@@ -1146,7 +1146,6 @@ dependencies = [
  "fid-canon",
  "fid-mig",
  "fid-registry",
- "fid-surface-gen",
  "fid-types",
  "fid-uuid",
  "sha2 0.10.9",

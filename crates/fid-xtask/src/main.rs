@@ -57,6 +57,8 @@ const KERNEL_ALLOW_USAGE: &str =
     "usage: cargo xtask kernel-allow [--workspace <dir>] [--map <layers.toml>] [--allowlist <kernel-allowlist.toml>]";
 const MIG_LADDER_USAGE: &str =
     "usage: cargo xtask mig ladder-check --ladder <json> --manifest <registry manifest json>";
+const GEN_SURFACES_USAGE: &str =
+    "usage: cargo xtask gen-surfaces --manifest <registry manifest json> --out <dir> [--test-emitter echo]...";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -87,7 +89,7 @@ fn main() -> ExitCode {
         Some("mig") if args.get(1).map(String::as_str) == Some("ladder-check") => mig_ladder_check(&args[2..]),
         Some("conic-audit") => fid_xtask::conic_audit::cli(&args[1..]),
         Some("registry-gate") => fid_xtask::registry_gate::cli(&args[1..]),
-        Some("gen-surfaces") => fid_surface_gen::cli(&args[1..]),
+        Some("gen-surfaces") => gen_surfaces(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
         Some("apps-policy") => apps_policy_check(&args[1..]),
         Some("study-tasks-check") => study_tasks_check(&args[1..]),
@@ -107,7 +109,7 @@ fn main() -> ExitCode {
             eprintln!("{MIG_LADDER_USAGE}");
             eprintln!("{}", fid_xtask::conic_audit::USAGE);
             eprintln!("{}", fid_xtask::registry_gate::USAGE);
-            eprintln!("{}", fid_surface_gen::USAGE);
+            eprintln!("{GEN_SURFACES_USAGE}");
             eprintln!("{}", fid_xtask::rel::notes::USAGE);
             ExitCode::from(2)
         }
@@ -304,6 +306,24 @@ fn bot_blocking(args: &[String]) -> ExitCode {
 /// `fid-platform plat-deploy validate-layout|check-bundle|make-install-manifest|bundle-schemas ...`,
 /// `fid-platform plat-hw ...` or `fid-platform plat-gpu validate ...` through Cargo, for the same layer reason as `datasets-check`
 /// (`fid-platform` is a `tool` crate).
+/// AUTO.SURF.GEN: `gen-surfaces`. Runs the `fid-surface-gen` binary, a `tool` crate that no
+/// other crate may link (ECO.REPO.LAYERS), with the same arguments and exit code.
+fn gen_surfaces(args: &[String]) -> ExitCode {
+    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
+    let manifest = concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.toml");
+    let status = Command::new(cargo)
+        .args(["run", "-q", "--manifest-path", manifest, "-p", "fid-surface-gen", "--bin", "fid-surface-gen", "--"])
+        .args(args)
+        .status();
+    match status {
+        Ok(s) => ExitCode::from(s.code().and_then(|c| u8::try_from(c).ok()).unwrap_or(2)),
+        Err(e) => {
+            eprintln!("gen-surfaces: cannot run cargo: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
 fn fid_platform(args: &[String], group: &str) -> ExitCode {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
     let manifest = concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.toml");

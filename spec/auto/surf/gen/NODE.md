@@ -63,7 +63,8 @@ The build-time driver that runs every surface emitter over the projection and wr
 - **Registry command(s):** none; `cargo xtask gen-surfaces --manifest <path> --out <dir>`.
 - **Data structures:** `trait SurfaceEmitter { fn surface(&self) -> &'static str; fn emit(&self, p: &Projection) -> Result<Vec<GeneratedFile>, EmitError>; fn comment_syntax(&self, path: &str) -> CommentSyntax; }`; `GeneratedFile { rel_path, bytes, covers: Vec<CommandRef> }`.
 - **Algorithm:** project the manifest (`AUTO.SURF.PROJ`); run emitters in fixed order; validate paths (relative, no `..`, no drive or UNC prefix); stamp headers; normalise line endings; write to a temporary sibling directory, then replace the output root atomically.
-- **Errors:** `emit_failed`, `path_outside_root`, `duplicate_output`, `io_error`.
+- **Errors:** `emit_failed`, `path_outside_root`, `duplicate_output`, `io_error`; and `case_mismatch` when an entry under the output root names an owned directory in another case (refused, never replaced).
+- **Header placement (for emitters):** the header is the first thing in every file, with one exception. A file whose interpreter only honours a first-line shebang (`#!`) or a coding line (PEP 263 form, on line 1, or on line 2 after a shebang) uses `CommentSyntax::LineAfterPrologue`, which keeps those lines above the header. `surface-index.json` carries the header as its first member, `_header`, because JSON has no comments.
 - **Determinism:** D0 for the bytes written.
 - **Performance budget:** full generation for 5,000 commands in < 5 s [unverified until measured].
 - **Crate:** `fid-surface-gen` (xtask library)

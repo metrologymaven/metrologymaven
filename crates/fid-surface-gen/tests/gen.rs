@@ -376,3 +376,73 @@ fn a_file_in_place_of_the_surface_directory_is_not_replaced() {
     assert_eq!(fs::read(out.join("echo")).unwrap(), b"a file");
     assert!(!out.join(".echo.gen-staging").exists());
 }
+
+#[test]
+fn header_goes_after_a_shebang_or_coding_line_only_when_asked() {
+    let h = "H\n";
+    let keep = CommentSyntax::HASH_AFTER_PROLOGUE;
+    let cases = [
+        (
+            "#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\nx\n",
+            "#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\nH\nx\n",
+        ),
+        ("#!/bin/sh\necho\n", "#!/bin/sh\nH\necho\n"),
+        ("# vim: set fileencoding=utf-8 :\nx\n", "# vim: set fileencoding=utf-8 :\nH\nx\n"),
+        ("# a plain comment\nx\n", "H\n# a plain comment\nx\n"),
+        ("# coding=latin-1\nx\n", "# coding=latin-1\nH\nx\n"),
+        ("x\n# coding: utf-8\n", "H\nx\n# coding: utf-8\n"),
+        ("#!/bin/sh\nx\n# coding: utf-8\n", "#!/bin/sh\nH\nx\n# coding: utf-8\n"),
+        ("", "H\n"),
+    ];
+    for (body, want) in cases {
+        assert_eq!(keep.stamp(h, body), want, "{body:?}");
+    }
+    assert_eq!(CommentSyntax::HASH.stamp(h, "#!/bin/sh\nx\n"), "H\n#!/bin/sh\nx\n");
+    assert_eq!(CommentSyntax::HTML.stamp(h, "#!/bin/sh\n"), "H\n#!/bin/sh\n");
+}
+
+#[test]
+fn an_owned_name_in_another_case_is_refused() {
+    let out = tmp("case");
+    fs::create_dir_all(out.join("Echo")).unwrap();
+    fs::write(out.join("Echo").join("mine.txt"), b"mine").unwrap();
+    let before = tree(&out);
+    let err = generate(&manifest(), &[&EchoEmitter], &out).unwrap_err();
+    assert_eq!(err.code(), "case_mismatch", "{err}");
+    assert_eq!(tree(&out), before);
+    let names: Vec<String> =
+        fs::read_dir(&out).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+    assert_eq!(names, ["Echo"]);
+}
+
+#[cfg(unix)]
+#[test]
+fn links_in_owned_names_are_never_followed() {
+    use std::os::unix::fs::symlink;
+    let base = tmp("links");
+    let outside = base.join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("precious.txt"), b"keep me").unwrap();
+    let out = base.join("out");
+    fs::create_dir_all(&out).unwrap();
+    symlink(&outside, out.join("echo")).unwrap();
+    symlink(&outside, out.join(".echo.gen-old")).unwrap();
+    let err = generate(&manifest(), &[&EchoEmitter], &out).unwrap_err();
+    assert_eq!(err.code(), "io_error", "{err}");
+    assert_eq!(tree(&outside).len(), 1);
+    assert_eq!(fs::read(outside.join("precious.txt")).unwrap(), b"keep me");
+    // The link at the owned name stays a link; the work-directory link is removed as a link.
+    assert!(fs::symlink_metadata(out.join("echo")).unwrap().file_type().is_symlink());
+    assert!(fs::symlink_metadata(out.join(".echo.gen-old")).is_err());
+    assert!(fs::symlink_metadata(out.join(".echo.gen-staging")).is_err());
+
+    // A lone work-directory link (no owned directory) is dropped as a link, never restored.
+    fs::remove_file(out.join("echo")).unwrap();
+    symlink(&outside, out.join(".echo.gen-old")).unwrap();
+    symlink(&outside, out.join(".echo.gen-staging")).unwrap();
+    generate(&manifest(), &[&EchoEmitter], &out).unwrap();
+    assert_eq!(fs::read(outside.join("precious.txt")).unwrap(), b"keep me");
+    assert_eq!(tree(&outside).len(), 1);
+    assert!(!fs::symlink_metadata(out.join("echo")).unwrap().file_type().is_symlink());
+    assert_eq!(tree(&out.join("echo")).len(), 14);
+}

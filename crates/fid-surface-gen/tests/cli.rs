@@ -1,6 +1,6 @@
-//! AUTO.SURF.GEN AC-1, AC-2 and AC-5 through the `fid-xtask gen-surfaces` binary. The
+//! AUTO.SURF.GEN AC-1, AC-2 and AC-5 through the `fid-surface-gen` binary that `cargo xtask gen-surfaces` runs. The
 //! expected tree is written by `fixtures/auto/surf/gen/make_fixtures.py` (independent
-//! Python reference); the library tests in `crates/fid-surface-gen/tests` cover the rest.
+//! Python reference); `gen.rs` covers the rest.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use std::collections::BTreeMap;
@@ -13,7 +13,7 @@ fn repo_root() -> PathBuf {
 }
 
 fn run(args: &[&str]) -> (i32, String) {
-    let out = Command::new(env!("CARGO_BIN_EXE_fid-xtask")).current_dir(repo_root()).args(args).output().unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_fid-surface-gen")).current_dir(repo_root()).args(args).output().unwrap();
     (out.status.code().unwrap(), String::from_utf8(out.stdout).unwrap())
 }
 
@@ -54,15 +54,8 @@ fn gen_surfaces_twice_gives_the_reference_tree() {
     for name in ["a", "b"] {
         let out = base.join(name);
         let out_s = out.to_string_lossy().into_owned();
-        let (code, stdout) = run(&[
-            "gen-surfaces",
-            "--manifest",
-            "fixtures/manifest/min-classes.json",
-            "--out",
-            &out_s,
-            "--test-emitter",
-            "echo",
-        ]);
+        let (code, stdout) =
+            run(&["--manifest", "fixtures/manifest/min-classes.json", "--out", &out_s, "--test-emitter", "echo"]);
         assert_eq!(code, 0, "{stdout}");
         assert!(stdout.contains("echo: 14 files, 13 commands"), "{stdout}");
         trees.push(tree(&out));
@@ -76,10 +69,10 @@ fn gen_surfaces_twice_gives_the_reference_tree() {
 
 #[test]
 fn gen_surfaces_usage_errors() {
-    assert_eq!(run(&["gen-surfaces"]).0, 2);
-    assert_eq!(run(&["gen-surfaces", "--manifest", "x", "--out", "y", "--test-emitter", "nope"]).0, 2);
+    assert_eq!(run(&[]).0, 2);
+    assert_eq!(run(&["--manifest", "x", "--out", "y", "--test-emitter", "nope"]).0, 2);
     let missing = Path::new(env!("CARGO_TARGET_TMPDIR")).join("gen-surfaces-missing");
-    let (code, _) = run(&["gen-surfaces", "--manifest", "no/such/manifest.json", "--out", &missing.to_string_lossy()]);
+    let (code, _) = run(&["--manifest", "no/such/manifest.json", "--out", &missing.to_string_lossy()]);
     assert_eq!(code, 1);
     assert!(!missing.exists());
 }

@@ -26,6 +26,14 @@
 //! - **Paths.** Emitted paths are relative, `/`-separated, and limited to the portable
 //!   characters `A-Z a-z 0-9 . _ -` per segment, so the same tree is written on Windows, Linux
 //!   and macOS; duplicates are detected ASCII case-insensitively for the same reason.
+//! - **Links and case.** A work directory that is a symbolic link is removed as a link, never
+//!   followed; an owned directory that is a link or a file is refused (`io_error`); an entry
+//!   that matches an owned name only ASCII case-insensitively is refused (`case_mismatch`).
+//! - **Durability.** Files are synced before the swap; on Unix the directories are synced
+//!   too, before and after each rename. On Windows directory sync is unavailable from the
+//!   standard library (see `sync_dir`).
+//! - **Header placement.** The header is the first thing in every file, except that
+//!   [`CommentSyntax::LineAfterPrologue`] keeps a first-line shebang and/or a coding line above it.
 //! - **Text.** Every file is UTF-8 without BOM, with LF line endings and a final LF; the header
 //!   carries no timestamp, path, host or user name.
 
@@ -69,6 +77,10 @@ pub enum CommentSyntax {
     Line(&'static str),
     /// A block comment: each header line is `<open> <text> <close>`.
     Block(&'static str, &'static str),
+    /// A line comment whose header goes after the file's prologue: a first-line shebang
+    /// (`#!`) and/or a coding line (a `#` comment line containing `coding:` or `coding=`, on
+    /// line 1, or on line 2 after a shebang), which interpreters honour only at the top.
+    LineAfterPrologue(&'static str),
 }
 
 impl CommentSyntax {
@@ -78,13 +90,15 @@ impl CommentSyntax {
     pub const SLASHES: CommentSyntax = CommentSyntax::Line("//");
     /// `<!-- -->` (Markdown, HTML).
     pub const HTML: CommentSyntax = CommentSyntax::Block("<!--", "-->");
+    /// `#` after any shebang or coding line (Python and shell scripts).
+    pub const HASH_AFTER_PROLOGUE: CommentSyntax = CommentSyntax::LineAfterPrologue("#");
 
     /// Comment tokens must be non-empty printable ASCII without spaces, so a header line is
     /// always exactly one line.
     fn check(self) -> Result<(), String> {
         let ok = |t: &str| !t.is_empty() && t.bytes().all(|b| (0x21..=0x7e).contains(&b));
         let good = match self {
-            CommentSyntax::Line(p) => ok(p),
+            CommentSyntax::Line(p) | CommentSyntax::LineAfterPrologue(p) => ok(p),
             CommentSyntax::Block(o, c) => ok(o) && ok(c),
         };
         if good {
@@ -96,9 +110,39 @@ impl CommentSyntax {
 
     fn line(self, text: &str) -> String {
         match self {
-            CommentSyntax::Line(p) => format!("{p} {text}\n"),
+            CommentSyntax::Line(p) | CommentSyntax::LineAfterPrologue(p) => format!("{p} {text}\n"),
             CommentSyntax::Block(o, c) => format!("{o} {text} {c}\n"),
         }
+    }
+
+    /// Byte length of the prologue of a normalised body that stays above the header: zero
+    /// unless the syntax is [`CommentSyntax::LineAfterPrologue`].
+    pub fn prologue_len(self, body: &str) -> usize {
+        if !matches!(self, CommentSyntax::LineAfterPrologue(_)) {
+            return 0;
+        }
+        let is_coding = |l: &str| l.trim_start().starts_with('#') && (l.contains("coding:") || l.contains("coding="));
+        let mut lines = body.split_inclusive('\n');
+        let mut len = 0;
+        let mut next = lines.next();
+        if let Some(first) = next.filter(|l| l.starts_with("#!")) {
+            len += first.len();
+            next = lines.next();
+        }
+        if let Some(coding) = next.filter(|l| is_coding(l)) {
+            len += coding.len();
+        }
+        len
+    }
+
+    /// `body` (normalised) with `header` placed per this syntax.
+    pub fn stamp(self, header: &str, body: &str) -> String {
+        let (prologue, rest) = body.split_at(self.prologue_len(body));
+        let mut text = String::with_capacity(prologue.len() + header.len() + rest.len());
+        text.push_str(prologue);
+        text.push_str(header);
+        text.push_str(rest);
+        text
     }
 }
 
@@ -143,6 +187,9 @@ pub enum GenError {
     /// Two outputs at the same path (ASCII case-insensitive), a path used as both file and
     /// directory, an emitter writing the index itself, or two emitters of one surface.
     DuplicateOutput { surface: String, path: String },
+    /// An existing entry under `--out` names an owned directory in a different case (for
+    /// example `Echo` for surface `echo`); it is refused, never replaced.
+    CaseMismatch { surface: String, found: String },
     /// Reading the manifest or writing the output failed.
     Io { path: String, detail: String },
 }
@@ -155,6 +202,7 @@ impl GenError {
             GenError::EmitFailed { .. } => "emit_failed",
             GenError::PathOutsideRoot { .. } => "path_outside_root",
             GenError::DuplicateOutput { .. } => "duplicate_output",
+            GenError::CaseMismatch { .. } => "case_mismatch",
             GenError::Io { .. } => "io_error",
         }
     }
@@ -170,6 +218,9 @@ impl fmt::Display for GenError {
                 write!(f, "{code}: surface {surface}: {path:?}: {detail}")
             }
             GenError::DuplicateOutput { surface, path } => write!(f, "{code}: surface {surface}: {path:?}"),
+            GenError::CaseMismatch { surface, found } => {
+                write!(f, "{code}: surface {surface}: {found:?} under the output root differs only in case")
+            }
             GenError::Io { path, detail } => write!(f, "{code}: {path}: {detail}"),
         }
     }
@@ -367,8 +418,7 @@ pub fn render(p: &Projection, emitters: &[&dyn SurfaceEmitter]) -> Result<Vec<Su
                 }
                 covered.insert(c);
             }
-            let mut text = header(p, syntax);
-            text.push_str(&body);
+            let text = syntax.stamp(&header(p, syntax), &body);
             files.insert(f.rel_path, text.into_bytes());
         }
         if let Some((_, path)) = dirs.iter().find(|(d, _)| keys.contains(*d)) {
@@ -401,16 +451,78 @@ fn work_dirs(out: &Path, surface: &str) -> (PathBuf, PathBuf, PathBuf) {
 
 /// Repairs what an interrupted earlier run left: drops a staging directory, and restores the
 /// old tree if the swap stopped between its two renames.
+/// A work directory that is a symbolic link (or junction) is removed as a link, never
+/// followed, so nothing outside the output root is touched.
 fn recover(out: &Path, surface: &str) -> Result<(), GenError> {
     let (target, staging, old) = work_dirs(out, surface);
-    if exists(&staging)? {
-        fs::remove_dir_all(&staging).map_err(io_err(&staging))?;
+    remove_work_dir(&staging)?;
+    if is_link(&old)? {
+        return remove_work_dir(&old);
     }
     if exists(&old)? {
         if exists(&target)? {
-            fs::remove_dir_all(&old).map_err(io_err(&old))?;
+            remove_work_dir(&old)?;
         } else {
             fs::rename(&old, &target).map_err(io_err(&old))?;
+            sync_dir(out)?;
+        }
+    }
+    Ok(())
+}
+
+fn is_link(path: &Path) -> Result<bool, GenError> {
+    match fs::symlink_metadata(path) {
+        Ok(m) => Ok(m.file_type().is_symlink()),
+        Err(e) if e.kind() == ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(io_err(path)(e)),
+    }
+}
+
+/// Removes a work directory, or only the link if it is one. Absent is fine.
+fn remove_work_dir(path: &Path) -> Result<(), GenError> {
+    if is_link(path)? {
+        // A directory link is removed with remove_dir on Windows and remove_file on Unix.
+        return fs::remove_file(path).or_else(|_| fs::remove_dir(path)).map_err(io_err(path));
+    }
+    if exists(path)? {
+        fs::remove_dir_all(path).map_err(io_err(path))?;
+    }
+    Ok(())
+}
+
+/// Flushes a directory's entries (new names, renames) to disk on Unix. On Windows the
+/// standard library cannot open a directory handle for flushing, so this is a no-op there:
+/// file contents are still synced, and NTFS journals the renames, but a power loss right
+/// after a swap may roll the directory back to the previous complete tree.
+fn sync_dir(dir: &Path) -> Result<(), GenError> {
+    #[cfg(unix)]
+    {
+        fs::File::open(dir).and_then(|d| d.sync_all()).map_err(io_err(dir))?;
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = dir;
+    }
+    Ok(())
+}
+
+/// Refuses an entry under `out` that names an owned directory in another case (REQ-006): on
+/// a case-insensitive file system replacing it would replace a directory the run does not own
+/// by name, and on a case-sensitive one the tree would differ between platforms.
+fn check_case(out: &Path, surfaces: &[&str]) -> Result<(), GenError> {
+    let owned: Vec<(String, &str)> = surfaces
+        .iter()
+        .flat_map(|s| [s.to_string(), format!(".{s}{STAGING_SUFFIX}"), format!(".{s}{OLD_SUFFIX}")].map(|n| (n, *s)))
+        .collect();
+    let mut names = Vec::new();
+    for e in fs::read_dir(out).map_err(io_err(out))? {
+        let e = e.map_err(io_err(out))?;
+        names.push(e.file_name().to_string_lossy().into_owned());
+    }
+    names.sort();
+    for name in &names {
+        if let Some((_, s)) = owned.iter().find(|(n, _)| n != name && n.eq_ignore_ascii_case(name)) {
+            return Err(GenError::CaseMismatch { surface: s.to_string(), found: name.clone() });
         }
     }
     Ok(())
@@ -418,6 +530,8 @@ fn recover(out: &Path, surface: &str) -> Result<(), GenError> {
 
 fn stage(staging: &Path, files: &BTreeMap<String, Vec<u8>>) -> Result<(), GenError> {
     fs::create_dir(staging).map_err(io_err(staging))?;
+    let mut dirs = BTreeSet::new();
+    dirs.insert(staging.to_path_buf());
     for (rel, bytes) in files {
         let mut path = staging.to_path_buf();
         for seg in rel.split('/') {
@@ -425,10 +539,21 @@ fn stage(staging: &Path, files: &BTreeMap<String, Vec<u8>>) -> Result<(), GenErr
         }
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(io_err(parent))?;
+            let mut d = parent;
+            while d != staging && dirs.insert(d.to_path_buf()) {
+                match d.parent() {
+                    Some(up) => d = up,
+                    None => break,
+                }
+            }
         }
         let mut f = fs::File::create_new(&path).map_err(io_err(&path))?;
         f.write_all(bytes).map_err(io_err(&path))?;
         f.sync_all().map_err(io_err(&path))?;
+    }
+    // Deepest first, so each directory's entries are durable before its parent's.
+    for d in dirs.iter().rev() {
+        sync_dir(d)?;
     }
     Ok(())
 }
@@ -443,13 +568,18 @@ fn swap(out: &Path, surface: &str) -> Result<(), GenError> {
                 let _ = fs::rename(&old, &target);
                 return Err(io_err(&staging)(e));
             }
-            fs::remove_dir_all(&old).map_err(io_err(&old))
+            sync_dir(out)?;
+            fs::remove_dir_all(&old).map_err(io_err(&old))?;
+            sync_dir(out)
         }
         Ok(_) => Err(GenError::Io {
             path: target.display().to_string(),
             detail: "exists and is not a plain directory; refusing to replace it".to_string(),
         }),
-        Err(e) if e.kind() == ErrorKind::NotFound => fs::rename(&staging, &target).map_err(io_err(&staging)),
+        Err(e) if e.kind() == ErrorKind::NotFound => {
+            fs::rename(&staging, &target).map_err(io_err(&staging))?;
+            sync_dir(out)
+        }
         Err(e) => Err(io_err(&target)(e)),
     }
 }
@@ -466,6 +596,8 @@ fn drop_staging(out: &Path, outputs: &[SurfaceOutput]) {
 /// swaps each owned directory in. Files outside the owned directories are left alone.
 pub fn write_outputs(out: &Path, outputs: &[SurfaceOutput]) -> Result<(), GenError> {
     fs::create_dir_all(out).map_err(io_err(out))?;
+    let surfaces: Vec<&str> = outputs.iter().map(|o| o.surface.as_str()).collect();
+    check_case(out, &surfaces)?;
     for o in outputs {
         recover(out, &o.surface)?;
     }

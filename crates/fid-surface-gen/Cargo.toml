@@ -8,7 +8,13 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
-# Build-time tool (layer `tool`): an xtask library, never linked into an app.
+# `cargo xtask gen-surfaces` runs this binary: a `tool` crate may not be linked by another crate.
+[[bin]]
+name = "fid-surface-gen"
+path = "src/main.rs"
+
+# Build-time tool (layer `tool`): no other crate may link it (ECO.REPO.LAYERS); `cargo xtask
+# gen-surfaces` runs its binary with `cargo run -p fid-surface-gen`.
 [dependencies]
 # RFC 8785 writer and reader for `surface-index.json` (model layer).
 fid-canon = { path = "../fid-canon" }
