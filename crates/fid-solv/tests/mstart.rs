@@ -51,7 +51,12 @@ impl Fixture {
                 let t: Vec<&str> = l.split_whitespace().collect();
                 // i x y well W objective O params px py
                 assert_eq!((t[3], t[5], t[7]), ("well", "objective", "params"), "{l}");
-                (vec![f64_hex(t[1]), f64_hex(t[2])], t[4].to_string(), f64_hex(t[6]), vec![f64_hex(t[8]), f64_hex(t[9])])
+                (
+                    vec![f64_hex(t[1]), f64_hex(t[2])],
+                    t[4].to_string(),
+                    f64_hex(t[6]),
+                    vec![f64_hex(t[8]), f64_hex(t[9])],
+                )
             })
             .collect()
     }
@@ -85,7 +90,7 @@ fn digest(rows: impl IntoIterator<Item = Vec<f64>>) -> String {
             h.update(&v.to_le_bytes());
         }
     }
-    format!("sha256:{}", h.finish())
+    h.finish()
 }
 
 /// AC-1 (and AC-3: CI runs this on x86-64 Linux and Windows, ARM64 macOS and wasm32 under
@@ -234,7 +239,10 @@ fn starts_are_seeded_and_in_box() {
     };
     let a = generate_starts(&spec).unwrap();
     assert_eq!(a.len(), 64);
-    assert_eq!(a[0].iter().map(|x| x.to_bits()).collect::<Vec<_>>(), spec.primary.iter().map(|x| x.to_bits()).collect::<Vec<_>>());
+    assert_eq!(
+        a[0].iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+        spec.primary.iter().map(|x| x.to_bits()).collect::<Vec<_>>()
+    );
     for s in &a[1..] {
         for ((x, p), h) in s.iter().zip(&spec.primary).zip(&spec.half_widths) {
             assert!((x - p).abs() <= *h, "{s:?}");
@@ -372,7 +380,10 @@ fn invalid_specs_are_rejected() {
         StartSpec { tolerances: vec![1e-9, f64::NAN], ..base.clone() },
         SpecError::NotFinite { field: "tolerances", start: None, index: 1 },
     );
-    check(StartSpec { tolerances: vec![-1e-9, 0.0], ..base.clone() }, SpecError::Negative { field: "tolerances", index: 0 });
+    check(
+        StartSpec { tolerances: vec![-1e-9, 0.0], ..base.clone() },
+        SpecError::Negative { field: "tolerances", index: 0 },
+    );
     // A start that overflows is rejected, not passed to the solve.
     let huge = StartSpec { primary: vec![f64::MAX], half_widths: vec![f64::MAX], count: MAX_STARTS, ..base.clone() };
     assert!(matches!(generate_starts(&huge), Err(SpecError::StartNotFinite { index: 0, .. })));
@@ -400,7 +411,14 @@ fn invalid_specs_are_rejected() {
 /// A single start is the primary alone and trivially agrees.
 #[test]
 fn single_start() {
-    let spec = StartSpec { primary: vec![0.6, 0.3], half_widths: vec![1.0, 1.0], count: 1, seed: 0, stream: 0, tolerances: vec![] };
+    let spec = StartSpec {
+        primary: vec![0.6, 0.3],
+        half_widths: vec![1.0, 1.0],
+        count: 1,
+        seed: 0,
+        stream: 0,
+        tolerances: vec![],
+    };
     let out = run(&spec, double_well_solve).unwrap();
     assert_eq!((out.best, out.best_index, out.agreement), ("right", 0, true));
     assert_eq!(out.starts, vec![vec![0.6, 0.3]]);
