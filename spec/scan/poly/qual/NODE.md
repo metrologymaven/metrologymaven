@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-scan-mesh]
+built_pr: 276
 satisfies: [REQ-SCAN.POLY-005]
 covers: []
 depends_on: [GEO.TYPES]
