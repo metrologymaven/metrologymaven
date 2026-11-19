@@ -195,6 +195,12 @@
    "code": "unknown_format"
   },
   {
+   "name": "unknown_format_nested",
+   "bytes": "{\"format\":\"merkle-v2\",\"proof\":{\"a\":{\"b\":{\"c\":[\"d\"]}}}}",
+   "ok": false,
+   "code": "unknown_format"
+  },
+  {
    "name": "format_missing",
    "bytes": "{\"count\":\"50\",\"head\":\"sha256:8dd98152593519aedbcc374c838ec400669d08b4815b9d9f1b2fb61f0786e202\",\"reason\":\"close\",\"seq\":\"50\",\"stream\":\"record\",\"time\":\"2026-11-19T12:00:00Z\"}",
    "ok": false,

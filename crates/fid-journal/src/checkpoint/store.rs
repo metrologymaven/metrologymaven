@@ -239,7 +239,9 @@ impl Journal {
     }
 
     /// Checks `cp` against this journal's stored chain ([`super::verify`]), streaming the
-    /// `seq`, `prev_hash` and `hash` columns in sequence order.
+    /// `seq`, `prev_hash` and `hash` columns in sequence order. It trusts the stored `hash`
+    /// columns and does not recompute any hash from the entry headers; full verification of
+    /// the chain is `CORE.JRN.CHAIN.VERIFY`'s job.
     pub fn verify_checkpoint(&self, cp: &Checkpoint, coverage: Coverage) -> Result<Verified, CheckpointError> {
         self.check_poison().map_err(|e| CheckpointError::Storage(e.to_string()))?;
         self.store

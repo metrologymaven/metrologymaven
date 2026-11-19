@@ -275,6 +275,7 @@ def decode_cases(ac1):
         ("array", "[]"),
         ("unknown_format", with_(format="merkle-v1")),
         ("unknown_format_with_other_fields", canon({"format": "merkle-v1", "tree_size": "50"}).decode()),
+        ("unknown_format_nested", canon({"format": "merkle-v2", "proof": {"a": {"b": {"c": ["d"]}}}}).decode()),
         ("format_missing", with_(format=None)),
         ("format_number", with_(format=1)),
         ("extra_key", with_(extra="x")),

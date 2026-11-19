@@ -31,7 +31,9 @@
 //!   (`fid-canon`); the digest is SHA-256 over them. These bytes are what TRUST signs, with
 //!   no prefix added here (domain separation belongs to the signature envelope).
 //! - **Decoding.** [`Checkpoint::from_bytes`] takes at most [`MAX_CHECKPOINT_BYTES`]
-//!   (`input_limit` beyond), refuses invalid UTF-8, invalid JSON and duplicate keys
+//!   (`input_limit` beyond) and parses with `fid-canon`'s default nesting limit, so a future
+//!   format with deeper nesting still reaches the `format` gate (`unknown_format`); the
+//!   `linear-v1` shape itself is flat (root object plus `ledger`). It refuses invalid UTF-8, invalid JSON and duplicate keys
 //!   (`schema`), and requires the bytes to be exactly the canonical form of the value they
 //!   decode to (`schema` otherwise), so one checkpoint has one byte string.
 //! - **Time.** The host clock truncated to whole seconds, in UTC ([`format_time`]); an
@@ -57,7 +59,7 @@ mod store;
 pub use store::{BranchHead, HeadsRebuilt, StoredCheckpoint, MAX_BRANCHES};
 
 use crate::entry::{parse_digest, GENESIS_PREV};
-use fid_canon::{digest_bytes, parse_with_limits, to_canonical_bytes, CValue, Digest};
+use fid_canon::{digest_bytes, parse_with_limits, to_canonical_bytes, CValue, Digest, MAX_DEPTH};
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -67,8 +69,6 @@ pub const FORMAT_LINEAR_V1: &str = "linear-v1";
 pub const MAX_CHECKPOINT_BYTES: usize = 4096;
 /// Longest stream name, in bytes (the store's identifier bound).
 pub const MAX_STREAM_BYTES: usize = 64;
-/// Nesting depth accepted when decoding (root object and `ledger`).
-const MAX_DECODE_DEPTH: usize = 2;
 /// Last instant [`format_time`] can write: 9999-12-31T23:59:59Z.
 pub const MAX_TIME_UNIX: u64 = 253_402_300_799;
 /// Longest unknown `format` value echoed in an error.
@@ -350,7 +350,7 @@ impl Checkpoint {
         if bytes.len() > MAX_CHECKPOINT_BYTES {
             return Err(CheckpointError::InputLimit(bytes.len()));
         }
-        let v = parse_with_limits(bytes, MAX_CHECKPOINT_BYTES, MAX_DECODE_DEPTH).map_err(|e| schema(e.to_string()))?;
+        let v = parse_with_limits(bytes, MAX_CHECKPOINT_BYTES, MAX_DEPTH).map_err(|e| schema(e.to_string()))?;
         let cp = Checkpoint::from_value(&v)?;
         let canonical = to_canonical_bytes(&cp.to_value()).map_err(|e| schema(e.to_string()))?;
         if canonical != bytes {
