@@ -180,11 +180,8 @@ pub fn unified_diff(old: &str, new: &str, old_name: &str, new_name: &str) -> Str
     let old_len = body.iter().filter(|(c, _)| *c != '+').count();
     let new_len = body.iter().filter(|(c, _)| *c != '-').count();
     let first = |len: usize| if len == 0 { start } else { start + 1 };
-    let mut out = format!(
-        "--- {old_name}\n+++ {new_name}\n@@ -{},{old_len} +{},{new_len} @@\n",
-        first(old_len),
-        first(new_len)
-    );
+    let mut out =
+        format!("--- {old_name}\n+++ {new_name}\n@@ -{},{old_len} +{},{new_len} @@\n", first(old_len), first(new_len));
     for (c, line) in body {
         out.push(c);
         out.push_str(line);
