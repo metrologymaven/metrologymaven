@@ -2,7 +2,7 @@
 
 use super::records::{check_rows, ResultRow};
 use super::OutError;
-use crate::csv::map::{ColumnMap, Dialect, Field, FieldType, Layout, Scope, WIDE_SEPARATOR};
+use crate::csv::map::{ColumnMap, Dialect, Field, FieldType, Layout, Scope, MAX_FIELDS, WIDE_SEPARATOR};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 
@@ -131,11 +131,19 @@ fn push_record(out: &mut String, d: &Dialect, cells: &[Cow<'_, str>]) -> Result<
 ///   part's results agree on. Reasons (`records_invalid`): `wide_duplicate` (two results
 ///   of one part and characteristic), `wide_part_conflict` (results of one part disagree
 ///   on a part-scope value), `wide_characteristic_separator` (a characteristic ID holds
-///   `:`).
+///   `:`), `wide_too_many_columns` (more than [`MAX_FIELDS`] columns, which no reader
+///   of this crate would accept; checked before any row is built).
+/// - A map without `record_status` refuses any transcribed result
+///   (`transcription_status_missing`): transcribed values must never look measured.
 pub fn render(rows: &[ResultRow], map: &ColumnMap) -> Result<Rendered, OutError> {
     check_rows(rows)?;
     if rows.is_empty() {
         return Err(OutError::NoResults);
+    }
+    if !map.has_field(Field::RecordStatus) {
+        if let Some(t) = rows.iter().find(|r| r.is_transcribed()) {
+            return Err(OutError::TranscriptionStatusMissing { result: t.result_id().to_owned() });
+        }
     }
     let order = ordered(rows);
     let d = map.dialect();
@@ -171,9 +179,13 @@ pub fn render(rows: &[ResultRow], map: &ColumnMap) -> Result<Rendered, OutError>
             if chars.iter().any(|c| c.contains(WIDE_SEPARATOR)) {
                 return Err(OutError::Records { reason: "wide_characteristic_separator", record: None });
             }
-            let mut parts: BTreeMap<&str, BTreeMap<&str, &ResultRow>> = BTreeMap::new();
+            let width = chars.len().saturating_mul(group.len()).saturating_add(part_slots.len());
+            if width > MAX_FIELDS {
+                return Err(OutError::Records { reason: "wide_too_many_columns", record: None });
+            }
+            let mut parts: BTreeMap<&str, BTreeMap<&str, (usize, &ResultRow)>> = BTreeMap::new();
             for &(n, row) in &order {
-                if parts.entry(row.part()).or_default().insert(row.characteristic(), row).is_some() {
+                if parts.entry(row.part()).or_default().insert(row.characteristic(), (n, row)).is_some() {
                     return Err(OutError::Records { reason: "wide_duplicate", record: Some(n) });
                 }
             }
@@ -189,7 +201,7 @@ pub fn render(rows: &[ResultRow], map: &ColumnMap) -> Result<Rendered, OutError>
                 push_record(&mut out, d, &cells)?;
             }
             for by_char in parts.values() {
-                let mut cells = Vec::with_capacity(part_slots.len() + chars.len() * group.len());
+                let mut cells = Vec::with_capacity(width);
                 for s in &part_slots {
                     cells.push(match s.and_then(|p| cols.get(p)) {
                         None => Cow::Borrowed(""),
@@ -197,7 +209,7 @@ pub fn render(rows: &[ResultRow], map: &ColumnMap) -> Result<Rendered, OutError>
                     });
                 }
                 for c in &chars {
-                    let row = by_char.get(c).copied();
+                    let row = by_char.get(c).map(|&(_, r)| r);
                     for p in &group {
                         cells.push(match cols.get(*p) {
                             None => Cow::Borrowed(""),
@@ -214,14 +226,18 @@ pub fn render(rows: &[ResultRow], map: &ColumnMap) -> Result<Rendered, OutError>
 }
 
 /// The one non-empty value of a part-scope field among a part's results.
-fn part_value<'a>(by_char: &BTreeMap<&str, &'a ResultRow>, field: Field) -> Result<Option<&'a str>, OutError> {
+/// A disagreeing row fails `wide_part_conflict` naming its input position.
+fn part_value<'a>(
+    by_char: &BTreeMap<&str, (usize, &'a ResultRow)>,
+    field: Field,
+) -> Result<Option<&'a str>, OutError> {
     let mut found: Option<&'a str> = None;
-    for &row in by_char.values() {
+    for &(n, row) in by_char.values() {
         match (found, row.get(field)) {
             (_, None) | (_, Some("")) => {}
             (None, Some(v)) => found = Some(v),
             (Some(a), Some(b)) if a == b => {}
-            (Some(_), Some(_)) => return Err(OutError::Records { reason: "wide_part_conflict", record: None }),
+            (Some(_), Some(_)) => return Err(OutError::Records { reason: "wide_part_conflict", record: Some(n) }),
         }
     }
     Ok(found)

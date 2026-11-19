@@ -1,15 +1,15 @@
-Merkmal;Soll;Ist;UGW;OGW;unit;Teil;;;'=Note
-C1;10,000;10,012;-0,020;0,020;mm;P1;;;
-C1;10,000;9,9875;-0,020;0,020;mm;P2;;;"first line
+Merkmal;Soll;Ist;UGW;OGW;unit;Teil;Status;;'=Note
+C1;10,000;10,012;-0,020;0,020;mm;P1;evaluated;;
+C1;10,000;9,9875;-0,020;0,020;mm;P2;evaluated;;"first line
 second, ""quoted"""
-C1;10,000;10,004;-0,020;0,020;mm;P3;;;
-C2;25,4;25,41;-0,05;0,05;mm;P1;;;'@sum(A1:A3)
-C2;25,4;25,46;-0,05;0,05;mm;P2;;;"re-check; fixture moved"
-C2;25,4;25,39;-0,05;0,05;mm;P3;;;'=cmd|' /C calc'!A0
-C3;1,5e-3;1,2E-3;;2,0e-3;mm;P1;;;
-C3;1,5e-3;2,4E-3;;2,0e-3;mm;P2;;;
-C4;0,000;-0,012;-0,0100;0,0100;mm;P1;;;'	tab-led note
-C4;0,000;0,0100;-0,0100;0,0100;mm;P2;;;"edge, ""at limit"""
-C5;45;45,02;-0,1;0,1;deg;P1;;;日本語のコメント
-C5;45;44,97;-0,1;0,1;deg;P2;;;
-C6;0;0,031;;0,050;mm;P3;;;'-from vendor report
+C1;10,000;10,004;-0,020;0,020;mm;P3;transcribed;;
+C2;25,4;25,41;-0,05;0,05;mm;P1;evaluated;;'@sum(A1:A3)
+C2;25,4;25,46;-0,05;0,05;mm;P2;evaluated;;"re-check; fixture moved"
+C2;25,4;25,39;-0,05;0,05;mm;P3;transcribed;;'=cmd|' /C calc'!A0
+C3;1,5e-3;1,2E-3;;2,0e-3;mm;P1;evaluated;;
+C3;1,5e-3;2,4E-3;;2,0e-3;mm;P2;evaluated;;
+C4;0,000;-0,012;-0,0100;0,0100;mm;P1;evaluated;;'	tab-led note
+C4;0,000;0,0100;-0,0100;0,0100;mm;P2;evaluated;;"edge, ""at limit"""
+C5;45;45,02;-0,1;0,1;deg;P1;evaluated;;日本語のコメント
+C5;45;44,97;-0,1;0,1;deg;P2;evaluated;;
+C6;0;0,031;;0,050;mm;P3;transcribed;;'-from vendor report

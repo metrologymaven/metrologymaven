@@ -6,7 +6,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::{parse, CValue};
-use fid_io_res::csv::map::{builtin, load_user_map_bytes, ColumnMap, Field, LONG_REF, WIDE_REF};
+use fid_io_reg::IoError;
+use fid_io_res::csv::map::{builtin, load_user_map_bytes, ColumnMap, Field, LONG_REF, MAX_FIELDS, WIDE_REF};
 use fid_io_res::csv::out::{
     check_marked, export_results_csv, load_records, neutralise, read_table, render, replay, split_records,
     unneutralise, ExportEvent, ExportRequest, OutError, ResultRow, TMP_PREFIX,
@@ -347,7 +348,10 @@ fn errors_no_results_and_bad_records() {
             .with(Field::PartId, "P1")
             .with(Field::TimestampText, "t2"),
     ];
-    assert_eq!(render(&conflict, &wide).unwrap_err().reason(), Some("wide_part_conflict"));
+    match render(&conflict, &wide).unwrap_err() {
+        OutError::Records { reason, record } => assert_eq!((reason, record), ("wide_part_conflict", Some(1))),
+        other => panic!("{other:?}"),
+    }
     let sep = vec![ResultRow::new("R1").with(Field::CharacteristicId, "C:1")];
     assert_eq!(render(&sep, &wide).unwrap_err().reason(), Some("wide_characteristic_separator"));
 
@@ -435,4 +439,102 @@ fn never_panics_on_odd_rows() {
             }
         }
     }
+}
+
+#[test]
+fn encode_record_enforces_max_fields_like_the_decoder() {
+    let map = builtin(LONG_REF).unwrap();
+    let d = map.dialect();
+    let over = vec![""; MAX_FIELDS + 1];
+    match d.encode_record(&over).unwrap_err() {
+        IoError::Malformed { reason, .. } => assert_eq!(reason, "too_many_fields"),
+        other => panic!("{other:?}"),
+    }
+    let full = vec!["x"; MAX_FIELDS];
+    let text = d.encode_record(&full).unwrap();
+    assert_eq!(d.decode_record(text.trim_end_matches('\n')).unwrap().len(), MAX_FIELDS);
+}
+
+/// One part, `n` characteristics, through the wide built-in map (4 part-scope columns,
+/// 13 per characteristic group): 4 + 13 * 5040 = 65,524 columns fit, 5041 give 65,537.
+fn wide_rows(n: usize) -> Vec<ResultRow> {
+    (0..n)
+        .map(|i| {
+            ResultRow::new(&format!("R{i}"))
+                .with(Field::CharacteristicId, &format!("C{i:05}"))
+                .with(Field::PartId, "P1")
+                .with(Field::Actual, "1.0")
+        })
+        .collect()
+}
+
+#[test]
+fn wide_layout_is_capped_at_max_fields() {
+    let wide = builtin(WIDE_REF).unwrap();
+    let err = render(&wide_rows(5041), &wide).unwrap_err();
+    assert_eq!((err.code(), err.reason()), ("records_invalid", Some("wide_too_many_columns")));
+    let ok = render(&wide_rows(5040), &wide).unwrap();
+    let table = read_table(&ok.bytes, &wide).unwrap();
+    assert_eq!(table.len(), 2);
+    assert_eq!(table[0].len(), 4 + 13 * 5040);
+    assert!(table[0].len() <= MAX_FIELDS);
+}
+
+#[test]
+fn records_digest_does_not_depend_on_input_order() {
+    let map = builtin(LONG_REF).unwrap();
+    let out = export_results_csv(&records(), &request(&map, "root://out/r.csv"), &root("order-a")).unwrap();
+    let mut reordered = records();
+    reordered.reverse();
+    reordered.rotate_left(4);
+    let fresh = root("order-b");
+    assert_eq!(replay(&out.event, &reordered, &map, &fresh).unwrap(), ReplayOutcome::Identical);
+    assert_eq!(std::fs::read(fresh.join("r.csv")).unwrap(), read("r.golden.csv"));
+}
+
+/// Maintainer decision (leaf Design): transcribed values must never be indistinguishable
+/// from measured ones, so a map without `record_status` refuses transcribed results.
+#[test]
+fn map_without_record_status_refuses_transcribed_results() {
+    let json = r#"{"schema":"colmap@1","id":"test.no.status","version":"1.0.0","layout":"long",
+        "dialect":{"delimiter":"comma","decimal_mark":".","header":true,"quote":"rfc4180",
+                   "encoding":"utf-8","line_ending":"lf"},
+        "columns":[{"field":"characteristic_id","header":"id","required":true},
+                   {"field":"actual","header":"actual","required":true},
+                   {"field":"unit","header":"unit","required":true}]}"#;
+    let map = load_user_map_bytes(json.as_bytes()).unwrap();
+    let dir = root("no-status");
+    match export_results_csv(&records(), &request(&map, "root://out/r.csv"), &dir).unwrap_err() {
+        OutError::TranscriptionStatusMissing { result } => assert_eq!(result, "R-T03"),
+        other => panic!("{other:?}"),
+    }
+    assert!(listing(&dir).is_empty(), "nothing may be written");
+    // Measured results alone are fine (the map is still reported lossy).
+    let measured: Vec<ResultRow> = records().into_iter().filter(|r| !r.is_transcribed()).collect();
+    let out = export_results_csv(&measured, &request(&map, "root://out/r.csv"), &dir).unwrap();
+    assert!(out.event.lossy.contains(&"record_status".to_owned()));
+}
+
+#[test]
+fn marking_check_handles_many_rows() {
+    // 10^5 rows, every other one transcribed: the indexed check stays near-linear.
+    let map = builtin(LONG_REF).unwrap();
+    let rows: Vec<ResultRow> = (0..100_000)
+        .map(|i| {
+            let row = ResultRow::new(&format!("R{i}"))
+                .with(Field::CharacteristicId, &format!("C{:03}", i % 500))
+                .with(Field::PartId, &format!("P{:04}", i / 500))
+                .with(Field::Actual, "1.0");
+            if i % 2 == 0 {
+                row.with(Field::RecordStatus, "transcribed")
+                    .with(Field::SourceSoftware, "VendorX")
+                    .with(Field::SourceVersion, "4.2")
+            } else {
+                row.with(Field::RecordStatus, "evaluated")
+            }
+        })
+        .collect();
+    let out = render(&rows, &map).unwrap();
+    assert_eq!(out.rows, 100_000);
+    check_marked(&out.bytes, &map, &rows).unwrap();
 }

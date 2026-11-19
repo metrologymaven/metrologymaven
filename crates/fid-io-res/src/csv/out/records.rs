@@ -187,11 +187,14 @@ pub fn check_rows(rows: &[ResultRow]) -> Result<(), OutError> {
 }
 
 /// SHA-256 of the RFC 8785 canonical form of `rows` as a records file (null values
-/// dropped), in the given order. Journaled so a replay can tell its input is the same.
+/// dropped), with the rows in export order (characteristic, part, result ID), so the same
+/// records in another input order give the same digest. Journaled so a replay can tell
+/// its input is the same.
 pub fn records_digest(rows: &[ResultRow]) -> Result<Digest, OutError> {
     let mut top = BTreeMap::new();
     top.insert("schema".to_owned(), CValue::Str(RECORDS_SCHEMA.to_owned()));
-    top.insert("records".to_owned(), CValue::Arr(rows.iter().map(ResultRow::to_cvalue).collect()));
+    let ordered = super::render::ordered(rows);
+    top.insert("records".to_owned(), CValue::Arr(ordered.iter().map(|(_, r)| r.to_cvalue()).collect()));
     let bytes = fid_canon::to_canonical_bytes(&CValue::Obj(top)).map_err(|_| bad("json_syntax", None))?;
     Ok(Digest::from_bytes(fid_canon::digest_bytes(&bytes).0))
 }

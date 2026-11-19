@@ -18,7 +18,9 @@
 //!   decimal cells never do.
 //! - **Transcription marking (REQ-004):** with a map holding `record_status` and
 //!   `source_software`, the export fails `transcription_unmarked` rather than write a
-//!   table in which a transcribed result is not marked.
+//!   table in which a transcribed result is not marked. A map without `record_status`
+//!   refuses transcribed results outright (`transcription_status_missing`), so a
+//!   transcribed value can never be read as a measured one.
 //! - **Determinism (REQ-005, D0):** rows are sorted by characteristic, part and result
 //!   ID (byte-wise), and the file bytes depend only on the rows and the map.
 
@@ -74,6 +76,13 @@ pub enum OutError {
         /// The result ID.
         result: String,
     },
+    /// `transcription_status_missing`: the map has no `record_status` column but the
+    /// export holds a transcribed result, which would then look measured (maintainer
+    /// decision, see the leaf's Design).
+    TranscriptionStatusMissing {
+        /// The first such result ID.
+        result: String,
+    },
     /// A report could not be built.
     Report(ReportError),
     /// `event_invalid`: a journal event could not be read back.
@@ -93,6 +102,7 @@ impl OutError {
             OutError::Encode(e) | OutError::Io(e) => e.code(),
             OutError::TargetIsLink => "target_is_link",
             OutError::TranscriptionUnmarked { .. } => "transcription_unmarked",
+            OutError::TranscriptionStatusMissing { .. } => "transcription_status_missing",
             OutError::Report(e) => e.code(),
             OutError::Event { .. } => "event_invalid",
         }
@@ -120,6 +130,11 @@ impl fmt::Display for OutError {
             OutError::TranscriptionUnmarked { result } => {
                 write!(f, "transcription_unmarked: {}", fid_io_reg::UntrustedText::new(result).as_display())
             }
+            OutError::TranscriptionStatusMissing { result } => write!(
+                f,
+                "transcription_status_missing: map has no record_status column for transcribed result {}",
+                fid_io_reg::UntrustedText::new(result).as_display()
+            ),
             other => f.write_str(other.code()),
         }
     }

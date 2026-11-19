@@ -50,6 +50,11 @@
       "required": false
     },
     {
+      "field": "record_status",
+      "header": "Status",
+      "required": false
+    },
+    {
       "field": "comment",
       "header": "=Note",
       "index": 9,

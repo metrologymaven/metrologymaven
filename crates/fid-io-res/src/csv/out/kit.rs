@@ -11,6 +11,7 @@ use super::records::{ResultRow, TRANSCRIBED};
 use super::render::{header_of, neutralise, scope_positions, slots, Slot};
 use super::OutError;
 use crate::csv::map::{decode_utf8, ColumnMap, Field, Layout, Scope, WIDE_SEPARATOR};
+use std::collections::BTreeMap;
 
 /// Splits table text into records at `terminator` outside quoted fields. A final
 /// terminator does not start an empty record.
@@ -66,6 +67,42 @@ fn is(rec: &[String], at: Option<usize>, value: &str) -> bool {
     at.and_then(|i| rec.get(i)).is_some_and(|c| c.as_str() == neutralise(value).as_ref())
 }
 
+/// Data rows indexed by their written (key, part) cells; a missing column indexes as "".
+/// Built once, so the check is O((N + T) log N) for N rows and T transcribed results.
+type RowIndex<'a> = BTreeMap<(String, String), Vec<&'a [String]>>;
+
+fn cell_at(rec: &[String], i: Option<usize>) -> String {
+    i.and_then(|i| rec.get(i)).map_or_else(String::new, String::clone)
+}
+
+fn index_rows(data: &[Vec<String>], key_i: Option<usize>, part_i: Option<usize>) -> RowIndex<'_> {
+    let mut index: RowIndex<'_> = BTreeMap::new();
+    for rec in data {
+        index.entry((cell_at(rec, key_i), cell_at(rec, part_i))).or_default().push(rec.as_slice());
+    }
+    index
+}
+
+/// The rows whose written key and part cells hold `key` and `part` (each compared only
+/// when its column exists).
+fn candidates<'i, 'a>(
+    index: &'i RowIndex<'a>,
+    key_i: Option<usize>,
+    key: &str,
+    part_i: Option<usize>,
+    part: &str,
+) -> &'i [&'a [String]] {
+    let written = |at: Option<usize>, v: &str| if at.is_some() { neutralise(v).into_owned() } else { String::new() };
+    index.get(&(written(key_i, key), written(part_i, part))).map_or(&[], Vec::as_slice)
+}
+
+/// Whether a row carries the marking of transcribed result `t`.
+fn marks(rec: &[String], t: &ResultRow, status_i: Option<usize>, sw_i: Option<usize>, ver_i: Option<usize>) -> bool {
+    is(rec, status_i, TRANSCRIBED)
+        && is(rec, sw_i, t.get(Field::SourceSoftware).unwrap_or(""))
+        && (ver_i.is_none() || is(rec, ver_i, t.get(Field::SourceVersion).unwrap_or("")))
+}
+
 /// Checks that every transcribed result in `rows` is marked in `output`, a table written
 /// through `map`. A map without `record_status` or `source_software` columns cannot mark
 /// anything, so any transcribed result fails.
@@ -95,16 +132,12 @@ pub fn check_marked(output: &[u8], map: &ColumnMap, rows: &[ResultRow]) -> Resul
                 find(&s, map, Field::SourceSoftware),
                 find(&s, map, Field::SourceVersion),
             );
+            let index = index_rows(data, key_i, part_i);
             for &t in &transcribed {
+                let found = candidates(&index, key_i, t.get(key).unwrap_or(""), part_i, t.part());
                 let marked = status_i.is_some()
                     && sw_i.is_some()
-                    && data.iter().any(|rec| {
-                        is(rec, key_i, t.get(key).unwrap_or(""))
-                            && (part_i.is_none() || is(rec, part_i, t.part()))
-                            && is(rec, status_i, TRANSCRIBED)
-                            && is(rec, sw_i, t.get(Field::SourceSoftware).unwrap_or(""))
-                            && (ver_i.is_none() || is(rec, ver_i, t.get(Field::SourceVersion).unwrap_or("")))
-                    });
+                    && found.iter().any(|&rec| marks(rec, t, status_i, sw_i, ver_i));
                 if !marked {
                     return Err(unmarked(t));
                 }
@@ -119,22 +152,20 @@ pub fn check_marked(output: &[u8], map: &ColumnMap, rows: &[ResultRow]) -> Resul
             );
             let status_header =
                 map.columns().iter().position(|c| c.field == Field::RecordStatus).map(|p| header_of(map, p));
+            let mut header_index: BTreeMap<&str, usize> = BTreeMap::new();
+            for (i, c) in header.map_or(&[][..], |h| h.as_slice()).iter().enumerate() {
+                header_index.entry(c.as_str()).or_insert(i);
+            }
+            let index = index_rows(data, None, part_i);
             for &t in &transcribed {
-                let status_i = match (header, status_header) {
-                    (Some(h), Some(sh)) => {
-                        let want = format!("{}{WIDE_SEPARATOR}{sh}", t.characteristic());
-                        h.iter().position(|c| c.as_str() == neutralise(&want).as_ref())
-                    }
-                    _ => None,
-                };
+                let status_i = status_header.and_then(|sh| {
+                    let want = format!("{}{WIDE_SEPARATOR}{sh}", t.characteristic());
+                    header_index.get(neutralise(&want).as_ref()).copied()
+                });
+                let found = candidates(&index, None, "", part_i, t.part());
                 let marked = status_i.is_some()
                     && sw_i.is_some()
-                    && data.iter().any(|rec| {
-                        (part_i.is_none() || is(rec, part_i, t.part()))
-                            && is(rec, status_i, TRANSCRIBED)
-                            && is(rec, sw_i, t.get(Field::SourceSoftware).unwrap_or(""))
-                            && (ver_i.is_none() || is(rec, ver_i, t.get(Field::SourceVersion).unwrap_or("")))
-                    });
+                    && found.iter().any(|&rec| marks(rec, t, status_i, sw_i, ver_i));
                 if !marked {
                     return Err(unmarked(t));
                 }

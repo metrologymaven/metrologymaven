@@ -203,9 +203,13 @@ impl Dialect {
     /// One record: encoded fields joined by the delimiter, plus the line ending. A record
     /// of a single empty field is written `""`, so it is not an empty line. A record of no
     /// fields fails `malformed{empty_record}`, as [`Dialect::decode_record`] fails on the
-    /// empty line it would give, so encoding and decoding stay inverse.
+    /// empty line it would give, so encoding and decoding stay inverse. More than
+    /// [`MAX_FIELDS`] fields fail `malformed{too_many_fields}`, as decoding would.
     pub fn encode_record(&self, fields: &[&str]) -> Result<String, IoError> {
         let mut out = String::new();
+        if fields.len() > MAX_FIELDS {
+            return Err(malformed(0, "too_many_fields"));
+        }
         match fields {
             [] => return Err(malformed(0, "empty_record")),
             [""] => {

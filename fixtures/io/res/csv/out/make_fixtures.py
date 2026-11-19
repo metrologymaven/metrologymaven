@@ -91,6 +91,9 @@ def render(records, cmap):
     d = cmap["dialect"]
     delim, term, mark = DELIMS[d["delimiter"]], TERMS[d["line_ending"]], d["decimal_mark"]
     recs = sorted(records, key=lambda r: (r["characteristic_id"], r.get("part_id") or "", r["result_id"]))
+    # Maintainer decision: a map without record_status may not carry transcribed results.
+    if not any(c["field"] == "record_status" for c in cmap["columns"]):
+        assert not any(r.get("record_status") == "transcribed" for r in recs), "transcription_status_missing"
     out = []
     if cmap["layout"] == "long":
         slots = place(cmap["columns"])

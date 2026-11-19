@@ -16,17 +16,16 @@
     "sha256": "sha256:dcfa1833f51d1e7640148833d752b88835fb8f2ad7cca4873557fe00ee246bcb"
   },
   "semicolon": {
-    "bytes": 679,
+    "bytes": 808,
     "golden": "r.semicolon.golden.csv",
     "lossy": [
       "evaluation_basis",
       "uec",
       "decision_rule",
-      "record_status",
       "source_software"
     ],
     "rows": 13,
-    "sha256": "sha256:bfc6093ed1c0e1140a7a0cf7743b9b475be7ecea1bacb704ec179d18811d911e"
+    "sha256": "sha256:b191299e269544dedb2461f76f35e3b56ee5d31b47968684d892ffc48fa411d7"
   },
   "wide": {
     "bytes": 2751,
