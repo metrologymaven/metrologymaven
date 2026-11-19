@@ -1,0 +1,1 @@
+ALLOW-UNLISTED ext-c via fid-krn -> fid-num -> ext-c
