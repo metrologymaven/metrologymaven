@@ -1,0 +1,1 @@
+<q:QIFDocument xmlns:q="http://qifstandards.org/xsd/qif3"><Extension><Local xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="5" xsi:type="LocalType">kept</Local><q:Inner><q:Value>2.0</q:Value></q:Inner></Extension><q:Value>1.0</q:Value></q:QIFDocument>

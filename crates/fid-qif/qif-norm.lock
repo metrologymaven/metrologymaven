@@ -1,0 +1,5 @@
+# qif-norm rule-file lock (IO.QIF.NORM REQ-IO.QIF.NORM-002). Append-only: one line per
+# released version of qif-norm.toml, oldest first, `<version> <sha256 of the file with LF
+# line ends>`. Never edit an existing line. Digest computed independently with
+#   python -c "import hashlib;print(hashlib.sha256(open('crates/fid-qif/qif-norm.toml','rb').read().replace(b'\r\n',b'\n')).hexdigest())"
+qif-norm@1 sha256:258b0f78fdcb272bf965c41c04d2cfa0b84a1c9a2d01373ec048d349aedf1a0e

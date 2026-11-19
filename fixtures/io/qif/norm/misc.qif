@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?fixture-before root?>
+<!-- Exercises every qif-norm@1 rule; self-written, QIF-like. -->
+<doc:QIFDocument xmlns:doc="http://qifstandards.org/xsd/qif3" xmlns:z="urn:example:zeta" xmlns:a="urn:example:alpha" z:flag="yes" a:flag="also" xml:lang="en">
+  <doc:Note>a &amp; b &lt; c &gt; d<!-- split -->e<![CDATA[ <raw> & ]]>f&#xD;g</doc:Note>
+  <doc:Mixed>  <?inner data here?>  </doc:Mixed>
+  <z:Ext tab="x&#9;y" nl="p&#10;q" quote='say "hi"' a:x="1"/>
+  <doc:Value>  </doc:Value>
+  <doc:Count/>
+  <doc:Nominal xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:k="urn:example:kappa" xsi:type="k:Special" id=" 9 "> text <doc:Inner/> </doc:Nominal>
+  <plain attr="noNamespace">éü</plain>
+  <z:Other xmlns:z="urn:example:zeta2"/>
+</doc:QIFDocument>
+<?fixture-after root?>

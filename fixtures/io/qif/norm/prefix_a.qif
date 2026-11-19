@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<q:QIFDocument xmlns:q="http://qifstandards.org/xsd/qif3" xmlns:t="http://www.w3.org/2001/XMLSchema-instance" xmlns:unused="urn:example:unused">
+  <q:Nominal id="7" t:type="q:LengthNominalType">
+    <q:Value>3.250</q:Value>
+  </q:Nominal>
+</q:QIFDocument>

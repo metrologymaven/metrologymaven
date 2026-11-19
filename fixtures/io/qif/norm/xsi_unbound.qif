@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Self-written: xsi:type values whose prefix is not bound are kept, only collapsed. -->
+<QIFDocument xmlns="http://qifstandards.org/xsd/qif3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Nominal xsi:type="  zz:UnboundType  " id="1"/>
+  <Nominal xsi:type="two words" id="2"/>
+  <Nominal xmlns:zz="urn:example:bound" xsi:type="zz:BoundType" id="3"/>
+</QIFDocument>
