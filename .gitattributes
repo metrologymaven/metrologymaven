@@ -104,8 +104,13 @@ fixtures/flow/fixes/** -text
 fixtures/man/manifest-v1.json -text
 fixtures/man/manifest-v1-digests.txt -text
 fixtures/man/manifest/** -text
+# KRN.NUM.RED fixtures: bit patterns and a SHA-256 written by make_red_fixtures.py, which --check compares byte for byte.
+fixtures/num/red-*.txt -text
 # CORE.REG.VER.COMPAT fixtures: hand-labelled pairs and manifests carrying SHA-256 digests; never convert line endings.
 fixtures/core/reg/ver/compat/** -text
 fixtures/core/reg/manifest/** -text
 # ECO.REL.PROC.NOTES fixtures: hand-labelled release notes and reports hashed byte for byte.
 fixtures/rel/notes/** -text
+# GEO.TYPES fixtures: digest vectors pin a byte layout and are compared byte for byte by
+# tools/fixtures/geo_digest_vectors.py --check; never convert line endings.
+fixtures/geo/types/** -text
