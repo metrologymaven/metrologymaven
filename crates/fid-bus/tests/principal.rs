@@ -974,9 +974,11 @@ fn unicode_tables_are_sorted_and_pinned_to_16_0() {
 /// A presence provider that, while the person is being asked, runs `hook` against the
 /// shared table. That compiles and runs only because no table borrow is held during the
 /// prompt.
+type Hook<'a> = Box<dyn FnOnce(&mut SessionTable) + 'a>;
+
 struct DuringPrompt<'a> {
     table: &'a RefCell<SessionTable>,
-    hook: RefCell<Option<Box<dyn FnOnce(&mut SessionTable) + 'a>>>,
+    hook: RefCell<Option<Hook<'a>>>,
     answer: FakePresence,
 }
 
@@ -991,7 +993,7 @@ impl HumanPresence for DuringPrompt<'_> {
     fn confirm(&self, req: &UpgradeRequest, deadline: Duration) -> PresenceOutcome {
         let hook = self.hook.borrow_mut().take();
         if let Some(hook) = hook {
-            hook(&mut *self.table.borrow_mut());
+            hook(&mut self.table.borrow_mut());
         }
         self.answer.confirm(req, deadline)
     }
