@@ -24,11 +24,8 @@ fn check_fixture(name: &str) {
 /// Runs the binary on a fixture: (exit code, stdout lines).
 fn cli(name: &str) -> (i32, Vec<String>) {
     let ws = fixtures().join(name);
-    let out = Command::new(env!("CARGO_BIN_EXE_fid-xtask"))
-        .args(["kernel-allow", "--workspace"])
-        .arg(&ws)
-        .output()
-        .unwrap();
+    let out =
+        Command::new(env!("CARGO_BIN_EXE_fid-xtask")).args(["kernel-allow", "--workspace"]).arg(&ws).output().unwrap();
     (out.status.code().unwrap(), String::from_utf8(out.stdout).unwrap().lines().map(String::from).collect())
 }
 

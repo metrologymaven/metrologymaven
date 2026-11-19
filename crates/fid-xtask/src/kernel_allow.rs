@@ -532,8 +532,7 @@ pub fn run(workspace: &Path, map_file: &Path, allowlist: &Path) -> Result<Report
         Ok(e) => e,
         Err(findings) => return Ok(Report { findings, warnings: Vec::new() }),
     };
-    let map_text =
-        std::fs::read_to_string(map_file).map_err(|e| format!("LAYER-MAP: {}: {e}", map_file.display()))?;
+    let map_text = std::fs::read_to_string(map_file).map_err(|e| format!("LAYER-MAP: {}: {e}", map_file.display()))?;
     let map = parse_layer_map(&map_text)?;
     let g = Graph::load_with(workspace, true)?;
     Ok(check(&entries, &map, &g))
@@ -593,8 +592,8 @@ mod tests {
         assert_eq!(parse_allowlist(ok).unwrap().len(), 1);
         let errs = parse_allowlist(&format!("{ok}{ok}")).unwrap_err();
         assert_eq!(errs, vec!["ALLOW-SCHEMA entry 2: a is listed twice"]);
-        let errs = parse_allowlist("[[allow]]\nname = \"a\"\nversion = \"nope\"\nreason = \" \"\nextra = 1\n")
-            .unwrap_err();
+        let errs =
+            parse_allowlist("[[allow]]\nname = \"a\"\nversion = \"nope\"\nreason = \" \"\nextra = 1\n").unwrap_err();
         assert_eq!(
             errs,
             vec![
