@@ -130,8 +130,8 @@ fn ac1_cli_and_mcp_give_the_same_result_and_event() {
     let mut m1 = plan();
     let mut m2 = plan();
     let c = cli(&mut m1, H, &AC1).unwrap();
-    let params = br#"{"label":"A","feature":"f1","faces":["face:12"],"type":"plane"}"#;
-    let p = invoke_mcp(&mut m2, H, &pat(), DEFINE_DATUM_MCP, params).unwrap();
+    let params = exp("ac1_params");
+    let p = invoke_mcp(&mut m2, H, &pat(), DEFINE_DATUM_MCP, params.as_bytes()).unwrap();
     assert_eq!(c, p);
     assert_eq!(snapshot(&m1), snapshot(&m2));
 }
@@ -658,23 +658,23 @@ fn cli_and_mcp_refuse_malformed_calls() {
     assert_eq!(j(b"[]"), "bad_params{params is not an object}");
     assert_eq!(j(br#"{"label":"A","label":"B"}"#), "bad_params{duplicate key}");
     assert_eq!(
-        j(br#"{"label":"A","feature":"f1","faces":["face:12"],"type":"plane","x":1}"#),
+        j(br#"{"label":"A","feature":"f1","faces":["face:12"],"feature_type":"plane","x":1}"#),
         "bad_params{unknown parameter}"
     );
     assert_eq!(
-        j(br#"{"label":1,"feature":"f1","faces":["face:12"],"type":"plane"}"#),
+        j(br#"{"label":1,"feature":"f1","faces":["face:12"],"feature_type":"plane"}"#),
         "bad_params{parameter is not a string}"
     );
     assert_eq!(
-        j(br#"{"label":"A","feature":"f1","faces":"face:12","type":"plane"}"#),
+        j(br#"{"label":"A","feature":"f1","faces":"face:12","feature_type":"plane"}"#),
         "bad_params{faces is not a string array}"
     );
     assert_eq!(
-        j(br#"{"label":"A","feature":"f1","faces":["face:12"],"type":"plane","replace":"yes"}"#),
+        j(br#"{"label":"A","feature":"f1","faces":["face:12"],"feature_type":"plane","replace":"yes"}"#),
         "bad_params{parameter is not a boolean}"
     );
     assert_eq!(
-        j(br#"{"label":"A","feature":"f1","faces":["face:12"],"type":"plane","targets":[{"id":"A1"}]}"#),
+        j(br#"{"label":"A","feature":"f1","faces":["face:12"],"feature_type":"plane","targets":[{"id":"A1"}]}"#),
         "bad_params{target is not {id, kind, geometry}}"
     );
     assert_eq!(j(br#"{"a":{"b":{"c":{}}}}"#), "bad_params{params too large or too deep}");
@@ -685,7 +685,7 @@ fn cli_and_mcp_refuse_malformed_calls() {
         H,
         &p,
         DEFINE_DATUM_MCP,
-        br#"{"label":"A","feature":"f1","faces":["face:12"],"type":"plane","targets":[{"id":"A1","kind":"point","geometry":"pt:1"}],"dry_run":true}"#,
+        br#"{"label":"A","feature":"f1","faces":["face:12"],"feature_type":"plane","targets":[{"id":"A1","kind":"point","geometry":"pt:1"}],"dry_run":true}"#,
     )
     .unwrap();
     assert!(d.dry_run());
@@ -700,4 +700,137 @@ fn command_definition_is_w2_d0_on_cli_and_mcp() {
     assert_eq!(d.side_effect.as_str(), "W2");
     assert_eq!(d.determinism.as_str(), "D0");
     assert_eq!(d.effects, [DEFINE_COMMAND]);
+}
+
+// ------------------------------------------------------------------ published schemas
+
+/// A checker for the JSON Schema subset the command definition uses. An unknown keyword or
+/// pattern fails the test, so a schema change must extend this checker on purpose.
+fn conforms(schema: &CValue, v: &CValue, at: &str) -> Result<(), String> {
+    let CValue::Obj(s) = schema else { return Err(format!("{at}: schema is not an object")) };
+    for (k, kv) in s {
+        let ok = match (k.as_str(), kv) {
+            ("description", _) => true,
+            ("type", CValue::Str(t)) => matches!(
+                (t.as_str(), v),
+                ("object", CValue::Obj(_))
+                    | ("array", CValue::Arr(_))
+                    | ("string", CValue::Str(_))
+                    | ("boolean", CValue::Bool(_))
+                    | ("null", CValue::Null)
+            ),
+            ("enum", CValue::Arr(e)) => e.contains(v),
+            ("pattern", CValue::Str(p)) => {
+                let CValue::Str(x) = v else { return Err(format!("{at}: pattern on a non-string")) };
+                matches_pattern(p, x)
+            }
+            ("required", CValue::Arr(r)) => {
+                let CValue::Obj(o) = v else { return Err(format!("{at}: required on a non-object")) };
+                r.iter().all(|k| matches!(k, CValue::Str(k) if o.contains_key(k)))
+            }
+            ("additionalProperties", CValue::Bool(false)) => {
+                let (CValue::Obj(o), Some(CValue::Obj(props))) = (v, s.get("properties")) else {
+                    return Err(format!("{at}: additionalProperties without properties"));
+                };
+                o.keys().all(|k| props.contains_key(k))
+            }
+            ("properties", CValue::Obj(props)) => {
+                if let CValue::Obj(o) = v {
+                    for (pk, ps) in props {
+                        if let Some(pv) = o.get(pk) {
+                            conforms(ps, pv, &format!("{at}/{pk}"))?;
+                        }
+                    }
+                }
+                true
+            }
+            ("items", item) => {
+                if let CValue::Arr(a) = v {
+                    for (i, x) in a.iter().enumerate() {
+                        conforms(item, x, &format!("{at}/{i}"))?;
+                    }
+                }
+                true
+            }
+            ("minItems", CValue::Num(n)) => matches!(v, CValue::Arr(a) if a.len() as f64 >= *n),
+            ("maxItems", CValue::Num(n)) => matches!(v, CValue::Arr(a) if a.len() as f64 <= *n),
+            ("uniqueItems", CValue::Bool(true)) => {
+                matches!(v, CValue::Arr(a) if a.iter().enumerate().all(|(i, x)| !a[..i].contains(x)))
+            }
+            ("anyOf", CValue::Arr(alts)) => alts.iter().any(|alt| conforms(alt, v, at).is_ok()),
+            (other, _) => return Err(format!("{at}: keyword {other} not supported by the test checker")),
+        };
+        if !ok {
+            return Err(format!("{at}: fails {k}"));
+        }
+    }
+    Ok(())
+}
+
+/// The three patterns the definition uses, matched by hand (no regex engine in the workspace).
+fn matches_pattern(p: &str, x: &str) -> bool {
+    let b = x.as_bytes();
+    match p {
+        "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" => {
+            !b.is_empty()
+                && b.len() <= 128
+                && b[0].is_ascii_alphanumeric()
+                && b.iter().all(|c| c.is_ascii_alphanumeric() || b"._:-".contains(c))
+        }
+        "^[A-Z]{1,3}$" => (1..=3).contains(&b.len()) && b.iter().all(u8::is_ascii_uppercase),
+        "^[A-Z]{1,3}[1-9][0-9]?$" => {
+            let n = b.iter().take_while(|c| c.is_ascii_uppercase()).count();
+            let d = &b[n..];
+            (1..=3).contains(&n)
+                && (1..=2).contains(&d.len())
+                && (b'1'..=b'9').contains(&d[0])
+                && d.iter().all(u8::is_ascii_digit)
+        }
+        other => panic!("pattern {other} not supported by the test checker"),
+    }
+}
+
+fn parsed(text: &str) -> CValue {
+    fid_canon::parse(text.as_bytes()).unwrap()
+}
+
+#[test]
+fn results_and_ac_inputs_conform_to_the_published_schemas() {
+    let def = command_def().unwrap();
+    // The schemas are valid in the registry's keyword vocabulary.
+    let geo = fid_registry::Catalogue::geo_frame().unwrap();
+    assert_eq!(fid_registry::check_schema(&def.params_schema, &geo), vec![]);
+    assert_eq!(fid_registry::check_schema(&def.result_schema, &geo), vec![]);
+
+    // AC inputs (from the Python reference) against params_schema.
+    for key in ["ac1_params", "ac3_params"] {
+        conforms(&def.params_schema, &parsed(&exp(key)), key).unwrap();
+    }
+    // AC results against result_schema: the AC-1 result, and the --replace result whose
+    // `replaced` holds the old definition.
+    for key in ["ac1_result", "ac3_result"] {
+        conforms(&def.result_schema, &parsed(&exp(key)), key).unwrap();
+    }
+    // The Rust results are those bytes, through both surfaces.
+    let mut m = plan();
+    let r1 = invoke_mcp(&mut m, H, &pat(), DEFINE_DATUM_MCP, exp("ac1_params").as_bytes()).unwrap();
+    assert_eq!(String::from_utf8(r1.to_json_bytes().unwrap()).unwrap(), exp("ac1_result"));
+    let r3 = invoke_mcp(&mut m, H, &pat(), DEFINE_DATUM_MCP, exp("ac3_params").as_bytes()).unwrap();
+    assert_eq!(String::from_utf8(r3.to_json_bytes().unwrap()).unwrap(), exp("ac3_result"));
+    assert_eq!(ev(&r3), exp("ac3_event"));
+    let mut m = plan();
+    cli(&mut m, H, &AC1).unwrap();
+    let c3 = cli(&mut m, H, &AC3).unwrap();
+    assert_eq!(String::from_utf8(c3.to_json_bytes().unwrap()).unwrap(), exp("ac3_result"));
+    // Every definition the command writes also validates as the definition fields of a
+    // parameter object (one key vocabulary for input and output).
+    let CValue::Obj(res) = parsed(&exp("ac3_result")) else { panic!("result") };
+    conforms(&def.params_schema, &res["datum"], "datum as params").unwrap();
+    // The checker is not vacuous: the old key name and a missing field are refused.
+    let old_key = exp("ac1_params").replace("feature_type", "type");
+    assert!(conforms(&def.params_schema, &parsed(&old_key), "old").is_err());
+    let bad_result = exp("ac1_result").replace(r#""feature_type":"plane","#, "");
+    assert!(conforms(&def.result_schema, &parsed(&bad_result), "bad").is_err());
+    let bad_target = exp("ac3_params").replace(r#""id":"A1""#, r#""id":"A0""#);
+    assert!(conforms(&def.params_schema, &parsed(&bad_target), "bad").is_err());
 }

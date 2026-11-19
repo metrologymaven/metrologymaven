@@ -6,8 +6,8 @@ Writes, next to this script:
 - block_plan.fidproj: a synthetic block plan with three measured planes (f1, f2, f3, one
   nominal face each) and a few target geometries, no datums declared;
 - datum_profile.json: a synthetic defaults profile that sets gdt.datum.label_pattern;
-- expected.json: the canonical event and result bytes the acceptance criteria expect,
-  derived here from the leaf's written rules (not by running the Rust code).
+- expected.json: the canonical event, result and MCP parameter bytes the acceptance criteria
+  expect, derived here from the leaf's written rules (not by running the Rust code).
 
 Canonical JSON (RFC 8785) for this data: keys sorted, no whitespace, strings only (the
 files hold no numbers), ASCII only, so json.dumps with sort_keys and compact separators is
@@ -82,6 +82,23 @@ def main():
         "A", "f1", ["face:12"], "plane", [("A2", "point", "pt:2"), ("A1", "point", "pt:1"), ("A3", "area", "ar:1")]
     )
     ac3_event = event("human", True, a1, a3)
+    ac3_result = {"branch": "working", "datum": a3, "dry_run": False, "plan": "block-1", "replaced": a1}
+
+    # The same calls as MCP parameter objects. The parameter keys equal the definition keys
+    # (label, feature, faces, feature_type, targets), as pinned in the leaf's Design.
+    ac1_params = {"label": "A", "feature": "f1", "faces": ["face:12"], "feature_type": "plane"}
+    ac3_params = {
+        "label": "A",
+        "feature": "f1",
+        "faces": ["face:12"],
+        "feature_type": "plane",
+        "targets": [
+            {"id": "A2", "kind": "point", "geometry": "pt:2"},
+            {"id": "A1", "kind": "point", "geometry": "pt:1"},
+            {"id": "A3", "kind": "area", "geometry": "ar:1"},
+        ],
+        "replace": True,
+    }
 
     # An agent declaring B on f2 with a point target: agent branch.
     b = definition("B", "f2", ["face:13"], "plane", [("B1", "point", "pt:3")])
@@ -105,6 +122,9 @@ def main():
         "ac1_event": canon(ac1_event),
         "ac1_result": canon(ac1_result),
         "ac3_event": canon(ac3_event),
+        "ac3_result": canon(ac3_result),
+        "ac1_params": canon(ac1_params),
+        "ac3_params": canon(ac3_params),
         "agent_event": canon(agent_event),
         "plan_after_ac3": canon(after),
         "plan_canonical": canon(PLAN),

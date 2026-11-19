@@ -7,7 +7,7 @@
 //! CLI: `fid gdt define-datum --label A --feature f1 --faces face:12[,face:13]
 //! --type plane [--target A1,point,pt:1].. [--replace] [--dry-run] [--json]`.
 //!
-//! MCP parameters: `{"label": "A", "feature": "f1", "faces": ["face:12"], "type": "plane",
+//! MCP parameters: `{"label": "A", "feature": "f1", "faces": ["face:12"], "feature_type": "plane",
 //! "targets": [{"id": "A1", "kind": "point", "geometry": "pt:1"}], "replace": false,
 //! "dry_run": false}`; `targets`, `replace` and `dry_run` are optional.
 
@@ -31,7 +31,7 @@ const MAX_PARAMS_DEPTH: usize = 3;
 const MAX_CLI_ARGS: usize = 2 * MAX_TARGETS + 16;
 const LIFECYCLE_SINCE: &str = "2026-11-19";
 const ID_PATTERN: &str = "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$";
-const PARAMS: [&str; 7] = ["dry_run", "faces", "feature", "label", "replace", "targets", "type"];
+const PARAMS: [&str; 7] = ["dry_run", "faces", "feature", "feature_type", "label", "replace", "targets"];
 
 fn bad(reason: &'static str) -> DatumError {
     DatumError::BadParams { reason }
@@ -97,7 +97,7 @@ fn run(
         label: string(o, "label")?,
         feature: string(o, "feature")?,
         faces: &faces,
-        feature_type: string(o, "type")?,
+        feature_type: string(o, "feature_type")?,
         targets: &targets,
         replace: flag(o, "replace")?,
     };
@@ -178,7 +178,7 @@ pub fn invoke_cli(
             "--label" => "label",
             "--feature" => "feature",
             "--faces" => "faces",
-            "--type" => "type",
+            "--type" => "feature_type",
             s if s.starts_with('-') => return Err(bad("unknown option")),
             _ => return Err(bad("unexpected argument")),
         };
@@ -244,7 +244,7 @@ fn definition_schema() -> CValue {
         ("label", obj([("type", text("string")), ("pattern", text("^[A-Z]{1,3}$"))])),
         ("feature", id_schema("The measured feature the datum is bound to.")),
         ("faces", faces),
-        ("type", obj([("type", text("string")), ("enum", strs(&["cylinder", "plane"]))])),
+        ("feature_type", obj([("type", text("string")), ("enum", strs(&["cylinder", "plane"]))])),
         ("targets", targets),
     ])
 }
@@ -261,7 +261,7 @@ pub fn command_def() -> Result<CommandDef, DefError> {
     let def = obj([
         ("type", text("object")),
         ("additionalProperties", CValue::Bool(false)),
-        ("required", strs(&["faces", "feature", "label", "type"])),
+        ("required", strs(&["faces", "feature", "feature_type", "label", "targets"])),
         ("properties", definition_schema()),
     ]);
     CommandDef::from_value(obj([
@@ -280,7 +280,7 @@ pub fn command_def() -> Result<CommandDef, DefError> {
             obj([
                 ("type", text("object")),
                 ("additionalProperties", CValue::Bool(false)),
-                ("required", strs(&["faces", "feature", "label", "type"])),
+                ("required", strs(&["faces", "feature", "feature_type", "label"])),
                 ("properties", CValue::Obj(params)),
             ]),
         ),
