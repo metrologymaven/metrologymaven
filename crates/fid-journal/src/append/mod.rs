@@ -615,7 +615,12 @@ impl Journal {
 
     /// One request inside the batch transaction. Outer `Err`: abort the batch. Inner
     /// `Err`: this request is refused and left no row.
-    fn one(&self, db: &Database, tail: Option<&Tail>, req: &AppendRequest) -> Result<Result<Tail, JournalError>, JournalError> {
+    fn one(
+        &self,
+        db: &Database,
+        tail: Option<&Tail>,
+        req: &AppendRequest,
+    ) -> Result<Result<Tail, JournalError>, JournalError> {
         let conn = db.connection();
         let (seq, prev) = match tail {
             None => (FIRST_SEQ, GENESIS_PREV),
@@ -638,7 +643,10 @@ impl Journal {
                     ))))
                 }
                 Some(Ordering::Less) => {
-                    return Ok(Err(JournalError::TimeRegressed { head: t.utc.clone(), entry: req.draft.time.utc.clone() }))
+                    return Ok(Err(JournalError::TimeRegressed {
+                        head: t.utc.clone(),
+                        entry: req.draft.time.utc.clone(),
+                    }))
                 }
                 Some(_) => {}
             }

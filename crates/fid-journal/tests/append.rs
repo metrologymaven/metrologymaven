@@ -36,8 +36,7 @@ impl TempDir {
     fn new(tag: &str) -> TempDir {
         static N: AtomicU32 = AtomicU32::new(0);
         let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().subsec_nanos();
-        let name =
-            format!("fid-jrn-{tag}-{}-{nanos}-{}", std::process::id(), N.fetch_add(1, AtomicOrdering::SeqCst));
+        let name = format!("fid-jrn-{tag}-{}-{nanos}-{}", std::process::id(), N.fetch_add(1, AtomicOrdering::SeqCst));
         let p = std::path::absolute(std::env::temp_dir().join(name)).unwrap();
         std::fs::create_dir_all(&p).unwrap();
         TempDir(p)
@@ -153,18 +152,23 @@ fn rows(root: &Path) -> Vec<Row> {
     let mut st = c.prepare("SELECT seq, hash, prev_hash, stream, header FROM entries ORDER BY seq").unwrap();
     let mut out: Vec<Row> = st
         .query_map([], |r| {
-            Ok(Row { seq: r.get(0)?, hash: r.get(1)?, prev: r.get(2)?, stream: r.get(3)?, header: r.get(4)?, refs: vec![] })
+            Ok(Row {
+                seq: r.get(0)?,
+                hash: r.get(1)?,
+                prev: r.get(2)?,
+                stream: r.get(3)?,
+                header: r.get(4)?,
+                refs: vec![],
+            })
         })
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    let mut refs = c.prepare("SELECT role, digest FROM entry_blobs WHERE entry_hash = ?1 ORDER BY role, digest").unwrap();
+    let mut refs =
+        c.prepare("SELECT role, digest FROM entry_blobs WHERE entry_hash = ?1 ORDER BY role, digest").unwrap();
     for row in &mut out {
-        row.refs = refs
-            .query_map([row.hash.as_str()], |r| Ok((r.get(0)?, r.get(1)?)))
-            .unwrap()
-            .map(Result::unwrap)
-            .collect();
+        row.refs =
+            refs.query_map([row.hash.as_str()], |r| Ok((r.get(0)?, r.get(1)?))).unwrap().map(Result::unwrap).collect();
     }
     let orphans: i64 = c
         .query_row("SELECT count(*) FROM entry_blobs WHERE entry_hash NOT IN (SELECT hash FROM entries)", [], |r| {
@@ -514,7 +518,8 @@ fn time_order_fixture() {
         let order = utc_order(st(c, "entry"), st(c, "head")).unwrap();
         assert_eq!(order != Ordering::Less, accept, "{}", st(c, "name"));
     }
-    for bad in ["2026-11-19T10:00:00", "2026-11-19T10:00:00.Z", "2026-11-19T10:00:00.1234567890Z", "2026-11-19 10:00:00Z"]
+    for bad in
+        ["2026-11-19T10:00:00", "2026-11-19T10:00:00.Z", "2026-11-19T10:00:00.1234567890Z", "2026-11-19 10:00:00Z"]
     {
         assert_eq!(utc_order(bad, "2026-11-19T10:00:00Z"), None, "{bad}");
     }
@@ -626,7 +631,7 @@ fn error_codes_are_stable() {
         assert_eq!(e.code(), code);
         assert!(e.to_string().starts_with(code));
     }
-    assert!(MAX_BATCH <= MAX_QUEUE);
+    const { assert!(MAX_BATCH <= MAX_QUEUE) };
 }
 
 // ------------------------------------------------------------------ the bus seam
