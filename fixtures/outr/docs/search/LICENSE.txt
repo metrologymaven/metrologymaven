@@ -1,0 +1,4 @@
+Synthetic test fixtures for spec node OUTR.DOCS.SEARCH.INDEX (CC-BY-4.0).
+All text is project-authored. The edition pages are hand-written stand-ins for docs-build and
+ref-render output (neither docs-build nor this fixture depends on the other). The expected index
+tiny/expected-search-index.js is hand-labelled from the spec rules, not produced by the Rust code.

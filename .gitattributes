@@ -41,6 +41,8 @@ fixtures/core/reg/def/guide/** -text
 fixtures/io/qif/norm/** -text
 crates/fid-qif/qif-norm.toml -text
 crates/fid-qif/qif-norm.lock -text
+# OUTR.DOCS.SEARCH.INDEX fixtures: hand-labelled index compared byte for byte.
+fixtures/outr/docs/search/** -text
 # PLAT.MATRIX.PAGE: hand-written escape fixture, reference-rendered golden pages and the generated
 # project page are compared byte for byte (the page header carries the matrix file's SHA-256).
 fixtures/plat/matrix/escape.toml -text
