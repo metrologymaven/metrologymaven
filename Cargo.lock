@@ -1072,6 +1072,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-surface-gen"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-surface",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-testkit"
 version = "0.0.1"
 dependencies = [
