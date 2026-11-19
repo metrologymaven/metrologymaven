@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-geo-cad]
+built_pr: 281
 satisfies: [REQ-GEO.CAD.TOPO-002, REQ-GEO.CAD.TOPO-006]
 covers: []
 depends_on: [GEO.CAD.TOPO.MODEL]

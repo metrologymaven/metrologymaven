@@ -1,0 +1,182 @@
+{
+ "description": "sphere as two lunes sharing two meridian edges and both pole vertices",
+ "license": "CC-BY-4.0",
+ "body_id": "1e051e051e051e051e051e051e051e05",
+ "vertices": [
+  {
+   "point": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "label": "#south"
+  },
+  {
+   "point": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "label": "#north"
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 1,
+   "range": [
+    0.0,
+    3.141592653589793
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "radius": 1.0
+   },
+   "label": "#m_east"
+  },
+  {
+   "start": 0,
+   "end": 1,
+   "range": [
+    0.0,
+    3.141592653589793
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "radius": 1.0
+   },
+   "label": "#m_west"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null
+  },
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": null
+  },
+  {
+   "edge": 1,
+   "sense": "same",
+   "pcurve": null
+  },
+  {
+   "edge": 0,
+   "sense": "reversed",
+   "pcurve": null
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0,
+    1
+   ],
+   "outer": true
+  },
+  {
+   "coedges": [
+    2,
+    3
+   ],
+   "outer": true
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "sphere",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 1.0
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "#lune_a"
+  },
+  {
+   "surface": {
+    "type": "sphere",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 1.0
+   },
+   "sense": "same",
+   "loops": [
+    1
+   ],
+   "label": "#lune_b"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0,
+    1
+   ],
+   "closed": true
+  }
+ ]
+}
