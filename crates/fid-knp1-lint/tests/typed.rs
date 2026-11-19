@@ -14,6 +14,7 @@ use fid_knp1_lint::typed::{
     parse_config, parse_messages, prune_cache_dirs, run, target_findings, unresolved_allowed, CrateRef, ItemKind,
     MapCtx, Options, TypedErrorCode, CACHE_STAMP, DEFAULT_TARGETS, KEEP_CACHE_DIRS, TYPED_TABLE, TYPED_TABLE_LEN,
 };
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 fn fix(rel: &str) -> PathBuf {
@@ -54,7 +55,7 @@ fn crate_ref(dir: &str) -> CrateRef {
 }
 
 fn ctx(dirs: &[&str]) -> MapCtx {
-    MapCtx { cwd: ws(), crates: dirs.iter().map(|d| crate_ref(d)).collect() }
+    MapCtx { cwd: ws(), crates: dirs.iter().map(|d| crate_ref(d)).collect(), scratch: None }
 }
 
 /// The message fixture with `@WS@` replaced by the absolute workspace path.
@@ -188,6 +189,86 @@ fn compile_errors_in_driver_wording_are_build_findings_not_driver_errors() {
     let e = parse_messages(&messages("messages-wrong-kind.jsonl"), "x86_64-unknown-linux-gnu", &c).unwrap_err();
     assert_eq!(e.code, TypedErrorCode::Driver, "{e}");
     assert!(e.message.contains("knp1_wrong_kind"), "{e}");
+}
+
+#[test]
+fn driver_wording_without_code_but_with_an_in_crate_span_is_not_a_driver_warning() {
+    let c = ctx(&["macro"]);
+    let p = parse_messages(&messages("messages-nocode-incrate.jsonl"), "x86_64-unknown-linux-gnu", &c).unwrap();
+    assert!(p.unresolved_allowed.is_empty());
+    assert_eq!(p.errors.keys().cloned().collect::<Vec<_>>(), ["typed-macro"]);
+    let all = target_findings(&p, &c, "x86_64-unknown-linux-gnu", None);
+    assert_eq!(lines(&all), ["KNP1-TYPED-BUILD typed-macro Cargo.toml:1"]);
+}
+
+/// A codeless "does not refer to" warning whose only span is `file`.
+fn config_warning(manifest: &Path, file: &Path) -> Vec<u8> {
+    let j = |p: &Path| p.to_string_lossy().replace('\\', "/");
+    format!(
+        "{{\"reason\":\"compiler-message\",\"manifest_path\":\"{}\",\"message\":{{\"message\":\"`std::knp1_scratch` does not refer to an existing function\",\"code\":null,\"level\":\"warning\",\"spans\":[{{\"file_name\":\"{}\",\"line_start\":1,\"column_start\":1,\"is_primary\":true,\"expansion\":null}}],\"children\":[]}}}}\n",
+        j(manifest),
+        j(file)
+    )
+    .into_bytes()
+}
+
+#[test]
+fn spans_under_the_scratch_root_never_count_as_inside_a_crate() {
+    // A crate whose root holds the scratch root (which check_run refuses; see below): the
+    // generated clippy.toml lies under the crate root, but the warning still fails the run.
+    let root = scratch("typed-scratch-span");
+    let _ = std::fs::remove_dir_all(&root);
+    let krate = root.join("k");
+    let conf = krate.join("scratch").join("cfg-0000000000000000").join("clippy-conf");
+    std::fs::create_dir_all(&conf).unwrap();
+    std::fs::write(krate.join("Cargo.toml"), b"").unwrap();
+    std::fs::write(conf.join("clippy.toml"), b"").unwrap();
+    let krate = std::fs::canonicalize(&krate).unwrap();
+    let stream = config_warning(&krate.join("Cargo.toml"), &conf.join("clippy.toml"));
+    let cr = CrateRef { name: "k".into(), version: "0.0.1".into(), root: krate.clone() };
+    let mut c = MapCtx { cwd: krate.clone(), crates: vec![cr], scratch: Some(krate.join("scratch")) };
+    let e = parse_messages(&stream, "x86_64-unknown-linux-gnu", &c).unwrap_err();
+    assert_eq!(e.code, TypedErrorCode::Driver, "{e}");
+    assert!(e.message.contains("knp1_scratch"), "{e}");
+    // Without the scratch root the span would count as crate code and the warning would be lost.
+    c.scratch = None;
+    assert!(parse_messages(&stream, "x86_64-unknown-linux-gnu", &c).is_ok());
+}
+
+#[test]
+fn a_scratch_root_inside_a_linted_crate_is_refused() {
+    let config = fix("ws/knp1-lint.toml");
+    let text = String::from_utf8(read(&config)).unwrap();
+    let cfg = parse_config(&text).unwrap();
+    let syn_cfg = syn_scan::parse_config(&text).unwrap();
+    let gcfg = graph::load_config(&config).unwrap();
+    let closure = graph::compute_closure(&gcfg).unwrap();
+    let inside = ws().join("clean").join("knp1-scratch-refused").join("deeper");
+    let opts = Options { cargo: PathBuf::from("definitely-not-a-cargo-binary-knp1"), scratch: inside.clone() };
+    let e = check_run(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts).unwrap_err();
+    assert_eq!(e.code, TypedErrorCode::ConfigInvalid, "{e}");
+    assert!(e.message.contains("typed-clean"), "{e}");
+    // Refused before anything is written (and before the driver is looked for).
+    assert!(!ws().join("clean").join("knp1-scratch-refused").exists());
+    // Also through `..`.
+    let dotted = ws().join("forms").join("..").join("clean").join("src").join("new");
+    let opts = Options { cargo: PathBuf::from("definitely-not-a-cargo-binary-knp1"), scratch: dotted };
+    let e = check_run(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts).unwrap_err();
+    assert_eq!(e.code, TypedErrorCode::ConfigInvalid, "{e}");
+}
+
+#[test]
+fn too_many_spans_on_a_driver_warning_fail_closed() {
+    let span = "{\"file_name\":\"/elsewhere/x.rs\",\"line_start\":1,\"column_start\":1,\"is_primary\":false,\"expansion\":null}";
+    let spans = vec![span; 5000].join(",");
+    let ws = ws().to_string_lossy().replace('\\', "/");
+    let ws = ws.strip_prefix("//?/").unwrap_or(&ws).to_string();
+    let stream = format!(
+        "{{\"reason\":\"compiler-message\",\"manifest_path\":\"{ws}/macro/Cargo.toml\",\"message\":{{\"message\":\"`f64::sin` does not refer to an existing function\",\"code\":null,\"level\":\"warning\",\"spans\":[{spans}],\"children\":[]}}}}\n"
+    );
+    let e = parse_messages(stream.as_bytes(), "x86_64-unknown-linux-gnu", &ctx(&["macro"])).unwrap_err();
+    assert_eq!(e.code, TypedErrorCode::Driver, "{e}");
+    assert!(e.message.contains("more than 4096 spans:"), "{e}");
 }
 
 /// A disallowed-method diagnostic whose primary span (line 5) sits under `levels` nested
@@ -367,6 +448,33 @@ fn canary_uses_every_table_row_once() {
     assert_eq!(canary_rows(), want);
 }
 
+#[test]
+fn every_table_row_is_guarded_by_some_lint() {
+    // Each canary row line needs an expected hit with its rule: from the driver on some target,
+    // or from the syntax scan (`syn`). No row may be left unguarded.
+    let src = String::from_utf8(read(&fix("canary/src/lib.rs"))).unwrap();
+    let hits = text_lines(&fix("canary/expected-hits.txt"));
+    let mut guards: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for (n, l) in src.lines().enumerate() {
+        let Some((_, row)) = l.split_once(" // row ") else { continue };
+        let w: Vec<&str> = row.split_whitespace().collect();
+        let (rule, kind, line) = (w[1], w[2], (n + 1).to_string());
+        let g: Vec<String> = hits
+            .iter()
+            .filter_map(|h| {
+                let x: Vec<&str> = h.split_whitespace().collect();
+                (x[1] == rule && x[2] == kind && x[3] == line).then(|| x[0].to_string())
+            })
+            .collect();
+        assert!(!g.is_empty(), "row {row} (line {line}) is guarded by no lint");
+        guards.insert(w[3].to_string(), g);
+    }
+    assert_eq!(guards.len(), TYPED_TABLE_LEN);
+    // The one row clippy cannot see is guarded by the syntax scan only.
+    assert_eq!(guards["std::include"], ["syn"]);
+    assert_eq!(guards.values().filter(|g| g.iter().any(|t| t == "syn")).count(), 1);
+}
+
 /// The kind a disallowed-item finding's message names (`method`, `type` or `macro`).
 fn kind_of(message: &str) -> &'static str {
     ["method", "type", "macro"].into_iter().find(|k| message.contains(&format!("disallowed {k} "))).unwrap_or("?")
@@ -397,7 +505,9 @@ fn canary_hits_every_table_row_on_every_target() {
         }
     }
     got.sort();
-    let mut want = text_lines(&fix("canary/expected-hits.txt"));
+    // `syn …` rows are guarded by KRN.NUM.LINT.SYN (tests/syn.rs), not by the driver.
+    let mut want: Vec<String> =
+        text_lines(&fix("canary/expected-hits.txt")).into_iter().filter(|l| !l.starts_with("syn ")).collect();
     want.sort();
     let missing: Vec<&String> = want.iter().filter(|w| !got.contains(w)).collect();
     let extra: Vec<&String> = got.iter().filter(|g| !want.contains(g)).collect();

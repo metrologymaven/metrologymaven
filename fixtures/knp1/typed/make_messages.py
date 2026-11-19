@@ -88,6 +88,11 @@ OUTPUTS = {
         msg(f"{WS}/e0277/Cargo.toml", "aborting due to 1 previous error", None, "error", []),
         {"reason": "build-finished", "success": False},
     ]),
+    # #288 review: the driver wording with no code but a span inside a linted crate is not a
+    # driver configuration warning; as an error it is a compile error of that crate.
+    "messages-nocode-incrate.jsonl": line(msg(f"{WS}/macro/Cargo.toml",
+                                              "expected a function, found struct `std::knp1_in_crate`", None,
+                                              "error", [span("macro/src/lib.rs", 20, 5)])) + "\n",
     "messages-wrong-kind.jsonl": line(msg(f"{WS}/macro/Cargo.toml",
                                           "expected a function, found struct `std::knp1_wrong_kind`", None,
                                           "warning", [])) + "\n",

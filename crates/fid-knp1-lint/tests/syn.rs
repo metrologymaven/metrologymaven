@@ -619,3 +619,29 @@ fn rule_table_is_pinned_in_node_md() {
     let pinned = node.lines().filter(|l| l.starts_with("| `KNP1-")).count();
     assert_eq!(pinned, RULE_TABLE_LEN, "NODE.md pins rows that the code does not have");
 }
+
+#[test]
+fn syn_guards_the_typed_canary_rows_clippy_cannot_see() {
+    // KRN.NUM.LINT.TYPED's canary marks rows the driver never reports with `syn RULE KIND LINE`
+    // (rendered by fixtures/knp1/typed/make_canary.py); the syntax scan must report each one.
+    let typed = fix("typed/canary");
+    let out = run(&typed.join("knp1-lint.toml")).unwrap();
+    let want: Vec<String> = text_lines(&typed.join("expected-hits.txt"))
+        .into_iter()
+        .filter_map(|l| l.strip_prefix("syn ").map(str::to_string))
+        .collect();
+    assert!(!want.is_empty());
+    for w in &want {
+        let x: Vec<&str> = w.split_whitespace().collect();
+        let (rule, line) = (x[0], x[2].parse::<u32>().unwrap());
+        assert!(
+            out.findings.iter().any(|f| f.rule.id() == rule
+                && f.crate_name == "typed-canary"
+                && f.file == "src/lib.rs"
+                && f.line == line
+                && f.message.contains("include!")),
+            "the syntax scan misses canary row `{w}`: {:#?}",
+            out.findings.iter().filter(|f| f.line == line).collect::<Vec<_>>()
+        );
+    }
+}

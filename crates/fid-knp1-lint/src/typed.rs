@@ -612,7 +612,14 @@ pub struct CrateRef {
 pub struct MapCtx {
     pub cwd: PathBuf,
     pub crates: Vec<CrateRef>,
+    /// Canonical scratch root of the run (generated `clippy.toml`, target directory). A span
+    /// under it is never "inside a crate", even if the scratch root lies under a crate root.
+    pub scratch: Option<PathBuf>,
 }
+
+/// Most spans (top-level, child and along expansion chains) inspected when deciding whether a
+/// driver configuration warning points into a linted crate; more is `KNP1-TYPED-DRIVER`.
+pub const MAX_CONFIG_WARNING_SPANS: usize = 4096;
 
 /// What one driver run reported for one target.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -641,6 +648,38 @@ fn canon(p: &Path) -> PathBuf {
     std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf())
 }
 
+/// The canonical form of a path that may not exist yet: its deepest existing ancestor
+/// canonicalized, with the remaining components appended (`..` and `.` resolved lexically first).
+fn lenient_canon(p: &Path) -> PathBuf {
+    let mut abs = PathBuf::new();
+    for c in std::path::absolute(p).unwrap_or_else(|_| p.to_path_buf()).components() {
+        match c {
+            std::path::Component::ParentDir => {
+                abs.pop();
+            }
+            std::path::Component::CurDir => {}
+            other => abs.push(other),
+        }
+    }
+    let mut rest: Vec<std::ffi::OsString> = Vec::new();
+    let mut cur = abs.as_path();
+    loop {
+        if let Ok(mut out) = std::fs::canonicalize(cur) {
+            for part in rest.iter().rev() {
+                out.push(part);
+            }
+            return out;
+        }
+        match (cur.parent(), cur.file_name()) {
+            (Some(parent), Some(name)) => {
+                rest.push(name.to_os_string());
+                cur = parent;
+            }
+            _ => return abs.clone(),
+        }
+    }
+}
+
 impl MapCtx {
     fn crate_of_manifest(&self, manifest: &str) -> Option<&CrateRef> {
         let dir = canon(Path::new(manifest).parent()?);
@@ -662,8 +701,9 @@ impl MapCtx {
     }
 
     /// True when a span of the diagnostic (or of a child, or along an expansion chain) lies
-    /// inside one of the run's crates.
-    fn any_span_in_crates(&self, msg: &CValue) -> bool {
+    /// inside one of the run's crates and not under the scratch root. More than
+    /// [`MAX_CONFIG_WARNING_SPANS`] spans: `None` (the caller fails closed).
+    fn any_span_in_crates(&self, msg: &CValue) -> Option<bool> {
         let mut pending: Vec<&CValue> = get_arr(msg, "spans").iter().collect();
         for c in get_arr(msg, "children") {
             pending.extend(get_arr(c, "spans"));
@@ -671,20 +711,22 @@ impl MapCtx {
         let mut seen = 0usize;
         while let Some(s) = pending.pop() {
             seen += 1;
-            if seen > MAX_EXPANSION_DEPTH * 16 {
-                // Unbounded input: treat as in-crate, which keeps it out of the driver path.
-                return true;
+            if seen > MAX_CONFIG_WARNING_SPANS {
+                return None;
             }
             if let Some(f) = get_str(s, "file_name") {
-                if self.crates.iter().any(|c| self.relative(c, f).is_some()) {
-                    return true;
+                let p = Path::new(f);
+                let abs = canon(&if p.is_absolute() { p.to_path_buf() } else { self.cwd.join(p) });
+                let in_scratch = self.scratch.as_ref().is_some_and(|r| abs.starts_with(r));
+                if !in_scratch && self.crates.iter().any(|c| self.relative(c, f).is_some()) {
+                    return Some(true);
                 }
             }
             if let Some(e) = get(s, "expansion").and_then(|e| get(e, "span")) {
                 pending.push(e);
             }
         }
-        false
+        Some(false)
     }
 }
 
@@ -726,13 +768,23 @@ pub fn unresolved_allowed(path: &str, target: &str) -> bool {
 /// wording too (E0277: "expected an `FnMut(f64)` closure, found `f64`"); they carry a code and a
 /// span in the crate, so they stay compile errors of that crate (`KNP1-TYPED-BUILD`) instead of
 /// aborting the whole check.
-fn unresolved_path<'t>(text: &'t str, msg: &CValue, ctx: &MapCtx) -> Option<&'t str> {
+fn unresolved_path<'t>(text: &'t str, msg: &CValue, ctx: &MapCtx, target: &str) -> Result<Option<&'t str>, TypedError> {
     if !text.contains("does not refer to") && !(text.contains("expected a") && text.contains("found")) {
-        return None;
+        return Ok(None);
     }
-    if get(msg, "code").is_some_and(|c| *c != CValue::Null) || ctx.any_span_in_crates(msg) {
-        return None;
+    if get(msg, "code").is_some_and(|c| *c != CValue::Null) {
+        return Ok(None);
     }
+    let limit = MAX_CONFIG_WARNING_SPANS;
+    match ctx.any_span_in_crates(msg) {
+        None => return Err(driver(format!("{target}: driver-warning wording with more than {limit} spans: {text}"))),
+        Some(true) => return Ok(None),
+        Some(false) => {}
+    }
+    Ok(backticked(text))
+}
+
+fn backticked(text: &str) -> Option<&str> {
     let start = text.find('`')? + 1;
     let len = text.get(start..)?.find('`')?;
     text.get(start..start + len)
@@ -767,7 +819,7 @@ pub fn parse_messages(stdout: &[u8], target: &str, ctx: &MapCtx) -> Result<Parse
                     return Err(driver(format!("{target}: compiler message without `message`")));
                 };
                 let text = get_str(msg, "message").unwrap_or_default();
-                if let Some(path) = unresolved_path(text, msg, ctx) {
+                if let Some(path) = unresolved_path(text, msg, ctx, target)? {
                     if !unresolved_allowed(path, target) {
                         return Err(driver(format!("{target}: the driver cannot resolve a table entry: {text}")));
                     }
@@ -1217,11 +1269,22 @@ fn run_with_probe(
     opts: &Options,
     probe: &[String],
 ) -> Result<CheckRun, TypedError> {
+    let members: Vec<&CrateEntry> = closure.crates.iter().filter(|c| c.source_kind == SourceKind::Workspace).collect();
+    // Before anything is written: the scratch root may not lie inside a linted crate, where the
+    // generated `clippy.toml` would look like crate code to the driver-warning check.
+    let scratch_abs = lenient_canon(&opts.scratch);
+    if let Some(c) = members.iter().find(|c| scratch_abs.starts_with(canon(&c.root))) {
+        return Err(invalid(format!(
+            "scratch directory {} lies inside linted crate {} {}; choose one outside every crate root",
+            opts.scratch.display(),
+            c.name,
+            c.version
+        )));
+    }
     let (version, version_line) = driver_version_line(&opts.cargo)?;
     if version != cfg.clippy_version {
         return Err(driver(format!("clippy {version} is not the pinned {}", cfg.clippy_version)));
     }
-    let members: Vec<&CrateEntry> = closure.crates.iter().filter(|c| c.source_kind == SourceKind::Workspace).collect();
     if members.is_empty() {
         return Ok(CheckRun::default());
     }
@@ -1241,6 +1304,7 @@ fn run_with_probe(
     std::fs::write(run_dir.join(CACHE_STAMP), format!("{version_line}\n")).map_err(|e| io(&run_dir, e))?;
     prune_cache_dirs(&opts.scratch, &dir_name, KEEP_CACHE_DIRS);
     let ctx = MapCtx {
+        scratch: Some(canon(&opts.scratch)),
         cwd: canon(workspace),
         crates: members
             .iter()

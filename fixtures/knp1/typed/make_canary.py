@@ -8,7 +8,9 @@ crate compiles for every kernel target. The script writes:
 
 - `canary/src/lib.rs`: the crate source; each row's line ends with `// row NNN: RULE kind path`;
 - `canary/expected-hits.txt`: one line `TARGET RULE KIND LINE` per row the driver must report on
-  that target, sorted.
+  that target, and one line `syn RULE KIND LINE` per row that the syntax scan
+  (KRN.NUM.LINT.SYN) guards instead because clippy cannot see it (SYN_GUARDED), sorted. Every
+  row has at least one line: every row is guarded by some lint.
 
 Clippy ignores a `clippy.toml` entry listed under the wrong kind (a type under
 `disallowed-methods`, say) without a word; such a row then shows up as a missing hit.
@@ -83,10 +85,18 @@ MACROS = {
         '#[cfg(target_arch = "x86_64")] ', ["x86_64"], 'let _ = std::is_x86_feature_detected!("sse2");'),
     "std::env": ("", None, 'let _ = std::env!("CARGO_PKG_NAME");'),
     "std::option_env": ("", None, 'let _ = std::option_env!("KNP1_CANARY");'),
-    "std::include": ("", None, 'let _: u8 = std::include!("inc.rs");'),
+    "std::include": ("", None, 'let _: u8 = std::include!("inc.in");'),
     "std::include_bytes": ("", None, 'let _ = std::include_bytes!("inc.txt");'),
     "std::include_str": ("", None, 'let _ = std::include_str!("inc.txt");'),
 }
+
+
+# Rows the driver never reports, guarded by the syntax scan instead. Clippy does not report
+# `std::include!` in expression position on any kernel target (CI, PR #288). KRN.NUM.LINT.SYN
+# reports every `include!` whose argument is not a single plain literal naming a `.rs` file the
+# scan lists (KNP1-IO-FS); `inc.in` is not one. An `include!` of a listed `.rs` file is scanned
+# like a module, so no unscanned file is read.
+SYN_GUARDED = {"std::include"}
 
 
 def fn(n: int, params: str, body: str, attr: str = "") -> str:
@@ -157,6 +167,9 @@ def render():
             code, archs = macro_line(i, path)
         src.append(f"{code} // row {i:03}: {rule} {kind} {path}")
         line = len(src)
+        if path in SYN_GUARDED:
+            hits.append(f"syn {rule} {kind} {line}")
+            continue
         for t in TARGETS:
             if archs is None or t.split("-")[0] in archs:
                 hits.append(f"{t} {rule} {kind} {line}")

@@ -25,7 +25,6 @@ aarch64-apple-darwin KNP1-HASH type 114
 aarch64-apple-darwin KNP1-HASH type 115
 aarch64-apple-darwin KNP1-HASH type 116
 aarch64-apple-darwin KNP1-HASH type 117
-aarch64-apple-darwin KNP1-IO-FS macro 133
 aarch64-apple-darwin KNP1-IO-FS macro 134
 aarch64-apple-darwin KNP1-IO-FS macro 135
 aarch64-apple-darwin KNP1-IO-FS method 67
@@ -156,7 +155,6 @@ aarch64-unknown-linux-gnu KNP1-HASH type 114
 aarch64-unknown-linux-gnu KNP1-HASH type 115
 aarch64-unknown-linux-gnu KNP1-HASH type 116
 aarch64-unknown-linux-gnu KNP1-HASH type 117
-aarch64-unknown-linux-gnu KNP1-IO-FS macro 133
 aarch64-unknown-linux-gnu KNP1-IO-FS macro 134
 aarch64-unknown-linux-gnu KNP1-IO-FS macro 135
 aarch64-unknown-linux-gnu KNP1-IO-FS method 67
@@ -260,6 +258,7 @@ aarch64-unknown-linux-gnu KNP1-THREAD method 113
 aarch64-unknown-linux-gnu KNP1-THREAD type 126
 aarch64-unknown-linux-gnu KNP1-THREAD type 127
 aarch64-unknown-linux-gnu KNP1-THREAD type 128
+syn KNP1-IO-FS macro 133
 wasm32-unknown-unknown KNP1-CLOCK method 85
 wasm32-unknown-unknown KNP1-CLOCK method 86
 wasm32-unknown-unknown KNP1-CLOCK type 124
@@ -287,7 +286,6 @@ wasm32-unknown-unknown KNP1-HASH type 114
 wasm32-unknown-unknown KNP1-HASH type 115
 wasm32-unknown-unknown KNP1-HASH type 116
 wasm32-unknown-unknown KNP1-HASH type 117
-wasm32-unknown-unknown KNP1-IO-FS macro 133
 wasm32-unknown-unknown KNP1-IO-FS macro 134
 wasm32-unknown-unknown KNP1-IO-FS macro 135
 wasm32-unknown-unknown KNP1-IO-FS method 67
@@ -417,7 +415,6 @@ x86_64-pc-windows-msvc KNP1-HASH type 114
 x86_64-pc-windows-msvc KNP1-HASH type 115
 x86_64-pc-windows-msvc KNP1-HASH type 116
 x86_64-pc-windows-msvc KNP1-HASH type 117
-x86_64-pc-windows-msvc KNP1-IO-FS macro 133
 x86_64-pc-windows-msvc KNP1-IO-FS macro 134
 x86_64-pc-windows-msvc KNP1-IO-FS macro 135
 x86_64-pc-windows-msvc KNP1-IO-FS method 67
@@ -548,7 +545,6 @@ x86_64-unknown-linux-gnu KNP1-HASH type 114
 x86_64-unknown-linux-gnu KNP1-HASH type 115
 x86_64-unknown-linux-gnu KNP1-HASH type 116
 x86_64-unknown-linux-gnu KNP1-HASH type 117
-x86_64-unknown-linux-gnu KNP1-IO-FS macro 133
 x86_64-unknown-linux-gnu KNP1-IO-FS macro 134
 x86_64-unknown-linux-gnu KNP1-IO-FS macro 135
 x86_64-unknown-linux-gnu KNP1-IO-FS method 67

@@ -130,7 +130,7 @@ pub fn r124() { let _: Option<std::thread::Builder> = None; } // row 124: KNP1-T
 #[cfg(target_arch = "x86_64")] pub fn r126() { let _ = std::is_x86_feature_detected!("sse2"); } // row 126: KNP1-SIMD macro std::is_x86_feature_detected
 pub fn r127() { let _ = std::env!("CARGO_PKG_NAME"); } // row 127: KNP1-ENV macro std::env
 pub fn r128() { let _ = std::option_env!("KNP1_CANARY"); } // row 128: KNP1-ENV macro std::option_env
-pub fn r129() { let _: u8 = std::include!("inc.rs"); } // row 129: KNP1-IO-FS macro std::include
+pub fn r129() { let _: u8 = std::include!("inc.in"); } // row 129: KNP1-IO-FS macro std::include
 pub fn r130() { let _ = std::include_bytes!("inc.txt"); } // row 130: KNP1-IO-FS macro std::include_bytes
 pub fn r131() { let _ = std::include_str!("inc.txt"); } // row 131: KNP1-IO-FS macro std::include_str
 std::thread_local! { static CANARY: u8 = 0; } // row 132: KNP1-THREAD macro std::thread_local
