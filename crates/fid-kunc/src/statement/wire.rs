@@ -231,6 +231,12 @@ fn opt<T>(v: Option<Json>, f: impl FnOnce(Json) -> Result<T, StmtError>) -> Resu
 
 /// Parts from a parsed document. Unknown members, wrong JSON types and malformed scalars
 /// fail here; the statement invariants are checked afterwards by the constructor.
+///
+/// Error priority: every error raised here (`malformed{detail}`, `unknown_method`,
+/// `invalid_field{field}` for a bad hex, boolean, count, enum value or digest, and
+/// `statement_incomplete{class}`) takes priority over the constructor's class, numbers,
+/// completeness, text and consistency order. So a document with both an unknown method and a
+/// UEC-0 number reports `unknown_method`.
 pub(crate) fn from_json(j: Json) -> Result<StatementParts, StmtError> {
     let mut o = Obj::of(j)?;
     if string(o.need("schema")?)? != SCHEMA {

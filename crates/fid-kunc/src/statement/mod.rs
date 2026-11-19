@@ -27,8 +27,14 @@
 //!    `SPEC_DERIVED`) only with UEC-1, so a claimed value never looks measured; UEC-3 only
 //!    with `ISO15530-3` or `ISO15530-4` (REQ-UNC.UEC-006); UEC-2 and UEC-3 need at least one
 //!    source and only characterized ones (`dcc`, `qualification`, `type_a`;
-//!    REQ-UNC.UEC-005). Provenance: an agent principal or an adopter implies a proposal
-//!    (CONSTITUTION C5).
+//!    REQ-UNC.UEC-005). A claimed method carries no `contributors`, `lpu_validated_by_mc`
+//!    or `nonlinearity`; `lpu_validated_by_mc` only with `LPU`. Provenance: `principal` and
+//!    `principal_kind` together; `DECLARED` needs a `principal`; an agent principal or an
+//!    adopter implies a proposal (CONSTITUTION C5).
+//!
+//! Parse-stage errors of [`UncertaintyStatement::parse_canonical`] (`malformed`,
+//! `unknown_method`, `invalid_field` for a bad scalar encoding, enum or digest, and
+//! `statement_incomplete{class}`) come before all of the above; `non_canonical` comes last.
 //!
 //! # Numbers
 //!
@@ -304,7 +310,7 @@ pub struct StatementParts {
     pub class: EvidenceClass,
     pub uec0_reason: Option<Uec0Reason>,
     pub method: Option<Method>,
-    /// Unit URI, `<scheme>:<rest>`.
+    /// Unit: one of [`UNITS`] (`si:m`, `si:rad`, `si:1`).
     pub unit: Option<String>,
     pub u_std: Option<f64>,
     pub expanded: Option<Expanded>,
@@ -467,11 +473,18 @@ impl UncertaintyStatement {
     pub fn method(&self) -> Option<Method> {
         self.parts.method
     }
-    /// True when the value is a claim (`DECLARED` or `SPEC_DERIVED`), never a measurement.
+    /// True when the method is `DECLARED` or `SPEC_DERIVED`: the value was stated by a
+    /// person or taken from a specification rather than evaluated from measurement data.
+    /// Surfaces (`UNC.UEC.EXPL`, `RPT`) must label such values as claimed.
     pub fn is_claimed(&self) -> bool {
         self.parts.method.is_some_and(Method::is_claimed)
     }
-    /// The unit URI.
+    /// True when any source is `declared`: the value, even if evaluated, rests on at least
+    /// one declared input. Surfaces (`UNC.UEC.EXPL`, `RPT`) must label it as such.
+    pub fn rests_on_declared_input(&self) -> bool {
+        self.parts.sources.iter().any(|s| s.kind == SourceKind::Declared)
+    }
+    /// The unit (`si:m`, `si:rad` or `si:1`).
     pub fn unit(&self) -> Option<&str> {
         self.parts.unit.as_deref()
     }
@@ -638,14 +651,12 @@ pub(crate) fn is_token(s: &str) -> bool {
         && s.bytes().all(|b| (0x21..=0x7e).contains(&b) && b != b'"' && b != b'\\')
 }
 
-/// `<scheme>:<rest>` with an RFC 3986 scheme and a non-empty rest.
-fn is_uri(s: &str) -> bool {
-    let Some((scheme, rest)) = s.split_once(':') else { return false };
-    let mut sb = scheme.bytes();
-    is_token(s)
-        && !rest.is_empty()
-        && sb.next().is_some_and(|b| b.is_ascii_alphabetic())
-        && sb.all(|b| b.is_ascii_alphanumeric() || matches!(b, b'+' | b'-' | b'.'))
+/// The closed unit set: coherent SI units only (CONSTITUTION §4). `u_std`, `U`, the
+/// interval ends and `u_contrib` are in this unit.
+pub const UNITS: [&str; 3] = ["si:m", "si:rad", "si:1"];
+
+fn is_unit(s: &str) -> bool {
+    UNITS.contains(&s)
 }
 
 /// `MAJOR.MINOR.PATCH`, each 1..=9 digits without leading zeros.
@@ -689,7 +700,7 @@ fn strictly_sorted<'a>(mut ids: impl Iterator<Item = &'a str>) -> bool {
 
 fn check_text(p: &StatementParts) -> Result<(), StmtError> {
     if let Some(u) = &p.unit {
-        text(is_uri(u), "unit")?;
+        text(is_unit(u), "unit")?;
     }
     if let Some(m) = &p.model {
         text(is_token(&m.id) && m.id.len() > 3 && m.id.starts_with("um:"), "model.id")?;
@@ -733,12 +744,20 @@ fn check_consistency(p: &StatementParts) -> Result<(), StmtError> {
     if let Some(m) = p.method {
         mismatch(!m.is_claimed() || p.class == EvidenceClass::Uec1, "method")?;
         mismatch(p.class != EvidenceClass::Uec3 || matches!(m, Method::Iso15530_3 | Method::Iso15530_4), "method")?;
+        if m.is_claimed() {
+            // A claim carries no evaluation output, so it never looks measured.
+            mismatch(p.contributors.is_empty(), "contributors")?;
+            mismatch(p.lpu_validated_by_mc.is_none(), "lpu_validated_by_mc")?;
+            mismatch(p.nonlinearity.is_none(), "nonlinearity")?;
+        }
+        mismatch(p.lpu_validated_by_mc.is_none() || m == Method::Lpu, "lpu_validated_by_mc")?;
     }
     if matches!(p.class, EvidenceClass::Uec2 | EvidenceClass::Uec3) {
         mismatch(!p.sources.is_empty() && p.sources.iter().all(|s| s.kind.is_characterized()), "sources")?;
     }
     let pv = &p.provenance;
     mismatch(pv.principal.is_some() == pv.principal_kind.is_some(), "provenance.principal_kind")?;
+    mismatch(p.method != Some(Method::Declared) || pv.principal.is_some(), "provenance.principal")?;
     let needs_proposal = pv.principal_kind == Some(PrincipalKind::Agent) || pv.adopted_by.is_some();
     mismatch(!needs_proposal || pv.proposal, "provenance.proposal")
 }
@@ -767,8 +786,8 @@ mod tests {
     #[test]
     fn semver_and_uri() {
         assert!(is_semver("0.10.3") && !is_semver("01.0.0") && !is_semver("1.0") && !is_semver("1.0.0-rc1"));
-        assert!(is_uri("unit:mm") && is_uri("http://qudt.org/vocab/unit/MilliM"));
-        assert!(!is_uri("mm") && !is_uri("1x:mm") && !is_uri("unit:"));
+        assert!(is_unit("si:m") && is_unit("si:rad") && is_unit("si:1"));
+        assert!(!is_unit("mm") && !is_unit("si:mm") && !is_unit("SI:m") && !is_unit("http://qudt.org/vocab/unit/M"));
     }
 
     #[test]

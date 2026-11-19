@@ -6,7 +6,7 @@
 //! on wasm32-wasip1 (wasmtime), x86-64 (Linux, Windows) and ARM64 (macOS).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_kunc::statement::{MAX_INPUT_BYTES, SCHEMA};
+use fid_kunc::statement::{MAX_INPUT_BYTES, SCHEMA, UNITS};
 use fid_kunc::{
     Contributor, CoverageInterval, EvidenceClass, Expanded, IntervalKind, Method, ModelRef, NlinVerdict, Nonlinearity,
     PrincipalKind, Provenance, SourceKind, SourceRef, StatementParts, StmtError, Uec0Reason, UncertaintyStatement,
@@ -117,11 +117,15 @@ fn model() -> ModelRef {
 fn complete(class: EvidenceClass, method: Method) -> StatementParts {
     let mut p = StatementParts::new(class);
     p.method = Some(method);
-    p.unit = Some("unit:m".into());
+    p.unit = Some("si:m".into());
     p.expanded = Some(Expanded { value: 2e-6, k: 2.0 });
     p.model = Some(model());
     if class >= EvidenceClass::Uec2 {
         p.sources.push(SourceRef { kind: SourceKind::Dcc, id: "dcc:1".into(), digest: digest_of("dcc:1") });
+    }
+    if method == Method::Declared {
+        p.provenance.principal = Some("person:qa".into());
+        p.provenance.principal_kind = Some(PrincipalKind::Human);
     }
     p
 }
@@ -161,7 +165,7 @@ fn req003_first_missing_field_in_declaration_order() {
     assert_eq!(err(p.clone()), StmtError::StatementIncomplete { field: "method" });
     p.method = Some(Method::Lpu);
     assert_eq!(err(p.clone()), StmtError::StatementIncomplete { field: "unit" });
-    p.unit = Some("unit:m".into());
+    p.unit = Some("si:m".into());
     p.u_std = Some(1e-6); // a standard uncertainty alone is not a coverage statement
     assert_eq!(err(p.clone()), StmtError::StatementIncomplete { field: "coverage" });
     p.interval = Some(CoverageInterval { low: 1.0, high: 2.0, p: 0.95, kind: IntervalKind::ProbSymmetric });
@@ -258,20 +262,72 @@ fn claimed_values_never_look_measured() {
         p.sources.push(SourceRef { kind, id: "z".into(), digest: digest_of("z") });
         assert_eq!(err(p.clone()), StmtError::ClassMismatch { field: "sources" });
         p.class = EvidenceClass::Uec1;
-        UncertaintyStatement::new(p).unwrap();
+        let s = UncertaintyStatement::new(p).unwrap();
+        assert!(!s.is_claimed());
+        assert_eq!(s.rests_on_declared_input(), kind == SourceKind::Declared);
+    }
+    // A claim carries no evaluation output.
+    for m in [Method::Declared, Method::SpecDerived] {
+        let mut p = complete(EvidenceClass::Uec1, m);
+        p.contributors.push(Contributor {
+            input_id: "a".into(),
+            sensitivity: None,
+            u_contrib: 0.0,
+            variance_share: 0.0,
+        });
+        assert_eq!(err(p), StmtError::ClassMismatch { field: "contributors" }, "{m}");
+        let mut p = complete(EvidenceClass::Uec1, m);
+        p.lpu_validated_by_mc = Some(true);
+        assert_eq!(err(p), StmtError::ClassMismatch { field: "lpu_validated_by_mc" }, "{m}");
+        let mut p = complete(EvidenceClass::Uec1, m);
+        p.nonlinearity = Some(nlin());
+        assert_eq!(err(p), StmtError::ClassMismatch { field: "nonlinearity" }, "{m}");
+    }
+    // `lpu_validated_by_mc` only with LPU.
+    for m in [Method::Mcm, Method::Iso15530_3, Method::Iso15530_4] {
+        let mut p = complete(EvidenceClass::Uec2, m);
+        p.lpu_validated_by_mc = Some(false);
+        assert_eq!(err(p), StmtError::ClassMismatch { field: "lpu_validated_by_mc" }, "{m}");
+    }
+    let mut p = complete(EvidenceClass::Uec2, Method::Lpu);
+    p.lpu_validated_by_mc = Some(false);
+    UncertaintyStatement::new(p).unwrap();
+}
+
+fn nlin() -> Nonlinearity {
+    Nonlinearity {
+        version: "nlin@1".into(),
+        verdict: NlinVerdict::LinearAdequate,
+        v1: 1.0,
+        v2: 0.0,
+        ratio: Some(0.0),
+        probed_inputs: 0,
+        probed_pairs: 0,
+        cross_terms_truncated: false,
+        reason: None,
     }
 }
 
 #[test]
-fn agent_statements_are_proposals() {
+fn declared_needs_a_principal() {
     let mut p = complete(EvidenceClass::Uec1, Method::Declared);
+    p.provenance.principal = None;
+    p.provenance.principal_kind = None;
+    assert_eq!(err(p), StmtError::ClassMismatch { field: "provenance.principal" });
+    // SPEC_DERIVED cites a specification and may come without one.
+    UncertaintyStatement::new(complete(EvidenceClass::Uec1, Method::SpecDerived)).unwrap();
+}
+
+#[test]
+fn agent_statements_are_proposals() {
+    let mut p = complete(EvidenceClass::Uec1, Method::Lpu);
     p.provenance.principal = Some("agent:a".into());
     assert_eq!(err(p.clone()), StmtError::ClassMismatch { field: "provenance.principal_kind" });
     p.provenance.principal_kind = Some(PrincipalKind::Agent);
     assert_eq!(err(p.clone()), StmtError::ClassMismatch { field: "provenance.proposal" });
     p.provenance.proposal = true;
     UncertaintyStatement::new(p.clone()).unwrap();
-    let mut q = complete(EvidenceClass::Uec1, Method::Declared);
+    let mut q = complete(EvidenceClass::Uec1, Method::Lpu);
     q.provenance.adopted_by = Some("person:b".into());
     assert_eq!(err(q), StmtError::ClassMismatch { field: "provenance.proposal" });
 }
@@ -308,7 +364,7 @@ fn every_field_changes_the_digest() {
     let d0 = UncertaintyStatement::new(base.clone()).unwrap().digest();
     let edits: [Edit; 8] = [
         |p| p.method = Some(Method::Mcm),
-        |p| p.unit = Some("unit:mm".into()),
+        |p| p.unit = Some("si:rad".into()),
         |p| p.u_std = Some(1e-6),
         |p| p.expanded = Some(Expanded { value: f64::from_bits(2e-6f64.to_bits() + 1), k: 2.0 }),
         |p| p.contributors[0].sensitivity = None,
@@ -451,7 +507,7 @@ impl Gen {
         }
         if class == EvidenceClass::Uec0 || self.coin() {
             if self.coin() {
-                p.unit = Some(self.token("unit:"));
+                p.unit = Some(self.pick(&UNITS).to_owned());
             }
             if self.coin() {
                 p.model = Some(ModelRef { id: self.token("um:"), semver: "0.1.12".into(), digest: self.digest() });
@@ -461,7 +517,7 @@ impl Gen {
             p.uec0_reason = Some(self.pick(Uec0Reason::ALL));
         } else {
             p.method = Some(self.pick(methods));
-            p.unit = Some(self.token("x-y.z+1:"));
+            p.unit = Some(self.pick(&UNITS).to_owned());
             p.model = Some(ModelRef {
                 id: self.token("um:"),
                 semver: format!("{}.{}.{}", self.below(1000), self.below(10), self.below(999_999_999)),
@@ -485,7 +541,8 @@ impl Gen {
                 let kind = self.pick(IntervalKind::ALL);
                 p.interval = Some(CoverageInterval { low: a, high: b, p: self.open_unit(), kind });
             }
-            for i in 0..self.below(5) {
+            let claimed = p.method.is_some_and(Method::is_claimed);
+            for i in 0..if claimed { 0 } else { self.below(5) } {
                 let sensitivity = if self.coin() { Some(self.finite()) } else { None };
                 p.contributors.push(Contributor {
                     input_id: self.token(&format!("{i}")),
@@ -494,10 +551,10 @@ impl Gen {
                     variance_share: self.closed_unit(),
                 });
             }
-            if self.coin() {
+            if p.method == Some(Method::Lpu) && self.coin() {
                 p.lpu_validated_by_mc = Some(self.coin());
             }
-            if self.coin() {
+            if !claimed && self.coin() {
                 p.nonlinearity = Some(Nonlinearity {
                     version: self.token("nlin@"),
                     verdict: self.pick(NlinVerdict::ALL),
@@ -521,7 +578,7 @@ impl Gen {
         for i in 0..self.below(3) {
             pv.rule_sets.push(self.token(&format!("{i}")));
         }
-        if self.coin() {
+        if p.method == Some(Method::Declared) || self.coin() {
             pv.principal = Some(self.token("p:"));
             pv.principal_kind = Some(self.pick(PrincipalKind::ALL));
         }

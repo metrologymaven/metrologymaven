@@ -47,7 +47,7 @@ def canon(obj):
     return text.encode("ascii")
 
 
-UNIT = "http://qudt.org/vocab/unit/M"
+UNIT = "si:m"  # closed set: si:m, si:rad, si:1
 MODEL = {"id": "um:bore-diameter", "semver": "1.2.0", "digest": d("um:bore-diameter@1.2.0")}
 PROV = {"rule_sets": ["uec-assign@1"], "proposal": "false"}
 
@@ -116,7 +116,6 @@ VALID = {
         interval={"low": h(0.024995), "high": h(0.0250052), "p": h(0.95), "kind": "shortest"},
         model=MODEL,
         sources=[src("declared", "decl:fixture-wear"), src("type_a", "ta:run-0042")],
-        lpu_validated_by_mc="false",
         provenance={"rule_sets": ["est-policy@1", "uec-assign@1"], "principal": "agent:unc-helper",
                     "principal_kind": "agent", "proposal": "true", "adopted_by": "person:qa-lead",
                     "supersedes": d("statement:previous")},
@@ -234,6 +233,16 @@ INVALID = {
     "uec1_with_reason": (canon(withv(V["uec1_lpu"], uec0_reason="u_missing")), "class_mismatch", "uec0_reason"),
     "agent_not_proposal": (canon(withv(V["uec1_spec_derived"], provenance=withv(
         V["uec1_spec_derived"]["provenance"], proposal="false"))), "class_mismatch", "provenance.proposal"),
+    "declared_with_contributors": (canon(withv(V["uec1_declared"], contributors=[
+        {"input_id": "a", "u_contrib": h(1e-6), "variance_share": h(1.0)}])), "class_mismatch", "contributors"),
+    "declared_with_lpu_flag": (canon(withv(V["uec1_declared"], lpu_validated_by_mc="true")), "class_mismatch",
+                               "lpu_validated_by_mc"),
+    "spec_derived_with_nonlinearity": (canon(withv(V["uec1_spec_derived"], nonlinearity=V["uec1_lpu"]["nonlinearity"])),
+                                       "class_mismatch", "nonlinearity"),
+    "mcm_with_lpu_flag": (canon(withv(V["uec2_mcm"], lpu_validated_by_mc="false")), "class_mismatch",
+                          "lpu_validated_by_mc"),
+    "declared_no_principal": (canon(withv(V["uec1_declared"], provenance=PROV)), "class_mismatch", "provenance.principal"),
+    "unit_not_si": (canon(withv(V["uec1_lpu"], unit="http://qudt.org/vocab/unit/M")), "invalid_field", "unit"),
     "unknown_member": (canon(withv(V["uec1_lpu"], note="x")), "malformed", "unknown_member"),
     "wrong_schema": (canon(withv(V["uec1_lpu"], schema="uncertainty_statement@2")), "malformed", "schema"),
     "number_literal": (canon(V["uec1_declared"]).replace(b'"k":"' + h(2.0).encode() + b'"', b'"k":2'),
