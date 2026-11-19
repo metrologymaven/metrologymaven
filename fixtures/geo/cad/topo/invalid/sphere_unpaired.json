@@ -1,0 +1,121 @@
+{
+ "description": "invalid variant: edge 0: used once in closed shell 0",
+ "license": "CC-BY-4.0",
+ "body_id": "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+ "vertices": [
+  {
+   "point": [
+    1.0,
+    0.0,
+    0.0
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 1.0
+   }
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": {
+    "type": "nurbs",
+    "degree": 1,
+    "knots": [
+     0.0,
+     0.0,
+     6.283185307179586,
+     6.283185307179586
+    ],
+    "ctrl": [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      6.283185307179586,
+      0.0
+     ]
+    ],
+    "weights": [
+     1.0,
+     1.0
+    ],
+    "periodic": false
+   }
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0
+   ],
+   "outer": true
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "sphere",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 1.0
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ]
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": true
+  }
+ ],
+ "expect": {
+  "code": "BadPairing",
+  "message": "edge 0: used once in closed shell 0"
+ }
+}

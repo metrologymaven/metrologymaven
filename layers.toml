@@ -17,11 +17,17 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-solv" = "kernel"
 "fid-fit" = "kernel"
 "fid-scan-cmp" = "kernel"
+# B-rep model (GEO.CAD.TOPO.MODEL): L0 library code, KNP-1; only fid-geo-nurbs, fid-kci, fid-types.
+"fid-geo-cad" = "kernel"
+# Alignment kernel (ALN.QA.REPORT first): residual report, fixed-order statistics, digest.
+"fid-align-solve" = "kernel"
 "fid-canon" = "model"
 # GD&T evaluation library (CONSTITUTION §2.1 L0). Model, not kernel: the DMT schema hashes
 # through fid-canon (model) and sha2, which the kernel graph (KNP-1, zero dependencies) cannot reach.
 "fid-gps" = "model"
 "fid-registry" = "model"
+# Declaration macros (CORE.REG.DEF.MACRO): proc-macro crate used through fid-registry.
+"fid-registry-macros" = "model"
 "fid-store" = "model"
 "fid-journal" = "model"
 "fid-trust-canon" = "model"
@@ -83,6 +89,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-eval-board" = "tool"
 "fid-shlint" = "tool"
 "fid-render" = "viewer"
+# View state model (VIZ.VIEW.STATE): ViewState, its canonical form and digest.
+"fid-view" = "viewer"
 "fid-eval-harness" = "tool"
 "fid-eval-redteam" = "tool"
 "fid-testkit" = "test-support"

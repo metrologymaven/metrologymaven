@@ -1,0 +1,24 @@
+[package]
+name = "fid-view"
+description = "Metrology Maven view state: the ViewState model, validation, RFC 8785 canonical form and digest (VIZ.VIEW.STATE)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Viewer layer. No GPU, windowing or UI-toolkit crate (C2). Workspace crates only, no third-party
+# dependency is added:
+# - fid-canon: the RFC 8785 canonicaliser and SHA-256 the journal uses (CORE.JRN.CANON), so a
+#   ViewState hashes exactly as journal entries do;
+# - fid-types: the shared `sha256:` digest type (ColorMapSpec and legend-layout references, the
+#   ViewState digest itself);
+# - fid-uuid: the workspace UUID value type for entity and LabelSet IDs (CONSTITUTION §5).
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-types = { path = "../fid-types" }
+fid-uuid = { path = "../fid-uuid" }
+
+[lints]
+workspace = true

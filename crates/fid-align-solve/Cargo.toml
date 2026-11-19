@@ -1,0 +1,24 @@
+[package]
+name = "fid-align-solve"
+description = "Metrology Maven alignment kernel: the ResidualReport every alignment solver writes, its builder, fixed-order statistics and digest (ALN.QA.REPORT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate (KNP-1): no third-party dependencies. Only first-party num/kernel-layer crates:
+# fid-num (fixed-order reductions KRN.NUM.RED, correctly rounded sqrt and total-order
+# comparison), fid-kci (portable SHA-256 and the kernel canonical JSON writer) and fid-types
+# (the shared `sha256:` digest type, AGENTS.md rule 14).
+[dependencies]
+fid-num = { path = "../fid-num" }
+fid-kci = { path = "../fid-kci" }
+fid-types = { path = "../fid-types" }
+
+[dev-dependencies]
+# Test-support only (never in the kernel graph): the workspace root for fixture paths.
+fid-testkit = { path = "../fid-testkit" }
+
+[lints]
+workspace = true

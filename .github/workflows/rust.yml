@@ -61,6 +61,12 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+      - name: Template format fuzz, full 1 000 000 iterations in release (RPT.MODEL.TMPL.FORMAT AC-4)
+        # Plain `cargo test` runs a 20 000-iteration prefix of the same streams on every OS.
+        if: runner.os == 'Linux'
+        env:
+          TMPL_FUZZ_FULL: "1"
+        run: cargo test --release -p fid-report --test tmpl_format_fuzz -- --nocapture
       - name: Kernel WASM shim with its stand-in test algorithms, natively (KRN.MAN.WASM AC-2)
         run: |
           cargo clippy -p fid-kernel-wasm --all-targets --features test-algorithms -- -D warnings
@@ -263,6 +269,7 @@ jobs:
           python fixtures/manifest/make_fixtures.py --check
           python tools/check_registry_keywords.py
           python fixtures/core/reg/def/schema/make_fixtures.py --check
+          python fixtures/core/reg/def/macro/make_golden.py --check
           python fixtures/core/reg/manifest/make_fixtures.py --check
           python tools/check_manifest_schema.py
           python fixtures/gdt/dprof/make_cases.py --check
@@ -278,6 +285,7 @@ jobs:
           python fixtures/solv/vend/make_fixtures.py --check
           python fixtures/solv/make_mstart_fixtures.py --check
           python fixtures/fit/make_trait_fixtures.py --check
+          python fixtures/aln/qa/make_report_fixtures.py --check
           python tools/check_eval_suite.py
           python fixtures/pkg/make_fixtures.py --check
           python fixtures/io/dmis/conf/make_expected.py --check
@@ -314,6 +322,8 @@ jobs:
           python crates/fid-report-pdf/fontgen/make_fonts.py --check
           python fixtures/rpt/output/text/make_fixtures.py --check
           python fixtures/rpt/output/text/check_pdf_text.py
+          python fixtures/rpt/model/tmpl/make_fixtures.py --check
+          python fixtures/rpt/model/tmpl/check_schema.py
           python tools/fixtures/geo_sel_sets.py --check
           python tools/fixtures/geo_units_cases.py --check
           python tools/fixtures/geo_xform_cases.py --check
@@ -328,10 +338,12 @@ jobs:
           python fixtures/geo/index/make_bvh_fixtures.py --check
           python tools/fixtures/geo_index.py --check
           python fixtures/scan/cmp/make_field_golden.py --check
+          python fixtures/geo/cad/topo/make_topo_fixtures.py --check
           python fixtures/unc/stmt/make_fixtures.py --check
           python fixtures/unc/dec/type/make_fixtures.py --check
           python fixtures/unc/class/make_table.py --check
           python fixtures/unc/dist/make_fixtures.py --check
+          python fixtures/viz/viewstate-samples/make_fixtures.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
@@ -474,8 +486,14 @@ jobs:
         run: cargo test --target wasm32-wasip1 -p fid-geo-sel --test model
       - name: BVH and k-d tree index and query result digests on wasm32-wasip1 (GEO.INDEX.BVH AC-3, GEO.INDEX.KDTREE AC-3)
         run: cargo test --target wasm32-wasip1 -p fid-geo-index
+      - name: ViewState canonical bytes, golden digests and f64 round trip on wasm32-wasip1 (VIZ.VIEW.STATE AC-1, AC-2, AC-5)
+        run: cargo test --target wasm32-wasip1 -p fid-view
       - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)
         run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib
+      - name: B-rep canonical encodings, digests and derived IDs on wasm32-wasip1 (GEO.CAD.TOPO.MODEL AC-1, AC-2, AC-6)
+        run: cargo test --target wasm32-wasip1 -p fid-geo-cad
+      - name: Residual report statistics and digest of the seeded 1,000,000-entry report on wasm32-wasip1 (ALN.QA.REPORT AC-2)
+        run: cargo test --target wasm32-wasip1 -p fid-align-solve
       - name: RDL dataset digests, public views and replay on wasm32-wasip1 (UNC.RDL.FORMAT AC-1)
         run: cargo test --target wasm32-wasip1 -p fid-rdl
       - name: Kernel WASM reference module, import allowlist and golden calls (KRN.MAN.WASM AC-1 to AC-3)
