@@ -1,0 +1,8 @@
+[package]
+name = "ext-mac"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[lib]
+proc-macro = true
