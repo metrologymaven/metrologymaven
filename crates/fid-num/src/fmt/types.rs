@@ -198,10 +198,12 @@ pub enum FmtError {
     /// `fmt.angle@1`: the two ends of the value interval over every enclosure of pi in the
     /// ladder round to different outputs, so no string is given.
     UndecidableRounding,
+    /// `fmt::ang` test hook only: a given ladder rung is malformed, does not enclose pi
+    /// (it must contain the tightest built-in rung) or is not nested in the rung before it.
+    InvalidLadder,
     /// The internal big integer ran out of limbs. Unreachable for any finite `f64` within
     /// the precision bounds (see the module documentation of `fmt::len`); kept so that an
-    /// impossible case is an error and never a wrong string. `fmt::ang` also reports a
-    /// malformed enclosure of pi this way (only reachable through its test hook).
+    /// impossible case is an error and never a wrong string.
     Capacity,
 }
 
@@ -214,6 +216,7 @@ impl FmtError {
             FmtError::LimitsInverted => "limits_inverted",
             FmtError::UnitNotSupported => "unit_not_supported",
             FmtError::UndecidableRounding => "undecidable_rounding",
+            FmtError::InvalidLadder => "invalid_ladder",
             FmtError::Capacity => "big_integer_capacity",
         }
     }
@@ -231,6 +234,7 @@ impl FmtError {
             FmtError::LimitsInverted,
             FmtError::UnitNotSupported,
             FmtError::UndecidableRounding,
+            FmtError::InvalidLadder,
             FmtError::Capacity,
         ]
         .into_iter()

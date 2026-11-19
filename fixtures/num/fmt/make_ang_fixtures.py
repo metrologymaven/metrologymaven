@@ -610,6 +610,10 @@ def error_cases():
     out.append((-0.0, "angle", "dms", ("d", 0), "0", "0"))
     out.append((lenfx.fb(1), "angle", "deg", ("d", 3), "0", "0"))
     out.append((-lenfx.fb(1), "angle", "dms", ("d", 2), "0", "0"))
+    # Review of #213: the largest double at 0 decimals (needs the 1000-decimal rung)
+    # against a violated limit at the bottom of the kdec range.
+    out.append((sys.float_info.max, "angle", "deg", ("d", 0), None, "1e-400"))
+    out.append((-sys.float_info.max, "angle", "deg", ("d", 0), "-1e-400", None))
     return out
 
 

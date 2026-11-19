@@ -177,18 +177,18 @@ pub fn format(x: f64, spec: &FormatSpec) -> Result<Reported, NumError> {
 }
 
 /// Test hook: [`format`] over a given ladder, so that the tests can pass a deliberately
-/// coarse ladder and exercise moving up the ladder and both undecidable outcomes. Each rung
-/// must be nested inside the one before (the reported index assumes it). Every rung is
-/// checked to contain the tightest rung of [`PI_LADDER`], so it encloses pi and no ladder
-/// can make an output wrong; a rung that does not, or a malformed one, gives
-/// [`FmtError::Capacity`] (`big_integer_capacity`) and no string.
+/// coarse ladder and exercise moving up the ladder and both undecidable outcomes. Every
+/// rung must be well formed, contain the tightest rung of [`PI_LADDER`] (so it encloses
+/// pi) and lie inside the rung before it (the reported index assumes nesting); otherwise
+/// the call returns [`FmtError::InvalidLadder`] and no string, so no ladder can make an
+/// output wrong.
 #[doc(hidden)]
 pub fn format_with_ladder(x: f64, spec: &FormatSpec, ladder: &[PiEnclosure]) -> Result<Reported, NumError> {
     if spec.formatter != FormatterId::ANGLE_V1 {
         return Err(FmtError::UnitNotSupported.at("fmt"));
     }
     if ladder != PI_LADDER.as_slice() {
-        check_encloses_pi(ladder)?;
+        check_ladder(ladder).map_err(|_| FmtError::InvalidLadder.at(OP))?;
     }
     let scale = match spec.unit {
         Unit::Rad => return len::format_with(OP, &RAD, x, spec),
@@ -299,10 +299,12 @@ fn parse_pi(s: &str, digits: u16) -> Result<BigA, NumError> {
     Ok(b)
 }
 
-/// Every rung contains the tightest rung of [`PI_LADDER`] (so it encloses pi).
-fn check_encloses_pi(ladder: &[PiEnclosure]) -> Result<(), NumError> {
+/// Every rung is well formed, contains the tightest rung of [`PI_LADDER`] (so it encloses
+/// pi) and lies inside the rung before it. Rungs are compared at the 1000-decimal scale.
+fn check_ladder(ladder: &[PiEnclosure]) -> Result<(), NumError> {
     let Some(tight) = PI_LADDER.last() else { return Err(capacity()) };
     let (t_lo, t_hi) = (parse_pi(tight.lo, tight.digits)?, parse_pi(tight.hi, tight.digits)?);
+    let mut prev: Option<(BigA, BigA)> = None;
     for r in ladder {
         let shift = tight.digits.checked_sub(r.digits).ok_or_else(capacity)?;
         let (mut lo, mut hi) = (parse_pi(r.lo, r.digits)?, parse_pi(r.hi, r.digits)?);
@@ -313,6 +315,12 @@ fn check_encloses_pi(ladder: &[PiEnclosure]) -> Result<(), NumError> {
         if lo.cmp_mag(&t_lo) == Ordering::Greater || hi.cmp_mag(&t_hi) == Ordering::Less {
             return Err(capacity());
         }
+        if let Some((p_lo, p_hi)) = &prev {
+            if lo.cmp_mag(p_lo) == Ordering::Less || hi.cmp_mag(p_hi) == Ordering::Greater {
+                return Err(capacity());
+            }
+        }
+        prev = Some((lo, hi));
     }
     Ok(())
 }
@@ -566,15 +574,22 @@ mod tests {
         };
         let e = format_with_ladder(1.0, &spec, &[]).unwrap_err();
         assert_eq!(FmtError::of(&e), Some(FmtError::UndecidableRounding));
-        // A rung that does not enclose pi is refused, never used.
-        for (lo, hi) in [("3.15", "3.16"), ("3.13", "3.14"), ("3.1415", "3.1417")] {
-            let bad = [PiEnclosure { lo, hi, digits: (lo.len() - 2) as u16 }];
-            let whole = FormatSpec { precision: Precision::Decimals(0), ..spec };
-            let r = format_with_ladder(1.0, &whole, &bad);
-            let ok = lo == "3.1415";
-            assert_eq!(r.is_ok(), ok, "{lo} {hi}");
+        // A rung that does not enclose pi, is malformed or is not nested is refused.
+        let whole = FormatSpec { precision: Precision::Decimals(0), ..spec };
+        let rung = |lo: &'static str, hi: &'static str| PiEnclosure { lo, hi, digits: (lo.len() - 2) as u16 };
+        let ladders: [(&[PiEnclosure], bool); 6] = [
+            (&[rung("3.15", "3.16")], false),
+            (&[rung("3.13", "3.14")], false),
+            (&[rung("3.1x", "3.15")], false),
+            (&[rung("3.1415", "3.1417")], true),
+            (&[rung("3.1415", "3.1417"), rung("3.141", "3.142")], false),
+            (&[rung("3.141", "3.142"), rung("3.1415", "3.1417")], true),
+        ];
+        for (ladder, ok) in ladders {
+            let r = format_with_ladder(1.0, &whole, ladder);
+            assert_eq!(r.is_ok(), ok, "{ladder:?}");
             if !ok {
-                assert_eq!(FmtError::of(&r.unwrap_err()), Some(FmtError::Capacity));
+                assert_eq!(FmtError::of(&r.unwrap_err()), Some(FmtError::InvalidLadder));
             }
         }
     }
