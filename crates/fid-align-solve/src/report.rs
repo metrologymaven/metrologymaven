@@ -38,6 +38,8 @@
 //!   `weighted_rms`, `max_abs` and `max_entry` are absent.
 //! - A square, a weighted square or a sum that exceeds `f64::MAX` (`|r|` from about `1.34e154`
 //!   metres) gives `stat_overflow`; an intermediate overflow is never compensated away.
+//! - A square below the smallest subnormal (`|r|` below about `1e-162` metres) rounds to zero,
+//!   so `rms` can be `0` while `max_abs > 0`; this is the IEEE 754 result, not an error.
 //! - A NaN or infinite residual or vector component gives `nan_residual` naming the entry,
 //!   when it is pushed (REQ-ALN.QA.REPORT-004). The maximum search refuses a NaN again with
 //!   the same error (it cannot occur after the push check).

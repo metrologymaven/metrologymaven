@@ -58,6 +58,8 @@ pub enum AlignError {
     InvalidCursor { offset: u64, len: u64 },
     /// The caller paged from a report digest that is no longer the alignment's report.
     ReportChanged,
+    /// A residual page after the first (`offset > 0`) without the report `digest` it pages.
+    CursorUnpinned,
     /// A fault that cannot be the caller's mistake.
     Internal(&'static str),
 }
@@ -88,6 +90,7 @@ impl AlignError {
             AlignError::PageTooLarge(_) => "page_too_large",
             AlignError::InvalidCursor { .. } => "invalid_cursor",
             AlignError::ReportChanged => "report_changed",
+            AlignError::CursorUnpinned => "cursor_unpinned",
             AlignError::Internal(_) => "internal",
         }
     }
@@ -125,7 +128,10 @@ impl fmt::Display for AlignError {
             AlignError::Id(e) => write!(f, ": {e}"),
             AlignError::PageTooLarge(n) => write!(f, ": limit {n}"),
             AlignError::InvalidCursor { offset, len } => write!(f, ": offset {offset} past {len} entries"),
-            AlignError::Solver(_) | AlignError::DigestMismatch | AlignError::ReportChanged => Ok(()),
+            AlignError::Solver(_)
+            | AlignError::DigestMismatch
+            | AlignError::ReportChanged
+            | AlignError::CursorUnpinned => Ok(()),
         }
     }
 }

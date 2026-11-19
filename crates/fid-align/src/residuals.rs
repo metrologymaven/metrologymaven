@@ -19,10 +19,11 @@
 //!
 //! The page holds entries `[offset, min(offset + limit, n))` in index order, and `next_offset`
 //! is the offset of the next page or `null` after the last one. A report never changes, so
-//! a page is stable for a given report digest; a caller that passes the `digest` of the
-//! report it started from gets `report_changed` if the alignment was recomputed since.
-//! `limit > 100000` gives `page_too_large`; `offset > n` gives `invalid_cursor` (`offset = n`
-//! is the valid empty page after the end).
+//! a page is stable for a given report digest. Every page after the first is pinned: a read
+//! with `offset > 0` must pass the `digest` of the report it started from (from the summary
+//! of the first page), else `cursor_unpinned`; a pinned read gets `report_changed` if the
+//! alignment was recomputed since. `limit > 100000` gives `page_too_large`; `offset > n`
+//! gives `invalid_cursor` (`offset = n` is the valid empty page after the end).
 //!
 //! # Result
 //!
@@ -255,8 +256,8 @@ pub fn entry_value(e: &EntryView<'_>) -> CValue {
     ])
 }
 
-/// The residual read. Fails `not_found` for an unknown alignment or a report missing from
-/// the store, `digest_mismatch` if the stored report is not the one the alignment recorded,
+/// The residual read. Fails `cursor_unpinned` for a page read with `offset > 0` and no
+/// `digest`, `not_found` for an unknown alignment or a report missing from the store, `digest_mismatch` if the stored report is not the one the alignment recorded,
 /// `report_changed` if `digest` is given and differs, and `invalid_cursor` for an offset past
 /// the end.
 pub fn get_residuals(
@@ -264,6 +265,9 @@ pub fn get_residuals(
     reports: &ResidualStore,
     params: &ResidualsParams,
 ) -> Result<CValue, AlignError> {
+    if !params.summary_only && params.offset > 0 && params.digest.is_none() {
+        return Err(AlignError::CursorUnpinned);
+    }
     let alignment = model.get(&params.alignment).ok_or(AlignError::NotFound(params.alignment))?;
     let rref = alignment.report();
     let report = reports.get(&rref.id).ok_or(AlignError::NotFound(rref.id))?;
@@ -296,3 +300,120 @@ pub fn get_residuals(
     }
     Ok(CValue::Obj(out))
 }
+
+// ------------------------------------------------------------------ result schema
+
+fn text(s: &str) -> CValue {
+    CValue::Str(s.to_string())
+}
+
+fn texts(items: &[&str]) -> CValue {
+    CValue::Arr(items.iter().map(|s| text(s)).collect())
+}
+
+fn int(lo: u64, hi: Option<u64>, nullable: bool) -> CValue {
+    let mut m = BTreeMap::new();
+    m.insert("type".to_string(), if nullable { texts(&["integer", "null"]) } else { text("integer") });
+    m.insert("minimum".to_string(), num(lo));
+    if let Some(hi) = hi {
+        m.insert("maximum".to_string(), num(hi));
+    }
+    CValue::Obj(m)
+}
+
+/// A closed object with every listed property required.
+fn closed(ty: CValue, props: Vec<(&str, CValue)>) -> CValue {
+    let names: Vec<&str> = props.iter().map(|(k, _)| *k).collect();
+    obj([
+        ("type", ty),
+        ("additionalProperties", CValue::Bool(false)),
+        ("required", texts(&names)),
+        ("properties", CValue::Obj(props.into_iter().map(|(k, v)| (k.to_string(), v)).collect())),
+    ])
+}
+
+fn metres() -> CValue {
+    obj([("type", text("number")), ("x-quantity", text("length")), ("x-unit", text("m"))])
+}
+
+/// `{"unit": "m", "value": <number>}`, or also `null` when `nullable`.
+fn length_schema(nullable: bool) -> CValue {
+    let ty = if nullable { texts(&["object", "null"]) } else { text("object") };
+    closed(ty, vec![("unit", obj([("const", text("m"))])), ("value", metres())])
+}
+
+/// The result schema of `align.get_residuals@1`: `alignment`, `summary` and the optional
+/// `page`, every length `{value, unit}` with `unit` the constant `m`, and the statistics
+/// nullable (no used entry).
+pub fn result_schema() -> CValue {
+    let id = obj([("type", text("string")), ("pattern", text(crate::command::ID_PATTERN))]);
+    let digest = obj([("type", text("string")), ("pattern", text("^sha256:[0-9a-f]{64}$"))]);
+    let summary = closed(
+        text("object"),
+        vec![
+            ("digest", digest),
+            ("max_abs", length_schema(true)),
+            ("max_entry", int(0, None, true)),
+            ("n_entries", int(1, None, false)),
+            ("n_rejected", int(0, None, false)),
+            ("n_used", int(0, None, false)),
+            ("report", id.clone()),
+            ("rms", length_schema(true)),
+            ("weighted", obj([("type", text("boolean"))])),
+            ("weighted_rms", length_schema(true)),
+        ],
+    );
+    let vector = closed(
+        texts(&["object", "null"]),
+        vec![
+            ("unit", obj([("const", text("m"))])),
+            ("value", obj([("type", text("array")), ("minItems", num(3)), ("maxItems", num(3)), ("items", metres())])),
+        ],
+    );
+    let entry = closed(
+        text("object"),
+        vec![
+            ("index", int(0, None, false)),
+            ("input", int(0, Some(u64::from(u32::MAX)), false)),
+            ("item", int(0, Some(MAX_SAFE), false)),
+            ("kind", obj([("enum", texts(&["feature", "locked_direction", "pair", "point"]))])),
+            (
+                "reason",
+                obj([
+                    ("type", texts(&["string", "null"])),
+                    ("pattern", text(REASON_PATTERN)),
+                    ("maxLength", num(fid_align_solve::MAX_REASON_BYTES as u64)),
+                ]),
+            ),
+            ("residual", length_schema(false)),
+            ("used", obj([("type", text("boolean"))])),
+            ("vector", vector),
+            (
+                "weight",
+                obj([
+                    ("type", texts(&["number", "null"])),
+                    ("exclusiveMinimum", num(0)),
+                    ("x-quantity", text("dimensionless")),
+                ]),
+            ),
+        ],
+    );
+    let page = closed(
+        text("object"),
+        vec![
+            ("entries", obj([("type", text("array")), ("maxItems", num(MAX_PAGE)), ("items", entry)])),
+            ("limit", int(1, Some(MAX_PAGE), false)),
+            ("next_offset", int(1, None, true)),
+            ("offset", int(0, None, false)),
+        ],
+    );
+    obj([
+        ("type", text("object")),
+        ("additionalProperties", CValue::Bool(false)),
+        ("required", texts(&["alignment", "summary"])),
+        ("properties", obj([("alignment", id), ("page", page), ("summary", summary)])),
+    ])
+}
+
+/// The rejection reason grammar of `fid-align-solve`.
+pub const REASON_PATTERN: &str = "^[a-z][a-z0-9_]*$";

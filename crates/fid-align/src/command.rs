@@ -34,7 +34,7 @@ pub const MAX_PARAMS_DEPTH: usize = 8;
 /// Most CLI arguments after `fid align`.
 const MAX_CLI_ARGS: usize = 16;
 const LIFECYCLE_SINCE: &str = "2026-11-19";
-const ID_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
+pub(crate) const ID_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
 
 /// The surface a call came through.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -351,7 +351,10 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
                     obj([
                         ("type", text("integer")),
                         ("minimum", CValue::Num(0.0)),
-                        ("description", text("Index of the first entry of the page (default 0).")),
+                        (
+                            "description",
+                            text("Index of the first entry of the page (default 0); above 0 needs digest."),
+                        ),
                     ]),
                 ),
                 (
@@ -377,7 +380,7 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             "Returns an alignment's residual report: the summary (RMS, weighted RMS, maximum absolute residual, \
              used and rejected counts, all with units, and the report digest) and optionally one page of entries.",
             residuals_params,
-            obj([("type", text("object"))]),
+            residuals::result_schema(),
         )?,
         def(
             "align.list_alignments",
