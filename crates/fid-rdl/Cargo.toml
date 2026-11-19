@@ -1,0 +1,25 @@
+[package]
+name = "fid-rdl"
+description = "Metrology Maven Reference Data Library record format: rdl-dataset/v1, digest, public view and the rdl.list_dataset / rdl.show_dataset read commands (spec node UNC.RDL.FORMAT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# RFC 8785 canonical JSON, bounded parsing and SHA-256 (CORE.JRN.CANON). Layer model.
+fid-canon = { path = "../fid-canon" }
+# Shared `sha256:` digest type (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+# Command definitions of the two read commands through the registry's field rules
+# (CORE.REG.DEF). Layer model.
+fid-registry = { path = "../fid-registry" }
+# The shared result envelope printed by `--json` and returned over MCP (AUTO.SURF.ENV).
+# Layer services, the same layer as this crate.
+fid-surface = { path = "../fid-surface" }
+# The replay outcome class for exact replay of the activity records (CORE.RPL.CLASS). Layer engine.
+fid-replay = { path = "../fid-replay" }
+
+[lints]
+workspace = true
