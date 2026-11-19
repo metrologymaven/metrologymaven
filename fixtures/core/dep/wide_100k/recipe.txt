@@ -1,0 +1,11 @@
+# CORE.DEP.EDGE fixture `wide_100k` recipe (hand-written; CC-BY-4.0).
+# Element i (0 <= i < elements) has ID 00000000-0000-7000-8000-<i as 12 lowercase hex digits>.
+# Element 0 has no inputs. For i = 1 .. elements-1, in order, draw from one SplitMix64
+# stream started at `seed`: k = 1 + next % max_inputs, then k draws j = next % i; the
+# inputs of i are the distinct j (duplicates collapse). Every input is older, so the
+# graph is acyclic. `extra <n> <indices...>`: element `elements` is then created with
+# those n inputs (AC-5). make_fixtures.py holds the reference generator.
+elements 100000
+seed 20261119
+max_inputs 3
+extra 10 0 10000 20000 30000 40000 50000 60000 70000 80000 90000

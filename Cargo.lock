@@ -463,6 +463,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-dep"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-registry",
+ "fid-types",
+ "fid-uuid",
+]
+
+[[package]]
 name = "fid-design"
 version = "0.0.1"
 dependencies = [
