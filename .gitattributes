@@ -114,3 +114,6 @@ fixtures/rel/notes/** -text
 # GEO.TYPES fixtures: digest vectors pin a byte layout and are compared byte for byte by
 # tools/fixtures/geo_digest_vectors.py --check; never convert line endings.
 fixtures/geo/types/** -text
+# CORE.RPL.EXEC.SUBST fixtures: hand-labelled spans and observation blobs whose SHA-256 is checked
+# byte for byte by the tests and make_fixtures.py --check; never convert line endings.
+fixtures/core/rpl/exec/subst/** -text

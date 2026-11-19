@@ -1,0 +1,99 @@
+{
+ "decls": [
+  {
+   "command": "probe.legacy@1",
+   "lifecycle": {
+    "replaced_by": "probe.legacy@2",
+    "since": "2026-09-01",
+    "state": "removed"
+   }
+  },
+  {
+   "command": "probe.legacy@2",
+   "lifecycle": {
+    "since": "2026-01-15",
+    "state": "active"
+   }
+  },
+  {
+   "command": "probe.hidden@1",
+   "lifecycle": {
+    "remove_after": "2027-06-01",
+    "replaced_by": "probe.hidden@2",
+    "since": "2026-06-01",
+    "state": "hidden"
+   }
+  },
+  {
+   "command": "probe.hidden@2",
+   "lifecycle": {
+    "since": "2026-01-15",
+    "state": "active"
+   }
+  }
+ ],
+ "expect": {
+  "preflight": [
+   {
+    "id": "probe.legacy@1",
+    "kind": "command",
+    "steps": [
+     1,
+     3
+    ]
+   }
+  ]
+ },
+ "kernels": [
+  "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f"
+ ],
+ "migrators": [],
+ "span": {
+  "steps": [
+   {
+    "command": "probe.legacy@1",
+    "entry": "sha256:c76951b05bc1f94fd2db2c5eba48e80fb8409bc710572fe1e5d6e4600811b99d",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 1
+   },
+   {
+    "command": "probe.legacy@2",
+    "entry": "sha256:b64799701ecbcc989caaab63b62d52e77ada53138f92cbe89a31962169808e04",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 2
+   },
+   {
+    "command": "probe.legacy@1",
+    "entry": "sha256:3ae69adf5830ac495db837d7ff96c54a4b587ced167a82bdca8b201d4466b7a2",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 3
+   },
+   {
+    "command": "probe.hidden@1",
+    "entry": "sha256:d42f6a29dd57c8c3e97cfff1128cc26a76bfb9680d6f1a2ebf7529264717c1eb",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 4
+   }
+  ]
+ }
+}
