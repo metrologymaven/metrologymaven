@@ -8,7 +8,7 @@
 //! the result ID.
 
 use super::records::{ResultRow, TRANSCRIBED};
-use super::render::{header_of, scope_positions, slots, unneutralise, Slot};
+use super::render::{header_of, neutralise, scope_positions, slots, Slot};
 use super::OutError;
 use crate::csv::map::{decode_utf8, ColumnMap, Field, Layout, Scope, WIDE_SEPARATOR};
 
@@ -59,8 +59,11 @@ fn find(slots: &[Slot], map: &ColumnMap, field: Field) -> Option<usize> {
     slots.iter().position(|s| s.and_then(|p| map.columns().get(p)).is_some_and(|c| c.field == field))
 }
 
-fn cell(rec: &[String], at: Option<usize>) -> Option<&str> {
-    at.and_then(|i| rec.get(i)).map(|s| unneutralise(s))
+/// Whether the cell at `at` holds `value` as the exporter writes it (neutralised). The
+/// written form is compared, not a reversal of it, so text that itself starts with `'`
+/// cannot be mistaken for a neutralised cell.
+fn is(rec: &[String], at: Option<usize>, value: &str) -> bool {
+    at.and_then(|i| rec.get(i)).is_some_and(|c| c.as_str() == neutralise(value).as_ref())
 }
 
 /// Checks that every transcribed result in `rows` is marked in `output`, a table written
@@ -96,11 +99,11 @@ pub fn check_marked(output: &[u8], map: &ColumnMap, rows: &[ResultRow]) -> Resul
                 let marked = status_i.is_some()
                     && sw_i.is_some()
                     && data.iter().any(|rec| {
-                        cell(rec, key_i).unwrap_or("") == t.get(key).unwrap_or("")
-                            && (part_i.is_none() || cell(rec, part_i) == Some(t.part()))
-                            && cell(rec, status_i) == Some(TRANSCRIBED)
-                            && cell(rec, sw_i) == t.get(Field::SourceSoftware)
-                            && (ver_i.is_none() || cell(rec, ver_i) == t.get(Field::SourceVersion))
+                        is(rec, key_i, t.get(key).unwrap_or(""))
+                            && (part_i.is_none() || is(rec, part_i, t.part()))
+                            && is(rec, status_i, TRANSCRIBED)
+                            && is(rec, sw_i, t.get(Field::SourceSoftware).unwrap_or(""))
+                            && (ver_i.is_none() || is(rec, ver_i, t.get(Field::SourceVersion).unwrap_or("")))
                     });
                 if !marked {
                     return Err(unmarked(t));
@@ -120,17 +123,17 @@ pub fn check_marked(output: &[u8], map: &ColumnMap, rows: &[ResultRow]) -> Resul
                 let status_i = match (header, status_header) {
                     (Some(h), Some(sh)) => {
                         let want = format!("{}{WIDE_SEPARATOR}{sh}", t.characteristic());
-                        h.iter().position(|c| unneutralise(c) == want)
+                        h.iter().position(|c| c.as_str() == neutralise(&want).as_ref())
                     }
                     _ => None,
                 };
                 let marked = status_i.is_some()
                     && sw_i.is_some()
                     && data.iter().any(|rec| {
-                        (part_i.is_none() || cell(rec, part_i) == Some(t.part()))
-                            && cell(rec, status_i) == Some(TRANSCRIBED)
-                            && cell(rec, sw_i) == t.get(Field::SourceSoftware)
-                            && (ver_i.is_none() || cell(rec, ver_i) == t.get(Field::SourceVersion))
+                        (part_i.is_none() || is(rec, part_i, t.part()))
+                            && is(rec, status_i, TRANSCRIBED)
+                            && is(rec, sw_i, t.get(Field::SourceSoftware).unwrap_or(""))
+                            && (ver_i.is_none() || is(rec, ver_i, t.get(Field::SourceVersion).unwrap_or("")))
                     });
                 if !marked {
                     return Err(unmarked(t));

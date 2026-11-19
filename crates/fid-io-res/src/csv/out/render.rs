@@ -25,7 +25,9 @@ pub fn neutralise(text: &str) -> Cow<'_, str> {
     }
 }
 
-/// The inverse of [`neutralise`], for readers of exported tables.
+/// Drops the [`NEUTRALISER`] that [`neutralise`] added, for readers of exported tables.
+/// Not an exact inverse: text that itself starts with `'` and a trigger character (which
+/// [`neutralise`] leaves alone) loses its apostrophe too.
 pub fn unneutralise(cell: &str) -> &str {
     match cell.strip_prefix(NEUTRALISER) {
         Some(rest) if rest.starts_with(FORMULA_TRIGGERS) => rest,
