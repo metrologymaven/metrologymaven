@@ -194,6 +194,9 @@ fn markers(src: &str) -> (Pos, Pos) {
     let mut found = BTreeSet::new();
     let mut notes = BTreeSet::new();
     for (n, line) in src.lines().enumerate() {
+        if line.trim_start().starts_with("//") {
+            continue; // a comment line describing the markers
+        }
         let Some(at) = line.find("//~") else { continue };
         let code = &line[..at];
         for m in line[at + 3..].split_whitespace() {
