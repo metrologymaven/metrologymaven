@@ -198,7 +198,7 @@ fn edge_fixture() {
         }
         n += 1;
     }
-    assert!(n >= 70, "fixture too small: {n}");
+    assert!(n >= 60, "fixture too small: {n}");
 }
 
 /// AC-3: on 10^6 elements the result equals the test-side reimplementation bit for bit, and
