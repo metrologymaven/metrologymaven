@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-journal]
+built_pr: 229
 satisfies: [REQ-CORE.JRN.CHAIN-001, REQ-CORE.JRN.CHAIN-002, REQ-CORE.JRN.CHAIN-003, REQ-CORE.JRN.CHAIN-004, REQ-CORE.JRN.CHAIN-009]
 covers: []
 depends_on: [CORE.JRN.ENTRY, CORE.STO.SQL, CORE.STO.CAS]
