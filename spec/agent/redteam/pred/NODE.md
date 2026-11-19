@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-eval-suite]
+built_pr: 172
 satisfies: [REQ-AGENT.REDTEAM-003, REQ-AGENT.REDTEAM-007]
 covers: []
 depends_on: [AGENT.EVAL.FORMAT]
