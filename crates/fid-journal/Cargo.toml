@@ -1,6 +1,6 @@
 [package]
 name = "fid-journal"
-description = "Metrology Maven semantic journal: entry model and salted commitments, atomic durable append (spec nodes CORE.JRN.ENTRY, CORE.JRN.CHAIN.APPEND)"
+description = "Metrology Maven semantic journal: entry model and salted commitments, atomic durable append, branch heads and checkpoints (spec nodes CORE.JRN.ENTRY, CORE.JRN.CHAIN.APPEND, CORE.JRN.CHAIN.CKPT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
