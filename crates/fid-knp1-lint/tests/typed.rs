@@ -247,9 +247,32 @@ fn missing_driver_is_fatal() {
 #[test]
 fn wrong_clippy_version_is_fatal() {
     // The fixture pins 0.0.0, which no toolchain has.
-    let opts = Options { cargo: cargo(), scratch: scratch("typed-version") };
+    let opts = Options { cargo: cargo(), scratch: scratch("typed-version"), extra_methods: Vec::new() };
     let e = run(&fix("ws/knp1-lint.toml"), &opts).unwrap_err();
     assert_eq!(e.code, TypedErrorCode::Driver, "{e}");
+}
+
+#[test]
+fn an_unresolvable_table_path_fails_the_real_driver_run() {
+    // Proves the real driver's wording matches the detector: a path that exists nowhere must
+    // make the run fail with KNP1-TYPED-DRIVER, not lint silently without it.
+    let config = fix("ws/knp1-lint.toml");
+    let text = String::from_utf8(read(&config)).unwrap();
+    let mut cfg = parse_config(&text).unwrap();
+    cfg.clippy_version = driver_version(&cargo()).unwrap();
+    cfg.targets = vec!["x86_64-unknown-linux-gnu".to_string()];
+    let syn_cfg = syn_scan::parse_config(&text).unwrap();
+    let gcfg = graph::load_config(&config).unwrap();
+    let mut closure = graph::compute_closure(&gcfg).unwrap();
+    closure.crates.retain(|c| c.name == "typed-clean");
+    let opts = Options {
+        cargo: cargo(),
+        scratch: scratch("typed-unresolved"),
+        extra_methods: vec!["std::knp1_no_such_function".to_string()],
+    };
+    let e = check_run(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts).unwrap_err();
+    assert_eq!(e.code, TypedErrorCode::Driver, "{e}");
+    assert!(e.message.contains("knp1_no_such_function"), "{e}");
 }
 
 #[test]
@@ -261,20 +284,10 @@ fn ac1_to_ac4_end_to_end_on_three_targets() {
     let syn_cfg = syn_scan::parse_config(&text).unwrap();
     let gcfg = graph::load_config(&config).unwrap();
     let closure = graph::compute_closure(&gcfg).unwrap();
-    let opts = Options { cargo: cargo(), scratch: scratch("typed-ws") };
+    let opts = Options { cargo: cargo(), scratch: scratch("typed-ws"), extra_methods: Vec::new() };
     // The workspace's .cargo/config.toml sets a missing wrapper, a missing rustc and a bad
     // codegen flag: the check must override them, or nothing builds.
     let run = check_run(&closure, &gcfg.workspace, &cfg, &syn_cfg, &opts).unwrap();
-    // The real clippy wording of an unresolved table path matches the detector: the x86
-    // feature-detection macro does not exist on wasm32 and is allowlisted there.
-    assert!(
-        run.unresolved_allowed
-            .contains(&("wasm32-unknown-unknown".to_string(), "std::is_x86_feature_detected".to_string())),
-        "{:?}
-{:#?}",
-        run.unresolved_allowed,
-        run.outcome.findings.iter().map(|f| f.message.as_str()).collect::<Vec<_>>()
-    );
     let out = run.outcome;
     for f in out.findings.iter().chain(&out.notes) {
         f.validate().unwrap();
