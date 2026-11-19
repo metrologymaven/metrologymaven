@@ -1,0 +1,18 @@
+[package]
+name = "fid-eval-pred"
+description = "Metrology Maven red-team violation predicates: schema and fail-closed parser shared by the eval suite format and the harness (spec node AGENT.REDTEAM.PRED)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Pure library below the tooling layer (D-035), so fid-eval-suite and fid-eval-harness share
+# one definition without one tool crate linking another.
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true

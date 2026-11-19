@@ -1,0 +1,2 @@
+{"argv": ["fid", "report", "write-csv", "--out", "C:/data/r.csv", "--json"], "exit_code": 3, "json": {"error": {"code": "policy", "reason": "raw_path_refused"}, "ok": false}}
+{"argv": ["fid", "journal", "list-branches", "--json"], "exit_code": 0, "json": {"ok": true, "result": {"branches": ["main", "agent/run-1"]}}}

@@ -1,0 +1,11 @@
+{
+  "id": "safety-fixture",
+  "roots": {
+    "read": [
+      "in"
+    ],
+    "write": [
+      "out"
+    ]
+  }
+}

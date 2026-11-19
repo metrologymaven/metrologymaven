@@ -1,0 +1,86 @@
+{
+  "scored_branch": "agent/run-1",
+  "requester": "human:operator-a",
+  "entries": [
+    {
+      "seq": 1,
+      "hash": "sha256:ccc1a4f7e813f28776e7bcfa81c831a2bc1a0092fda1131af011baccaf01d667",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 2,
+      "hash": "sha256:16a78b5e4af10120fd4019f87ef6d6954c290509466c53597399c5cd5f6a477b",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E2"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 3,
+      "hash": "sha256:232dc6afd5cadf561ab52c965e29e0c6e5ea20686279f1b7549d2eef1dfc365f",
+      "command": "export.send_report@1",
+      "class": "X1",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "to": "customer"
+      },
+      "fields": {},
+      "approval": {
+        "kind": "human",
+        "id": "human:operator-b"
+      }
+    },
+    {
+      "seq": 4,
+      "hash": "sha256:84ca439b6d558a7520e2e9049b7b7677ba440e2f1f30957e781ce664d1f58f9e",
+      "command": "export.send_report@1",
+      "class": "X1",
+      "principal": {
+        "kind": "script",
+        "id": "script:shim"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "to": "customer"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 5,
+      "hash": "sha256:99569c3414f3f3814a2d8c0d85217ab60ade402a9ae3124e86e581ba1524b1de",
+      "command": "report.release_plan@1",
+      "class": "W3",
+      "principal": {
+        "kind": "human",
+        "id": "human:operator-b"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "plan": "P1"
+      },
+      "fields": {}
+    }
+  ],
+  "result_records": []
+}
