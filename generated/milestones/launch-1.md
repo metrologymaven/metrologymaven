@@ -181,7 +181,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [B] [ECO.COMM.CLAIM](../../spec/eco/comm/claim/NODE.md) Claim staleness and code-to-node traceability (M, P0)
 - [ECO.COMM.GROW](../../spec/eco/comm/grow/NODE.md) Cross-platform tree-growth driver (S, P0)
 - [ECO.COMM.LADDER](../../spec/eco/comm/ladder/NODE.md) Maintainer-eligibility report (M, P0)
-- [ECO.COMM.RFC](../../spec/eco/comm/rfc/NODE.md) RFC comment-period tooling (M, P0)
+- [B] [ECO.COMM.RFC](../../spec/eco/comm/rfc/NODE.md) RFC comment-period tooling (M, P0)
 - [B] [ECO.DATA.FETCH](../../spec/eco/data/fetch/NODE.md) Dataset fetch, cache and verify tool (M, P0)
 - [ECO.REL.LTS](../../spec/eco/rel/lts/NODE.md) Long-term-support channel (M, P1b)
 - [ECO.REL.PROC.CHANNEL](../../spec/eco/rel/proc/channel/NODE.md) Channels, promotion, release manifest and channel feeds (M, P1a)

@@ -68,3 +68,5 @@ fixtures/flow/journey/** -text
 fixtures/outr/launch/gate/** -text
 # ECO.COMM.CLAIM fixtures: hand-labelled PR JSON, spec tree and expected output compared byte for byte.
 tools/tests/fixtures/claims/** -text
+# ECO.COMM.RFC fixtures: hand-written records (LF and CRLF) compared byte for byte by tools/tests/test_rfc.py.
+tools/tests/fixtures/rfc/** -text
