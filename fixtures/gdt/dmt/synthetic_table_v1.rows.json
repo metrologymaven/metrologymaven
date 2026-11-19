@@ -1,0 +1,127 @@
+{
+  "dmt:asme/angularity/none@1": {
+    "chains": {
+      "surface": "sha256:15397ec695189cf4bb092b64f86c1ebbafbad779e5787f78043d8a7ec0b0b8b0"
+    },
+    "row": "sha256:77ba51d0ac99a355dbc236fd55a84c6cfdce59808d08592518d5807efed10594"
+  },
+  "dmt:asme/circular_runout/none@1": {
+    "chains": {
+      "default": "sha256:c91c9a30798c04915f4ac7e6e410ba111a6976fd4ea59100117ac59f0ccdee18"
+    },
+    "row": "sha256:8d631778f73f07d16dbbdee110f55e1be9d84be1e1a397ab9f6441508ef1b85d"
+  },
+  "dmt:asme/circularity/none@1": {
+    "chains": {
+      "default": "sha256:c91c9a30798c04915f4ac7e6e410ba111a6976fd4ea59100117ac59f0ccdee18"
+    },
+    "row": "sha256:fdfb73981bcbd4e6c2b8b8999b3c1e166d2230bf45fbd48a3eef864a2e79be7a"
+  },
+  "dmt:asme/concentricity/none@1": {
+    "chains": {
+      "placeholder": "sha256:9fcb971f3fc340bad5f33f118ef093a99e64bb1062850d4b9889658d39eb550c"
+    },
+    "row": "sha256:c383054c6b371a9958afd8c78cdf52de81e5d7b8ea4f421828cffc7b5e46329d"
+  },
+  "dmt:asme/cylindricity/none@1": {
+    "chains": {
+      "default": "sha256:c91c9a30798c04915f4ac7e6e410ba111a6976fd4ea59100117ac59f0ccdee18"
+    },
+    "row": "sha256:c64a900ff05bfc823652aa2415a5c0dee3d1738656758123fe9b3b4f13a6ac86"
+  },
+  "dmt:asme/flatness/none@1": {
+    "chains": {
+      "default": "sha256:c91c9a30798c04915f4ac7e6e410ba111a6976fd4ea59100117ac59f0ccdee18"
+    },
+    "row": "sha256:7088bfbe9812e632bb85a018ddaba5ada648f64cfd1ec0137851baedc94b4909"
+  },
+  "dmt:asme/parallelism/none@1": {
+    "chains": {
+      "surface": "sha256:15397ec695189cf4bb092b64f86c1ebbafbad779e5787f78043d8a7ec0b0b8b0"
+    },
+    "row": "sha256:c407f51802494c7ceaf744f6f52e275e1aa351c2db75cf2dc0a6bba39eb69dc4"
+  },
+  "dmt:asme/perpendicularity/none@1": {
+    "chains": {
+      "axis": "sha256:27e1cd23def4ec0cffc12f7f225c342a7dd9445e292b69290c3f94d846ca28f7",
+      "surface": "sha256:15397ec695189cf4bb092b64f86c1ebbafbad779e5787f78043d8a7ec0b0b8b0"
+    },
+    "row": "sha256:08153594ab16bc62907c9c549113706a80b6f00eaa7e43891d23c7e6f14957e8"
+  },
+  "dmt:asme/position/cz+mmc@1": {
+    "chains": {
+      "axis": "sha256:27e1cd23def4ec0cffc12f7f225c342a7dd9445e292b69290c3f94d846ca28f7",
+      "surface": "sha256:15397ec695189cf4bb092b64f86c1ebbafbad779e5787f78043d8a7ec0b0b8b0"
+    },
+    "row": "sha256:2d60c7357ee6217068dfdb96595a850116a9e5b886c6c977f1e23de62898a2cf"
+  },
+  "dmt:asme/position/mmc@1": {
+    "chains": {
+      "axis": "sha256:27e1cd23def4ec0cffc12f7f225c342a7dd9445e292b69290c3f94d846ca28f7",
+      "surface": "sha256:15397ec695189cf4bb092b64f86c1ebbafbad779e5787f78043d8a7ec0b0b8b0"
+    },
+    "row": "sha256:ea9ae06d43685254d12a10c14b2a17fef0362088c5064209edcdf4992a8799e9"
+  },
+  "dmt:asme/position/none@1": {
+    "chains": {
+      "axis": "sha256:27e1cd23def4ec0cffc12f7f225c342a7dd9445e292b69290c3f94d846ca28f7",
+      "surface": "sha256:15397ec695189cf4bb092b64f86c1ebbafbad779e5787f78043d8a7ec0b0b8b0"
+    },
+    "row": "sha256:3d510c884f24520b5de95e67e76bf925bb16aecca699023dc0f95ed1daeacfc1"
+  },
+  "dmt:asme/profile_of_a_line/none@1": {
+    "chains": {
+      "placeholder": "sha256:9fcb971f3fc340bad5f33f118ef093a99e64bb1062850d4b9889658d39eb550c"
+    },
+    "row": "sha256:72e251fd4453cf4e24d5caac57662d991601c85d47cd27f4a66f3f393cce5473"
+  },
+  "dmt:asme/profile_of_a_surface/none@1": {
+    "chains": {
+      "surface": "sha256:15397ec695189cf4bb092b64f86c1ebbafbad779e5787f78043d8a7ec0b0b8b0"
+    },
+    "row": "sha256:c4302cc442fd4d4b76d67a81554a2f22c79e710fa9f79ef23cc4a268cf0a61fd"
+  },
+  "dmt:asme/size/none@1": {
+    "chains": {
+      "global": "sha256:51167a13cea9648733bc0952eb6eb4ff516474f8c1b2726099d07d9e50efde74",
+      "local": "sha256:701dcd12d2a903ce83cd5d754056c6c3ea811a4d1749f92de02f0865df139fca"
+    },
+    "row": "sha256:8652832be76a2c2d0c9c9bc4aea52937db69ac0806330852bfd2b3c1e1dff23f"
+  },
+  "dmt:asme/straightness/none@1": {
+    "chains": {
+      "default": "sha256:c91c9a30798c04915f4ac7e6e410ba111a6976fd4ea59100117ac59f0ccdee18"
+    },
+    "row": "sha256:dea2feee160833b24301e393ff85fe3cd89e13345057667af1b4939b49ccd4eb"
+  },
+  "dmt:asme/total_runout/none@1": {
+    "chains": {
+      "default": "sha256:c91c9a30798c04915f4ac7e6e410ba111a6976fd4ea59100117ac59f0ccdee18"
+    },
+    "row": "sha256:847d9f1d6e867a0a2e5b2d2834c2c9a265a2d37d47a2de0ea9a8b7a36437d865"
+  },
+  "dmt:iso/cylindricity/none@1": {
+    "chains": {
+      "placeholder": "sha256:9fcb971f3fc340bad5f33f118ef093a99e64bb1062850d4b9889658d39eb550c"
+    },
+    "row": "sha256:5fd03cce3eef348a305135adf42808543459dbc52f720e48bacabbb6079ac0a8"
+  },
+  "dmt:iso/flatness/none@1": {
+    "chains": {
+      "placeholder": "sha256:9fcb971f3fc340bad5f33f118ef093a99e64bb1062850d4b9889658d39eb550c"
+    },
+    "row": "sha256:8749dfe5a9e8b5291ffcfefa97e442338382ed3fc41ea76fff2f53d94a025188"
+  },
+  "dmt:iso/position/none@1": {
+    "chains": {
+      "placeholder": "sha256:9fcb971f3fc340bad5f33f118ef093a99e64bb1062850d4b9889658d39eb550c"
+    },
+    "row": "sha256:3e42219fc933af06c752dbbb921230a8a4071cd94b57807e8084f0d240694962"
+  },
+  "dmt:iso/roundness/none@1": {
+    "chains": {
+      "placeholder": "sha256:9fcb971f3fc340bad5f33f118ef093a99e64bb1062850d4b9889658d39eb550c"
+    },
+    "row": "sha256:b01ac5e72edca8f5fcfe4dd35c8ff928d14ea6b62b61337e348b0579e1a54141"
+  }
+}

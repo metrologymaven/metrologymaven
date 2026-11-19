@@ -15,6 +15,7 @@ use super::ident::{Edition, ProfileId, ProfileRef, SemVer};
 use super::DprofError;
 use crate::dmt_flow::roster::Dialect;
 use fid_canon::CValue;
+use fid_gps::dmt::{profile_vocabulary, Dialect as GpsDialect, DmtTable, ProfileKeyRule};
 use fid_types::Digest;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -63,33 +64,90 @@ pub fn is_valid_key(k: &str) -> bool {
         })
 }
 
-/// The set of keys a profile may set. The real set is owned by the DMT schema
-/// (`GDT.RES.SCHEMA`); callers pass it in, and nothing here assumes its content.
+/// What a key's value must be.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ValueRule {
+    /// Any profile value (explicit vocabularies built with [`KeyVocabulary::new`]).
+    Any,
+    /// A text value.
+    Text,
+    /// A text naming one of these variants of the DMT row with this key.
+    Variant(BTreeSet<String>),
+}
+
+/// The keys a profile may set, and what each value must be. The real vocabulary is owned by
+/// the DMT schema (`GDT.RES.SCHEMA`, `fid_gps::dmt::profile_keys`) and is built with
+/// [`KeyVocabulary::from_dmt_table`]; [`KeyVocabulary::new`] builds an explicit key list that
+/// accepts any value (tests and tools that check a key subset).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct KeyVocabulary(BTreeSet<String>);
+pub struct KeyVocabulary {
+    keys: BTreeMap<String, ValueRule>,
+    dialect: Option<Dialect>,
+}
 
 impl KeyVocabulary {
-    /// Builds a vocabulary. Fails `bad_vocabulary` on a key outside the key grammar, a
-    /// repeated key, or more than [`MAX_VOCABULARY_KEYS`] keys.
+    /// Builds an explicit vocabulary whose keys accept any value. Fails `bad_vocabulary` on a
+    /// key outside the key grammar, a repeated key, or more than [`MAX_VOCABULARY_KEYS`] keys.
     pub fn new<'a>(keys: impl IntoIterator<Item = &'a str>) -> Result<KeyVocabulary, DprofError> {
-        let mut set = BTreeSet::new();
+        let mut map = BTreeMap::new();
         for k in keys {
-            if !is_valid_key(k) {
-                return Err(DprofError::BadVocabulary { reason: "bad_key" });
-            }
-            if set.len() >= MAX_VOCABULARY_KEYS {
-                return Err(DprofError::BadVocabulary { reason: "too_many_keys" });
-            }
-            if !set.insert(k.to_owned()) {
-                return Err(DprofError::BadVocabulary { reason: "duplicate_key" });
-            }
+            KeyVocabulary::add(&mut map, k, ValueRule::Any)?;
         }
-        Ok(KeyVocabulary(set))
+        Ok(KeyVocabulary { keys: map, dialect: None })
+    }
+
+    /// The DMT schema's vocabulary (`fid.dmt-profile-keys/1`) for profiles of `dialect`
+    /// against `table`: the schema's named keys (text values) and the key of every row of
+    /// that dialect with two or more variants (value: the name of one of that row's
+    /// variants). A profile of another dialect is refused with
+    /// `malformed_profile{vocabulary_dialect}`.
+    pub fn from_dmt_table(table: &DmtTable, dialect: Dialect) -> Result<KeyVocabulary, DprofError> {
+        let gps_dialect = match dialect {
+            Dialect::Asme => GpsDialect::Asme,
+            Dialect::Iso => GpsDialect::Iso,
+        };
+        let mut map = BTreeMap::new();
+        for (k, rule) in profile_vocabulary(table, gps_dialect) {
+            let rule = match rule {
+                ProfileKeyRule::Text => ValueRule::Text,
+                ProfileKeyRule::Variant(v) => ValueRule::Variant(v.into_iter().collect()),
+            };
+            KeyVocabulary::add(&mut map, &k, rule)?;
+        }
+        Ok(KeyVocabulary { keys: map, dialect: Some(dialect) })
+    }
+
+    fn add(map: &mut BTreeMap<String, ValueRule>, k: &str, rule: ValueRule) -> Result<(), DprofError> {
+        if !is_valid_key(k) {
+            return Err(DprofError::BadVocabulary { reason: "bad_key" });
+        }
+        if map.len() >= MAX_VOCABULARY_KEYS {
+            return Err(DprofError::BadVocabulary { reason: "too_many_keys" });
+        }
+        if map.insert(k.to_owned(), rule).is_some() {
+            return Err(DprofError::BadVocabulary { reason: "duplicate_key" });
+        }
+        Ok(())
     }
 
     /// Whether `key` is allowed.
     pub fn contains(&self, key: &str) -> bool {
-        self.0.contains(key)
+        self.keys.contains_key(key)
+    }
+
+    /// The dialect this vocabulary is for, when it comes from the DMT schema.
+    pub fn dialect(&self) -> Option<Dialect> {
+        self.dialect
+    }
+
+    /// Whether `value` is allowed for `key` (false for an unknown key).
+    pub fn allows(&self, key: &str, value: &ProfileValue) -> bool {
+        match (self.keys.get(key), value) {
+            (Some(ValueRule::Any), _) => true,
+            (Some(ValueRule::Text), ProfileValue::Text(_)) => true,
+            (Some(ValueRule::Variant(names)), ProfileValue::Text(t)) => names.contains(t),
+            _ => false,
+        }
     }
 }
 
@@ -185,7 +243,10 @@ fn text<'a>(o: &'a BTreeMap<String, CValue>, k: &str) -> Result<&'a str, DprofEr
 
 /// Parses a profile from a parsed JSON value. Structure is checked for every key before
 /// the vocabulary, so a malformed document fails `malformed_profile` even when it also
-/// holds an unknown key; among unknown keys the first in byte order is named.
+/// holds an unknown key; among unknown keys the first in byte order is named. A vocabulary
+/// from the DMT schema also refuses a profile of another dialect
+/// (`malformed_profile{vocabulary_dialect}`, checked with the dialect field) and, after the
+/// key check, a value its key does not allow (`malformed_profile{value_not_allowed}`).
 pub fn profile_from_value(v: &CValue, vocab: &KeyVocabulary) -> Result<ProfileDoc, DprofError> {
     let o = match v {
         CValue::Obj(o) => o,
@@ -198,6 +259,9 @@ pub fn profile_from_value(v: &CValue, vocab: &KeyVocabulary) -> Result<ProfileDo
         return Err(malformed("bad_schema"));
     }
     let dialect = Dialect::parse(text(o, "dialect")?).ok_or_else(|| malformed("bad_dialect"))?;
+    if vocab.dialect().is_some_and(|d| d != dialect) {
+        return Err(malformed("vocabulary_dialect"));
+    }
     let edition = Edition::parse(text(o, "edition")?).ok_or_else(|| malformed("bad_edition"))?;
     let version = SemVer::parse(text(o, "version")?).ok_or_else(|| malformed("bad_version"))?;
     let raw = match o.get("keys") {
@@ -217,6 +281,9 @@ pub fn profile_from_value(v: &CValue, vocab: &KeyVocabulary) -> Result<ProfileDo
     }
     if let Some(k) = keys.keys().find(|k| !vocab.contains(k)) {
         return Err(DprofError::UnknownKey { key: k.clone() });
+    }
+    if keys.iter().any(|(k, v)| !vocab.allows(k, v)) {
+        return Err(malformed("value_not_allowed"));
     }
     let canonical = fid_canon::to_canonical_bytes(v).map_err(|e| malformed(e.code()))?;
     let digest = Digest::from_bytes(fid_canon::digest_bytes(&canonical).0);

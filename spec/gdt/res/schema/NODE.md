@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-gps]
 satisfies: [REQ-GDT.RES-002, REQ-GDT.RES-005]
 covers: []
 depends_on: [KRN.NUM]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # GDT.RES.SCHEMA: DMT row and operator-chain schema
@@ -58,6 +59,19 @@ Defines the **structure** of the Dialect Mapping Table (DMT, D-009) and of the o
 - **Determinism:** D0; parsing and hashing involve no floating-point arithmetic.
 - **Performance budget:** load and digest a 5 000-row table in < 200 ms [unverified].
 - **Crate:** `fid-gps` (kernel GD&T crate, module `dmt`; pure, no I/O: callers pass bytes).
+- **Pinned choices (as built in `fid-gps`, module `dmt`):**
+  - *Layer:* `fid-gps` is in layer `model` of `layers.toml` (CONSTITUTION §2.1 L0, beside canonical JSON), not `kernel`: RFC 8785 and SHA-256 come from `fid-canon` (model) and `sha2`, which the zero-dependency kernel graph cannot reach. KNP-1 still holds in substance: no floating-point arithmetic, no `HashMap`/`HashSet`, no panics. Parsing uses `fid-canon`'s strict bounded parser, not serde; `deny_unknown_fields` is an explicit field-set check on every object.
+  - *Table document:* `{schema: "fid.dmt-table/1", version: "x.y.z", rows: [...]}`, every field required and no other; at most 32 MiB, nesting depth 8, 10 000 rows; no duplicate member name in any object (`malformed_table{duplicate_key}`). Rows may come in any order; everything else is fixed. The `schema` string is the schema version and changes on any change to the row format.
+  - *Row:* the 16 fields `key, dialect, editions, characteristic, modifiers, clauses, variants, default_variant, actual_value, decision_rule_hint, ors_cases, status, limitations, review, notes, synthetic`, all required, no others. `dialect`, `characteristic` and `modifiers` must agree with the key (`malformed_table{key_mismatch}`); `default_variant` must name a variant.
+  - *No JSON numbers anywhere.* Operator parameters (at most 32 per operator, names `[a-z][a-z0-9_]{0,31}`) are a boolean or a string: `0x` + 16 lower-case hex digits is an IEEE-754 binary64 bit pattern (NaN and infinities refused; -0 kept distinct), `0` or `-?[1-9][0-9]*` is an i64, `[a-z][a-z0-9_.-]{0,63}` is a token. The canonical form writes them back unchanged.
+  - *Sets:* editions (1 to 8), modifiers (0 to 8), clauses (1 to 16, ordered by designator, edition, clause), variants (1 to 16, by name), ORS cases (0 to 64), limitations (0 to 32) and reviewers (1 to 16) must be strictly ascending by bytes in the file (`malformed_table{not_sorted}`), so the canonical form never reorders an author's list. Chains may be empty (0 to 64 operators), as `GDT.RES.ROWISO.STUBS` placeholders need.
+  - *Grammars (all lower-case ASCII, so case-only duplicates cannot both be valid):* key `dmt:<asme|iso>/<characteristic>/<modifiers|none>@<v>` with characteristic `[a-z][a-z0-9_]{0,31}`, modifiers `[a-z0-9][a-z0-9_]{0,15}` (not `none`) strictly ascending and `+`-joined, `v` a u32 of at least 1 without leading zero, at most 128 bytes (so every key is also a defaults-profile key); editions, designators and clause editions 1 to 32 bytes of `[a-z0-9.-]` with alphanumerics at both ends and no two separators in a row; clause numbers `[0-9a-z]+(.[0-9a-z]+)*` up to 24 bytes (annex letters lower case); variant names `[a-z][a-z0-9_]{0,31}`; algorithm IDs three such names and a semver after `@`, up to 128 bytes; actual-value and decision-rule hint IDs dotted names plus `@<u32>`, up to 96 bytes; ORS case IDs `[a-z0-9][a-z0-9._:/-]{0,95}`; limitation codes `[a-z][a-z0-9_]{0,47}` with an optional `:[a-z0-9_]{1,31}` argument; reviewer IDs the roster grammar `[a-z0-9][a-z0-9._-]{0,63}`.
+  - *Free text:* `notes` is the only free-text field: at most 280 Unicode scalar values and no control characters (may be empty). Every string is length-checked before its grammar, so an over-long value is `field_too_long{field}` rather than a grammar error.
+  - *Review:* `{state: draft}`, `{state: under_review}` or `{state: signed_off, reviewers: [...]}`; `reviewers` is refused on the first two.
+  - *Error order:* table fields, then rows in file order, each row fully checked (in the field order of `row_from_value`) before its key is compared with earlier rows, so the first failure in file order wins. Grammar failures of the key, operator kind and algorithm ID use their own codes; every other failure is `malformed_table{reason}`.
+  - *Digests:* chain = SHA-256 of the RFC 8785 form of `{steps: [{alg, kind, params}], variant}`; row = of the row object with all 16 fields; table = of `{rows: [rows by key, byte order], schema, version}`. Written `sha256:<hex>` (`fid-types`).
+  - *JSON Schema:* `crates/fid-gps/schema/dmt-table-v1.schema.json` (2020-12), exported as `DMT_TABLE_JSON_SCHEMA`. It checks field sets and grammars; the loader is stricter (sorting, key agreement, unique keys). CI validates both fixtures with Python `jsonschema` and checks hand-labelled mutations fail (`fixtures/gdt/dmt/check_schema.py`).
+  - *Defaults-profile key vocabulary (`fid.dmt-profile-keys/1`):* for a table and a dialect, the key of every row of that dialect with two or more variants (value: text naming one of that row's variants) plus the closed named keys `gdt.datum.label_pattern` (GDT.DRF.DATUM), `scan.edge.extraction_method` (SCAN.EDGE.EST.DEFS) and `unc.decision_rule_hint` (GDT.RES.ROWASME.DPROF), each a text value. Adding a named key bumps the vocabulary version. `GDT.CHAR.DPROF` builds its `KeyVocabulary` from this (`KeyVocabulary::from_dmt_table`).
 
 ## Test fixtures
 
@@ -70,6 +84,7 @@ Defines the **structure** of the Dialect Mapping Table (DMT, D-009) and of the o
 ## Open questions
 
 - The 280-character free-text cap is a guess; reviewers (D-009) should confirm it with `GDT.RES.LINT`.
+- `fid-gps` sits in layer `model`, not `kernel`, because hashing needs `fid-canon` and `sha2`. If the GD&T evaluators that later join `fid-gps` must be in the KNP-1 kernel graph, the DMT schema should move to its own model-layer crate, or `sha2` be allowlisted (ECO.REPO.ALLOW).
 
 ## Children
 
