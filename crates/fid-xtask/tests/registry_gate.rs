@@ -51,7 +51,7 @@ fn release(case: &BTreeMap<String, CValue>) -> Option<Date> {
 #[test]
 fn expect_cases() {
     let all = cases();
-    assert!(all.len() >= 25, "only {} cases", all.len());
+    assert!(all.len() >= 26, "only {} cases", all.len());
     for c in &all {
         let name = text(&c["name"]);
         let (b, cur) = (fixture(text(&c["baseline"])), fixture(text(&c["current"])));
