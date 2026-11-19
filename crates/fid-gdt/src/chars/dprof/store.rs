@@ -278,6 +278,31 @@ impl DprofState {
         Ok(())
     }
 
+    /// Sets (or replaces) the binding of `c` on `branch`'s own map. Used by
+    /// `GDT.CHAR.SPEC` (`chars::spec`), which keeps the bindings a mirror of the
+    /// governing specs: after its own checks, when a governing spec is set or inherited,
+    /// and when a project is loaded. The caller has already resolved `r` on `branch`.
+    pub(crate) fn set_binding(&mut self, branch: Branch, c: &CharId, r: &ProfileRef) -> Result<(), DprofError> {
+        let map = match branch {
+            Branch::Working => &mut self.working,
+            Branch::Agent => &mut self.agent,
+        };
+        if !map.contains_key(c) && map.len() >= MAX_BINDINGS {
+            return Err(store_err("too_many_bindings"));
+        }
+        map.insert(c.clone(), r.clone());
+        Ok(())
+    }
+
+    /// The bindings held on `branch` itself (no fallback from the agent overlay to the
+    /// working branch).
+    pub(crate) fn own_bindings(&self, branch: Branch) -> &BTreeMap<CharId, ProfileRef> {
+        match branch {
+            Branch::Working => &self.working,
+            Branch::Agent => &self.agent,
+        }
+    }
+
     /// `gdt.publish_defaults_profile@1` on an already parsed profile. `file` is the
     /// command's `file` parameter as given (recorded in the event). Never changes any
     /// binding (REQ-004).

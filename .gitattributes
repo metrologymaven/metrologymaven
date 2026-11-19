@@ -170,3 +170,6 @@ fixtures/core/jrn/chain/append/** -text
 # CORE.DEP.EDGE fixtures: hand-labelled projects and expected digests written by make_fixtures.py,
 # which --check compares byte for byte; never convert line endings.
 fixtures/core/dep/** -text
+# GDT.CHAR.SPEC fixtures: project files, events and canonical forms written by make_fixtures.py,
+# which --check compares byte for byte; never convert line endings.
+fixtures/gdt/spec/** -text

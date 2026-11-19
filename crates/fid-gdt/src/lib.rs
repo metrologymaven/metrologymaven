@@ -5,7 +5,10 @@
 //!   its loader, its digest and the reviewer role lookup;
 //! - [`chars::dprof`] (`GDT.CHAR.DPROF`): defaults profiles as immutable, content-addressed,
 //!   versioned objects, with the publish and re-point commands, their journal events and
-//!   exact replay.
+//!   exact replay;
+//! - [`chars::spec`] (`GDT.CHAR.SPEC`): the governing spec of a characteristic (dialect,
+//!   standard designators with editions, defaults profile), `gdt.set_governing_spec@1`,
+//!   creation-time inheritance from plan and tenant defaults, and the evaluation gate.
 //!
 //! Nothing here panics on any input: every outcome is a returned `Result`.
 
