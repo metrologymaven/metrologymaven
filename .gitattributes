@@ -99,6 +99,11 @@ tools/tests/fixtures/ladder/** -text
 fixtures/allow/** -text
 # FLOW.DEADEND.CATALOG fixtures: hand-written catalogues and a digest compared byte for byte by make_fixtures.py --check.
 fixtures/flow/fixes/** -text
+# KRN.MAN.MANI.SCHEMA: canonical manifest bytes (no trailing newline), digested and round-tripped byte for
+# byte; hand-labelled mutated copies compared by make_manifest_fixtures.py --check.
+fixtures/man/manifest-v1.json -text
+fixtures/man/manifest-v1-digests.txt -text
+fixtures/man/manifest/** -text
 # KRN.NUM.RED fixtures: bit patterns and a SHA-256 written by make_red_fixtures.py, which --check compares byte for byte.
 fixtures/num/red-*.txt -text
 # CORE.REG.VER.COMPAT fixtures: hand-labelled pairs and manifests carrying SHA-256 digests; never convert line endings.
@@ -108,6 +113,11 @@ fixtures/core/reg/manifest/** -text
 fixtures/rel/notes/** -text
 # CORE.REG.VER.GATE fixtures: the baseline digest is over exact bytes; never convert line endings.
 fixtures/core/reg/ver/gate/** -text
+# CORE.STO.SQL.SCHEMA fixture database and its generator: hashed and compared byte for byte.
+fixtures/core/sto/sql/schema/** -text
 # GEO.TYPES fixtures: digest vectors pin a byte layout and are compared byte for byte by
 # tools/fixtures/geo_digest_vectors.py --check; never convert line endings.
 fixtures/geo/types/** -text
+# CORE.RPL.EXEC.SUBST fixtures: hand-labelled spans and observation blobs whose SHA-256 is checked
+# byte for byte by the tests and make_fixtures.py --check; never convert line endings.
+fixtures/core/rpl/exec/subst/** -text

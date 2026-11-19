@@ -1,0 +1,3 @@
+# KRN.MAN.MANI.SCHEMA AC-1: digests of manifest-v1.json (hashlib). Format: <name><TAB><digest>.
+core_digest	sha256:5bd18ad4c5d94fecd9989fea47f21d1d055440ea73c1cc5f6b04e0fcd52fcaaa
+manifest_digest	sha256:780a8ca640c0e2a0df4592100404ab72f5553ca19edfeebefc78a3634c9df92f
