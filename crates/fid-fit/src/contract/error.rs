@@ -3,7 +3,7 @@
 use core::fmt;
 
 use fid_num::NumError;
-use fid_solv::nlls::SolverError;
+use fid_solv::nlls::{Diagnostics, NllsConfig, SolverError};
 
 use super::primitive::{Method, Primitive};
 
@@ -41,8 +41,9 @@ pub enum FitError {
     /// A Jacobian condition estimate above the configured limit (`None`: beyond the `f64`
     /// range).
     IllConditioned { cond: Option<f64> },
-    /// An iteration did not converge within its bound.
-    NotConverged { iterations: usize },
+    /// An iteration did not converge within its bound. `reason` says which bound; `last` holds
+    /// the NLLS driver's last diagnostics when the driver hit it.
+    NotConverged { iterations: usize, reason: NotConvergedReason, last: Option<Diagnostics> },
     /// The method is not defined for the primitive.
     MethodUndefined { primitive: Primitive, method: Method },
     /// A parameter is out of range; `field` names it (for example `thresholds.rank_tol`).
@@ -106,7 +107,9 @@ impl fmt::Display for FitError {
             }
             FitError::IllConditioned { cond: Some(c) } => write!(f, "fit: ill-conditioned (cond {c:e})"),
             FitError::IllConditioned { cond: None } => write!(f, "fit: ill-conditioned (cond beyond range)"),
-            FitError::NotConverged { iterations } => write!(f, "fit: not converged after {iterations} iterations"),
+            FitError::NotConverged { iterations, reason, .. } => {
+                write!(f, "fit: not converged after {iterations} iterations ({})", reason.as_str())
+            }
             FitError::MethodUndefined { primitive, method } => {
                 write!(f, "fit: method {} undefined for {}", method.slug(), primitive.slug())
             }
@@ -126,13 +129,59 @@ impl From<NumError> for FitError {
     }
 }
 
+/// Which bound an iteration hit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NotConvergedReason {
+    /// The NLLS driver accepted `max_iter` steps without a stop.
+    MaxIter,
+    /// The NLLS driver rejected `fid_solv::nlls::MAX_TRIALS` consecutive trial steps.
+    TrialsExhausted,
+    /// The degeneracy checks' Jacobi iteration used all its sweeps.
+    JacobiSweeps,
+}
+
+impl NotConvergedReason {
+    /// The wire string.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            NotConvergedReason::MaxIter => "max_iter",
+            NotConvergedReason::TrialsExhausted => "trials_exhausted",
+            NotConvergedReason::JacobiSweeps => "jacobi_sweeps",
+        }
+    }
+}
+
+impl FitError {
+    /// Maps an NLLS driver error run under `cfg`. `IterationLimit { last }` becomes
+    /// [`FitError::NotConverged`] keeping `last`: reason [`NotConvergedReason::MaxIter`] when
+    /// `last.iterations == cfg.max_iter` (the driver checks the step limit before trying a
+    /// step, so only the limit can stop it there), else
+    /// [`NotConvergedReason::TrialsExhausted`]. `IllConditioned` becomes
+    /// [`FitError::IllConditioned`]; every other driver error is kept as [`FitError::Solver`].
+    pub fn from_solver(e: SolverError, cfg: &NllsConfig) -> FitError {
+        match e {
+            SolverError::IterationLimit { last } => FitError::NotConverged {
+                iterations: last.iterations,
+                reason: if last.iterations == cfg.max_iter {
+                    NotConvergedReason::MaxIter
+                } else {
+                    NotConvergedReason::TrialsExhausted
+                },
+                last: Some(last),
+            },
+            SolverError::IllConditioned { cond, .. } => FitError::IllConditioned { cond },
+            other => FitError::Solver(other),
+        }
+    }
+}
+
 impl From<SolverError> for FitError {
-    /// `IterationLimit` becomes [`FitError::NotConverged`] and `IllConditioned` becomes
-    /// [`FitError::IllConditioned`]; every other driver error is kept as
-    /// [`FitError::Solver`].
+    /// Without the configuration an `IterationLimit` cannot be told apart, so it is kept
+    /// whole as [`FitError::Solver`] (with its diagnostics); use [`FitError::from_solver`] to
+    /// get [`FitError::NotConverged`] with its reason. `IllConditioned` becomes
+    /// [`FitError::IllConditioned`]; every other driver error is [`FitError::Solver`].
     fn from(e: SolverError) -> Self {
         match e {
-            SolverError::IterationLimit { last } => FitError::NotConverged { iterations: last.iterations },
             SolverError::IllConditioned { cond, .. } => FitError::IllConditioned { cond },
             other => FitError::Solver(other),
         }

@@ -274,8 +274,12 @@ impl FittedFeature {
     /// torus normals and the planar shapes' normals and long-axis directions go through
     /// [`normalize_direction`] (unit length, sign-normalised); the cone and paraboloid axes,
     /// whose sign is part of the geometry, through [`unit_direction`] (unit length only).
-    /// Every value must be finite ([`FitError::Num`] otherwise). Positions and lengths are
-    /// copied unchanged.
+    /// Every value must be finite ([`FitError::Num`] otherwise). Out-of-range values are
+    /// [`FitError::InvalidParams`] naming the field (`feature.<name>`): a radius `r <= 0`;
+    /// a negative `major_r`, `minor_r`, `length`, `width`, `b` or `focal`; an ellipse with
+    /// `a < b`; a cone `half_angle` outside the open interval `(0, pi/2)`; a spline with
+    /// `degree == 0`, fewer than `degree + 1` control points, or a knot count other than
+    /// `control + degree + 1`. Values are copied unchanged otherwise.
     pub fn canonical(&self) -> Result<FittedFeature, FitError> {
         use FittedFeature as F;
         let nd = normalize_direction;
@@ -285,27 +289,52 @@ impl FittedFeature {
             F::Line2 { p, d } => F::Line2 { p: fin2(p)?, d: normalize_direction2(*d)? },
             F::Line3 { p, d } => F::Line3 { p: fin3(p)?, d: nd(*d)? },
             F::Plane { p, n } => F::Plane { p: fin3(p)?, n: nd(*n)? },
-            F::Circle2 { c, r } => F::Circle2 { c: fin2(c)?, r: fin(*r)? },
-            F::Circle3 { c, n, r } => F::Circle3 { c: fin3(c)?, n: nd(*n)?, r: fin(*r)? },
-            F::Sphere { c, r } => F::Sphere { c: fin3(c)?, r: fin(*r)? },
-            F::Cylinder { p, d, r } => F::Cylinder { p: fin3(p)?, d: nd(*d)?, r: fin(*r)? },
-            F::Cone { apex, d, half_angle } => F::Cone { apex: fin3(apex)?, d: ud(*d)?, half_angle: fin(*half_angle)? },
-            F::Torus { c, n, major_r, minor_r } => {
-                F::Torus { c: fin3(c)?, n: nd(*n)?, major_r: fin(*major_r)?, minor_r: fin(*minor_r)? }
+            F::Circle2 { c, r } => F::Circle2 { c: fin2(c)?, r: pos("feature.r", *r)? },
+            F::Circle3 { c, n, r } => F::Circle3 { c: fin3(c)?, n: nd(*n)?, r: pos("feature.r", *r)? },
+            F::Sphere { c, r } => F::Sphere { c: fin3(c)?, r: pos("feature.r", *r)? },
+            F::Cylinder { p, d, r } => F::Cylinder { p: fin3(p)?, d: nd(*d)?, r: pos("feature.r", *r)? },
+            F::Cone { apex, d, half_angle } => {
+                let h = fin(*half_angle)?;
+                if !(h > 0.0 && h < core::f64::consts::FRAC_PI_2) {
+                    return Err(FitError::InvalidParams { field: "feature.half_angle" });
+                }
+                F::Cone { apex: fin3(apex)?, d: ud(*d)?, half_angle: h }
             }
-            F::Slot { c, n, d, length, width } => {
-                F::Slot { c: fin3(c)?, n: nd(*n)?, d: nd(*d)?, length: fin(*length)?, width: fin(*width)? }
-            }
-            F::Rectangle { c, n, d, length, width } => {
-                F::Rectangle { c: fin3(c)?, n: nd(*n)?, d: nd(*d)?, length: fin(*length)?, width: fin(*width)? }
-            }
+            F::Torus { c, n, major_r, minor_r } => F::Torus {
+                c: fin3(c)?,
+                n: nd(*n)?,
+                major_r: nonneg("feature.major_r", *major_r)?,
+                minor_r: nonneg("feature.minor_r", *minor_r)?,
+            },
+            F::Slot { c, n, d, length, width } => F::Slot {
+                c: fin3(c)?,
+                n: nd(*n)?,
+                d: nd(*d)?,
+                length: nonneg("feature.length", *length)?,
+                width: nonneg("feature.width", *width)?,
+            },
+            F::Rectangle { c, n, d, length, width } => F::Rectangle {
+                c: fin3(c)?,
+                n: nd(*n)?,
+                d: nd(*d)?,
+                length: nonneg("feature.length", *length)?,
+                width: nonneg("feature.width", *width)?,
+            },
             F::Ellipse { c, n, d, a, b } => {
-                F::Ellipse { c: fin3(c)?, n: nd(*n)?, d: nd(*d)?, a: fin(*a)?, b: fin(*b)? }
+                let b = nonneg("feature.b", *b)?;
+                let a = fin(*a)?;
+                if a < b {
+                    return Err(FitError::InvalidParams { field: "feature.a" });
+                }
+                F::Ellipse { c: fin3(c)?, n: nd(*n)?, d: nd(*d)?, a, b }
             }
-            F::Paraboloid { apex, d, focal } => F::Paraboloid { apex: fin3(apex)?, d: ud(*d)?, focal: fin(*focal)? },
+            F::Paraboloid { apex, d, focal } => {
+                F::Paraboloid { apex: fin3(apex)?, d: ud(*d)?, focal: nonneg("feature.focal", *focal)? }
+            }
             F::Polyline { vertices } => F::Polyline { vertices: copy_points(vertices)? },
             F::Spline { degree, knots, control } => {
                 check_finite_slice("fit.feature", knots)?;
+                spline_counts(*degree, knots.len(), control.len())?;
                 let mut k = alloc("fit.feature", knots.len())?;
                 k.extend_from_slice(knots);
                 F::Spline { degree: *degree, knots: k, control: copy_points(control)? }
@@ -316,6 +345,42 @@ impl FittedFeature {
 
 fn fin(x: f64) -> Result<f64, FitError> {
     Ok(fid_num::check_finite("fit.feature", x)?)
+}
+
+/// Finite and strictly positive, else [`FitError::InvalidParams`] naming `field`.
+fn pos(field: &'static str, x: f64) -> Result<f64, FitError> {
+    let x = fin(x)?;
+    if x > 0.0 {
+        Ok(x)
+    } else {
+        Err(FitError::InvalidParams { field })
+    }
+}
+
+/// Finite and not negative (`-0.0` counts as zero), else [`FitError::InvalidParams`].
+fn nonneg(field: &'static str, x: f64) -> Result<f64, FitError> {
+    let x = fin(x)?;
+    if x >= 0.0 {
+        Ok(x)
+    } else {
+        Err(FitError::InvalidParams { field })
+    }
+}
+
+/// Counts of a B-spline of degree `p`: `p >= 1`, at least `p + 1` control points `m`, and
+/// exactly `m + p + 1` knots. (Knot order is the fitting method's concern.)
+fn spline_counts(degree: u32, knots: usize, control: usize) -> Result<(), FitError> {
+    let p = degree as usize;
+    if degree == 0 {
+        return Err(FitError::InvalidParams { field: "feature.degree" });
+    }
+    if control < p + 1 {
+        return Err(FitError::InvalidParams { field: "feature.control" });
+    }
+    if knots != control + p + 1 {
+        return Err(FitError::InvalidParams { field: "feature.knots" });
+    }
+    Ok(())
 }
 
 fn fin2(v: &V2) -> Result<V2, FitError> {

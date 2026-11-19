@@ -10,11 +10,11 @@
 use fid_fit::contract::{
     algorithm_id, check, check_points, command_row, encode, normalize_direction, normalize_direction2, unit_direction,
     AlgorithmId, Centred, Certificate, CommandRow, Constraint, Field, Fit, FitDiagnostics, FitError, FitParams,
-    FitResult, FittedFeature, Method, Normalisation, PointsView, Primitive, ResidualStats, RowError, StopReason,
-    Thresholds, ValueType, Weights, DEFAULT_MIN_COVERAGE,
+    FitResult, FittedFeature, Method, Normalisation, NotConvergedReason, PointsView, Primitive, ResidualStats,
+    RowError, StopReason, Thresholds, ValueType, Weights, DEFAULT_MIN_COVERAGE,
 };
 use fid_num::NumError;
-use fid_solv::nlls::{Diagnostics, SolverError};
+use fid_solv::nlls::{Diagnostics, NllsConfig, SolverError};
 use fid_types::{Determinism, SideEffect};
 
 const DEGENERATE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/fit/trait-degenerate-v1/cases.txt");
@@ -304,7 +304,7 @@ fn encoding_covers_every_feature_kind() {
         F::Ellipse { c: v, n: [0.0, 0.0, 1.0], d: [1.0, 0.0, 0.0], a: 3.0, b: 1.0 },
         F::Paraboloid { apex: v, d: [0.0, -1.0, 0.0], focal: 0.25 },
         F::Polyline { vertices: vec![v, [0.0; 3]] },
-        F::Spline { degree: 3, knots: vec![0.0, 1.0], control: vec![v] },
+        F::Spline { degree: 1, knots: vec![0.0, 0.0, 1.0, 1.0], control: vec![v, [0.0; 3]] },
     ];
     for f in feats {
         let p = f.primitive();
@@ -524,7 +524,23 @@ fn params_validation() {
 #[test]
 fn solver_errors_map_to_fit_errors() {
     let last = Diagnostics { iterations: 7, ..Diagnostics::default() };
-    assert_eq!(FitError::from(SolverError::IterationLimit { last }), FitError::NotConverged { iterations: 7 });
+    let cfg = NllsConfig { max_iter: 7, ..NllsConfig::default() };
+    let e = SolverError::IterationLimit { last };
+    assert_eq!(
+        FitError::from_solver(e, &cfg),
+        FitError::NotConverged { iterations: 7, reason: NotConvergedReason::MaxIter, last: Some(last) }
+    );
+    let cfg = NllsConfig { max_iter: 200, ..NllsConfig::default() };
+    assert_eq!(
+        FitError::from_solver(e, &cfg),
+        FitError::NotConverged { iterations: 7, reason: NotConvergedReason::TrialsExhausted, last: Some(last) }
+    );
+    // Without the configuration the driver error is kept whole, diagnostics included.
+    assert_eq!(FitError::from(e), FitError::Solver(e));
+    assert_eq!(
+        FitError::from_solver(SolverError::IllConditioned { cond: None, last }, &cfg),
+        FitError::IllConditioned { cond: None }
+    );
     assert_eq!(
         FitError::from(SolverError::IllConditioned { cond: Some(1e13), last }),
         FitError::IllConditioned { cond: Some(1e13) }
@@ -599,4 +615,64 @@ fn degeneracy_on_large_inputs_spans_several_blocks() {
         check_points(Primitive::Sphere, &v, &Thresholds::default()),
         Err(FitError::Coplanar { n: 10_000, rank: 2, .. })
     ));
+}
+
+#[test]
+fn tiny_third_spread_is_coplanar_not_a_stall() {
+    // Points on a 20 x 20 grid of 1 m with z spread `eps` (alternating sign pattern): the
+    // third singular value is about eps relative, whose square underflows for eps <= 1e-160.
+    for eps in [1e-200, 1e-300, 1e-160, 1e-100] {
+        let mut xyz = Vec::new();
+        for i in 0..400u32 {
+            let x = f64::from(i % 20) / 20.0;
+            let y = f64::from(i / 20) / 20.0;
+            let z = if (i * 7 + i / 3) % 2 == 0 { eps } else { -eps };
+            xyz.extend_from_slice(&[x, y, z]);
+        }
+        let v = PointsView::new(&xyz, None).unwrap();
+        match check_points(Primitive::Sphere, &v, &Thresholds::default()) {
+            Err(FitError::Coplanar { n: 400, rank: 2, cond }) => assert!(cond > 1e9, "eps {eps:e}: cond {cond:e}"),
+            other => panic!("eps {eps:e}: {other:?}"),
+        }
+        let (_, d) = check_points(Primitive::Plane, &v, &Thresholds::default()).unwrap();
+        assert_eq!(d.rank, 2, "eps {eps:e}");
+    }
+}
+
+#[test]
+fn canonical_refuses_out_of_range_values() {
+    use FittedFeature as F;
+    let v = [1.0, 2.0, 3.0];
+    let z = [0.0, 0.0, 1.0];
+    let x = [1.0, 0.0, 0.0];
+    let bad = |f: F, field: &'static str| {
+        assert_eq!(f.canonical(), Err(FitError::InvalidParams { field }), "{f:?}");
+    };
+    for r in [0.0, -0.0, -1.0] {
+        bad(F::Circle2 { c: [0.0, 0.0], r }, "feature.r");
+        bad(F::Circle3 { c: v, n: z, r }, "feature.r");
+        bad(F::Sphere { c: v, r }, "feature.r");
+        bad(F::Cylinder { p: v, d: z, r }, "feature.r");
+    }
+    bad(F::Torus { c: v, n: z, major_r: -1.0, minor_r: 0.5 }, "feature.major_r");
+    bad(F::Torus { c: v, n: z, major_r: 1.0, minor_r: -0.5 }, "feature.minor_r");
+    bad(F::Slot { c: v, n: z, d: x, length: -1.0, width: 1.0 }, "feature.length");
+    bad(F::Slot { c: v, n: z, d: x, length: 1.0, width: -1.0 }, "feature.width");
+    bad(F::Rectangle { c: v, n: z, d: x, length: -1.0, width: 1.0 }, "feature.length");
+    bad(F::Rectangle { c: v, n: z, d: x, length: 1.0, width: -1.0 }, "feature.width");
+    bad(F::Paraboloid { apex: v, d: z, focal: -0.25 }, "feature.focal");
+    bad(F::Ellipse { c: v, n: z, d: x, a: 1.0, b: 2.0 }, "feature.a");
+    bad(F::Ellipse { c: v, n: z, d: x, a: 1.0, b: -0.5 }, "feature.b");
+    for h in [0.0, -0.1, core::f64::consts::FRAC_PI_2, 2.0] {
+        bad(F::Cone { apex: v, d: z, half_angle: h }, "feature.half_angle");
+    }
+    bad(F::Spline { degree: 0, knots: vec![0.0, 1.0], control: vec![v] }, "feature.degree");
+    bad(F::Spline { degree: 3, knots: vec![0.0; 6], control: vec![v; 2] }, "feature.control");
+    bad(F::Spline { degree: 3, knots: vec![0.0; 7], control: vec![v; 4] }, "feature.knots");
+    bad(F::Spline { degree: 3, knots: vec![0.0; 9], control: vec![v; 4] }, "feature.knots");
+    // Boundary values that are in range.
+    assert!(F::Spline { degree: 3, knots: vec![0.0; 8], control: vec![v; 4] }.canonical().is_ok());
+    assert!(F::Ellipse { c: v, n: z, d: x, a: 1.0, b: 1.0 }.canonical().is_ok());
+    assert!(F::Torus { c: v, n: z, major_r: 0.0, minor_r: 0.0 }.canonical().is_ok());
+    assert!(F::Cone { apex: v, d: z, half_angle: 1.5 }.canonical().is_ok());
 }

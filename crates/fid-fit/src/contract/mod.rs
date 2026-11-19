@@ -39,7 +39,7 @@ pub use degen::{
     angular_coverage, check, check_points, data_shape, DataShape, Degeneracy, JACOBI_MAX_SWEEPS, JACOBI_TOL,
 };
 pub use encode::encode;
-pub use error::FitError;
+pub use error::{FitError, NotConvergedReason};
 pub use normalise::{Centred, Normalisation};
 pub use params::{Constraint, FitParams, Thresholds, Weights, DEFAULT_MIN_COVERAGE, DEFAULT_RANK_TOL, TWO_PI};
 pub use points::{PointsView, MAX_POINTS, UNIT_NORMAL_TOL};

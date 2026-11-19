@@ -16,12 +16,13 @@
 //! 3. **Singular values.** One-sided Jacobi on the columns of the `3 x 3` factor of the
 //!    centred data: sweeps over the pairs `(0,1), (0,2), (1,2)`; for a pair, `a = |c_i|^2`,
 //!    `b = |c_j|^2`, `g = c_i . c_j` (each a `red::dot`); the pair is skipped when `g == 0` or
-//!    `|g| <= JACOBI_TOL * (sqrt(a) * sqrt(b))`, or when `zeta = (b - a) / (2 g)` is not
-//!    finite (a rotation angle below `2^-1024`); otherwise
+//!    `|g| <= JACOBI_TOL * (red::norm2(c_i) * red::norm2(c_j))`, or when
+//!    `zeta = (b - a) / (2 g)` is not finite (a rotation angle below `2^-1024`); otherwise
 //!    `t = sign(zeta) / (|zeta| + hypot(1, zeta))` (`sign(0) = +1`), `c = 1 / hypot(1, t)`,
 //!    `s = c t`, and columns `c_i, c_j` (and the same columns of `V`, which starts as the
-//!    identity) become `c c_i - s c_j` and `s c_i + c c_j`, component by component. A sweep
-//!    without a rotation ends the iteration; [`JACOBI_MAX_SWEEPS`] sweeps without that is
+//!    identity) become `c c_i - s c_j` and `s c_i + c c_j`, component by component. A
+//!    rotation that leaves both data columns bit-identical is not applied and does not count.
+//!    A sweep without a counted rotation ends the iteration; [`JACOBI_MAX_SWEEPS`] sweeps without that is
 //!    [`FitError::NotConverged`]. The singular values are `red::norm2` of the final columns,
 //!    ordered by descending total order (ties keep the lower column index); the principal
 //!    axes are the matching columns of `V` through
@@ -47,7 +48,7 @@
 use fid_num::la::{lstsq, qr, rank_by_rule, Mat, MAX_DIM};
 use fid_num::{f, red};
 
-use super::error::{alloc, FitError};
+use super::error::{alloc, FitError, NotConvergedReason};
 use super::normalise::Centred;
 use super::params::{Thresholds, TWO_PI};
 use super::points::PointsView;
@@ -151,7 +152,11 @@ fn jacobi(r: [[f64; 3]; 3]) -> Result<DataShape, FitError> {
             let a = red::dot(&col[i], &col[i])?;
             let b = red::dot(&col[j], &col[j])?;
             let g = red::dot(&col[i], &col[j])?;
-            if g == 0.0 || g.abs() <= JACOBI_TOL * (f::sqrt(a)? * f::sqrt(b)?) {
+            // The tolerance uses the column norms from `red::norm2` (overflow- and
+            // underflow-safe), not `sqrt(a) * sqrt(b)`: a column whose squared norm
+            // underflows to zero still gets a non-zero tolerance.
+            let (na, nb) = (red::norm2(&col[i])?, red::norm2(&col[j])?);
+            if g == 0.0 || g.abs() <= JACOBI_TOL * (na * nb) {
                 continue;
             }
             let zeta = (b - a) / (2.0 * g);
@@ -162,7 +167,16 @@ fn jacobi(r: [[f64; 3]; 3]) -> Result<DataShape, FitError> {
             let t = if zeta < 0.0 { -mag } else { mag };
             let c = 1.0 / f::hypot(1.0, t)?;
             let s = c * t;
-            rotate(&mut col, i, j, c, s);
+            let mut trial = col;
+            rotate(&mut trial, i, j, c, s);
+            // A rotation counts only if it changes a data column bit for bit; one that rounds
+            // back to the same columns is not applied (to `V` either), so the sweep loop
+            // cannot stall on rotations that change nothing.
+            let same = |x: &V3, y: &V3| x.iter().zip(y).all(|(p, q)| p.to_bits() == q.to_bits());
+            if same(&trial[i], &col[i]) && same(&trial[j], &col[j]) {
+                continue;
+            }
+            col = trial;
             rotate(&mut v, i, j, c, s);
             rotated = true;
         }
@@ -172,7 +186,11 @@ fn jacobi(r: [[f64; 3]; 3]) -> Result<DataShape, FitError> {
         }
     }
     if !converged {
-        return Err(FitError::NotConverged { iterations: JACOBI_MAX_SWEEPS });
+        return Err(FitError::NotConverged {
+            iterations: JACOBI_MAX_SWEEPS,
+            reason: NotConvergedReason::JacobiSweeps,
+            last: None,
+        });
     }
     let sv = [red::norm2(&col[0])?, red::norm2(&col[1])?, red::norm2(&col[2])?];
     // Insertion sort of the indices by descending total order; ties keep the lower index.
