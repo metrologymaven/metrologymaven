@@ -56,3 +56,5 @@ docs/platform/support-matrix.md -text
 fixtures/gdt/rowflow/** -text
 # FLOW.PERSONA.SCHEMA fixtures: hand-written maps compared by make_fixtures.py --check byte for byte.
 fixtures/flow/journey/** -text
+# ECO.COMM.RFC fixtures: hand-written records (LF and CRLF) compared byte for byte by tools/tests/test_rfc.py.
+tools/tests/fixtures/rfc/** -text
