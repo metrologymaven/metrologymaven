@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid unc import-acceptance-record, fid unc import-iemps, fid unc show-iemps]
 mcp: [unc_import_iemps, unc_show_iemps]
 journal: [unc.import_acceptance_record@1, unc.import_iemps@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # UNC.INST.IEMPS: Instrument Error Model Parameter Sets for virtual-CMM simulation
@@ -84,6 +84,10 @@ Ingests Instrument Error Model Parameter Sets (IEMPS): maker- or user-supplied p
 > In crate `fid-unc-inst`, module `iemps`, add the IEMPS extension of `instrument-model/v1` (kind `iemps`): machine identity, source `maker|user`, `validity_days`, anchor digest, error-map grids `{name, axis, start, step, count, unit, values}`, probe and thermal parameters, optional opaque signature block (not verified here). Reuse the `fid-unc-inst` schema validation and canonical SHA-256 digest (RFC 8785).
 > Implement registry commands: `unc.import_acceptance_record@1` (W2, `human_only: true`, CLI `fid unc import-acceptance-record`, no MCP tool beyond the generated request-only projection; refuses agent and script principals with `principal_not_human`; stores the certificate document via the content-addressed store), `unc.import_iemps@1` (W2, CLI `fid unc import-iemps`, MCP `unc_import_iemps`; import-root handle only; `on_date` input) and `unc.show_iemps@1` (R0). Provide `iemps_bindable(digest, date) -> Bindable | NotBindable{reason}` with reasons `anchor_missing`, `anchor_failed`, `anchor_machine_mismatch`, `anchor_expired` (test date earlier than date minus validity). Not-bindable IEMPS are stored, never rejected. Fail closed with `grid_too_large` (> 10^6 total nodes, counted before allocation) or `grid_inconsistent`, committing nothing. Untrusted text ≤ 4 096 bytes, never interpreted (C6).
 > Tests: AC-1..AC-7 with `fixtures/unc/inst/iemps/`. `--json` and `--dry-run`. No panic, `unwrap`, `expect` or `unsafe`; BTreeMap only (CONSTITUTION §8).
+
+## Notes
+
+- **Evidence class cap (maintainer note).** An IEMPS-origin instrument model is not a characterized source under rule set `uec-assign@1` (`UNC.UEC.CLASS`, downgrade `uncharacterized_contributor`). So an ISO/TS 15530-4 simulation whose model carries an IEMPS contributor is capped at UEC-1 under REQ-UNC.UEC-005, even when it is anchored, bindable and validated, until a later rule set admits anchored IEMPS as characterized. Binding an IEMPS never raises the class by itself.
 
 ## Open questions
 
