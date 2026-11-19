@@ -1,22 +1,20 @@
 //! The registry build step over the crates on main (spec node CORE.REG.MAN, Design "Build
-//! step"). The expected errors are hand-labelled from the `fid-jobs` schemas
-//! (`crates/fid-jobs/src/commands.rs`: `progress` is a `number` without `x-quantity`, and
-//! `timeout` declares `x-quantity: "time"`), not taken from a run.
+//! step" and "Quantity catalogue"). Expected errors and the merged catalogue are hand-labelled
+//! from the `fid-jobs` schemas and fragment (`crates/fid-jobs/src/commands.rs`: `timeout` is
+//! `x-quantity: "time"`, `progress` is `x-quantity: "dimensionless"`) and from the GEO.FRAME
+//! catalogue fixture, not taken from a run.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::{parse, CValue};
 use fid_registry::manifest::{check_manifest, ManifestError, SHOW_MANIFEST};
 use fid_registry::{Catalogue, CommandDef, DefError, QuantityCatalogue, RuleCode};
-use fid_registry_build::{build, build_workspace, declarations, manifest_in_force, BuildError, Source, SOURCES};
-use std::path::Path;
+use fid_registry_build::{
+    build, build_workspace, declarations, manifest_in_force, merge_catalogues, workspace_catalogue, BuildError,
+    QuantitySource, Source, QUANTITY_SOURCES, SOURCES,
+};
 
 fn geo() -> Catalogue {
     Catalogue::geo_frame().unwrap()
-}
-
-fn with_time() -> Catalogue {
-    let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/core/reg/def/schema/catalogue/with_time.json");
-    Catalogue::from_json(&std::fs::read(p).unwrap()).unwrap()
 }
 
 fn errors(e: BuildError) -> Vec<(String, RuleCode, Option<String>)> {
@@ -28,17 +26,8 @@ fn errors(e: BuildError) -> Vec<(String, RuleCode, Option<String>)> {
     }
 }
 
-fn progress(cmd: &str, field: &str) -> (String, RuleCode, Option<String>) {
-    (cmd.to_string(), RuleCode::MissingQuantity, Some(field.to_string()))
-}
-
-fn missing_progress() -> Vec<(String, RuleCode, Option<String>)> {
-    vec![
-        progress("job.cancel_job", "/result_schema/properties/progress"),
-        progress("job.list_jobs", "/result_schema/properties/jobs/items/properties/progress"),
-        progress("job.show_status", "/result_schema/properties/progress"),
-        progress("job.wait_job", "/result_schema/properties/progress"),
-    ]
+fn unknown(cmd: &str, field: &str) -> (String, RuleCode, Option<String>) {
+    (cmd.to_string(), RuleCode::UnknownQuantity, Some(field.to_string()))
 }
 
 #[test]
@@ -51,18 +40,60 @@ fn sources_are_sorted_unique_and_each_declares_commands() {
     for s in SOURCES {
         assert!(!(s.defs)().unwrap().is_empty(), "{}", s.krate);
     }
+    let names: Vec<_> = QUANTITY_SOURCES.iter().map(|s| s.krate).collect();
+    let mut sorted = names.clone();
+    sorted.sort_unstable();
+    sorted.dedup();
+    assert_eq!(names, sorted);
 }
 
-/// The open blocker, surfaced as typed errors and never skipped: with the GEO.FRAME.UNITS
-/// catalogue the workspace does not export.
+/// The merged workspace catalogue, typed by hand: the GEO.FRAME.UNITS catalogue fixture
+/// (`fixtures/core/reg/def/schema/catalogue/geo_frame_units.json`) plus fid-jobs'
+/// `dimensionless` (unit `1`) and `time` (`s`, `h` = 3600, `min` = 60, `ms` = 1/1000).
+const WORKSPACE_CATALOGUE: &str = concat!(
+    r#"{"format":"fid-quantity-catalogue/1","kinds":["#,
+    r#"{"canonical":"rad","kind":"angle","units":[{"den":"10800","num":"1","pi":true,"symbol":"arcmin"},"#,
+    r#"{"den":"648000","num":"1","pi":true,"symbol":"arcsec"},{"den":"180","num":"1","pi":true,"symbol":"deg"},"#,
+    r#"{"den":"200","num":"1","pi":true,"symbol":"gon"},{"den":"1","num":"1","pi":false,"symbol":"rad"}]},"#,
+    r#"{"canonical":"1","kind":"dimensionless","units":[{"den":"1","num":"1","pi":false,"symbol":"1"}]},"#,
+    r#"{"canonical":"m","kind":"length","units":[{"den":"1250","num":"381","pi":false,"symbol":"ft"},"#,
+    r#"{"den":"5000","num":"127","pi":false,"symbol":"in"},{"den":"1","num":"1","pi":false,"symbol":"m"},"#,
+    r#"{"den":"1000","num":"1","pi":false,"symbol":"mm"},{"den":"1000000000","num":"1","pi":false,"symbol":"nm"},"#,
+    r#"{"den":"5000000","num":"127","pi":false,"symbol":"thou"},"#,
+    r#"{"den":"1000000","num":"1","pi":false,"symbol":"um"}]},"#,
+    r#"{"canonical":"s","kind":"time","units":[{"den":"1","num":"3600","pi":false,"symbol":"h"},"#,
+    r#"{"den":"1","num":"60","pi":false,"symbol":"min"},{"den":"1000","num":"1","pi":false,"symbol":"ms"},"#,
+    r#"{"den":"1","num":"1","pi":false,"symbol":"s"}]}],"#,
+    r#""pi_hex":"c90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b139b22"}"#,
+);
+
+/// The quantity-catalogue gap is closed: the workspace exports against GEO.FRAME plus the
+/// domain fragments, and the manifest carries the merged catalogue's digest.
 #[test]
-fn workspace_is_blocked_on_the_quantity_catalogue() {
-    let mut expected = missing_progress();
-    expected.push((
-        "job.wait_job".to_string(),
-        RuleCode::UnknownQuantity,
-        Some("/params_schema/properties/timeout/x-quantity".to_string()),
-    ));
+fn workspace_builds_against_the_merged_catalogue() {
+    let merged = workspace_catalogue().unwrap();
+    assert_eq!(merged, Catalogue::from_json(WORKSPACE_CATALOGUE.as_bytes()).unwrap());
+    assert_eq!(merged.kind_names(), ["angle", "dimensionless", "length", "time"]);
+    assert_ne!(merged.digest(), geo().digest());
+    let export = build_workspace(&merged).unwrap();
+    assert_eq!(check_manifest(&export.bytes, &merged).unwrap(), export.digest);
+    let CValue::Obj(top) = parse(&export.bytes).unwrap() else { panic!() };
+    assert_eq!(top.get("quantity_catalogue_digest"), Some(&CValue::Str(merged.digest().to_string())));
+    let n: usize = SOURCES.iter().map(|s| (s.defs)().unwrap().len()).sum();
+    assert_eq!(export.definitions.len(), n);
+    assert!(manifest_in_force(merged).is_ok());
+}
+
+/// Fail-closed: without the domain fragments the kinds stay unknown, as typed VAL errors.
+#[test]
+fn geo_frame_alone_still_refuses_the_job_kinds() {
+    let mut expected = vec![
+        unknown("job.cancel_job", "/result_schema/properties/progress/x-quantity"),
+        unknown("job.list_jobs", "/result_schema/properties/jobs/items/properties/progress/x-quantity"),
+        unknown("job.show_status", "/result_schema/properties/progress/x-quantity"),
+        unknown("job.wait_job", "/params_schema/properties/timeout/x-quantity"),
+        unknown("job.wait_job", "/result_schema/properties/progress/x-quantity"),
+    ];
     expected.sort();
     let mut got = errors(build_workspace(&geo()).unwrap_err());
     got.sort();
@@ -70,13 +101,82 @@ fn workspace_is_blocked_on_the_quantity_catalogue() {
     assert_eq!(manifest_in_force(geo()).unwrap_err().code(), "declarations_invalid");
 }
 
-/// A catalogue that holds `time` (test data) clears the `time` error; `progress` still needs a
-/// `dimensionless` kind and its `x-quantity`.
+fn time_hours() -> &'static str {
+    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"s","kind":"time","units":[{"den":"1","num":"3600","pi":false,"symbol":"h"},{"den":"1","num":"1","pi":false,"symbol":"s"}]}]}"#
+}
+
+fn temperature() -> &'static str {
+    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"K","kind":"temperature","units":[{"den":"1","num":"1","pi":false,"symbol":"K"}]}]}"#
+}
+
+fn length_again() -> &'static str {
+    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"m","kind":"length","units":[{"den":"1250","num":"381","pi":false,"symbol":"ft"},{"den":"5000","num":"127","pi":false,"symbol":"in"},{"den":"1","num":"1","pi":false,"symbol":"m"},{"den":"1000","num":"1","pi":false,"symbol":"mm"},{"den":"1000000000","num":"1","pi":false,"symbol":"nm"},{"den":"5000000","num":"127","pi":false,"symbol":"thou"},{"den":"1000000","num":"1","pi":false,"symbol":"um"}]}]}"#
+}
+
+fn angle_turn() -> &'static str {
+    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"rad","kind":"angle","units":[{"den":"1","num":"1","pi":false,"symbol":"rad"},{"den":"1","num":"2","pi":true,"symbol":"turn"}]}]}"#
+}
+
+fn seconds_as_other_kind() -> &'static str {
+    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"s","kind":"duration","units":[{"den":"1","num":"1","pi":false,"symbol":"s"}]}]}"#
+}
+
+fn unsorted() -> &'static str {
+    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"s","kind":"time","units":[{"den":"1","num":"1","pi":false,"symbol":"s"}]},{"canonical":"K","kind":"temperature","units":[{"den":"1","num":"1","pi":false,"symbol":"K"}]}]}"#
+}
+
+fn src(krate: &'static str, kinds: fn() -> &'static str) -> QuantitySource {
+    QuantitySource { krate, kinds }
+}
+
 #[test]
-fn a_time_kind_leaves_only_the_progress_fields() {
-    let mut got = errors(build_workspace(&with_time()).unwrap_err());
-    got.sort();
-    assert_eq!(got, missing_progress());
+fn a_kind_defined_differently_by_two_crates_is_refused() {
+    let jobs = QUANTITY_SOURCES[0];
+    let err = merge_catalogues(&[jobs, src("fid-other", time_hours)]).unwrap_err();
+    assert_eq!(err, BuildError::KindConflict { kind: "time".into(), first: "fid-jobs", second: "fid-other" });
+    assert_eq!(err.code(), "quantity_kind_conflict");
+    let CValue::Obj(o) = err.to_value() else { panic!() };
+    assert_eq!(
+        o.get("crates"),
+        Some(&CValue::Arr(vec![CValue::Str("fid-jobs".into()), CValue::Str("fid-other".into())]))
+    );
+    // The same definition from a second crate is accepted once and changes nothing.
+    let twice = merge_catalogues(&[jobs, src("fid-other", fid_jobs::quantity_catalogue)]).unwrap();
+    assert_eq!(twice, workspace_catalogue().unwrap());
+}
+
+#[test]
+fn a_redefined_geo_kind_is_refused() {
+    // Even identical to GEO.FRAME's `length`: GEO kinds are locked.
+    for (f, kind) in [(length_again as fn() -> &'static str, "length"), (angle_turn, "angle")] {
+        let err = merge_catalogues(&[src("fid-geo-copy", f)]).unwrap_err();
+        assert_eq!(err, BuildError::GeoKindRedefined { krate: "fid-geo-copy", kind: kind.into() });
+        assert_eq!(err.code(), "geo_kind_redefined");
+    }
+}
+
+#[test]
+fn a_fragment_the_catalogue_refuses_names_its_crate() {
+    let err = merge_catalogues(&[QUANTITY_SOURCES[0], src("fid-dur", seconds_as_other_kind)]).unwrap_err();
+    assert_eq!(err, BuildError::Catalogue { krate: "fid-dur", catalogue_code: "bad_catalogue" });
+    assert_eq!(err.code(), "catalogue_invalid");
+    let err = merge_catalogues(&[src("fid-unsorted", unsorted)]).unwrap_err();
+    assert_eq!(err, BuildError::Catalogue { krate: "fid-unsorted", catalogue_code: "bad_catalogue" });
+}
+
+/// The fixed crate order gives one digest; non-conflicting fragments in any order give the
+/// same catalogue, because it is sorted by kind name.
+#[test]
+fn merge_order_gives_a_stable_digest() {
+    let a = workspace_catalogue().unwrap();
+    let b = workspace_catalogue().unwrap();
+    assert_eq!(a.digest(), b.digest());
+    let forward = merge_catalogues(&[QUANTITY_SOURCES[0], src("fid-temp", temperature)]).unwrap();
+    let backward = merge_catalogues(&[src("fid-temp", temperature), QUANTITY_SOURCES[0]]).unwrap();
+    assert_eq!(forward, backward);
+    assert_eq!(forward.kind_names(), ["angle", "dimensionless", "length", "temperature", "time"]);
+    assert_ne!(forward.digest(), a.digest());
+    assert_eq!(merge_catalogues(&[]).unwrap(), geo());
 }
 
 fn without_jobs() -> Vec<Source> {
