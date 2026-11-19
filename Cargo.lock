@@ -439,6 +439,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-gdt"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-geo-dist"
 version = "0.0.1"
 dependencies = [

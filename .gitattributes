@@ -52,5 +52,7 @@ fixtures/plat/matrix/escape.toml -text
 fixtures/plat/matrix/expected-page.md -text
 fixtures/plat/matrix/expected-escape-page.md -text
 docs/platform/support-matrix.md -text
+# GDT.RES.ROWFLOW.ROSTER fixtures: hand-labelled rosters and a digest compared byte for byte by make_digest.py --check.
+fixtures/gdt/rowflow/** -text
 # FLOW.PERSONA.SCHEMA fixtures: hand-written maps compared by make_fixtures.py --check byte for byte.
 fixtures/flow/journey/** -text

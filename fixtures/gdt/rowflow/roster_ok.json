@@ -1,0 +1,30 @@
+{
+  "version": "dmt-reviewers/v1",
+  "entries": [
+    {
+      "id": "rev-alpha",
+      "display_name": "Alpha Example (fictional reviewer)",
+      "principals": ["human:fictional-alpha"],
+      "dialects": ["asme"],
+      "basis": "paid_author",
+      "valid_from": "2026-01-01"
+    },
+    {
+      "id": "rev-bravo",
+      "display_name": "Bravo Example (fictional reviewer)",
+      "principals": ["human:fictional-bravo", "human:fictional-bravo-2"],
+      "dialects": ["iso"],
+      "basis": "community",
+      "valid_from": "2026-03-15"
+    },
+    {
+      "id": "rev-charlie",
+      "display_name": "Charlie Example (fictional reviewer)",
+      "principals": ["human:fictional-charlie"],
+      "dialects": ["asme", "iso"],
+      "basis": "partner",
+      "valid_from": "2026-06-01",
+      "valid_until": "2026-12-01"
+    }
+  ]
+}
