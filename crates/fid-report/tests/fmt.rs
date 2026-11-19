@@ -242,7 +242,7 @@ fn format_case(c: &Case, locale: LocaleRules) -> ValueText {
 fn ac1_fixture_cases_match_the_golden_file() {
     let golden = json("fixtures/rpt/model/fmt/fmt_cases.golden.json");
     let all = cases();
-    assert_eq!(all.len(), 47);
+    assert_eq!(all.len(), 50);
     let mut units = BTreeSet::new();
     let mut authored = [false, false];
     for c in &all {

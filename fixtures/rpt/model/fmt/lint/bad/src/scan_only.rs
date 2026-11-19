@@ -11,3 +11,15 @@ pub fn exp_trait(x: f64) -> String { // expect: RPT-FLOAT-TYPE
 pub fn float_crate(x: f64) -> String { // expect: RPT-FLOAT-TYPE
     ryu::Buffer::new().format(x).to_owned() // expect: RPT-FLOAT-CRATE
 }
+
+// The JSON number of fid-canon is a float reached by inference.
+use fid_canon::CValue::Num; // expect: RPT-NUM
+use fid_canon::CValue::*; // expect: RPT-NUM
+
+pub fn json_number(v: &fid_canon::CValue) -> String {
+    match v {
+        fid_canon::CValue::Num(f) => format!("{f}"), // expect: RPT-NUM
+        fid_canon::CValue::Num(_) => String::new(),
+        _ => String::new(),
+    }
+}

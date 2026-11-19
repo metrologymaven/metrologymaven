@@ -28,8 +28,16 @@ float-to-decimal code of its own. The rule is enforced in two layers:
    - RPT-FLOAT-TRAIT: `LowerExp` or `UpperExp`;
    - RPT-FLOAT-CRATE: a path through a float-printing crate (`ryu`, `dtoa`, ...);
    - RPT-LEX: a file the lexer cannot read (fail closed);
+   - RPT-NUM: `CValue::Num` used other than as the wildcard pattern `CValue::Num(_)`, or
+     `Num` / `CValue::*` imported, outside the allowed files (the JSON number of
+     `fid-canon` is a float reached by inference);
    - RPT-CONFIG: a `fid-report*` crate without a `clippy.toml` that disallows both `f32`
-     and `f64`.
+     and `f64`, or whose `disallowed-methods` misses a public function of one of its
+     direct path dependencies that returns `f32`/`f64` (or an `Option`/`Result` of one;
+     source scan, see `dependency_float_fns`); a `.clippy.toml` in a `fid-report*` crate
+     or at the root; a `[workspace.lints.clippy]` that sets `disallowed_types`,
+     `disallowed_methods`, `style` or `all` to `allow`; a CI workflow that sets
+     `CLIPPY_CONF_DIR`.
 
    Comments and string contents are not code. Integration tests are not shipped and not
    scanned (they may name floats, with `#![allow(clippy::disallowed_types)]`).
@@ -40,10 +48,10 @@ with `crates/fid-report/clippy.toml` into a temporary directory, runs
 `cargo clippy -- -D clippy::disallowed_types` on it, and requires a `disallowed_types`
 error on every line annotated `clippy` in the fixture. It fails if clippy is missing.
 
-Known limit of both layers: a float that reaches code outside `fmt` purely by inference
-from another crate's API, with no float type named and no literal (for example a binding
-`CValue::Num(f)` or `stmt.u_std()` passed straight to `format!`), is not seen. That case
-is recorded as an open question of RPT.MODEL.FMT.
+Known limit of both layers: a float that reaches code outside `fmt` purely by type
+inference, with no float type named, no literal, no listed method and no `CValue::Num`
+binding (for example a public `f64` field of a dependency's struct, or a `Vec<f64>`), is
+not seen. That case is recorded as an open question of RPT.MODEL.FMT.
 
 Exit status: 0 when there is no finding, 1 when there is at least one (each printed as
 `path:line:col: RULE message`), 2 on a usage error.
@@ -306,6 +314,28 @@ def floaty(tokens: list[Tok]) -> Tok | None:
     return None
 
 
+def in_use(toks: list[Tok], k: int) -> bool:
+    """Whether token k lies in a `use` declaration (back to the previous `;`, `{` or `}`
+    at statement level)."""
+    depth = 0
+    for j in range(k - 1, -1, -1):
+        t = toks[j]
+        if t.kind == "close":
+            depth += 1
+        elif t.kind == "open":
+            if depth == 0 and t.text != "{":
+                continue
+            if depth == 0:
+                # `{` of a use tree (`use a::{b, c}`) or of a block: look further back.
+                continue
+            depth -= 1
+        elif t.text == ";" and depth == 0:
+            return False
+        elif t.kind == "ident" and t.text == "use" and depth == 0:
+            return True
+    return False
+
+
 def float_allowed(path: str) -> bool:
     return path.startswith(ALLOWED_FLOAT_FILES)
 
@@ -323,6 +353,18 @@ def scan_tokens(path: str, toks: list[Tok]) -> list[Finding]:
         if t.kind != "ident":
             continue
         nxt0 = toks[k + 1] if k + 1 < len(toks) else None
+        if not allowed and t.text == "Num":
+            pattern = (
+                k >= 2
+                and toks[k - 1].text == "::"
+                and toks[k - 2].text == "CValue"
+                and [x.text for x in toks[k + 1 : k + 4]] == ["(", "_", ")"]
+                and not in_use(toks, k)
+            )
+            if not pattern:
+                add(t, "RPT-NUM", "`CValue::Num` only as the pattern `CValue::Num(_)` outside fid_report::fmt")
+        if not allowed and t.text == "CValue" and [x.text for x in toks[k + 1 : k + 3]] == ["::", "*"]:
+            add(t, "RPT-NUM", "glob import of `CValue::*`")
         if not allowed and t.text in FLOAT_TYPES:
             add(t, "RPT-FLOAT-TYPE", f"`{t.text}` outside fid_report::fmt")
         if not allowed and t.text in ("allow", "expect", "warn") and nxt0 is not None and nxt0.text == "(":
@@ -417,12 +459,116 @@ def scan_crate(crate: Path, base: Path) -> list[Finding]:
     return out
 
 
+FN_RE = re.compile(
+    r"^(?P<indent>[ \t]*)pub\s+(?:const\s+)?(?:unsafe\s+)?fn\s+(?P<name>\w+)(?P<sig>[^{;]*)",
+    re.M,
+)
+FLOAT_RET_RE = re.compile(r"->\s*(?:f32|f64|Option<\s*f(?:32|64)\s*>|Result<\s*f(?:32|64)\s*[,>])")
+IMPL_RE = re.compile(r"^impl(?:<[^{]*?>)?\s+(?P<ty>[A-Za-z_]\w*)(?P<rest>[^{]*)\{", re.M)
+
+
+def _module_file(src: Path, chain: list[str]) -> Path | None:
+    if not chain:
+        return src / "lib.rs"
+    base = src.joinpath(*chain)
+    for f in (base.with_suffix(".rs"), base / "mod.rs"):
+        if f.is_file():
+            return f
+    return None
+
+
+def _chain_of(src: Path, f: Path) -> list[str]:
+    parts = list(f.relative_to(src).with_suffix("").parts)
+    if parts[-1] in ("lib", "mod"):
+        parts.pop()
+    return parts
+
+
+def dependency_float_fns(crate_dir: Path) -> list[list[str]]:
+    """Public functions and inherent methods of `crate_dir`'s src that return f32/f64 or an
+    Option/Result of one. Each entry is the list of clippy paths that name it: the
+    definition path through public modules, plus each path through a `pub use` of the
+    item or its type in an ancestor module (a source scan; good enough for this
+    workspace's style, fail closed on what it cannot place)."""
+    src = crate_dir / "src"
+    krate = crate_dir.name.replace("-", "_")
+    out: list[list[str]] = []
+    for f in sorted(src.rglob("*.rs")):
+        text = f.read_text(encoding="utf-8")
+        chain = _chain_of(src, f)
+        if "tests" in chain or "test" in chain:
+            continue
+        for m in FN_RE.finditer(text):
+            if not FLOAT_RET_RE.search(m.group("sig")):
+                continue
+            name = m.group("name")
+            owner = None
+            if m.group("indent"):
+                impls = [i for i in IMPL_RE.finditer(text, 0, m.start())]
+                if not impls or " for " in impls[-1].group("rest"):
+                    continue  # trait impl or nested: not an inherent public method
+                owner = impls[-1].group("ty")
+            item = owner or name
+            tail = [owner, name] if owner else [name]
+            paths = []
+            # Walk from the defining module up: keep a module segment when its parent
+            # declares it `pub mod`; else the item must be re-exported by the parent.
+            for cut in range(len(chain), -1, -1):
+                prefix = chain[:cut]
+                if cut < len(chain):
+                    parent = _module_file(src, prefix)
+                    ptext = parent.read_text(encoding="utf-8") if parent else ""
+                    if not re.search(r"pub\s+use\s[^;]*\b" + re.escape(item) + r"\b", ptext):
+                        if not re.search(r"pub\s+mod\s+" + re.escape(chain[cut]) + r"\b", ptext):
+                            break
+                        continue
+                visible = all(
+                    re.search(
+                        r"pub\s+mod\s+" + re.escape(prefix[i]) + r"\b",
+                        (_module_file(src, prefix[:i]) or src / "lib.rs").read_text(encoding="utf-8"),
+                    )
+                    for i in range(len(prefix))
+                )
+                if visible:
+                    paths.append("::".join([krate] + prefix + tail))
+            out.append(paths or ["::".join([krate] + chain + tail) + " (unplaceable)"])
+    return out
+
+
+def path_deps(crate_dir: Path, root: Path) -> list[Path]:
+    import tomllib
+
+    manifest = tomllib.loads((crate_dir / "Cargo.toml").read_text(encoding="utf-8"))
+    out = []
+    for name, spec in sorted(manifest.get("dependencies", {}).items()):
+        if isinstance(spec, dict) and "path" in spec:
+            out.append((crate_dir / spec["path"]).resolve())
+    return out
+
+
 def check_config(root: Path) -> list[Finding]:
-    """Every fid-report* crate has a clippy.toml disallowing f32 and f64."""
+    """The clippy layer is configured, complete and not weakened (see RPT-CONFIG)."""
     import tomllib
 
     out: list[Finding] = []
+    for name in (".clippy.toml",):
+        if (root / name).exists():
+            out.append(Finding(name, 1, 1, "RPT-CONFIG", "a root .clippy.toml would shadow the crate configs"))
+    ws = tomllib.loads((root / "Cargo.toml").read_text(encoding="utf-8")).get("workspace", {})
+    lints = ws.get("lints", {}).get("clippy", {})
+    for key in ("disallowed_types", "disallowed_methods", "style", "all"):
+        level = lints.get(key)
+        level = level.get("level") if isinstance(level, dict) else level
+        if level == "allow":
+            out.append(Finding("Cargo.toml", 1, 1, "RPT-CONFIG", f"[workspace.lints.clippy] sets {key} to allow"))
+    wf_dir = root / ".github" / "workflows"
+    for wf in sorted(wf_dir.glob("*.yml")) if wf_dir.is_dir() else []:
+        if "CLIPPY_CONF_DIR" in wf.read_text(encoding="utf-8"):
+            out.append(Finding(wf.relative_to(root).as_posix(), 1, 1, "RPT-CONFIG", "sets CLIPPY_CONF_DIR"))
     for c in crate_dirs(root):
+        if (c / ".clippy.toml").exists():
+            rel = (c / ".clippy.toml").relative_to(root).as_posix()
+            out.append(Finding(rel, 1, 1, "RPT-CONFIG", "a .clippy.toml would take precedence over clippy.toml"))
         rel = (c / "clippy.toml").relative_to(root).as_posix()
         try:
             cfg = tomllib.loads((c / "clippy.toml").read_text(encoding="utf-8"))
@@ -435,6 +581,16 @@ def check_config(root: Path) -> list[Finding]:
         missing = sorted(FLOAT_TYPES - paths)
         if missing:
             out.append(Finding(rel, 1, 1, "RPT-CONFIG", f"disallowed-types lacks {', '.join(missing)}"))
+        methods = set()
+        for entry in cfg.get("disallowed-methods", []):
+            methods.add(entry["path"] if isinstance(entry, dict) else entry)
+        if (c / "Cargo.toml").is_file():
+            for dep in path_deps(c, root):
+                if not (dep / "src").is_dir():
+                    continue
+                for names in dependency_float_fns(dep):
+                    if not methods.intersection(names):
+                        out.append(Finding(rel, 1, 1, "RPT-CONFIG", f"disallowed-methods lacks {names[0]}"))
     return out
 
 
@@ -535,7 +691,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--root", type=Path, default=ROOT, help="repository root (default: this checkout)")
     ap.add_argument("--crate", type=Path, action="append", help="scan this crate directory instead of crates/fid-report*")
     ap.add_argument("--clippy-selftest", action="store_true", help="prove the clippy layer on the bad fixture crate")
+    ap.add_argument("--float-fns", type=Path, help="print the float-returning public functions of a crate directory")
     a = ap.parse_args(argv)
+    if a.float_fns:
+        for names in dependency_float_fns(a.float_fns.resolve()):
+            print(" | ".join(names))
+        return 0
     if a.clippy_selftest:
         return clippy_selftest(a.root.resolve())
     crates = [c.resolve() for c in a.crate] if a.crate else None

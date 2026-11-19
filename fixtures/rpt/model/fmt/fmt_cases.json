@@ -394,6 +394,54 @@
   },
   {
    "acceptance": null,
+   "decimals": 4,
+   "kind": "angle",
+   "limits": {
+    "lower": "0",
+    "unit": "deg",
+    "upper": null
+   },
+   "name": "nc_wrap_below_zero",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "deg",
+   "value_bits": "0xbd719799812dea11"
+  },
+  {
+   "acceptance": null,
+   "decimals": 4,
+   "kind": "angle",
+   "limits": {
+    "lower": null,
+    "unit": "deg",
+    "upper": "359.99"
+   },
+   "name": "nc_wrap_below_2pi_deg",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "deg",
+   "value_bits": "0x401921fb54442d18"
+  },
+  {
+   "acceptance": null,
+   "decimals": 0,
+   "kind": "angle",
+   "limits": {
+    "lower": null,
+    "unit": "deg",
+    "upper": "359.99"
+   },
+   "name": "nc_wrap_below_2pi_dms",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "dms",
+   "value_bits": "0x401921fb54442d18"
+  },
+  {
+   "acceptance": null,
    "decimals": 0,
    "kind": "length",
    "limits": null,

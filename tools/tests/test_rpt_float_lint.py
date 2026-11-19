@@ -96,6 +96,12 @@ class GoodCode(unittest.TestCase):
         self.assertEqual(lint.scan_tokens("crates/fid-report/src/json_num.rs", toks), [])
         rules = sorted(f.rule for f in lint.scan_tokens("crates/fid-report/src/doc/defs.rs", toks))
         self.assertEqual(rules, ["RPT-FLOAT-LITERAL", "RPT-FLOAT-TYPE", "RPT-FLOAT-TYPE", "RPT-LINT-ALLOW"])
+        # The JSON number: only the wildcard pattern outside the allowed files.
+        ok = lint.lex("fn k(v: &CValue) -> bool { matches!(v, CValue::Num(_)) }\n")
+        self.assertEqual(lint.scan_tokens("crates/fid-report/src/doc/x.rs", ok), [])
+        bad = lint.lex("use fid_canon::{CValue, CValue::Num};\nfn k(v: &CValue) { if let CValue::Num(x) = v {} }\n")
+        self.assertEqual([f.rule for f in lint.scan_tokens("crates/fid-report/src/doc/x.rs", bad)], ["RPT-NUM", "RPT-NUM"])
+        self.assertEqual(lint.scan_tokens("crates/fid-report/src/json_num.rs", bad), [])
         # Format rules apply in fmt too.
         spec = lint.lex('fn g(x: f64) -> String { format!("{:.2}", x) }\n')
         self.assertEqual([f.rule for f in lint.scan_tokens("crates/fid-report/src/fmt/mod.rs", spec)], ["RPT-FLOAT-SPEC"])
@@ -140,14 +146,73 @@ class Wiring(unittest.TestCase):
                     allowing.append(f.relative_to(ROOT).as_posix())
         self.assertEqual(sorted(allowing), ["crates/fid-report/src/fmt/mod.rs", "crates/fid-report/src/json_num.rs"])
 
+    @staticmethod
+    def tree(d, clippy, dep_src="pub fn ok() -> u32 { 1 }\n", workspace=""):
+        root = Path(d)
+        (root / "Cargo.toml").write_text('[workspace]\nmembers = ["crates/*"]\n' + workspace, encoding="utf-8")
+        c = root / "crates" / "fid-report-x"
+        (c / "src").mkdir(parents=True)
+        (c / "Cargo.toml").write_text('[package]\n[dependencies]\ndep = { path = "../dep" }\n', encoding="utf-8")
+        if clippy is not None:
+            (c / "clippy.toml").write_text(clippy, encoding="utf-8")
+        dep = root / "crates" / "dep" / "src"
+        dep.mkdir(parents=True)
+        (dep / "lib.rs").write_text(dep_src, encoding="utf-8")
+        return root
+
     def test_missing_clippy_config_is_a_finding(self):
         with tempfile.TemporaryDirectory() as d:
-            c = Path(d) / "crates" / "fid-report-x"
-            (c / "src").mkdir(parents=True)
-            (c / "Cargo.toml").write_text("[package]\n", encoding="utf-8")
-            self.assertEqual([f.rule for f in lint.check_config(Path(d))], ["RPT-CONFIG"])
-            (c / "clippy.toml").write_text('disallowed-types = ["f64"]\n', encoding="utf-8")
-            self.assertEqual([f.message for f in lint.check_config(Path(d))], ["disallowed-types lacks f32"])
+            root = self.tree(d, None)
+            self.assertEqual([f.rule for f in lint.check_config(root)], ["RPT-CONFIG"])
+        with tempfile.TemporaryDirectory() as d:
+            root = self.tree(d, 'disallowed-types = ["f64"]\n')
+            self.assertEqual([f.message for f in lint.check_config(root)], ["disallowed-types lacks f32"])
+
+    def test_a_new_float_returning_dependency_function_is_a_finding(self):
+        types = 'disallowed-types = ["f32", "f64"]\n'
+        src = "pub mod m;\npub use m::Thing;\n"
+        with tempfile.TemporaryDirectory() as d:
+            root = self.tree(d, types, src)
+            (root / "crates" / "dep" / "src" / "m.rs").write_text(
+                "pub struct Thing;\nimpl Thing {\n    pub fn v(&self) -> Option<f64> { None }\n"
+                "    pub fn n(&self) -> u32 { 0 }\n}\npub fn r() -> Result<f32, ()> { Ok(0.0) }\n"
+                "fn private() -> f64 { 0.0 }\n",
+                encoding="utf-8",
+            )
+            msgs = sorted(f.message for f in lint.check_config(root))
+            self.assertEqual(msgs, ["disallowed-methods lacks dep::m::Thing::v", "disallowed-methods lacks dep::m::r"])
+            listed = types + 'disallowed-methods = ["dep::Thing::v", { path = "dep::m::r" }]\n'
+            (root / "crates" / "fid-report-x" / "clippy.toml").write_text(listed, encoding="utf-8")
+            self.assertEqual(lint.check_config(root), [])
+
+    def test_weakened_configuration_is_a_finding(self):
+        types = 'disallowed-types = ["f32", "f64"]\n'
+        for ws in [
+            '[workspace.lints.clippy]\ndisallowed_types = "allow"\n',
+            '[workspace.lints.clippy]\nstyle = { level = "allow", priority = -1 }\n',
+            '[workspace.lints.clippy]\nall = "allow"\n',
+            '[workspace.lints.clippy]\ndisallowed_methods = "allow"\n',
+        ]:
+            with tempfile.TemporaryDirectory() as d:
+                root = self.tree(d, types, workspace=ws)
+                self.assertEqual([f.rule for f in lint.check_config(root)], ["RPT-CONFIG"], ws)
+        for where in [".clippy.toml", "crates/fid-report-x/.clippy.toml"]:
+            with tempfile.TemporaryDirectory() as d:
+                root = self.tree(d, types)
+                (root / where).write_text("", encoding="utf-8")
+                self.assertEqual([f.rule for f in lint.check_config(root)], ["RPT-CONFIG"], where)
+        with tempfile.TemporaryDirectory() as d:
+            root = self.tree(d, types)
+            (root / ".github" / "workflows").mkdir(parents=True)
+            (root / ".github" / "workflows" / "x.yml").write_text("env:\n  CLIPPY_CONF_DIR: /tmp\n", encoding="utf-8")
+            self.assertEqual([f.rule for f in lint.check_config(root)], ["RPT-CONFIG"])
+
+    def test_the_review_listed_methods_are_disallowed_in_fid_report(self):
+        cfg = tomllib.loads((ROOT / "crates" / "fid-report" / "clippy.toml").read_text(encoding="utf-8"))
+        paths = {e["path"] for e in cfg["disallowed-methods"]}
+        for p in ["fid_gdt::chars::record::Quantity::value", "fid_kunc::UncertaintyStatement::u_std",
+                  "fid_num::rng::Cursor::uniform_f64", "fid_kunc::dist::open_unit"]:
+            self.assertIn(p, paths)
 
     def test_repository_report_crates_pass(self):
         self.assertEqual([str(f) for f in lint.run(ROOT)], [])

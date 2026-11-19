@@ -104,11 +104,12 @@ impl SiValue {
     }
 
     /// The value of a GDT ResultRecord quantity (`GDT.CHAR.RECORD`).
+    #[allow(clippy::disallowed_methods)] // the one sanctioned call of `Quantity::value`
     pub fn of_quantity(q: fid_gdt::chars::record::Quantity) -> SiValue {
         SiValue(q.value())
     }
 
-    pub(crate) const fn get(self) -> f64 {
+    pub(in crate::fmt) const fn get(self) -> f64 {
         self.0
     }
 }

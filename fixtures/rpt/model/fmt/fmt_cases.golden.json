@@ -219,6 +219,39 @@
   "tie": false,
   "unit": "um"
  },
+ "nc_wrap_below_2pi_deg": {
+  "canonical": "360.0000",
+  "decimals": 4,
+  "digits_added": 0,
+  "display_de": "360,0000",
+  "display_en": "360.0000",
+  "formatter": "fmt.angle@1",
+  "side": "above",
+  "tie": false,
+  "unit": "deg"
+ },
+ "nc_wrap_below_2pi_dms": {
+  "canonical": "360:00:00",
+  "decimals": 0,
+  "digits_added": 0,
+  "display_de": "360:00:00",
+  "display_en": "360:00:00",
+  "formatter": "fmt.angle@1",
+  "side": "above",
+  "tie": false,
+  "unit": "dms"
+ },
+ "nc_wrap_below_zero": {
+  "canonical": "-0.0000000001",
+  "decimals": 4,
+  "digits_added": 6,
+  "display_de": "-0,0000000001",
+  "display_en": "-0.0000000001",
+  "formatter": "fmt.angle@1",
+  "side": "below",
+  "tie": false,
+  "unit": "deg"
+ },
  "scalar_auth2": {
   "canonical": "0.99",
   "decimals": 2,

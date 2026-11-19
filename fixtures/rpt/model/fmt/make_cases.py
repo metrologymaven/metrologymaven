@@ -292,6 +292,14 @@ CASES = [
          limits=None, acceptance=None, outcome="NOT_DECIDABLE", rule=None),
     dict(name="wrap_dms_below_zero", kind="angle", unit="dms", decimals=1, value=-1e-9,
          limits=None, acceptance=None, outcome="NOT_DECIDABLE", rule=None),
+    # NONCONFORMS at the wrap: just below 0 rad against a lower limit of 0 deg, and just
+    # below 2 pi against an upper limit of 359.99 deg (the formatter never wraps to 0).
+    dict(name="nc_wrap_below_zero", kind="angle", unit="deg", decimals=4, value=-1e-12,
+         limits=lim("0", None, "deg"), acceptance=None, outcome="NONCONFORMS", rule="dr:simple-acceptance@1"),
+    dict(name="nc_wrap_below_2pi_deg", kind="angle", unit="deg", decimals=4, value=6.283185307179586,
+         limits=lim(None, "359.99", "deg"), acceptance=None, outcome="NONCONFORMS", rule="dr:simple-acceptance@1"),
+    dict(name="nc_wrap_below_2pi_dms", kind="angle", unit="dms", decimals=0, value=6.283185307179586,
+         limits=lim(None, "359.99", "deg"), acceptance=None, outcome="NONCONFORMS", rule="dr:simple-acceptance@1"),
 ] + [
     # Precision sweep 0..9: plain rounding, and the side rule from every starting precision.
     dict(name=f"sweep_mm_d{d}", kind="length", unit="mm", decimals=d, value=0.0123456789012,
