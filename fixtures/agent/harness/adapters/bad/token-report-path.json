@@ -1,0 +1,1 @@
+{"name": "bad", "version": "1", "prompt": "file", "model": "m", "settings": {}, "shell": false, "argv": ["agent", "--mcp-config", "{mcp_config}", "--prompt-file", "{prompt_file}"], "token_report": "../tokens.json"}
