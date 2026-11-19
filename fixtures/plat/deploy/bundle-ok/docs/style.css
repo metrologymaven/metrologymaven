@@ -1,0 +1,4 @@
+@import "theme.css";
+@font-face { font-family: mm; src: url("fonts/mm.woff2") format("woff2"); }
+body { font-family: mm, sans-serif; }
+/* url(https://example.org/old.woff2) was the old font, now bundled */

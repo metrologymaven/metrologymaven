@@ -7,7 +7,12 @@
 //! [--phase <P>]` (spec node `PLAT.GPU.POLICY`) and
 //! `fid-platform plat-deploy validate-layout [--file <file>] [--matrix <file>] [--phase <P>]`
 //! (spec node `PLAT.DEPLOY.NOADMIN.LAYOUT`) and
-//! `fid-platform plat-matrix page [--check] [--matrix <file>] --out <file>` (spec node `PLAT.MATRIX.PAGE`).
+//! `fid-platform plat-matrix page [--check] [--matrix <file>] --out <file>` (spec node `PLAT.MATRIX.PAGE`)
+//! and `fid-platform plat-deploy check-bundle --bundle <dir> --plan <file>`,
+//! `fid-platform plat-deploy check-bundles --plan <file> --bundle <dir> [--bundle <dir> ...]`,
+//! `fid-platform plat-deploy make-install-manifest --root <dir> --kind <per_user|machine> --release <v>
+//! --os <os> --arch <arch> [--out <file>]` and `fid-platform plat-deploy bundle-schemas` (spec node
+//! `PLAT.DEPLOY.OFFLINE.BUNDLE`).
 //! `cargo xtask plat-matrix ...`, `cargo xtask plat-hw ...`, `cargo xtask plat-gpu validate` and
 //! `cargo xtask plat-deploy validate-layout` run this binary.
 //!
@@ -36,9 +41,22 @@
 //! diff and exits 1 when the file at `--out` differs from the generated page, and exits 0 when
 //! they are equal. A matrix with validation errors prints them to stderr, writes nothing and
 //! exits 1; bad usage or an unreadable or unwritable file exits 2.
+//! `plat-deploy check-bundle` prints one finding per line (e.g. `MissingRole { role: cli }`) and
+//! exits 1 when there are any, or prints `check-bundle: ok` and exits 0; bad usage or
+//! an unreadable or invalid package plan exits 2. `plat-deploy check-bundles` checks every
+//! bundle the same way and also requires one bundle per Tier 1 combination of the plan; each
+//! finding is prefixed with its bundle directory (coverage findings have none); `check-bundles:
+//! ok` and exit 0, or exit 1 on findings, 2 on bad usage. `plat-deploy make-install-manifest` writes the
+//! canonical manifest of the tree to `--out` (or standard output) and exits 0; findings in the
+//! tree (a symbolic link, a bad name) are printed and exit 1; bad usage exits 2.
+//! `plat-deploy bundle-schemas` writes `platform/offline-bundle.schema.json` and
+//! `platform/install-manifest.schema.json` (exit 0, or 2 if it cannot).
 
-use fid_platform::{bench_schema, gpu_policy, hw_profile, kiosk_display, matrix, page, peruser_layout};
-use std::io::Read;
+use fid_platform::{
+    bench_schema, gpu_policy, hw_profile, install_manifest, kiosk_display, matrix, page, peruser_layout,
+};
+use std::io::{Read, Write};
+use std::path::Path;
 use std::process::ExitCode;
 
 const USAGE: &str = "usage: fid-platform plat-matrix validate <file>\n       \
@@ -49,7 +67,12 @@ const USAGE: &str = "usage: fid-platform plat-matrix validate <file>\n       \
                      fid-platform plat-kiosk display [--file <path>]\n       \
                      fid-platform plat-gpu validate [--policy <file>] [--known-bad <file>] [--matrix <file>] \
                      [--phase <P>]\n       \
-                     fid-platform plat-deploy validate-layout [--file <file>] [--matrix <file>] [--phase <P>]";
+                     fid-platform plat-deploy validate-layout [--file <file>] [--matrix <file>] [--phase <P>]\n       \
+                     fid-platform plat-deploy check-bundle --bundle <dir> --plan <file>\n       \
+                     fid-platform plat-deploy check-bundles --plan <file> --bundle <dir> [--bundle <dir> ...]\n       \
+                     fid-platform plat-deploy make-install-manifest --root <dir> --kind <per_user|machine> \
+                     --release <v> --os <os> --arch <arch> [--out <file>]\n       \
+                     fid-platform plat-deploy bundle-schemas";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -69,6 +92,10 @@ fn main() -> ExitCode {
         [group, cmd, flag, file] if group == "plat-kiosk" && cmd == "display" && flag == "--file" => kiosk(file),
         [group, cmd, rest @ ..] if group == "plat-gpu" && cmd == "validate" => gpu_validate(rest),
         [group, cmd, rest @ ..] if group == "plat-deploy" && cmd == "validate-layout" => layout_validate(rest),
+        [group, cmd, rest @ ..] if group == "plat-deploy" && cmd == "check-bundle" => check_bundle(rest),
+        [group, cmd, rest @ ..] if group == "plat-deploy" && cmd == "check-bundles" => check_bundles(rest),
+        [group, cmd, rest @ ..] if group == "plat-deploy" && cmd == "make-install-manifest" => make_manifest(rest),
+        [group, cmd] if group == "plat-deploy" && cmd == "bundle-schemas" => bundle_schemas(),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::from(2)
@@ -376,4 +403,178 @@ fn page_cmd(args: &[String]) -> ExitCode {
             ExitCode::from(1)
         }
     }
+}
+
+/// Parses `--flag value` pairs: each flag at most once and only from `allowed`.
+fn flag_pairs<'a>(
+    args: &'a [String],
+    allowed: &[&str],
+    cmd: &str,
+) -> Option<std::collections::BTreeMap<&'a str, &'a str>> {
+    let mut out = std::collections::BTreeMap::new();
+    for pair in args.chunks(2) {
+        let [flag, value] = pair else {
+            eprintln!("{cmd}: every flag needs a value\n{USAGE}");
+            return None;
+        };
+        if !allowed.contains(&flag.as_str()) {
+            eprintln!("{cmd}: unknown flag {flag}\n{USAGE}");
+            return None;
+        }
+        if out.insert(flag.as_str(), value.as_str()).is_some() {
+            eprintln!("{cmd}: {flag} given twice\n{USAGE}");
+            return None;
+        }
+    }
+    Some(out)
+}
+
+/// `plat-deploy check-bundle`: see the module documentation for the output and exit codes.
+fn check_bundle(args: &[String]) -> ExitCode {
+    let cmd = "plat-deploy check-bundle";
+    let Some(flags) = flag_pairs(args, &["--bundle", "--plan"], cmd) else {
+        return ExitCode::from(2);
+    };
+    let (Some(bundle), Some(plan_path)) = (flags.get("--bundle"), flags.get("--plan")) else {
+        eprintln!("{cmd}: --bundle and --plan are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let Some(plan_bytes) = read_capped(plan_path, install_manifest::MAX_BYTES, cmd) else {
+        return ExitCode::from(2);
+    };
+    let plan = match install_manifest::parse_plan(&plan_bytes, plan_path) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{cmd}: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let findings = install_manifest::check_bundle(Path::new(bundle), &plan);
+    if findings.is_empty() {
+        println!("check-bundle: ok");
+        return ExitCode::SUCCESS;
+    }
+    for f in &findings {
+        println!("{f}");
+    }
+    ExitCode::from(1)
+}
+
+/// `plat-deploy make-install-manifest`: see the module documentation for the output and exit codes.
+fn make_manifest(args: &[String]) -> ExitCode {
+    let cmd = "plat-deploy make-install-manifest";
+    let allowed = ["--root", "--kind", "--release", "--os", "--arch", "--out"];
+    let Some(flags) = flag_pairs(args, &allowed, cmd) else {
+        return ExitCode::from(2);
+    };
+    let (Some(root), Some(kind), Some(release), Some(os), Some(arch)) = (
+        flags.get("--root"),
+        flags.get("--kind").and_then(|k| install_manifest::InstallKind::from_name(k)),
+        flags.get("--release"),
+        flags.get("--os").and_then(|o| matrix::OsFamily::from_name(o)),
+        flags.get("--arch").and_then(|a| matrix::Arch::from_name(a)),
+    ) else {
+        eprintln!("{cmd}: --root, --kind (per_user|machine), --release, --os and --arch are required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let manifest = match install_manifest::make_install_manifest(Path::new(root), kind, release, os, arch) {
+        Ok(m) => m,
+        Err(findings) => {
+            for f in &findings {
+                println!("{f}");
+            }
+            return ExitCode::from(1);
+        }
+    };
+    let bytes = match manifest.to_json() {
+        Ok(b) => b,
+        Err(e) => {
+            println!("{e}");
+            return ExitCode::from(1);
+        }
+    };
+    let written = match flags.get("--out") {
+        Some(out) => write_atomically(Path::new(out), &bytes),
+        None => std::io::stdout().write_all(&bytes),
+    };
+    match written {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("{cmd}: cannot write the manifest: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+/// `plat-deploy bundle-schemas`: writes the two exported JSON Schemas.
+fn bundle_schemas() -> ExitCode {
+    let files = match install_manifest::json_schema_files() {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("plat-deploy bundle-schemas: cannot serialise: {}", e.code());
+            return ExitCode::from(2);
+        }
+    };
+    for (path, bytes) in files {
+        if let Err(e) = std::fs::write(path, bytes) {
+            eprintln!("plat-deploy bundle-schemas: cannot write {path}: {e}");
+            return ExitCode::from(2);
+        }
+        println!("wrote {path}");
+    }
+    ExitCode::SUCCESS
+}
+
+/// Writes `bytes` to a temporary file next to `out` and renames it over `out`, so a reader never
+/// sees a half-written manifest; the temporary file is removed on failure.
+fn write_atomically(out: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let name = out.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let tmp = out.with_file_name(format!(".{name}.tmp-{}", std::process::id()));
+    let result = std::fs::File::create(&tmp)
+        .and_then(|mut f| f.write_all(bytes).and_then(|()| f.sync_all()))
+        .and_then(|()| std::fs::rename(&tmp, out));
+    if result.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    result
+}
+
+/// `plat-deploy check-bundles`: see the module documentation for the output and exit codes.
+fn check_bundles(args: &[String]) -> ExitCode {
+    let cmd = "plat-deploy check-bundles";
+    let mut plan_path: Option<&str> = None;
+    let mut dirs: Vec<std::path::PathBuf> = Vec::new();
+    for pair in args.chunks(2) {
+        match pair {
+            [flag, value] if flag == "--bundle" => dirs.push(value.into()),
+            [flag, value] if flag == "--plan" && plan_path.is_none() => plan_path = Some(value),
+            _ => {
+                eprintln!("{cmd}: bad arguments\n{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let Some(plan_path) = plan_path else {
+        eprintln!("{cmd}: --plan is required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let Some(plan_bytes) = read_capped(plan_path, install_manifest::MAX_BYTES, cmd) else {
+        return ExitCode::from(2);
+    };
+    let plan = match install_manifest::parse_plan(&plan_bytes, plan_path) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{cmd}: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let findings = install_manifest::check_bundles(&dirs, &plan);
+    if findings.is_empty() {
+        println!("check-bundles: ok");
+        return ExitCode::SUCCESS;
+    }
+    for f in &findings {
+        println!("{f}");
+    }
+    ExitCode::from(1)
 }
