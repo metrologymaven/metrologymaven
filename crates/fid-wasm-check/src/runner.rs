@@ -18,8 +18,12 @@
 //! non-empty stderr line, after leading spaces and a `<n>: ` cause number are removed, equals
 //! one of [`RESOURCE_CAUSES`] exactly. A guest can write only before it traps, so it cannot
 //! write that last line. Causes: stack overflow, an out-of-bounds access (in a module built
-//! without `unsafe`, only a shadow-stack overrun produces it), fuel exhausted, and a failed
-//! `memory.grow` (trapping because of `-W trap-on-grow-failure=y`). A wasmtime usage or
+//! without `unsafe`, only a shadow-stack overrun produces it) and fuel exhausted. A failed
+//! `memory.grow` (`-W trap-on-grow-failure=y`) is reported by wasmtime 49 as a host error, not
+//! a wasm trap: exit code [`HOST_ERROR_EXIT`] and a last line `forcing trap when growing
+//! memory to <digits> bytes` ([`is_grow_failure`]); it is a resource limit only with that exit
+//! code, empty stdout and that exact line. A guest can also exit 1, so it could forge this one
+//! verdict, but only from one non-value (`trap`) to another (`resource`). A wasmtime usage or
 //! start-up error never looks like a result: it has no shim-shaped stdout or has stderr
 //! output, so it is a trap, not a value.
 
@@ -33,12 +37,22 @@ pub const NOT_REPLAYABLE_RESOURCE: &str = "NOT_REPLAYABLE(resource)";
 /// Runner stdout for any other abnormal end.
 pub const NOT_REPLAYABLE_TRAP: &str = "NOT_REPLAYABLE(trap)";
 /// Wasmtime's last stderr line (cause number removed) for a stack, fuel or memory limit.
-pub const RESOURCE_CAUSES: [&str; 4] = [
+pub const RESOURCE_CAUSES: [&str; 3] = [
     "wasm trap: call stack exhausted",
     "wasm trap: out of bounds memory access",
     "wasm trap: all fuel consumed by WebAssembly",
-    "forcing a memory growth failure to be a trap",
 ];
+/// Wasmtime's exit code for a host error such as a forced `memory.grow` failure.
+pub const HOST_ERROR_EXIT: i32 = 1;
+
+/// True for wasmtime's forced `memory.grow` failure line:
+/// `forcing trap when growing memory to <digits> bytes`.
+pub fn is_grow_failure(cause: &str) -> bool {
+    cause
+        .strip_prefix("forcing trap when growing memory to ")
+        .and_then(|r| r.strip_suffix(" bytes"))
+        .is_some_and(|n| !n.is_empty() && n.len() <= 20 && n.bytes().all(|c| c.is_ascii_digit()))
+}
 /// The exit code wasmtime uses when the guest traps (128 + SIGABRT on Unix, 3 on Windows).
 pub const TRAP_EXIT: i32 = if cfg!(windows) { 3 } else { 134 };
 
@@ -85,7 +99,10 @@ pub fn classify(code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> Outcome {
             return Outcome::Shim { exit: c, stdout: stdout.to_vec() };
         }
     }
-    if code == Some(TRAP_EXIT) && RESOURCE_CAUSES.contains(&last_cause(stderr).as_str()) {
+    let cause = last_cause(stderr);
+    let trap = code == Some(TRAP_EXIT) && RESOURCE_CAUSES.contains(&cause.as_str());
+    let grow = code == Some(HOST_ERROR_EXIT) && stdout.is_empty() && is_grow_failure(&cause);
+    if trap || grow {
         Outcome::Resource
     } else {
         Outcome::Trap

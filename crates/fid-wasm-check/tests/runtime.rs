@@ -4,7 +4,10 @@
 //! Design rules.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_wasm_check::runner::{classify, last_cause, parse_cases, version_matches, Outcome, RESOURCE_CAUSES, TRAP_EXIT};
+use fid_wasm_check::runner::{
+    classify, is_grow_failure, last_cause, parse_cases, version_matches, Outcome, HOST_ERROR_EXIT, RESOURCE_CAUSES,
+    TRAP_EXIT,
+};
 use fid_wasm_check::runtime::{RuntimeConfig, RuntimeError};
 use std::path::Path;
 
@@ -141,6 +144,15 @@ fn ac3_outcome_classification() {
         assert_eq!(classify(Some(1), b"", stderr.as_bytes()), Outcome::Trap);
         assert_eq!(classify(Some(125), b"", stderr.as_bytes()), Outcome::Trap);
     }
+    // A forced memory.grow failure: wasmtime's host-error exit and its exact last line.
+    let grow = b"Error: failed to run main module `k.wasm`\n\nCaused by:\n    0: forcing trap when growing memory to 1611726848 bytes\n";
+    assert_eq!(classify(Some(HOST_ERROR_EXIT), b"", grow), Outcome::Resource);
+    assert_eq!(classify(Some(TRAP_EXIT), b"", grow), Outcome::Trap);
+    assert_eq!(classify(Some(HOST_ERROR_EXIT), b"x", grow), Outcome::Trap);
+    assert_eq!(classify(Some(HOST_ERROR_EXIT), b"", b"forcing trap when growing memory to  bytes"), Outcome::Trap);
+    assert_eq!(classify(Some(HOST_ERROR_EXIT), b"", b"forcing trap when growing memory to 12 bytes!"), Outcome::Trap);
+    assert!(is_grow_failure("forcing trap when growing memory to 0 bytes"));
+    assert!(!is_grow_failure("forcing trap when growing table to 5 bytes"));
     // A sealed clock import that is called traps like any unknown import.
     let unknown =
         b"Error: failed to run main module\n\nCaused by:\n    0: unknown import: `fid_trap::clock_time_get`\n";
