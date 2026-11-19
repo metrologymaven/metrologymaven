@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-manifest-gen]
+built_pr: 204
 satisfies: [REQ-KRN.MAN.MANI-003]
 covers: []
 depends_on: [KRN.MAN.KCI, KRN.MAN.CARD]
