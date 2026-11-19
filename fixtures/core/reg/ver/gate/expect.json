@@ -120,18 +120,17 @@
    "name": "lifecycle_legal",
    "baseline": "baseline.json",
    "current": "lifecycle_legal.json",
+   "release_date": "2026-02-01",
    "exit": 0,
    "failures": [],
    "report": "registry-gate: ok\n"
   },
   {
-   "name": "lifecycle_legal_dated",
+   "name": "lifecycle_legal_undated",
    "baseline": "baseline.json",
    "current": "lifecycle_legal.json",
-   "release_date": "2026-02-01",
-   "exit": 0,
-   "failures": [],
-   "report": "registry-gate: ok\n"
+   "exit": 2,
+   "code": "release_date_required"
   },
   {
    "name": "lifecycle_wrong_release_date",
@@ -165,6 +164,7 @@
    "name": "illegal_transition",
    "baseline": "baseline.json",
    "current": "illegal_transition.json",
+   "release_date": "2026-02-01",
    "exit": 1,
    "failures": [
     {
@@ -180,6 +180,7 @@
    "name": "deprecation_too_short",
    "baseline": "baseline.json",
    "current": "deprecation_too_short.json",
+   "release_date": "2025-12-01",
    "exit": 1,
    "failures": [
     {
@@ -195,6 +196,7 @@
    "name": "removal_too_early",
    "baseline": "baseline.json",
    "current": "removal_too_early.json",
+   "release_date": "2025-12-01",
    "exit": 1,
    "failures": [
     {
@@ -205,6 +207,52 @@
     }
    ],
    "report": "{\"code\":\"removal_too_early\",\"command\":\"demo.old\",\"major\":1,\"pointer\":\"/lifecycle\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "deprecation_bypass",
+   "baseline": "baseline.json",
+   "current": "deprecation_bypass.json",
+   "exit": 2,
+   "code": "release_date_required"
+  },
+  {
+   "name": "deprecation_bypass_dated",
+   "baseline": "baseline.json",
+   "current": "deprecation_bypass.json",
+   "release_date": "2025-12-01",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "bad_lifecycle",
+     "command": "demo.legacy",
+     "major": 1,
+     "pointer": "/lifecycle/since"
+    }
+   ],
+   "report": "{\"code\":\"bad_lifecycle\",\"command\":\"demo.legacy\",\"major\":1,\"pointer\":\"/lifecycle/since\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "removal_bypass",
+   "baseline": "baseline.json",
+   "current": "removal_bypass.json",
+   "exit": 2,
+   "code": "release_date_required"
+  },
+  {
+   "name": "removal_bypass_dated",
+   "baseline": "baseline.json",
+   "current": "removal_bypass.json",
+   "release_date": "2025-12-01",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "bad_lifecycle",
+     "command": "demo.old",
+     "major": 1,
+     "pointer": "/lifecycle/since"
+    }
+   ],
+   "report": "{\"code\":\"bad_lifecycle\",\"command\":\"demo.old\",\"major\":1,\"pointer\":\"/lifecycle/since\"}\nregistry-gate: fail (1)\n"
   },
   {
    "name": "same_state_change",
@@ -222,9 +270,41 @@
    "report": "{\"code\":\"illegal_transition\",\"command\":\"demo.legacy\",\"major\":1,\"pointer\":\"/lifecycle\"}\nregistry-gate: fail (1)\n"
   },
   {
+   "name": "same_state_change_dated",
+   "baseline": "baseline.json",
+   "current": "same_state_change.json",
+   "release_date": "2026-02-01",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "illegal_transition",
+     "command": "demo.legacy",
+     "major": 1,
+     "pointer": "/lifecycle"
+    }
+   ],
+   "report": "{\"code\":\"illegal_transition\",\"command\":\"demo.legacy\",\"major\":1,\"pointer\":\"/lifecycle\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "same_state_old_since",
+   "baseline": "baseline.json",
+   "current": "same_state_old_since.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "illegal_transition",
+     "command": "demo.legacy",
+     "major": 1,
+     "pointer": "/lifecycle"
+    }
+   ],
+   "report": "{\"code\":\"illegal_transition\",\"command\":\"demo.legacy\",\"major\":1,\"pointer\":\"/lifecycle\"}\nregistry-gate: fail (1)\n"
+  },
+  {
    "name": "stale_since",
    "baseline": "baseline.json",
    "current": "stale_since.json",
+   "release_date": "2026-01-01",
    "exit": 1,
    "failures": [
     {
@@ -252,12 +332,93 @@
    "report": "{\"code\":\"bad_lifecycle\",\"command\":\"demo.newcmd\",\"major\":1,\"pointer\":\"/lifecycle\"}\nregistry-gate: fail (1)\n"
   },
   {
-   "name": "drop_removed",
-   "baseline": "baseline_with_removed.json",
-   "current": "baseline.json",
+   "name": "empty_current",
+   "baseline": "baseline.json",
+   "current": "empty_current.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "silent_removal",
+     "command": "demo.export",
+     "major": 1,
+     "pointer": ""
+    },
+    {
+     "code": "silent_removal",
+     "command": "demo.legacy",
+     "major": 1,
+     "pointer": ""
+    },
+    {
+     "code": "silent_removal",
+     "command": "demo.legacy",
+     "major": 2,
+     "pointer": ""
+    },
+    {
+     "code": "silent_removal",
+     "command": "demo.measure",
+     "major": 1,
+     "pointer": ""
+    },
+    {
+     "code": "silent_removal",
+     "command": "demo.old",
+     "major": 1,
+     "pointer": ""
+    },
+    {
+     "code": "silent_removal",
+     "command": "demo.private",
+     "major": 1,
+     "pointer": ""
+    }
+   ],
+   "report": "{\"code\":\"silent_removal\",\"command\":\"demo.export\",\"major\":1,\"pointer\":\"\"}\n{\"code\":\"silent_removal\",\"command\":\"demo.legacy\",\"major\":1,\"pointer\":\"\"}\n{\"code\":\"silent_removal\",\"command\":\"demo.legacy\",\"major\":2,\"pointer\":\"\"}\n{\"code\":\"silent_removal\",\"command\":\"demo.measure\",\"major\":1,\"pointer\":\"\"}\n{\"code\":\"silent_removal\",\"command\":\"demo.old\",\"major\":1,\"pointer\":\"\"}\n{\"code\":\"silent_removal\",\"command\":\"demo.private\",\"major\":1,\"pointer\":\"\"}\nregistry-gate: fail (6)\n"
+  },
+  {
+   "name": "baseline_zero_commands",
+   "baseline": "baseline_empty.json",
+   "current": "additive.json",
    "exit": 0,
    "failures": [],
    "report": "registry-gate: ok\n"
+  },
+  {
+   "name": "major_bump_drop",
+   "baseline": "baseline.json",
+   "current": "major_bump_drop.json",
+   "exit": 1,
+   "failures": [
+    {
+     "code": "silent_removal",
+     "command": "demo.measure",
+     "major": 1,
+     "pointer": ""
+    }
+   ],
+   "report": "{\"code\":\"silent_removal\",\"command\":\"demo.measure\",\"major\":1,\"pointer\":\"\"}\nregistry-gate: fail (1)\n"
+  },
+  {
+   "name": "duplicate_current",
+   "baseline": "baseline.json",
+   "current": "duplicate_current.json",
+   "exit": 2,
+   "code": "declarations_invalid"
+  },
+  {
+   "name": "baseline_duplicate_command",
+   "baseline": "baseline_duplicate_command.json",
+   "current": "additive.json",
+   "exit": 2,
+   "code": "baseline_invalid"
+  },
+  {
+   "name": "baseline_lists_removed",
+   "baseline": "baseline_lists_removed.json",
+   "current": "baseline.json",
+   "exit": 2,
+   "code": "baseline_invalid"
   },
   {
    "name": "baseline_tampered",

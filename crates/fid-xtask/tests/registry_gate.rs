@@ -51,7 +51,7 @@ fn release(case: &BTreeMap<String, CValue>) -> Option<Date> {
 #[test]
 fn expect_cases() {
     let all = cases();
-    assert!(all.len() >= 26, "only {} cases", all.len());
+    assert!(all.len() >= 37, "only {} cases", all.len());
     for c in &all {
         let name = text(&c["name"]);
         let (b, cur) = (fixture(text(&c["baseline"])), fixture(text(&c["current"])));
@@ -180,6 +180,6 @@ fn usage_errors_exit_2() {
 #[test]
 fn identical_manifests_pass() {
     let b = load_baseline(&fixture("baseline.json")).unwrap();
-    assert_eq!(gate(&b, &b, None), GateReport::default());
-    assert!(gate(&b, &b, None).passed());
+    assert_eq!(gate(&b, &b, None).unwrap(), GateReport::default());
+    assert!(gate(&b, &b, None).unwrap().passed());
 }

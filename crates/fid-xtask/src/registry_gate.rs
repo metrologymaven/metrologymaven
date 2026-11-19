@@ -13,15 +13,15 @@
 //!   when the rest of the definition is unchanged (REQ-002);
 //! - a baseline (ID, major) missing from the current declarations (`silent_removal`,
 //!   REQ-003). A major retires by staying in the declarations with state `removed`, which
-//!   is then checked as a lifecycle transition. A baseline entry that is already `removed`
-//!   may be dropped;
+//!   is then checked as a lifecycle transition;
 //! - any lifecycle change that `fid_registry::lifecycle` refuses, with that check's code
 //!   (REQ-004). Every current lifecycle must also read as a valid lifecycle
 //!   (`bad_lifecycle`).
 //!
 //! It exits 0 when nothing fails (REQ-005), 1 with a report when something does, and 2
 //! when an input cannot be trusted: `baseline_invalid` (missing, unreadable, malformed or
-//! failing its digest, REQ-006), `declarations_invalid`, or `format_mismatch`.
+//! failing its digest, REQ-006), `declarations_invalid`, `format_mismatch`, or
+//! `release_date_required`.
 //!
 //! **Baseline digest.** The baseline manifest's digest is the SHA-256 of its exact bytes
 //! (`CORE.REG.MAN` REQ-002). It is stated in a sidecar file next to it, the baseline path
@@ -29,10 +29,18 @@
 //! missing or malformed sidecar is `baseline_invalid`.
 //!
 //! **Release date.** A lifecycle transition is checked against the date of the release
-//! that makes it. With `--release-date`, every changed lifecycle must carry that date as its
-//! `since`. Without it, the new `since` is taken as the release date. In both cases the new
-//! `since` must be later than the baseline's `since`, so a state change cannot keep (or
-//! backdate past) the old date and shorten the deprecation period (`bad_lifecycle`).
+//! that makes it, given as `--release-date`. When any lifecycle state differs from the
+//! baseline, `--release-date` is mandatory: without it the gate exits 2 with
+//! `release_date_required`, so a `since` written into the declarations (for example one far in
+//! the future) can never stand in for the release date and defeat `deprecation_too_short` or
+//! `removal_too_early`. Every changed state must carry the release date as its `since`, and
+//! that date must be later than the baseline's `since` (else `bad_lifecycle` at
+//! `/lifecycle/since`). A lifecycle edit that keeps the state is checked first and is always
+//! LIFE's `illegal_transition`, with or without a release date.
+//!
+//! **Baseline contents.** A manifest never lists `removed` majors (LIFE `retained`), so a
+//! baseline that does is `baseline_invalid`; every baseline (ID, major) missing from the
+//! declarations is therefore a `silent_removal`.
 //!
 //! **Current declarations.** Until crates export `declarations()` (`CORE.REG.MAN`), the
 //! current declarations are read from a manifest-shaped JSON file (`--current`), in the
@@ -69,6 +77,8 @@ pub const SILENT_REMOVAL: &str = "silent_removal";
 pub const BASELINE_INVALID: &str = "baseline_invalid";
 /// Exit-2 code: the current declarations cannot be read.
 pub const DECLARATIONS_INVALID: &str = "declarations_invalid";
+/// Exit-2 code: a lifecycle state changed but no `--release-date` was given.
+pub const RELEASE_DATE_REQUIRED: &str = "release_date_required";
 /// Exit-2 code: baseline and declarations use different manifest formats.
 pub const FORMAT_MISMATCH: &str = "format_mismatch";
 /// `fid_registry::lifecycle` code for an unreadable or inconsistent lifecycle.
@@ -178,7 +188,8 @@ fn parse_sidecar(bytes: &[u8]) -> Result<Digest, String> {
 }
 
 /// Loads and verifies the baseline (REQ-006): the sidecar digest must match the exact
-/// bytes, the bytes must be a valid manifest, and every lifecycle must read.
+/// bytes, the bytes must be a valid manifest, every lifecycle must read, and no entry may be
+/// `removed` (a manifest lists only retained majors).
 pub fn load_baseline(path: &Path) -> Result<Manifest, InputError> {
     let bad = |detail: String| InputError { code: BASELINE_INVALID, detail };
     let bytes = read_capped(path, MAX_BYTES).map_err(bad)?;
@@ -197,7 +208,10 @@ pub fn load_baseline(path: &Path) -> Result<Manifest, InputError> {
     }
     let manifest = Manifest::from_json(&bytes).map_err(|e| bad(format!("{}: {e}", path.display())))?;
     for (key, def) in &manifest.commands {
-        LifecycleDecl::from_def(def).map_err(|e| bad(format!("{}@{}: {e}", key.id, key.major)))?;
+        let decl = LifecycleDecl::from_def(def).map_err(|e| bad(format!("{}@{}: {e}", key.id, key.major)))?;
+        if decl.lifecycle.state == State::Removed {
+            return Err(bad(format!("{}@{}: a manifest never lists a removed major", key.id, key.major)));
+        }
     }
     Ok(manifest)
 }
@@ -210,9 +224,25 @@ pub fn load_declarations(path: &Path) -> Result<Manifest, InputError> {
 }
 
 /// Applies REQ-001..004 to a verified baseline and the current declarations. Pure and
-/// deterministic. `release_date`, when given, is the date of the release being gated.
-pub fn gate(baseline: &Manifest, current: &Manifest, release_date: Option<Date>) -> GateReport {
+/// deterministic. `release_date` is the date of the release being gated; it is required
+/// (else `release_date_required`) when any lifecycle state differs from the baseline.
+pub fn gate(
+    baseline: &Manifest,
+    current: &Manifest,
+    release_date: Option<Date>,
+) -> Result<GateReport, InputError> {
     let d = diff(baseline, current);
+    if release_date.is_none() {
+        if let Some(lc) = d.lifecycle_changed.iter().find(|lc| lc.old_state != lc.new_state) {
+            return Err(InputError {
+                code: RELEASE_DATE_REQUIRED,
+                detail: format!(
+                    "{}@{} changes lifecycle state; pass --release-date <YYYY-MM-DD>",
+                    lc.command.id, lc.command.major
+                ),
+            });
+        }
+    }
     let mut out: BTreeSet<GateFailure> = BTreeSet::new();
 
     // Every current lifecycle must be a valid lifecycle (CORE.REG.VER.LIFE).
@@ -244,16 +274,10 @@ pub fn gate(baseline: &Manifest, current: &Manifest, release_date: Option<Date>)
         }
     }
 
-    // REQ-003: a baseline major may only leave through a legal transition to `removed`.
+    // REQ-003: a baseline major may only leave through a legal transition to `removed`
+    // (the baseline holds no `removed` majors; `load_baseline` refuses them).
     for key in &d.removed {
-        let already_removed = baseline
-            .commands
-            .get(key)
-            .and_then(|def| LifecycleDecl::from_def(def).ok())
-            .is_some_and(|decl| decl.lifecycle.state == State::Removed);
-        if !already_removed {
-            out.insert(GateFailure::new(key, "", SILENT_REMOVAL));
-        }
+        out.insert(GateFailure::new(key, "", SILENT_REMOVAL));
     }
 
     // REQ-004: every lifecycle change must pass the lifecycle check.
@@ -273,16 +297,30 @@ pub fn gate(baseline: &Manifest, current: &Manifest, release_date: Option<Date>)
             }
         };
         let since = new.lifecycle.since;
-        if since <= old.lifecycle.since || release_date.is_some_and(|r| r != since) {
+        // Same state, other metadata: LIFE refuses staying in a state (`illegal_transition`)
+        // whatever the date, so this is checked before any date rule.
+        let release = match release_date {
+            Some(r) if old.lifecycle.state != new.lifecycle.state => r,
+            _ => {
+                if let Err(e) = check_transition(&old.lifecycle, new.lifecycle.state, since) {
+                    out.insert(GateFailure::new(key, "/lifecycle", e.code()));
+                } else {
+                    // Unreachable while LIFE refuses same-state moves; fail closed anyway.
+                    out.insert(GateFailure::new(key, "/lifecycle", BAD_LIFECYCLE));
+                }
+                continue;
+            }
+        };
+        if since != release || since <= old.lifecycle.since {
             out.insert(GateFailure::new(key, "/lifecycle/since", BAD_LIFECYCLE));
             continue;
         }
-        if let Err(e) = check_transition(&old.lifecycle, new.lifecycle.state, since) {
+        if let Err(e) = check_transition(&old.lifecycle, new.lifecycle.state, release) {
             out.insert(GateFailure::new(key, "/lifecycle", e.code()));
         }
     }
 
-    GateReport { failures: out.into_iter().collect() }
+    Ok(GateReport { failures: out.into_iter().collect() })
 }
 
 /// Loads both inputs and runs the gate.
@@ -295,7 +333,7 @@ pub fn run(baseline: &Path, current: &Path, release_date: Option<Date>) -> Resul
             detail: format!("baseline format {}, declarations format {}", base.format, cur.format),
         });
     }
-    Ok(gate(&base, &cur, release_date))
+    gate(&base, &cur, release_date)
 }
 
 /// The exit status of a run: 0 pass, 1 failures, 2 untrusted input.

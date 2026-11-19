@@ -113,6 +113,17 @@ def manifest(defs, fmt=1, digest_override=None):
     return (json.dumps(doc, indent=1, ensure_ascii=True) + "\n").encode("ascii")
 
 
+def manifest_raw(defs, fmt=1):
+    """A manifest of `defs` in the given order, repeats kept."""
+    commands = []
+    for d in defs:
+        d = copy.deepcopy(d)
+        d["definition_digest"] = sha_bytes(jcs(d))
+        commands.append(d)
+    doc = {"format": fmt, "quantity_catalogue_digest": QCAT, "commands": commands}
+    return (json.dumps(doc, indent=1, ensure_ascii=True) + "\n").encode("ascii")
+
+
 def edit(changes=None, drop=(), add=None):
     """The baseline with `changes` (key -> function mutating a copy), `drop`ped keys and
     `add`ed definitions."""
@@ -243,8 +254,9 @@ LEGAL = edit(
     },
     add=[definition("demo.measure", 2, lifecycle={"state": "active", "since": "2026-02-01"})],
 )
-case("lifecycle_legal", LEGAL, [])
-case("lifecycle_legal_dated", None, [], release_date="2026-02-01", current_file="lifecycle_legal.json")
+# A state change needs --release-date (maintainer decision on PR #199): without it, exit 2.
+case("lifecycle_legal", LEGAL, [], release_date="2026-02-01")
+case("lifecycle_legal_undated", None, "release_date_required", exit_code=2, current_file="lifecycle_legal.json")
 # --release-date names another release: every changed lifecycle's `since` is wrong.
 case("lifecycle_wrong_release_date", None, [
     fail("demo.legacy", 1, "/lifecycle/since", "bad_lifecycle"),
@@ -254,28 +266,64 @@ case("lifecycle_wrong_release_date", None, [
 
 # REQ-004: transitions the lifecycle check refuses.
 case("illegal_transition", edit(changes={M: setter(["lifecycle"], {"state": "hidden", "since": "2026-02-01"})}),
-     [fail("demo.measure", 1, "/lifecycle", "illegal_transition")])
+     [fail("demo.measure", 1, "/lifecycle", "illegal_transition")], release_date="2026-02-01")
 case("deprecation_too_short", edit(changes={L1: setter(["lifecycle"], {
     "state": "hidden", "since": "2025-12-01", "replaced_by": "demo.legacy@2"})}),
-    [fail("demo.legacy", 1, "/lifecycle", "deprecation_too_short")])
+    [fail("demo.legacy", 1, "/lifecycle", "deprecation_too_short")], release_date="2025-12-01")
 case("removal_too_early", edit(changes={OLD: setter(["lifecycle"], {"state": "removed", "since": "2025-12-01"})}),
-     [fail("demo.old", 1, "/lifecycle", "removal_too_early")])
-# Staying in the same state with new metadata is not one of LIFE's legal moves.
+     [fail("demo.old", 1, "/lifecycle", "removal_too_early")], release_date="2025-12-01")
+
+# A `since` far in the future cannot stand in for the release date: undated it is exit 2,
+# dated it is a `since` that is not the release date (exit 1). Both bypasses, both ways.
+case("deprecation_bypass", edit(changes={L1: setter(["lifecycle"], {
+    "state": "hidden", "since": "2099-01-01", "replaced_by": "demo.legacy@2"})}),
+    "release_date_required", exit_code=2)
+case("deprecation_bypass_dated", None, [fail("demo.legacy", 1, "/lifecycle/since", "bad_lifecycle")],
+     release_date="2025-12-01", current_file="deprecation_bypass.json")
+case("removal_bypass", edit(changes={OLD: setter(["lifecycle"], {"state": "removed", "since": "2099-01-01"})}),
+     "release_date_required", exit_code=2)
+case("removal_bypass_dated", None, [fail("demo.old", 1, "/lifecycle/since", "bad_lifecycle")],
+     release_date="2025-12-01", current_file="removal_bypass.json")
+
+# Staying in the same state with new metadata is not one of LIFE's legal moves; it is
+# checked before any date rule, so it is illegal_transition with or without a release date.
 case("same_state_change", edit(changes={L1: setter(["lifecycle"], {
     "state": "deprecated", "since": "2026-02-01", "replaced_by": "demo.legacy@2", "remove_after": "2027-01-01"})}),
     [fail("demo.legacy", 1, "/lifecycle", "illegal_transition")])
+case("same_state_change_dated", None, [fail("demo.legacy", 1, "/lifecycle", "illegal_transition")],
+     release_date="2026-02-01", current_file="same_state_change.json")
+case("same_state_old_since", edit(changes={L1: setter(["lifecycle"], {
+    "state": "deprecated", "since": "2025-01-15", "replaced_by": "demo.legacy@2", "remove_after": "2027-01-01"})}),
+    [fail("demo.legacy", 1, "/lifecycle", "illegal_transition")])
 # A state change that keeps the old date would start the deprecation clock in the past.
 case("stale_since", edit(changes={M: setter(["lifecycle"], {"state": "deprecated", "since": "2026-01-01"})}),
-     [fail("demo.measure", 1, "/lifecycle/since", "bad_lifecycle")])
+     [fail("demo.measure", 1, "/lifecycle/since", "bad_lifecycle")], release_date="2026-01-01")
 # An unreadable lifecycle fails even on an (ID, major) absent from the baseline.
 case("bad_lifecycle_new", edit(add=[definition("demo.newcmd", 1, lifecycle={"state": "retired", "since": "2026-02-01"})]),
      [fail("demo.newcmd", 1, "/lifecycle", "bad_lifecycle")])
 
-# A baseline entry already `removed` may leave the declarations.
+# An empty current set: every baseline (ID, major) is a silent removal.
+case("empty_current", {}, [fail(cid, major, "", "silent_removal") for (cid, major) in sorted(BASE)])
+# A zero-command baseline: everything current is new, so it passes.
+baseline("baseline_empty.json", manifest({}))
+case("baseline_zero_commands", None, [], baseline="baseline_empty.json", current_file="additive.json")
+# A major bump that drops the old major instead of retiring it through the lifecycle.
+case("major_bump_drop", edit(drop=[M], add=[definition("demo.measure", 2)]),
+     [fail("demo.measure", 1, "", "silent_removal")])
+# A duplicate (ID, major), in the declarations or in the baseline.
+case("duplicate_current", None, "declarations_invalid", exit_code=2,
+     current_bytes=manifest_raw([BASE[k] for k in sorted(BASE)] + [BASE[M]]))
+baseline("baseline_duplicate_command.json", manifest_raw([BASE[k] for k in sorted(BASE)] + [BASE[M]]))
+case("baseline_duplicate_command", None, "baseline_invalid", exit_code=2,
+     baseline="baseline_duplicate_command.json", current_file="additive.json")
+
+# A manifest never lists a removed major (LIFE retained()): such a baseline is invalid
+# (maintainer decision on PR #199).
 GONE = dict(BASE)
 GONE[("demo.gone", 1)] = definition("demo.gone", 1, lifecycle={"state": "removed", "since": "2025-06-01"})
-baseline("baseline_with_removed.json", manifest(GONE))
-case("drop_removed", None, [], baseline="baseline_with_removed.json", current_file="baseline.json")
+baseline("baseline_lists_removed.json", manifest(GONE))
+case("baseline_lists_removed", None, "baseline_invalid", exit_code=2, baseline="baseline_lists_removed.json",
+     current_file="baseline.json")
 
 # Exit 2: inputs the gate cannot trust (REQ-006, AC-5).
 baseline("baseline_tampered.json", BASE_BYTES.replace(b'"format": 1', b'"format":  1'),

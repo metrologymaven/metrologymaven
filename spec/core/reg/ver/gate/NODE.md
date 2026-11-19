@@ -71,6 +71,9 @@ The CI step that stops an accidental breaking change from shipping under an exis
 ## Open questions
 
 - The baseline is updated by the release process (`ECO.REL`); that process is not yet written to copy the released manifest into `registry/baseline-manifest.json` (cross-domain follow-up).
+- The gate is not yet wired into CI: there is no `registry/baseline-manifest.json` yet (see above) and no source for the current declarations, since no crate exports `declarations()` until `CORE.REG.MAN` is built. Wire `cargo xtask registry-gate` into `.github/workflows/rust.yml` once both exist (built in PR #199).
+- Deviation from the Build prompt (PR #199): until crates export `declarations()`, the current declarations are read from a manifest-shaped JSON file given as `--current` (the format `fid_registry::Manifest::from_json` reads; unlike a manifest it may list `removed` majors). When `CORE.REG.MAN` lands, the input should be built in-process and `--current` dropped or kept for tests.
+- Deviation from the Build prompt (PR #199): the baseline digest is the SHA-256 of the exact baseline bytes (`CORE.REG.MAN` REQ-002), so it cannot sit inside the file. It is stated in a sidecar `registry/baseline-manifest.json.sha256` holding `sha256:<64 lowercase hex>` and at most one LF; a missing or malformed sidecar is `baseline_invalid`. The release process (`ECO.REL`) must write both files.
 
 ## Children
 
