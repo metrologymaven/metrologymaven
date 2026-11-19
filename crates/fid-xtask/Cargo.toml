@@ -1,6 +1,6 @@
 [package]
 name = "fid-xtask"
-description = "Metrology Maven repository tasks: `cargo xtask layers` (ECO.REPO.LAYERS), `cargo xtask lint-crate-graph` (CORE.BUS.LINT), `cargo xtask kernel-allow` (ECO.REPO.ALLOW), `cargo xtask apps-policy` (ECO.APPS.POLICY), `cargo xtask plat-matrix lint-tiers` (PLAT.MATRIX.POLICY.DEFS), `cargo xtask plat-hw validate` (PLAT.HW.PROFILE), `cargo xtask plat-hw validate-suite|result-schema` (PLAT.HW.SCHEMA), `cargo xtask rel version-check|version-compare` (ECO.REL.PROC.VERSION), `cargo xtask rel sums` (ECO.REL.SIGN.SUMS), `cargo xtask rel runbook-check|runbook-render` (ECO.REL.PROC.RUNBOOK), `cargo xtask rel sbom` (ECO.REL.SIGN.SBOM), `cargo xtask rel keys-check` (ECO.REL.SIGN.GUIDE), `cargo xtask plat-deploy netlist` (PLAT.DEPLOY.OFFLINE.NETLIST), `cargo xtask plat-gpu validate` (PLAT.GPU.POLICY), `cargo xtask plat-deploy validate-layout` (PLAT.DEPLOY.NOADMIN.LAYOUT), `cargo xtask plat-deploy check-bundle|make-install-manifest|bundle-schemas` (PLAT.DEPLOY.OFFLINE.BUNDLE), `cargo xtask bots-check` (ECO.CI.BOTS.REG), `cargo xtask bot-blocking` (ECO.CI.BOTS.BLOCK), `cargo xtask conic-audit` (KRN.SOLV.CONIC.VEND)"
+description = "Metrology Maven repository tasks: `cargo xtask layers` (ECO.REPO.LAYERS), `cargo xtask lint-crate-graph` (CORE.BUS.LINT), `cargo xtask kernel-allow` (ECO.REPO.ALLOW), `cargo xtask apps-policy` (ECO.APPS.POLICY), `cargo xtask plat-matrix lint-tiers` (PLAT.MATRIX.POLICY.DEFS), `cargo xtask plat-hw validate` (PLAT.HW.PROFILE), `cargo xtask plat-hw validate-suite|result-schema` (PLAT.HW.SCHEMA), `cargo xtask rel version-check|version-compare` (ECO.REL.PROC.VERSION), `cargo xtask rel sums` (ECO.REL.SIGN.SUMS), `cargo xtask rel runbook-check|runbook-render` (ECO.REL.PROC.RUNBOOK), `cargo xtask rel sbom` (ECO.REL.SIGN.SBOM), `cargo xtask rel keys-check` (ECO.REL.SIGN.GUIDE), `cargo xtask plat-deploy netlist` (PLAT.DEPLOY.OFFLINE.NETLIST), `cargo xtask plat-gpu validate` (PLAT.GPU.POLICY), `cargo xtask plat-deploy validate-layout` (PLAT.DEPLOY.NOADMIN.LAYOUT), `cargo xtask plat-deploy check-bundle|make-install-manifest|bundle-schemas` (PLAT.DEPLOY.OFFLINE.BUNDLE), `cargo xtask bots-check` (ECO.CI.BOTS.REG), `cargo xtask bot-blocking` (ECO.CI.BOTS.BLOCK), `cargo xtask conic-audit` (KRN.SOLV.CONIC.VEND), `cargo xtask mig ladder-check` (MIG.LADDER.DEF)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -17,6 +17,8 @@ path = "src/main.rs"
 fid-accept = { path = "../fid-accept" }
 # Also bounded JSON parsing for bot configs and the review export (`bots-check`).
 fid-canon = { path = "../fid-canon" }
+# `mig ladder-check` (MIG.LADDER.DEF): the ladder loader and check (services layer).
+fid-mig = { path = "../fid-mig" }
 # `rel sums` (ECO.REL.SIGN.SUMS) and `plat-deploy netlist` (PLAT.DEPLOY.OFFLINE.NETLIST): shared
 # side-effect class, command name and the `sha256:` digest type, and streaming SHA-256 over
 # artefacts (the same sha2 0.10 that fid-canon already uses, so no new crate in the graph).

@@ -70,6 +70,8 @@ fixtures/gdt/rowflow/** -text
 fixtures/flow/journey/** -text
 # OUTR.LAUNCH.GATE fixtures: hand-labelled inputs read byte for byte; never convert line endings.
 fixtures/outr/launch/gate/** -text
+# MIG.LADDER.DEF fixtures: written by make_fixtures.py, which --check compares byte for byte.
+fixtures/mig/ladder/def/** -text
 # ECO.COMM.CLAIM fixtures: hand-labelled PR JSON, spec tree and expected output compared byte for byte.
 tools/tests/fixtures/claims/** -text
 # AGENT.REDTEAM.PRED fixtures: tar archives and digested suites compared byte for byte by make_pred.py --check.
@@ -84,3 +86,5 @@ fixtures/solv/vend/** -text
 vendor/fid-clarabel/** -text
 # ECO.REPO.ALLOW fixtures: hand-labelled manifests and expected output written by make_fixtures.py.
 fixtures/allow/** -text
+# FLOW.DEADEND.CATALOG fixtures: hand-written catalogues and a digest compared byte for byte by make_fixtures.py --check.
+fixtures/flow/fixes/** -text
