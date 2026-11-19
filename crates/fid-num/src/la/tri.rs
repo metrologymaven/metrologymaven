@@ -1,19 +1,35 @@
 //! Triangular solves and the rank rule (`KRN.NUM.LA.MAT`, REQ-002, REQ-003, REQ-004).
 
-use super::{check_tol, singular_scan, LaError, Mat};
+use super::{alloc, alloc_filled, check_tol, singular_scan, LaError, Mat};
 use crate::err::{check_finite_slice, NumError};
 use crate::red;
 
+/// Why a substitution stopped: an overflow at unknown `i`, or a failed reservation.
+pub(crate) enum SubError {
+    Overflow(usize),
+    Allocation,
+}
+
+impl SubError {
+    /// The solves' mapping: overflow at `i` is `Infinite { index: Some(i) }`.
+    fn at(self, op: &'static str) -> NumError {
+        match self {
+            SubError::Overflow(i) => NumError::Infinite { op, index: Some(i) },
+            SubError::Allocation => LaError::Allocation.at(op),
+        }
+    }
+}
+
 /// Back substitution on the upper triangle of the square row-major `n x n` matrix `r`:
 /// `x[i] = (b[i] - dot(r[i, i+1..n], x[i+1..n])) / r[i][i]` for `i = n-1` down to `0`.
-/// Returns the first `i` (in solve order) whose dot overflows or whose `x[i]` is not finite.
-pub(crate) fn back_sub(n: usize, r: &[f64], b: &[f64]) -> Result<Vec<f64>, usize> {
-    let mut x = vec![0.0_f64; n];
+/// Fails at the first `i` (in solve order) whose dot overflows or whose `x[i]` is not finite.
+pub(crate) fn back_sub(n: usize, r: &[f64], b: &[f64]) -> Result<Vec<f64>, SubError> {
+    let mut x = alloc_filled("la.back_sub", n, 0.0).map_err(|_| SubError::Allocation)?;
     for i in (0..n).rev() {
-        let s = red::dot(&r[i * n + i + 1..(i + 1) * n], &x[i + 1..]).map_err(|_| i)?;
+        let s = red::dot(&r[i * n + i + 1..(i + 1) * n], &x[i + 1..]).map_err(|_| SubError::Overflow(i))?;
         let xi = (b[i] - s) / r[i * n + i];
         if !xi.is_finite() {
-            return Err(i);
+            return Err(SubError::Overflow(i));
         }
         x[i] = xi;
     }
@@ -22,14 +38,14 @@ pub(crate) fn back_sub(n: usize, r: &[f64], b: &[f64]) -> Result<Vec<f64>, usize
 
 /// Forward substitution on the lower triangle of the square row-major `n x n` matrix `l`:
 /// `x[i] = (b[i] - dot(l[i, 0..i], x[0..i])) / l[i][i]` for `i = 0` up to `n-1`.
-/// Returns the first `i` whose dot overflows or whose `x[i]` is not finite.
-pub(crate) fn fwd_sub(n: usize, l: &[f64], b: &[f64]) -> Result<Vec<f64>, usize> {
-    let mut x = Vec::with_capacity(n);
+/// Fails at the first `i` whose dot overflows or whose `x[i]` is not finite.
+pub(crate) fn fwd_sub(n: usize, l: &[f64], b: &[f64]) -> Result<Vec<f64>, SubError> {
+    let mut x = alloc("la.fwd_sub", n).map_err(|_| SubError::Allocation)?;
     for i in 0..n {
-        let s = red::dot(&l[i * n..i * n + i], &x[..i]).map_err(|_| i)?;
+        let s = red::dot(&l[i * n..i * n + i], &x[..i]).map_err(|_| SubError::Overflow(i))?;
         let xi = (b[i] - s) / l[i * n + i];
         if !xi.is_finite() {
-            return Err(i);
+            return Err(SubError::Overflow(i));
         }
         x.push(xi);
     }
@@ -58,7 +74,7 @@ fn check_solve(op: &'static str, r: &Mat, b: &[f64], rel_tol: f64) -> Result<usi
 pub fn solve_upper(r: &Mat, b: &[f64], rel_tol: f64) -> Result<Vec<f64>, NumError> {
     const OP: &str = "la.solve_upper";
     let n = check_solve(OP, r, b, rel_tol)?;
-    back_sub(n, r.data(), b).map_err(|i| NumError::Infinite { op: OP, index: Some(i) })
+    back_sub(n, r.data(), b).map_err(|e| e.at(OP))
 }
 
 /// Solves `L x = b` for lower triangular `L` by forward substitution (only the lower
@@ -67,7 +83,7 @@ pub fn solve_upper(r: &Mat, b: &[f64], rel_tol: f64) -> Result<Vec<f64>, NumErro
 pub fn solve_lower(l: &Mat, b: &[f64], rel_tol: f64) -> Result<Vec<f64>, NumError> {
     const OP: &str = "la.solve_lower";
     let n = check_solve(OP, l, b, rel_tol)?;
-    fwd_sub(n, l.data(), b).map_err(|i| NumError::Infinite { op: OP, index: Some(i) })
+    fwd_sub(n, l.data(), b).map_err(|e| e.at(OP))
 }
 
 /// The rank rule (REQ-KRN.NUM.LA.MAT-004): the number of values in `diag_desc` strictly

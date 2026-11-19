@@ -1,6 +1,6 @@
 //! Matrix type and products (`KRN.NUM.LA.MAT`, REQ-001, REQ-002).
 
-use super::LaError;
+use super::{alloc, LaError};
 use crate::err::{check_finite_slice, NumError};
 use crate::red;
 
@@ -8,8 +8,10 @@ use crate::red;
 pub const MAX_DIM: usize = 4096;
 
 /// Upper bound on the heap bytes of one [`Mat`]: `MAX_DIM^2` elements of `f64` (128 MiB).
-/// Every function in this module allocates its result and scratch with exact capacity
-/// (no growth), and its total is at most two such matrices plus `O(MAX_DIM)` vectors.
+/// Every function in this module reserves its result and scratch fallibly with exact
+/// capacity (no growth, no slack), and its total is at most two such matrices plus
+/// `O(MAX_DIM)` vectors. A `Mat` never holds spare capacity, so [`Mat::heap_bytes`] is
+/// exactly `rows * cols * size_of::<f64>()` and at most this bound.
 pub const MAX_MAT_BYTES: usize = MAX_DIM * MAX_DIM * core::mem::size_of::<f64>();
 
 /// A dense row-major `f64` matrix with `1..=MAX_DIM` rows and columns and finite entries.
@@ -34,7 +36,8 @@ fn check_dims(op: &'static str, rows: usize, cols: usize) -> Result<(), NumError
 impl Mat {
     /// Builds a matrix from row-major data. Check order: a zero dimension (`BadShape`),
     /// more than [`MAX_DIM`] rows or columns (`TooLarge`), `data.len() != rows * cols`
-    /// (`BadShape`), then the first NaN or infinity by row-major index.
+    /// (`BadShape`), then the first NaN or infinity by row-major index. If `data` has spare
+    /// capacity it is copied into an exact-capacity buffer (`Allocation` if that fails).
     pub fn new(rows: usize, cols: usize, data: Vec<f64>) -> Result<Mat, NumError> {
         const OP: &str = "la.mat";
         check_dims(OP, rows, cols)?;
@@ -42,6 +45,13 @@ impl Mat {
             return Err(LaError::BadShape.at(OP));
         }
         check_finite_slice(OP, &data)?;
+        let data = if data.capacity() == data.len() {
+            data
+        } else {
+            let mut exact = alloc(OP, data.len())?;
+            exact.extend_from_slice(&data);
+            exact
+        };
         Ok(Mat { rows, cols, data })
     }
 
@@ -55,7 +65,7 @@ impl Mat {
         if rows.iter().any(|r| r.as_ref().len() != cols) {
             return Err(LaError::BadShape.at(OP));
         }
-        let mut data = Vec::with_capacity(rows.len() * cols);
+        let mut data = alloc(OP, rows.len() * cols)?;
         for r in rows {
             data.extend_from_slice(r.as_ref());
         }
@@ -105,24 +115,25 @@ impl Mat {
         if j >= self.cols {
             return Err(LaError::BadShape.at("la.col"));
         }
-        let mut v = Vec::with_capacity(self.rows);
+        let mut v = alloc("la.col", self.rows)?;
         self.gather_col(j, &mut v);
         Ok(v)
     }
 
-    /// The transpose (an exact copy; no arithmetic).
-    pub fn transpose(&self) -> Mat {
-        let mut data = Vec::with_capacity(self.data.len());
+    /// The transpose (an exact copy; no arithmetic). `Allocation` if the buffer cannot be
+    /// reserved.
+    pub fn transpose(&self) -> Result<Mat, NumError> {
+        let mut data = alloc("la.transpose", self.data.len())?;
         for j in 0..self.cols {
             for i in 0..self.rows {
                 data.push(self.data[i * self.cols + j]);
             }
         }
-        Mat { rows: self.cols, cols: self.rows, data }
+        Ok(Mat { rows: self.cols, cols: self.rows, data })
     }
 
-    /// Heap bytes held by the entries (`capacity * size_of::<f64>()`), at most
-    /// [`MAX_MAT_BYTES`].
+    /// Heap bytes held by the entries (`capacity * size_of::<f64>()`); the buffer has no
+    /// spare capacity, so this is `rows * cols * size_of::<f64>()` <= [`MAX_MAT_BYTES`].
     pub fn heap_bytes(&self) -> usize {
         self.data.capacity() * core::mem::size_of::<f64>()
     }
@@ -155,7 +166,7 @@ pub fn mat_vec(a: &Mat, x: &[f64]) -> Result<Vec<f64>, NumError> {
         return Err(LaError::BadShape.at(OP));
     }
     check_finite_slice(OP, x)?;
-    let mut y = Vec::with_capacity(a.rows);
+    let mut y = alloc(OP, a.rows)?;
     for i in 0..a.rows {
         y.push(red::dot(a.row_unchecked(i), x).map_err(overflow_at(OP, i))?);
     }
@@ -170,8 +181,8 @@ pub fn mat_t_vec(a: &Mat, x: &[f64]) -> Result<Vec<f64>, NumError> {
         return Err(LaError::BadShape.at(OP));
     }
     check_finite_slice(OP, x)?;
-    let mut y = Vec::with_capacity(a.cols);
-    let mut col = Vec::with_capacity(a.rows);
+    let mut y = alloc(OP, a.cols)?;
+    let mut col = alloc(OP, a.rows)?;
     for j in 0..a.cols {
         a.gather_col(j, &mut col);
         y.push(red::dot(&col, x).map_err(overflow_at(OP, j))?);
@@ -188,8 +199,8 @@ pub fn mat_mul(a: &Mat, b: &Mat) -> Result<Mat, NumError> {
     if a.cols != b.rows {
         return Err(LaError::BadShape.at(OP));
     }
-    let bt = b.transpose();
-    let mut data = Vec::with_capacity(a.rows * b.cols);
+    let bt = b.transpose().map_err(|_| LaError::Allocation.at(OP))?;
+    let mut data = alloc(OP, a.rows * b.cols)?;
     for i in 0..a.rows {
         let ai = a.row_unchecked(i);
         for j in 0..b.cols {

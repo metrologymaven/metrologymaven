@@ -7,7 +7,8 @@
 //! 2. Scaling: with `m` the total-order maximum of `|r_ij|` over the upper triangle and `e`
 //!    its binary exponent (`2^e <= m < 2^(e+1)`), `S = R * 2^-e` entry by entry, as
 //!    `(r * d1) * d2` with the same power-of-two factors as `red::norm2`. The condition
-//!    number is invariant under this scaling; it keeps every intermediate in range.
+//!    number is invariant under this scaling (exactly, unless a scaled entry is subnormal and
+//!    rounds); it keeps every intermediate in range.
 //!    `S^T` is formed explicitly so every triangular row is contiguous.
 //! 3. For an operator `P` with adjoint `Q` (first `P = S`, `Q = S^T`; then `P = S^-1`,
 //!    `Q = S^-T`), from `x = [1.0; n]`, [`ITERATIONS`] times: `u = x / ||x||`, `y = P u`,
@@ -19,9 +20,10 @@
 //!
 //! A zero norm, an overflowing product or solve, or a non-finite or zero result means the
 //! condition number is beyond the `f64` range: `Infinite { index: None }`. Never infinity.
+//! Every buffer is reserved fallibly with exact capacity; failure is `Allocation`.
 
-use super::tri::{back_sub, fwd_sub};
-use super::{check_tol, singular_scan, LaError, Mat};
+use super::tri::{back_sub, fwd_sub, SubError};
+use super::{alloc, alloc_filled, check_tol, singular_scan, LaError, Mat};
 use crate::err::NumError;
 use crate::{f, red};
 
@@ -34,22 +36,42 @@ fn overflow() -> NumError {
     NumError::Infinite { op: OP, index: None }
 }
 
+/// Maps a substitution failure: overflow means the condition number is out of range.
+fn sub_err(e: SubError) -> NumError {
+    match e {
+        SubError::Overflow(_) => overflow(),
+        SubError::Allocation => LaError::Allocation.at(OP),
+    }
+}
+
 fn normalize(x: &[f64]) -> Result<Vec<f64>, NumError> {
     let nu = red::norm2(x).map_err(|_| overflow())?;
     if nu == 0.0 {
         return Err(overflow());
     }
-    Ok(x.iter().map(|&xi| xi / nu).collect())
+    let mut u = alloc(OP, x.len())?;
+    for &xi in x {
+        u.push(xi / nu);
+    }
+    Ok(u)
 }
 
 /// `S u` on the upper triangle.
 fn upper_mul(n: usize, s: &[f64], u: &[f64]) -> Result<Vec<f64>, NumError> {
-    (0..n).map(|i| red::dot(&s[i * n + i..(i + 1) * n], &u[i..]).map_err(|_| overflow())).collect()
+    let mut y = alloc(OP, n)?;
+    for i in 0..n {
+        y.push(red::dot(&s[i * n + i..(i + 1) * n], &u[i..]).map_err(|_| overflow())?);
+    }
+    Ok(y)
 }
 
 /// `S^T v` on the lower triangle of the explicit transpose `st`.
 fn lower_mul(n: usize, st: &[f64], v: &[f64]) -> Result<Vec<f64>, NumError> {
-    (0..n).map(|j| red::dot(&st[j * n..j * n + j + 1], &v[..=j]).map_err(|_| overflow())).collect()
+    let mut x = alloc(OP, n)?;
+    for j in 0..n {
+        x.push(red::dot(&st[j * n..j * n + j + 1], &v[..=j]).map_err(|_| overflow())?);
+    }
+    Ok(x)
 }
 
 fn estimate<P, Q>(n: usize, p: P, q: Q) -> Result<f64, NumError>
@@ -57,7 +79,7 @@ where
     P: Fn(&[f64]) -> Result<Vec<f64>, NumError>,
     Q: Fn(&[f64]) -> Result<Vec<f64>, NumError>,
 {
-    let mut x = vec![1.0_f64; n];
+    let mut x = alloc_filled(OP, n, 1.0)?;
     for _ in 0..ITERATIONS {
         let u = normalize(&x)?;
         let v = normalize(&p(&u)?)?;
@@ -86,8 +108,8 @@ pub fn cond_triangular(r: &Mat, rel_tol: f64) -> Result<f64, NumError> {
         }
     }
     let (d1, d2) = red::pow2_scale_factors(red::exponent(m));
-    let mut s = vec![0.0_f64; n * n];
-    let mut st = vec![0.0_f64; n * n];
+    let mut s = alloc_filled(OP, n * n, 0.0)?;
+    let mut st = alloc_filled(OP, n * n, 0.0)?;
     for i in 0..n {
         for j in i..n {
             let v = data[i * n + j] * d1 * d2;
@@ -97,8 +119,7 @@ pub fn cond_triangular(r: &Mat, rel_tol: f64) -> Result<f64, NumError> {
     }
 
     let norm_s = estimate(n, |u| upper_mul(n, &s, u), |v| lower_mul(n, &st, v))?;
-    let norm_inv =
-        estimate(n, |u| back_sub(n, &s, u).map_err(|_| overflow()), |v| fwd_sub(n, &st, v).map_err(|_| overflow()))?;
+    let norm_inv = estimate(n, |u| back_sub(n, &s, u).map_err(sub_err), |v| fwd_sub(n, &st, v).map_err(sub_err))?;
     let c = norm_s * norm_inv;
     if c.is_finite() && c > 0.0 {
         Ok(c)

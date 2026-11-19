@@ -35,7 +35,10 @@
 //!
 //! # Errors (REQ-KRN.NUM.LA.MAT-001)
 //!
-//! Shape and tolerance errors are [`NumError::Domain`] with a [`LaError`] detail; inputs
+//! Every buffer is reserved with `try_reserve_exact` for exactly the elements it will hold, so
+//! allocation failure is [`LaError::Allocation`] (never an abort) and no buffer has slack.
+//!
+//! Shape, tolerance and allocation errors are [`NumError::Domain`] with a [`LaError`] detail; inputs
 //! with a NaN or infinity are [`NumError::NotANumber`] / [`NumError::Infinite`] naming the
 //! first offending (row-major) index; an overflow is [`NumError::Infinite`] naming the first
 //! output element (in computation order) that overflowed. The `op` is `la.<function>`.
@@ -79,6 +82,9 @@ pub enum LaError {
     BadTolerance,
     /// A rank-rule input that is negative or not in non-increasing order.
     BadSpectrum,
+    /// A result or scratch buffer could not be reserved (`Vec::try_reserve_exact` failed);
+    /// no operation in this module aborts on allocation failure.
+    Allocation,
     /// The first diagonal entry (ascending index) with `|r_ii| <= rel_tol * max |r_jj|`.
     Singular {
         /// Zero-based diagonal index.
@@ -97,6 +103,7 @@ impl LaError {
             LaError::TooLarge => "too_large",
             LaError::BadTolerance => "bad_tolerance",
             LaError::BadSpectrum => "bad_spectrum",
+            LaError::Allocation => "allocation_failed",
             LaError::Singular { .. } => "singular",
         }
     }
@@ -107,7 +114,7 @@ impl LaError {
         match e {
             NumError::Singular { op, rank } if SINGULAR_OPS.contains(op) => Some(LaError::Singular { index: *rank }),
             NumError::Domain { op, detail } if op.starts_with("la.") => {
-                [LaError::BadShape, LaError::TooLarge, LaError::BadTolerance, LaError::BadSpectrum]
+                [LaError::BadShape, LaError::TooLarge, LaError::BadTolerance, LaError::BadSpectrum, LaError::Allocation]
                     .into_iter()
                     .find(|k| k.detail() == *detail)
             }
@@ -121,6 +128,21 @@ impl LaError {
             k => NumError::Domain { op, detail: k.detail() },
         }
     }
+}
+
+/// An empty vector with capacity for exactly `n` elements, reserved fallibly
+/// (`try_reserve_exact`): allocation failure is [`LaError::Allocation`], never an abort.
+pub(crate) fn alloc(op: &'static str, n: usize) -> Result<Vec<f64>, NumError> {
+    let mut v = Vec::new();
+    v.try_reserve_exact(n).map_err(|_| LaError::Allocation.at(op))?;
+    Ok(v)
+}
+
+/// `n` copies of `value` in an exact-capacity vector, reserved fallibly.
+pub(crate) fn alloc_filled(op: &'static str, n: usize, value: f64) -> Result<Vec<f64>, NumError> {
+    let mut v = alloc(op, n)?;
+    v.resize(n, value);
+    Ok(v)
 }
 
 /// Checks a relative tolerance: NaN and infinity are errors (index `None`), a negative

@@ -275,7 +275,7 @@ fn ac4_singular_index() {
     let e = cond_triangular(&r, 1e-12).unwrap_err();
     assert_eq!(LaError::of(&e), Some(LaError::Singular { index: 2 }));
     // The same factor stored as lower triangular.
-    let e = solve_lower(&r.transpose(), &[1.0, 2.0, 3.0], 1e-12).unwrap_err();
+    let e = solve_lower(&r.transpose().unwrap(), &[1.0, 2.0, 3.0], 1e-12).unwrap_err();
     assert_eq!(LaError::of(&e), Some(LaError::Singular { index: 2 }));
 }
 
@@ -290,7 +290,7 @@ fn ac5_rank_rule() {
 
 #[test]
 fn error_kinds_round_trip() {
-    for k in [LaError::BadShape, LaError::TooLarge, LaError::BadTolerance, LaError::BadSpectrum] {
+    for k in [LaError::BadShape, LaError::TooLarge, LaError::BadTolerance, LaError::BadSpectrum, LaError::Allocation] {
         assert_eq!(LaError::of(&domain("la.mat_vec", k)), Some(k));
     }
     assert_eq!(LaError::of(&NumError::Domain { op: "fmt", detail: "bad_shape" }), None);
@@ -308,10 +308,10 @@ fn views_and_transpose() {
     assert_eq!(a.row(2), Err(domain("la.row", LaError::BadShape)));
     assert_eq!(a.col(3), Err(domain("la.col", LaError::BadShape)));
     assert_eq!(a.get(2, 0), Err(domain("la.get", LaError::BadShape)));
-    let t = a.transpose();
+    let t = a.transpose().unwrap();
     assert_eq!((t.rows(), t.cols()), (3, 2));
     assert_eq!(t.data(), &[1.0, 4.0, 2.0, 5.0, 3.0, -0.0]);
-    assert_eq!(t.transpose(), a);
+    assert_eq!(t.transpose().unwrap(), a);
     // mat_t_vec(A, x) is mat_vec(A^T, x) bit for bit (same dot over the same order).
     let x = [0.1, -0.7];
     assert_eq!(mat_t_vec(&a, &x).unwrap(), mat_vec(&t, &x).unwrap());
@@ -325,10 +325,32 @@ fn allocation_bounds() {
     assert!(MAX_MAT_BYTES >= MAX_DIM * MAX_DIM * core::mem::size_of::<f64>());
     let a = Mat::from_rows(&[vec![1.0; 37], vec![2.0; 37]]).unwrap();
     assert_eq!(a.heap_bytes(), 2 * 37 * core::mem::size_of::<f64>());
-    let c = mat_mul(&a.transpose(), &a).unwrap();
+    let c = mat_mul(&a.transpose().unwrap(), &a).unwrap();
     assert_eq!(c.heap_bytes(), 37 * 37 * core::mem::size_of::<f64>());
     assert!(c.heap_bytes() <= MAX_MAT_BYTES);
     assert_eq!(COND_ITERATIONS, 8);
+    assert_eq!(LaError::Allocation.detail(), "allocation_failed");
+}
+
+/// A caller's buffer with spare capacity is stored without it, so `heap_bytes` is exactly
+/// `rows * cols * size_of::<f64>()` for every matrix and the bound really holds.
+#[test]
+fn matrices_hold_no_spare_capacity() {
+    let f = core::mem::size_of::<f64>();
+    let mut v = Vec::with_capacity(1000);
+    v.extend_from_slice(&[1.0, -2.0, 0.5, 3.0, -0.0, 7.0]);
+    let a = Mat::new(2, 3, v).unwrap();
+    assert_eq!(a.heap_bytes(), 6 * f);
+    assert_eq!(a.data(), &[1.0, -2.0, 0.5, 3.0, -0.0, 7.0]);
+    let exact = vec![2.0; 6];
+    assert_eq!(Mat::new(3, 2, exact).unwrap().heap_bytes(), 6 * f);
+    let rows: Vec<Vec<f64>> = (0..5).map(|i| vec![f64::from(i); 4]).collect();
+    let m = Mat::from_rows(&rows).unwrap();
+    assert_eq!(m.heap_bytes(), 20 * f);
+    assert_eq!(m.transpose().unwrap().heap_bytes(), 20 * f);
+    assert_eq!(mat_mul(&m, &m.transpose().unwrap()).unwrap().heap_bytes(), 25 * f);
+    let big = Mat::new(1, MAX_DIM, vec![0.0; MAX_DIM]).unwrap();
+    assert!(big.heap_bytes() <= MAX_MAT_BYTES);
 }
 
 /// The estimator is invariant under power-of-two scaling (exact when no entry turns
