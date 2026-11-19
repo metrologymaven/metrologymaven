@@ -18,7 +18,7 @@ pub fn calls() {
     inner!(thread_local { static K: u8 = 0; }); //~ KNP1-THREAD=thread_local
 }
 
-#[my_attr(env, sin)] //~ KNP1-ENV=env KNP1-LIBM=sin
+#[my_attr(env, sin)] //~ KNP1-PARSE=my_attr KNP1-ENV=env KNP1-LIBM=sin
 pub fn attr_args() {}
 
 #[allow(unknown_lints, max)]

@@ -361,31 +361,50 @@ fn reaches_any(path: &[String], pat: &[&str]) -> bool {
     (0..path.len()).any(|k| path.get(k..).is_some_and(|rest| reaches(rest, pat)))
 }
 
-/// Built-in attributes whose arguments are not scanned for banned names passed bare (their
-/// arguments are lint names, cfg predicates, derives or literals, not callees).
-pub const BUILTIN_ATTRIBUTES: [&str; 36] = [
+/// Built-in attributes. Any other attribute is an attribute macro (proc-macro item input,
+/// `KNP1-PARSE`), and its arguments are checked for banned names passed bare.
+pub const BUILTIN_ATTRIBUTES: &[&str] = &[
     "allow",
     "automatically_derived",
     "cfg",
     "cfg_attr",
+    "clippy",
     "cold",
+    "collapse_debuginfo",
+    "coverage",
     "crate_name",
     "crate_type",
+    "debugger_visualizer",
     "deny",
     "deprecated",
     "derive",
     "diagnostic",
     "doc",
     "expect",
+    "export_name",
+    "feature",
     "forbid",
+    "global_allocator",
     "ignore",
     "inline",
+    "instruction_set",
+    "link",
+    "link_name",
+    "link_ordinal",
+    "link_section",
     "macro_export",
     "macro_use",
     "must_use",
+    "naked",
+    "no_builtins",
     "no_implicit_prelude",
+    "no_link",
+    "no_main",
+    "no_mangle",
     "no_std",
     "non_exhaustive",
+    "optimize",
+    "panic_handler",
     "path",
     "proc_macro",
     "proc_macro_attribute",
@@ -398,9 +417,15 @@ pub const BUILTIN_ATTRIBUTES: [&str; 36] = [
     "test",
     "track_caller",
     "type_length_limit",
+    "unsafe",
+    "used",
     "warn",
-    "clippy",
+    "windows_subsystem",
 ];
+
+/// Built-in derives. Any other derive is a derive macro (proc-macro item input, `KNP1-PARSE`).
+pub const BUILTIN_DERIVES: &[&str] =
+    &["Clone", "Copy", "Debug", "Default", "Eq", "Hash", "Ord", "PartialEq", "PartialOrd"];
 
 /// The built-in roots a re-export can expose (`pub use std;`).
 const BUILTIN_ROOTS: [&str; 3] = ["std", "core", "alloc"];
@@ -1318,6 +1343,60 @@ impl<'a> Scan<'a> {
         }
     }
 
+    /// One attribute item `name …` in `[from, to)`: a non-built-in attribute is an attribute
+    /// macro (`KNP1-PARSE`) whose arguments are checked for banned names; `derive` lists are
+    /// checked for derive macros; each attribute after the predicate of `cfg_attr` is checked
+    /// the same way.
+    fn attr_item(&mut self, from: usize, to: usize, in_args: &mut [bool], depth: usize) {
+        let Some(name) = self.ident(from) else { return };
+        let group = if self.is(from + 1, &Kind::Open(Delim::Paren)) {
+            let close = self.partner.get(from + 1).copied().unwrap_or(usize::MAX);
+            (close != usize::MAX && close < to).then_some((from + 1, close))
+        } else {
+            None
+        };
+        if name == "cfg_attr" && depth < 8 {
+            let Some((open, close)) = group else { return };
+            let mut starts = Vec::new();
+            let mut k = open + 1;
+            while k < close {
+                if matches!(self.kind(k), Some(Kind::Open(_))) {
+                    k = self.partner.get(k).copied().unwrap_or(close).max(k) + 1;
+                    continue;
+                }
+                if self.is(k, &Kind::Comma) {
+                    starts.push(k + 1);
+                }
+                k += 1;
+            }
+            starts.push(close + 1);
+            for w in starts.windows(2) {
+                if let (Some(&a), Some(&b)) = (w.first(), w.get(1)) {
+                    self.attr_item(a, b - 1, in_args, depth + 1);
+                }
+            }
+            return;
+        }
+        if name == "derive" {
+            if let Some((open, close)) = group {
+                for k in open + 1..close {
+                    if let Some(d) = self.ident(k) {
+                        if !self.is(k + 1, &Kind::PathSep) && !BUILTIN_DERIVES.contains(&d) {
+                            self.hit(k, &Rule::Parse, format!("derive macro `{d}`: proc-macro item input"));
+                        }
+                    }
+                }
+            }
+            return;
+        }
+        if !BUILTIN_ATTRIBUTES.contains(&name) {
+            self.hit(from, &Rule::Parse, format!("attribute macro `{name}`: proc-macro item input"));
+            for b in in_args.iter_mut().take(to).skip(from + 1) {
+                *b = true;
+            }
+        }
+    }
+
     /// A module, binding or type alias named like a facade root (`mod fid_num`,
     /// `use std::primitive::f64 as fid_num`) could stand in for the facade: `KNP1-LIBM`.
     fn check_facade_shadow(&mut self, at: usize, name: &str) {
@@ -1330,6 +1409,7 @@ impl<'a> Scan<'a> {
     fn check_macro_args_and_mods(&mut self) {
         let n = self.toks.len();
         let mut in_args = vec![false; n];
+        let mut in_template = vec![false; n];
         for i in 0..n {
             if self.keyword(i, "mod") {
                 if let Some(name) = self.ident(i + 1) {
@@ -1361,40 +1441,64 @@ impl<'a> Scan<'a> {
                     }
                 }
             }
-            // Arguments of an attribute that is not a pinned built-in (`#[my_attr(env)]`).
+            // Attributes: attribute and derive macros, and the arguments of non-built-ins.
             if self.is(i, &Kind::Pound) {
                 let open = if self.is(i + 1, &Kind::Bang) { i + 2 } else { i + 1 };
                 if self.is(open, &Kind::Open(Delim::Bracket)) {
                     let close = self.partner.get(open).copied().unwrap_or(usize::MAX).min(n);
-                    let builtin = self.ident(open + 1).is_some_and(|a| BUILTIN_ATTRIBUTES.contains(&a));
-                    if !builtin {
-                        for b in in_args.iter_mut().take(close).skip(open + 2) {
-                            *b = true;
-                        }
+                    self.attr_item(open + 1, close, &mut in_args, 0);
+                }
+            }
+            // Macro transcribers: `macro_rules! name { … }` and `macro name … { … }`.
+            let body = if self.keyword(i, "macro_rules") && self.is(i + 1, &Kind::Bang) && self.ident(i + 2).is_some() {
+                Some((i + 3, self.partner.get(i + 3).copied().unwrap_or(usize::MAX)))
+            } else if self.keyword(i, "macro") && self.ident(i + 1).is_some() {
+                let first = self.partner.get(i + 2).copied().unwrap_or(usize::MAX);
+                let last = if first != usize::MAX && self.is(first + 1, &Kind::Open(Delim::Brace)) {
+                    self.partner.get(first + 1).copied().unwrap_or(usize::MAX)
+                } else {
+                    first
+                };
+                Some((i + 2, last))
+            } else {
+                None
+            };
+            if let Some((from, to)) = body {
+                if matches!(self.kind(from), Some(Kind::Open(_))) {
+                    for b in in_template.iter_mut().take(to.min(n)).skip(from + 1) {
+                        *b = true;
                     }
                 }
             }
         }
-        for (i, inside) in in_args.iter().enumerate() {
-            if !inside {
-                continue;
-            }
+        for i in 0..n {
             let Some(name) = self.ident(i) else { continue };
             let prev = i.checked_sub(1).and_then(|p| self.kind(p));
             let next = self.kind(i + 1);
+            let template = in_template.get(i).copied().unwrap_or(false) && !matches!(prev, Some(Kind::Dollar));
+            let inside = in_args.get(i).copied().unwrap_or(false);
             let after_ok = !matches!(prev, Some(Kind::Dot | Kind::PathSep | Kind::Dollar));
-            let bare = after_ok && !matches!(next, Some(Kind::PathSep | Kind::Bang | Kind::Open(Delim::Paren)));
+            let bare =
+                inside && after_ok && !matches!(next, Some(Kind::PathSep | Kind::Bang | Kind::Open(Delim::Paren)));
             // Macro names count whatever follows them (`inner!(env ("X"))`), except `!` (a call,
             // checked as a macro already).
-            let macro_name = after_ok && !matches!(next, Some(Kind::Bang));
+            let macro_name = inside && after_ok && !matches!(next, Some(Kind::Bang));
+            // A banned name followed by a metavariable or repetition is called by it.
+            let meta_called = matches!(next, Some(Kind::Dollar)) && !matches!(prev, Some(Kind::Dollar));
             for kind in [P::Call, P::Method, P::FloatMethod, P::Macro, P::IncludeMacro] {
-                let applies = if matches!(kind, P::Macro | P::IncludeMacro) { macro_name } else { bare };
+                let applies = template
+                    || meta_called
+                    || if matches!(kind, P::Macro | P::IncludeMacro) { macro_name } else { bare };
                 if !applies {
                     continue;
                 }
                 for (rule, pat) in patterns(kind) {
                     if pat == name {
-                        let m = format!("`{name}` passed bare to a macro: the macro may call it");
+                        let m = if template {
+                            format!("`{name}` in a macro transcriber: a code template naming a banned item")
+                        } else {
+                            format!("`{name}` passed to a macro or a metavariable: it may be called")
+                        };
                         if *rule == Rule::Libm {
                             self.libm(i, m);
                         } else {
@@ -1681,6 +1785,44 @@ fn read_bounded(path: &Path, limit: u64) -> std::io::Result<Vec<u8>> {
     Ok(buf)
 }
 
+/// A proc-macro crate in the kernel closure is `KNP1-PARSE` at its `Cargo.toml` 1:1: its item
+/// input (derive and attribute macros, and function-like macros from it) cannot be scanned, so
+/// kernel crates may not depend on any proc-macro crate (maintainer decision, review 4). A
+/// manifest that is not valid TOML is `KNP1-PARSE` too.
+fn proc_macro_finding(c: &graph::CrateEntry) -> Result<Option<Finding>, SynError> {
+    let bytes = read_bounded(&c.root.join("Cargo.toml"), MAX_CONFIG_BYTES).map_err(|e| SynError {
+        code: SynErrorCode::Read,
+        message: format!("{} {} Cargo.toml: {e}", c.name, c.version),
+    })?;
+    let parsed = std::str::from_utf8(&bytes).ok().and_then(|t| t.parse::<toml::Table>().ok());
+    let message = match parsed {
+        None => format!("{} {}: Cargo.toml is not valid UTF-8 TOML", c.name, c.version),
+        Some(t) => {
+            let lib = t.get("lib").and_then(toml::Value::as_table);
+            let pm = lib.is_some_and(|l| {
+                ["proc-macro", "proc_macro"].iter().any(|k| l.get(*k).and_then(toml::Value::as_bool) == Some(true))
+            });
+            if !pm {
+                return Ok(None);
+            }
+            format!(
+                "{} {} is a proc-macro crate in the kernel closure: its item input cannot be scanned",
+                c.name, c.version
+            )
+        }
+    };
+    Ok(Some(Finding {
+        rule: Rule::Parse,
+        crate_name: c.name.clone(),
+        crate_version: c.version.clone(),
+        file: "Cargo.toml".to_string(),
+        line: 1,
+        column: 1,
+        excerpt_digest: input_digest(message.as_bytes()),
+        message,
+    }))
+}
+
 /// Scans every listed file of every crate of the closure, in the closure's sorted order.
 /// Fails with `KNP1-READ` if a listed file cannot be read and with `KNP1-CONFIG-INVALID` if a
 /// facade file is not part of the closure.
@@ -1715,6 +1857,9 @@ pub fn scan_closure(closure: &Closure, cfg: &Config) -> Result<Outcome, SynError
     }
     let mut out = Outcome::default();
     for c in &closure.crates {
+        if let Some(f) = proc_macro_finding(c)? {
+            out.findings.push(f);
+        }
         for file in &c.files {
             let path = c.root.join(file);
             let bytes = read_bounded(&path, MAX_FILE_BYTES).map_err(|e| SynError {
