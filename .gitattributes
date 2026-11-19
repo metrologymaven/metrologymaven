@@ -142,6 +142,9 @@ fixtures/man/implclosure-ws-v1/** -text
 fixtures/geo/frame/** -text
 # GEO.SEL.MODEL fixtures: sets.json is compared byte for byte by geo_sel_sets.py --check.
 fixtures/geo/sel/** -text
+# GEO.INDEX.BVH fixtures: reference-generated digests and f64 bits, compared byte for byte by
+# fixtures/geo/index/make_bvh_fixtures.py --check; never convert line endings.
+fixtures/geo/index/** -text
 # SCAN.CMP.DEV.FIELD fixtures: compared byte for byte by make_field_golden.py --check.
 fixtures/scan/cmp/** -text
 # VIZ.RENDER.FRAME.SHLINT fixture crates: hand-labelled sources and metadata; never convert line endings.
