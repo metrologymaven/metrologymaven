@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "fid": {
+      "command": "fid-eval",
+      "args": [
+        "tap",
+        "--",
+        "fid",
+        "mcp",
+        "--headless",
+        "--server",
+        "inspect-r1",
+        "--project",
+        "<sandbox>"
+      ]
+    }
+  }
+}

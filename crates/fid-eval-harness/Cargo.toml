@@ -1,12 +1,19 @@
 [package]
 name = "fid-eval-harness"
-description = "Metrology Maven evaluation harness: per-run sandbox project, task-scoped roots, file-system snapshots (spec node AGENT.HARNESS.SANDBOX)"
+description = "Metrology Maven evaluation harness: per-run sandbox project, task-scoped roots, file-system snapshots, agent adapter contract (spec nodes AGENT.HARNESS.SANDBOX, AGENT.HARNESS.ADAPT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish = false
+
+# The `fid-eval adapter ...` words (D-032). Until the `fid-eval` dispatcher in fid-eval-suite
+# forwards them (the layer rules forbid it linking this crate), this crate ships its own binary
+# taking the same words, plus `null-agent`, the program of the `null` reference adapter.
+[[bin]]
+name = "fid-eval-harness"
+path = "src/main.rs"
 
 # Tooling layer (D-034): reads files only. It may not link another tool crate (layers check),
 # so it reads the fields of task.json it needs itself instead of using fid-eval-suite.

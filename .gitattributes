@@ -3,6 +3,8 @@
 # Byte-exact fixtures and generated schemas (HAL.IDL.STAMP): digests and drift checks
 # compare bytes, so no end-of-line conversion.
 fixtures/hal/idl/stamp/** -text
+# HAL.IDL.BASE.CFG fixtures: digested and compared byte for byte by make_fixtures.py --check.
+fixtures/hal/idl/base/cfg/** -text
 schemas/hal/** -text
 # E57 physical-layer fixtures: binary files and exact-byte text compared by --check and the tests.
 fixtures/io/e57/phys/** -text
@@ -27,6 +29,11 @@ fixtures/io/reg/env/report/** -text
 # Hand-written XML reader fixtures (IO.QIF.XML.PARSE): CRLF, BOMs, UTF-16 and invalid bytes are
 # part of the test data, and make_fixtures.py --check compares bytes.
 fixtures/io/qif/xml/parse/** -text
+# AGENT.HARNESS.ADAPT fixtures: hand-labelled adapter files, golden MCP config and token reports.
+fixtures/agent/harness/adapters/** -text
+fixtures/agent/harness/tokens/** -text
+fixtures/agent/harness/mcp-config.golden.json -text
+crates/fid-eval-harness/adapters/** -text
 # CORE.REG.DEF.GUIDE fixtures: hand-labelled by make_fixtures.py, which --check compares byte for byte.
 fixtures/core/reg/def/guide/** -text
 # qif-norm fixtures (IO.QIF.NORM): hand-written inputs and reference-normaliser output compared

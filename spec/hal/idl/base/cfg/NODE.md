@@ -9,6 +9,8 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-hal-idl]
+built_pr: 162
 satisfies: [REQ-HAL.IDL.BASE-007]
 covers: []
 depends_on: [HAL.IDL.UNITS, CORE.JRN.CANON]
@@ -72,7 +74,7 @@ Project-authored schemas and configurations under `fixtures/hal/idl/base/cfg/` (
 
 ## Open questions
 
-- None.
+- Binding vendor extensions to the device's own vendor namespace (an `acme.*` setting is accepted only from an `acme` device) is deferred to `HAL.IDL.BASE.DESC`, which owns describe and `DeviceInstance`. This leaf only checks that every `<vendor>.<name>` setting is declared in the schema.
 
 ## Children
 

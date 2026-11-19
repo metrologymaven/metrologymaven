@@ -6,7 +6,10 @@
 //!   (`HAL.IDL.UNITS`).
 //! - [`stamp`]: the frozen v0 provenance stamp, acquisition-batch envelope and external
 //!   claim schemas, their validator and canonical digests (`HAL.IDL.STAMP`).
+//! - [`base`]: the `Device@1` base package; so far [`base::config`], typed configuration and
+//!   the configuration digest (`HAL.IDL.BASE.CFG`).
 
+pub mod base;
 pub mod stamp;
 pub mod units;
 
@@ -18,4 +21,9 @@ pub use units::{
 pub use stamp::{
     validate, AcquisitionBatchEnvelope, ExternalClaim, ProvenanceStamp, Record, RecordKind, StampError, StampErrorKind,
     UntrustedText,
+};
+
+pub use base::config::{
+    config_digest, ConfigDigest, ConfigError, ConfigErrorCode, ConfigReason, ConfigSchema, Configuration, SettingRange,
+    SettingSchema, SettingType, SettingValue,
 };
