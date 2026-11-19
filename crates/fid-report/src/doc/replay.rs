@@ -6,7 +6,9 @@
 //!
 //! - `NOT_REPLAYABLE`: an event cannot be read, or names a block kind (or kind version)
 //!   that the replaying registry does not have;
-//! - `DIVERGENT`: an operation fails on replay, or a replayed digest differs;
+//! - `DIVERGENT`: a `create_report` event names another project than the one replayed,
+//!   an operation fails on replay (including the value-label rule), or a replayed digest
+//!   differs;
 //! - `IDENTICAL`: every event replays to its recorded digest.
 //!
 //! Replay stops at the first event that is not identical.
@@ -16,6 +18,7 @@ use super::event::{Op, ReportEvent};
 use super::kind::KindRegistry;
 use super::model::{Report, ReportId};
 use fid_canon::CValue;
+use fid_project::Uuid;
 use fid_replay::ReplayOutcome;
 use fid_types::Digest;
 use std::collections::BTreeMap;
@@ -33,8 +36,8 @@ pub struct ReplayRun {
     pub reports: BTreeMap<ReportId, (Report, Digest)>,
 }
 
-/// Replays `events` (oldest first) in exact mode.
-pub fn replay_exact(events: &[CValue], kinds: &KindRegistry) -> ReplayRun {
+/// Replays `events` (oldest first) of project `project` in exact mode.
+pub fn replay_exact(events: &[CValue], kinds: &KindRegistry, project: Uuid) -> ReplayRun {
     let mut reports: BTreeMap<ReportId, (Report, Digest)> = BTreeMap::new();
     for (i, v) in events.iter().enumerate() {
         let stop = |outcome| ReplayRun { outcome, first_mismatch: Some(i), reports: BTreeMap::new() };
@@ -47,6 +50,11 @@ pub fn replay_exact(events: &[CValue], kinds: &KindRegistry) -> ReplayRun {
         if let Op::AddBlock { kind, kind_version, .. } = ev.op() {
             if kinds.get(kind).map(|(v, _)| v) != Some(*kind_version) {
                 return ReplayRun { reports, ..stop(ReplayOutcome::NotReplayable) };
+            }
+        }
+        if let Op::CreateReport { project: p, .. } = ev.op() {
+            if *p != project {
+                return ReplayRun { reports, ..stop(ReplayOutcome::Divergent) };
             }
         }
         let id = ev.report();

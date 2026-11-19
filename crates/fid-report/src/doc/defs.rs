@@ -68,6 +68,17 @@ fn untrusted_text(description: &str) -> CValue {
     ])
 }
 
+/// The value-label array: ascending, unique names.
+fn labels(description: &str) -> CValue {
+    obj([
+        ("type", text("array")),
+        ("uniqueItems", CValue::Bool(true)),
+        ("maxItems", num(3)),
+        ("items", obj([("enum", strs(&["claimed", "declared_input", "uncharacterized_input"]))])),
+        ("description", text(description)),
+    ])
+}
+
 fn object(required: &[&str], properties: CValue) -> CValue {
     obj([
         ("type", text("object")),
@@ -86,11 +97,12 @@ fn report_schema() -> CValue {
         ("properties", obj([("untrusted", obj([("const", CValue::Bool(true))])), ("value", obj([]))])),
     ]);
     let block = object(
-        &["id", "kind", "kind_version", "payload"],
+        &["id", "kind", "kind_version", "labels", "payload"],
         obj([
             ("id", id("Block ID (UUIDv7).")),
             ("kind", obj([("type", text("string")), ("pattern", text(KIND_PATTERN))])),
             ("kind_version", decimal("Payload schema version of the kind.")),
+            ("labels", labels("Provenance labels of the block's values; exactly the labels they require.")),
             ("payload", payload),
         ]),
     );
@@ -246,6 +258,12 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
                     ("page", id("The page.")),
                     ("after", nullable_id("Sibling block to insert after.")),
                     ("kind", obj([("type", text("string")), ("pattern", text(KIND_PATTERN))])),
+                    (
+                        "labels",
+                        labels(
+                            "Provenance labels; must equal the labels the payload's values require. Default: empty.",
+                        ),
+                    ),
                     (
                         "payload",
                         obj([(

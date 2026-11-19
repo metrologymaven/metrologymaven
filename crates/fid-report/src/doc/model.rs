@@ -5,6 +5,7 @@
 //! ```text
 //! { "id": <uuidv7>,
 //!   "pages": [ { "blocks": [ { "id": <uuidv7>, "kind": <kind id>, "kind_version": "<u32>",
+//!                              "labels": [ "claimed" | "declared_input" | "uncharacterized_input", ... ascending ],
 //!                              "payload": { "untrusted": true, "value": <json> } } ],
 //!                "id": <uuidv7> } ],
 //!   "retired_ids": [ <uuidv7>, ... ascending ],
@@ -16,10 +17,15 @@
 //! IDs are lowercase hyphenated text. Integers are decimal strings (the `fid-canon` 64-bit
 //! integer rule), so the document holds no JSON numbers of its own. The reader is strict:
 //! unknown or missing keys, a non-UUIDv7 ID, a repeated ID, an unsorted `retired_ids` and
-//! any bound violation are `report.store_invalid`.
+//! any bound violation are `report.store_invalid`. Reading a report also re-checks every
+//! block against the kind registry ([`check_block`]): an unregistered kind or kind version
+//! is `report.unknown_block_kind`, a payload that fails its kind is
+//! `report.invalid_block_payload`, and the value rule of [`super::value`] applies.
 
 use super::error::ReportError;
+use super::kind::KindRegistry;
 use super::text::{Text, Untrusted};
+use super::value::{check_block_values, labels_from_value, labels_value, ValueLabel};
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
 use fid_project::Uuid;
 use std::collections::{BTreeMap, BTreeSet};
@@ -192,12 +198,24 @@ pub struct Block {
     id: BlockId,
     kind: BlockKindId,
     kind_version: u32,
+    labels: BTreeSet<ValueLabel>,
     payload: CanonicalJson,
 }
 
 impl Block {
-    pub(crate) fn new(id: BlockId, kind: BlockKindId, kind_version: u32, payload: CanonicalJson) -> Block {
-        Block { id, kind, kind_version, payload }
+    pub(crate) fn new(
+        id: BlockId,
+        kind: BlockKindId,
+        kind_version: u32,
+        labels: BTreeSet<ValueLabel>,
+        payload: CanonicalJson,
+    ) -> Block {
+        Block { id, kind, kind_version, labels, payload }
+    }
+
+    /// The provenance labels of the block's values (see [`super::value`]).
+    pub fn labels(&self) -> &BTreeSet<ValueLabel> {
+        &self.labels
     }
 
     pub fn id(&self) -> BlockId {
@@ -429,13 +447,13 @@ impl Report {
 
     /// Reads canonical bytes back. The bytes must be exactly the canonical form of the
     /// report they describe; anything else is `report.store_invalid`.
-    pub fn from_canonical(bytes: &[u8]) -> Result<Report, ReportError> {
+    pub fn from_canonical(bytes: &[u8], kinds: &KindRegistry) -> Result<Report, ReportError> {
         if bytes.len() > MAX_REPORT_BYTES {
             return Err(ReportError::LimitExceeded("report bytes"));
         }
         let v = parse_with_limits(bytes, MAX_REPORT_BYTES, fid_canon::MAX_DEPTH)
             .map_err(|_| ReportError::StoreInvalid("not json"))?;
-        let r = Report::from_value(&v)?;
+        let r = Report::from_value(&v, kinds)?;
         if r.to_canonical()? != bytes {
             return Err(ReportError::StoreInvalid("bytes are not canonical"));
         }
@@ -443,7 +461,7 @@ impl Report {
     }
 
     /// Strict reader of [`Report::to_value`].
-    pub fn from_value(v: &CValue) -> Result<Report, ReportError> {
+    pub fn from_value(v: &CValue, kinds: &KindRegistry) -> Result<Report, ReportError> {
         let o = exact_obj(v, &["id", "pages", "retired_ids", "schema_version", "template_ref", "title"])?;
         let id = ReportId::from_value(field(o, "id")?)?;
         let schema_version = u32_value(field(o, "schema_version")?)?;
@@ -511,6 +529,7 @@ impl Report {
             let mut blocks = Vec::with_capacity(blocks_in.len());
             for b in blocks_in {
                 let block = block_from_value(b)?;
+                check_block(kinds, &block.kind, block.kind_version, &block.payload, &block.labels)?;
                 if !seen.insert(block.id.uuid()) {
                     return Err(ReportError::StoreInvalid("repeated id"));
                 }
@@ -534,6 +553,7 @@ fn block_value(b: &Block) -> CValue {
         ("id", b.id.to_value()),
         ("kind", CValue::Str(b.kind.as_str().to_string())),
         ("kind_version", CValue::U64(u64::from(b.kind_version))),
+        ("labels", labels_value(&b.labels)),
         ("payload", payload_value(&b.payload)),
     ])
 }
@@ -553,7 +573,7 @@ pub(crate) fn payload_from_value(v: &CValue) -> Result<CanonicalJson, ReportErro
 }
 
 fn block_from_value(v: &CValue) -> Result<Block, ReportError> {
-    let o = exact_obj(v, &["id", "kind", "kind_version", "payload"])?;
+    let o = exact_obj(v, &["id", "kind", "kind_version", "labels", "payload"])?;
     let id = BlockId::from_value(field(o, "id")?)?;
     let kind = match field(o, "kind")? {
         CValue::Str(s) => BlockKindId::new(s).ok_or(ReportError::StoreInvalid("kind id"))?,
@@ -563,8 +583,27 @@ fn block_from_value(v: &CValue) -> Result<Block, ReportError> {
     if kind_version == 0 {
         return Err(ReportError::StoreInvalid("kind_version is 0"));
     }
+    let labels = labels_from_value(field(o, "labels")?).ok_or(ReportError::StoreInvalid("labels"))?;
     let payload = payload_from_value(field(o, "payload")?)?;
-    Ok(Block { id, kind, kind_version, payload })
+    Ok(Block { id, kind, kind_version, labels, payload })
+}
+
+/// The registry check of one block, shared by `add_block`, [`super::Op::apply`] (so
+/// replay) and the stored-report reader: the kind and version are registered, the payload
+/// passes the kind, and the value rule holds.
+pub(crate) fn check_block(
+    kinds: &KindRegistry,
+    kind: &BlockKindId,
+    kind_version: u32,
+    payload: &CanonicalJson,
+    labels: &BTreeSet<ValueLabel>,
+) -> Result<(), ReportError> {
+    let (version, k) = kinds.get(kind).ok_or_else(|| ReportError::UnknownBlockKind(Some(kind.clone())))?;
+    if version != kind_version {
+        return Err(ReportError::UnknownBlockKind(Some(kind.clone())));
+    }
+    k.validate(payload).map_err(ReportError::InvalidBlockPayload)?;
+    check_block_values(k, payload, labels)
 }
 
 pub(crate) fn obj<const N: usize>(pairs: [(&str, CValue); N]) -> CValue {

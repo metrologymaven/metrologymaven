@@ -14,8 +14,11 @@
 //! - [`replay`]: exact replay ([`replay_exact`], AC-7).
 //! - [`defs`]: the registry definitions ([`command_defs`]).
 //!
-//! The model carries no numbers of its own: block payloads are opaque here, and values,
-//! their formatting and their labels belong to the block kinds and `RPT.MODEL.FMT`.
+//! - [`value`]: value provenance labels and the `value_text@1` shape every declared value
+//!   field must hold, so a claimed value can never be stored unlabelled or pre-formatted.
+//!
+//! The model formats no numbers of its own: values are produced by `RPT.MODEL.FMT` and
+//! placed by the block kinds; this module only refuses blocks that break the value rule.
 
 pub mod backend;
 pub mod command;
@@ -28,6 +31,8 @@ pub mod replay;
 #[cfg(feature = "test-kinds")]
 pub mod stub;
 pub mod text;
+mod unicode16;
+pub mod value;
 
 pub use backend::{MemoryBackend, ReportBackend, StoredReport};
 pub use command::{
@@ -44,3 +49,7 @@ pub use model::{
 };
 pub use replay::{replay_exact, ReplayRun, MAX_REPLAY_EVENTS};
 pub use text::{must_escape, Text, Untrusted, MAX_TEXT_BYTES};
+pub use value::{
+    check_value_text, resolve_pointer, ValueLabel, MAX_LABEL_VALUE_BYTES, MAX_POINTER_BYTES, MAX_VALUE_FIELDS,
+    MAX_VALUE_TEXT_ITEMS, VALUE_TEXT_SCHEMA,
+};

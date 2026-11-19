@@ -3,7 +3,8 @@
 //! the trait, the registry and, behind the `test-kinds` feature, two stub kinds.
 
 use super::model::{BlockKindId, CanonicalJson};
-use std::collections::BTreeMap;
+use super::value::ValueLabel;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 /// Most kinds one registry holds.
@@ -55,6 +56,15 @@ pub trait BlockKind {
     fn version(&self) -> u32;
     /// Checks a payload. Must be bounded and must not panic.
     fn validate(&self, payload: &CanonicalJson) -> Result<(), PayloadError>;
+    /// The provenance labels this payload's values require. A kind whose values rest on
+    /// uncertainty statements computes them with [`ValueLabel::required_by`] (fid-kunc
+    /// `is_claimed()`, `rests_on_declared_input()`, `rests_on_uncharacterized_input()`).
+    /// No default: every kind must answer, a kind without values returns the empty set.
+    fn required_labels(&self, payload: &CanonicalJson) -> Result<BTreeSet<ValueLabel>, PayloadError>;
+    /// RFC 6901 JSON pointers to every value field of this payload. Each must hold a
+    /// `value_text@1` produced by `RPT.MODEL.FMT` (see [`super::value`]). No default: a
+    /// kind without values returns an empty list.
+    fn value_fields(&self, payload: &CanonicalJson) -> Result<Vec<String>, PayloadError>;
 }
 
 /// Registry errors (registration is code, not user input, but still fails closed).

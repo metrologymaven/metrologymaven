@@ -9,11 +9,14 @@ use super::backend::{ReportBackend, StoredReport};
 use super::error::ReportError;
 use super::event::{Op, ReportEvent, ADD_BLOCK, ADD_PAGE, CREATE_REPORT, REMOVE_BLOCK, REMOVE_PAGE, SHOW_REPORT};
 use super::kind::{KindRegistry, PayloadError};
-use super::model::{is_v7, obj, parse_canonical_uuid, BlockId, BlockKindId, CanonicalJson, PageId, Report, ReportId};
+use super::model::{
+    check_block, is_v7, obj, parse_canonical_uuid, BlockId, BlockKindId, CanonicalJson, PageId, Report, ReportId,
+};
 use super::text::{Text, Untrusted};
+use super::value::{labels_from_value, ValueLabel};
 use fid_canon::CValue;
 use fid_project::{uuid_v7, ObservationSource, Uuid};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 // ------------------------------------------------------------------ params
 
@@ -40,7 +43,7 @@ pub struct RemovePage {
 }
 
 /// `report.add_block@1` parameters: `{report, page, after?: block | null, kind: string,
-/// payload: json}`. A kind string that is not a well-formed kind ID is kept as `None` and
+/// labels?: [label] = [], payload: json}`. A kind string that is not a well-formed kind ID is kept as `None` and
 /// fails as `report.unknown_block_kind`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AddBlock {
@@ -48,6 +51,7 @@ pub struct AddBlock {
     pub page: Uuid,
     pub after: Option<Uuid>,
     pub kind: Option<BlockKindId>,
+    pub labels: BTreeSet<ValueLabel>,
     pub payload: CValue,
 }
 
@@ -120,7 +124,13 @@ impl RemovePage {
 
 impl AddBlock {
     pub fn from_value(v: &CValue) -> Result<AddBlock, ReportError> {
-        let o = params(v, &["report", "page", "after", "kind", "payload"])?;
+        let o = params(v, &["report", "page", "after", "kind", "labels", "payload"])?;
+        let labels = match o.get("labels") {
+            None => BTreeSet::new(),
+            Some(l) => {
+                labels_from_value(l).ok_or(ReportError::BadParams("labels are not known, ascending label names"))?
+            }
+        };
         let kind = match o.get("kind") {
             Some(CValue::Str(s)) => BlockKindId::new(s),
             Some(_) => return Err(ReportError::BadParams("kind is not a string")),
@@ -132,6 +142,7 @@ impl AddBlock {
             page: id_param(o, "page")?,
             after: opt_id_param(o, "after")?,
             kind,
+            labels,
             payload,
         })
     }
@@ -164,10 +175,10 @@ fn draw(ids: &mut dyn ObservationSource) -> Result<Uuid, ReportError> {
 }
 
 /// Loads a report named in params: `report.not_found` unless it is stored.
-fn load(backend: &dyn ReportBackend, id: &Uuid) -> Result<Report, ReportError> {
+fn load(backend: &dyn ReportBackend, kinds: &KindRegistry, id: &Uuid) -> Result<Report, ReportError> {
     let rid = ReportId::new(*id).ok_or(ReportError::NotFound(*id))?;
     let stored = backend.load(&rid)?.ok_or(ReportError::NotFound(*id))?;
-    stored.open(&rid)
+    stored.open(&rid, kinds)
 }
 
 /// Applies `op` and commits the new stored report with its event.
@@ -223,7 +234,7 @@ pub fn add_page(
     ids: &mut dyn ObservationSource,
     p: &AddPage,
 ) -> Result<PageId, ReportError> {
-    let r = load(backend, &p.report)?;
+    let r = load(backend, kinds, &p.report)?;
     let after = match &p.after {
         None => None,
         Some(a) if r.has_page(a) => Some(page_id(a)?),
@@ -236,7 +247,7 @@ pub fn add_page(
 
 /// `report.remove_page@1` (REQ-004, REQ-005).
 pub fn remove_page(backend: &mut dyn ReportBackend, kinds: &KindRegistry, p: &RemovePage) -> Result<(), ReportError> {
-    let r = load(backend, &p.report)?;
+    let r = load(backend, kinds, &p.report)?;
     if !r.has_page(&p.page) {
         return Err(ReportError::NotFound(p.page));
     }
@@ -245,14 +256,15 @@ pub fn remove_page(backend: &mut dyn ReportBackend, kinds: &KindRegistry, p: &Re
 }
 
 /// `report.add_block@1` (REQ-002, REQ-007): returns the new block ID. Checks, in order:
-/// report, page, `after` on that page, kind, payload bounds, payload check.
+/// report, page, `after` on that page, kind, payload bounds, payload check, value rule
+/// (value fields hold `value_text@1`; labels equal the required labels).
 pub fn add_block(
     backend: &mut dyn ReportBackend,
     kinds: &KindRegistry,
     ids: &mut dyn ObservationSource,
     p: &AddBlock,
 ) -> Result<BlockId, ReportError> {
-    let r = load(backend, &p.report)?;
+    let r = load(backend, kinds, &p.report)?;
     if !r.has_page(&p.page) {
         return Err(ReportError::NotFound(p.page));
     }
@@ -262,10 +274,10 @@ pub fn add_block(
         Some(a) => return Err(ReportError::NotFound(*a)),
     };
     let kind = p.kind.clone().ok_or(ReportError::UnknownBlockKind(None))?;
-    let (kind_version, k) = kinds.get(&kind).ok_or_else(|| ReportError::UnknownBlockKind(Some(kind.clone())))?;
+    let (kind_version, _) = kinds.get(&kind).ok_or_else(|| ReportError::UnknownBlockKind(Some(kind.clone())))?;
     let payload = CanonicalJson::new(&p.payload)
         .ok_or_else(|| ReportError::InvalidBlockPayload(PayloadError::new("", "payload_bounds")))?;
-    k.validate(&payload).map_err(ReportError::InvalidBlockPayload)?;
+    check_block(kinds, &kind, kind_version, &payload, &p.labels)?;
     let block = BlockId::new(draw(ids)?).ok_or(ReportError::IdUnavailable("bad_id"))?;
     let op = Op::AddBlock {
         report: report_id(&p.report)?,
@@ -274,6 +286,7 @@ pub fn add_block(
         block,
         kind,
         kind_version,
+        labels: p.labels.clone(),
         payload,
     };
     commit(backend, kinds, Some(r), op)?;
@@ -282,15 +295,15 @@ pub fn add_block(
 
 /// `report.remove_block@1` (REQ-004).
 pub fn remove_block(backend: &mut dyn ReportBackend, kinds: &KindRegistry, p: &RemoveBlock) -> Result<(), ReportError> {
-    let r = load(backend, &p.report)?;
+    let r = load(backend, kinds, &p.report)?;
     let block = BlockId::new(p.block).filter(|b| r.pages().iter().any(|pg| pg.blocks().iter().any(|x| x.id() == *b)));
     let block = block.ok_or(ReportError::NotFound(p.block))?;
     commit(backend, kinds, Some(r), Op::RemoveBlock { report: report_id(&p.report)?, block }).map(|_| ())
 }
 
 /// `report.show_report@1` (R0): the stored report.
-pub fn show_report(backend: &dyn ReportBackend, p: &ShowReport) -> Result<Report, ReportError> {
-    load(backend, &p.report)
+pub fn show_report(backend: &dyn ReportBackend, kinds: &KindRegistry, p: &ShowReport) -> Result<Report, ReportError> {
+    load(backend, kinds, &p.report)
 }
 
 fn report_id(id: &Uuid) -> Result<ReportId, ReportError> {
@@ -339,7 +352,7 @@ pub fn execute(
         REMOVE_PAGE => remove_page(backend, kinds, &RemovePage::from_value(params)?).map(|()| obj([])),
         ADD_BLOCK => Ok(id("block_id", add_block(backend, kinds, ids, &AddBlock::from_value(params)?)?.uuid())),
         REMOVE_BLOCK => remove_block(backend, kinds, &RemoveBlock::from_value(params)?).map(|()| obj([])),
-        SHOW_REPORT => show_report(backend, &ShowReport::from_value(params)?).map(|r| r.to_value()),
+        SHOW_REPORT => show_report(backend, kinds, &ShowReport::from_value(params)?).map(|r| r.to_value()),
         _ => Err(ReportError::BadParams("unknown command")),
     }
 }

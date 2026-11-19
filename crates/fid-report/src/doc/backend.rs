@@ -8,6 +8,7 @@
 
 use super::error::ReportError;
 use super::event::ReportEvent;
+use super::kind::KindRegistry;
 use super::model::{Report, ReportId};
 use fid_canon::{digest_bytes, CValue};
 use fid_project::Uuid;
@@ -33,11 +34,11 @@ impl StoredReport {
     /// Reads a stored report back for `id`. The digest must match the bytes, the bytes must
     /// be the canonical form of a valid report, and its ID must be `id`; anything else is
     /// `report.store_invalid` (fail closed).
-    pub fn open(&self, id: &ReportId) -> Result<Report, ReportError> {
+    pub fn open(&self, id: &ReportId, kinds: &KindRegistry) -> Result<Report, ReportError> {
         if Digest::from_bytes(digest_bytes(&self.canonical).0) != self.digest {
             return Err(ReportError::StoreInvalid("digest mismatch"));
         }
-        let r = Report::from_canonical(&self.canonical)?;
+        let r = Report::from_canonical(&self.canonical, kinds)?;
         if r.id() != *id {
             return Err(ReportError::StoreInvalid("stored under another id"));
         }

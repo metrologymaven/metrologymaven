@@ -52,6 +52,8 @@ The standard block kinds a report is built from, each with a versioned payload s
 - **REQ-RPT.MODEL.BLOCKS-007** An `image` block shall store its image by content digest, and an image larger than 50 MiB [unverified limit] shall be rejected with error `report.image_too_large`.
 - **REQ-RPT.MODEL.BLOCKS-008** `header` and `footer` blocks shall offer page number, page count, report ID and resolved-report digest fields.
 - **REQ-RPT.MODEL.BLOCKS-009** A `text` block's bound fields shall be resolved only through `RPT.MODEL.FMT` and shall never evaluate user text as an expression or instruction (CONSTITUTION C6).
+- **REQ-RPT.MODEL.BLOCKS-010** A block kind whose payload holds values shall implement `required_labels` by calling `ValueLabel::required_by` on the fid-kunc uncertainty statement each value rests on (`is_claimed()`, `rests_on_declared_input()`, `rests_on_uncharacterized_input()`), so that `RPT.MODEL.DOC` refuses the block unless it carries those labels.
+- **REQ-RPT.MODEL.BLOCKS-011** A block kind whose payload holds values shall declare every value field in `value_fields`, and each such field shall hold a `value_text@1` produced by `RPT.MODEL.FMT`; a kind shall never store a value as a bare number or pre-formatted string.
 
 ## Interfaces
 
@@ -72,7 +74,7 @@ TABLE (table block and column model), CHART (chart block), VIEW (view block and 
 
 | ID | Title | Satisfies | Covers |
 |---|---|---|---|
-| RPT.MODEL.BLOCKS.TABLE | Characteristic table block with column and row customisation (leaf) | 001 002 003 | GOM.RPT.04, PW.RPT.03, SA.RPT.04 |
-| RPT.MODEL.BLOCKS.CHART | Chart block referencing ChartSeries (leaf, P1b) | 001 004 | GOM.RPT.05, PCD.RPT.03, SA.RPT.02 |
+| RPT.MODEL.BLOCKS.TABLE | Characteristic table block with column and row customisation (leaf) | 001 002 003 010 011 | GOM.RPT.04, PW.RPT.03, SA.RPT.04 |
+| RPT.MODEL.BLOCKS.CHART | Chart block referencing ChartSeries (leaf, P1b) | 001 004 010 011 | GOM.RPT.05, PCD.RPT.03, SA.RPT.02 |
 | RPT.MODEL.BLOCKS.VIEW | Restorable 3D view block (leaf) | 001 005 006 | GOM.RPT.03, PW.RPT.03 |
-| RPT.MODEL.BLOCKS.TEXT | Text, image, header and footer blocks (leaf) | 001 007 008 009 | PCD.RPT.03 |
+| RPT.MODEL.BLOCKS.TEXT | Text, image, header and footer blocks (leaf) | 001 007 008 009 010 011 | PCD.RPT.03 |

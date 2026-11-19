@@ -13,6 +13,9 @@ fid-canon = { path = "../fid-canon" }
 # UUIDv7 construction and the observation sources that record or replay its clock and random
 # bits (CORE.PRJ.CONT.ID); also re-exports the Uuid value type. Layer model.
 fid-project = { path = "../fid-project" }
+# Uncertainty statements (UNC.UEC.STMT): `ValueLabel::required_by` maps `is_claimed()`,
+# `rests_on_declared_input()` and `rests_on_uncharacterized_input()` to block labels. Layer kernel.
+fid-kunc = { path = "../fid-kunc" }
 # CommandDef records for the six report commands, built through the registry's field rules
 # (CORE.REG). Layer model.
 fid-registry = { path = "../fid-registry" }

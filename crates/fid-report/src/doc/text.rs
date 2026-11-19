@@ -8,6 +8,7 @@
 //! format character as `\u{XXXX}`.
 
 use super::error::{ReportError, TextFault};
+use super::unicode16::{in_ranges, DEFAULT_IGNORABLE_RANGES, FORMAT_RANGES};
 use fid_canon::CValue;
 use std::collections::BTreeMap;
 
@@ -109,22 +110,19 @@ impl Untrusted<Text> {
     }
 }
 
-/// Characters [`Untrusted::escaped`] never prints raw: C0 and C1 controls and DEL; the
-/// bidi embedding, override, isolate and mark characters (U+061C, U+200E, U+200F,
-/// U+202A..U+202E, U+2066..U+2069); zero-width and invisible format characters
-/// (U+00AD, U+200B..U+200D, U+2060..U+2064, U+FEFF); the line and paragraph separators
-/// (U+2028, U+2029); and the interlinear annotation and object replacement characters
-/// (U+FFF9..U+FFFC).
+/// Characters [`Untrusted::escaped`] never prints raw: C0 and C1 controls and DEL; every
+/// code point of general category Cf (format) and every Default_Ignorable_Code_Point, both
+/// from the pinned Unicode 16.0 tables in [`super::unicode16`] (bidi controls and marks,
+/// zero-width characters, tag characters, variation selectors, U+034F, U+115F, U+1160,
+/// U+180E, U+3164, U+FFA0 and the rest); the line and paragraph separators (U+2028,
+/// U+2029); and the object replacement character (U+FFFC).
 pub fn must_escape(c: char) -> bool {
     let u = u32::from(c);
     u < 0x20
         || (0x7F..=0x9F).contains(&u)
-        || u == 0xAD
-        || u == 0x061C
-        || (0x200B..=0x200F).contains(&u)
-        || (0x2028..=0x202E).contains(&u)
-        || (0x2060..=0x2064).contains(&u)
-        || (0x2066..=0x2069).contains(&u)
-        || u == 0xFEFF
-        || (0xFFF9..=0xFFFC).contains(&u)
+        || u == 0x2028
+        || u == 0x2029
+        || u == 0xFFFC
+        || in_ranges(FORMAT_RANGES, c)
+        || in_ranges(DEFAULT_IGNORABLE_RANGES, c)
 }

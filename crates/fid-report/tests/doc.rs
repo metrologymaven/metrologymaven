@@ -211,7 +211,7 @@ fn ac2_pages_and_blocks_in_insertion_order_and_reload_is_identical() {
         World { backend: MemoryBackend::reopen(project_id(), docs, journal), kinds: kinds(), ids: Counter::new() };
     assert_eq!(reopened.show(&rid), before);
     assert_eq!(reopened.backend.stored(&id).unwrap().digest, stored.digest);
-    let report = StoredReport::of(&stored.open(&id).unwrap()).unwrap();
+    let report = StoredReport::of(&stored.open(&id, &kinds()).unwrap()).unwrap();
     assert_eq!(report, stored);
 }
 
@@ -437,7 +437,7 @@ fn a_source_that_repeats_a_retired_id_fails_closed() {
 #[test]
 fn ac7_exact_replay_is_identical_and_reuses_journaled_ids() {
     let (w, rid, ..) = ac2_world();
-    let run = replay_exact(&w.backend.journal_values(), &kinds());
+    let run = replay_exact(&w.backend.journal_values(), &kinds(), project_id());
     assert_eq!(run.outcome, ReplayOutcome::Identical);
     assert_eq!(run.outcome.as_str(), "IDENTICAL");
     let id = rid_of(&rid);
@@ -455,15 +455,15 @@ fn replay_detects_tampering_and_missing_kinds() {
     if let CValue::Obj(o) = &mut tampered[2] {
         o.insert("payload".into(), obj([("untrusted", CValue::Bool(true)), ("value", obj([("text", s("forged"))]))]));
     }
-    let run = replay_exact(&tampered, &kinds());
+    let run = replay_exact(&tampered, &kinds(), project_id());
     assert_eq!((run.outcome, run.first_mismatch), (ReplayOutcome::Divergent, Some(2)));
     // Without the image kind the last event cannot be replayed.
     let mut only_text = KindRegistry::new();
     only_text.register(Box::new(TextStub)).unwrap();
-    let run = replay_exact(&events, &only_text);
+    let run = replay_exact(&events, &only_text, project_id());
     assert_eq!((run.outcome, run.first_mismatch), (ReplayOutcome::NotReplayable, Some(5)));
     // An unreadable event is NOT_REPLAYABLE.
-    let run = replay_exact(&[obj([("type", s("report.nope@1"))])], &kinds());
+    let run = replay_exact(&[obj([("type", s("report.nope@1"))])], &kinds(), project_id());
     assert_eq!(run.outcome, ReplayOutcome::NotReplayable);
     // Events round-trip through their journal form.
     for e in w.backend.journal() {
@@ -542,32 +542,35 @@ fn stored_documents_are_read_strictly() {
     let good = w.backend.stored(&id).unwrap().clone();
     // Wrong digest.
     let bad = StoredReport { canonical: good.canonical.clone(), digest: fid_types::Digest::TOMBSTONE };
-    assert_eq!(bad.open(&id).unwrap_err().code(), "report.store_invalid");
+    assert_eq!(bad.open(&id, &kinds()).unwrap_err().code(), "report.store_invalid");
     // Non-canonical bytes (a space) with a matching digest.
     let mut spaced = good.canonical.clone();
     spaced.insert(1, b' ');
     let d = fid_types::Digest::from_bytes(fid_canon::digest_bytes(&spaced).0);
-    assert_eq!(StoredReport { canonical: spaced, digest: d }.open(&id).unwrap_err().code(), "report.store_invalid");
+    assert_eq!(
+        StoredReport { canonical: spaced, digest: d }.open(&id, &kinds()).unwrap_err().code(),
+        "report.store_invalid"
+    );
     // Unknown field, a repeated ID, an unmarked title.
     let v = parse(&good.canonical).unwrap();
     let mut extra = v.clone();
     if let CValue::Obj(o) = &mut extra {
         o.insert("note".into(), s("x"));
     }
-    assert_eq!(Report::from_value(&extra).unwrap_err().code(), "report.store_invalid");
+    assert_eq!(Report::from_value(&extra, &kinds()).unwrap_err().code(), "report.store_invalid");
     let mut repeated = v.clone();
     if let CValue::Obj(o) = &mut repeated {
         o.insert("retired_ids".into(), CValue::Arr(vec![s(&rid)]));
     }
-    assert_eq!(Report::from_value(&repeated).unwrap_err().code(), "report.store_invalid");
+    assert_eq!(Report::from_value(&repeated, &kinds()).unwrap_err().code(), "report.store_invalid");
     let mut plain = v.clone();
     if let CValue::Obj(o) = &mut plain {
         o.insert("title".into(), s("Bracket FAI"));
     }
-    assert_eq!(Report::from_value(&plain).unwrap_err().code(), "report.store_invalid");
+    assert_eq!(Report::from_value(&plain, &kinds()).unwrap_err().code(), "report.store_invalid");
     // Stored under another ID.
     let other = rid_of("019a9969-3401-7000-8000-000000000002");
-    assert_eq!(good.open(&other).unwrap_err().code(), "report.store_invalid");
+    assert_eq!(good.open(&other, &kinds()).unwrap_err().code(), "report.store_invalid");
 }
 
 #[test]

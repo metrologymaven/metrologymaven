@@ -10,21 +10,22 @@
 //! report.create_report@1  {type, report, page, project, title, report_digest}
 //! report.add_page@1       {type, report, after, page, report_digest}
 //! report.remove_page@1    {type, report, page, force, report_digest}
-//! report.add_block@1      {type, report, page, after, block, kind, kind_version, payload, report_digest}
+//! report.add_block@1      {type, report, page, after, block, kind, kind_version, labels, payload, report_digest}
 //! report.remove_block@1   {type, report, block, report_digest}
 //! ```
 
 use super::error::ReportError;
 use super::kind::KindRegistry;
 use super::model::{
-    exact_obj, field, parse_canonical_uuid, payload_from_value, payload_value, u32_value, Block, BlockId, BlockKindId,
-    CanonicalJson, PageId, Report, ReportId,
+    check_block, exact_obj, field, parse_canonical_uuid, payload_from_value, payload_value, u32_value, Block, BlockId,
+    BlockKindId, CanonicalJson, PageId, Report, ReportId, MAX_REPORT_BYTES,
 };
 use super::text::{Text, Untrusted};
+use super::value::{labels_from_value, labels_value, ValueLabel};
 use fid_canon::CValue;
 use fid_project::Uuid;
 use fid_types::Digest;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub const CREATE_REPORT: &str = "report.create_report@1";
 pub const ADD_PAGE: &str = "report.add_page@1";
@@ -60,6 +61,7 @@ pub enum Op {
         block: BlockId,
         kind: BlockKindId,
         kind_version: u32,
+        labels: BTreeSet<ValueLabel>,
         payload: CanonicalJson,
     },
     RemoveBlock {
@@ -104,13 +106,9 @@ impl Op {
             Op::CreateReport { .. } => {}
             Op::AddPage { after, page, .. } => r.insert_page(after.map(|a| a.uuid()).as_ref(), *page)?,
             Op::RemovePage { page, force, .. } => r.remove_page(&page.uuid(), *force)?,
-            Op::AddBlock { page, after, block, kind, kind_version, payload, .. } => {
-                let (version, k) = kinds.get(kind).ok_or_else(|| ReportError::UnknownBlockKind(Some(kind.clone())))?;
-                if version != *kind_version {
-                    return Err(ReportError::UnknownBlockKind(Some(kind.clone())));
-                }
-                k.validate(payload).map_err(ReportError::InvalidBlockPayload)?;
-                let b = Block::new(*block, kind.clone(), *kind_version, payload.clone());
+            Op::AddBlock { page, after, block, kind, kind_version, labels, payload, .. } => {
+                check_block(kinds, kind, *kind_version, payload, labels)?;
+                let b = Block::new(*block, kind.clone(), *kind_version, labels.clone(), payload.clone());
                 r.insert_block(&page.uuid(), after.map(|a| a.uuid()).as_ref(), b)?;
             }
             Op::RemoveBlock { block, .. } => r.remove_block(&block.uuid())?,
@@ -174,7 +172,8 @@ impl ReportEvent {
                 put("page", id(page.uuid()));
                 put("force", CValue::Bool(*force));
             }
-            Op::AddBlock { page, after, block, kind, kind_version, payload, .. } => {
+            Op::AddBlock { page, after, block, kind, kind_version, labels, payload, .. } => {
+                put("labels", labels_value(labels));
                 put("page", id(page.uuid()));
                 put("after", opt(after.map(|a| a.uuid())));
                 put("block", id(block.uuid()));
@@ -185,6 +184,14 @@ impl ReportEvent {
             Op::RemoveBlock { block, .. } => put("block", id(block.uuid())),
         }
         CValue::Obj(o)
+    }
+
+    /// Reads an event from JSON bytes: bounded parse (duplicate keys refused), then
+    /// [`ReportEvent::from_value`]. Any failure is `report.store_invalid`.
+    pub fn from_json(bytes: &[u8]) -> Result<ReportEvent, ReportError> {
+        let v = fid_canon::parse_with_limits(bytes, MAX_REPORT_BYTES, fid_canon::MAX_DEPTH)
+            .map_err(|_| ReportError::StoreInvalid("event is not json"))?;
+        ReportEvent::from_value(&v)
     }
 
     /// Strict reader of [`ReportEvent::to_value`] (`report.store_invalid` on any deviation).
@@ -198,9 +205,18 @@ impl ReportEvent {
             CREATE_REPORT => &["type", "report", "page", "project", "title", "report_digest"],
             ADD_PAGE => &["type", "report", "after", "page", "report_digest"],
             REMOVE_PAGE => &["type", "report", "page", "force", "report_digest"],
-            ADD_BLOCK => {
-                &["type", "report", "page", "after", "block", "kind", "kind_version", "payload", "report_digest"]
-            }
+            ADD_BLOCK => &[
+                "type",
+                "report",
+                "page",
+                "after",
+                "block",
+                "kind",
+                "kind_version",
+                "labels",
+                "payload",
+                "report_digest",
+            ],
             REMOVE_BLOCK => &["type", "report", "block", "report_digest"],
             _ => return Err(ReportError::StoreInvalid("unknown event type")),
         };
@@ -240,6 +256,7 @@ impl ReportEvent {
                     block: block()?,
                     kind,
                     kind_version: u32_value(field(o, "kind_version")?)?,
+                    labels: labels_from_value(field(o, "labels")?).ok_or(ReportError::StoreInvalid("labels"))?,
                     payload: payload_from_value(field(o, "payload")?)?,
                 }
             }
