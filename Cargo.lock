@@ -692,6 +692,8 @@ name = "fid-replay"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-journal",
+ "fid-registry",
  "fid-types",
 ]
 

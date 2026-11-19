@@ -97,3 +97,6 @@ tools/tests/fixtures/ladder/** -text
 fixtures/allow/** -text
 # FLOW.DEADEND.CATALOG fixtures: hand-written catalogues and a digest compared byte for byte by make_fixtures.py --check.
 fixtures/flow/fixes/** -text
+# CORE.RPL.EXEC.SUBST fixtures: hand-labelled spans and observation blobs whose SHA-256 is checked
+# byte for byte by the tests and make_fixtures.py --check; never convert line endings.
+fixtures/core/rpl/exec/subst/** -text
