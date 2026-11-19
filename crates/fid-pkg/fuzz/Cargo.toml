@@ -2,7 +2,7 @@
 # member: it needs nightly and libFuzzer. CI's `fuzz-pkg-reader` job runs it for 10 minutes,
 # seeded with the reader corpus; to run it by hand, from crates/fid-pkg/fuzz:
 #   mkdir -p corpus/reader
-#   cargo +nightly fuzz run reader corpus/reader ../../../fixtures/pkg/malformed \
+#   cargo +nightly fuzz run --sanitizer none reader corpus/reader ../../../fixtures/pkg/malformed \
 #     ../../../fixtures/pkg/reader/valid ../../../fixtures/pkg/golden \
 #     -- -max_total_time=600 -timeout=5 -rss_limit_mb=256
 [package]

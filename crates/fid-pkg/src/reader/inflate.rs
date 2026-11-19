@@ -2,10 +2,12 @@
 //!
 //! It is a pull decoder in the style of zlib's reference `puff.c`: the bit reader takes input
 //! bytes from a reader on demand and counts them, so the caller knows exactly how much
-//! compressed input stands behind the output at every flush. Output goes to a 32 KiB window
-//! and, in chunks of at most [`FLUSH`] bytes, to a sink that enforces the size and ratio caps
-//! and may stop decoding with an error. Memory is fixed (window, flush buffer, input buffer
-//! and the Huffman tables) whatever the input. Work is bounded too: every loop step consumes
+//! compressed input stands behind the output at every flush. Output is appended to one flat
+//! buffer that keeps at least the last 32 KiB as the window; matches and stored blocks are
+//! copied in slices, not byte by byte. Every [`FLUSH`] bytes or more (a stored block chunk or
+//! one match past the mark) the new output goes to a sink that enforces the size and ratio
+//! caps and may stop decoding with an error. Memory is fixed (at most [`KEEP`] plus one flush
+//! of output, the input buffer and the Huffman tables) whatever the input. Work is bounded too: every loop step consumes
 //! input or produces output, and the sink stops output growth.
 //!
 //! Errors: any stream that breaks RFC 1951 is `pkg.malformed` `deflate`; running out of input
@@ -17,6 +19,8 @@ use std::io::{ErrorKind, Read};
 /// Largest chunk handed to the sink at once.
 pub(crate) const FLUSH: usize = 16 * 1024;
 const WINDOW: usize = 32 * 1024;
+/// Output kept before the oldest bytes beyond the window are dropped.
+pub(crate) const KEEP: usize = 4 * WINDOW;
 const MAX_BITS: usize = 15;
 const MAX_LCODES: usize = 286;
 const MAX_DCODES: usize = 30;
@@ -89,10 +93,11 @@ pub(crate) struct Inflater<R: Read> {
     consumed: u64,
     bitbuf: u64,
     bitcnt: u32,
-    window: Vec<u8>,
-    wpos: usize,
+    /// Recent output: at least the last [`WINDOW`] bytes once that many were produced.
+    out: Vec<u8>,
+    /// Bytes of `out` already handed to the sink.
+    flushed: usize,
     total: u64,
-    pending: Vec<u8>,
 }
 
 impl<R: Read> Inflater<R> {
@@ -105,10 +110,9 @@ impl<R: Read> Inflater<R> {
             consumed: 0,
             bitbuf: 0,
             bitcnt: 0,
-            window: vec![0; WINDOW],
-            wpos: 0,
+            out: Vec::with_capacity(KEEP + FLUSH + 512),
+            flushed: 0,
             total: 0,
-            pending: Vec::with_capacity(FLUSH),
         }
     }
 
@@ -177,23 +181,25 @@ impl<R: Read> Inflater<R> {
         Ok(v)
     }
 
-    fn put(&mut self, b: u8, sink: &mut Sink<'_>) -> Result<(), ReadError> {
-        if let Some(slot) = self.window.get_mut(self.wpos) {
-            *slot = b;
-        }
-        self.wpos = (self.wpos + 1) % WINDOW;
-        self.total += 1;
-        self.pending.push(b);
-        if self.pending.len() >= FLUSH {
+    /// Flushes once at least [`FLUSH`] bytes wait.
+    fn maybe_flush(&mut self, sink: &mut Sink<'_>) -> Result<(), ReadError> {
+        if self.out.len() - self.flushed >= FLUSH {
             self.flush(sink)?;
         }
         Ok(())
     }
 
+    /// Hands the new output to the sink, then drops output older than the window once the
+    /// buffer holds [`KEEP`] bytes.
     fn flush(&mut self, sink: &mut Sink<'_>) -> Result<(), ReadError> {
-        if !self.pending.is_empty() {
-            sink(&self.pending, self.consumed)?;
-            self.pending.clear();
+        if self.flushed < self.out.len() {
+            sink(self.out.get(self.flushed..).unwrap_or_default(), self.consumed)?;
+            self.flushed = self.out.len();
+        }
+        if self.out.len() >= KEEP {
+            let cut = self.out.len() - WINDOW;
+            self.out.drain(..cut);
+            self.flushed -= cut;
         }
         Ok(())
     }
@@ -207,9 +213,19 @@ impl<R: Read> Inflater<R> {
         if len != !nlen {
             return Err(bad("stored block length does not match its complement"));
         }
-        for _ in 0..len {
-            let b = self.byte()?;
-            self.put(b, sink)?;
+        let mut left = usize::from(len);
+        while left > 0 {
+            if self.inpos >= self.inlen && !self.refill()? {
+                return Err(ReadError::malformed("member_truncated", "the deflate stream ends early"));
+            }
+            let n = left.min(self.inlen - self.inpos);
+            let chunk = self.inbuf.get(self.inpos..self.inpos + n).ok_or_else(|| bad("input buffer"))?;
+            self.out.extend_from_slice(chunk);
+            self.inpos += n;
+            self.consumed += n as u64;
+            self.total += n as u64;
+            left -= n;
+            self.maybe_flush(sink)?;
         }
         Ok(())
     }
@@ -235,7 +251,9 @@ impl<R: Read> Inflater<R> {
         loop {
             let sym = self.decode(lit)?;
             if sym < 256 {
-                self.put(sym as u8, sink)?;
+                self.out.push(sym as u8);
+                self.total += 1;
+                self.maybe_flush(sink)?;
                 continue;
             }
             if sym == 256 {
@@ -256,12 +274,18 @@ impl<R: Read> Inflater<R> {
             if d > self.total {
                 return Err(bad("distance before the start of the output"));
             }
-            let d = d as usize; // at most 32768
-            for _ in 0..len {
-                let from = (self.wpos + WINDOW - d) % WINDOW;
-                let b = self.window.get(from).copied().ok_or_else(|| bad("window"))?;
-                self.put(b, sink)?;
+            // d <= 32768 <= the kept output whenever d <= total.
+            let start = self.out.len().checked_sub(d as usize).ok_or_else(|| bad("window"))?;
+            // The copy is periodic with period d, so copying from `start` in growing slices
+            // equals copying byte by byte.
+            let mut left = len as usize;
+            while left > 0 {
+                let n = left.min(self.out.len() - start);
+                self.out.extend_from_within(start..start + n);
+                left -= n;
             }
+            self.total += u64::from(len);
+            self.maybe_flush(sink)?;
         }
     }
 

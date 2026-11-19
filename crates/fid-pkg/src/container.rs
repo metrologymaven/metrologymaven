@@ -345,10 +345,12 @@ fn stored_deflate(data: &[u8]) -> Vec<u8> {
     out
 }
 
-const CRC_TABLE: [u32; 256] = crc_table();
+/// Slicing-by-8 tables: `CRC_TABLES[0]` is the classic byte table; `CRC_TABLES[k][i]` is the
+/// CRC state after byte `i` followed by `k` zero bytes.
+const CRC_TABLES: [[u32; 256]; 8] = crc_tables();
 
-const fn crc_table() -> [u32; 256] {
-    let mut table = [0u32; 256];
+const fn crc_tables() -> [[u32; 256]; 8] {
+    let mut t = [[0u32; 256]; 8];
     let mut i = 0;
     while i < 256 {
         let mut c = i as u32;
@@ -357,10 +359,20 @@ const fn crc_table() -> [u32; 256] {
             c = if c & 1 != 0 { 0xEDB8_8320 ^ (c >> 1) } else { c >> 1 };
             k += 1;
         }
-        table[i] = c;
+        t[0][i] = c;
         i += 1;
     }
-    table
+    let mut n = 1;
+    while n < 8 {
+        let mut i = 0;
+        while i < 256 {
+            let prev = t[n - 1][i];
+            t[n][i] = t[0][(prev & 0xff) as usize] ^ (prev >> 8);
+            i += 1;
+        }
+        n += 1;
+    }
+    t
 }
 
 /// CRC-32 (ISO-HDLC, reflected polynomial `0xEDB88320`) as used by ZIP.
@@ -370,9 +382,22 @@ pub fn crc32(data: &[u8]) -> u32 {
 
 /// Continues a CRC-32: `crc32_update(crc32(a), b) == crc32(a ++ b)`.
 pub(crate) fn crc32_update(crc: u32, data: &[u8]) -> u32 {
+    let t = &CRC_TABLES;
     let mut c = !crc;
-    for &b in data {
-        c = CRC_TABLE[((c ^ u32::from(b)) & 0xff) as usize] ^ (c >> 8);
+    let mut chunks = data.chunks_exact(8);
+    for b in &mut chunks {
+        let lo = c ^ u32::from_le_bytes([b[0], b[1], b[2], b[3]]);
+        c = t[7][(lo & 0xff) as usize]
+            ^ t[6][((lo >> 8) & 0xff) as usize]
+            ^ t[5][((lo >> 16) & 0xff) as usize]
+            ^ t[4][(lo >> 24) as usize]
+            ^ t[3][usize::from(b[4])]
+            ^ t[2][usize::from(b[5])]
+            ^ t[1][usize::from(b[6])]
+            ^ t[0][usize::from(b[7])];
+    }
+    for &b in chunks.remainder() {
+        c = t[0][((c ^ u32::from(b)) & 0xff) as usize] ^ (c >> 8);
     }
     !c
 }
@@ -386,6 +411,19 @@ mod tests {
     fn crc32_check_value() {
         assert_eq!(crc32(b"123456789"), 0xCBF4_3926);
         assert_eq!(crc32(b""), 0);
+        // Slicing-by-8 agrees with the bytewise definition at every length and split.
+        let data: Vec<u8> = (0..100u32).map(|i| (i * 37 + 11) as u8).collect();
+        let bytewise = |d: &[u8]| {
+            let mut c = !0u32;
+            for &b in d {
+                c = CRC_TABLES[0][((c ^ u32::from(b)) & 0xff) as usize] ^ (c >> 8);
+            }
+            !c
+        };
+        for n in 0..data.len() {
+            assert_eq!(crc32(&data[..n]), bytewise(&data[..n]), "{n}");
+            assert_eq!(crc32_update(crc32(&data[..n]), &data[n..]), crc32(&data), "{n}");
+        }
     }
 
     #[test]

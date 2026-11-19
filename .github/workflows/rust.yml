@@ -354,15 +354,14 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         working-directory: crates/fid-pkg/fuzz
         # 256 MiB RSS: an input that grows memory far beyond its size (a manifest that parses
-        # into a huge JSON tree, an unbounded buffer) fails the job. A small ASan quarantine
-        # keeps freed buffers from counting against it.
-        env:
-          ASAN_OPTIONS: quarantine_size_mb=16
+        # into a huge JSON tree, an unbounded buffer) fails the job. No sanitizer: fid-pkg and
+        # its dependencies in this path forbid `unsafe`, so ASan would only slow every input
+        # down and inflate RSS; coverage, panics, timeouts and RSS are still checked.
         run: |
           mkdir -p corpus/reader
           seeds="../../../fixtures/pkg/malformed ../../../fixtures/pkg/reader/valid ../../../fixtures/pkg/golden"
           # $seeds is word-split on purpose: three corpus directories.
-          cargo fuzz run reader corpus/reader $seeds -- -max_total_time=600 -timeout=5 -rss_limit_mb=256
+          cargo fuzz run --sanitizer none reader corpus/reader $seeds -- -max_total_time=600 -timeout=5 -rss_limit_mb=256
   msrv:
     # rust-version = 1.89 (Cargo.toml). Cargo 1.89 honours the [resolver] key in
     # .cargo/config.toml; the stable and lockfile jobs resolve MSRV-aware too.
