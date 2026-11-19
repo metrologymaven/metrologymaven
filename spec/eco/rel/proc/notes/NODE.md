@@ -9,6 +9,8 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-xtask]
+built_pr: 185
 satisfies: [REQ-ECO.REL.PROC-006]
 covers: []
 depends_on: [ECO.REL.PROC.VERSION]
@@ -75,6 +77,13 @@ Generates `release-notes.md` for a release from an exported list of merged PRs s
 ## Open questions
 
 - Label names follow the repository's label set, which is not yet defined anywhere; ECO.COMM may own it.
+- Assumptions the implementation (`fid-xtask` `rel::notes`, PR #185) makes where this node is silent; each is a hypothesis to confirm or change:
+  - **`prs.json` shape.** It is an object `{tag, channel, previous_tag, commit, prs: [...]}`, not a bare list, because nothing else supplies the previous tag or the release commit (VERSION has no history file; the CHANNEL `history.json` is not built). `tag` and `channel` must equal the command-line values; `previous_tag` is a tag on the same channel with lower precedence, or `null` for a channel's first release; `commit` and every `merge_commit` are 40 or 64 lowercase hex digits; each PR number appears once. The export step (`ECO.REL.PROC.FLOW`) owns range membership.
+  - **Label precedence.** A PR goes to the group of whichever of its labels comes first in the fixed order (feature, fix, security, breaking, docs, internal), not to its `labels[0]`, because code hosts do not order labels. Labels compare ASCII case-insensitively.
+  - **Evidence digest.** The SHA-256 of `<reports>/evidence/statement.json` (the `QUAL.EVID.LAYOUT` statement).
+  - **High threat count.** `counts.high` of `<reports>/threat/register-summary.json`, schema `qual-threat-summary/1` (`QUAL.THREAT.REG`); when `high_ids` is present its length must match.
+  - **Tier 2 build failures.** The `notes` strings of the gate with ID `pkg-plan` in `release-gates.json`. This is an assumption about the output of `ECO.REL.PROC.GATES`, which is not built yet; the notes fail closed (exactly one gate `pkg-plan`, exact ID, with a `notes` array, each note at most 1 024 bytes, else `INPUT-PARSE`).
+  - **Title rendering.** REQ-005's escaping is done by showing each title (and gate note) as a CommonMark code span with a fence longer than any backtick run in it, after control and format (Cf) characters become spaces and the text is cut to 200 characters. Backslash escapes alone would not stop GitHub's bare-URL, `www.` and e-mail autolinks or `@mention`s.
 
 ## Children
 
