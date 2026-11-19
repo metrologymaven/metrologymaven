@@ -264,15 +264,16 @@ pub struct ImportFile {
 }
 
 /// Where an export may be written: the target's folder, held open as a capability, and the
-/// file name inside it. The folder handle is not exposed; the only write operation offered
-/// here is [`ExportTarget::create_new`]. Overwrite, atomic rename and permissions are
-/// `IO.REG.WRITE`'s job and must go through this folder handle.
+/// file name inside it. The folder handle is not exposed; the write operations are
+/// [`ExportTarget::create_new`] and [`crate::AtomicWriter`] (`IO.REG.WRITE`: overwrite,
+/// atomic rename), both through this folder handle.
 #[derive(Debug)]
 pub struct ExportTarget {
-    dir: Dir,
-    name: OsString,
+    pub(crate) dir: Dir,
+    pub(crate) name: OsString,
     root: Option<RootId>,
     path: PathBuf,
+    pub(crate) final_link: bool,
 }
 
 impl ExportTarget {
@@ -289,6 +290,13 @@ impl ExportTarget {
     /// The link-free path relative to the root, or the raw path as given.
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    /// True if the handle's last component was itself a symbolic link, junction or other
+    /// reparse point when resolved: [`ExportTarget::name`] is then the link's in-root
+    /// target. [`crate::AtomicWriter`] refuses to write through such a target.
+    pub fn is_link(&self) -> bool {
+        self.final_link
     }
 
     /// Creates the target file for writing through the held folder handle. It must not
@@ -472,10 +480,13 @@ impl RootSet {
                 };
                 self.tick();
                 let dir = Dir::open_ambient_dir(parent, cap_std::ambient_authority()).map_err(io_err)?;
-                return Ok(ExportTarget { dir, name, root: None, path: p.to_path_buf() });
+                // The name is used as given; the writer looks at it through `dir` without
+                // following links.
+                return Ok(ExportTarget { dir, name, root: None, path: p.to_path_buf(), final_link: false });
             }
         };
         let (root_dir, canon, mut comps) = self.resolve(Direction::Export, &handle)?;
+        let final_link = self.final_is_link(&canon, handle.rel.components())?;
         let name = comps.pop().ok_or_else(not_a_file)?;
         let parent: PathBuf = comps.iter().collect();
         self.before_open();
@@ -489,7 +500,26 @@ impl RootSet {
             }
         };
         let path = parent.join(&name);
-        Ok(ExportTarget { dir, name, root: Some(handle.root), path })
+        Ok(ExportTarget { dir, name, root: Some(handle.root), path, final_link })
+    }
+
+    /// True if the last component of `rel` (below the canonical root, its folders walked
+    /// as in [`RootSet::walk`]) is a link or other reparse point. The full path has already
+    /// passed the walk, so the folders stay inside the root.
+    fn final_is_link(&self, canon: &Path, rel: &[String]) -> Result<bool, IoError> {
+        let (last, folders) = match rel.split_last() {
+            Some(x) => x,
+            None => return Ok(false),
+        };
+        let mut p = canon.to_path_buf();
+        p.extend(self.walk(canon, folders)?);
+        p.push(last);
+        self.tick();
+        match std::fs::symlink_metadata(&p) {
+            Ok(m) => Ok(m.file_type().is_symlink() || std_reparse_point(&m)),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
+            Err(e) => Err(io_err(e)),
+        }
     }
 
     /// Looks up the root, opens it, and walks the handle's path to a link-free path below
@@ -590,6 +620,23 @@ fn link_count(meta: &std::fs::Metadata) -> Option<u64> {
 #[cfg(not(unix))]
 fn link_count(_meta: &std::fs::Metadata) -> Option<u64> {
     None
+}
+
+/// Windows `FILE_ATTRIBUTE_REPARSE_POINT`: set on symbolic links, junctions and every
+/// other reparse point (cloud placeholders, mount points, deduplicated files).
+#[cfg(windows)]
+pub(crate) const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
+
+/// True for any Windows reparse point (std reports only name surrogates as links).
+#[cfg(windows)]
+fn std_reparse_point(m: &std::fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    m.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
+}
+
+#[cfg(not(windows))]
+fn std_reparse_point(_m: &std::fs::Metadata) -> bool {
+    false
 }
 
 /// `O_NONBLOCK | O_NOCTTY`: an open that cannot hang on a FIFO or adopt a terminal.
