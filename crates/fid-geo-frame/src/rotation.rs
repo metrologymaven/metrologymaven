@@ -8,8 +8,8 @@
 //!
 //! # Quaternion `(w, x, y, z)`
 //!
-//! - Norm: `sqrt(((w*w + x*x) + y*y) + z*z)`; `|norm - 1| > 1e-12` is `NotUnit` (no silent
-//!   normalisation, REQ-GEO.FRAME.XFORM-006).
+//! - Norm: `sqrt(((w*w + x*x) + y*y) + z*z)`, `+∞` if the sum overflows; `|norm - 1| > 1e-12`
+//!   is `NotUnit` (no silent normalisation, REQ-GEO.FRAME.XFORM-006).
 //! - To matrix: `R00 = 1 - 2*(y*y + z*z)`, `R01 = 2*(x*y - w*z)`, `R02 = 2*(x*z + w*y)`,
 //!   `R10 = 2*(x*y + w*z)`, `R11 = 1 - 2*(x*x + z*z)`, `R12 = 2*(y*z - w*x)`,
 //!   `R20 = 2*(x*z - w*y)`, `R21 = 2*(y*z + w*x)`, `R22 = 1 - 2*(x*x + y*y)`.
@@ -92,7 +92,12 @@ impl Quaternion {
     pub fn norm(&self) -> Result<f64, XformError> {
         let Quaternion { w, x, y, z } = *self;
         finite(&[w, x, y, z])?;
-        sqrt(((w * w + x * x) + y * y) + z * z).map_err(XformError::from)
+        let n2 = ((w * w + x * x) + y * y) + z * z;
+        if !n2.is_finite() {
+            // Finite components above about 1e154 overflow the sum: certainly not unit.
+            return Ok(f64::INFINITY);
+        }
+        sqrt(n2).map_err(XformError::from)
     }
 
     /// The rotation matrix; `NotUnit` if the norm is not within [`UNIT_TOL`] of 1.

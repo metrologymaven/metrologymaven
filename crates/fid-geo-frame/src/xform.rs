@@ -17,11 +17,26 @@
 //! - compose `a ∘ b` (apply `b` first): `R = Ra Rb`, `t[i] = sa * (Ra tb)[i] + ta[i]`,
 //!   `s = sa * sb`; the result is rigid only if both are;
 //! - inverse: `R' = Rᵀ`, `s' = 1 / s`, `t'[i] = -(s' * (Rᵀ t)[i])`;
-//! - construction: every entry finite (`NonFinite`); with `G = RᵀR` (entries by `dot3` down
-//!   the columns), `residual = sqrt(Σ (G[i][j] - δij)^2)` summed in row-major order from zero
-//!   must be `<= 1e-12` (`NotOrthonormal`); `det = (R00 * (R11 * R22 - R12 * R21) - R01 *
+//! - construction, checked in this order: translation finite, then rotation entries finite
+//!   (`NonFinite`); with `G = RᵀR` (entries by `dot3` down the columns),
+//!   `residual = sqrt(Σ (G[i][j] - δij)^2)` summed in row-major order from zero must be
+//!   `<= 1e-12` (`NotOrthonormal`; a sum that overflows, possible for finite entries above
+//!   about 1e154, gives `residual = +∞`); `det = (R00 * (R11 * R22 - R12 * R21) - R01 *
 //!   (R10 * R22 - R12 * R20)) + R02 * (R10 * R21 - R11 * R20)` must satisfy `|det - 1| <=
 //!   1e-12` (`Improper`); a similarity scale must be finite and `> 0` (`BadScale`).
+//!
+//! Units: translations and points are in SI metres (the output of `units::to_si`); angles in
+//! radians.
+//!
+//! # Round-trip bound (REQ-GEO.FRAME.XFORM-004)
+//!
+//! For a rigid transform accepted with residual `ρ` and a point `x`, mapping forward and back
+//! returns within `ρ |x| + 48 ε (|x| + |t|)` (2-norms, `ε = 2^-53`): exactly, the round trip
+//! is `RᵀR x`, off by at most `ρ |x|`; rounding adds at most `ε (22 a + 13 b)` per component
+//! with `a = ‖x‖∞`, `b = ‖t‖∞` (forward dot `3√3 a`, add `√3 a + b`, mapped back by `Rᵀ`
+//! (factor √3); back dot `3√3 (√3 a + b)`; `t' = −Rᵀt` `3√3 b`; final add `a`), so at most
+//! `√3 · 22 ε (|x| + |t|) < 38.2 ε (|x| + |t|)` in 2-norm; 48 leaves margin for second-order
+//! terms. [`round_trip_bound`] evaluates it.
 //!
 //! Composition and inversion do not re-check orthonormality (the result of valid inputs drifts
 //! by rounding only). They fail with `BadScale` if a similarity's resulting scale is not finite
@@ -130,8 +145,9 @@ fn finite_matrix(m: &Matrix3) -> bool {
     all_finite(m.iter().flatten().copied())
 }
 
-/// Checks a rotation matrix: finite, orthonormal and proper (REQ-GEO.FRAME.XFORM-001).
-pub fn check_rotation(r: &Matrix3) -> Result<(), XformError> {
+/// `‖RᵀR − I‖_F` with the pinned order; `+∞` if the sum of squares overflows. Entries must be
+/// finite (else `NonFinite`).
+pub fn orthonormality_residual(r: &Matrix3) -> Result<f64, XformError> {
     if !finite_matrix(r) {
         return Err(XformError::NonFinite);
     }
@@ -143,7 +159,27 @@ pub fn check_rotation(r: &Matrix3) -> Result<(), XformError> {
             sum += d * d;
         }
     }
-    let residual = fid_num::f::sqrt(sum)?;
+    if !sum.is_finite() {
+        return Ok(f64::INFINITY);
+    }
+    fid_num::f::sqrt(sum).map_err(XformError::from)
+}
+
+/// The REQ-GEO.FRAME.XFORM-004 bound `ρ |x| + 48 ε (|x| + |t|)` for a rigid transform with
+/// rotation residual `ρ` (see the module docs). Plain `f64` arithmetic; for tests and
+/// diagnostics.
+pub fn round_trip_bound(residual: f64, x: &[f64; 3], t: &[f64; 3]) -> Result<f64, XformError> {
+    let nx = fid_num::f::sqrt(dot3(x[0], x[1], x[2], x[0], x[1], x[2]))?;
+    let nt = fid_num::f::sqrt(dot3(t[0], t[1], t[2], t[0], t[1], t[2]))?;
+    Ok(residual * nx + ROUND_TRIP_C * f64::EPSILON * 0.5 * (nx + nt))
+}
+
+/// The constant `c` of the round-trip bound (REQ-GEO.FRAME.XFORM-004).
+pub const ROUND_TRIP_C: f64 = 48.0;
+
+/// Checks a rotation matrix: finite, orthonormal and proper (REQ-GEO.FRAME.XFORM-001).
+pub fn check_rotation(r: &Matrix3) -> Result<(), XformError> {
+    let residual = orthonormality_residual(r)?;
     if residual > ORTHONORMAL_TOL {
         return Err(XformError::NotOrthonormal { residual });
     }
@@ -168,10 +204,10 @@ impl Rigid {
 
     /// Validated construction (finite, orthonormal, proper).
     pub fn new(r: Matrix3, t: [f64; 3]) -> Result<Rigid, XformError> {
-        check_rotation(&r)?;
         if !all_finite(t) {
             return Err(XformError::NonFinite);
         }
+        check_rotation(&r)?;
         Ok(Rigid { r, t })
     }
 

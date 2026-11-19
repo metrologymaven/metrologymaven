@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Independent reference for GEO.FRAME.XFORM; writes fixtures/geo/frame/xform_cases.json and
-fixtures/geo/frame/euler_cases.json.
+"""Independent reference for GEO.FRAME.XFORM; writes fixtures/geo/frame/xform_cases.json,
+fixtures/geo/frame/euler_cases.json and fixtures/geo/frame/xform_worst_residual.json.
 
 Run:  python tools/fixtures/geo_xform_cases.py [--check]
 With --check nothing is written; the script exits non-zero if a file differs.
@@ -40,6 +40,12 @@ expected canonical angles follow from the composition law, not from the Rust for
   Tait-Bryan (a + s e' c, b, 0) with e' the parity of (s2, s1, s0), and proper (a + c, 0, 0)
   at b = 0, (a - c, pi, 0) at b = pi.
 
+xform_worst_residual.json (REQ-004). Rigid transforms at the largest residual the pinned
+residual model accepts (a stretch of the x axis, the same with a translation, a shear, and a
+random rotation times a stretch; each between 0.98e-12 and 1e-12), with 8 points each and the
+model's forward-and-back bits. Every round trip is checked in exact arithmetic against the
+bound residual |x| + 48 * 2^-53 (|x| + |t|).
+
 Here e = +1 when the sequence's second axis follows the first cyclically (X->Y->Z->X), else -1.
 Every canonical answer is verified numerically: the matrices of the input and the canonical
 angles (built here with math.sin and math.cos, used only for this assertion) agree within 1e-14.
@@ -56,6 +62,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 OUT_XFORM = ROOT / "fixtures" / "geo" / "frame" / "xform_cases.json"
 OUT_EULER = ROOT / "fixtures" / "geo" / "frame" / "euler_cases.json"
+OUT_WORST = ROOT / "fixtures" / "geo" / "frame" / "xform_worst_residual.json"
 N_XFORM = 200
 
 
@@ -266,6 +273,90 @@ def wrap(note, lines):
     return text
 
 
+# ------------------------------------------------------------------ worst accepted residual
+
+EPS = 2.0**-53
+C_BOUND = 48.0
+
+
+def model_residual(r):
+    """The pinned residual: sqrt of the row-major sum of squares of R^T R - I (dot3 columns)."""
+    total = 0.0
+    for i in range(3):
+        for j in range(3):
+            g = dot3(r[0][i], r[1][i], r[2][i], r[0][j], r[1][j], r[2][j])
+            d = g - 1.0 if i == j else g
+            total += d * d
+    return math.sqrt(total)
+
+
+def model_det(r):
+    return (r[0][0] * (r[1][1] * r[2][2] - r[1][2] * r[2][1]) - r[0][1] * (r[1][0] * r[2][2] - r[1][2] * r[2][0])) + r[0][2] * (
+        r[1][0] * r[2][1] - r[1][1] * r[2][0])
+
+
+def model_bound(rho, x, t):
+    nx = math.sqrt(dot3(x[0], x[1], x[2], x[0], x[1], x[2]))
+    nt = math.sqrt(dot3(t[0], t[1], t[2], t[0], t[1], t[2]))
+    return rho * nx + C_BOUND * (2.0**-52) * 0.5 * (nx + nt)
+
+
+def largest_accepted(make, start):
+    """make(k) -> matrix; the largest k <= start (stepping down) whose model residual <= 1e-12."""
+    k = start
+    while True:
+        r = make(k)
+        if model_residual(r) <= 1e-12 and abs(model_det(r) - 1.0) <= 1e-12:
+            return r
+        k -= 1
+
+
+def worst_text(rng):
+    ulp = 2.0**-52
+    q = random_rotation(rng)
+    stretch = lambda k: [[1.0 + k * ulp, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]  # noqa: E731
+    shear = lambda k: [[1.0, k * 2.0**-60, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]  # noqa: E731
+    mats = [
+        ("stretch_x", largest_accepted(stretch, 2400), [0.0, 0.0, 0.0]),
+        ("stretch_x_translated", largest_accepted(stretch, 2400), [100.0, -100.0, 100.0]),
+        ("shear_xy", largest_accepted(shear, 900000), [0.0, 0.0, 0.0]),
+        ("rotated_stretch", largest_accepted(lambda k: mat_mul(q, stretch(k)), 2400), [-100.0, 100.0, 37.5]),
+    ]
+    points = [[100.0, 100.0, 100.0], [-100.0, 100.0, -100.0], [100.0, -100.0, 100.0], [100.0, 0.0, 0.0]]
+    points += [[rng.uniform(-100.0, 100.0) for _ in range(3)] for _ in range(4)]
+    lines = []
+    for name, r, t in mats:
+        check_rotation_exact(r, name)
+        rho = model_residual(r)
+        assert 0.98e-12 <= rho <= 1e-12, (name, rho)
+        a = (True, r, t, 1.0)
+        inv = inverse(a)
+        backs = []
+        worst = 0.0
+        for x in points:
+            y = apply_point(inv, apply_point(a, x))
+            err = sum((F(y[i]) - F(x[i])) ** 2 for i in range(3))
+            bound = F(model_bound(rho, x, t))
+            assert err <= bound * bound, (name, x)
+            worst = max(worst, math.sqrt(err) / model_bound(rho, x, t))
+            backs.append(hxs(y))
+        print(f"{name}: residual {rho:.4e}, worst error / bound {worst:.3f}")
+        case = {
+            "name": name,
+            "r": hxs(flat(r)),
+            "t": hxs(t),
+            "residual": hx(rho),
+            "points": ",".join(hxs(x) for x in points),
+            "back": ",".join(backs),
+        }
+        lines.append(json.dumps(case, sort_keys=True, separators=(",", ":")))
+    return wrap(
+        "REQ-004: rigid transforms at the largest accepted residual (model residual <= 1e-12); each "
+        "point mapped forward and back; back = expected bits; error <= residual |x| + 48 eps (|x| + |t|).",
+        lines,
+    )
+
+
 # ------------------------------------------------------------------ Euler
 
 AXES = "XYZ"
@@ -350,7 +441,8 @@ def euler_text(rng):
 def build():
     rng = random.Random(11)  # one stream: the transforms first, then the Euler angles
     xform = xform_text(rng)
-    return {OUT_XFORM: xform, OUT_EULER: euler_text(rng)}
+    euler = euler_text(rng)
+    return {OUT_XFORM: xform, OUT_EULER: euler, OUT_WORST: worst_text(rng)}
 
 
 def main():

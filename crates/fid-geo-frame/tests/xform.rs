@@ -7,7 +7,10 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_geo_frame::rotation::{AxisAngle, Euler, EulerKind, EulerSeq, Quaternion};
-use fid_geo_frame::xform::{check_rotation, Matrix3, Rigid, Similarity, Transform, XformError, IDENTITY};
+use fid_geo_frame::xform::{
+    check_rotation, orthonormality_residual, round_trip_bound, Matrix3, Rigid, Similarity, Transform, XformError,
+    IDENTITY,
+};
 use fid_num::rng::{Address, Cursor};
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/geo/frame/");
@@ -231,4 +234,53 @@ fn apply_point_and_direction() {
     let huge = Transform::Rigid(Rigid::new(IDENTITY, [f64::MAX, 0.0, 0.0]).unwrap());
     assert_eq!(huge.apply_point(&[f64::MAX, 0.0, 0.0]), Err(XformError::NonFinite));
     assert_eq!(huge.compose(&huge), Err(XformError::NonFinite));
+}
+
+/// REQ-004: at the largest accepted residual the round trip stays within
+/// `residual |x| + 48 eps (|x| + |t|)`, bit for bit as the reference computed it.
+#[test]
+fn req4_worst_accepted_residual_within_bound() {
+    let all = cases("xform_worst_residual.json");
+    assert_eq!(all.len(), 4);
+    for line in &all {
+        let name = field(line, "name");
+        let r = matrix(&hexes(field(line, "r")));
+        let tv = hexes(field(line, "t"));
+        let t = [tv[0], tv[1], tv[2]];
+        let fwd = Transform::Rigid(Rigid::new(r, t).unwrap());
+        let residual = orthonormality_residual(&r).unwrap();
+        assert_eq!(residual.to_bits(), hexes(field(line, "residual"))[0].to_bits(), "{name}");
+        assert!(residual > 0.98e-12 && residual <= 1e-12, "{name}");
+        let back = fwd.inverse().unwrap();
+        let points: Vec<Vec<f64>> = field(line, "points").split(',').map(hexes).collect();
+        let expect: Vec<Vec<f64>> = field(line, "back").split(',').map(hexes).collect();
+        assert_eq!(points.len(), expect.len());
+        for (p, e) in points.iter().zip(&expect) {
+            let x = [p[0], p[1], p[2]];
+            let y = back.apply_point(&fwd.apply_point(&x).unwrap()).unwrap();
+            assert_eq!(bits(y), bits(e.iter().copied()), "{name}");
+            let d2: f64 = (0..3).map(|i| (y[i] - x[i]) * (y[i] - x[i])).sum();
+            let b = round_trip_bound(residual, &x, &t).unwrap();
+            assert!(d2.sqrt() <= b, "{name}: error {:e} > bound {b:e}", d2.sqrt());
+        }
+    }
+}
+
+/// Finite entries large enough to overflow the sums are rejected with the typed error, not as
+/// a numeric failure.
+#[test]
+fn overflowing_inputs_are_typed_errors() {
+    let big = [[1e200, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
+    assert_eq!(check_rotation(&big), Err(XformError::NotOrthonormal { residual: f64::INFINITY }));
+    assert_eq!(Rigid::new(big, [0.0; 3]), Err(XformError::NotOrthonormal { residual: f64::INFINITY }));
+    let q = Quaternion { w: 1e200, x: 0.0, y: 0.0, z: 0.0 };
+    assert_eq!(q.to_matrix(), Err(XformError::NotUnit { norm: f64::INFINITY }));
+    assert_eq!(Quaternion::from_matrix(&big), Err(XformError::NotOrthonormal { residual: f64::INFINITY }));
+}
+
+/// The translation is checked before the rotation (Design order).
+#[test]
+fn translation_checked_before_rotation() {
+    let reflection = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]];
+    assert_eq!(Rigid::new(reflection, [f64::NAN, 0.0, 0.0]), Err(XformError::NonFinite));
 }
