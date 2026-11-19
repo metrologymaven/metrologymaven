@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-gdt]
+built_pr: 256
 satisfies: [REQ-GDT.CHAR-006, REQ-GDT.CHAR-007, REQ-GDT.CHAR-008]
 covers: []
 depends_on: [GDT.CHAR.SPEC, UNC.DEC, UNC.UEC]
@@ -56,6 +58,8 @@ Every GDT evaluation ends in exactly one ResultRecord. This leaf owns the builde
 - **Registry command(s):** `gdt.get_result@1`, R0; params `run: RunId`, `char: CharId`; result `ResultRecord`.
 - **Data structures:** typestate `ResultRecordBuilder<Missing...>` so required fields are checked at compile time where possible and at `finish()` otherwise; `UncDecision` is constructible only by `UNC.DEC`'s crate (sealed type); `NotDecidableReason { NoRuleBound, UncNoDecision }`.
 - **Algorithm:** collect fields, validate, canonicalise (RFC 8785), return; commit is done by the evaluating command, which checks uniqueness per (run, characteristic).
+- **Branches (pinned).** A record is committed on the branch derived from the principal (person: working; agent or script: agent), with the overlay rule of `GDT.CHAR.DPROF`. A person's commit checks only the working branch and a person's read sees only the working branch, so agent work never reaches it; a person may commit for a (run, characteristic) an agent already proposed, and the agent record stays on the agent branch, shadowed. An agent or script commit is `duplicate_result` when the agent or the working branch already holds that (run, characteristic); an agent or script read looks at the agent branch first, then the working branch.
+- **Surfaces.** `gdt.get_result@1` has a registry definition (`CommandDef`, R0, D0, exposure CLI and MCP) and library entry points for `fid gdt get-result --run R --char C [--json]` and the MCP tool `gdt_get_result`, in the pattern of the `fid-align` reads; both return the stored canonical bytes.
 - **Errors:** `incomplete_result{field}`, `uec0_with_value`, `basis_changed`, `duplicate_result`, `not_found`.
 - **Determinism:** D0.
 - **Performance budget:** < 20 µs per record excluding I/O [unverified].
@@ -73,6 +77,8 @@ Synthetic JSON inputs and a UNC decision-rule stub defined in the test module; C
 
 - **Revise for D-035 (accepted 2026-11-17):** the ResultRecord **types** move to an L0 schema crate that every layer may use; this node keeps assembly and validation logic.
 - The exact sealed-type mechanism depends on how `UNC.DEC` exposes decisions; if it exposes a plain struct, this leaf needs a constructor token from UNC instead.
+- **UNC-issued constructor token.** `UNC.DEC.TYPE` exposes `Decision` with private fields and a public checked constructor, not a sealed type. Any crate, GDT included, can therefore call that constructor. Until UNC issues a constructor token that only its evaluating rules hold, a test in `fid-gdt` scans the crate's sources and fails on a call of the decision constructor or a written `CONFORMS`, `NONCONFORMS` or `INDETERMINATE` outcome. Adding the token is a change to `UNC.DEC.TYPE`.
+- **`fid` binary dispatch.** The `fid` binary (`fid-cli`) dispatches only `canon` today; no domain crate's command (for example `fid align get-alignment`) is wired into it, and there is no persistent result store to read from. `fid gdt get-result` exists as the library entry point; wiring it into the binary waits for that infrastructure (`AUTO.CLI` and the result store of the evaluating commands).
 
 ## Children
 
