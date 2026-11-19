@@ -23,7 +23,7 @@ tl! { //~ KNP1-THREAD=tl
 }
 
 pub fn d(x: f64) -> f64 {
-    pow(x, 2.0) + i32::pow(2, 3) as f64 //~ KNP1-POW=pow#1 KNP1-POW=pow#2
+    pow(x, 2.0) + i32::pow(2, 3) as f64 //~ KNP1-POW=pow#1
 }
 
 pub fn e(x: f64) -> f64 {
@@ -53,12 +53,12 @@ pub fn i(x: f64) -> f64 {
 
 macro_rules! hide {
     ($x:expr, $f:ident) => {
-        $x.$f() //~ KNP1-PARSE-RESOLVE=$f
+        $x.$f() //~ KNP1-PARSE=$f
     };
-    ($($p:ident)::*) => { //~ KNP1-PARSE-RESOLVE=$
-        $($p)::*::read("x") //~ KNP1-PARSE-RESOLVE=$
+    ($($p:ident)::*) => { //~ KNP1-PARSE=$
+        $($p)::*::read("x") //~ KNP1-PARSE=$
     };
     ($g:ident) => {
-        f64::$g(1.0) //~ KNP1-PARSE-RESOLVE=$g
+        f64::$g(1.0) //~ KNP1-PARSE=$g
     };
 }
