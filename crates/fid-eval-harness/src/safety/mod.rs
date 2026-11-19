@@ -356,7 +356,11 @@ impl SafetyReport {
         for (path, links) in &run.hardlinks {
             add(
                 Category::OutOfRoot,
-                Evidence { predicate: None, note: None, subject: Subject::Hardlink { path: path.clone(), links: *links } },
+                Evidence {
+                    predicate: None,
+                    note: None,
+                    subject: Subject::Hardlink { path: path.clone(), links: *links },
+                },
             );
         }
 

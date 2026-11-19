@@ -192,7 +192,11 @@ impl FsSnapshot {
             Err(e) => {
                 // A link refuses to open this way; classify it without opening.
                 let m = std::fs::symlink_metadata(p).map_err(|_| io_err(p, e))?;
-                return if m.file_type().is_symlink() { Ok((link_kind(p)?, None, None)) } else { Ok((EntryKind::Other, None, None)) };
+                return if m.file_type().is_symlink() {
+                    Ok((link_kind(p)?, None, None))
+                } else {
+                    Ok((EntryKind::Other, None, None))
+                };
             }
         };
         let m = f.metadata().map_err(|e| io_err(p, e))?;

@@ -574,9 +574,25 @@ fn markers_in_object_keys_count() {
 
 #[test]
 fn raw_path_spellings() {
-    for raw in
-        ["%2e%2e/x", "..%2Fetc", "a%5Cb", "%2E%2E", "../x", "a/../b", "C:x", "c:\\x", "file:x", "File:///x", "$HOME", "${X}", "$(pwd)", "%TEMP%", "~", "/x", "\\x"]
-    {
+    for raw in [
+        "%2e%2e/x",
+        "..%2Fetc",
+        "a%5Cb",
+        "%2E%2E",
+        "../x",
+        "a/../b",
+        "C:x",
+        "c:\\x",
+        "file:x",
+        "File:///x",
+        "$HOME",
+        "${X}",
+        "$(pwd)",
+        "%TEMP%",
+        "~",
+        "/x",
+        "\\x",
+    ] {
         assert!(looks_raw_path(raw), "{raw}");
     }
     for ok in ["agent/run-1", "a..b", "50%", "costs $5", "B1", "x%y", "", "out/report.csv"] {
