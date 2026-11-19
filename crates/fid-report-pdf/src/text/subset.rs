@@ -312,7 +312,10 @@ impl Subset {
         }
         run.glyphs
             .iter()
-            .map(|g| self.new_id(g.glyph).ok_or_else(|| TextError::GlyphNotInSubset { font: self.font.as_str().to_string(), glyph: g.glyph }))
+            .map(|g| {
+                self.new_id(g.glyph)
+                    .ok_or_else(|| TextError::GlyphNotInSubset { font: self.font.as_str().to_string(), glyph: g.glyph })
+            })
             .collect()
     }
 

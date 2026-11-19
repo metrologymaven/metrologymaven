@@ -167,11 +167,10 @@ impl FontSet {
         }
         let mut fonts = Vec::with_capacity(manifest.fonts.len());
         for e in &manifest.fonts {
-            let bytes = files
-                .iter()
-                .find(|(id, _)| *id == e.id.as_str())
-                .map(|(_, b)| *b)
-                .ok_or_else(|| TextError::ManifestInvalid { reason: format!("no file for font {}", e.id.as_str()) })?;
+            let bytes =
+                files.iter().find(|(id, _)| *id == e.id.as_str()).map(|(_, b)| *b).ok_or_else(|| {
+                    TextError::ManifestInvalid { reason: format!("no file for font {}", e.id.as_str()) }
+                })?;
             fonts.push(LoadedFont::load(e, bytes)?);
         }
         let mut fallback = Vec::with_capacity(manifest.fallback.len());
@@ -213,12 +212,18 @@ impl FontSet {
     }
 
     fn index(&self, id: &FontId) -> Result<usize, TextError> {
-        self.fonts.iter().position(|f| &f.entry.id == id).ok_or_else(|| TextError::FontUnknown { font: id.as_str().to_string() })
+        self.fonts
+            .iter()
+            .position(|f| &f.entry.id == id)
+            .ok_or_else(|| TextError::FontUnknown { font: id.as_str().to_string() })
     }
 
     /// The first font (manifest order) with this family, weight and slant.
     pub fn select(&self, family: &str, weight: u16, style: Slant) -> Option<&FontId> {
-        self.fonts.iter().find(|f| f.entry.family == family && f.entry.weight == weight && f.entry.style == style).map(|f| &f.entry.id)
+        self.fonts
+            .iter()
+            .find(|f| f.entry.family == family && f.entry.weight == weight && f.entry.style == style)
+            .map(|f| &f.entry.id)
     }
 
     /// The font of a default style (bundled families).
@@ -280,7 +285,13 @@ impl FontSet {
                     r.glyphs.push(g);
                     r.text.push(c);
                 }
-                _ => runs.push(ShapedRun { font: f.entry.id.clone(), size_um, glyphs: vec![g], start: cluster, text: c.to_string() }),
+                _ => runs.push(ShapedRun {
+                    font: f.entry.id.clone(),
+                    size_um,
+                    glyphs: vec![g],
+                    start: cluster,
+                    text: c.to_string(),
+                }),
             }
         }
         Ok(Shaped { runs, warnings })

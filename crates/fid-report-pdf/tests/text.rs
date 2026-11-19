@@ -6,10 +6,13 @@
 //! ARM64 and wasm32 (AC-1).
 
 use fid_num::fmt::{len::format, FormatSpec, FormatterId, Precision, Unit};
-use fid_report_pdf::text::pdf::{escape_literal, escape_name, fmt_milli, milli_points, single_page, text_object, PlacedRun};
+use fid_report_pdf::text::pdf::{
+    escape_literal, escape_name, fmt_milli, milli_points, single_page, text_object, PlacedRun,
+};
 use fid_report_pdf::text::{
-    break_opportunities, bundled_font_bytes, bundled_font_file, bundled_manifest, check_licences, spdx_ids, DefaultStyle, FontEntry, FontId,
-    FontManifest, FontSet, LoadedFont, Shaped, Slant, SubsetBuilder, TextError, TextWarning, MAX_TEXT_BYTES,
+    break_opportunities, bundled_font_bytes, bundled_font_file, bundled_manifest, check_licences, spdx_ids,
+    DefaultStyle, FontEntry, FontId, FontManifest, FontSet, LoadedFont, Shaped, Slant, SubsetBuilder, TextError,
+    TextWarning, MAX_TEXT_BYTES,
 };
 use fid_types::Digest;
 use sha2::{Digest as _, Sha256};
@@ -124,7 +127,8 @@ fn ac1_shaping_matches_reference() {
                 }
                 "g" => {
                     let g = got.runs[run_i].glyphs[glyph_i];
-                    let want = (f[1].parse::<u16>().unwrap(), f[2].parse::<i64>().unwrap(), f[3].parse::<u32>().unwrap());
+                    let want =
+                        (f[1].parse::<u16>().unwrap(), f[2].parse::<i64>().unwrap(), f[3].parse::<u32>().unwrap());
                     assert_eq!((g.glyph, g.advance_um, g.cluster), want, "{name}: run {run_i} glyph {glyph_i}");
                     glyph_i += 1;
                 }
@@ -156,7 +160,10 @@ fn ac1_missing_glyph_reports_code_point() {
     let got = set.shape(&id("sans-regular"), "A\u{E000}B", SIZE_UM).unwrap();
     assert_eq!(got.runs.len(), 1);
     assert_eq!(got.runs[0].glyphs[1].glyph, 0, ".notdef");
-    assert_eq!(got.warnings, vec![TextWarning::GlyphMissing { code_point: 0xE000, cluster: 1, font: id("sans-regular") }]);
+    assert_eq!(
+        got.warnings,
+        vec![TextWarning::GlyphMissing { code_point: 0xE000, cluster: 1, font: id("sans-regular") }]
+    );
     assert_eq!(got.warnings[0].to_string(), "report.glyph_missing: U+E000 at byte 1 (font sans-regular)");
 }
 
@@ -164,7 +171,10 @@ fn ac1_missing_glyph_reports_code_point() {
 fn shaping_is_repeatable() {
     let set = fonts_with_script();
     let s = "Gr\u{f6}\u{df}e \u{65e5}\u{672c} \u{2300}12,5 \u{b1}0,05";
-    assert_eq!(set.shape(&id("sans-regular"), s, SIZE_UM).unwrap(), set.shape(&id("sans-regular"), s, SIZE_UM).unwrap());
+    assert_eq!(
+        set.shape(&id("sans-regular"), s, SIZE_UM).unwrap(),
+        set.shape(&id("sans-regular"), s, SIZE_UM).unwrap()
+    );
 }
 
 #[test]
@@ -317,8 +327,12 @@ fn subset_rejects_foreign_runs_and_glyphs() {
 #[test]
 fn ac3_digest_mismatch_is_font_invalid() {
     let mut m = bundled_manifest().unwrap();
-    m.fonts[0].sha256 = Digest::parse("sha256:0000000000000000000000000000000000000000000000000000000000000000").unwrap();
-    let files: Vec<(&str, &[u8])> = ["sans-regular", "sans-bold", "mono-regular", "mono-bold"].iter().map(|i| (*i, bundled_font_bytes(i).unwrap())).collect();
+    m.fonts[0].sha256 =
+        Digest::parse("sha256:0000000000000000000000000000000000000000000000000000000000000000").unwrap();
+    let files: Vec<(&str, &[u8])> = ["sans-regular", "sans-bold", "mono-regular", "mono-bold"]
+        .iter()
+        .map(|i| (*i, bundled_font_bytes(i).unwrap()))
+        .collect();
     let err = FontSet::load(&m, &files).unwrap_err();
     assert_eq!(err.code(), "report.font_invalid");
     assert_eq!(err, TextError::FontInvalid { font: "sans-regular".into(), reason: "digest_mismatch" });
@@ -327,18 +341,25 @@ fn ac3_digest_mismatch_is_font_invalid() {
     let mut bytes = bundled_font_bytes("mono-bold").unwrap().to_vec();
     bytes[1000] ^= 1;
     let e = bundled_manifest().unwrap().fonts[3].clone();
-    assert_eq!(LoadedFont::load(&e, &bytes).unwrap_err(), TextError::FontInvalid { font: "mono-bold".into(), reason: "digest_mismatch" });
+    assert_eq!(
+        LoadedFont::load(&e, &bytes).unwrap_err(),
+        TextError::FontInvalid { font: "mono-bold".into(), reason: "digest_mismatch" }
+    );
 
     // The script font with a wrong digest fails the whole set.
     let mut sm = script_manifest();
     sm.fonts[0].sha256 = Digest::parse(COMPOSITE_SHA).unwrap();
-    assert_eq!(FontSet::bundled_with_script_fonts(&sm, &[("script-test", SCRIPT_FONT)]).unwrap_err().code(), "report.font_invalid");
+    assert_eq!(
+        FontSet::bundled_with_script_fonts(&sm, &[("script-test", SCRIPT_FONT)]).unwrap_err().code(),
+        "report.font_invalid"
+    );
 }
 
 #[test]
 fn manifest_errors() {
     let m = bundled_manifest().unwrap();
-    let files: Vec<(&str, &[u8])> = ["sans-regular", "sans-bold", "mono-regular"].iter().map(|i| (*i, bundled_font_bytes(i).unwrap())).collect();
+    let files: Vec<(&str, &[u8])> =
+        ["sans-regular", "sans-bold", "mono-regular"].iter().map(|i| (*i, bundled_font_bytes(i).unwrap())).collect();
     assert_eq!(FontSet::load(&m, &files).unwrap_err().code(), "report.font_invalid", "missing file");
     let mut dup = m.clone();
     dup.fonts.push(dup.fonts[0].clone());
@@ -412,9 +433,11 @@ fn ac4_value_round_trips_through_pdf() {
     assert_eq!(read_back(&shaped, &[&sub]), "-0,050");
     let obj = text_object("F1", &sub, &shaped.runs[0], 25_000, 270_000).unwrap();
     assert_eq!(obj, AC4_TEXT_OBJECT, "hand-labelled text object");
-    let pdf = single_page(A4.0, A4.1, &[&sub], &[PlacedRun { run: &shaped.runs[0], x_um: 25_000, y_um: 270_000 }]).unwrap();
+    let pdf =
+        single_page(A4.0, A4.1, &[&sub], &[PlacedRun { run: &shaped.runs[0], x_um: 25_000, y_um: 270_000 }]).unwrap();
     assert_eq!(pdf, AC4_PDF, "reference PDF (make_fixtures.py); check_pdf_text.py extracts -0,050 from it");
-    let again = single_page(A4.0, A4.1, &[&sub], &[PlacedRun { run: &shaped.runs[0], x_um: 25_000, y_um: 270_000 }]).unwrap();
+    let again =
+        single_page(A4.0, A4.1, &[&sub], &[PlacedRun { run: &shaped.runs[0], x_um: 25_000, y_um: 270_000 }]).unwrap();
     assert_eq!(pdf, again);
 }
 
@@ -424,7 +447,10 @@ fn two_fonts_on_one_page_match_reference() {
     let text = "Ma\u{df} \u{65e5}\u{672c} 12,5";
     let shaped = set.shape(&id("sans-bold"), text, SIZE_UM).unwrap();
     assert!(shaped.warnings.is_empty());
-    assert_eq!(shaped.runs.iter().map(|r| r.font.as_str()).collect::<Vec<_>>(), vec!["sans-bold", "script-test", "sans-bold"]);
+    assert_eq!(
+        shaped.runs.iter().map(|r| r.font.as_str()).collect::<Vec<_>>(),
+        vec!["sans-bold", "script-test", "sans-bold"]
+    );
     let mut order: Vec<FontId> = Vec::new();
     for r in &shaped.runs {
         if !order.contains(&r.font) {
@@ -457,7 +483,12 @@ fn two_fonts_on_one_page_match_reference() {
 fn formatter_output_is_shaped_verbatim() {
     // REQ-RPT.OUTPUT.PDF-004 / TEXT-006: the KRN.NUM.FMT.LEN string goes in unchanged and
     // comes back unchanged through the ToUnicode map.
-    let spec = FormatSpec { formatter: FormatterId::LENGTH_V1, unit: Unit::Mm, precision: Precision::Decimals(3), limits: None };
+    let spec = FormatSpec {
+        formatter: FormatterId::LENGTH_V1,
+        unit: Unit::Mm,
+        precision: Precision::Decimals(3),
+        limits: None,
+    };
     let set = FontSet::bundled().unwrap();
     for x in [-0.00005, 0.012_345_6, 12.5e-3, -1.0e-9, 0.0254] {
         let rep = format(x, &spec).unwrap();
@@ -476,7 +507,10 @@ fn formatter_output_is_shaped_verbatim() {
 // AC-5: every bundled font's licence is on both allowlists and in ATTRIBUTION.md.
 
 fn toml_list<'a>(doc: &'a str, key: &str) -> Vec<&'a str> {
-    let start = doc.lines().position(|l| l.trim_start().starts_with(&format!("{key} = ["))).unwrap_or_else(|| panic!("no {key}"));
+    let start = doc
+        .lines()
+        .position(|l| l.trim_start().starts_with(&format!("{key} = [")))
+        .unwrap_or_else(|| panic!("no {key}"));
     let mut out = Vec::new();
     for l in doc.lines().skip(start + 1) {
         let t = l.trim();
@@ -500,7 +534,8 @@ fn ac5_licences_are_allowed_and_attributed() {
     check_licences(&m, &assets).unwrap();
     for f in &m.fonts {
         let file = bundled_font_file(f.id.as_str()).unwrap();
-        let line = ATTRIBUTION.lines().find(|l| l.contains(file)).unwrap_or_else(|| panic!("{file} not in ATTRIBUTION.md"));
+        let line =
+            ATTRIBUTION.lines().find(|l| l.contains(file)).unwrap_or_else(|| panic!("{file} not in ATTRIBUTION.md"));
         assert!(line.contains(&f.spdx), "{file}: licence {} not on its ATTRIBUTION.md line", f.spdx);
     }
     // A licence off the list is caught, as is an exception.

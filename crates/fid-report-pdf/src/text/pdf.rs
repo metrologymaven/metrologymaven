@@ -12,9 +12,9 @@
 //! `RPT.OUTPUT.PDF.LAYOUT` and `RPT.OUTPUT.PDF.WRITE`.
 
 use super::error::TextError;
-use super::{round_half_even, MAX_SIZE_UM};
 use super::shape::ShapedRun;
 use super::subset::Subset;
+use super::{round_half_even, MAX_SIZE_UM};
 
 /// Most subsets (fonts) in one [`single_page`] document.
 pub const MAX_PAGE_FONTS: usize = 64;
@@ -89,7 +89,13 @@ fn check_coord(v: i64) -> Result<(), TextError> {
 ///
 /// Sizes and coordinates are [`milli_points`] written with [`fmt_milli`]; `GGGG` are the
 /// subset glyph IDs in upper-case hex.
-pub fn text_object(resource: &str, subset: &Subset, run: &ShapedRun, x_um: i64, y_um: i64) -> Result<Vec<u8>, TextError> {
+pub fn text_object(
+    resource: &str,
+    subset: &Subset,
+    run: &ShapedRun,
+    x_um: i64,
+    y_um: i64,
+) -> Result<Vec<u8>, TextError> {
     check_coord(x_um)?;
     check_coord(y_um)?;
     if !(1..=MAX_SIZE_UM).contains(&run.size_um) {
@@ -147,7 +153,12 @@ impl Doc {
 /// 1 catalog, 2 page tree, 3 page, 4 content stream, then per subset k (from 0) the objects
 /// `5+5k` Type0 font, `6+5k` CIDFontType2, `7+5k` font descriptor, `8+5k` FontFile2 and
 /// `9+5k` ToUnicode CMap; then the cross-reference table and trailer.
-pub fn single_page(width_um: i64, height_um: i64, subsets: &[&Subset], runs: &[PlacedRun<'_>]) -> Result<Vec<u8>, TextError> {
+pub fn single_page(
+    width_um: i64,
+    height_um: i64,
+    subsets: &[&Subset],
+    runs: &[PlacedRun<'_>],
+) -> Result<Vec<u8>, TextError> {
     if subsets.is_empty() || subsets.len() > MAX_PAGE_FONTS {
         return Err(TextError::Limit { what: "1 to MAX_PAGE_FONTS subsets" });
     }

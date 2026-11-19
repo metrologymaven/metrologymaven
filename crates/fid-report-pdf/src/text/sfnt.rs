@@ -170,7 +170,11 @@ pub(crate) fn parse(d: &[u8]) -> R<Parsed> {
     }
     let mut loca = Vec::with_capacity(ng + 1);
     for g in 0..=ng {
-        let v = if loca_long { need(rd32(lo, 4 * g), "bad_loca")? } else { u32::from(need(rd16(lo, 2 * g), "bad_loca")?) * 2 };
+        let v = if loca_long {
+            need(rd32(lo, 4 * g), "bad_loca")?
+        } else {
+            u32::from(need(rd16(lo, 2 * g), "bad_loca")?) * 2
+        };
         if let Some(&prev) = loca.last() {
             if v < prev {
                 return Err("bad_loca");
@@ -227,8 +231,11 @@ fn parse_cmap(d: &[u8], s: Span) -> R<Cmap> {
         let mut prev_end: Option<u32> = None;
         for g in 0..count {
             let b = 16 + 12 * g;
-            let (start, end, gid) =
-                (need(rd32(sub, b), "bad_cmap12")?, need(rd32(sub, b + 4), "bad_cmap12")?, need(rd32(sub, b + 8), "bad_cmap12")?);
+            let (start, end, gid) = (
+                need(rd32(sub, b), "bad_cmap12")?,
+                need(rd32(sub, b + 4), "bad_cmap12")?,
+                need(rd32(sub, b + 8), "bad_cmap12")?,
+            );
             if start > end || end > 0x10_FFFF || prev_end.is_some_and(|p| start <= p) {
                 return Err("bad_cmap12");
             }

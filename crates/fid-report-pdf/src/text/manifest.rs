@@ -11,7 +11,9 @@ pub struct FontId(String);
 impl FontId {
     /// Checks and wraps an ID.
     pub fn new(s: &str) -> Result<FontId, TextError> {
-        let ok = !s.is_empty() && s.len() <= 64 && s.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+        let ok = !s.is_empty()
+            && s.len() <= 64
+            && s.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
         if ok {
             Ok(FontId(s.to_string()))
         } else {
@@ -75,24 +77,34 @@ impl FontManifest {
     /// Checks IDs (unique), fallback entries (known, unique), weights and PostScript names.
     pub fn validate(&self) -> Result<(), TextError> {
         if self.fonts.is_empty() || self.fonts.len() > MAX_FONTS {
-            return Err(TextError::ManifestInvalid { reason: format!("{} fonts (1 to {MAX_FONTS} allowed)", self.fonts.len()) });
+            return Err(TextError::ManifestInvalid {
+                reason: format!("{} fonts (1 to {MAX_FONTS} allowed)", self.fonts.len()),
+            });
         }
         for (i, f) in self.fonts.iter().enumerate() {
             if self.fonts[..i].iter().any(|g| g.id == f.id) {
                 return Err(TextError::ManifestInvalid { reason: format!("duplicate font id {}", f.id.as_str()) });
             }
             if f.weight == 0 || f.weight > 1000 {
-                return Err(TextError::ManifestInvalid { reason: format!("font {}: weight {}", f.id.as_str(), f.weight) });
+                return Err(TextError::ManifestInvalid {
+                    reason: format!("font {}: weight {}", f.id.as_str(), f.weight),
+                });
             }
             let ps = f.postscript_name.as_bytes();
-            let ps_ok = !ps.is_empty() && ps.len() <= 63 && ps.iter().all(|b| b.is_ascii_alphanumeric() || *b == b'-' || *b == b'_');
+            let ps_ok = !ps.is_empty()
+                && ps.len() <= 63
+                && ps.iter().all(|b| b.is_ascii_alphanumeric() || *b == b'-' || *b == b'_');
             if !ps_ok {
-                return Err(TextError::ManifestInvalid { reason: format!("font {}: bad PostScript name", f.id.as_str()) });
+                return Err(TextError::ManifestInvalid {
+                    reason: format!("font {}: bad PostScript name", f.id.as_str()),
+                });
             }
         }
         for (i, id) in self.fallback.iter().enumerate() {
             if !self.fonts.iter().any(|f| &f.id == id) {
-                return Err(TextError::ManifestInvalid { reason: format!("fallback names unknown font {}", id.as_str()) });
+                return Err(TextError::ManifestInvalid {
+                    reason: format!("fallback names unknown font {}", id.as_str()),
+                });
             }
             if self.fallback[..i].contains(id) {
                 return Err(TextError::ManifestInvalid { reason: format!("fallback lists {} twice", id.as_str()) });
@@ -163,7 +175,8 @@ pub fn bundled_manifest() -> Result<FontManifest, TextError> {
     let mut fallback = Vec::with_capacity(BUNDLED.len());
     for b in &BUNDLED {
         let id = FontId::new(b.id)?;
-        let sha256 = Digest::parse(b.sha256).map_err(|_| TextError::ManifestInvalid { reason: format!("bad digest for {}", b.id) })?;
+        let sha256 = Digest::parse(b.sha256)
+            .map_err(|_| TextError::ManifestInvalid { reason: format!("bad digest for {}", b.id) })?;
         fonts.push(FontEntry {
             id: id.clone(),
             family: b.family.to_string(),

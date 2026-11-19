@@ -29,7 +29,8 @@ pub use cmap::CMap;
 pub use error::{TextError, TextWarning};
 pub use linebreak::break_opportunities;
 pub use manifest::{
-    bundled_font_bytes, bundled_font_file, bundled_manifest, check_licences, spdx_ids, FontEntry, FontId, FontManifest, Slant, BUNDLED_SPDX, MAX_FONTS,
+    bundled_font_bytes, bundled_font_file, bundled_manifest, check_licences, spdx_ids, FontEntry, FontId, FontManifest,
+    Slant, BUNDLED_SPDX, MAX_FONTS,
 };
 pub use shape::{DefaultStyle, FontSet, LoadedFont, Shaped, ShapedGlyph, ShapedRun};
 pub use subset::{Subset, SubsetBuilder};
