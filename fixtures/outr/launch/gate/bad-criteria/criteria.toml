@@ -1,0 +1,12 @@
+# Synthetic criteria file (CC-BY-4.0): one criterion of an unknown kind, so the gate refuses it.
+version = 1
+
+[[milestone]]
+id = "inspect-beta"
+app = "inspect"
+level = "beta"
+scope_label = "offline scan comparison"
+
+[[milestone.criterion]]
+id = "INS-B-01"
+kind = "vibes"
