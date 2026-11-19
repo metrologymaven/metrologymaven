@@ -135,8 +135,8 @@ fixtures/num/la/** -text
 # KRN.MAN.MANI.IMPL toy workspace: sources are hashed as committed bytes (CRLF and binary files are part
 # of the test) and compared byte for byte by make_implclosure_fixtures.py --check.
 fixtures/man/implclosure-ws-v1/** -text
-# GEO.FRAME.UNITS fixtures: hand-labelled and reference-generated cases, compared byte for byte by
-# tools/fixtures/geo_units_cases.py --check; never convert line endings.
+# GEO.FRAME.UNITS and GEO.FRAME.XFORM fixtures: reference-generated cases, compared byte for byte by
+# tools/fixtures/geo_units_cases.py and geo_xform_cases.py --check; never convert line endings.
 fixtures/geo/frame/** -text
 # GEO.SEL.MODEL fixtures: sets.json is compared byte for byte by geo_sel_sets.py --check.
 fixtures/geo/sel/** -text
