@@ -511,7 +511,9 @@ fn xref_outside_properties_and_items_is_unsupported() {
 fn bad_reference_values_are_refused() {
     let mut x = diamond();
     let out = [Output { element: id(6), op: Op::Create }];
-    let upper = id(1).to_string().to_uppercase();
+    // An ID with hex letters, so the uppercase spelling really differs.
+    let upper = id(0xab).to_string().to_uppercase();
+    assert!(upper.ends_with("AB"));
     let p = obj(vec![("inputs", CValue::Arr(vec![s(&upper)]))]);
     let e = x.commit_command(&num_schema(), &p, &out).unwrap_err();
     assert_eq!(e, EdgeError::BadReference("/inputs/0".to_string()));
@@ -732,10 +734,8 @@ fn output_errors_do_not_depend_on_listing_order() {
 #[test]
 fn a_parameter_named_x_ref_is_refused_as_an_annotation() {
     let mut x = diamond();
-    let schema = obj(vec![
-        ("type", s("object")),
-        ("properties", obj(vec![("x-ref", obj(vec![("type", s("string"))]))])),
-    ]);
+    let schema =
+        obj(vec![("type", s("object")), ("properties", obj(vec![("x-ref", obj(vec![("type", s("string"))]))]))]);
     let params = obj(vec![("x-ref", s("plain text"))]);
     let e = x.commit_command(&schema, &params, &[Output { element: id(6), op: Op::Create }]).unwrap_err();
     assert_eq!(e.code(), "unsupported_schema");
