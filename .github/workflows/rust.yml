@@ -195,6 +195,7 @@ jobs:
           python fixtures/flow/study/tasks/make_fixtures.py --check
           python fixtures/flow/pkg/make_fixtures.py --check
           python fixtures/flow/journey/make_fixtures.py --check
+          python fixtures/flow/fixes/make_fixtures.py --check
           python fixtures/outr/site/import/make_fixtures.py --check
           python fixtures/program/expr/make_cases.py --check
           python fixtures/io/qif/xml/parse/make_fixtures.py --check

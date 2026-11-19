@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-fixes]
 satisfies: [REQ-FLOW.DEADEND-001]
 covers: [JOB.USE.05]
 depends_on: [CORE.JRN.CANON]

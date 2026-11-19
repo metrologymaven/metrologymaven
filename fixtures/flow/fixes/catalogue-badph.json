@@ -1,0 +1,114 @@
+{
+  "version": "fix-catalogue@1",
+  "entries": [
+    {
+      "reason_code": "unc.u_missing",
+      "state_kind": "uec0",
+      "owner": "UNC.UEC.EXPL",
+      "source_table": "uec-fix@1",
+      "fixes": [
+        {
+          "command": "unc.propagate_auto@1",
+          "args": {
+            "result_id": "${entity_id}"
+          },
+          "label_key": "fix.unc.u_missing.propagate_auto"
+        },
+        {
+          "command": "unc.declare_uncertainty@1",
+          "args": {
+            "char_id": "${characteristic_id}"
+          },
+          "label_key": "fix.unc.u_missing.declare_uncertainty"
+        }
+      ]
+    },
+    {
+      "reason_code": "gdt.no_rule_bound",
+      "state_kind": "not_decidable",
+      "owner": "GDT.CHAR.RECORD",
+      "fixes": [
+        {
+          "command": "decide.bind_rule@1",
+          "args": {
+            "chars": "${characteristic_id}"
+          },
+          "label_key": "fix.gdt.no_rule_bound.bind_rule"
+        },
+        {
+          "command": "decide.set_default_rule@1",
+          "args": {},
+          "label_key": "fix.gdt.no_rule_bound.set_default_rule"
+        }
+      ]
+    },
+    {
+      "reason_code": "unc.instrument_missing",
+      "state_kind": "uec0",
+      "owner": "UNC.UEC.EXPL",
+      "source_table": "uec-fix@1",
+      "fixes": [
+        {
+          "command": "unc.bind_instrument_model@1",
+          "args": {
+            "target": "project:${project_id}"
+          },
+          "label_key": "fix.unc.instrument_missing.bind_instrument_model"
+        },
+        {
+          "command": "unc.list_profile@1",
+          "args": {},
+          "label_key": "fix.unc.instrument_missing.list_profile"
+        }
+      ]
+    },
+    {
+      "reason_code": "decide.rule_missing",
+      "state_kind": "not_decidable",
+      "owner": "UNC.DEC.DEFAULT",
+      "fixes": [
+        {
+          "command": "decide.bind_rule@1",
+          "args": {
+            "chars": "${path}"
+          },
+          "label_key": "fix.decide.rule_missing.bind_rule"
+        },
+        {
+          "command": "decide.set_default_rule@1",
+          "args": {},
+          "label_key": "fix.decide.rule_missing.set_default_rule"
+        }
+      ]
+    },
+    {
+      "reason_code": "unc.model_missing",
+      "state_kind": "uec0",
+      "owner": "UNC.UEC.EXPL",
+      "source_table": "uec-fix@1",
+      "fixes": [
+        {
+          "command": "unc.bind_model@1",
+          "args": {
+            "chars": "${characteristic_id}"
+          },
+          "label_key": "fix.unc.model_missing.bind_model"
+        }
+      ]
+    },
+    {
+      "reason_code": "gdt.unc_no_decision",
+      "state_kind": "not_decidable",
+      "owner": "GDT.CHAR.RECORD",
+      "fixes": [
+        {
+          "command": "unc.propagate_auto@1",
+          "args": {
+            "result_id": "${entity_id}"
+          },
+          "label_key": "fix.gdt.unc_no_decision.propagate_auto"
+        }
+      ]
+    }
+  ]
+}
