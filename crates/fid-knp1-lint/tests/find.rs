@@ -344,6 +344,8 @@ fn rule_ids_are_stable() {
         ("KNP1-CLOCK", Rule::Clock),
         ("KNP1-ENV", Rule::Env),
         ("KNP1-THREAD", Rule::Thread),
+        ("KNP1-PARSE", Rule::Parse),
+        ("KNP1-PARSE-RESOLVE", Rule::ParseResolve),
     ];
     for (id, rule) in fixed {
         assert_eq!(Rule::parse(id), Some(rule.clone()));
@@ -367,7 +369,7 @@ fn rule_ids_are_stable() {
         assert_eq!(Rule::parse(bad), None, "{bad}");
     }
     let cat = catalogue();
-    assert_eq!(cat.len(), 15);
+    assert_eq!(cat.len(), 17);
     for pat in ["KNP1-FLAG-*", "KNP1-ALLOW-*", "KNP1-DATA-*"] {
         assert!(cat.iter().any(|(id, d)| id == pat && !d.is_empty()));
     }

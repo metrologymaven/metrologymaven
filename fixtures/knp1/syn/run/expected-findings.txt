@@ -1,0 +1,4 @@
+KNP1-PARSE ext-mac 0.1.0 Cargo.toml:1:1
+KNP1-FMA ext-mac 0.1.0 src/lib.rs:5:31
+KNP1-ENV ext-solver 1.0.0 build.rs:2:18
+KNP1-POW ext-solver 1.0.0 src/lib.rs:2:7
