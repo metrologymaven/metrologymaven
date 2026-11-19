@@ -1,0 +1,53 @@
+# Synthetic criteria file for OUTR.LAUNCH.GATE tests (CC-BY-4.0). Not the real launch plan.
+version = 1
+
+[[milestone]]
+id = "inspect-beta"
+app = "inspect"
+level = "beta"
+scope_label = "offline scan comparison"
+
+[[milestone.criterion]]
+id = "INS-B-01"
+kind = "node_status"
+node = "GDT"
+in = ["leaf", "frozen"]
+
+[[milestone.criterion]]
+id = "INS-B-02"
+kind = "phase_done"
+phase = "P1a"
+scope = ["SCAN"]
+
+[[milestone.criterion]]
+id = "INS-B-03"
+kind = "parity"
+app = "inspect"
+min_pct = 82
+
+[[milestone.criterion]]
+id = "INS-B-04"
+kind = "parity"
+seeds = ["SEED-INS-001", "SEED-INS-002"]
+
+[[milestone.criterion]]
+id = "INS-B-05"
+kind = "signoff"
+role = "release-manager"
+note = "free text, not evaluated"
+
+[[milestone]]
+id = "inspect-alpha"
+app = "inspect"
+level = "alpha"
+
+[[milestone]]
+id = "report-alpha"
+app = "report"
+level = "alpha"
+
+[[milestone.criterion]]
+id = "RPT-A-01"
+kind = "node_status"
+node = "RPT"
+in = ["leaf"]

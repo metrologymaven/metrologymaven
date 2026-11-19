@@ -1,0 +1,4 @@
+[
+  {"actor": "ada-example", "state": "APPROVED", "at": "2026-12-08T10:00:00Z"},
+  {"actor": "zed-example", "state": "COMMENTED", "at": "2026-12-08T11:00:00Z"}
+]

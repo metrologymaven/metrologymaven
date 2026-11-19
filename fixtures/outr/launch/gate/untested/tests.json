@@ -1,0 +1,6 @@
+{
+  "results": [
+    {"leaf": "SCAN.CMP", "ac": "AC-1", "outcome": "pass"},
+    {"leaf": "SCAN.CMP", "ac": "AC-2", "outcome": "pass"}
+  ]
+}

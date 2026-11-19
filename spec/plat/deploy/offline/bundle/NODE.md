@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-platform]
+built_pr: 166
 satisfies: [REQ-PLAT.DEPLOY.OFFLINE-001, REQ-PLAT.DEPLOY.OFFLINE-002]
 covers: []
 depends_on: [PLAT.MATRIX.FILE]
