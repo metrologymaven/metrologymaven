@@ -88,3 +88,6 @@ vendor/fid-clarabel/** -text
 fixtures/allow/** -text
 # FLOW.DEADEND.CATALOG fixtures: hand-written catalogues and a digest compared byte for byte by make_fixtures.py --check.
 fixtures/flow/fixes/** -text
+# CORE.REG.VER.COMPAT fixtures: hand-labelled pairs and manifests carrying SHA-256 digests; never convert line endings.
+fixtures/core/reg/ver/compat/** -text
+fixtures/core/reg/manifest/** -text

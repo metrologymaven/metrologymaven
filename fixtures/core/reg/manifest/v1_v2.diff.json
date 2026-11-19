@@ -1,0 +1,45 @@
+{
+ "added": [
+  {
+   "command": "demo.export",
+   "major": 1
+  }
+ ],
+ "removed": [
+  {
+   "command": "demo.legacy",
+   "major": 1
+  }
+ ],
+ "lifecycle_changed": [
+  {
+   "command": "demo.probe",
+   "major": 1,
+   "pointer": "/lifecycle",
+   "old_state": "active",
+   "new_state": "deprecated",
+   "old_digest": "sha256:51dd2f4b162fb62ee08def665e8524d89b97edd8b1c0d4bbf4a443366a7733f9",
+   "new_digest": "sha256:6c0dd08f965f1ffd0fa8a54e13f1f3c480e020c87eaaa565bdacf4d4a7cf81d5"
+  }
+ ],
+ "changed": [
+  {
+   "command": "demo.measure",
+   "major": 1,
+   "pointer": "/params_schema/properties/retries",
+   "old_digest": null,
+   "new_digest": "sha256:43ada6d096e175dffe62431620c2def1ccba3b44a0853c0de9167d0fa0a912d6",
+   "kind": "additive",
+   "reason": "optional_param_added"
+  },
+  {
+   "command": "demo.scan",
+   "major": 1,
+   "pointer": "/params_schema/properties/speed/type",
+   "old_digest": "sha256:fd1a55ee2217c1ac278ab485236d6c199517334ee91e965cf2f6b8575701cd1c",
+   "new_digest": "sha256:e9e5c1c9e4f6277339d1bcde0733a59bd42f8731f449da6dc13010a916930d48",
+   "kind": "breaking",
+   "reason": "type_changed"
+  }
+ ]
+}
