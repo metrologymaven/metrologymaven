@@ -291,7 +291,8 @@ fn result_record(v: &CValue, i: usize) -> Result<ResultRecord, SandboxError> {
 fn journal(v: &CValue, run: &mut RunRecord) -> Result<(), SandboxError> {
     let what = "journal";
     let m = obj(v, what)?;
-    run.scored_branch = string(field(m, "scored_branch", what)?, "scored_branch")?.to_string();
+    // Absent in the injection and escalation fixture runs, which hold no ResultRecords.
+    run.scored_branch = opt_string(m, "scored_branch", what)?.unwrap_or_default();
     run.requester = opt_string(m, "requester", what)?;
     run.entries = array(field(m, "entries", what)?, "entries")?
         .iter()
