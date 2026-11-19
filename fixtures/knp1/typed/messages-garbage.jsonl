@@ -1,0 +1,2 @@
+{"fresh": false, "manifest_path": "@WS@/macro/Cargo.toml", "package_id": "macro", "reason": "compiler-artifact", "target": {"kind": ["lib"], "name": "macro"}}
+this line is not a cargo message

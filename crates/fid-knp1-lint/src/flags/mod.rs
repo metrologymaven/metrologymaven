@@ -13,6 +13,7 @@
 //! | `KNP1-FLAG-LTO` | two kernel profiles resolve to different `opt-level`, `lto`, `debug-assertions`, `overflow-checks` or `panic`, and the key is not in `allowed_profile_differences` |
 //! | `KNP1-FLAG-KEYWORD` | the fail-closed substring gate ([`keywords`]) hits a CI line or a free-form `.cargo/config` value the structured checks do not explain |
 //! | `KNP1-FLAG-AMBIGUOUS` | both `.cargo/config` and `.cargo/config.toml` exist |
+//! | `KNP1-FLAG-WRAPPER` | `.cargo/config(.toml)` sets `build.rustc-wrapper`, `build.rustc-workspace-wrapper` or `build.rustc` (never waivable) |
 //! | `KNP1-FLAG-OPTOUT` | informational note (in [`Outcome::notes`], never a failure): a line opted out with `knp1-flags: allow <RULE> <reason>` |
 //! | `KNP1-FLAG-WASMFMA` | the wasm reference module contains a relaxed multiply-add opcode |
 //! | `KNP1-FLAG-WASMSIMD` | the wasm reference module contains a SIMD opcode the config does not allow |
@@ -823,6 +824,26 @@ fn walk_rustflags(t: &toml::Table, path: &mut Vec<String>, out: &mut Vec<(Vec<St
     }
 }
 
+/// `build.rustc-wrapper`, `build.rustc-workspace-wrapper` and `build.rustc` (either spelling)
+/// wrap or replace the compiler, so neither the kernel build nor the type-aware check
+/// (`KRN.NUM.LINT.TYPED`) would run the pinned rustc: `KNP1-FLAG-WRAPPER`, never waivable.
+fn check_wrappers(sink: &mut Sink<'_>, file: &str, text: &str, table: &toml::Table) {
+    let idx = LineIndex::new(text);
+    let Some(toml::Value::Table(b)) = table.get("build") else { return };
+    for (k, v) in b {
+        if matches!(k.replace('_', "-").as_str(), "rustc-wrapper" | "rustc-workspace-wrapper" | "rustc") {
+            let pos = idx.locate(&["build".to_string(), k.clone()]);
+            sink.at_line(
+                "WRAPPER",
+                file,
+                &idx,
+                pos,
+                format!("`build.{k} = {}` wraps or replaces the compiler", v.as_str().unwrap_or("…")),
+            );
+        }
+    }
+}
+
 fn check_cargo_config(sink: &mut Sink<'_>, file: &str, text: &str, table: &toml::Table) {
     let idx = LineIndex::new(text);
     let mut sources = Vec::new();
@@ -1501,6 +1522,7 @@ pub fn check_all(cfg: &Config) -> Result<Outcome, FlagsError> {
         if let Some(text) = read_text(&cfg.workspace.join(name), name)? {
             let table = parse_toml(&text, name)?;
             check_cargo_config(&mut sink, name, &text, &table);
+            check_wrappers(&mut sink, name, &text, &table);
             cargo_table_gate(&mut sink, name, &text, &table);
             present.push(name);
             texts.insert(name.to_string(), text.clone());

@@ -694,6 +694,23 @@ expect("ok/expected-notes.txt", [
     ("KNP1-FLAG-OPTOUT", "ci.yml", 3, kw_col(OK_CI.split("\n")[2])),
 ])
 
+# KRN.NUM.LINT.TYPED re-review: a compiler wrapper or replacement rustc in the Cargo config is
+# KNP1-FLAG-WRAPPER (never waivable), at each key.
+WRAP_CFG = """[build]
+rustc-wrapper = "sccache"
+rustc_workspace_wrapper = "my-wrapper"
+rustc = "/opt/other/rustc"
+"""
+put("wrapper/knp1-lint.toml", '[flags]\nprofiles = ["release"]\n')
+put("wrapper/rust-toolchain.toml", TOOLCHAIN_OK)
+put("wrapper/Cargo.toml", CARGO_OK)
+put("wrapper/.cargo/config.toml", WRAP_CFG)
+expect("wrapper/expected-findings.txt", [
+    ("KNP1-FLAG-WRAPPER", ".cargo/config.toml", 2, 1),
+    ("KNP1-FLAG-WRAPPER", ".cargo/config.toml", 3, 1),
+    ("KNP1-FLAG-WRAPPER", ".cargo/config.toml", 4, 1),
+])
+
 # ---------------------------------------------------------------- third review: substring gate
 # Every bypass the third review listed, one per line. Each line that mentions a keyword must be
 # reported (by the structured checks or by the gate); the remaining lines must stay clean.

@@ -1,0 +1,13 @@
+KNP1-POW typed-bypass src/lib.rs:6
+KNP1-FMA typed-bypass src/lib.rs:11
+KNP1-FMA typed-deep src/lib.rs:13
+KNP1-LIBM typed-facade src/lib.rs:4
+KNP1-MINMAX typed-forms src/lib.rs:4
+KNP1-MINMAX typed-forms src/lib.rs:8
+KNP1-MINMAX typed-forms src/lib.rs:15
+KNP1-LIBM typed-forms src/lib.rs:28
+KNP1-LIBM typed-forms src/lib.rs:39
+KNP1-FMA typed-macro src/lib.rs:20
+KNP1-MINMAX typed-minmax-var src/lib.rs:5
+KNP1-MINMAX typed-minmax-var src/lib.rs:9
+KNP1-TYPED-BUILD typed-nowasm Cargo.toml:1

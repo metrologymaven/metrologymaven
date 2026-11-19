@@ -34,6 +34,8 @@ fixtures/knp1/graph/** -text
 # KRN.NUM.LINT.SYN fixtures: findings carry line/column positions and line digests; never convert line endings.
 fixtures/knp1/seeded/** -text
 fixtures/knp1/syn/** -text
+# KRN.NUM.LINT.TYPED fixtures: line positions and byte-compared expected clippy.toml.
+fixtures/knp1/typed/** -text
 # KRN.NUM.LINT.DATA fixtures: digested denylists and positions, compared byte for byte.
 fixtures/knp1/data/** -text
 # The CRLF fixture's CR bytes are the test, not trailing whitespace.

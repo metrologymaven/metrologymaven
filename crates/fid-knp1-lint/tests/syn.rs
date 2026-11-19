@@ -481,7 +481,7 @@ fn include_and_path_targets_must_be_listed_source() {
     assert_eq!(s("include!(concat!(\"gen\", \".rs\"));"), ["KNP1-IO-FS@1:1"]);
     assert_eq!(s("include_str!(\"gen.rs\"suffix);"), ["KNP1-IO-FS@1:1"]);
     assert_eq!(s("#[path = \"/abs/gen.rs\"] mod g;"), ["KNP1-IO-FS@1:3"]);
-    assert_eq!(s("#[cfg_attr(x, path = \"bin/x.rs\")] mod g;"), ["KNP1-IO-FS@1:15"]);
+    assert_eq!(s("#[cfg_attr(unix, path = \"bin/x.rs\")] mod g;"), ["KNP1-IO-FS@1:18"]);
     assert_eq!(s("include!(env!(\"OUT_DIR\"));"), ["KNP1-IO-FS@1:1", "KNP1-ENV@1:10"]);
 }
 

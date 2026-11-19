@@ -31,6 +31,8 @@ jobs:
         with:
           toolchain: stable
           components: clippy
+          # KRN.NUM.LINT.TYPED lints the kernel crates for these targets (cargo clippy --target).
+          targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu,wasm32-unknown-unknown,aarch64-apple-darwin,x86_64-pc-windows-msvc
       - name: Cargo.lock up to date
         # Blocking: a PR that adds a crate or dependency must update Cargo.lock in the same PR
         # (lockfile workflow, or exact hand-added entries). Main's lock went stale twice while this
