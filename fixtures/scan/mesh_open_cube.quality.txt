@@ -1,0 +1,19 @@
+# SCAN.POLY.QUAL expected report for mesh_open_cube.txt at threshold 1e-18 m^2.
+# CC-BY-4.0. Computed by make_mesh_quality.py (independent of the Rust crate).
+mesh mesh_open_cube
+threshold 1e-18
+triangles 10
+vertices 8
+edges 17
+boundary_edges 4
+boundary_loops 1
+nonmanifold_edges 0
+nonmanifold_vertices 0
+components 1
+degenerate 0
+angle_count 10
+angle_min 0.7853981633974484
+angle_p1 0.7853981633974484
+angle_p5 0.7853981633974484
+angle_median 0.7853981633974484
+canonical {"boundary_edges":"4","boundary_loops":"1","components":"1","degenerate":"0","edges":"17","min_angle":{"count":"10","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"10","vertices":"8"}
