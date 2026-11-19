@@ -9,6 +9,8 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-outreach]
+built_pr: 174
 satisfies: [REQ-OUTR.BENCH.RUN-001]
 covers: []
 depends_on: []
@@ -43,7 +45,7 @@ The one file format every public benchmark is written in, and the validator that
 
 ## Acceptance criteria
 
-- **AC-1** Given fixture `fixtures/outr/bench/recipe/ok/` (one recipe of each kind with stub kind validators, and a catalogue file listing their datasets), when `fid-outreach bench-recipe check --catalogue catalogue.toml recipes/ --json` runs, then it exits 0 and lists four valid recipes.
+- **AC-1** Given fixture `fixtures/outr/bench/recipe/ok/` (one recipe of each kind with stub kind validators, and a catalogue file listing their datasets), when `fid-outreach bench-recipe check --catalogue catalogue.toml recipes/ --json` runs, then three kinds are validated (accuracy, fidelity and performance are listed as valid with `kind_check` `stub`) and comparison is flagged with `kind_blocked` citing D-021, so it exits 1.
 - **AC-2** (error path) Given `missing-tolerance/` (a field without `tolerance`), when the check runs, then it exits 1 with `field_malformed` naming the recipe and field.
 - **AC-3** (error path) Given `bad-digest/` (dataset SHA-256 differs from the catalogue), when the check runs, then it exits 1 with `dataset_digest_mismatch`.
 - **AC-4** (error path) Given `other-program/` (`source.argv[0] = "python"`), when the check runs, then it exits 1 with `source_invalid`.
@@ -53,7 +55,7 @@ The one file format every public benchmark is written in, and the validator that
 
 ## Design
 
-- **Command:** `fid-outreach bench-recipe check --catalogue <file> [--json] <paths>...`. Project tooling, not a registry command; nearest class R0.
+- **Command:** `fid-outreach bench-recipe check --catalogue <file> [--allowlist <file>] [--json] <paths>...` (`--allowlist` defaults to the nearest `house-rules/spdx-allowlist.toml` above the catalogue). Project tooling, not a registry command; nearest class R0.
 - **Schema `bench-recipe@1`:**
   - `schema = "bench-recipe@1"`, `id`, `kind`, `title`, `since_release` (release tag), `machine_profile` (`minimum`, `recommended` or `any`; `any` only for deterministic results);
   - `dataset = { id, sha256 }`;
@@ -61,7 +63,7 @@ The one file format every public benchmark is written in, and the validator that
   - `[[fields]]` `name`, `unit` (catalogue unit symbol or `1` for counts and ratios), `better`, `tolerance`, `tolerance_kind`;
   - one kind section `[accuracy]`, `[fidelity]`, `[performance]` or `[comparison]`.
 - **Kind hook:** a trait `KindValidator { fn kind(&self) -> &str; fn validate(&self, section, recipe) -> Vec<Finding> }`; validators are registered at build time in a `BTreeMap` keyed by kind.
-- **Errors:** `field_missing`, `field_malformed`, `dataset_unknown`, `dataset_digest_mismatch`, `source_invalid`, `kind_unknown`, `kind_section_missing`, `duplicate_id`, `id_malformed`; exit 0 ok, 1 findings, 2 unreadable or unparsable input.
+- **Errors:** `field_missing`, `field_malformed`, `dataset_unknown`, `dataset_digest_mismatch`, `source_invalid`, `kind_unknown`, `kind_section_missing`, `duplicate_id`, `id_malformed`, `dataset_licence` (the dataset's catalogue entry states no `licence`, or one not in `asset_licences` of the ECO.RULES.SPDX allowlist), `kind_blocked` (a kind that must fail closed: `comparison` until OUTR.BENCH.CMP, per D-021); exit 0 ok, 1 findings, 2 unreadable or unparsable input or no recipe file found. Each valid recipe is reported with `kind_check` = `full` (checked by a real kind validator) or `stub` (placeholder only).
 - **Determinism:** D0; files read in sorted path order, BTreeMap only, RFC 8785 JSON output.
 - **Crate:** `fid-outreach`, module `bench::recipe`.
 
@@ -87,7 +89,9 @@ Hand-written TOML recipes and a stub catalogue under `fixtures/outr/bench/recipe
 
 ## Open questions
 
-- The catalogue file path and schema are owned by ECO.DATA.CAT; this leaf reads only `id` and `sha256` per entry.
+- The unit symbols accepted for `[[fields]] unit` are a compiled-in list in `fid-outreach` (`bench::recipe::UNITS`). It is temporary: replace it with the GEO.FRAME.UNITS catalogue once that exists.
+- The Design rule "`machine_profile = "any"` only for deterministic results" is not enforced by this validator: the common part has no field saying whether a result is deterministic. The kind validators (PERF in particular) must enforce it.
+- The catalogue file path and schema are owned by ECO.DATA.CAT; this leaf reads only `id`, `sha256` and `licence` per entry.
 
 ## Children
 

@@ -1,0 +1,11 @@
+[
+  {"pr": 201, "reviewer": "bob", "state": "approved", "body": "Checked the split rationale against the parent requirements.", "inline_comments": 0, "at": "2026-10-11T10:00:00Z", "node_ids": ["ALN.RPS.SEED"]},
+  {"pr": 201, "reviewer": "bob", "state": "approved", "body": "Re-approved after the rebase.", "inline_comments": 0, "at": "2026-10-12T10:00:00Z", "node_ids": ["ALN.RPS.SEED"]},
+  {"pr": 202, "reviewer": "bob", "state": "changes requested", "body": "REQ-003 is not satisfied by any child.", "inline_comments": 1, "at": "2026-10-13T10:00:00Z", "node_ids": ["ALN.RPS.OLD"]},
+  {"pr": 203, "reviewer": "Bob", "state": "CHANGES_REQUESTED", "body": "", "inline_comments": 2, "at": "2026-10-14T10:00:00Z", "node_ids": ["ALN.BEST.LSQ"]},
+  {"pr": 204, "reviewer": "bob", "state": "APPROVED", "body": "Fine once the acceptance criteria name fixtures.", "inline_comments": 0, "at": "2026-10-15T10:00:00Z", "node_ids": ["ALN.BEST.MINMAX", "GDT.SYM.FLAT"]},
+  {"pr": 205, "reviewer": "bob", "state": "approved", "body": null, "inline_comments": [{"path": "spec/aln/fit/NODE.md", "line": 12}], "at": "2026-10-16T10:00:00+02:00", "node_ids": ["ALN.FIT"]},
+  {"pr": 206, "reviewer": "bob", "state": "commented", "body": "Just a question about the seed.", "inline_comments": 3, "at": "2026-10-17T10:00:00Z", "node_ids": ["ALN.FIT.SEED"]},
+  {"pr": 207, "reviewer": "alice", "state": "approved", "body": "  ", "inline_comments": 0, "at": "2026-10-18T10:00:00Z", "node_ids": ["GDT.TOL"]},
+  {"pr": 208, "reviewer": "carol", "state": "approved", "body": "Looks right.", "inline_comments": 0, "at": "2026-12-05T10:00:00Z", "node_ids": ["KRN.SOLVE"]}
+]

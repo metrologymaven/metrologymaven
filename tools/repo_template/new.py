@@ -228,7 +228,8 @@ def builtin_sync(source: Path, rev: str, repo_id: str, target: Path) -> None:
 
 
 def run_sync(source: Path, rev: str, repo_id: str, target: Path) -> None:
-    if not (TOOLS / "house_rules" / "__main__.py").is_file():
+    # house_rules/__main__.py also serves `check` (ECO.RULES.CHECK); `sync` exists once sync.py does.
+    if not (TOOLS / "house_rules" / "sync.py").is_file():
         builtin_sync(source, rev, repo_id, target)
         return
     env = dict(os.environ)

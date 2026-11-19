@@ -78,13 +78,24 @@ tools/tests/fixtures/claims/** -text
 fixtures/agent/redteam/pred/** -text
 # ECO.COMM.RFC fixtures: hand-written records (LF and CRLF) compared byte for byte by tools/tests/test_rfc.py.
 tools/tests/fixtures/rfc/** -text
+# OUTR.BENCH.RUN.RECIPE fixtures: digested synthetic data and a byte-compared expected report.
+fixtures/outr/bench/recipe/** -text
 # ECO.CI.BOTS.BLOCK fixtures: hand-labelled exports (one deliberately truncated) and byte-compared stdout.
 fixtures/block/** -text
 # KRN.SOLV.CONIC.VEND: hand-written trees, patches and reports, digested and compared byte for byte
 # by make_fixtures.py --check and cargo xtask conic-audit; the vendored solver tree likewise.
 fixtures/solv/vend/** -text
 vendor/fid-clarabel/** -text
+# ECO.RULES.CHECK fixtures: hand-labelled repositories whose block digests and byte sizes are checked
+# byte for byte by tools/house_rules/tests/test_check.py; never convert line endings.
+tools/tests/fixtures/check/** -text
+# IO.CAD.WORKER.PROTO fixtures: digests compared byte for byte by make_digests.py --check and the tests.
+fixtures/io/cad/worker/proto/** -text
+# ECO.COMM.LADDER fixtures: a recorded NUL-separated git log and hand-written review exports, read byte for byte.
+tools/tests/fixtures/ladder/** -text
 # ECO.REPO.ALLOW fixtures: hand-labelled manifests and expected output written by make_fixtures.py.
 fixtures/allow/** -text
 # FLOW.DEADEND.CATALOG fixtures: hand-written catalogues and a digest compared byte for byte by make_fixtures.py --check.
 fixtures/flow/fixes/** -text
+# ECO.REL.PROC.NOTES fixtures: hand-labelled release notes and reports hashed byte for byte.
+fixtures/rel/notes/** -text

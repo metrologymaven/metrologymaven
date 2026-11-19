@@ -1,0 +1,6 @@
+# Synthetic, fictional point set for OUTR.BENCH.RUN.RECIPE fixtures (CC-BY-4.0).
+x_mm,y_mm,z_mm
+0.000,0.000,0.001
+10.000,0.000,-0.002
+0.000,10.000,0.000
+10.000,10.000,0.001

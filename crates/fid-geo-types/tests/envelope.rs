@@ -65,7 +65,7 @@ fn small() -> Small {
 }
 
 /// The mesh_cube fixture: frame, vertices, triangles.
-fn cube() -> (FrameRef, Vec<[f64; 3]>, Vec<[u32; 3]>) {
+fn cube() -> (FrameRef, Vec<[f64; 3]>, Vec<[u64; 3]>) {
     let text = read("mesh_cube.txt");
     let (mut frame, mut v, mut t) = (None, Vec::new(), Vec::new());
     for line in text.lines().filter(|l| !l.starts_with('#') && !l.trim().is_empty()) {
@@ -82,7 +82,7 @@ fn cube() -> (FrameRef, Vec<[f64; 3]>, Vec<[u32; 3]>) {
 
 fn cube_mesh() -> Mesh {
     let (frame, v, t) = cube();
-    Mesh::new(frame, &v, &t).unwrap()
+    Mesh::from_points(frame, &v, &t).unwrap()
 }
 
 /// The fixture really is the seeded generator's output (seed 1, stream 0, * 0.1 m), so
@@ -144,7 +144,7 @@ fn req3_kind_guard_matrix() {
     let elements = [
         GeometryElement::PointSet(PointSet::from_points(frame, &pts).unwrap()),
         GeometryElement::PointCloud(PointCloud::from_points(frame, &pts).unwrap()),
-        GeometryElement::Mesh(Mesh::new(frame, &pts, &[]).unwrap()),
+        GeometryElement::Mesh(Mesh::from_points(frame, &pts, &[]).unwrap()),
         GeometryElement::CadBody(CadBodyRef::new(frame, [2; 16], Digest::from_bytes([3; 32]), aabb)),
     ];
     for (e, kind) in elements.iter().zip(ElementKind::ALL) {
@@ -181,7 +181,7 @@ fn req5_empty_cloud_and_mesh_aabb() {
     let frame = FrameRef::from_bytes([9; 16]);
     let c = PointCloud::from_points(frame, &[]).unwrap();
     assert_eq!(GeometryElement::PointCloud(c).aabb(), Err(GeoTypeError::Empty));
-    let m = Mesh::new(frame, &[], &[]).unwrap();
+    let m = Mesh::from_points(frame, &[], &[]).unwrap();
     assert_eq!(GeometryElement::Mesh(m).aabb(), Err(GeoTypeError::Empty));
 }
 
@@ -190,7 +190,7 @@ fn req5_empty_cloud_and_mesh_aabb() {
 fn ac4_mesh_cube_vertices_to_point_set() {
     let (frame, v, t) = cube();
     assert_eq!((v.len(), t.len()), (8, 12));
-    let m = Mesh::new(frame, &v, &t).unwrap();
+    let m = Mesh::from_points(frame, &v, &t).unwrap();
     let p = m.vertices_to_point_set();
     assert_eq!(p.len(), 8);
     assert_eq!(p.frame(), frame);
@@ -200,7 +200,7 @@ fn ac4_mesh_cube_vertices_to_point_set() {
     assert_eq!(p.point(8), None);
     // The source mesh is unchanged and the result is a new element.
     assert_eq!(m.vertex_count(), 8);
-    assert_eq!(m.triangles().len(), 12);
+    assert_eq!(m.triangle_count(), 12);
 }
 
 /// REQ-004: PointCloud::to_point_set keeps frame and points.
@@ -291,8 +291,11 @@ fn constructors_reject_bad_input() {
         Err(GeoTypeError::AttributeLength { name: "y".to_string(), expected: 2, found: 1 })
     );
     let (_, v, _) = cube();
-    assert_eq!(Mesh::new(f, &v, &[[0, 1, 2], [0, 8, 1]]), Err(GeoTypeError::IndexOutOfRange { triangle: 1, index: 8 }));
-    assert_eq!(Mesh::new(f, &[[0.0, f64::NEG_INFINITY, 0.0]], &[]), Err(GeoTypeError::NonFinite { index: 0 }));
+    assert_eq!(
+        Mesh::from_points(f, &v, &[[0, 1, 2], [0, 8, 1]]),
+        Err(GeoTypeError::IndexOutOfRange { triangle: 1, index: 8 })
+    );
+    assert_eq!(Mesh::from_points(f, &[[0.0, f64::NEG_INFINITY, 0.0]], &[]), Err(GeoTypeError::NonFinite { index: 0 }));
 }
 
 /// Aabb: validation, union, containment; the CAD body returns its stored box.

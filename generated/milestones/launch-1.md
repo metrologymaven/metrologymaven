@@ -20,7 +20,7 @@ Source: [launch-1.md](../../milestones/launch-1.md)
 
 ## Build progress
 
-**124** of **1336** leaves built in code ([B]).
+**127** of **1336** leaves built in code ([B]).
 
 ## Build waves
 
@@ -154,7 +154,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [VIZ.SHELL.SPKTABLE](../../spec/viz/shell/spktable/NODE.md) Toolkit spike - characteristic table (M, P1a)
 - [VIZ.SHELL.SPKTREE](../../spec/viz/shell/spktree/NODE.md) Toolkit spike - element tree with 10k items (M, P1a)
 
-### Wave 2 (121 leaves, 51 built)
+### Wave 2 (121 leaves, 54 built)
 
 - [B] [AGENT.EVAL.CHECK](../../spec/agent/eval/check/NODE.md) Suite consistency, coverage and oracle isolation check (S, P0)
 - [B] [AGENT.HARNESS.ADAPT](../../spec/agent/harness/adapt/NODE.md) Agent adapter contract and reference adapters (S, P0)
@@ -188,7 +188,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.REL.PROC.GATES](../../spec/eco/rel/proc/gates/NODE.md) Aggregated release gate (M, P1a)
 - [ECO.REL.PROC.NOTES](../../spec/eco/rel/proc/notes/NODE.md) Release notes generator (S, P1a)
 - [ECO.REL.REPRO.RECIPE](../../spec/eco/rel/repro/recipe/NODE.md) Third-party offline rebuild recipe (S, P1b)
-- [ECO.REPO.ALLOW](../../spec/eco/repo/allow/NODE.md) Kernel-graph dependency allowlist (S, P0)
+- [B] [ECO.REPO.ALLOW](../../spec/eco/repo/allow/NODE.md) Kernel-graph dependency allowlist (S, P0)
 - [ECO.REPO.TPL.PROMOTE](../../spec/eco/repo/tpl/promote/NODE.md) Library promotion procedure and tool (M, P0)
 - [ECO.REPO.TPL.SELFTEST](../../spec/eco/repo/tpl/selftest/NODE.md) Template self-test job (S, P0)
 - [ECO.RULES.CHECK](../../spec/eco/rules/check/NODE.md) House-rules check (edited, stale, missing, budgets) (M, P0)
@@ -196,7 +196,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [ECO.RULES.SYNC](../../spec/eco/rules/sync/NODE.md) House-rules sync tool (M, P0)
 - [ECO.RULES.VOCAB.CATALOG](../../spec/eco/rules/vocab/catalog/NODE.md) Product string catalogue adapter (S, P1a)
 - [ECO.RULES.VOCAB.RULESET](../../spec/eco/rules/vocab/ruleset/NODE.md) Product rule set, incumbent list and fixtures (S, P1a)
-- [FLOW.DEADEND.CATALOG](../../spec/flow/deadend/catalog/NODE.md) Suggested-fix catalogue format and initial entries (M, P1a)
+- [B] [FLOW.DEADEND.CATALOG](../../spec/flow/deadend/catalog/NODE.md) Suggested-fix catalogue format and initial entries (M, P1a)
 - [B] [FLOW.PERSONA.SCHEMA](../../spec/flow/persona/schema/NODE.md) Journey-map format, schema and structural validator (S, P0)
 - [B] [FLOW.RUNNER.PKG](../../spec/flow/runner/pkg/NODE.md) Acceptance-job package format and validator (M, P0)
 - [B] [GDT.RES.ROWFLOW.ROSTER](../../spec/gdt/res/rowflow/roster/NODE.md) DMT reviewer roster file and role lookup (S, P1a)
@@ -222,7 +222,7 @@ Every leaf in a wave depends only on leaves in earlier waves, so a wave can be b
 - [KRN.NUM.LINT.FLAGS](../../spec/krn/num/lint/flags/NODE.md) Kernel build-configuration and emitted-code FMA check (M, P0)
 - [B] [KRN.NUM.LINT.GRAPH](../../spec/krn/num/lint/graph/NODE.md) Kernel dependency closure, allowlist and licence check (M, P0)
 - [B] [KRN.NUM.RNG](../../spec/krn/num/rng/NODE.md) Counter-based random number generator (S, P0)
-- [MIG.LADDER.DEF](../../spec/mig/ladder/def/NODE.md) Ladder data file and stage-independence check (S, P1a)
+- [B] [MIG.LADDER.DEF](../../spec/mig/ladder/def/NODE.md) Ladder data file and stage-independence check (S, P1a)
 - [OUTR.BENCH.ACC.FMT](../../spec/outr/bench/acc/fmt/NODE.md) Accuracy recipe section and result table (S, P1a)
 - [OUTR.BENCH.CASE](../../spec/outr/bench/case/NODE.md) User case studies (M, P1b)
 - [OUTR.BENCH.RUN.HARNESS](../../spec/outr/bench/run/harness/NODE.md) Release re-run harness and result store (M, P1a)
