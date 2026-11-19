@@ -129,15 +129,15 @@ fn ac2_cycle_rejected_with_path_and_digest_unchanged() {
     assert_eq!(before.as_str(), tree_digest());
     let (part_a, align_1) = (t.id("part_a"), t.id("align_1"));
     let err = t.tree.reparent(part_a, align_1, Transform::IDENTITY).unwrap_err();
-    assert_eq!(err, FrameError::Cycle { path: vec![part_a, align_1] });
+    assert_eq!(err, FrameError::Cycle { frames: vec![part_a, align_1] });
     assert_eq!(t.tree.digest(), before);
     // A deeper descendant reports the whole would-be cycle, frame first.
     let (align_2, inst_1) = (t.id("align_2"), t.id("inst_1"));
     let err = t.tree.reparent(part_a, inst_1, Transform::IDENTITY).unwrap_err();
-    assert_eq!(err, FrameError::Cycle { path: vec![part_a, inst_1, align_2, align_1] });
+    assert_eq!(err, FrameError::Cycle { frames: vec![part_a, inst_1, align_2, align_1] });
     // Self-parent.
     let err = t.tree.reparent(part_a, part_a, Transform::IDENTITY).unwrap_err();
-    assert_eq!(err, FrameError::Cycle { path: vec![part_a] });
+    assert_eq!(err, FrameError::Cycle { frames: vec![part_a] });
     assert_eq!(t.tree.digest(), before);
 }
 
@@ -281,7 +281,7 @@ fn insert_errors_leave_tree_unchanged() {
     assert_eq!(t.tree.insert(orphan).unwrap_err(), FrameError::NoParent { id: FrameId::from_bytes([1; 16]) });
     // Self parent.
     let me = FrameId::from_bytes([1; 16]);
-    assert_eq!(t.tree.insert(user(1, "u", me)).unwrap_err(), FrameError::Cycle { path: vec![me] });
+    assert_eq!(t.tree.insert(user(1, "u", me)).unwrap_err(), FrameError::Cycle { frames: vec![me] });
     // Names.
     for bad in ["", "a\u{7}b", &"x".repeat(MAX_NAME_BYTES + 1)] {
         assert_eq!(t.tree.insert(user(1, bad, part_a)).unwrap_err(), FrameError::BadName);
@@ -351,7 +351,7 @@ fn error_codes_display() {
         "handedness 00000000000000000000000000000000 (det -1)"
     );
     assert_eq!(FrameError::HasChildren { id: w }.to_string(), "has_children 00000000000000000000000000000000");
-    assert_eq!(FrameError::Cycle { path: vec![w, w] }.to_string(), format!("cycle [{w}, {w}]"));
+    assert_eq!(FrameError::Cycle { frames: vec![w, w] }.to_string(), format!("cycle [{w}, {w}]"));
 }
 
 #[test]
@@ -445,7 +445,7 @@ fn from_frames_checks_every_invariant() {
     // from align_2 (ID 3c..), so the cycle is reported from align_1, its first frame reached.
     assert_eq!(
         with(&|v| v.iter_mut().find(|f| f.id == part_a).unwrap().parent = Some(align_1)),
-        FrameError::Cycle { path: vec![align_1, part_a] }
+        FrameError::Cycle { frames: vec![align_1, part_a] }
     );
     // Duplicate ID and case-only duplicate name.
     assert_eq!(

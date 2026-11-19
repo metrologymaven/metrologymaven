@@ -15,7 +15,7 @@
 //! - exactly one frame of kind world, with no parent; it cannot be reparented, re-transformed
 //!   or removed (`WorldImmutable`), and no second world frame can be added (`SecondWorld`);
 //! - every other frame has a parent that is in the tree (`NoParent`, `UnknownFrame`);
-//! - no frame is its own ancestor (`Cycle { path }`);
+//! - no frame is its own ancestor (`Cycle { frames }`);
 //! - IDs are unique (`DuplicateId`); [`FrameId::parse`] accepts upper- and lower-case hex and
 //!   maps both to the same bytes, so a case-only variant of an ID is the same ID;
 //! - names are 1 to [`MAX_NAME_BYTES`] bytes of UTF-8 without control characters and unique
@@ -237,13 +237,13 @@ pub enum FrameError {
         /// The frame.
         id: FrameId,
     },
-    /// The edit would make `path[0]` its own ancestor: `path` is the cycle that would form,
+    /// The edit would make `frames[0]` its own ancestor: `frames` is the cycle that would form,
     /// starting at the frame, then its would-be parent and that frame's ancestors up to the
     /// frame (excluded). From [`FrameTree::from_frames`], the cycle starts at its first
     /// frame reached when walking parents from each frame in ascending ID order.
     Cycle {
         /// The cycle.
-        path: Vec<FrameId>,
+        frames: Vec<FrameId>,
     },
     /// The frame still has child frames.
     HasChildren {
@@ -303,9 +303,9 @@ impl fmt::Display for FrameError {
             FrameError::BadId => f.write_str("bad_id"),
             FrameError::BadName => f.write_str("bad_name"),
             FrameError::NoParent { id } => write!(f, "no_parent {id}"),
-            FrameError::Cycle { path } => {
+            FrameError::Cycle { frames } => {
                 f.write_str("cycle [")?;
-                for (i, p) in path.iter().enumerate() {
+                for (i, p) in frames.iter().enumerate() {
                     if i > 0 {
                         f.write_str(", ")?;
                     }
@@ -442,7 +442,7 @@ impl FrameTree {
             }
             let parent = node.frame.parent.ok_or(FrameError::NoParent { id: *id })?;
             if parent == *id {
-                return Err(FrameError::Cycle { path: vec![*id] });
+                return Err(FrameError::Cycle { frames: vec![*id] });
             }
             if !frames.contains_key(&parent) {
                 return Err(FrameError::UnknownFrame { id: parent });
@@ -476,9 +476,9 @@ impl FrameTree {
                 if let Some(pos) = stack.iter().position(|f| *f == cur) {
                     // `cur` repeats: the cycle is stack[pos..], reported from `cur` downward
                     // in the would-be order frame, parent, grandparent, ...
-                    let mut path = scratch(stack.len() - pos)?;
-                    path.extend_from_slice(&stack[pos..]);
-                    return Err(FrameError::Cycle { path });
+                    let mut frames = scratch(stack.len() - pos)?;
+                    frames.extend_from_slice(&stack[pos..]);
+                    return Err(FrameError::Cycle { frames });
                 }
                 if stack.len() > MAX_DEPTH {
                     return Err(FrameError::TooDeep { id: *start });
@@ -602,7 +602,7 @@ impl FrameTree {
         }
         let parent = frame.parent.ok_or(FrameError::NoParent { id })?;
         if parent == id {
-            return Err(FrameError::Cycle { path: vec![id] });
+            return Err(FrameError::Cycle { frames: vec![id] });
         }
         self.node(parent)?;
         if let Some(existing) = self.names.get(&key) {
@@ -628,14 +628,14 @@ impl FrameTree {
         }
         let old_parent = self.parent_of(id)?;
         if new_parent == id {
-            return Err(FrameError::Cycle { path: vec![id] });
+            return Err(FrameError::Cycle { frames: vec![id] });
         }
         let chain = self.ancestors(new_parent)?;
         if let Some(pos) = chain.iter().position(|f| *f == id) {
-            let mut path = scratch(pos + 1)?;
-            path.push(id);
-            path.extend_from_slice(&chain[..pos]);
-            return Err(FrameError::Cycle { path });
+            let mut frames = scratch(pos + 1)?;
+            frames.push(id);
+            frames.extend_from_slice(&chain[..pos]);
+            return Err(FrameError::Cycle { frames });
         }
         check_transform(id, &to_parent)?;
         if (chain.len() - 1) + 1 + self.height(id)? > MAX_DEPTH {
