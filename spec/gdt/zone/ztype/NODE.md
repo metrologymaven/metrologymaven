@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-gps]
+built_pr: 269
 satisfies: [REQ-GDT.ZONE-001]
 covers: []
 depends_on: [KRN.NUM, GEO.FRAME]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # GDT.ZONE.ZTYPE: Tolerance-zone shapes and fixed-pose usage
@@ -41,7 +43,7 @@ The geometric vocabulary of the zone engine: each zone shape, given a pose and t
 
 ## Acceptance criteria
 
-- **AC-1** Given fixture `fixtures/gdt/zone/shapes_analytic.json` (for each shape, points placed at known distances, including one point exactly on the boundary), when `usage` runs, then each size matches the expected value exactly (bit-for-bit where the inputs are dyadic) or within 1 ulp otherwise, and the driving index matches.
+- **AC-1** Given fixture `fixtures/gdt/zone/shapes_analytic.json` (for each shape, points placed at known distances, including one point exactly on the boundary), when `usage` runs, then each size lies within the Design's accuracy bound of the exact value, and also matches it bit for bit for the cases of class `bits` (small dyadic inputs, every intermediate exact) or within 1 ulp for the cases of class `ulp1`; the driving index matches.
 - **AC-2** Given two points tying for the maximum, then the lower index is returned.
 - **AC-3** Given `contains` with the size from AC-1, then true; with that size's next lower f64, then false.
 - **AC-4** (error path) Given an empty set, a direction of length 1.1, or a NaN coordinate, then the corresponding typed error is returned.
@@ -55,7 +57,20 @@ The geometric vocabulary of the zone engine: each zone shape, given a pose and t
 - **Errors:** `empty_points`, `non_unit_direction`, `nan_input`, `deviation_count_mismatch` (offset).
 - **Determinism:** D0.
 - **Performance budget:** 1 M points per call < 10 ms single-threaded [unverified].
-- **Crate:** `fid-gps` (module `zone::shape`).
+- **Crate:** `fid-gps` (module `zone::shape`). `layers.toml` places `fid-gps` in the model layer, so KNP-1 is not mandatory there; the module is still written to KNP-1 rules (no FMA, no `f64::min`/`f64::max`, square root through `fid-num`, fixed-order reductions, NaN an error) and its tests run on wasm32.
+
+### Pinned choices (as built)
+
+- **Pose.** `Pose { origin: P3, direction: P3 }` in the part frame (SI metres; `P3 = [f64; 3]`), the vector form the usage formulas are written in. `Pose::from_rigid(&Rigid)` takes it from a GEO.FRAME rigid transform (zone local frame to part frame): origin = the translation, direction = the third rotation column (image of local z), copied without arithmetic. Usage is evaluated directly on `r = p − o` in the part frame, not by first mapping points through the inverse transform: the two agree mathematically and the direct form rounds less.
+- **Shape semantics.** Two planes: normal = pose direction, centred on the plane through the origin. Two lines: lines lie in the plane with unit normal `plane`; the pose direction is the in-plane direction across the lines and must satisfy `|n·plane| ≤ 1e-12` (`direction_not_in_plane`); a point's out-of-plane component is ignored. Cylinder: axis through the origin along the pose direction. Circle: centred at the origin in the plane with unit normal `plane`; the pose direction is not used. Sphere: centred at the origin; direction not used. Offset: input is one signed deviation per toleranced point (`ZoneInput::Deviations { points, deviations }`), usage `2·max|d_i − c|`; the pose is not used by the arithmetic. The pose direction is validated for every shape, so a pose is valid or not independently of the shape.
+- **Sizes.** Full width or diameter in metres, never a half-width or radius; always ≥ 0.
+- **Expressions.** `dot3(a, b) = (a0·b0 + a1·b1) + a2·b2`; `r = [p0 − o0, p1 − o1, p2 − o2]`; planes and lines `|dot3(n, r)|`; cylinder (`a = n`) and circle (`a = plane`) `h = dot3(a, r)`, `q_k = r_k − h·a_k`, `sqrt(dot3(q, q))`; sphere `sqrt(dot3(r, r))`; offset `|d_i − c|`. `sqrt` is `fid_num::f::sqrt` (correctly rounded). Directions are used as given (no renormalisation).
+- **Accuracy (decision, review of #269).** The pinned expressions are kept; the result is their bits, not the correctly rounded exact value. With `ε = 2^-53`, `S` the exact usage on the given f64 inputs and `R = max_i |p_i − o|`: geometric shapes `|size − S| ≤ 32 ε R + 2^-535 m`; offset `|size − S| ≤ 2 ε max_i |d_i − c|` (derivation in the `shape.rs` module docs: per point below `10 ε |r|`, taken as `16 ε |r|` for margin, doubled for the size). The error is absolute in `R`, not relative to the size: a point far from the origin but near the reference (1 km along a cylinder axis, 1e6 m along a datum plane) can be many ulps off its small distance. Squared components are subnormal below about `1.5e-154 m` (`2^-511`) and flush to zero below about `1.5e-162 m`, so a size can read 0 for a point not exactly on the reference (the `2^-535` term). Above about `1.3e154 m` a square overflows and the call returns the typed error `overflow`. Bit-exactness and the 1-ulp agreement of AC-1 are properties of the fixture classes that have them, not of general inputs.
+- **Maximum and ties.** Index order from point 0; a value replaces the running maximum only if strictly greater, so the lowest index wins ties; size = `2.0 × max` (exact).
+- **Unit test.** `|sqrt(dot3(d, d)) − 1| ≤ 1e-12` for the pose direction and each plane normal (squared length overflow counts as length +∞).
+- **Validation order** (first failure wins): input kind (`input_kind_mismatch`: Offset takes deviations, every other shape points); deviation count (`deviation_count_mismatch`); `empty_points`; more than 2^32 − 1 points (`too_many_points`, the driving index is a `u32`); any NaN in pose, shape parameters, `contains` size, points or deviations (`nan_input`); any ±∞ in the same (`non_finite_input`); pose direction unit, then plane normal unit (`non_unit_direction`); two lines in-plane check (`direction_not_in_plane`); a non-finite per-point value or doubled maximum (`overflow`, with the point index). `input_kind_mismatch`, `too_many_points`, `non_finite_input` and `direction_not_in_plane` are additions to the error list above, needed to make the enum and the API total.
+- **contains.** `usage(...).size_m <= size`, exact; `size` NaN is `nan_input`, ±∞ is `non_finite_input`; a negative size contains nothing.
+- **Test data.** `fixtures/gdt/zone/make_shapes_fixtures.py` (stdlib Python): `shapes_analytic.json` holds the exact-rational oracle values (rounded once to f64) and the spec-labelled errors. Each success case names its agreement class: `bits` (small dyadic inputs with axis directions, every intermediate exact: bit-for-bit), `ulp1` (the listed non-dyadic cases, verified by the oracle to land within 1 ulp; not a general property) or `abs_bound` (hard cases: near-axis cylinder 1 km along the axis, plane cases at 1e6 m, a near-centre circle 1 km out of plane, sphere points at 1e-160 m and 1e-163 m, a near-axis cylinder point at 1e-163 m; the last two read size 0). For every success case the oracle checks the pinned result against the exact value under the accuracy bound above, in rational arithmetic, and records `abs_tol` (bound + 1 ulp), which the Rust test also asserts; `shapes_random_v1.json` holds, for 1 000 000 Philox4x32-10 points (seed `0x5eed`; point i = `2u − 1` from draws 3i..3i+2 of stream 0, deviation i from draw i of stream 1; pose origin (0.1, −0.2, 0.3), direction (2/7, 3/7, 6/7), plane (6/7, 2/7, −3/7), offset shift 0.1), the whole-set usage and the SHA-256 of the 1 000 chunk usages per shape, from the pinned expressions re-implemented in Python floats, cross-checked against the exact maximum over the whole set (candidates within 8 × the per-point bound of the pinned maximum, evaluated in rational arithmetic) under the accuracy bound. The 10 000-case property test uses seed `0x5eed`, stream 2.
 
 ## Test fixtures
 
