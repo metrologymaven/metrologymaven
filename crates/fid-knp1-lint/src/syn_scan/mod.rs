@@ -516,7 +516,8 @@ pub fn parse_config(text: &str) -> Result<Config, SynError> {
                             "knp1-lint.toml: syn.facade_paths key {p:?} starts at a built-in root and cannot be a facade"
                         )));
                     }
-                    let mut e = string_table(entry, &["crate", "version", "reason"], &format!("syn.facade_paths.{p:?}"))?;
+                    let mut e =
+                        string_table(entry, &["crate", "version", "reason"], &format!("syn.facade_paths.{p:?}"))?;
                     let crate_name = e.remove("crate").unwrap_or_default();
                     if segs.first().map(String::as_str) != Some(crate_name.replace('-', "_").as_str()) {
                         return Err(invalid(format!(
@@ -552,9 +553,8 @@ pub fn parse_config(text: &str) -> Result<Config, SynError> {
                     let reason = e.remove("reason").unwrap_or_default();
                     cfg.facade_files.push(FacadeFile { crate_name, version, file, reason });
                 }
-                cfg.facade_files.sort_by(|a, b| {
-                    (&a.crate_name, &a.version, &a.file).cmp(&(&b.crate_name, &b.version, &b.file))
-                });
+                cfg.facade_files
+                    .sort_by(|a, b| (&a.crate_name, &a.version, &a.file).cmp(&(&b.crate_name, &b.version, &b.file)));
             }
             other => return Err(invalid(format!("knp1-lint.toml: unknown key syn.{other}"))),
         }
@@ -1206,7 +1206,10 @@ impl<'a> Scan<'a> {
                 let float_ty = prev.is_some_and(is_float_type)
                     || (prev != Some("crate") && i >= 3 && self.is(i - 3, &Kind::Dollar));
                 if float_ty {
-                    self.parse_hit(i, "item name after a float type is a macro metavariable: the scan cannot classify it");
+                    self.parse_hit(
+                        i,
+                        "item name after a float type is a macro metavariable: the scan cannot classify it",
+                    );
                 }
             }
             if self.is(i, &Kind::Dollar) && self.is(i + 1, &Kind::Open(Delim::Paren)) {
@@ -1387,7 +1390,9 @@ impl<'a> Scan<'a> {
                         return true;
                     }
                     match open.checked_sub(1) {
-                        Some(p) if matches!(self.kind(p), Some(Kind::Ident { .. } | Kind::Close(_) | Kind::Gt)) => r = p,
+                        Some(p) if matches!(self.kind(p), Some(Kind::Ident { .. } | Kind::Close(_) | Kind::Gt)) => {
+                            r = p
+                        }
                         _ => return false,
                     }
                 }
@@ -1479,7 +1484,8 @@ pub fn scan_closure(closure: &Closure, cfg: &Config) -> Result<Outcome, SynError
         // The path names the crate by its library name, so it must be that one crate at that
         // exact version, and no other crate of the closure may share the library name.
         let ident = fp.crate_name.replace('-', "_");
-        let same: Vec<&graph::CrateEntry> = closure.crates.iter().filter(|c| c.name.replace('-', "_") == ident).collect();
+        let same: Vec<&graph::CrateEntry> =
+            closure.crates.iter().filter(|c| c.name.replace('-', "_") == ident).collect();
         let exact = same.len() == 1 && same.iter().all(|c| c.name == fp.crate_name && c.version == fp.version);
         if !exact {
             return Err(invalid(format!(

@@ -227,7 +227,10 @@ fn markers(src: &str) -> (Pos, Pos) {
 }
 
 fn keyed(fs: &[Finding], file: &str) -> Pos {
-    fs.iter().filter(|f| f.crate_name == "knp1-syn-cases" && f.file == file).map(|f| (f.line, f.column, f.rule.id())).collect()
+    fs.iter()
+        .filter(|f| f.crate_name == "knp1-syn-cases" && f.file == file)
+        .map(|f| (f.line, f.column, f.rule.id()))
+        .collect()
 }
 
 /// The facade crate the `[syn.facade_paths]` entries of the fixtures name.
