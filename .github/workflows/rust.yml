@@ -249,6 +249,7 @@ jobs:
           python fixtures/outr/site/import/make_fixtures.py --check
           python fixtures/outr/bench/recipe/make_fixtures.py --check
           python fixtures/program/expr/make_cases.py --check
+          python fixtures/agent/harness/runs/make_runs.py --check
           python fixtures/io/qif/xml/parse/make_fixtures.py --check
           python fixtures/auto/cli/out/make_cases.py --check
           python fixtures/fetch/make_fixtures.py --check
@@ -256,7 +257,10 @@ jobs:
           python fixtures/hal/idl/base/cfg/make_fixtures.py --check
           python fixtures/core/sto/sql/schema/make_fixture.py --check
           python fixtures/mig/ladder/def/make_fixtures.py --check
+          python fixtures/num/make_red_fixtures.py --check
+          python fixtures/core/reg/ver/compat/make_fixtures.py --check
           python fixtures/geo/types/make_mesh_fixtures.py --check
+          python tools/fixtures/geo_digest_vectors.py --check
           python fixtures/pkg/check_package.py --strict
           python -m unittest discover -s tools/house_rules/tests -v
           python -m unittest discover -s tools/tests -v
@@ -362,3 +366,5 @@ jobs:
       - run: wasmtime --version
       - name: Test kernel and core crates on wasm32-wasip1
         run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
+      - name: Element digest vectors on wasm32-wasip1 (GEO.TYPES.DIGEST AC-1)
+        run: cargo test --target wasm32-wasip1 -p fid-geo-types --test digest

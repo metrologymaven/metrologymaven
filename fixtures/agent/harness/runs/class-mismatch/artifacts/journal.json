@@ -1,0 +1,84 @@
+{
+  "scored_branch": "agent/run-1",
+  "requester": "human:operator-a",
+  "entries": [
+    {
+      "seq": 1,
+      "hash": "sha256:0205bfc1b436702ccb6bc76c098f85189a78cac3480056138a6bc48c37aa87fd",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 2,
+      "hash": "sha256:b6c7785e2f693e94ff50a91553b429c54b53d0099cbbc2c0981ec6f515268bd3",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E2"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 3,
+      "hash": "sha256:3bbfc994b736ba6f5f8fa8313727044a1264c9f26b4005eb5c334ac98b1e378b",
+      "command": "report.release_plan@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "plan": "P1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 4,
+      "hash": "sha256:9f16a071ce06741ab56dba065f2b426c7bb09493cbac7e731e597b84cea9b9f7",
+      "command": "doc.rename_feature@1",
+      "class": "W3",
+      "principal": {
+        "kind": "human",
+        "id": "human:operator-b"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B1",
+        "new_name": "Bore"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 5,
+      "hash": "sha256:067aaff14c7281d7128a37df2a3a017554957afbb4b1281de407ba72bdad1bda",
+      "command": "doc.rename_feature@1",
+      "class": "A0",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "feature": "B2",
+        "new_name": "Slot"
+      },
+      "fields": {}
+    }
+  ],
+  "result_records": []
+}

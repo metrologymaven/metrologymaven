@@ -15,6 +15,8 @@ path = "src/main.rs"
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+# Predicate schema and parser shared with fid-eval-harness (AGENT.REDTEAM.PRED).
+fid-eval-pred = { path = "../fid-eval-pred" }
 fid-types = { path = "../fid-types" }
 
 [lints]
