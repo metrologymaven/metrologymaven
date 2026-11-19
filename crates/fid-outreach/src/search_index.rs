@@ -24,11 +24,18 @@
 //! `&` and non-ASCII character is written as a `\uXXXX` escape, so the file is pure ASCII, cannot
 //! close a surrounding `<script>` element, and decodes the same under any page charset.
 //!
-//! Tokenisation: ASCII letters are lower-cased (no locale or Unicode case folding); a token is a
-//! run of word characters (ASCII letters and digits, and every non-ASCII character that is not
-//! whitespace and not in a fixed list of punctuation blocks), where `.`, `_`, `@` and `-` are kept
-//! when they sit between a word character and a following word character; tokens shorter than 2
-//! or longer than [`MAX_TOKEN_CHARS`] characters are dropped. No stemming.
+//! Tokenisation (the search UI must apply the same rules to queries): only ASCII `A-Z` are
+//! lower-cased (no locale, no Unicode case folding, no Unicode normalisation such as NFC); a
+//! token is a run of word characters, where a word character is an ASCII letter or digit, or any
+//! non-ASCII character outside the fixed separator list of [`is_separator`] (code point ranges
+//! written out in this file, so no Unicode property table is consulted); `.`, `_`, `@` and `-`
+//! are kept when they follow a word character of the current token and the next character is a
+//! word character; every other character ends the token. Tokens shorter than 2 or longer than
+//! [`MAX_TOKEN_CHARS`] characters (Unicode scalar values) are dropped. No stemming. Whitespace in
+//! titles and headings is collapsed with the same fixed list ([`is_space`]).
+//!
+//! Bounds: at most [`MAX_TOTAL_INPUT_BYTES`] of HTML are read per edition, and the build stops
+//! (`over_budget`, exit 1) as soon as a lower bound of the index size exceeds the budget.
 //!
 //! The HTML reader is a bounded tokenizer: it skips comments, doctype and processing
 //! instructions, the contents of `script` and `style`, and everything inside `nav`; every tag
@@ -36,9 +43,9 @@
 
 use fid_canon::CValue;
 use fid_types::CommandId;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::Path;
 
 /// Name of the index file written at the edition root.
@@ -61,6 +68,8 @@ pub const MAX_TOKEN_CHARS: usize = 64;
 pub const MAX_LABEL_CHARS: usize = 300;
 /// Most headings kept per page.
 pub const MAX_HEADINGS: usize = 200;
+/// Most HTML bytes read from one edition in total.
+pub const MAX_TOTAL_INPUT_BYTES: u64 = 512 * 1024 * 1024;
 
 /// Field weights.
 const W_TITLE: u8 = 3;
@@ -73,6 +82,7 @@ pub enum SearchError {
     EditionUnreadable { path: String, reason: String },
     BudgetParse { path: String, reason: String },
     IndexUnwritable { path: String, reason: String },
+    IndexSerialise { path: String, reason: String },
 }
 
 impl SearchError {
@@ -81,6 +91,7 @@ impl SearchError {
             SearchError::EditionUnreadable { .. } => "edition_unreadable",
             SearchError::BudgetParse { .. } => "budget_parse",
             SearchError::IndexUnwritable { .. } => "index_unwritable",
+            SearchError::IndexSerialise { .. } => "index_serialise",
         }
     }
 
@@ -88,7 +99,8 @@ impl SearchError {
         match self {
             SearchError::EditionUnreadable { path, reason }
             | SearchError::BudgetParse { path, reason }
-            | SearchError::IndexUnwritable { path, reason } => (path, reason),
+            | SearchError::IndexUnwritable { path, reason }
+            | SearchError::IndexSerialise { path, reason } => (path, reason),
         }
     }
 
@@ -174,17 +186,16 @@ impl Index {
     }
 
     /// The bytes of `search-index.js`: `window.FID_SEARCH_INDEX = <json>;\n`, pure ASCII.
-    pub fn to_script(&self) -> Vec<u8> {
-        // Every number is a small integer, so serialisation cannot fail; an empty result would
-        // still be caught by the caller's parse test rather than by a panic here.
-        let json = fid_canon::to_canonical_bytes(&self.to_value()).unwrap_or_default();
-        let json = String::from_utf8(json).unwrap_or_default();
+    /// Fails (and nothing is written) if the canonical serialisation fails.
+    pub fn to_script(&self) -> Result<Vec<u8>, String> {
+        let json = fid_canon::to_canonical_bytes(&self.to_value()).map_err(|e| e.to_string())?;
+        let json = String::from_utf8(json).map_err(|e| e.to_string())?;
         let mut out = String::with_capacity(json.len() + 32);
         out.push_str(GLOBAL);
         out.push_str(" = ");
         out.push_str(&js_safe(&json));
         out.push_str(";\n");
-        out.into_bytes()
+        Ok(out.into_bytes())
     }
 }
 
@@ -208,21 +219,32 @@ pub fn js_safe(json: &str) -> String {
 
 // ------------------------------------------------------------------ tokenisation
 
-/// Non-ASCII separator characters: Latin-1 punctuation and symbols, multiplication and division
-/// signs, General Punctuation, Supplemental Punctuation, CJK symbols and punctuation, vertical
-/// and small form variants, fullwidth ASCII punctuation, and the replacement character.
-fn is_unicode_separator(c: char) -> bool {
+/// Non-ASCII separator characters, a fixed list of code points: U+0080..U+00BF (C1 controls,
+/// Latin-1 punctuation and symbols, including U+0085 and U+00A0), U+00D7, U+00F7, U+1680 (Ogham
+/// space mark), U+2000..U+206F (General Punctuation, including the other Unicode spaces and line
+/// and paragraph separators), U+2E00..U+2E7F, U+3000..U+303F, U+FE10..U+FE1F, U+FE30..U+FE6F,
+/// U+FF00..U+FF0F, U+FF1A..U+FF20, U+FF3B..U+FF40, U+FF5B..U+FF65 and U+FFFD. Every Unicode
+/// White_Space character is in this list or is ASCII.
+pub fn is_separator(c: char) -> bool {
     matches!(c as u32,
-        0x80..=0xBF | 0xD7 | 0xF7 | 0x2000..=0x206F | 0x2E00..=0x2E7F | 0x3000..=0x303F
+        0x80..=0xBF | 0xD7 | 0xF7 | 0x1680 | 0x2000..=0x206F | 0x2E00..=0x2E7F | 0x3000..=0x303F
         | 0xFE10..=0xFE1F | 0xFE30..=0xFE6F | 0xFF00..=0xFF0F | 0xFF1A..=0xFF20 | 0xFF3B..=0xFF40
         | 0xFF5B..=0xFF65 | 0xFFFD)
+}
+
+/// Whitespace for collapsing titles and headings: ASCII tab, line feed, vertical tab, form feed,
+/// carriage return and space, and U+0085, U+00A0, U+1680, U+2000..U+200A, U+2028, U+2029,
+/// U+202F, U+205F and U+3000 (the Unicode White_Space set, written out).
+pub fn is_space(c: char) -> bool {
+    matches!(c as u32,
+        0x09..=0x0D | 0x20 | 0x85 | 0xA0 | 0x1680 | 0x2000..=0x200A | 0x2028 | 0x2029 | 0x202F | 0x205F | 0x3000)
 }
 
 fn is_word(c: char) -> bool {
     if c.is_ascii() {
         c.is_ascii_alphanumeric()
     } else {
-        !c.is_whitespace() && !is_unicode_separator(c)
+        !is_separator(c)
     }
 }
 
@@ -272,7 +294,7 @@ pub struct PageText {
 
 /// Collapses whitespace runs to one space, trims, and cuts at [`MAX_LABEL_CHARS`].
 fn label(raw: &str) -> String {
-    let joined = raw.split_whitespace().collect::<Vec<_>>().join(" ");
+    let joined = raw.split(is_space).filter(|w| !w.is_empty()).collect::<Vec<_>>().join(" ");
     joined.chars().take(MAX_LABEL_CHARS).collect()
 }
 
@@ -552,6 +574,13 @@ pub fn url_of(rel: &str) -> String {
     out
 }
 
+/// Rank of the MCP surface.
+const MCP_RANK: u8 = 1;
+
+/// Marker the reference renderer (`ref_pages`) puts on a surface page of a command that is not
+/// available on that surface.
+const UNAVAILABLE_MARKER: &str = "class=\"unavailable\"";
+
 /// Surface order of reference pages: CLI, MCP, Python.
 fn surface_rank(s: &str) -> Option<u8> {
     match s {
@@ -593,10 +622,13 @@ pub fn mcp_name(name: &str, major: u32) -> String {
     }
 }
 
-/// Builds the exact-name table from the reference pages among `urls` (relative paths).
-pub fn names_table(rels: &[String]) -> BTreeMap<String, Vec<String>> {
+/// Builds the exact-name table from the reference pages among `rels` (relative paths).
+/// `mcp_unavailable` holds the MCP pages that say the command is not available on MCP; no MCP
+/// tool name key is made for those command majors.
+pub fn names_table(rels: &[String], mcp_unavailable: &BTreeSet<String>) -> BTreeMap<String, Vec<String>> {
     // name -> major -> (id text, surface rank -> url)
-    type Majors = BTreeMap<u32, (String, BTreeMap<u8, String>)>;
+    // name -> major -> (id text, surface rank -> url, MCP marked unavailable)
+    type Majors = BTreeMap<u32, (String, BTreeMap<u8, String>, bool)>;
     let mut cmds: BTreeMap<String, Majors> = BTreeMap::new();
     for rel in rels {
         let Some((id, rank)) = ref_page(rel) else { continue };
@@ -604,32 +636,56 @@ pub fn names_table(rels: &[String]) -> BTreeMap<String, Vec<String>> {
             .entry(id.name().to_string())
             .or_default()
             .entry(id.major())
-            .or_insert_with(|| (id.as_str().to_string(), BTreeMap::new()));
+            .or_insert_with(|| (id.as_str().to_string(), BTreeMap::new(), false));
         // Two spellings of one major (`x@1`, `x@01`): the first in byte order wins per surface.
-        entry.1.entry(rank).or_insert_with(|| url_of(rel));
+        if !entry.1.contains_key(&rank) {
+            entry.1.insert(rank, url_of(rel));
+            if rank == MCP_RANK && mcp_unavailable.contains(rel) {
+                entry.2 = true;
+            }
+        }
     }
     let mut names: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for (name, majors) in &cmds {
         let mut all = Vec::new();
-        for (major, (id_text, pages)) in majors.iter().rev() {
+        for (major, (id_text, pages, no_mcp)) in majors.iter().rev() {
             let urls: Vec<String> = pages.values().cloned().collect();
             names.entry(id_text.clone()).or_default().extend(urls.iter().cloned());
             names.entry(format!("{name}@{major}")).or_default().extend(urls.iter().cloned());
-            names.entry(mcp_name(name, *major)).or_default().extend(urls.iter().cloned());
+            if !*no_mcp {
+                names.entry(mcp_name(name, *major)).or_default().extend(urls.iter().cloned());
+            }
             all.extend(urls);
         }
         names.entry(name.clone()).or_default().extend(all.iter().cloned());
         names.entry(cli_path(name)).or_default().extend(all);
     }
     for urls in names.values_mut() {
-        let mut seen = std::collections::BTreeSet::new();
+        let mut seen = BTreeSet::new();
         urls.retain(|u| seen.insert(u.clone()));
     }
     names
 }
 
-/// Builds the index of the edition at `edition`.
-pub fn build(edition: &Path) -> Result<Index, SearchError> {
+/// Result of [`build`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Built {
+    Index(Index),
+    /// Stopped early: the index would be at least this many bytes, over the budget.
+    OverBudget { at_least: u64 },
+}
+
+/// Bytes every index file has besides its contents: the assignment, the four top-level keys and
+/// their brackets.
+fn fixed_bytes() -> u64 {
+    (GLOBAL.len() + " = ".len() + r#"{"docs":[],"names":{},"terms":{},"v":1};"#.len() + 1) as u64
+}
+
+/// Builds the index of the edition at `edition`, reading at most `max_input` HTML bytes in total,
+/// and stops with [`Built::OverBudget`] as soon as a lower bound of the index size exceeds
+/// `max_bytes`. The lower bound counts the unescaped bytes of every title, URL, heading and term
+/// plus 5 bytes (`[d,w]`) per posting; escaping and separators only add to it.
+pub fn build(edition: &Path, max_bytes: u64, max_input: u64) -> Result<Built, SearchError> {
     let meta = std::fs::metadata(edition).map_err(|e| unreadable(edition, e.to_string()))?;
     if !meta.is_dir() {
         return Err(unreadable(edition, "not a directory"));
@@ -638,19 +694,30 @@ pub fn build(edition: &Path) -> Result<Index, SearchError> {
     walk(edition, "", 0, &mut rels)?;
     rels.sort();
     let mut index = Index::default();
+    let mut mcp_unavailable = BTreeSet::new();
+    let mut input = 0u64;
+    let mut estimate = fixed_bytes();
     for (n, rel) in rels.iter().enumerate() {
         let path = edition.join(rel);
         let bytes = read_bounded(&path, MAX_PAGE_BYTES).map_err(|e| unreadable(&path, e))?;
+        input += bytes.len() as u64;
+        if input > max_input {
+            return Err(unreadable(edition, format!("edition holds more than {max_input} bytes of HTML")));
+        }
         let text = String::from_utf8_lossy(&bytes);
         let text = text.strip_prefix('\u{feff}').unwrap_or(&text);
+        if ref_page(rel).is_some_and(|(_, rank)| rank == MCP_RANK) && text.contains(UNAVAILABLE_MARKER) {
+            mcp_unavailable.insert(rel.clone());
+        }
         let page = read_html(text);
         let url = url_of(rel);
-        let title = if !page.title.is_empty() {
-            page.title.clone()
+        // A page without title or heading is listed under its URL, but the URL is not indexed.
+        let (title, title_terms) = if !page.title.is_empty() {
+            (page.title.clone(), true)
         } else if let Some(h) = page.headings.first() {
-            h.clone()
+            (h.clone(), true)
         } else {
-            url.clone()
+            (url.clone(), false)
         };
         let mut weights: BTreeMap<String, u8> = BTreeMap::new();
         let mut add = |text: &str, w: u8| {
@@ -665,14 +732,26 @@ pub fn build(edition: &Path) -> Result<Index, SearchError> {
         for h in &page.headings {
             add(h, W_HEADING);
         }
-        add(&title, W_TITLE);
+        if title_terms {
+            add(&title, W_TITLE);
+        }
+        estimate += (title.len() + url.len() + page.headings.iter().map(String::len).sum::<usize>()) as u64;
         for (tok, w) in weights {
-            index.terms.entry(tok).or_default().push((n, w));
+            let key_len = tok.len() as u64;
+            let posts = index.terms.entry(tok).or_default();
+            if posts.is_empty() {
+                estimate += key_len;
+            }
+            posts.push((n, w));
+            estimate += 5;
         }
         index.docs.push(Doc { title, url, headings: page.headings });
+        if estimate > max_bytes {
+            return Ok(Built::OverBudget { at_least: estimate });
+        }
     }
-    index.names = names_table(&rels);
-    Ok(index)
+    index.names = names_table(&rels, &mcp_unavailable);
+    Ok(Built::Index(index))
 }
 
 /// Reads `max_bytes` (a positive integer) from the budget TOML file.
@@ -691,8 +770,10 @@ pub fn read_budget(path: &Path) -> Result<u64, SearchError> {
 /// Result of one run.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Outcome {
-    /// Size of the index file in bytes.
+    /// Size of the index file in bytes, or a lower bound of it when `complete` is false.
     pub bytes: u64,
+    /// Whether `bytes` is the exact size (false when the build stopped early over budget).
+    pub complete: bool,
     /// The budget's `max_bytes`.
     pub max_bytes: u64,
     pub docs: usize,
@@ -715,8 +796,10 @@ impl Outcome {
     pub fn render(&self) -> String {
         if self.over_budget() {
             format!(
-                "over_budget {INDEX_FILE}: {} bytes exceeds the budget of {} bytes; nothing written\n",
-                self.bytes, self.max_bytes
+                "over_budget {INDEX_FILE}: {}{} bytes exceeds the budget of {} bytes; nothing written\n",
+                if self.complete { "" } else { "at least " },
+                self.bytes,
+                self.max_bytes
             )
         } else {
             format!(
@@ -739,6 +822,7 @@ impl Outcome {
         }
         let mut o = BTreeMap::new();
         o.insert("bytes".to_string(), num(self.bytes));
+        o.insert("complete".to_string(), CValue::Bool(self.complete));
         o.insert("docs".to_string(), num(self.docs as u64));
         o.insert("findings".to_string(), CValue::Arr(findings));
         o.insert("max_bytes".to_string(), num(self.max_bytes));
@@ -751,13 +835,31 @@ impl Outcome {
 }
 
 /// `search-index`: builds the index of `edition` and writes `search-index.js` at its root, unless
-/// the file would exceed the budget's `max_bytes`, in which case nothing is written.
+/// the file would exceed the budget's `max_bytes`, in which case nothing is written. The file is
+/// written to a new temporary file in the edition and renamed over the target; a symbolic link or
+/// a non-file at the target is refused.
 pub fn run(edition: &Path, budget: &Path) -> Result<Outcome, SearchError> {
     let max_bytes = read_budget(budget)?;
-    let index = build(edition)?;
-    let script = index.to_script();
+    let index = match build(edition, max_bytes, MAX_TOTAL_INPUT_BYTES)? {
+        Built::Index(index) => index,
+        Built::OverBudget { at_least } => {
+            return Ok(Outcome {
+                bytes: at_least,
+                complete: false,
+                max_bytes,
+                docs: 0,
+                terms: 0,
+                names: 0,
+                written: false,
+            })
+        }
+    };
+    let script = index
+        .to_script()
+        .map_err(|reason| SearchError::IndexSerialise { path: edition.display().to_string(), reason })?;
     let mut outcome = Outcome {
         bytes: script.len() as u64,
+        complete: true,
         max_bytes,
         docs: index.docs.len(),
         terms: index.terms.len(),
@@ -765,10 +867,34 @@ pub fn run(edition: &Path, budget: &Path) -> Result<Outcome, SearchError> {
         written: false,
     };
     if !outcome.over_budget() {
-        let path = edition.join(INDEX_FILE);
-        std::fs::write(&path, &script)
-            .map_err(|e| SearchError::IndexUnwritable { path: path.display().to_string(), reason: e.to_string() })?;
+        write_atomic(&edition.join(INDEX_FILE), &script)?;
         outcome.written = true;
     }
     Ok(outcome)
+}
+
+/// Writes `bytes` to a fresh temporary file next to `path`, then renames it over `path`.
+fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), SearchError> {
+    let fail = |p: &Path, reason: String| SearchError::IndexUnwritable { path: p.display().to_string(), reason };
+    match std::fs::symlink_metadata(path) {
+        Ok(m) if m.file_type().is_symlink() => {
+            return Err(fail(path, "refusing to replace a symbolic link".to_string()));
+        }
+        Ok(m) if !m.is_file() => return Err(fail(path, "exists and is not a regular file".to_string())),
+        Ok(_) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(fail(path, e.to_string())),
+    }
+    let tmp = path.with_file_name(format!("{INDEX_FILE}.tmp-{}", std::process::id()));
+    let result = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&tmp)
+        .and_then(|mut f| f.write_all(bytes).and_then(|()| f.sync_all()))
+        .and_then(|()| std::fs::rename(&tmp, path));
+    if let Err(e) = result {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(fail(path, e.to_string()));
+    }
+    Ok(())
 }

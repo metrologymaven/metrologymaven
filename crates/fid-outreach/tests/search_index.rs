@@ -5,8 +5,10 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::CValue;
-use fid_outreach::search_index::{cli_path, js_safe, mcp_name, names_table, read_html, tokenize, url_of};
-use std::collections::BTreeMap;
+use fid_outreach::search_index::{
+    build, cli_path, js_safe, mcp_name, names_table, read_html, tokenize, url_of, Built, SearchError,
+};
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
@@ -196,17 +198,13 @@ fn ac3_urls_are_relative_and_inside_the_edition() {
 #[test]
 fn ac4_over_budget_exits_1_with_size_and_budget() {
     let edition = site("ac4");
+    // A 1 KB budget stops the build early: the size stated is a lower bound.
     let o = run(&edition, &fix("budget-1k.toml"), false);
     assert_eq!(o.status.code(), Some(1), "{}", show(&o));
     let out = String::from_utf8_lossy(&o.stdout).into_owned();
-    assert!(out.starts_with("over_budget "), "{out}");
-    assert!(out.contains("1024 bytes"), "{out}");
+    assert!(out.starts_with("over_budget search-index.js: at least "), "{out}");
+    assert!(out.contains("exceeds the budget of 1024 bytes"), "{out}");
     assert!(!edition.join("search-index.js").exists(), "nothing is written when over budget");
-
-    // The size stated is the size the file has when written under a large budget.
-    assert_eq!(run(&edition, &fix("search-budget.toml"), false).status.code(), Some(0));
-    let size = std::fs::metadata(edition.join("search-index.js")).unwrap().len();
-    assert!(out.contains(&format!("{size} bytes")), "{out}");
 
     let o = run(&edition, &fix("budget-1k.toml"), true);
     assert_eq!(o.status.code(), Some(1));
@@ -214,11 +212,113 @@ fn ac4_over_budget_exits_1_with_size_and_budget() {
         panic!()
     };
     assert_eq!(rep.get("ok"), Some(&CValue::Bool(false)));
-    assert_eq!(num(rep.get("bytes").unwrap()), size as f64);
+    assert_eq!(rep.get("complete"), Some(&CValue::Bool(false)));
+    assert!(num(rep.get("bytes").unwrap()) > 1024.0);
     assert_eq!(num(rep.get("max_bytes").unwrap()), 1024.0);
     let Some(CValue::Arr(findings)) = rep.get("findings") else { panic!() };
     let CValue::Obj(f) = &findings[0] else { panic!() };
     assert_eq!(f.get("code"), Some(&CValue::Str("over_budget".into())));
+
+    // A budget one byte under the real size: the build completes and the exact size is stated.
+    assert_eq!(run(&edition, &fix("search-budget.toml"), false).status.code(), Some(0));
+    let size = std::fs::metadata(edition.join("search-index.js")).unwrap().len();
+    let tight = edition.parent().unwrap().join("tight.toml");
+    std::fs::write(&tight, format!("max_bytes = {}\n", size - 1)).unwrap();
+    let before = std::fs::read(edition.join("search-index.js")).unwrap();
+    let o = run(&edition, &tight, false);
+    assert_eq!(o.status.code(), Some(1), "{}", show(&o));
+    let out = String::from_utf8_lossy(&o.stdout).into_owned();
+    assert!(out.contains(&format!(": {size} bytes exceeds the budget of {} bytes", size - 1)), "{out}");
+    assert_eq!(before, std::fs::read(edition.join("search-index.js")).unwrap(), "old index left untouched");
+}
+
+#[test]
+fn total_input_is_capped() {
+    let edition = site("input-cap");
+    match build(&edition, u64::MAX, 100) {
+        Err(e @ SearchError::EditionUnreadable { .. }) => {
+            assert!(e.to_string().contains("more than 100 bytes of HTML"), "{e}");
+        }
+        other => panic!("{other:?}"),
+    }
+    assert!(matches!(build(&edition, u64::MAX, u64::MAX), Ok(Built::Index(_))));
+}
+
+#[test]
+fn mcp_name_skipped_for_command_not_on_mcp() {
+    // demo.move_axis@1 is an M1 command; its pages come from the OUTR.DOCS.REF fixture, rendered
+    // by that leaf's independent Python script. Its MCP page says it is not available on MCP.
+    let edition = site("m1");
+    let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/outr/docs/ref/expected/v0.1.0/ref");
+    for surface in ["cli", "mcp", "python"] {
+        std::fs::copy(
+            src.join(surface).join("demo.move_axis@1.html"),
+            edition.join("ref").join(surface).join("demo.move_axis@1.html"),
+        )
+        .unwrap();
+    }
+    assert_eq!(run(&edition, &fix("search-budget.toml"), false).status.code(), Some(0));
+    let idx = load(&edition);
+    let names = obj(&idx, "names");
+    let pages =
+        ["ref/cli/demo.move_axis@1.html", "ref/mcp/demo.move_axis@1.html", "ref/python/demo.move_axis@1.html"];
+    for key in ["demo.move_axis", "demo.move_axis@1", "fid demo move-axis"] {
+        assert_eq!(strs(names.get(key).unwrap()), pages, "{key}");
+    }
+    assert!(!names.contains_key("demo_move_axis"), "no MCP tool name for a command not on MCP");
+    assert_eq!(strs(names.get("align_run_bestfit").unwrap()), ALIGN);
+}
+
+#[test]
+fn page_without_title_is_listed_under_its_url_but_the_url_is_not_indexed() {
+    let edition = site("no-title");
+    std::fs::create_dir_all(edition.join("misc")).unwrap();
+    std::fs::write(edition.join("misc/zzqq.html"), "<p>plain words</p>").unwrap();
+    assert_eq!(run(&edition, &fix("search-budget.toml"), false).status.code(), Some(0));
+    let idx = load(&edition);
+    let terms = obj(&idx, "terms");
+    assert!(!terms.contains_key("zzqq.html") && !terms.contains_key("misc"));
+    assert_eq!(weight(&idx, "plain", "misc/zzqq.html"), Some(1.0));
+    let Some(CValue::Arr(docs)) = idx.get("docs") else { panic!() };
+    let pos = doc_urls(&idx).iter().position(|u| u == "misc/zzqq.html").unwrap();
+    let CValue::Obj(d) = &docs[pos] else { panic!() };
+    assert_eq!(d.get("t"), Some(&CValue::Str("misc/zzqq.html".into())));
+}
+
+#[test]
+fn target_that_is_not_a_regular_file_is_refused() {
+    let edition = site("not-file");
+    std::fs::create_dir_all(edition.join("search-index.js")).unwrap();
+    let o = run(&edition, &fix("search-budget.toml"), false);
+    assert_eq!(o.status.code(), Some(2), "{}", show(&o));
+    assert!(String::from_utf8_lossy(&o.stderr).contains("index_unwritable"), "{}", show(&o));
+    assert!(edition.join("search-index.js").is_dir());
+}
+
+#[cfg(unix)]
+#[test]
+fn symlink_target_is_refused() {
+    let edition = site("symlink");
+    let outside = edition.parent().unwrap().join("outside.js");
+    std::fs::write(&outside, "keep").unwrap();
+    std::os::unix::fs::symlink(&outside, edition.join("search-index.js")).unwrap();
+    let o = run(&edition, &fix("search-budget.toml"), false);
+    assert_eq!(o.status.code(), Some(2), "{}", show(&o));
+    assert!(String::from_utf8_lossy(&o.stderr).contains("symbolic link"), "{}", show(&o));
+    assert_eq!(std::fs::read_to_string(&outside).unwrap(), "keep");
+}
+
+#[test]
+fn no_temporary_file_is_left_behind() {
+    let edition = site("tmpfile");
+    assert_eq!(run(&edition, &fix("search-budget.toml"), false).status.code(), Some(0));
+    assert_eq!(run(&edition, &fix("search-budget.toml"), false).status.code(), Some(0));
+    let left: Vec<String> = std::fs::read_dir(&edition)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|n| n.contains(".tmp-"))
+        .collect();
+    assert!(left.is_empty(), "{left:?}");
 }
 
 #[test]
@@ -285,6 +385,9 @@ fn tokenizer_rules() {
     assert_eq!(tokenize("STRASSE Straße İSTANBUL"), ["strasse", "straße", "İstanbul"]);
     // Non-ASCII punctuation separates words; non-ASCII letters join them.
     assert_eq!(tokenize("probe\u{2014}stylus «datum» naïve"), ["probe", "stylus", "datum", "naïve"]);
+    // U+1680 and U+00A0 are separators; there is no NFC normalisation (e + combining acute stays).
+    assert_eq!(tokenize("ab\u{1680}cd\u{a0}ef"), ["ab", "cd", "ef"]);
+    assert_eq!(tokenize("cafe\u{301} caf\u{e9}"), ["cafe\u{301}", "caf\u{e9}"]);
     let long = "a".repeat(65);
     assert!(tokenize(&long).is_empty());
     assert_eq!(tokenize(&"b".repeat(64)).len(), 1);
@@ -331,7 +434,7 @@ fn names_follow_constitution_section_3() {
     .iter()
     .map(|s| s.to_string())
     .collect();
-    let t = names_table(&rels);
+    let t = names_table(&rels, &BTreeSet::new());
     let v = |k: &str| t.get(k).cloned().unwrap_or_default();
     let newest_first = ["ref/cli/x.do_it@2.html", "ref/mcp/x.do_it@2.html", "ref/cli/x.do_it@1.html"];
     assert_eq!(v("x.do_it"), newest_first);
@@ -341,6 +444,10 @@ fn names_follow_constitution_section_3() {
     assert_eq!(v("x.do_it@1"), ["ref/cli/x.do_it@1.html"]);
     assert_eq!(v("x_do_it"), ["ref/cli/x.do_it@1.html"]);
     assert_eq!(t.len(), 6, "{:?}", t.keys().collect::<Vec<_>>());
+    let no_mcp: BTreeSet<String> = ["ref/mcp/x.do_it@2.html".to_string()].into_iter().collect();
+    let t = names_table(&rels, &no_mcp);
+    assert!(!t.contains_key("x_do_it_v2"));
+    assert_eq!(t.get("x_do_it").cloned().unwrap_or_default(), ["ref/cli/x.do_it@1.html"]);
     assert_eq!(url_of("a b/\u{fc}.html"), "a%20b/%C3%BC.html");
 }
 
