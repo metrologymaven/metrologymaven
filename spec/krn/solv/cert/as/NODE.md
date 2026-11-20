@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-solv]
 satisfies: [REQ-KRN.SOLV.CERT-001, REQ-KRN.SOLV.CERT-004]
 covers: []
 depends_on: [KRN.SOLV.CONIC.WRAP, KRN.NUM.FN, KRN.NUM.ERR]
@@ -76,6 +77,12 @@ Reads a converged conic solution and decides which constraints are in contact. R
 ## Open questions
 
 - Default threshold values (for example slack_rel 1e-9, mult_rel 1e-9 [unverified]) are set per caller; `KRN.MZ` and `KRN.ENV` should state theirs.
+- **As built (crates/fid-solv, module `cert::active`):** the signature is `extract(problem: &ConicProblem, solution: &ConicSolution, labels, expected, thresholds)`. The problem is needed because `scale_s = max |b|` and the cone layout are not in the solution. Every cone must be nonnegative (`InvalidInput { field: "cones" }` otherwise): a slack/multiplier rule does not classify equality rows or second-order cones. Thresholds must be finite and nonnegative, `expected >= 1`, `y` and `s` finite (the solution's fields are public), labels unique (`DuplicateLabel`).
+- **As built, exactness:** both threshold tests compare `s_i` with the real product `slack_rel * scale_s` (and `y_i` with `mult_rel * scale_y`) exactly, on integer significands and exponents; the product is never rounded. There is no rounding band, so no extra tolerance is needed. The only tolerances are the caller's two thresholds, recorded with the scales. The only float operations are `abs` and total-order max, so the output is bit-identical on every target.
+- **As built, strongly active also needs `y_i > 0`:** with `mult_rel = 0` or all multipliers 0, a zero multiplier is not clearly positive, so the row is ambiguous (fail closed).
+- **As built, over-determined sets (deviation from REQ-004):** when more rows are strongly active than `expected` (a primal-degenerate optimum such as two points at equal deviation, where an interior-point method gives every tied row a positive multiplier), the candidates are the `expected`-size subsets of the strongly active rows, in the same order, with `tie_broken = true` and a new flag `over_determined = true`. REQ-004 as written would return `ActiveSetUndetermined` here, so a solved tie would never reach `KRN.SOLV.CERT.CT`; candidates are only proposals, and `CT` certifies one by recomputation and the KKT check or fails. Over the cap is still `ActiveSetUndetermined`.
+- **As built, error:** `CertError` (in `fid_solv::cert`, non-exhaustive for the sibling leaves) has `Shape { field, expected, got }`, `InvalidInput { field }`, `DuplicateLabel { label }` and `ActiveSetUndetermined { strongly_active, ambiguous, cause }`, where `cause` is `TooFewRows` or `OverCap`.
+- **As built, fixture:** `fixtures/solv/cert/as-v1/make_cases.py` (stdlib Python, exact `Fraction` decisions, no libm) plants 40 minimum-zone straightness LPs (30 nondegenerate, 5 ties whose tied rows have sub-threshold multipliers, AC-2's problem among them, 5 over-determined ties), 2 vertex-dual ties, 38 boundary cases (slack or multiplier at or within one ulp of the rounded threshold product, zero thresholds, negative values, exactly 252 candidates) and 3 undetermined cases. The test also solves all 42 LPs with `solve_lp` and checks the candidates the oracle predicts for an interior-point solution. The crate's output bits are pinned by one SHA-256 for all targets (regression pin, not the oracle). The 256 cap and the performance budget are not measured [unverified].
 
 ## Children
 
