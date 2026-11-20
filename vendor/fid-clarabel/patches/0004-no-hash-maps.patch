@@ -1,0 +1,51 @@
+Patch 0004 (no-hash-maps) of fid-clarabel, spec node KRN.SOLV.CONIC.PATCH.
+
+Replace the HashMap of cone type counts with a BTreeMap.
+
+Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
+
+diff --git a/src/solver/core/cones/compositecone.rs b/src/solver/core/cones/compositecone.rs
+index 0857bb4..14f67f6 100644
+--- a/src/solver/core/cones/compositecone.rs
++++ b/src/solver/core/cones/compositecone.rs
+@@ -1,7 +1,7 @@
+ use super::*;
+ use crate::algebra::T;
+ use crate::algebra::{sq_root, tmin, triangular_number};
+-use std::collections::HashMap;
++use std::collections::BTreeMap;
+ use std::iter::zip;
+ use std::ops::Range;
+ 
+@@ -14,7 +14,8 @@ pub struct CompositeCone {
+ 
+     //Type count for each cone type (upstream printed it; kept for the wrapper)
+     #[allow(dead_code)]
+-    pub(crate) type_counts: HashMap<SupportedConeTag, usize>,
++    // (KNP-1, patch 0004: BTreeMap instead of HashMap, so iteration order is fixed)
++    pub(crate) type_counts: BTreeMap<SupportedConeTag, usize>,
+ 
+     //overall size of the composite cone
+     pub(crate) numel: usize,
+@@ -42,7 +43,7 @@ impl CompositeCone {
+         // NB: ideally we could fix max capacity here,  but Enum::variant_count is not
+         // yet a stable feature.  Capacity should be number of SupportedCone variants.
+         // See: https://github.com/rust-lang/rust/issues/73662
+-        let mut type_counts = HashMap::new();
++        let mut type_counts = BTreeMap::new();
+ 
+         // assumed symmetric to start
+         let mut _is_symmetric = true;
+diff --git a/src/solver/core/cones/supportedcone.rs b/src/solver/core/cones/supportedcone.rs
+index 17d7383..a277fec 100644
+--- a/src/solver/core/cones/supportedcone.rs
++++ b/src/solver/core/cones/supportedcone.rs
+@@ -133,7 +133,7 @@ pub enum SupportedCone {
+ // -------------------------------------
+ 
+ #[allow(clippy::enum_variant_names)]
+-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
++#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+ #[repr(u8)]
+ pub(crate) enum SupportedConeTag {
+     ZeroCone = 0,

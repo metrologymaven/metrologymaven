@@ -1,0 +1,3821 @@
+Patch 0002 (f64-specialisation) of fid-clarabel, spec node KRN.SOLV.CONIC.PATCH.
+
+Specialise the generic float type to f64: `T` becomes an alias of f64, generic float parameters are removed, and `FloatT` keeps only the constructors the solver used from num-traits, which is dropped.
+
+Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
+
+diff --git a/Cargo.toml b/Cargo.toml
+index 9c65555..2a82595 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -19,7 +19,6 @@ derive_builder = "0.11"
+ enum_dispatch = "0.3.8"
+ itertools = "0.11"
+ lazy_static = "1.4"
+-num-traits = "0.2"
+ thiserror = "1.0"
+ 
+ [lib]
+diff --git a/src/algebra/csc/block_concatenate.rs b/src/algebra/csc/block_concatenate.rs
+index bf2d86b..dc93e92 100644
+--- a/src/algebra/csc/block_concatenate.rs
++++ b/src/algebra/csc/block_concatenate.rs
+@@ -3,12 +3,9 @@ use crate::algebra::matrix_traits::ShapedMatrix;
+ use crate::algebra::MatrixConcatenationError;
+ use std::cmp::max;
+ 
+-use crate::algebra::{BlockConcatenate, CscMatrix, FloatT, MatrixShape};
++use crate::algebra::{BlockConcatenate, CscMatrix, MatrixShape};
+ 
+-impl<T> BlockConcatenate for CscMatrix<T>
+-where
+-    T: FloatT,
+-{
++impl BlockConcatenate for CscMatrix {
+     fn hcat(A: &Self, B: &Self) -> Result<Self, MatrixConcatenationError> {
+         Self::hvcat(&[&[A, B]])
+     }
+@@ -32,7 +29,7 @@ where
+             ncols += mat.ncols();
+             nnzM += mat.nnz();
+         }
+-        let mut M = CscMatrix::<T>::spalloc((nrows, ncols), nnzM);
++        let mut M = CscMatrix::spalloc((nrows, ncols), nnzM);
+ 
+         // assemble the column counts
+         M.colptr.fill(0);
+@@ -87,7 +84,7 @@ where
+             }
+         }
+ 
+-        let mut M = CscMatrix::<T>::spalloc((nrows, ncols), nnzM);
++        let mut M = CscMatrix::spalloc((nrows, ncols), nnzM);
+ 
+         // assemble the column counts
+         M.colptr.fill(0);
+diff --git a/src/algebra/csc/core.rs b/src/algebra/csc/core.rs
+index 80c316f..e532a93 100644
+--- a/src/algebra/csc/core.rs
++++ b/src/algebra/csc/core.rs
+@@ -3,7 +3,7 @@
+ use crate::algebra::utils::sortperm_by;
+ use crate::algebra::{permute, MatrixTriangle, TriangularMatrixChecks};
+ use crate::algebra::{Adjoint, MatrixShape, ShapedMatrix, SparseFormatError, Symmetric};
+-use num_traits::Num;
++use crate::algebra::{FloatT, T};
+ use std::iter::{repeat, zip};
+ 
+ /// Sparse matrix in standard Compressed Sparse Column (CSC) format
+@@ -17,7 +17,7 @@ use std::iter::{repeat, zip};
+ /// ```no_run
+ /// use clarabel::algebra::CscMatrix;
+ ///
+-/// let A : CscMatrix<f64> = CscMatrix::new(
++/// let A : CscMatrix = CscMatrix::new(
+ ///    3,                                // m
+ ///    3,                                // n
+ ///    vec![0, 2, 4, 7],                 //colptr
+@@ -36,8 +36,8 @@ use std::iter::{repeat, zip};
+ ///        [0.0, 4.0, 7.0]]);
+ ///
+ /// ```
+-#[derive(Debug, Clone, PartialEq, Eq)]
+-pub struct CscMatrix<T = f64> {
++#[derive(Debug, Clone, PartialEq)]
++pub struct CscMatrix {
+     /// number of rows
+     pub m: usize,
+     /// number of columns
+@@ -64,14 +64,13 @@ pub struct CscMatrix<T = f64> {
+ ///        [3.0, 0.0],
+ ///        [0.0, 4.0]]);
+ ///
+-impl<'a, I, J, T> From<I> for CscMatrix<T>
++impl<'a, I, J> From<I> for CscMatrix
+ where
+     I: IntoIterator<Item = J>,
+     J: IntoIterator<Item = &'a T>,
+-    T: Num + Copy + 'a,
+ {
+     #[allow(clippy::needless_range_loop)]
+-    fn from(rows: I) -> CscMatrix<T> {
++    fn from(rows: I) -> CscMatrix {
+         let rows: Vec<Vec<T>> = rows
+             .into_iter()
+             .map(|r| r.into_iter().copied().collect())
+@@ -99,7 +98,7 @@ where
+             colptr.push(nzval.len());
+         }
+ 
+-        CscMatrix::<T> {
++        CscMatrix {
+             m,
+             n,
+             colptr,
+@@ -109,10 +108,7 @@ where
+     }
+ }
+ 
+-impl<T> CscMatrix<T>
+-where
+-    T: Num + Copy,
+-{
++impl CscMatrix {
+     /// `CscMatrix` constructor.
+     ///
+     /// # Panics
+@@ -603,7 +599,7 @@ where
+     }
+ }
+ 
+-impl<T> TriangularMatrixChecks for CscMatrix<T> {
++impl TriangularMatrixChecks for CscMatrix {
+     fn is_triu(&self) -> bool {
+         // check lower triangle for any structural entries, regardless
+         // of the values that may be assigned to them
+@@ -636,7 +632,7 @@ impl<T> TriangularMatrixChecks for CscMatrix<T> {
+     }
+ }
+ 
+-impl<T> ShapedMatrix for CscMatrix<T> {
++impl ShapedMatrix for CscMatrix {
+     fn nrows(&self) -> usize {
+         self.m
+     }
+@@ -679,11 +675,8 @@ impl<T> ShapedMatrix for CscMatrix<T> {
+ /// assert_eq!(A, B);
+ ///
+ /// ```
+-impl<'a, T> From<Adjoint<'a, CscMatrix<T>>> for CscMatrix<T>
+-where
+-    T: Num + Copy,
+-{
+-    fn from(M: Adjoint<'a, CscMatrix<T>>) -> CscMatrix<T> {
++impl<'a> From<Adjoint<'a, CscMatrix>> for CscMatrix {
++    fn from(M: Adjoint<'a, CscMatrix>) -> CscMatrix {
+         let src = M.src;
+ 
+         let (m, n) = (src.n, src.m);
+diff --git a/src/algebra/csc/matrix_math.rs b/src/algebra/csc/matrix_math.rs
+index b3dee3b..b7c87de 100644
+--- a/src/algebra/csc/matrix_math.rs
++++ b/src/algebra/csc/matrix_math.rs
+@@ -1,19 +1,19 @@
+ use crate::algebra::*;
+ use std::iter::zip;
+ 
+-impl<T: FloatT> MatrixVectorMultiply<T> for CscMatrix<T> {
++impl MatrixVectorMultiply for CscMatrix {
+     fn gemv(&self, y: &mut [T], x: &[T], a: T, b: T) {
+         _csc_axpby_N(self, y, x, a, b);
+     }
+ }
+ 
+-impl<T: FloatT> MatrixVectorMultiply<T> for Adjoint<'_, CscMatrix<T>> {
++impl MatrixVectorMultiply for Adjoint<'_, CscMatrix> {
+     fn gemv(&self, y: &mut [T], x: &[T], a: T, b: T) {
+         _csc_axpby_T(self.src, y, x, a, b);
+     }
+ }
+ 
+-impl<T: FloatT> SymMatrixMath<T> for Symmetric<'_, CscMatrix<T>> {
++impl SymMatrixMath for Symmetric<'_, CscMatrix> {
+     fn symv(&self, y: &mut [T], x: &[T], a: T, b: T) {
+         _csc_symv_unsafe(self.src, self.uplo, y, x, a, b)
+     }
+@@ -23,7 +23,7 @@ impl<T: FloatT> SymMatrixMath<T> for Symmetric<'_, CscMatrix<T>> {
+     }
+ }
+ 
+-impl<T: FloatT> MatrixMath<T> for CscMatrix<T> {
++impl MatrixMath for CscMatrix {
+     fn col_sums(&self, sums: &mut [T]) {
+         assert_eq!(self.n, sums.len());
+         for (col, sum) in sums.iter_mut().enumerate() {
+@@ -90,7 +90,7 @@ impl<T: FloatT> MatrixMath<T> for CscMatrix<T> {
+     }
+ }
+ 
+-impl<T: FloatT> MatrixMathMut<T> for CscMatrix<T> {
++impl MatrixMathMut for CscMatrix {
+     //scalar mut operations
+     fn scale(&mut self, c: T) {
+         self.nzval.scale(c);
+@@ -132,14 +132,7 @@ impl<T: FloatT> MatrixMathMut<T> for CscMatrix<T> {
+ }
+ 
+ #[allow(non_snake_case)]
+-fn _csc_symv_safe<T: FloatT>(
+-    A: &CscMatrix<T>,
+-    _uplo: MatrixTriangle,
+-    y: &mut [T],
+-    x: &[T],
+-    a: T,
+-    b: T,
+-) {
++fn _csc_symv_safe(A: &CscMatrix, _uplo: MatrixTriangle, y: &mut [T], x: &[T], a: T, b: T) {
+     // NB: this function works identically regardless of uplo.  Implemented
+     // this for for consistency with _csc_quad_form interface
+ 
+@@ -175,14 +168,7 @@ fn _csc_symv_safe<T: FloatT>(
+ // the symmetric KKT matrix, and is used heavily in iterative refinement of
+ // direct linear solves.
+ #[allow(non_snake_case)]
+-fn _csc_symv_unsafe<T: FloatT>(
+-    A: &CscMatrix<T>,
+-    _uplo: MatrixTriangle,
+-    y: &mut [T],
+-    x: &[T],
+-    a: T,
+-    b: T,
+-) {
++fn _csc_symv_unsafe(A: &CscMatrix, _uplo: MatrixTriangle, y: &mut [T], x: &[T], a: T, b: T) {
+     // NB: this function works identically regardless of uplo.  Implemented
+     // this for for consistency with _csc_quad_form interface
+ 
+@@ -209,7 +195,7 @@ fn _csc_symv_unsafe<T: FloatT>(
+ 
+ #[allow(non_snake_case)]
+ #[allow(clippy::comparison_chain)]
+-fn _csc_quad_form<T: FloatT>(M: &CscMatrix<T>, uplo: MatrixTriangle, y: &[T], x: &[T]) -> T {
++fn _csc_quad_form(M: &CscMatrix, uplo: MatrixTriangle, y: &[T], x: &[T]) -> T {
+     assert_eq!(M.n, M.m);
+     assert_eq!(x.len(), M.n);
+     assert_eq!(y.len(), M.n);
+@@ -258,7 +244,7 @@ fn _csc_quad_form<T: FloatT>(M: &CscMatrix<T>, uplo: MatrixTriangle, y: &[T], x:
+ 
+ // sparse matrix-vector multiply, no transpose
+ #[allow(non_snake_case)]
+-fn _csc_axpby_N<T: FloatT>(A: &CscMatrix<T>, y: &mut [T], x: &[T], a: T, b: T) {
++fn _csc_axpby_N(A: &CscMatrix, y: &mut [T], x: &[T], a: T, b: T) {
+     //first do the b*y part
+     if b.is_zero() {
+         y.fill(T::zero());
+@@ -301,7 +287,7 @@ fn _csc_axpby_N<T: FloatT>(A: &CscMatrix<T>, y: &mut [T], x: &[T], a: T, b: T) {
+ 
+ // sparse matrix-vector multiply, transposed
+ #[allow(non_snake_case)]
+-fn _csc_axpby_T<T: FloatT>(A: &CscMatrix<T>, y: &mut [T], x: &[T], a: T, b: T) {
++fn _csc_axpby_T(A: &CscMatrix, y: &mut [T], x: &[T], a: T, b: T) {
+     //first do the b*y part
+     if b.is_zero() {
+         y.fill(T::zero());
+diff --git a/src/algebra/csc/utils.rs b/src/algebra/csc/utils.rs
+index 994acf7..9cfcbc8 100644
+--- a/src/algebra/csc/utils.rs
++++ b/src/algebra/csc/utils.rs
+@@ -1,16 +1,13 @@
++use crate::algebra::{FloatT, T};
+ //---------------------------------------------------------
+ // low-level internal utilities for counting / filling entries
+ // in block partitioned sparse matrices.
+ //---------------------------------------------------------
+ 
+ use crate::algebra::{CscMatrix, MatrixShape, MatrixTriangle};
+-use num_traits::Num;
+ use std::iter::zip;
+ 
+-impl<T> CscMatrix<T>
+-where
+-    T: Num + Copy,
+-{
++impl CscMatrix {
+     // increment self.colptr by the number of nonzeros
+     // in a dense upper/lower triangle on the diagonal.
+     pub(crate) fn colcount_dense_triangle(
+@@ -42,7 +39,7 @@ where
+     // same as kkt_count_diag, but counts places
+     // where the input matrix M has a missing
+     // diagonal entry.  M must be square and TRIU
+-    pub(crate) fn colcount_missing_diag(&mut self, M: &CscMatrix<T>, initcol: usize) {
++    pub(crate) fn colcount_missing_diag(&mut self, M: &CscMatrix, initcol: usize) {
+         assert_eq!(M.colptr.len(), M.n + 1);
+         assert!(self.colptr.len() >= M.n + initcol);
+ 
+@@ -77,7 +74,7 @@ where
+ 
+     // increment the self.colptr by the number of nonzeros in M
+ 
+-    pub(crate) fn colcount_block(&mut self, M: &CscMatrix<T>, initcol: usize, shape: MatrixShape) {
++    pub(crate) fn colcount_block(&mut self, M: &CscMatrix, initcol: usize, shape: MatrixShape) {
+         match shape {
+             MatrixShape::T => {
+                 for row in M.rowval.iter() {
+@@ -123,7 +120,7 @@ where
+     #[allow(clippy::needless_range_loop)]
+     pub(crate) fn fill_block(
+         &mut self,
+-        M: &CscMatrix<T>,
++        M: &CscMatrix,
+         MtoKKT: &mut [usize],
+         initrow: usize,
+         initcol: usize,
+@@ -233,7 +230,7 @@ where
+     // same as fill_diag, but only places zero
+     // entries where the input matrix M has a missing
+     // diagonal entry.  M must be square and TRIU
+-    pub(crate) fn fill_missing_diag(&mut self, M: &CscMatrix<T>, initcol: usize) {
++    pub(crate) fn fill_missing_diag(&mut self, M: &CscMatrix, initcol: usize) {
+         for i in 0..M.n {
+             // fill out missing diagonal terms only
+             if M.colptr[i] == M.colptr[i+1] ||    // completely empty column
+diff --git a/src/algebra/floats.rs b/src/algebra/floats.rs
+index 8e6a8a5..8639e3d 100644
+--- a/src/algebra/floats.rs
++++ b/src/algebra/floats.rs
+@@ -1,88 +1,75 @@
+ #![allow(non_snake_case)]
+-use num_traits::{Float, FloatConst, FromPrimitive, NumAssign};
+-use std::fmt::{Debug, Display, LowerExp};
++//! The solver's floating point type.
++//!
++//! Upstream Clarabel is generic over a float type `T: FloatT` built on `num_traits`. This
++//! fork is specialised to `f64` (patch 0002): `T` is an alias of `f64`, and [`FloatT`] only
++//! supplies the constructors and predicates the solver used from `num_traits`.
+ 
+-/// Core traits for internal floating point values.
+-///
+-/// This trait defines a subset of bounds for `FloatT`, which is preferred
+-/// throughout for use in the solver.  When the `sdp` feature is enabled,
+-/// `FloatT` is additionally restricted to f32/f64 types supported by BLAS.
+-/// When the `faer-sparse` feature is enabled, `FloatT` is additionally
+-/// restricted to types implementing `RealField` from the `faer` crate.
+-pub trait CoreFloatT:
+-    'static
+-    + Send
+-    + Sync
+-    + Float
+-    + FloatConst
+-    + NumAssign
+-    + Default
+-    + FromPrimitive
+-    + Display
+-    + LowerExp
+-    + Debug
+-    + Sized
+-{
+-}
++/// The solver's floating point type: always `f64` in this fork.
++pub type T = f64;
+ 
+-impl<T> CoreFloatT for T where
+-    T: 'static
+-        + Send
+-        + Sync
+-        + Float
+-        + FloatConst
+-        + NumAssign
+-        + Default
+-        + FromPrimitive
+-        + Display
+-        + LowerExp
+-        + Debug
+-        + Sized
+-{
++/// Constructors and predicates on the solver's float type ([`T`] = `f64`).
++pub trait FloatT: Copy {
++    /// `0.0`
++    fn zero() -> Self;
++    /// `1.0`
++    fn one() -> Self;
++    /// Machine epsilon.
++    fn epsilon() -> Self;
++    /// Positive infinity.
++    fn infinity() -> Self;
++    /// A quiet NaN (used only for "no value" placeholders in the solution).
++    fn nan() -> Self;
++    /// `self == 0.0`
++    fn is_zero(&self) -> bool;
+ }
+ 
+-/// Main trait for floating point types used in the Clarabel solver.
+-///
+-/// All floating point calculations in Clarabel are represented internally on values
+-/// implementing the `FloatT` trait, with implementations provided only for f32 and f64
+-/// native types when compiled with BLAS/LAPACK support for SDPs. If SDP support is not
+-/// enabled then it should be possible to compile Clarabel to support any any other
+-/// floating point type provided that it satisfies the trait bounds of `CoreFloatT`.
+-///
+-/// `FloatT` relies on [`num_traits`](num_traits) for most of its constituent trait bounds.
+-pub trait FloatT: CoreFloatT {}
+-impl<T> FloatT for T where T: CoreFloatT {}
++impl FloatT for f64 {
++    #[inline]
++    fn zero() -> Self {
++        0.0
++    }
++    #[inline]
++    fn one() -> Self {
++        1.0
++    }
++    #[inline]
++    fn epsilon() -> Self {
++        f64::EPSILON
++    }
++    #[inline]
++    fn infinity() -> Self {
++        f64::INFINITY
++    }
++    #[inline]
++    fn nan() -> Self {
++        f64::NAN
++    }
++    #[inline]
++    fn is_zero(&self) -> bool {
++        *self == 0.0
++    }
++}
+ 
+-/// Trait for converting Rust primitives to [`FloatT`](crate::algebra::FloatT)
++/// Trait for converting Rust primitives to [`T`].
+ ///
+-/// This convenience trait is implemented on f32/64 and u32/64.  This trait
+-/// is required internally by the solver for converting constant primitives
+-/// to [`FloatT`](crate::algebra::FloatT).  It is also used by the
+-/// [user settings](crate::solver::implementations::default::DefaultSettings)
+-/// for converting defaults of primitive type to [`FloatT`](crate::algebra::FloatT).
+-//
+-// NB: `AsFloatT` is a convenience trait for f32/64 and u32/64
+-// so that we can do things like (2.0).as_T() everywhere on
+-// constants, rather than the awful T::from_f32(2.0).unwrap()
+-pub(crate) trait AsFloatT<T>: 'static {
++/// Lets the solver write constants as `(2.0).as_T()` as upstream does.
++pub(crate) trait AsFloatT: 'static {
+     fn as_T(&self) -> T;
+ }
+ 
+ macro_rules! impl_as_FloatT {
+-    ($ty:ty, $ident:ident) => {
+-        impl<T> AsFloatT<T> for $ty
+-        where
+-            T: std::ops::Mul<T, Output = T> + FromPrimitive + 'static,
+-        {
++    ($ty:ty) => {
++        impl AsFloatT for $ty {
+             #[inline]
+             fn as_T(&self) -> T {
+-                T::$ident(*self).unwrap()
++                *self as T
+             }
+         }
+     };
+ }
+-impl_as_FloatT!(u32, from_u32);
+-impl_as_FloatT!(u64, from_u64);
+-impl_as_FloatT!(usize, from_usize);
+-impl_as_FloatT!(f32, from_f32);
+-impl_as_FloatT!(f64, from_f64);
++impl_as_FloatT!(u32);
++impl_as_FloatT!(u64);
++impl_as_FloatT!(usize);
++impl_as_FloatT!(f32);
++impl_as_FloatT!(f64);
+diff --git a/src/algebra/math_traits.rs b/src/algebra/math_traits.rs
+index 3f945c3..dc49958 100644
+--- a/src/algebra/math_traits.rs
++++ b/src/algebra/math_traits.rs
+@@ -1,3 +1,4 @@
++use crate::algebra::T;
+ // All internal math for all solver implementations should go
+ // through these core traits, which are implemented generically
+ // for floats of type FloatT.
+@@ -16,7 +17,7 @@ pub trait ScalarMath {
+ }
+ 
+ /// Vector operations on slices of [`FloatT`](crate::algebra::FloatT)
+-pub trait VectorMath<T> {
++pub trait VectorMath {
+     /// Copy values from `src` to `self`
+     fn copy_from(&mut self, src: &Self) -> &mut Self;
+ 
+@@ -122,12 +123,12 @@ pub trait VectorMath<T> {
+ }
+ 
+ /// Matrix operations for matrices of [`FloatT`](crate::algebra::FloatT)
+-pub(crate) trait MatrixVectorMultiply<T> {
++pub(crate) trait MatrixVectorMultiply {
+     /// BLAS-like general matrix-vector multiply.  Produces `y = a*self*x + b*y`
+     fn gemv(&self, y: &mut [T], x: &[T], a: T, b: T);
+ }
+ 
+-pub(crate) trait SymMatrixMath<T> {
++pub(crate) trait SymMatrixMath {
+     /// BLAS-like symmetric matrix-vector multiply.  Produces `y = a*self*x + b*y`.  
+     /// The matrix source data should be triu.
+     fn symv(&self, y: &mut [T], x: &[T], a: T, b: T);
+@@ -138,7 +139,7 @@ pub(crate) trait SymMatrixMath<T> {
+ }
+ 
+ /// Operations on matrices of [`FloatT`](crate::algebra::FloatT)
+-pub trait MatrixMath<T> {
++pub trait MatrixMath {
+     /// Compute columnwise sums on a matrix and
+     /// assign the results to the vector `sums`
+     fn col_sums(&self, sums: &mut [T]);
+@@ -177,7 +178,7 @@ pub trait MatrixMath<T> {
+ }
+ 
+ /// Operations on mutable matrices of [`FloatT`](crate::algebra::FloatT)
+-pub trait MatrixMathMut<T> {
++pub trait MatrixMathMut {
+     /// Elementwise scaling
+     fn scale(&mut self, c: T);
+ 
+diff --git a/src/algebra/scalarmath.rs b/src/algebra/scalarmath.rs
+index 5fd240d..b2eaa54 100644
+--- a/src/algebra/scalarmath.rs
++++ b/src/algebra/scalarmath.rs
+@@ -1,6 +1,7 @@
+ use super::{FloatT, ScalarMath};
++use crate::algebra::T;
+ 
+-impl<T: FloatT> ScalarMath for T {
++impl ScalarMath for T {
+     fn clip(&self, min_thresh: Self, max_thresh: Self) -> Self {
+         if *self < min_thresh {
+             min_thresh
+diff --git a/src/algebra/utils.rs b/src/algebra/utils.rs
+index 7616615..6389c4f 100644
+--- a/src/algebra/utils.rs
++++ b/src/algebra/utils.rs
+@@ -7,7 +7,6 @@
+ // returning indices of *all* elements satisfying a predicate
+ 
+ use crate::qdldl;
+-use num_traits::Num;
+ use std::cmp::Ordering;
+ 
+ #[allow(dead_code)]
+@@ -89,7 +88,7 @@ where
+ #[allow(dead_code)]
+ pub(crate) fn findmax<T>(v: &[T]) -> Option<usize>
+ where
+-    T: Num + Copy + Ord,
++    T: Copy + Ord,
+ {
+     v.iter()
+         .enumerate()
+diff --git a/src/algebra/vecmath.rs b/src/algebra/vecmath.rs
+index a59b6fb..0970171 100644
+--- a/src/algebra/vecmath.rs
++++ b/src/algebra/vecmath.rs
+@@ -1,9 +1,10 @@
+-use super::{FloatT, ScalarMath, VectorMath};
++use super::{AsFloatT, FloatT, ScalarMath, VectorMath};
++use crate::algebra::T;
+ use itertools::izip;
+ use std::borrow::Borrow;
+ use std::iter::zip;
+ 
+-impl<T: FloatT> VectorMath<T> for [T] {
++impl VectorMath for [T] {
+     fn copy_from(&mut self, src: &[T]) -> &mut Self {
+         self.copy_from_slice(src);
+         self
+@@ -174,7 +175,7 @@ impl<T: FloatT> VectorMath<T> for [T] {
+             T::zero()
+         } else {
+             let num = self.iter().fold(T::zero(), |r, &s| r + s);
+-            let den = T::from_usize(self.len()).unwrap();
++            let den = self.len().as_T();
+             num / den
+         };
+         mean
+@@ -203,9 +204,8 @@ impl<T: FloatT> VectorMath<T> for [T] {
+ }
+ 
+ // numerically more stable 2-norm that avoids overflow/underflow
+-fn stable_norm<T, I, B>(x: I) -> T
++fn stable_norm<I, B>(x: I) -> T
+ where
+-    T: FloatT,
+     I: Iterator<Item = B>,
+     B: Borrow<T>,
+ {
+diff --git a/src/qdldl/qdldl.rs b/src/qdldl/qdldl.rs
+index 68cc48e..b75ab3e 100644
+--- a/src/qdldl/qdldl.rs
++++ b/src/qdldl/qdldl.rs
+@@ -28,7 +28,7 @@ pub enum QDLDLError {
+ #[derive(Builder, Debug, Clone)]
+ #[allow(missing_docs)]
+ /// Required settings for [`QDLDLFactorisation`](QDLDLFactorisation)
+-pub struct QDLDLSettings<T: FloatT> {
++pub struct QDLDLSettings {
+     /// "dense scale" parameter for AMD ordering
+     #[builder(default = "1.0")]
+     pub amd_dense_scale: f64,
+@@ -58,44 +58,38 @@ pub struct QDLDLSettings<T: FloatT> {
+     pub regularize_delta: T,
+ }
+ 
+-impl<T> Default for QDLDLSettings<T>
+-where
+-    T: FloatT,
+-{
+-    fn default() -> QDLDLSettings<T> {
+-        QDLDLSettingsBuilder::<T>::default().build().unwrap()
++impl Default for QDLDLSettings {
++    fn default() -> QDLDLSettings {
++        QDLDLSettingsBuilder::default().build().unwrap()
+     }
+ }
+ 
+ /// Performs $LDL^T$ factorization of a symmetric quasidefinite matrix
+ #[derive(Debug)]
+-pub struct QDLDLFactorisation<T = f64> {
++pub struct QDLDLFactorisation {
+     /// permutation vector
+     pub perm: Vec<usize>,
+     /// inverse permutation
+     #[allow(dead_code)] //Unused because we call ipermute in solve instead.  Keep anyway.
+     iperm: Vec<usize>,
+     /// lower triangular factor L in LDL^T
+-    pub L: CscMatrix<T>,
++    pub L: CscMatrix,
+     /// vector of diagonal elements of D in LDL^T
+     pub D: Vec<T>,
+     /// vector of reciprocal diagonal elements of D in LDL^T
+     pub Dinv: Vec<T>,
+     /// internal workspace data
+-    workspace: QDLDLWorkspace<T>,
++    workspace: QDLDLWorkspace,
+     /// true if factorisation is symbolic only
+     is_symbolic: bool,
+ }
+ 
+-impl<T> QDLDLFactorisation<T>
+-where
+-    T: FloatT,
+-{
++impl QDLDLFactorisation {
+     /// create a new LDL^T factorisation
+     pub fn new(
+-        Ain: &CscMatrix<T>,
+-        opts: Option<QDLDLSettings<T>>,
+-    ) -> Result<QDLDLFactorisation<T>, QDLDLError> {
++        Ain: &CscMatrix,
++        opts: Option<QDLDLSettings>,
++    ) -> Result<QDLDLFactorisation, QDLDLError> {
+         //sanity check on structure
+         check_structure(Ain)?;
+         _qdldl_new(Ain, opts)
+@@ -210,7 +204,7 @@ where
+     }
+ }
+ 
+-fn check_structure<T: FloatT>(A: &CscMatrix<T>) -> Result<(), QDLDLError> {
++fn check_structure(A: &CscMatrix) -> Result<(), QDLDLError> {
+     if !A.is_square() {
+         return Err(QDLDLError::IncompatibleDimension);
+     }
+@@ -227,10 +221,10 @@ fn check_structure<T: FloatT>(A: &CscMatrix<T>) -> Result<(), QDLDLError> {
+     Ok(())
+ }
+ 
+-fn _qdldl_new<T: FloatT>(
+-    Ain: &CscMatrix<T>,
+-    opts: Option<QDLDLSettings<T>>,
+-) -> Result<QDLDLFactorisation<T>, QDLDLError> {
++fn _qdldl_new(
++    Ain: &CscMatrix,
++    opts: Option<QDLDLSettings>,
++) -> Result<QDLDLFactorisation, QDLDLError> {
+     let n = Ain.nrows();
+ 
+     //get default values if no options passed at all
+@@ -261,7 +255,7 @@ fn _qdldl_new<T: FloatT>(
+     }
+ 
+     // allocate workspace
+-    let mut workspace = QDLDLWorkspace::<T>::new(
++    let mut workspace = QDLDLWorkspace::new(
+         A,
+         AtoPAPt,
+         Dsigns,
+@@ -295,7 +289,7 @@ fn _qdldl_new<T: FloatT>(
+ }
+ 
+ #[derive(Debug)]
+-struct QDLDLWorkspace<T> {
++struct QDLDLWorkspace {
+     // internal workspace data
+     etree: Vec<usize>,
+     Lnz: Vec<usize>,
+@@ -308,7 +302,7 @@ struct QDLDLWorkspace<T> {
+ 
+     // The upper triangular matrix factorisation target
+     // This is the post ordering PAPt of the original data
+-    triuA: CscMatrix<T>,
++    triuA: CscMatrix,
+ 
+     // mapping from entries in the triu form
+     // of the original input to the post ordering
+@@ -327,12 +321,9 @@ struct QDLDLWorkspace<T> {
+     regularize_count: usize,
+ }
+ 
+-impl<T> QDLDLWorkspace<T>
+-where
+-    T: FloatT,
+-{
++impl QDLDLWorkspace {
+     pub fn new(
+-        triuA: CscMatrix<T>,
++        triuA: CscMatrix,
+         AtoPAPt: Vec<usize>,
+         Dsigns: Vec<i8>,
+         regularize_enable: bool,
+@@ -379,11 +370,11 @@ where
+     }
+ }
+ 
+-fn _factor<T: FloatT>(
+-    L: &mut CscMatrix<T>,
++fn _factor(
++    L: &mut CscMatrix,
+     D: &mut [T],
+     Dinv: &mut [T],
+-    workspace: &mut QDLDLWorkspace<T>,
++    workspace: &mut QDLDLWorkspace,
+     logical: bool,
+ ) -> Result<(), QDLDLError> {
+     if logical {
+@@ -466,7 +457,7 @@ fn _etree(
+ //allow too_many_arguments since this follows the implementation
+ //of the C version of QDLDL.
+ #[allow(clippy::too_many_arguments)]
+-fn _factor_inner<T: FloatT>(
++fn _factor_inner(
+     n: usize,
+     Ap: &[usize],
+     Ai: &[usize],
+@@ -517,7 +508,7 @@ fn _factor_inner<T: FloatT>(
+         // First element of the diagonal D.
+         D[0] = Ax[0];
+         if regularize_enable {
+-            let sign = T::from_i8(Dsigns[0]).unwrap();
++            let sign = T::from(Dsigns[0]);
+             if D[0] * sign < regularize_eps {
+                 D[0] = regularize_delta * sign;
+                 *regularize_count += 1;
+@@ -643,7 +634,7 @@ fn _factor_inner<T: FloatT>(
+         if !logical_factor {
+             // apply dynamic regularization
+             if regularize_enable {
+-                let sign = T::from_i8(Dsigns[k]).unwrap();
++                let sign = T::from(Dsigns[k]);
+                 if D[k] * sign < regularize_eps {
+                     D[k] = regularize_delta * sign;
+                     *regularize_count += 1;
+@@ -669,7 +660,7 @@ fn _factor_inner<T: FloatT>(
+ }
+ 
+ // Solves (L+I)x = b, with x replacing b (with standard bounds checks)
+-fn _lsolve_safe<T: FloatT>(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
++fn _lsolve_safe(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
+     for i in 0..x.len() {
+         let xi = x[i];
+         let (f, l) = (Lp[i], Lp[i + 1]);
+@@ -682,7 +673,7 @@ fn _lsolve_safe<T: FloatT>(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
+ }
+ 
+ // Solves (L+I)'x = b, with x replacing b (with standard bounds checks)
+-fn _ltsolve_safe<T: FloatT>(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
++fn _ltsolve_safe(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
+     for i in (0..x.len()).rev() {
+         let mut s = T::zero();
+         let (f, l) = (Lp[i], Lp[i + 1]);
+@@ -705,7 +696,7 @@ fn _ltsolve_safe<T: FloatT>(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
+ // -------------------------------------
+ 
+ // Solves (L+I)x = b, with x replacing b.  Unchecked version
+-fn _lsolve_unsafe<T: FloatT>(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
++fn _lsolve_unsafe(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
+     unsafe {
+         for i in 0..x.len() {
+             let xi = *x.get_unchecked(i);
+@@ -719,7 +710,7 @@ fn _lsolve_unsafe<T: FloatT>(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T])
+ }
+ 
+ // Solves (L+I)'x = b, with x replacing b.  Unchecked version.
+-fn _ltsolve_unsafe<T: FloatT>(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
++fn _ltsolve_unsafe(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
+     unsafe {
+         for i in (0..x.len()).rev() {
+             let mut s = T::zero();
+@@ -734,7 +725,7 @@ fn _ltsolve_unsafe<T: FloatT>(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T])
+ }
+ 
+ // Solves D(L+I)'x = b, with x replacing b.  Unchecked version.
+-fn _dltsolve_unsafe<T: FloatT>(Lp: &[usize], Li: &[usize], Lx: &[T], Dinv: &[T], x: &mut [T]) {
++fn _dltsolve_unsafe(Lp: &[usize], Li: &[usize], Lx: &[T], Dinv: &[T], x: &mut [T]) {
+     unsafe {
+         for i in (0..x.len()).rev() {
+             let mut s = T::zero();
+@@ -752,7 +743,7 @@ fn _dltsolve_unsafe<T: FloatT>(Lp: &[usize], Li: &[usize], Lx: &[T], Dinv: &[T],
+ }
+ 
+ // Solves Ax = b where A has given LDL factors, with x replacing b
+-fn _solve<T: FloatT>(Lp: &[usize], Li: &[usize], Lx: &[T], Dinv: &[T], b: &mut [T]) {
++fn _solve(Lp: &[usize], Li: &[usize], Lx: &[T], Dinv: &[T], b: &mut [T]) {
+     // We call the `unsafe`d version of the forward and backward substitution
+     // functions here, since the matrix data should be well posed and x of
+     // compatible dimensions.   For super safety or debugging purposes, there
+@@ -803,13 +794,10 @@ pub(crate) fn ipermute<T: Copy>(x: &mut [T], b: &[T], p: &[usize]) {
+ // Given a sparse symmetric matrix `A` (with only upper triangular entries), return
+ // permuted sparse symmetric matrix `P` (also only upper triangular) given the
+ // inverse permutation vector `iperm`."
+-pub(crate) fn permute_symmetric<T: FloatT>(
+-    A: &CscMatrix<T>,
+-    iperm: &[usize],
+-) -> (CscMatrix<T>, Vec<usize>) {
++pub(crate) fn permute_symmetric(A: &CscMatrix, iperm: &[usize]) -> (CscMatrix, Vec<usize>) {
+     // perform a number of argument checks
+     let (_m, n) = A.size();
+-    let mut P = CscMatrix::<T>::spalloc((n, n), A.nnz());
++    let mut P = CscMatrix::spalloc((n, n), A.nnz());
+ 
+     // we will record a mapping of entries from A to PAPt
+     let mut AtoPAPt = vec![0; A.nnz()];
+@@ -828,8 +816,8 @@ pub(crate) fn permute_symmetric<T: FloatT>(
+ // the main function without extra argument checks
+ // following the book: Timothy Davis - Direct Methods for Sparse Linear Systems
+ 
+-fn _permute_symmetric_inner<T: FloatT>(
+-    A: &CscMatrix<T>,
++fn _permute_symmetric_inner(
++    A: &CscMatrix,
+     AtoPAPt: &mut [usize],
+     iperm: &[usize],
+     Pr: &mut [usize],
+@@ -902,8 +890,8 @@ fn _permute_symmetric_inner<T: FloatT>(
+     }
+ }
+ 
+-pub(crate) fn get_amd_ordering<T: FloatT>(
+-    A: &CscMatrix<T>,
++pub(crate) fn get_amd_ordering(
++    A: &CscMatrix,
+     amd_dense_scale: f64,
+ ) -> (Vec<usize>, Vec<usize>, amd::Info) {
+     // PJG: For interested readers - setting amd_dense_scale to 1.5 seems to work better
+diff --git a/src/solver/core/cones/compositecone.rs b/src/solver/core/cones/compositecone.rs
+index 4871c81..6e3da9f 100644
+--- a/src/solver/core/cones/compositecone.rs
++++ b/src/solver/core/cones/compositecone.rs
+@@ -1,5 +1,6 @@
+ use super::*;
+ use crate::algebra::triangular_number;
++use crate::algebra::T;
+ use std::collections::HashMap;
+ use std::iter::zip;
+ use std::ops::Range;
+@@ -8,8 +9,8 @@ use std::ops::Range;
+ // default composite cone type
+ // -------------------------------------
+ 
+-pub struct CompositeCone<T: FloatT = f64> {
+-    cones: Vec<SupportedCone<T>>,
++pub struct CompositeCone {
++    cones: Vec<SupportedCone>,
+ 
+     //Type count for each cone type (upstream printed it; kept for the wrapper)
+     #[allow(dead_code)]
+@@ -30,15 +31,12 @@ pub struct CompositeCone<T: FloatT = f64> {
+     _is_symmetric: bool,
+ }
+ 
+-impl<T> CompositeCone<T>
+-where
+-    T: FloatT,
+-{
+-    pub fn new(types: &[SupportedConeT<T>]) -> Self {
++impl CompositeCone {
++    pub fn new(types: &[SupportedConeT]) -> Self {
+         // make an internal copy to protect from user modification
+         let types = types.to_vec();
+         let ncones = types.len();
+-        let mut cones: Vec<SupportedCone<T>> = Vec::with_capacity(ncones);
++        let mut cones: Vec<SupportedCone> = Vec::with_capacity(ncones);
+ 
+         // Count for the number of each cone type, indexed by SupportedConeTag
+         // NB: ideally we could fix max capacity here,  but Enum::variant_count is not
+@@ -87,10 +85,7 @@ where
+     }
+ }
+ 
+-fn make_rng_cones<T>(cones: &[SupportedCone<T>]) -> Vec<Range<usize>>
+-where
+-    T: FloatT,
+-{
++fn make_rng_cones(cones: &[SupportedCone]) -> Vec<Range<usize>> {
+     let mut rngs = Vec::with_capacity(cones.len());
+ 
+     if !cones.is_empty() {
+@@ -104,10 +99,7 @@ where
+     rngs
+ }
+ 
+-fn make_rng_blocks<T>(cones: &[SupportedCone<T>]) -> Vec<Range<usize>>
+-where
+-    T: FloatT,
+-{
++fn make_rng_blocks(cones: &[SupportedCone]) -> Vec<Range<usize>> {
+     let mut rngs = Vec::with_capacity(cones.len());
+ 
+     if !cones.is_empty() {
+@@ -128,20 +120,17 @@ where
+     rngs
+ }
+ 
+-impl<T> CompositeCone<T>
+-where
+-    T: FloatT,
+-{
++impl CompositeCone {
+     pub fn len(&self) -> usize {
+         self.cones.len()
+     }
+     pub fn is_empty(&self) -> bool {
+         self.cones.is_empty()
+     }
+-    pub fn iter(&self) -> std::slice::Iter<'_, SupportedCone<T>> {
++    pub fn iter(&self) -> std::slice::Iter<'_, SupportedCone> {
+         self.cones.iter()
+     }
+-    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, SupportedCone<T>> {
++    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, SupportedCone> {
+         self.cones.iter_mut()
+     }
+     #[allow(dead_code)]
+@@ -154,10 +143,7 @@ where
+     }
+ }
+ 
+-impl<T> Cone<T> for CompositeCone<T>
+-where
+-    T: FloatT,
+-{
++impl Cone for CompositeCone {
+     fn degree(&self) -> usize {
+         self.degree
+     }
+@@ -197,7 +183,7 @@ where
+     }
+ 
+     fn margins(&mut self, z: &mut [T], pd: PrimalOrDualCone) -> (T, T) {
+-        let mut α = T::max_value();
++        let mut α = T::MAX;
+         let mut β = T::zero();
+         for (cone, rng) in zip(&mut self.cones, &self.rng_cones) {
+             let (αi, βi) = cone.margins(&mut z[rng.clone()], pd);
+@@ -305,7 +291,7 @@ where
+         ds: &[T],
+         z: &[T],
+         s: &[T],
+-        settings: &CoreSettings<T>,
++        settings: &CoreSettings,
+         αmax: T,
+     ) -> (T, T) {
+         let mut α = αmax;
+diff --git a/src/solver/core/cones/mod.rs b/src/solver/core/cones/mod.rs
+index bea3e23..3ee18e6 100644
+--- a/src/solver/core/cones/mod.rs
++++ b/src/solver/core/cones/mod.rs
+@@ -1,6 +1,7 @@
+ #![allow(non_snake_case)]
+ 
+ use crate::algebra::FloatT;
++use crate::algebra::T;
+ use crate::solver::{core::ScalingStrategy, CoreSettings};
+ use enum_dispatch::*;
+ 
+@@ -31,10 +32,7 @@ pub enum PrimalOrDualCone {
+ }
+ 
+ #[enum_dispatch]
+-pub trait Cone<T>
+-where
+-    T: FloatT,
+-{
++pub trait Cone {
+     // functions relating to basic sizing
+     fn degree(&self) -> usize;
+     fn numel(&self) -> usize;
+@@ -136,7 +134,7 @@ where
+         ds: &[T],
+         z: &[T],
+         s: &[T],
+-        settings: &CoreSettings<T>,
++        settings: &CoreSettings,
+         αmax: T,
+     ) -> (T, T);
+ 
+diff --git a/src/solver/core/cones/nonnegativecone.rs b/src/solver/core/cones/nonnegativecone.rs
+index 3e4b530..b6be893 100644
+--- a/src/solver/core/cones/nonnegativecone.rs
++++ b/src/solver/core/cones/nonnegativecone.rs
+@@ -7,16 +7,13 @@ use std::iter::zip;
+ // Nonnegative Cone
+ // -------------------------------------
+ 
+-pub struct NonnegativeCone<T> {
++pub struct NonnegativeCone {
+     dim: usize,
+     w: Vec<T>,
+     λ: Vec<T>,
+ }
+ 
+-impl<T> NonnegativeCone<T>
+-where
+-    T: FloatT,
+-{
++impl NonnegativeCone {
+     pub fn new(dim: usize) -> Self {
+         Self {
+             dim,
+@@ -26,10 +23,7 @@ where
+     }
+ }
+ 
+-impl<T> Cone<T> for NonnegativeCone<T>
+-where
+-    T: FloatT,
+-{
++impl Cone for NonnegativeCone {
+     fn degree(&self) -> usize {
+         self.dim
+     }
+@@ -131,7 +125,7 @@ where
+         ds: &[T],
+         z: &[T],
+         s: &[T],
+-        _settings: &CoreSettings<T>,
++        _settings: &CoreSettings,
+         αmax: T,
+     ) -> (T, T) {
+         assert_eq!(z.len(), s.len());
+@@ -170,10 +164,7 @@ where
+ // operations supported by symmetric cones only
+ // ---------------------------------------------
+ 
+-impl<T> SymmetricCone<T> for NonnegativeCone<T>
+-where
+-    T: FloatT,
+-{
++impl SymmetricCone for NonnegativeCone {
+     fn λ_inv_circ_op(&mut self, x: &mut [T], z: &[T]) {
+         _inv_circ_op(x, &self.λ, z);
+     }
+@@ -199,10 +190,7 @@ where
+ // Jordan algebra operations for symmetric cones
+ // ---------------------------------------------
+ 
+-impl<T> JordanAlgebra<T> for NonnegativeCone<T>
+-where
+-    T: FloatT,
+-{
++impl JordanAlgebra for NonnegativeCone {
+     fn circ_op(&mut self, x: &mut [T], y: &[T], z: &[T]) {
+         _circ_op(x, y, z);
+     }
+@@ -215,19 +203,13 @@ where
+ // circ ops don't use self for this cone, so put the actual
+ // implementations outside so that they can be called by
+ // other functions with entering borrow check hell
+-fn _circ_op<T>(x: &mut [T], y: &[T], z: &[T])
+-where
+-    T: FloatT,
+-{
++fn _circ_op(x: &mut [T], y: &[T], z: &[T]) {
+     for (x, (y, z)) in zip(x, zip(y, z)) {
+         *x = (*y) * (*z);
+     }
+ }
+ 
+-fn _inv_circ_op<T>(x: &mut [T], y: &[T], z: &[T])
+-where
+-    T: FloatT,
+-{
++fn _inv_circ_op(x: &mut [T], y: &[T], z: &[T]) {
+     for (x, (y, z)) in zip(x, zip(y, z)) {
+         *x = (*z) / (*y);
+     }
+diff --git a/src/solver/core/cones/socone.rs b/src/solver/core/cones/socone.rs
+index 36b24f1..77e1cc4 100644
+--- a/src/solver/core/cones/socone.rs
++++ b/src/solver/core/cones/socone.rs
+@@ -6,7 +6,7 @@ use itertools::izip;
+ // Second order Cone
+ // -------------------------------------
+ 
+-pub struct SecondOrderConeSparseData<T> {
++pub struct SecondOrderConeSparseData {
+     //vectors for rank 2 update representation of W^2
+     pub u: Vec<T>,
+     pub v: Vec<T>,
+@@ -15,10 +15,7 @@ pub struct SecondOrderConeSparseData<T> {
+     pub d: T,
+ }
+ 
+-impl<T> SecondOrderConeSparseData<T>
+-where
+-    T: FloatT,
+-{
++impl SecondOrderConeSparseData {
+     pub fn new(dim: usize) -> Self {
+         Self {
+             u: vec![T::zero(); dim],
+@@ -28,20 +25,17 @@ where
+     }
+ }
+ 
+-pub struct SecondOrderCone<T> {
++pub struct SecondOrderCone {
+     pub dim: usize,
+     //internal working variables for W and its products
+     pub w: Vec<T>,
+     //scaled version of (s,z)
+     pub λ: Vec<T>,
+     pub η: T,
+-    pub sparse_data: Option<SecondOrderConeSparseData<T>>,
++    pub sparse_data: Option<SecondOrderConeSparseData>,
+ }
+ 
+-impl<T> SecondOrderCone<T>
+-where
+-    T: FloatT,
+-{
++impl SecondOrderCone {
+     pub fn new(dim: usize) -> Self {
+         const SOC_NO_EXPANSION_MAX_SIZE: usize = 4;
+ 
+@@ -69,10 +63,7 @@ where
+     }
+ }
+ 
+-impl<T> Cone<T> for SecondOrderCone<T>
+-where
+-    T: FloatT,
+-{
++impl Cone for SecondOrderCone {
+     fn degree(&self) -> usize {
+         // degree = 1 for SOC, since e'*e = 1
+         1
+@@ -126,7 +117,7 @@ where
+         if let Some(sparse_data) = &mut self.sparse_data {
+             sparse_data.d = (0.5).as_T();
+             sparse_data.u.fill(T::zero());
+-            sparse_data.u[0] = T::FRAC_1_SQRT_2();
++            sparse_data.u[0] = std::f64::consts::FRAC_1_SQRT_2;
+             sparse_data.v.fill(T::zero());
+         }
+     }
+@@ -226,8 +217,8 @@ where
+             // J = diag(1,-I).  We are packing into dense triu form
+ 
+             // 2 * w[0]^2 - 1., avoiding bad cancellations
+-            Hsblock[0] =
+-                (T::SQRT_2() * self.w[0] - T::one()) * (T::SQRT_2() * self.w[0] + T::one());
++            Hsblock[0] = (std::f64::consts::SQRT_2 * self.w[0] - T::one())
++                * (std::f64::consts::SQRT_2 * self.w[0] + T::one());
+ 
+             let mut hidx = 1;
+             let two: T = (2.).as_T();
+@@ -292,7 +283,7 @@ where
+         ds: &[T],
+         z: &[T],
+         s: &[T],
+-        _settings: &CoreSettings<T>,
++        _settings: &CoreSettings,
+         αmax: T,
+     ) -> (T, T) {
+         let αz = _step_length_soc_component(z, dz, αmax);
+@@ -318,10 +309,7 @@ where
+ // operations supported by symmetric cones only
+ // ---------------------------------------------
+ 
+-impl<T> SymmetricCone<T> for SecondOrderCone<T>
+-where
+-    T: FloatT,
+-{
++impl SymmetricCone for SecondOrderCone {
+     fn λ_inv_circ_op(&mut self, x: &mut [T], z: &[T]) {
+         _inv_circ_op(x, &self.λ, z);
+     }
+@@ -340,10 +328,7 @@ where
+ // Jordan algebra operations for symmetric cones
+ // ---------------------------------------------
+ 
+-impl<T> JordanAlgebra<T> for SecondOrderCone<T>
+-where
+-    T: FloatT,
+-{
++impl JordanAlgebra for SecondOrderCone {
+     fn circ_op(&mut self, x: &mut [T], y: &[T], z: &[T]) {
+         _circ_op(x, y, z);
+     }
+@@ -357,19 +342,13 @@ where
+ // implementations outside so that they can be called by
+ // other functions with entering borrow check hell
+ 
+-fn _circ_op<T>(x: &mut [T], y: &[T], z: &[T])
+-where
+-    T: FloatT,
+-{
++fn _circ_op(x: &mut [T], y: &[T], z: &[T]) {
+     x[0] = y.dot(z);
+     let (y0, z0) = (y[0], z[0]);
+     x[1..].waxpby(y0, &z[1..], z0, &y[1..]);
+ }
+ 
+-fn _inv_circ_op<T>(x: &mut [T], y: &[T], z: &[T])
+-where
+-    T: FloatT,
+-{
++fn _inv_circ_op(x: &mut [T], y: &[T], z: &[T]) {
+     let p = _soc_residual(y);
+     let pinv = T::recip(p);
+     let v = y[1..].dot(&z[1..]);
+@@ -385,18 +364,12 @@ where
+ // internal operations for second order cones
+ // ---------------------------------------------
+ 
+-fn _soc_residual<T>(z: &[T]) -> T
+-where
+-    T: FloatT,
+-{
++fn _soc_residual(z: &[T]) -> T {
+     let z1norm = z[1..].norm();
+     (z[0] - z1norm) * (z[0] + z1norm)
+ }
+ 
+-fn _sqrt_soc_residual<T>(z: &[T]) -> T
+-where
+-    T: FloatT,
+-{
++fn _sqrt_soc_residual(z: &[T]) -> T {
+     let res = _soc_residual(z);
+     if res > T::zero() {
+         T::sqrt(res)
+@@ -407,10 +380,7 @@ where
+ 
+ // compute the residual at z + \alpha dz
+ // without storing the intermediate vector
+-fn _soc_residual_shifted<T>(z: &[T], dz: &[T], α: T) -> T
+-where
+-    T: FloatT,
+-{
++fn _soc_residual_shifted(z: &[T], dz: &[T], α: T) -> T {
+     let x0 = z[0] + α * dz[0];
+     let x1norm = z[1..].norm_shifted(&dz[1..], α);
+     (x0 - x1norm) * (x0 + x1norm)
+@@ -418,10 +388,7 @@ where
+ 
+ // find the maximum step length α≥0 so that
+ // x + αy stays in the SOC
+-fn _step_length_soc_component<T>(x: &[T], y: &[T], αmax: T) -> T
+-where
+-    T: FloatT,
+-{
++fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+     let mut αmax = αmax;
+ 
+     // upper bound the step length by the maximum allowable
+@@ -501,10 +468,7 @@ where
+ // Could also have been done using std::mem::take
+ 
+ #[allow(non_snake_case)]
+-fn _soc_mul_W_inner<T>(y: &mut [T], x: &[T], α: T, β: T, w: &[T], η: T)
+-where
+-    T: FloatT,
+-{
++fn _soc_mul_W_inner(y: &mut [T], x: &[T], α: T, β: T, w: &[T], η: T) {
+     // use the fast product method from ECOS ECC paper
+     let ζ = w[1..].dot(&x[1..]);
+     let c = x[0] + ζ / (T::one() + w[0]);
+@@ -515,10 +479,7 @@ where
+     y[1..].axpby(α * η, &x[1..], T::one());
+ }
+ 
+-fn _soc_mul_Winv_inner<T>(y: &mut [T], x: &[T], α: T, β: T, w: &[T], η: T)
+-where
+-    T: FloatT,
+-{
++fn _soc_mul_Winv_inner(y: &mut [T], x: &[T], α: T, β: T, w: &[T], η: T) {
+     // use the fast inverse product method from ECOS ECC paper
+     let ζ = w[1..].dot(&x[1..]);
+     let c = -x[0] + ζ / (T::one() + w[0]);
+diff --git a/src/solver/core/cones/supportedcone.rs b/src/solver/core/cones/supportedcone.rs
+index 043c805..17d7383 100644
+--- a/src/solver/core/cones/supportedcone.rs
++++ b/src/solver/core/cones/supportedcone.rs
+@@ -8,7 +8,7 @@ use super::*;
+ /// API type describing the type of a conic constraint.
+ ///
+ #[derive(Debug, Clone, PartialEq)]
+-pub enum SupportedConeT<T> {
++pub enum SupportedConeT {
+     /// The zero cone (used for equality constraints).
+     ///
+     /// The parameter indicates the cones dimension.
+@@ -23,7 +23,7 @@ pub enum SupportedConeT<T> {
+     SecondOrderConeT(usize),
+ }
+ 
+-impl<T> SupportedConeT<T> {
++impl SupportedConeT {
+     // this reports the number of slack variables that will be generated by
+     // this cone.  Equivalent to `numels` for the internal cone representation.
+     // Required for user data validation prior to building a problem.
+@@ -37,10 +37,7 @@ impl<T> SupportedConeT<T> {
+     }
+ }
+ 
+-impl<T> std::fmt::Display for SupportedConeT<T>
+-where
+-    T: FloatT,
+-{
++impl std::fmt::Display for SupportedConeT {
+     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+         write!(f, "{}", &self.as_tag().as_str())
+     }
+@@ -50,30 +47,25 @@ where
+ // for the constraint types, and then map them through
+ // make_cone to get the internal cone representations.
+ 
+-pub fn make_cone<T: FloatT>(cone: &SupportedConeT<T>) -> SupportedCone<T> {
++pub fn make_cone(cone: &SupportedConeT) -> SupportedCone {
+     match cone {
+-        SupportedConeT::NonnegativeConeT(dim) => NonnegativeCone::<T>::new(*dim).into(),
+-        SupportedConeT::ZeroConeT(dim) => ZeroCone::<T>::new(*dim).into(),
+-        SupportedConeT::SecondOrderConeT(dim) => SecondOrderCone::<T>::new(*dim).into(),
++        SupportedConeT::NonnegativeConeT(dim) => NonnegativeCone::new(*dim).into(),
++        SupportedConeT::ZeroConeT(dim) => ZeroCone::new(*dim).into(),
++        SupportedConeT::SecondOrderConeT(dim) => SecondOrderCone::new(*dim).into(),
+     }
+ }
+ 
+-impl<T> SupportedConeT<T>
+-where
+-    T: FloatT,
+-{
+-    pub(crate) fn new_collapsed(cones: &[SupportedConeT<T>]) -> Vec<SupportedConeT<T>> {
++impl SupportedConeT {
++    pub(crate) fn new_collapsed(cones: &[SupportedConeT]) -> Vec<SupportedConeT> {
+         let mut newcones = Vec::with_capacity(cones.len());
+         let mut iter = cones.iter().peekable();
+ 
+         // rollup a subsequence of nonnegative cones or SOC/PSD singleton
+-        fn collapse<T>(
+-            iter: &mut std::iter::Peekable<std::slice::Iter<'_, SupportedConeT<T>>>,
+-            newcones: &mut Vec<SupportedConeT<T>>,
++        fn collapse(
++            iter: &mut std::iter::Peekable<std::slice::Iter<'_, SupportedConeT>>,
++            newcones: &mut Vec<SupportedConeT>,
+             init_dim: usize,
+-        ) where
+-            T: FloatT,
+-        {
++        ) {
+             let mut total_dim = init_dim;
+             while let Some(next_cone) = iter.peek() {
+                 // skip empty cones
+@@ -122,14 +114,11 @@ where
+ // -------------------------------------
+ 
+ #[allow(clippy::enum_variant_names)]
+-#[enum_dispatch(Cone<T>)]
+-pub enum SupportedCone<T>
+-where
+-    T: FloatT,
+-{
+-    ZeroCone(ZeroCone<T>),
+-    NonnegativeCone(NonnegativeCone<T>),
+-    SecondOrderCone(SecondOrderCone<T>),
++#[enum_dispatch(Cone)]
++pub enum SupportedCone {
++    ZeroCone(ZeroCone),
++    NonnegativeCone(NonnegativeCone),
++    SecondOrderCone(SecondOrderCone),
+ }
+ 
+ // -------------------------------------
+@@ -157,7 +146,7 @@ pub(crate) trait SupportedConeAsTag {
+ }
+ 
+ // user facing API type.   Just gives dimensions / exponents
+-impl<T> SupportedConeAsTag for SupportedConeT<T> {
++impl SupportedConeAsTag for SupportedConeT {
+     fn as_tag(&self) -> SupportedConeTag {
+         match self {
+             SupportedConeT::NonnegativeConeT(_) => SupportedConeTag::NonnegativeCone,
+@@ -168,7 +157,7 @@ impl<T> SupportedConeAsTag for SupportedConeT<T> {
+ }
+ 
+ // internal enum_dispatch container.   Each of the (_) contains the cone data objects
+-impl<T: FloatT> SupportedConeAsTag for SupportedCone<T> {
++impl SupportedConeAsTag for SupportedCone {
+     fn as_tag(&self) -> SupportedConeTag {
+         match self {
+             SupportedCone::NonnegativeCone(_) => SupportedConeTag::NonnegativeCone,
+@@ -196,14 +185,14 @@ impl SupportedConeTag {
+ //with the internal cone generators.
+ 
+ #[allow(dead_code)]
+-pub(crate) struct RangeSupportedConesIterator<'a, T> {
+-    cones: &'a [SupportedConeT<T>],
++pub(crate) struct RangeSupportedConesIterator<'a> {
++    cones: &'a [SupportedConeT],
+     index: usize,
+     start: usize,
+ }
+ 
+ #[allow(dead_code)]
+-impl<T> Iterator for RangeSupportedConesIterator<'_, T> {
++impl Iterator for RangeSupportedConesIterator<'_> {
+     type Item = std::ops::Range<usize>;
+ 
+     fn next(&mut self) -> Option<Self::Item> {
+@@ -220,14 +209,14 @@ impl<T> Iterator for RangeSupportedConesIterator<'_, T> {
+     }
+ }
+ #[allow(dead_code)]
+-pub(crate) trait ConeRanges<'a, T> {
+-    fn rng_cones_iter(&'a self) -> RangeSupportedConesIterator<'a, T>;
++pub(crate) trait ConeRanges<'a> {
++    fn rng_cones_iter(&'a self) -> RangeSupportedConesIterator<'a>;
+ }
+ 
+ #[allow(dead_code)]
+-impl<'a, T> ConeRanges<'a, T> for [SupportedConeT<T>] {
+-    fn rng_cones_iter(&'a self) -> RangeSupportedConesIterator<'a, T> {
+-        RangeSupportedConesIterator::<'a, T> {
++impl<'a> ConeRanges<'a> for [SupportedConeT] {
++    fn rng_cones_iter(&'a self) -> RangeSupportedConesIterator<'a> {
++        RangeSupportedConesIterator::<'a> {
+             cones: self,
+             index: 0,
+             start: 0,
+diff --git a/src/solver/core/cones/symmetric_common.rs b/src/solver/core/cones/symmetric_common.rs
+index a17d83a..163db6f 100644
+--- a/src/solver/core/cones/symmetric_common.rs
++++ b/src/solver/core/cones/symmetric_common.rs
+@@ -1,3 +1,4 @@
++use crate::algebra::T;
+ use crate::algebra::{MatrixShape, VectorMath};
+ 
+ use super::*;
+@@ -7,7 +8,7 @@ use super::*;
+ // -------------------------------------
+ 
+ // Operations supported on symmetric cones only
+-pub trait SymmetricCone<T: FloatT>: JordanAlgebra<T> {
++pub trait SymmetricCone: JordanAlgebra {
+     // Multiplication by the scaling point
+     fn mul_W(&mut self, is_transpose: MatrixShape, y: &mut [T], x: &[T], α: T, β: T);
+     fn mul_Winv(&mut self, is_transpose: MatrixShape, y: &mut [T], x: &[T], α: T, β: T);
+@@ -19,7 +20,7 @@ pub trait SymmetricCone<T: FloatT>: JordanAlgebra<T> {
+     fn λ_inv_circ_op(&mut self, x: &mut [T], z: &[T]);
+ }
+ 
+-pub trait JordanAlgebra<T: FloatT> {
++pub trait JordanAlgebra {
+     fn circ_op(&mut self, x: &mut [T], y: &[T], z: &[T]);
+     #[allow(dead_code)] //PJG: inv_circ_op not needed anywhere.  keep for symmetry
+     fn inv_circ_op(&mut self, x: &mut [T], y: &[T], z: &[T]);
+@@ -29,7 +30,7 @@ pub trait JordanAlgebra<T: FloatT> {
+ // Trait with blanket implementation for all symmetric cones
+ // Provides functions that are identical across types
+ 
+-pub(super) trait SymmetricConeUtils<T: FloatT> {
++pub(super) trait SymmetricConeUtils {
+     fn _combined_ds_shift_symmetric(
+         &mut self,
+         shift: &mut [T],
+@@ -40,10 +41,9 @@ pub(super) trait SymmetricConeUtils<T: FloatT> {
+     fn _Δs_from_Δz_offset_symmetric(&mut self, out: &mut [T], ds: &[T], work: &mut [T]);
+ }
+ 
+-impl<T, C> SymmetricConeUtils<T> for C
++impl<C> SymmetricConeUtils for C
+ where
+-    T: FloatT,
+-    C: SymmetricCone<T> + Cone<T>,
++    C: SymmetricCone + Cone,
+ {
+     // compute shift in the combined step :
+     //     λ ∘ (WΔz + W^{-⊤}Δs) = - (affine_ds + shift)
+diff --git a/src/solver/core/cones/zerocone.rs b/src/solver/core/cones/zerocone.rs
+index 35fcd87..5d02116 100644
+--- a/src/solver/core/cones/zerocone.rs
++++ b/src/solver/core/cones/zerocone.rs
+@@ -6,15 +6,12 @@ use core::marker::PhantomData;
+ // Zero Cone
+ // -------------------------------------
+ 
+-pub struct ZeroCone<T> {
++pub struct ZeroCone {
+     dim: usize,
+     phantom: PhantomData<T>,
+ }
+ 
+-impl<T> ZeroCone<T>
+-where
+-    T: FloatT,
+-{
++impl ZeroCone {
+     pub fn new(dim: usize) -> Self {
+         Self {
+             dim,
+@@ -23,10 +20,7 @@ where
+     }
+ }
+ 
+-impl<T> Cone<T> for ZeroCone<T>
+-where
+-    T: FloatT,
+-{
++impl Cone for ZeroCone {
+     fn degree(&self) -> usize {
+         0
+     }
+@@ -58,7 +52,7 @@ where
+         // if we later shift a vector into the zero cone
+         // using scaled_unit_shift!, we just zero it
+         // out regardless of the applied shift anway
+-        (T::max_value(), T::zero())
++        (T::MAX, T::zero())
+     }
+     fn scaled_unit_shift(&self, z: &mut [T], _α: T, pd: PrimalOrDualCone) {
+         if pd == PrimalOrDualCone::PrimalCone {
+@@ -119,7 +113,7 @@ where
+         _ds: &[T],
+         _z: &[T],
+         _s: &[T],
+-        _settings: &CoreSettings<T>,
++        _settings: &CoreSettings,
+         αmax: T,
+     ) -> (T, T) {
+         //equality constraints allow arbitrary step length
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs b/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
+index f7b41ff..d771729 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
+@@ -9,19 +9,13 @@ pub(crate) enum SparseExpansionMap {
+     SOCExpansionMap(SOCExpansionMap),
+ }
+ 
+-#[enum_dispatch(SparseExpansionConeTrait<T>)]
+-pub(crate) enum SparseExpansionCone<'a, T>
+-where
+-    T: FloatT,
+-{
+-    SecondOrderCone(&'a SecondOrderCone<T>),
++#[enum_dispatch(SparseExpansionConeTrait)]
++pub(crate) enum SparseExpansionCone<'a> {
++    SecondOrderCone(&'a SecondOrderCone),
+ }
+ 
+-impl<T> SupportedCone<T>
+-where
+-    T: FloatT,
+-{
+-    pub(crate) fn to_sparse_expansion(&self) -> Option<SparseExpansionCone<T>> {
++impl SupportedCone {
++    pub(crate) fn to_sparse_expansion(&self) -> Option<SparseExpansionCone<'_>> {
+         match self {
+             SupportedCone::SecondOrderCone(sc) => Some(SparseExpansionCone::SecondOrderCone(sc)),
+             _ => None,
+@@ -48,19 +42,16 @@ impl SparseExpansionMapTrait for Vec<SparseExpansionMap> {
+     }
+ }
+ 
+-type UpdateFcn<T> = fn(&mut BoxedDirectLDLSolver<T>, &mut CscMatrix<T>, &[usize], &[T]) -> ();
+-type ScaleFcn<T> = fn(&mut BoxedDirectLDLSolver<T>, &mut CscMatrix<T>, &[usize], T) -> ();
++type UpdateFcn = fn(&mut BoxedDirectLDLSolver, &mut CscMatrix, &[usize], &[T]) -> ();
++type ScaleFcn = fn(&mut BoxedDirectLDLSolver, &mut CscMatrix, &[usize], T) -> ();
+ 
+ #[enum_dispatch]
+-pub(crate) trait SparseExpansionConeTrait<T>
+-where
+-    T: FloatT,
+-{
++pub(crate) trait SparseExpansionConeTrait {
+     fn expansion_map(&self) -> SparseExpansionMap;
+     fn csc_colcount_sparsecone(
+         &self,
+         map: &SparseExpansionMap,
+-        K: &mut CscMatrix<T>,
++        K: &mut CscMatrix,
+         row: usize,
+         col: usize,
+         shape: MatrixTriangle,
+@@ -68,7 +59,7 @@ where
+     fn csc_fill_sparsecone(
+         &self,
+         map: &mut SparseExpansionMap,
+-        K: &mut CscMatrix<T>,
++        K: &mut CscMatrix,
+         row: usize,
+         col: usize,
+         shape: MatrixTriangle,
+@@ -76,16 +67,16 @@ where
+     fn csc_update_sparsecone(
+         &self,
+         map: &SparseExpansionMap,
+-        ldl: &mut BoxedDirectLDLSolver<T>,
+-        K: &mut CscMatrix<T>,
+-        updateFcn: UpdateFcn<T>,
+-        scaleFcn: ScaleFcn<T>,
++        ldl: &mut BoxedDirectLDLSolver,
++        K: &mut CscMatrix,
++        updateFcn: UpdateFcn,
++        scaleFcn: ScaleFcn,
+     );
+ }
+ 
+ macro_rules! impl_map_recover {
+     ($CONE:ident,$MAP:ident) => {
+-        impl<'a, T> $CONE<T> {
++        impl<'a> $CONE {
+             pub(crate) fn recover_map(&self, map: &'a SparseExpansionMap) -> &'a $MAP {
+                 match map {
+                     SparseExpansionMap::$MAP(map) => map,
+@@ -113,7 +104,7 @@ pub(crate) struct SOCExpansionMap {
+ }
+ 
+ impl SOCExpansionMap {
+-    pub fn new<T: FloatT>(cone: &SecondOrderCone<T>) -> Self {
++    pub fn new(cone: &SecondOrderCone) -> Self {
+         let u = vec![0; cone.numel()];
+         let v = vec![0; cone.numel()];
+         let D = [0; 2];
+@@ -135,10 +126,7 @@ impl SparseExpansionMapTrait for SOCExpansionMap {
+ 
+ impl_map_recover!(SecondOrderCone, SOCExpansionMap);
+ 
+-impl<T> SparseExpansionConeTrait<T> for &'_ SecondOrderCone<T>
+-where
+-    T: FloatT,
+-{
++impl SparseExpansionConeTrait for &'_ SecondOrderCone {
+     fn expansion_map(&self) -> SparseExpansionMap {
+         SparseExpansionMap::SOCExpansionMap(SOCExpansionMap::new(self))
+     }
+@@ -146,7 +134,7 @@ where
+     fn csc_colcount_sparsecone(
+         &self,
+         map: &SparseExpansionMap,
+-        K: &mut CscMatrix<T>,
++        K: &mut CscMatrix,
+         row: usize,
+         col: usize,
+         shape: MatrixTriangle,
+@@ -170,7 +158,7 @@ where
+     fn csc_fill_sparsecone(
+         &self,
+         map: &mut SparseExpansionMap,
+-        K: &mut CscMatrix<T>,
++        K: &mut CscMatrix,
+         row: usize,
+         col: usize,
+         shape: MatrixTriangle,
+@@ -196,10 +184,10 @@ where
+     fn csc_update_sparsecone(
+         &self,
+         map: &SparseExpansionMap,
+-        ldl: &mut BoxedDirectLDLSolver<T>,
+-        K: &mut CscMatrix<T>,
+-        updateFcn: UpdateFcn<T>,
+-        scaleFcn: ScaleFcn<T>,
++        ldl: &mut BoxedDirectLDLSolver,
++        K: &mut CscMatrix,
++        updateFcn: UpdateFcn,
++        scaleFcn: ScaleFcn,
+     ) {
+         let sparse_data = self.sparse_data.as_ref().unwrap();
+ 
+@@ -236,11 +224,7 @@ pub(crate) struct LDLDataMap {
+ }
+ 
+ impl LDLDataMap {
+-    pub fn new<T: FloatT>(
+-        Pmat: &CscMatrix<T>,
+-        Amat: &CscMatrix<T>,
+-        cones: &CompositeCone<T>,
+-    ) -> Self {
++    pub fn new(Pmat: &CscMatrix, Amat: &CscMatrix, cones: &CompositeCone) -> Self {
+         let (m, n) = (Amat.nrows(), Pmat.nrows());
+         let P = vec![0; Pmat.nnz()];
+         let A = vec![0; Amat.nnz()];
+@@ -252,7 +236,7 @@ impl LDLDataMap {
+         let diagP = vec![0; n];
+ 
+         // make an index for each of the Hs blocks for each cone
+-        let Hsblocks = allocate_kkt_Hsblocks::<T, usize>(cones);
++        let Hsblocks = allocate_kkt_Hsblocks::<usize>(cones);
+ 
+         // now do the sparse cone expansion pieces
+         let nsparse = cones.iter().filter(|&c| c.is_sparse_expandable()).count();
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs b/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs
+index bf44bc1..6a0c5a5 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs
+@@ -1,6 +1,6 @@
+ #![allow(non_snake_case)]
+ 
+-use super::ldlsolvers::config::LDLConfiguration;
++use super::ldlsolvers::config::get_ldlsolver_config;
+ use super::*;
+ use crate::solver::core::kktsolvers::{HasLinearSolverInfo, KKTSolver, LinearSolverInfo};
+ use crate::solver::core::{cones::*, CoreSettings};
+@@ -13,9 +13,9 @@ use std::iter::zip;
+ // We require Send/Sync here to allow pyo3 builds to share
+ // solver objects between threads.
+ 
+-pub(crate) type BoxedDirectLDLSolver<T> = Box<dyn DirectLDLSolver<T> + Send + Sync>;
++pub(crate) type BoxedDirectLDLSolver = Box<dyn DirectLDLSolver + Send + Sync>;
+ 
+-pub struct DirectLDLKKTSolver<T> {
++pub struct DirectLDLKKTSolver {
+     // problem dimensions
+     m: usize,
+     n: usize,
+@@ -41,33 +41,30 @@ pub struct DirectLDLKKTSolver<T> {
+     Hsblocks: Vec<T>,
+ 
+     // unpermuted KKT matrix
+-    KKT: CscMatrix<T>,
++    KKT: CscMatrix,
+ 
+     // triangular storage shape for KKT
+     KKTuplo: MatrixTriangle,
+ 
+     // the direct linear LDL solver
+-    ldlsolver: BoxedDirectLDLSolver<T>,
++    ldlsolver: BoxedDirectLDLSolver,
+ 
+     // the diagonal regularizer currently applied
+     diagonal_regularizer: T,
+ }
+ 
+-impl<T> DirectLDLKKTSolver<T>
+-where
+-    T: FloatT,
+-{
++impl DirectLDLKKTSolver {
+     pub fn new(
+-        P: &CscMatrix<T>,
+-        A: &CscMatrix<T>,
+-        cones: &CompositeCone<T>,
++        P: &CscMatrix,
++        A: &CscMatrix,
++        cones: &CompositeCone,
+         m: usize,
+         n: usize,
+-        settings: &CoreSettings<T>,
++        settings: &CoreSettings,
+     ) -> Self {
+         // get a constructor for the LDL solver we should use,
+         // and also the matrix shape it requires
+-        let (kktshape, ldl_ctor) = T::get_ldlsolver_config(settings);
++        let (kktshape, ldl_ctor) = get_ldlsolver_config(settings);
+ 
+         //construct a KKT matrix of the right shape
+         let (KKT, map) = assemble_kkt_matrix(P, A, cones, kktshape);
+@@ -87,7 +84,7 @@ where
+ 
+         // updates to the diagonal of KKT will be
+         // assigned here before updating matrix entries
+-        let Hsblocks = allocate_kkt_Hsblocks::<T, T>(cones);
++        let Hsblocks = allocate_kkt_Hsblocks::<T>(cones);
+ 
+         let diagonal_regularizer = T::zero();
+ 
+@@ -118,20 +115,14 @@ where
+     }
+ }
+ 
+-impl<T> HasLinearSolverInfo for DirectLDLKKTSolver<T>
+-where
+-    T: FloatT,
+-{
++impl HasLinearSolverInfo for DirectLDLKKTSolver {
+     fn linear_solver_info(&self) -> LinearSolverInfo {
+         self.ldlsolver.linear_solver_info()
+     }
+ }
+ 
+-impl<T> KKTSolver<T> for DirectLDLKKTSolver<T>
+-where
+-    T: FloatT,
+-{
+-    fn update(&mut self, cones: &CompositeCone<T>, settings: &CoreSettings<T>) -> bool {
++impl KKTSolver for DirectLDLKKTSolver {
++    fn update(&mut self, cones: &CompositeCone, settings: &CoreSettings) -> bool {
+         let map = &self.map;
+ 
+         // Set the elements the W^tW blocks in the KKT matrix.
+@@ -169,7 +160,7 @@ where
+         &mut self,
+         lhsx: Option<&mut [T]>,
+         lhsz: Option<&mut [T]>,
+-        settings: &CoreSettings<T>,
++        settings: &CoreSettings,
+     ) -> bool {
+         self.ldlsolver.solve(&self.KKT, &mut self.x, &mut self.b);
+ 
+@@ -188,19 +179,16 @@ where
+         is_success
+     }
+ 
+-    fn update_P(&mut self, P: &CscMatrix<T>) {
++    fn update_P(&mut self, P: &CscMatrix) {
+         _update_values(&mut self.ldlsolver, &mut self.KKT, &self.map.P, &P.nzval);
+     }
+ 
+-    fn update_A(&mut self, A: &CscMatrix<T>) {
++    fn update_A(&mut self, A: &CscMatrix) {
+         _update_values(&mut self.ldlsolver, &mut self.KKT, &self.map.A, &A.nzval);
+     }
+ }
+ 
+-impl<T> DirectLDLKKTSolver<T>
+-where
+-    T: FloatT,
+-{
++impl DirectLDLKKTSolver {
+     // extra helper functions, not required for KKTSolver trait
+     fn getlhs(&self, lhsx: Option<&mut [T]>, lhsz: Option<&mut [T]>) {
+         let x = &self.x;
+@@ -214,7 +202,7 @@ where
+         }
+     }
+ 
+-    fn regularize_and_refactor(&mut self, settings: &CoreSettings<T>) -> bool {
++    fn regularize_and_refactor(&mut self, settings: &CoreSettings) -> bool {
+         let map = &self.map;
+         let KKT = &mut self.KKT;
+         let dsigns = &self.dsigns;
+@@ -263,7 +251,7 @@ where
+         is_success
+     }
+ 
+-    fn iterative_refinement(&mut self, settings: &CoreSettings<T>) -> bool {
++    fn iterative_refinement(&mut self, settings: &CoreSettings) -> bool {
+         let (x, b) = (&mut self.x, &self.b);
+         let (e, dx) = (&mut self.work1, &mut self.work2);
+ 
+@@ -321,7 +309,7 @@ where
+     }
+ }
+ 
+-fn _compute_regularizer<T: FloatT>(diag_kkt: &[T], settings: &CoreSettings<T>) -> T {
++fn _compute_regularizer(diag_kkt: &[T], settings: &CoreSettings) -> T {
+     let maxdiag = diag_kkt.norm_inf();
+ 
+     // Compute a new regularizer
+@@ -331,12 +319,7 @@ fn _compute_regularizer<T: FloatT>(diag_kkt: &[T], settings: &CoreSettings<T>) -
+ //  computes e = b - Kξ, overwriting the first argument
+ //  and returning its norm
+ 
+-fn _get_refine_error<T: FloatT>(
+-    e: &mut [T],
+-    b: &[T],
+-    KKTsym: &Symmetric<CscMatrix<T>>,
+-    ξ: &mut [T],
+-) -> T {
++fn _get_refine_error(e: &mut [T], b: &[T], KKTsym: &Symmetric<CscMatrix>, ξ: &mut [T]) -> T {
+     // Note that K is only triu data, so need to
+     // be careful when computing the residual here
+ 
+@@ -348,9 +331,9 @@ fn _get_refine_error<T: FloatT>(
+ 
+ // update entries of the KKT matrix using the given index into its CSC representation.
+ // applied to both the unpermuted matrix of the kktsolver and also to the ldlsolver
+-fn _update_values<T: FloatT>(
+-    ldlsolver: &mut BoxedDirectLDLSolver<T>,
+-    KKT: &mut CscMatrix<T>,
++fn _update_values(
++    ldlsolver: &mut BoxedDirectLDLSolver,
++    KKT: &mut CscMatrix,
+     index: &[usize],
+     values: &[T],
+ ) {
+@@ -363,15 +346,15 @@ fn _update_values<T: FloatT>(
+     ldlsolver.update_values(index, values);
+ }
+ 
+-fn _update_values_KKT<T: FloatT>(KKT: &mut CscMatrix<T>, index: &[usize], values: &[T]) {
++fn _update_values_KKT(KKT: &mut CscMatrix, index: &[usize], values: &[T]) {
+     for (idx, v) in zip(index, values) {
+         KKT.nzval[*idx] = *v;
+     }
+ }
+ 
+-fn _scale_values<T: FloatT>(
+-    ldlsolver: &mut BoxedDirectLDLSolver<T>,
+-    KKT: &mut CscMatrix<T>,
++fn _scale_values(
++    ldlsolver: &mut BoxedDirectLDLSolver,
++    KKT: &mut CscMatrix,
+     index: &[usize],
+     scale: T,
+ ) {
+@@ -383,7 +366,7 @@ fn _scale_values<T: FloatT>(
+ }
+ 
+ //scales KKT matrix values
+-fn _scale_values_KKT<T: FloatT>(KKT: &mut CscMatrix<T>, index: &[usize], scale: T) {
++fn _scale_values_KKT(KKT: &mut CscMatrix, index: &[usize], scale: T) {
+     for idx in index.iter() {
+         KKT.nzval[*idx] *= scale;
+     }
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/kkt_assembly.rs b/src/solver/core/kktsolvers/direct/quasidef/kkt_assembly.rs
+index fdc1613..72bfc30 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/kkt_assembly.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/kkt_assembly.rs
+@@ -3,26 +3,24 @@
+ use super::datamaps::*;
+ use crate::algebra::*;
+ use crate::solver::core::cones::*;
+-use num_traits::Zero;
+ 
+-pub(crate) fn allocate_kkt_Hsblocks<T, Z>(cones: &CompositeCone<T>) -> Vec<Z>
++pub(crate) fn allocate_kkt_Hsblocks<Z>(cones: &CompositeCone) -> Vec<Z>
+ where
+-    T: FloatT,
+-    Z: Zero + Clone,
++    Z: Default + Clone,
+ {
+     let mut nnz = 0;
+     if let Some(rng_last) = cones.rng_blocks.last() {
+         nnz = rng_last.end;
+     }
+-    vec![Z::zero(); nnz]
++    vec![Z::default(); nnz]
+ }
+ 
+-pub(crate) fn assemble_kkt_matrix<T: FloatT>(
+-    P: &CscMatrix<T>,
+-    A: &CscMatrix<T>,
+-    cones: &CompositeCone<T>,
++pub(crate) fn assemble_kkt_matrix(
++    P: &CscMatrix,
++    A: &CscMatrix,
++    cones: &CompositeCone,
+     shape: MatrixTriangle,
+-) -> (CscMatrix<T>, LDLDataMap) {
++) -> (CscMatrix, LDLDataMap) {
+     let mut map = LDLDataMap::new(P, A, cones);
+     let (m, n) = A.size();
+     let p = map.sparse_maps.pdim();
+@@ -43,18 +41,18 @@ pub(crate) fn assemble_kkt_matrix<T: FloatT>(
+     map.sparse_maps.nnz_vec() +  // Number of elements in sparse cone off diagonals
+     p; //Number of elements in diagonal of sparse cones
+ 
+-    let mut K = CscMatrix::<T>::spalloc((m + n + p, m + n + p), nnzKKT);
++    let mut K = CscMatrix::spalloc((m + n + p, m + n + p), nnzKKT);
+ 
+     _kkt_assemble_colcounts(&mut K, P, A, cones, &map, shape);
+     _kkt_assemble_fill(&mut K, P, A, cones, &mut map, shape);
+ 
+     (K, map)
+ }
+-fn _kkt_assemble_colcounts<T: FloatT>(
+-    K: &mut CscMatrix<T>,
+-    P: &CscMatrix<T>,
+-    A: &CscMatrix<T>,
+-    cones: &CompositeCone<T>,
++fn _kkt_assemble_colcounts(
++    K: &mut CscMatrix,
++    P: &CscMatrix,
++    A: &CscMatrix,
++    cones: &CompositeCone,
+     map: &LDLDataMap,
+     shape: MatrixTriangle,
+ ) {
+@@ -102,11 +100,11 @@ fn _kkt_assemble_colcounts<T: FloatT>(
+     }
+ }
+ 
+-fn _kkt_assemble_fill<T: FloatT>(
+-    K: &mut CscMatrix<T>,
+-    P: &CscMatrix<T>,
+-    A: &CscMatrix<T>,
+-    cones: &CompositeCone<T>,
++fn _kkt_assemble_fill(
++    K: &mut CscMatrix,
++    P: &CscMatrix,
++    A: &CscMatrix,
++    cones: &CompositeCone,
+     map: &mut LDLDataMap,
+     shape: MatrixTriangle,
+ ) {
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/auto.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/auto.rs
+index 86918a8..d1c190a 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/auto.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/auto.rs
+@@ -9,31 +9,23 @@ use crate::{
+     },
+ };
+ 
+-pub struct AutoDirectLDLSolver<T> {
+-    T: std::marker::PhantomData<T>,
+-}
++pub struct AutoDirectLDLSolver {}
+ 
+-impl<T> DirectLDLSolverReqs for AutoDirectLDLSolver<T>
+-where
+-    T: FloatT,
+-{
++impl DirectLDLSolverReqs for AutoDirectLDLSolver {
+     fn required_matrix_shape() -> MatrixTriangle {
+         MatrixTriangle::Triu
+     }
+ }
+ 
+-impl<T> AutoDirectLDLSolver<T>
+-where
+-    T: FloatT,
+-{
++impl AutoDirectLDLSolver {
+     #[allow(clippy::new_ret_no_self)]
+     pub fn new(
+-        KKT: &CscMatrix<T>,
++        KKT: &CscMatrix,
+         Dsigns: &[i8],
+-        settings: &CoreSettings<T>,
++        settings: &CoreSettings,
+         _perm: Option<Vec<usize>>,
+-    ) -> BoxedDirectLDLSolver<T> {
+-        let solver = QDLDLDirectLDLSolver::<T>::new(KKT, Dsigns, settings, None);
++    ) -> BoxedDirectLDLSolver {
++        let solver = QDLDLDirectLDLSolver::new(KKT, Dsigns, settings, None);
+         Box::new(solver)
+     }
+ }
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/config.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/config.rs
+index a4e2cb3..18e1cfc 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/config.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/config.rs
+@@ -1,7 +1,7 @@
+ use super::{auto::*, qdldl::*};
+ 
+ use crate::{
+-    algebra::{CscMatrix, FloatT, MatrixTriangle},
++    algebra::{CscMatrix, MatrixTriangle},
+     solver::{
+         core::kktsolvers::direct::{BoxedDirectLDLSolver, DirectLDLSolverReqs},
+         CoreSettings,
+@@ -13,63 +13,27 @@ use crate::{
+ // ::Val{:qdldl} types of arguments.   There is no equivalent
+ // in Rust, so we get these big match statements.
+ 
+-type LDLConstructor<T> =
+-    fn(&CscMatrix<T>, &[i8], &CoreSettings<T>, Option<Vec<usize>>) -> BoxedDirectLDLSolver<T>;
++type LDLConstructor =
++    fn(&CscMatrix, &[i8], &CoreSettings, Option<Vec<usize>>) -> BoxedDirectLDLSolver;
+ 
+-// Some solvers only support 64 bit variants, which presents
+-// a problem since most of the solver code is generic over FloatT
+-// and trait specialization is not avaiable in Rust yet.   Hence
+-// this janky trait
++/// The KKT matrix shape and LDL solver constructor for the configured method.
++pub fn get_ldlsolver_config(settings: &CoreSettings) -> (MatrixTriangle, LDLConstructor) {
++    let ldlptr: LDLConstructor;
++    let kktshape: MatrixTriangle;
++    let case = settings.direct_solve_method.as_str();
+ 
+-pub trait LDLConfiguration: FloatT {
+-    fn get_ldlsolver_config(
+-        settings: &CoreSettings<Self>,
+-    ) -> (MatrixTriangle, LDLConstructor<Self>) {
+-        // default is to use the generic form, ignoring
+-        // types that support f64 only
+-        Self::get_ldlsolver_config_default(settings)
+-    }
+-
+-    // The default configurator for generic T
+-    fn get_ldlsolver_config_default(
+-        settings: &CoreSettings<Self>,
+-    ) -> (MatrixTriangle, LDLConstructor<Self>) {
+-        let ldlptr: LDLConstructor<Self>;
+-        let kktshape: MatrixTriangle;
+-        let case = settings.direct_solve_method.as_str();
+-
+-        match case {
+-            "auto" => {
+-                kktshape = AutoDirectLDLSolver::<Self>::required_matrix_shape();
+-                ldlptr = |M, D, S, P| AutoDirectLDLSolver::new(M, D, S, P);
+-            }
+-            "qdldl" => {
+-                kktshape = QDLDLDirectLDLSolver::<Self>::required_matrix_shape();
+-                ldlptr = |M, D, S, P| Box::new(QDLDLDirectLDLSolver::new(M, D, S, P));
+-            }
+-            _ => {
+-                panic!("Unrecognized LDL solver type: \"{}\"", case);
+-            }
++    match case {
++        "auto" => {
++            kktshape = AutoDirectLDLSolver::required_matrix_shape();
++            ldlptr = |M, D, S, P| AutoDirectLDLSolver::new(M, D, S, P);
+         }
+-        (kktshape, ldlptr)
+-    }
+-}
+-
+-// This cursed section of code exists because trait specialisation
+-// does not yet exist in rust.  We want get_ldlsolver_config to
+-// construct pardiso solvers only when FloatT = f64, and to return
+-// an error for pardiso options for all other FloatT.
+-
+-impl<T: FloatT> LDLConfiguration for T {
+-    //
+-    fn get_ldlsolver_config(settings: &CoreSettings<T>) -> (MatrixTriangle, LDLConstructor<T>) {
+-        let ldlptr: LDLConstructor<T>;
+-        let kktshape: MatrixTriangle;
+-        let case = settings.direct_solve_method.as_str();
+-
+-        match case {
+-            _ => (kktshape, ldlptr) = Self::get_ldlsolver_config_default(settings),
++        "qdldl" => {
++            kktshape = QDLDLDirectLDLSolver::required_matrix_shape();
++            ldlptr = |M, D, S, P| Box::new(QDLDLDirectLDLSolver::new(M, D, S, P));
++        }
++        _ => {
++            panic!("Unrecognized LDL solver type: \"{}\"", case);
+         }
+-        (kktshape, ldlptr)
+     }
++    (kktshape, ldlptr)
+ }
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/mod.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/mod.rs
+index 1278178..038d85a 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/mod.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/mod.rs
+@@ -1,4 +1,4 @@
+-use crate::algebra::{CscMatrix, FloatT};
++use crate::algebra::CscMatrix;
+ use amd::Info;
+ 
+ pub mod auto;
+@@ -6,10 +6,7 @@ pub mod config;
+ pub mod qdldl;
+ 
+ #[allow(dead_code)]
+-pub(crate) fn amd_order<T>(KKT: &CscMatrix<T>) -> (Vec<usize>, Vec<usize>, Info)
+-where
+-    T: FloatT,
+-{
++pub(crate) fn amd_order(KKT: &CscMatrix) -> (Vec<usize>, Vec<usize>, Info) {
+     // manually compute an AMD ordering for the KKT matrix
+     let amd_dense_scale = 1.5; // magic number from QDLDL
+     let (perm, iperm, info) = crate::qdldl::get_amd_ordering(KKT, amd_dense_scale);
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
+index ee91a17..2d642fc 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
+@@ -6,19 +6,16 @@ use crate::solver::core::kktsolvers::HasLinearSolverInfo;
+ use crate::solver::core::kktsolvers::LinearSolverInfo;
+ use crate::solver::core::CoreSettings;
+ 
+-pub struct QDLDLDirectLDLSolver<T> {
++pub struct QDLDLDirectLDLSolver {
+     //KKT matrix and its QDLDL factorization
+-    factors: QDLDLFactorisation<T>,
++    factors: QDLDLFactorisation,
+ }
+ 
+-impl<T> QDLDLDirectLDLSolver<T>
+-where
+-    T: FloatT,
+-{
++impl QDLDLDirectLDLSolver {
+     pub fn new(
+-        KKT: &CscMatrix<T>,
++        KKT: &CscMatrix,
+         Dsigns: &[i8],
+-        settings: &CoreSettings<T>,
++        settings: &CoreSettings,
+         perm: Option<Vec<usize>>,
+     ) -> Self {
+         assert!(KKT.is_square(), "KKT matrix is not square");
+@@ -43,25 +40,19 @@ where
+             .unwrap();
+         opts.perm = perm;
+ 
+-        let factors = QDLDLFactorisation::<T>::new(KKT, Some(opts)).unwrap();
++        let factors = QDLDLFactorisation::new(KKT, Some(opts)).unwrap();
+ 
+         Self { factors }
+     }
+ }
+ 
+-impl<T> DirectLDLSolverReqs for QDLDLDirectLDLSolver<T>
+-where
+-    T: FloatT,
+-{
++impl DirectLDLSolverReqs for QDLDLDirectLDLSolver {
+     fn required_matrix_shape() -> MatrixTriangle {
+         MatrixTriangle::Triu
+     }
+ }
+ 
+-impl<T> HasLinearSolverInfo for QDLDLDirectLDLSolver<T>
+-where
+-    T: FloatT,
+-{
++impl HasLinearSolverInfo for QDLDLDirectLDLSolver {
+     fn linear_solver_info(&self) -> LinearSolverInfo {
+         LinearSolverInfo {
+             name: "qdldl".to_string(),
+@@ -73,10 +64,7 @@ where
+     }
+ }
+ 
+-impl<T> DirectLDLSolver<T> for QDLDLDirectLDLSolver<T>
+-where
+-    T: FloatT,
+-{
++impl DirectLDLSolver for QDLDLDirectLDLSolver {
+     fn update_values(&mut self, index: &[usize], values: &[T]) {
+         //Update values that are stored within
+         //the reordered copy held internally by QDLDL.
+@@ -91,13 +79,13 @@ where
+         self.factors.offset_values(index, offset, signs);
+     }
+ 
+-    fn solve(&mut self, _kkt: &CscMatrix<T>, x: &mut [T], b: &mut [T]) {
++    fn solve(&mut self, _kkt: &CscMatrix, x: &mut [T], b: &mut [T]) {
+         // NB: QDLDL solves in place
+         x.copy_from(b);
+         self.factors.solve(x);
+     }
+ 
+-    fn refactor(&mut self, _kkt: &CscMatrix<T>) -> bool {
++    fn refactor(&mut self, _kkt: &CscMatrix) -> bool {
+         //QDLDL has maintained its own version of the permuted
+         //KKT matrix through custom update/scale/offset methods,
+         //so we ignore the KKT matrix provided by the caller
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/mod.rs b/src/solver/core/kktsolvers/direct/quasidef/mod.rs
+index 891c241..eca37e0 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/mod.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/mod.rs
+@@ -16,11 +16,11 @@ pub trait DirectLDLSolverReqs {
+     where
+         Self: Sized;
+ }
+-pub trait DirectLDLSolver<T: FloatT>: DirectLDLSolverReqs + HasLinearSolverInfo {
++pub trait DirectLDLSolver: DirectLDLSolverReqs + HasLinearSolverInfo {
+     fn update_values(&mut self, index: &[usize], values: &[T]);
+     fn scale_values(&mut self, index: &[usize], scale: T);
+     #[allow(dead_code)] //PJG: could be removed.
+     fn offset_values(&mut self, index: &[usize], offset: T, signs: &[i8]);
+-    fn solve(&mut self, kkt: &CscMatrix<T>, x: &mut [T], b: &mut [T]);
+-    fn refactor(&mut self, kkt: &CscMatrix<T>) -> bool;
++    fn solve(&mut self, kkt: &CscMatrix, x: &mut [T], b: &mut [T]);
++    fn refactor(&mut self, kkt: &CscMatrix) -> bool;
+ }
+diff --git a/src/solver/core/kktsolvers/mod.rs b/src/solver/core/kktsolvers/mod.rs
+index 4e42861..08efd53 100644
+--- a/src/solver/core/kktsolvers/mod.rs
++++ b/src/solver/core/kktsolvers/mod.rs
+@@ -4,17 +4,12 @@ use crate::algebra::*;
+ 
+ pub mod direct;
+ 
+-pub trait KKTSolver<T: FloatT>: HasLinearSolverInfo {
+-    fn update(&mut self, cones: &CompositeCone<T>, settings: &CoreSettings<T>) -> bool;
++pub trait KKTSolver: HasLinearSolverInfo {
++    fn update(&mut self, cones: &CompositeCone, settings: &CoreSettings) -> bool;
+     fn setrhs(&mut self, x: &[T], z: &[T]);
+-    fn solve(
+-        &mut self,
+-        x: Option<&mut [T]>,
+-        z: Option<&mut [T]>,
+-        settings: &CoreSettings<T>,
+-    ) -> bool;
+-    fn update_P(&mut self, P: &CscMatrix<T>);
+-    fn update_A(&mut self, A: &CscMatrix<T>);
++    fn solve(&mut self, x: Option<&mut [T]>, z: Option<&mut [T]>, settings: &CoreSettings) -> bool;
++    fn update_P(&mut self, P: &CscMatrix);
++    fn update_A(&mut self, A: &CscMatrix);
+ }
+ 
+ pub trait HasLinearSolverInfo {
+diff --git a/src/solver/core/settings.rs b/src/solver/core/settings.rs
+index e2e1a1e..069120c 100644
+--- a/src/solver/core/settings.rs
++++ b/src/solver/core/settings.rs
+@@ -6,7 +6,7 @@ use thiserror::Error;
+ /// Go [here](crate::solver::implementations::default::DefaultSettings)
+ /// to view the complete list.
+ ///
+-pub type CoreSettings<T> = DefaultSettings<T>;
++pub type CoreSettings = DefaultSettings;
+ 
+ #[derive(Error, Debug)]
+ /// Error type returned by settings validation
+diff --git a/src/solver/core/solver.rs b/src/solver/core/solver.rs
+index 8f0c1d1..2849bee 100644
+--- a/src/solver/core/solver.rs
++++ b/src/solver/core/solver.rs
+@@ -93,10 +93,9 @@ impl std::fmt::Display for SolverStatus {
+ // This trait is defined with a collection of mutually interacting associated types.
+ // See the [`DefaultSolver`](crate::solver::implementations::default) for an example.
+ 
+-pub struct Solver<T, D, V, R, K, C, I, SO, SE>
++pub struct Solver<D, V, R, K, C, I, SO, SE>
+ where
+-    SE: Settings<T>,
+-    T: FloatT,
++    SE: Settings,
+ {
+     pub data: D,
+     pub variables: V,
+@@ -112,11 +111,10 @@ where
+     pub(crate) phantom: std::marker::PhantomData<T>,
+ }
+ 
+-impl<T, D, V, R, K, C, I, SO, SE> Solver<T, D, V, R, K, C, I, SO, SE>
++impl<D, V, R, K, C, I, SO, SE> Solver<D, V, R, K, C, I, SO, SE>
+ where
+-    I: Info<T, D = D, V = V, R = R, C = C, SE = SE>,
+-    SE: Settings<T>,
+-    T: FloatT,
++    I: Info<D = D, V = V, R = R, C = C, SE = SE>,
++    SE: Settings,
+ {
+     pub fn settings(&self) -> &SE {
+         &self.settings
+@@ -139,23 +137,22 @@ where
+ // only publicly facing trait we want to give the solver.   Additional
+ // internal functionality for the top level solver object is implemented
+ // for the IPSolverUtilities trait below, upon which IPSolver depends
+-pub trait IPSolver<T, D, V, R, K, C, I, SO, SE> {
++pub trait IPSolver<D, V, R, K, C, I, SO, SE> {
+     /// Run the solver
+     fn solve(&mut self);
+ }
+ 
+-impl<T, D, V, R, K, C, I, SO, SE> IPSolver<T, D, V, R, K, C, I, SO, SE>
+-    for Solver<T, D, V, R, K, C, I, SO, SE>
++impl<D, V, R, K, C, I, SO, SE> IPSolver<D, V, R, K, C, I, SO, SE>
++    for Solver<D, V, R, K, C, I, SO, SE>
+ where
+-    T: FloatT,
+-    D: ProblemData<T, V = V>,
+-    V: Variables<T, D = D, R = R, C = C, SE = SE>,
+-    R: Residuals<T, D = D, V = V>,
+-    K: KKTSystem<T, D = D, V = V, C = C, SE = SE>,
+-    C: Cone<T>,
+-    I: Info<T, D = D, V = V, R = R, C = C, SE = SE>,
+-    SO: Solution<T, D = D, V = V, I = I, SE = SE>,
+-    SE: Settings<T>,
++    D: ProblemData<V = V>,
++    V: Variables<D = D, R = R, C = C, SE = SE>,
++    R: Residuals<D = D, V = V>,
++    K: KKTSystem<D = D, V = V, C = C, SE = SE>,
++    C: Cone,
++    I: Info<D = D, V = V, R = R, C = C, SE = SE>,
++    SO: Solution<D = D, V = V, I = I, SE = SE>,
++    SE: Settings,
+ {
+     fn solve(&mut self) {
+         // various initializations
+@@ -355,7 +352,7 @@ where
+ mod internal {
+     use super::*;
+ 
+-    pub(super) trait IPSolverInternals<T, D, V, R, K, C, I, SO, SE> {
++    pub(super) trait IPSolverInternals<D, V, R, K, C, I, SO, SE> {
+         /// Find an initial condition
+         fn default_start(&mut self);
+ 
+@@ -394,18 +391,17 @@ mod internal {
+         ) -> StrategyCheckpoint;
+     }
+ 
+-    impl<T, D, V, R, K, C, I, SO, SE> IPSolverInternals<T, D, V, R, K, C, I, SO, SE>
+-        for Solver<T, D, V, R, K, C, I, SO, SE>
++    impl<D, V, R, K, C, I, SO, SE> IPSolverInternals<D, V, R, K, C, I, SO, SE>
++        for Solver<D, V, R, K, C, I, SO, SE>
+     where
+-        T: FloatT,
+-        D: ProblemData<T, V = V>,
+-        V: Variables<T, D = D, R = R, C = C, SE = SE>,
+-        R: Residuals<T, D = D, V = V>,
+-        K: KKTSystem<T, D = D, V = V, C = C, SE = SE>,
+-        C: Cone<T>,
+-        I: Info<T, D = D, V = V, R = R, C = C, SE = SE>,
+-        SO: Solution<T, D = D, V = V, I = I>,
+-        SE: Settings<T>,
++        D: ProblemData<V = V>,
++        V: Variables<D = D, R = R, C = C, SE = SE>,
++        R: Residuals<D = D, V = V>,
++        K: KKTSystem<D = D, V = V, C = C, SE = SE>,
++        C: Cone,
++        I: Info<D = D, V = V, R = R, C = C, SE = SE>,
++        SO: Solution<D = D, V = V, I = I>,
++        SE: Settings,
+     {
+         fn default_start(&mut self) {
+             if self.cones.is_symmetric() {
+diff --git a/src/solver/core/traits.rs b/src/solver/core/traits.rs
+index eb112a6..5724eb3 100644
+--- a/src/solver/core/traits.rs
++++ b/src/solver/core/traits.rs
+@@ -15,28 +15,28 @@ use super::{SolverStatus, StepDirection};
+ use crate::algebra::*;
+ 
+ /// Data for a conic optimization problem.
+-pub trait ProblemData<T: FloatT> {
++pub trait ProblemData {
+     /// associated variable type
+-    type V: Variables<T>;
++    type V: Variables;
+     /// associated cone type
+-    type C: Cone<T>;
++    type C: Cone;
+     /// associated settings type
+-    type SE: Settings<T>;
++    type SE: Settings;
+ 
+     /// Equilibrate internal data before solver starts.
+     fn equilibrate(&mut self, cones: &Self::C, settings: &Self::SE);
+ }
+ 
+ /// Variables for a conic optimization problem.
+-pub trait Variables<T: FloatT> {
++pub trait Variables {
+     /// associated problem data type
+-    type D: ProblemData<T>;
++    type D: ProblemData;
+     /// associated problem residuals type
+-    type R: Residuals<T>;
++    type R: Residuals;
+     /// associated cone type
+-    type C: Cone<T>;
++    type C: Cone;
+     /// associated settings type
+-    type SE: Settings<T>;
++    type SE: Settings;
+ 
+     /// Compute the scaled duality gap.
+     fn calc_mu(&mut self, residuals: &Self::R, cones: &Self::C) -> T;
+@@ -91,11 +91,11 @@ pub trait Variables<T: FloatT> {
+ }
+ 
+ /// Residuals for a conic optimization problem.
+-pub trait Residuals<T: FloatT> {
++pub trait Residuals {
+     /// associated problem data type
+-    type D: ProblemData<T>;
++    type D: ProblemData;
+     /// associated variable type
+-    type V: Variables<T>;
++    type V: Variables;
+ 
+     /// Compute residuals for the given variables.
+     ///
+@@ -103,15 +103,15 @@ pub trait Residuals<T: FloatT> {
+ }
+ 
+ /// KKT linear solver object.
+-pub trait KKTSystem<T: FloatT> {
++pub trait KKTSystem {
+     /// associated problem data type
+-    type D: ProblemData<T>;
++    type D: ProblemData;
+     /// associated variable type
+-    type V: Variables<T>;
++    type V: Variables;
+     /// associated cone type
+-    type C: Cone<T>;
++    type C: Cone;
+     /// associated settings type
+-    type SE: Settings<T>;
++    type SE: Settings;
+ 
+     /// Update the KKT system.   In particular, update KKT
+     /// matrix entries with new variable and refactor.
+@@ -140,20 +140,17 @@ pub trait KKTSystem<T: FloatT> {
+ }
+ 
+ /// Internal information for the solver to monitor progress and check for termination.
+-pub trait Info<T>: Sized + Clone
+-where
+-    T: FloatT,
+-{
++pub trait Info: Sized + Clone {
+     /// associated problem data type
+-    type D: ProblemData<T>;
++    type D: ProblemData;
+     /// associated cone type
+-    type C: Cone<T>;
++    type C: Cone;
+     /// associated settings type
+-    type SE: Settings<T>;
++    type SE: Settings;
+     /// associated variables type
+-    type V: Variables<T>;
++    type V: Variables;
+     /// associated problem residuals type
+-    type R: Residuals<T>;
++    type R: Residuals;
+ 
+     /// Reset internal data.
+     fn reset(&mut self);
+@@ -187,15 +184,15 @@ where
+ }
+ 
+ /// Solution for a conic optimization problem.
+-pub trait Solution<T: FloatT> {
++pub trait Solution {
+     /// Associated problem data type
+-    type D: ProblemData<T>;
++    type D: ProblemData;
+     /// Associated problem variable type
+-    type V: Variables<T>;
++    type V: Variables;
+     /// Associated progress information type
+-    type I: Info<T>;
++    type I: Info;
+     /// Associated solver settings settings
+-    type SE: Settings<T>;
++    type SE: Settings;
+ 
+     /// Compute solution from the Variables at solver termination
+     fn post_process(
+@@ -216,12 +213,12 @@ pub trait Solution<T: FloatT> {
+ /// specific settings they wish.   They must, however, also maintain
+ /// a settings object of type [`CoreSettings`](crate::solver::core::CoreSettings)
+ /// and return this to the solver internally.   
+-pub trait Settings<T: FloatT>: Sized + Clone {
++pub trait Settings: Sized + Clone {
+     /// Return the core settings.
+-    fn core(&self) -> &CoreSettings<T>;
++    fn core(&self) -> &CoreSettings;
+ 
+     /// Return the core settings (mutably).
+-    fn core_mut(&mut self) -> &mut CoreSettings<T>;
++    fn core_mut(&mut self) -> &mut CoreSettings;
+ 
+     /// sanity check the settings
+     fn validate(&self) -> Result<(), SettingsError>;
+diff --git a/src/solver/implementations/default/data_updating.rs b/src/solver/implementations/default/data_updating.rs
+index b6b4349..ec2cd94 100644
+--- a/src/solver/implementations/default/data_updating.rs
++++ b/src/solver/implementations/default/data_updating.rs
+@@ -20,11 +20,11 @@ pub enum DataUpdateError {
+ }
+ 
+ /// Trait for updating problem data matrices (`P` and `A`) from various data types
+-pub trait MatrixProblemDataUpdate<T: FloatT> {
++pub trait MatrixProblemDataUpdate {
+     /// Update matrix entries using associated left/right conditioners and scaling terms
+     fn update_matrix(
+         &self,
+-        M: &mut CscMatrix<T>,
++        M: &mut CscMatrix,
+         lscale: &[T],
+         rscale: &[T],
+         cscale: Option<T>,
+@@ -32,7 +32,7 @@ pub trait MatrixProblemDataUpdate<T: FloatT> {
+ }
+ 
+ /// Trait for updating problem data vectors (`q`` and `b`) from various data types
+-pub trait VectorProblemDataUpdate<T: FloatT> {
++pub trait VectorProblemDataUpdate {
+     /// Update vector entries using associated elementwise and overall scaling terms
+     fn update_vector(
+         &self,
+@@ -42,10 +42,7 @@ pub trait VectorProblemDataUpdate<T: FloatT> {
+     ) -> Result<(), SparseFormatError>;
+ }
+ 
+-impl<T> DefaultSolver<T>
+-where
+-    T: FloatT,
+-{
++impl DefaultSolver {
+     // PJG: rustdoc fails to resolve links to `update_P`, `update_q`, `update_A`, `update_b` below
+ 
+     /// Overwrites internal problem data structures in a solver object with new data, avoiding new memory allocations.   
+@@ -62,10 +59,10 @@ where
+     ///
+     /// </div>
+     pub fn update_data<
+-        DataP: MatrixProblemDataUpdate<T>,
+-        Dataq: VectorProblemDataUpdate<T>,
+-        DataA: MatrixProblemDataUpdate<T>,
+-        Datab: VectorProblemDataUpdate<T>,
++        DataP: MatrixProblemDataUpdate,
++        Dataq: VectorProblemDataUpdate,
++        DataA: MatrixProblemDataUpdate,
++        Datab: VectorProblemDataUpdate,
+     >(
+         &mut self,
+         P: &DataP,
+@@ -91,7 +88,7 @@ where
+     ///
+     /// - an empty vector, in which case no action is taken.
+     ///
+-    pub fn update_P<Data: MatrixProblemDataUpdate<T>>(
++    pub fn update_P<Data: MatrixProblemDataUpdate>(
+         &mut self,
+         data: &Data,
+     ) -> Result<(), DataUpdateError> {
+@@ -114,7 +111,7 @@ where
+     ///
+     /// - an empty vector, in which case no action is taken.
+     ///
+-    pub fn update_A<Data: MatrixProblemDataUpdate<T>>(
++    pub fn update_A<Data: MatrixProblemDataUpdate>(
+         &mut self,
+         data: &Data,
+     ) -> Result<(), DataUpdateError> {
+@@ -128,7 +125,7 @@ where
+     }
+ 
+     /// Overwrites the `q` vector data in an existing solver object.  No action is taken if the input is empty.
+-    pub fn update_q<Data: VectorProblemDataUpdate<T>>(
++    pub fn update_q<Data: VectorProblemDataUpdate>(
+         &mut self,
+         data: &Data,
+     ) -> Result<(), DataUpdateError> {
+@@ -144,7 +141,7 @@ where
+     }
+ 
+     /// Overwrites the `b` vector data in an existing solver object.  No action is taken if the input is empty.
+-    pub fn update_b<Data: VectorProblemDataUpdate<T>>(
++    pub fn update_b<Data: VectorProblemDataUpdate>(
+         &mut self,
+         data: &Data,
+     ) -> Result<(), DataUpdateError> {
+@@ -175,13 +172,10 @@ where
+     }
+ }
+ 
+-impl<T> MatrixProblemDataUpdate<T> for CscMatrix<T>
+-where
+-    T: FloatT,
+-{
++impl MatrixProblemDataUpdate for CscMatrix {
+     fn update_matrix(
+         &self,
+-        M: &mut CscMatrix<T>,
++        M: &mut CscMatrix,
+         lscale: &[T],
+         rscale: &[T],
+         cscale: Option<T>,
+@@ -192,13 +186,10 @@ where
+     }
+ }
+ 
+-impl<T> MatrixProblemDataUpdate<T> for [T]
+-where
+-    T: FloatT,
+-{
++impl MatrixProblemDataUpdate for [T] {
+     fn update_matrix(
+         &self,
+-        M: &mut CscMatrix<T>,
++        M: &mut CscMatrix,
+         lscale: &[T],
+         rscale: &[T],
+         cscale: Option<T>,
+@@ -224,10 +215,10 @@ where
+     }
+ }
+ 
+-impl<T: FloatT> MatrixProblemDataUpdate<T> for Vec<T> {
++impl MatrixProblemDataUpdate for Vec<T> {
+     fn update_matrix(
+         &self,
+-        M: &mut CscMatrix<T>,
++        M: &mut CscMatrix,
+         lscale: &[T],
+         rscale: &[T],
+         cscale: Option<T>,
+@@ -236,10 +227,10 @@ impl<T: FloatT> MatrixProblemDataUpdate<T> for Vec<T> {
+     }
+ }
+ 
+-impl<T: FloatT> MatrixProblemDataUpdate<T> for [T; 0] {
++impl MatrixProblemDataUpdate for [T; 0] {
+     fn update_matrix(
+         &self,
+-        _M: &mut CscMatrix<T>,
++        _M: &mut CscMatrix,
+         _lscale: &[T],
+         _rscale: &[T],
+         _cscale: Option<T>,
+@@ -252,13 +243,10 @@ impl<T: FloatT> MatrixProblemDataUpdate<T> for [T; 0] {
+ // bounding by AsRef<[T]> is not specific enough to distinguish it from
+ // the zip iterator for partial updates implemented next.
+ 
+-impl<'a, T> MatrixProblemDataUpdate<T> for Zip<Iter<'a, usize>, Iter<'a, T>>
+-where
+-    T: FloatT,
+-{
++impl<'a> MatrixProblemDataUpdate for Zip<Iter<'a, usize>, Iter<'a, T>> {
+     fn update_matrix(
+         &self,
+-        M: &mut CscMatrix<T>,
++        M: &mut CscMatrix,
+         lscale: &[T],
+         rscale: &[T],
+         cscale: Option<T>,
+@@ -278,13 +266,10 @@ where
+     }
+ }
+ 
+-impl<T> MatrixProblemDataUpdate<T> for (Vec<usize>, Vec<T>)
+-where
+-    T: FloatT,
+-{
++impl MatrixProblemDataUpdate for (Vec<usize>, Vec<T>) {
+     fn update_matrix(
+         &self,
+-        M: &mut CscMatrix<T>,
++        M: &mut CscMatrix,
+         lscale: &[T],
+         rscale: &[T],
+         cscale: Option<T>,
+@@ -294,10 +279,7 @@ where
+     }
+ }
+ 
+-impl<T> VectorProblemDataUpdate<T> for [T]
+-where
+-    T: FloatT,
+-{
++impl VectorProblemDataUpdate for [T] {
+     fn update_vector(
+         &self,
+         v: &mut [T],
+@@ -326,7 +308,7 @@ where
+     }
+ }
+ 
+-impl<T: FloatT> VectorProblemDataUpdate<T> for Vec<T> {
++impl VectorProblemDataUpdate for Vec<T> {
+     fn update_vector(
+         &self,
+         v: &mut [T],
+@@ -337,7 +319,7 @@ impl<T: FloatT> VectorProblemDataUpdate<T> for Vec<T> {
+     }
+ }
+ 
+-impl<T: FloatT> VectorProblemDataUpdate<T> for [T; 0] {
++impl VectorProblemDataUpdate for [T; 0] {
+     fn update_vector(
+         &self,
+         _v: &mut [T],
+@@ -352,10 +334,7 @@ impl<T: FloatT> VectorProblemDataUpdate<T> for [T; 0] {
+ // bounding by AsRef<[T]> is not specific enough to distinguish it from
+ // the zip iterator for partial updates implemented next.
+ 
+-impl<'a, T> VectorProblemDataUpdate<T> for Zip<Iter<'a, usize>, Iter<'a, T>>
+-where
+-    T: FloatT,
+-{
++impl<'a> VectorProblemDataUpdate for Zip<Iter<'a, usize>, Iter<'a, T>> {
+     fn update_vector(
+         &self,
+         v: &mut [T],
+@@ -376,10 +355,7 @@ where
+     }
+ }
+ 
+-impl<T> VectorProblemDataUpdate<T> for (Vec<usize>, Vec<T>)
+-where
+-    T: FloatT,
+-{
++impl VectorProblemDataUpdate for (Vec<usize>, Vec<T>) {
+     fn update_vector(
+         &self,
+         v: &mut [T],
+diff --git a/src/solver/implementations/default/equilibration.rs b/src/solver/implementations/default/equilibration.rs
+index 813dde0..fd5f25d 100644
+--- a/src/solver/implementations/default/equilibration.rs
++++ b/src/solver/implementations/default/equilibration.rs
+@@ -6,7 +6,7 @@ use crate::algebra::*;
+ // ---------------
+ 
+ /// Data from the Ruiz equilibration procedure
+-pub struct DefaultEquilibrationData<T> {
++pub struct DefaultEquilibrationData {
+     // scaling matrices for problem data equilibration
+     // fields d,e,dinv,einv are vectors of scaling values
+     // to be treated as diagonal scaling data
+@@ -22,10 +22,7 @@ pub struct DefaultEquilibrationData<T> {
+     pub c: T,
+ }
+ 
+-impl<T> DefaultEquilibrationData<T>
+-where
+-    T: FloatT,
+-{
++impl DefaultEquilibrationData {
+     /// creates a new equilibration object
+     pub fn new(n: usize, m: usize) -> Self {
+         // Left/Right diagonal scaling for problem data
+diff --git a/src/solver/implementations/default/info.rs b/src/solver/implementations/default/info.rs
+index 3a65adb..9d04f18 100644
+--- a/src/solver/implementations/default/info.rs
++++ b/src/solver/implementations/default/info.rs
+@@ -6,7 +6,7 @@ use crate::solver::traits::Variables;
+ 
+ /// Standard-form solver type implementing the [`Info`](crate::solver::core::traits::Info) trait
+ #[derive(Default, Debug, Clone)]
+-pub struct DefaultInfo<T> {
++pub struct DefaultInfo {
+     /// interior point path parameter μ
+     pub mu: T,
+     /// interior point path parameter reduction ratio σ
+@@ -54,32 +54,26 @@ pub struct DefaultInfo<T> {
+     pub linsolver: LinearSolverInfo,
+ }
+ 
+-impl<T> DefaultInfo<T>
+-where
+-    T: FloatT,
+-{
++impl DefaultInfo {
+     /// creates a new `DefaultInfo` object
+     pub fn new() -> Self {
+         Self::default()
+     }
+ }
+ 
+-impl<T> Info<T> for DefaultInfo<T>
+-where
+-    T: FloatT,
+-{
+-    type D = DefaultProblemData<T>;
+-    type C = CompositeCone<T>;
+-    type SE = DefaultSettings<T>;
+-    type V = DefaultVariables<T>;
+-    type R = DefaultResiduals<T>;
++impl Info for DefaultInfo {
++    type D = DefaultProblemData;
++    type C = CompositeCone;
++    type SE = DefaultSettings;
++    type V = DefaultVariables;
++    type R = DefaultResiduals;
+ 
+     fn reset(&mut self) {
+         self.status = SolverStatus::Unsolved;
+         self.iterations = 0;
+     }
+ 
+-    fn post_process(&mut self, residuals: &DefaultResiduals<T>, settings: &DefaultSettings<T>) {
++    fn post_process(&mut self, residuals: &DefaultResiduals, settings: &DefaultSettings) {
+         // if there was an error or we ran out of
+         // iterations, check for partial convergence
+ 
+@@ -92,9 +86,9 @@ where
+ 
+     fn update(
+         &mut self,
+-        data: &mut DefaultProblemData<T>,
+-        variables: &DefaultVariables<T>,
+-        residuals: &DefaultResiduals<T>,
++        data: &mut DefaultProblemData,
++        variables: &DefaultVariables,
++        residuals: &DefaultResiduals,
+     ) {
+         // optimality termination check should be computed w.r.t
+         // the pre-homogenization x and z variables.
+@@ -158,8 +152,8 @@ where
+ 
+     fn check_termination(
+         &mut self,
+-        residuals: &DefaultResiduals<T>,
+-        settings: &DefaultSettings<T>,
++        residuals: &DefaultResiduals,
++        settings: &DefaultSettings,
+         iter: u32,
+     ) -> bool {
+         //  optimality or infeasibility
+@@ -243,15 +237,8 @@ where
+ 
+ // Utility functions for convergence checkiing
+ 
+-impl<T> DefaultInfo<T>
+-where
+-    T: FloatT,
+-{
+-    fn check_convergence_full(
+-        &mut self,
+-        residuals: &DefaultResiduals<T>,
+-        settings: &DefaultSettings<T>,
+-    ) {
++impl DefaultInfo {
++    fn check_convergence_full(&mut self, residuals: &DefaultResiduals, settings: &DefaultSettings) {
+         // "full" tolerances
+         let tol_gap_abs = settings.tol_gap_abs;
+         let tol_gap_rel = settings.tol_gap_rel;
+@@ -280,8 +267,8 @@ where
+ 
+     fn check_convergence_almost(
+         &mut self,
+-        residuals: &DefaultResiduals<T>,
+-        settings: &DefaultSettings<T>,
++        residuals: &DefaultResiduals,
++        settings: &DefaultSettings,
+     ) {
+         // "almost" tolerances
+         let tol_gap_abs = settings.reduced_tol_gap_abs;
+@@ -312,7 +299,7 @@ where
+     #[allow(clippy::too_many_arguments)]
+     fn check_convergence(
+         &mut self,
+-        residuals: &DefaultResiduals<T>,
++        residuals: &DefaultResiduals,
+         tol_gap_abs: T,
+         tol_gap_rel: T,
+         tol_feas: T,
+@@ -343,7 +330,7 @@ where
+ 
+     fn is_primal_infeasible(
+         &self,
+-        residuals: &DefaultResiduals<T>,
++        residuals: &DefaultResiduals,
+         tol_infeas_abs: T,
+         tol_infeas_rel: T,
+     ) -> bool {
+@@ -353,7 +340,7 @@ where
+ 
+     fn is_dual_infeasible(
+         &self,
+-        residuals: &DefaultResiduals<T>,
++        residuals: &DefaultResiduals,
+         tol_infeas_abs: T,
+         tol_infeas_rel: T,
+     ) -> bool {
+diff --git a/src/solver/implementations/default/kktsystem.rs b/src/solver/implementations/default/kktsystem.rs
+index 586c3ae..44f31ef 100644
+--- a/src/solver/implementations/default/kktsystem.rs
++++ b/src/solver/implementations/default/kktsystem.rs
+@@ -11,11 +11,11 @@ use crate::algebra::*;
+ // We require Send/Sync here to allow pyo3 builds to share
+ // solver objects between threads.
+ 
+-type BoxedKKTSolver<T> = Box<dyn KKTSolver<T> + Send + Sync>;
++type BoxedKKTSolver = Box<dyn KKTSolver + Send + Sync>;
+ 
+ /// Standard-form solver type implementing the [`KKTSystem`](crate::solver::core::traits::KKTSystem) trait
+-pub struct DefaultKKTSystem<T> {
+-    kktsolver: BoxedKKTSolver<T>,
++pub struct DefaultKKTSystem {
++    kktsolver: BoxedKKTSolver,
+ 
+     // solution vector for constant part of KKT solves
+     x1: Vec<T>,
+@@ -31,15 +31,12 @@ pub struct DefaultKKTSystem<T> {
+     work_conic: Vec<T>,
+ }
+ 
+-impl<T> DefaultKKTSystem<T>
+-where
+-    T: FloatT,
+-{
++impl DefaultKKTSystem {
+     /// Create a new KKT system solver
+     pub fn new(
+-        data: &DefaultProblemData<T>,
+-        cones: &CompositeCone<T>,
+-        settings: &DefaultSettings<T>,
++        data: &DefaultProblemData,
++        cones: &CompositeCone,
++        settings: &DefaultSettings,
+     ) -> Self {
+         let (m, n) = (data.m, data.n);
+ 
+@@ -47,7 +44,7 @@ where
+         //direct vs indirect, different QR based direct methods
+         //etc.   For now, we only have direct / LDL based
+         let kktsolver = if settings.direct_kkt_solver {
+-            Box::new(DirectLDLKKTSolver::<T>::new(
++            Box::new(DirectLDLKKTSolver::new(
+                 &data.P,
+                 &data.A,
+                 cones,
+@@ -87,29 +84,23 @@ where
+     }
+ }
+ 
+-impl<T> HasLinearSolverInfo for DefaultKKTSystem<T>
+-where
+-    T: FloatT,
+-{
++impl HasLinearSolverInfo for DefaultKKTSystem {
+     fn linear_solver_info(&self) -> LinearSolverInfo {
+         self.kktsolver.linear_solver_info()
+     }
+ }
+ 
+-impl<T> KKTSystem<T> for DefaultKKTSystem<T>
+-where
+-    T: FloatT,
+-{
+-    type D = DefaultProblemData<T>;
+-    type V = DefaultVariables<T>;
+-    type C = CompositeCone<T>;
+-    type SE = DefaultSettings<T>;
++impl KKTSystem for DefaultKKTSystem {
++    type D = DefaultProblemData;
++    type V = DefaultVariables;
++    type C = CompositeCone;
++    type SE = DefaultSettings;
+ 
+     fn update(
+         &mut self,
+-        data: &DefaultProblemData<T>,
+-        cones: &CompositeCone<T>,
+-        settings: &DefaultSettings<T>,
++        data: &DefaultProblemData,
++        cones: &CompositeCone,
++        settings: &DefaultSettings,
+     ) -> bool {
+         // update the linear solver with new cones
+         let is_success = self.kktsolver.update(cones, settings.core());
+@@ -126,13 +117,13 @@ where
+ 
+     fn solve(
+         &mut self,
+-        lhs: &mut DefaultVariables<T>,
+-        rhs: &DefaultVariables<T>,
+-        data: &DefaultProblemData<T>,
+-        variables: &DefaultVariables<T>,
+-        cones: &mut CompositeCone<T>,
++        lhs: &mut DefaultVariables,
++        rhs: &DefaultVariables,
++        data: &DefaultProblemData,
++        variables: &DefaultVariables,
++        cones: &mut CompositeCone,
+         step_direction: StepDirection,
+-        settings: &DefaultSettings<T>,
++        settings: &DefaultSettings,
+     ) -> bool {
+         let (x1, z1) = (&mut self.x1, &mut self.z1);
+         let (x2, z2) = (&self.x2, &self.z2); //from constant solve, so not mut
+@@ -210,9 +201,9 @@ where
+ 
+     fn solve_initial_point(
+         &mut self,
+-        variables: &mut DefaultVariables<T>,
+-        data: &DefaultProblemData<T>,
+-        settings: &DefaultSettings<T>,
++        variables: &mut DefaultVariables,
++        data: &DefaultProblemData,
++        settings: &DefaultSettings,
+     ) -> bool {
+         let mut is_success;
+ 
+@@ -259,14 +250,11 @@ where
+     }
+ }
+ 
+-impl<T> DefaultKKTSystem<T>
+-where
+-    T: FloatT,
+-{
++impl DefaultKKTSystem {
+     fn solve_constant_rhs(
+         &mut self,
+-        data: &DefaultProblemData<T>,
+-        settings: &DefaultSettings<T>,
++        data: &DefaultProblemData,
++        settings: &DefaultSettings,
+     ) -> bool {
+         self.workx.axpby(-T::one(), &data.q, T::zero()); //workx .= -q
+         self.kktsolver.setrhs(&self.workx, &data.b);
+@@ -277,11 +265,11 @@ where
+         is_success
+     }
+ 
+-    pub(crate) fn update_P(&mut self, P: &CscMatrix<T>) {
++    pub(crate) fn update_P(&mut self, P: &CscMatrix) {
+         self.kktsolver.update_P(P);
+     }
+ 
+-    pub(crate) fn update_A(&mut self, A: &CscMatrix<T>) {
++    pub(crate) fn update_A(&mut self, A: &CscMatrix) {
+         self.kktsolver.update_A(A);
+     }
+ }
+diff --git a/src/solver/implementations/default/presolver.rs b/src/solver/implementations/default/presolver.rs
+index a98f75c..5e7262d 100644
+--- a/src/solver/implementations/default/presolver.rs
++++ b/src/solver/implementations/default/presolver.rs
+@@ -18,10 +18,10 @@ pub(crate) struct PresolverRowReductionIndex {
+ /// Presolver data for the standard solver implementation
+ 
+ #[derive(Debug)]
+-pub(crate) struct Presolver<T> {
++pub(crate) struct Presolver {
+     // original cones of the problem
+     // PJG: not currently used.  Here for future presolver
+-    pub(crate) _init_cones: Vec<SupportedConeT<T>>,
++    pub(crate) _init_cones: Vec<SupportedConeT>,
+ 
+     //record of reduced constraints for NN cones with inf bounds
+     pub(crate) reduce_map: Option<PresolverRowReductionIndex>,
+@@ -39,16 +39,13 @@ pub(crate) struct Presolver<T> {
+     pub(crate) infbound: f64,
+ }
+ 
+-impl<T> Presolver<T>
+-where
+-    T: FloatT,
+-{
++impl Presolver {
+     /// create a new presolver object
+     pub(crate) fn new(
+-        _A: &CscMatrix<T>,
++        _A: &CscMatrix,
+         b: &[T],
+-        cones: &[SupportedConeT<T>],
+-        _settings: &DefaultSettings<T>,
++        cones: &[SupportedConeT],
++        _settings: &DefaultSettings,
+     ) -> Self {
+         let infbound = crate::get_infinity();
+ 
+@@ -79,17 +76,17 @@ where
+ 
+     pub(crate) fn presolve(
+         &self,
+-        A: &CscMatrix<T>,
++        A: &CscMatrix,
+         b: &[T],
+-        cones: &[SupportedConeT<T>],
+-    ) -> (CscMatrix<T>, Vec<T>, Vec<SupportedConeT<T>>) {
++        cones: &[SupportedConeT],
++    ) -> (CscMatrix, Vec<T>, Vec<SupportedConeT>) {
+         let (A_new, b_new) = self.reduce_A_b(A, b);
+         let cones_new = self.reduce_cones(cones);
+ 
+         (A_new, b_new, cones_new)
+     }
+ 
+-    fn reduce_A_b(&self, A: &CscMatrix<T>, b: &[T]) -> (CscMatrix<T>, Vec<T>) {
++    fn reduce_A_b(&self, A: &CscMatrix, b: &[T]) -> (CscMatrix, Vec<T>) {
+         assert!(self.reduce_map.is_some());
+         let map = self.reduce_map.as_ref().unwrap();
+ 
+@@ -99,7 +96,7 @@ where
+         (A, b)
+     }
+ 
+-    fn reduce_cones(&self, cones: &[SupportedConeT<T>]) -> Vec<SupportedConeT<T>> {
++    fn reduce_cones(&self, cones: &[SupportedConeT]) -> Vec<SupportedConeT> {
+         assert!(self.reduce_map.is_some());
+         let map = self.reduce_map.as_ref().unwrap();
+ 
+@@ -136,8 +133,8 @@ where
+ 
+     pub(crate) fn reverse_presolve(
+         &self,
+-        solution: &mut DefaultSolution<T>,
+-        variables: &DefaultVariables<T>,
++        solution: &mut DefaultSolution,
++        variables: &DefaultVariables,
+     ) {
+         solution.x.copy_from(&variables.x);
+ 
+@@ -157,14 +154,11 @@ where
+     }
+ }
+ 
+-fn make_reduction_map<T>(
+-    cones: &[SupportedConeT<T>],
++fn make_reduction_map(
++    cones: &[SupportedConeT],
+     b: &[T],
+     infbound: T,
+-) -> (Option<PresolverRowReductionIndex>, usize)
+-where
+-    T: FloatT,
+-{
++) -> (Option<PresolverRowReductionIndex>, usize) {
+     //assume we keep everything initially
+     let mut keep_logical = vec![true; b.len()];
+     let mut mreduced = b.len();
+diff --git a/src/solver/implementations/default/problemdata.rs b/src/solver/implementations/default/problemdata.rs
+index 51dc78d..95959f5 100644
+--- a/src/solver/implementations/default/problemdata.rs
++++ b/src/solver/implementations/default/problemdata.rs
+@@ -14,23 +14,23 @@ use crate::solver::SupportedConeT;
+ // ---------------
+ 
+ /// Standard-form solver type implementing the [`ProblemData`](crate::solver::core::traits::ProblemData) trait
+-pub struct DefaultProblemData<T> {
++pub struct DefaultProblemData {
+     /// The matrix P in the quadratic objective term
+-    pub P: CscMatrix<T>,
++    pub P: CscMatrix,
+     /// The vector q in the quadratic objective term
+     pub q: Vec<T>,
+     /// The matrix A in the constraints
+-    pub A: CscMatrix<T>,
++    pub A: CscMatrix,
+     /// The vector b in the constraints
+     pub b: Vec<T>,
+     /// Vector of cones in the problem
+-    pub cones: Vec<SupportedConeT<T>>,
++    pub cones: Vec<SupportedConeT>,
+     /// Number of variables
+     pub n: usize,
+     /// Number of constraints
+     pub m: usize,
+     /// Equilibration data for the problem
+-    pub equilibration: DefaultEquilibrationData<T>,
++    pub equilibration: DefaultEquilibrationData,
+ 
+     // unscaled inf norms of linear terms.  Set to "None"
+     // during data updating to allow for multiple updates, and
+@@ -38,22 +38,19 @@ pub struct DefaultProblemData<T> {
+     normq: Option<T>,
+     normb: Option<T>,
+ 
+-    pub(crate) presolver: Option<Presolver<T>>,
++    pub(crate) presolver: Option<Presolver>,
+     dropped_zeros: usize, // number of eliminated structural zeros
+ }
+ 
+-impl<T> DefaultProblemData<T>
+-where
+-    T: FloatT,
+-{
++impl DefaultProblemData {
+     /// Create a new `DefaultProblemData` object
+     pub fn new(
+-        P: &CscMatrix<T>,
++        P: &CscMatrix,
+         q: &[T],
+-        A: &CscMatrix<T>,
++        A: &CscMatrix,
+         b: &[T],
+-        cones: &[SupportedConeT<T>],
+-        settings: &DefaultSettings<T>,
++        cones: &[SupportedConeT],
++        settings: &DefaultSettings,
+     ) -> Self {
+         // clean up the cones by consolidating repeated NNs,
+         // eliminate empty cones, transform singletons etc
+@@ -63,11 +60,11 @@ where
+         // some caution is required to ensure we take a minimal,
+         // but nonzero, number of data copies during presolve steps
+ 
+-        let mut P_new: Option<CscMatrix<T>> = None;
++        let mut P_new: Option<CscMatrix> = None;
+         let q_new: Option<Vec<T>> = None;
+-        let mut A_new: Option<CscMatrix<T>> = None;
++        let mut A_new: Option<CscMatrix> = None;
+         let mut b_new: Option<Vec<T>> = None;
+-        let mut cones_new: Option<Vec<SupportedConeT<T>>> = None;
++        let mut cones_new: Option<Vec<SupportedConeT>> = None;
+ 
+         if !P.is_triu() {
+             P_new = Some(P.to_triu());
+@@ -113,7 +110,7 @@ where
+             dropped_zeros += P_new.dropzeros() + A_new.dropzeros();
+         }
+ 
+-        let equilibration = DefaultEquilibrationData::<T>::new(n, m);
++        let equilibration = DefaultEquilibrationData::new(n, m);
+ 
+         let normq = Some(q_new.norm_inf());
+         let normb = Some(b_new.norm_inf());
+@@ -177,15 +174,12 @@ where
+     }
+ }
+ 
+-impl<T> ProblemData<T> for DefaultProblemData<T>
+-where
+-    T: FloatT,
+-{
+-    type V = DefaultVariables<T>;
+-    type C = CompositeCone<T>;
+-    type SE = DefaultSettings<T>;
++impl ProblemData for DefaultProblemData {
++    type V = DefaultVariables;
++    type C = CompositeCone;
++    type SE = DefaultSettings;
+ 
+-    fn equilibrate(&mut self, cones: &CompositeCone<T>, settings: &DefaultSettings<T>) {
++    fn equilibrate(&mut self, cones: &CompositeCone, settings: &DefaultSettings) {
+         let data = self;
+         let equil = &mut data.equilibration;
+ 
+@@ -275,20 +269,15 @@ where
+ // utilities
+ // ---------------
+ 
+-fn kkt_col_norms<T: FloatT>(
+-    P: &CscMatrix<T>,
+-    A: &CscMatrix<T>,
+-    norm_LHS: &mut [T],
+-    norm_RHS: &mut [T],
+-) {
++fn kkt_col_norms(P: &CscMatrix, A: &CscMatrix, norm_LHS: &mut [T], norm_RHS: &mut [T]) {
+     P.col_norms_sym(norm_LHS); // P can be triu
+     A.col_norms_no_reset(norm_LHS); // incrementally from P norms
+     A.row_norms(norm_RHS); // same as column norms of A'
+ }
+ 
+-fn scale_data<T: FloatT>(
+-    P: &mut CscMatrix<T>,
+-    A: &mut CscMatrix<T>,
++fn scale_data(
++    P: &mut CscMatrix,
++    A: &mut CscMatrix,
+     q: &mut [T],
+     b: &mut [T],
+     d: Option<&[T]>,
+@@ -307,15 +296,12 @@ fn scale_data<T: FloatT>(
+     b.hadamard(e);
+ }
+ 
+-fn try_presolver<T>(
+-    A: &CscMatrix<T>,
++fn try_presolver(
++    A: &CscMatrix,
+     b: &[T],
+-    cones: &[SupportedConeT<T>],
+-    settings: &DefaultSettings<T>,
+-) -> Option<Presolver<T>>
+-where
+-    T: FloatT,
+-{
++    cones: &[SupportedConeT],
++    settings: &DefaultSettings,
++) -> Option<Presolver> {
+     if !settings.presolve_enable {
+         return None;
+     }
+diff --git a/src/solver/implementations/default/residuals.rs b/src/solver/implementations/default/residuals.rs
+index f93a371..2b74e8c 100644
+--- a/src/solver/implementations/default/residuals.rs
++++ b/src/solver/implementations/default/residuals.rs
+@@ -8,7 +8,7 @@ use crate::solver::core::traits::Residuals;
+ // ---------------
+ 
+ /// Standard-form solver type implementing the [`Residuals`](crate::solver::core::traits::Residuals) trait
+-pub struct DefaultResiduals<T> {
++pub struct DefaultResiduals {
+     // the main KKT residuals
+     pub(crate) rx: Vec<T>,
+     pub(crate) rz: Vec<T>,
+@@ -29,10 +29,7 @@ pub struct DefaultResiduals<T> {
+     pub(crate) Px: Vec<T>,
+ }
+ 
+-impl<T> DefaultResiduals<T>
+-where
+-    T: FloatT,
+-{
++impl DefaultResiduals {
+     /// Create a new `DefaultResiduals` object
+     pub fn new(n: usize, m: usize) -> Self {
+         let rx = vec![T::zero(); n];
+@@ -59,14 +56,11 @@ where
+     }
+ }
+ 
+-impl<T> Residuals<T> for DefaultResiduals<T>
+-where
+-    T: FloatT,
+-{
+-    type D = DefaultProblemData<T>;
+-    type V = DefaultVariables<T>;
++impl Residuals for DefaultResiduals {
++    type D = DefaultProblemData;
++    type V = DefaultVariables;
+ 
+-    fn update(&mut self, variables: &DefaultVariables<T>, data: &DefaultProblemData<T>) {
++    fn update(&mut self, variables: &DefaultVariables, data: &DefaultProblemData) {
+         // various products used multiple times
+         let qx = data.q.dot(&variables.x);
+         let bz = data.b.dot(&variables.z);
+diff --git a/src/solver/implementations/default/settings.rs b/src/solver/implementations/default/settings.rs
+index 2b0359b..507b7f7 100644
+--- a/src/solver/implementations/default/settings.rs
++++ b/src/solver/implementations/default/settings.rs
+@@ -5,7 +5,7 @@ use derive_builder::Builder;
+ /// Standard-form solver type implementing the [`Settings`](crate::solver::core::traits::Settings) trait
+ #[derive(Builder, Debug, Clone)]
+ #[builder(build_fn(validate = "Self::validate"))]
+-pub struct DefaultSettings<T: FloatT> {
++pub struct DefaultSettings {
+     ///maximum number of iterations
+     #[builder(default = "200")]
+     pub max_iter: u32,
+@@ -159,12 +159,9 @@ pub struct DefaultSettings<T: FloatT> {
+     pub input_sparse_dropzeros: bool,
+ }
+ 
+-impl<T> Default for DefaultSettings<T>
+-where
+-    T: FloatT,
+-{
+-    fn default() -> DefaultSettings<T> {
+-        DefaultSettingsBuilder::<T>::default().build().unwrap()
++impl Default for DefaultSettings {
++    fn default() -> DefaultSettings {
++        DefaultSettingsBuilder::default().build().unwrap()
+     }
+ }
+ 
+@@ -176,15 +173,12 @@ macro_rules! check_immutable_setting {
+     };
+ }
+ 
+-impl<T> Settings<T> for DefaultSettings<T>
+-where
+-    T: FloatT,
+-{
++impl Settings for DefaultSettings {
+     //NB: CoreSettings is typedef'd to DefaultSettings
+-    fn core(&self) -> &DefaultSettings<T> {
++    fn core(&self) -> &DefaultSettings {
+         self
+     }
+-    fn core_mut(&mut self) -> &mut DefaultSettings<T> {
++    fn core_mut(&mut self) -> &mut DefaultSettings {
+         self
+     }
+ 
+@@ -233,10 +227,7 @@ impl From<SettingsError> for DefaultSettingsBuilderError {
+ }
+ 
+ /// Automatic pre-build settings validation
+-impl<T> DefaultSettingsBuilder<T>
+-where
+-    T: FloatT,
+-{
++impl DefaultSettingsBuilder {
+     /// check that the specified direct_solve_method is valid
+     pub fn validate(&self) -> Result<(), SettingsError> {
+         if let Some(ref direct_solve_method) = self.direct_solve_method {
+diff --git a/src/solver/implementations/default/solution.rs b/src/solver/implementations/default/solution.rs
+index 4322403..3d2d77f 100644
+--- a/src/solver/implementations/default/solution.rs
++++ b/src/solver/implementations/default/solution.rs
+@@ -8,7 +8,7 @@ use crate::{
+ 
+ /// Standard-form solver type implementing the [`Solution`](crate::solver::core::traits::Solution) trait
+ #[derive(Debug)]
+-pub struct DefaultSolution<T> {
++pub struct DefaultSolution {
+     /// primal solution
+     pub x: Vec<T>,
+     /// dual solution (in dual cone)
+@@ -29,10 +29,7 @@ pub struct DefaultSolution<T> {
+     pub r_dual: T,
+ }
+ 
+-impl<T> DefaultSolution<T>
+-where
+-    T: FloatT,
+-{
++impl DefaultSolution {
+     /// Create a new `DefaultSolution` object
+     pub fn new(n: usize, m: usize) -> Self {
+         let x = vec![T::zero(); n];
+@@ -53,21 +50,18 @@ where
+     }
+ }
+ 
+-impl<T> Solution<T> for DefaultSolution<T>
+-where
+-    T: FloatT,
+-{
+-    type D = DefaultProblemData<T>;
+-    type V = DefaultVariables<T>;
+-    type I = DefaultInfo<T>;
+-    type SE = DefaultSettings<T>;
++impl Solution for DefaultSolution {
++    type D = DefaultProblemData;
++    type V = DefaultVariables;
++    type I = DefaultInfo;
++    type SE = DefaultSettings;
+ 
+     fn post_process(
+         &mut self,
+-        data: &DefaultProblemData<T>,
+-        variables: &mut DefaultVariables<T>,
+-        info: &DefaultInfo<T>,
+-        settings: &DefaultSettings<T>,
++        data: &DefaultProblemData,
++        variables: &mut DefaultVariables,
++        info: &DefaultInfo,
++        settings: &DefaultSettings,
+     ) {
+         self.status = info.status;
+         let is_infeasible = info.status.is_infeasible();
+@@ -99,5 +93,5 @@ where
+         }
+     }
+ 
+-    fn finalize(&mut self, _info: &DefaultInfo<T>) {}
++    fn finalize(&mut self, _info: &DefaultInfo) {}
+ }
+diff --git a/src/solver/implementations/default/solver.rs b/src/solver/implementations/default/solver.rs
+index 69aae02..0dad6fb 100644
+--- a/src/solver/implementations/default/solver.rs
++++ b/src/solver/implementations/default/solver.rs
+@@ -11,16 +11,15 @@ use thiserror::Error;
+ use crate::algebra::*;
+ 
+ /// Solver for problems in standard conic program form
+-pub type DefaultSolver<T = f64> = Solver<
+-    T,
+-    DefaultProblemData<T>,
+-    DefaultVariables<T>,
+-    DefaultResiduals<T>,
+-    DefaultKKTSystem<T>,
+-    CompositeCone<T>,
+-    DefaultInfo<T>,
+-    DefaultSolution<T>,
+-    DefaultSettings<T>,
++pub type DefaultSolver = Solver<
++    DefaultProblemData,
++    DefaultVariables,
++    DefaultResiduals,
++    DefaultKKTSystem,
++    CompositeCone,
++    DefaultInfo,
++    DefaultSolution,
++    DefaultSettings,
+ >;
+ 
+ /// Error types returned by the DefaultSolver
+@@ -37,48 +36,45 @@ pub enum SolverError {
+     SettingsError(#[from] SettingsError),
+ }
+ 
+-impl<T> DefaultSolver<T>
+-where
+-    T: FloatT,
+-{
++impl DefaultSolver {
+     pub fn new(
+-        P: &CscMatrix<T>,
++        P: &CscMatrix,
+         q: &[T],
+-        A: &CscMatrix<T>,
++        A: &CscMatrix,
+         b: &[T],
+-        cones: &[SupportedConeT<T>],
+-        settings: DefaultSettings<T>,
++        cones: &[SupportedConeT],
++        settings: DefaultSettings,
+     ) -> Result<Self, SolverError> {
+         //sanity check problem dimensions
+         check_dimensions(P, q, A, b, cones)?;
+         //sanity check settings
+         settings.validate()?;
+ 
+-        let mut info = DefaultInfo::<T>::new();
++        let mut info = DefaultInfo::new();
+ 
+         // user facing results go here.
+-        let solution = DefaultSolution::<T>::new(A.n, A.m);
++        let solution = DefaultSolution::new(A.n, A.m);
+ 
+         // presolve if needed, then take an internal copy of the problem data
+-        let mut data = DefaultProblemData::<T>::new(P, q, A, b, cones, &settings);
++        let mut data = DefaultProblemData::new(P, q, A, b, cones, &settings);
+ 
+-        let cones = CompositeCone::<T>::new(&data.cones);
++        let cones = CompositeCone::new(&data.cones);
+         assert_eq!(cones.numel, data.m);
+-        let variables = DefaultVariables::<T>::new(data.n, data.m);
+-        let residuals = DefaultResiduals::<T>::new(data.n, data.m);
++        let variables = DefaultVariables::new(data.n, data.m);
++        let residuals = DefaultResiduals::new(data.n, data.m);
+ 
+         // equilibrate problem data immediately on setup.
+         // this prevents multiple equlibrations if solve!
+         // is called more than once.
+         data.equilibrate(&cones, &settings);
+ 
+-        let kktsystem = DefaultKKTSystem::<T>::new(&data, &cones, &settings);
++        let kktsystem = DefaultKKTSystem::new(&data, &cones, &settings);
+         info.linsolver = kktsystem.linear_solver_info();
+ 
+         // work variables for assembling step direction LHS/RHS
+-        let step_rhs = DefaultVariables::<T>::new(data.n, data.m);
+-        let step_lhs = DefaultVariables::<T>::new(data.n, data.m);
+-        let prev_vars = DefaultVariables::<T>::new(data.n, data.m);
++        let step_rhs = DefaultVariables::new(data.n, data.m);
++        let step_lhs = DefaultVariables::new(data.n, data.m);
++        let prev_vars = DefaultVariables::new(data.n, data.m);
+ 
+         let output = Self {
+             data,
+@@ -99,12 +95,12 @@ where
+     }
+ }
+ 
+-fn check_dimensions<T: FloatT>(
+-    P: &CscMatrix<T>,
++fn check_dimensions(
++    P: &CscMatrix,
+     q: &[T],
+-    A: &CscMatrix<T>,
++    A: &CscMatrix,
+     b: &[T],
+-    cone_types: &[SupportedConeT<T>],
++    cone_types: &[SupportedConeT],
+ ) -> Result<(), SolverError> {
+     let m = b.len();
+     let n = q.len();
+diff --git a/src/solver/implementations/default/variables.rs b/src/solver/implementations/default/variables.rs
+index acd602a..0438228 100644
+--- a/src/solver/implementations/default/variables.rs
++++ b/src/solver/implementations/default/variables.rs
+@@ -11,7 +11,7 @@ use crate::solver::core::{
+ // ---------------
+ 
+ /// Standard-form solver type implementing the [`Variables`](crate::solver::core::traits::Variables) trait
+-pub struct DefaultVariables<T> {
++pub struct DefaultVariables {
+     /// scaled primal variables
+     pub x: Vec<T>,
+     /// slack variables
+@@ -24,7 +24,7 @@ pub struct DefaultVariables<T> {
+     pub κ: T,
+ }
+ 
+-impl<T: std::fmt::Display + std::fmt::Debug> std::fmt::Debug for DefaultVariables<T> {
++impl std::fmt::Debug for DefaultVariables {
+     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+         write!(
+             f,
+@@ -34,10 +34,7 @@ impl<T: std::fmt::Display + std::fmt::Debug> std::fmt::Debug for DefaultVariable
+     }
+ }
+ 
+-impl<T> DefaultVariables<T>
+-where
+-    T: FloatT,
+-{
++impl DefaultVariables {
+     /// Create a new `DefaultVariables` object
+     pub fn new(n: usize, m: usize) -> Self {
+         let x = vec![T::zero(); n];
+@@ -50,25 +47,22 @@ where
+     }
+ }
+ 
+-impl<T> Variables<T> for DefaultVariables<T>
+-where
+-    T: FloatT,
+-{
+-    type D = DefaultProblemData<T>;
+-    type R = DefaultResiduals<T>;
+-    type C = CompositeCone<T>;
+-    type SE = DefaultSettings<T>;
+-
+-    fn calc_mu(&mut self, residuals: &DefaultResiduals<T>, cones: &CompositeCone<T>) -> T {
+-        let denom = T::from(cones.degree() + 1).unwrap();
++impl Variables for DefaultVariables {
++    type D = DefaultProblemData;
++    type R = DefaultResiduals;
++    type C = CompositeCone;
++    type SE = DefaultSettings;
++
++    fn calc_mu(&mut self, residuals: &DefaultResiduals, cones: &CompositeCone) -> T {
++        let denom = (cones.degree() + 1).as_T();
+         (residuals.dot_sz + self.τ * self.κ) / denom
+     }
+ 
+     fn affine_step_rhs(
+         &mut self,
+-        residuals: &DefaultResiduals<T>,
++        residuals: &DefaultResiduals,
+         variables: &Self,
+-        cones: &CompositeCone<T>,
++        cones: &CompositeCone,
+     ) {
+         self.x.copy_from(&residuals.rx);
+         self.z.copy_from(&residuals.rz);
+@@ -79,9 +73,9 @@ where
+ 
+     fn combined_step_rhs(
+         &mut self,
+-        residuals: &DefaultResiduals<T>,
++        residuals: &DefaultResiduals,
+         variables: &Self,
+-        cones: &mut CompositeCone<T>,
++        cones: &mut CompositeCone,
+         step: &mut Self,
+         σ: T,
+         μ: T,
+@@ -117,15 +111,15 @@ where
+     fn calc_step_length(
+         &self,
+         step: &Self,
+-        cones: &mut CompositeCone<T>,
+-        settings: &DefaultSettings<T>,
++        cones: &mut CompositeCone,
++        settings: &DefaultSettings,
+         step_direction: StepDirection,
+     ) -> T {
+         let ατ = {
+             if step.τ < T::zero() {
+                 -self.τ / step.τ
+             } else {
+-                T::max_value()
++                T::MAX
+             }
+         };
+ 
+@@ -133,7 +127,7 @@ where
+             if step.κ < T::zero() {
+                 -self.κ / step.κ
+             } else {
+-                T::max_value()
++                T::MAX
+             }
+         };
+ 
+@@ -161,7 +155,7 @@ where
+         self.κ += α * step.κ;
+     }
+ 
+-    fn symmetric_initialization(&mut self, cones: &mut CompositeCone<T>) {
++    fn symmetric_initialization(&mut self, cones: &mut CompositeCone) {
+         _shift_to_cone_interior(&mut self.s, cones, PrimalOrDualCone::PrimalCone);
+         _shift_to_cone_interior(&mut self.z, cones, PrimalOrDualCone::DualCone);
+ 
+@@ -169,7 +163,7 @@ where
+         self.κ = T::one();
+     }
+ 
+-    fn unit_initialization(&mut self, cones: &CompositeCone<T>) {
++    fn unit_initialization(&mut self, cones: &CompositeCone) {
+         cones.unit_initialization(&mut self.z, &mut self.s);
+ 
+         self.x.set(T::zero());
+@@ -187,21 +181,21 @@ where
+ 
+     fn scale_cones(
+         &self,
+-        cones: &mut CompositeCone<T>,
++        cones: &mut CompositeCone,
+         μ: T,
+         scaling_strategy: ScalingStrategy,
+     ) -> bool {
+         cones.update_scaling(&self.s, &self.z, μ, scaling_strategy)
+     }
+ 
+-    fn barrier(&self, step: &Self, α: T, cones: &mut CompositeCone<T>) -> T {
++    fn barrier(&self, step: &Self, α: T, cones: &mut CompositeCone) -> T {
+         let central_coef = (cones.degree() + 1).as_T();
+ 
+         let cur_τ = self.τ + α * step.τ;
+         let cur_κ = self.κ + α * step.κ;
+ 
+         // compute current μ
+-        let sz = <[T] as VectorMath<T>>::dot_shifted(&self.z, &self.s, &step.z, &step.s, α);
++        let sz = <[T] as VectorMath>::dot_shifted(&self.z, &self.s, &step.z, &step.s, α);
+         let μ = (sz + cur_τ * cur_κ) / central_coef;
+ 
+         // barrier terms from gap and scalars
+@@ -228,10 +222,7 @@ where
+     }
+ }
+ 
+-fn _shift_to_cone_interior<T>(z: &mut [T], cones: &mut CompositeCone<T>, pd: PrimalOrDualCone)
+-where
+-    T: FloatT,
+-{
++fn _shift_to_cone_interior(z: &mut [T], cones: &mut CompositeCone, pd: PrimalOrDualCone) {
+     let (min_margin, pos_margin) = cones.margins(z, pd);
+     let target = T::max(
+         T::one(),
+@@ -255,11 +246,8 @@ where
+     }
+ }
+ 
+-impl<T> DefaultVariables<T>
+-where
+-    T: FloatT,
+-{
+-    pub(crate) fn unscale(&mut self, data: &DefaultProblemData<T>, is_infeasible: bool) {
++impl DefaultVariables {
++    pub(crate) fn unscale(&mut self, data: &DefaultProblemData, is_infeasible: bool) {
+         // if we have an infeasible problem, normalize
+         // using κ to get an infeasibility certificate.
+         // Otherwise use τ to get an unscaled solution.

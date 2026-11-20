@@ -1,0 +1,16 @@
+# Writes vendor/fid-clarabel/knp1-findings.json (KRN.SOLV.CONIC.PATCH AC-1) until the
+# `fid-knp1-lint check` command (KRN.NUM.LINT.CLI) exists. Not a workspace member, so it is not
+# part of any layer: run it with
+#   cargo run --manifest-path vendor/fid-clarabel/lint-driver/Cargo.toml
+[package]
+name = "fid-clarabel-lint-driver"
+version = "0.0.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[dependencies]
+fid-canon = { path = "../../../crates/fid-canon" }
+fid-knp1-lint = { path = "../../../crates/fid-knp1-lint" }

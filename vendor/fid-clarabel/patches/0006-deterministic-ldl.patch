@@ -1,0 +1,317 @@
+Patch 0006 (deterministic-ldl) of fid-clarabel, spec node KRN.SOLV.CONIC.PATCH.
+
+Deterministic LDL path: replace AMD (amd crate) with an exact minimum-degree ordering computed from the sparsity pattern only with lowest-index tie-breaks; bounds-checked factorisation and triangular solves instead of the unsafe copies.
+
+Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
+
+diff --git a/Cargo.toml b/Cargo.toml
+index 899fec6..e56e54e 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -16,7 +16,6 @@ publish = false
+ [dependencies]
+ # KNP-1 transcendentals, total-order min/max and fixed-order reductions (KRN.NUM.FN, KRN.NUM.RED).
+ fid-num = { path = "../../../crates/fid-num" }
+-amd = "0.2.2"
+ derive_builder = "0.11"
+ enum_dispatch = "0.3.8"
+ itertools = "0.11"
+diff --git a/src/qdldl/qdldl.rs b/src/qdldl/qdldl.rs
+index b75ab3e..038013d 100644
+--- a/src/qdldl/qdldl.rs
++++ b/src/qdldl/qdldl.rs
+@@ -2,6 +2,7 @@
+ use crate::algebra::*;
+ use core::cmp::{max, min};
+ use derive_builder::Builder;
++use std::collections::BTreeSet;
+ use std::iter::zip;
+ use thiserror::Error;
+ 
+@@ -29,10 +30,6 @@ pub enum QDLDLError {
+ #[allow(missing_docs)]
+ /// Required settings for [`QDLDLFactorisation`](QDLDLFactorisation)
+ pub struct QDLDLSettings {
+-    /// "dense scale" parameter for AMD ordering
+-    #[builder(default = "1.0")]
+-    pub amd_dense_scale: f64,
+-
+     /// optional user-supplied custom permutation vector for the matrix
+     #[builder(default = "None", setter(strip_option))]
+     pub perm: Option<Vec<usize>>,
+@@ -230,16 +227,15 @@ fn _qdldl_new(
+     //get default values if no options passed at all
+     let opts = opts.unwrap_or_default();
+ 
+-    //Use AMD ordering if a user-provided ordering
++    //Use the minimum-degree ordering of the sparsity pattern (KNP-1, patch 0006;
++    //upstream used AMD from the amd crate) if a user-provided ordering
+     //is not supplied.   For no ordering at all, the
+     //user would need to pass (0..n).collect() explicitly
+-    let (perm, iperm);
+-    if let Some(_perm) = opts.perm {
+-        iperm = _invperm(&_perm)?;
+-        perm = _perm;
+-    } else {
+-        (perm, iperm, _) = get_amd_ordering(Ain, opts.amd_dense_scale);
+-    }
++    let perm = match opts.perm {
++        Some(p) => p,
++        None => min_degree_ordering(Ain),
++    };
++    let iperm = _invperm(&perm)?;
+ 
+     //permute to (another) upper triangular matrix and store the
+     //index mapping the input's entries to the permutation's entries
+@@ -604,21 +600,18 @@ fn _factor_inner(
+                 let y_vals_cidx = y_vals[cidx];
+ 
+                 let (f, l) = (Lp[cidx], tmp_idx);
+-                unsafe {
+-                    //Safety : Here the Lij index comes from the rowval
+-                    //field of the sparse L factor matrix, and should
+-                    //always be bounded by the matrix dimension.
+-                    for (&Lxj, &Lij) in zip(&Lx[f..l], &Li[f..l]) {
+-                        *(y_vals.get_unchecked_mut(Lij)) -= Lxj * y_vals_cidx;
+-                    }
+-
+-                    // Now I have the cidx^th element of y = L\b.
+-                    // so compute the corresponding element of
+-                    // this row of L and put it into the right place
+-                    let Lx_tmp_idx = y_vals_cidx * *Dinv.get_unchecked(cidx);
+-                    *Lx.get_unchecked_mut(tmp_idx) = Lx_tmp_idx;
+-                    *D.get_unchecked_mut(k) -= y_vals_cidx * Lx_tmp_idx;
++                // (KNP-1, patch 0006: bounds-checked indexing; upstream used unsafe
++                // get_unchecked here)
++                for (&Lxj, &Lij) in zip(&Lx[f..l], &Li[f..l]) {
++                    y_vals[Lij] -= Lxj * y_vals_cidx;
+                 }
++
++                // Now I have the cidx^th element of y = L\b.
++                // so compute the corresponding element of
++                // this row of L and put it into the right place
++                let Lx_tmp_idx = y_vals_cidx * Dinv[cidx];
++                Lx[tmp_idx] = Lx_tmp_idx;
++                D[k] -= y_vals_cidx * Lx_tmp_idx;
+             }
+ 
+             // record which row it went into
+@@ -686,76 +679,29 @@ fn _ltsolve_safe(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
+     }
+ }
+ 
+-// -------------------------------------
+-// Versions of L\x and Lᵀ \ x that use unchecked indexing.
+-//
+-// Safety : The values in colptr array Lp at the time this
+-// function is reached should be bounded by the sizes of the
+-// arrays in Lx and Li.  The length of x should be compatible
+-// with the row index entries in Li
+-// -------------------------------------
+-
+-// Solves (L+I)x = b, with x replacing b.  Unchecked version
+-fn _lsolve_unsafe(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
+-    unsafe {
+-        for i in 0..x.len() {
+-            let xi = *x.get_unchecked(i);
+-            let f = *Lp.get_unchecked(i);
+-            let l = *Lp.get_unchecked(i + 1);
+-            for (&Lxj, &Lij) in zip(&Lx[f..l], &Li[f..l]) {
+-                *(x.get_unchecked_mut(Lij)) -= Lxj * xi;
+-            }
+-        }
+-    }
+-}
+-
+-// Solves (L+I)'x = b, with x replacing b.  Unchecked version.
+-fn _ltsolve_unsafe(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
+-    unsafe {
+-        for i in (0..x.len()).rev() {
+-            let mut s = T::zero();
+-            let f = *Lp.get_unchecked(i);
+-            let l = *Lp.get_unchecked(i + 1);
+-            for (&Lxj, &Lij) in zip(&Lx[f..l], &Li[f..l]) {
+-                s += Lxj * (*x.get_unchecked(Lij));
+-            }
+-            *x.get_unchecked_mut(i) -= s;
+-        }
+-    }
+-}
+-
+-// Solves D(L+I)'x = b, with x replacing b.  Unchecked version.
+-fn _dltsolve_unsafe(Lp: &[usize], Li: &[usize], Lx: &[T], Dinv: &[T], x: &mut [T]) {
+-    unsafe {
+-        for i in (0..x.len()).rev() {
+-            let mut s = T::zero();
+-            let f = *Lp.get_unchecked(i);
+-            let l = *Lp.get_unchecked(i + 1);
+-            for (&Lxj, &Lij) in zip(&Lx[f..l], &Li[f..l]) {
+-                s += Lxj * (*x.get_unchecked(Lij));
+-            }
+-
+-            let xi = x.get_unchecked_mut(i);
+-            *xi *= *Dinv.get_unchecked(i);
+-            *xi -= s;
++// Solves D(L+I)'x = b, with x replacing b (with standard bounds checks)
++fn _dltsolve_safe(Lp: &[usize], Li: &[usize], Lx: &[T], Dinv: &[T], x: &mut [T]) {
++    for i in (0..x.len()).rev() {
++        let mut s = T::zero();
++        let (f, l) = (Lp[i], Lp[i + 1]);
++        let Lx = &Lx[f..l];
++        let Li = &Li[f..l];
++        for (&Lij, &Lxj) in zip(Li, Lx) {
++            s += Lxj * x[Lij];
+         }
++        x[i] *= Dinv[i];
++        x[i] -= s;
+     }
+ }
+ 
+ // Solves Ax = b where A has given LDL factors, with x replacing b
+ fn _solve(Lp: &[usize], Li: &[usize], Lx: &[T], Dinv: &[T], b: &mut [T]) {
+-    // We call the `unsafe`d version of the forward and backward substitution
+-    // functions here, since the matrix data should be well posed and x of
+-    // compatible dimensions.   For super safety or debugging purposes, there
+-    // are also `safe` versions implemented above.
+-    _lsolve_unsafe(Lp, Li, Lx, b);
++    // KNP-1 (patch 0006): the bounds-checked substitutions; upstream called unsafe
++    // copies with unchecked indexing here.
++    _lsolve_safe(Lp, Li, Lx, b);
+ 
+     // combined D and L^T solve in one pass
+-    _dltsolve_unsafe(Lp, Li, Lx, Dinv, b);
+-
+-    // in separate passes for reference
+-    //zip(b.iter_mut(), Dinv).for_each(|(b, d)| *b *= *d);
+-    //_ltsolve_unsafe(Lp, Li, Lx, b);
++    _dltsolve_safe(Lp, Li, Lx, Dinv, b);
+ }
+ 
+ // Construct an inverse permutation from a permutation
+@@ -778,17 +724,11 @@ fn _invperm(p: &[usize]) -> Result<Vec<usize>, QDLDLError> {
+ // in both cases for safety
+ 
+ pub(crate) fn permute<T: Copy>(x: &mut [T], b: &[T], p: &[usize]) {
+-    debug_assert!(p.is_empty() || *p.iter().max().unwrap() < x.len());
+-    unsafe {
+-        zip(p, x).for_each(|(p, x)| *x = *b.get_unchecked(*p));
+-    }
++    zip(p, x).for_each(|(p, x)| *x = b[*p]);
+ }
+ 
+ pub(crate) fn ipermute<T: Copy>(x: &mut [T], b: &[T], p: &[usize]) {
+-    debug_assert!(p.is_empty() || *p.iter().max().unwrap() < x.len());
+-    unsafe {
+-        zip(p, b).for_each(|(p, b)| *x.get_unchecked_mut(*p) = *b);
+-    }
++    zip(p, b).for_each(|(p, b)| x[*p] = *b);
+ }
+ 
+ // Given a sparse symmetric matrix `A` (with only upper triangular entries), return
+@@ -890,16 +830,48 @@ fn _permute_symmetric_inner(
+     }
+ }
+ 
+-pub(crate) fn get_amd_ordering(
+-    A: &CscMatrix,
+-    amd_dense_scale: f64,
+-) -> (Vec<usize>, Vec<usize>, amd::Info) {
+-    // PJG: For interested readers - setting amd_dense_scale to 1.5 seems to work better
+-    // for KKT systems in QP problems, but this ad hoc method can surely be improved
+-
+-    // computes a permutation for A using AMD default parameters
+-    let mut control = amd::Control::default();
+-    control.dense *= amd_dense_scale; //increase the default value
+-    let (perm, iperm, info) = amd::order(A.nrows(), &A.colptr, &A.rowval, &control).unwrap();
+-    (perm, iperm, info)
++/// Fill-reducing ordering of a symmetric matrix given by its upper triangle `A`, computed
++/// from the sparsity pattern only (KNP-1, patch 0006; replaces AMD from the `amd` crate).
++///
++/// Exact minimum degree on the elimination graph: the graph has an edge `{i, j}` for every
++/// stored off-diagonal entry `(i, j)` (values and the diagonal are ignored); at each step the
++/// uneliminated node of smallest current degree is eliminated, ties going to the lowest
++/// index, and its remaining neighbours become a clique. Every set is a `BTreeSet` and every
++/// choice is a total order on `(degree, index)`, so the result is a function of the pattern
++/// alone and identical on every target. Returns `perm` with `perm[k]` the `k`-th pivot.
++pub fn min_degree_ordering(A: &CscMatrix) -> Vec<usize> {
++    let n = A.n;
++    let mut adj: Vec<BTreeSet<usize>> = vec![BTreeSet::new(); n];
++    for col in 0..n {
++        for &row in &A.rowval[A.colptr[col]..A.colptr[col + 1]] {
++            if row != col && row < n {
++                adj[row].insert(col);
++                adj[col].insert(row);
++            }
++        }
++    }
++    let mut eliminated = vec![false; n];
++    let mut perm = Vec::with_capacity(n);
++    for _ in 0..n {
++        // smallest (degree, index) among the uneliminated nodes
++        let mut best: Option<(usize, usize)> = None;
++        for (i, nbrs) in adj.iter().enumerate() {
++            if !eliminated[i] && best.map_or(true, |(d, _)| nbrs.len() < d) {
++                best = Some((nbrs.len(), i));
++            }
++        }
++        let Some((_, p)) = best else { break };
++        perm.push(p);
++        eliminated[p] = true;
++        let nbrs = std::mem::take(&mut adj[p]);
++        for &u in &nbrs {
++            adj[u].remove(&p);
++            for &v in &nbrs {
++                if v != u {
++                    adj[u].insert(v);
++                }
++            }
++        }
++    }
++    perm
+ }
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/mod.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/mod.rs
+index 038d85a..ace10b1 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/mod.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/mod.rs
+@@ -1,14 +1,3 @@
+-use crate::algebra::CscMatrix;
+-use amd::Info;
+-
+ pub mod auto;
+ pub mod config;
+ pub mod qdldl;
+-
+-#[allow(dead_code)]
+-pub(crate) fn amd_order(KKT: &CscMatrix) -> (Vec<usize>, Vec<usize>, Info) {
+-    // manually compute an AMD ordering for the KKT matrix
+-    let amd_dense_scale = 1.5; // magic number from QDLDL
+-    let (perm, iperm, info) = crate::qdldl::get_amd_ordering(KKT, amd_dense_scale);
+-    (perm, iperm, info)
+-}
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
+index 65bec87..847c4a2 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
+@@ -19,12 +19,8 @@ impl QDLDLDirectLDLSolver {
+         settings: &CoreSettings,
+         perm: Option<Vec<usize>>,
+     ) -> Self {
+-        // occasionally we find that the default AMD parameters give a bad ordering, particularly
+-        // for some big matrices.  In particular, KKT conditions for QPs are sometimes worse
+-        // than their SOC counterparts for very large problems.   This is because the SOC form
+-        // is artificially "big", with extra rows, so the dense row threshold is effectively a
+-        // different value.   We fix a bit more generous AMD_DENSE here, which should perhaps
+-        // be user-settable.
++        // (upstream tuned AMD's dense-row threshold here; patch 0006 replaces AMD with the
++        // pattern-only minimum-degree ordering, which has no such parameter)
+ 
+         //make a logical factorization to determine memory allocations
+ 
+@@ -34,7 +30,6 @@ impl QDLDLDirectLDLSolver {
+             .regularize_enable(true)
+             .regularize_eps(settings.dynamic_regularization_eps)
+             .regularize_delta(settings.dynamic_regularization_delta)
+-            .amd_dense_scale(1.5)
+             .build()
+             .unwrap();
+         opts.perm = perm;

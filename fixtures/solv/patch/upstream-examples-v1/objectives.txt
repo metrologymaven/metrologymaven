@@ -1,0 +1,9 @@
+# KRN.SOLV.CONIC.PATCH AC-3: objectives of the in-scope upstream examples, recorded from
+# UNPATCHED clarabel 0.11.1 (crates.io, sha256 d950c870fad4feed732bc3f7da489d223ba3911eac0522e6512eed7e659cfafe)
+# on x86_64-pc-windows-gnu, release build, the examples' own settings. Columns: name, status,
+# objective as IEEE 754 binary64 bits (hex), objective (decimal, 17 significant digits).
+lp Solved bffffffffff7b9f1 -1.99999999987960231e0
+qp Solved bfe4924924924925 -6.42857142857142905e-1
+socp Solved 3fefffffffbdd4e5 9.99999999518561666e-1
+box Solved c058fffffebb178e -9.99999996974058547e1
+hs35 Solved c021c71c71897ac7 -8.88888888171403657e0

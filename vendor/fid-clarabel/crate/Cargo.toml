@@ -1,0 +1,41 @@
+# fid-clarabel: Clarabel 0.11.1 (https://github.com/oxfordcontrol/Clarabel.rs, Apache-2.0)
+# patched for the Metrology Maven kernel (spec node KRN.SOLV.CONIC.PATCH). The patch series
+# and its rationale are in ../patches/ and ../AUDIT.toml. Do not edit this crate by hand:
+# change a patch and regenerate.
+
+[package]
+name = "fid-clarabel"
+version = "0.11.1"
+authors = ["Paul Goulart <paul.goulart@eng.ox.ac.uk>"]
+edition = "2021"
+rust-version = "1.89"
+description = "Clarabel conic interior-point solver, KNP-1 patched fork for the Metrology Maven kernel (zero, nonnegative and second-order cones, QP objective)"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+# The only dependency (KNP-1 kernel graph; patch 0007 removed every third-party crate).
+# KNP-1 transcendentals, total-order min/max and fixed-order reductions (KRN.NUM.FN, KRN.NUM.RED).
+fid-num = { path = "../../../crates/fid-num" }
+
+[lib]
+# Upstream's doc examples are not maintained in this fork (they name the `clarabel` crate and
+# the generic float type); the kernel's tests are in ../tests/.
+doctest = false
+
+[lints]
+workspace = true
+
+# The kernel's tests of this crate live outside crate/ (vendor/fid-clarabel/tests/), so that
+# crate/ stays exactly upstream plus the patch series (KRN.SOLV.CONIC.VEND).
+[[test]]
+name = "upstream_examples"
+path = "../tests/upstream_examples.rs"
+
+[[test]]
+name = "ldl_order"
+path = "../tests/ldl_order.rs"
+
+[[test]]
+name = "kernel_source"
+path = "../tests/kernel_source.rs"

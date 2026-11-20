@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [vendor/fid-clarabel]
 satisfies: [REQ-KRN.SOLV.CONIC-002]
 covers: []
 depends_on: [KRN.NUM.FN, KRN.NUM.RED, KRN.NUM.ERR]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # KRN.SOLV.CONIC.PATCH: KNP-1 patches to the vendored interior-point solver
@@ -81,7 +82,14 @@ Turns the pinned upstream interior-point solver (a fork of Clarabel, `fid-clarab
 
 - The parent asked whether the sparse LDL can be made deterministic by patching or must be replaced by `fid-num` dense factorizations. This leaf patches it (the LDL is a sequential algorithm, so fixed ordering, fixed regularisation and no FMA should suffice [unverified]). If `KRN.SOLV.CONIC.XTEST` shows cross-target divergence, replacing the LDL would need an LDL^T in `KRN.NUM.LA`, which that module does not offer today; raise it then as a change to KRN.NUM.LA.
 - Upstream may panic on some inputs (index checks, `unwrap`); converting every panic path is part of patch 0003 or a separate patch [unverified count].
-- Which third-party crates upstream depends on and whether each can be removed [unverified].
+- Which third-party crates upstream depends on and whether each can be removed: resolved in the build. Clarabel 0.11.1 requires amd, cfg-if, derive_builder, enum_dispatch, itertools, lazy_static, num-traits and thiserror (plus optional serde, BLAS/LAPACK, faer, Pardiso, pyo3 and others behind features). Patches 0001, 0002, 0006 and 0007 remove all of them; `fid-num` is the only dependency, so `kernel-allowlist.toml` stays empty.
+- **As built (vendor/fid-clarabel/, fid-clarabel 0.11.1):** the series has eight patches, not seven: 0008 makes every file classifiable by the KNP-1 syntax scan, which fails closed on non-ASCII identifiers (Clarabel's Greek names), two-segment `use super::Name` imports, macro metavariables in callee position and `#[default]`. Its `AUDIT.toml` entry can only name `KNP1-ENV` and `KNP1-SIMD`, because the VEND schema accepts no `KNP1-PARSE` rule ID.
+- **As built, f64 specialisation (0002):** `T` stays as the name of the float type but is an alias of `f64` (`pub type T = f64`); the generic parameters are removed. This keeps the later patches line-comparable with upstream.
+- **As built, NaN and errors (0003, 0005):** `fid_num::f` and `fid_num::red` return errors; the solver's numeric code is infallible, so `algebra/knp.rs` and `vecmath.rs` map an error to NaN, and the solver ends with `NumericalError` (non-finite μ, or the KKT solve's finiteness checks). `DefaultSolver::new` rejects malformed CSC data and NaN (and infinite P, A, q) with `BadInputData`.
+- **As built, panics:** every `panic!`, `unwrap`, `expect`, `unreachable!` and `debug_assert!` is gone. Upstream's internal `assert!`/`assert_eq!` dimension checks on solver-allocated buffers (about 50) and slice indexing remain; they cannot fire on data that passed the setup checks [unverified: no proof beyond the tests], and converting them would change most internal signatures. WRAP may wrap the solve to make this explicit.
+- **As built, AC-1:** `fid-knp1-lint check` (KRN.NUM.LINT.CLI) does not exist yet, so `vendor/fid-clarabel/knp1-findings.json` is written by `vendor/fid-clarabel/lint-driver/`, which runs the built syntax scan (KRN.NUM.LINT.SYN) over `crate/src/` and adds the `linted` entry. It reports no finding and two facade notes. The graph, flags, typed and data modules have not been run on this crate; regenerate the report with the CLI once it exists.
+- **As built, scope:** `set_infinity`/`default_infinity` (a mutable global) are removed; the infinity bound is the constant 1e20. Upstream's unit tests and doc examples are dropped (doctest = false); the kernel tests live in `vendor/fid-clarabel/tests/` so that `crate/` stays upstream plus patches.
+- **As built, AC-3:** the patched objectives agree with unpatched upstream within about 2e-15 relative, far inside 1e-8. Performance against upstream was not measured [unverified].
 
 ## Children
 

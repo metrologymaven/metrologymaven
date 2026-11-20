@@ -1,0 +1,1070 @@
+Patch 0003 (fid-num-transcendentals) of fid-clarabel, spec node KRN.SOLV.CONIC.PATCH.
+
+Route sqrt, ln, min and max through fid_num::f (sqrt, ln, total_min, total_max) via algebra/knp.rs, replace powi by explicit products, stop on a non-finite mu with NumericalError, validate input data (CSC format, no NaN) at solver setup, and convert upstream panics (panic!, unwrap, unreachable!) to error statuses.
+
+Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
+
+diff --git a/Cargo.toml b/Cargo.toml
+index 2a82595..899fec6 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -14,6 +14,8 @@ license = "Apache-2.0"
+ publish = false
+ 
+ [dependencies]
++# KNP-1 transcendentals, total-order min/max and fixed-order reductions (KRN.NUM.FN, KRN.NUM.RED).
++fid-num = { path = "../../../crates/fid-num" }
+ amd = "0.2.2"
+ derive_builder = "0.11"
+ enum_dispatch = "0.3.8"
+diff --git a/src/algebra/csc/block_concatenate.rs b/src/algebra/csc/block_concatenate.rs
+index dc93e92..58d273f 100644
+--- a/src/algebra/csc/block_concatenate.rs
++++ b/src/algebra/csc/block_concatenate.rs
+@@ -48,7 +48,7 @@ impl BlockConcatenate for CscMatrix {
+         //KKT assembly code.
+ 
+         // unwrap is fine since this is unreachable for empty input
+-        let dummylength = mats.iter().map(|m| m.nnz()).max().unwrap();
++        let dummylength = mats.iter().map(|m| m.nnz()).max().unwrap_or(0);
+         let mut dummymap = vec![0; dummylength];
+ 
+         // fill in data and rebuild colptr
+diff --git a/src/algebra/csc/core.rs b/src/algebra/csc/core.rs
+index e532a93..13d8859 100644
+--- a/src/algebra/csc/core.rs
++++ b/src/algebra/csc/core.rs
+@@ -289,14 +289,8 @@ impl CscMatrix {
+ 
+     /// symmetric view (selects upper or lower triangle source)
+     pub fn sym(&self, uplo: MatrixTriangle) -> Symmetric<'_, Self> {
+-        match uplo {
+-            MatrixTriangle::Triu => {
+-                debug_assert!(self.is_triu());
+-            }
+-            MatrixTriangle::Tril => {
+-                debug_assert!(self.is_tril());
+-            }
+-        }
++        // (upstream debug_assert!-ed the triangle here; no panics in the kernel, and
++        // callers pass matrices made triangular at solver setup)
+         Symmetric { src: self, uplo }
+     }
+ 
+diff --git a/src/algebra/csc/matrix_math.rs b/src/algebra/csc/matrix_math.rs
+index b7c87de..2ee286f 100644
+--- a/src/algebra/csc/matrix_math.rs
++++ b/src/algebra/csc/matrix_math.rs
+@@ -54,7 +54,7 @@ impl MatrixMath for CscMatrix {
+                 .iter()
+                 .take(self.colptr[i + 1])
+                 .skip(self.colptr[i])
+-                .fold(*v, |m, &nzval| T::max(m, T::abs(nzval)));
++                .fold(*v, |m, &nzval| tmax(m, T::abs(nzval)));
+         }
+     }
+ 
+@@ -70,8 +70,8 @@ impl MatrixMath for CscMatrix {
+             for j in self.colptr[i]..self.colptr[i + 1] {
+                 let tmp = T::abs(self.nzval[j]);
+                 let r = self.rowval[j];
+-                norms[i] = T::max(norms[i], tmp);
+-                norms[r] = T::max(norms[r], tmp);
++                norms[i] = tmax(norms[i], tmp);
++                norms[r] = tmax(norms[r], tmp);
+             }
+         }
+     }
+@@ -82,10 +82,10 @@ impl MatrixMath for CscMatrix {
+     }
+ 
+     fn row_norms_no_reset(&self, norms: &mut [T]) {
+-        assert_eq!(self.rowval.len(), *self.colptr.last().unwrap());
++        assert_eq!(self.rowval.len(), self.colptr.last().copied().unwrap_or(0));
+ 
+         for (row, val) in zip(&self.rowval, &self.nzval) {
+-            norms[*row] = T::max(norms[*row], T::abs(*val));
++            norms[*row] = tmax(norms[*row], T::abs(*val));
+         }
+     }
+ }
+@@ -110,14 +110,14 @@ impl MatrixMathMut for CscMatrix {
+         let colptr = &self.colptr;
+         let vals = &mut self.nzval;
+ 
+-        assert_eq!(vals.len(), *colptr.last().unwrap());
++        assert_eq!(vals.len(), colptr.last().copied().unwrap_or(0));
+         for i in 0..self.n {
+             vals[colptr[i]..colptr[i + 1]].scale(r[i]);
+         }
+     }
+ 
+     fn lrscale(&mut self, l: &[T], r: &[T]) {
+-        assert_eq!(self.nzval.len(), *self.colptr.last().unwrap());
++        assert_eq!(self.nzval.len(), self.colptr.last().copied().unwrap_or(0));
+ 
+         for (col, &ri) in r.iter().enumerate() {
+             let (first, last) = (self.colptr[col], self.colptr[col + 1]);
+@@ -234,7 +234,9 @@ fn _csc_quad_form(M: &CscMatrix, uplo: MatrixTriangle, y: &[T], x: &[T]) -> T {
+             } else if row == col {
+                 out += Mv * x[col] * y[col];
+             } else {
+-                panic!("Input matrix should be in triangular form.");
++                // not triangular: upstream panicked; P is made upper triangular at
++                // solver setup, so this is unreachable, and a NaN fails the solve
++                return T::NAN;
+             }
+         }
+         out += tmp1 * y[col] + tmp2 * x[col];
+@@ -260,7 +262,7 @@ fn _csc_axpby_N(A: &CscMatrix, y: &mut [T], x: &[T], a: T, b: T) {
+         return;
+     }
+ 
+-    assert_eq!(A.nzval.len(), *A.colptr.last().unwrap());
++    assert_eq!(A.nzval.len(), A.colptr.last().copied().unwrap_or(0));
+     assert_eq!(x.len(), A.n);
+ 
+     //y += A*x
+@@ -303,7 +305,7 @@ fn _csc_axpby_T(A: &CscMatrix, y: &mut [T], x: &[T], a: T, b: T) {
+         return;
+     }
+ 
+-    assert_eq!(A.nzval.len(), *A.colptr.last().unwrap());
++    assert_eq!(A.nzval.len(), A.colptr.last().copied().unwrap_or(0));
+     assert_eq!(x.len(), A.m);
+ 
+     //y += A*x
+diff --git a/src/algebra/knp.rs b/src/algebra/knp.rs
+new file mode 100644
+index 0000000..812471c
+--- /dev/null
++++ b/src/algebra/knp.rs
+@@ -0,0 +1,41 @@
++//! KNP-1 numeric facade of the vendored solver (patch 0003).
++//!
++//! Every square root, logarithm, min and max of the solver goes through `fid_num::f`
++//! (spec node KRN.NUM.FN): correctly rounded `sqrt`, the pinned pure-Rust `ln`, and the
++//! total-order `total_min`/`total_max`, so results are bit-identical on every target and a
++//! NaN is never silently dropped (`f64::min`/`f64::max` return the non-NaN operand).
++//!
++//! `fid_num::f` reports a NaN, an infinite argument or a domain error as an error. The
++//! upstream solver's numeric code is infallible, so the error is turned into a NaN here, and
++//! the solver's finiteness checks turn that NaN into `SolverStatus::NumericalError`: the KKT
++//! solve fails on a non-finite solution or refinement error (direct LDL KKT solver), and the
++//! main loop stops on a non-finite μ (core solver, patch 0003). No NaN reaches a caller as a
++//! value of record.
++//!
++//! The names avoid the identifiers the KNP-1 syntax scan bans (`sqrt`, `min`, `max`, ...).
++
++use crate::algebra::T;
++
++/// Square root (IEEE 754 correctly rounded); NaN for a negative, infinite or NaN argument.
++#[inline]
++pub(crate) fn sq_root(x: T) -> T {
++    fid_num::f::sqrt(x).unwrap_or(T::NAN)
++}
++
++/// Natural logarithm; NaN for a non-positive, infinite or NaN argument.
++#[inline]
++pub(crate) fn nat_log(x: T) -> T {
++    fid_num::f::ln(x).unwrap_or(T::NAN)
++}
++
++/// The smaller operand in IEEE 754 total order; NaN if either operand is NaN.
++#[inline]
++pub(crate) fn tmin(a: T, b: T) -> T {
++    fid_num::f::total_min(a, b).unwrap_or(T::NAN)
++}
++
++/// The larger operand in IEEE 754 total order; NaN if either operand is NaN.
++#[inline]
++pub(crate) fn tmax(a: T, b: T) -> T {
++    fid_num::f::total_max(a, b).unwrap_or(T::NAN)
++}
+diff --git a/src/algebra/math_traits.rs b/src/algebra/math_traits.rs
+index dc49958..e50186f 100644
+--- a/src/algebra/math_traits.rs
++++ b/src/algebra/math_traits.rs
+@@ -43,8 +43,8 @@ pub trait VectorMath {
+     /// Elementwise reciprocal.
+     fn recip(&mut self) -> &mut Self;
+ 
+-    /// Elementwise square root.
+-    fn sqrt(&mut self) -> &mut Self;
++    /// Elementwise square root (KNP-1 facade).
++    fn elem_root(&mut self) -> &mut Self;
+ 
+     /// Elementwise inverse square root.
+     fn rsqrt(&mut self) -> &mut Self;
+diff --git a/src/algebra/mod.rs b/src/algebra/mod.rs
+index 68dd15e..73776cb 100644
+--- a/src/algebra/mod.rs
++++ b/src/algebra/mod.rs
+@@ -13,6 +13,7 @@
+ 
+ mod error_types;
+ mod floats;
++mod knp;
+ mod math_traits;
+ mod matrix_traits;
+ mod matrix_types;
+@@ -21,6 +22,7 @@ mod utils;
+ mod vecmath;
+ pub use error_types::*;
+ pub use floats::*;
++pub(crate) use knp::*;
+ pub use math_traits::*;
+ pub use matrix_traits::*;
+ pub(crate) use matrix_types::*;
+diff --git a/src/algebra/scalarmath.rs b/src/algebra/scalarmath.rs
+index b2eaa54..057826c 100644
+--- a/src/algebra/scalarmath.rs
++++ b/src/algebra/scalarmath.rs
+@@ -1,4 +1,4 @@
+-use super::{FloatT, ScalarMath};
++use super::{nat_log, FloatT, ScalarMath};
+ use crate::algebra::T;
+ 
+ impl ScalarMath for T {
+@@ -16,7 +16,7 @@ impl ScalarMath for T {
+         if *self <= Self::zero() {
+             -Self::infinity()
+         } else {
+-            self.ln()
++            nat_log(*self)
+         }
+     }
+ }
+@@ -31,42 +31,3 @@ pub(crate) fn triangular_index(k: usize) -> usize {
+     // triangular number(k+1) - 1 = (((k+1) * (k+2)) >> 1) - 1
+     (k * (k + 3)) >> 1
+ }
+-
+-// given an index into the upper triangular part of a matrix, return
+-// its row and column position
+-#[allow(dead_code)]
+-pub(crate) fn upper_triangular_index_to_coord(linearidx: usize) -> (usize, usize) {
+-    if linearidx == 0 {
+-        return (0, 0);
+-    }
+-
+-    let col = ((isqrt(8 * linearidx + 1) + 1) >> 1) - 1;
+-
+-    let row = linearidx - triangular_index(col - 1) - 1;
+-    (row, col)
+-}
+-
+-// given a row and column position, return the index into the upper
+-// triangular part of the matrix
+-#[allow(dead_code)]
+-pub(crate) fn coord_to_upper_triangular_index(coord: (usize, usize)) -> usize {
+-    if coord == (0, 0) {
+-        return 0;
+-    }
+-
+-    let (i, j) = coord;
+-    if i <= j {
+-        triangular_index(j - 1) + i + 1
+-    } else {
+-        triangular_index(i - 1) + j + 1
+-    }
+-}
+-
+-// isqrt : rust does not currently have a stable isqrt yet.   See issue
+-// here: https://github.com/rust-lang/rust/issues/116226
+-// For now, implement a simple truncation method, which works
+-// for inputs < 2^53 or so (otherwise possibly off-by-one).
+-#[allow(dead_code)]
+-pub(crate) fn isqrt(v: usize) -> usize {
+-    (v as f64).sqrt() as usize
+-}
+diff --git a/src/algebra/vecmath.rs b/src/algebra/vecmath.rs
+index 0970171..2fec922 100644
+--- a/src/algebra/vecmath.rs
++++ b/src/algebra/vecmath.rs
+@@ -1,4 +1,4 @@
+-use super::{AsFloatT, FloatT, ScalarMath, VectorMath};
++use super::{sq_root, tmax, tmin, AsFloatT, FloatT, ScalarMath, VectorMath};
+ use crate::algebra::T;
+ use itertools::izip;
+ use std::borrow::Borrow;
+@@ -51,12 +51,12 @@ impl VectorMath for [T] {
+         self.scalarop(T::recip)
+     }
+ 
+-    fn sqrt(&mut self) -> &mut Self {
+-        self.scalarop(T::sqrt)
++    fn elem_root(&mut self) -> &mut Self {
++        self.scalarop(sq_root)
+     }
+ 
+     fn rsqrt(&mut self) -> &mut Self {
+-        self.scalarop(|x| T::recip(T::sqrt(x)))
++        self.scalarop(|x| T::recip(sq_root(x)))
+     }
+ 
+     fn negate(&mut self) -> &mut Self {
+@@ -100,8 +100,8 @@ impl VectorMath for [T] {
+     }
+ 
+     fn dist(&self, y: &Self) -> T {
+-        let dist2 = zip(self, y).fold(T::zero(), |acc, (&x, &y)| acc + T::powi(x - y, 2));
+-        T::sqrt(dist2)
++        let dist2 = zip(self, y).fold(T::zero(), |acc, (&x, &y)| acc + (x - y) * (x - y));
++        sq_root(dist2)
+     }
+ 
+     fn sum(&self) -> T {
+@@ -114,7 +114,7 @@ impl VectorMath for [T] {
+ 
+     // 2-norm
+     fn norm(&self) -> T {
+-        // T::sqrt(self.sumsq()) // not robust
++        // sq_root(self.sumsq()) // not robust
+         stable_norm(self.iter())
+     }
+ 
+@@ -136,7 +136,7 @@ impl VectorMath for [T] {
+             if v.is_nan() {
+                 return T::nan();
+             }
+-            out = T::max(out, v.abs());
++            out = tmax(out, v.abs());
+         }
+         out
+     }
+@@ -149,7 +149,7 @@ impl VectorMath for [T] {
+     //inf-norm of elementwise product self.*v
+     fn norm_inf_scaled(&self, v: &Self) -> T {
+         assert_eq!(self.len(), v.len());
+-        zip(self, v).fold(T::zero(), |acc, (&x, &y)| T::max(acc, T::abs(x * y)))
++        zip(self, v).fold(T::zero(), |acc, (&x, &y)| tmax(acc, T::abs(x * y)))
+     }
+ 
+     //
+@@ -159,15 +159,15 @@ impl VectorMath for [T] {
+ 
+     // max absolute difference (used for unit testing)
+     fn norm_inf_diff(&self, b: &[T]) -> T {
+-        zip(self, b).fold(T::zero(), |acc, (x, y)| T::max(acc, T::abs(*x - *y)))
++        zip(self, b).fold(T::zero(), |acc, (x, y)| tmax(acc, T::abs(*x - *y)))
+     }
+ 
+     fn minimum(&self) -> T {
+-        self.iter().fold(T::infinity(), |r, &s| T::min(r, s))
++        self.iter().fold(T::infinity(), |r, &s| tmin(r, s))
+     }
+ 
+     fn maximum(&self) -> T {
+-        self.iter().fold(-T::infinity(), |r, &s| T::max(r, s))
++        self.iter().fold(-T::infinity(), |r, &s| tmax(r, s))
+     }
+ 
+     fn mean(&self) -> T {
+@@ -222,5 +222,5 @@ where
+                     (scale, sumsq + r * r)
+                 }
+             });
+-    scale * sumsq.sqrt()
++    scale * sq_root(sumsq)
+ }
+diff --git a/src/solver/core/cones/compositecone.rs b/src/solver/core/cones/compositecone.rs
+index 6e3da9f..0857bb4 100644
+--- a/src/solver/core/cones/compositecone.rs
++++ b/src/solver/core/cones/compositecone.rs
+@@ -1,6 +1,6 @@
+ use super::*;
+-use crate::algebra::triangular_number;
+ use crate::algebra::T;
++use crate::algebra::{sq_root, tmin, triangular_number};
+ use std::collections::HashMap;
+ use std::iter::zip;
+ use std::ops::Range;
+@@ -157,9 +157,8 @@ impl Cone for CompositeCone {
+     }
+ 
+     fn is_sparse_expandable(&self) -> bool {
+-        //This should probably never be called
+-        //self.cones.iter().any(|cone| cone.is_sparse_expandable())
+-        unreachable!();
++        //This should probably never be called (upstream: unreachable!(); no panics in the kernel)
++        self.cones.iter().any(|cone| cone.is_sparse_expandable())
+     }
+ 
+     fn allows_primal_dual_scaling(&self) -> bool {
+@@ -187,7 +186,7 @@ impl Cone for CompositeCone {
+         let mut β = T::zero();
+         for (cone, rng) in zip(&mut self.cones, &self.rng_cones) {
+             let (αi, βi) = cone.margins(&mut z[rng.clone()], pd);
+-            α = T::min(α, αi);
++            α = tmin(α, αi);
+             β += βi;
+         }
+         (α, β)
+@@ -306,7 +305,7 @@ impl Cone for CompositeCone {
+                 let (dzi, dsi) = (&dz[rng.clone()], &ds[rng.clone()]);
+                 let (zi, si) = (&z[rng.clone()], &s[rng.clone()]);
+                 let (nextαz, nextαs) = cone.step_length(dzi, dsi, zi, si, settings, α);
+-                α = T::min(α, T::min(nextαz, nextαs));
++                α = tmin(α, tmin(nextαz, nextαs));
+             }
+             α
+         };
+@@ -317,8 +316,8 @@ impl Cone for CompositeCone {
+         // if we have any nonsymmetric cones, then back off from full steps slightly
+         // so that centrality checks and logarithms don't fail right at the boundaries
+         if !all_symmetric {
+-            let ceil = T::one() - T::sqrt(T::epsilon());
+-            α = T::min(α, ceil);
++            let ceil = T::one() - sq_root(T::epsilon());
++            α = tmin(α, ceil);
+         }
+ 
+         // Force asymmetric cones last.
+diff --git a/src/solver/core/cones/nonnegativecone.rs b/src/solver/core/cones/nonnegativecone.rs
+index b6be893..54eef60 100644
+--- a/src/solver/core/cones/nonnegativecone.rs
++++ b/src/solver/core/cones/nonnegativecone.rs
+@@ -51,7 +51,7 @@ impl Cone for NonnegativeCone {
+ 
+     fn margins(&mut self, z: &mut [T], _pd: PrimalOrDualCone) -> (T, T) {
+         let α = z.minimum();
+-        let β = z.iter().fold(T::zero(), |β, &zi| β + T::max(zi, T::zero()));
++        let β = z.iter().fold(T::zero(), |β, &zi| β + tmax(zi, T::zero()));
+         (α, β)
+     }
+ 
+@@ -76,8 +76,8 @@ impl Cone for NonnegativeCone {
+         _scaling_strategy: ScalingStrategy,
+     ) -> bool {
+         for (λ, w, s, z) in izip!(&mut self.λ, &mut self.w, s, z) {
+-            *λ = T::sqrt((*s) * (*z));
+-            *w = T::sqrt((*s) / (*z));
++            *λ = sq_root((*s) * (*z));
++            *w = sq_root((*s) / (*z));
+         }
+ 
+         true
+@@ -137,10 +137,10 @@ impl Cone for NonnegativeCone {
+ 
+         for i in 0..z.len() {
+             if dz[i] < T::zero() {
+-                αz = T::min(αz, -z[i] / dz[i]);
++                αz = tmin(αz, -z[i] / dz[i]);
+             }
+             if ds[i] < T::zero() {
+-                αs = T::min(αs, -s[i] / ds[i]);
++                αs = tmin(αs, -s[i] / ds[i]);
+             }
+         }
+         (αz, αs)
+diff --git a/src/solver/core/cones/socone.rs b/src/solver/core/cones/socone.rs
+index 77e1cc4..1c1ec42 100644
+--- a/src/solver/core/cones/socone.rs
++++ b/src/solver/core/cones/socone.rs
+@@ -94,7 +94,7 @@ impl Cone for SecondOrderCone {
+     // functions relating to unit vectors and cone initialization
+     fn margins(&mut self, z: &mut [T], _pd: PrimalOrDualCone) -> (T, T) {
+         let α = z[0] - z[1..].norm();
+-        let β = T::max(T::zero(), α);
++        let β = tmax(T::zero(), α);
+         (α, β)
+     }
+ 
+@@ -142,7 +142,7 @@ impl Cone for SecondOrderCone {
+         }
+ 
+         //the leading scalar term for W^TW
+-        self.η = T::sqrt(sscale / zscale);
++        self.η = sq_root(sscale / zscale);
+ 
+         // construct w and normalize
+         let w = &mut self.w;
+@@ -160,7 +160,7 @@ impl Cone for SecondOrderCone {
+ 
+         // try to force badly scaled w to come out normalized
+         let w1sq = w[1..].sumsq();
+-        w[0] = T::sqrt(T::one() + w1sq);
++        w[0] = sq_root(T::one() + w1sq);
+ 
+         //Compute the scaling point λ.   Should satisfy λ = Wz = W^{-T}s
+         let γ = half * wscale;
+@@ -172,7 +172,7 @@ impl Cone for SecondOrderCone {
+             &z[1..],
+         );
+         self.λ[1..].scale(T::recip(s[0] / sscale + z[0] / zscale + two * γ));
+-        self.λ.scale(T::sqrt(sscale * zscale));
++        self.λ.scale(sq_root(sscale * zscale));
+ 
+         // Populate sparse expansion terms if allocated
+         if let Some(sparse_data) = &mut self.sparse_data {
+@@ -187,10 +187,10 @@ impl Cone for SecondOrderCone {
+ 
+             //the vectors for the rank two update
+             //representation of W^TW
+-            let u0 = T::sqrt(wsq - sparse_data.d);
++            let u0 = sq_root(wsq - sparse_data.d);
+             let u1 = α / u0;
+             let v0 = T::zero();
+-            let v1 = T::sqrt(two * (two + wsqinv) / (two * wsq - wsqinv));
++            let v1 = sq_root(two * (two + wsqinv) / (two * wsq - wsqinv));
+ 
+             sparse_data.u[0] = u0;
+             sparse_data.u[1..].axpby(u1, &self.w[1..], T::zero());
+@@ -372,7 +372,7 @@ fn _soc_residual(z: &[T]) -> T {
+ fn _sqrt_soc_residual(z: &[T]) -> T {
+     let res = _soc_residual(z);
+     if res > T::zero() {
+-        T::sqrt(res)
++        sq_root(res)
+     } else {
+         T::zero()
+     }
+@@ -394,7 +394,7 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+     // upper bound the step length by the maximum allowable
+     // step length for the scalar part of the cone
+     if x[0] >= T::zero() && y[0] < T::zero() {
+-        αmax = T::min(αmax, -x[0] / y[0]);
++        αmax = tmin(αmax, -x[0] / y[0]);
+     }
+ 
+     // assume that x is in the SOC, and find the minimum positive root
+@@ -405,12 +405,13 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+ 
+     let a = _soc_residual(y); //NB: could be negative
+     let b = two * (x[0] * y[0] - x[1..].dot(&y[1..]));
+-    let c = T::max(T::zero(), _soc_residual(x)); //should be ≥0
++    let c = tmax(T::zero(), _soc_residual(x)); //should be ≥0
+     let d = b * b - four * a * c;
+ 
+-    if c < T::zero() {
+-        // This should never be reachable since c ≥ 0 above
+-        panic!("starting point of line search not in SOC");
++    if !(c >= T::zero()) {
++        // Not reachable for finite data since c ≥ 0 above (upstream panicked here). A NaN
++        // gives a zero step, which ends the solve with a status instead of a panic.
++        return T::zero();
+     }
+ 
+     #[allow(clippy::if_same_then_else)] // allows explanation of separate cases
+@@ -445,9 +446,9 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+ 
+     let t = {
+         if b >= T::zero() {
+-            -b - T::sqrt(d)
++            -b - sq_root(d)
+         } else {
+-            -b + T::sqrt(d)
++            -b + sq_root(d)
+         }
+     };
+ 
+@@ -458,7 +459,7 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+     let r1 = if r1 < T::zero() { T::infinity() } else { r1 };
+     let r2 = if r2 < T::zero() { T::infinity() } else { r2 };
+ 
+-    T::min(αmax, T::min(r1, r2))
++    tmin(αmax, tmin(r1, r2))
+ }
+ 
+ // Must move the actual implementations of W*x to an outside
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs b/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
+index d771729..39cbb9d 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
+@@ -38,7 +38,8 @@ impl SparseExpansionMapTrait for Vec<SparseExpansionMap> {
+         self.iter().fold(0, |nnz, map| nnz + map.nnz_vec())
+     }
+     fn Dsigns(&self) -> &[i8] {
+-        unreachable!()
++        // not meaningful for a collection of maps (upstream: unreachable!())
++        &[]
+     }
+ }
+ 
+@@ -80,13 +81,11 @@ macro_rules! impl_map_recover {
+             pub(crate) fn recover_map(&self, map: &'a SparseExpansionMap) -> &'a $MAP {
+                 match map {
+                     SparseExpansionMap::$MAP(map) => map,
+-                    _ => panic!(),
+                 }
+             }
+             pub(crate) fn recover_map_mut(&self, map: &'a mut SparseExpansionMap) -> &'a mut $MAP {
+                 match map {
+                     SparseExpansionMap::$MAP(map) => map,
+-                    _ => panic!(),
+                 }
+             }
+         }
+@@ -189,7 +188,9 @@ impl SparseExpansionConeTrait for &'_ SecondOrderCone {
+         updateFcn: UpdateFcn,
+         scaleFcn: ScaleFcn,
+     ) {
+-        let sparse_data = self.sparse_data.as_ref().unwrap();
++        let Some(sparse_data) = self.sparse_data.as_ref() else {
++            return;
++        };
+ 
+         let map = self.recover_map(map);
+         let η2 = self.η * self.η;
+@@ -244,8 +245,9 @@ impl LDLDataMap {
+ 
+         for cone in cones.iter() {
+             if cone.is_sparse_expandable() {
+-                let sc = cone.to_sparse_expansion().unwrap();
+-                sparse_maps.push(sc.expansion_map());
++                if let Some(sc) = cone.to_sparse_expansion() {
++                    sparse_maps.push(sc.expansion_map());
++                }
+             }
+         }
+ 
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs b/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs
+index 6a0c5a5..4f7ced7 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs
+@@ -139,9 +139,11 @@ impl KKTSolver for DirectLDLKKTSolver {
+ 
+         for cone in cones.iter() {
+             if cone.is_sparse_expandable() {
+-                let sc = cone.to_sparse_expansion().unwrap();
+-                let thismap = sparse_map_iter.next().unwrap();
+-                sc.csc_update_sparsecone(thismap, ldl, KKT, _update_values, _scale_values);
++                if let (Some(sc), Some(thismap)) =
++                    (cone.to_sparse_expansion(), sparse_map_iter.next())
++                {
++                    sc.csc_update_sparsecone(thismap, ldl, KKT, _update_values, _scale_values);
++                }
+             }
+         }
+ 
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/kkt_assembly.rs b/src/solver/core/kktsolvers/direct/quasidef/kkt_assembly.rs
+index 72bfc30..1135b98 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/kkt_assembly.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/kkt_assembly.rs
+@@ -92,10 +92,11 @@ fn _kkt_assemble_colcounts(
+ 
+         //add sparse expansions columns for sparse cones
+         if cone.is_sparse_expandable() {
+-            let sc = cone.to_sparse_expansion().unwrap();
+-            let thismap = sparse_map_iter.next().unwrap();
+-            sc.csc_colcount_sparsecone(thismap, K, row, pcol, shape);
+-            pcol += thismap.pdim();
++            if let (Some(sc), Some(thismap)) = (cone.to_sparse_expansion(), sparse_map_iter.next())
++            {
++                sc.csc_colcount_sparsecone(thismap, K, row, pcol, shape);
++                pcol += thismap.pdim();
++            }
+         }
+     }
+ }
+@@ -147,10 +148,11 @@ fn _kkt_assemble_fill(
+ 
+         //add sparse expansions columns for sparse cones
+         if cone.is_sparse_expandable() {
+-            let sc = cone.to_sparse_expansion().unwrap();
+-            let thismap = sparse_map_iter.next().unwrap();
+-            sc.csc_fill_sparsecone(thismap, K, row, pcol, shape);
+-            pcol += thismap.pdim();
++            if let (Some(sc), Some(thismap)) = (cone.to_sparse_expansion(), sparse_map_iter.next())
++            {
++                sc.csc_fill_sparsecone(thismap, K, row, pcol, shape);
++                pcol += thismap.pdim();
++            }
+         }
+     }
+ 
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/config.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/config.rs
+index 18e1cfc..3f75fd6 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/config.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/config.rs
+@@ -23,16 +23,14 @@ pub fn get_ldlsolver_config(settings: &CoreSettings) -> (MatrixTriangle, LDLCons
+     let case = settings.direct_solve_method.as_str();
+ 
+     match case {
+-        "auto" => {
+-            kktshape = AutoDirectLDLSolver::required_matrix_shape();
+-            ldlptr = |M, D, S, P| AutoDirectLDLSolver::new(M, D, S, P);
+-        }
+         "qdldl" => {
+             kktshape = QDLDLDirectLDLSolver::required_matrix_shape();
+             ldlptr = |M, D, S, P| Box::new(QDLDLDirectLDLSolver::new(M, D, S, P));
+         }
++        // "auto"; settings validation rejects every other value (upstream panicked here)
+         _ => {
+-            panic!("Unrecognized LDL solver type: \"{}\"", case);
++            kktshape = AutoDirectLDLSolver::required_matrix_shape();
++            ldlptr = |M, D, S, P| AutoDirectLDLSolver::new(M, D, S, P);
+         }
+     }
+     (kktshape, ldlptr)
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
+index 2d642fc..65bec87 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
+@@ -7,8 +7,9 @@ use crate::solver::core::kktsolvers::LinearSolverInfo;
+ use crate::solver::core::CoreSettings;
+ 
+ pub struct QDLDLDirectLDLSolver {
+-    //KKT matrix and its QDLDL factorization
+-    factors: QDLDLFactorisation,
++    //KKT matrix and its QDLDL factorization; `None` if the logical factorization
++    //failed (upstream panicked), in which case every refactor reports failure
++    factors: Option<QDLDLFactorisation>,
+ }
+ 
+ impl QDLDLDirectLDLSolver {
+@@ -18,8 +19,6 @@ impl QDLDLDirectLDLSolver {
+         settings: &CoreSettings,
+         perm: Option<Vec<usize>>,
+     ) -> Self {
+-        assert!(KKT.is_square(), "KKT matrix is not square");
+-
+         // occasionally we find that the default AMD parameters give a bad ordering, particularly
+         // for some big matrices.  In particular, KKT conditions for QPs are sometimes worse
+         // than their SOC counterparts for very large problems.   This is because the SOC form
+@@ -40,7 +39,7 @@ impl QDLDLDirectLDLSolver {
+             .unwrap();
+         opts.perm = perm;
+ 
+-        let factors = QDLDLFactorisation::new(KKT, Some(opts)).unwrap();
++        let factors = QDLDLFactorisation::new(KKT, Some(opts)).ok();
+ 
+         Self { factors }
+     }
+@@ -58,8 +57,8 @@ impl HasLinearSolverInfo for QDLDLDirectLDLSolver {
+             name: "qdldl".to_string(),
+             threads: 1,
+             direct: true,
+-            nnzA: self.factors.nnzA(),
+-            nnzL: self.factors.nnzL(),
++            nnzA: self.factors.as_ref().map_or(0, |f| f.nnzA()),
++            nnzL: self.factors.as_ref().map_or(0, |f| f.nnzL()),
+         }
+     }
+ }
+@@ -68,28 +67,39 @@ impl DirectLDLSolver for QDLDLDirectLDLSolver {
+     fn update_values(&mut self, index: &[usize], values: &[T]) {
+         //Update values that are stored within
+         //the reordered copy held internally by QDLDL.
+-        self.factors.update_values(index, values);
++        if let Some(f) = self.factors.as_mut() {
++            f.update_values(index, values);
++        }
+     }
+ 
+     fn scale_values(&mut self, index: &[usize], scale: T) {
+-        self.factors.scale_values(index, scale);
++        if let Some(f) = self.factors.as_mut() {
++            f.scale_values(index, scale);
++        }
+     }
+ 
+     fn offset_values(&mut self, index: &[usize], offset: T, signs: &[i8]) {
+-        self.factors.offset_values(index, offset, signs);
++        if let Some(f) = self.factors.as_mut() {
++            f.offset_values(index, offset, signs);
++        }
+     }
+ 
+     fn solve(&mut self, _kkt: &CscMatrix, x: &mut [T], b: &mut [T]) {
+         // NB: QDLDL solves in place
+         x.copy_from(b);
+-        self.factors.solve(x);
++        match self.factors.as_mut() {
++            Some(f) => f.solve(x),
++            None => x.fill(T::NAN), // fails the solver's finiteness check
++        }
+     }
+ 
+     fn refactor(&mut self, _kkt: &CscMatrix) -> bool {
+         //QDLDL has maintained its own version of the permuted
+         //KKT matrix through custom update/scale/offset methods,
+         //so we ignore the KKT matrix provided by the caller
+-        self.factors.refactor().unwrap();
+-        self.factors.Dinv.is_finite()
++        match self.factors.as_mut() {
++            Some(f) => f.refactor().is_ok() && f.Dinv.is_finite(),
++            None => false,
++        }
+     }
+ }
+diff --git a/src/solver/core/solver.rs b/src/solver/core/solver.rs
+index 2849bee..580bd3c 100644
+--- a/src/solver/core/solver.rs
++++ b/src/solver/core/solver.rs
+@@ -191,6 +191,13 @@ where
+             // This captures μ at iteration zero.
+             self.info.save_scalars(μ, α, σ, iter);
+ 
++            // KNP-1 (patch 0003): the fid-num facade turns a NaN, an infinity or a domain
++            // error into a NaN, which reaches μ; stop with a numerical error status.
++            if !μ.is_finite() {
++                self.info.set_status(SolverStatus::NumericalError);
++                break;
++            }
++
+             // convergence check and printing
+             // --------------
+             self.info
+@@ -221,10 +228,8 @@ where
+             // check whether variables are interior points
+             match self.strategy_checkpoint_is_scaling_success(is_scaling_success, scaling) {
+                 StrategyCheckpoint::Fail => break,
+-                StrategyCheckpoint::NoUpdate => {} // we only expect NoUpdate or Fail here
+-                StrategyCheckpoint::Update(_) => {
+-                    unreachable!()
+-                }
++                // we only expect NoUpdate or Fail here (upstream: unreachable!() on Update)
++                StrategyCheckpoint::NoUpdate | StrategyCheckpoint::Update(_) => {}
+             }
+ 
+             //increment counter here because we only count
+@@ -422,7 +427,8 @@ mod internal {
+         }
+ 
+         fn centering_parameter(&self, α: T) -> T {
+-            T::powi(T::one() - α, 3)
++            let a = T::one() - α;
++            a * a * a
+         }
+ 
+         fn get_step_length(
+@@ -522,7 +528,7 @@ mod internal {
+                 && α < self.settings.core().min_switch_step_length
+             {
+                 output = StrategyCheckpoint::Update(ScalingStrategy::Dual);
+-            } else if α <= T::max(T::zero(), self.settings.core().min_terminate_step_length) {
++            } else if α <= tmax(T::zero(), self.settings.core().min_terminate_step_length) {
+                 self.info.set_status(SolverStatus::InsufficientProgress);
+                 output = StrategyCheckpoint::Fail;
+             } else {
+diff --git a/src/solver/implementations/default/info.rs b/src/solver/implementations/default/info.rs
+index 9d04f18..048fdf7 100644
+--- a/src/solver/implementations/default/info.rs
++++ b/src/solver/implementations/default/info.rs
+@@ -121,10 +121,10 @@ impl Info for DefaultInfo {
+         let mut norms = variables.s.norm_scaled(einv);
+ 
+         // primal and dual infeasibility residuals.
+-        self.res_primal_inf = (residuals.rx_inf.norm_scaled(dinv) * cinv) / T::max(T::one(), normz);
+-        self.res_dual_inf = T::max(
+-            residuals.Px.norm_scaled(dinv) / T::max(T::one(), normx),
+-            residuals.rz_inf.norm_scaled(einv) / T::max(T::one(), normx + norms),
++        self.res_primal_inf = (residuals.rx_inf.norm_scaled(dinv) * cinv) / tmax(T::one(), normz);
++        self.res_dual_inf = tmax(
++            residuals.Px.norm_scaled(dinv) / tmax(T::one(), normx),
++            residuals.rz_inf.norm_scaled(einv) / tmax(T::one(), normx + norms),
+         );
+ 
+         // now back out the τ scaling so we can normalize the unscaled primal / dual errors
+@@ -134,16 +134,16 @@ impl Info for DefaultInfo {
+ 
+         // primal and dual relative residuals.
+         self.res_primal =
+-            residuals.rz.norm_scaled(einv) * τinv / T::max(T::one(), normb + normx + norms);
++            residuals.rz.norm_scaled(einv) * τinv / tmax(T::one(), normb + normx + norms);
+         self.res_dual =
+-            residuals.rx.norm_scaled(dinv) * τinv * cinv / T::max(T::one(), normq + normx + normz);
++            residuals.rx.norm_scaled(dinv) * τinv * cinv / tmax(T::one(), normq + normx + normz);
+ 
+         // absolute and relative gaps
+         self.gap_abs = T::abs(self.cost_primal - self.cost_dual);
+         self.gap_rel = self.gap_abs
+-            / T::max(
++            / tmax(
+                 T::one(),
+-                T::min(T::abs(self.cost_primal), T::abs(self.cost_dual)),
++                tmin(T::abs(self.cost_primal), T::abs(self.cost_dual)),
+             );
+ 
+         // κ/τ ratio (scaled)
+diff --git a/src/solver/implementations/default/kktsystem.rs b/src/solver/implementations/default/kktsystem.rs
+index 44f31ef..c14ce90 100644
+--- a/src/solver/implementations/default/kktsystem.rs
++++ b/src/solver/implementations/default/kktsystem.rs
+@@ -40,21 +40,16 @@ impl DefaultKKTSystem {
+     ) -> Self {
+         let (m, n) = (data.m, data.n);
+ 
+-        //here we allow scope for different KKT solvers, e.g.
+-        //direct vs indirect, different QR based direct methods
+-        //etc.   For now, we only have direct / LDL based
+-        let kktsolver = if settings.direct_kkt_solver {
+-            Box::new(DirectLDLKKTSolver::new(
+-                &data.P,
+-                &data.A,
+-                cones,
+-                m,
+-                n,
+-                settings.core(),
+-            ))
+-        } else {
+-            panic!("Indirect and other solve strategies not yet supported.");
+-        };
++        //only direct / LDL based KKT solvers exist; settings validation rejects
++        //direct_kkt_solver = false (upstream panicked here)
++        let kktsolver = Box::new(DirectLDLKKTSolver::new(
++            &data.P,
++            &data.A,
++            cones,
++            m,
++            n,
++            settings.core(),
++        ));
+ 
+         //the LHS constant part of the reduced solve
+         let x1 = vec![T::zero(); n];
+diff --git a/src/solver/implementations/default/presolver.rs b/src/solver/implementations/default/presolver.rs
+index 5e7262d..9ea90cd 100644
+--- a/src/solver/implementations/default/presolver.rs
++++ b/src/solver/implementations/default/presolver.rs
+@@ -87,8 +87,9 @@ impl Presolver {
+     }
+ 
+     fn reduce_A_b(&self, A: &CscMatrix, b: &[T]) -> (CscMatrix, Vec<T>) {
+-        assert!(self.reduce_map.is_some());
+-        let map = self.reduce_map.as_ref().unwrap();
++        let Some(map) = self.reduce_map.as_ref() else {
++            return (A.clone(), b.to_vec());
++        };
+ 
+         let A = A.select_rows(&map.keep_logical);
+         let b = b.select(&map.keep_logical);
+@@ -97,8 +98,9 @@ impl Presolver {
+     }
+ 
+     fn reduce_cones(&self, cones: &[SupportedConeT]) -> Vec<SupportedConeT> {
+-        assert!(self.reduce_map.is_some());
+-        let map = self.reduce_map.as_ref().unwrap();
++        let Some(map) = self.reduce_map.as_ref() else {
++            return cones.to_vec();
++        };
+ 
+         // assume that we will end up with the same
+         // number of cones, despite small possibility
+@@ -138,7 +140,11 @@ impl Presolver {
+     ) {
+         solution.x.copy_from(&variables.x);
+ 
+-        let map = self.reduce_map.as_ref().unwrap();
++        let Some(map) = self.reduce_map.as_ref() else {
++            solution.s.copy_from(&variables.s);
++            solution.z.copy_from(&variables.z);
++            return;
++        };
+         let mut ctr = 0;
+ 
+         for (idx, &keep) in map.keep_logical.iter().enumerate() {
+diff --git a/src/solver/implementations/default/problemdata.rs b/src/solver/implementations/default/problemdata.rs
+index 95959f5..17fc34f 100644
+--- a/src/solver/implementations/default/problemdata.rs
++++ b/src/solver/implementations/default/problemdata.rs
+@@ -96,7 +96,7 @@ impl DefaultProblemData {
+         //this is not considered part of the "presolve", so
+         //can always happen regardless of user settings
+         let infbound = crate::get_infinity().as_T();
+-        b_new.scalarop(|x| T::min(x, infbound));
++        b_new.scalarop(|x| tmin(x, infbound));
+ 
+         // this ensures m is the *reduced* size m
+         let (m, n) = A_new.size();
+@@ -237,7 +237,7 @@ impl ProblemData for DefaultProblemData {
+             let inf_norm_q = q.norm_inf();
+ 
+             if mean_col_norm_P != T::zero() && inf_norm_q != T::zero() {
+-                let scale_cost = T::max(inf_norm_q, mean_col_norm_P);
++                let scale_cost = tmax(inf_norm_q, mean_col_norm_P);
+                 let ctmp = T::recip(scale_cost);
+                 let ctmp = T::clip(&ctmp, scale_min / equil.c, scale_max / equil.c);
+ 
+diff --git a/src/solver/implementations/default/solver.rs b/src/solver/implementations/default/solver.rs
+index 0dad6fb..f389faf 100644
+--- a/src/solver/implementations/default/solver.rs
++++ b/src/solver/implementations/default/solver.rs
+@@ -45,8 +45,10 @@ impl DefaultSolver {
+         cones: &[SupportedConeT],
+         settings: DefaultSettings,
+     ) -> Result<Self, SolverError> {
+-        //sanity check problem dimensions
++        //sanity check problem dimensions and data (KNP-1: no NaN, CSC format checked
++        //here so that the internal code cannot panic on malformed input)
+         check_dimensions(P, q, A, b, cones)?;
++        check_data(P, q, A, b)?;
+         //sanity check settings
+         settings.validate()?;
+ 
+@@ -59,7 +61,11 @@ impl DefaultSolver {
+         let mut data = DefaultProblemData::new(P, q, A, b, cones, &settings);
+ 
+         let cones = CompositeCone::new(&data.cones);
+-        assert_eq!(cones.numel, data.m);
++        if cones.numel != data.m {
++            return Err(SolverError::BadInputData(
++                "Constraint dimensions inconsistent with size of cones",
++            ));
++        }
+         let variables = DefaultVariables::new(data.n, data.m);
+         let residuals = DefaultResiduals::new(data.n, data.m);
+ 
+@@ -126,3 +132,29 @@ fn check_dimensions(
+ 
+     Ok(())
+ }
++
++// KNP-1 input check (patch 0003): matrices in valid CSC form, no NaN anywhere, finite
++// P, A and q. b may hold infinite bounds (removed by the presolver or capped at the
++// infinity bound), but not NaN.
++fn check_data(P: &CscMatrix, q: &[T], A: &CscMatrix, b: &[T]) -> Result<(), SolverError> {
++    if P.check_format().is_err() || A.check_format().is_err() {
++        return Err(SolverError::BadInputData(
++            "P or A is not a valid CSC matrix",
++        ));
++    }
++    if !P
++        .nzval
++        .iter()
++        .chain(A.nzval.iter())
++        .chain(q.iter())
++        .all(|x| x.is_finite())
++    {
++        return Err(SolverError::BadInputData(
++            "P, A or q has a NaN or infinite entry",
++        ));
++    }
++    if b.iter().any(|x| x.is_nan()) {
++        return Err(SolverError::BadInputData("b has a NaN entry"));
++    }
++    Ok(())
++}
+diff --git a/src/solver/implementations/default/variables.rs b/src/solver/implementations/default/variables.rs
+index 0438228..f8d6722 100644
+--- a/src/solver/implementations/default/variables.rs
++++ b/src/solver/implementations/default/variables.rs
+@@ -138,7 +138,7 @@ impl Variables for DefaultVariables {
+         // To enable split lengths, we need to also pass a
+         // tuple of limits to the step_length function of
+         // every cone
+-        let mut α = T::min(αz, αs);
++        let mut α = tmin(αz, αs);
+ 
+         if step_direction == StepDirection::Combined {
+             α *= settings.core().max_step_fraction;
+@@ -211,7 +211,7 @@ impl Variables for DefaultVariables {
+     }
+ 
+     fn rescale(&mut self) {
+-        let scale = T::max(self.τ, self.κ);
++        let scale = tmax(self.τ, self.κ);
+         let invscale = scale.recip();
+ 
+         self.x.scale(invscale);
+@@ -224,7 +224,7 @@ impl Variables for DefaultVariables {
+ 
+ fn _shift_to_cone_interior(z: &mut [T], cones: &mut CompositeCone, pd: PrimalOrDualCone) {
+     let (min_margin, pos_margin) = cones.margins(z, pd);
+-    let target = T::max(
++    let target = tmax(
+         T::one(),
+         (pos_margin * (0.1).as_T()) / cones.degree().as_T(),
+     );
