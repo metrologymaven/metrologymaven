@@ -1157,6 +1157,7 @@ dependencies = [
  "fid-registry",
  "fid-store",
  "fid-types",
+ "fid-uuid",
  "libc",
  "unicode-normalization",
  "winx",

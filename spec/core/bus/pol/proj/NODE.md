@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-bus]
 satisfies: [REQ-CORE.BUS.POL-002, REQ-CORE.BUS.POL-003, REQ-CORE.BUS.POL-004]
 covers: []
 depends_on: [CORE.REG.DEF, CORE.BUS.PRIN, CORE.BUS.PIPE.ERR, CORE.BUS.PIPE.HANDLER, CORE.JRN.ENTRY]
@@ -78,6 +79,8 @@ Enforces each command's MCP projection at the bus, behind the generated MCP surf
 
 - Pending requests do not expire; an expiry setting may be added later. A request filed against an old head is still re-validated (preconditions, conflicts) when approved.
 - The surface for approving on the CLI is an upgraded human session (D-012) passing `--approve-request <id>`; the flag name belongs to `AUTO.CLI`.
+- **Built in `fid-bus` (`policy::projection`); what is left for other leaves.** AC-1, AC-2, AC-4 and AC-5 are built and tested. AC-3 is built up to the decision: the approval check, the `RequestApproved` event (requester, request ID and record digest) and the `approved` state in `request.list_requests@1`; appending the approved command's entry is `CORE.BUS.PIPE.STAGE` and `fid request list-requests --json` is `AUTO.CLI.TREE`. AC-6 is built as the `request.reject_request@1` handler; its CLI form is `AUTO.CLI.TREE`. AC-7 (exact-mode replay) needs `CORE.RPL.EXEC.LOOP`; a determinism test covers the parts here. REQ-008's "a later stage fails" is the pipeline's: this module changes no request until the approving entry is committed and folded.
+- Pending-request records reach handlers as entities of kind `request.pending_request` through the handler `StateView`; the project's state view must include them when `CORE.BUS.PIPE.STAGE` wires the pipeline. Filing an X1 command by a `script` outside MCP is `CORE.BUS.POL.EGRESS`.
 
 ## Children
 

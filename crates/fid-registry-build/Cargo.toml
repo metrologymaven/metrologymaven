@@ -31,7 +31,8 @@ fid-program-rec = { path = "../fid-program-rec" }
 # Layer model. Brings bundled SQLite into this build step; no new crate in the lock.
 fid-store = { path = "../fid-store" }
 # The settings each crate declares with `fid_settings!` (CORE.STO.SET), collected into the
-# workspace settings manifest: `fid_bus::policy::fs::fs_settings` (`bus.fs_roots`). Layer
+# workspace settings manifest: `fid_bus::policy::fs::fs_settings` (`bus.fs_roots`); and the
+# request commands of CORE.BUS.POL.PROJ (`fid_bus::policy::projection::command_defs`). Layer
 # engine, below services; already in the lock.
 fid-bus = { path = "../fid-bus" }
 # `fid_journal::stream::activity_settings` (the Activity Log rotation size and kept files,
