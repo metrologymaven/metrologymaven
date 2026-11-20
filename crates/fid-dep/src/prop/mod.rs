@@ -59,41 +59,13 @@ fn ids_value<'a>(ids: impl IntoIterator<Item = &'a EntityId>) -> CValue {
 
 // ------------------------------------------------------------------ element state
 
-/// The state of an element (CORE.PRJ.TREE, REQ-CORE.PRJ-007). Propagation only ever moves
-/// `current` or `failed` to `outdated`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ElementState {
-    Current,
-    Outdated,
-    Failed,
-    NotComputed,
-}
+/// The state of an element: the one type of `CORE.PRJ.TREE.MODEL`, owned by `fid-project`.
+pub use fid_project::ElementState;
 
-impl ElementState {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            ElementState::Current => "current",
-            ElementState::Outdated => "outdated",
-            ElementState::Failed => "failed",
-            ElementState::NotComputed => "not_computed",
-        }
-    }
-
-    /// Parses the exact lowercase text form; anything else is `None`.
-    pub fn parse(text: &str) -> Option<ElementState> {
-        match text {
-            "current" => Some(ElementState::Current),
-            "outdated" => Some(ElementState::Outdated),
-            "failed" => Some(ElementState::Failed),
-            "not_computed" => Some(ElementState::NotComputed),
-            _ => None,
-        }
-    }
-
-    /// Whether marking moves this state to `outdated` (REQ-001, REQ-002).
-    pub fn is_markable(self) -> bool {
-        matches!(self, ElementState::Current | ElementState::Failed)
-    }
+/// Whether marking moves this state to `outdated` (REQ-001, REQ-002): exactly the states the
+/// element tree lets move to `outdated` (`current` and `failed`).
+pub fn is_markable(s: ElementState) -> bool {
+    s.can_become(ElementState::Outdated)
 }
 
 /// Element states keyed by entity ID, the part of the project document propagation reads
@@ -135,7 +107,7 @@ impl ElementStates {
         for id in event.elements() {
             match self.get(id) {
                 None => return Err(PropError::MissingState(*id)),
-                Some(s) if !s.is_markable() => return Err(PropError::InvalidTransition { element: *id, from: s }),
+                Some(s) if !is_markable(s) => return Err(PropError::InvalidTransition { element: *id, from: s }),
                 Some(_) => {}
             }
         }
@@ -559,7 +531,7 @@ pub fn plan<G: DepGraph + ?Sized>(
         };
         if pending {
             let state = state_of.get(i).copied().flatten().ok_or(PropError::MissingState(id))?;
-            if state.is_markable() {
+            if is_markable(state) {
                 result.marked.push(id);
             }
             result.pending.push(id);
@@ -689,6 +661,12 @@ mod tests {
         }
         assert_eq!(ElementState::parse("Current"), None);
         assert_eq!(ElementState::parse("stale"), None);
+    }
+
+    #[test]
+    fn markable_states_are_current_and_failed() {
+        let markable: Vec<ElementState> = ElementState::ALL.into_iter().filter(|s| is_markable(*s)).collect();
+        assert_eq!(markable, vec![ElementState::Current, ElementState::Failed]);
     }
 
     #[test]

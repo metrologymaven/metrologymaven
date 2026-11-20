@@ -13,6 +13,8 @@ fid-canon = { path = "../fid-canon" }
 # CommandDef record for `project.show_dependencies@1`, built through the registry's own field rules.
 # Layer model, below fid-dep (engine).
 fid-registry = { path = "../fid-registry" }
+# ElementState, owned by the element tree (CORE.PRJ.TREE.MODEL). Layer model, below fid-dep (engine).
+fid-project = { path = "../fid-project" }
 # Shared `sha256:` digest and command-ID types (AGENTS.md rule 14). Layer num.
 fid-types = { path = "../fid-types" }
 # Entity IDs are UUIDs (CONSTITUTION §5). Layer model.

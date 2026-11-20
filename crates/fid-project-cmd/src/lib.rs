@@ -13,6 +13,8 @@
 //!   `validation/<reason>`; `id_collision` becomes `conflict/id_collision` (bus catalogue v2);
 //!   ID service faults become `internal/handler_failed`; a malformed container entity in the
 //!   state becomes `internal/invariant_violated`.
+//! - [`tree`]: the element tree on the bus (spec node `CORE.PRJ.TREE.MODEL`, bus half): the
+//!   [`StateView`] over `fid_project::Tree` and the mapping of tree refusals to bus errors.
 
 use fid_bus::error::{BusError, ConflictReason, Detail, InternalReason, ValidationReason};
 use fid_bus::handler::{
@@ -28,6 +30,8 @@ use fid_project::{
 use fid_registry::{CommandDef, DefError};
 use std::fmt;
 use std::sync::{Arc, Mutex};
+
+pub mod tree;
 
 const LIFECYCLE_SINCE: &str = "2026-11-19";
 

@@ -1224,6 +1224,7 @@ name = "fid-dep"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-project",
  "fid-registry",
  "fid-types",
  "fid-uuid",
@@ -1679,6 +1680,7 @@ name = "fid-project"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-types",
  "fid-uuid",
  "getrandom 0.2.17",
  "unicode-normalization",

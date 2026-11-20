@@ -3,8 +3,8 @@
 
 use fid_bus::error::{
     bus_error_schema, bus_errors_digest, bus_errors_json, catalog_value, check_compatible, current_catalog,
-    parse_catalog, BusError, Code, ConflictReason, Detail, Removal, Untrusted, ValidationReason, MAX_DETAIL_CHARS,
-    TRUNCATION_MARKER,
+    parse_catalog, BusError, Code, ConflictReason, Detail, PreconditionReason, Removal, Untrusted, ValidationReason,
+    MAX_DETAIL_CHARS, TRUNCATION_MARKER,
 };
 use fid_canon::{parse, to_canonical_bytes, CValue};
 use std::path::{Path, PathBuf};
@@ -48,6 +48,9 @@ const V1_DIGEST: &str = "sha256:b741ab9fca53a6f299e7ea11345739c44df45284b2bc3c2f
 /// Digest of the frozen v2 baseline (v1 plus `conflict/id_collision`), pinned the same way.
 /// Never change this constant.
 const V2_DIGEST: &str = "sha256:54d2543ddeca083e52dd316b2c85eddcb6ee7493feb06fe3c17c92b3e49601c5";
+/// Digest of the frozen v3 baseline (v2 plus `precondition/invalid_transition`), pinned the
+/// same way. Never change this constant.
+const V3_DIGEST: &str = "sha256:c0f4953d20d43b8d5c88a585455d91d02c3e3da2b22677fef74fbf89a9e65fcd";
 
 /// Checks that frozen baseline `vN` still has its pinned digest, file and digest file alike,
 /// and returns its bytes without the trailing newline.
@@ -61,16 +64,17 @@ fn frozen(n: u32, pinned: &str) -> Vec<u8> {
 }
 
 /// AC-1: the generated file lists exactly the twelve codes and equals the newest frozen
-/// baseline, `bus-errors.v2.json`, with the committed digest (both fixtures come from
-/// `make_bus_errors.py`). The v1 baseline stays frozen.
+/// baseline, `bus-errors.v3.json`, with the committed digest (both fixtures come from
+/// `make_bus_errors.py`). The v1 and v2 baselines stay frozen.
 #[test]
 fn ac1_generated_file_and_digest() {
     let bytes = bus_errors_json().unwrap();
     frozen(1, V1_DIGEST);
-    let newest = frozen(2, V2_DIGEST);
+    frozen(2, V2_DIGEST);
+    let newest = frozen(3, V3_DIGEST);
     assert_eq!(String::from_utf8(bytes.clone()).unwrap(), String::from_utf8(newest).unwrap());
-    assert_eq!(bus_errors_digest().unwrap().to_string(), V2_DIGEST);
-    assert_eq!(fid_canon::digest_bytes(&bytes).to_string(), V2_DIGEST);
+    assert_eq!(bus_errors_digest().unwrap().to_string(), V3_DIGEST);
+    assert_eq!(fid_canon::digest_bytes(&bytes).to_string(), V3_DIGEST);
 
     let CValue::Obj(o) = parse(&bytes).unwrap() else { panic!("not an object") };
     let Some(CValue::Obj(codes)) = o.get("codes") else { panic!("no codes") };
@@ -114,6 +118,22 @@ fn current_is_compatible_with_v1_and_v2() {
     let e = BusError::Conflict(ConflictReason::IdCollision, Detail::empty());
     assert_eq!((e.code(), e.reason()), (Code::Conflict, "id_collision"));
     assert_eq!(ConflictReason::from_wire("id_collision"), Some(ConflictReason::IdCollision));
+}
+
+/// REQ-003: v3 is v2 plus `precondition/invalid_transition` only (CORE.PRJ.TREE.MODEL), and
+/// the current build keeps all of v3.
+#[test]
+fn v3_is_v2_plus_invalid_transition() {
+    let v2 = parse_catalog(&read(&format!("{FIXTURE_DIR}/bus-errors.v2.json"))).unwrap();
+    let v3 = parse_catalog(&read(&format!("{FIXTURE_DIR}/bus-errors.v3.json"))).unwrap();
+    assert_eq!(check_compatible(&v2, &v3), Ok(()));
+    assert_eq!(check_compatible(&v3, &current_catalog()), Ok(()));
+    let mut grown = v2.clone();
+    grown.get_mut("precondition").unwrap().insert("invalid_transition".to_string());
+    assert_eq!(grown, v3);
+    let e = BusError::Precondition(PreconditionReason::InvalidTransition, Detail::empty());
+    assert_eq!((e.code(), e.reason()), (Code::Precondition, "invalid_transition"));
+    assert_eq!(PreconditionReason::from_wire("invalid_transition"), Some(PreconditionReason::InvalidTransition));
 }
 
 /// AC-2 (error path): renaming `conflict` to `head_conflict` fails, naming `conflict`.
