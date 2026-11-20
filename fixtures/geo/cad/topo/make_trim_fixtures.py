@@ -9,6 +9,8 @@ Writes, next to this script:
                            both orientations, a comb with horizontal edges and collinear vertices,
                            a triangle with inexact coordinates, a square whose hole is joined to
                            the outside by a bridge edge used twice (fuzz, AC-3)
+  cylinder_slit.json       the cylinder window with a slit: a generator edge at u = 0.25 from the
+                           bottom to v = 0.01, used once up and once down (boundary, not a seam)
   sphere_seam_closed.json  a whole sphere: one loop, a meridian seam edge used twice (the uses
                            coincide in PCURVE's chart; poles interior)
   sphere_cap.json          the cap v > 0.5 rad of a sphere, bounded by one latitude circle that
@@ -141,6 +143,33 @@ def cylinder_window():
     faces = [(dict(type="cylinder", radius=r, **MP.frame(O, Z, X)), [0], "f-window")]
     return MP.body("cylindrical face r 0.05 m: the window u in [-0.5, 0.5] rad, v in [0, 0.02] m across the seam, "
                    "imported line pcurves (GEO.CAD.TOPO.TRIM AC-2)", "c71dc71dc71dc71dc71dc71dc71dc71d", verts, edges,
+                   coedges, loops, faces)
+
+
+def cylinder_slit():
+    r, h, a, us, hs = 0.05, 0.02, 0.5, 0.25, 0.01
+    pt = lambda u, z: (r * math.cos(u), r * math.sin(u), z)  # noqa: E731
+    verts = [pt(-a, 0.0), pt(us, 0.0), pt(a, 0.0), pt(a, h), pt(-a, h), pt(us, hs)]
+    edges = [
+        (0, 1, (-a, us), MP.circle(O, Z, X, r), "e-bottom-l"),
+        (1, 5, (0.0, hs), MP.line(verts[1], Z, (math.cos(us), math.sin(us), 0.0)), "e-slit"),
+        (1, 2, (us, a), MP.circle(O, Z, X, r), "e-bottom-r"),
+        (2, 3, (0.0, h), MP.line(verts[2], Z, (math.cos(a), math.sin(a), 0.0)), "e-right"),
+        (4, 3, (-a, a), MP.circle((0.0, 0.0, h), Z, X, r), "e-top"),
+        (0, 4, (0.0, h), MP.line(verts[0], Z, (math.cos(a), -math.sin(a), 0.0)), "e-left"),
+    ]
+    l2 = lambda o, d: {"type": "line2", "origin": list(o), "dir": list(d)}  # noqa: E731
+    coedges = [(0, "same", l2((0.0, 0.0), (1.0, 0.0)), "c-bottom-l"),
+               (1, "same", l2((us, 0.0), (0.0, 1.0)), "c-slit-up"),
+               (1, "reversed", l2((us, 0.0), (0.0, 1.0)), "c-slit-down"),
+               (2, "same", l2((0.0, 0.0), (1.0, 0.0)), "c-bottom-r"),
+               (3, "same", l2((a, 0.0), (0.0, 1.0)), "c-right"),
+               (4, "reversed", l2((0.0, h), (1.0, 0.0)), "c-top"),
+               (5, "reversed", l2((-a, 0.0), (0.0, 1.0)), "c-left")]
+    loops = [([0, 1, 2, 3, 4, 5, 6], True, "l-slit")]
+    faces = [(dict(type="cylinder", radius=r, **MP.frame(O, Z, X)), [0], "f-slit")]
+    return MP.body("the cylinder window with a slit: the generator edge u = 0.25, v in [0, 0.01] used up and down "
+                   "by the loop (GEO.CAD.TOPO.TRIM review)", "511d511d511d511d511d511d511d511d", verts, edges,
                    coedges, loops, faces)
 
 
@@ -720,6 +749,7 @@ def build():
     files["plate_with_hole.json"] = MP.render(plate)
     files["cylinder_window.json"] = MP.render(window)
     files["trim_polygons.json"] = MP.render(poly)
+    files["cylinder_slit.json"] = MP.render(cylinder_slit())
     files["sphere_seam_closed.json"] = MP.render(sphere_seam_closed())
     files["sphere_cap.json"] = MP.render(sphere_cap())
 

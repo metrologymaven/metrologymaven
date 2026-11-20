@@ -223,12 +223,10 @@ fn undecidable_faces_never_guess() {
         classify_uv(&straddle, 1.0, 0.0, 1e-7),
         Err(TrimError::Undecidable(Undecidable::PcurveFailed { .. }))
     ));
-    for (name, label, periods) in [("torus_tubes", "f-torus", [0, 1])] {
-        let idx = fixture_index(name, label);
-        match classify_uv(&idx, 1.0, 0.01, 1e-7) {
-            Err(TrimError::Undecidable(Undecidable::Winding { periods: p, .. })) => assert_eq!(p, periods, "{name}"),
-            other => panic!("{name}: {other:?}"),
-        }
+    let torus = fixture_index("torus_tubes", "f-torus");
+    match classify_uv(&torus, 1.0, 0.01, 1e-7) {
+        Err(TrimError::Undecidable(Undecidable::Winding { periods: p, .. })) => assert_eq!(p, [0, 1]),
+        other => panic!("torus_tubes: {other:?}"),
     }
 }
 
@@ -354,6 +352,31 @@ fn bridge_edge_is_boundary_on_a_plane() {
         (0.5 * s, 2.0 * s + 2.0 * tol, TrimClass::Inside),
         (2.0 * s, 2.0 * s, TrimClass::Outside),
         (3.5 * s, 2.0 * s, TrimClass::Inside),
+    ] {
+        assert_eq!(classify_uv(&idx, u, v, tol), Ok(want), "({u}, {v})");
+    }
+}
+
+/// A slit (an edge used twice, both uses at u = 0.25, off every period line) inside the
+/// cylinder window: ordinary boundary on both sides, not a seam (hand-labelled: r = 0.05 m,
+/// the slit runs v in [0, 0.01] at u = 0.25).
+#[test]
+fn slit_on_a_cylinder_is_boundary() {
+    let idx = fixture_index("cylinder_slit", "f-slit");
+    assert_eq!(idx.undecidable(), None);
+    assert!(idx.segments().iter().all(|s| !s.seam));
+    let (r, tol) = (0.05, 1e-7);
+    for (u, v, want) in [
+        (0.25, 0.005, TrimClass::OnBoundary),
+        (0.25 + 0.5 * tol / r, 0.005, TrimClass::OnBoundary),
+        (0.25 - 0.5 * tol / r, 0.005, TrimClass::OnBoundary),
+        (0.25 + 3.0 * tol / r, 0.005, TrimClass::Inside),
+        (0.25 - 3.0 * tol / r, 0.005, TrimClass::Inside),
+        (0.25, 0.01 + 0.5 * tol, TrimClass::OnBoundary),
+        (0.25, 0.015, TrimClass::Inside),
+        (0.0, 0.01, TrimClass::Inside),
+        (0.25 + TAU, 0.005, TrimClass::OnBoundary),
+        (1.0, 0.01, TrimClass::Outside),
     ] {
         assert_eq!(classify_uv(&idx, u, v, tol), Ok(want), "({u}, {v})");
     }

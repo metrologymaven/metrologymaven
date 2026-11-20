@@ -37,6 +37,8 @@
 //!   end, `k = floor(d / P + 0.5)`) is a seam: crossed, but not boundary. On a face without a
 //!   periodic direction both uses are ordinary boundary (a bridge or slit). If the two uses
 //!   coincide (`k = 0`, PCURVE unwraps both to the same place, e.g. a sphere's meridian seam),
+//!   and the edge lies on a period line (every vertex within `2^-40 P` of the domain start
+//!   plus whole periods; otherwise the two uses are a slit, ordinary boundary on both),
 //!   the second use is lifted one period to the side where the material lies: with material
 //!   on the left of the first use (on the right for a `Reversed` face), going `+v` puts it at
 //!   `-P` in `u`. A coincident use that does not move along the axis is
@@ -88,13 +90,14 @@
 //!   `2|r0 + v tan a| + |v|`; sphere `3r`; torus `2(R + r) + r`). Each world coordinate is
 //!   three products and three sums (`gamma_6 < 2^-50` relative to `M`), the local coordinates
 //!   carry at most two products and the `sin`/`cos` error (taken as 1 ulp, at most `2^-52`
-//!   absolute for a value in `[-1, 1]`, the documented accuracy of the musl-derived
-//!   `fid_num::f` [unverified for this port]), together below `2^-49 M`; `2^-48` doubles it.
+//!   absolute for a value in `[-1, 1]`: REQ-KRN.NUM.FN-006 and its AC-2 self-test hold every
+//!   vendored function within 1 ulp of a 200-bit oracle on the self-test inputs; that the bound
+//!   holds for every input is [unverified]), together below `2^-49 M`; `2^-48` doubles it.
 //!   For a NURBS surface `2^-40 (p_u + p_v + 2) (w_max / w_min) max|P|inf`: a conservative
 //!   enlargement of the stability bound of convex-combination evaluation, not proven for
 //!   GEO.NURBS.EVAL's algorithm [unverified].
 //! - the distance: `2^-48 (|Q|inf + |S(m)|inf)` (three subtractions and two `hypot`s, each
-//!   within 1 ulp [unverified for the port's `hypot`]).
+//!   within 1 ulp by the same KRN.NUM.FN self-test bound [unverified beyond its inputs]).
 //! - the uv rounding of `a + (b - a) s` and of `x + k P`: `2^-50 (Lu + Lv)(|a|inf + |b|inf)`.
 //! - the period drift `D`: the chart copy `k` of the boundary is `S(x + k P)` while the band
 //!   measures the base image; for an analytic surface `P` is the binary64 `TAU`, within `2^-51`
@@ -638,6 +641,26 @@ struct Part {
     seam: bool,
 }
 
+/// Whether every vertex lies on a period line `lo + j P` (within `2^-40 P`) in each periodic
+/// direction, `lo` the domain start.
+fn on_period_line(
+    pts: &[ChartPoint],
+    per: &[Option<f64>; DIM],
+    domain: &[(f64, f64); DIM],
+    periodic: &[usize],
+) -> bool {
+    pts.iter().all(|q| {
+        let a = q.approx(per);
+        periodic.iter().all(|&i| match per[i] {
+            Some(p) => {
+                let r = (a[i] - domain[i].0) / p;
+                abs(r - floor(r + 0.5)) <= POLE_SNAP
+            }
+            None => true,
+        })
+    })
+}
+
 /// Collects segments and their bounding box.
 struct Emit {
     segs: Vec<TrimSeg>,
@@ -828,6 +851,12 @@ impl TrimIndex {
                     if let Some(p) = per[i] {
                         apart |= round_k((a0[i] - b1[i]) / p).ok_or(Undecidable::ChartExtent)? != 0;
                     }
+                }
+                // Coincident uses (k = 0) are a seam only when the edge lies on a period line
+                // (every vertex of the first use within 2^-40 P of the domain start plus whole
+                // periods): otherwise they are a slit, ordinary boundary on both uses.
+                if !apart && !on_period_line(&pa.pts, &per, &self.domain, &periodic) {
+                    continue;
                 }
                 let lift = if apart {
                     0
