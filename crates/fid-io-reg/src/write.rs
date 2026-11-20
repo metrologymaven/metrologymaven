@@ -10,7 +10,10 @@
 //!    the existing target must be a regular file: a symbolic link, junction or other
 //!    reparse point, or a folder, fails `io{InvalidInput}`; a read-only file fails
 //!    `io{PermissionDenied}` on every platform (POSIX would replace it, Windows would not;
-//!    one rule keeps the outcome platform-independent).
+//!    one rule keeps the outcome platform-independent). The existing entry must also be
+//!    listed in the folder under the requested name (ASCII case aside): an 8.3 short name
+//!    or other alias that resolves to a differently named file fails `path_outside_root`
+//!    (at most [`MAX_ALIAS_SCAN`] entries are looked at; a larger folder is refused).
 //! 2. **Sweep**: stale temp files in the folder are removed (best effort, at most
 //!    [`MAX_STALE_SCAN`] folder entries looked at). Only regular files (not links) named
 //!    exactly `.fid-tmp-<lowercase UUIDv7>` qualify, and only when both the UUIDv7
@@ -147,6 +150,7 @@ pub struct AtomicWriter {
     opts: WriteOptions,
     failed: Option<IoError>,
     done: bool,
+    sealed: Option<WriteReceipt>,
     fail_hard_link: bool,
 }
 
@@ -187,8 +191,29 @@ impl AtomicWriter {
             opts,
             failed: None,
             done: false,
+            sealed: None,
             fail_hard_link: false,
         })
+    }
+
+    /// Step 1 alone, for a dry run: the checks [`AtomicWriter::create`] makes on `target`
+    /// (`target_exists`, a link or folder or read-only file under `overwrite`), with no
+    /// stale sweep and no file created, removed or changed.
+    pub fn check(target: &ExportTarget, opts: WriteOptions) -> Result<(), IoError> {
+        AtomicWriter::check_classified(target, opts).map_err(TargetRefusal::into_inner)
+    }
+
+    /// [`AtomicWriter::check`], telling the explicit link, folder and read-only refusals
+    /// apart from everything else.
+    pub(crate) fn check_classified(target: &ExportTarget, opts: WriteOptions) -> Result<(), TargetRefusal> {
+        if target.final_link {
+            return Err(if opts.overwrite {
+                TargetRefusal::Protected(kind_err(io::ErrorKind::InvalidInput))
+            } else {
+                TargetRefusal::Other(IoError::TargetExists)
+            });
+        }
+        check_target_classified(&target.dir, &target.name, opts.overwrite)
     }
 
     /// The target file name inside the export folder.
@@ -241,6 +266,9 @@ impl AtomicWriter {
         if let Some(e) = &self.failed {
             return Err(e.clone());
         }
+        if self.sealed.is_some() {
+            return Err(self.fail(kind_err(io::ErrorKind::Other)));
+        }
         let end = u64::try_from(buf.len()).ok().and_then(|n| self.bytes.checked_add(n));
         let end = match end {
             Some(end) if end <= self.opts.max_bytes => end,
@@ -266,30 +294,49 @@ impl AtomicWriter {
         Ok(())
     }
 
-    /// Flushes, syncs and moves the temp file onto the target, then returns its digest and
-    /// size. On any error the temp file is removed and the target is unchanged.
-    pub fn commit(mut self) -> Result<WriteReceipt, IoError> {
-        if let Some(e) = self.failed.take() {
-            return Err(e);
+    /// Flushes, syncs and closes the temp file and returns its digest and size, without
+    /// touching the target: the bytes are durable under the temp name, ready for
+    /// [`AtomicWriter::commit`]. Calling it again returns the same receipt; writing after it
+    /// fails. On any error the writer is poisoned (the temp file is removed on drop).
+    pub fn prepare(&mut self) -> Result<WriteReceipt, IoError> {
+        if let Some(r) = self.sealed {
+            return Ok(r);
+        }
+        if let Some(e) = &self.failed {
+            return Err(e.clone());
         }
         let out = match self.out.take() {
             Some(out) => out,
-            None => return Err(kind_err(io::ErrorKind::Other)),
+            None => return Err(self.fail(kind_err(io::ErrorKind::Other))),
         };
         let sink = match out.into_inner() {
             Ok(sink) => sink,
-            Err(e) => return Err(self.io_at(e.error())),
+            Err(e) => {
+                let e = self.io_at(e.error());
+                return Err(self.fail(e));
+            }
         };
         let file = sink.file;
         if let Err(e) = file.sync_all() {
-            return Err(self.io_at(&e));
+            let e = self.io_at(&e);
+            return Err(self.fail(e));
         }
         drop(file);
+        let sha256 = Digest::from_bytes(std::mem::take(&mut self.hasher).finalize().into());
+        let r = WriteReceipt { sha256, bytes: self.bytes };
+        self.sealed = Some(r);
+        Ok(r)
+    }
+
+    /// [`AtomicWriter::prepare`] (if not done yet), then moves the temp file onto the
+    /// target and returns its digest and size. On any error the temp file is removed and the
+    /// target is unchanged.
+    pub fn commit(mut self) -> Result<WriteReceipt, IoError> {
+        let r = self.prepare()?;
         self.place()?;
         self.done = true;
         sync_dir(&self.dir);
-        let sha256 = Digest::from_bytes(std::mem::take(&mut self.hasher).finalize().into());
-        Ok(WriteReceipt { sha256, bytes: self.bytes })
+        Ok(r)
     }
 
     /// Moves the closed, synced temp file onto the target.
@@ -387,23 +434,72 @@ fn reparse_point(_m: &Metadata) -> bool {
     false
 }
 
-/// The target check of step 1, looked at without following links.
-fn check_target(dir: &Dir, name: &OsStr, overwrite: bool) -> Result<(), IoError> {
+/// Why the target check of step 1 refused.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum TargetRefusal {
+    /// The explicit rule: under `overwrite`, the target is a link, a folder or read-only.
+    Protected(IoError),
+    /// Anything else: `target_exists`, `path_outside_root` for an alias, or a file-system
+    /// error while looking.
+    Other(IoError),
+}
+
+impl TargetRefusal {
+    pub(crate) fn into_inner(self) -> IoError {
+        match self {
+            TargetRefusal::Protected(e) | TargetRefusal::Other(e) => e,
+        }
+    }
+}
+
+/// Most folder entries the alias check looks at; a larger folder is refused (fail closed).
+pub const MAX_ALIAS_SCAN: usize = 1 << 20;
+
+/// True if the folder lists an entry whose real name is `name` (exactly, or equal ignoring
+/// ASCII case, which case-insensitive file systems treat as the same name). An 8.3 short
+/// name or another alias resolves to an entry listed under a different name, so it fails.
+fn listed_as(dir: &Dir, name: &OsStr) -> Result<bool, IoError> {
+    let entries = dir.entries().map_err(|e| io_err(&e))?;
+    for (i, entry) in entries.enumerate() {
+        if i >= MAX_ALIAS_SCAN {
+            return Ok(false);
+        }
+        let real = entry.map_err(|e| io_err(&e))?.file_name();
+        let same =
+            real == name || matches!((real.to_str(), name.to_str()), (Some(a), Some(b)) if a.eq_ignore_ascii_case(b));
+        if same {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+/// The target check of step 1, looked at without following links. Under `overwrite` the
+/// existing entry must be listed under the requested name (no 8.3 short name or other alias
+/// may stand for it): `path_outside_root` otherwise.
+fn check_target_classified(dir: &Dir, name: &OsStr, overwrite: bool) -> Result<(), TargetRefusal> {
     let m = match dir.symlink_metadata(name) {
         Ok(m) => m,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(()),
-        Err(e) => return Err(io_err(&e)),
+        Err(e) => return Err(TargetRefusal::Other(io_err(&e))),
     };
     if !overwrite {
-        return Err(IoError::TargetExists);
+        return Err(TargetRefusal::Other(IoError::TargetExists));
+    }
+    if !listed_as(dir, name).map_err(TargetRefusal::Other)? {
+        return Err(TargetRefusal::Other(IoError::PathOutsideRoot));
     }
     if is_link(&m) || !m.is_file() {
-        return Err(kind_err(io::ErrorKind::InvalidInput));
+        return Err(TargetRefusal::Protected(kind_err(io::ErrorKind::InvalidInput)));
     }
     if m.permissions().readonly() {
-        return Err(kind_err(io::ErrorKind::PermissionDenied));
+        return Err(TargetRefusal::Protected(kind_err(io::ErrorKind::PermissionDenied)));
     }
     Ok(())
+}
+
+fn check_target(dir: &Dir, name: &OsStr, overwrite: bool) -> Result<(), IoError> {
+    check_target_classified(dir, name, overwrite).map_err(TargetRefusal::into_inner)
 }
 
 /// Removes `.fid-tmp-*` regular files at least [`STALE_AFTER`] old (best effort).
