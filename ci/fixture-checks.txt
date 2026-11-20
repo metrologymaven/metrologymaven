@@ -114,6 +114,7 @@ python fixtures/rpt/output/text/make_fixtures.py --check
 python fixtures/scan/cmp/make_field_golden.py --check
 python fixtures/scan/make_mesh_quality.py --check
 python fixtures/solv/cert/as-v1/make_cases.py --check
+python fixtures/solv/cert/recomp-v1/make_cases.py --check
 python fixtures/solv/make_mstart_fixtures.py --check
 python fixtures/solv/patch/ldl-order-v1/make_orders.py --check
 python fixtures/solv/patch/upstream-examples-v1/check_objectives.py

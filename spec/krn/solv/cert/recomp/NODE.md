@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-solv]
+built_pr: 321
 satisfies: [REQ-KRN.SOLV.CERT-002, REQ-KRN.SOLV.CERT-006]
 covers: []
 depends_on: [KRN.SOLV.CERT.AS, KRN.NUM.LA.QR, KRN.NUM.RED, KRN.NUM.ERR]
@@ -49,7 +51,7 @@ Computes the reported optimum from the active set alone. The caller's `ActiveSet
 
 ## Acceptance criteria
 
-- **AC-1** Given fixture `fixtures/solv/cert/recomp-v1` (straightness and flatness minimum-zone sets with exact rational optima, and circle minimum-zone sets with 50-digit optima), when recomputation runs, then linear cases match within 2 u relative and circle cases within 1e-14 relative [unverified].
+- **AC-1** Given fixture `fixtures/solv/cert/recomp-v1` (straightness and flatness minimum-zone sets with exact rational optima, and circle minimum-zone sets with 50-digit optima), when recomputation runs, then linear cases are within 2·u·cond relative to the parameter scale (cond = the QR condition estimate), circles within 1e-14, and every exact optimum lies inside the proven bound.
 - **AC-2** (path independence) Given one circle problem solved from two different conic starting points that reach the same active set, then the recomputed parameters and value are bit-identical.
 - **AC-3** (error path) Given a candidate set of three collinear points for a straightness zone with two parameters, then `RankDeficient`; given a near-degenerate set with condition 1e14, then `IllConditioned`.
 - **AC-4** Given AC-1's fixture on x86-64, ARM64 and wasm32 under wasmtime, then the digest of all outputs is identical.
@@ -57,9 +59,9 @@ Computes the reported optimum from the active set alone. The caller's `ActiveSet
 ## Design
 
 - **Registry command(s):** none; library API `fid_solv::cert::recomp::{ActiveSetProblem, recompute, Recomputed, RecompConfig}`.
-- **Data structures:** `trait ActiveSetProblem { fn n_params(&self) -> usize; fn expected_active(&self) -> usize; fn row_labels(&self) -> Vec<RowLabel>; fn is_linear(&self) -> bool; fn start_from_set(&self, set: &[RowLabel]) -> Result<Vec<f64>, CertError>; fn residuals_and_jacobian(&self, set: &[RowLabel], p: &[f64]) -> Result<(Vec<f64>, Mat), CertError>; fn value(&self, p: &[f64]) -> Result<f64, CertError>; fn constraint_values(&self, p: &[f64]) -> Result<Vec<f64>, CertError>; fn objective_gradient(&self, p: &[f64]) -> Result<Vec<f64>, CertError>; fn constraint_gradients(&self, set: &[RowLabel], p: &[f64]) -> Result<Mat, CertError>; }` (the last three are used by `KRN.SOLV.CERT.KKT`); `RecompConfig { rel_tol, cond_max, gn_steps }`.
+- **Data structures:** `trait ActiveSetProblem { fn n_params(&self) -> usize; fn expected_active(&self) -> usize; fn row_labels(&self) -> Vec<RowLabel>; fn is_linear(&self) -> bool; fn start_from_set(&self, set: &[RowLabel]) -> Result<Vec<f64>, CertError>; fn residuals_and_jacobian(&self, set: &[RowLabel], p: &[f64]) -> Result<(Vec<f64>, Mat), CertError>; fn value(&self, p: &[f64]) -> Result<f64, CertError>; fn constraint_values(&self, p: &[f64]) -> Result<Vec<f64>, CertError>; fn objective_gradient(&self, p: &[f64]) -> Result<Vec<f64>, CertError>; fn constraint_gradients(&self, set: &[RowLabel], p: &[f64]) -> Result<Mat, CertError>; }` (the last three are used by `KRN.SOLV.CERT.KKT`); `RecompConfig { rel_tol, cond_max, gn_steps }`. The trait also has three enclosure methods with `None` defaults: `residual_enclosure(set, p) -> Result<Option<Vec<Interval>>, CertError>`, `jacobian_enclosure(set, box) -> Result<Option<Vec<Interval>>, CertError>` (row-major) and `value_enclosure(box) -> Result<Option<Interval>, CertError>`; `Interval` is outward-rounded interval arithmetic. Signature: `recompute(problem, proposal: &Proposal, candidate: usize, cfg) -> Result<Recomputed, CertError>` (a set reaches it only as an uncertified candidate; a crate-internal `recompute_set` serves `KRN.SOLV.CERT.CT`). `Recomputed { set, params, value, cond, steps, param_bounds, value_bound }` with crate-private fields and accessors: `|params[i] - p*_i| <= param_bounds[i]` and `|value - value(p*)| <= value_bound` for the unique exact root `p*` in the box, proven by a Krawczyk test.
 - **Algorithm:** sort the set; linear: build system, QR least squares; nonlinear: p0 = start_from_set, then fixed GN steps p <- p - lstsq(J, r), then the step-norm test; condition from the QR diagnostics.
-- **Errors:** `CertError::{RankDeficient{rank}, IllConditioned{cond}, RecomputeNoConvergence{step_norm}, Callback(..)}`.
+- **Errors:** `CertError::{RankDeficient{rank}, IllConditioned{cond}, RecomputeNoConvergence{step_norm}, Callback{reason}, Numeric(NumError), BoundNotProven{reason}}` with `BoundFailure::{NotSquare, NoEnclosure, NotContracting, Overflow}`: fail closed, no result without a proven bound; an active set larger than `n_params` is solved by least squares and then fails with `NotSquare`.
 - **Determinism:** D0.
 - **Performance budget:** < 50 microseconds for a 7-parameter set [unverified until measured].
 - **Crate:** `fid-solv` (module `cert::recomp`).
@@ -75,6 +77,7 @@ Computes the reported optimum from the active set alone. The caller's `ActiveSet
 ## Open questions
 
 - `GDT.ZONE.POSE.LIN` and `KRN.MZ.LIN` were written against the open `ActiveSetProblem` interface; they must implement `start_from_set` so the nonlinear start does not depend on the iterate (for the linear GD&T rows, `is_linear() = true` and no start is needed).
+- **Enclosure obligation (from KRN.SOLV.CERT.RECOMP, #321):** every `ActiveSetProblem` must implement `value_enclosure`, and a nonlinear one also `residual_enclosure` and `jacobian_enclosure`; otherwise recomputation, and so `certify`, fails with `BoundNotProven`. For a linear problem the proven bound applies to the f64 data as given (the Jacobian and residuals at p = 0 are taken as the exact system).
 
 ## Children
 

@@ -67,6 +67,7 @@ Straightness of an axis in space: the smallest cylinder containing all points, r
 ## Open questions
 
 - The CI comparison with `KRN.ENV.MCC.CYL` is a test-time dependency only (P1a leaf against a P0 leaf); until MCC exists, the job is skipped and says so.
+- **Enclosure obligation (from KRN.SOLV.CERT.RECOMP, #321):** every `ActiveSetProblem` must implement `value_enclosure`, and a nonlinear one also `residual_enclosure` and `jacobian_enclosure`; otherwise recomputation, and so `certify`, fails with `BoundNotProven`. For a linear problem the proven bound applies to the f64 data as given (the Jacobian and residuals at p = 0 are taken as the exact system).
 
 ## Children
 

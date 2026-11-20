@@ -2,12 +2,16 @@
 //!
 //! The certificate pipeline extracts candidate active sets from a converged conic solution
 //! ([`active`], KRN.SOLV.CERT.AS), recomputes the optimum from a candidate, checks the KKT
-//! conditions independently and packages a certificate. Modules land one spec leaf at a
-//! time; see `spec/krn/solv/cert/`.
+//! conditions independently and packages a certificate. [`recomp`] (KRN.SOLV.CERT.RECOMP)
+//! recomputes the optimum on one candidate from the problem data, with a proven forward error
+//! bound. Modules land one spec leaf at a time; see `spec/krn/solv/cert/`.
 
 pub mod active;
+pub mod recomp;
 
 use core::fmt;
+
+use fid_num::NumError;
 
 pub use active::{Proposal, RowLabel};
 
@@ -21,9 +25,28 @@ pub enum Undetermined {
     OverCap,
 }
 
+/// Why [`recomp::recompute`] could not prove a forward error bound for its result. The
+/// recomputation fails closed: without a proven bound there is no result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum BoundFailure {
+    /// The active-set system is not square (more equations than parameters), so it has no
+    /// isolated root to enclose.
+    NotSquare,
+    /// The problem supplies no enclosure that the bound needs (`value_enclosure`, or for a
+    /// nonlinear problem `residual_enclosure` or `jacobian_enclosure`).
+    NoEnclosure,
+    /// The Krawczyk test did not contract within its fixed number of attempts.
+    NotContracting,
+    /// An enclosure overflowed, or an interval division or square root met 0 or a negative
+    /// argument.
+    Overflow,
+}
+
 /// Every way the certificate pipeline can fail. Later leaves of KRN.SOLV.CERT add variants,
-/// so the enum is non-exhaustive.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// so the enum is non-exhaustive. (Not `Eq`: [`CertError::IllConditioned`] and
+/// [`CertError::RecomputeNoConvergence`] carry an `f64`.)
+#[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum CertError {
     /// An input has the wrong length: `field` (`"labels"`, `"y"` or `"s"`) has `got`
@@ -57,6 +80,36 @@ pub enum CertError {
         /// Why no list was returned.
         cause: Undetermined,
     },
+    /// The active-set system has numerical rank `rank` below the parameter count under the
+    /// recorded tolerance (REQ-KRN.SOLV.CERT.RECOMP-002).
+    RankDeficient {
+        /// Numerical rank of the active-set system.
+        rank: usize,
+    },
+    /// The condition estimate of the active-set system exceeds the configured threshold
+    /// (REQ-KRN.SOLV.CERT.RECOMP-004); no value is returned.
+    IllConditioned {
+        /// The condition estimate (`+inf` when beyond the `f64` range).
+        cond: f64,
+    },
+    /// The last Gauss-Newton step on a nonlinear active-set system is longer than `4 u` times
+    /// the parameter norm (REQ-KRN.SOLV.CERT.RECOMP-003).
+    RecomputeNoConvergence {
+        /// 2-norm of the last step.
+        step_norm: f64,
+    },
+    /// An `ActiveSetProblem` implementation refused its input.
+    Callback {
+        /// The implementation's reason.
+        reason: &'static str,
+    },
+    /// A `fid-num` operation failed (overflow, allocation, a non-finite value).
+    Numeric(NumError),
+    /// No forward error bound could be proven, so no result is returned (fail closed).
+    BoundNotProven {
+        /// Why.
+        reason: BoundFailure,
+    },
 }
 
 impl fmt::Display for CertError {
@@ -75,8 +128,24 @@ impl fmt::Display for CertError {
                 strongly_active.len(),
                 ambiguous.len()
             ),
+            CertError::RankDeficient { rank } => write!(f, "cert: active-set system is rank deficient (rank {rank})"),
+            CertError::IllConditioned { cond } => {
+                write!(f, "cert: active-set system is ill-conditioned (cond {cond:e})")
+            }
+            CertError::RecomputeNoConvergence { step_norm } => {
+                write!(f, "cert: recomputation did not converge (last step norm {step_norm:e})")
+            }
+            CertError::Callback { reason } => write!(f, "cert: active-set problem: {reason}"),
+            CertError::Numeric(e) => write!(f, "cert: {e}"),
+            CertError::BoundNotProven { reason } => write!(f, "cert: no proven error bound ({reason:?})"),
         }
     }
 }
 
 impl core::error::Error for CertError {}
+
+impl From<NumError> for CertError {
+    fn from(e: NumError) -> CertError {
+        CertError::Numeric(e)
+    }
+}
