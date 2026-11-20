@@ -104,6 +104,7 @@
  ],
  "list_entity": {
   "active_stage": "10055045-3a8b-7316-8aa5-27fd007eb78a",
+  "adoptable": null,
   "stages": [
    "10055045-3a8b-7316-8aa5-27fd007eb78a"
   ]
@@ -120,7 +121,7 @@
  "run": "7c98f7e0-365f-7173-9a2d-d3e7349c0cbf",
  "run2": "6e2954cc-07a2-7bf3-a092-1eb5264592c9",
  "s1": "10055045-3a8b-7316-8aa5-27fd007eb78a",
- "stage_digest_s1": "sha256:16abfe1dddf50d81b4901b262c966d37258a85515692b74f08e07ba90be3d2eb",
+ "stage_digest_s1": "sha256:8d986d4c0db2fa4f5cc6462e975067e52d6916da9def779375d468a23231638f",
  "stage_list": "e324f66f-a675-51f7-90ab-4f323e41d373",
  "type": {
   "display_kind": "point",

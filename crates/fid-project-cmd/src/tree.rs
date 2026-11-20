@@ -25,7 +25,7 @@
 //!   once, so a transition it can no longer make means the state is corrupt. The stage
 //!   state rules (`stage_not_found`, `stage_active`, `bad_order`) are treated the same way.
 //! - Stage refusals (spec node `CORE.PRJ.STAGE.MODEL`, catalogue v3): `label` is
-//!   `validation/label`, `bad_order` is `validation/bad_stage`, `stage_not_found` is
+//!   `validation/label`, `bad_order` and `ambiguous_stage` are `validation/bad_stage`, `stage_not_found` is
 //!   `not_found/unknown_entity` and `stage_active` is `precondition/stage_active`.
 //! - The state view also serves the stage records (kind `project.stage`) and the stage list
 //!   (kind `project.stage_list`), which the stage commands read.
@@ -52,7 +52,7 @@ pub fn to_bus_error(e: &TreeError) -> BusError {
         TreeError::Id(_) => BusError::Internal(InternalReason::HandlerFailed, d),
         TreeError::InvalidTransition { .. } => BusError::Precondition(PreconditionReason::InvalidTransition, d),
         TreeError::Label => BusError::Validation(ValidationReason::Label, d),
-        TreeError::BadOrder(_) => BusError::Validation(ValidationReason::BadStage, d),
+        TreeError::BadOrder(_) | TreeError::AmbiguousStage(_) => BusError::Validation(ValidationReason::BadStage, d),
         TreeError::StageNotFound(_) => BusError::NotFound(NotFoundReason::UnknownEntity, d),
         TreeError::StageActive(_) => BusError::Precondition(PreconditionReason::StageActive, d),
         TreeError::DuplicateType(_)

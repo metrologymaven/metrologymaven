@@ -12,10 +12,14 @@
 //!   are the element slots of `CORE.PRJ.TREE.MODEL`. Applying `StageAdded` gives every
 //!   element a `not_computed` slot for the new stage in the same commit (REQ-002), with no
 //!   per-element events. A project without explicit stages has the implicit default stage
-//!   of `CORE.PRJ.TREE.MODEL`; the first `StageAdded` takes its place: every element's
-//!   default-stage slot (state and digest) moves to the new stage, which also becomes the
-//!   active stage. So "a project with one stage" is the same whether or not the stage was
-//!   ever named, and no measured data is lost.
+//!   of `CORE.PRJ.TREE.MODEL`. The first `StageAdded` adopts it only while none of its
+//!   slots holds data (every slot is `not_computed` with no digest): the new stage takes its
+//!   place in the sequence and as the active stage, and the event says so (`"adopts":
+//!   <default id>`). If the default stage holds data, it becomes an explicit stage instead
+//!   (label [`DEFAULT_STAGE_LABEL`], the new stage's run) that keeps its reserved ID, its
+//!   data and the active-stage role; the new stage is appended with empty slots
+//!   (`"adopts": null`). Nothing moves silently. The reserved default-stage ID is never
+//!   importable, even once adopted.
 //! - Removal is soft (REQ-004): the record is marked `removed`, every element keeps its slot
 //!   for it (the data stays in the state and the journal), a removed stage takes no new
 //!   slots, no slot changes and no new elements' slots, and `project.list_stages@1` hides it
@@ -27,19 +31,21 @@
 //!   the one event (or, for the R0 list, the result); they write nothing. The bus handlers,
 //!   registry definitions and bus error mapping live in `fid-project-cmd`. The view has no
 //!   listing, so the tree publishes the stage sequence as one entity, the stage list
-//!   ([`STAGE_LIST_KIND`], ID [`stage_list_id`]): `{"active_stage", "stages": [<id>, ...]}`
-//!   in project order, removed stages included; each stage is an entity of kind
+//!   ([`STAGE_LIST_KIND`], ID [`stage_list_id`]): `{"active_stage", "adoptable": <default
+//!   id> | null, "stages": [<id>, ...]}` in project order, removed stages included; each
+//!   stage is an entity of kind
 //!   [`STAGE_KIND`] whose body is [`Stage::body`].
 //!
 //! Check order of a command, first failure wins: parameter shape (`schema`), text
 //! (`label`), references (`bad_reference`: the run must be a Run), the state rules
-//! (`stage_not_found`, `stage_active`, `bad_order`), then the ID. Only an add that passes
+//! (`stage_not_found`, `stage_active`, `bad_order`; for add, whether the default stage is
+//! adopted), then the ID. Only an add that passes
 //! every check draws an ID (as the container commands do).
 //!
 //! Wire forms (RFC 8785; IDs are canonical lowercase UUID text):
 //! - stage body: `{"id", "label", "metadata": {}, "removed": bool, "run", "serial": string |
 //!   null}`;
-//! - [`STAGE_ADDED`] `{"id", "label", "metadata", "run", "serial"}`;
+//! - [`STAGE_ADDED`] `{"adopts": <id> | null, "id", "label", "metadata", "run", "serial"}`;
 //! - [`STAGE_REMOVED`] `{"stage"}`;
 //! - [`STAGES_REORDERED`] `{"order": [<id>, ...], "run"}`: the run's live stages in their new
 //!   order; they take, in that order, the positions in the project sequence that the run's
@@ -69,6 +75,8 @@ pub const ADD_STAGE: &str = "project.add_stage";
 pub const REMOVE_STAGE: &str = "project.remove_stage";
 pub const REORDER_STAGES: &str = "project.reorder_stages";
 pub const LIST_STAGES: &str = "project.list_stages";
+/// Label of the explicit stage the implicit default stage becomes when it holds data.
+pub const DEFAULT_STAGE_LABEL: &str = "Default";
 
 // ------------------------------------------------------------------ the entity
 
@@ -183,10 +191,15 @@ impl Stage {
     }
 }
 
-/// The checked body of a `StageAdded` event: the new, live stage. `schema` for a wrong
-/// shape, `label` for a label or serial breaking the text rules.
-pub(crate) fn stage_from_added(body: &CValue) -> Result<Stage, TreeError> {
-    let o = exact_keys(body, &["id", "label", "metadata", "run", "serial"])?;
+/// The checked body of a `StageAdded` event: the new, live stage and the default stage it
+/// adopts (`adopts`, or `None`). `schema` for a wrong shape, `label` for a label or serial
+/// breaking the text rules.
+pub(crate) fn stage_from_added(body: &CValue) -> Result<(Stage, Option<Uuid>), TreeError> {
+    let o = exact_keys(body, &["adopts", "id", "label", "metadata", "run", "serial"])?;
+    let adopts = match o.get("adopts") {
+        Some(CValue::Null) => None,
+        _ => Some(uuid_field(o, "adopts")?),
+    };
     let id = uuid_field(o, "id")?;
     let run = uuid_field(o, "run")?;
     let label = str_field(o, "label")?;
@@ -201,7 +214,7 @@ pub(crate) fn stage_from_added(body: &CValue) -> Result<Stage, TreeError> {
     };
     let label = stage_text(label)?;
     let serial = serial.map(stage_text).transpose()?;
-    Ok(Stage::new(id, run, label, serial, metadata, false))
+    Ok((Stage::new(id, run, label, serial, metadata, false), adopts))
 }
 
 /// A label or serial: the container label rules (1 to 256 characters, no Cc or bidi
@@ -253,6 +266,8 @@ pub fn stage_list_id(namespace: Uuid) -> Result<Uuid, TreeError> {
 pub struct StageListing {
     /// The active stage (the implicit default stage while there are no explicit stages).
     pub active_stage: Uuid,
+    /// The implicit default stage the next added stage adopts, if it holds no data.
+    pub adoptable: Option<Uuid>,
     /// Every explicit stage, removed ones included, in project order.
     pub stages: Vec<Stage>,
 }
@@ -261,6 +276,46 @@ impl StageListing {
     /// Reads the stage list entity and every stage it names. A missing or malformed list or
     /// stage is `invariant_violated`.
     pub fn read(view: &dyn ContainerView, namespace: Uuid) -> Result<StageListing, TreeError> {
+        let head = ListHead::read(view, namespace)?;
+        let mut stages = Vec::with_capacity(head.stages.len());
+        for id in &head.stages {
+            stages.push(read_stage(view, id)?);
+        }
+        Ok(StageListing { active_stage: head.active_stage, adoptable: head.adoptable, stages })
+    }
+
+    /// The live stages of `run`, in project order.
+    pub fn live_of_run(&self, run: &Uuid) -> Vec<Uuid> {
+        self.stages.iter().filter(|s| !s.removed && s.run == *run).map(|s| s.id).collect()
+    }
+}
+
+/// One stage entity read from the view; `invariant_violated` if it is missing or malformed.
+fn read_stage(view: &dyn ContainerView, id: &Uuid) -> Result<Stage, TreeError> {
+    let bad = |m: String| TreeError::Invariant(format!("stage list: {m}"));
+    let Some((kind, body)) = view.entity(id) else {
+        return Err(bad(format!("stage {id} is missing")));
+    };
+    if kind != STAGE_KIND {
+        return Err(bad(format!("entity {id} is not a stage")));
+    }
+    let s = Stage::from_value(body)?;
+    if s.id != *id {
+        return Err(bad(format!("stage {id} body names another ID")));
+    }
+    Ok(s)
+}
+
+/// The stage list entity alone (no stage bodies): what add and remove need, read in
+/// O(stages) without parsing every stage.
+struct ListHead {
+    active_stage: Uuid,
+    adoptable: Option<Uuid>,
+    stages: Vec<Uuid>,
+}
+
+impl ListHead {
+    fn read(view: &dyn ContainerView, namespace: Uuid) -> Result<ListHead, TreeError> {
         let bad = |m: String| TreeError::Invariant(format!("stage list: {m}"));
         let lid = stage_list_id(namespace)?;
         let Some((kind, body)) = view.entity(&lid) else {
@@ -272,38 +327,26 @@ impl StageListing {
         let CValue::Obj(o) = body else {
             return Err(bad("not an object".to_string()));
         };
-        if o.len() != 2 {
+        if o.len() != 3 {
             return Err(bad("missing or extra fields".to_string()));
         }
         let active_stage = state_uuid(o.get("active_stage")).ok_or_else(|| bad("active_stage".to_string()))?;
+        let adoptable = match o.get("adoptable") {
+            Some(CValue::Null) => None,
+            v => Some(state_uuid(v).ok_or_else(|| bad("adoptable".to_string()))?),
+        };
         let Some(CValue::Arr(ids)) = o.get("stages") else {
             return Err(bad("stages must be an array".to_string()));
         };
-        let mut stages = Vec::with_capacity(ids.len());
-        for v in ids {
-            let id = match v {
+        let stages = ids
+            .iter()
+            .map(|v| match v {
                 CValue::Str(s) => canonical_uuid(s),
                 _ => None,
-            }
-            .ok_or_else(|| bad("a stage ID is not a canonical UUID".to_string()))?;
-            let Some((kind, body)) = view.entity(&id) else {
-                return Err(bad(format!("stage {id} is missing")));
-            };
-            if kind != STAGE_KIND {
-                return Err(bad(format!("entity {id} is not a stage")));
-            }
-            let s = Stage::from_value(body)?;
-            if s.id != id {
-                return Err(bad(format!("stage {id} body names another ID")));
-            }
-            stages.push(s);
-        }
-        Ok(StageListing { active_stage, stages })
-    }
-
-    /// The live stages of `run`, in project order.
-    pub fn live_of_run(&self, run: &Uuid) -> Vec<Uuid> {
-        self.stages.iter().filter(|s| !s.removed && s.run == *run).map(|s| s.id).collect()
+            })
+            .map(|id| id.ok_or_else(|| bad("a stage ID is not a canonical UUID".to_string())))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(ListHead { active_stage, adoptable, stages })
     }
 }
 
@@ -379,20 +422,26 @@ pub fn add_stage(
     let serial = serial.map(stage_text).transpose()?;
     // 3. References.
     expect_run(view, &run)?;
-    // 4. The ID: imported unchanged, or a fresh UUIDv7. Nothing is drawn before this point.
+    // 4. State: whether the implicit default stage is adopted (it holds no data).
+    let adopts = ListHead::read(view, namespace)?.adoptable;
+    // 5. The ID: imported unchanged, or a fresh UUIDv7. Nothing is drawn before this point.
+    // The reserved default-stage ID is never available, even once replaced.
+    let reserved = reserved_id(namespace, "project.default_stage")?;
     let h = Hierarchy::new(view);
     let mut ids = IdService::new(namespace, source, &h);
     let id = match imported {
+        Some(id) if id == reserved => return Err(TreeError::IdCollision(id)),
         Some(id) => ids.import_uuid(id)?,
         None => {
             let id = ids.new_v7()?;
-            if crate::id::IdIndex::contains_id(&h, &id) {
+            if id == reserved || crate::id::IdIndex::contains_id(&h, &id) {
                 return Err(TreeError::IdCollision(id));
             }
             id
         }
     };
     let body = obj([
+        ("adopts", adopts.as_ref().map_or(CValue::Null, uuid_value)),
         ("id", uuid_value(&id)),
         ("label", text(label.as_untrusted_str())),
         ("metadata", CValue::Obj(BTreeMap::new())),
@@ -408,11 +457,11 @@ pub fn add_stage(
 pub fn remove_stage(view: &dyn ContainerView, params: &CValue, namespace: Uuid) -> Result<TreeEvent, TreeError> {
     let p = params_obj(params, &["stage"])?;
     let stage = param_uuid(required(p, "stage")?, "stage")?;
-    let listing = StageListing::read(view, namespace)?;
-    if !listing.stages.iter().any(|s| s.id == stage && !s.removed) {
-        return Err(TreeError::StageNotFound(stage));
+    let head = ListHead::read(view, namespace)?;
+    if !head.stages.contains(&stage) || read_stage(view, &stage)?.removed {
+        return Err(TreeError::StageNotFound(stage.to_string()));
     }
-    if listing.active_stage == stage {
+    if head.active_stage == stage {
         return Err(TreeError::StageActive(stage));
     }
     Ok(TreeEvent::new(STAGE_REMOVED, obj([("stage", uuid_value(&stage))])))

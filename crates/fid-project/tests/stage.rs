@@ -269,6 +269,141 @@ fn ac1_add_stage_gives_every_element_a_slot() {
     assert_eq!(p.tree.active_stage(), s1);
     assert_eq!(p.tree.target_stage(None).unwrap(), s1);
     assert_eq!(p.tree.target_stage(Some(&s2)).unwrap(), s2);
+
+    // Creating an element with data in S2 leaves S1's per-stage digest unchanged.
+    let in_s2 = obj(get(ac1, "element_in_s2"));
+    let mut q = p.clone();
+    q.tree.apply_commit(&arr(in_s2, "events").iter().map(tree_event).collect::<Vec<_>>()).unwrap();
+    assert_eq!(q.tree.stage_digest(&s1).unwrap(), s1_before);
+    assert_eq!(q.tree.stage_digest(&s1).unwrap().as_str(), st(in_s2, "s1_digest"));
+    assert_eq!(q.tree.stage_digest(&s2).unwrap().as_str(), st(in_s2, "s2_digest"));
+    assert_ne!(q.tree.stage_digest(&s2).unwrap(), p.tree.stage_digest(&s2).unwrap());
+}
+
+/// The implicit default stage holds data (20 `current` results): the first added stage does
+/// not adopt it (`adopts: null`). The default stage becomes an explicit stage that keeps its
+/// reserved ID, its data and the active role; the new stage gets empty slots (REQ-002).
+#[test]
+fn default_stage_with_data_is_kept_not_adopted() {
+    let c = cases();
+    let k = obj(get(obj(&c), "default_with_data"));
+    let events = p100_events();
+    let mut p = empty();
+    for e in &events[..65] {
+        p.apply(e).unwrap();
+    }
+    let default = p.tree.default_stage_id();
+    let before = obj(get(k, "before"));
+    for e in arr(k, "setup") {
+        p.apply(&tree_event(e)).unwrap();
+    }
+    assert_eq!(p.digest(), st(before, "digest"));
+    assert_eq!(p.tree.adoptable_default(), None);
+    let (_, body) = p.tree.entity(&p.tree.stage_list_id()).unwrap();
+    assert_eq!(canon(body), canon(get(before, "list_entity")));
+    assert_eq!(p.tree.stage_digest(&default).unwrap().as_str(), st(before, "default"));
+    accept(&mut p, k, &mut no_source());
+    assert_eq!(p.digest(), st(k, "digest_after"));
+    let s1 = uuid(obj(get(k, "result")), "stage");
+    assert_eq!(p.tree.stages(), &[default, s1][..]);
+    assert_eq!(p.tree.active_stage(), default);
+    assert_eq!(p.tree.stage(&default).unwrap().label().as_untrusted_str(), "Default");
+    assert_eq!(p.tree.stage_digest(&default).unwrap().as_str(), st(before, "default"));
+    let digests = obj(get(k, "stage_digests"));
+    for id in digests.keys() {
+        assert_eq!(p.tree.stage_digest(&Uuid::parse(id).unwrap()).unwrap().as_str(), st(digests, id));
+    }
+    assert_eq!(canon(&list(&p, &CValue::Obj(Obj::new()))), canon(get(k, "list")));
+    let (_, body) = p.tree.entity(&p.tree.stage_list_id()).unwrap();
+    assert_eq!(canon(body), canon(get(k, "list_entity")));
+    // Every element still shows its default-stage result; S1 slots are empty.
+    for e in p.tree.elements() {
+        assert_eq!(e.slots().get(&s1).unwrap().state, ElementState::NotComputed);
+    }
+    assert_eq!(p.tree.elements().filter(|e| e.slots()[&default].state == ElementState::Current).count(), 20);
+    p.tree.verify().unwrap();
+}
+
+/// The reserved default-stage ID stays reserved after adoption: no element, group or stage
+/// may take it, and an event whose `adopts` disagrees with the state is `bad_stage`.
+#[test]
+fn reserved_default_id_and_adopts_check() {
+    let mut p = after_ac1();
+    let default = p.tree.default_stage_id();
+    assert!(!p.tree.stages().contains(&default));
+    assert!(p.tree.contains_id(&default));
+    let root = p.tree.root();
+    let el =
+        format!(r#"{{"id":"{default}","meta":{{}},"name":"x","parent":"{root}","type":"test.point","visible":true}}"#);
+    assert_eq!(
+        p.apply(&TreeEvent::new("ElementCreated", parse(el.as_bytes()).unwrap())).unwrap_err().code(),
+        "id_collision"
+    );
+    let s = setup();
+    let run = st(obj(&s), "run");
+    let add = |id: &str, adopts: &str| {
+        let b = format!(r#"{{"adopts":{adopts},"id":"{id}","label":"X","metadata":{{}},"run":"{run}","serial":null}}"#);
+        TreeEvent::new(STAGE_ADDED, parse(b.as_bytes()).unwrap())
+    };
+    let before = p.digest();
+    assert_eq!(p.apply(&add(&default.to_string(), "null")).unwrap_err().code(), "id_collision");
+    let fresh = "0190aaaa-0000-7000-8000-000000000001";
+    assert_eq!(p.apply(&add(fresh, &format!("\"{default}\""))).unwrap_err().code(), "bad_stage");
+    assert_eq!(p.digest(), before);
+    // On a fresh project the default stage must be adopted: `adopts: null` is refused.
+    let mut q = empty();
+    assert_eq!(q.tree.adoptable_default(), Some(default));
+    assert_eq!(q.apply(&add(fresh, "null")).unwrap_err().code(), "bad_stage");
+}
+
+/// Lookup by name: exactly one live stage, `stage_not_found` for none, `ambiguous_stage`
+/// (bus `validation/bad_stage`) for several.
+#[test]
+fn stage_by_label() {
+    let mut p = after_ac1();
+    let s1 = p.tree.active_stage();
+    assert_eq!(p.tree.stage_by_label("S1").unwrap(), s1);
+    assert_eq!(p.tree.stage_by_label("nope").unwrap_err().code(), "stage_not_found");
+    let s = setup();
+    let run = st(obj(&s), "run");
+    let params =
+        parse(format!(r#"{{"id":"0190aaaa-0000-7000-8000-000000000002","label":"S1","run":"{run}"}}"#).as_bytes())
+            .unwrap();
+    let e = add_stage(&p, &params, namespace(), &mut no_source()).unwrap();
+    p.apply(&e).unwrap();
+    assert_eq!(p.tree.stage_by_label("S1").unwrap_err().code(), "ambiguous_stage");
+    assert_eq!(p.tree.stages_labelled("S1").len(), 2);
+}
+
+/// Creating elements in a project with 1,000 stages costs O(stages log stages) per element
+/// (liveness is looked up in the records, not by scanning the sequence).
+#[test]
+fn element_creation_with_one_thousand_stages_is_fast() {
+    let c = cases();
+    let ac2 = obj(get(obj(&c), "ac2"));
+    let mut p = p100();
+    let mut evs = Vec::new();
+    for params in arr(ac2, "adds") {
+        let e = add_stage(&p, params, namespace(), &mut no_source()).unwrap();
+        p.apply(&e).unwrap();
+        evs.push(e);
+    }
+    let root = p.tree.root();
+    let start = std::time::Instant::now();
+    let mut batch = Vec::new();
+    for i in 0..1000u128 {
+        let id = Uuid::from_u128(0x0190_bbbb_0000_7000_8000_0000_0000_0000 | i);
+        let b = format!(
+            r#"{{"id":"{id}","meta":{{}},"name":"n{i}","parent":"{root}","type":"test.point","visible":true}}"#
+        );
+        batch.push(TreeEvent::new("ElementCreated", parse(b.as_bytes()).unwrap()));
+    }
+    p.tree.apply_commit(&batch).unwrap();
+    let took = start.elapsed();
+    assert!(p.tree.elements().all(|e| e.slots().len() == 1000));
+    // Generous for debug builds on CI runners; the old O(stages^2) scan per element took
+    // about 1e9 comparisons here.
+    assert!(took < std::time::Duration::from_secs(60), "{took:?}");
 }
 
 /// A stage without an imported ID draws a UUIDv7 from the observation source; the label and
@@ -343,7 +478,6 @@ fn ac3_soft_remove_and_undo() {
     assert_eq!(p.tree.stage_digest(&s1).unwrap(), s1_before);
     assert_eq!(p.digest(), st(ac3, "digest_before"));
     assert_eq!(canon(&list(&p, &CValue::Obj(Obj::new()))), canon(get(ac3, "list_before")));
-    let undo_state = p.clone();
     let rm = obj(get(ac3, "remove"));
     accept(&mut p, rm, &mut no_source());
     let s2 = uuid(obj(get(rm, "result")), "stage");
@@ -386,10 +520,22 @@ fn ac3_soft_remove_and_undo() {
     }
     assert_eq!(p.digest(), st(ac3, "digest_after"));
 
-    // Undo by head move: the state at the previous head has S2 live with its data.
-    assert_eq!(undo_state.digest(), st(ac3, "digest_before"));
-    assert_eq!(undo_state.tree.stage_digest(&s2).unwrap().as_str(), st(ac3, "s2_digest"));
-    assert_eq!(undo_state.tree.live_stages(), vec![s1, s2]);
+    // Undo by head move: replaying the journal up to the previous head (everything but the
+    // removal) gives the state before the removal, with S2 live and its data.
+    let mut journal = p100_events();
+    journal.push(tree_event(get(obj(get(obj(&c), "ac1")), "event")));
+    journal.extend(arr(ac3, "setup").iter().map(tree_event));
+    journal.push(tree_event(get(rm, "event")));
+    let mut undone = empty();
+    for e in &journal[..journal.len() - 1] {
+        undone.apply(e).unwrap();
+    }
+    assert_eq!(undone.digest(), st(ac3, "digest_before"));
+    assert_eq!(undone.tree.stage_digest(&s2).unwrap().as_str(), st(ac3, "s2_digest"));
+    assert_eq!(undone.tree.live_stages(), vec![s1, s2]);
+    let mut redone = undone.clone();
+    redone.apply(journal.last().unwrap()).unwrap();
+    assert_eq!(redone.digest(), p.digest());
 }
 
 /// REQ-005 on the tree too: a journaled `StageRemoved` of the active stage, of an unknown

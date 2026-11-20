@@ -11,21 +11,25 @@ Files written next to this script:
 - p100/setup.json: the project namespace, the reserved IDs (tree root, implicit default
   stage, stage list), the container and stage IDs, the principal and the test element type.
 - p100/events.jsonl: the synthetic project p100, one canonical `{"body", "type"}` per line:
-  a Part, a Revision, a Plan and two Runs (`ContainerCreated`), 60 elements, 20 slot changes
-  in the implicit default stage, `StageAdded` S1 (the first explicit stage, which takes the
-  default stage's place and data), 40 more elements and 15 slot changes in S1. 100 elements,
-  one stage.
+  a Part, a Revision, a Plan and two Runs (`ContainerCreated`), 60 elements, `StageAdded` S1
+  (the first explicit stage; the implicit default stage holds no data, so S1 adopts it),
+  40 more elements and 35 slot changes in S1. 100 elements, one stage.
 - p100/expected_digest.txt: the canonical state digest of p100.
 - cases.json: the acceptance cases (AC-1 .. AC-5) and hand-labelled refusals; see `main`.
 
 Pinned choices (stated in the PR):
-- Stage events: StageAdded {id, label, metadata, run, serial}; StageRemoved {stage};
+- Stage events: StageAdded {adopts, id, label, metadata, run, serial}; StageRemoved {stage};
   StagesReordered {order, run}. Stage body {id, label, metadata, removed, run, serial};
   `metadata` is {} (no command sets it yet); `serial` is a string or null.
-- The first StageAdded of a project with only the implicit default stage replaces it: each
-  element's default-stage slot moves, unchanged, to the new stage, which becomes the stage
-  sequence and the active stage. Later StageAdded events append to the sequence and give
-  every element a new `not_computed` slot with a null digest.
+- The first StageAdded of a project with only the implicit default stage adopts it only if
+  every element's default-stage slot is empty (`not_computed`, null digest): the new stage
+  replaces it in the sequence and as the active stage (`adopts`: the default stage ID).
+  Otherwise (`adopts`: null) the default stage becomes an explicit stage record {id: the
+  reserved default ID, label "Default", metadata {}, removed false, run: the new stage's
+  run, serial null} keeping its data and the active role, and the new stage is appended.
+  Every other StageAdded has `adopts` null, appends to the sequence and gives every element
+  a new `not_computed` slot with a null digest. The reserved default ID is never available
+  as a stage ID (conflict/id_collision).
 - StageRemoved marks the record removed; slots stay. A removed stage takes no new slots,
   allows no slot change (`bad_stage`) and is hidden from the list unless include_removed.
 - StagesReordered: `order` must be exactly a permutation of the run's live stages
@@ -35,9 +39,11 @@ Pinned choices (stated in the PR):
   "stages": [all stage IDs in project order, removed included]} plus "stage_records": {id:
   stage body} once there are explicit stages.
 - Per-stage digest: SHA-256 of the canonical {"elements": {id: {"digest", "state"}},
-  "stage": id} over the elements holding a slot for the stage.
+  "stage": id} over the elements whose slot for the stage is not empty (empty =
+  `not_computed` with a null digest).
 - Stage list entity (ID: UUIDv5 of the namespace over {"kind": "project.stage_list"}):
-  {"active_stage", "stages": [explicit stage IDs in project order]}.
+  {"active_stage", "adoptable": default ID if the next add adopts it else null, "stages":
+  [explicit stage IDs in project order]}.
 - Command results: add {"stage": id}; remove {"stage": id}; reorder {"order": [ids]};
   list {"stages": [stage body + "order": position in the sequence]}.
 - Command check order: parameter shape (validation/schema), label and serial text
@@ -107,6 +113,8 @@ PART, REV, PLAN, RUN, RUN2 = (v7_like(f"stage-model-{t}") for t in ("part", "rev
 S = {n: v7_like(f"stage-model-s{n}") for n in range(1, 1001)}
 ELEMENTS = [v7_like(f"stage-model-element-{i}") for i in range(100)]
 NEW_ELEMENT = v7_like("stage-model-element-new")
+S2_ELEMENT = v7_like("stage-model-element-s2")
+EMPTY = {"digest": None, "state": "not_computed"}
 
 BIDI = {0x200E, 0x200F, 0x061C} | set(range(0x202A, 0x202F)) | set(range(0x2066, 0x206A))
 
@@ -145,8 +153,11 @@ def slot_set(ident, stage, state, digest):
     return ev("ElementSlotSet", {"digest": digest, "element": ident, "stage": stage, "state": state})
 
 
-def stage_added(ident, label, run, serial=None):
-    return ev("StageAdded", {"id": ident, "label": label, "metadata": {}, "run": run, "serial": serial})
+def stage_added(ident, label, run, serial=None, adopts=None):
+    return ev(
+        "StageAdded",
+        {"adopts": adopts, "id": ident, "label": label, "metadata": {}, "run": run, "serial": serial},
+    )
 
 
 # ------------------------------------------------------------------ the reference model
@@ -180,7 +191,12 @@ class Project:
         return [s for s in self.stages if not self.records.get(s, {}).get("removed", False)]
 
     def ids(self):
-        return set(self.containers) | set(self.elements) | set(self.stages) | {ROOT, STAGE_LIST}
+        return set(self.containers) | set(self.elements) | set(self.stages) | {ROOT, STAGE_LIST, DEFAULT}
+
+    def adoptable(self):
+        if self.records or any(e["slots"][DEFAULT] != EMPTY for e in self.elements.values()):
+            return None
+        return DEFAULT
 
     def apply(self, e):
         t, b = e["type"], e["body"]
@@ -200,16 +216,27 @@ class Project:
         elif t == "StageAdded":
             ident = b["id"]
             assert ident not in self.ids()
-            if not self.records:
+            assert b["adopts"] == self.adoptable()
+            if b["adopts"] is not None:
                 for el in self.elements.values():
                     el["slots"][ident] = el["slots"].pop(DEFAULT)
                 self.stages = [ident]
                 self.active = ident
             else:
+                if not self.records:
+                    self.records[DEFAULT] = {
+                        "id": DEFAULT,
+                        "label": "Default",
+                        "metadata": {},
+                        "removed": False,
+                        "run": b["run"],
+                        "serial": None,
+                    }
                 for el in self.elements.values():
-                    el["slots"][ident] = {"digest": None, "state": "not_computed"}
+                    el["slots"][ident] = dict(EMPTY)
                 self.stages.append(ident)
-            self.records[ident] = {**b, "removed": False}
+            rec = {k: v for k, v in b.items() if k != "adopts"}
+            self.records[ident] = {**rec, "removed": False}
         elif t == "StageRemoved":
             s = b["stage"]
             assert s in self.records and s in self.live() and s != self.active
@@ -238,7 +265,7 @@ class Project:
         return sha(self.state())
 
     def stage_digest(self, s):
-        els = {i: e["slots"][s] for i, e in self.elements.items() if s in e["slots"]}
+        els = {i: e["slots"][s] for i, e in self.elements.items() if s in e["slots"] and e["slots"][s] != EMPTY}
         return sha({"elements": els, "stage": s})
 
     # -------------------------------------------------------------- commands
@@ -283,7 +310,7 @@ class Project:
         assert ident is not None
         if ident in self.ids():
             raise Refused("conflict", "id_collision")
-        return stage_added(ident, params["label"], run, params.get("serial"))
+        return stage_added(ident, params["label"], run, params.get("serial"), self.adoptable())
 
     def remove(self, params):
         self.shape(params, {"stage"})
@@ -328,7 +355,11 @@ class Project:
         return {"stages": out}
 
     def list_entity(self):
-        return {"active_stage": self.active, "stages": [s for s in self.stages if s in self.records]}
+        return {
+            "active_stage": self.active,
+            "adoptable": self.adoptable(),
+            "stages": [s for s in self.stages if s in self.records],
+        }
 
 
 # ------------------------------------------------------------------ p100
@@ -344,17 +375,23 @@ def p100_events():
     ]
     for i in range(60):
         evs.append(element(ELEMENTS[i], f"P{i + 1}"))
-    for i in range(20):
-        evs.append(slot_set(ELEMENTS[i], DEFAULT, "current", value_digest(f"stage-model-default-{i}")))
-    evs.append(stage_added(S[1], "S1", RUN))
+    # The default stage holds no data yet, so S1 adopts it (the 60 empty slots move).
+    evs.append(stage_added(S[1], "S1", RUN, adopts=DEFAULT))
     for i in range(60, 100):
         evs.append(element(ELEMENTS[i], f"P{i + 1}"))
-    for i in range(60, 70):
+    for i in list(range(20)) + list(range(60, 70)):
         evs.append(slot_set(ELEMENTS[i], S[1], "current", value_digest(f"stage-model-s1-{i}")))
-    # Elements 0..4 were current in the default stage; their slots moved to S1 with the
-    # adoption, so current -> outdated is allowed there.
     for i in range(5):
-        evs.append(slot_set(ELEMENTS[i], S[1], "outdated", value_digest(f"stage-model-default-{i}")))
+        evs.append(slot_set(ELEMENTS[i], S[1], "outdated", value_digest(f"stage-model-s1-{i}")))
+    return evs
+
+
+def default_data_events():
+    """Containers, 60 elements and 20 `current` results in the implicit default stage."""
+    evs = p100_events()[:65]
+    assert all(e["type"] in ("ContainerCreated", "ElementCreated") for e in evs)
+    for i in range(20):
+        evs.append(slot_set(ELEMENTS[i], DEFAULT, "current", value_digest(f"stage-model-default-{i}")))
     return evs
 
 
@@ -398,7 +435,35 @@ def main_cases():
     assert p.stage_digest(S[1]) == s1_before
     assert all(e["slots"][S[2]] == {"digest": None, "state": "not_computed"} for e in p.elements.values())
     ac1["list_entity"] = p.list_entity()
+    # Creating an element with data in S2 leaves S1's per-stage digest unchanged.
+    q = copy.deepcopy(p)
+    in_s2 = [element(S2_ELEMENT, "only in S2"), slot_set(S2_ELEMENT, S[2], "current", value_digest("stage-model-only-s2"))]
+    for e in in_s2:
+        q.apply(e)
+    assert q.stage_digest(S[1]) == s1_before
+    ac1["element_in_s2"] = {"events": in_s2, "s1_digest": q.stage_digest(S[1]), "s2_digest": q.stage_digest(S[2])}
     cases["ac1"] = ac1
+
+    # The implicit default stage holds data (20 current results): adding S1 does not adopt
+    # it; it becomes an explicit stage that keeps its ID, data and the active role.
+    q = Project()
+    for e in default_data_events():
+        q.apply(e)
+    before = {"default": q.stage_digest(DEFAULT), "digest": q.digest(), "list_entity": q.list_entity()}
+    keep = ok(q, "add", {"id": S[1], "label": "S1", "run": RUN})
+    assert keep["event"]["body"]["adopts"] is None and q.active == DEFAULT and q.stages == [DEFAULT, S[1]]
+    assert q.stage_digest(DEFAULT) == before["default"]
+    keep.update(
+        {
+            "setup": default_data_events()[65:],
+            "before": before,
+            "digest_after": q.digest(),
+            "stage_digests": {DEFAULT: q.stage_digest(DEFAULT), S[1]: q.stage_digest(S[1])},
+            "list": q.list({}),
+            "list_entity": q.list_entity(),
+        }
+    )
+    cases["default_with_data"] = keep
 
     # A drawn ID (no `id`): UUIDv7 from the observation.
     q = p100()
@@ -501,6 +566,7 @@ def main_cases():
         refused(p, "add_id_collides_stage", "add", {"id": S[1], "label": "S9", "run": RUN}),
         refused(p, "add_id_collides_element", "add", {"id": ELEMENTS[7], "label": "S9", "run": RUN}),
         refused(p, "add_id_collides_run", "add", {"id": RUN, "label": "S9", "run": RUN}),
+        refused(p, "add_id_is_reserved_default", "add", {"id": DEFAULT, "label": "S9", "run": RUN}),
         refused(p, "list_bad_flag", "list", {"include_removed": "yes"}),
         refused(p, "list_run_is_part", "list", {"run": PART}),
         refused(p, "list_unknown_param", "list", {"stage": S[1]}),

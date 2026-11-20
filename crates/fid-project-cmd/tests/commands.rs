@@ -16,7 +16,8 @@ use fid_project::{
     CONTAINER_CREATED,
 };
 use fid_project_cmd::{
-    command_defs, container_defs, created_by, register, result_of, run_create, to_bus_error, SharedSource,
+    command_defs, container_defs, created_by, register, register_containers, result_of, run_create, to_bus_error,
+    SharedSource,
 };
 use fid_registry::{check_schema, validate, Catalogue, CommandDecl, CommandDef};
 use std::collections::BTreeMap;
@@ -278,16 +279,23 @@ fn command_definitions() {
 fn handlers_register_on_the_bus() {
     let source: SharedSource = Arc::new(Mutex::new(Recording::new(ReplaySource::new(Vec::new()))));
     let mut set = HandlerSet::new();
-    register(&mut set, NAMESPACE, &source).unwrap();
+    register_containers(&mut set, NAMESPACE, &source).unwrap();
     assert_eq!(set.len(), 4);
     for k in ContainerKind::ALL {
         let id = format!("{}@1", k.command());
         assert!(set.get(&id).is_ok());
         assert_eq!(set.def(&id).unwrap().id, k.command());
     }
-    let err = register(&mut set, NAMESPACE, &source).unwrap_err();
+    let err = register_containers(&mut set, NAMESPACE, &source).unwrap_err();
     assert_eq!(err.code(), Code::Internal);
     assert_eq!(set.len(), 4);
+    // `register` registers all eight handlers of the crate.
+    let mut all = HandlerSet::new();
+    register(&mut all, NAMESPACE, &source).unwrap();
+    assert_eq!(all.len(), 8);
+    for d in command_defs().unwrap() {
+        assert!(all.get(&format!("{}@{}", d.id, d.major)).is_ok(), "{}", d.id);
+    }
 }
 
 // ------------------------------------------------------------------ published schemas

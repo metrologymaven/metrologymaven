@@ -6,8 +6,10 @@
 //! model rules are tested in `fid-project`.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_bus::error::{Code, InternalReason};
+use fid_bus::error::{BusError, Code, Detail, InternalReason, ValidationReason};
 use fid_bus::handler::{effects_check, EntityId, EntityRef, Event, HandlerSet, SettingKey, StateView};
+use fid_bus::unit::Normalised;
+use fid_bus::validate::{Compiled, Hooks, RefLookup};
 use fid_canon::{parse, to_canonical_bytes, CValue, Digest};
 use fid_project::{
     Bits, ElementTypeDef, ElementTypeRegistry, Observation, ObservationSource, Recording, ReplaySource, Tree,
@@ -284,7 +286,7 @@ fn refusals_map_to_their_bus_errors() {
         refuse(&w.after_ac1, obj(e));
         n += 1;
     }
-    assert_eq!(n, 37);
+    assert_eq!(n, 38);
     let ac3 = obj(get(top, "ac3"));
     let active = obj(&arr(ac3, "errors")[0]);
     assert_eq!((st(active, "code"), st(active, "reason")), ("precondition", "stage_active"));
@@ -315,7 +317,14 @@ fn stage_errors_map_to_the_catalogue() {
     let cases: Vec<(TreeError, Code, &str, Code, &str)> = vec![
         (TreeError::Label, Code::Validation, "label", Code::Validation, "label"),
         (TreeError::BadOrder("x".into()), Code::Validation, "bad_stage", Code::Internal, "invariant_violated"),
-        (TreeError::StageNotFound(id), Code::NotFound, "unknown_entity", Code::Internal, "invariant_violated"),
+        (
+            TreeError::StageNotFound(id.to_string()),
+            Code::NotFound,
+            "unknown_entity",
+            Code::Internal,
+            "invariant_violated",
+        ),
+        (TreeError::AmbiguousStage("x".into()), Code::Validation, "bad_stage", Code::Validation, "bad_stage"),
         (TreeError::StageActive(id), Code::Precondition, "stage_active", Code::Internal, "invariant_violated"),
     ];
     for (err, code, reason, rcode, rreason) in cases {
@@ -440,7 +449,8 @@ fn handlers_register_on_the_bus() {
     let source: SharedSource = Arc::new(Mutex::new(Recording::new(ReplaySource::new(Vec::new()))));
     let mut set = HandlerSet::new();
     register(&mut set, namespace(), &source).unwrap();
-    fid_project_cmd::register(&mut set, namespace(), &source).unwrap();
+    assert_eq!(set.len(), 4);
+    fid_project_cmd::register_containers(&mut set, namespace(), &source).unwrap();
     assert_eq!(set.len(), 8);
     for op in StageOp::ALL {
         let id = format!("{}@1", op.command());
@@ -454,82 +464,22 @@ fn handlers_register_on_the_bus() {
 
 // ------------------------------------------------------------------ published schemas
 
-/// A checker for the JSON Schema subset the four definitions use. An unknown keyword or
-/// pattern fails the test, so a schema change must extend this checker on purpose.
+struct NoHooks;
+
+impl Hooks for NoHooks {
+    fn literal(&self, _: &str, _: &CValue) -> Result<Normalised, BusError> {
+        Err(BusError::Validation(ValidationReason::UnitMismatch, Detail::new("no literals in stage schemas")))
+    }
+    fn entity(&self, _: &str) -> RefLookup {
+        RefLookup::Missing
+    }
+}
+
+/// Validates `v` against `schema` with the bus's own validator (`CORE.BUS.PIPE.VALID`): the
+/// schema must compile and the value must pass it.
 fn conforms(schema: &CValue, v: &CValue, at: &str) -> Result<(), String> {
-    let CValue::Obj(s) = schema else { return Err(format!("{at}: schema is not an object")) };
-    for (k, kv) in s {
-        let ok = match (k.as_str(), kv) {
-            ("description", _) | ("x-untrusted", CValue::Bool(true)) => true,
-            ("type", CValue::Str(t)) => type_ok(t, v),
-            ("type", CValue::Arr(ts)) => ts.iter().any(|t| matches!(t, CValue::Str(t) if type_ok(t, v))),
-            ("pattern", CValue::Str(p)) => {
-                let CValue::Str(x) = v else { return Err(format!("{at}: pattern on a non-string")) };
-                matches_pattern(p, x)
-            }
-            ("minimum", CValue::Num(m)) => matches!(v, CValue::Num(x) if x >= m),
-            ("required", CValue::Arr(r)) => {
-                let CValue::Obj(o) = v else { return Err(format!("{at}: required on a non-object")) };
-                r.iter().all(|k| matches!(k, CValue::Str(k) if o.contains_key(k)))
-            }
-            ("additionalProperties", CValue::Bool(false)) => {
-                let (CValue::Obj(o), Some(CValue::Obj(props))) = (v, s.get("properties")) else {
-                    return Err(format!("{at}: additionalProperties without properties or object"));
-                };
-                o.keys().all(|k| props.contains_key(k))
-            }
-            ("properties", CValue::Obj(props)) => {
-                if let CValue::Obj(o) = v {
-                    for (pk, ps) in props {
-                        if let Some(pv) = o.get(pk) {
-                            conforms(ps, pv, &format!("{at}/{pk}"))?;
-                        }
-                    }
-                }
-                true
-            }
-            ("items", item) => {
-                if let CValue::Arr(a) = v {
-                    for (i, x) in a.iter().enumerate() {
-                        conforms(item, x, &format!("{at}/{i}"))?;
-                    }
-                }
-                true
-            }
-            (other, _) => return Err(format!("{at}: keyword {other} not supported by the test checker")),
-        };
-        if !ok {
-            return Err(format!("{at}: fails {k}"));
-        }
-    }
-    Ok(())
-}
-
-fn type_ok(t: &str, v: &CValue) -> bool {
-    match (t, v) {
-        ("object", CValue::Obj(_))
-        | ("array", CValue::Arr(_))
-        | ("string", CValue::Str(_))
-        | ("boolean", CValue::Bool(_))
-        | ("null", CValue::Null) => true,
-        ("integer", CValue::Num(x)) => x.fract() == 0.0,
-        _ => false,
-    }
-}
-
-/// The one pattern the definitions use, matched by hand (no regex engine in the workspace).
-fn matches_pattern(p: &str, x: &str) -> bool {
-    match p {
-        "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" => {
-            let b = x.as_bytes();
-            b.len() == 36
-                && b.iter().enumerate().all(|(i, c)| match i {
-                    8 | 13 | 18 | 23 => *c == b'-',
-                    _ => matches!(c, b'0'..=b'9' | b'a'..=b'f'),
-                })
-        }
-        other => panic!("pattern {other} not supported by the test checker"),
-    }
+    let c = Compiled::compile(schema).map_err(|e| format!("{at}: schema does not compile: {e:?}"))?;
+    c.evaluate(v, &NoHooks).map(|_| ()).map_err(|f| format!("{at}: fails {} ({})", f.keyword, f.message))
 }
 
 /// Every accepted fixture command's real parameters conform to its `params_schema` and its

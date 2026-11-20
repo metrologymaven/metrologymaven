@@ -64,11 +64,11 @@
 //! [`Tree::to_value`]; a project without explicit stages keeps the exact form above, so its
 //! digest is unchanged. [`Tree::stage_digest`] is the digest of one stage's data.
 
-use crate::container::{is_bidi_control, is_nfc};
+use crate::container::{is_bidi_control, is_nfc, Label};
 use crate::id::{IdError, IdIndex, IdService, ReplaySource, Uuid};
 use crate::stage::{
-    check_permutation, removed_stage, reordered, stage_from_added, stage_list_id, Stage, STAGES_REORDERED, STAGE_ADDED,
-    STAGE_EVENTS, STAGE_KIND, STAGE_LIST_KIND, STAGE_REMOVED,
+    check_permutation, removed_stage, reordered, stage_from_added, stage_list_id, Stage, DEFAULT_STAGE_LABEL,
+    STAGES_REORDERED, STAGE_ADDED, STAGE_EVENTS, STAGE_KIND, STAGE_LIST_KIND, STAGE_REMOVED,
 };
 use fid_canon::CValue;
 use fid_types::Digest;
@@ -132,8 +132,10 @@ pub enum TreeError {
     Invariant(String),
     /// A stage label or serial breaks the text rules (`label`).
     Label,
-    /// A named stage is not a live stage of the project (`stage_not_found`).
-    StageNotFound(Uuid),
+    /// A named stage (by ID or label) is not a live stage of the project (`stage_not_found`).
+    StageNotFound(String),
+    /// More than one live stage has the label (`ambiguous_stage`).
+    AmbiguousStage(String),
     /// The stage to remove is the active stage (`stage_active`).
     StageActive(Uuid),
     /// A reorder list is not a permutation of the run's live stages (`bad_order`).
@@ -159,6 +161,7 @@ impl TreeError {
             TreeError::Invariant(_) => "invariant_violated",
             TreeError::Label => "label",
             TreeError::StageNotFound(_) => "stage_not_found",
+            TreeError::AmbiguousStage(_) => "ambiguous_stage",
             TreeError::StageActive(_) => "stage_active",
             TreeError::BadOrder(_) => "bad_order",
         }
@@ -176,9 +179,10 @@ impl fmt::Display for TreeError {
             | TreeError::BadReference(m)
             | TreeError::Hierarchy(m)
             | TreeError::Invariant(m)
-            | TreeError::BadOrder(m) => write!(f, "{}: {m}", self.code()),
+            | TreeError::BadOrder(m)
+            | TreeError::StageNotFound(m)
+            | TreeError::AmbiguousStage(m) => write!(f, "{}: {m}", self.code()),
             TreeError::Label => write!(f, "label: must be 1..=256 characters, NFC, no control"),
-            TreeError::StageNotFound(s) => write!(f, "stage_not_found: {s}"),
             TreeError::StageActive(s) => write!(f, "stage_active: {s} is the active stage"),
             TreeError::Name => write!(f, "name: must be 0..={MAX_NAME_CHARS} characters, NFC, no control"),
             TreeError::BadStage(s) => write!(f, "bad_stage: {s}"),
@@ -609,6 +613,8 @@ enum Undo {
         stage: Uuid,
         adopted_from: Option<Uuid>,
     },
+    /// The count of default-stage slots holding data before a slot change.
+    DefaultData(usize),
 }
 
 /// The in-memory element tree of one project.
@@ -623,6 +629,11 @@ pub struct Tree {
     stage_list: Uuid,
     records: BTreeMap<Uuid, Stage>,
     list_body: CValue,
+    /// The reserved ID of the implicit default stage; never importable, even once replaced.
+    default_stage: Uuid,
+    /// While there are no explicit stages: how many elements hold data (a slot other than
+    /// [`Slot::NEW`]) in the implicit default stage.
+    default_data: usize,
 }
 
 /// The reserved UUIDv5 of the project namespace for `{"kind": <kind>}`.
@@ -652,6 +663,8 @@ impl Tree {
             stage_list,
             records: BTreeMap::new(),
             list_body: CValue::Null,
+            default_stage: stage,
+            default_data: 0,
         };
         tree.rebuild_list();
         Ok(tree)
@@ -677,8 +690,30 @@ impl Tree {
         self.stages.iter().filter(|s| self.is_live(s)).copied().collect()
     }
 
+    /// Whether `stage` is a live stage: an explicit stage not removed, or the implicit default
+    /// stage while there are no explicit stages. O(log n): records only.
     fn is_live(&self, stage: &Uuid) -> bool {
-        self.stages.contains(stage) && !self.records.get(stage).is_some_and(Stage::removed)
+        match self.records.get(stage) {
+            Some(r) => !r.removed(),
+            None => self.records.is_empty() && *stage == self.default_stage,
+        }
+    }
+
+    /// Whether `stage` is in the project sequence (removed stages included).
+    fn is_known(&self, stage: &Uuid) -> bool {
+        self.records.contains_key(stage) || (self.records.is_empty() && *stage == self.default_stage)
+    }
+
+    /// The reserved ID of the implicit default stage.
+    pub fn default_stage_id(&self) -> Uuid {
+        self.default_stage
+    }
+
+    /// The default stage the next `StageAdded` adopts: the implicit default stage while there
+    /// are no explicit stages and none of its slots holds data; else `None` (the default
+    /// stage then becomes an explicit stage that keeps its ID and data).
+    pub fn adoptable_default(&self) -> Option<Uuid> {
+        (self.records.is_empty() && self.default_data == 0).then_some(self.default_stage)
     }
 
     /// Whether the project has explicit stages (else it has only the implicit default stage).
@@ -707,13 +742,23 @@ impl Tree {
         self.stage_records().filter(|s| !s.removed() && s.label().as_untrusted_str() == label).map(Stage::id).collect()
     }
 
+    /// The one live stage labelled exactly `label`: `stage_not_found` if none is,
+    /// `ambiguous_stage` (bus `validation/bad_stage`) if several are.
+    pub fn stage_by_label(&self, label: &str) -> Result<Uuid, TreeError> {
+        match self.stages_labelled(label).as_slice() {
+            [one] => Ok(*one),
+            [] => Err(TreeError::StageNotFound("no live stage has this label".to_string())),
+            many => Err(TreeError::AmbiguousStage(format!("{} live stages have this label", many.len()))),
+        }
+    }
+
     /// The stage an import or another stage-targeting command writes to: `stage` when it is a
     /// live stage of the project, else `stage_not_found`; the active stage when `None`.
     pub fn target_stage(&self, stage: Option<&Uuid>) -> Result<Uuid, TreeError> {
         match stage {
             None => Ok(self.active_stage),
             Some(s) if self.is_live(s) => Ok(*s),
-            Some(s) => Err(TreeError::StageNotFound(*s)),
+            Some(s) => Err(TreeError::StageNotFound(s.to_string())),
         }
     }
 
@@ -723,14 +768,17 @@ impl Tree {
     }
 
     /// One stage's data: `{"elements": {<id>: {"digest", "state"}}, "stage": <id>}` over
-    /// every element holding a slot for the stage. `bad_stage` if the stage is not in the
-    /// project sequence (a removed stage keeps its data and has a value).
+    /// every element whose slot for the stage holds data (empty `not_computed` slots with no
+    /// digest are left out, so creating an element, or giving it data in another stage, does
+    /// not change this stage's value). `bad_stage` if the stage is not in the project
+    /// sequence (a removed stage keeps its data and has a value).
     pub fn stage_value(&self, stage: &Uuid) -> Result<CValue, TreeError> {
-        if !self.stages.contains(stage) {
+        if !self.is_known(stage) {
             return Err(TreeError::BadStage(*stage));
         }
-        let elements =
-            self.elements.iter().filter_map(|(id, e)| e.slots.get(stage).map(|s| (id.to_string(), s.to_value())));
+        let elements = self.elements.iter().filter_map(|(id, e)| {
+            e.slots.get(stage).filter(|s| **s != Slot::NEW).map(|s| (id.to_string(), s.to_value()))
+        });
         Ok(obj([("elements", CValue::Obj(elements.collect())), ("stage", uuid_value(stage))]))
     }
 
@@ -790,7 +838,11 @@ impl Tree {
 
     fn list_value(&self) -> CValue {
         let ids = self.stages.iter().filter(|s| self.records.contains_key(s)).map(uuid_value).collect();
-        obj([("active_stage", uuid_value(&self.active_stage)), ("stages", CValue::Arr(ids))])
+        obj([
+            ("active_stage", uuid_value(&self.active_stage)),
+            ("adoptable", self.adoptable_default().as_ref().map_or(CValue::Null, uuid_value)),
+            ("stages", CValue::Arr(ids)),
+        ])
     }
 
     fn rebuild_list(&mut self) {
@@ -894,8 +946,10 @@ impl Tree {
                                 }
                             }
                         }
+                        Undo::DefaultData(n) => self.default_data = n,
                     }
                 }
+                self.rebuild_list();
                 Err(e)
             }
         }
@@ -956,6 +1010,14 @@ impl Tree {
             }
             ELEMENT_SLOT_SET => {
                 let (id, stage, slot) = self.check_slot_set(body)?;
+                let was_new = self.elements.get(&id).and_then(|e| e.slots.get(&stage)).is_some_and(|s| *s == Slot::NEW);
+                if self.records.is_empty() && was_new && slot != Slot::NEW {
+                    undo.push(Undo::DefaultData(self.default_data));
+                    self.default_data = self.default_data.saturating_add(1);
+                    if self.default_data == 1 {
+                        self.rebuild_list();
+                    }
+                }
                 let Some(e) = self.elements.get_mut(&id) else {
                     return Err(invariant(format!("element {id} vanished")));
                 };
@@ -978,11 +1040,23 @@ impl Tree {
     ) -> Result<(), TreeError> {
         match event_type {
             STAGE_ADDED => {
-                let stage = stage_from_added(body)?;
+                let (stage, adopt) = stage_from_added(body)?;
                 let id = self.import_id(stage.id())?;
+                // `adopts` must say what the state allows: the implicit default stage while it
+                // holds no data, else null.
+                if adopt != self.adoptable_default() {
+                    return Err(TreeError::BadStage(adopt.unwrap_or(self.default_stage)));
+                }
                 undo.push(self.stage_snapshot());
-                // The first explicit stage takes the place of the implicit default stage.
-                let adopt = if self.records.is_empty() { self.stages.first().copied() } else { None };
+                if adopt.is_none() && self.records.is_empty() {
+                    // The default stage holds data: it becomes an explicit stage that keeps its
+                    // reserved ID, its data and the active-stage role.
+                    let label = Label::new(DEFAULT_STAGE_LABEL)
+                        .map_err(|_| invariant("default stage label breaks the text rules".to_string()))?;
+                    let d = self.default_stage;
+                    self.records.insert(d, Stage::new(d, stage.run(), label, None, obj([]), false));
+                    created.push(d);
+                }
                 undo.push(Undo::StageSlots { stage: id, adopted_from: adopt });
                 for e in self.elements.values_mut() {
                     let slot = match adopt {
@@ -1004,7 +1078,7 @@ impl Tree {
             STAGE_REMOVED => {
                 let id = removed_stage(body)?;
                 if !self.records.contains_key(&id) || !self.is_live(&id) {
-                    return Err(TreeError::StageNotFound(id));
+                    return Err(TreeError::StageNotFound(id.to_string()));
                 }
                 if id == self.active_stage {
                     return Err(TreeError::StageActive(id));
@@ -1159,8 +1233,8 @@ impl Tree {
             return Err(invariant("stage IDs are not distinct".to_string()));
         }
         if self.records.is_empty() {
-            if self.stages.len() != 1 {
-                return Err(invariant("a project without explicit stages has exactly one stage".to_string()));
+            if self.stages != [self.default_stage] {
+                return Err(invariant("a project without explicit stages has only the default stage".to_string()));
             }
         } else if !self.records.keys().eq(sorted.iter()) {
             return Err(invariant("stage records and the stage sequence disagree".to_string()));
@@ -1216,6 +1290,16 @@ impl Tree {
                 return Err(invariant(format!("element {} body is stale", e.id)));
             }
         }
+        if self.records.is_empty() {
+            let data = self
+                .elements
+                .values()
+                .filter(|e| e.slots.get(&self.default_stage).is_some_and(|s| *s != Slot::NEW))
+                .count();
+            if data != self.default_data {
+                return Err(invariant("default stage data count is stale".to_string()));
+            }
+        }
         Ok(())
     }
 
@@ -1228,11 +1312,12 @@ impl Tree {
 
 impl IdIndex for Tree {
     /// Elements, groups (the root included), stages and the stage list hold IDs.
+    /// The reserved default-stage ID stays held after the first explicit stage replaces it.
     fn contains_id(&self, id: &Uuid) -> bool {
         self.elements.contains_key(id)
             || self.groups.contains_key(id)
-            || self.stages.contains(id)
             || self.records.contains_key(id)
+            || *id == self.default_stage
             || *id == self.stage_list
     }
 }

@@ -5,7 +5,7 @@
 //!   `project.create_plan@1` and `project.create_run@1` as registry definitions: W2, D0,
 //!   undo `head_move`, effect `ContainerCreated`, on the CLI (`fid project create-part`, ...)
 //!   and MCP (`project_create_part`, ...) (REQ-005).
-//! - [`CreateHandler`] and [`register`]: the four bus handlers. Each reads the immutable
+//! - [`CreateHandler`] and [`register_containers`]: the four container handlers. Each reads the immutable
 //!   [`StateView`] through [`BusView`], runs [`fid_project::create`] with the call's principal
 //!   and the shared [`ObservationSource`], and returns one `ContainerCreated` event
 //!   ([`created_event`]); the bus commits it.
@@ -16,7 +16,10 @@
 //! - [`tree`]: the element tree on the bus (spec node `CORE.PRJ.TREE.MODEL`, bus half): the
 //!   [`StateView`] over `fid_project::Tree` and the mapping of tree refusals to bus errors.
 //! - [`stage`]: the four stage commands (spec node `CORE.PRJ.STAGE.MODEL`, bus half).
-//!   [`command_defs`] lists the container commands, then the stage commands.
+//! - [`command_defs`] lists all eight commands of this crate (container, then stage) and
+//!   [`register`] registers all eight handlers.
+//!
+//! [`container_defs`] and [`register_containers`] cover the four container commands only.
 
 use fid_bus::error::{BusError, ConflictReason, Detail, InternalReason, ValidationReason};
 use fid_bus::handler::{
@@ -146,8 +149,18 @@ impl Handler for CreateHandler {
     }
 }
 
-/// Registers the four create handlers, each with its definition from [`command_defs`].
+/// Registers all eight handlers of this crate: the four container commands
+/// ([`register_containers`]), then the four stage commands ([`stage::register`]), each with
+/// its definition from [`command_defs`]. A handler already in `set` is
+/// `internal/invariant_violated`.
 pub fn register(set: &mut HandlerSet, namespace: Uuid, source: &SharedSource) -> Result<(), BusError> {
+    register_containers(set, namespace, source)?;
+    stage::register(set, namespace, source)
+}
+
+/// Registers the four container create handlers only, each with its definition from
+/// [`container_defs`].
+pub fn register_containers(set: &mut HandlerSet, namespace: Uuid, source: &SharedSource) -> Result<(), BusError> {
     let defs = container_defs().map_err(|e| {
         BusError::Internal(InternalReason::InvariantViolated, Detail::new(&format!("container definitions: {e}")))
     })?;

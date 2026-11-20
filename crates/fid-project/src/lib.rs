@@ -14,8 +14,9 @@ pub use id::{
     ReplaySource, SystemSource, Uuid, V7_RANDOM_BITS,
 };
 pub use stage::{
-    add_stage, list_stages, remove_stage, reorder_stages, stage_list_id, Stage, StageListing, ADD_STAGE, LIST_STAGES,
-    REMOVE_STAGE, REORDER_STAGES, STAGES_REORDERED, STAGE_ADDED, STAGE_KIND, STAGE_LIST_KIND, STAGE_REMOVED,
+    add_stage, list_stages, remove_stage, reorder_stages, stage_list_id, Stage, StageListing, ADD_STAGE,
+    DEFAULT_STAGE_LABEL, LIST_STAGES, REMOVE_STAGE, REORDER_STAGES, STAGES_REORDERED, STAGE_ADDED, STAGE_KIND,
+    STAGE_LIST_KIND, STAGE_REMOVED,
 };
 pub use tree::{
     DomainTranslate, Element, ElementName, ElementState, ElementTypeDef, ElementTypeRegistry, Group, Slot, Tree,
