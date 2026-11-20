@@ -561,7 +561,7 @@ pub struct ReviewEvent<'a> {
 }
 
 /// The journal payload of one transition. The command adds the principal and time.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FlowRecord {
     event: &'static str,
     from: Option<FlowState>,
@@ -603,7 +603,7 @@ impl FlowRecord {
 }
 
 /// The outcome of a successful call: the new revision and what to journal for it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Step {
     /// The revision after the event.
     pub revision: RowRevision,
