@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-gdt]
+built_pr: 301
 satisfies: [REQ-GDT.CHAR-009]
 covers: []
 depends_on: [GDT.CHAR.MODEL]
