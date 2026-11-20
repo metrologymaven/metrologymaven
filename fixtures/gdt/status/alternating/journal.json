@@ -1,0 +1,4206 @@
+{
+ "entries": [
+  {
+   "command": "gdt.propose_dmt_row@1",
+   "hash": "sha256:ff0d14d0925060f413a7bb02cf902a51b7318c63abf868933cc519a8b7ae493b",
+   "principal": {
+    "id": "author-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "author_kind": "human",
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "derived_from": null,
+    "event": "propose",
+    "from": null,
+    "key": "dmt:asme/flatness/none@1",
+    "provenance": "human",
+    "revision": "1",
+    "to": "draft"
+   },
+   "row": {
+    "actual_value": "av.synthetic.flatness@1",
+    "characteristic": "flatness",
+    "clauses": [
+     {
+      "clause": "4.2",
+      "designator": "syn-std-a",
+      "edition": "2001"
+     },
+     {
+      "clause": "7",
+      "designator": "syn-std-b",
+      "edition": "2010"
+     }
+    ],
+    "decision_rule_hint": "dr.synthetic.default@1",
+    "default_variant": "surface",
+    "dialect": "asme",
+    "editions": [
+     "syn-a-2001",
+     "syn-b-2010"
+    ],
+    "key": "dmt:asme/flatness/none@1",
+    "limitations": [],
+    "modifiers": [],
+    "notes": "Synthetic row for status register tests; not an interpretation of any standard.",
+    "ors_cases": [
+     "ors:synthetic/flatness.001"
+    ],
+    "review": {
+     "state": "draft"
+    },
+    "status": "supported",
+    "synthetic": true,
+    "variants": [
+     {
+      "steps": [
+       {
+        "alg": "syn.partition.whole_feature@0.1.0",
+        "kind": "partition",
+        "params": {}
+       },
+       {
+        "alg": "syn.extract.all_points@0.1.0",
+        "kind": "extraction",
+        "params": {
+         "min_points": "4"
+        }
+       },
+       {
+        "alg": "syn.assoc.min_zone@0.1.0",
+        "kind": "association",
+        "params": {
+         "constrained": true
+        }
+       },
+       {
+        "alg": "syn.eval.max_deviation@0.1.0",
+        "kind": "evaluation",
+        "params": {}
+       }
+      ],
+      "variant": "surface"
+     }
+    ]
+   },
+   "utc": "2026-11-20T09:00:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:3b375226d3e53193c45ea07877c40bae24a001ec79daa2c95420bda514c2617a",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:01:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:77b522738f6dfb827421738708f041324013d6208024e7529b4af2f4e7d3bff5",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:02:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:e9d6403937ce9259736b3981dac25bd5807dd28d91302ee656c98464f60b2311",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:03:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:25cc006ec50ec8eacfde41f83724a528b13440384b2ca6aad2c493853af68d99",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:04:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:765fe2e327fe513ee3ef37458ba8e367259ed2cf8e132de7935e7528d505698a",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:05:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:2421fc2a31ca8dbe4c4feaee38c9211ff8dc4dc51b0efcd020be810bed887735",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:06:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:0b46568d908b00c2e1d093a436799999989fcd9f8f9658213c5d85d1486d91ac",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:07:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:58043dcdd5099353b4a3ead6a5259ba7562ecd6a1a005f7f286d6a01a240c803",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:08:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:949c150f867f456708aa79c2590aaf2a3d94856d80f953376c74384155d3998d",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:09:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:af17c89bdd0147a3fbbbf3c4f59c2d08bf31f149d008b75977e0c7da00a5ba96",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:10:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:cc4a4488ebc59bc90d5af64ced1f5d03d253516fa1aaa06c29b5e108e9179125",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:11:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:252f74246fa6eb1860e688f9f05b4ee9072fa4b7b653d0a680d27ca5005ab513",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:12:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:0e0f6239cf3a9b2109e52aba9ea24d5511f100e8642a926fff2c0259ea95726d",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:13:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:c1f80276310a86dd1475632af27ed4f8b403f530e49dda8728ed9c263ab75a1f",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:14:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:16850d773ff812f977a8f9fd282e46aadcbfd4c38565adb9f7a1d7874fcd2751",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:15:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:4ac8ccf93c01539dfea9272d0cf36657ca599733217eb87bce7e2073d5e5eade",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:16:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:211ebc3328faf0b9486f883f06500022e2b8f8788c37394d0a9a8e74df8328fa",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:17:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:62ebc3fe63a294390445f948393538867d381071420218dea45b9b93880da3ae",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:18:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:d5719b486dd1428c0fa42eeec0fcc228e3de2bbc6c5b9e9966175be4509fd323",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:19:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:3d0e120525c09d44f81c0f4b3d28f7e8efae5b4e0c5e76a0db8c09f4c41f3203",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:20:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:bd920635aea4e7c5cc5a39eea77d52c1768e233812bba7e6f3aab56d980b363b",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:21:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:60a23ca4538723fd3c39726074aecbddf322de292bd84354d30a2effd32da748",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:22:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:da60ccfcdd5875d2840e4dce01383f0ed103b7e0f84c3659f0cc7acc963c8501",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:23:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:78e2e458fad3564fc7182059b9640b6203f3db49e5ec937343a11b3dba73ed04",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:24:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:c6473d7d8992fc3f27f9c45cc21a38bf37b89053b688c420c245dc7ca1ed9017",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:25:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:bea5b51cf0d13178c752cc775c5ddb3754a9389d42be6b598d740e1d10bfd167",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:26:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:9759b059b3ef64331926b605a8c9906dcfadfe52a82a3b4c58f3b94dadc72976",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:27:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:bc5def07fc53a0e530dd04e1b591d784df6179fc9bc8a89af7fd84087e25a043",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:28:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:e0bdbb5e38ee34be562e492bc3ad909e6a5a28fe9095ab859171acb794e3bc8a",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:29:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:55606c43aa81d97e8797c44719037103517d237803af53531b681c1956776db4",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:30:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:787104cebaa26948eaeb9f55dcf44b0d322c4afcb91146ecefe3866182a34a47",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:31:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:2969fca4660302b3e515d3afa6fe584656d13304b1f506bec5a60d677d20bfba",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:32:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:b26fa20983702909380929c5f3abca21b970aa414820a6911468506e849b3031",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:33:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:ca5c34b342d5cac1abd54dd0a5af233dc186532031ae8f1fc0d27bab05da7d48",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:34:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:b8c3f8a399cf2fca78863c46a722f0f8c1c67a482c6d2f0bb9115eb989787fdd",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:35:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:3a7ca5c44ec3b8681908518f80ea286cb953b9b69f3878fff75fd582d69f5a49",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:36:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:d03b84191c7cf9b8228484b872393d590eea1b825d68860025bbfc8d59f910ae",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:37:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:cc8a8ca6800ec80c9f66f84742afb556bf75ca2378ea27fcf1a88e0dd54bef69",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:38:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:f192294ad46105e5822674784f5c6dc8d1b536f3c9db226ef2b65a4e79149050",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:39:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:8c6cf86ef4fd9aa81bee49a712aaa27c7f623494a080321fe87833813bdd7df3",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:40:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:a91a55a01b82da38fcd2a149f60272f48c661181ac92416124d8eb9799dccc8a",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:41:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:1fdc1e759aa9cfa8eea854badb724c8c9f0c0052b5ce9baa292eb21df4989d1a",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:42:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:fd4b4aff76538980633c9621fedd983e950eee9f1f4cf54aa315ad3c42395a4e",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:43:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:095ac9a9e86855471afcf20d1856a925151a487586b4e6de28d301836e56fa53",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:44:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:5edb9d124a750ea8337e2ee62a7d437c9f7db03f5379e72fefa87c7a6e378d46",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:45:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:133e6f86f0be40043c182bd4af91912f8b39bd29dada12b787e3046736881a43",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:46:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:394cb18f2d3bc0f3796a965d118aafd83fbb91865f68d7ba4d19e8cf009cf3ff",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:47:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:be5a99581745851c44872dfbdd457a260ccd760769a5383182d1ddcb009009e9",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:48:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:367f18bad175b8d8369dc616d11f6d6770fc65a58d5abeec00165f052471ee4d",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:49:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:4b828d0ea2c37aa4290107fa9fe0b1465699c0e8876b3c90f93cabb4b0c2aeac",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:50:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:d8d730f4d47372cb233ea89a42191f2e3a262529ca7e6102f9e51281a8acb12b",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:51:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:6003f6544035c99c143709410360aa7ab3a1e4b516fd7e70bb5584b2196eca0f",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:52:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:bb2c29f4b94c6cf3c1053e02088a9ca86a0cc99469f80402b2551cc41cd28580",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:53:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:0411b95eaee40018f534cdfcec0bcfcca234e3f5ebcf8d09d0e3663b53f9d21f",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:54:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:6fc33e4c760b43be4b86b41452ca7a79aa7fcdd69175c3720643cfae7a2c7376",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:55:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:7388254b4cf9bb3da78c780d03db337777e5a8574bdfc469e2efc54ba482d46e",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:56:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:13f4adcc08a68af4d4b1571b1ad54be64719e81a8715920c2591c61d416748f8",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:57:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:b9275480307a0dd7000ea36c5375476be4cf87fcd1aea28f4d6d5068eee568c7",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T09:58:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:1e5c2e94ca7800c49de346832b88196f8dcf75b0afef0e397d13f48a028fc08f",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:59:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:276656ba1b248338062e38f2a1ab95bbf4a60cb3f426bf9611dd96ca3ee5083d",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:00:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:5f930b6f9e4799e1a68b761ccb1aec71a99825c407c97ded15c01381c16e654d",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:01:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:44423ac3d804d54bea7fb88b02ab89dfc627ba298948bc2afe9570c3a8d92500",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:02:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:f681c476e6b94877fa5f7c94b8778396a02f99805970703bda4c46778552a53f",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:03:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:fb35b03ec039ca3344c87bf62a6d928322aae8a205ca0fcf741f8c1d14b37c1f",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:04:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:ce308db3f1759812fb140963d411acc79cae77cd45c0b46198eeb2b43fb045b6",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:05:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:2645e5475e2217ab9f1b4e5370c40e8fad39fff9dc0b7e5ddea24ce82b30298b",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:06:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:9f81b9541a2a64d07497acd8ac791f21e39cf1c511aec5f1b3648c2d29ecc4b8",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:07:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:302d6aa3cc14511873831e59e7d9368274992ea3fe3b2658d4df4285ef5fef9a",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:08:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:5f2bc41d977279bcdead893eaffe0a7abad38a7ae6f22548095fe856fd95277e",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:09:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:0232d991395485d3f47675a70f3e489ecf587c77ce38e8aae9fa108f5d227d02",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:10:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:96ea535e44da756a18ae5ae72526fb8fa777b27cef641e4c6e58ec51ab468acd",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:11:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:15753b86849147d2513244660b97dbb7aa40e4f1564107395b89712f66712541",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:12:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:5570b459eff111b8816c0c7dc827dbc24dc8c7c935c10325294e00fa85ed5539",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:13:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:31ee9694f7dd9afc8acc54f86d5c6b93c2397ac4a494d011020aa4c59bff5aaa",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:14:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:19d6c52f766c7c9fdd7cce13fe00c284a1339b0cfe5637ff736cb10334ce8c80",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:15:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:85af16e3ebc73908664058af4cf8c990cabf300992f129d1850b5d4413cb31d5",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:16:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:ad429204d46e3975d36ad1f484483502291e5b79a3cbbc97a04967424f410339",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:17:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:4ecaf744aba284bc6359ed4bf3cd0beab1df33c4497896bdfdc5cdf3cebd339f",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:18:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:0bf16a85770ecd9701757ec52c353ca5d3d49a16a9c604521eb58053bd92001a",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:19:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:c347f844cf88b3426ff86391719c3d29c47cd054b9fd1843f3e5d7652c6841bc",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:20:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:dd5ae0a90916270c06d1abf3f3ab2062d6dd4494fef8933b15454ff1a615e7b7",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:21:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:1948c77e0c85e402215a80b2536d28187d221496fe8588538c5b8115ecd99ad0",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:22:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:a7a718ee07b0c3a868bfe82912427d97667763e0e492234f30e5d406c58190bd",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:23:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:17fb3c552ec6667fbf48d18e8ac114a2036dad843d641495706b7d44d3fe7ecd",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:24:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:63ad824df0935627188e0285abf56d27d26f29f8848d0687ac8308055255897c",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:25:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:296e0b9c40b93d8fb95036f424a33aa39ffa29a4566ba6a018a3ecf8bebeb4a1",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:26:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:7affc316c7374e30eda725dbad84dce6026d3c4530f27849880fb6b899b4ede6",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:27:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:644e801eb569291727d602052c20c48e017b175f2f94718ae319e2f049fd8a3b",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:28:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:48ad4ea80308e12d9cfd6ac18bf0971e41424d7772a158ae7dd13dfd05f11ed4",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:29:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:e548edc38f295ae29fd163b9b51be63b36c94f39918cc10da89eb14b25aab0cd",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:30:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:26f6d034cc4edb14dff15a31050b96c7acc04a1749c42c75586346b5469c5f4d",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:31:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:3f811fdf8a87e5d9124a31256fb17aad9a8553d53dca2fffb4beaca87b6bbb8f",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:32:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:ce5178736a710f3cbb9118ca8945e06b47e16f90a5f4a6c93cef33f3bc8107c9",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:33:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:a21e54c567cf269f4e58ecb9e0f8bffb993ec9c0d0c8ce10dda002b6bf112332",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:34:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:9a396c5da7c125fd7842206262431fe2c5d5005b2db3d3ed72fc3fcf6bc0e080",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:35:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:64b0448c320a782c18aff798742ac14bf66eaeff3a9be930de6e04f91e6a555a",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:36:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:c4f4d9e49afb8f5e763128f2f1e37155ab2753d97b0b15a017fdf172900fa8ee",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:37:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:c4a785579f1df8af8692f365d63b8d6f05a812f0707d50b976ef21a79fcf0735",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:38:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:384b363f55cbba1e28684a28cf4197ebefedef19f824fba7078ec1b9c7d8a5a6",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:39:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:b57e25f0f3eecd8b6794e8e5315d9c79818c5f68c6ff92fd010755266b882db4",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:40:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:329ac79fcb05d98779d08935c69d0e065c44a440f6ebc4db75226d875faac47c",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:41:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:1d495e63a2d4563abcde91e2893cd9f0cc62a68ca581c0c0186f27f51af09124",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:42:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:92da4d35ea79437af90499b0f0a5d0632e5d3f2fca5e093c001e542704aec6e0",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:43:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:5501416cebea666b68c27194495be2dab35827b6aa5aa0116e3cfb0a024575b6",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:44:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:43402253969ba5493dd1595dec47aa1aa800c099aac24642956a3627b767153e",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:45:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:0c2cfe0b8bf471823354e032d176a722bc72dd6d8fb5469ab582dfae01d18f80",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:46:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:16a97388bbe5f8c732954658557badd41336da09d2fe56df1264f018185b1ec7",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:47:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:8056248b930a44182de388e11591d4e17d9613a731663761a5454d2fa23b0faa",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:48:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:5b9b679da08b4e24af3ad1dcbc3811828a08a1a8c0ff9c45558d74c77f6865fe",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:49:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:435c6e688654376eaa767c1166d9bd2c6e1bf1caecf5e2b1ca4d323608b1aa5c",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:50:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:1c276905d92abb9a56adc6b9470a2845fee6efee195dd2534dc8dfa34b1d6790",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:51:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:70693c9d1ef22da32252987ac73421a8c5dd4217ca99f5a5d508ac10c66c6dbe",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:52:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:bb7636fab1a0c00536dd31b0b86e2faa59d173bd4951b78fec79114268c2ba45",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:53:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:d34587ebbcc05a14c1ee2968010b04ac96cb0a8820e9b837e15db21c9ca0ad51",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:54:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:b3a32a94a24e706a2b84ce8024f4dcf0c267dbf0447a1cefe55f24b0a1387185",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:55:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:7da2f95a98836dd748c662adf8e8fb384bc42440159a8ef464a62d74716a91a2",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:56:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:7cca7fffeb197b5b9e695a2566c86407cd6ed3396cdc9381a7ee898a2d892531",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:57:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:cb152bdcd51230993e3df1feffd065bcc554438e4e9d671dadfe701dfd0df979",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T10:58:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:be2beef631e332c24f0738412d780f78f4848b1a0a282e9220707aeeeca6e568",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T10:59:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:91640d8c6861ad71615d294d61cbdc9a8dc0ed0ecbb8af14155cef876489c121",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "request_changes",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "draft"
+   },
+   "utc": "2026-11-20T11:00:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:7a33bc969cc17ae17c539cb11727f6025179ee09ead1d1eacef9b508954a96a9",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T11:01:00Z"
+  }
+ ],
+ "schema": "gdt-rowflow-journal/v1"
+}

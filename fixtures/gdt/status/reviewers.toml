@@ -1,0 +1,29 @@
+schema = "gdt-reviewer-register/v1"
+
+[[reviewer]]
+id = "r1"
+org_id = "org-1"
+recusals = []
+credit_name = false
+credit_org = false
+
+[[reviewer]]
+id = "r2"
+org_id = "org-2"
+recusals = []
+credit_name = false
+credit_org = false
+
+[[reviewer]]
+id = "r3"
+org_id = "org-1"
+recusals = []
+credit_name = false
+credit_org = false
+
+[[reviewer]]
+id = "r4"
+org_id = "org-3"
+recusals = ["dmt:asme/flatness/none@1"]
+credit_name = false
+credit_org = false

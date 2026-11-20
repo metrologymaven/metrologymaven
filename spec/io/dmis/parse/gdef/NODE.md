@@ -18,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # IO.DMIS.PARSE.GDEF: Grammar for definition and result statements
@@ -33,7 +33,7 @@ Registers descriptors and typed views for the statements that both DMIS output f
 - Header and bookkeeping: `DMISMN`, `DMISMD`, `FILNAM`, `ENDFIL`, `TEXT`, `UNITS` [unverified: full list]
 - Feature definitions `F(label)=FEAT/...` and actuals `FA(label)=FEAT/...` for point, line, plane, circle, arc, cylinder, cone, sphere, ellipse, slot, torus, pattern, compound, generic and edge-point types, with Cartesian/polar and inner/outer minor words [unverified: type list]
 - Tolerance definitions `T(label)=TOL/...` and tolerance results `TA(label)=TOL/...` for size, location, form, orientation, profile and runout kinds, with `INTOL`/`OUTOL` flags on results [unverified: exact result syntax]
-- Datum definitions `D(label)=DATDEF/...` and `DA(label)` forms
+- Datum definitions: the unlabelled `DATDEF/<feature>,<datum label>` form and the labelled `DA(label)=DATDEF/<feature>` form of output files. The form `D(label)=DATDEF/...` is not supported: `D(..)` labels name coordinate systems (`IO.DMIS.PARSE.GEXEC`) [unverified]
 - Typed views: `FeatView`, `TolView`, `DatumView`, `UnitsView` with values as lexemes
 - QPId-carrying forms where DMIS 5.3 defines them, exposed on the views [unverified: which statements carry QPIds]
 

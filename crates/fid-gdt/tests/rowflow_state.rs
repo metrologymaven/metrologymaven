@@ -17,6 +17,7 @@ use fid_gdt::dmt_flow::state::{
     propose, replay, transition, Attestation, Decision, FlowError, FlowState, IdrDraft, Provenance, RecordedFlow,
     ReviewEvent, RowRevision, MAX_ATTESTATIONS, MAX_IDR_POSITIONS,
 };
+use fid_gdt::dmt_flow::status::{Published, TrustedRosters};
 use fid_gps::dmt::row::row_from_value;
 use fid_gps::dmt::{row_content_digest, DmtRow, ReviewState, Reviewers};
 use fid_types::Digest;
@@ -60,6 +61,19 @@ fn get<'a>(v: &'a CValue, k: &str) -> &'a CValue {
 
 fn roster() -> Roster {
     Roster::load(&std::fs::read(fixtures().join("state_roster.json")).unwrap()).unwrap()
+}
+
+/// The test roster as the only trusted roster: a `gdt-published/v1` list naming its digest
+/// (with an invented register digest), loaded through the verified loader, the only way to
+/// build a `TrustedRosters`.
+fn trusted() -> TrustedRosters {
+    let r = roster();
+    let list = format!(
+        r#"{{"entries":[{{"register_digest":"sha256:{}","roster_digest":"{}"}}],"schema":"gdt-published/v1"}}"#,
+        "1".repeat(64),
+        r.digest().as_str()
+    );
+    Published::load(list.as_bytes()).unwrap().trusted_rosters(vec![r]).unwrap()
 }
 
 fn rows() -> BTreeMap<String, DmtRow> {
@@ -213,7 +227,7 @@ struct Run {
 
 fn run_case(name: &str) -> (Run, Vec<CValue>) {
     let d = doc(&format!("{name}.json"));
-    let roster = roster();
+    let roster = trusted();
     let rows = rows();
     let mut table = SessionTable::new();
     let mut rev: Option<RowRevision> = None;
@@ -442,7 +456,7 @@ fn ac3_agent_revision_needs_a_human_reproposal() {
 #[test]
 fn every_non_human_author_is_refused_like_an_agent() {
     let rows = rows();
-    let roster = roster();
+    let roster = trusted();
     let mut table = SessionTable::new();
     let script = principal(&mut table, "script", "batch-job");
     let r1 = principal(&mut table, "human", "rev-one");
@@ -561,7 +575,7 @@ fn approve<'a>(who: &'a Principal, rev: &RowRevision) -> ReviewEvent<'a> {
 #[test]
 fn idr_and_attestation_formats() {
     let rows = rows();
-    let roster = roster();
+    let roster = trusted();
     let mut table = SessionTable::new();
     let author = principal(&mut table, "human", "author-a");
     let r1 = principal(&mut table, "human", "rev-one");
@@ -609,7 +623,7 @@ fn idr_and_attestation_formats() {
 #[test]
 fn stale_review_names_a_digest_other_than_the_revisions() {
     let rows = rows();
-    let roster = roster();
+    let roster = trusted();
     let mut table = SessionTable::new();
     let author = principal(&mut table, "human", "author-a");
     let r1 = principal(&mut table, "human", "rev-one");
@@ -622,7 +636,7 @@ fn stale_review_names_a_digest_other_than_the_revisions() {
 #[test]
 fn roster_role_is_checked_on_the_review_date() {
     let rows = rows();
-    let roster = roster();
+    let roster = trusted();
     let mut table = SessionTable::new();
     let author = principal(&mut table, "human", "author-a");
     // r5 held the role until 2026-11-01 (exclusive).
@@ -638,7 +652,7 @@ fn roster_role_is_checked_on_the_review_date() {
 #[test]
 fn request_changes_from_an_approver_clears_approvals_and_allows_reapproval() {
     let rows = rows();
-    let roster = roster();
+    let roster = trusted();
     let mut table = SessionTable::new();
     let author = principal(&mut table, "human", "author-a");
     let r1 = principal(&mut table, "human", "rev-one");
@@ -695,7 +709,7 @@ fn error_codes_and_display() {
 fn reviews_cannot_be_backdated() {
     check_case("backdated");
     let rows = rows();
-    let roster = roster();
+    let roster = trusted();
     let mut table = SessionTable::new();
     let author = principal(&mut table, "human", "author-a");
     let r1 = principal(&mut table, "human", "rev-one");
@@ -716,13 +730,13 @@ fn reviews_cannot_be_backdated() {
 // ------------------------------------------------------------------ replay from the journal
 
 /// Splits a run's journal into revisions and replays each from its records.
-fn replay_run(run: &Run, roster: &Roster) -> Vec<RowRevision> {
+fn replay_run(run: &Run, roster: &TrustedRosters) -> Vec<RowRevision> {
     let mut out: Vec<RowRevision> = Vec::new();
     let mut group: Vec<RecordedFlow> = Vec::new();
     let mut row: Option<DmtRow> = None;
     let flush = |row: &mut Option<DmtRow>, group: &mut Vec<RecordedFlow>, out: &mut Vec<RowRevision>| {
         if let Some(r) = row.take() {
-            let rev = replay(out.last(), r, group, &[roster]).unwrap();
+            let rev = replay(out.last(), r, group, roster).unwrap();
             out.push(rev);
             group.clear();
         }
@@ -740,7 +754,7 @@ fn replay_run(run: &Run, roster: &Roster) -> Vec<RowRevision> {
 
 #[test]
 fn replay_round_trips_every_case() {
-    let roster = roster();
+    let roster = trusted();
     for name in CASES {
         let (run, _) = run_case(name);
         let rebuilt = replay_run(&run, &roster);
@@ -779,11 +793,11 @@ fn set(v: &mut CValue, k: &str, x: CValue) {
 
 #[test]
 fn replay_refuses_a_tampered_journal() {
-    let roster = roster();
+    let roster = trusted();
     let (row, good) = happy_entries();
-    let signed = replay(None, row.clone(), &good, &[&roster]).unwrap();
+    let signed = replay(None, row.clone(), &good, &roster).unwrap();
     assert_eq!(signed.state(), FlowState::SignedOff);
-    let run = |entries: &[RecordedFlow]| replay(None, row.clone(), entries, &[&roster]).unwrap_err();
+    let run = |entries: &[RecordedFlow]| replay(None, row.clone(), entries, &roster).unwrap_err();
     let differs = FlowError::ReplayMismatch { reason: "record_differs" };
 
     // A forged final state.
@@ -860,5 +874,5 @@ fn replay_refuses_a_tampered_journal() {
     assert_eq!(run(&e), FlowError::ReplayMismatch { reason: "malformed_record" });
     // A forged row (its own review field signed off) cannot be replayed in either.
     let forged = rows()["supported_review_only"].clone();
-    assert_eq!(replay(None, forged, &good, &[&roster]).unwrap_err(), FlowError::ReviewFieldNotDraft);
+    assert_eq!(replay(None, forged, &good, &roster).unwrap_err(), FlowError::ReviewFieldNotDraft);
 }

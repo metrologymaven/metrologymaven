@@ -6,6 +6,10 @@
 //! - [`dmt_flow::state`] (`GDT.RES.ROWFLOW.STATE`): row revisions, the review state machine
 //!   (two distinct human roster reviewers, edition-held attestations, reset on any content
 //!   change, content digest bound to the reviewed content) and its journal records;
+//! - [`dmt_flow::status`] (`GDT.RES.STATUS`): the interpretation status register
+//!   `gdt-rule-status/v1` rebuilt from the workflow journal with conflict-of-interest rules,
+//!   its verification against `gdt-published/v1`, `status_of`, the trusted-roster loader and
+//!   `gdt.export_rule_status@1`;
 //! - [`chars::dprof`] (`GDT.CHAR.DPROF`): defaults profiles as immutable, content-addressed,
 //!   versioned objects, with the publish and re-point commands, their journal events and
 //!   exact replay;

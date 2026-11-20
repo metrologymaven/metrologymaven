@@ -1,0 +1,65 @@
+{
+ "entries": [
+  {
+   "basis": "community",
+   "dialects": [
+    "asme"
+   ],
+   "display_name": "Fictional reviewer one",
+   "id": "r1",
+   "principals": [
+    "human:rev-one"
+   ],
+   "valid_from": "2026-01-01"
+  },
+  {
+   "basis": "community",
+   "dialects": [
+    "asme"
+   ],
+   "display_name": "Fictional reviewer two",
+   "id": "r2",
+   "principals": [
+    "human:rev-two"
+   ],
+   "valid_from": "2026-01-01"
+  },
+  {
+   "basis": "community",
+   "dialects": [
+    "asme"
+   ],
+   "display_name": "Fictional reviewer three",
+   "id": "r3",
+   "principals": [
+    "human:rev-three"
+   ],
+   "valid_from": "2026-01-01"
+  },
+  {
+   "basis": "community",
+   "dialects": [
+    "asme"
+   ],
+   "display_name": "Fictional reviewer four",
+   "id": "r4",
+   "principals": [
+    "human:rev-four"
+   ],
+   "valid_from": "2026-01-01"
+  },
+  {
+   "basis": "community",
+   "dialects": [
+    "asme"
+   ],
+   "display_name": "Fictional reviewer five",
+   "id": "r5",
+   "principals": [
+    "human:rev-five"
+   ],
+   "valid_from": "2026-01-01"
+  }
+ ],
+ "version": "dmt-reviewers/v1"
+}

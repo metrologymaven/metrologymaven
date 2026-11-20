@@ -62,6 +62,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # fid-dep (engine), so engine, outside the kernel graph.
 "fid-geo-cmd" = "engine"
 "fid-hal-runtime" = "engine"
+# Uncertainty commands (UNC.MODEL.GRAPH.STORE first): model store, journal and surfaces over the
+# fid-kunc kernel types; needs fid-bus and fid-replay (engine), so engine, outside the kernel graph.
+"fid-unc" = "engine"
 "fid-surface" = "services"
 "fid-report-pdf" = "services"
 # Report model (RPT.MODEL): document, pages, blocks and report commands.
