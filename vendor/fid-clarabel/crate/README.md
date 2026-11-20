@@ -1,3 +1,9 @@
+> **Fork notice.** This is `fid-clarabel`, the Metrology Maven kernel's fork of
+> Clarabel.rs 0.11.1 (Apache-2.0). Modified from Clarabel 0.11.1 by Metrology Maven;
+> see vendor/fid-clarabel/patches/ for every change. It keeps only the
+> zero, nonnegative and second-order cones with a quadratic objective; the text below
+> is upstream's and describes the full Clarabel.
+
 <p align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/oxfordcontrol/ClarabelDocs/main/docs/src/assets/logo-banner-dark-rs.png">

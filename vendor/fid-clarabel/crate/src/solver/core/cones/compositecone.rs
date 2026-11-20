@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use super::*;
 use crate::algebra::T;
 use crate::algebra::{sq_root, tmin, triangular_number};
@@ -33,7 +35,9 @@ pub struct CompositeCone {
 }
 
 impl CompositeCone {
-    pub fn new(types: &[SupportedConeT]) -> Self {
+    /// The composite cone of `types`; `None` if a size, degree or block-range sum
+    /// overflows `usize` (patch 0003: checked instead of panicking).
+    pub fn new(types: &[SupportedConeT]) -> Option<Self> {
         // make an internal copy to protect from user modification
         let types = types.to_vec();
         let ncones = types.len();
@@ -63,17 +67,21 @@ impl CompositeCone {
         }
 
         // count up elements and degree
-        let numel = cones.iter().map(|c| c.numel()).sum();
-        let degree = cones.iter().map(|c| c.degree()).sum();
+        let numel = cones
+            .iter()
+            .try_fold(0usize, |a, c| a.checked_add(c.numel()))?;
+        let degree = cones
+            .iter()
+            .try_fold(0usize, |a, c| a.checked_add(c.degree()))?;
 
         //ranges for the subvectors associated with each cone,
         //and the ranges for the corresponding entries
         //in the Hs sparse block
 
-        let rng_cones = make_rng_cones(&cones);
-        let rng_blocks = make_rng_blocks(&cones);
+        let rng_cones = make_rng_cones(&cones)?;
+        let rng_blocks = make_rng_blocks(&cones)?;
 
-        Self {
+        Some(Self {
             cones,
             //types,
             type_counts,
@@ -82,43 +90,42 @@ impl CompositeCone {
             rng_cones,
             rng_blocks,
             _is_symmetric,
-        }
+        })
     }
 }
 
-fn make_rng_cones(cones: &[SupportedCone]) -> Vec<Range<usize>> {
+fn make_rng_cones(cones: &[SupportedCone]) -> Option<Vec<Range<usize>>> {
     let mut rngs = Vec::with_capacity(cones.len());
 
     if !cones.is_empty() {
-        let mut start = 0;
+        let mut start: usize = 0;
         for cone in cones {
-            let stop = start + cone.numel();
+            let stop = start.checked_add(cone.numel())?;
             rngs.push(start..stop);
             start = stop;
         }
     }
-    rngs
+    Some(rngs)
 }
 
-fn make_rng_blocks(cones: &[SupportedCone]) -> Vec<Range<usize>> {
+fn make_rng_blocks(cones: &[SupportedCone]) -> Option<Vec<Range<usize>>> {
     let mut rngs = Vec::with_capacity(cones.len());
 
     if !cones.is_empty() {
-        let mut start = 0;
+        let mut start: usize = 0;
         for cone in cones {
             let nvars = cone.numel();
-            let stop = start + {
-                if cone.Hs_is_diagonal() {
-                    nvars
-                } else {
-                    triangular_number(nvars)
-                }
+            let block = if cone.Hs_is_diagonal() {
+                nvars
+            } else {
+                triangular_number(nvars)?
             };
+            let stop = start.checked_add(block)?;
             rngs.push(start..stop);
             start = stop;
         }
     }
-    rngs
+    Some(rngs)
 }
 
 impl CompositeCone {

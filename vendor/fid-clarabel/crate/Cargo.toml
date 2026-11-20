@@ -1,3 +1,5 @@
+# Modified from Clarabel 0.11.1 by Metrology Maven;
+# see vendor/fid-clarabel/patches/
 # fid-clarabel: Clarabel 0.11.1 (https://github.com/oxfordcontrol/Clarabel.rs, Apache-2.0)
 # patched for the Metrology Maven kernel (spec node KRN.SOLV.CONIC.PATCH). The patch series
 # and its rationale are in ../patches/ and ../AUDIT.toml. Do not edit this crate by hand:
@@ -39,3 +41,11 @@ path = "../tests/ldl_order.rs"
 [[test]]
 name = "kernel_source"
 path = "../tests/kernel_source.rs"
+
+[[test]]
+name = "upstream_tests"
+path = "../tests/upstream_tests.rs"
+
+[[test]]
+name = "kernel_errors"
+path = "../tests/kernel_errors.rs"

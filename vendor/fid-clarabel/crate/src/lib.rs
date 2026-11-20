@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 // Add a stylish Clarabel cow and gear logo to the docs
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/oxfordcontrol/ClarabelDocs/main/docs/src/assets/cow-and-gear-logo.png",

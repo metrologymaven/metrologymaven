@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use self::internal::*;
 use crate::algebra::*;
 use crate::solver::core::cones::Cone;
@@ -198,7 +200,17 @@ where
 
             // KNP-1 (patch 0003): the fid-num facade turns a NaN, an infinity or a domain
             // error into a NaN, which reaches μ; stop with a numerical error status.
+            // The "almost solved" check in post_process must not read this iterate: go
+            // back to the previous one (whose info and residuals are recomputed), or, at
+            // iteration 0, leave the info at its NaN reset values so no check passes.
             if !mu.is_finite() {
+                if iter > 0 {
+                    self.info
+                        .reset_to_prev_iterate(&mut self.variables, &self.prev_vars);
+                    self.residuals.update(&self.variables, &self.data);
+                    self.info
+                        .update(&mut self.data, &self.variables, &self.residuals);
+                }
                 self.info.set_status(SolverStatus::NumericalError);
                 break;
             }

@@ -1,0 +1,548 @@
+Patch 0009 (licence-notice) of fid-clarabel, spec node KRN.SOLV.CONIC.PATCH.
+
+Apache-2.0 section 4(b): a two-line change notice at the top of every file of the crate that differs from upstream or is new (Rust and TOML comments), and a fork notice at the top of README.md.
+
+Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
+
+diff --git a/Cargo.toml b/Cargo.toml
+index 420eb24..9b23af2 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -1,3 +1,5 @@
++# Modified from Clarabel 0.11.1 by Metrology Maven;
++# see vendor/fid-clarabel/patches/
+ # fid-clarabel: Clarabel 0.11.1 (https://github.com/oxfordcontrol/Clarabel.rs, Apache-2.0)
+ # patched for the Metrology Maven kernel (spec node KRN.SOLV.CONIC.PATCH). The patch series
+ # and its rationale are in ../patches/ and ../AUDIT.toml. Do not edit this crate by hand:
+diff --git a/README.md b/README.md
+index e26f16d..8d36006 100644
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1,9 @@
++> **Fork notice.** This is `fid-clarabel`, the Metrology Maven kernel's fork of
++> Clarabel.rs 0.11.1 (Apache-2.0). Modified from Clarabel 0.11.1 by Metrology Maven;
++> see vendor/fid-clarabel/patches/ for every change. It keeps only the
++> zero, nonnegative and second-order cones with a quadratic objective; the text below
++> is upstream's and describes the full Clarabel.
++
+ <p align="center">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/oxfordcontrol/ClarabelDocs/main/docs/src/assets/logo-banner-dark-rs.png">
+diff --git a/src/algebra/csc/block_concatenate.rs b/src/algebra/csc/block_concatenate.rs
+index 58d273f..fa28467 100644
+--- a/src/algebra/csc/block_concatenate.rs
++++ b/src/algebra/csc/block_concatenate.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use crate::algebra::hvcat_dim_check;
+ use crate::algebra::matrix_traits::ShapedMatrix;
+ use crate::algebra::MatrixConcatenationError;
+diff --git a/src/algebra/csc/cscmatrix.rs b/src/algebra/csc/cscmatrix.rs
+index da211d5..0d2e66b 100644
+--- a/src/algebra/csc/cscmatrix.rs
++++ b/src/algebra/csc/cscmatrix.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ 
+ use crate::algebra::utils::sortperm_by;
+diff --git a/src/algebra/csc/matrix_math.rs b/src/algebra/csc/matrix_math.rs
+index f03e278..d9e70ac 100644
+--- a/src/algebra/csc/matrix_math.rs
++++ b/src/algebra/csc/matrix_math.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use crate::algebra::*;
+ use std::iter::zip;
+ 
+diff --git a/src/algebra/csc/mod.rs b/src/algebra/csc/mod.rs
+index 2c79f53..6409f84 100644
+--- a/src/algebra/csc/mod.rs
++++ b/src/algebra/csc/mod.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ 
+ mod cscmatrix;
+diff --git a/src/algebra/csc/utils.rs b/src/algebra/csc/utils.rs
+index 1fe64b4..a0a6ca4 100644
+--- a/src/algebra/csc/utils.rs
++++ b/src/algebra/csc/utils.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use crate::algebra::{FloatT, T};
+ //---------------------------------------------------------
+ // low-level internal utilities for counting / filling entries
+diff --git a/src/algebra/error_types.rs b/src/algebra/error_types.rs
+index 8e6b563..8d170d5 100644
+--- a/src/algebra/error_types.rs
++++ b/src/algebra/error_types.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ /// Error type returned by matrix concatenation operations.
+ #[derive(Debug)]
+ pub enum MatrixConcatenationError {
+diff --git a/src/algebra/floats.rs b/src/algebra/floats.rs
+index 8639e3d..f4e0e6a 100644
+--- a/src/algebra/floats.rs
++++ b/src/algebra/floats.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ //! The solver's floating point type.
+ //!
+diff --git a/src/algebra/knp.rs b/src/algebra/knp.rs
+index 812471c..5ea25cd 100644
+--- a/src/algebra/knp.rs
++++ b/src/algebra/knp.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ //! KNP-1 numeric facade of the vendored solver (patch 0003).
+ //!
+ //! Every square root, logarithm, min and max of the solver goes through `fid_num::f`
+diff --git a/src/algebra/math_traits.rs b/src/algebra/math_traits.rs
+index e29ed06..4f06ea3 100644
+--- a/src/algebra/math_traits.rs
++++ b/src/algebra/math_traits.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use crate::algebra::T;
+ // All internal math for all solver implementations should go
+ // through these core traits, which are implemented generically
+diff --git a/src/algebra/matrix_traits.rs b/src/algebra/matrix_traits.rs
+index cbfabca..e790888 100644
+--- a/src/algebra/matrix_traits.rs
++++ b/src/algebra/matrix_traits.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ 
+ use crate::algebra::MatrixConcatenationError;
+diff --git a/src/algebra/matrix_types.rs b/src/algebra/matrix_types.rs
+index 7f1c8af..b15d76e 100644
+--- a/src/algebra/matrix_types.rs
++++ b/src/algebra/matrix_types.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use crate::algebra::ShapedMatrix;
+ 
+ use crate::algebra::TriangularMatrixChecks;
+diff --git a/src/algebra/mod.rs b/src/algebra/mod.rs
+index 73776cb..ea43e9b 100644
+--- a/src/algebra/mod.rs
++++ b/src/algebra/mod.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ //! Clarabel algebra module.   
+ //!
+ //! __NB__: Users will not ordinarily need to interact with this module except for defining
+diff --git a/src/algebra/scalarmath.rs b/src/algebra/scalarmath.rs
+index 641504f..ad4d9a7 100644
+--- a/src/algebra/scalarmath.rs
++++ b/src/algebra/scalarmath.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use crate::algebra::T;
+ use crate::algebra::{nat_log, FloatT, ScalarMath};
+ 
+diff --git a/src/algebra/utils.rs b/src/algebra/utils.rs
+index 26e7627..10a926d 100644
+--- a/src/algebra/utils.rs
++++ b/src/algebra/utils.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ //! Internal utility functions and helpers.
+ 
+ // assorted other functionality missing from std
+diff --git a/src/algebra/vecmath.rs b/src/algebra/vecmath.rs
+index 6354a17..ad5e7ac 100644
+--- a/src/algebra/vecmath.rs
++++ b/src/algebra/vecmath.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use crate::algebra::T;
+ use crate::algebra::{sq_root, tmax, tmin, AsFloatT, FloatT, ScalarMath, VectorMath};
+ use fid_num::red;
+diff --git a/src/lib.rs b/src/lib.rs
+index bd5c969..c33bd30 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ // Add a stylish Clarabel cow and gear logo to the docs
+ #![doc(
+     html_logo_url = "https://raw.githubusercontent.com/oxfordcontrol/ClarabelDocs/main/docs/src/assets/cow-and-gear-logo.png",
+diff --git a/src/qdldl/qdldl.rs b/src/qdldl/qdldl.rs
+index 8bcefe8..03728ad 100644
+--- a/src/qdldl/qdldl.rs
++++ b/src/qdldl/qdldl.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ use crate::algebra::*;
+ use core::cmp::{max, min};
+diff --git a/src/solver/core/cones/compositecone.rs b/src/solver/core/cones/compositecone.rs
+index 8ec6084..591ed06 100644
+--- a/src/solver/core/cones/compositecone.rs
++++ b/src/solver/core/cones/compositecone.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use super::*;
+ use crate::algebra::T;
+ use crate::algebra::{sq_root, tmin, triangular_number};
+diff --git a/src/solver/core/cones/mod.rs b/src/solver/core/cones/mod.rs
+index 2dca48e..10041e1 100644
+--- a/src/solver/core/cones/mod.rs
++++ b/src/solver/core/cones/mod.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ 
+ use crate::algebra::FloatT;
+diff --git a/src/solver/core/cones/nonnegativecone.rs b/src/solver/core/cones/nonnegativecone.rs
+index f67d5ba..81edf3b 100644
+--- a/src/solver/core/cones/nonnegativecone.rs
++++ b/src/solver/core/cones/nonnegativecone.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use super::*;
+ use crate::algebra::*;
+ use std::iter::zip;
+diff --git a/src/solver/core/cones/socone.rs b/src/solver/core/cones/socone.rs
+index 69ec8a0..74f89c6 100644
+--- a/src/solver/core/cones/socone.rs
++++ b/src/solver/core/cones/socone.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use super::*;
+ use crate::algebra::*;
+ 
+diff --git a/src/solver/core/cones/supportedcone.rs b/src/solver/core/cones/supportedcone.rs
+index b6d00fa..cc29b91 100644
+--- a/src/solver/core/cones/supportedcone.rs
++++ b/src/solver/core/cones/supportedcone.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use super::*;
+ 
+ // ---------------------------------------------------
+diff --git a/src/solver/core/cones/symmetric_common.rs b/src/solver/core/cones/symmetric_common.rs
+index 6c8495b..5a30947 100644
+--- a/src/solver/core/cones/symmetric_common.rs
++++ b/src/solver/core/cones/symmetric_common.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use crate::algebra::T;
+ use crate::algebra::{MatrixShape, VectorMath};
+ 
+diff --git a/src/solver/core/cones/zerocone.rs b/src/solver/core/cones/zerocone.rs
+index 9ef2242..9a2cbf4 100644
+--- a/src/solver/core/cones/zerocone.rs
++++ b/src/solver/core/cones/zerocone.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use super::*;
+ use crate::algebra::*;
+ use core::marker::PhantomData;
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs b/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
+index e9bfbd0..a96f21f 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ 
+ use super::*;
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs b/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs
+index 17763d6..b5dc884 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ 
+ use super::ldlsolvers::config::get_ldlsolver_config;
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/kkt_assembly.rs b/src/solver/core/kktsolvers/direct/quasidef/kkt_assembly.rs
+index 1135b98..5cf8f1f 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/kkt_assembly.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/kkt_assembly.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ 
+ use super::datamaps::*;
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/auto.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/auto.rs
+index d1c190a..183a88a 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/auto.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/auto.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ use crate::{
+     algebra::*,
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/config.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/config.rs
+index 3f75fd6..dd80e47 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/config.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/config.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use super::{auto::*, qdldl::*};
+ 
+ use crate::{
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/mod.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/mod.rs
+index ace10b1..86bcb43 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/mod.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/mod.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ pub mod auto;
+ pub mod config;
+ pub mod qdldl;
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
+index 94b8d0a..8820e51 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ use crate::algebra::*;
+ use crate::qdldl::*;
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/mod.rs b/src/solver/core/kktsolvers/direct/quasidef/mod.rs
+index eca37e0..83e05e3 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/mod.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/mod.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use crate::{algebra::*, solver::core::kktsolvers::HasLinearSolverInfo};
+ 
+ //ldl linear solvers kept in a submodule (not flattened)
+diff --git a/src/solver/core/kktsolvers/mod.rs b/src/solver/core/kktsolvers/mod.rs
+index 46b39b8..65025d3 100644
+--- a/src/solver/core/kktsolvers/mod.rs
++++ b/src/solver/core/kktsolvers/mod.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ use crate::algebra::*;
+ use crate::solver::core::{cones::CompositeCone, CoreSettings};
+diff --git a/src/solver/core/mod.rs b/src/solver/core/mod.rs
+index 0ddc180..18189d7 100644
+--- a/src/solver/core/mod.rs
++++ b/src/solver/core/mod.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ // package together all of the following and re-export
+ // in a partially flattened structure :
+ // : core component traits
+diff --git a/src/solver/core/settings.rs b/src/solver/core/settings.rs
+index f15c462..598c380 100644
+--- a/src/solver/core/settings.rs
++++ b/src/solver/core/settings.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use crate::solver::implementations::default::DefaultSettings;
+ 
+ /// Solver general core settings are the same as in the default solver.
+diff --git a/src/solver/core/solver.rs b/src/solver/core/solver.rs
+index 4f97210..d3cf1d2 100644
+--- a/src/solver/core/solver.rs
++++ b/src/solver/core/solver.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use self::internal::*;
+ use crate::algebra::*;
+ use crate::solver::core::cones::Cone;
+diff --git a/src/solver/core/traits.rs b/src/solver/core/traits.rs
+index 56542d9..1907cbf 100644
+--- a/src/solver/core/traits.rs
++++ b/src/solver/core/traits.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ //! Required traits for types providing a Clarabel solver implementation.
+ //!
+ //! This module defines the core traits that must be implemented by a collection
+diff --git a/src/solver/implementations/default/data_updating.rs b/src/solver/implementations/default/data_updating.rs
+index 04e2b71..ccc47c8 100644
+--- a/src/solver/implementations/default/data_updating.rs
++++ b/src/solver/implementations/default/data_updating.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ use crate::algebra::*;
+ use crate::solver::DefaultSolver;
+diff --git a/src/solver/implementations/default/equilibration.rs b/src/solver/implementations/default/equilibration.rs
+index fd5f25d..deeff02 100644
+--- a/src/solver/implementations/default/equilibration.rs
++++ b/src/solver/implementations/default/equilibration.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ use crate::algebra::*;
+ 
+diff --git a/src/solver/implementations/default/info.rs b/src/solver/implementations/default/info.rs
+index fcec8de..185b709 100644
+--- a/src/solver/implementations/default/info.rs
++++ b/src/solver/implementations/default/info.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use super::*;
+ use crate::algebra::*;
+ use crate::solver::core::kktsolvers::LinearSolverInfo;
+diff --git a/src/solver/implementations/default/kktsystem.rs b/src/solver/implementations/default/kktsystem.rs
+index 0ff83c7..23cf984 100644
+--- a/src/solver/implementations/default/kktsystem.rs
++++ b/src/solver/implementations/default/kktsystem.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use super::*;
+ use crate::solver::core::{
+     cones::{CompositeCone, Cone},
+diff --git a/src/solver/implementations/default/mod.rs b/src/solver/implementations/default/mod.rs
+index 7df23f1..8d03ba1 100644
+--- a/src/solver/implementations/default/mod.rs
++++ b/src/solver/implementations/default/mod.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ //! Implementation of core types for the standard problem format
+ //! described in the documentation [main page](crate).
+ 
+diff --git a/src/solver/implementations/default/presolver.rs b/src/solver/implementations/default/presolver.rs
+index 9ea90cd..6c710e3 100644
+--- a/src/solver/implementations/default/presolver.rs
++++ b/src/solver/implementations/default/presolver.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ use super::*;
+ use crate::algebra::*;
+diff --git a/src/solver/implementations/default/problemdata.rs b/src/solver/implementations/default/problemdata.rs
+index 461c6d7..d9a0ac3 100644
+--- a/src/solver/implementations/default/problemdata.rs
++++ b/src/solver/implementations/default/problemdata.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ 
+ use super::*;
+diff --git a/src/solver/implementations/default/residuals.rs b/src/solver/implementations/default/residuals.rs
+index b250217..da06edd 100644
+--- a/src/solver/implementations/default/residuals.rs
++++ b/src/solver/implementations/default/residuals.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(non_snake_case)]
+ use super::*;
+ use crate::algebra::*;
+diff --git a/src/solver/implementations/default/settings.rs b/src/solver/implementations/default/settings.rs
+index 13c4919..c3130fc 100644
+--- a/src/solver/implementations/default/settings.rs
++++ b/src/solver/implementations/default/settings.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use crate::solver::core::traits::Settings;
+ use crate::{algebra::*, solver::core::SettingsError};
+ 
+diff --git a/src/solver/implementations/default/solution.rs b/src/solver/implementations/default/solution.rs
+index 29533ae..fe56243 100644
+--- a/src/solver/implementations/default/solution.rs
++++ b/src/solver/implementations/default/solution.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ #![allow(unused_variables)]
+ 
+ use super::*;
+diff --git a/src/solver/implementations/default/solver.rs b/src/solver/implementations/default/solver.rs
+index e04202e..230fba4 100644
+--- a/src/solver/implementations/default/solver.rs
++++ b/src/solver/implementations/default/solver.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use super::*;
+ use crate::solver::core::{
+     cones::{CompositeCone, SupportedConeT},
+diff --git a/src/solver/implementations/default/variables.rs b/src/solver/implementations/default/variables.rs
+index cf59072..328d9da 100644
+--- a/src/solver/implementations/default/variables.rs
++++ b/src/solver/implementations/default/variables.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ use super::*;
+ use crate::algebra::*;
+ use crate::solver::core::{
+diff --git a/src/solver/mod.rs b/src/solver/mod.rs
+index 05957dc..26e4803 100644
+--- a/src/solver/mod.rs
++++ b/src/solver/mod.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ //! Clarabel solver main module.
+ //!
+ //! This module contains the main types and traits for the Clarabel solver.
+diff --git a/src/utils/infbounds.rs b/src/utils/infbounds.rs
+index 37d21ef..a35f9da 100644
+--- a/src/utils/infbounds.rs
++++ b/src/utils/infbounds.rs
+@@ -1,3 +1,5 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ /// Constant indicating that an inequality bound is to be treated as infinite.
+ ///
+ /// If the setting [`presolve_enable`](crate::solver::DefaultSettings::presolve_enable)
+diff --git a/src/utils/mod.rs b/src/utils/mod.rs
+index 7dfc4ec..ef572d7 100644
+--- a/src/utils/mod.rs
++++ b/src/utils/mod.rs
+@@ -1 +1,3 @@
++// Modified from Clarabel 0.11.1 by Metrology Maven;
++// see vendor/fid-clarabel/patches/
+ pub(crate) mod infbounds;

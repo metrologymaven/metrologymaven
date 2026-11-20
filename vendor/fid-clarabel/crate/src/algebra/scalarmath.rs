@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use crate::algebra::T;
 use crate::algebra::{nat_log, FloatT, ScalarMath};
 
@@ -21,8 +23,15 @@ impl ScalarMath for T {
     }
 }
 
-pub(crate) const fn triangular_number(k: usize) -> usize {
-    (k * (k + 1)) >> 1
+/// k(k+1)/2, or `None` on overflow (patch 0003: checked instead of panicking)
+pub(crate) const fn triangular_number(k: usize) -> Option<usize> {
+    match k.checked_add(1) {
+        Some(k1) => match k.checked_mul(k1) {
+            Some(p) => Some(p >> 1),
+            None => None,
+        },
+        None => None,
+    }
 }
 
 #[allow(dead_code)]

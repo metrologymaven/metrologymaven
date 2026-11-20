@@ -5,7 +5,7 @@ Remove every third-party dependency: derive_builder (hand-written Default), enum
 Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
 
 diff --git a/Cargo.toml b/Cargo.toml
-index e56e54e..976393d 100644
+index 1efe212..420eb24 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
 @@ -14,13 +14,9 @@ license = "Apache-2.0"
@@ -125,7 +125,7 @@ index 7000449..8e6b563 100644
 +
 +impl std::error::Error for DenseFactorizationError {}
 diff --git a/src/algebra/vecmath.rs b/src/algebra/vecmath.rs
-index bbcf619..59520a1 100644
+index a26caa6..7735641 100644
 --- a/src/algebra/vecmath.rs
 +++ b/src/algebra/vecmath.rs
 @@ -2,7 +2,6 @@ use super::{sq_root, tmax, tmin, AsFloatT, FloatT, ScalarMath, VectorMath};
@@ -136,7 +136,7 @@ index bbcf619..59520a1 100644
  use std::iter::zip;
  
  // KNP-1 (patch 0005): every sum, dot product and 2-norm of the solver goes through
-@@ -102,7 +101,7 @@ impl VectorMath for [T] {
+@@ -104,7 +103,7 @@ impl VectorMath for [T] {
  
          let mut si = Vec::with_capacity(s.len());
          let mut zi = Vec::with_capacity(z.len());
@@ -146,10 +146,10 @@ index bbcf619..59520a1 100644
              zi.push(z + α * dz);
          }
 diff --git a/src/qdldl/qdldl.rs b/src/qdldl/qdldl.rs
-index 038013d..998de97 100644
+index 6f92d7d..8bcefe8 100644
 --- a/src/qdldl/qdldl.rs
 +++ b/src/qdldl/qdldl.rs
-@@ -1,63 +1,74 @@
+@@ -1,66 +1,82 @@
  #![allow(non_snake_case)]
  use crate::algebra::*;
  use core::cmp::{max, min};
@@ -177,6 +177,9 @@ index 038013d..998de97 100644
 -    #[error("Invalid permutation vector")]
      /// Invalid permutation vector supplied
      InvalidPermutation,
+-    #[error("Matrix exceeds the size budget of the minimum-degree ordering")]
+     /// Matrix exceeds [`MAX_ORDERING_DIM`], [`MAX_ORDERING_NNZ`] or [`MAX_ORDERING_FILL`]
+     OrderingTooLarge,
  }
  
 -#[derive(Builder, Debug, Clone)]
@@ -190,6 +193,12 @@ index 038013d..998de97 100644
 +            QDLDLError::NotUpperTriangular => write!(f, "Matrix is not upper triangular"),
 +            QDLDLError::ZeroPivot => write!(f, "Matrix factorization produced a zero pivot"),
 +            QDLDLError::InvalidPermutation => write!(f, "Invalid permutation vector"),
++            QDLDLError::OrderingTooLarge => {
++                write!(
++                    f,
++                    "Matrix exceeds the size budget of the minimum-degree ordering"
++                )
++            }
 +        }
 +    }
 +}
@@ -261,7 +270,7 @@ index 3ee18e6..0f5eeb8 100644
      // functions relating to basic sizing
      fn degree(&self) -> usize;
 diff --git a/src/solver/core/cones/nonnegativecone.rs b/src/solver/core/cones/nonnegativecone.rs
-index 54eef60..595e4db 100644
+index ae49f27..e556a1b 100644
 --- a/src/solver/core/cones/nonnegativecone.rs
 +++ b/src/solver/core/cones/nonnegativecone.rs
 @@ -1,6 +1,5 @@
@@ -280,7 +289,7 @@ index 54eef60..595e4db 100644
              *λ = sq_root((*s) * (*z));
              *w = sq_root((*s) / (*z));
          }
-@@ -151,7 +150,7 @@ impl Cone for NonnegativeCone {
+@@ -155,7 +154,7 @@ impl Cone for NonnegativeCone {
          assert_eq!(dz.len(), z.len());
          assert_eq!(ds.len(), s.len());
          let mut barrier = T::zero();
@@ -290,7 +299,7 @@ index 54eef60..595e4db 100644
              let zi = z + α * dz;
              barrier -= (si * zi).logsafe();
 diff --git a/src/solver/core/cones/socone.rs b/src/solver/core/cones/socone.rs
-index 1c1ec42..e4e79b8 100644
+index b1f67ec..8dc2a66 100644
 --- a/src/solver/core/cones/socone.rs
 +++ b/src/solver/core/cones/socone.rs
 @@ -1,6 +1,5 @@
@@ -300,7 +309,7 @@ index 1c1ec42..e4e79b8 100644
  
  // -------------------------------------
  // Second order Cone
-@@ -270,7 +269,9 @@ impl Cone for SecondOrderCone {
+@@ -271,7 +270,9 @@ impl Cone for SecondOrderCone {
          out.scale(c / resz);
  
          out[0] += self.η * w1ds1;
@@ -702,10 +711,10 @@ index 069120c..f15c462 100644
 +
 +impl std::error::Error for SettingsError {}
 diff --git a/src/solver/implementations/default/data_updating.rs b/src/solver/implementations/default/data_updating.rs
-index ec2cd94..108e0c1 100644
+index cfade4b..04e2b71 100644
 --- a/src/solver/implementations/default/data_updating.rs
 +++ b/src/solver/implementations/default/data_updating.rs
-@@ -3,20 +3,39 @@ use crate::algebra::*;
+@@ -3,25 +3,46 @@ use crate::algebra::*;
  use crate::solver::DefaultSolver;
  use core::iter::{zip, Zip};
  use core::slice::Iter;
@@ -724,9 +733,12 @@ index ec2cd94..108e0c1 100644
 -    #[error("Data formatting error")]
      /// Data formatting error.   See [`SparseFormatError`]
 -    BadFormat(#[from] SparseFormatError),
+-    #[error("Data updates must be finite (no NaN or infinity)")]
 +    BadFormat(SparseFormatError),
-+}
-+
+     /// Data updates must be finite (KNP-1, patch 0003)
+     NonFiniteData,
+ }
+ 
 +impl std::fmt::Display for DataUpdateError {
 +    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 +        match self {
@@ -738,6 +750,9 @@ index ec2cd94..108e0c1 100644
 +                "Data updates are not allowed if structural zeros have been dropped"
 +            ),
 +            DataUpdateError::BadFormat(_) => write!(f, "Data formatting error"),
++            DataUpdateError::NonFiniteData => {
++                write!(f, "Data updates must be finite (no NaN or infinity)")
++            }
 +        }
 +    }
 +}
@@ -748,9 +763,11 @@ index ec2cd94..108e0c1 100644
 +    fn from(e: SparseFormatError) -> Self {
 +        DataUpdateError::BadFormat(e)
 +    }
- }
- 
++}
++
  /// Trait for updating problem data matrices (`P` and `A`) from various data types
+ pub trait MatrixProblemDataUpdate {
+     /// True when every new value is finite (checked before any update; patch 0003)
 diff --git a/src/solver/implementations/default/problemdata.rs b/src/solver/implementations/default/problemdata.rs
 index 17fc34f..461c6d7 100644
 --- a/src/solver/implementations/default/problemdata.rs
@@ -1014,7 +1031,7 @@ index 507b7f7..ed9b806 100644
  // individual validation functions go here
  // ---------------------------------------------------------
 diff --git a/src/solver/implementations/default/solver.rs b/src/solver/implementations/default/solver.rs
-index f389faf..ef9ad96 100644
+index 67ef79d..e04202e 100644
 --- a/src/solver/implementations/default/solver.rs
 +++ b/src/solver/implementations/default/solver.rs
 @@ -6,7 +6,6 @@ use crate::solver::core::{

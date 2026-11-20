@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use crate::algebra::T;
 use crate::algebra::{sq_root, tmax, tmin, AsFloatT, FloatT, ScalarMath, VectorMath};
 use fid_num::red;
@@ -20,6 +22,7 @@ impl VectorMath for [T] {
     }
 
     fn select(&self, index: &[bool]) -> Vec<T> {
+        // invariant (patch 0003): presolve keep flags have one entry per element.
         assert_eq!(self.len(), index.len());
         zip(self, index)
             .filter(|(_x, &b)| b)
@@ -95,6 +98,7 @@ impl VectorMath for [T] {
     }
 
     fn dot_shifted(z: &[T], s: &[T], dz: &[T], ds: &[T], alpha: T) -> T {
+        // invariant (patch 0003): z, s, dz, ds are the same cone range of solver vectors.
         assert_eq!(z.len(), s.len());
         assert_eq!(z.len(), dz.len());
         assert_eq!(s.len(), ds.len());
@@ -128,6 +132,7 @@ impl VectorMath for [T] {
 
     //2-norm of elementwise product self.*v
     fn norm_scaled(&self, v: &[T]) -> T {
+        // invariant (patch 0003): both are solver vectors of the same dimension (n or m).
         assert_eq!(self.len(), v.len());
         let p: Vec<T> = zip(self, v).map(|(&yi, &vi)| yi * vi).collect();
         red_value(red::norm2(&p))
@@ -159,6 +164,7 @@ impl VectorMath for [T] {
 
     //inf-norm of elementwise product self.*v
     fn norm_inf_scaled(&self, v: &Self) -> T {
+        // invariant (patch 0003): both are solver vectors of the same dimension (n or m).
         assert_eq!(self.len(), v.len());
         zip(self, v).fold(T::zero(), |acc, (&x, &y)| tmax(acc, T::abs(x * y)))
     }
@@ -198,6 +204,7 @@ impl VectorMath for [T] {
     }
 
     fn axpby(&mut self, a: T, x: &[T], b: T) -> &mut Self {
+        // invariant (patch 0003): both are solver vectors of the same dimension (n or m).
         assert_eq!(self.len(), x.len());
 
         zip(&mut *self, x).for_each(|(y, x)| *y = a * (*x) + b * (*y));
@@ -205,6 +212,7 @@ impl VectorMath for [T] {
     }
 
     fn waxpby(&mut self, a: T, x: &[T], b: T, y: &[T]) -> &mut Self {
+        // invariant (patch 0003): both are solver vectors of the same dimension (n or m).
         assert_eq!(self.len(), x.len());
         assert_eq!(self.len(), y.len());
 

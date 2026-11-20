@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 // package together all of the following and re-export
 // in a partially flattened structure :
 // : core component traits

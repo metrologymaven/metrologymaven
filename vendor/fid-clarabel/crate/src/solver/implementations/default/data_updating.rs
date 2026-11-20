@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 #![allow(non_snake_case)]
 use crate::algebra::*;
 use crate::solver::DefaultSolver;
@@ -13,6 +15,8 @@ pub enum DataUpdateError {
     DroppedStructuralZeros,
     /// Data formatting error.   See [`SparseFormatError`]
     BadFormat(SparseFormatError),
+    /// Data updates must be finite (KNP-1, patch 0003)
+    NonFiniteData,
 }
 
 impl std::fmt::Display for DataUpdateError {
@@ -26,6 +30,9 @@ impl std::fmt::Display for DataUpdateError {
                 "Data updates are not allowed if structural zeros have been dropped"
             ),
             DataUpdateError::BadFormat(_) => write!(f, "Data formatting error"),
+            DataUpdateError::NonFiniteData => {
+                write!(f, "Data updates must be finite (no NaN or infinity)")
+            }
         }
     }
 }
@@ -40,6 +47,8 @@ impl From<SparseFormatError> for DataUpdateError {
 
 /// Trait for updating problem data matrices (`P` and `A`) from various data types
 pub trait MatrixProblemDataUpdate {
+    /// True when every new value is finite (checked before any update; patch 0003)
+    fn all_finite(&self) -> bool;
     /// Update matrix entries using associated left/right conditioners and scaling terms
     fn update_matrix(
         &self,
@@ -52,6 +61,8 @@ pub trait MatrixProblemDataUpdate {
 
 /// Trait for updating problem data vectors (`q`` and `b`) from various data types
 pub trait VectorProblemDataUpdate {
+    /// True when every new value is finite (checked before any update; patch 0003)
+    fn all_finite(&self) -> bool;
     /// Update vector entries using associated elementwise and overall scaling terms
     fn update_vector(
         &self,
@@ -112,6 +123,9 @@ impl DefaultSolver {
         data: &Data,
     ) -> Result<(), DataUpdateError> {
         self.check_data_update_allowed()?;
+        if !data.all_finite() {
+            return Err(DataUpdateError::NonFiniteData);
+        }
         let d = &self.data.equilibration.d;
         let c = self.data.equilibration.c;
         data.update_matrix(&mut self.data.P, d, d, Some(c))?;
@@ -135,6 +149,9 @@ impl DefaultSolver {
         data: &Data,
     ) -> Result<(), DataUpdateError> {
         self.check_data_update_allowed()?;
+        if !data.all_finite() {
+            return Err(DataUpdateError::NonFiniteData);
+        }
         let d = &self.data.equilibration.d;
         let e = &self.data.equilibration.e;
         data.update_matrix(&mut self.data.A, e, d, None)?;
@@ -149,6 +166,9 @@ impl DefaultSolver {
         data: &Data,
     ) -> Result<(), DataUpdateError> {
         self.check_data_update_allowed()?;
+        if !data.all_finite() {
+            return Err(DataUpdateError::NonFiniteData);
+        }
         let d = &self.data.equilibration.d;
         let c = self.data.equilibration.c;
         data.update_vector(&mut self.data.q, d, Some(c))?;
@@ -165,6 +185,11 @@ impl DefaultSolver {
         data: &Data,
     ) -> Result<(), DataUpdateError> {
         self.check_data_update_allowed()?;
+        // stricter than setup, where +infinity bounds are allowed: updates are only
+        // possible without presolve, which is what removes or caps them
+        if !data.all_finite() {
+            return Err(DataUpdateError::NonFiniteData);
+        }
         let e = &self.data.equilibration.e;
         data.update_vector(&mut self.data.b, e, None)?;
 
@@ -192,6 +217,10 @@ impl DefaultSolver {
 }
 
 impl MatrixProblemDataUpdate for CscMatrix {
+    fn all_finite(&self) -> bool {
+        self.nzval.iter().all(|x| x.is_finite())
+    }
+
     fn update_matrix(
         &self,
         M: &mut CscMatrix,
@@ -206,6 +235,10 @@ impl MatrixProblemDataUpdate for CscMatrix {
 }
 
 impl MatrixProblemDataUpdate for [T] {
+    fn all_finite(&self) -> bool {
+        self.iter().all(|x| x.is_finite())
+    }
+
     fn update_matrix(
         &self,
         M: &mut CscMatrix,
@@ -235,6 +268,10 @@ impl MatrixProblemDataUpdate for [T] {
 }
 
 impl MatrixProblemDataUpdate for Vec<T> {
+    fn all_finite(&self) -> bool {
+        self.iter().all(|x| x.is_finite())
+    }
+
     fn update_matrix(
         &self,
         M: &mut CscMatrix,
@@ -247,6 +284,10 @@ impl MatrixProblemDataUpdate for Vec<T> {
 }
 
 impl MatrixProblemDataUpdate for [T; 0] {
+    fn all_finite(&self) -> bool {
+        true
+    }
+
     fn update_matrix(
         &self,
         _M: &mut CscMatrix,
@@ -263,6 +304,10 @@ impl MatrixProblemDataUpdate for [T; 0] {
 // the zip iterator for partial updates implemented next.
 
 impl<'a> MatrixProblemDataUpdate for Zip<Iter<'a, usize>, Iter<'a, T>> {
+    fn all_finite(&self) -> bool {
+        self.clone().all(|(_, x)| x.is_finite())
+    }
+
     fn update_matrix(
         &self,
         M: &mut CscMatrix,
@@ -274,7 +319,9 @@ impl<'a> MatrixProblemDataUpdate for Zip<Iter<'a, usize>, Iter<'a, T>> {
             if idx >= M.nzval.len() {
                 return Err(SparseFormatError::IncompatibleDimension);
             }
-            let (row, col) = M.index_to_coord(idx);
+            let Some((row, col)) = M.index_to_coord(idx) else {
+                return Err(SparseFormatError::IncompatibleDimension);
+            };
             if let Some(c) = cscale {
                 M.nzval[idx] = lscale[row] * rscale[col] * c * value;
             } else {
@@ -286,6 +333,10 @@ impl<'a> MatrixProblemDataUpdate for Zip<Iter<'a, usize>, Iter<'a, T>> {
 }
 
 impl MatrixProblemDataUpdate for (Vec<usize>, Vec<T>) {
+    fn all_finite(&self) -> bool {
+        self.1.iter().all(|x| x.is_finite())
+    }
+
     fn update_matrix(
         &self,
         M: &mut CscMatrix,
@@ -299,6 +350,10 @@ impl MatrixProblemDataUpdate for (Vec<usize>, Vec<T>) {
 }
 
 impl VectorProblemDataUpdate for [T] {
+    fn all_finite(&self) -> bool {
+        self.iter().all(|x| x.is_finite())
+    }
+
     fn update_vector(
         &self,
         v: &mut [T],
@@ -328,6 +383,10 @@ impl VectorProblemDataUpdate for [T] {
 }
 
 impl VectorProblemDataUpdate for Vec<T> {
+    fn all_finite(&self) -> bool {
+        self.iter().all(|x| x.is_finite())
+    }
+
     fn update_vector(
         &self,
         v: &mut [T],
@@ -339,6 +398,10 @@ impl VectorProblemDataUpdate for Vec<T> {
 }
 
 impl VectorProblemDataUpdate for [T; 0] {
+    fn all_finite(&self) -> bool {
+        true
+    }
+
     fn update_vector(
         &self,
         _v: &mut [T],
@@ -354,6 +417,10 @@ impl VectorProblemDataUpdate for [T; 0] {
 // the zip iterator for partial updates implemented next.
 
 impl<'a> VectorProblemDataUpdate for Zip<Iter<'a, usize>, Iter<'a, T>> {
+    fn all_finite(&self) -> bool {
+        self.clone().all(|(_, x)| x.is_finite())
+    }
+
     fn update_vector(
         &self,
         v: &mut [T],
@@ -375,6 +442,10 @@ impl<'a> VectorProblemDataUpdate for Zip<Iter<'a, usize>, Iter<'a, T>> {
 }
 
 impl VectorProblemDataUpdate for (Vec<usize>, Vec<T>) {
+    fn all_finite(&self) -> bool {
+        self.1.iter().all(|x| x.is_finite())
+    }
+
     fn update_vector(
         &self,
         v: &mut [T],

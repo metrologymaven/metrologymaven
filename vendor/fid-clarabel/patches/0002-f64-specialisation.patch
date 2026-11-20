@@ -5,7 +5,7 @@ Specialise the generic float type to f64: `T` becomes an alias of f64, generic f
 Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
 
 diff --git a/Cargo.toml b/Cargo.toml
-index 9c65555..2a82595 100644
+index dafebd9..1dbdc45 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
 @@ -19,7 +19,6 @@ derive_builder = "0.11"

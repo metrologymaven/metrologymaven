@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 //! Clarabel solver main module.
 //!
 //! This module contains the main types and traits for the Clarabel solver.

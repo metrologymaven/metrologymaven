@@ -1,11 +1,11 @@
 Patch 0003 (fid-num-transcendentals) of fid-clarabel, spec node KRN.SOLV.CONIC.PATCH.
 
-Route sqrt, ln, min and max through fid_num::f (sqrt, ln, total_min, total_max) via algebra/knp.rs, replace powi by explicit products, stop on a non-finite mu with NumericalError, validate input data (CSC format, no NaN) at solver setup, and convert upstream panics (panic!, unwrap, unreachable!) to error statuses.
+Route sqrt, ln, min and max through fid_num::f (sqrt, ln, total_min, total_max) via algebra/knp.rs, replace powi by explicit products, stop on a non-finite mu with NumericalError, validate input data (CSC format, no NaN, no -infinity in b, checked cone sizes) at solver setup and finite values in data updates, never report a solved, almost solved or infeasible status without finite values of record (info reset to NaN, previous iterate restored on a non-finite mu, solution status demoted), convert upstream panics (panic!, unwrap, unreachable!, the CscMatrix entry-point asserts) to errors or statuses, and document the invariant of each remaining internal assert.
 
 Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
 
 diff --git a/Cargo.toml b/Cargo.toml
-index 2a82595..899fec6 100644
+index 1dbdc45..901bbf8 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
 @@ -14,6 +14,8 @@ license = "Apache-2.0"
@@ -31,10 +31,93 @@ index dc93e92..58d273f 100644
  
          // fill in data and rebuild colptr
 diff --git a/src/algebra/csc/core.rs b/src/algebra/csc/core.rs
-index e532a93..13d8859 100644
+index e532a93..da211d5 100644
 --- a/src/algebra/csc/core.rs
 +++ b/src/algebra/csc/core.rs
-@@ -289,14 +289,8 @@ impl CscMatrix {
+@@ -79,7 +79,17 @@ where
+         let m = rows.len();
+         let n = rows.iter().map(|r| r.len()).next().unwrap_or(0);
+ 
+-        assert!(rows.iter().all(|r| r.len() == n));
++        // (patch 0003) ragged rows: upstream asserted; this returns a matrix that fails
++        // check_format (no column pointers), which the solver rejects as bad input
++        if !rows.iter().all(|r| r.len() == n) {
++            return CscMatrix {
++                m,
++                n,
++                colptr: Vec::new(),
++                rowval: Vec::new(),
++                nzval: Vec::new(),
++            };
++        }
+         let nnz = rows.iter().flatten().filter(|&v| *v != T::zero()).count();
+ 
+         let mut colptr = Vec::with_capacity(n + 1);
+@@ -111,18 +121,11 @@ where
+ impl CscMatrix {
+     /// `CscMatrix` constructor.
+     ///
+-    /// # Panics
+-    /// Makes rudimentary dimensional compatibility checks and panics on
+-    /// failure.   This constructor does __not__
+-    /// ensure that rows indices are all in bounds or that data is arranged
+-    /// such that entries within each column appear in order of increasing
+-    /// row index.   Responsibility for ensuring these conditions hold
+-    /// is left to the caller.
++    /// This constructor does __not__ check its arguments (upstream asserted the
++    /// array lengths and panicked; patch 0003). Use [`check_format`](CscMatrix::check_format)
++    /// to validate a matrix; the solver does so for its inputs and rejects a malformed one.
+     ///
+     pub fn new(m: usize, n: usize, colptr: Vec<usize>, rowval: Vec<usize>, nzval: Vec<T>) -> Self {
+-        assert_eq!(rowval.len(), nzval.len());
+-        assert_eq!(colptr.len(), n + 1);
+-        assert_eq!(colptr[n], rowval.len());
+         CscMatrix {
+             m,
+             n,
+@@ -134,13 +137,26 @@ impl CscMatrix {
+ 
+     /// `CscMatrix` constructor from data in triplet format.
+     ///
+-    /// # Panics
+-    /// Makes rudimentary dimensional compatibility checks and panics on
+-    /// failure.   Data can be provided unsorted.   Repeated values are added.
++    /// Data can be provided unsorted.   Repeated values are added.
++    /// Returns `IncompatibleDimension` if `I`, `J` and `V` differ in length and
++    /// `BadRowval`/`BadColptr` for an index out of range (upstream panicked; patch 0003).
+     ///
+-    pub fn new_from_triplets(m: usize, n: usize, I: Vec<usize>, J: Vec<usize>, V: Vec<T>) -> Self {
+-        assert_eq!(I.len(), J.len());
+-        assert_eq!(I.len(), V.len());
++    pub fn new_from_triplets(
++        m: usize,
++        n: usize,
++        I: Vec<usize>,
++        J: Vec<usize>,
++        V: Vec<T>,
++    ) -> Result<Self, SparseFormatError> {
++        if I.len() != J.len() || I.len() != V.len() {
++            return Err(SparseFormatError::IncompatibleDimension);
++        }
++        if I.iter().any(|&i| i >= m) {
++            return Err(SparseFormatError::BadRowval);
++        }
++        if J.iter().any(|&j| j >= n) {
++            return Err(SparseFormatError::BadColptr);
++        }
+ 
+         let mut M = CscMatrix::spalloc((m, n), V.len());
+ 
+@@ -194,7 +210,7 @@ impl CscMatrix {
+ 
+         M.colcount_to_colptr();
+ 
+-        M
++        Ok(M)
+     }
+ 
+     /// allocate space for a sparse matrix with `nnz` elements
+@@ -289,14 +305,8 @@ impl CscMatrix {
  
      /// symmetric view (selects upper or lower triangle source)
      pub fn sym(&self, uplo: MatrixTriangle) -> Symmetric<'_, Self> {
@@ -51,11 +134,138 @@ index e532a93..13d8859 100644
          Symmetric { src: self, uplo }
      }
  
+@@ -446,6 +456,7 @@ impl CscMatrix {
+     /// Panics if row dimensions are incompatible
+     pub fn select_rows(&self, rowidx: &Vec<bool>) -> Self {
+         //first check for compatible row dimensions
++        // invariant (patch 0003): the presolver passes one keep flag per row of A.
+         assert_eq!(rowidx.len(), self.m);
+ 
+         //count the number of rows in the reduced matrix and build an
+@@ -485,6 +496,7 @@ impl CscMatrix {
+ 
+     /// Allocates a new matrix containing only entries from the upper triangular part
+     pub fn to_triu(&self) -> Self {
++        // invariant (patch 0003): called on P, which check_dimensions found square.
+         assert_eq!(self.m, self.n);
+         let (m, n) = (self.m, self.n);
+         let mut colptr = vec![0; n + 1];
+@@ -534,19 +546,19 @@ impl CscMatrix {
+     }
+ 
+     /// Returns the value at the given (row,col) index as an Option.
+-    /// Returns None if the given index is not a structural nonzero.
+-    ///
+-    /// # Panics
+-    /// Panics if the given index is out of bounds.
++    /// Returns None if the given index is not a structural nonzero, is out of bounds or
++    /// the matrix is malformed (upstream panicked out of bounds; patch 0003).
+     pub fn get_entry(&self, idx: (usize, usize)) -> Option<T> {
+         let (row, col) = idx;
+-        assert!(row < self.nrows() && col < self.ncols());
++        if row >= self.nrows() || col >= self.ncols() {
++            return None;
++        }
+ 
+-        let first = self.colptr[col];
+-        let last = self.colptr[col + 1];
+-        let rows_in_this_column = &self.rowval[first..last];
++        let first = *self.colptr.get(col)?;
++        let last = *self.colptr.get(col + 1)?;
++        let rows_in_this_column = self.rowval.get(first..last)?;
+         match rows_in_this_column.binary_search(&row) {
+-            Ok(idx) => Some(self.nzval[first + idx]),
++            Ok(idx) => self.nzval.get(first + idx).copied(),
+             Err(_) => None,
+         }
+     }
+@@ -554,11 +566,13 @@ impl CscMatrix {
+     /// Sets a value at a given (row,col) index, allocating
+     /// additional space in the matrix if required.  
+     ///
+-    /// # Panics
+-    /// Panics if the given index is out of bounds.
+-    pub fn set_entry(&mut self, idx: (usize, usize), value: T) {
++    /// Returns `IncompatibleDimension` if the index is out of bounds or the matrix is
++    /// malformed (upstream panicked; patch 0003).
++    pub fn set_entry(&mut self, idx: (usize, usize), value: T) -> Result<(), SparseFormatError> {
+         let (row, col) = idx;
+-        assert!(row < self.nrows() && col < self.ncols());
++        if row >= self.nrows() || col >= self.ncols() || self.check_format().is_err() {
++            return Err(SparseFormatError::IncompatibleDimension);
++        }
+ 
+         let first = self.colptr[col];
+         let last = self.colptr[col + 1];
+@@ -569,7 +583,7 @@ impl CscMatrix {
+         if i == rows_in_this_column.len() || rows_in_this_column[i] != row {
+             // don't allocate space for insertion of new zeros
+             if value.is_zero() {
+-                return;
++                return Ok(());
+             }
+ 
+             // the element must be inserted, then col counts rebuilt
+@@ -585,17 +599,21 @@ impl CscMatrix {
+             // the element already exists, so overwrite it
+             self.nzval[first + i] = value;
+         }
++        Ok(())
+     }
+ 
+-    /// Returns the (row,col) coordinates of the given linear index.
+-    ///
+-    /// # Panics
+-    /// Panics if the given index is out of bounds.
+-    pub fn index_to_coord(&self, idx: usize) -> (usize, usize) {
+-        assert!(idx < self.nnz());
+-        let row = self.rowval[idx];
+-        let col = self.colptr.partition_point(|&c| idx + 1 > c) - 1;
+-        (row, col)
++    /// Returns the (row,col) coordinates of the given linear index, or `None` if it is
++    /// out of bounds (upstream panicked; patch 0003).
++    pub fn index_to_coord(&self, idx: usize) -> Option<(usize, usize)> {
++        if idx >= self.nnz() {
++            return None;
++        }
++        let row = *self.rowval.get(idx)?;
++        let col = self
++            .colptr
++            .partition_point(|&c| idx + 1 > c)
++            .checked_sub(1)?;
++        Some((row, col))
+     }
+ }
+ 
 diff --git a/src/algebra/csc/matrix_math.rs b/src/algebra/csc/matrix_math.rs
-index b7c87de..2ee286f 100644
+index b7c87de..876ea64 100644
 --- a/src/algebra/csc/matrix_math.rs
 +++ b/src/algebra/csc/matrix_math.rs
-@@ -54,7 +54,7 @@ impl MatrixMath for CscMatrix {
+@@ -25,6 +25,7 @@ impl SymMatrixMath for Symmetric<'_, CscMatrix> {
+ 
+ impl MatrixMath for CscMatrix {
+     fn col_sums(&self, sums: &mut [T]) {
++        // invariant (patch 0003): equilibration work vectors are sized from the matrix (n, m).
+         assert_eq!(self.n, sums.len());
+         for (col, sum) in sums.iter_mut().enumerate() {
+             let rng = self.colptr[col]..self.colptr[col + 1];
+@@ -33,6 +34,7 @@ impl MatrixMath for CscMatrix {
+     }
+ 
+     fn row_sums(&self, sums: &mut [T]) {
++        // invariant (patch 0003): equilibration work vectors are sized from the matrix (n, m).
+         assert_eq!(self.m, sums.len());
+         sums.fill(T::zero());
+         for (&row, &val) in zip(&self.rowval, &self.nzval) {
+@@ -46,6 +48,7 @@ impl MatrixMath for CscMatrix {
+     }
+ 
+     fn col_norms_no_reset(&self, norms: &mut [T]) {
++        // invariant (patch 0003): norm work vectors have one entry per column; colptr has n + 1 entries (check_format).
+         assert_eq!(norms.len(), self.colptr.len() - 1);
+ 
+         for (i, v) in norms.iter_mut().enumerate() {
+@@ -54,7 +57,7 @@ impl MatrixMath for CscMatrix {
                  .iter()
                  .take(self.colptr[i + 1])
                  .skip(self.colptr[i])
@@ -64,7 +274,14 @@ index b7c87de..2ee286f 100644
          }
      }
  
-@@ -70,8 +70,8 @@ impl MatrixMath for CscMatrix {
+@@ -64,14 +67,15 @@ impl MatrixMath for CscMatrix {
+     }
+ 
+     fn col_norms_sym_no_reset(&self, norms: &mut [T]) {
++        // invariant (patch 0003): norm work vectors have one entry per column; colptr has n + 1 entries (check_format).
+         assert_eq!(norms.len(), self.colptr.len() - 1);
+ 
+         for i in 0..norms.len() {
              for j in self.colptr[i]..self.colptr[i + 1] {
                  let tmp = T::abs(self.nzval[j]);
                  let r = self.rowval[j];
@@ -75,11 +292,12 @@ index b7c87de..2ee286f 100644
              }
          }
      }
-@@ -82,10 +82,10 @@ impl MatrixMath for CscMatrix {
+@@ -82,10 +86,11 @@ impl MatrixMath for CscMatrix {
      }
  
      fn row_norms_no_reset(&self, norms: &mut [T]) {
 -        assert_eq!(self.rowval.len(), *self.colptr.last().unwrap());
++        // invariant (patch 0003): solver matrices pass check_format at setup.
 +        assert_eq!(self.rowval.len(), self.colptr.last().copied().unwrap_or(0));
  
          for (row, val) in zip(&self.rowval, &self.nzval) {
@@ -88,11 +306,12 @@ index b7c87de..2ee286f 100644
          }
      }
  }
-@@ -110,14 +110,14 @@ impl MatrixMathMut for CscMatrix {
+@@ -110,14 +115,16 @@ impl MatrixMathMut for CscMatrix {
          let colptr = &self.colptr;
          let vals = &mut self.nzval;
  
 -        assert_eq!(vals.len(), *colptr.last().unwrap());
++        // invariant (patch 0003): solver matrices pass check_format at setup.
 +        assert_eq!(vals.len(), colptr.last().copied().unwrap_or(0));
          for i in 0..self.n {
              vals[colptr[i]..colptr[i + 1]].scale(r[i]);
@@ -101,11 +320,36 @@ index b7c87de..2ee286f 100644
  
      fn lrscale(&mut self, l: &[T], r: &[T]) {
 -        assert_eq!(self.nzval.len(), *self.colptr.last().unwrap());
++        // invariant (patch 0003): solver matrices pass check_format at setup.
 +        assert_eq!(self.nzval.len(), self.colptr.last().copied().unwrap_or(0));
  
          for (col, &ri) in r.iter().enumerate() {
              let (first, last) = (self.colptr[col], self.colptr[col + 1]);
-@@ -234,7 +234,9 @@ fn _csc_quad_form(M: &CscMatrix, uplo: MatrixTriangle, y: &[T], x: &[T]) -> T {
+@@ -138,6 +145,7 @@ fn _csc_symv_safe(A: &CscMatrix, _uplo: MatrixTriangle, y: &mut [T], x: &[T], a:
+ 
+     y.scale(b);
+ 
++    // invariant (patch 0003): the KKT matrix is square and x, y are KKT-sized work vectors.
+     assert!(x.len() == A.n);
+     assert!(y.len() == A.n);
+     assert!(A.n == A.m);
+@@ -174,6 +182,7 @@ fn _csc_symv_unsafe(A: &CscMatrix, _uplo: MatrixTriangle, y: &mut [T], x: &[T],
+ 
+     y.scale(b);
+ 
++    // invariant (patch 0003): the KKT matrix is square and x, y are KKT-sized work vectors.
+     assert!(x.len() == A.n);
+     assert!(y.len() == A.n);
+     assert!(A.n == A.m);
+@@ -196,6 +205,7 @@ fn _csc_symv_unsafe(A: &CscMatrix, _uplo: MatrixTriangle, y: &mut [T], x: &[T],
+ #[allow(non_snake_case)]
+ #[allow(clippy::comparison_chain)]
+ fn _csc_quad_form(M: &CscMatrix, uplo: MatrixTriangle, y: &[T], x: &[T]) -> T {
++    // invariant (patch 0003): quad_form is called on P (square) with x, y of length n.
+     assert_eq!(M.n, M.m);
+     assert_eq!(x.len(), M.n);
+     assert_eq!(y.len(), M.n);
+@@ -234,7 +244,9 @@ fn _csc_quad_form(M: &CscMatrix, uplo: MatrixTriangle, y: &[T], x: &[T]) -> T {
              } else if row == col {
                  out += Mv * x[col] * y[col];
              } else {
@@ -116,24 +360,38 @@ index b7c87de..2ee286f 100644
              }
          }
          out += tmp1 * y[col] + tmp2 * x[col];
-@@ -260,7 +262,7 @@ fn _csc_axpby_N(A: &CscMatrix, y: &mut [T], x: &[T], a: T, b: T) {
+@@ -260,7 +272,8 @@ fn _csc_axpby_N(A: &CscMatrix, y: &mut [T], x: &[T], a: T, b: T) {
          return;
      }
  
 -    assert_eq!(A.nzval.len(), *A.colptr.last().unwrap());
++    // invariant (patch 0003): A and P pass check_format at setup; x, y are sized n or m from them.
 +    assert_eq!(A.nzval.len(), A.colptr.last().copied().unwrap_or(0));
      assert_eq!(x.len(), A.n);
  
      //y += A*x
-@@ -303,7 +305,7 @@ fn _csc_axpby_T(A: &CscMatrix, y: &mut [T], x: &[T], a: T, b: T) {
+@@ -303,7 +316,8 @@ fn _csc_axpby_T(A: &CscMatrix, y: &mut [T], x: &[T], a: T, b: T) {
          return;
      }
  
 -    assert_eq!(A.nzval.len(), *A.colptr.last().unwrap());
++    // invariant (patch 0003): A and P pass check_format at setup; x, y are sized n or m from them.
 +    assert_eq!(A.nzval.len(), A.colptr.last().copied().unwrap_or(0));
      assert_eq!(x.len(), A.m);
  
      //y += A*x
+diff --git a/src/algebra/csc/utils.rs b/src/algebra/csc/utils.rs
+index 9cfcbc8..1fe64b4 100644
+--- a/src/algebra/csc/utils.rs
++++ b/src/algebra/csc/utils.rs
+@@ -40,6 +40,7 @@ impl CscMatrix {
+     // where the input matrix M has a missing
+     // diagonal entry.  M must be square and TRIU
+     pub(crate) fn colcount_missing_diag(&mut self, M: &CscMatrix, initcol: usize) {
++        // invariant (patch 0003): KKT assembly allocates K with room for every block it counts.
+         assert_eq!(M.colptr.len(), M.n + 1);
+         assert!(self.colptr.len() >= M.n + initcol);
+ 
 diff --git a/src/algebra/knp.rs b/src/algebra/knp.rs
 new file mode 100644
 index 0000000..812471c
@@ -217,7 +475,7 @@ index 68dd15e..73776cb 100644
  pub use matrix_traits::*;
  pub(crate) use matrix_types::*;
 diff --git a/src/algebra/scalarmath.rs b/src/algebra/scalarmath.rs
-index b2eaa54..057826c 100644
+index b2eaa54..fe497be 100644
 --- a/src/algebra/scalarmath.rs
 +++ b/src/algebra/scalarmath.rs
 @@ -1,4 +1,4 @@
@@ -226,7 +484,7 @@ index b2eaa54..057826c 100644
  use crate::algebra::T;
  
  impl ScalarMath for T {
-@@ -16,7 +16,7 @@ impl ScalarMath for T {
+@@ -16,13 +16,20 @@ impl ScalarMath for T {
          if *self <= Self::zero() {
              -Self::infinity()
          } else {
@@ -235,7 +493,22 @@ index b2eaa54..057826c 100644
          }
      }
  }
-@@ -31,42 +31,3 @@ pub(crate) fn triangular_index(k: usize) -> usize {
+ 
+-pub(crate) const fn triangular_number(k: usize) -> usize {
+-    (k * (k + 1)) >> 1
++/// k(k+1)/2, or `None` on overflow (patch 0003: checked instead of panicking)
++pub(crate) const fn triangular_number(k: usize) -> Option<usize> {
++    match k.checked_add(1) {
++        Some(k1) => match k.checked_mul(k1) {
++            Some(p) => Some(p >> 1),
++            None => None,
++        },
++        None => None,
++    }
+ }
+ 
+ #[allow(dead_code)]
+@@ -31,42 +38,3 @@ pub(crate) fn triangular_index(k: usize) -> usize {
      // triangular number(k+1) - 1 = (((k+1) * (k+2)) >> 1) - 1
      (k * (k + 3)) >> 1
  }
@@ -278,8 +551,44 @@ index b2eaa54..057826c 100644
 -pub(crate) fn isqrt(v: usize) -> usize {
 -    (v as f64).sqrt() as usize
 -}
+diff --git a/src/algebra/utils.rs b/src/algebra/utils.rs
+index 6389c4f..49f82af 100644
+--- a/src/algebra/utils.rs
++++ b/src/algebra/utils.rs
+@@ -46,6 +46,7 @@ pub(crate) fn ipermute<T: Copy>(x: &mut [T], b: &[T], p: &[usize]) {
+ pub(crate) fn invperm(p: &[usize]) -> Vec<usize> {
+     let mut b = vec![0; p.len()];
+     for (i, j) in p.iter().enumerate() {
++        // invariant (patch 0003): p is a permutation built by the solver.
+         assert!(*j < p.len() && b[*j] == 0);
+         b[*j] = i;
+     }
+@@ -57,6 +58,7 @@ pub(crate) fn sortperm<T>(p: &mut [usize], v: &[T])
+ where
+     T: Sized + Ord + Copy,
+ {
++    // invariant (patch 0003): the permutation buffer is allocated with the length of v.
+     assert_eq!(p.len(), v.len());
+     p.iter_mut().enumerate().for_each(|(i, p)| *p = i);
+     p.sort_by_key(|&k| v[k]);
+@@ -67,6 +69,7 @@ pub(crate) fn sortperm_rev<T>(p: &mut [usize], v: &[T])
+ where
+     T: Sized + Ord + Copy,
+ {
++    // invariant (patch 0003): the permutation buffer is allocated with the length of v.
+     assert_eq!(p.len(), v.len());
+     sortperm_by(p, v, |&a, &b| b.cmp(&a));
+ }
+@@ -75,6 +78,7 @@ pub(crate) fn sortperm_by<T, F>(p: &mut [usize], v: &[T], compare: F)
+ where
+     F: FnMut(&T, &T) -> Ordering,
+ {
++    // invariant (patch 0003): the permutation buffer is allocated with the length of v.
+     assert_eq!(p.len(), v.len());
+     p.iter_mut().enumerate().for_each(|(i, p)| *p = i);
+     let mut f = compare;
 diff --git a/src/algebra/vecmath.rs b/src/algebra/vecmath.rs
-index 0970171..2fec922 100644
+index 0970171..cf9c6d2 100644
 --- a/src/algebra/vecmath.rs
 +++ b/src/algebra/vecmath.rs
 @@ -1,4 +1,4 @@
@@ -288,7 +597,15 @@ index 0970171..2fec922 100644
  use crate::algebra::T;
  use itertools::izip;
  use std::borrow::Borrow;
-@@ -51,12 +51,12 @@ impl VectorMath for [T] {
+@@ -11,6 +11,7 @@ impl VectorMath for [T] {
+     }
+ 
+     fn select(&self, index: &[bool]) -> Vec<T> {
++        // invariant (patch 0003): presolve keep flags have one entry per element.
+         assert_eq!(self.len(), index.len());
+         zip(self, index)
+             .filter(|(_x, &b)| b)
+@@ -51,12 +52,12 @@ impl VectorMath for [T] {
          self.scalarop(T::recip)
      }
  
@@ -304,7 +621,15 @@ index 0970171..2fec922 100644
      }
  
      fn negate(&mut self) -> &mut Self {
-@@ -100,8 +100,8 @@ impl VectorMath for [T] {
+@@ -86,6 +87,7 @@ impl VectorMath for [T] {
+     }
+ 
+     fn dot_shifted(z: &[T], s: &[T], dz: &[T], ds: &[T], α: T) -> T {
++        // invariant (patch 0003): z, s, dz, ds are the same cone range of solver vectors.
+         assert_eq!(z.len(), s.len());
+         assert_eq!(z.len(), dz.len());
+         assert_eq!(s.len(), ds.len());
+@@ -100,8 +102,8 @@ impl VectorMath for [T] {
      }
  
      fn dist(&self, y: &Self) -> T {
@@ -315,7 +640,7 @@ index 0970171..2fec922 100644
      }
  
      fn sum(&self) -> T {
-@@ -114,7 +114,7 @@ impl VectorMath for [T] {
+@@ -114,12 +116,13 @@ impl VectorMath for [T] {
  
      // 2-norm
      fn norm(&self) -> T {
@@ -324,7 +649,13 @@ index 0970171..2fec922 100644
          stable_norm(self.iter())
      }
  
-@@ -136,7 +136,7 @@ impl VectorMath for [T] {
+     //2-norm of elementwise product self.*v
+     fn norm_scaled(&self, v: &[T]) -> T {
++        // invariant (patch 0003): both are solver vectors of the same dimension (n or m).
+         assert_eq!(self.len(), v.len());
+         stable_norm(izip!(self, v).map(|(&yi, &vi)| yi * vi))
+     }
+@@ -136,7 +139,7 @@ impl VectorMath for [T] {
              if v.is_nan() {
                  return T::nan();
              }
@@ -333,16 +664,18 @@ index 0970171..2fec922 100644
          }
          out
      }
-@@ -149,7 +149,7 @@ impl VectorMath for [T] {
+@@ -148,8 +151,9 @@ impl VectorMath for [T] {
+ 
      //inf-norm of elementwise product self.*v
      fn norm_inf_scaled(&self, v: &Self) -> T {
++        // invariant (patch 0003): both are solver vectors of the same dimension (n or m).
          assert_eq!(self.len(), v.len());
 -        zip(self, v).fold(T::zero(), |acc, (&x, &y)| T::max(acc, T::abs(x * y)))
 +        zip(self, v).fold(T::zero(), |acc, (&x, &y)| tmax(acc, T::abs(x * y)))
      }
  
      //
-@@ -159,15 +159,15 @@ impl VectorMath for [T] {
+@@ -159,15 +163,15 @@ impl VectorMath for [T] {
  
      // max absolute difference (used for unit testing)
      fn norm_inf_diff(&self, b: &[T]) -> T {
@@ -361,15 +694,67 @@ index 0970171..2fec922 100644
      }
  
      fn mean(&self) -> T {
-@@ -222,5 +222,5 @@ where
+@@ -186,6 +190,7 @@ impl VectorMath for [T] {
+     }
+ 
+     fn axpby(&mut self, a: T, x: &[T], b: T) -> &mut Self {
++        // invariant (patch 0003): both are solver vectors of the same dimension (n or m).
+         assert_eq!(self.len(), x.len());
+ 
+         zip(&mut *self, x).for_each(|(y, x)| *y = a * (*x) + b * (*y));
+@@ -193,6 +198,7 @@ impl VectorMath for [T] {
+     }
+ 
+     fn waxpby(&mut self, a: T, x: &[T], b: T, y: &[T]) -> &mut Self {
++        // invariant (patch 0003): both are solver vectors of the same dimension (n or m).
+         assert_eq!(self.len(), x.len());
+         assert_eq!(self.len(), y.len());
+ 
+@@ -222,5 +228,5 @@ where
                      (scale, sumsq + r * r)
                  }
              });
 -    scale * sumsq.sqrt()
 +    scale * sq_root(sumsq)
  }
+diff --git a/src/qdldl/qdldl.rs b/src/qdldl/qdldl.rs
+index b75ab3e..473dbef 100644
+--- a/src/qdldl/qdldl.rs
++++ b/src/qdldl/qdldl.rs
+@@ -106,13 +106,13 @@ impl QDLDLFactorisation {
+     }
+ 
+     /// Solves Ax = b using LDL factors for A.
+-    /// Solves in place (x replaces b)
++    /// Solves in place (x replaces b). If the factorisation is logical only or `b` has
++    /// the wrong length, `b` is filled with NaN (upstream panicked; patch 0003).
+     pub fn solve(&mut self, b: &mut [T]) {
+-        // bomb if logical factorisation only
+-        assert!(!self.is_symbolic);
+-
+-        // bomb if b is the wrong size
+-        assert_eq!(b.len(), self.D.len());
++        if self.is_symbolic || b.len() != self.D.len() {
++            b.fill(T::nan());
++            return;
++        }
+ 
+         // permute b
+         let tmp = &mut self.workspace.fwork;
+@@ -157,9 +157,9 @@ impl QDLDLFactorisation {
+     /// values are offset by `offset`, with `signs` a vector of +/- 1 values
+     /// indicating the direction of shifts. See [`refactor`](crate::qdldl::QDLDLFactorisation::refactor)
+     ///
++    /// Pairs `indices` and `signs` up to the shorter of the two (upstream asserted
++    /// equal lengths; patch 0003).
+     pub fn offset_values(&mut self, indices: &[usize], offset: T, signs: &[i8]) {
+-        assert_eq!(indices.len(), signs.len());
+-
+         let nzval = &mut self.workspace.triuA.nzval; // post perm internal data
+         let AtoPAPt = &self.workspace.AtoPAPt; //mapping from input matrix entries to triuA
+ 
 diff --git a/src/solver/core/cones/compositecone.rs b/src/solver/core/cones/compositecone.rs
-index 6e3da9f..0857bb4 100644
+index 6e3da9f..bac2b1f 100644
 --- a/src/solver/core/cones/compositecone.rs
 +++ b/src/solver/core/cones/compositecone.rs
 @@ -1,6 +1,6 @@
@@ -380,7 +765,102 @@ index 6e3da9f..0857bb4 100644
  use std::collections::HashMap;
  use std::iter::zip;
  use std::ops::Range;
-@@ -157,9 +157,8 @@ impl Cone for CompositeCone {
+@@ -32,7 +32,9 @@ pub struct CompositeCone {
+ }
+ 
+ impl CompositeCone {
+-    pub fn new(types: &[SupportedConeT]) -> Self {
++    /// The composite cone of `types`; `None` if a size, degree or block-range sum
++    /// overflows `usize` (patch 0003: checked instead of panicking).
++    pub fn new(types: &[SupportedConeT]) -> Option<Self> {
+         // make an internal copy to protect from user modification
+         let types = types.to_vec();
+         let ncones = types.len();
+@@ -62,17 +64,21 @@ impl CompositeCone {
+         }
+ 
+         // count up elements and degree
+-        let numel = cones.iter().map(|c| c.numel()).sum();
+-        let degree = cones.iter().map(|c| c.degree()).sum();
++        let numel = cones
++            .iter()
++            .try_fold(0usize, |a, c| a.checked_add(c.numel()))?;
++        let degree = cones
++            .iter()
++            .try_fold(0usize, |a, c| a.checked_add(c.degree()))?;
+ 
+         //ranges for the subvectors associated with each cone,
+         //and the ranges for the corresponding entries
+         //in the Hs sparse block
+ 
+-        let rng_cones = make_rng_cones(&cones);
+-        let rng_blocks = make_rng_blocks(&cones);
++        let rng_cones = make_rng_cones(&cones)?;
++        let rng_blocks = make_rng_blocks(&cones)?;
+ 
+-        Self {
++        Some(Self {
+             cones,
+             //types,
+             type_counts,
+@@ -81,43 +87,42 @@ impl CompositeCone {
+             rng_cones,
+             rng_blocks,
+             _is_symmetric,
+-        }
++        })
+     }
+ }
+ 
+-fn make_rng_cones(cones: &[SupportedCone]) -> Vec<Range<usize>> {
++fn make_rng_cones(cones: &[SupportedCone]) -> Option<Vec<Range<usize>>> {
+     let mut rngs = Vec::with_capacity(cones.len());
+ 
+     if !cones.is_empty() {
+-        let mut start = 0;
++        let mut start: usize = 0;
+         for cone in cones {
+-            let stop = start + cone.numel();
++            let stop = start.checked_add(cone.numel())?;
+             rngs.push(start..stop);
+             start = stop;
+         }
+     }
+-    rngs
++    Some(rngs)
+ }
+ 
+-fn make_rng_blocks(cones: &[SupportedCone]) -> Vec<Range<usize>> {
++fn make_rng_blocks(cones: &[SupportedCone]) -> Option<Vec<Range<usize>>> {
+     let mut rngs = Vec::with_capacity(cones.len());
+ 
+     if !cones.is_empty() {
+-        let mut start = 0;
++        let mut start: usize = 0;
+         for cone in cones {
+             let nvars = cone.numel();
+-            let stop = start + {
+-                if cone.Hs_is_diagonal() {
+-                    nvars
+-                } else {
+-                    triangular_number(nvars)
+-                }
++            let block = if cone.Hs_is_diagonal() {
++                nvars
++            } else {
++                triangular_number(nvars)?
+             };
++            let stop = start.checked_add(block)?;
+             rngs.push(start..stop);
+             start = stop;
+         }
+     }
+-    rngs
++    Some(rngs)
+ }
+ 
+ impl CompositeCone {
+@@ -157,9 +162,8 @@ impl Cone for CompositeCone {
      }
  
      fn is_sparse_expandable(&self) -> bool {
@@ -392,7 +872,7 @@ index 6e3da9f..0857bb4 100644
      }
  
      fn allows_primal_dual_scaling(&self) -> bool {
-@@ -187,7 +186,7 @@ impl Cone for CompositeCone {
+@@ -187,7 +191,7 @@ impl Cone for CompositeCone {
          let mut β = T::zero();
          for (cone, rng) in zip(&mut self.cones, &self.rng_cones) {
              let (αi, βi) = cone.margins(&mut z[rng.clone()], pd);
@@ -401,7 +881,7 @@ index 6e3da9f..0857bb4 100644
              β += βi;
          }
          (α, β)
-@@ -306,7 +305,7 @@ impl Cone for CompositeCone {
+@@ -306,7 +310,7 @@ impl Cone for CompositeCone {
                  let (dzi, dsi) = (&dz[rng.clone()], &ds[rng.clone()]);
                  let (zi, si) = (&z[rng.clone()], &s[rng.clone()]);
                  let (nextαz, nextαs) = cone.step_length(dzi, dsi, zi, si, settings, α);
@@ -410,7 +890,7 @@ index 6e3da9f..0857bb4 100644
              }
              α
          };
-@@ -317,8 +316,8 @@ impl Cone for CompositeCone {
+@@ -317,8 +321,8 @@ impl Cone for CompositeCone {
          // if we have any nonsymmetric cones, then back off from full steps slightly
          // so that centrality checks and logarithms don't fail right at the boundaries
          if !all_symmetric {
@@ -422,7 +902,7 @@ index 6e3da9f..0857bb4 100644
  
          // Force asymmetric cones last.
 diff --git a/src/solver/core/cones/nonnegativecone.rs b/src/solver/core/cones/nonnegativecone.rs
-index b6be893..54eef60 100644
+index b6be893..ae49f27 100644
 --- a/src/solver/core/cones/nonnegativecone.rs
 +++ b/src/solver/core/cones/nonnegativecone.rs
 @@ -51,7 +51,7 @@ impl Cone for NonnegativeCone {
@@ -445,7 +925,31 @@ index b6be893..54eef60 100644
          }
  
          true
-@@ -137,10 +137,10 @@ impl Cone for NonnegativeCone {
+@@ -88,6 +88,7 @@ impl Cone for NonnegativeCone {
+     }
+ 
+     fn get_Hs(&self, Hsblock: &mut [T]) {
++        // invariant (patch 0003): Hsblock is this cone's block range (CompositeCone::rng_blocks).
+         assert_eq!(self.w.len(), Hsblock.len());
+         for (blki, &wi) in zip(Hsblock, &self.w) {
+             *blki = wi * wi;
+@@ -102,6 +103,7 @@ impl Cone for NonnegativeCone {
+     }
+ 
+     fn affine_ds(&self, ds: &mut [T], _s: &[T]) {
++        // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
+         assert_eq!(self.λ.len(), ds.len());
+         for (dsi, &λi) in zip(ds, &self.λ) {
+             *dsi = λi * λi;
+@@ -128,6 +130,7 @@ impl Cone for NonnegativeCone {
+         _settings: &CoreSettings,
+         αmax: T,
+     ) -> (T, T) {
++        // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
+         assert_eq!(z.len(), s.len());
+         assert_eq!(dz.len(), z.len());
+         assert_eq!(ds.len(), s.len());
+@@ -137,16 +140,17 @@ impl Cone for NonnegativeCone {
  
          for i in 0..z.len() {
              if dz[i] < T::zero() {
@@ -458,11 +962,42 @@ index b6be893..54eef60 100644
              }
          }
          (αz, αs)
+     }
+ 
+     fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], α: T) -> T {
++        // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
+         assert_eq!(z.len(), s.len());
+         assert_eq!(dz.len(), z.len());
+         assert_eq!(ds.len(), s.len());
+@@ -170,6 +174,7 @@ impl SymmetricCone for NonnegativeCone {
+     }
+ 
+     fn mul_W(&mut self, _is_transpose: MatrixShape, y: &mut [T], x: &[T], α: T, β: T) {
++        // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
+         assert_eq!(y.len(), x.len());
+         assert_eq!(y.len(), self.w.len());
+         for i in 0..y.len() {
+@@ -178,6 +183,7 @@ impl SymmetricCone for NonnegativeCone {
+     }
+ 
+     fn mul_Winv(&mut self, _is_transpose: MatrixShape, y: &mut [T], x: &[T], α: T, β: T) {
++        // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
+         assert_eq!(y.len(), x.len());
+         assert_eq!(y.len(), self.w.len());
+         for i in 0..y.len() {
 diff --git a/src/solver/core/cones/socone.rs b/src/solver/core/cones/socone.rs
-index 77e1cc4..1c1ec42 100644
+index 77e1cc4..b1f67ec 100644
 --- a/src/solver/core/cones/socone.rs
 +++ b/src/solver/core/cones/socone.rs
-@@ -94,7 +94,7 @@ impl Cone for SecondOrderCone {
+@@ -39,6 +39,7 @@ impl SecondOrderCone {
+     pub fn new(dim: usize) -> Self {
+         const SOC_NO_EXPANSION_MAX_SIZE: usize = 4;
+ 
++        // invariant (patch 0003): new_collapsed drops SOC(0) and folds SOC(1) into the nonnegative cone.
+         assert!(dim >= 2);
+ 
+         let w = vec![T::zero(); dim];
+@@ -94,7 +95,7 @@ impl Cone for SecondOrderCone {
      // functions relating to unit vectors and cone initialization
      fn margins(&mut self, z: &mut [T], _pd: PrimalOrDualCone) -> (T, T) {
          let α = z[0] - z[1..].norm();
@@ -471,7 +1006,7 @@ index 77e1cc4..1c1ec42 100644
          (α, β)
      }
  
-@@ -142,7 +142,7 @@ impl Cone for SecondOrderCone {
+@@ -142,7 +143,7 @@ impl Cone for SecondOrderCone {
          }
  
          //the leading scalar term for W^TW
@@ -480,7 +1015,7 @@ index 77e1cc4..1c1ec42 100644
  
          // construct w and normalize
          let w = &mut self.w;
-@@ -160,7 +160,7 @@ impl Cone for SecondOrderCone {
+@@ -160,7 +161,7 @@ impl Cone for SecondOrderCone {
  
          // try to force badly scaled w to come out normalized
          let w1sq = w[1..].sumsq();
@@ -489,7 +1024,7 @@ index 77e1cc4..1c1ec42 100644
  
          //Compute the scaling point λ.   Should satisfy λ = Wz = W^{-T}s
          let γ = half * wscale;
-@@ -172,7 +172,7 @@ impl Cone for SecondOrderCone {
+@@ -172,7 +173,7 @@ impl Cone for SecondOrderCone {
              &z[1..],
          );
          self.λ[1..].scale(T::recip(s[0] / sscale + z[0] / zscale + two * γ));
@@ -498,7 +1033,7 @@ index 77e1cc4..1c1ec42 100644
  
          // Populate sparse expansion terms if allocated
          if let Some(sparse_data) = &mut self.sparse_data {
-@@ -187,10 +187,10 @@ impl Cone for SecondOrderCone {
+@@ -187,10 +188,10 @@ impl Cone for SecondOrderCone {
  
              //the vectors for the rank two update
              //representation of W^TW
@@ -511,7 +1046,7 @@ index 77e1cc4..1c1ec42 100644
  
              sparse_data.u[0] = u0;
              sparse_data.u[1..].axpby(u1, &self.w[1..], T::zero());
-@@ -372,7 +372,7 @@ fn _soc_residual(z: &[T]) -> T {
+@@ -372,7 +373,7 @@ fn _soc_residual(z: &[T]) -> T {
  fn _sqrt_soc_residual(z: &[T]) -> T {
      let res = _soc_residual(z);
      if res > T::zero() {
@@ -520,7 +1055,7 @@ index 77e1cc4..1c1ec42 100644
      } else {
          T::zero()
      }
-@@ -394,7 +394,7 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+@@ -394,7 +395,7 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
      // upper bound the step length by the maximum allowable
      // step length for the scalar part of the cone
      if x[0] >= T::zero() && y[0] < T::zero() {
@@ -529,7 +1064,7 @@ index 77e1cc4..1c1ec42 100644
      }
  
      // assume that x is in the SOC, and find the minimum positive root
-@@ -405,12 +405,13 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+@@ -405,12 +406,13 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
  
      let a = _soc_residual(y); //NB: could be negative
      let b = two * (x[0] * y[0] - x[1..].dot(&y[1..]));
@@ -547,7 +1082,7 @@ index 77e1cc4..1c1ec42 100644
      }
  
      #[allow(clippy::if_same_then_else)] // allows explanation of separate cases
-@@ -445,9 +446,9 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+@@ -445,9 +447,9 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
  
      let t = {
          if b >= T::zero() {
@@ -559,7 +1094,7 @@ index 77e1cc4..1c1ec42 100644
          }
      };
  
-@@ -458,7 +459,7 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+@@ -458,7 +460,7 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
      let r1 = if r1 < T::zero() { T::infinity() } else { r1 };
      let r2 = if r2 < T::zero() { T::infinity() } else { r2 };
  
@@ -790,16 +1325,26 @@ index 2d642fc..65bec87 100644
      }
  }
 diff --git a/src/solver/core/solver.rs b/src/solver/core/solver.rs
-index 2849bee..580bd3c 100644
+index 2849bee..d6c28e4 100644
 --- a/src/solver/core/solver.rs
 +++ b/src/solver/core/solver.rs
-@@ -191,6 +191,13 @@ where
+@@ -191,6 +191,23 @@ where
              // This captures μ at iteration zero.
              self.info.save_scalars(μ, α, σ, iter);
  
 +            // KNP-1 (patch 0003): the fid-num facade turns a NaN, an infinity or a domain
 +            // error into a NaN, which reaches μ; stop with a numerical error status.
++            // The "almost solved" check in post_process must not read this iterate: go
++            // back to the previous one (whose info and residuals are recomputed), or, at
++            // iteration 0, leave the info at its NaN reset values so no check passes.
 +            if !μ.is_finite() {
++                if iter > 0 {
++                    self.info
++                        .reset_to_prev_iterate(&mut self.variables, &self.prev_vars);
++                    self.residuals.update(&self.variables, &self.data);
++                    self.info
++                        .update(&mut self.data, &self.variables, &self.residuals);
++                }
 +                self.info.set_status(SolverStatus::NumericalError);
 +                break;
 +            }
@@ -807,7 +1352,7 @@ index 2849bee..580bd3c 100644
              // convergence check and printing
              // --------------
              self.info
-@@ -221,10 +228,8 @@ where
+@@ -221,10 +238,8 @@ where
              // check whether variables are interior points
              match self.strategy_checkpoint_is_scaling_success(is_scaling_success, scaling) {
                  StrategyCheckpoint::Fail => break,
@@ -820,7 +1365,7 @@ index 2849bee..580bd3c 100644
              }
  
              //increment counter here because we only count
-@@ -422,7 +427,8 @@ mod internal {
+@@ -422,7 +437,8 @@ mod internal {
          }
  
          fn centering_parameter(&self, α: T) -> T {
@@ -830,7 +1375,7 @@ index 2849bee..580bd3c 100644
          }
  
          fn get_step_length(
-@@ -522,7 +528,7 @@ mod internal {
+@@ -522,7 +538,7 @@ mod internal {
                  && α < self.settings.core().min_switch_step_length
              {
                  output = StrategyCheckpoint::Update(ScalingStrategy::Dual);
@@ -839,11 +1384,242 @@ index 2849bee..580bd3c 100644
                  self.info.set_status(SolverStatus::InsufficientProgress);
                  output = StrategyCheckpoint::Fail;
              } else {
+diff --git a/src/solver/implementations/default/data_updating.rs b/src/solver/implementations/default/data_updating.rs
+index ec2cd94..cfade4b 100644
+--- a/src/solver/implementations/default/data_updating.rs
++++ b/src/solver/implementations/default/data_updating.rs
+@@ -17,10 +17,15 @@ pub enum DataUpdateError {
+     #[error("Data formatting error")]
+     /// Data formatting error.   See [`SparseFormatError`]
+     BadFormat(#[from] SparseFormatError),
++    #[error("Data updates must be finite (no NaN or infinity)")]
++    /// Data updates must be finite (KNP-1, patch 0003)
++    NonFiniteData,
+ }
+ 
+ /// Trait for updating problem data matrices (`P` and `A`) from various data types
+ pub trait MatrixProblemDataUpdate {
++    /// True when every new value is finite (checked before any update; patch 0003)
++    fn all_finite(&self) -> bool;
+     /// Update matrix entries using associated left/right conditioners and scaling terms
+     fn update_matrix(
+         &self,
+@@ -33,6 +38,8 @@ pub trait MatrixProblemDataUpdate {
+ 
+ /// Trait for updating problem data vectors (`q`` and `b`) from various data types
+ pub trait VectorProblemDataUpdate {
++    /// True when every new value is finite (checked before any update; patch 0003)
++    fn all_finite(&self) -> bool;
+     /// Update vector entries using associated elementwise and overall scaling terms
+     fn update_vector(
+         &self,
+@@ -93,6 +100,9 @@ impl DefaultSolver {
+         data: &Data,
+     ) -> Result<(), DataUpdateError> {
+         self.check_data_update_allowed()?;
++        if !data.all_finite() {
++            return Err(DataUpdateError::NonFiniteData);
++        }
+         let d = &self.data.equilibration.d;
+         let c = self.data.equilibration.c;
+         data.update_matrix(&mut self.data.P, d, d, Some(c))?;
+@@ -116,6 +126,9 @@ impl DefaultSolver {
+         data: &Data,
+     ) -> Result<(), DataUpdateError> {
+         self.check_data_update_allowed()?;
++        if !data.all_finite() {
++            return Err(DataUpdateError::NonFiniteData);
++        }
+         let d = &self.data.equilibration.d;
+         let e = &self.data.equilibration.e;
+         data.update_matrix(&mut self.data.A, e, d, None)?;
+@@ -130,6 +143,9 @@ impl DefaultSolver {
+         data: &Data,
+     ) -> Result<(), DataUpdateError> {
+         self.check_data_update_allowed()?;
++        if !data.all_finite() {
++            return Err(DataUpdateError::NonFiniteData);
++        }
+         let d = &self.data.equilibration.d;
+         let c = self.data.equilibration.c;
+         data.update_vector(&mut self.data.q, d, Some(c))?;
+@@ -146,6 +162,11 @@ impl DefaultSolver {
+         data: &Data,
+     ) -> Result<(), DataUpdateError> {
+         self.check_data_update_allowed()?;
++        // stricter than setup, where +infinity bounds are allowed: updates are only
++        // possible without presolve, which is what removes or caps them
++        if !data.all_finite() {
++            return Err(DataUpdateError::NonFiniteData);
++        }
+         let e = &self.data.equilibration.e;
+         data.update_vector(&mut self.data.b, e, None)?;
+ 
+@@ -173,6 +194,10 @@ impl DefaultSolver {
+ }
+ 
+ impl MatrixProblemDataUpdate for CscMatrix {
++    fn all_finite(&self) -> bool {
++        self.nzval.iter().all(|x| x.is_finite())
++    }
++
+     fn update_matrix(
+         &self,
+         M: &mut CscMatrix,
+@@ -187,6 +212,10 @@ impl MatrixProblemDataUpdate for CscMatrix {
+ }
+ 
+ impl MatrixProblemDataUpdate for [T] {
++    fn all_finite(&self) -> bool {
++        self.iter().all(|x| x.is_finite())
++    }
++
+     fn update_matrix(
+         &self,
+         M: &mut CscMatrix,
+@@ -216,6 +245,10 @@ impl MatrixProblemDataUpdate for [T] {
+ }
+ 
+ impl MatrixProblemDataUpdate for Vec<T> {
++    fn all_finite(&self) -> bool {
++        self.iter().all(|x| x.is_finite())
++    }
++
+     fn update_matrix(
+         &self,
+         M: &mut CscMatrix,
+@@ -228,6 +261,10 @@ impl MatrixProblemDataUpdate for Vec<T> {
+ }
+ 
+ impl MatrixProblemDataUpdate for [T; 0] {
++    fn all_finite(&self) -> bool {
++        true
++    }
++
+     fn update_matrix(
+         &self,
+         _M: &mut CscMatrix,
+@@ -244,6 +281,10 @@ impl MatrixProblemDataUpdate for [T; 0] {
+ // the zip iterator for partial updates implemented next.
+ 
+ impl<'a> MatrixProblemDataUpdate for Zip<Iter<'a, usize>, Iter<'a, T>> {
++    fn all_finite(&self) -> bool {
++        self.clone().all(|(_, x)| x.is_finite())
++    }
++
+     fn update_matrix(
+         &self,
+         M: &mut CscMatrix,
+@@ -255,7 +296,9 @@ impl<'a> MatrixProblemDataUpdate for Zip<Iter<'a, usize>, Iter<'a, T>> {
+             if idx >= M.nzval.len() {
+                 return Err(SparseFormatError::IncompatibleDimension);
+             }
+-            let (row, col) = M.index_to_coord(idx);
++            let Some((row, col)) = M.index_to_coord(idx) else {
++                return Err(SparseFormatError::IncompatibleDimension);
++            };
+             if let Some(c) = cscale {
+                 M.nzval[idx] = lscale[row] * rscale[col] * c * value;
+             } else {
+@@ -267,6 +310,10 @@ impl<'a> MatrixProblemDataUpdate for Zip<Iter<'a, usize>, Iter<'a, T>> {
+ }
+ 
+ impl MatrixProblemDataUpdate for (Vec<usize>, Vec<T>) {
++    fn all_finite(&self) -> bool {
++        self.1.iter().all(|x| x.is_finite())
++    }
++
+     fn update_matrix(
+         &self,
+         M: &mut CscMatrix,
+@@ -280,6 +327,10 @@ impl MatrixProblemDataUpdate for (Vec<usize>, Vec<T>) {
+ }
+ 
+ impl VectorProblemDataUpdate for [T] {
++    fn all_finite(&self) -> bool {
++        self.iter().all(|x| x.is_finite())
++    }
++
+     fn update_vector(
+         &self,
+         v: &mut [T],
+@@ -309,6 +360,10 @@ impl VectorProblemDataUpdate for [T] {
+ }
+ 
+ impl VectorProblemDataUpdate for Vec<T> {
++    fn all_finite(&self) -> bool {
++        self.iter().all(|x| x.is_finite())
++    }
++
+     fn update_vector(
+         &self,
+         v: &mut [T],
+@@ -320,6 +375,10 @@ impl VectorProblemDataUpdate for Vec<T> {
+ }
+ 
+ impl VectorProblemDataUpdate for [T; 0] {
++    fn all_finite(&self) -> bool {
++        true
++    }
++
+     fn update_vector(
+         &self,
+         _v: &mut [T],
+@@ -335,6 +394,10 @@ impl VectorProblemDataUpdate for [T; 0] {
+ // the zip iterator for partial updates implemented next.
+ 
+ impl<'a> VectorProblemDataUpdate for Zip<Iter<'a, usize>, Iter<'a, T>> {
++    fn all_finite(&self) -> bool {
++        self.clone().all(|(_, x)| x.is_finite())
++    }
++
+     fn update_vector(
+         &self,
+         v: &mut [T],
+@@ -356,6 +419,10 @@ impl<'a> VectorProblemDataUpdate for Zip<Iter<'a, usize>, Iter<'a, T>> {
+ }
+ 
+ impl VectorProblemDataUpdate for (Vec<usize>, Vec<T>) {
++    fn all_finite(&self) -> bool {
++        self.1.iter().all(|x| x.is_finite())
++    }
++
+     fn update_vector(
+         &self,
+         v: &mut [T],
 diff --git a/src/solver/implementations/default/info.rs b/src/solver/implementations/default/info.rs
-index 9d04f18..048fdf7 100644
+index 9d04f18..7970b86 100644
 --- a/src/solver/implementations/default/info.rs
 +++ b/src/solver/implementations/default/info.rs
-@@ -121,10 +121,10 @@ impl Info for DefaultInfo {
+@@ -71,6 +71,27 @@ impl Info for DefaultInfo {
+     fn reset(&mut self) {
+         self.status = SolverStatus::Unsolved;
+         self.iterations = 0;
++        // (patch 0003) every scalar starts as NaN, so no convergence check can pass on
++        // values that were never computed for this solve
++        let nan = T::nan();
++        self.mu = nan;
++        self.sigma = nan;
++        self.step_length = nan;
++        self.cost_primal = nan;
++        self.cost_dual = nan;
++        self.res_primal = nan;
++        self.res_dual = nan;
++        self.res_primal_inf = nan;
++        self.res_dual_inf = nan;
++        self.gap_abs = nan;
++        self.gap_rel = nan;
++        self.ktratio = nan;
++        self.prev_cost_primal = nan;
++        self.prev_cost_dual = nan;
++        self.prev_res_primal = nan;
++        self.prev_res_dual = nan;
++        self.prev_gap_abs = nan;
++        self.prev_gap_rel = nan;
+     }
+ 
+     fn post_process(&mut self, residuals: &DefaultResiduals, settings: &DefaultSettings) {
+@@ -121,10 +142,10 @@ impl Info for DefaultInfo {
          let mut norms = variables.s.norm_scaled(einv);
  
          // primal and dual infeasibility residuals.
@@ -858,7 +1634,7 @@ index 9d04f18..048fdf7 100644
          );
  
          // now back out the τ scaling so we can normalize the unscaled primal / dual errors
-@@ -134,16 +134,16 @@ impl Info for DefaultInfo {
+@@ -134,16 +155,16 @@ impl Info for DefaultInfo {
  
          // primal and dual relative residuals.
          self.res_primal =
@@ -978,8 +1754,38 @@ index 95959f5..17fc34f 100644
                  let ctmp = T::recip(scale_cost);
                  let ctmp = T::clip(&ctmp, scale_min / equil.c, scale_max / equil.c);
  
+diff --git a/src/solver/implementations/default/solution.rs b/src/solver/implementations/default/solution.rs
+index 3d2d77f..29533ae 100644
+--- a/src/solver/implementations/default/solution.rs
++++ b/src/solver/implementations/default/solution.rs
+@@ -91,6 +91,25 @@ impl Solution for DefaultSolution {
+             self.z.copy_from(&variables.z);
+             self.s.copy_from(&variables.s);
+         }
++
++        // KNP-1 (patch 0003): a solved, almost solved or infeasibility status is only
++        // reported with finite values of record (the objective for a solution; x, z and s
++        // in every case, as they carry the certificate); otherwise it is a numerical error.
++        let claims_result = matches!(
++            self.status,
++            SolverStatus::Solved
++                | SolverStatus::AlmostSolved
++                | SolverStatus::PrimalInfeasible
++                | SolverStatus::DualInfeasible
++                | SolverStatus::AlmostPrimalInfeasible
++                | SolverStatus::AlmostDualInfeasible
++        );
++        let objective_ok =
++            is_infeasible || (self.obj_val.is_finite() && self.obj_val_dual.is_finite());
++        let vectors_ok = self.x.is_finite() && self.z.is_finite() && self.s.is_finite();
++        if claims_result && !(objective_ok && vectors_ok) {
++            self.status = SolverStatus::NumericalError;
++        }
+     }
+ 
+     fn finalize(&mut self, _info: &DefaultInfo) {}
 diff --git a/src/solver/implementations/default/solver.rs b/src/solver/implementations/default/solver.rs
-index 0dad6fb..f389faf 100644
+index 0dad6fb..b3d06e8 100644
 --- a/src/solver/implementations/default/solver.rs
 +++ b/src/solver/implementations/default/solver.rs
 @@ -45,8 +45,10 @@ impl DefaultSolver {
@@ -994,11 +1800,15 @@ index 0dad6fb..f389faf 100644
          //sanity check settings
          settings.validate()?;
  
-@@ -59,7 +61,11 @@ impl DefaultSolver {
+@@ -58,8 +60,14 @@ impl DefaultSolver {
+         // presolve if needed, then take an internal copy of the problem data
          let mut data = DefaultProblemData::new(P, q, A, b, cones, &settings);
  
-         let cones = CompositeCone::new(&data.cones);
+-        let cones = CompositeCone::new(&data.cones);
 -        assert_eq!(cones.numel, data.m);
++        let Some(cones) = CompositeCone::new(&data.cones) else {
++            return Err(SolverError::BadInputData("cone dimensions overflow"));
++        };
 +        if cones.numel != data.m {
 +            return Err(SolverError::BadInputData(
 +                "Constraint dimensions inconsistent with size of cones",
@@ -1007,14 +1817,30 @@ index 0dad6fb..f389faf 100644
          let variables = DefaultVariables::new(data.n, data.m);
          let residuals = DefaultResiduals::new(data.n, data.m);
  
-@@ -126,3 +132,29 @@ fn check_dimensions(
+@@ -104,7 +112,14 @@ fn check_dimensions(
+ ) -> Result<(), SolverError> {
+     let m = b.len();
+     let n = q.len();
+-    let p = cone_types.iter().fold(0, |acc, cone| acc + cone.nvars());
++    // (patch 0003) checked: a cone list whose total size overflows usize is bad input,
++    // not a panic
++    let Some(p) = cone_types
++        .iter()
++        .try_fold(0usize, |acc, cone| acc.checked_add(cone.nvars()))
++    else {
++        return Err(SolverError::BadInputData("cone dimensions overflow"));
++    };
+ 
+     if m != A.nrows() {
+         return Err(SolverError::BadInputData("A and b incompatible dimensions"));
+@@ -126,3 +141,29 @@ fn check_dimensions(
  
      Ok(())
  }
 +
 +// KNP-1 input check (patch 0003): matrices in valid CSC form, no NaN anywhere, finite
 +// P, A and q. b may hold infinite bounds (removed by the presolver or capped at the
-+// infinity bound), but not NaN.
++// infinity bound), but not NaN or -infinity (an empty constraint).
 +fn check_data(P: &CscMatrix, q: &[T], A: &CscMatrix, b: &[T]) -> Result<(), SolverError> {
 +    if P.check_format().is_err() || A.check_format().is_err() {
 +        return Err(SolverError::BadInputData(
@@ -1032,8 +1858,8 @@ index 0dad6fb..f389faf 100644
 +            "P, A or q has a NaN or infinite entry",
 +        ));
 +    }
-+    if b.iter().any(|x| x.is_nan()) {
-+        return Err(SolverError::BadInputData("b has a NaN entry"));
++    if b.iter().any(|x| x.is_nan() || *x == -T::infinity()) {
++        return Err(SolverError::BadInputData("b has a NaN or -infinity entry"));
 +    }
 +    Ok(())
 +}

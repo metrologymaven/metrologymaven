@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use crate::algebra::*;
 use std::iter::zip;
 
@@ -26,6 +28,7 @@ impl SymMatrixMath for Symmetric<'_, CscMatrix> {
 
 impl MatrixMath for CscMatrix {
     fn col_sums(&self, sums: &mut [T]) {
+        // invariant (patch 0003): equilibration work vectors are sized from the matrix (n, m).
         assert_eq!(self.n, sums.len());
         for (col, sum) in sums.iter_mut().enumerate() {
             let rng = self.colptr[col]..self.colptr[col + 1];
@@ -34,6 +37,7 @@ impl MatrixMath for CscMatrix {
     }
 
     fn row_sums(&self, sums: &mut [T]) {
+        // invariant (patch 0003): equilibration work vectors are sized from the matrix (n, m).
         assert_eq!(self.m, sums.len());
         sums.fill(T::zero());
         for (&row, &val) in zip(&self.rowval, &self.nzval) {
@@ -47,6 +51,7 @@ impl MatrixMath for CscMatrix {
     }
 
     fn col_norms_no_reset(&self, norms: &mut [T]) {
+        // invariant (patch 0003): norm work vectors have one entry per column; colptr has n + 1 entries (check_format).
         assert_eq!(norms.len(), self.colptr.len() - 1);
 
         for (i, v) in norms.iter_mut().enumerate() {
@@ -65,6 +70,7 @@ impl MatrixMath for CscMatrix {
     }
 
     fn col_norms_sym_no_reset(&self, norms: &mut [T]) {
+        // invariant (patch 0003): norm work vectors have one entry per column; colptr has n + 1 entries (check_format).
         assert_eq!(norms.len(), self.colptr.len() - 1);
 
         for i in 0..norms.len() {
@@ -83,6 +89,7 @@ impl MatrixMath for CscMatrix {
     }
 
     fn row_norms_no_reset(&self, norms: &mut [T]) {
+        // invariant (patch 0003): solver matrices pass check_format at setup.
         assert_eq!(self.rowval.len(), self.colptr.last().copied().unwrap_or(0));
 
         for (row, val) in zip(&self.rowval, &self.nzval) {
@@ -111,6 +118,7 @@ impl MatrixMathMut for CscMatrix {
         let colptr = &self.colptr;
         let vals = &mut self.nzval;
 
+        // invariant (patch 0003): solver matrices pass check_format at setup.
         assert_eq!(vals.len(), colptr.last().copied().unwrap_or(0));
         for i in 0..self.n {
             vals[colptr[i]..colptr[i + 1]].scale(r[i]);
@@ -118,6 +126,7 @@ impl MatrixMathMut for CscMatrix {
     }
 
     fn lrscale(&mut self, l: &[T], r: &[T]) {
+        // invariant (patch 0003): solver matrices pass check_format at setup.
         assert_eq!(self.nzval.len(), self.colptr.last().copied().unwrap_or(0));
 
         for (col, &ri) in r.iter().enumerate() {
@@ -139,6 +148,7 @@ fn _csc_symv_safe(A: &CscMatrix, _uplo: MatrixTriangle, y: &mut [T], x: &[T], a:
 
     y.scale(b);
 
+    // invariant (patch 0003): the KKT matrix is square and x, y are KKT-sized work vectors.
     assert!(x.len() == A.n);
     assert!(y.len() == A.n);
     assert!(A.n == A.m);
@@ -163,6 +173,7 @@ fn _csc_symv_safe(A: &CscMatrix, _uplo: MatrixTriangle, y: &mut [T], x: &[T], a:
 #[allow(non_snake_case)]
 #[allow(clippy::comparison_chain)]
 fn _csc_quad_form(M: &CscMatrix, uplo: MatrixTriangle, y: &[T], x: &[T]) -> T {
+    // invariant (patch 0003): quad_form is called on P (square) with x, y of length n.
     assert_eq!(M.n, M.m);
     assert_eq!(x.len(), M.n);
     assert_eq!(y.len(), M.n);
@@ -229,6 +240,7 @@ fn _csc_axpby_N(A: &CscMatrix, y: &mut [T], x: &[T], a: T, b: T) {
         return;
     }
 
+    // invariant (patch 0003): A and P pass check_format at setup; x, y are sized n or m from them.
     assert_eq!(A.nzval.len(), A.colptr.last().copied().unwrap_or(0));
     assert_eq!(x.len(), A.n);
 
@@ -272,6 +284,7 @@ fn _csc_axpby_T(A: &CscMatrix, y: &mut [T], x: &[T], a: T, b: T) {
         return;
     }
 
+    // invariant (patch 0003): A and P pass check_format at setup; x, y are sized n or m from them.
     assert_eq!(A.nzval.len(), A.colptr.last().copied().unwrap_or(0));
     assert_eq!(x.len(), A.m);
 

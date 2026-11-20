@@ -50,7 +50,7 @@ fn ordering_matches_the_reference_on_every_case() {
     for c in cases {
         let nz = c.rowval.len();
         let a = CscMatrix::new(c.n, c.n, c.colptr.clone(), c.rowval.clone(), vec![1.0; nz]);
-        assert_eq!(min_degree_ordering(&a), c.perm, "{}", c.name);
+        assert_eq!(min_degree_ordering(&a).unwrap(), c.perm, "{}", c.name);
     }
 }
 
@@ -61,6 +61,6 @@ fn ordering_ignores_values() {
         let nz = c.rowval.len();
         let vals: Vec<f64> = (0..nz).map(|k| if k % 3 == 0 { 0.0 } else { -(k as f64) * 1.5e3 }).collect();
         let a = CscMatrix::new(c.n, c.n, c.colptr.clone(), c.rowval.clone(), vals);
-        assert_eq!(min_degree_ordering(&a), c.perm, "{}", c.name);
+        assert_eq!(min_degree_ordering(&a).unwrap(), c.perm, "{}", c.name);
     }
 }

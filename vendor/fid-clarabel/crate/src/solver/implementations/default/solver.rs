@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use super::*;
 use crate::solver::core::{
     cones::{CompositeCone, SupportedConeT},
@@ -63,6 +65,7 @@ impl DefaultSolver {
         //here so that the internal code cannot panic on malformed input)
         check_dimensions(P, q, A, b, cones)?;
         check_data(P, q, A, b)?;
+        check_ordering_budget(P, A, cones)?;
         //sanity check settings
         settings.validate()?;
 
@@ -74,7 +77,9 @@ impl DefaultSolver {
         // presolve if needed, then take an internal copy of the problem data
         let mut data = DefaultProblemData::new(P, q, A, b, cones, &settings);
 
-        let cones = CompositeCone::new(&data.cones);
+        let Some(cones) = CompositeCone::new(&data.cones) else {
+            return Err(SolverError::BadInputData("cone dimensions overflow"));
+        };
         if cones.numel != data.m {
             return Err(SolverError::BadInputData(
                 "Constraint dimensions inconsistent with size of cones",
@@ -124,7 +129,14 @@ fn check_dimensions(
 ) -> Result<(), SolverError> {
     let m = b.len();
     let n = q.len();
-    let p = cone_types.iter().fold(0, |acc, cone| acc + cone.nvars());
+    // (patch 0003) checked: a cone list whose total size overflows usize is bad input,
+    // not a panic
+    let Some(p) = cone_types
+        .iter()
+        .try_fold(0usize, |acc, cone| acc.checked_add(cone.nvars()))
+    else {
+        return Err(SolverError::BadInputData("cone dimensions overflow"));
+    };
 
     if m != A.nrows() {
         return Err(SolverError::BadInputData("A and b incompatible dimensions"));
@@ -149,7 +161,7 @@ fn check_dimensions(
 
 // KNP-1 input check (patch 0003): matrices in valid CSC form, no NaN anywhere, finite
 // P, A and q. b may hold infinite bounds (removed by the presolver or capped at the
-// infinity bound), but not NaN.
+// infinity bound), but not NaN or -infinity (an empty constraint).
 fn check_data(P: &CscMatrix, q: &[T], A: &CscMatrix, b: &[T]) -> Result<(), SolverError> {
     if P.check_format().is_err() || A.check_format().is_err() {
         return Err(SolverError::BadInputData(
@@ -167,8 +179,35 @@ fn check_data(P: &CscMatrix, q: &[T], A: &CscMatrix, b: &[T]) -> Result<(), Solv
             "P, A or q has a NaN or infinite entry",
         ));
     }
-    if b.iter().any(|x| x.is_nan()) {
-        return Err(SolverError::BadInputData("b has a NaN entry"));
+    if b.iter().any(|x| x.is_nan() || *x == -T::infinity()) {
+        return Err(SolverError::BadInputData("b has a NaN or -infinity entry"));
+    }
+    Ok(())
+}
+
+// Patch 0006: refuse up front a problem whose KKT system cannot be within the size budget
+// of the minimum-degree ordering (crate::qdldl::MAX_ORDERING_DIM / _NNZ), as bad input,
+// instead of failing later with a numerical error. The KKT dimension is n + m plus two
+// rows per expanded second-order cone; the stored entries are bounded by those of P and
+// A, the diagonal and the expansion columns. (The fill budget can only be checked while
+// ordering; exceeding it there gives a NumericalError status.)
+fn check_ordering_budget(
+    P: &CscMatrix,
+    A: &CscMatrix,
+    cones: &[SupportedConeT],
+) -> Result<(), SolverError> {
+    let mut dim = P.n.saturating_add(A.m);
+    let mut nnz = P.nnz().saturating_add(A.nnz()).saturating_add(dim);
+    for c in cones {
+        if let SupportedConeT::SecondOrderConeT(d) = c {
+            dim = dim.saturating_add(2);
+            nnz = nnz.saturating_add(d.saturating_mul(2)).saturating_add(2);
+        }
+    }
+    if dim > crate::qdldl::MAX_ORDERING_DIM || nnz > crate::qdldl::MAX_ORDERING_NNZ {
+        return Err(SolverError::BadInputData(
+            "problem exceeds the size budget of the minimum-degree LDL ordering",
+        ));
     }
     Ok(())
 }

@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use crate::algebra::T;
 // All internal math for all solver implementations should go
 // through these core traits, which are implemented generically

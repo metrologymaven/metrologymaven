@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 #![allow(unused_variables)]
 
 use super::*;
@@ -90,6 +92,25 @@ impl Solution for DefaultSolution {
             self.x.copy_from(&variables.x);
             self.z.copy_from(&variables.z);
             self.s.copy_from(&variables.s);
+        }
+
+        // KNP-1 (patch 0003): a solved, almost solved or infeasibility status is only
+        // reported with finite values of record (the objective for a solution; x, z and s
+        // in every case, as they carry the certificate); otherwise it is a numerical error.
+        let claims_result = matches!(
+            self.status,
+            SolverStatus::Solved
+                | SolverStatus::AlmostSolved
+                | SolverStatus::PrimalInfeasible
+                | SolverStatus::DualInfeasible
+                | SolverStatus::AlmostPrimalInfeasible
+                | SolverStatus::AlmostDualInfeasible
+        );
+        let objective_ok =
+            is_infeasible || (self.obj_val.is_finite() && self.obj_val_dual.is_finite());
+        let vectors_ok = self.x.is_finite() && self.z.is_finite() && self.s.is_finite();
+        if claims_result && !(objective_ok && vectors_ok) {
+            self.status = SolverStatus::NumericalError;
         }
     }
 

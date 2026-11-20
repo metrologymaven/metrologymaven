@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 /// Constant indicating that an inequality bound is to be treated as infinite.
 ///
 /// If the setting [`presolve_enable`](crate::solver::DefaultSettings::presolve_enable)

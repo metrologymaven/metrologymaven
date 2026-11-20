@@ -230,7 +230,12 @@ jobs:
                 echo "::error::$e is not an audited vendored directory"; exit 1
               fi
             done
-            if [ -d vendor/fid-clarabel ]; then cargo xtask conic-audit; fi
+            if [ -d vendor/fid-clarabel ]; then
+              # The committed KNP-1 report must be what the lint driver writes today
+              # (KRN.SOLV.CONIC.PATCH AC-1), so a stale report fails here.
+              CARGO_TARGET_DIR=target/lint-driver cargo run --manifest-path vendor/fid-clarabel/lint-driver/Cargo.toml -- --check
+              cargo xtask conic-audit
+            fi
           fi
       - name: Tier definitions table is complete (PLAT.MATRIX.POLICY.DEFS AC-1)
         run: cargo xtask plat-matrix lint-tiers

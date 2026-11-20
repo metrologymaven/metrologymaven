@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 //! Clarabel algebra module.   
 //!
 //! __NB__: Users will not ordinarily need to interact with this module except for defining

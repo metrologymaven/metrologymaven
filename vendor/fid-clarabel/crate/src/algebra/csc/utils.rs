@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use crate::algebra::{FloatT, T};
 //---------------------------------------------------------
 // low-level internal utilities for counting / filling entries
@@ -40,6 +42,7 @@ impl CscMatrix {
     // where the input matrix M has a missing
     // diagonal entry.  M must be square and TRIU
     pub(crate) fn colcount_missing_diag(&mut self, M: &CscMatrix, initcol: usize) {
+        // invariant (patch 0003): KKT assembly allocates K with room for every block it counts.
         assert_eq!(M.colptr.len(), M.n + 1);
         assert!(self.colptr.len() >= M.n + initcol);
 

@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 //! Required traits for types providing a Clarabel solver implementation.
 //!
 //! This module defines the core traits that must be implemented by a collection

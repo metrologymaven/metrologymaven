@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use super::*;
 use crate::algebra::*;
 use crate::solver::core::kktsolvers::LinearSolverInfo;
@@ -71,6 +73,27 @@ impl Info for DefaultInfo {
     fn reset(&mut self) {
         self.status = SolverStatus::Unsolved;
         self.iterations = 0;
+        // (patch 0003) every scalar starts as NaN, so no convergence check can pass on
+        // values that were never computed for this solve
+        let nan = T::nan();
+        self.mu = nan;
+        self.sigma = nan;
+        self.step_length = nan;
+        self.cost_primal = nan;
+        self.cost_dual = nan;
+        self.res_primal = nan;
+        self.res_dual = nan;
+        self.res_primal_inf = nan;
+        self.res_dual_inf = nan;
+        self.gap_abs = nan;
+        self.gap_rel = nan;
+        self.ktratio = nan;
+        self.prev_cost_primal = nan;
+        self.prev_cost_dual = nan;
+        self.prev_res_primal = nan;
+        self.prev_res_dual = nan;
+        self.prev_gap_abs = nan;
+        self.prev_gap_rel = nan;
     }
 
     fn post_process(&mut self, residuals: &DefaultResiduals, settings: &DefaultSettings) {

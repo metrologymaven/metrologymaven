@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 //! KNP-1 numeric facade of the vendored solver (patch 0003).
 //!
 //! Every square root, logarithm, min and max of the solver goes through `fid_num::f`

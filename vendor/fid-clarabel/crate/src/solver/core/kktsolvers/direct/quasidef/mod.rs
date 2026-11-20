@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use crate::{algebra::*, solver::core::kktsolvers::HasLinearSolverInfo};
 
 //ldl linear solvers kept in a submodule (not flattened)

@@ -42,9 +42,10 @@ that adds the asset.
   (University of Oxford).
 - **Licence:** SPDX `Apache-2.0` (crates.io metadata, and the licence text in
   `vendor/fid-clarabel/upstream/LICENSE.md`, kept unchanged as `crate/LICENSE.md`). The patch
-  files record every change file by file, and `crate/Cargo.toml` says the crate is modified;
-  whether each modified source file also needs its own change notice under Apache-2.0
-  section 4(b) is open [unverified].
+  files record every change file by file, and (Apache-2.0 section 4(b)) every modified or
+  new file of `crate/` starts with the notice "Modified from Clarabel 0.11.1 by Metrology
+  Maven; see vendor/fid-clarabel/patches/" and `crate/README.md` starts with a fork notice
+  (patch 0009).
 - **Notice:** upstream ships no NOTICE file; its `LICENSE.md` and `CITATION.bib` are kept in
   both trees.
 

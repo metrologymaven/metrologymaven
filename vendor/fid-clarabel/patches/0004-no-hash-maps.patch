@@ -5,7 +5,7 @@ Replace the HashMap of cone type counts with a BTreeMap.
 Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
 
 diff --git a/src/solver/core/cones/compositecone.rs b/src/solver/core/cones/compositecone.rs
-index 0857bb4..14f67f6 100644
+index bac2b1f..dc3c7ce 100644
 --- a/src/solver/core/cones/compositecone.rs
 +++ b/src/solver/core/cones/compositecone.rs
 @@ -1,7 +1,7 @@
@@ -27,7 +27,7 @@ index 0857bb4..14f67f6 100644
  
      //overall size of the composite cone
      pub(crate) numel: usize,
-@@ -42,7 +43,7 @@ impl CompositeCone {
+@@ -44,7 +45,7 @@ impl CompositeCone {
          // NB: ideally we could fix max capacity here,  but Enum::variant_count is not
          // yet a stable feature.  Capacity should be number of SupportedCone variants.
          // See: https://github.com/rust-lang/rust/issues/73662

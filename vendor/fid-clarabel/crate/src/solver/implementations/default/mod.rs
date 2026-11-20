@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 //! Implementation of core types for the standard problem format
 //! described in the documentation [main page](crate).
 

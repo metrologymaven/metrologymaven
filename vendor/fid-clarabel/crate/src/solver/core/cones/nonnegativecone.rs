@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use super::*;
 use crate::algebra::*;
 use std::iter::zip;
@@ -89,6 +91,7 @@ impl Cone for NonnegativeCone {
     }
 
     fn get_Hs(&self, Hsblock: &mut [T]) {
+        // invariant (patch 0003): Hsblock is this cone's block range (CompositeCone::rng_blocks).
         assert_eq!(self.w.len(), Hsblock.len());
         for (blki, &wi) in zip(Hsblock, &self.w) {
             *blki = wi * wi;
@@ -103,6 +106,7 @@ impl Cone for NonnegativeCone {
     }
 
     fn affine_ds(&self, ds: &mut [T], _s: &[T]) {
+        // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
         assert_eq!(self.lambda.len(), ds.len());
         for (dsi, &lambdai) in zip(ds, &self.lambda) {
             *dsi = lambdai * lambdai;
@@ -129,6 +133,7 @@ impl Cone for NonnegativeCone {
         _settings: &CoreSettings,
         alphamax: T,
     ) -> (T, T) {
+        // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
         assert_eq!(z.len(), s.len());
         assert_eq!(dz.len(), z.len());
         assert_eq!(ds.len(), s.len());
@@ -148,6 +153,7 @@ impl Cone for NonnegativeCone {
     }
 
     fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], alpha: T) -> T {
+        // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
         assert_eq!(z.len(), s.len());
         assert_eq!(dz.len(), z.len());
         assert_eq!(ds.len(), s.len());
@@ -171,6 +177,7 @@ impl SymmetricCone for NonnegativeCone {
     }
 
     fn mul_W(&mut self, _is_transpose: MatrixShape, y: &mut [T], x: &[T], alpha: T, beta: T) {
+        // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
         assert_eq!(y.len(), x.len());
         assert_eq!(y.len(), self.w.len());
         for i in 0..y.len() {
@@ -179,6 +186,7 @@ impl SymmetricCone for NonnegativeCone {
     }
 
     fn mul_Winv(&mut self, _is_transpose: MatrixShape, y: &mut [T], x: &[T], alpha: T, beta: T) {
+        // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
         assert_eq!(y.len(), x.len());
         assert_eq!(y.len(), self.w.len());
         for i in 0..y.len() {

@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 /// Error type returned by matrix concatenation operations.
 #[derive(Debug)]
 pub enum MatrixConcatenationError {

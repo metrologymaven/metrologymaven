@@ -5,7 +5,7 @@ Route sums, dot products and 2-norms through fid_num::red (fixed block-and-tree 
 Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
 
 diff --git a/src/algebra/csc/matrix_math.rs b/src/algebra/csc/matrix_math.rs
-index 2ee286f..073ff3b 100644
+index 876ea64..f03e278 100644
 --- a/src/algebra/csc/matrix_math.rs
 +++ b/src/algebra/csc/matrix_math.rs
 @@ -15,7 +15,8 @@ impl MatrixVectorMultiply for Adjoint<'_, CscMatrix> {
@@ -18,7 +18,7 @@ index 2ee286f..073ff3b 100644
      }
  
      fn quad_form(&self, y: &[T], x: &[T]) -> T {
-@@ -159,40 +160,6 @@ fn _csc_symv_safe(A: &CscMatrix, _uplo: MatrixTriangle, y: &mut [T], x: &[T], a:
+@@ -167,41 +168,6 @@ fn _csc_symv_safe(A: &CscMatrix, _uplo: MatrixTriangle, y: &mut [T], x: &[T], a:
      }
  }
  
@@ -37,6 +37,7 @@ index 2ee286f..073ff3b 100644
 -
 -    y.scale(b);
 -
+-    // invariant (patch 0003): the KKT matrix is square and x, y are KKT-sized work vectors.
 -    assert!(x.len() == A.n);
 -    assert!(y.len() == A.n);
 -    assert!(A.n == A.m);
@@ -60,7 +61,7 @@ index 2ee286f..073ff3b 100644
  #[allow(clippy::comparison_chain)]
  fn _csc_quad_form(M: &CscMatrix, uplo: MatrixTriangle, y: &[T], x: &[T]) -> T {
 diff --git a/src/algebra/vecmath.rs b/src/algebra/vecmath.rs
-index 2fec922..bbcf619 100644
+index cf9c6d2..a26caa6 100644
 --- a/src/algebra/vecmath.rs
 +++ b/src/algebra/vecmath.rs
 @@ -1,9 +1,19 @@
@@ -84,7 +85,7 @@ index 2fec922..bbcf619 100644
  impl VectorMath for [T] {
      fn copy_from(&mut self, src: &[T]) -> &mut Self {
          self.copy_from_slice(src);
-@@ -82,7 +92,7 @@ impl VectorMath for [T] {
+@@ -83,7 +93,7 @@ impl VectorMath for [T] {
      }
  
      fn dot(&self, y: &[T]) -> T {
@@ -93,7 +94,7 @@ index 2fec922..bbcf619 100644
      }
  
      fn dot_shifted(z: &[T], s: &[T], dz: &[T], ds: &[T], α: T) -> T {
-@@ -90,43 +100,44 @@ impl VectorMath for [T] {
+@@ -92,44 +102,45 @@ impl VectorMath for [T] {
          assert_eq!(z.len(), dz.len());
          assert_eq!(s.len(), ds.len());
  
@@ -138,6 +139,7 @@ index 2fec922..bbcf619 100644
  
      //2-norm of elementwise product self.*v
      fn norm_scaled(&self, v: &[T]) -> T {
+         // invariant (patch 0003): both are solver vectors of the same dimension (n or m).
          assert_eq!(self.len(), v.len());
 -        stable_norm(izip!(self, v).map(|(&yi, &vi)| yi * vi))
 +        let p: Vec<T> = zip(self, v).map(|(&yi, &vi)| yi * vi).collect();
@@ -152,7 +154,7 @@ index 2fec922..bbcf619 100644
      }
  
      // Returns infinity norm
-@@ -143,7 +154,8 @@ impl VectorMath for [T] {
+@@ -146,7 +157,8 @@ impl VectorMath for [T] {
  
      // Returns one norm
      fn norm_one(&self) -> T {
@@ -162,7 +164,7 @@ index 2fec922..bbcf619 100644
      }
  
      //inf-norm of elementwise product self.*v
-@@ -154,7 +166,8 @@ impl VectorMath for [T] {
+@@ -158,7 +170,8 @@ impl VectorMath for [T] {
  
      //
      fn norm_one_scaled(&self, v: &Self) -> T {
@@ -172,7 +174,7 @@ index 2fec922..bbcf619 100644
      }
  
      // max absolute difference (used for unit testing)
-@@ -174,7 +187,7 @@ impl VectorMath for [T] {
+@@ -178,7 +191,7 @@ impl VectorMath for [T] {
          let mean = if self.is_empty() {
              T::zero()
          } else {
@@ -181,7 +183,7 @@ index 2fec922..bbcf619 100644
              let den = self.len().as_T();
              num / den
          };
-@@ -202,25 +215,3 @@ impl VectorMath for [T] {
+@@ -208,25 +221,3 @@ impl VectorMath for [T] {
          self
      }
  }

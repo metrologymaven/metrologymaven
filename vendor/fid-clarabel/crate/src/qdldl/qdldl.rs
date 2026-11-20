@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 #![allow(non_snake_case)]
 use crate::algebra::*;
 use core::cmp::{max, min};
@@ -17,6 +19,8 @@ pub enum QDLDLError {
     ZeroPivot,
     /// Invalid permutation vector supplied
     InvalidPermutation,
+    /// Matrix exceeds [`MAX_ORDERING_DIM`], [`MAX_ORDERING_NNZ`] or [`MAX_ORDERING_FILL`]
+    OrderingTooLarge,
 }
 
 impl std::fmt::Display for QDLDLError {
@@ -29,6 +33,12 @@ impl std::fmt::Display for QDLDLError {
             QDLDLError::NotUpperTriangular => write!(f, "Matrix is not upper triangular"),
             QDLDLError::ZeroPivot => write!(f, "Matrix factorization produced a zero pivot"),
             QDLDLError::InvalidPermutation => write!(f, "Invalid permutation vector"),
+            QDLDLError::OrderingTooLarge => {
+                write!(
+                    f,
+                    "Matrix exceeds the size budget of the minimum-degree ordering"
+                )
+            }
         }
     }
 }
@@ -114,13 +124,13 @@ impl QDLDLFactorisation {
     }
 
     /// Solves Ax = b using LDL factors for A.
-    /// Solves in place (x replaces b)
+    /// Solves in place (x replaces b). If the factorisation is logical only or `b` has
+    /// the wrong length, `b` is filled with NaN (upstream panicked; patch 0003).
     pub fn solve(&mut self, b: &mut [T]) {
-        // bomb if logical factorisation only
-        assert!(!self.is_symbolic);
-
-        // bomb if b is the wrong size
-        assert_eq!(b.len(), self.D.len());
+        if self.is_symbolic || b.len() != self.D.len() {
+            b.fill(T::nan());
+            return;
+        }
 
         // permute b
         let tmp = &mut self.workspace.fwork;
@@ -165,9 +175,9 @@ impl QDLDLFactorisation {
     /// values are offset by `offset`, with `signs` a vector of +/- 1 values
     /// indicating the direction of shifts. See [`refactor`](crate::qdldl::QDLDLFactorisation::refactor)
     ///
+    /// Pairs `indices` and `signs` up to the shorter of the two (upstream asserted
+    /// equal lengths; patch 0003).
     pub fn offset_values(&mut self, indices: &[usize], offset: T, signs: &[i8]) {
-        assert_eq!(indices.len(), signs.len());
-
         let nzval = &mut self.workspace.triuA.nzval; // post perm internal data
         let AtoPAPt = &self.workspace.AtoPAPt; //mapping from input matrix entries to triuA
 
@@ -244,7 +254,7 @@ fn _qdldl_new(
     //user would need to pass (0..n).collect() explicitly
     let perm = match opts.perm {
         Some(p) => p,
-        None => min_degree_ordering(Ain),
+        None => min_degree_ordering(Ain)?,
     };
     let iperm = _invperm(&perm)?;
 
@@ -850,14 +860,27 @@ fn _permute_symmetric_inner(
 /// index, and its remaining neighbours become a clique. Every set is a `BTreeSet` and every
 /// choice is a total order on `(degree, index)`, so the result is a function of the pattern
 /// alone and identical on every target. Returns `perm` with `perm[k]` the `k`-th pivot.
-pub fn min_degree_ordering(A: &CscMatrix) -> Vec<usize> {
+///
+/// Size budget: the selection step scans every node, so the cost grows as `n^2` plus the
+/// work on the fill. A matrix with more than [`MAX_ORDERING_DIM`] columns or
+/// [`MAX_ORDERING_NNZ`] stored entries, or whose elimination graph grows past
+/// [`MAX_ORDERING_FILL`] edges, is refused with [`QDLDLError::OrderingTooLarge`]; so is a
+/// malformed pattern. The budget is the same on every target, so the outcome is too.
+pub fn min_degree_ordering(A: &CscMatrix) -> Result<Vec<usize>, QDLDLError> {
     let n = A.n;
+    if n > MAX_ORDERING_DIM || A.rowval.len() > MAX_ORDERING_NNZ || A.colptr.len() != n + 1 {
+        return Err(QDLDLError::OrderingTooLarge);
+    }
     let mut adj: Vec<BTreeSet<usize>> = vec![BTreeSet::new(); n];
+    let mut edges = 0usize;
     for col in 0..n {
-        for &row in &A.rowval[A.colptr[col]..A.colptr[col + 1]] {
-            if row != col && row < n {
-                adj[row].insert(col);
+        let Some(rows) = A.rowval.get(A.colptr[col]..A.colptr[col + 1]) else {
+            return Err(QDLDLError::OrderingTooLarge);
+        };
+        for &row in rows {
+            if row != col && row < n && adj[row].insert(col) {
                 adj[col].insert(row);
+                edges += 1;
             }
         }
     }
@@ -875,14 +898,26 @@ pub fn min_degree_ordering(A: &CscMatrix) -> Vec<usize> {
         perm.push(p);
         eliminated[p] = true;
         let nbrs = std::mem::take(&mut adj[p]);
+        edges -= nbrs.len();
         for &u in &nbrs {
             adj[u].remove(&p);
             for &v in &nbrs {
-                if v != u {
-                    adj[u].insert(v);
+                if v != u && adj[u].insert(v) && u < v {
+                    edges += 1;
                 }
             }
         }
+        if edges > MAX_ORDERING_FILL {
+            return Err(QDLDLError::OrderingTooLarge);
+        }
     }
-    perm
+    Ok(perm)
 }
+
+/// Most columns (KKT dimension) [`min_degree_ordering`] accepts.
+pub const MAX_ORDERING_DIM: usize = 20_000;
+/// Most stored entries of the upper-triangular pattern [`min_degree_ordering`] accepts.
+pub const MAX_ORDERING_NNZ: usize = 1_000_000;
+/// Most edges the elimination graph may reach during [`min_degree_ordering`] (bounds the
+/// fill, and so the memory and time spent on it).
+pub const MAX_ORDERING_FILL: usize = 4_000_000;

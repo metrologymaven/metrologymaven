@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use super::*;
 use crate::algebra::*;
 
@@ -38,6 +40,7 @@ impl SecondOrderCone {
     pub fn new(dim: usize) -> Self {
         const SOC_NO_EXPANSION_MAX_SIZE: usize = 4;
 
+        // invariant (patch 0003): new_collapsed drops SOC(0) and folds SOC(1) into the nonnegative cone.
         assert!(dim >= 2);
 
         let w = vec![T::zero(); dim];

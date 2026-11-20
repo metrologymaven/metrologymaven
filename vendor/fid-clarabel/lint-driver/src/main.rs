@@ -8,7 +8,14 @@
 //! canonical JSON to `vendor/fid-clarabel/knp1-findings.json`. It exits 1 if any finding
 //! remains. The other lint modules (graph, flags, typed, data) are not run here.
 //!
-//! Run from the repository root: `cargo run --manifest-path vendor/fid-clarabel/lint-driver/Cargo.toml`.
+//! The syntax scan reads no lockfile, so the report's `inputs.lockfile` is the digest of
+//! empty input: the report then depends only on `crate/src/` and `knp1-lint.toml`, and does
+//! not go stale when the workspace's Cargo.lock changes.
+//!
+//! With `--check` the report is not written: the driver exits 1 if the committed
+//! `knp1-findings.json` differs from what it would write (CI runs this, so a stale report
+//! fails). Run from anywhere:
+//! `cargo run --manifest-path vendor/fid-clarabel/lint-driver/Cargo.toml [-- --check]`.
 
 use fid_canon::CValue;
 use fid_knp1_lint::syn_scan::{parse_config, scan_file, FileRef};
@@ -35,14 +42,12 @@ fn rust_files(root: &Path, dir: &Path, out: &mut Vec<String>) -> std::io::Result
     Ok(())
 }
 
-fn run() -> Result<bool, String> {
+fn run(check: bool) -> Result<bool, String> {
     let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let vendored = here.join("..");
     let crate_root = vendored.join("crate");
-    let repo = vendored.join("../..");
     let config = std::fs::read(here.join("knp1-lint.toml")).map_err(|e| format!("knp1-lint.toml: {e}"))?;
     let cfg = parse_config(&String::from_utf8_lossy(&config)).map_err(|e| e.to_string())?;
-    let lockfile = std::fs::read(repo.join("Cargo.lock")).map_err(|e| format!("Cargo.lock: {e}"))?;
 
     let mut files = Vec::new();
     rust_files(&crate_root, &crate_root.join("src"), &mut files).map_err(|e| format!("crate/src: {e}"))?;
@@ -56,7 +61,7 @@ fn run() -> Result<bool, String> {
         findings.extend(out.findings);
     }
     let passed = findings.is_empty();
-    let inputs = InputDigests::of(&config, &lockfile, b"", b"");
+    let inputs = InputDigests::of(&config, b"", b"", b"");
     let report = Report::new(TOOL_VERSION, inputs, Applied::without_waivers(findings)).map_err(|e| e.to_string())?;
     let CValue::Obj(mut obj) = report.to_cvalue() else {
         return Err("report is not an object".to_string());
@@ -67,13 +72,22 @@ fn run() -> Result<bool, String> {
     obj.insert("linted".to_string(), CValue::Arr(vec![CValue::Obj(entry)]));
     let bytes = fid_canon::to_canonical_bytes(&CValue::Obj(obj)).map_err(|e| e.to_string())?;
     let out = vendored.join("knp1-findings.json");
-    std::fs::write(&out, bytes).map_err(|e| format!("{}: {e}", out.display()))?;
-    eprintln!(
-        "{} files scanned, {} findings, {notes} facade notes; wrote {}",
-        files.len(),
-        report.findings.len(),
-        out.display()
-    );
+    if check {
+        let committed = std::fs::read(&out).map_err(|e| format!("{}: {e}", out.display()))?;
+        if committed != bytes {
+            eprintln!("{} is stale: rerun the lint driver and update lint_report_sha256 in AUDIT.toml", out.display());
+            return Ok(false);
+        }
+        eprintln!("{} files scanned, {} findings, {notes} facade notes; report up to date", files.len(), report.findings.len());
+    } else {
+        std::fs::write(&out, bytes).map_err(|e| format!("{}: {e}", out.display()))?;
+        eprintln!(
+            "{} files scanned, {} findings, {notes} facade notes; wrote {}",
+            files.len(),
+            report.findings.len(),
+            out.display()
+        );
+    }
     for f in &report.findings {
         eprintln!("{} {}:{}:{} {}", f.rule.id(), f.file, f.line, f.column, f.message);
     }
@@ -81,7 +95,16 @@ fn run() -> Result<bool, String> {
 }
 
 fn main() -> ExitCode {
-    match run() {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let check = match args.as_slice() {
+        [] => false,
+        [a] if a == "--check" => true,
+        _ => {
+            eprintln!("usage: lint-driver [--check]");
+            return ExitCode::from(2);
+        }
+    };
+    match run(check) {
         Ok(true) => ExitCode::SUCCESS,
         Ok(false) => ExitCode::FAILURE,
         Err(e) => {

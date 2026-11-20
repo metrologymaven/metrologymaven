@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 use crate::algebra::hvcat_dim_check;
 use crate::algebra::matrix_traits::ShapedMatrix;
 use crate::algebra::MatrixConcatenationError;

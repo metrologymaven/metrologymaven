@@ -1,3 +1,5 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
 #![allow(non_snake_case)]
 
 use crate::algebra::utils::sortperm_by;
@@ -79,7 +81,17 @@ where
         let m = rows.len();
         let n = rows.iter().map(|r| r.len()).next().unwrap_or(0);
 
-        assert!(rows.iter().all(|r| r.len() == n));
+        // (patch 0003) ragged rows: upstream asserted; this returns a matrix that fails
+        // check_format (no column pointers), which the solver rejects as bad input
+        if !rows.iter().all(|r| r.len() == n) {
+            return CscMatrix {
+                m,
+                n,
+                colptr: Vec::new(),
+                rowval: Vec::new(),
+                nzval: Vec::new(),
+            };
+        }
         let nnz = rows.iter().flatten().filter(|&v| *v != T::zero()).count();
 
         let mut colptr = Vec::with_capacity(n + 1);
@@ -111,18 +123,11 @@ where
 impl CscMatrix {
     /// `CscMatrix` constructor.
     ///
-    /// # Panics
-    /// Makes rudimentary dimensional compatibility checks and panics on
-    /// failure.   This constructor does __not__
-    /// ensure that rows indices are all in bounds or that data is arranged
-    /// such that entries within each column appear in order of increasing
-    /// row index.   Responsibility for ensuring these conditions hold
-    /// is left to the caller.
+    /// This constructor does __not__ check its arguments (upstream asserted the
+    /// array lengths and panicked; patch 0003). Use [`check_format`](CscMatrix::check_format)
+    /// to validate a matrix; the solver does so for its inputs and rejects a malformed one.
     ///
     pub fn new(m: usize, n: usize, colptr: Vec<usize>, rowval: Vec<usize>, nzval: Vec<T>) -> Self {
-        assert_eq!(rowval.len(), nzval.len());
-        assert_eq!(colptr.len(), n + 1);
-        assert_eq!(colptr[n], rowval.len());
         CscMatrix {
             m,
             n,
@@ -134,13 +139,26 @@ impl CscMatrix {
 
     /// `CscMatrix` constructor from data in triplet format.
     ///
-    /// # Panics
-    /// Makes rudimentary dimensional compatibility checks and panics on
-    /// failure.   Data can be provided unsorted.   Repeated values are added.
+    /// Data can be provided unsorted.   Repeated values are added.
+    /// Returns `IncompatibleDimension` if `I`, `J` and `V` differ in length and
+    /// `BadRowval`/`BadColptr` for an index out of range (upstream panicked; patch 0003).
     ///
-    pub fn new_from_triplets(m: usize, n: usize, I: Vec<usize>, J: Vec<usize>, V: Vec<T>) -> Self {
-        assert_eq!(I.len(), J.len());
-        assert_eq!(I.len(), V.len());
+    pub fn new_from_triplets(
+        m: usize,
+        n: usize,
+        I: Vec<usize>,
+        J: Vec<usize>,
+        V: Vec<T>,
+    ) -> Result<Self, SparseFormatError> {
+        if I.len() != J.len() || I.len() != V.len() {
+            return Err(SparseFormatError::IncompatibleDimension);
+        }
+        if I.iter().any(|&i| i >= m) {
+            return Err(SparseFormatError::BadRowval);
+        }
+        if J.iter().any(|&j| j >= n) {
+            return Err(SparseFormatError::BadColptr);
+        }
 
         let mut M = CscMatrix::spalloc((m, n), V.len());
 
@@ -194,7 +212,7 @@ impl CscMatrix {
 
         M.colcount_to_colptr();
 
-        M
+        Ok(M)
     }
 
     /// allocate space for a sparse matrix with `nnz` elements
@@ -440,6 +458,7 @@ impl CscMatrix {
     /// Panics if row dimensions are incompatible
     pub fn select_rows(&self, rowidx: &Vec<bool>) -> Self {
         //first check for compatible row dimensions
+        // invariant (patch 0003): the presolver passes one keep flag per row of A.
         assert_eq!(rowidx.len(), self.m);
 
         //count the number of rows in the reduced matrix and build an
@@ -479,6 +498,7 @@ impl CscMatrix {
 
     /// Allocates a new matrix containing only entries from the upper triangular part
     pub fn to_triu(&self) -> Self {
+        // invariant (patch 0003): called on P, which check_dimensions found square.
         assert_eq!(self.m, self.n);
         let (m, n) = (self.m, self.n);
         let mut colptr = vec![0; n + 1];
@@ -528,19 +548,19 @@ impl CscMatrix {
     }
 
     /// Returns the value at the given (row,col) index as an Option.
-    /// Returns None if the given index is not a structural nonzero.
-    ///
-    /// # Panics
-    /// Panics if the given index is out of bounds.
+    /// Returns None if the given index is not a structural nonzero, is out of bounds or
+    /// the matrix is malformed (upstream panicked out of bounds; patch 0003).
     pub fn get_entry(&self, idx: (usize, usize)) -> Option<T> {
         let (row, col) = idx;
-        assert!(row < self.nrows() && col < self.ncols());
+        if row >= self.nrows() || col >= self.ncols() {
+            return None;
+        }
 
-        let first = self.colptr[col];
-        let last = self.colptr[col + 1];
-        let rows_in_this_column = &self.rowval[first..last];
+        let first = *self.colptr.get(col)?;
+        let last = *self.colptr.get(col + 1)?;
+        let rows_in_this_column = self.rowval.get(first..last)?;
         match rows_in_this_column.binary_search(&row) {
-            Ok(idx) => Some(self.nzval[first + idx]),
+            Ok(idx) => self.nzval.get(first + idx).copied(),
             Err(_) => None,
         }
     }
@@ -548,11 +568,13 @@ impl CscMatrix {
     /// Sets a value at a given (row,col) index, allocating
     /// additional space in the matrix if required.  
     ///
-    /// # Panics
-    /// Panics if the given index is out of bounds.
-    pub fn set_entry(&mut self, idx: (usize, usize), value: T) {
+    /// Returns `IncompatibleDimension` if the index is out of bounds or the matrix is
+    /// malformed (upstream panicked; patch 0003).
+    pub fn set_entry(&mut self, idx: (usize, usize), value: T) -> Result<(), SparseFormatError> {
         let (row, col) = idx;
-        assert!(row < self.nrows() && col < self.ncols());
+        if row >= self.nrows() || col >= self.ncols() || self.check_format().is_err() {
+            return Err(SparseFormatError::IncompatibleDimension);
+        }
 
         let first = self.colptr[col];
         let last = self.colptr[col + 1];
@@ -563,7 +585,7 @@ impl CscMatrix {
         if i == rows_in_this_column.len() || rows_in_this_column[i] != row {
             // don't allocate space for insertion of new zeros
             if value.is_zero() {
-                return;
+                return Ok(());
             }
 
             // the element must be inserted, then col counts rebuilt
@@ -579,17 +601,21 @@ impl CscMatrix {
             // the element already exists, so overwrite it
             self.nzval[first + i] = value;
         }
+        Ok(())
     }
 
-    /// Returns the (row,col) coordinates of the given linear index.
-    ///
-    /// # Panics
-    /// Panics if the given index is out of bounds.
-    pub fn index_to_coord(&self, idx: usize) -> (usize, usize) {
-        assert!(idx < self.nnz());
-        let row = self.rowval[idx];
-        let col = self.colptr.partition_point(|&c| idx + 1 > c) - 1;
-        (row, col)
+    /// Returns the (row,col) coordinates of the given linear index, or `None` if it is
+    /// out of bounds (upstream panicked; patch 0003).
+    pub fn index_to_coord(&self, idx: usize) -> Option<(usize, usize)> {
+        if idx >= self.nnz() {
+            return None;
+        }
+        let row = *self.rowval.get(idx)?;
+        let col = self
+            .colptr
+            .partition_point(|&c| idx + 1 > c)
+            .checked_sub(1)?;
+        Some((row, col))
     }
 }
 
