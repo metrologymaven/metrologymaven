@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-unc]
+built_pr: 327
 satisfies: [REQ-UNC.MODEL.GRAPH-006, REQ-UNC.MODEL.GRAPH-007]
 covers: []
 depends_on: [UNC.MODEL.GRAPH.CHECK, UNC.MODEL.GRAPH.SCHEMA, CORE.STO.CAS, KRN.MAN.MANI]
