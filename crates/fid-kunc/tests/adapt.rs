@@ -143,7 +143,7 @@ fn identifiers() {
 fn spec_card() {
     let card = fid_kci::parse_card(include_str!("../cards/unc.prop.mcm_adapt@1.0.0.toml")).unwrap();
     let id = fid_kci::AlgorithmId::parse(ALGORITHM_ID).unwrap();
-    let report = fid_kci::check(&[id], &[card.id.clone()]);
+    let report = fid_kci::check(&[id], std::slice::from_ref(&card.id));
     assert!(report.is_clean(), "{report:?}");
     assert_eq!(card.determinism, "D0");
     assert!(card.references.iter().all(|r| r.starts_with("JCGM 101:2008")));
