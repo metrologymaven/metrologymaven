@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-kunc]
+built_pr: 314
 satisfies: [REQ-UNC.MODEL.GRAPH-002, REQ-UNC.MODEL.GRAPH-003, REQ-UNC.MODEL.GRAPH-004, REQ-UNC.MODEL.GRAPH-005, REQ-UNC.MODEL.GRAPH-008]
 covers: []
 depends_on: [UNC.MODEL.GRAPH.SCHEMA, UNC.MODEL.DIST, KRN.MAN.MANI]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # UNC.MODEL.GRAPH.CHECK: Structural validation passes
@@ -43,14 +45,15 @@ updated: 2026-11-17
 ## Acceptance criteria
 
 - **AC-1** Given `fixtures/unc/model/graph/bore_ls.json` and manifest stub `manifest_stub.json`, then validation returns `ValidModel`.
-- **AC-2** (error paths) Given `fixtures/unc/model/graph/bad/` (cycle among n3, n5, n7; unknown operator; unsourced input; mm-to-rad edge; indefinite correlation), then each yields its code with the named node, and a file with all five yields five findings in the stated order.
+- **AC-2** (error paths) Given `fixtures/unc/model/graph/bad/` (cycle among n3, n5, n7; unknown operator; unsourced input; m-to-rad edge; indefinite correlation), then each yields its code with the named node, and a file with all five yields five findings in the stated order.
 - **AC-3** (performance) Given a generated 1 000-node chain model (seed `0x47524150`), then validation completes within budget on the reference runner.
 
 ## Design
 
 - **Registry command(s):** none (called by `unc.validate_model@1` in `UNC.MODEL.GRAPH.STORE`).
-- **Algorithm:** Kahn topological sort with BTreeMap-ordered ready set; manifest lookup; unit dimension vectors compared exactly; correlation via `dist::validate_correlation`.
-- **Errors:** findings `cycle`, `unknown_operator`, `unsourced_input`, `unit_mismatch`, `arity_mismatch`, `invalid_correlation`.
+- **Algorithm:** Kahn topological sort with BTreeMap-ordered ready set; manifest lookup; unit codes compared exactly (`si:m`, `si:rad`, `si:1`; `si:rad` and `si:1` differ although both have dimension one) together with quantity kinds; iterative Tarjan for the cycle members; correlation via `dist::validate_correlation`.
+- **Errors:** findings, in pass order: `dangling_edge`, `cycle`, `unknown_operator`, `unsourced_input`, `arity_mismatch`, `unit_mismatch`, `unreachable_output`, `correlation_not_input`, `invalid_correlation` (see Resolved at build).
+- **Manifest precondition:** `validate` trusts the manifest it is given; provenance is the caller's job. `UNC.MODEL.GRAPH.STORE` takes the manifest only from the release manifest file, read with `KernelManifest::parse_canonical`, whose core digest must equal the core digest the running kernel artifact reports (`manifest_core_digest`, `KRN.MAN.MANI.GEN`); the manifest never comes from command parameters. `UNC.PROP` refuses a `ValidModel` whose `manifest_digest()` differs from the running kernel's manifest digest.
 - **Determinism:** D0.
 - **Performance budget:** REQ-006.
 - **Crate:** `fid-kunc` (module `model`).
@@ -65,7 +68,20 @@ updated: 2026-11-17
 
 ## Open questions
 
-- None.
+- **Operator port signatures are not yet bound to the algorithm.** This leaf checks edges against the ports the model *declares* (unit, quantity kind, arity), but nothing yet checks that those declarations match the real signature of `algorithm_id@algorithm_version`. Follow-up leaf: publish each algorithm's port signature (names, quantity kinds, unit codes, arities, in argument order) in its `KRN.MAN.CARD` card or the kernel manifest entry, and add a pass here that refuses a declared port list that differs from it.
+- **Until then, the kernel call must refuse an argument-count mismatch.** `fid_kci::kci::evaluate` (`KRN.MAN.KCI`) does not do this today: it checks input digests and calls `KernelAlgorithm::validate` (params only), then passes `inputs` to `run`, so each algorithm must refuse a wrong input count itself. `KRN.MAN.KCI` should add an input-count check against the declared signature before `run`; until it does, `UNC.PROP` must not rely on this leaf for argument counts.
+
+## Resolved at build
+
+- **Passes.** Besides the five named passes, validation fails closed on three more findings, numbered into the pinned order: `dangling_edge` (pass 1: an edge end whose node or port does not exist, or that points the wrong way, out of an output node or into an input node), `unreachable_output` (pass 6: no input reaches the output over resolved edges) and `correlation_not_input` (pass 7: a group member that is not an input node). The order is dangling_edge, cycle, unknown_operator, unsourced_input, arity_mismatch and unit_mismatch, unreachable_output, correlation_not_input, invalid_correlation; the five findings of AC-2 keep their stated relative order.
+- **Resolution.** A source is an input's implicit port `value` or an operator output port; a target is an operator input port or an output's implicit `value` (arity 1). Arity counts every edge whose target resolves, even if its source dangles, so one broken edge is not also reported as a missing connection. Cycles, unit checks and reachability use only edges with both ends resolved.
+- **Cycles.** After Kahn leaves nodes, each strongly connected component of the remainder that is a cycle (two or more nodes, or a self-loop) is one `cycle` finding naming its lowest node ID and listing its members (iterative Tarjan, linear time, no recursion).
+- **Units** are compared as unit codes exactly. `si:rad` and `si:1` share a dimension vector but are different codes, so an angle cannot flow silently into a ratio port; quantity kinds must also be equal. Both give `unit_mismatch`.
+- **Empty digest** (REQ-003): a source digest is empty when it is the tombstone digest (64 zeros) or the SHA-256 of zero bytes.
+- **Sort key** (REQ-006): pass, node ID, then the remaining fields, all as bytes (arity numbers by value; on one port `arity_mismatch` sorts before `unit_mismatch`). The node ID of an edge finding is its target node; of a correlation finding, the group's smallest input ID.
+- **Manifest.** Membership is exact `algorithm_id@algorithm_version` in `KernelManifest::core().algorithms` (`KRN.MAN.MANI.SCHEMA`, in `fid-kci`). Each entry carries its `KRN.MAN.CARD` digest, so a listed operator also has a registered card. `KRN.MAN.MANI.GEN`, which produces the real manifest, is not needed here: the caller (`UNC.MODEL.GRAPH.STORE`) supplies the manifest.
+- **`ValidModel`** has private fields and no constructor other than `validate`; it keeps the model, the digest of the manifest it was checked against, and the Kahn order (smallest ready ID first).
+- **Error type.** Findings are `fid_kunc::model::ModelError` (one line each via `Display`, `<code> <node> ...`). The parent's `Result<ValidModel, ModelError>` is read as `Result<ValidModel, Vec<ModelError>>`, as this leaf's Purpose states.
 
 ## Children
 

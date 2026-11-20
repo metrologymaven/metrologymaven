@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid unc create-model, fid unc validate-model, fid unc show-model]
 mcp: [unc_create_model, unc_validate_model, unc_show_model]
 journal: [unc.create_model@1, unc.validate_model@1, unc.show_model@1]
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # UNC.MODEL.GRAPH.STORE: Create, validate and show commands and version immutability
@@ -46,6 +46,7 @@ The registry commands around the model graph: `unc.create_model@1` stores a vali
 - **AC-3** (error path) Given `bad/cycle.json`, then `model_invalid` with the `cycle` finding.
 - **AC-4** Given `fid unc show-model --ref um:bore-ls@1.0.0 --json`, then the stored model and digest are returned; given a reference with a wrong digest, then `digest_mismatch`.
 - **AC-5** (replay) Given the journal from AC-1, when replayed in exact mode, then the outcome is `IDENTICAL`.
+- **AC-6** (manifest provenance) `unc.create_model@1` and `unc.validate_model@1` validate only against the release kernel manifest, read with `KernelManifest::parse_canonical`, whose core digest equals the `manifest_core_digest` the running kernel artifact reports; given a manifest whose core digest differs, then the command fails and commits nothing; no command parameter can supply or replace the manifest. `UNC.PROP` refuses a `ValidModel` whose `manifest_digest()` differs from the running kernel's manifest digest.
 
 ## Design
 

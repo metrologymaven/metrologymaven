@@ -1,0 +1,935 @@
+# GEO.DIST.SIGN AC-2 (CC-BY-4.0). Written by tools/fixtures/geo_dist_sign.py; do not edit.
+# Mesh: mesh.txt. Points: the pinned stream of sphere_queries() near its sorted edges.
+# l: exact mesh side of EVERY point: o outside, i inside, O / I the same within 2^-30 m of
+# the mesh (the sign or Undecidable), z on the mesh.
+# a: exact side of the analytic surface: + outside, - inside, 0 on it. Kept points (o / i
+# with the same analytic side) are the AC-2 points proper.
+# s <index> <status code> <signed distance bits> <bound bits>: bit-exact model results.
+seed 0x67656f2e7369676f
+generated 11146
+kept 10000
+side_counts o=5713 O=0 i=5433 I=0 z=0
+edges convex=2352 concave=720
+kept_near convex=7551 concave=2449
+points_sha256 0d75d90ef6451e4f1fef7e100941f4cf3007fa8e5d5e8d84c3237fb9c06f2dda
+l oioooiiiioiiiiooooiioooiooiooioooioioooioiioiiiiiooiiiooioiiiooooiooooiiioiooiiioooiooooiiioioiioiio
+l ioooooiiiooioiioioiiiiiooooooioooooooiiooioioiiiooiiiioioiooiiooiiioooooioooioooioioioiiioiooooooioo
+l oioiooioiioioiiooiooiooiooiooiiooiioooiioiooooioooiiooiiiioiooiooooioioioioiiiioiiooioooioiooiioiioi
+l iiiiiioioiiooiioooioooiiioioooioioiioiiiiiioiooioiiiiooiiiiioooooioooiooiooiiiioiooioooiooooooiioiio
+l iiiooioiooiiioiiooooooiooiooiioioioiiooooioooioiiiooooooiooooooioiiiiiiiooiooiiiooioiooooooiiiiioiii
+l oiooooooooiooioooiiiioiiiiooooiiiiioiiiiooooiiooiooiiiiioioiioiiiooooiooiiiooooiioiioiiiiioooioioiii
+l iooiooiiooioiioiiooiioooooiioooiooiooiioiooioioioooiooiooiiiioioooiiiiiiiooiooiooiooiiiooooioioioioo
+l oioioiioioioiiiooioiiiooioiiiiiooiooiioooiiioioiiooooiiiioiiiiiiiooiiiooiiioiiooiiiiooooiioooioioiio
+l iiioooooooioiiiiiiiioiooiioooooioiiiioooioiooooiioooiiiooiiioioooooiiiiioiiooiioiiioooooiooiioiiiioi
+l iiooioiioooioiooiiiioiiiiiooiioooooioooooiioooiiiooiooioiiiooiooiiooiiioioiiiioioooioiioioooiooiioii
+l oioooiooooiiiioiooiiiioiiooooiiooiiiiioiiiioooooiioiioiiooiioiiooiioooooiiiiiooooiioiiioioooiiioioio
+l iiiiiioiioioiiiiiooioioioiiioioiiiooioiiooooiiioiooioiiooioiooiioooiiiiooiiioioiooioiooooiiooioooiii
+l ioioiiiooooiiooioiioooooooiiiooioooiioooiioooioiiioiiiiiooooooiiioooiiooiiioiioooiiiiiooiiioiioiiioi
+l oiiiioiooioiiioioioiooioioioiiioiiiiiooiooioooooiiiioiooiioooioioiioiiiiioioiooiooooioiioioiiiiiiiio
+l iiioooooioiioioooioooiiiooooooooioiiioooiiiiooiioiiioooiioiiiiioiioioooioooioooiioiooiiiioiioooiioio
+l iooooiioiooioiioooiiiiiiiooiiioooiiiiiioiooioooooioioiioiooioiooioooooiioiioooiioiooooioioioioooiiii
+l oooioooiiiioioioioooioioiiioiiiioiiioiiooiioooioiooioiiiiiioiioiioiiiooooioiiiiooiioiioioiooiioiioio
+l ooiioiioioioiooiooiooooiiiiiioooiiooooiioioiooiiiooooiiooioioiioiiooooiioiiiioioiiioioiooiooooiiiooi
+l ooioooioiiiioiooiooioooiooiooiiooiiiiioiioooiooioiioooiooooiioioiooioooiiiiioiioioioooiiiooooooioioo
+l oioiooioooioooioiiioooooiiiiioiiooioiooioiioooioooooooooiooooioooiioiiiiiiiioiiooioioiioioiooioiooio
+l ioooooooooioooooioiooiiioioiiioiiiiiooioiioiiooooioiooioioooooooioooioiiiiiooioiooooooioooiioiiooioi
+l iiioiiiiooooiooioiooiiiioooiiiiooioooiiiioiiioiiioiioiioiiioiooioiooiooiiiioioioiiioiiiioooiooioioio
+l oooiooiooiooooiiiiiioooiiooiooioioooooiooioooooiiooiioioiioiooooiooioiiooooioioiooiioiiiiiioooooiioo
+l iiioooioioioioooiioiiiioioioioiiooioooiiioiioooioiiiooooiooiooioiiiiooiiioooiioooiioioioiioiiioiiioi
+l iioiioiioooiiooioiiioioiooioioiiooioooiioiiioiiiioiioiiooioioooiiooiooiiiiooiiiioooooiiooiiioioioiii
+l oooooioiiiioioioooiiiiiiioiiooiioiiiiioooooooiioooooioooiooioiooiooiiooioooooioooooioooiioooooiiioio
+l oiiiiioiiiioiiioiiiiiiiooioioioooooooiooooooiooiioiooioooiooiioiioooooooiiiooiiooiiiiooooiooiioioioo
+l iooiioooioioiiioooiiioiiiioiooiiioioiooooioioioiiiiiiiiioiioiioiiiiooioooiooiooiioooiiiioooiioioiiio
+l ooiiiioiiooiiiooioioioiioioioiiooiiiiioiiioiiiiooooiioiooioiiioooiiiioooiooooooioooiiiiiioiiiooioioo
+l oioiiiiiooiooooioooiiiioiiiiioioiioiioiooioiiooioooiiooooiiioiiiooiioioioiooiioioiooioiooiooiooiiiii
+l ioioooiiiioiiiioiooioioooioiiioioooooioiiiiiooioiioiiiooooioiiiooiiioooiooioiiiooiooiioiioioiiioioii
+l oioiiiiioiioioiiiooioiioooiiiooiooiiiiiooiiioiiiioiiioiioiiiooiooooiiioooooooioiiiioioiiooioiooiioii
+l oiioiooioioooioiooooiioioooioiooiiiiioiioiiiiioioioiooioiioiioiiiioiiiiiiioiioooooiioioooiioioooiooi
+l ioiiiioiooiioiioiiiiioiiiioioooiooiiioiooioooioooiooiiiiiiioooooioiooooiooioooiioooiiioioooiiiioioii
+l oiiiiioiiooiioioioiiiooioooioooiioooiioiioiioioioooioiioooiooiooooiioioiiooiioiiioiioiooiiooiiiiiiio
+l iooooiioiooioiiooiooiiiiioioooioiiiioooooioioioioioiiiioiiioiiooiioioooooioioiooiiiooioooiiooiioioio
+l iioiiooiioiiooiooioioiooooooooiiioiooooooiiooooooiiooiiooioiioiioiioiiiioioioioooiiooioioiiioiiooiii
+l iooiioooiioioiiiooiiiiiiiooiiooooooiooiiioiiioioioiiiioooioiiiioooooioiiooioioiooiooiiioooiiiioioooi
+l ioioioooiiioiiiiiiioiiiioooooiiiioiiiioiiiooioooiooioooioioioiiooooooioiooiiiioiooiiiiooiiioioiioooo
+l ioooiioiiooiooooiiooiooiioooiioiiiiioooiiioioiiiiiiooiiiiooiooiioiioioooiiiiooooiioioioooiooioiioiio
+l oioiooiiioiiiiiooiiiioioiiiiiooioioiooiioioiooiiiiiiioiioiooiooioioioooiiiiooiiiiiioiiioiiioooooiooo
+l iiiooiiooooioiiiioiiiiiooiiiiooioooiioooooioiioioiiooooioioiooiooooiioioioooiioooiiiooioiioiooioiioo
+l iiiiiooooooiooiiioiiooiiioiooooiioioiiioioooooioiioooiioiiiioooiiooooiiooioooiiooiioiiiioiioiiiiiiii
+l iiioooioiiiiiiiioiiiooiiiiiiiiiiiooioiioioooioioooioiiiooooiiiiiioioiiiooiooooiiiiioiiioioooioooiiii
+l ioiiiioioooiiiooioiiioiiiooooiiioiioiiiioooooioiioiooiiiioiioioiiiioooioiiioioooiooooioiioioioooiooo
+l oooioiioooooiooooooioooiooiiioooioioiioooooiioioiiiioiooiioiooiiooioiioiooooiiiiooooiiiiiiioiiooiiii
+l ooiiiiiiiooioooiiooioiioioioooiiioiooioioiooooooiooiiiioooiiiooooooooioioiooooiooiiooiioooooiioiooio
+l oiooooiooiiiioiioooiooiioioooiiooooiioooiiooiooooioiooiiiioiiioioioiioooiiiiioooooioooooiiiiiiiooiio
+l oiiiooooooioooioooooioioiiiooiooiooiiioioioiiiooioiooiooooooioiioooooiioooiooiiiooiiioooiiiioooiooio
+l ioiiioioioooiooioioioiiooooooiioiooiioiiioioiiiooioooiooiiiiioiooooiiooooioioiiioooioooioiiiiooooioi
+l iiiiooiiiiooiiiioooioioooioioiiiioooooiioiooooiioiioioioiioooioiooiioioioiioiiiooooooiooiioioiioiioo
+l oiioiooooioiiioioiiiooioiiiooiooiioiooioiooioiiooiooiiiooooooiiiiiooiioiooiooooiooioiiioooooioiioioo
+l oooooooooiiiioioiiooiioioiiiiiiooooiooooiiiooiooiiooiooiioiiooooooiioiioooiiooioiioooiioiooioooioioi
+l oiiiiioooooiiioiiiioooiiiioooiioioiooooioiiooiiioiioiiooioioooiiooooioiioioioiooiooioooioioiioiioiio
+l oiooooiiioioiooiioiioiioooooooooiooiioooiiioooioooiooiiiooioooooooooooooiooioiiiooiioioiiiiiiiiooioo
+l iooiioiooooiioiioioioiooiiioioioooooiooiiooioiooiooooiiiiooiiiooiioooiiiioiiiiooooiioiiooooiiooooooo
+l iiooioioiooioiiioiooiiooooioiiioooooiiooiioioiooioiiooioiooioooiiooooiiiooooiiooiioioiiiiioooioooiii
+l ioiiooooooiioioiioiiiiooooiooiiiiiiooooiiioiioiiooiioiooiiooiiiioioooooooiiiioooiooioiooiioioioiiooi
+l oioooioiiooiooiooiiooioioioiiooooiooiiiiiioiooiooiooioiioioioiooooioiooiiioiiiooooioioiiiooiiioiiioo
+l oioiiioiooooioooiiooiioioiiooooooooooiioiooioioooooioioiooiiooooioooiiiooioooiiiooiooooiiiooiooioooo
+l oioooioiiiioiiiioiiiiiooioioioooooooiioioiiiooiiiooooiooioioooiiooiiioiooioiooooioooiooooiooioiioiii
+l iioiiooiiiiooiioooiioiiioooooooooiioiiiiioooiioiooiioiiiooooioioioiiiioiiioiooooiiiooiiiiioiiioiooii
+l ioooiiiiooiooiioioioooiooooiooooiiiiioiooiioioooiooiooiiioiioiiooiiioiooiiioiiiooiooiiiiiooiiioioooi
+l oioiiiiioooiioiooooiiooooiioioooiiiiiooiioiooooooooiiioioiiiiioioiooiiooiooiiiooiooooioioiiooioiiioi
+l oooooioioioiioooiooiooiiiiiiiiioioiooiiioiioioooiooiiiioioooiooiiioooiioiioooiooooiioiiooooioioiooio
+l ioiiiooiooiiioooiioooiooiiiooiiioiooooiooiooooiioiiiioioiiooiioioiooooiioooioiiiiiooooiooiooiiiiiioo
+l ooioioioiiioioiioiooiiioooooiooioioiiiioooiooiooiiiiooioiooiooiioiioioiiooooooiiiooiioioooiiiioooioi
+l oiiiiooiooioooiiiiioooioooioiooioiooiiiioioiioooiiiooioioiooiiiooioiiioiiiiiooiioioooiooiooooiiiiiio
+l oiiooiiiiooooiooioiioiooiiooiiooiiiooiooooiiioioioooiooiioioiiiiooioiooioiooiiiooiioiiioooooooooiiii
+l oiioooiioooiiiiiooioooooioioiiooooiiiooiooioooooiooiioioiiiiioooioooiooiioioioioooioiiooiiiooiooooio
+l ooooooioioioioooiooiooioiiioiiooioioiioioiioioiioiooooiooioioooioiiioiioioooooiiiooiiiiiiiiiiioooioi
+l ooooiiiiioiioiiooiooooiiooiiooiiioooiiooiiiiioiiooooioooooioiioiiiooioiooioiiooooooooooioooooioiiiii
+l iioooioioioooiooooiooioiooooiooooioiooiooiooooiiioooooioioooooiioioioiioiooiiioiioiooiooioooiooioooi
+l oioooioiioiioioiioiioioioooioioiooooooioiiooioooiiooiioiooiioioiooioooioioooiiiiiiooioooiioooiiiiooi
+l iioiioiiooiiooioioiiooiiiooiioooiiioooiioooooooiioioiiiioiooiooooooioiioioooioiiioioiiooioiioioiiooo
+l oiioiiooioiioioiiiooiooooiiiooooiiiooioioioiiiooooooiiooiioiiooiiioioooooooiiioioooiioiiiooiioiiooii
+l iooioioooiiioioiiiiiiooiooooiioooioioiiooiioioooooiooiioioiioioiiiioiooooooooioooioiiiioiiiiiiiiiioo
+l oioiioiiiiooiioooooooioooiioooiooiioooiiooiooiioioiioooooooioiiooiooooooioooooiioiiiiiooiiiiooioiioo
+l ooiiooioioiiiioioooiooiiioiioioiiiiioooiiooioiooiiiooiioiooiioioiiiiiooiooooooiooiiioooooiooooiiooii
+l oiiioiooiiiooooioiooiiooiioioioiiiooiiioiooiiooiioioioiiiiooooooioiiiioiioioiiooiioioiiioiooooooiooo
+l ioiiooooiiooiiooioioiiiiiooooioioioiooiiioioiooiiooiiioioooooooioooioooioiioiiiioooooioioiiooiooioii
+l ooiiooiiooioioooiiooooioiiioiooiioooooooioiooiooiooioooooioiioiioiooioiiioooioiooooiioioiooioiioiiii
+l ooiiooooiooioioiiooioiioiioooiioiioiioooooiiiioiiiioiooioiiioiiooioooiiooioooooooiiiiioioooiiiiiioio
+l ioiiooiiooiiioioioioiiioioioiiiiooioooooiiiooiiioiiiioioiooiiiiioooiioooioiooiioiiiiioiiiioooiioiooo
+l iioooiioiooioiooooioioiiiioioiooiooooiiiiioooioiiiiioioooiioiooooiooioioooiooiioooiooiioioooiioiooii
+l oiiiooiooiiiiiiiioiioioiiiiioooooioiooioiooiiioooooioiiiiioiiooioiiooiiioiiooioooioiooioiioooioiioio
+l oioiiiooooooiiiooooooioooooiooiiioioiioiioooooiooiiiooiooooiooioiiiooioiiiioioiooioioiiioioooooioooi
+l oooiiioiioooiiiiioooooooioooiooooiiooiooooooiooiiiooioiooiooioioioiiiiiiiooioiiiooiioooiooioooiooooo
+l oiiiiiiioiiiiioiiooooiooiooioooooiooiioiiiioooioioiiiiooooioiioioooiiiiiioooooiiooooiooooooiooiooioo
+l oooiiooiooooioioiooiiiooiiooiooiioioiiooioiooooiiioooioooiioiioiiooioooiioooooiiooooiioiioooiiiioooi
+l ooioioooiioiiiooioiiiiiooooiooioioiiiiooiooioooioiioooiiiiioooooiiiiioioiiiiioooooooooiioioooiooiiii
+l oioiooioioiioioioioiiooooiioiioiioioiooooooioiioiiioiioiiooioiiiioooioiiooiooiiooooooiioooiiioooiiio
+l ooioiooioooooioiooiiiioiooooioiiioiooooioiioooioioiiioioooioooooiiooiooioooiiiooioioioooioiioioioiii
+l ooooioooioiiooiooiooiiiiiiooioiiiiiooiioooiooiiiioooioioioioooooioioiooioooooooiooooooiooioioiiioiio
+l ioiooooioioooioiioioooiiiiiiooiioiooiooioiiioiioiiiooiiiooiiooooioiiiiiiioiiiioiiiiiiiiooiiiiiioiiii
+l oooiiooiioiiiiiiiiiiioioiooioooiiioioioioooooiioiioioioioooioiooioooiioooooooooiioioiiioiioooooooooi
+l ioiooiooiiioiooiooioioiioioiiioooiiooooooiiioiiioiiioioiioiiooioiooooioioiooioiiioiooiiioiiiiiioiooo
+l oiooioiioiiooiiiiiooioioiiiiiiiiiiioiiiioiioiiiiioiooooiooiioooiiooiiiiiiioioiioioiooooioioiooiioiii
+l oioioooiooiioiioioioioioiooioiioooiiiiooioiioiiooiiooiooiiiooiiiioiioooiooooioooiooiooooooooioiioioo
+l oioiioiooooiioiooooooooiiiooiiiiioiiioiiioooiioiiooioioioiooiiooooiooooioooooiioooooooooioioooioioii
+l oiioiiioioiooiiooooooiiiiiiioooioooiioiioioooiiiiioooioiioooooiiiioiioiiiooooooioioiiioiioooiioiioii
+l ioioioooooiiioooiooooooioiiiioioioiiiooooiooioiiioioioioooiiioioiiiioioioooiiooooooiiioioooioiooiiii
+l oiioooooooioiiiioooooiiiiiooiiiooioiiiooooioioooiiiiiiiioooiiiioiiooioiiioooiiiiooiiiiioiioooooioiio
+l oioooioiiiiooiooooioooiiiiiioiooooiioooioioioooioooiooiooiioooooiioioooooooooiiooiooiooiiiooiooioiii
+l iiiooiiioiiiiooiiooiioooiooioiiiooioooooooiioiioiooioioiiooioioooiiiiiiiooiioooiooooooiooioiiooooioi
+l iooioiioiiioooioooiioioooiiiiioiioiioioioioooioiiioooooioioiooiioiiiooiioiioooiiooiiiiooioooiiiooioi
+l ooooooioiioiooioooooooooioioooioooiiooioiiiooiooiiooioiooiooooioioioioiiooooioioooiiioooioooioioiiii
+l oioiiiiooioiioioooioioiiiiiiiooiioooioiioooiiiooiiooioiioooiiioooiiiooiioiiiioioiooiioiiioiiiiiiooio
+l ioioioiioooiooiioiooioiooiiioioiooiioiioooiooiooiiiooooooiioioooioooioioiooioiiooiiioioooiooiioiioio
+l ooioiiioiiiooooiioiooooiooioooioioiioioiioiiioiioioioooooiioioiioiooiioiiioiiooooiiiiooiiioiooooiooi
+l iiiiiiiiiiiooiioooooiiiooioiioioioiioooiiioiooiiiooiiooooiioioooiiooiiooiioiiiioiioiooioiiiiooioooio
+l oioooioioiooooiooiioiioiiiiiiioiiioooooiioiiio
+a +-+-+----+----++++--+++-++-++-+++-+-++-----+-----+-------+---++-+-++++--++-++---+++-++++---+-+-----+
+a -++-++---++-+--+-+-----++++++-+-+++++--++-+-----++------+--+--++---++-++-+++-+++-+-+---------++++-++
+a +----+-+--+-+---+-++----++--+--++--+++--+-++++-+-+--++----+-++-+++--+-+---+----+--++-++--+-+---+--+-
+a --------+--+---+++-++-------++-+-+--+------+-+--++---+------+-+++-+++--+-++----+-++-+-+-++++++--+--+
+a ---+----++---+--+++-++--+-++----+-+--+++--+++------++-++-++++---+-------++-------+---++++++-----+---
+a +--+++-+-+-++-+++---------++++-----+----++-+--+---+-----+-++-----++-+-++---++++--+--+------++-+-+---
+a --+-++--++-+--+---+--++-++--+-+-++-++--+-++-+----+--++-------+-+++----+--+--+--+--++---++-+-+-+-+-++
+a --+----+-+-+----------++-+-----++-+----++---+-+--+-++----+-------++----+---+--++----++++---++---+---
+a ---++++++--+--------+-++--++-+--+++--+-+-+-++++---++---+++----++++------+----------+++---++--+----+-
+a --++-+--+++-+-+-----+-----++--+++++--++-+--+-+---++-++-+---+--++--++---+-+---++--++-+-++--++--+-----
+a +-+++-++----+-+-------+--++++---+-----+---++++++--+--+--++--+--++--+++++-----++++--+-----++----+-+-+
+a ------+--+-------++-+-+-+---+-+---++-+--++++---+-++----++-+-+-----+----++-----+-++-+-++++-+-+-+-+---
+a -+-+---++-+--++-+----+--++---++++++--+++--+++-----+------+++++---+-+---+---+--+++-----+-------+-----
+a -----+-+------+-+-+-+----------------++-++-++-++----+-----+++-+----+-------+-+---+++-+----+---------
+a ---+++++-+--+-+-+-+++---++-+++++-+-----+----++-------++--+-----+--+-++--+---+++--+--+----+---++--+--
+a --+-+--+-++-+--+-+-------++---+++------+--+-+++---+-+--+-++-+-++-+---+----++-+--+-+--+-+-+-+-+++----
+a +++-+++----+-+-+-+++-+-+---+----+---+--+----++-+-++-+------+-----+---+-++------++--+--+-+-----+----+
+a ++--+--+-+-+-++-++--+--------+-+--++++--+-+-++---+-++--++-+----+--++++--+----+-+-----+-++-+++----++-
+a ++-+++-+----+-++-++-+-+-+--++--++-----+--++--+--+--+++-++------+--+-+++-+---+--+-+-++------++++-+-++
+a +-+-++-+++-+++-----++-++-----+--++-+-++----++--++-+-++++-++++-++---+--------+---+-+-+--+-+-+----+--+
+a -+++++++++-++-+--+-++---+-----+------+----+--++++-+--+---+++++++-++--------++-+--+++---+++--+-----+-
+a --++------++-++-+--++---+-+----++--++----+---+-+-+--+--+---+-++---++--+----+-+-+---+----+---++-+-+-+
+a -++-++-+---+++-------+---++-++-+--++++-++-++-+---++--+----+-++++-++----++-+-+-+-+--++------+++-+--++
+a ---+---+-+-+--++--+-+----+-+-+---+-+++-+-+---++-+---+++--++-++-+-----+---+++--+++--+-+-+--+---+-----
+a --+--+--+++--++-----+-+-++---+--++-+++--+---+----+--+--++-+-+++--++-++----++----++++---++---+-+-----
+a +++-+------+-+-+++-------+---+--+------++-+-+--++-++--++-++-+-++-++--++-+++++--++-+-++---+++++---+-+
+a +-----+----+---+--+----++-+---+++++++-+-++-+-++----+--++--++-----+--+++----++--+-----+++--++--+-+-++
+a -++--+++-------+-+---+----+-++---+-+-++++-+-+-+------------+--+----++-+++--+-++---++-----++--+-+---+
+a ++-------++---++---+-+--+-+----++-----+---+----++++--+-++-+----++----+++-+----+-+++------+---++----+
+a +-+-----++--+-+-+-+----+-----+-------+-++-+--++-++---++-+--++---++----+-+-++--+-+-++---++--+--+-----
+a -+-+++-----------++-+-+-+-----+--++++--------+-+--+---++++++---++---+++-++-+---+--++--+--+-+---+-+--
+a +-+-----+----+---++-+--+++----+--+-----++-+-------------+-+-++--+++---++++++--+----+-+--+--+-++--+--
+a +--+----+-+++---++++--+-+++-+-++-----+--+-----+-+-+-++-+--+-------+-------+---++++-++-+++-++-+++--+-
+a -+----+-++--+--+-----+----+--++--+---+-++-+-+-+-+-++-------+--++-+-++++-++-+++--+++-+-+-+++----+----
+a +-----+--++----+-+---++-++--+++--+-+--+--+--+-+-+-+-+--+++-++--++---+-+--+---+---+--+-+-------------
+a -++++--+-+--+--++-++-----+-+-+-+----+++++---+-+---+----+---+--++--+-+++++-+---++------+++--++----+--
+a --+---+--+--++-++-+-+--+++++++---+-++++++---+-+----++---+-+--+--+--+----+-+-+-+++---++--+---+--++---
+a -++--+++--+-+---++-------++--++++++-++---+---+-+-+----+++-+----+++++-+--++-+-+--+-+-----++-+--+-++--
+a -+-+-++----+-------+----+++++----+----+---++-+++-++-+++-+-+----++++-+-+-++----+-++----++-----+--+--+
+a -+++--+---+-++++--++-++--+++--+-----+++---+-+------++----++-++--+--+-+++-----+++--+-+-+++-++-+--+--+
+a +-+-++---+-----+-----+-+-----++-+-+-+---+-+-++-------+--+-+--++++-+-+++----++------+---+---++++--+-+
+a ---++--+++--+-----------+-----+-+++--+-+++-+--+-+--++++-+-+-++--++---+---+----+-+---++-+--+-++-+--+-
+a -----++-+-+-++---+--++---+-+-++----+---+-++-+--+--+-+--+-----++--+++----+-+++--+---+----+--+--------
+a ---+++----------+---++-----------++-+----+++-+-+-+-+---+++-------+-+---++-++++-----+---+-+---+++----
+a -+----+-+-+---++-----+----+++---+--+----+++++-+--+-++-------+------+++-+---+---+-++-+-+----+-+++-+++
+a +++----++++---+++++-+-+-++---+-+-------++-+--+------+-+---+-++--++-+--+-+-++----++++-------+---+----
+a ++-------++-+++--++-+--+-+-+++---+-++-+---++++-+--+----+++----++-++-+---+-+++------++--+++-+--+-++-+
+a --+++--++----+---+--++--+-+++--++++--+++--++-++++-+-++--------+-+-+--+++-----+-+++-+++-+-------++--+
+a ----++++++-++--+++-+-+-+---++-++-+----+-+-+---+-----+---++++-+--+-+++--+++-++--+++---+++----++--++-+
+a -+-----+-+-+-++-+---+--++------+-++--+---+-+--+++-+++-++-----+--+++--+-++---+---++--+++-+----++++---
+a ----++----++----+++-+---+-+-+----+++-+--+-+-++--+--+-+----+++-+-++--+-+-+--+----+++++--+--+----+--++
+a +--+-+-++-----+-+---++-+---+--+-----++-+-++-+--+--++--++-++-+-----++--+-+++++++-++-+---+++++-+--+-++
+a ++++++-++----+----+---+-+------+-++-+--+---++-++--++-++--+--++-+++--+---++--++-+--+-+--+-+---++-+-+-
+a ------+++++---+----+++----+++--+---+-++-+--++---+--+--++-+-+++--+++--+--+-+-+-++-+---++-+-+--+------
+a +--++----+-+-++--+--+--++++++++--++--+-+---+++-+---++---+--+++++++++-+++-++-+----+--+-+--------++-+-
+a -++--+-++++--+--+-+-+--++--+-+-+++-+-++--++-+-++-++++----++---++--+++----+----+++---+--+-++--+-+++++
+a --+----+-++-+-----+---++++------++++--++--+-+-+--+---+-+-++-+----+--+---+++++--+--+-------+++-+-+---
+a --------++--+-+--+----++++-++------++-+---------++--+-++--++----+-+++-+-+----+++-+--+-++--+-+-+--++-
+a --+++-+--++--+-++--++-+-+-+---+++-++--+-----++-++-++-+--+-+-+-++++-+-++---+---++++-+-+---++---+----+
+a +-----+--+++--++--++--+-+--++-++++--++-+-+-----++++-+-+-++--++++-+-+----+---+---++-++++----+--+-++++
+a +-+++-+---------+-----+--+-+-++++++---+-+---++---++++--+-+--++--++---+-+--+-++-+-+++-++++-++-+------
+a --+--+-----++-+++++-+---++-+-++++--+---+-+++--+--+--+---++-+-+-+-+----+---+-++-+---++-----+---+-++--
+a -+++----++-++--+-+-+-+-++-+-++++-----+-++--+-+---++-+-------+--++---+-+----+---++--+-----++---+-+++-
+a +-+-----+-+--+-++++--++++--+-+-+-----+-----++++-+-+-----+-------+-++--++-++---+--++-+-+-+---+-+---+-
+a +++++-+-+-+--+++-++-++---------+-+-++---+--+-++--++-------+---+---+++--+--+++-+++---+--+++--+-+-++-+
+a -+---++-++---+-+--+-+-++---++---+--+-+-+--++++--+----+-+--++--+-+-++++--+-+-+-----+-+--+--++------++
+a ++-+-+-+---+-+--+--+----++++-++-+-+----+++-++-++-----+---+--++--+----+--+++++----++--+-+++-----++-+-
+a +----++-++--++-----++--+++-+-++-+-------+-+----+---++-+-+-------+-+---+----+++----+++-++--+++------+
+a +--++----+-++-++-+--+-+---++---+---++-++++---+-+-+++-++----+----+--+-++-+-++---++--+---+++-++-++----
+a ----++--+++-----+--++--+-+-+--++++----+-+--+++++-++--+-+------++-+++-++--+-+-+-+-+-+--++---+--++-+-+
+a ++-+++-+-+-+-+++-++-++-+---+---+-+----+-+--+-+--+---++-++-+-+++-----++-+-++-++---++----+------+++-+-
+a ++++-----+--+--++--+-+--++--++---+-+--++--------++++-+++++-+--+---++-+-++-+--++++++++++-+++-+-+-----
+a ---++-+-+-+++-++++-++-+-++++-++++-+-+++++--+++---++-++-+--+-+++-+-+-+-+--++---+----++----+++-++-+-+-
+a +-+++-+--+--+-+--+--+-+-+-+-+-+-+-++++-+-++--++---++--+-++----+--+-+++-+--++------++--++--+-+----++-
+a --+--+--+---++------++---+---+++----++--+++++++--+-+----+-++-+-+-++-+--+-+++-+---+----++----+-+--++-
+a +--+-++-------+---+---++++--++-+---++---+-+---++++++--++--+---+---+-+---+-----+-+++--+---++--+--+---
+a -++-+-+++---+-+------++-++++--+++-+-+--++--+-++-+--++--+-+--+-+------++++++++--+--+----+----------++
+a +----+----++--++--+++--+---++------+++---+-+---+-----+++-++-+--++-+++++--++--+--+-+---++-----+-+---+
+a ++---+-+-+----+-+++-++---+--+-+---+-+++--+--+-++---++--+--+--+-+--------+++++--++---++++---+++--+---
+a +---+-+----++-+-++++-++---+-------+----+-----++--+---+----+++-++-+----+--+-+--++--+-+-----+++-++-+++
+a -++-++++--++---+-+--------+-+-+-+-+-++---+-+-++--++-----+++++++-+++-+++-+---------+-+-+-+--+--++-+--
+a ----+---++---+++--++-+-----+-+----+++-++-+----++--+-+++++-+--+----++-+---+-+-+--+++--+-+-++-+--+----
+a -+--++++-++-+-+--++-++-+-++-+--+--+--+++++----+-+-----+-+---+--+--+----++-+++++-+-----+-+++------+-+
+a -+--++--++---+-+-+-+---+-+-+----++-+++++---++---+----+-+-+------+++--+++---++--+-----+----+++--+--+-
+a --+++----++---++-+-+-+----+---++-++-+-----+++-+-----+-+++--+-+++--+--+-+++--+--+++-++--+-++---+-++--
+a +----+++------------+-+-----+++++-+-++----+----+-+--+-----+--++------------++--++-+-++-+--+++-+--+-+
+a +-+---++++++----+-+++-++-++--+---+-+--+--+++++------++-+-++-++-+---++-+------+--+-+-+---+-+-+++-+-+-
+a -+----+--+-+----+++++++----+-+-++--++--+++++-++---+--+-++-++-+-+-+-------++-+---++---++-++-+++-+++-+
+a +----+--+-----+--++++-++-++-+-+-+-++--+----+++-+-+----++++-+--+-++-------+++++--++++-++++++-++-+-+++
+a +++--+--+++++--+-++---++--++-++--+-+--++-+-++++--++++-+-+--+-----+---++--+++++--++++--+--++------++-
+a ++-+-+++------++-+-----++++--+-+-+----++-++++++-+--++-------++-------+-+-----++--++++---+-++--++----
+a +-+--+---+--+-+-+-+---+++--+--+--+-+-+++-++-+---------+-----++---+++-+---+-+--+++++++----+---+++---+
+a +--+----+-+++-+-++----+-++++-+---+-+-+--+--++--+-----+--++-++++------++-+++---++-+-+-+++-+----+-+---
+a ++++-+-+-+--++-+--++------+--+-----++--+++-++----+++-+-+---+++++-+-+-++-++++++--+-++++-++-+-+---+---
+a ---++++-+-+++----+-+-+------++--+-++-+--+----------+----++--++++-+-------+-------------++------+----
+a ++---++--+-----------+-+-++-+++---+-+-+-+++++--+--+-+---+-+---+---++--+++-+++++--+-+---+--+-+-+--+--
+a -+-++-++---+-++-++-+-+--+-+----++--++++-+---+---+---+-+--+--++---++-+-+-+-++-+---+-+++---------+-+-+
+a --++----+--++----+-+-+-+----------------+--+-----+-+-++-++--+++--++-------+-+--+-+-++++-+---+---+---
+a +-+-+++-++--+----+---+---++-+--+++----++-+--+--++--++-++---++----+---++-++++-+-+-+--+++-+++-----+-++
+a +-+--+-++++----++-++-+-------+------------++-----++-+-+-+-++--+-++-++++-+-+++---++++++++-+---+-+-+--
+a ---+---+-+-+---+++++--------+-+-++---+--+-+-+-----+++-+--+++++----+--+---++-+++-+-+---+--+++-----+--
+a -+-+-+++++---+++-++++-+-+----+-+-+---+++-----+---+-+----++-----+----+----+---+--+++---+-+++-+-+-----
+a ---+++++++---+--+++++-----++-+-++-+---++++-+-+++--------+-+----+--++++---++------+--+--+--+-+++-+--+
+a +-+-+-+-----+-+-++-+++------+-++++--+-+---+-+++-+++--+-+---+++++--+-++++++--+--++-++-++----+--+-+---
+a ---+----+----+---++--++--++-+---++-+++++-+--+-----+---+---+-+-+++-----------+++-++++-+-++-+--++++-+-
+a -++-+--+---+-+------+-+++-------------+-+-+-+-+---++-++-+-+-----+---++--+--+++--++----++-+++---++-+-
+a ++++-+----+-++-++-+++-++-+-+++-+++--++-+---++-++--+--+-+--+-++-+-+-+-+--++++-+-+++----++-+++-+-+----
+a +------++-+--+-++--+-+-------++--+++-+--+-+---+++----+--+++----+----++-------+-+-++--+---+------++--
+a -+-+-+--+++-++--+-++-+-++---+-+-+---+--+++-++-++---++-+++--+-+++-+---+-+-++-+---+---+-+-+-++--+--+--
+a ++-+---+---+++-----+----++-+++---+--+-+--+-+-+--+-+-+++++--+-+--+-++--+---+--++-+----+----+-+----+--
+a -----------++--+++++---++-+----+----+++---+-++---++--++-+--+-+++---+--++-------+----++-+----+--+-+-+
+a --+++---+-++-+-++-----+------------++++--+---+
+s 0 0 3f8687e4fe5af82d 3ca1000000000004
+s 16 0 3f6a8768652089a8 3c9ca00000000007
+s 32 0 3f8d2594b121d5bd 3cb1c00000000004
+s 48 1 bf005f7205038b96 3cac180000000007
+s 64 0 3f6cce2ab6c69384 3cb0080000000004
+s 80 0 3f6f7a4cf315587e 3cb6280000000006
+s 96 0 3f4b6052983ab86a 3cb4e00000000005
+s 112 0 3f640446dd0420fd 3cb8680000000006
+s 128 0 3f997ddbb98acd9f 3cb7c00000000006
+s 144 0 3f54d9d954fec836 3c9ef00000000008
+s 160 1 bf69054875cbc490 3ca0700000000004
+s 176 1 bf82af33f587370a 3cd1400000000004
+s 192 0 3f4e16d4e22c83c0 3cb1de0000000004
+s 208 1 bf72d25097f28957 3cb0700000000004
+s 224 0 3f85e88a89429c66 3cb1400000000004
+s 240 0 3f810049c2b30a5c 3cb8600000000006
+s 256 1 bf6cc4fc1219d498 3cbab80000000007
+s 272 0 3f3e40dbd5205a3a 3c8e280000000008
+s 288 1 bf615734179c9083 3caed00000000008
+s 304 1 bf91a4293f68b4bc 3cb9800000000006
+s 320 0 3f7bc412add3bacf 3cb2f00000000005
+s 336 0 3fa123f9e9cd525a 3cbb800000000007
+s 352 1 bf45428b34c7b423 3caab00000000007
+s 368 0 3f3bbf75f3bd3f93 3cb8750000000006
+s 384 0 3f78033c90432de5 3ca6c00000000006
+s 400 1 bf8157ab00796c9d 3c95800000000005
+s 416 0 3f8562ec1b854d62 3cb0200000000004
+s 432 0 3f77c1784570f073 3caa200000000007
+s 448 1 bf9ab008106a0e30 3cb6400000000006
+s 464 0 3f488102c9192006 3cb42a0000000005
+s 480 0 3f53100c32633f4c 3c83600000000005
+s 496 0 3f5fc85748a7f821 3c9ad00000000007
+s 512 0 3f8a8393b8b47baf 3cb5000000000005
+s 528 0 3f77bcd883fb0dbe 3ca8000000000006
+s 544 1 bf7d0319a953fe56 3cb4f00000000005
+s 560 1 bf70c78dc2ff6550 3cb5400000000005
+s 576 0 3f639a3e1ec57839 3cac100000000007
+s 592 0 3f93d2a272f7f0c0 3ca9000000000006
+s 608 0 3f8978c8eaca3196 3cb0800000000004
+s 624 0 3f99794b8b6be62c 3ca8000000000006
+s 640 1 bf8d5a2410e25971 3cb2600000000005
+s 656 0 3f3d061d2ee43ab4 3c9fc80000000008
+s 672 1 bf6bba1e9e6fb33e 3cad700000000007
+s 688 0 3f8edfeb12326a40 3ca0800000000004
+s 704 0 3f5cd7df5c951639 3c91a00000000004
+s 720 1 bf6aaa5c20eaed91 3cb5200000000005
+s 736 1 bf0531c2d1aa48c9 3cb43dc000000005
+s 752 0 3f82fa4f4c75a735 3cb4e00000000005
+s 768 1 bf61c578c1cfc879 3cb6580000000006
+s 784 0 3f827f3316bd46d6 3ca3000000000005
+s 800 1 bf88d78722e68741 3cb3a00000000005
+s 816 1 bf78da0f64a935c1 3cb5700000000005
+s 832 0 3f777a9dc07f4030 3cb1300000000004
+s 848 1 bf6eed46e751938d 3ca7c00000000006
+s 864 0 3f85609554e3df1a 3c7a000000000006
+s 880 1 bf5f95094b62d951 3cb2400000000005
+s 896 1 bf77b72368147078 3cb0e00000000004
+s 912 0 3f863e05dfe755b5 3ca6c00000000006
+s 928 1 bf81a0e92d65e232 3ca8400000000006
+s 944 0 3f3901b4ca9b235a 3caa3a0000000007
+s 960 0 3f58bee460328db5 3cb1240000000004
+s 976 1 bf8556195a82acaf 3cac000000000007
+s 992 1 bf959e450d7f3b5f 3cb3400000000005
+s 1008 0 3f4e3327c2bfa572 3c93c80000000005
+s 1024 1 bf5d647ee7952325 3cb2100000000005
+s 1040 1 bf73719c5791be1c 3c93400000000005
+s 1056 0 3f64932bed3b29df 3cbb100000000007
+s 1072 1 bf5301fcf0695fa1 3cb2d00000000005
+s 1088 1 bf8f903b8dd74e9e 3cb9800000000006
+s 1104 1 bf7efd6ffe06be3e 3ca2c00000000005
+s 1120 0 3f78076446f2eb2c 3ca6800000000006
+s 1136 1 bf75d710dd711a2b 3cb6900000000006
+s 1152 0 3f6f5862bac9737c 3cb5380000000005
+s 1168 1 bf6b7edba4916d3f 3cb9d80000000006
+s 1184 1 bf76f63b7d9daa6f 3caea00000000008
+s 1200 1 bf78c26cb809771b 3cb8c00000000006
+s 1216 0 3f8fe97e478ce782 3cae800000000008
+s 1232 0 3f81459b92c9f5bb 3cb3400000000005
+s 1248 1 bf71a2756b3a9173 3c92000000000004
+s 1264 1 bf4ae15fd5544cea 3ca4480000000005
+s 1280 0 3f6aed4dcddce04e 3ca6800000000006
+s 1296 1 bf64d8dca60e0523 3cb3b00000000005
+s 1312 1 bf6067b1a3bbd8a3 3ca0a00000000004
+s 1328 1 bf75bf21b2d361fc 3ca9c00000000006
+s 1344 0 3f8958d66011f3d7 3cb5c00000000005
+s 1360 0 3f850fc5b07613cc 3cb2c00000000005
+s 1376 1 bf826641e5b988c5 3cb2000000000004
+s 1392 1 bf60593233226ebc 3c9a600000000007
+s 1408 1 bf6293c7a39bd032 3c93a00000000005
+s 1424 0 3f82731e8750a8d5 3ca6800000000006
+s 1440 1 bf6bb090fc2ce575 3ca1a00000000004
+s 1456 1 bf6d12c78a1d5c54 3cb0f00000000004
+s 1472 0 3f864cd3ec9aa6b2 3ca2000000000004
+s 1488 1 bf8fff271ec7062d 3cb4e00000000005
+s 1504 0 3f66a2b1c4320212 3ca2700000000005
+s 1520 1 bf99d858ac7dcae0 3cb2000000000004
+s 1536 1 bf763410fe576e5e 3cb3d00000000005
+s 1552 0 3f94d9687642078d 3cb2800000000005
+s 1568 0 3f65f40b47410071 3ca6800000000006
+s 1584 0 3f691445f7f5af8d 3c9fc00000000008
+s 1600 0 3f5647cf81554088 3cafc80000000008
+s 1616 1 bf7aa4a2fb3fe853 3cafa00000000008
+s 1632 0 3f55abf577a53bc7 3cb5240000000005
+s 1648 1 bf7a302f1ab616e1 3ca3a00000000005
+s 1664 1 bf5541234fe712ce 3cb8580000000006
+s 1680 0 3f7336e0b624799f 3c9dc00000000007
+s 1696 1 bf7371d09e88fbfb 3ca4a00000000005
+s 1712 1 bf883813f57f17be 3caa400000000007
+s 1728 1 bf73b0144fb144b7 3cb3600000000005
+s 1744 0 3f989f6c77b5ee67 3caf000000000008
+s 1760 0 3f6b7d63ccb20d68 3c9ea00000000008
+s 1776 1 bf7bf8f1f908f2f6 3cb3500000000005
+s 1792 0 3f96334ab734a12b 3cbac00000000007
+s 1808 1 bf7389f21cd73dee 3c92400000000005
+s 1824 0 3fa297fe7fff9eda 3cce400000000008
+s 1840 1 bf769cbc9c2c89b4 3caa400000000007
+s 1856 0 3f9ce01018fa8c2c 3cb4800000000005
+s 1872 1 bf4bba631e1da285 3ca6240000000006
+s 1888 1 bf80f61392aaa4ef 3ca1800000000004
+s 1904 0 3f91f60a621ca2d2 3ca7000000000006
+s 1920 0 3f7baf7c4134b144 3cc0400000000004
+s 1936 1 bf65992f3c08a181 3cac100000000007
+s 1952 0 3f8a92bc543da352 3cbdc00000000007
+s 1968 1 bf746294905537fe 3ca7800000000006
+s 1984 0 3f64136540f72191 3cb1680000000004
+s 2000 1 bf74b275fd8ccf81 3ca4400000000005
+s 2016 1 bf7b8385b0ddee81 3cb3c00000000005
+s 2032 1 bf76c84fb05e8df8 3cb5400000000005
+s 2048 0 3f88ddd43f93d93d 3cb3200000000005
+s 2064 1 bf466db9411f3247 3cae640000000008
+s 2080 0 3f5899581294c26e 3ca4a00000000005
+s 2096 0 3f52b65f38c9b9c5 3cb7300000000006
+s 2112 1 bf403afda331fd76 3cb1d20000000004
+s 2128 1 bf88347d60ec45a3 3cb4000000000005
+s 2144 1 bf6fb3251f3ae26e 3cb1b00000000004
+s 2160 1 bf6cb91c646c2cdc 3ca9400000000006
+s 2176 1 bf8c3eb1ab909f61 3cb8200000000006
+s 2192 0 3f7714fc225a34a5 3caf400000000008
+s 2208 0 3f42d7af2b15fa88 3cb0a20000000004
+s 2224 1 bf8acf40dc4dbcf2 3cb9400000000006
+s 2240 0 3f872d50f026c40b 3caec00000000008
+s 2256 1 bf74d2c00371bf45 3cb1300000000004
+s 2272 0 3f785b9419e5fdd7 3c90400000000004
+s 2288 1 bf8f40555d33d0b0 3ca3000000000005
+s 2304 0 3f6b2a19eb57ad40 3cb1080000000004
+s 2320 1 bf5d7d72f28cdb6e 3c97400000000006
+s 2336 0 3f6023dd26b70805 3ca3500000000005
+s 2352 0 3f58b302a74f97d8 3c9a800000000007
+s 2368 0 3f30e0f1ef465fd5 3ca4880000000005
+s 2384 1 bf978d867c422eff 3ca3800000000005
+s 2400 1 bf628c765ca63a7e 3c9a200000000007
+s 2416 0 3f690cf01c21573b 3cb0380000000004
+s 2432 0 3f8a44fe86852cf3 3cac800000000007
+s 2448 1 bf645b5464f409ee 3cb6480000000006
+s 2464 1 bf4a8828b4b5d9f6 3cb4e00000000005
+s 2480 0 3f7a8606ce622d11 3cb5a00000000005
+s 2496 0 3f646bfad7c582a5 3c94c00000000005
+s 2512 1 bf6200c25a7a578c 3cb6b00000000006
+s 2528 0 3f3690bde7b94b1b 3ca6a80000000006
+s 2544 0 3f5d5d1877aafe26 3ca8080000000006
+s 2560 0 3f584b29717298f4 3c8d800000000007
+s 2576 0 3f765ea4df3467b5 3cb0b00000000004
+s 2592 0 3f7c3047b0ba8662 3cb0f00000000004
+s 2608 1 bf937ddbf1ee948f 3cb6c00000000006
+s 2624 0 3f99cab88d358117 3cb9000000000006
+s 2640 0 3f60ed963d2b451d 3c9d800000000007
+s 2656 0 3f44320b4ee4fd7d 3c92e00000000005
+s 2672 1 bf6a7f790245841e 3ca7900000000006
+s 2688 0 3f6483cf7ffca8b4 3cacc00000000007
+s 2704 1 bf6ea03505cfa8e7 3cb9500000000006
+s 2720 1 bf521b9aa2b2ea51 3cb3400000000005
+s 2736 1 bf9670b88dbb9d36 3caf800000000008
+s 2752 1 bf8360388b3130a2 3cb2400000000005
+s 2768 0 3f973572e1f0738a 3cb9c00000000006
+s 2784 1 bf9066ddb979b282 3caf000000000008
+s 2800 0 3f70156afbc4d6cf 3cb1700000000004
+s 2816 1 bf5d156e6de93781 3cac100000000007
+s 2832 0 3f956e17b7ce811b 3cc9c00000000006
+s 2848 0 3f8c8e02c401e666 3ca6800000000006
+s 2864 0 3f702d47349d41ff 3ca8400000000006
+s 2880 0 3f83a22deeacc99b 3cbb000000000007
+s 2896 0 3f48c691bae5a2f7 3cb0620000000004
+s 2912 0 3f861136af1e2e74 3ca5400000000005
+s 2928 1 bf82ea53e01fa675 3c97000000000006
+s 2944 1 bf329a8a272d8e6c 3ca26c0000000005
+s 2960 0 3f87e5fb03ef3995 3cb6600000000006
+s 2976 1 bf64cc892d5b7a7d 3cafb00000000008
+s 2992 1 bf78121c49c99d37 3ca7200000000006
+s 3008 1 bf78b5be0a9c9fc7 3c9d000000000007
+s 3024 0 3f5d110f27ca7a7e 3ca5380000000005
+s 3040 1 bf853be60e7ad761 3ca8c00000000006
+s 3056 0 3f8dbe0556d9a99d 3cb7800000000006
+s 3072 0 3f5d95c2a6958377 3cb6680000000006
+s 3088 1 bf907996145639b8 3cbdc00000000007
+s 3104 1 bf93aad4fae12c51 3cad000000000007
+s 3120 0 3f9218319f91589d 3cb5400000000005
+s 3136 1 bf415fa47b5f495d 3caf780000000008
+s 3152 1 bf5e70116918d2ee 3c93200000000005
+s 3168 1 bf265b066734d15d 3cab440000000007
+s 3184 1 bf7900ec0674fda3 3ca2200000000005
+s 3200 0 3f935605f3a8a93f 3cb6c00000000006
+s 3216 0 3f76f300bf86cae5 3cb1500000000004
+s 3232 1 bf88fc536b745991 3ca2c00000000005
+s 3248 0 3f909b94edd4a1c6 3cac000000000007
+s 3264 1 bf691cd3873da2ab 3cb2c80000000005
+s 3280 0 3f806c6f2def5837 3ca4000000000005
+s 3296 1 bf6c43518a402a37 3cb1a80000000004
+s 3312 0 3f8272ee68e5b345 3cbdc00000000007
+s 3328 0 3f6024ceb86a6234 3cc4d80000000005
+s 3344 0 3f7c787087e51fb9 3ca9000000000006
+s 3360 0 3f36982b15924c24 3caf300000000008
+s 3376 0 3f796712f4c40648 3cb2100000000005
+s 3392 1 bf6311707b9a32cf 3ca6d00000000006
+s 3408 1 bf92f66f39384e8d 3cb7000000000006
+s 3424 0 3f95e30b08e82545 3cb9000000000006
+s 3440 1 bf6d241330e323e5 3c99000000000006
+s 3456 0 3f775c49ce151f81 3cb5100000000005
+s 3472 1 bfa3becf8322914b 3cb2000000000004
+s 3488 1 bf97a282d5f3f429 3cb7c00000000006
+s 3504 0 3f38fce706ed7983 3c7c800000000007
+s 3520 1 bf50fafb7358b6b1 3cb4980000000005
+s 3536 0 3f973cc2d2e50b95 3cba000000000006
+s 3552 1 bf88fd32c675aa0a 3cb2000000000004
+s 3568 0 3f693c017d6d8744 3c9d000000000007
+s 3584 0 3f625d80f6081cb3 3c9e200000000008
+s 3600 1 bf7da6d7b1aa73b6 3c8f000000000008
+s 3616 0 3f91c590ea28d579 3cbb800000000007
+s 3632 1 bf88246004160a64 3cb3c00000000005
+s 3648 0 3f6b9cc417d68960 3cb7800000000006
+s 3664 0 3f871dd3f0d69428 3cb5a00000000005
+s 3680 0 3f944800125d3f0d 3cb2400000000005
+s 3696 0 3f7b71af1add0653 3cb0000000000004
+s 3712 0 3f5f352d1b76d7d5 3cb58c0000000005
+s 3728 1 bf5f435fabf60e03 3cb73c0000000006
+s 3744 1 bf8bacfd5ec7ffd6 3cb4600000000005
+s 3760 1 bf928e8b4b6ae346 3ca3000000000005
+s 3776 1 bf8eaac7db2e3cc3 3caf800000000008
+s 3792 1 bf934cf1605246b4 3ca2800000000005
+s 3808 1 bf5361ffc9d163cc 3cb28c0000000005
+s 3824 0 3f8615764ddf88ce 3cae000000000008
+s 3840 1 bf273ed8a63dbb9a 3c945c0000000005
+s 3856 0 3f864cbd4691ec3b 3cb9000000000006
+s 3872 0 3f7fbcdb31040066 3ca1400000000004
+s 3888 1 bf95f88a6d074adc 3ca3000000000005
+s 3904 1 bf726a50ffd09357 3c86000000000006
+s 3920 1 bf74fa5c83477ef1 3cbda00000000007
+s 3936 0 3f6ee5048b9b81e7 3cb4500000000005
+s 3952 0 3f8bf0f3b72d8cf4 3ca7000000000006
+s 3968 1 bf7f1081f12bd6ea 3cb8300000000006
+s 3984 0 3f5b629ccf6126af 3ca6880000000006
+s 4000 0 3f7cf89cb1ddca47 3ca9600000000006
+s 4016 0 3f61be4c9f0cf2d0 3c9f600000000008
+s 4032 0 3f82a03f04fb73aa 3ca0c00000000004
+s 4048 1 bf8aa78567c49a2b 3ca3800000000005
+s 4064 0 3f85b160badf3535 3cb2600000000005
+s 4080 1 bf82ca60af653a5e 3cb7200000000006
+s 4096 1 bf9c0ba21ac88b85 3cb4000000000005
+s 4112 0 3f76522241e4e372 3cd2300000000005
+s 4128 1 bf898fdbec12185c 3cb4800000000005
+s 4144 1 bf7acde477eac610 3cb7500000000006
+s 4160 0 3f722566d1f38e23 3cad800000000007
+s 4176 1 bf6dc11a2735a2bd 3ca4b00000000005
+s 4192 0 3f8615213800cf7f 3cb2600000000005
+s 4208 0 3f9a4ba64dc6dfde 3cbd800000000007
+s 4224 1 bf59b6144510e333 3cb33c0000000005
+s 4240 1 bf85b6abd998f11e 3cb0a00000000004
+s 4256 1 bf5b0b15c71e9cbc 3c98700000000006
+s 4272 0 3f87567572da94d9 3cac400000000007
+s 4288 0 3f931002323ee681 3cd3e00000000005
+s 4304 0 3f740b85dba118da 3c87000000000006
+s 4320 0 3f7548dc968a279f 3cb8000000000006
+s 4336 0 3f886d44c0aab9cc 3cab000000000007
+s 4352 1 bf4c38b61c05883f 3cb0660000000004
+s 4368 1 bf706bc79ba3c8a9 3cb2c00000000005
+s 4384 1 bf7b8aa52ed899b1 3ca1a00000000004
+s 4400 1 bf968dad21c02d91 3cb2000000000004
+s 4416 1 bf83306732c6ca77 3cb4000000000005
+s 4432 0 3f7100c48362bb73 3c83800000000005
+s 4448 1 bf7a9cebfabe0a6c 3cb3200000000005
+s 4464 1 bf7c16ae14af5c3b 3cac200000000007
+s 4480 1 bf7f5155594d43c2 3cb3200000000005
+s 4496 1 bf61ff5239ab92f3 3cb3780000000005
+s 4512 1 bf7660e553c13752 3cb9b00000000006
+s 4528 1 bf07f69af8486150 3caaf38000000007
+s 4544 1 bf82429082a913a8 3cb7c00000000006
+s 4560 0 3f5ae15fff82727b 3cab400000000007
+s 4576 1 bf602f0dfa0960ab 3ca2b00000000005
+s 4592 1 bf743c67e3885340 3cb7400000000006
+s 4608 1 bf674b9382849a13 3cb6180000000006
+s 4624 1 bf66627dc36cd7dc 3cb0200000000004
+s 4640 0 3f50320298a46000 3cae880000000008
+s 4656 0 3f84131d2e384e39 3c9e800000000008
+s 4672 0 3f76698721d3b512 3cb0f00000000004
+s 4688 0 3f8a05b583dff658 3cae800000000008
+s 4704 0 3f6fef9acd2d9a23 3ca5100000000005
+s 4720 0 3f8feb958c469040 3cae000000000008
+s 4736 1 bf6a5cfb7bc94b41 3cb4300000000005
+s 4752 0 3f7e360f9a5a5560 3ca3c00000000005
+s 4768 1 bf92eca9a293f803 3cb8800000000006
+s 4784 0 3f6c96ed56fca0b5 3cb3280000000005
+s 4800 0 3f66874eedd5bb05 3cad300000000007
+s 4816 0 3fa4c4b46d6de026 3cb4000000000005
+s 4832 1 bf76353a11693f52 3cb0300000000004
+s 4848 1 bf58d841a8d086af 3cb42c0000000005
+s 4864 0 3f6739814c3476b0 3cb1180000000004
+s 4880 0 3f76464d67a235c7 3cad600000000007
+s 4896 0 3f7d2e871dad4834 3cb7200000000006
+s 4912 1 bf64e06cb14691f6 3caa400000000007
+s 4928 0 3f65fc211c118ead 3cb6880000000006
+s 4944 1 bf763e6a45419438 3ca8200000000006
+s 4960 1 bf674b338595ce76 3ca1700000000004
+s 4976 0 3f7fad1a7f59ef2d 3cb5200000000005
+s 4992 1 bf5ac17ad1301cec 3c75400000000005
+s 5008 1 bf7008480799dd2b 3cb5d00000000005
+s 5024 0 3f66ca92d889d280 3ca6a00000000006
+s 5040 0 3f71e039fe5882f2 3c9d000000000007
+s 5056 1 bf8a935e6f74577f 3ca5000000000005
+s 5072 0 3f552750ac5dcc8d 3cb3b40000000005
+s 5088 1 bf86d951958ef088 3cb4000000000005
+s 5104 1 bf897f9cbca65c0d 3ca9c00000000006
+s 5120 0 3f90f66d3b575a75 3cb7800000000006
+s 5136 0 3f697d27cf4ede45 3c8a800000000007
+s 5152 1 bf877c878d7f8f8d 3cb8000000000006
+s 5168 1 bf9b9cba50b16fb6 3cb6400000000006
+s 5184 1 bf840defb7d47b0a 3cb9c00000000006
+s 5200 0 3f72225c064fc23a 3ca2c00000000005
+s 5216 1 bf8155659f0d19b9 3cac800000000007
+s 5232 0 3f696e8fc710ddc0 3cb1900000000004
+s 5248 1 bf91481275a48f61 3cb7000000000006
+s 5264 0 3f938898ec253f7d 3cbd800000000007
+s 5280 1 bf7fa03bfc4473c4 3cb5100000000005
+s 5296 0 3f872119ded019ac 3ca8400000000006
+s 5312 1 bfa733e4b95cf90b 3cba800000000007
+s 5328 0 3f7e653ab62efee3 3ca5c00000000005
+s 5344 0 3f8eec322a523fb8 3cb7a00000000006
+s 5360 0 3f645670dc475a55 3ca1100000000004
+s 5376 0 3f73f4906a64718d 3cab800000000007
+s 5392 1 bf5fd7de97cc0ab8 3cb4340000000005
+s 5408 1 bf6a97693e6dab4d 3c9ca00000000007
+s 5424 0 3fa5352f98834cb6 3cb3000000000005
+s 5440 1 bf75099dadf407e6 3c95000000000005
+s 5456 0 3f8a026a3f3c778c 3cb4400000000005
+s 5472 1 bf8f241a11a0ed68 3cb1400000000004
+s 5488 1 bf82429c2de8271e 3ca7400000000006
+s 5504 1 bf59f062388a1b00 3cb8580000000006
+s 5520 0 3f85c37592b5dcb0 3cb3c00000000005
+s 5536 1 bf639d01f51f9d1e 3cb7f80000000006
+s 5552 0 3f94d8073f9ce189 3cb2000000000004
+s 5568 0 3f71ebf5009017b1 3ca8200000000006
+s 5584 0 3f8a4a552125ad97 3cb2800000000005
+s 5600 1 bf852e4c9b715774 3ca9800000000006
+s 5616 0 3f64999d8582d8d0 3cb1980000000004
+s 5632 0 3f771c6789821823 3cb4200000000005
+s 5648 1 bf20310210099c23 3c9d960000000007
+s 5664 1 bf64e9620257ec62 3ca3100000000005
+s 5680 1 bf5537db7b2a0392 3ca7880000000006
+s 5696 0 3f913f13143aed3f 3cb9c00000000006
+s 5712 0 3f5b39fb61da05d6 3cb0dc0000000004
+s 5728 0 3f8aa332dc5a2c9a 3ca8c00000000006
+s 5744 1 bf4fc7b92148bd15 3cbdec0000000007
+s 5760 1 bf889945eb68242f 3cb2c00000000005
+s 5776 1 bf55f20225fbfb67 3cac880000000007
+s 5792 0 3fa3ad5c89340dc2 3cb2000000000004
+s 5808 1 bf769f4d2fb1a898 3cb2600000000005
+s 5824 0 3f9090aa0cf07fb1 3cb3c00000000005
+s 5840 1 bf9c10658c999b32 3cbb800000000007
+s 5856 0 3f57caa4740b03f2 3caee80000000008
+s 5872 1 bf791cd2044be7e0 3ca2400000000005
+s 5888 1 bf99b5d1adc61a97 3cbe400000000008
+s 5904 1 bf86929f43c2f7cc 3caac00000000007
+s 5920 1 bf5801a340d24132 3ca7c00000000006
+s 5936 0 3f792aec7e5069f1 3c94800000000005
+s 5952 0 3f8b04c50e79a08f 3cb3400000000005
+s 5968 1 bf7b1ae13d07f804 3cad800000000007
+s 5984 0 3f93a8229520f767 3ca4800000000005
+s 6000 0 3f89a168155565be 3cb2200000000005
+s 6016 0 3f817caa86645873 3ca9400000000006
+s 6032 0 3f7754f28769d2e8 3cb9c00000000006
+s 6048 1 bf76171e5f42daae 3ca3000000000005
+s 6064 0 3f7a00d3da6cc982 3cb3200000000005
+s 6080 1 bf5e3648c73c15d1 3cb4240000000005
+s 6096 0 3f42e96093b7e9a0 3caf680000000008
+s 6112 0 3f905c381df842e6 3ca5800000000005
+s 6128 0 3f2aee9adab3c6df 3c8c480000000007
+s 6144 1 bf648962f608e129 3cb4980000000005
+s 6160 1 bf5dbe7ff906d7b0 3ca6b00000000006
+s 6176 0 3f72815f10781909 3cb6400000000006
+s 6192 1 bf7e0efc5e3a50f2 3cb6a00000000006
+s 6208 0 3f93e10d30979999 3cb4800000000005
+s 6224 0 3f95d291e2c7ac87 3cb7800000000006
+s 6240 0 3f5ebff37531e12c 3cada80000000007
+s 6256 1 bf77e8081a8e26dd 3cade00000000007
+s 6272 1 bf70d50f0ad3b0bb 3c99c00000000006
+s 6288 1 bf7d405b3896df77 3cb0900000000004
+s 6304 1 bfa090c86aa7ad8a 3cb6800000000006
+s 6320 1 bf675a5dd593f9c5 3cb1600000000004
+s 6336 1 bf94418c97e0de1e 3ca0800000000004
+s 6352 1 bf540d1910619a39 3cb3680000000005
+s 6368 1 bf594aab059331d9 3ca4280000000005
+s 6384 0 3f8423086a37229a 3cb3200000000005
+s 6400 0 3f8a9f9cb4a07986 3cad800000000007
+s 6416 1 bf6fd17b97d6503d 3cadf00000000007
+s 6432 1 bf62b371a24e4410 3caf200000000008
+s 6448 1 bf61519ab5b608d3 3cb3c00000000005
+s 6464 1 bf64e2d142c45905 3cb6500000000006
+s 6480 0 3f78ba87f7894646 3cb5900000000005
+s 6496 0 3f7f4035a5d96f4d 3cb4600000000005
+s 6512 1 bf88aebec03a1ed8 3caf400000000008
+s 6528 0 3f7f7d4118acd0fb 3cb6500000000006
+s 6544 0 3f7b5de702ab4447 3cba100000000007
+s 6560 1 bf7313a10e295bdc 3cbef00000000008
+s 6576 0 3f99fc52027f8d51 3cb0c00000000004
+s 6592 1 bf5cec7ccab06805 3cb4300000000005
+s 6608 1 bf863a39b1b57c7d 3c97000000000006
+s 6624 0 3f8926c9d54fae29 3cb1a00000000004
+s 6640 0 3fa35119a2bc804c 3cba000000000006
+s 6656 1 bf8025303ca4cb64 3cb9200000000006
+s 6672 0 3f7a95e60caec600 3cb2400000000005
+s 6688 0 3f8cf8c8542ae4db 3cb3600000000005
+s 6704 1 bf7163000ce8938d 3cb3300000000005
+s 6720 0 3f88ccc9dff8e151 3cba400000000007
+s 6736 1 bf36703743706708 3c90540000000004
+s 6752 0 3f6289c57cf90646 3c98400000000006
+s 6768 1 bf5dac96e0993331 3c99300000000006
+s 6784 0 3f935b86b412095e 3cb7000000000006
+s 6800 0 3f7838c7cab80a73 3cab800000000007
+s 6816 1 bf826486b08eb595 3caa400000000007
+s 6832 1 bf77ed254eab5b0e 3ca4400000000005
+s 6848 1 bf91cba702e3d972 3cb9800000000006
+s 6864 0 3f6b61a5651ee617 3caa800000000007
+s 6880 0 3f63bd4ddd930a99 3c81c00000000004
+s 6896 1 bf777ce3c4b0f767 3ca7400000000006
+s 6912 1 bf80577b93659458 3cb2600000000005
+s 6928 1 bf9b2b9466b38480 3cba000000000006
+s 6944 0 3f7dce0dc4a250c7 3cb0300000000004
+s 6960 1 bfa098cf18d33e43 3cb5800000000005
+s 6976 1 bf5bbc3f76b95645 3caad00000000007
+s 6992 0 3f62c4aeee880301 3ca1500000000004
+s 7008 1 bf630ca203d0413f 3cba500000000007
+s 7024 1 bf6452c2add7f886 3cb1100000000004
+s 7040 0 3f864fc5d1bc4ae2 3ca7000000000006
+s 7056 0 3f99dd89cb8b7888 3cb3000000000005
+s 7072 1 bf7867793f888765 3cb3e00000000005
+s 7088 1 bf8ac2bef8cce265 3c9d000000000007
+s 7104 1 bf6d4db4a93c9e77 3ca5e00000000005
+s 7120 0 3f542c0a2f48951d 3cb7280000000006
+s 7136 1 bf601bf33f52302b 3ca8800000000006
+s 7152 1 bf8206268f2e7f54 3cb3e00000000005
+s 7168 1 bf87f36634b61e0c 3cca900000000007
+s 7184 0 3f80f9130baea124 3ca3800000000005
+s 7200 1 bf447d8231c0c16b 3cb7980000000006
+s 7216 0 3f7e805bc27385d1 3c94800000000005
+s 7232 0 3f69eb168a8a6f57 3ca8c00000000006
+s 7248 1 bf77bed2296fa25f 3c9a400000000007
+s 7264 0 3fa01c117932846a 3cac000000000007
+s 7280 1 bf70d8c0ec8df493 3c8e000000000008
+s 7296 0 3f73d96f533b3c61 3cb1600000000004
+s 7312 0 3f564c3a0214eed0 3cabe00000000007
+s 7328 0 3f65c78ac0990c5d 3cb0b80000000004
+s 7344 1 bf85f7fd05c70245 3cb3c00000000005
+s 7360 0 3f5b43c1d031d9cc 3cab380000000007
+s 7376 1 bf6012dced5ee53d 3cb7e00000000006
+s 7392 0 3f793bd9acacb0c6 3cb5b00000000005
+s 7408 0 3f781d6ae41070ff 3ca0c00000000004
+s 7424 1 bf360f6f86e5c378 3ca3d40000000005
+s 7440 0 3f6a9547dba6bb10 3cb4c80000000005
+s 7456 0 3f89fabb8653ce94 3cb7600000000006
+s 7472 1 bf6e90736ee5bb16 3c8f800000000008
+s 7488 1 bf789c6d4ada1a18 3cb6500000000006
+s 7504 1 bf08e3d1ae29af38 3c97f48000000006
+s 7520 1 bf6e402b6d630206 3cb6980000000006
+s 7536 0 3f84212506a4e3f0 3cb2400000000005
+s 7552 1 bf89e72eaa96428b 3c9c800000000007
+s 7568 0 3f7c4e69dc10bef9 3cb8300000000006
+s 7584 1 bf76716f5466ea3f 3ca2e00000000005
+s 7600 1 bf648835a483146a 3cb3400000000005
+s 7616 1 bf795c1f1af8c253 3cb3400000000005
+s 7632 0 3f8bd9169607d1b3 3cbb000000000007
+s 7648 0 3f7d1f05098d780b 3cb5700000000005
+s 7664 1 bf6aa4059415185d 3ca2e00000000005
+s 7680 0 3f6c1f302cf1ede5 3ca2700000000005
+s 7696 1 bf7e9782045f30a1 3cb0c00000000004
+s 7712 1 bf623f4c4cb6ecf5 3ca0600000000004
+s 7728 0 3f6d2c2943382322 3ca1500000000004
+s 7744 0 3f5ca6febcec9e16 3cb4040000000005
+s 7760 0 3f83d72ada036362 3cb7800000000006
+s 7776 0 3f511312ec6b2081 3c9da00000000007
+s 7792 0 3f249af231f9c2fb 3ca54b0000000005
+s 7808 1 bf8a4cf72e9ac35f 3ca9800000000006
+s 7824 1 bf8397d74f6d60f2 3cb8800000000006
+s 7840 1 bf6d11f969e60250 3ca4500000000005
+s 7856 1 bf80c2c7bf941bd7 3cb6400000000006
+s 7872 0 3f75a7f76a058c37 3c9f800000000008
+s 7888 0 3f57d63a362816e1 3ca5100000000005
+s 7904 0 3f8b811b85d1f9e0 3cb3600000000005
+s 7920 1 bf6f720bdd2e6109 3ca5500000000005
+s 7936 1 bf6969044b31c65b 3ca4f00000000005
+s 7952 1 bf704d85af3a1d29 3ca1e00000000004
+s 7968 1 bf9fafbd6f6d10ed 3cae000000000008
+s 7984 0 3f745ac9accfd3fc 3cb5100000000005
+s 8000 1 bf74b87e5486d525 3ca6600000000006
+s 8016 1 bf4312839a742be8 3c9b300000000007
+s 8032 0 3f903b850ce08568 3ca4800000000005
+s 8048 1 bf83048b20133685 3ca6800000000006
+s 8064 0 3f9c62c1af1b7150 3cb4000000000005
+s 8080 0 3f53d3b330ffc326 3ca6b00000000006
+s 8096 1 bf9cf41edb94def5 3cb0400000000004
+s 8112 1 bf68dd3e2ec42fb8 3c97800000000006
+s 8128 1 bf9d30369a1d4eb2 3cc4000000000005
+s 8144 0 3f5261f0aa6e4edc 3cb2000000000004
+s 8160 1 bf963b09544743fc 3cb0c00000000004
+s 8176 1 bf5f5f9b4ac9a3dd 3c92000000000004
+s 8192 0 3f5ae45a7dcde3bf 3cb0b40000000004
+s 8208 1 bf5b759a08a9fa65 3c96000000000006
+s 8224 1 bf8cdfe2832e6569 3cadc00000000007
+s 8240 0 3f7105c2781c7c76 3cb3e00000000005
+s 8256 0 3f7abf824b84d4a3 3ca6e00000000006
+s 8272 0 3f83ccdbf2d9af14 3cac000000000007
+s 8288 0 3f71e0780778d76c 3cb0f00000000004
+s 8304 0 3f8aede5738bd404 3cab000000000007
+s 8320 1 bf80e08142f4a8d9 3cae400000000008
+s 8336 0 3f8df44d15449d05 3cb8400000000006
+s 8352 1 bf62040ac4833f0e 3cb4a80000000005
+s 8368 1 bf85971a317e99c6 3cb1400000000004
+s 8384 1 bf02b84ef92ae900 3cb4c90000000005
+s 8400 1 bf8995ec001613eb 3cb4000000000005
+s 8416 0 3f69df066edc48d2 3cb2480000000005
+s 8432 1 bf7d95b4fa363d65 3cb0800000000004
+s 8448 1 bf6f0552a3718cc3 3cb3f00000000005
+s 8464 0 3f6147a388fd1c1c 3ca9e00000000006
+s 8480 0 3f9bcb8e0cef294d 3cbc400000000007
+s 8496 0 3f9107550634592d 3cb1800000000004
+s 8512 1 bf71604efb89fcd7 3cb9a00000000006
+s 8528 0 3f5c98705a543902 3cabe00000000007
+s 8544 1 bf91d1abc05b289b 3cb2000000000004
+s 8560 1 bf6b9f79d0ada113 3ca4d00000000005
+s 8576 0 3f97985f2432c6ab 3cb1000000000004
+s 8592 0 3f744a09e9eb696e 3ca9200000000006
+s 8608 0 3f685447fe6a1b39 3cab100000000007
+s 8624 0 3f3c3a121561b6be 3ca7140000000006
+s 8640 1 bf85715e877e595f 3ca8400000000006
+s 8656 0 3f55ab4424fb2c9b 3cae880000000008
+s 8672 1 bf8bb598c05efd39 3cb2400000000005
+s 8688 0 3f7eb2cb5b02ebac 3cb2b00000000005
+s 8704 1 bf854886099603a0 3cb4a00000000005
+s 8720 0 3fa08d14da5ece8f 3cb9000000000006
+s 8736 0 3f843e0bb61d748d 3cb0c00000000004
+s 8752 1 bf794f7e9a1bd600 3cb3100000000005
+s 8768 1 bf530a9968295c5e 3cb3f00000000005
+s 8784 0 3f683f17025b1541 3ca1d00000000004
+s 8800 0 3f74f6f71087666c 3cae600000000008
+s 8816 1 bf51e60074b46a0e 3ca5180000000005
+s 8832 0 3f7e6e94edf8b4fe 3cb6e00000000006
+s 8848 1 bf55a9fb9d2a3188 3cad280000000007
+s 8864 0 3f896cf2a093f4e7 3c9d000000000007
+s 8880 0 3f9265d5a8a40dde 3cb3c00000000005
+s 8896 0 3f3b0f06731eb3f6 3ca4d60000000005
+s 8912 1 bf51e4e43f38bc1c 3c95d00000000005
+s 8928 1 bf760f15fd02d939 3cb2c00000000005
+s 8944 0 3f803d432f866bd1 3cb2600000000005
+s 8960 1 bf80c6733a3e6956 3cab000000000007
+s 8976 0 3f84ec4b9fa6273d 3cb6e00000000006
+s 8992 1 bf1a31dcc35ebc9c 3c9ba70000000007
+s 9008 1 bf86396613315a89 3cae000000000008
+s 9024 0 3f889f4cc4063c35 3cb0e00000000004
+s 9040 1 bf3582012b14a305 3cb2ca0000000005
+s 9056 1 bf766fe991e37179 3ca2e00000000005
+s 9072 1 bf55636121f54586 3cb4180000000005
+s 9088 0 3fa36dba29791ce2 3cb9800000000006
+s 9104 0 3f51a462db21c550 3c94b00000000005
+s 9120 1 bf856e24bffeee9c 3ca2400000000005
+s 9136 1 bf52665b008733e9 3ca7380000000006
+s 9152 1 bf856847c44eae3e 3cb3400000000005
+s 9168 1 bf092a92498491cb 3c85f30000000005
+s 9184 0 3f92128324db8238 3ca5000000000005
+s 9200 0 3f7e221a70b4a5a5 3cb4f00000000005
+s 9216 0 3f7c4b7e590ee67e 3ca7c00000000006
+s 9232 1 bf6adc0cf491e285 3ca0c00000000004
+s 9248 1 bf8c67284af27d82 3cac400000000007
+s 9264 1 bf7bc300e3fea1c8 3cb8000000000006
+s 9280 1 bf7faf1e8a6f8757 3cb1c00000000004
+s 9296 0 3f8ff963c80ed65c 3ca8c00000000006
+s 9312 0 3f7dd82aed0829b2 3cb7b00000000006
+s 9328 1 bf7ff841ee070c83 3cac000000000007
+s 9344 0 3f965d6f65f8973b 3caf800000000008
+s 9360 0 3f8659a556c17324 3cb4000000000005
+s 9376 0 3f91c373c8533995 3cb6400000000006
+s 9392 0 3f77598b6a22ed51 3ca7800000000006
+s 9408 0 3f7e5960ff4026d9 3cba600000000007
+s 9424 1 bf7410332958f70e 3ca2400000000005
+s 9440 0 3f68f8c73dd172a6 3cb1100000000004
+s 9456 0 3f79eeb554ecb702 3cbaa00000000007
+s 9472 1 bf931e765314245a 3ca6000000000006
+s 9488 0 3f7e68b34c9a1066 3cb6f00000000006
+s 9504 1 bf837ac6449a499f 3ca8400000000006
+s 9520 1 bf87b1461a6b22ae 3cb0800000000004
+s 9536 0 3f8825750e91c485 3cb1400000000004
+s 9552 0 3f7d90ea4a5a69a5 3cb7800000000006
+s 9568 1 bf9890626a8eb50a 3ca5000000000005
+s 9584 1 bf1c92329a58cad8 3cb1d98000000004
+s 9600 1 bf6a56b9e2f2e57f 3cb1e00000000004
+s 9616 0 3fa26f5a4620d07f 3cad000000000007
+s 9632 0 3f72919c4dc364fd 3cb3600000000005
+s 9648 0 3f472f91bbc21f37 3cace80000000007
+s 9664 1 bf902505fa89861b 3ca3800000000005
+s 9680 1 bf92c793b7b95ad7 3cb7800000000006
+s 9696 1 bf6c1c93d5c2c1ca 3cb5e00000000005
+s 9712 0 3f9bb67844366bd3 3cb9400000000006
+s 9728 1 bf72894cc18bf01d 3ca7200000000006
+s 9744 1 bf73bc80e9e4b465 3cae400000000008
+s 9760 0 3f7885f255a63905 3cac400000000007
+s 9776 0 3f9030a462bc6d63 3cba800000000007
+s 9792 0 3f9b71f643bdf14f 3cb3000000000005
+s 9808 0 3f8fda718a1f5a0f 3ca7800000000006
+s 9824 1 bf8296b7add5e27a 3ca0c00000000004
+s 9840 1 bf62ac90b5070833 3cb3e00000000005
+s 9856 1 bf8c8459ec1630b7 3cb0600000000004
+s 9872 0 3f914861a9602f62 3ca0000000000004
+s 9888 0 3f945b83b3b5b403 3ca1000000000004
+s 9904 1 bf48e52442f9923a 3cad340000000007
+s 9920 0 3f54eacc321b1861 3caed80000000008
+s 9936 1 bf7987e8e06ee9b7 3cb5f00000000005
+s 9952 0 3f7331985dccde54 3cb3600000000005
+s 9968 0 3f9aff9698499f42 3cb0000000000004
+s 9984 0 3f8af337e7a54a1a 3ca2000000000004
+s 10000 0 3f279d6406dee9f9 3c952a0000000005
+s 10016 0 3f9ace1b05998dad 3caa000000000006
+s 10032 0 3f710ada1ed7499f 3cb0c00000000004
+s 10048 1 bf649092df7b651b 3cb7b00000000006
+s 10064 1 bf2c10e22f4afa34 3cafa40000000008
+s 10080 0 3f812f3c326ef4a5 3c9f000000000008
+s 10096 1 bf5c818fc71c5fee 3ca7b00000000006
+s 10112 1 bf904eb56cc241b6 3cb8c00000000006
+s 10128 1 bf800116f9d46d67 3c97000000000006
+s 10144 1 bf70e9edec8c0d2a 3cb3d00000000005
+s 10160 1 bf9415bea4771715 3ca4800000000005
+s 10176 1 bf5115f25ebd2a1a 3cab200000000007
+s 10192 0 3f5baa2cc1ff6dea 3c8a200000000007
+s 10208 0 3f8a6bb05dfcf13f 3ca2c00000000005
+s 10224 1 bf80b9a13979b066 3cae400000000008
+s 10240 0 3f935f53b5311392 3cb4c00000000005
+s 10256 0 3f910640b7bedb2b 3cb8800000000006
+s 10272 1 bf894d3ad0860cc0 3cb0400000000004
+s 10288 1 bf81503715ecd980 3cad400000000007
+s 10304 0 3f76531bb5393d7c 3caf000000000008
+s 10320 0 3f6488331dd32f57 3ca4700000000005
+s 10336 0 3f79ab0ef0c3b0fa 3cb9300000000006
+s 10352 0 3f05f53191e43498 3ca0d0c000000004
+s 10368 0 3f861f9e7bd650f3 3cb1600000000004
+s 10384 1 bf5210588abaaaeb 3cacb80000000007
+s 10400 1 bfa5c10f18e8b8f7 3cb9000000000006
+s 10416 1 bf65c954e3549051 3cb3380000000005
+s 10432 0 3f8aebae817a5386 3caec00000000008
+s 10448 1 bf84089b5c0d0308 3caf000000000008
+s 10464 0 3f9286932ce48702 3cb7400000000006
+s 10480 0 3f99a0d78d1d46e6 3cb4c00000000005
+s 10496 0 3f7f3dde2d172f05 3c9d800000000007
+s 10512 0 3f11f3adcacbe369 3cb1ce4000000004
+s 10528 1 bf8a508388295b67 3c97800000000006
+s 10544 0 3f6bc8752fb24d03 3ca6f00000000006
+s 10560 0 3f63a40665d28ad5 3ca9900000000006
+s 10576 0 3f32fce07351fd8d 3cb5da0000000005
+s 10592 1 bf6e0a84fe4d9e0f 3ca7200000000006
+s 10608 1 bf86b536ead18d86 3c99800000000006
+s 10624 1 bf87ba882fba1400 3cb4800000000005
+s 10640 1 bf80bae0e405d8dd 3ca8400000000006
+s 10656 0 3f62f8be37675df4 3cb3c00000000005
+s 10672 0 3f97377cbbafa15d 3cb7800000000006
+s 10688 1 bf56eb0764824781 3cb3cc0000000005
+s 10704 1 bf7116f0fd7b0329 3cac800000000007
+s 10720 1 bf9026c071edd169 3cb3000000000005
+s 10736 1 bf7c401c3580a129 3ca4c00000000005
+s 10752 1 bf5d2a71484dbf5c 3caf200000000008
+s 10768 0 3f830dad9fa84524 3cb5200000000005
+s 10784 1 bf8c1f9acb26a8e9 3cb8000000000006
+s 10800 1 bf97df08f00683b9 3cb5000000000005
+s 10816 0 3f92e28a7c8fee2e 3cb4800000000005
+s 10832 0 3f99462f3d5efdde 3cb3400000000005
+s 10848 1 bf75e3f0c9940220 3c99000000000006
+s 10864 1 bef626585865bd1f 3cab490000000007
+s 10880 0 3f9a8a2b2037587b 3cb6000000000006
+s 10896 1 bf6667cae031b9d5 3cb1e80000000004
+s 10912 0 3f9b8f6a6bb5ae4d 3cbe000000000008
+s 10928 0 3f901f0f707ee9fa 3ca4800000000005
+s 10944 1 bf9561e67d218baf 3cab800000000007
+s 10960 1 bf82b9ef7a84658d 3cb8a00000000006
+s 10976 1 bf638721d3bf857c 3cb1300000000004
+s 10992 0 3f8063ac5095bfea 3cb6c00000000006
+s 11008 1 bf86c1c6d3d827e7 3caf000000000008
+s 11024 0 3f6928ac5593a543 3ca2300000000005
+s 11040 1 bf8da687ab1d540a 3ca6400000000006
+s 11056 0 3f9052dd8975afd7 3cb8000000000006
+s 11072 1 bf52ee857de631cd 3c9a600000000007
+s 11088 1 bf73fe5ecfa5f27e 3cae400000000008
+s 11104 0 3f80d48c2ed34c19 3cb8400000000006
+s 11120 1 bf6c43ddc8c15d52 3cb6900000000006
+s 11136 0 3f798148b02b3a80 3ca9600000000006

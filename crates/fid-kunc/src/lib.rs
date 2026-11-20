@@ -7,6 +7,8 @@
 //! `UNC.MODEL.DIST` (input distributions, moments, seeded sampling and the correlation check,
 //! see [`dist`]), `UNC.MODEL.GRAPH.SCHEMA` (the Uncertainty Model graph types, the
 //! `uncertainty-model/v1` document, its canonical form and digest, see [`model`]),
+//! `UNC.MODEL.GRAPH.CHECK` (structural validation into a `ValidModel`, see
+//! [`model::validate`]),
 //! `UNC.PROP.MCM.INTVL` (Monte Carlo coverage intervals and estimate outputs from samples,
 //! see [`prop::mcm::interval`]) and `UNC.PROP.MCM.ADAPT` (the adaptive stopping rule
 //! `mcm-adapt@1` and trial cap, see [`prop::mcm::adapt`]).

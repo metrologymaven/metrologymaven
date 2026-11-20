@@ -113,11 +113,13 @@ python fixtures/solv/make_mstart_fixtures.py --check
 python fixtures/solv/patch/ldl-order-v1/make_orders.py --check
 python fixtures/solv/patch/upstream-examples-v1/check_objectives.py
 python fixtures/solv/vend/make_fixtures.py --check
+python fixtures/solv/wrap/small-v1/make_fixtures.py --check
 python fixtures/unc/class/make_table.py --check
 python fixtures/unc/dec/type/make_fixtures.py --check
 python fixtures/unc/dist/make_fixtures.py --check
 python fixtures/unc/mcm/adapt/make_fixtures.py --check
 python fixtures/unc/mcm/intvl/make_fixtures.py --check
+python fixtures/unc/model/graph/make_check_fixtures.py --check
 python fixtures/unc/model/graph/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/ux/system/princ/make_fixtures.py --check
@@ -132,6 +134,7 @@ python tools/check_registry_keywords.py
 python tools/fixtures/geo_apply_cases.py --check
 python tools/fixtures/geo_digest_vectors.py --check
 python tools/fixtures/geo_dist.py --check
+python tools/fixtures/geo_dist_sign.py --check
 python tools/fixtures/geo_index.py --check
 python tools/fixtures/geo_sel_sets.py --check
 python tools/fixtures/geo_tree_cases.py --check

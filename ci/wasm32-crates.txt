@@ -9,6 +9,7 @@ fid-fit
 fid-geo-cad
 fid-geo-cmd
 fid-geo-dist --test mesh
+fid-geo-dist --test sign
 fid-geo-frame
 fid-geo-index
 fid-geo-nurbs --test analytic

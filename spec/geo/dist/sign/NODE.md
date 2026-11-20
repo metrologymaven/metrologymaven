@@ -9,6 +9,8 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-dist]
+built_pr: 313
 satisfies: [REQ-GEO.DIST-003]
 covers: []
 depends_on: [GEO.DIST.MESH, GEO.TYPES.MESH, KRN.NUM]
@@ -43,17 +45,17 @@ Defines, once, which side of a surface a point is on: positive along the outward
 
 - **REQ-GEO.DIST.SIGN-001** For a foot point in a triangle interior, the sign shall be the sign of (p − foot)·n with n the triangle's normal from its vertex order (right-hand rule).
 - **REQ-GEO.DIST.SIGN-002** For a foot point on an edge or vertex, the sign shall use the angle-weighted pseudo-normal of that feature (Bærentzen and Aanæs, IEEE TVCG 11(3), 2005), which gives the correct sign for closed, consistently oriented manifold meshes.
-- **REQ-GEO.DIST.SIGN-003** If the foot feature is on a boundary, non-manifold or inconsistently oriented edge, or a vertex touching one, then the result shall carry `SignUndefined` together with the unsigned distance.
-- **REQ-GEO.DIST.SIGN-004** When the distance is exactly zero, the signed distance shall be +0.0.
+- **REQ-GEO.DIST.SIGN-003** If a possible foot feature is on a boundary, non-manifold or inconsistently oriented edge, on a vertex touching one, on a vertex whose triangles form more than one fan, on a degenerate triangle, or anywhere in a connected component (triangles sharing edges) that contains a non-manifold or misoriented edge, then the result shall carry `SignUndefined` together with the unsigned distance. (Which side of a misoriented pair is flipped cannot be decided locally, so the whole component has no defined orientation.)
+- **REQ-GEO.DIST.SIGN-004** When the computed distance is exactly zero and no possible foot feature is undefined (REQ-003), the result shall be `OnSurface` with signed distance +0.0 and a proven bound on the exact distance (which need not be zero); when a possible foot feature is undefined, the result shall be `SignUndefined` with distance +0.0.
 - **REQ-GEO.DIST.SIGN-005** The CAD form of the rule shall take incident unit normals and incident angles as input, so GEO.DIST.FACE produces signs by the same weighting.
 - **REQ-GEO.DIST.SIGN-006** Pseudo-normal precomputation shall be deterministic class D0 and use ordered (sorted) edge tables, not hash maps.
 
 ## Acceptance criteria
 
 - **AC-1** Given fixture `fixtures/geo/types/mesh_cube` and 10⁵ seeded points inside and outside the cube, including points closest to edges and corners, when signed distances are computed, then every sign agrees with an exact inside/outside test.
-- **AC-2** Given fixture `fixtures/geo/dist/sphere_concave_convex` (a closed mesh with concave and convex edges), when queried at 10⁴ points near edges, then signs agree with the analytic signed distance of the generating surface.
+- **AC-2** Given fixture `fixtures/geo/dist/sphere_concave_convex` (a closed mesh with concave and convex edges), when queried at 10⁴ points near edges, then signs agree with the analytic signed distance of the generating surface at points outside the mesh-approximation band (exact mesh side equals analytic side); every other point agrees with the exact mesh inside test or is Undecidable.
 - **AC-3** Given fixture `fixtures/geo/types/mesh_open_flipped`, when a point projects onto a boundary edge or the flipped region, then the result carries `SignUndefined` and the correct unsigned distance.
-- **AC-4** Given a point exactly on the surface, then the signed distance is +0.0 (bit pattern 0x0).
+- **AC-4** Given a point exactly on the surface whose computed distance is zero, then the signed distance is +0.0 (bit pattern 0x0): `OnSurface` with a bound on the exact distance, or `SignUndefined` on an undefined feature (REQ-004).
 - **AC-5** Given a synthetic CAD-style input (two incident face normals at a convex edge with angles π), when the CAD rule is applied, then the sign matches the mesh rule for the same geometry.
 
 ## Design
