@@ -16,6 +16,9 @@ decimal strings), written here by hand:
 Outputs (CC-BY-4.0 project data):
   blobs.json          100 blobs from 0 B to 20 MiB: seed, size, address, chunk addresses
   manifest_20mib.json canonical manifest of the 20 MiB blob (no trailing newline)
+  objects.json        every chunked object of blobs.json: its name (the manifest address), size,
+                      seed, the SHA-256 of its whole content and its manifest's length
+                      (BlobStore::read_object, REQ-010: the name gives the content, not the manifest)
 
 Run:   python fixtures/core/sto/cas/make_fixtures.py
 Check: python fixtures/core/sto/cas/make_fixtures.py --check
@@ -74,6 +77,7 @@ def sizes():
 
 def build():
     blobs = []
+    objects = []
     manifest_20 = None
     for i, size in enumerate(sizes()):
         seed = SEED_BASE + i
@@ -89,6 +93,8 @@ def build():
             entry["kind"] = "object"
             entry["address"] = address(m)
             entry["chunks"] = chunks
+            objects.append({"address": address(m), "content": address(data), "manifest_bytes": len(m),
+                            "seed": "%d" % seed, "size": size})
             if size == 20 * MIB:
                 manifest_20 = m
         blobs.append(entry)
@@ -99,7 +105,17 @@ def build():
         "blobs": blobs,
     }
     text = json.dumps(doc, indent=1, sort_keys=True) + "\n"
-    return {"blobs.json": text.encode("ascii"), "manifest_20mib.json": manifest_20}
+    objs = {
+        "about": "CORE.STO.CAS REQ-010: the chunked objects of blobs.json; `content` is the SHA-256 of "
+                 "the whole object, `address` that of its manifest. Python hashlib. CC-BY-4.0.",
+        "objects": objects,
+    }
+    otext = json.dumps(objs, indent=1, sort_keys=True) + "\n"
+    return {
+        "blobs.json": text.encode("ascii"),
+        "manifest_20mib.json": manifest_20,
+        "objects.json": otext.encode("ascii"),
+    }
 
 
 def main():

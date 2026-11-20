@@ -78,7 +78,7 @@ use cap_std::fs::Dir;
 use fid_canon::CValue;
 use fid_journal::EntryTime;
 use fid_registry::{CommandDef, DefError};
-use fid_store::cas::{Address, BlobRef, BlobStore, CasError, ChunkManifest, CHUNK_SIZE};
+use fid_store::cas::{BlobStore, CasError, CHUNK_SIZE};
 use fid_store::settings::{
     machine_config_dir, resolve as resolve_settings, user_config_dir, FileStore, Scope, SettingWarning,
     SettingsRegistry, Sources,
@@ -1293,34 +1293,22 @@ impl<'a> EgressSender<'a> {
         EgressSender { store, transports }
     }
 
+    /// The artifact's own bytes, through `BlobStore::read_object` (CORE.STO.CAS REQ-010): the
+    /// digest of a chunked object gives the object, never its manifest, so a manifest is
+    /// never sent as if it were the data (maintainer decision on #336). At most
+    /// [`MAX_ARTIFACT_BYTES`]: a larger artifact, which every chunked object this store
+    /// writes is, is refused before it is read.
     fn load(&self, digest: &Digest) -> Result<Vec<u8>, BusError> {
-        let size = match fs::metadata(self.store.path_of(digest)) {
-            Ok(m) if m.is_file() => m.len(),
-            Ok(_) | Err(_) => return Err(bad_artifact(&format!("artifact {digest} is not in the store"))),
-        };
-        if size > MAX_ARTIFACT_BYTES {
-            return Err(bad_artifact(&format!(
-                "artifact {digest} is larger than one blob ({MAX_ARTIFACT_BYTES} bytes)"
-            )));
-        }
-        let bytes = self.store.get(&Address::Blob(BlobRef { digest: *digest, size })).map_err(|e| match e {
+        self.store.read_object(digest, MAX_ARTIFACT_BYTES).map_err(|e| match e {
             CasError::Integrity(_) => bad_artifact(&format!("artifact {digest} does not verify")),
             CasError::NotFound(_) => bad_artifact(&format!("artifact {digest} is not in the store")),
-            CasError::ManifestInvalid(_) | CasError::OutOfRange { .. } | CasError::Io(_) => {
+            CasError::OutOfRange { .. } => {
+                bad_artifact(&format!("artifact {digest} is larger than one blob ({MAX_ARTIFACT_BYTES} bytes)"))
+            }
+            CasError::ManifestInvalid(_) | CasError::Io(_) => {
                 bad_artifact(&format!("artifact {digest} cannot be read: {}", e.code()))
             }
-        })?;
-        if Digest::from_bytes(fid_canon::digest_bytes(&bytes).0) != *digest {
-            return Err(bad_artifact(&format!("artifact {digest} does not verify")));
-        }
-        // The digest of a chunked object names its manifest, not its bytes; sending the
-        // manifest would report `sent` for data that never left (maintainer decision on #336).
-        if ChunkManifest::parse(&bytes).is_ok() {
-            return Err(bad_artifact(&format!(
-                "artifact {digest} is a chunked object's manifest; chunked objects are not sent"
-            )));
-        }
-        Ok(bytes)
+        })
     }
 
     /// Sends a cleared egress under `permit` (REQ-001, REQ-006): `class_forbidden` unless
@@ -1328,8 +1316,8 @@ impl<'a> EgressSender<'a> {
     /// `bad_destination` if the destination is no longer in `current` (the setting as read
     /// now) and `no_approval` if its configuration digest changed since the approval;
     /// `bad_destination` when this build has no transport for the kind; `bad_artifact`
-    /// when the artifact is missing, larger than one blob, does not verify or is a chunk
-    /// manifest. Nothing is
+    /// when the artifact is missing, larger than one blob, does not verify, or names a chunk
+    /// manifest whose object cannot be verified (a manifest is never sent). Nothing is
     /// sent on any of these. Then the transport is called exactly once (not at all when
     /// cancellation was already requested) and the outcome is recorded.
     pub fn send(

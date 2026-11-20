@@ -1,0 +1,33 @@
+{
+ "about": "CORE.STO.CAS REQ-010: the chunked objects of blobs.json; `content` is the SHA-256 of the whole object, `address` that of its manifest. Python hashlib. CC-BY-4.0.",
+ "objects": [
+  {
+   "address": "sha256:37fb96edc020dec964bcc61d5d1e88e769680cc8f77239ae0dd8dcf9233ed59a",
+   "content": "sha256:50a9810d9ed1144e296ddeaa6c800cb3d68dfd408e4c512e6b018c874e0954aa",
+   "manifest_bytes": 224,
+   "seed": "6840345853991845902",
+   "size": 8388609
+  },
+  {
+   "address": "sha256:c46f8f3bdb0dd90fa908e0733af2e51e558020c42e39bd8ba04b9102f483d24b",
+   "content": "sha256:84df96c62a9793138483760d81c91623ba2ea22ca18ba6275423ec2748389b31",
+   "manifest_bytes": 225,
+   "seed": "6840345853991845903",
+   "size": 16777216
+  },
+  {
+   "address": "sha256:42916433ab11421f3cd2e3e7a36622c03aa069a15eb0477f6d6e4780819aa318",
+   "content": "sha256:0ecfc006fcb9ca8dea065b6db3aea6f51a872444a74400981959a4a8979a9ff6",
+   "manifest_bytes": 299,
+   "seed": "6840345853991845904",
+   "size": 16777217
+  },
+  {
+   "address": "sha256:4194771c580d89c14e59776542277cf1a7b3a059c918ffc4992851848fd19603",
+   "content": "sha256:25ea750709d5579dee565dd7ef0a55bcd529de7b74e2e7847a3984db7a6070c5",
+   "manifest_bytes": 299,
+   "seed": "6840345853991845905",
+   "size": 20971520
+  }
+ ]
+}

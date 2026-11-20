@@ -958,6 +958,40 @@ fn a_chunked_object_is_refused_and_its_manifest_is_never_sent() {
     assert_eq!(r.count(), 0);
 }
 
+/// CORE.STO.CAS REQ-010 through egress: a digest naming a manifest is read as the object it
+/// names, so the transport gets the object's bytes and never the manifest's. The manifest
+/// here lists one 10-byte chunk, small enough to send.
+#[test]
+fn a_manifest_digest_sends_the_object_never_the_manifest() {
+    let mut w = World::new();
+    let alice = w.channel(ChannelKind::Gui, "alice");
+    let chunk = w.store.put_bytes(b"0123456789", PutOpts::default()).unwrap().digest();
+    let manifest = format!(
+        "{{\"chunk_size\":\"10\",\"chunks\":[\"{}\"],\"format\":\"fid-chunks@1\",\"size\":\"10\"}}",
+        chunk.as_str()
+    )
+    .into_bytes();
+    assert!(fid_store::ChunkManifest::parse(&manifest).is_ok());
+    let digest = Digest::from_bytes(fid_canon::digest_bytes(&manifest).0);
+    let path = w.store.path_of(&digest);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, &manifest).unwrap();
+    let p = params(&digest, "upload");
+    let r = Recorder::ok();
+    let consent = w.approval(&alice, digest, "upload");
+    let decision = w.authorise(&alice, &p, None, Some(consent)).unwrap();
+    w.send(&alice, decision, https(&r), CancelToken::never()).unwrap();
+    let got = r.received();
+    assert_eq!(got.len(), 1);
+    assert_eq!(got[0].1, b"0123456789".to_vec(), "the object's bytes, not the manifest");
+    // Remove the chunk: the object can no longer be verified, and nothing is sent.
+    std::fs::remove_file(w.store.path_of(&chunk)).unwrap();
+    let consent = w.approval(&alice, digest, "upload");
+    let decision = w.authorise(&alice, &p, None, Some(consent)).unwrap();
+    assert_err(w.send(&alice, decision, https(&r), CancelToken::never()), Code::Validation, "bad_artifact");
+    assert_eq!(r.count(), 1);
+}
+
 fn partials(dir: &Path) -> Vec<String> {
     std::fs::read_dir(dir)
         .unwrap()
