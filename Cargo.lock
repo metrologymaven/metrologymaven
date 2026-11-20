@@ -943,6 +943,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-program-rec"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-journal",
+ "fid-program",
+ "fid-registry",
+ "fid-replay",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-project"
 version = "0.0.1"
 dependencies = [

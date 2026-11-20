@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-program-rec]
 satisfies: [REQ-AUTO.REC-008]
 covers: []
 depends_on: [AUTO.PROG.FMT, CORE.BUS, CORE.JRN]
