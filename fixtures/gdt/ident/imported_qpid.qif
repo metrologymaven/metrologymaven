@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- GDT.CHAR.IDENT AC-1 fixture: synthetic, CC0. Written by make_fixtures.py. -->
+<QIFDocument xmlns="http://qifstandards.org/xsd/qif3" versionQIF="3.0.0" idMax="3">
+  <Characteristics>
+    <CharacteristicDefinitions n="1">
+      <FlatnessCharacteristicDefinition id="1">
+        <ToleranceValue>0.05</ToleranceValue>
+      </FlatnessCharacteristicDefinition>
+    </CharacteristicDefinitions>
+    <CharacteristicNominals n="1">
+      <FlatnessCharacteristicNominal id="2">
+        <CharacteristicDefinitionId>1</CharacteristicDefinitionId>
+      </FlatnessCharacteristicNominal>
+    </CharacteristicNominals>
+    <CharacteristicItems n="1">
+      <FlatnessCharacteristicItem id="3">
+        <QPId>4F2A9C3E-1B7D-4E8A-9C21-7D3B5E6F8A10</QPId>
+        <CharacteristicNominalId>2</CharacteristicNominalId>
+      </FlatnessCharacteristicItem>
+    </CharacteristicItems>
+  </Characteristics>
+</QIFDocument>

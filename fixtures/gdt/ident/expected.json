@@ -1,0 +1,58 @@
+{
+  "imported_qpid": "4F2A9C3E-1B7D-4E8A-9C21-7D3B5E6F8A10",
+  "no_slot": {
+    "clock_ms": "1763500000000",
+    "identity": "019a98ca-8300-7cae-bdc3-1d10c7e7db52",
+    "kept_attribute": {
+      "name": "inspectionNote",
+      "value": "synthetic foreign attribute"
+    },
+    "seed": "20261119"
+  },
+  "v7_cases": [
+    {
+      "clock_ms": "0",
+      "name": "zero_seed",
+      "seed": "0",
+      "uuids": [
+        "00000000-0000-76bd-ae78-9e6aa1b965f4",
+        "00000000-0000-753f-b88b-b8a8724c81ec"
+      ]
+    },
+    {
+      "clock_ms": "1700000000000",
+      "name": "typical",
+      "seed": "42",
+      "uuids": [
+        "018bcfe5-6800-7a54-a8ef-e333b266f103",
+        "018bcfe5-6800-7d49-981c-e1ff0e4ae394",
+        "018bcfe5-6800-7fcb-9e44-31fa3c80db06"
+      ]
+    },
+    {
+      "clock_ms": "281474976710655",
+      "name": "max_clock",
+      "seed": "7",
+      "uuids": [
+        "ffffffff-ffff-775c-844c-3cd7f43c661c"
+      ]
+    },
+    {
+      "clock_ms": "1763500000000",
+      "name": "max_seed",
+      "seed": "18446744073709551615",
+      "uuids": [
+        "019a98ca-8300-7083-a99f-f867dbf682c9",
+        "019a98ca-8300-77a5-ad1d-b36ccba982d2"
+      ]
+    },
+    {
+      "clock_ms": "1763500000000",
+      "name": "no_slot",
+      "seed": "20261119",
+      "uuids": [
+        "019a98ca-8300-7cae-bdc3-1d10c7e7db52"
+      ]
+    }
+  ]
+}

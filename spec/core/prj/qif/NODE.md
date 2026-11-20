@@ -17,7 +17,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # CORE.PRJ.QIF: Mapping of the project model onto QIF 3.0
@@ -70,6 +70,7 @@ States, field by field, how the project model (container, stages, element tree, 
 
 - Which QIF 3.0 structures best hold stages (multiple measured instances) needs a QIF-expert review [unverified]. This leaf maps each stage to one measurement-results set and keeps ordering in the extension, which REQ-CORE.PRJ-012 permits. If the review finds no sanctioned structure for per-stage results, the stage mapping moves wholly into the extension; no decision is needed unless the review rejects the extension route.
 - `IO.QIF` should declare `uses_artifacts: [CORE.PRJ.QIF]` for `mapping.md` and `fid-qif-ext.xsd` when next changed.
+- Reserve the name `qpid` in the versioned `fx` extension catalogue (`fid-qif-ext.xsd`, namespace `v1`) for the characteristic identity that `GDT.CHAR.IDENT` writes as the `fx:qpid` string attribute on QIF elements without a native QPId slot. Until it is reserved, `GDT.CHAR.IDENT` accepts an `fx:qpid` value only in its own exact lowercase UUID form. The risk of adopting a third-party value written under that name stays open.
 
 ## Children
 
