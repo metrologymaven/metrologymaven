@@ -132,6 +132,7 @@ python fixtures/unc/model/graph/make_check_fixtures.py --check
 python fixtures/unc/model/graph/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/ux/system/princ/make_fixtures.py --check
+python fixtures/ux/system/review/make_fixtures.py --check
 python fixtures/viz/viewstate-samples/make_fixtures.py --check
 python tools/check_bench_schema.py
 python tools/check_command_defs.py

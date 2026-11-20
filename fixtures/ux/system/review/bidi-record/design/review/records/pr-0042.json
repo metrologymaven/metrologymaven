@@ -1,0 +1,72 @@
+{
+  "pr": 42,
+  "artefacts": [
+    "icons/probe.svg",
+    "tokens/color.tokens.json"
+  ],
+  "principles": [
+    "P-DATA",
+    "P-NOCOLOR"
+  ],
+  "dress": [
+    {
+      "rule": "TD-01",
+      "result": "pass"
+    },
+    {
+      "rule": "TD-02",
+      "result": "pass"
+    },
+    {
+      "rule": "TD-03",
+      "result": "pass"
+    },
+    {
+      "rule": "TD-04",
+      "result": "pass"
+    },
+    {
+      "rule": "TD-05",
+      "result": "pass"
+    }
+  ],
+  "checklist": [
+    {
+      "item": "C-CONTRAST",
+      "result": "pass"
+    },
+    {
+      "item": "C-DRESS",
+      "result": "pass"
+    },
+    {
+      "item": "C-KEYBOARD",
+      "result": "pass"
+    },
+    {
+      "item": "C-NAME",
+      "result": "pass"
+    },
+    {
+      "item": "C-NOCOLOR",
+      "result": "pass"
+    },
+    {
+      "item": "C-ORIGINALITY",
+      "result": "pass"
+    },
+    {
+      "item": "C-PRINCIPLES",
+      "result": "pass"
+    }
+  ],
+  "approver": {
+    "name": "Ana \u202eLopez",
+    "principal": "human"
+  },
+  "date": "2026-11-19",
+  "digests": {
+    "icons/probe.svg": "sha256:7acac644a751bee1b0718ae0299026fd1a7dbbb30967937be1d5f5165b23c32a",
+    "tokens/color.tokens.json": "sha256:5a4094dd2eeac1a17006ad3344602da0879dc8ffeb9f3c5eb6e6d801b4cf9d6a"
+  }
+}

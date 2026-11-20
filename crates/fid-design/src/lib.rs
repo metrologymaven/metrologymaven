@@ -4,8 +4,10 @@
 //! - [`pkg`]: `pkg-check` and `pkg-diff` (`UX.SYSTEM.PKG`).
 //! - [`princ`]: `princ-check` (`UX.SYSTEM.PRINC`).
 //! - [`words`]: `words-check` (`UX.SYSTEM.PRINC`).
+//! - [`review`]: `review-check` (`UX.SYSTEM.REVIEW`).
 
 pub mod finding;
 pub mod pkg;
 pub mod princ;
+pub mod review;
 pub mod words;

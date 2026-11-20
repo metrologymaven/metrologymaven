@@ -17,10 +17,11 @@
 //! and message.
 //!
 //! The check fails closed on text that could hide a reserved word from that comparison:
-//! `WORDS-OBFUSCATED <message id>` for any invisible or formatting character (U+00AD, U+034F,
-//! U+200B..U+200F, U+202A..U+202E, U+2060..U+206F, U+FEFF), any compatibility form (U+FB00..
-//! U+FB4F, U+FF00..U+FFEF, U+1D400..U+1D7FF), or a word mixing Latin letters with Cyrillic or
-//! Greek. Ordinary accented Latin letters are not flagged. Malformed entries of either file are
+//! `WORDS-OBFUSCATED <message id>` for any invisible or formatting character ([`is_hidden`]:
+//! U+00AD, U+034F, U+061C, U+115F, U+1160, U+180E, U+200B..U+200F, U+202A..U+202E,
+//! U+2060..U+206F, U+3164, U+FE00..U+FE0F, U+FEFF, U+FFA0, U+E0000..U+E007F, U+E0100..U+E01EF),
+//! any compatibility form (U+017F, U+2100..U+214F, U+FB00..U+FB4F, U+FF00..U+FFEF,
+//! U+1D400..U+1D7FF), or a word mixing Latin letters with Cyrillic or Greek. Ordinary accented Latin letters are not flagged. Malformed entries of either file are
 //! `WORDS-SCHEMA` findings.
 //!
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable input.
@@ -87,14 +88,39 @@ fn valid_id(s: &str) -> bool {
     !s.is_empty() && s.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'.' || b == b'_')
 }
 
-/// Invisible or formatting characters that can split or hide a word.
-fn is_invisible(c: char) -> bool {
-    matches!(c, '\u{00AD}' | '\u{034F}' | '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2060}'..='\u{206F}' | '\u{FEFF}')
+/// Invisible or formatting characters that can split or hide a word: soft hyphen, combining
+/// grapheme joiner, Arabic letter mark, Hangul fillers, Mongolian vowel separator, zero-width and
+/// directional marks, bidi embeddings, overrides and isolates, word joiner and invisible
+/// operators, variation selectors, byte-order mark and tag characters. Shared by every check of
+/// this crate that refuses or ignores hidden text.
+pub fn is_hidden(c: char) -> bool {
+    matches!(
+        c,
+        '\u{00AD}'
+            | '\u{034F}'
+            | '\u{061C}'
+            | '\u{115F}'
+            | '\u{1160}'
+            | '\u{180E}'
+            | '\u{200B}'..='\u{200F}'
+            | '\u{202A}'..='\u{202E}'
+            | '\u{2060}'..='\u{206F}'
+            | '\u{3164}'
+            | '\u{FE00}'..='\u{FE0F}'
+            | '\u{FEFF}'
+            | '\u{FFA0}'
+            | '\u{E0000}'..='\u{E007F}'
+            | '\u{E0100}'..='\u{E01EF}'
+    )
 }
 
-/// Compatibility forms (ligatures, fullwidth, mathematical alphanumerics).
+/// Compatibility forms: long s, letterlike symbols, ligatures, fullwidth and halfwidth forms,
+/// mathematical alphanumerics.
 fn is_compat(c: char) -> bool {
-    matches!(c, '\u{FB00}'..='\u{FB4F}' | '\u{FF00}'..='\u{FFEF}' | '\u{1D400}'..='\u{1D7FF}')
+    matches!(
+        c,
+        '\u{017F}' | '\u{2100}'..='\u{214F}' | '\u{FB00}'..='\u{FB4F}' | '\u{FF00}'..='\u{FFEF}' | '\u{1D400}'..='\u{1D7FF}'
+    )
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -125,7 +151,7 @@ fn mixed_script(tok: &str) -> bool {
 pub fn obfuscation(text: &str) -> Vec<String> {
     let mut why = BTreeSet::new();
     for c in text.chars() {
-        if is_invisible(c) {
+        if is_hidden(c) {
             why.insert(format!("invisible or formatting character U+{:04X}", u32::from(c)));
         } else if is_compat(c) {
             why.insert(format!("compatibility form U+{:04X}", u32::from(c)));

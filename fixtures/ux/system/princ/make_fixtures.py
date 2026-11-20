@@ -144,6 +144,10 @@ COPY_OBFUSCATED = [
     {"id": "agent.m2", "text": "Cosigned and countersigned"},
     {"id": "agent.n", "text": "Verifier output"},
     {"id": "agent.o", "text": "Conformity, conformant, nonconformity, nonconformance, nonconformant"},
+    {"id": "agent.sl", "text": "ſign here"},  # long s (compatibility form)
+    {"id": "agent.lls", "text": "ℜelease now"},  # letterlike black-letter R
+    {"id": "agent.tag", "text": "approve\U000e0041"},  # tag character after the word
+    {"id": "agent.hf", "text": "approveㅤ"},  # Hangul filler inside the word
     # All-Cyrillic look-alikes are a documented gap: not flagged.
     {"id": "viz.sample.ru", "text": "Проверено"},
     {"id": "viz.sample.de", "text": "Maße bestätigt"},
@@ -249,8 +253,13 @@ EXPECTED = {
         "copy-obfuscated.jsonl": {
             "words": "shipped",
             "exit": 1,
-            "messages": 23,
+            "messages": 27,
             "findings": [
+                "WORDS-OBFUSCATED agent.sl",
+                "WORDS-OBFUSCATED agent.lls",
+                "WORDS-OBFUSCATED agent.tag",
+                "WORD-RESERVED approve agent.tag",
+                "WORDS-OBFUSCATED agent.hf",
                 "WORDS-OBFUSCATED agent.a",
                 "WORDS-OBFUSCATED agent.b",
                 "WORDS-OBFUSCATED agent.c",
@@ -477,7 +486,8 @@ def suspicious(text):
     for ch in text:
         cat = unicodedata.category(ch)
         tag = unicodedata.decomposition(ch).split(" ")[0]
-        if cat == "Cf" or ch == "͏":
+        # Hangul fillers are letters (Lo) by category but render as nothing.
+        if cat == "Cf" or ch == "͏" or ch in "ᅟᅠㅤﾠ":
             return True
         if tag in ("<wide>", "<font>") or (tag == "<compat>" and cat.startswith("L")):
             return True
