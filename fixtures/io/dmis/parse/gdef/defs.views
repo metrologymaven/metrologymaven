@@ -8,7 +8,7 @@ datum	7:1	datdef	FA(CI1)	DA(B)
 tol	8:1	tol_diam	T(D1)	def	DIAM	size	-0.05 0.05	-	-	-
 tol	9:1	tol_rad	T(R1)	def	RAD	size	-0.1 0.1	-	-	-
 tol	10:1	tol_width	T(W1)	def	WIDTH	size	-0.2 0.2	-	-	-
-tol	11:1	tol_distb	T(DB1)	def	DISTB	location	40 -0.1 0.1	NOMINL AVG	-	-
+tol	11:1	tol_distb	T(DB1)	def	DISTB	location	40 -0.1 0.1	AVG	-	-
 tol	12:1	tol_anglb	T(AB1)	def	ANGLB	location	30 -0.5 0.5	-	-	-
 tol	13:1	tol_pos	T(P1)	def	POS	location	0.2	MMC	DAT(A) DAT(B)	-
 tol	14:1	tol_concen	T(CC1)	def	CONCEN	location	0.05	-	DAT(A)	-

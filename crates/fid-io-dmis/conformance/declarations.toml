@@ -34,6 +34,7 @@ import = "partial"
 export = "none"
 tests = [
   "fid-io-dmis::gdef::ac2_results_expose_values_and_flags",
+  "fid-io-dmis::gdef::datum_actual_form_parses_and_d_label_is_rejected",
   "fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views",
 ]
 

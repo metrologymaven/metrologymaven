@@ -21,7 +21,7 @@ by one space, ``-`` when empty or absent; tokens are written with their authored
     header  <line>:<col> <class> <name> <version> <extra>
     text    <line>:<col> text <channel> <text>
     units   <line>:<col> units <length> <angle> <temp>
-    datum   <line>:<col> datdef <feature label> <datum label>
+    datum   <line>:<col> <class> <feature label> <datum label>
     feat    <line>:<col> <class> <label> def|actual <KIND> CART|POL|- INNER|OUTER|- <minor> <values> <refs>
     tol     <line>:<col> <class> <label> def|actual <KIND> <category> <values> <words> <refs> INTOL|OUTOL|-
 """
@@ -62,7 +62,9 @@ TOLERANCE = {
     "PROFL": "profile", "PROFP": "profile", "PROFS": "profile",
     "CRNOUT": "runout", "TRNOUT": "runout",
 }
-TOL_TAIL_MAX = 12
+TOL_LEAD_MAX = 4
+TOL_TAIL_MAX = 11
+MODIFIERS = {"MMC", "LMC", "RFS", "AVG", "MIN", "MAX"}
 LENGTHS = {"MM", "CM", "METER", "INCH", "FEET"}
 ANGLES = {"ANGDEC", "ANGDMS", "ANGRAD"}
 TEMPS = {"TEMPC", "TEMPF"}
@@ -190,16 +192,19 @@ def tolerance(label, f):
     actual = prefix(label) == "TA"
     need(f and kind(f[0]) == "word" and up(f[0]) in TOLERANCE)
     word = up(f[0])
-    body, flag = f[1:], "-"
+    body, flag, tail_max = f[1:], "-", TOL_TAIL_MAX
     if actual:
         need(body and is_word_in(body[-1], ("INTOL", "OUTOL")))
         flag = up(body[-1])
         body = body[:-1]
-        need(1 <= len(body) <= TOL_TAIL_MAX - 1)
-    else:
-        need(1 <= len(body) <= TOL_TAIL_MAX)
+        tail_max -= 1
+    # Every field is a number, a modifier word or a DAT label; flags are not modifiers.
     for t in body:
-        need(kind(t) in ("number", "word") or prefix(t) == "DAT")
+        need(kind(t) == "number" or is_word_in(t, MODIFIERS) or prefix(t) == "DAT")
+    numbers_at = [i for i, t in enumerate(body) if kind(t) == "number"]
+    need(numbers_at)  # at least one value
+    first = numbers_at[0]
+    need(first <= TOL_LEAD_MAX and len(body) - first - 1 <= tail_max)
     values = [t for t in body if kind(t) == "number"]
     words = [t for t in body if kind(t) == "word"]
     refs = [t for t in body if kind(t) == "label"]
@@ -220,7 +225,11 @@ def classify(label, major, f):
         need(len(f) == 2 or is_word_in(f[2], TEMPS))
         return ["units", "units", spell(f[0]), spell(f[1]), spell(f[2]) if len(f) == 3 else "-"]
     if major == "DATDEF":
-        need(label is None and len(f) == 2)
+        if label is not None:
+            # Only the DA(..) labelled form; D(..)=DATDEF is not part of this family.
+            need(prefix(label) == "DA" and len(f) == 1 and prefix(f[0]) in ("F", "FA"))
+            return ["datum", "datdef_actual", spell(f[0]), spell(label)]
+        need(len(f) == 2)
         need(prefix(f[0]) in ("F", "FA") and prefix(f[1]) in ("DAT", "DA"))
         return ["datum", "datdef", spell(f[0]), spell(f[1])]
     if major == "FEAT":
@@ -256,9 +265,33 @@ def render(data):
     return "".join("\t".join(r) + "\n" for r in rows)
 
 
+# Statements the GDEF rules must reject (hand-picked; checked on every run).
+REJECTED = [
+    b"T(X)=TOL/DIAM,0.1,INTOL\n",  # a flag is not a definition modifier
+    b"TA(X)=TOL/FLAT,MMC,OUTOL\n",  # a result needs at least one value
+    b"D(A)=DATDEF/FA(P1)\n",  # only DA(..) labels the datum form
+    b"F(C1)=FEAT/CIRCLE,CART,1,2,3,0,0,1,10\n",  # side word missing
+]
+
+
+def rejects(data):
+    st = LEX.lex(data)[0]
+    label, major, fields = split([t for t in st.tokens if kind(t) != "comment"])
+    try:
+        classify(label, major, fields)
+    except NoMatch:
+        return True
+    return False
+
+
 def main():
     check = "--check" in sys.argv[1:]
     stale = []
+    for data in REJECTED:
+        if not rejects(data):
+            raise SystemExit("rule accepts %r" % data)
+    if rejects(b"DA(A)=DATDEF/FA(P1)\n"):
+        raise SystemExit("rule rejects the DA(..)=DATDEF form")
     sources = sorted(list(HERE.glob("*.dmi")) + list(HERE.glob("*.dmo")))
     for src in sources:
         target = src.with_suffix(".views")

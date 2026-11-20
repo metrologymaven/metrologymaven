@@ -26,21 +26,28 @@
 //!   (`ROUND`, `SQUARE`, `FLAT`); `CART` or `POL`; then between `min` and `max` numbers.
 //! - **Member features** (`PATERN`, `COMPOUND`): the kind word, for `COMPOUND` an optional
 //!   word, then one or more feature labels (`F(..)` or `FA(..)`).
-//! - **Tolerances** ([`TOLERANCES`]): the kind word, then 1 to [`TOL_TAIL_MAX`] fields that
-//!   are each a number, a word or a datum label `DAT(..)`. A result (`TA`) has the same body
-//!   with one field fewer allowed, followed by the flag `INTOL` or `OUTOL` as its last field.
+//! - **Tolerances** ([`TOLERANCES`]): the kind word; up to [`TOL_LEAD_MAX`] modifier words
+//!   ([`TOL_MODIFIERS`]) or datum labels `DAT(..)`; one number (every tolerance has at least
+//!   one value); then up to [`TOL_TAIL_MAX`] further numbers, modifier words or datum labels.
+//!   A result (`TA`) allows one trailing field fewer and ends with the flag `INTOL` or
+//!   `OUTOL`. The flag words are not modifiers, so a definition cannot end with a flag and a
+//!   result's body cannot swallow it.
 //! - **Datum definition**: `DATDEF/` a feature label (`F` or `FA`), then a datum label (`DAT`
-//!   or `DA`). No label prefix on the statement.
+//!   or `DA`), with no label prefix (class `datdef`); or `DA(..)=DATDEF/` a feature label, the
+//!   datum label being the statement's own (class `datdef_actual`, the output-file form). The
+//!   form `D(..)=DATDEF/..` is not registered: `D(..)` labels name coordinate systems, which
+//!   belong to `IO.DMIS.PARSE.GEXEC` [unverified], so it is rejected as malformed.
 //! - Definitions take label prefixes `F` and `T`, actuals and results `FA` and `TA`; each is
 //!   its own statement class (`feat_circle`, `feat_circle_actual`, ...).
 //!
 //! **Step budget.** Every repeat in these shapes is followed either by the end of the
 //! statement or by a field of a kind the repeat cannot match, and every alternative lists
 //! distinct keywords or token kinds, so a failing path is abandoned at the first field that
-//! cannot match and backtracking stays linear in the field count. The only overlap is a
-//! tolerance result's last field: a body word can also be `INTOL`/`OUTOL`, which costs at most
-//! [`TOL_TAIL_MAX`] retries. Measured costs are in the `gdef` tests
-//! (`realistic_statements_stay_well_under_the_step_cap`).
+//! cannot match and backtracking stays linear in the field count. Measured costs are in the
+//! `gdef` tests (`realistic_statements_stay_well_under_the_step_cap`). A pattern or compound
+//! costs about 5 steps per member label, so one with roughly 2,000 members reaches the
+//! per-statement cap of 10^4 steps ([`crate::registry::MAX_MATCH_STEPS`]) and fails closed with
+//! `limit_exceeded{match_steps}`; 1,000 members still parse.
 //!
 //! **Not covered yet**: QPIds (REQ-IO.DMIS.PARSE.GDEF-004; the statement forms that carry them
 //! have not been confirmed), conformance module tags, and the NIST test-suite corpus
@@ -54,8 +61,13 @@ use crate::tree::{Label, Statement};
 pub const FAMILY: &str = "IO.DMIS.PARSE.GDEF";
 /// The phase of this family.
 pub const PHASE: &str = "P1a";
-/// Most fields after the kind word in a tolerance definition.
-pub const TOL_TAIL_MAX: u32 = 12;
+/// Most modifier words or datum labels before a tolerance's first number.
+pub const TOL_LEAD_MAX: u32 = 4;
+/// Most fields after a tolerance definition's first number (one fewer in a result, before
+/// its flag).
+pub const TOL_TAIL_MAX: u32 = 11;
+/// Modifier words allowed in tolerance bodies [unverified: list].
+pub const TOL_MODIFIERS: &[&str] = &["MMC", "LMC", "RFS", "AVG", "MIN", "MAX"];
 
 /// Feature kinds of this family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -250,8 +262,16 @@ fn feat_shape(spec: &FeatSpec) -> Shape {
     Shape::seq(items)
 }
 
+fn tol_lead() -> Shape {
+    Shape::alt(vec![kws(TOL_MODIFIERS), Shape::label("DAT")])
+}
+
 fn tol_item() -> Shape {
-    Shape::alt(vec![Shape::Number, Shape::AnyWord, Shape::label("DAT")])
+    Shape::alt(vec![Shape::Number, kws(TOL_MODIFIERS), Shape::label("DAT")])
+}
+
+fn tol_body(tail: u32) -> Vec<Shape> {
+    vec![Shape::repeat(tol_lead(), 0, Some(TOL_LEAD_MAX)), Shape::Number, Shape::repeat(tol_item(), 0, Some(tail))]
 }
 
 /// The descriptors of this family, in registration order.
@@ -289,6 +309,12 @@ pub fn descriptors() -> Vec<StatementDescriptor> {
                 Shape::alt(vec![Shape::label("DAT"), Shape::label("DA")]),
             ]),
         ),
+        desc(
+            "datdef_actual",
+            "DATDEF",
+            req("DA"),
+            Shape::seq(vec![Shape::alt(vec![Shape::label("F"), Shape::label("FA")])]),
+        ),
     ];
     for spec in FEATURES {
         out.push(desc(&format!("feat_{}", spec.id), "FEAT", req("F"), feat_shape(spec)));
@@ -296,12 +322,12 @@ pub fn descriptors() -> Vec<StatementDescriptor> {
     }
     for spec in TOLERANCES {
         let stem = spec.word.to_ascii_lowercase();
-        let def = Shape::seq(vec![Shape::kw(spec.word), Shape::repeat(tol_item(), 1, Some(TOL_TAIL_MAX))]);
-        let result = Shape::seq(vec![
-            Shape::kw(spec.word),
-            Shape::repeat(tol_item(), 1, Some(TOL_TAIL_MAX - 1)),
-            kws(&["INTOL", "OUTOL"]),
-        ]);
+        let mut def = vec![Shape::kw(spec.word)];
+        def.extend(tol_body(TOL_TAIL_MAX));
+        let mut result = vec![Shape::kw(spec.word)];
+        result.extend(tol_body(TOL_TAIL_MAX - 1));
+        result.push(kws(&["INTOL", "OUTOL"]));
+        let (def, result) = (Shape::seq(def), Shape::seq(result));
         out.push(desc(&format!("tol_{stem}"), "TOL", req("T"), def));
         out.push(desc(&format!("tol_{stem}{ACTUAL_SUFFIX}"), "TOL", req("TA"), result));
     }
@@ -407,9 +433,11 @@ pub struct TolView<'a> {
 /// A `DATDEF` statement.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DatumView<'a> {
+    /// True for the labelled form `DA(..)=DATDEF/..`.
+    pub actual: bool,
     /// The feature label.
     pub feature: &'a Token,
-    /// The datum label.
+    /// The datum label: the second field, or the statement's `DA(..)` label.
     pub datum: &'a Token,
 }
 
@@ -456,7 +484,13 @@ pub fn view(s: &Statement) -> Option<GdefView<'_>> {
             _ => None,
         },
         "datdef" => match *atoms(s).as_slice() {
-            [feature, datum] => Some(GdefView::Datum(DatumView { feature, datum })),
+            [feature, datum] => Some(GdefView::Datum(DatumView { actual: false, feature, datum })),
+            _ => None,
+        },
+        "datdef_actual" => match (atoms(s).as_slice(), &s.label) {
+            (&[feature], Some(label)) => {
+                Some(GdefView::Datum(DatumView { actual: true, feature, datum: &label.token }))
+            }
             _ => None,
         },
         _ => {

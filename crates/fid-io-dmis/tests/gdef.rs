@@ -241,6 +241,23 @@ fn malformed_statements_report_the_closest_class() {
     assert_eq!(strict_error(b"T(X)=FEAT/POINT,CART,1,2,3\n"), malformed(1, 1, "feat_point"));
     // A pattern needs at least one feature label.
     assert_eq!(strict_error(b"F(PA)=FEAT/PATERN,DAT(A)\n"), malformed(1, 19, "feat_patern"));
+    // A flag word is not a definition modifier: stops at `INTOL` (column 19).
+    assert_eq!(strict_error(b"T(X)=TOL/DIAM,0.1,INTOL\n"), malformed(1, 19, "tol_diam"));
+    // A result without any value: stops at `OUTOL` where the number was due (column 20).
+    assert_eq!(strict_error(b"TA(X)=TOL/FLAT,MMC,OUTOL\n"), malformed(1, 20, "tol_flat_actual"));
+}
+
+/// Hand-labelled: the labelled datum form `DA(..)=DATDEF` parses; `D(..)=DATDEF` is not part
+/// of this family and is rejected (reported against the first DATDEF class, `datdef`).
+#[test]
+fn datum_actual_form_parses_and_d_label_is_rejected() {
+    let tree = parse(b"DA(A)=DATDEF/FA(P1)\n", None).unwrap();
+    let Node::Statement(s) = &tree.statements[0] else { panic!("expected a statement") };
+    assert_eq!(&*s.class, "datdef_actual");
+    let Some(GdefView::Datum(d)) = view(s) else { panic!("expected a datum view") };
+    assert!(d.actual);
+    assert_eq!((d.feature.text.as_bytes(), d.datum.text.as_bytes()), (&b"FA(P1)"[..], &b"DA(A)"[..]));
+    assert_eq!(strict_error(b"D(A)=DATDEF/FA(P1)\n"), malformed(1, 1, "datdef"));
 }
 
 #[test]
@@ -251,8 +268,7 @@ fn every_descriptor_belongs_to_the_family_and_has_a_view() {
         assert_eq!(&*d.family, FAMILY);
         assert_eq!(&*d.phase, "P1a");
     }
-    // Every class is reached by at least one fixture or hand-labelled test, except the actual
-    // forms of kinds the fixtures do not repeat; those still have a view.
+    // Every class except `dmismd` (hand-labelled in its own test) is reached by a fixture.
     let mut seen = BTreeSet::new();
     for name in ["features.dmi", "defs.dmi", "results.dmo"] {
         for s in statements(&parse_fixture(name)) {
@@ -262,7 +278,7 @@ fn every_descriptor_belongs_to_the_family_and_has_a_view() {
     }
     for d in registry.descriptors() {
         if !seen.contains(&*d.class) {
-            assert!(d.class.ends_with("_actual") || &*d.class == "dmismd", "{} is not exercised", d.class);
+            assert_eq!(&*d.class, "dmismd", "{} is not exercised", d.class);
         }
     }
 }

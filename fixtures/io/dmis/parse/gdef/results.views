@@ -15,4 +15,28 @@ tol	14:1	tol_parlel_actual	TA(PA1)	actual	PARLEL	orientation	0.02	-	DAT(A)	INTOL
 tol	15:1	tol_profs_actual	TA(PS1)	actual	PROFS	profile	-0.12 0.08	-	DAT(A) DAT(B)	INTOL
 tol	16:1	tol_trnout_actual	TA(TR1)	actual	TRNOUT	runout	0.07	-	DAT(A) DAT(B)	OUTOL
 datum	17:1	datdef	FA(PL1)	DAT(A)
-header	18:1	endfil	-	-	-
+feat	18:1	feat_line_actual	FA(LN1)	actual	LINE	CART	-	UNBND	0.01 0 0 50.02 0 0 0 0 1	-
+feat	19:1	feat_arc_actual	FA(AR1)	actual	ARC	POL	OUTER	-	30.01 44.98 0 0 0 1 8.003 0 90	-
+feat	20:1	feat_cone_actual	FA(CO1)	actual	CONE	CART	OUTER	-	0 0 0.02 0 0 1 29.97	-
+feat	21:1	feat_sphere_actual	FA(SP1)	actual	SPHERE	CART	OUTER	-	0.01 0 50.01 25.392	-
+feat	22:1	feat_ellips_actual	FA(EL1)	actual	ELLIPS	CART	INNER	-	0 0 0 0 0 1 1 0 0 20.01 9.98	-
+feat	23:1	feat_cparln_actual	FA(SL1)	actual	CPARLN	CART	INNER	ROUND	0 0 0 0 0 1 1 0 0 40.03 10.01	-
+feat	24:1	feat_torus_actual	FA(TO1)	actual	TORUS	CART	OUTER	-	0 0 0 0 0 1 60.02 7.99	-
+feat	25:1	feat_edgept_actual	FA(EP1)	actual	EDGEPT	CART	-	-	5.004 0 0 0 0 1 1 0 0	-
+feat	26:1	feat_gcurve_actual	FA(GC1)	actual	GCURVE	CART	-	-	1.001 2 3 0 0 1	-
+feat	27:1	feat_gsurf_actual	FA(GS1)	actual	GSURF	POL	-	-	10.002 30 0	-
+feat	28:1	feat_compound_actual	FA(CP1)	actual	COMPOUND	-	-	AXIAL	-	FA(CI1) FA(CY1)
+tol	29:1	tol_width_actual	TA(W1)	actual	WIDTH	size	0.05	-	-	INTOL
+tol	30:1	tol_distb_actual	TA(DB1)	actual	DISTB	location	40.08	AVG	-	INTOL
+tol	31:1	tol_anglb_actual	TA(AB1)	actual	ANGLB	location	30.7	-	-	OUTOL
+tol	32:1	tol_concen_actual	TA(CC1)	actual	CONCEN	location	0.03	-	DAT(A)	INTOL
+tol	33:1	tol_strght_actual	TA(S1)	actual	STRGHT	form	0.004	-	-	INTOL
+tol	34:1	tol_cirlty_actual	TA(C1)	actual	CIRLTY	form	0.021	-	-	OUTOL
+tol	35:1	tol_cylcty_actual	TA(Y1)	actual	CYLCTY	form	0.012	-	-	INTOL
+tol	36:1	tol_perpnd_actual	TA(PE1)	actual	PERPND	orientation	0.06	-	DAT(A)	OUTOL
+tol	37:1	tol_anglr_actual	TA(AN1)	actual	ANGLR	orientation	0.04	-	DAT(B)	INTOL
+tol	38:1	tol_profl_actual	TA(PL1)	actual	PROFL	profile	-0.05 0.04	-	DAT(A)	INTOL
+tol	39:1	tol_profp_actual	TA(PP1)	actual	PROFP	profile	0.11	-	-	INTOL
+tol	40:1	tol_crnout_actual	TA(CR1)	actual	CRNOUT	runout	0.02	MMC	DAT(A)	INTOL
+datum	41:1	datdef_actual	FA(PL1)	DA(A)
+header	42:1	endfil	-	-	-

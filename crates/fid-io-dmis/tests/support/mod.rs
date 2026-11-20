@@ -7,6 +7,7 @@ use std::path::Path;
 /// in `tests/*.rs`, in the format of `cargo test -- --list`. CI checks the same claims against
 /// the real `--list` inventory of the whole workspace; this lets a single-crate test run check
 /// that each declared test exists without compiling the workspace.
+// The scan can over-count cfg-gated, ignored or commented-out tests; CI's real `--list` step is the authoritative gate.
 pub fn crate_test_inventory() -> String {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
     let mut files: Vec<_> = std::fs::read_dir(&dir)
