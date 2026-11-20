@@ -1,0 +1,28 @@
+{
+  "sem": {
+    "$type": "color",
+    "status": {
+      "conforms": {
+        "$value": "{prim.color.fix.conforms-light}"
+      },
+      "indeterminate": {
+        "$value": "{prim.color.fix.indeterminate-light}"
+      },
+      "nonconforms": {
+        "$value": "{prim.color.fix.nonconforms-light}"
+      },
+      "not-decidable": {
+        "$value": "{prim.color.fix.not-decidable-light}"
+      },
+      "not-evaluated": {
+        "$value": "{prim.color.fix.not-evaluated-light}"
+      },
+      "pending": {
+        "$value": "{prim.color.fix.stale-light}"
+      },
+      "stale": {
+        "$value": "{prim.color.fix.stale-light}"
+      }
+    }
+  }
+}

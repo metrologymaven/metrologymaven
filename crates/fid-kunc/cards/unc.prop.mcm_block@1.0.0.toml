@@ -1,0 +1,16 @@
+# Spec card (UNC.PROP.MCM.BLOCK). Cite designators and clause numbers only; never paste standards text.
+id = "unc.prop.mcm_block@1.0.0"
+title = "Monte Carlo trial block: counter-addressed sampling and per-trial kernel evaluation"
+method = "For each global trial index t of the block (block_index * block_size up to the next block), every input is drawn from its UNC.MODEL.DIST distribution at RNG address (seed, input ordinal in ID order, t); a correlation group of normal inputs is drawn as one multivariate normal at the stream of its first input. Every operator of the validated model is then evaluated once, in Kahn order, through the kernel call interface, with one little-endian double blob per input port. A trial whose sample or output is NaN or infinite, or whose algorithm fails, is recorded by index with its code and excluded; the block continues. The output columns depend only on (model digest, inputs digest, seed, block index, block size)."
+applicability = "Validated Uncertainty Models whose operators are in the running kernel's table and whose release manifest is bound to the kernel's compiled-in core digest; scalar values on every edge; correlation groups only of normal inputs. The bound model and the sampling plan are the two data inputs; the block spec is the parameter set."
+references = [
+  "JCGM 101:2008 (GUM Supplement 1), clauses 7.2 to 7.4 (propagation of distributions by Monte Carlo trials) [unverified: clause numbering]",
+]
+determinism = "D2"
+input_arity = "2"
+failure_modes = [
+  "A model whose release manifest, kernel core digest or validation manifest disagree is refused before any trial (provenance).",
+  "Kernel errors that do not depend on the trial (floating-point environment, lookup, card, arity, parameters) end the block instead of being counted as trial failures.",
+  "Correlation groups with a non-normal member are refused: no copula is specified.",
+]
+validation = "Samples, failed trial indices, output values and the model and inputs digests against an independent stdlib-Python oracle (fixtures/unc/mcm/block/make_fixtures.py); block-order and thread-count independence and per-target bit pins (x86-64, ARM64, wasm32) of the canonical block bytes; Kolmogorov-Smirnov rejection counts of the rectangular-input additive model over 100 seeds within the exact two-sided 99 % binomial band of Binomial(100, 0.01)."

@@ -1,0 +1,24 @@
+[package]
+name = "fid-net"
+description = "Metrology Maven network facade: every socket-opening function takes the bus's NetPermit, issued only to an executing X1, I1 or D1 command (spec node CORE.BUS.POL.EGRESS)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# The permit type lives in the bus, which alone can issue it (crate-private constructor), so no
+# other crate can forge one. Engine layer, same as this crate.
+fid-bus = { path = "../fid-bus" }
+
+[dev-dependencies]
+# Tests mint permits through the bus's `permit-test-hooks` feature, which only
+# `[dev-dependencies]` may enable (fid-bus `tests/test_hooks.rs` checks every crate).
+fid-bus = { path = "../fid-bus", features = ["permit-test-hooks"] }
+fid-canon = { path = "../fid-canon" }
+fid-registry = { path = "../fid-registry" }
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
