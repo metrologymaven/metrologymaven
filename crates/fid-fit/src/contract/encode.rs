@@ -205,6 +205,15 @@ fn feature(o: &mut Out, feat: &FittedFeature) -> Result<(), FitError> {
     o.s("}")
 }
 
+/// The canonical bytes of one feature: the `"feature"` object of [`encode`] (module
+/// documentation), on its own. Used as the feature key and in the rocking report
+/// (`tan_rock`). Allocation failure is [`FitError::Num`]; nothing else fails.
+pub fn encode_feature(feat: &FittedFeature) -> Result<Vec<u8>, FitError> {
+    let mut o = Out { buf: Vec::new() };
+    feature(&mut o, feat)?;
+    Ok(o.buf)
+}
+
 /// The canonical bytes of `r` (module documentation). Deterministic: the same value gives the
 /// same bytes on every target. Allocation failure is [`FitError::Num`]; nothing else fails.
 pub fn encode(r: &FitResult) -> Result<Vec<u8>, FitError> {
