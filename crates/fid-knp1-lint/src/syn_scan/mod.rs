@@ -757,6 +757,8 @@ struct Scan<'a> {
     partner: Vec<usize>,
     in_use: Vec<bool>,
     in_attr: Vec<bool>,
+    /// Tokens inside a `macro_rules!` body or `macro` item (a code template).
+    in_template: Vec<bool>,
     aliases: BTreeMap<String, Vec<Vec<String>>>,
     /// Token indices of facade-path `KNP1-LIBM` names (never findings there).
     exempt: BTreeSet<usize>,
@@ -779,6 +781,7 @@ impl<'a> Scan<'a> {
             partner: vec![usize::MAX; n],
             in_use: vec![false; n],
             in_attr: vec![false; n],
+            in_template: vec![false; n],
             aliases: BTreeMap::new(),
             exempt: BTreeSet::new(),
             hits: BTreeMap::new(),
@@ -1535,6 +1538,7 @@ impl<'a> Scan<'a> {
                 }
             }
         }
+        self.in_template.clone_from(&in_template);
         for i in 0..n {
             let Some(name) = self.ident(i) else { continue };
             let prev = i.checked_sub(1).and_then(|p| self.kind(p));
@@ -1570,6 +1574,13 @@ impl<'a> Scan<'a> {
                             format!("`{name}` in a macro transcriber: a code template naming a banned item")
                         } else {
                             format!("`{name}` passed to a macro or a metavariable: it may be called")
+                        };
+                        // Never waivable: in a template a relative path resolves at the call
+                        // site, and a code `include` of an unknown argument is unscanned code.
+                        let rule = if kind == P::IncludeMacro && (template || name == "include") {
+                            &Rule::Include
+                        } else {
+                            rule
                         };
                         if *rule == Rule::Libm {
                             self.libm(i, m);
@@ -1667,9 +1678,14 @@ impl<'a> Scan<'a> {
             }
         }
         if name == "path" && self.in_attr.get(i).copied().unwrap_or(false) && self.is(i + 1, &Kind::Eq) {
-            for (rule, pat) in patterns(P::Attr) {
-                if pat == name && !self.safe_include(i + 2, None) {
-                    self.hit(i, rule, "`#[path]` names a file the scan does not list".to_string());
+            for (_, pat) in patterns(P::Attr) {
+                if pat != name {
+                    continue;
+                }
+                if self.templated(i) {
+                    self.hit(i, &Rule::Include, "`#[path]` inside a macro template".to_string());
+                } else if !self.safe_include(i + 2, None) {
+                    self.hit(i, &Rule::Include, "`#[path]` names a file the scan does not list".to_string());
                 }
             }
         }
@@ -1684,11 +1700,22 @@ impl<'a> Scan<'a> {
         for (rule, pat) in patterns(P::IncludeMacro) {
             if pat == name {
                 let close = self.partner.get(i + 2).copied().unwrap_or(usize::MAX);
-                if !self.safe_include(i + 3, Some(close)) {
+                if self.templated(i) {
+                    // rustc resolves the path against the outermost call site, not this file.
+                    let m = format!("`{name}!` inside a macro template: its path resolves at the call site");
+                    self.hit(i, &Rule::Include, m);
+                } else if !self.safe_include(i + 3, Some(close)) {
+                    // Code the scan does not see is never waivable; data stays KNP1-IO-FS.
+                    let rule = if name == "include" { &Rule::Include } else { rule };
                     self.hit(i, rule, format!("`{name}!` of a file the scan does not list"));
                 }
             }
         }
+    }
+
+    /// True when token `i` lies inside a `macro_rules!` body or `macro` item.
+    fn templated(&self, i: usize) -> bool {
+        self.in_template.get(i).copied().unwrap_or(false)
     }
 
     /// True when token `i` is a plain string literal naming a `.rs` file that this scan lists

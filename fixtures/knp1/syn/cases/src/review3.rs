@@ -13,7 +13,7 @@ pub fn calls() {
     inner!(env ("SECRET")); //~ KNP1-ENV=env
     inner!(option_env ("X")); //~ KNP1-ENV=option_env
     inner!(include_str ("data.txt")); //~ KNP1-IO-FS=include_str
-    inner!(include ("gen.in")); //~ KNP1-IO-FS=include
+    inner!(include ("gen.in")); //~ KNP1-INCLUDE=include
     inner!(include_bytes ("table.bin")); //~ KNP1-IO-FS=include_bytes
     inner!(thread_local { static K: u8 = 0; }); //~ KNP1-THREAD=thread_local
 }

@@ -258,7 +258,7 @@ aarch64-unknown-linux-gnu KNP1-THREAD method 113
 aarch64-unknown-linux-gnu KNP1-THREAD type 126
 aarch64-unknown-linux-gnu KNP1-THREAD type 127
 aarch64-unknown-linux-gnu KNP1-THREAD type 128
-syn KNP1-IO-FS macro 133
+syn KNP1-INCLUDE macro 133
 wasm32-unknown-unknown KNP1-CLOCK method 85
 wasm32-unknown-unknown KNP1-CLOCK method 86
 wasm32-unknown-unknown KNP1-CLOCK type 124

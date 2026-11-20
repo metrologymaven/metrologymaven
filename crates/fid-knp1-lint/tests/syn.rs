@@ -475,14 +475,14 @@ fn include_and_path_targets_must_be_listed_source() {
     let s = |src: &str| short(&scan_file(f, src.as_bytes(), &cfg).findings);
     assert!(s("include!(\"gen.rs\");").is_empty());
     assert!(s("#[path = \"gen.rs\"] mod g;").is_empty());
-    assert_eq!(s("include!(\"other.rs\");"), ["KNP1-IO-FS@1:1"]);
-    assert_eq!(s("include!(\"./gen.rs\");"), ["KNP1-IO-FS@1:1"]);
-    assert_eq!(s("include!(\"gen.rs\", x);"), ["KNP1-IO-FS@1:1"]);
-    assert_eq!(s("include!(concat!(\"gen\", \".rs\"));"), ["KNP1-IO-FS@1:1"]);
+    assert_eq!(s("include!(\"other.rs\");"), ["KNP1-INCLUDE@1:1"]);
+    assert_eq!(s("include!(\"./gen.rs\");"), ["KNP1-INCLUDE@1:1"]);
+    assert_eq!(s("include!(\"gen.rs\", x);"), ["KNP1-INCLUDE@1:1"]);
+    assert_eq!(s("include!(concat!(\"gen\", \".rs\"));"), ["KNP1-INCLUDE@1:1"]);
     assert_eq!(s("include_str!(\"gen.rs\"suffix);"), ["KNP1-IO-FS@1:1"]);
-    assert_eq!(s("#[path = \"/abs/gen.rs\"] mod g;"), ["KNP1-IO-FS@1:3"]);
-    assert_eq!(s("#[cfg_attr(unix, path = \"bin/x.rs\")] mod g;"), ["KNP1-IO-FS@1:18"]);
-    assert_eq!(s("include!(env!(\"OUT_DIR\"));"), ["KNP1-IO-FS@1:1", "KNP1-ENV@1:10"]);
+    assert_eq!(s("#[path = \"/abs/gen.rs\"] mod g;"), ["KNP1-INCLUDE@1:3"]);
+    assert_eq!(s("#[cfg_attr(unix, path = \"bin/x.rs\")] mod g;"), ["KNP1-INCLUDE@1:18"]);
+    assert_eq!(s("include!(env!(\"OUT_DIR\"));"), ["KNP1-INCLUDE@1:1", "KNP1-ENV@1:10"]);
 }
 
 #[test]
@@ -643,5 +643,55 @@ fn syn_guards_the_typed_canary_rows_clippy_cannot_see() {
             "the syntax scan misses canary row `{w}`: {:#?}",
             out.findings.iter().filter(|f| f.line == line).collect::<Vec<_>>()
         );
+    }
+}
+
+#[test]
+fn include_in_a_macro_template_is_never_safe() {
+    // #288 re-review: `include!("bin/sub/x.rs")` in a `macro_rules!` of `src/a/m.rs` names the
+    // listed `src/a/bin/sub/x.rs` relative to that file, but rustc resolves it against the call
+    // site (`src/lib.rs`) and includes the excluded `src/bin/sub/x.rs`.
+    let dir = "syn/tmpl-include";
+    let root = fix(dir);
+    let files = enumerate_files(&root, &["src/bin/**".to_string()], &BTreeSet::new()).unwrap();
+    assert!(files.contains(&"src/a/bin/sub/x.rs".to_string()) && !files.contains(&"src/bin/sub/x.rs".to_string()));
+    let mut e = entry("knp1-syn-tmpl-include", "0.0.1", dir);
+    e.files = files;
+    let out = scan(vec![e], &Config::default());
+    assert_eq!(lines(&out.findings), ["KNP1-INCLUDE knp1-syn-tmpl-include 0.0.1 src/a/m.rs:4:9"]);
+    assert!(out.findings[0].message.contains("macro t"), "{}", out.findings[0].message);
+    assert!(!out.findings[0].rule.is_waivable());
+}
+
+#[test]
+fn unscanned_code_includes_are_never_waivable_and_data_includes_stay_waivable() {
+    let out = one(concat!(
+        "macro_rules! t { () => { include_str!(\"lib.rs\"); include_bytes!(\"lib.rs\"); } }\n",
+        "macro_rules! p { () => { #[path = \"lib.rs\"] mod q; } }\n",
+        "pub fn a() { include!(\"gen.in\") }\n",
+        "pub fn b() -> &'static str { include_str!(\"data.txt\") }\n",
+        "pub fn c() -> &'static [u8] { include_bytes!(\"data.bin\") }\n",
+        "#[path = \"x/other.rs\"] mod other;\n",
+        "pub fn d() { include!(\"lib.rs\") }\n",
+    ));
+    let got: Vec<String> = out.findings.iter().map(|f| format!("{} {}:{}", f.rule, f.line, f.column)).collect();
+    assert_eq!(
+        got,
+        [
+            // In templates: every include-family macro and `#[path]`, even of a listed file.
+            "KNP1-INCLUDE 1:26",
+            "KNP1-INCLUDE 1:50",
+            "KNP1-INCLUDE 2:28",
+            // A code `include!` of an unlisted file.
+            "KNP1-INCLUDE 3:14",
+            // Data: waivable KNP1-IO-FS (the type-aware check reports these too).
+            "KNP1-IO-FS 4:30",
+            "KNP1-IO-FS 5:31",
+            // `#[path]` of an unlisted file is code.
+            "KNP1-INCLUDE 6:3",
+        ]
+    );
+    for f in &out.findings {
+        assert_eq!(f.rule.is_waivable(), f.rule == Rule::IoFs, "{f:?}");
     }
 }

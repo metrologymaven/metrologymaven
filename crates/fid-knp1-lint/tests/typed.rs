@@ -463,7 +463,8 @@ fn every_table_row_is_guarded_by_some_lint() {
             .iter()
             .filter_map(|h| {
                 let x: Vec<&str> = h.split_whitespace().collect();
-                (x[1] == rule && x[2] == kind && x[3] == line).then(|| x[0].to_string())
+                // A `syn` line carries the syntax scan's rule, which may differ from the row's.
+                ((x[0] == "syn" || x[1] == rule) && x[2] == kind && x[3] == line).then(|| x[0].to_string())
             })
             .collect();
         assert!(!g.is_empty(), "row {row} (line {line}) is guarded by no lint");

@@ -37,7 +37,7 @@ const MAX_RULE_SUFFIX: usize = 48;
 // ------------------------------------------------------------------ rules
 
 /// Fixed rule IDs and their one-line descriptions, in catalogue order.
-const FIXED: [(&str, &str); 15] = [
+const FIXED: [(&str, &str); 16] = [
     ("KNP1-FMA", "fused multiply-add: `mul_add` or an FMA intrinsic"),
     ("KNP1-POW", "`powi`/`powf` and other std float powers outside the fid-num facade"),
     ("KNP1-LIBM", "std or libm transcendental function outside the fid-num facade"),
@@ -53,6 +53,7 @@ const FIXED: [(&str, &str); 15] = [
     ("KNP1-PARSE", "source file the syntax scan cannot lex or classify (never waivable)"),
     ("KNP1-PARSE-RESOLVE", "use tree, alias or macro metavariable the syntax scan cannot resolve"),
     ("KNP1-CFG", "cfg predicate on `clippy` or `debug_assertions`: code hidden from the lint or profile-dependent (never waivable)"),
+    ("KNP1-INCLUDE", "`include!` or `#[path]` of source the syntax scan does not list, or an `include`-family macro or `#[path]` inside a macro template: unscanned code (never waivable)"),
 ];
 
 /// Rule families with a free suffix, their prefixes and descriptions.
@@ -85,6 +86,9 @@ pub enum Rule {
     ParseResolve,
     /// `KNP1-CFG`: a `clippy` or `debug_assertions` cfg predicate (KRN.NUM.LINT.SYN).
     Cfg,
+    /// `KNP1-INCLUDE`: source pulled in that the syntax scan does not list, or an
+    /// `include`-family macro or `#[path]` inside a macro template (KRN.NUM.LINT.SYN).
+    Include,
     /// `KNP1-FLAG-<suffix>`.
     Flag(String),
     /// `KNP1-ALLOW-<suffix>`.
@@ -96,7 +100,7 @@ pub enum Rule {
 }
 
 impl Rule {
-    const FIXED_RULES: [Rule; 15] = [
+    const FIXED_RULES: [Rule; 16] = [
         Rule::Fma,
         Rule::Pow,
         Rule::Libm,
@@ -112,6 +116,7 @@ impl Rule {
         Rule::Parse,
         Rule::ParseResolve,
         Rule::Cfg,
+        Rule::Include,
     ];
 
     fn fixed_index(&self) -> Option<usize> {
@@ -151,6 +156,7 @@ impl Rule {
         !matches!(self, Rule::Flag(s) if s.starts_with("WASM") || s == "WRAPPER")
             && *self != Rule::Parse
             && *self != Rule::Cfg
+            && *self != Rule::Include
             && !matches!(self, Rule::Typed(_))
     }
 
