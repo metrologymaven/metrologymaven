@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-gdt]
 satisfies: [REQ-GDT.RES.ROWFLOW-002, REQ-GDT.RES.ROWFLOW-003, REQ-GDT.RES.ROWFLOW-005]
 covers: []
 depends_on: [GDT.RES.SCHEMA, CORE.JRN.CANON]

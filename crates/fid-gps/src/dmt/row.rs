@@ -562,6 +562,32 @@ impl DmtRow {
     }
 }
 
+/// Name of the only row field the content digest leaves out (REQ-GDT.RES.STATUS-001).
+pub const CONTENT_DIGEST_EXCLUDED: &str = "review";
+
+impl DmtRow {
+    /// The row's content as a JSON value: [`DmtRow::to_cvalue`] without `review`, so every
+    /// other field (including `synthetic`, and any field the schema adds later) is covered.
+    pub fn content_cvalue(&self) -> CValue {
+        match self.to_cvalue() {
+            CValue::Obj(mut fields) => {
+                fields.remove(CONTENT_DIGEST_EXCLUDED);
+                CValue::Obj(fields)
+            }
+            other => other,
+        }
+    }
+}
+
+/// The content digest of a DMT row (REQ-GDT.RES.STATUS-001, D-045): SHA-256 of the RFC 8785
+/// canonical JSON of every `DmtRow` field except `review`. It is always recomputed from the
+/// row itself; review state never changes it, and any other field does. The canonical writer
+/// cannot fail on a row (strings, booleans, arrays and objects only); if it ever did, the
+/// error is returned rather than a digest.
+pub fn row_content_digest(row: &DmtRow) -> Result<Digest, DmtError> {
+    canonical_and_digest(&row.content_cvalue()).map(|(_, d)| d)
+}
+
 fn obj<const N: usize>(fields: [(&str, CValue); N]) -> CValue {
     CValue::Obj(fields.into_iter().map(|(k, v)| (k.to_owned(), v)).collect())
 }

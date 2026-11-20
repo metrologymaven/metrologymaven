@@ -1,0 +1,70 @@
+{
+ "version": "dmt-reviewers/v1",
+ "entries": [
+  {
+   "id": "r1",
+   "display_name": "Reviewer One (fictional)",
+   "principals": [
+    "human:rev-one"
+   ],
+   "dialects": [
+    "asme",
+    "iso"
+   ],
+   "basis": "community",
+   "valid_from": "2026-01-01"
+  },
+  {
+   "id": "r2",
+   "display_name": "Reviewer Two (fictional)",
+   "principals": [
+    "human:rev-two"
+   ],
+   "dialects": [
+    "asme",
+    "iso"
+   ],
+   "basis": "partner",
+   "valid_from": "2026-01-01"
+  },
+  {
+   "id": "r3",
+   "display_name": "Reviewer Three (fictional)",
+   "principals": [
+    "human:rev-three"
+   ],
+   "dialects": [
+    "iso"
+   ],
+   "basis": "community",
+   "valid_from": "2026-01-01"
+  },
+  {
+   "id": "r4",
+   "display_name": "Author Four (fictional)",
+   "principals": [
+    "human:author-four",
+    "human:author-four-alt"
+   ],
+   "dialects": [
+    "asme"
+   ],
+   "basis": "paid_author",
+   "valid_from": "2026-01-01"
+  },
+  {
+   "id": "r5",
+   "display_name": "Reviewer Five (fictional)",
+   "principals": [
+    "human:rev-five",
+    "human:rev-five-alt"
+   ],
+   "dialects": [
+    "asme"
+   ],
+   "basis": "community",
+   "valid_from": "2026-01-01",
+   "valid_until": "2026-11-01"
+  }
+ ]
+}
