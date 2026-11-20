@@ -1,0 +1,29 @@
+{
+  "comp": {
+    "$type": "color",
+    "table": {
+      "bg": {
+        "header": {
+          "$description": "Header row fill.",
+          "$value": "{sem.surface.sunken}"
+        },
+        "selected": {
+          "$description": "Selected row fill.",
+          "$value": "{sem.brand.subtle}"
+        }
+      },
+      "border": {
+        "row": {
+          "$description": "Row divider.",
+          "$value": "{sem.border.subtle}"
+        }
+      },
+      "fg": {
+        "header": {
+          "$description": "Header row text.",
+          "$value": "{sem.text.secondary}"
+        }
+      }
+    }
+  }
+}

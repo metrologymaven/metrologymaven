@@ -42,8 +42,16 @@ use fid_project::Uuid;
 use fid_types::Digest;
 use std::collections::BTreeMap;
 
-/// Wire schema of a GDT ResultRecord.
+/// Wire schema of a GDT ResultRecord without the interpretation block.
 pub const RESULT_RECORD_SCHEMA: &str = "fid.gdt-result/1";
+/// Wire schema of a GDT ResultRecord with the interpretation block (`GDT.CHAR.INTERP`). Its
+/// value fields and evidence read like `/1`, and it must carry `interpretation`,
+/// `interpretation_rules` and `interpretation_register` (`record interpretation` otherwise).
+/// Whether it needs the provisional label is `fid_gdt::requires_provisional_label_bytes`,
+/// read into [`Evidence::is_provisional`]; a `/1` record always does.
+pub const RESULT_RECORD_SCHEMA_V2: &str = "fid.gdt-result/2";
+/// The interpretation fields a `/2` record must carry.
+const INTERPRETATION_FIELDS: [&str; 3] = ["interpretation", "interpretation_register", "interpretation_rules"];
 /// The value field of a `fid.gdt-result/1` record.
 pub const RECORD_VALUE_FIELD: &str = "/value";
 /// Largest stored record or statement this module reads, in bytes.
@@ -269,6 +277,8 @@ pub struct Evidence {
     reason: Option<String>,
     /// Whether the referenced statement was parsed and agrees with the record's facts.
     statement_checked: bool,
+    /// Whether the result must carry the provisional interpretation label (D-045).
+    provisional: bool,
 }
 
 /// The measurement methods: an evaluation from data, not a claim (`DECLARED`,
@@ -315,6 +325,12 @@ impl Evidence {
     /// facts agree with the record's (false for a record without a statement).
     pub fn statement_checked(&self) -> bool {
         self.statement_checked
+    }
+    /// Whether the result must show the provisional interpretation label (D-045), from
+    /// `fid_gdt::requires_provisional_label_bytes` on the stored bytes: true for every `/1`
+    /// record and for any `/2` record that is not signed off.
+    pub fn is_provisional(&self) -> bool {
+        self.provisional
     }
     /// Whether the value may be shown as measured: evaluated from points or features, with an
     /// evaluated (UEC-1..3) uncertainty from a measurement method ([`MEASUREMENT_METHODS`]),
@@ -559,8 +575,14 @@ fn read_record(bytes: &[u8]) -> Result<(Vec<ValueField>, Evidence), LookupFault>
         return Err(LookupFault::Invalid("record not canonical"));
     }
     let CValue::Obj(o) = &v else { return Err(bad) };
-    if o.get("schema") != Some(&CValue::Str(RESULT_RECORD_SCHEMA.to_string())) {
-        return Err(LookupFault::Invalid("record schema"));
+    match o.get("schema") {
+        Some(CValue::Str(s)) if s == RESULT_RECORD_SCHEMA => {}
+        Some(CValue::Str(s)) if s == RESULT_RECORD_SCHEMA_V2 => {
+            if INTERPRETATION_FIELDS.iter().any(|k| !o.contains_key(*k)) {
+                return Err(LookupFault::Invalid("record interpretation"));
+            }
+        }
+        _ => return Err(LookupFault::Invalid("record schema")),
     }
     let Some(CValue::Obj(value)) = o.get("value") else { return Err(bad) };
     let (Some(CValue::Str(bits)), Some(CValue::Str(unit)), 2) = (value.get("value"), value.get("unit"), value.len())
@@ -615,6 +637,7 @@ fn read_record(bytes: &[u8]) -> Result<(Vec<ValueField>, Evidence), LookupFault>
         rule: opt_str(dec, "rule")?,
         reason: opt_str(dec, "reason")?,
         statement_checked: false,
+        provisional: fid_gdt::requires_provisional_label_bytes(bytes),
     };
     let field =
         ValueField { field: RECORD_VALUE_FIELD, quantity: Quantity::new(SiValue::from_bits(bits), unit), statement };

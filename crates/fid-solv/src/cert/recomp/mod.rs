@@ -131,7 +131,7 @@ impl Default for RecompConfig {
 }
 
 impl RecompConfig {
-    fn check(&self) -> Result<(), CertError> {
+    pub(crate) fn check(&self) -> Result<(), CertError> {
         let ok = self.rel_tol.is_finite()
             && (0.0..1.0).contains(&self.rel_tol)
             && self.cond_max.is_finite()

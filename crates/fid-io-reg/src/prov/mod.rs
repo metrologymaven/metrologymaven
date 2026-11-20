@@ -150,8 +150,8 @@ fn bounded_text(field: &'static str, text: UntrustedText, max: usize) -> Result<
 
 // ------------------------------------------------------------------ names and versions
 
-/// A reader ID: the same alphabet as [`FormatId`] (1 to 64 bytes of `a-z`, `0-9`, `-`, `_`
-/// and `.`, starting with a letter or digit).
+/// A reader ID: the same alphabet as [`FormatId`] (1 to 64 bytes of `a-z`, `0-9`, `-` and
+/// `.`, starting with a letter or digit).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ReaderId(String);
 

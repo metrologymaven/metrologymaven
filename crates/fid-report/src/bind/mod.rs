@@ -46,6 +46,7 @@ pub use error::BindError;
 pub use journal::{
     AtHead, EntityKind, EntityView, Evidence, EvidenceClass, HeadLookup, JournalReads, Journaled, Lookup, LookupFault,
     MemoryJournal, Outcome, ResultView, StatementBytes, ValueField, RECORD_VALUE_FIELD, RESULT_RECORD_SCHEMA,
+    RESULT_RECORD_SCHEMA_V2,
 };
 pub use model::{
     Binding, FieldId, JournalHead, Quantity, QuantityUnit, Ref, RefKind, ValueBinding, BINDING_KEY, BINDING_SCHEMA,

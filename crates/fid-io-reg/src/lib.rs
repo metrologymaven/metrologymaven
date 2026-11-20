@@ -5,7 +5,9 @@
 //! `IO.REG.WRITE`, the atomic export write path ([`write`], [`AtomicWriter`]), and
 //! `IO.REG.DETECT`, the format registry, its listing commands and the content-signature
 //! detector ([`detect`], [`Registry`]), and `IO.REG.PROV`, source provenance with unit
-//! and frame capture ([`prov`], [`SourceProvenance`], [`HashingSource`], [`resolve_unit`]).
+//! and frame capture ([`prov`], [`SourceProvenance`], [`HashingSource`], [`resolve_unit`]),
+//! and `IO.REG.ENV.EXPORT`, the generic export command `export.file@1` and the export
+//! skeleton with its conformance kit ([`env::export`]).
 //!
 //! - [`Limits`] with documented defaults; [`LimitRequest`] overrides may only lower a
 //!   limit unless the [`Principal`] is a human (`limit_raise_forbidden` otherwise);
@@ -22,6 +24,7 @@
 
 mod budget;
 pub mod detect;
+pub mod env;
 mod error;
 mod limits;
 pub mod prov;

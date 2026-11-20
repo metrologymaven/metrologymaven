@@ -19,7 +19,7 @@ determinism: D0
 cli: [fid import list-formats, fid export list-formats]
 mcp: [import_list_formats, export_list_formats]
 journal: [import.list_formats@1, export.list_formats@1]
-updated: 2026-11-16
+updated: 2026-11-20
 ---
 
 # IO.REG.DETECT: Format registry listing and content-signature detection
@@ -63,6 +63,7 @@ The in-memory registry of format descriptors (first-party and plugin), the two R
 ## Design
 
 - **Registry commands:** `import.list_formats@1` and `export.list_formats@1`, R0, no parameters except optional `origin` filter (`first_party|plugin|any`), result `Vec<FormatDescriptor>`.
+- **Format ID:** matches `^[a-z0-9][a-z0-9.-]{0,63}$`: lowercase letters, digits, `-` and `.`, no `_`. The export command `export.<format>@1` writes `-` as `_` (IO.REG.ENV.EXPORT), so without `_` in format IDs that mapping names one format only. The same check (`is_format_id`) also governs IO.REG.PROV's `ReaderId`. No registered or fixture format ID uses `_`.
 - **Data structures:** `FormatDescriptor { id: FormatId, versions: VersionRange, signatures: Vec<Signature>, extensions: Vec<String>, options_schema: JsonSchema, phase, origin, direction }`; `Signature { offset: u32, bytes: Vec<u8> | Predicate, priority: u8 }`. A `Predicate` is a named, pure, first-party function over the prefix (e.g. binary-STL size consistency needs the total file length, passed in as a parameter).
 - **Algorithm:** collect matching descriptors in registration order; sort by (priority desc, id asc); apply REQ-003..005. Registry storage is a `BTreeMap` keyed by `(FormatId, Direction)`.
 - **Errors:** `format_unknown`, `format_ambiguous`, `format_mismatch`, `format_duplicate` (variants of the `IO.REG.LIMITS` taxonomy).

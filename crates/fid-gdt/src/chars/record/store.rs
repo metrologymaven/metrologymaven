@@ -79,6 +79,19 @@ impl ResultStore {
     }
 }
 
+/// The record of (`run`, `char`) as `principal` sees it, with the ID grammar checks of
+/// [`get_result`] (`invalid_field{run}`, `invalid_field{char}`, `not_found`).
+pub fn get_record<'s>(
+    store: &'s ResultStore,
+    principal: Principal,
+    run: &str,
+    char: &str,
+) -> Result<&'s ResultRecord, RecordError> {
+    let run = RunId::parse(run)?;
+    let char = CharId::parse(char).ok_or(RecordError::InvalidField { field: "char" })?;
+    store.get(principal, &run, &char)
+}
+
 /// `gdt.get_result@1` (R0, REQ-GDT.CHAR.RECORD-007): the stored canonical JSON of the record
 /// of (`run`, `char`) as `principal` sees it ([`ResultStore::get`]). Errors: `invalid_field{run}`,
 /// `invalid_field{char}` for IDs outside their grammar, `not_found`. Read-only.
@@ -88,7 +101,5 @@ pub fn get_result<'s>(
     run: &str,
     char: &str,
 ) -> Result<&'s [u8], RecordError> {
-    let run = RunId::parse(run)?;
-    let char = CharId::parse(char).ok_or(RecordError::InvalidField { field: "char" })?;
-    store.get(principal, &run, &char).map(ResultRecord::canonical_json)
+    get_record(store, principal, run, char).map(ResultRecord::canonical_json)
 }
