@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-kunc]
+built_pr: 306
 satisfies: [REQ-UNC.PROP.MCM-006]
 covers: []
 depends_on: [KRN.NUM.RED, KRN.NUM.FN]
