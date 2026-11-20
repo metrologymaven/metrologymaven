@@ -48,6 +48,13 @@ fid-journal = { path = "../fid-journal", features = ["store"] }
 fid-geo-types = { path = "../fid-geo-types" }
 fid-project = { path = "../fid-project" }
 fid-uuid = { path = "../fid-uuid" }
+# The bus-validation compile test (CORE.BUS.PIPE.VALID, re-review of #341) also compiles the
+# command definitions of crates not yet in SOURCES: GDT (record, status, datum), RDL, the
+# package reader and the export commands. Layers services and model; already in the lock.
+fid-gdt = { path = "../fid-gdt" }
+fid-io-reg = { path = "../fid-io-reg" }
+fid-pkg = { path = "../fid-pkg" }
+fid-rdl = { path = "../fid-rdl" }
 
 [lints]
 workspace = true

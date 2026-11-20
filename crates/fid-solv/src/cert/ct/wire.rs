@@ -76,6 +76,7 @@ pub(crate) fn to_json(c: &Certificate, with_digest: bool) -> Json {
                     ]),
                 ),
                 ("stationarity", condition(k.stationarity)),
+                ("stationarity_float", condition(k.stationarity_float)),
                 ("status", s("certified")),
                 (
                     "tolerances",
@@ -363,6 +364,7 @@ pub(crate) fn from_bytes(input: &[u8]) -> Result<Certificate, CertError> {
             "primal",
             "scales",
             "stationarity",
+            "stationarity_float",
             "status",
             "tolerances",
         ],
@@ -376,6 +378,7 @@ pub(crate) fn from_bytes(input: &[u8]) -> Result<Certificate, CertError> {
         primal: cond_from(kkt.get("primal")?)?,
         dual: cond_from(kkt.get("dual")?)?,
         stationarity: cond_from(kkt.get("stationarity")?)?,
+        stationarity_float: cond_from(kkt.get("stationarity_float")?)?,
         complementarity: cond_from(kkt.get("complementarity")?)?,
         dual_thresholds: kkt.fs("dual_thresholds")?,
         gradient_norms_hi: kkt.fs("gradient_norms_hi")?,

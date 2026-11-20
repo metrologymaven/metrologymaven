@@ -60,6 +60,18 @@ pub enum FitError {
     /// that may pick one, so the rocking report refuses them (`tan_rock::rock_report`).
     /// `first_contact` and `contacts` (the set's lowest point index and size) identify the set.
     AmbiguousCandidate { first_contact: u32, contacts: usize },
+    /// Every start of a sequential-linearisation run (`fid_solv::seq`, used by the tangential
+    /// fits) ended without a certified value. `cause` is the `SeqCause::code()` of the first
+    /// start's failure (`certificate_failed` failures are `cert`), `starts` the number of starts
+    /// tried. No iterate is ever returned in place of a certified result. Code `solver`.
+    SeqFailed { cause: &'static str, starts: u32 },
+    /// The tangential variant has no formulation the certificate pipeline can certify with a
+    /// free normal (`tan_plane`: constrained L2, whose optimum is in general not a vertex). Use
+    /// a fixed normal, or another variant. Code `not_certifiable`.
+    NotCertifiable { variant: TanVariant },
+    /// A certified tangential result leaves point `index` on the material-free side by
+    /// `violation` metres, more than the recorded `side_tol`. Code `side_violation`.
+    SideViolation { index: usize, violation: f64 },
     /// A parameter is out of range; `field` names it (for example `thresholds.rank_tol`).
     InvalidParams { field: &'static str },
     /// A direction vector is zero or too small to normalise (norm below `2^-1022`).
@@ -90,6 +102,9 @@ impl FitError {
             FitError::NotConverged { .. } => "not_converged",
             FitError::MethodUndefined { .. } | FitError::TanMethodUndefined { .. } => "method_undefined",
             FitError::AmbiguousCandidate { .. } => "ambiguous_candidate",
+            FitError::SeqFailed { .. } => "solver",
+            FitError::NotCertifiable { .. } => "not_certifiable",
+            FitError::SideViolation { .. } => "side_violation",
             FitError::InvalidParams { .. } => "invalid_params",
             FitError::InvalidDirection => "invalid_direction",
             FitError::Solver(_) => "solver",
@@ -135,6 +150,15 @@ impl fmt::Display for FitError {
                 f,
                 "fit: candidates for the contact set starting at point {first_contact} ({contacts} contacts) tie on the objective with different features"
             ),
+            FitError::SeqFailed { cause, starts } => {
+                write!(f, "fit: no certified result from {starts} starts (first failure: {cause})")
+            }
+            FitError::NotCertifiable { variant } => {
+                write!(f, "fit: tangential variant {} cannot be certified with a free normal", variant.slug())
+            }
+            FitError::SideViolation { index, violation } => {
+                write!(f, "fit: point {index} lies {violation:e} m on the material-free side, beyond side_tol")
+            }
             FitError::InvalidParams { field } => write!(f, "fit: invalid parameter {field}"),
             FitError::InvalidDirection => write!(f, "fit: zero or too small direction vector"),
             FitError::Solver(e) => write!(f, "fit: {e}"),

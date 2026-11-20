@@ -1,6 +1,6 @@
 [package]
 name = "fid-fit"
-description = "Metrology Maven kernel fit contract (KNP-1): points view, Fit trait, fitted features, centring and scaling, degeneracy checks, residual statistics, canonical result encoding and fit command data rows (spec node KRN.LSQ.TRAIT); tangential variant table and rocking report (KRN.ENV.TAN.ROCK)"
+description = "Metrology Maven kernel fit contract (KNP-1): points view, Fit trait, fitted features, centring and scaling, degeneracy checks, residual statistics, canonical result encoding and fit command data rows (spec node KRN.LSQ.TRAIT); tangential variant table and rocking report (KRN.ENV.TAN.ROCK); tangential plane in three variants (KRN.ENV.TAN.PLANE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -16,6 +16,10 @@ fid-kci = { path = "../fid-kci" }
 fid-num = { path = "../fid-num" }
 fid-solv = { path = "../fid-solv" }
 fid-types = { path = "../fid-types" }
+
+# Test-only: SHA-256 of the output-bit pin (layer test-support).
+[dev-dependencies]
+fid-testkit = { path = "../fid-testkit" }
 
 [lints]
 workspace = true

@@ -1,0 +1,15 @@
+# Spec card (KRN.ENV.TAN.PLANE). Cite designators and clause numbers only; never paste standards text.
+id = "fit.plane.tan_l2@1.0.0"
+title = "Constrained L2 tangential plane"
+method = "The plane on the material-free side of the points with the smallest sum of squared depths, every point on the material side. Implemented for a fixed normal only: the plane with that normal through the extreme point, which is the exact optimum for that normal. With a free normal the optimum generally touches fewer points than it has parameters, so it is not a vertex and the vertex certificate (KRN.SOLV.CERT) cannot prove it; the call is refused (NotCertifiable) rather than answered with an uncertified iterate."
+applicability = "Fixed normal only (orientation to a higher-precedence datum); at least 1 point; the fixed normal not perpendicular to the material side. The objective is in square metres."
+references = [
+  "Shakarji, C. M. and Srinivasan, V. (2012 to 2015). Papers on datum plane establishment by constrained least squares and L1 fitting [unverified citation].",
+  "Conn, A. R., Gould, N. I. M. and Toint, P. L. (2000). Trust-Region Methods. SIAM [unverified chapter].",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "A free normal: NotCertifiable, no value.",
+]
+validation = "Exact rational oracle fixtures/fit/tan-plane-v1 (make_tan_plane_fixtures.py: global optimum by enumeration over hull supports, isqrt rounding), checked on x86-64, ARM64 and wasm32 with an output-bit pin."

@@ -71,14 +71,19 @@
 //!    recheck row by row against [`KktReport::dual_thresholds`] (which `KRN.SOLV.CERT.CT` puts
 //!    into the certificate). (A threshold relative to
 //!    `max |lambda|` would let a large multiplier excuse a materially negative one.)
-//! 8. **Stationarity**: `|| G(p*)^T lambda + grad f(p*) ||_2` at the reported **float**
-//!    multipliers `lambda` (not at `lambda*`), enclosed componentwise and then normed with
-//!    upward (downward) rounding for `hi` (`lo`); threshold `tol_s * scale_gradient` with
-//!    `scale_gradient = red::norm2(grad f(params))` (1 if 0). This verdict measures how accurate
-//!    the float multipliers are, so that a verifier can recheck it from the recorded values;
-//!    exact stationarity at `lambda*` is already proven by step 6. A false negative is possible:
-//!    an inaccurate float solve can fail (or, at a tolerance of 0, certainly violate) this
-//!    condition at a true KKT point.
+//! 8. **Stationarity**, threshold `tol_s * scale_gradient` with
+//!    `scale_gradient = red::norm2(grad f(params))` (1 if 0). First the **float residual**
+//!    `|| G(p*)^T lambda + grad f(p*) ||_2` at the float multipliers `lambda`, enclosed over `X`
+//!    componentwise and then normed with upward (downward) rounding for `hi` (`lo`); it is
+//!    recorded in [`KktReport::stationarity_float`] for information.
+//!    - **Multipliers proven** (step 6 contracted): the Krawczyk test proves that the exact
+//!      multipliers `lambda*` solve `G(p*)^T lambda* = -grad f(p*)` exactly, so stationarity is
+//!      **Satisfied as proven**, with enclosure `[0, 0]` at `lambda*`. The float residual does
+//!      not enter the verdict: it grows with the gradients' magnitude and the box (for example
+//!      lever arms of 300 mm on a cylinder axis) without saying anything about `lambda*`.
+//!    - **Multipliers not proven** (fallback, unchanged): the verdict is the float residual's
+//!      enclosure against the threshold. A false negative is possible there.
+//!    - Degenerate gradients: undecidable, no enclosure.
 //!
 //! The thresholds of primal feasibility, complementarity and stationarity are the `f64`
 //! product `tol * scale` (one rounding). Every threshold is recorded in the report and
@@ -266,6 +271,7 @@ pub struct KktReport {
     primal: Condition,
     dual: Condition,
     stationarity: Condition,
+    stationarity_float: Condition,
     complementarity: Condition,
     tolerances: KktTolerances,
     scales: KktScales,
@@ -303,10 +309,18 @@ impl KktReport {
     pub fn dual(&self) -> Condition {
         self.dual
     }
-    /// Stationarity: `||G(p*)^T lambda + grad f(p*)||_2` at the float [`Self::multipliers`]
-    /// (measures their accuracy; see the module docs, step 8).
+    /// Stationarity: `[0, 0]` (satisfied) at the exact multipliers `lambda*` when they are
+    /// proven; otherwise (fallback) `||G(p*)^T lambda + grad f(p*)||_2` at the float
+    /// [`Self::multipliers`]. See the module docs, step 8.
     pub fn stationarity(&self) -> Condition {
         self.stationarity
+    }
+    /// For information only: the proven enclosure of `||G(p*)^T lambda + grad f(p*)||_2` at the
+    /// float [`Self::multipliers`] (how accurate they are), with the stationarity threshold and
+    /// the verdict it would give. It decides [`Self::stationarity`] only when the multipliers are
+    /// not proven. Unknown (`[0, +inf]`) when the gradients are degenerate.
+    pub fn stationarity_float(&self) -> Condition {
+        self.stationarity_float
     }
     /// Complementarity: `max |g_i(p*)|` over the active rows.
     pub fn complementarity(&self) -> Condition {
@@ -421,6 +435,7 @@ pub fn check<P: ActiveSetProblem + ?Sized>(
         primal,
         dual: Condition::unknown(0.0),
         stationarity: Condition::unknown(thr_s),
+        stationarity_float: Condition::unknown(thr_s),
         complementarity,
         tolerances: *tol,
         scales: KktScales { data: data_scale, gradient_lo: 0.0, gradient: scale_gradient },
@@ -477,9 +492,10 @@ pub fn check<P: ActiveSetProblem + ?Sized>(
             r.push(acc);
         }
 
-        // 8. Stationarity at the float multipliers.
+        // 8. Stationarity: the float residual (information; the fallback verdict).
         let (slo, shi) = norm_bounds(&r)?;
-        out.stationarity = Condition::decide(slo, shi, thr_s);
+        out.stationarity_float = Condition::decide(slo, shi, thr_s);
+        out.stationarity = out.stationarity_float;
 
         // 7. Proven multiplier box and dual feasibility.
         let y = approximate_inverse(&q, tol.rank_tol)?;
@@ -511,6 +527,8 @@ pub fn check<P: ActiveSetProblem + ?Sized>(
                 };
                 out.dual = Condition { lo: dlo, hi: dhi, threshold: thr_min, verdict };
                 out.multiplier_bounds = k;
+                // 8. lambda* is proven to solve the stationarity equations exactly.
+                out.stationarity = Condition::decide(0.0, 0.0, thr_s);
             }
             Err(CertError::BoundNotProven { reason: BoundFailure::NotContracting }) => {
                 out.dual = Condition::unknown(thr_min);

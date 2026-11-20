@@ -345,7 +345,10 @@ def golden():
             "gradient_norms_hi": [h(v) for v in ghi],
             "primal": cond,
             "scales": {"data": h(data), "gradient": h(1.0), "gradient_lo": h(grad_lo)},
-            "stationarity": {"hi": h(2.0**-45), "lo": h(0.0), "threshold": h(thr_s)},
+            # Stationarity is proven exact at the proven multipliers ([0, 0]); the residual at the
+            # float multipliers is recorded for information (KRN.SOLV.CERT.KKT step 8).
+            "stationarity": {"hi": h(0.0), "lo": h(0.0), "threshold": h(thr_s)},
+            "stationarity_float": {"hi": h(2.0**-45), "lo": h(0.0), "threshold": h(thr_s)},
             "status": "certified",
             "tolerances": {"rank_tol": h(2.0**-50), "tol_c": h(tol), "tol_d": h(tol), "tol_p": h(tol),
                            "tol_s": h(tol)},
