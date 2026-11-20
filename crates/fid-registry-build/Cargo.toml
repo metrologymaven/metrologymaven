@@ -55,6 +55,8 @@ fid-gdt = { path = "../fid-gdt" }
 fid-io-reg = { path = "../fid-io-reg" }
 fid-pkg = { path = "../fid-pkg" }
 fid-rdl = { path = "../fid-rdl" }
+# AUTO.SURF.PROJ over the workspace manifest (tests/surface_projection.rs). Layer services.
+fid-surface = { path = "../fid-surface" }
 
 [lints]
 workspace = true
