@@ -1717,6 +1717,8 @@ dependencies = [
  "fid-canon",
  "fid-project",
  "fid-registry",
+ "fid-store",
+ "fid-types",
 ]
 
 [[package]]

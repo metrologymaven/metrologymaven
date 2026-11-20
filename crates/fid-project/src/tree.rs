@@ -70,6 +70,7 @@ use crate::stage::{
     check_permutation, removed_stage, reordered, stage_from_added, stage_list_id, Stage, DEFAULT_STAGE_LABEL,
     STAGES_REORDERED, STAGE_ADDED, STAGE_EVENTS, STAGE_KIND, STAGE_LIST_KIND, STAGE_REMOVED,
 };
+use crate::stage_switch::{active_set, ACTIVE_STAGE_SET};
 use fid_canon::CValue;
 use fid_types::Digest;
 use std::collections::BTreeMap;
@@ -615,6 +616,8 @@ enum Undo {
     },
     /// The count of default-stage slots holding data before a slot change.
     DefaultData(usize),
+    /// The active stage before an `ActiveStageSet`.
+    Active(Uuid),
 }
 
 /// The in-memory element tree of one project.
@@ -947,6 +950,7 @@ impl Tree {
                             }
                         }
                         Undo::DefaultData(n) => self.default_data = n,
+                        Undo::Active(old) => self.active_stage = old,
                     }
                 }
                 self.rebuild_list();
@@ -1074,6 +1078,19 @@ impl Tree {
                 self.records.insert(id, stage);
                 self.rebuild_list();
                 created.push(id);
+            }
+            ACTIVE_STAGE_SET => {
+                // Swaps the active-stage pointer only (CORE.PRJ.STAGE.SWITCH): no slot, value or
+                // stage record moves, so every per-stage digest is unchanged.
+                let id = active_set(body)?;
+                if !self.is_live(&id) {
+                    return Err(TreeError::BadStage(id));
+                }
+                undo.push(Undo::Active(self.active_stage));
+                self.active_stage = id;
+                if let CValue::Obj(b) = &mut self.list_body {
+                    b.insert("active_stage".to_string(), uuid_value(&id));
+                }
             }
             STAGE_REMOVED => {
                 let id = removed_stage(body)?;

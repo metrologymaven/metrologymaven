@@ -69,7 +69,8 @@ pub const STAGE_REMOVED: &str = "StageRemoved";
 /// Event: a run's live stages were reordered.
 pub const STAGES_REORDERED: &str = "StagesReordered";
 /// The stage events, sorted.
-pub const STAGE_EVENTS: [&str; 3] = [STAGE_ADDED, STAGE_REMOVED, STAGES_REORDERED];
+pub const STAGE_EVENTS: [&str; 4] =
+    [crate::stage_switch::ACTIVE_STAGE_SET, STAGE_ADDED, STAGE_REMOVED, STAGES_REORDERED];
 /// Command names, without major.
 pub const ADD_STAGE: &str = "project.add_stage";
 pub const REMOVE_STAGE: &str = "project.remove_stage";
@@ -291,7 +292,7 @@ impl StageListing {
 }
 
 /// One stage entity read from the view; `invariant_violated` if it is missing or malformed.
-fn read_stage(view: &dyn ContainerView, id: &Uuid) -> Result<Stage, TreeError> {
+pub(crate) fn read_stage(view: &dyn ContainerView, id: &Uuid) -> Result<Stage, TreeError> {
     let bad = |m: String| TreeError::Invariant(format!("stage list: {m}"));
     let Some((kind, body)) = view.entity(id) else {
         return Err(bad(format!("stage {id} is missing")));
@@ -308,14 +309,14 @@ fn read_stage(view: &dyn ContainerView, id: &Uuid) -> Result<Stage, TreeError> {
 
 /// The stage list entity alone (no stage bodies): what add and remove need, read in
 /// O(stages) without parsing every stage.
-struct ListHead {
-    active_stage: Uuid,
-    adoptable: Option<Uuid>,
-    stages: Vec<Uuid>,
+pub(crate) struct ListHead {
+    pub(crate) active_stage: Uuid,
+    pub(crate) adoptable: Option<Uuid>,
+    pub(crate) stages: Vec<Uuid>,
 }
 
 impl ListHead {
-    fn read(view: &dyn ContainerView, namespace: Uuid) -> Result<ListHead, TreeError> {
+    pub(crate) fn read(view: &dyn ContainerView, namespace: Uuid) -> Result<ListHead, TreeError> {
         let bad = |m: String| TreeError::Invariant(format!("stage list: {m}"));
         let lid = stage_list_id(namespace)?;
         let Some((kind, body)) = view.entity(&lid) else {
@@ -368,9 +369,9 @@ fn expect_run(view: &dyn ContainerView, run: &Uuid) -> Result<(), TreeError> {
 
 // ------------------------------------------------------------------ commands
 
-type Params<'a> = &'a BTreeMap<String, CValue>;
+pub(crate) type Params<'a> = &'a BTreeMap<String, CValue>;
 
-fn params_obj<'a>(params: &'a CValue, allowed: &[&str]) -> Result<Params<'a>, TreeError> {
+pub(crate) fn params_obj<'a>(params: &'a CValue, allowed: &[&str]) -> Result<Params<'a>, TreeError> {
     let CValue::Obj(p) = params else {
         return Err(schema("parameters must be an object"));
     };
@@ -380,11 +381,11 @@ fn params_obj<'a>(params: &'a CValue, allowed: &[&str]) -> Result<Params<'a>, Tr
     Ok(p)
 }
 
-fn required<'a>(p: Params<'a>, key: &str) -> Result<&'a CValue, TreeError> {
+pub(crate) fn required<'a>(p: Params<'a>, key: &str) -> Result<&'a CValue, TreeError> {
     p.get(key).ok_or_else(|| TreeError::Schema(format!("{key} is required")))
 }
 
-fn param_uuid(v: &CValue, key: &str) -> Result<Uuid, TreeError> {
+pub(crate) fn param_uuid(v: &CValue, key: &str) -> Result<Uuid, TreeError> {
     match v {
         CValue::Str(s) => {
             canonical_uuid(s).ok_or_else(|| TreeError::Schema(format!("{key} must be a canonical lowercase UUID")))

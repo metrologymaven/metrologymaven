@@ -1,6 +1,6 @@
 [package]
 name = "fid-project-cmd"
-description = "Metrology Maven project commands on the bus: container create handlers and their registry definitions, the element tree state view and the stage commands (spec nodes CORE.PRJ.CONT.HIER, CORE.PRJ.TREE.MODEL, CORE.PRJ.STAGE.MODEL)"
+description = "Metrology Maven project commands on the bus: container create handlers and their registry definitions, the element tree state view, the stage commands and the stage value reads (spec nodes CORE.PRJ.CONT.HIER, CORE.PRJ.TREE.MODEL, CORE.PRJ.STAGE.MODEL, CORE.PRJ.STAGE.SWITCH)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -18,6 +18,11 @@ fid-canon = { path = "../fid-canon" }
 fid-project = { path = "../fid-project" }
 # The four commands' registry definitions (CORE.REG.DEF). Layer model.
 fid-registry = { path = "../fid-registry" }
+# CORE.PRJ.STAGE.SWITCH: the blob store and evictable cache behind the value reads
+# (CORE.STO.CAS, CORE.STO.CACHE). Layer model; already linked through fid-bus.
+fid-store = { path = "../fid-store" }
+# `sha256:` digests and command names (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
 
 [lints]
 workspace = true
