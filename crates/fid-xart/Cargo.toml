@@ -1,0 +1,37 @@
+[package]
+name = "fid-xart"
+description = "CI tool for the cross-host and cross-artifact bit-identity gate: runs a call set through kernel artifacts, writes digest tables and compares them (spec node KRN.MAN.XART)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-xart"
+path = "src/main.rs"
+
+# Test-only native artifacts speaking the fid-kernel-wasm stdin/stdout protocol: the faithful
+# stand-in algorithms and a deliberately divergent build (KRN.MAN.XART AC-2).
+[[bin]]
+name = "xart-test-artifact"
+path = "src/bin/xart-test-artifact.rs"
+
+[[bin]]
+name = "xart-test-artifact-reversed"
+path = "src/bin/xart-test-artifact-reversed.rs"
+
+# Test-only: reads its call and never answers (per-call deadline test).
+[[bin]]
+name = "xart-test-artifact-hang"
+path = "src/bin/xart-test-artifact-hang.rs"
+
+# No third-party dependencies. fid-kci supplies SHA-256, the canonical JSON writer, `evaluate`
+# and the card registry; fid-canon supplies the strict JSON reader (duplicate keys refused).
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-kci = { path = "../fid-kci" }
+
+[lints]
+workspace = true
