@@ -20,7 +20,9 @@ Writes, next to this script:
 Run:  python fixtures/geo/cad/topo/make_trim_fixtures.py          (writes everything)
       python fixtures/geo/cad/topo/make_trim_fixtures.py --check  (fails if anything is stale)
 
-Stdlib only; never runs the Rust code.
+Stdlib only; never runs the Rust code. Fixture geometry uses only correctly rounded binary64
+operations and the bit-exact fid-num sin/cos model (no platform libm), so --check is the same on
+every OS.
 
 How the expected values are made
 --------------------------------
@@ -82,6 +84,16 @@ def _load(name, rel):
 
 MP = _load("make_pcurve_fixtures", "fixtures/geo/cad/topo/make_pcurve_fixtures.py")
 OR = MP.OR
+AN = MP.AN
+
+
+def cos(x):
+    """fid-num's cos, bit-exact model (no platform libm)."""
+    return AN.sin_cos(x)[1]
+
+
+def sin(x):
+    return AN.sin_cos(x)[0]
 TAU = MP.TAU
 X, Z, O = MP.X, MP.Z, MP.O
 
@@ -126,7 +138,7 @@ class SplitMix:
 
 def cylinder_window():
     r, h, a = 0.05, 0.02, 0.5
-    ca, sa = math.cos(a), math.sin(a)
+    ca, sa = cos(a), sin(a)
     verts = [(r * ca, -r * sa, 0.0), (r * ca, r * sa, 0.0), (r * ca, r * sa, h), (r * ca, -r * sa, h)]
     edges = [
         (0, 1, (-a, a), MP.circle(O, Z, X, r), "e-bottom"),
@@ -148,15 +160,15 @@ def cylinder_window():
 
 def cylinder_slit():
     r, h, a, us, hs = 0.05, 0.02, 0.5, 0.25, 0.01
-    pt = lambda u, z: (r * math.cos(u), r * math.sin(u), z)  # noqa: E731
+    pt = lambda u, z: (r * cos(u), r * sin(u), z)  # noqa: E731
     verts = [pt(-a, 0.0), pt(us, 0.0), pt(a, 0.0), pt(a, h), pt(-a, h), pt(us, hs)]
     edges = [
         (0, 1, (-a, us), MP.circle(O, Z, X, r), "e-bottom-l"),
-        (1, 5, (0.0, hs), MP.line(verts[1], Z, (math.cos(us), math.sin(us), 0.0)), "e-slit"),
+        (1, 5, (0.0, hs), MP.line(verts[1], Z, (cos(us), sin(us), 0.0)), "e-slit"),
         (1, 2, (us, a), MP.circle(O, Z, X, r), "e-bottom-r"),
-        (2, 3, (0.0, h), MP.line(verts[2], Z, (math.cos(a), math.sin(a), 0.0)), "e-right"),
+        (2, 3, (0.0, h), MP.line(verts[2], Z, (cos(a), sin(a), 0.0)), "e-right"),
         (4, 3, (-a, a), MP.circle((0.0, 0.0, h), Z, X, r), "e-top"),
-        (0, 4, (0.0, h), MP.line(verts[0], Z, (math.cos(a), -math.sin(a), 0.0)), "e-left"),
+        (0, 4, (0.0, h), MP.line(verts[0], Z, (cos(a), -sin(a), 0.0)), "e-left"),
     ]
     l2 = lambda o, d: {"type": "line2", "origin": list(o), "dir": list(d)}  # noqa: E731
     coedges = [(0, "same", l2((0.0, 0.0), (1.0, 0.0)), "c-bottom-l"),
@@ -424,7 +436,7 @@ def ac1_band(segs):
         off = rng.between(-3.0, 3.0) * AC1_TOL
         if kind == 4:
             phi = rng.between(0.0, TAU)
-            u, v = cx + (r + off) * math.cos(phi), cy + (r + off) * math.sin(phi)
+            u, v = cx + (r + off) * cos(phi), cy + (r + off) * sin(phi)
         else:
             s_ = rng.between(0.0, 1.0)
             u, v = [(w * s_, off), (w + off, h * s_), (w * s_, h + off), (off, h * s_)][kind]
@@ -467,7 +479,7 @@ CAP_V0 = 0.5
 
 def sphere_cap():
     r = 0.05
-    rc, zc = r * math.cos(CAP_V0), r * math.sin(CAP_V0)
+    rc, zc = r * cos(CAP_V0), r * sin(CAP_V0)
     verts = [(rc, 0.0, zc)]
     edges = [(0, 0, (0.0, TAU), MP.circle((0.0, 0.0, zc), Z, X, rc), "e-latitude")]
     coedges = [(0, "same", None, "c-latitude")]
@@ -660,7 +672,7 @@ def polygon_cases(b, m):
             for a, z, _s in segs:
                 mx, my = (a[0] + z[0]) * 0.5, (a[1] + z[1]) * 0.5
                 dx, dy = z[0] - a[0], z[1] - a[1]
-                ln = math.hypot(dx, dy)
+                ln = math.sqrt(dx * dx + dy * dy)
                 nx, ny = -dy / ln, dx / ln
                 for o in (0.25, 0.5, 0.999, 1.001, 2.0, 1.0 + 2.0 ** -9):
                     for sg in (1.0, -1.0):
@@ -785,8 +797,10 @@ def build():
     }
     files["trim_expected.json"] = render(expected)
     n_poly = sum(len(c) for f in expected["polygons"].values() for c in f.values())
-    print("AC-1: %s; AC-2: %d cases; polygons: %d cases; orient: %d cases"
-          % (expected["ac1"]["counts"], len(ac2), n_poly, len(expected["orient"])))
+    print("AC-1: %s seeded, %d band cases %s; AC-2: %d cases; polygons: %d cases; periodic: %d cases; "
+          "orient: %d cases"
+          % (expected["ac1"]["counts"], len(band_cases), expected["ac1"]["band_counts"], len(ac2), n_poly,
+             sum(len(f["cases"]) for f in expected["periodic"].values()), len(expected["orient"])))
     return files
 
 
