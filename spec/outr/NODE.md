@@ -15,7 +15,7 @@ depends_on: [ECO]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # OUTR: Outreach
@@ -47,6 +47,7 @@ These are open-source deliverables that contributors can own. The **commercial**
 - Public benchmarks and case studies
 - Adoption metrics without product telemetry (downloads, stars, forum activity, opt-in surveys)
 - Instrument-vendor and university outreach programs
+- The GD&T interpretation community: public rule pages, interpretation profiles, cases, reviewers and reference suites (D-045)
 
 **Out:**
 - Pricing, sales, funding (business documents, outside this tree)
@@ -63,6 +64,7 @@ These are open-source deliverables that contributors can own. The **commercial**
 - **REQ-OUTR-006** Adoption shall be measured without product telemetry, using only public signals and opt-in surveys, and reported quarterly.
 - **REQ-OUTR-007** Marketing material shall follow the vocabulary rules in CONSTITUTION C9 and the vocabulary lint: no incumbent trade dress or copied text, no unqualified "certified" or "compliant" claims.
 - **REQ-OUTR-008** The project shall run outreach programs for instrument vendors (driver SDK and conformance) and universities (teaching kits, datasets).
+- **REQ-OUTR-009** The project shall run a public GD&T interpretation community (rule pages, interpretation profiles, a case pipeline, a public reviewer role and public reference suites) that never publishes standards text, gives every interpretation rule a decision owner and a deadline, and routes questions about specific customer parts to paid support (D-045).
 
 ## Interfaces
 
@@ -86,6 +88,7 @@ Alternatives considered:
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** added REQ-OUTR-009 and child `OUTR.GDTC`. It is a separate child, not part of `OUTR.COMM` or `OUTR.BENCH`, because its pages publish the review state of interpretation rules and its suites are run by third parties against any software, which are rules neither sibling has.
 - An existing site project may already exist in `../../metrology maven/site` [unverified relationship]. Decide whether OUTR.SITE reuses it (carried into OUTR.SITE).
 - ECO's scope also lists "Docs site and book" and "Example corpora and benchmark datasets". This split assumes ECO owns the docs build, generators and datasets, and OUTR owns the portal, content and published results. Confirm when ECO is split.
 - REQ-OUTR-007 refers to "the vocabulary lint"; OUTR.BRAND owns the outreach claim lint. No node yet owns a product UI-string lint.
@@ -103,3 +106,4 @@ Alternatives considered:
 | [OUTR.CONTENT](content/NODE.md) | Tutorials, migration guides and videos | 005 | none |
 | [OUTR.BENCH](bench/NODE.md) | Public benchmarks and case studies | 001 007 | none |
 | [OUTR.PROG](prog/NODE.md) | Instrument-vendor and university programs | 008 | none |
+| [OUTR.GDTC](gdtc/NODE.md) | GD&T interpretation community | 009 | none |

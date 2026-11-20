@@ -9,13 +9,13 @@ phase: P1a
 size: XL
 owners: []
 claimed_by:
-satisfies: [REQ-GDT-001, REQ-GDT-002, REQ-GDT-008]
+satisfies: [REQ-GDT-001, REQ-GDT-002, REQ-GDT-008, REQ-GDT-009, REQ-GDT-010]
 covers: []
 depends_on: [GDT.CHAR, KRN]
-cli: [fid gdt resolve-*, fid gdt *-dmt-row, fid gdt *-support-matrix]
-mcp: [gdt_resolve_*, gdt_*_dmt_row, gdt_*_support_matrix]
-journal: [gdt.resolve_*, gdt.*_dmt_row]
-updated: 2026-11-16
+cli: [fid gdt resolve-*, fid gdt *-dmt-row, fid gdt *-support-matrix, fid gdt export-rule-status]
+mcp: [gdt_resolve_*, gdt_*_dmt_row, gdt_*_support_matrix, gdt_export_rule_status]
+journal: [gdt.resolve_*, gdt.*_dmt_row, gdt.export_rule_status]
+updated: 2026-11-19
 ---
 
 # GDT.RES: Interpretation resolver, DMT and support matrix
@@ -54,6 +54,9 @@ The kernel-side **interpretation resolver**: given a characteristic, its context
 - **REQ-GDT.RES-007** The support matrix shall be generated from the DMT on every DMT change, list every (dialect, edition, characteristic, modifier combination) row with its status, and never be edited by hand.
 - **REQ-GDT.RES-008** When a row offers interpretation variants, the resolver shall select the variant named by the defaults profile or by an explicit characteristic override, and the chosen variant name shall be recorded in the chain.
 - **REQ-GDT.RES-009** The P1a DMT shall contain rows for every ASME Y14.5-2018 callout needed by `GDT.DIM`, `GDT.FORM` and `GDT.LOC` P1a scope, and shall report all ISO rows as `unsupported` until P1b.
+- **REQ-GDT.RES-010** The project shall publish an interpretation status register giving, for every DMT row key and every defaults profile, the latest revision, its content digest and its status `draft`, `provisional` or `signed_off`, where `signed_off` holds only while a two-reviewer sign-off (D-009) names that same content digest (D-045).
+- **REQ-GDT.RES-011** When asked for the status of a rule at a content digest, the system shall answer from the register, and if the register holds no entry for that rule and digest, then it shall answer `provisional` with reason `not_in_register`, never `signed_off`.
+- **REQ-GDT.RES-012** While any rule of the D-045 first-review subset is not `signed_off`, CI shall fail any change that adds or changes a DMT row outside that subset, or that claims or marks built a GDT leaf classified as serving only callouts outside it.
 
 ## Interfaces
 
@@ -66,6 +69,7 @@ SCHEMA (DMT row and operator-chain types), RESOLVE (the pure resolver), ROWS-ASM
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** adds REQ-GDT.RES-010 to -012 and two leaves: `GDT.RES.STATUS` (status register, sign-off bound to the content digest) and `GDT.RES.PACE` (pacing gate). Profile comparison went to `GDT.CHAR.PDIFF`, next to the profiles it compares. The released-table rule (REQ-GDT.RES.ROWASME-002) is unchanged: a released DMT table still holds only signed-off rows; `provisional` applies to development tables, local tables and profiles not yet signed off.
 - Authorship and review of rows: settled by D-009 (paid expert authors, two-expert sign-off, partner); implemented as a workflow in `GDT.RES.ROWFLOW`.
 - Access to standards texts for authors and reviewers: open as D-016, blocking `GDT.RES.ROWASME` and `GDT.RES.ROWISO`.
 - Naming: settled by D-009 as "Dialect Mapping Table (DMT)".
@@ -88,6 +92,8 @@ Alternatives considered:
 | GDT.RES.RESOLVE | Pure interpretation resolver (leaf) | 001 002 003 004 008 | none |
 | GDT.RES.ROWASME | P1a ASME Y14.5-2018 DMT row set (decision D-016) | 009 | none |
 | GDT.RES.ROWISO | ISO GPS DMT row set (decision D-016) | 009 | none |
-| GDT.RES.ROWFLOW | DMT row proposal, review and sign-off workflow | 005 | none |
+| GDT.RES.ROWFLOW | DMT row proposal, review and sign-off workflow | 005 010 | none |
 | GDT.RES.MATRIX | Generated support matrix (leaf) | 007 | none |
 | GDT.RES.LINT | DMT copyright and ORS-link lint (leaf) | 005 006 | none |
+| GDT.RES.STATUS | Interpretation status register and sign-off binding (leaf) | 010 011 | none |
+| GDT.RES.PACE | Review pacing gate for the first-review subset (leaf) | 012 | none |

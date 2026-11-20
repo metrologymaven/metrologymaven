@@ -9,7 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
-satisfies: [REQ-RPT.FORMS.FINAL-002, REQ-RPT.FORMS.FINAL-003, REQ-RPT.FORMS.FINAL-004, REQ-RPT.FORMS.FINAL-005]
+satisfies: [REQ-RPT.FORMS.FINAL-002, REQ-RPT.FORMS.FINAL-003, REQ-RPT.FORMS.FINAL-004, REQ-RPT.FORMS.FINAL-005, REQ-RPT.FORMS.FINAL-006]
 covers: []
 depends_on: [RPT.FORMS.FINAL.CHECK, RPT.FORMS.ROWS, RPT.FORMS.PPAP, CORE.STO.CAS, CORE.JRN, CORE.BUS.POL.CLASS]
 side_effect: [W3, W3, R0]
@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid report finalize-fai, fid report finalize-ppap, fid report list-final-fai]
 mcp: [report_finalize_fai, report_finalize_ppap, report_list_final_fai]
 journal: [report.finalize_fai@1, report.finalize_ppap@1, report.list_final_fai@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # RPT.FORMS.FINAL.FREEZE: W3 finalisation of FAI and PPAP forms with immutable revisions
@@ -41,6 +41,7 @@ Turns a complete FAI or PPAP draft into a controlled record. A human finalises t
 - **REQ-RPT.FORMS.FINAL.FREEZE-005** No command shall modify or delete a finalised revision; finalising the same form again shall create revision n+1 that references revision n, and revision n shall stay readable.
 - **REQ-RPT.FORMS.FINAL.FREEZE-006** If the resolved-form digest equals the digest of the form's latest revision, then finalisation shall fail with error `report.form_unchanged` and journal nothing.
 - **REQ-RPT.FORMS.FINAL.FREEZE-007** `report.list_final_fai@1` shall be R0 and list every revision of a named FAI or PPAP form in ascending revision order with its digests and finalising principal.
+- **REQ-RPT.FORMS.FINAL.FREEZE-008** If the check reports any blocker of a kind not covered by REQ-001 or REQ-002, including `provisional_label_missing` (D-045), then finalisation shall fail with that blocker's error code (`report.provisional_label_missing` naming the balloons for that kind), write nothing to the content-addressed store and journal nothing; finalisation shall succeed only when the check reports no blocker at all.
 
 ## Acceptance criteria
 
@@ -51,6 +52,7 @@ Turns a complete FAI or PPAP draft into a controlled record. A human finalises t
 - **AC-5** Given AC-1, when a reading is corrected and the form is finalised again at the new head, then revision 2 references revision 1, revision 1's bytes are unchanged and `fid report list-final-fai` lists both; finalising again at the same head fails with `report.form_unchanged`.
 - **AC-6** Given fixture `fixtures/rpt/forms/ppap_6parts_complete`, when `fid report finalize-ppap` runs as a human, then revision 1 is created as in AC-1.
 - **AC-7** (replay) Given the journal from AC-5, when replayed in exact mode, then the outcome is `IDENTICAL` and both revision digests match.
+- **AC-8** (error path, D-045) Given fixture `fixtures/rpt/forms/fai_provisional_unlabelled` (balloon 4 from a provisional record rendered without the `ProvisionalInterpretation` label), when a human runs `fid report finalize-fai --fai <id> --head <h> --json`, then it fails with `report.provisional_label_missing` naming balloon 4, no blob is stored, and the journal length is unchanged; given `fai_provisional` (label present), finalisation succeeds and the stored form shows `interpretation: provisional` on balloon 4.
 
 ## Design
 
@@ -59,8 +61,8 @@ Turns a complete FAI or PPAP draft into a controlled record. A human finalises t
   - `report.finalize_ppap@1(ppap: PpapId, head: JournalHash) -> FormRevision` (W3, `human_only`)
   - `report.list_final_fai@1(form: FormRef) -> Vec<FormRevision>` (R0; accepts FAI or PPAP form refs)
 - **Data structures:** `FormRevision { form: FormRef, revision: u32, previous: Option<Sha256>, head: JournalHash, resolved_digest: Sha256, check_digest: Sha256, finalized_by: PrincipalRef }`.
-- **Algorithm:** `check_form(form, head)` -> refuse on blockers -> call `generate_fai` or `generate_ppap` at `head` -> canonical bytes -> compare with the latest revision digest -> put bytes in `CORE.STO.CAS` -> journal the W3 event. The head is an explicit argument so the finalised content never depends on what was committed while the user was reviewing.
-- **Errors:** `report.form_incomplete`, `report.form_unadopted`, `report.form_unchanged`, `report.not_found`, bus refusals.
+- **Algorithm:** `check_form(form, head)` -> refuse on any blocker, with the blocker's own code -> call `generate_fai` or `generate_ppap` at `head` -> canonical bytes -> compare with the latest revision digest -> put bytes in `CORE.STO.CAS` -> journal the W3 event. The head is an explicit argument so the finalised content never depends on what was committed while the user was reviewing.
+- **Errors:** `report.form_incomplete`, `report.form_unadopted`, `report.provisional_label_missing`, `report.form_unchanged`, `report.not_found`, bus refusals.
 - **Determinism:** D0; the resolved form is a pure function of the head and the form record.
 - **Performance budget:** finalising a 500-balloon FAI in under 2 s on reference hardware [unverified until measured].
 - **Crate:** `fid-report-forms`.
@@ -77,12 +79,15 @@ Fixtures from `RPT.FORMS.FINAL.CHECK` plus `fixtures/rpt/forms/ppap_6parts_compl
 >
 > **Rules:** run `check_form` (from the CHECK leaf) at the explicit `head`; `missing_result` or `header_incomplete` -> `report.form_incomplete` (list balloons and fields); `unadopted` -> `report.form_unadopted`. Otherwise generate the resolved form with `generate_fai`/`generate_ppap` at that head, canonicalise (RFC 8785) and hash (SHA-256); equal to the latest revision digest -> `report.form_unchanged`; else store the bytes in the content-addressed store and journal one W3 event with form ID, revision, previous digest, head, resolved digest, check digest and principal. Revisions are immutable; a new finalisation creates revision n+1. A refused command journals nothing.
 >
-> **Acceptance:** AC-1..AC-7 in `spec/rpt/forms/final/freeze/NODE.md`.
+> **D-045:** refuse finalisation on any check blocker with that blocker's code, including `report.provisional_label_missing`; store and journal nothing.
+>
+> **Acceptance:** AC-1..AC-8 in `spec/rpt/forms/final/freeze/NODE.md`.
 >
 > **Constraints:** CONSTITUTION §3 (agents never perform W3; `human_only`), C5, §5 (stable IDs), §8 (no panic, no `unsafe`, no `unwrap`/`expect`). Do not implement signing (TRUST reads the revision digest).
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** REQ-008 and AC-8 make every CHECK blocker, including `provisional_label_missing`, refuse the freeze.
 - REQ-RPT.FORMS.FINAL-004 says finalisation "shall not be exposed as MCP tools". CONSTITUTION §3 projects W3 as a human-only request, so the generated MCP names exist but only file a pending request. Treat the parent wording as "no MCP tool performs it".
 - The list command uses the FAI pattern for both form kinds to stay within the parent's CLI patterns; a neutral name (`list-final-form`) would need the RPT.FORMS patterns widened.
 

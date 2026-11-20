@@ -15,7 +15,7 @@ depends_on: [KRN, ALN, UNC, IO]
 cli: [fid check *, fid gdt *]
 mcp: [check_*, gdt_*]
 journal: [check.*, gdt.*]
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # GDT: Dimensional and GD&T evaluation
@@ -65,6 +65,8 @@ Each characteristic is evaluated under an explicitly chosen ASME Y14.5-2018 or I
 - **REQ-GDT-006** When PMI is imported, the system shall propose characteristics automatically, and a human shall confirm them before they count as the inspection plan.
 - **REQ-GDT-007** Every evaluation shall emit a ResultRecord (CONSTITUTION §5), and the GDT domain shall never itself decide conformance without UNC's decision rule.
 - **REQ-GDT-008** A published support matrix shall list every callout and modifier combination per dialect as supported, partial or unsupported, generated from the DMT.
+- **REQ-GDT-009** Every evaluation result shall carry the ID, version and content digest of each interpretation rule (DMT row and defaults profile) it used, and if any of them lacks expert sign-off for its current content, then the result shall be labelled `interpretation: provisional` (D-045).
+- **REQ-GDT-010** While any rule of the D-045 first-review subset is not signed off, no DMT row outside that subset shall be added or changed and no GDT leaf that serves only callouts outside it shall be claimed or marked built (D-045 pacing).
 
 ## Interfaces
 
@@ -77,6 +79,7 @@ CHAR (characteristic model, dialect and defaults), RES (interpretation resolver 
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** results name every interpretation rule they used and carry `interpretation: provisional` until those rules are signed off; GDT work beyond the first-review subset waits for that subset's sign-off. Added REQ-GDT-009 (owned by `GDT.CHAR.INTERP` and `GDT.RES.STATUS`) and REQ-GDT-010 (owned by `GDT.RES.PACE`).
 - Standards interpretation needs a credentialed expert. The baseline budgets 150–300 h for the first subset. Who authors DMT rows in an open project? Candidate decision for the steering group.
 
 ## Split rationale
@@ -97,8 +100,8 @@ Alternatives considered:
 
 | ID | Title | Satisfies | Covers |
 |---|---|---|---|
-| GDT.CHAR | Characteristic model, dialects and result records | 001 007 | GOM.GDT.17, PCD.DIM.02, PCD.DIM.05, PW.GDT.08 |
-| GDT.RES | Interpretation resolver, DMT and support matrix | 001 002 008 | none |
+| GDT.CHAR | Characteristic model, dialects and result records | 001 007 009 | GOM.GDT.17, PCD.DIM.02, PCD.DIM.05, PW.GDT.08 |
+| GDT.RES | Interpretation resolver, DMT and support matrix | 001 002 008 009 010 | none |
 | GDT.DIM | Dimensional and size checks | 003 007 | GOM.DIM.*, PW.GDT.01, PCD.DIM.01, SA.GDT.02 |
 | GDT.DRF | Datum reference frames and datum mobility | 005 | GOM.GDT.14, PW.GDT.07, SA.GDT.03 |
 | GDT.ZONE | Tolerance-zone engine, modifiers and composite frames | 004 005 007 | GOM.GDT.15, PCD.DIM.03, PCD.DIM.04, PW.GDT.09 |

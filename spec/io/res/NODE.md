@@ -15,7 +15,7 @@ depends_on: [IO.REG, IO.QIF, IO.DMIS]
 cli: [fid import results*, fid export results*]
 mcp: [import_results*, export_results*]
 journal: [import.results*, export.results*]
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # IO.RES: Results and SPC formats, transcription records
@@ -55,7 +55,8 @@ Moves characteristic results in and out. Inbound, it turns third-party results (
 - **REQ-IO.RES-010** The system shall export results as AQDEF DFQ built from publicly documented K-fields, and every such export and its documentation shall be labelled as not Q-DAS certified.
 - **REQ-IO.RES-011** The system shall export results in a PiWeb-importable form [unverified: whether a public format specification exists; may become plugin-only].
 - **REQ-IO.RES-012** When a report file export is requested, the system shall write the report produced by RPT to an approved export root and shall not itself lay out report content.
-- **REQ-IO.RES-013** Exported results shall carry each ResultRecord's `evaluation_basis`, uncertainty class and decision rule wherever the target format has a field or extension for them.
+- **REQ-IO.RES-013** Exported results shall carry each ResultRecord's `evaluation_basis`, uncertainty class, decision rule and `interpretation` label (D-045) wherever the target format has a field or extension for them.
+- **REQ-IO.RES-014** If a results export would write a ResultRecord whose `interpretation` is `provisional` to a format or column map that cannot carry the label, then the export shall fail with `interpretation_label_unsupported` naming the record and write nothing (D-045).
 
 ## Interfaces
 
@@ -68,6 +69,7 @@ TRANS (transcription record model and source mapping), QIFR (QIF Results and Sta
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** REQ-IO.RES-013 now includes the `interpretation` label and REQ-IO.RES-014 refuses a provisional record a format cannot label; both are enforced by the shared guard `IO.RES.ILABEL`, which every exporter (`IO.RES.QIFR.ROUT`, `IO.RES.CSV.OUT`, `IO.RES.AQDEF.OUT`, `IO.RES.PIWEB`, `IO.RES.REPORT`) calls before writing. Wiring the call into the already-built `IO.RES.CSV.OUT` is a follow-up build task.
 - GOM.EXP.03 (export reports as PDF) is in IO's covers, but RPT owns PDF output. This node covers it only as the export envelope (REQ-IO.RES-012). If maintainers prefer, the seed could be moved to RPT, which would need a change to IO's `covers:` in the parent.
 - AQDEF is owned by a competitor; certification terms and fees are [unverified]. VDA QDX as a neutral alternative is not in IO's scope yet.
 - Where the ResultRecord type itself lives (CORE data model or GDT) is not settled in the parents; this node only consumes it.
@@ -90,3 +92,4 @@ Alternatives considered:
 | IO.RES.AQDEF | AQDEF DFQ export and historical import (uncertified) | 010 013 | GOM.EXP.04, PW.EXP.04 |
 | IO.RES.PIWEB | PiWeb-importable results export | 011 | GOM.EXP.05 |
 | IO.RES.REPORT | Report-file export envelope (leaf) | 012 | GOM.EXP.03 |
+| IO.RES.ILABEL | Interpretation label guard for every results export (leaf) | 013 014 | none |
