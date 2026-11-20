@@ -6,9 +6,10 @@
 //! Expected values come from `fixtures/solv/cert/recomp-floor-v1/make_cases.py` (90-digit
 //! Newton-polished optima of minimum-zone partial arcs, long cylinders and cylinders 300 mm from
 //! the origin, each verified a strict local minimum; independent of this crate, of any solver
-//! and of the platform libm). For every case that must certify, the test also replays the
-//! recomputation's Gauss-Newton iteration bit for bit and asserts that its last step exceeds
-//! `4 u ||p||`, so the case is one the step-only rule (before the fix) refused. `OUTPUT_PIN` is a
+//! and of the platform libm). All 64 generated candidates are emitted (no selection). The test
+//! replays the recomputation's Gauss-Newton iteration bit for bit and counts the floor cases,
+//! whose last step exceeds `4 u ||p||` (the step-only rule before the fix refused them); at
+//! least `MIN_FLOOR` must be floor cases, and every candidate must recompute. `OUTPUT_PIN` is a
 //! regression pin of this crate's own output (not an oracle); CI checks it on x86-64 Linux and
 //! Windows, ARM64 macOS and wasm32.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
@@ -413,25 +414,29 @@ fn bits(v: &[f64]) -> Vec<u64> {
 fn fixture_counts() {
     let cases = parse();
     let count = |p: &str| cases.iter().filter(|c| c.name.starts_with(p)).count();
-    assert_eq!((count("arc-"), count("arc-far-"), count("cyl-long-"), count("cyl-far-")), (7, 4, 6, 6));
+    assert_eq!((count("arc-"), count("arc-far-"), count("cyl-long-"), count("cyl-far-")), (32, 16, 16, 16));
     assert_eq!(cases.iter().filter(|c| c.expect == "no_convergence").count(), 1);
-    assert_eq!(cases.len(), 20);
+    assert_eq!(cases.len(), 65);
 }
 
-/// Every floor case: the step-only rule (`s <= 4 u ||p||`) would refuse it, and the
-/// recomputation now succeeds with the replayed parameters and a proven bound that contains the
-/// exact optimum. The partial arcs (near and 300 mm from the origin) and the long cylinders then
-/// certify end to end; the cylinders 300 mm from the origin stop at the KKT stationarity check
-/// (see below).
+/// At least this many candidates are floor cases (the step-only rule refused them).
+const MIN_FLOOR: usize = 19;
+
+/// Every generated candidate (no selection) recomputes with the replayed parameters and a proven
+/// bound that contains the exact optimum, and at least [`MIN_FLOOR`] of them are floor cases: the
+/// step-only rule (`s <= 4 u ||p||`) would refuse them. A floor case is accepted only within the
+/// new allowance. Then `certify` runs end to end: it passes, or stops only at the KKT
+/// stationarity check (see `kkt_stationarity_limit`).
 #[test]
-fn floor_cases_recompute_and_certify() {
+fn all_candidates_recompute() {
     let cfg = RecompConfig::default();
+    let mut floor = Vec::new();
+    let mut kkt_limited = Vec::new();
     for c in parse().iter().filter(|c| c.expect == "certify") {
         let prob = c.problem();
         let (p, step) = replay(&prob, &c.set, cfg.gn_steps);
         let s = red::norm2(&step).unwrap();
         let old_thr = STEP_TOL * red::norm2(&p).unwrap();
-        assert!(s > old_thr, "{}: step {s:e} <= 4 u ||p|| = {old_thr:e}: not a floor case", c.name);
 
         let r = run(&prob, &c.set, &cfg).unwrap_or_else(|e| panic!("{}: {e:?}", c.name));
         assert_eq!(bits(r.params()), bits(&p), "{}", c.name);
@@ -441,33 +446,32 @@ fn floor_cases_recompute_and_certify() {
         }
         check_bound(&c.name, "value", r.value(), c.value, r.value_bound());
         assert!(r.param_bounds().iter().all(|&b| b <= 1e-9 * scale), "{}: {:?}", c.name, r.param_bounds());
-        // The accepted step is within the new allowance 4 u ||p|| + 2 ||k||.
-        let k = red::norm2(r.param_bounds()).unwrap();
-        assert!(s <= old_thr + 2.0 * k, "{}", c.name);
+        if s > old_thr {
+            floor.push(c.name.clone());
+            // Accepted only within the allowance 4 u ||p|| + 2 ||k||.
+            let k = red::norm2(r.param_bounds()).unwrap();
+            assert!(s <= old_thr + 2.0 * k, "{}", c.name);
+        }
 
         let (conic_p, sol) = conic(&prob.row_labels(), &c.set);
-        let cert = certify(&prob, &conic_p, &sol, CertKind::Zone, &CertConfig::default());
-        if c.name.starts_with("cyl-far-") {
-            // The recomputation no longer refuses these, but KRN.SOLV.CERT.KKT does: its
-            // stationarity residual at the float multipliers (threshold `tol_s ||grad f||`,
-            // here 1.4e-9, while the constraint gradients in (a, b) reach about 300 at z = 300)
-            // stays undecidable. That is a separate, fail-closed limitation of the KKT check,
-            // pinned here so a change to it shows.
-            match cert {
-                Err(CertError::CertificateFailed { tried: 1, first_report: Some(rep), first_error: None }) => {
-                    assert_eq!(rep.status(), KktStatus::Undecidable, "{}", c.name);
-                    assert_eq!(rep.reason(), Some(KktFail::Stationarity), "{}", c.name);
-                    for cond in [rep.primal(), rep.dual(), rep.complementarity()] {
-                        assert_eq!(cond.verdict(), Verdict::Satisfied, "{}", c.name);
-                    }
+        match certify(&prob, &conic_p, &sol, CertKind::Zone, &CertConfig::default()) {
+            Ok(cert) => assert_eq!(bits(cert.params()), bits(r.params()), "{}", c.name),
+            Err(CertError::CertificateFailed { tried: 1, first_report: Some(rep), first_error: None }) => {
+                assert_eq!(rep.status(), KktStatus::Undecidable, "{}", c.name);
+                assert_eq!(rep.reason(), Some(KktFail::Stationarity), "{}", c.name);
+                for cond in [rep.primal(), rep.dual(), rep.complementarity()] {
+                    assert_eq!(cond.verdict(), Verdict::Satisfied, "{}", c.name);
                 }
-                other => panic!("{}: certify {other:?}", c.name),
+                kkt_limited.push(c.name.clone());
             }
-        } else {
-            let cert = cert.unwrap_or_else(|e| panic!("{}: certify {e:?}", c.name));
-            assert_eq!(bits(cert.params()), bits(r.params()), "{}", c.name);
+            Err(e) => panic!("{}: certify {e:?}", c.name),
         }
     }
+    eprintln!("floor cases ({}): {floor:?}", floor.len());
+    eprintln!("KKT stationarity undecidable ({}): {kkt_limited:?}", kkt_limited.len());
+    assert!(floor.len() >= MIN_FLOOR, "only {} floor cases: {floor:?}", floor.len());
+    // Only cylinders far from the origin (gradients in (a, b) of about 300) hit the KKT limit.
+    assert!(kkt_limited.iter().all(|n| n.starts_with("cyl-far-")), "{kkt_limited:?}");
 }
 
 /// The unconverged case: its step budget leaves a last step far above both `4 u ||p||` and twice
@@ -507,7 +511,7 @@ fn digest(name: &str, r: &Result<Recomputed, CertError>, h: &mut Sha256Hasher) {
 /// Output-bit pin of every case (its own step budget), recorded from a local x86-64 run and
 /// checked by CI on x86-64 Linux and Windows, ARM64 macOS and wasm32 under wasmtime
 /// (REQ-KRN.SOLV.CERT.RECOMP-005: a target that diverges is a failure, not a new pin).
-const OUTPUT_PIN: &str = "sha256:95409fe55b67179172aa960916adcd27b10b16a67e018679be7c41579d1439d5";
+const OUTPUT_PIN: &str = "sha256:ac75dc549609915e1aee1f471ea8611c44927fdbc046cdaf9aa21621af82b714";
 
 #[test]
 fn output_bits_pinned() {

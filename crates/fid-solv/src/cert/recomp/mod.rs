@@ -39,8 +39,9 @@
 //!    bound (`NotSquare`).
 //! 6. **Convergence** (nonlinear only), decided **after** the bound: with `s` = `red::norm2` of
 //!    the last step and `thr = (4 u) * red::norm2(p)` (`u = 2^-53`, one rounding):
-//!    - bound proven: accepted when `s <= thr + 2 * red::norm2(k)` (the allowance rounded up),
-//!      else [`CertError::RecomputeNoConvergence`];
+//!    - bound proven: accepted when `s <= next_up(thr + next_up(2 * norm2(k)))`, with `s`,
+//!      `thr` and `norm2(k)` = `red::norm2(k)` rounded to nearest and each `+`, `*` rounded to
+//!      nearest before `next_up`, else [`CertError::RecomputeNoConvergence`];
 //!    - no bound: `s > thr` is [`CertError::RecomputeNoConvergence`], otherwise the bound's own
 //!      error (`BoundNotProven`, a callback error, ...).
 //!
@@ -434,8 +435,9 @@ fn proven_bounds<P: ActiveSetProblem + ?Sized>(
 /// Krawczyk test. `step_norm` is `||s||` of the last Gauss-Newton step, `thr` is `4 u ||p||`,
 /// `bounds` the outcome of the Krawczyk test.
 ///
-/// - Proven radius `k`: accepted when `||s|| <= 4 u ||p|| + 2 ||k||` (the allowance is rounded
-///   up), else [`CertError::RecomputeNoConvergence`].
+/// - Proven radius `k`: accepted when `step_norm <= next_up(thr + next_up(2 * norm2(k)))`
+///   (`norm2` = `red::norm2`, rounded to nearest; `+` and `*` round to nearest before
+///   `next_up`), else [`CertError::RecomputeNoConvergence`].
 /// - No proof: if `||s|| > 4 u ||p||` the result is [`CertError::RecomputeNoConvergence`] (as
 ///   before the proof existed in the rule), otherwise the proof's own error.
 pub(crate) fn converged(step_norm: f64, thr: f64, bounds: Result<Vec<f64>, CertError>) -> Result<Vec<f64>, CertError> {
@@ -742,11 +744,133 @@ mod tests {
         );
     }
 
+    /// Minimum-zone circle on four points, `p = (cx, cy, r_in, r_out)`; row `(i, 1)` outer
+    /// (`d_i = r_out`), `(i, 0)` inner. Nonlinear, with every enclosure the bound needs and a
+    /// deliberately poor start.
+    struct Ring {
+        pts: [(f64, f64); 4],
+        start: [f64; 4],
+    }
+
+    impl Ring {
+        fn dist_iv(&self, i: usize, cx: Interval, cy: Interval) -> Result<(Interval, Interval, Interval), CertError> {
+            let (x, y) = self.pts[i];
+            let dx = Interval::point(x)?.sub(cx)?;
+            let dy = Interval::point(y)?.sub(cy)?;
+            Ok((dx, dy, dx.sqr()?.add(dy.sqr()?)?.sqrt()?))
+        }
+    }
+
+    impl ActiveSetProblem for Ring {
+        fn n_params(&self) -> usize {
+            4
+        }
+        fn expected_active(&self) -> usize {
+            4
+        }
+        fn row_labels(&self) -> Vec<RowLabel> {
+            (0..4).flat_map(|point| [0, 1].map(|side| RowLabel { point, side })).collect()
+        }
+        fn is_linear(&self) -> bool {
+            false
+        }
+        fn start_from_set(&self, _: &[RowLabel]) -> Result<Vec<f64>, CertError> {
+            Ok(self.start.to_vec())
+        }
+        fn residuals_and_jacobian(&self, set: &[RowLabel], p: &[f64]) -> Result<(Vec<f64>, Mat), CertError> {
+            let mut r = Vec::new();
+            let mut rows = Vec::new();
+            for l in set {
+                let (x, y) = self.pts[l.point as usize];
+                let (dx, dy) = (x - p[0], y - p[1]);
+                let d = fid_num::f::sqrt(dx * dx + dy * dy)?;
+                r.push(d - p[2 + l.side as usize]);
+                let mut row = [-dx / d, -dy / d, 0.0, 0.0];
+                row[2 + l.side as usize] = -1.0;
+                rows.push(row);
+            }
+            Ok((r, Mat::from_rows(&rows)?))
+        }
+        fn value(&self, p: &[f64]) -> Result<f64, CertError> {
+            Ok(p[3] - p[2])
+        }
+        fn constraint_values(&self, _: &[f64]) -> Result<Vec<f64>, CertError> {
+            Err(CertError::Callback { reason: "unused" })
+        }
+        fn objective_gradient(&self, _: &[f64]) -> Result<Vec<f64>, CertError> {
+            Ok(vec![0.0, 0.0, -1.0, 1.0])
+        }
+        fn constraint_gradients(&self, _: &[RowLabel], _: &[f64]) -> Result<Mat, CertError> {
+            Err(CertError::Callback { reason: "unused" })
+        }
+        fn residual_enclosure(&self, set: &[RowLabel], p: &[f64]) -> Result<Option<Vec<Interval>>, CertError> {
+            let mut out = Vec::new();
+            for l in set {
+                let (_, _, d) = self.dist_iv(l.point as usize, Interval::point(p[0])?, Interval::point(p[1])?)?;
+                out.push(d.sub(Interval::point(p[2 + l.side as usize])?)?);
+            }
+            Ok(Some(out))
+        }
+        fn jacobian_enclosure(&self, set: &[RowLabel], b: &[Interval]) -> Result<Option<Vec<Interval>>, CertError> {
+            let mut out = Vec::new();
+            for l in set {
+                let (dx, dy, d) = self.dist_iv(l.point as usize, b[0], b[1])?;
+                out.push(dx.div(d)?.neg());
+                out.push(dy.div(d)?.neg());
+                out.push(Interval::point(if l.side == 0 { -1.0 } else { 0.0 })?);
+                out.push(Interval::point(if l.side == 1 { -1.0 } else { 0.0 })?);
+            }
+            Ok(Some(out))
+        }
+        fn value_enclosure(&self, b: &[Interval]) -> Result<Option<Interval>, CertError> {
+            Ok(Some(b[3].sub(b[2])?))
+        }
+    }
+
+    /// The rejection branch of the convergence rule on a real case: after two Gauss-Newton steps
+    /// from a poor start, the Krawczyk test proves a radius `k` around the iterate, yet the last
+    /// step exceeds `next_up(4 u ||p|| + next_up(2 ||k||))`, so the result is
+    /// `RecomputeNoConvergence`, not a proven but unconverged value.
+    #[test]
+    fn proven_but_unconverged_is_refused() {
+        let ring =
+            Ring { pts: [(10.0, 0.0), (0.0, 9.875), (-10.0, 0.125), (0.25, -9.875)], start: [0.25, 0.25, 9.5, 10.5] };
+        let set = [
+            RowLabel { point: 0, side: 1 },
+            RowLabel { point: 1, side: 0 },
+            RowLabel { point: 2, side: 1 },
+            RowLabel { point: 3, side: 0 },
+        ];
+        let cfg = RecompConfig { gn_steps: 2, ..RecompConfig::default() };
+        // Replay the iteration of `recompute_set`.
+        let mut p = ring.start.to_vec();
+        let mut step = Vec::new();
+        for _ in 0..cfg.gn_steps {
+            let (r, j) = ring.residuals_and_jacobian(&set, &p).unwrap();
+            step = lstsq(&j, &r, cfg.rel_tol).unwrap().x;
+            for (pi, xi) in p.iter_mut().zip(&step) {
+                *pi -= xi;
+            }
+        }
+        let (r, j) = ring.residuals_and_jacobian(&set, &p).unwrap();
+        let q = qr_pivoted(&j, cfg.rel_tol).unwrap();
+        let k = proven_bounds(&ring, &set, &p, &q, &j, &r, cfg.rel_tol).unwrap();
+        let s = red::norm2(&step).unwrap();
+        let thr = STEP_TOL * red::norm2(&p).unwrap();
+        let allowance = add_up(thr, mul_up(red::norm2(&k).unwrap(), 2.0).unwrap()).unwrap();
+        assert!(s > allowance, "step {s:e} within allowance {allowance:e}");
+        assert!(k.iter().all(|&b| b > 0.0 && b < s), "{k:?}");
+        assert_eq!(recompute_set(&ring, &set, &cfg), Err(CertError::RecomputeNoConvergence { step_norm: s }));
+        // With the default budget the same start converges and is accepted.
+        let ok = recompute_set(&ring, &set, &RecompConfig::default()).unwrap();
+        assert_eq!(ok.steps(), DEFAULT_GN_STEPS);
+    }
+
     #[test]
     fn convergence_rule() {
         let nc = |s: f64| Err(CertError::RecomputeNoConvergence { step_norm: s });
-        let k = || Ok(vec![3e-12, 4e-12]); // ||k|| = 5e-12, allowance thr + 1e-11
-                                           // Proven: accepted up to thr + 2 ||k||, refused above.
+        // ||k|| = 5e-12, allowance thr + 1e-11. Proven: accepted up to it, refused above.
+        let k = || Ok(vec![3e-12, 4e-12]);
         assert_eq!(converged(1e-11, 1e-14, k()), k());
         assert_eq!(converged(1.0009e-11, 1e-14, k()), k());
         assert_eq!(converged(1.0011e-11, 1e-14, k()), nc(1.0011e-11));

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Independent reference for the KRN.SOLV.CERT.RECOMP convergence rule (CC-BY-4.0 project data).
 
-Writes fixtures/solv/cert/recomp-floor-v1/cases.txt: nonlinear minimum-zone problems whose
-Gauss-Newton steps, with residuals evaluated in plain f64, stall at the rounding floor above
-4 u ||p|| (partial arcs, long cylinders, parts far from the origin), and one problem that has
-not converged after its step budget and must still be refused.
+Writes fixtures/solv/cert/recomp-floor-v1/cases.txt: 64 nonlinear minimum-zone problems (16
+each of partial arcs near and far from the origin, long cylinders and cylinders far from the
+origin), every generated candidate, many of whose Gauss-Newton steps with residuals in plain f64
+stall at the rounding floor above 4 u ||p||, and one problem that has not converged after its
+step budget and must still be refused.
 
 Every expected value is decided here with exact rational arithmetic (fractions.Fraction of the
 exact dyadic data) or with the stdlib decimal module at 90 significant digits (software
@@ -71,18 +72,12 @@ from random import Random
 OUT = Path(__file__).with_name("cases.txt")
 getcontext().prec = 90
 U = Fraction(1, 2**53)
-# Candidate indices kept per family (16 generated each). Kept: those whose Gauss-Newton
-# iteration with plain-f64 residuals ends with a last step above 1.2 * 4 u ||p||, i.e. that the
-# step-only convergence rule refused. That property is a statement about f64 arithmetic, so it
-# is not decided here: the Rust test replays the iteration bit for bit and asserts it for every
-# kept case. The selection was made once and is recorded, not computed. The expected values
-# (optima, active sets, local optimality) are all decided by this script.
-KEEP = {
-    "arc": [3, 8, 9],
-    "arc-far": [7, 9, 11, 14],
-    "cyl-long": [2, 6, 7, 8, 10, 13],
-    "cyl-far": [0, 1, 2, 4, 6, 7],
-}
+# Candidates generated per family; every one is emitted. Whether a candidate is a floor case
+# (its Gauss-Newton iteration with plain-f64 residuals ends with a last step above 4 u ||p||) is a
+# statement about f64 arithmetic, so it is not decided here: the Rust test replays the iteration
+# bit for bit, counts the floor cases and asserts a minimum. The expected values (optima, active
+# sets, local optimality) are all decided by this script.
+PER_FAMILY = 16
 
 
 # ------------------------------------------------------------------ number helpers
@@ -420,16 +415,16 @@ def render():
         "# Minimum-zone partial arcs and long or far cylinders (90-digit references) whose plain-f64",
         "# Gauss-Newton steps stall at the rounding floor, and one unconverged case. See make_cases.py.",
     ]
-    for k in KEEP["arc"]:
+    for k in range(PER_FAMILY):
         pts, labels, p, width = make_arc(k, False)
         emit(out, f"arc-{k:02d}", "arc", pts, None, labels, p, width)
-    for k in KEEP["arc-far"]:
+    for k in range(PER_FAMILY):
         pts, labels, p, width = make_arc(k, True)
         emit(out, f"arc-far-{k:02d}", "arc", pts, None, labels, p, width)
-    for k in KEEP["cyl-long"]:
+    for k in range(PER_FAMILY):
         pts, start, labels, p, width = make_cylinder("long", k, False)
         emit(out, f"cyl-long-{k:02d}", "cyl", pts, start, labels, p, width)
-    for k in KEEP["cyl-far"]:
+    for k in range(PER_FAMILY):
         pts, start, labels, p, width = make_cylinder("far", k, True)
         emit(out, f"cyl-far-{k:02d}", "cyl", pts, start, labels, p, width)
     pts, start, labels, p, width = make_unconverged()

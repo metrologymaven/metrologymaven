@@ -99,9 +99,10 @@ pub enum CertError {
         /// The condition estimate (`+inf` when beyond the `f64` range).
         cond: f64,
     },
-    /// The last Gauss-Newton step on a nonlinear active-set system is longer than `4 u` times
-    /// the parameter norm plus twice the norm of the proven radius, or than `4 u` times the
-    /// parameter norm when no radius is proven (REQ-KRN.SOLV.CERT.RECOMP-003).
+    /// The last Gauss-Newton step `s` on a nonlinear active-set system exceeds
+    /// `next_up(thr + next_up(2 * norm2(k)))` with `thr = 4 u * norm2(p)` and `k` the proven
+    /// radius (norms `red::norm2`, round to nearest), or exceeds `thr` when no radius is proven
+    /// (REQ-KRN.SOLV.CERT.RECOMP-003).
     RecomputeNoConvergence {
         /// 2-norm of the last step.
         step_norm: f64,
