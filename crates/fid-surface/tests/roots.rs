@@ -558,7 +558,7 @@ fn ac1_handle_resolves_inside_its_root() {
         assert_eq!(v, "ok", "{ch:?}");
         let r = r.unwrap();
         assert_eq!(r.root().map(|x| x.as_str()), Some("in"));
-        let got = std::fs::canonicalize(&roots.iter().find(|x| x.id().as_str() == "in").unwrap().path())
+        let got = std::fs::canonicalize(roots.iter().find(|x| x.id().as_str() == "in").unwrap().path())
             .unwrap()
             .join(r.rel_path());
         assert_eq!(got, want, "{ch:?}");
