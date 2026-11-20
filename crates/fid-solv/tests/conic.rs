@@ -220,6 +220,13 @@ fn ac2_invalid_problem() {
     assert_eq!(invalid_field(ConicProblemBuilder::new(vec![1.0], out_of_range, vec![0.0, 0.0], nn()).build()), "A");
     let bad_ptr = Csc::new(2, 1, vec![0, 3], vec![0, 1], vec![1.0, 1.0]);
     assert_eq!(invalid_field(ConicProblemBuilder::new(vec![1.0], bad_ptr, vec![0.0, 0.0], nn()).build()), "A");
+    // a negative diagonal entry of P (necessary PSD check)
+    let p_neg = Csc::new(2, 2, vec![0, 1, 2], vec![0, 1], vec![1.0, -1e-300]);
+    let r = ConicProblemBuilder::new(vec![1.0, 1.0], a2.clone(), vec![0.0, 0.0], nn()).p(p_neg).build();
+    assert_eq!(invalid_field(r), "P");
+    // a zero or missing diagonal entry is accepted
+    let p_zero = Csc::new(2, 2, vec![0, 1, 1], vec![0], vec![0.0]);
+    assert!(ConicProblemBuilder::new(vec![1.0, 1.0], a2.clone(), vec![0.0, 0.0], nn()).p(p_zero).build().is_ok());
     // a valid upper-triangular P is accepted
     let p_upper = Csc::new(2, 2, vec![0, 1, 3], vec![0, 0, 1], vec![1.0, 0.5, 1.0]);
     assert!(ConicProblemBuilder::new(vec![1.0, 1.0], a2, vec![0.0, 0.0], nn()).p(p_upper).build().is_ok());

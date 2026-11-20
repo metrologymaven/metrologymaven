@@ -65,6 +65,19 @@ impl Csc {
     fn all_finite(&self) -> bool {
         self.nzval.iter().all(|v| v.is_finite())
     }
+
+    /// Whether a stored diagonal entry is negative (a missing diagonal entry is 0). Call only
+    /// on a matrix that passed `is_valid`.
+    fn has_negative_diagonal(&self) -> bool {
+        self.colptr.windows(2).enumerate().any(|(col, w)| match w {
+            [lo, hi] => self
+                .rowval
+                .get(*lo..*hi)
+                .zip(self.nzval.get(*lo..*hi))
+                .is_some_and(|(rows, vals)| rows.iter().zip(vals).any(|(&r, &v)| r == col && v < 0.0)),
+            _ => false,
+        })
+    }
 }
 
 /// One cone of the product cone `K`, with its dimension (rows of `A` it covers).
@@ -162,6 +175,13 @@ impl ConicProblemBuilder {
     }
 
     /// Sets the upper triangle of `P` (entries on or above the diagonal only).
+    ///
+    /// **Precondition: `P` must be positive semidefinite** (the problem must be convex). The
+    /// builder checks only a necessary condition, no negative diagonal entry; it does not
+    /// prove `P` PSD. An indefinite `P` with a nonnegative diagonal is accepted and the
+    /// solver's behaviour on it is undefined (it may report a wrong optimum). Pass only a
+    /// `P` the caller constructed to be PSD (for example `J'J` or a nonnegative diagonal);
+    /// a full PSD check is an open question of KRN.SOLV.CONIC.WRAP.
     pub fn p(mut self, p: Csc) -> ConicProblemBuilder {
         self.p = Some(p);
         self
@@ -175,8 +195,9 @@ impl ConicProblemBuilder {
     /// - `b`: length other than the row count of `A`, or a non-finite entry;
     /// - `cones`: a cone of dimension 0, a second-order cone of dimension below 2, or
     ///   dimensions that do not sum to the row count of `A`;
-    /// - `P`: not a valid CSC matrix, not `n x n`, an entry below the diagonal, or a
-    ///   non-finite entry.
+    /// - `P`: not a valid CSC matrix, not `n x n`, an entry below the diagonal, a
+    ///   non-finite entry, or a negative diagonal entry (a necessary condition for positive
+    ///   semidefiniteness; see [`ConicProblemBuilder::p`]).
     pub fn build(self) -> Result<ConicProblem, ConicError> {
         let ConicProblemBuilder { p, q, a, b, cones } = self;
         let invalid = |field: &'static str| ConicError::InvalidProblem { field };
@@ -206,7 +227,7 @@ impl ConicProblemBuilder {
             return Err(invalid("cones"));
         }
         if let Some(p) = &p {
-            if !p.is_valid(true) || p.nrows != n || p.ncols != n || !p.all_finite() {
+            if !p.is_valid(true) || p.nrows != n || p.ncols != n || !p.all_finite() || p.has_negative_diagonal() {
                 return Err(invalid("P"));
             }
         }

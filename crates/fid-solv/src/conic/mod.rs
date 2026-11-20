@@ -22,23 +22,40 @@ use fid_clarabel::qdldl::{MAX_ORDERING_DIM, MAX_ORDERING_NNZ};
 use fid_clarabel::solver::{DefaultSolver, IPSolver, SolverError as SetupError, SolverStatus, SupportedConeT};
 
 /// Why the solver ended without a solution (REQ-KRN.SOLV.CONIC.WRAP-005).
+///
+/// The cause is read from the solver's *final* status (`solution.status`), after the vendored
+/// solver's own post-processing: a solved, almost solved or infeasibility status whose values
+/// of record are not finite has already been demoted to a numerical error there (patch 0003),
+/// and is reported here as [`ConicCause::Numerical`].
+///
+/// The `Almost*` causes can come from a run that hit the iteration limit, stopped for lack of
+/// progress or failed numerically: on those ends the solver checks its last iterate against
+/// the reduced-accuracy tolerances and, if they pass, reports `Almost*` instead. So an
+/// iteration-limit run does not always give [`ConicCause::IterationLimit`]. Either way it is
+/// an error here; nothing reduced-accuracy is returned as a solution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConicCause {
     /// The solver found a certificate of primal infeasibility.
     PrimalInfeasible,
     /// The solver found a certificate of dual infeasibility (the problem is unbounded).
     DualInfeasible,
-    /// The iteration limit was reached.
+    /// The iteration limit was reached and the last iterate did not meet even the
+    /// reduced-accuracy tolerances (else the cause is one of the `Almost*` causes).
     IterationLimit,
     /// The solver stopped for lack of progress.
     InsufficientProgress,
-    /// The solver stopped on a numerical error (including a non-finite iterate).
+    /// The solver stopped on a numerical error (including a non-finite iterate, and a result
+    /// or certificate the solver demoted because a value of record was not finite).
     Numerical,
-    /// The solver reached only its reduced-accuracy tolerances for a solution.
+    /// The solver reached only its reduced-accuracy tolerances for a solution. This is also
+    /// how a run that hit the iteration limit, stalled or failed numerically ends when its
+    /// last iterate passes the reduced tolerances.
     AlmostSolved,
-    /// The solver reached only its reduced-accuracy tolerances for primal infeasibility.
+    /// The solver reached only its reduced-accuracy tolerances for primal infeasibility
+    /// (also possible after the iteration limit, a stall or a numerical failure).
     AlmostPrimalInfeasible,
-    /// The solver reached only its reduced-accuracy tolerances for dual infeasibility.
+    /// The solver reached only its reduced-accuracy tolerances for dual infeasibility (also
+    /// possible after the iteration limit, a stall or a numerical failure).
     AlmostDualInfeasible,
     /// The solver reported that it did not run.
     NotRun,
@@ -241,37 +258,33 @@ pub(crate) fn solve_with(problem: &ConicProblem, limits: &ConicLimits) -> Result
             SetupError::SettingsError(_) => ConicError::SetupRejected { reason: "settings" },
         })?;
     // A KKT matrix always stores its diagonal, so zero stored entries means the logical
-    // factorisation (and with it the ordering) failed; the solver could only end in
-    // NumericalError, so do not run it.
+    // factorisation failed; the solver could only end in NumericalError, so do not run it.
+    // Defensive: with the budget check above and the builder's checks, the only known way
+    // here is an elimination graph past MAX_ORDERING_FILL (4 000 000 edges) within the
+    // dimension and entry budgets. No test reaches it: building that much fill costs far
+    // more than a debug or wasm32 CI test can spend.
     if solver.info.linsolver.nnzA == 0 {
         return Err(ConicError::FactorisationSetup);
     }
     solver.solve();
 
     let info = &solver.info;
+    let sol = &solver.solution;
     let fail = |cause: ConicCause| {
         Err(ConicError::Solver(SolverError {
             cause,
-            iterations: info.iterations,
+            iterations: sol.iterations,
             primal_residual: finite(info.res_primal),
             dual_residual: finite(info.res_dual),
             gap: finite(info.gap_abs),
         }))
     };
-    // Exhaustive on purpose: a new vendored status must be mapped before this compiles.
-    match info.status {
-        SolverStatus::Solved => {}
-        SolverStatus::PrimalInfeasible => return fail(ConicCause::PrimalInfeasible),
-        SolverStatus::DualInfeasible => return fail(ConicCause::DualInfeasible),
-        SolverStatus::AlmostSolved => return fail(ConicCause::AlmostSolved),
-        SolverStatus::AlmostPrimalInfeasible => return fail(ConicCause::AlmostPrimalInfeasible),
-        SolverStatus::AlmostDualInfeasible => return fail(ConicCause::AlmostDualInfeasible),
-        SolverStatus::MaxIterations => return fail(ConicCause::IterationLimit),
-        SolverStatus::NumericalError => return fail(ConicCause::Numerical),
-        SolverStatus::InsufficientProgress => return fail(ConicCause::InsufficientProgress),
-        SolverStatus::Unsolved => return fail(ConicCause::NotRun),
+    // The final status is `solution.status`: the solver's post-processing demotes a result
+    // or certificate without finite values of record to NumericalError there, and only
+    // there (`info.status` keeps the undemoted value).
+    if let Some(cause) = cause_of(sol.status) {
+        return fail(cause);
     }
-    let sol = &solver.solution;
     let residuals =
         ConicResiduals { primal: info.res_primal, dual: info.res_dual, gap_abs: info.gap_abs, gap_rel: info.gap_rel };
     let all_finite = sol.x.len() == n
@@ -288,9 +301,27 @@ pub(crate) fn solve_with(problem: &ConicProblem, limits: &ConicLimits) -> Result
         y: sol.z.clone(),
         s: sol.s.clone(),
         objective: sol.obj_val,
-        iterations: info.iterations,
+        iterations: sol.iterations,
         residuals,
     })
+}
+
+/// The cause for a final solver status, or `None` for `Solved` (the only status that can give
+/// a solution). Exhaustive on purpose: a new vendored status must be mapped before this
+/// compiles.
+pub(crate) fn cause_of(status: SolverStatus) -> Option<ConicCause> {
+    match status {
+        SolverStatus::Solved => None,
+        SolverStatus::PrimalInfeasible => Some(ConicCause::PrimalInfeasible),
+        SolverStatus::DualInfeasible => Some(ConicCause::DualInfeasible),
+        SolverStatus::AlmostSolved => Some(ConicCause::AlmostSolved),
+        SolverStatus::AlmostPrimalInfeasible => Some(ConicCause::AlmostPrimalInfeasible),
+        SolverStatus::AlmostDualInfeasible => Some(ConicCause::AlmostDualInfeasible),
+        SolverStatus::MaxIterations => Some(ConicCause::IterationLimit),
+        SolverStatus::NumericalError => Some(ConicCause::Numerical),
+        SolverStatus::InsufficientProgress => Some(ConicCause::InsufficientProgress),
+        SolverStatus::Unsolved => Some(ConicCause::NotRun),
+    }
 }
 
 #[cfg(test)]

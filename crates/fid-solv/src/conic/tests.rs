@@ -91,3 +91,30 @@ fn descriptor_follows_limits() {
     assert_ne!(a, b);
     assert_eq!(a, limits_descriptor().canonical_json());
 }
+
+/// Every final solver status maps to its cause; only `Solved` gives no cause. The statuses a
+/// demotion can replace (Solved, AlmostSolved and the four infeasibility statuses) become
+/// NumericalError in `solution.status`, which maps to `Numerical`.
+#[test]
+fn cause_of_every_status() {
+    use fid_clarabel::solver::SolverStatus as S;
+    let table = [
+        (S::Unsolved, Some(ConicCause::NotRun)),
+        (S::Solved, None),
+        (S::PrimalInfeasible, Some(ConicCause::PrimalInfeasible)),
+        (S::DualInfeasible, Some(ConicCause::DualInfeasible)),
+        (S::AlmostSolved, Some(ConicCause::AlmostSolved)),
+        (S::AlmostPrimalInfeasible, Some(ConicCause::AlmostPrimalInfeasible)),
+        (S::AlmostDualInfeasible, Some(ConicCause::AlmostDualInfeasible)),
+        (S::MaxIterations, Some(ConicCause::IterationLimit)),
+        (S::NumericalError, Some(ConicCause::Numerical)),
+        (S::InsufficientProgress, Some(ConicCause::InsufficientProgress)),
+    ];
+    for (status, cause) in table {
+        assert_eq!(cause_of(status), cause, "{status:?}");
+    }
+    // the table is complete: one row per status, by the enum's discriminants 0..=9
+    let mut seen: Vec<i32> = table.iter().map(|(s, _)| *s as i32).collect();
+    seen.sort_unstable();
+    assert_eq!(seen, (0..=9).collect::<Vec<i32>>());
+}
