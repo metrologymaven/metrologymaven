@@ -85,8 +85,9 @@ pub struct Degeneracy {
     pub coverage: Option<f64>,
 }
 
-/// The blocked QR fold of rule 2 over rows produced by `row(i, out)`.
-fn tsqr<const K: usize, F>(n: usize, mut row: F) -> Result<[[f64; K]; K], FitError>
+/// The blocked QR fold of rule 2 over rows produced by `row(i, out)`. Also used by `init`
+/// (KRN.LSQ.INIT) for its candidate circle fits.
+pub(crate) fn tsqr<const K: usize, F>(n: usize, mut row: F) -> Result<[[f64; K]; K], FitError>
 where
     F: FnMut(usize, &mut [f64; K]) -> Result<(), FitError>,
 {
@@ -210,9 +211,15 @@ fn jacobi(r: [[f64; 3]; 3]) -> Result<DataShape, FitError> {
 
 /// Singular values and principal axes of centred, scaled data (rules 2 and 3).
 pub fn data_shape(c: &Centred) -> Result<DataShape, FitError> {
-    let xyz = c.xyz();
-    let r = tsqr::<3, _>(c.len(), |i, out| {
-        out.copy_from_slice(&xyz[3 * i..3 * i + 3]);
+    shape_of_rows(c.xyz())
+}
+
+/// Rules 2 and 3 on any interleaved `n x 3` buffer (for example unit normals, whose smallest
+/// right singular vector is the smallest-eigenvalue eigenvector of their scatter; used by
+/// `init`, KRN.LSQ.INIT).
+pub(crate) fn shape_of_rows(xyz: &[f64]) -> Result<DataShape, FitError> {
+    let r = tsqr::<3, _>(xyz.len() / 3, |i, out| {
+        out.copy_from_slice(xyz.get(3 * i..3 * i + 3).ok_or(FitError::BadLength { len: xyz.len() })?);
         Ok(())
     })?;
     jacobi(r)
