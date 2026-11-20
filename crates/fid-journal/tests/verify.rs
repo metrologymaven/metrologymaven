@@ -1053,7 +1053,8 @@ fn an_appended_and_checkpointed_journal_verifies() {
 fn both_commands_are_declared_r0_d0_on_cli_and_mcp() {
     let defs = command_defs().unwrap();
     let ids: Vec<String> = defs.iter().map(|d| d.id.clone()).collect();
-    assert_eq!(ids, ["journal.verify_chain", "journal.list_entries"]);
+    assert_eq!(ids, [VERIFY_CHAIN, LIST_ENTRIES]);
+    assert_eq!((VERIFY_CHAIN, LIST_ENTRIES), ("journal.verify_chain", "journal.list_entries"));
     for d in &defs {
         let v = d.to_value();
         let o = obj(&v);
