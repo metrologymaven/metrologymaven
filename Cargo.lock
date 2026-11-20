@@ -81,6 +81,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f125eb85b84a24c36b02ed1d22c9dd8632f53b3cde6e4d23512f94021030003"
 
 [[package]]
+name = "cap-fs-ext"
+version = "3.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "476f0d0003a760918ed4b1e039a59e11769030416f79c8222551d22785f7f70d"
+dependencies = [
+ "cap-primitives",
+ "cap-std",
+ "io-lifetimes",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "cap-primitives"
 version = "3.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -441,12 +453,17 @@ dependencies = [
 name = "fid-bus"
 version = "0.0.1"
 dependencies = [
+ "cap-fs-ext",
+ "cap-std",
  "fid-bus",
  "fid-canon",
  "fid-journal",
  "fid-registry",
+ "fid-store",
  "fid-types",
+ "libc",
  "unicode-normalization",
+ "winx",
 ]
 
 [[package]]
@@ -598,6 +615,7 @@ version = "0.0.1"
 dependencies = [
  "fid-geo-nurbs",
  "fid-kci",
+ "fid-num",
  "fid-types",
 ]
 
@@ -634,6 +652,19 @@ version = "0.0.1"
 dependencies = [
  "fid-num",
  "fid-testkit",
+]
+
+[[package]]
+name = "fid-geo-ooc"
+version = "0.0.1"
+dependencies = [
+ "cap",
+ "fid-canon",
+ "fid-geo-types",
+ "fid-kci",
+ "fid-num",
+ "fid-store",
+ "fid-types",
 ]
 
 [[package]]
@@ -859,6 +890,7 @@ name = "fid-pkg"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-registry",
  "fid-types",
  "sha2 0.10.9",
  "unicode-normalization",
@@ -873,6 +905,16 @@ dependencies = [
  "fid-types",
  "sha2 0.10.9",
  "toml",
+]
+
+[[package]]
+name = "fid-profile"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-trust-canon",
+ "fid-types",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -986,6 +1028,11 @@ name = "fid-report"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-gdt",
+ "fid-io-res",
+ "fid-kdec",
+ "fid-kunc",
+ "fid-num",
  "fid-project",
  "fid-registry",
  "fid-replay",
@@ -1069,6 +1116,7 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]

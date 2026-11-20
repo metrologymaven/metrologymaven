@@ -59,13 +59,9 @@ fn bad(at: &str, reason: &'static str) -> TemplateError {
 
 /// A JSON integer in `0..=u32::MAX` as a canonical decimal string.
 fn int_string(v: &CValue, at: &str) -> Result<CValue, TemplateError> {
-    match v {
-        CValue::Num(f) if (0.0..=f64::from(u32::MAX)).contains(f) && f.fract() == 0.0 => {
-            // Exact: an integral f64 in u32 range converts without loss.
-            let n = *f as u32;
-            Ok(CValue::Str(n.to_string()))
-        }
-        _ => Err(bad(at, "bad_integer")),
+    match crate::json_num::as_u32(v) {
+        Some(n) => Ok(CValue::Str(n.to_string())),
+        None => Err(bad(at, "bad_integer")),
     }
 }
 

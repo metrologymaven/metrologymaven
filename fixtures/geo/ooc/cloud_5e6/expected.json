@@ -1,0 +1,276 @@
+{
+ "aabb_max": [
+  "4000020c49ac9216",
+  "4000012ff6519e81",
+  "3ff0033c12017e5d"
+ ],
+ "aabb_min": [
+  "bf4223bc81af712f",
+  "bf429c174d3fca97",
+  "bfb9ccdda46766bd"
+ ],
+ "comment": "GEO.OOC.LAYOUT AC-1/AC-2 fixture cloud_5e6, regenerated from the seed in tests; values from make_layout_fixtures.py (CC-BY-4.0). Point i takes Philox4x32-10 seed 61 stream 0 draws 5i..5i+4: facet = d0 mod 6, u, v, w = uniform(d1..d3), noise = (w - 0.5) * 0.002, coordinate k = ((o[k] + u * a[k]) + v * b[k]) + noise * n[k], normal = n, intensity = f32((d4 >> 40) * 2^-24).",
+ "element_digest": "faa8304f11cbefe0850d6fb9b6a84791138e4580639690ec8460cfbe68734b52",
+ "facets": [
+  [
+   [
+    0.0,
+    0.0,
+    0.0
+   ],
+   [
+    2.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    2.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  [
+   [
+    0.0,
+    0.0,
+    0.5
+   ],
+   [
+    0.8,
+    0.0,
+    -0.6
+   ],
+   [
+    0.0,
+    2.0,
+    0.0
+   ],
+   [
+    0.6,
+    0.0,
+    0.8
+   ]
+  ],
+  [
+   [
+    2.0,
+    0.0,
+    0.5
+   ],
+   [
+    -0.8,
+    0.0,
+    -0.6
+   ],
+   [
+    0.0,
+    2.0,
+    0.0
+   ],
+   [
+    -0.6,
+    0.0,
+    0.8
+   ]
+  ],
+  [
+   [
+    0.0,
+    0.0,
+    1.0
+   ],
+   [
+    2.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.8,
+    -0.6
+   ],
+   [
+    0.0,
+    0.6,
+    0.8
+   ]
+  ],
+  [
+   [
+    0.0,
+    2.0,
+    1.0
+   ],
+   [
+    2.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    -0.8,
+    -0.6
+   ],
+   [
+    0.0,
+    -0.6,
+    0.8
+   ]
+  ],
+  [
+   [
+    2.0,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    2.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    1.0
+   ],
+   [
+    1.0,
+    0.0,
+    0.0
+   ]
+  ]
+ ],
+ "frame": "c7a0d48cb084924c54fb7ec8099ad6fe",
+ "manifest_digest": "5879317f4c9ed2f4a8f4738ad086ceabc4f212572d4a7e6fb2dd34c51b8a963d",
+ "max_chunk_points": 65536,
+ "n_chunks": 266,
+ "n_points": 5000000,
+ "noise": 0.002,
+ "samples": [
+  {
+   "index": 0,
+   "intensity": "3dd57c18",
+   "normal": [
+    "3fe3333333333333",
+    "0000000000000000",
+    "3fe999999999999a"
+   ],
+   "point": [
+    "3fc3226f108ca242",
+    "3fa30d0f42b9df20",
+    "3fd8e77290ef31f1"
+   ]
+  },
+  {
+   "index": 1,
+   "intensity": "3f7f8853",
+   "normal": [
+    "3fe3333333333333",
+    "0000000000000000",
+    "3fe999999999999a"
+   ],
+   "point": [
+    "3fdb02280c8ae4c5",
+    "3fe5b1e1708e776a",
+    "3fc79e06fc332a23"
+   ]
+  },
+  {
+   "index": 2,
+   "intensity": "3f4414d6",
+   "normal": [
+    "0000000000000000",
+    "0000000000000000",
+    "3ff0000000000000"
+   ],
+   "point": [
+    "3fe0b7436e01a16a",
+    "3feee158249b029a",
+    "3f324083487de1fc"
+   ]
+  },
+  {
+   "index": 3,
+   "intensity": "3e34e070",
+   "normal": [
+    "0000000000000000",
+    "0000000000000000",
+    "3ff0000000000000"
+   ],
+   "point": [
+    "3fdf37c54691efe0",
+    "3ff7a69aa99e9e94",
+    "3f468264afbe9e83"
+   ]
+  },
+  {
+   "index": 999,
+   "intensity": "3f7bb755",
+   "normal": [
+    "bfe3333333333333",
+    "0000000000000000",
+    "3fe999999999999a"
+   ],
+   "point": [
+    "3ff36d90a8b02d9d",
+    "3ff8024bd60abcf3",
+    "bfb70ddcc0d08da0"
+   ]
+  },
+  {
+   "index": 65536,
+   "intensity": "3eec5ba2",
+   "normal": [
+    "3ff0000000000000",
+    "0000000000000000",
+    "0000000000000000"
+   ],
+   "point": [
+    "3ffffcec7ac1eac5",
+    "3ff433848d1e5078",
+    "3fbb30190a892e80"
+   ]
+  },
+  {
+   "index": 1234567,
+   "intensity": "3f70a596",
+   "normal": [
+    "0000000000000000",
+    "3fe3333333333333",
+    "3fe999999999999a"
+   ],
+   "point": [
+    "3ff639048a283909",
+    "3fdfa12d49073000",
+    "3fe4257f9a3dea09"
+   ]
+  },
+  {
+   "index": 4999999,
+   "intensity": "3e6bc918",
+   "normal": [
+    "3fe3333333333333",
+    "0000000000000000",
+    "3fe999999999999a"
+   ],
+   "point": [
+    "3fcd35df65ff756b",
+    "3fe31d8a7b93e1da",
+    "3fd51bf5e63d4e28"
+   ]
+  }
+ ],
+ "seed": 61,
+ "small": {
+  "element_digest": "accd2152756f41001bd4409335de0c64724eb716d50d526e6e6383300afcf30a",
+  "manifest_digest": "9a98db5bc37918aa708bf6549c92ab51bd9dc57f5cec19caf9fba96406ea7578",
+  "max_chunk_points": 4096,
+  "n_chunks": 187,
+  "n_points": 200000
+ }
+}

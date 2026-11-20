@@ -1,0 +1,27 @@
+[package]
+name = "fid-profile"
+description = "Governance profiles for Metrology Maven: built-in definitions, schema and digest (spec node TRUST.PROFILE.DEFS)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# TRUST.PROFILE.DEFS: no CORE crate, so the verifier can read profile documents in packages.
+# tests/independence.rs fails the build if a normal dependency names any other first-party crate.
+# No OS or network dependencies; builds for wasm32.
+[dependencies]
+# sha256: digest wire type (shared vocabulary, layer num).
+fid-types = { path = "../fid-types" }
+# Verifier-side bounded JSON parser (rejects duplicate keys) and RFC 8785 serialiser (TRUST.CHAIN.CANON, layer model).
+fid-trust-canon = { path = "../fid-trust-canon" }
+# NFC check of tenant labels and descriptions (same text on screen, same digest).
+# MIT OR Apache-2.0; already in the tree (fid-pkg, fid-bus, fid-vocab).
+unicode-normalization = "0.1.24"
+
+[dev-dependencies]
+# Cross-check only: CORE's canonicaliser must give the same bytes. Never linked into the library.
+fid-canon = { path = "../fid-canon" }
+
+[lints]
+workspace = true

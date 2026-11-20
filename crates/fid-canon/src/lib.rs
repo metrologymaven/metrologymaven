@@ -312,15 +312,29 @@ pub fn parse(input: &[u8]) -> Result<CValue, CanonError> {
 /// [`parse`] with caller-chosen limits, for surfaces with tighter budgets.
 /// The limits are clamped to [`MAX_INPUT_BYTES`] and [`MAX_DEPTH`].
 pub fn parse_with_limits(input: &[u8], max_bytes: usize, max_depth: usize) -> Result<CValue, CanonError> {
+    parse_with_budget(input, max_bytes, max_depth, usize::MAX)
+}
+
+/// [`parse_with_limits`] that also caps the number of parsed elements: every value (scalar,
+/// array or object) and every object key counts as one. Exceeding it is
+/// [`CanonError::InputLimit`], raised before the element is built, so a small input of many
+/// tiny elements (`[0,0,0,...]`) cannot grow a value tree far larger than itself.
+pub fn parse_with_budget(
+    input: &[u8],
+    max_bytes: usize,
+    max_depth: usize,
+    max_elements: usize,
+) -> Result<CValue, CanonError> {
     let max_depth = max_depth.min(MAX_DEPTH);
     if input.len() > max_bytes.min(MAX_INPUT_BYTES) {
         return Err(CanonError::InputLimit);
     }
     let text = std::str::from_utf8(input).map_err(|_| CanonError::InvalidUtf8)?;
-    let mut p = Parser { s: text.as_bytes(), text, pos: 0 };
+    let mut p = Parser { s: text.as_bytes(), text, pos: 0, elements: 0, max_elements };
     let mut stack: Vec<Frame> = Vec::new();
     p.ws();
     'value: loop {
+        p.count()?;
         // Parse the start of a value.
         let mut v = match p.peek() {
             Some(b'{') => {
@@ -408,9 +422,20 @@ struct Parser<'a> {
     s: &'a [u8],
     text: &'a str,
     pos: usize,
+    elements: usize,
+    max_elements: usize,
 }
 
 impl Parser<'_> {
+    /// Counts one element against the budget.
+    fn count(&mut self) -> Result<(), CanonError> {
+        if self.elements >= self.max_elements {
+            return Err(CanonError::InputLimit);
+        }
+        self.elements += 1;
+        Ok(())
+    }
+
     fn peek(&self) -> Option<u8> {
         self.s.get(self.pos).copied()
     }
@@ -440,6 +465,7 @@ impl Parser<'_> {
 
     /// `"key"` followed by optional whitespace and `:`.
     fn key(&mut self) -> Result<String, CanonError> {
+        self.count()?;
         if self.peek() != Some(b'"') {
             return Err(CanonError::Syntax(self.pos));
         }

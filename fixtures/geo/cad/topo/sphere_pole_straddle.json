@@ -1,0 +1,97 @@
+{
+ "description": "the great circle with range [0.1, 0.1 + 2 pi]: no sample hits a pole, so refinement cannot converge there (REQ-003)",
+ "license": "CC-BY-4.0",
+ "body_id": "5fe05fe05fe05fe05fe05fe05fe05fe0",
+ "vertices": [
+  {
+   "point": [
+    0.049750208263901294,
+    0.0,
+    0.004991670832341408
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.1,
+    6.383185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.05,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     -1.0,
+     0.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-meridian"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-meridian"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0
+   ],
+   "outer": true,
+   "label": "l-meridian"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "sphere",
+    "radius": 0.05,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "f-hemisphere"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": false
+  }
+ ]
+}

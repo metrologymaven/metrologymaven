@@ -1,0 +1,1 @@
+{"error_code":"pkg.limit","note":"an unknown manifest key holding 10,000 numbers: above 64 + 9 per entry","reason":"manifest_budget"}

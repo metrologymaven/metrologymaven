@@ -1,0 +1,227 @@
+[
+  {
+    "file": "../regulated-with-xqa.json",
+    "profile": "regulated",
+    "expect": "ok"
+  },
+  {
+    "file": "../regulated-with-xqa.json",
+    "profile": "lean",
+    "expect": "profile.param_forbidden"
+  },
+  {
+    "file": "../regulated-with-xqa.json",
+    "profile": "assistive_only",
+    "expect": "profile.param_forbidden"
+  },
+  {
+    "file": "empty.json",
+    "profile": "lean",
+    "expect": "ok"
+  },
+  {
+    "file": "empty.json",
+    "profile": "regulated",
+    "expect": "ok"
+  },
+  {
+    "file": "empty.json",
+    "profile": "assistive_only",
+    "expect": "ok"
+  },
+  {
+    "file": "two-meanings.json",
+    "profile": "lean",
+    "expect": "ok"
+  },
+  {
+    "file": "two-meanings.json",
+    "profile": "assistive_only",
+    "expect": "ok"
+  },
+  {
+    "file": "two-meanings-reordered.json",
+    "profile": "lean",
+    "expect": "ok"
+  },
+  {
+    "file": "bad-software-keys.json",
+    "profile": "regulated",
+    "expect": "profile.param_forbidden"
+  },
+  {
+    "file": "bad-software-keys.json",
+    "profile": "lean",
+    "expect": "profile.param_forbidden"
+  },
+  {
+    "file": "bad-release-signatures-off.json",
+    "profile": "regulated",
+    "expect": "profile.param_forbidden"
+  },
+  {
+    "file": "bad-agent-writes.json",
+    "profile": "assistive_only",
+    "expect": "profile.param_forbidden"
+  },
+  {
+    "file": "bad-program-release.json",
+    "profile": "regulated",
+    "expect": "profile.param_forbidden"
+  },
+  {
+    "file": "bad-name.json",
+    "profile": "regulated",
+    "expect": "profile.param_forbidden"
+  },
+  {
+    "file": "bad-unknown-key.json",
+    "profile": "lean",
+    "expect": "profile.param_forbidden"
+  },
+  {
+    "file": "bad-no-approved.json",
+    "profile": "regulated",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-no-approved.json",
+    "profile": "lean",
+    "expect": "profile.param_forbidden"
+  },
+  {
+    "file": "bad-empty-sequence.json",
+    "profile": "regulated",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-unknown-code.json",
+    "profile": "regulated",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-lowercase-code.json",
+    "profile": "regulated",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-repeated-code.json",
+    "profile": "regulated",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-sequence-too-long.json",
+    "profile": "regulated",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-code-syntax.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-code-builtin.json",
+    "profile": "regulated",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-code-no-prefix.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-code-too-long.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-code-repeated.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-extra-member.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-missing-label.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-empty-label.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-label-too-long.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-label-control.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-description-too-long.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-too-many.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-not-array.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-sequence-not-array.json",
+    "profile": "regulated",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-duplicate-key.json",
+    "profile": "lean",
+    "expect": "profile.malformed"
+  },
+  {
+    "file": "bad-duplicate-key-nested.json",
+    "profile": "lean",
+    "expect": "profile.malformed"
+  },
+  {
+    "file": "bad-not-object.json",
+    "profile": "lean",
+    "expect": "profile.malformed"
+  },
+  {
+    "file": "bad-not-json.json",
+    "profile": "regulated",
+    "expect": "profile.malformed"
+  },
+  {
+    "file": "nonascii.json",
+    "profile": "lean",
+    "expect": "ok"
+  },
+  {
+    "file": "bad-tenant-label-bidi.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-description-bidi.json",
+    "profile": "regulated",
+    "expect": "profile.param_invalid"
+  },
+  {
+    "file": "bad-tenant-label-nfd.json",
+    "profile": "lean",
+    "expect": "profile.param_invalid"
+  }
+]

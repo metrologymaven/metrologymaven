@@ -1,6 +1,6 @@
 [package]
 name = "fid-pkg"
-description = "Metrology Maven Result Package format: container layout, manifest and in-toto statement (spec node TRUST.PKG.MANIFEST)"
+description = "Metrology Maven Result Package format: container layout, manifest and in-toto statement (spec node TRUST.PKG.MANIFEST), and the bounded package reader with verify.inspect_package (TRUST.PKG.READER)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,6 +9,8 @@ repository.workspace = true
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+# Declares verify.inspect_package@1 with the registry macros (CORE.REG.DEF.MACRO). Layer model.
+fid-registry = { path = "../fid-registry" }
 fid-types = { path = "../fid-types" }
 # Streaming SHA-256 of members (fid-canon only hashes whole buffers); already in the tree.
 sha2 = "0.10"

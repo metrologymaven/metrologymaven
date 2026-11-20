@@ -1,0 +1,30 @@
+# cargo-fuzz harness for the Result Package reader (TRUST.PKG.READER AC-4). Not a workspace
+# member: it needs nightly and libFuzzer. CI's `fuzz-pkg-reader` job runs it for 10 minutes,
+# seeded with the reader corpus; to run it by hand, from crates/fid-pkg/fuzz:
+#   mkdir -p corpus/reader
+#   cargo +nightly fuzz run --sanitizer none reader corpus/reader ../../../fixtures/pkg/malformed \
+#     ../../../fixtures/pkg/reader/valid ../../../fixtures/pkg/golden \
+#     -- -max_total_time=600 -timeout=5 -rss_limit_mb=256
+[package]
+name = "fid-pkg-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+fid-pkg = { path = ".." }
+
+[[bin]]
+name = "reader"
+path = "fuzz_targets/reader.rs"
+test = false
+doc = false
+bench = false
+
+# Keep this harness out of the repository workspace.
+[workspace]

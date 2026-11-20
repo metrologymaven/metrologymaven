@@ -1,0 +1,4 @@
+[build]
+rustc-wrapper = "sccache"
+rustc_workspace_wrapper = "my-wrapper"
+rustc = "/opt/other/rustc"

@@ -1,0 +1,1 @@
+{"error_code":"pkg.limit","note":"declared size within 1000:1 overall, but the first block inflates at about 1030:1","reason":"ratio"}

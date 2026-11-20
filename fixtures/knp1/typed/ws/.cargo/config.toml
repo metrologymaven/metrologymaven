@@ -1,0 +1,9 @@
+# KRN.NUM.LINT.TYPED re-review: a wrapper, a replacement rustc and bad flags in the workspace
+# Cargo config. The check overrides all of them (empty RUSTC_WRAPPER and
+# RUSTC_WORKSPACE_WRAPPER, RUSTC set to the pinned rustc, empty CARGO_ENCODED_RUSTFLAGS); if it
+# did not, nothing would build and every crate would be KNP1-TYPED-BUILD.
+[build]
+rustc-wrapper = "knp1-no-such-wrapper"
+rustc-workspace-wrapper = "knp1-no-such-workspace-wrapper"
+rustc = "knp1-no-such-rustc"
+rustflags = ["-C", "knp1-not-a-codegen-option"]

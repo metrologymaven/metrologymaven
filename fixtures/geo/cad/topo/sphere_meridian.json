@@ -1,0 +1,97 @@
+{
+ "description": "hemisphere r 0.05 m bounded by one great circle through both poles; the poles are samples 4 and 12",
+ "license": "CC-BY-4.0",
+ "body_id": "5fe05fe05fe05fe05fe05fe05fe05fe0",
+ "vertices": [
+  {
+   "point": [
+    0.05,
+    0.0,
+    0.0
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.05,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     -1.0,
+     0.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-meridian"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-meridian"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0
+   ],
+   "outer": true,
+   "label": "l-meridian"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "sphere",
+    "radius": 0.05,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "f-hemisphere"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": false
+  }
+ ]
+}

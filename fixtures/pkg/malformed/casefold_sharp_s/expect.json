@@ -1,0 +1,1 @@
+{"error_code":"pkg.malformed","note":"sharp s folds to ss","reason":"case_collision"}

@@ -1,0 +1,1 @@
+{"error_code":"pkg.limit","note":"AC-3: a 42 KB deflate stream that inflates to 44 MB while the manifest and headers say 4096 bytes","reason":"member_length"}

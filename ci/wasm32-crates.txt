@@ -10,6 +10,7 @@ fid-geo-index
 fid-geo-nurbs --test analytic
 fid-geo-nurbs --test eval
 fid-geo-nurbs --test invert -- ac5
+fid-geo-ooc --no-default-features --test layout --test format
 fid-geo-sel --test model
 fid-geo-types --test digest
 fid-gps --test zone_shape
@@ -18,6 +19,7 @@ fid-kdec
 fid-kunc
 fid-manifest-gen
 fid-num
+fid-profile
 fid-rdl
 fid-replay
 fid-report-pdf

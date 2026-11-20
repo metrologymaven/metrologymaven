@@ -1,0 +1,146 @@
+{
+ "description": "full cylinder band r 0.05 m, height 0.02 m: two circular loops across the seam, no seam edge, 3-D curves only",
+ "license": "CC-BY-4.0",
+ "body_id": "ba4dba4dba4dba4dba4dba4dba4dba4d",
+ "vertices": [
+  {
+   "point": [
+    0.05,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.05,
+    0.0,
+    0.02
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.05,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-bottom"
+  },
+  {
+   "start": 1,
+   "end": 1,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.05,
+    "origin": [
+     0.0,
+     0.0,
+     0.02
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-top"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-bottom"
+  },
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-top"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0
+   ],
+   "outer": false,
+   "label": "l-bottom"
+  },
+  {
+   "coedges": [
+    1
+   ],
+   "outer": false,
+   "label": "l-top"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "cylinder",
+    "radius": 0.05,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0,
+    1
+   ],
+   "label": "f-band"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": false
+  }
+ ]
+}

@@ -24,7 +24,7 @@ fn strs(items: &[&str]) -> CValue {
 }
 
 fn num(n: usize) -> CValue {
-    CValue::Num(n as f64)
+    crate::json_num::num_usize(n)
 }
 
 fn id(description: &str) -> CValue {
@@ -137,7 +137,7 @@ fn def(s: Spec) -> Result<CommandDef, DefError> {
     let event = format!("{}@1", s.name);
     CommandDef::from_value(obj([
         ("id", text(s.name)),
-        ("major", CValue::Num(1.0)),
+        ("major", num(1)),
         ("title", text(s.title)),
         ("description", text(s.description)),
         ("params_schema", s.params),

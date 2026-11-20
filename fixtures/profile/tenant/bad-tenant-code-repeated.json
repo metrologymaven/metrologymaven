@@ -1,0 +1,14 @@
+{
+  "tenant_meanings": [
+    {
+      "code": "X_QA",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_QA",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    }
+  ]
+}

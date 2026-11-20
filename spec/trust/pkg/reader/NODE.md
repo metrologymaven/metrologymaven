@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-pkg]
+built_pr: 279
 satisfies: [REQ-TRUST.PKG-007]
 covers: []
 depends_on: [TRUST.PKG.MANIFEST]

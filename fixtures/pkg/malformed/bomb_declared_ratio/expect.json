@@ -1,0 +1,1 @@
+{"error_code":"pkg.limit","note":"the central directory declares 44 MB from 42 KB, above the 1000:1 cap","reason":"ratio"}
