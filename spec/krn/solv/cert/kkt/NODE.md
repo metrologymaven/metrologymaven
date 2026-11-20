@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-solv]
+built_pr: 324
 satisfies: [REQ-KRN.SOLV.CERT-003]
 covers: []
 depends_on: [KRN.SOLV.CERT.RECOMP, KRN.NUM.LA.QR, KRN.NUM.RED, KRN.NUM.FN, KRN.NUM.ERR]
