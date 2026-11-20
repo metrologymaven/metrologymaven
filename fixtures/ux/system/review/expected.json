@@ -1,0 +1,381 @@
+{
+  "ok": {
+    "case": "ok",
+    "deny": null,
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ]
+  },
+  "ok+deny": {
+    "case": "ok",
+    "deny": "deny-names.txt",
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ]
+  },
+  "missing-record": {
+    "case": "missing-record",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "agent-approver": {
+    "case": "agent-approver",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-APPROVER-NOT-HUMAN review/records/pr-0042.json",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "dress-gap": {
+    "case": "dress-gap",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-DRESS-RESULT-MISSING TD-05",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "no-decl": {
+    "case": "no-decl",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-ORIGINALITY-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "name-leak": {
+    "case": "name-leak",
+    "deny": "deny-names.txt",
+    "exit": 1,
+    "findings": [
+      "REVIEW-NAME-LEAK components/button.md",
+      "REVIEW-NAME-LEAK copy/labels.txt"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ]
+  },
+  "name-leak-nodeny": {
+    "case": "name-leak",
+    "deny": null,
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ]
+  },
+  "principle-unknown": {
+    "case": "principle-unknown",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-PRINCIPLE-UNKNOWN P-SHINY",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "stale-record": {
+    "case": "stale-record",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "bidi-record": {
+    "case": "bidi-record",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA review/records/pr-0042.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "nfd-record": {
+    "case": "nfd-record",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA review/records/pr-0042.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "obfuscated-changed": {
+    "case": "obfuscated-changed",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-SCHEMA changed:1"
+    ],
+    "needs_review": [
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ]
+  },
+  "empty-changed": {
+    "case": "empty-changed",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-SCHEMA changed"
+    ],
+    "needs_review": [],
+    "records": []
+  },
+  "result-fail": {
+    "case": "result-fail",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-RESULT-FAIL TD-02",
+      "REVIEW-SCHEMA review/records/pr-0042.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "checklist-gap": {
+    "case": "checklist-gap",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-CHECKLIST-MISSING C-KEYBOARD",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "map-weakened": {
+    "case": "map-weakened",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING review/paths.toml"
+    ],
+    "needs_review": [
+      "review/paths.toml"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ]
+  },
+  "bad-map": {
+    "case": "bad-map",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING notes/readme.txt",
+      "REVIEW-SCHEMA review/paths.toml"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "notes/readme.txt",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ]
+  },
+  "empty-dress": {
+    "case": "empty-dress",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA review/dress-rules.json",
+      "REVIEW-SCHEMA review/records/pr-0042.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "bot-approver": {
+    "case": "bot-approver",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-APPROVER-NOT-HUMAN review/records/pr-0042.json",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "bad-decl": {
+    "case": "bad-decl",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-ORIGINALITY-MISSING tokens/color.tokens.json",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA tokens/color.tokens.json.origin.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "two-decl": {
+    "case": "two-decl",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-ORIGINALITY-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA icons/probe.svg"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "dup-key-record": {
+    "case": "dup-key-record",
+    "deny": null,
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA review/records/pr-0042.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": []
+  },
+  "deleted-artefact": {
+    "case": "deleted-artefact",
+    "deny": null,
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "icons/old.svg",
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ]
+  },
+  "empty-deny": {
+    "case": "ok",
+    "deny": "deny-empty.txt",
+    "exit": 1,
+    "findings": [
+      "REVIEW-SCHEMA deny-names"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ]
+  },
+  "deny-bidi": {
+    "case": "ok",
+    "deny": "deny-bidi.txt",
+    "exit": 1,
+    "findings": [
+      "REVIEW-SCHEMA deny-names"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ]
+  }
+}

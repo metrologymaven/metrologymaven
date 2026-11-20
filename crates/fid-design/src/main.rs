@@ -1,7 +1,8 @@
 //! `fid-design pkg-check --root <dir> [--json]`,
 //! `fid-design pkg-diff --from <dir> --to <dir> [--json]`,
 //! `fid-design princ-check [--file <md>] [--json]` and
-//! `fid-design words-check --copy <jsonl> [--words <json>] [--json]`.
+//! `fid-design words-check --copy <jsonl> [--words <json>] [--json]` and
+//! `fid-design review-check --changed <file> --root <design dir> [--deny-names <file>] [--json]`.
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage.
 
 use std::io::Write;
@@ -9,7 +10,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 const USAGE: &str =
-    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]";
+    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--deny-names <file>] [--json]";
 
 #[derive(Default)]
 struct Args {
@@ -19,6 +20,8 @@ struct Args {
     file: Option<PathBuf>,
     copy: Option<PathBuf>,
     words: Option<PathBuf>,
+    changed: Option<PathBuf>,
+    deny_names: Option<PathBuf>,
     json: bool,
 }
 
@@ -34,6 +37,8 @@ fn parse_args(args: &[String]) -> Option<Args> {
             "--file" => out.file = Some(PathBuf::from(it.next()?)),
             "--copy" => out.copy = Some(PathBuf::from(it.next()?)),
             "--words" => out.words = Some(PathBuf::from(it.next()?)),
+            "--changed" => out.changed = Some(PathBuf::from(it.next()?)),
+            "--deny-names" => out.deny_names = Some(PathBuf::from(it.next()?)),
             _ => return None,
         }
     }
@@ -83,6 +88,20 @@ fn main() -> ExitCode {
     };
     let pkg_flags = args.root.is_some() || args.from.is_some() || args.to.is_some();
     let princ_flags = args.file.is_some() || args.copy.is_some() || args.words.is_some();
+    if cmd == "review-check" {
+        return match (&args.changed, &args.root) {
+            (Some(changed), Some(root)) if !princ_flags && args.from.is_none() && args.to.is_none() => {
+                match fid_design::review::check(changed, root, args.deny_names.as_deref()) {
+                    Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+                    Err(e) => fail(e),
+                }
+            }
+            _ => usage(),
+        };
+    }
+    if args.changed.is_some() || args.deny_names.is_some() {
+        return usage();
+    }
     match cmd.as_str() {
         "princ-check" if !pkg_flags && args.copy.is_none() && args.words.is_none() => {
             let file = args.file.clone().unwrap_or_else(|| PathBuf::from(fid_design::princ::DEFAULT_FILE));

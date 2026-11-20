@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-design]
 satisfies: [REQ-UX.SYSTEM-001, REQ-UX.SYSTEM-007, REQ-UX.SYSTEM-008, REQ-UX.SYSTEM-009, REQ-UX.SYSTEM-011]
 covers: []
 depends_on: [UX.SYSTEM.PKG, UX.SYSTEM.PRINC]
@@ -55,7 +56,8 @@ The design review every UI-changing PR passes. It defines the checklist, the ori
 - **Path map `review/paths.toml`:** globs that need review (`design/**`, consumer globs such as UI source folders, declared by consumers in their own copy).
 - **Formats:** `originality@1` `{ artefact, author, date, references: [text], statement_version }`, stored beside the artefact as `<file>.origin.json` or in `review/origin/`. `design-review@1` `{ pr, artefacts: [path], principles: [P-*], dress: [{rule, result, reason?}], checklist: [{item, result}], approver: {name, principal: human}, date }`.
 - **Dress-rule slot:** `dress-rules.json` holds `[{ id, text_ref }]` copied by a human PR from the brand guidelines; this node defines the slot and the per-rule result, not the rules.
-- **Errors:** `REVIEW-RECORD-MISSING`, `REVIEW-APPROVER-NOT-HUMAN`, `REVIEW-DRESS-RESULT-MISSING`, `REVIEW-PRINCIPLE-UNKNOWN`, `REVIEW-ORIGINALITY-MISSING`, `REVIEW-NAME-LEAK`, `REVIEW-SCHEMA`.
+- **Errors:** `REVIEW-RECORD-MISSING`, `REVIEW-APPROVER-NOT-HUMAN`, `REVIEW-DRESS-RESULT-MISSING`, `REVIEW-PRINCIPLE-UNKNOWN`, `REVIEW-ORIGINALITY-MISSING`, `REVIEW-NAME-LEAK`, `REVIEW-SCHEMA`; added when built: `REVIEW-CHECKLIST-MISSING <item>` (a checklist item without a result) and `REVIEW-RESULT-FAIL <rule or item>` (a record with a `fail` result does not approve).
+- **As built:** all paths (changed list, path-map globs, record artefacts) are relative to `--root`; a record counts only when its own path is in the changed list; `review/paths.toml` and `review/dress-rules.json` always need a review; untrusted text that is obfuscated, carries bidi controls or is not NFC is refused; an empty changed list, map, rule slot or deny list is a finding, never a pass; findings never quote a deny-list entry.
 - **Determinism:** D0.
 - **Crate:** `fid-design`, module `review`.
 

@@ -1,6 +1,6 @@
 [package]
 name = "fid-design"
-description = "Design-system tooling commands: pkg-check and pkg-diff (UX.SYSTEM.PKG), princ-check and words-check (UX.SYSTEM.PRINC)"
+description = "Design-system tooling commands: pkg-check and pkg-diff (UX.SYSTEM.PKG), princ-check and words-check (UX.SYSTEM.PRINC), review-check (UX.SYSTEM.REVIEW)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -17,6 +17,10 @@ path = "src/main.rs"
 fid-design-pkg = { path = "../fid-design-pkg" }
 # RFC 8785 canonical JSON for the --json reports.
 fid-canon = { path = "../fid-canon" }
+# The review path map `review/paths.toml` (already in the workspace; rejects duplicate keys).
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+# NFC check and NFKC folding of untrusted text (already in the workspace).
+unicode-normalization = "0.1.24"
 
 [lints]
 workspace = true

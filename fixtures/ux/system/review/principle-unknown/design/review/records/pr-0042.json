@@ -1,0 +1,68 @@
+{
+  "pr": 42,
+  "artefacts": [
+    "icons/probe.svg",
+    "tokens/color.tokens.json"
+  ],
+  "principles": [
+    "P-DATA",
+    "P-SHINY"
+  ],
+  "dress": [
+    {
+      "rule": "TD-01",
+      "result": "pass"
+    },
+    {
+      "rule": "TD-02",
+      "result": "pass"
+    },
+    {
+      "rule": "TD-03",
+      "result": "pass"
+    },
+    {
+      "rule": "TD-04",
+      "result": "pass"
+    },
+    {
+      "rule": "TD-05",
+      "result": "pass"
+    }
+  ],
+  "checklist": [
+    {
+      "item": "C-CONTRAST",
+      "result": "pass"
+    },
+    {
+      "item": "C-DRESS",
+      "result": "pass"
+    },
+    {
+      "item": "C-KEYBOARD",
+      "result": "pass"
+    },
+    {
+      "item": "C-NAME",
+      "result": "pass"
+    },
+    {
+      "item": "C-NOCOLOR",
+      "result": "pass"
+    },
+    {
+      "item": "C-ORIGINALITY",
+      "result": "pass"
+    },
+    {
+      "item": "C-PRINCIPLES",
+      "result": "pass"
+    }
+  ],
+  "approver": {
+    "name": "A. Maintainer",
+    "principal": "human"
+  },
+  "date": "2026-11-19"
+}

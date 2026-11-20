@@ -1,0 +1,3 @@
+# Synthetic deny list for UX.SYSTEM.REVIEW fixtures; the name is invented. CC-BY-4.0.
+Examplar
+Quarzolith
