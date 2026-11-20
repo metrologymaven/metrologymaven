@@ -658,7 +658,7 @@ fn solve_case(c: &Case) -> SeqOutcome {
 #[test]
 fn ac1_reference_optima() {
     let cases = reference_cases();
-    assert_eq!(cases.len(), 60);
+    assert_eq!(cases.len(), 61);
     for c in &cases {
         // The 50-digit reference and its nearest double agree.
         assert_eq!(c.value_digits.parse::<f64>().unwrap().to_bits(), c.value.to_bits(), "{}", c.name);
@@ -901,6 +901,47 @@ fn ac4_outer_region() {
     assert!(!out.on_trust_boundary);
 }
 
+/// mic-00's ring with a centre box of half width `3 R` around the true centre. Outside the ring
+/// the box-free MIC is unbounded (the empty circle grows without limit away from the points).
+fn mic_escape(c: &Case) -> Prob {
+    let (cx, cy, r) = (c.params[0], c.params[1], c.params[2]);
+    let inf = f64::INFINITY;
+    Prob {
+        region: Some(vec![(cx - 3.0 * r, cx + 3.0 * r), (cy - 3.0 * r, cy + 3.0 * r), (-inf, inf)]),
+        ..problem_of(c)
+    }
+}
+
+#[test]
+fn unbounded_after_boundary_stop_is_flagged() {
+    let c = first_case("mic");
+    let p = mic_escape(&c);
+    let (cx, cy, r) = (c.params[0], c.params[1], c.params[2]);
+    // A start outside the ring: the first phase stops on the box, the box-free second phase
+    // runs away. The error carries the flag and counts as converged.
+    let start = [cx + 2.0 * r, cy + 0.5 * r, r];
+    let e = solve(&p, &start, &config(&p)).unwrap_err();
+    assert!(e.on_trust_boundary && e.converged, "{e}");
+    assert!(e.iterations > config(&p).max_iter, "phase 2 has its own budget: {e}");
+    // In solve_multi such a start counts as disagreeing, whatever the certified starts say.
+    let spec = StartSpec {
+        primary: c.start.clone(),
+        half_widths: vec![2.5 * r, 2.5 * r, 0.0],
+        count: 8,
+        seed: 41,
+        stream: 2,
+        tolerances: vec![1e-6; 3],
+    };
+    let out = solve_multi(&p, &spec, &config(&p)).unwrap();
+    assert!(out.local_optimum_only);
+    assert!(out.best.certified.certificate().flags().local_optimum_only);
+    let flagged = out
+        .per_start
+        .iter()
+        .any(|s| matches!(s, StartSummary::Failed(StartError::Solver(e)) if e.on_trust_boundary && e.converged));
+    assert!(flagged);
+}
+
 // ------------------------------------------------------------------ AC-5
 
 fn twin_spec() -> StartSpec {
@@ -996,11 +1037,11 @@ fn converged_but_uncertified_start_disagrees() {
 // ------------------------------------------------------------------ AC-6 output pin
 
 /// Output-bit pin: regression pin of this crate's own output (every AC-1 certificate's bytes,
-/// the AC-5 flagged certificate, then the AC-3 and AC-4 errors in the stable encoding of
+/// the AC-5 flagged certificate, then the AC-3, AC-4 and unbounded-phase-2 errors in the stable encoding of
 /// `encode_err`), recorded from a local x86-64 run and checked by CI on every target. One value
 /// serves all targets because they agree bit for bit; a target that diverged would get its own
 /// `#[cfg(target_arch)]` value here.
-const OUTPUT_PIN: &str = "sha256:92c4db207a51defe18e878907daefcf617bab95d0c451a75c94caebcf0249178";
+const OUTPUT_PIN: &str = "sha256:f467440e0c03bfe1c00f5329dd02219b8d42a9bf52e446a2f428aa79ed8e6fa8";
 
 #[test]
 fn ac6_output_bits_pinned() {
@@ -1015,6 +1056,10 @@ fn ac6_output_bits_pinned() {
     }
     let (e, out) = ac4_outcomes();
     h.update(encode_err(&e).as_bytes());
+    let c = first_case("mic");
+    let (cx, cy, r) = (c.params[0], c.params[1], c.params[2]);
+    let escape = solve(&mic_escape(&c), &[cx + 2.0 * r, cy + 0.5 * r, r], &config(&problem_of(&c))).unwrap_err();
+    h.update(encode_err(&escape).as_bytes());
     h.update(&out.certified.certificate().to_canonical_json().unwrap());
     assert_eq!(h.finish(), OUTPUT_PIN, "output bits changed on {}", std::env::consts::ARCH);
 }

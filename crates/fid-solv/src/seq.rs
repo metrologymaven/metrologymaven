@@ -16,7 +16,8 @@
 //!    the config ([`SeqConfig::check`]); `n_params() >= 1`; `scales()` of length `n`, each
 //!    finite and positive; the start of length `n` and finite; the outer region, if any, of
 //!    length `n` with `lo <= hi` (either end may be infinite, neither NaN) and the start inside
-//!    it. Then `objective(start)` must be finite.
+//!    it; `data_scale()` finite and positive (its own error is [`SeqCause::Callback`]). Then
+//!    `objective(start)` must be finite.
 //! 2. **Iteration** `k = 1, 2, ..`: if `radius < radius_min` the result is
 //!    [`SeqCause::StepBoundCollapsed`]. Otherwise `local_problem(p)` gives the local problem in
 //!    the step `dp` (`n` variables, no quadratic term, row `i` the constraint labelled
@@ -35,7 +36,7 @@
 //!    carries them).
 //! 6. **Step test.** `predicted = f(p) - m(dp)` with `f` = [`LinearisableProblem::objective`];
 //!    the step bound is *active* when some `|dp_j| >= BOUND_ACTIVE_FRAC * t_j`. With
-//!    `tol = decrease_tol_rel * max(|f(p)|, DECREASE_FLOOR)`, a step whose bound is inactive and
+//!    `tol = decrease_tol_rel * max(|f(p)|, DECREASE_FLOOR_REL * data_scale)`, a step whose bound is inactive and
 //!    whose `|predicted| <= tol` is a **null step** (the model offers no change beyond the
 //!    tolerance) and is not taken. Every other step is evaluated: `p+ = p + dp` (clamped into
 //!    the outer region), `rho = (f(p) - f(p+)) / predicted` (undefined when `predicted <= 0`,
@@ -56,15 +57,19 @@
 //!    A null step that does not stop the run shrinks the radius (`radius / 4`), so the next
 //!    subproblem differs; that makes it a moving iteration. A bound-active step is never a
 //!    success, so a radius that keeps shrinking ends in `StepBoundCollapsed` (REQ-003). After
-//!    `max_iter` iterations without success the result is [`SeqCause::IterationLimit`].
+//!    `max_iter` iterations of a phase without success the result is
+//!    [`SeqCause::IterationLimit`].
 //! 8. **Certify** (REQ-005): `cert::certify` on the local problem of the last iteration and its
 //!    solution with the step-bound rows removed (REQ-006), with `cfg.kind` and `cfg.cert`. Its
 //!    error is [`SeqCause::Cert`] and no value (fail closed: a `certificate_failed` is never
 //!    replaced by the iterate).
 //! 9. **Outer region** (REQ-004). The region confines the iterates. If certification fails
 //!    and the final iterate lies within `boundary_tol_rel * scale_j` of the region's boundary,
-//!    the loop continues from that point **without** the region (the iteration count goes on)
-//!    and the new final subproblem is certified. The flags are then computed from the
+//!    the loop continues from that point **without** the region (phase 2, with its own budget of
+//!    `max_iter` iterations; the reported iteration count goes on) and the new final subproblem
+//!    is certified. Every error of phase 2 (including its certification) carries
+//!    `on_trust_boundary = true` and `converged = true`: the first phase converged on the
+//!    boundary, and the box-free problem may be unbounded. The flags are then computed from the
 //!    **certified** parameters and their proven bounds only: a certified point outside the
 //!    region is [`SeqCause::OutsideOuterRegion`] with `on_trust_boundary = true` and no value;
 //!    a certified point whose enclosure, widened by `boundary_tol_rel * scale_j`, reaches the
@@ -118,12 +123,17 @@ pub const DEFAULT_MAX_ITER: u32 = 100;
 pub const DEFAULT_STABLE_ITERS: u32 = 3;
 /// Default relative step tolerance (REQ-008, [unverified]).
 pub const DEFAULT_STEP_TOL_REL: f64 = 1e-12;
-/// Default relative decrease tolerance of the null-step rule, relative to the objective
-/// `max(|f(p)|, DECREASE_FLOOR)` ([unverified]).
+/// Default relative decrease tolerance of the null-step rule, relative to
+/// `max(|f(p)|, DECREASE_FLOOR_REL * data_scale)` ([unverified]).
 pub const DEFAULT_DECREASE_TOL_REL: f64 = 1e-9;
-/// Floor of the objective magnitude in the null-step tolerance (`2^-1022`), so that a zero
-/// objective gives a zero (not undefined) tolerance.
-pub const DECREASE_FLOOR: f64 = f64::MIN_POSITIVE;
+/// Floor of the objective magnitude in the null-step tolerance, relative to the problem's data
+/// scale (`ActiveSetProblem::data_scale`, the largest coordinate magnitude): `2^-10`. With the
+/// default `decrease_tol_rel` the floor is about `1e-12 * data_scale`, two orders below the
+/// conic solver's relative tolerances (`1e-10`) and above the decrease noise of a converged
+/// subproblem (about `1e-14 * data_scale` measured on a 1 um circle 300 mm from the origin,
+/// fixture `mzc-far`), so a small objective far from the origin still reaches a null step,
+/// while the floor (`3e-10` mm there) stays far below the feature size ([unverified]).
+pub const DECREASE_FLOOR_REL: f64 = 1.0 / 1024.0;
 /// Default relative distance (in units of `scale_j`) within which the final point counts as on
 /// the outer region's boundary ([unverified]).
 pub const DEFAULT_BOUNDARY_TOL_REL: f64 = 1e-6;
@@ -171,8 +181,14 @@ pub trait LinearisableProblem: ActiveSetProblem {
     fn objective(&self, p: &[f64]) -> Result<f64, CertError>;
 
     /// An optional outer trust region: per-parameter absolute bounds `(lo, hi)` (either end may
-    /// be infinite) that every iterate must satisfy, for example the MIC centre region of
-    /// `KRN.ENV`. `None` (the default) for none.
+    /// be infinite) that the iterates of the first phase satisfy, for example the MIC centre
+    /// region of `KRN.ENV`. `None` (the default) for none.
+    ///
+    /// **Contract:** after the first phase stops on the region's boundary without a
+    /// certificate, the driver continues without the region, so `local_problem`, `objective`
+    /// and the [`ActiveSetProblem`] callbacks may then be evaluated **outside** it. Implementers
+    /// must define them everywhere, or return an error there, which the driver reports as
+    /// [`SeqCause::Callback`] with `on_trust_boundary = true` and no value (fail closed).
     fn outer_region(&self) -> Option<Vec<(f64, f64)>> {
         None
     }
@@ -188,8 +204,8 @@ pub struct SeqConfig {
     pub stable_iters: u32,
     /// Relative step tolerance of the stop rule (finite, not negative).
     pub step_tol_rel: f64,
-    /// Relative decrease tolerance of the null-step rule, times `max(|f(p)|, DECREASE_FLOOR)`
-    /// (finite, not negative).
+    /// Relative decrease tolerance of the null-step rule, times
+    /// `max(|f(p)|, DECREASE_FLOOR_REL * data_scale)` (finite, not negative).
     pub decrease_tol_rel: f64,
     /// Relative boundary tolerance, times `scale_j`, added to the certified parameter bound
     /// when deciding `on_trust_boundary` (finite, not negative).
@@ -451,6 +467,7 @@ impl State {
 /// The checked inputs of a run.
 struct Checked {
     scales: Vec<f64>,
+    data_scale: f64,
     region: Option<Vec<(f64, f64)>>,
     labels: Vec<RowLabel>,
 }
@@ -484,8 +501,13 @@ pub fn solve<P: LinearisableProblem + ?Sized>(
         if near_boundary(&fin.p, &checked.scales, r, cfg.boundary_tol_rel) {
             // Phase 2: the outer region stopped the iterates short of a KKT point. Continue
             // without it, so the certified point (not the iterate) decides the boundary flag.
-            fin = iterate(problem, &fin.p, cfg, &checked, None, &mut st, &mut history)?;
+            // Any error from here on follows a converged run that stopped on the boundary.
+            let flagged = |e: SolverError| SolverError { on_trust_boundary: true, converged: true, ..e };
+            fin = iterate(problem, &fin.p, cfg, &checked, None, &mut st, &mut history).map_err(flagged)?;
             result = certify(problem, &fin.local, &fin.solution, cfg.kind, &cfg.cert);
+            if let Err(e) = result {
+                return Err(flagged(st.fail(SeqCause::Cert(e))));
+            }
         }
     }
     let certified = result.map_err(|e| SolverError { converged: true, ..st.fail(SeqCause::Cert(e)) })?;
@@ -572,7 +594,11 @@ fn check_inputs<P: LinearisableProblem + ?Sized>(
             return Err(invalid("start"));
         }
     }
-    Ok(Checked { scales, region, labels: problem.row_labels() })
+    let data_scale = problem.data_scale().map_err(SeqCause::Callback)?;
+    if !(data_scale.is_finite() && data_scale > 0.0) {
+        return Err(invalid("data_scale"));
+    }
+    Ok(Checked { scales, data_scale, region, labels: problem.row_labels() })
 }
 
 fn objective_at<P: LinearisableProblem + ?Sized>(problem: &P, p: &[f64]) -> Result<f64, SeqCause> {
@@ -580,8 +606,9 @@ fn objective_at<P: LinearisableProblem + ?Sized>(problem: &P, p: &[f64]) -> Resu
     fid_num::check_finite("seq.objective", f).map_err(SeqCause::Numeric)
 }
 
-/// Steps 2 to 7: the loop from `start` with the iterates confined to `region`. Returns the last
-/// subproblem of a converged run. Iterations count on in `st` across calls.
+/// Steps 2 to 7: the loop from `start` with the iterates confined to `region`, at most
+/// `max_iter` iterations. Returns the last subproblem of a converged run. The iteration count
+/// in `st` goes on across calls.
 fn iterate<P: LinearisableProblem + ?Sized>(
     problem: &P,
     start: &[f64],
@@ -597,7 +624,8 @@ fn iterate<P: LinearisableProblem + ?Sized>(
     let mut f_p = objective_at(problem, &p).map_err(|c| st.fail(c))?;
     let mut last_moving: Option<Vec<RowLabel>> = None;
     let mut stable: u32 = 0;
-    while st.iterations < cfg.max_iter {
+    // Each call (phase) has its own budget of `max_iter` iterations; `st.iterations` counts on.
+    for _ in 0..cfg.max_iter {
         if st.radius < cfg.radius_min {
             return Err(st.fail(SeqCause::StepBoundCollapsed));
         }
@@ -624,7 +652,8 @@ fn iterate<P: LinearisableProblem + ?Sized>(
         let predicted = f_p - (m0 + qdp);
         let step_norm = scaled_norm(dp, scales).map_err(|e| st.fail(num(e)))?;
         let bound_active = dp.iter().zip(&bounds).any(|(d, b)| d.abs() >= BOUND_ACTIVE_FRAC * b);
-        let dec_tol = cfg.decrease_tol_rel * total_max(f_p.abs(), DECREASE_FLOOR).map_err(|e| st.fail(num(e)))?;
+        let floor = DECREASE_FLOOR_REL * checked.data_scale;
+        let dec_tol = cfg.decrease_tol_rel * total_max(f_p.abs(), floor).map_err(|e| st.fail(num(e)))?;
         let null_step = !bound_active && predicted.abs() <= dec_tol;
         let (mut actual, mut rho, mut accepted) = (None, None, false);
         let mut summary = IterSummary {
