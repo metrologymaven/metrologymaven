@@ -12,6 +12,11 @@
 //! on a schema position, a pattern outside the ECMA-262 subset) fails compilation, so the
 //! command refuses every call rather than skip a keyword (fail closed).
 //!
+//! A literal is normalised for the keywords of the schema object holding `x-quantity` only, so
+//! compilation also refuses a numeric keyword connected through in-place applicators to a
+//! different `x-quantity` schema object, and `x-quantity` under `contains` or `not`
+//! (`quantity_rule`).
+//!
 //! # First failure in document order
 //!
 //! Every keyword reports its own first failure; a schema reports the earliest of them by
@@ -30,10 +35,13 @@
 //!
 //! The schema: at most [`MAX_SCHEMA_DEPTH`] levels and [`MAX_SCHEMA_NODES`] schema
 //! positions. Evaluation: at most [`MAX_EVAL_STEPS`] steps (one per schema applied to one
-//! value, plus one per 1,024 bytes of string or canonical value examined) and
+//! value, one per object member or array element each keyword looks at, one per 1,024 bytes
+//! of string or canonical value examined, one per KiB of input times the program size in KiB
+//! per pattern match, and [`REGEX_FORMAT_STEPS`] plus one per byte for each `format: "regex"`
+//! check, of which there are at most [`MAX_REGEX_FORMAT_CHECKS`]) and
 //! [`MAX_EVAL_DEPTH`] nested schema applications; beyond either, validation stops with
 //! `input_limit` and nothing under `anyOf`, `oneOf`, `not` or `if` can turn that into a
-//! pass. Patterns are linear-time ([`super::ecma`]).
+//! pass. Patterns are linear-time (module `ecma`).
 
 use super::ecma::Pattern;
 use super::format::Format;
@@ -56,6 +64,10 @@ pub const MAX_EVAL_STEPS: u64 = 4_000_000;
 pub const MAX_EVAL_DEPTH: usize = 128;
 /// Bytes of string or canonical value examined per extra step.
 const BYTES_PER_STEP: usize = 1024;
+/// Most `format: "regex"` checks (each compiles a pattern) in one parameter document.
+pub const MAX_REGEX_FORMAT_CHECKS: usize = 64;
+/// Fixed step charge of one `format: "regex"` check, on top of one step per pattern byte.
+pub const REGEX_FORMAT_STEPS: u64 = 1024;
 
 /// Keyword ranks: the order keywords are evaluated in and the tie-break between failures
 /// at the same instance pointer. `false`, `json` and `input_limit` are pseudo-keywords.
@@ -159,7 +171,7 @@ type Bound = (Option<f64>, &'static str, fn(f64, f64) -> bool);
 
 /// Validation stopped: a limit was reached or a hook hit a broken invariant. Never turned
 /// into a pass by `anyOf`, `oneOf`, `not` or `if`.
-struct Abort(Fail);
+struct Abort(Box<Fail>);
 
 type Step = Result<Result<Out, Fail>, Abort>;
 
@@ -245,16 +257,15 @@ impl Dec {
         };
         let (int, frac) = mant.split_once('.').unwrap_or((mant, ""));
         let digits: String = int.chars().chain(frac.chars()).collect();
-        let mut coeff: u64 = digits.parse().ok()?;
-        let mut exp = exp - frac.len() as i64;
-        if coeff == 0 {
+        // Trailing zeros go into the exponent before parsing (`1e20` prints as 21 digits),
+        // leading zeros are dropped; what is left is at most 17 significant digits.
+        let trimmed = digits.trim_end_matches('0');
+        let exp = exp - frac.len() as i64 + (digits.len() - trimmed.len()) as i64;
+        let significant = trimmed.trim_start_matches('0');
+        if significant.is_empty() {
             return Some(Dec { coeff: 0, exp: 0 });
         }
-        while coeff % 10 == 0 {
-            coeff /= 10;
-            exp += 1;
-        }
-        Some(Dec { coeff, exp })
+        Some(Dec { coeff: significant.parse().ok()?, exp })
     }
 
     /// Whether `self / m` is an integer, exactly, in decimal.
@@ -669,6 +680,105 @@ impl Builder {
     }
 }
 
+/// The schema positions applied to the same instance location as `o` (in-place applicators).
+fn in_place(o: &Obj) -> Vec<NodeId> {
+    let mut v: Vec<NodeId> = o.reference.into_iter().collect();
+    v.extend(o.all_of.iter().chain(&o.any_of).chain(&o.one_of).copied());
+    v.extend([o.not, o.if_, o.then_, o.else_].into_iter().flatten());
+    v.extend(o.dependent_schemas.iter().map(|(_, n)| *n));
+    v
+}
+
+fn has_numeric(o: &Obj) -> bool {
+    o.minimum.is_some()
+        || o.maximum.is_some()
+        || o.exclusive_minimum.is_some()
+        || o.exclusive_maximum.is_some()
+        || o.multiple_of.is_some()
+}
+
+fn find(parent: &mut [usize], mut x: usize) -> usize {
+    while let Some(&p) = parent.get(x) {
+        if p == x {
+            break;
+        }
+        let gp = parent.get(p).copied().unwrap_or(p);
+        if let Some(slot) = parent.get_mut(x) {
+            *slot = gp;
+        }
+        x = p;
+    }
+    x
+}
+
+/// The `x-quantity` rule (maintainer decision in the review of #341). A literal is
+/// normalised for the keywords of the schema object holding `x-quantity` only, so:
+///
+/// 1. a numeric keyword (`minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`,
+///    `multipleOf`) in a schema object connected through in-place applicators (`$ref`,
+///    `allOf`, `anyOf`, `oneOf`, `not`, `if`, `then`, `else`, `dependentSchemas`) to a
+///    different schema object holding `x-quantity` is refused: an `x-quantity` schema carries
+///    its own numeric bounds. The check is conservative: any connection counts.
+/// 2. `x-quantity` reachable in place from a `contains` or `not` subschema is refused: those
+///    never keep what their subschema normalised.
+fn quantity_rule(nodes: &[Node], positions: &BTreeMap<Vec<String>, NodeId>) -> Result<(), CompileError> {
+    let path_of = |id: NodeId| positions.iter().find(|(_, n)| **n == id).map(|(p, _)| p.clone()).unwrap_or_default();
+    let obj = |id: NodeId| match nodes.get(id) {
+        Some(Node::Obj(o)) => Some(o.as_ref()),
+        _ => None,
+    };
+    let mut parent: Vec<usize> = (0..nodes.len()).collect();
+    for id in 0..nodes.len() {
+        let Some(o) = obj(id) else { continue };
+        for other in in_place(o) {
+            let (a, b) = (find(&mut parent, id), find(&mut parent, other));
+            if let Some(slot) = parent.get_mut(a) {
+                *slot = b;
+            }
+        }
+    }
+    let mut quantity_in: BTreeMap<usize, Vec<NodeId>> = BTreeMap::new();
+    for id in 0..nodes.len() {
+        if obj(id).is_some_and(|o| o.quantity.is_some()) {
+            quantity_in.entry(find(&mut parent, id)).or_default().push(id);
+        }
+    }
+    for id in 0..nodes.len() {
+        if !obj(id).is_some_and(has_numeric) {
+            continue;
+        }
+        let group = quantity_in.get(&find(&mut parent, id)).map(Vec::as_slice).unwrap_or(&[]);
+        if group.iter().any(|q| *q != id) {
+            return Err(Builder::err(
+                &path_of(id),
+                "a numeric keyword applies where x-quantity sits in another schema object;                  put the bounds next to x-quantity",
+            ));
+        }
+    }
+    for id in 0..nodes.len() {
+        let Some(o) = obj(id) else { continue };
+        for start in [o.contains, o.not].into_iter().flatten() {
+            let mut seen = BTreeSet::new();
+            let mut work = vec![start];
+            while let Some(n) = work.pop() {
+                if !seen.insert(n) {
+                    continue;
+                }
+                if let Some(x) = obj(n) {
+                    if x.quantity.is_some() {
+                        return Err(Builder::err(
+                            &path_of(n),
+                            "x-quantity under contains or not: its literals would never be normalised",
+                        ));
+                    }
+                    work.extend(in_place(x));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 impl Compiled {
     /// Compiles a schema (see the module docs for what is refused).
     pub fn compile(schema: &CValue) -> Result<Compiled, CompileError> {
@@ -682,14 +792,16 @@ impl Compiled {
                 o.reference = Some(t);
             }
         }
+        quantity_rule(&b.nodes, &b.positions)?;
         Ok(Compiled { nodes: b.nodes, root })
     }
 
     /// Validates `instance`. On success, returns the normalised literals in document order.
     pub fn evaluate(&self, instance: &CValue, hooks: &dyn Hooks) -> Result<Vec<(JsonPointer, Normalised)>, Fail> {
-        let mut e = Eval { s: self, hooks, steps: 0, depth: 0 };
+        let mut e = Eval { s: self, hooks, steps: 0, depth: 0, regex_formats: 0 };
         let out = match e.node(self.root, instance, &JsonPointer::root(), "false") {
-            Err(Abort(f)) | Ok(Err(f)) => return Err(f),
+            Err(Abort(f)) => return Err(*f),
+            Ok(Err(f)) => return Err(f),
             Ok(Ok(out)) => out,
         };
         let mut lits = out.lits;
@@ -734,10 +846,21 @@ struct Eval<'a> {
     hooks: &'a dyn Hooks,
     steps: u64,
     depth: usize,
+    regex_formats: usize,
 }
 
 fn limit(ptr: &JsonPointer, message: &str) -> Abort {
-    Abort(Fail::new(ptr, "input_limit", ValidationReason::InputLimit, message))
+    Abort(Box::new(Fail::new(ptr, "input_limit", ValidationReason::InputLimit, message)))
+}
+
+/// A boolean schema position (or a dangling one, which cannot happen after compilation).
+#[inline(never)]
+fn leaf(node: Option<&Node>, ptr: &JsonPointer, via: &'static str) -> Step {
+    match node {
+        Some(Node::Bool(true)) => Ok(Ok(Out::default())),
+        Some(Node::Bool(false)) => Ok(Err(Fail::schema(ptr, via, "no value is allowed here"))),
+        _ => Err(Abort(Box::new(Fail::schema(ptr, "schema", "dangling schema position")))),
+    }
 }
 
 /// Member names of an object in document order.
@@ -760,28 +883,55 @@ impl Eval<'_> {
         self.charge(ptr, (len / BYTES_PER_STEP) as u64)
     }
 
+    /// Matches a pattern, charging one step per KiB of `text` (at least one) times the
+    /// pattern's program size in KiB: the PikeVM's work is O(input × program).
+    fn matches(&mut self, p: &Pattern, text: &str, ptr: &JsonPointer) -> Result<bool, Abort> {
+        let kib = (text.len() / BYTES_PER_STEP + 1) as u64;
+        self.charge(ptr, kib.saturating_mul(p.program_kib()))?;
+        Ok(p.is_match(text))
+    }
+
+    /// Charges a format check: one step per KiB of the string, and for `format: "regex"`,
+    /// which compiles the string, [`REGEX_FORMAT_STEPS`] plus one step per byte, at most
+    /// [`MAX_REGEX_FORMAT_CHECKS`] times per document.
+    fn charge_format(&mut self, f: Format, s: &str, ptr: &JsonPointer) -> Result<(), Abort> {
+        if f != Format::Regex {
+            return self.charge_bytes(ptr, s.len());
+        }
+        self.regex_formats += 1;
+        if self.regex_formats > MAX_REGEX_FORMAT_CHECKS {
+            return Err(limit(ptr, "too many format: regex checks in one document"));
+        }
+        self.charge(ptr, REGEX_FORMAT_STEPS.saturating_add(s.len() as u64))
+    }
+
     fn canon(&mut self, v: &CValue, ptr: &JsonPointer) -> Result<Vec<u8>, Abort> {
-        let bytes =
-            to_canonical_bytes(v).map_err(|_| Abort(Fail::schema(ptr, "json", "value has no canonical form")))?;
+        let bytes = to_canonical_bytes(v)
+            .map_err(|_| Abort(Box::new(Fail::schema(ptr, "json", "value has no canonical form"))))?;
         self.charge_bytes(ptr, bytes.len())?;
         Ok(bytes)
     }
 
-    /// Applies schema `id` to `inst`; a `false` schema fails under `via`.
+    /// Applies schema `id` to `inst`; a `false` schema fails under `via`. Kept small: it is on
+    /// the recursion path, so everything but the dispatch lives in other functions.
     fn node(&mut self, id: NodeId, inst: &CValue, ptr: &JsonPointer, via: &'static str) -> Step {
+        self.enter(ptr)?;
+        let r = match self.s.nodes.get(id) {
+            Some(Node::Obj(o)) => self.object(o, inst, ptr),
+            other => leaf(other, ptr, via),
+        };
+        self.depth -= 1;
+        r
+    }
+
+    #[inline(never)]
+    fn enter(&mut self, ptr: &JsonPointer) -> Result<(), Abort> {
         self.charge(ptr, 1)?;
         if self.depth >= MAX_EVAL_DEPTH {
             return Err(limit(ptr, "schema applications nest too deeply"));
         }
         self.depth += 1;
-        let r = match self.s.nodes.get(id) {
-            Some(Node::Bool(true)) => Ok(Ok(Out::default())),
-            Some(Node::Bool(false)) => Ok(Err(Fail::schema(ptr, via, "no value is allowed here"))),
-            Some(Node::Obj(o)) => self.object(o, inst, ptr),
-            None => Err(Abort(Fail::schema(ptr, "schema", "dangling schema position"))),
-        };
-        self.depth -= 1;
-        r
+        Ok(())
     }
 
     fn object(&mut self, o: &Obj, inst0: &CValue, ptr: &JsonPointer) -> Step {
@@ -820,7 +970,7 @@ impl Eval<'_> {
             Err(other) => {
                 let mut f = Fail::schema(ptr, "x-quantity", "literal normalisation failed");
                 f.bus = Some(other);
-                Err(Abort(f))
+                Err(Abort(Box::new(f)))
             }
         }
     }
@@ -872,13 +1022,12 @@ impl Eval<'_> {
                 }
             }
             if let Some(p) = &o.pattern {
-                self.charge_bytes(ptr, s.len())?;
-                if !p.is_match(s) {
+                if !self.matches(p, s, ptr)? {
                     note(best, Fail::schema(ptr, "pattern", "string does not match the pattern"));
                 }
             }
             if let Some(f) = o.format {
-                self.charge_bytes(ptr, s.len())?;
+                self.charge_format(f, s, ptr)?;
                 if !f.check(s) {
                     note(best, Fail::schema(ptr, "format", "string does not match the format"));
                 }
@@ -1069,6 +1218,7 @@ impl Eval<'_> {
     ) -> Result<(), Abort> {
         let mut matched = 0u64;
         for (i, item) in a.iter().enumerate() {
+            self.charge(ptr, 1)?;
             if self.node(c, item, &ptr.index(i), "contains")?.is_ok() {
                 matched += 1;
                 out.items.insert(i);
@@ -1169,6 +1319,7 @@ impl Eval<'_> {
         best: &mut Option<Fail>,
     ) -> Result<(), Abort> {
         for (i, (id, item)) in o.prefix_items.iter().zip(a.iter()).enumerate() {
+            self.charge(ptr, 1)?;
             if let Some(f) = self.child(*id, item, &ptr.index(i), "prefixItems", out)? {
                 note(best, f);
                 break;
@@ -1177,6 +1328,7 @@ impl Eval<'_> {
         }
         if let Some(id) = o.items {
             for (i, item) in a.iter().enumerate().skip(o.prefix_items.len()) {
+                self.charge(ptr, 1)?;
                 if let Some(f) = self.child(id, item, &ptr.index(i), "items", out)? {
                     note(best, f);
                     break;
@@ -1186,6 +1338,7 @@ impl Eval<'_> {
         }
         if let (Some(id), None) = (o.unevaluated_items, best.as_ref()) {
             for (i, item) in a.iter().enumerate() {
+                self.charge(ptr, 1)?;
                 if out.all_items || out.items.contains(&i) {
                     continue;
                 }
@@ -1208,9 +1361,21 @@ impl Eval<'_> {
         out: &mut Out,
         best: &mut Option<Fail>,
     ) -> Result<(), Abort> {
+        let any_member_keyword = o.property_names.is_some()
+            || !o.properties.is_empty()
+            || !o.pattern_properties.is_empty()
+            || o.additional_properties.is_some()
+            || o.unevaluated_properties.is_some();
+        if !any_member_keyword {
+            return Ok(());
+        }
+        // Ordering the members costs one step per member; every keyword below then pays one
+        // step per member it looks at, so a wide object cannot be walked for free.
+        self.charge(ptr, m.len() as u64)?;
         let members = ordered(m);
         if let Some(id) = o.property_names {
             for (name, _) in &members {
+                self.charge(ptr, 1)?;
                 let at = ptr.key(name);
                 if let Err(f) = self.node(id, &CValue::Str((*name).clone()), &at, "propertyNames")? {
                     note(best, Fail::schema(&at, "propertyNames", &f.message));
@@ -1220,6 +1385,7 @@ impl Eval<'_> {
         }
         if !o.properties.is_empty() {
             for (name, v) in &members {
+                self.charge(ptr, 1)?;
                 if let Some(id) = o.properties.get(*name) {
                     if let Some(f) = self.child(*id, v, &ptr.key(name), "properties", out)? {
                         note(best, f);
@@ -1231,10 +1397,10 @@ impl Eval<'_> {
         }
         if !o.pattern_properties.is_empty() {
             for (name, v) in &members {
+                self.charge(ptr, 1)?;
                 let mut first: Option<Fail> = None;
                 for (pat, id) in &o.pattern_properties {
-                    self.charge_bytes(ptr, name.len())?;
-                    if pat.is_match(name) {
+                    if self.matches(pat, name, ptr)? {
                         match self.child(*id, v, &ptr.key(name), "patternProperties", out)? {
                             Some(f) => note(&mut first, f),
                             None => {
@@ -1251,9 +1417,15 @@ impl Eval<'_> {
         }
         if let Some(id) = o.additional_properties {
             for (name, v) in &members {
-                let named = o.properties.contains_key(*name);
-                let patterned = o.pattern_properties.iter().any(|(p, _)| p.is_match(name));
-                if named || patterned {
+                self.charge(ptr, 1)?;
+                let mut patterned = false;
+                for (p, _) in &o.pattern_properties {
+                    if self.matches(p, name, ptr)? {
+                        patterned = true;
+                        break;
+                    }
+                }
+                if o.properties.contains_key(*name) || patterned {
                     continue;
                 }
                 if let Some(f) = self.child(id, v, &ptr.key(name), "additionalProperties", out)? {
@@ -1265,6 +1437,7 @@ impl Eval<'_> {
         }
         if let (Some(id), None) = (o.unevaluated_properties, best.as_ref()) {
             for (name, v) in &members {
+                self.charge(ptr, 1)?;
                 if out.props.contains(*name) {
                     continue;
                 }
@@ -1294,6 +1467,9 @@ mod tests {
         assert!(d(0.0).is_multiple_of(d(7.0)));
         assert!(!d(0.001).is_multiple_of(d(0.01)));
         assert!(d(-4.5).is_multiple_of(d(1.5)));
+        assert!(d(1e20).is_multiple_of(d(1.0)) && d(1e20).is_multiple_of(d(4.0)));
+        assert_eq!(d(1e20), Dec { coeff: 1, exp: 20 });
+        assert_eq!(d(0.000_25), Dec { coeff: 25, exp: -5 });
     }
 
     #[test]

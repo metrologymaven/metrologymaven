@@ -3,14 +3,18 @@
 //!
 //! JSON Schema 2020-12 patterns are ECMA-262 regular expressions. This module accepts an
 //! allowlisted subset, translates it to the syntax of the `regex` crate with ECMA-262
-//! meanings spelled out, and compiles it with size and nesting limits. The `regex` crate
-//! matches with finite automata in time linear in the input (no backtracking), so no
-//! pattern can take catastrophic time. Everything outside the subset is refused when the
-//! schema is compiled, so it can never be silently read with another meaning:
+//! meanings spelled out, and compiles it with size and nesting limits. The `regex` crate is
+//! built without its DFA features (`default-features = false`, `std` and `unicode` only), so
+//! matching runs on its PikeVM: an NFA simulation in time O(input length × program size), no
+//! backtracking, so no pattern can take catastrophic time. Each pattern records its compiled
+//! program size ([`Pattern::program_kib`]); the validator charges its step budget per KiB of
+//! input times that size. Everything outside the subset is refused when the schema is
+//! compiled, so it can never be silently read with another meaning:
 //!
 //! - accepted: literals; `.`; `^`, `$`; groups `( )`, `(?: )`, `(?<name> )`; `|`;
 //!   quantifiers `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}`, each optionally lazy (`?`);
-//!   classes `[...]`, `[^...]` with ranges; escapes `\d \D \w \W \s \S` (the upper-case
+//!   classes `[...]`, `[^...]` with ranges `a-z` between two single characters (a literal
+//!   hyphen inside a class is written `\-`); escapes `\d \D \w \W \s \S` (the upper-case
 //!   ones outside classes only), `\b` inside a class (backspace), `\t \n \v \f \r`, `\0` (not before a digit), `\xHH`,
 //!   `\uHHHH` (not a surrogate) and `\` before one of ``^$\.*+?()[]{}|/-``;
 //! - ECMA-262 meanings: `\d` is `[0-9]`, `\w` is `[0-9A-Za-z_]` (ASCII, as in ECMA-262
@@ -18,7 +22,9 @@
 //!   character except the four line terminators, `$` is the end of the input (no `m`
 //!   flag), and the match is a search anywhere in the string (an unanchored `test`);
 //! - refused: lookaround, backreferences, `\b \B` outside classes, `\p{..}`, `\c`, `\k`, inline flags,
-//!   `[]` and `[^]`, a lone `{`, `}` or `]`, any other escape, and patterns over
+//!   `[]` and `[^]` (so also a `]` first in a class), an unescaped `-` in a class that is not
+//!   between two single characters (`[a-]`, `[-a]`, `[a--]`, `[^--/]`, `[\w-]`), a lone `{`,
+//!   `}` or `]`, any other escape, and patterns over
 //!   [`MAX_PATTERN_BYTES`] bytes or beyond the compiled-size and nesting limits.
 
 use regex::{Regex, RegexBuilder};
@@ -27,8 +33,10 @@ use regex::{Regex, RegexBuilder};
 pub const MAX_PATTERN_BYTES: usize = 1024;
 /// Compiled program size limit of one pattern (bytes, `regex` crate accounting).
 pub const REGEX_SIZE_LIMIT: usize = 1 << 20;
-/// Lazy DFA cache limit of one pattern, in bytes.
+/// Lazy DFA cache limit of one pattern, in bytes (inert while the DFA features are off).
 pub const REGEX_DFA_LIMIT: usize = 1 << 20;
+/// Smallest program size tried when measuring a pattern.
+const MIN_PROGRAM_BYTES: usize = 1 << 10;
 /// Nesting limit of one pattern (groups, repetitions, classes).
 pub const REGEX_NEST_LIMIT: u32 = 32;
 
@@ -44,25 +52,59 @@ const DOT: &str = "[^\\x{A}\\x{D}\\x{2028}\\x{2029}]";
 pub struct Pattern {
     source: String,
     re: Regex,
+    program_kib: u64,
+}
+
+fn build(translated: &str, size_limit: usize) -> Result<Regex, regex::Error> {
+    RegexBuilder::new(translated)
+        .size_limit(size_limit)
+        .dfa_size_limit(REGEX_DFA_LIMIT)
+        .nest_limit(REGEX_NEST_LIMIT)
+        .build()
+}
+
+fn refusal(e: &regex::Error) -> String {
+    match e {
+        regex::Error::CompiledTooBig(_) => "pattern exceeds the compiled size limit".to_string(),
+        _ => "pattern is outside the supported ECMA-262 subset".to_string(),
+    }
 }
 
 impl Pattern {
-    /// Translates and compiles `source`; the error says why it is refused.
+    /// Translates and compiles `source`; the error says why it is refused. The program size
+    /// is measured as the smallest power-of-two size limit (1 KiB up to
+    /// [`REGEX_SIZE_LIMIT`]) the pattern compiles under; done once per schema.
     pub fn compile(source: &str) -> Result<Pattern, String> {
+        let translated = Pattern::translate_checked(source)?;
+        let mut limit = MIN_PROGRAM_BYTES;
+        loop {
+            match build(&translated, limit) {
+                Ok(re) => {
+                    let program_kib = (limit / 1024) as u64;
+                    return Ok(Pattern { source: source.to_string(), re, program_kib });
+                }
+                Err(regex::Error::CompiledTooBig(_)) if limit < REGEX_SIZE_LIMIT => limit *= 2,
+                Err(e) => return Err(refusal(&e)),
+            }
+        }
+    }
+
+    /// Whether `source` is a pattern this module accepts (`format: "regex"`): one compile at
+    /// the full size limit.
+    pub fn is_valid(source: &str) -> bool {
+        Pattern::translate_checked(source).is_ok_and(|t| build(&t, REGEX_SIZE_LIMIT).is_ok())
+    }
+
+    fn translate_checked(source: &str) -> Result<String, String> {
         if source.len() > MAX_PATTERN_BYTES {
             return Err(format!("pattern longer than {MAX_PATTERN_BYTES} bytes"));
         }
-        let translated = translate(source)?;
-        let re = RegexBuilder::new(&translated)
-            .size_limit(REGEX_SIZE_LIMIT)
-            .dfa_size_limit(REGEX_DFA_LIMIT)
-            .nest_limit(REGEX_NEST_LIMIT)
-            .build()
-            .map_err(|e| match e {
-                regex::Error::CompiledTooBig(_) => "pattern exceeds the compiled size limit".to_string(),
-                _ => "pattern is outside the supported ECMA-262 subset".to_string(),
-            })?;
-        Ok(Pattern { source: source.to_string(), re })
+        translate(source)
+    }
+
+    /// Compiled program size in KiB, rounded up to a power of two (at least 1).
+    pub fn program_kib(&self) -> u64 {
+        self.program_kib
     }
 
     /// Whether the pattern matches anywhere in `text` (ECMA-262 `RegExp.prototype.test`).
@@ -186,34 +228,31 @@ fn class(chars: &[char], mut i: usize) -> Result<(String, usize), String> {
     if items.is_empty() {
         return Err(unsupported("an empty class"));
     }
+    // An unescaped `-` is only ever the range operator between two single characters; a
+    // literal hyphen is written `\-`. So `[a-]`, `[-a]`, `[a--]`, `[^--/]` and `[\d-z]` are
+    // refused rather than read as a narrower class than ECMA-262 means.
     let mut body = String::new();
     let mut k = 0;
-    while k < items.len() {
-        match (items.get(k), items.get(k + 1), items.get(k + 2)) {
-            (Some(Item::Char(a)), Some(Item::Dash), Some(Item::Char(b))) => {
+    while let Some(item) = items.get(k) {
+        match (item, items.get(k + 1), items.get(k + 2)) {
+            (Item::Char(a), Some(Item::Dash), Some(Item::Char(b))) => {
                 if a > b {
                     return Err(unsupported("a class range out of order"));
                 }
                 body.push_str(&format!("{}-{}", hex(*a), hex(*b)));
                 k += 3;
             }
-            (Some(Item::Set(_)), Some(Item::Dash), Some(Item::Char(_) | Item::Set(_)))
-            | (Some(Item::Char(_)), Some(Item::Dash), Some(Item::Set(_))) => {
-                return Err(unsupported("a class range with a class escape"));
+            (Item::Char(_) | Item::Set(_), Some(Item::Dash), _) | (Item::Dash, _, _) => {
+                return Err(unsupported("an unescaped `-` that is not between two characters (write `\\-`)"));
             }
-            (Some(Item::Char(a)), _, _) => {
+            (Item::Char(a), _, _) => {
                 body.push_str(&hex(*a));
                 k += 1;
             }
-            (Some(Item::Set(s)), _, _) => {
+            (Item::Set(s), _, _) => {
                 body.push_str(s);
                 k += 1;
             }
-            (Some(Item::Dash), _, _) => {
-                body.push_str(&hex(u32::from('-')));
-                k += 1;
-            }
-            (None, _, _) => break,
         }
     }
     Ok((format!("[{}{}]", if negated { "^" } else { "" }, body), i))
@@ -341,7 +380,10 @@ mod tests {
         assert!(m("^\\s$", "\u{feff}") && m("^\\s$", "\u{2028}") && !m("^\\s$", "\u{85}"));
         assert!(!m("^.$", "\r") && !m("^.$", "\u{2028}") && m("^.$", "\u{1f600}"));
         assert!(!m("^a$", "a\n"), "$ is the end of input");
-        assert!(m("^[\\d.-]+$", "1.5-2") && m("^[-a]$", "-") && m("^[a-]$", "-"));
+        assert!(m("^[\\d.\\-]+$", "1.5-2") && m("^[\\-a]$", "-") && m("^[a\\-]$", "-"));
+        // `[\--/]` is the range U+002D..U+002F, so it holds `.`; its negation does not.
+        assert!(m("^[\\--/]$", ".") && !m("^[^\\--/]+$", "a.b") && m("^[^\\--/]$", "a"));
+        assert!(m("^[\\]a]$", "]") && m("^[\\[]$", "["));
         assert!(m("^\\x41\\u00e9$", "A\u{e9}") && m("^a\\/b$", "a/b") && m("^[\\b]$", "\u{8}"));
         assert!(m("^(?:ab)+$", "abab") && m("^(?<y>\\d{4})$", "2026") && m("^a{2,3}?$", "aa"));
         assert!(m("^[^\\s]+$", "ab") && !m("^\\S+$", "a b") && m("^\\D\\W$", "a-"));
@@ -354,6 +396,10 @@ mod tests {
         for p in [
             "(?=a)", "(?!a)", "(?<=a)", "(?<!a)", "(a)\\1", "\\k<n>", "\\bword", "\\B", "\\p{L}", "\\cA", "(?i)a",
             "[]", "[^]", "a{", "a}", "]", "[a", "\\", "\\q", "[\\D]", "[z-a]", "[\\d-z]", "\\ud800", "\\012", "\\x4",
+            // A bare `-` that is not between two characters (review of #341).
+            "[^--/]", "[a--]", "[--a]", "[a-]", "[-a]", "[-]", "[^-]", "[a-z-0]", "[\\w-]", "[a-\\d]", "[--]",
+            // `]` first closes an empty class, which is refused.
+            "[]a]", "[^]a]",
         ] {
             assert!(refused(p), "{p} should be refused");
         }

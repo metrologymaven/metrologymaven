@@ -273,10 +273,17 @@ fn ac3_params_fixture() {
             continue;
         }
         let r = resolved.unwrap_or_else(|e| panic!("{case}: {e}"));
-        let by_value = r.validate_value(params, &v);
-        let by_text = r.validate_json(&to_canonical_bytes(params).unwrap(), &v);
-        assert_eq!(by_value, by_text, "{case}: value and text entry points agree");
-        match (s(get(exp, "outcome")), by_value) {
+        let got = match get(&row, "params_text") {
+            // Rows whose exact text matters (integers beyond 2^53): the text entry point only.
+            CValue::Str(text) => r.validate_json(text.as_bytes(), &v),
+            _ => {
+                let by_value = r.validate_value(params, &v);
+                let by_text = r.validate_json(&to_canonical_bytes(params).unwrap(), &v);
+                assert_eq!(by_value, by_text, "{case}: value and text entry points agree");
+                by_value
+            }
+        };
+        match (s(get(exp, "outcome")), got) {
             ("ok", Ok(got)) => check_validated(case, &got, exp, params),
             ("error", Err(got)) => check_refusal(case, &got, exp),
             (want, got) => panic!("{case}: expected {want}, got {got:?}"),
@@ -360,6 +367,20 @@ fn ac6_preconditions() {
     assert_eq!(run(1.0, vec![0.0, 2.0]), Ok(()));
 }
 
+/// `x-quantity` with its own numeric bounds, and shared through `$ref` without numeric
+/// keywords elsewhere, compiles.
+#[test]
+fn quantity_with_own_bounds_compiles() {
+    for schema in [
+        r#"{"type":"number","x-quantity":"length","minimum":0,"multipleOf":0.5}"#,
+        r##"{"$defs":{"len":{"type":"number","x-quantity":"length","minimum":0}},"properties":{"a":{"$ref":"#/$defs/len"},"b":{"$ref":"#/$defs/len"}}}"##,
+        r#"{"properties":{"a":{"x-quantity":"length","minimum":0},"n":{"type":"integer","minimum":1}}}"#,
+        r#"{"type":"array","items":{"x-quantity":"length","maximum":2},"contains":{"type":"number"}}"#,
+    ] {
+        assert!(Compiled::compile(&parse(schema.as_bytes()).unwrap()).is_ok(), "{schema}");
+    }
+}
+
 /// A precondition reading a context root the caller does not supply fails closed.
 #[test]
 fn precondition_with_missing_root_is_false() {
@@ -434,7 +455,77 @@ impl Hooks for NoHooks {
 /// test-thread default) so the nesting limit is shown to fit it even in a debug build.
 #[test]
 fn evaluation_is_bounded_and_fails_closed() {
-    std::thread::Builder::new().stack_size(2 * 1024 * 1024).spawn(bounded_cases).unwrap().join().unwrap();
+    // 1 MiB: the stack the nesting limit is pinned to fit, even in a debug build (NODE.md).
+    std::thread::Builder::new().stack_size(1024 * 1024).spawn(bounded_cases).unwrap().join().unwrap();
+}
+
+/// The step budget charges every object member and array element a keyword looks at, so an
+/// exponential schema over a wide object stops with `input_limit` in bounded time (review of
+/// #341: before, each application walked every member for one step).
+#[test]
+fn wide_documents_are_charged_per_member() {
+    // d0 walks every member; d(k) applies d(k-1) twice; d12 applies d0 4096 times.
+    let mut defs = vec![r#""d0":{"additionalProperties":true,"propertyNames":true}"#.to_string()];
+    for k in 1..=12 {
+        defs.push(format!(r##""d{k}":{{"allOf":[{{"$ref":"#/$defs/d{p}"}},{{"$ref":"#/$defs/d{p}"}}]}}"##, p = k - 1));
+    }
+    let schema = format!(r##"{{"$defs":{{{}}},"$ref":"#/$defs/d12"}}"##, defs.join(","));
+    let c = Compiled::compile(&parse(schema.as_bytes()).unwrap()).unwrap();
+    let wide = CValue::Obj((0..100_000).map(|i| (format!("m{i}"), CValue::Num(0.0))).collect());
+    let started = std::time::Instant::now();
+    let e = c.evaluate(&wide, &NoHooks).unwrap_err();
+    assert_eq!((e.keyword, e.reason), ("input_limit", ValidationReason::InputLimit));
+    assert!(started.elapsed() < std::time::Duration::from_secs(60), "bounded time: {:?}", started.elapsed());
+    let arrays = CValue::Arr(vec![CValue::Num(0.0); 100_000]);
+    let items = r##"{"$defs":{"a":{"items":true}},"allOf":[{"$ref":"#/$defs/a"},{"$ref":"#/$defs/a"}]}"##;
+    let c = Compiled::compile(&parse(items.as_bytes()).unwrap()).unwrap();
+    assert!(c.evaluate(&arrays, &NoHooks).is_ok(), "a few walks of a wide array fit the budget");
+}
+
+/// `format: "regex"` compiles each string: at most 64 checks per document, each charged by
+/// pattern size.
+#[test]
+fn regex_format_checks_are_capped() {
+    let c =
+        Compiled::compile(&parse(br#"{"type":"array","items":{"type":"string","format":"regex"}}"#).unwrap()).unwrap();
+    let doc = |n: usize| CValue::Arr(vec![text("^[a-z]+$"); n]);
+    assert!(c.evaluate(&doc(64), &NoHooks).is_ok());
+    let e = c.evaluate(&doc(65), &NoHooks).unwrap_err();
+    assert_eq!((e.keyword, e.reason), ("input_limit", ValidationReason::InputLimit));
+}
+
+/// The hand-labelled ECMA-262 table: every row's verdict (match, no match, refused).
+#[test]
+fn ecma_table() {
+    let table = fixture("ecma_table.json");
+    let mut n = 0;
+    for row in arr(get(&table, "rows")) {
+        n += 1;
+        let pattern = s(get(row, "pattern"));
+        let got = match fid_bus::validate::Pattern::compile(pattern) {
+            Err(_) => "refused",
+            Ok(p) if p.is_match(s(get(row, "input"))) => "match",
+            Ok(_) => "no_match",
+        };
+        assert_eq!(got, s(get(row, "verdict")), "{pattern:?} on {:?}", get(row, "input"));
+    }
+    assert!(n >= 60);
+}
+
+/// The hand-labelled JSON Schema 2020-12 cases.
+#[test]
+fn spec_cases() {
+    let cases = fixture("spec_cases.json");
+    let mut n = 0;
+    for g in arr(get(&cases, "groups")) {
+        let c = Compiled::compile(get(g, "schema")).unwrap_or_else(|e| panic!("{}: {e}", s(get(g, "name"))));
+        for t in arr(get(g, "tests")) {
+            n += 1;
+            let valid = c.evaluate(get(t, "data"), &NoHooks).is_ok();
+            assert_eq!(CValue::Bool(valid), *get(t, "valid"), "{} / {}", s(get(g, "name")), s(get(t, "note")));
+        }
+    }
+    assert!(n >= 50);
 }
 
 fn bounded_cases() {
@@ -470,6 +561,21 @@ fn uncompilable_schema_fails_closed() {
         r#"{"items":[{}]}"#,
         r#"{"properties":{"a":{"$schema":"https://json-schema.org/draft/2020-12/schema"}}}"#,
         r#"{"multipleOf":0}"#,
+        // x-quantity behind an applicator with numeric keywords elsewhere (review of #341).
+        r##"{"$defs":{"len":{"type":"number","x-quantity":"length"}},"$ref":"#/$defs/len","minimum":0}"##,
+        r#"{"allOf":[{"x-quantity":"length"},{"maximum":5}]}"#,
+        r#"{"x-quantity":"length","allOf":[{"multipleOf":0.5}]}"#,
+        r#"{"anyOf":[{"x-quantity":"length","minimum":0},{"type":"integer","minimum":5}]}"#,
+        r#"{"oneOf":[{"x-quantity":"length"}],"exclusiveMinimum":0}"#,
+        r#"{"if":{"x-quantity":"length"},"then":{"exclusiveMaximum":1}}"#,
+        r#"{"properties":{"a":{"dependentSchemas":{"b":{"minimum":1}},"x-quantity":"length"}}}"#,
+        // x-quantity under contains or not: those literals would never be normalised.
+        r#"{"contains":{"x-quantity":"length"}}"#,
+        r##"{"$defs":{"q":{"x-quantity":"length"}},"contains":{"allOf":[{"$ref":"#/$defs/q"}]}}"##,
+        r#"{"not":{"x-quantity":"length"}}"#,
+        // Pattern classes with a bare hyphen.
+        r#"{"pattern":"^[^--/]+$"}"#,
+        r#"{"patternProperties":{"[a--]":true}}"#,
     ];
     let defs: Vec<CommandDef> =
         schemas.iter().enumerate().map(|(i, s)| def_with(&format!("t.c{i}"), s, "[]")).collect();

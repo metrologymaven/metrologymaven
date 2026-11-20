@@ -281,20 +281,156 @@ def multiple(x, m):
     return decimal.Decimal(repr(x)) % decimal.Decimal(repr(m)) == 0
 
 
-def ecma(pattern):
-    """The few ECMA-262 meanings the fixture patterns need, in Python `re` syntax:
-    `$` is the end of the input only, `\\d` is ASCII."""
-    out, i = [], 0
-    while i < len(pattern):
-        c = pattern[i]
-        if c == "\\":
-            nxt = pattern[i + 1]
-            out.append("[0-9]" if nxt == "d" else "\\" + nxt)
-            i += 2
-            continue
-        out.append(r"\Z" if c == "$" else c)
+class Refused(Exception):
+    """A pattern outside the accepted ECMA-262 subset."""
+
+
+# ECMA-262 WhiteSpace and LineTerminator (ES2023 sections 12.2 and 12.3).
+ECMA_WS = "\t\n\x0b\x0c\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
+SYNTAX = set("^$\\.*+?()[]{}|/-")
+
+
+def py_char(cp):
+    return "\\U%08x" % cp
+
+
+def ecma_escape(p, i, in_class):
+    """Reads the escape whose letter is at p[i]; returns (kind, value, next index) where kind
+    is 'char' (a code point) or 'set' (a Python class body, possibly negated with '^')."""
+    if i >= len(p):
+        raise Refused("trailing backslash")
+    c = p[i]
+    sets = {"d": "0-9", "w": "0-9A-Za-z_", "s": ECMA_WS}
+    if c in sets:
+        return "set", sets[c], i + 1
+    if c in "DWS":
+        if in_class:
+            raise Refused("negated class escape inside a class")
+        return "set", "^" + sets[c.lower()], i + 1
+    simple = {"t": 9, "n": 10, "v": 11, "f": 12, "r": 13}
+    if c in simple:
+        return "char", simple[c], i + 1
+    if c == "0":
+        if i + 1 < len(p) and p[i + 1].isdigit():
+            raise Refused("octal escape")
+        return "char", 0, i + 1
+    if c in "xu":
+        n = 2 if c == "x" else 4
+        h = p[i + 1 : i + 1 + n]
+        if len(h) != n or not all(ch in "0123456789abcdefABCDEF" for ch in h):
+            raise Refused("malformed hex escape")
+        v = int(h, 16)
+        if 0xD800 <= v <= 0xDFFF:
+            raise Refused("surrogate escape")
+        return "char", v, i + 1 + n
+    if c == "b" and in_class:
+        return "char", 8, i + 1
+    if c in SYNTAX:
+        return "char", ord(c), i + 1
+    raise Refused("escape \\" + c)
+
+
+def ecma_class(p, i):
+    """Translates a class whose body starts at p[i] (after '['); returns (text, next index)."""
+    neg = i < len(p) and p[i] == "^"
+    if neg:
         i += 1
-    return "".join(out)
+    items = []
+    while True:
+        if i >= len(p):
+            raise Refused("unterminated class")
+        c = p[i]
+        if c == "]":
+            i += 1
+            break
+        if c == "\\":
+            kind, val, i = ecma_escape(p, i + 1, True)
+            items.append((kind, val))
+        elif c == "-":
+            items.append(("dash", None))
+            i += 1
+        else:
+            items.append(("char", ord(c)))
+            i += 1
+    if not items:
+        raise Refused("empty class")
+    body, k = "", 0
+    while k < len(items):
+        kind, val = items[k]
+        nxt = items[k + 1] if k + 1 < len(items) else None
+        if kind == "dash" or (nxt is not None and nxt[0] == "dash"):
+            after = items[k + 2] if k + 2 < len(items) else None
+            if kind == "char" and after is not None and after[0] == "char":
+                if val > after[1]:
+                    raise Refused("range out of order")
+                body += py_char(val) + "-" + py_char(after[1])
+                k += 3
+                continue
+            raise Refused("bare hyphen in a class")
+        body += py_char(val) if kind == "char" else val
+        k += 1
+    return "[" + ("^" if neg else "") + body + "]", i
+
+
+def ecma(pattern):
+    """Translates the accepted ECMA-262 subset (see crates/fid-bus/src/validate/ecma.rs and
+    spec/core/bus/pipe/valid/NODE.md) into Python `re` syntax with ECMA meanings: `\\d` and
+    `\\w` ASCII, `\\s` ECMA white space, `.` without line terminators, `$` the end of the
+    input. Raises Refused for anything outside the subset."""
+    p = pattern
+    if len(p.encode("utf-8")) > 1024:
+        raise Refused("too long")
+    out, i = [], 0
+    while i < len(p):
+        c = p[i]
+        if c == "\\":
+            kind, val, i = ecma_escape(p, i + 1, False)
+            if kind == "char":
+                out.append(py_char(val))
+            else:
+                out.append("[" + val + "]")
+        elif c == ".":
+            out.append("[^\n\r\u2028\u2029]")
+            i += 1
+        elif c == "$":
+            out.append(r"\Z")
+            i += 1
+        elif c == "[":
+            text, i = ecma_class(p, i + 1)
+            out.append(text)
+        elif c == "(":
+            if p.startswith("(?:", i):
+                out.append("(?:")
+                i += 3
+            elif p.startswith("(?<", i) and not p.startswith("(?<=", i) and not p.startswith("(?<!", i):
+                m = re.match(r"\(\?<([A-Za-z_][A-Za-z0-9_]*)>", p[i:])
+                if not m:
+                    raise Refused("bad group name")
+                out.append("(?P<%s>" % m[1])
+                i += m.end()
+            elif p.startswith("(?", i):
+                raise Refused("lookaround or flag")
+            else:
+                out.append("(")
+                i += 1
+        elif c == "{":
+            m = re.match(r"\{[0-9]+(,[0-9]*)?\}", p[i:])
+            if not m:
+                raise Refused("lone {")
+            out.append(m[0])
+            i += m.end()
+        elif c in "}]":
+            raise Refused("lone " + c)
+        elif c in ")|^*+?":
+            out.append(c)
+            i += 1
+        else:
+            out.append(re.escape(c))
+            i += 1
+    try:
+        return re.compile("".join(out))
+    except re.error as e:
+        raise Refused(str(e))
 
 
 def fmt_ok(name, s):
@@ -469,7 +605,7 @@ class Validator:
                 best.note(Fail(ptr, "maxLength"))
             if "minLength" in o and len(inst) < o["minLength"]:
                 best.note(Fail(ptr, "minLength"))
-            if "pattern" in o and not re.search(ecma(o["pattern"]), inst):
+            if "pattern" in o and not ecma(o["pattern"]).search(inst):
                 best.note(Fail(ptr, "pattern"))
             if "format" in o and not fmt_ok(o["format"], inst):
                 best.note(Fail(ptr, "format"))
@@ -600,7 +736,7 @@ class Validator:
     def object_children(self, o, m, ptr, out, best):
         members = sorted(m, key=utf16)
         props = o.get("properties", {})
-        pats = [(re.compile(ecma(p)), s) for p, s in sorted(o.get("patternProperties", {}).items())]
+        pats = [(ecma(p), s) for p, s in sorted(o.get("patternProperties", {}).items())]
         if "propertyNames" in o:
             for name in members:
                 if isinstance(self.node(o["propertyNames"], name, ptr + (name,), "propertyNames"), Fail):
@@ -993,6 +1129,65 @@ def real_expected(cmd, target, doc):
     return {"outcome": "ok"}
 
 
+TEXT_CASES = [
+    # Integers no binary64 number equals are refused (fail closed; decision in the review of #341).
+    ("big_int_inexact", "t.free@1", H, '{"a":9007199254740993}'),
+    ("big_int_exact", "t.free@1", H, '{"a":9007199254740992}'),
+    ("big_int_even_exact", "t.free@1", H, '{"a":9007199254740994}'),
+    ("big_int_exponent_exact", "t.free@1", H, '{"a":1e20}'),
+    ("big_int_exponent_inexact", "t.free@1", H, '{"z":1,"b":[1,1e23]}'),
+    ("big_int_document_order", "t.free@1", H, '{"z":9007199254740993,"a":18014398509481985}'),
+    ("big_int_negative", "t.free@1", H, '{"a":-9007199254740993}'),
+    ("big_int_in_string_is_text", "t.free@1", H, '{"a":"9007199254740993"}'),
+    ("fraction_is_not_an_integer", "t.free@1", H, '{"a":0.1,"b":12345678901234567.5}'),
+]
+
+
+def inexact_pointer(text):
+    """The first integer above 2^53 in document order that no binary64 number equals."""
+    found = []
+
+    def walk(v, ptr):
+        if isinstance(v, dict):
+            for k, x in v.items():
+                walk(x, ptr + (k,))
+        elif isinstance(v, list):
+            for i, x in enumerate(v):
+                walk(x, ptr + (i,))
+        elif isinstance(v, (int, decimal.Decimal)) and not isinstance(v, bool):
+            d = decimal.Decimal(v)
+            if d == d.to_integral_value() and abs(d) > 2**53 and decimal.Decimal(float(d)) != d:
+                found.append(ptr)
+
+    decimal.getcontext().prec = 2000
+    walk(json.loads(text, parse_int=int, parse_float=decimal.Decimal), ())
+    best = None
+    for p in found:
+        if best is None or ptr_cmp(p, best) < 0:
+            best = p
+    return best
+
+
+def check_hand_labelled():
+    """Runs the reference validator against the hand-labelled tables; returns mismatches."""
+    bad = []
+    table = json.loads((HERE / "ecma_table.json").read_text(encoding="utf-8"))
+    for row in table["rows"]:
+        try:
+            got = "match" if ecma(row["pattern"]).search(row["input"]) else "no_match"
+        except Refused:
+            got = "refused"
+        if got != row["verdict"]:
+            bad.append("ecma %r on %r: oracle %s, label %s" % (row["pattern"], row["input"], got, row["verdict"]))
+    groups = json.loads((HERE / "spec_cases.json").read_text(encoding="utf-8"), parse_int=float)
+    for g in groups["groups"]:
+        for t in g["tests"]:
+            got = not isinstance(Validator(g["schema"]).node(g["schema"], t["data"], (), "false"), Fail)
+            if got != t["valid"]:
+                bad.append("spec %s / %s: oracle %s" % (g["name"], t["note"], got))
+    return bad
+
+
 def load(text):
     return json.loads(text, parse_int=float)
 
@@ -1009,6 +1204,17 @@ def render():
         p = load(json.dumps(params))
         row = {"case": name, "command": cmd, "principal": principal, "params": params, "expect": expected(cmd, principal, p)}
         lines.append(json.dumps(row, ensure_ascii=False, sort_keys=True))
+    for name, cmd, principal, text in TEXT_CASES:
+        assert name not in seen, name
+        seen.add(name)
+        p = load(text)
+        bad = inexact_pointer(text)
+        if bad is not None:
+            exp = {"outcome": "error", "code": "validation", "reason": "schema", "pointer": show(bad), "keyword": "json"}
+        else:
+            exp = expected(cmd, principal, p)
+        row = {"case": name, "command": cmd, "principal": principal, "params": p, "params_text": text, "expect": exp}
+        lines.append(json.dumps(row, ensure_ascii=False, sort_keys=True))
     out["params.jsonl"] = "\n".join(lines) + "\n"
     real_cases = []
     for name, cmd, target, doc in REAL_CASES:
@@ -1022,13 +1228,18 @@ def render():
 
 
 def main():
+    bad = check_hand_labelled()
+    if bad:
+        print("the reference validator disagrees with the hand-labelled tables:")
+        print("\n".join(bad))
+        return 1
     files = render()
     if "--check" in sys.argv[1:]:
         stale = [n for n, t in files.items() if not (HERE / n).exists() or (HERE / n).read_text(encoding="utf-8") != t]
         if stale:
             print("stale:", ", ".join(stale))
             return 1
-        print(f"ok: {len(CASES)} cases")
+        print(f"ok: {len(CASES) + len(TEXT_CASES)} cases; hand-labelled tables agree")
         return 0
     for n, t in files.items():
         (HERE / n).write_text(t, encoding="utf-8", newline="\n")

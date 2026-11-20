@@ -31,17 +31,24 @@
 //!    `precondition/false` naming the message key and the expression (REQ-006), a stopped
 //!    evaluation is `precondition/step_bound_exceeded` (REQ-007).
 //!
+//! The text entry point also refuses an integer above 2^53 that no binary64 number equals
+//! (`validation/schema`, keyword `json`; see `exact`), since parsing would round it. Validation
+//! recurses once per nested schema application (at most [`MAX_EVAL_DEPTH`]); run it on a thread
+//! with at least 1 MiB of stack.
+//!
 //! Fail closed: a schema that does not compile, a precondition that does not compile, or a
 //! lifecycle the table cannot read never lets a call through; nothing here returns
 //! `internal` for a caller's mistake. Every error is from the frozen bus error catalogue;
 //! this module adds no code or reason. Determinism D0: document-order traversal, no clock.
 
 mod ecma;
+mod exact;
 mod format;
 mod pointer;
 pub mod schema;
 
 pub use ecma::{Pattern, MAX_PATTERN_BYTES, REGEX_DFA_LIMIT, REGEX_NEST_LIMIT, REGEX_SIZE_LIMIT};
+pub use exact::MAX_SCAN_WORK;
 pub use format::Format;
 pub use pointer::{cmp_utf16, JsonPointer, Token};
 pub use schema::{
@@ -364,6 +371,20 @@ impl<'a> Resolved<'a> {
                     &format!("parameter document is not acceptable JSON ({})", other.code()),
                 ),
             })?;
+        match exact::first_inexact_integer(bytes) {
+            exact::Scan::Clean => {}
+            exact::Scan::Inexact(p) => {
+                return Err(ValidationError::new(
+                    p,
+                    "json",
+                    ValidationReason::Schema,
+                    "integer above 2^53 that no binary64 number equals",
+                ))
+            }
+            exact::Scan::TooMuchWork => {
+                return Err(ValidationError::limit("deciding integer exactness exceeds its work budget"))
+            }
+        }
         self.validate_checked(value, view)
     }
 

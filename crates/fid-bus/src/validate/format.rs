@@ -14,7 +14,7 @@
 //! - `hostname`: RFC 1123: labels of 1..=63 ASCII letters, digits and `-`, not starting or
 //!   ending with `-`, separated by `.`; at most 253 characters in all; no trailing dot.
 //! - `json-pointer`: RFC 6901 (`~` only as `~0` or `~1`).
-//! - `regex`: a pattern of the ECMA-262 subset of [`super::ecma`].
+//! - `regex`: a pattern of the ECMA-262 subset of module `ecma`.
 
 use super::ecma::Pattern;
 use regex::Regex;
@@ -67,7 +67,7 @@ impl Format {
             Format::Ipv6 => ipv6(s),
             Format::Hostname => hostname(s),
             Format::JsonPointer => json_pointer(s),
-            Format::Regex => Pattern::compile(s).is_ok(),
+            Format::Regex => Pattern::is_valid(s),
         }
     }
 }
