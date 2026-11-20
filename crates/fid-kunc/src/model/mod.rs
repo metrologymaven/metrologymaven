@@ -107,7 +107,7 @@
 //! the order of nodes, edges, groups or group inputs (port lists keep their declared order).
 
 mod check;
-mod reader;
+pub(crate) mod reader;
 mod wire;
 
 pub use check::{validate, ModelError, ValidModel, VALUE_PORT};
