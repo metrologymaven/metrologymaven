@@ -371,7 +371,7 @@ fn rows_are_deduplicated_and_bounded() {
     let once = base("flat-1", flat.key().as_str()).interpretation(&[&flat], Some(&p), &v).finish().unwrap();
     let twice = base("flat-1", flat.key().as_str()).interpretation(&[&flat, &flat], Some(&p), &v).finish().unwrap();
     assert_eq!(once.canonical_json(), twice.canonical_json());
-    let many: Vec<&DmtRow> = std::iter::repeat(&flat).take(MAX_RULE_ROWS + 1).collect();
+    let many: Vec<&DmtRow> = vec![&flat; MAX_RULE_ROWS + 1];
     let e = base("flat-1", flat.key().as_str()).interpretation(&many, Some(&p), &v).finish().unwrap_err();
     assert_eq!(e, RecordError::InvalidField { field: "interpretation_rules" });
 }
