@@ -1,6 +1,6 @@
 [package]
 name = "fid-bus"
-description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy and file handles (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS)"
+description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles and MCP projection with pending requests (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -26,6 +26,9 @@ cap-std = "3.4"
 # CORE.BUS.POL.FS opens the final component without following links (`O_NOFOLLOW`,
 # `FILE_FLAG_OPEN_REPARSE_POINT`); the companion crate of cap-std.
 cap-fs-ext = "3.4"
+# CORE.BUS.POL.PROJ: request IDs are UUIDv7 values; the shared UUID type. Layer model, below the
+# bus; already in the workspace and the lock.
+fid-uuid = { path = "../fid-uuid" }
 
 [target.'cfg(unix)'.dependencies]
 # O_NONBLOCK, O_NOCTTY and EXDEV constants only (CORE.BUS.POL.FS). Already in the lock.

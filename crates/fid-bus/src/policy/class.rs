@@ -1,6 +1,6 @@
 //! Class, principal and human-only matrix. Spec node `CORE.BUS.POL.CLASS`.
 //!
-//! The first check of the authorise stage: a fixed table from (principal kind, side-effect
+//! A check of the authorise stage: a fixed table from (principal kind, side-effect
 //! class, `human_only`) to allow or a `policy` refusal. It encodes
 //!
 //! - the CONSTITUTION §3 bans: only a `human` principal may run an M1, S1, W3 or A0
@@ -13,14 +13,22 @@
 //!   cancel its own job, a human any job; otherwise `policy/not_job_owner` (REQ-004).
 //!
 //! The class ban is checked before `human_only`: an agent invoking a human-only W3
-//! command gets `class_forbidden`.
+//! command outside the request path gets `class_forbidden`.
+//!
+//! Order with the projection check (maintainer decision on #328): for an MCP channel or any
+//! `agent` principal, the projection check of `CORE.BUS.POL.PROJ` comes first, so a
+//! `request_only` or `human_only` call (including every W3 call, whose class ceiling is
+//! `request_only`) becomes a pending request and never reaches this table; only calls that
+//! the projection lets run are checked here. An approval (`approval_of`) is checked here
+//! with the approving human as principal. `policy::projection::authorise` is the one entry
+//! point that applies both checks in this order.
 //!
 //! [`class_rule`] is one `match` with an explicit arm for each of the 6 x 11 x 2 = 132
 //! combinations and no wildcard (REQ-005). The module denies the wildcard lints, and the
 //! two enums are matched by path, so adding a principal kind or a side-effect class fails
 //! to build until every new cell is written here. Motion release (CMM), the S1 ceremony
-//! (TRUST), MCP projection (`CORE.BUS.POL.PROJ`), file handles (`CORE.BUS.POL.FS`) and X1
-//! approval (`CORE.BUS.POL.EGRESS`) are later checks; an `Allow` here only means this
+//! (TRUST), file handles (`CORE.BUS.POL.FS`) and X1 approval (`CORE.BUS.POL.EGRESS`) are
+//! later checks; an `Allow` here only means this
 //! check passes. The table is published as `schema/policy-matrix.json`
 //! ([`policy_matrix_json`]). Determinism D0; no allocation on the decision path.
 

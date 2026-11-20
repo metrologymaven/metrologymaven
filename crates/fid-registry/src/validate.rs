@@ -97,6 +97,7 @@ rule_codes! {
     MissingField => "missing_field",
     MissingQuantity => "missing_quantity",
     ProjectionTooLoose => "projection_too_loose",
+    ReservedEffect => "reserved_effect",
     SchemaTooDeep => "schema_too_deep",
     TooManyErrors => "too_many_errors",
     ToolNameCollision => "tool_name_collision",
@@ -308,6 +309,17 @@ pub fn max_projection(class: SideEffect) -> Projection {
         SideEffect::M1 | SideEffect::S1 | SideEffect::A0 => Projection::Never,
     }
 }
+
+/// Journal event types reserved for the pending-request commands of CORE.BUS.POL.PROJ, each
+/// with the one command `(id, major)` that may declare it. `RequestApproved` is added by the
+/// bus to an approved command's commit, so no command may declare it. Any other declaration
+/// is `reserved_effect`, so no command an agent can run can emit a request event.
+pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 4] = [
+    ("RequestApproved", None),
+    ("RequestFiled", Some(("request.file_request", 1))),
+    ("RequestRejected", Some(("request.reject_request", 1))),
+    ("RequestWithdrawn", Some(("request.withdraw_request", 1))),
+];
 
 /// Validates declarations with the default limits and the `GEO.FRAME.UNITS` catalogue.
 pub fn validate(decls: &[CommandDecl]) -> Vec<ValidationError> {
@@ -700,6 +712,21 @@ fn check_decl(v: &CValue, limits: &Limits, kinds: &dyn QuantityKinds, sink: &mut
         if p > max {
             let msg = format!("{} is projected {p}, looser than the class maximum {max}", class.as_str());
             ctx.at(RuleCode::ProjectionTooLoose, "mcp_projection", msg);
+        }
+    }
+    // The request events of CORE.BUS.POL.PROJ: only their own command may declare them.
+    if let Some(CValue::Arr(effects)) = m.get("effects") {
+        for (i, e) in effects.iter().enumerate() {
+            let CValue::Str(e) = e else { continue };
+            let Some((_, owner)) = RESERVED_EFFECTS.iter().find(|(name, _)| *name == e.as_str()) else { continue };
+            let allowed = match (owner, &id, major) {
+                (Some((oid, om)), Some(id), Some(major)) => oid == id && *om == major,
+                _ => false,
+            };
+            if !allowed {
+                let msg = format!("effect {} is reserved for the bus's request commands", quote(e));
+                ctx.push(RuleCode::ReservedEffect, Some(pointer(&[Seg::Key("effects"), Seg::Idx(i)])), msg);
+            }
         }
     }
     // Backstop: everything else the DEF record requires (titles, effects, algorithms, ...).
