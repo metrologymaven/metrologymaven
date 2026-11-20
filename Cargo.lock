@@ -946,7 +946,9 @@ dependencies = [
 name = "fid-project"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
  "fid-canon",
+ "fid-registry",
  "fid-uuid",
  "getrandom",
 ]
@@ -1002,6 +1004,7 @@ dependencies = [
  "fid-canon",
  "fid-dep",
  "fid-jobs",
+ "fid-project",
  "fid-registry",
  "fid-report",
  "fid-store",

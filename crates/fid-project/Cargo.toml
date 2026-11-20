@@ -1,6 +1,6 @@
 [package]
 name = "fid-project"
-description = "Metrology Maven project model: entity ID service (spec node CORE.PRJ.CONT.ID)"
+description = "Metrology Maven project model: entity ID service and container hierarchy (spec nodes CORE.PRJ.CONT.ID, CORE.PRJ.CONT.HIER)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,6 +13,12 @@ fid-canon = { path = "../fid-canon" }
 fid-uuid = { path = "../fid-uuid" }
 # Operating-system CSPRNG for the random bits of live UUIDv7s.
 getrandom = "0.2"
+# CORE.PRJ.CONT.HIER: the create commands are bus handlers (Handler, StateView, Event, typed
+# bus errors, principals, Untrusted). Layer engine, which moves fid-project from model to
+# engine; every crate that depends on fid-project is engine or above.
+fid-bus = { path = "../fid-bus" }
+# CORE.PRJ.CONT.HIER: the four commands' registry definitions (CommandDef). Layer model.
+fid-registry = { path = "../fid-registry" }
 
 [lints]
 workspace = true
