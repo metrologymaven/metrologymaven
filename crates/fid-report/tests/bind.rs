@@ -522,10 +522,10 @@ fn ac4_cross_project_ids_are_refused_and_leak_nothing() {
     let head = JournalHead::parse(&format!("sha256:{}", "8".repeat(64))).unwrap();
     w.journal.append(head, foreign, EntityKind::Series, Some(series), br#"{"name":"B trend"}"#.to_vec()).unwrap();
     w.bind(b, "--series", &series.to_string()).unwrap();
-    w.resolve(b, &head.digest().as_str().to_string()).unwrap();
+    w.resolve(b, head.digest().as_str()).unwrap();
     // A's own record binds and resolves.
     w.bind(b, "--results", st(get(&cases, "a"), "record")).unwrap();
-    w.resolve(b, &head.digest().as_str().to_string()).unwrap();
+    w.resolve(b, head.digest().as_str()).unwrap();
     // Both projects store byte-identical statements; each record resolves its own.
     let tj = fixture("two_projects/journal.json");
     let stmts: Vec<&CValue> = arr(get(&tj, "entries")).iter().filter(|e| st(e, "kind") == "statement").collect();
