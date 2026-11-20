@@ -1,0 +1,40 @@
+{
+  "fixtures": {
+    "alpha-flip": {
+      "exit": 1,
+      "findings": [
+        "CONTRAST dark sem.border.overlay/sem.surface.highlight 3.00",
+        "CONTRAST floor sem.border.overlay/sem.surface.highlight 3.00",
+        "CONTRAST hc sem.border.overlay/sem.surface.highlight 3.00",
+        "CONTRAST light sem.border.overlay/sem.surface.highlight 3.00"
+      ]
+    },
+    "deutan-clash": {
+      "exit": 1,
+      "findings": [
+        "STATUS-DISTANCE deuteranopia dark nonconforms",
+        "STATUS-DISTANCE protanopia dark nonconforms"
+      ]
+    },
+    "hc-6-to-1": {
+      "exit": 1,
+      "findings": [
+        "CONTRAST-HC hc sem.text.muted/sem.surface.base 6.01",
+        "CONTRAST-HC hc sem.text.muted/sem.surface.raised 6.01",
+        "CONTRAST-HC hc sem.text.muted/sem.surface.sunken 5.59"
+      ]
+    },
+    "low-contrast": {
+      "exit": 1,
+      "findings": [
+        "CONTRAST light sem.text.muted/sem.surface.base 4.20",
+        "CONTRAST light sem.text.muted/sem.surface.raised 3.91",
+        "CONTRAST light sem.text.muted/sem.surface.sunken 3.58"
+      ]
+    },
+    "ok": {
+      "exit": 0,
+      "findings": []
+    }
+  }
+}

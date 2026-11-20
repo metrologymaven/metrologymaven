@@ -1797,6 +1797,7 @@ dependencies = [
  "fid-registry-build",
  "fid-report",
  "fid-store",
+ "fid-surface",
  "fid-unc",
  "fid-uuid",
 ]

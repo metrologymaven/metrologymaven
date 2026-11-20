@@ -1,6 +1,6 @@
 [package]
 name = "fid-project-cmd"
-description = "Metrology Maven project commands on the bus: container create handlers and their registry definitions, and the element tree state view (spec nodes CORE.PRJ.CONT.HIER, CORE.PRJ.TREE.MODEL)"
+description = "Metrology Maven project commands on the bus: container create handlers and their registry definitions, the element tree state view and the stage commands (spec nodes CORE.PRJ.CONT.HIER, CORE.PRJ.TREE.MODEL, CORE.PRJ.STAGE.MODEL)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -1,4 +1,4 @@
-//! Acceptance criteria of spec node UX.TOKENS.COLOR (AC-1 .. AC-4, provisional AC-5) and further
+//! Acceptance criteria of spec node UX.TOKENS.COLOR (AC-1 .. AC-5) and further
 //! error paths. Expected results are in `fixtures/ux/tokens/color/expected.json`, written by
 //! `make_fixtures.py`: hand-labelled findings, and per-theme values and WCAG contrast ratios
 //! computed by an independent Python reading of the files, never by this crate.
@@ -19,6 +19,20 @@ fn fix(rel: &str) -> PathBuf {
 
 fn design() -> PathBuf {
     repo().join("design")
+}
+
+/// The release report of `fid-design color-check` (UX.TOKENS.CHECK) on the shipped tree, which
+/// must pass.
+fn gate_report() -> CValue {
+    let d = design().to_string_lossy().into_owned();
+    let o = run(&["color-check", "--root", d.as_str(), "--json"]);
+    assert_eq!(o.status.code(), Some(0), "{}", String::from_utf8_lossy(&o.stdout));
+    fid_canon::parse(String::from_utf8(o.stdout).unwrap().trim_end().as_bytes()).unwrap()
+}
+
+/// A report value (rounded to 0.01) against an oracle value at full precision.
+fn close_to_rounded(reported: f64, oracle: f64) -> bool {
+    (reported - oracle).abs() <= 0.005 + 1e-9
 }
 
 fn run(args: &[&str]) -> Output {
@@ -211,11 +225,13 @@ fn claimed_values_never_look_measured() {
     }
 }
 
-/// AC-5 depends on UX.TOKENS.CHECK (not built yet). Until then this is the provisional evidence:
-/// the WCAG contrast of every declared pair in every theme, computed by this crate's formula,
-/// equals the independent Python oracle and meets the threshold for its tag and theme.
+/// AC-5: the UX.TOKENS.CHECK release gate (`color-check`) passes every declared pair in every
+/// theme, and its reported ratios equal this leaf's independent Python oracle (to the report's
+/// 0.01); this crate's unrounded contrast equals the oracle too.
 #[test]
-fn ac5_provisional_every_pair_meets_its_threshold() {
+fn ac5_color_check_passes_every_pair() {
+    let gate = gate_report();
+    let gate_pairs = arr(get(&gate, &["pairs"]));
     let report = fid_design::tokens::check(&design()).unwrap();
     let got = report.pair_contrasts();
     let e = expected();
@@ -235,6 +251,15 @@ fn ac5_provisional_every_pair_meets_its_threshold() {
         assert!((r - ratio).abs() < 1e-8, "{k}: {r} vs oracle {ratio}");
         assert_eq!(g.required, Some(*required), "{k}");
         assert!(r >= *required, "{k}: {r} < {required}");
+    }
+    assert_eq!(gate_pairs.len(), want.len());
+    for g in gate_pairs {
+        let k = format!("{} {}/{}", s(get(g, &["theme"])), s(get(g, &["fg"])), s(get(g, &["bg"])));
+        let (tag, ratio, required) = by_key.get(&k).unwrap_or_else(|| panic!("{k} not in oracle"));
+        assert_eq!(s(get(g, &["tag"])), tag, "{k}");
+        assert!(close_to_rounded(num(get(g, &["ratio"])), *ratio), "{k}");
+        assert_eq!(num(get(g, &["required"])), *required, "{k}");
+        assert_eq!(get(g, &["pass"]), &CValue::Bool(true), "{k}");
     }
 }
 

@@ -1,4 +1,4 @@
-//! Acceptance criteria of spec node UX.TOKENS.DATAPAL (AC-1 .. AC-3, provisional AC-4) and further
+//! Acceptance criteria of spec node UX.TOKENS.DATAPAL (AC-1 .. AC-4) and further
 //! error paths. Expected results are in `fixtures/ux/tokens/datapal/expected.json`, written by
 //! `make_fixtures.py`: hand-labelled findings, and the shipped palettes' digests, lightness,
 //! CIEDE2000 distances under four vision conditions, contrasts and OKLab distances computed by an
@@ -28,6 +28,20 @@ fn fix(rel: &str) -> PathBuf {
 
 fn design() -> PathBuf {
     repo().join("design")
+}
+
+/// The release report of `fid-design color-check` (UX.TOKENS.CHECK) on the shipped tree, which
+/// must pass.
+fn gate_report() -> CValue {
+    let d = design().to_string_lossy().into_owned();
+    let o = run(&["color-check", "--root", d.as_str(), "--json"]);
+    assert_eq!(o.status.code(), Some(0), "{}", String::from_utf8_lossy(&o.stdout));
+    fid_canon::parse(String::from_utf8(o.stdout).unwrap().trim_end().as_bytes()).unwrap()
+}
+
+/// A report value (rounded to 0.01) against an oracle value at full precision.
+fn close_to_rounded(reported: f64, oracle: f64) -> bool {
+    (reported - oracle).abs() <= 0.005 + 1e-9
 }
 
 fn run(args: &[&str]) -> Output {
@@ -260,12 +274,40 @@ fn digests_match_the_oracle() {
     }
 }
 
-/// Provisional AC-4 (until UX.TOKENS.CHECK exists): every stepped palette has a neutral centre,
-/// strictly monotonic lightness along each arm, and at least CIEDE2000 10 between adjacent and
-/// mirrored steps (and the out-of-range colours next to the ends) under the four vision
-/// conditions; this crate's values equal the oracle's.
+/// AC-4: the UX.TOKENS.CHECK release gate (`color-check`) passes every stepped palette:
+/// strictly monotonic lightness per arm and adjacent-step CIEDE2000 at least 10 under the four
+/// vision conditions, with values equal to this leaf's independent oracle (to the report's 0.01).
+/// The stricter palettes-check rules hold too: a neutral centre, mirrored steps and the
+/// out-of-range colours next to the ends at least 10 apart; this crate's values equal the
+/// oracle's.
 #[test]
-fn ac4_provisional_lightness_and_step_differences() {
+fn ac4_color_check_lightness_and_step_differences() {
+    let gate = gate_report();
+    let e = expected();
+    let gate_pals = arr(get(&gate, &["palettes"]));
+    assert_eq!(gate_pals.len(), 2);
+    for g in gate_pals {
+        let rf = s(get(g, &["ref"]));
+        let rec = get(&e, &["shipped", "palettes", rf]);
+        assert_eq!(s(get(rec, &["kind"])), "stepped");
+        assert_eq!(get(g, &["lstar_monotonic"]), &CValue::Bool(true), "{rf}");
+        assert_eq!(get(g, &["default"]), &CValue::Bool(rf == DEFAULT), "{rf}");
+        for (a, b) in arr(get(g, &["lstar"])).iter().zip(arr(get(rec, &["lstar"]))) {
+            assert!(close_to_rounded(num(a), num(b)), "{rf}: L*");
+        }
+        let adjacent = arr(get(g, &["adjacent"]));
+        assert_eq!(adjacent.len(), (arr(get(rec, &["lstar"])).len() - 1) * 4, "{rf}");
+        for x in adjacent {
+            let i = num(get(x, &["step"])) as usize;
+            let v = s(get(x, &["vision"]));
+            let w = arr(get(rec, &["pairs"]))
+                .iter()
+                .find(|w| s(get(w, &["a"])) == i.to_string() && s(get(w, &["b"])) == (i + 1).to_string())
+                .unwrap_or_else(|| panic!("{rf} {i} not in oracle"));
+            assert!(close_to_rounded(num(get(x, &["de2000"])), num(get(w, &["de2000", v]))), "{rf} {i} {v}");
+            assert_eq!(get(x, &["pass"]), &CValue::Bool(true), "{rf} {i} {v}");
+        }
+    }
     let values = shipped_values();
     let e = expected();
     for (rf, rec) in obj(get(&e, &["shipped", "palettes"])) {

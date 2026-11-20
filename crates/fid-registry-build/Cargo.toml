@@ -62,8 +62,10 @@ test-support = ["dep:fid-gdt", "dep:fid-io-reg", "dep:fid-pkg", "dep:fid-rdl"]
 fid-geo-types = { path = "../fid-geo-types" }
 fid-project = { path = "../fid-project" }
 fid-uuid = { path = "../fid-uuid" }
-# `test_support::all_defs` for this crate's bus-validation test.
+# `test_support::all_defs` for this crate's bus-validation and surface-projection tests.
 fid-registry-build = { path = ".", features = ["test-support"] }
+# AUTO.SURF.PROJ over the workspace manifest (tests/surface_projection.rs). Layer services.
+fid-surface = { path = "../fid-surface" }
 
 [lints]
 workspace = true

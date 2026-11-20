@@ -6,6 +6,7 @@
 use fid_canon::{digest_bytes, parse, CValue};
 use fid_surface::projection::{MAX_MANIFEST_BYTES, MAX_MANIFEST_DEPTH};
 use fid_surface::{project, McpProjection, ProjError};
+use fid_types::SideEffect;
 use std::path::{Path, PathBuf};
 
 fn root() -> PathBuf {
@@ -105,6 +106,56 @@ fn ac4_name_collision() {
 #[test]
 fn ac5_name_too_long() {
     assert_error("long-name.json", "name_too_long");
+}
+
+/// Declarations stricter than the class ceiling project to themselves, as the bus decides
+/// (CORE.BUS.POL.PROJ `mcp_projection`: the stricter of the declaration and the class
+/// ceiling): `request.reject_request@1` (W1, `human_only`, `never`) and
+/// `request.file_request@1` (W1, `never`) project to `none`, an R0 or W2 command declaring
+/// `request_only` to `request_only`, a W3 command declaring `never` to `none`. Golden from
+/// the Python reference.
+#[test]
+fn stricter_declarations_project_to_themselves() {
+    let m = read("fixtures/manifest/stricter.json");
+    let p = project(&m).unwrap();
+    let golden = read("fixtures/projection/stricter.golden.json");
+    assert_eq!(String::from_utf8(p.to_canonical_bytes().unwrap()).unwrap(), String::from_utf8(golden).unwrap());
+    let of = |id: &str| p.commands.iter().find(|c| c.command_id.as_str() == id).unwrap().mcp_projection;
+    assert_eq!(of("request.reject_request@1"), McpProjection::None);
+    assert_eq!(of("request.file_request@1"), McpProjection::None);
+    assert_eq!(of("align.preview_fit@1"), McpProjection::RequestOnly);
+    assert_eq!(of("align.set_datum@1"), McpProjection::RequestOnly);
+    assert_eq!(of("rpt.release_report@1"), McpProjection::None);
+}
+
+/// The rule, hand-labelled for every ceiling and declaration: at the ceiling projects to the
+/// ceiling, stricter to the declaration, looser is refused.
+#[test]
+fn for_declared_table() {
+    use fid_surface::DeclaredProjection as D;
+    use McpProjection as M;
+    let table = [
+        (M::Exposed, D::Exposed, Some(M::Exposed)),
+        (M::Exposed, D::RequestOnly, Some(M::RequestOnly)),
+        (M::Exposed, D::Never, Some(M::None)),
+        (M::Named, D::Exposed, Some(M::Named)),
+        (M::Named, D::RequestOnly, Some(M::RequestOnly)),
+        (M::Named, D::Never, Some(M::None)),
+        (M::RequestOnly, D::Exposed, None),
+        (M::RequestOnly, D::RequestOnly, Some(M::RequestOnly)),
+        (M::RequestOnly, D::Never, Some(M::None)),
+        (M::None, D::Exposed, None),
+        (M::None, D::RequestOnly, None),
+        (M::None, D::Never, Some(M::None)),
+        // A human_only W1 command: the ceiling is tightened to request_only (D-031).
+        (M::for_command(SideEffect::W1, true), D::Exposed, None),
+        (M::for_command(SideEffect::W1, true), D::RequestOnly, Some(M::RequestOnly)),
+        (M::for_command(SideEffect::W1, true), D::Never, Some(M::None)),
+    ];
+    assert_eq!(M::for_command(SideEffect::W1, true), M::RequestOnly);
+    for (ceiling, declared, want) in table {
+        assert_eq!(McpProjection::for_declared(declared, ceiling), want, "{ceiling:?} {declared:?}");
+    }
 }
 
 /// AC-6 (in-process half; the cross-OS half is AC-1's golden file on every CI runner).

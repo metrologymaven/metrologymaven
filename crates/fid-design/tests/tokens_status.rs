@@ -1,4 +1,4 @@
-//! Acceptance criteria of spec node UX.TOKENS.STATUS (AC-1 .. AC-3, provisional AC-4) and further
+//! Acceptance criteria of spec node UX.TOKENS.STATUS (AC-1 .. AC-4) and further
 //! error paths. Expected results are in `fixtures/ux/tokens/status/expected.json`, written by
 //! `make_fixtures.py`: hand-labelled findings, and the shipped palette's values, CIEDE2000
 //! distances under four vision conditions, WCAG contrasts and OKLCH hues computed by an
@@ -26,6 +26,20 @@ fn fix(rel: &str) -> PathBuf {
 
 fn design() -> PathBuf {
     repo().join("design")
+}
+
+/// The release report of `fid-design color-check` (UX.TOKENS.CHECK) on the shipped tree, which
+/// must pass.
+fn gate_report() -> CValue {
+    let d = design().to_string_lossy().into_owned();
+    let o = run(&["color-check", "--root", d.as_str(), "--json"]);
+    assert_eq!(o.status.code(), Some(0), "{}", String::from_utf8_lossy(&o.stdout));
+    fid_canon::parse(String::from_utf8(o.stdout).unwrap().trim_end().as_bytes()).unwrap()
+}
+
+/// A report value (rounded to 0.01) against an oracle value at full precision.
+fn close_to_rounded(reported: f64, oracle: f64) -> bool {
+    (reported - oracle).abs() <= 0.005 + 1e-9
 }
 
 fn run(args: &[&str]) -> Output {
@@ -231,12 +245,16 @@ fn every_state_has_its_glyph_and_text() {
     }
 }
 
-/// Provisional AC-4 (until UX.TOKENS.CHECK exists): this crate's CIEDE2000 under the four vision
-/// conditions equals the independent oracle's, and every nonconforming-set colour is at least 20
-/// from CONFORMS in every theme. The other states are held to the same floor (the runtime guard
-/// of VIZ.OVERLAY.STATUS applies it to them).
+/// AC-4: the UX.TOKENS.CHECK release gate (`color-check`) finds every nonconforming-set colour
+/// at least 20 from CONFORMS in every theme under the four vision conditions, with distances
+/// equal to this leaf's independent oracle (to the report's 0.01). This crate's unrounded
+/// CIEDE2000 equals the oracle too, and the other states are held to the same floor (the runtime
+/// guard of VIZ.OVERLAY.STATUS applies it to them).
 #[test]
-fn ac4_provisional_cvd_distances() {
+fn ac4_color_check_cvd_distances() {
+    let gate = gate_report();
+    let gate_status = arr(get(&gate, &["status"]));
+    assert_eq!(gate_status.len(), 4 * 2 * 4);
     let values = shipped_values();
     let e = expected();
     let want = arr(get(&e, &["shipped", "de2000"]));
@@ -256,6 +274,17 @@ fn ac4_provisional_cvd_distances() {
         }
     }
     assert_eq!(nc_seen, 4 * 2 * 4, "nonconforms and stale in every theme under every vision");
+    for g in gate_status {
+        let (t, st, v) = (s(get(g, &["theme"])), s(get(g, &["state"])), s(get(g, &["vision"])));
+        assert_eq!(s(get(g, &["other"])), "conforms");
+        let w = want
+            .iter()
+            .find(|w| s(get(w, &["theme"])) == t && s(get(w, &["state"])) == st && s(get(w, &["vision"])) == v)
+            .unwrap_or_else(|| panic!("{t} {st} {v} not in oracle"));
+        assert!(close_to_rounded(num(get(g, &["de2000"])), num(get(w, &["de2000"]))), "{t} {st} {v}");
+        assert_eq!(num(get(g, &["required"])), MIN_DELTA_E2000);
+        assert_eq!(get(g, &["pass"]), &CValue::Bool(true), "{t} {st} {v}");
+    }
 }
 
 /// WCAG 2.2 contrast of every status colour on the plain surfaces equals the oracle's and meets

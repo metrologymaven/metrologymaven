@@ -2,6 +2,7 @@
 
 pub mod container;
 pub mod id;
+pub mod stage;
 pub mod tree;
 
 pub use container::{
@@ -11,6 +12,11 @@ pub use container::{
 pub use id::{
     live_source, uuid_v5, uuid_v7, Bits, IdError, IdIndex, IdService, Observation, ObservationSource, Recording,
     ReplaySource, SystemSource, Uuid, V7_RANDOM_BITS,
+};
+pub use stage::{
+    add_stage, list_stages, remove_stage, reorder_stages, stage_list_id, Stage, StageListing, ADD_STAGE,
+    DEFAULT_STAGE_LABEL, LIST_STAGES, REMOVE_STAGE, REORDER_STAGES, STAGES_REORDERED, STAGE_ADDED, STAGE_KIND,
+    STAGE_LIST_KIND, STAGE_REMOVED,
 };
 pub use tree::{
     DomainTranslate, Element, ElementName, ElementState, ElementTypeDef, ElementTypeRegistry, Group, Slot, Tree,

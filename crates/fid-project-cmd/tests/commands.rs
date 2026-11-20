@@ -15,7 +15,10 @@ use fid_project::{
     Bits, Container, ContainerError, ContainerKind, CreatedBy, IdError, Observation, Recording, ReplaySource, Uuid,
     CONTAINER_CREATED,
 };
-use fid_project_cmd::{command_defs, created_by, register, result_of, run_create, to_bus_error, SharedSource};
+use fid_project_cmd::{
+    command_defs, container_defs, created_by, register, register_containers, result_of, run_create, to_bus_error,
+    SharedSource,
+};
 use fid_registry::{check_schema, validate, Catalogue, CommandDecl, CommandDef};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
@@ -237,7 +240,11 @@ fn created_by_comes_from_the_principal() {
 /// CLI and MCP; their schemas pass the keyword checker and the definitions pass VAL.
 #[test]
 fn command_definitions() {
-    let defs = command_defs().unwrap();
+    let defs = container_defs().unwrap();
+    // The crate's full list is the container commands, then the stage commands.
+    let all: Vec<String> = command_defs().unwrap().iter().map(|d| format!("{}@{}", d.id, d.major)).collect();
+    assert_eq!(all.len(), 8);
+    assert!(all.iter().zip(&defs).all(|(a, d)| *a == format!("{}@{}", d.id, d.major)));
     let ids: Vec<String> = defs.iter().map(|d| format!("{}@{}", d.id, d.major)).collect();
     assert_eq!(
         ids,
@@ -272,16 +279,23 @@ fn command_definitions() {
 fn handlers_register_on_the_bus() {
     let source: SharedSource = Arc::new(Mutex::new(Recording::new(ReplaySource::new(Vec::new()))));
     let mut set = HandlerSet::new();
-    register(&mut set, NAMESPACE, &source).unwrap();
+    register_containers(&mut set, NAMESPACE, &source).unwrap();
     assert_eq!(set.len(), 4);
     for k in ContainerKind::ALL {
         let id = format!("{}@1", k.command());
         assert!(set.get(&id).is_ok());
         assert_eq!(set.def(&id).unwrap().id, k.command());
     }
-    let err = register(&mut set, NAMESPACE, &source).unwrap_err();
+    let err = register_containers(&mut set, NAMESPACE, &source).unwrap_err();
     assert_eq!(err.code(), Code::Internal);
     assert_eq!(set.len(), 4);
+    // `register` registers all eight handlers of the crate.
+    let mut all = HandlerSet::new();
+    register(&mut all, NAMESPACE, &source).unwrap();
+    assert_eq!(all.len(), 8);
+    for d in command_defs().unwrap() {
+        assert!(all.get(&format!("{}@{}", d.id, d.major)).is_ok(), "{}", d.id);
+    }
 }
 
 // ------------------------------------------------------------------ published schemas
