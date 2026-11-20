@@ -198,8 +198,7 @@ impl SelfReporter for Fake {
         assert_eq!(call_set, self_report_call_set());
         self.calls += 1;
         let (exit, stdout) = self.answer.clone()?;
-        let artifact_sha256 =
-            self.file_digest.clone().unwrap_or_else(|| sha256_digest(&fs::read(&artifact.file).unwrap()));
+        let artifact_sha256 = self.file_digest.unwrap_or_else(|| sha256_digest(&fs::read(&artifact.file).unwrap()));
         Ok(SelfReport { artifact_sha256, exit, result_digest: sha256_digest(&stdout) })
     }
 }

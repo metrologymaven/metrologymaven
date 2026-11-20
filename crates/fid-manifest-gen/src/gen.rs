@@ -547,7 +547,7 @@ fn algorithms(config: &Config, tree: &dyn SourceTree) -> Result<Vec<AlgorithmEnt
     let mut out = Vec::with_capacity(ids.len());
     for e in table.entries() {
         let card_digest = registry.digest(&e.algorithm).cloned().ok_or_else(|| invalid(f, "card digest missing"))?;
-        out.push(AlgorithmEntry { id: e.algorithm.clone(), card_digest, impl_digest: e.impl_digest.clone() });
+        out.push(AlgorithmEntry { id: e.algorithm.clone(), card_digest, impl_digest: e.impl_digest });
     }
     Ok(out)
 }
@@ -780,7 +780,7 @@ pub fn expected_answer(core_digest: &Digest) -> Result<Vec<u8>, GenError> {
     let algorithm = AlgorithmId::parse(MANIFEST_CORE_DIGEST_QUERY).map_err(|e| invalid(field::CORE, e.code()))?;
     let table = AlgorithmTable::new(Vec::new(), CardRegistry::default())
         .map_err(|e| invalid(field::CORE, e.code()))?
-        .with_manifest_core_digest(core_digest.clone());
+        .with_manifest_core_digest(*core_digest);
     let call = KernelCall { algorithm, params: Vec::new(), seed: None, inputs: Vec::new() };
     let result = evaluate(&table, &call).map_err(|e| invalid(field::CORE, e.code()))?;
     Ok(result.canonical_json())
