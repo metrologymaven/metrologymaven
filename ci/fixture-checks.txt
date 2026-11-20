@@ -12,6 +12,7 @@ python fixtures/auto/surf/gen/make_fixtures.py --check
 python fixtures/cons/check_row_schema.py
 python fixtures/cons/make_decl_fixtures.py --check
 python fixtures/core/bus/pol/class/make_matrix.py --check
+python fixtures/core/bus/pol/egress/make_fixtures.py --check
 python fixtures/core/bus/pol/proj/make_cases.py --check
 python fixtures/core/jrn/chain/append/make_fixtures.py --check
 python fixtures/core/jrn/chain/ckpt/make_fixtures.py --check

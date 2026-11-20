@@ -1610,6 +1610,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-net"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-registry",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-num"
 version = "0.0.1"
 dependencies = [
