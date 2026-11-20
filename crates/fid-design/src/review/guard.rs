@@ -14,22 +14,6 @@ pub fn is_bidi(c: char) -> bool {
     matches!(c, '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}')
 }
 
-/// Invisible characters not covered by the `words` check: Mongolian vowel separator, Hangul
-/// fillers, variation selectors and tag characters.
-pub fn is_extra_invisible(c: char) -> bool {
-    matches!(
-        c,
-        '\u{115F}'
-            | '\u{1160}'
-            | '\u{180E}'
-            | '\u{3164}'
-            | '\u{FFA0}'
-            | '\u{FE00}'..='\u{FE0F}'
-            | '\u{E0000}'..='\u{E007F}'
-            | '\u{E0100}'..='\u{E01EF}'
-    )
-}
-
 /// The reasons a piece of untrusted text is refused, sorted and unique; empty when acceptable.
 /// The empty string has no defect here; callers that need content check for it themselves.
 pub fn defects(s: &str) -> Vec<&'static str> {
@@ -40,7 +24,9 @@ pub fn defects(s: &str) -> Vec<&'static str> {
     if s.chars().any(char::is_control) {
         v.push("control character");
     }
-    if s.chars().any(is_extra_invisible) || !crate::words::obfuscation(s).is_empty() {
+    // `obfuscation` covers every `words::is_hidden` character, compatibility forms and mixed
+    // scripts.
+    if !crate::words::obfuscation(s).is_empty() {
         v.push("invisible character, compatibility form or mixed-script word");
     }
     if !is_nfc(s) {

@@ -72,14 +72,23 @@ fn finding_keys(report: &CValue) -> Vec<String> {
 }
 
 fn args_for(e: &CValue) -> Vec<String> {
-    let CValue::Str(case) = get(e, "case") else { panic!("case") };
-    let mut a = vec![
-        "review-check".to_string(),
-        "--changed".to_string(),
-        fix(&format!("{case}/changed.txt")),
-        "--root".to_string(),
-        fix(&format!("{case}/design")),
-    ];
+    let CValue::Str(root) = get(e, "root") else { panic!("root") };
+    let mut a = vec!["review-check".to_string(), "--root".to_string(), fix(root)];
+    if let CValue::Str(c) = get(e, "changed") {
+        a.push("--changed".to_string());
+        a.push(fix(c));
+    }
+    if let CValue::Str(b) = get(e, "base") {
+        a.push("--base".to_string());
+        a.push(fix(b));
+    }
+    if let CValue::Num(n) = get(e, "pr") {
+        a.push("--pr".to_string());
+        a.push(format!("{n}"));
+    }
+    if get(e, "all") == &CValue::Bool(true) {
+        a.push("--all".to_string());
+    }
     if let CValue::Str(d) = get(e, "deny") {
         a.push("--deny-names".to_string());
         a.push(fix(d));
@@ -160,7 +169,7 @@ fn ac6_name_leak_names_the_file_and_withholds_the_name() {
 #[test]
 fn every_labelled_case() {
     let CValue::Obj(m) = expected() else { panic!("expected.json") };
-    assert!(m.len() >= 26);
+    assert!(m.len() >= 38);
     for key in m.keys() {
         case(key);
     }
@@ -185,6 +194,8 @@ fn untrusted_text_fails_closed_and_empty_inputs_never_pass() {
         "principle-unknown",
         "bad-decl",
         "two-decl",
+        "tag-record",
+        "changed-decl",
     ] {
         let o = case(key);
         assert_eq!(o.status.code(), Some(1), "{key}");
@@ -192,6 +203,51 @@ fn untrusted_text_fails_closed_and_empty_inputs_never_pass() {
     // A refused deny-list entry is not echoed.
     let o = case("deny-bidi");
     assert!(!stdout(&o).to_lowercase().contains("exam"), "{}", stdout(&o));
+}
+
+#[test]
+fn stale_records_never_approve() {
+    // An old record (PR 41) touched in PR 42 is stale with --pr 42.
+    let o = case("stale-pr");
+    assert!(stdout(&o).contains("REVIEW-RECORD-STALE"));
+    // An artefact edited after approval no longer matches the record's digest.
+    let o = case("stale-digest");
+    assert!(stdout(&o).contains("digest differs"), "{}", stdout(&o));
+    case("ok+pr");
+    case("stale-pr-nopr");
+    // The approvals are reported for the CI wrapper.
+    let r = json_out(&case("ok"));
+    let CValue::Arr(a) = get(&r, "approvals") else { panic!("approvals") };
+    assert_eq!(a.len(), 1);
+    assert_eq!(get(&a[0], "approver"), &CValue::Str("A. Maintainer".into()));
+}
+
+#[test]
+fn map_change_and_governance_files() {
+    // Changing the map puts every changed path under review.
+    case("map-weakened");
+    // Governance files under review/ need no declaration; other artefacts still do.
+    case("map-reviewed");
+}
+
+#[test]
+fn whole_package_sweep_and_repo_root_paths() {
+    case("all-ok");
+    case("all-no-decl");
+    case("base-ok");
+    case("base-extra");
+    case("base-all");
+    // --root outside --base is a usage error.
+    let o = run(&["review-check", "--all", "--root", &fix("ok/design"), "--base", &fix("base-repo/repo")]);
+    assert_eq!(o.status.code(), Some(2));
+    // The shipped package: every artefact under the map has a declaration.
+    let o = run(&["review-check", "--all", "--root", &shipped(""), "--json"]);
+    assert_eq!(o.status.code(), Some(0), "{}", stdout(&o));
+    let r = json_out(&o);
+    let need = strs(get(&r, "needs_review"));
+    for f in ["principles.md", "reserved-words.json", "writing-guide.md"] {
+        assert!(need.contains(&f.to_string()), "{f} not swept: {need:?}");
+    }
 }
 
 #[test]
@@ -224,6 +280,12 @@ fn bad_usage_exits_2() {
         vec!["pkg-check", "--root", "x", "--changed", "y"],
         vec!["princ-check", "--deny-names", "y"],
         vec!["review-check", "--changed", "x", "--root", "y", "--bogus"],
+        vec!["review-check", "--changed", "x", "--root", "y", "--pr", "0"],
+        vec!["review-check", "--changed", "x", "--root", "y", "--pr", "abc"],
+        vec!["review-check", "--all", "--changed", "x", "--root", "y"],
+        vec!["review-check", "--all", "--pr", "3", "--root", "y"],
+        vec!["princ-check", "--all"],
+        vec!["pkg-check", "--root", "x", "--base", "y"],
     ] {
         assert_eq!(run(&args).status.code(), Some(2), "{args:?}");
     }
@@ -238,16 +300,17 @@ fn shipped_review_files() {
     }
     assert!(checklist.contains(review::STATEMENT_VERSION));
     assert!(checklist.contains("{{FAMILY_NAME}}"));
+    assert!(checklist.contains("cannot verify who approved"));
     for needle in ["colour alone", "keyboard path", "Contrast evidence", "trade-dress"] {
         assert!(checklist.to_lowercase().contains(&needle.to_lowercase()), "{needle}");
     }
     // The shipped map is valid; the shipped rule slot is empty until a reviewed PR fills it,
     // and the check then refuses to pass (fail closed).
     let mut f = Vec::new();
-    let map = review::parse_paths(&std::fs::read_to_string(shipped("review/paths.toml")).unwrap(), &mut f);
+    let map = review::parse_paths(&std::fs::read_to_string(shipped("review/paths.toml")).unwrap(), "p", &mut f);
     assert_eq!(map, Some(vec!["**".to_string()]));
     assert!(f.is_empty());
-    let dress = review::parse_dress(&std::fs::read_to_string(shipped("review/dress-rules.json")).unwrap(), &mut f);
+    let dress = review::parse_dress(&std::fs::read_to_string(shipped("review/dress-rules.json")).unwrap(), "d", &mut f);
     assert_eq!(dress, None);
     assert_eq!(f.len(), 1);
     // The shipped package names no deny-listed name.
@@ -273,20 +336,33 @@ fn library_record_and_declaration_checks() {
         CHECKLIST_ITEMS.iter().map(|c| format!("{{\"item\":\"{c}\",\"result\":\"pass\"}}")).collect();
     let rec = |pr: &str, date: &str| {
         format!(
-            "{{\"pr\":{pr},\"artefacts\":[\"a.svg\"],\"principles\":[\"P-DATA\"],\"dress\":[{{\"rule\":\"TD-01\",\"result\":\"pass\"}}],\"checklist\":[{}],\"approver\":{{\"name\":\"A\",\"principal\":\"human\"}},\"date\":\"{date}\"}}",
+            "{{\"pr\":{pr},\"artefacts\":[\"a.svg\"],\"digests\":{{\"a.svg\":\"deleted\"}},\"principles\":[\"P-DATA\"],\"dress\":[{{\"rule\":\"TD-01\",\"result\":\"pass\"}}],\"checklist\":[{}],\"approver\":{{\"name\":\"A\",\"principal\":\"human\"}},\"date\":\"{date}\"}}",
             checklist.join(",")
         )
     };
     let mut f = Vec::new();
     assert_eq!(
-        review::check_record("r.json", &rec("7", "2026-11-19"), Some(rules.as_slice()), &known, &mut f),
-        Some(vec!["a.svg".to_string()])
+        review::check_record("r.json", &rec("7", "2026-11-19"), Some(rules.as_slice()), &known, Some(7), &mut f)
+            .map(|a| (a.artefacts, a.approver)),
+        Some((vec!["a.svg".to_string()], "A".to_string()))
     );
     assert!(f.is_empty(), "{f:?}");
+    // --pr mismatch.
+    let mut f = Vec::new();
+    assert!(review::check_record("r.json", &rec("7", "2026-11-19"), Some(rules.as_slice()), &known, Some(8), &mut f)
+        .is_none());
+    assert_eq!(f[0].code, review::RECORD_STALE);
+    // Digests: wrong form, or not one per artefact.
+    for d in ["{\"a.svg\":\"sha256:ABC\"}", "{}", "{\"a.svg\":\"deleted\",\"b.svg\":\"deleted\"}", "[]"] {
+        let text = rec("7", "2026-11-19").replace("{\"a.svg\":\"deleted\"}", d);
+        let mut f = Vec::new();
+        assert!(review::check_record("r.json", &text, Some(rules.as_slice()), &known, None, &mut f).is_none(), "{d}");
+        assert!(f.iter().all(|x| x.code == review::SCHEMA), "{f:?}");
+    }
     for (pr, date) in [("0", "2026-11-19"), ("1.5", "2026-11-19"), ("\"7\"", "2026-11-19"), ("7", "2026-02-30")] {
         let mut f = Vec::new();
         assert_eq!(
-            review::check_record("r.json", &rec(pr, date), Some(rules.as_slice()), &known, &mut f),
+            review::check_record("r.json", &rec(pr, date), Some(rules.as_slice()), &known, None, &mut f),
             None,
             "{pr} {date}"
         );

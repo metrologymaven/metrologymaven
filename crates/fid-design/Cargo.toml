@@ -17,6 +17,8 @@ path = "src/main.rs"
 fid-design-pkg = { path = "../fid-design-pkg" }
 # RFC 8785 canonical JSON for the --json reports.
 fid-canon = { path = "../fid-canon" }
+# `sha256:` digests of approved artefacts (shared types).
+fid-types = { path = "../fid-types" }
 # The review path map `review/paths.toml` (already in the workspace; rejects duplicate keys).
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 # NFC check and NFKC folding of untrusted text (already in the workspace).

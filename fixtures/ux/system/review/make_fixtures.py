@@ -6,22 +6,29 @@ Synthetic data, CC-BY-4.0. Python stdlib only (3.11+ for tomllib). Run from any 
     python fixtures/ux/system/review/make_fixtures.py          # (re)write the fixtures
     python fixtures/ux/system/review/make_fixtures.py --check  # fail if files differ or labels disagree
 
-Each case is a directory `<case>/` holding `changed.txt` (the changed-path list, relative to the
-design directory) and `design/` (the design directory given as `--root`). The expected results
-in `expected.json` are hand-labelled from the leaf's Requirements, Design and Acceptance
-criteria (written below as literals in LABELS, not computed by the code under test).
+Each case is a directory `<case>/` holding `changed.txt` (the changed-path list) and `design/`
+(the design directory given as `--root`). The `base-repo` case is a small repository: its
+paths are relative to `base-repo/repo` (given as `--base`), and its design directory is
+`repo/design`. The `sha256` digests inside records are computed here from the fixture files
+they approve: they are input data, like the files themselves.
 
-`--check` also runs an independent Python reading of the same rules over every case and fails
-if it disagrees with a label. The oracle does not mirror the Rust code: globs are matched by a
-recursive segment walk with `fnmatch.fnmatchcase`, the map is read with `tomllib`, JSON with a
-duplicate-key hook, refused text is judged with `unicodedata` (general categories Cc and Cf,
-decomposition tags, character names, `is_normalized`), and the name scan uses `os.walk` with
-NFKC and `str.lower`.
+The expected results in `expected.json` are hand-labelled from the leaf's Requirements, Design,
+Acceptance criteria and the maintainer decisions on #308 (written below as literals in LABELS,
+not computed by the code under test).
+
+`--check` also runs an independent Python reading of the same rules over every labelled run and
+fails if it disagrees with a label. The oracle does not mirror the Rust code: globs are matched
+by a recursive segment walk with `fnmatch.fnmatchcase`, the map is read with `tomllib`, JSON with
+a duplicate-key hook, digests with `hashlib`, refused text is judged with `unicodedata` (general
+categories Cc and Cf, decomposition tags, character names, `is_normalized`), and the name scan
+and the `--all` sweep use `os.walk` over the whole tree.
 
 The deny-list name `Examplar` is invented for these fixtures; it is not a candidate name.
 """
 
+import datetime
 import fnmatch
+import hashlib
 import json
 import os
 import pathlib
@@ -70,18 +77,43 @@ def decl(artefact, **over):
     return js(d)
 
 
+class Record(dict):
+    """A record whose `digests` are filled from the case's files when it is written."""
+
+
 def record(**over):
-    r = {
-        "pr": 42,
-        "artefacts": ["icons/probe.svg", "tokens/color.tokens.json"],
-        "principles": ["P-DATA", "P-NOCOLOR"],
-        "dress": [{"rule": i, "result": "pass"} for i in RULES],
-        "checklist": [{"item": c, "result": "pass"} for c in CHECKLIST],
-        "approver": {"name": "A. Maintainer", "principal": "human"},
-        "date": "2026-11-19",
-    }
+    r = Record(
+        pr=42,
+        artefacts=["icons/probe.svg", "tokens/color.tokens.json"],
+        principles=["P-DATA", "P-NOCOLOR"],
+        dress=[{"rule": i, "result": "pass"} for i in RULES],
+        checklist=[{"item": c, "result": "pass"} for c in CHECKLIST],
+        approver={"name": "A. Maintainer", "principal": "human"},
+        date="2026-11-19",
+    )
     r.update(over)
-    return js(r)
+    return r
+
+
+def sha(text):
+    return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def finish(files, digest_from=None):
+    """Serialises records, filling digests from `digest_from` (default: the files themselves)."""
+    src = files if digest_from is None else digest_from
+    out = {}
+    for k, v in files.items():
+        if isinstance(v, Record):
+            r = dict(v)
+            if "digests" not in r:
+                r["digests"] = {a: (sha(src[a]) if a in src else "deleted") for a in r["artefacts"]}
+            v = js(r)
+        out[k] = v
+    return out
+
+
+ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3"/></svg>\n'
 
 
 def base_design():
@@ -91,7 +123,7 @@ def base_design():
         "review/dress-rules.json": dress_rules(),
         "tokens/color.tokens.json": js({"color": {"surface": {"$type": "color", "$value": "#f4f4f2"}}}),
         "tokens/color.tokens.json.origin.json": decl("tokens/color.tokens.json"),
-        "icons/probe.svg": '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3"/></svg>\n',
+        "icons/probe.svg": ICON,
         "review/origin/icons/probe.svg.origin.json": decl("icons/probe.svg"),
         REC: record(),
         "notes/readme.txt": "Synthetic notes for {{FAMILY_NAME}}; not in the review map.\n",
@@ -112,16 +144,43 @@ def lines(ps):
     return "".join(p + "\n" for p in ps)
 
 
-def case(changed=None, drop=(), **files):
+def case(changed=None, drop=(), after=None, **files):
     d = base_design()
     for k in drop:
         d.pop(k)
     d.update(files)
-    return {"changed": lines(OK_CHANGED) if changed is None else changed, "design": d}
+    approved = dict(d)
+    if after:  # files edited after the record was written
+        d.update(after)
+    return {"changed": lines(OK_CHANGED) if changed is None else changed, "design": finish(d, approved)}
 
 
 def checklist_without(item):
     return [{"item": c, "result": "pass"} for c in CHECKLIST if c != item]
+
+
+def base_repo():
+    d = {
+        "design/principles.md": principles_md(),
+        "design/review/paths.toml": paths_toml(["design/icons/**", "design/tokens/*.tokens.json", "ui/**"]),
+        "design/review/dress-rules.json": dress_rules(),
+        "design/tokens/color.tokens.json": js({"color": {"surface": {"$type": "color", "$value": "#f4f4f2"}}}),
+        "design/tokens/color.tokens.json.origin.json": decl("design/tokens/color.tokens.json"),
+        "design/icons/probe.svg": ICON,
+        "design/review/origin/design/icons/probe.svg.origin.json": decl("design/icons/probe.svg"),
+        "ui/src/panel.tsx": "export const Panel = () => null;\n",
+        "ui/src/panel.tsx.origin.json": decl("ui/src/panel.tsx"),
+        "design/" + REC: record(artefacts=["design/icons/probe.svg", "design/tokens/color.tokens.json", "ui/src/panel.tsx"]),
+    }
+    return finish(d)
+
+
+BASE_CHANGED = [
+    "design/icons/probe.svg",
+    "design/" + REC,
+    "design/tokens/color.tokens.json",
+    "ui/src/panel.tsx",
+]
 
 
 def build_cases():
@@ -138,12 +197,16 @@ def build_cases():
         **{
             "components/button.md": "# Button\n\nDo not copy the EXAMPLAR toolbar look.\n",
             "copy/labels.txt": "Welcome to Exam​plar\n",
+            "icons/Examplar-mark.svg": ICON,
         }
     )
     c["principle-unknown"] = case(**{REC: record(principles=["P-DATA", "P-SHINY"])})
     c["stale-record"] = case(changed=lines([p for p in OK_CHANGED if p != REC]))
+    c["stale-pr"] = case(**{REC: record(pr=41)})
+    c["stale-digest"] = case(after={"icons/probe.svg": ICON.replace('r="3"', 'r="4"')})
     c["bidi-record"] = case(**{REC: record(approver={"name": "Ana ‮Lopez", "principal": "human"})})
     c["nfd-record"] = case(**{REC: record(approver={"name": "José Ruiz", "principal": "human"})})
+    c["tag-record"] = case(**{REC: record(approver={"name": "Ana Lopez\U000e0041", "principal": "human"})})
     c["obfuscated-changed"] = case(changed=lines(["icons/pro​be.svg"] + OK_CHANGED[1:]))
     c["empty-changed"] = case(changed="\n\n")
     dress = [{"rule": i, "result": "fail" if i == "TD-02" else "pass"} for i in RULES]
@@ -152,6 +215,14 @@ def build_cases():
     c["checklist-gap"] = case(**{REC: record(checklist=checklist_without("C-KEYBOARD"))})
     c["map-weakened"] = case(
         changed=lines(sorted(OK_CHANGED + ["review/paths.toml"])), **{"review/paths.toml": paths_toml(["nothing/**"])}
+    )
+    c["map-reviewed"] = case(
+        changed=lines(sorted(OK_CHANGED + ["review/paths.toml", "notes/readme.txt.origin.json"])),
+        **{
+            "review/paths.toml": paths_toml(["nothing/**"]),
+            "notes/readme.txt.origin.json": decl("notes/readme.txt"),
+            REC: record(artefacts=["icons/probe.svg", "notes/readme.txt", "review/paths.toml", "tokens/color.tokens.json"]),
+        },
     )
     c["bad-map"] = case(
         **{"review/paths.toml": 'format = "review-paths@1"\nformat = "review-paths@1"\nreview = ["**"]\n'}
@@ -171,6 +242,13 @@ def build_cases():
         changed=lines(sorted(OK_CHANGED + ["icons/old.svg"])),
         **{REC: record(artefacts=["icons/old.svg", "icons/probe.svg", "tokens/color.tokens.json"])},
     )
+    c["changed-decl"] = case(
+        changed=lines(sorted(OK_CHANGED + ["notes/readme.txt.origin.json", "review/origin/notes.txt"])),
+        **{
+            "notes/readme.txt.origin.json": decl("notes/readme.txt", statement_version="originality-statement@0"),
+            "review/origin/notes.txt": "Not a declaration.\n",
+        },
+    )
     return c
 
 
@@ -178,48 +256,111 @@ SIDE = {
     "deny-names.txt": "# Synthetic deny list for UX.SYSTEM.REVIEW fixtures; the name is invented. CC-BY-4.0.\nExamplar\nQuarzolith\n",
     "deny-empty.txt": "\n# A deny list with no names.\n",
     "deny-bidi.txt": "Exam‮plar\nQuarzolith\n",
+    "base-repo/changed.txt": lines(BASE_CHANGED),
+    "base-repo/changed-extra.txt": lines(sorted(BASE_CHANGED + ["ui/src/other.tsx"])),
 }
 
 BOTH = ["icons/probe.svg", "tokens/color.tokens.json"]
 MISS_BOTH = ["REVIEW-RECORD-MISSING icons/probe.svg", "REVIEW-RECORD-MISSING tokens/color.tokens.json"]
 S_REC = f"REVIEW-SCHEMA {REC}"
+BASE_NEEDS = ["design/icons/probe.svg", "design/tokens/color.tokens.json", "ui/src/panel.tsx"]
 
-# Hand labels: run key -> (case dir, deny file or None, exit, findings "CODE subject", needs_review, records).
+
+def L(case_dir, ex, findings, needs, recs, **kw):
+    e = {"case": case_dir, "exit": ex, "findings": findings, "needs_review": needs, "records": recs}
+    e.update({"deny": None, "pr": None, "all": False, "base": None, "root": f"{case_dir}/design", "changed": f"{case_dir}/changed.txt"})
+    e.update(kw)
+    return e
+
+
+# Hand labels: run key -> expected exit, findings ("CODE subject", sorted), paths needing review,
+# valid records, and the run's options.
 LABELS = {
-    "ok": ("ok", None, 0, [], BOTH, [REC]),
-    "ok+deny": ("ok", "deny-names.txt", 0, [], BOTH, [REC]),
-    "missing-record": ("missing-record", None, 1, ["REVIEW-RECORD-MISSING tokens/color.tokens.json"], ["tokens/color.tokens.json"], []),
-    "agent-approver": ("agent-approver", None, 1, [f"REVIEW-APPROVER-NOT-HUMAN {REC}"] + MISS_BOTH, BOTH, []),
-    "dress-gap": ("dress-gap", None, 1, ["REVIEW-DRESS-RESULT-MISSING TD-05"] + MISS_BOTH, BOTH, []),
-    "no-decl": ("no-decl", None, 1, ["REVIEW-ORIGINALITY-MISSING icons/probe.svg"] + MISS_BOTH, BOTH, []),
-    "name-leak": ("name-leak", "deny-names.txt", 1, ["REVIEW-NAME-LEAK components/button.md", "REVIEW-NAME-LEAK copy/labels.txt"], BOTH, [REC]),
-    "name-leak-nodeny": ("name-leak", None, 0, [], BOTH, [REC]),
-    "principle-unknown": ("principle-unknown", None, 1, ["REVIEW-PRINCIPLE-UNKNOWN P-SHINY"] + MISS_BOTH, BOTH, []),
-    "stale-record": ("stale-record", None, 1, MISS_BOTH, BOTH, []),
-    "bidi-record": ("bidi-record", None, 1, MISS_BOTH + [S_REC], BOTH, []),
-    "nfd-record": ("nfd-record", None, 1, MISS_BOTH + [S_REC], BOTH, []),
-    "obfuscated-changed": ("obfuscated-changed", None, 1, ["REVIEW-SCHEMA changed:1"], ["tokens/color.tokens.json"], [REC]),
-    "empty-changed": ("empty-changed", None, 1, ["REVIEW-SCHEMA changed"], [], []),
-    "result-fail": ("result-fail", None, 1, MISS_BOTH + ["REVIEW-RESULT-FAIL TD-02", S_REC], BOTH, []),
-    "checklist-gap": ("checklist-gap", None, 1, ["REVIEW-CHECKLIST-MISSING C-KEYBOARD"] + MISS_BOTH, BOTH, []),
-    "map-weakened": ("map-weakened", None, 1, ["REVIEW-RECORD-MISSING review/paths.toml"], ["review/paths.toml"], [REC]),
-    "bad-map": ("bad-map", None, 1, ["REVIEW-RECORD-MISSING notes/readme.txt", "REVIEW-SCHEMA review/paths.toml"], ["icons/probe.svg", "notes/readme.txt", "tokens/color.tokens.json"], [REC]),
-    "empty-dress": ("empty-dress", None, 1, MISS_BOTH + ["REVIEW-SCHEMA review/dress-rules.json", S_REC], BOTH, []),
-    "bot-approver": ("bot-approver", None, 1, [f"REVIEW-APPROVER-NOT-HUMAN {REC}"] + MISS_BOTH, BOTH, []),
-    "bad-decl": ("bad-decl", None, 1, ["REVIEW-ORIGINALITY-MISSING tokens/color.tokens.json"] + MISS_BOTH + ["REVIEW-SCHEMA tokens/color.tokens.json.origin.json"], BOTH, []),
-    "two-decl": ("two-decl", None, 1, ["REVIEW-ORIGINALITY-MISSING icons/probe.svg"] + MISS_BOTH + ["REVIEW-SCHEMA icons/probe.svg"], BOTH, []),
-    "dup-key-record": ("dup-key-record", None, 1, MISS_BOTH + [S_REC], BOTH, []),
-    "deleted-artefact": ("deleted-artefact", None, 0, [], ["icons/old.svg", "icons/probe.svg", "tokens/color.tokens.json"], [REC]),
-    "empty-deny": ("ok", "deny-empty.txt", 1, ["REVIEW-SCHEMA deny-names"], BOTH, [REC]),
-    "deny-bidi": ("ok", "deny-bidi.txt", 1, ["REVIEW-SCHEMA deny-names"], BOTH, [REC]),
+    "ok": L("ok", 0, [], BOTH, [REC]),
+    "ok+deny": L("ok", 0, [], BOTH, [REC], deny="deny-names.txt"),
+    "ok+pr": L("ok", 0, [], BOTH, [REC], pr=42),
+    "missing-record": L("missing-record", 1, ["REVIEW-RECORD-MISSING tokens/color.tokens.json"], ["tokens/color.tokens.json"], []),
+    "agent-approver": L("agent-approver", 1, [f"REVIEW-APPROVER-NOT-HUMAN {REC}"] + MISS_BOTH, BOTH, []),
+    "dress-gap": L("dress-gap", 1, ["REVIEW-DRESS-RESULT-MISSING TD-05"] + MISS_BOTH, BOTH, []),
+    "no-decl": L("no-decl", 1, ["REVIEW-ORIGINALITY-MISSING icons/probe.svg"] + MISS_BOTH, BOTH, []),
+    "name-leak": L(
+        "name-leak",
+        1,
+        ["REVIEW-NAME-LEAK components/button.md", "REVIEW-NAME-LEAK copy/labels.txt", "REVIEW-NAME-LEAK icons/<withheld>"],
+        BOTH,
+        [REC],
+        deny="deny-names.txt",
+    ),
+    "name-leak-nodeny": L("name-leak", 0, [], BOTH, [REC]),
+    "principle-unknown": L("principle-unknown", 1, ["REVIEW-PRINCIPLE-UNKNOWN P-SHINY"] + MISS_BOTH, BOTH, []),
+    "stale-record": L("stale-record", 1, MISS_BOTH, BOTH, []),
+    "stale-pr": L("stale-pr", 1, MISS_BOTH + [f"REVIEW-RECORD-STALE {REC}"], BOTH, [], pr=42),
+    "stale-pr-nopr": L("stale-pr", 0, [], BOTH, [REC]),
+    "stale-digest": L("stale-digest", 1, MISS_BOTH + ["REVIEW-RECORD-STALE icons/probe.svg"], BOTH, []),
+    "bidi-record": L("bidi-record", 1, MISS_BOTH + [S_REC], BOTH, []),
+    "nfd-record": L("nfd-record", 1, MISS_BOTH + [S_REC], BOTH, []),
+    "tag-record": L("tag-record", 1, MISS_BOTH + [S_REC], BOTH, []),
+    "obfuscated-changed": L("obfuscated-changed", 1, ["REVIEW-SCHEMA changed:1"], ["tokens/color.tokens.json"], [REC]),
+    "empty-changed": L("empty-changed", 1, ["REVIEW-SCHEMA changed"], [], []),
+    "result-fail": L("result-fail", 1, MISS_BOTH + ["REVIEW-RESULT-FAIL TD-02", S_REC], BOTH, []),
+    "checklist-gap": L("checklist-gap", 1, ["REVIEW-CHECKLIST-MISSING C-KEYBOARD"] + MISS_BOTH, BOTH, []),
+    "map-weakened": L(
+        "map-weakened",
+        1,
+        ["REVIEW-RECORD-MISSING notes/readme.txt", "REVIEW-RECORD-MISSING review/paths.toml"],
+        ["icons/probe.svg", "notes/readme.txt", "review/paths.toml", "tokens/color.tokens.json"],
+        [REC],
+    ),
+    "map-reviewed": L(
+        "map-reviewed", 0, [], ["icons/probe.svg", "notes/readme.txt", "review/paths.toml", "tokens/color.tokens.json"], [REC]
+    ),
+    "bad-map": L(
+        "bad-map",
+        1,
+        ["REVIEW-RECORD-MISSING notes/readme.txt", "REVIEW-SCHEMA review/paths.toml"],
+        ["icons/probe.svg", "notes/readme.txt", "tokens/color.tokens.json"],
+        [REC],
+    ),
+    "empty-dress": L("empty-dress", 1, MISS_BOTH + ["REVIEW-SCHEMA review/dress-rules.json", S_REC], BOTH, []),
+    "bot-approver": L("bot-approver", 1, [f"REVIEW-APPROVER-NOT-HUMAN {REC}"] + MISS_BOTH, BOTH, []),
+    "bad-decl": L(
+        "bad-decl",
+        1,
+        ["REVIEW-ORIGINALITY-MISSING tokens/color.tokens.json"] + MISS_BOTH + ["REVIEW-SCHEMA tokens/color.tokens.json.origin.json"],
+        BOTH,
+        [],
+    ),
+    "two-decl": L("two-decl", 1, ["REVIEW-ORIGINALITY-MISSING icons/probe.svg"] + MISS_BOTH + ["REVIEW-SCHEMA icons/probe.svg"], BOTH, []),
+    "dup-key-record": L("dup-key-record", 1, MISS_BOTH + [S_REC], BOTH, []),
+    "deleted-artefact": L("deleted-artefact", 0, [], ["icons/old.svg", "icons/probe.svg", "tokens/color.tokens.json"], [REC]),
+    "changed-decl": L(
+        "changed-decl",
+        1,
+        ["REVIEW-SCHEMA notes/readme.txt.origin.json", "REVIEW-SCHEMA review/origin/notes.txt"],
+        BOTH,
+        [REC],
+    ),
+    "empty-deny": L("ok", 1, ["REVIEW-SCHEMA deny-names"], BOTH, [REC], deny="deny-empty.txt"),
+    "deny-bidi": L("ok", 1, ["REVIEW-SCHEMA deny-names"], BOTH, [REC], deny="deny-bidi.txt"),
+    "all-ok": L("ok", 0, [], BOTH, [], all=True, changed=None),
+    "all-no-decl": L("no-decl", 1, ["REVIEW-ORIGINALITY-MISSING icons/probe.svg"], BOTH, [], all=True, changed=None),
+    "base-ok": L(
+        "base-repo", 0, [], BASE_NEEDS, ["design/" + REC], base="base-repo/repo", root="base-repo/repo/design", changed="base-repo/changed.txt"
+    ),
+    "base-extra": L(
+        "base-repo",
+        1,
+        ["REVIEW-RECORD-MISSING ui/src/other.tsx"],
+        sorted(BASE_NEEDS + ["ui/src/other.tsx"]),
+        ["design/" + REC],
+        base="base-repo/repo",
+        root="base-repo/repo/design",
+        changed="base-repo/changed-extra.txt",
+    ),
+    "base-all": L(
+        "base-repo", 0, [], BASE_NEEDS, [], base="base-repo/repo", root="base-repo/repo/design", changed=None, all=True
+    ),
 }
-
-
-def expected():
-    out = {}
-    for k, (d, deny, ex, fs, nr, recs) in LABELS.items():
-        out[k] = {"case": d, "deny": deny, "exit": ex, "findings": fs, "needs_review": nr, "records": recs}
-    return out
 
 
 def all_files():
@@ -228,8 +369,10 @@ def all_files():
         files[f"{name}/changed.txt"] = c["changed"]
         for rel, text in c["design"].items():
             files[f"{name}/design/{rel}"] = text
+    for rel, text in base_repo().items():
+        files[f"base-repo/repo/{rel}"] = text
     files.update(SIDE)
-    files["expected.json"] = json.dumps(expected(), indent=2, ensure_ascii=True) + "\n"
+    files["expected.json"] = json.dumps(LABELS, indent=2, ensure_ascii=True) + "\n"
     return files
 
 
@@ -252,14 +395,17 @@ def loads(text):
     return json.loads(text, object_pairs_hook=no_dups)
 
 
+HANGUL_FILLERS = {"ᅟ", "ᅠ", "ㅤ", "ﾠ"}
+
+
 def refused(s):
-    """Control, format (bidi, zero-width), compatibility or mixed-script text, or not NFC."""
+    """Control, format (bidi, zero-width, tags), filler, compatibility or mixed-script text, or not NFC."""
     if not unicodedata.is_normalized("NFC", s):
         return True
     for ch in s:
         cat = unicodedata.category(ch)
         tag = unicodedata.decomposition(ch).split(" ")[0]
-        if cat in ("Cc", "Cf") or ch == "͏":
+        if cat in ("Cc", "Cf") or ch == "͏" or ch in HANGUL_FILLERS:
             return True
         if tag in ("<wide>", "<font>") or (tag == "<compat>" and cat.startswith("L")):
             return True
@@ -304,8 +450,6 @@ def is_text(v):
 
 
 def is_date(s):
-    import datetime
-
     if not isinstance(s, str) or len(s) != 10:
         return False
     try:
@@ -356,117 +500,165 @@ def oracle_results(lst, key, allowed):
     return ok, seen, failed
 
 
-def oracle(case_dir, deny_path):
-    design = case_dir / "design"
+def oracle(e):
+    root = HERE / e["root"]
+    base = HERE / e["base"] if e["base"] else root
+    pre = root.relative_to(base).as_posix() + "/" if base != root else ""
     keys = set()
-    changed = []
-    raw = (case_dir / "changed.txt").read_text(encoding="utf-8").split("\n")
-    nonblank = 0
-    for n, line in enumerate(raw, start=1):
-        if not line.strip():
-            continue
-        nonblank += 1
-        if bad_path(line):
-            keys.add(f"REVIEW-SCHEMA changed:{n}")
-        elif line not in changed:
-            changed.append(line)
-    if nonblank == 0:
-        keys.add("REVIEW-SCHEMA changed")
+
+    def decl_ok(a):
+        cands = [p for p in (a + ".origin.json", pre + "review/origin/" + a + ".origin.json") if (base / p).is_file()]
+        if len(cands) == 2:
+            keys.add(f"REVIEW-SCHEMA {a}")
+            return False
+        if len(cands) == 1:
+            if oracle_decl((base / cands[0]).read_text(encoding="utf-8"), a):
+                return True
+            keys.add(f"REVIEW-SCHEMA {cands[0]}")
+        return False
+
+    def declared(p):
+        if p.startswith(pre + "review/origin/"):
+            rest = p[len(pre + "review/origin/"):]
+            return rest[: -len(".origin.json")] if rest.endswith(".origin.json") else None
+        return p[: -len(".origin.json")] if p.endswith(".origin.json") else None
+
+    def meta(p):
+        return p.startswith(pre + "review/records/") or p.startswith(pre + "review/origin/") or p.endswith(".origin.json")
+
     try:
-        m = tomllib.loads((design / "review/paths.toml").read_text(encoding="utf-8"))
+        m = tomllib.loads((root / "review/paths.toml").read_text(encoding="utf-8"))
         globs = m["review"] if set(m) == {"format", "review"} and m["format"] == "review-paths@1" else None
     except (tomllib.TOMLDecodeError, KeyError):
         globs = None
     if not globs:
-        keys.add("REVIEW-SCHEMA review/paths.toml")
+        keys.add(f"REVIEW-SCHEMA {pre}review/paths.toml")
         globs = None
-    try:
-        rules = loads((design / "review/dress-rules.json").read_text(encoding="utf-8"))
-        rule_ids = [r["id"] for r in rules] if isinstance(rules, list) and rules else None
-    except ValueError:
-        rule_ids = None
-    if rule_ids is None:
-        keys.add("REVIEW-SCHEMA review/dress-rules.json")
-    known = {p for p in PRINCIPLES if f"## {p}:" in (design / "principles.md").read_text(encoding="utf-8")}
 
-    def meta(p):
-        return p.startswith("review/records/") or p.startswith("review/origin/") or p.endswith(".origin.json")
+    def in_map(p, g):
+        return g is None or any(glob_hits(x.split("/"), p.split("/")) for x in g)
 
-    needs = sorted(
-        p
-        for p in changed
-        if not meta(p)
-        and (
-            p in ("review/paths.toml", "review/dress-rules.json")
-            or globs is None
-            or any(glob_hits(g.split("/"), p.split("/")) for g in globs)
-        )
-    )
-    covered, records = set(), []
-    for p in sorted(x for x in changed if x.startswith("review/records/")):
-        f = design / p
-        if not f.is_file():
-            continue
-        before = set(keys)
+    needs, records = [], []
+    if e["all"]:
+        for dirpath, _dirs, fnames in os.walk(base):
+            for fn in fnames:
+                p = (pathlib.Path(dirpath) / fn).relative_to(base).as_posix()
+                if declared(p) is not None:
+                    if not oracle_decl((base / p).read_text(encoding="utf-8"), declared(p)):
+                        keys.add(f"REVIEW-SCHEMA {p}")
+                    continue
+                if meta(p) or p.startswith(pre + "review/") or not in_map(p, globs):
+                    continue
+                needs.append(p)
+                if not decl_ok(p):
+                    keys.add(f"REVIEW-ORIGINALITY-MISSING {p}")
+        needs.sort()
+    else:
+        changed = []
+        raw = (HERE / e["changed"]).read_text(encoding="utf-8").split("\n")
+        nonblank = 0
+        for n, line in enumerate(raw, start=1):
+            if not line.strip():
+                continue
+            nonblank += 1
+            if bad_path(line):
+                keys.add(f"REVIEW-SCHEMA changed:{n}")
+            elif line not in changed:
+                changed.append(line)
+        if nonblank == 0:
+            keys.add("REVIEW-SCHEMA changed")
         try:
-            r = loads(f.read_text(encoding="utf-8"))
+            rules = loads((root / "review/dress-rules.json").read_text(encoding="utf-8"))
+            rule_ids = [r["id"] for r in rules] if isinstance(rules, list) and rules else None
         except ValueError:
-            keys.add(f"REVIEW-SCHEMA {p}")
-            continue
-        if not isinstance(r, dict) or any_refused(r) or set(r) != {"pr", "artefacts", "principles", "dress", "checklist", "approver", "date"}:
-            keys.add(f"REVIEW-SCHEMA {p}")
-            continue
-        for pid in r["principles"]:
-            if pid not in known:
-                keys.add(f"REVIEW-PRINCIPLE-UNKNOWN {pid}")
+            rule_ids = None
         if rule_ids is None:
-            keys.add(f"REVIEW-SCHEMA {p}")
-        else:
-            ok, seen, failed = oracle_results(r["dress"], "rule", rule_ids)
+            keys.add(f"REVIEW-SCHEMA {pre}review/dress-rules.json")
+        known = {p for p in PRINCIPLES if f"## {p}:" in (root / "principles.md").read_text(encoding="utf-8")}
+        gmap = None if pre + "review/paths.toml" in changed else globs
+        needs = sorted(
+            p
+            for p in changed
+            if not meta(p) and (p in (pre + "review/paths.toml", pre + "review/dress-rules.json") or in_map(p, gmap))
+        )
+        for p in changed:
+            if meta(p) and not p.startswith(pre + "review/records/"):
+                a = declared(p)
+                if a is None:
+                    keys.add(f"REVIEW-SCHEMA {p}")
+                elif (base / p).is_file() and not oracle_decl((base / p).read_text(encoding="utf-8"), a):
+                    keys.add(f"REVIEW-SCHEMA {p}")
+        covered = set()
+        for p in sorted(x for x in changed if x.startswith(pre + "review/records/")):
+            f = base / p
+            if not f.is_file():
+                continue
+            before = set(keys)
+            try:
+                r = loads(f.read_text(encoding="utf-8"))
+            except ValueError:
+                keys.add(f"REVIEW-SCHEMA {p}")
+                continue
+            want = {"pr", "artefacts", "digests", "principles", "dress", "checklist", "approver", "date"}
+            if not isinstance(r, dict) or any_refused(r) or set(r) != want:
+                keys.add(f"REVIEW-SCHEMA {p}")
+                continue
+            if e["pr"] is not None and r["pr"] != e["pr"]:
+                keys.add(f"REVIEW-RECORD-STALE {p}")
+            if set(r["digests"]) != set(r["artefacts"]):
+                keys.add(f"REVIEW-SCHEMA {p}")
+            for pid in r["principles"]:
+                if pid not in known:
+                    keys.add(f"REVIEW-PRINCIPLE-UNKNOWN {pid}")
+            if rule_ids is None:
+                keys.add(f"REVIEW-SCHEMA {p}")
+            else:
+                ok, seen, failed = oracle_results(r["dress"], "rule", rule_ids)
+                if not ok:
+                    keys.add(f"REVIEW-SCHEMA {p}")
+                keys.update(f"REVIEW-RESULT-FAIL {x}" for x in failed)
+                keys.update(f"REVIEW-DRESS-RESULT-MISSING {x}" for x in rule_ids if x not in seen)
+            ok, seen, failed = oracle_results(r["checklist"], "item", CHECKLIST)
             if not ok:
                 keys.add(f"REVIEW-SCHEMA {p}")
             keys.update(f"REVIEW-RESULT-FAIL {x}" for x in failed)
-            keys.update(f"REVIEW-DRESS-RESULT-MISSING {x}" for x in rule_ids if x not in seen)
-        ok, seen, failed = oracle_results(r["checklist"], "item", CHECKLIST)
-        if not ok:
-            keys.add(f"REVIEW-SCHEMA {p}")
-        keys.update(f"REVIEW-RESULT-FAIL {x}" for x in failed)
-        keys.update(f"REVIEW-CHECKLIST-MISSING {x}" for x in CHECKLIST if x not in seen)
-        ap = r["approver"]
-        if ap.get("principal") != "human" or ap.get("name", "").lower().endswith("[bot]"):
-            keys.add(f"REVIEW-APPROVER-NOT-HUMAN {p}")
-        if not is_date(r["date"]):
-            keys.add(f"REVIEW-SCHEMA {p}")
-        valid = keys == before
-        if valid:
-            for a in r["artefacts"]:
-                af = design / a
-                if not af.exists():
-                    if a not in changed:
-                        keys.add(f"REVIEW-SCHEMA {p}")
+            keys.update(f"REVIEW-CHECKLIST-MISSING {x}" for x in CHECKLIST if x not in seen)
+            ap = r["approver"]
+            if ap.get("principal") != "human" or ap.get("name", "").lower().endswith("[bot]"):
+                keys.add(f"REVIEW-APPROVER-NOT-HUMAN {p}")
+            if not is_date(r["date"]):
+                keys.add(f"REVIEW-SCHEMA {p}")
+            valid = keys == before
+            if valid:
+                for a in r["artefacts"]:
+                    af = base / a
+                    if not af.exists():
+                        if a not in changed:
+                            keys.add(f"REVIEW-SCHEMA {p}")
+                            valid = False
+                        elif r["digests"].get(a) != "deleted":
+                            keys.add(f"REVIEW-RECORD-STALE {a}")
+                            valid = False
+                        continue
+                    if r["digests"].get(a) != "sha256:" + hashlib.sha256(af.read_bytes()).hexdigest():
+                        keys.add(f"REVIEW-RECORD-STALE {a}")
                         valid = False
-                    continue
-                cands = [d for d in (design / (a + ".origin.json"), design / "review/origin" / (a + ".origin.json")) if d.is_file()]
-                good = False
-                if len(cands) == 2:
-                    keys.add(f"REVIEW-SCHEMA {a}")
-                elif len(cands) == 1:
-                    good = oracle_decl(cands[0].read_text(encoding="utf-8"), a)
-                    if not good:
-                        keys.add(f"REVIEW-SCHEMA {cands[0].relative_to(design).as_posix()}")
-                if not good:
-                    keys.add(f"REVIEW-ORIGINALITY-MISSING {a}")
-                    valid = False
-        if valid:
-            covered.update(r["artefacts"])
-            records.append(p)
-    for p in needs:
-        if p not in covered:
-            keys.add(f"REVIEW-RECORD-MISSING {p}")
-    if deny_path is not None:
+                        continue
+                    if a.startswith(pre + "review/"):
+                        continue
+                    if not decl_ok(a):
+                        keys.add(f"REVIEW-ORIGINALITY-MISSING {a}")
+                        valid = False
+            if valid:
+                covered.update(r["artefacts"])
+                records.append(p)
+        for p in needs:
+            if p not in covered:
+                keys.add(f"REVIEW-RECORD-MISSING {p}")
+    if e["deny"] is not None:
         names = []
         bad = False
-        for line in deny_path.read_text(encoding="utf-8").split("\n"):
+        for line in (HERE / e["deny"]).read_text(encoding="utf-8").split("\n"):
             t = line.strip()
             if not t or t.startswith("#"):
                 continue
@@ -481,21 +673,23 @@ def oracle(case_dir, deny_path):
             n = unicodedata.normalize("NFKC", s)
             return "".join(ch for ch in n if unicodedata.category(ch) != "Cf").lower()
 
-        for dirpath, _dirs, fnames in os.walk(design):
+        def withhold(p):
+            return "/".join("<withheld>" if any(key(n) in key(seg) for n in names) else seg for seg in p.split("/"))
+
+        for dirpath, _dirs, fnames in os.walk(root):
             for fn in fnames:
                 full = pathlib.Path(dirpath) / fn
-                rel = full.relative_to(design).as_posix()
+                rel = full.relative_to(base).as_posix()
                 text = key(rel + "\n" + full.read_text(encoding="utf-8"))
                 if any(key(n) in text for n in names):
-                    keys.add(f"REVIEW-NAME-LEAK {rel}")
+                    keys.add(f"REVIEW-NAME-LEAK {withhold(rel)}")
     return sorted(keys), needs, records
 
 
 def oracle_check():
     errors = []
-    for k, e in expected().items():
-        deny = HERE / e["deny"] if e["deny"] else None
-        keys, needs, recs = oracle(HERE / e["case"], deny)
+    for k, e in LABELS.items():
+        keys, needs, recs = oracle(e)
         exit_code = 1 if keys else 0
         if keys != e["findings"] or needs != e["needs_review"] or recs != e["records"] or exit_code != e["exit"]:
             errors.append(f"{k}: oracle {exit_code} {keys} {needs} {recs} != label {e}")
@@ -509,7 +703,7 @@ def oracle_check():
         "name-leak": (1, "REVIEW-NAME-LEAK"),
     }
     for k, (ex, code) in ac.items():
-        e = expected()[k]
+        e = LABELS[k]
         if e["exit"] != ex or (code and not any(f.startswith(code) for f in e["findings"])):
             errors.append(f"AC label {k} does not match the leaf")
     rules = loads((HERE / "dress-gap/design/review/dress-rules.json").read_text(encoding="utf-8"))
@@ -543,12 +737,13 @@ def main():
     extra = tree(HERE) - set(files) - {"make_fixtures.py"}
     extra = {x for x in extra if "__pycache__" not in x}
     bad += [f"{x} is not written by make_fixtures.py" for x in sorted(extra)]
-    bad += oracle_check()
+    if not bad:
+        bad += oracle_check()
     for b in bad:
         print("FAIL:", b, file=sys.stderr)
     if bad:
         return 1
-    print("ok" if check else f"wrote {len(files)} files")
+    print("ok" if check else f"wrote {len(files)} files ({len(build_cases()) + 1} case directories, {len(LABELS)} labelled runs)")
     return 0
 
 

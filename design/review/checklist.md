@@ -7,6 +7,13 @@ reviewer writes a `design-review@1` record in `review/records/` in the same PR, 
 `fid-design review-check` checks it. Only a person approves: a record whose approver is an
 agent or a bot account never passes.
 
+**The CLI cannot verify who approved.** `approver.name` and `approver.principal` are text that
+anyone, including an agent, can write. Two things outside the CLI back them up:
+`.github/CODEOWNERS` assigns `design/review/records/` to the human maintainer, and the CI
+wrapper `tools/design_review_gate.py` requires each record's `approver.name` to be the GitHub
+login of a non-bot reviewer who approved the PR's head commit. Neither can tell a person from an
+agent that holds that person's credentials. Write the approver's GitHub login as `name`.
+
 The product is named only `{{FAMILY_NAME}}` in every design artefact until decision D-002 names
 it. Candidate names are never written in this repository.
 
@@ -62,6 +69,7 @@ References are words only: no links, no image files, no images of another produc
 {
   "pr": 123,
   "artefacts": ["icons/probe.svg"],
+  "digests": { "icons/probe.svg": "sha256:<64 lowercase hex of the file as approved>" },
   "principles": ["P-DATA", "P-NOCOLOR"],
   "dress": [{ "rule": "<rule id>", "result": "pass" }],
   "checklist": [
@@ -73,13 +81,17 @@ References are words only: no links, no image files, no images of another produc
     { "item": "C-ORIGINALITY", "result": "pass" },
     { "item": "C-PRINCIPLES", "result": "pass" }
   ],
-  "approver": { "name": "A. Maintainer", "principal": "human" },
+  "approver": { "name": "<GitHub login>", "principal": "human" },
   "date": "2026-11-19"
 }
 ```
 
-All paths are relative to the design directory and use `/`. A record counts only in the PR that
-adds or changes it. Text in records and declarations must be in Unicode NFC and must not hold
+All paths are relative to the design directory (or to the repository with `--base`) and use `/`.
+A record counts only in the PR that adds or changes it, only when its `pr` is the PR given with
+`--pr`, and only while every `digests` entry matches the file on disk (`"deleted"` for an
+artefact the PR deletes). Any edit to an artefact after approval makes the record stale
+(`REVIEW-RECORD-STALE`); review it again. Governance files under `review/` need no
+originality declaration. `review-check --all` lists every file under the map that lacks one. Text in records and declarations must be in Unicode NFC and must not hold
 control, bidirectional, invisible or compatibility characters or words that mix Latin with
 Cyrillic or Greek letters; such text is refused, not cleaned.
 

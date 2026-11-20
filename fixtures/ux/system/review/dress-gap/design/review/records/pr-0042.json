@@ -60,5 +60,9 @@
     "name": "A. Maintainer",
     "principal": "human"
   },
-  "date": "2026-11-19"
+  "date": "2026-11-19",
+  "digests": {
+    "icons/probe.svg": "sha256:7acac644a751bee1b0718ae0299026fd1a7dbbb30967937be1d5f5165b23c32a",
+    "tokens/color.tokens.json": "sha256:5a4094dd2eeac1a17006ad3344602da0879dc8ffeb9f3c5eb6e6d801b4cf9d6a"
+  }
 }

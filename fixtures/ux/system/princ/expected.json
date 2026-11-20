@@ -85,13 +85,14 @@
     "copy-obfuscated.jsonl": {
       "words": "shipped",
       "exit": 1,
-      "messages": 23,
+      "messages": 27,
       "findings": [
         "WORD-RESERVED approve agent.cgj",
         "WORD-RESERVED approve agent.g2",
         "WORD-RESERVED approve agent.h",
         "WORD-RESERVED approve agent.l",
         "WORD-RESERVED approve agent.l2",
+        "WORD-RESERVED approve agent.tag",
         "WORD-RESERVED conforms agent.k",
         "WORD-RESERVED conforms agent.o",
         "WORD-RESERVED release agent.rlm",
@@ -110,8 +111,12 @@
         "WORDS-OBFUSCATED agent.f",
         "WORDS-OBFUSCATED agent.greek",
         "WORDS-OBFUSCATED agent.h",
+        "WORDS-OBFUSCATED agent.hf",
         "WORDS-OBFUSCATED agent.i",
-        "WORDS-OBFUSCATED agent.rlm"
+        "WORDS-OBFUSCATED agent.lls",
+        "WORDS-OBFUSCATED agent.rlm",
+        "WORDS-OBFUSCATED agent.sl",
+        "WORDS-OBFUSCATED agent.tag"
       ]
     },
     "copy-schema.jsonl": {
