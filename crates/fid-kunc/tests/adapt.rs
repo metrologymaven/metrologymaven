@@ -149,6 +149,12 @@ fn spec_card() {
     assert!(report.is_clean(), "{report:?}");
     assert_eq!(card.determinism, "D0");
     assert!(card.references.iter().all(|r| r.starts_with("JCGM 101:2008")));
+    // REQ-KRN.MAN.CARD-006 / REQ-KRN.MAN.KCI-009: the card's input_arity matches `decide`,
+    // which takes the profile (the parameters) and two data inputs: the block summaries and
+    // the overall u(y). The binding stops compiling if that signature changes.
+    let _: fn(&AdaptProfile, &[BlockSummary], f64) -> Result<AdaptStep, McmError> = decide;
+    const DATA_INPUTS_OF_DECIDE: u32 = 2;
+    assert_eq!(card.input_arity, fid_kci::InputArity::exactly(DATA_INPUTS_OF_DECIDE));
 }
 
 /// AC-1: the converging sequence stops at block 5, after four `continue`s.

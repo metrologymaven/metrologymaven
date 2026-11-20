@@ -57,6 +57,7 @@ semver change? More generally, which card changes need an algorithm version bump
 ## Consequences
 
 - `spec/krn/man/card/NODE.md` "Schema changes" links this record.
-- Open builds that add cards (#311, #317) add `input_arity` to their cards after PR 315 merges.
-  Those algorithms are unreleased, so rule 1 applies to them too.
+- #311 (`unc.prop.mcm_adapt@1.0.0`) merged first; PR 315 adds its `input_arity` (`"2"`).
+  #317 adds `input_arity` to its cards after PR 315 merges. These algorithms are unreleased, so
+  rule 1 applies to them too.
 - Amending this rule needs a new decision record whose frontmatter lists `D-046` in `amends:`.
