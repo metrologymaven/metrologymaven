@@ -704,7 +704,8 @@ fn module_declarations_resolve_like_rustc_and_unlisted_module_files_are_never_wa
     // is excluded, and module resolution may not reach it.
     let dir = "syn/mod-resolve";
     let root = fix(dir);
-    let files = enumerate_files(&root, &["src/bin/**".to_string()], &BTreeSet::new()).unwrap();
+    let exclude: Vec<String> = ["src/bin/**", "custom-root/**", "bad-root/**"].iter().map(|s| s.to_string()).collect();
+    let files = enumerate_files(&root, &exclude, &BTreeSet::new()).unwrap();
     assert!(!files.iter().any(|f| f.starts_with("src/bin/")), "{files:?}");
     let mut e = entry("knp1-syn-mod-resolve", "0.0.1", dir);
     e.files = files;
@@ -713,6 +714,9 @@ fn module_declarations_resolve_like_rustc_and_unlisted_module_files_are_never_wa
     assert_eq!(
         lines(&out.findings),
         [
+            // Round 3 (b): src/incl.rs, pulled in by `include!`, is read as mod-rs: its `mod bin;`
+            // loads src/bin.rs or src/bin/mod.rs, not the listed src/incl/bin.rs.
+            format!("{c} src/incl.rs:2:5"),
             // (a) `mod bin { #[path = "x.rs"] mod x; }` loads src/bin/x.rs, not the listed src/x.rs.
             format!("{c} src/lib.rs:6:7"),
             // (b) `mod bin { mod w; }` loads src/bin/w.rs.
@@ -721,13 +725,35 @@ fn module_declarations_resolve_like_rustc_and_unlisted_module_files_are_never_wa
             format!("{c} src/lib.rs:28:18"),
             // (b) `mod bin;` from a crate root: src/bin.rs or src/bin/mod.rs, neither listed.
             format!("{c} src/main.rs:2:5"),
+            // Round 3 (a): src/pth.rs, loaded through `#[path]`, is read as mod-rs.
+            format!("{c} src/pth.rs:2:5"),
         ],
         "{:#?}",
         out.findings
     );
     assert!(out.findings.iter().all(|f| !f.rule.is_waivable()));
-    assert!(out.findings[0].message.contains("src/bin/x.rs"), "{}", out.findings[0].message);
-    assert!(out.findings[1].message.contains("src/bin/w.rs"), "{}", out.findings[1].message);
+    assert!(out.findings[1].message.contains("src/bin/x.rs"), "{}", out.findings[1].message);
+    assert!(out.findings[2].message.contains("src/bin/w.rs"), "{}", out.findings[2].message);
+    for i in [0, 5] {
+        assert!(out.findings[i].message.contains("src/bin/mod.rs"), "{}", out.findings[i].message);
+    }
+}
+
+#[test]
+fn custom_crate_roots_are_mod_rs_files_and_undeterminable_roots_fail_closed() {
+    // Round 3 (c): `[lib] path = "src/kernel.rs"`. rustc reads the root as mod-rs, so its
+    // `mod bin;` loads the excluded src/bin/mod.rs, not the listed src/kernel/bin.rs.
+    let dir = "syn/mod-resolve/custom-root";
+    let mut e = entry("knp1-syn-mod-root", "0.0.1", dir);
+    e.files = enumerate_files(&fix(dir), &["src/bin/**".to_string()], &BTreeSet::new()).unwrap();
+    assert_eq!(e.files, ["src/kernel.rs", "src/kernel/bin.rs"]);
+    let out = scan(vec![e], &Config::default());
+    assert_eq!(lines(&out.findings), ["KNP1-INCLUDE knp1-syn-mod-root 0.0.1 src/kernel.rs:2:5"]);
+    assert!(out.findings[0].message.contains("src/bin/mod.rs"), "{}", out.findings[0].message);
+    // A library path the scan cannot place: never-waivable KNP1-INCLUDE at the manifest.
+    let out = scan(vec![entry("knp1-syn-bad-root", "0.0.1", "syn/mod-resolve/bad-root")], &Config::default());
+    assert_eq!(lines(&out.findings), ["KNP1-INCLUDE knp1-syn-bad-root 0.0.1 Cargo.toml:1:1"]);
+    assert!(!out.findings[0].rule.is_waivable());
 }
 
 #[test]

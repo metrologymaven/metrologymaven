@@ -744,6 +744,12 @@ pub struct FileRef<'a> {
 
 /// Scans one source file. Never fails: anything it cannot classify is a `KNP1-PARSE` finding.
 pub fn scan_file(f: FileRef<'_>, bytes: &[u8], cfg: &Config) -> Outcome {
+    scan_file_with(f, bytes, cfg, None).0
+}
+
+/// [`scan_file`] with a forced mod-rs reading (`Some`), also returning the listed files this
+/// file loads through an out-of-line `#[path]` or a plain `include!`.
+fn scan_file_with(f: FileRef<'_>, bytes: &[u8], cfg: &Config, mod_rs: Option<bool>) -> (Outcome, BTreeSet<String>) {
     let mut out = Outcome::default();
     let parse = |line: u32, col: u32, excerpt: &[u8], msg: String| Finding {
         rule: Rule::Parse,
@@ -758,7 +764,7 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], cfg: &Config) -> Outcome {
     if bytes.len() as u64 > MAX_FILE_BYTES {
         let m = format!("file larger than {MAX_FILE_BYTES} bytes: not scanned");
         out.findings.push(parse(1, 1, m.as_bytes(), m.clone()));
-        return out;
+        return (out, BTreeSet::new());
     }
     let text = match std::str::from_utf8(bytes) {
         Ok(t) => t,
@@ -771,7 +777,7 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], cfg: &Config) -> Outcome {
             let line = u32::try_from(line).unwrap_or(u32::MAX);
             let col = u32::try_from(col).unwrap_or(u32::MAX);
             out.findings.push(parse(line, col, m.as_bytes(), m.clone()));
-            return out;
+            return (out, BTreeSet::new());
         }
     };
     let text = text.strip_prefix('\u{feff}').unwrap_or(text);
@@ -781,16 +787,17 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], cfg: &Config) -> Outcome {
         Err(e) => {
             let excerpt = line_text(&lines, e.line).unwrap_or(&e.message).as_bytes().to_vec();
             out.findings.push(parse(e.line, e.col, &excerpt, format!("cannot lex file: {}", e.message)));
-            return out;
+            return (out, BTreeSet::new());
         }
     };
     let mut s = Scan::new(f, cfg, &toks, &lines);
+    s.mod_rs = mod_rs;
     s.run();
     out.findings = s.hits.into_values().collect();
     out.notes = s.notes.into_values().collect();
     sort_findings(&mut out.findings);
     sort_findings(&mut out.notes);
-    out
+    (out, s.reached)
 }
 
 fn line_text<'l>(lines: &[&'l str], line: u32) -> Option<&'l str> {
@@ -825,6 +832,12 @@ struct Scan<'a> {
     in_template: Vec<bool>,
     /// `path` tokens of `#[path]` attributes that module resolution has handled.
     mod_paths: BTreeSet<usize>,
+    /// Mod-rs reading forced by the caller (a crate root from the manifest, or a file reached
+    /// through `#[path]` or `include!`); `None` infers it from the file's path.
+    mod_rs: Option<bool>,
+    /// Listed files this file loads through an out-of-line `#[path]` or a plain `include!`:
+    /// rustc reads those as mod-rs files.
+    reached: BTreeSet<String>,
     aliases: BTreeMap<String, Vec<Vec<String>>>,
     /// Token indices of facade-path `KNP1-LIBM` names (never findings there).
     exempt: BTreeSet<usize>,
@@ -849,6 +862,8 @@ impl<'a> Scan<'a> {
             in_attr: vec![false; n],
             in_template: vec![false; n],
             mod_paths: BTreeSet::new(),
+            mod_rs: None,
+            reached: BTreeSet::new(),
             aliases: BTreeMap::new(),
             exempt: BTreeSet::new(),
             hits: BTreeMap::new(),
@@ -999,7 +1014,7 @@ impl<'a> Scan<'a> {
     /// `KNP1-INCLUDE` (never waivable) when the file it loads is not one the scan lists, or when
     /// the scan cannot tell which file that is. See [`mod_rs_kind`] and [`ModDir`].
     fn check_module_files(&mut self) {
-        match mod_rs_kind(self.f.file) {
+        match self.mod_rs.or_else(|| mod_rs_kind(self.f.file)) {
             Some(mod_rs) => self.resolve_modules(mod_rs),
             None => {
                 // A `lib.rs`/`main.rs` that is not a known crate root: both readings must hold.
@@ -1162,7 +1177,9 @@ impl<'a> Scan<'a> {
                     );
                 }
                 PathAttr::Lit(p, t) => match join_rel(&c.dir, &p) {
-                    Some(target) if self.listed(&target.join("/")) => {}
+                    Some(target) if self.listed(&target.join("/")) => {
+                        self.reached.insert(target.join("/"));
+                    }
                     Some(target) => {
                         let msg = format!(
                             "`#[path = \"{p}\"] mod {m};` loads `{}`, which the scan does not list",
@@ -1969,7 +1986,11 @@ impl<'a> Scan<'a> {
                     // rustc resolves the path against the outermost call site, not this file.
                     let m = format!("`{name}!` inside a macro template: its path resolves at the call site");
                     self.hit(i, &Rule::Include, m);
-                } else if !self.safe_include(i + 3, Some(close)) {
+                } else if let Some(target) = self.include_target(i + 3, Some(close)) {
+                    if name == "include" {
+                        self.reached.insert(target);
+                    }
+                } else {
                     // Code the scan does not see is never waivable; data stays KNP1-IO-FS.
                     let rule = if name == "include" { &Rule::Include } else { rule };
                     self.hit(i, rule, format!("`{name}!` of a file the scan does not list"));
@@ -1983,25 +2004,26 @@ impl<'a> Scan<'a> {
         self.in_template.get(i).copied().unwrap_or(false)
     }
 
-    /// True when token `i` is a plain string literal naming a `.rs` file that this scan lists
-    /// (relative to the current file's directory), and (for a macro) it is the only argument.
-    fn safe_include(&self, i: usize, close: Option<usize>) -> bool {
+    /// When token `i` is a plain string literal naming a `.rs` file that this scan lists
+    /// (relative to the current file's directory), and (for a macro) it is the only argument:
+    /// that file, crate-relative.
+    fn include_target(&self, i: usize, close: Option<usize>) -> Option<String> {
         let Some(Token { kind: Kind::Lit { kind: LitKind::Str | LitKind::RawStr, suffix: false }, text, .. }) =
             self.t(i)
         else {
-            return false;
+            return None;
         };
         if let Some(c) = close {
             if c != i + 1 {
-                return false;
+                return None;
             }
         }
         if !text.ends_with(".rs") || !valid_relpath(text) {
-            return false;
+            return None;
         }
         let dir = self.f.file.rsplit_once('/').map_or("", |(d, _)| d);
         let target = if dir.is_empty() { text.clone() } else { format!("{dir}/{text}") };
-        self.f.crate_files.contains(&target)
+        self.f.crate_files.contains(&target).then_some(target)
     }
 
     /// True when a token range holds a float marker: a float literal, `f32`/`f64`, a
@@ -2203,6 +2225,84 @@ fn proc_macro_finding(c: &graph::CrateEntry) -> Result<Option<Finding>, SynError
     }))
 }
 
+/// Crate roots the manifest names (`[lib] path`, `[[bin]]`/`[[example]]`/`[[test]]`/`[[bench]]`
+/// `path`, `package.build`), crate-relative: rustc reads them as mod-rs files whatever their
+/// name. A root the scan cannot determine (a `path` that is not a string, leaves the crate or is
+/// absolute; a target list that is not a list of tables; a `[lib] path` the scan does not list)
+/// is `KNP1-INCLUDE` (never waivable) at `Cargo.toml` 1:1. A manifest that is not valid TOML is
+/// already `KNP1-PARSE` ([`proc_macro_finding`]).
+fn crate_roots(c: &graph::CrateEntry) -> Result<(BTreeSet<String>, Option<Finding>), SynError> {
+    let bytes = read_bounded(&c.root.join("Cargo.toml"), MAX_CONFIG_BYTES).map_err(|e| SynError {
+        code: SynErrorCode::Read,
+        message: format!("{} {} Cargo.toml: {e}", c.name, c.version),
+    })?;
+    let Some(t) = std::str::from_utf8(&bytes).ok().and_then(|t| t.parse::<toml::Table>().ok()) else {
+        return Ok((BTreeSet::new(), None));
+    };
+    let mut roots = BTreeSet::new();
+    let mut bad: Vec<String> = Vec::new();
+    let mut add = |what: &str, v: Option<&toml::Value>, must_list: bool| match v {
+        None => {}
+        Some(toml::Value::String(p)) => match join_rel(&[], p) {
+            Some(parts) if !parts.is_empty() => {
+                let r = parts.join("/");
+                if must_list && !c.files.contains(&r) {
+                    bad.push(format!("{what} path {p:?} is not a file the scan lists"));
+                }
+                roots.insert(r);
+            }
+            _ => bad.push(format!("{what} path {p:?} leaves the crate")),
+        },
+        Some(_) => bad.push(format!("{what} path is not a string")),
+    };
+    let mut shape: Vec<String> = Vec::new();
+    match t.get("lib") {
+        None => {}
+        Some(toml::Value::Table(l)) => add("[lib]", l.get("path"), true),
+        Some(_) => shape.push("[lib] is not a table".to_string()),
+    }
+    for key in ["bin", "example", "test", "bench"] {
+        match t.get(key) {
+            None => {}
+            Some(toml::Value::Array(a)) => {
+                for e in a {
+                    match e {
+                        toml::Value::Table(tt) => add(&format!("[[{key}]]"), tt.get("path"), false),
+                        _ => shape.push(format!("[[{key}]] entry is not a table")),
+                    }
+                }
+            }
+            Some(_) => shape.push(format!("[[{key}]] is not a list of tables")),
+        }
+    }
+    if let Some(toml::Value::Table(pkg)) = t.get("package") {
+        match pkg.get("build") {
+            None | Some(toml::Value::Boolean(_)) => {}
+            v => add("package.build", v, false),
+        }
+    }
+    bad.extend(shape);
+    let finding = (!bad.is_empty()).then(|| {
+        let message = format!(
+            "{} {}: the scan cannot determine the crate roots rustc reads as mod-rs files: {}",
+            c.name,
+            c.version,
+            bad.join("; ")
+        );
+        Finding {
+            rule: Rule::Include,
+            crate_name: c.name.clone(),
+            crate_version: c.version.clone(),
+            file: "Cargo.toml".to_string(),
+            line: 1,
+            column: 1,
+            excerpt_digest: input_digest(message.as_bytes()),
+            message,
+        }
+    });
+    Ok((roots, finding))
+}
+
 /// Scans every listed file of every crate of the closure, in the closure's sorted order.
 /// Fails with `KNP1-READ` if a listed file cannot be read and with `KNP1-CONFIG-INVALID` if a
 /// facade file is not part of the closure.
@@ -2240,6 +2340,10 @@ pub fn scan_closure(closure: &Closure, cfg: &Config) -> Result<Outcome, SynError
         if let Some(f) = proc_macro_finding(c)? {
             out.findings.push(f);
         }
+        let (roots, root_finding) = crate_roots(c)?;
+        out.findings.extend(root_finding);
+        let mut mod_rs_done: BTreeSet<String> = BTreeSet::new();
+        let mut pending: BTreeSet<String> = BTreeSet::new();
         for file in &c.files {
             let path = c.root.join(file);
             let bytes = read_bounded(&path, MAX_FILE_BYTES).map_err(|e| SynError {
@@ -2247,13 +2351,40 @@ pub fn scan_closure(closure: &Closure, cfg: &Config) -> Result<Outcome, SynError
                 message: format!("{} {} {file}: {e}", c.name, c.version),
             })?;
             let fr = FileRef { crate_name: &c.name, crate_version: &c.version, file, crate_files: &c.files };
-            let o = scan_file(fr, &bytes, cfg);
+            let forced = roots.contains(file).then_some(true);
+            let (o, reached) = scan_file_with(fr, &bytes, cfg, forced);
             out.findings.extend(o.findings);
             out.notes.extend(o.notes);
+            if forced.is_some() {
+                mod_rs_done.insert(file.clone());
+            }
+            pending.extend(reached);
+        }
+        // rustc reads every file loaded through `#[path]` or `include!` as a mod-rs file: scan
+        // those again with that reading (until no new file is reached). Both readings' findings
+        // are kept, since such a file may also be a module of its own.
+        while let Some(file) = pending.pop_first() {
+            if !mod_rs_done.insert(file.clone()) || !c.files.contains(&file) {
+                continue;
+            }
+            let bytes = read_bounded(&c.root.join(&file), MAX_FILE_BYTES).map_err(|e| SynError {
+                code: SynErrorCode::Read,
+                message: format!("{} {} {file}: {e}", c.name, c.version),
+            })?;
+            let fr = FileRef { crate_name: &c.name, crate_version: &c.version, file: &file, crate_files: &c.files };
+            let (o, reached) = scan_file_with(fr, &bytes, cfg, Some(true));
+            out.findings.extend(o.findings);
+            out.notes.extend(o.notes);
+            pending.extend(reached);
         }
     }
-    sort_findings(&mut out.findings);
-    sort_findings(&mut out.notes);
+    for list in [&mut out.findings, &mut out.notes] {
+        sort_findings(list);
+        list.dedup_by(|a, b| {
+            (&a.crate_name, &a.crate_version, &a.file, a.line, a.column, a.rule.id(), &a.message)
+                == (&b.crate_name, &b.crate_version, &b.file, b.line, b.column, b.rule.id(), &b.message)
+        });
+    }
     Ok(out)
 }
 
