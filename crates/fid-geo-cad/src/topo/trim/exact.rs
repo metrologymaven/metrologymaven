@@ -335,7 +335,8 @@ mod tests {
     #[test]
     fn constants() {
         assert_eq!(FILTER_MIN, 2f64.powi(-960));
-        assert_eq!(TINY, 2f64.powi(-1070));
+        assert_eq!(TINY, f64::from_bits(16));
+        assert_eq!(TINY * 2f64.powi(1000), 2f64.powi(-70));
         assert_eq!(MARGIN, 2f64.powi(-50));
         assert_eq!(CCW_BOUND, (3.0 + 16.0 * 2f64.powi(-53)) * 2f64.powi(-53));
     }

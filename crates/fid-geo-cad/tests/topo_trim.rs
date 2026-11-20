@@ -105,6 +105,16 @@ fn ac1_ac5_plate_with_hole_seeded_points() {
     for c in ["I", "O", "B"] {
         assert_eq!(got.matches(c).count(), ac1.get("counts").get(c).u(), "{c}");
     }
+    // Seeded points within a few tolerances of the boundary (the band cases).
+    let band = ac1.get("band_cases").arr();
+    assert!(band.len() >= 2000);
+    let mut seen = [0usize; 3];
+    for c in band {
+        let (u, v, want) = row(c);
+        assert_eq!(classify_uv(&idx, u, v, tol), Ok(want), "({u:e}, {v:e})");
+        seen[want as usize] += 1;
+    }
+    assert!(seen.iter().all(|&n| n > 300), "{seen:?}");
 }
 
 /// AC-2: the window across the seam; u, u + 2 pi and u - 2 pi classify identically and match
@@ -190,7 +200,10 @@ fn ac4_bad_tolerance_and_domain() {
     let sph = fixture_index("sphere_meridian", "f-hemisphere");
     assert!(matches!(classify_uv(&sph, 1.0, 1.6, 1e-7), Err(TrimError::OutsideDomain { .. })));
     assert!(matches!(classify_uv(&sph, 1e300, 0.0, 1e-7), Err(TrimError::OutsideDomain { .. })));
-    assert_eq!(classify_uv(&sph, 1.0 + 4.0 * TAU, 0.0, 1e-7), Ok(TrimClass::Inside));
+    // At most 2^20 periods from the chart.
+    let far = 2f64.powi(21) * TAU;
+    assert!(matches!(classify_uv(&sph, far, 0.0, 1e-7), Err(TrimError::OutsideDomain { .. })));
+    assert_eq!(classify_uv(&sph, 4.0 + 1000.0 * TAU, 0.0, 1e-7), Ok(TrimClass::Inside));
 }
 
 /// A failed pcurve or a winding loop gives a typed Undecidable for every point, never a guess.
@@ -210,11 +223,7 @@ fn undecidable_faces_never_guess() {
         classify_uv(&straddle, 1.0, 0.0, 1e-7),
         Err(TrimError::Undecidable(Undecidable::PcurveFailed { .. }))
     ));
-    for (name, label, periods) in [
-        ("cylinder_band", "f-band", [1, 0]),
-        ("cylinder_band_pcurves", "f-band", [1, 0]),
-        ("torus_tubes", "f-torus", [0, 1]),
-    ] {
+    for (name, label, periods) in [("torus_tubes", "f-torus", [0, 1])] {
         let idx = fixture_index(name, label);
         match classify_uv(&idx, 1.0, 0.01, 1e-7) {
             Err(TrimError::Undecidable(Undecidable::Winding { periods: p, .. })) => assert_eq!(p, periods, "{name}"),
@@ -265,14 +274,18 @@ fn seam_is_interior() {
 fn poles_and_apex() {
     let sph = fixture_index("sphere_meridian", "f-hemisphere");
     let tol = 1e-7;
+    // The meridian loop runs up u = 0, along the north pole to u = pi, down u = pi and back
+    // along the south pole: clockwise in the chart, so with material on its left the face is
+    // u in [pi, 2 pi] (y < 0).
     for (u, v, want) in [
-        (FRAC_PI_2, 0.0, TrimClass::Inside),
-        (0.5, 0.3, TrimClass::Inside),
-        (3.0, -1.2, TrimClass::Inside),
-        (FRAC_PI_2, 1.5, TrimClass::Inside),
-        (3.0 * FRAC_PI_2, 0.0, TrimClass::Outside),
-        (-FRAC_PI_2, 0.0, TrimClass::Outside),
-        (PI + 0.5, 0.3, TrimClass::Outside),
+        (FRAC_PI_2, 0.0, TrimClass::Outside),
+        (0.5, 0.3, TrimClass::Outside),
+        (3.0, -1.2, TrimClass::Outside),
+        (FRAC_PI_2, 1.5, TrimClass::Outside),
+        (3.0 * FRAC_PI_2, 0.0, TrimClass::Inside),
+        (-FRAC_PI_2, 0.0, TrimClass::Inside),
+        (PI + 0.5, 0.3, TrimClass::Inside),
+        (-0.5, 1.5, TrimClass::Inside),
         (0.0, 0.3, TrimClass::OnBoundary),
         (PI, -0.3, TrimClass::OnBoundary),
         (1.0, FRAC_PI_2, TrimClass::OnBoundary),
@@ -281,18 +294,68 @@ fn poles_and_apex() {
     ] {
         assert_eq!(classify_uv(&sph, u, v, tol), Ok(want), "sphere ({u}, {v})");
     }
+    // The sector loop (up generator 0, along the arc +u, down generator 1, back along the apex)
+    // is clockwise in the chart: the face is everything of the cone except the sector.
     let cone = fixture_index("cone_apex_sector", "f-cone");
     for (u, v, want) in [
-        (PI / 4.0, 0.025, TrimClass::Inside),
-        (PI, 0.025, TrimClass::Outside),
-        (PI / 4.0, 0.06, TrimClass::Outside),
-        (PI / 4.0, -0.01, TrimClass::Outside),
+        (PI / 4.0, 0.025, TrimClass::Outside),
+        (PI, 0.025, TrimClass::Inside),
+        (PI / 4.0, 0.06, TrimClass::Inside),
+        (PI / 4.0, -0.01, TrimClass::Inside),
         (1.0, 0.0, TrimClass::OnBoundary),
         (3.0, 0.0, TrimClass::OnBoundary),
         (PI / 4.0, 0.05, TrimClass::OnBoundary),
         (0.0, 0.03, TrimClass::OnBoundary),
     ] {
         assert_eq!(classify_uv(&cone, u, v, tol), Ok(want), "cone ({u}, {v})");
+    }
+}
+
+/// Seam spheres, a cap, a band and a capped cylinder: the column rule against the analytic
+/// faces (exact rational inside/outside, closed-form band), including the poles.
+#[test]
+fn periodic_faces_match_analytic_answers() {
+    let e = expected();
+    let mut total = 0;
+    for (name, spec) in e.get("periodic").obj() {
+        let body = build(name);
+        let f = match spec.get("face") {
+            J::Null => body
+                .loops()
+                .iter()
+                .map(|l| l.face())
+                .find(|&f| matches!(body.face(f).unwrap().surface().as_analytic(), Some(AnalyticSurface::Cylinder(_))))
+                .unwrap(),
+            j => face(&body, j.str()),
+        };
+        let idx = index(&body, f);
+        assert_eq!(idx.undecidable(), None, "{name}");
+        let tol = spec.get("tol_m").f();
+        for c in spec.get("cases").arr() {
+            let (u, v, want) = row(c);
+            assert_eq!(classify_uv(&idx, u, v, tol), Ok(want), "{name} ({u:e}, {v:e})");
+            total += 1;
+        }
+    }
+    assert!(total > 1500, "{total}");
+}
+
+/// A plane loop that uses a bridge edge twice: both uses are boundary (no periodic direction).
+#[test]
+fn bridge_edge_is_boundary_on_a_plane() {
+    let idx = fixture_index("trim_polygons", "f-bridge");
+    assert!(idx.segments().iter().all(|s| !s.seam));
+    let s = 1.0 / 64.0;
+    let tol = 1e-7;
+    for (u, v, want) in [
+        (0.5 * s, 2.0 * s, TrimClass::OnBoundary),
+        (0.5 * s, 2.0 * s + tol / 2.0, TrimClass::OnBoundary),
+        (0.5 * s, 2.0 * s - tol / 2.0, TrimClass::OnBoundary),
+        (0.5 * s, 2.0 * s + 2.0 * tol, TrimClass::Inside),
+        (2.0 * s, 2.0 * s, TrimClass::Outside),
+        (3.5 * s, 2.0 * s, TrimClass::Inside),
+    ] {
+        assert_eq!(classify_uv(&idx, u, v, tol), Ok(want), "({u}, {v})");
     }
 }
 
@@ -359,6 +422,13 @@ fn nurbs_surface_and_nurbs_pcurves() {
         (1.0, 1.0, TrimClass::Outside),
     ] {
         assert_eq!(classify_uv(&idx, u, v, tol), Ok(want), "({u}, {v})");
+    }
+    // A smaller tolerance re-flattens the NURBS pcurves at tol / 4; straight ones still give
+    // the same chords and answers.
+    for (u, v, want) in
+        [(0.5, 0.5, TrimClass::Inside), (0.25, 0.5, TrimClass::OnBoundary), (0.1, 0.5, TrimClass::Outside)]
+    {
+        assert_eq!(classify_uv(&idx, u, v, 1e-12), Ok(want), "({u}, {v})");
     }
     assert!(matches!(classify_uv(&idx, 1.5, 0.5, tol), Err(TrimError::OutsideDomain { .. })));
     assert!(matches!(classify_uv(&idx, 0.5, -0.01, tol), Err(TrimError::OutsideDomain { .. })));

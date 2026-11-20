@@ -5,9 +5,14 @@ Writes, next to this script:
   plate_with_hole.json     plane plate 100 x 80 mm, 10 mm radius hole, 3-D curves only (AC-1, AC-5)
   cylinder_window.json     cylindrical face r 50 mm, u in [-0.5, 0.5] rad, v in [0, 20 mm], with
                            imported line pcurves: a rectangular window across the seam (AC-2)
-  trim_polygons.json       four planar faces with imported line pcurves: a square with a hole in
+  trim_polygons.json       five planar faces with imported line pcurves: a square with a hole in
                            both orientations, a comb with horizontal edges and collinear vertices,
-                           a triangle with inexact coordinates (fuzz, AC-3)
+                           a triangle with inexact coordinates, a square whose hole is joined to
+                           the outside by a bridge edge used twice (fuzz, AC-3)
+  sphere_seam_closed.json  a whole sphere: one loop, a meridian seam edge used twice (the uses
+                           coincide in PCURVE's chart; poles interior)
+  sphere_cap.json          the cap v > 0.5 rad of a sphere, bounded by one latitude circle that
+                           winds once in u (pole interior)
   trim_expected.json       expected classes and orientation signs
 
 Run:  python fixtures/geo/cad/topo/make_trim_fixtures.py          (writes everything)
@@ -36,7 +41,13 @@ How the expected values are made
    tol < d <= tol (1 + 2^-12) + 1e-12 may be either. No expected case lies in that shell, nor
    within 1e-12 below tol (AC-2: 1e-11 m either side for the 60-digit trigonometry); generated
    near-boundary cases that would are dropped, and the seeded AC-1 points are asserted clear of it.
-5. Orientation signs: exact rationals on the binary64 values (and `x + k * TAU` shifts).
+5. Periodic faces (sphere_seam_closed, sphere_cap, and the PCURVE fixtures cylinder_band,
+   cylinder_capped): the analytic face, material on the left of every loop: the whole sphere;
+   v > 0.5; 0 < v < 0.02; 0 < v < 1. Inside/outside is an exact rational comparison of the
+   binary64 v; the band is the 3-D distance to the boundary circles along the meridian
+   (|dv| on a cylinder, exact rationals; 2 r sin(|dv| / 2) on the sphere, 60 digits). Seams and
+   poles are not boundary. Cases near the band edge are dropped as in 4.
+6. Orientation signs: exact rationals on the binary64 values (and `x + k * TAU` shifts).
 
 Case rows are strings: AC-2 and polygon cases "<u hex> <v hex> <I|O|B>" (hex: the binary64 bit
 pattern); orientation cases "<ax> <ay> <bx> <by> <qx> <qy> <sign>", each value "<x hex>:<k>"
@@ -134,6 +145,7 @@ def cylinder_window():
 
 
 S = 0.015625  # 1/64 m
+LABELS = ["f-square-ccw", "f-square-cw", "f-comb", "f-triangle", "f-bridge"]
 POLYGONS = [
     ("f-square-ccw", [[(0, 0), (4, 0), (4, 4), (0, 4)], [(1, 1), (1, 3), (3, 3), (3, 1)]]),
     ("f-square-cw", [[(0, 0), (0, 4), (4, 4), (4, 0)], [(1, 1), (3, 1), (3, 3), (1, 3)]]),
@@ -163,6 +175,29 @@ def polygons():
             loops.append((cs, ri == 0, "l-%s-%d" % (fl[2:], ri)))
             lids.append(len(loops) - 1)
         faces.append((dict(type="plane", **MP.frame(O, Z, X)), lids, fl))
+    # The bridge: square (0..4)^2 with the hole (1..3)^2 joined to x = 0 by the edge (0,2)-(1,2),
+    # used once in each direction by the single loop.
+    pts = [(0, 0), (4, 0), (4, 4), (0, 4), (0, 2), (1, 2), (1, 3), (3, 3), (3, 1), (1, 1)]
+    base = len(verts)
+    verts += [(x * S, y * S, 0.0) for x, y in pts]
+    chain = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8), (8, 9), (9, 5), (4, 0)]
+    eix = {}
+    for a, b in chain:
+        pa, pb = pts[a], pts[b]
+        lab = "bridge-%d-%d" % (a, b)
+        edges.append((base + a, base + b, (0.0, 1.0), None, "e-" + lab))
+        eix[(a, b)] = len(edges) - 1
+    cs = []
+    for a, b, sense in [(0, 1, "same"), (1, 2, "same"), (2, 3, "same"), (3, 4, "same"), (4, 5, "same"),
+                        (5, 6, "same"), (6, 7, "same"), (7, 8, "same"), (8, 9, "same"), (9, 5, "same"),
+                        (4, 5, "reversed"), (4, 0, "same")]:
+        pa, pb = (pts[a][0] * S, pts[a][1] * S), (pts[b][0] * S, pts[b][1] * S)
+        d = (pb[0] - pa[0], pb[1] - pa[1])
+        coedges.append((eix[(a, b)], sense, {"type": "line2", "origin": list(pa), "dir": list(d)},
+                        "c-bridge-%d-%d-%s" % (a, b, sense)))
+        cs.append(len(coedges) - 1)
+    loops.append((cs, True, "l-bridge"))
+    faces.append((dict(type="plane", **MP.frame(O, Z, X)), [len(loops) - 1], "f-bridge"))
     return MP.body("planar faces with imported line pcurves and no 3-D curves: a square with a hole (both "
                    "orientations), a comb with horizontal edges and collinear vertices, a triangle with inexact "
                    "coordinates (GEO.CAD.TOPO.TRIM fuzz, AC-3)", "7a1a7a1a7a1a7a1a7a1a7a1a7a1a7a1a", verts, edges,
@@ -217,7 +252,9 @@ def assemble(b, m, fi):
                 for i in range(2):
                     if offsets[j][i] != 0.0:
                         q[i] = q[i] + offsets[j][i]
-            parts.append((pts, uses[ce["edge"]] >= 2))
+            # Planar faces only: an edge used twice (a bridge) is ordinary boundary.
+            assert periods == [None, None]
+            parts.append((pts, False))
         n = len(parts)
         for k, (pts, seam) in enumerate(parts):
             for a, z in zip(pts, pts[1:]):
@@ -346,6 +383,144 @@ def ac1(segs):
     return "".join(out)
 
 
+def ac1_band(segs):
+    """Seeded points within a few tolerances of the plate's boundary (AC-1 band cases)."""
+    pl = Planar(segs)
+    w, h, cx, cy, r = 0.1, 0.08, 0.04, 0.03, 0.01
+    W, H, CX, CY, R, t = F(w), F(h), F(cx), F(cy), F(r), F(AC1_TOL)
+    rng = SplitMix(AC1_SEED + 1000)
+    out = []
+    while len(out) < 2000:
+        kind = rng.next() % 5
+        off = rng.between(-3.0, 3.0) * AC1_TOL
+        if kind == 4:
+            phi = rng.between(0.0, TAU)
+            u, v = cx + (r + off) * math.cos(phi), cy + (r + off) * math.sin(phi)
+        else:
+            s_ = rng.between(0.0, 1.0)
+            u, v = [(w * s_, off), (w + off, h * s_), (w * s_, h + off), (off, h * s_)][kind]
+        c, clear = classify_planar(pl, u, v, AC1_TOL)
+        U, V = F(u), F(v)
+        inside_rect = 0 <= U <= W and 0 <= V <= H
+        if inside_rect:
+            dr = min(U, W - U, V, H - V)
+            d2r = dr * dr
+        else:
+            dx, dy = max(-U, F(0), U - W), max(-V, F(0), V - H)
+            d2r = dx * dx + dy * dy
+        r2 = (U - CX) ** 2 + (V - CY) ** 2
+        m = F(2e-8)
+        if not clear or (R - t - m) ** 2 < r2 < (R - t + m) ** 2 or (R + t - m) ** 2 < r2 < (R + t + m) ** 2:
+            continue
+        band = d2r <= t * t or (R - t) ** 2 <= r2 <= (R + t) ** 2
+        a = "B" if band else ("I" if inside_rect and r2 > R * R else "O")
+        assert a == c, ("AC-1 band case: polyline and analytic answers differ", u, v, a, c)
+        out.append("%s %s %s" % (hx(u), hx(v), c))
+    return out
+
+
+# ================================================================ periodic faces
+
+def sphere_seam_closed():
+    r = 0.05
+    verts = [(0.0, 0.0, -r), (0.0, 0.0, r)]
+    # Meridian in the xz-plane, axis -Y: C(t) = r (cos t, 0, sin t), south pole to north pole.
+    edges = [(0, 1, (-MP.FRAC_PI_2, MP.FRAC_PI_2), MP.circle(O, (0.0, -1.0, 0.0), X, r), "e-seam")]
+    coedges = [(0, "same", None, "c-seam-up"), (0, "reversed", None, "c-seam-down")]
+    loops = [([0, 1], True, "l-seam")]
+    faces = [(dict(type="sphere", radius=r, **MP.frame(O, Z, X)), [0], "f-sphere")]
+    return MP.body("whole sphere r 0.05 m: one loop of a meridian seam edge used twice; no boundary "
+                   "(GEO.CAD.TOPO.TRIM)", "5ea55ea55ea55ea55ea55ea55ea55ea5", verts, edges, coedges, loops, faces)
+
+
+CAP_V0 = 0.5
+
+
+def sphere_cap():
+    r = 0.05
+    rc, zc = r * math.cos(CAP_V0), r * math.sin(CAP_V0)
+    verts = [(rc, 0.0, zc)]
+    edges = [(0, 0, (0.0, TAU), MP.circle((0.0, 0.0, zc), Z, X, rc), "e-latitude")]
+    coedges = [(0, "same", None, "c-latitude")]
+    loops = [([0], True, "l-latitude")]
+    faces = [(dict(type="sphere", radius=r, **MP.frame(O, Z, X)), [0], "f-cap")]
+    return MP.body("spherical cap v > 0.5 rad of a sphere r 0.05 m: one latitude circle winding once in u, "
+                   "material on its left (GEO.CAD.TOPO.TRIM)", "ca95ca95ca95ca95ca95ca95ca95ca95", verts, edges,
+                   coedges, loops, faces)
+
+
+PERIODIC = {
+    # fixture: (face label or None, kind, parameters)
+    "sphere_seam_closed": ("f-sphere", "sphere", {"r": 0.05, "bands": []}),
+    "sphere_cap": ("f-cap", "sphere", {"r": 0.05, "bands": [CAP_V0], "inside": (CAP_V0, None)}),
+    "cylinder_band": ("f-band", "cylinder", {"bands": [0.0, 0.02], "inside": (0.0, 0.02)}),
+    "cylinder_capped": (None, "cylinder", {"bands": [0.0, 1.0], "inside": (0.0, 1.0)}),
+}
+PER_TOL = 1e-7
+
+
+def periodic_class(kind, prm, u, v, tol):
+    """(class, clear) of the analytic periodic faces."""
+    with localcontext() as ctx:
+        ctx.prec = 60
+        t = dec(tol)
+        ds = []
+        for vb in prm["bands"]:
+            dv = abs(dec(v) - dec(vb))
+            if kind == "sphere":
+                sn, _c = OR.sin_cos(dv / 2)
+                ds.append(2 * dec(prm["r"]) * abs(sn))
+            else:
+                ds.append(dv)
+        margin = dec(1e-12)
+        if ds:
+            d = min(ds)
+            clear = not (t - margin < d <= t * (1 + dec(RES_REL)) + margin)
+            if d <= t:
+                return "B", clear
+        else:
+            clear = True
+    lo, hi = prm.get("inside", (None, None))
+    V = F(v)
+    inside = (lo is None or V > F(lo)) and (hi is None or V < F(hi))
+    return ("I" if inside else "O"), clear
+
+
+def periodic_cases():
+    out = {}
+    rng = SplitMix(55)
+    for name, (label, kind, prm) in PERIODIC.items():
+        if kind == "sphere":
+            vlo, vhi = -MP.FRAC_PI_2, MP.FRAC_PI_2
+        else:
+            vlo, vhi = prm["bands"][0] - 0.25 * (prm["bands"][1] - prm["bands"][0]), \
+                prm["bands"][1] + 0.25 * (prm["bands"][1] - prm["bands"][0])
+        pts = []
+        for _ in range(300):
+            pts.append((rng.between(-8.0, 8.0), rng.between(vlo, vhi)))
+        for u in (0.0, 1.0, -1.0, 3.0, TAU, -TAU, 2 * TAU, 0.5 * TAU):
+            for vb in prm["bands"]:
+                for o in (0.0, 0.5, 0.999, 1.001, 2.0, -0.5, -0.999, -1.001, -2.0, 10.0, -10.0):
+                    dv = o * PER_TOL / (prm["r"] if kind == "sphere" else 1.0)
+                    pts.append((u, vb + dv))
+            if kind == "sphere":
+                for pole in (MP.FRAC_PI_2, -MP.FRAC_PI_2):
+                    for dlt in (0.0, 1e-15, 1e-12, 1e-9, 1e-6, 1e-3):
+                        pts.append((u, pole - dlt if pole > 0 else pole + dlt))
+            else:
+                mid = 0.5 * (prm["bands"][0] + prm["bands"][1])
+                pts.append((u, mid))
+        cases = []
+        for u, v in pts:
+            if kind == "sphere" and not (-MP.FRAC_PI_2 <= v <= MP.FRAC_PI_2):
+                continue
+            c, clear = periodic_class(kind, prm, u, v, PER_TOL)
+            if clear:
+                cases.append("%s %s %s" % (hx(u), hx(v), c))
+        out[name] = {"face": label, "tol_m": PER_TOL, "cases": cases}
+    return out
+
+
 # ================================================================ AC-2 (60-digit closed form)
 
 def dec(x):
@@ -431,7 +606,7 @@ def polygon_cases(b, m):
     faces, loops, _coedges, _res, _charts, _wound = m
     out = {}
     rng = SplitMix(33)
-    labels = [MP_label for MP_label, _ in POLYGONS]
+    labels = LABELS
     for fi, f in enumerate(faces):
         label = labels[fi]
         segs = assemble(b, m, fi)
@@ -447,6 +622,9 @@ def polygon_cases(b, m):
                 pts.append((k * 0.25 * S, v))
         for _ in range(300):
             pts.append((rng.between(-0.5 * S, 4.5 * S), rng.between(-0.5 * S, 4.5 * S)))
+        if label == "f-bridge":
+            for x in (0.0, 0.25, 0.5, 0.75, 1.0):
+                pts.append((x * S, 2 * S))
         per_tol = {}
         for tol in (1e-6, 1e-9):
             tp = list(pts)
@@ -455,7 +633,7 @@ def polygon_cases(b, m):
                 dx, dy = z[0] - a[0], z[1] - a[1]
                 ln = math.hypot(dx, dy)
                 nx, ny = -dy / ln, dx / ln
-                for o in (0.5, 0.999, 1.001, 2.0, 1.0 + 2.0 ** -9):
+                for o in (0.25, 0.5, 0.999, 1.001, 2.0, 1.0 + 2.0 ** -9):
                     for sg in (1.0, -1.0):
                         tp.append((mx + sg * o * tol * nx, my + sg * o * tol * ny))
                 for c in (a, z):
@@ -542,14 +720,15 @@ def build():
     files["plate_with_hole.json"] = MP.render(plate)
     files["cylinder_window.json"] = MP.render(window)
     files["trim_polygons.json"] = MP.render(poly)
+    files["sphere_seam_closed.json"] = MP.render(sphere_seam_closed())
+    files["sphere_cap.json"] = MP.render(sphere_cap())
 
     mp = MP.m_body(plate)
     segs = assemble(plate, mp, 0)
     classes = ac1(segs)
+    band_cases = ac1_band(segs)
     mw = MP.m_body(window)
     assert mw[4][0][1] == [[0.0, 0.0]], mw[4][0]
-    win_segs = assemble(window, mw, 0)
-    assert len(win_segs) == 4
     ac2 = ac2_cases()
     mpoly = MP.m_body(poly)
     expected = {
@@ -566,9 +745,12 @@ def build():
             "classes": classes,
             "counts": {c: classes.count(c) for c in "IOB"},
             "segments": len(segs),
+            "band_cases": band_cases,
+            "band_counts": {c: sum(1 for x in band_cases if x.endswith(c)) for c in "IOB"},
         },
         "ac2": {"fixture": "cylinder_window", "tol_m": AC2_TOL, "cases": ac2},
         "polygons": polygon_cases(poly, mpoly),
+        "periodic": periodic_cases(),
         "orient": orient_cases(),
     }
     files["trim_expected.json"] = render(expected)

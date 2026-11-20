@@ -212,6 +212,76 @@
     0.0140625,
     0.0
    ]
+  },
+  {
+   "point": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.0625,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.0625,
+    0.0625,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.0,
+    0.0625,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.0,
+    0.03125,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.015625,
+    0.03125,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.015625,
+    0.046875,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.046875,
+    0.046875,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.046875,
+    0.015625,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.015625,
+    0.015625,
+    0.0
+   ]
   }
  ],
  "edges": [
@@ -514,6 +584,116 @@
    ],
    "curve": null,
    "label": "e-triangle-0-2"
+  },
+  {
+   "start": 30,
+   "end": 31,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": null,
+   "label": "e-bridge-0-1"
+  },
+  {
+   "start": 31,
+   "end": 32,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": null,
+   "label": "e-bridge-1-2"
+  },
+  {
+   "start": 32,
+   "end": 33,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": null,
+   "label": "e-bridge-2-3"
+  },
+  {
+   "start": 33,
+   "end": 34,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": null,
+   "label": "e-bridge-3-4"
+  },
+  {
+   "start": 34,
+   "end": 35,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": null,
+   "label": "e-bridge-4-5"
+  },
+  {
+   "start": 35,
+   "end": 36,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": null,
+   "label": "e-bridge-5-6"
+  },
+  {
+   "start": 36,
+   "end": 37,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": null,
+   "label": "e-bridge-6-7"
+  },
+  {
+   "start": 37,
+   "end": 38,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": null,
+   "label": "e-bridge-7-8"
+  },
+  {
+   "start": 38,
+   "end": 39,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": null,
+   "label": "e-bridge-8-9"
+  },
+  {
+   "start": 39,
+   "end": 35,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": null,
+   "label": "e-bridge-9-5"
+  },
+  {
+   "start": 34,
+   "end": 30,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": null,
+   "label": "e-bridge-4-0"
   }
  ],
  "coedges": [
@@ -996,6 +1176,198 @@
     ]
    },
    "label": "c-triangle-0-2"
+  },
+  {
+   "edge": 30,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0
+    ],
+    "dir": [
+     0.0625,
+     0.0
+    ]
+   },
+   "label": "c-bridge-0-1-same"
+  },
+  {
+   "edge": 31,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0625,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     0.0625
+    ]
+   },
+   "label": "c-bridge-1-2-same"
+  },
+  {
+   "edge": 32,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0625,
+     0.0625
+    ],
+    "dir": [
+     -0.0625,
+     0.0
+    ]
+   },
+   "label": "c-bridge-2-3-same"
+  },
+  {
+   "edge": 33,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0625
+    ],
+    "dir": [
+     0.0,
+     -0.03125
+    ]
+   },
+   "label": "c-bridge-3-4-same"
+  },
+  {
+   "edge": 34,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.03125
+    ],
+    "dir": [
+     0.015625,
+     0.0
+    ]
+   },
+   "label": "c-bridge-4-5-same"
+  },
+  {
+   "edge": 35,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.015625,
+     0.03125
+    ],
+    "dir": [
+     0.0,
+     0.015625
+    ]
+   },
+   "label": "c-bridge-5-6-same"
+  },
+  {
+   "edge": 36,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.015625,
+     0.046875
+    ],
+    "dir": [
+     0.03125,
+     0.0
+    ]
+   },
+   "label": "c-bridge-6-7-same"
+  },
+  {
+   "edge": 37,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.046875,
+     0.046875
+    ],
+    "dir": [
+     0.0,
+     -0.03125
+    ]
+   },
+   "label": "c-bridge-7-8-same"
+  },
+  {
+   "edge": 38,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.046875,
+     0.015625
+    ],
+    "dir": [
+     -0.03125,
+     0.0
+    ]
+   },
+   "label": "c-bridge-8-9-same"
+  },
+  {
+   "edge": 39,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.015625,
+     0.015625
+    ],
+    "dir": [
+     0.0,
+     0.015625
+    ]
+   },
+   "label": "c-bridge-9-5-same"
+  },
+  {
+   "edge": 34,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.03125
+    ],
+    "dir": [
+     0.015625,
+     0.0
+    ]
+   },
+   "label": "c-bridge-4-5-reversed"
+  },
+  {
+   "edge": 40,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.03125
+    ],
+    "dir": [
+     0.0,
+     -0.03125
+    ]
+   },
+   "label": "c-bridge-4-0-same"
   }
  ],
  "loops": [
@@ -1064,6 +1436,24 @@
    ],
    "outer": true,
    "label": "l-triangle-0"
+  },
+  {
+   "coedges": [
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41
+   ],
+   "outer": true,
+   "label": "l-bridge"
   }
  ],
  "faces": [
@@ -1168,6 +1558,31 @@
     5
    ],
    "label": "f-triangle"
+  },
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    6
+   ],
+   "label": "f-bridge"
   }
  ],
  "shells": [
@@ -1176,7 +1591,8 @@
     0,
     1,
     2,
-    3
+    3,
+    4
    ],
    "closed": false
   }
