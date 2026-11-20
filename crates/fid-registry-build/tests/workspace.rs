@@ -305,6 +305,24 @@ fn on_mcp(o: &std::collections::BTreeMap<String, CValue>) -> bool {
         && !matches!(o.get("mcp_projection"), Some(CValue::Str(p)) if p == "never")
 }
 
+/// The Activity Log writes job lifecycle changes as `command` entries with the reserved ID
+/// `fid_journal::stream::LIFECYCLE_COMMAND` (`job.lifecycle`, CORE.JRN.STREAM.ALOG). No
+/// registry command may take that ID, or a log reader could not tell the two apart.
+#[test]
+fn no_command_takes_the_lifecycle_record_id() {
+    let reserved = fid_journal::stream::LIFECYCLE_COMMAND;
+    assert_eq!(reserved, "job.lifecycle");
+    let commands = workspace_commands();
+    assert!(!commands.is_empty());
+    for (key, o) in &commands {
+        assert_ne!(
+            o.get("id"),
+            Some(&CValue::Str(reserved.to_string())),
+            "{key} collides with the lifecycle record ID"
+        );
+    }
+}
+
 /// GEO.TYPES.REG AC-6 (hand-labelled from spec/geo/types/reg/NODE.md, Design): the workspace
 /// manifest carries `geo.describe_element@1`, class R0, projected to MCP as `exposed`, so the
 /// tool `geo_describe_element` is generated from it.
