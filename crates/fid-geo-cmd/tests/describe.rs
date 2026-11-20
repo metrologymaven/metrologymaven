@@ -412,6 +412,7 @@ fn re_registering_an_identical_derivation_is_a_no_op_and_a_different_one_collide
     let moved = PointSet::from_points(FrameRef::from_bytes([0x0f; 16]), &[[0.5, 0.5, 0.5]]).unwrap();
     let e = p.register(GeometryElement::PointSet(moved), derived_origin(&exp)).unwrap_err();
     assert_eq!(e, GeoCmdError::IdCollision(r.id));
+    assert_eq!(e.bus_error(), ("conflict", "id_collision"), "the shared bus catalogue v2 reason");
     assert_eq!(p.snapshot(), before);
 }
 
@@ -432,7 +433,9 @@ fn derivation_inputs_are_checked_before_anything_changes() {
         GeoCmdError::DuplicateInput(a)
     );
     // A geometric input given with a digest other than its current one.
-    assert_eq!(p.register(derived_element(), derived(vec![(a, d)])).unwrap_err(), GeoCmdError::DigestMismatch(a));
+    let e = p.register(derived_element(), derived(vec![(a, d)])).unwrap_err();
+    assert_eq!(e, GeoCmdError::DigestMismatch(a));
+    assert_eq!(e.bus_error(), ("conflict", "expected_digest_mismatch"));
     let ghost = Uuid::parse("0190a5b2-7c3d-7000-8000-0000000000ee").unwrap();
     let missing = derived(vec![(ghost, d)]);
     let e = p.register(derived_element(), missing).unwrap_err();
@@ -622,6 +625,7 @@ fn a_uuid_source_id_in_any_case_is_imported_and_kept_verbatim() {
     // The same ID in canonical form collides.
     let e = p.register(mesh_cube(), IdOrigin::Imported(id.to_string())).unwrap_err();
     assert_eq!(e, GeoCmdError::IdCollision(id));
+    assert_eq!(e.bus_error(), ("conflict", "id_collision"));
 }
 
 fn cad_body() -> GeometryElement {

@@ -1737,12 +1737,15 @@ dependencies = [
  "fid-canon",
  "fid-dep",
  "fid-geo-cmd",
+ "fid-geo-types",
  "fid-jobs",
  "fid-program-rec",
+ "fid-project",
  "fid-project-cmd",
  "fid-registry",
  "fid-report",
  "fid-store",
+ "fid-uuid",
 ]
 
 [[package]]

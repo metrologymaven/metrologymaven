@@ -74,6 +74,33 @@ impl GeoCmdError {
     }
 }
 
+impl GeoCmdError {
+    /// The CORE.BUS error (`code`, `reason`) of the bus error catalogue (v2) this refusal is
+    /// reported as on the bus. `id_collision` is the shared `conflict/id_collision`; this
+    /// crate adds no reason of its own. The pairs are wire strings, so this crate does not
+    /// depend on `fid-bus`; `fid-registry-build`'s tests check every pair against the
+    /// catalogue.
+    pub fn bus_error(&self) -> (&'static str, &'static str) {
+        match self {
+            GeoCmdError::IdCollision(_) => ("conflict", "id_collision"),
+            GeoCmdError::DigestMismatch(_) => ("conflict", "expected_digest_mismatch"),
+            GeoCmdError::NotFound(_) => ("not_found", "unknown_entity"),
+            GeoCmdError::UnknownCommand(_) => ("not_found", "unknown_command"),
+            GeoCmdError::Edge(e) if e.code() == "not_found" => ("not_found", "unknown_entity"),
+            GeoCmdError::BadParams(_) => ("validation", "schema"),
+            GeoCmdError::BadSourceId(_) | GeoCmdError::BadOutput(_) => ("validation", "label"),
+            GeoCmdError::InputLimit(_) => ("validation", "input_limit"),
+            GeoCmdError::NotGeometry(_)
+            | GeoCmdError::DuplicateInput(_)
+            | GeoCmdError::KindMismatch { .. }
+            | GeoCmdError::Edge(_)
+            | GeoCmdError::Prop(_) => ("validation", "bad_reference"),
+            GeoCmdError::Id(_) | GeoCmdError::Geometry(_) => ("internal", "handler_failed"),
+            GeoCmdError::Internal(_) => ("internal", "invariant_violated"),
+        }
+    }
+}
+
 /// Copies at most 64 bytes of untrusted text, cut at a char boundary.
 pub(crate) fn kept(s: &str) -> String {
     let mut end = s.len().min(MAX_KEPT_BYTES);
