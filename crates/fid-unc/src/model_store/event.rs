@@ -13,6 +13,12 @@
 //! branch the bus routed the commit to. The model bytes are in the content-addressed store,
 //! not in the event. The reader is strict: unknown, missing or mistyped keys and bytes that are
 //! not exactly this canonical form are refused.
+//!
+//! **Permanent GC root.** The event names the blob instead of carrying the bytes (a model may
+//! be 16 MiB, an event at most [`MAX_EVENT_BYTES`]), so the blob of every committed
+//! `unc.create_model@1` event is a permanent garbage-collection root of the content-addressed
+//! store: removing it would make the version unreadable (`blob_store` or `digest_mismatch`
+//! on every read) and its journal entry not replayable. Open question in `CORE.STO.CAS`.
 
 use super::{AuthorKind, BlobKey};
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
@@ -77,9 +83,11 @@ impl CreateModelEvent {
         CValue::Obj(o)
     }
 
-    /// Canonical JSON bytes, no trailing newline.
-    pub fn to_canonical_bytes(&self) -> Vec<u8> {
-        to_canonical_bytes(&self.to_value()).unwrap_or_default()
+    /// Canonical JSON bytes, no trailing newline. The writer fails only on a non-finite
+    /// number or a duplicate key, neither of which an event holds; such a failure is reported,
+    /// never turned into empty bytes.
+    pub fn to_canonical_bytes(&self) -> Result<Vec<u8>, BadEvent> {
+        to_canonical_bytes(&self.to_value()).map_err(|_| BadEvent("the event has no canonical form"))
     }
 
     /// Reads recorded bytes; they must be the canonical form of a valid event.
@@ -128,7 +136,7 @@ impl CreateModelEvent {
             kernel_manifest_digest: digest("kernel_manifest_digest")?,
         };
         // Strict: the bytes must be exactly what this event writes (no extra keys, canonical).
-        if e.to_canonical_bytes().as_slice() != bytes {
+        if e.to_canonical_bytes()?.as_slice() != bytes {
             return Err(BadEvent("not the canonical form of an event"));
         }
         Ok(e)

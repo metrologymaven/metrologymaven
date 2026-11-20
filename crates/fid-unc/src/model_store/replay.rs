@@ -113,7 +113,7 @@ fn step(
         branch: e.branch.clone(),
         kernel_manifest_digest: release.manifest_digest(),
     };
-    if derived.to_canonical_bytes() != recorded.event {
+    if derived.to_canonical_bytes().ok().as_deref() != Some(recorded.event.as_slice()) {
         return ReplayOutcome::Divergent;
     }
     match store.insert(stored_from(&derived, recorded.journal_entry)) {

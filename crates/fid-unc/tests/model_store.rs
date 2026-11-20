@@ -199,7 +199,11 @@ impl ModelJournal for Journal {
         }
         let n = self.entries.len() as u64 + 1;
         let principal_kind = self.kind.unwrap();
-        self.entries.push(RecordedEntry { journal_entry: n, principal_kind, event: event.to_canonical_bytes() });
+        self.entries.push(RecordedEntry {
+            journal_entry: n,
+            principal_kind,
+            event: event.to_canonical_bytes().unwrap(),
+        });
         Ok(n)
     }
 }
@@ -538,6 +542,19 @@ fn read_back_re_verifies_the_digest_and_resolve_checks_the_reference() {
     w.cli(&a, MAIN, &create_args("bore_ls.json")).unwrap();
     let stored = w.store.get("bore-ls", "1.0.0").unwrap().clone();
 
+    // An idempotent re-create reads the stored bytes back: a lost blob is reported.
+    let mut lost = World {
+        store: w.store.clone(),
+        blobs: MemBlobs::default(),
+        kernel: Box::new(toy_kernel(&ex)),
+        release: Box::new(toy()),
+        journal: Journal::default(),
+    };
+    assert_eq!(code(lost.cli(&a, MAIN, &create_args("bore_ls.json"))), "blob_store");
+    assert!(lost.journal.entries.is_empty() && lost.blobs.0.borrow().is_empty());
+    let dry = ["unc", "create-model", "--file", "bore_ls.json", "--dry-run"];
+    assert_eq!(code(lost.cli(&a, MAIN, &dry)), "blob_store");
+
     // Bytes that changed under the address are refused, never returned.
     let err = read_back(&stored, &Tampered(&w.blobs)).unwrap_err();
     assert_eq!(err.code(), "digest_mismatch");
@@ -627,6 +644,11 @@ fn ac5_replay_of_the_journal_is_identical_and_rebuilds_the_store() {
     assert_eq!(
         replay(&ModelStore::new(), &MemBlobs::default(), &release, &w.journal.entries).outcome,
         ReplayOutcome::NotReplayable
+    );
+    // Blob bytes that changed under their address diverge.
+    assert_eq!(
+        replay(&ModelStore::new(), &Tampered(&w.blobs), &release, &w.journal.entries).outcome,
+        ReplayOutcome::Divergent
     );
     // Under another kernel manifest the replay diverges.
     let stub = Release(graph("manifest_stub.json"));
@@ -843,7 +865,7 @@ fn surface_readers_are_strict() {
 
     // Events are read strictly.
     let ev = CreateModelEvent::from_canonical_bytes(&ex.b("ac1_event")).unwrap();
-    assert_eq!(ev.to_canonical_bytes(), ex.b("ac1_event"));
+    assert_eq!(ev.to_canonical_bytes().unwrap(), ex.b("ac1_event"));
     let extra = ex.s("ac1_event").replacen('{', "{\"aa\":\"x\",", 1);
     assert!(CreateModelEvent::from_canonical_bytes(extra.as_bytes()).is_err());
     let spaced = ex.s("ac1_event").replacen(',', ", ", 1);
@@ -942,6 +964,15 @@ fn declarations_validate_and_calls_and_results_conform_to_their_schemas() {
     ] {
         conforms(&schema(id).result_schema, &parse(&ex.b(key)).unwrap(), "").unwrap();
     }
+    // A validate result with findings (valid: false) conforms too.
+    let mut table = SessionTable::new();
+    let a = alice(&mut table);
+    let mut w = World::toy(&ex);
+    let invalid = w.cli(&a, MAIN, &["unc", "validate-model", "--file", "bad/cycle.json"]).unwrap();
+    let invalid = parse(&invalid).unwrap();
+    let CValue::Obj(o) = &invalid else { panic!() };
+    assert_eq!(o.get("valid"), Some(&CValue::Bool(false)));
+    conforms(&schema("unc.validate_model").result_schema, &invalid, "").unwrap();
     let bad = ex.s("ac1_result").replace("\"stored\"", "\"deleted\"");
     assert!(conforms(&schema("unc.create_model").result_schema, &parse(bad.as_bytes()).unwrap(), "").is_err());
     let bad = ex.s("ac1_result").replace(&ex.s("bore_ls_digest"), "sha256:00");

@@ -33,6 +33,13 @@ use fid_types::Digest;
 
 /// The running kernel, as the host reaches it: the assembled [`AlgorithmTable`] of this build
 /// (implemented here through [`fid_kci::evaluate`]), or an artifact answering the same calls.
+///
+/// **Host trust.** The answer to `kernel.manifest.core_digest@1.0.0` is the anchor of AC-6, so
+/// the host must wire the kernel's own compiled-in core digest: the table built with the
+/// `fid-kernel-wasm` constant `MANIFEST_CORE_DIGEST` (or the assembly crate that replaces it),
+/// or the kernel artifact itself. It must never derive that digest from the release manifest
+/// file (for example by parsing the file and attaching its `core_digest` to a table): that
+/// would make the check compare the file with itself and accept any manifest.
 pub trait RunningKernel {
     /// Evaluates one kernel call.
     fn evaluate(&self, call: &KernelCall) -> Result<KernelResult, KernelError>;

@@ -366,7 +366,15 @@ fn create(
         outcome,
     };
     match check_create(ctx.store, &model, &release)? {
-        Plan::AlreadyStored(kind) => return Ok(result(kind, CreateOutcome::AlreadyStored)),
+        Plan::AlreadyStored(kind) => {
+            // Idempotent success only if the stored bytes are still there and intact.
+            let stored = ctx
+                .store
+                .get(model.name(), model.semver())
+                .ok_or(StoreError::Internal { reason: "a stored version vanished from the index" })?;
+            read_back(stored, ctx.blobs)?;
+            return Ok(result(kind, CreateOutcome::AlreadyStored));
+        }
         Plan::New => {}
     }
     if dry_run {
@@ -383,6 +391,8 @@ fn create(
         branch: ctx.branch.to_owned(),
         kernel_manifest_digest: release.manifest_digest(),
     };
+    // The journal writes these bytes; refuse before committing if they cannot be written.
+    event.to_canonical_bytes().map_err(|_| StoreError::Internal { reason: "the event has no canonical form" })?;
     let entry = ctx.journal.commit(&event).map_err(|d| StoreError::Journal { detail: echo(&d) })?;
     ctx.store.insert(stored_from(&event, entry))?;
     Ok(result(author, CreateOutcome::Stored))
