@@ -208,6 +208,16 @@ pub trait ActiveSetProblem {
         Ok(None)
     }
 
+    /// The data scale of the KKT check (`KRN.SOLV.CERT.KKT`): the largest magnitude of the
+    /// problem's constraint data, in the units of the constraint values `g_i` (for a
+    /// minimum-zone problem, the largest absolute point coordinate). The primal feasibility
+    /// and complementarity thresholds are `tol * data_scale`. Must be finite and positive. The
+    /// default is `InvalidInput { field: "data_scale_unset" }`, so a problem that does not
+    /// state its scale cannot be certified (fail closed).
+    fn data_scale(&self) -> Result<f64, CertError> {
+        Err(CertError::InvalidInput { field: "data_scale_unset" })
+    }
+
     /// An enclosure of every exact constraint value `g_i` (in [`Self::row_labels`] order) at
     /// every point of the box `b`. Needed by the proven KKT check (`KRN.SOLV.CERT.KKT`);
     /// `None` (the default) makes it fail closed.

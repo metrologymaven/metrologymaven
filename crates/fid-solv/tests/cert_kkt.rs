@@ -41,14 +41,24 @@ fn ip(x: f64) -> Interval {
 
 /// Straightness (`dim = 1`) or flatness (`dim = 2`), as in `cert_recomp.rs`, with the KKT
 /// enclosures. Row `(i, 1)`: `g = dev_i - t/2`; row `(i, 0)`: `g = -dev_i - t/2`. Flags:
-/// `enclosures = false` provides none; `degenerate` makes every constraint gradient of a set
-/// equal to the first one (rank 1); `wide_grad` widens the gradient enclosures by 1e3.
+/// `enclosures = false` provides none, `obj_enc = false` no objective-gradient enclosure,
+/// `grad_enc = false` no constraint-gradient enclosure; `degenerate` makes every constraint
+/// gradient of a set equal to the first one (rank 1); `wide_grad` widens the gradient
+/// enclosures by 1e3; `scale` overrides the data scale (max |point coordinate|).
 struct LinZone {
     dim: usize,
     pts: Vec<Vec<f64>>,
     enclosures: bool,
+    obj_enc: bool,
+    grad_enc: bool,
     degenerate: bool,
     wide_grad: bool,
+    scale: Option<f64>,
+}
+
+/// Largest magnitude of the point data: the data scale of the zone problems (units of `g`).
+fn max_abs(xs: impl Iterator<Item = f64>) -> f64 {
+    xs.fold(0.0, |a, v| if v.abs() > a { v.abs() } else { a })
 }
 
 impl LinZone {
@@ -57,8 +67,11 @@ impl LinZone {
             dim,
             pts: flat.chunks(dim + 1).map(<[f64]>::to_vec).collect(),
             enclosures: true,
+            obj_enc: true,
+            grad_enc: true,
             degenerate: false,
             wide_grad: false,
+            scale: None,
         }
     }
     fn sgn(side: u8) -> f64 {
@@ -138,6 +151,9 @@ impl ActiveSetProblem for LinZone {
     fn value_enclosure(&self, b: &[Interval]) -> Result<Option<Interval>, CertError> {
         Ok(Some(b[self.dim + 1]))
     }
+    fn data_scale(&self) -> Result<f64, CertError> {
+        Ok(self.scale.unwrap_or_else(|| max_abs(self.pts.iter().flatten().copied())))
+    }
     fn constraint_enclosure(&self, b: &[Interval]) -> Result<Option<Vec<Interval>>, CertError> {
         if !self.enclosures {
             return Ok(None);
@@ -156,7 +172,7 @@ impl ActiveSetProblem for LinZone {
         Ok(Some(out))
     }
     fn objective_gradient_enclosure(&self, _: &[Interval]) -> Result<Option<Vec<Interval>>, CertError> {
-        if !self.enclosures {
+        if !self.enclosures || !self.obj_enc {
             return Ok(None);
         }
         Ok(Some(self.objective_gradient(&[])?.into_iter().map(ip).collect()))
@@ -166,7 +182,7 @@ impl ActiveSetProblem for LinZone {
         set: &[RowLabel],
         _: &[Interval],
     ) -> Result<Option<Vec<Interval>>, CertError> {
-        if !self.enclosures {
+        if !self.enclosures || !self.grad_enc {
             return Ok(None);
         }
         let w = if self.wide_grad { 1e3 } else { 0.0 };
@@ -303,6 +319,9 @@ impl ActiveSetProblem for Circle {
     fn value_enclosure(&self, b: &[Interval]) -> Result<Option<Interval>, CertError> {
         Ok(Some(b[3].sub(b[2])?))
     }
+    fn data_scale(&self) -> Result<f64, CertError> {
+        Ok(max_abs(self.pts.iter().flat_map(|&(x, y)| [x, y])))
+    }
     fn constraint_enclosure(&self, b: &[Interval]) -> Result<Option<Vec<Interval>>, CertError> {
         let mut out = Vec::new();
         for l in self.row_labels() {
@@ -436,7 +455,7 @@ fn recomputed(prob: &dyn ActiveSetProblem, set: &[RowLabel]) -> Recomputed {
 }
 
 fn run(prob: &dyn ActiveSetProblem, c: &Case) -> Result<KktReport, CertError> {
-    check(prob, &recomputed(prob, &c.set), &c.tol, c.data_scale)
+    check(prob, &recomputed(prob, &c.set), &c.tol)
 }
 
 fn ulp(x: f64) -> f64 {
@@ -537,10 +556,16 @@ fn missing_enclosures_fail_closed() {
     let rec = recomputed(&full, &c.set);
     let mut bare = LinZone::new(2, &c.points);
     bare.enclosures = false;
-    assert_eq!(
-        check(&bare, &rec, &c.tol, c.data_scale),
-        Err(CertError::BoundNotProven { reason: BoundFailure::NoEnclosure })
-    );
+    assert_eq!(check(&bare, &rec, &c.tol), Err(CertError::BoundNotProven { reason: BoundFailure::NoEnclosure }));
+    // Only the objective-gradient enclosure missing.
+    let mut no_obj = LinZone::new(2, &c.points);
+    no_obj.obj_enc = false;
+    assert_eq!(check(&no_obj, &rec, &c.tol), Err(CertError::BoundNotProven { reason: BoundFailure::NoEnclosure }));
+    // Only the constraint-gradient enclosure missing.
+    let mut no_grad = LinZone::new(2, &c.points);
+    no_grad.grad_enc = false;
+    assert_eq!(check(&no_grad, &rec, &c.tol), Err(CertError::BoundNotProven { reason: BoundFailure::NoEnclosure }));
+    assert!(check(&full, &rec, &c.tol).unwrap().pass());
 }
 
 /// REQ-004: rank-deficient active gradients give `pass = false`, reason
@@ -551,7 +576,7 @@ fn degenerate_gradients() {
     let mut prob = LinZone::new(1, &c.points);
     let rec = recomputed(&prob, &c.set);
     prob.degenerate = true;
-    let r = check(&prob, &rec, &c.tol, c.data_scale).unwrap();
+    let r = check(&prob, &rec, &c.tol).unwrap();
     assert!(!r.pass());
     assert_eq!((r.status(), r.reason()), (KktStatus::Undecidable, Some(KktFail::DegenerateGradients)));
     assert!(r.multipliers().is_empty() && r.multiplier_bounds().is_empty());
@@ -567,7 +592,7 @@ fn unproven_multipliers_are_undecidable() {
     let mut prob = LinZone::new(1, &c.points);
     let rec = recomputed(&prob, &c.set);
     prob.wide_grad = true;
-    let r = check(&prob, &rec, &c.tol, c.data_scale).unwrap();
+    let r = check(&prob, &rec, &c.tol).unwrap();
     assert!(!r.pass());
     assert_eq!((r.status(), r.reason()), (KktStatus::Undecidable, Some(KktFail::MultipliersNotProven)));
     assert_eq!(r.multipliers().len(), 3);
@@ -585,7 +610,7 @@ fn borderline_is_never_a_pass() {
     let mut undecidable = 0;
     for c in parse().iter().filter(|c| c.kind != "circle") {
         let prob = problem_of(c);
-        let r = check(prob.as_ref(), &recomputed(prob.as_ref(), &c.set), &zero, c.data_scale).unwrap();
+        let r = check(prob.as_ref(), &recomputed(prob.as_ref(), &c.set), &zero).unwrap();
         assert_ne!(r.status(), KktStatus::Certified, "{}", c.name);
         assert!(!r.pass(), "{}", c.name);
         assert_eq!(r.complementarity().verdict(), Verdict::Undecidable, "{}", c.name);
@@ -611,16 +636,151 @@ fn input_checks() {
     let prob = LinZone::new(1, &c.points);
     let rec = recomputed(&prob, &c.set);
     for bad in [0.0, -1.0, f64::NAN, f64::INFINITY] {
-        assert_eq!(check(&prob, &rec, &c.tol, bad), Err(CertError::InvalidInput { field: "data_scale" }));
+        let mut p = LinZone::new(1, &c.points);
+        p.scale = Some(bad);
+        assert_eq!(check(&p, &rec, &c.tol), Err(CertError::InvalidInput { field: "data_scale" }));
     }
+    assert_eq!(check(&NoScale, &rec, &c.tol), Err(CertError::InvalidInput { field: "data_scale_unset" }));
     let bad = KktTolerances { tol_s: f64::NAN, ..c.tol };
-    assert_eq!(check(&prob, &rec, &bad, c.data_scale), Err(CertError::InvalidInput { field: "tolerances" }));
+    assert_eq!(check(&prob, &rec, &bad), Err(CertError::InvalidInput { field: "tolerances" }));
+    let mut big = LinZone::new(1, &c.points);
+    big.scale = Some(4.0);
     let bad = KktTolerances { tol_p: f64::MAX, ..c.tol };
-    assert_eq!(check(&prob, &rec, &bad, 4.0), Err(CertError::InvalidInput { field: "tolerances" }));
+    assert_eq!(check(&big, &rec, &bad), Err(CertError::InvalidInput { field: "tolerances" }));
     // A recomputation whose set names rows this (smaller) problem does not have.
     assert!(rec.set().iter().any(|l| l.point >= 2));
     let other = LinZone::new(1, &c.points[..4]);
-    assert_eq!(check(&other, &rec, &c.tol, c.data_scale), Err(CertError::InvalidInput { field: "set" }));
+    assert_eq!(check(&other, &rec, &c.tol), Err(CertError::InvalidInput { field: "set" }));
+}
+
+/// A problem that does not state its data scale: the trait default fails closed. Its other
+/// methods are never reached.
+struct NoScale;
+
+impl ActiveSetProblem for NoScale {
+    fn n_params(&self) -> usize {
+        3
+    }
+    fn expected_active(&self) -> usize {
+        3
+    }
+    fn row_labels(&self) -> Vec<RowLabel> {
+        Vec::new()
+    }
+    fn is_linear(&self) -> bool {
+        true
+    }
+    fn start_from_set(&self, _: &[RowLabel]) -> Result<Vec<f64>, CertError> {
+        Err(CertError::Callback { reason: "unused" })
+    }
+    fn residuals_and_jacobian(&self, _: &[RowLabel], _: &[f64]) -> Result<(Vec<f64>, Mat), CertError> {
+        Err(CertError::Callback { reason: "unused" })
+    }
+    fn value(&self, _: &[f64]) -> Result<f64, CertError> {
+        Err(CertError::Callback { reason: "unused" })
+    }
+    fn constraint_values(&self, _: &[f64]) -> Result<Vec<f64>, CertError> {
+        Err(CertError::Callback { reason: "unused" })
+    }
+    fn objective_gradient(&self, _: &[f64]) -> Result<Vec<f64>, CertError> {
+        Err(CertError::Callback { reason: "unused" })
+    }
+    fn constraint_gradients(&self, _: &[RowLabel], _: &[f64]) -> Result<Mat, CertError> {
+        Err(CertError::Callback { reason: "unused" })
+    }
+}
+
+/// Review counter-example (#324): two linear constraints `g = G p - 1 <= 0` with
+/// `G = [[1e-5, 0], [1e5, 1e4]]` and `f = p_1` (`grad f = (0, 1)`). The exact multipliers of
+/// `grad f + G^T lambda = 0` are about `(1e6, -1e-4)`: the second is materially negative
+/// (`|lambda_2| ||grad g_2|| ~ 10` against `||grad f|| = 1`) although it is tiny relative to
+/// `max |lambda|`. It must not certify.
+struct Skewed;
+
+const SKEW: [[f64; 2]; 2] = [[1e-5, 0.0], [1e5, 1e4]];
+
+impl ActiveSetProblem for Skewed {
+    fn n_params(&self) -> usize {
+        2
+    }
+    fn expected_active(&self) -> usize {
+        2
+    }
+    fn row_labels(&self) -> Vec<RowLabel> {
+        vec![RowLabel { point: 0, side: 0 }, RowLabel { point: 1, side: 0 }]
+    }
+    fn is_linear(&self) -> bool {
+        true
+    }
+    fn start_from_set(&self, _: &[RowLabel]) -> Result<Vec<f64>, CertError> {
+        Err(CertError::Callback { reason: "linear" })
+    }
+    fn residuals_and_jacobian(&self, set: &[RowLabel], p: &[f64]) -> Result<(Vec<f64>, Mat), CertError> {
+        let rows: Vec<[f64; 2]> = set.iter().map(|l| SKEW[l.point as usize]).collect();
+        let r = rows.iter().map(|g| g[0] * p[0] + g[1] * p[1] - 1.0).collect();
+        Ok((r, Mat::from_rows(&rows)?))
+    }
+    fn value(&self, p: &[f64]) -> Result<f64, CertError> {
+        Ok(p[1])
+    }
+    fn constraint_values(&self, p: &[f64]) -> Result<Vec<f64>, CertError> {
+        Ok(SKEW.iter().map(|g| g[0] * p[0] + g[1] * p[1] - 1.0).collect())
+    }
+    fn objective_gradient(&self, _: &[f64]) -> Result<Vec<f64>, CertError> {
+        Ok(vec![0.0, 1.0])
+    }
+    fn constraint_gradients(&self, set: &[RowLabel], _: &[f64]) -> Result<Mat, CertError> {
+        let rows: Vec<[f64; 2]> = set.iter().map(|l| SKEW[l.point as usize]).collect();
+        Ok(Mat::from_rows(&rows)?)
+    }
+    fn value_enclosure(&self, b: &[Interval]) -> Result<Option<Interval>, CertError> {
+        Ok(Some(b[1]))
+    }
+    fn data_scale(&self) -> Result<f64, CertError> {
+        Ok(1e5)
+    }
+    fn constraint_enclosure(&self, b: &[Interval]) -> Result<Option<Vec<Interval>>, CertError> {
+        let mut out = Vec::new();
+        for g in SKEW {
+            out.push(ip(g[0]).mul(b[0])?.add(ip(g[1]).mul(b[1])?)?.sub(ip(1.0))?);
+        }
+        Ok(Some(out))
+    }
+    fn objective_gradient_enclosure(&self, _: &[Interval]) -> Result<Option<Vec<Interval>>, CertError> {
+        Ok(Some(vec![ip(0.0), ip(1.0)]))
+    }
+    fn constraint_gradient_enclosure(
+        &self,
+        set: &[RowLabel],
+        _: &[Interval],
+    ) -> Result<Option<Vec<Interval>>, CertError> {
+        Ok(Some(set.iter().flat_map(|l| SKEW[l.point as usize]).map(ip).collect()))
+    }
+}
+
+#[test]
+fn materially_negative_multiplier_does_not_certify() {
+    let set = Skewed.row_labels();
+    let rec = recomputed(&Skewed, &set);
+    let r = check(&Skewed, &rec, &KktTolerances::default()).unwrap();
+    assert!(!r.pass(), "{r:?}");
+    assert_eq!((r.status(), r.reason()), (KktStatus::Violated, Some(KktFail::Dual)));
+    let m = r.multipliers();
+    assert!((m[0] - 1e6).abs() < 1e-3 && (m[1] + 1e-4).abs() < 1e-12, "{m:?}");
+    // thr_2 = 1e-9 * 1 / ||(1e5, 1e4)|| ~ 1e-14, far below |lambda_2| = 1e-4.
+    let t = r.dual_thresholds();
+    assert!(t[1] > 0.0 && t[1] <= 1e-9 / f::sqrt(1e10 + 1e8).unwrap(), "{t:?}");
+}
+
+/// A zero dual tolerance gives zero dual thresholds: a row passes only with a proven
+/// nonnegative multiplier (the same rule as a zero lower bound of `||grad f||`).
+#[test]
+fn zero_dual_thresholds_need_proven_signs() {
+    let c = first("straightness");
+    let prob = LinZone::new(1, &c.points);
+    let r = check(&prob, &recomputed(&prob, &c.set), &KktTolerances { tol_d: 0.0, ..c.tol }).unwrap();
+    assert!(r.dual_thresholds().iter().all(|&t| t == 0.0));
+    assert_eq!(r.dual().verdict(), Verdict::Satisfied);
 }
 
 fn put(h: &mut Sha256Hasher, c: Condition) {
@@ -634,7 +794,7 @@ fn put(h: &mut Sha256Hasher, c: Condition) {
 /// by CI on x86-64 Linux and Windows, ARM64 macOS and wasm32 under wasmtime. One value serves
 /// all targets: REQ-KRN.SOLV.CERT.KKT-005 requires them to agree bit for bit, so a target that
 /// diverges is a failure, not a new pin.
-const OUTPUT_PIN: &str = "sha256:763b7d096eebabba03da85e75e079b7db720a4e4290061605c04bc994ad297b5";
+const OUTPUT_PIN: &str = "sha256:9faa8727180ab2e9643dd79bdbc976d97aa3d475bdf821e63d5cb647b42fb263";
 
 #[test]
 fn ac4_output_bits_pinned() {
@@ -651,7 +811,7 @@ fn ac4_output_bits_pinned() {
                     put(&mut h, cond);
                 }
                 let s = r.scales();
-                for v in [s.data, s.multiplier, s.gradient] {
+                for v in r.dual_thresholds().iter().chain(&[s.data, s.gradient_lo, s.gradient]) {
                     h.update(&v.to_bits().to_le_bytes());
                 }
             }

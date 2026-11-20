@@ -11,8 +11,10 @@ input points.
 
 Input data: the points and optimal active sets of fixtures/solv/cert/recomp-v1/cases.txt
 (straightness, flatness and minimum-zone circle). Their optimality is NOT taken from that
-file: this script re-derives the exact point of every set and proves (or refutes) its
-optimality by the exact KKT conditions, which for these convex problems are sufficient.
+file: this script re-derives the exact point of every set and decides the exact KKT
+conditions there. The expected results are KKT verdicts (first-order conditions at the
+set's point), not a global-optimality claim: the circle's inner rows r_in - d_i <= 0 are not
+convex, so KKT alone does not prove a circle optimum global.
 
 Conventions (the same as the Rust test problems):
 
@@ -32,10 +34,12 @@ Lagrangian grad f + sum mu_i grad g_i = 0 with mu >= 0 for an optimum. Quantitie
 - stationarity = 0 at mu (exact), so every case expects it satisfied;
 - complementarity = max over the rows of S of |g_i(p*)| (0 by construction).
 
-Thresholds: data_scale D = max |point coordinate| (the caller's data scale); thr_p = tol_p D,
-thr_c = tol_c D, thr_d = tol_d max |mu_i|. A condition is expected "S" (satisfied) when the
-exact quantity is at most thr / 2 and "V" (violated) when it is at least 2 thr; a candidate set
-with any quantity in between is not emitted, so the expectation never rests on a borderline.
+Thresholds: data_scale D = max |point coordinate| (the problem's data scale); thr_p = tol_p D,
+thr_c = tol_c D, and per active row i the dual threshold thr_i = tol_d |grad f| / |grad g_i|
+(2-norms at p*). A condition is expected "S" (satisfied) when the exact quantity is at most
+thr / 2 and "V" (violated) when it is at least 2 thr; dual feasibility is "V" when some row has
+-mu_i >= 2 thr_i and "S" when every row has -mu_i <= thr_i / 2. A candidate set with any
+quantity in between is not emitted, so the expectation never rests on a borderline.
 
 Cases:
 
@@ -243,10 +247,28 @@ def kkt(prob, rows, p, data_scale, tol):
     primal = max(prob.g(r, p) for r in prob.rows())
     comp = max(abs(prob.g(r, p)) for r in rows)
     dual = max(Fraction(0), -min(mu))
-    mu_scale = max(abs(m) for m in mu) or Fraction(1)
+    nf = sqrt_q(sum(v * v for v in gf))
+    rows_dual = []
+    for m, grow in zip(mu, gmat):
+        thr_i = tol_d * nf / sqrt_q(sum(v * v for v in grow))
+        if -m <= thr_i / 2:
+            rows_dual.append("S")
+        elif -m >= 2 * thr_i:
+            rows_dual.append("V")
+        else:
+            rows_dual.append("?")
+    if "V" in rows_dual:
+        dual_v = "V"
+    elif all(r == "S" for r in rows_dual):
+        dual_v = "S"
+    else:
+        return None
     verdicts = []
-    for q, thr in ((primal, tol_p * data_scale), (dual, tol_d * mu_scale), (Fraction(0), Fraction(1)),
-                   (comp, tol_c * data_scale)):
+    for item in ((primal, tol_p * data_scale), "dual", (Fraction(0), Fraction(1)), (comp, tol_c * data_scale)):
+        if item == "dual":
+            verdicts.append(dual_v)
+            continue
+        q, thr = item
         if q <= thr / 2:
             verdicts.append("S")
         elif q >= 2 * thr:

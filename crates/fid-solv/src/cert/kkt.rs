@@ -24,8 +24,9 @@
 //! # Procedure (pinned)
 //!
 //! 1. **Checks**, in this order: the tolerances (`InvalidInput { field: "tolerances" }`: each
-//!    finite and `>= 0`, `rank_tol < 1`), `data_scale` finite and `> 0`
-//!    (`InvalidInput { field: "data_scale" }`), the recomputed set of size `n_params`
+//!    finite and `>= 0`, `rank_tol < 1`), [`ActiveSetProblem::data_scale`] (its error, by
+//!    default `InvalidInput { field: "data_scale_unset" }`, is returned; a value that is not
+//!    finite and `> 0` is `InvalidInput { field: "data_scale" }`), the recomputed set of size `n_params`
 //!    (`BoundNotProven { NotSquare }` otherwise) drawn from the unique row labels
 //!    (`DuplicateLabel`, `InvalidInput { field: "set" }`), and `params` of length `n_params`
 //!    (`Shape`).
@@ -49,17 +50,33 @@
 //!    bound) proves that the exact multipliers `lambda*` at `p*` are unique and lie in
 //!    `lambda +- multiplier_bounds`. A test that does not contract is
 //!    [`KktFail::MultipliersNotProven`] (undecidable, not an error).
-//! 7. **Dual feasibility**: `dual = max(0, -min_i lambda*_i)`, enclosed from the proven
-//!    multiplier box; threshold `tol_d * scale_multiplier` with
-//!    `scale_multiplier = max_i |lambda_i|` (1 if 0).
-//! 8. **Stationarity**: `|| G(p*)^T lambda + grad f(p*) ||_2` at the reported float multipliers,
-//!    enclosed componentwise and then normed with upward (downward) rounding for `hi` (`lo`);
-//!    threshold `tol_s * scale_gradient` with `scale_gradient = red::norm2(grad f(params))`
-//!    (1 if 0).
+//! 7. **Dual feasibility**, per active row `i` against its own threshold
+//!    `thr_i = tol_d * lo(||grad f(X)||_2) / hi(||grad g_i(X)||_2)`: the size a negative
+//!    multiplier may have before its term `lambda_i grad g_i` is no longer negligible against
+//!    `grad f`. Both norms are bounded over `X` from the enclosures (the lower bound of the
+//!    objective gradient norm, the upper bound of the constraint gradient norm), and the
+//!    product and quotient are rounded down, so the threshold is never larger than the exact
+//!    one. If the lower bound of `||grad f||` is 0 (or the upper bound of `||grad g_i||` is not
+//!    positive), `thr_i = 0`: the row passes only if `lambda*_i >= 0` is proven (fail closed
+//!    toward violated or undecidable). Row `i` is satisfied when `lo(Lambda_i) >= -thr_i`,
+//!    violated when `hi(Lambda_i) < -thr_i`, undecidable otherwise; the condition is violated
+//!    if any row is, satisfied if every row is, undecidable otherwise. Its recorded enclosure
+//!    is that of `max(0, -min_i lambda*_i)` and its recorded threshold the smallest `thr_i`;
+//!    every `thr_i` is in [`KktReport::dual_thresholds`]. (A threshold relative to
+//!    `max |lambda|` would let a large multiplier excuse a materially negative one.)
+//! 8. **Stationarity**: `|| G(p*)^T lambda + grad f(p*) ||_2` at the reported **float**
+//!    multipliers `lambda` (not at `lambda*`), enclosed componentwise and then normed with
+//!    upward (downward) rounding for `hi` (`lo`); threshold `tol_s * scale_gradient` with
+//!    `scale_gradient = red::norm2(grad f(params))` (1 if 0). This verdict measures how accurate
+//!    the float multipliers are, so that a verifier can recheck it from the recorded values;
+//!    exact stationarity at `lambda*` is already proven by step 6. A false negative is possible:
+//!    an inaccurate float solve can fail (or, at a tolerance of 0, certainly violate) this
+//!    condition at a true KKT point.
 //!
-//! Every threshold is the `f64` product `tol * scale` (one rounding), recorded in the report
-//! and compared exactly, so a verifier repeats the same decision; a threshold that is not
-//! finite is `InvalidInput { field: "tolerances" }`.
+//! The thresholds of primal feasibility, complementarity and stationarity are the `f64`
+//! product `tol * scale` (one rounding). Every threshold is recorded in the report and
+//! compared exactly, so a verifier repeats the same decision; a threshold that is not finite
+//! is `InvalidInput { field: "tolerances" }`.
 //!
 //! # Determinism
 //!
@@ -83,13 +100,14 @@ use super::{BoundFailure, CertError, RowLabel};
 pub const DEFAULT_KKT_TOL: f64 = 1e-9;
 
 /// Relative tolerances of the four conditions and the rank tolerance of the multiplier solve.
-/// The absolute thresholds are `tol_p * data_scale`, `tol_d * scale_multiplier`,
-/// `tol_s * scale_gradient` and `tol_c * data_scale` (see the module docs).
+/// The absolute thresholds are `tol_p * data_scale`, the per-row
+/// `tol_d * ||grad f|| / ||grad g_i||`, `tol_s * scale_gradient` and `tol_c * data_scale` (see
+/// the module docs).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct KktTolerances {
     /// Primal feasibility: `max_i g_i <= tol_p * data_scale`.
     pub tol_p: f64,
-    /// Dual feasibility: `max(0, -min_i lambda_i) <= tol_d * scale_multiplier`.
+    /// Dual feasibility: `-lambda_i <= tol_d * ||grad f|| / ||grad g_i||` for every active row.
     pub tol_d: f64,
     /// Stationarity: `||G^T lambda + grad f||_2 <= tol_s * scale_gradient`.
     pub tol_s: f64,
@@ -217,8 +235,9 @@ pub struct KktScales {
     /// The caller's data scale (max |constraint data|), for primal feasibility and
     /// complementarity.
     pub data: f64,
-    /// `max_i |lambda_i|` (1 if 0 or if there are no multipliers), for dual feasibility.
-    pub multiplier: f64,
+    /// Proven lower bound of `||grad f||_2` over the box, for the dual thresholds (0 when the
+    /// gradients are degenerate and no dual threshold is formed).
+    pub gradient_lo: f64,
     /// `red::norm2` of the float objective gradient (1 if 0), for stationarity.
     pub gradient: f64,
 }
@@ -228,6 +247,7 @@ pub struct KktScales {
 pub struct KktReport {
     multipliers: Vec<f64>,
     multiplier_bounds: Vec<f64>,
+    dual_thresholds: Vec<f64>,
     primal: Condition,
     dual: Condition,
     stationarity: Condition,
@@ -249,6 +269,10 @@ impl KktReport {
     pub fn multiplier_bounds(&self) -> &[f64] {
         &self.multiplier_bounds
     }
+    /// The per-row dual thresholds `thr_i`, in set order (empty when degenerate).
+    pub fn dual_thresholds(&self) -> &[f64] {
+        &self.dual_thresholds
+    }
     /// Primal feasibility: `max_i g_i(p*)` over every row.
     pub fn primal(&self) -> Condition {
         self.primal
@@ -257,7 +281,8 @@ impl KktReport {
     pub fn dual(&self) -> Condition {
         self.dual
     }
-    /// Stationarity: `||G(p*)^T lambda + grad f(p*)||_2` at [`Self::multipliers`].
+    /// Stationarity: `||G(p*)^T lambda + grad f(p*)||_2` at the float [`Self::multipliers`]
+    /// (measures their accuracy; see the module docs, step 8).
     pub fn stationarity(&self) -> Condition {
         self.stationarity
     }
@@ -288,8 +313,8 @@ impl KktReport {
 }
 
 /// Checks the KKT conditions at the exact optimum enclosed by `rec`, recomputed for `problem`.
-/// `data_scale` is the caller's data scale (max |constraint data|, finite and positive). See
-/// the module docs for the pinned procedure. Failing conditions are report content, not
+/// The data scale of the primal and complementarity thresholds is
+/// [`ActiveSetProblem::data_scale`]. See the module docs for the pinned procedure. Failing conditions are report content, not
 /// errors.
 ///
 /// # Errors
@@ -301,9 +326,9 @@ pub fn check<P: ActiveSetProblem + ?Sized>(
     problem: &P,
     rec: &Recomputed,
     tol: &KktTolerances,
-    data_scale: f64,
 ) -> Result<KktReport, CertError> {
     tol.check()?;
+    let data_scale = problem.data_scale()?;
     if !(data_scale.is_finite() && data_scale > 0.0) {
         return Err(CertError::InvalidInput { field: "data_scale" });
     }
@@ -369,30 +394,42 @@ pub fn check<P: ActiveSetProblem + ?Sized>(
     let mut out = KktReport {
         multipliers: Vec::new(),
         multiplier_bounds: Vec::new(),
+        dual_thresholds: Vec::new(),
         primal,
         dual: Condition::unknown(0.0),
         stationarity: Condition::unknown(thr_s),
         complementarity,
         tolerances: *tol,
-        scales: KktScales { data: data_scale, multiplier: 1.0, gradient: scale_gradient },
+        scales: KktScales { data: data_scale, gradient_lo: 0.0, gradient: scale_gradient },
         status: KktStatus::Undecidable,
         reason: None,
     };
     let mut special = None;
     if q.diag().rank < n {
-        out.dual = Condition::unknown(threshold(tol.tol_d, 1.0)?);
+        out.dual = Condition::unknown(0.0);
         special = Some(KktFail::DegenerateGradients);
     } else {
         let neg: Vec<f64> = grad.iter().map(|v| -v).collect();
         let lambda = solve_factored(&q, &neg, n, tol.rank_tol)?;
         check_vec("multipliers", &lambda, n)?;
-        let mut lmax = 0.0_f64;
-        for &l in &lambda {
-            lmax = total_max(lmax, l.abs())?;
+        // Per-row dual thresholds, rounded down: tol_d * lo||grad f(X)|| / hi||grad g_i(X)||.
+        let (flo, _) = norm_bounds(&fe)?;
+        out.scales.gradient_lo = flo;
+        let num = down(tol.tol_d * flo);
+        let mut thr_d = Vec::with_capacity(n);
+        for i in 0..n {
+            let row = ge.get(i * n..(i + 1) * n).ok_or(not_proven(BoundFailure::NoEnclosure))?;
+            let (_, ghi) = norm_bounds(row)?;
+            let t = if num > 0.0 && ghi > 0.0 { down(num / ghi) } else { 0.0 };
+            if !t.is_finite() {
+                return Err(CertError::InvalidInput { field: "tolerances" });
+            }
+            thr_d.push(t);
         }
-        let scale_multiplier = if lmax == 0.0 { 1.0 } else { lmax };
-        out.scales.multiplier = scale_multiplier;
-        let thr_d = threshold(tol.tol_d, scale_multiplier)?;
+        let mut thr_min = f64::INFINITY;
+        for &t in &thr_d {
+            thr_min = total_min(thr_min, t)?;
+        }
 
         // [A] = [G(X)]^T (row i = parameter, column j = active row), row-major n x n.
         let mut ai = Vec::with_capacity(n * n);
@@ -428,17 +465,34 @@ pub fn check<P: ActiveSetProblem + ?Sized>(
                 }
                 let dlo = total_max(0.0, -min_hi)?;
                 let dhi = total_max(0.0, -min_lo)?;
-                out.dual = Condition::decide(dlo, dhi, thr_d);
+                let (mut any_violated, mut all_satisfied) = (false, true);
+                for (l, &t) in lb.iter().zip(&thr_d) {
+                    if l.hi() < -t {
+                        any_violated = true;
+                    }
+                    if l.lo() < -t {
+                        all_satisfied = false;
+                    }
+                }
+                let verdict = if any_violated {
+                    Verdict::Violated
+                } else if all_satisfied {
+                    Verdict::Satisfied
+                } else {
+                    Verdict::Undecidable
+                };
+                out.dual = Condition { lo: dlo, hi: dhi, threshold: thr_min, verdict };
                 out.multiplier_bounds = k;
             }
             Err(CertError::BoundNotProven { reason: BoundFailure::NotContracting }) => {
-                out.dual = Condition::unknown(thr_d);
+                out.dual = Condition::unknown(thr_min);
                 out.multiplier_bounds = vec![f64::INFINITY; n];
                 special = Some(KktFail::MultipliersNotProven);
             }
             Err(e) => return Err(e),
         }
         out.multipliers = lambda;
+        out.dual_thresholds = thr_d;
     }
 
     let conds = [
@@ -468,6 +522,17 @@ fn threshold(tol: f64, scale: f64) -> Result<f64, CertError> {
         Ok(t)
     } else {
         Err(CertError::InvalidInput { field: "tolerances" })
+    }
+}
+
+/// `x` rounded down to a lower bound of the exact real it approximates (one rounding), clamped
+/// at 0 for a nonnegative quantity.
+fn down(x: f64) -> f64 {
+    let d = next_down(x);
+    if d < 0.0 {
+        0.0
+    } else {
+        d
     }
 }
 
