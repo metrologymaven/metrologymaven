@@ -4,7 +4,20 @@
 
 use super::*;
 
-const FIXTURE: &str = include_str!("../../../../fixtures/solv/wrap/small-v1/problems.txt");
+/// The circle-socp block of `fixtures/solv/wrap/small-v1/problems.txt` (AC-1's SOCP), line
+/// for line. Copied rather than included: the kernel's implementation-digest scan
+/// (KRN.MAN.MANI.IMPL) refuses `include_str!` of files outside the crate's hashed set.
+/// `make_fixtures.py --check` fails if any of these lines is not in the fixture's block.
+const CIRCLE_SOCP: [&str; 8] = [
+    "n 3",
+    "q 0000000000000000 0000000000000000 3ff0000000000000",
+    "m 24",
+    "a_colptr 0 8 16 24",
+    "a_rowval 1 4 7 10 13 16 19 22 2 5 8 11 14 17 20 23 0 3 6 9 12 15 18 21",
+    "a_nzval 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 3ff0000000000000 bff0000000000000 bff0000000000000 bff0000000000000 bff0000000000000 bff0000000000000 bff0000000000000 bff0000000000000 bff0000000000000",
+    "b 0000000000000000 c006a00000000000 4003f00000000000 0000000000000000 400ac80000000000 c001e00000000000 0000000000000000 c007780000000000 c00d400000000000 0000000000000000 3fe6000000000000 c00a880000000000 0000000000000000 c00d500000000000 bffa800000000000 0000000000000000 bf9c000000000000 3ff6700000000000 0000000000000000 400b600000000000 3ffc800000000000 0000000000000000 bff3e00000000000 bff6f00000000000",
+    "cones soc 3 soc 3 soc 3 soc 3 soc 3 soc 3 soc 3 soc 3",
+];
 
 fn hexes(s: &str) -> Vec<f64> {
     s.split_whitespace().map(|t| f64::from_bits(u64::from_str_radix(t, 16).unwrap())).collect()
@@ -14,11 +27,10 @@ fn usizes(s: &str) -> Vec<usize> {
     s.split_whitespace().map(|t| t.parse().unwrap()).collect()
 }
 
-/// The circle-socp problem of `fixtures/solv/wrap/small-v1` (AC-1's SOCP).
+/// The circle-socp problem of `fixtures/solv/wrap/small-v1`.
 fn circle_socp() -> ConicProblem {
-    let mut lines = FIXTURE.lines().skip_while(|l| !l.starts_with("problem circle-socp "));
-    let mut get = |key: &str| -> String {
-        let l = lines.find(|l| l.starts_with(&format!("{key} "))).unwrap();
+    let get = |key: &str| -> String {
+        let l = CIRCLE_SOCP.iter().find(|l| l.starts_with(&format!("{key} "))).unwrap();
         l[key.len() + 1..].to_string()
     };
     let n: usize = get("n").parse().unwrap();

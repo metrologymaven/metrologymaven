@@ -208,11 +208,33 @@ def render():
     return "\n".join(out) + "\n"
 
 
+def unit_test_copy_ok(text):
+    """The crate's AC-4 unit test holds a verbatim copy of the circle-socp block (the kernel's
+    implementation-digest scan refuses include_str! of files outside the crate). Every
+    quoted line of its CIRCLE_SOCP array must be a line of that block. Reads the Rust
+    source as text only; nothing is compiled or run."""
+    src = UNIT_TEST.read_text(encoding="utf-8")
+    start = src.index("const CIRCLE_SOCP")
+    body = src[start:src.index("];", start)]
+    copied = [ln.strip().rstrip(",")[1:-1] for ln in body.splitlines()[1:] if ln.strip().startswith('"')]
+    lines = text.splitlines()
+    i = lines.index(next(ln for ln in lines if ln.startswith("problem circle-socp ")))
+    block = set(lines[i + 1:lines.index("end", i)])
+    keys = {ln.split(" ", 1)[0] for ln in copied}
+    return len(copied) == 8 and all(ln in block for ln in copied) and len(keys) == 8
+
+
+UNIT_TEST = Path(__file__).resolve().parents[4] / "crates/fid-solv/src/conic/tests.rs"
+
+
 def main():
     text = render()
     if "--check" in sys.argv[1:]:
         if OUT.read_text(encoding="utf-8") != text:
             print(f"{OUT} is stale; rerun without --check", file=sys.stderr)
+            return 1
+        if not unit_test_copy_ok(text):
+            print(f"{UNIT_TEST}: CIRCLE_SOCP differs from the fixture's circle-socp block", file=sys.stderr)
             return 1
         print(f"{OUT} is up to date")
         return 0
