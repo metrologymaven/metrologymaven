@@ -67,7 +67,7 @@ TraCIM Chebyshev sets from the RDL release (`UNC.RDL.FREEZE`; terms [unverified]
 
 ## Open questions
 
-- None beyond the parent's.
+- **Enclosure obligation (from KRN.SOLV.CERT.RECOMP, #321):** every `ActiveSetProblem` must implement `value_enclosure`, and a nonlinear one also `residual_enclosure` and `jacobian_enclosure`; otherwise recomputation, and so `certify`, fails with `BoundNotProven`. For a linear problem the proven bound applies to the f64 data as given (the Jacobian and residuals at p = 0 are taken as the exact system).
 
 ## Children
 

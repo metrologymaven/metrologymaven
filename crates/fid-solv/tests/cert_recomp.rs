@@ -604,8 +604,8 @@ fn digest(name: &str, r: &Result<Recomputed, CertError>, h: &mut Sha256Hasher) {
 
 /// AC-4: output-bit pin of every fixture case (AC-1 and AC-3 together), recorded from a local
 /// x86-64 run and checked by CI on x86-64 Linux and Windows, ARM64 macOS and wasm32 under
-/// wasmtime. One value serves all targets because they agree bit for bit; a target that
-/// diverged would get its own `#[cfg(target_arch)]` value here.
+/// wasmtime. One value serves all targets: REQ-KRN.SOLV.CERT.RECOMP-005 requires them to agree
+/// bit for bit, so a target that diverges is a failure, not a new pin.
 const OUTPUT_PIN: &str = "sha256:582689d3dfd2e80dbe679439a61dddfbca074f4888dfdaac99f58622c0849a58";
 
 #[test]

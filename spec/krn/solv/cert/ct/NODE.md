@@ -79,6 +79,7 @@ The public face of the certificate module. `certify` takes a converged conic sol
 
 - The certificate schema must match what `TRUST.VERIFY` rechecks; agree on `fid.cert@1` when TRUST's recheck leaf is written. The verifier needs the problem data (points) too, which the ResultRecord's input digests reference.
 - Depending on `CORE.JRN.CANON` is layer-legal (L0 to L0) but brings its SHA-256 dependency into the kernel closure; it must be on `kernel-allowlist.toml`.
+- **Enclosure obligation (from KRN.SOLV.CERT.RECOMP, #321):** every `ActiveSetProblem` must implement `value_enclosure`, and a nonlinear one also `residual_enclosure` and `jacobian_enclosure`; otherwise recomputation, and so `certify`, fails with `BoundNotProven`. For a linear problem the proven bound applies to the f64 data as given (the Jacobian and residuals at p = 0 are taken as the exact system).
 
 ## Children
 

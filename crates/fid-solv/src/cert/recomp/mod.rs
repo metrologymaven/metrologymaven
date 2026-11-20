@@ -14,9 +14,9 @@
 //!
 //! # Procedure (pinned)
 //!
-//! 1. **Checks**, in this order: the config (`InvalidInput { field: "config" }`: `rel_tol` and
-//!    `cond_max` finite, `0 <= rel_tol < 1`, `cond_max >= 1`, `gn_steps >= 1`); the candidate
-//!    index (`InvalidInput { field: "candidate" }`); `n_params() >= 1` and
+//! 1. **Checks**, in this order: the candidate index (`InvalidInput { field: "candidate" }`);
+//!    the config (`InvalidInput { field: "config" }`: `rel_tol` and `cond_max` finite,
+//!    `0 <= rel_tol < 1`, `cond_max >= 1`, `gn_steps >= 1`); `n_params() >= 1` and
 //!    `expected_active() >= n_params()` (`InvalidInput`); the problem's row labels unique
 //!    (`DuplicateLabel`); the set, sorted ascending, of length `expected_active()` (`Shape`),
 //!    duplicate-free (`DuplicateLabel`) and drawn from the row labels
@@ -24,8 +24,11 @@
 //!    and finiteness (`InvalidInput`). The callbacks always receive the **sorted** set, so the
 //!    order in which a conic solution listed its rows cannot reach the arithmetic.
 //! 2. **Linear** (`is_linear()`): `(r0, J) = residuals_and_jacobian(set, 0)`. The system is
-//!    `J p + r0 = 0`, solved once by `fid_num::la::lstsq(J, -r0, rel_tol)` (column-pivoted
-//!    Householder QR). Rank below `n_params` is [`CertError::RankDeficient`]. `steps = 1`.
+//!    `J p + r0 = 0`. `J` is factored once by `qr_pivoted(J, rel_tol)` (column-pivoted
+//!    Householder QR); rank below `n_params` is [`CertError::RankDeficient`]; otherwise
+//!    `p` is solved from that factor with the arithmetic of `fid_num::la::lstsq(J, -r0,
+//!    rel_tol)` (`Q^T b`, back substitution, un-permutation), and the same factor serves the
+//!    condition check and the bound. `steps = 1`.
 //! 3. **Nonlinear**: `p = start_from_set(set)`, then exactly `gn_steps` Gauss-Newton steps
 //!    `p_j <- p_j - x_j` with `x = lstsq(J(p), r(p), rel_tol).x` (no step control, no early
 //!    exit), then `J` at the final `p` is factored by `qr_pivoted(J, rel_tol)` (rank as above).
@@ -45,7 +48,7 @@
 //! `params +- param_bounds`. The proof is a Krawczyk test in outward-rounded interval
 //! arithmetic ([`Interval`]), valid under IEEE-754 round-to-nearest without FMA:
 //!
-//! - `Y` is an approximate inverse of the final `J` (columns solved from the same pivoted QR).
+//! - `Y` is an approximate inverse of the final `J` (columns solved from its pivoted QR).
 //! - `[f]` encloses the exact residuals at `p`. Linear: `J p + r0` evaluated in intervals from
 //!   the exact data `J`, `r0` (the contract of a linear problem is that the Jacobian and the
 //!   residuals it returns at `p = 0` are the system's exact coefficients, so the exact residual
@@ -267,7 +270,6 @@ pub fn recompute<P: ActiveSetProblem + ?Sized>(
     candidate: usize,
     cfg: &RecompConfig,
 ) -> Result<Recomputed, CertError> {
-    cfg.check()?;
     let set = proposal.sets.get(candidate).ok_or(CertError::InvalidInput { field: "candidate" })?;
     recompute_set(problem, set, cfg)
 }
@@ -294,8 +296,8 @@ pub(crate) fn recompute_set<P: ActiveSetProblem + ?Sized>(
         let zeros = vec![0.0; n];
         let (r0, j) = system(problem, &set, &zeros, n)?;
         let neg: Vec<f64> = r0.iter().map(|v| -v).collect();
-        let x = lstsq(&j, &neg, cfg.rel_tol).map_err(la_err)?.x;
         let q = qr_pivoted(&j, cfg.rel_tol).map_err(la_err)?;
+        let x = solve_factored(&q, &neg, n, cfg.rel_tol)?;
         (x, (q, j, r0), 1, None)
     } else {
         let mut p = problem.start_from_set(&set)?;
@@ -431,6 +433,26 @@ fn system<P: ActiveSetProblem + ?Sized>(
         return Err(CertError::Shape { field: "jacobian_cols", expected: n, got: j.cols() });
     }
     Ok((r, j))
+}
+
+/// The least-squares solution of `J x = b` from the pivoted factor of `J`, with the same
+/// arithmetic as `fid_num::la::lstsq` (rank check, `Q^T b`, back substitution on `R`,
+/// un-permutation), so `J` is factored once and the factor is reused for the bound.
+fn solve_factored(q: &Qr, b: &[f64], n: usize, rel_tol: f64) -> Result<Vec<f64>, CertError> {
+    let rank = q.diag().rank;
+    if rank < n {
+        return Err(CertError::RankDeficient { rank });
+    }
+    let c = q.apply_qt(b)?;
+    let r = q.r()?;
+    let z = solve_upper(&r, c.get(..n).unwrap_or(&[]), rel_tol)?;
+    let mut x = vec![0.0; n];
+    for (&pi, &zi) in q.perm().iter().zip(&z) {
+        if let Some(slot) = x.get_mut(pi) {
+            *slot = zi;
+        }
+    }
+    Ok(x)
 }
 
 /// `Y ~ J^-1` (row-major `n x n`), column `c` solved from the pivoted factor: `Q^T e_c`, back
