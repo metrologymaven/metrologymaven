@@ -2,7 +2,7 @@
 """Independent reference for AUTO.SURF.PROJ (surface projection model and name derivation).
 
 Writes the hand-specified manifests under fixtures/manifest/, the golden projection
-fixtures/projection/min-classes.golden.json, and a seeded fuzz corpus
+fixtures/projection/min-classes.golden.json (and stricter.golden.json), and a seeded fuzz corpus
 fixtures/projection/fuzz.json whose expected results come from this script's own
 implementation of the spec rules (never from the Rust code).
 
@@ -17,6 +17,9 @@ Pinned choices (mirrored by crates/fid-surface, stated in the PR):
   definition-level errors (invalid command name, major > 99999) come first, in manifest order;
 - a W1/W2 command declares `exposed` in the registry and projects to `named`; `human_only`
   tightens the expected projection to `request_only` (D-031);
+- the projection is the stricter of the declaration and that class ceiling (the bus rule of
+  CORE.BUS.POL.PROJ): a declaration looser than the ceiling is `projection_mismatch`, a
+  stricter one projects to itself (`request_only`, or `never` as `none`);
 - majors of one command share a CLI path, so CLI paths collide only across command names;
 - the fuzz PRNG is splitmix64 with the seed below.
 """
@@ -163,8 +166,14 @@ def reference_project(manifest_bytes):
         declared = d["mcp_projection"]
         if human_only and declared == "exposed":
             declared = "request_only"
-        if declared != DECLARED[expected]:
+        # The bus rule (CORE.BUS.POL.PROJ): the stricter of the declaration and the class
+        # ceiling. Looser than the ceiling is refused (the registry refuses it too); stricter
+        # projects to the declaration.
+        rank = {"never": 0, "request_only": 1, "exposed": 2}
+        if rank[declared] > rank[DECLARED[expected]]:
             raise Refused("projection_mismatch", [cid])
+        if declared != DECLARED[expected]:
+            expected = {"request_only": "request_only", "never": "none"}[declared]
         cli_path = ["fid", domain, verb.replace("_", "-")]
         key = " ".join(cli_path)
         if key in cli and cli[key][0] != name:
@@ -247,6 +256,20 @@ def bad_projection():
     return manifest([
         definition("align.run_bestfit", 1, "R1", "exposed"),
         definition("motion.move_axis", 1, "M1", "exposed"),
+    ])
+
+
+def stricter():
+    """Declarations stricter than the class ceiling, which the bus accepts (CORE.BUS.POL.PROJ:
+    the stricter of the two wins), shaped like the bus's own request commands."""
+    return manifest([
+        # request.reject_request@1: W1, human_only, never (a person rejects; not on MCP).
+        definition("request.reject_request", 1, "W1", "never", human_only=True),
+        # request.file_request@1: W1, never (written only by the bus).
+        definition("request.file_request", 1, "W1", "never"),
+        definition("align.preview_fit", 1, "R0", "request_only"),
+        definition("align.set_datum", 1, "W2", "request_only"),
+        definition("rpt.release_report", 1, "W3", "never"),
     ])
 
 
@@ -417,12 +440,14 @@ def outputs():
         MAN / "min-classes.json": min_classes(),
         MAN / "bad-projection.json": bad_projection(),
         MAN / "collision.json": collision(),
+        MAN / "stricter.json": stricter(),
         MAN / "long-name.json": long_name(),
         MAN / "roots-config.json": roots_config(),
     }
     reference_project(files[MAN / "roots-config.json"])  # must project cleanly
     files[PROJ / "roots-config.visible.json"] = roots_visibility(files[MAN / "roots-config.json"])
     files[PROJ / "min-classes.golden.json"] = reference_project(files[MAN / "min-classes.json"])
+    files[PROJ / "stricter.golden.json"] = reference_project(files[MAN / "stricter.json"])
     expected = {}
     for p in (MAN / "bad-projection.json", MAN / "collision.json", MAN / "long-name.json"):
         expected[p.name] = expectation(files[p])

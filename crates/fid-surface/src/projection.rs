@@ -7,8 +7,10 @@
 //!
 //! The input is refused, never repaired: bytes that are not RFC 8785 canonical, unknown keys,
 //! a `definition_digest` that does not match its definition, a name outside the surface grammar,
-//! a declared MCP projection that differs from the class table, and any two commands deriving
-//! the same name are all typed errors, and no partial projection is returned. Commands are
+//! a declared MCP projection looser than the class table, and any two commands deriving the
+//! same name are all typed errors, and no partial projection is returned. A declaration
+//! stricter than the class table projects to itself, as the bus decides it
+//! ([`McpProjection::for_declared`]). Commands are
 //! processed in (name bytes, major) order and the first error in that order is reported, so the
 //! error is as deterministic as the output.
 
@@ -71,6 +73,23 @@ impl McpProjection {
             McpProjection::RequestOnly
         } else {
             p
+        }
+    }
+
+    /// The projection of a command that declares `declared` (already clamped by `human_only`)
+    /// under the class ceiling `ceiling` ([`McpProjection::for_command`]): the stricter of the
+    /// two, the rule of the bus (`CORE.BUS.POL.PROJ` `mcp_projection`). A declaration at the
+    /// ceiling projects to the ceiling (`exposed` on a W1 or W2 command is `named`); a stricter
+    /// one projects to itself (`request_only`, or `never` as `none`). `None` when the
+    /// declaration is looser than the ceiling: the registry refuses that, and the projection
+    /// fails closed with `projection_mismatch` rather than clamp it (REQ-006).
+    pub fn for_declared(declared: DeclaredProjection, ceiling: McpProjection) -> Option<McpProjection> {
+        match declared.cmp(&ceiling.declared_form()) {
+            std::cmp::Ordering::Greater => None,
+            std::cmp::Ordering::Equal => Some(ceiling),
+            std::cmp::Ordering::Less if declared == DeclaredProjection::Never => Some(McpProjection::None),
+            // Stricter than a ceiling that is at most `exposed`, and not `never`: `request_only`.
+            std::cmp::Ordering::Less => Some(McpProjection::RequestOnly),
         }
     }
 
@@ -157,6 +176,10 @@ pub struct SurfaceProjection {
     pub mcp_name: String,
     pub py_module: String,
     pub py_name: String,
+    /// The MCP projection from the class table and the declaration (REQ-005, REQ-006). It does
+    /// not account for `exposure`: the bus treats a command without `mcp` among its surfaces
+    /// as `never` whatever this says, so a consumer must also check that `mcp` is in the
+    /// command's exposure (as the MCP emitter's `tool_for` does, AUTO.MCP.PROJ).
     pub mcp_projection: McpProjection,
     pub side_effect: SideEffect,
     pub determinism: Determinism,
@@ -213,7 +236,7 @@ pub enum ProjError {
     ManifestParse { detail: String },
     /// A command ID outside the surface grammar.
     BadCommandId { command: String, detail: String },
-    /// The declared MCP projection differs from the class table.
+    /// The declared MCP projection is looser than the class table allows.
     ProjectionMismatch { command: String, declared: String, expected: McpProjection },
     /// Two commands derive the same name. `first` sorts before `second`.
     NameCollision { kind: NameKind, name: String, first: String, second: String },
@@ -259,7 +282,7 @@ impl fmt::Display for ProjError {
             ProjError::ManifestParse { detail } => write!(f, "{code}: {detail}"),
             ProjError::BadCommandId { command, detail } => write!(f, "{code}: {command:?}: {detail}"),
             ProjError::ProjectionMismatch { command, declared, expected } => {
-                write!(f, "{code}: {command} declares {declared:?}, its class projects to {expected}")
+                write!(f, "{code}: {command} declares {declared:?}, looser than its class allows ({expected})")
             }
             ProjError::NameCollision { kind, name, first, second } => {
                 write!(f, "{code}: {} name {name:?} is derived by both {first} and {second}", kind.as_str())
@@ -616,14 +639,14 @@ pub fn project(manifest: &[u8]) -> Result<Projection, ProjError> {
     for Entry { id, def } in entries {
         let command = id.as_str();
         let DerivedNames { cli_path, mcp_name, py_module, py_name } = derive(command, id.name(), id.major())?;
-        let expected = McpProjection::for_command(def.side_effect, def.human_only);
-        if def.effective_projection() != expected.declared_form() {
-            return Err(ProjError::ProjectionMismatch {
+        let ceiling = McpProjection::for_command(def.side_effect, def.human_only);
+        let expected = McpProjection::for_declared(def.effective_projection(), ceiling).ok_or_else(|| {
+            ProjError::ProjectionMismatch {
                 command: command.to_string(),
                 declared: def.mcp_projection.as_str().to_string(),
-                expected,
-            });
-        }
+                expected: ceiling,
+            }
+        })?;
         // Majors of one command share their CLI path by design (AUTO.CLI.TREE groups them), so
         // a CLI path collides only between different command names.
         match cli.get(&cli_path) {

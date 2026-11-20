@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-20
 ---
 
 # AUTO.SURF.PROJ: Surface projection model and name derivation
@@ -49,7 +49,7 @@ A pure function from the registry manifest to one `SurfaceProjection` per regist
 - **REQ-AUTO.SURF.PROJ-003** The projection shall derive the MCP tool name by dropping `@major` and replacing dots with underscores, appending `_vN` when the major N is 2 or more, and shall reject any name outside `[a-z0-9_]` or longer than 64 characters.
 - **REQ-AUTO.SURF.PROJ-004** The projection shall derive the Python name of a command as module `fiducial.<domain>` and function `<verb_object>`, appending `_vN` when the major N is 2 or more.
 - **REQ-AUTO.SURF.PROJ-005** The projection shall map side-effect classes to MCP projections as R0, R1 and I1 to `exposed`; W1 and W2 to `named`; W3, X1 and D1 to `request_only`; M1, S1 and A0 to `none`.
-- **REQ-AUTO.SURF.PROJ-006** If the manifest's declared MCP projection for a command differs from the class mapping, then projection shall fail with error `projection_mismatch` naming the command.
+- **REQ-AUTO.SURF.PROJ-006** The projection of a command shall be the stricter of its declared MCP projection (`human_only` clamping `exposed` to `request_only`) and the class mapping, as the bus decides it (`CORE.BUS.POL.PROJ`); if the declared projection is looser than the class mapping, then projection shall fail with error `projection_mismatch` naming the command.
 - **REQ-AUTO.SURF.PROJ-007** If two commands derive the same CLI path, MCP tool name or Python name, then projection shall fail with error `name_collision` naming both commands.
 - **REQ-AUTO.SURF.PROJ-008** The projection list shall be ordered by command ID and major in byte order, and serialised as RFC 8785 canonical JSON.
 
@@ -82,7 +82,12 @@ Synthetic manifests written by hand under `fixtures/manifest/` (CC-BY-4.0, proje
 
 ## Open questions
 
-- None.
+- Switch `crates/fid-registry-build/tests/surface_projection.rs` from walking `SOURCES` to the shared `all_defs()` helper once #348 merges.
+- `exposure` without `mcp` makes the bus treat a command as `never`; the projection does not fold that into `mcp_projection` (the MCP emitter, `AUTO.MCP.PROJ`, applies it).
+
+## Change log
+
+- REQ-006 amended 2026-11-20 (maintainer decision, #348 review): a declaration stricter than the class mapping projects to itself (`request_only`, or `never` as `none`), matching the bus's `mcp_projection` (stricter of declared and class ceiling); only a looser one is `projection_mismatch`. Before, any difference was refused, so `request.reject_request@1` (W1, `human_only`, `never`) and `request.file_request@1` (W1, `never`) failed the whole workspace projection and no MCP tool was generated.
 
 ## Children
 
