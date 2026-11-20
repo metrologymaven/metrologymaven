@@ -8,10 +8,13 @@
 //! Modules [`projection`] and [`names`] hold the surface projection model and name derivation
 //! (spec node `AUTO.SURF.PROJ`). Module [`jobs`] holds the invocation tracker with progress,
 //! cancellation and honest `not_run` / `no_reply` timeouts (spec node `AUTO.SURF.JOBS`).
+//! Module [`roots`] is the surface-side gate for file roots: raw-path refusal and the
+//! root-changing command predicate (spec node `AUTO.SURF.ROOTS`).
 
 pub mod jobs;
 pub mod names;
 pub mod projection;
+pub mod roots;
 
 pub use names::{derive as derive_names, DerivedNames, MCP_NAME_MAX};
 pub use projection::{
