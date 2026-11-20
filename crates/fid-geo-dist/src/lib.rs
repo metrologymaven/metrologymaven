@@ -7,6 +7,9 @@
 //! - [`mesh`] (GEO.DIST.MESH): closest point on a triangle (Voronoi-region classification with
 //!   pinned evaluation order and degenerate fallback) and on a whole mesh through the
 //!   `fid-geo-index` hierarchy, bit-identical to a brute-force scan.
+//! - [`sign`] (GEO.DIST.SIGN): angle-weighted pseudo-normals, topology statuses and the certified
+//!   sign of a mesh projection (outside, inside, on the surface, undecidable, or undefined at
+//!   boundary, non-manifold, misoriented or degenerate features), and the same rule for CAD feet.
 //!
 //! The crate also holds the reference fixtures for trimmed-face projection
 //! (GEO.DIST.FACE.REF): the data lives in
@@ -16,10 +19,15 @@
 //! projectors into that comparison.
 
 pub mod mesh;
+pub mod sign;
 
 pub use mesh::{
     closest_on_mesh, closest_on_triangle, DistError, Feature, MeshHit, MeshProjection, MeshQuery, MeshTarget,
     TriangleFoot, TriangleSubset,
+};
+pub use sign::{
+    cad_sign, EdgeNormal, FeatureNormal, PseudoNormals, SignError, SignStatus, SignTarget, SignUndefined, Signed,
+    Topology,
 };
 
 /// Comparison tolerance for foot points and distances against the face reference fixtures,

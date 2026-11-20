@@ -540,6 +540,11 @@ impl<'m> MeshTarget<'m> {
         self.mesh
     }
 
+    /// The hierarchy (checked against the mesh by [`MeshTarget::new`]).
+    pub fn bvh(&self) -> &'m PrimitiveBvh {
+        self.bvh
+    }
+
     /// The closest point on the mesh, searched through the hierarchy with pruning.
     pub fn closest(&self, p: [f64; 3], q: &MeshQuery<'_, '_>) -> Result<MeshProjection, DistError> {
         let (limit2, subset) = self.prepare(&p, q)?;

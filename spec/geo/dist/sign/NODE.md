@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-dist]
 satisfies: [REQ-GEO.DIST-003]
 covers: []
 depends_on: [GEO.DIST.MESH, GEO.TYPES.MESH, KRN.NUM]
