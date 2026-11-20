@@ -779,11 +779,11 @@ fn canonical_len_stops_early_on_huge_bodies() {
 
 // ------------------------------------------------------------------ catalogue
 
-/// This leaf adds no error code or reason: the catalogue digest is the one committed by
-/// CORE.BUS.PIPE.ERR.
+/// This leaf adds no error code or reason: the catalogue digest is the newest one committed
+/// under CORE.BUS.PIPE.ERR (v2).
 #[test]
 fn catalogue_digest_unchanged() {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/core/bus/pipe/err/bus-errors.v1.digest");
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/core/bus/pipe/err/bus-errors.v2.digest");
     let committed = std::fs::read_to_string(path).unwrap();
     assert_eq!(bus_errors_digest().unwrap().to_string(), committed.trim());
 }
