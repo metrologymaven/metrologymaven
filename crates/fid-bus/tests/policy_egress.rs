@@ -561,7 +561,7 @@ fn ac1_a_gui_human_with_the_dialog_confirmed_sends_the_exact_bytes_once() {
 }
 
 /// AC-1 with a `network_root` destination: the file in the share holds exactly the bytes;
-/// a second send never overwrites it and is recorded as `failed`.
+/// a second send never rewrites it and, the content being the same, is recorded as `sent`.
 #[test]
 fn ac1_a_network_root_send_writes_a_new_file_and_never_overwrites() {
     let mut w = World::new();
@@ -581,10 +581,11 @@ fn ac1_a_network_root_send_writes_a_new_file_and_never_overwrites() {
     let consent = w.approval(&alice, w.digest, "lab-share");
     let again = w.send(&alice, w.authorise(&alice, &p, None, Some(consent)).unwrap(), transports, CancelToken::never());
     let again = again.unwrap();
-    assert_eq!(again.outcome, Outcome::Failed);
-    assert_eq!(st(event_body(&again), "outcome"), "failed");
-    assert!(event_body(&again).contains_key("failure"));
+    // Maintainer decision on #336: an existing file with the same content counts as sent.
+    assert_eq!(again.outcome, Outcome::Sent);
+    assert_eq!(st(event_body(&again), "remote_receipt"), "already present with the same content");
     assert_eq!(std::fs::read(&file).unwrap(), w.bytes);
+    assert_eq!(std::fs::read_dir(&w.share.0).unwrap().count(), 1, "no partial file is left");
     check_schemas(&p, &again);
 }
 
