@@ -1,0 +1,21 @@
+{
+  "centre_index": 4,
+  "colors": [
+    "#01468c",
+    "#2a76c3",
+    "#67a3e0",
+    "#aecef1",
+    "#edcaa3",
+    "#e19956",
+    "#c9690c",
+    "#873d02"
+  ],
+  "digest": "sha256:035e81565ce6be6ae356e03f07eb3b764d8f77ebe302c40a15d4b8e929b8e83a",
+  "id": "pal.step.cvd",
+  "kind": "stepped",
+  "licence": "CC-BY-4.0",
+  "over": "#ea6878",
+  "source": "original: generated for this project by fixtures/ux/tokens/datapal/make_palettes.py in OKLCH, a neutral centre with blue and orange arms kept apart under colour-vision deficiency",
+  "under": "#b18e15",
+  "version": 1
+}

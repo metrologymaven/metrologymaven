@@ -1,0 +1,2808 @@
+{
+  "fixtures": {
+    "bad-hex": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-SCHEMA pal.step.tol@1"
+      ]
+    },
+    "centre-off": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-CENTRE pal.step.tol@1"
+      ]
+    },
+    "centre-tinted": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-CENTRE pal.step.cvd@1"
+      ]
+    },
+    "changed-v1": {
+      "baseline": "baseline.json",
+      "exit": 1,
+      "findings": [
+        "PAL-IMMUTABLE pal.step.tol@1"
+      ]
+    },
+    "claimed": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-CLAIMED pal.cont.cividis@1 floor",
+        "PAL-CLAIMED pal.cont.cividis@1 light",
+        "PAL-OOT pal.cont.cividis@1 dark under",
+        "PAL-OOT pal.cont.cividis@1 floor under",
+        "PAL-OOT pal.cont.cividis@1 hc under",
+        "PAL-OOT pal.cont.cividis@1 light under"
+      ]
+    },
+    "contrast": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-CONTRAST pal.step.tol@1 floor over",
+        "PAL-CONTRAST pal.step.tol@1 hc over",
+        "PAL-CONTRAST pal.step.tol@1 light over"
+      ]
+    },
+    "default-missing": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-DEFAULT tokens/palettes/catalogue.json"
+      ]
+    },
+    "default-wrong": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-DEFAULT tokens/palettes/catalogue.json"
+      ]
+    },
+    "delta": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-DELTA pal.step.cvd@1 5 6"
+      ]
+    },
+    "digest-mismatch": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-SCHEMA pal.cont.viridis@1"
+      ]
+    },
+    "even-steps": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-STEPS pal.step.cvd@1"
+      ]
+    },
+    "extra-key": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-SCHEMA pal.step.cvd@1"
+      ]
+    },
+    "five-steps": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-STEPS pal.step.cvd@1"
+      ]
+    },
+    "id-mismatch": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-SCHEMA pal.cont.viridis@1"
+      ]
+    },
+    "licence-nc": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-LICENCE pal.cont.cividis@1"
+      ]
+    },
+    "licence-third-party": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-LICENCE pal.cont.viridis@1"
+      ]
+    },
+    "lightness-cont": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-LIGHTNESS pal.cont.viridis@1"
+      ]
+    },
+    "lightness-step": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-LIGHTNESS pal.step.tol@1"
+      ]
+    },
+    "new-major": {
+      "baseline": "baseline.json",
+      "exit": 0,
+      "findings": []
+    },
+    "no-catalogue": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-SCHEMA tokens/palettes/catalogue.json"
+      ]
+    },
+    "ok": {
+      "baseline": null,
+      "exit": 0,
+      "findings": []
+    },
+    "ok-baseline": {
+      "baseline": "baseline.json",
+      "exit": 0,
+      "findings": []
+    },
+    "oot-blue": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-OOT pal.step.cvd@1 dark under",
+        "PAL-OOT pal.step.cvd@1 floor under",
+        "PAL-OOT pal.step.cvd@1 hc under",
+        "PAL-OOT pal.step.cvd@1 light under"
+      ]
+    },
+    "removed-v1": {
+      "baseline": "baseline.json",
+      "exit": 1,
+      "findings": [
+        "PAL-IMMUTABLE pal.step.tol@1",
+        "PAL-SCHEMA tokens/palettes/catalogue.json"
+      ]
+    },
+    "required-missing": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-SCHEMA tokens/palettes/catalogue.json"
+      ]
+    },
+    "samples": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-SAMPLES pal.cont.cividis@1"
+      ]
+    },
+    "unlisted-file": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-SCHEMA tokens/palettes/notes.json"
+      ]
+    },
+    "wrong-kind": {
+      "baseline": null,
+      "exit": 1,
+      "findings": [
+        "PAL-SCHEMA pal.cont.cividis@1"
+      ]
+    }
+  },
+  "shipped": {
+    "default": "pal.step.cvd@1",
+    "digests": {
+      "pal.cont.cividis@1": "sha256:87ab857ee8dda176638eec705cca9387a968f488db5ba2a13913aad64ce9711d",
+      "pal.cont.viridis@1": "sha256:404eec97e8a66eb27a6e64610c36d396b9d750b38ba341b1f6975d87caa40b6e",
+      "pal.step.cvd@1": "sha256:98200d8f97a20896c9152a2d5906b8cee0eda28f9db7390845ee4b4da6e0c754",
+      "pal.step.tol@1": "sha256:de2692effb5695249397722a30898076f6d4237cbe53697a1e055c8e38ad5335"
+    },
+    "palettes": {
+      "pal.cont.cividis@1": {
+        "claimed_min": {
+          "dark": 0.108834627,
+          "floor": 0.166504207,
+          "hc": 0.131777443,
+          "light": 0.166504207
+        },
+        "count": 256,
+        "digest": "sha256:87ab857ee8dda176638eec705cca9387a968f488db5ba2a13913aad64ce9711d",
+        "kind": "continuous",
+        "lstar": [
+          19.790972745,
+          20.154900332,
+          20.587194969,
+          20.65554766,
+          20.987272491,
+          21.420030737,
+          21.494683602,
+          21.889538739,
+          22.258617172,
+          22.339267634,
+          22.731229198,
+          23.102250144,
+          23.205941311,
+          23.577608689,
+          23.950280715,
+          24.054873134,
+          24.428054753,
+          24.802113873,
+          24.9075536,
+          25.281998449,
+          25.713402076,
+          25.763439755,
+          26.138921492,
+          26.569695907,
+          26.622038064,
+          26.998352993,
+          27.428379865,
+          27.482900925,
+          27.859866027,
+          28.233718993,
+          28.289042675,
+          28.717424034,
+          29.094010542,
+          29.151311944,
+          29.578746244,
+          29.955679614,
+          30.014850935,
+          30.441265467,
+          30.818416276,
+          30.927691643,
+          31.304688166,
+          31.681940443,
+          31.79170473,
+          32.105957905,
+          32.48291353,
+          32.592145582,
+          32.96886602,
+          33.345755838,
+          33.455430431,
+          33.832041529,
+          34.208780555,
+          34.318863827,
+          34.695285425,
+          35.071797698,
+          35.182257806,
+          35.490911098,
+          35.909252127,
+          35.976848501,
+          36.352500506,
+          36.769600076,
+          36.838446947,
+          37.213738532,
+          37.629579305,
+          37.699611477,
+          38.07449046,
+          38.489059106,
+          38.560215096,
+          38.863346088,
+          39.27660564,
+          39.347921757,
+          39.721726127,
+          40.133712231,
+          40.206061327,
+          40.579345257,
+          40.990052803,
+          41.063382581,
+          41.436112532,
+          41.845538906,
+          41.919799997,
+          42.291946302,
+          42.700091076,
+          42.775236865,
+          43.071563769,
+          43.478457734,
+          43.553638018,
+          43.924490562,
+          44.330118059,
+          44.40611586,
+          44.77632722,
+          45.180692081,
+          45.257467476,
+          45.627019248,
+          46.030126643,
+          46.107641871,
+          46.476518031,
+          46.878374295,
+          47.246545907,
+          47.3247803,
+          47.725392779,
+          48.014692632,
+          48.092872126,
+          48.492323499,
+          48.859096258,
+          48.937920854,
+          49.336152335,
+          49.702221055,
+          49.781660499,
+          50.178681183,
+          50.544037629,
+          50.62406323,
+          51.019882803,
+          51.384520106,
+          51.465104648,
+          51.829532629,
+          52.223645826,
+          52.304763481,
+          52.668456362,
+          53.061395057,
+          53.143021302,
+          53.505975515,
+          53.897750738,
+          54.260002597,
+          54.3420752,
+          54.732698249,
+          55.094212327,
+          55.176742803,
+          55.56622519,
+          55.844624314,
+          55.927000123,
+          56.287569129,
+          56.647929547,
+          57.008078844,
+          57.090895527,
+          57.450779905,
+          57.810447966,
+          58.169897549,
+          58.253122185,
+          58.612294317,
+          58.971243608,
+          59.329968228,
+          59.388160084,
+          59.746836342,
+          60.105280766,
+          60.463491884,
+          60.547497182,
+          60.905406411,
+          61.263079503,
+          61.620515237,
+          61.704841109,
+          61.977712466,
+          62.334670114,
+          62.691387172,
+          62.775499348,
+          63.109045087,
+          63.46541136,
+          63.821531522,
+          63.905976792,
+          64.261774819,
+          64.617325461,
+          64.972628133,
+          65.057335665,
+          65.41231152,
+          65.767038514,
+          66.100494948,
+          66.185488172,
+          66.539814853,
+          66.89388926,
+          67.247711136,
+          67.601280257,
+          67.686411482,
+          68.019764574,
+          68.37291024,
+          68.725800767,
+          68.811173819,
+          69.163722902,
+          69.516017095,
+          69.868056419,
+          69.934794789,
+          70.201137234,
+          70.552818628,
+          70.90424343,
+          70.98957446,
+          71.34065531,
+          71.673575427,
+          72.024287026,
+          72.37474136,
+          72.460181661,
+          72.81028995,
+          73.142992196,
+          73.49272192,
+          73.578343201,
+          73.927724881,
+          74.276850029,
+          74.609283653,
+          74.695071125,
+          75.043717954,
+          75.392108373,
+          75.724364055,
+          76.072362803,
+          76.158209149,
+          76.505858438,
+          76.837907288,
+          77.185160275,
+          77.271144891,
+          77.618047994,
+          77.94986359,
+          78.296366578,
+          78.642614705,
+          78.728630544,
+          79.060188728,
+          79.405938611,
+          79.751434753,
+          79.823595736,
+          80.168843515,
+          80.513838197,
+          80.845045462,
+          81.189631727,
+          81.275793361,
+          81.606845525,
+          81.950925309,
+          82.294753779,
+          82.368160917,
+          82.711731711,
+          83.055052149,
+          83.385670397,
+          83.728577774,
+          83.814839882,
+          84.1452676,
+          84.487664096,
+          84.829812604,
+          85.159949302,
+          85.246208333,
+          85.576303281,
+          85.917771836,
+          86.247726805,
+          86.588778731,
+          86.675024592,
+          87.004753976,
+          87.345292418,
+          87.674867251,
+          88.014988494,
+          88.090696243,
+          88.430546501,
+          88.759888914,
+          89.099321155,
+          89.428490919,
+          89.514700079,
+          89.843789027,
+          90.18252951,
+          90.511435511,
+          90.849757643,
+          90.926517635,
+          91.226388753,
+          91.528794345,
+          91.833733352,
+          92.15262754
+        ],
+        "min_lstar_step": 0.050037679,
+        "oklab_step": {
+          "max": 0.005514899,
+          "min": 0.001092441,
+          "total": 0.738273183
+        },
+        "oot": [
+          {
+            "de2000": 49.542505728,
+            "side": "under",
+            "theme": "light",
+            "vision": "normal"
+          },
+          {
+            "de2000": 45.982008852,
+            "side": "under",
+            "theme": "light",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 52.017779251,
+            "side": "under",
+            "theme": "light",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 45.675674687,
+            "side": "under",
+            "theme": "light",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 55.413980593,
+            "side": "over",
+            "theme": "light",
+            "vision": "normal"
+          },
+          {
+            "de2000": 23.278838198,
+            "side": "over",
+            "theme": "light",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 43.229136752,
+            "side": "over",
+            "theme": "light",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 58.182511119,
+            "side": "over",
+            "theme": "light",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 50.571868935,
+            "side": "under",
+            "theme": "dark",
+            "vision": "normal"
+          },
+          {
+            "de2000": 49.580461632,
+            "side": "under",
+            "theme": "dark",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 51.830459795,
+            "side": "under",
+            "theme": "dark",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 46.471791512,
+            "side": "under",
+            "theme": "dark",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 60.830048445,
+            "side": "over",
+            "theme": "dark",
+            "vision": "normal"
+          },
+          {
+            "de2000": 28.566262939,
+            "side": "over",
+            "theme": "dark",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 38.825134193,
+            "side": "over",
+            "theme": "dark",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 63.337746254,
+            "side": "over",
+            "theme": "dark",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 51.851280455,
+            "side": "under",
+            "theme": "hc",
+            "vision": "normal"
+          },
+          {
+            "de2000": 48.1622548,
+            "side": "under",
+            "theme": "hc",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 54.153383542,
+            "side": "under",
+            "theme": "hc",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 48.701673694,
+            "side": "under",
+            "theme": "hc",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 55.569344963,
+            "side": "over",
+            "theme": "hc",
+            "vision": "normal"
+          },
+          {
+            "de2000": 27.535780957,
+            "side": "over",
+            "theme": "hc",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 47.235992201,
+            "side": "over",
+            "theme": "hc",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 58.770842066,
+            "side": "over",
+            "theme": "hc",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 49.542505728,
+            "side": "under",
+            "theme": "floor",
+            "vision": "normal"
+          },
+          {
+            "de2000": 45.982008852,
+            "side": "under",
+            "theme": "floor",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 52.017779251,
+            "side": "under",
+            "theme": "floor",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 45.675674687,
+            "side": "under",
+            "theme": "floor",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 55.413980593,
+            "side": "over",
+            "theme": "floor",
+            "vision": "normal"
+          },
+          {
+            "de2000": 23.278838198,
+            "side": "over",
+            "theme": "floor",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 43.229136752,
+            "side": "over",
+            "theme": "floor",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 58.182511119,
+            "side": "over",
+            "theme": "floor",
+            "vision": "tritanopia"
+          }
+        ],
+        "oot_contrast": [
+          {
+            "ratio": 3.111364027,
+            "side": "under",
+            "theme": "light"
+          },
+          {
+            "ratio": 3.111192212,
+            "side": "over",
+            "theme": "light"
+          },
+          {
+            "ratio": 5.421651004,
+            "side": "under",
+            "theme": "dark"
+          },
+          {
+            "ratio": 5.421950413,
+            "side": "over",
+            "theme": "dark"
+          },
+          {
+            "ratio": 3.111364027,
+            "side": "under",
+            "theme": "hc"
+          },
+          {
+            "ratio": 3.111192212,
+            "side": "over",
+            "theme": "hc"
+          },
+          {
+            "ratio": 3.111364027,
+            "side": "under",
+            "theme": "floor"
+          },
+          {
+            "ratio": 3.111192212,
+            "side": "over",
+            "theme": "floor"
+          }
+        ],
+        "pairs": [
+          {
+            "a": "under",
+            "b": "0",
+            "de2000": {
+              "deuteranopia": 62.11412045,
+              "normal": 58.877994241,
+              "protanopia": 57.387905954,
+              "tritanopia": 54.117364866
+            }
+          },
+          {
+            "a": "255",
+            "b": "over",
+            "de2000": {
+              "deuteranopia": 23.317261481,
+              "normal": 51.027461026,
+              "protanopia": 34.632662111,
+              "tritanopia": 30.034062548
+            }
+          }
+        ]
+      },
+      "pal.cont.viridis@1": {
+        "claimed_min": {
+          "dark": 0.112190724,
+          "floor": 0.20871942,
+          "hc": 0.152984487,
+          "light": 0.171254433
+        },
+        "count": 256,
+        "digest": "sha256:404eec97e8a66eb27a6e64610c36d396b9d750b38ba341b1f6975d87caa40b6e",
+        "kind": "continuous",
+        "lstar": [
+          20.834596629,
+          20.910052728,
+          21.184647667,
+          21.573895619,
+          21.962860303,
+          22.244073778,
+          22.316639413,
+          22.672897958,
+          22.99075707,
+          23.350019143,
+          23.739722296,
+          24.031770976,
+          24.101161711,
+          24.464461406,
+          24.761016644,
+          25.150857801,
+          25.517827557,
+          25.819696906,
+          25.886215576,
+          26.237136454,
+          26.542083107,
+          26.91322964,
+          27.284407898,
+          27.591637389,
+          27.655592728,
+          27.945820539,
+          28.31763223,
+          28.689369726,
+          28.999050589,
+          29.342531154,
+          29.670034023,
+          29.730193213,
+          30.057410676,
+          30.42853746,
+          30.77157714,
+          31.084400181,
+          31.484949046,
+          31.542361891,
+          31.813055425,
+          32.182991465,
+          32.525643378,
+          32.854226338,
+          33.197058232,
+          33.25109981,
+          33.605968458,
+          33.961281061,
+          34.276355549,
+          34.64422276,
+          34.998678711,
+          35.050516294,
+          35.365685721,
+          35.681440138,
+          36.03499144,
+          36.401072332,
+          36.729465382,
+          36.79098289,
+          37.130722361,
+          37.446861586,
+          37.823114233,
+          38.139470561,
+          38.503554019,
+          38.562506596,
+          38.864878657,
+          39.227931167,
+          39.555221051,
+          39.92842168,
+          40.24480528,
+          40.301032252,
+          40.617139593,
+          40.978545326,
+          41.305053497,
+          41.672068886,
+          41.726376216,
+          42.032046274,
+          42.357960142,
+          42.727058682,
+          43.052623935,
+          43.42075181,
+          43.473087665,
+          43.745956382,
+          44.113121739,
+          44.447148134,
+          44.813248983,
+          45.137604399,
+          45.187789858,
+          45.511641572,
+          45.832278821,
+          46.164896175,
+          46.488738775,
+          46.852338111,
+          47.184183324,
+          47.240624947,
+          47.555077198,
+          47.877923111,
+          48.208904345,
+          48.578035165,
+          48.86039064,
+          49.228817737,
+          49.282775203,
+          49.566581144,
+          49.933687259,
+          50.262809149,
+          50.583286519,
+          50.912116355,
+          51.24818189,
+          51.299578892,
+          51.620108687,
+          51.911473905,
+          52.275205502,
+          52.602583365,
+          52.936835597,
+          53.263833674,
+          53.590559087,
+          53.64636755,
+          53.937692761,
+          54.257391463,
+          54.590132149,
+          54.922548242,
+          55.248662878,
+          55.580489499,
+          55.633802454,
+          55.919393324,
+          56.250511755,
+          56.587688033,
+          56.912950133,
+          57.24311133,
+          57.535712445,
+          57.871736733,
+          58.201236789,
+          58.537832708,
+          58.59382053,
+          58.878627335,
+          59.153546052,
+          59.476208712,
+          59.804507159,
+          60.126700909,
+          60.448684786,
+          60.776156574,
+          61.058098756,
+          61.385340465,
+          61.717834566,
+          62.000276077,
+          62.303779814,
+          62.354280658,
+          62.608570136,
+          62.940355885,
+          63.27174262,
+          63.608168965,
+          63.941049125,
+          64.249387779,
+          64.58749804,
+          64.918969126,
+          64.974207951,
+          65.282015919,
+          65.603025491,
+          65.940230042,
+          66.278418895,
+          66.592502179,
+          66.650485688,
+          66.977735141,
+          67.321023471,
+          67.641013193,
+          67.986403598,
+          68.309059738,
+          68.365475062,
+          68.695035252,
+          69.021633535,
+          69.372398486,
+          69.72405064,
+          69.791402583,
+          70.099667253,
+          70.456572935,
+          70.813114732,
+          71.149081421,
+          71.200876793,
+          71.539485098,
+          71.900087644,
+          72.240956613,
+          72.298252787,
+          72.641670707,
+          73.006147706,
+          73.351700964,
+          73.414419755,
+          73.762424335,
+          74.130582583,
+          74.212497416,
+          74.548643028,
+          74.901007404,
+          75.254476937,
+          75.32658179,
+          75.682325686,
+          76.056661011,
+          76.115230819,
+          76.47422569,
+          76.851142288,
+          76.914273207,
+          77.276390569,
+          77.655777242,
+          77.723388321,
+          78.131622386,
+          78.513900448,
+          78.586724235,
+          78.955241664,
+          79.031215814,
+          79.416881442,
+          79.788127136,
+          79.868348327,
+          80.241683722,
+          80.629957961,
+          80.714335128,
+          81.140548969,
+          81.228722754,
+          81.620479555,
+          81.711451691,
+          82.091389357,
+          82.47198862,
+          82.567060189,
+          82.94946336,
+          83.11554321,
+          83.499917928,
+          83.601291297,
+          83.987356632,
+          84.091513358,
+          84.479215946,
+          84.597504604,
+          85.046696235,
+          85.156900151,
+          85.547919338,
+          85.660783429,
+          86.05327905,
+          86.168763089,
+          86.6367949,
+          86.755442973,
+          86.875685007,
+          87.272105061,
+          87.394865149,
+          87.859720232,
+          87.985667266,
+          88.394174207,
+          88.522415307,
+          88.652192552,
+          89.123645222,
+          89.256487399,
+          89.659132396,
+          89.794300441,
+          89.939228446,
+          90.343574271,
+          90.556320247,
+          90.697258863,
+          91.103676175,
+          91.254468397,
+          91.398928998,
+          91.883671756,
+          92.030930045,
+          92.179601989,
+          92.596430287
+        ],
+        "min_lstar_step": 0.050185459,
+        "oklab_step": {
+          "max": 0.005040449,
+          "min": 0.001179904,
+          "total": 0.78036294
+        },
+        "oot": [
+          {
+            "de2000": 49.542505728,
+            "side": "under",
+            "theme": "light",
+            "vision": "normal"
+          },
+          {
+            "de2000": 45.982008852,
+            "side": "under",
+            "theme": "light",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 52.017779251,
+            "side": "under",
+            "theme": "light",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 45.675674687,
+            "side": "under",
+            "theme": "light",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 55.413980593,
+            "side": "over",
+            "theme": "light",
+            "vision": "normal"
+          },
+          {
+            "de2000": 23.278838198,
+            "side": "over",
+            "theme": "light",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 43.229136752,
+            "side": "over",
+            "theme": "light",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 58.182511119,
+            "side": "over",
+            "theme": "light",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 50.571868935,
+            "side": "under",
+            "theme": "dark",
+            "vision": "normal"
+          },
+          {
+            "de2000": 49.580461632,
+            "side": "under",
+            "theme": "dark",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 51.830459795,
+            "side": "under",
+            "theme": "dark",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 46.471791512,
+            "side": "under",
+            "theme": "dark",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 60.830048445,
+            "side": "over",
+            "theme": "dark",
+            "vision": "normal"
+          },
+          {
+            "de2000": 28.566262939,
+            "side": "over",
+            "theme": "dark",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 38.825134193,
+            "side": "over",
+            "theme": "dark",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 63.337746254,
+            "side": "over",
+            "theme": "dark",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 51.851280455,
+            "side": "under",
+            "theme": "hc",
+            "vision": "normal"
+          },
+          {
+            "de2000": 48.1622548,
+            "side": "under",
+            "theme": "hc",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 54.153383542,
+            "side": "under",
+            "theme": "hc",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 48.701673694,
+            "side": "under",
+            "theme": "hc",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 55.569344963,
+            "side": "over",
+            "theme": "hc",
+            "vision": "normal"
+          },
+          {
+            "de2000": 27.535780957,
+            "side": "over",
+            "theme": "hc",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 47.235992201,
+            "side": "over",
+            "theme": "hc",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 58.770842066,
+            "side": "over",
+            "theme": "hc",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 49.542505728,
+            "side": "under",
+            "theme": "floor",
+            "vision": "normal"
+          },
+          {
+            "de2000": 45.982008852,
+            "side": "under",
+            "theme": "floor",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 52.017779251,
+            "side": "under",
+            "theme": "floor",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 45.675674687,
+            "side": "under",
+            "theme": "floor",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 55.413980593,
+            "side": "over",
+            "theme": "floor",
+            "vision": "normal"
+          },
+          {
+            "de2000": 23.278838198,
+            "side": "over",
+            "theme": "floor",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 43.229136752,
+            "side": "over",
+            "theme": "floor",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 58.182511119,
+            "side": "over",
+            "theme": "floor",
+            "vision": "tritanopia"
+          }
+        ],
+        "oot_contrast": [
+          {
+            "ratio": 3.111364027,
+            "side": "under",
+            "theme": "light"
+          },
+          {
+            "ratio": 3.111192212,
+            "side": "over",
+            "theme": "light"
+          },
+          {
+            "ratio": 5.421651004,
+            "side": "under",
+            "theme": "dark"
+          },
+          {
+            "ratio": 5.421950413,
+            "side": "over",
+            "theme": "dark"
+          },
+          {
+            "ratio": 3.111364027,
+            "side": "under",
+            "theme": "hc"
+          },
+          {
+            "ratio": 3.111192212,
+            "side": "over",
+            "theme": "hc"
+          },
+          {
+            "ratio": 3.111364027,
+            "side": "under",
+            "theme": "floor"
+          },
+          {
+            "ratio": 3.111192212,
+            "side": "over",
+            "theme": "floor"
+          }
+        ],
+        "pairs": [
+          {
+            "a": "under",
+            "b": "0",
+            "de2000": {
+              "deuteranopia": 63.803088885,
+              "normal": 61.360160339,
+              "protanopia": 59.249206206,
+              "tritanopia": 53.568422547
+            }
+          },
+          {
+            "a": "255",
+            "b": "over",
+            "de2000": {
+              "deuteranopia": 25.286490397,
+              "normal": 59.086163601,
+              "protanopia": 37.426951134,
+              "tritanopia": 32.658707748
+            }
+          }
+        ]
+      },
+      "pal.step.cvd@1": {
+        "centre_chroma": 3.6e-08,
+        "claimed_min": {
+          "dark": 0.1087013,
+          "floor": 0.1087013,
+          "hc": 0.1087013,
+          "light": 0.1087013
+        },
+        "contrast_on_base": {
+          "dark": [
+            1.812218984,
+            3.596933402,
+            6.339392179,
+            10.360959897,
+            15.472620024,
+            10.906827246,
+            7.143007899,
+            4.425583926,
+            2.167674618
+          ],
+          "floor": [
+            9.308328656,
+            4.689753191,
+            2.660938056,
+            1.628104931,
+            1.090230994,
+            1.546621169,
+            2.361572343,
+            3.811639364,
+            7.781947421
+          ],
+          "hc": [
+            9.308328656,
+            4.689753191,
+            2.660938056,
+            1.628104931,
+            1.090230994,
+            1.546621169,
+            2.361572343,
+            3.811639364,
+            7.781947421
+          ],
+          "light": [
+            9.308328656,
+            4.689753191,
+            2.660938056,
+            1.628104931,
+            1.090230994,
+            1.546621169,
+            2.361572343,
+            3.811639364,
+            7.781947421
+          ]
+        },
+        "count": 9,
+        "digest": "sha256:98200d8f97a20896c9152a2d5906b8cee0eda28f9db7390845ee4b4da6e0c754",
+        "kind": "stepped",
+        "lstar": [
+          30.106392412,
+          48.744220969,
+          65.323815256,
+          81.560243221,
+          96.537493365,
+          83.385713559,
+          69.087224919,
+          54.606575879,
+          34.991837377
+        ],
+        "oot": [
+          {
+            "de2000": 49.542505728,
+            "side": "under",
+            "theme": "light",
+            "vision": "normal"
+          },
+          {
+            "de2000": 45.982008852,
+            "side": "under",
+            "theme": "light",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 52.017779251,
+            "side": "under",
+            "theme": "light",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 45.675674687,
+            "side": "under",
+            "theme": "light",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 55.413980593,
+            "side": "over",
+            "theme": "light",
+            "vision": "normal"
+          },
+          {
+            "de2000": 23.278838198,
+            "side": "over",
+            "theme": "light",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 43.229136752,
+            "side": "over",
+            "theme": "light",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 58.182511119,
+            "side": "over",
+            "theme": "light",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 50.571868935,
+            "side": "under",
+            "theme": "dark",
+            "vision": "normal"
+          },
+          {
+            "de2000": 49.580461632,
+            "side": "under",
+            "theme": "dark",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 51.830459795,
+            "side": "under",
+            "theme": "dark",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 46.471791512,
+            "side": "under",
+            "theme": "dark",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 60.830048445,
+            "side": "over",
+            "theme": "dark",
+            "vision": "normal"
+          },
+          {
+            "de2000": 28.566262939,
+            "side": "over",
+            "theme": "dark",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 38.825134193,
+            "side": "over",
+            "theme": "dark",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 63.337746254,
+            "side": "over",
+            "theme": "dark",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 51.851280455,
+            "side": "under",
+            "theme": "hc",
+            "vision": "normal"
+          },
+          {
+            "de2000": 48.1622548,
+            "side": "under",
+            "theme": "hc",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 54.153383542,
+            "side": "under",
+            "theme": "hc",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 48.701673694,
+            "side": "under",
+            "theme": "hc",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 55.569344963,
+            "side": "over",
+            "theme": "hc",
+            "vision": "normal"
+          },
+          {
+            "de2000": 27.535780957,
+            "side": "over",
+            "theme": "hc",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 47.235992201,
+            "side": "over",
+            "theme": "hc",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 58.770842066,
+            "side": "over",
+            "theme": "hc",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 49.542505728,
+            "side": "under",
+            "theme": "floor",
+            "vision": "normal"
+          },
+          {
+            "de2000": 45.982008852,
+            "side": "under",
+            "theme": "floor",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 52.017779251,
+            "side": "under",
+            "theme": "floor",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 45.675674687,
+            "side": "under",
+            "theme": "floor",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 55.413980593,
+            "side": "over",
+            "theme": "floor",
+            "vision": "normal"
+          },
+          {
+            "de2000": 23.278838198,
+            "side": "over",
+            "theme": "floor",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 43.229136752,
+            "side": "over",
+            "theme": "floor",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 58.182511119,
+            "side": "over",
+            "theme": "floor",
+            "vision": "tritanopia"
+          }
+        ],
+        "oot_contrast": [
+          {
+            "ratio": 3.111364027,
+            "side": "under",
+            "theme": "light"
+          },
+          {
+            "ratio": 3.111192212,
+            "side": "over",
+            "theme": "light"
+          },
+          {
+            "ratio": 5.421651004,
+            "side": "under",
+            "theme": "dark"
+          },
+          {
+            "ratio": 5.421950413,
+            "side": "over",
+            "theme": "dark"
+          },
+          {
+            "ratio": 3.111364027,
+            "side": "under",
+            "theme": "hc"
+          },
+          {
+            "ratio": 3.111192212,
+            "side": "over",
+            "theme": "hc"
+          },
+          {
+            "ratio": 3.111364027,
+            "side": "under",
+            "theme": "floor"
+          },
+          {
+            "ratio": 3.111192212,
+            "side": "over",
+            "theme": "floor"
+          }
+        ],
+        "pairs": [
+          {
+            "a": "under",
+            "b": "0",
+            "de2000": {
+              "deuteranopia": 64.000921783,
+              "normal": 60.338034632,
+              "protanopia": 58.818466624,
+              "tritanopia": 52.316044143
+            }
+          },
+          {
+            "a": "0",
+            "b": "1",
+            "de2000": {
+              "deuteranopia": 15.60964716,
+              "normal": 17.099140647,
+              "protanopia": 17.350618616,
+              "tritanopia": 17.205587757
+            }
+          },
+          {
+            "a": "1",
+            "b": "2",
+            "de2000": {
+              "deuteranopia": 16.300275318,
+              "normal": 15.404650981,
+              "protanopia": 14.424564464,
+              "tritanopia": 13.163539972
+            }
+          },
+          {
+            "a": "2",
+            "b": "3",
+            "de2000": {
+              "deuteranopia": 14.577627771,
+              "normal": 13.469566937,
+              "protanopia": 12.74839295,
+              "tritanopia": 14.078178292
+            }
+          },
+          {
+            "a": "3",
+            "b": "4",
+            "de2000": {
+              "deuteranopia": 17.978187147,
+              "normal": 17.16949778,
+              "protanopia": 16.094236894,
+              "tritanopia": 19.419464081
+            }
+          },
+          {
+            "a": "4",
+            "b": "5",
+            "de2000": {
+              "deuteranopia": 17.817334598,
+              "normal": 18.363187897,
+              "protanopia": 17.870897939,
+              "tritanopia": 19.871861811
+            }
+          },
+          {
+            "a": "5",
+            "b": "6",
+            "de2000": {
+              "deuteranopia": 12.529936569,
+              "normal": 14.422496588,
+              "protanopia": 14.614373569,
+              "tritanopia": 13.929196004
+            }
+          },
+          {
+            "a": "6",
+            "b": "7",
+            "de2000": {
+              "deuteranopia": 11.976903203,
+              "normal": 13.784792423,
+              "protanopia": 15.208790343,
+              "tritanopia": 13.313855751
+            }
+          },
+          {
+            "a": "7",
+            "b": "8",
+            "de2000": {
+              "deuteranopia": 20.347189345,
+              "normal": 19.148620368,
+              "protanopia": 17.222500921,
+              "tritanopia": 18.619038898
+            }
+          },
+          {
+            "a": "8",
+            "b": "over",
+            "de2000": {
+              "deuteranopia": 28.226887485,
+              "normal": 34.163615213,
+              "protanopia": 27.309871748,
+              "tritanopia": 26.159296518
+            }
+          },
+          {
+            "a": "3",
+            "b": "5",
+            "de2000": {
+              "deuteranopia": 33.74392374,
+              "normal": 30.732583936,
+              "protanopia": 31.145468357,
+              "tritanopia": 38.084445827
+            }
+          },
+          {
+            "a": "2",
+            "b": "6",
+            "de2000": {
+              "deuteranopia": 49.475931583,
+              "normal": 43.803108169,
+              "protanopia": 45.823301635,
+              "tritanopia": 51.284704855
+            }
+          },
+          {
+            "a": "1",
+            "b": "7",
+            "de2000": {
+              "deuteranopia": 57.229079995,
+              "normal": 49.013866197,
+              "protanopia": 52.482868988,
+              "tritanopia": 63.220383352
+            }
+          },
+          {
+            "a": "0",
+            "b": "8",
+            "de2000": {
+              "deuteranopia": 52.095748716,
+              "normal": 44.217411631,
+              "protanopia": 47.222969416,
+              "tritanopia": 50.65106934
+            }
+          }
+        ]
+      },
+      "pal.step.tol@1": {
+        "centre_chroma": 3.6e-08,
+        "claimed_min": {
+          "dark": 0.109518702,
+          "floor": 0.109518702,
+          "hc": 0.109518702,
+          "light": 0.109518702
+        },
+        "contrast_on_base": {
+          "dark": [
+            1.495753894,
+            2.510247564,
+            4.264888658,
+            6.840031199,
+            10.734423663,
+            15.472620024,
+            11.512126413,
+            7.805694038,
+            4.961156033,
+            3.106524759,
+            1.864255904
+          ],
+          "floor": [
+            11.277744265,
+            6.719946726,
+            3.955256808,
+            2.466177333,
+            1.571461164,
+            1.090230994,
+            1.465300961,
+            2.161080081,
+            3.400161129,
+            5.430096719,
+            9.048505555
+          ],
+          "hc": [
+            11.277744265,
+            6.719946726,
+            3.955256808,
+            2.466177333,
+            1.571461164,
+            1.090230994,
+            1.465300961,
+            2.161080081,
+            3.400161129,
+            5.430096719,
+            9.048505555
+          ],
+          "light": [
+            11.277744265,
+            6.719946726,
+            3.955256808,
+            2.466177333,
+            1.571461164,
+            1.090230994,
+            1.465300961,
+            2.161080081,
+            3.400161129,
+            5.430096719,
+            9.048505555
+          ]
+        },
+        "count": 11,
+        "digest": "sha256:de2692effb5695249397722a30898076f6d4237cbe53697a1e055c8e38ad5335",
+        "kind": "stepped",
+        "lstar": [
+          24.669799487,
+          38.939225113,
+          53.540550199,
+          67.705024194,
+          82.814818188,
+          96.537493365,
+          85.33175568,
+          71.953798467,
+          57.92751438,
+          44.716404052,
+          30.89209961
+        ],
+        "oot": [
+          {
+            "de2000": 49.542505728,
+            "side": "under",
+            "theme": "light",
+            "vision": "normal"
+          },
+          {
+            "de2000": 45.982008852,
+            "side": "under",
+            "theme": "light",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 52.017779251,
+            "side": "under",
+            "theme": "light",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 45.675674687,
+            "side": "under",
+            "theme": "light",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 55.413980593,
+            "side": "over",
+            "theme": "light",
+            "vision": "normal"
+          },
+          {
+            "de2000": 23.278838198,
+            "side": "over",
+            "theme": "light",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 43.229136752,
+            "side": "over",
+            "theme": "light",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 58.182511119,
+            "side": "over",
+            "theme": "light",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 50.571868935,
+            "side": "under",
+            "theme": "dark",
+            "vision": "normal"
+          },
+          {
+            "de2000": 49.580461632,
+            "side": "under",
+            "theme": "dark",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 51.830459795,
+            "side": "under",
+            "theme": "dark",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 46.471791512,
+            "side": "under",
+            "theme": "dark",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 60.830048445,
+            "side": "over",
+            "theme": "dark",
+            "vision": "normal"
+          },
+          {
+            "de2000": 28.566262939,
+            "side": "over",
+            "theme": "dark",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 38.825134193,
+            "side": "over",
+            "theme": "dark",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 63.337746254,
+            "side": "over",
+            "theme": "dark",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 51.851280455,
+            "side": "under",
+            "theme": "hc",
+            "vision": "normal"
+          },
+          {
+            "de2000": 48.1622548,
+            "side": "under",
+            "theme": "hc",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 54.153383542,
+            "side": "under",
+            "theme": "hc",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 48.701673694,
+            "side": "under",
+            "theme": "hc",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 55.569344963,
+            "side": "over",
+            "theme": "hc",
+            "vision": "normal"
+          },
+          {
+            "de2000": 27.535780957,
+            "side": "over",
+            "theme": "hc",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 47.235992201,
+            "side": "over",
+            "theme": "hc",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 58.770842066,
+            "side": "over",
+            "theme": "hc",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 49.542505728,
+            "side": "under",
+            "theme": "floor",
+            "vision": "normal"
+          },
+          {
+            "de2000": 45.982008852,
+            "side": "under",
+            "theme": "floor",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 52.017779251,
+            "side": "under",
+            "theme": "floor",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 45.675674687,
+            "side": "under",
+            "theme": "floor",
+            "vision": "tritanopia"
+          },
+          {
+            "de2000": 55.413980593,
+            "side": "over",
+            "theme": "floor",
+            "vision": "normal"
+          },
+          {
+            "de2000": 23.278838198,
+            "side": "over",
+            "theme": "floor",
+            "vision": "protanopia"
+          },
+          {
+            "de2000": 43.229136752,
+            "side": "over",
+            "theme": "floor",
+            "vision": "deuteranopia"
+          },
+          {
+            "de2000": 58.182511119,
+            "side": "over",
+            "theme": "floor",
+            "vision": "tritanopia"
+          }
+        ],
+        "oot_contrast": [
+          {
+            "ratio": 3.111364027,
+            "side": "under",
+            "theme": "light"
+          },
+          {
+            "ratio": 3.111192212,
+            "side": "over",
+            "theme": "light"
+          },
+          {
+            "ratio": 5.421651004,
+            "side": "under",
+            "theme": "dark"
+          },
+          {
+            "ratio": 5.421950413,
+            "side": "over",
+            "theme": "dark"
+          },
+          {
+            "ratio": 3.111364027,
+            "side": "under",
+            "theme": "hc"
+          },
+          {
+            "ratio": 3.111192212,
+            "side": "over",
+            "theme": "hc"
+          },
+          {
+            "ratio": 3.111364027,
+            "side": "under",
+            "theme": "floor"
+          },
+          {
+            "ratio": 3.111192212,
+            "side": "over",
+            "theme": "floor"
+          }
+        ],
+        "pairs": [
+          {
+            "a": "under",
+            "b": "0",
+            "de2000": {
+              "deuteranopia": 68.111431955,
+              "normal": 66.614493728,
+              "protanopia": 63.455248458,
+              "tritanopia": 51.281576641
+            }
+          },
+          {
+            "a": "0",
+            "b": "1",
+            "de2000": {
+              "deuteranopia": 11.245134198,
+              "normal": 12.52648204,
+              "protanopia": 12.161119825,
+              "tritanopia": 12.497033612
+            }
+          },
+          {
+            "a": "1",
+            "b": "2",
+            "de2000": {
+              "deuteranopia": 13.270857701,
+              "normal": 15.210897299,
+              "protanopia": 14.611157215,
+              "tritanopia": 14.069372757
+            }
+          },
+          {
+            "a": "2",
+            "b": "3",
+            "de2000": {
+              "deuteranopia": 13.744918853,
+              "normal": 12.988917367,
+              "protanopia": 12.425841616,
+              "tritanopia": 10.979690987
+            }
+          },
+          {
+            "a": "3",
+            "b": "4",
+            "de2000": {
+              "deuteranopia": 14.290047385,
+              "normal": 13.25800795,
+              "protanopia": 12.919831076,
+              "tritanopia": 12.856056759
+            }
+          },
+          {
+            "a": "4",
+            "b": "5",
+            "de2000": {
+              "deuteranopia": 15.455298899,
+              "normal": 15.527150554,
+              "protanopia": 13.275641752,
+              "tritanopia": 19.061075086
+            }
+          },
+          {
+            "a": "5",
+            "b": "6",
+            "de2000": {
+              "deuteranopia": 16.839266122,
+              "normal": 16.8303896,
+              "protanopia": 16.949953317,
+              "tritanopia": 16.860755335
+            }
+          },
+          {
+            "a": "6",
+            "b": "7",
+            "de2000": {
+              "deuteranopia": 10.798481072,
+              "normal": 14.41308564,
+              "protanopia": 12.424833619,
+              "tritanopia": 14.013752972
+            }
+          },
+          {
+            "a": "7",
+            "b": "8",
+            "de2000": {
+              "deuteranopia": 11.107715178,
+              "normal": 14.021670921,
+              "protanopia": 14.550034565,
+              "tritanopia": 13.240844885
+            }
+          },
+          {
+            "a": "8",
+            "b": "9",
+            "de2000": {
+              "deuteranopia": 11.9884192,
+              "normal": 13.839645485,
+              "protanopia": 13.872045488,
+              "tritanopia": 13.40642594
+            }
+          },
+          {
+            "a": "9",
+            "b": "10",
+            "de2000": {
+              "deuteranopia": 13.321406684,
+              "normal": 12.388599688,
+              "protanopia": 11.195080224,
+              "tritanopia": 11.929882591
+            }
+          },
+          {
+            "a": "10",
+            "b": "over",
+            "de2000": {
+              "deuteranopia": 31.188161351,
+              "normal": 33.323824745,
+              "protanopia": 29.689901079,
+              "tritanopia": 28.960767725
+            }
+          },
+          {
+            "a": "4",
+            "b": "6",
+            "de2000": {
+              "deuteranopia": 30.308483653,
+              "normal": 29.170511479,
+              "protanopia": 27.709639558,
+              "tritanopia": 35.931807018
+            }
+          },
+          {
+            "a": "3",
+            "b": "7",
+            "de2000": {
+              "deuteranopia": 45.822919374,
+              "normal": 41.028508528,
+              "protanopia": 41.875012354,
+              "tritanopia": 48.800672127
+            }
+          },
+          {
+            "a": "2",
+            "b": "8",
+            "de2000": {
+              "deuteranopia": 55.143282362,
+              "normal": 46.778098411,
+              "protanopia": 50.740030171,
+              "tritanopia": 65.044341894
+            }
+          },
+          {
+            "a": "1",
+            "b": "9",
+            "de2000": {
+              "deuteranopia": 58.332256632,
+              "normal": 47.207443286,
+              "protanopia": 52.712822905,
+              "tritanopia": 59.809669497
+            }
+          },
+          {
+            "a": "0",
+            "b": "10",
+            "de2000": {
+              "deuteranopia": 53.987877414,
+              "normal": 43.004112753,
+              "protanopia": 48.230457601,
+              "tritanopia": 49.628559617
+            }
+          }
+        ]
+      }
+    },
+    "sem": {
+      "dark": {
+        "sem.border.value.claimed": "#e676c9",
+        "sem.status.conforms": "#00b5e4",
+        "sem.surface.base": "#1c1d1f",
+        "sem.surface.value.claimed": "#481c3d",
+        "sem.text.value.claimed": "#ffc7ed",
+        "sem.text.value.measured": "#f5f7f9"
+      },
+      "floor": {
+        "sem.border.value.claimed": "#902679",
+        "sem.status.conforms": "#00637e",
+        "sem.surface.base": "#ffffff",
+        "sem.surface.value.claimed": "#ffc7ed",
+        "sem.text.value.claimed": "#902679",
+        "sem.text.value.measured": "#1c1d1f"
+      },
+      "hc": {
+        "sem.border.value.claimed": "#6b225a",
+        "sem.status.conforms": "#004b61",
+        "sem.surface.base": "#ffffff",
+        "sem.surface.value.claimed": "#ffc7ed",
+        "sem.text.value.claimed": "#6b225a",
+        "sem.text.value.measured": "#000000"
+      },
+      "light": {
+        "sem.border.value.claimed": "#ab3f92",
+        "sem.status.conforms": "#00637e",
+        "sem.surface.base": "#ffffff",
+        "sem.surface.value.claimed": "#ffc7ed",
+        "sem.text.value.claimed": "#902679",
+        "sem.text.value.measured": "#2d2f32"
+      }
+    },
+    "values": {
+      "pal.cont.cividis@1": {
+        "colors": [
+          "#0d305a",
+          "#0e315a",
+          "#0f325b",
+          "#11325b",
+          "#11335b",
+          "#12345c",
+          "#14345c",
+          "#14355d",
+          "#15365d",
+          "#17365d",
+          "#17375e",
+          "#18385e",
+          "#19385f",
+          "#1a395f",
+          "#1b3a5f",
+          "#1c3a60",
+          "#1d3b60",
+          "#1e3c60",
+          "#1f3c61",
+          "#203d61",
+          "#213e62",
+          "#223e62",
+          "#233f62",
+          "#244063",
+          "#254063",
+          "#264163",
+          "#274264",
+          "#284264",
+          "#294364",
+          "#294465",
+          "#2a4465",
+          "#2b4566",
+          "#2c4666",
+          "#2d4666",
+          "#2e4767",
+          "#2f4867",
+          "#304867",
+          "#314968",
+          "#324a68",
+          "#334a69",
+          "#344b69",
+          "#354c69",
+          "#364c6a",
+          "#364d6a",
+          "#374e6a",
+          "#384e6b",
+          "#394f6b",
+          "#3a506b",
+          "#3b506c",
+          "#3c516c",
+          "#3d526c",
+          "#3e526d",
+          "#3f536d",
+          "#40546d",
+          "#41546e",
+          "#41556e",
+          "#42566f",
+          "#43566f",
+          "#44576f",
+          "#455870",
+          "#465870",
+          "#475970",
+          "#485a71",
+          "#495a71",
+          "#4a5b71",
+          "#4b5c72",
+          "#4c5c72",
+          "#4c5d72",
+          "#4d5e73",
+          "#4e5e73",
+          "#4f5f73",
+          "#506074",
+          "#516074",
+          "#526174",
+          "#536275",
+          "#546275",
+          "#556375",
+          "#566476",
+          "#576476",
+          "#586576",
+          "#596677",
+          "#5a6677",
+          "#5a6777",
+          "#5b6878",
+          "#5c6878",
+          "#5d6978",
+          "#5e6a79",
+          "#5f6a79",
+          "#606b79",
+          "#616c7a",
+          "#626c7a",
+          "#636d7a",
+          "#646e7b",
+          "#656e7b",
+          "#666f7b",
+          "#67707c",
+          "#68717c",
+          "#69717c",
+          "#6a727d",
+          "#6a737d",
+          "#6b737d",
+          "#6c747e",
+          "#6d757e",
+          "#6e757e",
+          "#6f767f",
+          "#70777f",
+          "#71777f",
+          "#727880",
+          "#737980",
+          "#747980",
+          "#757a81",
+          "#767b81",
+          "#777b81",
+          "#787c81",
+          "#797d82",
+          "#7a7d82",
+          "#7b7e82",
+          "#7c7f83",
+          "#7d7f83",
+          "#7e8083",
+          "#7f8184",
+          "#808284",
+          "#818284",
+          "#828385",
+          "#838485",
+          "#848485",
+          "#858586",
+          "#858686",
+          "#868686",
+          "#878786",
+          "#888886",
+          "#898986",
+          "#8a8986",
+          "#8b8a86",
+          "#8c8b86",
+          "#8d8c86",
+          "#8e8c86",
+          "#8f8d86",
+          "#908e86",
+          "#918f86",
+          "#928f85",
+          "#939085",
+          "#949185",
+          "#959285",
+          "#969285",
+          "#979385",
+          "#989485",
+          "#999585",
+          "#9a9585",
+          "#9a9685",
+          "#9b9785",
+          "#9c9885",
+          "#9d9885",
+          "#9e9984",
+          "#9f9a84",
+          "#a09b84",
+          "#a19b84",
+          "#a29c84",
+          "#a39d84",
+          "#a49e84",
+          "#a59e84",
+          "#a69f84",
+          "#a7a084",
+          "#a8a183",
+          "#a9a183",
+          "#aaa283",
+          "#aba383",
+          "#aca483",
+          "#ada583",
+          "#aea583",
+          "#afa682",
+          "#b0a782",
+          "#b1a882",
+          "#b2a882",
+          "#b3a982",
+          "#b4aa82",
+          "#b5ab82",
+          "#b6ab81",
+          "#b6ac81",
+          "#b7ad81",
+          "#b8ae81",
+          "#b9ae81",
+          "#baaf81",
+          "#bbb080",
+          "#bcb180",
+          "#bdb280",
+          "#beb280",
+          "#bfb380",
+          "#c0b47f",
+          "#c1b57f",
+          "#c2b57f",
+          "#c3b67f",
+          "#c4b77f",
+          "#c5b87e",
+          "#c6b87e",
+          "#c7b97e",
+          "#c8ba7e",
+          "#c9bb7d",
+          "#cabc7d",
+          "#cbbc7d",
+          "#ccbd7d",
+          "#cdbe7c",
+          "#cebf7c",
+          "#cfbf7c",
+          "#d0c07c",
+          "#d1c17b",
+          "#d2c27b",
+          "#d3c37b",
+          "#d4c37b",
+          "#d5c47a",
+          "#d6c57a",
+          "#d7c67a",
+          "#d8c679",
+          "#d9c779",
+          "#dac879",
+          "#dbc978",
+          "#dcca78",
+          "#ddca78",
+          "#decb77",
+          "#dfcc77",
+          "#e0cd77",
+          "#e1cd76",
+          "#e2ce76",
+          "#e3cf76",
+          "#e4d075",
+          "#e5d175",
+          "#e6d175",
+          "#e7d274",
+          "#e8d374",
+          "#e9d474",
+          "#ead573",
+          "#ebd573",
+          "#ecd672",
+          "#edd772",
+          "#eed871",
+          "#efd971",
+          "#f0d971",
+          "#f1da70",
+          "#f2db70",
+          "#f3dc6f",
+          "#f4dd6f",
+          "#f5dd6e",
+          "#f6de6e",
+          "#f7df6d",
+          "#f8e06d",
+          "#f9e16c",
+          "#fae16c",
+          "#fbe26b",
+          "#fce36b",
+          "#fde46a",
+          "#fee56a",
+          "#ffe569",
+          "#ffe66e",
+          "#ffe773",
+          "#ffe878",
+          "#ffe97e"
+        ],
+        "over": "#ea6878",
+        "under": "#b18e15"
+      },
+      "pal.cont.viridis@1": {
+        "colors": [
+          "#143065",
+          "#143066",
+          "#133166",
+          "#133267",
+          "#133368",
+          "#123468",
+          "#123469",
+          "#11356a",
+          "#11366a",
+          "#10376b",
+          "#10386c",
+          "#0f396c",
+          "#0f396d",
+          "#0e3a6e",
+          "#0d3b6e",
+          "#0d3c6f",
+          "#0c3d70",
+          "#0b3e70",
+          "#0b3e71",
+          "#093f72",
+          "#084072",
+          "#074173",
+          "#064274",
+          "#054374",
+          "#054375",
+          "#034475",
+          "#024576",
+          "#014677",
+          "#004777",
+          "#014877",
+          "#014977",
+          "#014978",
+          "#014a78",
+          "#004b79",
+          "#014c79",
+          "#004d79",
+          "#014e7a",
+          "#014e7b",
+          "#014f7a",
+          "#00507b",
+          "#01517b",
+          "#01527b",
+          "#02537b",
+          "#02537c",
+          "#00547d",
+          "#02557d",
+          "#01567d",
+          "#00577e",
+          "#02587e",
+          "#02587f",
+          "#01597f",
+          "#005a7f",
+          "#025b7f",
+          "#015c80",
+          "#015d80",
+          "#025d81",
+          "#035e81",
+          "#025f81",
+          "#026082",
+          "#016182",
+          "#006283",
+          "#016284",
+          "#036383",
+          "#026484",
+          "#026584",
+          "#026685",
+          "#016785",
+          "#026786",
+          "#016886",
+          "#006987",
+          "#006a87",
+          "#046b87",
+          "#056b88",
+          "#036c88",
+          "#036d88",
+          "#036e89",
+          "#036f89",
+          "#03708a",
+          "#04708b",
+          "#03718a",
+          "#03728b",
+          "#04738b",
+          "#04748c",
+          "#04758c",
+          "#05758d",
+          "#05768d",
+          "#00778e",
+          "#01788e",
+          "#01798e",
+          "#017a8f",
+          "#027b8f",
+          "#047b90",
+          "#037c90",
+          "#037d90",
+          "#047e90",
+          "#057f91",
+          "#008091",
+          "#018192",
+          "#038193",
+          "#038292",
+          "#048393",
+          "#058493",
+          "#008594",
+          "#018694",
+          "#038794",
+          "#058795",
+          "#058895",
+          "#018995",
+          "#028a96",
+          "#038b96",
+          "#058c96",
+          "#018d97",
+          "#028e97",
+          "#058e98",
+          "#068f97",
+          "#019098",
+          "#039198",
+          "#059298",
+          "#019399",
+          "#039499",
+          "#06949a",
+          "#01959a",
+          "#03969a",
+          "#06979a",
+          "#02989b",
+          "#04999b",
+          "#009a9b",
+          "#039b9b",
+          "#059c9b",
+          "#039d9c",
+          "#079d9d",
+          "#079e9c",
+          "#009f9c",
+          "#01a09c",
+          "#03a19c",
+          "#04a29c",
+          "#05a39c",
+          "#07a49c",
+          "#01a59c",
+          "#03a69c",
+          "#06a79c",
+          "#00a89c",
+          "#03a99b",
+          "#07a99c",
+          "#01aa9b",
+          "#04ab9b",
+          "#07ac9b",
+          "#0bad9b",
+          "#0eae9b",
+          "#11af9a",
+          "#14b09a",
+          "#16b19a",
+          "#19b19b",
+          "#1bb29a",
+          "#1eb399",
+          "#20b499",
+          "#22b599",
+          "#24b698",
+          "#28b698",
+          "#29b798",
+          "#2bb898",
+          "#2db997",
+          "#2fba97",
+          "#31bb96",
+          "#34bb96",
+          "#35bc96",
+          "#37bd95",
+          "#39be95",
+          "#3bbf95",
+          "#3fbf94",
+          "#3fc094",
+          "#42c193",
+          "#44c293",
+          "#46c392",
+          "#48c392",
+          "#4ac491",
+          "#4cc591",
+          "#4ec690",
+          "#50c690",
+          "#52c78f",
+          "#54c88f",
+          "#56c98e",
+          "#58c98e",
+          "#5aca8d",
+          "#5ccb8d",
+          "#5fcb8c",
+          "#60cc8c",
+          "#62cd8b",
+          "#64ce8a",
+          "#66ce8a",
+          "#68cf89",
+          "#6ad089",
+          "#6cd088",
+          "#6ed187",
+          "#70d287",
+          "#72d286",
+          "#74d385",
+          "#76d485",
+          "#78d484",
+          "#7bd583",
+          "#7dd683",
+          "#7fd682",
+          "#81d781",
+          "#83d780",
+          "#85d880",
+          "#87d97f",
+          "#89d97e",
+          "#8bda7d",
+          "#8ddb7d",
+          "#8fdb7c",
+          "#92dc7b",
+          "#94dc7a",
+          "#96dd7a",
+          "#98dd79",
+          "#9ade78",
+          "#9cdf77",
+          "#9edf76",
+          "#a0e075",
+          "#a3e075",
+          "#a5e174",
+          "#a7e173",
+          "#a9e272",
+          "#abe271",
+          "#ade370",
+          "#afe370",
+          "#b2e46f",
+          "#b4e46e",
+          "#b6e56d",
+          "#b8e56c",
+          "#bae66b",
+          "#bce66a",
+          "#bfe76a",
+          "#c1e769",
+          "#c3e768",
+          "#c5e867",
+          "#c7e866",
+          "#cae965",
+          "#cce964",
+          "#ceea64",
+          "#d0ea63",
+          "#d2ea62",
+          "#d5eb61",
+          "#d7eb60",
+          "#d9ec5f",
+          "#dbec5e",
+          "#ddec5e",
+          "#dfed5d",
+          "#e2ed5c",
+          "#e4ed5b",
+          "#e6ee5a",
+          "#e8ee5a",
+          "#eaee59",
+          "#edef58",
+          "#efef57",
+          "#f1ef56",
+          "#f3f056"
+        ],
+        "over": "#ea6878",
+        "under": "#b18e15"
+      },
+      "pal.step.cvd@1": {
+        "colors": [
+          "#01468c",
+          "#2a76c3",
+          "#67a3e0",
+          "#aecef1",
+          "#f5f5f5",
+          "#edcaa3",
+          "#e19956",
+          "#c9690c",
+          "#873d02"
+        ],
+        "over": "#ea6878",
+        "under": "#b18e15"
+      },
+      "pal.step.tol@1": {
+        "colors": [
+          "#18328a",
+          "#2757b6",
+          "#4381d2",
+          "#70aae0",
+          "#b0d3eb",
+          "#f5f5f5",
+          "#ebd2aa",
+          "#e3a36b",
+          "#d37131",
+          "#b74506",
+          "#872701"
+        ],
+        "over": "#ea6878",
+        "under": "#b18e15"
+      }
+    }
+  }
+}

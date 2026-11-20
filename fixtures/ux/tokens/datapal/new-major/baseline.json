@@ -1,0 +1,9 @@
+{
+  "digests": {
+    "pal.cont.cividis@1": "sha256:87ab857ee8dda176638eec705cca9387a968f488db5ba2a13913aad64ce9711d",
+    "pal.cont.viridis@1": "sha256:404eec97e8a66eb27a6e64610c36d396b9d750b38ba341b1f6975d87caa40b6e",
+    "pal.step.cvd@1": "sha256:98200d8f97a20896c9152a2d5906b8cee0eda28f9db7390845ee4b4da6e0c754",
+    "pal.step.tol@1": "sha256:de2692effb5695249397722a30898076f6d4237cbe53697a1e055c8e38ad5335"
+  },
+  "format": "palette-digests@1"
+}

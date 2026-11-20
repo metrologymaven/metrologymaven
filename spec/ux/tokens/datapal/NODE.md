@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-design]
 satisfies: [REQ-UX.TOKENS-006, REQ-UX.TOKENS-007]
 covers: []
 depends_on: [UX.SYSTEM.PKG]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # UX.TOKENS.DATAPAL: Deviation palette catalogue
@@ -70,6 +71,14 @@ The catalogue of data palettes used for deviation colour maps in the viewer and 
 ## Open questions
 
 - VIZ.OVERLAY.CMAP lists the same four palettes by name; it should resolve them by the IDs here (`uses_artifacts: [UX.TOKENS.DATAPAL]`, not editable from here).
+- As built: `catalogue.json` is `{ format: "palette-catalogue@1", default: "<ref>", palettes: ["<ref>", ..] }` and each palette lives in `tokens/palettes/<ref>.json` (`<ref>` = `<id>@<major>`); any other file in that directory is `PAL-SCHEMA`. The baseline is `{ format: "palette-digests@1", digests: { "<ref>": "sha256:.." } }`; `fixtures/ux/tokens/datapal/shipped-digests.json` holds the shipped digests.
+- As built: the shipped palettes are original, written by `fixtures/ux/tokens/datapal/make_palettes.py` from OKLCH paths. `pal.cont.viridis@1` and `pal.cont.cividis@1` keep the IDs of REQ-001 but are not the published viridis or cividis data; they are this project's maps built to the same published design goals (strictly rising lightness; cividis on the blue-yellow axis), and their `source` says so. Being project-made data they are `CC-BY-4.0` (LICENSE.md). `PAL-LICENCE` accepts `CC0-1.0` or `public-domain` for a palette from elsewhere (REQ-003) and `CC-BY-4.0` only when the source starts `original: `.
+- As built: perceptual rules are gated in `palettes-check` (as `STATUS-DISTANCE` is in `status-check`); `UX.TOKENS.CHECK` should repeat them as the release gate. Codes beyond the Design list: `PAL-LIGHTNESS` (strict CIELAB L* monotonicity per arm, and along a continuous map), `PAL-DELTA <ref> <a> <b>` (CIEDE2000 at least 10 under normal vision and Machado 2009 protanopia, deuteranopia, tritanopia for adjacent steps, mirrored steps `c-k`/`c+k` so the arms stay apart, and `under`/`over` against the end colours), `PAL-OOT`, `PAL-CONTRAST` and `PAL-CLAIMED` (below). `PAL-CENTRE` also fails a centre step with OKLab chroma above 0.02 [unverified threshold].
+- As built (closes the out-of-tolerance item UX.TOKENS.STATUS deferred here): every palette's `under` and `over` are the out-of-tolerance region colours. `PAL-OOT` requires CIEDE2000 at least 20 from `sem.status.conforms` in every theme under the four vision conditions (REQ-UX.TOKENS-009); the shipped pair (ochre `#b18e15`, coral `#ea6878`, shared by all four palettes) gives at least 23.28. Because CONFORMS is azure across lightness 29 to 68 (CIELAB L*), no blue, violet, teal or green colour can meet this, so both out-of-tolerance colours are warm even on the blue arm's side. `PAL-CONTRAST` requires them to reach 3:1 on `sem.surface.base` in every theme (WCAG 2.2 SC 1.4.11); shipped 3.11. The contrast of the in-range steps on the surfaces is measured and recorded in `expected.json`, not gated: a diverging map with a light centre cannot reach 3:1 on both a white and a near-black surface, so legend swatches need a border (UX.REPORT.CHART, VIZ.OVERLAY.CMAP).
+- As built: UX.TOKENS.COLOR's claimed-versus-measured floor is extended to data colours: `PAL-CLAIMED <ref> <theme>` fails any palette colour within OKLab 0.10 of a claimed semantic role in that theme. Shipped minimum 0.1087.
+- As built: shipped margins: least step difference 11.98 (`pal.step.cvd@1`) and 10.80 (`pal.step.tol@1`); continuous maps rise by at least 0.05 L* per sample.
+- No categorical palette: the spec names none. Distinguishability under colour-vision deficiency is measured on the stepped palettes (adjacent and mirrored steps).
+- AC-4 pending UX.TOKENS.CHECK: until it exists, the lightness and ΔE rules are shown by `palettes-check` and by `tests/tokens_datapal.rs`, matched to the independent oracle `fixtures/ux/tokens/datapal/make_fixtures.py` (28 fixtures, hand-labelled; perceptual labels recomputed by the oracle).
 
 ## Children
 

@@ -1,0 +1,24 @@
+{
+  "centre_index": 4,
+  "colors": [
+    "#18328a",
+    "#2757b6",
+    "#4381d2",
+    "#70aae0",
+    "#b0d3eb",
+    "#f5f5f5",
+    "#ebd2aa",
+    "#e3a36b",
+    "#d37131",
+    "#b74506",
+    "#872701"
+  ],
+  "digest": "sha256:de2692effb5695249397722a30898076f6d4237cbe53697a1e055c8e38ad5335",
+  "id": "pal.step.tol",
+  "kind": "stepped",
+  "licence": "CC-BY-4.0",
+  "over": "#ea6878",
+  "source": "original: generated for this project by fixtures/ux/tokens/datapal/make_palettes.py in OKLCH, a finer stepped tolerance map with a neutral centre and blue and orange arms",
+  "under": "#b18e15",
+  "version": 1
+}
