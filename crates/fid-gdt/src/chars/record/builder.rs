@@ -2,10 +2,14 @@
 
 use super::fields::{AlgorithmRef, EvaluationBasis, InputDigests, KernelVersion, Measurand, Quantity, RunId};
 use super::RecordError;
-use crate::chars::dprof::CharId;
+use crate::chars::dprof::{CharId, ProfileDoc};
+use crate::chars::interp::{
+    register_cvalue, Interpretation, InterpretationPin, Interpreted, RegisterView, RuleUse, Uninterpreted,
+};
 use crate::chars::spec::GoverningSpec;
+use crate::dmt_flow::status::Purpose;
 use fid_canon::CValue;
-use fid_gps::dmt::DmtKey;
+use fid_gps::dmt::{DmtKey, DmtRow};
 use fid_kdec::{Decision, EvidenceBasis, NotDecidableReason as UncReason, Outcome, RuleId, RuleRef};
 use fid_kunc::{CoverageInterval, EvidenceClass, Expanded, Method, Uec0Reason, UncertaintyStatement};
 use fid_types::Digest;
@@ -277,9 +281,11 @@ impl RecordDecision {
 
 // ------------------------------------------------------------------ record
 
-/// A finished ResultRecord: every CONSTITUTION §5 field plus the three DMT identifiers, its
-/// canonical JSON and the SHA-256 of that JSON. Built only by
-/// [`ResultRecordBuilder::finish`].
+/// A finished ResultRecord: every CONSTITUTION §5 field plus the three DMT identifiers, the
+/// interpretation block of `GDT.CHAR.INTERP` (`interpretation`, `interpretation_rules`,
+/// `interpretation_register`), its canonical JSON and the SHA-256 of that JSON. Built only by
+/// [`ResultRecordBuilder::finish`]; the canonical JSON always holds `interpretation`, and
+/// there is no other serialisation.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResultRecord {
     run: RunId,
@@ -297,6 +303,10 @@ pub struct ResultRecord {
     dmt_row: DmtKey,
     operator_chain_digest: Digest,
     dmt_digest: Digest,
+    interpretation: Interpretation,
+    interpretation_rules: Vec<RuleUse>,
+    interpretation_register: Option<Digest>,
+    interpretation_pin: InterpretationPin,
     canonical: Vec<u8>,
     digest: Digest,
 }
@@ -362,6 +372,22 @@ impl ResultRecord {
     pub fn dmt_digest(&self) -> Digest {
         self.dmt_digest
     }
+    /// `provisional` or `signed_off` (`GDT.CHAR.INTERP` REQ-004).
+    pub fn interpretation(&self) -> Interpretation {
+        self.interpretation
+    }
+    /// The rules used, sorted by (kind, rule ID) (`GDT.CHAR.INTERP` REQ-001).
+    pub fn interpretation_rules(&self) -> &[RuleUse] {
+        &self.interpretation_rules
+    }
+    /// Digest of the status register consulted, `None` for `none`.
+    pub fn interpretation_register(&self) -> Option<Digest> {
+        self.interpretation_register
+    }
+    /// What the evaluating command pins in its journal entry (`GDT.CHAR.INTERP` REQ-007).
+    pub fn interpretation_pin(&self) -> &InterpretationPin {
+        &self.interpretation_pin
+    }
     /// The canonical RFC 8785 bytes.
     pub fn canonical_json(&self) -> &[u8] {
         &self.canonical
@@ -393,6 +419,12 @@ impl ResultRecord {
         m.insert("dmt_row".to_owned(), s(self.dmt_row.as_str()));
         m.insert("operator_chain_digest".to_owned(), s(self.operator_chain_digest.as_str()));
         m.insert("dmt_digest".to_owned(), s(self.dmt_digest.as_str()));
+        m.insert("interpretation".to_owned(), s(self.interpretation.as_str()));
+        m.insert(
+            "interpretation_rules".to_owned(),
+            CValue::Arr(self.interpretation_rules.iter().map(RuleUse::to_cvalue).collect()),
+        );
+        m.insert("interpretation_register".to_owned(), register_cvalue(self.interpretation_register));
         CValue::Obj(m)
     }
 }
@@ -405,8 +437,13 @@ impl ResultRecord {
 /// (`basis_changed`, `uncertainty_changed`, `uec0_with_value`, `field_changed{field}`). The
 /// first error is kept and returned by [`ResultRecordBuilder::finish`]; later calls do not
 /// replace it.
+///
+/// The type parameter is the interpretation state (`GDT.CHAR.INTERP`): a builder starts
+/// [`Uninterpreted`], which has no `finish`; [`ResultRecordBuilder::interpretation`] turns it
+/// into a builder holding the [`Interpreted`] block, which can finish. So no code path can
+/// build or serialise a record without its `interpretation` field.
 #[derive(Debug, Clone)]
-pub struct ResultRecordBuilder {
+pub struct ResultRecordBuilder<I = Uninterpreted> {
     run: RunId,
     characteristic: CharId,
     measurand: Option<Measurand>,
@@ -423,6 +460,7 @@ pub struct ResultRecordBuilder {
     operator_chain_digest: Option<Digest>,
     dmt_digest: Option<Digest>,
     error: Option<RecordError>,
+    interp: I,
 }
 
 fn put<T: PartialEq>(slot: &mut Option<T>, v: T, changed: RecordError, error: &mut Option<RecordError>) {
@@ -441,7 +479,7 @@ fn need<T>(v: Option<T>, field: &'static str) -> Result<T, RecordError> {
     v.ok_or(RecordError::IncompleteResult { field })
 }
 
-impl ResultRecordBuilder {
+impl ResultRecordBuilder<Uninterpreted> {
     /// Starts the record of `characteristic` in `run`.
     pub fn new(run: RunId, characteristic: CharId) -> ResultRecordBuilder {
         ResultRecordBuilder {
@@ -461,9 +499,74 @@ impl ResultRecordBuilder {
             operator_chain_digest: None,
             dmt_digest: None,
             error: None,
+            interp: Uninterpreted,
         }
     }
 
+    /// The interpretation block (`GDT.CHAR.INTERP`): `rows` are the resolved DMT rows the
+    /// evaluation used (primary row plus datum-frame, size and material-condition rows),
+    /// `profile` the characteristic's defaults profile, `register` the status register view
+    /// (verified for [`Purpose::Evaluate`]; any other view labels every rule `provisional`).
+    /// Each digest is recomputed here from the row or profile; no digest is taken from the
+    /// caller. Rows over [`MAX_RULE_ROWS`](crate::chars::interp::MAX_RULE_ROWS) are
+    /// `invalid_field{interpretation_rules}`. [`ResultRecordBuilder::finish`] checks the rest.
+    pub fn interpretation(
+        self,
+        rows: &[&DmtRow],
+        profile: Option<&ProfileDoc>,
+        register: &RegisterView,
+    ) -> ResultRecordBuilder<Interpreted> {
+        let interp = Interpreted::compute(rows, profile, register, Purpose::Evaluate);
+        ResultRecordBuilder {
+            run: self.run,
+            characteristic: self.characteristic,
+            measurand: self.measurand,
+            evaluation_basis: self.evaluation_basis,
+            value: self.value,
+            uncertainty: self.uncertainty,
+            decision: self.decision,
+            spec: self.spec,
+            algorithm: self.algorithm,
+            kernel_version: self.kernel_version,
+            input_digests: self.input_digests,
+            journal_entry: self.journal_entry,
+            dmt_row: self.dmt_row,
+            operator_chain_digest: self.operator_chain_digest,
+            dmt_digest: self.dmt_digest,
+            error: self.error,
+            interp,
+        }
+    }
+}
+
+impl ResultRecordBuilder<Uninterpreted> {
+    /// Test hook: a builder holding a hand-made block (the signed_off branch no register can
+    /// reach today).
+    #[cfg(test)]
+    pub(crate) fn with_interpreted(self, interp: Interpreted) -> ResultRecordBuilder<Interpreted> {
+        ResultRecordBuilder {
+            run: self.run,
+            characteristic: self.characteristic,
+            measurand: self.measurand,
+            evaluation_basis: self.evaluation_basis,
+            value: self.value,
+            uncertainty: self.uncertainty,
+            decision: self.decision,
+            spec: self.spec,
+            algorithm: self.algorithm,
+            kernel_version: self.kernel_version,
+            input_digests: self.input_digests,
+            journal_entry: self.journal_entry,
+            dmt_row: self.dmt_row,
+            operator_chain_digest: self.operator_chain_digest,
+            dmt_digest: self.dmt_digest,
+            error: self.error,
+            interp,
+        }
+    }
+}
+
+impl<I> ResultRecordBuilder<I> {
     fn fail(&mut self, e: RecordError) {
         if self.error.is_none() {
             self.error = Some(e);
@@ -579,7 +682,9 @@ impl ResultRecordBuilder {
     pub fn resolved(self, r: &fid_gps::resolve::Resolved) -> Self {
         self.dmt_row(r.row().clone()).operator_chain_digest(r.chain_digest()).dmt_digest(r.dmt_digest())
     }
+}
 
+impl ResultRecordBuilder<Interpreted> {
     /// Finishes the record. In order: the first error kept by a setter; the first missing
     /// field (`incomplete_result{field}`) in the order `measurand`, `evaluation_basis`,
     /// `value`, `uncertainty`, `decision`, `spec`, `algorithm`, `kernel_version`,
@@ -588,7 +693,10 @@ impl ResultRecordBuilder {
     /// `decision_basis_mismatch` when the UNC decision rests on a statement other than the
     /// record's, or rests on none while the record carries one (except `NOT_DECIDABLE` with
     /// `rule_missing` or `label_only`; GDT's own `no_rule_bound` and `unc_no_decision` carry
-    /// no UNC decision and so no basis). Then the canonical JSON and its digest.
+    /// no UNC decision and so no basis). Then the interpretation checks of `GDT.CHAR.INTERP`:
+    /// `incomplete_result{interpretation_rules}` when no rows were passed, the primary row
+    /// (`dmt_row`) is not among them, or the defaults profile is missing or is not the spec's;
+    /// `rule_not_admitted{rule}` for a `draft` rule. Then the canonical JSON and its digest.
     pub fn finish(self) -> Result<ResultRecord, RecordError> {
         if let Some(e) = self.error {
             return Err(e);
@@ -625,6 +733,7 @@ impl ResultRecordBuilder {
                 None => {}
             }
         }
+        let block = self.interp.finish(dmt_row.as_str(), spec.defaults_profile())?;
         let mut record = ResultRecord {
             run: self.run,
             characteristic: self.characteristic,
@@ -641,6 +750,10 @@ impl ResultRecordBuilder {
             dmt_row,
             operator_chain_digest,
             dmt_digest,
+            interpretation: block.interpretation,
+            interpretation_rules: block.rules,
+            interpretation_register: block.register,
+            interpretation_pin: block.pin,
             canonical: Vec::new(),
             digest: Digest::TOMBSTONE,
         };

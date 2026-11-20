@@ -4,18 +4,22 @@
 //! `fixtures/gdt/record/make_cases.py`; error paths are hand-labelled from the leaf's rules.
 //! The uncertainty statements are the `UNC.UEC.STMT` fixtures. The "UNC rule stub" of AC-1 is
 //! this file: it plays the UNC decision rule and returns a `fid_kdec::Decision`. AC-7 itself
-//! is the `compile_fail` doctest on `fid_gdt::chars::record`. Synthetic data only.
+//! is the `compile_fail` doctest on `fid_gdt::chars::record`. Synthetic data only. Every
+//! record carries the interpretation block of `GDT.CHAR.INTERP`, built here with no status
+//! register (the block itself is tested in `tests/interp.rs`).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::CValue;
-use fid_gdt::chars::dprof::CharId;
+use fid_gdt::chars::dprof::{parse_profile, CharId, KeyVocabulary, ProfileDoc};
+use fid_gdt::chars::interp::RegisterView;
 use fid_gdt::chars::record::{
-    command_def, get_result, invoke_cli, invoke_mcp, AlgorithmRef, EvaluationBasis, InputDigests, KernelVersion,
-    Measurand, NotDecidableReason, Quantity, RecordError, ResultRecord, ResultRecordBuilder, ResultStore, RunId,
-    Uncertainty, GET_RESULT_CLI, GET_RESULT_COMMAND, GET_RESULT_MCP,
+    command_def, get_result, invoke_cli, invoke_mcp, AlgorithmRef, EvaluationBasis, InputDigests, Interpreted,
+    KernelVersion, Measurand, NotDecidableReason, Quantity, RecordError, ResultRecord, ResultRecordBuilder,
+    ResultStore, RunId, Uncertainty, GET_RESULT_CLI, GET_RESULT_COMMAND, GET_RESULT_MCP,
 };
 use fid_gdt::chars::spec::{GoverningSpec, SpecError};
-use fid_gps::dmt::DmtKey;
+use fid_gps::dmt::row::row_from_value;
+use fid_gps::dmt::{DmtKey, DmtRow};
 use fid_io_reg::Principal;
 use fid_kdec::{Catalog, Decision, EvidenceBasis, NotDecidableReason as UncReason, Outcome, RuleRef};
 use fid_kunc::{Uec0Reason, UncertaintyStatement};
@@ -75,14 +79,41 @@ fn unc_stub(rule: &RuleRef, outcome: Outcome, stmt: &UncertaintyStatement) -> De
     Decision::new(Some(&rule), outcome, Some(EvidenceBasis::of(stmt).unwrap())).unwrap()
 }
 
-/// Every field from the inputs except `skip`; uncertainty and decision as given.
+const GDT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/gdt/");
+
+/// The synthetic flatness row `dmt_row` names (`fixtures/gdt/status/rows.json`, row `a`).
+fn flatness_row() -> DmtRow {
+    let v = fid_canon::parse(&std::fs::read(format!("{GDT}status/rows.json")).unwrap()).unwrap();
+    let CValue::Obj(o) = v else { panic!("rows") };
+    let Some(CValue::Obj(rows)) = o.get("rows") else { panic!("rows") };
+    row_from_value(rows.get("a").unwrap()).unwrap()
+}
+
+/// The defaults profile the spec names (`fixtures/gdt/dprof/asme_placeholder_1.0.0.json`).
+fn profile() -> ProfileDoc {
+    let v = fid_canon::parse(&std::fs::read(format!("{GDT}dprof/vocabulary.json")).unwrap()).unwrap();
+    let CValue::Obj(o) = v else { panic!("vocabulary") };
+    let Some(CValue::Arr(keys)) = o.get("keys") else { panic!("keys") };
+    let keys: Vec<&str> = keys
+        .iter()
+        .map(|k| match k {
+            CValue::Str(s) => s.as_str(),
+            _ => panic!("key"),
+        })
+        .collect();
+    let vocab = KeyVocabulary::new(keys).unwrap();
+    parse_profile(&std::fs::read(format!("{GDT}dprof/asme_placeholder_1.0.0.json")).unwrap(), &vocab).unwrap()
+}
+
+/// Every field from the inputs except `skip`; uncertainty and decision as given; the
+/// interpretation block with no register.
 fn builder_with(
     o: &Obj,
     skip: &str,
     u: Option<Uncertainty>,
     bound: Option<&RuleRef>,
     d: Option<Decision>,
-) -> ResultRecordBuilder {
+) -> ResultRecordBuilder<Interpreted> {
     let mut b =
         ResultRecordBuilder::new(RunId::parse(s(o, "run")).unwrap(), CharId::parse(s(o, "characteristic")).unwrap());
     let bits = u64::from_str_radix(s(o, "value").trim_start_matches("0x"), 16).unwrap();
@@ -135,11 +166,12 @@ fn builder_with(
     if skip != "dmt_digest" {
         b = b.dmt_digest(digest(s(o, "dmt_digest")));
     }
-    b
+    let row = flatness_row();
+    b.interpretation(&[&row], Some(&profile()), &RegisterView::none())
 }
 
 /// The AC-1 builder: UEC-2 statement, stub rule returning CONFORMS.
-fn ac1_builder(skip: &str) -> ResultRecordBuilder {
+fn ac1_builder(skip: &str) -> ResultRecordBuilder<Interpreted> {
     let o = inputs();
     let stmt = statement(s(&o, "uncertainty_statement"));
     let rule = stub_rule(&o);

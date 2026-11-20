@@ -1,0 +1,466 @@
+{
+ "cases": {
+  "currency_r1_stale": {
+   "expect": {
+    "interpretation": "provisional",
+    "interpretation_register": "sha256:6be0f9fb2d6466df456345266c0e7c74144af645d9e1b8bf4323531947544388",
+    "interpretation_rules": [
+     {
+      "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+      "kind": "dmt_row",
+      "reason": "unverified_register",
+      "revision": null,
+      "rule": "dmt:asme/flatness/none@1",
+      "status": "provisional"
+     },
+     {
+      "content_digest": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "kind": "profile",
+      "reason": "unverified_register",
+      "revision": 1,
+      "rule": "dp:asme-y14.5-2018@1.0.0",
+      "status": "provisional"
+     }
+    ],
+    "verification": "stale_register"
+   },
+   "journal": "currency/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "currency/published_v1.json",
+   "profile": true,
+   "published": "currency/published_v2.json",
+   "register": "currency/register_r1.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat"
+   ]
+  },
+  "currency_r1_when_latest": {
+   "expect": {
+    "interpretation": "provisional",
+    "interpretation_register": "sha256:6be0f9fb2d6466df456345266c0e7c74144af645d9e1b8bf4323531947544388",
+    "interpretation_rules": [
+     {
+      "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+      "kind": "dmt_row",
+      "reason": "awaiting_review",
+      "revision": 1,
+      "rule": "dmt:asme/flatness/none@1",
+      "status": "provisional"
+     },
+     {
+      "content_digest": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "kind": "profile",
+      "reason": "not_in_register",
+      "revision": 1,
+      "rule": "dp:asme-y14.5-2018@1.0.0",
+      "status": "provisional"
+     }
+    ],
+    "verification": "verified"
+   },
+   "journal": "currency/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "currency/published_v1.json",
+   "profile": true,
+   "published": "currency/published_v1.json",
+   "register": "currency/register_r1.json",
+   "replay_later_list": {
+    "outcome": "IDENTICAL",
+    "prior": "currency/published_v1.json",
+    "published": "currency/published_v2.json"
+   },
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat"
+   ]
+  },
+  "currency_r2_latest": {
+   "expect": {
+    "interpretation": "provisional",
+    "interpretation_register": "sha256:c81c6541edd2b45438a285871055e315d63fbb308092940d878643487a4e2283",
+    "interpretation_rules": [
+     {
+      "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+      "kind": "dmt_row",
+      "reason": null,
+      "revision": 1,
+      "rule": "dmt:asme/flatness/none@1",
+      "status": "signed_off"
+     },
+     {
+      "content_digest": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "kind": "profile",
+      "reason": "no_signoff_path",
+      "revision": 1,
+      "rule": "dp:asme-y14.5-2018@1.0.0",
+      "status": "provisional"
+     }
+    ],
+    "verification": "verified"
+   },
+   "journal": "currency/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "currency/published_v1.json",
+   "profile": true,
+   "published": "currency/published_v2.json",
+   "register": "currency/register_r2.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat"
+   ]
+  },
+  "currency_rewritten_list": {
+   "expect": {
+    "interpretation": "provisional",
+    "interpretation_register": "sha256:c81c6541edd2b45438a285871055e315d63fbb308092940d878643487a4e2283",
+    "interpretation_rules": [
+     {
+      "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+      "kind": "dmt_row",
+      "reason": "unverified_register",
+      "revision": null,
+      "rule": "dmt:asme/flatness/none@1",
+      "status": "provisional"
+     },
+     {
+      "content_digest": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "kind": "profile",
+      "reason": "unverified_register",
+      "revision": 1,
+      "rule": "dp:asme-y14.5-2018@1.0.0",
+      "status": "provisional"
+     }
+    ],
+    "verification": "published_unreadable"
+   },
+   "journal": "currency/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "currency/published_v1.json",
+   "profile": true,
+   "published": "currency/published_rewritten.json",
+   "register": "currency/register_r2.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat"
+   ]
+  },
+  "draft_row": {
+   "expect": {
+    "error": "rule_not_admitted{dmt:asme/position/mmc@1}"
+   },
+   "journal": "draft_row/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "draft_row/published.json",
+   "profile": true,
+   "published": "draft_row/published.json",
+   "register": "draft_row/register.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat",
+    "pos"
+   ]
+  },
+  "flatness_signed": {
+   "expect": {
+    "interpretation": "provisional",
+    "interpretation_register": "sha256:217a12695f7f4b3dba3f1be5c6eddb305eef8b72019884db039455f7ccfe33dc",
+    "interpretation_rules": [
+     {
+      "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+      "kind": "dmt_row",
+      "reason": null,
+      "revision": 1,
+      "rule": "dmt:asme/flatness/none@1",
+      "status": "signed_off"
+     },
+     {
+      "content_digest": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "kind": "profile",
+      "reason": "no_signoff_path",
+      "revision": 1,
+      "rule": "dp:asme-y14.5-2018@1.0.0",
+      "status": "provisional"
+     }
+    ],
+    "verification": "verified"
+   },
+   "journal": "flatness_signed/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "flatness_signed/published.json",
+   "profile": true,
+   "published": "flatness_signed/published.json",
+   "register": "flatness_signed/register.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat"
+   ]
+  },
+  "foreign_roster": {
+   "expect": {
+    "interpretation": "provisional",
+    "interpretation_register": "sha256:8fbadce9506db7cb4266bb6166fccd7c146ef5f6e495c2697a88deacc6a41a14",
+    "interpretation_rules": [
+     {
+      "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+      "kind": "dmt_row",
+      "reason": "unverified_register",
+      "revision": null,
+      "rule": "dmt:asme/flatness/none@1",
+      "status": "provisional"
+     },
+     {
+      "content_digest": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "kind": "profile",
+      "reason": "unverified_register",
+      "revision": 1,
+      "rule": "dp:asme-y14.5-2018@1.0.0",
+      "status": "provisional"
+     }
+    ],
+    "verification": "foreign_roster"
+   },
+   "journal": "flatness_signed/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "flatness_signed/published.json",
+   "profile": true,
+   "published": "flatness_signed/published.json",
+   "register": "foreign_roster/register.json",
+   "rosters": [
+    "roster.json",
+    "roster_foreign.json"
+   ],
+   "rows": [
+    "flat"
+   ]
+  },
+  "forged_register": {
+   "expect": {
+    "interpretation": "provisional",
+    "interpretation_register": "sha256:01a4efadc1e2b6e25173b185b8b2e828e94ca833fc66be347efe806e6bdde816",
+    "interpretation_rules": [
+     {
+      "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+      "kind": "dmt_row",
+      "reason": "unverified_register",
+      "revision": null,
+      "rule": "dmt:asme/flatness/none@1",
+      "status": "provisional"
+     },
+     {
+      "content_digest": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "kind": "profile",
+      "reason": "unverified_register",
+      "revision": 1,
+      "rule": "dp:asme-y14.5-2018@1.0.0",
+      "status": "provisional"
+     }
+    ],
+    "verification": "register_mismatch"
+   },
+   "journal": "flatness_signed/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "flatness_signed/published.json",
+   "profile": true,
+   "published": "flatness_signed/published.json",
+   "register": "forged_register/register.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat"
+   ]
+  },
+  "missing_profile": {
+   "expect": {
+    "error": "incomplete_result{interpretation_rules}"
+   },
+   "journal": "flatness_signed/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "flatness_signed/published.json",
+   "profile": false,
+   "published": "flatness_signed/published.json",
+   "register": "flatness_signed/register.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat"
+   ]
+  },
+  "no_register": {
+   "expect": {
+    "interpretation": "provisional",
+    "interpretation_register": "none",
+    "interpretation_rules": [
+     {
+      "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+      "kind": "dmt_row",
+      "reason": "no_register",
+      "revision": null,
+      "rule": "dmt:asme/flatness/none@1",
+      "status": "provisional"
+     },
+     {
+      "content_digest": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "kind": "profile",
+      "reason": "no_register",
+      "revision": 1,
+      "rule": "dp:asme-y14.5-2018@1.0.0",
+      "status": "provisional"
+     }
+    ],
+    "verification": "none"
+   },
+   "journal": "flatness_signed/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "flatness_signed/published.json",
+   "profile": true,
+   "published": "flatness_signed/published.json",
+   "register": null,
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat"
+   ]
+  },
+  "no_rule_list": {
+   "expect": {
+    "error": "incomplete_result{interpretation_rules}"
+   },
+   "journal": "flatness_signed/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "flatness_signed/published.json",
+   "profile": true,
+   "published": "flatness_signed/published.json",
+   "register": "flatness_signed/register.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": []
+  },
+  "position_mmc_mixed": {
+   "expect": {
+    "interpretation": "provisional",
+    "interpretation_register": "sha256:d9a1340559a470243dc810432607b6a895ca1f83ee2eb6bb852b83104138a476",
+    "interpretation_rules": [
+     {
+      "content_digest": "sha256:477d7a04899de5c564c02644a5a3c0dfaea229f7130bcfb158a0777efa0feba7",
+      "kind": "dmt_row",
+      "reason": null,
+      "revision": 1,
+      "rule": "dmt:asme/datum_frame/rmb@1",
+      "status": "signed_off"
+     },
+     {
+      "content_digest": "sha256:54965684e11c180ee8051bacba17edcb1814ee7678d59eac64158b9f3a540fe1",
+      "kind": "dmt_row",
+      "reason": null,
+      "revision": 1,
+      "rule": "dmt:asme/position/mmc@1",
+      "status": "signed_off"
+     },
+     {
+      "content_digest": "sha256:e56a7c67a32efc2142687c1e53ecd9239bae012fe0358de6ba373d27ad580235",
+      "kind": "dmt_row",
+      "reason": null,
+      "revision": 1,
+      "rule": "dmt:asme/size/none@1",
+      "status": "signed_off"
+     },
+     {
+      "content_digest": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "kind": "profile",
+      "reason": "no_signoff_path",
+      "revision": 1,
+      "rule": "dp:asme-y14.5-2018@1.0.0",
+      "status": "provisional"
+     }
+    ],
+    "verification": "verified"
+   },
+   "journal": "position_mmc_mixed/journal.json",
+   "primary": "dmt:asme/position/mmc@1",
+   "prior": "position_mmc_mixed/published.json",
+   "profile": true,
+   "published": "position_mmc_mixed/published.json",
+   "register": "position_mmc_mixed/register.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "pos",
+    "drf",
+    "size"
+   ]
+  },
+  "primary_absent": {
+   "expect": {
+    "error": "incomplete_result{interpretation_rules}"
+   },
+   "journal": "flatness_signed/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "flatness_signed/published.json",
+   "profile": true,
+   "published": "flatness_signed/published.json",
+   "register": "flatness_signed/register.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "pos"
+   ]
+  },
+  "tampered_row": {
+   "expect": {
+    "interpretation": "provisional",
+    "interpretation_register": "sha256:217a12695f7f4b3dba3f1be5c6eddb305eef8b72019884db039455f7ccfe33dc",
+    "interpretation_rules": [
+     {
+      "content_digest": "sha256:9a8499526f900917b06e11d9902fe4d7beb7e8dfb615da850045c195ce6ebd12",
+      "kind": "dmt_row",
+      "reason": "not_in_register",
+      "revision": null,
+      "rule": "dmt:asme/flatness/none@1",
+      "status": "provisional"
+     },
+     {
+      "content_digest": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "kind": "profile",
+      "reason": "no_signoff_path",
+      "revision": 1,
+      "rule": "dp:asme-y14.5-2018@1.0.0",
+      "status": "provisional"
+     }
+    ],
+    "verification": "verified"
+   },
+   "journal": "flatness_signed/journal.json",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "flatness_signed/published.json",
+   "profile": true,
+   "published": "flatness_signed/published.json",
+   "register": "flatness_signed/register.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat_tampered"
+   ]
+  }
+ },
+ "profile_ref": "dp:asme-y14.5-2018@1.0.0#sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc"
+}

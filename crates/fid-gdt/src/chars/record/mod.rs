@@ -70,6 +70,26 @@
 //! for a call of fid-kdec's decision constructor and for a written `CONFORMS`, `NONCONFORMS` or `INDETERMINATE`
 //! outcome, and fails on either.
 //!
+//! # Interpretation block (`GDT.CHAR.INTERP`)
+//!
+//! Every record also carries `interpretation` (`provisional` | `signed_off`),
+//! `interpretation_rules` and `interpretation_register` (see [`crate::chars::interp`]). The
+//! builder is typed by its interpretation state: only a builder that went through
+//! [`ResultRecordBuilder::interpretation`] has `finish`, so a record without its
+//! `interpretation` field cannot be built or serialised. This does not build
+//! (`tests/compile_fail/record_interp.rs`):
+//!
+#![doc = "```compile_fail"]
+#![doc = include_str!("../../../tests/compile_fail/record_interp.rs")]
+#![doc = "```"]
+//!
+//! and its control, which differs only in the builder's type state, builds
+//! (`tests/compile_fail/record_interp_control.rs`):
+//!
+#![doc = "```"]
+#![doc = include_str!("../../../tests/compile_fail/record_interp_control.rs")]
+#![doc = "```"]
+//!
 //! Nothing here panics on any input, and every input is bounded.
 
 mod builder;
@@ -77,19 +97,23 @@ mod command;
 pub mod fields;
 mod store;
 
+pub use crate::chars::interp::{Interpreted, Uninterpreted};
 pub use builder::{
     NotDecidableReason, RecordDecision, ResultRecord, ResultRecordBuilder, Uncertainty, DECISION_SOURCE_GDT,
     DECISION_SOURCE_UNC, RECORD_SCHEMA,
 };
-pub use command::{command_def, invoke_cli, invoke_mcp, GET_RESULT_CLI, GET_RESULT_MCP, MAX_PARAMS_BYTES};
+pub use command::{
+    command_def, invoke_cli, invoke_mcp, invoke_mcp_tool, render_text, McpToolResult, GET_RESULT_CLI, GET_RESULT_MCP,
+    MAX_PARAMS_BYTES,
+};
 pub use fields::{AlgorithmRef, EvaluationBasis, InputDigests, KernelVersion, Measurand, Quantity, RunId};
-pub use store::{get_result, ResultStore, GET_RESULT_COMMAND, MAX_RECORDS};
+pub use store::{get_record, get_result, ResultStore, GET_RESULT_COMMAND, MAX_RECORDS};
 
 use std::fmt;
 
 /// Errors of the builder, the store and `gdt.get_result@1`. [`RecordError::code`] is the
 /// stable code.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RecordError {
     /// `incomplete_result{field}`: a required field was never set.
     IncompleteResult {
@@ -141,6 +165,12 @@ pub enum RecordError {
     StoreFull,
     /// `canonical_encoding`: the record could not be written as canonical JSON.
     CanonicalEncoding,
+    /// `rule_not_admitted{rule}`: the evaluation used a rule whose status is `draft`
+    /// (`GDT.CHAR.INTERP` REQ-005); no record is emitted.
+    RuleNotAdmitted {
+        /// The rule ID (DMT key or profile ID).
+        rule: String,
+    },
 }
 
 impl RecordError {
@@ -163,6 +193,7 @@ impl RecordError {
             RecordError::NotFound => "not_found",
             RecordError::StoreFull => "store_full",
             RecordError::CanonicalEncoding => "canonical_encoding",
+            RecordError::RuleNotAdmitted { .. } => "rule_not_admitted",
         }
     }
 
@@ -176,11 +207,19 @@ impl RecordError {
             _ => None,
         }
     }
+
+    /// The rule a `rule_not_admitted` names.
+    pub fn rule(&self) -> Option<&str> {
+        match self {
+            RecordError::RuleNotAdmitted { rule } => Some(rule),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for RecordError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.detail() {
+        match self.detail().or(self.rule()) {
             Some(d) => write!(f, "{}{{{d}}}", self.code()),
             None => f.write_str(self.code()),
         }

@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-gdt]
 satisfies: [REQ-GDT.CHAR-010, REQ-GDT.CHAR-011]
 covers: []
 depends_on: [GDT.CHAR.RECORD, GDT.CHAR.DPROF]
@@ -93,7 +94,11 @@ Synthetic rows, records, registers, journals, rosters and `gdt-published/v1` fil
 
 - Stored records are immutable: a rule signed off later does not relabel an older provisional record. Re-evaluation produces a new record with the new status. Whether report views also show "rule since signed off" next to an old record is for `RPT`.
 - The ResultRecord types move to an L0 schema crate (D-035, noted on `GDT.CHAR.RECORD`); the three fields move with them.
-- Registers are stored by digest in the project's register store so replay can find them; the store is the same content-addressed store that holds pinned DMT tables.
+- Registers are stored by digest in the project's register store so replay can find them; the store is the same content-addressed store that holds pinned DMT tables. As built, `RegisterStore` is an in-memory, content-addressed stand-in with the same lookup contract; wiring it to the project store is for the evaluating commands.
+- **AC-1 and the signed_off branch (as built):** `GDT.RES.STATUS` REQ-006 labels every defaults profile `provisional`/`no_signoff_path` until the profile sign-off key (`GDT.RES.ROWASME.DPROF`) exists, so no verified register can make a record `signed_off` today: AC-1's fixture yields a signed-off flatness row and a provisional record. The `signed_off` aggregate, its CLI line and `requires_provisional_label == false` are tested with a hand-made block inside the crate; they become reachable end to end with that key.
+- **Revision when the register has no entry (as built):** `RuleUse.revision` is the register entry's revision, `1` for a profile (profiles are immutable), and `null` for a row the consulted register does not hold at that digest (no register, unverified register, or `not_in_register`), since a row carries no ROWFLOW revision number of its own.
+- **Journal pin (as built):** the pin (`fid.gdt-interp-pin/1`) records the register digest and how it verified (`verified`, the unverified reason, or `none`); replay re-verifies a `verified` pin for `replay` and recomputes the fail-safe labels for the others, so an unverified evaluation never replays as a different label. The evaluating children write the pin; none is built yet.
+- **AC-12 (as built):** a rustdoc `compile_fail` pair with a control (the crate's pattern for `GDT.CHAR.RECORD` AC-7) instead of `trybuild`, avoiding a new dependency: the builder is typed by its interpretation state and only an interpreted builder has `finish`.
 
 ## Children
 
