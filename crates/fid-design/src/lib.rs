@@ -7,8 +7,10 @@
 //! - [`review`]: `review-check` (`UX.SYSTEM.REVIEW`).
 //! - [`tokens`]: `tokens-check` (`UX.TOKENS.COLOR`).
 //! - [`status`]: `status-check` (`UX.TOKENS.STATUS`).
+//! - [`palettes`]: `palettes-check` (`UX.TOKENS.DATAPAL`).
 
 pub mod finding;
+pub mod palettes;
 pub mod pkg;
 pub mod princ;
 pub mod review;
