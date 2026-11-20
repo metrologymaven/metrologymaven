@@ -236,7 +236,6 @@ pub fn run(config: &Config, adapter: &dyn CrashAdapter, log: &mut dyn Write) -> 
         };
         if i as u64 % rotate == 0 {
             summary.recovered += last_n;
-            last_n = 0;
             if !root.as_os_str().is_empty() {
                 let _ = std::fs::remove_dir_all(&root);
             }
