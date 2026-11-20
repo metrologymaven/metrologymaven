@@ -3,6 +3,7 @@
 //! ```text
 //! fid-manifest-gen toolchain-check  [--workspace <dir>]
 //! fid-manifest-gen toolchain-digest [--workspace <dir>] [--rustc <program>] [--record <file>]
+//! fid-manifest-gen toolchain-flags  [--workspace <dir>]
 //! ```
 //!
 //! `toolchain-check` checks the kernel build settings in `<dir>/kernel-build` (KRN.MAN.REPRO
@@ -11,7 +12,10 @@
 //! `RUSTUP_TOOLCHAIN` removed so rustup picks the pinned toolchain exactly as the rebuild script
 //! does; it fails on any drift from the pinned toolchain, prints the toolchain-and-flags digest
 //! (`sha256:<hex>`) and, with `--record`, writes the canonical record. The workspace defaults
-//! to the current directory. Exit codes: 0 pass, 1 the settings or the toolchain were refused,
+//! to the current directory. `toolchain-flags` prints the checked static rustflags of the kernel
+//! target, one per line, for the rebuild script to pass explicitly (CARGO_ENCODED_RUSTFLAGS).
+//! Every command first refuses any Cargo configuration file the kernel build would read besides
+//! the two it checks (`stray_cargo_config`). Exit codes: 0 pass, 1 the settings or the toolchain were refused,
 //! 2 usage or I/O error.
 
 use std::path::{Path, PathBuf};
@@ -23,7 +27,8 @@ use fid_manifest_gen::toolchain::{
 };
 
 const USAGE: &str = "usage: fid-manifest-gen toolchain-check [--workspace <dir>]\n\
-       fid-manifest-gen toolchain-digest [--workspace <dir>] [--rustc <program>] [--record <file>]";
+       fid-manifest-gen toolchain-digest [--workspace <dir>] [--rustc <program>] [--record <file>]\n\
+       fid-manifest-gen toolchain-flags [--workspace <dir>]";
 
 enum Failure {
     Refused(ToolchainError),
@@ -126,21 +131,36 @@ fn opts(args: &[String], allow_toolchain: bool) -> Result<Opts, Failure> {
     Ok(o)
 }
 
+/// Loads and checks the settings of `ws` (made absolute so every directory above it is seen).
+fn checked(ws: &Path) -> Result<(Files, toolchain::Settings, PathBuf), Failure> {
+    let ws = std::fs::canonicalize(ws).map_err(|e| Failure::Usage(format!("{}: {e}", ws.display())))?;
+    toolchain::stray_cargo_config(&ws)?;
+    let files = Files::load(&ws)?;
+    let st = toolchain::settings(&files.inputs())?;
+    Ok((files, st, ws))
+}
+
 fn run(args: &[String]) -> Result<(), Failure> {
     let (cmd, rest) = args.split_first().ok_or_else(|| Failure::Usage(String::new()))?;
     match cmd.as_str() {
+        "toolchain-flags" => {
+            let o = opts(rest, false)?;
+            let (_, st, _) = checked(&o.workspace)?;
+            for f in &st.rustflags {
+                println!("{f}");
+            }
+            Ok(())
+        }
         "toolchain-check" => {
             let o = opts(rest, false)?;
-            let files = Files::load(&o.workspace)?;
-            let st = toolchain::settings(&files.inputs())?;
+            let (_, st, _) = checked(&o.workspace)?;
             println!("kernel build settings ok: {} {} {}", st.channel, st.target, st.package);
             Ok(())
         }
         "toolchain-digest" => {
             let o = opts(rest, true)?;
-            let files = Files::load(&o.workspace)?;
-            let st = toolchain::settings(&files.inputs())?;
-            let dir = o.workspace.join(SETTINGS_DIR);
+            let (files, st, ws) = checked(&o.workspace)?;
+            let dir = ws.join(SETTINGS_DIR);
             let vv = rustc(&o.rustc, &dir, &["-vV".to_string()])?;
             let cfg = rustc(&o.rustc, &dir, &st.rustc_cfg_args())?;
             let rec = toolchain::record(&files.inputs(), &vv, &cfg)?;

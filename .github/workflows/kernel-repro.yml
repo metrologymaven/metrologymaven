@@ -3,10 +3,11 @@ name: kernel-repro
 # byte-identical WASM artifacts (REQ-KRN.MAN-009). The kernel artifact is built with
 # scripts/rebuild-kernel.sh (the procedure a third party follows) three times: on a Linux x86-64
 # runner as a separate user, on a macOS ARM64 runner as the runner user, and in a clean
-# container that holds only the pinned toolchain; each in its own path. The compare job fails
-# unless every SHA-256 matches, and names the differing sections otherwise. Each runner also
-# computes the toolchain-and-flags digest from its real toolchain, which fails on any drift
-# from the pin. A build with an injected build time must fail and name its section (AC-3).
+# container that holds only the pinned toolchain; each in its own path. Each build also checks
+# its settings and real toolchain and writes the toolchain-and-flags digest (fails closed on
+# drift). The compare job fails unless every artifact SHA-256 and every digest matches, names
+# the differing sections otherwise, and runs the golden calls on the artifact. A build with an
+# injected build time must fail the comparison and name its section (AC-3).
 on:
   pull_request:
   push:
@@ -23,6 +24,8 @@ env:
   # rust:1.89.0-bookworm (multi-arch index), pinned by digest: the clean container of AC-2.
   # Its toolchain must match kernel-build/rust-toolchain.toml; the script checks that.
   REPRO_IMAGE: rust:1.89.0-bookworm@sha256:948f9b08a66e7fe01b03a98ef1c7568292e07ec2e4fe90d88c07bb14563c84ff
+  # Files every build uploads for the compare job.
+  REPRO_FILES: fid-kernel-wasm.wasm fid-kernel-wasm.link.wasm rustc-vV.txt build-settings.json toolchain-digest.txt vendor-digest.txt build-info.txt SHA256SUMS
 jobs:
   build-linux:
     runs-on: ubuntu-latest
@@ -36,19 +39,11 @@ jobs:
         with:
           toolchain: ${{ steps.pin.outputs.channel }}
           targets: wasm32-wasip1
-      - name: Toolchain-and-flags digest from this runner's toolchain (fails closed on drift)
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(uname -m)" = x86_64
-          mkdir -p "$RUNNER_TEMP/settings"
-          cargo build -q --locked -p fid-manifest-gen
-          ./target/debug/fid-manifest-gen toolchain-digest --record "$RUNNER_TEMP/settings/build-settings.json" \
-            | tee "$RUNNER_TEMP/settings/toolchain-digest.txt"
       - name: Rebuild as another user, in another path, with only the pinned toolchain (AC-1)
         shell: bash
         run: |
           set -euo pipefail
+          test "$(uname -m)" = x86_64
           channel='${{ steps.pin.outputs.channel }}'
           sde=$(git log -1 --format=%ct)
           tc=$(dirname "$(dirname "$(rustup which --toolchain "$channel" rustc)")")
@@ -65,11 +60,11 @@ jobs:
           }
           run --out "$d/out"
           # AC-3: the same build with the build time injected, from the vendored sources of the
-          # first build (so it also runs fully offline from a vendored directory).
-          run --out "$d/out-injected" --vendor "$d/out/work/vendor" --inject-timestamp-for-test
+          # first build, checked against the tree digest that build wrote (fully offline).
+          run --out "$d/out-injected" --vendor "$d/out/work/vendor" \
+            --vendor-digest "$(cat "$d/out/vendor-digest.txt")" --inject-timestamp-for-test
           mkdir -p "$RUNNER_TEMP/up/kernel" "$RUNNER_TEMP/up/injected"
-          cp "$d"/out/{fid-kernel-wasm.wasm,fid-kernel-wasm.link.wasm,rustc-vV.txt,build-info.txt,SHA256SUMS} \
-            "$RUNNER_TEMP/settings"/* "$RUNNER_TEMP/up/kernel/"
+          for f in $REPRO_FILES; do cp "$d/out/$f" "$RUNNER_TEMP/up/kernel/"; done
           cp "$d"/out-injected/{fid-kernel-wasm.wasm,SHA256SUMS} "$RUNNER_TEMP/up/injected/"
       - uses: actions/upload-artifact@v4
         with:
@@ -93,31 +88,22 @@ jobs:
         with:
           toolchain: ${{ steps.pin.outputs.channel }}
           targets: wasm32-wasip1
-      - name: Toolchain-and-flags digest from this runner's toolchain (fails closed on drift)
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(uname -m)" = arm64
-          mkdir -p "$RUNNER_TEMP/settings"
-          cargo build -q --locked -p fid-manifest-gen
-          ./target/debug/fid-manifest-gen toolchain-digest --record "$RUNNER_TEMP/settings/build-settings.json" \
-            | tee "$RUNNER_TEMP/settings/toolchain-digest.txt"
       - name: Rebuild in another path through rustup and the toolchain file (AC-1)
         shell: bash
         run: |
           set -euo pipefail
+          test "$(uname -m)" = arm64
           sde=$(git log -1 --format=%ct)
-          d="$RUNNER_TEMP/kbuild-macos/checkout"
+          # Outside the home directory, so no Cargo config of the runner lies above the checkout.
+          d=/tmp/kbuild-macos/checkout
           mkdir -p "$d/src"
           git archive HEAD | tar -x -C "$d/src"
           # Only the directory of the rustup proxies, so the toolchain file in kernel-build/ decides.
           proxies=$(dirname "$(command -v rustup)")
-          ls -l "$proxies" | head -n 20
           env -i HOME="$HOME" PATH="$proxies:/usr/bin:/bin" ${RUSTUP_HOME:+RUSTUP_HOME="$RUSTUP_HOME"} \
             SOURCE_DATE_EPOCH="$sde" bash "$d/src/scripts/rebuild-kernel.sh" --out "$d/out"
           mkdir -p "$RUNNER_TEMP/up"
-          cp "$d"/out/{fid-kernel-wasm.wasm,fid-kernel-wasm.link.wasm,rustc-vV.txt,build-info.txt,SHA256SUMS} \
-            "$RUNNER_TEMP/settings"/* "$RUNNER_TEMP/up/"
+          for f in $REPRO_FILES; do cp "$d/out/$f" "$RUNNER_TEMP/up/"; done
       - uses: actions/upload-artifact@v4
         with:
           name: kernel-macos
@@ -139,8 +125,7 @@ jobs:
             "$REPRO_IMAGE" bash -c \
             'set -e; rustup target add wasm32-wasip1; bash /opt/kernel-source/scripts/rebuild-kernel.sh --out /out/result'
           mkdir -p "$RUNNER_TEMP/up"
-          cp "$d"/out/result/{fid-kernel-wasm.wasm,fid-kernel-wasm.link.wasm,rustc-vV.txt,build-info.txt,SHA256SUMS} \
-            "$RUNNER_TEMP/up/"
+          for f in $REPRO_FILES; do cp "$d/out/result/$f" "$RUNNER_TEMP/up/"; done
       - uses: actions/upload-artifact@v4
         with:
           name: kernel-container
@@ -154,10 +139,25 @@ jobs:
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
           toolchain: stable
+      - name: Install wasmtime v49.0.6 (tarball SHA-256 pinned and verified before use)
+        # Same pinned release and digest as the wasm32 job of rust.yml (KRN.MAN.WASM wasm-runtime.toml).
+        shell: bash
+        env:
+          WASMTIME_TARBALL: wasmtime-v49.0.6-x86_64-linux.tar.xz
+          WASMTIME_SHA256: 15625b129e54534793dc77965d6912a5307db8e8e90ee114f52ef62ce6e4f918
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/wasmtime"
+          mkdir -p "$d"
+          curl --proto '=https' --tlsv1.2 -fsSL --retry 5 -o "$d/$WASMTIME_TARBALL" \
+            "https://github.com/bytecodealliance/wasmtime/releases/download/v49.0.6/$WASMTIME_TARBALL"
+          echo "$WASMTIME_SHA256  $d/$WASMTIME_TARBALL" | sha256sum --check --strict -
+          tar -xJf "$d/$WASMTIME_TARBALL" -C "$d"
+          echo "$d/wasmtime-v49.0.6-x86_64-linux" >> "$GITHUB_PATH"
       - uses: actions/download-artifact@v4
         with:
           path: art
-      - name: Every build gave the same artifact, toolchain and digest (AC-1, AC-2, REQ-KRN.MAN.REPRO-004)
+      - name: Every build gave the same artifact, toolchain and digests (AC-1, AC-2, REQ-KRN.MAN.REPRO-004)
         shell: bash
         run: |
           set -euo pipefail
@@ -165,6 +165,7 @@ jobs:
           chk=target/debug/fid-wasm-check
           L=art/kernel-linux
           head -n 100 $L/SHA256SUMS art/kernel-macos/SHA256SUMS art/kernel-container/SHA256SUMS
+          head -n 100 $L/toolchain-digest.txt art/kernel-macos/toolchain-digest.txt art/kernel-container/toolchain-digest.txt
           fail=0
           for x in art/kernel-macos art/kernel-container; do
             for f in fid-kernel-wasm.wasm fid-kernel-wasm.link.wasm; do
@@ -175,14 +176,25 @@ jobs:
             if ! diff <(grep -v '^host: ' $L/rustc-vV.txt) <(grep -v '^host: ' $x/rustc-vV.txt); then
               echo "::error::toolchain differs: $L vs $x"; fail=1
             fi
-          done
-          for f in toolchain-digest.txt build-settings.json; do
-            if ! cmp $L/$f art/kernel-macos/$f; then echo "::error::$f differs between Linux and macOS"; fail=1; fi
+            for f in toolchain-digest.txt build-settings.json vendor-digest.txt; do
+              if ! cmp $L/$f $x/$f; then echo "::error::$f differs: $L vs $x"; fail=1; fi
+            done
           done
           test "$fail" = 0
           echo "kernel artifact $(cut -d' ' -f1 $L/SHA256SUMS | head -n 1), toolchain-and-flags digest $(cat $L/toolchain-digest.txt)"
-          # The reproducible artifact is still a valid kernel module (KRN.MAN.WASM allowlist).
-          $chk imports $L/fid-kernel-wasm.wasm crates/fid-kernel-wasm/wasm-imports.allow
+      - name: The reproducible artifact passes the import allowlist, the SIMD check and its golden calls
+        # The shipped (reference) module registers no algorithm, so its golden calls are the
+        # algorithm-independent KRN.MAN.WASM calls (fixtures/man/repro/calls-reference-v1.txt),
+        # run through the pinned wasmtime and runtime settings.
+        shell: bash
+        run: |
+          set -euo pipefail
+          chk=target/debug/fid-wasm-check
+          a=art/kernel-linux/fid-kernel-wasm.wasm
+          c=crates/fid-kernel-wasm
+          $chk imports $a $c/wasm-imports.allow
+          $chk no-simd $a
+          $chk golden $c/wasm-runtime.toml $c/wasm-imports.allow $a fixtures/man/repro/calls-reference-v1.txt
       - name: An injected build time fails the comparison and names its section (AC-3)
         shell: bash
         run: |

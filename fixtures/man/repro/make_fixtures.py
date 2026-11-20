@@ -196,14 +196,14 @@ def settings(files):
             err("bad_value", f, key)
         k, v = flags[i + 1].split("=", 1)
         if k == "target-cpu":
-            if v == "native" or not plain(v, False):
+            # Allowlist: only the generic baseline CPUs.
+            if v not in ("generic", "mvp"):
                 err("bad_value", f, key)
         elif k == "target-feature":
+            # Features may only be disabled; any `+name` is refused.
             for feat in v.split(","):
                 if feat[:1] == "-" and plain(feat[1:], False):
                     disabled.add(feat[1:])
-                elif feat[:1] == "+" and plain(feat[1:], False) and feat[1:] not in FMA_FEATURES:
-                    pass
                 else:
                     err("bad_value", f, key)
         else:
@@ -381,6 +381,8 @@ CASES_SPEC = {
     "profile-package-override": [edit("cargo-config.toml", b"codegen-units = 1\n",
                                       b"codegen-units = 1\n\n[profile.kernel-artifact.package.fid-kci]\nopt-level = 1\n")],
     "target-cpu-native": [edit("cargo-config.toml", b"target-cpu=generic", b"target-cpu=native")],
+    "target-cpu-other": [edit("cargo-config.toml", b"target-cpu=generic", b"target-cpu=bleeding-edge")],
+    "plus-feature": [edit("cargo-config.toml", b"-relaxed-simd,-simd128", b"-relaxed-simd,-simd128,+bulk-memory")],
     "fma-flag": [edit("cargo-config.toml", b"-relaxed-simd,-simd128", b"+relaxed-simd")],
     "build-rustflags": [edit("cargo-config.toml", b'target = "wasm32-wasip1"\n',
                              b'target = "wasm32-wasip1"\nrustflags = ["-C", "opt-level=1"]\n')],
@@ -422,8 +424,35 @@ def expected(files):
     return b"record " + canonical + b"\n" + f"digest {digest}\n".encode("ascii")
 
 
+# --- golden calls for the reproducible reference artifact ------------------------------------------
+# The reference module registers no algorithm, so of the KRN.MAN.WASM calls only those whose
+# outcome does not depend on a registered algorithm apply, relabelled by hand from the shim's
+# table (crates/fid-kernel-wasm/src/shim.rs): a malformed call is `malformed_call` (exit 2)
+# whatever is registered; `unknown-algorithm` stays `unknown_algorithm` (exit 1); and every
+# well-formed call of the KCI vectors (kci-call-*, all digests correct) names an algorithm the
+# reference module does not have, so it is `unknown_algorithm` (exit 1). Calls that rely on
+# a stand-in algorithm's behaviour (digest checks, failures, resource limits) are left out.
+def reference_calls():
+    rows = ["# KRN.MAN.REPRO golden calls for the reproducible reference artifact (no algorithms registered).",
+            "# Written by fixtures/man/repro/make_fixtures.py from fixtures/man/wasm/calls-v1.txt. CC-BY-4.0.",
+            "# Format: <name><TAB><any | wasm><TAB><canonical call><TAB><runner exit><TAB><expected stdout>."]
+    src = (ROOT / "fixtures" / "man" / "wasm" / "calls-v1.txt").read_text(encoding="utf-8")
+    for line in src.splitlines():
+        if not line or line.startswith("#"):
+            continue
+        name, mode, call, exitc, out = line.split("\t")
+        if name.startswith("malformed-"):
+            assert (exitc, out) == ("2", '{"error":"malformed_call"}'), name
+            rows.append("\t".join([name, mode, call, exitc, out]))
+        elif name == "unknown-algorithm" or name.startswith("kci-call-"):
+            assert mode == "any", name
+            rows.append("\t".join([name, mode, call, "1", '{"error":"unknown_algorithm"}']))
+    assert len(rows) - 3 >= 30, len(rows)
+    return ("\n".join(rows) + "\n").encode("ascii")
+
+
 def build():
-    out = {}
+    out = {HERE / "calls-reference-v1.txt": reference_calls()}
     for name in sorted(CASES_SPEC):
         files = case_files(name)
         d = CASES / name

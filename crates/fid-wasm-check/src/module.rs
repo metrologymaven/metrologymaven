@@ -103,6 +103,8 @@ pub enum WasmErrorKind {
     BadLimits,
     BadTypeIndex,
     LimitExceeded,
+    /// A custom section name the section diff cannot label unambiguously (it contains `#`).
+    BadSectionName,
 }
 
 /// A refusal and the byte offset where it was detected.
@@ -131,6 +133,7 @@ impl WasmError {
             WasmErrorKind::BadLimits => "bad_limits",
             WasmErrorKind::BadTypeIndex => "bad_type_index",
             WasmErrorKind::LimitExceeded => "limit_exceeded",
+            WasmErrorKind::BadSectionName => "bad_section_name",
         }
     }
 }

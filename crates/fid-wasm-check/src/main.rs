@@ -8,7 +8,11 @@
 //! fid-wasm-check run <wasm-runtime.toml> <allowlist> <module.wasm>        (call on stdin)
 //! fid-wasm-check golden <wasm-runtime.toml> <allowlist> <module.wasm> <calls file>
 //! fid-wasm-check sections-diff <a.wasm> <b.wasm>
+//! fid-wasm-check no-simd <module.wasm>
 //! ```
+//!
+//! `no-simd` exits 0 when the code section holds no SIMD (`0xFD`) instruction, 1 when it holds
+//! one (each is printed) or cannot be decoded (fail closed), and 2 on a read error.
 //!
 //! `seal` writes the sealed module (clock imports renamed so they trap; see
 //! `fid_wasm_check::seal`); it exits 0, or 2 if the module is refused or cannot be written.
@@ -29,6 +33,7 @@ use fid_wasm_check::runner::{self, Outcome};
 use fid_wasm_check::runtime::RuntimeConfig;
 use fid_wasm_check::seal::seal;
 use fid_wasm_check::sections;
+use fid_wasm_check::simd;
 
 const USAGE: &str = "usage: fid-wasm-check seal <linked.wasm> <sealed.wasm>\n\
        fid-wasm-check imports <module.wasm> <allowlist>\n\
@@ -36,7 +41,8 @@ const USAGE: &str = "usage: fid-wasm-check seal <linked.wasm> <sealed.wasm>\n\
        fid-wasm-check manifest <manifest.json> <module.wasm> <allowlist> <wasm-runtime.toml>\n\
        fid-wasm-check run <wasm-runtime.toml> <allowlist> <module.wasm>\n\
        fid-wasm-check golden <wasm-runtime.toml> <allowlist> <module.wasm> <calls file>\n\
-       fid-wasm-check sections-diff <a.wasm> <b.wasm>";
+       fid-wasm-check sections-diff <a.wasm> <b.wasm>\n\
+       fid-wasm-check no-simd <module.wasm>";
 
 /// Largest file this tool reads (modules are capped lower by the reader itself).
 const MAX_FILE_BYTES: u64 = 128 * 1024 * 1024;
@@ -205,6 +211,22 @@ fn main() -> ExitCode {
                 Err(e) => verdict(Err(e)),
             }
         }
+        ["no-simd", path] => verdict(read(path).map(|bytes| match simd::simd_opcodes(&bytes) {
+            Ok(hits) if hits.is_empty() => {
+                println!("no SIMD instruction");
+                true
+            }
+            Ok(hits) => {
+                for h in hits {
+                    println!("{h}");
+                }
+                false
+            }
+            Err(e) => {
+                println!("refused: {e}");
+                false
+            }
+        })),
         ["sections-diff", a_path, b_path] => verdict(read(a_path).and_then(|a| {
             let b = read(b_path)?;
             let (lines, same) = sections::diff(&a, &b).map_err(|e| format!("module refused: {e}"))?;

@@ -194,3 +194,39 @@ fn a_missing_setting_is_named() {
         );
     }
 }
+
+/// Item 2 of the #318 review: a Cargo config the kernel build would read but the check does not.
+#[test]
+fn stray_cargo_configs_are_refused() {
+    use fid_manifest_gen::toolchain::stray_cargo_config;
+    let base = Path::new(env!("CARGO_TARGET_TMPDIR")).join("repro-stray");
+    let _ = fs::remove_dir_all(&base);
+    let ws = base.join("above").join("ws");
+    let put = |p: PathBuf| {
+        fs::create_dir_all(p.parent().unwrap()).unwrap();
+        fs::write(&p, b"").unwrap();
+        p
+    };
+    put(ws.join("kernel-build").join(".cargo").join("config.toml"));
+    put(ws.join(".cargo").join("config.toml"));
+    // The two checked files alone: anything reported lies above the fixture (the repository's
+    // own files around the target directory), never inside it.
+    if let Err(ToolchainError::StrayCargoConfig { path }) = stray_cargo_config(&ws) {
+        assert!(!Path::new(&path).starts_with(&base), "{path}");
+    }
+    let cases = [
+        ws.join("kernel-build").join(".cargo").join("config"),
+        ws.join(".cargo").join("config"),
+        base.join("above").join(".cargo").join("config.toml"),
+        base.join(".cargo").join("config"),
+    ];
+    for p in cases {
+        put(p.clone());
+        assert_eq!(
+            stray_cargo_config(&ws).unwrap_err(),
+            ToolchainError::StrayCargoConfig { path: p.display().to_string() },
+        );
+        fs::remove_file(&p).unwrap();
+    }
+    fs::remove_dir_all(&base).unwrap();
+}

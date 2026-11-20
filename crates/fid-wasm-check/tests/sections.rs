@@ -118,3 +118,13 @@ fn refused_module_is_an_error() {
     let truncated = module(&[types()])[..12].to_vec();
     assert!(sections(&truncated).is_err());
 }
+
+#[test]
+fn hash_in_a_custom_name_is_refused_so_labels_never_collide() {
+    // Without the refusal, a section named "x#2" would collide with the second "x".
+    let m = module(&[types(), custom("x", b""), custom("x#2", b""), custom("x", b"")]);
+    assert_eq!(sections(&m).unwrap_err().kind, WasmErrorKind::BadSectionName);
+    let ok = module(&[custom("x", b""), types(), custom("x", b""), custom("y", b""), custom("x", b"")]);
+    let labels: Vec<String> = sections(&ok).unwrap().into_iter().map(|s| s.label).collect();
+    assert_eq!(labels, ["custom:x", "type", "custom:x#2", "custom:y", "custom:x#3"]);
+}

@@ -74,6 +74,8 @@ pub const PROFILE_KEYS: [&str; 10] = [
 ];
 /// Target features that give fused multiply-add (wasm32: `relaxed_madd`), never allowed.
 pub const FMA_FEATURES: [&str; 2] = ["fma", "relaxed-simd"];
+/// The only `-C target-cpu` values accepted (an allowlist: the generic baseline CPUs).
+pub const ALLOWED_CPUS: [&str; 2] = ["generic", "mvp"];
 /// The remap prefixes `kernel-build.toml` must name.
 pub const REMAP_KEYS: [&str; 4] = ["cargo_home", "target_dir", "vendor", "workspace"];
 /// Largest settings file read.
@@ -104,6 +106,9 @@ pub enum ToolchainError {
     FmaFeatureEnabled { feature: String },
     /// A feature the static flags disable is still enabled.
     FeatureNotDisabled { feature: String },
+    /// A Cargo configuration file that the kernel build would read but this check does not
+    /// (a legacy `.cargo/config`, or one in a directory above the workspace).
+    StrayCargoConfig { path: String },
 }
 
 impl ToolchainError {
@@ -119,6 +124,7 @@ impl ToolchainError {
             ToolchainError::ToolchainDrift { .. } => "toolchain_drift",
             ToolchainError::FmaFeatureEnabled { .. } => "fma_feature_enabled",
             ToolchainError::FeatureNotDisabled { .. } => "feature_not_disabled",
+            ToolchainError::StrayCargoConfig { .. } => "stray_cargo_config",
         }
     }
 }
@@ -139,6 +145,7 @@ impl fmt::Display for ToolchainError {
             ToolchainError::FmaFeatureEnabled { feature } | ToolchainError::FeatureNotDisabled { feature } => {
                 write!(f, "{code}: {feature}")
             }
+            ToolchainError::StrayCargoConfig { path } => write!(f, "{code}: {path}"),
         }
     }
 }
@@ -337,9 +344,10 @@ fn kernel_build_file(bytes: &[u8]) -> Result<KernelBuild, ToolchainError> {
     Ok(KernelBuild { commit_hash, llvm_version, package, bin, remap })
 }
 
-/// Checks the static rustflags: only `"-C", "target-cpu=<cpu>"` (never `native`) and
-/// `"-C", "target-feature=<+|-><name>,.."` pairs (never enabling an FMA feature). Returns the
-/// features they disable.
+/// Checks the static rustflags against an allowlist: only `"-C", "target-cpu=<cpu>"` with a CPU
+/// in [`ALLOWED_CPUS`] and `"-C", "target-feature=-<name>,.."` pairs. No feature may be enabled
+/// (`+name` is refused whatever it is), so nothing FMA-capable can be switched on by a flag.
+/// Returns the features they disable.
 fn check_rustflags(flags: &[String], key: &str) -> Result<BTreeSet<String>, ToolchainError> {
     const F: &str = CARGO_CONFIG;
     let bad = || ToolchainError::BadValue { file: F, key: key.to_string() };
@@ -358,22 +366,17 @@ fn check_rustflags(flags: &[String], key: &str) -> Result<BTreeSet<String>, Tool
         let (k, v) = opt.split_once('=').ok_or_else(bad)?;
         match k {
             "target-cpu" => {
-                if v == "native" || !plain_name(v, false) {
+                if !ALLOWED_CPUS.contains(&v) {
                     return Err(bad());
                 }
             }
             "target-feature" => {
                 for feat in v.split(',') {
-                    let ok = match (feat.strip_prefix('-'), feat.strip_prefix('+')) {
-                        (Some(name), _) if plain_name(name, false) => {
+                    match feat.strip_prefix('-') {
+                        Some(name) if plain_name(name, false) => {
                             disabled.insert(name.to_string());
-                            true
                         }
-                        (_, Some(name)) => plain_name(name, false) && !FMA_FEATURES.contains(&name),
-                        _ => false,
-                    };
-                    if !ok {
-                        return Err(bad());
+                        _ => return Err(bad()),
                     }
                 }
             }
@@ -469,6 +472,27 @@ fn workspace_files(manifest: &[u8], config: Option<&[u8]>) -> Result<(), Toolcha
                 return Err(ToolchainError::WorkspaceOverride { file: WORKSPACE_CONFIG, key: k.clone() });
             }
         }
+    }
+    Ok(())
+}
+
+/// Cargo reads `.cargo/config` and `.cargo/config.toml` in the directory a command starts in and
+/// in every directory above it. For a build started in `<workspace>/kernel-build`, only
+/// [`CARGO_CONFIG`] and [`WORKSPACE_CONFIG`] are checked by [`settings`]; this returns the first
+/// other one that exists (a legacy `.cargo/config` next to either, or any file above the
+/// workspace) as [`ToolchainError::StrayCargoConfig`]. `workspace` should be absolute.
+pub fn stray_cargo_config(workspace: &std::path::Path) -> Result<(), ToolchainError> {
+    let kb = workspace.join(SETTINGS_DIR);
+    let allowed = [kb.join(".cargo").join("config.toml"), workspace.join(".cargo").join("config.toml")];
+    let mut dir = Some(kb.as_path());
+    while let Some(d) = dir {
+        for name in ["config", "config.toml"] {
+            let p = d.join(".cargo").join(name);
+            if !allowed.contains(&p) && std::fs::symlink_metadata(&p).is_ok() {
+                return Err(ToolchainError::StrayCargoConfig { path: p.display().to_string() });
+            }
+        }
+        dir = d.parent();
     }
     Ok(())
 }
@@ -657,6 +681,9 @@ mod tests {
         );
         assert!(f(&["-C", "target-cpu=native"]).is_err());
         assert!(f(&["-C", "target-feature=+relaxed-simd"]).is_err());
+        assert!(f(&["-C", "target-feature=+bulk-memory"]).is_err());
+        assert!(f(&["-C", "target-cpu=bleeding-edge"]).is_err());
+        assert!(f(&["-C", "target-cpu=mvp"]).is_ok());
         assert!(f(&["-C", "target-feature=simd128"]).is_err());
         assert!(f(&["-C", "opt-level=3"]).is_err());
         assert!(f(&["-Ctarget-cpu=generic"]).is_err());

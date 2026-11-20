@@ -6,7 +6,8 @@
 //! by label, not by position, so a section that only one build has does not shift the others:
 //! a non-custom section is labelled by its kind (`type`, `import`, .., `data`), a custom
 //! section by `custom:<name>`, and a label that occurs more than once is numbered in order
-//! (`custom:name#2`). Each section is compared by the SHA-256 of its whole encoding (id, size
+//! (`custom:name#2`); a custom name containing `#` is refused (`bad_section_name`) so labels
+//! never collide. Each section is compared by the SHA-256 of its whole encoding (id, size
 //! and payload).
 //!
 //! The report lists every label in the first module's order, then labels only the second has,
@@ -70,6 +71,8 @@ fn uleb(bytes: &[u8], pos: &mut usize) -> Result<usize, WasmError> {
 pub fn sections(bytes: &[u8]) -> Result<Vec<Section>, WasmError> {
     module::parse(bytes)?;
     let mut out: Vec<Section> = Vec::new();
+    // Exact occurrence counter per base label; names never contain `#`, so `base#n` is unique.
+    let mut counts: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
     let mut pos = 8;
     while pos < bytes.len() {
         let at = pos;
@@ -82,10 +85,14 @@ pub fn sections(bytes: &[u8]) -> Result<Vec<Section>, WasmError> {
             let mut p = pos;
             let len = uleb(bytes, &mut p)?;
             let name = bytes.get(p..p + len).ok_or(WasmError { kind: WasmErrorKind::Truncated, offset: p })?;
+            if name.contains(&b'#') {
+                return Err(WasmError { kind: WasmErrorKind::BadSectionName, offset: p });
+            }
             base = format!("custom:{}", String::from_utf8_lossy(name));
         }
-        let n = out.iter().filter(|s| s.label == base || s.label.starts_with(&format!("{base}#"))).count();
-        let label = if n == 0 { base } else { format!("{base}#{}", n + 1) };
+        let seen = counts.entry(base.clone()).or_insert(0usize);
+        *seen += 1;
+        let label = if *seen == 1 { base } else { format!("{base}#{seen}") };
         out.push(Section { label, range: (at, end) });
         pos = end;
     }

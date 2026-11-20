@@ -1,9 +1,10 @@
 # Kernel artifact build settings (spec node KRN.MAN.REPRO, REQ-KRN.MAN.REPRO-001). Cargo reads
 # this file only for commands started in kernel-build/ (scripts/rebuild-kernel.sh does). Every
 # key here is checked by `fid-manifest-gen toolchain-check` and enters the kernel's
-# toolchain-and-flags digest; unknown keys are refused. The absolute-path remaps are added by
-# the script (their source paths differ per checkout); their fixed targets are in
-# kernel-build.toml.
+# toolchain-and-flags digest; unknown keys are refused. The script passes the rustflags
+# explicitly (CARGO_ENCODED_RUSTFLAGS): the static flags below, as `fid-manifest-gen
+# toolchain-flags` prints them after checking, plus the absolute-path remaps (their source
+# paths differ per checkout; their fixed targets are in kernel-build.toml).
 
 [build]
 target = "wasm32-wasip1"
