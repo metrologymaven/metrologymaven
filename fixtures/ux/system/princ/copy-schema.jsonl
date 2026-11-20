@@ -1,0 +1,12 @@
+{"id":"a.b","text":"ok"}
+not json
+{"id":"a.c"}
+{"id":"a.b","text":"again"}
+{"id":"a.d","text":"x","note":"y"}
+[1]
+{"id":"a.e","text":"Approve","id":"z"}
+{"id":"agent.x","text":"Approved"}
+{"id":"Agent.Upper","text":"x"}
+{"id":"agent-x","text":"x"}
+{"id":"","text":"x"}
+

@@ -1,0 +1,11 @@
+[
+  {"word": "approve", "meaning": "Human approval.", "allowed_prefixes": ["review.human."], "case_insensitive": true, "inflections": ["approved"]},
+  {"word": "Approved", "meaning": "Clashes with an inflection of approve.", "allowed_prefixes": [], "case_insensitive": true},
+  {"word": "sign in", "meaning": "Two words.", "allowed_prefixes": [], "case_insensitive": true},
+  {"word": "release", "meaning": "", "allowed_prefixes": [], "case_insensitive": true},
+  {"word": "conforms", "meaning": "Prefixes not an array.", "allowed_prefixes": "gdt.", "case_insensitive": true},
+  {"word": "verified", "meaning": "Flag not a boolean.", "allowed_prefixes": [], "case_insensitive": "yes"},
+  {"word": "sign", "meaning": "Unknown key.", "allowed_prefixes": [], "case_insensitive": true, "colour": "red"},
+  {"word": "cert", "meaning": "Case-sensitive matching is not allowed.", "allowed_prefixes": ["trust."], "case_insensitive": false},
+  {"word": "audit", "meaning": "Prefix without a trailing dot.", "allowed_prefixes": ["trust"], "case_insensitive": true}
+]
