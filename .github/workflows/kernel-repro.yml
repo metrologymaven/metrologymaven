@@ -110,8 +110,11 @@ jobs:
           d="$RUNNER_TEMP/kbuild-macos/checkout"
           mkdir -p "$d/src"
           git archive HEAD | tar -x -C "$d/src"
-          env -i HOME="$HOME" PATH="$HOME/.cargo/bin:/usr/bin:/bin" SOURCE_DATE_EPOCH="$sde" \
-            bash "$d/src/scripts/rebuild-kernel.sh" --out "$d/out"
+          # Only the directory of the rustup proxies, so the toolchain file in kernel-build/ decides.
+          proxies=$(dirname "$(command -v rustup)")
+          ls -l "$proxies" | head -n 20
+          env -i HOME="$HOME" PATH="$proxies:/usr/bin:/bin" ${RUSTUP_HOME:+RUSTUP_HOME="$RUSTUP_HOME"} \
+            SOURCE_DATE_EPOCH="$sde" bash "$d/src/scripts/rebuild-kernel.sh" --out "$d/out"
           mkdir -p "$RUNNER_TEMP/up"
           cp "$d"/out/{fid-kernel-wasm.wasm,fid-kernel-wasm.link.wasm,rustc-vV.txt,build-info.txt,SHA256SUMS} \
             "$RUNNER_TEMP/settings"/* "$RUNNER_TEMP/up/"
