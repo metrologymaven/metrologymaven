@@ -66,10 +66,14 @@ fn store_defs() -> Result<Vec<CommandDef>, DefError> {
     Ok(fid_store::settings::declarations().into_iter().map(|d| d.def).collect())
 }
 
-/// The two adoption commands of `AUTO.REC.ADOPT` (`human_only`, request-only on MCP),
-/// declared with the registry macros.
+/// The two adoption commands of `AUTO.REC.ADOPT` (`human_only`, request-only on MCP) and the
+/// ten lifecycle commands of `AUTO.REC.LIFE` (register, unregister and open_draft W2;
+/// release and deprecate W3, `human_only`, request-only on MCP), declared with the registry
+/// macros.
 fn program_rec_defs() -> Result<Vec<CommandDef>, DefError> {
-    Ok(fid_program_rec::adopt::declarations().into_iter().map(|d| d.def).collect())
+    let adopt = fid_program_rec::adopt::declarations().into_iter().map(|d| d.def);
+    let life = fid_program_rec::life::declarations().into_iter().map(|d| d.def);
+    Ok(adopt.chain(life).collect())
 }
 
 /// Every crate on main that declares commands, sorted by crate name.
@@ -104,9 +108,12 @@ impl fmt::Debug for SettingsSource {
 }
 
 /// Every crate on main that declares settings, sorted by crate name: `fid-bus` declares the
-/// approved file roots `bus.fs_roots` (CORE.BUS.POL.FS).
-pub const SETTINGS_SOURCES: [SettingsSource; 1] =
-    [SettingsSource { krate: "fid-bus", settings: fid_bus::policy::fs::fs_settings }];
+/// approved file roots `bus.fs_roots` (CORE.BUS.POL.FS); `fid-journal` the Activity Log
+/// rotation settings `journal.activity_log_*` (CORE.JRN.STREAM.ALOG).
+pub const SETTINGS_SOURCES: [SettingsSource; 2] = [
+    SettingsSource { krate: "fid-bus", settings: fid_bus::policy::fs::fs_settings },
+    SettingsSource { krate: "fid-journal", settings: fid_journal::stream::activity_settings },
+];
 
 /// A crate's quantity-catalogue fragment function.
 pub type KindsFn = fn() -> &'static str;

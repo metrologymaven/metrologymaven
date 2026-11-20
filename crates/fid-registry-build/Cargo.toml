@@ -23,7 +23,8 @@ fid-geo-cmd = { path = "../fid-geo-cmd" }
 fid-jobs = { path = "../fid-jobs" }
 fid-project-cmd = { path = "../fid-project-cmd" }
 fid-report = { path = "../fid-report" }
-# The adoption commands of AUTO.REC.ADOPT, read through `fid_program_rec::adopt::declarations()`.
+# The adoption commands of AUTO.REC.ADOPT and the lifecycle commands of AUTO.REC.LIFE, read
+# through `fid_program_rec::{adopt,life}::declarations()`.
 # Layer services, as this crate.
 fid-program-rec = { path = "../fid-program-rec" }
 # The settings commands (CORE.STO.SET), read through `fid_store::settings::declarations()`.
@@ -33,6 +34,10 @@ fid-store = { path = "../fid-store" }
 # workspace settings manifest: `fid_bus::policy::fs::fs_settings` (`bus.fs_roots`). Layer
 # engine, below services; already in the lock.
 fid-bus = { path = "../fid-bus" }
+# `fid_journal::stream::activity_settings` (the Activity Log rotation size and kept files,
+# CORE.JRN.STREAM.ALOG). Feature `store` because the declaration uses fid-store's macro. Layer
+# model; already in the lock.
+fid-journal = { path = "../fid-journal", features = ["store"] }
 
 [dev-dependencies]
 # Error values for the bus-catalogue mapping test of fid-geo-cmd's errors.

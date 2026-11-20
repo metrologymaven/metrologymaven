@@ -14,6 +14,7 @@ python fixtures/cons/make_decl_fixtures.py --check
 python fixtures/core/bus/pol/class/make_matrix.py --check
 python fixtures/core/jrn/chain/append/make_fixtures.py --check
 python fixtures/core/jrn/chain/ckpt/make_fixtures.py --check
+python fixtures/core/jrn/stream/alog/make_fixtures.py --check
 python fixtures/core/prj/cont/hier/make_fixtures.py --check
 python fixtures/core/reg/def/guide/make_fixtures.py --check
 python fixtures/core/reg/def/macro/make_golden.py --check
@@ -95,6 +96,7 @@ python fixtures/profile/make_fixtures.py --check
 python fixtures/program/expr/make_cases.py --check
 python fixtures/rdl/format/make_fixtures.py --check
 python fixtures/rec/adopt/make_fixtures.py --check
+python fixtures/rec/life/make_fixtures.py --check
 python fixtures/rel/guide/make_fixtures.py --check
 python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
@@ -108,12 +110,15 @@ python fixtures/rpt/output/text/make_fixtures.py --check
 python fixtures/scan/cmp/make_field_golden.py --check
 python fixtures/scan/make_mesh_quality.py --check
 python fixtures/solv/make_mstart_fixtures.py --check
+python fixtures/solv/patch/ldl-order-v1/make_orders.py --check
+python fixtures/solv/patch/upstream-examples-v1/check_objectives.py
 python fixtures/solv/vend/make_fixtures.py --check
 python fixtures/unc/class/make_table.py --check
 python fixtures/unc/dec/type/make_fixtures.py --check
 python fixtures/unc/dist/make_fixtures.py --check
 python fixtures/unc/mcm/adapt/make_fixtures.py --check
 python fixtures/unc/mcm/intvl/make_fixtures.py --check
+python fixtures/unc/model/graph/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/ux/system/princ/make_fixtures.py --check
 python fixtures/viz/viewstate-samples/make_fixtures.py --check

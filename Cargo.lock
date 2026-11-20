@@ -1178,6 +1178,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-clarabel"
+version = "0.11.1"
+dependencies = [
+ "fid-num",
+]
+
+[[package]]
 name = "fid-cli"
 version = "0.0.1"
 dependencies = [
@@ -1516,6 +1523,7 @@ version = "0.0.1"
 dependencies = [
  "fid-bus",
  "fid-canon",
+ "fid-journal",
  "fid-registry",
  "fid-types",
  "fid-uuid",
@@ -1739,6 +1747,7 @@ dependencies = [
  "fid-geo-cmd",
  "fid-geo-types",
  "fid-jobs",
+ "fid-journal",
  "fid-program-rec",
  "fid-project",
  "fid-project-cmd",

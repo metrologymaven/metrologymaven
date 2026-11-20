@@ -1,0 +1,3549 @@
+Patch 0008 (syntax-scan-source) of fid-clarabel, spec node KRN.SOLV.CONIC.PATCH.
+
+Make every source file classifiable by the KNP-1 syntax scan (KRN.NUM.LINT.SYN), which fails closed: transliterate non-ASCII identifiers (Greek letters) to ASCII names; import through full crate paths instead of two-segment `use super::Name` / `use crate::name` forms (an alias cycle for the scan); rename the csc module `core` to `cscmatrix` (its glob re-export read as std `core`); expand the two macros that call through metavariables; implement Default for SolverStatus by hand instead of `#[default]`.
+
+Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
+
+diff --git a/src/algebra/csc/core.rs b/src/algebra/csc/core.rs
+deleted file mode 100644
+index 7b2d5cc..0000000
+--- a/src/algebra/csc/core.rs
++++ /dev/null
+@@ -1,717 +0,0 @@
+-#![allow(non_snake_case)]
+-
+-use crate::algebra::utils::sortperm_by;
+-use crate::algebra::{permute, MatrixTriangle, TriangularMatrixChecks};
+-use crate::algebra::{Adjoint, MatrixShape, ShapedMatrix, SparseFormatError, Symmetric};
+-use crate::algebra::{FloatT, T};
+-use std::iter::{repeat, zip};
+-
+-/// Sparse matrix in standard Compressed Sparse Column (CSC) format
+-///
+-/// __Example usage__ : To construct the 3 x 3 matrix
+-/// ```text
+-/// A = [1.  3.  5.]
+-///     [2.  0.  6.]
+-///     [0.  4.  7.]
+-/// ```
+-/// ```no_run
+-/// use clarabel::algebra::CscMatrix;
+-///
+-/// let A : CscMatrix = CscMatrix::new(
+-///    3,                                // m
+-///    3,                                // n
+-///    vec![0, 2, 4, 7],                 //colptr
+-///    vec![0, 1, 0, 2, 0, 1, 2],        //rowval
+-///    vec![1., 2., 3., 4., 5., 6., 7.], //nzval
+-///  );
+-///
+-/// // optional correctness check
+-/// assert!(A.check_format().is_ok());
+-///
+-/// // the above is equivalent to the following,
+-/// // which is more convenient for small matrices
+-/// let A = CscMatrix::from(
+-///      &[[1.0, 3.0, 5.0],
+-///        [2.0, 0.0, 6.0],
+-///        [0.0, 4.0, 7.0]]);
+-///
+-/// ```
+-#[derive(Debug, Clone, PartialEq)]
+-pub struct CscMatrix {
+-    /// number of rows
+-    pub m: usize,
+-    /// number of columns
+-    pub n: usize,
+-    /// CSC format column pointer.   
+-    ///
+-    /// This field should have length `n+1`. The last entry corresponds
+-    /// to the the number of nonzeros and should agree with the lengths
+-    /// of the `rowval` and `nzval` fields.
+-    pub colptr: Vec<usize>,
+-    /// vector of row indices
+-    pub rowval: Vec<usize>,
+-    /// vector of non-zero matrix elements
+-    pub nzval: Vec<T>,
+-}
+-
+-/// Creates a CscMatrix from a slice of arrays.
+-///
+-/// Example:
+-/// ```
+-/// use clarabel::algebra::CscMatrix;
+-/// let A = CscMatrix::from(
+-///      &[[1.0, 2.0],
+-///        [3.0, 0.0],
+-///        [0.0, 4.0]]);
+-///
+-impl<'a, I, J> From<I> for CscMatrix
+-where
+-    I: IntoIterator<Item = J>,
+-    J: IntoIterator<Item = &'a T>,
+-{
+-    #[allow(clippy::needless_range_loop)]
+-    fn from(rows: I) -> CscMatrix {
+-        let rows: Vec<Vec<T>> = rows
+-            .into_iter()
+-            .map(|r| r.into_iter().copied().collect())
+-            .collect();
+-
+-        let m = rows.len();
+-        let n = rows.iter().map(|r| r.len()).next().unwrap_or(0);
+-
+-        // (patch 0003) ragged rows: upstream asserted; this returns a matrix that fails
+-        // check_format (no column pointers), which the solver rejects as bad input
+-        if !rows.iter().all(|r| r.len() == n) {
+-            return CscMatrix {
+-                m,
+-                n,
+-                colptr: Vec::new(),
+-                rowval: Vec::new(),
+-                nzval: Vec::new(),
+-            };
+-        }
+-        let nnz = rows.iter().flatten().filter(|&v| *v != T::zero()).count();
+-
+-        let mut colptr = Vec::with_capacity(n + 1);
+-        let mut rowval = Vec::with_capacity(nnz);
+-        let mut nzval = Vec::<T>::with_capacity(nnz);
+-
+-        colptr.push(0);
+-        for c in 0..n {
+-            for r in 0..m {
+-                let value = rows[r][c];
+-                if value != T::zero() {
+-                    rowval.push(r);
+-                    nzval.push(value);
+-                }
+-            }
+-            colptr.push(nzval.len());
+-        }
+-
+-        CscMatrix {
+-            m,
+-            n,
+-            colptr,
+-            rowval,
+-            nzval,
+-        }
+-    }
+-}
+-
+-impl CscMatrix {
+-    /// `CscMatrix` constructor.
+-    ///
+-    /// This constructor does __not__ check its arguments (upstream asserted the
+-    /// array lengths and panicked; patch 0003). Use [`check_format`](CscMatrix::check_format)
+-    /// to validate a matrix; the solver does so for its inputs and rejects a malformed one.
+-    ///
+-    pub fn new(m: usize, n: usize, colptr: Vec<usize>, rowval: Vec<usize>, nzval: Vec<T>) -> Self {
+-        CscMatrix {
+-            m,
+-            n,
+-            colptr,
+-            rowval,
+-            nzval,
+-        }
+-    }
+-
+-    /// `CscMatrix` constructor from data in triplet format.
+-    ///
+-    /// Data can be provided unsorted.   Repeated values are added.
+-    /// Returns `IncompatibleDimension` if `I`, `J` and `V` differ in length and
+-    /// `BadRowval`/`BadColptr` for an index out of range (upstream panicked; patch 0003).
+-    ///
+-    pub fn new_from_triplets(
+-        m: usize,
+-        n: usize,
+-        I: Vec<usize>,
+-        J: Vec<usize>,
+-        V: Vec<T>,
+-    ) -> Result<Self, SparseFormatError> {
+-        if I.len() != J.len() || I.len() != V.len() {
+-            return Err(SparseFormatError::IncompatibleDimension);
+-        }
+-        if I.iter().any(|&i| i >= m) {
+-            return Err(SparseFormatError::BadRowval);
+-        }
+-        if J.iter().any(|&j| j >= n) {
+-            return Err(SparseFormatError::BadColptr);
+-        }
+-
+-        let mut M = CscMatrix::spalloc((m, n), V.len());
+-
+-        let mut p = vec![0; V.len()];
+-
+-        // use M.rowptr as temporary workspace
+-        M.rowval.iter_mut().enumerate().for_each(|(i, p)| *p = i);
+-
+-        // sort by column, then by row
+-        sortperm_by(&mut p, &M.rowval, |&a, &b| {
+-            J[a].cmp(&J[b]).then(I[a].cmp(&I[b]))
+-        });
+-
+-        // map data into the matrix in sorted order
+-        permute(&mut M.rowval, &I, &p);
+-        permute(&mut M.nzval, &V, &p);
+-
+-        // assemble the column counts
+-        for &c in J.iter() {
+-            M.colptr[c] += 1;
+-        }
+-
+-        // make a second pass to consolidate repeated entries
+-        // within each column
+-        let mut readidx = 0;
+-        let mut writeidx = 0;
+-
+-        for col in 0..n {
+-            let nentries = M.colptr[col]; //entries in this column
+-            for j in 0..nentries {
+-                // non-repeated or first entry in column
+-                if j == 0 || M.rowval[readidx] != M.rowval[readidx - 1] {
+-                    if writeidx != readidx {
+-                        M.rowval[writeidx] = M.rowval[readidx];
+-                        M.nzval[writeidx] = M.nzval[readidx];
+-                    }
+-                    writeidx += 1;
+-                    readidx += 1;
+-                }
+-                // repeated row entry with value to be consolidated
+-                else {
+-                    M.nzval[writeidx - 1] = M.nzval[writeidx - 1] + M.nzval[readidx];
+-                    M.colptr[col] -= 1;
+-                    readidx += 1;
+-                }
+-            }
+-        }
+-
+-        M.rowval.resize(writeidx, 0);
+-        M.nzval.resize(writeidx, T::zero());
+-
+-        M.colcount_to_colptr();
+-
+-        Ok(M)
+-    }
+-
+-    /// allocate space for a sparse matrix with `nnz` elements
+-    pub fn spalloc(size: (usize, usize), nnz: usize) -> Self {
+-        let (m, n) = size;
+-        let mut colptr = vec![0; n + 1];
+-        let rowval = vec![0; nnz];
+-        let nzval = vec![T::zero(); nnz];
+-        colptr[n] = nnz;
+-
+-        CscMatrix::new(m, n, colptr, rowval, nzval)
+-    }
+-
+-    /// Sparse matrix of zeros of size `m` x `n`
+-    pub fn zeros(size: (usize, usize)) -> Self {
+-        Self::spalloc(size, 0)
+-    }
+-
+-    /// Negates every stored value (public; the math traits are crate-private, patch 0003)
+-    pub fn negate(&mut self) {
+-        self.nzval.iter_mut().for_each(|x| *x = -*x);
+-    }
+-
+-    /// Identity matrix of size `n`
+-    pub fn identity(n: usize) -> Self {
+-        let colptr = (0usize..=n).collect();
+-        let rowval = (0usize..n).collect();
+-        let nzval = vec![T::one(); n];
+-
+-        CscMatrix::new(n, n, colptr, rowval, nzval)
+-    }
+-
+-    /// squeeze out zero entries.  Returns a count of dropped entries.
+-    pub fn dropzeros(&mut self) -> usize {
+-        // this function could possibly be generalized to allow filtering
+-        // on a more general test, similar to fkeep! in Julia sparse matrix
+-        // internals.  Then could be used as a filter for triu matrix etc
+-
+-        // Sweep through columns, rewriting kept elements in their new positions
+-        // and updating the column pointers accordingly as we go.
+-        let mut writeidx: usize = 0;
+-        let mut first: usize = 0;
+-
+-        for col in 0..self.ncols() {
+-            let last = self.colptr[col + 1];
+-
+-            for readidx in first..last {
+-                let val = self.nzval[readidx];
+-                let row = self.rowval[readidx];
+-
+-                // If nonzero and a shift so far, move the value
+-                if val != T::zero() {
+-                    if writeidx != readidx {
+-                        self.nzval[writeidx] = val;
+-                        self.rowval[writeidx] = row;
+-                    }
+-                    writeidx += 1;
+-                }
+-            }
+-
+-            first = self.colptr[col + 1];
+-            self.colptr[col + 1] = writeidx;
+-        }
+-
+-        let dropcount = self.nzval.len() - writeidx;
+-
+-        self.rowval.resize(writeidx, 0);
+-        self.nzval.resize(writeidx, T::zero());
+-
+-        dropcount
+-    }
+-
+-    /// Return matrix data in triplet format.
+-    ///
+-    #[allow(dead_code)]
+-    pub(crate) fn findnz(&self) -> (Vec<usize>, Vec<usize>, Vec<T>) {
+-        let I = self.rowval.clone();
+-        let mut J = Vec::with_capacity(self.nnz());
+-        let V = self.nzval.clone();
+-
+-        for c in 0..self.ncols() {
+-            let times = self.colptr[c + 1] - self.colptr[c];
+-            J.extend(repeat(c).take(times));
+-        }
+-        (I, J, V)
+-    }
+-
+-    /// number of nonzeros
+-    pub fn nnz(&self) -> usize {
+-        self.colptr[self.n]
+-    }
+-
+-    /// transpose
+-    pub fn t(&self) -> Adjoint<'_, Self> {
+-        Adjoint { src: self }
+-    }
+-
+-    /// symmetric view (selects upper or lower triangle source)
+-    pub fn sym(&self, uplo: MatrixTriangle) -> Symmetric<'_, Self> {
+-        // (upstream debug_assert!-ed the triangle here; no panics in the kernel, and
+-        // callers pass matrices made triangular at solver setup)
+-        Symmetric { src: self, uplo }
+-    }
+-
+-    /// symmetric view (assume upper triangle source)
+-    pub fn sym_up(&self) -> Symmetric<'_, Self> {
+-        self.sym(MatrixTriangle::Triu)
+-    }
+-    /// symmetric view (assume lower triangle source)
+-    pub fn sym_lo(&self) -> Symmetric<'_, Self> {
+-        self.sym(MatrixTriangle::Tril)
+-    }
+-
+-    /// Check that matrix data is canonically formatted.
+-    pub fn check_format(&self) -> Result<(), SparseFormatError> {
+-        self.check_dimensions()?;
+-
+-        //check for rowval monotonicity within each column
+-        for col in 0..self.n {
+-            let rng = self.colptr[col]..self.colptr[col + 1];
+-            if self.rowval[rng].windows(2).any(|c| c[0] >= c[1]) {
+-                return Err(SparseFormatError::BadRowval);
+-            }
+-        }
+-        //check for row values out of bounds
+-        if !self.rowval.iter().all(|r| r < &self.m) {
+-            return Err(SparseFormatError::BadRowval);
+-        }
+-
+-        Ok(())
+-    }
+-
+-    /// Put matrix into standard ('canonical') form, operating in place.  This function
+-    /// sorts data within each column by row index, and removes any duplicates.
+-    /// Does not remove structural zeros.
+-    ///
+-    /// # Panics
+-    /// Panics if the matrix initial dimensions are incompatible.
+-    ///
+-    pub fn canonicalize(&mut self) -> Result<(), SparseFormatError> {
+-        self.check_dimensions()?;
+-        self.sort_indices()?;
+-        self.deduplicate()
+-    }
+-
+-    /// Adds together repeated entries in the same column.   Input must
+-    /// already be in column sorted order.
+-    fn sort_indices(&mut self) -> Result<(), SparseFormatError> {
+-        let mut tempdata: Vec<(usize, T)> = Vec::new();
+-
+-        for col in 0..self.n {
+-            let start = self.colptr[col];
+-            let stop = self.colptr[col + 1];
+-
+-            let nzval = &mut self.nzval[start..stop];
+-            let rowval = &mut self.rowval[start..stop];
+-
+-            tempdata.resize(stop - start, (0, T::zero()));
+-
+-            for (i, (r, v)) in zip(rowval.iter(), nzval.iter()).enumerate() {
+-                tempdata[i] = (*r, *v);
+-            }
+-            tempdata.sort_by_key(|&(r, _)| r);
+-
+-            for (i, (r, v)) in tempdata.iter().enumerate() {
+-                rowval[i] = *r;
+-                nzval[i] = *v;
+-            }
+-        }
+-
+-        Ok(())
+-    }
+-
+-    /// Adds together repeated entries in the same column.   Input must
+-    /// already be in column sorted order.
+-    fn deduplicate(&mut self) -> Result<(), SparseFormatError> {
+-        let mut nnz = 0;
+-        let mut stop = 0;
+-
+-        for col in 0..self.n {
+-            let mut ptr = stop;
+-            stop = self.colptr[col + 1];
+-
+-            while ptr < stop {
+-                let thisrow = self.rowval[ptr];
+-                let mut accum = self.nzval[ptr];
+-                ptr += 1;
+-
+-                while (ptr < stop) && (self.rowval[ptr] == thisrow) {
+-                    accum = accum + self.nzval[ptr];
+-                    ptr += 1;
+-                }
+-                self.rowval[nnz] = thisrow;
+-                self.nzval[nnz] = accum;
+-                nnz += 1;
+-            }
+-            self.colptr[col + 1] = nnz;
+-        }
+-
+-        self.rowval.truncate(nnz);
+-        self.nzval.truncate(nnz);
+-
+-        Ok(())
+-    }
+-
+-    /// Check that for dimensional consistency.  Private since users should
+-    /// check everything via check_format, and the canonicalization functions
+-    /// must at least check dimensions before running.
+-    fn check_dimensions(&self) -> Result<(), SparseFormatError> {
+-        if self.rowval.len() != self.nzval.len() {
+-            return Err(SparseFormatError::IncompatibleDimension);
+-        }
+-
+-        if self.colptr.is_empty()
+-            || (self.colptr.len() - 1) != self.n
+-            || self.colptr[self.n] != self.rowval.len()
+-        {
+-            return Err(SparseFormatError::IncompatibleDimension);
+-        }
+-
+-        //check for colptr monotonicity
+-        if self.colptr.windows(2).any(|c| c[0] > c[1]) {
+-            return Err(SparseFormatError::BadColptr);
+-        }
+-        Ok(())
+-    }
+-
+-    /// True if matrices if the same size and sparsity pattern
+-    pub fn is_equal_sparsity(&self, other: &Self) -> bool {
+-        self.size() == other.size() && self.colptr == other.colptr && self.rowval == other.rowval
+-    }
+-
+-    /// Same as `is_equal_sparsity`, but returns an error indicating the reason
+-    /// for failure if the matrices do not have equivalent sparsity patterns.
+-    pub fn check_equal_sparsity(&self, other: &Self) -> Result<(), SparseFormatError> {
+-        if self.size() != other.size() {
+-            Err(SparseFormatError::IncompatibleDimension)
+-        } else if self.colptr != other.colptr || self.rowval != other.rowval {
+-            Err(SparseFormatError::SparsityMismatch)
+-        } else {
+-            Ok(())
+-        }
+-    }
+-
+-    /// Select a subset of the rows of a sparse matrix (crate-private, patch 0003: asserts
+-    /// that `rowidx` has one flag per row)
+-    pub(crate) fn select_rows(&self, rowidx: &Vec<bool>) -> Self {
+-        //first check for compatible row dimensions
+-        // invariant (patch 0003): the presolver passes one keep flag per row of A.
+-        assert_eq!(rowidx.len(), self.m);
+-
+-        //count the number of rows in the reduced matrix and build an
+-        //index from the logical rowidx to the reduced row number
+-        let mut rridx = vec![0; self.m];
+-        let mut mred = 0;
+-        for (r, is_used) in zip(&mut rridx, rowidx) {
+-            if *is_used {
+-                *r = mred;
+-                mred += 1;
+-            }
+-        }
+-
+-        // count the nonzeros in Ared
+-        let nzred = self.rowval.iter().filter(|&r| rowidx[*r]).count();
+-
+-        // Allocate a reduced size A
+-        let mut Ared = CscMatrix::spalloc((mred, self.n), nzred);
+-
+-        //populate new matrix
+-        let mut ptrred = 0;
+-        for col in 0..self.n {
+-            Ared.colptr[col] = ptrred;
+-            for ptr in self.colptr[col]..self.colptr[col + 1] {
+-                let thisrow = self.rowval[ptr];
+-                if rowidx[thisrow] {
+-                    Ared.rowval[ptrred] = rridx[thisrow];
+-                    Ared.nzval[ptrred] = self.nzval[ptr];
+-                    ptrred += 1;
+-                }
+-            }
+-            Ared.colptr[Ared.n] = ptrred;
+-        }
+-
+-        Ared
+-    }
+-
+-    /// Allocates a new matrix containing only entries from the upper triangular part
+-    /// (crate-private, patch 0003: asserts a square matrix)
+-    pub(crate) fn to_triu(&self) -> Self {
+-        // invariant (patch 0003): called on P, which check_dimensions found square.
+-        assert_eq!(self.m, self.n);
+-        let (m, n) = (self.m, self.n);
+-        let mut colptr = vec![0; n + 1];
+-        let mut nnz = 0;
+-
+-        //count the number of entries in the upper triangle
+-        //and place the totals into colptr
+-
+-        for col in 0..n {
+-            //start / stop indices for the current column
+-            let first = self.colptr[col];
+-            let last = self.colptr[col + 1];
+-            let rows = &self.rowval[first..last];
+-
+-            // number of entries on or above diagonal in this column,
+-            // shifted by 1 (i.e. colptr keeps a 0 in the first column)
+-            colptr[col + 1] = rows.iter().filter(|&row| *row <= col).count();
+-            nnz += colptr[col + 1];
+-        }
+-
+-        //allocate and copy the upper triangle entries of
+-        //each column into the new value vector.
+-        //NB! : assumes that entries in each column have
+-        //monotonically increasing row numbers
+-        let mut rowval = vec![0; nnz];
+-        let mut nzval = vec![T::zero(); nnz];
+-
+-        for col in 0..n {
+-            let ntriu = colptr[col + 1];
+-
+-            //start / stop indices for the destination
+-            let fdest = colptr[col];
+-            let ldest = fdest + ntriu;
+-
+-            //start / stop indices for the source
+-            let fsrc = self.colptr[col];
+-            let lsrc = fsrc + ntriu;
+-
+-            //copy upper triangle values
+-            rowval[fdest..ldest].copy_from_slice(&self.rowval[fsrc..lsrc]);
+-            nzval[fdest..ldest].copy_from_slice(&self.nzval[fsrc..lsrc]);
+-
+-            //this should now be cumsum of the counts
+-            colptr[col + 1] = ldest;
+-        }
+-        CscMatrix::new(m, n, colptr, rowval, nzval)
+-    }
+-
+-    /// Returns the value at the given (row,col) index as an Option.
+-    /// Returns None if the given index is not a structural nonzero, is out of bounds or
+-    /// the matrix is malformed (upstream panicked out of bounds; patch 0003).
+-    pub fn get_entry(&self, idx: (usize, usize)) -> Option<T> {
+-        let (row, col) = idx;
+-        if row >= self.nrows() || col >= self.ncols() {
+-            return None;
+-        }
+-
+-        let first = *self.colptr.get(col)?;
+-        let last = *self.colptr.get(col + 1)?;
+-        let rows_in_this_column = self.rowval.get(first..last)?;
+-        match rows_in_this_column.binary_search(&row) {
+-            Ok(idx) => self.nzval.get(first + idx).copied(),
+-            Err(_) => None,
+-        }
+-    }
+-
+-    /// Sets a value at a given (row,col) index, allocating
+-    /// additional space in the matrix if required.  
+-    ///
+-    /// Returns `IncompatibleDimension` if the index is out of bounds or the matrix is
+-    /// malformed (upstream panicked; patch 0003).
+-    pub fn set_entry(&mut self, idx: (usize, usize), value: T) -> Result<(), SparseFormatError> {
+-        let (row, col) = idx;
+-        if row >= self.nrows() || col >= self.ncols() || self.check_format().is_err() {
+-            return Err(SparseFormatError::IncompatibleDimension);
+-        }
+-
+-        let first = self.colptr[col];
+-        let last = self.colptr[col + 1];
+-        let rows_in_this_column = &self.rowval[first..last];
+-
+-        let i = rows_in_this_column.partition_point(|&x| x < row);
+-
+-        if i == rows_in_this_column.len() || rows_in_this_column[i] != row {
+-            // don't allocate space for insertion of new zeros
+-            if value.is_zero() {
+-                return Ok(());
+-            }
+-
+-            // the element must be inserted, then col counts rebuilt
+-            self.rowval.insert(first + i, row);
+-            self.nzval.insert(first + i, value);
+-
+-            // a bit wasteful since we only really need to
+-            // rebuil from the insertion point onwards
+-            self.colptr_to_colcount();
+-            self.colptr[col] += 1;
+-            self.colcount_to_colptr();
+-        } else {
+-            // the element already exists, so overwrite it
+-            self.nzval[first + i] = value;
+-        }
+-        Ok(())
+-    }
+-
+-    /// Returns the (row,col) coordinates of the given linear index, or `None` if it is
+-    /// out of bounds (upstream panicked; patch 0003).
+-    pub fn index_to_coord(&self, idx: usize) -> Option<(usize, usize)> {
+-        if idx >= self.nnz() {
+-            return None;
+-        }
+-        let row = *self.rowval.get(idx)?;
+-        let col = self
+-            .colptr
+-            .partition_point(|&c| idx + 1 > c)
+-            .checked_sub(1)?;
+-        Some((row, col))
+-    }
+-}
+-
+-impl TriangularMatrixChecks for CscMatrix {
+-    fn is_triu(&self) -> bool {
+-        // check lower triangle for any structural entries, regardless
+-        // of the values that may be assigned to them
+-        for col in 0..self.ncols() {
+-            //start / stop indices for the current column
+-            let first = self.colptr[col];
+-            let last = self.colptr[col + 1];
+-            let rows = &self.rowval[first..last];
+-
+-            if rows.iter().any(|&row| row > col) {
+-                return false;
+-            }
+-        }
+-        true
+-    }
+-    fn is_tril(&self) -> bool {
+-        // check upper triangle for any structural entries, regardless
+-        // of the values that may be assigned to them
+-        for col in 0..self.ncols() {
+-            //start / stop indices for the current column
+-            let first = self.colptr[col];
+-            let last = self.colptr[col + 1];
+-            let rows = &self.rowval[first..last];
+-
+-            if rows.iter().any(|&row| row < col) {
+-                return false;
+-            }
+-        }
+-        true
+-    }
+-}
+-
+-impl ShapedMatrix for CscMatrix {
+-    fn nrows(&self) -> usize {
+-        self.m
+-    }
+-    fn ncols(&self) -> usize {
+-        self.n
+-    }
+-    fn size(&self) -> (usize, usize) {
+-        (self.m, self.n)
+-    }
+-    fn shape(&self) -> MatrixShape {
+-        MatrixShape::N
+-    }
+-    fn is_square(&self) -> bool {
+-        self.m == self.n
+-    }
+-}
+-
+-/// Make a concrete [CscMatrix] from its [Adjoint].   This operation will
+-/// allocate a new matrix and copy the data from the adjoint.
+-///
+-/// __Example usage__ : To construct the transpose of a 3 x 3 matrix:
+-/// ```text
+-/// A = [1.,  0.,  0.]
+-///     [2.,  4.,  0.]
+-///     [3.,  5.,  6.]
+-///```
+-/// ```no_run
+-/// use clarabel::algebra::CscMatrix;
+-///
+-/// let A : CscMatrix = (&[
+-///     [1., 0., 0.], //
+-///     [2., 4., 0.], //
+-///     [3., 5., 6.],
+-/// ]).into();
+-///
+-/// let At = A.t();  //Adjoint form.   Does not copy anything.
+-///
+-/// let B : CscMatrix = At.into(); //Concrete form.  Allocates and copies.
+-///
+-/// assert_eq!(A, B);
+-///
+-/// ```
+-impl<'a> From<Adjoint<'a, CscMatrix>> for CscMatrix {
+-    fn from(M: Adjoint<'a, CscMatrix>) -> CscMatrix {
+-        let src = M.src;
+-
+-        let (m, n) = (src.n, src.m);
+-        let mut A = CscMatrix::spalloc((m, n), src.nnz());
+-
+-        //make dummy mapping indices since we don't care
+-        //where the entries go
+-        let mut amap = vec![0usize; src.nnz()];
+-
+-        A.colcount_block(src, 0, MatrixShape::T);
+-        A.colcount_to_colptr();
+-        A.fill_block(src, &mut amap, 0, 0, MatrixShape::T);
+-        A.backshift_colptrs();
+-        A
+-    }
+-}
+diff --git a/src/algebra/csc/cscmatrix.rs b/src/algebra/csc/cscmatrix.rs
+new file mode 100644
+index 0000000..7b2d5cc
+--- /dev/null
++++ b/src/algebra/csc/cscmatrix.rs
+@@ -0,0 +1,717 @@
++#![allow(non_snake_case)]
++
++use crate::algebra::utils::sortperm_by;
++use crate::algebra::{permute, MatrixTriangle, TriangularMatrixChecks};
++use crate::algebra::{Adjoint, MatrixShape, ShapedMatrix, SparseFormatError, Symmetric};
++use crate::algebra::{FloatT, T};
++use std::iter::{repeat, zip};
++
++/// Sparse matrix in standard Compressed Sparse Column (CSC) format
++///
++/// __Example usage__ : To construct the 3 x 3 matrix
++/// ```text
++/// A = [1.  3.  5.]
++///     [2.  0.  6.]
++///     [0.  4.  7.]
++/// ```
++/// ```no_run
++/// use clarabel::algebra::CscMatrix;
++///
++/// let A : CscMatrix = CscMatrix::new(
++///    3,                                // m
++///    3,                                // n
++///    vec![0, 2, 4, 7],                 //colptr
++///    vec![0, 1, 0, 2, 0, 1, 2],        //rowval
++///    vec![1., 2., 3., 4., 5., 6., 7.], //nzval
++///  );
++///
++/// // optional correctness check
++/// assert!(A.check_format().is_ok());
++///
++/// // the above is equivalent to the following,
++/// // which is more convenient for small matrices
++/// let A = CscMatrix::from(
++///      &[[1.0, 3.0, 5.0],
++///        [2.0, 0.0, 6.0],
++///        [0.0, 4.0, 7.0]]);
++///
++/// ```
++#[derive(Debug, Clone, PartialEq)]
++pub struct CscMatrix {
++    /// number of rows
++    pub m: usize,
++    /// number of columns
++    pub n: usize,
++    /// CSC format column pointer.   
++    ///
++    /// This field should have length `n+1`. The last entry corresponds
++    /// to the the number of nonzeros and should agree with the lengths
++    /// of the `rowval` and `nzval` fields.
++    pub colptr: Vec<usize>,
++    /// vector of row indices
++    pub rowval: Vec<usize>,
++    /// vector of non-zero matrix elements
++    pub nzval: Vec<T>,
++}
++
++/// Creates a CscMatrix from a slice of arrays.
++///
++/// Example:
++/// ```
++/// use clarabel::algebra::CscMatrix;
++/// let A = CscMatrix::from(
++///      &[[1.0, 2.0],
++///        [3.0, 0.0],
++///        [0.0, 4.0]]);
++///
++impl<'a, I, J> From<I> for CscMatrix
++where
++    I: IntoIterator<Item = J>,
++    J: IntoIterator<Item = &'a T>,
++{
++    #[allow(clippy::needless_range_loop)]
++    fn from(rows: I) -> CscMatrix {
++        let rows: Vec<Vec<T>> = rows
++            .into_iter()
++            .map(|r| r.into_iter().copied().collect())
++            .collect();
++
++        let m = rows.len();
++        let n = rows.iter().map(|r| r.len()).next().unwrap_or(0);
++
++        // (patch 0003) ragged rows: upstream asserted; this returns a matrix that fails
++        // check_format (no column pointers), which the solver rejects as bad input
++        if !rows.iter().all(|r| r.len() == n) {
++            return CscMatrix {
++                m,
++                n,
++                colptr: Vec::new(),
++                rowval: Vec::new(),
++                nzval: Vec::new(),
++            };
++        }
++        let nnz = rows.iter().flatten().filter(|&v| *v != T::zero()).count();
++
++        let mut colptr = Vec::with_capacity(n + 1);
++        let mut rowval = Vec::with_capacity(nnz);
++        let mut nzval = Vec::<T>::with_capacity(nnz);
++
++        colptr.push(0);
++        for c in 0..n {
++            for r in 0..m {
++                let value = rows[r][c];
++                if value != T::zero() {
++                    rowval.push(r);
++                    nzval.push(value);
++                }
++            }
++            colptr.push(nzval.len());
++        }
++
++        CscMatrix {
++            m,
++            n,
++            colptr,
++            rowval,
++            nzval,
++        }
++    }
++}
++
++impl CscMatrix {
++    /// `CscMatrix` constructor.
++    ///
++    /// This constructor does __not__ check its arguments (upstream asserted the
++    /// array lengths and panicked; patch 0003). Use [`check_format`](CscMatrix::check_format)
++    /// to validate a matrix; the solver does so for its inputs and rejects a malformed one.
++    ///
++    pub fn new(m: usize, n: usize, colptr: Vec<usize>, rowval: Vec<usize>, nzval: Vec<T>) -> Self {
++        CscMatrix {
++            m,
++            n,
++            colptr,
++            rowval,
++            nzval,
++        }
++    }
++
++    /// `CscMatrix` constructor from data in triplet format.
++    ///
++    /// Data can be provided unsorted.   Repeated values are added.
++    /// Returns `IncompatibleDimension` if `I`, `J` and `V` differ in length and
++    /// `BadRowval`/`BadColptr` for an index out of range (upstream panicked; patch 0003).
++    ///
++    pub fn new_from_triplets(
++        m: usize,
++        n: usize,
++        I: Vec<usize>,
++        J: Vec<usize>,
++        V: Vec<T>,
++    ) -> Result<Self, SparseFormatError> {
++        if I.len() != J.len() || I.len() != V.len() {
++            return Err(SparseFormatError::IncompatibleDimension);
++        }
++        if I.iter().any(|&i| i >= m) {
++            return Err(SparseFormatError::BadRowval);
++        }
++        if J.iter().any(|&j| j >= n) {
++            return Err(SparseFormatError::BadColptr);
++        }
++
++        let mut M = CscMatrix::spalloc((m, n), V.len());
++
++        let mut p = vec![0; V.len()];
++
++        // use M.rowptr as temporary workspace
++        M.rowval.iter_mut().enumerate().for_each(|(i, p)| *p = i);
++
++        // sort by column, then by row
++        sortperm_by(&mut p, &M.rowval, |&a, &b| {
++            J[a].cmp(&J[b]).then(I[a].cmp(&I[b]))
++        });
++
++        // map data into the matrix in sorted order
++        permute(&mut M.rowval, &I, &p);
++        permute(&mut M.nzval, &V, &p);
++
++        // assemble the column counts
++        for &c in J.iter() {
++            M.colptr[c] += 1;
++        }
++
++        // make a second pass to consolidate repeated entries
++        // within each column
++        let mut readidx = 0;
++        let mut writeidx = 0;
++
++        for col in 0..n {
++            let nentries = M.colptr[col]; //entries in this column
++            for j in 0..nentries {
++                // non-repeated or first entry in column
++                if j == 0 || M.rowval[readidx] != M.rowval[readidx - 1] {
++                    if writeidx != readidx {
++                        M.rowval[writeidx] = M.rowval[readidx];
++                        M.nzval[writeidx] = M.nzval[readidx];
++                    }
++                    writeidx += 1;
++                    readidx += 1;
++                }
++                // repeated row entry with value to be consolidated
++                else {
++                    M.nzval[writeidx - 1] = M.nzval[writeidx - 1] + M.nzval[readidx];
++                    M.colptr[col] -= 1;
++                    readidx += 1;
++                }
++            }
++        }
++
++        M.rowval.resize(writeidx, 0);
++        M.nzval.resize(writeidx, T::zero());
++
++        M.colcount_to_colptr();
++
++        Ok(M)
++    }
++
++    /// allocate space for a sparse matrix with `nnz` elements
++    pub fn spalloc(size: (usize, usize), nnz: usize) -> Self {
++        let (m, n) = size;
++        let mut colptr = vec![0; n + 1];
++        let rowval = vec![0; nnz];
++        let nzval = vec![T::zero(); nnz];
++        colptr[n] = nnz;
++
++        CscMatrix::new(m, n, colptr, rowval, nzval)
++    }
++
++    /// Sparse matrix of zeros of size `m` x `n`
++    pub fn zeros(size: (usize, usize)) -> Self {
++        Self::spalloc(size, 0)
++    }
++
++    /// Negates every stored value (public; the math traits are crate-private, patch 0003)
++    pub fn negate(&mut self) {
++        self.nzval.iter_mut().for_each(|x| *x = -*x);
++    }
++
++    /// Identity matrix of size `n`
++    pub fn identity(n: usize) -> Self {
++        let colptr = (0usize..=n).collect();
++        let rowval = (0usize..n).collect();
++        let nzval = vec![T::one(); n];
++
++        CscMatrix::new(n, n, colptr, rowval, nzval)
++    }
++
++    /// squeeze out zero entries.  Returns a count of dropped entries.
++    pub fn dropzeros(&mut self) -> usize {
++        // this function could possibly be generalized to allow filtering
++        // on a more general test, similar to fkeep! in Julia sparse matrix
++        // internals.  Then could be used as a filter for triu matrix etc
++
++        // Sweep through columns, rewriting kept elements in their new positions
++        // and updating the column pointers accordingly as we go.
++        let mut writeidx: usize = 0;
++        let mut first: usize = 0;
++
++        for col in 0..self.ncols() {
++            let last = self.colptr[col + 1];
++
++            for readidx in first..last {
++                let val = self.nzval[readidx];
++                let row = self.rowval[readidx];
++
++                // If nonzero and a shift so far, move the value
++                if val != T::zero() {
++                    if writeidx != readidx {
++                        self.nzval[writeidx] = val;
++                        self.rowval[writeidx] = row;
++                    }
++                    writeidx += 1;
++                }
++            }
++
++            first = self.colptr[col + 1];
++            self.colptr[col + 1] = writeidx;
++        }
++
++        let dropcount = self.nzval.len() - writeidx;
++
++        self.rowval.resize(writeidx, 0);
++        self.nzval.resize(writeidx, T::zero());
++
++        dropcount
++    }
++
++    /// Return matrix data in triplet format.
++    ///
++    #[allow(dead_code)]
++    pub(crate) fn findnz(&self) -> (Vec<usize>, Vec<usize>, Vec<T>) {
++        let I = self.rowval.clone();
++        let mut J = Vec::with_capacity(self.nnz());
++        let V = self.nzval.clone();
++
++        for c in 0..self.ncols() {
++            let times = self.colptr[c + 1] - self.colptr[c];
++            J.extend(repeat(c).take(times));
++        }
++        (I, J, V)
++    }
++
++    /// number of nonzeros
++    pub fn nnz(&self) -> usize {
++        self.colptr[self.n]
++    }
++
++    /// transpose
++    pub fn t(&self) -> Adjoint<'_, Self> {
++        Adjoint { src: self }
++    }
++
++    /// symmetric view (selects upper or lower triangle source)
++    pub fn sym(&self, uplo: MatrixTriangle) -> Symmetric<'_, Self> {
++        // (upstream debug_assert!-ed the triangle here; no panics in the kernel, and
++        // callers pass matrices made triangular at solver setup)
++        Symmetric { src: self, uplo }
++    }
++
++    /// symmetric view (assume upper triangle source)
++    pub fn sym_up(&self) -> Symmetric<'_, Self> {
++        self.sym(MatrixTriangle::Triu)
++    }
++    /// symmetric view (assume lower triangle source)
++    pub fn sym_lo(&self) -> Symmetric<'_, Self> {
++        self.sym(MatrixTriangle::Tril)
++    }
++
++    /// Check that matrix data is canonically formatted.
++    pub fn check_format(&self) -> Result<(), SparseFormatError> {
++        self.check_dimensions()?;
++
++        //check for rowval monotonicity within each column
++        for col in 0..self.n {
++            let rng = self.colptr[col]..self.colptr[col + 1];
++            if self.rowval[rng].windows(2).any(|c| c[0] >= c[1]) {
++                return Err(SparseFormatError::BadRowval);
++            }
++        }
++        //check for row values out of bounds
++        if !self.rowval.iter().all(|r| r < &self.m) {
++            return Err(SparseFormatError::BadRowval);
++        }
++
++        Ok(())
++    }
++
++    /// Put matrix into standard ('canonical') form, operating in place.  This function
++    /// sorts data within each column by row index, and removes any duplicates.
++    /// Does not remove structural zeros.
++    ///
++    /// # Panics
++    /// Panics if the matrix initial dimensions are incompatible.
++    ///
++    pub fn canonicalize(&mut self) -> Result<(), SparseFormatError> {
++        self.check_dimensions()?;
++        self.sort_indices()?;
++        self.deduplicate()
++    }
++
++    /// Adds together repeated entries in the same column.   Input must
++    /// already be in column sorted order.
++    fn sort_indices(&mut self) -> Result<(), SparseFormatError> {
++        let mut tempdata: Vec<(usize, T)> = Vec::new();
++
++        for col in 0..self.n {
++            let start = self.colptr[col];
++            let stop = self.colptr[col + 1];
++
++            let nzval = &mut self.nzval[start..stop];
++            let rowval = &mut self.rowval[start..stop];
++
++            tempdata.resize(stop - start, (0, T::zero()));
++
++            for (i, (r, v)) in zip(rowval.iter(), nzval.iter()).enumerate() {
++                tempdata[i] = (*r, *v);
++            }
++            tempdata.sort_by_key(|&(r, _)| r);
++
++            for (i, (r, v)) in tempdata.iter().enumerate() {
++                rowval[i] = *r;
++                nzval[i] = *v;
++            }
++        }
++
++        Ok(())
++    }
++
++    /// Adds together repeated entries in the same column.   Input must
++    /// already be in column sorted order.
++    fn deduplicate(&mut self) -> Result<(), SparseFormatError> {
++        let mut nnz = 0;
++        let mut stop = 0;
++
++        for col in 0..self.n {
++            let mut ptr = stop;
++            stop = self.colptr[col + 1];
++
++            while ptr < stop {
++                let thisrow = self.rowval[ptr];
++                let mut accum = self.nzval[ptr];
++                ptr += 1;
++
++                while (ptr < stop) && (self.rowval[ptr] == thisrow) {
++                    accum = accum + self.nzval[ptr];
++                    ptr += 1;
++                }
++                self.rowval[nnz] = thisrow;
++                self.nzval[nnz] = accum;
++                nnz += 1;
++            }
++            self.colptr[col + 1] = nnz;
++        }
++
++        self.rowval.truncate(nnz);
++        self.nzval.truncate(nnz);
++
++        Ok(())
++    }
++
++    /// Check that for dimensional consistency.  Private since users should
++    /// check everything via check_format, and the canonicalization functions
++    /// must at least check dimensions before running.
++    fn check_dimensions(&self) -> Result<(), SparseFormatError> {
++        if self.rowval.len() != self.nzval.len() {
++            return Err(SparseFormatError::IncompatibleDimension);
++        }
++
++        if self.colptr.is_empty()
++            || (self.colptr.len() - 1) != self.n
++            || self.colptr[self.n] != self.rowval.len()
++        {
++            return Err(SparseFormatError::IncompatibleDimension);
++        }
++
++        //check for colptr monotonicity
++        if self.colptr.windows(2).any(|c| c[0] > c[1]) {
++            return Err(SparseFormatError::BadColptr);
++        }
++        Ok(())
++    }
++
++    /// True if matrices if the same size and sparsity pattern
++    pub fn is_equal_sparsity(&self, other: &Self) -> bool {
++        self.size() == other.size() && self.colptr == other.colptr && self.rowval == other.rowval
++    }
++
++    /// Same as `is_equal_sparsity`, but returns an error indicating the reason
++    /// for failure if the matrices do not have equivalent sparsity patterns.
++    pub fn check_equal_sparsity(&self, other: &Self) -> Result<(), SparseFormatError> {
++        if self.size() != other.size() {
++            Err(SparseFormatError::IncompatibleDimension)
++        } else if self.colptr != other.colptr || self.rowval != other.rowval {
++            Err(SparseFormatError::SparsityMismatch)
++        } else {
++            Ok(())
++        }
++    }
++
++    /// Select a subset of the rows of a sparse matrix (crate-private, patch 0003: asserts
++    /// that `rowidx` has one flag per row)
++    pub(crate) fn select_rows(&self, rowidx: &Vec<bool>) -> Self {
++        //first check for compatible row dimensions
++        // invariant (patch 0003): the presolver passes one keep flag per row of A.
++        assert_eq!(rowidx.len(), self.m);
++
++        //count the number of rows in the reduced matrix and build an
++        //index from the logical rowidx to the reduced row number
++        let mut rridx = vec![0; self.m];
++        let mut mred = 0;
++        for (r, is_used) in zip(&mut rridx, rowidx) {
++            if *is_used {
++                *r = mred;
++                mred += 1;
++            }
++        }
++
++        // count the nonzeros in Ared
++        let nzred = self.rowval.iter().filter(|&r| rowidx[*r]).count();
++
++        // Allocate a reduced size A
++        let mut Ared = CscMatrix::spalloc((mred, self.n), nzred);
++
++        //populate new matrix
++        let mut ptrred = 0;
++        for col in 0..self.n {
++            Ared.colptr[col] = ptrred;
++            for ptr in self.colptr[col]..self.colptr[col + 1] {
++                let thisrow = self.rowval[ptr];
++                if rowidx[thisrow] {
++                    Ared.rowval[ptrred] = rridx[thisrow];
++                    Ared.nzval[ptrred] = self.nzval[ptr];
++                    ptrred += 1;
++                }
++            }
++            Ared.colptr[Ared.n] = ptrred;
++        }
++
++        Ared
++    }
++
++    /// Allocates a new matrix containing only entries from the upper triangular part
++    /// (crate-private, patch 0003: asserts a square matrix)
++    pub(crate) fn to_triu(&self) -> Self {
++        // invariant (patch 0003): called on P, which check_dimensions found square.
++        assert_eq!(self.m, self.n);
++        let (m, n) = (self.m, self.n);
++        let mut colptr = vec![0; n + 1];
++        let mut nnz = 0;
++
++        //count the number of entries in the upper triangle
++        //and place the totals into colptr
++
++        for col in 0..n {
++            //start / stop indices for the current column
++            let first = self.colptr[col];
++            let last = self.colptr[col + 1];
++            let rows = &self.rowval[first..last];
++
++            // number of entries on or above diagonal in this column,
++            // shifted by 1 (i.e. colptr keeps a 0 in the first column)
++            colptr[col + 1] = rows.iter().filter(|&row| *row <= col).count();
++            nnz += colptr[col + 1];
++        }
++
++        //allocate and copy the upper triangle entries of
++        //each column into the new value vector.
++        //NB! : assumes that entries in each column have
++        //monotonically increasing row numbers
++        let mut rowval = vec![0; nnz];
++        let mut nzval = vec![T::zero(); nnz];
++
++        for col in 0..n {
++            let ntriu = colptr[col + 1];
++
++            //start / stop indices for the destination
++            let fdest = colptr[col];
++            let ldest = fdest + ntriu;
++
++            //start / stop indices for the source
++            let fsrc = self.colptr[col];
++            let lsrc = fsrc + ntriu;
++
++            //copy upper triangle values
++            rowval[fdest..ldest].copy_from_slice(&self.rowval[fsrc..lsrc]);
++            nzval[fdest..ldest].copy_from_slice(&self.nzval[fsrc..lsrc]);
++
++            //this should now be cumsum of the counts
++            colptr[col + 1] = ldest;
++        }
++        CscMatrix::new(m, n, colptr, rowval, nzval)
++    }
++
++    /// Returns the value at the given (row,col) index as an Option.
++    /// Returns None if the given index is not a structural nonzero, is out of bounds or
++    /// the matrix is malformed (upstream panicked out of bounds; patch 0003).
++    pub fn get_entry(&self, idx: (usize, usize)) -> Option<T> {
++        let (row, col) = idx;
++        if row >= self.nrows() || col >= self.ncols() {
++            return None;
++        }
++
++        let first = *self.colptr.get(col)?;
++        let last = *self.colptr.get(col + 1)?;
++        let rows_in_this_column = self.rowval.get(first..last)?;
++        match rows_in_this_column.binary_search(&row) {
++            Ok(idx) => self.nzval.get(first + idx).copied(),
++            Err(_) => None,
++        }
++    }
++
++    /// Sets a value at a given (row,col) index, allocating
++    /// additional space in the matrix if required.  
++    ///
++    /// Returns `IncompatibleDimension` if the index is out of bounds or the matrix is
++    /// malformed (upstream panicked; patch 0003).
++    pub fn set_entry(&mut self, idx: (usize, usize), value: T) -> Result<(), SparseFormatError> {
++        let (row, col) = idx;
++        if row >= self.nrows() || col >= self.ncols() || self.check_format().is_err() {
++            return Err(SparseFormatError::IncompatibleDimension);
++        }
++
++        let first = self.colptr[col];
++        let last = self.colptr[col + 1];
++        let rows_in_this_column = &self.rowval[first..last];
++
++        let i = rows_in_this_column.partition_point(|&x| x < row);
++
++        if i == rows_in_this_column.len() || rows_in_this_column[i] != row {
++            // don't allocate space for insertion of new zeros
++            if value.is_zero() {
++                return Ok(());
++            }
++
++            // the element must be inserted, then col counts rebuilt
++            self.rowval.insert(first + i, row);
++            self.nzval.insert(first + i, value);
++
++            // a bit wasteful since we only really need to
++            // rebuil from the insertion point onwards
++            self.colptr_to_colcount();
++            self.colptr[col] += 1;
++            self.colcount_to_colptr();
++        } else {
++            // the element already exists, so overwrite it
++            self.nzval[first + i] = value;
++        }
++        Ok(())
++    }
++
++    /// Returns the (row,col) coordinates of the given linear index, or `None` if it is
++    /// out of bounds (upstream panicked; patch 0003).
++    pub fn index_to_coord(&self, idx: usize) -> Option<(usize, usize)> {
++        if idx >= self.nnz() {
++            return None;
++        }
++        let row = *self.rowval.get(idx)?;
++        let col = self
++            .colptr
++            .partition_point(|&c| idx + 1 > c)
++            .checked_sub(1)?;
++        Some((row, col))
++    }
++}
++
++impl TriangularMatrixChecks for CscMatrix {
++    fn is_triu(&self) -> bool {
++        // check lower triangle for any structural entries, regardless
++        // of the values that may be assigned to them
++        for col in 0..self.ncols() {
++            //start / stop indices for the current column
++            let first = self.colptr[col];
++            let last = self.colptr[col + 1];
++            let rows = &self.rowval[first..last];
++
++            if rows.iter().any(|&row| row > col) {
++                return false;
++            }
++        }
++        true
++    }
++    fn is_tril(&self) -> bool {
++        // check upper triangle for any structural entries, regardless
++        // of the values that may be assigned to them
++        for col in 0..self.ncols() {
++            //start / stop indices for the current column
++            let first = self.colptr[col];
++            let last = self.colptr[col + 1];
++            let rows = &self.rowval[first..last];
++
++            if rows.iter().any(|&row| row < col) {
++                return false;
++            }
++        }
++        true
++    }
++}
++
++impl ShapedMatrix for CscMatrix {
++    fn nrows(&self) -> usize {
++        self.m
++    }
++    fn ncols(&self) -> usize {
++        self.n
++    }
++    fn size(&self) -> (usize, usize) {
++        (self.m, self.n)
++    }
++    fn shape(&self) -> MatrixShape {
++        MatrixShape::N
++    }
++    fn is_square(&self) -> bool {
++        self.m == self.n
++    }
++}
++
++/// Make a concrete [CscMatrix] from its [Adjoint].   This operation will
++/// allocate a new matrix and copy the data from the adjoint.
++///
++/// __Example usage__ : To construct the transpose of a 3 x 3 matrix:
++/// ```text
++/// A = [1.,  0.,  0.]
++///     [2.,  4.,  0.]
++///     [3.,  5.,  6.]
++///```
++/// ```no_run
++/// use clarabel::algebra::CscMatrix;
++///
++/// let A : CscMatrix = (&[
++///     [1., 0., 0.], //
++///     [2., 4., 0.], //
++///     [3., 5., 6.],
++/// ]).into();
++///
++/// let At = A.t();  //Adjoint form.   Does not copy anything.
++///
++/// let B : CscMatrix = At.into(); //Concrete form.  Allocates and copies.
++///
++/// assert_eq!(A, B);
++///
++/// ```
++impl<'a> From<Adjoint<'a, CscMatrix>> for CscMatrix {
++    fn from(M: Adjoint<'a, CscMatrix>) -> CscMatrix {
++        let src = M.src;
++
++        let (m, n) = (src.n, src.m);
++        let mut A = CscMatrix::spalloc((m, n), src.nnz());
++
++        //make dummy mapping indices since we don't care
++        //where the entries go
++        let mut amap = vec![0usize; src.nnz()];
++
++        A.colcount_block(src, 0, MatrixShape::T);
++        A.colcount_to_colptr();
++        A.fill_block(src, &mut amap, 0, 0, MatrixShape::T);
++        A.backshift_colptrs();
++        A
++    }
++}
+diff --git a/src/algebra/csc/mod.rs b/src/algebra/csc/mod.rs
+index f9eb468..2c79f53 100644
+--- a/src/algebra/csc/mod.rs
++++ b/src/algebra/csc/mod.rs
+@@ -1,7 +1,7 @@
+ #![allow(non_snake_case)]
+ 
+-mod core;
+-pub use self::core::*;
++mod cscmatrix;
++pub use self::cscmatrix::*;
+ mod block_concatenate;
+ mod matrix_math;
+ mod utils;
+diff --git a/src/algebra/math_traits.rs b/src/algebra/math_traits.rs
+index 62b9906..4307ba5 100644
+--- a/src/algebra/math_traits.rs
++++ b/src/algebra/math_traits.rs
+@@ -69,7 +69,7 @@ pub(crate) trait VectorMath {
+     fn dot(&self, y: &Self) -> T;
+ 
+     /// computes dot(z + αdz,s + αds) without intermediate allocation
+-    fn dot_shifted(z: &[T], s: &[T], dz: &[T], ds: &[T], α: T) -> T;
++    fn dot_shifted(z: &[T], s: &[T], dz: &[T], ds: &[T], alpha: T) -> T;
+ 
+     /// Standard Euclidian or 2-norm distance from `self` to `y`
+     fn dist(&self, y: &Self) -> T;
+@@ -87,7 +87,7 @@ pub(crate) trait VectorMath {
+     fn norm_scaled(&self, v: &Self) -> T;
+ 
+     /// computes 2 norm of (self + α.dz)
+-    fn norm_shifted(&self, dz: &[T], α: T) -> T;
++    fn norm_shifted(&self, dz: &[T], alpha: T) -> T;
+ 
+     /// Infinity norm
+     fn norm_inf(&self) -> T;
+diff --git a/src/algebra/matrix_types.rs b/src/algebra/matrix_types.rs
+index 1f4d4fa..7f1c8af 100644
+--- a/src/algebra/matrix_types.rs
++++ b/src/algebra/matrix_types.rs
+@@ -1,6 +1,6 @@
+ use crate::algebra::ShapedMatrix;
+ 
+-use super::TriangularMatrixChecks;
++use crate::algebra::TriangularMatrixChecks;
+ 
+ /// Matrix shape marker for triangular matrices
+ #[derive(Debug, PartialEq, Eq, Copy, Clone)]
+diff --git a/src/algebra/scalarmath.rs b/src/algebra/scalarmath.rs
+index fe497be..641504f 100644
+--- a/src/algebra/scalarmath.rs
++++ b/src/algebra/scalarmath.rs
+@@ -1,5 +1,5 @@
+-use super::{nat_log, FloatT, ScalarMath};
+ use crate::algebra::T;
++use crate::algebra::{nat_log, FloatT, ScalarMath};
+ 
+ impl ScalarMath for T {
+     fn clip(&self, min_thresh: Self, max_thresh: Self) -> Self {
+diff --git a/src/algebra/utils.rs b/src/algebra/utils.rs
+index 49f82af..26e7627 100644
+--- a/src/algebra/utils.rs
++++ b/src/algebra/utils.rs
+@@ -6,7 +6,6 @@
+ // which serves as a vectorized version of the std::iter::position
+ // returning indices of *all* elements satisfying a predicate
+ 
+-use crate::qdldl;
+ use std::cmp::Ordering;
+ 
+ #[allow(dead_code)]
+@@ -33,12 +32,12 @@ where
+ 
+ // permutation and inverse permutation
+ pub(crate) fn permute<T: Copy>(x: &mut [T], b: &[T], p: &[usize]) {
+-    qdldl::permute(x, b, p);
++    crate::qdldl::permute(x, b, p);
+ }
+ 
+ #[allow(dead_code)]
+ pub(crate) fn ipermute<T: Copy>(x: &mut [T], b: &[T], p: &[usize]) {
+-    qdldl::ipermute(x, b, p);
++    crate::qdldl::ipermute(x, b, p);
+ }
+ 
+ // Construct an inverse permutation from a permutation
+diff --git a/src/algebra/vecmath.rs b/src/algebra/vecmath.rs
+index 7735641..6354a17 100644
+--- a/src/algebra/vecmath.rs
++++ b/src/algebra/vecmath.rs
+@@ -1,5 +1,5 @@
+-use super::{sq_root, tmax, tmin, AsFloatT, FloatT, ScalarMath, VectorMath};
+ use crate::algebra::T;
++use crate::algebra::{sq_root, tmax, tmin, AsFloatT, FloatT, ScalarMath, VectorMath};
+ use fid_num::red;
+ use fid_num::NumError;
+ use std::iter::zip;
+@@ -95,7 +95,7 @@ impl VectorMath for [T] {
+         red_value(red::dot(self, y))
+     }
+ 
+-    fn dot_shifted(z: &[T], s: &[T], dz: &[T], ds: &[T], α: T) -> T {
++    fn dot_shifted(z: &[T], s: &[T], dz: &[T], ds: &[T], alpha: T) -> T {
+         // invariant (patch 0003): z, s, dz, ds are the same cone range of solver vectors.
+         assert_eq!(z.len(), s.len());
+         assert_eq!(z.len(), dz.len());
+@@ -104,8 +104,8 @@ impl VectorMath for [T] {
+         let mut si = Vec::with_capacity(s.len());
+         let mut zi = Vec::with_capacity(z.len());
+         for ((&s, &ds), (&z, &dz)) in zip(zip(s, ds), zip(z, dz)) {
+-            si.push(s + α * ds);
+-            zi.push(z + α * dz);
++            si.push(s + alpha * ds);
++            zi.push(z + alpha * dz);
+         }
+         red_value(red::dot(&si, &zi))
+     }
+@@ -137,8 +137,8 @@ impl VectorMath for [T] {
+     }
+ 
+     // 2-norm of (self + α.dz)
+-    fn norm_shifted(&self, dz: &[T], α: T) -> T {
+-        let p: Vec<T> = zip(self, dz).map(|(&zi, &dzi)| zi + α * dzi).collect();
++    fn norm_shifted(&self, dz: &[T], alpha: T) -> T {
++        let p: Vec<T> = zip(self, dz).map(|(&zi, &dzi)| zi + alpha * dzi).collect();
+         red_value(red::norm2(&p))
+     }
+ 
+diff --git a/src/solver/core/cones/compositecone.rs b/src/solver/core/cones/compositecone.rs
+index dc3c7ce..8ec6084 100644
+--- a/src/solver/core/cones/compositecone.rs
++++ b/src/solver/core/cones/compositecone.rs
+@@ -173,34 +173,34 @@ impl Cone for CompositeCone {
+             .all(|cone| cone.allows_primal_dual_scaling())
+     }
+ 
+-    fn rectify_equilibration(&self, δ: &mut [T], e: &[T]) -> bool {
++    fn rectify_equilibration(&self, delta: &mut [T], e: &[T]) -> bool {
+         let mut any_changed = false;
+ 
+         // we will update e <- δ .* e using return values
+         // from this function.  default is to do nothing at all
+-        δ.fill(T::one());
++        delta.fill(T::one());
+         for (cone, rng) in zip(&self.cones, &self.rng_cones) {
+-            let δi = &mut δ[rng.clone()];
++            let deltai = &mut delta[rng.clone()];
+             let ei = &e[rng.clone()];
+-            any_changed |= cone.rectify_equilibration(δi, ei);
++            any_changed |= cone.rectify_equilibration(deltai, ei);
+         }
+         any_changed
+     }
+ 
+     fn margins(&mut self, z: &mut [T], pd: PrimalOrDualCone) -> (T, T) {
+-        let mut α = T::MAX;
+-        let mut β = T::zero();
++        let mut alpha = T::MAX;
++        let mut beta = T::zero();
+         for (cone, rng) in zip(&mut self.cones, &self.rng_cones) {
+-            let (αi, βi) = cone.margins(&mut z[rng.clone()], pd);
+-            α = tmin(α, αi);
+-            β += βi;
++            let (alphai, betai) = cone.margins(&mut z[rng.clone()], pd);
++            alpha = tmin(alpha, alphai);
++            beta += betai;
+         }
+-        (α, β)
++        (alpha, beta)
+     }
+ 
+-    fn scaled_unit_shift(&self, z: &mut [T], α: T, pd: PrimalOrDualCone) {
++    fn scaled_unit_shift(&self, z: &mut [T], alpha: T, pd: PrimalOrDualCone) {
+         for (cone, rng) in zip(&self.cones, &self.rng_cones) {
+-            cone.scaled_unit_shift(&mut z[rng.clone()], α, pd);
++            cone.scaled_unit_shift(&mut z[rng.clone()], alpha, pd);
+         }
+     }
+ 
+@@ -220,14 +220,14 @@ impl Cone for CompositeCone {
+         &mut self,
+         s: &[T],
+         z: &[T],
+-        μ: T,
++        mu: T,
+         scaling_strategy: ScalingStrategy,
+     ) -> bool {
+         let mut is_scaling_success;
+         for (cone, rng) in zip(&mut self.cones, &self.rng_cones) {
+             let si = &s[rng.clone()];
+             let zi = &z[rng.clone()];
+-            is_scaling_success = cone.update_scaling(si, zi, μ, scaling_strategy);
++            is_scaling_success = cone.update_scaling(si, zi, mu, scaling_strategy);
+             if !is_scaling_success {
+                 return false;
+             }
+@@ -263,7 +263,13 @@ impl Cone for CompositeCone {
+         }
+     }
+ 
+-    fn combined_ds_shift(&mut self, shift: &mut [T], step_z: &mut [T], step_s: &mut [T], σμ: T) {
++    fn combined_ds_shift(
++        &mut self,
++        shift: &mut [T],
++        step_z: &mut [T],
++        step_s: &mut [T],
++        sigmamu: T,
++    ) {
+         // Here we must first explicitly borrow the subvector
+         // of cones, since trying to access it using self.iter_mut
+         // causes a borrow conflict with ranges.
+@@ -276,17 +282,17 @@ impl Cone for CompositeCone {
+             let shifti = &mut shift[rng.clone()];
+             let step_zi = &mut step_z[rng.clone()];
+             let step_si = &mut step_s[rng.clone()];
+-            cone.combined_ds_shift(shifti, step_zi, step_si, σμ);
++            cone.combined_ds_shift(shifti, step_zi, step_si, sigmamu);
+         }
+     }
+ 
+-    fn Δs_from_Δz_offset(&mut self, out: &mut [T], ds: &[T], work: &mut [T], z: &[T]) {
++    fn Ds_from_Dz_offset(&mut self, out: &mut [T], ds: &[T], work: &mut [T], z: &[T]) {
+         for (cone, rng) in zip(&mut self.cones, &self.rng_cones) {
+             let outi = &mut out[rng.clone()];
+             let dsi = &ds[rng.clone()];
+             let worki = &mut work[rng.clone()];
+             let zi = &z[rng.clone()];
+-            cone.Δs_from_Δz_offset(outi, dsi, worki, zi);
++            cone.Ds_from_Dz_offset(outi, dsi, worki, zi);
+         }
+     }
+ 
+@@ -297,49 +303,49 @@ impl Cone for CompositeCone {
+         z: &[T],
+         s: &[T],
+         settings: &CoreSettings,
+-        αmax: T,
++        alphamax: T,
+     ) -> (T, T) {
+-        let mut α = αmax;
++        let mut alpha = alphamax;
+         let all_symmetric = self.is_symmetric();
+ 
+-        let mut innerfcn = |α: T, symcond: bool| -> T {
+-            let mut α = α;
++        let mut innerfcn = |alpha: T, symcond: bool| -> T {
++            let mut alpha = alpha;
+             for (cone, rng) in zip(&mut self.cones, &self.rng_cones) {
+                 if cone.is_symmetric() != symcond {
+                     continue;
+                 }
+                 let (dzi, dsi) = (&dz[rng.clone()], &ds[rng.clone()]);
+                 let (zi, si) = (&z[rng.clone()], &s[rng.clone()]);
+-                let (nextαz, nextαs) = cone.step_length(dzi, dsi, zi, si, settings, α);
+-                α = tmin(α, tmin(nextαz, nextαs));
++                let (nextalphaz, nextalphas) = cone.step_length(dzi, dsi, zi, si, settings, alpha);
++                alpha = tmin(alpha, tmin(nextalphaz, nextalphas));
+             }
+-            α
++            alpha
+         };
+ 
+         // Force symmetric cones first.
+-        α = innerfcn(α, true);
++        alpha = innerfcn(alpha, true);
+ 
+         // if we have any nonsymmetric cones, then back off from full steps slightly
+         // so that centrality checks and logarithms don't fail right at the boundaries
+         if !all_symmetric {
+             let ceil = T::one() - sq_root(T::epsilon());
+-            α = tmin(α, ceil);
++            alpha = tmin(alpha, ceil);
+         }
+ 
+         // Force asymmetric cones last.
+-        α = innerfcn(α, false);
++        alpha = innerfcn(alpha, false);
+ 
+-        (α, α)
++        (alpha, alpha)
+     }
+ 
+-    fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], α: T) -> T {
++    fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], alpha: T) -> T {
+         let mut barrier = T::zero();
+         for (cone, rng) in zip(&mut self.cones, &self.rng_cones) {
+             let zi = &z[rng.clone()];
+             let si = &s[rng.clone()];
+             let dzi = &dz[rng.clone()];
+             let dsi = &ds[rng.clone()];
+-            barrier += cone.compute_barrier(zi, si, dzi, dsi, α);
++            barrier += cone.compute_barrier(zi, si, dzi, dsi, alpha);
+         }
+         barrier
+     }
+diff --git a/src/solver/core/cones/mod.rs b/src/solver/core/cones/mod.rs
+index 0f5eeb8..2dca48e 100644
+--- a/src/solver/core/cones/mod.rs
++++ b/src/solver/core/cones/mod.rs
+@@ -46,7 +46,7 @@ pub trait Cone {
+ 
+     // converts an elementwise scaling into
+     // a scaling that preserves cone memership
+-    fn rectify_equilibration(&self, δ: &mut [T], e: &[T]) -> bool;
++    fn rectify_equilibration(&self, delta: &mut [T], e: &[T]) -> bool;
+ 
+     // returns (α,β) such that:
+     // z - α⋅e is just on the cone boundary, with value
+@@ -60,13 +60,17 @@ pub trait Cone {
+     fn margins(&mut self, z: &mut [T], pd: PrimalOrDualCone) -> (T, T);
+ 
+     // functions relating to unit vectors and cone initialization
+-    fn scaled_unit_shift(&self, z: &mut [T], α: T, pd: PrimalOrDualCone);
++    fn scaled_unit_shift(&self, z: &mut [T], alpha: T, pd: PrimalOrDualCone);
+     fn unit_initialization(&self, z: &mut [T], s: &mut [T]);
+ 
+     // Compute scaling points
+     fn set_identity_scaling(&mut self);
+     fn update_scaling(
+-        &mut self, s: &[T], z: &[T], μ: T, scaling_strategy: ScalingStrategy
++        &mut self,
++        s: &[T],
++        z: &[T],
++        mu: T,
++        scaling_strategy: ScalingStrategy,
+     ) -> bool;
+ 
+     // operations on the Hessian of the centrality condition
+@@ -122,8 +126,14 @@ pub trait Cone {
+     // so may be modified in place as workspace.
+     // ---------------------------------------------------------
+     fn affine_ds(&self, ds: &mut [T], s: &[T]);
+-    fn combined_ds_shift(&mut self, shift: &mut [T], step_z: &mut [T], step_s: &mut [T], σμ: T);
+-    fn Δs_from_Δz_offset(&mut self, out: &mut [T], ds: &[T], work: &mut [T], z: &[T]);
++    fn combined_ds_shift(
++        &mut self,
++        shift: &mut [T],
++        step_z: &mut [T],
++        step_s: &mut [T],
++        sigmamu: T,
++    );
++    fn Ds_from_Dz_offset(&mut self, out: &mut [T], ds: &[T], work: &mut [T], z: &[T]);
+ 
+     // Find the maximum step length in some search direction
+     fn step_length(
+@@ -133,9 +143,9 @@ pub trait Cone {
+         z: &[T],
+         s: &[T],
+         settings: &CoreSettings,
+-        αmax: T,
++        alphamax: T,
+     ) -> (T, T);
+ 
+     // return the barrier function at (z+αdz,s+αds)
+-    fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], α: T) -> T;
++    fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], alpha: T) -> T;
+ }
+diff --git a/src/solver/core/cones/nonnegativecone.rs b/src/solver/core/cones/nonnegativecone.rs
+index e556a1b..f67d5ba 100644
+--- a/src/solver/core/cones/nonnegativecone.rs
++++ b/src/solver/core/cones/nonnegativecone.rs
+@@ -9,7 +9,7 @@ use std::iter::zip;
+ pub struct NonnegativeCone {
+     dim: usize,
+     w: Vec<T>,
+-    λ: Vec<T>,
++    lambda: Vec<T>,
+ }
+ 
+ impl NonnegativeCone {
+@@ -17,7 +17,7 @@ impl NonnegativeCone {
+         Self {
+             dim,
+             w: vec![T::zero(); dim],
+-            λ: vec![T::zero(); dim],
++            lambda: vec![T::zero(); dim],
+         }
+     }
+ }
+@@ -43,19 +43,21 @@ impl Cone for NonnegativeCone {
+         true
+     }
+ 
+-    fn rectify_equilibration(&self, δ: &mut [T], _e: &[T]) -> bool {
+-        δ.set(T::one());
++    fn rectify_equilibration(&self, delta: &mut [T], _e: &[T]) -> bool {
++        delta.set(T::one());
+         false
+     }
+ 
+     fn margins(&mut self, z: &mut [T], _pd: PrimalOrDualCone) -> (T, T) {
+-        let α = z.minimum();
+-        let β = z.iter().fold(T::zero(), |β, &zi| β + tmax(zi, T::zero()));
+-        (α, β)
++        let alpha = z.minimum();
++        let beta = z
++            .iter()
++            .fold(T::zero(), |beta, &zi| beta + tmax(zi, T::zero()));
++        (alpha, beta)
+     }
+ 
+-    fn scaled_unit_shift(&self, z: &mut [T], α: T, _pd: PrimalOrDualCone) {
+-        z.translate(α);
++    fn scaled_unit_shift(&self, z: &mut [T], alpha: T, _pd: PrimalOrDualCone) {
++        z.translate(alpha);
+     }
+ 
+     fn unit_initialization(&self, z: &mut [T], s: &mut [T]) {
+@@ -71,11 +73,11 @@ impl Cone for NonnegativeCone {
+         &mut self,
+         s: &[T],
+         z: &[T],
+-        _μ: T,
++        _mu: T,
+         _scaling_strategy: ScalingStrategy,
+     ) -> bool {
+-        for ((λ, w), (s, z)) in zip(zip(&mut self.λ, &mut self.w), zip(s, z)) {
+-            *λ = sq_root((*s) * (*z));
++        for ((lambda, w), (s, z)) in zip(zip(&mut self.lambda, &mut self.w), zip(s, z)) {
++            *lambda = sq_root((*s) * (*z));
+             *w = sq_root((*s) / (*z));
+         }
+ 
+@@ -103,18 +105,18 @@ impl Cone for NonnegativeCone {
+ 
+     fn affine_ds(&self, ds: &mut [T], _s: &[T]) {
+         // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
+-        assert_eq!(self.λ.len(), ds.len());
+-        for (dsi, &λi) in zip(ds, &self.λ) {
+-            *dsi = λi * λi;
++        assert_eq!(self.lambda.len(), ds.len());
++        for (dsi, &lambdai) in zip(ds, &self.lambda) {
++            *dsi = lambdai * lambdai;
+         }
+     }
+ 
+-    fn combined_ds_shift(&mut self, dz: &mut [T], step_z: &mut [T], step_s: &mut [T], σμ: T) {
++    fn combined_ds_shift(&mut self, dz: &mut [T], step_z: &mut [T], step_s: &mut [T], sigmamu: T) {
+         //PJG: could be done faster for nonnegatives?
+-        self._combined_ds_shift_symmetric(dz, step_z, step_s, σμ);
++        self._combined_ds_shift_symmetric(dz, step_z, step_s, sigmamu);
+     }
+ 
+-    fn Δs_from_Δz_offset(&mut self, out: &mut [T], ds: &[T], _work: &mut [T], z: &[T]) {
++    fn Ds_from_Dz_offset(&mut self, out: &mut [T], ds: &[T], _work: &mut [T], z: &[T]) {
+         for (outi, (&dsi, &zi)) in zip(out, zip(ds, z)) {
+             *outi = dsi / zi;
+         }
+@@ -127,36 +129,36 @@ impl Cone for NonnegativeCone {
+         z: &[T],
+         s: &[T],
+         _settings: &CoreSettings,
+-        αmax: T,
++        alphamax: T,
+     ) -> (T, T) {
+         // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
+         assert_eq!(z.len(), s.len());
+         assert_eq!(dz.len(), z.len());
+         assert_eq!(ds.len(), s.len());
+ 
+-        let mut αz = αmax;
+-        let mut αs = αmax;
++        let mut alphaz = alphamax;
++        let mut alphas = alphamax;
+ 
+         for i in 0..z.len() {
+             if dz[i] < T::zero() {
+-                αz = tmin(αz, -z[i] / dz[i]);
++                alphaz = tmin(alphaz, -z[i] / dz[i]);
+             }
+             if ds[i] < T::zero() {
+-                αs = tmin(αs, -s[i] / ds[i]);
++                alphas = tmin(alphas, -s[i] / ds[i]);
+             }
+         }
+-        (αz, αs)
++        (alphaz, alphas)
+     }
+ 
+-    fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], α: T) -> T {
++    fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], alpha: T) -> T {
+         // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
+         assert_eq!(z.len(), s.len());
+         assert_eq!(dz.len(), z.len());
+         assert_eq!(ds.len(), s.len());
+         let mut barrier = T::zero();
+         for ((&s, &ds), (&z, &dz)) in zip(zip(s, ds), zip(z, dz)) {
+-            let si = s + α * ds;
+-            let zi = z + α * dz;
++            let si = s + alpha * ds;
++            let zi = z + alpha * dz;
+             barrier -= (si * zi).logsafe();
+         }
+         barrier
+@@ -168,25 +170,25 @@ impl Cone for NonnegativeCone {
+ // ---------------------------------------------
+ 
+ impl SymmetricCone for NonnegativeCone {
+-    fn λ_inv_circ_op(&mut self, x: &mut [T], z: &[T]) {
+-        _inv_circ_op(x, &self.λ, z);
++    fn lambda_inv_circ_op(&mut self, x: &mut [T], z: &[T]) {
++        _inv_circ_op(x, &self.lambda, z);
+     }
+ 
+-    fn mul_W(&mut self, _is_transpose: MatrixShape, y: &mut [T], x: &[T], α: T, β: T) {
++    fn mul_W(&mut self, _is_transpose: MatrixShape, y: &mut [T], x: &[T], alpha: T, beta: T) {
+         // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
+         assert_eq!(y.len(), x.len());
+         assert_eq!(y.len(), self.w.len());
+         for i in 0..y.len() {
+-            y[i] = α * (x[i] * self.w[i]) + β * y[i];
++            y[i] = alpha * (x[i] * self.w[i]) + beta * y[i];
+         }
+     }
+ 
+-    fn mul_Winv(&mut self, _is_transpose: MatrixShape, y: &mut [T], x: &[T], α: T, β: T) {
++    fn mul_Winv(&mut self, _is_transpose: MatrixShape, y: &mut [T], x: &[T], alpha: T, beta: T) {
+         // invariant (patch 0003): slices are this cone's range of solver vectors (rng_cones).
+         assert_eq!(y.len(), x.len());
+         assert_eq!(y.len(), self.w.len());
+         for i in 0..y.len() {
+-            y[i] = α * (x[i] / self.w[i]) + β * y[i];
++            y[i] = alpha * (x[i] / self.w[i]) + beta * y[i];
+         }
+     }
+ }
+diff --git a/src/solver/core/cones/socone.rs b/src/solver/core/cones/socone.rs
+index 8dc2a66..69ec8a0 100644
+--- a/src/solver/core/cones/socone.rs
++++ b/src/solver/core/cones/socone.rs
+@@ -29,8 +29,8 @@ pub struct SecondOrderCone {
+     //internal working variables for W and its products
+     pub w: Vec<T>,
+     //scaled version of (s,z)
+-    pub λ: Vec<T>,
+-    pub η: T,
++    pub lambda: Vec<T>,
++    pub eta: T,
+     pub sparse_data: Option<SecondOrderConeSparseData>,
+ }
+ 
+@@ -42,8 +42,8 @@ impl SecondOrderCone {
+         assert!(dim >= 2);
+ 
+         let w = vec![T::zero(); dim];
+-        let λ = vec![T::zero(); dim];
+-        let η = T::zero();
++        let lambda = vec![T::zero(); dim];
++        let eta = T::zero();
+ 
+         let sparse_data = {
+             if dim > SOC_NO_EXPANSION_MAX_SIZE {
+@@ -56,8 +56,8 @@ impl SecondOrderCone {
+         Self {
+             dim,
+             w,
+-            λ,
+-            η,
++            lambda,
++            eta,
+             sparse_data,
+         }
+     }
+@@ -85,21 +85,21 @@ impl Cone for SecondOrderCone {
+         true
+     }
+ 
+-    fn rectify_equilibration(&self, δ: &mut [T], e: &[T]) -> bool {
+-        δ.copy_from(e).recip().scale(e.mean());
++    fn rectify_equilibration(&self, delta: &mut [T], e: &[T]) -> bool {
++        delta.copy_from(e).recip().scale(e.mean());
+ 
+         true // scalar equilibration
+     }
+ 
+     // functions relating to unit vectors and cone initialization
+     fn margins(&mut self, z: &mut [T], _pd: PrimalOrDualCone) -> (T, T) {
+-        let α = z[0] - z[1..].norm();
+-        let β = tmax(T::zero(), α);
+-        (α, β)
++        let alpha = z[0] - z[1..].norm();
++        let beta = tmax(T::zero(), alpha);
++        (alpha, beta)
+     }
+ 
+-    fn scaled_unit_shift(&self, z: &mut [T], α: T, _pd: PrimalOrDualCone) {
+-        z[0] += α;
++    fn scaled_unit_shift(&self, z: &mut [T], alpha: T, _pd: PrimalOrDualCone) {
++        z[0] += alpha;
+     }
+ 
+     fn unit_initialization(&self, z: &mut [T], s: &mut [T]) {
+@@ -112,7 +112,7 @@ impl Cone for SecondOrderCone {
+     fn set_identity_scaling(&mut self) {
+         self.w.fill(T::zero());
+         self.w[0] = T::one();
+-        self.η = T::one();
++        self.eta = T::one();
+ 
+         if let Some(sparse_data) = &mut self.sparse_data {
+             sparse_data.d = (0.5).as_T();
+@@ -126,7 +126,7 @@ impl Cone for SecondOrderCone {
+         &mut self,
+         s: &[T],
+         z: &[T],
+-        _μ: T,
++        _mu: T,
+         _scaling_strategy: ScalingStrategy,
+     ) -> bool {
+         let two: T = (2.0).as_T();
+@@ -142,7 +142,7 @@ impl Cone for SecondOrderCone {
+         }
+ 
+         //the leading scalar term for W^TW
+-        self.η = sq_root(sscale / zscale);
++        self.eta = sq_root(sscale / zscale);
+ 
+         // construct w and normalize
+         let w = &mut self.w;
+@@ -163,21 +163,21 @@ impl Cone for SecondOrderCone {
+         w[0] = sq_root(T::one() + w1sq);
+ 
+         //Compute the scaling point λ.   Should satisfy λ = Wz = W^{-T}s
+-        let γ = half * wscale;
+-        self.λ[0] = γ;
+-        self.λ[1..].waxpby(
+-            (γ + z[0] / zscale) / sscale,
++        let gamma = half * wscale;
++        self.lambda[0] = gamma;
++        self.lambda[1..].waxpby(
++            (gamma + z[0] / zscale) / sscale,
+             &s[1..],
+-            (γ + s[0] / sscale) / zscale,
++            (gamma + s[0] / sscale) / zscale,
+             &z[1..],
+         );
+-        self.λ[1..].scale(T::recip(s[0] / sscale + z[0] / zscale + two * γ));
+-        self.λ.scale(sq_root(sscale * zscale));
++        self.lambda[1..].scale(T::recip(s[0] / sscale + z[0] / zscale + two * gamma));
++        self.lambda.scale(sq_root(sscale * zscale));
+ 
+         // Populate sparse expansion terms if allocated
+         if let Some(sparse_data) = &mut self.sparse_data {
+             //various intermediate calcs for u,v,d,η
+-            let α = two * w[0];
++            let alpha = two * w[0];
+ 
+             //Scalar d is the upper LH corner of the diagonal
+             //term in the rank-2 update form of W^TW
+@@ -188,7 +188,7 @@ impl Cone for SecondOrderCone {
+             //the vectors for the rank two update
+             //representation of W^TW
+             let u0 = sq_root(wsq - sparse_data.d);
+-            let u1 = α / u0;
++            let u1 = alpha / u0;
+             let v0 = T::zero();
+             let v1 = sq_root(two * (two + wsqinv) / (two * wsq - wsqinv));
+ 
+@@ -210,7 +210,7 @@ impl Cone for SecondOrderCone {
+             // For sparse form, we are returning here the diagonal D block
+             // from the sparse representation of W^TW, but not the
+             // extra two entries at the bottom right of the block.
+-            Hsblock.fill(self.η * self.η);
++            Hsblock.fill(self.eta * self.eta);
+             Hsblock[0] *= sparse_data.d;
+         } else {
+             // for dense form, we return H = \eta^2 (2*ww^T - J), where
+@@ -232,7 +232,7 @@ impl Cone for SecondOrderCone {
+                 //go back to add the offset term from J
+                 Hsblock[hidx - 1] += T::one()
+             }
+-            Hsblock.scale(self.η * self.η);
++            Hsblock.scale(self.eta * self.eta);
+         }
+     }
+ 
+@@ -243,40 +243,46 @@ impl Cone for SecondOrderCone {
+         y.copy_from(x);
+         y[0] = -x[0];
+         y.axpby(c, &self.w, T::one());
+-        y.scale(self.η * self.η);
++        y.scale(self.eta * self.eta);
+     }
+ 
+     fn affine_ds(&self, ds: &mut [T], _s: &[T]) {
+-        _circ_op(ds, &self.λ, &self.λ);
++        _circ_op(ds, &self.lambda, &self.lambda);
+     }
+ 
+-    fn combined_ds_shift(&mut self, shift: &mut [T], step_z: &mut [T], step_s: &mut [T], σμ: T) {
+-        self._combined_ds_shift_symmetric(shift, step_z, step_s, σμ);
++    fn combined_ds_shift(
++        &mut self,
++        shift: &mut [T],
++        step_z: &mut [T],
++        step_s: &mut [T],
++        sigmamu: T,
++    ) {
++        self._combined_ds_shift_symmetric(shift, step_z, step_s, sigmamu);
+     }
+ 
+-    fn Δs_from_Δz_offset(&mut self, out: &mut [T], ds: &[T], _work: &mut [T], z: &[T]) {
++    fn Ds_from_Dz_offset(&mut self, out: &mut [T], ds: &[T], _work: &mut [T], z: &[T]) {
+         // out = Wᵀ(λ \ ds).  Below is equivalent,
+         // but appears to be a little more stable
+ 
+         let resz = _soc_residual(z);
+ 
+-        let λ1ds1 = self.λ[1..].dot(&ds[1..]);
++        let lambda1ds1 = self.lambda[1..].dot(&ds[1..]);
+         let w1ds1 = self.w[1..].dot(&ds[1..]);
+ 
+         out.scalarop_from(|zi| -zi, z);
+         out[0] = z[0];
+ 
+-        let c = self.λ[0] * ds[0] - λ1ds1;
++        let c = self.lambda[0] * ds[0] - lambda1ds1;
+         out.scale(c / resz);
+ 
+-        out[0] += self.η * w1ds1;
++        out[0] += self.eta * w1ds1;
+         for (outi, (&dsi, &wi)) in
+             std::iter::zip(out[1..].iter_mut(), std::iter::zip(&ds[1..], &self.w[1..]))
+         {
+-            *outi += self.η * (dsi + w1ds1 / (T::one() + self.w[0]) * wi);
++            *outi += self.eta * (dsi + w1ds1 / (T::one() + self.w[0]) * wi);
+         }
+ 
+-        out.scale(self.λ[0].recip());
++        out.scale(self.lambda[0].recip());
+     }
+ 
+     fn step_length(
+@@ -286,17 +292,17 @@ impl Cone for SecondOrderCone {
+         z: &[T],
+         s: &[T],
+         _settings: &CoreSettings,
+-        αmax: T,
++        alphamax: T,
+     ) -> (T, T) {
+-        let αz = _step_length_soc_component(z, dz, αmax);
+-        let αs = _step_length_soc_component(s, ds, αmax);
++        let alphaz = _step_length_soc_component(z, dz, alphamax);
++        let alphas = _step_length_soc_component(s, ds, alphamax);
+ 
+-        (αz, αs)
++        (alphaz, alphas)
+     }
+ 
+-    fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], α: T) -> T {
+-        let res_s = _soc_residual_shifted(s, ds, α);
+-        let res_z = _soc_residual_shifted(z, dz, α);
++    fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], alpha: T) -> T {
++        let res_s = _soc_residual_shifted(s, ds, alpha);
++        let res_z = _soc_residual_shifted(z, dz, alpha);
+ 
+         // avoid numerical issue if res_s <= 0 or res_z <= 0
+         if res_s > T::zero() && res_z > T::zero() {
+@@ -312,17 +318,17 @@ impl Cone for SecondOrderCone {
+ // ---------------------------------------------
+ 
+ impl SymmetricCone for SecondOrderCone {
+-    fn λ_inv_circ_op(&mut self, x: &mut [T], z: &[T]) {
+-        _inv_circ_op(x, &self.λ, z);
++    fn lambda_inv_circ_op(&mut self, x: &mut [T], z: &[T]) {
++        _inv_circ_op(x, &self.lambda, z);
+     }
+ 
+-    fn mul_W(&mut self, _is_transpose: MatrixShape, y: &mut [T], x: &[T], α: T, β: T) {
++    fn mul_W(&mut self, _is_transpose: MatrixShape, y: &mut [T], x: &[T], alpha: T, beta: T) {
+         // symmetric, so ignore transpose
+-        _soc_mul_W_inner(y, x, α, β, &self.w, self.η);
++        _soc_mul_W_inner(y, x, alpha, beta, &self.w, self.eta);
+     }
+ 
+-    fn mul_Winv(&mut self, _is_transpose: MatrixShape, y: &mut [T], x: &[T], α: T, β: T) {
+-        _soc_mul_Winv_inner(y, x, α, β, &self.w, self.η);
++    fn mul_Winv(&mut self, _is_transpose: MatrixShape, y: &mut [T], x: &[T], alpha: T, beta: T) {
++        _soc_mul_Winv_inner(y, x, alpha, beta, &self.w, self.eta);
+     }
+ }
+ 
+@@ -382,21 +388,21 @@ fn _sqrt_soc_residual(z: &[T]) -> T {
+ 
+ // compute the residual at z + \alpha dz
+ // without storing the intermediate vector
+-fn _soc_residual_shifted(z: &[T], dz: &[T], α: T) -> T {
+-    let x0 = z[0] + α * dz[0];
+-    let x1norm = z[1..].norm_shifted(&dz[1..], α);
++fn _soc_residual_shifted(z: &[T], dz: &[T], alpha: T) -> T {
++    let x0 = z[0] + alpha * dz[0];
++    let x1norm = z[1..].norm_shifted(&dz[1..], alpha);
+     (x0 - x1norm) * (x0 + x1norm)
+ }
+ 
+ // find the maximum step length α≥0 so that
+ // x + αy stays in the SOC
+-fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+-    let mut αmax = αmax;
++fn _step_length_soc_component(x: &[T], y: &[T], alphamax: T) -> T {
++    let mut alphamax = alphamax;
+ 
+     // upper bound the step length by the maximum allowable
+     // step length for the scalar part of the cone
+     if x[0] >= T::zero() && y[0] < T::zero() {
+-        αmax = tmin(αmax, -x[0] / y[0]);
++        alphamax = tmin(alphamax, -x[0] / y[0]);
+     }
+ 
+     // assume that x is in the SOC, and find the minimum positive root
+@@ -420,14 +426,14 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+     if (a > T::zero() && b > T::zero()) || d < T::zero() {
+         //all negative roots / complex root pair
+         //-> infinite step length
+-        return αmax;
++        return alphamax;
+     } else if a.is_zero() {
+         // edge case with only one root.  This corresponds to
+         // the case where the search direction is exactly on the
+         // cone boundary.   The root should be -c/b, but b can't
+         // be negative since both (x,y) are in the cone and it is
+         // self dual, so <x,y> \ge 0 necessarily.
+-        return αmax;
++        return alphamax;
+     } else if c.is_zero() {
+         // Edge case with one of the roots at 0.   This corresponds
+         // to the case where the initial point is exactly on the
+@@ -437,7 +443,7 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+         // direction is outside the cone and b can't be positive.
+         // Either way, step length is determined by whether or not
+         // the search direction is in the cone.
+-        return if a >= T::zero() { αmax } else { T::zero() };
++        return if a >= T::zero() { alphamax } else { T::zero() };
+     }
+ 
+     // if we got this far then we need to calculate a pair
+@@ -461,7 +467,7 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+     let r1 = if r1 < T::zero() { T::infinity() } else { r1 };
+     let r2 = if r2 < T::zero() { T::infinity() } else { r2 };
+ 
+-    tmin(αmax, tmin(r1, r2))
++    tmin(alphamax, tmin(r1, r2))
+ }
+ 
+ // Must move the actual implementations of W*x to an outside
+@@ -471,24 +477,24 @@ fn _step_length_soc_component(x: &[T], y: &[T], αmax: T) -> T {
+ // Could also have been done using std::mem::take
+ 
+ #[allow(non_snake_case)]
+-fn _soc_mul_W_inner(y: &mut [T], x: &[T], α: T, β: T, w: &[T], η: T) {
++fn _soc_mul_W_inner(y: &mut [T], x: &[T], alpha: T, beta: T, w: &[T], eta: T) {
+     // use the fast product method from ECOS ECC paper
+-    let ζ = w[1..].dot(&x[1..]);
+-    let c = x[0] + ζ / (T::one() + w[0]);
++    let zeta = w[1..].dot(&x[1..]);
++    let c = x[0] + zeta / (T::one() + w[0]);
+ 
+-    y[0] = (α * η) * (w[0] * x[0] + ζ) + β * y[0];
++    y[0] = (alpha * eta) * (w[0] * x[0] + zeta) + beta * y[0];
+ 
+-    y[1..].axpby(α * η * c, &w[1..], β);
+-    y[1..].axpby(α * η, &x[1..], T::one());
++    y[1..].axpby(alpha * eta * c, &w[1..], beta);
++    y[1..].axpby(alpha * eta, &x[1..], T::one());
+ }
+ 
+-fn _soc_mul_Winv_inner(y: &mut [T], x: &[T], α: T, β: T, w: &[T], η: T) {
++fn _soc_mul_Winv_inner(y: &mut [T], x: &[T], alpha: T, beta: T, w: &[T], eta: T) {
+     // use the fast inverse product method from ECOS ECC paper
+-    let ζ = w[1..].dot(&x[1..]);
+-    let c = -x[0] + ζ / (T::one() + w[0]);
++    let zeta = w[1..].dot(&x[1..]);
++    let c = -x[0] + zeta / (T::one() + w[0]);
+ 
+-    y[0] = (α / η) * (w[0] * x[0] - ζ) + β * y[0];
++    y[0] = (alpha / eta) * (w[0] * x[0] - zeta) + beta * y[0];
+ 
+-    y[1..].axpby(α / η * c, &w[1..], β);
+-    y[1..].axpby(α / η, &x[1..], T::one());
++    y[1..].axpby(alpha / eta * c, &w[1..], beta);
++    y[1..].axpby(alpha / eta, &x[1..], T::one());
+ }
+diff --git a/src/solver/core/cones/supportedcone.rs b/src/solver/core/cones/supportedcone.rs
+index 6ecf6e2..b6d00fa 100644
+--- a/src/solver/core/cones/supportedcone.rs
++++ b/src/solver/core/cones/supportedcone.rs
+@@ -156,11 +156,11 @@ impl Cone for SupportedCone {
+             SupportedCone::SecondOrderCone(c) => c.allows_primal_dual_scaling(),
+         }
+     }
+-    fn rectify_equilibration(&self, δ: &mut [T], e: &[T]) -> bool {
++    fn rectify_equilibration(&self, delta: &mut [T], e: &[T]) -> bool {
+         match self {
+-            SupportedCone::ZeroCone(c) => c.rectify_equilibration(δ, e),
+-            SupportedCone::NonnegativeCone(c) => c.rectify_equilibration(δ, e),
+-            SupportedCone::SecondOrderCone(c) => c.rectify_equilibration(δ, e),
++            SupportedCone::ZeroCone(c) => c.rectify_equilibration(delta, e),
++            SupportedCone::NonnegativeCone(c) => c.rectify_equilibration(delta, e),
++            SupportedCone::SecondOrderCone(c) => c.rectify_equilibration(delta, e),
+         }
+     }
+     fn margins(&mut self, z: &mut [T], pd: PrimalOrDualCone) -> (T, T) {
+@@ -170,11 +170,11 @@ impl Cone for SupportedCone {
+             SupportedCone::SecondOrderCone(c) => c.margins(z, pd),
+         }
+     }
+-    fn scaled_unit_shift(&self, z: &mut [T], α: T, pd: PrimalOrDualCone) {
++    fn scaled_unit_shift(&self, z: &mut [T], alpha: T, pd: PrimalOrDualCone) {
+         match self {
+-            SupportedCone::ZeroCone(c) => c.scaled_unit_shift(z, α, pd),
+-            SupportedCone::NonnegativeCone(c) => c.scaled_unit_shift(z, α, pd),
+-            SupportedCone::SecondOrderCone(c) => c.scaled_unit_shift(z, α, pd),
++            SupportedCone::ZeroCone(c) => c.scaled_unit_shift(z, alpha, pd),
++            SupportedCone::NonnegativeCone(c) => c.scaled_unit_shift(z, alpha, pd),
++            SupportedCone::SecondOrderCone(c) => c.scaled_unit_shift(z, alpha, pd),
+         }
+     }
+     fn unit_initialization(&self, z: &mut [T], s: &mut [T]) {
+@@ -195,13 +195,13 @@ impl Cone for SupportedCone {
+         &mut self,
+         s: &[T],
+         z: &[T],
+-        μ: T,
++        mu: T,
+         scaling_strategy: ScalingStrategy,
+     ) -> bool {
+         match self {
+-            SupportedCone::ZeroCone(c) => c.update_scaling(s, z, μ, scaling_strategy),
+-            SupportedCone::NonnegativeCone(c) => c.update_scaling(s, z, μ, scaling_strategy),
+-            SupportedCone::SecondOrderCone(c) => c.update_scaling(s, z, μ, scaling_strategy),
++            SupportedCone::ZeroCone(c) => c.update_scaling(s, z, mu, scaling_strategy),
++            SupportedCone::NonnegativeCone(c) => c.update_scaling(s, z, mu, scaling_strategy),
++            SupportedCone::SecondOrderCone(c) => c.update_scaling(s, z, mu, scaling_strategy),
+         }
+     }
+     fn Hs_is_diagonal(&self) -> bool {
+@@ -232,18 +232,28 @@ impl Cone for SupportedCone {
+             SupportedCone::SecondOrderCone(c) => c.affine_ds(ds, s),
+         }
+     }
+-    fn combined_ds_shift(&mut self, shift: &mut [T], step_z: &mut [T], step_s: &mut [T], σμ: T) {
++    fn combined_ds_shift(
++        &mut self,
++        shift: &mut [T],
++        step_z: &mut [T],
++        step_s: &mut [T],
++        sigmamu: T,
++    ) {
+         match self {
+-            SupportedCone::ZeroCone(c) => c.combined_ds_shift(shift, step_z, step_s, σμ),
+-            SupportedCone::NonnegativeCone(c) => c.combined_ds_shift(shift, step_z, step_s, σμ),
+-            SupportedCone::SecondOrderCone(c) => c.combined_ds_shift(shift, step_z, step_s, σμ),
++            SupportedCone::ZeroCone(c) => c.combined_ds_shift(shift, step_z, step_s, sigmamu),
++            SupportedCone::NonnegativeCone(c) => {
++                c.combined_ds_shift(shift, step_z, step_s, sigmamu)
++            }
++            SupportedCone::SecondOrderCone(c) => {
++                c.combined_ds_shift(shift, step_z, step_s, sigmamu)
++            }
+         }
+     }
+-    fn Δs_from_Δz_offset(&mut self, out: &mut [T], ds: &[T], work: &mut [T], z: &[T]) {
++    fn Ds_from_Dz_offset(&mut self, out: &mut [T], ds: &[T], work: &mut [T], z: &[T]) {
+         match self {
+-            SupportedCone::ZeroCone(c) => c.Δs_from_Δz_offset(out, ds, work, z),
+-            SupportedCone::NonnegativeCone(c) => c.Δs_from_Δz_offset(out, ds, work, z),
+-            SupportedCone::SecondOrderCone(c) => c.Δs_from_Δz_offset(out, ds, work, z),
++            SupportedCone::ZeroCone(c) => c.Ds_from_Dz_offset(out, ds, work, z),
++            SupportedCone::NonnegativeCone(c) => c.Ds_from_Dz_offset(out, ds, work, z),
++            SupportedCone::SecondOrderCone(c) => c.Ds_from_Dz_offset(out, ds, work, z),
+         }
+     }
+     fn step_length(
+@@ -253,19 +263,19 @@ impl Cone for SupportedCone {
+         z: &[T],
+         s: &[T],
+         settings: &CoreSettings,
+-        αmax: T,
++        alphamax: T,
+     ) -> (T, T) {
+         match self {
+-            SupportedCone::ZeroCone(c) => c.step_length(dz, ds, z, s, settings, αmax),
+-            SupportedCone::NonnegativeCone(c) => c.step_length(dz, ds, z, s, settings, αmax),
+-            SupportedCone::SecondOrderCone(c) => c.step_length(dz, ds, z, s, settings, αmax),
++            SupportedCone::ZeroCone(c) => c.step_length(dz, ds, z, s, settings, alphamax),
++            SupportedCone::NonnegativeCone(c) => c.step_length(dz, ds, z, s, settings, alphamax),
++            SupportedCone::SecondOrderCone(c) => c.step_length(dz, ds, z, s, settings, alphamax),
+         }
+     }
+-    fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], α: T) -> T {
++    fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], alpha: T) -> T {
+         match self {
+-            SupportedCone::ZeroCone(c) => c.compute_barrier(z, s, dz, ds, α),
+-            SupportedCone::NonnegativeCone(c) => c.compute_barrier(z, s, dz, ds, α),
+-            SupportedCone::SecondOrderCone(c) => c.compute_barrier(z, s, dz, ds, α),
++            SupportedCone::ZeroCone(c) => c.compute_barrier(z, s, dz, ds, alpha),
++            SupportedCone::NonnegativeCone(c) => c.compute_barrier(z, s, dz, ds, alpha),
++            SupportedCone::SecondOrderCone(c) => c.compute_barrier(z, s, dz, ds, alpha),
+         }
+     }
+ }
+diff --git a/src/solver/core/cones/symmetric_common.rs b/src/solver/core/cones/symmetric_common.rs
+index 163db6f..6c8495b 100644
+--- a/src/solver/core/cones/symmetric_common.rs
++++ b/src/solver/core/cones/symmetric_common.rs
+@@ -10,14 +10,14 @@ use super::*;
+ // Operations supported on symmetric cones only
+ pub trait SymmetricCone: JordanAlgebra {
+     // Multiplication by the scaling point
+-    fn mul_W(&mut self, is_transpose: MatrixShape, y: &mut [T], x: &[T], α: T, β: T);
+-    fn mul_Winv(&mut self, is_transpose: MatrixShape, y: &mut [T], x: &[T], α: T, β: T);
++    fn mul_W(&mut self, is_transpose: MatrixShape, y: &mut [T], x: &[T], alpha: T, beta: T);
++    fn mul_Winv(&mut self, is_transpose: MatrixShape, y: &mut [T], x: &[T], alpha: T, beta: T);
+ 
+     // x = λ \ z
+     // Included as a special case since q \ z for general q is difficult
+     // to implement for general q i PSD cone and never actually needed.
+     #[allow(dead_code)] //PJG: not currently used anywhere
+-    fn λ_inv_circ_op(&mut self, x: &mut [T], z: &[T]);
++    fn lambda_inv_circ_op(&mut self, x: &mut [T], z: &[T]);
+ }
+ 
+ pub trait JordanAlgebra {
+@@ -36,9 +36,9 @@ pub(super) trait SymmetricConeUtils {
+         shift: &mut [T],
+         step_z: &mut [T],
+         step_s: &mut [T],
+-        σμ: T,
++        sigmamu: T,
+     );
+-    fn _Δs_from_Δz_offset_symmetric(&mut self, out: &mut [T], ds: &[T], work: &mut [T]);
++    fn _Ds_from_Dz_offset_symmetric(&mut self, out: &mut [T], ds: &[T], work: &mut [T]);
+ }
+ 
+ impl<C> SymmetricConeUtils for C
+@@ -55,7 +55,7 @@ where
+         shift: &mut [T],
+         step_z: &mut [T],
+         step_s: &mut [T],
+-        σμ: T,
++        sigmamu: T,
+     ) {
+         // The shift must be assembled carefully if we want to be economical with
+         // allocated memory.  Will modify the step.z and step.s in place since
+@@ -80,15 +80,15 @@ where
+         self.circ_op(shift, step_s, step_z);
+ 
+         //cone will be self dual, so Primal/Dual not important
+-        self.scaled_unit_shift(shift, -σμ, PrimalOrDualCone::PrimalCone);
++        self.scaled_unit_shift(shift, -sigmamu, PrimalOrDualCone::PrimalCone);
+     }
+ 
+     // compute the constant part of Δs when written as a function of Δz
+     // in the solution of a KKT system
+ 
+-    fn _Δs_from_Δz_offset_symmetric(&mut self, out: &mut [T], ds: &[T], work: &mut [T]) {
++    fn _Ds_from_Dz_offset_symmetric(&mut self, out: &mut [T], ds: &[T], work: &mut [T]) {
+         //tmp = λ \ ds
+-        self.λ_inv_circ_op(work, ds);
++        self.lambda_inv_circ_op(work, ds);
+ 
+         //out = Wᵀ(λ \ ds) = Wᵀ(work)
+         self.mul_W(MatrixShape::T, out, work, T::one(), T::zero());
+diff --git a/src/solver/core/cones/zerocone.rs b/src/solver/core/cones/zerocone.rs
+index 5d02116..9ef2242 100644
+--- a/src/solver/core/cones/zerocone.rs
++++ b/src/solver/core/cones/zerocone.rs
+@@ -41,8 +41,8 @@ impl Cone for ZeroCone {
+         true
+     }
+ 
+-    fn rectify_equilibration(&self, δ: &mut [T], _e: &[T]) -> bool {
+-        δ.set(T::one());
++    fn rectify_equilibration(&self, delta: &mut [T], _e: &[T]) -> bool {
++        delta.set(T::one());
+         false
+     }
+ 
+@@ -54,7 +54,7 @@ impl Cone for ZeroCone {
+         // out regardless of the applied shift anway
+         (T::MAX, T::zero())
+     }
+-    fn scaled_unit_shift(&self, z: &mut [T], _α: T, pd: PrimalOrDualCone) {
++    fn scaled_unit_shift(&self, z: &mut [T], _alpha: T, pd: PrimalOrDualCone) {
+         if pd == PrimalOrDualCone::PrimalCone {
+             z.fill(T::zero());
+         } else {
+@@ -75,7 +75,7 @@ impl Cone for ZeroCone {
+         &mut self,
+         _s: &[T],
+         _z: &[T],
+-        _μ: T,
++        _mu: T,
+         _scaling_strategy: ScalingStrategy,
+     ) -> bool {
+         true
+@@ -98,12 +98,16 @@ impl Cone for ZeroCone {
+     }
+ 
+     fn combined_ds_shift(
+-        &mut self, shift: &mut [T], _step_z: &mut [T], _step_s: &mut [T], _σμ: T
++        &mut self,
++        shift: &mut [T],
++        _step_z: &mut [T],
++        _step_s: &mut [T],
++        _sigmamu: T,
+     ) {
+         shift.fill(T::zero());
+     }
+ 
+-    fn Δs_from_Δz_offset(&mut self, out: &mut [T], _ds: &[T], _work: &mut [T], _z: &[T]) {
++    fn Ds_from_Dz_offset(&mut self, out: &mut [T], _ds: &[T], _work: &mut [T], _z: &[T]) {
+         out.fill(T::zero());
+     }
+ 
+@@ -114,13 +118,13 @@ impl Cone for ZeroCone {
+         _z: &[T],
+         _s: &[T],
+         _settings: &CoreSettings,
+-        αmax: T,
++        alphamax: T,
+     ) -> (T, T) {
+         //equality constraints allow arbitrary step length
+-        (αmax, αmax)
++        (alphamax, alphamax)
+     }
+ 
+-    fn compute_barrier(&mut self, _z: &[T], _s: &[T], _dz: &[T], _ds: &[T], _α: T) -> T {
++    fn compute_barrier(&mut self, _z: &[T], _s: &[T], _dz: &[T], _ds: &[T], _alpha: T) -> T {
+         T::zero()
+     }
+ }
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs b/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
+index db4e2b6..e9bfbd0 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
+@@ -70,23 +70,6 @@ pub(crate) trait SparseExpansionConeTrait {
+     );
+ }
+ 
+-macro_rules! impl_map_recover {
+-    ($CONE:ident,$MAP:ident) => {
+-        impl<'a> $CONE {
+-            pub(crate) fn recover_map(&self, map: &'a SparseExpansionMap) -> &'a $MAP {
+-                match map {
+-                    SparseExpansionMap::$MAP(map) => map,
+-                }
+-            }
+-            pub(crate) fn recover_map_mut(&self, map: &'a mut SparseExpansionMap) -> &'a mut $MAP {
+-                match map {
+-                    SparseExpansionMap::$MAP(map) => map,
+-                }
+-            }
+-        }
+-    };
+-}
+-
+ //--------------------------------------
+ // Second order cone data map
+ //--------------------------------------
+@@ -118,7 +101,22 @@ impl SparseExpansionMapTrait for SOCExpansionMap {
+     }
+ }
+ 
+-impl_map_recover!(SecondOrderCone, SOCExpansionMap);
++// (upstream generated this with the impl_map_recover! macro)
++impl<'a> SecondOrderCone {
++    pub(crate) fn recover_map(&self, map: &'a SparseExpansionMap) -> &'a SOCExpansionMap {
++        match map {
++            SparseExpansionMap::SOCExpansionMap(map) => map,
++        }
++    }
++    pub(crate) fn recover_map_mut(
++        &self,
++        map: &'a mut SparseExpansionMap,
++    ) -> &'a mut SOCExpansionMap {
++        match map {
++            SparseExpansionMap::SOCExpansionMap(map) => map,
++        }
++    }
++}
+ 
+ impl SparseExpansionConeTrait for &'_ SecondOrderCone {
+     fn expansion_map(&self) -> SparseExpansionMap {
+@@ -188,16 +186,16 @@ impl SparseExpansionConeTrait for &'_ SecondOrderCone {
+         };
+ 
+         let map = self.recover_map(map);
+-        let η2 = self.η * self.η;
++        let eta2 = self.eta * self.eta;
+ 
+         // off diagonal columns (or rows)
+         updateFcn(ldl, K, &map.u, &sparse_data.u);
+         updateFcn(ldl, K, &map.v, &sparse_data.v);
+-        scaleFcn(ldl, K, &map.u, -η2);
+-        scaleFcn(ldl, K, &map.v, -η2);
++        scaleFcn(ldl, K, &map.u, -eta2);
++        scaleFcn(ldl, K, &map.v, -eta2);
+ 
+         //set diagonal to η^2*(-1,1) in the extended rows/cols
+-        updateFcn(ldl, K, &map.D, &[-η2, η2]);
++        updateFcn(ldl, K, &map.D, &[-eta2, eta2]);
+     }
+ }
+ 
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs b/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs
+index 4f7ced7..17763d6 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/directldlkktsolver.rs
+@@ -321,12 +321,12 @@ fn _compute_regularizer(diag_kkt: &[T], settings: &CoreSettings) -> T {
+ //  computes e = b - Kξ, overwriting the first argument
+ //  and returning its norm
+ 
+-fn _get_refine_error(e: &mut [T], b: &[T], KKTsym: &Symmetric<CscMatrix>, ξ: &mut [T]) -> T {
++fn _get_refine_error(e: &mut [T], b: &[T], KKTsym: &Symmetric<CscMatrix>, xi: &mut [T]) -> T {
+     // Note that K is only triu data, so need to
+     // be careful when computing the residual here
+ 
+     e.copy_from(b);
+-    KKTsym.symv(e, ξ, -T::one(), T::one()); //#  e = b - Kξ
++    KKTsym.symv(e, xi, -T::one(), T::one()); //#  e = b - Kξ
+ 
+     e.norm_inf()
+ }
+diff --git a/src/solver/core/kktsolvers/mod.rs b/src/solver/core/kktsolvers/mod.rs
+index 08efd53..46b39b8 100644
+--- a/src/solver/core/kktsolvers/mod.rs
++++ b/src/solver/core/kktsolvers/mod.rs
+@@ -1,6 +1,6 @@
+ #![allow(non_snake_case)]
+-use super::{cones::CompositeCone, CoreSettings};
+ use crate::algebra::*;
++use crate::solver::core::{cones::CompositeCone, CoreSettings};
+ 
+ pub mod direct;
+ 
+diff --git a/src/solver/core/solver.rs b/src/solver/core/solver.rs
+index d6c28e4..4f97210 100644
+--- a/src/solver/core/solver.rs
++++ b/src/solver/core/solver.rs
+@@ -1,7 +1,7 @@
+ use self::internal::*;
+-use super::cones::Cone;
+-use super::{traits::*, SettingsError};
+ use crate::algebra::*;
++use crate::solver::core::cones::Cone;
++use crate::solver::core::{traits::*, SettingsError};
+ 
+ // ---------------------------------
+ // Solver status type
+@@ -9,10 +9,9 @@ use crate::algebra::*;
+ 
+ /// Status of solver at termination
+ #[repr(C)]
+-#[derive(PartialEq, Eq, Clone, Debug, Copy, Default)]
++#[derive(PartialEq, Eq, Clone, Debug, Copy)]
+ pub enum SolverStatus {
+     /// Problem is not solved (solver hasn't run).
+-    #[default]
+     Unsolved = 0,
+     /// Solver terminated with a solution.
+     Solved,
+@@ -34,6 +33,12 @@ pub enum SolverStatus {
+     InsufficientProgress,
+ }
+ 
++impl Default for SolverStatus {
++    fn default() -> Self {
++        SolverStatus::Unsolved
++    }
++}
++
+ impl SolverStatus {
+     pub(crate) fn is_infeasible(&self) -> bool {
+         matches!(
+@@ -157,9 +162,9 @@ where
+     fn solve(&mut self) {
+         // various initializations
+         let mut iter: u32 = 0;
+-        let mut σ = T::one();
+-        let mut α = T::zero();
+-        let mut μ;
++        let mut sigma = T::one();
++        let mut alpha = T::zero();
++        let mut mu;
+ 
+         self.info.reset();
+ 
+@@ -185,18 +190,18 @@ where
+ 
+             //calculate duality gap (scaled)
+             //--------------
+-            μ = self.variables.calc_mu(&self.residuals, &self.cones);
++            mu = self.variables.calc_mu(&self.residuals, &self.cones);
+ 
+             // record scalar values from most recent iteration.
+             // This captures μ at iteration zero.
+-            self.info.save_scalars(μ, α, σ, iter);
++            self.info.save_scalars(mu, alpha, sigma, iter);
+ 
+             // KNP-1 (patch 0003): the fid-num facade turns a NaN, an infinity or a domain
+             // error into a NaN, which reaches μ; stop with a numerical error status.
+             // The "almost solved" check in post_process must not read this iterate: go
+             // back to the previous one (whose info and residuals are recomputed), or, at
+             // iteration 0, leave the info at its NaN reset values so no check passes.
+-            if !μ.is_finite() {
++            if !mu.is_finite() {
+                 if iter > 0 {
+                     self.info
+                         .reset_to_prev_iterate(&mut self.variables, &self.prev_vars);
+@@ -234,7 +239,7 @@ where
+ 
+             // update the scalings
+             // --------------
+-            let is_scaling_success = self.variables.scale_cones(&mut self.cones, μ, scaling);
++            let is_scaling_success = self.variables.scale_cones(&mut self.cones, mu, scaling);
+             // check whether variables are interior points
+             match self.strategy_checkpoint_is_scaling_success(is_scaling_success, scaling) {
+                 StrategyCheckpoint::Fail => break,
+@@ -275,12 +280,12 @@ where
+             if is_kkt_solve_success {
+                 //calculate step length and centering parameter
+                 // --------------
+-                α = self.get_step_length(StepDirection::Affine, scaling);
+-                σ = self.centering_parameter(α);
++                alpha = self.get_step_length(StepDirection::Affine, scaling);
++                sigma = self.centering_parameter(alpha);
+ 
+                 // make a reduced Mehrotra correction in the first iteration
+                 // to accommodate badly centred starting points
+-                let m = if iter > 1 { T::one() } else { α };
++                let m = if iter > 1 { T::one() } else { alpha };
+ 
+                 // calculate the combined step and length
+                 // --------------
+@@ -289,8 +294,8 @@ where
+                     &self.variables,
+                     &mut self.cones,
+                     &mut self.step_lhs,
+-                    σ,
+-                    μ,
++                    sigma,
++                    mu,
+                     m,
+                 );
+ 
+@@ -309,30 +314,30 @@ where
+             match self.strategy_checkpoint_numerical_error(is_kkt_solve_success, scaling) {
+                 StrategyCheckpoint::NoUpdate => {}
+                 StrategyCheckpoint::Update(s) => {
+-                    α = T::zero();
++                    alpha = T::zero();
+                     scaling = s;
+                     continue;
+                 }
+                 StrategyCheckpoint::Fail => {
+-                    α = T::zero();
++                    alpha = T::zero();
+                     break;
+                 }
+             }
+ 
+             // compute final step length and update the current iterate
+             // --------------
+-            α = self.get_step_length(StepDirection::Combined, scaling);
++            alpha = self.get_step_length(StepDirection::Combined, scaling);
+ 
+             // check for undersized step and update strategy
+-            match self.strategy_checkpoint_small_step(α, scaling) {
++            match self.strategy_checkpoint_small_step(alpha, scaling) {
+                 StrategyCheckpoint::NoUpdate => {}
+                 StrategyCheckpoint::Update(s) => {
+-                    α = T::zero();
++                    alpha = T::zero();
+                     scaling = s;
+                     continue;
+                 }
+                 StrategyCheckpoint::Fail => {
+-                    α = T::zero();
++                    alpha = T::zero();
+                     break;
+                 }
+             }
+@@ -341,15 +346,15 @@ where
+             self.info
+                 .save_prev_iterate(&self.variables, &mut self.prev_vars);
+ 
+-            self.variables.add_step(&self.step_lhs, α);
++            self.variables.add_step(&self.step_lhs, alpha);
+         } //end loop
+           // ----------
+           // ----------
+ 
+         // Check we if actually took a final step.  If not, we need
+         // to recapture the scalars
+-        if α.is_zero() {
+-            self.info.save_scalars(μ, α, σ, iter);
++        if alpha.is_zero() {
++            self.info.save_scalars(mu, alpha, sigma, iter);
+         }
+ 
+         //check for "almost" convergence case and then extract solution
+@@ -372,14 +377,14 @@ mod internal {
+         fn default_start(&mut self);
+ 
+         /// Compute a centering parameter
+-        fn centering_parameter(&self, α: T) -> T;
++        fn centering_parameter(&self, alpha: T) -> T;
+ 
+         /// Compute the current step length
+         fn get_step_length(&mut self, step_direction: StepDirection, scaling: ScalingStrategy)
+             -> T;
+ 
+         /// backtrack a step direction to the barrier
+-        fn backtrack_step_to_barrier(&mut self, αinit: T) -> T;
++        fn backtrack_step_to_barrier(&mut self, alphainit: T) -> T;
+ 
+         /// Scaling strategy checkpointing functions
+         fn strategy_checkpoint_insufficient_progress(
+@@ -395,7 +400,7 @@ mod internal {
+ 
+         fn strategy_checkpoint_small_step(
+             &mut self,
+-            α: T,
++            alpha: T,
+             scaling: ScalingStrategy,
+         ) -> StrategyCheckpoint;
+ 
+@@ -436,8 +441,8 @@ mod internal {
+             }
+         }
+ 
+-        fn centering_parameter(&self, α: T) -> T {
+-            let a = T::one() - α;
++        fn centering_parameter(&self, alpha: T) -> T {
++            let a = T::one() - alpha;
+             a * a * a
+         }
+ 
+@@ -447,7 +452,7 @@ mod internal {
+             scaling: ScalingStrategy,
+         ) -> T {
+             //step length to stay within the cones
+-            let mut α = self.variables.calc_step_length(
++            let mut alpha = self.variables.calc_step_length(
+                 &self.step_lhs,
+                 &mut self.cones,
+                 &self.settings,
+@@ -459,25 +464,27 @@ mod internal {
+                 && step_direction == StepDirection::Combined
+                 && scaling == ScalingStrategy::Dual
+             {
+-                let αinit = α;
+-                α = self.backtrack_step_to_barrier(αinit);
++                let alphainit = alpha;
++                alpha = self.backtrack_step_to_barrier(alphainit);
+             }
+-            α
++            alpha
+         }
+ 
+-        fn backtrack_step_to_barrier(&mut self, αinit: T) -> T {
++        fn backtrack_step_to_barrier(&mut self, alphainit: T) -> T {
+             let step = self.settings.core().linesearch_backtrack_step;
+-            let mut α = αinit;
++            let mut alpha = alphainit;
+ 
+             for _ in 0..50 {
+-                let barrier = self.variables.barrier(&self.step_lhs, α, &mut self.cones);
++                let barrier = self
++                    .variables
++                    .barrier(&self.step_lhs, alpha, &mut self.cones);
+                 if barrier < T::one() {
+-                    return α;
++                    return alpha;
+                 } else {
+-                    α = step * α;
++                    alpha = step * alpha;
+                 }
+             }
+-            α
++            alpha
+         }
+ 
+         fn strategy_checkpoint_insufficient_progress(
+@@ -528,17 +535,17 @@ mod internal {
+ 
+         fn strategy_checkpoint_small_step(
+             &mut self,
+-            α: T,
++            alpha: T,
+             scaling: ScalingStrategy,
+         ) -> StrategyCheckpoint {
+             let output;
+ 
+             if !self.cones.is_symmetric()
+                 && scaling == ScalingStrategy::PrimalDual
+-                && α < self.settings.core().min_switch_step_length
++                && alpha < self.settings.core().min_switch_step_length
+             {
+                 output = StrategyCheckpoint::Update(ScalingStrategy::Dual);
+-            } else if α <= tmax(T::zero(), self.settings.core().min_terminate_step_length) {
++            } else if alpha <= tmax(T::zero(), self.settings.core().min_terminate_step_length) {
+                 self.info.set_status(SolverStatus::InsufficientProgress);
+                 output = StrategyCheckpoint::Fail;
+             } else {
+diff --git a/src/solver/core/traits.rs b/src/solver/core/traits.rs
+index 5724eb3..56542d9 100644
+--- a/src/solver/core/traits.rs
++++ b/src/solver/core/traits.rs
+@@ -10,9 +10,9 @@
+ //!  which collectively implement support for the problem format described in the top
+ //! level crate documentation.
+ 
+-use super::{cones::Cone, CoreSettings, ScalingStrategy, SettingsError};
+-use super::{SolverStatus, StepDirection};
+ use crate::algebra::*;
++use crate::solver::core::{cones::Cone, CoreSettings, ScalingStrategy, SettingsError};
++use crate::solver::core::{SolverStatus, StepDirection};
+ 
+ /// Data for a conic optimization problem.
+ pub trait ProblemData {
+@@ -52,8 +52,8 @@ pub trait Variables {
+         variables: &Self,
+         cones: &mut Self::C,
+         step: &mut Self, //mut allows step to double as working space
+-        σ: T,
+-        μ: T,
++        sigma: T,
++        mu: T,
+         m: T,
+     );
+ 
+@@ -68,7 +68,7 @@ pub trait Variables {
+     ) -> T;
+ 
+     /// Update the variables in the given step direction, scaled by `α`.
+-    fn add_step(&mut self, step_lhs: &Self, α: T);
++    fn add_step(&mut self, step_lhs: &Self, alpha: T);
+ 
+     /// Bring the variables into the interior of the cone constraints.
+     fn symmetric_initialization(&mut self, cones: &mut Self::C);
+@@ -80,10 +80,10 @@ pub trait Variables {
+     fn copy_from(&mut self, src: &Self);
+ 
+     /// Apply NT scaling to a collection of cones
+-    fn scale_cones(&self, cones: &mut Self::C, μ: T, scaling_strategy: ScalingStrategy) -> bool;
++    fn scale_cones(&self, cones: &mut Self::C, mu: T, scaling_strategy: ScalingStrategy) -> bool;
+ 
+     /// Compute the barrier function
+-    fn barrier(&self, step: &Self, α: T, cones: &mut Self::C) -> T;
++    fn barrier(&self, step: &Self, alpha: T, cones: &mut Self::C) -> T;
+ 
+     /// Rescale variables, e.g. to renormalize iterates
+     /// in a homogeneous embedding
+@@ -175,7 +175,7 @@ pub trait Info: Sized + Clone {
+     /// Record some of the top level solver's choice of various
+     /// scalars. `μ = ` normalized gap.  `α = ` computed step length.
+     /// `σ = ` multiplier for the updated centering parameter.
+-    fn save_scalars(&mut self, μ: T, α: T, σ: T, iter: u32);
++    fn save_scalars(&mut self, mu: T, alpha: T, sigma: T, iter: u32);
+ 
+     /// Report the termination status
+     fn get_status(&self) -> SolverStatus;
+diff --git a/src/solver/implementations/default/info.rs b/src/solver/implementations/default/info.rs
+index 7970b86..fcec8de 100644
+--- a/src/solver/implementations/default/info.rs
++++ b/src/solver/implementations/default/info.rs
+@@ -113,7 +113,7 @@ impl Info for DefaultInfo {
+     ) {
+         // optimality termination check should be computed w.r.t
+         // the pre-homogenization x and z variables.
+-        let τinv = T::recip(variables.τ);
++        let tauinv = T::recip(variables.tau);
+ 
+         // unscaled linear term norms
+         let normb = data.get_normb();
+@@ -130,9 +130,9 @@ impl Info for DefaultInfo {
+         // equilibration, but we still need to back out the overall
+         // objective scaling term c
+ 
+-        let xPx_τinvsq_over2 = residuals.dot_xPx * τinv * τinv / (2.).as_T();
+-        self.cost_primal = (residuals.dot_qx * τinv + xPx_τinvsq_over2) * cinv;
+-        self.cost_dual = (-residuals.dot_bz * τinv - xPx_τinvsq_over2) * cinv;
++        let xPx_tauinvsq_over2 = residuals.dot_xPx * tauinv * tauinv / (2.).as_T();
++        self.cost_primal = (residuals.dot_qx * tauinv + xPx_tauinvsq_over2) * cinv;
++        self.cost_dual = (-residuals.dot_bz * tauinv - xPx_tauinvsq_over2) * cinv;
+ 
+         // variables norms, undoing the equilibration.  Do not unscale
+         // by τ yet because the infeasibility residuals are ratios of
+@@ -149,15 +149,15 @@ impl Info for DefaultInfo {
+         );
+ 
+         // now back out the τ scaling so we can normalize the unscaled primal / dual errors
+-        normx *= τinv;
+-        normz *= τinv;
+-        norms *= τinv;
++        normx *= tauinv;
++        normz *= tauinv;
++        norms *= tauinv;
+ 
+         // primal and dual relative residuals.
+         self.res_primal =
+-            residuals.rz.norm_scaled(einv) * τinv / tmax(T::one(), normb + normx + norms);
++            residuals.rz.norm_scaled(einv) * tauinv / tmax(T::one(), normb + normx + norms);
+         self.res_dual =
+-            residuals.rx.norm_scaled(dinv) * τinv * cinv / tmax(T::one(), normq + normx + normz);
++            residuals.rx.norm_scaled(dinv) * tauinv * cinv / tmax(T::one(), normq + normx + normz);
+ 
+         // absolute and relative gaps
+         self.gap_abs = T::abs(self.cost_primal - self.cost_dual);
+@@ -168,7 +168,7 @@ impl Info for DefaultInfo {
+             );
+ 
+         // κ/τ ratio (scaled)
+-        self.ktratio = variables.κ * τinv;
++        self.ktratio = variables.kappa * tauinv;
+     }
+ 
+     fn check_termination(
+@@ -240,10 +240,10 @@ impl Info for DefaultInfo {
+         variables.copy_from(prev_variables);
+     }
+ 
+-    fn save_scalars(&mut self, μ: T, α: T, σ: T, iter: u32) {
+-        self.mu = μ;
+-        self.step_length = α;
+-        self.sigma = σ;
++    fn save_scalars(&mut self, mu: T, alpha: T, sigma: T, iter: u32) {
++        self.mu = mu;
++        self.step_length = alpha;
++        self.sigma = sigma;
+         self.iterations = iter;
+     }
+ 
+diff --git a/src/solver/implementations/default/kktsystem.rs b/src/solver/implementations/default/kktsystem.rs
+index c14ce90..0ff83c7 100644
+--- a/src/solver/implementations/default/kktsystem.rs
++++ b/src/solver/implementations/default/kktsystem.rs
+@@ -130,18 +130,18 @@ impl KKTSystem for DefaultKKTSystem {
+ 
+         // compute the vector c in the step equation HₛΔz + Δs = -c,
+         // with shortcut in affine case
+-        let Δs_const_term = &mut self.work_conic;
++        let Ds_const_term = &mut self.work_conic;
+ 
+         match step_direction {
+             StepDirection::Affine => {
+-                Δs_const_term.copy_from(&variables.s);
++                Ds_const_term.copy_from(&variables.s);
+             }
+             StepDirection::Combined => {
+-                cones.Δs_from_Δz_offset(Δs_const_term, &rhs.s, &mut lhs.z, &variables.z);
++                cones.Ds_from_Dz_offset(Ds_const_term, &rhs.s, &mut lhs.z, &variables.z);
+             }
+         }
+ 
+-        workz.waxpby(T::one(), Δs_const_term, -T::one(), &rhs.z);
++        workz.waxpby(T::one(), Ds_const_term, -T::one(), &rhs.z);
+ 
+         // ---------------------------------------------------
+         // this solves the variable part of reduced KKT system
+@@ -154,39 +154,39 @@ impl KKTSystem for DefaultKKTSystem {
+         // solve for Δτ.
+         // -----------
+         // Numerator first
+-        let ξ = workx;
+-        ξ.axpby(T::recip(variables.τ), &variables.x, T::zero());
++        let xi = workx;
++        xi.axpby(T::recip(variables.tau), &variables.x, T::zero());
+ 
+         let two: T = (2.).as_T();
+-        let tau_num = rhs.τ - rhs.κ / variables.τ
++        let tau_num = rhs.tau - rhs.kappa / variables.tau
+             + data.q.dot(x1)
+             + data.b.dot(z1)
+-            + two * data.P.sym_up().quad_form(ξ, x1);
++            + two * data.P.sym_up().quad_form(xi, x1);
+ 
+         // offset ξ for the quadratic form in the denominator
+-        let ξ_minus_x2 = ξ; //alias to ξ, same as workx
+-        ξ_minus_x2.axpby(-T::one(), x2, T::one());
++        let xi_minus_x2 = xi; //alias to ξ, same as workx
++        xi_minus_x2.axpby(-T::one(), x2, T::one());
+ 
+-        let mut tau_den = variables.κ / variables.τ - data.q.dot(x2) - data.b.dot(z2);
++        let mut tau_den = variables.kappa / variables.tau - data.q.dot(x2) - data.b.dot(z2);
+         tau_den +=
+-            data.P.sym_up().quad_form(ξ_minus_x2, ξ_minus_x2) - data.P.sym_up().quad_form(x2, x2);
++            data.P.sym_up().quad_form(xi_minus_x2, xi_minus_x2) - data.P.sym_up().quad_form(x2, x2);
+ 
+         // solve for (Δx,Δz)
+         // -----------
+-        lhs.τ = tau_num / tau_den;
+-        lhs.x.waxpby(T::one(), x1, lhs.τ, x2);
+-        lhs.z.waxpby(T::one(), z1, lhs.τ, z2);
++        lhs.tau = tau_num / tau_den;
++        lhs.x.waxpby(T::one(), x1, lhs.tau, x2);
++        lhs.z.waxpby(T::one(), z1, lhs.tau, z2);
+ 
+         // solve for Δs
+         // -------------
+         //  compute the linear term HₛΔz, where Hs = WᵀW for symmetric
+         //  cones and Hs = μH(z) for asymmetric cones
+         cones.mul_Hs(&mut lhs.s, &lhs.z, workz);
+-        lhs.s.axpby(-T::one(), Δs_const_term, -T::one()); // lhs.s = -(lhs.s+Δs_const_term);
++        lhs.s.axpby(-T::one(), Ds_const_term, -T::one()); // lhs.s = -(lhs.s+Δs_const_term);
+ 
+         // solve for Δκ
+         // --------------
+-        lhs.κ = -(rhs.κ + variables.κ * lhs.τ) / variables.τ;
++        lhs.kappa = -(rhs.kappa + variables.kappa * lhs.tau) / variables.tau;
+ 
+         // we don't check the validity of anything
+         // after the KKT solve, so just return is_success
+diff --git a/src/solver/implementations/default/residuals.rs b/src/solver/implementations/default/residuals.rs
+index 2b74e8c..b250217 100644
+--- a/src/solver/implementations/default/residuals.rs
++++ b/src/solver/implementations/default/residuals.rs
+@@ -12,7 +12,7 @@ pub struct DefaultResiduals {
+     // the main KKT residuals
+     pub(crate) rx: Vec<T>,
+     pub(crate) rz: Vec<T>,
+-    pub(crate) rτ: T,
++    pub(crate) rtau: T,
+ 
+     // partial residuals for infeasibility checks
+     pub(crate) rx_inf: Vec<T>,
+@@ -34,7 +34,7 @@ impl DefaultResiduals {
+     pub fn new(n: usize, m: usize) -> Self {
+         let rx = vec![T::zero(); n];
+         let rz = vec![T::zero(); m];
+-        let rτ = T::one();
++        let rtau = T::one();
+ 
+         let rx_inf = vec![T::zero(); n];
+         let rz_inf = vec![T::zero(); m];
+@@ -44,7 +44,7 @@ impl DefaultResiduals {
+         Self {
+             rx,
+             rz,
+-            rτ,
++            rtau,
+             rx_inf,
+             rz_inf,
+             Px,
+@@ -87,15 +87,15 @@ impl Residuals for DefaultResiduals {
+ 
+         //complete the residuals
+         //rx = rx_inf - Px - qτ
+-        self.rx.waxpby(-T::one(), &self.Px, -variables.τ, &data.q);
++        self.rx.waxpby(-T::one(), &self.Px, -variables.tau, &data.q);
+         self.rx.axpby(T::one(), &self.rx_inf, T::one());
+ 
+         // rz = rz_inf - bτ
+         self.rz
+-            .waxpby(T::one(), &self.rz_inf, -variables.τ, &data.b);
++            .waxpby(T::one(), &self.rz_inf, -variables.tau, &data.b);
+ 
+         // τ = qz + bz + κ + xPx/τ;
+-        self.rτ = qx + bz + variables.κ + xPx / variables.τ;
++        self.rtau = qx + bz + variables.kappa + xPx / variables.tau;
+ 
+         //save local versions
+         self.dot_qx = qx;
+diff --git a/src/solver/implementations/default/settings.rs b/src/solver/implementations/default/settings.rs
+index ed9b806..13c4919 100644
+--- a/src/solver/implementations/default/settings.rs
++++ b/src/solver/implementations/default/settings.rs
+@@ -165,14 +165,6 @@ impl Default for DefaultSettings {
+     }
+ }
+ 
+-macro_rules! check_immutable_setting {
+-    ($self:expr, $prev:expr, $field:ident) => {
+-        if $self.$field != $prev.$field {
+-            return Err(SettingsError::ImmutableSetting(stringify!($field)));
+-        }
+-    };
+-}
+-
+ impl Settings for DefaultSettings {
+     //NB: CoreSettings is typedef'd to DefaultSettings
+     fn core(&self) -> &DefaultSettings {
+@@ -205,14 +197,30 @@ impl Settings for DefaultSettings {
+     fn validate_as_update(&self, prev: &Self) -> Result<(), SettingsError> {
+         self.validate()?;
+ 
+-        check_immutable_setting!(self, prev, equilibrate_enable);
+-        check_immutable_setting!(self, prev, equilibrate_max_iter);
+-        check_immutable_setting!(self, prev, equilibrate_min_scaling);
+-        check_immutable_setting!(self, prev, equilibrate_max_scaling);
+-        check_immutable_setting!(self, prev, direct_kkt_solver);
+-        check_immutable_setting!(self, prev, direct_solve_method);
+-        check_immutable_setting!(self, prev, presolve_enable);
+-        check_immutable_setting!(self, prev, input_sparse_dropzeros);
++        if self.equilibrate_enable != prev.equilibrate_enable {
++            return Err(SettingsError::ImmutableSetting("equilibrate_enable"));
++        }
++        if self.equilibrate_max_iter != prev.equilibrate_max_iter {
++            return Err(SettingsError::ImmutableSetting("equilibrate_max_iter"));
++        }
++        if self.equilibrate_min_scaling != prev.equilibrate_min_scaling {
++            return Err(SettingsError::ImmutableSetting("equilibrate_min_scaling"));
++        }
++        if self.equilibrate_max_scaling != prev.equilibrate_max_scaling {
++            return Err(SettingsError::ImmutableSetting("equilibrate_max_scaling"));
++        }
++        if self.direct_kkt_solver != prev.direct_kkt_solver {
++            return Err(SettingsError::ImmutableSetting("direct_kkt_solver"));
++        }
++        if self.direct_solve_method != prev.direct_solve_method {
++            return Err(SettingsError::ImmutableSetting("direct_solve_method"));
++        }
++        if self.presolve_enable != prev.presolve_enable {
++            return Err(SettingsError::ImmutableSetting("presolve_enable"));
++        }
++        if self.input_sparse_dropzeros != prev.input_sparse_dropzeros {
++            return Err(SettingsError::ImmutableSetting("input_sparse_dropzeros"));
++        }
+ 
+         Ok(())
+     }
+diff --git a/src/solver/implementations/default/variables.rs b/src/solver/implementations/default/variables.rs
+index f8d6722..cf59072 100644
+--- a/src/solver/implementations/default/variables.rs
++++ b/src/solver/implementations/default/variables.rs
+@@ -19,9 +19,9 @@ pub struct DefaultVariables {
+     /// scaled dual variables
+     pub z: Vec<T>,
+     /// homogenization scalar τ
+-    pub τ: T,
++    pub tau: T,
+     /// homogenization scalar κ
+-    pub κ: T,
++    pub kappa: T,
+ }
+ 
+ impl std::fmt::Debug for DefaultVariables {
+@@ -29,7 +29,7 @@ impl std::fmt::Debug for DefaultVariables {
+         write!(
+             f,
+             "x: {:?}\ns: {:?}\nz: {:?}\nτ: {:?}\nκ: {:?}\n",
+-            self.x, self.s, self.z, self.τ, self.κ
++            self.x, self.s, self.z, self.tau, self.kappa
+         )
+     }
+ }
+@@ -40,10 +40,16 @@ impl DefaultVariables {
+         let x = vec![T::zero(); n];
+         let s = vec![T::zero(); m];
+         let z = vec![T::zero(); m];
+-        let τ = T::one();
+-        let κ = T::one();
+-
+-        Self { x, s, z, τ, κ }
++        let tau = T::one();
++        let kappa = T::one();
++
++        Self {
++            x,
++            s,
++            z,
++            tau,
++            kappa,
++        }
+     }
+ }
+ 
+@@ -55,7 +61,7 @@ impl Variables for DefaultVariables {
+ 
+     fn calc_mu(&mut self, residuals: &DefaultResiduals, cones: &CompositeCone) -> T {
+         let denom = (cones.degree() + 1).as_T();
+-        (residuals.dot_sz + self.τ * self.κ) / denom
++        (residuals.dot_sz + self.tau * self.kappa) / denom
+     }
+ 
+     fn affine_step_rhs(
+@@ -67,8 +73,8 @@ impl Variables for DefaultVariables {
+         self.x.copy_from(&residuals.rx);
+         self.z.copy_from(&residuals.rz);
+         cones.affine_ds(&mut self.s, &variables.s);
+-        self.τ = residuals.rτ;
+-        self.κ = variables.τ * variables.κ;
++        self.tau = residuals.rtau;
++        self.kappa = variables.tau * variables.kappa;
+     }
+ 
+     fn combined_step_rhs(
+@@ -77,15 +83,15 @@ impl Variables for DefaultVariables {
+         variables: &Self,
+         cones: &mut CompositeCone,
+         step: &mut Self,
+-        σ: T,
+-        μ: T,
++        sigma: T,
++        mu: T,
+         m: T,
+     ) {
+-        let dotσμ = σ * μ;
++        let dotsigmamu = sigma * mu;
+ 
+-        self.x.axpby(T::one() - σ, &residuals.rx, T::zero()); //self.x  = (1 - σ)*rx
+-        self.τ = (T::one() - σ) * residuals.rτ;
+-        self.κ = -dotσμ + m * step.τ * step.κ + variables.τ * variables.κ;
++        self.x.axpby(T::one() - sigma, &residuals.rx, T::zero()); //self.x  = (1 - σ)*rx
++        self.tau = (T::one() - sigma) * residuals.rtau;
++        self.kappa = -dotsigmamu + m * step.tau * step.kappa + variables.tau * variables.kappa;
+ 
+         // ds is different for symmetric and asymmetric cones:
+         // Symmetric cones: d.s = λ ◦ λ + W⁻¹Δs ∘ WΔz − σμe
+@@ -99,13 +105,13 @@ impl Variables for DefaultVariables {
+             step.z.scale(m);
+         }
+ 
+-        cones.combined_ds_shift(&mut self.z, &mut step.z, &mut step.s, dotσμ);
++        cones.combined_ds_shift(&mut self.z, &mut step.z, &mut step.s, dotsigmamu);
+ 
+         //We are relying on d.s = affine_ds already here
+         self.s.axpby(T::one(), &self.z, T::one());
+ 
+         // now we copy the scaled res for rz and d.z is no longer work
+-        self.z.axpby(T::one() - σ, &residuals.rz, T::zero());
++        self.z.axpby(T::one() - sigma, &residuals.rz, T::zero());
+     }
+ 
+     fn calc_step_length(
+@@ -115,110 +121,111 @@ impl Variables for DefaultVariables {
+         settings: &DefaultSettings,
+         step_direction: StepDirection,
+     ) -> T {
+-        let ατ = {
+-            if step.τ < T::zero() {
+-                -self.τ / step.τ
++        let alphatau = {
++            if step.tau < T::zero() {
++                -self.tau / step.tau
+             } else {
+                 T::MAX
+             }
+         };
+ 
+-        let ακ = {
+-            if step.κ < T::zero() {
+-                -self.κ / step.κ
++        let alphakappa = {
++            if step.kappa < T::zero() {
++                -self.kappa / step.kappa
+             } else {
+                 T::MAX
+             }
+         };
+ 
+-        let α = [ατ, ακ, T::one()].minimum();
+-        let (αz, αs) = cones.step_length(&step.z, &step.s, &self.z, &self.s, settings.core(), α);
++        let alpha = [alphatau, alphakappa, T::one()].minimum();
++        let (alphaz, alphas) =
++            cones.step_length(&step.z, &step.s, &self.z, &self.s, settings.core(), alpha);
+ 
+         // itself only allows for a single maximum value.
+         // To enable split lengths, we need to also pass a
+         // tuple of limits to the step_length function of
+         // every cone
+-        let mut α = tmin(αz, αs);
++        let mut alpha = tmin(alphaz, alphas);
+ 
+         if step_direction == StepDirection::Combined {
+-            α *= settings.core().max_step_fraction;
++            alpha *= settings.core().max_step_fraction;
+         }
+ 
+-        α
++        alpha
+     }
+ 
+-    fn add_step(&mut self, step: &Self, α: T) {
+-        self.x.axpby(α, &step.x, T::one());
+-        self.s.axpby(α, &step.s, T::one());
+-        self.z.axpby(α, &step.z, T::one());
+-        self.τ += α * step.τ;
+-        self.κ += α * step.κ;
++    fn add_step(&mut self, step: &Self, alpha: T) {
++        self.x.axpby(alpha, &step.x, T::one());
++        self.s.axpby(alpha, &step.s, T::one());
++        self.z.axpby(alpha, &step.z, T::one());
++        self.tau += alpha * step.tau;
++        self.kappa += alpha * step.kappa;
+     }
+ 
+     fn symmetric_initialization(&mut self, cones: &mut CompositeCone) {
+         _shift_to_cone_interior(&mut self.s, cones, PrimalOrDualCone::PrimalCone);
+         _shift_to_cone_interior(&mut self.z, cones, PrimalOrDualCone::DualCone);
+ 
+-        self.τ = T::one();
+-        self.κ = T::one();
++        self.tau = T::one();
++        self.kappa = T::one();
+     }
+ 
+     fn unit_initialization(&mut self, cones: &CompositeCone) {
+         cones.unit_initialization(&mut self.z, &mut self.s);
+ 
+         self.x.set(T::zero());
+-        self.τ = T::one();
+-        self.κ = T::one();
++        self.tau = T::one();
++        self.kappa = T::one();
+     }
+ 
+     fn copy_from(&mut self, src: &Self) {
+         self.x.copy_from(&src.x);
+         self.s.copy_from(&src.s);
+         self.z.copy_from(&src.z);
+-        self.τ = src.τ;
+-        self.κ = src.κ;
++        self.tau = src.tau;
++        self.kappa = src.kappa;
+     }
+ 
+     fn scale_cones(
+         &self,
+         cones: &mut CompositeCone,
+-        μ: T,
++        mu: T,
+         scaling_strategy: ScalingStrategy,
+     ) -> bool {
+-        cones.update_scaling(&self.s, &self.z, μ, scaling_strategy)
++        cones.update_scaling(&self.s, &self.z, mu, scaling_strategy)
+     }
+ 
+-    fn barrier(&self, step: &Self, α: T, cones: &mut CompositeCone) -> T {
++    fn barrier(&self, step: &Self, alpha: T, cones: &mut CompositeCone) -> T {
+         let central_coef = (cones.degree() + 1).as_T();
+ 
+-        let cur_τ = self.τ + α * step.τ;
+-        let cur_κ = self.κ + α * step.κ;
++        let cur_tau = self.tau + alpha * step.tau;
++        let cur_kappa = self.kappa + alpha * step.kappa;
+ 
+         // compute current μ
+-        let sz = <[T] as VectorMath>::dot_shifted(&self.z, &self.s, &step.z, &step.s, α);
+-        let μ = (sz + cur_τ * cur_κ) / central_coef;
++        let sz = <[T] as VectorMath>::dot_shifted(&self.z, &self.s, &step.z, &step.s, alpha);
++        let mu = (sz + cur_tau * cur_kappa) / central_coef;
+ 
+         // barrier terms from gap and scalars
+-        let mut barrier = central_coef * μ.logsafe() - cur_τ.logsafe() - cur_κ.logsafe();
++        let mut barrier = central_coef * mu.logsafe() - cur_tau.logsafe() - cur_kappa.logsafe();
+ 
+         // barriers from the cones
+         let (z, s) = (&self.z, &self.s);
+         let (dz, ds) = (&step.z, &step.s);
+ 
+-        barrier += cones.compute_barrier(z, s, dz, ds, α);
++        barrier += cones.compute_barrier(z, s, dz, ds, alpha);
+ 
+         barrier
+     }
+ 
+     fn rescale(&mut self) {
+-        let scale = tmax(self.τ, self.κ);
++        let scale = tmax(self.tau, self.kappa);
+         let invscale = scale.recip();
+ 
+         self.x.scale(invscale);
+         self.z.scale(invscale);
+         self.s.scale(invscale);
+-        self.τ *= invscale;
+-        self.κ *= invscale;
++        self.tau *= invscale;
++        self.kappa *= invscale;
+     }
+ }
+ 
+@@ -253,9 +260,9 @@ impl DefaultVariables {
+         // Otherwise use τ to get an unscaled solution.
+         let scaleinv = {
+             if is_infeasible {
+-                T::recip(self.κ)
++                T::recip(self.kappa)
+             } else {
+-                T::recip(self.τ)
++                T::recip(self.tau)
+             }
+         };
+ 
+@@ -268,8 +275,8 @@ impl DefaultVariables {
+         self.z.hadamard(e).scale(scaleinv * cinv);
+         self.s.hadamard(einv).scale(scaleinv);
+ 
+-        self.τ *= scaleinv;
+-        self.κ *= scaleinv;
++        self.tau *= scaleinv;
++        self.kappa *= scaleinv;
+     }
+ 
+     #[allow(dead_code)]

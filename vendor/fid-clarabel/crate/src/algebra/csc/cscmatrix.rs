@@ -1,0 +1,719 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
+#![allow(non_snake_case)]
+
+use crate::algebra::utils::sortperm_by;
+use crate::algebra::{permute, MatrixTriangle, TriangularMatrixChecks};
+use crate::algebra::{Adjoint, MatrixShape, ShapedMatrix, SparseFormatError, Symmetric};
+use crate::algebra::{FloatT, T};
+use std::iter::{repeat, zip};
+
+/// Sparse matrix in standard Compressed Sparse Column (CSC) format
+///
+/// __Example usage__ : To construct the 3 x 3 matrix
+/// ```text
+/// A = [1.  3.  5.]
+///     [2.  0.  6.]
+///     [0.  4.  7.]
+/// ```
+/// ```no_run
+/// use clarabel::algebra::CscMatrix;
+///
+/// let A : CscMatrix = CscMatrix::new(
+///    3,                                // m
+///    3,                                // n
+///    vec![0, 2, 4, 7],                 //colptr
+///    vec![0, 1, 0, 2, 0, 1, 2],        //rowval
+///    vec![1., 2., 3., 4., 5., 6., 7.], //nzval
+///  );
+///
+/// // optional correctness check
+/// assert!(A.check_format().is_ok());
+///
+/// // the above is equivalent to the following,
+/// // which is more convenient for small matrices
+/// let A = CscMatrix::from(
+///      &[[1.0, 3.0, 5.0],
+///        [2.0, 0.0, 6.0],
+///        [0.0, 4.0, 7.0]]);
+///
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct CscMatrix {
+    /// number of rows
+    pub m: usize,
+    /// number of columns
+    pub n: usize,
+    /// CSC format column pointer.   
+    ///
+    /// This field should have length `n+1`. The last entry corresponds
+    /// to the the number of nonzeros and should agree with the lengths
+    /// of the `rowval` and `nzval` fields.
+    pub colptr: Vec<usize>,
+    /// vector of row indices
+    pub rowval: Vec<usize>,
+    /// vector of non-zero matrix elements
+    pub nzval: Vec<T>,
+}
+
+/// Creates a CscMatrix from a slice of arrays.
+///
+/// Example:
+/// ```
+/// use clarabel::algebra::CscMatrix;
+/// let A = CscMatrix::from(
+///      &[[1.0, 2.0],
+///        [3.0, 0.0],
+///        [0.0, 4.0]]);
+///
+impl<'a, I, J> From<I> for CscMatrix
+where
+    I: IntoIterator<Item = J>,
+    J: IntoIterator<Item = &'a T>,
+{
+    #[allow(clippy::needless_range_loop)]
+    fn from(rows: I) -> CscMatrix {
+        let rows: Vec<Vec<T>> = rows
+            .into_iter()
+            .map(|r| r.into_iter().copied().collect())
+            .collect();
+
+        let m = rows.len();
+        let n = rows.iter().map(|r| r.len()).next().unwrap_or(0);
+
+        // (patch 0003) ragged rows: upstream asserted; this returns a matrix that fails
+        // check_format (no column pointers), which the solver rejects as bad input
+        if !rows.iter().all(|r| r.len() == n) {
+            return CscMatrix {
+                m,
+                n,
+                colptr: Vec::new(),
+                rowval: Vec::new(),
+                nzval: Vec::new(),
+            };
+        }
+        let nnz = rows.iter().flatten().filter(|&v| *v != T::zero()).count();
+
+        let mut colptr = Vec::with_capacity(n + 1);
+        let mut rowval = Vec::with_capacity(nnz);
+        let mut nzval = Vec::<T>::with_capacity(nnz);
+
+        colptr.push(0);
+        for c in 0..n {
+            for r in 0..m {
+                let value = rows[r][c];
+                if value != T::zero() {
+                    rowval.push(r);
+                    nzval.push(value);
+                }
+            }
+            colptr.push(nzval.len());
+        }
+
+        CscMatrix {
+            m,
+            n,
+            colptr,
+            rowval,
+            nzval,
+        }
+    }
+}
+
+impl CscMatrix {
+    /// `CscMatrix` constructor.
+    ///
+    /// This constructor does __not__ check its arguments (upstream asserted the
+    /// array lengths and panicked; patch 0003). Use [`check_format`](CscMatrix::check_format)
+    /// to validate a matrix; the solver does so for its inputs and rejects a malformed one.
+    ///
+    pub fn new(m: usize, n: usize, colptr: Vec<usize>, rowval: Vec<usize>, nzval: Vec<T>) -> Self {
+        CscMatrix {
+            m,
+            n,
+            colptr,
+            rowval,
+            nzval,
+        }
+    }
+
+    /// `CscMatrix` constructor from data in triplet format.
+    ///
+    /// Data can be provided unsorted.   Repeated values are added.
+    /// Returns `IncompatibleDimension` if `I`, `J` and `V` differ in length and
+    /// `BadRowval`/`BadColptr` for an index out of range (upstream panicked; patch 0003).
+    ///
+    pub fn new_from_triplets(
+        m: usize,
+        n: usize,
+        I: Vec<usize>,
+        J: Vec<usize>,
+        V: Vec<T>,
+    ) -> Result<Self, SparseFormatError> {
+        if I.len() != J.len() || I.len() != V.len() {
+            return Err(SparseFormatError::IncompatibleDimension);
+        }
+        if I.iter().any(|&i| i >= m) {
+            return Err(SparseFormatError::BadRowval);
+        }
+        if J.iter().any(|&j| j >= n) {
+            return Err(SparseFormatError::BadColptr);
+        }
+
+        let mut M = CscMatrix::spalloc((m, n), V.len());
+
+        let mut p = vec![0; V.len()];
+
+        // use M.rowptr as temporary workspace
+        M.rowval.iter_mut().enumerate().for_each(|(i, p)| *p = i);
+
+        // sort by column, then by row
+        sortperm_by(&mut p, &M.rowval, |&a, &b| {
+            J[a].cmp(&J[b]).then(I[a].cmp(&I[b]))
+        });
+
+        // map data into the matrix in sorted order
+        permute(&mut M.rowval, &I, &p);
+        permute(&mut M.nzval, &V, &p);
+
+        // assemble the column counts
+        for &c in J.iter() {
+            M.colptr[c] += 1;
+        }
+
+        // make a second pass to consolidate repeated entries
+        // within each column
+        let mut readidx = 0;
+        let mut writeidx = 0;
+
+        for col in 0..n {
+            let nentries = M.colptr[col]; //entries in this column
+            for j in 0..nentries {
+                // non-repeated or first entry in column
+                if j == 0 || M.rowval[readidx] != M.rowval[readidx - 1] {
+                    if writeidx != readidx {
+                        M.rowval[writeidx] = M.rowval[readidx];
+                        M.nzval[writeidx] = M.nzval[readidx];
+                    }
+                    writeidx += 1;
+                    readidx += 1;
+                }
+                // repeated row entry with value to be consolidated
+                else {
+                    M.nzval[writeidx - 1] = M.nzval[writeidx - 1] + M.nzval[readidx];
+                    M.colptr[col] -= 1;
+                    readidx += 1;
+                }
+            }
+        }
+
+        M.rowval.resize(writeidx, 0);
+        M.nzval.resize(writeidx, T::zero());
+
+        M.colcount_to_colptr();
+
+        Ok(M)
+    }
+
+    /// allocate space for a sparse matrix with `nnz` elements
+    pub fn spalloc(size: (usize, usize), nnz: usize) -> Self {
+        let (m, n) = size;
+        let mut colptr = vec![0; n + 1];
+        let rowval = vec![0; nnz];
+        let nzval = vec![T::zero(); nnz];
+        colptr[n] = nnz;
+
+        CscMatrix::new(m, n, colptr, rowval, nzval)
+    }
+
+    /// Sparse matrix of zeros of size `m` x `n`
+    pub fn zeros(size: (usize, usize)) -> Self {
+        Self::spalloc(size, 0)
+    }
+
+    /// Negates every stored value (public; the math traits are crate-private, patch 0003)
+    pub fn negate(&mut self) {
+        self.nzval.iter_mut().for_each(|x| *x = -*x);
+    }
+
+    /// Identity matrix of size `n`
+    pub fn identity(n: usize) -> Self {
+        let colptr = (0usize..=n).collect();
+        let rowval = (0usize..n).collect();
+        let nzval = vec![T::one(); n];
+
+        CscMatrix::new(n, n, colptr, rowval, nzval)
+    }
+
+    /// squeeze out zero entries.  Returns a count of dropped entries.
+    pub fn dropzeros(&mut self) -> usize {
+        // this function could possibly be generalized to allow filtering
+        // on a more general test, similar to fkeep! in Julia sparse matrix
+        // internals.  Then could be used as a filter for triu matrix etc
+
+        // Sweep through columns, rewriting kept elements in their new positions
+        // and updating the column pointers accordingly as we go.
+        let mut writeidx: usize = 0;
+        let mut first: usize = 0;
+
+        for col in 0..self.ncols() {
+            let last = self.colptr[col + 1];
+
+            for readidx in first..last {
+                let val = self.nzval[readidx];
+                let row = self.rowval[readidx];
+
+                // If nonzero and a shift so far, move the value
+                if val != T::zero() {
+                    if writeidx != readidx {
+                        self.nzval[writeidx] = val;
+                        self.rowval[writeidx] = row;
+                    }
+                    writeidx += 1;
+                }
+            }
+
+            first = self.colptr[col + 1];
+            self.colptr[col + 1] = writeidx;
+        }
+
+        let dropcount = self.nzval.len() - writeidx;
+
+        self.rowval.resize(writeidx, 0);
+        self.nzval.resize(writeidx, T::zero());
+
+        dropcount
+    }
+
+    /// Return matrix data in triplet format.
+    ///
+    #[allow(dead_code)]
+    pub(crate) fn findnz(&self) -> (Vec<usize>, Vec<usize>, Vec<T>) {
+        let I = self.rowval.clone();
+        let mut J = Vec::with_capacity(self.nnz());
+        let V = self.nzval.clone();
+
+        for c in 0..self.ncols() {
+            let times = self.colptr[c + 1] - self.colptr[c];
+            J.extend(repeat(c).take(times));
+        }
+        (I, J, V)
+    }
+
+    /// number of nonzeros
+    pub fn nnz(&self) -> usize {
+        self.colptr[self.n]
+    }
+
+    /// transpose
+    pub fn t(&self) -> Adjoint<'_, Self> {
+        Adjoint { src: self }
+    }
+
+    /// symmetric view (selects upper or lower triangle source)
+    pub fn sym(&self, uplo: MatrixTriangle) -> Symmetric<'_, Self> {
+        // (upstream debug_assert!-ed the triangle here; no panics in the kernel, and
+        // callers pass matrices made triangular at solver setup)
+        Symmetric { src: self, uplo }
+    }
+
+    /// symmetric view (assume upper triangle source)
+    pub fn sym_up(&self) -> Symmetric<'_, Self> {
+        self.sym(MatrixTriangle::Triu)
+    }
+    /// symmetric view (assume lower triangle source)
+    pub fn sym_lo(&self) -> Symmetric<'_, Self> {
+        self.sym(MatrixTriangle::Tril)
+    }
+
+    /// Check that matrix data is canonically formatted.
+    pub fn check_format(&self) -> Result<(), SparseFormatError> {
+        self.check_dimensions()?;
+
+        //check for rowval monotonicity within each column
+        for col in 0..self.n {
+            let rng = self.colptr[col]..self.colptr[col + 1];
+            if self.rowval[rng].windows(2).any(|c| c[0] >= c[1]) {
+                return Err(SparseFormatError::BadRowval);
+            }
+        }
+        //check for row values out of bounds
+        if !self.rowval.iter().all(|r| r < &self.m) {
+            return Err(SparseFormatError::BadRowval);
+        }
+
+        Ok(())
+    }
+
+    /// Put matrix into standard ('canonical') form, operating in place.  This function
+    /// sorts data within each column by row index, and removes any duplicates.
+    /// Does not remove structural zeros.
+    ///
+    /// # Panics
+    /// Panics if the matrix initial dimensions are incompatible.
+    ///
+    pub fn canonicalize(&mut self) -> Result<(), SparseFormatError> {
+        self.check_dimensions()?;
+        self.sort_indices()?;
+        self.deduplicate()
+    }
+
+    /// Adds together repeated entries in the same column.   Input must
+    /// already be in column sorted order.
+    fn sort_indices(&mut self) -> Result<(), SparseFormatError> {
+        let mut tempdata: Vec<(usize, T)> = Vec::new();
+
+        for col in 0..self.n {
+            let start = self.colptr[col];
+            let stop = self.colptr[col + 1];
+
+            let nzval = &mut self.nzval[start..stop];
+            let rowval = &mut self.rowval[start..stop];
+
+            tempdata.resize(stop - start, (0, T::zero()));
+
+            for (i, (r, v)) in zip(rowval.iter(), nzval.iter()).enumerate() {
+                tempdata[i] = (*r, *v);
+            }
+            tempdata.sort_by_key(|&(r, _)| r);
+
+            for (i, (r, v)) in tempdata.iter().enumerate() {
+                rowval[i] = *r;
+                nzval[i] = *v;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Adds together repeated entries in the same column.   Input must
+    /// already be in column sorted order.
+    fn deduplicate(&mut self) -> Result<(), SparseFormatError> {
+        let mut nnz = 0;
+        let mut stop = 0;
+
+        for col in 0..self.n {
+            let mut ptr = stop;
+            stop = self.colptr[col + 1];
+
+            while ptr < stop {
+                let thisrow = self.rowval[ptr];
+                let mut accum = self.nzval[ptr];
+                ptr += 1;
+
+                while (ptr < stop) && (self.rowval[ptr] == thisrow) {
+                    accum = accum + self.nzval[ptr];
+                    ptr += 1;
+                }
+                self.rowval[nnz] = thisrow;
+                self.nzval[nnz] = accum;
+                nnz += 1;
+            }
+            self.colptr[col + 1] = nnz;
+        }
+
+        self.rowval.truncate(nnz);
+        self.nzval.truncate(nnz);
+
+        Ok(())
+    }
+
+    /// Check that for dimensional consistency.  Private since users should
+    /// check everything via check_format, and the canonicalization functions
+    /// must at least check dimensions before running.
+    fn check_dimensions(&self) -> Result<(), SparseFormatError> {
+        if self.rowval.len() != self.nzval.len() {
+            return Err(SparseFormatError::IncompatibleDimension);
+        }
+
+        if self.colptr.is_empty()
+            || (self.colptr.len() - 1) != self.n
+            || self.colptr[self.n] != self.rowval.len()
+        {
+            return Err(SparseFormatError::IncompatibleDimension);
+        }
+
+        //check for colptr monotonicity
+        if self.colptr.windows(2).any(|c| c[0] > c[1]) {
+            return Err(SparseFormatError::BadColptr);
+        }
+        Ok(())
+    }
+
+    /// True if matrices if the same size and sparsity pattern
+    pub fn is_equal_sparsity(&self, other: &Self) -> bool {
+        self.size() == other.size() && self.colptr == other.colptr && self.rowval == other.rowval
+    }
+
+    /// Same as `is_equal_sparsity`, but returns an error indicating the reason
+    /// for failure if the matrices do not have equivalent sparsity patterns.
+    pub fn check_equal_sparsity(&self, other: &Self) -> Result<(), SparseFormatError> {
+        if self.size() != other.size() {
+            Err(SparseFormatError::IncompatibleDimension)
+        } else if self.colptr != other.colptr || self.rowval != other.rowval {
+            Err(SparseFormatError::SparsityMismatch)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Select a subset of the rows of a sparse matrix (crate-private, patch 0003: asserts
+    /// that `rowidx` has one flag per row)
+    pub(crate) fn select_rows(&self, rowidx: &Vec<bool>) -> Self {
+        //first check for compatible row dimensions
+        // invariant (patch 0003): the presolver passes one keep flag per row of A.
+        assert_eq!(rowidx.len(), self.m);
+
+        //count the number of rows in the reduced matrix and build an
+        //index from the logical rowidx to the reduced row number
+        let mut rridx = vec![0; self.m];
+        let mut mred = 0;
+        for (r, is_used) in zip(&mut rridx, rowidx) {
+            if *is_used {
+                *r = mred;
+                mred += 1;
+            }
+        }
+
+        // count the nonzeros in Ared
+        let nzred = self.rowval.iter().filter(|&r| rowidx[*r]).count();
+
+        // Allocate a reduced size A
+        let mut Ared = CscMatrix::spalloc((mred, self.n), nzred);
+
+        //populate new matrix
+        let mut ptrred = 0;
+        for col in 0..self.n {
+            Ared.colptr[col] = ptrred;
+            for ptr in self.colptr[col]..self.colptr[col + 1] {
+                let thisrow = self.rowval[ptr];
+                if rowidx[thisrow] {
+                    Ared.rowval[ptrred] = rridx[thisrow];
+                    Ared.nzval[ptrred] = self.nzval[ptr];
+                    ptrred += 1;
+                }
+            }
+            Ared.colptr[Ared.n] = ptrred;
+        }
+
+        Ared
+    }
+
+    /// Allocates a new matrix containing only entries from the upper triangular part
+    /// (crate-private, patch 0003: asserts a square matrix)
+    pub(crate) fn to_triu(&self) -> Self {
+        // invariant (patch 0003): called on P, which check_dimensions found square.
+        assert_eq!(self.m, self.n);
+        let (m, n) = (self.m, self.n);
+        let mut colptr = vec![0; n + 1];
+        let mut nnz = 0;
+
+        //count the number of entries in the upper triangle
+        //and place the totals into colptr
+
+        for col in 0..n {
+            //start / stop indices for the current column
+            let first = self.colptr[col];
+            let last = self.colptr[col + 1];
+            let rows = &self.rowval[first..last];
+
+            // number of entries on or above diagonal in this column,
+            // shifted by 1 (i.e. colptr keeps a 0 in the first column)
+            colptr[col + 1] = rows.iter().filter(|&row| *row <= col).count();
+            nnz += colptr[col + 1];
+        }
+
+        //allocate and copy the upper triangle entries of
+        //each column into the new value vector.
+        //NB! : assumes that entries in each column have
+        //monotonically increasing row numbers
+        let mut rowval = vec![0; nnz];
+        let mut nzval = vec![T::zero(); nnz];
+
+        for col in 0..n {
+            let ntriu = colptr[col + 1];
+
+            //start / stop indices for the destination
+            let fdest = colptr[col];
+            let ldest = fdest + ntriu;
+
+            //start / stop indices for the source
+            let fsrc = self.colptr[col];
+            let lsrc = fsrc + ntriu;
+
+            //copy upper triangle values
+            rowval[fdest..ldest].copy_from_slice(&self.rowval[fsrc..lsrc]);
+            nzval[fdest..ldest].copy_from_slice(&self.nzval[fsrc..lsrc]);
+
+            //this should now be cumsum of the counts
+            colptr[col + 1] = ldest;
+        }
+        CscMatrix::new(m, n, colptr, rowval, nzval)
+    }
+
+    /// Returns the value at the given (row,col) index as an Option.
+    /// Returns None if the given index is not a structural nonzero, is out of bounds or
+    /// the matrix is malformed (upstream panicked out of bounds; patch 0003).
+    pub fn get_entry(&self, idx: (usize, usize)) -> Option<T> {
+        let (row, col) = idx;
+        if row >= self.nrows() || col >= self.ncols() {
+            return None;
+        }
+
+        let first = *self.colptr.get(col)?;
+        let last = *self.colptr.get(col + 1)?;
+        let rows_in_this_column = self.rowval.get(first..last)?;
+        match rows_in_this_column.binary_search(&row) {
+            Ok(idx) => self.nzval.get(first + idx).copied(),
+            Err(_) => None,
+        }
+    }
+
+    /// Sets a value at a given (row,col) index, allocating
+    /// additional space in the matrix if required.  
+    ///
+    /// Returns `IncompatibleDimension` if the index is out of bounds or the matrix is
+    /// malformed (upstream panicked; patch 0003).
+    pub fn set_entry(&mut self, idx: (usize, usize), value: T) -> Result<(), SparseFormatError> {
+        let (row, col) = idx;
+        if row >= self.nrows() || col >= self.ncols() || self.check_format().is_err() {
+            return Err(SparseFormatError::IncompatibleDimension);
+        }
+
+        let first = self.colptr[col];
+        let last = self.colptr[col + 1];
+        let rows_in_this_column = &self.rowval[first..last];
+
+        let i = rows_in_this_column.partition_point(|&x| x < row);
+
+        if i == rows_in_this_column.len() || rows_in_this_column[i] != row {
+            // don't allocate space for insertion of new zeros
+            if value.is_zero() {
+                return Ok(());
+            }
+
+            // the element must be inserted, then col counts rebuilt
+            self.rowval.insert(first + i, row);
+            self.nzval.insert(first + i, value);
+
+            // a bit wasteful since we only really need to
+            // rebuil from the insertion point onwards
+            self.colptr_to_colcount();
+            self.colptr[col] += 1;
+            self.colcount_to_colptr();
+        } else {
+            // the element already exists, so overwrite it
+            self.nzval[first + i] = value;
+        }
+        Ok(())
+    }
+
+    /// Returns the (row,col) coordinates of the given linear index, or `None` if it is
+    /// out of bounds (upstream panicked; patch 0003).
+    pub fn index_to_coord(&self, idx: usize) -> Option<(usize, usize)> {
+        if idx >= self.nnz() {
+            return None;
+        }
+        let row = *self.rowval.get(idx)?;
+        let col = self
+            .colptr
+            .partition_point(|&c| idx + 1 > c)
+            .checked_sub(1)?;
+        Some((row, col))
+    }
+}
+
+impl TriangularMatrixChecks for CscMatrix {
+    fn is_triu(&self) -> bool {
+        // check lower triangle for any structural entries, regardless
+        // of the values that may be assigned to them
+        for col in 0..self.ncols() {
+            //start / stop indices for the current column
+            let first = self.colptr[col];
+            let last = self.colptr[col + 1];
+            let rows = &self.rowval[first..last];
+
+            if rows.iter().any(|&row| row > col) {
+                return false;
+            }
+        }
+        true
+    }
+    fn is_tril(&self) -> bool {
+        // check upper triangle for any structural entries, regardless
+        // of the values that may be assigned to them
+        for col in 0..self.ncols() {
+            //start / stop indices for the current column
+            let first = self.colptr[col];
+            let last = self.colptr[col + 1];
+            let rows = &self.rowval[first..last];
+
+            if rows.iter().any(|&row| row < col) {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl ShapedMatrix for CscMatrix {
+    fn nrows(&self) -> usize {
+        self.m
+    }
+    fn ncols(&self) -> usize {
+        self.n
+    }
+    fn size(&self) -> (usize, usize) {
+        (self.m, self.n)
+    }
+    fn shape(&self) -> MatrixShape {
+        MatrixShape::N
+    }
+    fn is_square(&self) -> bool {
+        self.m == self.n
+    }
+}
+
+/// Make a concrete [CscMatrix] from its [Adjoint].   This operation will
+/// allocate a new matrix and copy the data from the adjoint.
+///
+/// __Example usage__ : To construct the transpose of a 3 x 3 matrix:
+/// ```text
+/// A = [1.,  0.,  0.]
+///     [2.,  4.,  0.]
+///     [3.,  5.,  6.]
+///```
+/// ```no_run
+/// use clarabel::algebra::CscMatrix;
+///
+/// let A : CscMatrix = (&[
+///     [1., 0., 0.], //
+///     [2., 4., 0.], //
+///     [3., 5., 6.],
+/// ]).into();
+///
+/// let At = A.t();  //Adjoint form.   Does not copy anything.
+///
+/// let B : CscMatrix = At.into(); //Concrete form.  Allocates and copies.
+///
+/// assert_eq!(A, B);
+///
+/// ```
+impl<'a> From<Adjoint<'a, CscMatrix>> for CscMatrix {
+    fn from(M: Adjoint<'a, CscMatrix>) -> CscMatrix {
+        let src = M.src;
+
+        let (m, n) = (src.n, src.m);
+        let mut A = CscMatrix::spalloc((m, n), src.nnz());
+
+        //make dummy mapping indices since we don't care
+        //where the entries go
+        let mut amap = vec![0usize; src.nnz()];
+
+        A.colcount_block(src, 0, MatrixShape::T);
+        A.colcount_to_colptr();
+        A.fill_block(src, &mut amap, 0, 0, MatrixShape::T);
+        A.backshift_colptrs();
+        A
+    }
+}

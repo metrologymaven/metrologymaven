@@ -305,6 +305,24 @@ fn on_mcp(o: &std::collections::BTreeMap<String, CValue>) -> bool {
         && !matches!(o.get("mcp_projection"), Some(CValue::Str(p)) if p == "never")
 }
 
+/// The Activity Log writes job lifecycle changes as `command` entries with the reserved ID
+/// `fid_journal::stream::LIFECYCLE_COMMAND` (`job.lifecycle`, CORE.JRN.STREAM.ALOG). No
+/// registry command may take that ID, or a log reader could not tell the two apart.
+#[test]
+fn no_command_takes_the_lifecycle_record_id() {
+    let reserved = fid_journal::stream::LIFECYCLE_COMMAND;
+    assert_eq!(reserved, "job.lifecycle");
+    let commands = workspace_commands();
+    assert!(!commands.is_empty());
+    for (key, o) in &commands {
+        assert_ne!(
+            o.get("id"),
+            Some(&CValue::Str(reserved.to_string())),
+            "{key} collides with the lifecycle record ID"
+        );
+    }
+}
+
 /// GEO.TYPES.REG AC-6 (hand-labelled from spec/geo/types/reg/NODE.md, Design): the workspace
 /// manifest carries `geo.describe_element@1`, class R0, projected to MCP as `exposed`, so the
 /// tool `geo_describe_element` is generated from it.
@@ -459,5 +477,29 @@ fn the_adoption_commands_are_human_only_and_request_only_in_the_manifest() {
         let mut exposure = strs(c.get("exposure"));
         exposure.sort();
         assert_eq!(exposure, ["cli", "gui", "mcp"], "{id}");
+    }
+}
+
+/// AUTO.REC.LIFE's ten lifecycle commands are collected into the workspace manifest:
+/// register, unregister and open_draft W2 and exposed; release and deprecate W3, `human_only` and
+/// request-only on MCP (hand-labelled from spec/auto/rec/life/NODE.md, REQ-003).
+#[test]
+fn the_lifecycle_commands_are_in_the_manifest_with_their_classes() {
+    let commands = workspace_commands();
+    for kind in ["program", "script"] {
+        for (verb, class, human_only, projection) in [
+            ("register", "W2", false, "exposed"),
+            ("unregister", "W2", false, "exposed"),
+            ("release", "W3", true, "request_only"),
+            ("deprecate", "W3", true, "request_only"),
+            ("open_draft", "W2", false, "exposed"),
+        ] {
+            let id = format!("{kind}.{verb}@1");
+            let (_, c) = commands.iter().find(|(i, _)| *i == id).unwrap_or_else(|| panic!("{id} collected"));
+            assert_eq!(c.get("side_effect"), Some(&CValue::Str(class.into())), "{id}");
+            let human = c.get("human_only").cloned().unwrap_or(CValue::Bool(false));
+            assert_eq!(human, CValue::Bool(human_only), "{id}");
+            assert_eq!(c.get("mcp_projection"), Some(&CValue::Str(projection.into())), "{id}");
+        }
     }
 }

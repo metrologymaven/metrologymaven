@@ -12,9 +12,9 @@ claimed_by:
 satisfies: [REQ-AUTO-006, REQ-AUTO-007]
 covers: [GOM.AUT.02, PW.AUT.01]
 depends_on: [CORE, AUTO.PROG]
-cli: [fid program record-*, fid program from-journal, fid program register, fid program unregister, fid program release, fid program deprecate, fid script register, fid script unregister, fid script release, fid script deprecate, fid program lift-*, fid program adopt-steps]
-mcp: [program_record_*, program_from_journal, program_register, program_unregister, program_release, program_deprecate, script_register, script_unregister, script_release, script_deprecate, program_lift_*]
-journal: [program.record_*, program.from_journal, program.register, program.unregister, program.release, program.deprecate, script.register, script.unregister, script.release, script.deprecate, program.lift_*, program.adopt_steps]
+cli: [fid program record-*, fid program from-journal, fid program register, fid program unregister, fid program release, fid program deprecate, fid script register, fid script unregister, fid script release, fid script deprecate, fid program lift-*, fid program adopt-steps, fid program open-draft, fid script open-draft]
+mcp: [program_record_*, program_from_journal, program_register, program_unregister, program_release, program_deprecate, script_register, script_unregister, script_release, script_deprecate, program_lift_*, program_open_draft, script_open_draft]
+journal: [program.record_*, program.from_journal, program.register, program.unregister, program.release, program.deprecate, script.register, script.unregister, script.release, script.deprecate, program.lift_*, program.adopt_steps, program.open_draft, script.open_draft]
 updated: 2026-11-16
 ---
 

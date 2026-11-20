@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-journal, fid-jobs]
+built_pr: 307
 satisfies: [REQ-CORE.JRN.STREAM-001, REQ-CORE.JRN.STREAM-002, REQ-CORE.JRN.STREAM-003, REQ-CORE.JRN.STREAM-007]
 covers: []
 depends_on: [CORE.JRN.ENTRY, CORE.JRN.CHAIN.APPEND, CORE.JOB.SCHED, CORE.STO.LAYOUT, CORE.STO.SET]
@@ -72,6 +74,8 @@ Decides which stream a record belongs to and writes the local Activity Log. Ever
 ## Open questions
 
 - REQ-CORE.JRN-001 and REQ-CORE.JRN.CHAIN-001 list W1, W2, W3, D1, M1 and S1; REQ-001 here also routes X1, I1 and A0 commands to the Record Journal, following C4 and D-031 (only reads are exempt). A maintainer should align the parent wording.
+- **Attribution of reads to a recording session or program step.** An Activity Log line is the entry header only, so it does not say which recording session (`RecordingFlag`'s recording ID) or which Command Program step (`ProgramStepRef`) caused it to be written. `VIZ.CAPTURE.REC` and `AUTO.RUN` will likely need that to replay or audit a session. Options: a header field (schema change in `CORE.JRN.ENTRY`), an input digest with a reserved tag, or a sidecar index. Undecided; the build passes both references to the router but does not record them (raised in the review of PR #307).
+- **One writer per directory.** The writer holds `activity.lock` (created with `create_new`) from its first write until it is dropped. A lock left behind by a crashed process blocks the directory (every write is an `activity_log_unavailable` warning) until the host removes it; stale-lock recovery (owner PID, start time) is not specified.
 
 ## Children
 

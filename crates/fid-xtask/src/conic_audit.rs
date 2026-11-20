@@ -81,6 +81,14 @@ pub const DEFAULT_DENY: &str = "deny.toml";
 const GITATTRIBUTES: &str = ".gitattributes";
 /// The reason class a patch may name instead of a KNP-1 rule ID.
 pub const SCOPE_REDUCTION: &str = "scope-reduction";
+/// The reason class of a patch that only adds the change notices the upstream licence asks
+/// for (for example Apache-2.0 section 4(b)); maintainer decision, KRN.SOLV.CONIC.PATCH review.
+pub const LICENCE_NOTICE: &str = "licence-notice";
+
+/// Whether `s` is a reason class a patch may name instead of a KNP-1 rule ID.
+pub fn is_reason_class(s: &str) -> bool {
+    s == SCOPE_REDUCTION || s == LICENCE_NOTICE
+}
 
 /// Usage line of `cargo xtask conic-audit`.
 pub const USAGE: &str = "usage: cargo xtask conic-audit [--dir <vendor dir>] [--audit <AUDIT.toml>] \
@@ -398,19 +406,29 @@ pub fn parse_record(text: &str) -> Result<(AuditRecord, Vec<Finding>), Finding> 
             Some(Value::Array(a)) => {
                 for v in a {
                     match v.as_str() {
-                        Some(s) if is_knp1_rule(s) || s == SCOPE_REDUCTION => patch.rules.push(s.to_string()),
+                        Some(s) if is_knp1_rule(s) || is_reason_class(s) => patch.rules.push(s.to_string()),
                         _ => f.err(
                             &subject,
-                            format!("`rules` entry {v:?} is neither a KNP-1 rule ID nor `{SCOPE_REDUCTION}`"),
+                            format!(
+                                "`rules` entry {v:?} is neither a KNP-1 rule ID nor `{SCOPE_REDUCTION}` or `{LICENCE_NOTICE}`"
+                            ),
                         ),
                     }
                 }
                 if a.is_empty() {
-                    f.err(&subject, format!("`rules` must name at least one KNP-1 rule ID or `{SCOPE_REDUCTION}`"));
+                    f.err(
+                        &subject,
+                        format!(
+                            "`rules` must name at least one KNP-1 rule ID, `{SCOPE_REDUCTION}` or `{LICENCE_NOTICE}`"
+                        ),
+                    );
                 }
             }
             Some(_) => f.err(&subject, "`rules` must be an array of strings"),
-            None => f.err(&subject, format!("`rules` is missing (name a KNP-1 rule ID or `{SCOPE_REDUCTION}`)")),
+            None => f.err(
+                &subject,
+                format!("`rules` is missing (name a KNP-1 rule ID, `{SCOPE_REDUCTION}` or `{LICENCE_NOTICE}`)"),
+            ),
         }
         patch.rationale = f.text(p, "rationale", &subject);
         r.patches.push(patch);
@@ -1523,6 +1541,33 @@ mod tests {
         {
             assert!(!is_knp1_rule(bad), "{bad}");
         }
+    }
+
+    #[test]
+    fn reason_classes() {
+        assert!(is_reason_class(SCOPE_REDUCTION) && is_reason_class(LICENCE_NOTICE));
+        for bad in ["licence", "license-notice", "LICENCE-NOTICE", "KNP1-POW", ""] {
+            assert!(!is_reason_class(bad), "{bad}");
+        }
+        let rec = "schema = 1
+lint_report_sha256 = \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"
+                   auditor = \"a\"
+date = \"2026-11-19\"
+[upstream]
+url = \"https://x.invalid/a\"
+                   commit = \"1111111111111111111111111111111111111111\"
+                   tree_sha256 = \"sha256:0000000000000000000000000000000000000000000000000000000000000000\"
+                   licence = \"MIT\"
+[[patches]]
+id = \"0001\"
+file = \"patches/0001-notice.patch\"
+                   rules = [\"licence-notice\"]
+rationale = \"notices\"
+";
+        let (_, errs) = parse_record(rec).expect("TOML");
+        assert!(errs.is_empty(), "{errs:?}");
+        let (_, errs) = parse_record(&rec.replace("licence-notice", "license-notice")).expect("TOML");
+        assert_eq!(errs.len(), 1, "{errs:?}");
     }
 
     #[test]
