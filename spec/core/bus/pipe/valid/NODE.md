@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-bus]
+built_pr: 341
 satisfies: [REQ-CORE.BUS.PIPE-002, REQ-CORE.BUS.PIPE-003, REQ-CORE.BUS.PIPE-004, REQ-CORE.BUS.PIPE-005]
 covers: []
 depends_on: [CORE.REG.DEF, CORE.REG.VER, CORE.BUS.PIPE.ERR, CORE.BUS.PIPE.HANDLER, CORE.BUS.UNIT]
