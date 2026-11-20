@@ -123,7 +123,8 @@ fn ac5_compile_fail_cases_are_the_intended_ones() {
     let without = read("w2_without_permit.rs");
     assert!(without.contains("impl Handler for W2Handler"));
     assert!(without.contains("fid_net::connect_tcp(&self.addr, Duration::from_secs(1))"));
-    assert!(!without.contains("NetPermit"));
+    // No permit is obtained anywhere in the case (its comment names the type only).
+    assert!(!without.contains("issue_permit") && !without.contains("use fid_bus::policy::egress"));
     let forged = read("w2_forged_permit.rs");
     assert!(forged.contains("impl Handler for W2Handler"));
     assert!(forged.contains("fid_bus::policy::egress::issue_permit("));
