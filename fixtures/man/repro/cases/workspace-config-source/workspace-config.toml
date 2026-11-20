@@ -1,0 +1,8 @@
+[alias]
+xtask = "run -q -p fid-xtask --"
+
+[source.crates-io]
+replace-with = "mirror"
+
+[resolver]
+incompatible-rust-versions = "fallback"

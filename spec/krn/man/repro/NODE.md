@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-manifest-gen, fid-wasm-check]
 satisfies: [REQ-KRN.MAN-009]
 covers: []
 depends_on: [KRN.MAN.WASM]

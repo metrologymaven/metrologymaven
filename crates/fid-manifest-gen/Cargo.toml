@@ -1,12 +1,16 @@
 [package]
 name = "fid-manifest-gen"
-description = "Metrology Maven build-time kernel manifest generator: per-algorithm implementation digests over the crate closure (spec node KRN.MAN.MANI.IMPL)"
+description = "Metrology Maven build-time kernel manifest generator: per-algorithm implementation digests over the crate closure (spec node KRN.MAN.MANI.IMPL) and the toolchain-and-flags digest of the kernel build (KRN.MAN.REPRO)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish = false
+
+[[bin]]
+name = "fid-manifest-gen"
+path = "src/main.rs"
 
 # Build-time tool (layer `tool`): never linked into the kernel artifact; it may read files.
 [dependencies]

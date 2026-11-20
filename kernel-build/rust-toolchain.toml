@@ -1,0 +1,10 @@
+# Kernel artifact toolchain (spec node KRN.MAN.REPRO, REQ-KRN.MAN.REPRO-001). rustup reads this
+# file only for commands started in kernel-build/ (scripts/rebuild-kernel.sh does), so it never
+# changes the toolchain of other builds or CI jobs. 1.89.0 is the workspace MSRV, which the msrv
+# CI job keeps building. Changing the pin also changes kernel-build.toml's commit_hash and
+# llvm_version, and the kernel's toolchain-and-flags digest.
+[toolchain]
+channel = "1.89.0"
+components = []
+profile = "minimal"
+targets = ["wasm32-wasip1"]

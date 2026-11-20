@@ -1,0 +1,27 @@
+# Kernel artifact build settings (spec node KRN.MAN.REPRO, REQ-KRN.MAN.REPRO-001). Cargo reads
+# this file only for commands started in kernel-build/ (scripts/rebuild-kernel.sh does). Every
+# key here is checked by `fid-manifest-gen toolchain-check` and enters the kernel's
+# toolchain-and-flags digest; unknown keys are refused. The absolute-path remaps are added by
+# the script (their source paths differ per checkout); their fixed targets are in
+# kernel-build.toml.
+
+[build]
+target = "wasm32-wasip1"
+
+# Static flags for the kernel target. No FMA: relaxed SIMD (relaxed_madd) and SIMD are off,
+# and the CPU is the generic one rather than whatever the host has.
+[target.wasm32-wasip1]
+rustflags = ["-C", "target-cpu=generic", "-C", "target-feature=-relaxed-simd,-simd128"]
+
+# Every key that changes code generation is set here, so nothing is inherited from `release`.
+[profile.kernel-artifact]
+inherits = "release"
+opt-level = 3
+debug = false
+strip = "symbols"
+debug-assertions = false
+overflow-checks = false
+lto = "fat"
+panic = "abort"
+incremental = false
+codegen-units = 1

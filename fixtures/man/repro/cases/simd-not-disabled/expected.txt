@@ -1,0 +1,1 @@
+error feature_not_disabled: simd128

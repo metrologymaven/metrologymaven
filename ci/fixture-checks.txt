@@ -74,6 +74,7 @@ python fixtures/knp1/typed/make_messages.py --check
 python fixtures/man/check_manifest_schema.py
 python fixtures/man/make_implclosure_fixtures.py --check
 python fixtures/man/make_manifest_fixtures.py --check
+python fixtures/man/repro/make_fixtures.py --check
 python fixtures/man/wasm/make_fixtures.py --check
 python fixtures/manifest/make_fixtures.py --check
 python fixtures/mig/ladder/def/make_fixtures.py --check

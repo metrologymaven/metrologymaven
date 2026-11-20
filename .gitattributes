@@ -168,6 +168,9 @@ fixtures/viz/shlint/** -text
 fixtures/man/wasm/** -text
 crates/fid-kernel-wasm/wasm-runtime.toml -text
 crates/fid-kernel-wasm/wasm-imports.allow -text
+# KRN.MAN.REPRO toolchain-digest cases: inputs hashed and expected records compared byte for byte by
+# make_fixtures.py --check and the fid-manifest-gen tests; never convert line endings.
+fixtures/man/repro/** -text
 # RPT.OUTPUT.PDF.TEXT: fonts and byte-compared golden outputs (PDFs, CMap, text objects).
 crates/fid-report-pdf/assets/fonts/*.ttf binary
 fixtures/rpt/output/text/** -text

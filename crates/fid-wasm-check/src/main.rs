@@ -7,12 +7,15 @@
 //! fid-wasm-check manifest <manifest.json> <module.wasm> <allowlist> <wasm-runtime.toml>
 //! fid-wasm-check run <wasm-runtime.toml> <allowlist> <module.wasm>        (call on stdin)
 //! fid-wasm-check golden <wasm-runtime.toml> <allowlist> <module.wasm> <calls file>
+//! fid-wasm-check sections-diff <a.wasm> <b.wasm>
 //! ```
 //!
 //! `seal` writes the sealed module (clock imports renamed so they trap; see
 //! `fid_wasm_check::seal`); it exits 0, or 2 if the module is refused or cannot be written.
 //! Exit codes: `imports`, `runtime-digest`, `manifest` and `golden` exit 0 when the check
-//! passes, 1 when it fails and 2 on a usage or read error. `run` exits with the runner's code
+//! passes, 1 when it fails and 2 on a usage or read error; `sections-diff` exits 0 when the
+//! modules are byte-identical, 1 when they differ (naming the differing sections, KRN.MAN.REPRO)
+//! and 2 when either cannot be read or parsed. `run` exits with the runner's code
 //! (0, 1 or 2 from the shim; 3 `NOT_REPLAYABLE(resource)`; 4 `NOT_REPLAYABLE(trap)`) and 5
 //! when it cannot run at all (bad settings, module refused, wrong or missing wasmtime).
 
@@ -25,13 +28,15 @@ use fid_wasm_check::module;
 use fid_wasm_check::runner::{self, Outcome};
 use fid_wasm_check::runtime::RuntimeConfig;
 use fid_wasm_check::seal::seal;
+use fid_wasm_check::sections;
 
 const USAGE: &str = "usage: fid-wasm-check seal <linked.wasm> <sealed.wasm>\n\
        fid-wasm-check imports <module.wasm> <allowlist>\n\
        fid-wasm-check runtime-digest <wasm-runtime.toml>\n\
        fid-wasm-check manifest <manifest.json> <module.wasm> <allowlist> <wasm-runtime.toml>\n\
        fid-wasm-check run <wasm-runtime.toml> <allowlist> <module.wasm>\n\
-       fid-wasm-check golden <wasm-runtime.toml> <allowlist> <module.wasm> <calls file>";
+       fid-wasm-check golden <wasm-runtime.toml> <allowlist> <module.wasm> <calls file>\n\
+       fid-wasm-check sections-diff <a.wasm> <b.wasm>";
 
 /// Largest file this tool reads (modules are capped lower by the reader itself).
 const MAX_FILE_BYTES: u64 = 128 * 1024 * 1024;
@@ -200,6 +205,14 @@ fn main() -> ExitCode {
                 Err(e) => verdict(Err(e)),
             }
         }
+        ["sections-diff", a_path, b_path] => verdict(read(a_path).and_then(|a| {
+            let b = read(b_path)?;
+            let (lines, same) = sections::diff(&a, &b).map_err(|e| format!("module refused: {e}"))?;
+            for l in lines {
+                println!("{l}");
+            }
+            Ok(same)
+        })),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::from(2)

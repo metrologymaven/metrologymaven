@@ -1,0 +1,8 @@
+[alias]
+xtask = "run -q -p fid-xtask --"
+
+[build]
+rustflags = ["-C", "target-cpu=native"]
+
+[resolver]
+incompatible-rust-versions = "fallback"
