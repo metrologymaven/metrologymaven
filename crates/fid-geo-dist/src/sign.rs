@@ -839,6 +839,8 @@ fn upper_on_triangle(p: &V3, c: &[V3; 3]) -> Result<f64, SignError> {
     for k in 0..3 {
         if tv.ee[k].v > 0.0 {
             let t = tv.tn[k].v / tv.ee[k].v;
+            // KNP-1 bans f64::clamp; the comparisons are the pinned clamp.
+            #[allow(clippy::manual_clamp)]
             let tau = Ev::x(if t < 0.0 {
                 0.0
             } else if t > 1.0 {
