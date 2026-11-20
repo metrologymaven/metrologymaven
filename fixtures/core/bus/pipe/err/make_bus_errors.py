@@ -52,10 +52,13 @@ CODES = {
         "bad_destination", "no_approval", "target_protected", "no_assertion", "agent_write_forbidden",
         "system_only",
     ],
-    # CORE.BUS.PIPE.VALID (`false`, `step_bound_exceeded`) and domain nodes.
+    # CORE.BUS.PIPE.VALID (`false`, `step_bound_exceeded`) and domain nodes. v3:
+    # `invalid_transition`, a commit's event asks for an element state change the tree does
+    # not allow (CORE.PRJ.TREE.MODEL REQ-003; the commit is aborted).
     "precondition": [
         "false", "step_bound_exceeded", "capability_missing", "divergent_step", "not_supersedable",
         "not_undoable", "nothing_to_redo", "project_locked", "released_record", "stage_active",
+        "invalid_transition",
     ],
     # CORE.BUS.ROUTE-004 (expected_head), CORE.BUS.PIPE.STAGE-005 (head moved during a job),
     # writer lock held, expected content digest differs; v2: `id_collision`, an entity ID

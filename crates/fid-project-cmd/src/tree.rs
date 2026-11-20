@@ -7,23 +7,30 @@
 //!   so the orphan rule and the layer rule put the implementation on this wrapper.
 //!   [`EntityRef`] lends its entity ID by reference, so the wrapper keeps one bus
 //!   [`EntityId`] per entity, updated as commits create entities.
-//! - [`TreeState::apply_commit`]: the events of one commit, all or nothing
-//!   ([`Tree::apply_commit`]); a refused commit leaves the state unchanged.
-//! - [`to_bus_error`]: refusals a caller can cause become `validation/<reason>` (`schema`,
-//!   `name`, `unregistered_type`, `bad_reference`, `bad_stage`, `hierarchy`; the nil or max
-//!   UUID is `validation/schema`) or `conflict/id_collision`. The bus catalogue has no
-//!   `invalid_transition`, `duplicate_type`, `duplicate_event` or `unknown_event` reason: an
-//!   event that breaks them at commit time, or a start-up registration clash, is a bug in
-//!   the emitting domain, so they become `internal/invariant_violated` with the tree's code
-//!   first in the detail. ID service faults become `internal/handler_failed`.
+//! - [`TreeState::apply_commit`] (a new commit) and [`TreeState::replay_commit`] (a
+//!   journaled commit read back): the events of one commit, all or nothing. The wrapper
+//!   keeps a copy of the tree and the entity ID map and restores both on any error, so a
+//!   refused commit leaves the state unchanged.
+//! - [`to_bus_error`] (commit path): refusals a caller can cause become
+//!   `validation/<reason>` (`schema`, `name`, `unregistered_type`, `bad_reference`,
+//!   `bad_stage`, `hierarchy`; the nil or max UUID is `validation/schema`),
+//!   `conflict/id_collision`, or `precondition/invalid_transition` (bus catalogue v3; the
+//!   commit is aborted, REQ-003). `duplicate_type` and `duplicate_event` come from start-up
+//!   registration only and can never come from a commit; they, `unknown_event` (an event
+//!   type no domain registered) and a broken invariant become `internal/invariant_violated`
+//!   with the tree's code first in the detail. ID service faults become
+//!   `internal/handler_failed`.
+//! - [`to_replay_error`] (replay path): as [`to_bus_error`], except that
+//!   `invalid_transition` is `internal/invariant_violated`. A journaled commit was accepted
+//!   once, so a transition it can no longer make means the state is corrupt.
 
-use fid_bus::error::{BusError, ConflictReason, Detail, InternalReason, ValidationReason};
+use fid_bus::error::{BusError, ConflictReason, Detail, InternalReason, PreconditionReason, ValidationReason};
 use fid_bus::handler::{EntityId, EntityRef, Event, SettingKey, StateView};
 use fid_canon::{CValue, Digest};
 use fid_project::{IdError, Tree, TreeError, TreeEvent, Uuid};
 use std::collections::BTreeMap;
 
-/// The bus error of a tree refusal (see the module docs).
+/// The bus error of a tree refusal on the commit path (see the module docs).
 pub fn to_bus_error(e: &TreeError) -> BusError {
     let d = Detail::new(&e.to_string());
     match e {
@@ -35,11 +42,23 @@ pub fn to_bus_error(e: &TreeError) -> BusError {
         TreeError::Hierarchy(_) => BusError::Validation(ValidationReason::Hierarchy, d),
         TreeError::IdCollision(_) => BusError::Conflict(ConflictReason::IdCollision, d),
         TreeError::Id(_) => BusError::Internal(InternalReason::HandlerFailed, d),
-        TreeError::InvalidTransition { .. }
-        | TreeError::DuplicateType(_)
+        TreeError::InvalidTransition { .. } => BusError::Precondition(PreconditionReason::InvalidTransition, d),
+        TreeError::DuplicateType(_)
         | TreeError::DuplicateEvent(_)
         | TreeError::UnknownEvent(_)
         | TreeError::Invariant(_) => BusError::Internal(InternalReason::InvariantViolated, d),
+    }
+}
+
+/// The bus error of a tree refusal on the replay path: an invalid transition in a journaled
+/// commit means corrupt state (`internal/invariant_violated`); everything else as
+/// [`to_bus_error`].
+pub fn to_replay_error(e: &TreeError) -> BusError {
+    match e {
+        TreeError::InvalidTransition { .. } => {
+            BusError::Internal(InternalReason::InvariantViolated, Detail::new(&e.to_string()))
+        }
+        other => to_bus_error(other),
     }
 }
 
@@ -85,15 +104,33 @@ impl TreeState {
         self.settings.insert(key.as_str().to_string(), value);
     }
 
-    /// Applies the events of one commit, all or nothing; a refusal is returned as a bus
+    /// Applies the events of a new commit, all or nothing; a refusal is returned as a bus
     /// error ([`to_bus_error`]) and changes nothing.
     pub fn apply_commit(&mut self, events: &[Event]) -> Result<(), BusError> {
+        self.commit(events, to_bus_error)
+    }
+
+    /// Applies the events of a journaled commit during replay, all or nothing; a refusal is
+    /// returned as a bus error ([`to_replay_error`]) and changes nothing.
+    pub fn replay_commit(&mut self, events: &[Event]) -> Result<(), BusError> {
+        self.commit(events, to_replay_error)
+    }
+
+    fn commit(&mut self, events: &[Event], map: fn(&TreeError) -> BusError) -> Result<(), BusError> {
+        let saved = (self.tree.clone(), self.ids.clone());
+        let r = self.commit_unguarded(events, map);
+        if r.is_err() {
+            (self.tree, self.ids) = saved;
+        }
+        r
+    }
+
+    fn commit_unguarded(&mut self, events: &[Event], map: fn(&TreeError) -> BusError) -> Result<(), BusError> {
         let evs: Vec<TreeEvent> = events.iter().map(tree_event).collect();
-        let created = self.tree.apply_commit(&evs).map_err(|e| to_bus_error(&e))?;
-        // Canonical UUID text (36 ASCII bytes) is always a valid entity ID. Should that ever
-        // fail, the entity stays unreachable through the view (fails closed) and the error
-        // is reported as internal.
+        let created = self.tree.apply_commit(&evs).map_err(|e| map(&e))?;
         for id in created {
+            // Canonical UUID text (36 ASCII bytes) is always a valid entity ID; should that
+            // ever fail, the caller restores the state from before the commit.
             let key = entity_id(&id).map_err(|e| {
                 BusError::Internal(InternalReason::InvariantViolated, Detail::new(&format!("entity id {id}: {e}")))
             })?;

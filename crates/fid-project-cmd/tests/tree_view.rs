@@ -7,10 +7,10 @@ use fid_bus::error::{Code, InternalReason};
 use fid_bus::handler::{EntityId, Event, EventType, SettingKey, StateView};
 use fid_canon::{CValue, Digest};
 use fid_project::{
-    ElementTypeDef, ElementTypeRegistry, IdError, Tree, TreeError, Uuid, ELEMENT_CREATED, ELEMENT_SLOT_SET,
-    GROUP_CREATED, GROUP_KIND,
+    ElementState, ElementTypeDef, ElementTypeRegistry, IdError, Tree, TreeError, Uuid, ELEMENT_CREATED,
+    ELEMENT_SLOT_SET, GROUP_CREATED, GROUP_KIND,
 };
-use fid_project_cmd::tree::{to_bus_error, tree_event, TreeState};
+use fid_project_cmd::tree::{to_bus_error, to_replay_error, tree_event, TreeState};
 use fid_project_cmd::BusView;
 use std::sync::Arc;
 
@@ -116,6 +116,11 @@ fn bus_error_mapping() {
         (TreeError::Hierarchy("x".into()), Code::Validation, "hierarchy"),
         (TreeError::IdCollision(id(1)), Code::Conflict, "id_collision"),
         (TreeError::Id(IdError::ReplayExhausted), Code::Internal, InternalReason::HandlerFailed.as_str()),
+        (
+            TreeError::InvalidTransition { from: ElementState::Current, to: ElementState::Failed },
+            Code::Precondition,
+            "invalid_transition",
+        ),
         (TreeError::DuplicateType("geo.mesh".into()), Code::Internal, "invariant_violated"),
         (TreeError::DuplicateEvent("x".into()), Code::Internal, "invariant_violated"),
         (TreeError::UnknownEvent("x".into()), Code::Internal, "invariant_violated"),
@@ -125,11 +130,19 @@ fn bus_error_mapping() {
         let b = to_bus_error(&e);
         assert_eq!((b.code(), b.reason()), (code, reason), "{e}");
         assert!(b.detail().as_untrusted_str().starts_with(e.code()), "{e}: detail names the tree code");
+        // Replay maps the same, except an invalid transition, which there means corrupt state.
+        let r = to_replay_error(&e);
+        if matches!(e, TreeError::InvalidTransition { .. }) {
+            assert_eq!((r.code(), r.reason()), (Code::Internal, "invariant_violated"));
+            assert!(r.detail().as_untrusted_str().starts_with("invalid_transition"));
+        } else {
+            assert_eq!(r, b, "{e}");
+        }
     }
 }
 
 #[test]
-fn invalid_transition_at_commit_is_internal_and_rolled_back() {
+fn invalid_transition_is_a_precondition_on_commit_internal_on_replay_and_rolled_back() {
     let mut s = state();
     let root = s.tree().root();
     s.apply_commit(&[element(id(1), root, "test.alpha", "a")]).unwrap();
@@ -147,9 +160,19 @@ fn invalid_transition_at_commit_is_internal_and_rolled_back() {
     };
     let before = s.tree().state_digest().unwrap();
     let err = s.apply_commit(&[set("current", Some(D1)), set("failed", None)]).unwrap_err();
+    assert_eq!((err.code(), err.reason()), (Code::Precondition, "invalid_transition"));
+    assert_eq!(s.tree().state_digest().unwrap(), before);
+    let err = s.replay_commit(&[set("current", Some(D1)), set("failed", None)]).unwrap_err();
     assert_eq!((err.code(), err.reason()), (Code::Internal, "invariant_violated"));
     assert!(err.detail().as_untrusted_str().starts_with("invalid_transition"));
     assert_eq!(s.tree().state_digest().unwrap(), before);
+    // A commit that creates an entity and then fails leaves no trace in the view either.
+    let err = s.apply_commit(&[element(id(2), root, "test.alpha", "b"), set("failed", None)]);
+    assert!(err.is_ok(), "not_computed -> failed is allowed");
+    let err = s.apply_commit(&[element(id(3), root, "test.alpha", "c"), set("current", None)]).unwrap_err();
+    assert_eq!((err.code(), err.reason()), (Code::Validation, "schema"));
+    assert!(s.entity(&key(&id(3))).is_none() && s.tree().element(&id(3)).is_none());
+    assert!(s.entity(&key(&id(2))).is_some());
     // The tree event of a bus event keeps its type and body.
     let e = set("current", Some(D1));
     let te = tree_event(&e);

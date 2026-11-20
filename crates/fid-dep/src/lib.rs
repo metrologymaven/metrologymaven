@@ -13,8 +13,8 @@ pub use edge::{
     SHOW_DEPENDENCIES,
 };
 pub use prop::{
-    plan, propagate, set_command_def, set_recompute_mode, Adjacency, DepGraph, ElementState, ElementStates,
-    ElementsMarked, Marking, PropError, Propagation, RecomputeMode, RecomputeModeSet, RecomputeSubmission,
-    SetRecomputeMode, ELEMENTS_MARKED_EVENT, MAX_CHANGED, MAX_PASS_EDGES, MAX_PASS_ELEMENTS, RECOMPUTE_DEPENDENTS,
-    RECOMPUTE_MODE_SET_EVENT, SET_RECOMPUTE_MODE,
+    is_markable, plan, propagate, set_command_def, set_recompute_mode, Adjacency, DepGraph, ElementState,
+    ElementStates, ElementsMarked, Marking, PropError, Propagation, RecomputeMode, RecomputeModeSet,
+    RecomputeSubmission, SetRecomputeMode, ELEMENTS_MARKED_EVENT, MAX_CHANGED, MAX_PASS_EDGES, MAX_PASS_ELEMENTS,
+    RECOMPUTE_DEPENDENTS, RECOMPUTE_MODE_SET_EVENT, SET_RECOMPUTE_MODE,
 };

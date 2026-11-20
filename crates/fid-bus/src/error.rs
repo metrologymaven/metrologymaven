@@ -173,6 +173,9 @@ reason_enum!(
 
 reason_enum!(
     /// Reasons for `precondition` (CORE.BUS.PIPE.VALID and domain preconditions).
+    /// `invalid_transition` (added in catalogue v3): a commit's event asks for an element
+    /// state change the element tree does not allow, so the commit is aborted
+    /// (CORE.PRJ.TREE.MODEL REQ-003).
     PreconditionReason {
         False => "false",
         StepBoundExceeded => "step_bound_exceeded",
@@ -184,6 +187,7 @@ reason_enum!(
         ProjectLocked => "project_locked",
         ReleasedRecord => "released_record",
         StageActive => "stage_active",
+        InvalidTransition => "invalid_transition",
     }
 );
 

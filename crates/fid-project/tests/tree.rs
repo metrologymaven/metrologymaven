@@ -408,9 +408,9 @@ fn domain_events_dispatch_through_the_registry() {
     assert_eq!(tree.apply("test.made", &body).unwrap(), vec![id(1)]);
     let e = tree.element(&id(1)).unwrap();
     assert_eq!((e.type_id(), e.visible()), ("test.alpha", false));
-    // A translation must yield core events only (no recursion).
+    // A translation must yield core events only (no recursion); anything else is a domain bug.
     let before = tree.state_digest().unwrap();
-    assert_eq!(err_code(tree.apply("test.leak", &CValue::Null)), "schema");
+    assert_eq!(err_code(tree.apply("test.leak", &CValue::Null)), "invariant_violated");
     // A translated event is checked like a core one.
     assert_eq!(err_code(tree.apply("test.made", &body)), "id_collision");
     assert_eq!(tree.state_digest().unwrap(), before);

@@ -13,7 +13,13 @@
 //!   (`duplicate_type` on a second registration, REQ-005) and may register domain event
 //!   types, each with a translation into core tree events (the registry dispatch of
 //!   `apply`). Creating an element of an unregistered type fails with
-//!   `unregistered_type` (REQ-004).
+//!   `unregistered_type` (REQ-004). Both registrations happen at start-up only, so
+//!   `duplicate_type` and `duplicate_event` can never come from applying a commit.
+//! - Every domain event type that can appear in a journal the tree is built from must be
+//!   registered, with an empty translation (one returning no events) for events that do not
+//!   touch the tree. An event type that is neither core nor registered is refused with
+//!   `unknown_event`, which aborts its commit (fail closed). A translation that yields a
+//!   non-core event is a bug in the registering domain and fails with `invariant_violated`.
 //! - [`Tree::apply`] and [`Tree::apply_commit`]: event application, total (every input
 //!   gives `Ok` or a typed error, nothing panics) and deterministic. A commit applies all
 //!   its events or none: on the first refusal every change of the commit is rolled back.
@@ -31,7 +37,8 @@
 //! Invariants, kept by every event and checked again by [`Tree::verify`]: every element's
 //! parent is a group of the tree, every group but the root has a parent group (no orphans),
 //! group parent chains end at the root within [`MAX_GROUP_DEPTH`] steps (no cycles), every
-//! element type is registered, and every element has exactly one slot per stage.
+//! element type is registered, every element has exactly one slot per stage, element, group
+//! and stage IDs are pairwise distinct, and every `current` slot carries a digest.
 //!
 //! Core events (type, then the exact keys of the body; IDs are canonical lowercase UUID text):
 //! - [`GROUP_CREATED`] `{"id", "name", "parent"}`: a group under an existing group.
@@ -708,7 +715,7 @@ impl Tree {
         })?;
         for ev in translate(body)? {
             if !CORE_EVENTS.contains(&ev.event_type.as_str()) {
-                return Err(TreeError::Schema(format!("{event_type} translated into a non-core event")));
+                return Err(TreeError::Invariant(format!("{event_type} translated into a non-core event")));
             }
             self.apply_core(&ev.event_type, &ev.body, undo, created)?;
         }
@@ -847,7 +854,12 @@ impl Tree {
         if !self.stages.contains(&stage) {
             return Err(TreeError::BadStage(stage));
         }
-        let from = e.slots.get(&stage).map_or(ElementState::NotComputed, |s| s.state);
+        // Every element has a slot per stage (an invariant), so a missing one is corrupt state.
+        let from = e
+            .slots
+            .get(&stage)
+            .map(|s| s.state)
+            .ok_or_else(|| invariant(format!("element {id} has no slot for stage {stage}")))?;
         if !from.can_become(state) {
             return Err(TreeError::InvalidTransition { from, to: state });
         }
@@ -864,13 +876,26 @@ impl Tree {
         if !self.stages.contains(&self.active_stage) {
             return Err(invariant("active stage is not a stage".to_string()));
         }
-        for g in self.groups.values() {
+        let sorted = self.stages_sorted();
+        if sorted.windows(2).any(|w| w[0] == w[1]) {
+            return Err(invariant("stage IDs are not distinct".to_string()));
+        }
+        for (key, g) in &self.groups {
+            if *key != g.id {
+                return Err(invariant(format!("group {} is filed under {key}", g.id)));
+            }
+            if self.stages.contains(&g.id) {
+                return Err(invariant(format!("group {} shares its ID with a stage", g.id)));
+            }
             self.depth(&g.id).map_err(|e| invariant(e.to_string()))?;
             if *g != Group::new(g.id, g.parent, g.name.clone()) {
                 return Err(invariant(format!("group {} body is stale", g.id)));
             }
         }
-        for e in self.elements.values() {
+        for (key, e) in &self.elements {
+            if *key != e.id {
+                return Err(invariant(format!("element {} is filed under {key}", e.id)));
+            }
             if !self.groups.contains_key(&e.parent) {
                 return Err(invariant(format!("element {} is an orphan", e.id)));
             }
@@ -880,8 +905,11 @@ impl Tree {
             if self.registry.get(&e.type_id).is_none() {
                 return Err(invariant(format!("element {} has an unregistered type", e.id)));
             }
-            if !e.slots.keys().eq(self.stages_sorted().iter()) {
+            if !e.slots.keys().eq(sorted.iter()) {
                 return Err(invariant(format!("element {} does not have one slot per stage", e.id)));
+            }
+            if e.slots.values().any(|s| s.state == ElementState::Current && s.digest.is_none()) {
+                return Err(invariant(format!("element {} has a current slot without a digest", e.id)));
             }
             let mut fresh = e.clone();
             fresh.rebuild_body();
@@ -944,5 +972,86 @@ fn uuid_field(o: &BTreeMap<String, CValue>, key: &str) -> Result<Uuid, TreeError
     match Uuid::parse(s) {
         Ok(id) if id.to_string() == s => Ok(id),
         _ => Err(TreeError::Schema(format!("{key} must be a canonical lowercase UUID"))),
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    //! Corrupt states that no event can produce, built by reaching into the private fields.
+    use super::*;
+
+    const D: &str = "sha256:2222222222222222222222222222222222222222222222222222222222222222";
+
+    fn tree_with_element() -> (Tree, Uuid) {
+        let mut reg = ElementTypeRegistry::new();
+        reg.register(ElementTypeDef::new("test.alpha", obj([]), "point").unwrap()).unwrap();
+        let mut tree = Tree::new(Uuid::from_u128(1), Arc::new(reg)).unwrap();
+        let id = Uuid::from_u128(0x0190_0000_0000_7000_8000_0000_0000_0001);
+        let body = obj([
+            ("id", uuid_value(&id)),
+            ("meta", obj([])),
+            ("name", text("e")),
+            ("parent", uuid_value(&tree.root())),
+            ("type", text("test.alpha")),
+            ("visible", CValue::Bool(true)),
+        ]);
+        tree.apply(ELEMENT_CREATED, &body).unwrap();
+        tree.verify().unwrap();
+        (tree, id)
+    }
+
+    fn set(tree: &Tree, id: Uuid, state: &str, digest: Option<&str>) -> CValue {
+        obj([
+            ("digest", digest.map_or(CValue::Null, text)),
+            ("element", uuid_value(&id)),
+            ("stage", uuid_value(&tree.active_stage())),
+            ("state", text(state)),
+        ])
+    }
+
+    #[test]
+    fn missing_slot_is_an_invariant_breach() {
+        let (mut tree, id) = tree_with_element();
+        tree.elements.get_mut(&id).unwrap().slots.clear();
+        let body = set(&tree, id, "current", Some(D));
+        assert_eq!(tree.apply(ELEMENT_SLOT_SET, &body).unwrap_err().code(), "invariant_violated");
+        assert_eq!(tree.verify().unwrap_err().code(), "invariant_violated");
+    }
+
+    #[test]
+    fn verify_refuses_a_current_slot_without_digest() {
+        let (mut tree, id) = tree_with_element();
+        let stage = tree.active_stage();
+        let e = tree.elements.get_mut(&id).unwrap();
+        e.slots.insert(stage, Slot { digest: None, state: ElementState::Current });
+        e.rebuild_body();
+        assert!(tree.verify().unwrap_err().to_string().contains("without a digest"));
+    }
+
+    #[test]
+    fn verify_refuses_a_group_sharing_a_stage_id() {
+        let (mut tree, _) = tree_with_element();
+        let stage = tree.active_stage();
+        let root = tree.root();
+        tree.groups.insert(stage, Group::new(stage, Some(root), ElementName::default()));
+        assert!(tree.verify().unwrap_err().to_string().contains("shares its ID with a stage"));
+    }
+
+    #[test]
+    fn verify_refuses_cycles_orphans_and_misfiled_entries() {
+        let (tree, id) = tree_with_element();
+        let (a, b) = (Uuid::from_u128(0xa), Uuid::from_u128(0xb));
+        let mut cyc = tree.clone();
+        cyc.groups.insert(a, Group::new(a, Some(b), ElementName::default()));
+        cyc.groups.insert(b, Group::new(b, Some(a), ElementName::default()));
+        assert_eq!(cyc.verify().unwrap_err().code(), "invariant_violated");
+        let mut orphan = tree.clone();
+        orphan.groups.insert(a, Group::new(a, Some(b), ElementName::default()));
+        assert_eq!(orphan.verify().unwrap_err().code(), "invariant_violated");
+        let mut misfiled = tree.clone();
+        let e = misfiled.elements.remove(&id).unwrap();
+        misfiled.elements.insert(a, e);
+        assert!(misfiled.verify().unwrap_err().to_string().contains("filed under"));
     }
 }
