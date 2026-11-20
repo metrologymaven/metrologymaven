@@ -6,6 +6,7 @@ use fid_num::NumError;
 use fid_solv::nlls::{Diagnostics, NllsConfig, SolverError};
 
 use super::primitive::{Method, Primitive};
+use crate::tan_rock::TanVariant;
 
 /// Why a fit, a check or a contract operation returned no result. Every variant carries
 /// the numbers that explain it; nothing is ever replaced by a silent best effort.
@@ -46,6 +47,9 @@ pub enum FitError {
     NotConverged { iterations: usize, reason: NotConvergedReason, last: Option<Diagnostics> },
     /// The method is not defined for the primitive.
     MethodUndefined { primitive: Primitive, method: Method },
+    /// The tangential variant is not defined for the primitive (`tan_rock::DEFINED_PAIRS`).
+    /// Its code is `method_undefined`, like [`FitError::MethodUndefined`].
+    TanMethodUndefined { primitive: Primitive, variant: TanVariant },
     /// A parameter is out of range; `field` names it (for example `thresholds.rank_tol`).
     InvalidParams { field: &'static str },
     /// A direction vector is zero or too small to normalise (norm below `2^-1022`).
@@ -74,7 +78,7 @@ impl FitError {
             FitError::InsufficientCoverage { .. } => "insufficient_coverage",
             FitError::IllConditioned { .. } => "ill_conditioned",
             FitError::NotConverged { .. } => "not_converged",
-            FitError::MethodUndefined { .. } => "method_undefined",
+            FitError::MethodUndefined { .. } | FitError::TanMethodUndefined { .. } => "method_undefined",
             FitError::InvalidParams { .. } => "invalid_params",
             FitError::InvalidDirection => "invalid_direction",
             FitError::Solver(_) => "solver",
@@ -112,6 +116,9 @@ impl fmt::Display for FitError {
             }
             FitError::MethodUndefined { primitive, method } => {
                 write!(f, "fit: method {} undefined for {}", method.slug(), primitive.slug())
+            }
+            FitError::TanMethodUndefined { primitive, variant } => {
+                write!(f, "fit: tangential variant {} undefined for {}", variant.slug(), primitive.slug())
             }
             FitError::InvalidParams { field } => write!(f, "fit: invalid parameter {field}"),
             FitError::InvalidDirection => write!(f, "fit: zero or too small direction vector"),

@@ -3,7 +3,9 @@
 //!
 //! Modules land one spec leaf at a time; see `spec/krn/lsq/`. This crate starts with the
 //! shared fit contract ([`contract`], spec node `KRN.LSQ.TRAIT`) that every fitting method
-//! (least squares, minimum zone, envelope) implements.
+//! (least squares, minimum zone, envelope) implements. [`tan_rock`] (spec node
+//! `KRN.ENV.TAN.ROCK`) holds the tangential variant table and the rocking report shared by the
+//! tangential fits.
 
 // `FitError` wraps `fid_solv::nlls::SolverError` by value (about 150 bytes, see the note in
 // `fid-solv`). It is returned at most once per fit, never in a loop, and boxing it would add an
@@ -11,3 +13,4 @@
 #![allow(clippy::result_large_err)]
 
 pub mod contract;
+pub mod tan_rock;
