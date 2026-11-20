@@ -8,7 +8,9 @@
 //! - [`tokens`]: `tokens-check` (`UX.TOKENS.COLOR`).
 //! - [`status`]: `status-check` (`UX.TOKENS.STATUS`).
 //! - [`palettes`]: `palettes-check` (`UX.TOKENS.DATAPAL`).
+//! - [`color`]: `color-check`, the release gate over all of them (`UX.TOKENS.CHECK`).
 
+pub mod color;
 pub mod finding;
 pub mod palettes;
 pub mod pkg;

@@ -3,6 +3,7 @@
 //! `fid-design tokens-check --root <dir> [--json]`,
 //! `fid-design status-check --root <dir> [--json]`,
 //! `fid-design palettes-check --root <dir> [--baseline <digests>] [--json]`,
+//! `fid-design color-check --root <dir> [--baseline <digests>] [--out <file>] [--json]`,
 //! `fid-design princ-check [--file <md>] [--json]` and
 //! `fid-design words-check --copy <jsonl> [--words <json>] [--json]` and
 //! `fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>]
@@ -14,7 +15,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 const USAGE: &str =
-    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]";
+    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]";
 
 #[derive(Default)]
 struct Args {
@@ -28,6 +29,7 @@ struct Args {
     deny_names: Option<PathBuf>,
     base: Option<PathBuf>,
     baseline: Option<PathBuf>,
+    out: Option<PathBuf>,
     pr: Option<u64>,
     all: bool,
     json: bool,
@@ -49,6 +51,7 @@ fn parse_args(args: &[String]) -> Option<Args> {
             "--deny-names" => out.deny_names = Some(PathBuf::from(it.next()?)),
             "--base" => out.base = Some(PathBuf::from(it.next()?)),
             "--baseline" => out.baseline = Some(PathBuf::from(it.next()?)),
+            "--out" => out.out = Some(PathBuf::from(it.next()?)),
             "--pr" => {
                 let n: u64 = it.next()?.parse().ok()?;
                 if n == 0 {
@@ -111,7 +114,13 @@ fn main() -> ExitCode {
         let Some(root) = args.root.clone() else {
             return usage();
         };
-        if !mode_ok || princ_flags || args.from.is_some() || args.to.is_some() || args.baseline.is_some() {
+        if !mode_ok
+            || princ_flags
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+        {
             return usage();
         }
         let o = fid_design::review::Options {
@@ -132,7 +141,8 @@ fn main() -> ExitCode {
         || args.base.is_some()
         || args.pr.is_some()
         || args.all
-        || (args.baseline.is_some() && cmd != "palettes-check")
+        || (args.baseline.is_some() && cmd != "palettes-check" && cmd != "color-check")
+        || (args.out.is_some() && cmd != "color-check")
     {
         return usage();
     }
@@ -172,6 +182,22 @@ fn main() -> ExitCode {
         },
         ("status-check", Some(root), None, None) => match fid_design::status::check(root) {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        },
+        ("color-check", Some(root), None, None) => match fid_design::color::check(root, args.baseline.as_deref()) {
+            Ok(r) => {
+                if let Some(out) = &args.out {
+                    let written =
+                        r.to_json().map_err(|e| format!("report encoding: {}", e.code())).and_then(|mut b| {
+                            b.push(b'\n');
+                            std::fs::write(out, b).map_err(|e| format!("cannot write {}: {e}", out.display()))
+                        });
+                    if let Err(e) = written {
+                        return fail(e);
+                    }
+                }
+                finish(r.to_json(), r.to_text(), args.json, r.exit_code())
+            }
             Err(e) => fail(e),
         },
         ("palettes-check", Some(root), None, None) => match fid_design::palettes::check(root, args.baseline.as_deref())
