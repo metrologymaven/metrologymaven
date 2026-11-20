@@ -1178,6 +1178,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-clarabel"
+version = "0.11.1"
+dependencies = [
+ "fid-num",
+]
+
+[[package]]
 name = "fid-cli"
 version = "0.0.1"
 dependencies = [

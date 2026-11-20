@@ -32,6 +32,23 @@ that adds the asset.
 - **Notice:** "Copyright © 2005-2020 Rich Felker, et al." with the full MIT permission
   text, kept in every file header and in `VENDOR.md`.
 
+### Clarabel.rs (interior-point conic solver)
+
+- **Files:** `vendor/fid-clarabel/upstream/` (the pristine crates.io package clarabel 0.11.1,
+  commit `25540f559592068d0c8a80e46ded1b21760212a1`), `vendor/fid-clarabel/patches/` and the
+  patched crate `vendor/fid-clarabel/crate/` (fid-clarabel); audit record
+  `vendor/fid-clarabel/AUDIT.toml` (KRN.SOLV.CONIC.VEND, KRN.SOLV.CONIC.PATCH).
+- **Upstream:** <https://github.com/oxfordcontrol/Clarabel.rs>, by Paul Goulart and Yuwen Chen
+  (University of Oxford).
+- **Licence:** SPDX `Apache-2.0` (crates.io metadata, and the licence text in
+  `vendor/fid-clarabel/upstream/LICENSE.md`, kept unchanged as `crate/LICENSE.md`). The patch
+  files record every change file by file, and (Apache-2.0 section 4(b)) every modified or
+  new file of `crate/` starts with the notice "Modified from Clarabel 0.11.1 by Metrology
+  Maven; see vendor/fid-clarabel/patches/" and `crate/README.md` starts with a fork notice
+  (patch 0009).
+- **Notice:** upstream ships no NOTICE file; its `LICENSE.md` and `CITATION.bib` are kept in
+  both trees.
+
 ## Test material
 
 - **Random123 Philox4x32-10 known-answer vectors** (D. E. Shaw Research): the first three

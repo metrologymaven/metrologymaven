@@ -1,0 +1,4 @@
+# KNP-1 lint configuration for the vendored solver's report (KRN.SOLV.CONIC.PATCH AC-1).
+# Only the [syn] table is read by the driver in this directory (see src/main.rs).
+[syn.facade_paths]
+"fid_num::f" = { crate = "fid-num", version = "0.0.1", reason = "KNP-1 facade: correctly rounded sqrt and the pinned pure-Rust transcendentals and total-order min/max (KRN.NUM.FN)" }

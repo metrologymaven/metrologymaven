@@ -1,0 +1,185 @@
+// Modified from Clarabel 0.11.1 by Metrology Maven;
+// see vendor/fid-clarabel/patches/
+#![allow(non_snake_case)]
+
+use super::datamaps::*;
+use crate::algebra::*;
+use crate::solver::core::cones::*;
+
+pub(crate) fn allocate_kkt_Hsblocks<Z>(cones: &CompositeCone) -> Vec<Z>
+where
+    Z: Default + Clone,
+{
+    let mut nnz = 0;
+    if let Some(rng_last) = cones.rng_blocks.last() {
+        nnz = rng_last.end;
+    }
+    vec![Z::default(); nnz]
+}
+
+pub(crate) fn assemble_kkt_matrix(
+    P: &CscMatrix,
+    A: &CscMatrix,
+    cones: &CompositeCone,
+    shape: MatrixTriangle,
+) -> (CscMatrix, LDLDataMap) {
+    let mut map = LDLDataMap::new(P, A, cones);
+    let (m, n) = A.size();
+    let p = map.sparse_maps.pdim();
+
+    // entries actually on the diagonal of P.
+    // NB: user provided P is always triu regardless
+    // of the target shape of the KKT matrix
+    let nnz_diagP = P.count_diagonal_entries(MatrixTriangle::Triu);
+
+    // total entries in the Hs blocks
+    let nnz_Hsblocks = map.Hsblocks.len();
+
+    let nnzKKT = P.nnz() +      // Number of elements in P
+    n -                         // Number of elements in diagonal top left block
+    nnz_diagP +                 // remove double count on the diagonal if P has entries
+    A.nnz() +                   // Number of nonzeros in A
+    nnz_Hsblocks +              // Number of elements in diagonal below A'
+    map.sparse_maps.nnz_vec() +  // Number of elements in sparse cone off diagonals
+    p; //Number of elements in diagonal of sparse cones
+
+    let mut K = CscMatrix::spalloc((m + n + p, m + n + p), nnzKKT);
+
+    _kkt_assemble_colcounts(&mut K, P, A, cones, &map, shape);
+    _kkt_assemble_fill(&mut K, P, A, cones, &mut map, shape);
+
+    (K, map)
+}
+fn _kkt_assemble_colcounts(
+    K: &mut CscMatrix,
+    P: &CscMatrix,
+    A: &CscMatrix,
+    cones: &CompositeCone,
+    map: &LDLDataMap,
+    shape: MatrixTriangle,
+) {
+    let (m, n) = A.size();
+
+    // use K.p to hold nnz entries in each
+    // column of the KKT matrix
+    K.colptr.fill(0);
+
+    match shape {
+        MatrixTriangle::Triu => {
+            K.colcount_block(P, 0, MatrixShape::N);
+            K.colcount_missing_diag(P, 0);
+            K.colcount_block(A, n, MatrixShape::T);
+        }
+        MatrixTriangle::Tril => {
+            K.colcount_missing_diag(P, 0);
+            K.colcount_block(P, 0, MatrixShape::T);
+            K.colcount_block(A, 0, MatrixShape::N);
+        }
+    }
+
+    // track the next sparse column to fill (assuming triu fill)
+    let mut pcol = m + n; //next sparse column to fill
+    let mut sparse_map_iter = map.sparse_maps.iter();
+
+    for (i, cone) in cones.iter().enumerate() {
+        let row = cones.rng_cones[i].start + n;
+
+        // add the Hs blocks in the lower right
+        let blockdim = cone.numel();
+        if cone.Hs_is_diagonal() {
+            K.colcount_diag(row, blockdim);
+        } else {
+            K.colcount_dense_triangle(row, blockdim, shape);
+        }
+
+        //add sparse expansions columns for sparse cones
+        if cone.is_sparse_expandable() {
+            if let (Some(sc), Some(thismap)) = (cone.to_sparse_expansion(), sparse_map_iter.next())
+            {
+                sc.csc_colcount_sparsecone(thismap, K, row, pcol, shape);
+                pcol += thismap.pdim();
+            }
+        }
+    }
+}
+
+fn _kkt_assemble_fill(
+    K: &mut CscMatrix,
+    P: &CscMatrix,
+    A: &CscMatrix,
+    cones: &CompositeCone,
+    map: &mut LDLDataMap,
+    shape: MatrixTriangle,
+) {
+    let (m, n) = A.size();
+
+    // cumsum total entries to convert to K.p
+    K.colcount_to_colptr();
+
+    match shape {
+        MatrixTriangle::Triu => {
+            K.fill_block(P, &mut map.P, 0, 0, MatrixShape::N);
+            K.fill_missing_diag(P, 0); // after adding P, since triu form
+                                       // fill in value for A, top right (transposed/rowwise)
+            K.fill_block(A, &mut map.A, 0, n, MatrixShape::T);
+        }
+        MatrixTriangle::Tril => {
+            K.fill_missing_diag(P, 0); // before adding P, since tril form
+            K.fill_block(P, &mut map.P, 0, 0, MatrixShape::T);
+            // fill in value for A, bottom left (not transposed)
+            K.fill_block(A, &mut map.A, n, 0, MatrixShape::N);
+        }
+    }
+
+    // track the next sparse column to fill (assuming triu fill)
+    let mut pcol = m + n; //next sparse column to fill
+    let mut sparse_map_iter = map.sparse_maps.iter_mut();
+
+    for (i, cone) in cones.iter().enumerate() {
+        let row = cones.rng_cones[i].start + n;
+
+        // add the Hs blocks in the lower right
+        let blockdim = cone.numel();
+        let block = &mut map.Hsblocks[cones.rng_blocks[i].clone()];
+
+        if cone.Hs_is_diagonal() {
+            K.fill_diag(block, row, blockdim);
+        } else {
+            K.fill_dense_triangle(block, row, blockdim, shape);
+        }
+
+        //add sparse expansions columns for sparse cones
+        if cone.is_sparse_expandable() {
+            if let (Some(sc), Some(thismap)) = (cone.to_sparse_expansion(), sparse_map_iter.next())
+            {
+                sc.csc_fill_sparsecone(thismap, K, row, pcol, shape);
+                pcol += thismap.pdim();
+            }
+        }
+    }
+
+    // backshift the colptrs to recover K.p again
+    K.backshift_colptrs();
+
+    // Now we can populate the index of the full diagonal.
+    // We have filled in structural zeros on it everywhere.
+
+    match shape {
+        MatrixTriangle::Triu => {
+            // matrix is triu, so diagonal is last in each column
+            map.diag_full.copy_from_slice(&K.colptr[1..]);
+            map.diag_full.iter_mut().for_each(|x| *x -= 1);
+            // and the diagonal of just the upper left
+            map.diagP.copy_from_slice(&K.colptr[1..=n]);
+            map.diagP.iter_mut().for_each(|x| *x -= 1);
+        }
+
+        MatrixTriangle::Tril => {
+            // matrix is tril, so diagonal is first in each column
+            map.diag_full
+                .copy_from_slice(&K.colptr[0..K.colptr.len() - 1]);
+            // and the diagonal of just the upper left
+            map.diagP.copy_from_slice(&K.colptr[0..n]);
+        }
+    }
+}

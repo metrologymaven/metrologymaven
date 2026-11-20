@@ -15,6 +15,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-kunc" = "kernel"
 "fid-kdec" = "kernel"
 "fid-solv" = "kernel"
+# Vendored conic solver (KRN.SOLV.CONIC.PATCH): Clarabel 0.11.1 patched to KNP-1, only fid-num;
+# lives in vendor/fid-clarabel/crate and is audited by `cargo xtask conic-audit`.
+"fid-clarabel" = "kernel"
 "fid-fit" = "kernel"
 # Construction contract (KRN.CONS.DECL): KNP-1, only fid-fit, fid-kci, fid-num, fid-types.
 "fid-construct" = "kernel"

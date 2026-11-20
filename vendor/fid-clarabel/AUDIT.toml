@@ -1,0 +1,71 @@
+# Audit record of the vendored conic solver (KRN.SOLV.CONIC.VEND schema 1), checked in CI by
+# `cargo xtask conic-audit`. upstream/ is the crates.io package clarabel 0.11.1 (crate file
+# SHA-256 d950c870fad4feed732bc3f7da489d223ba3911eac0522e6512eed7e659cfafe, as published in the
+# crates.io index), whose .cargo_vcs_info.json names the commit below. Its licence is Apache-2.0:
+# the crates.io metadata says so and upstream/LICENSE.md is the Apache License 2.0 text
+# (maintainer decision recorded in spec/krn/solv/conic/vend/NODE.md). crate/ is upstream/ plus
+# patches/ in order; knp1-findings.json is written by lint-driver/ (see its src/main.rs).
+schema = 1
+lint_report_sha256 = "sha256:74fda06d31828bc28071d2661fbffbe691ab26ef2706f271fa493d6a86e013bd"
+auditor = "Claude Code (Claude Opus 5.5) for metrologymaven; needs an independent review per D-037 P2"
+date = "2026-11-19"
+
+[upstream]
+url = "https://github.com/oxfordcontrol/Clarabel.rs"
+commit = "25540f559592068d0c8a80e46ded1b21760212a1"
+tree_sha256 = "sha256:ea2d6f4a19d7589b1521141cf9724d9faf70a1eef77d0724dee419140a600c1c"
+licence = "Apache-2.0"
+
+[[patches]]
+id = "0001"
+file = "patches/0001-scope-reduction.patch"
+rules = ["scope-reduction", "KNP1-CLOCK", "KNP1-THREAD", "KNP1-IO-FS", "KNP1-ENV", "KNP1-UNSAFE"]
+rationale = "Keep only what the kernel uses (zero, nonnegative and second-order cones with a QP objective; REQ-002) so less code needs auditing. Removing the timers (std::time, web-time), printing and JSON file I/O, the Python/Julia/C bindings and callbacks (unsafe FFI), the faer and Pardiso back ends (threads) and the build-info env! macros also removes those KNP-1 classes outright, and the crate has no feature that brings any of them back (REQ-003)."
+
+[[patches]]
+id = "0002"
+file = "patches/0002-f64-specialisation.patch"
+rules = ["KNP1-LIBM", "KNP1-MINMAX", "KNP1-POW"]
+rationale = "Generic num-traits Float calls hide which sqrt, powi, min and max run; with T = f64 every float operation is a plain f64 operation the lint can see, and num-traits is no longer needed."
+
+[[patches]]
+id = "0003"
+file = "patches/0003-fid-num-transcendentals.patch"
+rules = ["KNP1-LIBM", "KNP1-POW", "KNP1-MINMAX"]
+rationale = "std sqrt/ln and f64::min/max are replaced by fid_num::f (correctly rounded sqrt, pinned pure-Rust ln, total-order min/max that never drop a NaN) through algebra/knp.rs, and powi by explicit products. fid-num errors become NaN there and a non-finite mu stops the solve with NumericalError, after restoring the previous iterate (info is reset to NaN, so no almost-solved check can pass on uncomputed values), and a solved, almost solved or infeasible status without finite values of record is demoted to NumericalError. Input data is validated at setup (CSC format, no NaN, finite P, A and q, no -infinity in b, cone sizes with checked arithmetic) and data updates must be finite. Upstream panics (panic!, unwrap, unreachable!, the CscMatrix entry-point asserts) become errors or statuses (CONSTITUTION section 8); the asserting math traits (ScalarMath, VectorMath, MatrixMath, MatrixMathMut; symv and gemv were already crate-private) and CscMatrix::select_rows/to_triu are crate-private, so no caller outside the crate reaches their asserts; each remaining internal assert carries a comment stating why it holds (list in spec/krn/solv/conic/patch/NODE.md)."
+
+[[patches]]
+id = "0004"
+file = "patches/0004-no-hash-maps.patch"
+rules = ["KNP1-HASH"]
+rationale = "HashMap iteration order is not fixed; the cone type counts use a BTreeMap."
+
+[[patches]]
+id = "0005"
+file = "patches/0005-fid-num-reductions.patch"
+rules = ["KNP1-FMA", "KNP1-UNSAFE"]
+rationale = "Sums, dot products and 2-norms in the iteration use fid_num::red (fixed block-and-tree compensated summation of plain products, no FMA), so their result is a function of the inputs and their order only; the symmetric matrix-vector product uses upstream's bounds-checked version instead of its unsafe copy."
+
+[[patches]]
+id = "0006"
+file = "patches/0006-deterministic-ldl.patch"
+rules = ["KNP1-ALLOW-UNLISTED", "KNP1-UNSAFE"]
+rationale = "The LDL ordering is an exact minimum-degree ordering of the sparsity pattern with lowest-index tie-breaks (REQ-004), replacing AMD from the unlisted amd crate; regularisation constants and refinement limits stay the fixed upstream settings, so the factorization path depends on the problem data only. The factorisation and the triangular solves use bounds-checked indexing instead of unsafe get_unchecked. The ordering has a size budget (MAX_ORDERING_DIM = 20000 columns, MAX_ORDERING_NNZ = 1000000 entries, MAX_ORDERING_FILL = 4000000 elimination-graph edges) and refuses larger inputs with QDLDLError::OrderingTooLarge (a malformed pattern with QDLDLError::InvalidPattern); the solver refuses such a problem up front as bad input."
+
+[[patches]]
+id = "0007"
+file = "patches/0007-dependency-trimming.patch"
+rules = ["KNP1-ALLOW-UNLISTED"]
+rationale = "kernel-allowlist.toml lists no third-party crate, so derive_builder, enum_dispatch, itertools, lazy_static and thiserror are replaced by hand-written code; the mutable global infinity bound (lazy_static plus an atomic) becomes a constant. fid-num is the only dependency."
+
+[[patches]]
+id = "0008"
+file = "patches/0008-syntax-scan-source.patch"
+rules = ["KNP1-ENV", "KNP1-SIMD"]
+rationale = "The KNP-1 syntax scan fails closed on what it cannot classify (KNP1-PARSE and KNP1-PARSE-RESOLVE, which this schema cannot name): non-ASCII identifiers, two-segment super/crate imports, macro metavariables in callee position and the #[default] attribute. The csc module named core made its glob re-export read as std core (KNP1-ENV, KNP1-SIMD). After this patch the scan reports no finding in the crate."
+
+[[patches]]
+id = "0009"
+file = "patches/0009-licence-notice.patch"
+rules = ["licence-notice"]
+rationale = "Apache-2.0 section 4(b) asks that modified files carry prominent notices that they were changed: every file of the crate that differs from upstream or is new starts with the two-line notice \"Modified from Clarabel 0.11.1 by Metrology Maven; see vendor/fid-clarabel/patches/\", and README.md starts with a fork notice. Comments only; no code changes. Reason class licence-notice by maintainer decision (KRN.SOLV.CONIC.PATCH review)."

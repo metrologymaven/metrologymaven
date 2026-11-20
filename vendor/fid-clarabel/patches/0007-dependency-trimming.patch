@@ -1,0 +1,1171 @@
+Patch 0007 (dependency-trimming) of fid-clarabel, spec node KRN.SOLV.CONIC.PATCH.
+
+Remove every third-party dependency: derive_builder (hand-written Default), enum_dispatch (hand-written match dispatch), itertools (std zip), lazy_static (the infinity bound becomes a constant) and thiserror (hand-written Display and Error).
+
+Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
+
+diff --git a/Cargo.toml b/Cargo.toml
+index 1efe212..420eb24 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -14,13 +14,9 @@ license = "Apache-2.0"
+ publish = false
+ 
+ [dependencies]
++# The only dependency (KNP-1 kernel graph; patch 0007 removed every third-party crate).
+ # KNP-1 transcendentals, total-order min/max and fixed-order reductions (KRN.NUM.FN, KRN.NUM.RED).
+ fid-num = { path = "../../../crates/fid-num" }
+-derive_builder = "0.11"
+-enum_dispatch = "0.3.8"
+-itertools = "0.11"
+-lazy_static = "1.4"
+-thiserror = "1.0"
+ 
+ [lib]
+ # Upstream's doc examples are not maintained in this fork (they name the `clarabel` crate and
+diff --git a/src/algebra/error_types.rs b/src/algebra/error_types.rs
+index 7000449..8e6b563 100644
+--- a/src/algebra/error_types.rs
++++ b/src/algebra/error_types.rs
+@@ -1,47 +1,80 @@
+-use thiserror::Error;
+-
+ /// Error type returned by matrix concatenation operations.
+-#[derive(Error, Debug)]
++#[derive(Debug)]
+ pub enum MatrixConcatenationError {
+-    #[error("Incompatible dimensions")]
+     /// Indicates inputs have incompatible dimension
+     IncompatibleDimension,
+ }
+ 
+-#[derive(Error, Debug)]
++impl std::fmt::Display for MatrixConcatenationError {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        match self {
++            MatrixConcatenationError::IncompatibleDimension => write!(f, "Incompatible dimensions"),
++        }
++    }
++}
++
++impl std::error::Error for MatrixConcatenationError {}
++
++#[derive(Debug)]
+ /// Error type returned by sparse matrix assembly operations.
+ pub enum SparseFormatError {
+     /// Matrix dimension fields and/or array lengths are incompatible
+-    #[error("Matrix dimension fields and/or array lengths are incompatible")]
+     IncompatibleDimension,
+     /// Data is not sorted by row index within each column
+-    #[error("Data is not sorted by row index within each column")]
+     BadRowOrdering,
+-    #[error("Row value exceeds the matrix row dimension")]
+     /// Row value exceeds the matrix row dimension
+     BadRowval,
+-    #[error("Bad column pointer values")]
+     /// Matrix column pointer values are defective
+     BadColptr,
+-    #[error("sparsity pattern mismatch")]
+     /// Operation on matrices that have mismatching sparsity patterns
+     SparsityMismatch,
+ }
+ 
++impl std::fmt::Display for SparseFormatError {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        match self {
++            SparseFormatError::IncompatibleDimension => write!(
++                f,
++                "Matrix dimension fields and/or array lengths are incompatible"
++            ),
++            SparseFormatError::BadRowOrdering => {
++                write!(f, "Data is not sorted by row index within each column")
++            }
++            SparseFormatError::BadRowval => write!(f, "Row value exceeds the matrix row dimension"),
++            SparseFormatError::BadColptr => write!(f, "Bad column pointer values"),
++            SparseFormatError::SparsityMismatch => write!(f, "sparsity pattern mismatch"),
++        }
++    }
++}
++
++impl std::error::Error for SparseFormatError {}
++
+ /// Error type returned by BLAS-like dense factorization routines.  Errors
+ /// return the internal BLAS error codes.
+ #[allow(clippy::upper_case_acronyms)]
+ #[allow(dead_code)]
+-#[derive(Error, Debug)]
++#[derive(Debug)]
+ pub(crate) enum DenseFactorizationError {
+-    #[error("Matrix dimension fields and/or array lengths are incompatible")]
+     IncompatibleDimension,
+-    #[error("Eigendecomposition error")]
+     Eigen(i32),
+-    #[error("SVD error")]
+     SVD(i32),
+-    #[error("Cholesky error")]
+     Cholesky(i32),
+-    #[error("LU error")]
+     LU(i32),
+ }
++
++impl std::fmt::Display for DenseFactorizationError {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        match self {
++            DenseFactorizationError::IncompatibleDimension => write!(
++                f,
++                "Matrix dimension fields and/or array lengths are incompatible"
++            ),
++            DenseFactorizationError::Eigen(_) => write!(f, "Eigendecomposition error"),
++            DenseFactorizationError::SVD(_) => write!(f, "SVD error"),
++            DenseFactorizationError::Cholesky(_) => write!(f, "Cholesky error"),
++            DenseFactorizationError::LU(_) => write!(f, "LU error"),
++        }
++    }
++}
++
++impl std::error::Error for DenseFactorizationError {}
+diff --git a/src/algebra/vecmath.rs b/src/algebra/vecmath.rs
+index a26caa6..7735641 100644
+--- a/src/algebra/vecmath.rs
++++ b/src/algebra/vecmath.rs
+@@ -2,7 +2,6 @@ use super::{sq_root, tmax, tmin, AsFloatT, FloatT, ScalarMath, VectorMath};
+ use crate::algebra::T;
+ use fid_num::red;
+ use fid_num::NumError;
+-use itertools::izip;
+ use std::iter::zip;
+ 
+ // KNP-1 (patch 0005): every sum, dot product and 2-norm of the solver goes through
+@@ -104,7 +103,7 @@ impl VectorMath for [T] {
+ 
+         let mut si = Vec::with_capacity(s.len());
+         let mut zi = Vec::with_capacity(z.len());
+-        for (&s, &ds, &z, &dz) in izip!(s, ds, z, dz) {
++        for ((&s, &ds), (&z, &dz)) in zip(zip(s, ds), zip(z, dz)) {
+             si.push(s + α * ds);
+             zi.push(z + α * dz);
+         }
+diff --git a/src/qdldl/qdldl.rs b/src/qdldl/qdldl.rs
+index c441f12..568a37c 100644
+--- a/src/qdldl/qdldl.rs
++++ b/src/qdldl/qdldl.rs
+@@ -1,69 +1,85 @@
+ #![allow(non_snake_case)]
+ use crate::algebra::*;
+ use core::cmp::{max, min};
+-use derive_builder::Builder;
+ use std::collections::BTreeSet;
+ use std::iter::zip;
+-use thiserror::Error;
+ 
+ /// Error codes returnable from [`QDLDLFactorisation`](QDLDLFactorisation) factor operations
+-#[derive(Error, Debug)]
++#[derive(Debug)]
+ pub enum QDLDLError {
+-    #[error("Matrix dimension fields are incompatible")]
+     /// Matrix dimension fields are incompatible
+     IncompatibleDimension,
+-    #[error("Matrix has a zero column")]
+     /// Matrix has a zero column
+     EmptyColumn,
+-    #[error("Matrix is not upper triangular")]
+     /// Matrix is not upper triangular
+     NotUpperTriangular,
+     /// Matrix factorization produced a zero pivot
+-    #[error("Matrix factorization produced a zero pivot")]
+     ZeroPivot,
+-    #[error("Invalid permutation vector")]
+     /// Invalid permutation vector supplied
+     InvalidPermutation,
+-    #[error("Matrix exceeds the size budget of the minimum-degree ordering")]
+     /// Matrix exceeds [`MAX_ORDERING_DIM`], [`MAX_ORDERING_NNZ`] or [`MAX_ORDERING_FILL`]
+     OrderingTooLarge,
+-    #[error("Matrix sparsity pattern is malformed")]
+     /// Column pointers or row indices that do not describe a valid pattern
+     InvalidPattern,
+ }
+ 
+-#[derive(Builder, Debug, Clone)]
++impl std::fmt::Display for QDLDLError {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        match self {
++            QDLDLError::IncompatibleDimension => {
++                write!(f, "Matrix dimension fields are incompatible")
++            }
++            QDLDLError::EmptyColumn => write!(f, "Matrix has a zero column"),
++            QDLDLError::NotUpperTriangular => write!(f, "Matrix is not upper triangular"),
++            QDLDLError::ZeroPivot => write!(f, "Matrix factorization produced a zero pivot"),
++            QDLDLError::InvalidPermutation => write!(f, "Invalid permutation vector"),
++            QDLDLError::InvalidPattern => write!(f, "Matrix sparsity pattern is malformed"),
++            QDLDLError::OrderingTooLarge => {
++                write!(
++                    f,
++                    "Matrix exceeds the size budget of the minimum-degree ordering"
++                )
++            }
++        }
++    }
++}
++
++impl std::error::Error for QDLDLError {}
++
++#[derive(Debug, Clone)]
+ #[allow(missing_docs)]
+ /// Required settings for [`QDLDLFactorisation`](QDLDLFactorisation)
+ pub struct QDLDLSettings {
+     /// optional user-supplied custom permutation vector for the matrix
+-    #[builder(default = "None", setter(strip_option))]
+     pub perm: Option<Vec<usize>>,
+ 
+     /// Logical factorisation only, no numerical factorisation
+-    #[builder(default = "false")]
+     pub logical: bool,
+ 
+     /// optional user-supplied signs of the diagonal elements of D in LDL^T
+-    #[builder(default = "None", setter(strip_option))]
+     pub Dsigns: Option<Vec<i8>>,
+ 
+     /// Enable regularization during factorisation
+-    #[builder(default = "true")]
+     pub regularize_enable: bool,
+ 
+     /// Regularization epsilon parameter
+-    #[builder(default = "(1e-12).as_T()")]
+     pub regularize_eps: T,
+ 
+     /// Regularization delta parameter
+-    #[builder(default = "(1e-7).as_T()")]
+     pub regularize_delta: T,
+ }
+ 
+ impl Default for QDLDLSettings {
+     fn default() -> QDLDLSettings {
+-        QDLDLSettingsBuilder::default().build().unwrap()
++        // (KNP-1, patch 0007: hand-written defaults; upstream used derive_builder)
++        QDLDLSettings {
++            perm: None,
++            logical: false,
++            Dsigns: None,
++            regularize_enable: true,
++            regularize_eps: (1e-12).as_T(),
++            regularize_delta: (1e-7).as_T(),
++        }
+     }
+ }
+ 
+diff --git a/src/solver/core/cones/mod.rs b/src/solver/core/cones/mod.rs
+index 3ee18e6..0f5eeb8 100644
+--- a/src/solver/core/cones/mod.rs
++++ b/src/solver/core/cones/mod.rs
+@@ -3,7 +3,6 @@
+ use crate::algebra::FloatT;
+ use crate::algebra::T;
+ use crate::solver::{core::ScalingStrategy, CoreSettings};
+-use enum_dispatch::*;
+ 
+ // the supported cone wrapper type for primitives
+ // and the composite cone
+@@ -31,7 +30,6 @@ pub enum PrimalOrDualCone {
+     DualCone,
+ }
+ 
+-#[enum_dispatch]
+ pub trait Cone {
+     // functions relating to basic sizing
+     fn degree(&self) -> usize;
+diff --git a/src/solver/core/cones/nonnegativecone.rs b/src/solver/core/cones/nonnegativecone.rs
+index ae49f27..e556a1b 100644
+--- a/src/solver/core/cones/nonnegativecone.rs
++++ b/src/solver/core/cones/nonnegativecone.rs
+@@ -1,6 +1,5 @@
+ use super::*;
+ use crate::algebra::*;
+-use itertools::izip;
+ use std::iter::zip;
+ 
+ // -------------------------------------
+@@ -75,7 +74,7 @@ impl Cone for NonnegativeCone {
+         _μ: T,
+         _scaling_strategy: ScalingStrategy,
+     ) -> bool {
+-        for (λ, w, s, z) in izip!(&mut self.λ, &mut self.w, s, z) {
++        for ((λ, w), (s, z)) in zip(zip(&mut self.λ, &mut self.w), zip(s, z)) {
+             *λ = sq_root((*s) * (*z));
+             *w = sq_root((*s) / (*z));
+         }
+@@ -155,7 +154,7 @@ impl Cone for NonnegativeCone {
+         assert_eq!(dz.len(), z.len());
+         assert_eq!(ds.len(), s.len());
+         let mut barrier = T::zero();
+-        for (&s, &ds, &z, &dz) in izip!(s, ds, z, dz) {
++        for ((&s, &ds), (&z, &dz)) in zip(zip(s, ds), zip(z, dz)) {
+             let si = s + α * ds;
+             let zi = z + α * dz;
+             barrier -= (si * zi).logsafe();
+diff --git a/src/solver/core/cones/socone.rs b/src/solver/core/cones/socone.rs
+index b1f67ec..8dc2a66 100644
+--- a/src/solver/core/cones/socone.rs
++++ b/src/solver/core/cones/socone.rs
+@@ -1,6 +1,5 @@
+ use super::*;
+ use crate::algebra::*;
+-use itertools::izip;
+ 
+ // -------------------------------------
+ // Second order Cone
+@@ -271,7 +270,9 @@ impl Cone for SecondOrderCone {
+         out.scale(c / resz);
+ 
+         out[0] += self.η * w1ds1;
+-        for (outi, &dsi, &wi) in izip!(out[1..].iter_mut(), &ds[1..], &self.w[1..]) {
++        for (outi, (&dsi, &wi)) in
++            std::iter::zip(out[1..].iter_mut(), std::iter::zip(&ds[1..], &self.w[1..]))
++        {
+             *outi += self.η * (dsi + w1ds1 / (T::one() + self.w[0]) * wi);
+         }
+ 
+diff --git a/src/solver/core/cones/supportedcone.rs b/src/solver/core/cones/supportedcone.rs
+index a277fec..6ecf6e2 100644
+--- a/src/solver/core/cones/supportedcone.rs
++++ b/src/solver/core/cones/supportedcone.rs
+@@ -109,22 +109,189 @@ impl SupportedConeT {
+ 
+ // -------------------------------------
+ // Here we make a corresponding internal SupportedCone type that
+-// uses enum_dispatch to allow for static dispatching against
+-// all of our internal cone types
++// dispatches statically against all of our internal cone types
+ // -------------------------------------
+ 
+ #[allow(clippy::enum_variant_names)]
+-#[enum_dispatch(Cone)]
+ pub enum SupportedCone {
+     ZeroCone(ZeroCone),
+     NonnegativeCone(NonnegativeCone),
+     SecondOrderCone(SecondOrderCone),
+ }
+ 
++// KNP-1 (patch 0007): hand-written static dispatch; upstream used enum_dispatch.
++impl Cone for SupportedCone {
++    fn degree(&self) -> usize {
++        match self {
++            SupportedCone::ZeroCone(c) => c.degree(),
++            SupportedCone::NonnegativeCone(c) => c.degree(),
++            SupportedCone::SecondOrderCone(c) => c.degree(),
++        }
++    }
++    fn numel(&self) -> usize {
++        match self {
++            SupportedCone::ZeroCone(c) => c.numel(),
++            SupportedCone::NonnegativeCone(c) => c.numel(),
++            SupportedCone::SecondOrderCone(c) => c.numel(),
++        }
++    }
++    fn is_sparse_expandable(&self) -> bool {
++        match self {
++            SupportedCone::ZeroCone(c) => c.is_sparse_expandable(),
++            SupportedCone::NonnegativeCone(c) => c.is_sparse_expandable(),
++            SupportedCone::SecondOrderCone(c) => c.is_sparse_expandable(),
++        }
++    }
++    fn is_symmetric(&self) -> bool {
++        match self {
++            SupportedCone::ZeroCone(c) => c.is_symmetric(),
++            SupportedCone::NonnegativeCone(c) => c.is_symmetric(),
++            SupportedCone::SecondOrderCone(c) => c.is_symmetric(),
++        }
++    }
++    fn allows_primal_dual_scaling(&self) -> bool {
++        match self {
++            SupportedCone::ZeroCone(c) => c.allows_primal_dual_scaling(),
++            SupportedCone::NonnegativeCone(c) => c.allows_primal_dual_scaling(),
++            SupportedCone::SecondOrderCone(c) => c.allows_primal_dual_scaling(),
++        }
++    }
++    fn rectify_equilibration(&self, δ: &mut [T], e: &[T]) -> bool {
++        match self {
++            SupportedCone::ZeroCone(c) => c.rectify_equilibration(δ, e),
++            SupportedCone::NonnegativeCone(c) => c.rectify_equilibration(δ, e),
++            SupportedCone::SecondOrderCone(c) => c.rectify_equilibration(δ, e),
++        }
++    }
++    fn margins(&mut self, z: &mut [T], pd: PrimalOrDualCone) -> (T, T) {
++        match self {
++            SupportedCone::ZeroCone(c) => c.margins(z, pd),
++            SupportedCone::NonnegativeCone(c) => c.margins(z, pd),
++            SupportedCone::SecondOrderCone(c) => c.margins(z, pd),
++        }
++    }
++    fn scaled_unit_shift(&self, z: &mut [T], α: T, pd: PrimalOrDualCone) {
++        match self {
++            SupportedCone::ZeroCone(c) => c.scaled_unit_shift(z, α, pd),
++            SupportedCone::NonnegativeCone(c) => c.scaled_unit_shift(z, α, pd),
++            SupportedCone::SecondOrderCone(c) => c.scaled_unit_shift(z, α, pd),
++        }
++    }
++    fn unit_initialization(&self, z: &mut [T], s: &mut [T]) {
++        match self {
++            SupportedCone::ZeroCone(c) => c.unit_initialization(z, s),
++            SupportedCone::NonnegativeCone(c) => c.unit_initialization(z, s),
++            SupportedCone::SecondOrderCone(c) => c.unit_initialization(z, s),
++        }
++    }
++    fn set_identity_scaling(&mut self) {
++        match self {
++            SupportedCone::ZeroCone(c) => c.set_identity_scaling(),
++            SupportedCone::NonnegativeCone(c) => c.set_identity_scaling(),
++            SupportedCone::SecondOrderCone(c) => c.set_identity_scaling(),
++        }
++    }
++    fn update_scaling(
++        &mut self,
++        s: &[T],
++        z: &[T],
++        μ: T,
++        scaling_strategy: ScalingStrategy,
++    ) -> bool {
++        match self {
++            SupportedCone::ZeroCone(c) => c.update_scaling(s, z, μ, scaling_strategy),
++            SupportedCone::NonnegativeCone(c) => c.update_scaling(s, z, μ, scaling_strategy),
++            SupportedCone::SecondOrderCone(c) => c.update_scaling(s, z, μ, scaling_strategy),
++        }
++    }
++    fn Hs_is_diagonal(&self) -> bool {
++        match self {
++            SupportedCone::ZeroCone(c) => c.Hs_is_diagonal(),
++            SupportedCone::NonnegativeCone(c) => c.Hs_is_diagonal(),
++            SupportedCone::SecondOrderCone(c) => c.Hs_is_diagonal(),
++        }
++    }
++    fn get_Hs(&self, Hsblock: &mut [T]) {
++        match self {
++            SupportedCone::ZeroCone(c) => c.get_Hs(Hsblock),
++            SupportedCone::NonnegativeCone(c) => c.get_Hs(Hsblock),
++            SupportedCone::SecondOrderCone(c) => c.get_Hs(Hsblock),
++        }
++    }
++    fn mul_Hs(&mut self, y: &mut [T], x: &[T], work: &mut [T]) {
++        match self {
++            SupportedCone::ZeroCone(c) => c.mul_Hs(y, x, work),
++            SupportedCone::NonnegativeCone(c) => c.mul_Hs(y, x, work),
++            SupportedCone::SecondOrderCone(c) => c.mul_Hs(y, x, work),
++        }
++    }
++    fn affine_ds(&self, ds: &mut [T], s: &[T]) {
++        match self {
++            SupportedCone::ZeroCone(c) => c.affine_ds(ds, s),
++            SupportedCone::NonnegativeCone(c) => c.affine_ds(ds, s),
++            SupportedCone::SecondOrderCone(c) => c.affine_ds(ds, s),
++        }
++    }
++    fn combined_ds_shift(&mut self, shift: &mut [T], step_z: &mut [T], step_s: &mut [T], σμ: T) {
++        match self {
++            SupportedCone::ZeroCone(c) => c.combined_ds_shift(shift, step_z, step_s, σμ),
++            SupportedCone::NonnegativeCone(c) => c.combined_ds_shift(shift, step_z, step_s, σμ),
++            SupportedCone::SecondOrderCone(c) => c.combined_ds_shift(shift, step_z, step_s, σμ),
++        }
++    }
++    fn Δs_from_Δz_offset(&mut self, out: &mut [T], ds: &[T], work: &mut [T], z: &[T]) {
++        match self {
++            SupportedCone::ZeroCone(c) => c.Δs_from_Δz_offset(out, ds, work, z),
++            SupportedCone::NonnegativeCone(c) => c.Δs_from_Δz_offset(out, ds, work, z),
++            SupportedCone::SecondOrderCone(c) => c.Δs_from_Δz_offset(out, ds, work, z),
++        }
++    }
++    fn step_length(
++        &mut self,
++        dz: &[T],
++        ds: &[T],
++        z: &[T],
++        s: &[T],
++        settings: &CoreSettings,
++        αmax: T,
++    ) -> (T, T) {
++        match self {
++            SupportedCone::ZeroCone(c) => c.step_length(dz, ds, z, s, settings, αmax),
++            SupportedCone::NonnegativeCone(c) => c.step_length(dz, ds, z, s, settings, αmax),
++            SupportedCone::SecondOrderCone(c) => c.step_length(dz, ds, z, s, settings, αmax),
++        }
++    }
++    fn compute_barrier(&mut self, z: &[T], s: &[T], dz: &[T], ds: &[T], α: T) -> T {
++        match self {
++            SupportedCone::ZeroCone(c) => c.compute_barrier(z, s, dz, ds, α),
++            SupportedCone::NonnegativeCone(c) => c.compute_barrier(z, s, dz, ds, α),
++            SupportedCone::SecondOrderCone(c) => c.compute_barrier(z, s, dz, ds, α),
++        }
++    }
++}
++
++impl From<ZeroCone> for SupportedCone {
++    fn from(c: ZeroCone) -> Self {
++        SupportedCone::ZeroCone(c)
++    }
++}
++
++impl From<NonnegativeCone> for SupportedCone {
++    fn from(c: NonnegativeCone) -> Self {
++        SupportedCone::NonnegativeCone(c)
++    }
++}
++
++impl From<SecondOrderCone> for SupportedCone {
++    fn from(c: SecondOrderCone) -> Self {
++        SupportedCone::SecondOrderCone(c)
++    }
++}
++
+ // -------------------------------------
+ // we need a tagging enum with no data fields to act
+ // as a bridge between the SupportedConeT API types and the
+-// internal SupportedCone enum_dispatch wrapper.   This enum
++// internal SupportedCone dispatch wrapper.   This enum
+ // has no data attached at all, so we can just convert to a u8.
+ // This would not be necessary if I could assign matching
+ // discriminants to both types, but that feature is not yet
+@@ -156,7 +323,7 @@ impl SupportedConeAsTag for SupportedConeT {
+     }
+ }
+ 
+-// internal enum_dispatch container.   Each of the (_) contains the cone data objects
++// internal dispatch container.   Each of the (_) contains the cone data objects
+ impl SupportedConeAsTag for SupportedCone {
+     fn as_tag(&self) -> SupportedConeTag {
+         match self {
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs b/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
+index 39cbb9d..db4e2b6 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/datamaps.rs
+@@ -2,14 +2,11 @@
+ 
+ use super::*;
+ use crate::solver::core::cones::*;
+-use enum_dispatch::*;
+-
+-#[enum_dispatch(SparseExpansionMapTrait)]
++// KNP-1 (patch 0007): hand-written dispatch below; upstream used enum_dispatch.
+ pub(crate) enum SparseExpansionMap {
+     SOCExpansionMap(SOCExpansionMap),
+ }
+ 
+-#[enum_dispatch(SparseExpansionConeTrait)]
+ pub(crate) enum SparseExpansionCone<'a> {
+     SecondOrderCone(&'a SecondOrderCone),
+ }
+@@ -23,7 +20,6 @@ impl SupportedCone {
+     }
+ }
+ 
+-#[enum_dispatch]
+ pub(crate) trait SparseExpansionMapTrait {
+     fn pdim(&self) -> usize;
+     fn nnz_vec(&self) -> usize;
+@@ -46,7 +42,6 @@ impl SparseExpansionMapTrait for Vec<SparseExpansionMap> {
+ type UpdateFcn = fn(&mut BoxedDirectLDLSolver, &mut CscMatrix, &[usize], &[T]) -> ();
+ type ScaleFcn = fn(&mut BoxedDirectLDLSolver, &mut CscMatrix, &[usize], T) -> ();
+ 
+-#[enum_dispatch]
+ pub(crate) trait SparseExpansionConeTrait {
+     fn expansion_map(&self) -> SparseExpansionMap;
+     fn csc_colcount_sparsecone(
+@@ -263,3 +258,71 @@ impl LDLDataMap {
+         }
+     }
+ }
++
++impl SparseExpansionMapTrait for SparseExpansionMap {
++    fn pdim(&self) -> usize {
++        match self {
++            SparseExpansionMap::SOCExpansionMap(m) => m.pdim(),
++        }
++    }
++    fn nnz_vec(&self) -> usize {
++        match self {
++            SparseExpansionMap::SOCExpansionMap(m) => m.nnz_vec(),
++        }
++    }
++    fn Dsigns(&self) -> &[i8] {
++        match self {
++            SparseExpansionMap::SOCExpansionMap(m) => m.Dsigns(),
++        }
++    }
++}
++
++impl SparseExpansionConeTrait for SparseExpansionCone<'_> {
++    fn expansion_map(&self) -> SparseExpansionMap {
++        match self {
++            SparseExpansionCone::SecondOrderCone(c) => c.expansion_map(),
++        }
++    }
++    fn csc_colcount_sparsecone(
++        &self,
++        map: &SparseExpansionMap,
++        K: &mut CscMatrix,
++        row: usize,
++        col: usize,
++        shape: MatrixTriangle,
++    ) {
++        match self {
++            SparseExpansionCone::SecondOrderCone(c) => {
++                c.csc_colcount_sparsecone(map, K, row, col, shape)
++            }
++        }
++    }
++    fn csc_fill_sparsecone(
++        &self,
++        map: &mut SparseExpansionMap,
++        K: &mut CscMatrix,
++        row: usize,
++        col: usize,
++        shape: MatrixTriangle,
++    ) {
++        match self {
++            SparseExpansionCone::SecondOrderCone(c) => {
++                c.csc_fill_sparsecone(map, K, row, col, shape)
++            }
++        }
++    }
++    fn csc_update_sparsecone(
++        &self,
++        map: &SparseExpansionMap,
++        ldl: &mut BoxedDirectLDLSolver,
++        K: &mut CscMatrix,
++        updateFcn: UpdateFcn,
++        scaleFcn: ScaleFcn,
++    ) {
++        match self {
++            SparseExpansionCone::SecondOrderCone(c) => {
++                c.csc_update_sparsecone(map, ldl, K, updateFcn, scaleFcn)
++            }
++        }
++    }
++}
+diff --git a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
+index 847c4a2..94b8d0a 100644
+--- a/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
++++ b/src/solver/core/kktsolvers/direct/quasidef/ldlsolvers/qdldl.rs
+@@ -24,15 +24,14 @@ impl QDLDLDirectLDLSolver {
+ 
+         //make a logical factorization to determine memory allocations
+ 
+-        let mut opts = QDLDLSettingsBuilder::default()
+-            .logical(true) //allocate memory only on init
+-            .Dsigns(Dsigns.to_vec())
+-            .regularize_enable(true)
+-            .regularize_eps(settings.dynamic_regularization_eps)
+-            .regularize_delta(settings.dynamic_regularization_delta)
+-            .build()
+-            .unwrap();
+-        opts.perm = perm;
++        let opts = QDLDLSettings {
++            logical: true, //allocate memory only on init
++            Dsigns: Some(Dsigns.to_vec()),
++            regularize_enable: true,
++            regularize_eps: settings.dynamic_regularization_eps,
++            regularize_delta: settings.dynamic_regularization_delta,
++            perm,
++        };
+ 
+         let factors = QDLDLFactorisation::new(KKT, Some(opts)).ok();
+ 
+diff --git a/src/solver/core/settings.rs b/src/solver/core/settings.rs
+index 069120c..f15c462 100644
+--- a/src/solver/core/settings.rs
++++ b/src/solver/core/settings.rs
+@@ -1,5 +1,4 @@
+ use crate::solver::implementations::default::DefaultSettings;
+-use thiserror::Error;
+ 
+ /// Solver general core settings are the same as in the default solver.
+ ///
+@@ -8,19 +7,32 @@ use thiserror::Error;
+ ///
+ pub type CoreSettings = DefaultSettings;
+ 
+-#[derive(Error, Debug)]
++#[derive(Debug)]
+ /// Error type returned by settings validation
+ pub enum SettingsError {
+     /// An error attributable to one of the fields
+-    #[error("Bad value for field \"{0}\"")]
+     BadFieldValue(&'static str),
+     /// An error thrown when immutable settings are modified within the solver
+-    #[error("Attempt to modify immutable setting \"{0}\"")]
+     ImmutableSetting(&'static str),
+     /// a subsolver error of some kind (e.g. not found, no license)
+-    #[error("Problem with {solver} solver ({problem})")]
+     LinearSolverProblem {
+         solver: &'static str,
+         problem: &'static str,
+     },
+ }
++
++impl std::fmt::Display for SettingsError {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        match self {
++            SettingsError::BadFieldValue(x) => write!(f, "Bad value for field \"{x}\""),
++            SettingsError::ImmutableSetting(x) => {
++                write!(f, "Attempt to modify immutable setting \"{x}\"")
++            }
++            SettingsError::LinearSolverProblem { solver, problem } => {
++                write!(f, "Problem with {solver} solver ({problem})")
++            }
++        }
++    }
++}
++
++impl std::error::Error for SettingsError {}
+diff --git a/src/solver/implementations/default/data_updating.rs b/src/solver/implementations/default/data_updating.rs
+index cfade4b..04e2b71 100644
+--- a/src/solver/implementations/default/data_updating.rs
++++ b/src/solver/implementations/default/data_updating.rs
+@@ -3,25 +3,46 @@ use crate::algebra::*;
+ use crate::solver::DefaultSolver;
+ use core::iter::{zip, Zip};
+ use core::slice::Iter;
+-use thiserror::Error;
+ 
+ /// Error type returned by user data update utilities, e.g. [`check_format`](crate::algebra::CscMatrix::check_format) utility.
+-#[derive(Error, Debug)]
++#[derive(Debug)]
+ pub enum DataUpdateError {
+-    #[error("Data updates are not allowed when presolver is active")]
+     /// Data updates are not allowed when presolver is active
+     PresolveIsActive,
+-    #[error("Data updates are not allowed if structural zeros have been dropped")]
+     /// Data updates are not allowed if structural zeros have been dropped
+     DroppedStructuralZeros,
+-    #[error("Data formatting error")]
+     /// Data formatting error.   See [`SparseFormatError`]
+-    BadFormat(#[from] SparseFormatError),
+-    #[error("Data updates must be finite (no NaN or infinity)")]
++    BadFormat(SparseFormatError),
+     /// Data updates must be finite (KNP-1, patch 0003)
+     NonFiniteData,
+ }
+ 
++impl std::fmt::Display for DataUpdateError {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        match self {
++            DataUpdateError::PresolveIsActive => {
++                write!(f, "Data updates are not allowed when presolver is active")
++            }
++            DataUpdateError::DroppedStructuralZeros => write!(
++                f,
++                "Data updates are not allowed if structural zeros have been dropped"
++            ),
++            DataUpdateError::BadFormat(_) => write!(f, "Data formatting error"),
++            DataUpdateError::NonFiniteData => {
++                write!(f, "Data updates must be finite (no NaN or infinity)")
++            }
++        }
++    }
++}
++
++impl std::error::Error for DataUpdateError {}
++
++impl From<SparseFormatError> for DataUpdateError {
++    fn from(e: SparseFormatError) -> Self {
++        DataUpdateError::BadFormat(e)
++    }
++}
++
+ /// Trait for updating problem data matrices (`P` and `A`) from various data types
+ pub trait MatrixProblemDataUpdate {
+     /// True when every new value is finite (checked before any update; patch 0003)
+diff --git a/src/solver/implementations/default/problemdata.rs b/src/solver/implementations/default/problemdata.rs
+index 17fc34f..461c6d7 100644
+--- a/src/solver/implementations/default/problemdata.rs
++++ b/src/solver/implementations/default/problemdata.rs
+@@ -1,5 +1,4 @@
+ #![allow(non_snake_case)]
+-use itertools::izip;
+ 
+ use super::*;
+ use crate::algebra::*;
+@@ -216,10 +215,10 @@ impl ProblemData for DefaultProblemData {
+             ework.rsqrt();
+ 
+             // bound the cumulative scaling
+-            for (dwork, &d) in izip!(dwork.iter_mut(), d.iter()) {
++            for (dwork, &d) in std::iter::zip(dwork.iter_mut(), d.iter()) {
+                 *dwork = T::clip(dwork, scale_min / d, scale_max / d);
+             }
+-            for (ework, &e) in izip!(ework.iter_mut(), e.iter()) {
++            for (ework, &e) in std::iter::zip(ework.iter_mut(), e.iter()) {
+                 *ework = T::clip(ework, scale_min / e, scale_max / e);
+             }
+ 
+diff --git a/src/solver/implementations/default/settings.rs b/src/solver/implementations/default/settings.rs
+index 507b7f7..ed9b806 100644
+--- a/src/solver/implementations/default/settings.rs
++++ b/src/solver/implementations/default/settings.rs
+@@ -1,41 +1,31 @@
+ use crate::solver::core::traits::Settings;
+ use crate::{algebra::*, solver::core::SettingsError};
+-use derive_builder::Builder;
+ 
+ /// Standard-form solver type implementing the [`Settings`](crate::solver::core::traits::Settings) trait
+-#[derive(Builder, Debug, Clone)]
+-#[builder(build_fn(validate = "Self::validate"))]
++#[derive(Debug, Clone)]
+ pub struct DefaultSettings {
+     ///maximum number of iterations
+-    #[builder(default = "200")]
+     pub max_iter: u32,
+ 
+     ///maximum interior point step length
+-    #[builder(default = "(0.99).as_T()")]
+     pub max_step_fraction: T,
+ 
+     ///absolute duality gap tolerance
+-    #[builder(default = "(1e-8).as_T()")]
+     pub tol_gap_abs: T,
+ 
+     ///relative duality gap tolerance
+-    #[builder(default = "(1e-8).as_T()")]
+     pub tol_gap_rel: T,
+ 
+     ///feasibility check tolerance (primal and dual)
+-    #[builder(default = "(1e-8).as_T()")]
+     pub tol_feas: T,
+ 
+     ///absolute infeasibility tolerance (primal and dual)
+-    #[builder(default = "(1e-8).as_T()")]
+     pub tol_infeas_abs: T,
+ 
+     ///relative infeasibility tolerance (primal and dual)
+-    #[builder(default = "(1e-8).as_T()")]
+     pub tol_infeas_rel: T,
+ 
+     ///κ/τ tolerance
+-    #[builder(default = "(1e-6).as_T()")]
+     pub tol_ktratio: T,
+ 
+     ///reduced absolute duality gap tolerance
+@@ -43,111 +33,84 @@ pub struct DefaultSettings {
+     // we are checking that we are this far into the interior of
+     // an inequality when checking.   Smaller for this value means
+     // "less margin required"
+-    #[builder(default = "(5e-5).as_T()")]
+     pub reduced_tol_gap_abs: T,
+ 
+     ///reduced relative duality gap tolerance
+-    #[builder(default = "(5e-5).as_T()")]
+     pub reduced_tol_gap_rel: T,
+ 
+     ///reduced feasibility check tolerance (primal and dual)
+-    #[builder(default = "(1e-4).as_T()")]
+     pub reduced_tol_feas: T,
+ 
+     ///reduced absolute infeasibility tolerance (primal and dual)
+-    #[builder(default = "(5e-12).as_T()")]
+     pub reduced_tol_infeas_abs: T,
+ 
+     ///reduced relative infeasibility tolerance (primal and dual)
+-    #[builder(default = "(5e-5).as_T()")]
+     pub reduced_tol_infeas_rel: T,
+ 
+     ///reduced κ/τ tolerance
+-    #[builder(default = "(1e-4).as_T()")]
+     pub reduced_tol_ktratio: T,
+ 
+     ///enable data equilibration pre-scaling
+-    #[builder(default = "true")]
+     pub equilibrate_enable: bool,
+ 
+     /// maximum equilibration scaling iterations
+-    #[builder(default = "10")]
+     pub equilibrate_max_iter: u32,
+ 
+     ///minimum equilibration scaling allowed
+-    #[builder(default = "(1e-4).as_T()")]
+     pub equilibrate_min_scaling: T,
+ 
+     ///maximum equilibration scaling allowed
+-    #[builder(default = "(1e+4).as_T()")]
+     pub equilibrate_max_scaling: T,
+ 
+     ///line search backtracking
+-    #[builder(default = "(0.8).as_T()")]
+     pub linesearch_backtrack_step: T,
+ 
+     ///minimum step size allowed for asymmetric cones with PrimalDual scaling
+-    #[builder(default = "(1e-1).as_T()")]
+     pub min_switch_step_length: T,
+ 
+     ///minimum step size allowed for symmetric cones & asymmetric cones with Dual scaling
+-    #[builder(default = "(1e-4).as_T()")]
+     pub min_terminate_step_length: T,
+ 
+     ///use a direct linear solver method (required true)
+-    #[builder(default = "true")]
+     pub direct_kkt_solver: bool,
+ 
+     ///direct linear solver method ("qdldl" or "auto")
+-    #[builder(default = r#""auto".to_string()"#)]
+     pub direct_solve_method: String,
+ 
+     ///enable KKT static regularization
+-    #[builder(default = "true")]
+     pub static_regularization_enable: bool,
+ 
+     ///KKT static regularization parameter
+-    #[builder(default = "(1e-8).as_T()")]
+     pub static_regularization_constant: T,
+ 
+     ///additional regularization parameter w.r.t. the maximum abs diagonal term
+-    #[builder(default = "T::epsilon()*T::epsilon()")]
+     pub static_regularization_proportional: T,
+ 
+     ///enable KKT dynamic regularization
+-    #[builder(default = "true")]
+     pub dynamic_regularization_enable: bool,
+ 
+     ///KKT dynamic regularization threshold
+-    #[builder(default = "(1e-13).as_T()")]
+     pub dynamic_regularization_eps: T,
+ 
+     ///KKT dynamic regularization shift
+-    #[builder(default = "(2e-7).as_T()")]
+     pub dynamic_regularization_delta: T,
+ 
+     ///KKT direct solve with iterative refinement
+-    #[builder(default = "true")]
+     pub iterative_refinement_enable: bool,
+ 
+     ///iterative refinement relative tolerance
+-    #[builder(default = "(1e-13).as_T()")]
+     pub iterative_refinement_reltol: T,
+ 
+     ///iterative refinement absolute tolerance
+-    #[builder(default = "(1e-12).as_T()")]
+     pub iterative_refinement_abstol: T,
+ 
+     ///iterative refinement maximum iterations
+-    #[builder(default = "10")]
+     pub iterative_refinement_max_iter: u32,
+ 
+     ///iterative refinement stalling tolerance
+-    #[builder(default = "(5.0).as_T()")]
+     pub iterative_refinement_stop_ratio: T,
+ 
+     ///enable presolve constraint reduction
+-    #[builder(default = "true")]
+     pub presolve_enable: bool,
+ 
+     ///explicitly drop structural zeros from sparse data inputs
+@@ -155,13 +118,50 @@ pub struct DefaultSettings {
+     ///See also ['dropzeros'][crate::algebra::CscMatrix::dropzeros]
+     ///for dropping structural zeros before passing to the solver
+     ///
+-    #[builder(default = "false")]
+     pub input_sparse_dropzeros: bool,
+ }
+ 
+ impl Default for DefaultSettings {
+     fn default() -> DefaultSettings {
+-        DefaultSettingsBuilder::default().build().unwrap()
++        // (KNP-1, patch 0007: hand-written defaults; upstream used derive_builder)
++        DefaultSettings {
++            max_iter: 200,
++            max_step_fraction: (0.99).as_T(),
++            tol_gap_abs: (1e-8).as_T(),
++            tol_gap_rel: (1e-8).as_T(),
++            tol_feas: (1e-8).as_T(),
++            tol_infeas_abs: (1e-8).as_T(),
++            tol_infeas_rel: (1e-8).as_T(),
++            tol_ktratio: (1e-6).as_T(),
++            reduced_tol_gap_abs: (5e-5).as_T(),
++            reduced_tol_gap_rel: (5e-5).as_T(),
++            reduced_tol_feas: (1e-4).as_T(),
++            reduced_tol_infeas_abs: (5e-12).as_T(),
++            reduced_tol_infeas_rel: (5e-5).as_T(),
++            reduced_tol_ktratio: (1e-4).as_T(),
++            equilibrate_enable: true,
++            equilibrate_max_iter: 10,
++            equilibrate_min_scaling: (1e-4).as_T(),
++            equilibrate_max_scaling: (1e+4).as_T(),
++            linesearch_backtrack_step: (0.8).as_T(),
++            min_switch_step_length: (1e-1).as_T(),
++            min_terminate_step_length: (1e-4).as_T(),
++            direct_kkt_solver: true,
++            direct_solve_method: "auto".to_string(),
++            static_regularization_enable: true,
++            static_regularization_constant: (1e-8).as_T(),
++            static_regularization_proportional: T::epsilon() * T::epsilon(),
++            dynamic_regularization_enable: true,
++            dynamic_regularization_eps: (1e-13).as_T(),
++            dynamic_regularization_delta: (2e-7).as_T(),
++            iterative_refinement_enable: true,
++            iterative_refinement_reltol: (1e-13).as_T(),
++            iterative_refinement_abstol: (1e-12).as_T(),
++            iterative_refinement_max_iter: 10,
++            iterative_refinement_stop_ratio: (5.0).as_T(),
++            presolve_enable: true,
++            input_sparse_dropzeros: false,
++        }
+     }
+ }
+ 
+@@ -218,26 +218,6 @@ impl Settings for DefaultSettings {
+     }
+ }
+ 
+-// pre build checker (for auto-validation when using the builder)
+-
+-impl From<SettingsError> for DefaultSettingsBuilderError {
+-    fn from(e: SettingsError) -> Self {
+-        DefaultSettingsBuilderError::ValidationError(e.to_string())
+-    }
+-}
+-
+-/// Automatic pre-build settings validation
+-impl DefaultSettingsBuilder {
+-    /// check that the specified direct_solve_method is valid
+-    pub fn validate(&self) -> Result<(), SettingsError> {
+-        if let Some(ref direct_solve_method) = self.direct_solve_method {
+-            validate_direct_solve_method(direct_solve_method)?;
+-        }
+-
+-        Ok(())
+-    }
+-}
+-
+ // ---------------------------------------------------------
+ // individual validation functions go here
+ // ---------------------------------------------------------
+diff --git a/src/solver/implementations/default/solver.rs b/src/solver/implementations/default/solver.rs
+index 67ef79d..e04202e 100644
+--- a/src/solver/implementations/default/solver.rs
++++ b/src/solver/implementations/default/solver.rs
+@@ -6,7 +6,6 @@ use crate::solver::core::{
+     SettingsError, Solver,
+ };
+ use crate::solver::traits::Settings;
+-use thiserror::Error;
+ 
+ use crate::algebra::*;
+ 
+@@ -24,16 +23,31 @@ pub type DefaultSolver = Solver<
+ 
+ /// Error types returned by the DefaultSolver
+ 
+-#[derive(Error, Debug)]
++#[derive(Debug)]
+ /// Error type returned by settings validation
+ pub enum SolverError {
+     /// An error attributable to one of the fields
+-    #[error("Bad input data: {0}")]
+     BadInputData(&'static str),
+ 
+     /// Error from settings validation with details
+-    #[error("Bad settings: {0}")]
+-    SettingsError(#[from] SettingsError),
++    SettingsError(SettingsError),
++}
++
++impl std::fmt::Display for SolverError {
++    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
++        match self {
++            SolverError::BadInputData(x) => write!(f, "Bad input data: {x}"),
++            SolverError::SettingsError(x) => write!(f, "Bad settings: {x}"),
++        }
++    }
++}
++
++impl std::error::Error for SolverError {}
++
++impl From<SettingsError> for SolverError {
++    fn from(e: SettingsError) -> Self {
++        SolverError::SettingsError(e)
++    }
+ }
+ 
+ impl DefaultSolver {
+diff --git a/src/utils/atomic.rs b/src/utils/atomic.rs
+deleted file mode 100644
+index 74defd4..0000000
+--- a/src/utils/atomic.rs
++++ /dev/null
+@@ -1,27 +0,0 @@
+-// a rudimentary Atomic64 type for enabling safe-ish storing
+-// of module level configuration parameters, notably INFINITY.
+-//
+-// See: https://github.com/rust-lang/rust/issues/72353
+-
+-use std::sync::atomic::AtomicU64;
+-pub use std::sync::atomic::Ordering;
+-
+-pub struct AtomicF64 {
+-    storage: AtomicU64,
+-}
+-impl AtomicF64 {
+-    pub fn new(value: f64) -> Self {
+-        let as_u64 = value.to_bits();
+-        Self {
+-            storage: AtomicU64::new(as_u64),
+-        }
+-    }
+-    pub fn store(&self, value: f64, ordering: Ordering) {
+-        let as_u64 = value.to_bits();
+-        self.storage.store(as_u64, ordering);
+-    }
+-    pub fn load(&self, ordering: Ordering) -> f64 {
+-        let as_u64 = self.storage.load(ordering);
+-        f64::from_bits(as_u64)
+-    }
+-}
+diff --git a/src/utils/infbounds.rs b/src/utils/infbounds.rs
+index 10c4188..37d21ef 100644
+--- a/src/utils/infbounds.rs
++++ b/src/utils/infbounds.rs
+@@ -1,36 +1,15 @@
+-use crate::utils::atomic::{AtomicF64, Ordering};
+-use lazy_static::lazy_static;
+-
+ /// Constant indicating that an inequality bound is to be treated as infinite.
+-///   
++///
+ /// If the setting [`presolve_enable`](crate::solver::DefaultSettings::presolve_enable)
+ /// is `true`, any such constraints are removed.   Bounds for all other cones with
+ /// values greater than this are capped at this value.
+-/// A custom constant for this bound can be specified using [`set_infinity`].  
+-///
+-/// Setting the infinity bound to a custom constant applies at module level.
+ ///
++/// KNP-1 (patch 0007): upstream kept this bound in a mutable global (`lazy_static` and an
++/// atomic, with `set_infinity`/`default_infinity`); this fork fixes it at the default so
++/// that a solve depends on its arguments only.
+ pub const INFINITY_DEFAULT: f64 = crate::_INFINITY_DEFAULT;
+ 
+-lazy_static! {
+-    static ref INFINITY: AtomicF64 = AtomicF64::new(INFINITY_DEFAULT);
+-}
+-
+-/// Revert internal infinity bound to its default value.   The default is [`INFINITY_DEFAULT`]
+-///
+-/// See also: [`get_infinity`], [`set_infinity`]
+-pub fn default_infinity() {
+-    INFINITY.store(INFINITY_DEFAULT, Ordering::Relaxed);
+-}
+-/// Set the internal infinity bound to a new value.
+-///
+-/// See also: [`get_infinity`], [`default_infinity`]
+-pub fn set_infinity(v: f64) {
+-    INFINITY.store(v, Ordering::Relaxed);
+-}
+-/// Get the current value of the internal infinity bound.
+-///
+-/// See also: [`set_infinity`], [`default_infinity`]
++/// The internal infinity bound: always [`INFINITY_DEFAULT`] in this fork.
+ pub fn get_infinity() -> f64 {
+-    INFINITY.load(Ordering::Relaxed)
++    INFINITY_DEFAULT
+ }
+diff --git a/src/utils/mod.rs b/src/utils/mod.rs
+index 71be9ed..7dfc4ec 100644
+--- a/src/utils/mod.rs
++++ b/src/utils/mod.rs
+@@ -1,2 +1 @@
+-pub(crate) mod atomic;
+ pub(crate) mod infbounds;
