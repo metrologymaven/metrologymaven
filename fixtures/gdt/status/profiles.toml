@@ -1,0 +1,7 @@
+schema = "gdt-profiles/v1"
+
+[[profile]]
+id = "dp:asme-syn-2001@1.0.0#sha256:9c1b8a9129732fab23acc92e1e8c85ce15721c9c078440ebb6eaab397669ad38"
+sponsor_org = "org-9"
+state = "active"
+default = true

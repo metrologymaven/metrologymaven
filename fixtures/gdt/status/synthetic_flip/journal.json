@@ -1,0 +1,282 @@
+{
+ "entries": [
+  {
+   "command": "gdt.propose_dmt_row@1",
+   "hash": "sha256:af5e5567ec109a27cfaafe1de819ed57b0b438501187bc572da566affa0468aa",
+   "principal": {
+    "id": "author-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "author_kind": "human",
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "derived_from": null,
+    "event": "propose",
+    "from": null,
+    "key": "dmt:asme/flatness/none@1",
+    "provenance": "human",
+    "revision": "1",
+    "to": "draft"
+   },
+   "row": {
+    "actual_value": "av.synthetic.flatness@1",
+    "characteristic": "flatness",
+    "clauses": [
+     {
+      "clause": "4.2",
+      "designator": "syn-std-a",
+      "edition": "2001"
+     },
+     {
+      "clause": "7",
+      "designator": "syn-std-b",
+      "edition": "2010"
+     }
+    ],
+    "decision_rule_hint": "dr.synthetic.default@1",
+    "default_variant": "surface",
+    "dialect": "asme",
+    "editions": [
+     "syn-a-2001",
+     "syn-b-2010"
+    ],
+    "key": "dmt:asme/flatness/none@1",
+    "limitations": [],
+    "modifiers": [],
+    "notes": "Synthetic row for status register tests; not an interpretation of any standard.",
+    "ors_cases": [
+     "ors:synthetic/flatness.001"
+    ],
+    "review": {
+     "state": "draft"
+    },
+    "status": "supported",
+    "synthetic": true,
+    "variants": [
+     {
+      "steps": [
+       {
+        "alg": "syn.partition.whole_feature@0.1.0",
+        "kind": "partition",
+        "params": {}
+       },
+       {
+        "alg": "syn.extract.all_points@0.1.0",
+        "kind": "extraction",
+        "params": {
+         "min_points": "4"
+        }
+       },
+       {
+        "alg": "syn.assoc.min_zone@0.1.0",
+        "kind": "association",
+        "params": {
+         "constrained": true
+        }
+       },
+       {
+        "alg": "syn.eval.max_deviation@0.1.0",
+        "kind": "evaluation",
+        "params": {}
+       }
+      ],
+      "variant": "surface"
+     }
+    ]
+   },
+   "utc": "2026-11-20T09:00:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:f987517aea9ac0325cdc09efdf27c5606885da7eeae3e55d9c4e86413208e1ad",
+   "principal": {
+    "id": "rev-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "draft",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r1",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "under_review"
+   },
+   "utc": "2026-11-20T09:01:00Z"
+  },
+  {
+   "command": "gdt.review_dmt_row@1",
+   "hash": "sha256:fc17148de78d03d8d6346e13d4056fd6b5d302a6e0944f814b9144ef3bafa05d",
+   "principal": {
+    "id": "rev-two",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "attestations": [
+     {
+      "designator": "syn-std-a",
+      "edition": "2001",
+      "kind": "edition_held"
+     },
+     {
+      "designator": "syn-std-b",
+      "edition": "2010",
+      "kind": "edition_held"
+     }
+    ],
+    "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "event": "approve",
+    "from": "under_review",
+    "idr": null,
+    "key": "dmt:asme/flatness/none@1",
+    "reviewed_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+    "reviewer": "r2",
+    "revision": "1",
+    "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7",
+    "to": "signed_off"
+   },
+   "utc": "2026-11-20T09:02:00Z"
+  },
+  {
+   "command": "gdt.publish_defaults_profile@1",
+   "hash": "sha256:e8dd46277650194fbe963d15b76c80afdbd53e17f24984cc1f70ec00c4cbe97d",
+   "principal": {
+    "id": "author-one",
+    "kind": "human"
+   },
+   "record": {
+    "branch": "working",
+    "command": "gdt.publish_defaults_profile@1",
+    "file": "profile-syn.json",
+    "principal": "human",
+    "ref": "dp:asme-syn-2001@1.0.0#sha256:9c1b8a9129732fab23acc92e1e8c85ce15721c9c078440ebb6eaab397669ad38"
+   },
+   "utc": "2026-11-20T09:03:00Z"
+  },
+  {
+   "command": "gdt.publish_defaults_profile@1",
+   "hash": "sha256:9633f1744c75b6c6b0b310cd75f5e883a8e1e256206caf0f98ed2ced3c41787f",
+   "principal": {
+    "id": "agent-one",
+    "kind": "agent"
+   },
+   "record": {
+    "branch": "agent",
+    "command": "gdt.publish_defaults_profile@1",
+    "file": "profile-syn.json",
+    "principal": "agent",
+    "ref": "dp:asme-syn-2001@1.1.0#sha256:f76f35c9bdc498e4bec0e6cf7f70ca284db59f02fcddee3632d58f82740a34de"
+   },
+   "utc": "2026-11-20T09:04:00Z"
+  },
+  {
+   "command": "gdt.propose_dmt_row@1",
+   "hash": "sha256:278d4d7bd0af3f82d04b5ef286ca5d71bbaa82ab7b5fc4d926dd86ddb9c55a36",
+   "principal": {
+    "id": "author-one",
+    "kind": "human"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "author_kind": "human",
+    "content_digest": "sha256:958547b161e8bf1506dd01f2f4f3dde954719a8e79794d3b1ffa479a8d3b511c",
+    "derived_from": {
+     "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+     "revision": "1"
+    },
+    "event": "propose",
+    "from": null,
+    "key": "dmt:asme/flatness/none@1",
+    "provenance": "human",
+    "revision": "2",
+    "to": "draft"
+   },
+   "row": {
+    "actual_value": "av.synthetic.flatness@1",
+    "characteristic": "flatness",
+    "clauses": [
+     {
+      "clause": "4.2",
+      "designator": "syn-std-a",
+      "edition": "2001"
+     },
+     {
+      "clause": "7",
+      "designator": "syn-std-b",
+      "edition": "2010"
+     }
+    ],
+    "decision_rule_hint": "dr.synthetic.default@1",
+    "default_variant": "surface",
+    "dialect": "asme",
+    "editions": [
+     "syn-a-2001",
+     "syn-b-2010"
+    ],
+    "key": "dmt:asme/flatness/none@1",
+    "limitations": [],
+    "modifiers": [],
+    "notes": "Synthetic row for status register tests; not an interpretation of any standard.",
+    "ors_cases": [
+     "ors:synthetic/flatness.001"
+    ],
+    "review": {
+     "state": "draft"
+    },
+    "status": "supported",
+    "synthetic": false,
+    "variants": [
+     {
+      "steps": [
+       {
+        "alg": "syn.partition.whole_feature@0.1.0",
+        "kind": "partition",
+        "params": {}
+       },
+       {
+        "alg": "syn.extract.all_points@0.1.0",
+        "kind": "extraction",
+        "params": {
+         "min_points": "4"
+        }
+       },
+       {
+        "alg": "syn.assoc.min_zone@0.1.0",
+        "kind": "association",
+        "params": {
+         "constrained": true
+        }
+       },
+       {
+        "alg": "syn.eval.max_deviation@0.1.0",
+        "kind": "evaluation",
+        "params": {}
+       }
+      ],
+      "variant": "surface"
+     }
+    ]
+   },
+   "utc": "2026-11-20T09:05:00Z"
+  }
+ ],
+ "schema": "gdt-rowflow-journal/v1"
+}

@@ -1,0 +1,39 @@
+{
+ "coi": "none",
+ "registers": [
+  {
+   "answers": [
+    {
+     "digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+     "reason": null,
+     "rule": "dmt:asme/flatness/none@1",
+     "status": "signed_off"
+    },
+    {
+     "digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+     "reason": "not_in_register",
+     "rule": "dmt:asme/unknown_rule/none@1",
+     "status": "provisional"
+    },
+    {
+     "digest": "sha256:aaf53bc7d7318c818511687e1d1f9debee8868169900fe46097a12b891a900cd",
+     "reason": "not_in_register",
+     "rule": "dmt:asme/flatness/none@1",
+     "status": "provisional"
+    }
+   ],
+   "current": "roster.json",
+   "digest": "sha256:5d113f9c5a7930513619c33a050c83674aefd1ebc2c220caee02f16ac96ca389",
+   "file": "register.json",
+   "genuine": true,
+   "head": "sha256:d8338513b835e76b315d78c874f7f45baead6be6fad85080980bdbbac56f467a",
+   "verify": {
+    "evaluate": "verified",
+    "replay": "verified"
+   }
+  }
+ ],
+ "rosters": [
+  "roster.json"
+ ]
+}

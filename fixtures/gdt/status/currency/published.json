@@ -1,0 +1,13 @@
+{
+ "entries": [
+  {
+   "register_digest": "sha256:0a3329d54093897cc8f6112c8fe246fe4db497f4a9724e22369d786f7e6f9c34",
+   "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7"
+  },
+  {
+   "register_digest": "sha256:02afd6e695b787e55151a31777e264a231fda5414a1e0c3fbfbf870d427621fb",
+   "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7"
+  }
+ ],
+ "schema": "gdt-published/v1"
+}
