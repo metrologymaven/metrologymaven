@@ -23,8 +23,10 @@
 //! in ascending byte order (the column order of [`BlockOut::values`]). The encoded size is
 //! therefore `8 + H + 8 (K (T - F) + F)` for `K` outputs.
 //!
-//! Only the failed trial *indices* are retained; the per-trial failure codes stay in the
-//! blocks and the run record.
+//! The value columns hold only the trials that succeeded. Consumers must read `failed` and
+//! treat the values as conditional on success: a statistic over the columns describes the
+//! successful trials, not all `T` trials. Only the failed trial *indices* are retained; the
+//! per-trial failure codes stay in the blocks and the run record.
 //!
 //! # Encoding ([`encode`])
 //!
@@ -47,7 +49,7 @@
 //! end (`length`); a header longer than [`MAX_HEADER_BYTES`], not readable as JSON, not in
 //! canonical form, or with a missing, extra or malformed member (`header`); a `version`
 //! other than [`FORMAT`] (`version`); outputs that are empty, not strictly ascending or not
-//! printable ASCII IDs of at most [`MAX_NAME_BYTES`] bytes (`outputs`); `trials` of 0 or
+//! printable ASCII IDs of at most [`MAX_ID_BYTES`] bytes (`outputs`); `trials` of 0 or
 //! `failed > trials` (`counts`); a body whose length differs from what the counts declare
 //! (`length`, REQ-UNC.PROP.MCM.SAMP-003); a NaN or infinite value (`non_finite`); failed
 //! indices not strictly ascending or not below `trials` (`failed`).
@@ -60,6 +62,7 @@ use fid_types::Digest;
 
 use super::block::BlockOut;
 use super::McmError;
+use crate::model::MAX_ID_BYTES;
 
 /// Format name and version, the header's `version` member.
 pub const FORMAT: &str = "mcm-samples@1";
@@ -67,8 +70,6 @@ pub const FORMAT: &str = "mcm-samples@1";
 pub const DEFAULT_CAP: u64 = 64 * 1024 * 1024;
 /// Longest header [`decode`] reads: 1 MiB.
 pub const MAX_HEADER_BYTES: u64 = 1024 * 1024;
-/// Longest output name, in bytes (the model's ID limit).
-pub const MAX_NAME_BYTES: usize = 64;
 
 /// Bytes of the header length prefix, of one value and of one failed index.
 const WORD: u64 = 8;
@@ -110,7 +111,7 @@ impl SampleSetHeader {
         }
         for name in &self.outputs {
             let ok = !name.is_empty()
-                && name.len() <= MAX_NAME_BYTES
+                && name.len() <= MAX_ID_BYTES
                 && name.bytes().all(|c| (0x20..=0x7e).contains(&c) && c != b'"' && c != b'\\');
             if !ok {
                 return Err(invalid("outputs"));

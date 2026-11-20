@@ -13,13 +13,16 @@ Nothing here runs or imports the Rust code. The sample sets are rebuilt from scr
 
 Bit exactness. A digest pins every bit of every sample, so the oracle must reproduce the
 crate's doubles exactly, not within a few units in the last place. AS241's central region
-uses only +, -, *, / (exact in Python's binary64). Its tails need ln: the crate's ln is the
-published fdlibm `e_log.c` algorithm (fid-num facade), which is accurate to below 1 ulp but
-not correctly rounded, so a correctly rounded 60-digit ln differs from it in the last place
-for about 2.6 % of tail calls (and one linear2 sample changes). This file therefore ports the
-published fdlibm algorithm and its published coefficients to Python binary64 arithmetic
-(`ln_fdlibm`, no platform libm) and checks every call against the 60-digit decimal ln of the
-BLOCK oracle: they must agree within 1 ulp. Square roots are correctly rounded from a 60-digit
+uses only +, -, *, / (exact in Python's binary64). Its tails need ln: the crate's ln
+(fid-num `f::ln`, vendored in `exp_log.rs`) is musl <= 1.1.x `src/math/log.c`, an
+fdlibm-derived algorithm (not Sun's `e_log.c`), accurate to below 1 ulp but not correctly
+rounded. A correctly rounded 60-digit ln differs from it in the last place for about 2.6 %
+of the linear2 tail calls; the linear2 samples do not change, but three fail_fit samples do.
+This file therefore transcribes that musl algorithm and its coefficients to Python binary64
+arithmetic (`ln_musl`, no platform libm) and checks every call against the 60-digit decimal
+ln of the BLOCK oracle: they must agree within 1 ulp. So the sample bits are pinned against
+a transcription of the crate's ln algorithm, checked within 1 ulp of a 60-digit ln; the Rust
+ln's own bits are pinned by fixtures/num/fn-selftest-v1.txt. Square roots are correctly rounded from a 60-digit
 decimal square root, as IEEE-754 requires of the crate's sqrt.
 
 Format mcm-samples@1 (all integers little-endian):
@@ -78,7 +81,7 @@ def bits(x):
     return struct.unpack("<Q", struct.pack("<d", x))[0]
 
 
-# Published fdlibm e_log.c constants (hex words as printed there).
+# musl log.c constants (fdlibm-derived; hex words as printed there).
 LN2_HI = from_bits(0x3FE62E42FEE00000)
 LN2_LO = from_bits(0x3DEA39EF35793C76)
 LG1, LG2, LG3, LG4, LG5, LG6, LG7 = (from_bits(w) for w in (
@@ -86,8 +89,8 @@ LG1, LG2, LG3, LG4, LG5, LG6, LG7 = (from_bits(w) for w in (
     0x3FC7466496CB03DE, 0x3FC39A09D078C69F, 0x3FC2F112DF3E5244))
 
 
-def ln_fdlibm(x):
-    """fdlibm log for a normal x > 0, in binary64 (each Python op rounds once; no FMA)."""
+def ln_musl(x):
+    """musl <= 1.1.x log.c for a normal x > 0, in binary64 (each Python op rounds once; no FMA)."""
     u = bits(x)
     hx = u >> 32
     assert 0x00100000 <= hx < 0x7FF00000 and x > 0.0
@@ -112,7 +115,7 @@ LN_CALLS = [0, 0]  # calls, calls differing from the correctly rounded ln
 
 
 def ln(x):
-    y = ln_fdlibm(x)
+    y = ln_musl(x)
     exact = block.ln(x)  # 60-digit decimal ln rounded once
     LN_CALLS[0] += 1
     if y != exact:
@@ -256,7 +259,7 @@ def outputs():
     h = header(block.linear2(), 10_000, 0, ["y"])
     ac2_size = 8 + len(h) + 8 * 10_000
     assert ac2_size > 1024
-    assert LN_CALLS[1] > 0, "the fdlibm port should differ from the correctly rounded ln somewhere"
+    assert LN_CALLS[1] > 0, "the musl transcription should differ from the correctly rounded ln somewhere"
     expected = {
         "format": FORMAT,
         "profile_digest": PROFILE,

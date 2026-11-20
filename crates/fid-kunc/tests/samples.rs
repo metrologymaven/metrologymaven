@@ -2,9 +2,9 @@
 //!
 //! The pinned digests (`linear2.sha256`, `fail_fit.sha256`), header lengths, sizes and the
 //! AC-2 would-be size come from the independent Python reference
-//! `fixtures/unc/mcm/samp/make_fixtures.py` (its own Philox4x32-10, AS241 with a Python port
-//! of the published fdlibm logarithm cross-checked against a 60-digit decimal logarithm, its
-//! own byte layout), never from this crate. The blocks are computed by `run_block` on the
+//! `fixtures/unc/mcm/samp/make_fixtures.py` (its own Philox4x32-10, AS241 with a Python
+//! transcription of the musl <= 1.1.x `log.c` algorithm that fid-num vendors, checked within
+//! 1 ulp of a 60-digit decimal logarithm, its own byte layout), never from this crate. The blocks are computed by `run_block` on the
 //! models, manifest and test kernel of the UNC.PROP.MCM.BLOCK fixtures. AC-3 and the
 //! decoder and encoder checks are hand-labelled from the spec's rules.
 //!
