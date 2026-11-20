@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-dmis"
-description = "Metrology Maven DMIS 5.3 support: generated conformance table (spec node IO.DMIS.CONF) and bounded lexer (IO.DMIS.PARSE.LEX)"
+description = "Metrology Maven DMIS 5.3 support: conformance table (IO.DMIS.CONF), bounded lexer (IO.DMIS.PARSE.LEX) and statement tree (IO.DMIS.PARSE.TREE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,6 +11,10 @@ publish = false
 [[bin]]
 name = "dmis-conformance"
 path = "src/bin/dmis-conformance.rs"
+
+[[bin]]
+name = "dmis-classes"
+path = "src/bin/dmis-classes.rs"
 
 [dependencies]
 # Reader harness (IO.REG.LIMITS): bounded source, budget, error taxonomy, untrusted text.

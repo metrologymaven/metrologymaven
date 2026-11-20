@@ -1,0 +1,7 @@
+mode	strict
+error	malformed	2	1	feat_point
+mode	lenient
+statement	1:1	units	-	UNITS	/word:MM
+tokens	UNITS	/	MM
+unknown	2:1	FEAT	shape_mismatch
+tokens	FEAT	/	POINT	,	CART	,	1	,	2	,	3	,	0	,	0	,	1

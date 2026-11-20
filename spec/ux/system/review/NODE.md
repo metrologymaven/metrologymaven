@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-design]
+built_pr: 308
 satisfies: [REQ-UX.SYSTEM-001, REQ-UX.SYSTEM-007, REQ-UX.SYSTEM-008, REQ-UX.SYSTEM-009, REQ-UX.SYSTEM-011]
 covers: []
 depends_on: [UX.SYSTEM.PKG, UX.SYSTEM.PRINC]
@@ -51,11 +53,13 @@ The design review every UI-changing PR passes. It defines the checklist, the ori
 
 ## Design
 
-- **Command:** `fid-design review-check --changed <file> --root <design dir> [--deny-names <file>] [--json]`. Tooling, nearest class R0. The deny list is passed at run time and never committed, since D-002 says publish nothing before the knockout search.
+- **Command:** `fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]`, and `fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]` (whole-package declaration sweep, REQ-001). Tooling, nearest class R0. The deny list is passed at run time and never committed, since D-002 says publish nothing before the knockout search.
 - **Path map `review/paths.toml`:** globs that need review (`design/**`, consumer globs such as UI source folders, declared by consumers in their own copy).
-- **Formats:** `originality@1` `{ artefact, author, date, references: [text], statement_version }`, stored beside the artefact as `<file>.origin.json` or in `review/origin/`. `design-review@1` `{ pr, artefacts: [path], principles: [P-*], dress: [{rule, result, reason?}], checklist: [{item, result}], approver: {name, principal: human}, date }`.
+- **Formats:** `originality@1` `{ artefact, author, date, references: [text], statement_version }`, stored beside the artefact as `<file>.origin.json` or in `review/origin/`. `design-review@1` `{ pr, artefacts: [path], digests: {path: sha256 | "deleted"}, principles: [P-*], dress: [{rule, result, reason?}], checklist: [{item, result, reason?}], approver: {name, principal: human}, date }` (`digests` added when built).
 - **Dress-rule slot:** `dress-rules.json` holds `[{ id, text_ref }]` copied by a human PR from the brand guidelines; this node defines the slot and the per-rule result, not the rules.
-- **Errors:** `REVIEW-RECORD-MISSING`, `REVIEW-APPROVER-NOT-HUMAN`, `REVIEW-DRESS-RESULT-MISSING`, `REVIEW-PRINCIPLE-UNKNOWN`, `REVIEW-ORIGINALITY-MISSING`, `REVIEW-NAME-LEAK`, `REVIEW-SCHEMA`.
+- **Errors:** `REVIEW-RECORD-MISSING`, `REVIEW-APPROVER-NOT-HUMAN`, `REVIEW-DRESS-RESULT-MISSING`, `REVIEW-PRINCIPLE-UNKNOWN`, `REVIEW-ORIGINALITY-MISSING`, `REVIEW-NAME-LEAK`, `REVIEW-SCHEMA`; added when built: `REVIEW-CHECKLIST-MISSING <item>` (a checklist item without a result), `REVIEW-RESULT-FAIL <rule or item>` (a record with a `fail` result does not approve) and `REVIEW-RECORD-STALE <record or artefact>` (the record's `pr` is not `--pr`, or an artefact's digest no longer matches the file).
+- **As built:** paths (changed list, path-map globs, record artefacts and digests) are relative to `--root`, or to `--base` when given so consumer UI folders can be governed. A record counts only when its own path is in the changed list, its `pr` equals `--pr` when given, and every artefact digest matches the file on disk; an old record or an artefact edited after approval is `REVIEW-RECORD-STALE`. `review/paths.toml` and `review/dress-rules.json` always need a review, and a PR that changes the map (or an invalid map) puts every changed path under review. Every changed declaration is checked, and any other file under `review/origin/` is `REVIEW-SCHEMA`. Governance files under `review/` need no originality declaration. Untrusted text that is obfuscated (shared `words::is_hidden` set, compatibility forms, mixed scripts), carries bidi controls or is not NFC is refused; an empty changed list, map, rule slot or deny list is a finding, never a pass. Findings never quote a deny-list entry, and every path segment holding one is printed as `<withheld>`.
+- **Approver identity:** the CLI cannot verify who approved; `approver` is text. `.github/CODEOWNERS` assigns `design/review/records/` to the human maintainer (advisory unless branch protection requires code-owner review), and the CI wrapper `tools/design_review_gate.py` requires each record's `approver.name` to be the login of a non-bot GitHub reviewer whose latest review approves the head commit (read-only `gh api`). Neither can tell a person from an agent using that person's account.
 - **Determinism:** D0.
 - **Crate:** `fid-design`, module `review`.
 

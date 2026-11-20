@@ -1236,6 +1236,9 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-design-pkg",
+ "fid-types",
+ "toml",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -1313,6 +1316,7 @@ dependencies = [
 name = "fid-gdt"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
  "fid-canon",
  "fid-gps",
  "fid-io-reg",
@@ -1591,6 +1595,7 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-kci",
+ "fid-num",
  "toml",
 ]
 

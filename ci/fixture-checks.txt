@@ -40,6 +40,7 @@ python fixtures/gdt/dprof/make_cases.py --check
 python fixtures/gdt/drf/build/make_cases.py --check
 python fixtures/gdt/ident/make_fixtures.py --check
 python fixtures/gdt/resolve/make_cases.py --check
+python fixtures/gdt/rowflow/make_state_cases.py --check
 python fixtures/gdt/spec/make_fixtures.py --check
 python fixtures/gdt/zone/make_shapes_fixtures.py --check
 python fixtures/geo/cad/topo/make_adj_fixtures.py --check
@@ -61,6 +62,7 @@ python fixtures/hal/idl/stamp/make_fixtures.py --check
 python fixtures/io/cad/worker/proto/make_digests.py --check
 python fixtures/io/cloud/las/hdr/make_fixtures.py --check
 python fixtures/io/dmis/conf/make_expected.py --check
+python fixtures/io/dmis/parse/tree/make_expected.py --check
 python fixtures/io/e57/phys/make_fixtures.py --check
 python fixtures/io/qif/xml/parse/make_fixtures.py --check
 python fixtures/io/reg/detect/make_fixtures.py --check
@@ -73,6 +75,7 @@ python fixtures/knp1/typed/make_canary.py --check
 python fixtures/knp1/typed/make_expected.py --check
 python fixtures/knp1/typed/make_messages.py --check
 python fixtures/man/check_manifest_schema.py
+python fixtures/man/gen-toy-v1/make_fixtures.py --check
 python fixtures/man/make_implclosure_fixtures.py --check
 python fixtures/man/make_kci_fixtures.py --check
 python fixtures/man/make_manifest_fixtures.py --check
@@ -130,6 +133,7 @@ python fixtures/unc/model/graph/make_check_fixtures.py --check
 python fixtures/unc/model/graph/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/ux/system/princ/make_fixtures.py --check
+python fixtures/ux/system/review/make_fixtures.py --check
 python fixtures/viz/viewstate-samples/make_fixtures.py --check
 python tools/check_bench_schema.py
 python tools/check_command_defs.py

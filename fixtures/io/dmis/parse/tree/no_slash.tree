@@ -1,0 +1,5 @@
+mode	strict
+error	malformed	1	5	tol_diam
+mode	lenient
+unknown	1:1	TOL	shape_mismatch
+tokens	TOL	DIAM

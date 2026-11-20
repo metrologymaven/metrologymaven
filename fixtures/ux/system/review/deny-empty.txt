@@ -1,0 +1,2 @@
+
+# A deny list with no names.

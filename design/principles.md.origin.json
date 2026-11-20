@@ -1,0 +1,10 @@
+{
+  "artefact": "principles.md",
+  "author": "Claude Code (Claude Opus 5.5), agent author of UX.SYSTEM.PRINC in PR 297",
+  "date": "2026-11-19",
+  "references": [
+    "The UX.SYSTEM.PRINC and UX.SYSTEM spec nodes in this repository",
+    "The project constitution (spec/CONSTITUTION.md) in this repository"
+  ],
+  "statement_version": "originality-statement@1"
+}

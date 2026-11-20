@@ -1,0 +1,14 @@
+# Toy spec card (fixture). Cite designators and clause numbers only.
+id = "fit.plane.lsq@1.10.0"
+title = "Toy least-squares plane"
+method = "Orthogonal-distance least squares through the centroid; toy fixture card."
+applicability = "At least 3 non-collinear points; toy fixture only."
+references = [
+  "ISO 10360-6:2001, clause 5 (test method for the software)",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Collinear points leave the normal undefined.",
+]
+validation = "Pending: toy fixture card, no validation."

@@ -1,0 +1,54 @@
+{
+ "case": "placeholder_on_supported",
+ "roster": "state_roster.json",
+ "rows": "state_rows.json",
+ "events": [
+  {
+   "op": "propose",
+   "row": "supported",
+   "author": {
+    "kind": "human",
+    "id": "author-a"
+   },
+   "at": "2026-11-20"
+  },
+  {
+   "op": "review",
+   "reviewer": {
+    "kind": "human",
+    "id": "rev-one"
+   },
+   "decision": "approve",
+   "attest": "placeholder",
+   "reviewed": "current",
+   "at": "2026-11-20"
+  }
+ ],
+ "expected": [
+  {
+   "ok": {
+    "revision": 1,
+    "key": "dmt:asme/flatness/none@1",
+    "state": "draft",
+    "content_digest": "sha256:1f65fa44e5dd1f2420e4272775e18525a5d36f8248952d294becfdaa653c162a",
+    "author_kind": "human",
+    "provenance": "human",
+    "derived_from": null,
+    "approvals": [],
+    "reviews": 0,
+    "review_state": {
+     "state": "draft"
+    },
+    "idrs": []
+   }
+  },
+  {
+   "error": {
+    "code": "bad_attestation",
+    "detail": {
+     "reason": "placeholder_not_allowed"
+    }
+   }
+  }
+ ]
+}

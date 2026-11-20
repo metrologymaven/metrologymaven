@@ -1,0 +1,7 @@
+# Review path map of the design package (UX.SYSTEM.REVIEW). Globs are relative to the design
+# directory; `*` and `?` match within a path segment and `**` matches any number of segments.
+# Consumers declare their own UI source globs in their own copy of this file.
+# review/paths.toml and review/dress-rules.json always need a review, whatever this list says,
+# and a PR that changes this file puts every changed path under review.
+format = "review-paths@1"
+review = ["**"]

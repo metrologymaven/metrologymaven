@@ -1,0 +1,2 @@
+# Import allowlist of the toy kernel modules (fixture gen-toy-v1).
+wasi_snapshot_preview1 fd_write -- writes the self-report answer to standard output (fd 1)

@@ -1,0 +1,5 @@
+mode	strict
+error	malformed	1	10	nest
+mode	lenient
+unknown	1:1	NESTT	shape_mismatch
+tokens	NESTT	/	A	,	1	)

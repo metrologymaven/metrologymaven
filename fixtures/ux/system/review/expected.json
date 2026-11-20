@@ -1,0 +1,745 @@
+{
+  "ok": {
+    "case": "ok",
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "ok/design",
+    "changed": "ok/changed.txt"
+  },
+  "ok+deny": {
+    "case": "ok",
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": "deny-names.txt",
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "ok/design",
+    "changed": "ok/changed.txt"
+  },
+  "ok+pr": {
+    "case": "ok",
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": null,
+    "pr": 42,
+    "all": false,
+    "base": null,
+    "root": "ok/design",
+    "changed": "ok/changed.txt"
+  },
+  "missing-record": {
+    "case": "missing-record",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "missing-record/design",
+    "changed": "missing-record/changed.txt"
+  },
+  "agent-approver": {
+    "case": "agent-approver",
+    "exit": 1,
+    "findings": [
+      "REVIEW-APPROVER-NOT-HUMAN review/records/pr-0042.json",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "agent-approver/design",
+    "changed": "agent-approver/changed.txt"
+  },
+  "dress-gap": {
+    "case": "dress-gap",
+    "exit": 1,
+    "findings": [
+      "REVIEW-DRESS-RESULT-MISSING TD-05",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "dress-gap/design",
+    "changed": "dress-gap/changed.txt"
+  },
+  "no-decl": {
+    "case": "no-decl",
+    "exit": 1,
+    "findings": [
+      "REVIEW-ORIGINALITY-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "no-decl/design",
+    "changed": "no-decl/changed.txt"
+  },
+  "name-leak": {
+    "case": "name-leak",
+    "exit": 1,
+    "findings": [
+      "REVIEW-NAME-LEAK components/button.md",
+      "REVIEW-NAME-LEAK copy/labels.txt",
+      "REVIEW-NAME-LEAK icons/<withheld>"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": "deny-names.txt",
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "name-leak/design",
+    "changed": "name-leak/changed.txt"
+  },
+  "name-leak-nodeny": {
+    "case": "name-leak",
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "name-leak/design",
+    "changed": "name-leak/changed.txt"
+  },
+  "principle-unknown": {
+    "case": "principle-unknown",
+    "exit": 1,
+    "findings": [
+      "REVIEW-PRINCIPLE-UNKNOWN P-SHINY",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "principle-unknown/design",
+    "changed": "principle-unknown/changed.txt"
+  },
+  "stale-record": {
+    "case": "stale-record",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "stale-record/design",
+    "changed": "stale-record/changed.txt"
+  },
+  "stale-pr": {
+    "case": "stale-pr",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-RECORD-STALE review/records/pr-0042.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": 42,
+    "all": false,
+    "base": null,
+    "root": "stale-pr/design",
+    "changed": "stale-pr/changed.txt"
+  },
+  "stale-pr-nopr": {
+    "case": "stale-pr",
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "stale-pr/design",
+    "changed": "stale-pr/changed.txt"
+  },
+  "stale-digest": {
+    "case": "stale-digest",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-RECORD-STALE icons/probe.svg"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "stale-digest/design",
+    "changed": "stale-digest/changed.txt"
+  },
+  "bidi-record": {
+    "case": "bidi-record",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA review/records/pr-0042.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "bidi-record/design",
+    "changed": "bidi-record/changed.txt"
+  },
+  "nfd-record": {
+    "case": "nfd-record",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA review/records/pr-0042.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "nfd-record/design",
+    "changed": "nfd-record/changed.txt"
+  },
+  "tag-record": {
+    "case": "tag-record",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA review/records/pr-0042.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "tag-record/design",
+    "changed": "tag-record/changed.txt"
+  },
+  "obfuscated-changed": {
+    "case": "obfuscated-changed",
+    "exit": 1,
+    "findings": [
+      "REVIEW-SCHEMA changed:1"
+    ],
+    "needs_review": [
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "obfuscated-changed/design",
+    "changed": "obfuscated-changed/changed.txt"
+  },
+  "empty-changed": {
+    "case": "empty-changed",
+    "exit": 1,
+    "findings": [
+      "REVIEW-SCHEMA changed"
+    ],
+    "needs_review": [],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "empty-changed/design",
+    "changed": "empty-changed/changed.txt"
+  },
+  "result-fail": {
+    "case": "result-fail",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-RESULT-FAIL TD-02",
+      "REVIEW-SCHEMA review/records/pr-0042.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "result-fail/design",
+    "changed": "result-fail/changed.txt"
+  },
+  "checklist-gap": {
+    "case": "checklist-gap",
+    "exit": 1,
+    "findings": [
+      "REVIEW-CHECKLIST-MISSING C-KEYBOARD",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "checklist-gap/design",
+    "changed": "checklist-gap/changed.txt"
+  },
+  "map-weakened": {
+    "case": "map-weakened",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING notes/readme.txt",
+      "REVIEW-RECORD-MISSING review/paths.toml"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "notes/readme.txt",
+      "review/paths.toml",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "map-weakened/design",
+    "changed": "map-weakened/changed.txt"
+  },
+  "map-reviewed": {
+    "case": "map-reviewed",
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "icons/probe.svg",
+      "notes/readme.txt",
+      "review/paths.toml",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "map-reviewed/design",
+    "changed": "map-reviewed/changed.txt"
+  },
+  "bad-map": {
+    "case": "bad-map",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING notes/readme.txt",
+      "REVIEW-SCHEMA review/paths.toml"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "notes/readme.txt",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "bad-map/design",
+    "changed": "bad-map/changed.txt"
+  },
+  "empty-dress": {
+    "case": "empty-dress",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA review/dress-rules.json",
+      "REVIEW-SCHEMA review/records/pr-0042.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "empty-dress/design",
+    "changed": "empty-dress/changed.txt"
+  },
+  "bot-approver": {
+    "case": "bot-approver",
+    "exit": 1,
+    "findings": [
+      "REVIEW-APPROVER-NOT-HUMAN review/records/pr-0042.json",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "bot-approver/design",
+    "changed": "bot-approver/changed.txt"
+  },
+  "bad-decl": {
+    "case": "bad-decl",
+    "exit": 1,
+    "findings": [
+      "REVIEW-ORIGINALITY-MISSING tokens/color.tokens.json",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA tokens/color.tokens.json.origin.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "bad-decl/design",
+    "changed": "bad-decl/changed.txt"
+  },
+  "two-decl": {
+    "case": "two-decl",
+    "exit": 1,
+    "findings": [
+      "REVIEW-ORIGINALITY-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA icons/probe.svg"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "two-decl/design",
+    "changed": "two-decl/changed.txt"
+  },
+  "dup-key-record": {
+    "case": "dup-key-record",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING icons/probe.svg",
+      "REVIEW-RECORD-MISSING tokens/color.tokens.json",
+      "REVIEW-SCHEMA review/records/pr-0042.json"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "dup-key-record/design",
+    "changed": "dup-key-record/changed.txt"
+  },
+  "deleted-artefact": {
+    "case": "deleted-artefact",
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "icons/old.svg",
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "deleted-artefact/design",
+    "changed": "deleted-artefact/changed.txt"
+  },
+  "changed-decl": {
+    "case": "changed-decl",
+    "exit": 1,
+    "findings": [
+      "REVIEW-SCHEMA notes/readme.txt.origin.json",
+      "REVIEW-SCHEMA review/origin/notes.txt"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "changed-decl/design",
+    "changed": "changed-decl/changed.txt"
+  },
+  "empty-deny": {
+    "case": "ok",
+    "exit": 1,
+    "findings": [
+      "REVIEW-SCHEMA deny-names"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": "deny-empty.txt",
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "ok/design",
+    "changed": "ok/changed.txt"
+  },
+  "deny-bidi": {
+    "case": "ok",
+    "exit": 1,
+    "findings": [
+      "REVIEW-SCHEMA deny-names"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [
+      "review/records/pr-0042.json"
+    ],
+    "deny": "deny-bidi.txt",
+    "pr": null,
+    "all": false,
+    "base": null,
+    "root": "ok/design",
+    "changed": "ok/changed.txt"
+  },
+  "all-ok": {
+    "case": "ok",
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": true,
+    "base": null,
+    "root": "ok/design",
+    "changed": null
+  },
+  "all-no-decl": {
+    "case": "no-decl",
+    "exit": 1,
+    "findings": [
+      "REVIEW-ORIGINALITY-MISSING icons/probe.svg"
+    ],
+    "needs_review": [
+      "icons/probe.svg",
+      "tokens/color.tokens.json"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": true,
+    "base": null,
+    "root": "no-decl/design",
+    "changed": null
+  },
+  "base-ok": {
+    "case": "base-repo",
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "design/icons/probe.svg",
+      "design/tokens/color.tokens.json",
+      "ui/src/panel.tsx"
+    ],
+    "records": [
+      "design/review/records/pr-0042.json"
+    ],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": "base-repo/repo",
+    "root": "base-repo/repo/design",
+    "changed": "base-repo/changed.txt"
+  },
+  "base-extra": {
+    "case": "base-repo",
+    "exit": 1,
+    "findings": [
+      "REVIEW-RECORD-MISSING ui/src/other.tsx"
+    ],
+    "needs_review": [
+      "design/icons/probe.svg",
+      "design/tokens/color.tokens.json",
+      "ui/src/other.tsx",
+      "ui/src/panel.tsx"
+    ],
+    "records": [
+      "design/review/records/pr-0042.json"
+    ],
+    "deny": null,
+    "pr": null,
+    "all": false,
+    "base": "base-repo/repo",
+    "root": "base-repo/repo/design",
+    "changed": "base-repo/changed-extra.txt"
+  },
+  "base-all": {
+    "case": "base-repo",
+    "exit": 0,
+    "findings": [],
+    "needs_review": [
+      "design/icons/probe.svg",
+      "design/tokens/color.tokens.json",
+      "ui/src/panel.tsx"
+    ],
+    "records": [],
+    "deny": null,
+    "pr": null,
+    "all": true,
+    "base": "base-repo/repo",
+    "root": "base-repo/repo/design",
+    "changed": null
+  }
+}

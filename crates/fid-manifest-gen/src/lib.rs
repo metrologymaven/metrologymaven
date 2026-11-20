@@ -6,11 +6,15 @@
 //! - [`implclosure`]: per-algorithm implementation digests over the crate closure
 //!   (`KRN.MAN.MANI.IMPL`);
 //! - [`toolchain`]: the kernel build settings check and the toolchain-and-flags digest
-//!   (`KRN.MAN.REPRO`), with the `fid-manifest-gen toolchain-digest` command.
+//!   (`KRN.MAN.REPRO`), with the `fid-manifest-gen toolchain-digest` command;
+//! - [`gen`]: the two-stage manifest generator (`KRN.MAN.MANI.GEN`): `core` builds the manifest
+//!   core and the generated `manifest_core_digest` constant, `finish` hashes the artifacts,
+//!   checks each one's self-reported core digest and writes the full manifest.
 //!
 //! The manifest schema, its canonical encoding and its digests live in the kernel crate
 //! (`fid_kci::manifest`, `KRN.MAN.MANI.SCHEMA`); this crate reuses them and the kernel's
 //! SHA-256 and canonical JSON writer rather than carrying its own.
 
+pub mod gen;
 pub mod implclosure;
 pub mod toolchain;

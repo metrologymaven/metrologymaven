@@ -1,0 +1,5 @@
+mode	strict
+error	malformed	1	40	feat_circle
+mode	lenient
+unknown	1:1	FEAT	shape_mismatch
+tokens	F(C1)	=	FEAT	/	CIRCLE	,	INNER	,	CART	,	1	,	2	,	3	,	0	,	0	,	1
