@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-gdt]
+built_pr: 326
 satisfies: [REQ-GDT.RES-010, REQ-GDT.RES-011]
 covers: []
 depends_on: [GDT.RES.ROWFLOW.STATE, GDT.RES.ROWFLOW.ROSTER, GDT.RES.SCHEMA, CORE.JRN]
