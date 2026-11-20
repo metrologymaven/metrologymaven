@@ -191,6 +191,16 @@ impl AtomicWriter {
         })
     }
 
+    /// Step 1 alone, for a dry run: the checks [`AtomicWriter::create`] makes on `target`
+    /// (`target_exists`, a link or folder or read-only file under `overwrite`), with no
+    /// stale sweep and no file created, removed or changed.
+    pub fn check(target: &ExportTarget, opts: WriteOptions) -> Result<(), IoError> {
+        if target.final_link {
+            return Err(if opts.overwrite { kind_err(io::ErrorKind::InvalidInput) } else { IoError::TargetExists });
+        }
+        check_target(&target.dir, &target.name, opts.overwrite)
+    }
+
     /// The target file name inside the export folder.
     pub fn target_name(&self) -> &OsStr {
         &self.target

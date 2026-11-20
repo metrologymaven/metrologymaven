@@ -1496,6 +1496,7 @@ dependencies = [
  "fid-geo-frame",
  "fid-io-reg",
  "fid-journal",
+ "fid-registry",
  "fid-replay",
  "fid-surface",
  "fid-types",

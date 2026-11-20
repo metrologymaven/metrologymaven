@@ -255,14 +255,14 @@ impl Location {
         Ok(Location(Loc::HumanPath(UntrustedText::new(path))))
     }
 
-    fn wire(&self) -> String {
+    pub(crate) fn wire(&self) -> String {
         match &self.0 {
             Loc::Handle(h) => h.to_string(),
             Loc::HumanPath(p) => p.raw().to_string(),
         }
     }
 
-    fn from_wire(s: &str) -> Result<Location, ReportError> {
+    pub(crate) fn from_wire(s: &str) -> Result<Location, ReportError> {
         if s.starts_with("root://") {
             let h = RootHandle::parse(s).map_err(|_| invalid("location", "invalid root handle"))?;
             if h.to_string() != s {

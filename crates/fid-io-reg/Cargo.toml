@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-reg"
-description = "Metrology Maven reader harness: limits, bounded source, IoError taxonomy, untrusted text, root handles, import and export reports, atomic export writes (spec nodes IO.REG.LIMITS, IO.REG.ROOTS, IO.REG.ENV.REPORT, IO.REG.WRITE), format registry and detection (IO.REG.DETECT)"
+description = "Metrology Maven reader harness: limits, bounded source, IoError taxonomy, untrusted text, root handles, import and export reports, atomic export writes (spec nodes IO.REG.LIMITS, IO.REG.ROOTS, IO.REG.ENV.REPORT, IO.REG.WRITE), format registry and detection (IO.REG.DETECT), export command and skeleton (IO.REG.ENV.EXPORT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -33,6 +33,9 @@ fid-replay = { path = "../fid-replay" }
 # layer; default features only, so no storage).
 fid-geo-frame = { path = "../fid-geo-frame" }
 fid-journal = { path = "../fid-journal" }
+# IO.REG.ENV.EXPORT: the registry definitions of `export.file@1` and `export.<format>@1`
+# (CORE.REG.DEF, model layer; already in this crate's tree through fid-replay).
+fid-registry = { path = "../fid-registry" }
 
 [target.'cfg(unix)'.dependencies]
 # O_NONBLOCK, O_NOCTTY and EXDEV constants only.

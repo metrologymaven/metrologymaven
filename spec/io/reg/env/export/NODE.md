@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-io-reg]
 satisfies: [REQ-IO.REG.ENV-005]
 covers: []
 depends_on: [IO.REG.ENV.REPORT, IO.REG.DETECT, IO.REG.ROOTS, IO.REG.WRITE, CORE.BUS.PIPE]
@@ -75,7 +76,8 @@ Test-only format `fid-test-points` (shared with `IO.REG.ENV.IMPORT`) and a faili
 
 ## Open questions
 
-- None.
+- Built in `fid-io-reg` (`env::export`): the skeleton, `export.file@1`, `ExportCommand<W>`, the registry definitions, the journal record with replay, and the conformance kit. Two pieces wait for `CORE.BUS.PIPE.STAGE` (not built yet): running the command through `Bus::execute` (so the generated `fid export file` and MCP `export_file` reach it) and committing the record to the journal. Until then AC-1 and AC-6 are tested through the command function, and a file placed before a failed journal commit is not removed; that rollback belongs to the stage that commits.
+- The journal record also holds `source` and `report_sha256`, which replay needs. A per-format command is named `export.<format>@1` with `-` written as `_`, because command names do not allow `-`.
 
 ## Children
 

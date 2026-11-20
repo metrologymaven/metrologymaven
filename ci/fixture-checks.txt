@@ -66,6 +66,7 @@ python fixtures/io/dmis/parse/tree/make_expected.py --check
 python fixtures/io/e57/phys/make_fixtures.py --check
 python fixtures/io/qif/xml/parse/make_fixtures.py --check
 python fixtures/io/reg/detect/make_fixtures.py --check
+python fixtures/io/reg/env/export/make_fixtures.py --check
 python fixtures/io/reg/env/report/make_fixtures.py --check
 python fixtures/io/reg/prov/make_cases.py --check
 python fixtures/io/res/trans/model/make_fixtures.py --check
