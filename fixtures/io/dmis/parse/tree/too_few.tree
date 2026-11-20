@@ -1,0 +1,5 @@
+mode	strict
+error	malformed	1	25	feat_point
+mode	lenient
+unknown	1:1	FEAT	shape_mismatch
+tokens	F(P1)	=	FEAT	/	POINT	,	CART	,	1	,	2

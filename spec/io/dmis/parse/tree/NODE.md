@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-dmis]
+built_pr: 322
 satisfies: [REQ-IO.DMIS.PARSE-001, REQ-IO.DMIS.PARSE-003]
 covers: []
 depends_on: [IO.DMIS.PARSE.LEX]

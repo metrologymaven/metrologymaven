@@ -1,0 +1,5 @@
+mode	strict
+error	malformed	1	17	units
+mode	lenient
+unknown	1:1	UNITS	shape_mismatch
+tokens	UNITS	/	MM	,	ANGDEC	,	ANGDMS

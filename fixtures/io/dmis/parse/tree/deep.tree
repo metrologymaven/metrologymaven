@@ -1,0 +1,4 @@
+mode	strict
+error	limit_exceeded	group_depth	1
+mode	lenient
+error	limit_exceeded	group_depth	1

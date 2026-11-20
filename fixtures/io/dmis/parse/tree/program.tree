@@ -1,0 +1,66 @@
+mode	strict
+comment	1:1
+tokens	$$ hand-written test program for the statement tree (CC-BY-4.0)
+statement	2:1	units	-	UNITS	/word:MM,word:ANGDEC
+tokens	UNITS	/	MM	,	ANGDEC
+statement	3:1	units	-	UNITS	/word:inch
+tokens	units	/	inch
+statement	4:1	feat_point	f(p1)	FEAT	/word:point,word:pol,number:1.5,number:-2,number:+0.25,number:0,number:0,number:1
+tokens	f(p1)	=	feat	/	point	,	pol	,	1.5	,	-2	,	+0.25	,	0	,	0	,	1
+statement	5:1	feat_circle	F(C1)	FEAT	/word:CIRCLE,word:INNER,word:CART,number:1,number:2,number:3,number:0,number:0,number:1,number:12.5
+tokens	F(C1)	=	FEAT	/	CIRCLE	,	INNER	,	CART	,	1	,	2	,	3	,	0	,	0	,	1	,	12.5
+statement	6:1	tol_diam	T(DIAM_1)	TOL	/word:DIAM,number:-0.01,number:0.01,word:MMC
+tokens	T(DIAM_1)	=	TOL	/	DIAM	,	-0.01	,	0.01	,	$$ a comment inside the chain	MMC
+statement	9:1	text	-	TEXT	/word:OPER,raw_text:Clamp the part, then press start
+tokens	TEXT	/	OPER	,	Clamp the part, then press start
+statement	10:1	text	-	TEXT	/word:OUTFIL,string:'report ''one'''
+tokens	TEXT	/	OUTFIL	,	'report ''one'''
+statement	11:1	nest	V(N1)	NESTT	/word:A,(number:1,(number:2,number:3),number:4),word:B equals:= word:C
+tokens	V(N1)	=	NESTT	/	A	,	(	1	,	(	2	,	3	)	,	4	)	,	B	=	C
+statement	12:1	nest	-	NESTT	/word:B,(number:1,number:2)
+tokens	NESTT	/	B	,	(	1	,	2	)
+statement	13:1	nest	-	NESTT	/word:C
+tokens	NESTT	/	C
+statement	14:1	output	-	OUTPUT	/label:FA(P1),label:TA(DIAM_1)
+tokens	OUTPUT	/	FA(P1)	,	TA(DIAM_1)
+unknown	15:1	BAR	-
+tokens	V(X)	=	BAR	/	's'	,	(	1	,	2
+unknown	16:1	-	no_major_word
+tokens	5	,	6
+unknown	17:1	DMISMN	-
+tokens	DMISMN	/	'tree test'	,	05.3
+statement	18:1	endfil	-	ENDFIL	-
+tokens	ENDFIL
+mode	lenient
+comment	1:1
+tokens	$$ hand-written test program for the statement tree (CC-BY-4.0)
+statement	2:1	units	-	UNITS	/word:MM,word:ANGDEC
+tokens	UNITS	/	MM	,	ANGDEC
+statement	3:1	units	-	UNITS	/word:inch
+tokens	units	/	inch
+statement	4:1	feat_point	f(p1)	FEAT	/word:point,word:pol,number:1.5,number:-2,number:+0.25,number:0,number:0,number:1
+tokens	f(p1)	=	feat	/	point	,	pol	,	1.5	,	-2	,	+0.25	,	0	,	0	,	1
+statement	5:1	feat_circle	F(C1)	FEAT	/word:CIRCLE,word:INNER,word:CART,number:1,number:2,number:3,number:0,number:0,number:1,number:12.5
+tokens	F(C1)	=	FEAT	/	CIRCLE	,	INNER	,	CART	,	1	,	2	,	3	,	0	,	0	,	1	,	12.5
+statement	6:1	tol_diam	T(DIAM_1)	TOL	/word:DIAM,number:-0.01,number:0.01,word:MMC
+tokens	T(DIAM_1)	=	TOL	/	DIAM	,	-0.01	,	0.01	,	$$ a comment inside the chain	MMC
+statement	9:1	text	-	TEXT	/word:OPER,raw_text:Clamp the part, then press start
+tokens	TEXT	/	OPER	,	Clamp the part, then press start
+statement	10:1	text	-	TEXT	/word:OUTFIL,string:'report ''one'''
+tokens	TEXT	/	OUTFIL	,	'report ''one'''
+statement	11:1	nest	V(N1)	NESTT	/word:A,(number:1,(number:2,number:3),number:4),word:B equals:= word:C
+tokens	V(N1)	=	NESTT	/	A	,	(	1	,	(	2	,	3	)	,	4	)	,	B	=	C
+statement	12:1	nest	-	NESTT	/word:B,(number:1,number:2)
+tokens	NESTT	/	B	,	(	1	,	2	)
+statement	13:1	nest	-	NESTT	/word:C
+tokens	NESTT	/	C
+statement	14:1	output	-	OUTPUT	/label:FA(P1),label:TA(DIAM_1)
+tokens	OUTPUT	/	FA(P1)	,	TA(DIAM_1)
+unknown	15:1	BAR	-
+tokens	V(X)	=	BAR	/	's'	,	(	1	,	2
+unknown	16:1	-	no_major_word
+tokens	5	,	6
+unknown	17:1	DMISMN	-
+tokens	DMISMN	/	'tree test'	,	05.3
+statement	18:1	endfil	-	ENDFIL	-
+tokens	ENDFIL
