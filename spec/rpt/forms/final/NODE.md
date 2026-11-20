@@ -57,7 +57,7 @@ CHECK (completeness rules), FREEZE (W3 finalisation and revisions).
 
 ## Open questions
 
-- **D-045 (accepted 2026-11-19):** REQ-RPT.FORMS.FINAL-006 makes a missing provisional label a blocker, owned by `RPT.FORMS.FINAL.CHECK`.
+- **D-045 (accepted 2026-11-19):** REQ-RPT.FORMS.FINAL-006 makes a missing provisional label a blocker: `RPT.FORMS.FINAL.CHECK` reports it and `RPT.FORMS.FINAL.FREEZE` refuses the freeze on it.
 - **Revise for D-036/D-037 (accepted 2026-11-17):** finalisation is gate H2 (batched release-and-adoption queue, AGENT.GATEPREP).
 - Is a `NONCONFORMS` row a blocker for finalisation, or is a failed FAI still a valid final record? Assumed valid: an FAI may document a failure, but every row must have a result.
 
@@ -69,4 +69,4 @@ CHECK (completeness rules), FREEZE (W3 finalisation and revisions).
 | ID | Title | Satisfies | Covers |
 |---|---|---|---|
 | RPT.FORMS.FINAL.CHECK | Form completeness check and adoption of agent-authored form content (leaf) | 001 002 003 006 | none |
-| RPT.FORMS.FINAL.FREEZE | W3 finalisation of FAI and PPAP forms with immutable revisions (leaf) | 002 003 004 005 | none |
+| RPT.FORMS.FINAL.FREEZE | W3 finalisation of FAI and PPAP forms with immutable revisions (leaf) | 002 003 004 005 006 | none |

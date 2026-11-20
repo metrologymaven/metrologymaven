@@ -77,6 +77,11 @@ off? And how is engine work kept from running ahead of expert review?
    - flatness;
    - profile of a surface, single segment (no composite profile).
 
+   This narrowing (datum references at RMB only, with no datum targets, common datums or
+   MMB/LMB datum modifiers; position at RFS and at MMC with bonus on the toleranced feature;
+   flatness; single-segment profile of a surface) was confirmed by the maintainer on
+   2026-11-19 as consistent with the decision's intent.
+
    "GD&T work" means new or changed DMT rows outside the subset, and claiming or marking
    built any `GDT` leaf that serves only callouts outside the subset. Shared machinery
    (schema, resolver, workflow, record, zone engine, lint) and leaves built before this

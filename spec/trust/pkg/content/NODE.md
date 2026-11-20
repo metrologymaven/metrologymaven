@@ -16,7 +16,7 @@ uses_artifacts: [CORE.JRN.ENTRY, KRN.MAN.MANI.SCHEMA]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # TRUST.PKG.CONTENT: Package content selection and evidence tiers
@@ -53,6 +53,7 @@ Decides **what goes into** a Result Package for a given export request: which Re
 - **REQ-TRUST.PKG.CONTENT-006** When a selected ResultRecord has uncertainty class UEC-0, content assembly shall carry it with uncertainty marked "not evaluated" and no numeric uncertainty value.
 - **REQ-TRUST.PKG.CONTENT-007** Content assembly shall include each distinct point set once, keyed by its SHA-256, however many results reference it.
 - **REQ-TRUST.PKG.CONTENT-008** Content assembly shall exclude detachable journal fields that were redacted in the source journal and shall keep their salted commitments so the chain still verifies.
+- **REQ-TRUST.PKG.CONTENT-009** For every distinct `interpretation_register` digest named by an included ResultRecord (D-045, `GDT.CHAR.INTERP`), at every evidence tier, content assembly shall include that status register and the roster it was built from, each once and keyed by its SHA-256, so a signed package replays against the same registers; if either cannot be read or does not hash to its digest, then assembly shall fail with `pkg.register_missing` naming the digest.
 
 ## Interfaces
 
@@ -75,5 +76,5 @@ SELECT (selection to records, completeness), EVID (tiers and point gathering), J
 | ID | Title | Satisfies | Covers |
 |---|---|---|---|
 | TRUST.PKG.CONTENT.SELECT | Selection resolution, record completeness and content assembly | 001 006 | none |
-| TRUST.PKG.CONTENT.EVID | Evidence tiers and point-set gathering | 002 003 007 | none |
+| TRUST.PKG.CONTENT.EVID | Evidence tiers and point-set gathering | 002 003 007 009 | none |
 | TRUST.PKG.CONTENT.JSEG | Journal segment and checkpoint choice | 004 005 008 | none |

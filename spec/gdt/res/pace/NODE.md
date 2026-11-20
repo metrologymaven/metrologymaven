@@ -47,7 +47,7 @@ This leaf is the CI gate that enforces the rule mechanically, so agent build spe
 **Out:**
 - Rule statuses and register verification (owned by `GDT.RES.STATUS`; this gate calls its `export-rule-status` and `verify_register`).
 - The row inventory and its coverage check (owned by `GDT.RES.ROWASME.INV`).
-- Changing the subset. That needs a new decision record amending D-045.
+- Changing the subset. That needs a new, accepted decision record amending D-045.
 
 ## Requirements
 
@@ -55,7 +55,7 @@ This leaf is the CI gate that enforces the rule mechanically, so agent build spe
 - **REQ-GDT.RES.PACE-002** (PC2) While the subset is incomplete, the gate shall fail for every GDT leaf not listed as `subset`, `shared` or `existing` whose `claimed_by` becomes non-empty, or which gains `built_in`, between base and head.
 - **REQ-GDT.RES.PACE-003** (PC3) A GDT leaf that the manifest does not list shall be treated as outside the subset (fail closed).
 - **REQ-GDT.RES.PACE-004** (PC4) The subset shall count as complete exactly when the **base** status register both verifies against the project-published digests and lists every key in the manifest's subset key list with its latest revision `signed_off`. An unverified base register shall count as incomplete. The gate shall rebuild the head register from the head journal and roster in CI and report its statuses, but shall never read completeness from a register file in the change.
-- **REQ-GDT.RES.PACE-005** (PC5) If the pacing manifest changes between base and head, then the gate shall fail with `manifest_without_decision` unless the same change adds a new file under `decisions/` whose frontmatter lists `D-045` in `amends:`.
+- **REQ-GDT.RES.PACE-005** (PC5) If the pacing manifest changes between base and head, then the gate shall fail with `manifest_without_decision` unless the same change adds a new file under `decisions/` whose frontmatter lists `D-045` in `amends:` and has `status: accepted`.
 - **REQ-GDT.RES.PACE-006** The report shall:
   - list findings sorted by (check, ID);
   - state pass or fail, and whether the subset is complete;
@@ -69,7 +69,7 @@ This leaf is the CI gate that enforces the rule mechanically, so agent build spe
 - **AC-4** (error path) Given `beyond_leaf/` (head sets `built_in` on `GDT.PROF.SURF.COMP`), then PC2 fires naming that leaf. Given `unclassified_leaf/`, then PC2 fires through PC3.
 - **AC-5** Given `complete/` (a base register that verifies and shows every subset key `signed_off`), then the changes of AC-2 and AC-4 pass and the report says `subset_complete`.
 - **AC-6** (forged completion) Given `forged_head/` (the change commits a head register file marking every subset key `signed_off`, while the base register shows them `provisional`), then the subset is incomplete and the changes of AC-2 still fail. Given `foreign_base/` (a base register built with a roster whose digest is not published), then the subset is incomplete.
-- **AC-7** (error path) Given `manifest_change/` (pace.toml edited, no new decision file), then the gate fails with `manifest_without_decision`. With a new decision file whose `amends:` lists `D-045`, PC5 passes. With a changed existing decision file only, it still fails.
+- **AC-7** (error path) Given `manifest_change/` (pace.toml edited, no new decision file), then the gate fails with `manifest_without_decision`. With a new decision file whose `amends:` lists `D-045` and whose status is `accepted`, PC5 passes. With the same file at `status: proposed`, or with a changed existing decision file only, it still fails.
 - **AC-8** (determinism) Running AC-2 twice gives byte-identical JSON.
 
 ## Design
@@ -139,7 +139,7 @@ Small synthetic base/head pairs under `fixtures/gdt/pace/`, hand-labelled from t
 > - PC2: a GDT leaf not listed as `subset`, `shared` or `existing` that gains a non-empty `claimed_by` or a `built_in` fails.
 > - PC3: unlisted GDT leaves count as outside the subset.
 >
-> When the subset is complete, report `subset_complete` and skip PC1 and PC2. PC5: a manifest change fails with `manifest_without_decision` unless the change adds a new decision file whose frontmatter `amends:` lists `D-045`.
+> When the subset is complete, report `subset_complete` and skip PC1 and PC2. PC5: a manifest change fails with `manifest_without_decision` unless the change adds a new decision file whose frontmatter `amends:` lists `D-045` and whose `status:` is `accepted`.
 >
 > **Output:** report findings sorted by (check, ID), pass or fail, the subset state, and the digests of the manifest, both tables and both registers. Support `--json`. Exit 0, 1 or 2.
 >

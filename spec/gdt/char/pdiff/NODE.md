@@ -51,7 +51,7 @@ An interpretation profile (the community name for a defaults profile, `GDT.CHAR.
 - **REQ-GDT.CHAR.PDIFF-005** If A and B are for different dialects, then the command shall still report both values and both rule lists, and shall mark rule attribution `not_attributable_cross_dialect` instead of computing REQ-002 and REQ-003.
 - **REQ-GDT.CHAR.PDIFF-006** If a characteristic cannot be evaluated under one profile (unresolved, unsupported or a `draft` rule), then that side shall carry the refusal code and no value, and the other side's result shall still be reported.
 - **REQ-GDT.CHAR.PDIFF-007** The command shall commit no ResultRecord and change no characteristic's profile reference.
-- **REQ-GDT.CHAR.PDIFF-008** The command shall take rule statuses only from a register that `verify_register` (`GDT.RES.STATUS`) checked against the journal and the project-published digests, and shall otherwise report every rule `provisional` with reason `unverified_register` (or `no_register` when none is given).
+- **REQ-GDT.CHAR.PDIFF-008** The command shall take rule statuses only from a register that `verify_register` (`GDT.RES.STATUS`) checked with purpose `evaluate` against the journal and the project-published digests (only the latest published register), and shall otherwise report every rule `provisional` with reason `unverified_register` (or `no_register` when none is given).
 
 ## Acceptance criteria
 

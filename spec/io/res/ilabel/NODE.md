@@ -29,12 +29,13 @@ D-045 says a GD&T result that rests on an interpretation rule without expert sig
 ## Scope
 
 **In:**
-- `LabelCapability` of an export target: `Field(name)`, `Extension(hook)` or `None`
+- `LabelCapability` of an export target: `Field(name)`, `Extension(hook)`, `InheritedFromReport` or `None`
 - Capabilities of the built-in targets:
   - CSV and table exports: `Field`, when the column map binds a column to `interpretation`;
   - AQDEF: `None`, until the K-field subset names a field for it;
   - QIF Results: `Extension`, through QIF's sanctioned extension hook;
-  - PiWeb and report-file envelopes: as each exporter declares.
+  - PiWeb: `None` until a PiWeb field or attribute for the label is specified in `IO.RES.PIWEB`;
+  - report-file exports (`IO.RES.REPORT`): `InheritedFromReport`, because the report's values are rendered by `RPT.MODEL.FMT`, which always carries `ProvisionalInterpretation` (REQ-RPT.MODEL.FMT-014, -015).
 - `ensure_interpretation_label(records, capability)`
 - The values each exporter writes: `interpretation` and, where the target can hold it, the `interpretation_rules` list
 
@@ -48,6 +49,7 @@ D-045 says a GD&T result that rests on an interpretation rule without expert sig
 - **REQ-IO.RES.ILABEL-002** When the capability is `Field` or `Extension`, the guard shall return the label value of every record (`provisional` or `signed_off`), and the exporter shall write it for every record, signed-off ones included.
 - **REQ-IO.RES.ILABEL-003** A record set with no provisional record shall pass the guard for every capability, `None` included.
 - **REQ-IO.RES.ILABEL-004** A CSV column map's capability shall be `Field` only if one of its columns is bound to the ResultRecord field `interpretation`. A column bound to any other field, or a constant, shall not count.
+- **REQ-IO.RES.ILABEL-005** The capability of a PiWeb export shall be `None`, and that of a report-file export shall be `InheritedFromReport`, which passes the guard only when the report-file envelope declares that its content was rendered through `RPT.MODEL.FMT`; any other report-file content shall count as `None`.
 
 ## Acceptance criteria
 
@@ -56,11 +58,12 @@ D-045 says a GD&T result that rests on an interpretation rule without expert sig
 - **AC-3** (AQDEF, error path) Given the same provisional records, when `fid io export-results --format aqdef --json` runs with the published K-field subset, then it fails with `interpretation_label_unsupported` and no DFQ file is written.
 - **AC-4** (AQDEF) Given records from `fixtures/gdt/interp/flatness_signed/` (signed off only), then the AQDEF export succeeds.
 - **AC-5** Given a column map with a constant column `Interpretation = signed_off`, then its capability is `None`, and AC-1's records fail as in AC-1.
+- **AC-6** (PiWeb and report file) Given AC-1's provisional records, when exported to PiWeb, then `interpretation_label_unsupported`; when exported as a report file whose envelope declares `RPT.MODEL.FMT` rendering, then the export succeeds and the file shows `interpretation: provisional` on every value from those records; with an envelope that does not declare it, then `interpretation_label_unsupported`.
 
 ## Design
 
 - **Registry command(s):** none; a library used by every results exporter.
-- **Data structures:** `LabelCapability { Field(FieldName), Extension(HookId), None }`; `LabelPlan { per_record: Vec<(RecordId, Interpretation)> }`.
+- **Data structures:** `LabelCapability { Field(FieldName), Extension(HookId), InheritedFromReport, None }`; `LabelPlan { per_record: Vec<(RecordId, Interpretation)> }`.
 - **Algorithm:** scan the records. If any is provisional and the capability is `None`, fail. Otherwise return the plan.
 - **Errors:** `interpretation_label_unsupported{record, target}`.
 - **Determinism:** D0.
@@ -72,13 +75,13 @@ The `fixtures/gdt/interp/` records shared with `GDT.CHAR.INTERP`, and new column
 
 ## Build prompt
 
-> In crate `fid-io-res`, add module `ilabel` with `LabelCapability { Field, Extension, None }` and `ensure_interpretation_label(records, capability) -> Result<LabelPlan, ExportError>`:
+> In crate `fid-io-res`, add module `ilabel` with `LabelCapability { Field, Extension, InheritedFromReport, None }` and `ensure_interpretation_label(records, capability) -> Result<LabelPlan, ExportError>`:
 > - Fail with `interpretation_label_unsupported{record, target}` when any record's `interpretation` is `provisional` and the capability is `None`.
 > - Otherwise return each record's label.
 > - A CSV column map has capability `Field` only if a column is bound to the record field `interpretation` (constants do not count).
-> - AQDEF has `None` under the published K-field subset.
+> - AQDEF has `None` under the published K-field subset; PiWeb has `None` until specified; a report-file export has `InheritedFromReport` only when its envelope declares `RPT.MODEL.FMT` rendering, otherwise `None`.
 >
-> Call the guard from the CSV and AQDEF exporters before any byte is written, and write the label column when present. Tests: AC-1..AC-5. Constraints: CONSTITUTION §8 (no `unwrap`/`expect`/`panic`/`unsafe`), no std `HashMap`/`HashSet`.
+> Call the guard from the CSV and AQDEF exporters before any byte is written, and write the label column when present. Tests: AC-1..AC-6. Constraints: CONSTITUTION §8 (no `unwrap`/`expect`/`panic`/`unsafe`), no std `HashMap`/`HashSet`.
 
 ## Open questions
 
