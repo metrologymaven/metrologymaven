@@ -9,7 +9,8 @@ KRN.MAN.WASM, never from the Rust implementation.
 - reference-table.json          the digest table the stand-in test algorithms must produce
 - reference-reversed-table.json the table of the deliberately divergent native test artifact
                                 (echo concatenates its inputs in reverse order)
-- scenarios/<name>/             matrix, digest tables, optional previous table, release kind,
+- scenarios/<name>/             matrix, digest tables (and failed-<host>.txt markers), optional
+                                previous table, release kind,
                                 and the expected report bytes and exit code of `fid-xart compare`
 
 Run:          python fixtures/man/xart-calls-v1/make_fixtures.py
@@ -158,8 +159,9 @@ put(HERE / "reference-reversed-table.json", canon(table("python-reversed", "refe
 
 
 # --- the comparison oracle (spec Design: run, tabulate, compare) ----------------------------
-def compare(hosts, tables, release, previous):
-    """hosts: [(name, runner, optional)] sorted by name; returns (exit, report bytes)."""
+def compare(hosts, tables, release, previous, failed=()):
+    """hosts: [(name, runner, optional)] sorted by name; failed: hosts that left a
+    failed-<host> marker. Returns (exit, report bytes)."""
     wasm = {t["host"]: t for t in tables if t["kind"] == "wasm"}
     natives = sorted((t for t in tables if t["kind"] == "native"), key=lambda t: (t["host"], t["artifact"]))
     ref_host = next((h for h, _, _ in hosts if h in wasm), None)
@@ -191,6 +193,10 @@ def compare(hosts, tables, release, previous):
                 failures.append(
                     f"wasm_digest_mismatch: host {h} call {r['call']} ({r['name']}) algorithm {r['algorithm']} differs from host {ref_host}"
                 )
+    # A host whose job failed is a failure, optional or not (defence in depth).
+    for h, _, _ in hosts:
+        if h in failed:
+            failures.append(f"host_failed: {h}")
     native_entries = []
     for t in natives:
         algs = {}
@@ -290,17 +296,22 @@ SCENARIOS = {
     "optional-not-run": (HOSTS3, wasm_tables(ALL3[:2]), "none", None),
     "required-not-run": (HOSTS3, wasm_tables(["linux-x86_64", "windows-arm64"]), "none", None),
     "no-wasm-table": (HOSTS3, NATIVES, "none", None),
+    # A host job that failed leaves a failed-<host> marker: a failure even for an optional host.
+    "host-failed": (HOSTS3, wasm_tables(ALL3[:2]), "none", None, ["windows-arm64"]),
 }
 
-for name, (hosts, tables, release, previous) in SCENARIOS.items():
+for name, (hosts, tables, release, previous, *rest) in SCENARIOS.items():
+    failed = rest[0] if rest else []
     d = HERE / "scenarios" / name
     put(d / "matrix.toml", matrix_toml(hosts))
     for t in tables:
         put(d / "tables" / f"{t['kind']}-{t['host']}-{t['artifact']}.json", canon(t))
     if previous is not None:
         put(d / "previous.json", canon(previous))
+    for h in failed:
+        put(d / "tables" / f"failed-{h}.txt", b"failed\n")
     put(d / "release.txt", (release + "\n").encode())
-    code, report = compare(hosts, tables, release, previous)
+    code, report = compare(hosts, tables, release, previous, failed)
     put(d / "expected-exit.txt", f"{code}\n".encode())
     put(d / "expected-report.json", report)
 

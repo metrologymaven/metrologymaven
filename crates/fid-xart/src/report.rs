@@ -5,6 +5,9 @@
 //!   digest for every call; each difference is a failure naming the host, call and algorithm.
 //! - **Unavailable hosts (gates).** A matrix host without a WASM table is `not_run`; it is a
 //!   failure unless the host is optional. No WASM table at all is a failure.
+//! - **Failed hosts (gates).** A host whose job failed leaves a `failed-<host>` marker; each
+//!   one is a failure `host_failed: <host>`, optional or not, table or not (defence in depth:
+//!   a host that ran and then failed never passes silently).
 //! - **Native artifacts (measured only).** Per native table and algorithm, the number of calls
 //!   and the number whose result digest equals the reference WASM digest. Never a failure while
 //!   `native_gate = measured-only`.
@@ -86,6 +89,7 @@ impl Comparison {
 fn check_inputs(
     matrix: &Matrix,
     tables: &[DigestTable],
+    failed: &[String],
     release: Release,
     previous: Option<&DigestTable>,
 ) -> Result<(), XartError> {
@@ -103,6 +107,9 @@ fn check_inputs(
         if matrix.host(&t.host).is_none() {
             return bad(format!("host {} is not in the matrix", t.host));
         }
+    }
+    if let Some(h) = failed.iter().find(|h| matrix.host(h).is_none()) {
+        return bad(format!("failed host {h} is not in the matrix"));
     }
     let mut seen = BTreeMap::new();
     for t in tables {
@@ -129,10 +136,11 @@ fn check_inputs(
 pub fn compare(
     matrix: &Matrix,
     tables: &[DigestTable],
+    failed: &[String],
     release: Release,
     previous: Option<&DigestTable>,
 ) -> Result<Comparison, XartError> {
-    check_inputs(matrix, tables, release, previous)?;
+    check_inputs(matrix, tables, failed, release, previous)?;
     let wasm = |host: &str| tables.iter().find(|t| t.kind == Kind::Wasm && t.host == host);
     let reference = matrix.hosts.iter().find_map(|h| wasm(&h.name));
     let mut failures = Vec::new();
@@ -177,6 +185,12 @@ pub fn compare(
                     t.host, a.call, a.name, a.algorithm, r.host
                 ));
             }
+        }
+    }
+
+    for h in &matrix.hosts {
+        if failed.contains(&h.name) {
+            failures.push(format!("host_failed: {}", h.name));
         }
     }
 

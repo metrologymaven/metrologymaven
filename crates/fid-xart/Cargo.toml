@@ -22,6 +22,11 @@ path = "src/bin/xart-test-artifact.rs"
 name = "xart-test-artifact-reversed"
 path = "src/bin/xart-test-artifact-reversed.rs"
 
+# Test-only: reads its call and never answers (per-call deadline test).
+[[bin]]
+name = "xart-test-artifact-hang"
+path = "src/bin/xart-test-artifact-hang.rs"
+
 # No third-party dependencies. fid-kci supplies SHA-256, the canonical JSON writer, `evaluate`
 # and the card registry; fid-canon supplies the strict JSON reader (duplicate keys refused).
 [dependencies]

@@ -5,6 +5,7 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, Instant};
 
 use fid_kci::kci::sha256_digest;
 use fid_xart::artifact::{classify, run_call_set, Answer, Artifact, CommandArtifact, TableMeta};
@@ -33,7 +34,12 @@ fn meta(kind: Kind) -> TableMeta {
 }
 
 fn command(bin: &str) -> CommandArtifact {
-    CommandArtifact { program: bin.to_string(), args: Vec::new() }
+    CommandArtifact { program: bin.to_string(), args: Vec::new(), timeout: Duration::from_secs(60) }
+}
+
+/// The faithful test artifact's answer to one call.
+fn faithful(call: &[u8]) -> Answer {
+    command(env!("CARGO_BIN_EXE_xart-test-artifact")).answer(call).unwrap()
 }
 
 #[test]
@@ -97,6 +103,7 @@ fn cli_run_writes_the_table_and_hashes_the_artifact_file() {
     // A program that cannot be started: exit 2 and no table.
     let missing = tmp.join("no-such-artifact");
     let gone = tmp.join("gone.json");
+    std::fs::write(&gone, b"stale table from an earlier run").unwrap();
     let mut bad = args;
     bad[12] = gone.to_str().unwrap();
     bad[14] = missing.to_str().unwrap();
@@ -120,8 +127,7 @@ impl Artifact for Faulty {
         if i == self.at {
             return Ok(self.answer.clone());
         }
-        let (code, stdout) = fid_xart::testart::respond(fid_xart::testart::Order::Faithful, call);
-        Ok(Answer { exit: Some(i32::from(code)), stdout, stderr: Vec::new() })
+        Ok(faithful(call))
     }
 }
 
@@ -145,7 +151,7 @@ fn every_non_answer_fails_the_run() {
     // A malformed call, a signal, stray stderr.
     fails_at(1, Some(2), b"{\"error\":\"malformed_call\"}", b"");
     fails_at(1, None, b"", b"");
-    let ok = fid_xart::testart::respond(fid_xart::testart::Order::Faithful, &call_set().calls[0].bytes).1;
+    let ok = faithful(&call_set().calls[0].bytes).stdout;
     let text = fails_at(0, Some(0), &ok, b"warning\n");
     assert!(text.contains("stderr"), "{text}");
     // A result for another algorithm, a lying output digest, non-canonical bytes.
@@ -166,8 +172,9 @@ fn every_non_answer_fails_the_run() {
 fn classify_accepts_results_and_kernel_errors() {
     let set = call_set();
     for call in &set.calls {
-        let (code, stdout) = fid_xart::testart::respond(fid_xart::testart::Order::Faithful, &call.bytes);
-        let a = Answer { exit: Some(i32::from(code)), stdout, stderr: Vec::new() };
+        let a = faithful(&call.bytes);
+        let code = u8::try_from(a.exit.unwrap()).unwrap();
+        assert!(code <= 1, "{}", call.name);
         assert_eq!(classify(call, &a), Ok(code), "{}", call.name);
     }
 }
@@ -179,4 +186,37 @@ fn labels_are_checked() {
     m.host = "Linux".to_string();
     let e = run_call_set(&set, &mut command(env!("CARGO_BIN_EXE_xart-test-artifact")), m).unwrap_err();
     assert_eq!(e.code(), "bad_inputs");
+}
+
+#[test]
+fn hanging_native_artifact_is_killed_at_the_deadline() {
+    let set = call_set();
+    let mut a = CommandArtifact {
+        program: env!("CARGO_BIN_EXE_xart-test-artifact-hang").to_string(),
+        args: Vec::new(),
+        timeout: Duration::from_millis(500),
+    };
+    let start = Instant::now();
+    let e = run_call_set(&set, &mut a, meta(Kind::Native)).unwrap_err();
+    assert!(start.elapsed() < Duration::from_secs(30), "deadline not enforced");
+    assert_eq!(e.code(), "artifact_failed");
+    let text = e.to_string();
+    assert!(text.contains("call 0 (") && text.contains("timeout"), "{text}");
+
+    // Through the CLI: exit 2, and no table, not even a stale one.
+    let tmp = std::env::temp_dir().join(format!("fid-xart-hang-{}", std::process::id()));
+    std::fs::create_dir_all(&tmp).unwrap();
+    let out = tmp.join("table.json");
+    std::fs::write(&out, b"stale").unwrap();
+    let calls = fixtures().join("calls.txt");
+    let bin = env!("CARGO_BIN_EXE_xart-test-artifact-hang");
+    let status = Command::new(env!("CARGO_BIN_EXE_fid-xart"))
+        .args(["run", "--calls", calls.to_str().unwrap(), "--kind", "native", "--host", "linux-x86_64"])
+        .args(["--artifact", "hang", "--artifact-file", bin, "--out", out.to_str().unwrap(), "--timeout-ms", "300"])
+        .args(["--", bin])
+        .status()
+        .unwrap();
+    assert_eq!(status.code(), Some(2));
+    assert!(!out.exists());
+    std::fs::remove_dir_all(&tmp).unwrap();
 }

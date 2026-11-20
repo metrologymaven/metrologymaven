@@ -12,8 +12,10 @@
 //! - [`report`]: compares the tables: WASM digests must agree on every host (REQ-001), native
 //!   artifacts are measured against WASM and never gate (REQ-002), a patch release must
 //!   reproduce the previous release's table (REQ-003), and a host without a table is `not_run`
-//!   and fails the gate unless optional (REQ-005). The report is canonical JSON (REQ-004);
-//! - [`testart`]: test-only native artifacts for the stand-in test algorithms (AC-2).
+//!   and fails the gate unless optional (REQ-005). The report is canonical JSON (REQ-004).
+//!
+//! The test-only native artifacts of AC-2 live in `src/testart.rs` and are compiled only into
+//! the `xart-test-artifact*` binaries, never into this library.
 //!
 //! Every digest of an artifact's answer is computed here from the bytes the artifact wrote;
 //! nothing an artifact claims about itself is read from disk.
@@ -24,7 +26,6 @@ mod json;
 pub mod matrix;
 pub mod report;
 pub mod table;
-pub mod testart;
 
 use std::fmt;
 

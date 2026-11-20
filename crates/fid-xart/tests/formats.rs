@@ -57,8 +57,8 @@ fn shipped_matrix_parses() {
             ("linux-arm64", false),
             ("linux-x86_64", false),
             ("macos-arm64", false),
-            ("macos-x86_64", true),
-            ("windows-arm64", true),
+            ("macos-x86_64", false),
+            ("windows-arm64", false),
             ("windows-x86_64", false),
         ]
     );

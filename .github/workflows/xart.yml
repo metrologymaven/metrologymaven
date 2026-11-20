@@ -3,33 +3,15 @@ name: xart
 # One WASM module is built and sealed once; every host in crates/fid-xart/xart-matrix.toml runs
 # the call set through it under the pinned wasmtime, and through two native artifacts (the
 # native shim and the deliberately divergent test artifact). The gate job compares the tables.
-# Runs only when the kernel, the artifact tooling or the fixtures change, to keep CI light.
+#
+# The workflow triggers on every pull request and push, but the `changes` job skips the heavy
+# jobs unless the kernel, the artifact tooling or the fixtures changed. The always-run `result`
+# job reports success for a skipped run and the gate's verdict otherwise, so it can be made a
+# required check without blocking unrelated PRs (making it required is the owner's decision).
 on:
   pull_request:
-    paths:
-      - ".github/workflows/xart.yml"
-      - "Cargo.lock"
-      - "crates/fid-canon/**"
-      - "crates/fid-kci/**"
-      - "crates/fid-kernel-wasm/**"
-      - "crates/fid-num/**"
-      - "crates/fid-types/**"
-      - "crates/fid-wasm-check/**"
-      - "crates/fid-xart/**"
-      - "fixtures/man/xart-calls-v1/**"
   push:
     branches: [main]
-    paths:
-      - ".github/workflows/xart.yml"
-      - "Cargo.lock"
-      - "crates/fid-canon/**"
-      - "crates/fid-kci/**"
-      - "crates/fid-kernel-wasm/**"
-      - "crates/fid-num/**"
-      - "crates/fid-types/**"
-      - "crates/fid-wasm-check/**"
-      - "crates/fid-xart/**"
-      - "fixtures/man/xart-calls-v1/**"
   workflow_dispatch:
 permissions:
   contents: read
@@ -37,9 +19,44 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Did the kernel, the artifact tooling or the fixtures change?
+        id: diff
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          pattern='^(\.github/workflows/xart\.yml|Cargo\.lock|crates/fid-(canon|kci|kernel-wasm|num|types|wasm-check|xart)/|fixtures/man/xart-calls-v1/)'
+          case "$EVENT" in
+            pull_request) base="$PR_BASE" ;;
+            push) base="$PUSH_BEFORE" ;;
+            *) base="" ;;
+          esac
+          # Unknown base (manual run, new branch, force push): run everything.
+          run=true
+          if [ -n "$base" ] && [ "$base" != 0000000000000000000000000000000000000000 ] \
+            && git cat-file -e "$base^{commit}" 2> /dev/null; then
+            files=$(git diff --name-only "$base" "$HEAD_SHA")
+            if ! grep -qE "$pattern" <<< "$files"; then run=false; fi
+          fi
+          echo "run=$run" | tee -a "$GITHUB_OUTPUT"
   module:
     # The stand-in test algorithms are compiled only with the test-algorithms feature; the
     # reference build registers none until fid-kernel exists (KRN.MAN.WASM).
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -63,53 +80,50 @@ jobs:
           path: ${{ runner.temp }}/module/fid-kernel-wasm-test.wasm
           if-no-files-found: error
   host:
-    needs: module
+    name: host ${{ matrix.host }}
+    needs: [changes, module]
+    if: needs.changes.outputs.run == 'true'
     strategy:
       fail-fast: false
       # Keep in step with crates/fid-xart/xart-matrix.toml; a host missing here is `not_run`.
-      # Archive digests are the ones GitHub records for the wasmtime v49.0.6 release assets.
+      # Every host is required. Archive digests are the ones GitHub records for the wasmtime
+      # v49.0.6 release assets.
       matrix:
         include:
           - host: linux-arm64
             runner: ubuntu-24.04-arm
-            optional: false
             wasmtime: aarch64-linux
             archive: tar.xz
             sha256: a84a45f7be136988c6aee53d9a983d0f6cf3ecb518ec190e03501afb24017c34
           - host: linux-x86_64
             runner: ubuntu-latest
-            optional: false
             wasmtime: x86_64-linux
             archive: tar.xz
             sha256: 15625b129e54534793dc77965d6912a5307db8e8e90ee114f52ef62ce6e4f918
           - host: macos-arm64
             runner: macos-latest
-            optional: false
             wasmtime: aarch64-macos
             archive: tar.xz
             sha256: d119614aef5d5628d96ed97b918b48ce460fda5fe1453b58c18bf6bbca2d1909
           - host: macos-x86_64
             runner: macos-15-intel
-            optional: true
             wasmtime: x86_64-macos
             archive: tar.xz
             sha256: 47a19dc9b1f48ef6b262f64863f4b0a965d2b56dd30cc62051e52ffdd3ffe1c6
           - host: windows-arm64
             runner: windows-11-arm
-            optional: true
             wasmtime: aarch64-windows
             archive: zip
             sha256: 3276b4b009e766d7dd748a7447a4f280702ef4ca7a0b51d552815d9cfe11ec3d
           - host: windows-x86_64
             runner: windows-latest
-            optional: false
             wasmtime: x86_64-windows
             archive: zip
             sha256: ac2c5bd77d7ea4e09ac3490259326456e900fa72c2aa2e40d21ba176d5ab81b6
     runs-on: ${{ matrix.runner }}
-    # An optional host that fails leaves no table; the gate lists it as not_run (REQ-005).
-    continue-on-error: ${{ matrix.optional }}
     timeout-minutes: 45
+    env:
+      HOST: ${{ matrix.host }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
@@ -118,22 +132,24 @@ jobs:
       - name: Install wasmtime v49.0.6 (archive SHA-256 pinned and verified before use)
         shell: bash
         env:
-          ASSET: wasmtime-v49.0.6-${{ matrix.wasmtime }}.${{ matrix.archive }}
+          WASMTIME: ${{ matrix.wasmtime }}
+          ARCHIVE: ${{ matrix.archive }}
           SHA256: ${{ matrix.sha256 }}
         run: |
           set -euo pipefail
+          asset="wasmtime-v49.0.6-$WASMTIME.$ARCHIVE"
           d="$RUNNER_TEMP/wasmtime"
           mkdir -p "$d"
-          curl --proto '=https' --tlsv1.2 -fsSL --retry 5 -o "$d/$ASSET" \
-            "https://github.com/bytecodealliance/wasmtime/releases/download/v49.0.6/$ASSET"
+          curl --proto '=https' --tlsv1.2 -fsSL --retry 5 -o "$d/$asset" \
+            "https://github.com/bytecodealliance/wasmtime/releases/download/v49.0.6/$asset"
           if command -v sha256sum > /dev/null; then sum="sha256sum"; else sum="shasum -a 256"; fi
-          got=$(cd "$d" && $sum "$ASSET" | cut -d' ' -f1)
-          if [ "$got" != "$SHA256" ]; then echo "::error::$ASSET has SHA-256 $got"; exit 1; fi
-          case "$ASSET" in
-            *.zip) unzip -q "$d/$ASSET" -d "$d" ;;
-            *) tar -xJf "$d/$ASSET" -C "$d" ;;
+          got=$(cd "$d" && $sum "$asset" | cut -d' ' -f1)
+          if [ "$got" != "$SHA256" ]; then echo "::error::$asset has SHA-256 $got"; exit 1; fi
+          case "$asset" in
+            *.zip) unzip -q "$d/$asset" -d "$d" ;;
+            *) tar -xJf "$d/$asset" -C "$d" ;;
           esac
-          echo "$d/wasmtime-v49.0.6-${{ matrix.wasmtime }}" >> "$GITHUB_PATH"
+          echo "$d/wasmtime-v49.0.6-$WASMTIME" >> "$GITHUB_PATH"
       - run: wasmtime --version
       - uses: actions/download-artifact@v4
         with:
@@ -147,8 +163,6 @@ jobs:
           cargo build -q --release -p fid-kernel-wasm --features test-algorithms
       - name: Digest tables (WASM under the pinned runner, native shim, divergent test artifact)
         shell: bash
-        env:
-          HOST: ${{ matrix.host }}
         run: |
           set -euo pipefail
           x=""; if [ "$RUNNER_OS" = Windows ]; then x=".exe"; fi
@@ -169,9 +183,23 @@ jobs:
           name: xart-table-${{ matrix.host }}
           path: ${{ runner.temp }}/tables/*.json
           if-no-files-found: error
+      # Defence in depth: a host that ran and failed leaves a marker the gate counts as a
+      # failure, whatever the matrix says about the host.
+      - name: Failed-host marker
+        if: failure()
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/failed"
+          echo failed > "$RUNNER_TEMP/failed/failed-$HOST.txt"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: xart-table-${{ matrix.host }}-failed
+          path: ${{ runner.temp }}/failed/failed-${{ matrix.host }}.txt
+          if-no-files-found: error
   gate:
-    needs: host
-    if: ${{ !cancelled() }}
+    needs: [changes, host]
+    if: ${{ !cancelled() && needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -217,3 +245,22 @@ jobs:
           name: xart-report
           path: ${{ runner.temp }}/report/xart-report.json
           if-no-files-found: ignore
+  result:
+    # Always runs: success when nothing relevant changed, otherwise the gate's verdict.
+    name: xart result
+    needs: [changes, gate]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Report the gate's verdict
+        shell: bash
+        env:
+          RUN: ${{ needs.changes.outputs.run }}
+          CHANGES: ${{ needs.changes.result }}
+          GATE: ${{ needs.gate.result }}
+        run: |
+          echo "changes: $CHANGES (run=$RUN), gate: $GATE"
+          if [ "$CHANGES" != success ]; then exit 1; fi
+          if [ "$RUN" = false ]; then exit 0; fi
+          test "$GATE" = success

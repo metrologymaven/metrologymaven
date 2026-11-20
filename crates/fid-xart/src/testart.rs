@@ -1,5 +1,5 @@
-//! Test-only native artifacts (AC-2): the binaries `xart-test-artifact` and
-//! `xart-test-artifact-reversed` speak the `fid-kernel-wasm` protocol and register the
+//! Test-only native artifacts (AC-2), compiled only into the binaries `xart-test-artifact` and
+//! `xart-test-artifact-reversed` (not part of the library API). They speak the `fid-kernel-wasm` protocol and register the
 //! KRN.MAN.WASM stand-in algorithms `test.echo.identity@1.0.0` and `test.stack.recurse@1.0.0`
 //! through `fid_kci::evaluate`.
 //!
@@ -15,7 +15,31 @@ use fid_kci::{
     KernelCall, KernelError,
 };
 
-use crate::json;
+use std::collections::BTreeMap;
+
+type Obj = BTreeMap<String, CValue>;
+
+/// Parses canonical JSON (duplicate keys refused); `None` if not canonical.
+fn parse_canonical(input: &[u8]) -> Option<CValue> {
+    let v = fid_canon::parse_with_limits(input, MAX_CALL_BYTES, 8).ok()?;
+    (fid_canon::to_canonical_bytes(&v).ok()? == input).then_some(v)
+}
+
+/// The object if it has exactly the `required` keys plus any of the `optional` ones.
+fn object<'a>(v: &'a CValue, required: &[&str], optional: &[&str]) -> Option<&'a Obj> {
+    let CValue::Obj(m) = v else {
+        return None;
+    };
+    let known = |k: &String| required.contains(&k.as_str()) || optional.contains(&k.as_str());
+    (required.iter().all(|k| m.contains_key(*k)) && m.keys().all(known)).then_some(m)
+}
+
+fn string<'a>(m: &'a Obj, key: &str) -> Option<&'a str> {
+    match m.get(key) {
+        Some(CValue::Str(s)) => Some(s),
+        _ => None,
+    }
+}
 
 /// The KRN.MAN.KCI echo: `params | seed-or-"-" | input0 | input1 ...`.
 pub const ECHO_ID: &str = "test.echo.identity@1.0.0";
@@ -137,25 +161,27 @@ fn hex(s: &str) -> Option<Vec<u8>> {
 
 /// Parses one canonical call as `fid-kernel-wasm` pins it; `None` if malformed.
 pub fn parse_call(input: &[u8]) -> Option<KernelCall> {
-    let v = json::parse_canonical(input, MAX_CALL_BYTES).ok()?;
-    let m = json::object(&v, &["algorithm", "inputs", "params"], &["seed"]).ok()?;
-    let id = json::string(m, "algorithm").ok()?;
+    let v = parse_canonical(input)?;
+    let m = object(&v, &["algorithm", "inputs", "params"], &["seed"])?;
+    let id = string(m, "algorithm")?;
     let algorithm = AlgorithmId::parse(id).ok().filter(|a| a.to_string() == id)?;
-    let params = hex(json::string(m, "params").ok()?)?;
+    let params = hex(string(m, "params")?)?;
     let seed = match m.get("seed") {
         None => None,
         Some(CValue::Str(s)) => Some(decimal_u64(s.as_bytes())?),
         Some(_) => return None,
     };
-    let list = json::array(m, "inputs").ok()?;
+    let Some(CValue::Arr(list)) = m.get("inputs") else {
+        return None;
+    };
     if list.len() > MAX_INPUTS {
         return None;
     }
     let mut inputs = Vec::with_capacity(list.len());
     for x in list {
-        let x = json::object(x, &["bytes", "sha256"], &[]).ok()?;
-        let bytes = hex(json::string(x, "bytes").ok()?)?;
-        let claimed = Digest::parse(json::string(x, "sha256").ok()?).ok()?;
+        let x = object(x, &["bytes", "sha256"], &[])?;
+        let bytes = hex(string(x, "bytes")?)?;
+        let claimed = Digest::parse(string(x, "sha256")?).ok()?;
         inputs.push((bytes, claimed));
     }
     Some(KernelCall { algorithm, params, seed, inputs })

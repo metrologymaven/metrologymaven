@@ -9,13 +9,15 @@
 //! **Fail closed.** Every other answer stops the run with [`XartError::Artifact`]: the runner's
 //! `NOT_REPLAYABLE(resource)` (exit 3) or `NOT_REPLAYABLE(trap)` (exit 4), a runner that could
 //! not start (exit 5), a malformed or oversized call (exit 2), a process that could not be
-//! spawned or was killed, anything on stderr, and a result envelope that is not canonical,
+//! spawned, was killed or missed its wall-clock deadline, anything on stderr, and a result envelope that is not canonical,
 //! names another algorithm or whose `output_digest` is not the SHA-256 of its `output`. No
 //! call is ever skipped, so a table always has one row per call.
 
 use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::thread::JoinHandle;
+use std::time::{Duration, Instant};
 
 use fid_kci::kci::{sha256_digest, Sha256};
 use fid_kci::Digest;
@@ -42,15 +44,27 @@ pub trait Artifact {
     fn answer(&mut self, call: &[u8]) -> Result<Answer, String>;
 }
 
-/// An artifact run as a child process, one process per call.
+/// An artifact run as a child process, one process per call, with a wall-clock deadline.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandArtifact {
     pub program: String,
     pub args: Vec<String>,
+    /// Wall-clock deadline per call. A process still running at the deadline is killed and the
+    /// call is an `artifact_failed` error (fail closed).
+    pub timeout: Duration,
+}
+
+/// Reads at most `MAX_ANSWER_BYTES + 1` bytes of a pipe on its own thread.
+fn reader<R: Read + Send + 'static>(pipe: R) -> JoinHandle<std::io::Result<Vec<u8>>> {
+    std::thread::spawn(move || {
+        let mut buf = Vec::new();
+        pipe.take(MAX_ANSWER_BYTES as u64 + 1).read_to_end(&mut buf).map(|_| buf)
+    })
 }
 
 impl Artifact for CommandArtifact {
     fn answer(&mut self, call: &[u8]) -> Result<Answer, String> {
+        let deadline = Instant::now() + self.timeout;
         let mut child = Command::new(&self.program)
             .args(&self.args)
             .stdin(Stdio::piped())
@@ -60,32 +74,41 @@ impl Artifact for CommandArtifact {
             .map_err(|e| format!("cannot start {}: {e}", self.program))?;
         let mut stdin = child.stdin.take().ok_or("no stdin")?;
         let input = call.to_vec();
-        // Feed stdin from a thread so a child that writes before reading cannot deadlock us; a
-        // child that exits early closes the pipe, which is its outcome, not ours.
+        // Feed stdin and drain stdout and stderr on their own threads, so a child that writes
+        // before reading cannot deadlock us; a child that exits early closes the pipe, which is
+        // its outcome, not ours.
         let feeder = std::thread::spawn(move || {
             let _ = stdin.write_all(&input);
         });
-        let mut stdout = Vec::new();
-        let out = child.stdout.take().ok_or("no stdout")?;
-        let err = child.stderr.take().ok_or("no stderr")?;
-        let err_reader = std::thread::spawn(move || {
-            let mut buf = Vec::new();
-            let r = err.take(MAX_ANSWER_BYTES as u64 + 1).read_to_end(&mut buf);
-            r.map(|_| buf)
-        });
-        let read = out.take(MAX_ANSWER_BYTES as u64 + 1).read_to_end(&mut stdout);
-        if read.is_err() || stdout.len() > MAX_ANSWER_BYTES {
-            let _ = child.kill();
-        }
-        let status = child.wait().map_err(|e| format!("wait: {e}"))?;
+        let out_reader = reader(child.stdout.take().ok_or("no stdout")?);
+        let err_reader = reader(child.stderr.take().ok_or("no stderr")?);
+        let mut pause = Duration::from_millis(1);
+        let status = loop {
+            if let Some(status) = child.try_wait().map_err(|e| format!("wait: {e}"))? {
+                break status;
+            }
+            let now = Instant::now();
+            if now >= deadline {
+                let _ = child.kill();
+                let _ = child.wait();
+                // The pipe threads are not joined: a grandchild may still hold the pipes.
+                return Err(format!("timeout: no answer within {} ms, killed", self.timeout.as_millis()));
+            }
+            std::thread::sleep(pause.min(deadline - now));
+            pause = (pause * 2).min(Duration::from_millis(20));
+        };
         if feeder.join().is_err() {
             return Err("stdin writer failed".to_string());
         }
+        let stdout = match out_reader.join() {
+            Ok(Ok(b)) => b,
+            Ok(Err(e)) => return Err(format!("stdout: {e}")),
+            Err(_) => return Err("stdout reader failed".to_string()),
+        };
         let stderr = match err_reader.join() {
             Ok(Ok(b)) => b,
             _ => b"<stderr unreadable>".to_vec(),
         };
-        read.map_err(|e| format!("stdout: {e}"))?;
         if stdout.len() > MAX_ANSWER_BYTES {
             return Err("stdout_too_large".to_string());
         }

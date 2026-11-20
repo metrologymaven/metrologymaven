@@ -3,9 +3,8 @@
 # GitHub Actions runs-on label .github/workflows/xart.yml uses for the host. A host without a
 # WASM digest table is listed as `not_run` and fails the gate unless `optional = true`.
 #
-# Optional hosts: windows-arm64 until a hosted Windows ARM64 runner is confirmed for this
-# repository (spec open question) [unverified]; macos-x86_64 because GitHub is retiring its
-# Intel macOS images [unverified].
+# Every host is required: the Intel macOS and Windows ARM64 runner labels both got runners
+# in CI on PR #317, so none is optional. A host whose job fails also fails the gate.
 schema = "1"
 
 [[host]]
@@ -26,12 +25,12 @@ optional = false
 [[host]]
 name = "macos-x86_64"
 runner = "macos-15-intel"
-optional = true
+optional = false
 
 [[host]]
 name = "windows-arm64"
 runner = "windows-11-arm"
-optional = true
+optional = false
 
 [[host]]
 name = "windows-x86_64"
