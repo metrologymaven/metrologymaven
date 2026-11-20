@@ -15,7 +15,7 @@ use fid_io_reg::env::export::command::{
 use fid_io_reg::env::export::conformance::{self, FailAfter, Fixture};
 use fid_io_reg::env::export::{
     format_command_id, ByteSink, CountingSink, ExportCommand, ExportEnv, ExportError, ExportEvent, ExportFile,
-    ExportParams, SourceRef, Writer, ENTITY_ID_PATTERN, EXPORT_FILE,
+    ExportParams, ExportRun, Fault, SourceRef, Writer, ENTITY_ID_PATTERN, EXPORT_FILE,
 };
 use fid_io_reg::{
     Direction, FormatDescriptor, FormatId, IoError, LimitKind, Origin, Phase, Position, Principal, Registry,
@@ -68,6 +68,7 @@ fn points() -> Points {
 }
 
 /// The writer of the test format (rule written out in the fixture script).
+#[derive(Debug)]
 struct TestPoints {
     format: FormatId,
     version: VersionToken,
@@ -127,12 +128,21 @@ impl Writer for TestPoints {
 }
 
 fn descriptor(id: &str, ext: &str, direction: Direction) -> FormatDescriptor {
+    // The test format declares its one option, `stride`.
+    let options = if id == "fid-test-points" {
+        fid_canon::parse(
+            b"{\"properties\":{\"stride\":{\"maximum\":1000,\"minimum\":1,\"type\":\"integer\"}},\"type\":\"object\"}",
+        )
+        .unwrap()
+    } else {
+        CValue::Obj(BTreeMap::new())
+    };
     FormatDescriptor::new(
         FormatId::new(id).unwrap(),
         VersionRange::new("1", "1").unwrap(),
         Vec::new(),
         vec![ext.to_string()],
-        CValue::Obj(BTreeMap::new()),
+        options,
         Phase::new(0).unwrap(),
         Origin::FirstParty,
         direction,
@@ -307,11 +317,19 @@ fn ac3_a_writer_failing_after_10_kib_leaves_nothing_and_journals_nothing() {
     f.add(Box::new(FailAfter { inner: &w, n: 10 * 1024 })).unwrap();
     let r = f.run_value(&env, &params_json("", "root://out/a.ftp"), &src);
     let e = r.unwrap_err();
-    assert!(matches!(e, ExportError::Io(IoError::Io { .. })), "{e:?}");
+    assert!(matches!(e, ExportError::Writer(IoError::Io { .. })), "{e:?}");
+    assert_eq!(e.bus_code(), ("internal", "handler_failed"));
     assert!(listing(&t.out()).is_empty(), "no file, no temp file: {:?}", listing(&t.out()));
 
+    // A failing sink (disk) after 10 KiB is an I/O fault, not a writer failure.
+    let faulted = ExportEnv { fault: Some(Fault::FailAfter(10 * 1024)), ..env };
+    let e = generic(&w).run_value(&faulted, &params_json("", "root://out/a.ftp"), &src).unwrap_err();
+    assert!(matches!(e, ExportError::Io(IoError::Io { .. })), "{e:?}");
+    assert_eq!(e.bus_code(), ("internal", "storage"));
+    assert!(listing(&t.out()).is_empty());
+
     // The same through the per-format command, and for a dry run.
-    let cmd = ExportCommand::new(FailAfter { inner: &w, n: 10 * 1024 }).unwrap();
+    let cmd = ExportCommand::new(FailAfter { inner: &w, n: 10 * 1024 }, &[]).unwrap();
     let mut p = ExportParams::from_value(&params_json("", "root://out/a.ftp"), true).unwrap();
     p.format = None;
     assert!(cmd.run(&env, &p, &src).is_err());
@@ -473,7 +491,7 @@ fn ac6_replay_into_an_empty_root_is_identical() {
     let t4 = Tmp::new("ac6d");
     let roots4 = t4.roots();
     let env4 = ExportEnv::new(&reg, &roots4, Principal::Script);
-    let cmd = ExportCommand::new(&w).unwrap();
+    let cmd = ExportCommand::new(&w, &[]).unwrap();
     assert_eq!(cmd.replay(&env4, &event, &src).unwrap(), ReplayOutcome::NotReplayable);
     assert!(listing(&t4.out()).is_empty());
     // Replaying into a root that already holds the file does not clobber it.
@@ -548,7 +566,22 @@ fn an_existing_target_is_never_clobbered_without_overwrite() {
     // A folder at the target is protected even with overwrite.
     fs::create_dir(t.out().join("d.ftp")).unwrap();
     let e = generic(&w).run_value(&env, &params_json(",\"overwrite\":true", "root://out/d.ftp"), &src).unwrap_err();
+    assert!(matches!(e, ExportError::TargetProtected(_)), "{e:?}");
     assert_eq!(e.bus_code(), ("policy", "target_protected"));
+    // ... and so is a read-only file; the dry run says the same.
+    fs::write(t.out().join("r.ftp"), b"ro").unwrap();
+    let mut perm = fs::metadata(t.out().join("r.ftp")).unwrap().permissions();
+    perm.set_readonly(true);
+    fs::set_permissions(t.out().join("r.ftp"), perm).unwrap();
+    for extra in [",\"overwrite\":true", ",\"overwrite\":true,\"dry_run\":true"] {
+        let e = generic(&w).run_value(&env, &params_json(extra, "root://out/r.ftp"), &src).unwrap_err();
+        assert_eq!(e.bus_code(), ("policy", "target_protected"), "{extra}");
+    }
+    assert_eq!(fs::read(t.out().join("r.ftp")).unwrap(), b"ro");
+    let mut perm = fs::metadata(t.out().join("r.ftp")).unwrap().permissions();
+    #[allow(clippy::permissions_set_readonly_false)]
+    perm.set_readonly(false);
+    fs::set_permissions(t.out().join("r.ftp"), perm).unwrap();
 }
 
 #[test]
@@ -615,12 +648,28 @@ fn journal_records_are_read_back_strictly() {
         good.replacen("\"command\":\"export.file@1\"", "\"command\":\"export.file\"", 1),
         good.replacen("\"writer_version\":\"1.0.0\"", "\"writer_version\":\"\"", 1),
         good.replacen("{", "{\"bytes\":\"1\",", 1),
+        // Not canonical: whitespace, or keys out of order.
+        good.replacen(",", ", ", 1),
+        format!("{} ", good),
+        good.replacen(
+            "\"bytes\":\"26755\",\"command\":\"export.file@1\"",
+            "\"command\":\"export.file@1\",\"bytes\":\"26755\"",
+            1,
+        ),
+        good.replacen("\"principal\":\"script\"", "\"principal\":\"root\"", 1),
+        good.replacen("\"overwrite\":false", "\"overwrite\":0", 1),
     ];
     for b in &bad {
         assert_ne!(b, &good);
         let e = ExportEvent::from_json(b.as_bytes()).unwrap_err();
         assert_eq!(e.bus_code(), ("validation", "schema"), "{b}");
     }
+    // `lossy` is capped at MAX_LOSSY names.
+    let names = |n: usize| (0..n).map(|i| format!("\"n{i:05}\"")).collect::<Vec<_>>().join(",");
+    let at_cap = good.replacen("[\"point_set.color\"]", &format!("[{}]", names(fid_io_reg::report::MAX_LOSSY)), 1);
+    assert_eq!(ExportEvent::from_json(at_cap.as_bytes()).unwrap().lossy.len(), fid_io_reg::report::MAX_LOSSY);
+    let over = good.replacen("[\"point_set.color\"]", &format!("[{}]", names(fid_io_reg::report::MAX_LOSSY + 1)), 1);
+    assert!(ExportEvent::from_json(over.as_bytes()).is_err());
 }
 
 #[test]
@@ -675,8 +724,7 @@ fn every_failure_maps_into_bus_catalogue_v3_and_refusals_are_never_internal() {
         ExportError::Io(IoError::LimitExceeded { limit: LimitKind::Wall, value: 1, at }),
         ExportError::Io(IoError::LimitRaiseForbidden { limit: LimitKind::Bytes, requested: 2, default: 1 }),
         ExportError::Io(IoError::Io { kind: ErrorKind::NotFound, at }),
-        ExportError::Io(IoError::Io { kind: ErrorKind::InvalidInput, at }),
-        ExportError::Io(IoError::Io { kind: ErrorKind::PermissionDenied, at }),
+        ExportError::TargetProtected(IoError::Io { kind: ErrorKind::PermissionDenied, at }),
         ExportError::Cancelled,
         ExportError::ForceExtensionHumanOnly,
         ExportError::BadParams("x"),
@@ -685,6 +733,11 @@ fn every_failure_maps_into_bus_catalogue_v3_and_refusals_are_never_internal() {
     ];
     let faults = vec![
         ExportError::Io(IoError::Io { kind: ErrorKind::Other, at }),
+        ExportError::Io(IoError::Io { kind: ErrorKind::PermissionDenied, at }),
+        ExportError::Io(IoError::Io { kind: ErrorKind::InvalidInput, at }),
+        ExportError::Writer(IoError::Io { kind: ErrorKind::Other, at }),
+        ExportError::Writer(IoError::Malformed { at, reason: "r" }),
+        ExportError::CommandIdTaken,
         ExportError::Io(IoError::Malformed { at, reason: "r" }),
         ExportError::Io(IoError::TruncatedFile { at }),
         ExportError::Io(IoError::ReaderCrashed),
@@ -701,6 +754,12 @@ fn every_failure_maps_into_bus_catalogue_v3_and_refusals_are_never_internal() {
     for e in &faults {
         assert_eq!(e.bus_code().0, "internal", "{e:?} is a fault");
     }
+    // An OS permission error while writing is a storage fault, never the policy refusal.
+    assert_eq!(
+        ExportError::Io(IoError::Io { kind: ErrorKind::PermissionDenied, at }).bus_code(),
+        ("internal", "storage")
+    );
+    assert_eq!(ExportError::Writer(IoError::TargetExists).bus_code(), ("internal", "handler_failed"));
     // Every IoError code is covered by the two lists.
     let covered: BTreeSet<&str> = refusals.iter().chain(&faults).map(|e| e.code()).collect();
     for c in fid_io_reg::CODES {
@@ -716,28 +775,9 @@ fn wire(r: &fid_io_reg::ExportReport) -> CValue {
     fid_canon::parse(&r.canonical_bytes().unwrap()).unwrap()
 }
 
+/// Patterns are evaluated with a real regex engine, so the published strings are what is tested.
 fn matches_pattern(p: &str, x: &str) -> bool {
-    let hex = |s: &str| s.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b));
-    let snake = |s: &str| {
-        let b = s.as_bytes();
-        b.first().is_some_and(u8::is_ascii_lowercase)
-            && b.iter().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'_')
-    };
-    match p {
-        ENTITY_ID_PATTERN => {
-            x.len() == 36
-                && x.char_indices()
-                    .all(|(i, c)| if [8, 13, 18, 23].contains(&i) { c == '-' } else { hex(&c.to_string()) })
-        }
-        FORMAT_ID_PATTERN => FormatId::new(x).is_ok(),
-        U64_PATTERN => {
-            !x.is_empty() && x.len() <= 20 && x.bytes().all(|b| b.is_ascii_digit()) && (x == "0" || !x.starts_with('0'))
-        }
-        DIGEST_PATTERN => x.strip_prefix("sha256:").is_some_and(|h| h.len() == 64 && hex(h)),
-        CODE_PATTERN => x.len() <= 64 && snake(x),
-        TYPE_NAME_PATTERN => x.split('.').all(snake),
-        other => panic!("pattern {other} not supported by the test checker"),
-    }
+    regex::Regex::new(p).unwrap().is_match(x)
 }
 
 fn type_ok(t: &str, v: &CValue) -> bool {
@@ -811,11 +851,11 @@ fn command_definitions_are_valid_w1_write_root_registry_records() {
     let geo = fid_registry::Catalogue::geo_frame().unwrap();
     let file = export_file_def(&reg).unwrap();
     let fmt = FormatId::new("fid-test-points").unwrap();
-    let per = format_def(&reg, &fmt).unwrap();
+    let per = format_def(&reg, &fmt, &[EXPORT_FILE, "export.list_formats@1"]).unwrap();
     assert_eq!(file.id, "export.file");
     assert_eq!(per.id, "export.fid_test_points");
-    assert_eq!(format_command_id(&fmt).unwrap().as_str(), "export.fid_test_points@1");
-    assert_eq!(ExportCommand::new(test_points()).unwrap().id().as_str(), "export.fid_test_points@1");
+    assert_eq!(format_command_id(&fmt, &[]).unwrap().as_str(), "export.fid_test_points@1");
+    assert_eq!(ExportCommand::new(test_points(), &[]).unwrap().id().as_str(), "export.fid_test_points@1");
     for def in [&file, &per] {
         assert_eq!(def.side_effect.as_str(), "W1");
         assert_eq!(def.fs_effect.as_str(), "write_root");
@@ -841,7 +881,7 @@ fn real_params_and_results_conform_to_the_published_schemas() {
     let exp = Expected::load();
     let reg = registry();
     let file = export_file_def(&reg).unwrap();
-    let per = format_def(&reg, &FormatId::new("fid-test-points").unwrap()).unwrap();
+    let per = format_def(&reg, &FormatId::new("fid-test-points").unwrap(), &[]).unwrap();
     assert_eq!(per.result_schema, result_schema());
 
     // Results: the reference reports (real and dry run) and a report produced here with a
@@ -864,7 +904,7 @@ fn real_params_and_results_conform_to_the_published_schemas() {
     o.remove("format");
     let per_params = CValue::Obj(o);
     conforms(&per.params_schema, &per_params, "per params").unwrap();
-    let cmd = ExportCommand::new(&w).unwrap();
+    let cmd = ExportCommand::new(&w, &[]).unwrap();
     fs::remove_file(t.out().join("a.ftp")).unwrap();
     let out = cmd.run_value(&env, &per_params, &src).unwrap();
     conforms(&per.result_schema, &wire(&out.report), "per result").unwrap();
@@ -904,30 +944,316 @@ fn real_params_and_results_conform_to_the_published_schemas() {
 }
 
 // ---------------------------------------------------------------------------------------
-// Conformance kit (REQ-005)
+// Published patterns
 
 #[test]
-fn the_test_format_passes_the_conformance_kit() {
-    let exp = Expected::load();
-    let t = Tmp::new("kit");
-    let (reg, roots, src, w) = (registry(), t.roots(), points(), test_points());
-    let source = exp.source();
-    let options = CValue::Obj(BTreeMap::new());
-    let fx = Fixture {
-        registry: &reg,
-        roots: &roots,
-        root_id: "out",
-        root_dir: &t.out(),
-        file_name: "kit.ftp",
-        source: &source,
-        options: &options,
-        fail_after: 10 * 1024,
-    };
-    conformance::check(&w, &src, &fx).unwrap();
-    assert!(listing(&t.out()).is_empty(), "the kit removes what it wrote");
+fn published_patterns_accept_and_refuse_the_right_strings() {
+    let cases: [(&str, &[&str], &[&str]); 6] = [
+        (
+            ENTITY_ID_PATTERN,
+            &["0190f3a2-7c41-7d2e-9b10-3c5e8f6a4d21", "00000000-0000-0000-0000-000000000000"],
+            &[
+                "0190F3A2-7C41-7D2E-9B10-3C5E8F6A4D21",
+                "0190f3a27c417d2e9b103c5e8f6a4d21",
+                "0190f3a2-7c41-7d2e-9b10-3c5e8f6a4d2",
+                "",
+            ],
+        ),
+        (
+            FORMAT_ID_PATTERN,
+            &["fid-test-points", "mesh.stl", "mesh.stl-ascii", "3mf", "a"],
+            &["fid_test_points", "Mesh", "-a", ".a", "", "a b", &"a".repeat(65)],
+        ),
+        (
+            U64_PATTERN,
+            &[
+                "0",
+                "1",
+                "26755",
+                "9999999999999999999",
+                "10000000000000000000",
+                "18446744073709551614",
+                "18446744073709551615",
+            ],
+            &[
+                "",
+                "01",
+                "-1",
+                "1.0",
+                "18446744073709551616",
+                "18446744073709551620",
+                "18446744073709552000",
+                "19000000000000000000",
+                "99999999999999999999",
+                "100000000000000000000",
+            ],
+        ),
+        (
+            DIGEST_PATTERN,
+            &["sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"],
+            &[
+                "sha256:BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD",
+                "sha256:ab",
+                "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            ],
+        ),
+        (CODE_PATTERN, &["unit_assumed", "a", "nan_coordinate2"], &["Unit", "_a", "1a", "a-b", "", &"a".repeat(65)]),
+        (
+            TYPE_NAME_PATTERN,
+            &["point_set", "point_set.color", "mesh.normals"],
+            &["point_set.", ".a", "Point", "a..b", "a-b", ""],
+        ),
+    ];
+    for (p, good, bad) in cases {
+        let re = regex::Regex::new(p).unwrap();
+        for g in good {
+            assert!(re.is_match(g), "{p} should accept {g:?}");
+        }
+        for b in bad {
+            assert!(!re.is_match(b), "{p} should refuse {b:?}");
+        }
+    }
+    // The patterns agree with the Rust validators on the same strings.
+    for x in ["fid-test-points", "fid_test_points", "mesh.stl", "-a", "Mesh"] {
+        assert_eq!(regex::Regex::new(FORMAT_ID_PATTERN).unwrap().is_match(x), FormatId::new(x).is_ok(), "{x}");
+    }
+    for x in ["18446744073709551615", "18446744073709551616", "0", "01"] {
+        let parsed = x.parse::<u64>().is_ok() && (x == "0" || !x.starts_with('0'));
+        assert_eq!(regex::Regex::new(U64_PATTERN).unwrap().is_match(x), parsed, "{x}");
+    }
 }
 
-/// A writer whose output changes on every call: it must fail the kit.
+// ---------------------------------------------------------------------------------------
+// Command IDs
+
+#[test]
+fn per_format_command_ids_are_one_to_one_and_never_collide() {
+    // Format IDs hold no `_`, so `-` -> `_` cannot merge two formats.
+    assert!(FormatId::new("fid_test_points").is_err());
+    let a = format_command_id(&FormatId::new("mesh-stl").unwrap(), &[]).unwrap();
+    let b = format_command_id(&FormatId::new("mesh.stl").unwrap(), &[]).unwrap();
+    assert_eq!(a.as_str(), "export.mesh_stl@1");
+    assert_eq!(b.as_str(), "export.mesh.stl@1");
+    assert_ne!(a, b);
+    // Reserved names: export.file and export.list_formats.
+    for f in ["file", "list-formats"] {
+        let e = format_command_id(&FormatId::new(f).unwrap(), &[]).unwrap_err();
+        assert_eq!(e, ExportError::CommandIdTaken, "{f}");
+        assert_eq!(e.bus_code(), ("internal", "invariant_violated"));
+    }
+    // Any other export command already in the registry, with or without `@major`.
+    let reg = registry();
+    let fmt = FormatId::new("fid-test-points").unwrap();
+    for taken in ["export.fid_test_points@1", "export.fid_test_points", "export.fid_test_points@2"] {
+        assert_eq!(format_command_id(&fmt, &[taken]).unwrap_err(), ExportError::CommandIdTaken, "{taken}");
+        assert_eq!(ExportCommand::new(test_points(), &[taken]).unwrap_err(), ExportError::CommandIdTaken);
+        assert_eq!(format_def(&reg, &fmt, &[taken]).unwrap_err(), ExportError::CommandIdTaken);
+    }
+    assert!(format_def(&reg, &FormatId::new("file").unwrap(), &[]).is_err());
+    assert!(format_command_id(&fmt, &["export.other@1", "import.fid_test_points@1"]).is_ok());
+    // A format ID that would not end a command name.
+    assert!(format_command_id(&FormatId::new("abc-").unwrap(), &[]).is_err());
+}
+
+// ---------------------------------------------------------------------------------------
+// REQ-004 on the resolved name
+
+#[test]
+fn the_extension_check_sees_the_resolved_file_name() {
+    let t = Tmp::new("resolved");
+    let (reg, roots, src, w) = (registry(), t.roots(), points(), test_points());
+    let human = ExportEnv::new(&reg, &roots, Principal::Human);
+    let script = ExportEnv::new(&reg, &roots, Principal::Script);
+    let dir = t.out().to_string_lossy().replace('\\', "/");
+    for name in ["a.stl.", "a.stl ", "a.stl::$DATA", "a.ftp:x", "CON.ftp"] {
+        // A human's raw path: refused before the extension check could be dodged.
+        let raw = format!("{dir}/{name}");
+        for extra in ["", ",\"dry_run\":true"] {
+            let e = generic(&w).run_value(&human, &params_json(extra, &raw), &src).unwrap_err();
+            assert_eq!(e, ExportError::Io(IoError::PathOutsideRoot), "{name:?}");
+            assert_eq!(e.bus_code(), ("policy", "outside_root"));
+        }
+        // A handle: refused by the lexical check of IO.REG.ROOTS.
+        let e = generic(&w).run_value(&script, &params_json("", &format!("root://out/{name}")), &src).unwrap_err();
+        assert_eq!(e, ExportError::Io(IoError::PathOutsideRoot), "{name:?}");
+    }
+    assert!(listing(&t.out()).is_empty());
+    // The raw path's resolved name is what is checked: `.STL` names fid-test-stl.
+    let e = generic(&w).run_value(&human, &params_json("", &format!("{dir}/a.STL")), &src).unwrap_err();
+    assert_eq!(e, ExportError::Io(IoError::FormatMismatch));
+    assert!(listing(&t.out()).is_empty());
+}
+
+#[cfg(windows)]
+#[test]
+fn a_junction_out_of_the_root_is_refused() {
+    let t = Tmp::new("junction");
+    let outside = t.raw.join("outside");
+    fs::create_dir_all(&outside).unwrap();
+    let ok = std::process::Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(t.out().join("j"))
+        .arg(&outside)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    assert!(ok, "mklink /J needs no privilege");
+    let (reg, roots, src, w) = (registry(), t.roots(), points(), test_points());
+    let env = ExportEnv::new(&reg, &roots, Principal::Agent);
+    for extra in ["", ",\"dry_run\":true"] {
+        let e = generic(&w).run_value(&env, &params_json(extra, "root://out/j/a.ftp"), &src).unwrap_err();
+        assert_eq!(e, ExportError::Io(IoError::PathOutsideRoot));
+        assert_eq!(e.bus_code(), ("policy", "outside_root"));
+    }
+    assert!(listing(&outside).is_empty());
+}
+
+// ---------------------------------------------------------------------------------------
+// AC-6 with a forced extension; prepare and place
+
+#[test]
+fn a_human_forced_export_replays_identically_and_only_for_a_human_record() {
+    let t = Tmp::new("force");
+    let (reg, roots, src, w) = (registry(), t.roots(), points(), test_points());
+    let human = ExportEnv::new(&reg, &roots, Principal::Human);
+    let out =
+        generic(&w).run_value(&human, &params_json(",\"force_extension\":true", "root://out/a.stl"), &src).unwrap();
+    let event = out.event.unwrap();
+    assert!(event.force_extension && !event.overwrite);
+    assert_eq!(event.principal, Principal::Human);
+    assert_eq!(ExportEvent::from_json(&event.to_json().unwrap()).unwrap(), event);
+
+    // Replayed by a script into an empty root: the recorded human's force is honoured.
+    let t2 = Tmp::new("force2");
+    let roots2 = t2.roots();
+    let script = ExportEnv::new(&reg, &roots2, Principal::Script);
+    assert_eq!(generic(&w).replay(&script, &event, &src).unwrap(), ReplayOutcome::Identical);
+    assert_eq!(listing(&t2.out()), ["a.stl"]);
+    // A record claiming a forced extension for a script is not replayable.
+    let t3 = Tmp::new("force3");
+    let roots3 = t3.roots();
+    let script3 = ExportEnv::new(&reg, &roots3, Principal::Script);
+    let forged = ExportEvent { principal: Principal::Script, ..event.clone() };
+    assert_eq!(generic(&w).replay(&script3, &forged, &src).unwrap(), ReplayOutcome::NotReplayable);
+    assert!(listing(&t3.out()).is_empty());
+    // A recorded overwrite is replayed too: over an existing file it replaces it.
+    let t4 = Tmp::new("force4");
+    fs::write(t4.out().join("a.ftp"), b"old").unwrap();
+    let roots4 = t4.roots();
+    let env4 = ExportEnv::new(&reg, &roots4, Principal::Script);
+    let out = generic(&w).run_value(&env4, &params_json(",\"overwrite\":true", "root://out/a.ftp"), &src).unwrap();
+    let ev = out.event.unwrap();
+    assert!(ev.overwrite);
+    assert_eq!(generic(&w).replay(&env4, &ev, &src).unwrap(), ReplayOutcome::Identical);
+}
+
+#[test]
+fn prepare_writes_only_a_temp_file_and_place_or_discard_finishes_it() {
+    let exp = Expected::load();
+    let t = Tmp::new("prepare");
+    let (reg, roots, src, w) = (registry(), t.roots(), points(), test_points());
+    let env = ExportEnv::new(&reg, &roots, Principal::Script);
+    let f = generic(&w);
+    let p = ExportParams::from_value(&params_json("", "root://out/a.ftp"), true).unwrap();
+
+    let prepared = f.prepare(&env, &p, &src).unwrap();
+    // The record and its report digest exist before anything is placed.
+    let ev = prepared.event().unwrap().clone();
+    assert_eq!(ev.to_json().unwrap(), exp.get("stride1", "event").as_bytes());
+    assert_eq!(prepared.report().sha256().as_str(), exp.get("stride1", "sha256"));
+    let names = listing(&t.out());
+    assert_eq!(names.len(), 1);
+    assert!(names[0].starts_with(".fid-tmp-"), "{names:?}");
+    prepared.discard();
+    assert!(listing(&t.out()).is_empty());
+
+    let prepared = f.prepare(&env, &p, &src).unwrap();
+    // A target that appears between prepare and place is not clobbered.
+    fs::write(t.out().join("a.ftp"), b"raced").unwrap();
+    assert_eq!(prepared.place().unwrap_err(), ExportError::Io(IoError::TargetExists));
+    assert_eq!(listing(&t.out()), ["a.ftp"]);
+    assert_eq!(fs::read(t.out().join("a.ftp")).unwrap(), b"raced");
+    fs::remove_file(t.out().join("a.ftp")).unwrap();
+
+    let out = f.prepare(&env, &p, &src).unwrap().place().unwrap();
+    assert_eq!(out.event.unwrap(), ev);
+    assert_eq!(sha_of(&fs::read(t.out().join("a.ftp")).unwrap()), exp.get("stride1", "sha256"));
+
+    // A bus-level dry run becomes the export's own dry run: no file, not even a temp one.
+    let mut p2 = ExportParams::from_value(&params_json("", "root://out/b.ftp"), true).unwrap();
+    p2.apply_bus_dry_run(true);
+    assert!(p2.dry_run);
+    let prepared = f.prepare(&env, &p2, &src).unwrap();
+    assert!(prepared.event().is_none());
+    assert_eq!(listing(&t.out()), ["a.ftp"]);
+    assert!(prepared.place().unwrap().event.is_none());
+    assert_eq!(listing(&t.out()), ["a.ftp"]);
+    p2.apply_bus_dry_run(false);
+    assert!(p2.dry_run, "a bus flag never clears the export's own dry run");
+}
+
+// ---------------------------------------------------------------------------------------
+// Conformance kit (REQ-005)
+
+struct Kit {
+    reg: Registry,
+    source: SourceRef,
+    options: CValue,
+    sha: Digest,
+    variants: Vec<CValue>,
+    format: FormatId,
+}
+
+fn kit() -> Kit {
+    let exp = Expected::load();
+    Kit {
+        reg: registry(),
+        source: exp.source(),
+        options: CValue::Obj(BTreeMap::new()),
+        sha: Digest::parse(&exp.get("stride1", "sha256")).unwrap(),
+        variants: vec![
+            fid_canon::parse(b"{\"stride\":3}").unwrap(),
+            fid_canon::parse(b"{\"stride\":0}").unwrap(),
+            fid_canon::parse(b"{\"other\":1}").unwrap(),
+        ],
+        format: FormatId::new("fid-test-points").unwrap(),
+    }
+}
+
+fn fixture<'a>(k: &'a Kit, roots: &'a RootSet, dir: &'a Path) -> Fixture<'a> {
+    Fixture {
+        registry: &k.reg,
+        roots,
+        root_id: "out",
+        root_dir: dir,
+        format: &k.format,
+        file_name: "kit.ftp",
+        source: &k.source,
+        options: &k.options,
+        expected_sha256: &k.sha,
+        option_variants: &k.variants,
+        fail_after: 10 * 1024,
+    }
+}
+
+#[test]
+fn both_commands_pass_the_conformance_kit() {
+    let k = kit();
+    let t = Tmp::new("kit");
+    let (roots, out, src, w) = (t.roots(), t.out(), points(), test_points());
+    let fx = fixture(&k, &roots, &out);
+    let file = generic(&w);
+    conformance::check(&file, &export_file_def(&k.reg).unwrap(), &src, &fx).unwrap();
+    assert!(listing(&out).is_empty(), "the kit removes what it wrote");
+    let cmd = ExportCommand::new(&w, &[EXPORT_FILE]).unwrap();
+    conformance::check(&cmd, &format_def(&k.reg, &k.format, &[EXPORT_FILE]).unwrap(), &src, &fx).unwrap();
+    assert!(listing(&out).is_empty());
+    // The wrong definition for a command is caught.
+    let e = conformance::check(&cmd, &export_file_def(&k.reg).unwrap(), &src, &fx).unwrap_err();
+    assert_eq!(e.step, "definition");
+}
+
+/// A writer whose output changes on every call (a timestamp stand-in): it must fail the kit.
 struct Unstable {
     inner: TestPoints,
     calls: Cell<u64>,
@@ -944,6 +1270,10 @@ impl Writer for Unstable {
         self.inner.version()
     }
 
+    fn options(&self, given: &CValue) -> Result<CValue, &'static str> {
+        self.inner.options(given)
+    }
+
     fn write(
         &self,
         src: &Points,
@@ -957,7 +1287,61 @@ impl Writer for Unstable {
     }
 }
 
-/// A writer that ignores the sink and writes a side file: the kit sees the root change.
+/// A writer whose output is stable within a process but differs from the stored digest
+/// (as hash-order output would between processes).
+struct Shifted(TestPoints);
+
+impl Writer for Shifted {
+    type Source = Points;
+
+    fn format(&self) -> &FormatId {
+        self.0.format()
+    }
+
+    fn version(&self) -> &VersionToken {
+        self.0.version()
+    }
+
+    fn options(&self, given: &CValue) -> Result<CValue, &'static str> {
+        self.0.options(given)
+    }
+
+    fn write(
+        &self,
+        src: &Points,
+        opts: &CValue,
+        sink: &mut dyn ByteSink,
+        r: &mut ReportBuilder,
+    ) -> Result<(), IoError> {
+        sink.write_bytes(b"#\n")?;
+        self.0.write(src, opts, sink, r)
+    }
+}
+
+/// A writer that accepts options but ignores them.
+struct Deaf(TestPoints);
+
+impl Writer for Deaf {
+    type Source = Points;
+
+    fn format(&self) -> &FormatId {
+        self.0.format()
+    }
+
+    fn version(&self) -> &VersionToken {
+        self.0.version()
+    }
+
+    fn options(&self, given: &CValue) -> Result<CValue, &'static str> {
+        self.0.options(given)
+    }
+
+    fn write(&self, src: &Points, _: &CValue, sink: &mut dyn ByteSink, r: &mut ReportBuilder) -> Result<(), IoError> {
+        self.0.write(src, &CValue::Obj(BTreeMap::new()), sink, r)
+    }
+}
+
+/// A writer that swallows sink errors and writes a side file.
 struct Leaky<'a> {
     inner: TestPoints,
     dir: &'a Path,
@@ -974,6 +1358,10 @@ impl Writer for Leaky<'_> {
         self.inner.version()
     }
 
+    fn options(&self, given: &CValue) -> Result<CValue, &'static str> {
+        self.inner.options(given)
+    }
+
     fn write(
         &self,
         src: &Points,
@@ -986,43 +1374,47 @@ impl Writer for Leaky<'_> {
     }
 }
 
+fn kit_step<W: Writer<Source = Points>>(name: &str, w: W) -> &'static str {
+    let k = kit();
+    let t = Tmp::new(name);
+    let (roots, out, src) = (t.roots(), t.out(), points());
+    let fx = fixture(&k, &roots, &out);
+    let mut file = ExportFile::new();
+    file.add(Box::new(w)).unwrap();
+    conformance::check(&file, &export_file_def(&k.reg).unwrap(), &src, &fx).unwrap_err().step
+}
+
 #[test]
 fn the_conformance_kit_catches_broken_writers() {
-    let exp = Expected::load();
-    let source = exp.source();
-    let options = CValue::Obj(BTreeMap::new());
-    let reg = registry();
-    let src = points();
+    assert_eq!(kit_step("kit-unstable", Unstable { inner: test_points(), calls: Cell::new(0) }), "dry_run");
+    assert_eq!(kit_step("kit-shifted", Shifted(test_points())), "dry_run");
+    assert_eq!(kit_step("kit-deaf", Deaf(test_points())), "options");
 
-    let t = Tmp::new("kit-unstable");
-    let roots = t.roots();
-    let out = t.out();
-    let fx = Fixture {
-        registry: &reg,
-        roots: &roots,
-        root_id: "out",
-        root_dir: &out,
-        file_name: "kit.ftp",
-        source: &source,
-        options: &options,
-        fail_after: 10 * 1024,
-    };
-    let e = conformance::check(&Unstable { inner: test_points(), calls: Cell::new(0) }, &src, &fx).unwrap_err();
-    assert_eq!(e.command, EXPORT_FILE);
-    assert_eq!(e.step, "export", "{e}");
-
+    // Side effects outside the sink.
+    let k = kit();
     let t = Tmp::new("kit-leaky");
-    let roots = t.roots();
-    let out = t.out();
-    let fx = Fixture { roots: &roots, root_dir: &out, ..fx };
-    let e = conformance::check(&Leaky { inner: test_points(), dir: &out }, &src, &fx).unwrap_err();
-    assert_eq!(e.step, "dry_run", "{e}");
+    let (roots, out, src) = (t.roots(), t.out(), points());
+    let fx = fixture(&k, &roots, &out);
+    let mut file = ExportFile::new();
+    file.add(Box::new(Leaky { inner: test_points(), dir: &out })).unwrap();
+    assert_eq!(conformance::check(&file, &export_file_def(&k.reg).unwrap(), &src, &fx).unwrap_err().step, "dry_run");
+
+    // An option the descriptor declares but no variant exercises.
+    let t = Tmp::new("kit-novar");
+    let (roots, out) = (t.roots(), t.out());
+    let empty: Vec<CValue> = vec![fid_canon::parse(b"{\"other\":1}").unwrap()];
+    let fx = Fixture { option_variants: &empty, ..fixture(&k, &roots, &out) };
+    let w = test_points();
+    let e = conformance::check(&generic(&w), &export_file_def(&k.reg).unwrap(), &src, &fx).unwrap_err();
+    assert_eq!(e.step, "options");
 
     // A non-empty root is refused up front.
     let t = Tmp::new("kit-busy");
     fs::write(t.out().join("x"), b"").unwrap();
-    let roots = t.roots();
-    let out = t.out();
-    let fx = Fixture { roots: &roots, root_dir: &out, ..fx };
-    assert_eq!(conformance::check(&test_points(), &src, &fx).unwrap_err().step, "setup");
+    let (roots, out) = (t.roots(), t.out());
+    let fx = fixture(&k, &roots, &out);
+    assert_eq!(
+        conformance::check(&generic(&w), &export_file_def(&k.reg).unwrap(), &src, &fx).unwrap_err().step,
+        "setup"
+    );
 }

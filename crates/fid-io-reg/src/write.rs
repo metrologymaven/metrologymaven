@@ -147,6 +147,7 @@ pub struct AtomicWriter {
     opts: WriteOptions,
     failed: Option<IoError>,
     done: bool,
+    sealed: Option<WriteReceipt>,
     fail_hard_link: bool,
 }
 
@@ -187,6 +188,7 @@ impl AtomicWriter {
             opts,
             failed: None,
             done: false,
+            sealed: None,
             fail_hard_link: false,
         })
     }
@@ -251,6 +253,9 @@ impl AtomicWriter {
         if let Some(e) = &self.failed {
             return Err(e.clone());
         }
+        if self.sealed.is_some() {
+            return Err(self.fail(kind_err(io::ErrorKind::Other)));
+        }
         let end = u64::try_from(buf.len()).ok().and_then(|n| self.bytes.checked_add(n));
         let end = match end {
             Some(end) if end <= self.opts.max_bytes => end,
@@ -276,30 +281,49 @@ impl AtomicWriter {
         Ok(())
     }
 
-    /// Flushes, syncs and moves the temp file onto the target, then returns its digest and
-    /// size. On any error the temp file is removed and the target is unchanged.
-    pub fn commit(mut self) -> Result<WriteReceipt, IoError> {
-        if let Some(e) = self.failed.take() {
-            return Err(e);
+    /// Flushes, syncs and closes the temp file and returns its digest and size, without
+    /// touching the target: the bytes are durable under the temp name, ready for
+    /// [`AtomicWriter::commit`]. Calling it again returns the same receipt; writing after it
+    /// fails. On any error the writer is poisoned (the temp file is removed on drop).
+    pub fn prepare(&mut self) -> Result<WriteReceipt, IoError> {
+        if let Some(r) = self.sealed {
+            return Ok(r);
+        }
+        if let Some(e) = &self.failed {
+            return Err(e.clone());
         }
         let out = match self.out.take() {
             Some(out) => out,
-            None => return Err(kind_err(io::ErrorKind::Other)),
+            None => return Err(self.fail(kind_err(io::ErrorKind::Other))),
         };
         let sink = match out.into_inner() {
             Ok(sink) => sink,
-            Err(e) => return Err(self.io_at(e.error())),
+            Err(e) => {
+                let e = self.io_at(e.error());
+                return Err(self.fail(e));
+            }
         };
         let file = sink.file;
         if let Err(e) = file.sync_all() {
-            return Err(self.io_at(&e));
+            let e = self.io_at(&e);
+            return Err(self.fail(e));
         }
         drop(file);
+        let sha256 = Digest::from_bytes(std::mem::take(&mut self.hasher).finalize().into());
+        let r = WriteReceipt { sha256, bytes: self.bytes };
+        self.sealed = Some(r);
+        Ok(r)
+    }
+
+    /// [`AtomicWriter::prepare`] (if not done yet), then moves the temp file onto the
+    /// target and returns its digest and size. On any error the temp file is removed and the
+    /// target is unchanged.
+    pub fn commit(mut self) -> Result<WriteReceipt, IoError> {
+        let r = self.prepare()?;
         self.place()?;
         self.done = true;
         sync_dir(&self.dir);
-        let sha256 = Digest::from_bytes(std::mem::take(&mut self.hasher).finalize().into());
-        Ok(WriteReceipt { sha256, bytes: self.bytes })
+        Ok(r)
     }
 
     /// Moves the closed, synced temp file onto the target.

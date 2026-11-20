@@ -1501,6 +1501,7 @@ dependencies = [
  "fid-surface",
  "fid-types",
  "libc",
+ "regex",
  "sha2 0.10.9",
 ]
 

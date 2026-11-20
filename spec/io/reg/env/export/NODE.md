@@ -19,7 +19,7 @@ determinism: D0
 cli: [fid export file]
 mcp: [export_file]
 journal: [export.file@1]
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # IO.REG.ENV.EXPORT: Generic export command and export skeleton
@@ -61,8 +61,11 @@ updated: 2026-11-17
 
 - **Registry command:** `export.file@1` W1 `fs_effect: write_root`; params `source: EntityRef | Selection`, `format: FormatId`, `target: RootHandle | Path (human only)`, `options?: Json`, `overwrite: bool = false`, `force_extension: bool = false`, `dry_run: bool = false`; result `ExportReport`.
 - **Data structures:** `trait Writer { fn write(&self, src, opts, sink: &mut dyn ByteSink, report: &mut ReportBuilder) -> Result<(), IoError> }`; `CountingSink` for dry runs.
-- **Algorithm:** resolve handle → extension check → `AtomicWriter` (or `CountingSink`) → `Writer::write` → commit or drop → journal receipt.
-- **Errors:** `format_mismatch`, `target_exists`, `raw_path_forbidden`, `path_outside_root`, writer errors.
+- **Algorithm:** two phases. *Prepare:* resolve handle → for a human's raw path, the file name must be a plain name (no trailing dot or space, no `:`, no device name; the `IO.REG.ROOTS` component rule) → extension check on the **resolved** file name → explicit target check (`target_exists`, `target_protected`) → `Writer::write` into the `AtomicWriter` temp file, then flush, sync and close it (or into a `CountingSink`) → report, report digest and journal record. *Place:* move the temp file onto the target without clobbering; on any failure, or when not placed, the temp file is removed.
+- **Format IDs and per-format commands:** a format ID matches `^[a-z0-9][a-z0-9.-]{0,63}$` (no `_`). `export.<format>@1` writes `-` as `_`, which is therefore one-to-one. The names `export.file` and `export.list_formats`, and any `export.*` command already registered, are refused for a format command (`command_id_taken`).
+- **Journal record (`export.file@1` / `export.<format>@1`):** command, principal kind, source, target, format, writer version, effective options, `overwrite`, `force_extension`, SHA-256, byte count, lossy list (at most 1,024 names) and the report digest; RFC 8785 canonical bytes only. Replay re-runs with the recorded `overwrite` and `force_extension`; a forced extension is honoured only when the recorded principal is `human`, otherwise the record is `NOT_REPLAYABLE`.
+- **Obligations on the bus adapter and `CORE.BUS.PIPE.STAGE`:** (1) a bus-level `dry_run` maps to the export's own `dry_run` (`ExportParams::apply_bus_dry_run`), so no file, temporary or final, is ever written for it; (2) the adapter prepares, commits the journal record, and only then places the file; if the commit fails it discards the prepared export, and if placing fails after the commit the stage must record the failure (a commit-then-place hook, see that node's Open questions).
+- **Errors:** `format_mismatch`, `target_exists`, `target_protected` (from the explicit target check only), `raw_path_forbidden`, `path_outside_root`, `command_id_taken`, writer errors (`internal/handler_failed`). Every failure maps to a bus catalogue v3 `code/reason`; refusals are never `internal`, and an OS permission error while writing is `internal/storage`.
 - **Determinism:** D0 for bytes and digest.
 - **Performance budget:** skeleton overhead < 2% of writer time [unverified until measured].
 - **Crate:** `fid-io-reg` (module `env::export`).
@@ -77,8 +80,8 @@ Test-only format `fid-test-points` (shared with `IO.REG.ENV.IMPORT`) and a faili
 
 ## Open questions
 
-- Built in `fid-io-reg` (`env::export`): the skeleton, `export.file@1`, `ExportCommand<W>`, the registry definitions, the journal record with replay, and the conformance kit. Two pieces wait for `CORE.BUS.PIPE.STAGE` (not built yet): running the command through `Bus::execute` (so the generated `fid export file` and MCP `export_file` reach it) and committing the record to the journal. Until then AC-1 and AC-6 are tested through the command function, and a file placed before a failed journal commit is not removed; that rollback belongs to the stage that commits.
-- The journal record also holds `source` and `report_sha256`, which replay needs. A per-format command is named `export.<format>@1` with `-` written as `_`, because command names do not allow `-`.
+- Built in `fid-io-reg` (`env::export`): prepare and place, `export.file@1`, `ExportCommand<W>`, the registry definitions, the journal record with replay, and the conformance kit (it takes the command under test and its definition, checks against a stored digest, cancels mid-write and checks that declared options matter). What waits for `CORE.BUS.PIPE.STAGE` (not built yet): the bus adapter that runs the command through `Bus::execute` (so the generated `fid export file` and MCP `export_file` reach it) and that honours the two obligations in Design. Until then AC-1 and AC-6 are tested through the command function.
+- The bus catalogue v3 has no reason finer than `internal/storage` for an OS permission error while writing; a dedicated reason would need catalogue v4.
 
 ## Children
 

@@ -77,6 +77,7 @@ updated: 2026-11-17
 
 ## Open questions
 
+- Handlers with `fs_effect: write_root` need a commit-then-place hook: the handler prepares its file (written and synced under a temp name), the stage commits the journal entry, and only then the file is placed; on a failed commit the prepared file is discarded, and a placement that fails after the commit must be recorded. Raised by IO.REG.ENV.EXPORT (`PreparedExport::place` / `discard`); a bus-level `dry_run` must also reach such handlers as their own dry run so they write nothing.
 - Whether a long-running command whose head moved should be offered an automatic rebase instead of `conflict`; this leaf returns `conflict` and leaves retry to the caller.
 
 ## Children

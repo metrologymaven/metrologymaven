@@ -44,6 +44,9 @@ libc = "0.2"
 [dev-dependencies]
 # Integration tests use the race hook.
 fid-io-reg = { path = ".", features = ["test-hooks"] }
+# IO.REG.ENV.EXPORT tests evaluate the published schema patterns with a real regex engine.
+# Already in the lock (fid-vocab), same features.
+regex = { version = "1", default-features = false, features = ["std", "unicode"] }
 
 [lints]
 workspace = true

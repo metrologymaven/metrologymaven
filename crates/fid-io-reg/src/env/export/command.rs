@@ -20,10 +20,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// The day these definitions were first published.
 const LIFECYCLE_SINCE: &str = "2026-11-20";
-/// The pattern of a format ID (`IO.REG.ENV.REPORT`).
-pub const FORMAT_ID_PATTERN: &str = "^[a-z0-9][a-z0-9._-]{0,63}$";
-/// The pattern of a 64-bit integer written as a decimal string.
-pub const U64_PATTERN: &str = "^(0|[1-9][0-9]{0,19})$";
+/// The pattern of a format ID (`IO.REG.ENV.REPORT`): no `_`, so `export.<format>@1` is
+/// one-to-one.
+pub const FORMAT_ID_PATTERN: &str = "^[a-z0-9][a-z0-9.-]{0,63}$";
+/// The pattern of a 64-bit unsigned integer written as a decimal string: no leading zero and
+/// at most `18446744073709551615`.
+pub const U64_PATTERN: &str = "^(0|[1-9][0-9]{0,18}|1[0-7][0-9]{18}|18[0-3][0-9]{17}|184[0-3][0-9]{16}|1844[0-5][0-9]{15}|18446[0-6][0-9]{14}|184467[0-3][0-9]{13}|1844674[0-3][0-9]{12}|184467440[0-6][0-9]{10}|1844674407[0-2][0-9]{9}|18446744073[0-6][0-9]{8}|1844674407370[0-8][0-9]{6}|18446744073709[0-4][0-9]{5}|184467440737095[0-4][0-9]{4}|18446744073709550[0-9]{3}|18446744073709551[0-5][0-9]{2}|1844674407370955160[0-9]|1844674407370955161[0-4]|18446744073709551615)$";
 /// The pattern of a `sha256:` digest.
 pub const DIGEST_PATTERN: &str = "^sha256:[0-9a-f]{64}$";
 /// The pattern of a warning code.
@@ -261,9 +263,10 @@ pub fn export_file_def(reg: &Registry) -> Result<CommandDef, ExportError> {
     CommandDef::from_value(export_file_def_value(reg)?).map_err(|_| ExportError::Internal("invalid command definition"))
 }
 
-/// The definition value of `export.<format>@1`.
-pub fn format_def_value(reg: &Registry, format: &FormatId) -> Result<CValue, ExportError> {
-    let id = format_command_id(format)?;
+/// The definition value of `export.<format>@1`; `taken` lists the command IDs already in the
+/// registry (see [`format_command_id`]).
+pub fn format_def_value(reg: &Registry, format: &FormatId, taken: &[&str]) -> Result<CValue, ExportError> {
+    let id = format_command_id(format, taken)?;
     Ok(def_value(
         id.as_str(),
         &format!("Export to {}", format.as_str()),
@@ -277,7 +280,7 @@ pub fn format_def_value(reg: &Registry, format: &FormatId) -> Result<CValue, Exp
 }
 
 /// The registry definition of `export.<format>@1`.
-pub fn format_def(reg: &Registry, format: &FormatId) -> Result<CommandDef, ExportError> {
-    CommandDef::from_value(format_def_value(reg, format)?)
+pub fn format_def(reg: &Registry, format: &FormatId, taken: &[&str]) -> Result<CommandDef, ExportError> {
+    CommandDef::from_value(format_def_value(reg, format, taken)?)
         .map_err(|_| ExportError::Internal("invalid command definition"))
 }
