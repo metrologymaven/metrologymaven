@@ -1,0 +1,45 @@
+# VIZ.SHELL.SPKTREE results: element tree with 10k items
+
+Overall: **incomplete**
+
+## Environment
+
+- Hardware: H1
+- GPU adapter: -
+- Profile: PLAT H1 reference machine
+- Versions: egui 0.33.3, wgpu 27.0.1, winit 0.30.13
+
+## Criteria
+
+| Criterion | Measured | Threshold | Result |
+|---|---|---|---|
+| AC-1 scroll, p95 frame time | - | < 33 ms | not run |
+| AC-2 expand-all, p95 frame time | - | < 33 ms | not run |
+| AC-2 collapse-all, p95 frame time | - | < 33 ms | not run |
+| REQ-002 filter typing, p95 frame time | - | < 33 ms | not run |
+| AC-3 keyboard sequence | - | all steps | not run |
+| AC-4 screen reader (manual) | see log | role, name, level, expanded for 5 items | not run |
+
+## Recommendation
+
+Incomplete: 6 criteria not run. No recommendation until every criterion is measured.
+
+## Frame-time summary
+
+No frame times recorded.
+
+## Manual screen-reader check (AC-4)
+
+Screen reader and version:
+
+| Item | Role | Name | Level | Expanded |
+|---|---|---|---|---|
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
+| 4 | | | | |
+| 5 | | | | |
+
+## Limitations
+
+None recorded.

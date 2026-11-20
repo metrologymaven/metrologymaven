@@ -49,6 +49,7 @@ pub mod apps_policy;
 pub mod bots;
 pub mod conic_audit;
 pub mod crate_graph;
+pub mod deny_scope;
 pub mod kernel_allow;
 pub mod plat_deploy_netlist;
 pub mod plat_gpu_invar;

@@ -1,0 +1,18 @@
+{
+  "ac1_event": "{\"branch\":\"working\",\"command\":\"program.adopt_steps@1\",\"human\":\"alice\",\"program\":\"019a0000-0000-7000-8000-00000000a000\",\"program_digest\":\"sha256:1355d0c80e30fa38d0e4c7b36a6a9fe74ccddcf182352f96b60e9502feab7a6f\",\"steps\":[\"019a0000-0002-7000-8000-00000000a002\",\"019a0000-0003-7000-8000-00000000a003\"]}",
+  "ac1_result": "{\"adopted\":[\"019a0000-0002-7000-8000-00000000a002\",\"019a0000-0003-7000-8000-00000000a003\"]}",
+  "ac5_event": "{\"branch\":\"working\",\"command\":\"script.adopt_version@1\",\"human\":\"alice\",\"script\":\"probe-sweep\",\"version_digest\":\"sha256:8942a5ad42970d7f6a90bce24c69977d925d891350b954f6f1b7049877abb1df\"}",
+  "ac5_result": "{\"adopted\":true}",
+  "draft_digest": "sha256:1355d0c80e30fa38d0e4c7b36a6a9fe74ccddcf182352f96b60e9502feab7a6f",
+  "edited_digest": "sha256:94da70eb08baaac571fc6f9520981173f50834986ef628747d0f9487360e4a29",
+  "human": "alice",
+  "program": "019a0000-0000-7000-8000-00000000a000",
+  "script": "probe-sweep",
+  "script_v1": "sha256:8942a5ad42970d7f6a90bce24c69977d925d891350b954f6f1b7049877abb1df",
+  "script_v2": "sha256:1781977e718a296c23ac5571af5048f7e6db0c6b5291d491b2135769b42b383f",
+  "steps": {
+    "S1": "019a0000-0001-7000-8000-00000000a001",
+    "S2": "019a0000-0002-7000-8000-00000000a002",
+    "S3": "019a0000-0003-7000-8000-00000000a003"
+  }
+}

@@ -1,0 +1,10 @@
+{"id":"agent.proposal.apply_button","text":"Approve"}
+{"id":"agent.plan.status","text":"Plan approved by agent"}
+{"id":"agent.proposal.bulk_button","text":"Approve and release all"}
+{"id":"run.approved.count","text":"Approved runs: {n}"}
+{"id":"viz.shell.login","text":"Sign in"}
+{"id":"viz.update.banner","text":"New release available"}
+{"id":"rpt.summary.note","text":"All features VERIFIED"}
+{"id":"viz.inspect.badge","text":"Conformance: 98 %"}
+{"id":"viz.inspect.title","text":"Inspect features"}
+{"id":"program.sign.tooltip","text":"Signed by the release manager; signature checked"}

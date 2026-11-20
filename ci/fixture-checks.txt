@@ -24,6 +24,7 @@ python fixtures/core/sto/set/make_fixtures.py --check
 python fixtures/core/sto/sql/schema/make_fixture.py --check
 python fixtures/dsse/make_fixtures.py --check
 python fixtures/fetch/make_fixtures.py --check
+python fixtures/fit/make_lin_fixtures.py --check
 python fixtures/fit/make_trait_fixtures.py --check
 python fixtures/flow/fixes/make_fixtures.py --check
 python fixtures/flow/journey/make_fixtures.py --check
@@ -62,6 +63,7 @@ python fixtures/io/reg/prov/make_cases.py --check
 python fixtures/io/res/trans/model/make_fixtures.py --check
 python fixtures/knp1/data/make_fixtures.py --check
 python fixtures/knp1/seeded/make_expected.py --check
+python fixtures/knp1/typed/make_canary.py --check
 python fixtures/knp1/typed/make_expected.py --check
 python fixtures/knp1/typed/make_messages.py --check
 python fixtures/man/check_manifest_schema.py
@@ -88,6 +90,7 @@ python fixtures/plat/matrix/make_page.py --check
 python fixtures/profile/make_fixtures.py --check
 python fixtures/program/expr/make_cases.py --check
 python fixtures/rdl/format/make_fixtures.py --check
+python fixtures/rec/adopt/make_fixtures.py --check
 python fixtures/rel/guide/make_fixtures.py --check
 python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
@@ -105,6 +108,7 @@ python fixtures/unc/class/make_table.py --check
 python fixtures/unc/dec/type/make_fixtures.py --check
 python fixtures/unc/dist/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
+python fixtures/ux/system/princ/make_fixtures.py --check
 python fixtures/viz/viewstate-samples/make_fixtures.py --check
 python tools/check_bench_schema.py
 python tools/check_command_defs.py

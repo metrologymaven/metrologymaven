@@ -66,11 +66,18 @@ fn store_defs() -> Result<Vec<CommandDef>, DefError> {
     Ok(fid_store::settings::declarations().into_iter().map(|d| d.def).collect())
 }
 
+/// The two adoption commands of `AUTO.REC.ADOPT` (`human_only`, request-only on MCP),
+/// declared with the registry macros.
+fn program_rec_defs() -> Result<Vec<CommandDef>, DefError> {
+    Ok(fid_program_rec::adopt::declarations().into_iter().map(|d| d.def).collect())
+}
+
 /// Every crate on main that declares commands, sorted by crate name.
-pub const SOURCES: [Source; 6] = [
+pub const SOURCES: [Source; 7] = [
     Source { krate: "fid-align", defs: fid_align::command_defs },
     Source { krate: "fid-dep", defs: dep_defs },
     Source { krate: "fid-jobs", defs: fid_jobs::command_defs },
+    Source { krate: "fid-program-rec", defs: program_rec_defs },
     Source { krate: "fid-registry", defs: registry_defs },
     Source { krate: "fid-report", defs: fid_report::doc::command_defs },
     Source { krate: "fid-store", defs: store_defs },

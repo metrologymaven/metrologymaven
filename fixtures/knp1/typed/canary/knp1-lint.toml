@@ -1,0 +1,9 @@
+# KRN.NUM.LINT.TYPED kind guard. Paths are relative to this file.
+[graph]
+workspace = "."
+roots = ["typed-canary"]
+
+[typed]
+# The test replaces this pin with the version of the toolchain that runs it, and runs one
+# target at a time.
+clippy_version = "0.0.0"
