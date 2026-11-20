@@ -51,11 +51,11 @@ Finds the globally closest point on a single untrimmed NURBS curve or surface to
 
 ## Acceptance criteria
 
-- **AC-1** Given fixture `fixtures/geo/nurbs/ref_set_v1` inversion queries (5 000 points, including points near several local minima), when inverted, then every foot point is within 1e-12 m of the reference global closest point and distances agree within 1e-12 m.
+- **AC-1** Given fixture `fixtures/geo/nurbs/ref_set_v2` inversion queries (5 000 points, including points near several local minima), when inverted, then every foot point is within 1e-12 m of the reference global closest point and distances agree within 1e-12 m.
 - **AC-2** Given fixture `fixtures/geo/nurbs/multi_minima` (a wavy surface with query points equidistant to two crests), when inverted, then the lexicographically smallest (u, v) is chosen.
 - **AC-3** Given a query point whose closest point lies on a boundary edge, when inverted, then the boundary parameter is returned exactly at the domain limit.
 - **AC-4** (error path) Given a synthetic surface with a cusp that defeats Newton (in the fixture), when inverted, then `NonConvergence` is returned with a finite best point.
-- **AC-5** Given `ref_set_v1`, when run on three targets, then the result digest is identical.
+- **AC-5** Given `ref_set_v2`, when run on three targets, then the result digest is identical.
 
 ## Design
 
@@ -80,7 +80,7 @@ Finds the globally closest point on a single untrimmed NURBS curve or surface to
 
 ## Test fixtures
 
-- `ref_set_v1` and `multi_minima` from GEO.NURBS.REF (references from dense high-precision search). CC-BY-4.0. Known defect: `sphere-q0121` is a local, not the global, minimum (the radial projection is 2.7e-6 m closer); it is excluded from the REF comparison and the sphere is checked against its closed form until the GEO.NURBS.REF follow-up fixes the fixture.
+- `ref_set_v2` and `multi_minima` from GEO.NURBS.REF (references from dense high-precision search, each certified global within 1e-15 m by an exact Bernstein bound). CC-BY-4.0. The superseded `ref_set_v1` had one non-global reference (`sphere-q0121`, 2.7e-6 m too far) and is not used for inversion. The sphere is also checked against its closed form.
 - `fixtures/geo/nurbs/invert/fuzz_set.json` (seed 44): curvature centres and axes, sphere poles, kinks and creases, unclamped and periodic knot vectors, degrees up to 25, near ties and random rational curves and surfaces, referenced by the GEO.NURBS.REF oracle and closed forms; `digests-v1.txt` from the bit-exact model `invert_model.py`; both written by `make_invert_fixtures.py`. CC-BY-4.0.
 
 ## Build prompt

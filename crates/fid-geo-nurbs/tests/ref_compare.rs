@@ -22,7 +22,9 @@ const DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/geo/nurbs
 /// REQ-GEO.NURBS.REF-005 (and REQ-GEO.NURBS-003): position tolerance in metres.
 const POS_TOL: f64 = 1e-12;
 const SEED: f64 = 40.0;
-const ORACLE_FILES: [&str; 3] = ["ref_set_v1.json", "analytic_set.json", "multi_minima.json"];
+const ORACLE_FILES: [&str; 3] = ["ref_set_v2.json", "analytic_set.json", "multi_minima.json"];
+/// Frozen output of oracle 1.0.0, superseded by `ref_set_v2.json` (non-global sphere-q0121).
+const SUPERSEDED: &str = "ref_set_v1.json";
 
 // ---------------------------------------------------------------- minimal JSON reader
 
@@ -262,7 +264,7 @@ fn doc(name: &str) -> &'static J {
     static DOCS: OnceLock<BTreeMap<String, J>> = OnceLock::new();
     let docs = DOCS.get_or_init(|| {
         let mut m = BTreeMap::new();
-        for f in ORACLE_FILES.iter().chain(["manifest.json"].iter()) {
+        for f in ORACLE_FILES.iter().chain([SUPERSEDED, "manifest.json"].iter()) {
             let bytes = std::fs::read(format!("{DIR}{f}")).unwrap();
             m.insert((*f).to_string(), parse(&bytes));
         }
@@ -321,13 +323,13 @@ trait PositionEvaluator {
     fn surface(&self, s: &NurbsSurface, u: f64, v: f64) -> [f64; 3];
 }
 
-/// Largest position error over every `eval` row of `ref_set_v1` and the number of rows whose
+/// Largest position error over every `eval` row of `ref_set_v2` and the number of rows whose
 /// error is not within [`POS_TOL`] (a NaN counts as outside).
 fn compare_positions(ev: &dyn PositionEvaluator) -> (f64, usize, usize) {
     let mut worst = 0.0_f64;
     let mut fails = 0;
     let mut total = 0;
-    for e in entities("ref_set_v1.json") {
+    for e in entities("ref_set_v2.json") {
         let built = build(e);
         for r in e.get("eval").arr() {
             let want = r.get("p").v3();
@@ -422,7 +424,8 @@ impl PositionEvaluator for DeBoorDouble {
 // ---------------------------------------------------------------- tests
 
 /// AC-1 (Rust side): every file matches the SHA-256 in the manifest, oracle outputs carry the
-/// manifest's oracle version and seed, and the adopted GEO.NURBS.DATA sets are pinned too.
+/// manifest's oracle version (frozen 1.0.0 outputs their own) and seed, and the adopted
+/// GEO.NURBS.DATA sets and the superseded ref_set_v1 are pinned too.
 #[test]
 fn ac1_manifest_matches_files() {
     let man = doc("manifest.json");
@@ -437,14 +440,22 @@ fn ac1_manifest_matches_files() {
         if f.has("adopted") {
             continue;
         }
-        assert_eq!(f.get("oracle_version").str(), version, "{path}");
+        if f.has("superseded") {
+            assert_eq!(path, SUPERSEDED, "unexpected superseded file");
+            assert_eq!(f.get("superseded_by").str(), "ref_set_v2.json");
+            assert_eq!(f.get("oracle_version").str(), "nurbs_oracle 1.0.0");
+            continue;
+        }
+        // frozen oracle 1.0.0 outputs (analytic_set, multi_minima) carry their own version
+        let want = if f.has("frozen") { "nurbs_oracle 1.0.0" } else { version };
+        assert_eq!(f.get("oracle_version").str(), want, "{path}");
         let d = doc(path);
-        assert_eq!(d.get("oracle_version").str(), version, "{path}");
+        assert_eq!(d.get("oracle_version").str(), want, "{path}");
         assert_eq!(d.get("seed").num(), SEED, "{path}");
         assert_eq!(d.get("file_seed").num(), f.get("seed").num(), "{path}");
         assert_eq!(d.get("license").str(), "CC-BY-4.0");
     }
-    for want in ORACLE_FILES.iter().chain(["valid_set.json", "invalid_set.json"].iter()) {
+    for want in ORACLE_FILES.iter().chain(["valid_set.json", "invalid_set.json", SUPERSEDED].iter()) {
         assert!(names.iter().any(|n| n == want), "{want} missing from the manifest");
     }
 }
@@ -482,7 +493,7 @@ fn hex_and_decimal_agree() {
 /// domain the oracle used.
 #[test]
 fn entities_construct_with_matching_domains() {
-    for f in ["ref_set_v1.json", "multi_minima.json"] {
+    for f in ["ref_set_v2.json", "multi_minima.json"] {
         for e in entities(f) {
             let id = e.get("id").str();
             match build(e) {
@@ -507,7 +518,7 @@ fn entities_construct_with_matching_domains() {
 /// within 1e-15 and lie in z = 0.
 #[test]
 fn ac2_circle_reference_points_on_unit_circle() {
-    let circle = entities("ref_set_v1.json").iter().find(|e| e.get("id").str() == "circle").unwrap();
+    let circle = entities("ref_set_v2.json").iter().find(|e| e.get("id").str() == "circle").unwrap();
     let rows = circle.get("eval").arr();
     assert!(rows.len() >= 100, "circle has {} parameters", rows.len());
     for r in rows {
@@ -529,7 +540,7 @@ fn repeated_interior(knots: &[f64], p: usize) -> bool {
 /// analytic types, tied multi-minima queries and at least 5000 inversion queries.
 #[test]
 fn ac3_fixture_coverage() {
-    let ents = entities("ref_set_v1.json");
+    let ents = entities("ref_set_v2.json");
     for p in 1..=25 {
         for rational in [false, true] {
             assert!(
@@ -584,7 +595,7 @@ fn dist(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// the domain limit, ties carry their alternative, and parameters lie in the domain.
 #[test]
 fn inversion_records_are_consistent() {
-    for f in ["ref_set_v1.json", "multi_minima.json"] {
+    for f in ["ref_set_v2.json", "multi_minima.json"] {
         for e in entities(f) {
             let surface = e.get("kind").str() == "surface";
             for q in e.get("invert").arr() {
@@ -622,7 +633,7 @@ fn inversion_records_are_consistent() {
 /// (signed against the outward normal; GEO.NURBS.EVAL AC-2, AC-3).
 #[test]
 fn named_surfaces_regularity_and_curvature() {
-    let ents = entities("ref_set_v1.json");
+    let ents = entities("ref_set_v2.json");
     let sphere = ents.iter().find(|e| e.get("id").str() == "sphere").unwrap();
     let poles: Vec<&J> =
         sphere.get("eval").arr().iter().filter(|r| r.has("tag") && r.get("tag").str() == "pole").collect();
@@ -662,4 +673,39 @@ fn real_evaluator_passes_the_reference_harness() {
     let (worst, fails, total) = compare_positions(&RealEvaluator);
     assert!(total >= 1500, "{total} reference positions");
     assert_eq!(fails, 0, "{fails} of {total} outside {POS_TOL} m (worst {worst:e})");
+}
+
+/// ref_set_v2 supersedes ref_set_v1 only in its inversion rows: geometry, `eval` and
+/// `domain_checks` rows are identical, so consumers of the v1 evaluation rows (GEO.NURBS.EVAL)
+/// stay valid.
+#[test]
+fn v2_keeps_v1_geometry_and_evaluation_rows() {
+    let v1 = doc(SUPERSEDED).get("entities").arr();
+    let v2 = entities("ref_set_v2.json");
+    assert_eq!(v1.len(), v2.len());
+    for (a, b) in v1.iter().zip(v2) {
+        let id = a.get("id").str();
+        assert_eq!(id, b.get("id").str());
+        let (J::Obj(ma), J::Obj(mb)) = (a, b) else { panic!("{id}: not an object") };
+        for (k, va) in ma {
+            if k == "invert" {
+                assert_eq!(va.arr().len(), b.get("invert").arr().len(), "{id}");
+                continue;
+            }
+            assert_eq!(format!("{va:?}"), format!("{:?}", mb[k]), "{id}: {k} differs between v1 and v2");
+        }
+    }
+}
+
+/// The v2 sphere references are the radial projection: distance | |q| - 0.5 | (the case that
+/// v1 got wrong, sphere-q0121, included).
+#[test]
+fn v2_sphere_references_match_the_closed_form() {
+    let sphere = entities("ref_set_v2.json").iter().find(|e| e.get("id").str() == "sphere").unwrap();
+    for q in sphere.get("invert").arr() {
+        let p = q.get("q").v3();
+        let want = ((p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt() - 0.5).abs();
+        let got = q.get("distance").f();
+        assert!((got - want).abs() <= 2e-15, "{}: {got} vs closed form {want}", q.get("id").str());
+    }
 }

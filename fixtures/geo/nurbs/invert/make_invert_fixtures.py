@@ -10,18 +10,17 @@ Stdlib only; shares no code with any Rust crate and never runs the Rust code.
 1. fuzz_set.json: extra entities and queries aimed at the hard cases of the leaf (curvature
    centres, poles, kinks and creases, unclamped and periodic knot vectors, high degrees, near
    ties, random rational curves and surfaces). Every reference comes from the GEO.NURBS.REF
-   oracle `tools/fixtures/nurbs_oracle.py` (dense f64 grid search, then 60-digit Decimal
-   Newton from every grid local minimum and on every break line, exact Fraction evaluation),
-   imported here; queries whose answer is known in closed form (sphere and circle centre and
+   oracle `tools/fixtures/nurbs_oracle.py` (oracle 2.0.0: dense f64 grid search seeded per
+   break cell, then 60-digit Decimal Newton, exact Fraction evaluation, every answer gated by
+   the exact Bernstein certificate `tools/fixtures/nurbs_cert.py`), imported here; queries whose answer is known in closed form (sphere and circle centre and
    axis, sphere radial projection) are checked against it as well.
 2. invert_model.py: the bit-exact binary64 model of the algorithm pinned in
    spec/geo/nurbs/invert/NODE.md. Before anything is written, the model is checked against
-   the references of ref_set_v1.json, multi_minima.json (GEO.NURBS.REF) and fuzz_set.json:
+   the references of ref_set_v2.json, multi_minima.json (GEO.NURBS.REF) and fuzz_set.json:
    foot and distance within 1e-12 m, the boundary flag equal, NonUnique exactly on tied
    queries, NonConvergence exactly where the foot is a cusp tip. The worst errors are printed.
-   Known defect of the REF fixture (excluded from the REF comparison; a separate GEO.NURBS.REF
-   fix is coming): sphere-q0121 (ref_set_v1) is not the global minimum
-   (the radial projection is 2.7e-6 m closer); it is checked against the closed form instead.
+   The named spheres and circle are checked against their closed forms as well (ref_set_v1's
+   sphere-q0121 was a non-global reference; ref_set_v2 replaces v1).
 3. digests-v1.txt: SHA-256 of the model's results per entity and per file (AC-5). Digest
    text, one line per query in file order, every f64 as 16 lowercase hex digits of its bit
    pattern:
@@ -51,7 +50,7 @@ import invert_model as IM  # noqa: E402
 EM = IM.EM
 FUZZ = HERE / "fuzz_set.json"
 DIGESTS = HERE / "digests-v1.txt"
-FILES = [("ref_set_v1.json", HERE.parent / "ref_set_v1.json"), ("multi_minima.json", HERE.parent / "multi_minima.json"),
+FILES = [("ref_set_v2.json", HERE.parent / "ref_set_v2.json"), ("multi_minima.json", HERE.parent / "multi_minima.json"),
          ("invert/fuzz_set.json", FUZZ)]
 SEED = 44
 # query tags whose answer may honestly be Unresolved (degenerate or flat minima); a certified
@@ -90,12 +89,13 @@ def build_fuzz():
     def add(sp, queries, per_span, extra=None, expect=None):
         t0 = time.time()
         grid = O.Grid(sp, per_span)
+        cert = O.entity_cert(sp)
         g = sp.json_geometry()
         if extra:
             g.update(extra)
         recs = []
         for k, (Pf, tag) in enumerate(queries):
-            rec = O.invert(sp, grid, Pf, tag)
+            rec = O.invert_certified(sp, grid, Pf, tag, cert)
             rec = {"id": f"{sp.id}-q{k:04d}", **rec}
             if tag in HARD_TAGS:
                 rec["allow_unresolved"] = True

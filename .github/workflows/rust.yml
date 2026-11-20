@@ -269,6 +269,9 @@ jobs:
             echo "+ $cmd"
             if ! bash -euo pipefail -c "$cmd" < /dev/null; then echo "::error file=$list::failed: $cmd"; exit 1; fi
           done <<< "$entries"
+      - name: NURBS reference oracle regenerates byte-identically (GEO.NURBS.REF AC-1, about 6 minutes)
+        if: runner.os == 'Linux'
+        run: python tools/fixtures/nurbs_oracle.py --out fixtures/geo/nurbs --seed 40 --check
       - name: Contributor guide passes claim lint and its commands run (OUTR.DOCS.CONTRIB AC-6, AC-1, AC-3)
         # The committed guide states the main commit it was written against; a commit cannot name
         # itself, so the guide is checked as a copy stating this checkout's HEAD.
