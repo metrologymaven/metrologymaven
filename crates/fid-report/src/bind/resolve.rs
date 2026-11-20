@@ -4,8 +4,9 @@
 //! nothing is ever journaled:
 //!
 //! 1. the block's kind has a registered [`BlockResolver`] (`report.no_resolver`);
-//! 2. the payload holds no value ([`find_value`]: no JSON number, no number text, no bit
-//!    pattern outside its ID fields; `report.binding_has_value`);
+//! 2. the payload holds no value ([`find_value`]: no JSON number and no bit pattern
+//!    anywhere but the top-level `binding`, and, in a block that carries a binding, no
+//!    number text; `report.binding_has_value`);
 //! 3. the head is an entry of the journal (`report.not_found`);
 //! 4. the stored `binding@1` reads back (`report.store_invalid`);
 //! 5. every reference, in binding order, as of the head: a ResultRecord or characteristic
@@ -36,9 +37,9 @@
 
 use super::error::BindError;
 use super::journal::{EntityView, Evidence, HeadLookup, JournalReads, Lookup, LookupFault, StatementBytes};
-use super::model::{Binding, FieldId, JournalHead, Quantity, Ref, ValueBinding, BINDING_KEY, BINDING_SCHEMA};
+use super::model::{Binding, FieldId, JournalHead, Quantity, Ref, ValueBinding, BINDING_KEY};
 use crate::doc::kind::PayloadError;
-use crate::doc::value::{resolve_pointer, VALUE_BINDING_SCHEMA};
+use crate::doc::value::resolve_pointer;
 use crate::doc::{Block, BlockId, BlockKindId, CanonicalJson, KindRegistry, ReportError, Text, Untrusted};
 use fid_canon::CValue;
 use fid_project::Uuid;
@@ -173,8 +174,8 @@ pub struct ResolvedBlock {
 impl ResolvedBlock {
     /// Refuses a layout holding a value ([`find_value`], `report.binding_has_value`):
     /// values travel in [`Resolved::values`] only.
-    pub(crate) fn new(view: Resolved, layout: CValue) -> Result<ResolvedBlock, BindError> {
-        refuse_value(&layout)?;
+    pub(crate) fn new(view: Resolved, layout: CValue, text_rule: bool) -> Result<ResolvedBlock, BindError> {
+        refuse_value(&layout, text_rule)?;
         Ok(ResolvedBlock { view, layout })
     }
 
@@ -246,12 +247,14 @@ pub fn is_bit_pattern(s: &str) -> bool {
 }
 
 /// The pointer and reason of the first value in `v` (depth first, objects in key order,
-/// arrays in index order): a JSON number (`number`), a bit pattern (`bit_pattern`) or value
-/// text (`number_text`) in any string. ID fields are skipped: the payload's top-level
-/// `binding` and every object tagged `binding@1` or `value_binding@1`. Iterative; memory
+/// arrays in index order): a JSON number (`number`), a bit pattern (`bit_pattern`) or, when
+/// `text_rule` is set (blocks that carry a binding), value text (`number_text`) in any
+/// string. Only the top-level `binding` is skipped (checked key by key by
+/// [`Binding::of_payload`]); no tagged object is exempt, since ID strings (UUIDs, `sha256:`
+/// digests, pointers, schema tags) never match either grammar. Iterative; memory
 /// is one borrowed entry per visited node, and pointer text is built only for the node
 /// reported (cut at 128 bytes).
-pub fn find_value(v: &CValue) -> Option<(String, &'static str)> {
+pub fn find_value(v: &CValue, text_rule: bool) -> Option<(String, &'static str)> {
     enum Step<'a> {
         Root,
         Key(&'a str),
@@ -264,18 +267,14 @@ pub fn find_value(v: &CValue) -> Option<(String, &'static str)> {
         let reason = match v {
             CValue::Num(_) | CValue::I64(_) | CValue::U64(_) | CValue::F64Bits(_) => Some("number"),
             CValue::Str(s) if is_bit_pattern(s) => Some("bit_pattern"),
-            CValue::Str(s) if is_number_text(s) => Some("number_text"),
+            CValue::Str(s) if text_rule && is_number_text(s) => Some("number_text"),
             CValue::Obj(o) => {
-                let tagged =
-                    matches!(o.get("schema"), Some(CValue::Str(t)) if t == VALUE_BINDING_SCHEMA || t == BINDING_SCHEMA);
-                if !tagged {
-                    for (k, c) in o.iter().rev() {
-                        if i == 0 && k == BINDING_KEY {
-                            continue;
-                        }
-                        stack.push((trail.len(), c));
-                        trail.push((i, Step::Key(k)));
+                for (k, c) in o.iter().rev() {
+                    if i == 0 && k == BINDING_KEY {
+                        continue;
                     }
+                    stack.push((trail.len(), c));
+                    trail.push((i, Step::Key(k)));
                 }
                 None
             }
@@ -319,9 +318,15 @@ pub fn find_value(v: &CValue) -> Option<(String, &'static str)> {
     Some((out, reason))
 }
 
+/// Whether a payload carries a binding (top-level `binding` key): the value-text rule
+/// applies to it and to its layout.
+pub(crate) fn is_bound(payload: &CValue) -> bool {
+    matches!(payload, CValue::Obj(o) if o.contains_key(BINDING_KEY))
+}
+
 /// [`find_value`] as an error (`report.binding_has_value`).
-pub(crate) fn refuse_value(v: &CValue) -> Result<(), BindError> {
-    match find_value(v) {
+pub(crate) fn refuse_value(v: &CValue, text_rule: bool) -> Result<(), BindError> {
+    match find_value(v, text_rule) {
         Some((at, reason)) => Err(BindError::BindingHasValue(PayloadError::new(&at, reason))),
         None => Ok(()),
     }
@@ -470,7 +475,8 @@ pub fn resolve_block(
 ) -> Result<ResolvedBlock, BindError> {
     let resolver = resolvers.get(block.kind())?;
     let payload = block.payload().value();
-    refuse_value(payload)?;
+    let bound = is_bound(payload);
+    refuse_value(payload, bound)?;
     let lookup = HeadLookup::new(journal, ctx.project, &ctx.head)?;
     let binding = Binding::of_payload(payload)?;
     let id = block.id();
@@ -482,5 +488,5 @@ pub fn resolve_block(
         fields.iter().map(|p| resolve_value(id, p, payload, &binding, &lookup)).collect::<Result<Vec<_>, _>>()?;
     let view = Resolved { block: id, kind: block.kind().clone(), refs, values };
     let layout = resolver.resolve(&view, ctx, &lookup)?;
-    ResolvedBlock::new(view, layout)
+    ResolvedBlock::new(view, layout, bound)
 }

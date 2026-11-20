@@ -23,8 +23,8 @@
 //!    `report.value_binding_invalid`, `no_statement`; a statement not stored is
 //!    `report.not_found`);
 //! 6. the kind places the bindings ([`super::BlockResolver::place`]); the command writes the
-//!    `binding@1` under `binding`; a value anywhere in the new payload outside its ID
-//!    fields (a JSON number, number text, a bit pattern: [`super::find_value`]) is
+//!    `binding@1` under `binding`; a value anywhere in the new payload but its
+//!    top-level `binding` (a JSON number, number text, a bit pattern: [`super::find_value`]) is
 //!    `report.binding_has_value`; then DOC's checks (kind, value rule) run in [`Op::apply`].
 //!
 //! It then commits the new stored report and one `report.bind_block@1` event through the
@@ -311,7 +311,7 @@ pub fn bind_block(ctx: &mut BindCtx<'_>, params: BindBlockParams) -> Result<Bind
     };
     payload.insert(BINDING_KEY.to_string(), binding.to_value());
     let payload = CValue::Obj(payload);
-    refuse_value(&payload)?;
+    refuse_value(&payload, true)?;
     let payload = CanonicalJson::new(&payload)
         .ok_or_else(|| ReportError::InvalidBlockPayload(PayloadError::new("", "payload_bounds")))?;
     let op = Op::BindBlock { report: rid, block: bid, payload };

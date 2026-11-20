@@ -7,9 +7,9 @@
 //!   ([`Binding`] of [`Ref`]s, under the payload key `binding`) and, for each bound
 //!   ResultRecord, one `value_binding@1` ([`ValueBinding`]) per value field: record ID, record
 //!   digest, field pointer and statement digest. No type here has a field that can hold a
-//!   value, and both the command and resolution refuse a value anywhere outside the ID
-//!   fields of a payload ([`find_value`]: a JSON number, number text with an optional unit,
-//!   or a bit pattern; `report.binding_has_value`), so no value is ever copied into a block.
+//!   value, and both the command and resolution refuse a value anywhere in a payload but its
+//!   top-level `binding` ([`find_value`]: a JSON number, a bit pattern, and in a bound
+//!   block number text with an optional unit; `report.binding_has_value`), so no value is ever copied into a block.
 //! - [`resolve_block`] looks every stored ID up as of the explicit [`JournalHead`] of a
 //!   [`ResolveContext`] (never "latest"), refuses IDs not journaled by that head
 //!   (`report.unjournaled_record`) or owned by another project

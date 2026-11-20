@@ -350,9 +350,32 @@ fn value_text_and_bit_patterns_are_refused_at_bind_and_at_resolve() {
         assert_eq!(e.code(), "report.binding_has_value", "{text}");
         assert_eq!((st(&e.to_value(), "field"), st(&e.to_value(), "reason")), ("/note/1", reason), "{text}");
         assert_eq!(w.journaled(), before);
-        let e = w.resolve(blk, st(&cases, "current_head")).unwrap_err();
-        assert_eq!(st(&e.to_value(), "reason"), reason, "{text}");
+        // Resolve: a bound block refuses both; a block without a binding refuses only the
+        // bit pattern (the value-text rule applies to bound blocks only).
+        let bb = bound_block(&mut w, &cases);
+        let mut bound_note = w.payload_of(bb);
+        set_at(&mut bound_note, "/note", get(&note, "note").clone());
+        let held = w.add(&bound_note, "table");
+        let e = w.resolve(held, st(&cases, "current_head")).unwrap_err();
+        assert_eq!((st(&e.to_value(), "field"), st(&e.to_value(), "reason")), ("/note/1", reason), "{text}");
+        let unbound = w.resolve(blk, st(&cases, "current_head"));
+        if reason == "bit_pattern" {
+            assert_eq!(st(&unbound.unwrap_err().to_value(), "reason"), reason);
+        } else {
+            unbound.unwrap();
+        }
         assert!(is_number_text(text) || is_bit_pattern(text));
+    }
+    for x in arr(get(&cases, "drawing_text")) {
+        let CValue::Str(text) = x else { panic!() };
+        let note = CValue::Obj(BTreeMap::from([
+            ("note".to_string(), CValue::Str(text.clone())),
+            ("rows".to_string(), CValue::Arr(Vec::new())),
+        ]));
+        let blk = w.add(&note, "table");
+        w.resolve(blk, st(&cases, "current_head")).unwrap();
+        let e = w.bind(blk, "--results", st(&cases, "r1")).unwrap_err();
+        assert_eq!(st(&e.to_value(), "reason"), "number_text", "{text}");
     }
     for x in arr(get(&cases, "not_value_strings")) {
         let CValue::Str(text) = x else { panic!() };
@@ -365,6 +388,110 @@ fn value_text_and_bit_patterns_are_refused_at_bind_and_at_resolve() {
         w.bind(blk, "--results", st(&cases, "r1")).unwrap();
         w.resolve(blk, st(&cases, "current_head")).unwrap();
     }
+}
+
+/// A fresh table block bound to r1; returns its ID.
+fn bound_block(w: &mut World, cases: &CValue) -> BlockId {
+    let blk = w.add(&parse(br#"{"rows":[]}"#).unwrap(), "table");
+    w.bind(blk, "--results", st(cases, "r1")).unwrap();
+    blk
+}
+
+#[test]
+fn a_value_inside_a_tagged_object_is_refused() {
+    let (mut w, _, cases) = bracket();
+    for (note, reason) in [
+        (r#"{"schema":"binding@1","value":12.003}"#, "number"),
+        (r#"{"schema":"binding@1","refs":[],"bits":"0x3f847ae147ae147b"}"#, "bit_pattern"),
+    ] {
+        let mut p = parse(br#"{"rows":[]}"#).unwrap();
+        set_at(&mut p, "/note", parse(note.as_bytes()).unwrap());
+        let blk = w.add(&p, "table");
+        let before = w.journaled();
+        let e = w.bind(blk, "--results", st(&cases, "r1")).unwrap_err();
+        assert_eq!(st(&e.to_value(), "reason"), reason, "{note}");
+        assert!(st(&e.to_value(), "field").starts_with("/note/"));
+        assert_eq!(w.journaled(), before);
+        // Resolve, in a bound block holding the same object.
+        let bb = bound_block(&mut w, &cases);
+        let mut held = w.payload_of(bb);
+        set_at(&mut held, "/note", parse(note.as_bytes()).unwrap());
+        let h = w.add(&held, "table");
+        let e = w.resolve(h, st(&cases, "current_head")).unwrap_err();
+        assert_eq!(st(&e.to_value(), "reason"), reason, "{note}");
+    }
+    // A tagged object nested deeper, carrying value text, in a bound block.
+    let bb = bound_block(&mut w, &cases);
+    let mut held = w.payload_of(bb);
+    set_at(&mut held, "/note", parse(br#"{"inner":{"schema":"binding@1","text":"12.003 mm"}}"#).unwrap());
+    let h = w.add(&held, "table");
+    let e = w.resolve(h, st(&cases, "current_head")).unwrap_err();
+    assert_eq!((st(&e.to_value(), "field"), st(&e.to_value(), "reason")), ("/note/inner/text", "number_text"));
+}
+
+/// Commits a new result `id` whose bytes are `text`, at a fresh head; returns the head.
+fn commit_result(w: &mut World, project: Uuid, id: Uuid, text: String, n: u8) -> String {
+    let head = format!("sha256:{}", format!("{n:02x}").repeat(32));
+    w.journal
+        .append(JournalHead::parse(&head).unwrap(), project, EntityKind::Result, Some(id), text.into_bytes())
+        .unwrap();
+    head
+}
+
+fn entry_text<'a>(journal: &'a CValue, id: &str) -> &'a str {
+    let e = arr(get(journal, "entries")).iter().find(|e| matches!(get(e, "id"), CValue::Str(s) if s == id)).unwrap();
+    st(e, "text")
+}
+
+#[test]
+fn record_facts_must_agree_with_the_parsed_statement() {
+    let (mut w, b, cases) = bracket();
+    let journal = fixture("bracket_3stage/journal.json");
+    let project = uuid(st(&cases, "project"));
+    // r2 is a DECLARED (claimed) value; a copy that says claimed:false is refused.
+    let r2 = entry_text(&journal, st(&cases, "r2"));
+    assert_eq!(r2.matches(r#""claimed":true"#).count(), 1);
+    let liar = uuid("019a9a9b-0008-7000-8000-000000000001");
+    let head = commit_result(&mut w, project, liar, r2.replace(r#""claimed":true"#, r#""claimed":false"#), 0xa1);
+    let lookup = HeadLookup::new(&w.journal, project, &JournalHead::parse(&head).unwrap()).unwrap();
+    assert_eq!(lookup.result(&liar).unwrap_err(), LookupFault::Invalid("record evidence"));
+    let before = w.journaled();
+    let e = w.bind(b, "--results", &liar.to_string()).unwrap_err();
+    assert_eq!(e, BindError::StoreInvalid("record evidence"));
+    assert_eq!(w.journaled(), before);
+    // A record whose statement does not parse as a fid-kunc statement is refused.
+    let junk = br#"{"schema":"fixture.not-a-statement/1"}"#.to_vec();
+    let junk_digest = Digest::from_bytes(fid_canon::digest_bytes(&junk).0);
+    let shead = format!("sha256:{}", "b2".repeat(32));
+    w.journal.append(JournalHead::parse(&shead).unwrap(), project, EntityKind::Statement, None, junk).unwrap();
+    let r1 = entry_text(&journal, st(&cases, "r1"));
+    let stmt = arr(get(&cases, "ac3_values"))[0].clone();
+    let old = st(&stmt, "statement_digest");
+    let bad = uuid("019a9a9b-0008-7000-8000-000000000002");
+    let head = commit_result(&mut w, project, bad, r1.replace(old, junk_digest.as_str()), 0xa3);
+    let lookup = HeadLookup::new(&w.journal, project, &JournalHead::parse(&head).unwrap()).unwrap();
+    assert_eq!(lookup.result(&bad).unwrap_err(), LookupFault::Invalid("statement"));
+    // POINTS with a DECLARED method still never looks measured.
+    let pts = uuid("019a9a9b-0008-7000-8000-000000000003");
+    let head = commit_result(&mut w, project, pts, r2.replace("RESULTS_ONLY", "POINTS"), 0xa4);
+    let lookup = HeadLookup::new(&w.journal, project, &JournalHead::parse(&head).unwrap()).unwrap();
+    let v = lookup.result(&pts).unwrap();
+    assert_eq!(v.evidence().basis().wire(), "POINTS");
+    assert!(v.evidence().statement_checked() && !v.evidence().looks_measured());
+    // r1 (LPU, dcc sources) is confirmed by its statement and looks measured.
+    let v = lookup.result(&uuid(st(&cases, "r1"))).unwrap();
+    assert!(v.evidence().statement_checked() && v.evidence().looks_measured());
+}
+
+#[test]
+fn a_not_yet_committed_entity_of_another_kind_is_not_found() {
+    let (w, _, cases) = bracket();
+    let project = uuid(st(&cases, "project"));
+    let lookup = HeadLookup::new(&w.journal, project, &JournalHead::parse(st(&cases, "h0")).unwrap()).unwrap();
+    let r2 = uuid(st(&cases, "r2"));
+    assert_eq!(lookup.result(&r2).unwrap_err(), LookupFault::Unjournaled);
+    assert_eq!(lookup.characteristic(&r2).unwrap_err(), LookupFault::NotFound);
+    assert_eq!(lookup.series(&r2).unwrap_err(), LookupFault::NotFound);
 }
 
 #[test]
@@ -417,7 +544,9 @@ fn ac3_resolution_is_as_of_the_given_head() {
         };
         assert_eq!(e.rule(), rule);
         assert_eq!(CValue::Bool(e.looks_measured()), *get(ev, "looks_measured"));
-        assert!(!e.rests_on_declared_input() && !e.rests_on_uncharacterized_input());
+        assert_eq!(CValue::Bool(e.rests_on_declared_input()), *get(ev, "declared_input"));
+        assert_eq!(CValue::Bool(e.rests_on_uncharacterized_input()), *get(ev, "uncharacterized_input"));
+        assert!(e.statement_checked());
     }
     // The layout holds pointers only; resolution journals nothing.
     assert_eq!(canon(ok.layout()), r#"{"rows":["/rows/0/value","/rows/1/value"]}"#);
@@ -735,7 +864,14 @@ fn a_resolver_cannot_bring_in_a_value_or_a_record_not_at_the_head() {
         let e = w.resolve(text, st(&cases, "h0")).unwrap_err();
         assert_eq!(e, BindError::BadParams("lookup refused the record"));
         // At the head, whatever the resolver puts in its layout is checked by the engine.
-        let e = w.resolve(text, st(&cases, "current_head")).unwrap_err();
+        // (This `text` block carries no binding, so value text is allowed in its layout; a
+        // number or a bit pattern never is.)
+        let got = w.resolve(text, st(&cases, "current_head"));
+        if reason == "number_text" {
+            got.unwrap();
+            continue;
+        }
+        let e = got.unwrap_err();
         assert_eq!(e.code(), "report.binding_has_value");
         assert_eq!(st(&e.to_value(), "reason"), reason, "{layout}");
     }

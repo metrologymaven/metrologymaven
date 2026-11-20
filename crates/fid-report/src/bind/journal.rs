@@ -8,13 +8,16 @@
 //! committed only later (with its owner and kind), or nothing. [`HeadLookup`] turns those
 //! answers into typed views as of exactly one head:
 //!
+//! Order: ownership, then kind, then position.
+//!
 //! 1. ownership is checked for ResultRecords and characteristics only (the leaf's Open
 //!    question: cross-project data enters reports only as statistics series, so saved views
 //!    and series are not owner-checked here); an entity of another project is
 //!    [`LookupFault::CrossProject`], checked before position, so nothing about the other
 //!    project's journal (whether, when or as what the ID was committed) can be learned;
-//! 2. an entity committed only after the head is [`LookupFault::Unjournaled`];
-//! 3. an absent entity, or one of another kind, is [`LookupFault::NotFound`].
+//! 2. an absent entity, or one of another kind (committed yet or not), is
+//!    [`LookupFault::NotFound`];
+//! 3. an entity committed only after the head is [`LookupFault::Unjournaled`].
 //!
 //! Statements are looked up by (project, digest): the same statement bytes may be stored by
 //! two projects.
@@ -24,13 +27,17 @@
 //! uncertainty statement is the digest at `/uncertainty/statement` (`null` for UEC-0). The
 //! record's evidence facts (evaluation basis, decision, evidence class and method, and the
 //! claimed / declared-input / uncharacterized-input facts) are read into [`Evidence`], so
-//! no downstream kind ever has to invent them. Record bytes never leave this module.
+//! no downstream kind ever has to invent them; the referenced statement is parsed
+//! (`fid_kunc::UncertaintyStatement::parse_canonical_verified`) and its class, method and
+//! claim facts must agree with the record's, else the record is `Invalid`. Record bytes never leave this module.
 
 use super::error::BindError;
 use super::model::{JournalHead, Quantity, QuantityUnit};
 use crate::fmt::SiValue;
 use fid_canon::{digest_bytes, parse_with_limits, to_canonical_bytes, CValue};
 use fid_gdt::chars::record::EvaluationBasis;
+use fid_kunc::uec::{RecordTable, SourceRecords};
+use fid_kunc::UncertaintyStatement;
 use fid_project::Uuid;
 use fid_types::Digest;
 use std::collections::BTreeMap;
@@ -89,6 +96,12 @@ pub trait JournalReads {
     fn entity(&self, id: &Uuid, seq: u64) -> AtHead;
     /// `project`'s stored uncertainty statement with this digest as of position `seq`.
     fn statement(&self, project: &Uuid, digest: &Digest, seq: u64) -> AtHead;
+    /// The source records that confirm UEC-2 and UEC-3 statements (UNC.UEC.CLASS). Without
+    /// them, a stored UEC-2/3 statement does not parse (`source_not_verified`) and its
+    /// record is refused.
+    fn source_records(&self) -> Option<&dyn SourceRecords> {
+        None
+    }
 }
 
 /// An in-memory store and journal, for tests and tools. Each [`MemoryJournal::append`] is
@@ -254,7 +267,13 @@ pub struct Evidence {
     decision_source: String,
     rule: Option<String>,
     reason: Option<String>,
+    /// Whether the referenced statement was parsed and agrees with the record's facts.
+    statement_checked: bool,
 }
+
+/// The measurement methods: an evaluation from data, not a claim (`DECLARED`,
+/// `SPEC_DERIVED`).
+pub const MEASUREMENT_METHODS: [&str; 4] = ["LPU", "MCM", "ISO15530-3", "ISO15530-4"];
 
 impl Evidence {
     /// `POINTS`, `FEATURES`, `RESULTS_ONLY` or `DIRECT_READING`, exactly as journaled.
@@ -292,11 +311,19 @@ impl Evidence {
     pub fn reason(&self) -> Option<&str> {
         self.reason.as_deref()
     }
+    /// Whether the referenced fid-kunc statement was parsed and its class, method and claim
+    /// facts agree with the record's (false for a record without a statement).
+    pub fn statement_checked(&self) -> bool {
+        self.statement_checked
+    }
     /// Whether the value may be shown as measured: evaluated from points or features, with an
-    /// evaluated (UEC-1..3) uncertainty that is neither claimed nor rests on declared or
-    /// uncharacterized input.
+    /// evaluated (UEC-1..3) uncertainty from a measurement method ([`MEASUREMENT_METHODS`]),
+    /// neither claimed nor resting on declared or uncharacterized input, and confirmed by the
+    /// parsed statement it references.
     pub fn looks_measured(&self) -> bool {
         matches!(self.basis, EvaluationBasis::Points | EvaluationBasis::Features)
+            && self.statement_checked
+            && self.method.as_deref().is_some_and(|m| MEASUREMENT_METHODS.contains(&m))
             && self.class != EvidenceClass::Uec0
             && !self.claimed
             && !self.declared_input
@@ -441,11 +468,13 @@ impl<'a> HeadLookup<'a> {
         if owned && project != self.project {
             return Err(LookupFault::CrossProject(project));
         }
-        let AtHead::Committed(j) = found else { return Err(LookupFault::Unjournaled) };
-        if found_kind != kind || j.seq > self.seq {
+        if found_kind != kind {
             return Err(LookupFault::NotFound);
         }
-        Ok(j)
+        match found {
+            AtHead::Committed(j) if j.seq <= self.seq => Ok(j),
+            _ => Err(LookupFault::Unjournaled),
+        }
     }
 
     fn entity_view(&self, id: &Uuid, kind: EntityKind) -> Result<EntityView, LookupFault> {
@@ -461,7 +490,23 @@ fn sha256(bytes: &[u8]) -> Digest {
 impl Lookup for HeadLookup<'_> {
     fn result(&self, id: &Uuid) -> Result<ResultView, LookupFault> {
         let j = self.visible(self.journal.entity(id, self.seq), EntityKind::Result)?;
-        let (values, evidence) = read_record(&j.bytes)?;
+        let (values, mut evidence) = read_record(&j.bytes)?;
+        if let Some(d) = values.iter().find_map(|v| v.statement) {
+            let stored = self.statement(&d)?;
+            let empty = RecordTable::default();
+            let records = self.journal.source_records().unwrap_or(&empty);
+            let stmt = UncertaintyStatement::parse_canonical_verified(stored.as_bytes(), records)
+                .map_err(|_| LookupFault::Invalid("statement"))?;
+            let agrees = stmt.class().wire() == evidence.class.as_str()
+                && stmt.method().map(|m| m.wire()) == evidence.method.as_deref()
+                && stmt.is_claimed() == evidence.claimed
+                && stmt.rests_on_declared_input() == evidence.declared_input
+                && stmt.rests_on_uncharacterized_input() == evidence.uncharacterized_input;
+            if !agrees {
+                return Err(LookupFault::Invalid("record evidence"));
+            }
+            evidence.statement_checked = true;
+        }
         Ok(ResultView { id: *id, digest: sha256(&j.bytes), values, evidence })
     }
 
@@ -569,6 +614,7 @@ fn read_record(bytes: &[u8]) -> Result<(Vec<ValueField>, Evidence), LookupFault>
         decision_source,
         rule: opt_str(dec, "rule")?,
         reason: opt_str(dec, "reason")?,
+        statement_checked: false,
     };
     let field =
         ValueField { field: RECORD_VALUE_FIELD, quantity: Quantity::new(SiValue::from_bits(bits), unit), statement };

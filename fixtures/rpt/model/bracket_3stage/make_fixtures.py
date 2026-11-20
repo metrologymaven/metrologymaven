@@ -88,14 +88,50 @@ def characteristic(cid: str, c: int) -> dict:
     }
 
 
-def statement(cid: str, stage: int, c: int) -> dict:
+def kd(label: str) -> str:
+    return "sha256:" + hashlib.sha256(label.encode("ascii")).hexdigest()
+
+
+# Uncertainty statements in the canonical UNC.UEC.STMT form (`uncertainty_statement@1`),
+# shaped like fixtures/unc/stmt/valid/uec1_lpu_unverified.json (all sources dcc, none
+# unverified: evaluated, not claimed, no declared or uncharacterized input) and
+# uec1_declared.json (DECLARED by a person: claimed, rests on a declared input, which is
+# uncharacterized). Only expanded.U varies, so each statement has its own bytes.
+STMT_MODEL = {"digest": kd("um:bore-diameter@1.2.0"), "id": "um:bore-diameter", "semver": "1.2.0"}
+
+
+def hx(x: float) -> str:
+    return struct.pack(">d", x).hex()
+
+
+def statement(profile: str, u: float) -> dict:
+    if profile == "measured":
+        return {
+            "class": "UEC-1",
+            "contributors": [
+                {"input_id": "probe_cal", "sensitivity": hx(1.0), "u_contrib": hx(1.2e-6), "variance_share": hx(0.64)},
+                {"input_id": "ref_cal", "sensitivity": hx(1.0), "u_contrib": hx(0.9e-6), "variance_share": hx(0.36)},
+            ],
+            "expanded": {"U": hx(u), "k": hx(2.0)},
+            "method": "LPU",
+            "model": STMT_MODEL,
+            "provenance": {"proposal": "false", "rule_sets": ["uec-assign@1"]},
+            "schema": "uncertainty_statement@1",
+            "sources": [{"digest": kd("source:dcc:probe-cal-7"), "id": "dcc:probe-cal-7", "kind": "dcc"},
+                        {"digest": kd("source:dcc:ring-gauge-25"), "id": "dcc:ring-gauge-25", "kind": "dcc"}],
+            "unit": "si:m",
+        }
+    assert profile == "transcribed"
     return {
-        "characteristic": cid,
         "class": "UEC-1",
-        "expanded": {"U": bits(0.000002 + c * 0.0000001), "k": bits(2.0)},
+        "contributors": [],
+        "expanded": {"U": hx(u), "k": hx(2.0)},
         "method": "DECLARED",
-        "schema": "fixture.unc-statement/1",
-        "stage": str(stage),
+        "model": {"digest": kd("um:declared@1.0.0"), "id": "um:declared", "semver": "1.0.0"},
+        "provenance": {"principal": "person:qa-lead", "principal_kind": "human", "proposal": "false",
+                       "rule_sets": ["uec-assign@1"]},
+        "schema": "uncertainty_statement@1",
+        "sources": [{"digest": kd("source:decl:2026-11-16-001"), "id": "decl:2026-11-16-001", "kind": "declared"}],
         "unit": "si:m",
     }
 
@@ -106,12 +142,15 @@ def statement(cid: str, stage: int, c: int) -> dict:
 # "uec0": POINTS but uncertainty not evaluated (no statement); never looks measured.
 PROFILES = {
     "measured": {"basis": "POINTS", "class": "UEC-1", "method": "LPU", "claimed": False,
+                 "declared_input": False, "uncharacterized_input": False,
                  "source": "unc", "rule": "dr:simple-acceptance@1", "outcome": "CONFORMS", "reason": None,
                  "looks_measured": True},
     "transcribed": {"basis": "RESULTS_ONLY", "class": "UEC-1", "method": "DECLARED", "claimed": True,
+                    "declared_input": True, "uncharacterized_input": True,
                     "source": "gdt_not_decidable", "rule": None, "outcome": "NOT_DECIDABLE",
                     "reason": "no_rule_bound", "looks_measured": False},
     "uec0": {"basis": "POINTS", "class": "UEC-0", "method": None, "claimed": False,
+             "declared_input": False, "uncharacterized_input": False,
              "source": "gdt_not_decidable", "rule": None, "outcome": "NOT_DECIDABLE",
              "reason": "unc_no_decision", "looks_measured": False},
 }
@@ -122,7 +161,7 @@ def record(run: str, cid: str, c: int, value: float, stmt_digest, profile: str) 
     z = "sha256:" + "0" * 63 + "1"
     p = PROFILES[profile]
     uec0 = p["class"] == "UEC-0"
-    facts = {"claimed": p["claimed"], "declared_input": False, "uncharacterized_input": False}
+    facts = {k: p[k] for k in ("claimed", "declared_input", "uncharacterized_input")}
     basis = None
     if p["source"] == "unc":
         basis = dict(facts, **{"class": p["class"], "method": p["method"], "statement": stmt_digest})
@@ -154,7 +193,8 @@ def record(run: str, cid: str, c: int, value: float, stmt_digest, profile: str) 
 
 def evidence(profile: str) -> dict:
     p = PROFILES[profile]
-    return {k: p[k] for k in ("basis", "class", "method", "claimed", "outcome", "rule", "looks_measured")}
+    return {k: p[k] for k in ("basis", "class", "method", "claimed", "declared_input", "uncharacterized_input",
+                              "outcome", "rule", "looks_measured")}
 
 
 class Journal:
@@ -189,7 +229,7 @@ def bracket():
         run = eid(3, s, 0)
         for c in range(1, CHARS + 1):
             cid = chars[c - 1]
-            stmt = jcs(statement(cid, s, c))
+            stmt = jcs(statement(STAGE_PROFILE[s], 3e-6 + c * 1e-8 + s * 1e-9))
             sd = sha(stmt)
             j.add(PROJECT, "statement", None, json.loads(stmt))
             value = 0.01 + c * 0.001 + s * 0.000001
@@ -263,6 +303,9 @@ def bracket():
             {"text": "-1.5e-3m", "reason": "number_text"}, {"text": "−.5 µm", "reason": "number_text"},
             {"text": "0x3f847ae147ae147b", "reason": "bit_pattern"}, {"text": "0X1F", "reason": "bit_pattern"},
         ],
+        # Ordinary drawing text that matches the value-text grammar: allowed in a block that
+        # carries no binding, refused (number_text) in a bound block (REQ-001 trade-off).
+        "drawing_text": ["2 places", "4X", "2026"],
         "not_value_strings": ["C01", "top view", "e5", "-", ".", "12-3", "Rev. B", "/rows/0/value", "ISO 1101"],
     }
     return {"project": PROJECT, "entries": j.entries}, cases
@@ -274,7 +317,7 @@ def two_projects():
     for name, project, g in (("a", PROJECT_A, 5), ("b", PROJECT_B, 6)):
         cid = eid(g, 0, 1)
         j.add(project, "characteristic", cid, characteristic(cid, 1))
-        stmt = jcs(statement("shared", 1, 1))  # identical bytes in A and B
+        stmt = jcs(statement("measured", 3e-6))  # identical bytes in A and B
         sd = sha(stmt)
         j.add(project, "statement", None, json.loads(stmt))
         rid = eid(g, 1, 1)
