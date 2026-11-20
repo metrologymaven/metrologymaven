@@ -3,7 +3,7 @@
 //!
 //! [`summarize`] turns the output values of a Monte Carlo run (or of one block of it, for
 //! the adaptive rule of `UNC.PROP.MCM.ADAPT`) into the summary JCGM 101:2008 describes
-//! [unverified: clause 7.7 numbering]: mean, standard uncertainty, probabilistically
+//! (§7.7.1 to §7.7.3): mean, standard uncertainty, probabilistically
 //! symmetric and shortest coverage intervals, and the difference between the MC mean and
 //! the kernel value `f(x)` at the measured inputs (for the estimator policy of
 //! `UNC.PROP.SELECT`). Per-block summaries are this same function applied to one block's
@@ -14,16 +14,19 @@
 //! 1. Validation, in this order: `p` finite with `0 < p < 1`, else [`McmError::InvalidP`];
 //!    `fx` finite, else `Num` (op `mcm.interval.fx`); every value finite, else `Num` (op
 //!    `mcm.interval.values`, index of the first offending value in input order); then
-//!    `M >= ceil(1 / (1 - p))` (evaluated in binary64 as `(1.0 / (1.0 - p)).ceil()`),
-//!    else [`McmError::TooFewTrials`] (REQ-UNC.PROP.MCM.INTVL-003).
+//!    `M >= 2` and `M >= ceil(1 / (1 - p))` (the latter evaluated in binary64 as
+//!    `(1.0 / (1.0 - p)).ceil()`), else [`McmError::TooFewTrials`] with `min` the larger
+//!    of the two bounds (REQ-UNC.PROP.MCM.INTVL-003).
 //! 2. The values are copied and stably sorted by IEEE-754 totalOrder (`-0.0 < +0.0`).
-//! 3. Ranks are 1-based. `m = M as f64`, `r = ((m * (1.0 - p)) * 0.5).round()`,
-//!    `q = (p * m).round()` (`round` is half away from zero). The symmetric interval is
-//!    `[x_(r), x_(r + q)]`, each rank clamped to `1..=M` independently
-//!    (REQ-UNC.PROP.MCM.INTVL-002).
-//! 4. The shortest interval is `[x_(s), x_(s + q)]` for the start rank `s` in `1..=M - q`
-//!    with the smallest `x_(s + q) - x_(s)`; the lowest `s` wins ties (strict `<` scan in
-//!    ascending `s`). It always covers the same number of ranks as `q`.
+//! 3. Ranks are 1-based integers, as in JCGM 101:2008 §7.7.1 and §7.7.2.
+//!    `q = floor(p M + 1/2)`, computed exactly in integers from the binary64 value of `p`
+//!    (no floating-point rounding; [`coverage_count`]). `r = ceil((M - q) / 2)`, that is
+//!    `(M - q) / 2` when `M - q` is even and `(M - q + 1) / 2` when it is odd. The
+//!    symmetric interval is `[x_(r), x_(r + q)]` (REQ-UNC.PROP.MCM.INTVL-002). After
+//!    validation `1 <= r` and `r + q <= M` always hold.
+//! 4. The shortest interval (§7.7.3) is `[x_(s), x_(s + q)]` for the start rank `s` in
+//!    `1..=M - q` with the smallest `x_(s + q) - x_(s)`. The lowest `s` wins ties (a strict
+//!    `<` scan in ascending `s`): a documented deterministic tie-break.
 //! 5. `mean = red::mean(sorted)`; `u = red::norm2(sorted - mean) / sqrt(M - 1)` with the
 //!    deviations in sorted order and `sqrt` = `fid_num::f::sqrt` (overflow-safe; an
 //!    overflow is `Num`); `mean_minus_fx = mean - fx`, which must be finite.
@@ -59,15 +62,22 @@ pub struct McmSummary {
     pub shortest_ranks: (u64, u64),
 }
 
-/// Clamps a rank to `1..=m` without `min`/`max`.
-fn clamp_rank(rank: usize, m: usize) -> usize {
-    if rank < 1 {
-        1
-    } else if rank > m {
-        m
-    } else {
-        rank
+/// `floor(p * m + 1/2)` computed exactly: `p` is a binary64 `mant * 2^e` with `e < 0`
+/// for `0 < p < 1`, so the result is `(mant * m + 2^(shift - 1)) >> shift` with
+/// `shift = -e`, in 128-bit integers (`mant * m < 2^117`). Requires `0 < p < 1` finite.
+pub fn coverage_count(p: f64, m: u64) -> u64 {
+    let bits = p.to_bits();
+    let exp = ((bits >> 52) & 0x7ff) as i32;
+    let frac = bits & ((1u64 << 52) - 1);
+    let (mant, e) = if exp == 0 { (frac, -1074) } else { (frac | (1u64 << 52), exp - 1075) };
+    // p < 1 gives e <= -1, so shift >= 1.
+    let shift = (-e) as u32;
+    if shift >= 120 {
+        // mant * m < 2^117, so p * m < 2^-3 and the rounded count is zero.
+        return 0;
     }
+    let prod = u128::from(mant) * u128::from(m);
+    ((prod + (1u128 << (shift - 1))) >> shift) as u64
 }
 
 /// Summarises `values` at coverage probability `p` with kernel value `fx` (rules in the
@@ -81,10 +91,11 @@ pub fn summarize(values: &[f64], p: f64, fx: f64) -> Result<McmSummary, McmError
     let m_len = values.len();
     // Slice lengths of f64 never exceed 2^53 on supported targets, so this is exact.
     let m = m_len as f64;
-    let need = (1.0 / (1.0 - p)).ceil();
-    if m < need {
-        // `need` is at most 2^53 (1 - p >= 2^-53), so the conversion is exact.
-        return Err(McmError::TooFewTrials { m: m_len as u64, min: need as u64 });
+    let ceil_bound = (1.0 / (1.0 - p)).ceil();
+    // `ceil_bound` is at most 2^53 (1 - p >= 2^-53), so the conversion is exact.
+    let need = if ceil_bound < 2.0 { 2u64 } else { ceil_bound as u64 };
+    if (m_len as u64) < need {
+        return Err(McmError::TooFewTrials { m: m_len as u64, min: need });
     }
 
     let mut xs: Vec<f64> = Vec::new();
@@ -92,16 +103,17 @@ pub fn summarize(values: &[f64], p: f64, fx: f64) -> Result<McmSummary, McmError
     xs.extend_from_slice(values);
     xs.sort_by(|a, b| a.total_cmp(b));
 
-    // Rank arithmetic (rule 3). Both products are finite and non-negative, so `as usize`
-    // is exact after `round`.
-    let r = ((m * (1.0 - p)) * 0.5).round() as usize;
-    let q = (p * m).round() as usize;
-    let sym_lo = clamp_rank(r, m_len);
-    let sym_hi = clamp_rank(r.saturating_add(q), m_len);
+    // Rule 3, in integers. Validation gives M (1 - p) >= 1, hence p M <= M - 1 and
+    // q <= M - 1; the bound below is kept anyway so no index can leave the slice.
+    let mm = m_len as u64;
+    let q_raw = coverage_count(p, mm);
+    let q = if q_raw >= mm { mm - 1 } else { q_raw };
+    let r = (mm - q).div_ceil(2);
+    let sym_lo = r as usize;
+    let sym_hi = (r + q) as usize;
+    let width = q as usize;
 
-    // Rule 4. `M >= 2` and `q <= M - 1` hold after validation (M (1 - p) >= 1 gives
-    // p M <= M - 1), but the window width is still bounded defensively.
-    let width = if q >= m_len { m_len - 1 } else { q };
+    // Rule 4.
     let mut best_start = 0usize;
     let mut best_len = xs[width] - xs[0];
     let mut s = 1usize;

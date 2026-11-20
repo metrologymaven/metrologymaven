@@ -22,8 +22,8 @@ pub enum McmError {
     /// `invalid_p`: the coverage probability is not a finite number strictly between 0
     /// and 1 (NaN included).
     InvalidP,
-    /// `too_few_trials`: the value set has `m` values but at least `min` =
-    /// `ceil(1 / (1 - p))` are needed (REQ-UNC.PROP.MCM.INTVL-003).
+    /// `too_few_trials`: the value set has `m` values but at least `min`, the larger of 2
+    /// and `ceil(1 / (1 - p))`, are needed (REQ-UNC.PROP.MCM.INTVL-003).
     TooFewTrials { m: u64, min: u64 },
     /// A result buffer could not be reserved.
     Allocation,

@@ -7,20 +7,28 @@ repr next to scalars for people.
 
 uniform_1000.json  AC-1: the values 1..1000, p = 0.95. Expected symmetric interval
                    [25th value, 975th value] and shortest interval [1st, 951st] by the rank
-                   rule of REQ-UNC.PROP.MCM.INTVL-002, evaluated here in exact rationals with
-                   p = 19/20. Mean and standard uncertainty are exact rationals rounded once
+                   rule of REQ-UNC.PROP.MCM.INTVL-002 (JCGM 101:2008 §7.7.1 to §7.7.3),
+                   evaluated here in exact rationals from the binary64 value of p. Mean and standard uncertainty are exact rationals rounded once
                    to the nearest double (sqrt by decimal.Decimal at 60 digits).
 skewed.json        AC-2: 2000 exponential values from the project RNG with seed 3, stream 0,
                    indices 0..1999. The RNG is an independent Philox4x32-10 (checked against
                    the published Random123 known answers below); the uniform is the open-unit
                    map u = (2 k + 1) 2^-53 with k the top 52 bits of word1 << 32 | word0
-                   (UNC.MODEL.DIST); the value is -ln(u), correctly rounded from a 60-digit decimal logarithm. The values are
-                   data: the expected results are computed from them here, independently.
+                   (UNC.MODEL.DIST); the value is -ln(u), correctly rounded from a 60-digit
+                   decimal logarithm. The values are data: the expected results are
+                   computed from them here, independently.
+ranks_m1012.json, ranks_m51.json, ranks_p6827.json
+                   Rank-rule cases where p M is not an integer: M = 1012 and M = 51 at
+                   p = 0.95 (M - q odd), and M = 1000 at p = 0.6827 (M - q even); exponential
+                   values from seeds 5, 6 and 7 (stream 0) as above.
 ac_h1_reference.json
                    AC-H1: analytic endpoints and densities of the two closed-form output
                    distributions, and the exact (Clopper-Pearson) two-sided 95 % binomial
                    bounds for k of 100 seeds, so the crate test can report a pass count with
-                   its exact bounds instead of a bare point estimate.
+                   its exact bounds instead of a bare point estimate. The crate test uses the
+                   symmetric endpoints per endpoint, and the shortest interval through its
+                   width (analytic shortest width, density at the upper endpoint) and its
+                   realised coverage (AC-H1 as restated on #306).
                    - rect4: Y = X1 + X2 + X3 + X4, Xi rectangular on [-sqrt 3, sqrt 3] (unit
                      variance each), the rectangular-input additive model of JCGM 101:2008
                      [unverified: clause 9.2 variant]. Y = 2 sqrt(3) S - 4 sqrt(3) with S
@@ -103,10 +111,10 @@ def hexbits(x):
     return format(struct.unpack("<Q", struct.pack("<d", x))[0], "016x")
 
 
-def round_half_away(fr):
-    """Round a non-negative Fraction to the nearest integer, halves away from zero."""
+def floor_half_up(fr):
+    """floor(fr + 1/2) for a non-negative Fraction."""
     assert fr >= 0
-    return int(fr + Fraction(1, 2))
+    return math.floor(fr + Fraction(1, 2))
 
 
 def exact_mean_u(values):
@@ -119,16 +127,13 @@ def exact_mean_u(values):
 
 
 def intervals(values, p):
-    """Rank rule of REQ-UNC.PROP.MCM.INTVL-002 with 1-based ranks, in exact rationals."""
+    """JCGM 101:2008 §7.7.2 rank rule with 1-based ranks; p is an exact Fraction."""
     xs = sorted(values)
     m = len(xs)
-    r = round_half_away(m * (1 - p) / 2)
-    q = round_half_away(p * m)
-    # Guard: neither rounding may sit near a half, so float evaluation agrees.
-    assert abs(m * (1 - p) / 2 - r) < Fraction(2, 5) or abs(m * (1 - p) / 2 - r) > Fraction(3, 5)
-    lo_rank = 1 if r < 1 else (m if r > m else r)
-    hi_rank = r + q
-    hi_rank = 1 if hi_rank < 1 else (m if hi_rank > m else hi_rank)
+    q = floor_half_up(p * m)
+    r = (m - q) // 2 if (m - q) % 2 == 0 else (m - q + 1) // 2
+    lo_rank, hi_rank = r, r + q
+    assert 1 <= lo_rank and hi_rank <= m
     sym = (xs[lo_rank - 1], xs[hi_rank - 1])
     best = None
     for s in range(1, m - q + 1):
@@ -139,9 +144,8 @@ def intervals(values, p):
     return sym, (xs[s - 1], xs[s + q - 1]), (lo_rank, hi_rank), (s, s + q)
 
 
-def case(values, p_num, p_den, fx, note):
-    p = Fraction(p_num, p_den)
-    pf = p_num / p_den
+def case(values, pf, fx, note):
+    p = Fraction(pf)  # the exact binary64 value
     mean_f, u_f, mean_exact = exact_mean_u(values)
     sym, sh, sym_ranks, sh_ranks = intervals(values, p)
     sym_len = Fraction(sym[1]) - Fraction(sym[0])
@@ -271,16 +275,27 @@ def ac_h1():
 
 def main(argv):
     check = "--check" in argv[1:]
-    uni_text, uni = case([float(i) for i in range(1, 1001)], 19, 20, 500.5, "AC-1: the values 1..1000")
+    uni_text, uni = case([float(i) for i in range(1, 1001)], 0.95, 500.5, "AC-1: the values 1..1000")
     assert uni["sym_ranks"] == [25, 975] and uni["shortest_ranks"] == [1, 951]
     assert not uni["shortest_strictly_shorter"]
     skew_values = [neg_ln(open_unit(3, 0, i)) for i in range(2000)]
-    skew_text, skew = case(skew_values, 19, 20, 1.0, "AC-2: exponential(1), seed 3, stream 0, indices 0..1999")
+    skew_text, skew = case(skew_values, 0.95, 1.0, "AC-2: exponential(1), seed 3, stream 0, indices 0..1999")
     assert skew["shortest_strictly_shorter"]
+    rank_cases = {}
+    for name, seed, m, pf, want in (
+        ("ranks_m1012.json", 5, 1012, 0.95, [26, 987]),
+        ("ranks_m51.json", 6, 51, 0.95, [2, 50]),
+        ("ranks_p6827.json", 7, 1000, 0.6827, [159, 842]),
+    ):
+        vals = [neg_ln(open_unit(seed, 0, i)) for i in range(m)]
+        text, exp = case(vals, pf, 1.0, f"rank rule: M = {m}, p = {pf!r}, exponential(1) seed {seed}")
+        assert exp["sym_ranks"] == want, (name, exp["sym_ranks"])
+        rank_cases[name] = text
     files = {
         "uniform_1000.json": uni_text,
         "skewed.json": skew_text,
         "ac_h1_reference.json": ac_h1(),
+        **rank_cases,
     }
     bad = 0
     for name, text in files.items():

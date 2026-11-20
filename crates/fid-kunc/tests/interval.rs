@@ -6,7 +6,7 @@
 //! decimal square root, its own Philox4x32-10), never from this crate. AC-3 and AC-4 are
 //! hand-labelled from the spec's rules.
 //!
-//! AC-H1 is measured by `ac_h1_endpoint_convergence`. Plain `cargo test` runs it at
+//! AC-H1 (as restated on #306) is measured by `ac_h1_interval_convergence`. Plain `cargo test` runs it at
 //! M = 10 000 values per seed (a smoke run of the same seeds on every target, wasm32
 //! included); `UNC_MCM_INTVL_FULL=1 cargo test --release -p fid-kunc --test interval
 //! ac_h1 -- --nocapture` runs the hypothesis scale M = 10^6. Pass counts are printed with
@@ -14,12 +14,15 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_kunc::dist::{open_unit, Distribution, Quantity, UnitCode};
-use fid_kunc::prop::mcm::interval::{summarize, McmSummary, ALGORITHM_ID};
+use fid_kunc::prop::mcm::interval::{coverage_count, summarize, McmSummary, ALGORITHM_ID};
 use fid_kunc::prop::mcm::McmError;
 use fid_kunc::IntervalKind;
 use fid_num::{f, rng, NumError};
 
 const FIX: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/unc/mcm/intvl/");
+/// Every interval fixture produced by the oracle.
+const FIXTURES: [&str; 5] =
+    ["uniform_1000.json", "skewed.json", "ranks_m1012.json", "ranks_m51.json", "ranks_p6827.json"];
 
 fn read(name: &str) -> String {
     std::fs::read_to_string(format!("{FIX}{name}")).unwrap_or_else(|e| panic!("{name}: {e}"))
@@ -266,6 +269,42 @@ fn rank_rule() {
     assert_eq!(s.shortest_ranks, (1, 20));
 }
 
+/// Rank cases where p M is not an integer (JCGM 101:2008 §7.7.2): M = 1012 gives
+/// (26, 987), M = 51 gives (2, 50), M = 1000 at p = 0.6827 gives (159, 842).
+#[test]
+fn rank_rule_non_integer_pm() {
+    for (name, want) in [("ranks_m1012.json", (26, 987)), ("ranks_m51.json", (2, 50)), ("ranks_p6827.json", (159, 842))]
+    {
+        let c = case(name);
+        let s = summarize(&c.values, c.p, c.fx).unwrap();
+        assert_eq!(s.sym_ranks, want, "{name}");
+        check_expected(&c, &s);
+    }
+}
+
+/// q = floor(p M + 1/2) exactly from the binary64 value of p.
+#[test]
+fn coverage_count_is_exact() {
+    assert_eq!(coverage_count(0.95, 1012), 961);
+    assert_eq!(coverage_count(0.95, 1000), 950);
+    assert_eq!(coverage_count(0.5, 3), 2); // 1.5 + 0.5 = 2 exactly
+    assert_eq!(coverage_count(0.5, 1), 1);
+    assert_eq!(coverage_count(0.25, 2), 1); // 0.5 + 0.5
+                                            // The binary64 0.95 is slightly below 19/20, so 0.95 * 10 + 1/2 = 9.999... and q = 9.
+    assert_eq!(coverage_count(0.95, 10), 9);
+    assert_eq!(coverage_count(f64::from_bits(1), u64::MAX), 0);
+    // (1 - 2^-53) * 2^20 + 1/2 = 2^20 + 1/2 - 2^-33, so q = 2^20.
+    assert_eq!(coverage_count(1.0 - f64::EPSILON / 2.0, 1 << 20), 1 << 20);
+    assert_eq!(coverage_count(1.0 - f64::EPSILON / 2.0, u64::MAX), u64::MAX - 2048);
+}
+
+/// M >= 2 always (REQ-UNC.PROP.MCM.INTVL-003), even when ceil(1 / (1 - p)) rounds to 1.
+#[test]
+fn at_least_two_values() {
+    assert_eq!(summarize(&[1.0], 1e-20, 0.0).unwrap_err(), McmError::TooFewTrials { m: 1, min: 2 });
+    assert!(summarize(&[1.0, 2.0], 1e-20, 0.0).is_ok());
+}
+
 // ------------------------------------------------------------------------ AC-H1
 
 struct Endpoint {
@@ -285,13 +324,10 @@ fn endpoint(doc: &str, dist: &str, key: &str) -> Endpoint {
 }
 
 /// Tolerance 3 x the asymptotic standard error of the order statistic at level q,
-/// sqrt(q (1 - q) / M) / f(x_q). At a support boundary (q = 0, the exponential's
-/// shortest lower endpoint) that error is zero and the criterion is ill-posed; one
-/// expected spacing 1 / (M f) is used instead (stated as a deviation in the PR).
+/// sqrt(q (1 - q) / M) / f(x_q). Used for the symmetric endpoints only.
 fn tolerance(e: &Endpoint, m: usize) -> f64 {
     let m = m as f64;
-    let se = if e.q == 0.0 { 1.0 / (m * e.density) } else { f::sqrt(e.q * (1.0 - e.q) / m).unwrap() / e.density };
-    3.0 * se
+    3.0 * f::sqrt(e.q * (1.0 - e.q) / m).unwrap() / e.density
 }
 
 fn rect4_values(seed: u64, m: usize) -> Vec<f64> {
@@ -310,56 +346,155 @@ fn exp1_values(seed: u64, m: usize) -> Vec<f64> {
         .collect()
 }
 
-/// AC-H1: the symmetric and shortest 95 % intervals converge to the analytic endpoints of
-/// two closed-form output distributions, per endpoint within 3 asymptotic standard errors,
-/// for at least 99 of 100 seeds. Seeds: rect4 0x1A7_0000 + s (streams 0..3), exp1
-/// 0x1A7_1000 + s (stream 0), s = 0..99.
+/// Analytic CDF of rect4, Y = 2 sqrt(3) S - 4 sqrt(3) with S Irwin-Hall(4):
+/// F_S(s) = (1/24) sum_{k <= floor(s)} (-1)^k C(4, k) (s - k)^4 (the textbook closed form).
+fn rect4_cdf(y: f64) -> f64 {
+    let h = f::sqrt(3.0).unwrap();
+    let s = (y + 4.0 * h) / (2.0 * h);
+    if s <= 0.0 {
+        return 0.0;
+    }
+    if s >= 4.0 {
+        return 1.0;
+    }
+    let c = [1.0, -4.0, 6.0, -4.0, 1.0];
+    let mut acc = 0.0;
+    for (k, ck) in c.iter().enumerate() {
+        let d = s - k as f64;
+        if d <= 0.0 {
+            break;
+        }
+        acc += ck * (d * d) * (d * d);
+    }
+    acc / 24.0
+}
+
+/// Analytic CDF of exp1.
+fn exp1_cdf(x: f64) -> f64 {
+    if x <= 0.0 {
+        0.0
+    } else {
+        1.0 - f::exp(-x).unwrap()
+    }
+}
+
+/// AC-H1 as restated (maintainer decision on #306): for the probabilistically symmetric
+/// interval, each endpoint is within 3 asymptotic order-statistic standard errors of the
+/// analytic endpoint; for the shortest interval (whose endpoints converge at about M^(-1/3),
+/// shorth behaviour, so a per-endpoint test does not apply), the width is within
+/// 3 sqrt(p (1 - p) / M) / f(xi) of the analytic shortest width (xi the upper analytic
+/// endpoint) and the realised coverage F(hi) - F(lo) is within 3 sqrt(p (1 - p) / M) of p.
+/// Each of the four checks must pass for at least 99 of 100 seeds. The shortest endpoints
+/// themselves are matched bit for bit against the oracle by AC-1, AC-2 and the rank cases.
+/// Seeds: rect4 0x1A7_0000 + s (streams 0..3), exp1 0x1A7_1000 + s (stream 0), s = 0..99.
 #[test]
-fn ac_h1_endpoint_convergence() {
+fn ac_h1_interval_convergence() {
     let full = std::env::var("UNC_MCM_INTVL_FULL").map(|v| v == "1").unwrap_or(false);
     let m = if full { 1_000_000 } else { 10_000 };
+    let p = 0.95;
     let doc = read("ac_h1_reference.json");
     let cp_raw = raw_field(&doc, 0, "clopper_pearson_95_n100");
     let cp: Vec<&str> = cp_raw.trim_matches(['[', ']']).split("], [").collect();
     assert_eq!(cp.len(), 101);
-    let keys = ["sym_low", "sym_high", "shortest_low", "shortest_high"];
+    let checks = ["sym_low", "sym_high", "shortest_width", "shortest_coverage"];
+    let cov_tol = 3.0 * f::sqrt(p * (1.0 - p) / m as f64).unwrap();
     let mut report = Vec::new();
     for (dist, base) in [("rect4", 0x1A7_0000u64), ("exp1", 0x1A7_1000u64)] {
-        let eps: Vec<Endpoint> = keys.iter().map(|k| endpoint(&doc, dist, k)).collect();
+        let lo = endpoint(&doc, dist, "sym_low");
+        let hi = endpoint(&doc, dist, "sym_high");
+        let sh_lo = endpoint(&doc, dist, "shortest_low");
+        let sh_hi = endpoint(&doc, dist, "shortest_high");
+        let width_ref = sh_hi.x - sh_lo.x;
+        let width_tol = cov_tol / sh_hi.density;
+        let cdf = if dist == "rect4" { rect4_cdf } else { exp1_cdf };
         let mut pass = [0u32; 4];
         let mut worst = [0.0f64; 4];
         for s in 0..100u64 {
             let v = if dist == "rect4" { rect4_values(base + s, m) } else { exp1_values(base + s, m) };
-            let sum = summarize(&v, 0.95, 0.0).unwrap();
-            let got = [sum.sym.low, sum.sym.high, sum.shortest.low, sum.shortest.high];
+            let sum = summarize(&v, p, 0.0).unwrap();
+            let z = [
+                (sum.sym.low - lo.x).abs() / tolerance(&lo, m),
+                (sum.sym.high - hi.x).abs() / tolerance(&hi, m),
+                ((sum.shortest.high - sum.shortest.low) - width_ref).abs() / width_tol,
+                ((cdf(sum.shortest.high) - cdf(sum.shortest.low)) - p).abs() / cov_tol,
+            ];
             for k in 0..4 {
-                let z = (got[k] - eps[k].x).abs() / tolerance(&eps[k], m);
-                if z <= 1.0 {
+                if z[k] <= 1.0 {
                     pass[k] += 1;
                 }
-                if z > worst[k] {
-                    worst[k] = z;
+                if z[k] > worst[k] {
+                    worst[k] = z[k];
                 }
             }
         }
         for k in 0..4 {
             let bounds = cp[pass[k] as usize].replace('"', "");
             println!(
-                "AC-H1 M={m} {dist} {}: {}/100 seeds within 3 se, exact 95 % bounds [{bounds}], worst |err|/(3 se) = {:.3}",
-                keys[k], pass[k], worst[k]
+                "AC-H1 M={m} {dist} {}: {}/100 seeds within tolerance, exact 95 % bounds [{bounds}], worst |err|/tol = {:.3}",
+                checks[k], pass[k], worst[k]
             );
-            report.push((dist, keys[k], pass[k]));
+            report.push((dist, checks[k], pass[k]));
         }
     }
     assert_eq!(report.len(), 8);
-    // The symmetric endpoints meet the hypothesis at both scales and are guarded here. The
-    // shortest-interval endpoints are measured and printed but not asserted: at M = 10^6
-    // rect4 passes 50/100 (its shortest-window endpoints converge more slowly than the
-    // order-statistic standard error assumes) and exp1's boundary endpoint 96/100, so the
-    // hypothesis is falsified for them; see the leaf's Open questions.
-    for (dist, key, pass) in &report {
-        if key.starts_with("sym_") {
-            assert!(*pass >= 99, "AC-H1 {dist} {key}: {pass}/100");
+    // The hypothesis is stated at M = 10^6, where every check must pass for >= 99 seeds
+    // (measured: 99 or 100 each). At the M = 10 000 smoke scale the symmetric checks keep
+    // the same bar, and the shortest-interval checks are a regression guard at >= 95: the
+    // shortest window is selected from the sample, which perturbs its realised coverage by
+    // an amount that only becomes negligible at large M (measured: rect4 coverage 98/100).
+    for (dist, check, pass) in &report {
+        let bar = if full || check.starts_with("sym_") { 99 } else { 95 };
+        assert!(*pass >= bar, "AC-H1 M={m} {dist} {check}: {pass}/100, need {bar}");
+    }
+}
+
+// ------------------------------------------------------------------------ D0 bits
+
+/// Little-endian bytes of the summary fields, in a fixed order.
+fn summary_bytes(s: &McmSummary, out: &mut Vec<u8>) {
+    for x in [s.mean, s.u, s.sym.low, s.sym.high, s.shortest.low, s.shortest.high, s.mean_minus_fx] {
+        out.extend_from_slice(&x.to_le_bytes());
+    }
+}
+
+fn hex_bytes(b: &[u8]) -> String {
+    b.iter().map(|x| format!("{x:02x}")).collect()
+}
+
+/// D0 bit identity across targets. `crate_bits.txt` pins this crate's exact `to_bits()` of
+/// mean, u and mean_minus_fx for every interval fixture, and a SHA-256 over the summaries
+/// of AC-H1 seeds 0..3 of both distributions at M = 10 000. It is produced by this test
+/// with `UNC_MCM_INTVL_PRINT_BITS=1` (crate output, not an oracle: the correctness of
+/// these values is checked against the oracle by the other tests) and CI runs this file on
+/// wasm32-wasip1, x86-64 (Linux, Windows) and ARM64 (macOS), so a pass everywhere shows
+/// identical bits on all of them.
+#[test]
+fn d0_bits_are_pinned() {
+    let mut lines = vec![
+        "# UNC.PROP.MCM.INTVL D0 bit pins: crate output, regenerate with UNC_MCM_INTVL_PRINT_BITS=1".to_string(),
+        "# fixture mean u mean_minus_fx (IEEE-754 bits, hex)".to_string(),
+    ];
+    for name in FIXTURES {
+        let c = case(name);
+        let s = summarize(&c.values, c.p, c.fx).unwrap();
+        lines.push(format!(
+            "{name} {:016x} {:016x} {:016x}",
+            s.mean.to_bits(),
+            s.u.to_bits(),
+            s.mean_minus_fx.to_bits()
+        ));
+    }
+    let mut bytes = Vec::new();
+    for (dist, base) in [("rect4", 0x1A7_0000u64), ("exp1", 0x1A7_1000u64)] {
+        for s in 0..4u64 {
+            let v = if dist == "rect4" { rect4_values(base + s, 10_000) } else { exp1_values(base + s, 10_000) };
+            summary_bytes(&summarize(&v, 0.95, 0.0).unwrap(), &mut bytes);
         }
     }
+    lines.push(format!("ac_h1_seeds_0_3_m10000 sha256:{}", hex_bytes(&fid_kci::kci::sha256::sha256(&bytes))));
+    let text = lines.join("\n") + "\n";
+    if std::env::var("UNC_MCM_INTVL_PRINT_BITS").map(|v| v == "1").unwrap_or(false) {
+        std::fs::write(format!("{FIX}crate_bits.txt"), &text).unwrap();
+    }
+    assert_eq!(text, read("crate_bits.txt"));
 }
