@@ -1,6 +1,6 @@
 [package]
 name = "fid-program-rec"
-description = "Metrology Maven record-to-program and release lifecycle: agent-provenance gate on release (AUTO.REC.ADOPT)"
+description = "Metrology Maven record-to-program and release lifecycle: agent-provenance gate on release (AUTO.REC.ADOPT) and the program and script lifecycle (AUTO.REC.LIFE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

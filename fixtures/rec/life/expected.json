@@ -1,0 +1,30 @@
+{
+  "ac1_register_event": "{\"artifact\":\"018f0000-0000-7a0b-9f63-cc74b8b713d5\",\"branch\":\"main\",\"by\":\"alice\",\"command\":\"program.register@1\",\"content\":\"{\\\"format\\\":\\\"fid-program\\\",\\\"format_version\\\":1,\\\"main\\\":[],\\\"meta\\\":{},\\\"params\\\":[],\\\"program_id\\\":\\\"018f0000-0000-7a0b-9f63-cc74b8b713d5\\\",\\\"subroutines\\\":[],\\\"variables\\\":[]}\",\"digest\":\"sha256:d049cda9d62278db15a409bea80ffb033078e2ff8ffa1be777b7064840bf9f27\",\"state\":\"registered\",\"version\":1}",
+  "ac1_register_result": "{\"digest\":\"sha256:d049cda9d62278db15a409bea80ffb033078e2ff8ffa1be777b7064840bf9f27\",\"state\":\"registered\",\"version\":1}",
+  "ac1_release_event": "{\"artifact\":\"018f0000-0000-7a0b-9f63-cc74b8b713d5\",\"branch\":\"main\",\"by\":\"alice\",\"command\":\"program.release@1\",\"digest\":\"sha256:d049cda9d62278db15a409bea80ffb033078e2ff8ffa1be777b7064840bf9f27\",\"state\":\"released\",\"version\":1}",
+  "ac1_release_result": "{\"digest\":\"sha256:d049cda9d62278db15a409bea80ffb033078e2ff8ffa1be777b7064840bf9f27\",\"state\":\"released\",\"version\":1}",
+  "ac4_unadopted": [
+    "019a0000-0002-7000-8000-00000000c002",
+    "019a0000-0003-7000-8000-00000000c003"
+  ],
+  "ac5_deprecate_result": "{\"digest\":\"sha256:d049cda9d62278db15a409bea80ffb033078e2ff8ffa1be777b7064840bf9f27\",\"state\":\"deprecated\",\"version\":1}",
+  "ac6_deprecate_result": "{\"digest\":\"sha256:99ccc7276ac15c5f14cc6850dd04c72a7f3c126f383a1795c7496982ee188ad9\",\"state\":\"deprecated\",\"version\":1}",
+  "ac6_register_event": "{\"artifact\":\"hello\",\"branch\":\"main\",\"by\":\"alice\",\"command\":\"script.register@1\",\"content\":\"{\\\"files\\\":{\\\"main.py\\\":\\\"print(\\\\\\\"hello from a Metrology Maven script\\\\\\\")\\\\n\\\"},\\\"format\\\":\\\"fid-script-bundle\\\",\\\"format_version\\\":1}\",\"digest\":\"sha256:99ccc7276ac15c5f14cc6850dd04c72a7f3c126f383a1795c7496982ee188ad9\",\"state\":\"registered\",\"version\":1}",
+  "ac6_register_result": "{\"digest\":\"sha256:99ccc7276ac15c5f14cc6850dd04c72a7f3c126f383a1795c7496982ee188ad9\",\"state\":\"registered\",\"version\":1}",
+  "ac6_release_event": "{\"artifact\":\"hello\",\"branch\":\"main\",\"by\":\"alice\",\"command\":\"script.release@1\",\"digest\":\"sha256:99ccc7276ac15c5f14cc6850dd04c72a7f3c126f383a1795c7496982ee188ad9\",\"state\":\"released\",\"version\":1}",
+  "ac6_release_result": "{\"digest\":\"sha256:99ccc7276ac15c5f14cc6850dd04c72a7f3c126f383a1795c7496982ee188ad9\",\"state\":\"released\",\"version\":1}",
+  "agent_digest": "sha256:61d745710286919015b4f267394da4114877635350daa126b630e497f89ba6aa",
+  "agent_program": "019a0000-0000-7000-8000-00000000c000",
+  "agent_steps": {
+    "A1": "019a0000-0002-7000-8000-00000000c002",
+    "A2": "019a0000-0003-7000-8000-00000000c003",
+    "H1": "019a0000-0001-7000-8000-00000000c001"
+  },
+  "branch": "main",
+  "edited_digest": "sha256:254728ec55664ef44b0b18c522e00310d1630ee508af7e7a055b3bfab5864062",
+  "human": "alice",
+  "minimal_digest": "sha256:d049cda9d62278db15a409bea80ffb033078e2ff8ffa1be777b7064840bf9f27",
+  "program": "018f0000-0000-7a0b-9f63-cc74b8b713d5",
+  "script": "hello",
+  "script_digest": "sha256:99ccc7276ac15c5f14cc6850dd04c72a7f3c126f383a1795c7496982ee188ad9"
+}

@@ -455,7 +455,7 @@ impl ProvenanceStore {
 
 /// Whether an author of this kind is a person accountable for the content. Exhaustive, so a
 /// new principal kind fails to build until it is classified.
-fn is_person(kind: PrincipalKind) -> bool {
+pub(crate) fn is_person(kind: PrincipalKind) -> bool {
     match kind {
         PrincipalKind::Human => true,
         PrincipalKind::Agent

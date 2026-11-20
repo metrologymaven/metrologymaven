@@ -23,7 +23,8 @@ fid-geo-cmd = { path = "../fid-geo-cmd" }
 fid-jobs = { path = "../fid-jobs" }
 fid-project-cmd = { path = "../fid-project-cmd" }
 fid-report = { path = "../fid-report" }
-# The adoption commands of AUTO.REC.ADOPT, read through `fid_program_rec::adopt::declarations()`.
+# The adoption commands of AUTO.REC.ADOPT and the lifecycle commands of AUTO.REC.LIFE, read
+# through `fid_program_rec::{adopt,life}::declarations()`.
 # Layer services, as this crate.
 fid-program-rec = { path = "../fid-program-rec" }
 # The settings commands (CORE.STO.SET), read through `fid_store::settings::declarations()`.
