@@ -552,6 +552,7 @@ fn ac1_a_gui_human_with_the_dialog_confirmed_sends_the_exact_bytes_once() {
     assert_eq!(st(b, "destination_digest"), w.dest("upload").digest().as_str());
     assert_eq!(st(b, "outcome"), "sent");
     assert_eq!(st(b, "remote_receipt"), "stored as 42");
+    assert!(!boolean(b, "already_present"));
     let approval = obj(b.get("approval").unwrap());
     assert_eq!(st(approval, "at"), "2026-11-20T10:00:00Z");
     assert_eq!(st(approval, "method"), "gui_prompt");
@@ -574,6 +575,7 @@ fn ac1_a_network_root_send_writes_a_new_file_and_never_overwrites() {
     let sent = w.send(&alice, w.authorise(&alice, &p, None, Some(consent)).unwrap(), transports, CancelToken::never());
     let sent = sent.unwrap();
     assert_eq!(sent.outcome, Outcome::Sent);
+    assert!(!boolean(event_body(&sent), "already_present"), "a new file was written");
     let file = w.share.0.join(w.digest.hex());
     assert_eq!(std::fs::read(&file).unwrap(), w.bytes);
     check_schemas(&p, &sent);
@@ -581,9 +583,11 @@ fn ac1_a_network_root_send_writes_a_new_file_and_never_overwrites() {
     let consent = w.approval(&alice, w.digest, "lab-share");
     let again = w.send(&alice, w.authorise(&alice, &p, None, Some(consent)).unwrap(), transports, CancelToken::never());
     let again = again.unwrap();
-    // Maintainer decision on #336: an existing file with the same content counts as sent.
+    // Maintainer decision on #336: an existing file with the same content counts as sent,
+    // with the distinct flag that nothing was written (#336 review).
     assert_eq!(again.outcome, Outcome::Sent);
-    assert_eq!(st(event_body(&again), "remote_receipt"), "already present with the same content");
+    assert!(boolean(event_body(&again), "already_present"));
+    assert!(event_body(&again).get("remote_receipt").is_none());
     assert_eq!(std::fs::read(&file).unwrap(), w.bytes);
     assert_eq!(std::fs::read_dir(&w.share.0).unwrap().count(), 1, "no partial file is left");
     check_schemas(&p, &again);
@@ -994,17 +998,135 @@ fn an_existing_network_root_file_is_hashed_and_never_replaced() {
     let target = w.share.0.join(w.digest.hex());
     std::fs::write(&target, &w.bytes).unwrap();
     let t = NetworkRootTransport::new();
-    assert_eq!(root_send(&mut w, &t).outcome, Outcome::Sent);
+    let same = root_send(&mut w, &t);
+    assert_eq!(same.outcome, Outcome::Sent);
+    assert!(boolean(event_body(&same), "already_present"), "nothing was written");
     assert!(partials(&w.share.0).is_empty());
 
     std::fs::write(&target, b"someone else's bytes").unwrap();
     let sent = root_send(&mut w, &t);
     assert_eq!(sent.outcome, Outcome::Failed);
     assert_eq!(std::fs::read(&target).unwrap(), b"someone else's bytes");
+    assert!(!boolean(event_body(&sent), "already_present"));
     assert!(partials(&w.share.0).is_empty());
 }
 
-/// Maintainer decision 4: an approval older than five minutes is refused at authorise.
+/// Runs the `network_root` transport for `digest` on another thread and gives up after 30
+/// seconds, so a send that blocks (on a FIFO) fails the test instead of hanging it.
+fn transport_send_with_deadline(share: &Path, t: NetworkRootTransport, digest: Digest, bytes: Vec<u8>) -> SendOutcome {
+    let share = share.to_path_buf();
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let destinations = Destinations::from_value(&destinations_value(&share, UPLOAD_URL)).unwrap();
+        let d = def();
+        let mut scope = PermitScope::new();
+        let permit = issue_permit_for_tests(&d, &mut scope).unwrap();
+        let dest = destinations.lookup("lab-share").unwrap();
+        let _ = tx.send(t.send(&permit, dest, &digest, &bytes, &CancelToken::never()));
+    });
+    rx.recv_timeout(Duration::from_secs(30)).expect("the network_root send blocked")
+}
+
+fn file_symlink(link: &Path, target: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link).is_ok()
+    }
+    #[cfg(windows)]
+    {
+        std::os::windows::fs::symlink_file(target, link).is_ok()
+    }
+}
+
+/// A folder link: a symbolic link on Unix, a junction on Windows (no privilege needed).
+fn dir_link(link: &Path, target: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link).is_ok()
+    }
+    #[cfg(windows)]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(link)
+            .arg(target)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
+}
+
+/// #336 review: a symbolic link planted at `<hex>` is never followed, even when its target
+/// holds exactly the artifact: the send is `failed`, not `sent`, and the link stays.
+#[test]
+fn a_planted_symlink_at_the_target_name_is_never_followed() {
+    let mut w = World::new();
+    let elsewhere = Temp::new("elsewhere");
+    let outside = elsewhere.0.join("same-bytes");
+    std::fs::write(&outside, &w.bytes).unwrap();
+    let target = w.share.0.join(w.digest.hex());
+    if !file_symlink(&target, &outside) {
+        // Windows without the symbolic-link privilege; the junction test still runs.
+        return;
+    }
+    let t = NetworkRootTransport::new();
+    let got = transport_send_with_deadline(&w.share.0, t, w.digest, w.bytes.clone());
+    assert!(matches!(got, SendOutcome::Failed { .. }), "{got:?}");
+    let sent = root_send(&mut w, &t);
+    assert_eq!(sent.outcome, Outcome::Failed);
+    assert!(!boolean(event_body(&sent), "already_present"));
+    assert!(std::fs::symlink_metadata(&target).unwrap().file_type().is_symlink(), "the link is left as it is");
+    assert_eq!(std::fs::read(&outside).unwrap(), w.bytes);
+    assert!(partials(&w.share.0).is_empty());
+}
+
+/// #336 review: a folder link or junction planted at `<hex>` is `failed`, not followed.
+#[test]
+fn a_planted_folder_link_or_junction_at_the_target_name_is_failed() {
+    let w = World::new();
+    let elsewhere = Temp::new("elsewhere-dir");
+    let target = w.share.0.join(w.digest.hex());
+    assert!(dir_link(&target, &elsewhere.0), "the folder link could be made");
+    let got = transport_send_with_deadline(&w.share.0, NetworkRootTransport::new(), w.digest, w.bytes.clone());
+    assert!(matches!(got, SendOutcome::Failed { .. }), "{got:?}");
+    assert!(std::fs::read_dir(&elsewhere.0).unwrap().next().is_none(), "nothing was written through the link");
+    assert!(partials(&w.share.0).is_empty());
+}
+
+/// #336 review, Unix: a FIFO planted at `<hex>` neither blocks the send nor counts as
+/// `sent`. (Windows has no FIFO in the file system; skipped there.)
+#[cfg(unix)]
+#[test]
+fn a_planted_fifo_at_the_target_name_does_not_block() {
+    use std::os::unix::fs::FileTypeExt;
+    let mut w = World::new();
+    let target = w.share.0.join(w.digest.hex());
+    let made = std::process::Command::new("mkfifo").arg(&target).status().map(|s| s.success()).unwrap_or(false);
+    assert!(made, "mkfifo is available on the Unix runners");
+    let got = transport_send_with_deadline(&w.share.0, NetworkRootTransport::new(), w.digest, w.bytes.clone());
+    assert!(matches!(got, SendOutcome::Failed { .. }), "{got:?}");
+    let sent = root_send(&mut w, &NetworkRootTransport::new());
+    assert_eq!(sent.outcome, Outcome::Failed);
+    assert!(!boolean(event_body(&sent), "already_present"));
+    assert!(std::fs::symlink_metadata(&target).unwrap().file_type().is_fifo(), "the FIFO is left as it is");
+    assert!(partials(&w.share.0).is_empty());
+}
+
+/// #336 review: `<hex>` is hashed again after the link; a file changed in between is
+/// `failed`, not `sent`, and left as it is.
+#[test]
+fn a_file_changed_after_the_link_is_failed() {
+    let mut w = World::new();
+    let sent = root_send(&mut w, &NetworkRootTransport::tampering_after_link_for_tests());
+    assert_eq!(sent.outcome, Outcome::Failed);
+    assert!(st(event_body(&sent), "failure").contains("does not verify"), "{:?}", event_body(&sent));
+    assert!(!boolean(event_body(&sent), "already_present"));
+    assert!(w.share.0.join(w.digest.hex()).exists(), "the changed file is not removed");
+    assert!(partials(&w.share.0).is_empty());
+}
+
+/// Maintainer decision 4: an approval older than five minutes is refused at authorise; a
+/// stale approval is no approval (`policy/no_approval`, #336 review).
 #[test]
 fn a_stale_approval_is_refused() {
     let mut w = World::new();
@@ -1018,7 +1140,7 @@ fn a_stale_approval_is_refused() {
     for now in [later(301), EntryTime { mono_ns: 999, ..time() }] {
         w.now = now;
         let consent = w.approval(&alice, w.digest, "upload");
-        assert_err(w.authorise(&alice, &p, None, Some(consent)), Code::Precondition, "false");
+        assert_err(w.authorise(&alice, &p, None, Some(consent)), Code::Policy, "no_approval");
     }
 }
 
@@ -1091,5 +1213,5 @@ fn network_root_paths_are_checked() {
         assert_eq!(got.is_ok(), boolean(o, "valid"), "{}: {:?}", st(o, "name"), got);
         checked += 1;
     }
-    assert!(checked >= 6);
+    assert!(checked >= 20);
 }

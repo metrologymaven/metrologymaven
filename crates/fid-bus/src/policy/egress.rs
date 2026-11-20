@@ -12,7 +12,8 @@
 //!   build has no transport for its kind (REQ-003).
 //! - `policy/no_approval`: no [`EgressApproval`], or one that does not name the executing
 //!   human, the artifact digest, the destination ID and the destination's configuration
-//!   digest; a principal that is neither `human`, `agent` nor `script` (REQ-002).
+//!   digest, or one older than [`APPROVAL_MAX_AGE`]; a principal that is neither `human`,
+//!   `agent` nor `script` (REQ-002).
 //! - `validation/bad_artifact`: the artifact is not in the store, is larger than one blob,
 //!   or its bytes do not hash to the digest (REQ-003).
 //! - `validation/schema`: parameters with unknown or missing fields, a malformed digest, or
@@ -49,8 +50,10 @@
 //! twice (the store's own check, then SHA-256 of the exact bytes to be sent); the
 //! transport is called exactly once, under a [`NetPermit`] issued for X1 (`issue_permit`,
 //! crate-private, called by the pipeline); the outcome (`sent`, `failed`, `cancelled`) is
-//! recorded in one [`EGRESS_EVENT`] event with the digest, size, destination and approval. A failure or a
-//! cancellation is recorded, never retried (REQ-006).
+//! recorded in one [`EGRESS_EVENT`] event with the digest, size, destination and approval,
+//! and the flag `already_present` (`true` when the destination already held exactly these
+//! bytes and nothing was written). A failure or a cancellation is recorded, never retried
+//! (REQ-006).
 //!
 //! **Redirects and name resolution.** The spec does not cover them; this module never
 //! follows a redirect itself (it has no HTTP client), and the [`Transport`] contract
@@ -62,14 +65,16 @@
 
 #![deny(clippy::wildcard_enum_match_arm, clippy::match_wildcard_for_single_variants)]
 
-use crate::error::{BusError, Detail, PolicyReason, PreconditionReason, Untrusted, ValidationReason};
+use crate::error::{BusError, Detail, PolicyReason, Untrusted, ValidationReason};
 use crate::handler::{CancelToken, Event, EventType, HandlerCtx, StateView, ValidParams};
+use crate::policy::fs::{open_checked, windows_device};
 use crate::policy::projection::{
     authorise as authorise_projection_call, forbidden_in_reason, is_mcp_channel, Approval, Decision, Filing, RequestId,
 };
 use crate::principal::{
     Channel, ConfirmMethod, OsUser, PresenceOutcome, Principal, PrincipalKind, PrincipalRef, SessionTable, UpgradeClock,
 };
+use cap_std::fs::Dir;
 use fid_canon::CValue;
 use fid_journal::EntryTime;
 use fid_registry::{CommandDef, DefError};
@@ -591,6 +596,14 @@ impl Destinations {
 /// other control character, absolute on this platform, no `.` or `..` segment (split on `/`
 /// and `\\`), no Windows device or verbatim path (`\\.\\`, `\\?\\`, `\\??\\`, also
 /// with `/`), and only a drive letter or a UNC share as a Windows prefix.
+///
+/// Every component (split on `/` and `\\`, the UNC server and share names included, a
+/// leading drive `X:` excepted) must also be a name Windows keeps as written, on every
+/// platform, since a share may be served by Windows: no trailing `.` or space (Windows strips
+/// them, so the name would alias another), no `:` (an alternate data stream), and no
+/// reserved device name (`CON`, `PRN`, `AUX`, `NUL`, `COM0`-`COM9`, `LPT0`-`LPT9`, `CONIN$`,
+/// `CONOUT$`, `CLOCK$` and the superscript-digit forms, in any case and with any extension;
+/// the rule of `policy::fs`).
 pub fn check_root_path(s: &str) -> Result<(), String> {
     if s.is_empty() || s.len() > MAX_ROOT_PATH_BYTES {
         return Err(format!("path must be 1 to {MAX_ROOT_PATH_BYTES} bytes"));
@@ -604,6 +617,22 @@ pub fn check_root_path(s: &str) -> Result<(), String> {
     }
     if s.split(['/', '\\']).any(|seg| seg == "." || seg == "..") {
         return Err("path has a '.' or '..' segment".into());
+    }
+    for (i, seg) in s.split(['/', '\\']).enumerate() {
+        let b = seg.as_bytes();
+        let drive = i == 0 && b.len() == 2 && b[0].is_ascii_alphabetic() && b[1] == b':';
+        if seg.is_empty() || drive {
+            continue;
+        }
+        if seg.ends_with('.') || seg.ends_with(' ') {
+            return Err("a path component ends with '.' or a space".into());
+        }
+        if seg.contains(':') {
+            return Err("a path component holds ':'".into());
+        }
+        if windows_device(seg) {
+            return Err("a path component is a Windows reserved device name".into());
+        }
     }
     let p = Path::new(s);
     if !p.is_absolute() {
@@ -861,7 +890,8 @@ pub enum EgressDecision {
 ///    (`no_approval` otherwise).
 ///
 /// 4. The approval must be at most [`APPROVAL_MAX_AGE`] old at `now` by the monotonic
-///    clock (`precondition/false` otherwise, also when `now` is before the approval).
+///    clock: a stale approval is no approval (`no_approval`, also when `now` is before the
+///    approval).
 ///
 /// Pure: sends nothing and commits nothing.
 #[allow(clippy::too_many_arguments)]
@@ -921,10 +951,10 @@ pub fn authorise(
     match now.mono_ns.checked_sub(approval.at.mono_ns) {
         Some(age) if age <= max_age => {}
         Some(_) | None => {
-            return Err(BusError::Precondition(
-                PreconditionReason::False,
-                Detail::new(&format!("the approval is older than {} seconds", APPROVAL_MAX_AGE.as_secs())),
-            ))
+            return Err(no_approval(&format!(
+                "the approval is older than {} seconds (or dated after now)",
+                APPROVAL_MAX_AGE.as_secs()
+            )))
         }
     }
     let cleared = Cleared {
@@ -1036,6 +1066,10 @@ pub fn issue_permit_for_tests<'s>(def: &CommandDef, scope: &'s mut PermitScope) 
 pub enum SendOutcome {
     /// The destination accepted all the bytes; with the remote's receipt, untrusted.
     Sent { receipt: Option<Untrusted<String>> },
+    /// The destination already held exactly these bytes and nothing was written (a
+    /// `network_root` file of the digest's name with the same content). Recorded as `sent`
+    /// with `already_present: true` in the event.
+    AlreadyPresent,
     /// The send failed; why, untrusted.
     Failed { reason: Untrusted<String> },
     /// Cancelled before completion.
@@ -1070,15 +1104,24 @@ pub struct Transports<'a> {
 /// digits, atomically and without replacing anything:
 ///
 /// 1. write `<hex>.partial-<random>` (created with `create_new`) and sync it;
-/// 2. hard-link it to `<hex>`, which fails if `<hex>` exists, then remove the partial file;
-/// 3. if `<hex>` already exists, hash it: `sent` if it holds exactly the artifact, `failed`
-///    otherwise (it is never replaced).
+/// 2. hard-link it to `<hex>`, which fails if `<hex>` exists, then remove the partial file,
+///    and hash `<hex>` again: `sent` if it holds exactly the artifact, `failed` otherwise (the
+///    file was changed after the link; it is left as it is);
+/// 3. if `<hex>` already exists, hash it: [`SendOutcome::AlreadyPresent`] if it holds exactly
+///    the artifact, `failed` otherwise (it is never replaced).
+///
+/// `<hex>` is hashed only if it is a regular file by `symlink_metadata`, and it is opened
+/// without following a link (`O_NOFOLLOW`; `FILE_FLAG_OPEN_REPARSE_POINT`, then refused if
+/// the handle is a reparse point) and without blocking (`O_NONBLOCK`, so a FIFO swapped in
+/// after the check cannot hang the send), through the root folder held as a capability
+/// (`policy::fs`). A link, junction, FIFO, device or folder of that name is `failed`.
 ///
 /// The partial file is removed on every path. The folder must exist. A share that does not
 /// support hard links gives `failed`.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct NetworkRootTransport {
     fail_after: Option<usize>,
+    tamper_after_link: bool,
 }
 
 static PARTIAL_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -1090,27 +1133,51 @@ fn partial_suffix() -> String {
     format!("{:016x}", h.finish())
 }
 
-/// Whether the file at `path` holds exactly `digest` (at most [`MAX_ARTIFACT_BYTES`] read).
-fn holds(path: &Path, digest: &Digest) -> bool {
-    let Ok(f) = fs::File::open(path) else { return false };
+/// Whether the file `name` in the folder `root` holds exactly `digest` (at most
+/// [`MAX_ARTIFACT_BYTES`] + 1 bytes read). `Err` says why not: not a plain regular file
+/// (a link, junction or other reparse point, FIFO, device or folder), unreadable, or other
+/// content. Never follows a link and never blocks on a FIFO (see [`NetworkRootTransport`]).
+fn holds(root: &Path, name: &str, digest: &Digest) -> Result<(), String> {
+    let dir = Dir::open_ambient_dir(root, cap_std::ambient_authority())
+        .map_err(|e| format!("the network root cannot be opened: {:?}", e.kind()))?;
+    let file = open_checked(&dir, Path::new(name), false)
+        .map_err(|e| format!("the file of that name is not a plain regular file ({}/{})", e.code(), e.reason()))?;
     let mut bytes = Vec::new();
-    if f.take(MAX_ARTIFACT_BYTES + 1).read_to_end(&mut bytes).is_err() {
-        return false;
+    file.take(MAX_ARTIFACT_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|e| format!("the file of that name cannot be read: {:?}", e.kind()))?;
+    if Digest::from_bytes(fid_canon::digest_bytes(&bytes).0) == *digest {
+        Ok(())
+    } else {
+        Err("the file of that name holds other content".into())
     }
-    Digest::from_bytes(fid_canon::digest_bytes(&bytes).0) == *digest
 }
 
 impl NetworkRootTransport {
     /// The transport.
     pub const fn new() -> NetworkRootTransport {
-        NetworkRootTransport { fail_after: None }
+        NetworkRootTransport { fail_after: None, tamper_after_link: false }
     }
 
     /// Test hook: a transport whose write fails with an I/O error after `bytes` bytes.
     #[cfg(feature = "permit-test-hooks")]
     #[doc(hidden)]
     pub const fn failing_after_for_tests(bytes: usize) -> NetworkRootTransport {
-        NetworkRootTransport { fail_after: Some(bytes) }
+        NetworkRootTransport { fail_after: Some(bytes), tamper_after_link: false }
+    }
+
+    /// Test hook: a transport that overwrites `<hex>` right after placing it, as another
+    /// writer on the share could, so the check after the link sees other content.
+    #[cfg(feature = "permit-test-hooks")]
+    #[doc(hidden)]
+    pub const fn tampering_after_link_for_tests() -> NetworkRootTransport {
+        NetworkRootTransport { fail_after: None, tamper_after_link: true }
+    }
+
+    fn tamper(&self, target: &Path) {
+        if self.tamper_after_link {
+            let _ = fs::write(target, b"changed by another writer after the link");
+        }
     }
 
     fn write_partial(&self, file: &mut fs::File, bytes: &[u8]) -> io::Result<()> {
@@ -1145,8 +1212,9 @@ impl Transport for NetworkRootTransport {
         if cancel.is_cancelled() {
             return SendOutcome::Cancelled;
         }
-        let target = path.join(artifact.hex());
-        let partial = path.join(format!("{}.partial-{}", artifact.hex(), partial_suffix()));
+        let name = artifact.hex();
+        let target = path.join(name);
+        let partial = path.join(format!("{name}.partial-{}", partial_suffix()));
         let mut file = match OpenOptions::new().write(true).create_new(true).open(&partial) {
             Ok(f) => f,
             Err(e) => return failed(format!("cannot create the partial file: {:?}", e.kind())),
@@ -1160,14 +1228,17 @@ impl Transport for NetworkRootTransport {
         let linked = fs::hard_link(&partial, &target);
         let _ = fs::remove_file(&partial);
         match linked {
-            Ok(()) => SendOutcome::Sent { receipt: None },
-            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
-                if holds(&target, artifact) {
-                    SendOutcome::Sent { receipt: Some(Untrusted::new("already present with the same content".into())) }
-                } else {
-                    failed("a different file of that name exists; it was not replaced".into())
+            Ok(()) => {
+                self.tamper(&target);
+                match holds(path, name, artifact) {
+                    Ok(()) => SendOutcome::Sent { receipt: None },
+                    Err(why) => failed(format!("the placed file does not verify; it was left as it is: {why}")),
                 }
             }
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => match holds(path, name, artifact) {
+                Ok(()) => SendOutcome::AlreadyPresent,
+                Err(why) => failed(format!("a file of that name exists and was not replaced: {why}")),
+            },
             Err(e) => failed(format!("cannot place the file: {:?}", e.kind())),
         }
     }
@@ -1294,12 +1365,16 @@ impl<'a> EgressSender<'a> {
             transport.send(permit, &cleared.destination, &cleared.artifact, &bytes, ctx.cancel())
         };
         let size = bytes.len() as f64; // at most CHUNK_SIZE, exact
-        let (outcome, receipt, failure) = match &observed {
-            SendOutcome::Sent { receipt } => (Outcome::Sent, receipt.as_ref().map(bounded), None),
-            SendOutcome::Failed { reason } => (Outcome::Failed, None, Some(bounded(reason))),
-            SendOutcome::Cancelled => (Outcome::Cancelled, None, None),
+        let (outcome, receipt, failure, already_present) = match &observed {
+            SendOutcome::Sent { receipt } => (Outcome::Sent, receipt.as_ref().map(bounded), None, false),
+            SendOutcome::AlreadyPresent => (Outcome::Sent, None, None, true),
+            SendOutcome::Failed { reason } => (Outcome::Failed, None, Some(bounded(reason)), false),
+            SendOutcome::Cancelled => (Outcome::Cancelled, None, None, false),
         };
         let mut body = BTreeMap::new();
+        // Distinct from a write: `true` only when the destination already held exactly these
+        // bytes and nothing was written (outcome `sent`).
+        body.insert("already_present".to_string(), CValue::Bool(already_present));
         body.insert("approval".to_string(), cleared.approval.to_value());
         body.insert("artifact".to_string(), text(cleared.artifact.as_str()));
         body.insert("bytes".to_string(), CValue::Num(size));

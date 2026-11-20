@@ -222,6 +222,204 @@
       "path": "C:\\a\u007fb",
       "platform": "windows",
       "valid": false
+    },
+    {
+      "name": "unix trailing dot",
+      "path": "/srv/egress/lab.",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix trailing space",
+      "path": "/srv/egress/lab ",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix trailing dot mid",
+      "path": "/srv/egress./lab",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix colon",
+      "path": "/srv/egress/a:b",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix CON",
+      "path": "/srv/CON",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix nul with extension",
+      "path": "/srv/nul.txt",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix Aux two extensions",
+      "path": "/srv/Aux.tar.gz/inbox",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix PRN",
+      "path": "/srv/prn/inbox",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix com1",
+      "path": "/srv/com1",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix LPT9 extension",
+      "path": "/srv/LPT9.log",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix CON space extension",
+      "path": "/srv/CON .txt",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix COM10 is not reserved",
+      "path": "/srv/COM10",
+      "platform": "unix",
+      "valid": true
+    },
+    {
+      "name": "unix console is not reserved",
+      "path": "/srv/console",
+      "platform": "unix",
+      "valid": true
+    },
+    {
+      "name": "unix con-x is not reserved",
+      "path": "/srv/con-x/inbox",
+      "platform": "unix",
+      "valid": true
+    },
+    {
+      "name": "unix inner dot",
+      "path": "/srv/lab.v2/inbox",
+      "platform": "unix",
+      "valid": true
+    },
+    {
+      "name": "unix inner space",
+      "path": "/srv/lab share/inbox",
+      "platform": "unix",
+      "valid": true
+    },
+    {
+      "name": "windows trailing dot",
+      "path": "C:\\egress\\lab.",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows trailing space",
+      "path": "C:\\egress\\lab ",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows trailing dot mid",
+      "path": "C:\\egress.\\lab",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows stream colon",
+      "path": "C:\\egress\\lab:stream",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows second drive colon",
+      "path": "C:\\egress\\D:",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows CON",
+      "path": "C:\\egress\\CON",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows aux extension",
+      "path": "C:\\egress\\aux.txt",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows Nul folder",
+      "path": "C:\\Nul\\inbox",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows COM9 extension",
+      "path": "C:\\egress\\com9.log",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows lpt1",
+      "path": "C:\\egress\\lpt1",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows UNC reserved share",
+      "path": "\\\\server\\PRN\\inbox",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows UNC reserved server",
+      "path": "\\\\CON\\share",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows UNC trailing dot share",
+      "path": "\\\\server\\share.\\inbox",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows forward slash CON",
+      "path": "C:/egress/CON",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows COM10 is not reserved",
+      "path": "C:\\egress\\COM10",
+      "platform": "windows",
+      "valid": true
+    },
+    {
+      "name": "windows inner dot",
+      "path": "D:\\lab.v2\\inbox",
+      "platform": "windows",
+      "valid": true
+    },
+    {
+      "name": "windows UNC inner dot",
+      "path": "\\\\server.example\\share\\inbox",
+      "platform": "windows",
+      "valid": true
     }
   ],
   "settings": [
