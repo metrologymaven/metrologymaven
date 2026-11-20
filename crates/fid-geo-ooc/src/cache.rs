@@ -16,10 +16,17 @@
 //!   its share of the cache's map nodes. If the decoded columns ever hold more capacity
 //!   than that, the larger, real size is charged.
 //! * A **load in flight** costs the resident cost plus the blob's byte length: the fetched
-//!   bytes are held while they are verified and decoded.
-//! * The cache keeps `resident + in flight <= budget` at all times (REQ-GEO.OOC.CACHE-001),
-//!   so the chunk data it holds, the transient load buffers included, never exceeds the
-//!   budget.
+//!   bytes are held while they are verified and decoded. If the buffer the store returns
+//!   has a larger capacity, the reservation grows to that capacity before decoding (or the
+//!   load fails with [`OocError::CacheExhausted`]). Before anything is reserved, the entry's
+//!   byte length must equal the format size for its count and channels
+//!   ([`crate::chunk_bytes`]), so a manifest cannot under-reserve with a low count.
+//! * The cache keeps `resident + in flight <= budget` at all times (REQ-GEO.OOC.CACHE-001).
+//!   The budget covers the decoded chunk data and the fetched bytes as the store returns
+//!   them. The store's own internal buffers while it reads (for `fid_store::BlobStore`,
+//!   its streaming reads and scratch buffer) are **outside** the budget.
+//! * A reservation is an RAII guard: if the store panics during a load, unwinding releases
+//!   the reservation and wakes waiting threads.
 //!
 //! # Loads and eviction (D0 for a given access order)
 //!
@@ -49,7 +56,7 @@
 
 use crate::cell::CellCode;
 use crate::error::{chunk_fault, Fault, OocError};
-use crate::format::{decode_chunk, ChannelSet, Chunk, ChunkEntry, ChunkManifest};
+use crate::format::{chunk_bytes, decode_chunk, ChannelSet, Chunk, ChunkEntry, ChunkManifest};
 use crate::store::{blob_address, ChunkStore};
 use core::fmt;
 use core::mem::size_of;
@@ -237,21 +244,30 @@ fn check_against_entry(c: &Chunk, e: &ChunkEntry, channels: ChannelSet) -> Resul
     Ok(())
 }
 
-/// Fetches, verifies and decodes the chunk of entry `e` of manifest `m`.
-fn load_verified(store: &dyn ChunkStore, m: &ChunkManifest, e: &ChunkEntry) -> Result<Chunk, OocError> {
-    let integrity = || OocError::ChunkIntegrity { cloud: m.manifest_digest, cell: e.cell, digest: e.blob };
-    let bytes = match store.get_blob(&e.blob, e.bytes) {
-        Ok(b) => b,
-        Err(OocError::Store { code: "integrity" | "manifest_invalid", .. }) => return Err(integrity()),
-        Err(other) => return Err(other),
-    };
-    if bytes.len() as u64 != e.bytes || blob_address(&bytes) != e.blob {
-        return Err(integrity());
+/// Bytes reserved in flight by one load. Dropping it (also while unwinding from a panic in
+/// the store) releases what is still reserved and wakes threads waiting for room.
+struct Reservation<'a> {
+    cache: &'a ChunkCache,
+    bytes: u64,
+}
+
+impl Reservation<'_> {
+    /// Releases the reservation under a lock the caller already holds.
+    fn release(&mut self, st: &mut State) {
+        st.stats.in_flight_bytes = st.stats.in_flight_bytes.saturating_sub(self.bytes);
+        self.bytes = 0;
     }
-    let c = decode_chunk(&bytes, e.bytes)?;
-    drop(bytes);
-    check_against_entry(&c, e, m.channels)?;
-    Ok(c)
+}
+
+impl Drop for Reservation<'_> {
+    fn drop(&mut self) {
+        if self.bytes > 0 {
+            let mut st = self.cache.lock();
+            st.stats.in_flight_bytes = st.stats.in_flight_bytes.saturating_sub(self.bytes);
+            self.bytes = 0;
+        }
+        self.cache.loaded.notify_all();
+    }
 }
 
 /// A memory-bounded cache of decoded chunks, shared by every chunked cloud of a process.
@@ -329,6 +345,13 @@ impl ChunkCache {
                 st.stats.hits = st.stats.hits.saturating_add(1);
                 return Ok(ChunkHandle { cache: self, key, chunk: c });
             }
+            // The entry's length must be the format size of its count, so the reservation
+            // (resident cost from the count, plus the length) covers the decoded columns.
+            if let Some(size) = chunk_bytes(channels, e.count) {
+                if size != e.bytes {
+                    return Err(chunk_fault(Fault::WrongSize { expected: size, found: e.bytes }));
+                }
+            }
             let pinned = st.stats.pinned_bytes;
             let need = match need {
                 Some(n) if pinned.checked_add(n).is_some_and(|t| t <= st.stats.budget) => n,
@@ -351,28 +374,66 @@ impl ChunkCache {
             break need;
         };
         drop(st);
+        let mut res = Reservation { cache: self, bytes: need };
 
-        let loaded = load_verified(store, manifest, &e);
+        let loaded = self.load_verified(&mut res, store, manifest, &e);
 
         let mut st = self.lock();
-        // The reservation ends here; under the same lock the loaded chunk (at most `need`
-        // bytes) is inserted or dropped.
-        st.stats.in_flight_bytes = st.stats.in_flight_bytes.saturating_sub(need);
+        // The reservation ends here; under the same lock the loaded chunk (at most the
+        // resident part of the reservation) is inserted or dropped.
+        res.release(&mut st);
         let result = self.insert(&mut st, key, &e, channels, loaded);
         drop(st);
-        self.loaded.notify_all();
+        drop(res);
         result
     }
 
+    /// Fetches, verifies and decodes the chunk of entry `e` of manifest `m`. Grows the
+    /// reservation `res` if the fetched buffer's capacity exceeds the entry's length.
+    fn load_verified(
+        &self,
+        res: &mut Reservation<'_>,
+        store: &dyn ChunkStore,
+        m: &ChunkManifest,
+        e: &ChunkEntry,
+    ) -> Result<Chunk, OocError> {
+        let integrity = || OocError::ChunkIntegrity { cloud: m.manifest_digest, cell: e.cell, digest: e.blob };
+        let bytes = match store.get_blob(&e.blob, e.bytes) {
+            Ok(b) => b,
+            Err(OocError::Store { code: "integrity" | "manifest_invalid", .. }) => return Err(integrity()),
+            Err(other) => return Err(other),
+        };
+        let extra = (bytes.capacity() as u64).saturating_sub(e.bytes);
+        if extra > 0 {
+            let mut st = self.lock();
+            let pinned = st.stats.pinned_bytes;
+            let total = res.bytes.saturating_add(extra);
+            let fits = pinned.checked_add(total).is_some_and(|t| t <= st.stats.budget) && st.evict_for(extra);
+            if !fits {
+                return Err(OocError::CacheExhausted { needed: total, pinned });
+            }
+            st.stats.in_flight_bytes = st.stats.in_flight_bytes.saturating_add(extra);
+            res.bytes = total;
+            st.note_peak();
+        }
+        if bytes.len() as u64 != e.bytes || blob_address(&bytes) != e.blob {
+            return Err(integrity());
+        }
+        let c = decode_chunk(&bytes, e.bytes)?;
+        drop(bytes);
+        check_against_entry(&c, e, m.channels)?;
+        Ok(c)
+    }
+
     /// Inserts a finished load and pins it.
-    fn insert<'a>(
-        &'a self,
+    fn insert(
+        &self,
         st: &mut State,
         key: [u8; 32],
         e: &ChunkEntry,
         channels: ChannelSet,
         loaded: Result<Chunk, OocError>,
-    ) -> Result<ChunkHandle<'a>, OocError> {
+    ) -> Result<ChunkHandle<'_>, OocError> {
         let chunk = match loaded {
             Ok(c) => c,
             Err(err) => {

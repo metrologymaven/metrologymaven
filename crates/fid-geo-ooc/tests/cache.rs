@@ -292,6 +292,72 @@ fn store_clone(cloud: &PointCloud) -> MemStore {
     corner_chunks(cloud, 10).0
 }
 
+// ------------------------------------------------------------------ panicking store
+
+/// A store that signals when a read starts, waits for a go, then panics.
+struct PanicStore {
+    entered: std::sync::mpsc::Sender<()>,
+    go: Mutex<std::sync::mpsc::Receiver<()>>,
+}
+
+impl ChunkStore for PanicStore {
+    fn put_blob(&self, bytes: &[u8]) -> Result<[u8; 32], OocError> {
+        Ok(fid_geo_ooc::blob_address(bytes))
+    }
+
+    fn get_blob(&self, _: &[u8; 32], _: u64) -> Result<Vec<u8>, OocError> {
+        self.entered.send(()).unwrap();
+        self.go.lock().unwrap().recv().unwrap();
+        panic!("store panics during a load");
+    }
+}
+
+/// A store that panics in the middle of a load releases the load's reservation: the
+/// in-flight bytes return to 0 and a thread waiting for room completes.
+#[test]
+fn panicking_store_releases_the_reservation() {
+    let (cloud, store, m) = corners(10, &[0, 1]);
+    let l = lcost(&m, 0).max(lcost(&m, 1));
+    // One load fits; a second load next to one in flight must wait.
+    let cache = ChunkCache::new(2 * l - 1);
+    let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+    let (go_tx, go_rx) = std::sync::mpsc::channel();
+    let panicking = PanicStore { entered: entered_tx, go: Mutex::new(go_rx) };
+    std::thread::scope(|sc| {
+        let a = sc.spawn(|| cache.get(&panicking, &m, 0).map(|_| ()));
+        entered_rx.recv().unwrap();
+        assert_eq!(cache.stats().in_flight_bytes, lcost(&m, 0));
+        let b = sc.spawn(|| {
+            let own = corner_chunks(&cloud, 10).0;
+            cache.get(&own, &m, 1).map(|h| h.len())
+        });
+        // Give B time to block on the reservation (it completes either way).
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        go_tx.send(()).unwrap();
+        assert!(a.join().is_err(), "the store's panic reaches the caller");
+        assert_eq!(b.join().unwrap().unwrap(), 10);
+    });
+    let s = cache.stats();
+    assert_eq!((s.in_flight_bytes, s.pinned_bytes, s.resident_chunks), (0, 0, 1));
+    drop(cache.get(&store, &m, 0).unwrap());
+}
+
+/// A manifest entry whose count is too low for its byte length is refused before any
+/// reservation is made.
+#[test]
+fn entry_length_must_match_its_count() {
+    let (_, store, m) = corners(10, &[0, 1]);
+    let mut bad = m.clone();
+    bad.chunks[1].count = 1;
+    let cache = ChunkCache::new(1 << 20);
+    assert!(matches!(
+        cache.get(&store, &bad, 1),
+        Err(OocError::CorruptChunk { fault: fid_geo_ooc::Fault::WrongSize { .. } })
+    ));
+    let s = cache.stats();
+    assert_eq!((s.misses, s.in_flight_bytes, s.peak_bytes), (0, 0, 0));
+}
+
 // ------------------------------------------------------------------ AC-2 integrity
 
 #[test]
@@ -507,7 +573,9 @@ fn eight_threads_same_cloud_race_on_loads() {
     let (mem, m) = chunked(&cloud, 500);
     let n = m.chunks.len();
     let r = (0..n).map(|i| rcost(&m, i)).max().unwrap();
-    let budget = 20 * r;
+    // Worst case: 8 threads x 3 pins (two held plus the one being replaced) = 24R, minus
+    // the getter's own third, plus one load (< 2R): 26R never runs out.
+    let budget = 26 * r;
     let reference: Vec<[u8; 32]> = {
         let cache = ChunkCache::new(budget);
         (0..n)
