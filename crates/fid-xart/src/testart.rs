@@ -11,8 +11,8 @@
 
 use fid_canon::CValue;
 use fid_kci::{
-    evaluate, parse_card, AlgorithmFailure, AlgorithmId, AlgorithmTable, CardRegistry, Digest, KernelAlgorithm,
-    KernelCall, KernelError,
+    evaluate, parse_card, AlgorithmFailure, AlgorithmId, AlgorithmTable, CardRegistry, Digest, InputArity,
+    KernelAlgorithm, KernelCall, KernelError,
 };
 
 use std::collections::BTreeMap;
@@ -65,6 +65,9 @@ impl KernelAlgorithm for Echo {
     fn id(&self) -> AlgorithmId {
         self.0.clone()
     }
+    fn input_arity(&self) -> InputArity {
+        InputArity::at_least(0)
+    }
     fn validate(&self, params: &[u8]) -> Result<(), KernelError> {
         if params.iter().all(|b| (0x20..=0x7e).contains(b)) {
             Ok(())
@@ -110,6 +113,9 @@ impl KernelAlgorithm for Recurse {
     fn id(&self) -> AlgorithmId {
         self.0.clone()
     }
+    fn input_arity(&self) -> InputArity {
+        InputArity::exactly(0)
+    }
     fn validate(&self, params: &[u8]) -> Result<(), KernelError> {
         decimal_u64(params).map(|_| ()).ok_or(KernelError::InvalidParams { reason: "params_not_decimal_u64" })
     }
@@ -119,9 +125,10 @@ impl KernelAlgorithm for Recurse {
     }
 }
 
-fn card(id: &str, title: &str) -> String {
+fn card(id: &str, title: &str, input_arity: &str) -> String {
     [
         format!("id = \"{id}\""),
+        format!("input_arity = \"{input_arity}\""),
         format!("title = \"{title}\""),
         "method = \"Test algorithm of the cross-artifact gate.\"".to_string(),
         "applicability = \"Tests of fid-xart only.\"".to_string(),
@@ -133,13 +140,14 @@ fn card(id: &str, title: &str) -> String {
     .join("\n")
 }
 
-/// The test table, or `None` if a card or ID fails to parse (unit-tested not to).
+/// The test table, or `None` if a card or ID fails to parse or a card's `input_arity` differs
+/// from its algorithm's (unit-tested not to). The arities match the KRN.MAN.WASM stand-ins.
 pub fn table(order: Order) -> Option<AlgorithmTable> {
     let echo = AlgorithmId::parse(ECHO_ID).ok()?;
     let recurse = AlgorithmId::parse(RECURSE_ID).ok()?;
     let cards = CardRegistry::new(vec![
-        parse_card(&card(ECHO_ID, "Echo test algorithm")).ok()?,
-        parse_card(&card(RECURSE_ID, "Depth test algorithm")).ok()?,
+        parse_card(&card(ECHO_ID, "Echo test algorithm", "0..")).ok()?,
+        parse_card(&card(RECURSE_ID, "Depth test algorithm", "0")).ok()?,
     ])
     .ok()?;
     let algorithms: Vec<Box<dyn KernelAlgorithm>> = vec![Box::new(Echo(echo, order)), Box::new(Recurse(recurse))];
@@ -232,5 +240,18 @@ mod tests {
     fn tables_build() {
         assert!(table(Order::Faithful).is_some());
         assert!(table(Order::Reversed).is_some());
+    }
+
+    /// REQ-KRN.MAN.KCI-008, -009: the tables build only because each card's `input_arity`
+    /// equals its algorithm's (`AlgorithmTable::new` refuses drift), and a recurse call with
+    /// one input is refused by the kernel before the algorithm runs.
+    #[test]
+    fn input_arity_matches_cards_and_is_enforced() {
+        for order in [Order::Faithful, Order::Reversed] {
+            let call = br#"{"algorithm":"test.stack.recurse@1.0.0","inputs":[{"bytes":"78","sha256":"sha256:2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"}],"params":"31"}"#;
+            assert_eq!(respond(order, call), (1, error("input_arity_mismatch")));
+            let ok = br#"{"algorithm":"test.stack.recurse@1.0.0","inputs":[],"params":"31"}"#;
+            assert_eq!(respond(order, ok).0, 0);
+        }
     }
 }
