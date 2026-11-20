@@ -14,7 +14,7 @@
 use fid_fit::contract::{Constraint, Fit, FitError, FitParams, FittedFeature, Method, PointsView, Weights};
 use fid_fit::tan_plane::{
     algorithm_id, command_row, encode, fit_tan_plane, output_digest, Optimality, TanPlane, TanPlaneParams,
-    TanPlaneResult, DEFAULT_STARTS,
+    TanPlaneResult,
 };
 use fid_fit::tan_rock::{MaterialSide, TanVariant, TieBreak};
 use fid_kci::{check, parse_card, CardRegistry, InputArity};
@@ -269,10 +269,13 @@ fn ac2_crowned_plate_rocks_in_l1() {
 /// AC-2 on the `KRN.ENV.TAN.ROCK` crowned plate itself. Constrained L1 lists the four facet
 /// sets with `rocking` true, each with the objective of the ROCK fixture's exact oracle
 /// (`3f50ffffde000066`, documented in `crowned-plate.txt`). External minimax reaches the
-/// horizontal plane through the apex (1.5 h), but its 20 coplanar far-side points and the apex
-/// put 21 rows in the small-slack pool, and `C(21, 4) = 5985` candidate bases exceed
-/// `cert::active::MAX_CANDIDATES` (`OverCap`), so it fails closed with no
-/// value instead of the AC's single candidate {0} (Open questions of the leaf).
+/// horizontal plane through the apex; its 20 coplanar far-side points and the apex put 21 rows
+/// in the small-slack pool (`C(21, 4) = 5985` bases, over `cert::active::MAX_CANDIDATES`), which
+/// the certificate pipeline now reduces to one exact basis (`KRN.SOLV.CERT.AS`, REQ-007), so it
+/// certifies the AC's answer: one candidate {0}, objective 1.5 h, `rocking` false, normal +z.
+/// Expected values from the ROCK fixture's exact oracle (`make_tan_rock_fixtures.py`:
+/// "minimax 1.5h = 4.57763671875e-05 m", contact {0}, the horizontal plane), checked against the
+/// fixture text so the constant cannot drift from it.
 #[test]
 fn ac2_tan_rock_crowned_plate() {
     let text = read(CROWNED);
@@ -295,10 +298,22 @@ fn ac2_tan_rock_crowned_plate() {
     assert_eq!(r.rock.tie_break, TieBreak::ContactOrder);
     assert_eq!(r.optimality, Optimality::StrictLocal);
     assert!(r.max_violation <= SIDE_TOL);
-    assert_eq!(
-        fit(TanVariant::ExternalMinimax).unwrap_err(),
-        FitError::SeqFailed { cause: "cert", starts: DEFAULT_STARTS }
-    );
+    assert!(text.contains("minimax 1.5h = 4.57763671875e-05 m"));
+    let want = 1.5 * 2f64.powi(-15);
+    assert_eq!(want, 4.57763671875e-05);
+    let m = fit(TanVariant::ExternalMinimax).unwrap();
+    assert!(close(m.objective, want, obj_tol(want)), "{:016x}", m.objective.to_bits());
+    assert_eq!(m.contacts, [0]);
+    assert!(!m.rock.rocking);
+    let sets: Vec<Vec<u32>> = m.rock.candidates.iter().map(|k| k.contacts.clone()).collect();
+    assert_eq!(sets, [vec![0]]);
+    assert_eq!(m.optimality, Optimality::StrictLocal);
+    assert!(m.max_violation <= SIDE_TOL);
+    let n = normal(&m);
+    for (j, want_n) in [0.0, 0.0, 1.0].into_iter().enumerate() {
+        assert!(close(n[j], want_n, 1e-15), "{n:?}");
+    }
+    assert!(m.certificate.is_some());
 }
 
 /// AC-3 (kernel part): no variant is `InvalidParams{field: "variant"}`, both through the trait
@@ -545,11 +560,11 @@ fn canonical_bytes() {
 
 /// Output-bit pin: regression pin of this crate's own output (the canonical bytes of every
 /// AC-1 free-normal and fixed-normal result, the AC-2 results on the ROCK crowned plate (the
-/// constrained-L1 report and the minimax error), then the error paths in
+/// constrained-L1 report and the certified minimax result), then the error paths in
 /// the stable encoding of `encode_err`), recorded from a local x86-64 run and checked by CI on
 /// every target. One value serves all targets because they agree bit for bit; a target that
 /// diverged would get its own `#[cfg(target_arch)]` value here.
-const OUTPUT_PIN: &str = "sha256:d1f118e9e847e37adbb4539c24184de0077e6d2f525ffc141bcf05adcc954897";
+const OUTPUT_PIN: &str = "sha256:9131e34ab01ab7a76503a891459f21df4da7118a347f384dceb02d0c4403c8e6";
 
 #[test]
 fn ac5_output_bits_pinned() {

@@ -10,6 +10,7 @@
 //! `spec/krn/solv/cert/`.
 
 pub mod active;
+pub(crate) mod basis;
 pub mod ct;
 pub mod kkt;
 pub mod recomp;
@@ -30,6 +31,10 @@ pub enum Undetermined {
     TooFewRows,
     /// More candidate sets exist than [`active::MAX_CANDIDATES`].
     OverCap,
+    /// A linear problem's tied pool has no basis with nonnegative multipliers (or its rows do
+    /// not span the parameter space), so the exact basis reduction proposes nothing
+    /// (REQ-KRN.SOLV.CERT.AS-007).
+    NoBasis,
 }
 
 /// Why [`recomp::recompute`] could not prove a forward error bound for its result. The

@@ -8,7 +8,9 @@
 //!    [`ActiveSetProblem::data_scale`] (its own error, `data_scale_unset` by default, or
 //!    `InvalidInput { field: "data_scale" }` for a value that is not finite and positive). These
 //!    fail the call; they are not candidate failures.
-//! 2. **Extraction** ([`super::active::extract`], KRN.SOLV.CERT.AS) with the problem's
+//! 2. **Extraction** (`super::active::propose`, KRN.SOLV.CERT.AS: [`super::active::extract`]'s
+//!    list within its cap; over the cap one exact basis for a linear problem, else the first
+//!    `MAX_CANDIDATES` sets) with the problem's
 //!    [`ActiveSetProblem::row_labels`] as the labels of the conic rows **in that order** (row `i`
 //!    of the conic problem is the constraint labelled `row_labels()[i]`) and
 //!    [`ActiveSetProblem::expected_active`] as the set size. Its errors (including
@@ -80,7 +82,7 @@ mod wire;
 use fid_num::f::{total_max, total_min};
 use fid_types::Digest;
 
-use super::active::{extract, Thresholds};
+use super::active::{propose, Thresholds};
 use super::kkt::{check, dual_threshold, KktReport, KktScales, KktStatus, KktTolerances, Verdict};
 use super::recomp::interval::{next_down, next_up};
 use super::recomp::{recompute, ActiveSetProblem, RecompConfig, Recomputed};
@@ -299,7 +301,7 @@ pub fn certify<P: ActiveSetProblem + ?Sized>(
         return Err(CertError::InvalidInput { field: "data_scale" });
     }
     let labels = problem.row_labels();
-    let proposal = extract(conic, solution, &labels, problem.expected_active(), &cfg.thresholds)?;
+    let proposal = propose(conic, solution, &labels, problem.expected_active(), &cfg.thresholds, problem.is_linear())?;
     let count = proposal.sets.len();
     let (mut first_report, mut first_error) = (None, None);
     for idx in 0..count {
