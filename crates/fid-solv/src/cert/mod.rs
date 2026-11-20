@@ -186,6 +186,28 @@ impl fmt::Display for CertError {
     }
 }
 
+impl CertError {
+    /// A stable snake_case code per variant, for logs and output pins (the fields are encoded
+    /// by the caller; `Debug` output is not a stable format).
+    pub fn code(&self) -> &'static str {
+        match self {
+            CertError::Shape { .. } => "shape",
+            CertError::InvalidInput { .. } => "invalid_input",
+            CertError::DuplicateLabel { .. } => "duplicate_label",
+            CertError::ActiveSetUndetermined { .. } => "active_set_undetermined",
+            CertError::RankDeficient { .. } => "rank_deficient",
+            CertError::IllConditioned { .. } => "ill_conditioned",
+            CertError::RecomputeNoConvergence { .. } => "recompute_no_convergence",
+            CertError::Callback { .. } => "callback",
+            CertError::Numeric(_) => "numeric",
+            CertError::BoundNotProven { .. } => "bound_not_proven",
+            CertError::CertificateFailed { .. } => "certificate_failed",
+            CertError::Malformed { .. } => "malformed",
+            CertError::Inconsistent { .. } => "inconsistent",
+        }
+    }
+}
+
 impl core::error::Error for CertError {}
 
 impl From<NumError> for CertError {

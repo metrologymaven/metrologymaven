@@ -563,4 +563,4 @@ candidate violated_primal 0:0 2:1 3:1
 candidate singular 1:1 2:1 3:1
 tried 4
 end
-golden_digest sha256:a9e7e0fbfb344f92d0788e2a782d45027e7cc06ea740318c58053bc78b33fef5
+golden_digest sha256:868e4d545aa51d5cba39f0f699d27289a3c48feacd8e1c1916010f36d2ff52e3

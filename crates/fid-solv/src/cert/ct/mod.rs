@@ -29,30 +29,39 @@
 //! the recomputed parameters and value with their proven bounds, the condition estimate, the
 //! multipliers (`G^T lambda = -grad f`, the sign convention of KRN.SOLV.CERT.KKT) with their
 //! proven bounds, every KKT condition's proven enclosure `[lo, hi]` and threshold, the per-row
-//! dual thresholds `tol_d * lo||grad f|| / hi||grad g_i||` (never only their minimum), every
-//! tolerance and scale, the extraction thresholds, the flags and the algorithm ID.
+//! dual thresholds `tol_d * lo||grad f|| / hi||grad g_i||` (never only their minimum) with the
+//! per-row `hi||grad g_i||` they divide by, every tolerance and scale, whether the problem is
+//! linear, the extraction thresholds, the flags and the algorithm ID.
 //!
 //! **Iterate exclusion** (REQ-003). No field comes from a solver iterate: the recomputation and
 //! the KKT check read only the candidate set and the problem data, and the extraction
-//! contributes only the caller's relative thresholds and `tie_broken` (whether more than one
-//! candidate set exists). The extraction's scales (`max |y|` is an iterate) and diagnostic row
-//! lists, the conic `x`, `y`, `s`, objective, iteration count and residuals, and which
-//! candidate index won, are not recorded.
+//! contributes only the caller's relative thresholds. Which and how many candidate sets the
+//! extraction listed depends on the solution's slacks, so `tie_broken` (more than one
+//! candidate) is returned on the in-memory [`Certified`] as a diagnostic and is **not** part of
+//! the certificate or its digest. The extraction's scales (`max |y|` is an iterate) and
+//! diagnostic row lists, the conic `x`, `y`, `s`, objective, iteration count and residuals, and
+//! which candidate index won, are not recorded either.
 //!
 //! **Self-consistency** ([`Certificate::check_consistency`]) is checked before a certificate
 //! is returned and when one is parsed: lengths, finiteness, ordering, `lo <= hi <= threshold`
 //! for primal feasibility, stationarity and complementarity, each of their thresholds equal to
 //! `tol * scale` as KRN.SOLV.CERT.KKT forms it, and the dual condition recomputed row by row
-//! from the recorded multipliers, bounds and per-row thresholds. It does not need the problem
+//! from the recorded multipliers, bounds and per-row thresholds, each per-row threshold
+//! recomputed bit for bit as `down(down(tol_d * gradient_lo) / ghi_i)` (0 when the rounded
+//! numerator is not positive, in particular when `gradient_lo` is 0), and `steps` matching
+//! `is_linear` (1, or `gn_steps`). It does not need the problem
 //! data; checking the recorded values against the data is the verifier's part (`TRUST`).
 //!
 //! # Serialisation and digest (schema `fid.cert@1`)
 //!
-//! The canonical form is RFC 8785 JSON written by `fid-kci`'s kernel canonical writer (keys in
-//! UTF-16 order, no whitespace). Every value is a string: floats as the 16 lowercase hex digits
-//! of their IEEE-754 bits, integers in decimal, booleans as `"true"` / `"false"`, row labels
-//! as `"point:side"`. The digest (REQ-003) is the SHA-256 of the canonical JSON of every field
-//! except `digest`; the serialised certificate is that object plus `"digest": "sha256:..."`.
+//! The bytes of `fid.cert@1` are defined by `fid-kci`'s kernel canonical form (RFC 8785 JSON
+//! restricted to strings, arrays and objects: keys in UTF-16 order, no whitespace), and the
+//! digest is computed over those bytes. Every value is a string: floats in the
+//! CORE.JRN.CANON `F64Bits` form `0x` followed by the 16 lowercase hex digits of their
+//! IEEE-754 bits (only that form is parsed), integers in decimal, booleans as `"true"` /
+//! `"false"` (the kernel writer has no JSON booleans), row labels as `"point:side"`. The digest
+//! (REQ-003) is the SHA-256 of the canonical bytes of every field except `digest`; the
+//! serialised certificate is that object plus `"digest": "sha256:..."`.
 //! [`Certificate::parse`] accepts only the canonical bytes (REQ-006: serialise, parse,
 //! serialise gives identical bytes) and checks the digest.
 //!
@@ -68,7 +77,7 @@ use fid_num::f::{total_max, total_min};
 use fid_types::Digest;
 
 use super::active::{extract, Thresholds};
-use super::kkt::{check, KktReport, KktScales, KktStatus, KktTolerances, Verdict};
+use super::kkt::{check, dual_threshold, KktReport, KktScales, KktStatus, KktTolerances, Verdict};
 use super::recomp::interval::{next_down, next_up};
 use super::recomp::{recompute, ActiveSetProblem, RecompConfig, Recomputed};
 use super::{CertError, RowLabel};
@@ -142,12 +151,15 @@ impl CertConfig {
 }
 
 /// Flags of a certificate.
+///
+/// A KKT certificate proves a first-order (KKT) point. It implies a **global** optimum only for
+/// a linear or convex problem (see [`Certificate::is_linear`]); for a nonconvex problem it
+/// proves a KKT point, which may be a local optimum only.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CertFlags {
-    /// More than one candidate set existed, so the tie-break order chose (KRN.SOLV.CERT.AS).
-    pub tie_broken: bool,
-    /// Set by a multi-start caller ([`Certificate::set_local_optimum_only`]) when the starts did
-    /// not agree; the certificate then proves a local optimum only.
+    /// Set by a multi-start caller ([`Certificate::set_local_optimum_only`]) when it observed
+    /// that its starts disagreed (KRN.SOLV.MSTART, KRN.SOLV.SEQ). It signals that observed
+    /// disagreement; its absence is not a proof of global optimality.
     pub local_optimum_only: bool,
 }
 
@@ -176,10 +188,13 @@ pub struct KktRecord {
     pub stationarity: RecordedCondition,
     /// Complementarity, `max |g_i(p*)|` over the active rows; threshold `tol_c * data`.
     pub complementarity: RecordedCondition,
-    /// The per-row dual thresholds `tol_d * lo||grad f|| / hi||grad g_i||`, in active-set
-    /// order. Row `i` passes when `lambda_i - multiplier_bounds_i` (rounded down) is at least
-    /// `-dual_thresholds_i`.
+    /// The per-row dual thresholds `down(down(tol_d * gradient_lo) / gradient_norms_hi_i)`
+    /// (0 when the rounded numerator is not positive), in active-set order. Row `i` passes when
+    /// `lambda_i - multiplier_bounds_i` (rounded down) is at least `-dual_thresholds_i`.
     pub dual_thresholds: Vec<f64>,
+    /// The proven upper bounds `hi||grad g_i||` of the active rows' constraint gradient norms,
+    /// in active-set order: the divisors of [`Self::dual_thresholds`].
+    pub gradient_norms_hi: Vec<f64>,
     /// The tolerances.
     pub tolerances: KktTolerances,
     /// The scales.
@@ -199,6 +214,7 @@ pub struct Certificate {
     recomp: RecompConfig,
     cond: f64,
     steps: u32,
+    is_linear: bool,
     flags: CertFlags,
     params: Vec<f64>,
     param_bounds: Vec<f64>,
@@ -207,10 +223,12 @@ pub struct Certificate {
     digest: Digest,
 }
 
-/// A certified result: the recomputed parameters and value and their certificate.
+/// A certified result: the recomputed parameters and value, their certificate, and the
+/// in-memory diagnostic `tie_broken` (not part of the certificate or its digest).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Certified {
     certificate: Certificate,
+    tie_broken: bool,
 }
 
 impl Certified {
@@ -225,6 +243,12 @@ impl Certified {
     /// The certificate.
     pub fn certificate(&self) -> &Certificate {
         &self.certificate
+    }
+    /// More than one candidate set existed, so the tie-break order chose (REQ-KRN.SOLV.CERT-004).
+    /// A diagnostic of this run: it depends on the solution's slacks, so it is not part of the
+    /// certificate or its digest (REQ-KRN.SOLV.CERT-005).
+    pub fn tie_broken(&self) -> bool {
+        self.tie_broken
     }
     /// The certificate, by value.
     pub fn into_certificate(self) -> Certificate {
@@ -272,8 +296,8 @@ pub fn certify<P: ActiveSetProblem + ?Sized>(
             .and_then(|rec| check(problem, &rec, &cfg.kkt).map(|rep| (rec, rep)));
         match outcome {
             Ok((rec, rep)) if passes(&rep) => {
-                let certificate = Certificate::build(kind, &rec, &rep, cfg, proposal.tie_broken)?;
-                return Ok(Certified { certificate });
+                let certificate = Certificate::build(kind, &rec, &rep, cfg, problem.is_linear())?;
+                return Ok(Certified { certificate, tie_broken: proposal.tie_broken });
             }
             Ok((_, rep)) => {
                 if idx == 0 {
@@ -314,7 +338,7 @@ impl Certificate {
         rec: &Recomputed,
         rep: &KktReport,
         cfg: &CertConfig,
-        tie_broken: bool,
+        is_linear: bool,
     ) -> Result<Certificate, CertError> {
         let mut c = Certificate {
             kind,
@@ -327,6 +351,7 @@ impl Certificate {
                 stationarity: recorded(rep.stationarity()),
                 complementarity: recorded(rep.complementarity()),
                 dual_thresholds: rep.dual_thresholds().to_vec(),
+                gradient_norms_hi: rep.gradient_norms_hi().to_vec(),
                 tolerances: rep.tolerances(),
                 scales: rep.scales(),
             },
@@ -334,7 +359,8 @@ impl Certificate {
             recomp: cfg.recomp,
             cond: rec.cond(),
             steps: rec.steps(),
-            flags: CertFlags { tie_broken, local_optimum_only: false },
+            is_linear,
+            flags: CertFlags { local_optimum_only: false },
             params: rec.params().to_vec(),
             param_bounds: rec.param_bounds().to_vec(),
             value: rec.value(),
@@ -385,6 +411,15 @@ impl Certificate {
     /// QR solves of the recomputation.
     pub fn steps(&self) -> u32 {
         self.steps
+    }
+    /// Whether the problem's active-set equations are linear (`ActiveSetProblem::is_linear`).
+    /// For a linear program the KKT certificate proves a global optimum.
+    pub fn is_linear(&self) -> bool {
+        self.is_linear
+    }
+    /// The per-row `hi||grad g_i||` (also in [`Self::kkt`]).
+    pub fn gradient_norms_hi(&self) -> &[f64] {
+        &self.kkt.gradient_norms_hi
     }
     /// The flags.
     pub fn flags(&self) -> CertFlags {
@@ -483,6 +518,7 @@ impl Certificate {
             self.multiplier_bounds.len(),
             self.param_bounds.len(),
             self.kkt.dual_thresholds.len(),
+            self.kkt.gradient_norms_hi.len(),
         ];
         if lens.iter().any(|&l| l != n) {
             return Err(inconsistent("length"));
@@ -510,6 +546,7 @@ impl Certificate {
             .chain(&self.multipliers)
             .chain(&self.multiplier_bounds)
             .chain(&k.dual_thresholds)
+            .chain(&k.gradient_norms_hi)
             .chain(&scalars)
             .chain(&cond_ends)
             .all(|v| v.is_finite());
@@ -526,7 +563,8 @@ impl Certificate {
         }
         self.recomp.check().map_err(|_| inconsistent("recomp"))?;
         k.tolerances.check().map_err(|_| inconsistent("tolerances"))?;
-        if !(self.steps == 1 || self.steps == self.recomp.gn_steps) {
+        let want_steps = if self.is_linear { 1 } else { self.recomp.gn_steps };
+        if self.steps != want_steps {
             return Err(inconsistent("steps"));
         }
         if !(self.cond > 0.0 && self.cond <= self.recomp.cond_max) {
@@ -548,6 +586,17 @@ impl Certificate {
         }
         if !decided(k.complementarity, t.tol_c * k.scales.data, 0.0) {
             return Err(inconsistent("complementarity"));
+        }
+        if k.gradient_norms_hi.iter().any(|&g| g <= 0.0) {
+            return Err(inconsistent("gradient_norms_hi"));
+        }
+        let thresholds_ok = k
+            .dual_thresholds
+            .iter()
+            .zip(&k.gradient_norms_hi)
+            .all(|(&thr, &ghi)| same(thr, dual_threshold(t.tol_d, k.scales.gradient_lo, ghi)));
+        if !thresholds_ok {
+            return Err(inconsistent("dual_thresholds"));
         }
         self.check_dual().map_err(|_| inconsistent("dual"))
     }

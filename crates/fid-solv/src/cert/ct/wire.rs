@@ -27,8 +27,9 @@ fn s(v: &str) -> Json {
     Json::Str(v.to_owned())
 }
 
+/// The CORE.JRN.CANON `F64Bits` form: `0x` and the 16 lowercase hex digits of the bits.
 fn hex(x: f64) -> Json {
-    Json::Str(format!("{:016x}", x.to_bits()))
+    Json::Str(format!("0x{:016x}", x.to_bits()))
 }
 
 fn hexes(xs: &[f64]) -> Json {
@@ -55,13 +56,8 @@ pub(crate) fn to_json(c: &Certificate, with_digest: bool) -> Json {
         ("active_set", Json::Arr(c.active_set.iter().map(|l| Json::Str(format!("{}:{}", l.point, l.side))).collect())),
         ("algorithm", s(ALGORITHM)),
         ("cond", hex(c.cond)),
-        (
-            "flags",
-            obj(vec![
-                ("local_optimum_only", boolean(c.flags.local_optimum_only)),
-                ("tie_broken", boolean(c.flags.tie_broken)),
-            ]),
-        ),
+        ("flags", obj(vec![("local_optimum_only", boolean(c.flags.local_optimum_only))])),
+        ("is_linear", boolean(c.is_linear)),
         ("kind", s(c.kind.as_str())),
         (
             "kkt",
@@ -69,6 +65,7 @@ pub(crate) fn to_json(c: &Certificate, with_digest: bool) -> Json {
                 ("complementarity", condition(k.complementarity)),
                 ("dual", condition(k.dual)),
                 ("dual_thresholds", hexes(&k.dual_thresholds)),
+                ("gradient_norms_hi", hexes(&k.gradient_norms_hi)),
                 ("primal", condition(k.primal)),
                 (
                     "scales",
@@ -276,13 +273,14 @@ fn array(v: &Json) -> Result<&[Json], CertError> {
     }
 }
 
-/// Exactly 16 lowercase hex digits: the IEEE-754 bits.
+/// Only the `F64Bits` form: `0x` and exactly 16 lowercase hex digits of the IEEE-754 bits.
 fn float(s: &str) -> Result<f64, CertError> {
-    let ok = s.len() == 16 && s.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c));
+    let digits = s.strip_prefix("0x").ok_or_else(|| bad("float"))?;
+    let ok = digits.len() == 16 && digits.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c));
     if !ok {
         return Err(bad("float"));
     }
-    u64::from_str_radix(s, 16).map(f64::from_bits).map_err(|_| bad("float"))
+    u64::from_str_radix(digits, 16).map(f64::from_bits).map_err(|_| bad("float"))
 }
 
 /// A canonical decimal (no sign, no leading zero) that fits `T`.
@@ -312,12 +310,13 @@ fn cond_from(v: &Json) -> Result<RecordedCondition, CertError> {
     Ok(RecordedCondition { lo: f.f("lo")?, hi: f.f("hi")?, threshold: f.f("threshold")? })
 }
 
-const TOP_KEYS: [&str; 17] = [
+const TOP_KEYS: [&str; 18] = [
     "active_set",
     "algorithm",
     "cond",
     "digest",
     "flags",
+    "is_linear",
     "kind",
     "kkt",
     "multiplier_bounds",
@@ -351,14 +350,22 @@ pub(crate) fn from_bytes(input: &[u8]) -> Result<Certificate, CertError> {
     }
     let kind = CertKind::from_wire(top.str("kind")?).ok_or_else(|| bad("kind"))?;
     let active_set = array(top.get("active_set")?)?.iter().map(|v| label(text(v)?)).collect::<Result<_, _>>()?;
-    let flags = members(top.get("flags")?, &["local_optimum_only", "tie_broken"])?;
-    let flags = CertFlags {
-        tie_broken: boolean_from(flags.str("tie_broken")?)?,
-        local_optimum_only: boolean_from(flags.str("local_optimum_only")?)?,
-    };
+    let flags = members(top.get("flags")?, &["local_optimum_only"])?;
+    let flags = CertFlags { local_optimum_only: boolean_from(flags.str("local_optimum_only")?)? };
+    let is_linear = boolean_from(top.str("is_linear")?)?;
     let kkt = members(
         top.get("kkt")?,
-        &["complementarity", "dual", "dual_thresholds", "primal", "scales", "stationarity", "status", "tolerances"],
+        &[
+            "complementarity",
+            "dual",
+            "dual_thresholds",
+            "gradient_norms_hi",
+            "primal",
+            "scales",
+            "stationarity",
+            "status",
+            "tolerances",
+        ],
     )?;
     if kkt.str("status")? != "certified" {
         return Err(bad("status"));
@@ -371,6 +378,7 @@ pub(crate) fn from_bytes(input: &[u8]) -> Result<Certificate, CertError> {
         stationarity: cond_from(kkt.get("stationarity")?)?,
         complementarity: cond_from(kkt.get("complementarity")?)?,
         dual_thresholds: kkt.fs("dual_thresholds")?,
+        gradient_norms_hi: kkt.fs("gradient_norms_hi")?,
         tolerances: KktTolerances {
             tol_p: tl.f("tol_p")?,
             tol_d: tl.f("tol_d")?,
@@ -399,6 +407,7 @@ pub(crate) fn from_bytes(input: &[u8]) -> Result<Certificate, CertError> {
         recomp,
         cond: top.f("cond")?,
         steps: decimal(top.str("steps")?)?,
+        is_linear,
         flags,
         params: top.fs("params")?,
         param_bounds: top.fs("param_bounds")?,
@@ -436,10 +445,12 @@ mod tests {
 
     #[test]
     fn scalar_decoders_are_strict() {
-        assert_eq!(float("3ff0000000000000"), Ok(1.0));
-        assert!(float("3FF0000000000000").is_err());
-        assert!(float("3ff000000000000").is_err());
-        assert!(float("+ff0000000000000").is_err());
+        assert_eq!(float("0x3ff0000000000000"), Ok(1.0));
+        assert!(float("3ff0000000000000").is_err());
+        assert!(float("0X3ff0000000000000").is_err());
+        assert!(float("0x3FF0000000000000").is_err());
+        assert!(float("0x3ff000000000000").is_err());
+        assert!(float("0x+ff0000000000000").is_err());
         assert_eq!(decimal::<u32>("0"), Ok(0));
         assert_eq!(decimal::<u32>("17"), Ok(17));
         assert!(decimal::<u32>("017").is_err());

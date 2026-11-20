@@ -314,7 +314,8 @@ fn ac1_two_paths_bit_identical() {
         assert_eq!(a.certificate().digest(), b.certificate().digest(), "{}: digest", c.name);
         assert_eq!(a.certificate().to_canonical_json().unwrap(), b.certificate().to_canonical_json().unwrap());
         assert_eq!(a.certificate().kind(), p.kind());
-        assert!(!a.certificate().flags().tie_broken && !a.certificate().flags().local_optimum_only);
+        assert!(!a.tie_broken() && !b.tie_broken() && !a.certificate().flags().local_optimum_only);
+        assert!(a.certificate().is_linear());
         assert_eq!(a.params(), a.certificate().params());
     }
     assert_eq!(count, [15, 15, 15, 15]);
@@ -387,7 +388,7 @@ fn ac2_tie_uses_lowest_passing_set() {
         let cert = got.certificate();
         check_expected(c, cert);
         assert_eq!(cert.active_set(), &labels("0:0 1:1 4:0")[..]);
-        assert!(cert.flags().tie_broken);
+        assert!(got.tie_broken());
         bytes.push(cert.to_canonical_json().unwrap());
     }
     assert_eq!(bytes[0], bytes[1]);
@@ -575,7 +576,7 @@ fn ac5_round_trip_and_local_flag() {
         assert!(text.contains(&format!("\"schema\":\"{SCHEMA}\"")));
         assert!(text.contains(&format!("\"algorithm\":\"{ALGORITHM}\"")));
         assert!(text.contains(&format!("\"digest\":\"{}\"", cert.digest())));
-        for banned in ["\"x\"", "\"y\"", "\"s\"", "iterations", "objective"] {
+        for banned in ["\"x\"", "\"y\"", "\"s\"", "iterations", "objective", "tie_broken"] {
             assert!(!text.contains(banned), "{banned}");
         }
 
@@ -605,8 +606,10 @@ fn golden_certificate_from_the_oracle() {
     assert_eq!(cert.to_canonical_json().unwrap(), GOLDEN);
     assert_eq!(cert.kind(), CertKind::Zone);
     assert_eq!(cert.active_set(), &labels("1:0 4:1 6:0")[..]);
-    assert_eq!(cert.dual_thresholds(), &[7.5e-10, 1e-9, 7.5e-10]);
-    assert!(cert.flags().tie_broken && !cert.flags().local_optimum_only);
+    let thr: Vec<u64> = cert.dual_thresholds().iter().map(|v| v.to_bits()).collect();
+    assert_eq!(thr, [0x3e0b7cdfd9d7bdb7, 0x3e112e0be826d692, 0x3e06e80fe033c8c3]);
+    assert_eq!(cert.gradient_norms_hi(), &[1.25, 1.0, 1.5]);
+    assert!(cert.is_linear() && !cert.flags().local_optimum_only);
     assert_eq!(cert.kkt().scales.data, 12.5);
     assert_eq!(cert.recomp().gn_steps, 8);
     assert_eq!(cert.steps(), 1);
@@ -618,46 +621,182 @@ fn tampered(from: &str, to: &str) -> Result<Certificate, CertError> {
     Certificate::parse(text.replacen(from, to, 1).as_bytes())
 }
 
+/// The golden text with `from` replaced by `to` and the digest recomputed over the new body,
+/// so only the consistency check can refuse it.
+fn tampered_redigested(from: &str, to: &str) -> Result<Certificate, CertError> {
+    let text = std::str::from_utf8(GOLDEN).unwrap().replacen(from, to, 1);
+    let at = text.find("\"digest\":\"").unwrap();
+    let member = &text[at..at + "\"digest\":\"sha256:\",".len() + 64];
+    let body = text.replacen(member, "", 1);
+    let mut h = Sha256Hasher::new();
+    h.update(body.as_bytes());
+    let fresh = format!("\"digest\":\"{}\",", h.finish());
+    Certificate::parse(text.replacen(member, &fresh, 1).as_bytes())
+}
+
 /// Parsing fails closed: a changed value (digest mismatch), a changed digest, non-canonical
-/// bytes, an inconsistent record, an unknown schema or kind.
+/// bytes, an inconsistent record, an unknown schema or kind, a float not in `F64Bits` form.
 #[test]
 fn parse_fails_closed() {
     let mal = |detail| Err(CertError::Malformed { detail });
     let inc = |detail| Err(CertError::Inconsistent { detail });
-    assert_eq!(tampered("\"3fd8000000000000\"", "\"3fd8000000000001\""), mal("digest_mismatch"));
-    assert_eq!(tampered("sha256:a", "sha256:b"), mal("digest_mismatch"));
-    assert_eq!(tampered("\"tie_broken\":\"true\"", "\"tie_broken\":\"false\""), mal("digest_mismatch"));
+    assert_eq!(tampered("\"0x3fd8000000000000\"", "\"0x3fd8000000000001\""), mal("digest_mismatch"));
+    assert_eq!(tampered("sha256:8", "sha256:9"), mal("digest_mismatch"));
+    assert_eq!(tampered("\"is_linear\":\"true\"", "\"is_linear\":\"false\""), inc("steps"));
+    assert_eq!(tampered("\"0x3fd8000000000000\"", "\"3fd8000000000000\""), mal("float"));
+    assert_eq!(tampered("\"0x3fd8000000000000\"", "\"0X3fd8000000000000\""), mal("float"));
     assert_eq!(tampered("{\"active_set\"", "{ \"active_set\""), mal("syntax"));
     assert_eq!(tampered("\"schema\":\"fid.cert@1\"", "\"schema\":\"fid.cert@2\""), mal("schema"));
     assert_eq!(tampered("\"kind\":\"zone\"", "\"kind\":\"Zone\""), mal("kind"));
     assert_eq!(tampered("\"status\":\"certified\"", "\"status\":\"undecidable\""), mal("status"));
     assert_eq!(tampered("\"steps\":\"1\"", "\"steps\":\"01\""), mal("integer"));
     assert_eq!(tampered("\"steps\":\"1\"", "\"steps\":\"2\""), inc("steps"));
+    assert_eq!(tampered("\"flags\":{\"local", "\"flags\":{\"tie_broken\":\"true\",\"local"), mal("unknown_member"));
     // primal hi above its threshold
     assert_eq!(
-        tampered("\"hi\":\"3d60000000000000\",\"lo\":\"bd6", "\"hi\":\"3f60000000000000\",\"lo\":\"bd6"),
+        tampered("\"hi\":\"0x3d60000000000000\",\"lo\":\"0xbd6", "\"hi\":\"0x3f60000000000000\",\"lo\":\"0xbd6"),
         inc("primal")
     );
-    // a dual threshold that no longer matches the recorded minimum
+    // a negative multiplier beyond its row threshold
     assert_eq!(
-        tampered("\"dual_thresholds\":[\"3e09c511dc3a41df\"", "\"dual_thresholds\":[\"3e09c511dc3a41de\""),
+        tampered("\"multipliers\":[\"0x3fd0000000000000\"", "\"multipliers\":[\"0xbfd0000000000000\""),
         inc("dual")
     );
-    // a negative multiplier beyond its row threshold
-    assert_eq!(tampered("\"multipliers\":[\"3fd0000000000000\"", "\"multipliers\":[\"bfd0000000000000\""), inc("dual"));
     // NaN
-    assert_eq!(tampered("\"value\":\"3fea000000000000\"", "\"value\":\"7ff8000000000000\""), inc("not_finite"));
+    assert_eq!(tampered("\"value\":\"0x3fea000000000000\"", "\"value\":\"0x7ff8000000000000\""), inc("not_finite"));
     assert_eq!(tampered("\"active_set\":[\"1:0\",\"4:1\"", "\"active_set\":[\"4:1\",\"1:0\""), inc("active_set"));
     assert!(Certificate::parse(&[]).is_err());
+}
+
+/// Dual thresholds are rechecked bit for bit from `tol_d`, `gradient_lo` and the recorded
+/// `hi||grad g_i||`, even when the digest is recomputed to match the tampered body: raising a
+/// threshold that is not the minimum (so the recorded dual minimum still agrees) is refused,
+/// as is a changed divisor or a nonzero threshold when `gradient_lo` is 0.
+#[test]
+fn tampered_dual_thresholds_are_refused() {
+    let inc = |detail| Err(CertError::Inconsistent { detail });
+    // the untouched golden body re-digested parses (the helper itself is sound)
+    assert!(tampered_redigested("\"kind\":\"zone\"", "\"kind\":\"zone\"").is_ok());
+    assert_eq!(
+        tampered_redigested(
+            "\"dual_thresholds\":[\"0x3e0b7cdfd9d7bdb7\"",
+            "\"dual_thresholds\":[\"0x3e0b7cdfd9d7bdb8\""
+        ),
+        inc("dual_thresholds")
+    );
+    assert_eq!(
+        tampered_redigested(
+            "\"dual_thresholds\":[\"0x3e0b7cdfd9d7bdb7\"",
+            "\"dual_thresholds\":[\"0x3e20000000000000\""
+        ),
+        inc("dual_thresholds")
+    );
+    assert_eq!(
+        tampered_redigested(
+            "\"gradient_norms_hi\":[\"0x3ff4000000000000\"",
+            "\"gradient_norms_hi\":[\"0x3ff2000000000000\""
+        ),
+        inc("dual_thresholds")
+    );
+    assert_eq!(
+        tampered_redigested("\"gradient_lo\":\"0x3fefffffffffffff\"", "\"gradient_lo\":\"0x0000000000000000\""),
+        inc("dual_thresholds")
+    );
+    assert_eq!(
+        tampered_redigested(
+            "\"gradient_norms_hi\":[\"0x3ff4000000000000\"",
+            "\"gradient_norms_hi\":[\"0x0000000000000000\""
+        ),
+        inc("gradient_norms_hi")
+    );
+}
+
+/// REQ-003: `tie_broken` depends on the solution's slacks, so it is not in the digest. Two
+/// solutions of one problem whose extractions list different candidates (one candidate, and
+/// `n + 1` candidates because an inactive row's slack is reported as 0) certify the same set
+/// with identical certificates and digests; only the in-memory `tie_broken` differs.
+#[test]
+fn different_candidate_lists_same_digest() {
+    let (th, cases, _) = parse();
+    for c in generated(&cases) {
+        let p = &c.problem;
+        let conic = p.conic();
+        let sol = solve_lp(&conic).unwrap();
+        let set = labels(c.get("set"));
+        let mut other = sol.clone();
+        let extra = p.labels().iter().position(|l| !set.contains(l)).unwrap();
+        other.s[extra] = 0.0;
+        let la = extract(&conic, &sol, &p.labels(), p.n(), &th).unwrap();
+        let lb = extract(&conic, &other, &p.labels(), p.n(), &th).unwrap();
+        assert_eq!(la.uncertified_sets().len(), 1, "{}", c.name);
+        assert_eq!(lb.uncertified_sets().len(), p.n() + 1, "{}", c.name);
+        let a = certify_with(c, &sol, &th).unwrap();
+        let b = certify_with(c, &other, &th).unwrap_or_else(|e| panic!("{}: {e}", c.name));
+        assert!(!a.tie_broken() && b.tie_broken(), "{}", c.name);
+        assert_eq!(b.certificate().active_set(), &set[..], "{}", c.name);
+        assert_eq!(a.certificate().digest(), b.certificate().digest(), "{}", c.name);
+        assert_eq!(a.certificate(), b.certificate(), "{}", c.name);
+    }
 }
 
 // ------------------------------------------------------------------ output pin
 
 /// Output-bit pin: regression pin of this crate's own output (every certificate's bytes, then
-/// the AC-3 error), recorded from a local x86-64 run and checked by CI on every target. One
+/// the AC-3 error in the stable encoding of `encode_err`), recorded from a local x86-64 run and checked by CI on every target. One
 /// value serves all targets because they agree bit for bit; a target that diverged would get
 /// its own `#[cfg(target_arch)]` value here.
-const OUTPUT_PIN: &str = "sha256:4c8ce13be168e3dfd0f26e03c752570759a2bba925167e6dc3732de21f23efe7";
+const OUTPUT_PIN: &str = "sha256:f2970613c0c6b3cfb008ece929490b438efb00a977732b82d46e6f06868c926e";
+
+fn bits_of(xs: &[f64]) -> String {
+    xs.iter().map(|v| format!("0x{:016x}", v.to_bits())).collect::<Vec<_>>().join(",")
+}
+
+/// A stable encoding of an error: its code and fields (KKT reports by status, reason and
+/// every recorded value's bits), never `Debug` output.
+fn encode_err(e: &CertError) -> String {
+    let mut out = e.code().to_string();
+    match e {
+        CertError::CertificateFailed { tried, first_report, first_error } => {
+            out.push_str(&format!(";tried={tried}"));
+            if let Some(r) = first_report {
+                let status = match r.status() {
+                    KktStatus::Certified => "certified",
+                    KktStatus::Violated => "violated",
+                    KktStatus::Undecidable => "undecidable",
+                };
+                let reason = match r.reason() {
+                    None => "none",
+                    Some(KktFail::Primal) => "primal",
+                    Some(KktFail::Dual) => "dual",
+                    Some(KktFail::Stationarity) => "stationarity",
+                    Some(KktFail::Complementarity) => "complementarity",
+                    Some(KktFail::DegenerateGradients) => "degenerate_gradients",
+                    Some(KktFail::MultipliersNotProven) => "multipliers_not_proven",
+                    Some(_) => "other",
+                };
+                out.push_str(&format!(";status={status};reason={reason}"));
+                for c in [r.primal(), r.dual(), r.stationarity(), r.complementarity()] {
+                    out.push_str(&format!(";cond={}", bits_of(&[c.lo(), c.hi(), c.threshold()])));
+                }
+                out.push_str(&format!(
+                    ";mult={};mb={};thr={};ghi={}",
+                    bits_of(r.multipliers()),
+                    bits_of(r.multiplier_bounds()),
+                    bits_of(r.dual_thresholds()),
+                    bits_of(r.gradient_norms_hi())
+                ));
+            }
+            if let Some(e) = first_error {
+                out.push_str(&format!(";first_error={}", encode_err(e)));
+            }
+        }
+        CertError::RankDeficient { rank } => out.push_str(&format!(";rank={rank}")),
+        CertError::IllConditioned { cond } => out.push_str(&format!(";cond={}", bits_of(&[*cond]))),
+        CertError::InvalidInput { field } => out.push_str(&format!(";field={field}")),
+        _ => {}
+    }
+    out
+}
 
 #[test]
 fn output_bits_pinned() {
@@ -669,6 +808,6 @@ fn output_bits_pinned() {
     let (p, small, _) = tie_case(&cases, "ac3-all-fail");
     let sol = hand_solution(&p, &small, &[0.0, 0.0, 2.0], 0.0, false);
     let err = certify(&p, &p.conic(), &sol, CertKind::Zone, &CertConfig::new(th)).unwrap_err();
-    h.update(format!("{err:?}").as_bytes());
+    h.update(encode_err(&err).as_bytes());
     assert_eq!(h.finish(), OUTPUT_PIN, "output bits changed on {}", std::env::consts::ARCH);
 }

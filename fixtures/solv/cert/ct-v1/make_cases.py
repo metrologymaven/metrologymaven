@@ -49,9 +49,12 @@ Special cases:
 
 golden-cert.json: a synthetic certificate in schema fid.cert@1 (values chosen here, not
 computed by any solver) serialised by this script's own RFC 8785 writer (json.dumps with
-sorted keys and no whitespace; every value a string, floats as 16 hex digits of their
-IEEE-754 bits) with its SHA-256 digest from hashlib, so the Rust parser and digest rule are
-checked against an independent implementation.
+sorted keys and no whitespace; every value a string, floats in the CORE.JRN.CANON F64Bits
+form "0x" + 16 lowercase hex digits of their IEEE-754 bits, booleans as "true"/"false") with
+its SHA-256 digest from hashlib, so the Rust parser and digest rule are checked against an
+independent implementation. Its per-row dual thresholds follow the certificate rule
+thr_i = down(down(tol_d * gradient_lo) / ghi_i), down = one step toward -inf clamped at 0,
+with IEEE-754 products and quotients of doubles.
 """
 
 import hashlib
@@ -302,9 +305,16 @@ def next_down(x):
     return struct.unpack(">d", b.to_bytes(8, "big"))[0]
 
 
+def down(x):
+    d = next_down(x)
+    return 0.0 if d < 0 else d
+
+
 def golden():
     """A synthetic, internally consistent fid.cert@1 certificate and its canonical bytes."""
-    h = bits
+    def h(x):
+        return "0x" + bits(x)
+
     n = 3
     params = [float(Fraction(3, 8)), float(Fraction(-5, 4)), float(Fraction(13, 16))]
     mult = [0.25, 0.5, 0.25]
@@ -314,7 +324,9 @@ def golden():
     tol = 1e-9
     thr_p = tol * data  # IEEE product of two doubles, as the rule states
     thr_s = tol * 1.0
-    dual_thr = [7.5e-10, 1e-9, 7.5e-10]
+    grad_lo = next_down(1.0)
+    ghi = [1.25, 1.0, 1.5]
+    dual_thr = [down(down(tol * grad_lo) / g) for g in ghi]
     # dual enclosure: lo = max(0, -min next_up(l + k)), hi = max(0, -min next_down(l - k));
     # every multiplier is positive, so both are +0.
     assert all(next_down(m - k) >= -t for m, k, t in zip(mult, mb, dual_thr))
@@ -323,14 +335,16 @@ def golden():
         "active_set": ["1:0", "4:1", "6:0"],
         "algorithm": "KRN.SOLV.CERT@1",
         "cond": h(17.25),
-        "flags": {"local_optimum_only": "false", "tie_broken": "true"},
+        "flags": {"local_optimum_only": "false"},
+        "is_linear": "true",
         "kind": "zone",
         "kkt": {
             "complementarity": {"hi": h(2.0**-41), "lo": h(0.0), "threshold": h(thr_p)},
-            "dual": {"hi": h(0.0), "lo": h(0.0), "threshold": h(7.5e-10)},
+            "dual": {"hi": h(0.0), "lo": h(0.0), "threshold": h(min(dual_thr))},
             "dual_thresholds": [h(v) for v in dual_thr],
+            "gradient_norms_hi": [h(v) for v in ghi],
             "primal": cond,
-            "scales": {"data": h(data), "gradient": h(1.0), "gradient_lo": h(next_down(1.0))},
+            "scales": {"data": h(data), "gradient": h(1.0), "gradient_lo": h(grad_lo)},
             "stationarity": {"hi": h(2.0**-45), "lo": h(0.0), "threshold": h(thr_s)},
             "status": "certified",
             "tolerances": {"rank_tol": h(2.0**-50), "tol_c": h(tol), "tol_d": h(tol), "tol_p": h(tol),
