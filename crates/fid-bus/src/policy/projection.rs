@@ -505,6 +505,11 @@ impl Approval {
         &self.requested_by
     }
 
+    /// The commitment of the approved parameters (the record's).
+    pub fn params_commitment(&self) -> Digest {
+        self.params_commitment
+    }
+
     /// The approving person.
     pub fn approved_by(&self) -> &PrincipalRef {
         &self.approved_by
@@ -824,17 +829,19 @@ impl RequestRecord {
 pub struct EntryOrigin {
     principal: PrincipalRef,
     command: CommandId,
+    params_commitment: Digest,
 }
 
 impl EntryOrigin {
-    /// The origin of an entry committed by `principal` for `command`.
-    pub fn new(principal: PrincipalRef, command: CommandId) -> EntryOrigin {
-        EntryOrigin { principal, command }
+    /// The origin of an entry committed by `principal` for `command` with parameters whose
+    /// commitment ([`params_commitment`]) is `params_commitment`.
+    pub fn new(principal: PrincipalRef, command: CommandId, params_commitment: Digest) -> EntryOrigin {
+        EntryOrigin { principal, command, params_commitment }
     }
 
-    /// The origin of a command entry draft: its principal kind and identity (a string) and
-    /// its command `id@major`. Any other entry kind, or another identity shape, is
-    /// `internal/invariant_violated`.
+    /// The origin of a command entry draft: its principal kind and identity (a string), its
+    /// command `id@major` and the commitment of its arguments. Any other entry kind, another
+    /// identity shape or arguments without a canonical form is `internal/invariant_violated`.
     pub fn from_draft(d: &EntryDraft) -> Result<EntryOrigin, BusError> {
         let DraftBody::Command(c) = &d.body else { return Err(invariant("not a command entry")) };
         let CValue::Str(identity) = &d.principal.identity else {
@@ -843,7 +850,9 @@ impl EntryOrigin {
         let id = PrincipalId::new(identity).map_err(|_| invariant("entry principal identity is malformed"))?;
         let command = CommandId::parse(&format!("{}@{}", c.id, c.major))
             .map_err(|_| invariant("entry command id is malformed"))?;
-        Ok(EntryOrigin { principal: PrincipalRef { kind: d.principal.kind, id }, command })
+        let params_commitment =
+            params_commitment(&c.args).map_err(|_| invariant("entry arguments have no canonical form"))?;
+        Ok(EntryOrigin { principal: PrincipalRef { kind: d.principal.kind, id }, command, params_commitment })
     }
 
     pub fn principal(&self) -> &PrincipalRef {
@@ -852,6 +861,11 @@ impl EntryOrigin {
 
     pub fn command(&self) -> &CommandId {
         &self.command
+    }
+
+    /// The commitment of the entry's parameters.
+    pub fn params_commitment(&self) -> Digest {
+        self.params_commitment
     }
 }
 
@@ -1036,6 +1050,9 @@ impl RequestBook {
                 if by.kind != PrincipalKind::Human || origin.principal != *by || origin.command != *command {
                     return refuse("RequestApproved outside the approved command's entry of its human approver");
                 }
+                if origin.params_commitment != r.params_commitment {
+                    return refuse("RequestApproved in an entry whose parameters differ from the request's");
+                }
             }
             Change::Withdrawn { id, by } => {
                 if !is(WITHDRAW_REQUEST) || origin.principal != *by {
@@ -1068,7 +1085,8 @@ impl RequestBook {
     ///   requester;
     /// - `RequestApproved` whose record digest, command, parameters commitment or requester
     ///   differs from the record, or that is not in an entry of the approved command whose
-    ///   principal is the `human` approver;
+    ///   principal is the `human` approver and whose own parameters commitment is the
+    ///   record's;
     /// - `RequestWithdrawn` outside a `request.withdraw_request@1` entry of the requester;
     /// - `RequestRejected` outside a `request.reject_request@1` entry of the `human` rejecter.
     pub fn apply_entry(&mut self, origin: &EntryOrigin, events: &[Event]) -> Result<(), BusError> {
@@ -1199,11 +1217,44 @@ impl Handler for WithdrawHandler {
     }
 }
 
-/// Characters a rejection reason may not hold: C0 controls (U+0000..U+001F, none excepted),
-/// DEL, C1 controls (U+0080..U+009F) and the bidi embedding, override and isolate controls
-/// (U+202A..U+202E, U+2066..U+2069).
+/// Code point ranges a rejection reason may not hold (Unicode 16.0), with what each range
+/// is: general categories Cc, Cf, Zl and Zp, the noncharacters U+FDD0..U+FDEF, and the whole
+/// tag block U+E0000..U+E007F. The plane-end noncharacters U+xFFFE and U+xFFFF of every
+/// plane are refused by [`forbidden_in_reason`] as well.
+#[rustfmt::skip]
+pub const REASON_FORBIDDEN_RANGES: &[(u32, u32, &str)] = &[
+    (0x0000, 0x001F, "Cc: C0 controls"),
+    (0x007F, 0x009F, "Cc: DEL and C1 controls"),
+    (0x00AD, 0x00AD, "Cf: soft hyphen"),
+    (0x0600, 0x0605, "Cf: Arabic number signs"),
+    (0x061C, 0x061C, "Cf: Arabic letter mark"),
+    (0x06DD, 0x06DD, "Cf: Arabic end of ayah"),
+    (0x070F, 0x070F, "Cf: Syriac abbreviation mark"),
+    (0x0890, 0x0891, "Cf: Arabic pound and piastre marks above"),
+    (0x08E2, 0x08E2, "Cf: Arabic disputed end of ayah"),
+    (0x180E, 0x180E, "Cf: Mongolian vowel separator"),
+    (0x200B, 0x200F, "Cf: zero width space, joiners, LRM, RLM"),
+    (0x2028, 0x2028, "Zl: line separator"),
+    (0x2029, 0x2029, "Zp: paragraph separator"),
+    (0x202A, 0x202E, "Cf: bidi embeddings and overrides"),
+    (0x2060, 0x2064, "Cf: word joiner and invisible operators"),
+    (0x2066, 0x206F, "Cf: bidi isolates and deprecated format controls"),
+    (0xFDD0, 0xFDEF, "noncharacters"),
+    (0xFEFF, 0xFEFF, "Cf: byte order mark"),
+    (0xFFF9, 0xFFFB, "Cf: interlinear annotation controls"),
+    (0x110BD, 0x110BD, "Cf: Kaithi number sign"),
+    (0x110CD, 0x110CD, "Cf: Kaithi number sign above"),
+    (0x13430, 0x1343F, "Cf: Egyptian hieroglyph format controls"),
+    (0x1BCA0, 0x1BCA3, "Cf: shorthand format controls"),
+    (0x1D173, 0x1D17A, "Cf: musical symbol format controls"),
+    (0xE0000, 0xE007F, "Cf and reserved: tag characters"),
+];
+
+/// Whether a rejection reason may not hold `c`: any [`REASON_FORBIDDEN_RANGES`] code point
+/// or a plane-end noncharacter (U+xFFFE, U+xFFFF).
 pub fn forbidden_in_reason(c: char) -> bool {
-    matches!(c, '\u{0}'..='\u{1f}' | '\u{7f}'..='\u{9f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+    let u = u32::from(c);
+    (u & 0xFFFE) == 0xFFFE || REASON_FORBIDDEN_RANGES.iter().any(|(lo, hi, _)| (*lo..=*hi).contains(&u))
 }
 
 /// The handler of `request.reject_request@1` (REQ-006): parameters `{request, reason}`, the
@@ -1227,7 +1278,7 @@ impl Handler for RejectHandler {
         }
         if let Some(c) = reason.chars().find(|c| forbidden_in_reason(*c)) {
             return Err(schema(&format!(
-                "reason must not hold control or bidi-override characters (found U+{:04X})",
+                "reason holds a forbidden character U+{:04X} (control, format, separator, noncharacter or tag)",
                 u32::from(c)
             ))
             .into());

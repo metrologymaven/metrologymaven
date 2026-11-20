@@ -11,8 +11,8 @@ use fid_bus::policy::projection::{
     authorise, authorise_projection, command_defs, forbidden_in_reason, is_mcp_channel, list_requests, mcp_projection,
     params_commitment, Approval, Decision, EntryOrigin, Filing, Projected, RecordContext, RejectHandler, RequestBook,
     RequestId, RequestRecord, RequestState, WithdrawHandler, FILE_REQUEST, LIST_REQUESTS, MAX_FILED_PARAMS_BYTES,
-    MAX_REASON_CHARS, PARAMS_TAG, REJECT_REQUEST, REQUEST_APPROVED, REQUEST_FILED, REQUEST_KIND, REQUEST_REJECTED,
-    REQUEST_WITHDRAWN, WITHDRAW_REQUEST,
+    MAX_REASON_CHARS, PARAMS_TAG, REASON_FORBIDDEN_RANGES, REJECT_REQUEST, REQUEST_APPROVED, REQUEST_FILED,
+    REQUEST_KIND, REQUEST_REJECTED, REQUEST_WITHDRAWN, WITHDRAW_REQUEST,
 };
 use fid_bus::principal::{
     Channel, ChannelKind, Identity, JournalAppend, OsUser, PrincipalId, PrincipalKind, PrincipalRef, SessionId,
@@ -240,13 +240,17 @@ impl World {
         let ctx = HandlerCtx::derive(&self.table, ch, 0, CancelToken::never())?;
         let view = self.book.view(HEAD);
         let checked = run_handler(&set, id, &view, &ValidParams::for_tests(p.clone()), &ctx)?;
-        *self.last.borrow_mut() = Some(EntryOrigin::new(ctx.principal().reference(), CommandId::parse(id).unwrap()));
+        let origin =
+            EntryOrigin::new(ctx.principal().reference(), CommandId::parse(id).unwrap(), params_commitment(p).unwrap());
+        *self.last.borrow_mut() = Some(origin);
         Ok(checked.events().to_vec())
     }
 
-    /// The origin of an entry committed by `ch` for command `id`.
+    /// The origin of an entry committed by `ch` for command `id` with the fixture's filed
+    /// parameters.
     fn origin(&self, ch: &TestChannel, id: &str) -> EntryOrigin {
-        EntryOrigin::new(self.table.derive_principal(ch).unwrap().reference(), CommandId::parse(id).unwrap())
+        let p = params_commitment(&filed_params()).unwrap();
+        EntryOrigin::new(self.table.derive_principal(ch).unwrap().reference(), CommandId::parse(id).unwrap(), p)
     }
 
     /// Folds `events` as the entry of the last successful [`World::run`].
@@ -524,7 +528,11 @@ fn request_ids_are_uuid_v7() {
 
 /// The origin of the approved command's entry: the approving human, the approved command.
 fn approval_origin(approval: &Approval) -> EntryOrigin {
-    EntryOrigin::new(approval.approved_by().clone(), CommandId::parse(REQUEST_CMD).unwrap())
+    EntryOrigin::new(
+        approval.approved_by().clone(),
+        CommandId::parse(REQUEST_CMD).unwrap(),
+        approval.params_commitment(),
+    )
 }
 
 fn approve_entry(w: &mut World, approval: &Approval) {
@@ -1319,16 +1327,92 @@ fn reject_reasons_refuse_control_and_bidi_characters() {
         "\u{2067}x",
         "\u{2068}x",
         "x\u{2069}",
+        "\u{200f}rtl mark",
     ] {
         let e = w.run(&alice, &cmd, &with(bad)).unwrap_err();
         assert_eq!((e.code(), e.reason()), (Code::Validation, "schema"), "{bad:?}");
-        assert!(e.detail().as_untrusted_str().contains("bidi-override"), "{bad:?}");
+        assert!(e.detail().as_untrusted_str().contains("forbidden character"), "{bad:?}");
     }
-    for ok in ["wrong datum", "Bezug falsch: \u{e9}\u{4e2d}", "a b", "\u{200f}rtl mark"] {
+    for ok in ["wrong datum", "Bezug falsch: \u{e9}\u{4e2d}", "a b", "nbsp\u{a0}", "\u{1f600}"] {
         assert!(!ok.chars().any(forbidden_in_reason), "{ok:?}");
     }
     assert_eq!(w.record(r).state(), RequestState::Pending);
     let ev = w.run(&alice, &cmd, &with("Bezug falsch: \u{e9}")).unwrap();
     w.fold_last(&ev);
     assert_eq!(w.record(r).state(), RequestState::Rejected);
+}
+
+/// The reject-reason filter, one case per range of its table (first and last code point),
+/// every plane-end noncharacter, the reviewer's named code points, and every Unicode 16.0 Cf
+/// range of the principal checks.
+#[test]
+fn reject_reason_filter_covers_every_range() {
+    let mut w = World::new();
+    let agent = w.channel(ChannelKind::Mcp, "claude-a");
+    let alice = w.channel(ChannelKind::Gui, "alice");
+    let r = w.file(&agent, REQUEST_CMD, &filed_params(), 1);
+    let cmd = format!("{REJECT_REQUEST}@1");
+    let refused = |w: &World, u: u32| {
+        let c = char::from_u32(u).unwrap();
+        let mut o = Obj::new();
+        o.insert("request".into(), CValue::Str(r.to_string()));
+        o.insert("reason".into(), CValue::Str(format!("x{c}y")));
+        let e = w.run(&alice, &cmd, &CValue::Obj(o)).unwrap_err();
+        assert_eq!((e.code(), e.reason()), (Code::Validation, "schema"), "U+{u:04X}");
+        assert!(forbidden_in_reason(c), "U+{u:04X}");
+    };
+    assert_eq!(REASON_FORBIDDEN_RANGES.len(), 25);
+    for (lo, hi, what) in REASON_FORBIDDEN_RANGES {
+        assert!(lo <= hi, "{what}");
+        refused(&w, *lo);
+        refused(&w, *hi);
+    }
+    for plane in 0..=0x10u32 {
+        refused(&w, (plane << 16) | 0xFFFE);
+        refused(&w, (plane << 16) | 0xFFFF);
+    }
+    let named = [
+        0x2028, 0x2029, 0xFEFF, 0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0x2060, 0x2061, 0x2062, 0x2063, 0x2064, 0x061C,
+        0xE0000, 0xE0001, 0xE0020, 0xE007F, 0xFDD0, 0xFDEF,
+    ];
+    for u in named {
+        refused(&w, u);
+    }
+    for (lo, hi) in fid_bus::FORMAT_RANGES {
+        for u in [*lo, *hi] {
+            assert!(forbidden_in_reason(char::from_u32(u).unwrap()), "Cf U+{u:04X}");
+        }
+    }
+    for u in [0x20u32, 0x7E, 0xA0, 0xAC, 0xAE, 0x2027, 0x202F, 0x2065, 0xFDCF, 0xFDF0, 0xFFFD, 0xE0080, 0x1F600] {
+        assert!(!forbidden_in_reason(char::from_u32(u).unwrap()), "U+{u:04X} allowed");
+    }
+    assert_eq!(w.record(r).state(), RequestState::Pending);
+}
+
+/// The fold compares the approving entry's own parameters commitment with the record's: a
+/// `RequestApproved` in an entry of the right command and human but other parameters is
+/// refused. `EntryOrigin::from_draft` takes it from the entry's arguments.
+#[test]
+fn the_fold_checks_the_entry_params_commitment() {
+    let mut w = World::new();
+    let agent = w.channel(ChannelKind::Mcp, "claude-a");
+    let alice = w.channel(ChannelKind::Gui, "alice");
+    let r = w.file(&agent, REQUEST_CMD, &filed_params(), 1);
+    let Decision::RunApproved(a) = w.authorise(&alice, REQUEST_CMD, &filed_params(), Some(&r)).unwrap() else {
+        panic!()
+    };
+    let alice_ref = w.table.derive_principal(&alice).unwrap().reference();
+    let cmd = CommandId::parse(REQUEST_CMD).unwrap();
+    let other = params_commitment(&json(r#"{"target":"plane-2","count":3}"#)).unwrap();
+    let wrong = EntryOrigin::new(alice_ref.clone(), cmd.clone(), other);
+    assert_err(w.book.apply_entry(&wrong, &[a.event().unwrap()]), Code::Internal, "invariant_violated");
+    assert_eq!(w.record(r).state(), RequestState::Pending);
+    // from_draft commits the entry's arguments.
+    let draft = w.journal.drafts[0].clone();
+    let DraftBody::Command(c) = &draft.body else { panic!() };
+    assert_eq!(EntryOrigin::from_draft(&draft).unwrap().params_commitment(), params_commitment(&c.args).unwrap());
+    let right = EntryOrigin::new(alice_ref, cmd, params_commitment(&filed_params()).unwrap());
+    assert_eq!(right.params_commitment(), a.params_commitment());
+    w.book.apply_entry(&right, &[a.event().unwrap()]).unwrap();
+    assert_eq!(w.record(r).state(), RequestState::Approved);
 }
