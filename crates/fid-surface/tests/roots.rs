@@ -624,12 +624,14 @@ fn ac4_raw_path_refused_before_the_bus() {
     req.insert("principal".to_string(), CValue::Str("human".into()));
     let req = CValue::Obj(req);
     for (ch, p) in principals(&mut table) {
+        let before = sent.len();
         let r = call(&p, &req, &mut sent);
         if p.kind() == BusKind::Human {
             assert_eq!(r, Ok(()), "{ch:?}");
+            assert_eq!(sent.len(), before + 1, "{ch:?}");
         } else {
             assert_eq!(r, Err("raw_path_refused"), "{ch:?}");
-            assert_eq!(sent.len(), 0, "{ch:?}: the bus received a refused call");
+            assert_eq!(sent.len(), before, "{ch:?}: the bus received a refused call");
         }
     }
     assert_eq!(sent.len(), 1, "only the GUI human's call is sent");
