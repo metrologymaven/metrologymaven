@@ -75,7 +75,7 @@ fn ac4_stage_one_is_identical_across_directories_and_after_embedding() {
     let sb = core_in(&b).unwrap();
     assert_eq!(sa.manifest.canonical_json(), sb.manifest.canonical_json());
     assert_eq!(sa.constant, sb.constant);
-    fs::write(a.join("ws").join(&sa.constant_path), &sa.constant).unwrap();
+    fs::write(a.join("ws").join(&sa.constant_path), sa.constant.as_slice()).unwrap();
     let again = core_in(&a).unwrap();
     assert_eq!(again.manifest.canonical_json(), read("expected-core.json").as_slice());
 }

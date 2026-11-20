@@ -107,7 +107,7 @@ pub enum GenError {
     /// The assembled manifest fails the schema (`fid_kci::manifest`).
     SchemaInvalid(ManifestError),
     /// An implementation digest could not be computed (KRN.MAN.MANI.IMPL).
-    ImplDigest(ImplError),
+    ImplDigest(Box<ImplError>),
     /// An algorithm's implementation closure reads the generated constant, so the core would
     /// depend on its own digest.
     ConstantInClosure { constant: String },
@@ -156,7 +156,7 @@ impl std::error::Error for GenError {}
 
 impl From<ImplError> for GenError {
     fn from(e: ImplError) -> Self {
-        GenError::ImplDigest(e)
+        GenError::ImplDigest(Box::new(e))
     }
 }
 
