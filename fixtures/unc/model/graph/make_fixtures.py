@@ -408,6 +408,8 @@ def main():
         on_disk = {p.relative_to(HERE).as_posix() for p in HERE.rglob("*") if p.is_file() and p.suffix in (".json", ".txt", ".sha256")}
         # Files of UNC.MODEL.GRAPH.CHECK, written and checked by make_check_fixtures.py.
         on_disk = {r for r in on_disk if not r.startswith("bad/") and r not in CHECK_FILES}
+        # Files of UNC.MODEL.GRAPH.STORE, written and checked by store/make_store_fixtures.py.
+        on_disk = {r for r in on_disk if not r.startswith("store/")}
         for extra in sorted(on_disk - set(files)):
             print("not generated: " + extra)
             bad += 1

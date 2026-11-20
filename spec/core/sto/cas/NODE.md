@@ -77,6 +77,7 @@ Seeded random content generated in tests; expected digests in `fixtures/core/sto
 
 - **Resolved:** fixed-size versus content-defined chunking: fixed 8 MiB for P0 (see Design); revisit with measurements from `GEO.OOC` edited-cloud workloads.
 - Garbage collection of unreferenced blobs is not specified anywhere in STO; it needs the blob reference index of `CORE.STO.SQL.SCHEMA` and retention rules from `TRUST`.
+- Journal-referenced blobs as permanent GC roots: `UNC.MODEL.GRAPH.STORE` journals `unc.create_model@1` events that name the model blob (address and size) instead of carrying the bytes, so every such blob must stay reachable for as long as the journal entry exists; any future garbage collection must treat blobs named by journal events as roots (via the `CORE.STO.SQL.SCHEMA` blob reference index or a journal scan).
 
 ## Children
 

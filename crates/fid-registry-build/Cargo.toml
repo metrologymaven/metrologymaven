@@ -30,6 +30,9 @@ fid-program-rec = { path = "../fid-program-rec" }
 # The settings commands (CORE.STO.SET), read through `fid_store::settings::declarations()`.
 # Layer model. Brings bundled SQLite into this build step; no new crate in the lock.
 fid-store = { path = "../fid-store" }
+# The model commands of UNC.MODEL.GRAPH.STORE (unc.create_model@1, unc.validate_model@1,
+# unc.show_model@1), read through `fid_unc::model_store::declarations()`. Layer engine.
+fid-unc = { path = "../fid-unc" }
 # The settings each crate declares with `fid_settings!` (CORE.STO.SET), collected into the
 # workspace settings manifest: `fid_bus::policy::fs::fs_settings` (`bus.fs_roots`). Layer
 # engine, below services; already in the lock.

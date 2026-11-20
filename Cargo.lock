@@ -1761,6 +1761,7 @@ dependencies = [
  "fid-registry",
  "fid-report",
  "fid-store",
+ "fid-unc",
  "fid-uuid",
 ]
 
@@ -1944,6 +1945,20 @@ dependencies = [
 [[package]]
 name = "fid-types"
 version = "0.0.1"
+
+[[package]]
+name = "fid-unc"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-kci",
+ "fid-kunc",
+ "fid-registry",
+ "fid-replay",
+ "fid-store",
+ "fid-types",
+]
 
 [[package]]
 name = "fid-uuid"
