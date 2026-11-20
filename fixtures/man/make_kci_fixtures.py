@@ -16,21 +16,30 @@ messages are pseudo-random bytes from a fixed seed and the digests come from has
 not the NIST files themselves. The published FIPS 180-4 example digests and a few NIST CAVP
 sample vectors are hard-coded below and checked against hashlib before anything is written.
 
-Run:  python fixtures/man/make_kci_fixtures.py
+Run:          python fixtures/man/make_kci_fixtures.py
+Check (CI):   python fixtures/man/make_kci_fixtures.py --check   (writes nothing; exits 1 on any stale file)
 """
 
 import hashlib
 import json
 import random
+import sys
 import tomllib
 from pathlib import Path
 
 HERE = Path(__file__).parent
+CHECK = "--check" in sys.argv[1:]
+STALE = []
 
 
 def write(path, lines):
+    data = ("\n".join(lines) + "\n").encode("utf-8")
+    if CHECK:
+        if not path.is_file() or path.read_bytes() != data:
+            STALE.append(path)
+        return
     path.parent.mkdir(exist_ok=True)
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    path.write_bytes(data)
 
 
 def sha(b):
@@ -221,4 +230,8 @@ for f in sorted((HERE / "cards-v1").glob("valid-*.toml")):
     text = json.dumps(card, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     lines.append(f"{f.name}\t{text}\t{sha(text.encode('utf-8'))}")
 write(HERE / "card-digests-v1.txt", lines)
+if STALE:
+    for p in STALE:
+        print(f"stale: {p.relative_to(HERE.parent.parent).as_posix()}", file=sys.stderr)
+    sys.exit(1)
 print("ok")

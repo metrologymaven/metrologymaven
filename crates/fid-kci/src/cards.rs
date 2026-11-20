@@ -87,10 +87,15 @@ impl AlgorithmId {
     }
 }
 
+/// Largest finite input-arity bound a card may spell (REQ-KRN.MAN.CARD-006).
+pub const MAX_ARITY_BOUND: u32 = u32::MAX - 1;
+
 /// How many input blobs an algorithm takes (REQ-KRN.MAN.CARD-006): at least `min` and, when
 /// `max` is set, at most `max`. Card text: `"N"` (exactly N), `"N..=M"` (N to M inclusive,
 /// M > N) or `"N.."` (N or more). Each value has exactly one spelling, so the card's canonical
-/// bytes stay unique.
+/// bytes stay unique. A finite upper bound must be below `u32::MAX` ([`MAX_ARITY_BOUND`]): on
+/// wasm32 `usize` is 32 bits, so `"0..=4294967295"` would accept exactly the calls `"0.."`
+/// accepts while having a different card digest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InputArity {
     min: u32,
@@ -98,7 +103,7 @@ pub struct InputArity {
 }
 
 impl InputArity {
-    /// Exactly `n` inputs.
+    /// Exactly `n` inputs. `exactly(u32::MAX)` has no card spelling (see [`MAX_ARITY_BOUND`]).
     pub const fn exactly(n: u32) -> Self {
         InputArity { min: n, max: Some(n) }
     }
@@ -108,9 +113,9 @@ impl InputArity {
         InputArity { min, max: None }
     }
 
-    /// `min` to `max` inputs inclusive; `None` when `max < min`.
+    /// `min` to `max` inputs inclusive; `None` when `max < min` or `max > MAX_ARITY_BOUND`.
     pub const fn between(min: u32, max: u32) -> Option<Self> {
-        if max < min {
+        if max < min || max > MAX_ARITY_BOUND {
             None
         } else {
             Some(InputArity { min, max: Some(max) })
@@ -137,19 +142,24 @@ impl InputArity {
     }
 
     /// Parses the card spelling exactly (`"N"`, `"N..=M"` with M > N, `"N.."`); decimal
-    /// numbers without leading zeros that fit in a `u32`.
+    /// numbers without leading zeros that fit in a `u32`, and a finite upper bound (`M`, or `N`
+    /// in `"N"`) of at most [`MAX_ARITY_BOUND`].
     pub fn parse(s: &str) -> Result<Self, CardError> {
         let bad = || CardError::BadArity(s.to_string());
         if let Some((lo, hi)) = s.split_once("..=") {
             let (lo, hi) = (version_part(lo).ok_or_else(bad)?, version_part(hi).ok_or_else(bad)?);
-            if hi <= lo {
+            if hi <= lo || hi > MAX_ARITY_BOUND {
                 return Err(bad());
             }
             Ok(InputArity { min: lo, max: Some(hi) })
         } else if let Some(lo) = s.strip_suffix("..") {
             Ok(InputArity::at_least(version_part(lo).ok_or_else(bad)?))
         } else {
-            Ok(InputArity::exactly(version_part(s).ok_or_else(bad)?))
+            let n = version_part(s).ok_or_else(bad)?;
+            if n > MAX_ARITY_BOUND {
+                return Err(bad());
+            }
+            Ok(InputArity::exactly(n))
         }
     }
 }

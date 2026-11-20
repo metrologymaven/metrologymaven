@@ -449,9 +449,16 @@ fn algorithms_cannot_impersonate_kernel_errors() {
             Err(self.0.clone())
         }
     }
-    let cards = CardRegistry::new(vec![parse_card(&echo_card()).unwrap()]).unwrap();
-    let t = AlgorithmTable::new(vec![Box::new(FakeArity(fake))], cards).unwrap();
-    assert_eq!(evaluate(&t, &call(ECHO, b"", None, &[])), Err(confined));
+    let fake_drift = KernelError::CardArityDrift {
+        id: AlgorithmId::parse(ECHO).unwrap(),
+        card: InputArity::exactly(1),
+        implementation: InputArity::exactly(2),
+    };
+    for fake in [fake, fake_drift] {
+        let cards = CardRegistry::new(vec![parse_card(&echo_card()).unwrap()]).unwrap();
+        let t = AlgorithmTable::new(vec![Box::new(FakeArity(fake.clone()))], cards).unwrap();
+        assert_eq!(evaluate(&t, &call(ECHO, b"", None, &[])), Err(confined.clone()), "{fake}");
+    }
 }
 
 // ------------------------------------- REQ-KRN.MAN.KCI-008, -009: declared input arity
@@ -537,12 +544,20 @@ fn wrong_input_count_is_refused_before_the_algorithm_runs() {
 /// pair makes `AlgorithmTable::new` fail, so no table with drift can evaluate anything.
 #[test]
 fn card_and_implementation_arity_must_agree() {
-    // Every algorithm in this file's tables agrees with its card.
-    for (t, _, _) in [table(), arity_table()] {
-        for id in t.cards().ids() {
-            assert!(t.ids().contains(&id));
-        }
-    }
+    // Every carded algorithm in this file's tables agrees with its card: each card's
+    // `input_arity` equals the arity the algorithm instance reports.
+    let id = |s| AlgorithmId::parse(s).unwrap();
+    let echo_impl = Echo { id: ECHO, calls: Rc::new(Cell::new(0)) }.input_arity();
+    let (t, _, _) = table();
+    assert_eq!(t.cards().ids(), [id(ECHO)]);
+    assert_eq!(t.cards().get(&id(ECHO)).unwrap().input_arity, echo_impl);
+    let (t, _, _) = arity_table();
+    let pair_impl = Declared { id: PAIR, arity: InputArity::exactly(2), calls: Rc::new(Cell::new(0)) }.input_arity();
+    let range_impl =
+        Declared { id: RANGE, arity: InputArity::between(1, 3).unwrap(), calls: Rc::new(Cell::new(0)) }.input_arity();
+    assert_eq!(t.cards().ids(), [id(PAIR), id(RANGE)]);
+    assert_eq!(t.cards().get(&id(PAIR)).unwrap().input_arity, pair_impl);
+    assert_eq!(t.cards().get(&id(RANGE)).unwrap().input_arity, range_impl);
     let drift = |card: &str, imp: InputArity| {
         let cards = CardRegistry::new(vec![parse_card(&card_with(PAIR, card)).unwrap()]).unwrap();
         let alg = Declared { id: PAIR, arity: imp, calls: Rc::new(Cell::new(0)) };
@@ -570,32 +585,52 @@ fn card_and_implementation_arity_must_agree() {
     }
 }
 
-/// REQ-KRN.MAN.CARD-006: the `input_arity` spellings, their round trip and their refusals.
+/// REQ-KRN.MAN.CARD-006, -007: the `input_arity` spellings, their round trip and their refusals.
 #[test]
 fn input_arity_grammar() {
     let ok = [
         ("0", 0, Some(0)),
         ("1", 1, Some(1)),
-        ("4294967295", u32::MAX, Some(u32::MAX)),
+        ("4294967294", u32::MAX - 1, Some(u32::MAX - 1)),
+        ("4294967295..", u32::MAX, None),
         ("0..", 0, None),
         ("2..", 2, None),
         ("1..=3", 1, Some(3)),
-        ("0..=4294967295", 0, Some(u32::MAX)),
+        ("0..=4294967294", 0, Some(u32::MAX - 1)),
     ];
+    assert_eq!(fid_kci::MAX_ARITY_BOUND, u32::MAX - 1);
     for (s, min, max) in ok {
         let a = InputArity::parse(s).unwrap();
         assert_eq!((a.min(), a.max()), (min, max), "{s}");
         assert_eq!(a.to_string(), s, "one spelling per value");
     }
-    for s in
-        ["", "01", "-1", "1.5", "4294967296", "1..=1", "3..=2", "..3", "..", "1..2", "1..=", "1...", " 1", "1 ", "x"]
-    {
+    for s in [
+        "",
+        "01",
+        "-1",
+        "1.5",
+        "4294967296",
+        "4294967295",
+        "0..=4294967295",
+        "1..=1",
+        "3..=2",
+        "..3",
+        "..",
+        "1..2",
+        "1..=",
+        "1...",
+        " 1",
+        "1 ",
+        "x",
+    ] {
         assert_eq!(InputArity::parse(s), Err(CardError::BadArity(s.to_string())), "{s:?}");
     }
     let a = InputArity::between(1, 3).unwrap();
     assert_eq!([0, 1, 2, 3, 4].map(|n| a.accepts(n)), [false, true, true, true, false]);
     assert!(InputArity::at_least(2).accepts(usize::MAX) && !InputArity::exactly(2).accepts(usize::MAX));
     assert_eq!(InputArity::between(3, 2), None);
+    // A finite bound of u32::MAX has no spelling: on wasm32 it would accept what "N.." accepts.
+    assert_eq!(InputArity::between(0, u32::MAX), None);
     // A card without the field, or with a bad one, is refused.
     let text = echo_card().replace("input_arity = \"0..\"", "");
     assert_eq!(parse_card(&text), Err(CardError::MissingField("input_arity")));
