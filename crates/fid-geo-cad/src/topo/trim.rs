@@ -674,7 +674,7 @@ pub fn classify_uv(index: &TrimIndex, u: f64, v: f64, tol_m: f64) -> Result<Trim
         match index.periods[i] {
             None => {
                 let (lo, hi) = index.domain[i];
-                if q[i] < lo || q[i] > hi {
+                if !(lo..=hi).contains(&q[i]) {
                     return Err(outside);
                 }
             }
