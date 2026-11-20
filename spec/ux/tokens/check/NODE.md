@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-design]
 satisfies: [REQ-UX.TOKENS-002, REQ-UX.TOKENS-003, REQ-UX.TOKENS-004, REQ-UX.TOKENS-005, REQ-UX.TOKENS-007, REQ-UX.TOKENS-008, REQ-UX.TOKENS-009]
 covers: []
 depends_on: [UX.SYSTEM.PKG, UX.TOKENS.COLOR, UX.TOKENS.DATAPAL, UX.TOKENS.STATUS]
@@ -17,7 +18,7 @@ determinism: D1
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # UX.TOKENS.CHECK: Automated contrast and colour-vision release check
@@ -70,6 +71,12 @@ The release gate for token values: it computes WCAG contrast for every declared 
 ## Open questions
 
 - The ΔE thresholds (10 and 20) are design targets [unverified]; if the shipped palettes cannot meet them, the thresholds change through a reviewed PR to UX.TOKENS, and VIZ.OVERLAY.STATUS must follow.
+- As built: one gate. `color-check` runs `tokens-check`, `status-check` and `palettes-check` over the same tree and includes all of their findings (`TOK-*`, `STATUS-*`, `PAL-*`; the report's `gates` gives the count per sub-check), then adds its own rules. REQ-003's `PAL-LIGHTNESS` and `PAL-DELTA` are those of `palettes-check` (UX.TOKENS.DATAPAL), which apply them to every stepped palette and add mirrored steps and the out-of-range colours; `color-check` reports the per-step L* and adjacent-step CIEDE2000 values. The gate runs in CI from `ci/fixture-checks.txt` (`cargo run -q -p fid-design -- color-check --root design`), so a token change that breaks a rule fails CI; the tests of all four leaves run it on the shipped tree too.
+- As built: finding subjects. `CONTRAST <theme> <fg>/<bg> <ratio>` and `CONTRAST-HC hc <fg>/<bg> <ratio>` (ratio to 0.01, as AC-2 states). `CONTRAST-HC` is used for every `text` or `large-text` pair below 7:1 in `hc` (REQ-UX.TOKENS-004 says every text/background pair). A `non-text` pair below 3:1 in `hc` is `CONTRAST`. `STATUS-DISTANCE <vision> <theme> <state>` (AC-4). `status-check` uses the code `STATUS-DISTANCE` for its own neutral-state rule (UX.TOKENS.STATUS), with a `<theme> <state> <other>` subject, so the two never collide. `CHECK-INPUT` names an unresolvable pair side, a background with alpha, or a status file without a readable threshold and sets.
+- As built: `color-report@1` (written with `--out`, printed with `--json`, RFC 8785 canonical) records the WCAG version, the formula, and the CVD model (`Machado, Oliveira and Fernandes (2009)`, table `machado-2009-severity-1.0@1`, severity 1, and `table_digest`, the `sha256:` of the canonical JSON of the three matrices). It lists every pair in every theme with ratio, requirement and verdict; every coloured nonconforming-set state against every conforming-set state per theme and vision; and every stepped palette's L* and adjacent-step CIEDE2000 per vision, all rounded to 0.01. REQ-UX.TOKENS-008's "release record" is this report; publishing it with a release belongs to ECO.REL.
+- As built: `#rrggbbaa` foregrounds are composited over the pair's opaque background in 8-bit sRGB before measuring. No shipped token has alpha.
+- As built: the independent oracle `fixtures/ux/tokens/check/make_fixtures.py` recomputes the whole shipped report (`expected-report.json`), which the test compares byte for byte in canonical form. It fails if any reported value lies within 1e-6 of a 0.01 rounding boundary (D1), and it checks its CIEDE2000 against `ciede2000-sharma.csv` (the 34 published pairs). Fixtures `low-contrast/`, `hc-6-to-1/` and `deutan-clash/` are copies of the shipped tree with one mutation each, so that only the rule under test fires. `deutan-clash` makes dark NONCONFORMS `#a896b4`: 36 from CONFORMS under normal vision, 11.8 under deuteranopia and 9.8 under protanopia, so it also gives `STATUS-DISTANCE protanopia`.
+- Closures for other nodes (not editable from here): UX.TOKENS.COLOR AC-5, UX.TOKENS.STATUS AC-4 and UX.TOKENS.DATAPAL AC-4 now run on this gate: their tests call `color-check` and compare its report with their own oracles. Their Open questions still call those ACs "pending UX.TOKENS.CHECK" and should be closed there.
 
 ## Children
 

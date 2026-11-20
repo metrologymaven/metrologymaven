@@ -1,0 +1,33 @@
+{
+  "comp": {
+    "$type": "color",
+    "button": {
+      "bg": {
+        "primary": {
+          "$description": "Primary button fill.",
+          "$value": "{sem.brand.accent}"
+        },
+        "primary-hover": {
+          "$description": "Primary button fill, hovered.",
+          "$value": "{sem.brand.accent-hover}"
+        }
+      },
+      "border": {
+        "secondary": {
+          "$description": "Secondary button outline.",
+          "$value": "{sem.border.strong}"
+        }
+      },
+      "fg": {
+        "primary": {
+          "$description": "Primary button label.",
+          "$value": "{sem.brand.on-accent}"
+        },
+        "secondary": {
+          "$description": "Secondary button label.",
+          "$value": "{sem.text.primary}"
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,9 @@
 # Python fixture checks run by the Linux test job in .github/workflows/rust.yml.
 # One shell command per line, run in file order from the repository root; the first failure
 # fails the step. Keep the lines sorted (LC_ALL=C sort) and unique; CI checks both.
+# The color-check line is the design-token release gate (UX.TOKENS.CHECK): a token, status or
+# palette change that breaks a contrast, colour-vision or structure rule fails this step.
+cargo run -q -p fid-design -- color-check --root design
 python -m unittest discover -s tools/house_rules/tests -v
 python -m unittest discover -s tools/repo_template/tests -v
 python -m unittest discover -s tools/tests -v
@@ -150,6 +153,7 @@ python fixtures/unc/model/graph/store/make_store_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/ux/system/princ/make_fixtures.py --check
 python fixtures/ux/system/review/make_fixtures.py --check
+python fixtures/ux/tokens/check/make_fixtures.py --check
 python fixtures/ux/tokens/color/make_fixtures.py --check
 python fixtures/ux/tokens/color/make_tokens.py --check
 python fixtures/ux/tokens/datapal/make_fixtures.py --check
