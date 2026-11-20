@@ -1660,6 +1660,17 @@ dependencies = [
  "fid-canon",
  "fid-uuid",
  "getrandom 0.2.17",
+ "unicode-normalization",
+]
+
+[[package]]
+name = "fid-project-cmd"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-project",
+ "fid-registry",
 ]
 
 [[package]]
@@ -1714,6 +1725,7 @@ dependencies = [
  "fid-dep",
  "fid-jobs",
  "fid-program-rec",
+ "fid-project-cmd",
  "fid-registry",
  "fid-report",
  "fid-store",
