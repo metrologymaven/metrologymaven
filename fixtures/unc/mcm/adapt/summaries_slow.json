@@ -1,0 +1,17 @@
+{
+  "title": "UNC.PROP.MCM.ADAPT AC-2: slow sequence, cap 30 000",
+  "license": "CC-BY-4.0",
+  "provenance": "hand-chosen synthetic block summaries: not measured, not simulated by the crate",
+  "note": "the next block would exceed the cap after block 3: cap_reached, not_converged",
+  "profile": {"p": "3fee666666666666", "p_repr": "0.95", "n_dig": 2, "cap": 30000, "block_size": 10000},
+  "blocks": [
+    {"y_mean": "4024000000000000", "u": "3ff0000000000000", "low": "4020000000000000", "high": "4028000000000000", "repr": ["10.0", "1.0", "8.0", "12.0"]},
+    {"y_mean": "402499999999999a", "u": "3ff0f5c28f5c28f6", "low": "401ecccccccccccd", "high": "4028cccccccccccd", "repr": ["10.3", "1.06", "7.7", "12.4"]},
+    {"y_mean": "4023666666666666", "u": "3fee666666666666", "low": "402099999999999a", "high": "4027333333333333", "repr": ["9.7", "0.95", "8.3", "11.6"]}
+  ],
+  "steps": [
+    {"h": 1, "u_all": "3ff0000000000000", "u_all_repr": "1.0", "decision": "continue", "exp10": null, "delta": null, "sd": null},
+    {"h": 2, "u_all": "3ff051eb851eb852", "u_all_repr": "1.02", "decision": "continue", "exp10": -1, "delta": "3fa999999999999a", "sd": ["3fc3333333333340", "3f9eb851eb851ec0", "3fc3333333333330", "3fc99999999999a0"]},
+    {"h": 3, "u_all": "3ff0000000000000", "u_all_repr": "1.0", "decision": "cap_reached", "exp10": -1, "delta": "3fa999999999999a", "sd": ["3fc62b9586ad0a31", "3fa047d2ef7f491f", "3fc62b9586ad0a28", "3fcd8f7208e6b835"]}
+  ]
+}

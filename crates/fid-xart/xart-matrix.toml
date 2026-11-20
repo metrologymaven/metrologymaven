@@ -1,0 +1,38 @@
+# Host matrix of the cross-host bit-identity gate (spec node KRN.MAN.XART, REQ-001, REQ-005).
+# Strict format, see crates/fid-xart/src/matrix.rs. Hosts sorted by name. `runner` is the
+# GitHub Actions runs-on label .github/workflows/xart.yml uses for the host. A host without a
+# WASM digest table is listed as `not_run` and fails the gate unless `optional = true`.
+#
+# Every host is required: the Intel macOS and Windows ARM64 runner labels both got runners
+# in CI on PR #317, so none is optional. A host whose job fails also fails the gate.
+schema = "1"
+
+[[host]]
+name = "linux-arm64"
+runner = "ubuntu-24.04-arm"
+optional = false
+
+[[host]]
+name = "linux-x86_64"
+runner = "ubuntu-latest"
+optional = false
+
+[[host]]
+name = "macos-arm64"
+runner = "macos-latest"
+optional = false
+
+[[host]]
+name = "macos-x86_64"
+runner = "macos-15-intel"
+optional = false
+
+[[host]]
+name = "windows-arm64"
+runner = "windows-11-arm"
+optional = false
+
+[[host]]
+name = "windows-x86_64"
+runner = "windows-latest"
+optional = false

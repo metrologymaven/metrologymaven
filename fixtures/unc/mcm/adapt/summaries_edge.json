@@ -1,0 +1,64 @@
+{
+  "cases": [
+    {
+      "title": "UNC.PROP.MCM.ADAPT edge: 2 s == delta",
+      "license": "CC-BY-4.0",
+      "provenance": "hand-chosen synthetic block summaries: not measured, not simulated by the crate",
+      "note": "stop at h = 2 with 2 s exactly equal to delta",
+      "profile": {"p": "3fee666666666666", "p_repr": "0.95", "n_dig": 1, "cap": 1000000, "block_size": 10000},
+      "blocks": [
+        {"y_mean": "4024000000000000", "u": "4008000000000000", "low": "4010000000000000", "high": "4030000000000000", "repr": ["10.0", "3.0", "4.0", "16.0"]},
+        {"y_mean": "4025000000000000", "u": "4008000000000000", "low": "4010000000000000", "high": "4030000000000000", "repr": ["10.5", "3.0", "4.0", "16.0"]}
+      ],
+      "steps": [
+        {"h": 1, "u_all": "4008000000000000", "u_all_repr": "3.0", "decision": "continue", "exp10": null, "delta": null, "sd": null},
+        {"h": 2, "u_all": "4008000000000000", "u_all_repr": "3.0", "decision": "stop", "exp10": 0, "delta": "3fe0000000000000", "sd": ["3fd0000000000000", "0000000000000000", "0000000000000000", "0000000000000000"]}
+      ]
+    },
+    {
+      "title": "UNC.PROP.MCM.ADAPT edge: 2 s one ulp above delta",
+      "license": "CC-BY-4.0",
+      "provenance": "hand-chosen synthetic block summaries: not measured, not simulated by the crate",
+      "note": "continue at h = 2: 2 s exceeds delta",
+      "profile": {"p": "3fee666666666666", "p_repr": "0.95", "n_dig": 1, "cap": 1000000, "block_size": 10000},
+      "blocks": [
+        {"y_mean": "4024000000000000", "u": "4008000000000000", "low": "4010000000000000", "high": "4030000000000000", "repr": ["10.0", "3.0", "4.0", "16.0"]},
+        {"y_mean": "4025000000000001", "u": "4008000000000000", "low": "4010000000000000", "high": "4030000000000000", "repr": ["10.500000000000002", "3.0", "4.0", "16.0"]}
+      ],
+      "steps": [
+        {"h": 1, "u_all": "4008000000000000", "u_all_repr": "3.0", "decision": "continue", "exp10": null, "delta": null, "sd": null},
+        {"h": 2, "u_all": "4008000000000000", "u_all_repr": "3.0", "decision": "continue", "exp10": 0, "delta": "3fe0000000000000", "sd": ["3fd0000000000010", "0000000000000000", "0000000000000000", "0000000000000000"]}
+      ]
+    },
+    {
+      "title": "UNC.PROP.MCM.ADAPT edge: converged on the last allowed block",
+      "license": "CC-BY-4.0",
+      "provenance": "hand-chosen synthetic block summaries: not measured, not simulated by the crate",
+      "note": "cap 2 M: converged at h = 2 is stop",
+      "profile": {"p": "3fee666666666666", "p_repr": "0.95", "n_dig": 2, "cap": 20000, "block_size": 10000},
+      "blocks": [
+        {"y_mean": "4024000000000000", "u": "3ff0000000000000", "low": "4020000000000000", "high": "4028000000000000", "repr": ["10.0", "1.0", "8.0", "12.0"]},
+        {"y_mean": "4024051eb851eb85", "u": "3ff0000000000000", "low": "4020051eb851eb85", "high": "4028051eb851eb85", "repr": ["10.01", "1.0", "8.01", "12.01"]}
+      ],
+      "steps": [
+        {"h": 1, "u_all": "3ff0000000000000", "u_all_repr": "1.0", "decision": "continue", "exp10": null, "delta": null, "sd": null},
+        {"h": 2, "u_all": "3ff0000000000000", "u_all_repr": "1.0", "decision": "stop", "exp10": -1, "delta": "3fa999999999999a", "sd": ["3f747ae147ae1400", "0000000000000000", "3f747ae147ae1400", "3f747ae147ae1400"]}
+      ]
+    },
+    {
+      "title": "UNC.PROP.MCM.ADAPT edge: constant output",
+      "license": "CC-BY-4.0",
+      "provenance": "hand-chosen synthetic block summaries: not measured, not simulated by the crate",
+      "note": "u(y) = 0: delta = 0 and every s = 0, stop",
+      "profile": {"p": "3fee666666666666", "p_repr": "0.95", "n_dig": 2, "cap": 1000000, "block_size": 10000},
+      "blocks": [
+        {"y_mean": "4014000000000000", "u": "0000000000000000", "low": "4014000000000000", "high": "4014000000000000", "repr": ["5.0", "0.0", "5.0", "5.0"]},
+        {"y_mean": "4014000000000000", "u": "0000000000000000", "low": "4014000000000000", "high": "4014000000000000", "repr": ["5.0", "0.0", "5.0", "5.0"]}
+      ],
+      "steps": [
+        {"h": 1, "u_all": "0000000000000000", "u_all_repr": "0.0", "decision": "continue", "exp10": null, "delta": null, "sd": null},
+        {"h": 2, "u_all": "0000000000000000", "u_all_repr": "0.0", "decision": "stop", "exp10": null, "delta": "0000000000000000", "sd": ["0000000000000000", "0000000000000000", "0000000000000000", "0000000000000000"]}
+      ]
+    }
+  ]
+}

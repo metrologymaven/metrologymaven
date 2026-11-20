@@ -9,6 +9,8 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-kunc]
+built_pr: 311
 satisfies: [REQ-UNC.PROP.MCM-002, REQ-UNC.PROP.MCM-003]
 covers: []
 depends_on: [UNC.PROP.MCM.INTVL, KRN.NUM.RED, KRN.NUM.FN, KRN.MAN.CARD]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # UNC.PROP.MCM.ADAPT: Adaptive stopping rule and trial cap
@@ -52,8 +54,8 @@ The pure decision, after each completed block, whether Monte Carlo has converged
 - **AC-2** Given `fixtures/unc/mcm/adapt/summaries_slow.json` with cap 30 000 and M = 10 000, then it returns `cap_reached` after block 3 with the achieved values.
 - **AC-3** Given u(y) = 0.0123456 and n_dig = 2, then delta = 0.0005.
 - **AC-4** Given p = 0.99, then M = 10 000; given p = 0.9999, then M = 1 000 000.
-- **AC-H1** Hypothesis: the `mcm-adapt@1` stop rule delivers its promised accuracy: with n_dig = 2, the stopped interval endpoints and u(y) lie within delta of a reference (analytic where the guide gives one, otherwise a 10^8-trial run [unverified]) in at least 95 % [unverified] of 100 independent seeds on each of the JCGM 101:2008 worked examples (additive model, mass calibration, comparison loss, gauge-block calibration [unverified: clause 9 numbering]), encoded from their published input definitions with the published results as reference values, measured by counting seeds within delta; falsified if any example falls below 95 %.
-- **AC-H2** Hypothesis: the trial count at stop is within a factor of 2 [unverified] of the trial count the guide reports for its adaptive runs on the same JCGM 101:2008 examples, measured by the median over 100 seeds; falsified if any example's median lies outside that factor.
+- **AC-H1** Implementation check (restated on #311 by maintainer decision, see Open questions): with p = 0.95, n_dig = 2, the default cap and the probabilistically symmetric interval, run the rule over 1000 seeds on each of the two JCGM 101:2008 additive-model examples with closed-form output distributions (Y = X1 + X2 + X3 + X4 with standard normal inputs, and with rectangular inputs of unit standard deviation [unverified: clause 9.2 numbering]). For each of the four quantities (the estimate, analytic value 0; u(y); the lower and upper endpoint, all from all trials of the run), count the runs that end within delta of the analytic value. Each count must agree, by a two-sided exact binomial test at level 0.01, with the rate predicted for the §7.9.4 rule by an independent reference simulation (`fixtures/unc/mcm/adapt/make_fixtures.py --simulate`, Python's own generator, 10 000 runs per example) [simulated]. Because the predicted rate is itself a simulated count, the test is the exact conditional (Fisher) comparison of the two binomial counts; its acceptance bands are in `ac_h_reference.json`. The check fails if any count lies outside its band. §7.9 gives no coverage-of-truth guarantee; the shortfall below 0.95 is a property of the rule (s with h−1 dof, optional stopping). The full count comparison runs only with `UNC_MCM_ADAPT_FULL=1` (release, about 30 s), not in CI; CI runs a 4-seed smoke of the same code path and the D0 bit pins.
+- **AC-H2** Hypothesis (restated on #311): the trial count at stop is within a factor of 2 [unverified] of the count predicted from the asymptotic per-block standard deviation of each block statistic (mean sigma / sqrt(M); standard deviation sigma sqrt((kappa - 1) / (4 M)); order statistic sqrt(q (1 - q) / M) / f(x_q)) as h* M with h* = max(2, ceil(max (2 sigma_k / delta)^2)), on the same two examples, measured by the median over the same 1000 seeds; the check fails if either example's median lies outside that factor. Like AC-H1, it is measured only with `UNC_MCM_ADAPT_FULL=1`, not in CI.
 
 ## Design
 
@@ -67,7 +69,7 @@ The pure decision, after each completed block, whether Monte Carlo has converged
 
 ## Test fixtures
 
-`fixtures/unc/mcm/adapt/`: hand-computed summary sequences (CC-BY-4.0).
+`fixtures/unc/mcm/adapt/`: hand-chosen synthetic summary sequences with oracle-computed decisions, tolerance and block-size tables, and the AC-H analytic references and acceptance bands, all from `make_fixtures.py` (stdlib Python, exact rationals); `ac_h_simulated.json` holds the [simulated] reference-simulation counts (`make_fixtures.py --simulate`, not run in CI); `crate_bits.txt` pins the crate's own output bits (CC-BY-4.0). The spec card is `crates/fid-kunc/cards/unc.prop.mcm_adapt@1.0.0.toml`.
 
 ## Build prompt
 
@@ -76,6 +78,13 @@ The pure decision, after each completed block, whether Monte Carlo has converged
 ## Open questions
 
 - Clause numbering and the block-size rule must be checked against the free JCGM 101 text by an uncertainty expert [unverified].
+- **Applied (AC-H1 restated as an implementation check, #311 maintainer decision).** §7.9 gives no coverage-of-truth guarantee; the shortfall below 0.95 is a property of the rule (s with h−1 dof, optional stopping). The review checked the implementation against §7.9 clause by clause and recomputed delta exactly. In the reference simulation, 23 % (normal inputs) and 28 % (rectangular inputs) of runs stop at h = 2, where s has one degree of freedom and optional stopping favours a small s. The expectation of at least 95 % was ours, not the rule's. AC-H1 therefore now checks that the crate reproduces the rate the rule itself produces, as predicted by an independent reference simulation, rather than a coverage target. The estimate was added as a fourth quantity.
+- **Measured (simulated, #311; `UNC_MCM_ADAPT_FULL=1`, release, 1000 seeds per example).** AC-H1: every count agrees with its predicted rate at level 0.01. Normal inputs: estimate 999 (predicted rate 1.0000, band [999, 1000]), u(y) 1000 (1.0000, [999, 1000]), low 935 (0.9304, [908, 951]), high 940 (0.9298, [907, 951]). Rectangular inputs: estimate 1000, u(y) 1000 (both 1.0000, [999, 1000]), low 938 (0.9445, [924, 963]), high 950 (0.9412, [920, 960]). The predicted rates come from 10 000 Python reference runs per example [simulated]. AC-H2: median trials at stop 50 000 (normal inputs, predicted 50 000) and 40 000 (rectangular inputs, predicted 40 000), supported. No run reached the cap.
+- **History (AC-H1 and AC-H2, kept for the record).** The leaf first stated AC-H1 as a hypothesis that the rule meets a 95 % accuracy target: at least 95 of 100 seeds on four JCGM 101:2008 worked examples. AC-H2 compared trial counts with the counts the guide reports. The first build restated both: an exact one-sided binomial test of a rate of at least 0.95 over 1000 seeds, on the two closed-form additive-model examples. Under that restatement the normal-input lower endpoint (935/1000, exact two-sided 95 % bounds [0.918, 0.949]) fell below the one-sided threshold. Under the original 100-seed wording the normal-input endpoints scored 91 and 94 of 100. Review on #311 found the 95 % expectation to be a misreading of §7.9, which promises a numerical tolerance, not coverage of the true value. The mass-calibration, comparison-loss and gauge-block examples have no closed form, and their published reference values are not encoded or verified here. Those checks, and the comparison with the guide's reported adaptive trial counts, are AC-H3 of `UNC.PROP.MCM.CMD`, which already runs all four examples end to end.
+- **Applied (block size).** p is read as the decimal it was written as (its shortest round-trip form), so AC-4's p = 0.9999 gives M = 10^6. The nearest binary64 to 0.9999 is slightly above it, and would give 10^6 + 1.
+- **Applied (spread).** The procedure's standard deviation of the block values is the standard deviation associated with their average (divisor h (h - 1)), as in JCGM 101:2008 §7.9.4 [unverified: clause numbering]. It is not the plain standard deviation of the block values.
+- **Applied (exactness).** delta's digit position and the test 2 s <= delta are exact decimal comparisons (a small big-integer compare), not fid-num log10 and power functions as the Design suggested. The result is the same rule without rounding at digit boundaries. n_dig is limited to 1..17 (`invalid_profile` above 17, the most a binary64 holds). u(y) = 0 gives delta = 0, which stops only when every s is 0.
+- **Applied (overall u(y)).** The rule takes the overall u(y) of all trials so far as an input (the caller computes it from all values, as the procedure does) rather than pooling it from the block summaries.
 
 ## Children
 

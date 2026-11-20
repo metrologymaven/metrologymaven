@@ -1,0 +1,10 @@
+{
+  "title": "UNC.PROP.MCM.ADAPT AC-H1 reference simulation of the JCGM 101:2008 7.9.4 rule",
+  "license": "CC-BY-4.0",
+  "provenance": "[simulated] Python random (Mersenne Twister) runs by make_fixtures.py --simulate; independent of the crate; not measured",
+  "runs": 10000,
+  "counts_within_delta": {
+    "normal4": {"y": 10000, "u": 10000, "sym_low": 9304, "sym_high": 9298, "stop_at_h2": 2289, "cap_reached": 0, "median_blocks": 5},
+    "rect4": {"y": 10000, "u": 10000, "sym_low": 9445, "sym_high": 9412, "stop_at_h2": 2821, "cap_reached": 0, "median_blocks": 4}
+  }
+}
