@@ -27,18 +27,29 @@
 //!   it ran out of fields. For a structure error it is the first descriptor of the major word
 //!   and the offending token.
 //! - Comments inside a continuation chain are kept as [`Trivia`] of the statement.
+//! - **File-level bounds**: lexing runs through a [`BoundedSource`] under the caller's
+//!   [`Budget`], and the same budget's wall clock is checked once per statement while the
+//!   tree is built. All statements together may use at most
+//!   `max(`[`STEPS_PER_INPUT_BYTE`]` x input bytes, `[`MAX_MATCH_STEPS`]`)` matcher steps;
+//!   past that parsing fails with a `budget` error located at the statement where it ran out.
 //!
 //! The tree is lossless: [`DmisTree::tokens`] returns every token of the input except
 //! whitespace and continuation markers, in input order, with its authored spelling and
 //! position. A failed parse returns only the error, never a partial tree.
 
-use crate::lex::{lex_slice, LexError, LexOptions, LogicalStatement, Pos, Token, TokenKind};
-use crate::registry::{Dialect, Registry, RegistryError, StatementDescriptor};
-use fid_io_reg::{Budget, LimitRequest, Principal};
+use crate::lex::{lex as lex_source, LexError, LexOptions, LogicalStatement, Pos, Token, TokenKind};
+use crate::registry::{Dialect, Registry, RegistryError, StatementDescriptor, Steps, MAX_MATCH_STEPS};
+use fid_io_reg::{BoundedSource, Budget, IoError, LimitRequest, Position, Principal};
 use std::fmt;
 
 /// Deepest nesting of parenthesised groups in one statement.
 pub const MAX_GROUP_DEPTH: usize = 32;
+
+/// File-level matcher budget: steps allowed per input byte (fixed). A file may use
+/// `max(STEPS_PER_INPUT_BYTE * input bytes, MAX_MATCH_STEPS)` steps over all its statements,
+/// so the matching cost stays linear in the input size even when every single statement
+/// stays under the per-statement cap.
+pub const STEPS_PER_INPUT_BYTE: u64 = 64;
 
 /// A label prefix: the label token and the `=` after it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -136,7 +147,8 @@ pub struct Trivia {
 /// A statement that matched a descriptor.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Statement {
-    /// Line and column of the statement's first token.
+    /// Line and column of the statement's first token. That is the first token of the
+    /// logical statement, comments included, so it may be a leading comment's position.
     pub pos: Pos,
     /// The label prefix, if any.
     pub label: Option<Label>,
@@ -240,7 +252,8 @@ impl UnknownReason {
 /// A statement kept as raw tokens.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unknown {
-    /// Line and column of the statement's first token.
+    /// Line and column of the statement's first token. That is the first token of the
+    /// logical statement, comments included, so it may be a leading comment's position.
     pub pos: Pos,
     /// The major word in upper case, if the statement has one.
     pub keyword: Option<Box<str>>,
@@ -345,18 +358,32 @@ pub enum ParseError {
         /// First line of the statement.
         line: u32,
     },
+    /// The file-level matcher budget ([`STEPS_PER_INPUT_BYTE`]) ran out in the statement
+    /// starting at `line`, `col`.
+    Budget {
+        /// 1-based line of the statement's first token.
+        line: u32,
+        /// 1-based byte column of the statement's first token.
+        col: u32,
+        /// The file's step limit.
+        limit: u64,
+    },
+    /// The reader harness failed while the tree was built (wall-time limit).
+    Io(Box<IoError>),
     /// The registry with the dialect's descriptors could not be built.
     Registry(RegistryError),
 }
 
 impl ParseError {
-    /// The stable error code: `malformed`, `limit_exceeded`, the lexer's or harness code, or
-    /// the registry code.
+    /// The stable error code: `malformed`, `limit_exceeded`, `budget`, the lexer's or harness
+    /// code, or the registry code.
     pub fn code(&self) -> &'static str {
         match self {
             ParseError::Lex(e) => e.code(),
             ParseError::Malformed { .. } => "malformed",
             ParseError::LimitExceeded { .. } => "limit_exceeded",
+            ParseError::Budget { .. } => "budget",
+            ParseError::Io(e) => e.code(),
             ParseError::Registry(e) => e.code(),
         }
     }
@@ -372,6 +399,10 @@ impl fmt::Display for ParseError {
             ParseError::LimitExceeded { bound, line } => {
                 write!(f, "limit_exceeded: {} in the statement starting at line {line}", bound.as_str())
             }
+            ParseError::Budget { line, col, limit } => {
+                write!(f, "budget: the file's {limit} matcher steps ran out at line {line}, column {col}")
+            }
+            ParseError::Io(e) => e.fmt(f),
             ParseError::Registry(e) => e.fmt(f),
         }
     }
@@ -417,12 +448,28 @@ pub fn parse_with(
     options: ParseOptions,
     budget: Budget,
 ) -> Result<DmisTree, ParseError> {
-    let stmts = lex_slice(data, budget, lex)?;
+    let mut src = BoundedSource::new(data, budget);
+    let stmts = lex_source(&mut src, lex)?;
+    let mut budget = src.into_parts().1;
+    let bytes = u64::try_from(data.len()).unwrap_or(u64::MAX);
+    let mut file =
+        FileSteps { used: 0, limit: bytes.saturating_mul(STEPS_PER_INPUT_BYTE).max(u64::from(MAX_MATCH_STEPS)) };
     let mut statements = Vec::with_capacity(stmts.len());
     for st in stmts {
-        statements.push(build_node(st, registry, options)?);
+        if let Some(first) = st.tokens.first() {
+            // The tree phase does not track byte offsets; the position carries line and column.
+            let at = Position::line_col(0, first.pos.line, first.pos.col);
+            budget.check_wall(at).map_err(|e| ParseError::Io(Box::new(e)))?;
+        }
+        statements.push(build_node(st, registry, options, &mut file)?);
     }
     Ok(DmisTree { statements })
+}
+
+/// Matcher steps used by the whole file so far, and its limit.
+struct FileSteps {
+    used: u64,
+    limit: u64,
 }
 
 fn is_comment(t: &Token) -> bool {
@@ -575,7 +622,12 @@ fn unknown(tokens: Vec<Token>, keyword: Option<&str>, reason: Option<UnknownReas
     Node::Unknown(Unknown { pos, keyword: keyword.map(Box::from), tokens, reason })
 }
 
-fn build_node(st: LogicalStatement, registry: &Registry, options: ParseOptions) -> Result<Node, ParseError> {
+fn build_node(
+    st: LogicalStatement,
+    registry: &Registry,
+    options: ParseOptions,
+    file: &mut FileSteps,
+) -> Result<Node, ParseError> {
     let LogicalStatement { tokens, first_line, .. } = st;
     if let [only] = tokens.as_slice() {
         if is_comment(only) {
@@ -613,9 +665,21 @@ fn build_node(st: LogicalStatement, registry: &Registry, options: ParseOptions) 
         Err(Shaping::Mismatch(at)) => return mismatch(tokens, at, first_class()),
     };
     let label_prefix = skeleton.label.as_ref().map(|l| l.prefix().to_string());
-    let attempts = registry
-        .attempt(&major, label_prefix.as_deref(), &skeleton.args)
-        .map_err(|_| ParseError::LimitExceeded { bound: TreeBound::MatchSteps, line: first_line })?;
+    // The statement may use the per-statement cap or what is left of the file's budget,
+    // whichever is smaller; which of the two ran out decides the error.
+    let left = file.limit.saturating_sub(file.used);
+    let file_bound = left < u64::from(MAX_MATCH_STEPS);
+    let limit = if file_bound { u32::try_from(left).unwrap_or(MAX_MATCH_STEPS) } else { MAX_MATCH_STEPS };
+    let mut steps = Steps { used: 0, limit };
+    let result = registry.attempt(&major, label_prefix.as_deref(), &skeleton.args, &mut steps);
+    file.used = file.used.saturating_add(u64::from(steps.used.min(limit)));
+    let attempts = match result {
+        Ok(a) => a,
+        Err(_) if file_bound => {
+            return Err(ParseError::Budget { line: statement_pos.line, col: statement_pos.col, limit: file.limit })
+        }
+        Err(_) => return Err(ParseError::LimitExceeded { bound: TreeBound::MatchSteps, line: first_line }),
+    };
     if let Some(hit) = attempts.iter().find(|a| matches!(a.result, Some((true, _)))) {
         skeleton.class = hit.desc.class.clone();
         return Ok(Node::Statement(Box::new(skeleton)));

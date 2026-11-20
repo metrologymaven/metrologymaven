@@ -477,9 +477,16 @@ fn compile(desc: &StatementDescriptor) -> Result<Program, RegistryError> {
     Ok(Program(out))
 }
 
-/// The matcher ran past [`MAX_MATCH_STEPS`].
+/// The matcher ran past its step limit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct StepsExceeded;
+
+/// Matcher steps used so far for one statement, and the most it may use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Steps {
+    pub(crate) used: u32,
+    pub(crate) limit: u32,
+}
 
 /// Outcome of matching one descriptor against a statement's fields.
 pub(crate) struct Attempt<'r> {
@@ -489,7 +496,7 @@ pub(crate) struct Attempt<'r> {
     pub(crate) result: Option<(bool, usize)>,
 }
 
-fn term_matches(term: &Term, arg: &Arg, steps: &mut u32) -> Result<bool, StepsExceeded> {
+fn term_matches(term: &Term, arg: &Arg, steps: &mut Steps) -> Result<bool, StepsExceeded> {
     if let Term::AnyField = term {
         return Ok(true);
     }
@@ -517,13 +524,13 @@ fn term_matches(term: &Term, arg: &Arg, steps: &mut u32) -> Result<bool, StepsEx
 
 /// Runs `program` over `args`: (matched, farthest failing field index). No recursion on the
 /// input: alternatives wait on an explicit stack.
-fn run(program: &Program, args: &[Arg], steps: &mut u32) -> Result<(bool, usize), StepsExceeded> {
+fn run(program: &Program, args: &[Arg], steps: &mut Steps) -> Result<(bool, usize), StepsExceeded> {
     let mut stack: Vec<(usize, usize)> = vec![(0, 0)];
     let mut farthest = 0usize;
     while let Some((mut pc, mut fi)) = stack.pop() {
         loop {
-            *steps = steps.saturating_add(1);
-            if *steps > MAX_MATCH_STEPS {
+            steps.used = steps.used.saturating_add(1);
+            if steps.used > steps.limit {
                 return Err(StepsExceeded);
             }
             match program.0.get(pc) {
@@ -630,13 +637,14 @@ impl Registry {
     }
 
     /// Tries every descriptor of `major` in registration order and stops at the first match.
+    /// All descriptors together may use at most `steps.limit` steps; `steps.used` counts them.
     pub(crate) fn attempt<'r>(
         &'r self,
         major: &str,
         label_prefix: Option<&str>,
         args: &[Arg],
+        steps: &mut Steps,
     ) -> Result<Vec<Attempt<'r>>, StepsExceeded> {
-        let mut steps = 0u32;
         let mut out = Vec::new();
         for c in self.by_major.get(major).map(Vec::as_slice).unwrap_or(&[]) {
             let label_ok = match (&c.desc.label_kind, label_prefix) {
@@ -645,7 +653,7 @@ impl Registry {
                 (LabelKind::Required(p) | LabelKind::Optional(p), Some(q)) => **p == *q,
                 _ => false,
             };
-            let result = if label_ok { Some(run(&c.program, args, &mut steps)?) } else { None };
+            let result = if label_ok { Some(run(&c.program, args, steps)?) } else { None };
             let done = matches!(result, Some((true, _)));
             out.push(Attempt { desc: &c.desc, result });
             if done {

@@ -6,11 +6,12 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_io_dmis::lex::{lex_bytes, LexError, LexOptions, Relaxation, Token, TokenKind};
-use fid_io_dmis::registry::{Dialect, LabelKind, Registry, Shape, StatementDescriptor};
+use fid_io_dmis::registry::{Dialect, LabelKind, Registry, Shape, StatementDescriptor, MAX_MATCH_STEPS};
 use fid_io_dmis::tree::{
     parse, parse_in, parse_with, Arg, DmisTree, Item, Node, ParseError, ParseOptions, TreeBound, UnknownReason,
+    STEPS_PER_INPUT_BYTE,
 };
-use fid_io_reg::{Budget, LimitRequest, Principal};
+use fid_io_reg::{Budget, Clock, IoError, LimitKind, LimitRequest, Principal};
 use std::path::{Path, PathBuf};
 
 fn fixtures() -> PathBuf {
@@ -323,9 +324,7 @@ fn backtracking_is_bounded_per_statement() {
     )])
     .unwrap();
     let mut data = b"EXPL/".to_vec();
-    for _ in 0..30 {
-        data.extend_from_slice(b"A,");
-    }
+    data.extend(std::iter::repeat_n(&b"A,"[..], 30).flatten());
     data.extend_from_slice(b"B\n");
     for lenient in [false, true] {
         let err = parse_in(&data, &registry, None, opts(lenient)).unwrap_err();
@@ -404,6 +403,10 @@ fn random_statements_never_panic_and_lenient_trees_are_lossless() {
         b"A",
         b"*",
         b"(((",
+        b"\r\n",
+        b"\t",
+        b"'\xc3\xa9'",
+        b"$$ \xe2\x82\xac\n",
     ];
     let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
     let mut parsed = 0;
@@ -441,4 +444,97 @@ fn token_kinds_in_items_are_the_lexer_kinds() {
     let Some(Item::Group(g)) = s.args[1].single() else { panic!("expected a group") };
     assert_eq!(g.args.len(), 2);
     assert_eq!(s.args[2].items.len(), 3);
+}
+
+/// A deliberately ambiguous descriptor: any split of the fields into runs of one or two,
+/// then a keyword that never comes, so every split is tried.
+fn ambiguous_registry() -> Registry {
+    let one_or_two = Shape::alt(vec![Shape::AnyField, Shape::seq(vec![Shape::AnyField, Shape::AnyField])]);
+    Registry::from_descriptors([d(
+        "amb",
+        "AMB",
+        LabelKind::None,
+        Shape::seq(vec![Shape::repeat(one_or_two, 0, None), Shape::kw("ZZZ")]),
+    )])
+    .unwrap()
+}
+
+fn amb_statement(fields: usize) -> Vec<u8> {
+    let mut data = b"AMB/".to_vec();
+    data.extend(std::iter::repeat_n(&b"A,"[..], fields).flatten());
+    data.extend_from_slice(
+        b"B
+",
+    );
+    data
+}
+
+const AMB_FIELDS: usize = 12;
+
+#[test]
+fn file_level_step_budget_stops_many_ambiguous_statements() {
+    let registry = ambiguous_registry();
+    // One statement stays under the per-statement cap and the file floor: it is only malformed.
+    let one = amb_statement(AMB_FIELDS);
+    let err = parse_in(&one, &registry, None, ParseOptions::default()).unwrap_err();
+    assert_eq!(err.code(), "malformed", "{err:?}");
+    let tree = parse_in(&one, &registry, None, opts(true)).unwrap();
+    assert!(matches!(&tree.statements[0], Node::Unknown(_)));
+    // Many of them cost more than STEPS_PER_INPUT_BYTE per byte: the file budget stops them.
+    // (Strict mode already stops at the first malformed statement, so this is lenient.)
+    let mut many = Vec::new();
+    for _ in 0..40 {
+        many.extend_from_slice(&one);
+    }
+    let limit = (many.len() as u64) * STEPS_PER_INPUT_BYTE;
+    let err = parse_in(&many, &registry, None, opts(true)).unwrap_err();
+    assert_eq!(err.code(), "budget");
+    match err {
+        ParseError::Budget { line, col, limit: got } => {
+            assert!(line > 1, "the first statements fit the budget");
+            assert_eq!(col, 1);
+            assert_eq!(got, limit.max(u64::from(MAX_MATCH_STEPS)));
+        }
+        other => panic!("{other:?}"),
+    }
+}
+
+/// 0 ms at the first reading (when the budget starts), far past any limit afterwards.
+struct JumpClock(bool);
+
+impl Clock for JumpClock {
+    fn now_ms(&mut self) -> u64 {
+        let started = self.0;
+        self.0 = true;
+        if started {
+            1_000_000_000
+        } else {
+            0
+        }
+    }
+}
+
+#[test]
+fn wall_clock_is_checked_per_statement_in_the_tree_phase() {
+    let request = LimitRequest::default().wall_ms(1000);
+    let budget = Budget::with_clock(Principal::Script, &request, Box::new(JumpClock(false))).unwrap();
+    // Few tokens, so the lexer never reads the clock; the tree phase must.
+    let err = parse_with(
+        b"UNITS/MM
+",
+        &test_registry(),
+        &LexOptions::strict(),
+        opts(true),
+        budget,
+    )
+    .unwrap_err();
+    match err {
+        ParseError::Io(e) => match *e {
+            IoError::LimitExceeded { limit: LimitKind::Wall, at, .. } => {
+                assert_eq!((at.line, at.col), (Some(1), Some(1)));
+            }
+            other => panic!("{other:?}"),
+        },
+        other => panic!("{other:?}"),
+    }
 }
