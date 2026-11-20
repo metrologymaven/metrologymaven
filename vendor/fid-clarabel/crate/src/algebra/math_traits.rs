@@ -1,12 +1,15 @@
 // Modified from Clarabel 0.11.1 by Metrology Maven;
 // see vendor/fid-clarabel/patches/
 use crate::algebra::T;
+// (patch 0003) These traits are crate-private: their methods assert length preconditions
+// that only the solver's own buffers are guaranteed to meet, so nothing outside the crate
+// can reach those asserts.
 // All internal math for all solver implementations should go
 // through these core traits, which are implemented generically
 // for floats of type FloatT.
 
 /// Scalar operations on [`FloatT`](crate::algebra::FloatT)
-pub trait ScalarMath {
+pub(crate) trait ScalarMath {
     /// Applies a threshold value.   
     ///
     /// Restricts the value to be at least `min_thresh` and at most `max_thresh`.
@@ -19,7 +22,8 @@ pub trait ScalarMath {
 }
 
 /// Vector operations on slices of [`FloatT`](crate::algebra::FloatT)
-pub trait VectorMath {
+#[allow(dead_code)] // upstream helpers kept; not all used by the reduced solver
+pub(crate) trait VectorMath {
     /// Copy values from `src` to `self`
     fn copy_from(&mut self, src: &Self) -> &mut Self;
 
@@ -141,7 +145,8 @@ pub(crate) trait SymMatrixMath {
 }
 
 /// Operations on matrices of [`FloatT`](crate::algebra::FloatT)
-pub trait MatrixMath {
+#[allow(dead_code)] // upstream helpers kept; not all used by the reduced solver
+pub(crate) trait MatrixMath {
     /// Compute columnwise sums on a matrix and
     /// assign the results to the vector `sums`
     fn col_sums(&self, sums: &mut [T]);
@@ -180,7 +185,8 @@ pub trait MatrixMath {
 }
 
 /// Operations on mutable matrices of [`FloatT`](crate::algebra::FloatT)
-pub trait MatrixMathMut {
+#[allow(dead_code)] // upstream helpers kept; not all used by the reduced solver
+pub(crate) trait MatrixMathMut {
     /// Elementwise scaling
     fn scale(&mut self, c: T);
 

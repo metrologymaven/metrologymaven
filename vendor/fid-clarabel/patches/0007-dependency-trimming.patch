@@ -146,10 +146,10 @@ index a26caa6..7735641 100644
              zi.push(z + α * dz);
          }
 diff --git a/src/qdldl/qdldl.rs b/src/qdldl/qdldl.rs
-index 6f92d7d..8bcefe8 100644
+index c441f12..568a37c 100644
 --- a/src/qdldl/qdldl.rs
 +++ b/src/qdldl/qdldl.rs
-@@ -1,66 +1,82 @@
+@@ -1,69 +1,85 @@
  #![allow(non_snake_case)]
  use crate::algebra::*;
  use core::cmp::{max, min};
@@ -180,6 +180,9 @@ index 6f92d7d..8bcefe8 100644
 -    #[error("Matrix exceeds the size budget of the minimum-degree ordering")]
      /// Matrix exceeds [`MAX_ORDERING_DIM`], [`MAX_ORDERING_NNZ`] or [`MAX_ORDERING_FILL`]
      OrderingTooLarge,
+-    #[error("Matrix sparsity pattern is malformed")]
+     /// Column pointers or row indices that do not describe a valid pattern
+     InvalidPattern,
  }
  
 -#[derive(Builder, Debug, Clone)]
@@ -193,6 +196,7 @@ index 6f92d7d..8bcefe8 100644
 +            QDLDLError::NotUpperTriangular => write!(f, "Matrix is not upper triangular"),
 +            QDLDLError::ZeroPivot => write!(f, "Matrix factorization produced a zero pivot"),
 +            QDLDLError::InvalidPermutation => write!(f, "Invalid permutation vector"),
++            QDLDLError::InvalidPattern => write!(f, "Matrix sparsity pattern is malformed"),
 +            QDLDLError::OrderingTooLarge => {
 +                write!(
 +                    f,

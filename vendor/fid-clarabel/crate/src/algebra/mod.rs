@@ -25,7 +25,7 @@ mod vecmath;
 pub use error_types::*;
 pub use floats::*;
 pub(crate) use knp::*;
-pub use math_traits::*;
+pub(crate) use math_traits::*;
 pub use matrix_traits::*;
 pub(crate) use matrix_types::*;
 pub(crate) use scalarmath::*;

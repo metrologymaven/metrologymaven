@@ -6,10 +6,10 @@ Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
 
 diff --git a/src/algebra/csc/core.rs b/src/algebra/csc/core.rs
 deleted file mode 100644
-index da211d5..0000000
+index 7b2d5cc..0000000
 --- a/src/algebra/csc/core.rs
 +++ /dev/null
-@@ -1,713 +0,0 @@
+@@ -1,717 +0,0 @@
 -#![allow(non_snake_case)]
 -
 -use crate::algebra::utils::sortperm_by;
@@ -241,6 +241,11 @@ index da211d5..0000000
 -        Self::spalloc(size, 0)
 -    }
 -
+-    /// Negates every stored value (public; the math traits are crate-private, patch 0003)
+-    pub fn negate(&mut self) {
+-        self.nzval.iter_mut().for_each(|x| *x = -*x);
+-    }
+-
 -    /// Identity matrix of size `n`
 -    pub fn identity(n: usize) -> Self {
 -        let colptr = (0usize..=n).collect();
@@ -462,11 +467,9 @@ index da211d5..0000000
 -        }
 -    }
 -
--    /// Select a subset of the rows of a sparse matrix
--    ///
--    /// # Panics
--    /// Panics if row dimensions are incompatible
--    pub fn select_rows(&self, rowidx: &Vec<bool>) -> Self {
+-    /// Select a subset of the rows of a sparse matrix (crate-private, patch 0003: asserts
+-    /// that `rowidx` has one flag per row)
+-    pub(crate) fn select_rows(&self, rowidx: &Vec<bool>) -> Self {
 -        //first check for compatible row dimensions
 -        // invariant (patch 0003): the presolver passes one keep flag per row of A.
 -        assert_eq!(rowidx.len(), self.m);
@@ -507,7 +510,8 @@ index da211d5..0000000
 -    }
 -
 -    /// Allocates a new matrix containing only entries from the upper triangular part
--    pub fn to_triu(&self) -> Self {
+-    /// (crate-private, patch 0003: asserts a square matrix)
+-    pub(crate) fn to_triu(&self) -> Self {
 -        // invariant (patch 0003): called on P, which check_dimensions found square.
 -        assert_eq!(self.m, self.n);
 -        let (m, n) = (self.m, self.n);
@@ -725,10 +729,10 @@ index da211d5..0000000
 -}
 diff --git a/src/algebra/csc/cscmatrix.rs b/src/algebra/csc/cscmatrix.rs
 new file mode 100644
-index 0000000..da211d5
+index 0000000..7b2d5cc
 --- /dev/null
 +++ b/src/algebra/csc/cscmatrix.rs
-@@ -0,0 +1,713 @@
+@@ -0,0 +1,717 @@
 +#![allow(non_snake_case)]
 +
 +use crate::algebra::utils::sortperm_by;
@@ -960,6 +964,11 @@ index 0000000..da211d5
 +        Self::spalloc(size, 0)
 +    }
 +
++    /// Negates every stored value (public; the math traits are crate-private, patch 0003)
++    pub fn negate(&mut self) {
++        self.nzval.iter_mut().for_each(|x| *x = -*x);
++    }
++
 +    /// Identity matrix of size `n`
 +    pub fn identity(n: usize) -> Self {
 +        let colptr = (0usize..=n).collect();
@@ -1181,11 +1190,9 @@ index 0000000..da211d5
 +        }
 +    }
 +
-+    /// Select a subset of the rows of a sparse matrix
-+    ///
-+    /// # Panics
-+    /// Panics if row dimensions are incompatible
-+    pub fn select_rows(&self, rowidx: &Vec<bool>) -> Self {
++    /// Select a subset of the rows of a sparse matrix (crate-private, patch 0003: asserts
++    /// that `rowidx` has one flag per row)
++    pub(crate) fn select_rows(&self, rowidx: &Vec<bool>) -> Self {
 +        //first check for compatible row dimensions
 +        // invariant (patch 0003): the presolver passes one keep flag per row of A.
 +        assert_eq!(rowidx.len(), self.m);
@@ -1226,7 +1233,8 @@ index 0000000..da211d5
 +    }
 +
 +    /// Allocates a new matrix containing only entries from the upper triangular part
-+    pub fn to_triu(&self) -> Self {
++    /// (crate-private, patch 0003: asserts a square matrix)
++    pub(crate) fn to_triu(&self) -> Self {
 +        // invariant (patch 0003): called on P, which check_dimensions found square.
 +        assert_eq!(self.m, self.n);
 +        let (m, n) = (self.m, self.n);
@@ -1457,10 +1465,10 @@ index f9eb468..2c79f53 100644
  mod matrix_math;
  mod utils;
 diff --git a/src/algebra/math_traits.rs b/src/algebra/math_traits.rs
-index e50186f..e29ed06 100644
+index 62b9906..4307ba5 100644
 --- a/src/algebra/math_traits.rs
 +++ b/src/algebra/math_traits.rs
-@@ -65,7 +65,7 @@ pub trait VectorMath {
+@@ -69,7 +69,7 @@ pub(crate) trait VectorMath {
      fn dot(&self, y: &Self) -> T;
  
      /// computes dot(z + αdz,s + αds) without intermediate allocation
@@ -1469,7 +1477,7 @@ index e50186f..e29ed06 100644
  
      /// Standard Euclidian or 2-norm distance from `self` to `y`
      fn dist(&self, y: &Self) -> T;
-@@ -83,7 +83,7 @@ pub trait VectorMath {
+@@ -87,7 +87,7 @@ pub(crate) trait VectorMath {
      fn norm_scaled(&self, v: &Self) -> T;
  
      /// computes 2 norm of (self + α.dz)

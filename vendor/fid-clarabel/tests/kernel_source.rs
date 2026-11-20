@@ -4,6 +4,7 @@
 //! all (ASCII identifiers, patch 0008) and a few KNP-1 names directly.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 /// AC-2's list, searched in code (comments and string literals removed).
@@ -154,4 +155,76 @@ fn identifiers_are_ascii() {
         }
     }
     assert!(hits.is_empty(), "non-ASCII characters in code: {hits:?}");
+}
+
+// ------------------------------------------------------------------ licence notices (patch 0009)
+
+/// The change notice Apache-2.0 section 4(b) asks for, required near the top of every file of
+/// `crate/` that differs from `upstream/` or is new.
+const NOTICE: &str = "Modified from Clarabel 0.11.1 by Metrology Maven";
+/// The notice must appear within this many leading lines.
+const NOTICE_LINES: usize = 5;
+
+fn tree(root: &Path) -> BTreeMap<String, Vec<u8>> {
+    fn walk(root: &Path, dir: &Path, out: &mut BTreeMap<String, Vec<u8>>) {
+        let mut entries: Vec<_> = std::fs::read_dir(dir).unwrap().map(|e| e.unwrap().path()).collect();
+        entries.sort();
+        for p in entries {
+            if p.is_dir() {
+                walk(root, &p, out);
+            } else {
+                let rel = p.strip_prefix(root).unwrap().to_string_lossy().replace('\\', "/");
+                out.insert(rel, std::fs::read(&p).unwrap());
+            }
+        }
+    }
+    let mut out = BTreeMap::new();
+    walk(root, root, &mut out);
+    out
+}
+
+/// Files of `patched` that differ from `upstream` or are new and lack the notice in their
+/// first `NOTICE_LINES` lines.
+fn missing_notices(patched: &BTreeMap<String, Vec<u8>>, upstream: &BTreeMap<String, Vec<u8>>) -> Vec<String> {
+    patched
+        .iter()
+        .filter(|(path, bytes)| upstream.get(*path) != Some(*bytes))
+        .filter(|(_, bytes)| !String::from_utf8_lossy(bytes).lines().take(NOTICE_LINES).any(|l| l.contains(NOTICE)))
+        .map(|(path, _)| path.clone())
+        .collect()
+}
+
+#[test]
+fn every_changed_or_new_file_carries_the_licence_notice() {
+    let vendored = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let patched = tree(&vendored.join("crate"));
+    let upstream = tree(&vendored.join("upstream"));
+    assert!(patched.len() > 40 && upstream.len() > 200, "trees not found");
+    let changed = patched.iter().filter(|(p, b)| upstream.get(*p) != Some(*b)).count();
+    assert!(changed > 40, "only {changed} changed files: wrong trees?");
+    assert_eq!(missing_notices(&patched, &upstream), Vec::<String>::new());
+}
+
+#[test]
+fn missing_notice_is_detected() {
+    let file = |s: &str| s.as_bytes().to_vec();
+    let up: BTreeMap<String, Vec<u8>> = [("same.rs", "fn a() {}\n"), ("changed.rs", "fn b() {}\n")]
+        .iter()
+        .map(|(p, s)| (p.to_string(), file(s)))
+        .collect();
+    let ok = format!("// {NOTICE};\n// see vendor/fid-clarabel/patches/\nfn b() {{ 1 }}\n");
+    let late = format!("a\nb\nc\nd\ne\n// {NOTICE};\nfn b() {{ 1 }}\n");
+    let cases: Vec<(&str, String, bool)> = vec![
+        ("same.rs", "fn a() {}\n".to_string(), false), // unchanged: no notice needed
+        ("changed.rs", ok.clone(), false),             // changed with notice
+        ("changed.rs", "fn b() { 1 }\n".to_string(), true), // changed without notice
+        ("changed.rs", late, true),                    // notice too far down
+        ("new.rs", "fn c() {}\n".to_string(), true),   // new without notice
+        ("new.rs", ok, false),                         // new with notice
+    ];
+    for (path, text, missing) in cases {
+        let mut patched = up.clone();
+        patched.insert(path.to_string(), text.into_bytes());
+        assert_eq!(missing_notices(&patched, &up) == vec![path.to_string()], missing, "{path}");
+    }
 }

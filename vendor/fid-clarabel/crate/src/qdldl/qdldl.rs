@@ -21,6 +21,8 @@ pub enum QDLDLError {
     InvalidPermutation,
     /// Matrix exceeds [`MAX_ORDERING_DIM`], [`MAX_ORDERING_NNZ`] or [`MAX_ORDERING_FILL`]
     OrderingTooLarge,
+    /// Column pointers or row indices that do not describe a valid pattern
+    InvalidPattern,
 }
 
 impl std::fmt::Display for QDLDLError {
@@ -33,6 +35,7 @@ impl std::fmt::Display for QDLDLError {
             QDLDLError::NotUpperTriangular => write!(f, "Matrix is not upper triangular"),
             QDLDLError::ZeroPivot => write!(f, "Matrix factorization produced a zero pivot"),
             QDLDLError::InvalidPermutation => write!(f, "Invalid permutation vector"),
+            QDLDLError::InvalidPattern => write!(f, "Matrix sparsity pattern is malformed"),
             QDLDLError::OrderingTooLarge => {
                 write!(
                     f,
@@ -864,18 +867,22 @@ fn _permute_symmetric_inner(
 /// Size budget: the selection step scans every node, so the cost grows as `n^2` plus the
 /// work on the fill. A matrix with more than [`MAX_ORDERING_DIM`] columns or
 /// [`MAX_ORDERING_NNZ`] stored entries, or whose elimination graph grows past
-/// [`MAX_ORDERING_FILL`] edges, is refused with [`QDLDLError::OrderingTooLarge`]; so is a
-/// malformed pattern. The budget is the same on every target, so the outcome is too.
+/// [`MAX_ORDERING_FILL`] edges, is refused with [`QDLDLError::OrderingTooLarge`]; a
+/// malformed pattern with [`QDLDLError::InvalidPattern`]. The budget is the same on every
+/// target, so the outcome is too.
 pub fn min_degree_ordering(A: &CscMatrix) -> Result<Vec<usize>, QDLDLError> {
     let n = A.n;
-    if n > MAX_ORDERING_DIM || A.rowval.len() > MAX_ORDERING_NNZ || A.colptr.len() != n + 1 {
+    if n > MAX_ORDERING_DIM || A.rowval.len() > MAX_ORDERING_NNZ {
         return Err(QDLDLError::OrderingTooLarge);
+    }
+    if A.colptr.len() != n + 1 {
+        return Err(QDLDLError::InvalidPattern);
     }
     let mut adj: Vec<BTreeSet<usize>> = vec![BTreeSet::new(); n];
     let mut edges = 0usize;
     for col in 0..n {
         let Some(rows) = A.rowval.get(A.colptr[col]..A.colptr[col + 1]) else {
-            return Err(QDLDLError::OrderingTooLarge);
+            return Err(QDLDLError::InvalidPattern);
         };
         for &row in rows {
             if row != col && row < n && adj[row].insert(col) {

@@ -1,6 +1,6 @@
 Patch 0006 (deterministic-ldl) of fid-clarabel, spec node KRN.SOLV.CONIC.PATCH.
 
-Deterministic LDL path: replace AMD (amd crate) with an exact minimum-degree ordering computed from the sparsity pattern only with lowest-index tie-breaks; bounds-checked factorisation and triangular solves instead of the unsafe copies; a size budget (MAX_ORDERING_DIM, MAX_ORDERING_NNZ, MAX_ORDERING_FILL) with the typed error QDLDLError::OrderingTooLarge, and the solver refuses a problem over the budget as bad input.
+Deterministic LDL path: replace AMD (amd crate) with an exact minimum-degree ordering computed from the sparsity pattern only with lowest-index tie-breaks; bounds-checked factorisation and triangular solves instead of the unsafe copies; a size budget (MAX_ORDERING_DIM, MAX_ORDERING_NNZ, MAX_ORDERING_FILL) with the typed error QDLDLError::OrderingTooLarge (QDLDLError::InvalidPattern for a malformed pattern), and the solver refuses a problem over the budget as bad input.
 
 Rule IDs and rationale: vendor/fid-clarabel/AUDIT.toml.
 
@@ -17,7 +17,7 @@ index 901bbf8..1efe212 100644
  enum_dispatch = "0.3.8"
  itertools = "0.11"
 diff --git a/src/qdldl/qdldl.rs b/src/qdldl/qdldl.rs
-index 473dbef..6f92d7d 100644
+index 473dbef..c441f12 100644
 --- a/src/qdldl/qdldl.rs
 +++ b/src/qdldl/qdldl.rs
 @@ -2,6 +2,7 @@
@@ -28,13 +28,16 @@ index 473dbef..6f92d7d 100644
  use std::iter::zip;
  use thiserror::Error;
  
-@@ -23,16 +24,15 @@ pub enum QDLDLError {
+@@ -23,16 +24,18 @@ pub enum QDLDLError {
      #[error("Invalid permutation vector")]
      /// Invalid permutation vector supplied
      InvalidPermutation,
 +    #[error("Matrix exceeds the size budget of the minimum-degree ordering")]
 +    /// Matrix exceeds [`MAX_ORDERING_DIM`], [`MAX_ORDERING_NNZ`] or [`MAX_ORDERING_FILL`]
 +    OrderingTooLarge,
++    #[error("Matrix sparsity pattern is malformed")]
++    /// Column pointers or row indices that do not describe a valid pattern
++    InvalidPattern,
  }
  
  #[derive(Builder, Debug, Clone)]
@@ -48,7 +51,7 @@ index 473dbef..6f92d7d 100644
      /// optional user-supplied custom permutation vector for the matrix
      #[builder(default = "None", setter(strip_option))]
      pub perm: Option<Vec<usize>>,
-@@ -230,16 +230,15 @@ fn _qdldl_new(
+@@ -230,16 +233,15 @@ fn _qdldl_new(
      //get default values if no options passed at all
      let opts = opts.unwrap_or_default();
  
@@ -72,7 +75,7 @@ index 473dbef..6f92d7d 100644
  
      //permute to (another) upper triangular matrix and store the
      //index mapping the input's entries to the permutation's entries
-@@ -604,21 +603,18 @@ fn _factor_inner(
+@@ -604,21 +606,18 @@ fn _factor_inner(
                  let y_vals_cidx = y_vals[cidx];
  
                  let (f, l) = (Lp[cidx], tmp_idx);
@@ -105,7 +108,7 @@ index 473dbef..6f92d7d 100644
              }
  
              // record which row it went into
-@@ -686,76 +682,29 @@ fn _ltsolve_safe(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
+@@ -686,76 +685,29 @@ fn _ltsolve_safe(Lp: &[usize], Li: &[usize], Lx: &[T], x: &mut [T]) {
      }
  }
  
@@ -197,7 +200,7 @@ index 473dbef..6f92d7d 100644
  }
  
  // Construct an inverse permutation from a permutation
-@@ -778,17 +727,11 @@ fn _invperm(p: &[usize]) -> Result<Vec<usize>, QDLDLError> {
+@@ -778,17 +730,11 @@ fn _invperm(p: &[usize]) -> Result<Vec<usize>, QDLDLError> {
  // in both cases for safety
  
  pub(crate) fn permute<T: Copy>(x: &mut [T], b: &[T], p: &[usize]) {
@@ -217,7 +220,7 @@ index 473dbef..6f92d7d 100644
  }
  
  // Given a sparse symmetric matrix `A` (with only upper triangular entries), return
-@@ -890,16 +833,73 @@ fn _permute_symmetric_inner(
+@@ -890,16 +836,77 @@ fn _permute_symmetric_inner(
      }
  }
  
@@ -246,18 +249,22 @@ index 473dbef..6f92d7d 100644
 +/// Size budget: the selection step scans every node, so the cost grows as `n^2` plus the
 +/// work on the fill. A matrix with more than [`MAX_ORDERING_DIM`] columns or
 +/// [`MAX_ORDERING_NNZ`] stored entries, or whose elimination graph grows past
-+/// [`MAX_ORDERING_FILL`] edges, is refused with [`QDLDLError::OrderingTooLarge`]; so is a
-+/// malformed pattern. The budget is the same on every target, so the outcome is too.
++/// [`MAX_ORDERING_FILL`] edges, is refused with [`QDLDLError::OrderingTooLarge`]; a
++/// malformed pattern with [`QDLDLError::InvalidPattern`]. The budget is the same on every
++/// target, so the outcome is too.
 +pub fn min_degree_ordering(A: &CscMatrix) -> Result<Vec<usize>, QDLDLError> {
 +    let n = A.n;
-+    if n > MAX_ORDERING_DIM || A.rowval.len() > MAX_ORDERING_NNZ || A.colptr.len() != n + 1 {
++    if n > MAX_ORDERING_DIM || A.rowval.len() > MAX_ORDERING_NNZ {
 +        return Err(QDLDLError::OrderingTooLarge);
++    }
++    if A.colptr.len() != n + 1 {
++        return Err(QDLDLError::InvalidPattern);
 +    }
 +    let mut adj: Vec<BTreeSet<usize>> = vec![BTreeSet::new(); n];
 +    let mut edges = 0usize;
 +    for col in 0..n {
 +        let Some(rows) = A.rowval.get(A.colptr[col]..A.colptr[col + 1]) else {
-+            return Err(QDLDLError::OrderingTooLarge);
++            return Err(QDLDLError::InvalidPattern);
 +        };
 +        for &row in rows {
 +            if row != col && row < n && adj[row].insert(col) {

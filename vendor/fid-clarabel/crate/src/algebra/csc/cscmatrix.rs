@@ -231,6 +231,11 @@ impl CscMatrix {
         Self::spalloc(size, 0)
     }
 
+    /// Negates every stored value (public; the math traits are crate-private, patch 0003)
+    pub fn negate(&mut self) {
+        self.nzval.iter_mut().for_each(|x| *x = -*x);
+    }
+
     /// Identity matrix of size `n`
     pub fn identity(n: usize) -> Self {
         let colptr = (0usize..=n).collect();
@@ -452,11 +457,9 @@ impl CscMatrix {
         }
     }
 
-    /// Select a subset of the rows of a sparse matrix
-    ///
-    /// # Panics
-    /// Panics if row dimensions are incompatible
-    pub fn select_rows(&self, rowidx: &Vec<bool>) -> Self {
+    /// Select a subset of the rows of a sparse matrix (crate-private, patch 0003: asserts
+    /// that `rowidx` has one flag per row)
+    pub(crate) fn select_rows(&self, rowidx: &Vec<bool>) -> Self {
         //first check for compatible row dimensions
         // invariant (patch 0003): the presolver passes one keep flag per row of A.
         assert_eq!(rowidx.len(), self.m);
@@ -497,7 +500,8 @@ impl CscMatrix {
     }
 
     /// Allocates a new matrix containing only entries from the upper triangular part
-    pub fn to_triu(&self) -> Self {
+    /// (crate-private, patch 0003: asserts a square matrix)
+    pub(crate) fn to_triu(&self) -> Self {
         // invariant (patch 0003): called on P, which check_dimensions found square.
         assert_eq!(self.m, self.n);
         let (m, n) = (self.m, self.n);

@@ -7,9 +7,56 @@
 // upstream code style kept as ported
 #![allow(clippy::useless_vec, clippy::field_reassign_with_default)]
 
+/// Test-only stand-ins for the algebra helpers upstream's tests call (`dist`, `negate` on
+/// vectors, `scale` and `to_triu` on matrices): fid-clarabel keeps its math traits
+/// crate-private (patch 0003), so the tests carry their own.
+mod helpers {
+    use fid_clarabel::algebra::CscMatrix;
+
+    pub trait VecExt {
+        fn dist(&self, y: &[f64]) -> f64;
+        fn negate(&mut self) -> &mut [f64];
+    }
+    impl VecExt for [f64] {
+        fn dist(&self, y: &[f64]) -> f64 {
+            assert_eq!(self.len(), y.len());
+            self.iter().zip(y).map(|(a, b)| (a - b) * (a - b)).sum::<f64>().sqrt()
+        }
+        fn negate(&mut self) -> &mut [f64] {
+            self.iter_mut().for_each(|x| *x = -*x);
+            self
+        }
+    }
+
+    pub trait CscExt {
+        fn scale(&mut self, c: f64);
+        fn to_triu(&self) -> CscMatrix;
+    }
+    impl CscExt for CscMatrix {
+        fn scale(&mut self, c: f64) {
+            self.nzval.iter_mut().for_each(|x| *x *= c);
+        }
+        fn to_triu(&self) -> CscMatrix {
+            let (mut colptr, mut rowval, mut nzval) = (vec![0], Vec::new(), Vec::new());
+            for col in 0..self.n {
+                for k in self.colptr[col]..self.colptr[col + 1] {
+                    if self.rowval[k] <= col {
+                        rowval.push(self.rowval[k]);
+                        nzval.push(self.nzval[k]);
+                    }
+                }
+                colptr.push(rowval.len());
+            }
+            CscMatrix::new(self.m, self.n, colptr, rowval, nzval)
+        }
+    }
+}
+
 mod basic_lp {
     #![allow(non_snake_case)]
 
+    #[allow(unused_imports)] // not every ported module needs the helpers
+    use crate::helpers::*;
     use fid_clarabel::{algebra::*, solver::*};
 
     #[allow(clippy::type_complexity)]
@@ -108,6 +155,8 @@ mod basic_lp {
 
 mod basic_qp {
     #![allow(non_snake_case)]
+    #[allow(unused_imports)] // not every ported module needs the helpers
+    use crate::helpers::*;
     use fid_clarabel::{algebra::*, solver::*};
 
     #[allow(clippy::type_complexity)]
@@ -296,6 +345,8 @@ mod basic_qp {
 mod basic_socp {
     #![allow(non_snake_case)]
 
+    #[allow(unused_imports)] // not every ported module needs the helpers
+    use crate::helpers::*;
     use fid_clarabel::{algebra::*, solver::*};
 
     #[allow(clippy::type_complexity)]
@@ -396,6 +447,8 @@ mod basic_socp {
 mod basic_eq_constrained {
     #![allow(non_snake_case)]
 
+    #[allow(unused_imports)] // not every ported module needs the helpers
+    use crate::helpers::*;
     use fid_clarabel::{algebra::*, solver::*};
 
     #[allow(clippy::type_complexity)]
@@ -479,6 +532,8 @@ mod basic_eq_constrained {
 mod basic_unconstrained {
     #![allow(non_snake_case)]
 
+    #[allow(unused_imports)] // not every ported module needs the helpers
+    use crate::helpers::*;
     use fid_clarabel::{algebra::*, solver::*};
 
     #[test]
@@ -518,6 +573,8 @@ mod basic_unconstrained {
 mod presolve {
     #![allow(non_snake_case)]
 
+    #[allow(unused_imports)] // not every ported module needs the helpers
+    use crate::helpers::*;
     use fid_clarabel::{algebra::*, solver::*};
     use fid_clarabel::{get_infinity, INFINITY_DEFAULT};
 
@@ -628,6 +685,8 @@ mod data_updating {
 
     use std::iter::zip;
 
+    #[allow(unused_imports)] // not every ported module needs the helpers
+    use crate::helpers::*;
     use fid_clarabel::{algebra::*, solver::*};
 
     #[allow(clippy::type_complexity)]
@@ -960,6 +1019,8 @@ mod data_updating {
 mod api_dimension_checks {
     #![allow(non_snake_case)]
     #![allow(clippy::type_complexity)]
+    #[allow(unused_imports)] // not every ported module needs the helpers
+    use crate::helpers::*;
     use fid_clarabel::{algebra::*, solver::*};
 
     // a collection of tests to ensure that data of

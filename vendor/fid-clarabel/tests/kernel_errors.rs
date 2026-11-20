@@ -173,7 +173,9 @@ fn ordering_budget_is_a_typed_error() {
     dense_col.nzval.resize(MAX_ORDERING_NNZ + 1, 1.0);
     assert!(matches!(min_degree_ordering(&dense_col), Err(QDLDLError::OrderingTooLarge)));
     let malformed = CscMatrix::new(3, 3, vec![0, 1], vec![0], vec![1.0]);
-    assert!(matches!(min_degree_ordering(&malformed), Err(QDLDLError::OrderingTooLarge)));
+    assert!(matches!(min_degree_ordering(&malformed), Err(QDLDLError::InvalidPattern)));
+    let bad_rows = CscMatrix::new(2, 2, vec![0, 1, 9], vec![0], vec![1.0]);
+    assert!(matches!(min_degree_ordering(&bad_rows), Err(QDLDLError::InvalidPattern)));
     // the solver refuses such a problem up front as bad input
     let n = MAX_ORDERING_DIM;
     let P = diagonal(n);
