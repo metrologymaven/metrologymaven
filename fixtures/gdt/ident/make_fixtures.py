@@ -7,14 +7,15 @@ Writes, from the leaf's Design rules:
   carries a native QPId, written in upper case so a test can see that nothing normalises it
   (AC-1).
 - no_qpid_slot.qif: a QIF 3.0 document whose characteristic nominal carries no identity, only
-  an unrelated string attribute in its Attributes list (AC-3). The test treats that element
+  an unrelated, non-fx string attribute in its Attributes list (AC-3). The test treats that element
   as one without a native QPId slot.
 - expected.json: the imported QPId text, the identity the no-slot element must get from the
   test clock and seed, and UUIDv7 vectors for the determinism check (AC-5).
 
 UUIDv7 here is built byte by byte from RFC 9562 section 5.7 (48-bit big-endian Unix
 milliseconds, version nibble 7, 12 bits rand_a, variant 0b10, 62 bits rand_b), not by the
-shifts the Rust code uses. The 74 random bits come from the leaf's seeded counter RNG: output
+shifts the Rust code uses. The 74 random bits come from the test-only seeded counter source
+(CounterRng in fid_gdt::chars::qpid; live IDs use the recorded system source): output
 i (1-based) is the SplitMix64 finaliser of seed + i * 0x9e3779b97f4a7c15 mod 2**64; one
 UUIDv7 takes two outputs a then b, and its random bits are the low 10 bits of a followed by
 the 64 bits of b (rand_a = the top 12 of those 74 bits, rand_b = the low 62).
@@ -37,7 +38,7 @@ M64 = (1 << 64) - 1
 GAMMA = 0x9E3779B97F4A7C15
 
 IMPORTED_QPID = "4F2A9C3E-1B7D-4E8A-9C21-7D3B5E6F8A10"
-OTHER_ATTR = ("fx:note", "synthetic test attribute")
+OTHER_ATTR = ("inspectionNote", "synthetic foreign attribute")
 NO_SLOT_CLOCK_MS = 1_763_500_000_000
 NO_SLOT_SEED = 20_261_119
 

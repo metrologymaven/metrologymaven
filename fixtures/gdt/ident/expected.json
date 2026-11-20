@@ -4,8 +4,8 @@
     "clock_ms": "1763500000000",
     "identity": "019a98ca-8300-7cae-bdc3-1d10c7e7db52",
     "kept_attribute": {
-      "name": "fx:note",
-      "value": "synthetic test attribute"
+      "name": "inspectionNote",
+      "value": "synthetic foreign attribute"
     },
     "seed": "20261119"
   },

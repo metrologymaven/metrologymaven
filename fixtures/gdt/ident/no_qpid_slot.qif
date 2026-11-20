@@ -10,7 +10,7 @@
     <CharacteristicNominals n="1">
       <FlatnessCharacteristicNominal id="2">
         <Attributes n="1">
-          <AttributeStr name="fx:note" val="synthetic test attribute"/>
+          <AttributeStr name="inspectionNote" val="synthetic foreign attribute"/>
         </Attributes>
         <CharacteristicDefinitionId>1</CharacteristicDefinitionId>
       </FlatnessCharacteristicNominal>

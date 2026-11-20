@@ -4,10 +4,10 @@
 //! objects, and [`spec`] (`GDT.CHAR.SPEC`), the governing spec of each characteristic, its
 //! inheritance from plan and tenant defaults, and the gate every evaluation calls first, and
 //! [`record`] (`GDT.CHAR.RECORD`), the ResultRecord builder, its decision binding and
-//! `gdt.get_result@1`, and [`ident`] (`GDT.CHAR.IDENT`), the stable identity of each
+//! `gdt.get_result@1`, and [`qpid`] (`GDT.CHAR.IDENT`), the stable identity of each
 //! characteristic (imported QPId or assigned UUIDv7, edit check, `fx:qpid` mapping).
 
 pub mod dprof;
-pub mod ident;
+pub mod qpid;
 pub mod record;
 pub mod spec;
