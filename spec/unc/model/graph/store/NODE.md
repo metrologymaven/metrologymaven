@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-unc]
 satisfies: [REQ-UNC.MODEL.GRAPH-006, REQ-UNC.MODEL.GRAPH-007]
 covers: []
 depends_on: [UNC.MODEL.GRAPH.CHECK, UNC.MODEL.GRAPH.SCHEMA, CORE.STO.CAS, KRN.MAN.MANI]
@@ -68,6 +69,17 @@ The registry commands around the model graph: `unc.create_model@1` stores a vali
 ## Open questions
 
 - None.
+
+## Resolved at build
+
+As built in crate `fid-unc`, module `model_store` (2026-11-20):
+
+- **Manifest provenance (AC-6).** The host supplies two seams, never a parameter: `RunningKernel` (the running kernel; implemented for `fid_kci::AlgorithmTable` through `fid_kci::evaluate`) and `ReleaseManifestSource` (the bytes of the release manifest file). `bind_release_manifest` asks the kernel first (`kernel.manifest.core_digest@1.0.0`), then reads the file with `KernelManifest::parse_canonical` and compares core digests. While the committed constant of `fid-kernel-wasm` is `None`, the kernel answers `manifest_core_digest_unset` and both `unc.create_model@1` and `unc.validate_model@1` fail with `kernel_manifest_unset`. The tests use `fixtures/unc/model/graph/store/toy_release_manifest.json` (kernel name `toy-test-only-not-a-release`) with a test-only kernel table reporting its core digest.
+- **PROP check.** `ensure_running_manifest(&ValidModel, &ReleaseManifest)` fails `model_manifest_stale` when the model was validated against another manifest; `resolve` re-validates against the running release manifest, so its `ValidModel` always passes. The `UNC.PROP` command leaves (unbuilt) call it.
+- **Errors beyond the four named.** `bad_params`, `policy_refused`, `file_unreadable`, `model_unreadable` (the document does not parse), `kernel_manifest_unset`, `kernel_unavailable`, `kernel_manifest_unavailable`, `kernel_manifest_invalid`, `kernel_manifest_mismatch`, `model_manifest_stale`, `blob_store`, `journal_failed`, `internal`.
+- **Order of checks in create.** Class, author kind (human, agent, script; service, device and system principals are refused), branch (a person off agent branches, an agent or script only on its agent branch), manifest binding, input (exactly one of `file` and `inline`), parse, validation, version rule, then `dry_run` stops; otherwise blob put and read-back, journal commit, then the index entry. Validation runs before the version rule, so `bad/cycle.json` is `model_invalid` whether or not `bore-ls@1.0.0` is stored.
+- **References.** `unc.show_model@1` takes `um:<name>@<semver>`, `um:<name>@<semver>#sha256:<hex>` or a bare digest.
+- **Storage.** The canonical bytes go to the CORE.STO.CAS blob store; the `unc.create_model@1` event records the blob address and size, the author kind and identity, the branch and the release manifest digest, not the bytes. Exact replay reads the blob back, re-validates against the release manifest and compares event bytes.
 
 ## Children
 

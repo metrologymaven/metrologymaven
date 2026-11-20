@@ -1,0 +1,35 @@
+[package]
+name = "fid-unc"
+description = "Metrology Maven uncertainty commands: the Uncertainty Model store with unc.create_model@1, unc.validate_model@1 and unc.show_model@1, version immutability, release-manifest provenance and resolve(ModelRef) for engines (spec node UNC.MODEL.GRAPH.STORE)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Bus-derived principals and the D-031 class check (CORE.BUS.PRIN, CORE.BUS.POL.CLASS). Layer
+# engine, the same layer as this crate.
+fid-bus = { path = "../fid-bus" }
+# Canonical JSON of journal events, results and bounded MCP parameter parsing (CORE.JRN.CANON).
+# Layer model.
+fid-canon = { path = "../fid-canon" }
+# The kernel call interface: the reserved `kernel.manifest.core_digest@1.0.0` query and the
+# strict release-manifest reader `KernelManifest::parse_canonical` (KRN.MAN.KCI,
+# KRN.MAN.MANI.SCHEMA). Layer kernel.
+fid-kci = { path = "../fid-kci" }
+# Uncertainty Model types, canonical form, digest and validation (UNC.MODEL.GRAPH.SCHEMA,
+# UNC.MODEL.GRAPH.CHECK). Layer kernel.
+fid-kunc = { path = "../fid-kunc" }
+# Command declarations through the registry macros (CORE.REG.DEF.MACRO). Layer model.
+fid-registry = { path = "../fid-registry" }
+# Exact-replay outcome classes (CORE.RPL). Layer engine.
+fid-replay = { path = "../fid-replay" }
+# Content-addressed blob store for the model bytes (CORE.STO.CAS) and the agent-branch
+# predicate (CORE.BUS.ROUTE). Layer model; already in the lock through fid-bus.
+fid-store = { path = "../fid-store" }
+# Shared `sha256:` digests (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
