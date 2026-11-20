@@ -5,6 +5,7 @@ fid-align-solve
 fid-canon
 fid-fit
 fid-geo-cad
+fid-geo-dist --test mesh
 fid-geo-frame
 fid-geo-index
 fid-geo-nurbs --test analytic
