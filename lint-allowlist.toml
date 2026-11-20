@@ -17,7 +17,7 @@ allowed = ["fid-bus", "fid-store"]
 drivers = ["libsqlite3-sys", "rusqlite"]
 
 [surfaces]
-crates = ["fid-cli"]
+crates = ["fid-cli", "fid-mcp"]
 bus_api = "fid-bus-api"
 
 [core]
