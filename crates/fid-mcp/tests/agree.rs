@@ -180,7 +180,7 @@ fn whole_registry_agrees_with_the_bus() {
                 // bus would run for an agent.
                 assert_eq!(e.code(), "projection_mismatch", "{id}: {e}");
                 assert_ne!(bus, "direct", "{id}");
-                refused_by_surface.push(id);
+                refused_by_surface.push(id.clone());
             }
         }
         // Filing re-checks the parameters against the schema, so the empty-parameter call is

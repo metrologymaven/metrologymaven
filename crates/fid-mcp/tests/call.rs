@@ -308,7 +308,6 @@ impl McpBus for PolProjBus {
             }
             Decision::RunApproved(_) => panic!("the adapter never asks for an approval"),
         };
-        drop(view);
         self.fold();
         env
     }
