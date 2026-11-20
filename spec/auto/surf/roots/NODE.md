@@ -55,7 +55,7 @@ How automation names files. A `RootHandle` is a root ID plus a relative path; it
 
 - **AC-1** Given fixture tree `fixtures/roots/tree/` (read root `in`, write root `out`), when `resolve("root:in/parts/a.stl", Read)` runs, then it returns the canonical path inside `in`.
 - **AC-2** (error path) Given `fixtures/roots/tree/in/link-out` a symlink (Unix) or junction (Windows) to the parent directory, when `resolve("root:in/link-out/secret.txt", Read)` runs, then it fails with `root_escape` and the file is never opened.
-- **AC-3** (error path) Given handles `root:in/../x`, `root:in/C:/x`, `root:in//server/share`, `root:in/a.txt:stream` and one with a NUL byte, then each fails parsing with `bad_handle`.
+- **AC-3** (error path) Given handles `root:in/C:/x`, `root:in//server/share`, `root:in/a.txt:stream` and one with a NUL byte, then each fails parsing with `bad_handle`; given `root:in/../x`, resolution fails with `outside_root` (matching CORE.BUS.POL.FS AC-4, which owns the `..` rule).
 - **AC-4** (error path) Given a `path_like` parameter with value `C:\data\a.stl` from an `agent` principal, when the gate runs, then it returns `raw_path_refused` and the fake bus receives nothing.
 - **AC-5** Given fixture manifest `fixtures/manifest/roots-config.json` containing `settings.set_roots@1` (A0) declaring a roots effect, then `is_root_config` is true for it and the projection filter yields it for `human` only.
 - **AC-6** (race) Given a test that swaps a directory for a symlink to outside between resolution and open, then the post-open check fails with `root_escape`.
