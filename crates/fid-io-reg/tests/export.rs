@@ -1014,12 +1014,14 @@ fn published_patterns_accept_and_refuse_the_right_strings() {
         }
     }
     // The patterns agree with the Rust validators on the same strings.
+    let format_re = regex::Regex::new(FORMAT_ID_PATTERN).unwrap();
     for x in ["fid-test-points", "fid_test_points", "mesh.stl", "-a", "Mesh"] {
-        assert_eq!(regex::Regex::new(FORMAT_ID_PATTERN).unwrap().is_match(x), FormatId::new(x).is_ok(), "{x}");
+        assert_eq!(format_re.is_match(x), FormatId::new(x).is_ok(), "{x}");
     }
+    let u64_re = regex::Regex::new(U64_PATTERN).unwrap();
     for x in ["18446744073709551615", "18446744073709551616", "0", "01"] {
         let parsed = x.parse::<u64>().is_ok() && (x == "0" || !x.starts_with('0'));
-        assert_eq!(regex::Regex::new(U64_PATTERN).unwrap().is_match(x), parsed, "{x}");
+        assert_eq!(u64_re.is_match(x), parsed, "{x}");
     }
 }
 
