@@ -774,7 +774,7 @@ pub enum EgressDecision {
     /// Send now ([`EgressSender::send`]).
     Send(Box<Cleared>),
     /// Do not send: file a pending request (`Filing::commit`).
-    File(Filing),
+    File(Box<Filing>),
 }
 
 /// The authorise stage for `egress.send@1`. The principal is derived from `channel` by
@@ -811,12 +811,12 @@ pub fn authorise(
     let destination = destinations.lookup(&p.destination)?;
     let (principal, decision) = authorise_projection_call(table, channel, def, params, approval_of, view)?.into_parts();
     let request = match decision {
-        Decision::File(f) => return Ok((principal, EgressDecision::File(f))),
+        Decision::File(f) => return Ok((principal, EgressDecision::File(Box::new(f)))),
         Decision::RunApproved(a) => Some(a),
         Decision::Run => match principal.kind() {
             PrincipalKind::Agent | PrincipalKind::Script => {
                 let f = Filing::new(&principal, def, params, view)?;
-                return Ok((principal, EgressDecision::File(f)));
+                return Ok((principal, EgressDecision::File(Box::new(f))));
             }
             PrincipalKind::Human => None,
             PrincipalKind::Service | PrincipalKind::Device | PrincipalKind::System => {
