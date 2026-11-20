@@ -1327,6 +1327,7 @@ dependencies = [
  "fid-replay",
  "fid-types",
  "fid-xml",
+ "toml",
 ]
 
 [[package]]

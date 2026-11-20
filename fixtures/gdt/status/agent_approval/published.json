@@ -1,0 +1,9 @@
+{
+ "entries": [
+  {
+   "register_digest": "sha256:c0fdb45f56af4593cfffb06ac887d652339e125cc9eff8b2757f5284bb64e3a9",
+   "roster_digest": "sha256:46dd25bc3028e71065bf121f1570a01753d984087ec0796f45a008d2a84d81e7"
+  }
+ ],
+ "schema": "gdt-published/v1"
+}
