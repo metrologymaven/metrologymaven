@@ -14,6 +14,7 @@ python fixtures/cons/make_decl_fixtures.py --check
 python fixtures/core/bus/pol/class/make_matrix.py --check
 python fixtures/core/bus/pol/egress/make_fixtures.py --check
 python fixtures/core/bus/pol/proj/make_cases.py --check
+python fixtures/core/bus/unit/make_literals.py --check
 python fixtures/core/jrn/chain/append/make_fixtures.py --check
 python fixtures/core/jrn/chain/ckpt/make_fixtures.py --check
 python fixtures/core/jrn/stream/alog/make_fixtures.py --check
@@ -136,6 +137,7 @@ python fixtures/unc/class/make_table.py --check
 python fixtures/unc/dec/type/make_fixtures.py --check
 python fixtures/unc/dist/make_fixtures.py --check
 python fixtures/unc/mcm/adapt/make_fixtures.py --check
+python fixtures/unc/mcm/block/make_fixtures.py --check
 python fixtures/unc/mcm/intvl/make_fixtures.py --check
 python fixtures/unc/model/graph/make_check_fixtures.py --check
 python fixtures/unc/model/graph/make_fixtures.py --check

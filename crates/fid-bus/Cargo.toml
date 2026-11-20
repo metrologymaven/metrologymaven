@@ -1,6 +1,6 @@
 [package]
 name = "fid-bus"
-description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles and MCP projection with pending requests (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.POL.EGRESS)"
+description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles, MCP projection with pending requests, authored literal normalisation and the egress primitive (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.UNIT, CORE.BUS.POL.EGRESS)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -26,6 +26,12 @@ cap-std = "3.4"
 # CORE.BUS.POL.FS opens the final component without following links (`O_NOFOLLOW`,
 # `FILE_FLAG_OPEN_REPARSE_POINT`); the companion crate of cap-std.
 cap-fs-ext = "3.4"
+# CORE.BUS.UNIT multiplies by the Π constant of GEO.FRAME.UNITS (`PI_256`), which every checked
+# quantity catalogue carries. Kernel layer, below the bus; already in the graph via fid-registry.
+fid-geo-frame = { path = "../fid-geo-frame" }
+# CORE.BUS.UNIT returns the journal entry's `AlgorithmId` type. Kernel layer, zero dependencies;
+# already in the graph via fid-journal.
+fid-kci = { path = "../fid-kci" }
 # CORE.BUS.POL.PROJ: request IDs are UUIDv7 values; the shared UUID type. Layer model, below the
 # bus; already in the workspace and the lock.
 fid-uuid = { path = "../fid-uuid" }

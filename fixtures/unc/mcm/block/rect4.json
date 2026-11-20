@@ -1,0 +1,160 @@
+{
+  "schema": "uncertainty-model/v1",
+  "name": "rect4",
+  "semver": "1.0.0",
+  "inputs": [
+    {
+      "id": "x1",
+      "quantity_kind": "length",
+      "unit": "si:m",
+      "distribution": {
+        "kind": "rect",
+        "params": {
+          "a": "bffbb67ae8584caa",
+          "b": "3ffbb67ae8584caa"
+        }
+      },
+      "source": {
+        "kind": "declared",
+        "digest": "sha256:03c5b892e0e3f91f707b839d817e77687f343812ebfacfb7c8681ce25ce53058",
+        "author": "metrology-maven fixtures"
+      }
+    },
+    {
+      "id": "x2",
+      "quantity_kind": "length",
+      "unit": "si:m",
+      "distribution": {
+        "kind": "rect",
+        "params": {
+          "a": "bffbb67ae8584caa",
+          "b": "3ffbb67ae8584caa"
+        }
+      },
+      "source": {
+        "kind": "declared",
+        "digest": "sha256:26e98feb83fd964776d7d5102796132bdf5597882c41cc81969f1ed153d878ea",
+        "author": "metrology-maven fixtures"
+      }
+    },
+    {
+      "id": "x3",
+      "quantity_kind": "length",
+      "unit": "si:m",
+      "distribution": {
+        "kind": "rect",
+        "params": {
+          "a": "bffbb67ae8584caa",
+          "b": "3ffbb67ae8584caa"
+        }
+      },
+      "source": {
+        "kind": "declared",
+        "digest": "sha256:bb6449d6c235b8839a1f40c429e6a074abdfcb621bfb46047eb6e288fbec43f6",
+        "author": "metrology-maven fixtures"
+      }
+    },
+    {
+      "id": "x4",
+      "quantity_kind": "length",
+      "unit": "si:m",
+      "distribution": {
+        "kind": "rect",
+        "params": {
+          "a": "bffbb67ae8584caa",
+          "b": "3ffbb67ae8584caa"
+        }
+      },
+      "source": {
+        "kind": "declared",
+        "digest": "sha256:bc8799a64f213d4040e098cd7bfec06eac0448191be0fd9218b9d750059650ef",
+        "author": "metrology-maven fixtures"
+      }
+    }
+  ],
+  "operators": [
+    {
+      "id": "y_sum",
+      "algorithm_id": "test.mcm.sum",
+      "algorithm_version": "1.0.0",
+      "params": {
+        "mode": "sequential"
+      },
+      "ports_in": [
+        {
+          "name": "terms",
+          "quantity_kind": "length",
+          "unit": "si:m",
+          "arity": "4"
+        }
+      ],
+      "ports_out": [
+        {
+          "name": "value",
+          "quantity_kind": "length",
+          "unit": "si:m"
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "id": "y",
+      "quantity_kind": "length",
+      "unit": "si:m"
+    }
+  ],
+  "edges": [
+    {
+      "from": {
+        "node": "x1",
+        "port": "value"
+      },
+      "to": {
+        "node": "y_sum",
+        "port": "terms"
+      }
+    },
+    {
+      "from": {
+        "node": "x2",
+        "port": "value"
+      },
+      "to": {
+        "node": "y_sum",
+        "port": "terms"
+      }
+    },
+    {
+      "from": {
+        "node": "x3",
+        "port": "value"
+      },
+      "to": {
+        "node": "y_sum",
+        "port": "terms"
+      }
+    },
+    {
+      "from": {
+        "node": "x4",
+        "port": "value"
+      },
+      "to": {
+        "node": "y_sum",
+        "port": "terms"
+      }
+    },
+    {
+      "from": {
+        "node": "y_sum",
+        "port": "value"
+      },
+      "to": {
+        "node": "y",
+        "port": "value"
+      }
+    }
+  ],
+  "correlations": []
+}

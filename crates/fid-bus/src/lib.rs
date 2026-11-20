@@ -6,6 +6,7 @@ pub mod handler;
 pub mod policy;
 pub mod principal;
 mod unicode16;
+pub mod unit;
 
 /// Short alias for [`error`].
 pub use self::error as err;
@@ -38,4 +39,8 @@ pub use principal::{
     SessionId, SessionKey, SessionTable, UpgradeClock, UpgradeContext, UpgradeGrant, UpgradeRequest, BLANK_CHARS,
     DEFAULT_IGNORABLE_RANGES, FORMAT_RANGES, MAX_ID_BYTES, MAX_SELF_ASSERTED_CHARS, MAX_UPGRADED_SESSIONS,
     PRIVATE_USE_RANGES, UNASSIGNED_RANGES, UPGRADE_DEADLINE,
+};
+pub use unit::{
+    algorithm_id, normalise, normalise_value, AuthoredLiteral, DecimalString, Normalised, UnitSymbol, ALGORITHM,
+    MAX_EXPONENT, MAX_LITERAL_BYTES, MAX_SIG_DIGITS, MIN_EXPONENT,
 };
