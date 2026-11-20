@@ -270,8 +270,24 @@ fn decompose(x: f64) -> (u64, i32) {
     }
 }
 
-/// Exact comparison of `mant * 2^e2` with `a * 10^k`.
+/// Largest `|k|` for which [`cmp_dec`] builds `10^k`. Every exponent the rule uses is
+/// within `[-341, 309]` (decimal exponents of finite binary64 values, shifted by at most
+/// `n_dig <= 17`), so this bound only keeps the big-integer work finite by construction.
+const MAX_ABS_EXP10: u32 = 400;
+
+/// Exact comparison of `mant * 2^e2` with `a * 10^k`, for `|e2| <= 1100` (binary64 range
+/// plus small shifts). For `|k| > MAX_ABS_EXP10` the result is decided without building
+/// `10^k`: `mant * 2^e2` lies strictly between `10^-400` and `10^400` unless it is zero.
 fn cmp_dec(mant: u64, e2: i32, a: u64, k: i32) -> Ordering {
+    if k.unsigned_abs() > MAX_ABS_EXP10 {
+        return match (mant == 0, a == 0, k > 0) {
+            (true, true, _) => Ordering::Equal,
+            (true, false, _) => Ordering::Less,
+            (false, true, _) => Ordering::Greater,
+            (false, false, true) => Ordering::Less,
+            (false, false, false) => Ordering::Greater,
+        };
+    }
     let mut lhs = Big::from_u64(mant);
     let mut rhs = Big::from_u64(a);
     if e2 >= 0 {
@@ -310,21 +326,33 @@ fn decimal_exponent(x: f64) -> i32 {
     e
 }
 
-/// The numerical tolerance of rule 3: `delta = 10^exp10 / 2`.
+/// The numerical tolerance of rule 3: `delta = 10^exp10 / 2`. Built only by [`tolerance`],
+/// so `exp10` is always within `[-341, 309]`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Tolerance {
-    /// `l`, the decimal exponent of the last retained digit of `u(y)`; `None` when
-    /// `u(y) = 0` (then `delta = 0`).
-    pub exp10: Option<i32>,
-    /// The binary64 nearest to the exact `delta` (0 when `u(y) = 0`; may underflow to 0
-    /// for a subnormal `u(y)`, the comparison stays exact).
-    pub delta: f64,
+    exp10: Option<i32>,
+    delta: f64,
 }
 
 impl Tolerance {
-    /// Whether `2 s <= delta`, compared exactly with the exact decimal `delta`. `s` must be
-    /// finite and non-negative (the rule only passes such values).
+    /// `l`, the decimal exponent of the last retained digit of `u(y)`; `None` when
+    /// `u(y) = 0` (then `delta = 0`).
+    pub const fn exp10(&self) -> Option<i32> {
+        self.exp10
+    }
+
+    /// The binary64 nearest to the exact `delta` (0 when `u(y) = 0`; may underflow to 0
+    /// for a subnormal `u(y)`, the comparison in [`Tolerance::admits`] stays exact).
+    pub const fn delta(&self) -> f64 {
+        self.delta
+    }
+
+    /// Whether `2 s <= delta`, compared exactly with the exact decimal `delta`. A NaN,
+    /// infinite or negative `s` is never admitted (`-0.0` counts as zero).
     pub fn admits(&self, s: f64) -> bool {
+        if !s.is_finite() || s < 0.0 {
+            return false;
+        }
         match self.exp10 {
             None => s == 0.0,
             Some(l) => {
@@ -360,6 +388,10 @@ pub fn tolerance(u: f64, n_dig: u32) -> Result<Tolerance, McmError> {
     let (mant, e2) = decompose(u);
     if cmp_dec(mant, e2 + 1, 2 * ten_n - 1, l) != Ordering::Less {
         l += 1;
+    }
+    if l.unsigned_abs() > MAX_ABS_EXP10 {
+        // Unreachable for finite u and n_dig <= 17 (l is within [-341, 309]).
+        return Err(McmError::InvalidProfile { detail: "n_dig" });
     }
     // delta = 5 * 10^(l - 1); the core parser rounds correctly to nearest.
     let delta: f64 = format!("5e{}", l - 1).parse().map_err(|_| McmError::InvalidProfile { detail: "n_dig" })?;

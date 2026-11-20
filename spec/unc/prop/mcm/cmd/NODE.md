@@ -17,7 +17,7 @@ determinism: D2
 cli: [fid unc propagate-mcm]
 mcp: [unc_propagate_mcm]
 journal: [unc.propagate_mcm@1]
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # UNC.PROP.MCM.CMD: The unc.propagate_mcm@1 command and block scheduling
@@ -56,6 +56,7 @@ The registry command that runs adaptive Monte Carlo on the model bound to a resu
 - **AC-5** Given a cap of 20 000 on a slowly converging model, then the result has flag `not_converged`.
 - **AC-H1** Hypothesis: `unc.propagate_mcm@1` reproduces the published Monte Carlo estimate, standard uncertainty and coverage-interval endpoints of the JCGM 101:2008 worked examples (additive model, mass calibration, comparison loss, gauge-block calibration [unverified: clause 9 numbering]), encoded from their published input definitions with the published results as reference values, with agreement to the number of significant digits the guide publishes (at most one unit in the last published digit), measured by comparing the command's JSON output (seed recorded) with the published values; falsified if any example disagrees beyond that.
 - **AC-H2** Hypothesis: Monte Carlo intervals from this command achieve coverage within the exact two-sided 99 % binomial band around p = 0.95 computed by `UNC.ORS.UNC.HARNESS` with N ≥ 1000 seeded repetitions on the ORS-UNC known-truth case `nonlin-rect` of `UNC.ORS.UNC.BASE` (the `fid-ors` release named in the run record), measured by the harness coverage count; falsified if the count lies outside the band.
+- **AC-H3** Implementation check of the adaptive stop rule `mcm-adapt@1` (moved from `UNC.PROP.MCM.ADAPT`, #311): for the mass-calibration, comparison-loss and gauge-block examples of JCGM 101:2008 [unverified: clause 9 numbering], with p = 0.95, n_dig = 2 and the default cap, run `unc.propagate_mcm@1` adaptively over 1000 seeds. Count the runs whose stopped estimate, u(y) and each interval endpoint lie within delta of the reference values (the published values, or a long-run reference where the guide gives none). Each count must agree with the rate that an independent reference simulation of the §7.9.4 rule predicts [simulated], by a two-sided exact binomial test at level 0.01. Also report the median trial count at stop next to the adaptive trial counts the guide reports. §7.9 gives no coverage-of-truth guarantee: a shortfall below 0.95 is a property of the rule (s with h - 1 degrees of freedom, optional stopping). The check fails if any count disagrees with its predicted rate.
 
 ## Design
 
@@ -78,7 +79,7 @@ The registry command that runs adaptive Monte Carlo on the model bound to a resu
 ## Open questions
 
 - The 0.1 % failure limit is from the parent and unreviewed [unverified].
-- **From `UNC.PROP.MCM.ADAPT` (its build PR):** the stop-rule checks on the mass-calibration, comparison-loss and gauge-block examples moved here, because those examples need published reference values and end-to-end models. The checks are accuracy at stop (stopped u(y) and endpoints within delta) and trial count at stop against the guide's reported adaptive counts. Measure them alongside AC-H1, with the same exact binomial test that ADAPT's AC-H1 uses.
+- **From `UNC.PROP.MCM.ADAPT` (#311):** the stop-rule checks on the three worked examples without a closed form are AC-H3 here. They need end-to-end models and published reference values, and ADAPT's own AC-H1 covers the two closed-form additive-model examples.
 
 ## Children
 

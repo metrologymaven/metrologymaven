@@ -31,31 +31,44 @@ Files:
   summaries_edge.json      boundary steps: 2 s == delta exactly (stop), one ulp above
                            (continue), the stop test passing on the last block the cap
                            allows (stop, not cap_reached), and u(y) = 0.
+  ac_h_simulated.json    [simulated] AC-H1 reference simulation, written only by --simulate:
+                         10 000 runs per example of the JCGM 101:2008 §7.9.4 rule as
+                         restated above, with Python's own generator (random.Random,
+                         Mersenne Twister; gauss for normal inputs), its own block
+                         summaries (fsum mean and standard deviation, symmetric ranks
+                         from the exact binary64 p) and the exact tolerance and stop test
+                         of this file. It never runs or imports the crate. Per example: the
+                         count of runs whose final estimate, u(y), lower and upper endpoint
+                         (from all trials) lie within delta of the analytic value, runs
+                         stopping at h = 2, cap hits and the median block count. About
+                         47 minutes; not run in CI (--check reads the stored file).
   ac_h_reference.json    AC-H1 and AC-H2 (as restated in the leaf's NODE.md): analytic
                          output distributions of the additive model Y = X1 + X2 + X3 + X4
                          of JCGM 101:2008 [unverified: clause 9.2] with standard normal
                          inputs (normal4) and with rectangular inputs of unit standard
-                         deviation (rect4); u(y), symmetric 95 % endpoints, the predicted
-                         per-block standard deviation of each of the four block statistics
+                         deviation (rect4); estimate 0, u(y) = 2, symmetric 95 % endpoints,
+                         the predicted per-block standard deviation of each block statistic
                          (estimate sigma / sqrt(M); u by sigma sqrt((kappa - 1) / (4 M)),
                          kappa the kurtosis; endpoint sqrt(q (1 - q) / M) / f(x_q)), the
                          predicted stopping block h* = max(2, ceil(max_k (2 sigma_k /
-                         delta)^2)). For the test of "pass rate >= 0.95" over N = 1000
-                         seeds: the exact one-sided binomial thresholds at level 0.05
-                         (falsified if k <= falsified_if_at_most, supported if
-                         k >= supported_if_at_least, in exact rationals), and
-                         Clopper-Pearson two-sided 95 % bounds for k = 800..1000 (6
-                         decimals) for reporting. Each AC-H quantity is a pass/fail count
-                         per seed, so the binomial is the right model; the per-block
-                         standard deviations above use the standard error that belongs to
-                         each statistic (mean, standard deviation, order statistic).
-                         Decimal strings with 12 significant digits, so the file is the
-                         same on every platform.
+                         delta)^2)) for AC-H2; for AC-H1 the [simulated] predicted rates
+                         pred_* from ac_h_simulated.json and, for the crate's 1000 seeds,
+                         the acceptance band band_* of the two-sided exact conditional
+                         (Fisher) binomial comparison at level 0.01 between the crate's
+                         count and the reference count (it accounts for the reference's
+                         own simulation error; a one-sample test against a predicted rate
+                         of exactly 1 would reject a single miss). Clopper-Pearson
+                         two-sided 95 % bounds for k = 800..1000 (6 decimals) for reporting.
+                         Each AC-H1 quantity is a pass/fail count per seed, so binomial
+                         models are the right ones. Decimal strings with 12 significant
+                         digits, so the file is the same on every platform.
 
-Usage: make_fixtures.py [--check]   (--check compares with the files on disk, writes nothing)
+Usage: make_fixtures.py [--simulate] [--check]   (--check compares with the files on disk, writes
+nothing; --simulate also reruns the reference simulation)
 """
 
 import math
+import random
 import struct
 import sys
 from decimal import Decimal, getcontext
@@ -167,12 +180,21 @@ def tolerance_file():
         el = "null" if l is None else str(l)
         lines.append('    {"u": %s, "u_repr": "%r", "n_dig": %d, "exp10": %s, "delta": %s}' % (q(u), u, n, el, q(d)))
     adm = []
-    for s, l in [
-        (0.025, -1), (next_down(0.025), -1), (0.25, 0), (next_up(0.25), 0), (next_down(0.25), 0),
-        (25.0, 2), (next_up(25.0), 2), (0.0, -5), (5e-324, -400), (1.7976931348623157e308, 400),
-        (2.5e-4, -3), (next_down(2.5e-4), -3), (2.5e21, 22), (next_up(2.5e21), 22),
+    # Each case gives the tolerance through (u, n_dig), the only way the crate builds one;
+    # u = 3 10^l at n_dig = 1 (or an extreme u) yields the wanted l.
+    MAX = 1.7976931348623157e308
+    for s, u, n, want_l in [
+        (0.025, 0.3, 1, -1), (next_down(0.025), 0.3, 1, -1), (0.25, 3.0, 1, 0), (next_up(0.25), 3.0, 1, 0),
+        (next_down(0.25), 3.0, 1, 0), (25.0, 300.0, 1, 2), (next_up(25.0), 300.0, 1, 2), (0.0, 3e-5, 1, -5),
+        (5e-324, 5e-324, 17, -340), (MAX, MAX, 1, 308), (2.5e307, MAX, 1, 308), (next_up(2.5e307), MAX, 1, 308),
+        (2.5e-4, 3e-3, 1, -3), (next_down(2.5e-4), 3e-3, 1, -3), (2.5e21, 3e22, 1, 22), (next_up(2.5e21), 3e22, 1, 22),
     ]:
-        adm.append('    {"s": %s, "s_repr": "%r", "exp10": %d, "admits": %s}' % (q(s), s, l, "true" if admits(s, l) else "false"))
+        l, _ = tolerance(u, n)
+        assert l == want_l, (u, n, l)
+        adm.append(
+            '    {"s": %s, "s_repr": "%r", "u": %s, "n_dig": %d, "exp10": %d, "admits": %s}'
+            % (q(s), s, q(u), n, l, "true" if admits(s, l) else "false")
+        )
     assert not admits(0.025, -1)  # the binary64 0.025 is above 1/40
     return (
         '{\n  "title": "UNC.PROP.MCM.ADAPT numerical tolerance delta = 10^l / 2 from n_dig digits of u(y)",\n'
@@ -387,32 +409,151 @@ def clopper_pearson(k, n, alpha=0.05):
     return lo, hi
 
 
-def thresholds(n, p0=Fraction(19, 20), alpha=Fraction(5, 100)):
-    """Exact one-sided binomial test of H: rate >= p0 (and its mirror) at level alpha, in
-    rationals: falsified iff P(X <= k; p0) < alpha (the one-sided Clopper-Pearson upper
-    bound is below p0); supported iff P(X >= k; p0) <= alpha (the one-sided lower bound
-    is at least p0)."""
-    pmf = [math.comb(n, i) * p0 ** i * (1 - p0) ** (n - i) for i in range(n + 1)]
-    cum = Fraction(0)
-    k_f = -1
-    for k in range(n + 1):
-        cum += pmf[k]
-        if cum < alpha:
-            k_f = k
-        else:
-            break
-    tail = Fraction(0)
-    k_s = n + 1
-    for k in range(n, -1, -1):
-        tail += pmf[k]
-        if tail <= alpha:
-            k_s = k
-        else:
-            break
-    return k_f, k_s
+def fisher_accepts(k, n, ref_k, ref_n, alpha=Decimal("0.01")):
+    """Two-sided exact conditional (Fisher) test that the crate's k of n and the reference
+    simulation's ref_k of ref_n come from the same pass rate. The reference rate is itself a
+    simulated estimate, so this is the exact binomial comparison that accounts for its
+    uncertainty; with ref_n -> infinity it becomes the one-sample exact binomial test.
+    p-value = sum of the hypergeometric probabilities no larger than that of k (relative
+    tie tolerance 1e-30); accept iff p > alpha. Hypergeometric weights by the ratio
+    recursion in Decimal at 60 digits (correctly rounded, the same on every platform)."""
+    t = k + ref_k
+    lo, hi = max(0, t - ref_n), min(n, t)
+    w = []
+    x_w = Decimal(1)
+    for x in range(lo, hi + 1):
+        w.append(x_w)
+        if x < hi:
+            x_w = x_w * (n - x) * (t - x) / ((x + 1) * (ref_n - t + x + 1))
+    wk = w[k - lo] * (1 + Decimal("1e-30"))
+    total = sum(w)
+    p = sum(v for v in w if v <= wk) / total
+    return p > alpha
 
 
-def example(name, low, high, f_low, f_high, sigma, kurt, m, l):
+def acceptance_band(n, ref_k, ref_n):
+    """The contiguous set of crate counts k that fisher_accepts, found by scanning outward
+    from the reference rate; the two counts beyond each end are checked to be rejected."""
+    centre = min(n, max(0, round(n * ref_k / ref_n)))
+    assert fisher_accepts(centre, n, ref_k, ref_n)
+    lo = centre
+    while lo > 0 and fisher_accepts(lo - 1, n, ref_k, ref_n):
+        lo -= 1
+    hi = centre
+    while hi < n and fisher_accepts(hi + 1, n, ref_k, ref_n):
+        hi += 1
+    for k in (lo - 1, lo - 2, hi + 1, hi + 2):
+        if 0 <= k <= n:
+            assert not fisher_accepts(k, n, ref_k, ref_n), k
+    return lo, hi
+
+
+# --------------------------------------------------------------------------- reference simulation
+
+QUANTITIES = ["y", "u", "sym_low", "sym_high"]
+SIM_FILE = "ac_h_simulated.json"
+# Runs per example of the independent reference simulation (python random, not the crate).
+N_REF = 10_000
+SIM_SEED = {"normal4": 0x5EED_0000, "rect4": 0x5EED_1000_0000}
+
+
+def sym_ranks(n, p=0.95):
+    q = math.floor(Fraction(p) * n + Fraction(1, 2))
+    r = (n - q + 1) // 2
+    return r, r + q
+
+
+def block_stats(v):
+    n = len(v)
+    s = sorted(v)
+    mean = math.fsum(s) / n
+    u = math.sqrt(math.fsum((x - mean) ** 2 for x in s) / (n - 1))
+    r_lo, r_hi = sym_ranks(n)
+    return mean, u, s[r_lo - 1], s[r_hi - 1]
+
+
+def spread(xs):
+    h = len(xs)
+    mean = math.fsum(xs) / h
+    return math.sqrt(math.fsum((x - mean) ** 2 for x in xs) / (h * (h - 1)))
+
+
+def sim_run(example_name, run, refs, m=10_000, cap=1_000_000):
+    """One run of the JCGM 101:2008 §7.9.4 procedure as restated in this file's docstring,
+    with Python's Mersenne Twister as the generator. Returns (passes per quantity, h)."""
+    rnd = random.Random(SIM_SEED[example_name] + run)
+    if example_name == "normal4":
+        g = rnd.gauss
+        draw = lambda: ((g(0.0, 1.0) + g(0.0, 1.0)) + g(0.0, 1.0)) + g(0.0, 1.0)  # noqa: E731
+    else:
+        a = math.sqrt(3.0)
+        r = rnd.random
+        draw = lambda: (((2 * r() - 1) * a + (2 * r() - 1) * a) + (2 * r() - 1) * a) + (2 * r() - 1) * a  # noqa: E731
+    blocks = []
+    all_values = []
+    while True:
+        v = [draw() for _ in range(m)]
+        blocks.append(block_stats(v))
+        all_values.extend(v)
+        h = len(blocks)
+        n = len(all_values)
+        mean_all = math.fsum(all_values) / n
+        u_all = math.sqrt(math.fsum((x - mean_all) ** 2 for x in all_values) / (n - 1))
+        if h == 1:
+            continue
+        l, delta = tolerance(u_all, 2)
+        ok = all(admits(spread([b[k] for b in blocks]), l) for k in range(4))
+        if ok or (h + 1) * m > cap:
+            break
+    fin = block_stats(all_values)
+    passes = [abs(fin[k] - refs[k]) <= delta for k in range(4)]
+    return passes, h, ok
+
+
+def simulate(refs):
+    out = {}
+    for name in ("normal4", "rect4"):
+        counts = [0, 0, 0, 0]
+        h2 = 0
+        caps = 0
+        hs = []
+        for run in range(N_REF):
+            passes, h, ok = sim_run(name, run, refs[name])
+            for k in range(4):
+                counts[k] += passes[k]
+            h2 += h == 2
+            caps += not ok
+            hs.append(h)
+        hs.sort()
+        out[name] = {"counts": counts, "stop_h2": h2, "caps": caps, "median_h": hs[N_REF // 2]}
+        print(name, out[name], flush=True)
+    lines = []
+    for name, d in out.items():
+        lines.append(
+            '    "%s": {%s, "stop_at_h2": %d, "cap_reached": %d, "median_blocks": %d}'
+            % (name, ", ".join('"%s": %d' % (q_, c) for q_, c in zip(QUANTITIES, d["counts"])), d["stop_h2"],
+               d["caps"], d["median_h"])
+        )
+    return (
+        '{\n  "title": "UNC.PROP.MCM.ADAPT AC-H1 reference simulation of the JCGM 101:2008 7.9.4 rule",\n'
+        '  "license": "%s",\n'
+        '  "provenance": "[simulated] Python random (Mersenne Twister) runs by make_fixtures.py --simulate; '
+        'independent of the crate; not measured",\n'
+        '  "runs": %d,\n  "counts_within_delta": {\n%s\n  }\n}\n' % (LICENSE, N_REF, ",\n".join(lines))
+    )
+
+
+def read_simulated():
+    text = (HERE / SIM_FILE).read_text(encoding="utf-8")
+    runs = int(text.split('"runs": ')[1].split(",")[0])
+    res = {}
+    for name in ("normal4", "rect4"):
+        line = text.split('"%s": {' % name)[1].split("}")[0]
+        res[name] = [int(line.split('"%s": ' % q_)[1].split(",")[0]) for q_ in QUANTITIES]
+    return runs, res
+
+
+def example(name, low, high, f_low, f_high, sigma, kurt, m, l, sim):
     delta = 10.0 ** l / 2
     sig = [
         sigma / math.sqrt(m),
@@ -421,54 +562,78 @@ def example(name, low, high, f_low, f_high, sigma, kurt, m, l):
         math.sqrt(0.025 * 0.975 / m) / f_high,
     ]
     h = max(2, math.ceil(max((2 * s / delta) ** 2 for s in sig)))
+    runs, counts = sim
+    pred = []
+    bands = []
+    for q_, c in zip(QUANTITIES, counts[name]):
+        lo, hi = acceptance_band(N_SEEDS, c, runs)
+        pred.append('"pred_%s": "%.4f"' % (q_, c / runs))
+        bands.append('"band_%s": [%d, %d]' % (q_, lo, hi))
     return (
-        '    "%s": {"u": "%s", "sym_low": "%s", "sym_high": "%s", "sigma_block": [%s], "exp10": %d, '
-        '"h_pred": %d, "trials_pred": %d}'
-        % (name, sig12(sigma), sig12(low), sig12(high), ", ".join('"%s"' % sig12(s) for s in sig), l, h, h * m)
+        '    "%s": {"y": "0", "u": "%s", "sym_low": "%s", "sym_high": "%s", "sigma_block": [%s], "exp10": %d, '
+        '"h_pred": %d, "trials_pred": %d, %s, %s}'
+        % (name, sig12(sigma), sig12(low), sig12(high), ", ".join('"%s"' % sig12(s) for s in sig), l, h, h * m,
+           ", ".join(pred), ", ".join(bands))
     )
 
 
-def ac_h_reference():
-    lo, hi = clopper_pearson(100, 100)
-    assert abs(lo - 0.025 ** (1 / 100)) < 1e-9 and hi == 1.0
-    k_f, k_s = thresholds(N_SEEDS)
-    m = block_size(0.95)
-    assert m == 10_000
-    # normal4: Y ~ N(0, 4).
+def analytic_refs():
     z = NormalDist().inv_cdf(0.975)
     phi = math.exp(-z * z / 2) / math.sqrt(2 * math.pi)
-    l, _ = tolerance(2.0, 2)
-    assert l == -1
-    n4 = example("normal4", -2 * z, 2 * z, phi / 2, phi / 2, 2.0, 3.0, m, l)
-    # rect4: Y = 2 sqrt(3) S - 4 sqrt(3), S Irwin-Hall(4); excess kurtosis -1.2 / 4.
     sc = 2 * math.sqrt(3.0)
     s_hi = bisect(irwin_hall4_cdf, 0.975, 0.0, 4.0)
     y_hi = sc * s_hi - 2 * sc
     f_hi = irwin_hall4_pdf(s_hi) / sc
-    r4 = example("rect4", -y_hi, y_hi, f_hi, f_hi, 2.0, 3.0 - 0.3, m, l)
+    return {
+        "normal4": {"low": -2 * z, "high": 2 * z, "f": phi / 2, "kurt": 3.0},
+        "rect4": {"low": -y_hi, "high": y_hi, "f": f_hi, "kurt": 3.0 - 0.3},
+    }
+
+
+def ac_h_reference(sim):
+    lo, hi = clopper_pearson(100, 100)
+    assert abs(lo - 0.025 ** (1 / 100)) < 1e-9 and hi == 1.0
+    m = block_size(0.95)
+    assert m == 10_000
+    l, _ = tolerance(2.0, 2)
+    assert l == -1
+    refs = analytic_refs()
+    ex = []
+    for name in ("normal4", "rect4"):
+        r = refs[name]
+        ex.append(example(name, r["low"], r["high"], r["f"], r["f"], 2.0, r["kurt"], m, l, sim))
     first = N_SEEDS * 8 // 10
     cp = ", ".join('["%.6f", "%.6f"]' % clopper_pearson(k, N_SEEDS) for k in range(first, N_SEEDS + 1))
     return (
-        '{\n  "title": "UNC.PROP.MCM.ADAPT AC-H1/AC-H2 analytic references (p = 0.95, n_dig = 2, M = 10 000)",\n'
-        '  "license": "%s",\n  "provenance": "closed-form distributions and asymptotic standard errors, not measured",\n'
+        '{\n  "title": "UNC.PROP.MCM.ADAPT AC-H1/AC-H2 references (p = 0.95, n_dig = 2, M = 10 000)",\n'
+        '  "license": "%s",\n'
+        '  "provenance": "closed-form distributions and asymptotic standard errors; pred_* are [simulated] rates '
+        'from %s (%d runs per example, independent of the crate); not measured",\n'
         '  "examples": {\n%s,\n%s\n  },\n'
-        '  "seeds": %d,\n  "falsified_if_at_most": %d,\n  "supported_if_at_least": %d,\n'
+        '  "seeds": %d,\n  "band_alpha": "0.01",\n'
         '  "clopper_pearson_95_first_k": %d,\n  "clopper_pearson_95": [%s]\n}\n'
-        % (LICENSE, n4, r4, N_SEEDS, k_f, k_s, first, cp)
+        % (LICENSE, SIM_FILE, sim[0], ex[0], ex[1], N_SEEDS, first, cp)
     )
 
 
 def main(argv):
     check = "--check" in argv[1:]
+    files = {}
+    if "--simulate" in argv[1:]:
+        r = analytic_refs()
+        refs = {n: [0.0, 2.0, r[n]["low"], r[n]["high"]] for n in r}
+        files[SIM_FILE] = simulate(refs)
+        if not check:
+            (HERE / SIM_FILE).write_text(files[SIM_FILE], encoding="utf-8", newline="\n")
     conv, stop_at = converge()
-    files = {
+    files.update({
         "block_size.json": block_size_file(),
         "tolerance.json": tolerance_file(),
         "summaries_converge.json": conv,
         "summaries_slow.json": slow(),
         "summaries_edge.json": edge(),
-        "ac_h_reference.json": ac_h_reference(),
-    }
+        "ac_h_reference.json": ac_h_reference(read_simulated()),
+    })
     if not check:
         print(f"AC-1 sequence stops after block {stop_at}")
     bad = 0

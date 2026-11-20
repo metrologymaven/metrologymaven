@@ -35,19 +35,21 @@
     {"u": "4000000000000000", "u_repr": "2.0", "n_dig": 1, "exp10": 0, "delta": "3fe0000000000000"}
   ],
   "admits": [
-    {"s": "3f9999999999999a", "s_repr": "0.025", "exp10": -1, "admits": false},
-    {"s": "3f99999999999999", "s_repr": "0.024999999999999998", "exp10": -1, "admits": true},
-    {"s": "3fd0000000000000", "s_repr": "0.25", "exp10": 0, "admits": true},
-    {"s": "3fd0000000000001", "s_repr": "0.25000000000000006", "exp10": 0, "admits": false},
-    {"s": "3fcfffffffffffff", "s_repr": "0.24999999999999997", "exp10": 0, "admits": true},
-    {"s": "4039000000000000", "s_repr": "25.0", "exp10": 2, "admits": true},
-    {"s": "4039000000000001", "s_repr": "25.000000000000004", "exp10": 2, "admits": false},
-    {"s": "0000000000000000", "s_repr": "0.0", "exp10": -5, "admits": true},
-    {"s": "0000000000000001", "s_repr": "5e-324", "exp10": -400, "admits": false},
-    {"s": "7fefffffffffffff", "s_repr": "1.7976931348623157e+308", "exp10": 400, "admits": true},
-    {"s": "3f30624dd2f1a9fc", "s_repr": "0.00025", "exp10": -3, "admits": false},
-    {"s": "3f30624dd2f1a9fb", "s_repr": "0.00024999999999999995", "exp10": -3, "admits": true},
-    {"s": "4460f0cf064dd592", "s_repr": "2.5e+21", "exp10": 22, "admits": true},
-    {"s": "4460f0cf064dd593", "s_repr": "2.5000000000000005e+21", "exp10": 22, "admits": false}
+    {"s": "3f9999999999999a", "s_repr": "0.025", "u": "3fd3333333333333", "n_dig": 1, "exp10": -1, "admits": false},
+    {"s": "3f99999999999999", "s_repr": "0.024999999999999998", "u": "3fd3333333333333", "n_dig": 1, "exp10": -1, "admits": true},
+    {"s": "3fd0000000000000", "s_repr": "0.25", "u": "4008000000000000", "n_dig": 1, "exp10": 0, "admits": true},
+    {"s": "3fd0000000000001", "s_repr": "0.25000000000000006", "u": "4008000000000000", "n_dig": 1, "exp10": 0, "admits": false},
+    {"s": "3fcfffffffffffff", "s_repr": "0.24999999999999997", "u": "4008000000000000", "n_dig": 1, "exp10": 0, "admits": true},
+    {"s": "4039000000000000", "s_repr": "25.0", "u": "4072c00000000000", "n_dig": 1, "exp10": 2, "admits": true},
+    {"s": "4039000000000001", "s_repr": "25.000000000000004", "u": "4072c00000000000", "n_dig": 1, "exp10": 2, "admits": false},
+    {"s": "0000000000000000", "s_repr": "0.0", "u": "3eff75104d551d69", "n_dig": 1, "exp10": -5, "admits": true},
+    {"s": "0000000000000001", "s_repr": "5e-324", "u": "0000000000000001", "n_dig": 17, "exp10": -340, "admits": false},
+    {"s": "7fefffffffffffff", "s_repr": "1.7976931348623157e+308", "u": "7fefffffffffffff", "n_dig": 1, "exp10": 308, "admits": false},
+    {"s": "7fc1ccf385ebc8a0", "s_repr": "2.5e+307", "u": "7fefffffffffffff", "n_dig": 1, "exp10": 308, "admits": false},
+    {"s": "7fc1ccf385ebc8a1", "s_repr": "2.5000000000000005e+307", "u": "7fefffffffffffff", "n_dig": 1, "exp10": 308, "admits": false},
+    {"s": "3f30624dd2f1a9fc", "s_repr": "0.00025", "u": "3f689374bc6a7efa", "n_dig": 1, "exp10": -3, "admits": false},
+    {"s": "3f30624dd2f1a9fb", "s_repr": "0.00024999999999999995", "u": "3f689374bc6a7efa", "n_dig": 1, "exp10": -3, "admits": true},
+    {"s": "4460f0cf064dd592", "s_repr": "2.5e+21", "u": "449969368974c05b", "n_dig": 1, "exp10": 22, "admits": true},
+    {"s": "4460f0cf064dd593", "s_repr": "2.5000000000000005e+21", "u": "449969368974c05b", "n_dig": 1, "exp10": 22, "admits": false}
   ]
 }

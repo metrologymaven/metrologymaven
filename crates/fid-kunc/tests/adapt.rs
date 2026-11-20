@@ -7,17 +7,19 @@
 //! hand-labelled from the spec's rules.
 //!
 //! AC-H1 and AC-H2 (as restated in the leaf's NODE.md) are measured by
-//! `ac_h_adaptive_runs`. Plain `cargo test` runs a smoke of the first few seeds on every
-//! target, wasm32 included; `UNC_MCM_ADAPT_FULL=1 cargo test --release -p fid-kunc --test
-//! adapt ac_h -- --nocapture` runs all 100 seeds per example. Every number these tests print
-//! is a simulated (Monte Carlo) result, not a measurement; pass counts are printed with
-//! their exact (Clopper-Pearson) two-sided 95 % bounds from the reference file.
+//! `ac_h_adaptive_runs`. Plain `cargo test` (CI) runs a 4-seed smoke on every target,
+//! wasm32 included, without the count comparison; `UNC_MCM_ADAPT_FULL=1 cargo test
+//! --release -p fid-kunc --test adapt ac_h -- --nocapture` runs all 1000 seeds per example
+//! and the two-sided exact binomial comparison with the oracle's [simulated] predicted
+//! rates. Every number these tests print is a simulated (Monte Carlo) result, not a
+//! measurement; pass counts are printed with their exact (Clopper-Pearson) two-sided 95 %
+//! bounds from the reference file.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_kunc::dist::{Distribution, Quantity, UnitCode};
 use fid_kunc::prop::mcm::adapt::{
-    block_size, decide, tolerance, AdaptProfile, AdaptStep, BlockSummary, Decision, GumSuiteProfile, Tolerance,
-    ALGORITHM_ID, DEFAULT_CAP, DEFAULT_N_DIG, FLAG_NOT_CONVERGED, RULE,
+    block_size, decide, tolerance, AdaptProfile, AdaptStep, BlockSummary, Decision, GumSuiteProfile, ALGORITHM_ID,
+    DEFAULT_CAP, DEFAULT_N_DIG, FLAG_NOT_CONVERGED, RULE,
 };
 use fid_kunc::prop::mcm::interval::{summarize, McmSummary};
 use fid_kunc::prop::mcm::McmError;
@@ -120,8 +122,8 @@ fn replay(s: &Seq) -> Vec<AdaptStep> {
             let tol = got.tolerance.unwrap();
             let e = raw(line, 0, "exp10");
             let want_e = if e == "null" { None } else { Some(e.parse::<i32>().unwrap()) };
-            assert_eq!(tol.exp10, want_e, "h = {h} exp10");
-            assert_eq!(tol.delta.to_bits(), hex(raw(line, 0, "delta")).to_bits(), "h = {h} delta");
+            assert_eq!(tol.exp10(), want_e, "h = {h} exp10");
+            assert_eq!(tol.delta().to_bits(), hex(raw(line, 0, "delta")).to_bits(), "h = {h} delta");
         }
         out.push(got);
     }
@@ -161,7 +163,7 @@ fn ac1_converging_sequence_stops() {
     assert!(!last.not_converged());
     assert!(last.flags().is_empty());
     // Step 3 has u(y) = 0.9951, which rounds to 1.0 at two digits: delta stays 0.05.
-    assert_eq!(steps[2].tolerance.unwrap().exp10, Some(-1));
+    assert_eq!(steps[2].tolerance.unwrap().exp10(), Some(-1));
 }
 
 /// AC-2: cap 30 000 and M = 10 000: cap_reached after block 3 with the achieved values.
@@ -176,7 +178,7 @@ fn ac2_slow_sequence_reaches_the_cap() {
     assert!(last.not_converged());
     assert_eq!(last.flags(), [FLAG_NOT_CONVERGED]);
     let tol = last.tolerance.unwrap();
-    assert_eq!(tol.delta, 0.05);
+    assert_eq!(tol.delta(), 0.05);
     // The achieved values do not meet the tolerance: never `stop` on a cap.
     assert!(last.sd.unwrap().iter().any(|&x| !tol.admits(x)));
     assert_eq!(steps[1].decision, Decision::Continue);
@@ -201,8 +203,8 @@ fn edge_sequences() {
 #[test]
 fn ac3_tolerance() {
     let t = tolerance(0.0123456, 2).unwrap();
-    assert_eq!(t.exp10, Some(-3));
-    assert_eq!(t.delta, 0.0005);
+    assert_eq!(t.exp10(), Some(-3));
+    assert_eq!(t.delta(), 0.0005);
 }
 
 /// The oracle's tolerance table, bit for bit, and the exact `2 s <= delta` test.
@@ -216,8 +218,8 @@ fn tolerance_table() {
         let t = tolerance(u, n_dig).unwrap();
         let e = raw(line, 0, "exp10");
         let want = if e == "null" { None } else { Some(e.parse::<i32>().unwrap()) };
-        assert_eq!(t.exp10, want, "u = {u}, n_dig = {n_dig}");
-        assert_eq!(t.delta.to_bits(), hex(raw(line, 0, "delta")).to_bits(), "u = {u}, n_dig = {n_dig}");
+        assert_eq!(t.exp10(), want, "u = {u}, n_dig = {n_dig}");
+        assert_eq!(t.delta().to_bits(), hex(raw(line, 0, "delta")).to_bits(), "u = {u}, n_dig = {n_dig}");
         n += 1;
     }
     assert!(n >= 30);
@@ -226,15 +228,27 @@ fn tolerance_table() {
         let s = hex(raw(line, 0, "s"));
         let l: i32 = raw(line, 0, "exp10").parse().unwrap();
         let want: bool = raw(line, 0, "admits").parse().unwrap();
-        let t = Tolerance { exp10: Some(l), delta: 0.0 };
+        let t = tolerance(hex(raw(line, 0, "u")), raw(line, 0, "n_dig").parse().unwrap()).unwrap();
+        assert_eq!(t.exp10(), Some(l), "s = {s}");
         assert_eq!(t.admits(s), want, "s = {s}, l = {l}");
         n += 1;
     }
-    assert!(n >= 14);
+    assert!(n >= 16);
+    // NaN, infinite and negative spreads are never admitted; -0.0 counts as zero.
+    let t = tolerance(1.0, 2).unwrap();
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -1.0, -f64::from_bits(1)] {
+        assert!(!t.admits(bad), "{bad}");
+    }
+    assert!(t.admits(-0.0));
+    // The exponent stays within the bounded range at the binary64 extremes.
+    assert_eq!(tolerance(f64::MAX, 1).unwrap().exp10(), Some(308));
+    assert_eq!(tolerance(f64::from_bits(1), 17).unwrap().exp10(), Some(-340));
+    assert_eq!(tolerance(f64::from_bits(1), 1).unwrap().exp10(), Some(-324));
+    assert!(!tolerance(f64::MAX, 17).unwrap().admits(f64::MAX / 8.0));
     // u(y) = 0 (and -0) give delta = 0, admitting only s = 0.
     for z in [0.0, -0.0] {
         let t = tolerance(z, 2).unwrap();
-        assert_eq!((t.exp10, t.delta), (None, 0.0));
+        assert_eq!((t.exp10(), t.delta()), (None, 0.0));
         assert!(t.admits(0.0));
         assert!(!t.admits(f64::from_bits(1)));
     }
@@ -392,76 +406,82 @@ fn run(ex: Example, seed: u64, profile: &AdaptProfile) -> Run {
     }
 }
 
+/// The four AC-H1 quantities, in the order of the reference keys.
+const QUANTITIES: [&str; 4] = ["y", "u", "sym_low", "sym_high"];
+
 struct Reference {
-    u: f64,
-    low: f64,
-    high: f64,
+    /// Analytic values of the estimate, u(y), and the symmetric endpoints.
+    values: [f64; 4],
+    /// Acceptance bands `[lo, hi]` of the two-sided exact binomial test at level 0.01
+    /// against the oracle's [simulated] predicted rates, for the reference seed count.
+    bands: [(u64, u64); 4],
+    /// Predicted rates (for printing).
+    pred: [String; 4],
     trials_pred: u64,
 }
 
 fn reference(doc: &str, ex: Example) -> Reference {
     let at = doc.find(&format!("\"{}\": {{", ex.name())).unwrap();
     let num = |k: &str| raw(doc, at, k).trim_matches('"').parse::<f64>().unwrap();
+    let band = |k: &str| {
+        let r = raw(doc, at, &format!("band_{k}"));
+        let v: Vec<u64> = r.trim_matches(['[', ']']).split(',').map(|x| x.trim().parse().unwrap()).collect();
+        (v[0], v[1])
+    };
+    let pred = |k: &str| raw(doc, at, &format!("pred_{k}")).trim_matches('"').to_string();
     Reference {
-        u: num("u"),
-        low: num("sym_low"),
-        high: num("sym_high"),
+        values: [num("y"), num("u"), num("sym_low"), num("sym_high")],
+        bands: QUANTITIES.map(band),
+        pred: QUANTITIES.map(pred),
         trials_pred: raw(doc, at, "trials_pred").parse().unwrap(),
     }
 }
 
-/// Verdict of a one-sided exact binomial test of "pass rate >= 0.95" from the oracle's
-/// thresholds: `falsified` if the one-sided 95 % Clopper-Pearson upper bound is below 0.95,
-/// `supported` if the one-sided lower bound is at least 0.95, else `inconclusive`.
-fn verdict(pass: u64, falsified_at_most: u64, supported_at_least: u64) -> &'static str {
-    if pass <= falsified_at_most {
-        "falsified"
-    } else if pass >= supported_at_least {
-        "supported"
-    } else {
-        "inconclusive"
-    }
-}
-
-/// Verdicts recorded in NODE.md for the hypothesis-scale run (1000 seeds per example,
-/// release build): (example, quantity, pass count, verdict). The run is deterministic
-/// (D0), so a full run must reproduce these counts exactly.
-const RECORDED: [(&str, &str, u64, &str); 6] = [
-    ("normal4", "u", 1000, "supported"),
-    ("normal4", "sym_low", 935, "falsified"),
-    ("normal4", "sym_high", 940, "inconclusive"),
-    ("rect4", "u", 1000, "supported"),
-    ("rect4", "sym_low", 938, "inconclusive"),
-    ("rect4", "sym_high", 950, "inconclusive"),
+/// Counts recorded in NODE.md for the full run (1000 seeds per example, release build):
+/// (example, quantity, runs within delta). The run is deterministic (D0), so a full run
+/// must reproduce these counts exactly.
+const RECORDED: [(&str, &str, u64); 8] = [
+    ("normal4", "y", 999),
+    ("normal4", "u", 1000),
+    ("normal4", "sym_low", 935),
+    ("normal4", "sym_high", 940),
+    ("rect4", "y", 1000),
+    ("rect4", "u", 1000),
+    ("rect4", "sym_low", 938),
+    ("rect4", "sym_high", 950),
 ];
 
 /// AC-H1 and AC-H2 as restated in NODE.md (simulated runs, not measurements).
 ///
-/// AC-H1: on the two additive-model examples with closed-form output distributions, the
-/// stopped u(y) and symmetric 95 % endpoints (from all trials of the run) lie within delta
-/// of the analytic values for at least 95 % of runs, per quantity, judged over 1000 seeds
-/// by the exact one-sided binomial test of [`verdict`].
+/// AC-H1 (implementation check): on the two additive-model examples with closed-form
+/// output distributions, count per quantity (estimate, u(y), symmetric 95 % endpoints, all
+/// from all trials of the run) the runs that end within delta of the analytic value; each
+/// count over 1000 seeds must lie in the acceptance band of a two-sided exact binomial
+/// test at level 0.01 around the rate that the oracle's independent reference simulation
+/// of the JCGM 101:2008 §7.9.4 rule predicts. §7.9 gives no coverage-of-truth guarantee:
+/// rates below 0.95 are a property of the rule (s with h - 1 degrees of freedom, optional
+/// stopping).
 /// AC-H2: the median trial count at stop over the same seeds is within a factor 2 of the
 /// trial count predicted from the asymptotic per-block standard deviations (oracle).
 /// Seeds: normal4 0xAD_0000 + s, rect4 0xAD_1000 + s (streams 0..3), s = 0..999.
+/// Plain `cargo test` (CI) runs a 4-seed smoke without the band test; the full count
+/// comparison runs only with `UNC_MCM_ADAPT_FULL=1`.
 #[test]
 fn ac_h_adaptive_runs() {
     let full = std::env::var("UNC_MCM_ADAPT_FULL").map(|v| v == "1").unwrap_or(false);
     let doc = read("ac_h_reference.json");
     let n_full: u64 = raw(&doc, 0, "seeds").parse().unwrap();
-    let k_f: u64 = raw(&doc, 0, "falsified_if_at_most").parse().unwrap();
-    let k_s: u64 = raw(&doc, 0, "supported_if_at_least").parse().unwrap();
     let cp_first: u64 = raw(&doc, 0, "clopper_pearson_95_first_k").parse().unwrap();
     let cp_raw = raw(&doc, 0, "clopper_pearson_95");
     let cp: Vec<String> = cp_raw.trim_matches(['[', ']']).split("], [").map(|x| x.replace('"', "")).collect();
     assert_eq!(cp.len() as u64, n_full - cp_first + 1);
     let seeds = if full { n_full } else { 4 };
-    let scale = if full { "hypothesis scale" } else { "smoke, not the hypothesis scale" };
+    let scale = if full { "full run" } else { "smoke, not the full run" };
     let profile = AdaptProfile::with_defaults(0.95).unwrap();
     let mut measured = Vec::new();
     for ex in [Example::Normal4, Example::Rect4] {
         let r = reference(&doc, ex);
-        let mut pass = [0u64; 3];
+        let mut pass = [0u64; 4];
         let mut caps = 0u64;
         let mut trials = Vec::new();
         for s in 0..seeds {
@@ -471,10 +491,10 @@ fn ac_h_adaptive_runs() {
                 caps += 1;
             }
             trials.push(last.trials);
-            let delta = last.tolerance.unwrap().delta;
-            let errs = [(run.fin.u - r.u).abs(), (run.fin.sym.low - r.low).abs(), (run.fin.sym.high - r.high).abs()];
-            for k in 0..3 {
-                if errs[k] <= delta {
+            let delta = last.tolerance.unwrap().delta();
+            let got = [run.fin.mean, run.fin.u, run.fin.sym.low, run.fin.sym.high];
+            for k in 0..4 {
+                if (got[k] - r.values[k]).abs() <= delta {
                     pass[k] += 1;
                 }
             }
@@ -482,24 +502,29 @@ fn ac_h_adaptive_runs() {
         trials.sort_unstable();
         let n = trials.len();
         let median = if n % 2 == 1 { trials[n / 2] as f64 } else { (trials[n / 2 - 1] + trials[n / 2]) as f64 / 2.0 };
-        for (k, name) in ["u", "sym_low", "sym_high"].iter().enumerate() {
+        for (k, name) in QUANTITIES.iter().enumerate() {
+            let (lo, hi) = r.bands[k];
             let (bounds, v) = if full {
                 let b = if pass[k] >= cp_first { cp[(pass[k] - cp_first) as usize].clone() } else { "< 0.8".into() };
-                (b, verdict(pass[k], k_f, k_s))
+                (b, if pass[k] >= lo && pass[k] <= hi { "agrees" } else { "disagrees" })
             } else {
                 ("n/a".to_string(), "n/a")
             };
             println!(
-                "AC-H1 simulated {} {name}: {}/{seeds} runs within delta ({scale}), exact two-sided 95 % bounds [{bounds}], verdict {v}",
+                "AC-H1 simulated {} {name}: {}/{seeds} runs within delta ({scale}), exact two-sided 95 % bounds [{bounds}]; predicted rate {} [simulated], band [{lo}, {hi}] at 0.01: {v}",
                 ex.name(),
-                pass[k]
+                pass[k],
+                r.pred[k]
             );
-            measured.push((ex.name(), *name, pass[k], v));
+            measured.push((ex.name(), *name, pass[k]));
+            if full {
+                assert!(pass[k] >= lo && pass[k] <= hi, "AC-H1 {} {name}: {} outside [{lo}, {hi}]", ex.name(), pass[k]);
+            }
         }
         let pred = r.trials_pred as f64;
-        let h2 = if median >= pred / 2.0 && median <= pred * 2.0 { "supported" } else { "falsified" };
+        let h2 = if median >= pred / 2.0 && median <= pred * 2.0 { "supported" } else { "not supported" };
         println!(
-            "AC-H2 simulated {}: median trials at stop {median} (predicted {pred}, {scale}), verdict {h2}; cap reached {caps}/{seeds}; min {} max {}",
+            "AC-H2 simulated {}: median trials at stop {median} (predicted {pred}, {scale}), {h2}; cap reached {caps}/{seeds}; min {} max {}",
             ex.name(),
             trials[0],
             trials[n - 1]
@@ -510,7 +535,7 @@ fn ac_h_adaptive_runs() {
         }
     }
     if full {
-        assert_eq!(measured, RECORDED, "the hypothesis-scale run no longer reproduces the counts in NODE.md");
+        assert_eq!(measured, RECORDED, "the full run no longer reproduces the counts in NODE.md");
     }
 }
 
