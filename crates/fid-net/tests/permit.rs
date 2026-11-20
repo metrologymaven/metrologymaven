@@ -128,10 +128,13 @@ fn ac5_compile_fail_cases_are_the_intended_ones() {
     let forged = read("w2_forged_permit.rs");
     assert!(forged.contains("impl Handler for W2Handler"));
     assert!(forged.contains("fid_bus::policy::egress::issue_permit("));
+    let literal = read("w2_struct_literal_permit.rs");
+    assert!(literal.contains("impl Handler for W2Handler"));
+    assert!(literal.contains("NetPermit { class: SideEffect::X1, _scope: PhantomData }"));
     let control = read("with_permit_control.rs");
     assert!(control.contains("fid_net::connect_tcp(permit, &self.addr, Duration::from_secs(1))"));
     let lib = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs")).unwrap();
-    for n in ["w2_without_permit.rs", "w2_forged_permit.rs"] {
+    for n in ["w2_without_permit.rs", "w2_forged_permit.rs", "w2_struct_literal_permit.rs"] {
         let at = lib.find(&format!("tests/compile_fail/{n}")).unwrap();
         assert!(lib[..at].ends_with("#![doc = \"```compile_fail\"]\n#![doc = include_str!(\"../"), "{n}");
     }

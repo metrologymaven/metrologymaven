@@ -13,8 +13,9 @@ repository.workspace = true
 fid-bus = { path = "../fid-bus" }
 
 [dev-dependencies]
-# Tests issue permits through the bus's test-support entry point.
-fid-bus = { path = "../fid-bus", features = ["test-support"] }
+# Tests mint permits through the bus's `permit-test-hooks` feature, which only
+# `[dev-dependencies]` may enable (fid-bus `tests/test_hooks.rs` checks every crate).
+fid-bus = { path = "../fid-bus", features = ["permit-test-hooks"] }
 fid-canon = { path = "../fid-canon" }
 fid-registry = { path = "../fid-registry" }
 fid-types = { path = "../fid-types" }

@@ -109,6 +109,35 @@ URLS = [
     ("tab", "https://a.example/a\tb", False),
     ("label 64 bytes", "https://" + "a" * 64 + ".example/x", False),
     ("label 63 bytes", "https://" + "a" * 63 + ".example/x", True),
+    ("NUL", "https://a.example/a\u0000b", False),
+    ("DEL", "https://a.example/a\u007fb", False),
+    ("two ports", "https://a.example:1:2/x", False),
+    ("2048 bytes", "https://a.example/" + "p" * (2048 - len("https://a.example/")), True),
+    ("2049 bytes", "https://a.example/" + "p" * (2049 - len("https://a.example/")), False),
+]
+
+# network_root paths, hand-labelled: absolute, no '.' or '..' segment, no control character,
+# no Windows device or verbatim prefix; a drive or a UNC share on Windows.
+ROOT_PATHS = [
+    ("unix absolute", "unix", "/srv/egress/lab", True),
+    ("unix relative", "unix", "srv/egress", False),
+    ("unix dot dot", "unix", "/srv/../etc", False),
+    ("unix dot", "unix", "/srv/./lab", False),
+    ("unix trailing dot dot", "unix", "/srv/lab/..", False),
+    ("unix NUL", "unix", "/srv/a\u0000b", False),
+    ("unix newline", "unix", "/srv/a\nb", False),
+    ("unix backslash dot dot", "unix", "/srv\\..\\etc", False),
+    ("windows drive", "windows", "C:\\egress\\lab", True),
+    ("windows UNC share", "windows", "\\\\server\\share\\inbox", True),
+    ("windows drive relative", "windows", "C:egress", False),
+    ("windows dot dot", "windows", "C:\\egress\\..\\x", False),
+    ("windows forward dot dot", "windows", "C:/egress/../x", False),
+    ("windows verbatim", "windows", "\\\\?\\C:\\egress", False),
+    ("windows verbatim UNC", "windows", "\\\\?\\UNC\\server\\share", False),
+    ("windows device", "windows", "\\\\.\\COM1", False),
+    ("windows device slashes", "windows", "//./pipe/x", False),
+    ("windows NT object", "windows", "\\??\\C:\\egress", False),
+    ("windows DEL", "windows", "C:\\a\u007fb", False),
 ]
 
 LAB = {"id": "lab-share", "kind": "network_root", "path": "/srv/egress/lab"}
@@ -154,6 +183,7 @@ def build():
         "artifact": {"file": "artifact.bin", "digest": digest(art), "size": len(art)},
         "ids": [{"name": n, "id": i, "valid": ok} for n, i, ok in IDS],
         "urls": [{"name": n, "url": u, "valid": ok} for n, u, ok in URLS],
+        "root_paths": [{"name": n, "platform": p, "path": v, "valid": ok} for n, p, v, ok in ROOT_PATHS],
         "settings": [{"name": n, "platform": p, "value": v, "valid": ok} for n, p, v, ok in SETTINGS],
         "config_digests": [{"destination": d, "digest": config_digest(d)} for d in (LAB, WIN_LAB, UPLOAD)],
     }

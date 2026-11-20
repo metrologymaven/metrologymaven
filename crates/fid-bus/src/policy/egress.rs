@@ -62,7 +62,7 @@
 
 #![deny(clippy::wildcard_enum_match_arm, clippy::match_wildcard_for_single_variants)]
 
-use crate::error::{BusError, Detail, PolicyReason, Untrusted, ValidationReason};
+use crate::error::{BusError, Detail, PolicyReason, PreconditionReason, Untrusted, ValidationReason};
 use crate::handler::{CancelToken, Event, EventType, HandlerCtx, StateView, ValidParams};
 use crate::policy::projection::{
     authorise as authorise_projection_call, forbidden_in_reason, is_mcp_channel, Approval, Decision, Filing, RequestId,
@@ -73,15 +73,21 @@ use crate::principal::{
 use fid_canon::CValue;
 use fid_journal::EntryTime;
 use fid_registry::{CommandDef, DefError};
-use fid_store::cas::{Address, BlobRef, BlobStore, CasError, CHUNK_SIZE};
-use fid_store::settings::{resolve as resolve_settings, Scope, SettingWarning, SettingsRegistry, Sources};
+use fid_store::cas::{Address, BlobRef, BlobStore, CasError, ChunkManifest, CHUNK_SIZE};
+use fid_store::settings::{
+    machine_config_dir, resolve as resolve_settings, user_config_dir, FileStore, Scope, SettingWarning,
+    SettingsRegistry, Sources,
+};
 use fid_types::{Digest, SideEffect};
+use std::collections::hash_map::RandomState;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::hash::{BuildHasher, Hasher};
+use std::io::{self, Read, Write};
 use std::marker::PhantomData;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf, Prefix};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 /// `egress.send@1`.
@@ -106,6 +112,8 @@ pub const MAX_RECEIPT_CHARS: usize = 500;
 pub const MAX_ARTIFACT_BYTES: u64 = CHUNK_SIZE;
 /// How long the approval dialog waits for the person.
 pub const APPROVAL_DEADLINE: Duration = Duration::from_secs(120);
+/// Oldest approval [`authorise`] accepts, by the monotonic clock (maintainer decision on #336).
+pub const APPROVAL_MAX_AGE: Duration = Duration::from_secs(300);
 
 const LIFECYCLE_SINCE: &str = "2026-11-20";
 
@@ -443,9 +451,11 @@ pub struct Destinations {
 }
 
 impl Destinations {
-    /// Reads a value of [`DESTINATIONS_KEY`]. Test support only: production code reads
-    /// destinations through [`Destinations::from_settings`].
-    #[cfg(any(test, feature = "test-support"))]
+    /// Reads a value of [`DESTINATIONS_KEY`] directly. Test hook only, behind the
+    /// `permit-test-hooks` feature, which only `[dev-dependencies]` may enable (checked by
+    /// `tests/test_hooks.rs`); production code reads destinations through
+    /// [`Destinations::from_machine_settings`].
+    #[cfg(feature = "permit-test-hooks")]
     #[doc(hidden)]
     pub fn from_value(v: &CValue) -> Result<Destinations, DestinationsError> {
         Destinations::parse_value(v)
@@ -454,7 +464,7 @@ impl Destinations {
     /// The whole value is refused on any error: not an array, more than
     /// [`MAX_DESTINATIONS`] items, an item that is not an object, an unknown field or a field
     /// of the other kind, a malformed or duplicate ID, an unknown kind, a `network_root`
-    /// path that is not absolute, holds NUL or is too long, an `https` URL that breaks
+    /// path that breaks [`check_root_path`], an `https` URL that breaks
     /// [`HttpsUrl::parse`], or a method other than `PUT` or `POST`.
     fn parse_value(v: &CValue) -> Result<Destinations, DestinationsError> {
         let err = |s: String| Err(DestinationsError(s));
@@ -480,13 +490,13 @@ impl Destinations {
                 return err(format!("destination {id} has unknown or misplaced field {k:?}"));
             }
             let kind = if allowed.contains(&"path") {
-                match o.get("path") {
-                    Some(CValue::Str(s))
-                        if !s.contains('\0') && s.len() <= MAX_ROOT_PATH_BYTES && Path::new(s).is_absolute() =>
-                    {
-                        DestinationKind::NetworkRoot { path: PathBuf::from(s) }
-                    }
-                    _ => return err(format!("destination {id}: path must be an absolute path")),
+                let checked = match o.get("path") {
+                    Some(CValue::Str(s)) => check_root_path(s).map(|()| PathBuf::from(s)),
+                    _ => Err("path is missing".to_string()),
+                };
+                match checked {
+                    Ok(path) => DestinationKind::NetworkRoot { path },
+                    Err(why) => return err(format!("destination {id}: {why}")),
                 }
             } else {
                 let url = match o.get("url") {
@@ -533,6 +543,27 @@ impl Destinations {
         Ok((Destinations::parse_value(&value.value)?, warnings))
     }
 
+    /// The production path: reads [`DESTINATIONS_KEY`] from this machine's real settings
+    /// files, located by `fid_store::settings::machine_config_dir` (Windows
+    /// `%ProgramData%`, macOS `/Library/Application Support`, other Unix `/etc`, then
+    /// `fiducial/settings.json`) and `user_config_dir` for the user scope, whose values of
+    /// this key are ignored. Fails closed when the machine folder cannot be located; the
+    /// caller then uses [`Destinations::default`] (none).
+    pub fn from_machine_settings() -> Result<(Destinations, Vec<SettingWarning>), DestinationsError> {
+        let os = std::env::consts::OS;
+        let env = |k: &str| std::env::var_os(k);
+        let machine_path = machine_config_dir(os, env)
+            .ok_or_else(|| DestinationsError("the machine settings folder is unknown".into()))?;
+        // The user scope may not hold this key; when its folder is unknown, an empty path is
+        // read as a missing file.
+        let user_path = user_config_dir(os, env).unwrap_or_default();
+        let machine = FileStore::new(Scope::Machine, machine_path)
+            .map_err(|_| DestinationsError("the machine settings file cannot be opened".into()))?;
+        let user = FileStore::new(Scope::User, user_path)
+            .map_err(|_| DestinationsError("the user settings file cannot be opened".into()))?;
+        Destinations::from_settings(&Sources { project: None, user: &user, machine: &machine })
+    }
+
     /// The destination with exactly this ID text; `bad_destination` if the text is not a
     /// valid ID or no destination has it.
     pub fn lookup(&self, id: &str) -> Result<&Destination, BusError> {
@@ -554,6 +585,43 @@ impl Destinations {
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()
     }
+}
+
+/// The rules for a `network_root` path: at most [`MAX_ROOT_PATH_BYTES`] bytes, no NUL or
+/// other control character, absolute on this platform, no `.` or `..` segment (split on `/`
+/// and `\\`), no Windows device or verbatim path (`\\.\\`, `\\?\\`, `\\??\\`, also
+/// with `/`), and only a drive letter or a UNC share as a Windows prefix.
+pub fn check_root_path(s: &str) -> Result<(), String> {
+    if s.is_empty() || s.len() > MAX_ROOT_PATH_BYTES {
+        return Err(format!("path must be 1 to {MAX_ROOT_PATH_BYTES} bytes"));
+    }
+    if s.chars().any(char::is_control) {
+        return Err("path holds a control character".into());
+    }
+    let lead: String = s.chars().take(4).map(|c| if c == '/' { '\\' } else { c }).collect();
+    if lead.starts_with("\\\\.\\") || lead.starts_with("\\\\?\\") || lead.starts_with("\\??\\") {
+        return Err("device and verbatim paths are refused".into());
+    }
+    if s.split(['/', '\\']).any(|seg| seg == "." || seg == "..") {
+        return Err("path has a '.' or '..' segment".into());
+    }
+    let p = Path::new(s);
+    if !p.is_absolute() {
+        return Err("path must be absolute".into());
+    }
+    for c in p.components() {
+        match c {
+            Component::Prefix(pre) => match pre.kind() {
+                Prefix::Disk(_) | Prefix::UNC(_, _) => {}
+                Prefix::Verbatim(_) | Prefix::VerbatimUNC(_, _) | Prefix::VerbatimDisk(_) | Prefix::DeviceNS(_) => {
+                    return Err("device and verbatim paths are refused".into())
+                }
+            },
+            Component::RootDir | Component::Normal(_) => {}
+            Component::CurDir | Component::ParentDir => return Err("path has a '.' or '..' component".into()),
+        }
+    }
+    Ok(())
 }
 
 // ------------------------------------------------------------------ parameters
@@ -792,6 +860,9 @@ pub enum EgressDecision {
 ///    that human, the artifact, the destination ID and its current configuration digest
 ///    (`no_approval` otherwise).
 ///
+/// 4. The approval must be at most [`APPROVAL_MAX_AGE`] old at `now` by the monotonic
+///    clock (`precondition/false` otherwise, also when `now` is before the approval).
+///
 /// Pure: sends nothing and commits nothing.
 #[allow(clippy::too_many_arguments)]
 pub fn authorise(
@@ -803,6 +874,7 @@ pub fn authorise(
     consent: Option<EgressApproval>,
     destinations: &Destinations,
     view: &dyn StateView,
+    now: &EntryTime,
 ) -> Result<(Principal, EgressDecision), BusError> {
     if def.id != SEND_COMMAND || def.major != 1 || def.side_effect != SideEffect::X1 {
         return Err(no_approval(&format!("{}@{} is not the egress primitive", def.id, def.major)));
@@ -844,6 +916,16 @@ pub fn authorise(
     }
     if approval.destination_digest != destination.digest {
         return Err(no_approval("the destination's configuration changed after the approval"));
+    }
+    let max_age = u64::try_from(APPROVAL_MAX_AGE.as_nanos()).unwrap_or(u64::MAX);
+    match now.mono_ns.checked_sub(approval.at.mono_ns) {
+        Some(age) if age <= max_age => {}
+        Some(_) | None => {
+            return Err(BusError::Precondition(
+                PreconditionReason::False,
+                Detail::new(&format!("the approval is older than {} seconds", APPROVAL_MAX_AGE.as_secs())),
+            ))
+        }
     }
     let cleared = Cleared {
         principal: principal.clone(),
@@ -939,9 +1021,9 @@ pub(crate) fn issue_permit<'s>(def: &CommandDef, scope: &'s mut PermitScope) -> 
 }
 
 /// Test-only access to `issue_permit` for integration tests outside this crate; not part
-/// of the API. Exists only with the `test-support` feature, which only dev-dependencies
-/// enable.
-#[cfg(feature = "test-support")]
+/// of the API. Exists only with the `permit-test-hooks` feature, which only
+/// `[dev-dependencies]` may enable (checked by `tests/test_hooks.rs`).
+#[cfg(feature = "permit-test-hooks")]
 #[doc(hidden)]
 pub fn issue_permit_for_tests<'s>(def: &CommandDef, scope: &'s mut PermitScope) -> Result<NetPermit<'s>, BusError> {
     issue_permit(def, scope)
@@ -984,11 +1066,63 @@ pub struct Transports<'a> {
     pub https: Option<&'a dyn Transport>,
 }
 
-/// Writes the artifact into a `network_root` folder as a new file named by the digest's 64
-/// hex digits. The folder must exist; an existing file of that name is never overwritten
-/// (`failed`); a partly written file is removed.
+/// Writes the artifact into a `network_root` folder under the name of the digest's 64 hex
+/// digits, atomically and without replacing anything:
+///
+/// 1. write `<hex>.partial-<random>` (created with `create_new`) and sync it;
+/// 2. hard-link it to `<hex>`, which fails if `<hex>` exists, then remove the partial file;
+/// 3. if `<hex>` already exists, hash it: `sent` if it holds exactly the artifact, `failed`
+///    otherwise (it is never replaced).
+///
+/// The partial file is removed on every path. The folder must exist. A share that does not
+/// support hard links gives `failed`.
 #[derive(Debug, Clone, Copy, Default)]
-pub struct NetworkRootTransport;
+pub struct NetworkRootTransport {
+    fail_after: Option<usize>,
+}
+
+static PARTIAL_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+fn partial_suffix() -> String {
+    let mut h = RandomState::new().build_hasher();
+    h.write_u64(PARTIAL_COUNTER.fetch_add(1, Ordering::Relaxed));
+    h.write_u32(std::process::id());
+    format!("{:016x}", h.finish())
+}
+
+/// Whether the file at `path` holds exactly `digest` (at most [`MAX_ARTIFACT_BYTES`] read).
+fn holds(path: &Path, digest: &Digest) -> bool {
+    let Ok(f) = fs::File::open(path) else { return false };
+    let mut bytes = Vec::new();
+    if f.take(MAX_ARTIFACT_BYTES + 1).read_to_end(&mut bytes).is_err() {
+        return false;
+    }
+    Digest::from_bytes(fid_canon::digest_bytes(&bytes).0) == *digest
+}
+
+impl NetworkRootTransport {
+    /// The transport.
+    pub const fn new() -> NetworkRootTransport {
+        NetworkRootTransport { fail_after: None }
+    }
+
+    /// Test hook: a transport whose write fails with an I/O error after `bytes` bytes.
+    #[cfg(feature = "permit-test-hooks")]
+    #[doc(hidden)]
+    pub const fn failing_after_for_tests(bytes: usize) -> NetworkRootTransport {
+        NetworkRootTransport { fail_after: Some(bytes) }
+    }
+
+    fn write_partial(&self, file: &mut fs::File, bytes: &[u8]) -> io::Result<()> {
+        let written = match self.fail_after {
+            Some(n) if n < bytes.len() => file
+                .write_all(&bytes[..n])
+                .and_then(|()| Err(io::Error::other("simulated failure in the middle of the write"))),
+            Some(_) | None => file.write_all(bytes),
+        };
+        written.and_then(|()| file.sync_all())
+    }
+}
 
 impl Transport for NetworkRootTransport {
     fn send(
@@ -1012,18 +1146,29 @@ impl Transport for NetworkRootTransport {
             return SendOutcome::Cancelled;
         }
         let target = path.join(artifact.hex());
-        let mut file = match OpenOptions::new().write(true).create_new(true).open(&target) {
+        let partial = path.join(format!("{}.partial-{}", artifact.hex(), partial_suffix()));
+        let mut file = match OpenOptions::new().write(true).create_new(true).open(&partial) {
             Ok(f) => f,
-            Err(e) => return failed(format!("cannot create the file: {:?}", e.kind())),
+            Err(e) => return failed(format!("cannot create the partial file: {:?}", e.kind())),
         };
-        let written = file.write_all(bytes).and_then(|()| file.sync_all());
+        let written = self.write_partial(&mut file, bytes);
         drop(file);
-        match written {
+        if let Err(e) = written {
+            let _ = fs::remove_file(&partial);
+            return failed(format!("write failed: {:?}", e.kind()));
+        }
+        let linked = fs::hard_link(&partial, &target);
+        let _ = fs::remove_file(&partial);
+        match linked {
             Ok(()) => SendOutcome::Sent { receipt: None },
-            Err(e) => {
-                let _ = fs::remove_file(&target);
-                failed(format!("write failed: {:?}", e.kind()))
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
+                if holds(&target, artifact) {
+                    SendOutcome::Sent { receipt: Some(Untrusted::new("already present with the same content".into())) }
+                } else {
+                    failed("a different file of that name exists; it was not replaced".into())
+                }
             }
+            Err(e) => failed(format!("cannot place the file: {:?}", e.kind())),
         }
     }
 }
@@ -1097,21 +1242,40 @@ impl<'a> EgressSender<'a> {
         if Digest::from_bytes(fid_canon::digest_bytes(&bytes).0) != *digest {
             return Err(bad_artifact(&format!("artifact {digest} does not verify")));
         }
+        // The digest of a chunked object names its manifest, not its bytes; sending the
+        // manifest would report `sent` for data that never left (maintainer decision on #336).
+        if ChunkManifest::parse(&bytes).is_ok() {
+            return Err(bad_artifact(&format!(
+                "artifact {digest} is a chunked object's manifest; chunked objects are not sent"
+            )));
+        }
         Ok(bytes)
     }
 
     /// Sends a cleared egress under `permit` (REQ-001, REQ-006): `class_forbidden` unless
     /// the permit is for X1; `no_approval` unless `ctx`'s principal is the approving human;
+    /// `bad_destination` if the destination is no longer in `current` (the setting as read
+    /// now) and `no_approval` if its configuration digest changed since the approval;
     /// `bad_destination` when this build has no transport for the kind; `bad_artifact`
-    /// when the artifact is missing, larger than one blob or does not verify. Nothing is
+    /// when the artifact is missing, larger than one blob, does not verify or is a chunk
+    /// manifest. Nothing is
     /// sent on any of these. Then the transport is called exactly once (not at all when
     /// cancellation was already requested) and the outcome is recorded.
-    pub fn send(&self, cleared: Cleared, permit: &NetPermit<'_>, ctx: &HandlerCtx) -> Result<Sent, BusError> {
+    pub fn send(
+        &self,
+        cleared: Cleared,
+        current: &Destinations,
+        permit: &NetPermit<'_>,
+        ctx: &HandlerCtx,
+    ) -> Result<Sent, BusError> {
         if permit.class() != SideEffect::X1 {
             return Err(policy(PolicyReason::ClassForbidden, "egress needs a permit issued for X1"));
         }
         if ctx.principal().reference() != cleared.principal.reference() {
             return Err(no_approval("the executing principal is not the approving human"));
+        }
+        if current.lookup(cleared.destination.id.as_str())?.digest != cleared.destination.digest {
+            return Err(no_approval("the destination's configuration changed after the approval"));
         }
         let transport = match &cleared.destination.kind {
             DestinationKind::NetworkRoot { .. } => self.transports.network_root,

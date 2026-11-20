@@ -24,6 +24,11 @@
 #![doc = include_str!("../tests/compile_fail/w2_forged_permit.rs")]
 #![doc = "```"]
 //!
+//! Nor does one that builds a permit with a struct literal:
+#![doc = "```compile_fail"]
+#![doc = include_str!("../tests/compile_fail/w2_struct_literal_permit.rs")]
+#![doc = "```"]
+//!
 //! The control, the same call with a permit handed in, compiles:
 #![doc = "```no_run"]
 #![doc = include_str!("../tests/compile_fail/with_permit_control.rs")]

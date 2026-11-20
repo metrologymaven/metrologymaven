@@ -11,9 +11,10 @@
 use fid_bus::error::{BusError, Code};
 use fid_bus::handler::{CancelSource, CancelToken, Event, HandlerCtx, ValidParams};
 use fid_bus::policy::egress::{
-    authorise, command_defs, issue_permit_for_tests, ApprovalDialog, Destination, DestinationId, Destinations,
-    EgressApproval, EgressDecision, EgressPrompt, EgressSender, HttpsUrl, NetworkRootTransport, Outcome, PermitScope,
-    SendOutcome, Sent, Transport, Transports, EGRESS_EVENT, MAX_NOTE_CHARS, MAX_RECEIPT_CHARS, SEND_COMMAND,
+    authorise, check_root_path, command_defs, issue_permit_for_tests, ApprovalDialog, Destination, DestinationId,
+    Destinations, EgressApproval, EgressDecision, EgressPrompt, EgressSender, HttpsUrl, NetworkRootTransport, Outcome,
+    PermitScope, SendOutcome, Sent, Transport, Transports, APPROVAL_MAX_AGE, DESTINATIONS_KEY, EGRESS_EVENT,
+    MAX_NOTE_CHARS, MAX_RECEIPT_CHARS, SEND_COMMAND,
 };
 use fid_bus::policy::projection::{EntryOrigin, RecordContext, RequestBook, RequestId, RequestState};
 use fid_bus::principal::{
@@ -26,6 +27,7 @@ use fid_journal::{DraftBody, EntryDraft, EntryTime, Manifests};
 use fid_registry::CommandDef;
 use fid_store::cas::{BlobStore, PutOpts};
 use fid_store::settings::check::validate_value;
+use fid_store::settings::{FileStore, Scope, Sources};
 use fid_types::{CommandId, Digest};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -174,6 +176,11 @@ fn time() -> EntryTime {
     EntryTime { utc: "2026-11-20T10:00:00Z".into(), mono_ns: 1_000, sync: "ntp".into() }
 }
 
+/// `seconds` after [`time`], by the monotonic clock.
+fn later(seconds: u64) -> EntryTime {
+    EntryTime { utc: "2026-11-20T10:00:00Z".into(), mono_ns: 1_000 + seconds * 1_000_000_000, sync: "ntp".into() }
+}
+
 #[derive(Default)]
 struct Journal {
     drafts: Vec<EntryDraft>,
@@ -293,6 +300,8 @@ struct World {
     destinations: Destinations,
     digest: Digest,
     bytes: Vec<u8>,
+    /// The time `authorise` runs at: one minute after the dialog by default.
+    now: EntryTime,
 }
 
 impl World {
@@ -314,6 +323,7 @@ impl World {
             destinations,
             digest,
             bytes,
+            now: later(60),
         }
     }
 
@@ -347,6 +357,7 @@ impl World {
             consent,
             &self.destinations,
             &view,
+            &self.now,
         )
         .map(|(_, d)| d)
     }
@@ -363,7 +374,7 @@ impl World {
         let mut scope = PermitScope::new();
         let permit = issue_permit_for_tests(&d, &mut scope).unwrap();
         let ctx = HandlerCtx::derive(&self.table, ch, 0, cancel).unwrap();
-        EgressSender::new(&self.store, transports).send(*cleared, &permit, &ctx)
+        EgressSender::new(&self.store, transports).send(*cleared, &self.destinations, &permit, &ctx)
     }
 }
 
@@ -556,7 +567,7 @@ fn ac1_a_network_root_send_writes_a_new_file_and_never_overwrites() {
     let mut w = World::new();
     let alice = w.channel(ChannelKind::Gui, "alice");
     let p = params(&w.digest, "lab-share");
-    let t = NetworkRootTransport;
+    let t = NetworkRootTransport::new();
     let transports = Transports { network_root: Some(&t), https: None };
 
     let consent = w.approval(&alice, w.digest, "lab-share");
@@ -807,8 +818,17 @@ fn another_definition_is_refused() {
     let p = params(&w.digest, "upload");
     let consent = w.approval(&alice, w.digest, "upload");
     let view = w.book.view(HEAD);
-    let got =
-        authorise(&w.table, &alice, &other, &ValidParams::for_tests(p), None, Some(consent), &w.destinations, &view);
+    let got = authorise(
+        &w.table,
+        &alice,
+        &other,
+        &ValidParams::for_tests(p),
+        None,
+        Some(consent),
+        &w.destinations,
+        &view,
+        &w.now,
+    );
     assert_err(got, Code::Policy, "no_approval");
 }
 
@@ -821,7 +841,7 @@ fn a_kind_without_a_transport_is_a_bad_destination() {
     let p = params(&w.digest, "upload");
     let consent = w.approval(&alice, w.digest, "upload");
     let decision = w.authorise(&alice, &p, None, Some(consent)).unwrap();
-    let t = NetworkRootTransport;
+    let t = NetworkRootTransport::new();
     let only_root = Transports { network_root: Some(&t), https: None };
     assert_err(w.send(&alice, decision, only_root, CancelToken::never()), Code::Policy, "bad_destination");
     assert!(std::fs::read_dir(&w.share.0).unwrap().next().is_none());
@@ -852,7 +872,11 @@ fn a_send_needs_an_x1_permit_and_the_approving_human() {
     let mut scope = PermitScope::new();
     let permit = issue_permit_for_tests(&i1, &mut scope).unwrap();
     let ctx = HandlerCtx::derive(&w.table, &alice, 0, CancelToken::never()).unwrap();
-    assert_err(EgressSender::new(&w.store, https(&r)).send(*cleared, &permit, &ctx), Code::Policy, "class_forbidden");
+    assert_err(
+        EgressSender::new(&w.store, https(&r)).send(*cleared, &w.destinations, &permit, &ctx),
+        Code::Policy,
+        "class_forbidden",
+    );
     assert_eq!(r.count(), 0);
 }
 
@@ -907,4 +931,164 @@ fn a_cancelled_send_is_recorded() {
     let sent = w.send(&alice, w.authorise(&alice, &p, None, Some(consent)).unwrap(), https(&c), CancelToken::never());
     assert_eq!(sent.unwrap().outcome, Outcome::Cancelled);
     assert_eq!(c.count(), 1);
+}
+
+// ------------------------------------------------------------------ review of #336
+
+/// Maintainer decision 1: a digest naming a chunked object (its manifest) is `bad_artifact`;
+/// the manifest bytes are never sent.
+#[test]
+fn a_chunked_object_is_refused_and_its_manifest_is_never_sent() {
+    let mut w = World::new();
+    let alice = w.channel(ChannelKind::Gui, "alice");
+    let big: Vec<u8> = (0..(8 * 1024 * 1024 + 4096)).map(|i| (i % 251) as u8).collect();
+    let addr = w.store.put_bytes(&big, PutOpts::default()).unwrap();
+    assert!(matches!(addr, fid_store::cas::Address::Object(_)), "stored as a chunked object");
+    let digest = addr.digest();
+    let p = params(&digest, "upload");
+    let r = Recorder::ok();
+    let consent = w.approval(&alice, digest, "upload");
+    let decision = w.authorise(&alice, &p, None, Some(consent)).unwrap();
+    assert_err(w.send(&alice, decision, https(&r), CancelToken::never()), Code::Validation, "bad_artifact");
+    assert_eq!(r.count(), 0);
+}
+
+fn partials(dir: &Path) -> Vec<String> {
+    std::fs::read_dir(dir)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().to_string())
+        .filter(|n| n.contains(".partial-"))
+        .collect()
+}
+
+fn root_send(w: &mut World, t: &NetworkRootTransport) -> Sent {
+    let alice = w.channel(ChannelKind::Gui, "alice");
+    let p = params(&w.digest, "lab-share");
+    let consent = w.approval(&alice, w.digest, "lab-share");
+    let decision = w.authorise(&alice, &p, None, Some(consent)).unwrap();
+    let sent =
+        w.send(&alice, decision, Transports { network_root: Some(t), https: None }, CancelToken::never()).unwrap();
+    check_schemas(&p, &sent);
+    sent
+}
+
+/// Maintainer decision 2: a write that fails in the middle leaves neither the final file nor
+/// the partial file, and is recorded as `failed`.
+#[test]
+fn a_failed_network_root_write_leaves_nothing_behind() {
+    let mut w = World::new();
+    let t = NetworkRootTransport::failing_after_for_tests(1000);
+    let sent = root_send(&mut w, &t);
+    assert_eq!(sent.outcome, Outcome::Failed);
+    assert!(!w.share.0.join(w.digest.hex()).exists());
+    assert!(partials(&w.share.0).is_empty());
+    assert!(std::fs::read_dir(&w.share.0).unwrap().next().is_none());
+}
+
+/// Maintainer decision 2: an existing file of the digest's name is hashed, never replaced:
+/// the same content is `sent`, other content is `failed` and stays as it was.
+#[test]
+fn an_existing_network_root_file_is_hashed_and_never_replaced() {
+    let mut w = World::new();
+    let target = w.share.0.join(w.digest.hex());
+    std::fs::write(&target, &w.bytes).unwrap();
+    let t = NetworkRootTransport::new();
+    assert_eq!(root_send(&mut w, &t).outcome, Outcome::Sent);
+    assert!(partials(&w.share.0).is_empty());
+
+    std::fs::write(&target, b"someone else's bytes").unwrap();
+    let sent = root_send(&mut w, &t);
+    assert_eq!(sent.outcome, Outcome::Failed);
+    assert_eq!(std::fs::read(&target).unwrap(), b"someone else's bytes");
+    assert!(partials(&w.share.0).is_empty());
+}
+
+/// Maintainer decision 4: an approval older than five minutes is refused at authorise.
+#[test]
+fn a_stale_approval_is_refused() {
+    let mut w = World::new();
+    let alice = w.channel(ChannelKind::Gui, "alice");
+    let p = params(&w.digest, "upload");
+    assert_eq!(APPROVAL_MAX_AGE.as_secs(), 300);
+    w.now = later(300);
+    let consent = w.approval(&alice, w.digest, "upload");
+    assert!(w.authorise(&alice, &p, None, Some(consent)).is_ok(), "exactly five minutes is accepted");
+    // Too old, and a clock reading before the approval.
+    for now in [later(301), EntryTime { mono_ns: 999, ..time() }] {
+        w.now = now;
+        let consent = w.approval(&alice, w.digest, "upload");
+        assert_err(w.authorise(&alice, &p, None, Some(consent)), Code::Precondition, "false");
+    }
+}
+
+/// Maintainer decision 7: the destination is checked again at send time against the setting
+/// as read then; a changed configuration is `no_approval`, a removed one `bad_destination`.
+#[test]
+fn the_destination_is_rechecked_at_send_time() {
+    let mut w = World::new();
+    let alice = w.channel(ChannelKind::Gui, "alice");
+    let p = params(&w.digest, "upload");
+    let r = Recorder::ok();
+
+    let consent = w.approval(&alice, w.digest, "upload");
+    let decision = w.authorise(&alice, &p, None, Some(consent)).unwrap();
+    w.destinations =
+        Destinations::from_value(&destinations_value(&w.share.0, "https://elsewhere.example/inbox")).unwrap();
+    assert_err(w.send(&alice, decision, https(&r), CancelToken::never()), Code::Policy, "no_approval");
+
+    w.destinations = Destinations::from_value(&destinations_value(&w.share.0, UPLOAD_URL)).unwrap();
+    let consent = w.approval(&alice, w.digest, "upload");
+    let decision = w.authorise(&alice, &p, None, Some(consent)).unwrap();
+    w.destinations = Destinations::default();
+    assert_err(w.send(&alice, decision, https(&r), CancelToken::never()), Code::Policy, "bad_destination");
+    assert_eq!(r.count(), 0);
+}
+
+/// Maintainer decision 5: the settings path reads the machine file; a value at user scope is
+/// ignored. `from_machine_settings` resolves the real machine file and fails closed.
+#[test]
+fn destinations_come_from_the_machine_settings_file() {
+    let dir = Temp::new("settings");
+    let share = Temp::new("share");
+    let file = |values: CValue| {
+        let mut v = Obj::new();
+        v.insert(DESTINATIONS_KEY.into(), values);
+        let mut o = Obj::new();
+        o.insert("format".into(), CValue::Str("fid-settings/1".into()));
+        o.insert("values".into(), CValue::Obj(v));
+        fid_canon::to_canonical_bytes(&CValue::Obj(o)).unwrap()
+    };
+    std::fs::write(dir.0.join("machine.json"), file(destinations_value(&share.0, UPLOAD_URL))).unwrap();
+    std::fs::write(dir.0.join("user.json"), file(destinations_value(&share.0, "https://user.example/x"))).unwrap();
+    let machine = FileStore::new(Scope::Machine, dir.0.join("machine.json")).unwrap();
+    let user = FileStore::new(Scope::User, dir.0.join("user.json")).unwrap();
+    let (got, warnings) =
+        Destinations::from_settings(&Sources { project: None, user: &user, machine: &machine }).unwrap();
+    assert_eq!(got.len(), 2);
+    assert_eq!(got.lookup("upload").unwrap().target(), UPLOAD_URL);
+    assert!(!warnings.is_empty(), "the user-scope value is reported as not allowed");
+
+    // On a CI runner there is no machine settings file: the result is empty or an error,
+    // never a destination from anywhere else.
+    if let Ok((d, _)) = Destinations::from_machine_settings() {
+        assert!(d.lookup("upload").map_or(true, |x| x.target() != UPLOAD_URL), "nothing from the test files");
+    }
+}
+
+/// Maintainer decision 8: `network_root` paths with `.`/`..`, controls or device and verbatim
+/// prefixes are refused.
+#[test]
+fn network_root_paths_are_checked() {
+    let c = cases();
+    let mut checked = 0;
+    for case in arr(obj(&c), "root_paths") {
+        let o = obj(case);
+        if !applies(st(o, "platform")) {
+            continue;
+        }
+        let got = check_root_path(st(o, "path"));
+        assert_eq!(got.is_ok(), boolean(o, "valid"), "{}: {:?}", st(o, "name"), got);
+        checked += 1;
+    }
+    assert!(checked >= 6);
 }

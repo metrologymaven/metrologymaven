@@ -108,6 +108,122 @@
       "valid": false
     }
   ],
+  "root_paths": [
+    {
+      "name": "unix absolute",
+      "path": "/srv/egress/lab",
+      "platform": "unix",
+      "valid": true
+    },
+    {
+      "name": "unix relative",
+      "path": "srv/egress",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix dot dot",
+      "path": "/srv/../etc",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix dot",
+      "path": "/srv/./lab",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix trailing dot dot",
+      "path": "/srv/lab/..",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix NUL",
+      "path": "/srv/a\u0000b",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix newline",
+      "path": "/srv/a\nb",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix backslash dot dot",
+      "path": "/srv\\..\\etc",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "windows drive",
+      "path": "C:\\egress\\lab",
+      "platform": "windows",
+      "valid": true
+    },
+    {
+      "name": "windows UNC share",
+      "path": "\\\\server\\share\\inbox",
+      "platform": "windows",
+      "valid": true
+    },
+    {
+      "name": "windows drive relative",
+      "path": "C:egress",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows dot dot",
+      "path": "C:\\egress\\..\\x",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows forward dot dot",
+      "path": "C:/egress/../x",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows verbatim",
+      "path": "\\\\?\\C:\\egress",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows verbatim UNC",
+      "path": "\\\\?\\UNC\\server\\share",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows device",
+      "path": "\\\\.\\COM1",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows device slashes",
+      "path": "//./pipe/x",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows NT object",
+      "path": "\\??\\C:\\egress",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows DEL",
+      "path": "C:\\a\u007fb",
+      "platform": "windows",
+      "valid": false
+    }
+  ],
   "settings": [
     {
       "name": "empty",
@@ -1338,6 +1454,31 @@
       "name": "label 63 bytes",
       "url": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example/x",
       "valid": true
+    },
+    {
+      "name": "NUL",
+      "url": "https://a.example/a\u0000b",
+      "valid": false
+    },
+    {
+      "name": "DEL",
+      "url": "https://a.example/a\u007fb",
+      "valid": false
+    },
+    {
+      "name": "two ports",
+      "url": "https://a.example:1:2/x",
+      "valid": false
+    },
+    {
+      "name": "2048 bytes",
+      "url": "https://a.example/pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+      "valid": true
+    },
+    {
+      "name": "2049 bytes",
+      "url": "https://a.example/ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+      "valid": false
     }
   ]
 }
