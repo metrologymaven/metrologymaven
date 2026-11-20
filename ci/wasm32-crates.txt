@@ -23,6 +23,7 @@ fid-kunc
 fid-manifest-gen
 fid-num
 fid-profile
+fid-project
 fid-rdl
 fid-replay
 fid-report-pdf

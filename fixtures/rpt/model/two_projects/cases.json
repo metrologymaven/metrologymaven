@@ -1,0 +1,36 @@
+{
+ "a": {
+  "binding": {
+   "field": "/value",
+   "record": "019a9a9b-0005-7001-8000-000000000001",
+   "record_digest": "sha256:c01637d83660e130f0bd014ee66f84da76af11380250015820b6416bfb589e4a",
+   "schema": "value_binding@1",
+   "statement_digest": "sha256:35878555b4c2091e811e3cd3d338c2b74c9c15c7d63f2aed1d34d6b1961f3b78"
+  },
+  "characteristic": "019a9a9b-0005-7000-8000-000000000001",
+  "record": "019a9a9b-0005-7001-8000-000000000001"
+ },
+ "b": {
+  "binding": {
+   "field": "/value",
+   "record": "019a9a9b-0006-7001-8000-000000000001",
+   "record_digest": "sha256:1c2d6d5391dc318394bb072dcaadefb0afa21a7338b760a001b2920c64534606",
+   "schema": "value_binding@1",
+   "statement_digest": "sha256:35878555b4c2091e811e3cd3d338c2b74c9c15c7d63f2aed1d34d6b1961f3b78"
+  },
+  "characteristic": "019a9a9b-0006-7000-8000-000000000001",
+  "record": "019a9a9b-0006-7001-8000-000000000001"
+ },
+ "current_head": "sha256:fcf9ea5a4ff8d53726a9948372609edfe976b706821d7482d5ce4b312660ce92",
+ "expected": {
+  "code": "report.cross_project_binding",
+  "error_keys": [
+   "block",
+   "code",
+   "project"
+  ],
+  "project": "019a9a9a-0000-7000-8000-00000000000b"
+ },
+ "project_a": "019a9a9a-0000-7000-8000-00000000000a",
+ "project_b": "019a9a9a-0000-7000-8000-00000000000b"
+}

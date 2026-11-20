@@ -79,6 +79,7 @@ pub const SOURCES: [Source; 8] = [
     Source { krate: "fid-geo-cmd", defs: fid_geo_cmd::command_defs },
     Source { krate: "fid-jobs", defs: fid_jobs::command_defs },
     Source { krate: "fid-program-rec", defs: program_rec_defs },
+    Source { krate: "fid-project-cmd", defs: fid_project_cmd::command_defs },
     Source { krate: "fid-registry", defs: registry_defs },
     Source { krate: "fid-report", defs: fid_report::doc::command_defs },
     Source { krate: "fid-store", defs: store_defs },

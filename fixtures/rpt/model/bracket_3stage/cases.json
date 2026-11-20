@@ -1,0 +1,116 @@
+{
+ "ac1": {
+  "block": "019a9969-3402-7000-8000-000000000003",
+  "event_text": "{\"block\":\"019a9969-3402-7000-8000-000000000003\",\"payload\":{\"untrusted\":true,\"value\":{\"binding\":{\"refs\":[{\"id\":\"019a9a9b-0004-7001-8000-000000000001\",\"kind\":\"result\"},{\"id\":\"019a9a9b-0004-7003-8000-000000000032\",\"kind\":\"result\"}],\"schema\":\"binding@1\"},\"rows\":[{\"value\":{\"field\":\"/value\",\"record\":\"019a9a9b-0004-7001-8000-000000000001\",\"record_digest\":\"sha256:882a8e526f81659bb0c9867fecbedb06b1ad4063eee8b52f9c401ba7ea153cb4\",\"schema\":\"value_binding@1\",\"statement_digest\":\"sha256:9ba2d4ce99018327c0a64a59797edc207b6acba51f7ccce6aa939e1043580129\"}},{\"value\":{\"field\":\"/value\",\"record\":\"019a9a9b-0004-7003-8000-000000000032\",\"record_digest\":\"sha256:3b42fc992bffecdb30f1ff8d025e932fc5383f678deb455c86a11d40aad14c3a\",\"schema\":\"value_binding@1\",\"statement_digest\":\"sha256:d0821b5cd7c67baf152aa7b9d1a489b8628eddfaee65016b6de32c126dbd8b91\"}}]}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:bd3dac0ea4dd85336409a23f5496be1e38b1a26bd08d13ab616d974a6ad8eab1\",\"type\":\"report.bind_block@1\"}",
+  "initial_payload_text": "{\"rows\":[]}",
+  "page": "019a9969-3401-7000-8000-000000000002",
+  "payload_text": "{\"binding\":{\"refs\":[{\"id\":\"019a9a9b-0004-7001-8000-000000000001\",\"kind\":\"result\"},{\"id\":\"019a9a9b-0004-7003-8000-000000000032\",\"kind\":\"result\"}],\"schema\":\"binding@1\"},\"rows\":[{\"value\":{\"field\":\"/value\",\"record\":\"019a9a9b-0004-7001-8000-000000000001\",\"record_digest\":\"sha256:882a8e526f81659bb0c9867fecbedb06b1ad4063eee8b52f9c401ba7ea153cb4\",\"schema\":\"value_binding@1\",\"statement_digest\":\"sha256:9ba2d4ce99018327c0a64a59797edc207b6acba51f7ccce6aa939e1043580129\"}},{\"value\":{\"field\":\"/value\",\"record\":\"019a9a9b-0004-7003-8000-000000000032\",\"record_digest\":\"sha256:3b42fc992bffecdb30f1ff8d025e932fc5383f678deb455c86a11d40aad14c3a\",\"schema\":\"value_binding@1\",\"statement_digest\":\"sha256:d0821b5cd7c67baf152aa7b9d1a489b8628eddfaee65016b6de32c126dbd8b91\"}}]}",
+  "report": "019a9969-3400-7000-8000-000000000001",
+  "result_text": "{\"block_id\":\"019a9969-3402-7000-8000-000000000003\",\"refs\":[{\"id\":\"019a9a9b-0004-7001-8000-000000000001\",\"kind\":\"result\"},{\"id\":\"019a9a9b-0004-7003-8000-000000000032\",\"kind\":\"result\"}],\"report_digest\":\"sha256:bd3dac0ea4dd85336409a23f5496be1e38b1a26bd08d13ab616d974a6ad8eab1\"}"
+ },
+ "ac2": {
+  "code": "report.binding_has_value",
+  "field": "/refs/0/value",
+  "ref_text": "{\"id\":\"019a9a9b-0004-7001-8000-000000000001\",\"kind\":\"result\",\"value\":12.003}"
+ },
+ "ac3_values": [
+  {
+   "bits": "0x3f8687b139c94f69",
+   "evidence": {
+    "basis": "POINTS",
+    "claimed": false,
+    "class": "UEC-1",
+    "declared_input": false,
+    "looks_measured": true,
+    "method": "LPU",
+    "outcome": "CONFORMS",
+    "rule": "dr:simple-acceptance@1",
+    "uncharacterized_input": false
+   },
+   "pointer": "/rows/0/value",
+   "record": "019a9a9b-0004-7001-8000-000000000001",
+   "statement_digest": "sha256:9ba2d4ce99018327c0a64a59797edc207b6acba51f7ccce6aa939e1043580129",
+   "unit": "si:m"
+  },
+  {
+   "bits": "0x3faeb8b69552e2fd",
+   "evidence": {
+    "basis": "RESULTS_ONLY",
+    "claimed": true,
+    "class": "UEC-1",
+    "declared_input": true,
+    "looks_measured": false,
+    "method": "DECLARED",
+    "outcome": "NOT_DECIDABLE",
+    "rule": null,
+    "uncharacterized_input": true
+   },
+   "pointer": "/rows/1/value",
+   "record": "019a9a9b-0004-7003-8000-000000000032",
+   "statement_digest": "sha256:d0821b5cd7c67baf152aa7b9d1a489b8628eddfaee65016b6de32c126dbd8b91",
+   "unit": "si:m"
+  }
+ ],
+ "ac7_other_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+ "ac8_fields": [
+  "/nominal",
+  "/limits/upper",
+  "/uncertainty/expanded/U",
+  "/value/value",
+  "/value/unit",
+  "/decision",
+  ""
+ ],
+ "characteristic_1": "019a9a9b-0002-7000-8000-000000000001",
+ "current_head": "sha256:fa2e8753a0c2b085de92beb657f910465b6755bd2375834d2e72375f1e8dbc6e",
+ "drawing_text": [
+  "2 places",
+  "4X",
+  "2026"
+ ],
+ "h0": "sha256:ff2e70fa195bb30b21060a0310213ceee08814a413c523b8c615aae2b5b5ecef",
+ "not_value_strings": [
+  "C01",
+  "top view",
+  "e5",
+  "-",
+  ".",
+  "12-3",
+  "Rev. B",
+  "/rows/0/value",
+  "ISO 1101"
+ ],
+ "project": "019a9a9a-0000-7000-8000-0000000b3a5e",
+ "r1": "019a9a9b-0004-7001-8000-000000000001",
+ "r2": "019a9a9b-0004-7003-8000-000000000032",
+ "series": "019a9a9b-0001-7000-8000-000000000002",
+ "title": "Bracket 3-stage FAI",
+ "uec0_record": "019a9a9b-0004-7009-8000-000000000001",
+ "value_strings": [
+  {
+   "reason": "number_text",
+   "text": "12.003"
+  },
+  {
+   "reason": "number_text",
+   "text": "12,003 mm"
+  },
+  {
+   "reason": "number_text",
+   "text": "-1.5e-3m"
+  },
+  {
+   "reason": "number_text",
+   "text": "−.5 µm"
+  },
+  {
+   "reason": "bit_pattern",
+   "text": "0x3f847ae147ae147b"
+  },
+  {
+   "reason": "bit_pattern",
+   "text": "0X1F"
+  }
+ ],
+ "view": "019a9a9b-0001-7000-8000-000000000001"
+}

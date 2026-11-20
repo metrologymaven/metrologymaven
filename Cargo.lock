@@ -1310,9 +1310,11 @@ dependencies = [
  "fid-io-reg",
  "fid-kdec",
  "fid-kunc",
+ "fid-project",
  "fid-registry",
  "fid-replay",
  "fid-types",
+ "fid-xml",
 ]
 
 [[package]]
@@ -1671,6 +1673,17 @@ dependencies = [
  "fid-canon",
  "fid-uuid",
  "getrandom 0.2.17",
+ "unicode-normalization",
+]
+
+[[package]]
+name = "fid-project-cmd"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-project",
+ "fid-registry",
 ]
 
 [[package]]
@@ -1726,6 +1739,7 @@ dependencies = [
  "fid-geo-cmd",
  "fid-jobs",
  "fid-program-rec",
+ "fid-project-cmd",
  "fid-registry",
  "fid-report",
  "fid-store",

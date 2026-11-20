@@ -390,6 +390,21 @@ impl Report {
         Ok(())
     }
 
+    /// The live block `block`, if any.
+    pub fn block(&self, block: &Uuid) -> Option<&Block> {
+        let (pi, bi) = self.block_position(block)?;
+        self.pages.get(pi)?.blocks.get(bi)
+    }
+
+    /// Replaces a live block's payload (`report.bind_block@1`); its ID, kind and position are
+    /// kept.
+    pub(crate) fn set_block_payload(&mut self, block: &Uuid, payload: CanonicalJson) -> Result<(), ReportError> {
+        let (pi, bi) = self.block_position(block).ok_or(ReportError::NotFound(*block))?;
+        let b = self.pages.get_mut(pi).and_then(|p| p.blocks.get_mut(bi)).ok_or(ReportError::NotFound(*block))?;
+        b.payload = payload;
+        Ok(())
+    }
+
     /// Removes a block and retires its ID (REQ-004).
     pub(crate) fn remove_block(&mut self, block: &Uuid) -> Result<(), ReportError> {
         let (pi, bi) = self.block_position(block).ok_or(ReportError::NotFound(*block))?;

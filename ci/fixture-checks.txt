@@ -14,6 +14,7 @@ python fixtures/cons/make_decl_fixtures.py --check
 python fixtures/core/bus/pol/class/make_matrix.py --check
 python fixtures/core/jrn/chain/append/make_fixtures.py --check
 python fixtures/core/jrn/chain/ckpt/make_fixtures.py --check
+python fixtures/core/prj/cont/hier/make_fixtures.py --check
 python fixtures/core/reg/def/guide/make_fixtures.py --check
 python fixtures/core/reg/def/macro/make_golden.py --check
 python fixtures/core/reg/def/schema/make_fixtures.py --check
@@ -34,6 +35,7 @@ python fixtures/gdt/dmt/check_schema.py
 python fixtures/gdt/dmt/make_fixtures.py --check
 python fixtures/gdt/dprof/make_cases.py --check
 python fixtures/gdt/drf/build/make_cases.py --check
+python fixtures/gdt/ident/make_fixtures.py --check
 python fixtures/gdt/resolve/make_cases.py --check
 python fixtures/gdt/spec/make_fixtures.py --check
 python fixtures/gdt/zone/make_shapes_fixtures.py --check
@@ -95,6 +97,7 @@ python fixtures/rec/adopt/make_fixtures.py --check
 python fixtures/rel/guide/make_fixtures.py --check
 python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
+python fixtures/rpt/model/bracket_3stage/make_fixtures.py --check
 python fixtures/rpt/model/fmt/make_cases.py --check
 python fixtures/rpt/model/tmpl/check_schema.py
 python fixtures/rpt/model/tmpl/make_fixtures.py --check
