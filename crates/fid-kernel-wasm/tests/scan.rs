@@ -53,7 +53,7 @@ fn ac4_no_unsafe_anywhere_in_the_crate_sources() {
         assert!(!text.contains("unsafe"), "{} mentions unsafe", path.display());
         n += 1;
     }
-    assert_eq!(n, 5, "lib.rs, main.rs, shim.rs, call.rs, stand_in.rs");
+    assert_eq!(n, 6, "lib.rs, main.rs, shim.rs, call.rs, stand_in.rs, manifest_core_digest.rs");
 }
 
 #[test]

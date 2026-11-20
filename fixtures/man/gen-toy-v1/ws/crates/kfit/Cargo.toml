@@ -1,0 +1,15 @@
+[package]
+name = "kfit"
+version = "0.3.0"
+edition = "2021"
+
+[features]
+default = ["fast"]
+fast = []
+
+[dependencies]
+kgeo = { path = "../kgeo" }
+knum = { path = "../knum" }
+
+[build-dependencies]
+knum = { path = "../knum" }

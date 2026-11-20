@@ -505,3 +505,9 @@ jobs:
           # Fuel: a module that loops forever ends as NOT_REPLAYABLE(resource).
           set +e; out=$(printf '' | $chk run $c/wasm-runtime.toml $c/wasm-imports.allow $w/modules/loop.wasm); code=$?; set -e
           test "$code" = 3 && test "$out" = 'NOT_REPLAYABLE(resource)'
+      - name: Kernel manifest, two stages twice and self-reports (KRN.MAN.MANI.GEN AC-1 to AC-4)
+        # Toy kernel fixture through `fid-manifest-gen core` and `finish` in two directories, the
+        # self-report of every artifact through fid-xart and the pinned runner (no preopens),
+        # then the real fid-kernel-wasm module built with the generated constant.
+        shell: bash
+        run: bash scripts/manifest-gen-ci.sh

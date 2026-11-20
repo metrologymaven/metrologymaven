@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-manifest-gen, fid-kci, fid-kernel-wasm]
+built_pr: 323
 satisfies: [REQ-KRN.MAN.MANI-001, REQ-KRN.MAN.MANI-002, REQ-KRN.MAN.MANI-004]
 covers: []
 depends_on: [KRN.MAN.MANI.SCHEMA, KRN.MAN.MANI.IMPL, KRN.MAN.KCI, KRN.MAN.CARD, KRN.MAN.REPRO, KRN.MAN.XART, KRN.NUM.FN]
@@ -75,6 +77,21 @@ Fills the manifest from the build and breaks the circle between "the artifact em
 
 - `CORE` and `TRUST` must record and check the full `kernel_manifest_digest` from the release manifest file and confirm it contains the core digest the running artifact reports (see the parent's open question).
 - `KRN.SOLV.CONIC` must publish its limits as a file with a stable name and schema for this tool to read; confirm when that node is finished.
+
+## Resolved at build
+
+As built in PR 323 (2026-11-20):
+
+- **Query name.** The `manifest_core_digest` query of the call interface is `kernel.manifest.core_digest@1.0.0`, answered by `fid_kci::evaluate` (see `KRN.MAN.KCI` "Resolved at build"). The module `kernel` is reserved (refused in the generator configuration, the algorithm table, the manifest schema and spec cards). New errors: `ReservedAlgorithm` and `ManifestCoreDigestUnset` in the KCI; in the generator, besides `MissingSource`, `CoreDigestMismatch`, `SchemaInvalid` and `Io`: `SourceInvalid`, `ImplDigest`, `ConstantInClosure`, `ConstantInvalid` and `SelfReportFailed`.
+- **Generated constant.** `crates/fid-kernel-wasm/src/manifest_core_digest.rs` (the current assembly crate) holds `None` as committed; `core --constant` writes it only at `<workspace>/<constant>`. Stage one requires the file to be exactly the generator's output for `None` or a well-formed digest (`ConstantInvalid` otherwise), excludes it from the source-tree digest, and fails with `ConstantInClosure` if any implementation closure reads it, so embedding the digest never changes the core.
+- **Digest formulas** (SHA-256 throughout, canonical JSON by the kernel's writer):
+  - `source_tree_digest`: over `{"excluded":[<constant path>],"files":[{"path","sha256"},..]}`, every tracked file of the workspace except the constant, `/`-separated paths sorted by bytes, each file hashed as its committed bytes.
+  - `facade_selftest_digest`: over `{"functions":[{"inputs","name","outputs"},..],"inputs_per_fn":"10000"}` in self-test order, `inputs`/`outputs` being the SHA-256 of the u64 little-endian bit patterns as `fixtures/num/fn-selftest-v1.txt` defines them; computed by running the `fid-num` self-test in the tool.
+  - `replay_runtime`: `version` is the file's `wasmtime_version`, `config_digest` the SHA-256 of the canonical `wasm-runtime.toml`; `finish` requires the runtime file the WASM runner uses to have that digest.
+  - `toolchain_digest`: the SHA-256 of the canonical `KRN.MAN.REPRO` record (`fid-manifest-gen toolchain-digest --record`), whose `lockfile` must equal `lockfile_digest`.
+- **Provisional source formats.** The solver-limits file must be canonical JSON (strings, arrays, objects) and is digested as its bytes; the RDL release file must be canonical JSON with `suite_digest` and `results_digest` members (other members allowed). Both change when `KRN.SOLV.CONIC` publishes its limits file and `UNC.RDL.FREEZE` defines the release file; `results_digest` is an assumption, since FREEZE defines only `suite_digest`.
+- **Release blocked.** A real release manifest cannot be generated yet: `KRN.SOLV.CONIC` publishes no limits file and `UNC.RDL.FREEZE` is unbuilt, so `core` on the real tree stops at `missing_source`. AC-1..AC-4 are met on the toy fixture `fixtures/man/gen-toy-v1`.
+- **Artifact commands.** The artifact list names role, target and file only; the command is derived (native: the file; wasm: `fid-wasm-check run <runtime> <allow> <file>`) and sent through `fid-xart run`, so the file hashed is the file that answers.
 
 ## Children
 

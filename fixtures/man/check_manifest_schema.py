@@ -101,6 +101,10 @@ def main():
         (["artifacts"], [{"role": "native", "target": "t" * 65, "sha256": "sha256:" + "2" * 64}], False),
         (["core", "algorithms"], [dict(algs(1)[0], id=long_id)], True),
         (["core", "algorithms"], [dict(algs(1)[0], id="a" + long_id)], False),
+        # KRN.MAN.MANI.GEN: module `kernel` is reserved for the kernel's own queries (Rust:
+        # bad_value core.algorithms[].id); a neighbouring module name is an ordinary ID.
+        (["core", "algorithms"], [dict(algs(1)[0], id="kernel.manifest.core_digest@1.0.0")], False),
+        (["core", "algorithms"], [dict(algs(1)[0], id="kernels.manifest.core_digest@1.0.0")], True),
     ]
     for path, value, ok in cases:
         m = copy.deepcopy(base)

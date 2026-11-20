@@ -19,5 +19,9 @@
 {"id":"agent.m2","text":"Cosigned and countersigned"}
 {"id":"agent.n","text":"Verifier output"}
 {"id":"agent.o","text":"Conformity, conformant, nonconformity, nonconformance, nonconformant"}
+{"id":"agent.sl","text":"ſign here"}
+{"id":"agent.lls","text":"ℜelease now"}
+{"id":"agent.tag","text":"approve󠁁"}
+{"id":"agent.hf","text":"approveㅤ"}
 {"id":"viz.sample.ru","text":"Проверено"}
 {"id":"viz.sample.de","text":"Maße bestätigt"}

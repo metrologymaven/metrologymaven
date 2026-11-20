@@ -17,3 +17,9 @@ Implements: <NODE.ID>
 - [ ] Level 1–2 split: a domain maintainer is requested as reviewer
 - [ ] I report only what I actually ran
 - [ ] App-crate change: reviewed against the [app-crate checklist](https://github.com/metrologymaven/metrologymaven/blob/main/docs/review/app-crate-checklist.md) (`docs/review/app-crate-checklist.md`)
+
+## Design review (only if this PR changes a path in `design/review/paths.toml`)
+
+- [ ] Every changed design artefact has an `originality@1` declaration (`design/review/checklist.md`)
+- [ ] A person (not an agent or bot) reviewed it against `design/review/checklist.md` and added a `design-review@1` record in `design/review/records/` in this PR
+- [ ] `fid-design review-check --changed <changed paths, relative to design/> --root design` exits 0

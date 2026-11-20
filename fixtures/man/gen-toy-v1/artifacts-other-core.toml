@@ -1,0 +1,10 @@
+# Artifacts for `fid-manifest-gen finish` (fixture gen-toy-v1). Paths are relative to the
+# directory finish runs in. The command is derived from the kind: a wasm artifact runs as
+# `fid-wasm-check run <runtime> <allow> <file>` (the pinned runner).
+runtime = "wasm-runtime.toml"
+allow = "wasm-imports.allow"
+
+[[artifact]]
+role = "wasm"
+target = "wasm32-wasip1"
+file = "artifacts/other-core.wasm"

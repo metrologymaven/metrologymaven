@@ -419,8 +419,14 @@ pub fn parse_card(text: &str) -> Result<SpecCard, CardError> {
             return Err(CardError::MissingField(f));
         }
     }
+    let id_text = get_str("id")?;
+    let id = AlgorithmId::parse(&id_text)?;
+    // The reserved module belongs to the kernel's own queries, which have no card.
+    if id.module == crate::kci::RESERVED_MODULE {
+        return Err(CardError::BadId(id_text));
+    }
     let card = SpecCard {
-        id: AlgorithmId::parse(&get_str("id")?)?,
+        id,
         title: get_str("title")?,
         method: get_str("method")?,
         applicability: get_str("applicability")?,

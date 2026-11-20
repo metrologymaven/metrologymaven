@@ -1,0 +1,14 @@
+# Toy spec card (fixture). Cite designators and clause numbers only.
+id = "geo.point.dist@1.2.0"
+title = "Toy point distance"
+method = "Euclidean distance between two points; toy fixture card."
+applicability = "Two finite points; toy fixture only."
+references = [
+  "ISO 10360-1:2000, clause 3 (vocabulary)",
+]
+determinism = "D0"
+input_arity = "2"
+failure_modes = [
+  "Non-finite coordinates are refused.",
+]
+validation = "Pending: toy fixture card, no validation."

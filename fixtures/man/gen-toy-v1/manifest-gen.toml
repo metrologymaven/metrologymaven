@@ -1,0 +1,26 @@
+# fid-manifest-gen configuration for the toy kernel (fixture gen-toy-v1).
+# Paths are relative to this file; `constant` is relative to `workspace`.
+schema = "1"
+name = "toy-kernel"
+semver = "0.1.0"
+numeric_profile = "knp-1"
+workspace = "ws"
+tracked = "tracked-files.txt"
+metadata = "metadata.json"
+constant = "shim/src/manifest_core_digest.rs"
+toolchain_record = "toolchain-record.json"
+replay_runtime = "wasm-runtime.toml"
+solver_limits = "solver-limits.json"
+rdl_release = "rdl-release.json"
+native_gate_policy = "native-gate.toml"
+allowlist = ["kfit", "kgeo", "knum", "kstat", "vext"]
+
+[[algorithm]]
+id = "geo.point.dist@1.2.0"
+crate = "kgeo"
+card = "cards/geo-point-dist.toml"
+
+[[algorithm]]
+id = "fit.plane.lsq@1.10.0"
+crate = "kfit"
+card = "cards/fit-plane-lsq.toml"
