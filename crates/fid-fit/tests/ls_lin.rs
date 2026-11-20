@@ -8,6 +8,8 @@
 //! Linux and Windows, ARM64 macOS and wasm32 under wasmtime against the same bytes, so the
 //! output digests are identical across targets (AC-3).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+// `FitError` is large by design (see the crate-level note in `fid-fit`).
+#![allow(clippy::result_large_err)]
 
 use fid_fit::contract::{
     encode, Constraint, Fit, FitError, FitParams, FitResult, FittedFeature, Method, PointsView, StopReason, Weights,
