@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-construct]
+built_pr: 291
 satisfies: [REQ-KRN.CONS-002, REQ-KRN.CONS-003, REQ-KRN.CONS-004, REQ-KRN.CONS-009, REQ-KRN.CONS-010]
 covers: []
 depends_on: [KRN.LSQ.TRAIT, KRN.NUM.ERR, KRN.MAN]
@@ -69,6 +71,7 @@ The contract every construction implements. A construction is a pure function of
 ## Open questions
 
 - `CORE.DEP` must accept `DependencyDecl` as data; confirm the field names when `CORE.DEP` is expanded.
+- Undeclared reads (#291 review): a construction cannot read undeclared supplied inputs; geometry captured in the construction value at `make()` is a contract violation the harness cannot detect. Closing this needs construction values that hold no geometry by type (for example only `ElementRef`s and plain options), not yet enforced.
 
 ## Children
 

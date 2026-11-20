@@ -490,6 +490,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-construct"
+version = "0.0.1"
+dependencies = [
+ "fid-fit",
+ "fid-kci",
+ "fid-num",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-ctrl"
 version = "0.0.1"
 dependencies = [

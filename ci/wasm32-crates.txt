@@ -3,6 +3,7 @@
 # package. Keep the lines sorted (LC_ALL=C sort) and unique; CI checks both.
 fid-align-solve
 fid-canon
+fid-construct
 fid-fit
 fid-geo-cad
 fid-geo-dist --test mesh
