@@ -446,6 +446,6 @@ mod tests {
         assert_eq!(composite([0, 0, 0], 255, [255, 255, 255]), [0, 0, 0]);
         assert_eq!(composite([0, 0, 0], 0, [255, 255, 255]), [255, 255, 255]);
         assert_eq!(composite([0, 0, 0], 128, [255, 255, 255]), [127, 127, 127]);
-        assert!(cvd_table_digest().unwrap().starts_with("sha256:"));
+        assert!(cvd_table_digest().is_ok_and(|d| d.starts_with("sha256:")));
     }
 }
