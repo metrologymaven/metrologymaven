@@ -1,0 +1,16 @@
+# Spec card (KRN.ENV.TAN.PLANE). Cite designators and clause numbers only; never paste standards text.
+id = "fit.plane.tan_l1@1.0.0"
+title = "Constrained L1 tangential plane"
+method = "The plane on the material-free side of the points with the smallest sum of depths, every point on the material side. The sum equals N times the distance from the centroid to the plane, so the optimum is the hull facet nearest the centroid. Parameters (a, b, c), rows w_i <= c + a u_i + b v_i (linear), value (N c + a U + b V - W) / sqrt(1 + a^2 + b^2). Sequential linearisation (KRN.SOLV.SEQ) from 1 + 4 ring + seeded random starts; each result certified (KRN.SOLV.CERT) as a KKT vertex of 3 active rows (strict local minimum); every certified candidate goes to the rocking report (KRN.ENV.TAN.ROCK). With a fixed normal the plane passes through the extreme point (exact)."
+applicability = "At least 3 points not collinear (free normal), at least 1 (fixed normal); a material side not perpendicular to the least-squares normal. The objective definition follows published work, not standards text; to be confirmed with a GDT maintainer before release."
+references = [
+  "Shakarji, C. M. and Srinivasan, V. (2012 to 2015). Papers on datum plane establishment by constrained least squares and L1 fitting [unverified citation].",
+  "Conn, A. R., Gould, N. I. M. and Toint, P. L. (2000). Trust-Region Methods. SIAM [unverified chapter].",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "A facet whose foot point from the centroid lies at (or very near) one of its vertices has nearly zero multipliers on the other contacts; the fixed conic tolerances then leave the active set unresolved: SeqFailed (cert), no value.",
+  "Several facets within rock_tol of the best: all are listed and the report says rocking.",
+]
+validation = "Exact rational oracle fixtures/fit/tan-plane-v1 (make_tan_plane_fixtures.py: global optimum by enumeration over hull supports, isqrt rounding), checked on x86-64, ARM64 and wasm32 with an output-bit pin."
