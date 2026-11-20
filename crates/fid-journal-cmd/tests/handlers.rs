@@ -318,14 +318,16 @@ fn schemas_check_real_values() {
 /// AC-3 error path: an agent calling protect over MCP gets a pending request (the
 /// projection check), never a change; a script gets policy/class_forbidden (the class
 /// check), and so does the handler if reached. AC-5 error path: a script calling the
-/// co-editing command gets policy/human_only; over MCP it becomes a pending request.
+/// co-editing command gets policy/human_only; over MCP it is policy/not_on_mcp.
 #[test]
 fn ac3_ac5_projection_and_class() {
     let defs = defs();
     let protect = &defs[fid_journal::branch::PROTECT_BRANCH];
     let co = &defs[fid_journal::branch::SET_BRANCH_COEDITING];
     assert_eq!(authorise_projection(ChannelKind::Mcp, protect).unwrap(), Projected::PendingRequest);
-    assert_eq!(authorise_projection(ChannelKind::Mcp, co).unwrap(), Projected::PendingRequest);
+    // Co-editing is not on the MCP surface at all (CLI only): an agent cannot even file it.
+    let e = authorise_projection(ChannelKind::Mcp, co).unwrap_err();
+    assert_eq!((e.code(), e.reason()), (Code::Policy, "not_on_mcp"));
     let create = &defs[fid_journal::branch::CREATE_BRANCH];
     assert_eq!(authorise_projection(ChannelKind::Mcp, create).unwrap(), Projected::Run);
     let script = ctx(ChannelKind::Cli);
