@@ -172,6 +172,8 @@ fn expect(r: Result<u64, CrashFailure>, kind: FailureKind, why: &str) {
 /// (so the store's schema check still passes and the edit reaches the row checks).
 fn raw_edit(root: &Path, sql: &str) {
     let c = rusqlite::Connection::open(root.join("project.db")).unwrap();
+    // Tampering ignores referential integrity, as an attacker editing the file would.
+    c.execute_batch("PRAGMA foreign_keys = OFF").unwrap();
     let names = ["entries_no_update", "entries_no_delete", "entry_blobs_no_delete"];
     let mut saved = Vec::new();
     for n in names {
