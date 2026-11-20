@@ -230,9 +230,9 @@ SEM = {
     "sem.focus.ring": ("Keyboard focus indicator.", dict(light="blue.600", dark="blue.300", hc="blue.800", floor="blue.700")),
     # status: the locked status palette of UX.TOKENS.STATUS (also written to tokens/status.json)
     "sem.status.conforms": ("Display state CONFORMS." + NOCOLOR + STATUS_NOTE % ("conforms", "conforms"), dict(light="azure.700", dark="azure.400", hc="azure.800", floor="azure.700")),
-    "sem.status.nonconforms": ("Display state NONCONFORMS." + NOCOLOR + STATUS_NOTE % ("nonconforms", "nonconforms"), dict(light="red.600", dark="red.300", hc="red.700", floor="red.600")),
-    "sem.status.indeterminate": ("Display state INDETERMINATE." + NOCOLOR + STATUS_NOTE % ("indeterminate", "indeterminate"), dict(light="yellow.800", dark="yellow.400", hc="yellow.800", floor="yellow.800")),
-    "sem.status.not-decidable": ("Display state NOT_DECIDABLE." + NOCOLOR + STATUS_NOTE % ("not-decidable", "not-decidable"), dict(light="olive.700", dark="olive.200", hc="olive.900", floor="olive.700")),
+    "sem.status.nonconforms": ("Display state NONCONFORMS." + NOCOLOR + STATUS_NOTE % ("nonconforms", "nonconforms"), dict(light="red.600", dark="red.400", hc="red.700", floor="red.600")),
+    "sem.status.indeterminate": ("Display state INDETERMINATE." + NOCOLOR + STATUS_NOTE % ("indeterminate", "indeterminate"), dict(light="yellow.900", dark="yellow.200", hc="yellow.950", floor="yellow.900")),
+    "sem.status.not-decidable": ("Display state NOT_DECIDABLE." + NOCOLOR + STATUS_NOTE % ("not-decidable", "not-decidable"), dict(light="olive.950", dark="olive.50", hc="olive.950", floor="olive.950")),
     "sem.status.not-evaluated": ("Display state not evaluated." + NOCOLOR + STATUS_NOTE % ("not-evaluated", "not-evaluated"), dict(light="neutral.950", dark="neutral.50", hc="neutral.1000", floor="neutral.950")),
     "sem.status.stale": ("Display state stale." + NOCOLOR + STATUS_NOTE % ("stale", "stale"), dict(light="orange.700", dark="orange.400", hc="orange.800", floor="orange.700")),
     # brand (the brand tier; brand-neutral defaults until OUTR.BRAND.GUIDE.VISUAL)
@@ -340,6 +340,15 @@ STATUS_FILES = {
 }
 
 
+def status_cues():
+    """Glyph (or pattern) and accessible-name IDs of UX.ICONS.CLASS for every state, and for the
+    out-of-tolerance region, whose colour comes from UX.TOKENS.DATAPAL but whose stripe pattern
+    must still go with it."""
+    cues = {s: {"glyph": "state." + s, "text": "icon.state." + s} for s in STATUS_STATES}
+    cues["out-of-tolerance"] = {"glyph": "pattern.out-of-tolerance", "text": "icon.pattern.out-of-tolerance"}
+    return cues
+
+
 def status_palette():
     """`tokens/status.json` (`status-palette@1`): the hex value of every `sem.status.<state>`
     binding in every theme, so the semantic tokens alias exactly these values."""
@@ -356,7 +365,7 @@ def status_palette():
         "formula": "ciede2000",
         "min_delta_e2000": 20,
         "sets": STATUS_SETS,
-        "cues": {s: {"glyph": "state." + s, "text": "icon.state." + s} for s in STATUS_STATES},
+        "cues": status_cues(),
         "themes": themes,
     }
 

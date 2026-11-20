@@ -1,9 +1,10 @@
 //! `fid-design status-check --root <design dir> [--json]` (spec node `UX.TOKENS.STATUS`): the
 //! structure of the locked status palette `<root>/tokens/status.json`, its set membership, lock
 //! flag and guard-threshold fields, the glyph and text cue of every state, and that every
-//! `sem.status.<state>` token resolves to exactly the palette's colour in every theme. Colour
-//! distances are not gated here; that is `UX.TOKENS.CHECK`. The CIEDE2000 formula and the
-//! colour-vision simulation it will use are in [`ciede2000`] and [`cvd`].
+//! `sem.status.<state>` token resolves to exactly the palette's colour in every theme, and the
+//! distance rule of REQ-UX.TOKENS.STATUS-002 ([`MIN_NEUTRAL_DELTA_E2000`]). The CONFORMS distance
+//! of REQ-004 is not gated here; that is `UX.TOKENS.CHECK`. The CIEDE2000 formula and the
+//! colour-vision simulation are in [`ciede2000`] and [`cvd`].
 //!
 //! `tokens/status.json` (`status-palette@1`), an object with exactly these keys:
 //! - `format`: `"status-palette@1"`;
@@ -14,8 +15,11 @@
 //!   "out-of-tolerance", "stale"] }` in any order (REQ-UX.TOKENS.STATUS-002). `out-of-tolerance`
 //!   stands for the out-of-tolerance region colours of `UX.TOKENS.DATAPAL`; it has no colour here;
 //! - `cues`: `{ "<state>": { "glyph": "state.<state>", "text": "icon.state.<state>" } }`, the glyph
-//!   ID and accessible-name message ID of `UX.ICONS.CLASS` for every state, so that no state is
-//!   ever carried by colour alone (principle P-NOCOLOR);
+//!   ID and accessible-name message ID of `UX.ICONS.CLASS` for every state, plus
+//!   `"out-of-tolerance": { "glyph": "pattern.out-of-tolerance", "text":
+//!   "icon.pattern.out-of-tolerance" }` for the out-of-tolerance stripe pattern, so that nothing is
+//!   ever carried by colour alone (principle P-NOCOLOR). Rendering them is `VIZ.OVERLAY.STATUS`'s;
+//!   whether the IDs exist in the icon index is checked once `UX.ICONS.CLASS` is built;
 //! - `themes`: `{ "<theme>": { "<state>": "#rrggbb" } }` for the four themes and six states,
 //!   lowercase hex.
 //!
@@ -30,20 +34,29 @@
 //! - `STATUS-THRESHOLD formula|min_delta_e2000`: a value other than `ciede2000` or `20`.
 //! - `STATUS-ALIAS <theme> <state>`: `sem.status.<state>` does not resolve in that theme, or
 //!   resolves to another colour; `STATUS-ALIAS <name>`: a `sem.status.*` token that is not a state.
-//! - `STATUS-CUE <state>`: a state without its glyph and text cue, or with another state's.
+//! - `STATUS-CUE <state>`: a state (or `out-of-tolerance`) without its glyph and text cue, or with
+//!   another one's.
+//! - `STATUS-DISTANCE <theme> <state> <other>`: in a theme, a state of [`NEUTRAL`] lies less than
+//!   [`MIN_NEUTRAL_DELTA_E2000`] (CIEDE2000) from a coloured nonconforming-set state ([`NC_COLOURED`])
+//!   under normal vision or simulated protanopia, deuteranopia or tritanopia ([`cvd`]).
 //! - `STATUS-SCHEMA <file, theme or theme state>`: invalid JSON, a missing file, a wrong format ID,
 //!   a missing or extra key, a value of the wrong type, an unknown theme or state, a colour that
 //!   is not lowercase `#rrggbb`.
 //!
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable root or limits exceeded (including an
 //! unreadable token tree, which the alias rule resolves with [`crate::tokens::check`]).
-//! Determinism D0: `BTreeMap` only, no clock, no floating point.
+//! Determinism D0: `BTreeMap` only, no clock. The one floating-point rule is `STATUS-DISTANCE`
+//! (`cbrt`, `atan2`, `sin`, `cos`, `exp`, no fused multiply-add); the shipped values clear it by
+//! more than 1.5, far above any last-bit difference between platforms. The report prints no
+//! floating-point value except in a finding's detail, rounded to two decimals.
 
 pub mod ciede2000;
 pub mod cvd;
 
 use crate::finding::{findings_text, findings_value, read_text, Finding};
+use crate::tokens::wcag::parse_hex;
 use crate::tokens::THEMES;
+use cvd::{delta_e2000_under, Vision};
 use fid_canon::CValue;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -64,6 +77,16 @@ pub const NONCONFORMING: [&str; 3] = ["nonconforms", "out-of-tolerance", "stale"
 pub const FORMULA: &str = "ciede2000";
 /// The guard's threshold [unverified threshold, REQ-UX.TOKENS.STATUS-003].
 pub const MIN_DELTA_E2000: f64 = 20.0;
+/// The states held apart from the nonconforming set (REQ-UX.TOKENS.STATUS-002).
+pub const NEUTRAL: [&str; 3] = ["indeterminate", "not-decidable", "not-evaluated"];
+/// The nonconforming-set states that have a colour in this file.
+pub const NC_COLOURED: [&str; 2] = ["nonconforms", "stale"];
+/// Least CIEDE2000 between a [`NEUTRAL`] and an [`NC_COLOURED`] state under every vision condition
+/// (maintainer decision on PR 339).
+pub const MIN_NEUTRAL_DELTA_E2000: f64 = 10.0;
+/// Keys of `cues`: the six states and the out-of-tolerance region.
+pub const CUE_KEYS: [&str; 7] =
+    ["conforms", "nonconforms", "indeterminate", "not-decidable", "not-evaluated", "stale", "out-of-tolerance"];
 /// Top-level keys of the palette file, sorted.
 pub const KEYS: [&str; 7] = ["cues", "format", "formula", "locked", "min_delta_e2000", "sets", "themes"];
 
@@ -76,15 +99,20 @@ pub const THRESHOLD: &str = "STATUS-THRESHOLD";
 pub const ALIAS: &str = "STATUS-ALIAS";
 pub const CUE: &str = "STATUS-CUE";
 pub const SCHEMA: &str = "STATUS-SCHEMA";
+pub const DISTANCE: &str = "STATUS-DISTANCE";
 
-/// The glyph ID of a state (`UX.ICONS.CLASS`).
+/// The glyph ID of a state, or the pattern ID of `out-of-tolerance` (`UX.ICONS.CLASS`).
 pub fn glyph_id(state: &str) -> String {
-    format!("state.{state}")
+    if state == "out-of-tolerance" {
+        format!("pattern.{state}")
+    } else {
+        format!("state.{state}")
+    }
 }
 
-/// The accessible-name message ID of a state's glyph (`UX.ICONS.CLASS`).
+/// The accessible-name message ID of [`glyph_id`] (`UX.ICONS.CLASS`).
 pub fn text_id(state: &str) -> String {
-    format!("icon.state.{state}")
+    format!("icon.{}", glyph_id(state))
 }
 
 /// Result of `status-check`.
@@ -147,6 +175,36 @@ pub fn check(root: &Path) -> Result<Report, String> {
             &n,
             format!("not a display state; status tokens are sem.status.{{{}}}", STATES.join(",")),
         ));
+    }
+
+    // REQ-UX.TOKENS.STATUS-002: neutral states keep their distance from the nonconforming set.
+    for (theme, row) in &r.themes {
+        for s in NEUTRAL {
+            for x in NC_COLOURED {
+                let (Some(a), Some(b)) = (row.get(s).and_then(|h| parse_hex(h)), row.get(x).and_then(|h| parse_hex(h)))
+                else {
+                    continue;
+                };
+                let mut worst = (f64::INFINITY, Vision::Normal);
+                for v in Vision::ALL {
+                    let d = delta_e2000_under(v, a, b);
+                    if d < worst.0 {
+                        worst = (d, v);
+                    }
+                }
+                if worst.0 < MIN_NEUTRAL_DELTA_E2000 {
+                    f.push(Finding::new(
+                        DISTANCE,
+                        format!("{theme} {s} {x}"),
+                        format!(
+                            "CIEDE2000 {:.2} under {}; at least {MIN_NEUTRAL_DELTA_E2000} under every vision condition",
+                            worst.0,
+                            worst.1.as_str()
+                        ),
+                    ));
+                }
+            }
+        }
     }
 
     // REQ-UX.TOKENS.STATUS-005: the brand tier holds no status token.
@@ -282,10 +340,10 @@ fn parse_cues(v: &CValue, f: &mut Vec<Finding>) {
         f.push(Finding::new(SCHEMA, PALETTE_FILE, "cues must be an object keyed by state"));
         return;
     };
-    for k in m.keys().filter(|k| !STATES.contains(&k.as_str())) {
-        f.push(Finding::new(SCHEMA, PALETTE_FILE, format!("cues: {k:?} is not a display state")));
+    for k in m.keys().filter(|k| !CUE_KEYS.contains(&k.as_str())) {
+        f.push(Finding::new(SCHEMA, PALETTE_FILE, format!("cues: {k:?} is not a display state or out-of-tolerance")));
     }
-    for state in STATES {
+    for state in CUE_KEYS {
         let (glyph, text) = (glyph_id(state), text_id(state));
         let want = format!("must be {{\"glyph\": {glyph:?}, \"text\": {text:?}}}; colour is never the only cue");
         let ok = match m.get(state) {
@@ -424,6 +482,8 @@ mod tests {
     fn cue_ids() {
         assert_eq!(glyph_id("not-evaluated"), "state.not-evaluated");
         assert_eq!(text_id("stale"), "icon.state.stale");
+        assert_eq!(glyph_id("out-of-tolerance"), "pattern.out-of-tolerance");
+        assert_eq!(text_id("out-of-tolerance"), "icon.pattern.out-of-tolerance");
         assert_eq!(KEYS.iter().copied().collect::<BTreeSet<_>>().len(), KEYS.len());
         let mut sorted = KEYS;
         sorted.sort_unstable();

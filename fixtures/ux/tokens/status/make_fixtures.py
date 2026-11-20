@@ -47,9 +47,15 @@ DE2000_MARGIN = 1.0
 MIN_DE_OK = 0.10  # UX.TOKENS.COLOR: claimed roles vs status roles, every theme
 DE_OK_MARGIN = 0.005
 CONTRAST_MARGIN = 0.05
-# Hue-family rule used to verify REQ-UX.TOKENS.STATUS-002 [unverified]: a colour with OKLCH
-# chroma below ACHROMATIC has no hue (so belongs to no family); otherwise a family is every hue
-# within FAMILY_HALF_WIDTH degrees of one of its members' hues in that theme.
+# REQ-UX.TOKENS.STATUS-002, gated on distance (maintainer decision on PR 339): every NEUTRAL state
+# is at least MIN_NEUTRAL_DE2000 from every coloured nonconforming-set state, under all four vision
+# conditions, in every theme. Shipped values clear it by NEUTRAL_MARGIN.
+NEUTRAL = ["indeterminate", "not-decidable", "not-evaluated"]
+NC_COLOURED = ["nonconforms", "stale"]
+MIN_NEUTRAL_DE2000 = 10.0
+NEUTRAL_MARGIN = 0.5
+# Hue-family advice (not gating): a colour with OKLCH chroma below ACHROMATIC has no hue; otherwise
+# a family is every hue within FAMILY_HALF_WIDTH degrees of a member's hue [unverified rule].
 ACHROMATIC = 0.03
 FAMILY_HALF_WIDTH = 30.0
 
@@ -182,13 +188,44 @@ def ciede2000(lab1, lab2):
     return math.sqrt((dl / sl) ** 2 + (dc / sc) ** 2 + (dH / sh) ** 2 + rt * (dc / sc) * (dH / sh))
 
 
-# Test pairs 1, 7, 17 and 25 of the table published with Sharma, Wu and Dalal (2005).
+# All 34 test pairs of the table published with Sharma, Wu and Dalal (2005).
 SHARMA = [
-    ((50.0, 2.6772, -79.7751), (50.0, 0.0, -82.7485), 2.0425),
-    ((50.0, 0.0, 0.0), (50.0, -1.0, 2.0), 2.3669),
-    ((50.0, 2.5, 0.0), (73.0, 25.0, -18.0), 27.1492),
+    ((50.0000, 2.6772, -79.7751), (50.0000, 0.0000, -82.7485), 2.0425),
+    ((50.0000, 3.1571, -77.2803), (50.0000, 0.0000, -82.7485), 2.8615),
+    ((50.0000, 2.8361, -74.0200), (50.0000, 0.0000, -82.7485), 3.4412),
+    ((50.0000, -1.3802, -84.2814), (50.0000, 0.0000, -82.7485), 1.0000),
+    ((50.0000, -1.1848, -84.8006), (50.0000, 0.0000, -82.7485), 1.0000),
+    ((50.0000, -0.9009, -85.5211), (50.0000, 0.0000, -82.7485), 1.0000),
+    ((50.0000, 0.0000, 0.0000), (50.0000, -1.0000, 2.0000), 2.3669),
+    ((50.0000, -1.0000, 2.0000), (50.0000, 0.0000, 0.0000), 2.3669),
+    ((50.0000, 2.4900, -0.0010), (50.0000, -2.4900, 0.0009), 7.1792),
+    ((50.0000, 2.4900, -0.0010), (50.0000, -2.4900, 0.0010), 7.1792),
+    ((50.0000, 2.4900, -0.0010), (50.0000, -2.4900, 0.0011), 7.2195),
+    ((50.0000, 2.4900, -0.0010), (50.0000, -2.4900, 0.0012), 7.2195),
+    ((50.0000, -0.0010, 2.4900), (50.0000, 0.0009, -2.4900), 4.8045),
+    ((50.0000, -0.0010, 2.4900), (50.0000, 0.0010, -2.4900), 4.8045),
+    ((50.0000, -0.0010, 2.4900), (50.0000, 0.0011, -2.4900), 4.7461),
+    ((50.0000, 2.5000, 0.0000), (50.0000, 0.0000, -2.5000), 4.3065),
+    ((50.0000, 2.5000, 0.0000), (73.0000, 25.0000, -18.0000), 27.1492),
+    ((50.0000, 2.5000, 0.0000), (61.0000, -5.0000, 29.0000), 22.8977),
+    ((50.0000, 2.5000, 0.0000), (56.0000, -27.0000, -3.0000), 31.9030),
+    ((50.0000, 2.5000, 0.0000), (58.0000, 24.0000, 15.0000), 19.4535),
+    ((50.0000, 2.5000, 0.0000), (50.0000, 3.1736, 0.5854), 1.0000),
+    ((50.0000, 2.5000, 0.0000), (50.0000, 3.2972, 0.0000), 1.0000),
+    ((50.0000, 2.5000, 0.0000), (50.0000, 1.8634, 0.5757), 1.0000),
+    ((50.0000, 2.5000, 0.0000), (50.0000, 3.2592, 0.3350), 1.0000),
     ((60.2574, -34.0099, 36.2677), (60.4626, -34.1751, 39.4387), 1.2644),
+    ((63.0109, -31.0961, -5.8663), (62.8187, -29.7946, -4.0864), 1.2630),
+    ((61.2901, 3.7196, -5.3901), (61.4292, 2.2480, -4.9620), 1.8731),
+    ((35.0831, -44.1164, 3.7933), (35.0232, -40.0716, 1.5901), 1.8645),
+    ((22.7233, 20.0904, -46.6940), (23.0331, 14.9730, -42.5619), 2.0373),
+    ((36.4612, 47.8580, 18.3852), (36.2715, 50.5065, 21.2231), 1.4146),
+    ((90.8027, -2.0831, 1.4410), (91.1528, -1.6435, 0.0447), 1.4441),
+    ((90.9257, -0.5406, -0.9208), (88.6381, -0.8985, -0.7239), 1.5381),
+    ((6.7747, -0.2908, -2.4247), (5.8714, -0.0985, -2.2286), 0.6377),
+    ((2.0776, 0.0795, -1.1350), (0.9033, -0.0636, -0.5514), 0.9082),
 ]
+assert len(SHARMA) == 34
 for _a, _b, _want in SHARMA:
     assert abs(ciede2000(_a, _b) - _want) < 1e-4, (_a, _b, ciede2000(_a, _b))
     assert abs(ciede2000(_b, _a) - _want) < 1e-4
@@ -197,6 +234,28 @@ assert abs(contrast("#000000", "#ffffff") - 21.0) < 1e-12
 
 def de2000(hex1, hex2, vision):
     return ciede2000(cielab(simulate(hex1, vision)), cielab(simulate(hex2, vision)))
+
+
+# Cue keys: the six states, and the out-of-tolerance region (its stripe pattern; its colour comes
+# from UX.TOKENS.DATAPAL).
+CUE_KEYS = STATES + ["out-of-tolerance"]
+
+
+def cues():
+    out = {s: {"glyph": "state." + s, "text": "icon.state." + s} for s in STATES}
+    out["out-of-tolerance"] = {"glyph": "pattern.out-of-tolerance", "text": "icon.pattern.out-of-tolerance"}
+    return out
+
+
+def neutral_findings(themes):
+    """`STATUS-DISTANCE <theme> <state> <other>` of a palette's themes (used to confirm labels)."""
+    out = set()
+    for t, row in themes.items():
+        for s in NEUTRAL:
+            for x in NC_COLOURED:
+                if s in row and x in row and min(de2000(row[s], row[x], v) for v in VISIONS) < MIN_NEUTRAL_DE2000:
+                    out.add(f"STATUS-DISTANCE {t} {s} {x}")
+    return out
 
 
 def hue_gap(h1, h2):
@@ -284,11 +343,9 @@ def shipped():
     for t in THEMES:
         assert sorted(pal["themes"][t]) == sorted(STATES), t
     # Never colour alone: one glyph and one text per state, all distinct (UX.ICONS.CLASS IDs).
-    assert sorted(pal["cues"]) == sorted(STATES)
-    for s in STATES:
-        assert pal["cues"][s] == {"glyph": "state." + s, "text": "icon.state." + s}, s
-    assert len({c["glyph"] for c in pal["cues"].values()}) == len(STATES)
-    assert len({c["text"] for c in pal["cues"].values()}) == len(STATES)
+    assert pal["cues"] == cues(), pal["cues"]
+    assert len({c["glyph"] for c in pal["cues"].values()}) == len(CUE_KEYS)
+    assert len({c["text"] for c in pal["cues"].values()}) == len(CUE_KEYS)
 
     # REQ-UX.TOKENS.STATUS-001: sem.status.<state> aliases exactly these values.
     resolved, _ = resolve_status(DESIGN)
@@ -313,8 +370,19 @@ def shipped():
                     fails.append(f"{t} {s} {v}: dE2000 {d:.3f} < {MIN_DE2000} + {DE2000_MARGIN}")
                 distances.append({"theme": t, "state": s, "vision": v, "de2000": round(d, 9)})
 
-    # REQ-UX.TOKENS.STATUS-002: hue families.
-    hues = []
+    # REQ-UX.TOKENS.STATUS-002, gating: neutral states keep their distance from the nonconforming set.
+    neutral = []
+    for t in THEMES:
+        for s in NEUTRAL:
+            for x in NC_COLOURED:
+                for v in VISIONS:
+                    d = de2000(values[t][s], values[t][x], v)
+                    if d < MIN_NEUTRAL_DE2000 + NEUTRAL_MARGIN:
+                        fails.append(f"{t} {s}/{x} {v}: dE2000 {d:.3f} < {MIN_NEUTRAL_DE2000} + {NEUTRAL_MARGIN}")
+                    neutral.append({"theme": t, "state": s, "other": x, "vision": v, "de2000": round(d, 9)})
+
+    # Hue families: advice only, recorded but never failing.
+    hues, hue_advice = [], []
     for t in THEMES:
         lch = {s: oklch(values[t][s]) for s in STATES}
         fam_c = [lch[s][0] for s in CONFORMING if lch[s][1] >= ACHROMATIC]
@@ -328,10 +396,7 @@ def shipped():
                 continue
             gap = min(hue_gap(h, x) for x in fam_c + fam_n)
             if gap < FAMILY_HALF_WIDTH:
-                fails.append(f"{t} {s}: hue {h:.1f} within {FAMILY_HALF_WIDTH} degrees of a conforming or nonconforming hue")
-        # The two families themselves are disjoint.
-        if min(hue_gap(a, b) for a in fam_c for b in fam_n) < 2 * FAMILY_HALF_WIDTH:
-            fails.append(f"{t}: conforming and nonconforming hue families overlap")
+                hue_advice.append(f"{t} {s}: hue {h:.1f} within {FAMILY_HALF_WIDTH} degrees of a family")
 
     # WCAG 2.2 contrast of every status colour as text on the plain surfaces (REQ-UX.TOKENS-002/004).
     surfaces = ["sem.surface.base", "sem.surface.raised", "sem.surface.sunken"]
@@ -361,7 +426,10 @@ def shipped():
         "de2000": distances,
         "min_de2000_nonconforming": round(min(nc), 6),
         "min_de2000_all": round(min(d["de2000"] for d in distances), 6),
+        "neutral_de2000": neutral,
+        "min_neutral_de2000": round(min(d["de2000"] for d in neutral), 6),
         "hues": hues,
+        "hue_advice": hue_advice,
         "contrasts": contrasts,
         "min_contrast_margin": round(min(c["ratio"] - c["required"] for c in contrasts), 6),
     }
@@ -372,10 +440,10 @@ def shipped():
 P = "prim.color.fix."
 # Synthetic colours for the fixture trees (not the shipped palette).
 FIX = {
-    "light": {"conforms": "#00607a", "nonconforms": "#b01020", "indeterminate": "#5a4800", "not-decidable": "#4c5a00", "not-evaluated": "#202020", "stale": "#8a4000"},
-    "dark": {"conforms": "#40c0e0", "nonconforms": "#ffa0a0", "indeterminate": "#c0a000", "not-decidable": "#d0e0a0", "not-evaluated": "#f0f0f0", "stale": "#f08020"},
-    "hc": {"conforms": "#004050", "nonconforms": "#900010", "indeterminate": "#403000", "not-decidable": "#283000", "not-evaluated": "#000000", "stale": "#603000"},
-    "floor": {"conforms": "#00607a", "nonconforms": "#b01020", "indeterminate": "#5a4800", "not-decidable": "#4c5a00", "not-evaluated": "#202020", "stale": "#8a4000"},
+    "light": {"conforms": "#00607a", "nonconforms": "#b01020", "indeterminate": "#002000", "not-decidable": "#000040", "not-evaluated": "#202020", "stale": "#8a4000"},
+    "dark": {"conforms": "#40c0e0", "nonconforms": "#ffa0a0", "indeterminate": "#d0e000", "not-decidable": "#c0f020", "not-evaluated": "#f0f0f0", "stale": "#f08020"},
+    "hc": {"conforms": "#004050", "nonconforms": "#900010", "indeterminate": "#101000", "not-decidable": "#201000", "not-evaluated": "#000000", "stale": "#603000"},
+    "floor": {"conforms": "#00607a", "nonconforms": "#b01020", "indeterminate": "#002000", "not-decidable": "#000040", "not-evaluated": "#202020", "stale": "#8a4000"},
 }
 
 
@@ -392,7 +460,7 @@ def base():
             "formula": "ciede2000",
             "min_delta_e2000": 20,
             "sets": {"conforming": list(CONFORMING), "nonconforming": list(NONCONFORMING)},
-            "cues": {s: {"glyph": "state." + s, "text": "icon.state." + s} for s in STATES},
+            "cues": cues(),
             "themes": copy.deepcopy(FIX),
         },
         # sem name -> theme -> prim name
@@ -518,6 +586,17 @@ LABELS = {
     "cue-missing": (drop(["cues", "stale"]), 1, ["STATUS-CUE stale"]),
     "cue-wrong-glyph": (put(["cues", "indeterminate", "glyph"], "state.not-decidable"), 1, ["STATUS-CUE indeterminate"]),
     "cue-no-text": (drop(["cues", "conforms", "text"]), 1, ["STATUS-CUE conforms"]),
+    "cue-no-oot": (drop(["cues", "out-of-tolerance"]), 1, ["STATUS-CUE out-of-tolerance"]),
+    # REQ-UX.TOKENS.STATUS-002: indeterminate drawn in the stale colour (dark) is 0 from stale; the
+    # tokens follow so that only the distance rule fires.
+    "neutral-near-stale": (
+        lambda m: (
+            m["status"]["themes"]["dark"].__setitem__("indeterminate", FIX["dark"]["stale"]),
+            m["bind"]["sem.status.indeterminate"].__setitem__("dark", prim_name("dark", "stale")),
+        ),
+        1,
+        ["STATUS-DISTANCE dark indeterminate stale"],
+    ),
 }
 
 
@@ -532,6 +611,11 @@ def all_files():
         for rel, obj in render(mutate(fn)).items():
             out[f"{name}/{rel}"] = canon(obj)
         expected["fixtures"][name] = {"exit": code, "findings": sorted(set(findings))}
+        st = mutate(fn)["status"]
+        if st is not None and isinstance(st.get("themes"), dict):
+            want = {f for f in findings if f.startswith("STATUS-DISTANCE")}
+            good = {t: {k: v for k, v in row.items() if isinstance(v, str) and len(v) == 7 and v == v.lower()} for t, row in st["themes"].items() if t in THEMES}
+            assert neutral_findings(good) == want, (name, neutral_findings(good), want)
     return out, expected
 
 

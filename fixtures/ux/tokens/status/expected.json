@@ -37,6 +37,12 @@
         "STATUS-CUE stale"
       ]
     },
+    "cue-no-oot": {
+      "exit": 1,
+      "findings": [
+        "STATUS-CUE out-of-tolerance"
+      ]
+    },
     "cue-no-text": {
       "exit": 1,
       "findings": [
@@ -76,6 +82,12 @@
         "STATUS-MISSING floor not-decidable",
         "STATUS-MISSING floor not-evaluated",
         "STATUS-MISSING floor stale"
+      ]
+    },
+    "neutral-near-stale": {
+      "exit": 1,
+      "findings": [
+        "STATUS-DISTANCE dark indeterminate stale"
       ]
     },
     "no-file": {
@@ -179,42 +191,42 @@
       },
       {
         "bg": "sem.surface.base",
-        "ratio": 9.755064306,
+        "ratio": 13.4205074,
         "required": 4.5,
         "state": "indeterminate",
         "theme": "light"
       },
       {
         "bg": "sem.surface.raised",
-        "ratio": 9.083689112,
+        "ratio": 12.496864512,
         "required": 4.5,
         "state": "indeterminate",
         "theme": "light"
       },
       {
         "bg": "sem.surface.sunken",
-        "ratio": 8.317057428,
+        "ratio": 11.442172727,
         "required": 4.5,
         "state": "indeterminate",
         "theme": "light"
       },
       {
         "bg": "sem.surface.base",
-        "ratio": 6.80032031,
+        "ratio": 16.790882699,
         "required": 4.5,
         "state": "not-decidable",
         "theme": "light"
       },
       {
         "bg": "sem.surface.raised",
-        "ratio": 6.332300189,
+        "ratio": 15.635279641,
         "required": 4.5,
         "state": "not-decidable",
         "theme": "light"
       },
       {
         "bg": "sem.surface.sunken",
-        "ratio": 5.797876136,
+        "ratio": 14.315716564,
         "required": 4.5,
         "state": "not-decidable",
         "theme": "light"
@@ -284,63 +296,63 @@
       },
       {
         "bg": "sem.surface.base",
-        "ratio": 8.985849747,
+        "ratio": 6.316061897,
         "required": 4.5,
         "state": "nonconforms",
         "theme": "dark"
       },
       {
         "bg": "sem.surface.raised",
-        "ratio": 7.151419045,
+        "ratio": 5.026659316,
         "required": 4.5,
         "state": "nonconforms",
         "theme": "dark"
       },
       {
         "bg": "sem.surface.sunken",
-        "ratio": 11.186547286,
+        "ratio": 7.862909693,
         "required": 4.5,
         "state": "nonconforms",
         "theme": "dark"
       },
       {
         "bg": "sem.surface.base",
-        "ratio": 6.797294046,
+        "ratio": 12.17758506,
         "required": 4.5,
         "state": "indeterminate",
         "theme": "dark"
       },
       {
         "bg": "sem.surface.raised",
-        "ratio": 5.409649556,
+        "ratio": 9.691572436,
         "required": 4.5,
         "state": "indeterminate",
         "theme": "dark"
       },
       {
         "bg": "sem.surface.sunken",
-        "ratio": 8.461998965,
+        "ratio": 15.159960931,
         "required": 4.5,
         "state": "indeterminate",
         "theme": "dark"
       },
       {
         "bg": "sem.surface.base",
-        "ratio": 12.241494622,
+        "ratio": 15.808455891,
         "required": 4.5,
         "state": "not-decidable",
         "theme": "dark"
       },
       {
         "bg": "sem.surface.raised",
-        "ratio": 9.742435078,
+        "ratio": 12.58121332,
         "required": 4.5,
         "state": "not-decidable",
         "theme": "dark"
       },
       {
         "bg": "sem.surface.sunken",
-        "ratio": 15.239522393,
+        "ratio": 19.680057459,
         "required": 4.5,
         "state": "not-decidable",
         "theme": "dark"
@@ -431,42 +443,42 @@
       },
       {
         "bg": "sem.surface.base",
-        "ratio": 9.755064306,
+        "ratio": 16.848632883,
         "required": 7.0,
         "state": "indeterminate",
         "theme": "hc"
       },
       {
         "bg": "sem.surface.raised",
-        "ratio": 9.755064306,
+        "ratio": 16.848632883,
         "required": 7.0,
         "state": "indeterminate",
         "theme": "hc"
       },
       {
         "bg": "sem.surface.sunken",
-        "ratio": 9.083689112,
+        "ratio": 15.68905527,
         "required": 7.0,
         "state": "indeterminate",
         "theme": "hc"
       },
       {
         "bg": "sem.surface.base",
-        "ratio": 13.333002792,
+        "ratio": 16.790882699,
         "required": 7.0,
         "state": "not-decidable",
         "theme": "hc"
       },
       {
         "bg": "sem.surface.raised",
-        "ratio": 13.333002792,
+        "ratio": 16.790882699,
         "required": 7.0,
         "state": "not-decidable",
         "theme": "hc"
       },
       {
         "bg": "sem.surface.sunken",
-        "ratio": 12.415382255,
+        "ratio": 15.635279641,
         "required": 7.0,
         "state": "not-decidable",
         "theme": "hc"
@@ -557,42 +569,42 @@
       },
       {
         "bg": "sem.surface.base",
-        "ratio": 9.755064306,
+        "ratio": 13.4205074,
         "required": 4.5,
         "state": "indeterminate",
         "theme": "floor"
       },
       {
         "bg": "sem.surface.raised",
-        "ratio": 9.083689112,
+        "ratio": 12.496864512,
         "required": 4.5,
         "state": "indeterminate",
         "theme": "floor"
       },
       {
         "bg": "sem.surface.sunken",
-        "ratio": 8.317057428,
+        "ratio": 11.442172727,
         "required": 4.5,
         "state": "indeterminate",
         "theme": "floor"
       },
       {
         "bg": "sem.surface.base",
-        "ratio": 6.80032031,
+        "ratio": 16.790882699,
         "required": 4.5,
         "state": "not-decidable",
         "theme": "floor"
       },
       {
         "bg": "sem.surface.raised",
-        "ratio": 6.332300189,
+        "ratio": 15.635279641,
         "required": 4.5,
         "state": "not-decidable",
         "theme": "floor"
       },
       {
         "bg": "sem.surface.sunken",
-        "ratio": 5.797876136,
+        "ratio": 14.315716564,
         "required": 4.5,
         "state": "not-decidable",
         "theme": "floor"
@@ -671,49 +683,49 @@
         "vision": "tritanopia"
       },
       {
-        "de2000": 39.212291982,
+        "de2000": 37.531995111,
         "state": "indeterminate",
         "theme": "light",
         "vision": "normal"
       },
       {
-        "de2000": 37.729834025,
+        "de2000": 36.692789697,
         "state": "indeterminate",
         "theme": "light",
         "vision": "protanopia"
       },
       {
-        "de2000": 39.814002007,
+        "de2000": 38.09872342,
         "state": "indeterminate",
         "theme": "light",
         "vision": "deuteranopia"
       },
       {
-        "de2000": 37.325769338,
+        "de2000": 38.217730927,
         "state": "indeterminate",
         "theme": "light",
         "vision": "tritanopia"
       },
       {
-        "de2000": 40.836314635,
+        "de2000": 32.227655426,
         "state": "not-decidable",
         "theme": "light",
         "vision": "normal"
       },
       {
-        "de2000": 38.917937932,
+        "de2000": 33.090814047,
         "state": "not-decidable",
         "theme": "light",
         "vision": "protanopia"
       },
       {
-        "de2000": 41.411501891,
+        "de2000": 32.648732465,
         "state": "not-decidable",
         "theme": "light",
         "vision": "deuteranopia"
       },
       {
-        "de2000": 22.591066774,
+        "de2000": 29.971312751,
         "state": "not-decidable",
         "theme": "light",
         "vision": "tritanopia"
@@ -767,73 +779,73 @@
         "vision": "tritanopia"
       },
       {
-        "de2000": 51.892629113,
+        "de2000": 59.704024438,
         "state": "nonconforms",
         "theme": "dark",
         "vision": "normal"
       },
       {
-        "de2000": 30.052628964,
+        "de2000": 36.717760326,
         "state": "nonconforms",
         "theme": "dark",
         "vision": "protanopia"
       },
       {
-        "de2000": 40.294144872,
+        "de2000": 45.563585166,
         "state": "nonconforms",
         "theme": "dark",
         "vision": "deuteranopia"
       },
       {
-        "de2000": 66.553152655,
+        "de2000": 63.116605194,
         "state": "nonconforms",
         "theme": "dark",
         "vision": "tritanopia"
       },
       {
-        "de2000": 51.960303699,
+        "de2000": 42.941137874,
         "state": "indeterminate",
         "theme": "dark",
         "vision": "normal"
       },
       {
-        "de2000": 49.578588018,
+        "de2000": 40.320072597,
         "state": "indeterminate",
         "theme": "dark",
         "vision": "protanopia"
       },
       {
-        "de2000": 53.428913418,
+        "de2000": 45.450311407,
         "state": "indeterminate",
         "theme": "dark",
         "vision": "deuteranopia"
       },
       {
-        "de2000": 44.891585382,
+        "de2000": 38.853008373,
         "state": "indeterminate",
         "theme": "dark",
         "vision": "tritanopia"
       },
       {
-        "de2000": 40.036794242,
+        "de2000": 36.476683839,
         "state": "not-decidable",
         "theme": "dark",
         "vision": "normal"
       },
       {
-        "de2000": 38.045669275,
+        "de2000": 33.839330317,
         "state": "not-decidable",
         "theme": "dark",
         "vision": "protanopia"
       },
       {
-        "de2000": 42.088872321,
+        "de2000": 38.676258989,
         "state": "not-decidable",
         "theme": "dark",
         "vision": "deuteranopia"
       },
       {
-        "de2000": 27.558053662,
+        "de2000": 29.869800935,
         "state": "not-decidable",
         "theme": "dark",
         "vision": "tritanopia"
@@ -911,49 +923,49 @@
         "vision": "tritanopia"
       },
       {
-        "de2000": 36.520353065,
+        "de2000": 28.468598022,
         "state": "indeterminate",
         "theme": "hc",
         "vision": "normal"
       },
       {
-        "de2000": 34.49731539,
+        "de2000": 28.076616157,
         "state": "indeterminate",
         "theme": "hc",
         "vision": "protanopia"
       },
       {
-        "de2000": 37.384087535,
+        "de2000": 29.183358734,
         "state": "indeterminate",
         "theme": "hc",
         "vision": "deuteranopia"
       },
       {
-        "de2000": 34.679022139,
+        "de2000": 31.024887299,
         "state": "indeterminate",
         "theme": "hc",
         "vision": "tritanopia"
       },
       {
-        "de2000": 31.989766818,
+        "de2000": 26.453383082,
         "state": "not-decidable",
         "theme": "hc",
         "vision": "normal"
       },
       {
-        "de2000": 32.150644688,
+        "de2000": 26.866815474,
         "state": "not-decidable",
         "theme": "hc",
         "vision": "protanopia"
       },
       {
-        "de2000": 33.040110825,
+        "de2000": 27.429152901,
         "state": "not-decidable",
         "theme": "hc",
         "vision": "deuteranopia"
       },
       {
-        "de2000": 21.767688899,
+        "de2000": 23.214935183,
         "state": "not-decidable",
         "theme": "hc",
         "vision": "tritanopia"
@@ -1031,49 +1043,49 @@
         "vision": "tritanopia"
       },
       {
-        "de2000": 39.212291982,
+        "de2000": 37.531995111,
         "state": "indeterminate",
         "theme": "floor",
         "vision": "normal"
       },
       {
-        "de2000": 37.729834025,
+        "de2000": 36.692789697,
         "state": "indeterminate",
         "theme": "floor",
         "vision": "protanopia"
       },
       {
-        "de2000": 39.814002007,
+        "de2000": 38.09872342,
         "state": "indeterminate",
         "theme": "floor",
         "vision": "deuteranopia"
       },
       {
-        "de2000": 37.325769338,
+        "de2000": 38.217730927,
         "state": "indeterminate",
         "theme": "floor",
         "vision": "tritanopia"
       },
       {
-        "de2000": 40.836314635,
+        "de2000": 32.227655426,
         "state": "not-decidable",
         "theme": "floor",
         "vision": "normal"
       },
       {
-        "de2000": 38.917937932,
+        "de2000": 33.090814047,
         "state": "not-decidable",
         "theme": "floor",
         "vision": "protanopia"
       },
       {
-        "de2000": 41.411501891,
+        "de2000": 32.648732465,
         "state": "not-decidable",
         "theme": "floor",
         "vision": "deuteranopia"
       },
       {
-        "de2000": 22.591066774,
+        "de2000": 29.971312751,
         "state": "not-decidable",
         "theme": "floor",
         "vision": "tritanopia"
@@ -1129,6 +1141,7 @@
     ],
     "exit": 0,
     "findings": [],
+    "hue_advice": [],
     "hues": [
       {
         "chroma": 0.087875197,
@@ -1143,14 +1156,14 @@
         "theme": "light"
       },
       {
-        "chroma": 0.079328649,
-        "hue": 95.487648,
+        "chroma": 0.062468399,
+        "hue": 94.606985,
         "state": "indeterminate",
         "theme": "light"
       },
       {
-        "chroma": 0.105840493,
-        "hue": 115.284916,
+        "chroma": 0.033435639,
+        "hue": 116.463709,
         "state": "not-decidable",
         "theme": "light"
       },
@@ -1173,20 +1186,20 @@
         "theme": "dark"
       },
       {
-        "chroma": 0.107175642,
-        "hue": 26.669086,
+        "chroma": 0.173892342,
+        "hue": 26.01141,
         "state": "nonconforms",
         "theme": "dark"
       },
       {
-        "chroma": 0.147700925,
-        "hue": 94.730073,
+        "chroma": 0.074232517,
+        "hue": 94.893654,
         "state": "indeterminate",
         "theme": "dark"
       },
       {
-        "chroma": 0.063719255,
-        "hue": 114.448972,
+        "chroma": 0.032992618,
+        "hue": 114.390653,
         "state": "not-decidable",
         "theme": "dark"
       },
@@ -1215,14 +1228,14 @@
         "theme": "hc"
       },
       {
-        "chroma": 0.079328649,
-        "hue": 95.487648,
+        "chroma": 0.038279571,
+        "hue": 97.29781,
         "state": "indeterminate",
         "theme": "hc"
       },
       {
-        "chroma": 0.062570416,
-        "hue": 114.715768,
+        "chroma": 0.033435639,
+        "hue": 116.463709,
         "state": "not-decidable",
         "theme": "hc"
       },
@@ -1251,14 +1264,14 @@
         "theme": "floor"
       },
       {
-        "chroma": 0.079328649,
-        "hue": 95.487648,
+        "chroma": 0.062468399,
+        "hue": 94.606985,
         "state": "indeterminate",
         "theme": "floor"
       },
       {
-        "chroma": 0.105840493,
-        "hue": 115.284916,
+        "chroma": 0.033435639,
+        "hue": 116.463709,
         "state": "not-decidable",
         "theme": "floor"
       },
@@ -1276,38 +1289,713 @@
       }
     ],
     "min_contrast_margin": 0.158677,
-    "min_de2000_all": 21.767689,
-    "min_de2000_nonconforming": 30.052629,
+    "min_de2000_all": 23.06256,
+    "min_de2000_nonconforming": 30.663289,
+    "min_neutral_de2000": 11.788378,
+    "neutral_de2000": [
+      {
+        "de2000": 38.174179259,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "light",
+        "vision": "normal"
+      },
+      {
+        "de2000": 12.933935039,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "light",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 24.755031438,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "light",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 31.388769392,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "light",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 22.686599834,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "light",
+        "vision": "normal"
+      },
+      {
+        "de2000": 11.788378468,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "light",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 16.768771193,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "light",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 21.087882291,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "light",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 43.449998373,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "light",
+        "vision": "normal"
+      },
+      {
+        "de2000": 19.101235602,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "light",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 32.979548247,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "light",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 40.031567466,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "light",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 31.82256857,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "light",
+        "vision": "normal"
+      },
+      {
+        "de2000": 20.158821098,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "light",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 26.051150909,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "light",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 31.430489402,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "light",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 38.140621251,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "light",
+        "vision": "normal"
+      },
+      {
+        "de2000": 25.130016285,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "light",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 38.205172197,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "light",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 37.382685605,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "light",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 32.228699954,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "light",
+        "vision": "normal"
+      },
+      {
+        "de2000": 27.745953851,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "light",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 32.534666088,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "light",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 28.282018112,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "light",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 37.927362171,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "dark",
+        "vision": "normal"
+      },
+      {
+        "de2000": 21.728692525,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "dark",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 13.475196983,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "dark",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 27.734002407,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "dark",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 29.481053121,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "dark",
+        "vision": "normal"
+      },
+      {
+        "de2000": 22.371138292,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "dark",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 17.348221438,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "dark",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 25.753162071,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "dark",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 40.753648916,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "dark",
+        "vision": "normal"
+      },
+      {
+        "de2000": 28.24444497,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "dark",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 22.477348195,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "dark",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 37.471019661,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "dark",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 36.887730778,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "dark",
+        "vision": "normal"
+      },
+      {
+        "de2000": 32.21263817,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "dark",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 27.266112813,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "dark",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 35.777053728,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "dark",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 34.949932545,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "dark",
+        "vision": "normal"
+      },
+      {
+        "de2000": 31.861975646,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "dark",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 28.703766865,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "dark",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 32.432370024,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "dark",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 36.139922905,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "dark",
+        "vision": "normal"
+      },
+      {
+        "de2000": 37.823594718,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "dark",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 33.606540728,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "dark",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 36.87834603,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "dark",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 35.037400974,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "hc",
+        "vision": "normal"
+      },
+      {
+        "de2000": 12.478206752,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "hc",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 24.913902417,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "hc",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 32.313615374,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "hc",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 22.199743527,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "hc",
+        "vision": "normal"
+      },
+      {
+        "de2000": 13.171081817,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "hc",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 17.305926796,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "hc",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 21.411383601,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "hc",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 39.085269284,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "hc",
+        "vision": "normal"
+      },
+      {
+        "de2000": 12.762393596,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "hc",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 25.85896163,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "hc",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 35.478531087,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "hc",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 26.402881722,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "hc",
+        "vision": "normal"
+      },
+      {
+        "de2000": 13.688887048,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "hc",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 18.48842989,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "hc",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 26.765107921,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "hc",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 36.304978435,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "hc",
+        "vision": "normal"
+      },
+      {
+        "de2000": 23.458944918,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "hc",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 35.365570556,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "hc",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 39.092101173,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "hc",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 29.166265662,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "hc",
+        "vision": "normal"
+      },
+      {
+        "de2000": 24.363326728,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "hc",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 28.469735504,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "hc",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 29.51758179,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "hc",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 38.174179259,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "floor",
+        "vision": "normal"
+      },
+      {
+        "de2000": 12.933935039,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "floor",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 24.755031438,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "floor",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 31.388769392,
+        "other": "nonconforms",
+        "state": "indeterminate",
+        "theme": "floor",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 22.686599834,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "floor",
+        "vision": "normal"
+      },
+      {
+        "de2000": 11.788378468,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "floor",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 16.768771193,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "floor",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 21.087882291,
+        "other": "stale",
+        "state": "indeterminate",
+        "theme": "floor",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 43.449998373,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "floor",
+        "vision": "normal"
+      },
+      {
+        "de2000": 19.101235602,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "floor",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 32.979548247,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "floor",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 40.031567466,
+        "other": "nonconforms",
+        "state": "not-decidable",
+        "theme": "floor",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 31.82256857,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "floor",
+        "vision": "normal"
+      },
+      {
+        "de2000": 20.158821098,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "floor",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 26.051150909,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "floor",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 31.430489402,
+        "other": "stale",
+        "state": "not-decidable",
+        "theme": "floor",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 38.140621251,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "floor",
+        "vision": "normal"
+      },
+      {
+        "de2000": 25.130016285,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "floor",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 38.205172197,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "floor",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 37.382685605,
+        "other": "nonconforms",
+        "state": "not-evaluated",
+        "theme": "floor",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 32.228699954,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "floor",
+        "vision": "normal"
+      },
+      {
+        "de2000": 27.745953851,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "floor",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 32.534666088,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "floor",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 28.282018112,
+        "other": "stale",
+        "state": "not-evaluated",
+        "theme": "floor",
+        "vision": "tritanopia"
+      }
+    ],
     "values": {
       "dark": {
         "conforms": "#00b5e4",
-        "indeterminate": "#c2a200",
-        "nonconforms": "#ffa69c",
-        "not-decidable": "#d9e0b0",
+        "indeterminate": "#eadba3",
+        "nonconforms": "#ff7269",
+        "not-decidable": "#f6fae1",
         "not-evaluated": "#f5f7f9",
         "stale": "#f58028"
       },
       "floor": {
         "conforms": "#00637e",
-        "indeterminate": "#514300",
+        "indeterminate": "#392e00",
         "nonconforms": "#c72d2e",
-        "not-decidable": "#586000",
+        "not-decidable": "#1c1f0c",
         "not-evaluated": "#1c1d1f",
         "stale": "#8c4200"
       },
       "hc": {
         "conforms": "#004b61",
-        "indeterminate": "#514300",
+        "indeterminate": "#221d06",
         "nonconforms": "#a90617",
-        "not-decidable": "#2e3206",
+        "not-decidable": "#1c1f0c",
         "not-evaluated": "#000000",
         "stale": "#6b3100"
       },
       "light": {
         "conforms": "#00637e",
-        "indeterminate": "#514300",
+        "indeterminate": "#392e00",
         "nonconforms": "#c72d2e",
-        "not-decidable": "#586000",
+        "not-decidable": "#1c1f0c",
         "not-evaluated": "#1c1d1f",
         "stale": "#8c4200"
       }

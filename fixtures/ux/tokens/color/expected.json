@@ -1301,7 +1301,7 @@
       },
       {
         "claimed": "sem.border.value.claimed",
-        "de_ok": 0.270283262,
+        "de_ok": 0.316734343,
         "other": "sem.status.indeterminate",
         "theme": "light"
       },
@@ -1313,7 +1313,7 @@
       },
       {
         "claimed": "sem.border.value.claimed",
-        "de_ok": 0.270051298,
+        "de_ok": 0.370947046,
         "other": "sem.status.not-decidable",
         "theme": "light"
       },
@@ -1367,7 +1367,7 @@
       },
       {
         "claimed": "sem.surface.value.claimed",
-        "de_ok": 0.522261858,
+        "de_ok": 0.598281018,
         "other": "sem.status.indeterminate",
         "theme": "light"
       },
@@ -1379,7 +1379,7 @@
       },
       {
         "claimed": "sem.surface.value.claimed",
-        "de_ok": 0.458249092,
+        "de_ok": 0.668511904,
         "other": "sem.status.not-decidable",
         "theme": "light"
       },
@@ -1433,7 +1433,7 @@
       },
       {
         "claimed": "sem.text.value.claimed",
-        "de_ok": 0.229767545,
+        "de_ok": 0.259019837,
         "other": "sem.status.indeterminate",
         "theme": "light"
       },
@@ -1445,7 +1445,7 @@
       },
       {
         "claimed": "sem.text.value.claimed",
-        "de_ok": 0.255358146,
+        "de_ok": 0.304305964,
         "other": "sem.status.not-decidable",
         "theme": "light"
       },
@@ -1499,19 +1499,19 @@
       },
       {
         "claimed": "sem.border.value.claimed",
-        "de_ok": 0.270242755,
+        "de_ok": 0.273210378,
         "other": "sem.status.indeterminate",
         "theme": "dark"
       },
       {
         "claimed": "sem.border.value.claimed",
-        "de_ok": 0.156465499,
+        "de_ok": 0.13981773,
         "other": "sem.status.nonconforms",
         "theme": "dark"
       },
       {
         "claimed": "sem.border.value.claimed",
-        "de_ok": 0.277735844,
+        "de_ok": 0.321367436,
         "other": "sem.status.not-decidable",
         "theme": "dark"
       },
@@ -1565,19 +1565,19 @@
       },
       {
         "claimed": "sem.surface.value.claimed",
-        "de_ok": 0.459854247,
+        "de_ok": 0.60035413,
         "other": "sem.status.indeterminate",
         "theme": "dark"
       },
       {
         "claimed": "sem.surface.value.claimed",
-        "de_ok": 0.512385746,
+        "de_ok": 0.436670271,
         "other": "sem.status.nonconforms",
         "theme": "dark"
       },
       {
         "claimed": "sem.surface.value.claimed",
-        "de_ok": 0.59994647,
+        "de_ok": 0.679378655,
         "other": "sem.status.not-decidable",
         "theme": "dark"
       },
@@ -1631,19 +1631,19 @@
       },
       {
         "claimed": "sem.text.value.claimed",
-        "de_ok": 0.26032761,
+        "de_ok": 0.131052362,
         "other": "sem.status.indeterminate",
         "theme": "dark"
       },
       {
         "claimed": "sem.text.value.claimed",
-        "de_ok": 0.113166093,
+        "de_ok": 0.216195189,
         "other": "sem.status.nonconforms",
         "theme": "dark"
       },
       {
         "claimed": "sem.text.value.claimed",
-        "de_ok": 0.133289207,
+        "de_ok": 0.136060168,
         "other": "sem.status.not-decidable",
         "theme": "dark"
       },
@@ -1697,7 +1697,7 @@
       },
       {
         "claimed": "sem.border.value.claimed",
-        "de_ok": 0.175478444,
+        "de_ok": 0.213031897,
         "other": "sem.status.indeterminate",
         "theme": "hc"
       },
@@ -1709,7 +1709,7 @@
       },
       {
         "claimed": "sem.border.value.claimed",
-        "de_ok": 0.19312214,
+        "de_ok": 0.21595576,
         "other": "sem.status.not-decidable",
         "theme": "hc"
       },
@@ -1763,7 +1763,7 @@
       },
       {
         "claimed": "sem.surface.value.claimed",
-        "de_ok": 0.522261858,
+        "de_ok": 0.667919275,
         "other": "sem.status.indeterminate",
         "theme": "hc"
       },
@@ -1775,7 +1775,7 @@
       },
       {
         "claimed": "sem.surface.value.claimed",
-        "de_ok": 0.601628988,
+        "de_ok": 0.668511904,
         "other": "sem.status.not-decidable",
         "theme": "hc"
       },
@@ -1829,7 +1829,7 @@
       },
       {
         "claimed": "sem.text.value.claimed",
-        "de_ok": 0.175478444,
+        "de_ok": 0.213031897,
         "other": "sem.status.indeterminate",
         "theme": "hc"
       },
@@ -1841,7 +1841,7 @@
       },
       {
         "claimed": "sem.text.value.claimed",
-        "de_ok": 0.19312214,
+        "de_ok": 0.21595576,
         "other": "sem.status.not-decidable",
         "theme": "hc"
       },
@@ -1895,7 +1895,7 @@
       },
       {
         "claimed": "sem.border.value.claimed",
-        "de_ok": 0.229767545,
+        "de_ok": 0.259019837,
         "other": "sem.status.indeterminate",
         "theme": "floor"
       },
@@ -1907,7 +1907,7 @@
       },
       {
         "claimed": "sem.border.value.claimed",
-        "de_ok": 0.255358146,
+        "de_ok": 0.304305964,
         "other": "sem.status.not-decidable",
         "theme": "floor"
       },
@@ -1961,7 +1961,7 @@
       },
       {
         "claimed": "sem.surface.value.claimed",
-        "de_ok": 0.522261858,
+        "de_ok": 0.598281018,
         "other": "sem.status.indeterminate",
         "theme": "floor"
       },
@@ -1973,7 +1973,7 @@
       },
       {
         "claimed": "sem.surface.value.claimed",
-        "de_ok": 0.458249092,
+        "de_ok": 0.668511904,
         "other": "sem.status.not-decidable",
         "theme": "floor"
       },
@@ -2027,7 +2027,7 @@
       },
       {
         "claimed": "sem.text.value.claimed",
-        "de_ok": 0.229767545,
+        "de_ok": 0.259019837,
         "other": "sem.status.indeterminate",
         "theme": "floor"
       },
@@ -2039,7 +2039,7 @@
       },
       {
         "claimed": "sem.text.value.claimed",
-        "de_ok": 0.255358146,
+        "de_ok": 0.304305964,
         "other": "sem.status.not-decidable",
         "theme": "floor"
       },
@@ -2297,7 +2297,7 @@
       {
         "bg": "sem.surface.base",
         "fg": "sem.status.indeterminate",
-        "ratio": 9.755064306,
+        "ratio": 13.4205074,
         "required": 4.5,
         "tag": "text",
         "theme": "light"
@@ -2305,7 +2305,7 @@
       {
         "bg": "sem.surface.raised",
         "fg": "sem.status.indeterminate",
-        "ratio": 9.083689112,
+        "ratio": 12.496864512,
         "required": 4.5,
         "tag": "text",
         "theme": "light"
@@ -2313,7 +2313,7 @@
       {
         "bg": "sem.surface.sunken",
         "fg": "sem.status.indeterminate",
-        "ratio": 8.317057428,
+        "ratio": 11.442172727,
         "required": 4.5,
         "tag": "text",
         "theme": "light"
@@ -2345,7 +2345,7 @@
       {
         "bg": "sem.surface.base",
         "fg": "sem.status.not-decidable",
-        "ratio": 6.80032031,
+        "ratio": 16.790882699,
         "required": 4.5,
         "tag": "text",
         "theme": "light"
@@ -2353,7 +2353,7 @@
       {
         "bg": "sem.surface.raised",
         "fg": "sem.status.not-decidable",
-        "ratio": 6.332300189,
+        "ratio": 15.635279641,
         "required": 4.5,
         "tag": "text",
         "theme": "light"
@@ -2361,7 +2361,7 @@
       {
         "bg": "sem.surface.sunken",
         "fg": "sem.status.not-decidable",
-        "ratio": 5.797876136,
+        "ratio": 14.315716564,
         "required": 4.5,
         "tag": "text",
         "theme": "light"
@@ -2825,7 +2825,7 @@
       {
         "bg": "sem.surface.base",
         "fg": "sem.status.indeterminate",
-        "ratio": 6.797294046,
+        "ratio": 12.17758506,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -2833,7 +2833,7 @@
       {
         "bg": "sem.surface.raised",
         "fg": "sem.status.indeterminate",
-        "ratio": 5.409649556,
+        "ratio": 9.691572436,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -2841,7 +2841,7 @@
       {
         "bg": "sem.surface.sunken",
         "fg": "sem.status.indeterminate",
-        "ratio": 8.461998965,
+        "ratio": 15.159960931,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -2849,7 +2849,7 @@
       {
         "bg": "sem.surface.base",
         "fg": "sem.status.nonconforms",
-        "ratio": 8.985849747,
+        "ratio": 6.316061897,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -2857,7 +2857,7 @@
       {
         "bg": "sem.surface.raised",
         "fg": "sem.status.nonconforms",
-        "ratio": 7.151419045,
+        "ratio": 5.026659316,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -2865,7 +2865,7 @@
       {
         "bg": "sem.surface.sunken",
         "fg": "sem.status.nonconforms",
-        "ratio": 11.186547286,
+        "ratio": 7.862909693,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -2873,7 +2873,7 @@
       {
         "bg": "sem.surface.base",
         "fg": "sem.status.not-decidable",
-        "ratio": 12.241494622,
+        "ratio": 15.808455891,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -2881,7 +2881,7 @@
       {
         "bg": "sem.surface.raised",
         "fg": "sem.status.not-decidable",
-        "ratio": 9.742435078,
+        "ratio": 12.58121332,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -2889,7 +2889,7 @@
       {
         "bg": "sem.surface.sunken",
         "fg": "sem.status.not-decidable",
-        "ratio": 15.239522393,
+        "ratio": 19.680057459,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -3353,7 +3353,7 @@
       {
         "bg": "sem.surface.base",
         "fg": "sem.status.indeterminate",
-        "ratio": 9.755064306,
+        "ratio": 16.848632883,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -3361,7 +3361,7 @@
       {
         "bg": "sem.surface.raised",
         "fg": "sem.status.indeterminate",
-        "ratio": 9.755064306,
+        "ratio": 16.848632883,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -3369,7 +3369,7 @@
       {
         "bg": "sem.surface.sunken",
         "fg": "sem.status.indeterminate",
-        "ratio": 9.083689112,
+        "ratio": 15.68905527,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -3401,7 +3401,7 @@
       {
         "bg": "sem.surface.base",
         "fg": "sem.status.not-decidable",
-        "ratio": 13.333002792,
+        "ratio": 16.790882699,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -3409,7 +3409,7 @@
       {
         "bg": "sem.surface.raised",
         "fg": "sem.status.not-decidable",
-        "ratio": 13.333002792,
+        "ratio": 16.790882699,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -3417,7 +3417,7 @@
       {
         "bg": "sem.surface.sunken",
         "fg": "sem.status.not-decidable",
-        "ratio": 12.415382255,
+        "ratio": 15.635279641,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -3881,7 +3881,7 @@
       {
         "bg": "sem.surface.base",
         "fg": "sem.status.indeterminate",
-        "ratio": 9.755064306,
+        "ratio": 13.4205074,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -3889,7 +3889,7 @@
       {
         "bg": "sem.surface.raised",
         "fg": "sem.status.indeterminate",
-        "ratio": 9.083689112,
+        "ratio": 12.496864512,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -3897,7 +3897,7 @@
       {
         "bg": "sem.surface.sunken",
         "fg": "sem.status.indeterminate",
-        "ratio": 8.317057428,
+        "ratio": 11.442172727,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -3929,7 +3929,7 @@
       {
         "bg": "sem.surface.base",
         "fg": "sem.status.not-decidable",
-        "ratio": 6.80032031,
+        "ratio": 16.790882699,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -3937,7 +3937,7 @@
       {
         "bg": "sem.surface.raised",
         "fg": "sem.status.not-decidable",
-        "ratio": 6.332300189,
+        "ratio": 15.635279641,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -3945,7 +3945,7 @@
       {
         "bg": "sem.surface.sunken",
         "fg": "sem.status.not-decidable",
-        "ratio": 5.797876136,
+        "ratio": 14.315716564,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -4247,9 +4247,9 @@
         "sem.brand.subtle": "#111d30",
         "sem.focus.ring": "#9cc3ff",
         "sem.status.conforms": "#00b5e4",
-        "sem.status.indeterminate": "#c2a200",
-        "sem.status.nonconforms": "#ffa69c",
-        "sem.status.not-decidable": "#d9e0b0",
+        "sem.status.indeterminate": "#eadba3",
+        "sem.status.nonconforms": "#ff7269",
+        "sem.status.not-decidable": "#f6fae1",
         "sem.status.not-evaluated": "#f5f7f9",
         "sem.status.stale": "#f58028",
         "sem.surface.base": "#1c1d1f",
@@ -4296,9 +4296,9 @@
         "sem.brand.subtle": "#f2f7ff",
         "sem.focus.ring": "#1454b2",
         "sem.status.conforms": "#00637e",
-        "sem.status.indeterminate": "#514300",
+        "sem.status.indeterminate": "#392e00",
         "sem.status.nonconforms": "#c72d2e",
-        "sem.status.not-decidable": "#586000",
+        "sem.status.not-decidable": "#1c1f0c",
         "sem.status.not-evaluated": "#1c1d1f",
         "sem.status.stale": "#8c4200",
         "sem.surface.base": "#ffffff",
@@ -4345,9 +4345,9 @@
         "sem.brand.subtle": "#f2f7ff",
         "sem.focus.ring": "#164183",
         "sem.status.conforms": "#004b61",
-        "sem.status.indeterminate": "#514300",
+        "sem.status.indeterminate": "#221d06",
         "sem.status.nonconforms": "#a90617",
-        "sem.status.not-decidable": "#2e3206",
+        "sem.status.not-decidable": "#1c1f0c",
         "sem.status.not-evaluated": "#000000",
         "sem.status.stale": "#6b3100",
         "sem.surface.base": "#ffffff",
@@ -4394,9 +4394,9 @@
         "sem.brand.subtle": "#f2f7ff",
         "sem.focus.ring": "#2c6cce",
         "sem.status.conforms": "#00637e",
-        "sem.status.indeterminate": "#514300",
+        "sem.status.indeterminate": "#392e00",
         "sem.status.nonconforms": "#c72d2e",
-        "sem.status.not-decidable": "#586000",
+        "sem.status.not-decidable": "#1c1f0c",
         "sem.status.not-evaluated": "#1c1d1f",
         "sem.status.stale": "#8c4200",
         "sem.surface.base": "#ffffff",

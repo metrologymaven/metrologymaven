@@ -7,7 +7,9 @@
 
 use fid_canon::CValue;
 use fid_design::status::cvd::{delta_e2000_under, Vision};
-use fid_design::status::{glyph_id, text_id, MIN_DELTA_E2000, NONCONFORMING, STATES};
+use fid_design::status::{
+    glyph_id, text_id, CUE_KEYS, MIN_DELTA_E2000, MIN_NEUTRAL_DELTA_E2000, NC_COLOURED, NEUTRAL, NONCONFORMING, STATES,
+};
 use fid_design::tokens::oklab::oklab;
 use fid_design::tokens::wcag::{contrast_ratio, parse_hex};
 use std::collections::{BTreeMap, BTreeSet};
@@ -203,15 +205,15 @@ fn semantic_tokens_alias_the_palette() {
 /// state, and the semantic token says so.
 #[test]
 fn every_state_has_its_glyph_and_text() {
-    for name in ["cue-missing", "cue-wrong-glyph", "cue-no-text"] {
+    for name in ["cue-missing", "cue-wrong-glyph", "cue-no-text", "cue-no-oot"] {
         fixture_case(name);
     }
     let pal = fid_canon::parse(&std::fs::read(design().join("tokens/status.json")).unwrap()).unwrap();
     let cues = obj(get(&pal, &["cues"]));
-    assert_eq!(cues.len(), STATES.len());
+    assert_eq!(cues.len(), CUE_KEYS.len());
     let mut glyphs = BTreeSet::new();
     let mut texts = BTreeSet::new();
-    for st in STATES {
+    for st in CUE_KEYS {
         let g = s(get(&cues[st], &["glyph"]));
         let x = s(get(&cues[st], &["text"]));
         assert_eq!(g, glyph_id(st));
@@ -219,8 +221,9 @@ fn every_state_has_its_glyph_and_text() {
         glyphs.insert(g.to_string());
         texts.insert(x.to_string());
     }
-    assert_eq!(glyphs.len(), 6);
-    assert_eq!(texts.len(), 6);
+    assert_eq!(glyphs.len(), 7);
+    assert_eq!(texts.len(), 7);
+    assert_eq!(glyph_id("out-of-tolerance"), "pattern.out-of-tolerance");
     let sem = fid_canon::parse(&std::fs::read(design().join("tokens/semantic/color.tokens.json")).unwrap()).unwrap();
     for st in STATES {
         let d = s(get(&sem, &["sem", "status", st, "$description"]));
@@ -276,39 +279,47 @@ fn status_colours_meet_text_contrast() {
     }
 }
 
-/// REQ-UX.TOKENS.STATUS-002: indeterminate, not-decidable and not-evaluated are achromatic
-/// (OKLCH chroma < 0.03) or at least 30 degrees of OKLCH hue from every conforming-set and
-/// nonconforming-set colour [unverified rule], checked with this crate's OKLab against the oracle.
+/// REQ-UX.TOKENS.STATUS-002, gated on distance: indeterminate, not-decidable and not-evaluated are
+/// at least 10 (CIEDE2000) from nonconforms and stale under all four vision conditions in every
+/// theme; this crate's values equal the oracle's. The error path is `neutral-near-stale`.
 #[test]
-fn neutral_states_stay_outside_both_hue_families() {
+fn neutral_states_keep_their_distance_from_the_nonconforming_set() {
+    let r = fixture_case("neutral-near-stale");
+    assert!(stdout(&check(&fix("neutral-near-stale"), false)).contains("STATUS-DISTANCE dark indeterminate stale"));
+    assert_eq!(get(&r, &["ok"]), &CValue::Bool(false));
     let values = shipped_values();
-    let lch = |hex: &str| {
-        let [_, a, b] = oklab(parse_hex(hex).unwrap());
-        (b.atan2(a).to_degrees().rem_euclid(360.0), (a * a + b * b).sqrt())
-    };
-    let gap = |x: f64, y: f64| {
-        let d = (x - y).abs() % 360.0;
-        d.min(360.0 - d)
-    };
     let e = expected();
+    let want = arr(get(&e, &["shipped", "neutral_de2000"]));
+    assert_eq!(want.len(), 4 * NEUTRAL.len() * NC_COLOURED.len() * 4);
+    for w in want {
+        let (t, st, x, v) =
+            (s(get(w, &["theme"])), s(get(w, &["state"])), s(get(w, &["other"])), s(get(w, &["vision"])));
+        let d = delta_e2000_under(
+            Vision::parse(v).unwrap(),
+            parse_hex(&values[t][st]).unwrap(),
+            parse_hex(&values[t][x]).unwrap(),
+        );
+        let oracle = num(get(w, &["de2000"]));
+        assert!((d - oracle).abs() < 1e-6, "{t} {st}/{x} {v}: {d} vs oracle {oracle}");
+        assert!(d >= MIN_NEUTRAL_DELTA_E2000, "{t} {st}/{x} {v}: {d}");
+    }
+}
+
+/// The +/-30 degree OKLCH hue-family rule is advice only (not gating): this crate's hue and chroma
+/// equal the oracle's, and the oracle records any advice.
+#[test]
+fn hue_family_advice_matches_the_oracle() {
+    let values = shipped_values();
+    let e = expected();
+    let _advice = arr(get(&e, &["shipped", "hue_advice"]));
     for w in arr(get(&e, &["shipped", "hues"])) {
         let (t, st) = (s(get(w, &["theme"])), s(get(w, &["state"])));
-        let (h, c) = lch(&values[t][st]);
+        let [_, a, b] = oklab(parse_hex(&values[t][st]).unwrap());
+        let (h, c) = (b.atan2(a).to_degrees().rem_euclid(360.0), (a * a + b * b).sqrt());
         assert!((c - num(get(w, &["chroma"]))).abs() < 1e-6, "{t} {st}");
         if c >= 0.03 {
-            assert!(gap(h, num(get(w, &["hue"]))) < 1e-4, "{t} {st}");
-        }
-    }
-    for (t, row) in &values {
-        let family: Vec<f64> = ["conforms", "nonconforms", "stale"].iter().map(|st| lch(&row[*st]).0).collect();
-        for st in ["indeterminate", "not-decidable", "not-evaluated"] {
-            let (h, c) = lch(&row[st]);
-            if c < 0.03 {
-                continue;
-            }
-            for f in &family {
-                assert!(gap(h, *f) >= 30.0, "{t} {st}: hue {h} vs {f}");
-            }
+            let d = (h - num(get(w, &["hue"]))).abs() % 360.0;
+            assert!(d.min(360.0 - d) < 1e-4, "{t} {st}");
         }
     }
 }
@@ -337,7 +348,7 @@ fn bad_usage_and_unreadable_root_exit_2() {
 fn every_fixture_is_labelled() {
     let e = expected();
     let names: BTreeSet<&String> = obj(get(&e, &["fixtures"])).keys().collect();
-    assert_eq!(names.len(), 21);
+    assert_eq!(names.len(), 23);
     for n in names {
         assert!(fix(n).join("tokens").is_dir(), "{n}");
     }

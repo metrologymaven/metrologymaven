@@ -16,16 +16,16 @@
           "$value": "#00607a"
         },
         "indeterminate-dark": {
-          "$value": "#c0a000"
+          "$value": "#d0e000"
         },
         "indeterminate-floor": {
-          "$value": "#5a4800"
+          "$value": "#002000"
         },
         "indeterminate-hc": {
-          "$value": "#403000"
+          "$value": "#101000"
         },
         "indeterminate-light": {
-          "$value": "#5a4800"
+          "$value": "#002000"
         },
         "nonconforms-dark": {
           "$value": "#ffa0a0"
@@ -40,16 +40,16 @@
           "$value": "#b01020"
         },
         "not-decidable-dark": {
-          "$value": "#d0e0a0"
+          "$value": "#c0f020"
         },
         "not-decidable-floor": {
-          "$value": "#4c5a00"
+          "$value": "#000040"
         },
         "not-decidable-hc": {
-          "$value": "#283000"
+          "$value": "#201000"
         },
         "not-decidable-light": {
-          "$value": "#4c5a00"
+          "$value": "#000040"
         },
         "not-evaluated-dark": {
           "$value": "#f0f0f0"
