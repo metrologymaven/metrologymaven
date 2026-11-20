@@ -18,13 +18,20 @@
 //!   entry points.
 //! - [`event`]: the journal event of an adoption; [`mod@replay`]: exact replay of those events.
 //!
-//! **Fail closed.** A target is unadopted unless its latest authorship is by a `human`
-//! principal, or an adoption was recorded after its latest authorship. So:
-//! - a step or version with no authorship record at all (unknown provenance) is unadopted;
-//! - every non-human author (agent, script, service, device, system) needs adoption, not only
+//! **Order and content.** Every record carries the sequence number of its journal entry
+//! (given by the caller from the committed entry, never a counter of the store) and the
+//! target's content digest ([`step_contents`] for a step). A target is adopted only when its
+//! *current* content is the content a person last authored, or the content a person adopted
+//! in an entry after the latest authorship. So an adoption covers the content the person
+//! reviewed and nothing else, even when an authorship record and its content commit arrive
+//! out of order.
+//!
+//! **Fail closed.** Everything else is unadopted:
+//! - a step or version with no authorship record at all (unknown provenance);
+//! - current content that no record describes;
+//! - work by every non-human author (agent, script, service, device, system), not only
 //!   `agent`: none of them is a person accountable for the content;
-//! - an authorship by a non-human after an adoption makes the target unadopted again
-//!   (REQ-004), because the adoption is then older than the latest authorship.
+//! - a target with a non-human authorship after its adoption (REQ-004).
 //!
 //! **Branches.** Adoption is human-only, and a person writes the working branch, so every
 //! adoption event names the branch `working`. Authorship is recorded per target wherever the
@@ -37,14 +44,15 @@ pub mod event;
 pub mod replay;
 
 pub use command::{
-    adopt_steps, adopt_version, declarations, invoke_cli, invoke_mcp, AdoptCtx, AdoptJournal, AdoptStepsParams,
-    AdoptStepsResult, AdoptVersionParams, AdoptVersionResult, Programs, CLI_ADOPT_STEPS, CLI_ADOPT_VERSION,
-    MCP_ADOPT_STEPS, MCP_ADOPT_VERSION,
+    adopt_steps, adopt_version, cli_params, declarations, invoke_cli, invoke_mcp, mcp_params, AdoptCall, AdoptCtx,
+    AdoptJournal, AdoptStepsParams, AdoptStepsResult, AdoptVersionParams, AdoptVersionResult, Programs,
+    CLI_ADOPT_STEPS, CLI_ADOPT_VERSION, MCP_ADOPT_STEPS, MCP_ADOPT_VERSION,
 };
 pub use event::AdoptEvent;
-pub use replay::{replay, AdoptReplayed};
+pub use replay::{replay, AdoptReplayed, RecordedEntry, ReplayedProvenance};
 
 use fid_bus::principal::{Principal, PrincipalKind};
+use fid_canon::{digest_bytes, parse_with_limits, to_canonical_bytes, CValue};
 use fid_program::{Program, Uuid7};
 use fid_types::Digest;
 use std::collections::BTreeMap;
@@ -223,59 +231,143 @@ impl fmt::Display for AdoptError {
 
 impl std::error::Error for AdoptError {}
 
+// ------------------------------------------------------------------ step content
+
+/// Deepest nesting [`step_contents`] reads: the program format's limit plus the document.
+const MAX_CONTENT_DEPTH: usize = fid_program::MAX_DEPTH + 2;
+
+/// The content digest of every step of `program`: SHA-256 of the step's canonical JSON as
+/// stored in the program (AUTO.PROG.FMT). A step that holds other steps (`if`, `loop`)
+/// includes them, so changing a nested step also changes its container's content. `None`
+/// when the program cannot be serialised.
+pub fn step_contents(program: &Program) -> Option<BTreeMap<Uuid7, Digest>> {
+    fn walk(steps: &[CValue], out: &mut BTreeMap<Uuid7, Digest>) -> Option<()> {
+        for st in steps {
+            let CValue::Obj(o) = st else { return None };
+            let Some(CValue::Str(id)) = o.get("step_id") else { return None };
+            let id = Uuid7::parse(id)?;
+            let bytes = to_canonical_bytes(st).ok()?;
+            out.insert(id, Digest::from_bytes(digest_bytes(&bytes).0));
+            for key in ["body", "else_body"] {
+                if let Some(CValue::Arr(a)) = o.get(key) {
+                    walk(a, out)?;
+                }
+            }
+            if let Some(CValue::Arr(branches)) = o.get("branches") {
+                for br in branches {
+                    if let CValue::Obj(b) = br {
+                        if let Some(CValue::Arr(a)) = b.get("body") {
+                            walk(a, out)?;
+                        }
+                    }
+                }
+            }
+        }
+        Some(())
+    }
+    let bytes = program.to_canonical().ok()?;
+    let v = parse_with_limits(&bytes, fid_program::MAX_BYTES, MAX_CONTENT_DEPTH).ok()?;
+    let CValue::Obj(doc) = v else { return None };
+    let mut out = BTreeMap::new();
+    if let Some(CValue::Arr(main)) = doc.get("main") {
+        walk(main, &mut out)?;
+    }
+    if let Some(CValue::Arr(subs)) = doc.get("subroutines") {
+        for sub in subs {
+            if let CValue::Obj(sub) = sub {
+                if let Some(CValue::Arr(a)) = sub.get("body") {
+                    walk(a, &mut out)?;
+                }
+            }
+        }
+    }
+    Some(out)
+}
+
 // ------------------------------------------------------------------ records
 
-/// One authorship record: who last created or changed the target.
+/// One authorship record: who created or changed the target, in which journal entry, and
+/// what the target's content was after the change.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Authorship {
     /// The step or script version.
     pub target: Target,
+    /// The content digest after the change (step content, or the script version digest).
+    pub content: Digest,
     /// The bus-derived principal kind.
     pub principal_kind: PrincipalKind,
     /// The bus-derived principal identity.
     pub principal_id: String,
-    /// Position of this record in the store's journal order.
+    /// Sequence number of the journal entry that made the change.
     pub journal_entry: u64,
 }
 
-/// One adoption record: a person took responsibility for the target.
+/// One adoption record: a person took responsibility for the target's content.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Adoption {
     /// The step or script version.
     pub target: Target,
+    /// The content the person adopted (the step's content in the reviewed program, or the
+    /// script version digest).
+    pub content: Digest,
     /// The adopting person's identity.
     pub human_id: String,
     /// The program digest the person reviewed, or the script version digest.
     pub digest: Digest,
-    /// Position of this record in the store's journal order.
+    /// Sequence number of the adoption's journal entry.
     pub journal_entry: u64,
 }
 
-/// Derived state of one target: its latest authorship and latest adoption positions.
+/// One journal position with what it says about the content.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Mark {
+    entry: u64,
+    content: Digest,
+    human: bool,
+}
+
+/// Derived state of one target: its latest authorship and latest adoption, by journal entry
+/// sequence number.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 struct TargetState {
-    author_pos: u64,
-    author_is_human: bool,
-    adoption_pos: Option<u64>,
+    author: Option<Mark>,
+    adoption: Option<Mark>,
 }
 
 impl TargetState {
-    fn unadopted(&self) -> bool {
-        match self.adoption_pos {
-            _ if self.author_is_human => false,
-            None => true,
-            Some(a) => a < self.author_pos,
-        }
+    /// Adopted when the current content is the content a person last authored, or the content
+    /// a person adopted in an entry after the latest authorship. Anything else, including
+    /// content no record describes, is unadopted.
+    fn adopted(&self, current: &Digest) -> bool {
+        let by_person = matches!(self.author, Some(a) if a.human && a.content == *current);
+        let by_adoption = match (self.adoption, self.author) {
+            (Some(ad), Some(au)) => ad.content == *current && ad.entry > au.entry,
+            (Some(ad), None) => ad.content == *current,
+            (None, _) => false,
+        };
+        by_person || by_adoption
+    }
+}
+
+/// Keeps the later of two marks by journal entry. Two marks of the same entry merge fail
+/// closed: the result is a person's only if both are, with equal content.
+fn later(old: Option<Mark>, new: Mark) -> Mark {
+    match old {
+        None => new,
+        Some(o) if new.entry > o.entry => new,
+        Some(o) if new.entry < o.entry => o,
+        Some(o) => Mark { human: o.human && new.human && o.content == new.content, ..new },
     }
 }
 
 /// The provenance store: append-only authorship and adoption records with the derived
-/// per-target state. There is no API that removes, rewrites or resets a record.
+/// per-target state. Order is the journal's entry sequence number, taken from the committed
+/// entry, never a counter of the store. There is no API that removes, rewrites or resets a
+/// record.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ProvenanceStore {
     authorships: Vec<Authorship>,
     adoptions: Vec<Adoption>,
-    next: u64,
     state: BTreeMap<Target, TargetState>,
 }
 
@@ -285,79 +377,77 @@ impl ProvenanceStore {
         ProvenanceStore::default()
     }
 
-    fn position(&mut self) -> u64 {
-        let p = self.next;
-        self.next = self.next.saturating_add(1);
-        p
-    }
-
-    /// Records `principal` as the latest author of `target` and returns the record's
-    /// position. The kind and identity come from the bus-derived principal only. An author
-    /// that is not `human` after an adoption makes the target unadopted again (REQ-004).
-    pub fn record_authorship(&mut self, target: Target, principal: &Principal) -> u64 {
-        let pos = self.position();
+    /// Records `principal` as an author of `target` in journal entry `journal_entry`, with
+    /// `content` the target's content after the change ([`step_contents`] for a step, the
+    /// version digest for a script version). The kind and identity come from the bus-derived
+    /// principal only. A non-human authorship after an adoption makes the target unadopted
+    /// again (REQ-004), and so does any content other than the adopted content.
+    pub fn record_authorship(&mut self, target: Target, content: Digest, principal: &Principal, journal_entry: u64) {
         let kind = principal.kind();
-        let st = TargetState { author_pos: pos, author_is_human: is_person(kind), adoption_pos: None };
-        self.state
-            .entry(target.clone())
-            .and_modify(|s| {
-                s.author_pos = pos;
-                s.author_is_human = st.author_is_human;
-            })
-            .or_insert(st);
+        let mark = Mark { entry: journal_entry, content, human: is_person(kind) };
+        let st = self.state.entry(target.clone()).or_default();
+        st.author = Some(later(st.author, mark));
         self.authorships.push(Authorship {
             target,
+            content,
             principal_kind: kind,
             principal_id: principal.id().as_str().to_owned(),
-            journal_entry: pos,
+            journal_entry,
         });
-        pos
     }
 
-    /// Appends an adoption. Crate-internal: only the human-only commands and replay reach it.
-    fn record_adoption(&mut self, target: Target, human_id: &str, digest: Digest) {
-        let pos = self.position();
-        // A target with no authorship (unknown provenance) gets a state whose adoption is as
-        // recent as its (absent) authorship, so any later authorship supersedes the adoption.
-        let st = TargetState { author_pos: pos, author_is_human: false, adoption_pos: None };
-        self.state.entry(target.clone()).or_insert(st).adoption_pos = Some(pos);
-        self.adoptions.push(Adoption { target, human_id: human_id.to_owned(), digest, journal_entry: pos });
+    /// Appends an adoption. Crate-internal: only the human-only commands reach it, after
+    /// their journal entry is committed.
+    fn record_adoption(&mut self, target: Target, content: Digest, human_id: &str, digest: Digest, entry: u64) {
+        let mark = Mark { entry, content, human: true };
+        let st = self.state.entry(target.clone()).or_default();
+        st.adoption = Some(later(st.adoption, mark));
+        self.adoptions.push(Adoption { target, content, human_id: human_id.to_owned(), digest, journal_entry: entry });
     }
 
-    /// Whether `target` is unadopted: its latest authorship is by a non-human with no later
-    /// adoption, or nothing is known about it (fail closed).
-    pub fn is_unadopted(&self, target: &Target) -> bool {
+    /// Whether `target`, whose current content is `current`, is unadopted. Total: no record at
+    /// all, or content no record describes, is unadopted (fail closed).
+    pub fn is_unadopted(&self, target: &Target, current: &Digest) -> bool {
         match self.state.get(target) {
-            Some(s) => s.unadopted(),
+            Some(s) => !s.adopted(current),
             None => true,
         }
     }
 
     /// Whether any authorship of `target` is recorded.
     pub fn knows(&self, target: &Target) -> bool {
-        self.authorships.iter().any(|a| &a.target == target)
+        self.state.get(target).is_some_and(|s| s.author.is_some())
     }
 
     /// Every step of `program`, in document order (AUTO.PROG.FMT: main, then subroutines,
-    /// depth first), that is unadopted (REQ-005). Steps with no provenance record count as
-    /// unadopted.
+    /// depth first), that is unadopted for its current content (REQ-005). Steps with no
+    /// provenance record count as unadopted; if the program cannot be serialised, every step
+    /// does.
     pub fn unadopted_steps(&self, program: &Program) -> Vec<Uuid7> {
         let id = program.program_id;
-        program.step_ids().into_iter().filter(|s| self.is_unadopted(&Target::Step { program: id, step: *s })).collect()
+        let contents = step_contents(program).unwrap_or_default();
+        program
+            .step_ids()
+            .into_iter()
+            .filter(|s| match contents.get(s) {
+                Some(c) => self.is_unadopted(&Target::Step { program: id, step: *s }, c),
+                None => true,
+            })
+            .collect()
     }
 
     /// Whether the script version is unadopted (REQ-006): registered or last changed by a
     /// non-human with no later `script.adopt_version@1`, or with no provenance at all.
     pub fn unadopted_script(&self, script: &ScriptId, version: &Digest) -> bool {
-        self.is_unadopted(&Target::ScriptVersion { script: script.clone(), version: *version })
+        self.is_unadopted(&Target::ScriptVersion { script: script.clone(), version: *version }, version)
     }
 
-    /// The authorship records, in order.
+    /// The authorship records, in arrival order.
     pub fn authorships(&self) -> &[Authorship] {
         &self.authorships
     }
 
-    /// The adoption records, in order.
+    /// The adoption records, in arrival order.
     pub fn adoptions(&self) -> &[Adoption] {
         &self.adoptions
     }

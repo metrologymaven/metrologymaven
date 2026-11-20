@@ -1015,6 +1015,7 @@ dependencies = [
  "fid-canon",
  "fid-dep",
  "fid-jobs",
+ "fid-program-rec",
  "fid-registry",
  "fid-report",
  "fid-store",

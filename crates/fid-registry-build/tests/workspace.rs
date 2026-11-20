@@ -396,3 +396,20 @@ fn a_setting_declared_twice_is_refused() {
     assert_eq!(e.code(), "settings_invalid");
     assert_eq!(e, BuildError::Settings { key: Some("bus.fs_roots".into()), settings_code: "duplicate_key" });
 }
+
+/// AUTO.REC.ADOPT's two adoption commands are collected into the workspace manifest as W2,
+/// `human_only` and request-only on MCP (hand-labelled from spec/auto/rec/adopt/NODE.md,
+/// REQ-001 and D-031).
+#[test]
+fn the_adoption_commands_are_human_only_and_request_only_in_the_manifest() {
+    let commands = workspace_commands();
+    for id in ["program.adopt_steps@1", "script.adopt_version@1"] {
+        let (_, c) = commands.iter().find(|(i, _)| i == id).unwrap_or_else(|| panic!("{id} collected"));
+        assert_eq!(c.get("side_effect"), Some(&CValue::Str("W2".into())), "{id}");
+        assert_eq!(c.get("human_only"), Some(&CValue::Bool(true)), "{id}");
+        assert_eq!(c.get("mcp_projection"), Some(&CValue::Str("request_only".into())), "{id}");
+        let mut exposure = strs(c.get("exposure"));
+        exposure.sort();
+        assert_eq!(exposure, ["cli", "gui", "mcp"], "{id}");
+    }
+}

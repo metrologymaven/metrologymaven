@@ -3,10 +3,13 @@
 //!
 //! CLI: `fid program adopt-steps --program <P> (--steps <S1>[,<S2>..] | --all-unadopted)
 //! --reviewed-digest <sha256:..> [--json]` and `fid script adopt-version --script <X>
-//! --version-digest <sha256:..> [--json]`. MCP tools `program_adopt_steps` and
-//! `script_adopt_version` are request-only (an agent may ask a person to adopt; it never
-//! adopts). Both surfaces build the same parameters and call one handler, so they return the
-//! same canonical result bytes and journal the same event.
+//! --version-digest <sha256:..> [--json]`.
+//!
+//! MCP tools `program_adopt_steps` and `script_adopt_version` are **request-only**: an agent may
+//! ask a person to adopt, and the tool never adopts. [`invoke_mcp`] reads the parameters
+//! strictly (`bad_params` on any unknown key, such as a `kind` or `principal` field), then
+//! always returns `policy_refused`: `human_only` for a non-human principal, `request_only` for
+//! a person, who adopts through the CLI or the GUI.
 //!
 //! Every handler checks the caller before anything else: the bus class check
 //! ([`fid_bus::policy::class::authorise_class`]) against the command's own declared
@@ -16,11 +19,12 @@
 //!
 //! A refused or failing command changes nothing: all checks run on a read-only view of the
 //! store, then the event is committed to the journal, and only after a successful commit are
-//! the adoptions appended to the store.
+//! the adoptions appended to the store, with the committed entry's sequence number.
 
 use super::event::AdoptEvent;
 use super::{
-    is_person, AdoptError, ProvenanceStore, ScriptId, Target, ADOPT_STEPS_COMMAND, ADOPT_VERSION_COMMAND, UUID7_PATTERN,
+    is_person, step_contents, AdoptError, ProvenanceStore, ScriptId, Target, ADOPT_STEPS_COMMAND,
+    ADOPT_VERSION_COMMAND, UUID7_PATTERN,
 };
 use fid_bus::principal::Principal;
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
@@ -51,11 +55,12 @@ pub trait Programs {
     fn program(&self, id: &Uuid7) -> Option<&Program>;
 }
 
-/// The journal seam the host wires (the Record Journal behind the bus). `Ok` means the event
-/// is durable; `Err` means nothing was committed (display-safe reason).
+/// The journal seam the host wires (the Record Journal behind the bus). `Ok` holds the
+/// sequence number of the committed, durable entry; `Err` means nothing was committed
+/// (display-safe reason).
 pub trait AdoptJournal {
     /// Commits one adoption event on the working branch.
-    fn commit(&mut self, event: &AdoptEvent) -> Result<(), String>;
+    fn commit(&mut self, event: &AdoptEvent) -> Result<u64, String>;
 }
 
 /// The context both handlers get.
@@ -113,8 +118,61 @@ pub struct AdoptVersionResult {
     pub adopted: bool,
 }
 
+/// One parsed call of either command.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AdoptCall {
+    /// `program.adopt_steps@1`.
+    Steps(AdoptStepsParams),
+    /// `script.adopt_version@1`.
+    Version(AdoptVersionParams),
+}
+
 fn text(s: &str) -> CValue {
     CValue::Str(s.to_owned())
+}
+
+impl AdoptStepsParams {
+    /// The JSON value (the parameter object the schema describes).
+    pub fn to_value(&self) -> CValue {
+        let mut o = BTreeMap::new();
+        o.insert("program".to_owned(), text(&self.program));
+        if let Some(steps) = &self.steps {
+            o.insert("steps".to_owned(), CValue::Arr(steps.iter().map(|s| text(s)).collect()));
+        }
+        if let Some(all) = self.all_unadopted {
+            o.insert("all_unadopted".to_owned(), CValue::Bool(all));
+        }
+        o.insert("reviewed_digest".to_owned(), text(&self.reviewed_digest));
+        CValue::Obj(o)
+    }
+}
+
+impl AdoptVersionParams {
+    /// The JSON value (the parameter object the schema describes).
+    pub fn to_value(&self) -> CValue {
+        let mut o = BTreeMap::new();
+        o.insert("script".to_owned(), text(&self.script));
+        o.insert("version_digest".to_owned(), text(&self.version_digest));
+        CValue::Obj(o)
+    }
+}
+
+impl AdoptCall {
+    /// The command ID.
+    pub fn command(&self) -> &'static str {
+        match self {
+            AdoptCall::Steps(_) => ADOPT_STEPS_COMMAND,
+            AdoptCall::Version(_) => ADOPT_VERSION_COMMAND,
+        }
+    }
+
+    /// The parameter object.
+    pub fn to_value(&self) -> CValue {
+        match self {
+            AdoptCall::Steps(p) => p.to_value(),
+            AdoptCall::Version(p) => p.to_value(),
+        }
+    }
 }
 
 impl AdoptStepsResult {
@@ -154,9 +212,16 @@ pub(crate) enum Selection<'a> {
     AllUnadopted,
 }
 
-/// Runs every check of a step adoption against a read-only store and returns the event to
-/// commit. Order: parameters, `program_not_found`, `stale_review`, `unknown_step`,
-/// `nothing_to_adopt`.
+/// A checked adoption: the event to journal and the content each target is adopted with.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Prepared {
+    pub(crate) event: AdoptEvent,
+    contents: Vec<(Target, Digest)>,
+    digest: Digest,
+}
+
+/// Runs every check of a step adoption against a read-only store and returns what to commit.
+/// Order: parameters, `program_not_found`, `stale_review`, `unknown_step`, `nothing_to_adopt`.
 pub(crate) fn prepare_steps(
     store: &ProvenanceStore,
     programs: &dyn Programs,
@@ -164,7 +229,7 @@ pub(crate) fn prepare_steps(
     program: &str,
     selection: Selection<'_>,
     reviewed_digest: &str,
-) -> Result<AdoptEvent, AdoptError> {
+) -> Result<Prepared, AdoptError> {
     let id = Uuid7::parse(program).ok_or(AdoptError::bad("program is not a step-format UUIDv7"))?;
     let reviewed =
         Digest::parse(reviewed_digest).map_err(|_| AdoptError::bad("reviewed_digest is not sha256:<hex>"))?;
@@ -173,7 +238,9 @@ pub(crate) fn prepare_steps(
     if current != reviewed {
         return Err(AdoptError::StaleReview { current: current.as_str().to_owned() });
     }
+    let contents = step_contents(doc).ok_or(AdoptError::Internal { reason: "program cannot be serialised" })?;
     let order: BTreeMap<Uuid7, usize> = doc.step_ids().into_iter().enumerate().map(|(i, s)| (s, i)).collect();
+    let target = |step: Uuid7| Target::Step { program: id, step };
     let steps = match selection {
         Selection::AllUnadopted => {
             let all = store.unadopted_steps(doc);
@@ -195,17 +262,24 @@ pub(crate) fn prepare_steps(
                 }
                 parsed.push(step);
             }
-            if let Some(s) = parsed.iter().find(|s| !order.contains_key(s)) {
+            if let Some(s) = parsed.iter().find(|s| !order.contains_key(s) || !contents.contains_key(s)) {
                 return Err(AdoptError::UnknownStep { step: s.to_string() });
             }
-            if let Some(s) = parsed.iter().find(|s| !store.is_unadopted(&Target::Step { program: id, step: **s })) {
+            let adoptable = |s: &Uuid7| contents.get(s).is_some_and(|c| store.is_unadopted(&target(*s), c));
+            if let Some(s) = parsed.iter().find(|s| !adoptable(s)) {
                 return Err(AdoptError::NothingToAdopt { target: s.to_string() });
             }
             parsed.sort_by_key(|s| order.get(s).copied().unwrap_or(usize::MAX));
             parsed
         }
     };
-    Ok(AdoptEvent::Steps { human: human.to_owned(), program: id, steps, program_digest: current })
+    let contents = steps
+        .iter()
+        .map(|s| contents.get(s).map(|c| (target(*s), *c)))
+        .collect::<Option<Vec<_>>>()
+        .ok_or(AdoptError::Internal { reason: "step without content" })?;
+    let event = AdoptEvent::Steps { human: human.to_owned(), program: id, steps, program_digest: current };
+    Ok(Prepared { event, contents, digest: current })
 }
 
 /// Runs every check of a script version adoption against a read-only store.
@@ -214,32 +288,26 @@ pub(crate) fn prepare_version(
     human: &str,
     script: &str,
     version_digest: &str,
-) -> Result<AdoptEvent, AdoptError> {
+) -> Result<Prepared, AdoptError> {
     let script = ScriptId::new(script)?;
     let version = Digest::parse(version_digest).map_err(|_| AdoptError::bad("version_digest is not sha256:<hex>"))?;
     let target = Target::ScriptVersion { script: script.clone(), version };
     if !store.knows(&target) {
         return Err(AdoptError::UnknownVersion { target: target.to_string() });
     }
-    if !store.is_unadopted(&target) {
+    if !store.is_unadopted(&target, &version) {
         return Err(AdoptError::NothingToAdopt { target: target.to_string() });
     }
-    Ok(AdoptEvent::Version { human: human.to_owned(), script, version_digest: version })
+    let event = AdoptEvent::Version { human: human.to_owned(), script, version_digest: version };
+    Ok(Prepared { event, contents: vec![(target, version)], digest: version })
 }
 
-/// Appends the adoptions an event records. Only after a successful journal commit, or in
-/// replay.
-pub(crate) fn apply(store: &mut ProvenanceStore, event: &AdoptEvent) {
-    match event {
-        AdoptEvent::Steps { human, program, steps, program_digest } => {
-            for step in steps {
-                store.record_adoption(Target::Step { program: *program, step: *step }, human, *program_digest);
-            }
-        }
-        AdoptEvent::Version { human, script, version_digest } => {
-            let target = Target::ScriptVersion { script: script.clone(), version: *version_digest };
-            store.record_adoption(target, human, *version_digest);
-        }
+/// Appends the adoptions of a prepared event, in journal entry `entry`. Only after a
+/// successful journal commit, or inside replay's comparison-only copy.
+pub(crate) fn apply(store: &mut ProvenanceStore, prepared: &Prepared, entry: u64) {
+    let human = prepared.event.human();
+    for (target, content) in &prepared.contents {
+        store.record_adoption(target.clone(), *content, human, prepared.digest, entry);
     }
 }
 
@@ -247,7 +315,7 @@ pub(crate) fn apply(store: &mut ProvenanceStore, event: &AdoptEvent) {
 /// kind itself. Both must allow; anything that is not a `human` principal is refused.
 fn require_person(principal: &Principal, def: &CommandDef) -> Result<(), AdoptError> {
     if !def.human_only {
-        // The declaration below sets it; a definition without it is a build error, fail closed.
+        // The declarations below set it; a definition without it is a bug, fail closed.
         return Err(AdoptError::PolicyRefused { reason: "human_only" });
     }
     fid_bus::policy::class::authorise_class(principal, def)
@@ -259,9 +327,10 @@ fn require_person(principal: &Principal, def: &CommandDef) -> Result<(), AdoptEr
     }
 }
 
-fn commit(ctx: &mut AdoptCtx<'_>, event: &AdoptEvent) -> Result<(), AdoptError> {
-    ctx.journal.commit(event).map_err(|reason| AdoptError::Journal { reason: super::echo(&reason) })?;
-    apply(ctx.store, event);
+fn commit(ctx: &mut AdoptCtx<'_>, prepared: &Prepared) -> Result<(), AdoptError> {
+    let entry =
+        ctx.journal.commit(&prepared.event).map_err(|reason| AdoptError::Journal { reason: super::echo(&reason) })?;
+    apply(ctx.store, prepared, entry);
     Ok(())
 }
 
@@ -295,9 +364,9 @@ pub fn adopt_steps(ctx: &mut AdoptCtx<'_>, params: AdoptStepsParams) -> Result<A
         (None, None | Some(false)) => return Err(AdoptError::bad("give steps or all_unadopted")),
     };
     let human = ctx.principal.id().as_str().to_owned();
-    let event = prepare_steps(ctx.store, ctx.programs, &human, &params.program, selection, &params.reviewed_digest)?;
-    commit(ctx, &event)?;
-    let adopted = match &event {
+    let prepared = prepare_steps(ctx.store, ctx.programs, &human, &params.program, selection, &params.reviewed_digest)?;
+    commit(ctx, &prepared)?;
+    let adopted = match &prepared.event {
         AdoptEvent::Steps { steps, .. } => steps.iter().map(Uuid7::to_string).collect(),
         AdoptEvent::Version { .. } => Vec::new(),
     };
@@ -326,14 +395,14 @@ pub fn adopt_steps(ctx: &mut AdoptCtx<'_>, params: AdoptStepsParams) -> Result<A
 pub fn adopt_version(ctx: &mut AdoptCtx<'_>, params: AdoptVersionParams) -> Result<AdoptVersionResult, AdoptError> {
     require_person(ctx.principal, &__fid_command_adopt_version().def)?;
     let human = ctx.principal.id().as_str().to_owned();
-    let event = prepare_version(ctx.store, &human, &params.script, &params.version_digest)?;
-    commit(ctx, &event)?;
+    let prepared = prepare_version(ctx.store, &human, &params.script, &params.version_digest)?;
+    commit(ctx, &prepared)?;
     Ok(AdoptVersionResult { adopted: true })
 }
 
 fid_commands![adopt_steps, adopt_version];
 
-// ------------------------------------------------------------------ surfaces
+// ------------------------------------------------------------------ parameter readers
 
 fn string(o: &BTreeMap<String, CValue>, k: &str) -> Result<Option<String>, AdoptError> {
     match o.get(k) {
@@ -384,25 +453,25 @@ fn version_params(o: &BTreeMap<String, CValue>) -> Result<AdoptVersionParams, Ad
     Ok(AdoptVersionParams { script: required(o, "script")?, version_digest: required(o, "version_digest")? })
 }
 
-/// Runs an MCP tool on raw JSON parameters (at most [`MAX_PARAMS_BYTES`] bytes, duplicate
-/// keys refused). `Ok` holds the canonical result bytes. The tools are request-only: called by
-/// an agent principal, they are refused like any other non-human call.
-pub fn invoke_mcp(ctx: &mut AdoptCtx<'_>, tool: &str, raw: &[u8]) -> Result<Vec<u8>, AdoptError> {
+/// Reads MCP parameters for `tool` strictly: at most [`MAX_PARAMS_BYTES`] bytes, duplicate
+/// keys refused, and any key the schema does not declare (a `kind`, a `principal`, anything)
+/// is `bad_params`.
+pub fn mcp_params(tool: &str, raw: &[u8]) -> Result<AdoptCall, AdoptError> {
     let v = parse_with_limits(raw, MAX_PARAMS_BYTES, MAX_PARAMS_DEPTH)
         .map_err(|_| AdoptError::bad("params are not JSON within the limits"))?;
     let CValue::Obj(o) = v else { return Err(AdoptError::bad("params is not an object")) };
     match tool {
-        MCP_ADOPT_STEPS => adopt_steps(ctx, steps_params(&o)?).map(|r| r.to_canonical_bytes()),
-        MCP_ADOPT_VERSION => adopt_version(ctx, version_params(&o)?).map(|r| r.to_canonical_bytes()),
+        MCP_ADOPT_STEPS => steps_params(&o).map(AdoptCall::Steps),
+        MCP_ADOPT_VERSION => version_params(&o).map(AdoptCall::Version),
         _ => Err(AdoptError::bad("unknown tool")),
     }
 }
 
-/// Runs `fid <args>`: `program adopt-steps --program <P> (--steps <S1>[,<S2>..] |
+/// Reads `fid <args>`: `program adopt-steps --program <P> (--steps <S1>[,<S2>..] |
 /// --all-unadopted) --reviewed-digest <D> [--json]` or `script adopt-version --script <X>
-/// --version-digest <V> [--json]`. Output is the canonical result JSON either way. Unknown,
-/// repeated or value-less options and stray words are `bad_params`.
-pub fn invoke_cli(ctx: &mut AdoptCtx<'_>, args: &[&str]) -> Result<Vec<u8>, AdoptError> {
+/// --version-digest <V> [--json]`. Unknown, repeated or value-less options and stray words
+/// are `bad_params`.
+pub fn cli_params(args: &[&str]) -> Result<AdoptCall, AdoptError> {
     if args.len() > MAX_CLI_ARGS {
         return Err(AdoptError::bad("too many arguments"));
     }
@@ -440,8 +509,32 @@ pub fn invoke_cli(ctx: &mut AdoptCtx<'_>, args: &[&str]) -> Result<Vec<u8>, Adop
         }
     }
     if steps_cmd {
-        adopt_steps(ctx, steps_params(&o)?).map(|r| r.to_canonical_bytes())
+        steps_params(&o).map(AdoptCall::Steps)
     } else {
-        adopt_version(ctx, version_params(&o)?).map(|r| r.to_canonical_bytes())
+        version_params(&o).map(AdoptCall::Version)
+    }
+}
+
+// ------------------------------------------------------------------ surfaces
+
+/// The MCP tools. Request-only: the parameters are read strictly (`bad_params` first, so a
+/// spoofed `kind` or `principal` field is refused as such), and then the call is always
+/// `policy_refused`. A non-human principal gets `human_only` (the class check); a person gets
+/// `request_only` and adopts through the CLI or the GUI. Nothing is journaled or adopted.
+pub fn invoke_mcp(ctx: &mut AdoptCtx<'_>, tool: &str, raw: &[u8]) -> Result<Vec<u8>, AdoptError> {
+    let call = mcp_params(tool, raw)?;
+    let def = match call {
+        AdoptCall::Steps(_) => __fid_command_adopt_steps().def,
+        AdoptCall::Version(_) => __fid_command_adopt_version().def,
+    };
+    require_person(ctx.principal, &def)?;
+    Err(AdoptError::PolicyRefused { reason: "request_only" })
+}
+
+/// Runs `fid <args>` (see [`cli_params`]). Output is the canonical result JSON either way.
+pub fn invoke_cli(ctx: &mut AdoptCtx<'_>, args: &[&str]) -> Result<Vec<u8>, AdoptError> {
+    match cli_params(args)? {
+        AdoptCall::Steps(p) => adopt_steps(ctx, p).map(|r| r.to_canonical_bytes()),
+        AdoptCall::Version(p) => adopt_version(ctx, p).map(|r| r.to_canonical_bytes()),
     }
 }
