@@ -9,7 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
-satisfies: [REQ-RPT.MODEL.BLOCKS-001, REQ-RPT.MODEL.BLOCKS-007, REQ-RPT.MODEL.BLOCKS-008, REQ-RPT.MODEL.BLOCKS-009]
+satisfies: [REQ-RPT.MODEL.BLOCKS-001, REQ-RPT.MODEL.BLOCKS-007, REQ-RPT.MODEL.BLOCKS-008, REQ-RPT.MODEL.BLOCKS-009, REQ-RPT.MODEL.BLOCKS-010, REQ-RPT.MODEL.BLOCKS-011, REQ-RPT.MODEL.BLOCKS-012]
 covers: [PCD.RPT.03]
 depends_on: [RPT.MODEL.DOC, RPT.MODEL.BIND.RESOLVE, RPT.MODEL.FMT, CORE.STO.CAS, IO.REG.ROOTS]
 side_effect: [W2, W2]
@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid report set-text-block, fid report set-image-block]
 mcp: [report_set_text_block, report_set_image_block]
 journal: [report.set_text_block@1, report.set_image_block@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # RPT.MODEL.BLOCKS.TEXT: Text, image, header and footer blocks

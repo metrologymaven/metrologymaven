@@ -1,0 +1,9 @@
+{
+  "tenant_meanings": [
+    {
+      "code": "APPROVED",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    }
+  ]
+}

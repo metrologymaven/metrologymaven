@@ -31,18 +31,54 @@ jobs:
         with:
           toolchain: stable
           components: clippy
-      - name: Cargo.lock up to date (informational)
-        # Non-blocking: builder PRs may add crates without refreshing Cargo.lock
-        # (refresh via the lockfile workflow). Runs before any build touches the lock.
+          # KRN.NUM.LINT.TYPED lints the kernel crates for these targets (cargo clippy --target).
+          targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu,wasm32-unknown-unknown,aarch64-apple-darwin,x86_64-pc-windows-msvc
+      - name: Cargo.lock up to date
+        # Blocking: a PR that adds a crate or dependency must update Cargo.lock in the same PR
+        # (lockfile workflow, or exact hand-added entries). Main's lock went stale twice while this
+        # was informational (#197, #209). Runs before any build touches the lock.
         if: runner.os == 'Linux'
-        continue-on-error: true
         run: cargo metadata --locked --format-version 1 > /dev/null
+      - name: Working tree is the committed bytes (KRN.MAN.MANI.IMPL REQ-003)
+        # Implementation digests hash git-tracked files as they are in the working tree. Before any
+        # build, on every OS: the whole checkout is clean, and every file has the same EOL state in
+        # the index and the working tree. Files whose attributes deliberately set eol=crlf (Windows
+        # scripts) are exempt, unless they lie where the digest reads (crates/, vendor/, .cargo/,
+        # Cargo.toml, Cargo.lock), which fails.
+        shell: bash
+        run: |
+          dirty=$(git status --porcelain --untracked-files=all)
+          if [ -n "$dirty" ]; then echo "$dirty"; exit 1; fi
+          bad=$(git ls-files --eol | awk -F'\t' '{
+            split($1, f, " +"); i = substr(f[1], 3); w = substr(f[2], 3); path = $2
+            if (i == w) next
+            hashed = (path ~ /^(crates|vendor|\.cargo)\// || path == "Cargo.toml" || path == "Cargo.lock")
+            if ($1 ~ /eol=crlf/ && !hashed) next
+            print
+          }')
+          if [ -n "$bad" ]; then echo "$bad"; exit 1; fi
       - name: Fetch dependencies for all targets (ECO.REPO.ALLOW checks every platform offline)
         run: cargo fetch
       - name: Lint
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+      - name: Template format fuzz, full 1 000 000 iterations in release (RPT.MODEL.TMPL.FORMAT AC-4)
+        # Plain `cargo test` runs a 20 000-iteration prefix of the same streams on every OS.
+        if: runner.os == 'Linux'
+        env:
+          TMPL_FUZZ_FULL: "1"
+        run: cargo test --release -p fid-report --test tmpl_format_fuzz -- --nocapture
+      - name: Out-of-core layout on the full 5 000 000-point cloud in release (GEO.OOC.LAYOUT AC-1, AC-2)
+        # Plain `cargo test` runs the first 200 000 points of the same seeded cloud on every OS.
+        if: runner.os == 'Linux'
+        env:
+          FID_OOC_FULL: "1"
+        run: cargo test --release -p fid-geo-ooc --test cloud_5e6 -- --nocapture
+      - name: Kernel WASM shim with its stand-in test algorithms, natively (KRN.MAN.WASM AC-2)
+        run: |
+          cargo clippy -p fid-kernel-wasm --all-targets --features test-algorithms -- -D warnings
+          cargo test -p fid-kernel-wasm --features test-algorithms
       - name: Site import verify runs with the network cut (OUTR.SITE.GEN.IMPORT AC-7)
         if: runner.os == 'Linux'
         shell: bash
@@ -202,6 +238,8 @@ jobs:
         run: cargo xtask study-tasks-check
       - name: Second implementation reproduces the canonical-JSON vectors (CORE.JRN.CANON AC-2)
         run: node fixtures/core/jrn/canon/runner.mjs
+      - name: Second implementation recomputes the registry manifest digests (CORE.REG.MAN AC-3)
+        run: node fixtures/core/reg/manifest/check_digests.mjs
       - name: CLI smoke test
         shell: bash
         run: |
@@ -216,60 +254,24 @@ jobs:
         if: runner.os == 'Linux'
         with:
           python-version: "3.12"
-      - name: Envelopes validate against schema/envelope-v1.json (AUTO.SURF.ENV AC-1)
+      - name: Envelopes validate against schema/envelope-v1.json (AUTO.SURF.ENV AC-1), then fixture checks
+        # New Python fixture checks: add one line to ci/fixture-checks.txt (sorted), not a line here.
         if: runner.os == 'Linux'
+        shell: bash
         run: |
+          set -euo pipefail
           python -m pip install --quiet jsonschema
           python tools/check_envelopes.py ok.json bad.json
-          python fixtures/plat/bench/make_expected.py --check
-          python fixtures/plat/deploy/make_expected.py --check
-          python fixtures/plat/matrix/make_page.py --check
-          python fixtures/rel/runbook/make_fixtures.py --check
-          python fixtures/rel/sbom/make_fixtures.py --check
-          python fixtures/rel/guide/make_fixtures.py --check
-          python fixtures/dsse/make_fixtures.py --check
-          python fixtures/io/reg/env/report/make_fixtures.py --check
-          python fixtures/io/cad/worker/proto/make_digests.py --check
-          python tools/check_bench_schema.py
-          python tools/check_command_defs.py
-          python fixtures/core/reg/def/guide/make_fixtures.py --check
-          python tools/check_entries.py
-          python tools/check_knp1_findings.py fixtures/solv/vend/*/knp1-findings.json fixtures/solv/vend/lint/*.json
-          python fixtures/solv/vend/make_fixtures.py --check
-          python fixtures/solv/make_mstart_fixtures.py --check
-          python tools/check_eval_suite.py
-          python fixtures/pkg/make_fixtures.py --check
-          python fixtures/io/dmis/conf/make_expected.py --check
-          python fixtures/io/e57/phys/make_fixtures.py --check
-          python fixtures/io/cloud/las/hdr/make_fixtures.py --check
-          python fixtures/flow/study/tasks/make_fixtures.py --check
-          python fixtures/flow/pkg/make_fixtures.py --check
-          python fixtures/flow/journey/make_fixtures.py --check
-          python fixtures/flow/fixes/make_fixtures.py --check
-          python fixtures/outr/site/import/make_fixtures.py --check
-          python fixtures/outr/bench/recipe/make_fixtures.py --check
-          python fixtures/program/expr/make_cases.py --check
-          python fixtures/agent/harness/runs/make_runs.py --check
-          python fixtures/io/qif/xml/parse/make_fixtures.py --check
-          python fixtures/auto/cli/out/make_cases.py --check
-          python fixtures/fetch/make_fixtures.py --check
-          python fixtures/hal/idl/stamp/make_fixtures.py --check
-          python fixtures/hal/idl/base/cfg/make_fixtures.py --check
-          python fixtures/core/sto/sql/schema/make_fixture.py --check
-          python fixtures/mig/ladder/def/make_fixtures.py --check
-          python fixtures/man/make_manifest_fixtures.py --check
-          python fixtures/man/check_manifest_schema.py
-          python fixtures/num/make_red_fixtures.py --check
-          python fixtures/num/fmt/make_len_fixtures.py --check
-          python fixtures/core/reg/ver/compat/make_fixtures.py --check
-          python fixtures/core/reg/ver/gate/make_fixtures.py --check
-          python fixtures/geo/types/make_mesh_fixtures.py --check
-          python tools/fixtures/geo_digest_vectors.py --check
-          python fixtures/scan/cmp/make_field_golden.py --check
-          python fixtures/pkg/check_package.py --strict
-          python -m unittest discover -s tools/house_rules/tests -v
-          python -m unittest discover -s tools/tests -v
-          python -m unittest discover -s tools/repo_template/tests -v
+          list=ci/fixture-checks.txt
+          entries=$(grep -vE '^[[:space:]]*(#|$)' "$list")
+          if ! LC_ALL=C sort -c -u <<< "$entries"; then echo "::error file=$list::lines are not sorted and unique (LC_ALL=C sort -u)"; exit 1; fi
+          while IFS= read -r cmd; do
+            echo "+ $cmd"
+            if ! bash -euo pipefail -c "$cmd" < /dev/null; then echo "::error file=$list::failed: $cmd"; exit 1; fi
+          done <<< "$entries"
+      - name: NURBS reference oracle regenerates byte-identically (GEO.NURBS.REF AC-1, about 6 minutes)
+        if: runner.os == 'Linux'
+        run: python tools/fixtures/nurbs_oracle.py --out fixtures/geo/nurbs --seed 40 --check
       - name: Contributor guide passes claim lint and its commands run (OUTR.DOCS.CONTRIB AC-6, AC-1, AC-3)
         # The committed guide states the main commit it was written against; a commit cannot name
         # itself, so the guide is checked as a copy stating this checkout's HEAD.
@@ -333,6 +335,44 @@ jobs:
             if offline curl -sS -m 10 -o /dev/null https://github.com; then exit 1; fi
           fi
           offline "$py" tools/verify_guide.py --tag "${{ matrix.tag }}"
+  fuzz-pkg-reader:
+    # TRUST.PKG.READER AC-4: the cargo-fuzz target runs for 10 minutes, seeded with the reader
+    # corpus, with no crash, no input over 5 s and no out-of-memory. Runs on main, and on pull
+    # requests that touch the fid-pkg crate or the package fixtures.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Decide whether to run
+        id: scope
+        shell: bash
+        run: |
+          run=true
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            if ! git diff --name-only "$base"...HEAD | grep -qE '^(crates/fid-pkg/|fixtures/pkg/)'; then run=false; fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        if: steps.scope.outputs.run == 'true'
+        with:
+          toolchain: nightly
+      - name: Install cargo-fuzz
+        if: steps.scope.outputs.run == 'true'
+        run: cargo install cargo-fuzz --locked
+      - name: Fuzz the package reader for 10 minutes
+        if: steps.scope.outputs.run == 'true'
+        working-directory: crates/fid-pkg/fuzz
+        # 256 MiB RSS: an input that grows memory far beyond its size (a manifest that parses
+        # into a huge JSON tree, an unbounded buffer) fails the job. No sanitizer: fid-pkg and
+        # its dependencies in this path forbid `unsafe`, so ASan would only slow every input
+        # down and inflate RSS; coverage, panics, timeouts and RSS are still checked.
+        run: |
+          mkdir -p corpus/reader
+          seeds="../../../fixtures/pkg/malformed ../../../fixtures/pkg/reader/valid ../../../fixtures/pkg/golden"
+          # $seeds is word-split on purpose: three corpus directories.
+          cargo fuzz run --sanitizer none reader corpus/reader $seeds -- -max_total_time=600 -timeout=5 -rss_limit_mb=256
   msrv:
     # rust-version = 1.89 (Cargo.toml). Cargo 1.89 honours the [resolver] key in
     # .cargo/config.toml; the stable and lockfile jobs resolve MSRV-aware too.
@@ -365,13 +405,98 @@ jobs:
         with:
           toolchain: stable
           targets: wasm32-wasip1
-      - uses: bytecodealliance/actions/wasmtime/setup@9152e710e9f7182e4c29ad218e4f335a7b203613 # v1.1.3
-        with:
-          version: "v49.0.6"
+      - name: Install wasmtime v49.0.6 (tarball SHA-256 pinned and verified before use)
+        # Same release the bytecodealliance setup action installed; the digest is the one GitHub
+        # records for the release asset. KRN.MAN.WASM pins this version in wasm-runtime.toml.
+        shell: bash
+        env:
+          WASMTIME_TARBALL: wasmtime-v49.0.6-x86_64-linux.tar.xz
+          WASMTIME_SHA256: 15625b129e54534793dc77965d6912a5307db8e8e90ee114f52ef62ce6e4f918
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/wasmtime"
+          mkdir -p "$d"
+          curl --proto '=https' --tlsv1.2 -fsSL --retry 5 -o "$d/$WASMTIME_TARBALL" \
+            "https://github.com/bytecodealliance/wasmtime/releases/download/v49.0.6/$WASMTIME_TARBALL"
+          echo "$WASMTIME_SHA256  $d/$WASMTIME_TARBALL" | sha256sum --check --strict -
+          tar -xJf "$d/$WASMTIME_TARBALL" -C "$d"
+          echo "$d/wasmtime-v49.0.6-x86_64-linux" >> "$GITHUB_PATH"
       - run: wasmtime --version
-      - name: Test kernel and core crates on wasm32-wasip1
-        run: cargo test --target wasm32-wasip1 -p fid-num -p fid-canon -p fid-kci -p fid-replay -p fid-surface -p fid-types -p fid-sign-core -p fid-solv
-      - name: Element digest vectors on wasm32-wasip1 (GEO.TYPES.DIGEST AC-1)
-        run: cargo test --target wasm32-wasip1 -p fid-geo-types --test digest
-      - name: Deviation field digest and golden vectors on wasm32-wasip1 (SCAN.CMP.DEV.FIELD AC-1, AC-4)
-        run: cargo test --target wasm32-wasip1 -p fid-scan-cmp --lib
+      - name: Crates tested on wasm32-wasip1 (one cargo test per line of ci/wasm32-crates.txt)
+        # New wasm32 crates: add one line to ci/wasm32-crates.txt (sorted), not a new step here.
+        # Line format: <crate> [extra cargo test arguments]. Every run is attempted; the step
+        # fails if any run fails, the list is unsorted, or it names a crate not in the workspace.
+        shell: bash
+        run: |
+          set -euo pipefail
+          list=ci/wasm32-crates.txt
+          entries=$(grep -vE '^[[:space:]]*(#|$)' "$list")
+          if ! LC_ALL=C sort -c -u <<< "$entries"; then echo "::error file=$list::lines are not sorted and unique (LC_ALL=C sort -u)"; exit 1; fi
+          members=$(cargo metadata --no-deps --format-version 1 \
+            | python3 -c 'import json, sys; print("\n".join(p["name"] for p in json.load(sys.stdin)["packages"]))')
+          missing=0
+          while read -r crate _; do
+            if ! grep -qxF -- "$crate" <<< "$members"; then echo "::error file=$list::$crate is not a workspace crate"; missing=1; fi
+          done <<< "$entries"
+          test "$missing" = 0
+          failed=()
+          while read -r crate args; do
+            echo "::group::cargo test --target wasm32-wasip1 -p $crate $args"
+            # $args is word-split on purpose: it holds extra cargo test arguments.
+            if ! cargo test --target wasm32-wasip1 -p "$crate" $args < /dev/null; then failed+=("$crate $args"); fi
+            echo "::endgroup::"
+          done <<< "$entries"
+          if [ "${#failed[@]}" -ne 0 ]; then printf '::error::wasm32 tests failed: %s\n' "${failed[@]}"; exit 1; fi
+      - name: Kernel WASM reference module, import allowlist and golden calls (KRN.MAN.WASM AC-1 to AC-3)
+        # Uses only what this job already installs (the wasm32-wasip1 target and the pinned
+        # wasmtime). The reference module registers no algorithm until fid-kernel exists; a
+        # second build registers the stand-in test algorithms the fixtures call. The linked
+        # modules are sealed (clock imports renamed to trap); the sealed module is the artifact.
+        shell: bash
+        run: |
+          set -euo pipefail
+          c=crates/fid-kernel-wasm
+          w=fixtures/man/wasm
+          cargo build -q --release --target wasm32-wasip1 -p fid-kernel-wasm
+          cargo build -q --release --target wasm32-wasip1 -p fid-kernel-wasm --features test-algorithms --target-dir target/wasm-test
+          cargo build -q -p fid-wasm-check
+          chk=target/debug/fid-wasm-check
+          # The wasmtime options the runner passes exist in this wasmtime (for the record).
+          wasmtime run -W help | grep -E 'nan-canonicalization|relaxed-simd|threads|max-wasm-stack|max-memory-size|trap-on-grow-failure|fuel|unknown-imports-trap' || true
+          ref="$RUNNER_TEMP/fid-kernel-wasm.wasm"
+          tst="$RUNNER_TEMP/fid-kernel-wasm-test.wasm"
+          $chk seal target/wasm32-wasip1/release/fid-kernel-wasm.wasm "$ref"
+          $chk seal target/wasm-test/wasm32-wasip1/release/fid-kernel-wasm.wasm "$tst"
+          sha256sum "$ref" "$tst"
+          # The reference module carries no stand-in test algorithm; the test module does.
+          if grep -q 'test.stack.recurse' "$ref"; then echo "::error::stand-ins in the reference module"; exit 1; fi
+          grep -q 'test.stack.recurse' "$tst"
+          $chk runtime-digest $c/wasm-runtime.toml > "$RUNNER_TEMP/runtime-digest.txt"
+          cmp "$RUNNER_TEMP/runtime-digest.txt" $w/runtime-digest.txt
+          # AC-1: the sealed modules import only allowlisted functions (the clock is `trapped`) ...
+          $chk imports "$ref" $c/wasm-imports.allow
+          $chk imports "$tst" $c/wasm-imports.allow
+          # ... the unsealed link output is refused (its clock import is not allowlisted) ...
+          set +e; $chk imports target/wasm32-wasip1/release/fid-kernel-wasm.wasm $c/wasm-imports.allow; code=$?; set -e
+          test "$code" = 1
+          # ... and a module importing random_get fails, naming the import.
+          set +e; out=$($chk imports $w/modules/bad-random-get.wasm $c/wasm-imports.allow); code=$?; set -e
+          echo "$out"
+          test "$code" = 1 && grep -qx 'DENIED wasi_snapshot_preview1 random_get (func)' <<< "$out"
+          # AC-2 and AC-3: every call through the module under the pinned settings.
+          $chk golden $c/wasm-runtime.toml $c/wasm-imports.allow "$tst" $w/calls-v1.txt
+          # The reference module answers through the same runner (no algorithms registered yet).
+          call='{"algorithm":"test.echo.identity@1.0.0","inputs":[],"params":""}'
+          set +e; out=$(printf '%s' "$call" | $chk run $c/wasm-runtime.toml $c/wasm-imports.allow "$ref"); code=$?; set -e
+          test "$code" = 1 && test "$out" = '{"error":"unknown_algorithm"}'
+          # clock = "trap": a sealed module that calls the clock is NOT_REPLAYABLE(trap) ...
+          $chk seal $w/modules/clock-call.wasm "$RUNNER_TEMP/clock.wasm"
+          cmp "$RUNNER_TEMP/clock.wasm" $w/modules/clock-call.sealed.wasm
+          set +e; out=$(printf '' | $chk run $c/wasm-runtime.toml $c/wasm-imports.allow "$RUNNER_TEMP/clock.wasm"); code=$?; set -e
+          test "$code" = 4 && test "$out" = 'NOT_REPLAYABLE(trap)'
+          # ... and the unsealed one is refused before it runs.
+          set +e; printf '' | $chk run $c/wasm-runtime.toml $c/wasm-imports.allow $w/modules/clock-call.wasm; code=$?; set -e
+          test "$code" = 5
+          # Fuel: a module that loops forever ends as NOT_REPLAYABLE(resource).
+          set +e; out=$(printf '' | $chk run $c/wasm-runtime.toml $c/wasm-imports.allow $w/modules/loop.wasm); code=$?; set -e
+          test "$code" = 3 && test "$out" = 'NOT_REPLAYABLE(resource)'

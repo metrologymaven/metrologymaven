@@ -1,0 +1,5 @@
+relaxed.wasm default KNP1-FLAG-WASMFMA 1:34
+swizzle.wasm default KNP1-FLAG-WASMSIMD 1:31
+clean.wasm only-12 KNP1-FLAG-WASMSIMD 1:42
+clean.wasm only-12 KNP1-FLAG-WASMSIMD 1:63
+relaxed.wasm only-12 KNP1-FLAG-WASMFMA 1:34

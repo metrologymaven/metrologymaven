@@ -1,18 +1,24 @@
 [package]
 name = "fid-geo-dist"
-description = "Metrology Maven point-to-geometry distance (GEO.DIST): projection onto trimmed faces and bodies"
+description = "Metrology Maven point-to-geometry distance (GEO.DIST): closest point on triangles and meshes, projection onto trimmed faces and bodies"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
-# Kernel crate: no dependencies (KNP-1).
+# Kernel crate (KNP-1): no third-party dependencies. Only kernel-layer workspace crates:
+# fid-geo-types (Mesh), fid-geo-index (PrimitiveBvh ordered visitor) and fid-num (sqrt).
 [dependencies]
+fid-geo-types = { path = "../fid-geo-types" }
+fid-geo-index = { path = "../fid-geo-index" }
+fid-num = { path = "../fid-num" }
 
 # Test-only: SHA-256 of the reference fixtures against their manifest (layer test-support).
 [dev-dependencies]
 fid-testkit = { path = "../fid-testkit" }
+# SHA-256 of the mesh-projection result digests (GEO.DIST.MESH AC-1, AC-6).
+fid-kci = { path = "../fid-kci" }
 
 [lints]
 workspace = true

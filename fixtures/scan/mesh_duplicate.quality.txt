@@ -1,0 +1,19 @@
+# SCAN.POLY.QUAL expected report for mesh_duplicate.txt at threshold 1e-18 m^2.
+# CC-BY-4.0. Computed by make_mesh_quality.py (independent of the Rust crate).
+mesh mesh_duplicate
+threshold 1e-18
+triangles 7
+vertices 7
+edges 9
+boundary_edges 0
+boundary_loops 0
+nonmanifold_edges 3
+nonmanifold_vertices 0
+components 2
+degenerate 0
+angle_count 7
+angle_min 0.7853981633974484
+angle_p1 0.7853981633974484
+angle_p5 0.7853981633974484
+angle_median 1.0471975511965979
+canonical {"boundary_edges":"0","boundary_loops":"0","components":"2","degenerate":"0","edges":"9","min_angle":{"count":"7","median":"1.0471975511965979","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"3","nonmanifold_vertices":"0","triangles":"7","vertices":"7"}

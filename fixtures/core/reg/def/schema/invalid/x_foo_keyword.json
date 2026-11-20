@@ -1,0 +1,15 @@
+{
+  "expect": {
+    "code": "unknown_keyword",
+    "pointer": "/properties/a/x-foo"
+  },
+  "schema": {
+    "type": "object",
+    "properties": {
+      "a": {
+        "type": "string",
+        "x-foo": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+# SCAN.POLY.QUAL expected report for mesh_jitter_grid.txt at threshold 1e-18 m^2.
+# CC-BY-4.0. Computed by make_mesh_quality.py (independent of the Rust crate).
+mesh mesh_jitter_grid
+threshold 1e-18
+triangles 200
+vertices 121
+edges 320
+boundary_edges 40
+boundary_loops 1
+nonmanifold_edges 0
+nonmanifold_vertices 0
+components 1
+degenerate 0
+angle_count 200
+angle_min 0.23829892733270247
+angle_p1 0.35004185516326175
+angle_p5 0.40455041202639375
+angle_median 0.6627041315028094
+canonical {"boundary_edges":"40","boundary_loops":"1","components":"1","degenerate":"0","edges":"320","min_angle":{"count":"200","median":"0.6627041315028094","min":"0.23829892733270247","p1":"0.35004185516326175","p5":"0.40455041202639375"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"200","vertices":"121"}

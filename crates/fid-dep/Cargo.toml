@@ -1,0 +1,22 @@
+[package]
+name = "fid-dep"
+description = "Metrology Maven parametric dependency graph: dependency edges, cycle rejection and dependency queries (CORE.DEP.EDGE); change propagation and recompute mode (CORE.DEP.PROP)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Canonical JSON for EdgesSet events, command params/results and the edge-index digest. Layer model.
+fid-canon = { path = "../fid-canon" }
+# CommandDef record for `project.show_dependencies@1`, built through the registry's own field rules.
+# Layer model, below fid-dep (engine).
+fid-registry = { path = "../fid-registry" }
+# Shared `sha256:` digest and command-ID types (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+# Entity IDs are UUIDs (CONSTITUTION §5). Layer model.
+fid-uuid = { path = "../fid-uuid" }
+
+[lints]
+workspace = true

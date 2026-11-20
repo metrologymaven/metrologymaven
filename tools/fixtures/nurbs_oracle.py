@@ -14,13 +14,22 @@ What is exact and what is high precision:
 - Normals, principal curvatures (need square roots) and every analytic-surface value (need sin,
   cos) are computed at 60 digits and rounded once. The degeneracy test of REQ-GEO.NURBS.EVAL-003
   (|Su x Sv| < 1e-14 |Su| |Sv|, or a zero derivative) is decided exactly.
-- Inversion (global closest point on an untrimmed curve or surface, including its boundary): a
-  dense f64 grid over every non-empty knot span selects seeds (every grid local minimum within
-  the grid-resolution bound of the best grid point, the boundary-edge local minima and the
-  corners); each seed is refined by damped Newton at 60 digits (2D inside, 1D on edges). Knot
-  lines of multiplicity >= degree (C0: the distance has a kink there) split the domain and are
-  searched like edges, with one-sided optimality tests. The smallest distance wins, and candidates within 1e-15 m are tied and resolved to the
-  lexicographically smallest parameters (REQ-GEO.NURBS.INVERT-004).
+- Inversion (global closest point on an untrimmed curve or surface, including its boundary),
+  method of oracle 2.0.0: a dense f64 grid over every non-empty knot span selects seeds. The
+  domain is split into break cells at the domain ends and at knot lines of multiplicity >= degree
+  (C0: the distance has a kink there); each cell gets its own seeds (the grid local minima of the
+  cell within the grid-resolution bound of the best grid point, at most 16 per cell, coincident
+  grid points counted once). A break line whose grid points all coincide (a collapsed edge such as
+  a sphere pole) gets 20 extra grid lines beside it at offsets width * 4^-k, k = 1..20. Each seed
+  is refined by damped Newton at 60 digits inside its cell (2D inside, 1D on break lines, which are
+  searched like edges with one-sided optimality tests). The smallest distance wins, and candidates
+  within 1e-15 m are tied and resolved to the lexicographically smallest parameters
+  (REQ-GEO.NURBS.INVERT-004). Every answer is then gated by the exact Bernstein certificate of
+  tools/fixtures/nurbs_cert.py (independent code): no point of the entity may be closer than
+  distance - 1e-15 m; a witness point is added as a seed and the search repeats (the oracle aborts
+  after 4 rounds). Oracle 1.0.0 took the 16 best grid minima overall: at a sphere pole the
+  coincident pole points used up that budget inside one cell, which made ref_set_v1 sphere-q0121
+  a non-global local minimum (2.69e-6 m too far).
 
 Conventions written into the fixtures (`conventions` key of each file):
 - Span rule: right-continuous; at the domain end the last non-empty span (REQ-GEO.NURBS.EVAL-006).
@@ -39,7 +48,13 @@ Conventions written into the fixtures (`conventions` key of each file):
 Every f64 is written as {"hex": IEEE 754 binary64 bit pattern "0x" + 16 hex digits, "dec": the
 shortest round-trip decimal}, with the same nesting in both members.
 
-Outputs (in --out): ref_set_v1.json, analytic_set.json, multi_minima.json, manifest.json. The
+Outputs (in --out): ref_set_v2.json and manifest.json. The generator is platform-independent
+(no libm: transcendental floats are computed at 60 digits and rounded once). ref_set_v2 takes its
+query points from the frozen ref_set_v1 (same ids, checked against the regenerated draw to 1e-9
+relative), because v1's points came from the author's libm. The superseded ref_set_v1.json and the
+still-current analytic_set.json and multi_minima.json (oracle 1.0.0, libm-dependent generation,
+audited by tools/fixtures/nurbs_cert.py) are frozen and pinned by SHA-256; build_analytic() and
+build_multi_minima() are kept for a future versioned regeneration (new file names). The
 GEO.NURBS.DATA fixtures valid_set.json and invalid_set.json (fixtures/geo/nurbs/
 make_data_fixtures.py, seed 41) are part of the reference set; they are not rewritten here, but
 the manifest lists them with their SHA-256 so the whole set is pinned.
@@ -60,7 +75,30 @@ from decimal import Decimal, getcontext, localcontext
 from fractions import Fraction
 from pathlib import Path
 
-ORACLE_VERSION = "nurbs_oracle 1.0.0"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import nurbs_cert  # noqa: E402  (independent certificate, no shared code)
+
+ORACLE_VERSION = "nurbs_oracle 2.0.0"
+REF_SET = "ref_set_v2.json"
+MULTI_MINIMA = "multi_minima.json"
+# Frozen earlier outputs, kept byte-for-byte and pinned in the manifest but never regenerated:
+# name -> (sha256, seed, oracle version, successor). ref_set_v1 (oracle 1.0.0) has a non-global
+# inversion reference (sphere-q0121, see spec/geo/nurbs/ref/NODE.md); its eval and domain_checks
+# rows are identical to ref_set_v2's.
+# Oracle 1.0.0 outputs that stay current but are frozen (not regenerated): their query points and
+# placements came from the platform libm (random.gauss, float pow), so they cannot be reproduced
+# byte-for-byte elsewhere. Both are audited by tools/fixtures/nurbs_cert.py (every reference
+# certified). A regeneration must ship as a new file version. name -> (sha256, seed, version, counts)
+FROZEN = {
+    "analytic_set.json": ("sha256:b94dcdc4d3727451959e2fbe7ad8936ee6a83fe40002d7b6b10384a901ee0ea6", 42,
+                          "nurbs_oracle 1.0.0", {"entities": 24, "evals": 480, "inversions": 733}),
+    "multi_minima.json": ("sha256:776ce5ac83973b58699f218fc4b2f05be2292e80200a1d042df1c4232112ecfe", 43,
+                          "nurbs_oracle 1.0.0", {"entities": 2, "inversions": 260}),
+}
+SUPERSEDED = {
+    "ref_set_v1.json": ("sha256:00756df103d13d7a70b49243991fe216567d0cdb5f0694232cedb77bb58f7bd1", 40,
+                        "nurbs_oracle 1.0.0", "ref_set_v2.json"),
+}
 FORMAT = "fid-nurbs-ref/1"
 PREC = 60
 getcontext().prec = PREC
@@ -94,7 +132,9 @@ CONVENTIONS = {
                  "curve curvature |C' x C''| / |C'|^3",
     "inversion": "global closest point on the untrimmed entity including its boundary; ties within 1e-15 m "
                  "resolve to the lexicographically smallest parameters (REQ-GEO.NURBS.INVERT-004); "
-                 "alternatives lists other local minima within 1e-9 m",
+                 "alternatives lists other local minima within 1e-9 m; on_boundary is true exactly when a "
+                 "parameter equals a domain limit; every NURBS reference is certified global within 1e-15 m "
+                 "(exact Bernstein bound, tools/fixtures/nurbs_cert.py)",
     "float": "every f64 as {hex: binary64 bit pattern, dec: shortest round-trip decimal}",
 }
 
@@ -223,6 +263,44 @@ def wrap_2pi(a):
     while a >= TWO_PI:
         a -= TWO_PI
     return a
+
+
+# ---------------------------------------------------------------- platform-independent float helpers
+#
+# The generated bytes must not depend on the platform's libm (CI regenerates on Linux, authors
+# often run Windows): every transcendental float the generator consumes is computed at 60
+# digits and rounded once (correctly rounded), and squares and distances use only + - * / sqrt.
+
+def cr_log(x):
+    return float(D(x).ln())
+
+
+def cr_cos_sin(x):
+    s, c = sin_cos(D(x))
+    return float(c), float(s)
+
+
+def cr_pow10(y):
+    return float(D(10) ** D(y))
+
+
+def gauss(rng, mu, sigma):
+    """random.Random.gauss (same algorithm and the same cached second value, rng.gauss_next) with
+    correctly rounded log, cos and sin instead of the platform's libm."""
+    z = rng.gauss_next
+    rng.gauss_next = None
+    if z is None:
+        x2pi = rng.random() * (2.0 * math.pi)
+        g2rad = math.sqrt(-2.0 * cr_log(1.0 - rng.random()))
+        c, s = cr_cos_sin(x2pi)
+        z = c * g2rad
+        rng.gauss_next = s * g2rad
+    return mu + z * sigma
+
+
+def fdist(a, b):
+    dx, dy, dz = a[0] - b[0], a[1] - b[1], a[2] - b[2]
+    return math.sqrt(dx * dx + dy * dy + dz * dz)
 
 
 def dec_of(x):
@@ -637,26 +715,74 @@ def curve_fgh(c, P):
     return fgh
 
 
+POLAR_ROWS = 20  # extra grid lines at width * 4^-k, k = 1..20, beside every collapsed line
+
+
+def _near_lines(K, p, n, collapsed):
+    """Parameters beside collapsed break lines: for each collapsed line b and each neighbouring
+    break piece of width w, the values b +- w * 4^-k, k = 1..POLAR_ROWS (2.0.0 seeding)."""
+    br = breaks(K, p, n)
+    out = []
+    for i, b in enumerate(br):
+        if b not in collapsed:
+            continue
+        if i + 1 < len(br):
+            w = br[i + 1] - b
+            out += [b + w * 0.25 ** k for k in range(1, POLAR_ROWS + 1)]
+        if i > 0:
+            w = b - br[i - 1]
+            out += [b - w * 0.25 ** k for k in range(1, POLAR_ROWS + 1)]
+    return out
+
+
 class Grid:
-    """f64 samples of a curve or surface for seeding the inversion."""
+    """f64 samples of a curve or surface for seeding the inversion.
+
+    Surfaces (oracle 2.0.0): a break line (domain edge or C0 knot line) whose grid points all
+    coincide in f64 is collapsed (a pole or degenerate edge); POLAR_ROWS extra grid lines are
+    added beside it at geometrically shrinking offsets, so the azimuth of a minimum next to the
+    collapsed line is resolved by the grid."""
 
     def __init__(self, e, per_span):
         self.e = e
         U, V, Pw = e.num("float")
         self.us = e.grid_params(U, e.p, e.n_u, per_span)
-        if not e.surface:
-            self.pts = []
-            for t in self.us:
-                s = find_span(U, e.p, e.n_u, t)
-                N = basis_ders(U, e.p, s, t, 0, 0.0, 1.0)[0]
-                acc = [0.0, 0.0, 0.0, 0.0]
-                for j in range(e.p + 1):
-                    pw = Pw[s - e.p + j]
-                    acc = [acc[k] + N[j] * pw[k] for k in range(4)]
-                self.pts.append((acc[0] / acc[3], acc[1] / acc[3], acc[2] / acc[3]))
-            self.h = max(math.dist(self.pts[i], self.pts[i + 1]) for i in range(len(self.pts) - 1))
+        if e.surface:
+            self.vs = e.grid_params(V, e.q, e.n_v, per_span)
+            self._surface(U, V, Pw)
+            cu = [x for x in breaks(U, e.p, e.n_u) if self._collapsed_u(x)]
+            cv = [x for x in breaks(V, e.q, e.n_v) if self._collapsed_v(x)]
+            self.collapsed = (cu, cv)
+            if cu or cv:
+                self.us = sorted(set(self.us + _near_lines(U, e.p, e.n_u, cu)))
+                self.vs = sorted(set(self.vs + _near_lines(V, e.q, e.n_v, cv)))
+                self._surface(U, V, Pw)
             return
-        self.vs = e.grid_params(V, e.q, e.n_v, per_span)
+        self.pts = []
+        for t in self.us:
+            s = find_span(U, e.p, e.n_u, t)
+            N = basis_ders(U, e.p, s, t, 0, 0.0, 1.0)[0]
+            acc = [0.0, 0.0, 0.0, 0.0]
+            for j in range(e.p + 1):
+                pw = Pw[s - e.p + j]
+                acc = [acc[k] + N[j] * pw[k] for k in range(4)]
+            self.pts.append((acc[0] / acc[3], acc[1] / acc[3], acc[2] / acc[3]))
+        self.h = max(fdist(self.pts[i], self.pts[i + 1]) for i in range(len(self.pts) - 1))
+
+    def _collapsed_u(self, x):
+        iu = self.us.index(x)
+        m = len(self.vs)
+        row = self.pts[iu * m:(iu + 1) * m]
+        return all(pt == row[0] for pt in row)
+
+    def _collapsed_v(self, y):
+        iv = self.vs.index(y)
+        m = len(self.vs)
+        col = [self.pts[iu * m + iv] for iu in range(len(self.us))]
+        return all(pt == col[0] for pt in col)
+
+    def _surface(self, U, V, Pw):
+        e = self.e
         nu, nv, p, q = e.n_u, e.n_v, e.p, e.q
         bu = []
         for u in self.us:
@@ -687,7 +813,7 @@ class Grid:
         for iu in range(len(self.us) - 1):
             for iv in range(m - 1):
                 a = self.pts[iu * m + iv]
-                h = max(h, math.dist(a, self.pts[(iu + 1) * m + iv + 1]), math.dist(self.pts[(iu + 1) * m + iv],
+                h = max(h, fdist(a, self.pts[(iu + 1) * m + iv + 1]), fdist(self.pts[(iu + 1) * m + iv],
                                                                                     self.pts[iu * m + iv + 1]))
         self.h = h
 
@@ -725,12 +851,31 @@ def local_minima_1d(vals, thr):
             (i == n - 1 or vals[i] <= vals[i + 1])]
 
 
-def invert(e, grid, Pf, rng_tag=None):
-    """Global closest point of f64 point Pf on entity e. Returns a query record (without id)."""
+def _cell_seeds(idxs, d2, pts):
+    """The MAX_SEEDS best grid indices of one break cell, skipping indices whose f64 point repeats
+    an earlier one (a collapsed edge contributes one seed, not its whole row)."""
+    out, seen = [], set()
+    for i in sorted(idxs, key=lambda i: (d2[i], i)):
+        if pts[i] in seen:
+            continue
+        seen.add(pts[i])
+        out.append(i)
+        if len(out) == MAX_SEEDS:
+            break
+    return out
+
+
+def invert(e, grid, Pf, rng_tag=None, extra=()):
+    """Global closest point of f64 point Pf on entity e. Returns a query record (without id).
+
+    Seeding (oracle 2.0.0): grid local minima are selected per break cell (the domain split at
+    C0 knot lines), each cell with its own MAX_SEEDS budget after removing coincident grid points,
+    so a collapsed edge (sphere pole) cannot use up the budget and every cell is searched from its
+    own seeds. `extra` holds additional parameter seeds (the certificate's witnesses)."""
     P = [D(x) for x in Pf]
-    d2 = [(a - Pf[0]) ** 2 + (b - Pf[1]) ** 2 + (c - Pf[2]) ** 2 for (a, b, c) in grid.pts]
+    d2 = [(a - Pf[0]) * (a - Pf[0]) + (b - Pf[1]) * (b - Pf[1]) + (c - Pf[2]) * (c - Pf[2]) for (a, b, c) in grid.pts]
     dmin = math.sqrt(min(d2))
-    thr = (dmin + 2.0 * grid.h + 1e-12) ** 2
+    thr = (dmin + 2.0 * grid.h + 1e-12) * (dmin + 2.0 * grid.h + 1e-12)
     cands = []  # (params, f, on_domain_boundary, is_local_min)
     U = e.num("dec")[0]
     ulo, uhi = U[e.p], U[e.n_u]
@@ -738,13 +883,21 @@ def invert(e, grid, Pf, rng_tag=None):
     gu = [+D(x) for x in grid.us]
     if not e.surface:
         fgh = curve_fgh(e, P)
-        seeds = sorted(local_minima_1d(d2, thr), key=lambda i: (d2[i], i))[:MAX_SEEDS]
-        for i in seeds:
+        n = len(d2)
+        starts = []
+        for a, b in zip(bu, bu[1:]):
+            cell = [i for i in range(n) if a <= gu[i] <= b]
+            mins = [i for i in cell if d2[i] <= thr and
+                    all(d2[j] >= d2[i] for j in (i - 1, i + 1) if j in cell)]
+            starts += [(gu[i], a, b) for i in _cell_seeds(mins, d2, grid.pts)]
+        for x in extra:
             for a, b in zip(bu, bu[1:]):
-                if a <= gu[i] <= b:
-                    r = minimize(fgh, [gu[i]], [a], [b])
-                    if r is not None:
-                        cands.append(((r[0][0],), r[1], False, r[2]))
+                if a <= x[0] <= b:
+                    starts.append((x[0], a, b))
+        for t0, a, b in starts:
+            r = minimize(fgh, [t0], [a], [b])
+            if r is not None:
+                cands.append(((r[0][0],), r[1], r[0][0] in (ulo, uhi), r[2]))
         for t in bu:
             C = e.curve_ders(t, 1, "dec")
             Cl = e.curve_ders(t, 1, "dec", left=True)
@@ -762,33 +915,39 @@ def invert(e, grid, Pf, rng_tag=None):
         def at(iu, iv):
             return d2[iu * nv + iv]
 
-        seeds = []
-        for idx, val in enumerate(d2):
-            if val > thr:
-                continue
-            iu, iv = divmod(idx, nv)
-            ok = True
-            for du in (-1, 0, 1):
-                for dv in (-1, 0, 1):
-                    ju, jv = iu + du, iv + dv
-                    if (du or dv) and 0 <= ju < nu and 0 <= jv < nv and at(ju, jv) < val:
-                        ok = False
-            if ok:
-                seeds.append(idx)
-        seeds.sort(key=lambda i: (d2[i], i))
         fuv = surface_fgh(e, P, "uv", None)
-        for idx in seeds[:MAX_SEEDS]:
-            iu, iv = divmod(idx, nv)
-            u0, v0 = gu[iu], gv[iv]
+        starts = []
+        for a, b in zip(bu, bu[1:]):
+            ius = [i for i in range(nu) if a <= gu[i] <= b]
+            for c, d in zip(bv, bv[1:]):
+                ivs = [j for j in range(nv) if c <= gv[j] <= d]
+                lo_u, hi_u, lo_v, hi_v = ius[0], ius[-1], ivs[0], ivs[-1]
+                mins = []
+                for iu in ius:
+                    for iv in ivs:
+                        val = at(iu, iv)
+                        if val > thr:
+                            continue
+                        ok = True
+                        for du in (-1, 0, 1):
+                            for dv in (-1, 0, 1):
+                                ju, jv = iu + du, iv + dv
+                                if (du or dv) and lo_u <= ju <= hi_u and lo_v <= jv <= hi_v and at(ju, jv) < val:
+                                    ok = False
+                        if ok:
+                            mins.append(iu * nv + iv)
+                for idx in _cell_seeds(mins, d2, grid.pts):
+                    iu, iv = divmod(idx, nv)
+                    starts.append(((gu[iu], gv[iv]), (a, c), (b, d)))
+        for x in extra:
             for a, b in zip(bu, bu[1:]):
-                if not a <= u0 <= b:
-                    continue
                 for c, d in zip(bv, bv[1:]):
-                    if not c <= v0 <= d:
-                        continue
-                    r = minimize(fuv, [u0, v0], [a, c], [b, d])
-                    if r is not None:
-                        cands.append(((r[0][0], r[0][1]), r[1], False, r[2]))
+                    if a <= x[0] <= b and c <= x[1] <= d:
+                        starts.append(((x[0], x[1]), (a, c), (b, d)))
+        for x0, lo, hi in starts:
+            r = minimize(fuv, list(x0), list(lo), list(hi))
+            if r is not None:
+                cands.append(((r[0][0], r[0][1]), r[1], r[0][0] in (ulo, uhi) or r[0][1] in (vlo, vhi), r[2]))
         # break lines: u fixed (move v inside each v piece), v fixed (move u inside each u piece)
         line_pts = []
         for uu in bu:
@@ -859,8 +1018,36 @@ def invert(e, grid, Pf, rng_tag=None):
     return rec
 
 
-def gen_queries(e, grid, rng, n, start=0):
-    """Query points around the entity: near (1e-7..1e-3 m), mid, far, off-boundary, on-surface."""
+CERT_ROUNDS = 4
+
+
+def entity_cert(e):
+    """The independent global-minimum certificate (tools/fixtures/nurbs_cert.py) for entity e."""
+    return nurbs_cert.EntityCert(json.loads(json.dumps(e.json_geometry())))
+
+
+def invert_certified(e, grid, Pf, rng_tag, cert):
+    """invert(), gated by the exact Bernstein certificate (oracle 2.0.0): the reference must be the
+    global minimum within 1e-15 m. A witness (a point closer by more than 1e-15 m) is added as a
+    Newton seed and the search repeats; the oracle aborts if CERT_ROUNDS rounds do not certify."""
+    extra = []
+    for _ in range(CERT_ROUNDS):
+        rec = invert(e, grid, Pf, rng_tag, extra)
+        st = cert.certify([Fraction(x) for x in Pf], Fraction(rec["distance"]["dec"]))
+        if st[0] == "ok":
+            return rec
+        if st[0] != "witness":
+            die(f"{e.id}: certificate {st[0]} for query {Pf!r}")
+        extra.append(tuple(D(x.numerator) / D(x.denominator) for x in st[1]))
+    die(f"{e.id}: query {Pf!r} not certified after {CERT_ROUNDS} rounds")
+
+
+def gen_queries(e, grid, rng, n, cert, start=0, pinned=None):
+    """Query points around the entity: near (1e-7..1e-3 m), mid, far, off-boundary, on-surface.
+
+    `pinned` (id -> f64 query) replaces each generated point by the pinned one (the same draw of
+    the frozen ref_set_v1, which was generated with the author's libm); the generated point must
+    agree with it to 1e-9 relative, so the random stream and the query kinds stay checked."""
     out = []
     ulo, uhi = e.domain_u()
     if e.surface:
@@ -890,14 +1077,14 @@ def gen_queries(e, grid, rng, n, start=0):
         else:
             C = e.curve_ders(Fraction(u), 1, "frac")
             base = [float(x) for x in C[0]]
-        dv = [rng.gauss(0.0, 1.0) for _ in range(3)]
+        dv = [gauss(rng, 0.0, 1.0) for _ in range(3)]
         nn = math.sqrt(sum(x * x for x in dv)) or 1.0
         dv = [x / nn for x in dv]
         if kind == "off_boundary":
             mag = size * (0.01 + 0.3 * rng.random())
         elif r < 0.45:
             kind = "near"
-            mag = 10.0 ** (-7 + 4 * rng.random())
+            mag = cr_pow10(-7 + 4 * rng.random())
         elif r < 0.85:
             mag = size * (0.02 + 0.3 * rng.random())
         elif r < 0.95:
@@ -907,8 +1094,14 @@ def gen_queries(e, grid, rng, n, start=0):
             kind = "on_entity"
             mag = 0.0
         Pf = [base[i] + mag * dv[i] for i in range(3)]
-        rec = invert(e, grid, Pf, kind)
-        rec = {"id": f"{e.id}-q{start + len(out):04d}", **rec}
+        qid = f"{e.id}-q{start + len(out):04d}"
+        if pinned is not None:
+            pq = pinned.get(qid)
+            if pq is None or any(abs(pq[i] - Pf[i]) > 1e-9 * max(1.0, abs(Pf[i])) for i in range(3)):
+                die(f"{qid}: generated query {Pf!r} does not match the pinned query {pq!r}")
+            Pf = pq
+        rec = invert_certified(e, grid, Pf, kind, cert)
+        rec = {"id": qid, **rec}
         out.append(rec)
     return out
 
@@ -1061,7 +1254,7 @@ def build_ref_entities(rng):
     return curves, surfaces
 
 
-# ---------------------------------------------------------------- ref_set_v1
+# ---------------------------------------------------------------- ref_set_v2
 
 INVERT_CURVES = {"c01n": 100, "c02n": 100, "c02r": 100, "c03n": 100, "c03r": 100, "c04r": 100, "c05n": 100,
                  "c06r": 100, "c07n": 100, "c09r": 100, "c10n": 100, "c13r": 100, "c15n": 100, "c20r": 100,
@@ -1095,7 +1288,7 @@ def curve_eval_params(c, rng, n):
     return out
 
 
-def build_ref_set(seed, log):
+def build_ref_set(seed, log, pinned=None):
     rng = random.Random(seed)
     curves, surfaces = build_ref_entities(rng)
     entities = []
@@ -1117,7 +1310,7 @@ def build_ref_set(seed, log):
         nq = INVERT_CURVES.get(c.id, 0)
         if nq:
             grid = Grid(c, 200)
-            g["invert"] = gen_queries(c, grid, rng, nq)
+            g["invert"] = gen_queries(c, grid, rng, nq, entity_cert(c), pinned=pinned)
         else:
             g["invert"] = []
         n_eval += len(recs)
@@ -1149,7 +1342,7 @@ def build_ref_set(seed, log):
         nq = INVERT_SURFACES.get(s.id, 0)
         if nq:
             grid = Grid(s, 40 if max(s.p, s.q) <= 3 else 24)
-            g["invert"] = gen_queries(s, grid, rng, nq)
+            g["invert"] = gen_queries(s, grid, rng, nq, entity_cert(s), pinned=pinned)
         else:
             g["invert"] = []
         n_eval += len(recs)
@@ -1192,6 +1385,7 @@ def build_multi_minima(seed, log):
     entities = []
     w = wavy_surface()
     grid = Grid(w, 48)
+    wcert = entity_cert(w)
     g = w.json_geometry()
     g["eval"] = [eval_surface_record(w, u, v, t)[0] for u, v, t in surface_eval_params(w, rng, 20)]
     qs = []
@@ -1202,26 +1396,27 @@ def build_multi_minima(seed, log):
             die("could not generate equidistant queries")
         y = -0.4 + 0.8 * rng.random()
         h = 0.0 + 0.25 * rng.random()
-        rec = invert(w, grid, [0.0, y, h], "equidistant")
+        rec = invert_certified(w, grid, [0.0, y, h], "equidistant", wcert)
         if "tie" not in rec["tags"]:
             continue
         qs.append({"id": f"wavy-q{len(qs):04d}", **rec})
-    gen = gen_queries(w, grid, rng, 140, start=len(qs))
+    gen = gen_queries(w, grid, rng, 140, wcert, start=len(qs))
     g["invert"] = qs + gen
     entities.append(g)
     log(f"  wavy: {len(qs)} equidistant + {len(gen)} generic queries")
     c = cusp_surface()
     grid = Grid(c, 200)
+    ccert = entity_cert(c)
     g = c.json_geometry()
     g["eval"] = [eval_surface_record(c, u, v, t)[0] for u, v, t in
                  [(0.5, 0.0, "cusp"), (0.5, 0.5, "cusp"), (0.5, 1.0, "cusp")] + surface_eval_params(c, rng, 12)]
     qs = []
     for k in range(20):
-        h = 10.0 ** (-6 + 5 * rng.random())
+        h = cr_pow10(-6 + 5 * rng.random())
         z = 0.5 * rng.random()
-        rec = invert(c, grid, [0.5, 0.75 + h, z], "above_cusp")
+        rec = invert_certified(c, grid, [0.5, 0.75 + h, z], "above_cusp", ccert)
         qs.append({"id": f"cusp-q{k:04d}", **rec})
-    gen = gen_queries(c, grid, rng, 40, start=len(qs))
+    gen = gen_queries(c, grid, rng, 40, ccert, start=len(qs))
     g["invert"] = qs + gen
     entities.append(g)
     log(f"  cusp: {len(qs)} above-tip + {len(gen)} generic queries")
@@ -1235,8 +1430,8 @@ def build_multi_minima(seed, log):
 def rand_frame(rng):
     """Random orthonormal frame at 60 digits, rounded to f64 (orthonormal within ~1e-16)."""
     while True:
-        z = [D(rng.gauss(0.0, 1.0)) for _ in range(3)]
-        a = [D(rng.gauss(0.0, 1.0)) for _ in range(3)]
+        z = [D(gauss(rng, 0.0, 1.0)) for _ in range(3)]
+        a = [D(gauss(rng, 0.0, 1.0)) for _ in range(3)]
         nz = dnorm(z)
         if nz < D("0.1"):
             continue
@@ -1380,8 +1575,8 @@ class Analytic:
         n = 1440
         best = []
         fx, fy, fa, fb = float(x), float(y), float(a), float(b)
-        vals = [(fa * math.cos(2 * math.pi * k / n) - fx) ** 2 + (fb * math.sin(2 * math.pi * k / n) - fy) ** 2
-                for k in range(n)]
+        cs = ellipse_table(n)
+        vals = [(fa * c - fx) * (fa * c - fx) + (fb * sn - fy) * (fb * sn - fy) for c, sn in cs]
         seeds = [k for k in range(n) if vals[k] <= vals[k - 1] and vals[k] <= vals[(k + 1) % n]]
 
         def fgh(tv):
@@ -1404,6 +1599,16 @@ class Analytic:
             if all(abs(t - o) > D("1e-30") for o in distinct):
                 distinct.append(t)
         return [distinct[0]], len(distinct) > 1
+
+
+_ELLIPSE_TABLE = {}
+
+
+def ellipse_table(n):
+    """Correctly rounded (cos, sin) of the f64 angles 2 pi k / n, k = 0..n-1."""
+    if n not in _ELLIPSE_TABLE:
+        _ELLIPSE_TABLE[n] = [cr_cos_sin(2 * math.pi * k / n) for k in range(n)]
+    return _ELLIPSE_TABLE[n]
 
 
 ANALYTIC_TYPES = ["line", "circle", "ellipse", "plane", "cylinder", "cone", "sphere", "torus"]
@@ -1530,25 +1735,42 @@ def render(head, entities):
     return text.encode("utf-8")
 
 
+def pinned_queries(out):
+    """Query points of the frozen ref_set_v1 by id, exactly (from the hex bit patterns)."""
+    doc = json.loads((out / "ref_set_v1.json").read_text(encoding="utf-8"))
+    return {r["id"]: [struct.unpack(">d", int(h, 16).to_bytes(8, "big"))[0] for h in r["q"]["hex"]]
+            for e in doc["entities"] for r in e["invert"]}
+
+
 def generate(seed, out, log):
     files = {}
-    log("ref_set_v1.json")
-    data, fseed, counts = build_ref_set(seed, log)
-    files["ref_set_v1.json"] = (data, fseed, counts)
-    log("analytic_set.json")
-    data, fseed, counts = build_analytic(seed + 2, log)
-    files["analytic_set.json"] = (data, fseed, counts)
-    log("multi_minima.json")
-    data, fseed, counts = build_multi_minima(seed + 3, log)
-    files["multi_minima.json"] = (data, fseed, counts)
+    for name, (sha, _, _, _) in SUPERSEDED.items():
+        f = out / name
+        if not f.is_file() or "sha256:" + hashlib.sha256(f.read_bytes()).hexdigest() != sha:
+            die(f"superseded fixture {f} missing or changed (it is frozen at {sha})")
+    log(REF_SET)
+    data, fseed, counts = build_ref_set(seed, log, pinned_queries(out))
+    files[REF_SET] = (data, fseed, counts)
     entries = [{"path": k, "sha256": "sha256:" + hashlib.sha256(v[0]).hexdigest(), "seed": v[1],
                 "oracle_version": ORACLE_VERSION, "counts": v[2]} for k, v in sorted(files.items())]
+    for name, (sha, fseed, fver, counts) in FROZEN.items():
+        f = out / name
+        if not f.is_file() or "sha256:" + hashlib.sha256(f.read_bytes()).hexdigest() != sha:
+            die(f"frozen fixture {f} missing or changed (it is pinned at {sha})")
+        entries.append({"path": name, "sha256": sha, "seed": fseed, "oracle_version": fver, "counts": counts,
+                        "frozen": True})
     for name, aseed in ADOPTED:
         f = out / name
         if not f.is_file():
             die(f"adopted fixture {f} missing")
         entries.append({"path": name, "sha256": "sha256:" + hashlib.sha256(f.read_bytes()).hexdigest(), "seed": aseed,
                         "oracle_version": ADOPTED_GENERATOR, "adopted": True})
+    for name, (sha, sseed, sver, successor) in SUPERSEDED.items():
+        f = out / name
+        if not f.is_file() or "sha256:" + hashlib.sha256(f.read_bytes()).hexdigest() != sha:
+            die(f"superseded fixture {f} missing or changed (it is frozen at {sha})")
+        entries.append({"path": name, "sha256": sha, "seed": sseed, "oracle_version": sver, "superseded": True,
+                        "superseded_by": successor})
     man = {"format": FORMAT, "oracle_version": ORACLE_VERSION, "seed": seed, "license": "CC-BY-4.0",
            "generator": "tools/fixtures/nurbs_oracle.py", "files": entries}
     files["manifest.json"] = ((json.dumps(man, indent=1) + "\n").encode("utf-8"), seed, None)

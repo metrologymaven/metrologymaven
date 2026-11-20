@@ -1,0 +1,5 @@
+[build]
+rustflags = ["-C", "debuginfo=0", "-C", "target-feature=-fma"]
+
+[env]
+RUST_LOG = "warn"

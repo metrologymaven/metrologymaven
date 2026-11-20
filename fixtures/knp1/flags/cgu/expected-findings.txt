@@ -1,0 +1,4 @@
+KNP1-FLAG-CGU .cargo/config.toml:2:17
+KNP1-FLAG-CGU .cargo/config.toml:5:1
+KNP1-FLAG-CGU Cargo.toml:5:1
+KNP1-FLAG-CGU ci.yml:2:3

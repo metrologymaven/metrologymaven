@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-knp1-lint]
+built_pr: 215
 satisfies: [REQ-KRN.NUM.LINT-001, REQ-KRN.NUM.LINT-002, REQ-KRN.NUM.LINT-007]
 covers: []
 depends_on: [KRN.NUM.LINT.FIND, KRN.NUM.LINT.GRAPH]
@@ -71,6 +73,184 @@ Parses every source file of every crate in the kernel closure, third-party and p
 - **Determinism:** D0.
 - **Performance budget:** 300 000 lines scanned < 10 s [unverified until measured].
 - **Crate:** `fid-knp1-lint` (tooling layer).
+
+### Build decisions (fid-knp1-lint `syn_scan`, PR #215)
+
+- **Token-level, not grammar-level.** The scan uses its own bounded, non-recursive lexer (`syn_scan::lex`) instead of `syn`. Every token of a file is matched, including `macro_rules!` bodies, macro invocation arguments and attributes, so no grammar position can hide a banned name, and no grammar gap can make the scan skip code. A file that lexes but would not parse is still fully scanned; `rustc` rejects it if it is ever compiled. Reason: earlier lint reviews found grammar bypasses, and a recursive parser can overflow the stack on hostile nesting. Comments (doc comments included) and string-literal contents are not code and are not matched.
+- **Shebang.** As in rustc, a leading `#!` is a shebang line (dropped) unless the first thing after it, skipping whitespace and non-doc comments, is `[`; then it is an inner attribute and is lexed. An unterminated comment there counts as an attribute.
+- **`KNP1-PARSE` (never waivable; maintainer decision).** Lexer-level failures, one finding at the offending position: invalid UTF-8; a file larger than 16 MiB; an unterminated string, raw string, character literal or block comment; an unbalanced or mismatched delimiter; nesting deeper than 512; more than 2 000 000 tokens; a non-ASCII identifier (the scan compares ASCII names only); a character that is not Rust punctuation. `KNP1-PARSE` joins the FIND rule catalogue (and `schema/knp1-findings-v1.json`) as a fixed rule; `Rule::is_waivable` is false for it.
+- **`KNP1-PARSE-RESOLVE` (waivable; maintainer decision).** Resolution-level findings, at the token: a `use` declaration the scan cannot take apart (for example a macro repetition inside a `use` tree); and an alias chain that is cyclic, deeper than 8 or has more than 64 targets. These may be waived only through a reviewed waiver (KRN.NUM.LINT.FIND), whose recorded justification is reported with the waived finding. Also a fixed rule of the FIND catalogue.
+- **Macro code the caller completes is `KNP1-PARSE` (never waivable; maintainer decision, review 2).** Reported in the macro definition: a metavariable in callee position (`$m!(…)`, `$f(…)`, `.$f(`, `::$f` after any prefix such as `f64::`, `F::`, `num_traits::Float::` or `<f64 as Float>::`; not `$crate`, not `fn $f(`), and a `$(…)` repetition that contains `::` or is followed by `::` (`$($p::)*read`, `$($p)::*::read`). A metavariable escaped through another (`$d m`, where `$d` expands to `$`) is tested on its second identifier (`$d m!` counts as `$m!`). A `macro_rules!` inside the body of another `macro_rules!` (a macro-defining macro) is also `KNP1-PARSE` (review 3). Kernel crates have no need for these.
+- **Banned names passed to macros.** Inside the arguments of a macro invocation, a bare identifier (not after `.`, `::` or `$`, not followed by `::`, `!` or `(`) equal to a `Call`, `Method`, `FloatMethod`, `Macro` or `IncludeMacro` pattern is reported with that pattern's rule (`call!(env, …)`, `m!(max, …)`). `Macro` and `IncludeMacro` names count whatever token follows them except `!` (`inner!(env ("X"))`). The same check covers the arguments of any attribute whose name is not one of the pinned built-in attributes (`BUILTIN_ATTRIBUTES`): `allow`, `automatically_derived`, `cfg`, `cfg_attr`, `clippy`, `cold`, `collapse_debuginfo`, `coverage`, `crate_name`, `crate_type`, `debugger_visualizer`, `deny`, `deprecated`, `derive`, `diagnostic`, `doc`, `expect`, `export_name`, `feature`, `forbid`, `global_allocator`, `ignore`, `inline`, `instruction_set`, `link`, `link_name`, `link_ordinal`, `link_section`, `macro_export`, `macro_use`, `must_use`, `naked`, `no_builtins`, `no_implicit_prelude`, `no_link`, `no_main`, `no_mangle`, `no_std`, `non_exhaustive`, `optimize`, `panic_handler`, `path`, `proc_macro`, `proc_macro_attribute`, `proc_macro_derive`, `recursion_limit`, `repr`, `rustfmt`, `should_panic`, `target_feature`, `test`, `track_caller`, `type_length_limit`, `unsafe`, `used`, `warn`, `windows_subsystem`. So `#[my_attr(env)]` is reported (and `my_attr` itself is an attribute macro).
+- **Macro transcribers are code templates (review 4).** Inside any `macro_rules!` body or `macro` item, a `Call`, `Method`, `FloatMethod`, `Macro` or `IncludeMacro` name is reported with its rule whatever token follows it (`env $b $a`, `1.0f64.sin $a`). Anywhere else, such a name followed by `$` (a metavariable or `$(` repetition) counts as called.
+- **Proc-macro item input is closed (maintainer decision, review 4).** Kernel crates may not depend on or invoke any proc-macro crate, workspace ones included. A crate of the closure whose library is a proc macro is `KNP1-PARSE` at its `Cargo.toml` 1:1 (never waivable; its sources are still scanned). The closure comes from `Cargo.lock` and the manifests offline (`KRN.NUM.LINT.GRAPH`), not from `cargo metadata`, so the check reads the same manifest keys Cargo derives the target kind from: `[lib] proc-macro = true` (or `proc_macro`) or a `crate-type` (or `crate_type`) list containing `"proc-macro"`; a `crate-type` that is not a list of strings is `KNP1-PARSE` too (review 5). As a backstop independent of the manifest, a `#[proc_macro]`, `#[proc_macro_derive]` or `#[proc_macro_attribute]` entry point (also inside `cfg_attr`) is `KNP1-PARSE` at the attribute. An attribute whose name is not in the pinned built-in list below is an attribute macro, `KNP1-PARSE` at its name, and a `derive` of anything but `Clone`, `Copy`, `Debug`, `Default`, `Eq`, `Hash`, `Ord`, `PartialEq` or `PartialOrd` (`BUILTIN_DERIVES`) is a derive macro, `KNP1-PARSE`. `cfg_attr` is split at its top-level commas and each attribute after the predicate is checked the same way (`#[cfg_attr(all(), my_attr(env))]`).
+- **`KNP1-CFG` (never waivable; maintainer decisions, re-reviews of PR #235).** Kernel code may only test the cfg names on the pinned allowlist `CFG_ALLOWED`: `target_arch`, `target_os`, `target_family`, `target_pointer_width`, `target_endian`, `target_env`, `target_vendor`, `target_feature`, `target_has_atomic`, `unix`, `windows`, `test`, `doc`, `feature` (plus the combinators `all`, `any`, `not` and `true`/`false`). Any other name, at any depth of a `#[cfg(…)]` or `#![cfg(…)]`, of the predicate of a `#[cfg_attr(…)]` or `#![cfg_attr(…)]` (up to its first top-level comma) or of a `cfg!(…)`, is `KNP1-CFG`. This covers `clippy` (code hidden from the type-aware check), `debug_assertions` and `panic` (profile-dependent code), and custom names a `build.rs` could emit. A macro metavariable (`$p`) in such a predicate is `KNP1-CFG` at its `$`, and a bare `clippy`, `debug_assertions` or `panic` in the arguments of a macro call (`gate!(not(clippy))`) is `KNP1-CFG` too, since the macro may place it in a predicate. Lint names in attributes (`allow(clippy::…)`) are not predicates, and `debug_assert!` stays allowed. `KNP1-CFG` is a fixed rule of the FIND catalogue (schema updated). No kernel crate on main tests any name outside the allowlist (they use only `test`).
+- **`KNP1-READ`** is fatal (no findings) when a listed file cannot be read. The `[syn]` config errors are `KNP1-CONFIG-INVALID`, like the other modules.
+- **Aliases** (REQ-004). Every `use` leaf (including `self`, `as`, nested groups), `extern crate X as Y` and `type Y = path;` adds its binding to one alias map for the whole file; module scopes are merged, so a name bound to several targets is checked against all of them. `crate` and `$crate` resolve to the scanned crate, and the segment after `crate`, `self` or `super` (`super::s::fs`) is resolved through the alias map too. A path whose first segment is a binding is checked as the full path it stands for and reported at the binding. Fail closed for bindings other files may use: a glob import (`use std::*`), a renamed binding whose target can reach a `Module` pattern (`use std as s;`, `extern crate std as s;`), and every `use` or `extern crate` of a bare `std`, `core` or `alloc` root (`pub use std;`, `pub extern crate core;`, which other files can reach as `crate::std::…`) are reported for every module rule they can reach. `Module` patterns match at any position of a path, literal or resolved (`crate::std::time::Instant::now`, `super::std::thread::spawn`). A `use` leaf that names a `Macro` or `IncludeMacro` pattern (`use core::include_str as t;`) is reported as that rule, and a macro call through such an alias (`t!(…)`) is checked as the macro itself.
+- **Metavariables.** A `$x` path segment matches any segment (so `$a::fs::read` is `KNP1-IO-FS`); as a receiver or operand of `.min`/`.max`/`.clamp`, or as the type in `$t::max`, it counts as a float.
+- **Float `min`/`max`/`clamp` receivers.** The receiver is followed back over `(…)`, `[…]` and `{…}` groups to the callee or indexed expression before them (`f64::from(a).max(b)`, `[1.0][0].max(b)`, `{1.0_f64}.max(b)`, `x.into::<f64>().max(b)`); a group, path or `<…>` that holds a float literal, `f32`/`f64` (or an alias to them) or a metavariable makes it a float. A call with no arguments (`Iterator::max()`) is not float `min`/`max`. Lookahead is capped at 512 tokens; past the cap the operand counts as a float.
+- **Opt-outs, all reported.** `[syn.facade_paths] "<path>" = { crate, version, reason }`: a `KNP1-LIBM` name reached through a listed path prefix (after alias resolution, and only if every resolution is a facade path) is a note, not a finding. The path must start at the library name of `crate`; that crate must be in the closure at exactly `version`, and no other crate of the closure may share its library name. Built-in roots (`std`, `core`, `alloc`, `proc_macro`, `test`, `crate`, `self`, `super`, `Self`) are rejected. A module (`mod fid_num`), `use`/`extern crate` binding or type alias named like a facade root that is not that crate itself is `KNP1-LIBM`. `[[syn.facade_files]] crate, version, file, reason`: `KNP1-LIBM` does not fire in that file of that crate version (REQ-003) and every other rule does; each suppressed hit is a note. A facade entry that does not match the closure is a config error. Notes are informational (`Outcome::notes`) and never fail the run. Otherwise only reviewed waivers (KRN.NUM.LINT.FIND) apply; there is no inline opt-out marker.
+- **Positions.** Findings carry the crate and version from the closure, the file relative to the crate root, the 1-based line and column (in characters, after a leading BOM is dropped) of the offending token, and the SHA-256 of that line's text without its line ending. Output is sorted (D0).
+- **Rule assignments the spec left open.** `include!`, `include_bytes!` and `include_str!` of anything but a plain string literal naming a relative `.rs` file that the scan itself lists, and `#[path = …]` naming such a file, are `KNP1-IO-FS` (the Scope lists them with the I/O rules; the Build prompt put them under `KNP1-THREAD`). `env!`/`option_env!` (and `core::env`) are `KNP1-ENV`; `thread_local!` and `std::process` are `KNP1-THREAD`; `extern` (other than `extern crate`), `asm!`-family macros and the `no_mangle`, `export_name` and `link_section` attributes are `KNP1-UNSAFE`. Fast-math, algebraic and `simd_fma`/`simd_relaxed_fma` intrinsics are `KNP1-FMA` because they license contraction. A float `pow` in call position (`libm::pow`, `<f64 as X>::pow`) is `KNP1-POW`, the rule for std float powers; a `pow` whose owner is an integer type (`i32::pow`, `<u64>::pow`) is exact and is not reported. The owner is judged after alias resolution, so `type i32 = f64; <i32>::pow` is reported.
+- **Performance.** The 300 000-line budget is not measured; `coarse_performance` (20 000 lines, debug build) only guards against quadratic behaviour.
+- **AC-5 wording.** `fid_num::fn::sin` in AC-5 is not a valid path (`fn` is a keyword); the facade is `fid_num::f`, and the clean fixture uses `fid_num::f::sin`.
+
+#### Pinned rule table
+
+`RULE_TABLE` in `crates/fid-knp1-lint/src/syn_scan/mod.rs`; the test `rule_table_is_pinned_in_node_md` checks that this table and the code agree row for row. Kinds: `Ident` an identifier equal to the pattern anywhere; `IdentFloat` equal to it or to it plus a float suffix (`f`, `f16`, `f32`, `f64`, `f128`); `IdentSuffixed` the pattern plus a float suffix only; `IdentContains` an identifier containing it (case-sensitive); `Call` the last segment of a path of two or more segments, of a path through an alias or of a `use` leaf, a name after `>::` (`<f64>::sin`, `Libm::<f64>::exp`), or a single identifier followed by `(`; `Method` `.name(` or `.name::`; `FloatMethod` `.name(…)` with a float receiver or operand (see above), a path ending in `f32::name`/`f64::name`, or `<… f32/f64 …>::name`; `Module` a path (aliases resolved) containing the pattern at any position, or a glob, renamed binding or bare built-in root that can reach it; `Macro` `name!(…)`; `IncludeMacro` `name!(…)` unless its only argument names a listed relative `.rs` file; `Attr` `name = …` inside an attribute unless it names such a file; `AttrName` the identifier inside an attribute; `Keyword` the keyword, not a raw identifier (`extern` only when not followed by `crate`).
+
+| Rule | Kind | Pattern |
+|---|---|---|
+| `KNP1-FMA` | Ident | `mul_add` |
+| `KNP1-FMA` | IdentFloat | `fma` |
+| `KNP1-FMA` | IdentContains | `fmadd` |
+| `KNP1-FMA` | IdentContains | `fmsub` |
+| `KNP1-FMA` | IdentContains | `fnmadd` |
+| `KNP1-FMA` | IdentContains | `fnmsub` |
+| `KNP1-FMA` | IdentContains | `fmuladd` |
+| `KNP1-FMA` | IdentContains | `relaxed_madd` |
+| `KNP1-FMA` | IdentContains | `relaxed_nmadd` |
+| `KNP1-FMA` | IdentContains | `fmla` |
+| `KNP1-FMA` | IdentContains | `fmls` |
+| `KNP1-FMA` | IdentContains | `vfma` |
+| `KNP1-FMA` | IdentContains | `vfms` |
+| `KNP1-FMA` | Ident | `fadd_fast` |
+| `KNP1-FMA` | Ident | `fsub_fast` |
+| `KNP1-FMA` | Ident | `fmul_fast` |
+| `KNP1-FMA` | Ident | `fdiv_fast` |
+| `KNP1-FMA` | Ident | `frem_fast` |
+| `KNP1-FMA` | Ident | `fadd_algebraic` |
+| `KNP1-FMA` | Ident | `fsub_algebraic` |
+| `KNP1-FMA` | Ident | `fmul_algebraic` |
+| `KNP1-FMA` | Ident | `fdiv_algebraic` |
+| `KNP1-FMA` | Ident | `frem_algebraic` |
+| `KNP1-FMA` | Ident | `algebraic_add` |
+| `KNP1-FMA` | Ident | `algebraic_sub` |
+| `KNP1-FMA` | Ident | `algebraic_mul` |
+| `KNP1-FMA` | Ident | `algebraic_div` |
+| `KNP1-FMA` | Ident | `algebraic_rem` |
+| `KNP1-FMA` | Ident | `simd_fma` |
+| `KNP1-FMA` | Ident | `simd_relaxed_fma` |
+| `KNP1-POW` | IdentFloat | `powi` |
+| `KNP1-POW` | IdentSuffixed | `pow` |
+| `KNP1-POW` | Call | `pow` |
+| `KNP1-LIBM` | IdentFloat | `sqrt` |
+| `KNP1-LIBM` | IdentFloat | `cbrt` |
+| `KNP1-LIBM` | IdentFloat | `hypot` |
+| `KNP1-LIBM` | IdentFloat | `exp_m1` |
+| `KNP1-LIBM` | IdentFloat | `expm1` |
+| `KNP1-LIBM` | IdentFloat | `exp2` |
+| `KNP1-LIBM` | IdentFloat | `ln_1p` |
+| `KNP1-LIBM` | IdentFloat | `log1p` |
+| `KNP1-LIBM` | IdentFloat | `log2` |
+| `KNP1-LIBM` | IdentFloat | `log10` |
+| `KNP1-LIBM` | IdentFloat | `asin` |
+| `KNP1-LIBM` | IdentFloat | `acos` |
+| `KNP1-LIBM` | IdentFloat | `atan` |
+| `KNP1-LIBM` | IdentFloat | `atan2` |
+| `KNP1-LIBM` | IdentFloat | `sinh` |
+| `KNP1-LIBM` | IdentFloat | `cosh` |
+| `KNP1-LIBM` | IdentFloat | `tanh` |
+| `KNP1-LIBM` | IdentFloat | `asinh` |
+| `KNP1-LIBM` | IdentFloat | `acosh` |
+| `KNP1-LIBM` | IdentFloat | `atanh` |
+| `KNP1-LIBM` | IdentFloat | `sin_cos` |
+| `KNP1-LIBM` | IdentFloat | `ln_gamma` |
+| `KNP1-LIBM` | IdentFloat | `lgamma` |
+| `KNP1-LIBM` | IdentFloat | `tgamma` |
+| `KNP1-LIBM` | IdentFloat | `erf` |
+| `KNP1-LIBM` | IdentFloat | `erfc` |
+| `KNP1-LIBM` | IdentFloat | `sincos` |
+| `KNP1-LIBM` | IdentFloat | `lgamma_r` |
+| `KNP1-LIBM` | Ident | `lgammaf_r` |
+| `KNP1-LIBM` | Call | `sin` |
+| `KNP1-LIBM` | Call | `cos` |
+| `KNP1-LIBM` | Call | `tan` |
+| `KNP1-LIBM` | Call | `exp` |
+| `KNP1-LIBM` | Call | `ln` |
+| `KNP1-LIBM` | Call | `log` |
+| `KNP1-LIBM` | Call | `gamma` |
+| `KNP1-LIBM` | Call | `exp10` |
+| `KNP1-LIBM` | Call | `j0` |
+| `KNP1-LIBM` | Call | `j1` |
+| `KNP1-LIBM` | Call | `jn` |
+| `KNP1-LIBM` | Call | `y0` |
+| `KNP1-LIBM` | Call | `y1` |
+| `KNP1-LIBM` | Call | `yn` |
+| `KNP1-LIBM` | Method | `sin` |
+| `KNP1-LIBM` | Method | `cos` |
+| `KNP1-LIBM` | Method | `tan` |
+| `KNP1-LIBM` | Method | `exp` |
+| `KNP1-LIBM` | Method | `ln` |
+| `KNP1-LIBM` | Method | `log` |
+| `KNP1-LIBM` | Method | `gamma` |
+| `KNP1-LIBM` | Method | `exp10` |
+| `KNP1-LIBM` | Method | `j0` |
+| `KNP1-LIBM` | Method | `j1` |
+| `KNP1-LIBM` | Method | `jn` |
+| `KNP1-LIBM` | Method | `y0` |
+| `KNP1-LIBM` | Method | `y1` |
+| `KNP1-LIBM` | Method | `yn` |
+| `KNP1-LIBM` | IdentSuffixed | `sin` |
+| `KNP1-LIBM` | IdentSuffixed | `cos` |
+| `KNP1-LIBM` | IdentSuffixed | `tan` |
+| `KNP1-LIBM` | IdentSuffixed | `exp` |
+| `KNP1-LIBM` | IdentSuffixed | `ln` |
+| `KNP1-LIBM` | IdentSuffixed | `log` |
+| `KNP1-LIBM` | IdentSuffixed | `gamma` |
+| `KNP1-LIBM` | IdentSuffixed | `exp10` |
+| `KNP1-LIBM` | IdentSuffixed | `j0` |
+| `KNP1-LIBM` | IdentSuffixed | `j1` |
+| `KNP1-LIBM` | IdentSuffixed | `jn` |
+| `KNP1-LIBM` | IdentSuffixed | `y0` |
+| `KNP1-LIBM` | IdentSuffixed | `y1` |
+| `KNP1-LIBM` | IdentSuffixed | `yn` |
+| `KNP1-MINMAX` | FloatMethod | `min` |
+| `KNP1-MINMAX` | FloatMethod | `max` |
+| `KNP1-MINMAX` | FloatMethod | `clamp` |
+| `KNP1-MINMAX` | IdentFloat | `fmin` |
+| `KNP1-MINMAX` | IdentFloat | `fmax` |
+| `KNP1-MINMAX` | IdentFloat | `minnum` |
+| `KNP1-MINMAX` | IdentFloat | `maxnum` |
+| `KNP1-HASH` | IdentContains | `HashMap` |
+| `KNP1-HASH` | IdentContains | `HashSet` |
+| `KNP1-HASH` | Ident | `RandomState` |
+| `KNP1-HASH` | Ident | `DefaultHasher` |
+| `KNP1-SIMD` | IdentContains | `_feature_detected` |
+| `KNP1-SIMD` | Ident | `target_feature` |
+| `KNP1-SIMD` | Ident | `target_clones` |
+| `KNP1-SIMD` | Ident | `multiversion` |
+| `KNP1-SIMD` | Module | `std::arch` |
+| `KNP1-SIMD` | Module | `core::arch` |
+| `KNP1-UNSAFE` | Keyword | `unsafe` |
+| `KNP1-UNSAFE` | Keyword | `extern` |
+| `KNP1-UNSAFE` | Macro | `asm` |
+| `KNP1-UNSAFE` | Macro | `global_asm` |
+| `KNP1-UNSAFE` | Macro | `naked_asm` |
+| `KNP1-UNSAFE` | Macro | `llvm_asm` |
+| `KNP1-UNSAFE` | AttrName | `no_mangle` |
+| `KNP1-UNSAFE` | AttrName | `export_name` |
+| `KNP1-UNSAFE` | AttrName | `link_section` |
+| `KNP1-IO-FS` | Module | `std::fs` |
+| `KNP1-IO-FS` | IncludeMacro | `include` |
+| `KNP1-IO-FS` | IncludeMacro | `include_bytes` |
+| `KNP1-IO-FS` | IncludeMacro | `include_str` |
+| `KNP1-IO-FS` | Attr | `path` |
+| `KNP1-IO-NET` | Module | `std::net` |
+| `KNP1-CLOCK` | Module | `std::time` |
+| `KNP1-ENV` | Module | `std::env` |
+| `KNP1-ENV` | Module | `core::env` |
+| `KNP1-ENV` | Macro | `env` |
+| `KNP1-ENV` | Macro | `option_env` |
+| `KNP1-THREAD` | Module | `std::thread` |
+| `KNP1-THREAD` | Module | `std::process` |
+| `KNP1-THREAD` | Macro | `thread_local` |
+
+#### Accepted gaps
+
+- The proc-macro item-input channel is closed: a proc-macro crate in the closure, an attribute macro and a derive macro are all `KNP1-PARSE`, so identifiers a proc macro builds from strings or pieces cannot reach kernel code. Still not seen: code generated by `build.rs` into `OUT_DIR` (its `include!` is reported), and calls through a glob import of a non-`std` module (`use libm::*; sin(x)`). `KRN.NUM.LINT.TYPED` covers expanded workspace code; the allowlist governs third-party crates.
+- `.min`/`.max`/`.clamp` on float variables with no float marker in sight, and generic `T::max` over a float trait, are left to `KRN.NUM.LINT.TYPED`.
+- A `#[path]` inside an inline module is checked relative to the file's directory, not to the inline module's directory.
 
 ## Test fixtures
 

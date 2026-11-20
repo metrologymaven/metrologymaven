@@ -1,0 +1,12 @@
+KNP1-CLOCK seeded-knp1-clock 0.0.1 src/lib.rs:4:18 sha256:2b3f3275942361ad674e4bc2aabac2f29699ae381df60c0c84d764f0c323cb89
+KNP1-ENV seeded-knp1-env 0.0.1 src/lib.rs:4:10 sha256:9529916dba56e0e28fe4b40faa2cab3723d9187ead474d77a0b588b0b5395781
+KNP1-FMA seeded-knp1-fma 0.0.1 src/lib.rs:4:7 sha256:48f1a039c258c97be1f5bcb6be11f9173a6ca2d7afc440d7872a117436ead619
+KNP1-HASH seeded-knp1-hash 0.0.1 src/lib.rs:4:42 sha256:030071f921ae237d53b5d5c8431dae32707a06276e9cc0f8c7b36028093c599e
+KNP1-IO-FS seeded-knp1-io-fs 0.0.1 src/lib.rs:4:10 sha256:2db03c451bca12f67c242f5bcf4fc4fddd57f5748745bf55ea0445c2fd7031cc
+KNP1-IO-NET seeded-knp1-io-net 0.0.1 src/lib.rs:4:10 sha256:f91cb5f9a5a834286b33598eef324fe9c79714fd464f57e9393a5f416ad1fe21
+KNP1-LIBM seeded-knp1-libm 0.0.1 src/lib.rs:4:7 sha256:4bbbd3cb420413f417f550482e79cb3ef685e5e0431fa7ed78c42422213f9abb
+KNP1-MINMAX seeded-knp1-minmax 0.0.1 src/lib.rs:4:7 sha256:ca1b4189f9e1e793b439510d5f5082f78790ce295ca7e99a103f7580cfe49093
+KNP1-POW seeded-knp1-pow 0.0.1 src/lib.rs:4:7 sha256:9e464caa4d243f134c558b7b1b1aaafebcf765da29d6ff0f7526edd04a7e9587
+KNP1-SIMD seeded-knp1-simd 0.0.1 src/lib.rs:4:5 sha256:8f87accad0b915cd9953389e15000b337c1fe89bfd581ab00e18306049528809
+KNP1-THREAD seeded-knp1-thread 0.0.1 src/lib.rs:4:18 sha256:7d8c877deeb8aa7bdc226faebe39a6cb1bcd7e074af70a21363f147f3141aca0
+KNP1-UNSAFE seeded-knp1-unsafe 0.0.1 src/lib.rs:4:5 sha256:81500f620dbeb62d359a79b114f0218a6a516cceb60f252233f5b1bf2bbf4672

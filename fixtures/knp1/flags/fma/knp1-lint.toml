@@ -1,0 +1,3 @@
+[flags]
+profiles = ["release"]
+fma_features = ["+fma4"]

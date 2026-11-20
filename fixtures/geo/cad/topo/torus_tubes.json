@@ -1,0 +1,147 @@
+{
+ "description": "torus sector (R 0.05 m, r 0.01 m) between the tube circles at u = pi/6 and 5 pi/6, each winding once in v",
+ "license": "CC-BY-4.0",
+ "body_id": "70a570a570a570a570a570a570a570a5",
+ "vertices": [
+  {
+   "point": [
+    0.051961524227066326,
+    0.03,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    -0.051961524227066326,
+    0.03,
+    0.0
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.01,
+    "origin": [
+     0.04330127018922194,
+     0.024999999999999998,
+     0.0
+    ],
+    "axis": [
+     0.49999999999999994,
+     -0.8660254037844387,
+     0.0
+    ],
+    "ref_dir": [
+     0.8660254037844387,
+     0.49999999999999994,
+     0.0
+    ]
+   },
+   "label": "e-tube0"
+  },
+  {
+   "start": 1,
+   "end": 1,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.01,
+    "origin": [
+     -0.04330127018922194,
+     0.024999999999999998,
+     0.0
+    ],
+    "axis": [
+     0.49999999999999994,
+     0.8660254037844387,
+     0.0
+    ],
+    "ref_dir": [
+     -0.8660254037844387,
+     0.49999999999999994,
+     0.0
+    ]
+   },
+   "label": "e-tube1"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-tube0"
+  },
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-tube1"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0
+   ],
+   "outer": false,
+   "label": "l-tube0"
+  },
+  {
+   "coedges": [
+    1
+   ],
+   "outer": false,
+   "label": "l-tube1"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "torus",
+    "major_radius": 0.05,
+    "minor_radius": 0.01,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0,
+    1
+   ],
+   "label": "f-torus"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": false
+  }
+ ]
+}

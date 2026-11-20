@@ -1,17 +1,33 @@
 [package]
 name = "fid-journal"
-description = "Metrology Maven semantic journal: entry model and salted commitments (spec node CORE.JRN.ENTRY)"
+description = "Metrology Maven semantic journal: entry model and salted commitments, atomic durable append, branch heads and checkpoints (spec nodes CORE.JRN.ENTRY, CORE.JRN.CHAIN.APPEND, CORE.JRN.CHAIN.CKPT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+# CORE.JRN.CHAIN.APPEND: the `append` module, which writes through fid-store (SQLite and the
+# blob store). Off by default so the entry model stays free of storage for its pure users
+# (fid-replay and friends, which are also built for wasm32-wasip1).
+store = ["dep:fid-store"]
+# Test seam `Journal::set_fault_hook` (crash and fault injection, AC-2). Off by default;
+# enabled only through the dev-dependency below, never in shipped builds.
+test-hooks = ["store"]
+
 [dependencies]
 fid-canon = { path = "../fid-canon" }
 fid-kci = { path = "../fid-kci" }
 fid-types = { path = "../fid-types" }
 getrandom = "0.2"
+# Project database and blob store (CORE.STO.SQL, CORE.STO.CAS), same layer (model). fid-store
+# is the only storage writer (storage-writers.toml); this crate reaches SQLite only through it.
+fid-store = { path = "../fid-store", optional = true }
+
+[dev-dependencies]
+# Integration tests use the append module and its fault hook.
+fid-journal = { path = ".", features = ["store", "test-hooks"] }
 
 [lints]
 workspace = true

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.org/schema/profile-tenant-v1.schema.json",
+  "title": "Governance profile tenant parameter file, version 1 (TRUST.PROFILE.DEFS)",
+  "description": "The only parameters a site may set on a built-in profile. tenant_meanings is allowed for every profile; required_meanings only for regulated, where it must include APPROVED and name only built-in codes or codes defined in tenant_meanings. Any other key fails instantiation with profile.param_forbidden; fid-profile enforces the profile-dependent and cross-field rules.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "required_meanings": {
+      "$ref": "profile-v1.schema.json#/$defs/requiredMeanings",
+      "minItems": 1
+    },
+    "tenant_meanings": { "$ref": "profile-v1.schema.json#/$defs/tenantMeanings" }
+  }
+}

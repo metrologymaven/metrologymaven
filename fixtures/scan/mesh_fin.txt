@@ -1,0 +1,12 @@
+# SCAN.POLY.QUAL fixture mesh_fin: three triangles on the edge 0-1 (AC-3).
+# CC-BY-4.0. Written by make_mesh_quality.py. Vertices `v x y z` (metres) and
+# triangles `t a b c`, in index order.
+frame 5c0a11ab1e5c0a11ab1e5c0a11ab1e00
+v 0 0 0
+v 1 0 0
+v 0 1 0
+v 0 -1 0
+v 0 0 1
+t 0 1 2
+t 1 0 3
+t 0 1 4

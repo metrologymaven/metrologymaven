@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "probe.measure_point parameters",
+  "type": "object",
+  "required": [
+    "target",
+    "approach",
+    "features",
+    "label"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "target": {
+      "type": "string",
+      "x-ref": "feature",
+      "x-selector": "single",
+      "x-ui": {
+        "widget": "entity-picker",
+        "order": 1
+      }
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "x-ref": "element"
+      },
+      "x-selector": "list",
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "approach": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm",
+      "exclusiveMinimum": 0,
+      "x-standards-ref": "ISO-10360-2:2009 cl. 6.2"
+    },
+    "tilt": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg",
+      "default": 0
+    },
+    "label": {
+      "type": "string",
+      "maxLength": 128,
+      "x-untrusted": true
+    },
+    "note": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-untrusted": false
+    },
+    "probe_file": {
+      "type": "string",
+      "path_like": true,
+      "x-extensions": [
+        "step",
+        "stl"
+      ]
+    }
+  }
+}

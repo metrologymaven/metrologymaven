@@ -1,0 +1,89 @@
+{
+  "$comment": "local references, conditionals and the other applicators",
+  "type": "object",
+  "$defs": {
+    "distance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "um",
+      "minimum": 0
+    },
+    "pair": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/distance"
+        },
+        {
+          "$ref": "#/$defs/distance"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "offset": {
+      "$ref": "#/$defs/distance"
+    },
+    "span": {
+      "$ref": "#/$defs/pair"
+    },
+    "mode": {
+      "enum": [
+        "fast",
+        "fine"
+      ],
+      "examples": [
+        "fine"
+      ]
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "frame": {
+      "type": "string",
+      "x-ref": "frame",
+      "x-ui": {
+        "group": "advanced"
+      }
+    }
+  },
+  "patternProperties": {
+    "^tag_[a-z]+$": {
+      "type": "string",
+      "maxLength": 32
+    }
+  },
+  "dependentRequired": {
+    "span": [
+      "offset"
+    ]
+  },
+  "if": {
+    "properties": {
+      "mode": {
+        "const": "fine"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "offset"
+    ]
+  },
+  "else": true,
+  "anyOf": [
+    {
+      "required": [
+        "offset"
+      ]
+    },
+    {
+      "required": [
+        "span"
+      ]
+    }
+  ],
+  "unevaluatedProperties": false
+}

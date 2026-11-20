@@ -13,7 +13,7 @@ built_in: [fid-hal-idl]
 built_pr: 162
 satisfies: [REQ-HAL.IDL.BASE-007]
 covers: []
-depends_on: [HAL.IDL.UNITS, CORE.JRN.CANON]
+depends_on: [HAL.IDL.UNITS, CORE.JRN.CANON, HAL.IDL.BASE.ERR]
 side_effect: R1
 determinism: D0
 cli: []

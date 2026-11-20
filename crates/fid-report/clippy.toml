@@ -1,0 +1,52 @@
+# RPT float rule (spec node RPT.MODEL.FMT, REQ-RPT.MODEL.FMT-002): in the fid-report* crates
+# a float may exist only in module `fid_report::fmt` (which turns values into text through
+# the kernel formatters) and in the listed boundary module `fid_report::json_num`; both
+# carry `#![allow(clippy::disallowed_types)]`. Anywhere else, naming f32 or f64 (a
+# parameter, field, alias, cast or path) fails CI's `cargo clippy -- -D warnings`.
+# tools/rpt_float_lint.py checks that no other module allows this lint, and that this file
+# is present in every fid-report* crate; its --clippy-selftest proves the rule fires.
+disallowed-types = [
+    { path = "f32", reason = "RPT float rule: floats only in fid_report::fmt (RPT.MODEL.FMT REQ-002)" },
+    { path = "f64", reason = "RPT float rule: floats only in fid_report::fmt (RPT.MODEL.FMT REQ-002)" },
+]
+
+# Every public function or inherent method of this crate's direct path dependencies that
+# returns f32/f64 (or an Option/Result of one): calling it would bring a float in by type
+# inference, with no float type named. `tools/rpt_float_lint.py` (RPT-CONFIG) fails when a
+# dependency gains such a function that is not listed here.
+disallowed-methods = [
+    { path = "fid_gdt::chars::record::Quantity::value", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_kdec::rule::ParamDecimal::to_f64", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_kunc::UncertaintyStatement::u_std", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_kunc::dist::Distribution::expectation", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_kunc::dist::Distribution::sample_at", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_kunc::dist::Distribution::std_uncertainty", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_kunc::dist::open_unit", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_kunc::dist::ppnd16", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::err::check_finite", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::FnId::eval", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::acos", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::asin", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::atan", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::atan2", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::cbrt", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::cos", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::exp", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::hypot", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::ln", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::sin", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::sqrt", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::tan", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::total_clamp", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::total_max", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::f::total_min", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::kdec::Decimal::to_f64", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::la::Mat::get", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::la::cond_triangular", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::red::dot", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::red::mean", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::red::norm2", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::red::sum", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::red::sum_sq", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_num::rng::Cursor::uniform_f64", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+]

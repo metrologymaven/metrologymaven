@@ -1,0 +1,7 @@
+# KRN.NUM.LINT.DATA canary fixture (stand-in for UNC.RDL.LINT's canary).
+[graph]
+workspace = "."
+roots = ["knp1-data-canary"]
+
+[data]
+denylist = "../denylist.json"

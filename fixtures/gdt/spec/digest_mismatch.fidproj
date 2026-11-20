@@ -1,0 +1,51 @@
+{
+ "schema": "fid.gdt-spec-project/2",
+ "profile_store": {
+  "schema": "fid.dprof-store/2",
+  "profiles": [
+   {
+    "ref": "dp:asme-y14.5-2018@1.0.0#sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+    "branch": "working",
+    "author": "human",
+    "adopted": false,
+    "vocabulary": "sha256:08416574ee6e01cf39c2a130936ba998ea0d16522765c72fad088703657daa0f",
+    "profile": {
+     "version": "1.0.0",
+     "schema": "fid.defaults-profile/1",
+     "keys": {
+      "placeholder.variant.flatness": "variant-a",
+      "dmt:asme/position/none@1": "variant-b",
+      "placeholder.assoc.default": "assoc-x",
+      "placeholder.synthetic": true,
+      "placeholder.count": 7,
+      "placeholder.list": [
+       "b",
+       "a"
+      ]
+     },
+     "dialect": "asme",
+     "edition": "y14.5-2018"
+    }
+   }
+  ],
+  "bindings": {
+   "working": {},
+   "agent": {}
+  }
+ },
+ "tenant_default": null,
+ "plan_defaults": {},
+ "characteristics": {
+  "working": {
+   "c-flat-1": {
+    "dialect": "ASME",
+    "standards": [
+     "std:asme:y14.5:2018"
+    ],
+    "defaults_profile": "dp:asme-y14.5-2018@1.0.0#sha256:57515224277e4723b8c6501d77c43ddceed35858166a79dca368162df1c80465",
+    "inherited_from": "explicit"
+   }
+  },
+  "agent": {}
+ }
+}

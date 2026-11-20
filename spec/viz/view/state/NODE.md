@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-view]
+built_pr: 264
 satisfies: [REQ-VIZ.VIEW-001, REQ-VIZ.VIEW-002]
 covers: []
 depends_on: [CORE.JRN]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # VIZ.VIEW.STATE: ViewState model and canonical form
@@ -43,7 +45,7 @@ The single serialisable description of what a viewport shows: f64 camera pose an
 ## Acceptance criteria
 
 - **AC-1** Given fixture `fixtures/viz/viewstate-samples` (20 hand-written ViewStates), when each is parsed and re-serialised, then the output bytes equal the input bytes.
-- **AC-2** (property) Given 10 000 generated ViewStates (seed 3) with random f64 values including subnormals and ±0, when serialised and parsed, then every f64 has the identical bit pattern.
+- **AC-2** (property) Given 10 000 generated ViewStates (seed 3) with random f64 values including subnormals and ±0, when serialised and parsed, then every f64 has the identical bit pattern, except −0.0, which reads back as +0.0 (see Design).
 - **AC-3** Given two ViewStates built with the same clip planes inserted in different orders, then their canonical bytes and digests are identical.
 - **AC-4** (error path) Given a ViewState with a NaN camera coordinate, when parsed, then it fails with `NonFiniteNumber`; given 65 clip planes, it fails with `LimitExceeded`.
 - **AC-5** Given a ViewState of schema version 1, then its digest matches the stored golden digest in the fixture.
@@ -51,16 +53,22 @@ The single serialisable description of what a viewport shows: f64 camera pose an
 ## Design
 
 - **Registry command(s):** none (data model).
-- **Data structures:** `ViewState { schema: u16, camera: Camera { eye_m, target_m, up: [f64; 3], projection: Perspective { fov_y_rad } | Ortho { height_m } }, clips: Vec<ClipPlane>, visibility: Vec<VisibilityRule>, transparency: Vec<TransparencyEntry>, colormap: Option<Digest>, legend: Option<LegendLayoutRef>, labels: Option<EntityId> }`.
-- **Algorithm:** canonical JSON per RFC 8785 using the canonicaliser that CORE.JRN uses for journal entries; sort collections by stable keys (entity ID, then plane ID); shortest round-trip f64 formatting (RFC 8785 number rules); SHA-256 digest.
-- **Errors:** `Malformed`, `NonFiniteNumber`, `LimitExceeded`, `UnsupportedSchema`.
+- **Data structures:** `ViewState { schema: u16, camera: Camera { eye_m, target_m, up: [f64; 3], projection: Perspective { fov_y_rad } | Ortho { height_m }, near_m, far_m }, viewport: Viewport { width_px, height_px }, clips: Vec<ClipPlane { id: u32, normal, offset_m }>, visibility: Vec<VisibilityRule { entity, visible }>, transparency: Vec<TransparencyEntry { entity, alpha }>, colormap: Option<Digest>, legend: Option<LegendLayoutRef>, labels: Option<EntityId> }`. `EntityId` is the workspace UUID; `Digest` and `LegendLayoutRef` (the legend layout's canonical digest) are `sha256:` digests. `near_m`/`far_m` and `viewport` complete the camera and the "viewport layout" of the Purpose; multi-viewport layouts stay in MULTI.
+- **Canonical form (schema 1):** one JSON object with exactly the keys `camera, clips, colormap, labels, legend, schema, transparency, viewport, visibility`; camera keys `eye_m, far_m, near_m, projection, target_m, up`; projection `{fov_y_rad, kind:"perspective"}` or `{height_m, kind:"ortho"}`; clip `{id, normal, offset_m}`; visibility `{entity, visible}`; transparency `{alpha, entity}`; viewport `{height_px, width_px}`. Every key is always present (absent references are `null`); unknown keys are `Malformed`. UUIDs are written lower case.
+- **Float formatting (pinned):** every f64 is a plain JSON number in RFC 8785 §3.2.2.3 form (ECMAScript `Number::toString` of the shortest round-trip digits, exact ties to even), written by the CORE.JRN canonicaliser `fid_canon::format_number`, so parsing returns the identical bit pattern, subnormals included. Not the `0x` bit-string form of `F64Bits`: view state is meant to be readable and the shortest form already round-trips.
+- **Negative zero (pinned):** `-0.0` is written `0` and parses as `+0.0`. The two zeros give the same view, so they give the same bytes and digest; `-0.0` is the only value whose bits do not survive a round trip. Lenient input `-0` is accepted and normalised.
+- **Integers:** `schema`, clip `id` and viewport sizes are JSON numbers with no fraction (`1.0` and `1e0` are accepted by the lenient parser and written `1`).
+- **Validation (fails closed, first fault, field path named):** non-finite numbers `NonFiniteNumber`; camera `DegenerateCamera` for zero up vector, eye equal to target (or a view direction that overflows), up parallel to the view direction (sine of the angle at most 1e-12, computed on vectors scaled by their largest component), `fov_y_rad` outside (0, π), perspective `near_m <= 0`, ortho `height_m <= 0`, `near_m >= far_m`; clip normals `DegenerateNormal` (zero) or `NonUnitNormal` (`|n·n − 1| > 1e-12`); `alpha` outside [0, 1] and viewport sizes outside 1..=32768 `OutOfRange`; repeated clip ID or entity `DuplicateKey`; references not held by the document `UnknownReference` (`check_references` against a caller-supplied `References`; `unknown_references` lists all of them for NAMED's restore report).
+- **Algorithm:** canonical JSON per RFC 8785 using the canonicaliser that CORE.JRN uses for journal entries (`fid-canon`); sort collections by stable keys (clip planes by plane ID, visibility and transparency by entity ID); SHA-256 digest of the canonical bytes. `parse` accepts any JSON spelling and returns the state with collections sorted; `parse_canonical` additionally requires the input to be the canonical bytes (`NotCanonical`).
+- **Limits:** at most 64 clip planes and 100 000 entries in each of `visibility` and `transparency` (`LimitExceeded`, checked before entries are decoded); input at most 24 MiB; JSON nesting at most 4; a lexical pre-scan bounds the number of separators (and so of values) before any tree is built and names the field of a `NaN`, `Infinity` or overflowing literal.
+- **Errors:** `Malformed`, `NonFiniteNumber`, `LimitExceeded`, `UnsupportedSchema`, `DegenerateCamera`, `DegenerateNormal`, `NonUnitNormal`, `OutOfRange`, `DuplicateKey`, `UnknownReference`, `NotCanonical`, each with a stable code and a field path (`camera.eye_m[1]`, `clips[3].normal`, `$` for the whole document).
 - **Determinism:** D0.
 - **Performance budget:** serialise or parse a 10 000-entry ViewState under 10 ms [unverified].
 - **Crate:** `fid-view` (module `state`).
 
 ## Test fixtures
 
-`fixtures/viz/viewstate-samples`: hand-written JSON in-repo; generated cases from seed 3.
+`fixtures/viz/viewstate-samples`: 20 hand-written ViewStates with golden digests, 200 generated cases from seed 3, lenient (non-canonical) inputs with their canonical forms, and invalid inputs with hand-labelled error codes and fields. All are written by `make_fixtures.py`, an independent stdlib-Python RFC 8785 writer (`--check` runs in CI); the 10 000-state property test (AC-2) generates its own states from seed 3 in Rust.
 
 ## Build prompt
 

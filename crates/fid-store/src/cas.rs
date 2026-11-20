@@ -100,6 +100,17 @@ pub struct PutOpts {
     pub durable: bool,
 }
 
+/// What [`BlobStore::check_stored`] found under a digest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Stored {
+    /// Nothing is stored under this digest (the blob itself, or a chunk its manifest lists).
+    Missing(Digest),
+    /// This blob or chunk does not hash to its address (or has the wrong length).
+    Corrupt(Digest),
+    /// Sound; these blobs (the blob, then its chunks) are to be flushed.
+    Sound(Vec<Digest>),
+}
+
 /// Typed errors with stable codes.
 #[derive(Debug)]
 pub enum CasError {
@@ -250,6 +261,23 @@ impl ChunkManifest {
         let start = (i as u64).saturating_mul(self.chunk_size);
         self.size.saturating_sub(start).min(self.chunk_size)
     }
+}
+
+/// The address [`BlobStore::put`] gives `bytes`, computed without writing anything: one blob
+/// up to [`CHUNK_SIZE`] bytes, else the digest of the chunk manifest.
+pub fn address_of(bytes: &[u8]) -> Result<Address, CasError> {
+    let size = bytes.len() as u64;
+    if size <= CHUNK_SIZE {
+        return Ok(Address::Blob(BlobRef { digest: Digest::from_bytes(Sha256::digest(bytes).into()), size }));
+    }
+    let chunks: Vec<Digest> =
+        bytes.chunks(CHUNK_SIZE as usize).map(|c| Digest::from_bytes(Sha256::digest(c).into())).collect();
+    if chunks.len() > MAX_OBJECT_CHUNKS {
+        return Err(invalid(format!("object needs more than {MAX_OBJECT_CHUNKS} chunks")));
+    }
+    let manifest = ChunkManifest { size, chunk_size: CHUNK_SIZE, chunks };
+    let m = manifest.to_canonical_bytes()?;
+    Ok(Address::Object(ObjectRef { manifest_digest: Digest::from_bytes(Sha256::digest(&m).into()), size }))
 }
 
 fn decimal_field(obj: &BTreeMap<String, CValue>, key: &str) -> Result<u64, CasError> {
@@ -439,6 +467,63 @@ impl BlobStore {
             Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
             Err(e) => Err(e.into()),
         }
+    }
+
+    /// Checks a blob that is already stored before a commit references it
+    /// (`CORE.STO.SQL.TXN`): the file under `digest` must hash to it, and if it is a chunk
+    /// manifest, every chunk must be stored with the listed length and hash to its digest.
+    /// Reads in small pieces (no whole-blob buffer) and writes nothing. On success returns the
+    /// digests to flush with [`BlobStore::flush_stored`]: the blob, then its chunks.
+    pub(crate) fn check_stored(&self, digest: &Digest) -> Result<Stored, CasError> {
+        let len = match fs::symlink_metadata(self.path_of(digest)) {
+            Ok(m) if m.is_file() => m.len(),
+            Ok(_) => return Err(not_regular()),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Stored::Missing(*digest)),
+            Err(e) => return Err(e.into()),
+        };
+        // No blob this store writes is longer than a manifest; a longer file is not the
+        // content of its address and is not hashed.
+        if len > MAX_BLOB_READ || !self.existing_matches(digest, len, true)? {
+            return Ok(Stored::Corrupt(*digest));
+        }
+        let mut flush = vec![*digest];
+        if len > MAX_OBJECT_MANIFEST_BYTES {
+            return Ok(Stored::Sound(flush));
+        }
+        let mut head = [0u8; 14];
+        let n = fill(&mut self.open_blob(digest)?, &mut head)?;
+        if head.get(..n) != Some(b"{\"chunk_size\":".as_slice()) {
+            return Ok(Stored::Sound(flush));
+        }
+        let bytes = self.read_blob(digest, MAX_OBJECT_MANIFEST_BYTES)?;
+        let Ok(manifest) = ChunkManifest::parse_with_limits(&bytes, MAX_OBJECT_MANIFEST_BYTES, MAX_OBJECT_CHUNKS)
+        else {
+            // A plain blob that merely starts like a manifest.
+            return Ok(Stored::Sound(flush));
+        };
+        for (i, chunk) in manifest.chunks.iter().enumerate() {
+            if !self.has_blob(chunk)? {
+                return Ok(Stored::Missing(*chunk));
+            }
+            if !self.existing_matches(chunk, manifest.chunk_len(i), true)? {
+                return Ok(Stored::Corrupt(*chunk));
+            }
+            flush.push(*chunk);
+        }
+        Ok(Stored::Sound(flush))
+    }
+
+    /// `sync_all` on a stored blob file and on its two fan-out directories and `sha256/`.
+    pub(crate) fn flush_stored(&self, digest: &Digest) -> Result<(), CasError> {
+        let target = self.path_of(digest);
+        // Write access: `FlushFileBuffers` refuses a read-only handle on Windows.
+        OpenOptions::new().write(true).open(&target)?.sync_all()?;
+        let hex = digest.hex();
+        let d1 = self.root.join(SHA256_DIR).join(&hex[0..2]);
+        sync_dir(&d1.join(&hex[2..4]))?;
+        sync_dir(&d1)?;
+        sync_dir(&self.root.join(SHA256_DIR))?;
+        Ok(())
     }
 
     /// The whole content, verified. For an object this holds the whole object in memory;
@@ -647,14 +732,12 @@ impl BlobStore {
         // its content too when durable; anything else is rewritten below by temp file + rename.
         if self.existing_matches(&digest, bytes.len() as u64, opts.durable)? {
             if opts.durable {
-                // Write access: `FlushFileBuffers` refuses a read-only handle on Windows.
-                OpenOptions::new().write(true).open(&target)?.sync_all()?;
-                sync_dir(&d2)?;
+                self.flush_stored(&digest)?;
             }
             return Ok(blob);
         }
-        let created1 = make_dir(&d1)?;
-        let created2 = make_dir(&d2)?;
+        make_dir(&d1)?;
+        make_dir(&d2)?;
         let tmp = self.root.join(TMP_DIR).join(temp_name());
         if let Err(e) = write_temp(&tmp, bytes, opts.durable) {
             let _ = fs::remove_file(&tmp);
@@ -667,14 +750,12 @@ impl BlobStore {
                 return Err(e.into());
             }
         }
+        // Every level, every time: a directory an earlier non-durable put created may not be
+        // on stable storage yet.
         if opts.durable {
             sync_dir(&d2)?;
-            if created2 {
-                sync_dir(&d1)?;
-            }
-            if created1 {
-                sync_dir(&self.root.join(SHA256_DIR))?;
-            }
+            sync_dir(&d1)?;
+            sync_dir(&self.root.join(SHA256_DIR))?;
         }
         Ok(blob)
     }

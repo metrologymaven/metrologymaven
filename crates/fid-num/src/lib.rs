@@ -7,6 +7,7 @@ pub mod err;
 pub mod f;
 pub mod fmt;
 pub mod kdec;
+pub mod la;
 pub mod red;
 pub mod rng;
 

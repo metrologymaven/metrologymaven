@@ -1,6 +1,6 @@
 [package]
 name = "fid-surface"
-description = "Metrology Maven shared result envelope and error codes for CLI and MCP (spec node AUTO.SURF.ENV)"
+description = "Metrology Maven shared result envelope and error codes for CLI and MCP, and the surface projection model, and the invocation tracker (spec nodes AUTO.SURF.ENV, AUTO.SURF.PROJ, AUTO.SURF.JOBS)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,6 +10,8 @@ repository.workspace = true
 [dependencies]
 fid-canon = { path = "../fid-canon" }
 fid-types = { path = "../fid-types" }
+# UUID value type for idempotency keys and job IDs (AUTO.SURF.JOBS). Layer model; only sha1.
+fid-uuid = { path = "../fid-uuid" }
 
 [lints]
 workspace = true

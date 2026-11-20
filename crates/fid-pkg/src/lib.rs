@@ -15,13 +15,22 @@
 //! the compression method chosen from the media type alone.
 //!
 //! Errors are one enum, [`PkgError`], with stable codes `pkg.*`.
+//!
+//! Reading a package from untrusted bytes goes through [`reader`] (spec node
+//! `TRUST.PKG.READER`): the bounded, fail-closed [`reader::PackageReader`], its error type
+//! [`reader::ReadError`] and the read-only command `verify.inspect_package@1`.
 
+mod casefold;
+mod casefold_table;
 pub mod container;
 mod error;
 pub mod manifest;
 mod path;
+pub mod reader;
 mod version;
 
+/// Unicode version of the pinned case-folding table used for path collisions.
+pub use casefold::UNICODE_VERSION as CASEFOLD_UNICODE_VERSION;
 pub use container::{
     build_package, build_package_with, crc32, method_for_media_type, BuiltPackage, MemberInput, Method, PackageInput,
     Zip64, STORED_MEDIA_TYPES,

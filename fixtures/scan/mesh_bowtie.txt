@@ -1,0 +1,15 @@
+# SCAN.POLY.QUAL fixture mesh_bowtie: two two-triangle fans sharing only vertex 0 (AC-3).
+# CC-BY-4.0. Written by make_mesh_quality.py. Vertices `v x y z` (metres) and
+# triangles `t a b c`, in index order.
+frame 5c0a11ab1e5c0a11ab1e5c0a11ab1e00
+v 0 0 0
+v 1 0 0
+v 1 1 0
+v 0 1 0
+v -1 0 0
+v -1 -1 0
+v 0 -1 0
+t 0 1 2
+t 0 2 3
+t 0 4 5
+t 0 5 6

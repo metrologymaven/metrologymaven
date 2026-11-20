@@ -1,0 +1,10 @@
+{
+  "tenant_meanings": [
+    {
+      "code": "X_QA",
+      "label": "QA",
+      "description": "QA.",
+      "colour": "red"
+    }
+  ]
+}

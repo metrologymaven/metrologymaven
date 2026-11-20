@@ -1,0 +1,1 @@
+{"additionalProperties":false,"properties":{"prefix":{"description":"Only keys starting with this text.","maxLength":128,"type":"string"},"scope":{"description":"Only keys that allow this scope.","enum":["project","user","machine"],"type":"string"}},"type":"object"}

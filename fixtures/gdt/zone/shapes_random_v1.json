@@ -1,0 +1,103 @@
+{
+ "chunk": 1000,
+ "count": 1000000,
+ "first_deviations": [
+  "0x3fd5e741ff61bd00",
+  "0xbfec018dee13a348"
+ ],
+ "first_points": [
+  [
+   "0xbfc0a912c611e3d8",
+   "0x3fd4637bf5f3cf44",
+   "0x3fc535d39c96b988"
+  ],
+  [
+   "0xbfe21d1dbfb849d0",
+   "0x3fd3a6ca3c6255ac",
+   "0xbfe82a28c4b4ad8a"
+  ]
+ ],
+ "generator": "fixtures/gdt/zone/make_shapes_fixtures.py",
+ "leaf": "GDT.ZONE.ZTYPE",
+ "licence": "CC0-1.0",
+ "pose": {
+  "direction": [
+   "0x3fd2492492492492",
+   "0x3fdb6db6db6db6db",
+   "0x3feb6db6db6db6db"
+  ],
+  "origin": [
+   "0x3fb999999999999a",
+   "0xbfc999999999999a",
+   "0x3fd3333333333333"
+  ]
+ },
+ "seed": "0x5eed",
+ "shapes": [
+  {
+   "chunk_sha256": "406f713dade3559d5165d002ec91188513bd50f143f4aa187cf83636cf92b64f",
+   "index": 48893,
+   "shape": {
+    "kind": "two_planes"
+   },
+   "size": "0x400c26f1875d2926",
+   "size_dec": "3.5190153670602227"
+  },
+  {
+   "chunk_sha256": "406f713dade3559d5165d002ec91188513bd50f143f4aa187cf83636cf92b64f",
+   "index": 48893,
+   "shape": {
+    "kind": "two_lines",
+    "plane": [
+     "0x3feb6db6db6db6db",
+     "0x3fd2492492492492",
+     "0xbfdb6db6db6db6db"
+    ]
+   },
+   "size": "0x400c26f1875d2926",
+   "size_dec": "3.5190153670602227"
+  },
+  {
+   "chunk_sha256": "97a89a508f0ad38add6579daf9dee1c683dcd26f7db943709b4414735e7f79e0",
+   "index": 644868,
+   "shape": {
+    "kind": "cylinder"
+   },
+   "size": "0x400f1206d3c01e16",
+   "size_dec": "3.8838020842556586"
+  },
+  {
+   "chunk_sha256": "b70e5921e4443943f6c50545c8d04a0f4d104f0de1b5586c4462a1ea4b3586ff",
+   "index": 803963,
+   "shape": {
+    "kind": "circle",
+    "plane": [
+     "0x3feb6db6db6db6db",
+     "0x3fd2492492492492",
+     "0xbfdb6db6db6db6db"
+    ]
+   },
+   "size": "0x401079839f9aa30d",
+   "size_dec": "4.11866616612748"
+  },
+  {
+   "chunk_sha256": "401f57db0a45b842e5c3c0fd4399c5c17c6acb750fd4ad883762070576371131",
+   "index": 803963,
+   "shape": {
+    "kind": "sphere"
+   },
+   "size": "0x40107a60d025f0f2",
+   "size_dec": "4.119509937587496"
+  },
+  {
+   "chunk_sha256": "185c8b4256a583e3bc8b615a62566452552e3026bb0579b749c59a3b55bbdb55",
+   "index": 216625,
+   "shape": {
+    "disposition_shift": "0x3fb999999999999a",
+    "kind": "offset"
+   },
+   "size": "0x40019995be73566f",
+   "size_dec": "2.1999926451633693"
+  }
+ ]
+}

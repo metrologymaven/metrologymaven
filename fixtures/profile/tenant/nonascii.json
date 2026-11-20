@@ -1,0 +1,9 @@
+{
+  "tenant_meanings": [
+    {
+      "code": "X_QS_FREIGABE",
+      "label": "Qualitätsfreigabe ✓",
+      "description": "Die Qualitätssicherung hat den Datensatz freigegeben (品質, Ångström, 𝛀)."
+    }
+  ]
+}

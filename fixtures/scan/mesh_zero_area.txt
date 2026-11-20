@@ -1,0 +1,16 @@
+# SCAN.POLY.QUAL fixture mesh_zero_area: mesh_tetra plus one zero-area triangle (AC-4).
+# CC-BY-4.0. Written by make_mesh_quality.py. Vertices `v x y z` (metres) and
+# triangles `t a b c`, in index order.
+frame 5c0a11ab1e5c0a11ab1e5c0a11ab1e00
+v 1 1 1
+v 1 -1 -1
+v -1 1 -1
+v -1 -1 1
+v 5 0 0
+v 6 0 0
+v 7 0 0
+t 0 1 2
+t 0 3 1
+t 0 2 3
+t 1 3 2
+t 4 5 6

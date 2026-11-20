@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-knp1-lint]
+built_pr: 182
 satisfies: [REQ-KRN.NUM.LINT-003, REQ-KRN.NUM.LINT-007]
 covers: []
 depends_on: [KRN.NUM.LINT.FIND]
@@ -66,6 +68,37 @@ Source can be clean while the build still changes results: `target-cpu=native` o
 - **Performance budget:** < 2 s including a 10 MB wasm module [unverified until measured].
 - **Crate:** `fid-knp1-lint` (tooling layer).
 
+### Review decisions (PR #182, 2026-11-19)
+
+- **CI files and scripts are gated by a fail-closed substring scan.** Shell and YAML grammar have too many ways to build a flag string for a parser to converge. So every line of a `ci_env_files` entry is lowercased, `_` is mapped to `-`, and whitespace runs are collapsed. The line is then a finding if it contains any of:
+  - `target-cpu`, `target-feature`, `codegen-units`, `llvm-args`, `fp-contract` or `-ctarget`;
+  - `rustflags`, `rustdocflags` or `cargo-encoded-rustflags`;
+  - `rustup run`, `rustup override`, `rustup default` or `rustup-toolchain`;
+  - a `+` toolchain selector (`cargo +`, `rustc +`, `cargo.exe +`, `rustc.exe +`);
+  - a `--config` whose value names a `profile`, `build` or `target` key, a file, a variable, or nothing.
+
+  The structured parser only refines the rule and column. A line it does not explain is reported as `KNP1-FLAG-KEYWORD`.
+- **Opt-out marker.** A line opts out only with a same-line marker `knp1-flags: allow <RULE> <reason>`. The marker suppresses that one rule on that one line and is reported as an informational `KNP1-FLAG-OPTOUT` note, which does not fail the lint.
+- **`.cargo/config(.toml)` gates.** The free-form `[alias]`, `[env]` and `[target.*]` values (everything but the rustflags keys, which are parsed) go through the same substring scan. Having both `.cargo/config` and `.cargo/config.toml` is `KNP1-FLAG-AMBIGUOUS`.
+- **Compiler wrappers (re-review of PR #235).** A `.cargo/config(.toml)` that sets `build.rustc-wrapper`, `build.rustc-workspace-wrapper` or `build.rustc` (either spelling) wraps or replaces the pinned compiler, which would also drop the type-aware check: `KNP1-FLAG-WRAPPER` at the key, never waivable and not covered by an opt-out marker.
+- **CPU and wasm rules.** Any `target-cpu` that is not `native` and not in `allowed_target_cpus` is reported: `KNP1-FLAG-FMA` when the CPU is on the built-in FMA list below, otherwise `KNP1-FLAG-CPU`. Listing a built-in FMA CPU in `allowed_target_cpus` is a config error unless `[flags.fma_cpu_overrides] <cpu> = "<reason>"` gives a reason. `KNP1-FLAG-WASM*` findings cannot be waived.
+
+### Built-in FMA-implying lists and their sources
+
+All entries are [unverified] against a specific LLVM release; re-check them when the pinned toolchain moves.
+
+- **Target features** (`+feature`):
+  - `fma` (x86 FMA3) and `fma4` (AMD FMA4): LLVM `X86.td` features of those names.
+  - Every `avx512*` and `avx10*` feature: in LLVM `X86.td` they imply `avx512f`, which implies `fma`.
+  - `relaxed-simd`: WebAssembly relaxed-SIMD proposal, which has the `relaxed_madd`/`relaxed_nmadd` instructions.
+  - `avx2` is not listed, because LLVM's `avx2` does not imply `fma`.
+  - AArch64 has no FMA feature to gate. `FMLA`/`FMADD` are baseline FP/AdvSIMD instructions (Arm ARM), so there FMA is excluded only by rustc not contracting floating-point operations, together with the source checks (`KRN.NUM.LINT.SYN`, `KRN.NUM.LINT.TYPED`).
+- **CPUs** (`-C target-cpu=`):
+  - x86 microarchitecture levels `x86-64-v3` and `x86-64-v4` (System V x86-64 psABI micro-architecture levels: v3 includes FMA).
+  - Intel `core-avx2`, `haswell` and every later Core/Xeon/Atom-E-core name in LLVM `X86.td`, plus Xeon Phi `knl` and `knm`. The full list is `BUILTIN_FMA_CPUS` in `crates/fid-knp1-lint/src/flags/mod.rs`. Their LLVM processor definitions include `FeatureFMA`.
+  - AMD `bdver1` to `bdver4` (FMA4, plus FMA3 from `bdver2`) and every `znver*` (FMA3), per LLVM `X86.td`.
+  - AArch64 `apple-*`, `neoverse-*`, `cortex-a*`, `cortex-x*`, `exynos-*`, `a64fx`, `carmel`, `thunderx2t99`, `thunderx3t110`, `ampere1` and `ampere1a`. All are LLVM `AArch64Processors.td` cores, and every AArch64 core has baseline FMA.
+
 ## Test fixtures
 
 `fixtures/knp1/flags/`: config directories and small wasm modules (hand-written in text format and assembled by the test build); project licence.
@@ -77,6 +110,11 @@ Source can be clean while the build still changes results: `target-cpu=native` o
 ## Open questions
 
 - Native x86-64 and ARM64 object code is not scanned for fused instructions (`vfmadd*`, `fmadd`). Rust does not contract floating-point operations by default [unverified per target]; if a native artifact ever becomes a gate (KRN.MAN `native_gate`), add a disassembly check as a new rule.
+- Accepted limits of the build-configuration check (PR #182):
+  - **Per-crate configs and toolchain files.** `.cargo/config(.toml)` and `rust-toolchain(.toml)` files in member-crate directories, parent directories or `$CARGO_HOME` are not read. Only the workspace directory is checked.
+  - **Unlisted scripts and actions.** Scripts, Makefiles and composite or reusable GitHub actions that are not listed in `ci_env_files` are not scanned, and neither are the inputs of called actions (for example a `toolchain:` input).
+  - **Variable indirection.** A flag assembled from variables whose names and values avoid every keyword (for example `F=target; G=-cpu`) is not detected.
+  - **Custom target JSON.** A `--target <file>.json` specification can set `cpu`, `features` or LLVM arguments, and it is not read.
 
 ## Children
 

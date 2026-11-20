@@ -1,0 +1,34 @@
+# Crates tested on wasm32-wasip1 by the wasm32 job in .github/workflows/rust.yml.
+# One line per run: <crate> [extra `cargo test` arguments]. Every crate must be a workspace
+# package. Keep the lines sorted (LC_ALL=C sort) and unique; CI checks both.
+fid-align-solve
+fid-canon
+fid-construct
+fid-fit
+fid-geo-cad
+fid-geo-dist --test mesh
+fid-geo-frame
+fid-geo-index
+fid-geo-nurbs --test analytic
+fid-geo-nurbs --test eval
+fid-geo-nurbs --test invert -- ac5
+fid-geo-ooc --no-default-features --test layout --test format
+fid-geo-sel --test model
+fid-geo-types --test digest
+fid-gps --test zone_shape
+fid-kci
+fid-kdec
+fid-kunc
+fid-manifest-gen
+fid-num
+fid-profile
+fid-rdl
+fid-replay
+fid-report-pdf
+fid-scan-cmp --lib
+fid-scan-mesh
+fid-sign-core
+fid-solv
+fid-surface
+fid-types
+fid-view

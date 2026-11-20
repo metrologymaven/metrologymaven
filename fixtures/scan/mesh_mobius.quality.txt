@@ -1,0 +1,19 @@
+# SCAN.POLY.QUAL expected report for mesh_mobius.txt at threshold 1e-18 m^2.
+# CC-BY-4.0. Computed by make_mesh_quality.py (independent of the Rust crate).
+mesh mesh_mobius
+threshold 1e-18
+triangles 6
+vertices 6
+edges 12
+boundary_edges 6
+boundary_loops 1
+nonmanifold_edges 0
+nonmanifold_vertices 0
+components 1
+degenerate 0
+angle_count 6
+angle_min 0.420534335283965
+angle_p1 0.420534335283965
+angle_p5 0.420534335283965
+angle_median 0.7853981633974484
+canonical {"boundary_edges":"6","boundary_loops":"1","components":"1","degenerate":"0","edges":"12","min_angle":{"count":"6","median":"0.7853981633974484","min":"0.420534335283965","p1":"0.420534335283965","p5":"0.420534335283965"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"6","vertices":"6"}

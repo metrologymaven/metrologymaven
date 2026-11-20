@@ -1,0 +1,56 @@
+{
+  "schema": "transcription-rows@1",
+  "source": {
+    "software": "VendorX",
+    "version": null,
+    "file_sha256": "sha256:34fa9641abcecb9adf4fcc0e388472997b886bd694892a2ddfa5388173f81ebc",
+    "imported_at": "2026-11-17T10:00:00Z",
+    "format": "csv"
+  },
+  "rows": [
+    {
+      "characteristic": "C1",
+      "measurand": "diameter",
+      "value": "10.012",
+      "unit": "mm",
+      "status": "pass",
+      "status_text": "OK",
+      "lower_limit": "9.98",
+      "upper_limit": "10.02"
+    },
+    {
+      "characteristic": "C2",
+      "measurand": "diameter",
+      "value": "10.031",
+      "unit": "mm",
+      "status": "fail",
+      "status_text": "NOK",
+      "lower_limit": "9.98",
+      "upper_limit": "10.02"
+    },
+    {
+      "characteristic": "C3",
+      "measurand": "position",
+      "value": "0.048",
+      "unit": "mm",
+      "status": "undecided",
+      "status_text": "?",
+      "upper_limit": "0.05"
+    },
+    {
+      "characteristic": "C4",
+      "measurand": "flatness",
+      "value": "0.007",
+      "unit": "mm"
+    },
+    {
+      "characteristic": "C5",
+      "measurand": "length",
+      "value": "25.004",
+      "unit": "mm",
+      "status": "pass",
+      "status_text": "OK",
+      "has_points": true
+    }
+  ]
+}

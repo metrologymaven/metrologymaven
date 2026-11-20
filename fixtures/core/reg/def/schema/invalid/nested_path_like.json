@@ -1,0 +1,21 @@
+{
+  "expect": {
+    "code": "misplaced_path_like",
+    "pointer": "/properties/a/items/path_like"
+  },
+  "schema": {
+    "type": "object",
+    "properties": {
+      "a": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "path_like": true,
+          "x-extensions": [
+            "stl"
+          ]
+        }
+      }
+    }
+  }
+}

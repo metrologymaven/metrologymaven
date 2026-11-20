@@ -134,7 +134,9 @@ impl Precondition {
         let bad = |why: &str| DefError::BadPrecondition(why.to_string());
         let CValue::Obj(mut o) = v else { return Err(bad("must be an object")) };
         if let Some(k) = o.keys().find(|k| !matches!(k.as_str(), "expr" | "bound" | "message_key")) {
-            return Err(bad(&format!("unknown field {k}")));
+            // Escaped and cut: the key is untrusted input.
+            let k: String = k.chars().take(64).collect();
+            return Err(bad(&format!("unknown field {k:?}")));
         }
         let expr = match o.remove("expr") {
             Some(CValue::Str(s)) => s,

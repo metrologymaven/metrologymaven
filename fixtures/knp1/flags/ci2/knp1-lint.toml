@@ -1,0 +1,3 @@
+[flags]
+profiles = ["release"]
+ci_env_files = ["workflows/kernel.yml", "build.sh"]

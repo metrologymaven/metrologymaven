@@ -132,6 +132,9 @@ pub struct Program {
     pub meta: Opaque,
     /// Part-family parameter declarations; validated by `AUTO.PROG.FAMILY`.
     pub params: Vec<Opaque>,
+    /// Optional part-family variant table (`None` when the field is absent); validated by
+    /// `AUTO.PROG.FAMILY`.
+    pub variants: Option<Vec<Opaque>>,
     pub variables: Vec<VarDecl>,
     pub subroutines: Vec<Subroutine>,
     pub main: Vec<Step>,
@@ -515,6 +518,19 @@ impl Decoder {
                 _ => return Err(invalid(&at_p.idx(i), "must be an object")),
             }
         }
+        let variants = if f.map.contains_key("variants") {
+            let at_w = root.key("variants");
+            let mut variants = Vec::new();
+            for (i, item) in f.array("variants")?.into_iter().enumerate() {
+                match item {
+                    CValue::Obj(m) => variants.push(m),
+                    _ => return Err(invalid(&at_w.idx(i), "must be an object")),
+                }
+            }
+            Some(variants)
+        } else {
+            None
+        };
         let at_v = root.key("variables");
         let mut variables = Vec::new();
         for (i, item) in f.array("variables")?.into_iter().enumerate() {
@@ -527,7 +543,7 @@ impl Decoder {
         for (i, item) in f.array("subroutines")?.into_iter().enumerate() {
             subroutines.push(self.subroutine(item, &at_s.idx(i))?);
         }
-        Ok(Program { format_version, program_id, meta, params, variables, subroutines, main })
+        Ok(Program { format_version, program_id, meta, params, variants, variables, subroutines, main })
     }
 
     fn subroutine(&mut self, v: CValue, at: &At<'_>) -> Result<Subroutine, ProgramError> {
@@ -1028,19 +1044,20 @@ impl Program {
     /// Canonical bytes; `capacity` is the expected length when known (parse), else 0.
     fn encode_bytes(&self, capacity: usize) -> Result<Vec<u8>, ProgramError> {
         let mut e = Encoder { out: Vec::with_capacity(capacity) };
-        e.object(
-            vec![
-                ("format", Val::Str(FORMAT)),
-                ("format_version", Val::Num(self.format_version)),
-                ("program_id", Val::Id(self.program_id)),
-                ("meta", Val::Obj(&self.meta)),
-                ("params", Val::Objs(&self.params)),
-                ("variables", Val::Vars(&self.variables)),
-                ("subroutines", Val::Subs(&self.subroutines)),
-                ("main", Val::Steps(&self.main)),
-            ],
-            0,
-        )?;
+        let mut fields = vec![
+            ("format", Val::Str(FORMAT)),
+            ("format_version", Val::Num(self.format_version)),
+            ("program_id", Val::Id(self.program_id)),
+            ("meta", Val::Obj(&self.meta)),
+            ("params", Val::Objs(&self.params)),
+            ("variables", Val::Vars(&self.variables)),
+            ("subroutines", Val::Subs(&self.subroutines)),
+            ("main", Val::Steps(&self.main)),
+        ];
+        if let Some(v) = &self.variants {
+            fields.push(("variants", Val::Objs(v)));
+        }
+        e.object(fields, 0)?;
         Ok(e.out)
     }
 }

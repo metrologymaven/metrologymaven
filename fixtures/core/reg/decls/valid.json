@@ -1,0 +1,637 @@
+{
+ "decls": [
+  {
+   "id": "gdt.evaluate_flatness",
+   "major": 1,
+   "title": "Fixture gdt.evaluate_flatness@1",
+   "description": "Fixture declaration for side-effect class R0.",
+   "params_schema": {
+    "type": "object",
+    "$defs": {
+     "len": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "properties": {
+     "nominal": {
+      "$ref": "#/$defs/len"
+     },
+     "offsets": {
+      "type": "array",
+      "items": {
+       "type": "number",
+       "x-quantity": "length",
+       "x-unit": "mm"
+      },
+      "minItems": 1,
+      "maxItems": 8
+     },
+     "pair": {
+      "type": "array",
+      "prefixItems": [
+       {
+        "type": "number",
+        "x-quantity": "length",
+        "x-unit": "mm"
+       },
+       {
+        "type": "number",
+        "x-quantity": "angle",
+        "x-unit": "deg"
+       }
+      ]
+     },
+     "limit": {
+      "anyOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": [
+         "number",
+         "null"
+        ],
+        "x-quantity": "length",
+        "minimum": 0,
+        "maximum": 1
+       }
+      ]
+     },
+     "count": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+     }
+    },
+    "patternProperties": {
+     "^[a-z]+$": {
+      "type": "string"
+     },
+     "^[A-Z]+$": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "nominal"
+    ]
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "project.list_features",
+   "major": 1,
+   "title": "Fixture project.list_features@1",
+   "description": "Fixture declaration for side-effect class R1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "R1",
+   "mcp_projection": "exposed",
+   "determinism": "D1",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "project.list_features",
+   "major": 2,
+   "title": "Fixture project.list_features@2",
+   "description": "Fixture declaration for side-effect class R1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "R1",
+   "mcp_projection": "request_only",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "sim.read_probe",
+   "major": 1,
+   "title": "Fixture sim.read_probe@1",
+   "description": "Fixture declaration for side-effect class I1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "I1",
+   "mcp_projection": "exposed",
+   "determinism": "N",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "report.set_title",
+   "major": 1,
+   "title": "Fixture report.set_title@1",
+   "description": "Fixture declaration for side-effect class W1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "W1",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available",
+   "human_only": false,
+   "network": "none",
+   "cli_bare": false
+  },
+  {
+   "id": "align.run_bestfit",
+   "major": 1,
+   "title": "Fixture align.run_bestfit@1",
+   "description": "Fixture declaration for side-effect class W2.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D3",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available",
+   "human_only": true
+  },
+  {
+   "id": "record.release_fai",
+   "major": 1,
+   "title": "Fixture record.release_fai@1",
+   "description": "Fixture declaration for side-effect class W3.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "W3",
+   "mcp_projection": "request_only",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "egress.send",
+   "major": 1,
+   "title": "Fixture egress.send@1",
+   "description": "Fixture declaration for side-effect class X1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "X1",
+   "mcp_projection": "request_only",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available",
+   "network": "egress"
+  },
+  {
+   "id": "hal.connect_device",
+   "major": 1,
+   "title": "Fixture hal.connect_device@1",
+   "description": "Fixture declaration for side-effect class D1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "D1",
+   "mcp_projection": "never",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available",
+   "network": "device"
+  },
+  {
+   "id": "cmm.move_to",
+   "major": 1,
+   "title": "Fixture cmm.move_to@1",
+   "description": "Fixture declaration for side-effect class M1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "M1",
+   "mcp_projection": "never",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "trust.sign_record",
+   "major": 1,
+   "title": "Fixture trust.sign_record@1",
+   "description": "Fixture declaration for side-effect class S1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "S1",
+   "mcp_projection": "never",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "settings.set_admin_value",
+   "major": 1,
+   "title": "Fixture settings.set_admin_value@1",
+   "description": "Fixture declaration for side-effect class A0.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "A0",
+   "mcp_projection": "never",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "unavailable",
+   "web_note": "Desktop only."
+  }
+ ]
+}

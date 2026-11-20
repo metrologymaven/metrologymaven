@@ -9,11 +9,11 @@ pub mod progress;
 pub mod sched;
 
 pub use commands::{
-    command_defs, context_types, format_rfc3339, job_status_schema, parse_job_id, parse_job_state, Caller,
-    CancelOutcome, Invocation, JobList, JobParams, JobService, JobStatus, JournalEffect, ListJobsParams, PrincipalId,
-    WaitParams, WaitResult, CANCEL_JOB, CANCEL_PRECONDITION, CANCEL_PRECONDITION_BOUND, COMMANDS, DEFAULT_WAIT_TIMEOUT,
-    JOB_ID_PATTERN, LIST_JOBS, MAX_PARAMS_BYTES, MAX_PARAMS_DEPTH, MAX_PRINCIPAL_ID_BYTES, MAX_WAIT_TIMEOUT,
-    NOT_JOB_OWNER_KEY, SHOW_STATUS, TIMESTAMP_PATTERN, WAIT_JOB,
+    command_defs, context_types, format_rfc3339, job_status_schema, parse_job_id, parse_job_state, quantity_catalogue,
+    Caller, CancelOutcome, Invocation, JobList, JobParams, JobService, JobStatus, JournalEffect, ListJobsParams,
+    PrincipalId, WaitParams, WaitResult, CANCEL_JOB, CANCEL_PRECONDITION, CANCEL_PRECONDITION_BOUND, COMMANDS,
+    DEFAULT_WAIT_TIMEOUT, JOB_ID_PATTERN, LIST_JOBS, MAX_PARAMS_BYTES, MAX_PARAMS_DEPTH, MAX_PRINCIPAL_ID_BYTES,
+    MAX_WAIT_TIMEOUT, NOT_JOB_OWNER_KEY, QUANTITY_CATALOGUE, SHOW_STATUS, TIMESTAMP_PATTERN, WAIT_JOB,
 };
 pub use progress::{
     CancelToken, Clock, ManualClock, Progress, ProgressSink, ProgressSnapshot, ProgressUpdate, ProgressWarning,

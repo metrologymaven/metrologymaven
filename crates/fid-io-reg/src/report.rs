@@ -109,7 +109,7 @@ fn is_type_name(s: &str) -> bool {
     s.split('.').all(is_snake_segment)
 }
 
-fn is_format_id(s: &str) -> bool {
+pub(crate) fn is_format_id(s: &str) -> bool {
     let b = s.as_bytes();
     matches!(b.first(), Some(b'a'..=b'z' | b'0'..=b'9'))
         && b.iter().all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.'))

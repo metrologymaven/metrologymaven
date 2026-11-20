@@ -1,0 +1,19 @@
+# SCAN.POLY.QUAL expected report for mesh_zero_area.txt at threshold 1e-18 m^2.
+# CC-BY-4.0. Computed by make_mesh_quality.py (independent of the Rust crate).
+mesh mesh_zero_area
+threshold 1e-18
+triangles 5
+vertices 7
+edges 9
+boundary_edges 3
+boundary_loops 1
+nonmanifold_edges 0
+nonmanifold_vertices 0
+components 2
+degenerate 1
+angle_count 4
+angle_min 1.0471975511965979
+angle_p1 1.0471975511965979
+angle_p5 1.0471975511965979
+angle_median 1.0471975511965979
+canonical {"boundary_edges":"3","boundary_loops":"1","components":"2","degenerate":"1","edges":"9","min_angle":{"count":"4","median":"1.0471975511965979","min":"1.0471975511965979","p1":"1.0471975511965979","p5":"1.0471975511965979"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"5","vertices":"7"}

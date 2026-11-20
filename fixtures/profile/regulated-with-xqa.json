@@ -1,0 +1,14 @@
+{
+  "tenant_meanings": [
+    {
+      "code": "X_QA_RELEASE",
+      "label": "QA release",
+      "description": "The site quality team has released the record for use."
+    }
+  ],
+  "required_meanings": [
+    "AUTHORED",
+    "X_QA_RELEASE",
+    "APPROVED"
+  ]
+}

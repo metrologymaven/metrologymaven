@@ -1,5 +1,7 @@
 //! Shared formatter types. Spec node `KRN.NUM.FMT.LEN` (reused by `KRN.NUM.FMT.ANG` and
-//! `KRN.NUM.FMT.REG`).
+//! `KRN.NUM.FMT.REG`; `KRN.NUM.FMT.ANG` added [`SideOutcome`], [`Conversion::pi_enclosure`],
+//! [`FormatterId::ANGLE_V1`] and [`FmtError::UndecidableRounding`]; `KRN.NUM.FMT.REG` added
+//! [`FormatterId::HEXBITS_V1`], [`FmtError::UnknownFormatter`] and [`FmtError::Alloc`]).
 
 use core::fmt;
 
@@ -27,6 +29,11 @@ impl FormatterId {
     pub const LENGTH_V1: FormatterId = FormatterId { kind: "length", major: 1 };
     /// `fmt.scalar@1`: dimensionless values (unit `1`).
     pub const SCALAR_V1: FormatterId = FormatterId { kind: "scalar", major: 1 };
+    /// `fmt.angle@1`: angles in radians shown in rad, deg or dms (`KRN.NUM.FMT.ANG`).
+    pub const ANGLE_V1: FormatterId = FormatterId { kind: "angle", major: 1 };
+    /// `fmt.hexbits@1`: the IEEE-754 bits of an SI value as `0x` plus 16 lowercase hex digits
+    /// (`KRN.NUM.FMT.REG`).
+    pub const HEXBITS_V1: FormatterId = FormatterId { kind: "hexbits", major: 1 };
 }
 
 impl fmt::Display for FormatterId {
@@ -88,8 +95,10 @@ pub enum Precision {
     SigDigits(u8),
 }
 
-/// Specification limits in SI units (metres for `fmt.length@1`, the plain value for
-/// `fmt.scalar@1`), as exact decimals. Either side may be absent.
+/// Specification limits as exact decimals. Either side may be absent. Units: metres for
+/// `fmt.length@1`, the plain value for `fmt.scalar@1`, and for `fmt.angle@1` radians when
+/// the display unit is `rad` and decimal degrees when it is `deg` or `dms` (drawings give
+/// angular limits in degrees, which are not exact in radians).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Limits {
     /// Lower limit.
@@ -118,8 +127,43 @@ pub struct Conversion {
     pub from: Unit,
     /// Display unit.
     pub to: Unit,
-    /// The exact factor as a decimal or ratio string: `1`, `1000`, `1000000` or `1/0.0254`.
+    /// The exact factor as a decimal or ratio string: `1`, `1000`, `1000000` or `1/0.0254`,
+    /// or `180/pi` (`fmt.angle@1` in deg and dms, with pi bracketed by [`Self::pi_enclosure`]).
     pub factor: &'static str,
+    /// For a factor involving pi: the index in the ladder of rational enclosures of pi
+    /// (`fmt::ang::PI_LADDER`) at which every decision of the call was decided. `None` for
+    /// exact decimal factors.
+    pub pi_enclosure: Option<u8>,
+}
+
+/// Where the exact value lies relative to the limits (REQ-KRN.NUM.FMT-004).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SideOutcome {
+    /// No limit value was given.
+    NoLimits,
+    /// Inside the limits or on one of them; the output is at the requested precision.
+    Within,
+    /// Strictly above the upper limit; the output shows it (side-preserving rule).
+    AboveUpper,
+    /// Strictly below the lower limit (and not above the upper one); the output shows it.
+    BelowLower,
+    /// `fmt.angle@1` only: no enclosure of pi in the ladder decides the side of a limit
+    /// in degrees. The output is the requested rounding with no digits added; it says
+    /// nothing about the side (`undecidable_side`, never a guess).
+    Undecidable,
+}
+
+impl SideOutcome {
+    /// Short ASCII name: `none`, `within`, `above`, `below`, `undecidable`.
+    pub const fn name(self) -> &'static str {
+        match self {
+            SideOutcome::NoLimits => "none",
+            SideOutcome::Within => "within",
+            SideOutcome::AboveUpper => "above",
+            SideOutcome::BelowLower => "below",
+            SideOutcome::Undecidable => "undecidable",
+        }
+    }
 }
 
 /// A formatted value (REQ-KRN.NUM.FMT.LEN-007).
@@ -138,11 +182,15 @@ pub struct Reported {
     /// True when half-even rounding could not show a violated limit strictly at 17
     /// significant digits, so the last digit was rounded toward the violated side instead.
     pub tie_at_max_precision: bool,
+    /// Where the exact value lies relative to the limits.
+    pub side: SideOutcome,
 }
 
 /// Why a format call failed. Carried in [`NumError::Domain`] as `detail` (see
 /// [`FmtError::detail`] and [`FmtError::of`]); the `op` is the formatter ID, for example
-/// `fmt.length@1`, or `fmt` for an unknown formatter.
+/// `fmt.length@1`, or `fmt` when `fmt::len` or `fmt::ang` is called directly with a formatter
+/// it does not implement. [`FmtError::UnknownFormatter`] alone is carried in
+/// [`NumError::UnknownFormatter`], which names the refused ID.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FmtError {
     /// The value is NaN or infinite.
@@ -153,6 +201,17 @@ pub enum FmtError {
     LimitsInverted,
     /// The formatter does not support the unit, or the formatter is unknown.
     UnitNotSupported,
+    /// `fmt.angle@1`: the two ends of the value interval over every enclosure of pi in the
+    /// ladder round to different outputs, so no string is given.
+    UndecidableRounding,
+    /// `fmt::ang` test hook only: a given ladder rung is malformed, does not enclose pi
+    /// (it must contain the tightest built-in rung) or is not nested in the rung before it.
+    InvalidLadder,
+    /// `fmt::format`: the formatter ID is not in the registry (`fmt::registry`). No other
+    /// version or kind is substituted (REQ-KRN.NUM.FMT.REG-002).
+    UnknownFormatter,
+    /// An output string could not be allocated.
+    Alloc,
     /// The internal big integer ran out of limbs. Unreachable for any finite `f64` within
     /// the precision bounds (see the module documentation of `fmt::len`); kept so that an
     /// impossible case is an error and never a wrong string.
@@ -167,14 +226,23 @@ impl FmtError {
             FmtError::PrecisionOutOfRange => "precision_out_of_range",
             FmtError::LimitsInverted => "limits_inverted",
             FmtError::UnitNotSupported => "unit_not_supported",
+            FmtError::UndecidableRounding => "undecidable_rounding",
+            FmtError::InvalidLadder => "invalid_ladder",
+            FmtError::UnknownFormatter => "unknown_formatter",
+            FmtError::Alloc => "allocation_failed",
             FmtError::Capacity => "big_integer_capacity",
         }
     }
 
     /// Recovers the kind from a [`NumError`] produced by a formatter (an `op` equal to
-    /// `fmt` or starting with `fmt.`); `None` for any other error.
+    /// `fmt` or starting with `fmt.`, or [`NumError::UnknownFormatter`]); `None` for any
+    /// other error.
     pub fn of(e: &NumError) -> Option<FmtError> {
-        let NumError::Domain { op, detail } = e else { return None };
+        let (op, detail) = match e {
+            NumError::Domain { op, detail } => (op, detail),
+            NumError::UnknownFormatter { .. } => return Some(FmtError::UnknownFormatter),
+            _ => return None,
+        };
         if *op != "fmt" && !op.starts_with("fmt.") {
             return None;
         }
@@ -183,6 +251,10 @@ impl FmtError {
             FmtError::PrecisionOutOfRange,
             FmtError::LimitsInverted,
             FmtError::UnitNotSupported,
+            FmtError::UndecidableRounding,
+            FmtError::InvalidLadder,
+            FmtError::UnknownFormatter,
+            FmtError::Alloc,
             FmtError::Capacity,
         ]
         .into_iter()

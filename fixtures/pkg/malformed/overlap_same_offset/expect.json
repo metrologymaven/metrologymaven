@@ -1,0 +1,1 @@
+{"error_code":"pkg.malformed","note":"two directory entries share one local record","reason":"overlap"}

@@ -9,6 +9,8 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-nurbs]
+built_pr: 227
 satisfies: [REQ-GEO.NURBS-001, REQ-GEO.NURBS-004, REQ-GEO.NURBS-006]
 covers: []
 depends_on: [GEO.NURBS.DATA, KRN.NUM]
@@ -44,6 +46,7 @@ Evaluates B-spline and NURBS curves and surfaces at a parameter: position, first
 ## Requirements
 
 - **REQ-GEO.NURBS.EVAL-001** The evaluator shall return position and all partial derivatives up to second order for any parameter inside the domain, for degrees 1 to 25.
+  - *Note (range):* results are computed in binary64 and an overflow is the typed error `NonFinite`, never a returned infinity. In practice a curve point is refused when `|C'|` exceeds about 5.6e102 (`|C'|^3` overflows), and a surface point when `|S_u|·|S_v|` exceeds about 1.3e154 (the squared degeneracy test overflows), as are domains or knot windows wider than the f64 range.
 - **REQ-GEO.NURBS.EVAL-002** If a parameter lies outside the domain by more than 1e-14 of the domain width, then evaluation shall fail with `OutsideDomain`; within that margin it shall clamp to the domain.
 - **REQ-GEO.NURBS.EVAL-003** When ‖S_u × S_v‖ is below 1e-14 times ‖S_u‖·‖S_v‖ or either is zero, the evaluator shall return the derivatives with `Regularity::Degenerate` and no normal, never a NaN normal.
 - **REQ-GEO.NURBS.EVAL-004** At regular points the evaluator shall return the unit normal and principal curvatures computed from the first and second fundamental forms.
@@ -63,8 +66,22 @@ Evaluates B-spline and NURBS curves and surfaces at a parameter: position, first
 - **Registry command(s):** none; library leaf.
 - **Data structures:** `trait Curve { fn eval(&self, t, order) -> CurveDerivs; fn domain(&self) }`, `trait Surface { fn eval(&self, u, v, order) -> SurfaceDerivs; fn normal(...); fn curvature(...); fn domain(&self) }`; `SurfaceDerivs { p, su, sv, suu, suv, svv, regularity }`; `Curvature { k1, k2, d1, d2, gaussian, mean }`.
 - **Algorithm:** span search by binary search with the rule of REQ-006; basis derivatives and surface derivatives per Piegl and Tiller, *The NURBS Book*, 2nd ed., algorithms A2.1, A2.3, A3.6 and A4.4 (cited, not copied); principal curvatures from the shape operator eigenproblem in closed form.
-- **Errors:** `OutsideDomain`, `OrderTooHigh`.
+- **Errors:** `OutsideDomain`, `OrderTooHigh`; also `NotANumber` (NaN parameter, KNP-1), `NonFinite` (an intermediate overflowed; no NaN or infinity is ever returned), `SubnormalWeight` (item 5) and `Inconsistent` (unreachable for validated data; returned instead of indexing out of bounds). Invalid knot vectors, degrees, control nets and weights are refused earlier, by the `GEO.NURBS.DATA` constructors (`NurbsError`), so they cannot reach the evaluator.
+- **Outside the domain** is the error `OutsideDomain`, not a `Regularity` value: `Regularity` is `Regular` or `Degenerate`.
+- **Pinned order of operations** (built in `fid-geo-nurbs` `basis.rs` and `eval.rs`; mirrored bit for bit by `fixtures/geo/nurbs/eval/make_eval_fixtures.py`). IEEE 754 binary64, round to nearest even, every `+ - * /` a separate rounded operation (no FMA), `sqrt` = `fid_num::f::sqrt` (correctly rounded); `x op y op z` is left to right unless bracketed.
+  1. *Domain:* NaN is `NotANumber`; ±inf is `OutsideDomain`; `width = hi - lo`, and a non-finite `width` is `NonFinite` (very wide knot vectors are refused, never clamped); `margin = 1e-14 * width`; a weight below `f64::MIN_POSITIVE` (subnormal) is refused with `SubnormalWeight` when its control point is used (item 5); `t < lo`: `lo - t <= margin` gives `lo`, else `OutsideDomain`; `t > hi` likewise with `t - hi`. The parameter actually used is returned with the result.
+  2. *Span* (n control points, degree p): if `t >= U[n]`, `s = n - 1`, then `s -= 1` while `s > p` and `U[s] == U[s+1]`; otherwise binary search `lo = p`, `hi = n`, while `hi - lo > 1`: `mid = lo + (hi - lo) / 2`, `t < U[mid]` sets `hi = mid`, else `lo = mid`; `s = lo`.
+  3. *Basis (Cox–de Boor):* first, if the knot window `U[s+p] - U[s-p]` is not finite, the result is `NonFinite` (every knot difference used below lies inside that window); then `N[0][0] = 1`; for `k = 1..=p`: `saved = 0`; for `r = 0..k`: `temp = N[k-1][r] / (U[s+r+1] - U[s+r+1-k])`, `N[k][r] = saved + (U[s+r+1] - t) * temp`, `saved = (t - U[s+r+1-k]) * temp`; then `N[k][k] = saved`.
+  4. *Basis derivatives* (degree-lowering recurrence): `D(prev, k)[j] = k * (a - b)`, `a = prev[j-1] / (U[s+j] - U[s+j-k])` for `j >= 1` else `0.0`, `b = prev[j] / (U[s+j+1] - U[s+j+1-k])` for `j < k` else `0.0`. First derivative `D(N[p-1], p)`; second `D(D(N[p-2], p-1), p)`, with `D(N[p-2], p-1)` replaced by `[0.0]` when `p = 1`.
+  5. *Homogeneous points:* `[x*w, y*w, z*w, w]` with weights, `[x, y, z, 1]` without. A weight `w < f64::MIN_POSITIVE` gives `SubnormalWeight { index }` (flat row-major index for surfaces) instead, checked as each control point is used, in the accumulation order below, so the first offending point used is reported (otherwise `x*w` underflows and the position is silently wrong). *Curve:* `A_d = sum over j = 0..=p ascending of N^(d)[j] * Pw[s-p+j]`, each component `acc = acc + b * pw`, from `0.0`. *Surface:* `T_l[i] = sum over j = 0..=q ascending of Nv^(l)[j] * Pw[(su-p+i) * n_v + (sv-q+j)]`, then `A_kl = sum over i = 0..=p ascending of Nu^(k)[i] * T_l[i]`, for `k + l <= order`.
+  6. *Quotient rule* (only when weights are present, even if all equal; without weights the result is `A` itself): `C0 = A0 / w0`; `C1 = (A1 - w1*C0) / w0`; `C2 = ((A2 - (2*w1)*C1) - w2*C0) / w0`. Surfaces: `S10 = (A10 - w10*S00) / w00` (and `S01`), `S20 = ((A20 - (2*w10)*S10) - w20*S00) / w00` (and `S02`), `S11 = (((A11 - w10*S01) - w01*S10) - w11*S00) / w00`.
+  7. *Vectors:* `dot(a, b) = (a0*b0 + a1*b1) + a2*b2`; `cross(a, b) = [a1*b2 - a2*b1, a2*b0 - a0*b2, a0*b1 - a1*b0]`.
+  8. *Curve regularity and geometry:* `cl = sqrt(dot(C', C'))`, `den = (cl*cl)*cl`; degenerate iff `den == 0`; tangent `C' / cl` (per component); curvature `sqrt(dot(x, x)) / den`, `x = cross(C', C'')`.
+  9. *Surface regularity* (REQ-003, squared form): `a2 = dot(Su, Su)`, `b2 = dot(Sv, Sv)`, `c2 = dot(Su x Sv, Su x Sv)`; degenerate iff `a2 == 0` or `b2 == 0` or `c2 == 0` or `c2 < 1e-28 * (a2 * b2)`.
+  10. *Normal and curvatures* (shape operator in the orthonormal tangent frame, so the eigenvalues have no cancellation at umbilics): `n = cr / sqrt(c2)`; `a = sqrt(a2)`; `e1 = Su / a`; `e2 = cross(n, e1)`; `b = dot(Sv, e1)`, `c = dot(Sv, e2)`; `L, M, N = dot(Suu, n), dot(Suv, n), dot(Svv, n)`; `t = b / a`; `s11 = (L / a) / a`; `s12 = ((M - t*L) / a) / c`; `s22 = ((N - (2*t)*M) + (t*t)*L) / (c*c)`; `mean = 0.5 * (s11 + s22)`; `h = 0.5 * (s11 - s22)`; `r = sqrt(h*h + s12*s12)`; `k1 = mean + r`, `k2 = mean - r`; `gaussian = k1 * k2`. Curvatures are signed against `n` (a sphere with outward `n` has `k1 = k2 = -1/r`), as in `ref_set_v1`.
+  11. *Principal directions:* none (umbilic) when `r <= 1e-8 * |mean|`. Otherwise, with `A = s11 - k1`, `C = s22 - k1`: `(x, y) = (-s12, A)` if `|A| >= |C|`, else `(C, -s12)`; `d = x*e1 + y*e2` per component; `d1 = d / sqrt(dot(d, d))` (none if that length is 0); `d2 = cross(n, d1)`.
 - **Determinism:** D0.
+- **Allocation and bounds:** no heap allocation; fixed-size stack tables of `MAX_DEGREE + 1 = 26` entries per order; every loop is bounded by the degree.
 - **Performance budget:** bicubic surface position plus second derivatives under 300 ns per point [unverified].
 - **Crate:** `fid-geo-nurbs` (kernel graph, KNP-1 applies).
 

@@ -1,0 +1,16 @@
+{
+  "expect": {
+    "code": "unit_not_accepted",
+    "pointer": "/properties/a/x-unit"
+  },
+  "schema": {
+    "type": "object",
+    "properties": {
+      "a": {
+        "type": "number",
+        "x-quantity": "length",
+        "x-unit": "deg"
+      }
+    }
+  }
+}

@@ -1,0 +1,267 @@
+{
+ "description": "plane plate 100 x 80 mm with a 10 mm radius hole; 3-D curves only",
+ "license": "CC-BY-4.0",
+ "body_id": "9c0e9c0e9c0e9c0e9c0e9c0e9c0e9c0e",
+ "vertices": [
+  {
+   "point": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.1,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.1,
+    0.08,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.0,
+    0.08,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.05,
+    0.03,
+    0.0
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 1,
+   "range": [
+    0.0,
+    0.1
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-bottom"
+  },
+  {
+   "start": 1,
+   "end": 2,
+   "range": [
+    0.0,
+    0.08
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.1,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "label": "e-right"
+  },
+  {
+   "start": 2,
+   "end": 3,
+   "range": [
+    0.0,
+    0.1
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.1,
+     0.08,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     -1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-top"
+  },
+  {
+   "start": 3,
+   "end": 0,
+   "range": [
+    0.0,
+    0.08
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.0,
+     0.08,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     0.0,
+     -1.0,
+     0.0
+    ]
+   },
+   "label": "e-left"
+  },
+  {
+   "start": 4,
+   "end": 4,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.01,
+    "origin": [
+     0.04,
+     0.03,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-hole"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-bottom"
+  },
+  {
+   "edge": 1,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-right"
+  },
+  {
+   "edge": 2,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-top"
+  },
+  {
+   "edge": 3,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-left"
+  },
+  {
+   "edge": 4,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-hole"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "outer": true,
+   "label": "l-outer"
+  },
+  {
+   "coedges": [
+    4
+   ],
+   "outer": false,
+   "label": "l-hole"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0,
+    1
+   ],
+   "label": "f-plate"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": false
+  }
+ ]
+}

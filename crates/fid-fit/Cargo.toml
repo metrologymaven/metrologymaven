@@ -1,0 +1,21 @@
+[package]
+name = "fid-fit"
+description = "Metrology Maven kernel fit contract (KNP-1): points view, Fit trait, fitted features, centring and scaling, degeneracy checks, residual statistics, canonical result encoding and fit command data rows (spec node KRN.LSQ.TRAIT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate (KNP-1): no third-party dependencies. fid-num (numerics, linear algebra) and
+# fid-solv (NLLS configuration, stop reasons and errors) are the build prompt's two; fid-kci
+# supplies the shared algorithm ID (KRN.MAN.CARD) and fid-types the shared command ID,
+# side-effect and determinism classes (AGENTS.md rule 14). All are kernel or num layer.
+[dependencies]
+fid-kci = { path = "../fid-kci" }
+fid-num = { path = "../fid-num" }
+fid-solv = { path = "../fid-solv" }
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true

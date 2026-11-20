@@ -6,6 +6,12 @@
 
 use sha2::{Digest, Sha256};
 
+/// The workspace root directory (absolute, `/`-joined onto this crate's manifest directory),
+/// for fixture paths. Kernel crates use it instead of `env!("CARGO_MANIFEST_DIR")`, which the
+/// implementation-digest scan (KRN.MAN.MANI.IMPL) refuses in sources under `src/`, unit-test
+/// modules included. Absolute, so it also resolves under the wasm32 test runner.
+pub const WORKSPACE_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+
 /// Incremental SHA-256 that prints as `sha256:<64 lowercase hex>`.
 #[derive(Default, Clone)]
 pub struct Sha256Hasher(Sha256);

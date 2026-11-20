@@ -1,8 +1,11 @@
 //! The safe-read framework of Metrology Maven (spec node `IO.REG`). This crate grows one
 //! leaf at a time; today it holds `IO.REG.LIMITS`, the harness every format reader runs
 //! inside, `IO.REG.ROOTS`, the approved import and export root handles ([`roots`]),
-//! `IO.REG.ENV.REPORT`, the import and export report types ([`report`]), and
-//! `IO.REG.WRITE`, the atomic export write path ([`write`], [`AtomicWriter`]).
+//! `IO.REG.ENV.REPORT`, the import and export report types ([`report`]),
+//! `IO.REG.WRITE`, the atomic export write path ([`write`], [`AtomicWriter`]), and
+//! `IO.REG.DETECT`, the format registry, its listing commands and the content-signature
+//! detector ([`detect`], [`Registry`]), and `IO.REG.PROV`, source provenance with unit
+//! and frame capture ([`prov`], [`SourceProvenance`], [`HashingSource`], [`resolve_unit`]).
 //!
 //! - [`Limits`] with documented defaults; [`LimitRequest`] overrides may only lower a
 //!   limit unless the [`Principal`] is a human (`limit_raise_forbidden` otherwise);
@@ -18,8 +21,10 @@
 //! and the `limits_toy_reader` fuzz target.
 
 mod budget;
+pub mod detect;
 mod error;
 mod limits;
+pub mod prov;
 pub mod report;
 pub mod roots;
 mod source;
@@ -28,10 +33,19 @@ mod untrusted;
 pub mod write;
 
 pub use budget::{Budget, Clock, DepthGuard, MonotonicClock, WALL_CHECK_EVERY};
+pub use detect::{
+    read_prefix, DetectError, FormatDescriptor, Matcher, Origin, OriginFilter, Phase, Predicate, Registry, Signature,
+    VersionRange, DETECT_PREFIX_LEN,
+};
 pub use error::{IoError, Position, CODES};
 pub use limits::{
     LimitKind, LimitRequest, Limits, Principal, DEFAULT_ALLOC, DEFAULT_BYTES, DEFAULT_DEPTH, DEFAULT_ELEMENTS,
     DEFAULT_WALL_MS,
+};
+pub use prov::{
+    draw_entry_salts, principal_commit, resolve_unit, to_metres, Detection, EffectiveOptions, Evidence,
+    FormatSelection, FrameCapture, HashingSource, NonFiniteLength, ProvError, ProvenanceBuilder, ReaderId, ReaderInfo,
+    SourceDigest, SourceProvenance, UnitResolution, UnitSource, VersionToken,
 };
 pub use report::{
     Code, Dropped, ExportReport, FormatId, ImportReport, Location, ReportBuilder, ReportError, ReportPos, ReportText,

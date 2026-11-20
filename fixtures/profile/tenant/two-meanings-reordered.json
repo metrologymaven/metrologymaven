@@ -1,0 +1,14 @@
+{
+  "tenant_meanings": [
+    {
+      "code": "X_CUSTOMER_OK",
+      "label": "Customer accepted",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_SUPPLIER_OK",
+      "label": "Supplier accepted",
+      "description": "A meaning defined by the site."
+    }
+  ]
+}

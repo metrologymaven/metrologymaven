@@ -1,0 +1,50 @@
+{
+  "tenant_meanings": [
+    {
+      "code": "X_S1",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_S2",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_S3",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_S4",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_S5",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_S6",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    },
+    {
+      "code": "X_S7",
+      "label": "Site meaning",
+      "description": "A meaning defined by the site."
+    }
+  ],
+  "required_meanings": [
+    "X_S1",
+    "X_S2",
+    "X_S3",
+    "X_S4",
+    "X_S5",
+    "X_S6",
+    "X_S7",
+    "AUTHORED",
+    "APPROVED"
+  ]
+}

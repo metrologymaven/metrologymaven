@@ -1,6 +1,6 @@
 [package]
 name = "fid-gdt"
-description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (spec node GDT.RES.ROWFLOW.ROSTER)"
+description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (GDT.RES.ROWFLOW.ROSTER), defaults profiles (GDT.CHAR.DPROF), governing specs (GDT.CHAR.SPEC), the resolver commands (GDT.RES.RESOLVE), ResultRecord assembly (GDT.CHAR.RECORD) and datum definitions (GDT.DRF.DATUM)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,6 +14,23 @@ publish = false
 fid-canon = { path = "../fid-canon" }
 # Shared `sha256:` digest type (AGENTS.md rule 14).
 fid-types = { path = "../fid-types" }
+# GDT.CHAR.DPROF: profiles are read through approved import handles (agents never pass raw
+# paths, CONSTITUTION §3); the principal type comes from here too. Same layer (services).
+fid-io-reg = { path = "../fid-io-reg" }
+# GDT.RES.SCHEMA: the DMT schema owns the defaults-profile key vocabulary that DPROF checks
+# profiles against, and the label grammar SPEC uses for standard designators and editions;
+# GDT.RES.RESOLVE: the pure resolver its commands wrap (model layer, below services).
+fid-gps = { path = "../fid-gps" }
+# GDT.CHAR.DPROF AC-7: replay outcomes and their aggregation (engine layer, below services).
+fid-replay = { path = "../fid-replay" }
+# GDT.CHAR.RECORD: decisions enter a ResultRecord only as the typed UNC decision of the
+# kernel decision crate, and the uncertainty with its evidence facts only from a validated
+# UNC statement (kernel layer, below services; no third-party dependencies).
+fid-kdec = { path = "../fid-kdec" }
+fid-kunc = { path = "../fid-kunc" }
+# GDT.CHAR.RECORD: the registry definition of `gdt.get_result@1`, built through the
+# registry's field rules (CORE.REG.DEF), as fid-align does for its reads. Layer model.
+fid-registry = { path = "../fid-registry" }
 
 [lints]
 workspace = true

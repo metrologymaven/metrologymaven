@@ -1,0 +1,31 @@
+[package]
+name = "fid-registry-build"
+description = "Metrology Maven registry build step: collects every crate's command declarations, validates them and exports the canonical Registry Manifest (spec node CORE.REG.MAN)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Canonical JSON for the error report. Layer model.
+fid-canon = { path = "../fid-canon" }
+# The manifest export, VAL and the quantity-catalogue facade (CORE.REG.MAN, CORE.REG.VAL,
+# CORE.REG.DEF.SCHEMA), and `registry.show_manifest@1` itself. Layer model.
+fid-registry = { path = "../fid-registry" }
+# The crates that declare commands today, read through their public `command_defs()`
+# functions. Layers engine (fid-align, fid-dep, fid-jobs) and services (fid-report).
+fid-align = { path = "../fid-align" }
+fid-dep = { path = "../fid-dep" }
+fid-jobs = { path = "../fid-jobs" }
+fid-report = { path = "../fid-report" }
+# The settings commands (CORE.STO.SET), read through `fid_store::settings::declarations()`.
+# Layer model. Brings bundled SQLite into this build step; no new crate in the lock.
+fid-store = { path = "../fid-store" }
+# The settings each crate declares with `fid_settings!` (CORE.STO.SET), collected into the
+# workspace settings manifest: `fid_bus::policy::fs::fs_settings` (`bus.fs_roots`). Layer
+# engine, below services; already in the lock.
+fid-bus = { path = "../fid-bus" }
+
+[lints]
+workspace = true

@@ -1,0 +1,50 @@
+[package]
+name = "fid-report"
+description = "Metrology Maven report model: report document, pages, blocks, block-kind registry, report commands and value formatting (spec nodes RPT.MODEL.DOC, RPT.MODEL.FMT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# RFC 8785 canonical JSON, bounded parsing and SHA-256 of stored reports and events (CORE.JRN.CANON).
+fid-canon = { path = "../fid-canon" }
+# UUIDv7 construction and the observation sources that record or replay its clock and random
+# bits (CORE.PRJ.CONT.ID); also re-exports the Uuid value type. Layer model.
+fid-project = { path = "../fid-project" }
+# Evaluation basis of a ResultRecord (GDT.CHAR.RECORD), for the source labels of
+# RPT.MODEL.FMT. Layer services.
+fid-gdt = { path = "../fid-gdt" }
+# Transcription record (IO.RES.TRANS.MODEL): source software and version of a RESULTS_ONLY
+# value. Layer services.
+fid-io-res = { path = "../fid-io-res" }
+# Decision record, outcome and rule IDs (UNC.DEC.TYPE). Layer kernel.
+fid-kdec = { path = "../fid-kdec" }
+# Uncertainty statement, evidence class and claim facts (UNC.UEC). Layer kernel.
+fid-kunc = { path = "../fid-kunc" }
+# Kernel formatters fmt.length@1, fmt.angle@1, fmt.scalar@1 and exact decimals
+# (KRN.NUM.FMT, KRN.NUM.KDEC): the only float-to-text code RPT uses. Layer num.
+fid-num = { path = "../fid-num" }
+# CommandDef records for the six report commands, built through the registry's field rules
+# (CORE.REG). Layer model.
+fid-registry = { path = "../fid-registry" }
+# Replay outcome classes (CORE.RPL.CLASS) for the exact-replay check (AC-7). Layer engine.
+fid-replay = { path = "../fid-replay" }
+# Shared `sha256:` digest type (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+
+[features]
+# Test-only block kinds `text` and `image` (module `doc::stub`). Off by default; enabled only
+# through the dev-dependency below, never in shipped builds. Real kinds are registered by
+# RPT.MODEL.BLOCKS, RPT.BALLOON and RPT.FORMS.
+test-kinds = []
+# Test-only hook `fmt::fmt_value_with` that takes another formatter (a stub or a coarse pi
+# ladder) for RPT.MODEL.FMT AC-3. Off by default; enabled only through the dev-dependency.
+test-formatter = []
+
+[dev-dependencies]
+fid-report = { path = ".", features = ["test-kinds", "test-formatter"] }
+
+[lints]
+workspace = true

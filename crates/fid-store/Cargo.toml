@@ -1,6 +1,6 @@
 [package]
 name = "fid-store"
-description = "Metrology Maven local storage: project layout and write lock, content-addressed blob store, evictable cache, project database schema (spec nodes CORE.STO.LAYOUT, CORE.STO.CAS, CORE.STO.CACHE, CORE.STO.SQL.SCHEMA)"
+description = "Metrology Maven local storage: project layout and write lock, content-addressed blob store, evictable cache, project database schema and transactions, typed settings and the settings commands (spec nodes CORE.STO.LAYOUT, CORE.STO.CAS, CORE.STO.CACHE, CORE.STO.SQL.SCHEMA, CORE.STO.SQL.TXN, CORE.STO.SET)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,6 +11,10 @@ repository.workspace = true
 # Canonical fid-chunks@1 manifests (RFC 8785) and the shared sha256: digest type.
 fid-canon = { path = "../fid-canon" }
 fid-types = { path = "../fid-types" }
+# CORE.STO.SET: settings commands are declared with the registry macros, and setting schemas are
+# checked with the registry's keyword dialect and quantity catalogue. Same layer (model); does not
+# depend on fid-store.
+fid-registry = { path = "../fid-registry" }
 # Incremental SHA-256 while verifying chunks; already in the tree through fid-canon.
 sha2 = "0.10"
 # SQLite binding for project.db (CORE.STO.SQL). Exact pin and scope: decisions/D-043.
@@ -24,6 +28,14 @@ rusqlite = { version = "=0.41.1", default-features = false, features = ["bundled
 # Safe wrappers for flock(2), directory-relative *at() calls (paths past macOS PATH_MAX),
 # fstatfs(2) (network file-system check) and uname(2) (host name). Keeps the crate free of `unsafe`.
 rustix = { version = "1", features = ["fs", "system"] }
+
+[features]
+# Compiles the commit probe hook (`txn::CommitProbe`) used by the fault-injection tests. Enabled
+# only by the dev-dependency below, so normal builds have no probe.
+test-probe = []
+
+[dev-dependencies]
+fid-store = { path = ".", features = ["test-probe"] }
 
 [lints]
 workspace = true

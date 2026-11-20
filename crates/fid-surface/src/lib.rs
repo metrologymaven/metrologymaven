@@ -4,6 +4,19 @@
 //! canonical JSON through `fid-canon`, so people, agents and the verifier read the
 //! same bytes. The design names serde; this crate uses `fid-canon`'s typed value
 //! model instead so that encoding is canonical by construction.
+//!
+//! Modules [`projection`] and [`names`] hold the surface projection model and name derivation
+//! (spec node `AUTO.SURF.PROJ`). Module [`jobs`] holds the invocation tracker with progress,
+//! cancellation and honest `not_run` / `no_reply` timeouts (spec node `AUTO.SURF.JOBS`).
+
+pub mod jobs;
+pub mod names;
+pub mod projection;
+
+pub use names::{derive as derive_names, DerivedNames, MCP_NAME_MAX};
+pub use projection::{
+    project, DeclaredProjection, DocText, McpProjection, NameKind, ParamSpec, ProjError, Projection, SurfaceProjection,
+};
 
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
 use fid_types::{CommandId, Digest};

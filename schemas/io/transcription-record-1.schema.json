@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/metrologymaven/metrologymaven/schemas/io/transcription-record-1.schema.json",
+  "title": "Transcription record (IO.RES.TRANS.MODEL, transcription-record@1)",
+  "description": "One record per imported third-party results file. Produced by fid_io_res::trans::model::transcribe; canonical JSON (RFC 8785). source_software and source_version are untrusted text taken from the source.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "source_software", "source_version", "file_sha256", "imported_at", "format"],
+  "properties": {
+    "schema": { "const": "transcription-record@1" },
+    "id": { "$ref": "#/$defs/uuid" },
+    "source_software": { "type": "string", "minLength": 1, "maxLength": 4096 },
+    "source_version": { "type": "string", "minLength": 1, "maxLength": 4096, "description": "The source's version text, or 'unknown' when the source states none." },
+    "file_sha256": { "$ref": "#/$defs/digest" },
+    "imported_at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$" },
+    "format": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$" }
+  },
+  "$defs": {
+    "uuid": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

@@ -37,7 +37,7 @@ const MAX_RULE_SUFFIX: usize = 48;
 // ------------------------------------------------------------------ rules
 
 /// Fixed rule IDs and their one-line descriptions, in catalogue order.
-const FIXED: [(&str, &str); 12] = [
+const FIXED: [(&str, &str); 15] = [
     ("KNP1-FMA", "fused multiply-add: `mul_add` or an FMA intrinsic"),
     ("KNP1-POW", "`powi`/`powf` and other std float powers outside the fid-num facade"),
     ("KNP1-LIBM", "std or libm transcendental function outside the fid-num facade"),
@@ -50,13 +50,17 @@ const FIXED: [(&str, &str); 12] = [
     ("KNP1-CLOCK", "clock access through `std::time`"),
     ("KNP1-ENV", "environment access through `std::env`"),
     ("KNP1-THREAD", "threads (`std::thread` and similar)"),
+    ("KNP1-PARSE", "source file the syntax scan cannot lex or classify (never waivable)"),
+    ("KNP1-PARSE-RESOLVE", "use tree, alias or macro metavariable the syntax scan cannot resolve"),
+    ("KNP1-CFG", "cfg predicate on `clippy` or `debug_assertions`: code hidden from the lint or profile-dependent (never waivable)"),
 ];
 
 /// Rule families with a free suffix, their prefixes and descriptions.
-const FAMILIES: [(&str, &str); 3] = [
+const FAMILIES: [(&str, &str); 4] = [
     ("KNP1-FLAG-", "kernel build configuration (target CPU, FMA feature, codegen units, toolchain pin)"),
     ("KNP1-ALLOW-", "dependency allowlist or SPDX licence check"),
     ("KNP1-DATA-", "reference-dataset denylist match"),
+    ("KNP1-TYPED-", "type-aware check: crate not linted for a target (BUILD) or finding without an in-crate span (NOSPAN); never waivable"),
 ];
 
 /// A KNP-1 rule with a stable string ID (`KNP1-…`).
@@ -74,16 +78,25 @@ pub enum Rule {
     Clock,
     Env,
     Thread,
+    /// `KNP1-PARSE`: a file or construct the syntax scan cannot classify (KRN.NUM.LINT.SYN).
+    Parse,
+    /// `KNP1-PARSE-RESOLVE`: a `use` tree, alias chain or macro metavariable the syntax scan
+    /// cannot resolve; waivable, with the waiver's recorded justification (KRN.NUM.LINT.SYN).
+    ParseResolve,
+    /// `KNP1-CFG`: a `clippy` or `debug_assertions` cfg predicate (KRN.NUM.LINT.SYN).
+    Cfg,
     /// `KNP1-FLAG-<suffix>`.
     Flag(String),
     /// `KNP1-ALLOW-<suffix>`.
     Allow(String),
     /// `KNP1-DATA-<suffix>`.
     Data(String),
+    /// `KNP1-TYPED-<suffix>` (KRN.NUM.LINT.TYPED).
+    Typed(String),
 }
 
 impl Rule {
-    const FIXED_RULES: [Rule; 12] = [
+    const FIXED_RULES: [Rule; 15] = [
         Rule::Fma,
         Rule::Pow,
         Rule::Libm,
@@ -96,6 +109,9 @@ impl Rule {
         Rule::Clock,
         Rule::Env,
         Rule::Thread,
+        Rule::Parse,
+        Rule::ParseResolve,
+        Rule::Cfg,
     ];
 
     fn fixed_index(&self) -> Option<usize> {
@@ -108,6 +124,7 @@ impl Rule {
             Rule::Flag(s) => format!("{}{s}", FAMILIES[0].0),
             Rule::Allow(s) => format!("{}{s}", FAMILIES[1].0),
             Rule::Data(s) => format!("{}{s}", FAMILIES[2].0),
+            Rule::Typed(s) => format!("{}{s}", FAMILIES[3].0),
             fixed => {
                 fixed.fixed_index().and_then(|i| FIXED.get(i)).map(|(id, _)| (*id).to_string()).unwrap_or_default()
             }
@@ -120,8 +137,21 @@ impl Rule {
             Rule::Flag(_) => FAMILIES[0].1,
             Rule::Allow(_) => FAMILIES[1].1,
             Rule::Data(_) => FAMILIES[2].1,
+            Rule::Typed(_) => FAMILIES[3].1,
             fixed => fixed.fixed_index().and_then(|i| FIXED.get(i)).map(|(_, d)| *d).unwrap_or_default(),
         }
+    }
+
+    /// False for rules no waiver may cover: the `KNP1-FLAG-WASM*` findings all sit at line 1 of
+    /// a binary module, so one waiver would hide every future hit (KRN.NUM.LINT.FLAGS), and a
+    /// `KNP1-PARSE` file was not scanned at all, so a waiver would hide everything in it
+    /// (KRN.NUM.LINT.SYN), and a `KNP1-TYPED-*` crate was not linted for that target
+    /// (KRN.NUM.LINT.TYPED).
+    pub fn is_waivable(&self) -> bool {
+        !matches!(self, Rule::Flag(s) if s.starts_with("WASM") || s == "WRAPPER")
+            && *self != Rule::Parse
+            && *self != Rule::Cfg
+            && !matches!(self, Rule::Typed(_))
     }
 
     /// Parses a rule ID. Family suffixes are `A-Z0-9` segments joined by single `-`, at most 48 bytes.
@@ -138,7 +168,8 @@ impl Rule {
                 return Some(match k {
                     0 => Rule::Flag(s),
                     1 => Rule::Allow(s),
-                    _ => Rule::Data(s),
+                    2 => Rule::Data(s),
+                    _ => Rule::Typed(s),
                 });
             }
         }
@@ -662,7 +693,8 @@ impl Applied {
 /// occurs there, and with `KNP1-WAIVER-SCHEMA` for a waiver whose crate occurs in more than one
 /// version (in the source tree or among the findings), since waivers carry no version. Otherwise a finding is waived by the first waiver (file order) with the same
 /// crate, file and rule whose range contains its line (REQ-004), and every waiver that waived
-/// nothing yields a `KNP1-WAIVER-UNUSED` warning (REQ-006).
+/// nothing yields a `KNP1-WAIVER-UNUSED` warning (REQ-006). A waiver for a rule that is not
+/// [`Rule::is_waivable`] fails with `KNP1-WAIVER-SCHEMA`, and such findings are never waived.
 pub fn apply_waivers(
     findings: Vec<Finding>,
     waivers: &[Waiver],
@@ -670,6 +702,13 @@ pub fn apply_waivers(
 ) -> Result<Applied, Vec<FindError>> {
     let mut stale = Vec::new();
     for (i, w) in waivers.iter().enumerate() {
+        if !w.rule.is_waivable() {
+            stale.push(FindError::new(
+                ErrorCode::WaiverSchema,
+                format!("{}: rule {} cannot be waived", w.label(i), w.rule),
+            ));
+            continue;
+        }
         // Waivers carry no crate version, so a crate present in more than one version is ambiguous:
         // fail closed rather than waive one version's finding on the other version's digest.
         let mut versions: BTreeSet<String> = sources.versions(&w.crate_name).into_iter().collect();
@@ -705,7 +744,8 @@ pub fn apply_waivers(
     let mut used = vec![false; waivers.len()];
     let mut out = Applied::default();
     for f in findings {
-        match waivers.iter().position(|w| w.matches(&f)) {
+        let hit = if f.rule.is_waivable() { waivers.iter().position(|w| w.matches(&f)) } else { None };
+        match hit {
             Some(i) => {
                 if let Some(u) = used.get_mut(i) {
                     *u = true;

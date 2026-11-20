@@ -1,0 +1,12 @@
+# Import allowlist of the kernel WASM reference module (spec node KRN.MAN.WASM, REQ-003).
+# Format: `<module> <name> -- <justification>`; read by `fid-wasm-check imports`.
+# Only function imports can be allowed. Nothing here gives the kernel a clock, randomness,
+# the file system or sockets. The clock import that Rust std links is not allowed: the
+# post-link `fid-wasm-check seal` step renames it to module `fid_trap`, and the runner makes
+# any call to it trap (`clock = "trap"` in wasm-runtime.toml).
+
+wasi_snapshot_preview1 fd_read -- reads the one canonical call from standard input (fd 0)
+wasi_snapshot_preview1 fd_write -- writes the canonical result or error to standard output (fd 1)
+wasi_snapshot_preview1 proc_exit -- ends the command with exit code 0, 1, 2 or 3
+wasi_snapshot_preview1 environ_get -- Rust std start-up copies environ; wasmtime passes none and the shim never reads it
+wasi_snapshot_preview1 environ_sizes_get -- Rust std start-up sizes environ; wasmtime passes none and the shim never reads it
