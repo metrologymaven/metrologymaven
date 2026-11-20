@@ -27,13 +27,21 @@
 //!    (rule 4; a zero orientation product is `InvalidParams{field:
 //!    "constraints.fixed_axis_direction"}`). On the centred, scaled data `q_i`,
 //!    `t_i = red::dot(q_i, n)`, `t_max` their total-order maximum, and the depths are
-//!    `(t_max - t_i) * scale`, so the extreme point's depth is exactly 0 and no depth is
-//!    negative. The plane passes through `centroid + t_max * scale * n`. The objective is the
+//!    `(t_max - t_i) * scale`, so the extreme point's depth is exactly 0 and no computed depth
+//!    is negative (`max_violation` is 0). The contacts are the points with `t_i == t_max`
+//!    exactly. These are statements about the computed floats: against the exact depths of the
+//!    input points below the reported plane, each depth carries the rounding of the centring
+//!    (`x - c`, at most `u |x_k - c_k|` per coordinate, `u = 2^-53`) and of two `red::dot`
+//!    products (each at most a few `u` times `sum_k |q_k n_k|`), so to first order
+//!    `|depth_i - exact_i| <= 8 u (||x_i - c||_1 + ||x_m - c||_1)` with `m` the extreme point;
+//!    the same bound limits the true violation of a point whose computed depth is 0 or small
+//!    [unverified constant]. The plane passes through `centroid + t_max * scale * n`. The objective is the
 //!    largest depth (minimax), `red::sum` of the depths (L1) or `red::sum_sq` of the depths
 //!    (L2, m^2). This is the exact global optimum of every variant for that normal (the
 //!    objective grows with the offset, which the constraints bound below by `t_max`): no
-//!    iteration and no certificate, [`Optimality::ClosedForm`], and a rocking report of the one
-//!    candidate (`rocking = false`).
+//!    iteration and no certificate, [`Optimality::ClosedForm`]. REQ-004's "empty rocking set" is
+//!    a report holding only this candidate (`rocking = false`, `tie_break = single`): no
+//!    alternative contact set exists, and `tan_rock::rock_report` refuses an empty list.
 //! 3. **Free normal**: constrained L2 is refused with [`FitError::NotCertifiable`] (its optimum
 //!    generally touches fewer points than it has parameters, so it is not a vertex and the
 //!    certificate pipeline cannot prove it; see the leaf's Open questions). Otherwise a seed is
@@ -79,8 +87,10 @@
 //!    linear but the objective is not, so that is a **strict local minimum**
 //!    ([`Optimality::StrictLocal`]), not a proven global one.
 //! 9. **Candidates**: from each certified start's parameters: depths
-//!    `k * ((((c + a u_i) + b v_i) - w_i) / s)` times the scale (metres), contacts (depth
-//!    `<= side_tol`, ascending), maximum violation `max(0, -min depth)`, objective `k` times the
+//!    `k * ((((c + a u_i) + b v_i) - w_i) / s)` times the scale (metres); contacts the points
+//!    of the certificate's tangent-side active rows (side 0), ascending, so they come from the
+//!    certified active set and never from a float comparison (a point exactly tied with the
+//!    active set but outside it is not listed); maximum violation `max(0, -min depth)`, objective `k` times the
 //!    certified value times the scale, feature the plane through the foot of the perpendicular
 //!    from the centroid, `centroid + ((k c) / s) * scale * n`, with the outward unit normal
 //!    `n = unit_direction(n0 - (k a) e1 - (k b) e2)`. A certified candidate whose violation exceeds
@@ -93,7 +103,10 @@
 //! # What enters the digest
 //!
 //! [`encode`] writes only values derived from certified parameters (and the caller's inputs):
-//! never an iterate, an iteration count or a per-start history. Floats are the `F64Bits` form
+//! never an iterate or an iteration count. Which starts certified, and to which vertex, does
+//! enter it, through the rocking report (its candidates, `merged` and `excluded`) and the
+//! certificate's `local_optimum_only` flag; that set of outcomes is deterministic for a given
+//! seed (D0) but is not a property of the data alone. Floats are the `F64Bits` form
 //! `0x` + 16 lowercase hex digits; the certificate enters by its `sha256:` digest
 //! (`fid.cert@1`, which itself excludes every iterate). [`output_digest`] is the SHA-256 of
 //! those bytes.
@@ -154,7 +167,7 @@ pub struct TanPlaneParams {
     /// Required (`None` is `InvalidParams{field: "variant"}`); there is no default.
     pub variant: Option<TanVariant>,
     pub material_side: MaterialSide,
-    /// Largest accepted violation and contact band (metres), finite, not negative.
+    /// Largest accepted violation (metres), finite, not negative. Contacts do not depend on it.
     pub side_tol: f64,
     /// Relative rocking tolerance of `tan_rock::rock_report`, in `[0, 1]`.
     pub rock_tol: f64,
@@ -201,10 +214,12 @@ pub struct TanPlaneResult {
     pub feature: FittedFeature,
     /// The variant's objective: metres (minimax, L1) or square metres (L2).
     pub objective: f64,
-    /// Depth of every point below the plane (metres, into the material), in point order.
+    /// Depth of every point below the plane (metres, into the material, positive), in point
+    /// order. The `Fit` summary turns them into the contract's signed residuals.
     pub residuals: Vec<f64>,
     pub stats: ResidualStats,
-    /// Points with depth `<= side_tol`, ascending.
+    /// The contact points, ascending: the tangent-side rows of the certified active set (free
+    /// normal) or the points with `t_i == t_max` (fixed normal).
     pub contacts: Vec<u32>,
     /// `max(0, -min depth)` (metres), at most `side_tol`.
     pub max_violation: f64,
@@ -216,6 +231,8 @@ pub struct TanPlaneResult {
     pub rock: RockReport,
     /// The seed (recorded for the journal; `None` when no random start was used).
     pub seed: Option<u64>,
+    /// The form scale `k` of rule 5 (1 for a fixed normal; not in the digest).
+    pub form_scale: f64,
     /// Starts run (diagnostic; not in the digest).
     pub starts: u32,
     /// Starts without a certified result (diagnostic; not in the digest).
@@ -263,24 +280,35 @@ impl Fit for TanPlane {
     }
 
     /// The contract summary of [`fit_tan_plane`]: the feature (canonical, so its normal is
-    /// sign-normalised), the depths as residuals, diagnostics `rank` = parameter count (1 for a
+    /// sign-normalised); the residuals signed as the contract has them (`ls_lin` rule 6:
+    /// positive on the normal's side), so `-depth` when the canonical normal is the outward
+    /// normal and `+depth` when the sign rule flipped it (the outward normal's first non-zero
+    /// component is negative); diagnostics `rank` = parameter count (1 for a
     /// fixed normal), `cond` = the certificate's condition estimate (0 for a fixed normal),
     /// `grad_norm` 0 and `iterations` 0 (iterate values are not values of record), stop
     /// `exchange` (`closed_form` for a fixed normal), and a contract certificate with the
-    /// contacts as support and the certificate's proven value bound (metres) as gap (0 for a
-    /// fixed normal).
+    /// contacts as support and the certificate's proven value bound times the form scale and
+    /// the scale (metres) as gap (0 for a fixed normal).
     fn fit(&self, pts: &PointsView<'_>, params: &FitParams, seed: Option<u64>) -> Result<FitResult, FitError> {
         let r = fit_tan_plane(pts, params, &self.params, seed)?;
         let scale = Centred::new(pts)?.map().scale();
         let (rank, cond, stop, gap) = match &r.certificate {
-            Some(c) => (c.params().len(), c.cond(), StopReason::Exchange, c.value_bound() * scale),
+            Some(c) => (c.params().len(), c.cond(), StopReason::Exchange, (r.form_scale * c.value_bound()) * scale),
             None => (1, 0.0, StopReason::ClosedForm, 0.0),
         };
         let diagnostics = FitDiagnostics { grad_norm: 0.0, rank, cond, iterations: 0, stop };
         let mut support = contract_alloc(r.contacts.len())?;
         support.extend(r.contacts.iter().map(|&i| i as usize));
         let cert = contract::Certificate { support, gap };
-        FitResult::assemble(&r.feature, r.residuals, diagnostics, Some(cert), r.algorithm)
+        let flipped = match r.feature {
+            FittedFeature::Plane { n, .. } => n.iter().copied().find(|x| *x != 0.0).is_some_and(|x| x < 0.0),
+            _ => false,
+        };
+        let mut residuals = contract_alloc(r.residuals.len())?;
+        for &d in &r.residuals {
+            residuals.push(if flipped { d } else { 0.0 - d });
+        }
+        FitResult::assemble(&r.feature, residuals, diagnostics, Some(cert), r.algorithm)
     }
 }
 
@@ -360,25 +388,17 @@ fn orient(side: &MaterialSide, pts: &PointsView<'_>, n: V3, field: &'static str)
     Ok(if o < 0.0 { [-n[0] + 0.0, -n[1] + 0.0, -n[2] + 0.0] } else { n })
 }
 
-fn contacts_and_violation(depths: &[f64], side_tol: f64) -> Result<(Vec<u32>, f64, usize), FitError> {
-    let mut contacts = Vec::new();
+/// `max(0, -min depth)` and the index of the smallest depth.
+fn violation(depths: &[f64]) -> Result<(f64, usize), FitError> {
     let mut min = f64::INFINITY;
     let mut argmin = 0usize;
     for (i, &d) in depths.iter().enumerate() {
-        if d <= side_tol {
-            contacts
-                .try_reserve(1)
-                .map_err(|_| FitError::Num(NumError::Domain { op: OP, detail: "allocation_failed" }))?;
-            // Point counts are below MAX_POINTS < 2^32.
-            contacts.push(i as u32);
-        }
         if d < min {
             min = d;
             argmin = i;
         }
     }
-    let violation = total_max(0.0, -min)?;
-    Ok((contacts, violation, argmin))
+    Ok((total_max(0.0, -min)?, argmin))
 }
 
 fn fixed_normal(
@@ -403,8 +423,16 @@ fn fixed_normal(
         t.push(ti);
     }
     let mut depths = contract_alloc(pts.len())?;
-    for &ti in &t {
+    let mut contacts = Vec::new();
+    for (i, &ti) in t.iter().enumerate() {
         depths.push(map.inverse_length(tmax - ti)?);
+        if ti == tmax {
+            contacts
+                .try_reserve(1)
+                .map_err(|_| FitError::Num(NumError::Domain { op: OP, detail: "allocation_failed" }))?;
+            // Point counts are below MAX_POINTS < 2^32.
+            contacts.push(i as u32);
+        }
     }
     let objective = match variant {
         TanVariant::ExternalMinimax => {
@@ -419,7 +447,7 @@ fn fixed_normal(
     };
     let p = map.inverse([tmax * n[0], tmax * n[1], tmax * n[2]])?;
     let feature = FittedFeature::Plane { p, n };
-    let (contacts, max_violation, _) = contacts_and_violation(&depths, tp.side_tol)?;
+    let (max_violation, _) = violation(&depths)?;
     let cand = CandidateSet { contacts: contacts.clone(), objective, feature: feature.clone() };
     let rock = rock_report(&[cand], tp.rock_tol)?;
     let stats = ResidualStats::of(&depths)?;
@@ -437,6 +465,7 @@ fn fixed_normal(
         certificate: None,
         rock,
         seed: None,
+        form_scale: 1.0,
         starts: 0,
         failed_starts: 0,
     })
@@ -488,7 +517,6 @@ fn candidate(
     map: &Normalisation,
     k: f64,
     certified: Certified,
-    side_tol: f64,
 ) -> Result<Found, FitError> {
     let p = certified.params();
     let (a, b, c) = (p[0], p[1], p[2]);
@@ -506,7 +534,10 @@ fn candidate(
     for &x in &scaled {
         depths.push(map.inverse_length(k * x)?);
     }
-    let (contacts, max_violation, worst) = contacts_and_violation(&depths, side_tol)?;
+    let (max_violation, worst) = violation(&depths)?;
+    let mut contacts = contract_alloc(prob.len())?;
+    // The active set is sorted by (point, side), so the side-0 points come out ascending.
+    contacts.extend(certified.certificate().active_set().iter().filter(|l| l.side == 0).map(|l| l.point));
     let objective = map.inverse_length(k * certified.value())?;
     let feature = FittedFeature::Plane { p: point, n };
     Ok(Found { certified, cand: CandidateSet { contacts, objective, feature }, depths, max_violation, worst })
@@ -630,7 +661,7 @@ fn free_normal(
 
     let mut found = contract_alloc::<Found>(certified.len())?;
     for c in certified.into_iter().flatten() {
-        let f = candidate(&prob, &fr, &map, k, c, tp.side_tol)?;
+        let f = candidate(&prob, &fr, &map, k, c)?;
         if f.max_violation > tp.side_tol {
             return Err(FitError::SideViolation { index: f.worst, violation: f.max_violation });
         }
@@ -669,6 +700,7 @@ fn free_normal(
         certificate: Some(cert.into_certificate()),
         rock,
         seed,
+        form_scale: k,
         starts: tp.starts,
         // At most MAX_STARTS.
         failed_starts: failed as u32,

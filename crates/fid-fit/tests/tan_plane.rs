@@ -269,8 +269,9 @@ fn ac2_crowned_plate_rocks_in_l1() {
 /// AC-2 on the `KRN.ENV.TAN.ROCK` crowned plate itself. Constrained L1 lists the four facet
 /// sets with `rocking` true, each with the objective of the ROCK fixture's exact oracle
 /// (`3f50ffffde000066`, documented in `crowned-plate.txt`). External minimax reaches the
-/// horizontal plane through the apex (1.5 h), but its 21 coplanar far-side points give more
-/// candidate bases than `cert::active::MAX_CANDIDATES` (`OverCap`), so it fails closed with no
+/// horizontal plane through the apex (1.5 h), but its 20 coplanar far-side points and the apex
+/// put 21 rows in the small-slack pool, and `C(21, 4) = 5985` candidate bases exceed
+/// `cert::active::MAX_CANDIDATES` (`OverCap`), so it fails closed with no
 /// value instead of the AC's single candidate {0} (Open questions of the leaf).
 #[test]
 fn ac2_tan_rock_crowned_plate() {
@@ -409,21 +410,84 @@ fn point_normals_side() {
     assert_eq!(encode(&r).unwrap(), encode(&s).unwrap());
 }
 
-/// The `Fit` trait: the contract summary of the same fit.
+/// The `Fit` trait: the contract summary of the same fit. Residuals are signed as the contract
+/// has them (positive on the canonical normal's side): pins-small's outward normal has a
+/// positive first component, so the sign rule keeps it and the residuals are `-depth`;
+/// slant-far's has a negative first component, so the rule flips it and they are `+depth`. The
+/// gap is the certificate's value bound times the form scale and the scale.
 #[test]
 fn fit_trait_summary() {
-    let c = case("slant-far");
+    for (name, flipped) in [("pins-small", false), ("slant-far", true)] {
+        let c = case(name);
+        let pts = PointsView::new(&c.xyz, None).unwrap();
+        let f = TanPlane::new(tparams(&c, Some(TanVariant::ConstrainedL1))).unwrap();
+        assert_eq!(f.algorithm_id().to_string(), "fit.plane.tan_l1@1.0.0");
+        let s = f.fit(&pts, &FitParams::new(Method::Tangential), Some(SEED)).unwrap();
+        let r = run(&c, TanVariant::ConstrainedL1, false).unwrap();
+        assert_eq!(s.feature, r.feature.canonical().unwrap());
+        let n = normal(&r);
+        let cn = match s.feature {
+            FittedFeature::Plane { n, .. } => n,
+            _ => panic!("not a plane"),
+        };
+        assert_eq!(n[0] < 0.0, flipped, "{name}");
+        assert_eq!(cn[0] * n[0] < 0.0, flipped, "{name}");
+        let want: Vec<f64> = r.residuals.iter().map(|&d| if flipped { d } else { 0.0 - d }).collect();
+        assert_eq!(s.residuals, want, "{name}");
+        if flipped {
+            assert!(s.residuals.iter().all(|&x| x >= -SIDE_TOL));
+        } else {
+            assert!(s.residuals.iter().all(|&x| x <= SIDE_TOL));
+        }
+        let cert = s.certificate.unwrap();
+        assert_eq!(cert.support, r.contacts.iter().map(|&i| i as usize).collect::<Vec<_>>());
+        let full = r.certificate.as_ref().unwrap();
+        let scale = fid_fit::contract::Centred::new(&pts).unwrap().map().scale();
+        assert_eq!(cert.gap, (r.form_scale * full.value_bound()) * scale, "{name}");
+        assert!(r.form_scale < 1.0 && cert.gap > 0.0);
+        assert_eq!(s.diagnostics.rank, 3);
+    }
+}
+
+/// Contacts come from the certified active set (free normal) or exact ties with the extreme
+/// point (fixed normal), never from a `side_tol` comparison: `side_tol = 0` gives the same
+/// contacts, and so does a band wide enough to take in other points.
+#[test]
+fn contacts_do_not_depend_on_side_tol() {
+    let c = case("pins-small");
     let pts = PointsView::new(&c.xyz, None).unwrap();
-    let f = TanPlane::new(tparams(&c, Some(TanVariant::ConstrainedL1))).unwrap();
-    assert_eq!(f.algorithm_id().to_string(), "fit.plane.tan_l1@1.0.0");
-    let s = f.fit(&pts, &FitParams::new(Method::Tangential), Some(SEED)).unwrap();
-    let r = run(&c, TanVariant::ConstrainedL1, false).unwrap();
-    assert_eq!(s.feature, r.feature.canonical().unwrap());
-    assert_eq!(s.residuals, r.residuals);
-    let cert = s.certificate.unwrap();
-    assert_eq!(cert.support, r.contacts.iter().map(|&i| i as usize).collect::<Vec<_>>());
-    assert!(cert.gap >= 0.0);
-    assert_eq!(s.diagnostics.rank, 3);
+    for v in TanVariant::ALL {
+        for fixed in [false, true] {
+            if !fixed && *v == TanVariant::ConstrainedL2 {
+                continue;
+            }
+            let base = run(&c, *v, fixed).unwrap();
+            let mut params = FitParams::new(Method::Tangential);
+            if fixed {
+                params.constraints.push(Constraint::FixedAxisDirection(c.fixed));
+            }
+            for side_tol in [0.0, 1e-4] {
+                let tp = TanPlaneParams { side_tol, ..tparams(&c, Some(*v)) };
+                match fit_tan_plane(&pts, &params, &tp, Some(SEED)) {
+                    Ok(r) => {
+                        assert_eq!(r.contacts, base.contacts, "{v} fixed={fixed} side_tol={side_tol}");
+                        assert_eq!(r.residuals, base.residuals);
+                    }
+                    // A certified result whose float depths dip below 0 by rounding is refused
+                    // when nothing is tolerated; it must not change the contacts otherwise.
+                    Err(FitError::SideViolation { violation, .. }) => {
+                        assert!(side_tol == 0.0 && !fixed && violation < 1e-15, "{v} {violation:e}");
+                    }
+                    Err(e) => panic!("{v} fixed={fixed}: {e:?}"),
+                }
+            }
+            if fixed {
+                // The extreme point's depth is exactly 0 and none is negative.
+                assert_eq!(base.max_violation, 0.0);
+                assert!(base.contacts.iter().all(|&i| base.residuals[i as usize] == 0.0));
+            }
+        }
+    }
 }
 
 /// Spec cards (KRN.MAN.CARD): one per algorithm ID, clean card check, one input.

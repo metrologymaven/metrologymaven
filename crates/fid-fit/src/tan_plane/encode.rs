@@ -17,7 +17,9 @@
 //! `<f>` is the `F64Bits` form: a JSON string `0x` followed by the 16 lowercase hexadecimal
 //! digits of the IEEE-754 binary64 bits; `<i>` a JSON string of decimal digits. Only values
 //! derived from certified parameters and the caller's inputs appear: no iterate, iteration
-//! count, start count or per-start history.
+//! count or start count. Which starts certified, and to which vertex, shows through the rocking
+//! report (candidates, `merged`, `excluded`) and the certificate digest (`local_optimum_only`);
+//! that is deterministic for a given seed but not a property of the data alone.
 
 use fid_kci::kci::sha256::sha256_digest;
 use fid_num::NumError;
