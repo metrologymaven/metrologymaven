@@ -577,6 +577,18 @@ impl DmtRow {
             other => other,
         }
     }
+
+    /// The same row with its review state replaced; canonical form and row digest are
+    /// recomputed, and the content digest is unchanged by construction. `GDT.RES.ROWFLOW.STATE`
+    /// uses it so a row leaves the workflow only with the review state the workflow derived.
+    pub fn with_review(&self, review: ReviewState) -> Result<DmtRow, DmtError> {
+        let mut row = self.clone();
+        row.review = review;
+        let (canonical, digest) = canonical_and_digest(&row.to_cvalue())?;
+        row.canonical = canonical;
+        row.digest = digest;
+        Ok(row)
+    }
 }
 
 /// The content digest of a DMT row (REQ-GDT.RES.STATUS-001, D-045): SHA-256 of the RFC 8785

@@ -44,10 +44,9 @@
   },
   {
    "error": {
-    "code": "attestation_missing",
+    "code": "bad_attestation",
     "detail": {
-     "designator": "syn-std-a",
-     "edition": "2001"
+     "reason": "placeholder_not_allowed"
     }
    }
   }

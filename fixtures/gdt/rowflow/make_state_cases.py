@@ -17,16 +17,19 @@ Rules this reference applies (the pinned check order of a review event):
  1. revision state `signed_off`            -> bad_transition{state, event}
  2. author not a human principal           -> agent_authored_revision
  3. reviewer not a human principal         -> reviewer_not_human
- 4. reviewed digest != content digest      -> stale_review
- 5. reviewer identity == author identity   -> reviewer_is_author   (ASCII case-insensitive)
- 6. reviewer holds no role for the dialect -> reviewer_not_in_roster
- 7. reviewer's roster ID == author's       -> reviewer_is_author
- 8. approve while holding a live approval  -> duplicate_reviewer
- 9. attestations                           -> attestation_missing{designator, edition}
-10. IDR (request_changes only)             -> bad_idr{reason} / field_too_long{position}
+ 4. date before the proposal or last review -> backdated_review
+ 5. reviewed digest != content digest      -> stale_review
+ 6. reviewer identity == author identity   -> reviewer_is_author   (ASCII case-insensitive)
+ 7. reviewer holds no role for the dialect -> reviewer_not_in_roster
+ 8. reviewer's roster ID == author's       -> reviewer_is_author
+ 9. approve while holding a live approval  -> duplicate_reviewer
+10. attestations                           -> bad_attestation{placeholder_not_allowed} /
+                                              attestation_missing{designator, edition}
+11. IDR (request_changes only)             -> bad_idr{reason} / field_too_long{position}
 
 A proposal starts a new revision: number = previous + 1, state draft, no reviews,
-derived_from = the previous revision's (number, content digest); a different key is
+derived_from = the previous revision's (number, content digest). A row whose own `review`
+field is not draft is review_field_not_draft (checked first); a different key is
 key_mismatch. The content digest is SHA-256 over RFC 8785 canonical JSON of the row without
 `review` (for these ASCII, number-free documents, json.dumps with sorted keys and no spaces).
 """
@@ -160,6 +163,8 @@ class Flow(Exception):
 
 def propose(prev, row_name, author, at):
     row = ROWS[row_name]
+    if row["review"] != {"state": "draft"}:
+        raise Flow("review_field_not_draft")
     digest = content_digest(row)
     if prev is not None and prev["key"] != row["key"]:
         raise Flow("key_mismatch")
@@ -174,6 +179,7 @@ def propose(prev, row_name, author, at):
         "provenance": "human" if human else "agent",
         "derived_from": None if prev is None else {"revision": prev["revision"], "content_digest": prev["content_digest"]},
         "state": "draft",
+        "proposed_at": at,
         "reviews": [],
         "idrs": [],
     }
@@ -212,6 +218,8 @@ def review(rev, ev):
     who = ev["reviewer"]
     if who["kind"] != "human":
         raise Flow("reviewer_not_human")
+    if ev["at"] < rev["proposed_at"] or (rev["reviews"] and ev["at"] < rev["reviews"][-1]["at"]):
+        raise Flow("backdated_review")
     reviewed = rev["content_digest"] if ev["reviewed"] == "current" else content_digest(ROWS[ev["reviewed"]])
     if reviewed != rev["content_digest"]:
         raise Flow("stale_review")
@@ -226,6 +234,8 @@ def review(rev, ev):
     if decision == "approve" and rid in live_approvals(rev):
         raise Flow("duplicate_reviewer")
     attest = ev["attest"]
+    if attest == "placeholder" and not is_placeholder(row):
+        raise Flow("bad_attestation", reason="placeholder_not_allowed")
     placeholder_ok = attest == "placeholder" and is_placeholder(row)
     if not placeholder_ok:
         held = set() if attest in ("none", "placeholder") else {tuple(p) for p in attest}
@@ -250,7 +260,7 @@ def review(rev, ev):
             if p == "" or any(ord(c) < 0x20 or 0x7f <= ord(c) < 0xa0 for c in p):
                 raise Flow("bad_idr", reason="bad_position")
         new["idrs"].append({"id": "idr-%d-%d" % (rev["revision"], len(rev["idrs"]) + 1), "positions": len(positions)})
-    new["reviews"].append({"reviewer": rid, "decision": decision})
+    new["reviews"].append({"reviewer": rid, "decision": decision, "at": ev["at"]})
     if decision == "request_changes":
         new["state"] = "draft"
     else:
@@ -345,6 +355,10 @@ CASES = {
     "same_person_two_principals": [prop(author={"kind": "human", "id": "author-four"}),
                                    rv({"kind": "human", "id": "author-four-alt"}), rv(R1)],
     "key_change": [prop(), prop("other_key")],
+    # Review findings on #320: a row file cannot carry its own sign-off; no backdated review.
+    "forged_review": [prop("supported_review_only"), prop(), rv(R1), rv(R2)],
+    "backdated": [prop(), rv(R1, at="2026-11-19"), rv(R1), rv(R2, at="2026-11-19"),
+                  rv(R2, at="2026-11-21")],
 }
 
 DIGESTS = {name: content_digest(row) for name, row in sorted(ROWS.items())}

@@ -2,13 +2,21 @@
 //! `GDT.RES.ROWFLOW.STATE`, D-009, D-016, D-045).
 //!
 //! The pure core of the DMT workflow. Every command of `GDT.RES.ROWFLOW` (propose, review,
-//! adopt) goes through the two functions here, so the rules cannot drift between commands:
+//! adopt) goes through the functions here, so the rules cannot drift between commands:
 //!
 //! - [`propose`] starts a new [`RowRevision`] of a key: number one more than the previous
 //!   revision, state `draft`, no reviews, `derived_from` naming the previous revision. So any
 //!   new content, including a change to a `signed_off` row, starts over and the old sign-off
-//!   covers only the old revision (REQ-006, REQ-GDT.RES.ROWFLOW-003).
+//!   covers only the old revision (REQ-006, REQ-GDT.RES.ROWFLOW-003). A row whose own `review`
+//!   field is not `draft` is refused (`review_field_not_draft`): review state is never taken
+//!   from a proposer.
 //! - [`transition`] applies one review event to a revision (REQ-001 .. 005, 007).
+//! - [`replay`] rebuilds a revision from its journaled [`FlowRecord`]s, re-checking every
+//!   invariant and requiring each rebuilt record to equal the journaled one byte for byte.
+//!
+//! **A row leaves the workflow only through [`RowRevision::reviewed_row`]**, whose `review`
+//! field is set from [`RowRevision::review_state`], the state this module derived. The row as
+//! proposed is not exposed.
 //!
 //! **Principals come from the bus.** Authors and reviewers are [`Principal`]s, which only
 //! `fid_bus::principal::SessionTable::derive_principal` can build from an authenticated
@@ -26,29 +34,36 @@
 //! the digest the reviewer read; any other digest is `stale_review` (REQ-GDT.RES.ROWFLOW-006).
 //!
 //! **Journaling.** Each successful call returns a [`Step`]: the new revision and the
-//! [`FlowRecord`] the command journals for it (event, key, revision, content digest, from and
-//! to state, reviewer ID, roster digest, attestations, IDR, date). A failed call returns an
-//! error and the input revision is untouched (it is only borrowed), so nothing is journaled.
+//! [`FlowRecord`] the command journals for it. A failed call returns an error and the input
+//! revision is untouched (it is only borrowed), so nothing is journaled.
 //!
 //! **Pseudonymous reviewers.** A review record names the reviewer by roster reviewer ID only
 //! (for example `r1`), never by display name or principal identity. The roster has no consent
 //! field, so no record here ever carries more.
+//!
+//! **`signed_off` here is not a counted sign-off.** It means two distinct roster reviewers
+//! hold live approvals. Conflict-of-interest rules (`OUTR.GDTC.REVIEW`: one organisation,
+//! sponsorship, recusal) are not checked here; `GDT.RES.STATUS` recounts approvals from the
+//! journal with them, and only its verified register says whether a rule is signed off.
 //!
 //! **Check order of a review event** (the first failure is returned):
 //! 1. revision `signed_off`: `bad_transition{signed_off, <event>}` (a signed-off row changes
 //!    only through a new revision);
 //! 2. author not human: `agent_authored_revision`;
 //! 3. reviewer not human: `reviewer_not_human`;
-//! 4. reviewed digest differs from the revision's: `stale_review`;
-//! 5. reviewer identity equals the author's (ASCII case-insensitive): `reviewer_is_author`;
-//! 6. no roster role for the row's dialect on the review date: `reviewer_not_in_roster`;
-//! 7. the author holds that same roster reviewer ID: `reviewer_is_author`;
-//! 8. an approval from a reviewer whose approval is still live: `duplicate_reviewer`;
-//! 9. attestations: `field_too_long{attestations}` past [`MAX_ATTESTATIONS`], then
-//!    `attestation_missing{designator, edition}` for the first cited pair not attested, unless
-//!    the row is a placeholder (status `unsupported`, every chain empty) and the review
-//!    carries [`Attestation::NotRequiredPlaceholder`] (REQ-004);
-//! 10. IDR: `bad_idr{idr_on_approve}`, `bad_idr{bad_question_code}`,
+//! 4. review date before the proposal date or before the last review: `backdated_review`;
+//! 5. reviewed digest differs from the revision's: `stale_review`;
+//! 6. reviewer identity equals the author's (ASCII case-insensitive): `reviewer_is_author`;
+//! 7. no roster role for the row's dialect on the review date: `reviewer_not_in_roster`;
+//! 8. the author holds that same roster reviewer ID: `reviewer_is_author`;
+//! 9. an approval from a reviewer whose approval is still live: `duplicate_reviewer`;
+//! 10. attestations: `field_too_long{attestations}` past [`MAX_ATTESTATIONS`],
+//!     `field_too_long{attestation}` on an over-long label,
+//!     `bad_attestation{placeholder_not_allowed}` for [`Attestation::NotRequiredPlaceholder`]
+//!     on a row that is not a placeholder (status `unsupported`, every chain empty), then
+//!     `attestation_missing{designator, edition}` for the first cited pair not attested,
+//!     unless a placeholder row carries the placeholder attestation (REQ-004);
+//! 11. IDR: `bad_idr{idr_on_approve}`, `bad_idr{bad_question_code}`,
 //!     `bad_idr{bad_position_count}`, then per position `field_too_long{position}` (over 280
 //!     characters) and `bad_idr{bad_position}` (empty or a control character).
 //!
@@ -57,12 +72,12 @@
 //! while the review history is kept. The revision is `signed_off` exactly when two distinct
 //! reviewers hold live approvals (REQ-003). No floating point, no hash maps, no panics.
 
-use super::roster::{Date, Dialect as RosterDialect, ReviewerId, RosterView};
+use super::roster::{Date, Dialect as RosterDialect, ReviewerId, Roster, RosterView};
 use fid_bus::principal::{Principal, PrincipalKind};
 use fid_canon::{digest_bytes, to_canonical_bytes, CValue};
 use fid_gps::dmt::{row_content_digest, Dialect, DmtKey, DmtRow, ReviewState, Reviewers, RowStatus};
 use fid_types::Digest;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 /// Longest IDR position statement, in Unicode scalar values (REQ-005).
@@ -90,6 +105,11 @@ pub enum FlowError {
         /// Its edition.
         edition: String,
     },
+    /// `bad_attestation{reason}`: `placeholder_not_allowed` on a row that is not a placeholder.
+    BadAttestation {
+        /// The reason.
+        reason: &'static str,
+    },
     /// `reviewer_is_author` (REQ-007).
     ReviewerIsAuthor,
     /// `duplicate_reviewer` (REQ-007).
@@ -98,7 +118,8 @@ pub enum FlowError {
     ReviewerNotInRoster,
     /// `reviewer_not_human` (REQ-007).
     ReviewerNotHuman,
-    /// `field_too_long{field}`: an IDR position over 280 characters, or too many attestations.
+    /// `field_too_long{field}`: an IDR position over 280 characters, or too many or too long
+    /// attestations.
     FieldTooLong {
         /// `position`, `attestations` or `attestation`.
         field: &'static str,
@@ -113,6 +134,10 @@ pub enum FlowError {
     /// `stale_review`: the review names a content digest other than the revision's
     /// (REQ-GDT.RES.ROWFLOW-006).
     StaleReview,
+    /// `backdated_review`: the review date is before the proposal or the last review.
+    BackdatedReview,
+    /// `review_field_not_draft`: a proposed row whose own `review` field is not `draft`.
+    ReviewFieldNotDraft,
     /// `key_mismatch`: a proposal for a different key than the previous revision's.
     KeyMismatch,
     /// `bad_idr{reason}`: an IDR that breaks its format.
@@ -122,7 +147,21 @@ pub enum FlowError {
     },
     /// `content_digest_unavailable{reason}`: the row's canonical form could not be written.
     ContentDigest {
-        /// The schema error code.
+        /// The schema or canonical-JSON error code.
+        reason: &'static str,
+    },
+    /// `reviewers_invalid{reason}`: the live approvals do not form a valid schema reviewer
+    /// list (unreachable with roster reviewer IDs; reported, never ignored).
+    ReviewersInvalid {
+        /// The schema's reason.
+        reason: &'static str,
+    },
+    /// `unknown_roster`: a journaled review names a roster digest replay was not given.
+    UnknownRoster,
+    /// `replay_mismatch{reason}`: the journaled records do not rebuild the same revision.
+    ReplayMismatch {
+        /// `empty`, `first_not_propose`, `propose_inside_revision`, `malformed_record`,
+        /// `principal_kind` or `record_differs`.
         reason: &'static str,
     },
 }
@@ -133,6 +172,7 @@ impl FlowError {
         match self {
             FlowError::AgentAuthoredRevision => "agent_authored_revision",
             FlowError::AttestationMissing { .. } => "attestation_missing",
+            FlowError::BadAttestation { .. } => "bad_attestation",
             FlowError::ReviewerIsAuthor => "reviewer_is_author",
             FlowError::DuplicateReviewer => "duplicate_reviewer",
             FlowError::ReviewerNotInRoster => "reviewer_not_in_roster",
@@ -140,9 +180,14 @@ impl FlowError {
             FlowError::FieldTooLong { .. } => "field_too_long",
             FlowError::BadTransition { .. } => "bad_transition",
             FlowError::StaleReview => "stale_review",
+            FlowError::BackdatedReview => "backdated_review",
+            FlowError::ReviewFieldNotDraft => "review_field_not_draft",
             FlowError::KeyMismatch => "key_mismatch",
             FlowError::BadIdr { .. } => "bad_idr",
             FlowError::ContentDigest { .. } => "content_digest_unavailable",
+            FlowError::ReviewersInvalid { .. } => "reviewers_invalid",
+            FlowError::UnknownRoster => "unknown_roster",
+            FlowError::ReplayMismatch { .. } => "replay_mismatch",
         }
     }
 }
@@ -155,15 +200,21 @@ impl fmt::Display for FlowError {
             }
             FlowError::FieldTooLong { field } => write!(f, "{}{{{field}}}", self.code()),
             FlowError::BadTransition { state, event } => write!(f, "{}{{{}, {event}}}", self.code(), state.as_str()),
-            FlowError::BadIdr { reason } | FlowError::ContentDigest { reason } => {
-                write!(f, "{}{{{reason}}}", self.code())
-            }
+            FlowError::BadAttestation { reason }
+            | FlowError::BadIdr { reason }
+            | FlowError::ContentDigest { reason }
+            | FlowError::ReviewersInvalid { reason }
+            | FlowError::ReplayMismatch { reason } => write!(f, "{}{{{reason}}}", self.code()),
             other => f.write_str(other.code()),
         }
     }
 }
 
 impl std::error::Error for FlowError {}
+
+fn mismatch(reason: &'static str) -> FlowError {
+    FlowError::ReplayMismatch { reason }
+}
 
 // ------------------------------------------------------------------ value types
 
@@ -174,7 +225,10 @@ pub enum FlowState {
     Draft,
     /// `under_review`.
     UnderReview,
-    /// `signed_off`.
+    /// `signed_off`: two distinct roster reviewers hold live approvals. **Not a counted
+    /// sign-off:** conflict-of-interest rules are applied only by `GDT.RES.STATUS`, which
+    /// recounts approvals from the journal; only its verified register may answer
+    /// `signed_off` for a rule (D-045).
     SignedOff,
 }
 
@@ -225,6 +279,14 @@ impl Decision {
             Decision::RequestChanges => "request_changes",
         }
     }
+
+    fn parse(s: &str) -> Option<Decision> {
+        match s {
+            "approve" => Some(Decision::Approve),
+            "request_changes" => Some(Decision::RequestChanges),
+            _ => None,
+        }
+    }
 }
 
 /// An "edition held" attestation (D-016), or the placeholder exception (REQ-004).
@@ -248,6 +310,17 @@ impl Attestation {
                 obj([("designator", s(designator)), ("edition", s(edition)), ("kind", s("edition_held"))])
             }
             Attestation::NotRequiredPlaceholder => obj([("kind", s("not_required_placeholder"))]),
+        }
+    }
+
+    fn from_cvalue(v: &CValue) -> Result<Attestation, FlowError> {
+        match field_str(v, "kind")? {
+            "edition_held" => Ok(Attestation::EditionHeld {
+                designator: field_str(v, "designator")?.to_owned(),
+                edition: field_str(v, "edition")?.to_owned(),
+            }),
+            "not_required_placeholder" => Ok(Attestation::NotRequiredPlaceholder),
+            _ => Err(mismatch("malformed_record")),
         }
     }
 }
@@ -414,7 +487,8 @@ impl Idr {
 }
 
 /// One revision of a DMT row and its review state. Fields are private: a revision is only
-/// built by [`propose`] and changed by [`transition`], so its digest always matches its row.
+/// built by [`propose`] or [`replay`] and changed by [`transition`], so its digest always
+/// matches its row.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RowRevision {
     row: DmtRow,
@@ -435,9 +509,19 @@ impl RowRevision {
         self.row.key()
     }
 
-    /// The row this revision holds (its `review` field is ignored by the workflow).
-    pub fn row(&self) -> &DmtRow {
-        &self.row
+    /// The row with its `review` field set from [`RowRevision::review_state`]: the only way
+    /// to take a row out of the workflow, so a row never carries review state the workflow
+    /// did not derive. Remember that `signed_off` here is not a counted sign-off (see
+    /// [`FlowState::SignedOff`]).
+    pub fn reviewed_row(&self) -> Result<DmtRow, FlowError> {
+        self.row.with_review(self.review_state()?).map_err(|e| FlowError::ContentDigest { reason: e.code() })
+    }
+
+    /// The cited (designator, edition) pairs, ascending and unique.
+    pub fn cited_editions(&self) -> Vec<(String, String)> {
+        let set: BTreeSet<(String, String)> =
+            self.row.clauses().iter().map(|c| (c.designator().to_owned(), c.edition().to_owned())).collect();
+        set.into_iter().collect()
     }
 
     /// Revision number, from 1.
@@ -445,7 +529,7 @@ impl RowRevision {
         self.revision
     }
 
-    /// Content digest, recomputed from [`RowRevision::row`] when the revision was built.
+    /// Content digest, recomputed from the revision's row when the revision was built.
     pub fn content_digest(&self) -> Digest {
         self.content_digest
     }
@@ -505,7 +589,9 @@ impl RowRevision {
     }
 
     /// The schema's `ReviewState` for this revision (REQ-008): `signed_off` lists both
-    /// reviewer IDs, sorted. This is the field `GDT.RES.LINT` rule L5 checks.
+    /// reviewer IDs, sorted. This is the field `GDT.RES.LINT` rule L5 checks. **Not a counted
+    /// sign-off:** conflict-of-interest rules are applied only by `GDT.RES.STATUS`, which
+    /// recounts from the journal (D-045).
     pub fn review_state(&self) -> Result<ReviewState, FlowError> {
         Ok(match self.state {
             FlowState::Draft => ReviewState::Draft,
@@ -513,16 +599,17 @@ impl RowRevision {
             FlowState::SignedOff => {
                 let ids = self.live_approvals().into_iter().map(|r| r.as_str().to_owned()).collect();
                 ReviewState::SignedOff(
-                    Reviewers::new(ids).map_err(|_| FlowError::BadTransition { state: self.state, event: "map" })?,
+                    Reviewers::new(ids)
+                        .map_err(|e| FlowError::ReviewersInvalid { reason: e.reason().unwrap_or_else(|| e.code()) })?,
                 )
             }
         })
     }
 
-    /// The revision as a JSON value (every field; `row` is the row's content without `review`).
+    /// The revision as a JSON value (every field; `content` is the row without `review`).
     pub fn to_cvalue(&self) -> CValue {
         obj([
-            ("author", obj([("id", s(&self.author.id)), ("kind", s(self.author.kind.as_str()))])),
+            ("author", author_cvalue(&self.author)),
             ("content", self.row.content_cvalue()),
             ("content_digest", s(self.content_digest.as_str())),
             ("derived_from", derived_cvalue(self.derived_from)),
@@ -560,7 +647,8 @@ pub struct ReviewEvent<'a> {
     pub at: Date,
 }
 
-/// The journal payload of one transition. The command adds the principal and time.
+/// The journal payload of one transition. The command adds the principal and time; the
+/// principal kind of the entry is what [`replay`] reads back as [`RecordedFlow::principal_kind`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct FlowRecord {
     event: &'static str,
@@ -611,13 +699,34 @@ pub struct Step {
     pub record: FlowRecord,
 }
 
-// ------------------------------------------------------------------ the two functions
+/// One journaled transition as [`replay`] reads it back: the record payload as stored, and
+/// the principal kind of the journal entry that carries it (from the entry header, which the
+/// bus wrote; never from the payload).
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecordedFlow {
+    /// Principal kind of the journal entry.
+    pub principal_kind: PrincipalKind,
+    /// The payload, as parsed from the journal.
+    pub record: CValue,
+}
+
+// ------------------------------------------------------------------ propose
 
 /// Proposes a new revision of a row (REQ-001, REQ-006). `prev` is the key's latest revision,
-/// if any. The new revision is numbered `prev + 1` (or 1), starts in `draft` with no reviews
-/// and no IDRs, and names `prev` in `derived_from`; its content digest is recomputed from
-/// `row`. A non-human author gives `author_kind` of that principal and provenance `agent`.
+/// if any. A row whose own `review` field is not `draft` is refused
+/// (`review_field_not_draft`). The new revision is numbered `prev + 1` (or 1), starts in
+/// `draft` with no reviews and no IDRs, and names `prev` in `derived_from`; its content
+/// digest is recomputed from `row`. A non-human author gives `author_kind` of that principal
+/// and provenance `agent`.
 pub fn propose(prev: Option<&RowRevision>, row: DmtRow, author: &Principal, at: Date) -> Result<Step, FlowError> {
+    let author = Author { kind: author.kind(), id: author.id().as_str().to_owned() };
+    propose_as(prev, row, author, at)
+}
+
+fn propose_as(prev: Option<&RowRevision>, row: DmtRow, author: Author, at: Date) -> Result<Step, FlowError> {
+    if *row.review() != ReviewState::Draft {
+        return Err(FlowError::ReviewFieldNotDraft);
+    }
     let content_digest = row_content_digest(&row).map_err(|e| FlowError::ContentDigest { reason: e.code() })?;
     let (revision, derived_from) = match prev {
         None => (1, None),
@@ -630,8 +739,20 @@ pub fn propose(prev: Option<&RowRevision>, row: DmtRow, author: &Principal, at: 
             (next, Some(DerivedFrom { revision: p.revision, content_digest: p.content_digest }))
         }
     };
-    let author = Author { kind: author.kind(), id: author.id().as_str().to_owned() };
     let provenance = if author.is_human() { Provenance::Human } else { Provenance::Agent };
+    let value = obj([
+        ("at", s(&at.to_string())),
+        ("author", author_cvalue(&author)),
+        ("author_kind", s(author.kind.as_str())),
+        ("content_digest", s(content_digest.as_str())),
+        ("derived_from", derived_cvalue(derived_from)),
+        ("event", s("propose")),
+        ("from", CValue::Null),
+        ("key", s(row.key().as_str())),
+        ("provenance", s(provenance.as_str())),
+        ("revision", CValue::U64(u64::from(revision))),
+        ("to", s(FlowState::Draft.as_str())),
+    ]);
     let rev = RowRevision {
         row,
         revision,
@@ -644,41 +765,22 @@ pub fn propose(prev: Option<&RowRevision>, row: DmtRow, author: &Principal, at: 
         reviews: Vec::new(),
         idrs: Vec::new(),
     };
-    let value = obj([
-        ("at", s(&at.to_string())),
-        ("author_kind", s(rev.author.kind.as_str())),
-        ("content_digest", s(content_digest.as_str())),
-        ("derived_from", derived_cvalue(derived_from)),
-        ("event", s("propose")),
-        ("from", CValue::Null),
-        ("key", s(rev.row.key().as_str())),
-        ("provenance", s(provenance.as_str())),
-        ("revision", CValue::U64(u64::from(revision))),
-        ("to", s(FlowState::Draft.as_str())),
-    ]);
     let record = FlowRecord { event: "propose", from: None, to: FlowState::Draft, value };
     Ok(Step { revision: rev, record })
 }
+
+// ------------------------------------------------------------------ review
 
 /// Applies one review event (REQ-001 .. 005, 007; REQ-GDT.RES.ROWFLOW-006). The checks run in
 /// the order of the module documentation; on any failure `rev` is unchanged and nothing is
 /// returned to journal.
 pub fn transition(rev: &RowRevision, event: &ReviewEvent<'_>, roster: &dyn RosterView) -> Result<Step, FlowError> {
-    let decision = event.decision;
-    if rev.state == FlowState::SignedOff {
-        return Err(FlowError::BadTransition { state: rev.state, event: decision.as_str() });
-    }
-    if !rev.author.is_human() {
-        return Err(FlowError::AgentAuthoredRevision);
-    }
-    let reviewer = event.reviewer;
-    if reviewer.kind() != PrincipalKind::Human {
+    check_state(rev, event.decision)?;
+    if event.reviewer.kind() != PrincipalKind::Human {
         return Err(FlowError::ReviewerNotHuman);
     }
-    if event.reviewed_digest != rev.content_digest {
-        return Err(FlowError::StaleReview);
-    }
-    let reviewer_id = reviewer.id().as_str();
+    check_time_and_digest(rev, event.at, event.reviewed_digest)?;
+    let reviewer_id = event.reviewer.id().as_str();
     if reviewer_id.eq_ignore_ascii_case(&rev.author.id) {
         return Err(FlowError::ReviewerIsAuthor);
     }
@@ -688,11 +790,64 @@ pub fn transition(rev: &RowRevision, event: &ReviewEvent<'_>, roster: &dyn Roste
     if roster.has_role(&roster_identity(&rev.author.id), dialect, event.at).as_ref() == Some(&rid) {
         return Err(FlowError::ReviewerIsAuthor);
     }
+    finish_review(
+        rev,
+        rid,
+        roster.roster_digest(),
+        ReviewInput {
+            decision: event.decision,
+            attestations: &event.attestations,
+            reviewed_digest: event.reviewed_digest,
+            idr: event.idr.as_ref(),
+            at: event.at,
+        },
+    )
+}
+
+/// Checks 1 and 2: the revision accepts reviews at all.
+fn check_state(rev: &RowRevision, decision: Decision) -> Result<(), FlowError> {
+    if rev.state == FlowState::SignedOff {
+        return Err(FlowError::BadTransition { state: rev.state, event: decision.as_str() });
+    }
+    if !rev.author.is_human() {
+        return Err(FlowError::AgentAuthoredRevision);
+    }
+    Ok(())
+}
+
+/// Checks 4 and 5: the date never goes back, and the reviewer read this content.
+fn check_time_and_digest(rev: &RowRevision, at: Date, reviewed: Digest) -> Result<(), FlowError> {
+    let last = rev.reviews.last().map_or(rev.proposed_at, |r| r.at);
+    if at < rev.proposed_at || at < last {
+        return Err(FlowError::BackdatedReview);
+    }
+    if reviewed != rev.content_digest {
+        return Err(FlowError::StaleReview);
+    }
+    Ok(())
+}
+
+struct ReviewInput<'a> {
+    decision: Decision,
+    attestations: &'a [Attestation],
+    reviewed_digest: Digest,
+    idr: Option<&'a IdrDraft>,
+    at: Date,
+}
+
+/// Checks 9 to 11, then the new revision and its record.
+fn finish_review(
+    rev: &RowRevision,
+    rid: ReviewerId,
+    roster_digest: Digest,
+    input: ReviewInput<'_>,
+) -> Result<Step, FlowError> {
+    let decision = input.decision;
     if decision == Decision::Approve && rev.live_approvals().contains(&rid) {
         return Err(FlowError::DuplicateReviewer);
     }
-    let attestations = check_attestations(&rev.row, &event.attestations)?;
-    let idr = match (&event.idr, decision) {
+    let attestations = check_attestations(&rev.row, input.attestations)?;
+    let idr = match (input.idr, decision) {
         (None, _) => None,
         (Some(_), Decision::Approve) => return Err(FlowError::BadIdr { reason: "idr_on_approve" }),
         (Some(d), Decision::RequestChanges) => {
@@ -713,9 +868,9 @@ pub fn transition(rev: &RowRevision, event: &ReviewEvent<'_>, roster: &dyn Roste
         decision,
         edition_attestations: attestations.clone(),
         idr: idr.as_ref().map(|i| i.id.clone()),
-        at: event.at,
-        roster_digest: roster.roster_digest(),
-        reviewed_digest: event.reviewed_digest,
+        at: input.at,
+        roster_digest,
+        reviewed_digest: input.reviewed_digest,
     });
     next.state = match decision {
         Decision::RequestChanges => FlowState::Draft,
@@ -727,20 +882,141 @@ pub fn transition(rev: &RowRevision, event: &ReviewEvent<'_>, roster: &dyn Roste
         next.idrs.push(i);
     }
     let value = obj([
-        ("at", s(&event.at.to_string())),
+        ("at", s(&input.at.to_string())),
         ("attestations", CValue::Arr(attestations.iter().map(Attestation::to_cvalue).collect())),
         ("content_digest", s(rev.content_digest.as_str())),
         ("event", s(decision.as_str())),
         ("from", s(rev.state.as_str())),
         ("idr", idr_value),
         ("key", s(rev.row.key().as_str())),
+        ("reviewed_digest", s(input.reviewed_digest.as_str())),
         ("reviewer", s(rid.as_str())),
         ("revision", CValue::U64(u64::from(rev.revision))),
-        ("roster_digest", s(roster.roster_digest().as_str())),
+        ("roster_digest", s(roster_digest.as_str())),
         ("to", s(next.state.as_str())),
     ]);
     let record = FlowRecord { event: decision.as_str(), from: Some(rev.state), to: next.state, value };
     Ok(Step { revision: next, record })
+}
+
+// ------------------------------------------------------------------ replay
+
+/// Rebuilds one revision from its journaled records: a `propose` record, then the review
+/// records of that revision in journal order. `prev` is the rebuilt previous revision of the
+/// key (or `None` for the first), `row` the row the proposal journaled (with `review:
+/// draft`), and `rosters` every roster the reviews may name by digest.
+///
+/// Every invariant is checked again, in the order [`propose`] and [`transition`] use: the
+/// proposal must name the entry's own principal kind as author kind; every review must come
+/// from a `human` entry, name a roster given here (`unknown_roster`) in which the reviewer ID
+/// held the role for the row's dialect on the review date (`reviewer_not_in_roster`) and
+/// which does not bind the author to that ID (`reviewer_is_author`); the rest
+/// (state, author, dates, digest, duplicates, attestations, IDR) is the same code as
+/// [`transition`]. Finally each rebuilt record must equal the journaled payload byte for byte
+/// in RFC 8785 form (`replay_mismatch{record_differs}`), so an edited, dropped, reordered or
+/// inserted record is refused.
+pub fn replay(
+    prev: Option<&RowRevision>,
+    row: DmtRow,
+    entries: &[RecordedFlow],
+    rosters: &[&Roster],
+) -> Result<RowRevision, FlowError> {
+    let (first, rest) = entries.split_first().ok_or_else(|| mismatch("empty"))?;
+    if field_str(&first.record, "event")? != "propose" {
+        return Err(mismatch("first_not_propose"));
+    }
+    let author_v = field(&first.record, "author")?;
+    let kind = PrincipalKind::parse(field_str(author_v, "kind")?).map_err(|_| mismatch("malformed_record"))?;
+    if kind != first.principal_kind {
+        return Err(mismatch("principal_kind"));
+    }
+    let author = Author { kind, id: field_str(author_v, "id")?.to_owned() };
+    let at = date_of(&first.record)?;
+    let step = propose_as(prev, row, author, at)?;
+    same_record(&step.record, &first.record)?;
+    let mut rev = step.revision;
+
+    for entry in rest {
+        let r = &entry.record;
+        let decision = match field_str(r, "event")? {
+            "propose" => return Err(mismatch("propose_inside_revision")),
+            other => Decision::parse(other).ok_or_else(|| mismatch("malformed_record"))?,
+        };
+        let at = date_of(r)?;
+        let reviewed = digest_of(r, "reviewed_digest")?;
+        let roster_digest = digest_of(r, "roster_digest")?;
+        let rid = ReviewerId::parse(field_str(r, "reviewer")?).map_err(|_| mismatch("malformed_record"))?;
+        let attestations = match field(r, "attestations")? {
+            CValue::Arr(a) => a.iter().map(Attestation::from_cvalue).collect::<Result<Vec<_>, _>>()?,
+            _ => return Err(mismatch("malformed_record")),
+        };
+        let idr = match field(r, "idr")? {
+            CValue::Null => None,
+            v => Some(IdrDraft {
+                question_code: field_str(v, "question_code")?.to_owned(),
+                positions: match field(v, "positions")? {
+                    CValue::Arr(a) => a
+                        .iter()
+                        .map(|p| match p {
+                            CValue::Str(t) => Ok(t.clone()),
+                            _ => Err(mismatch("malformed_record")),
+                        })
+                        .collect::<Result<Vec<_>, _>>()?,
+                    _ => return Err(mismatch("malformed_record")),
+                },
+            }),
+        };
+
+        check_state(&rev, decision)?;
+        if entry.principal_kind != PrincipalKind::Human {
+            return Err(FlowError::ReviewerNotHuman);
+        }
+        check_time_and_digest(&rev, at, reviewed)?;
+        let roster = rosters.iter().find(|ro| ro.digest() == roster_digest).ok_or(FlowError::UnknownRoster)?;
+        let dialect = roster_dialect(rev.row.dialect());
+        if !roster.get(rid.as_str()).is_some_and(|e| e.grants(dialect, at)) {
+            return Err(FlowError::ReviewerNotInRoster);
+        }
+        if roster.has_role(&roster_identity(&rev.author.id), dialect, at).as_ref() == Some(&rid) {
+            return Err(FlowError::ReviewerIsAuthor);
+        }
+        let input =
+            ReviewInput { decision, attestations: &attestations, reviewed_digest: reviewed, idr: idr.as_ref(), at };
+        let step = finish_review(&rev, rid, roster_digest, input)?;
+        same_record(&step.record, r)?;
+        rev = step.revision;
+    }
+    Ok(rev)
+}
+
+fn same_record(built: &FlowRecord, journaled: &CValue) -> Result<(), FlowError> {
+    if built.canonical_bytes()? == canonical(journaled)? {
+        Ok(())
+    } else {
+        Err(mismatch("record_differs"))
+    }
+}
+
+fn field<'a>(v: &'a CValue, name: &str) -> Result<&'a CValue, FlowError> {
+    match v {
+        CValue::Obj(m) => m.get(name).ok_or_else(|| mismatch("malformed_record")),
+        _ => Err(mismatch("malformed_record")),
+    }
+}
+
+fn field_str<'a>(v: &'a CValue, name: &str) -> Result<&'a str, FlowError> {
+    match field(v, name)? {
+        CValue::Str(t) => Ok(t),
+        _ => Err(mismatch("malformed_record")),
+    }
+}
+
+fn date_of(v: &CValue) -> Result<Date, FlowError> {
+    Date::parse(field_str(v, "at")?).ok_or_else(|| mismatch("malformed_record"))
+}
+
+fn digest_of(v: &CValue, name: &str) -> Result<Digest, FlowError> {
+    Digest::parse(field_str(v, name)?).map_err(|_| mismatch("malformed_record"))
 }
 
 // ------------------------------------------------------------------ helpers
@@ -777,8 +1053,12 @@ fn check_attestations(row: &DmtRow, given: &[Attestation]) -> Result<Vec<Attesta
         }
         set.insert(a.clone());
     }
-    let placeholder_ok = is_placeholder(row) && set.contains(&Attestation::NotRequiredPlaceholder);
-    if !placeholder_ok {
+    let placeholder_given = set.contains(&Attestation::NotRequiredPlaceholder);
+    let placeholder_row = is_placeholder(row);
+    if placeholder_given && !placeholder_row {
+        return Err(FlowError::BadAttestation { reason: "placeholder_not_allowed" });
+    }
+    if !(placeholder_given && placeholder_row) {
         let held: BTreeSet<(&str, &str)> = set
             .iter()
             .filter_map(|a| match a {
@@ -823,6 +1103,10 @@ fn check_idr(d: &IdrDraft) -> Result<(), FlowError> {
     Ok(())
 }
 
+fn author_cvalue(a: &Author) -> CValue {
+    obj([("id", s(&a.id)), ("kind", s(a.kind.as_str()))])
+}
+
 fn derived_cvalue(d: Option<DerivedFrom>) -> CValue {
     match d {
         None => CValue::Null,
@@ -841,5 +1125,5 @@ fn s(v: &str) -> CValue {
 }
 
 fn obj<const N: usize>(fields: [(&str, CValue); N]) -> CValue {
-    CValue::Obj(fields.into_iter().map(|(k, v)| (k.to_owned(), v)).collect())
+    CValue::Obj(fields.into_iter().map(|(k, v)| (k.to_owned(), v)).collect::<BTreeMap<_, _>>())
 }
