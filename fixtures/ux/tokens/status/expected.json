@@ -1,0 +1,1316 @@
+{
+  "fixtures": {
+    "alias-extra": {
+      "exit": 1,
+      "findings": [
+        "STATUS-ALIAS sem.status.pending"
+      ]
+    },
+    "alias-mismatch": {
+      "exit": 1,
+      "findings": [
+        "STATUS-ALIAS dark nonconforms"
+      ]
+    },
+    "alias-unbound": {
+      "exit": 1,
+      "findings": [
+        "STATUS-ALIAS hc stale"
+      ]
+    },
+    "bad-hex": {
+      "exit": 1,
+      "findings": [
+        "STATUS-SCHEMA dark conforms",
+        "STATUS-SCHEMA light stale"
+      ]
+    },
+    "brand-status": {
+      "exit": 1,
+      "findings": [
+        "STATUS-SET sem.status.conforms"
+      ]
+    },
+    "cue-missing": {
+      "exit": 1,
+      "findings": [
+        "STATUS-CUE stale"
+      ]
+    },
+    "cue-no-text": {
+      "exit": 1,
+      "findings": [
+        "STATUS-CUE conforms"
+      ]
+    },
+    "cue-wrong-glyph": {
+      "exit": 1,
+      "findings": [
+        "STATUS-CUE indeterminate"
+      ]
+    },
+    "extra-key": {
+      "exit": 1,
+      "findings": [
+        "STATUS-SCHEMA tokens/status.json"
+      ]
+    },
+    "locked-string": {
+      "exit": 1,
+      "findings": [
+        "STATUS-SCHEMA tokens/status.json"
+      ]
+    },
+    "missing-hc": {
+      "exit": 1,
+      "findings": [
+        "STATUS-MISSING hc stale"
+      ]
+    },
+    "missing-theme": {
+      "exit": 1,
+      "findings": [
+        "STATUS-MISSING floor conforms",
+        "STATUS-MISSING floor indeterminate",
+        "STATUS-MISSING floor nonconforms",
+        "STATUS-MISSING floor not-decidable",
+        "STATUS-MISSING floor not-evaluated",
+        "STATUS-MISSING floor stale"
+      ]
+    },
+    "no-file": {
+      "exit": 1,
+      "findings": [
+        "STATUS-SCHEMA tokens/status.json"
+      ]
+    },
+    "ok": {
+      "exit": 0,
+      "findings": []
+    },
+    "set-duplicate": {
+      "exit": 1,
+      "findings": [
+        "STATUS-SET nonconforming"
+      ]
+    },
+    "stale-conforming": {
+      "exit": 1,
+      "findings": [
+        "STATUS-SET conforming",
+        "STATUS-SET nonconforming"
+      ]
+    },
+    "threshold": {
+      "exit": 1,
+      "findings": [
+        "STATUS-THRESHOLD formula",
+        "STATUS-THRESHOLD min_delta_e2000"
+      ]
+    },
+    "unknown-state": {
+      "exit": 1,
+      "findings": [
+        "STATUS-SCHEMA light pending"
+      ]
+    },
+    "unknown-theme": {
+      "exit": 1,
+      "findings": [
+        "STATUS-SCHEMA print"
+      ]
+    },
+    "unlocked": {
+      "exit": 1,
+      "findings": [
+        "STATUS-UNLOCKED tokens/status.json"
+      ]
+    },
+    "wrong-format": {
+      "exit": 1,
+      "findings": [
+        "STATUS-SCHEMA tokens/status.json"
+      ]
+    }
+  },
+  "shipped": {
+    "contrasts": [
+      {
+        "bg": "sem.surface.base",
+        "ratio": 6.804908449,
+        "required": 4.5,
+        "state": "conforms",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 6.336572558,
+        "required": 4.5,
+        "state": "conforms",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 5.801787931,
+        "required": 4.5,
+        "state": "conforms",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 5.464155868,
+        "required": 4.5,
+        "state": "nonconforms",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 5.088094922,
+        "required": 4.5,
+        "state": "nonconforms",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 4.658677454,
+        "required": 4.5,
+        "state": "nonconforms",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 9.755064306,
+        "required": 4.5,
+        "state": "indeterminate",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 9.083689112,
+        "required": 4.5,
+        "state": "indeterminate",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 8.317057428,
+        "required": 4.5,
+        "state": "indeterminate",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 6.80032031,
+        "required": 4.5,
+        "state": "not-decidable",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 6.332300189,
+        "required": 4.5,
+        "state": "not-decidable",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 5.797876136,
+        "required": 4.5,
+        "state": "not-decidable",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 16.868729901,
+        "required": 4.5,
+        "state": "not-evaluated",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 15.707769146,
+        "required": 4.5,
+        "state": "not-evaluated",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 14.382088207,
+        "required": 4.5,
+        "state": "not-evaluated",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 7.255450706,
+        "required": 4.5,
+        "state": "stale",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 6.756107034,
+        "required": 4.5,
+        "state": "stale",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 6.185915161,
+        "required": 4.5,
+        "state": "stale",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 7.012440816,
+        "required": 4.5,
+        "state": "conforms",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 5.580874844,
+        "required": 4.5,
+        "state": "conforms",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 8.729836686,
+        "required": 4.5,
+        "state": "conforms",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 8.985849747,
+        "required": 4.5,
+        "state": "nonconforms",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 7.151419045,
+        "required": 4.5,
+        "state": "nonconforms",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 11.186547286,
+        "required": 4.5,
+        "state": "nonconforms",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 6.797294046,
+        "required": 4.5,
+        "state": "indeterminate",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 5.409649556,
+        "required": 4.5,
+        "state": "indeterminate",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 8.461998965,
+        "required": 4.5,
+        "state": "indeterminate",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 12.241494622,
+        "required": 4.5,
+        "state": "not-decidable",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 9.742435078,
+        "required": 4.5,
+        "state": "not-decidable",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 15.239522393,
+        "required": 4.5,
+        "state": "not-decidable",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 15.707769146,
+        "required": 4.5,
+        "state": "not-evaluated",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 12.501081432,
+        "required": 4.5,
+        "state": "not-evaluated",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 19.554711825,
+        "required": 4.5,
+        "state": "not-evaluated",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 6.426828901,
+        "required": 4.5,
+        "state": "stale",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 5.114813612,
+        "required": 4.5,
+        "state": "stale",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 8.000804312,
+        "required": 4.5,
+        "state": "stale",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 9.637252446,
+        "required": 7.0,
+        "state": "conforms",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 9.637252446,
+        "required": 7.0,
+        "state": "conforms",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 8.973985446,
+        "required": 7.0,
+        "state": "conforms",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 7.705218833,
+        "required": 7.0,
+        "state": "nonconforms",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 7.705218833,
+        "required": 7.0,
+        "state": "nonconforms",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 7.174920658,
+        "required": 7.0,
+        "state": "nonconforms",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 9.755064306,
+        "required": 7.0,
+        "state": "indeterminate",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 9.755064306,
+        "required": 7.0,
+        "state": "indeterminate",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 9.083689112,
+        "required": 7.0,
+        "state": "indeterminate",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 13.333002792,
+        "required": 7.0,
+        "state": "not-decidable",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 13.333002792,
+        "required": 7.0,
+        "state": "not-decidable",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 12.415382255,
+        "required": 7.0,
+        "state": "not-decidable",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 21.0,
+        "required": 7.0,
+        "state": "not-evaluated",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 21.0,
+        "required": 7.0,
+        "state": "not-evaluated",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 19.554711825,
+        "required": 7.0,
+        "state": "not-evaluated",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 10.172028196,
+        "required": 7.0,
+        "state": "stale",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 10.172028196,
+        "required": 7.0,
+        "state": "stale",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 9.471956193,
+        "required": 7.0,
+        "state": "stale",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 6.804908449,
+        "required": 4.5,
+        "state": "conforms",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 6.336572558,
+        "required": 4.5,
+        "state": "conforms",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 5.801787931,
+        "required": 4.5,
+        "state": "conforms",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 5.464155868,
+        "required": 4.5,
+        "state": "nonconforms",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 5.088094922,
+        "required": 4.5,
+        "state": "nonconforms",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 4.658677454,
+        "required": 4.5,
+        "state": "nonconforms",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 9.755064306,
+        "required": 4.5,
+        "state": "indeterminate",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 9.083689112,
+        "required": 4.5,
+        "state": "indeterminate",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 8.317057428,
+        "required": 4.5,
+        "state": "indeterminate",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 6.80032031,
+        "required": 4.5,
+        "state": "not-decidable",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 6.332300189,
+        "required": 4.5,
+        "state": "not-decidable",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 5.797876136,
+        "required": 4.5,
+        "state": "not-decidable",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 16.868729901,
+        "required": 4.5,
+        "state": "not-evaluated",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 15.707769146,
+        "required": 4.5,
+        "state": "not-evaluated",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 14.382088207,
+        "required": 4.5,
+        "state": "not-evaluated",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.base",
+        "ratio": 7.255450706,
+        "required": 4.5,
+        "state": "stale",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.raised",
+        "ratio": 6.756107034,
+        "required": 4.5,
+        "state": "stale",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "ratio": 6.185915161,
+        "required": 4.5,
+        "state": "stale",
+        "theme": "floor"
+      }
+    ],
+    "counts": {
+      "colours": 24,
+      "states": 6,
+      "themes": 4
+    },
+    "de2000": [
+      {
+        "de2000": 53.173881183,
+        "state": "nonconforms",
+        "theme": "light",
+        "vision": "normal"
+      },
+      {
+        "de2000": 31.940225634,
+        "state": "nonconforms",
+        "theme": "light",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 43.094653452,
+        "state": "nonconforms",
+        "theme": "light",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 54.945318193,
+        "state": "nonconforms",
+        "theme": "light",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 39.212291982,
+        "state": "indeterminate",
+        "theme": "light",
+        "vision": "normal"
+      },
+      {
+        "de2000": 37.729834025,
+        "state": "indeterminate",
+        "theme": "light",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 39.814002007,
+        "state": "indeterminate",
+        "theme": "light",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 37.325769338,
+        "state": "indeterminate",
+        "theme": "light",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 40.836314635,
+        "state": "not-decidable",
+        "theme": "light",
+        "vision": "normal"
+      },
+      {
+        "de2000": 38.917937932,
+        "state": "not-decidable",
+        "theme": "light",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 41.411501891,
+        "state": "not-decidable",
+        "theme": "light",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 22.591066774,
+        "state": "not-decidable",
+        "theme": "light",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 26.717580229,
+        "state": "not-evaluated",
+        "theme": "light",
+        "vision": "normal"
+      },
+      {
+        "de2000": 25.398885037,
+        "state": "not-evaluated",
+        "theme": "light",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 23.919805312,
+        "state": "not-evaluated",
+        "theme": "light",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 29.094105861,
+        "state": "not-evaluated",
+        "theme": "light",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 42.517867993,
+        "state": "stale",
+        "theme": "light",
+        "vision": "normal"
+      },
+      {
+        "de2000": 38.13403743,
+        "state": "stale",
+        "theme": "light",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 42.583737115,
+        "state": "stale",
+        "theme": "light",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 48.579484528,
+        "state": "stale",
+        "theme": "light",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 51.892629113,
+        "state": "nonconforms",
+        "theme": "dark",
+        "vision": "normal"
+      },
+      {
+        "de2000": 30.052628964,
+        "state": "nonconforms",
+        "theme": "dark",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 40.294144872,
+        "state": "nonconforms",
+        "theme": "dark",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 66.553152655,
+        "state": "nonconforms",
+        "theme": "dark",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 51.960303699,
+        "state": "indeterminate",
+        "theme": "dark",
+        "vision": "normal"
+      },
+      {
+        "de2000": 49.578588018,
+        "state": "indeterminate",
+        "theme": "dark",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 53.428913418,
+        "state": "indeterminate",
+        "theme": "dark",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 44.891585382,
+        "state": "indeterminate",
+        "theme": "dark",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 40.036794242,
+        "state": "not-decidable",
+        "theme": "dark",
+        "vision": "normal"
+      },
+      {
+        "de2000": 38.045669275,
+        "state": "not-decidable",
+        "theme": "dark",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 42.088872321,
+        "state": "not-decidable",
+        "theme": "dark",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 27.558053662,
+        "state": "not-decidable",
+        "theme": "dark",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 28.798008245,
+        "state": "not-evaluated",
+        "theme": "dark",
+        "vision": "normal"
+      },
+      {
+        "de2000": 23.555000042,
+        "state": "not-evaluated",
+        "theme": "dark",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 28.980571103,
+        "state": "not-evaluated",
+        "theme": "dark",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 28.286309297,
+        "state": "not-evaluated",
+        "theme": "dark",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 51.099840857,
+        "state": "stale",
+        "theme": "dark",
+        "vision": "normal"
+      },
+      {
+        "de2000": 48.80047685,
+        "state": "stale",
+        "theme": "dark",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 52.915080633,
+        "state": "stale",
+        "theme": "dark",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 60.655878907,
+        "state": "stale",
+        "theme": "dark",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 49.416069879,
+        "state": "nonconforms",
+        "theme": "hc",
+        "vision": "normal"
+      },
+      {
+        "de2000": 30.66328862,
+        "state": "nonconforms",
+        "theme": "hc",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 40.888124826,
+        "state": "nonconforms",
+        "theme": "hc",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 49.725167239,
+        "state": "nonconforms",
+        "theme": "hc",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 36.520353065,
+        "state": "indeterminate",
+        "theme": "hc",
+        "vision": "normal"
+      },
+      {
+        "de2000": 34.49731539,
+        "state": "indeterminate",
+        "theme": "hc",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 37.384087535,
+        "state": "indeterminate",
+        "theme": "hc",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 34.679022139,
+        "state": "indeterminate",
+        "theme": "hc",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 31.989766818,
+        "state": "not-decidable",
+        "theme": "hc",
+        "vision": "normal"
+      },
+      {
+        "de2000": 32.150644688,
+        "state": "not-decidable",
+        "theme": "hc",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 33.040110825,
+        "state": "not-decidable",
+        "theme": "hc",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 21.767688899,
+        "state": "not-decidable",
+        "theme": "hc",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 24.919718056,
+        "state": "not-evaluated",
+        "theme": "hc",
+        "vision": "normal"
+      },
+      {
+        "de2000": 23.852487692,
+        "state": "not-evaluated",
+        "theme": "hc",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 23.062560271,
+        "state": "not-evaluated",
+        "theme": "hc",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 27.362083698,
+        "state": "not-evaluated",
+        "theme": "hc",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 38.306088121,
+        "state": "stale",
+        "theme": "hc",
+        "vision": "normal"
+      },
+      {
+        "de2000": 33.547031846,
+        "state": "stale",
+        "theme": "hc",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 38.077223172,
+        "state": "stale",
+        "theme": "hc",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 43.649001209,
+        "state": "stale",
+        "theme": "hc",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 53.173881183,
+        "state": "nonconforms",
+        "theme": "floor",
+        "vision": "normal"
+      },
+      {
+        "de2000": 31.940225634,
+        "state": "nonconforms",
+        "theme": "floor",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 43.094653452,
+        "state": "nonconforms",
+        "theme": "floor",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 54.945318193,
+        "state": "nonconforms",
+        "theme": "floor",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 39.212291982,
+        "state": "indeterminate",
+        "theme": "floor",
+        "vision": "normal"
+      },
+      {
+        "de2000": 37.729834025,
+        "state": "indeterminate",
+        "theme": "floor",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 39.814002007,
+        "state": "indeterminate",
+        "theme": "floor",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 37.325769338,
+        "state": "indeterminate",
+        "theme": "floor",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 40.836314635,
+        "state": "not-decidable",
+        "theme": "floor",
+        "vision": "normal"
+      },
+      {
+        "de2000": 38.917937932,
+        "state": "not-decidable",
+        "theme": "floor",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 41.411501891,
+        "state": "not-decidable",
+        "theme": "floor",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 22.591066774,
+        "state": "not-decidable",
+        "theme": "floor",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 26.717580229,
+        "state": "not-evaluated",
+        "theme": "floor",
+        "vision": "normal"
+      },
+      {
+        "de2000": 25.398885037,
+        "state": "not-evaluated",
+        "theme": "floor",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 23.919805312,
+        "state": "not-evaluated",
+        "theme": "floor",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 29.094105861,
+        "state": "not-evaluated",
+        "theme": "floor",
+        "vision": "tritanopia"
+      },
+      {
+        "de2000": 42.517867993,
+        "state": "stale",
+        "theme": "floor",
+        "vision": "normal"
+      },
+      {
+        "de2000": 38.13403743,
+        "state": "stale",
+        "theme": "floor",
+        "vision": "protanopia"
+      },
+      {
+        "de2000": 42.583737115,
+        "state": "stale",
+        "theme": "floor",
+        "vision": "deuteranopia"
+      },
+      {
+        "de2000": 48.579484528,
+        "state": "stale",
+        "theme": "floor",
+        "vision": "tritanopia"
+      }
+    ],
+    "exit": 0,
+    "findings": [],
+    "hues": [
+      {
+        "chroma": 0.087875197,
+        "hue": 224.781289,
+        "state": "conforms",
+        "theme": "light"
+      },
+      {
+        "chroma": 0.190403508,
+        "hue": 25.997334,
+        "state": "nonconforms",
+        "theme": "light"
+      },
+      {
+        "chroma": 0.079328649,
+        "hue": 95.487648,
+        "state": "indeterminate",
+        "theme": "light"
+      },
+      {
+        "chroma": 0.105840493,
+        "hue": 115.284916,
+        "state": "not-decidable",
+        "theme": "light"
+      },
+      {
+        "chroma": 0.004129308,
+        "hue": 264.486829,
+        "state": "not-evaluated",
+        "theme": "light"
+      },
+      {
+        "chroma": 0.119836249,
+        "hue": 52.051965,
+        "state": "stale",
+        "theme": "light"
+      },
+      {
+        "chroma": 0.136254142,
+        "hue": 224.996781,
+        "state": "conforms",
+        "theme": "dark"
+      },
+      {
+        "chroma": 0.107175642,
+        "hue": 26.669086,
+        "state": "nonconforms",
+        "theme": "dark"
+      },
+      {
+        "chroma": 0.147700925,
+        "hue": 94.730073,
+        "state": "indeterminate",
+        "theme": "dark"
+      },
+      {
+        "chroma": 0.063719255,
+        "hue": 114.448972,
+        "state": "not-decidable",
+        "theme": "dark"
+      },
+      {
+        "chroma": 0.003420486,
+        "hue": 247.857968,
+        "state": "not-evaluated",
+        "theme": "dark"
+      },
+      {
+        "chroma": 0.170434857,
+        "hue": 51.852371,
+        "state": "stale",
+        "theme": "dark"
+      },
+      {
+        "chroma": 0.073227385,
+        "hue": 225.616516,
+        "state": "conforms",
+        "theme": "hc"
+      },
+      {
+        "chroma": 0.185903392,
+        "hue": 25.936913,
+        "state": "nonconforms",
+        "theme": "hc"
+      },
+      {
+        "chroma": 0.079328649,
+        "hue": 95.487648,
+        "state": "indeterminate",
+        "theme": "hc"
+      },
+      {
+        "chroma": 0.062570416,
+        "hue": 114.715768,
+        "state": "not-decidable",
+        "theme": "hc"
+      },
+      {
+        "chroma": 0.0,
+        "hue": 0.0,
+        "state": "not-evaluated",
+        "theme": "hc"
+      },
+      {
+        "chroma": 0.098704503,
+        "hue": 52.184685,
+        "state": "stale",
+        "theme": "hc"
+      },
+      {
+        "chroma": 0.087875197,
+        "hue": 224.781289,
+        "state": "conforms",
+        "theme": "floor"
+      },
+      {
+        "chroma": 0.190403508,
+        "hue": 25.997334,
+        "state": "nonconforms",
+        "theme": "floor"
+      },
+      {
+        "chroma": 0.079328649,
+        "hue": 95.487648,
+        "state": "indeterminate",
+        "theme": "floor"
+      },
+      {
+        "chroma": 0.105840493,
+        "hue": 115.284916,
+        "state": "not-decidable",
+        "theme": "floor"
+      },
+      {
+        "chroma": 0.004129308,
+        "hue": 264.486829,
+        "state": "not-evaluated",
+        "theme": "floor"
+      },
+      {
+        "chroma": 0.119836249,
+        "hue": 52.051965,
+        "state": "stale",
+        "theme": "floor"
+      }
+    ],
+    "min_contrast_margin": 0.158677,
+    "min_de2000_all": 21.767689,
+    "min_de2000_nonconforming": 30.052629,
+    "values": {
+      "dark": {
+        "conforms": "#00b5e4",
+        "indeterminate": "#c2a200",
+        "nonconforms": "#ffa69c",
+        "not-decidable": "#d9e0b0",
+        "not-evaluated": "#f5f7f9",
+        "stale": "#f58028"
+      },
+      "floor": {
+        "conforms": "#00637e",
+        "indeterminate": "#514300",
+        "nonconforms": "#c72d2e",
+        "not-decidable": "#586000",
+        "not-evaluated": "#1c1d1f",
+        "stale": "#8c4200"
+      },
+      "hc": {
+        "conforms": "#004b61",
+        "indeterminate": "#514300",
+        "nonconforms": "#a90617",
+        "not-decidable": "#2e3206",
+        "not-evaluated": "#000000",
+        "stale": "#6b3100"
+      },
+      "light": {
+        "conforms": "#00637e",
+        "indeterminate": "#514300",
+        "nonconforms": "#c72d2e",
+        "not-decidable": "#586000",
+        "not-evaluated": "#1c1d1f",
+        "stale": "#8c4200"
+      }
+    }
+  }
+}

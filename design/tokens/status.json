@@ -1,0 +1,76 @@
+{
+  "cues": {
+    "conforms": {
+      "glyph": "state.conforms",
+      "text": "icon.state.conforms"
+    },
+    "indeterminate": {
+      "glyph": "state.indeterminate",
+      "text": "icon.state.indeterminate"
+    },
+    "nonconforms": {
+      "glyph": "state.nonconforms",
+      "text": "icon.state.nonconforms"
+    },
+    "not-decidable": {
+      "glyph": "state.not-decidable",
+      "text": "icon.state.not-decidable"
+    },
+    "not-evaluated": {
+      "glyph": "state.not-evaluated",
+      "text": "icon.state.not-evaluated"
+    },
+    "stale": {
+      "glyph": "state.stale",
+      "text": "icon.state.stale"
+    }
+  },
+  "format": "status-palette@1",
+  "formula": "ciede2000",
+  "locked": true,
+  "min_delta_e2000": 20,
+  "sets": {
+    "conforming": [
+      "conforms"
+    ],
+    "nonconforming": [
+      "nonconforms",
+      "out-of-tolerance",
+      "stale"
+    ]
+  },
+  "themes": {
+    "dark": {
+      "conforms": "#00b5e4",
+      "indeterminate": "#c2a200",
+      "nonconforms": "#ffa69c",
+      "not-decidable": "#d9e0b0",
+      "not-evaluated": "#f5f7f9",
+      "stale": "#f58028"
+    },
+    "floor": {
+      "conforms": "#00637e",
+      "indeterminate": "#514300",
+      "nonconforms": "#c72d2e",
+      "not-decidable": "#586000",
+      "not-evaluated": "#1c1d1f",
+      "stale": "#8c4200"
+    },
+    "hc": {
+      "conforms": "#004b61",
+      "indeterminate": "#514300",
+      "nonconforms": "#a90617",
+      "not-decidable": "#2e3206",
+      "not-evaluated": "#000000",
+      "stale": "#6b3100"
+    },
+    "light": {
+      "conforms": "#00637e",
+      "indeterminate": "#514300",
+      "nonconforms": "#c72d2e",
+      "not-decidable": "#586000",
+      "not-evaluated": "#1c1d1f",
+      "stale": "#8c4200"
+    }
+  }
+}

@@ -57,27 +57,27 @@
     },
     "status": {
       "conforms": {
-        "$description": "Display state CONFORMS. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Provisional value until spec node UX.TOKENS.STATUS ships the locked status palette. The value here is the light binding; every theme binds it in tokens/themes/.",
-        "$value": "{prim.color.green.700}"
+        "$description": "Display state CONFORMS. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown with glyph state.conforms and the text of message icon.state.conforms. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.azure.700}"
       },
       "indeterminate": {
-        "$description": "Display state INDETERMINATE. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Provisional value until spec node UX.TOKENS.STATUS ships the locked status palette. The value here is the light binding; every theme binds it in tokens/themes/.",
-        "$value": "{prim.color.amber.800}"
+        "$description": "Display state INDETERMINATE. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown with glyph state.indeterminate and the text of message icon.state.indeterminate. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.yellow.800}"
       },
       "nonconforms": {
-        "$description": "Display state NONCONFORMS. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Provisional value until spec node UX.TOKENS.STATUS ships the locked status palette. The value here is the light binding; every theme binds it in tokens/themes/.",
-        "$value": "{prim.color.red.700}"
+        "$description": "Display state NONCONFORMS. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown with glyph state.nonconforms and the text of message icon.state.nonconforms. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.red.600}"
       },
       "not-decidable": {
-        "$description": "Display state NOT_DECIDABLE. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Provisional value until spec node UX.TOKENS.STATUS ships the locked status palette. The value here is the light binding; every theme binds it in tokens/themes/.",
-        "$value": "{prim.color.violet.700}"
+        "$description": "Display state NOT_DECIDABLE. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown with glyph state.not-decidable and the text of message icon.state.not-decidable. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.olive.700}"
       },
       "not-evaluated": {
-        "$description": "Display state not evaluated. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Provisional value until spec node UX.TOKENS.STATUS ships the locked status palette. The value here is the light binding; every theme binds it in tokens/themes/.",
-        "$value": "{prim.color.neutral.700}"
+        "$description": "Display state not evaluated. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown with glyph state.not-evaluated and the text of message icon.state.not-evaluated. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.950}"
       },
       "stale": {
-        "$description": "Display state stale. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Provisional value until spec node UX.TOKENS.STATUS ships the locked status palette. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$description": "Display state stale. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown with glyph state.stale and the text of message icon.state.stale. The value here is the light binding; every theme binds it in tokens/themes/.",
         "$value": "{prim.color.orange.700}"
       }
     },

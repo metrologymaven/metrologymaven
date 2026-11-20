@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-design]
 satisfies: [REQ-UX.TOKENS-009]
 covers: []
 depends_on: [UX.SYSTEM.PKG]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # UX.TOKENS.STATUS: Locked status palette values
@@ -56,7 +57,7 @@ The default colours for the six display states (CONFORMS, NONCONFORMS, INDETERMI
 
 ## Test fixtures
 
-`fixtures/ux/tokens/status/`: `missing-hc/`, `unlocked/`; synthetic, CC-BY-4.0.
+`fixtures/ux/tokens/status/`: `missing-hc/`, `unlocked/`; synthetic, CC-BY-4.0. Built with 19 further error-path fixtures and `expected.json`, written by `make_fixtures.py` (hand-labelled findings; CIEDE2000, colour-vision, contrast and hue values of the shipped palette from an independent Python reading).
 
 ## Build prompt
 
@@ -69,6 +70,13 @@ The default colours for the six display states (CONFORMS, NONCONFORMS, INDETERMI
 ## Open questions
 
 - VIZ.OVERLAY.STATUS's guard uses CIEDE2000 with threshold 20 [unverified]; both values should be read from this file (`uses_artifacts: [UX.TOKENS.STATUS]` on the VIZ side, not editable from here).
+- As built: state keys are the semantic token names (`not-decidable`, `not-evaluated`, `out-of-tolerance`), not the build prompt's `not_evaluated`/`out_of_tolerance`, so `sem.status.<state>` and the glyph ID `state.<state>` of UX.ICONS.CLASS use the same word.
+- As built: `status.json` has a `cues` key (`{ "<state>": { "glyph": "state.<state>", "text": "icon.state.<state>" } }`) so that no state is carried by colour alone; `status-check` requires it (`STATUS-CUE`). Whether those IDs exist in the icon index is checked once UX.ICONS.CLASS is built.
+- As built: two error codes beyond the Design list: `STATUS-ALIAS` (REQ-001: a `sem.status.<state>` that does not resolve to the palette value in a theme, or a `sem.status.*` token that is not a state) and `STATUS-CUE`. A brand-tier entry naming a status token (REQ-005) is reported as `STATUS-SET <name>`.
+- `out-of-tolerance` is a nonconforming-set member with no colour in this file: its colours are the out-of-tolerance region colours of UX.TOKENS.DATAPAL, and their distance from CONFORMS is UX.TOKENS.CHECK's to verify.
+- AC-4 pending UX.TOKENS.CHECK: until `color-check` exists, REQ-004 is shown by a provisional test (`status::ciede2000` and `status::cvd`, the Machado, Oliveira and Fernandes 2009 model at severity 1.0, matched to the independent oracle `fixtures/ux/tokens/status/make_fixtures.py`). The shipped values clear ΔE2000 20 for every non-CONFORMS state, not only the nonconforming set (smallest nonconforming-set distance 30.05, smallest overall 21.77), because VIZ.OVERLAY.STATUS's build prompt applies the guard to indeterminate, not-decidable and not-evaluated too.
+- REQ-002's "hue family" has no numeric definition. The provisional test uses: a colour with OKLCH chroma below 0.03 has no hue; otherwise a family is every hue within 30° of a member [unverified rule]. CONFORMS is azure (OKLCH hue 225), not green: no green CONFORMS could stay ΔE2000 20 from a red NONCONFORMS under protanopia and deuteranopia while meeting text contrast in all four themes.
+- UX.TOKENS.COLOR's open question (status values must stay at least 0.10 in OKLab from every claimed role in every theme) is met: `tokens-check` passes with no findings, smallest distance 0.1096. That node's note still calls the `sem.status.*` bindings provisional; it should be closed there (not editable from here).
 
 ## Children
 

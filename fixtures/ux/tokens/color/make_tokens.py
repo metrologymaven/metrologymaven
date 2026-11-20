@@ -58,6 +58,10 @@ HUES = {
     "red": (26.0, 0.190),
     "violet": (296.0, 0.170),
     "magenta": (338.0, 0.170),
+    # Added by UX.TOKENS.STATUS for the locked status palette (tokens/status.json).
+    "azure": (225.0, 0.150),
+    "yellow": (95.0, 0.150),
+    "olive": (115.0, 0.130),
 }
 
 
@@ -165,6 +169,21 @@ RAMPS = {
         "500": "#c85aac", "600": "#ab3f92", "700": "#902679", "800": "#6b225a", "900": "#481c3d",
         "950": "#2a1524",
     },
+    "azure": {
+        "50": "#ecf9ff", "100": "#d5f3ff", "200": "#a7e6ff", "300": "#66d0f7", "400": "#00b5e4",
+        "500": "#0097bf", "600": "#007c9d", "700": "#00637e", "800": "#004b61", "900": "#003545",
+        "950": "#05202a",
+    },
+    "yellow": {
+        "50": "#fef7db", "100": "#f7edc8", "200": "#eadba3", "300": "#d7c068", "400": "#c2a200",
+        "500": "#a28700", "600": "#856e00", "700": "#6a5800", "800": "#514300", "900": "#392e00",
+        "950": "#221d06",
+    },
+    "olive": {
+        "50": "#f6fae1", "100": "#ebf1d1", "200": "#d9e0b0", "300": "#bfc97f", "400": "#a2ae44",
+        "500": "#879223", "600": "#6e7800", "700": "#586000", "800": "#434900", "900": "#2e3206",
+        "950": "#1c1f0c",
+    },
 }
 
 
@@ -178,7 +197,10 @@ P = "prim.color."
 
 # name -> (description, {theme: primitive "<hue>.<step>"}).
 NOCOLOR = " Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol."
-STATUS_NOTE = " Provisional value until spec node UX.TOKENS.STATUS ships the locked status palette."
+STATUS_NOTE = (
+    " Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown"
+    " with glyph state.%s and the text of message icon.state.%s."
+)
 CLAIMED = (
     " A claimed value never looks measured: in every theme this role uses a hue ramp that no"
     " measured-value or brand-tier role uses, stays at least 0.10 in OKLab from every measured,"
@@ -206,13 +228,13 @@ SEM = {
     "sem.border.value.claimed": ("Dashed outline around a claimed value." + CLAIMED, dict(light="magenta.600", dark="magenta.400", hc="magenta.800", floor="magenta.700")),
     # focus
     "sem.focus.ring": ("Keyboard focus indicator.", dict(light="blue.600", dark="blue.300", hc="blue.800", floor="blue.700")),
-    # status (provisional)
-    "sem.status.conforms": ("Display state CONFORMS." + NOCOLOR + STATUS_NOTE, dict(light="green.700", dark="green.300", hc="green.900", floor="green.800")),
-    "sem.status.nonconforms": ("Display state NONCONFORMS." + NOCOLOR + STATUS_NOTE, dict(light="red.700", dark="red.300", hc="red.800", floor="red.800")),
-    "sem.status.indeterminate": ("Display state INDETERMINATE." + NOCOLOR + STATUS_NOTE, dict(light="amber.800", dark="amber.300", hc="amber.900", floor="amber.900")),
-    "sem.status.not-decidable": ("Display state NOT_DECIDABLE." + NOCOLOR + STATUS_NOTE, dict(light="violet.700", dark="violet.300", hc="violet.900", floor="violet.800")),
-    "sem.status.not-evaluated": ("Display state not evaluated." + NOCOLOR + STATUS_NOTE, dict(light="neutral.700", dark="neutral.300", hc="neutral.800", floor="neutral.700")),
-    "sem.status.stale": ("Display state stale." + NOCOLOR + STATUS_NOTE, dict(light="orange.700", dark="orange.300", hc="orange.900", floor="orange.800")),
+    # status: the locked status palette of UX.TOKENS.STATUS (also written to tokens/status.json)
+    "sem.status.conforms": ("Display state CONFORMS." + NOCOLOR + STATUS_NOTE % ("conforms", "conforms"), dict(light="azure.700", dark="azure.400", hc="azure.800", floor="azure.700")),
+    "sem.status.nonconforms": ("Display state NONCONFORMS." + NOCOLOR + STATUS_NOTE % ("nonconforms", "nonconforms"), dict(light="red.600", dark="red.300", hc="red.700", floor="red.600")),
+    "sem.status.indeterminate": ("Display state INDETERMINATE." + NOCOLOR + STATUS_NOTE % ("indeterminate", "indeterminate"), dict(light="yellow.800", dark="yellow.400", hc="yellow.800", floor="yellow.800")),
+    "sem.status.not-decidable": ("Display state NOT_DECIDABLE." + NOCOLOR + STATUS_NOTE % ("not-decidable", "not-decidable"), dict(light="olive.700", dark="olive.200", hc="olive.900", floor="olive.700")),
+    "sem.status.not-evaluated": ("Display state not evaluated." + NOCOLOR + STATUS_NOTE % ("not-evaluated", "not-evaluated"), dict(light="neutral.950", dark="neutral.50", hc="neutral.1000", floor="neutral.950")),
+    "sem.status.stale": ("Display state stale." + NOCOLOR + STATUS_NOTE % ("stale", "stale"), dict(light="orange.700", dark="orange.400", hc="orange.800", floor="orange.700")),
     # brand (the brand tier; brand-neutral defaults until OUTR.BRAND.GUIDE.VISUAL)
     "sem.brand.accent": ("Brand accent: primary buttons and selection. Brand tier.", dict(light="blue.600", dark="blue.300", hc="blue.800", floor="blue.700")),
     "sem.brand.accent-hover": ("Brand accent, hovered. Brand tier.", dict(light="blue.700", dark="blue.400", hc="blue.900", floor="blue.800")),
@@ -292,6 +314,53 @@ def pairs():
     return sorted(set(out))
 
 
+# ------------------------------------------------------------------ status palette (UX.TOKENS.STATUS)
+
+# The six display states, named as in `sem.status.<state>` and the glyph IDs `state.<state>` of
+# UX.ICONS.CLASS. `out-of-tolerance` names the out-of-tolerance region colours of the deviation
+# palettes (UX.TOKENS.DATAPAL); it is a nonconforming-set member without a colour of its own here.
+STATUS_STATES = ["conforms", "nonconforms", "indeterminate", "not-decidable", "not-evaluated", "stale"]
+STATUS_SETS = {"conforming": ["conforms"], "nonconforming": ["nonconforms", "out-of-tolerance", "stale"]}
+STATUS_REFS = [
+    "The UX.TOKENS.STATUS, UX.ICONS.CLASS and VIZ.OVERLAY.STATUS spec nodes in this repository",
+    "The CIEDE2000 colour-difference formula (Sharma, Wu and Dalal, 2005), used only to verify the values",
+    "The colour-vision-deficiency simulation matrices of Machado, Oliveira and Fernandes (2009) at severity 1.0, used only to verify the values",
+]
+AUTHOR = "Claude Code (Claude Opus 5.5), agent author of UX.TOKENS.COLOR; values generated by fixtures/ux/tokens/color/make_tokens.py from hue angles chosen for this project"
+AUTHOR_STATUS = "Claude Code (Claude Opus 5.5), agent author of UX.TOKENS.COLOR and UX.TOKENS.STATUS; values generated by fixtures/ux/tokens/color/make_tokens.py from hue angles chosen for this project, status steps selected for this project"
+# Files whose content UX.TOKENS.STATUS changed.
+STATUS_FILES = {
+    "tokens/status.json",
+    "tokens/primitive/color.tokens.json",
+    "tokens/semantic/color.tokens.json",
+    "tokens/themes/light.json",
+    "tokens/themes/dark.json",
+    "tokens/themes/hc.json",
+    "tokens/themes/floor.json",
+}
+
+
+def status_palette():
+    """`tokens/status.json` (`status-palette@1`): the hex value of every `sem.status.<state>`
+    binding in every theme, so the semantic tokens alias exactly these values."""
+    themes = {}
+    for theme in THEMES:
+        row = {}
+        for state in STATUS_STATES:
+            hue, step = SEM["sem.status." + state][1][theme].split(".")
+            row[state] = RAMPS[hue][step]
+        themes[theme] = row
+    return {
+        "format": "status-palette@1",
+        "locked": True,
+        "formula": "ciede2000",
+        "min_delta_e2000": 20,
+        "sets": STATUS_SETS,
+        "cues": {s: {"glyph": "state." + s, "text": "icon.state." + s} for s in STATUS_STATES},
+        "themes": themes,
+    }
+
+
 # ------------------------------------------------------------------ writers
 
 
@@ -345,6 +414,8 @@ def files():
         "pairs": [{"fg": f, "bg": b, "tag": t} for f, b, t in pairs()],
     }
 
+    out["tokens/status.json"] = status_palette()
+
     decl_refs = [
         "The UX.TOKENS, UX.TOKENS.COLOR and UX.SYSTEM.PRINC spec nodes in this repository",
         "WCAG 2.2 success criteria 1.4.3, 1.4.6 and 1.4.11 (contrast thresholds only)",
@@ -353,9 +424,9 @@ def files():
     for rel in list(out):
         out[f"review/origin/{rel}.origin.json"] = {
             "artefact": rel,
-            "author": "Claude Code (Claude Opus 5.5), agent author of UX.TOKENS.COLOR; values generated by fixtures/ux/tokens/color/make_tokens.py from hue angles chosen for this project",
+            "author": AUTHOR_STATUS if rel in STATUS_FILES else AUTHOR,
             "date": "2026-11-20",
-            "references": decl_refs,
+            "references": decl_refs + (STATUS_REFS if rel == "tokens/status.json" else []),
             "statement_version": "originality-statement@1",
         }
     return {k: canon(v) for k, v in out.items()}

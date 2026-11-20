@@ -1,0 +1,13 @@
+{
+  "bindings": {
+    "sem.status.conforms": "{prim.color.fix.conforms-dark}",
+    "sem.status.indeterminate": "{prim.color.fix.indeterminate-dark}",
+    "sem.status.nonconforms": "{prim.color.fix.nonconforms-dark}",
+    "sem.status.not-decidable": "{prim.color.fix.not-decidable-dark}",
+    "sem.status.not-evaluated": "{prim.color.fix.not-evaluated-dark}",
+    "sem.status.pending": "{prim.color.fix.stale-dark}",
+    "sem.status.stale": "{prim.color.fix.stale-dark}"
+  },
+  "format": "fid-design-theme@1",
+  "theme": "dark"
+}
