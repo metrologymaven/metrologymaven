@@ -53,7 +53,7 @@ pub const MAX_SCHEMA_NODES: usize = 65_536;
 /// Most evaluation steps for one parameter document.
 pub const MAX_EVAL_STEPS: u64 = 4_000_000;
 /// Most nested schema applications.
-pub const MAX_EVAL_DEPTH: usize = 256;
+pub const MAX_EVAL_DEPTH: usize = 128;
 /// Bytes of string or canonical value examined per extra step.
 const BYTES_PER_STEP: usize = 1024;
 
@@ -787,24 +787,19 @@ impl Eval<'_> {
     fn object(&mut self, o: &Obj, inst0: &CValue, ptr: &JsonPointer) -> Step {
         let mut out = Out::default();
         let mut best: Option<Fail> = None;
+        let lit = match (&o.quantity, inst0) {
+            (Some(kind), CValue::Obj(_)) => Some(self.literal(kind, inst0, ptr)?),
+            _ => None,
+        };
         let si;
-        let inst = match (&o.quantity, inst0) {
-            (Some(kind), CValue::Obj(_)) => match self.hooks.literal(kind, inst0) {
-                Ok(n) => {
-                    si = CValue::Num(n.si());
-                    out.lits.push((ptr.clone(), n));
-                    &si
-                }
-                Err(BusError::Validation(reason, detail)) => {
-                    return Ok(Err(Fail::new(ptr, "x-quantity", reason, detail.as_untrusted_str())));
-                }
-                Err(other) => {
-                    let mut f = Fail::schema(ptr, "x-quantity", "literal normalisation failed");
-                    f.bus = Some(other);
-                    return Err(Abort(f));
-                }
-            },
-            _ => inst0,
+        let inst = match lit {
+            Some(Ok(n)) => {
+                si = CValue::Num(n.si());
+                out.lits.push((ptr.clone(), n));
+                &si
+            }
+            Some(Err(f)) => return Ok(Err(f)),
+            None => inst0,
         };
         self.assertions(o, inst, ptr, &mut best)?;
         self.applicators(o, inst, ptr, &mut out, &mut best)?;
@@ -814,6 +809,23 @@ impl Eval<'_> {
         })
     }
 
+    /// Normalises the authored literal at `ptr` (`x-quantity` on an object instance).
+    #[inline(never)]
+    fn literal(&mut self, kind: &str, v: &CValue, ptr: &JsonPointer) -> Result<Result<Normalised, Fail>, Abort> {
+        match self.hooks.literal(kind, v) {
+            Ok(n) => Ok(Ok(n)),
+            Err(BusError::Validation(reason, detail)) => {
+                Ok(Err(Fail::new(ptr, "x-quantity", reason, detail.as_untrusted_str())))
+            }
+            Err(other) => {
+                let mut f = Fail::schema(ptr, "x-quantity", "literal normalisation failed");
+                f.bus = Some(other);
+                Err(Abort(f))
+            }
+        }
+    }
+
+    #[inline(never)]
     fn assertions(&mut self, o: &Obj, inst: &CValue, ptr: &JsonPointer, best: &mut Option<Fail>) -> Result<(), Abort> {
         if let Some(ts) = &o.types {
             if !ts.iter().any(|t| t.matches(inst)) {
@@ -957,6 +969,7 @@ impl Eval<'_> {
     }
 
     /// Applies `id` to the same instance; a pass merges its annotations, a failure is noted.
+    #[inline(never)]
     fn same(
         &mut self,
         id: NodeId,
@@ -979,6 +992,7 @@ impl Eval<'_> {
     }
 
     /// Applies `id` to a child value; a pass keeps only its literals.
+    #[inline(never)]
     fn child(
         &mut self,
         id: NodeId,
@@ -996,6 +1010,10 @@ impl Eval<'_> {
         })
     }
 
+    // The applicators are on the recursion path, so each keyword gets its own small frame
+    // (`inline(never)`): one large function would hold every keyword's temporaries in each
+    // nested application and multiply the stack a deep schema needs.
+    #[inline(never)]
     fn applicators(
         &mut self,
         o: &Obj,
@@ -1004,24 +1022,8 @@ impl Eval<'_> {
         out: &mut Out,
         best: &mut Option<Fail>,
     ) -> Result<(), Abort> {
-        if let CValue::Arr(a) = inst {
-            if let Some(c) = o.contains {
-                let mut matched = 0u64;
-                for (i, item) in a.iter().enumerate() {
-                    if self.node(c, item, &ptr.index(i), "contains")?.is_ok() {
-                        matched += 1;
-                        out.items.insert(i);
-                    }
-                }
-                let min = o.min_contains.unwrap_or(1);
-                if matched < min {
-                    let kw = if o.min_contains.is_some() { "minContains" } else { "contains" };
-                    note(best, Fail::schema(ptr, kw, "too few items match contains"));
-                }
-                if o.max_contains.is_some_and(|m| matched > m) {
-                    note(best, Fail::schema(ptr, "maxContains", "too many items match contains"));
-                }
-            }
+        if let (CValue::Arr(a), Some(c)) = (inst, o.contains) {
+            self.contains(o, c, a, ptr, out, best)?;
         }
         if let Some(r) = o.reference {
             self.same(r, inst, ptr, "$ref", out, best)?;
@@ -1030,51 +1032,16 @@ impl Eval<'_> {
             self.same(*id, inst, ptr, "allOf", out, best)?;
         }
         if !o.any_of.is_empty() {
-            let mut any = false;
-            for id in &o.any_of {
-                if let Ok(x) = self.node(*id, inst, ptr, "anyOf")? {
-                    out.merge(x);
-                    any = true;
-                }
-            }
-            if !any {
-                note(best, Fail::schema(ptr, "anyOf", "value matches none of the alternatives"));
-            }
+            self.any_of(&o.any_of, inst, ptr, out, best)?;
         }
         if !o.one_of.is_empty() {
-            let mut passing = Vec::new();
-            for id in &o.one_of {
-                if let Ok(x) = self.node(*id, inst, ptr, "oneOf")? {
-                    passing.push(x);
-                }
-            }
-            if passing.len() == 1 {
-                if let Some(x) = passing.pop() {
-                    out.merge(x);
-                }
-            } else {
-                note(best, Fail::schema(ptr, "oneOf", "value does not match exactly one alternative"));
-            }
+            self.one_of(&o.one_of, inst, ptr, out, best)?;
         }
         if let Some(n) = o.not {
-            if self.node(n, inst, ptr, "not")?.is_ok() {
-                note(best, Fail::schema(ptr, "not", "value matches a forbidden schema"));
-            }
+            self.not(n, inst, ptr, best)?;
         }
         if let Some(i) = o.if_ {
-            match self.node(i, inst, ptr, "if")? {
-                Ok(x) => {
-                    out.merge(x);
-                    if let Some(t) = o.then_ {
-                        self.same(t, inst, ptr, "then", out, best)?;
-                    }
-                }
-                Err(_) => {
-                    if let Some(e) = o.else_ {
-                        self.same(e, inst, ptr, "else", out, best)?;
-                    }
-                }
-            }
+            self.conditional(o, i, inst, ptr, out, best)?;
         }
         if let CValue::Obj(m) = inst {
             for (name, id) in &o.dependent_schemas {
@@ -1084,13 +1051,115 @@ impl Eval<'_> {
             }
         }
         match inst {
-            CValue::Arr(a) => self.array_children(o, a, ptr, out, best)?,
-            CValue::Obj(m) => self.object_children(o, m, ptr, out, best)?,
-            _ => {}
+            CValue::Arr(a) => self.array_children(o, a, ptr, out, best),
+            CValue::Obj(m) => self.object_children(o, m, ptr, out, best),
+            _ => Ok(()),
+        }
+    }
+
+    #[inline(never)]
+    fn contains(
+        &mut self,
+        o: &Obj,
+        c: NodeId,
+        a: &[CValue],
+        ptr: &JsonPointer,
+        out: &mut Out,
+        best: &mut Option<Fail>,
+    ) -> Result<(), Abort> {
+        let mut matched = 0u64;
+        for (i, item) in a.iter().enumerate() {
+            if self.node(c, item, &ptr.index(i), "contains")?.is_ok() {
+                matched += 1;
+                out.items.insert(i);
+            }
+        }
+        if matched < o.min_contains.unwrap_or(1) {
+            let kw = if o.min_contains.is_some() { "minContains" } else { "contains" };
+            note(best, Fail::schema(ptr, kw, "too few items match contains"));
+        }
+        if o.max_contains.is_some_and(|m| matched > m) {
+            note(best, Fail::schema(ptr, "maxContains", "too many items match contains"));
         }
         Ok(())
     }
 
+    #[inline(never)]
+    fn any_of(
+        &mut self,
+        ids: &[NodeId],
+        inst: &CValue,
+        ptr: &JsonPointer,
+        out: &mut Out,
+        best: &mut Option<Fail>,
+    ) -> Result<(), Abort> {
+        let mut any = false;
+        for id in ids {
+            if let Ok(x) = self.node(*id, inst, ptr, "anyOf")? {
+                out.merge(x);
+                any = true;
+            }
+        }
+        if !any {
+            note(best, Fail::schema(ptr, "anyOf", "value matches none of the alternatives"));
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn one_of(
+        &mut self,
+        ids: &[NodeId],
+        inst: &CValue,
+        ptr: &JsonPointer,
+        out: &mut Out,
+        best: &mut Option<Fail>,
+    ) -> Result<(), Abort> {
+        let mut passing = Vec::new();
+        for id in ids {
+            if let Ok(x) = self.node(*id, inst, ptr, "oneOf")? {
+                passing.push(x);
+            }
+        }
+        match (passing.pop(), passing.is_empty()) {
+            (Some(x), true) => out.merge(x),
+            _ => note(best, Fail::schema(ptr, "oneOf", "value does not match exactly one alternative")),
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn not(&mut self, n: NodeId, inst: &CValue, ptr: &JsonPointer, best: &mut Option<Fail>) -> Result<(), Abort> {
+        if self.node(n, inst, ptr, "not")?.is_ok() {
+            note(best, Fail::schema(ptr, "not", "value matches a forbidden schema"));
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
+    fn conditional(
+        &mut self,
+        o: &Obj,
+        i: NodeId,
+        inst: &CValue,
+        ptr: &JsonPointer,
+        out: &mut Out,
+        best: &mut Option<Fail>,
+    ) -> Result<(), Abort> {
+        let next = match self.node(i, inst, ptr, "if")? {
+            Ok(x) => {
+                out.merge(x);
+                o.then_.map(|t| (t, "then"))
+            }
+            Err(_) => o.else_.map(|e| (e, "else")),
+        };
+        if let Some((id, via)) = next {
+            self.same(id, inst, ptr, via, out, best)?;
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
     fn array_children(
         &mut self,
         o: &Obj,
@@ -1130,6 +1199,7 @@ impl Eval<'_> {
         Ok(())
     }
 
+    #[inline(never)]
     fn object_children(
         &mut self,
         o: &Obj,

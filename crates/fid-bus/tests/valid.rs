@@ -430,9 +430,14 @@ impl Hooks for NoHooks {
 }
 
 /// Exponential schemas stop at the step budget or the nesting limit with `input_limit`, and
-/// no `not` or `anyOf` can turn that into a pass.
+/// no `not` or `anyOf` can turn that into a pass. Run on a thread with a 2 MiB stack (the
+/// test-thread default) so the nesting limit is shown to fit it even in a debug build.
 #[test]
 fn evaluation_is_bounded_and_fails_closed() {
+    std::thread::Builder::new().stack_size(2 * 1024 * 1024).spawn(bounded_cases).unwrap().join().unwrap();
+}
+
+fn bounded_cases() {
     for schema in [
         r##"{"anyOf":[{"$ref":"#"},{"$ref":"#"}]}"##,
         r##"{"not":{"anyOf":[{"$ref":"#"},{"$ref":"#"}]}}"##,
