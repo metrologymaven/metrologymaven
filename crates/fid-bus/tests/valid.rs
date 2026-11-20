@@ -470,10 +470,10 @@ fn uncompilable_schema_fails_closed() {
         schemas.iter().enumerate().map(|(i, s)| def_with(&format!("t.c{i}"), s, "[]")).collect();
     let t = CommandTable::build(DIGEST, defs, catalogue(), &ContextTypes::new()).unwrap();
     assert_eq!(t.compile_errors().len(), schemas.len(), "{:?}", t.compile_errors());
-    for i in 0..schemas.len() {
+    for (i, schema) in schemas.iter().enumerate() {
         let r = t.resolve(&format!("t.c{i}"), 1, &principal("human")).unwrap();
         let e = r.validate_value(&obj(&[]), &view()).unwrap_err();
-        assert_eq!((e.reason, e.keyword), (ValidationReason::Schema, "schema"), "{}", schemas[i]);
+        assert_eq!((e.reason, e.keyword), (ValidationReason::Schema, "schema"), "{schema}");
         assert_eq!(e.to_bus_error().code(), Code::Validation);
     }
 }

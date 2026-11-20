@@ -154,6 +154,9 @@ fn note(best: &mut Option<Fail>, f: Fail) {
     }
 }
 
+/// A numeric bound: its limit, keyword and the test a passing value meets.
+type Bound = (Option<f64>, &'static str, fn(f64, f64) -> bool);
+
 /// Validation stopped: a limit was reached or a hook hit a broken invariant. Never turned
 /// into a pass by `anyOf`, `oneOf`, `not` or `if`.
 struct Abort(Fail);
@@ -512,12 +515,12 @@ impl Builder {
         k: &str,
         v: &CValue,
         id: NodeId,
-        path: &mut Vec<String>,
+        path: &[String],
         depth: usize,
     ) -> Result<(), CompileError> {
         let at_root = path.len() == 1;
         // `path` ends with `k`; children are built relative to the schema object.
-        let mut base: Vec<String> = path.clone();
+        let mut base: Vec<String> = path.to_vec();
         base.pop();
         let bad = |what: &str| Builder::err(path, what);
         let num = |v: &CValue| number(v).ok_or_else(|| bad("must be a number"));
@@ -548,7 +551,7 @@ impl Builder {
                     _ => None,
                 }
                 .ok_or_else(|| bad("$ref must be `#` or `#/` and a JSON pointer into this schema"))?;
-                self.refs.push((id, target, path.clone()));
+                self.refs.push((id, target, path.to_vec()));
             }
             "$dynamicRef" => return Err(bad("$dynamicRef is not supported")),
             "type" => {
@@ -833,7 +836,7 @@ impl Eval<'_> {
                     note(best, Fail::schema(ptr, "multipleOf", "value is not a multiple"));
                 }
             }
-            let checks: [(Option<f64>, &'static str, fn(f64, f64) -> bool); 4] = [
+            let checks: [Bound; 4] = [
                 (o.maximum, "maximum", |x, l| x <= l),
                 (o.exclusive_maximum, "exclusiveMaximum", |x, l| x < l),
                 (o.minimum, "minimum", |x, l| x >= l),
