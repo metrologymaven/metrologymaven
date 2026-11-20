@@ -16,7 +16,7 @@ uses_artifacts: []
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # AGENT.GATEPREP: Gate preparation: previews, batched queues, evidence packs
@@ -40,6 +40,7 @@ Makes every human gate in D-037 fast: the agent prepares, the human decides once
 ## Requirements
 
 - **REQ-AGENT.GATEPREP-001** Each human gate H1-H4 shall be presented as one batched, pre-digested item list acted on with a single human action per batch, and every item shall link to its evidence.
+- **REQ-AGENT.GATEPREP-002** The H2 release batch shall show, for every record whose `interpretation` is `provisional`, the label `interpretation: provisional` and its provisional rules, and shall offer no release action that completes while `RPT.FORMS.FINAL.CHECK` reports `provisional_label_missing` (D-045).
 
 ## Interfaces
 
@@ -51,6 +52,7 @@ Split along the Scope items above.
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** REQ-AGENT.GATEPREP-002 added; its acceptance test is AC-9 of `RPT.FORMS.FINAL.CHECK`. The H4 evidence pack per row should show the content digest the reviewer signs (`GDT.RES.ROWFLOW.REVIEW`, `stale_review`).
 - Added by D-037 (accepted 2026-11-17); not yet expanded.
 
 ## Children

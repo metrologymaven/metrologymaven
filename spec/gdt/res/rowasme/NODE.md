@@ -15,7 +15,7 @@ depends_on: [GDT.RES.SCHEMA, GDT.RES.ROWFLOW]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # GDT.RES.ROWASME: P1a ASME Y14.5-2018 DMT row set
@@ -56,6 +56,7 @@ One child per tolerance family inventory (FORM rows, ORIENT rows, POS rows, SIZE
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** the first-review subset (DRF from planar and cylindrical datum features; position RFS and at MMC with bonus; flatness; profile of a surface) must be signed off before any other row is added or changed (`GDT.RES.PACE`). Cylindrical datum features and profile of a surface are not in the P1a inventory above; aligning the inventory and phase tags with the subset is a follow-up change.
 - **Applied D-016 (accepted 2026-11-17):** the project buys one licence of ASME Y14.5-2018 and Y14.5.1-2019 per paid author; community reviewers hold their own copies (or a partner's institutional access, D-009 option C) and attest "edition held" on every review (`GDT.RES.ROWFLOW.STATE`). The node is no longer blocked; its content children remain open because the rows are expert work, never agent-written.
 - Purchasing the author licences is a steering-group budget action outside the tree; `GDT.RES.ROWASME.GATE` checks only what the project records (roster basis and attestations), not the purchase itself.
 - Concentricity and symmetry rows for legacy-edition ASME drawings: whether to have them at all is an expert call (raised on `GDT.LOC`); routed to `GDT.RES.ROWASME.POS`.

@@ -1,0 +1,32 @@
+[package]
+name = "fid-geo-cmd"
+description = "Metrology Maven GEO command adapter: element registration with stable IDs and the geo.describe_element@1 read command (GEO.TYPES.REG)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# RFC 8785 canonical JSON for the describe result, the command parameters and the UUIDv5
+# derivation names (CORE.JRN.CANON). Layer model.
+fid-canon = { path = "../fid-canon" }
+# Dependency edges of a registered element and change propagation on replacement
+# (CORE.DEP.EDGE, CORE.DEP.PROP). Layer engine, the same layer as this crate.
+fid-dep = { path = "../fid-dep" }
+# The geometry element types, their digest, bounding box and topology facts (GEO.TYPES).
+# Layer kernel. This crate depends on it, never the reverse (GEO.TYPES split rationale).
+fid-geo-types = { path = "../fid-geo-types" }
+# Stable IDs: UUIDv7 through the recorded observation source, UUIDv5 in the project
+# namespace and imported-ID collision checks (CORE.PRJ.CONT.ID). Layer model.
+fid-project = { path = "../fid-project" }
+# The registry definition of geo.describe_element@1, built through the registry's field
+# rules (CORE.REG.DEF). Layer model.
+fid-registry = { path = "../fid-registry" }
+# Shared `sha256:` digest and command-ID types (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+# Entity IDs (CONSTITUTION §5). Layer model.
+fid-uuid = { path = "../fid-uuid" }
+
+[lints]
+workspace = true

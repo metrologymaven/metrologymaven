@@ -1328,6 +1328,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-geo-cmd"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-dep",
+ "fid-geo-types",
+ "fid-project",
+ "fid-registry",
+ "fid-types",
+ "fid-uuid",
+]
+
+[[package]]
 name = "fid-geo-dist"
 version = "0.0.1"
 dependencies = [
@@ -1724,13 +1737,17 @@ dependencies = [
  "fid-bus",
  "fid-canon",
  "fid-dep",
+ "fid-geo-cmd",
+ "fid-geo-types",
  "fid-jobs",
  "fid-journal",
  "fid-program-rec",
+ "fid-project",
  "fid-project-cmd",
  "fid-registry",
  "fid-report",
  "fid-store",
+ "fid-uuid",
 ]
 
 [[package]]

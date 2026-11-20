@@ -55,7 +55,7 @@ When torn between A and B, choose B. When torn between B and C, choose C only if
 
 ## 3C. If decision
 
-- Create `decisions/D-NNN-<slug>.md` from `templates/DECISION.md`. Use the next free number; check `decisions/` first.
+- Create `decisions/D-NNN-<slug>.md` from `templates/DECISION.md`. Use the next free number; check `decisions/` first. If the new record amends or narrows an earlier decision, list it in the frontmatter as `amends: [D-NNN]`.
 - Set the target's `status: decision`. Add `decision: D-NNN` to its frontmatter, and explain the block in `## Open questions`.
 
 ## 4. Quality bar for requirements

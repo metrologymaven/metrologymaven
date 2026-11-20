@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-cmd]
+built_pr: 302
 satisfies: [REQ-GEO.TYPES-007, REQ-GEO.TYPES-008]
 covers: []
 depends_on: [GEO.TYPES.DIGEST, CORE.PRJ, CORE.REG, CORE.DEP]
@@ -59,8 +61,8 @@ The bridge between the pure geometry types and the document: a registration help
 ## Design
 
 - **Registry command(s):** `geo.describe_element@1`, class R0, params `{ element: EntityRef }`, result `ElementDescription`; determinism D0; projected to MCP as exposed.
-- **Data structures:** `enum IdOrigin { Imported(String), New, Derived { command: CommandId, inputs: Vec<(EntityId, ElementDigest)> } }`; `ElementDescription { kind, points, triangles, aabb, frame, digest, channels, topology }`.
-- **Algorithm:** UUIDv5 namespace is a fixed project constant; name bytes are the command ID followed by input IDs sorted ascending with their digests.
+- **Data structures:** `enum IdOrigin { Imported(String), New, Derived(Derivation) }` with `Derivation { command: CommandId, params: Digest, output: String, inputs: Vec<(EntityId, Digest)> }` (`params` is the canonical digest of the producing command's parameters, `output` names which of its outputs the element is); `ElementDescription { kind, origin, points, triangles, aabb, frame, digest, channels, topology, id, source_id }`, where `origin` is `imported`, `new` or `derived` and `aabb.source` is `computed`, or `claimed` for a CAD body's import box.
+- **Algorithm:** every UUIDv5 comes from CORE's ID service (`IdService::derive_v5`): the project namespace over the RFC 8785 bytes of a name object carrying a domain tag. A derived name is `{"command", "inputs": [{"digest", "id"}, ...], "kind": "geo_derived", "output", "params"}` with inputs sorted ascending by ID; each geometric input's digest must equal its current digest (`digest_mismatch`). A source ID that `Uuid::parse` accepts is imported unchanged; any other source ID is kept verbatim as `source_id` and its entity ID is named `{"kind": "geo_imported_source", "source_id"}`. Re-registering an identical derivation (same kind, digest and inputs) returns `already: true` and journals nothing; different content under a derived ID is `id_collision`. Replacement runs CORE.DEP propagation (with the elements recomputed in the same commit) before writing the tree.
 - **Errors:** `not_found`, `not_geometry`.
 - **Determinism:** D0.
 - **Performance budget:** describe under 5 ms for any element (it reads cached facts, never rescans) [unverified].

@@ -72,6 +72,7 @@ Reuses `synthetic_table_v1.json` from `GDT.RES.SCHEMA` plus small synthetic char
 
 ## Open questions
 
+- **Revise for D-045 (accepted 2026-11-19):** `Resolution::Resolved` should also return `row_content_digest` (`GDT.RES.STATUS`, REQ-GDT.RES.STATUS-001) recomputed from the row it resolved, so `GDT.CHAR.INTERP` stamps the digest of the row actually evaluated. Until that change is built, `GDT.CHAR.INTERP` recomputes it from the resolved row itself; neither ever takes a digest from table metadata.
 - Context beyond characteristic type and modifiers (for example feature type: hole versus pin) may need to enter the key; if so the key grammar in `GDT.RES.SCHEMA` gains a segment and this leaf follows.
 
 ## Children

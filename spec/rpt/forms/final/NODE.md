@@ -15,7 +15,7 @@ depends_on: [RPT.FORMS.ROWS, RPT.FORMS.PPAP, CORE.BUS, CORE.JRN, CORE.STO]
 cli: [fid report check-fai, fid report finalize-fai, fid report check-ppap, fid report finalize-ppap, fid report adopt-fai, fid report adopt-ppap, fid report list-final-fai]
 mcp: [report_check_fai, report_check_ppap, report_adopt_fai, report_adopt_ppap, report_list_final_fai]
 journal: [report.finalize_fai@1, report.finalize_ppap@1, report.adopt_fai@1, report.adopt_ppap@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # RPT.FORMS.FINAL: Form completeness check and finalisation
@@ -44,6 +44,7 @@ Decides whether an FAI or PPAP draft may become a controlled record, and perform
 - **REQ-RPT.FORMS.FINAL-003** If the form contains agent-authored content that no human has adopted, then finalisation shall be refused with error `report.form_unadopted`.
 - **REQ-RPT.FORMS.FINAL-004** `report.finalize_fai@1` and `report.finalize_ppap@1` shall be side-effect class W3, shall not be exposed as MCP tools, and shall be refused for any agent principal.
 - **REQ-RPT.FORMS.FINAL-005** When a form is finalised, the system shall store the resolved form and its content digest as an immutable controlled record, and any later change shall create a new form revision rather than modify it.
+- **REQ-RPT.FORMS.FINAL-006** If a form row supplies a value from a ResultRecord whose `interpretation` is `provisional`, and the form's rendering of that row lacks the `ProvisionalInterpretation` label (`RPT.MODEL.FMT`), then finalisation, including finalisation from an H2 release batch, shall be refused with `report.provisional_label_missing` naming the balloon (D-045).
 
 ## Interfaces
 
@@ -56,6 +57,7 @@ CHECK (completeness rules), FREEZE (W3 finalisation and revisions).
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** REQ-RPT.FORMS.FINAL-006 makes a missing provisional label a blocker: `RPT.FORMS.FINAL.CHECK` reports it and `RPT.FORMS.FINAL.FREEZE` refuses the freeze on it.
 - **Revise for D-036/D-037 (accepted 2026-11-17):** finalisation is gate H2 (batched release-and-adoption queue, AGENT.GATEPREP).
 - Is a `NONCONFORMS` row a blocker for finalisation, or is a failed FAI still a valid final record? Assumed valid: an FAI may document a failure, but every row must have a result.
 
@@ -66,5 +68,5 @@ CHECK (completeness rules), FREEZE (W3 finalisation and revisions).
 
 | ID | Title | Satisfies | Covers |
 |---|---|---|---|
-| RPT.FORMS.FINAL.CHECK | Form completeness check and adoption of agent-authored form content (leaf) | 001 002 003 | none |
-| RPT.FORMS.FINAL.FREEZE | W3 finalisation of FAI and PPAP forms with immutable revisions (leaf) | 002 003 004 005 | none |
+| RPT.FORMS.FINAL.CHECK | Form completeness check and adoption of agent-authored form content (leaf) | 001 002 003 006 | none |
+| RPT.FORMS.FINAL.FREEZE | W3 finalisation of FAI and PPAP forms with immutable revisions (leaf) | 002 003 004 005 006 | none |

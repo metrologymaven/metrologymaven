@@ -1,0 +1,10 @@
+{
+  "note": "rank rule: M = 51, p = 0.95, exponential(1) seed 6",
+  "p": "3fee666666666666",
+  "p_dec": "0.95",
+  "fx": "3ff0000000000000",
+  "fx_dec": "1.0",
+  "m": 51,
+  "expected": {"mean": "3ff2450c62da086f", "mean_dec": "1.141857515468043", "u": "3feec593d5c4318e", "u_dec": "0.9616183447956688", "sym_low": "3fa10638c3aea7f7", "sym_high": "400ce225b9459985", "sym_ranks": [2, 50], "shortest_low": "3f9dcd97147e3c67", "shortest_high": "4008fcb4059059a3", "shortest_ranks": [1, 49], "shortest_strictly_shorter": true, "mean_minus_fx": "3fc2286316d04377"},
+  "values": ["3fe8f228710d8348", "3ffc5e6c20ce9b15", "400d81d1a8df1d88", "3fed0954e16a535a", "3ff69aef00692294", "3ff14cd9efde5cbe", "3ff18b12458ce12c", "3ff2f1fb83e82537", "4008d25cfbd3ebbf", "3fecec7cad70c558", "3fbc70f64edc6476", "3fe269bb87f7ce35", "3ff6b9d7a2348685", "3fc7abd19abaf65e", "3fef65fd17690327", "3fa5c4abf419dd61", "3ff4b7d52a2e2932", "3fc386ec46dd9c4d", "3ff182a356ef9e5b", "3fdb83c537f89d96", "3ff45bd0b79cce53", "3fe0d4bd6f30b541", "3fdfd225d248f30e", "3fe12244422c9020", "3ff2e79148137cb3", "3fd3d322e937ce14", "3fef74e01df1b317", "400486e9671ac4e5", "3fe2d5cc3c6e3af8", "4008fcb4059059a3", "3ff3961b4382479b", "3f9dcd97147e3c67", "400ce225b9459985", "3fe9b30005c7e0a9", "3fbcf081f35f8c41", "3fd000ae9bad603c", "3fe3e932a8709838", "3ff069f382f4e38b", "3ffa6ef50cc6c098", "4007b807afac1b52", "4003a375dc43421f", "3fafa87ba430f4ab", "3ff0fb8b3961056d", "3fe1dd174c69555f", "3fadcb8db6e8df5b", "400261b5b7c26cb5", "3ffaf5f52d0f4c0e", "3fd6a36404e6a3ee", "3ffc7ac74fe344bb", "3fa10638c3aea7f7", "3ffcbab2888dedf4"]
+}

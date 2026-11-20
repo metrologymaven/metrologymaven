@@ -38,7 +38,7 @@ mod stats;
 pub use degen::{
     angular_coverage, check, check_points, data_shape, DataShape, Degeneracy, JACOBI_MAX_SWEEPS, JACOBI_TOL,
 };
-pub use encode::encode;
+pub use encode::{encode, encode_feature};
 pub use error::{FitError, NotConvergedReason};
 pub use normalise::{Centred, Normalisation};
 pub use params::{

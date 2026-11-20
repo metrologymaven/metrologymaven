@@ -1,0 +1,8 @@
+# UNC.PROP.MCM.INTVL D0 bit pins: crate output, regenerate with UNC_MCM_INTVL_PRINT_BITS=1
+# fixture mean u mean_minus_fx (IEEE-754 bits, hex)
+uniform_1000.json 407f480000000000 40720d1c6906067e 0000000000000000
+skewed.json 3ff03690322f447c 3ff043db00477f3f 3f8b481917a23e00
+ranks_m1012.json 3ff01d8b8593b5ab 3ff190b5dfc9c838 3f7d8b8593b5ab00
+ranks_m51.json 3ff2450c62da086f 3feec593d5c4318e 3fc2286316d04378
+ranks_p6827.json 3fee7befb4920016 3fef9d1259dfef8f bfa84104b6dffea0
+ac_h1_seeds_0_3_m10000 sha256:d1cffa799e296af7db238460efcb5ebcb6895daa78af850325605bbe7d6a43cc
