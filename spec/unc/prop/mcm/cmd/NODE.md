@@ -78,6 +78,7 @@ The registry command that runs adaptive Monte Carlo on the model bound to a resu
 ## Open questions
 
 - The 0.1 % failure limit is from the parent and unreviewed [unverified].
+- **From `UNC.PROP.MCM.ADAPT` (its build PR):** the stop-rule checks on the mass-calibration, comparison-loss and gauge-block examples moved here, because those examples need published reference values and end-to-end models. The checks are accuracy at stop (stopped u(y) and endpoints within delta) and trial count at stop against the guide's reported adaptive counts. Measure them alongside AC-H1, with the same exact binomial test that ADAPT's AC-H1 uses.
 
 ## Children
 

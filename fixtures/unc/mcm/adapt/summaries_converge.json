@@ -1,0 +1,24 @@
+{
+  "title": "UNC.PROP.MCM.ADAPT AC-1: converging sequence",
+  "license": "CC-BY-4.0",
+  "provenance": "hand-chosen synthetic block summaries: not measured, not simulated by the crate",
+  "note": "stops at the first block h >= 2 where 2 s <= delta for all four quantities",
+  "profile": {"p": "3fee666666666666", "p_repr": "0.95", "n_dig": 2, "cap": 1000000, "block_size": 10000},
+  "blocks": [
+    {"y_mean": "40240624dd2f1aa0", "u": "3ff010624dd2f1aa", "low": "40201eb851eb851f", "high": "4027e147ae147ae1", "repr": ["10.012", "1.004", "8.06", "11.94"]},
+    {"y_mean": "4023f645a1cac083", "u": "3fefe76c8b439581", "low": "401fb851eb851eb8", "high": "402823d70a3d70a4", "repr": ["9.981", "0.997", "7.93", "12.07"]},
+    {"y_mean": "4024020c49ba5e35", "u": "3ff004189374bc6a", "low": "402019999999999a", "high": "4027eb851eb851ec", "repr": ["10.004", "1.001", "8.05", "11.96"]},
+    {"y_mean": "4023fd70a3d70a3d", "u": "3feff7ced916872b", "low": "401feb851eb851ec", "high": "40280f5c28f5c28f", "repr": ["9.995", "0.999", "7.98", "12.03"]},
+    {"y_mean": "40240189374bc6a8", "u": "3ff0000000000000", "low": "4020051eb851eb85", "high": "4028000000000000", "repr": ["10.003", "1.0", "8.01", "12.0"]},
+    {"y_mean": "40240083126e978d", "u": "3ff0083126e978d5", "low": "401ff5c28f5c28f6", "high": "4027fae147ae147b", "repr": ["10.001", "1.002", "7.99", "11.99"]},
+    {"y_mean": "4023ff7ced916873", "u": "3fefef9db22d0e56", "low": "4020000000000000", "high": "4028051eb851eb85", "repr": ["9.999", "0.998", "8.0", "12.01"]},
+    {"y_mean": "4024000000000000", "u": "3ff0000000000000", "low": "4020000000000000", "high": "4028000000000000", "repr": ["10.0", "1.0", "8.0", "12.0"]}
+  ],
+  "steps": [
+    {"h": 1, "u_all": "3ff010624dd2f1aa", "u_all_repr": "1.004", "decision": "continue", "exp10": null, "delta": null, "sd": null},
+    {"h": 2, "u_all": "3ff0020c49ba5e35", "u_all_repr": "1.0005", "decision": "continue", "exp10": -1, "delta": "3fa999999999999a", "sd": ["3f8fbe76c8b43a00", "3f6cac083126e980", "3fb0a3d70a3d70c0", "3fb0a3d70a3d70c0"]},
+    {"h": 3, "u_all": "3fefd7dbf487fcb9", "u_all_repr": "0.9951", "decision": "continue", "exp10": -1, "delta": "3fa999999999999a", "sd": ["3f830775d9a9a654", "3f609c28c1760182", "3fa5626cc277860b", "3fa4b136396e4dc6"]},
+    {"h": 4, "u_all": "3ff0013a92a30553", "u_all_repr": "1.0003", "decision": "continue", "exp10": -1, "delta": "3fa999999999999a", "sd": ["3f7b38a08929493c", "3f587642dacba7c9", "3f9f6c4e0af2c532", "3f9f00cdc22ed006"]},
+    {"h": 5, "u_all": "3ff001a36e2eb1c4", "u_all_repr": "1.0004", "decision": "stop", "exp10": -1, "delta": "3fa999999999999a", "sd": ["3f757ac768363248", "3f52f74205e57b07", "3f985c9a8236e72f", "3f9803d25ddc97de"]}
+  ]
+}
