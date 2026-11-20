@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-surface, fid-bus]
 satisfies: [REQ-AUTO.SURF-008, REQ-AUTO.SURF-009, REQ-AUTO.SURF-010]
 covers: []
 depends_on: [CORE.STO, AUTO.SURF.PROJ]
