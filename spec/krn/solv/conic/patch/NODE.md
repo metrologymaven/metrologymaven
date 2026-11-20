@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [vendor/fid-clarabel]
+built_pr: 305
 satisfies: [REQ-KRN.SOLV.CONIC-002]
 covers: []
 depends_on: [KRN.NUM.FN, KRN.NUM.RED, KRN.NUM.ERR]
