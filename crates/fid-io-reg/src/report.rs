@@ -112,7 +112,7 @@ fn is_type_name(s: &str) -> bool {
 pub(crate) fn is_format_id(s: &str) -> bool {
     let b = s.as_bytes();
     matches!(b.first(), Some(b'a'..=b'z' | b'0'..=b'9'))
-        && b.iter().all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.'))
+        && b.iter().all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.'))
 }
 
 macro_rules! name_type {
@@ -163,8 +163,9 @@ name_type!(
 );
 
 name_type!(
-    /// A format ID: 1 to [`MAX_NAME_LEN`] bytes of `a-z`, `0-9`, `-`, `_` and `.`, starting
-    /// with a letter or digit (for example `fid-test-points`).
+    /// A format ID: 1 to [`MAX_NAME_LEN`] bytes of `a-z`, `0-9`, `-` and `.`, starting
+    /// with a letter or digit (for example `fid-test-points`). No `_`, so the export command
+    /// ID `export.<format>@1` (`-` written as `_`) names one format only (IO.REG.ENV.EXPORT).
     FormatId,
     "format",
     is_format_id
@@ -255,14 +256,14 @@ impl Location {
         Ok(Location(Loc::HumanPath(UntrustedText::new(path))))
     }
 
-    fn wire(&self) -> String {
+    pub(crate) fn wire(&self) -> String {
         match &self.0 {
             Loc::Handle(h) => h.to_string(),
             Loc::HumanPath(p) => p.raw().to_string(),
         }
     }
 
-    fn from_wire(s: &str) -> Result<Location, ReportError> {
+    pub(crate) fn from_wire(s: &str) -> Result<Location, ReportError> {
         if s.starts_with("root://") {
             let h = RootHandle::parse(s).map_err(|_| invalid("location", "invalid root handle"))?;
             if h.to_string() != s {

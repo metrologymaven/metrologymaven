@@ -1,0 +1,10 @@
+{
+  "sem": {
+    "text": {
+      "size-ref": {
+        "$type": "dimension",
+        "$value": "{prim.color.blue.600}"
+      }
+    }
+  }
+}

@@ -24,6 +24,10 @@ pub use handler::{
 pub use policy::class::{
     authorise_cancel, authorise_class, class_rule, policy_matrix_json, policy_matrix_value, ClassRule,
 };
+pub use policy::projection::{
+    authorise, authorise_projection, list_requests, Approval, Authorised, Decision, Filing, Projected, RejectHandler,
+    RequestBook, RequestId, RequestRecord, RequestState, WithdrawHandler,
+};
 pub use principal::{
     Channel, ChannelKind, ClientId, ConfirmMethod, ConfirmedUpgrade, HumanPresence, IdError, Identity, JournalAppend,
     OsUser, PendingUpgrade, PresenceOutcome, Principal, PrincipalId, PrincipalKind, PrincipalRef, SelfAsserted,

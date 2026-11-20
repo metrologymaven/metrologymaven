@@ -1,0 +1,430 @@
+{
+ "approvals": [
+  {
+   "approver": "gui",
+   "command": "test.run_request@1",
+   "expect": "approve",
+   "name": "same parameters by a human",
+   "params": {
+    "count": 3,
+    "target": "plane-1"
+   }
+  },
+  {
+   "approver": "gui",
+   "command": "test.run_request@1",
+   "expect": "policy/bad_approval",
+   "name": "one field differs",
+   "params": {
+    "count": 3,
+    "target": "plane-2"
+   }
+  },
+  {
+   "approver": "gui",
+   "command": "test.run_request@1",
+   "expect": "policy/bad_approval",
+   "name": "extra field",
+   "params": {
+    "count": 3,
+    "dry": true,
+    "target": "plane-1"
+   }
+  },
+  {
+   "approver": "gui",
+   "command": "test.run_request@1",
+   "expect": "policy/bad_approval",
+   "name": "missing field",
+   "params": {
+    "target": "plane-1"
+   }
+  },
+  {
+   "approver": "gui",
+   "command": "test.adopt_human@1",
+   "expect": "policy/bad_approval",
+   "name": "other command same parameters",
+   "params": {
+    "count": 3,
+    "target": "plane-1"
+   }
+  },
+  {
+   "approver": "mcp",
+   "command": "test.run_request@1",
+   "expect": "policy/bad_approval",
+   "name": "agent sets approval_of",
+   "params": {
+    "count": 3,
+    "target": "plane-1"
+   }
+  },
+  {
+   "approver": "server_mcp",
+   "command": "test.run_request@1",
+   "expect": "policy/bad_approval",
+   "name": "server agent sets approval_of",
+   "params": {
+    "count": 3,
+    "target": "plane-1"
+   }
+  },
+  {
+   "approver": "cli",
+   "command": "test.run_request@1",
+   "expect": "policy/bad_approval",
+   "name": "script sets approval_of",
+   "params": {
+    "count": 3,
+    "target": "plane-1"
+   }
+  },
+  {
+   "approver": "service",
+   "command": "test.run_request@1",
+   "expect": "policy/bad_approval",
+   "name": "service sets approval_of",
+   "params": {
+    "count": 3,
+    "target": "plane-1"
+   }
+  },
+  {
+   "approver": "server_session",
+   "command": "test.run_request@1",
+   "expect": "policy/bad_approval",
+   "name": "server user sets approval_of",
+   "params": {
+    "count": 3,
+    "target": "plane-1"
+   }
+  }
+ ],
+ "commitments": [
+  {
+   "commitment": "sha256:f1a892e5492af5a44ed3b5a14fc99b139c674f45cc6db7b9239cf169c71e5a6b",
+   "params": {
+    "target": "plane-1"
+   }
+  },
+  {
+   "commitment": "sha256:059139d6d607ade8c9d94a26465ba09c0673ceefe5d4b61486fb35eadce93031",
+   "params": {
+    "count": 3,
+    "target": "plane-1"
+   }
+  },
+  {
+   "commitment": "sha256:5c4694388f6a45aedbb4a263fd4e5b6ead012f75299d2d215cac45b5e9ea5b39",
+   "params": {
+    "count": 3,
+    "dry": true,
+    "target": "plane-1"
+   }
+  },
+  {
+   "commitment": "sha256:45a48f7a31c6ed44e44ba4a0d7ba6424d1647d996f3edc4728c297ab9efa5e32",
+   "params": {
+    "count": 3,
+    "target": "plane-2"
+   }
+  },
+  {
+   "commitment": "sha256:7cac0cebaa09d6848f1b9b8b98db2960a0579085fd44a43011595ca4e7b31d50",
+   "params": {
+    "target": "Ebene é"
+   }
+  }
+ ],
+ "filed": {
+  "command": "test.run_request@1",
+  "commitment": "sha256:059139d6d607ade8c9d94a26465ba09c0673ceefe5d4b61486fb35eadce93031",
+  "params": {
+   "count": 3,
+   "target": "plane-1"
+  }
+ },
+ "node": "CORE.BUS.POL.PROJ",
+ "projection": [
+  {
+   "channel": "mcp",
+   "command": "test.run_exposed@1",
+   "expect": "run"
+  },
+  {
+   "channel": "server_mcp",
+   "command": "test.run_exposed@1",
+   "expect": "run"
+  },
+  {
+   "channel": "gui",
+   "command": "test.run_exposed@1",
+   "expect": "run"
+  },
+  {
+   "channel": "cli",
+   "command": "test.run_exposed@1",
+   "expect": "run"
+  },
+  {
+   "channel": "python",
+   "command": "test.run_exposed@1",
+   "expect": "run"
+  },
+  {
+   "channel": "control",
+   "command": "test.run_exposed@1",
+   "expect": "run"
+  },
+  {
+   "channel": "server_session",
+   "command": "test.run_exposed@1",
+   "expect": "run"
+  },
+  {
+   "channel": "server_service",
+   "command": "test.run_exposed@1",
+   "expect": "run"
+  },
+  {
+   "channel": "service",
+   "command": "test.run_exposed@1",
+   "expect": "run"
+  },
+  {
+   "channel": "device",
+   "command": "test.run_exposed@1",
+   "expect": "run"
+  },
+  {
+   "channel": "internal",
+   "command": "test.run_exposed@1",
+   "expect": "run"
+  },
+  {
+   "channel": "mcp",
+   "command": "test.run_request@1",
+   "expect": "pending"
+  },
+  {
+   "channel": "server_mcp",
+   "command": "test.run_request@1",
+   "expect": "pending"
+  },
+  {
+   "channel": "gui",
+   "command": "test.run_request@1",
+   "expect": "run"
+  },
+  {
+   "channel": "cli",
+   "command": "test.run_request@1",
+   "expect": "run"
+  },
+  {
+   "channel": "python",
+   "command": "test.run_request@1",
+   "expect": "run"
+  },
+  {
+   "channel": "control",
+   "command": "test.run_request@1",
+   "expect": "run"
+  },
+  {
+   "channel": "server_session",
+   "command": "test.run_request@1",
+   "expect": "run"
+  },
+  {
+   "channel": "server_service",
+   "command": "test.run_request@1",
+   "expect": "run"
+  },
+  {
+   "channel": "service",
+   "command": "test.run_request@1",
+   "expect": "run"
+  },
+  {
+   "channel": "device",
+   "command": "test.run_request@1",
+   "expect": "run"
+  },
+  {
+   "channel": "internal",
+   "command": "test.run_request@1",
+   "expect": "run"
+  },
+  {
+   "channel": "mcp",
+   "command": "test.run_never@1",
+   "expect": "policy/not_on_mcp"
+  },
+  {
+   "channel": "server_mcp",
+   "command": "test.run_never@1",
+   "expect": "policy/not_on_mcp"
+  },
+  {
+   "channel": "gui",
+   "command": "test.run_never@1",
+   "expect": "run"
+  },
+  {
+   "channel": "cli",
+   "command": "test.run_never@1",
+   "expect": "run"
+  },
+  {
+   "channel": "python",
+   "command": "test.run_never@1",
+   "expect": "run"
+  },
+  {
+   "channel": "control",
+   "command": "test.run_never@1",
+   "expect": "run"
+  },
+  {
+   "channel": "server_session",
+   "command": "test.run_never@1",
+   "expect": "run"
+  },
+  {
+   "channel": "server_service",
+   "command": "test.run_never@1",
+   "expect": "run"
+  },
+  {
+   "channel": "service",
+   "command": "test.run_never@1",
+   "expect": "run"
+  },
+  {
+   "channel": "device",
+   "command": "test.run_never@1",
+   "expect": "run"
+  },
+  {
+   "channel": "internal",
+   "command": "test.run_never@1",
+   "expect": "run"
+  },
+  {
+   "channel": "mcp",
+   "command": "test.adopt_human@1",
+   "expect": "pending"
+  },
+  {
+   "channel": "server_mcp",
+   "command": "test.adopt_human@1",
+   "expect": "pending"
+  },
+  {
+   "channel": "gui",
+   "command": "test.adopt_human@1",
+   "expect": "run"
+  },
+  {
+   "channel": "cli",
+   "command": "test.adopt_human@1",
+   "expect": "run"
+  },
+  {
+   "channel": "python",
+   "command": "test.adopt_human@1",
+   "expect": "run"
+  },
+  {
+   "channel": "control",
+   "command": "test.adopt_human@1",
+   "expect": "run"
+  },
+  {
+   "channel": "server_session",
+   "command": "test.adopt_human@1",
+   "expect": "run"
+  },
+  {
+   "channel": "server_service",
+   "command": "test.adopt_human@1",
+   "expect": "run"
+  },
+  {
+   "channel": "service",
+   "command": "test.adopt_human@1",
+   "expect": "run"
+  },
+  {
+   "channel": "device",
+   "command": "test.adopt_human@1",
+   "expect": "run"
+  },
+  {
+   "channel": "internal",
+   "command": "test.adopt_human@1",
+   "expect": "run"
+  },
+  {
+   "channel": "mcp",
+   "command": "test.run_local@1",
+   "expect": "policy/not_on_mcp"
+  },
+  {
+   "channel": "server_mcp",
+   "command": "test.run_local@1",
+   "expect": "policy/not_on_mcp"
+  },
+  {
+   "channel": "gui",
+   "command": "test.run_local@1",
+   "expect": "run"
+  },
+  {
+   "channel": "cli",
+   "command": "test.run_local@1",
+   "expect": "run"
+  },
+  {
+   "channel": "python",
+   "command": "test.run_local@1",
+   "expect": "run"
+  },
+  {
+   "channel": "control",
+   "command": "test.run_local@1",
+   "expect": "run"
+  },
+  {
+   "channel": "server_session",
+   "command": "test.run_local@1",
+   "expect": "run"
+  },
+  {
+   "channel": "server_service",
+   "command": "test.run_local@1",
+   "expect": "run"
+  },
+  {
+   "channel": "service",
+   "command": "test.run_local@1",
+   "expect": "run"
+  },
+  {
+   "channel": "device",
+   "command": "test.run_local@1",
+   "expect": "run"
+  },
+  {
+   "channel": "internal",
+   "command": "test.run_local@1",
+   "expect": "run"
+  }
+ ],
+ "reject": {
+  "commitment": "sha256:a5d3882eabd9ff4f6283a25666ba4879f887df7b181bece7528867eee857b1a9",
+  "reason": "wrong datum"
+ }
+}

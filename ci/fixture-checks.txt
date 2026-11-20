@@ -12,6 +12,7 @@ python fixtures/auto/surf/gen/make_fixtures.py --check
 python fixtures/cons/check_row_schema.py
 python fixtures/cons/make_decl_fixtures.py --check
 python fixtures/core/bus/pol/class/make_matrix.py --check
+python fixtures/core/bus/pol/proj/make_cases.py --check
 python fixtures/core/bus/unit/make_literals.py --check
 python fixtures/core/jrn/chain/append/make_fixtures.py --check
 python fixtures/core/jrn/chain/ckpt/make_fixtures.py --check
@@ -43,6 +44,7 @@ python fixtures/gdt/ident/make_fixtures.py --check
 python fixtures/gdt/resolve/make_cases.py --check
 python fixtures/gdt/rowflow/make_state_cases.py --check
 python fixtures/gdt/spec/make_fixtures.py --check
+python fixtures/gdt/status/make_cases.py --check
 python fixtures/gdt/zone/make_shapes_fixtures.py --check
 python fixtures/geo/cad/topo/make_adj_fixtures.py --check
 python fixtures/geo/cad/topo/make_pcurve_fixtures.py --check
@@ -68,6 +70,7 @@ python fixtures/io/dmis/parse/tree/make_expected.py --check
 python fixtures/io/e57/phys/make_fixtures.py --check
 python fixtures/io/qif/xml/parse/make_fixtures.py --check
 python fixtures/io/reg/detect/make_fixtures.py --check
+python fixtures/io/reg/env/export/make_fixtures.py --check
 python fixtures/io/reg/env/report/make_fixtures.py --check
 python fixtures/io/reg/prov/make_cases.py --check
 python fixtures/io/res/trans/model/make_fixtures.py --check
@@ -119,6 +122,8 @@ python fixtures/rpt/output/text/make_fixtures.py --check
 python fixtures/scan/cmp/make_field_golden.py --check
 python fixtures/scan/make_mesh_quality.py --check
 python fixtures/solv/cert/as-v1/make_cases.py --check
+python fixtures/solv/cert/ct-v1/make_cases.py --check
+python fixtures/solv/cert/kkt-v1/make_cases.py --check
 python fixtures/solv/cert/recomp-v1/make_cases.py --check
 python fixtures/solv/make_mstart_fixtures.py --check
 python fixtures/solv/patch/ldl-order-v1/make_orders.py --check
@@ -136,6 +141,8 @@ python fixtures/unc/model/graph/store/make_store_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/ux/system/princ/make_fixtures.py --check
 python fixtures/ux/system/review/make_fixtures.py --check
+python fixtures/ux/tokens/color/make_fixtures.py --check
+python fixtures/ux/tokens/color/make_tokens.py --check
 python fixtures/viz/viewstate-samples/make_fixtures.py --check
 python tools/check_bench_schema.py
 python tools/check_command_defs.py

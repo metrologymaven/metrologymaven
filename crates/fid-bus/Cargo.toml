@@ -1,6 +1,6 @@
 [package]
 name = "fid-bus"
-description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles and authored literal normalisation (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.UNIT)"
+description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles, MCP projection with pending requests and authored literal normalisation (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.UNIT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -32,6 +32,9 @@ fid-geo-frame = { path = "../fid-geo-frame" }
 # CORE.BUS.UNIT returns the journal entry's `AlgorithmId` type. Kernel layer, zero dependencies;
 # already in the graph via fid-journal.
 fid-kci = { path = "../fid-kci" }
+# CORE.BUS.POL.PROJ: request IDs are UUIDv7 values; the shared UUID type. Layer model, below the
+# bus; already in the workspace and the lock.
+fid-uuid = { path = "../fid-uuid" }
 
 [target.'cfg(unix)'.dependencies]
 # O_NONBLOCK, O_NOCTTY and EXDEV constants only (CORE.BUS.POL.FS). Already in the lock.

@@ -4,9 +4,14 @@
 //! ([`active`], KRN.SOLV.CERT.AS), recomputes the optimum from a candidate, checks the KKT
 //! conditions independently and packages a certificate. [`recomp`] (KRN.SOLV.CERT.RECOMP)
 //! recomputes the optimum on one candidate from the problem data, with a proven forward error
-//! bound. Modules land one spec leaf at a time; see `spec/krn/solv/cert/`.
+//! bound. [`kkt`] (KRN.SOLV.CERT.KKT) proves or refutes the KKT conditions at the exact optimum
+//! enclosed by a recomputation. [`ct`] (KRN.SOLV.CERT.CT) runs the pipeline ([`certify`]) and
+//! packages the passing candidate as a [`Certificate`] with its digest. See
+//! `spec/krn/solv/cert/`.
 
 pub mod active;
+pub mod ct;
+pub mod kkt;
 pub mod recomp;
 
 use core::fmt;
@@ -14,6 +19,8 @@ use core::fmt;
 use fid_num::NumError;
 
 pub use active::{Proposal, RowLabel};
+pub use ct::{certify, CertConfig, CertFlags, CertKind, Certificate, Certified, KktRecord, RecordedCondition};
+pub use recomp::ActiveSetProblem;
 
 /// Why no candidate list could be returned (REQ-KRN.SOLV.CERT.AS-004).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -110,6 +117,31 @@ pub enum CertError {
         /// Why.
         reason: BoundFailure,
     },
+    /// `certificate_failed` (REQ-KRN.SOLV.CERT-003, REQ-KRN.SOLV.CERT.CT-002): no candidate
+    /// recomputed and passed the KKT check. No value is returned. Exactly one of
+    /// `first_report` and `first_error` is set: the first candidate's KKT report, or the error
+    /// that stopped it before a report existed.
+    CertificateFailed {
+        /// Candidates tried (all of them).
+        tried: usize,
+        /// The first candidate's KKT report, if it got that far.
+        first_report: Option<Box<kkt::KktReport>>,
+        /// The error of the first candidate's recomputation or check, if it had no report.
+        first_error: Option<Box<CertError>>,
+    },
+    /// A serialised certificate is not a canonical `fid.cert@1` document (`detail` names the
+    /// failed check, for example `syntax`, `unknown_member`, `digest_mismatch` or
+    /// `non_canonical`).
+    Malformed {
+        /// What failed.
+        detail: &'static str,
+    },
+    /// A certificate's recorded values contradict each other (`detail` names the first failed
+    /// check of `Certificate::check_consistency`).
+    Inconsistent {
+        /// What failed.
+        detail: &'static str,
+    },
 }
 
 impl fmt::Display for CertError {
@@ -138,6 +170,40 @@ impl fmt::Display for CertError {
             CertError::Callback { reason } => write!(f, "cert: active-set problem: {reason}"),
             CertError::Numeric(e) => write!(f, "cert: {e}"),
             CertError::BoundNotProven { reason } => write!(f, "cert: no proven error bound ({reason:?})"),
+            CertError::CertificateFailed { tried, first_report, first_error } => {
+                write!(f, "certificate_failed: no candidate passed ({tried} tried")?;
+                if let Some(r) = first_report {
+                    write!(f, "; first: KKT {:?} {:?}", r.status(), r.reason())?;
+                }
+                if let Some(e) = first_error {
+                    write!(f, "; first: {e}")?;
+                }
+                write!(f, ")")
+            }
+            CertError::Malformed { detail } => write!(f, "cert: malformed certificate ({detail})"),
+            CertError::Inconsistent { detail } => write!(f, "cert: inconsistent certificate ({detail})"),
+        }
+    }
+}
+
+impl CertError {
+    /// A stable snake_case code per variant, for logs and output pins (the fields are encoded
+    /// by the caller; `Debug` output is not a stable format).
+    pub fn code(&self) -> &'static str {
+        match self {
+            CertError::Shape { .. } => "shape",
+            CertError::InvalidInput { .. } => "invalid_input",
+            CertError::DuplicateLabel { .. } => "duplicate_label",
+            CertError::ActiveSetUndetermined { .. } => "active_set_undetermined",
+            CertError::RankDeficient { .. } => "rank_deficient",
+            CertError::IllConditioned { .. } => "ill_conditioned",
+            CertError::RecomputeNoConvergence { .. } => "recompute_no_convergence",
+            CertError::Callback { .. } => "callback",
+            CertError::Numeric(_) => "numeric",
+            CertError::BoundNotProven { .. } => "bound_not_proven",
+            CertError::CertificateFailed { .. } => "certificate_failed",
+            CertError::Malformed { .. } => "malformed",
+            CertError::Inconsistent { .. } => "inconsistent",
         }
     }
 }

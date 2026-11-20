@@ -76,7 +76,7 @@
 //! arithmetic uses only IEEE `+ - * /`, `abs` and `fid_num::f::sqrt` with a fixed operation
 //! order.
 
-mod interval;
+pub(crate) mod interval;
 
 pub use interval::Interval;
 
@@ -131,7 +131,7 @@ impl Default for RecompConfig {
 }
 
 impl RecompConfig {
-    fn check(&self) -> Result<(), CertError> {
+    pub(crate) fn check(&self) -> Result<(), CertError> {
         let ok = self.rel_tol.is_finite()
             && (0.0..1.0).contains(&self.rel_tol)
             && self.cond_max.is_finite()
@@ -205,6 +205,44 @@ pub trait ActiveSetProblem {
     /// every bound; `None` (the default) makes the recomputation fail closed.
     fn value_enclosure(&self, b: &[Interval]) -> Result<Option<Interval>, CertError> {
         let _ = b;
+        Ok(None)
+    }
+
+    /// The data scale of the KKT check (`KRN.SOLV.CERT.KKT`): the largest magnitude of the
+    /// problem's constraint data, in the units of the constraint values `g_i` (for a
+    /// minimum-zone problem, the largest absolute point coordinate). The primal feasibility
+    /// and complementarity thresholds are `tol * data_scale`. Must be finite and positive. The
+    /// default is `InvalidInput { field: "data_scale_unset" }`, so a problem that does not
+    /// state its scale cannot be certified (fail closed).
+    fn data_scale(&self) -> Result<f64, CertError> {
+        Err(CertError::InvalidInput { field: "data_scale_unset" })
+    }
+
+    /// An enclosure of every exact constraint value `g_i` (in [`Self::row_labels`] order) at
+    /// every point of the box `b`. Needed by the proven KKT check (`KRN.SOLV.CERT.KKT`);
+    /// `None` (the default) makes it fail closed.
+    fn constraint_enclosure(&self, b: &[Interval]) -> Result<Option<Vec<Interval>>, CertError> {
+        let _ = b;
+        Ok(None)
+    }
+
+    /// An enclosure of the exact objective gradient at every point of the box `b`. Needed by
+    /// the proven KKT check; `None` (the default) makes it fail closed.
+    fn objective_gradient_enclosure(&self, b: &[Interval]) -> Result<Option<Vec<Interval>>, CertError> {
+        let _ = b;
+        Ok(None)
+    }
+
+    /// An enclosure, row-major `set.len() x n_params`, of the exact gradients of the set's
+    /// constraints at every point of the box `b` (the interval counterpart of
+    /// [`Self::constraint_gradients`]). Needed by the proven KKT check; `None` (the default)
+    /// makes it fail closed.
+    fn constraint_gradient_enclosure(
+        &self,
+        set: &[RowLabel],
+        b: &[Interval],
+    ) -> Result<Option<Vec<Interval>>, CertError> {
+        let _ = (set, b);
         Ok(None)
     }
 }
@@ -363,12 +401,12 @@ pub(crate) fn recompute_set<P: ActiveSetProblem + ?Sized>(
     Ok(Recomputed { set, params, value, cond: diag.cond, steps, param_bounds, value_bound })
 }
 
-fn not_proven(reason: BoundFailure) -> CertError {
+pub(crate) fn not_proven(reason: BoundFailure) -> CertError {
     CertError::BoundNotProven { reason }
 }
 
 /// `lstsq`'s rank deficiency becomes [`CertError::RankDeficient`]; anything else is numeric.
-fn la_err(e: NumError) -> CertError {
+pub(crate) fn la_err(e: NumError) -> CertError {
     match LaError::of(&e) {
         Some(LaError::RankDeficient { rank }) => CertError::RankDeficient { rank },
         _ => CertError::Numeric(e),
@@ -407,7 +445,7 @@ fn first_duplicate(sorted: &[RowLabel]) -> Option<RowLabel> {
     })
 }
 
-fn check_vec(field: &'static str, v: &[f64], len: usize) -> Result<(), CertError> {
+pub(crate) fn check_vec(field: &'static str, v: &[f64], len: usize) -> Result<(), CertError> {
     if v.len() != len {
         return Err(CertError::Shape { field, expected: len, got: v.len() });
     }
@@ -438,7 +476,7 @@ fn system<P: ActiveSetProblem + ?Sized>(
 /// The least-squares solution of `J x = b` from the pivoted factor of `J`, with the same
 /// arithmetic as `fid_num::la::lstsq` (rank check, `Q^T b`, back substitution on `R`,
 /// un-permutation), so `J` is factored once and the factor is reused for the bound.
-fn solve_factored(q: &Qr, b: &[f64], n: usize, rel_tol: f64) -> Result<Vec<f64>, CertError> {
+pub(crate) fn solve_factored(q: &Qr, b: &[f64], n: usize, rel_tol: f64) -> Result<Vec<f64>, CertError> {
     let rank = q.diag().rank;
     if rank < n {
         return Err(CertError::RankDeficient { rank });
@@ -457,7 +495,7 @@ fn solve_factored(q: &Qr, b: &[f64], n: usize, rel_tol: f64) -> Result<Vec<f64>,
 
 /// `Y ~ J^-1` (row-major `n x n`), column `c` solved from the pivoted factor: `Q^T e_c`, back
 /// substitution, un-permutation.
-fn approximate_inverse(q: &Qr, rel_tol: f64) -> Result<Vec<f64>, CertError> {
+pub(crate) fn approximate_inverse(q: &Qr, rel_tol: f64) -> Result<Vec<f64>, CertError> {
     let n = q.cols();
     let r = q.r()?;
     let mut y = vec![0.0; n * n];
@@ -498,7 +536,7 @@ fn linear_residual_enclosure(j: &Mat, r0: &[f64], p: &[f64]) -> Result<Vec<Inter
 }
 
 /// The box `p +- rad`, rounded outward.
-fn boxed(p: &[f64], rad: &[f64]) -> Result<Vec<Interval>, CertError> {
+pub(crate) fn boxed(p: &[f64], rad: &[f64]) -> Result<Vec<Interval>, CertError> {
     p.iter()
         .zip(rad)
         .map(|(&c, &r)| {
@@ -513,7 +551,7 @@ fn boxed(p: &[f64], rad: &[f64]) -> Result<Vec<Interval>, CertError> {
 }
 
 /// The Krawczyk test of the module docs. Returns `k` (the proven per-parameter bounds).
-fn krawczyk<F>(p: &[f64], f: &[Interval], y: &[f64], mut jac: F) -> Result<Vec<f64>, CertError>
+pub(crate) fn krawczyk<F>(p: &[f64], f: &[Interval], y: &[f64], mut jac: F) -> Result<Vec<f64>, CertError>
 where
     F: FnMut(&[Interval]) -> Result<Vec<Interval>, CertError>,
 {

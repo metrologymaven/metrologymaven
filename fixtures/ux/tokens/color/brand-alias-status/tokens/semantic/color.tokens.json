@@ -1,0 +1,44 @@
+{
+  "sem": {
+    "$type": "color",
+    "brand": {
+      "accent": {
+        "$value": "{sem.status.nonconforms}"
+      }
+    },
+    "focus": {
+      "ring": {
+        "$value": "{prim.color.blue.600}"
+      }
+    },
+    "status": {
+      "conforms": {
+        "$value": "{prim.color.green.700}"
+      },
+      "nonconforms": {
+        "$value": "{prim.color.red.700}"
+      }
+    },
+    "surface": {
+      "base": {
+        "$value": "{prim.color.neutral.0}"
+      }
+    },
+    "text": {
+      "muted": {
+        "$value": "{prim.color.neutral.500}"
+      },
+      "primary": {
+        "$value": "{prim.color.neutral.900}"
+      },
+      "value": {
+        "claimed": {
+          "$value": "{prim.color.magenta.700}"
+        },
+        "measured": {
+          "$value": "{prim.color.neutral.900}"
+        }
+      }
+    }
+  }
+}

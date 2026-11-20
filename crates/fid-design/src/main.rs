@@ -1,5 +1,6 @@
 //! `fid-design pkg-check --root <dir> [--json]`,
 //! `fid-design pkg-diff --from <dir> --to <dir> [--json]`,
+//! `fid-design tokens-check --root <dir> [--json]`,
 //! `fid-design princ-check [--file <md>] [--json]` and
 //! `fid-design words-check --copy <jsonl> [--words <json>] [--json]` and
 //! `fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>]
@@ -11,7 +12,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 const USAGE: &str =
-    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]";
+    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]";
 
 #[derive(Default)]
 struct Args {
@@ -152,6 +153,10 @@ fn main() -> ExitCode {
             Err(e) => fail(e),
         },
         ("pkg-diff", None, Some(from), Some(to)) => match fid_design::pkg::diff(from, to) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        },
+        ("tokens-check", Some(root), None, None) => match fid_design::tokens::check(root) {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
             Err(e) => fail(e),
         },

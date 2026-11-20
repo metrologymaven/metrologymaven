@@ -1159,6 +1159,7 @@ dependencies = [
  "fid-registry",
  "fid-store",
  "fid-types",
+ "fid-uuid",
  "libc",
  "unicode-normalization",
  "winx",
@@ -1329,6 +1330,7 @@ dependencies = [
  "fid-replay",
  "fid-types",
  "fid-xml",
+ "toml",
 ]
 
 [[package]]
@@ -1498,10 +1500,12 @@ dependencies = [
  "fid-geo-frame",
  "fid-io-reg",
  "fid-journal",
+ "fid-registry",
  "fid-replay",
  "fid-surface",
  "fid-types",
  "libc",
+ "regex",
  "sha2 0.10.9",
 ]
 
@@ -1869,8 +1873,10 @@ name = "fid-solv"
 version = "0.0.1"
 dependencies = [
  "fid-clarabel",
+ "fid-kci",
  "fid-num",
  "fid-testkit",
+ "fid-types",
 ]
 
 [[package]]

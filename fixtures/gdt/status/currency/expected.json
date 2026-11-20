@@ -1,0 +1,76 @@
+{
+ "coi": "loaded",
+ "registers": [
+  {
+   "answers": [
+    {
+     "digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+     "reason": "unverified_register",
+     "rule": "dmt:asme/flatness/none@1",
+     "status": "provisional"
+    },
+    {
+     "digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+     "reason": "unverified_register",
+     "rule": "dmt:asme/unknown_rule/none@1",
+     "status": "provisional"
+    },
+    {
+     "digest": "sha256:aaf53bc7d7318c818511687e1d1f9debee8868169900fe46097a12b891a900cd",
+     "reason": "unverified_register",
+     "rule": "dmt:asme/flatness/none@1",
+     "status": "provisional"
+    }
+   ],
+   "current": "roster.json",
+   "digest": "sha256:21e35918074fda71a1725168511d16c2045fad42163293c17fb617cf898314f6",
+   "file": "register_r1.json",
+   "genuine": true,
+   "head": "sha256:c16f00fcf4653ec8911bac91d2e22ed5f4fd85d3ef9e7f31198cfe93f8daeb92",
+   "verify": {
+    "evaluate": "stale_register",
+    "replay": "verified"
+   }
+  },
+  {
+   "answers": [
+    {
+     "digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+     "reason": null,
+     "rule": "dmt:asme/flatness/none@1",
+     "status": "signed_off"
+    },
+    {
+     "digest": "sha256:9c1b8a9129732fab23acc92e1e8c85ce15721c9c078440ebb6eaab397669ad38",
+     "reason": "no_signoff_path",
+     "rule": "dp:asme-syn-2001@1.0.0",
+     "status": "provisional"
+    },
+    {
+     "digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+     "reason": "not_in_register",
+     "rule": "dmt:asme/unknown_rule/none@1",
+     "status": "provisional"
+    },
+    {
+     "digest": "sha256:aaf53bc7d7318c818511687e1d1f9debee8868169900fe46097a12b891a900cd",
+     "reason": "not_in_register",
+     "rule": "dmt:asme/flatness/none@1",
+     "status": "provisional"
+    }
+   ],
+   "current": "roster.json",
+   "digest": "sha256:cedf14f5f1e914d77e078f6358a12114ad22fb68c6126f4dbce8a23e17a51d85",
+   "file": "register_r2.json",
+   "genuine": true,
+   "head": "sha256:d000ecdf76c601ab31e271d7869f66c7370726bcf8cc956c98ef0728fd0275fd",
+   "verify": {
+    "evaluate": "verified",
+    "replay": "verified"
+   }
+  }
+ ],
+ "rosters": [
+  "roster.json"
+ ]
+}

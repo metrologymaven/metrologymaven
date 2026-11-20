@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-solv]
+built_pr: 333
 satisfies: [REQ-KRN.SOLV.CERT-003, REQ-KRN.SOLV.CERT-004, REQ-KRN.SOLV.CERT-005, REQ-KRN.SOLV.CERT-006]
 covers: []
 depends_on: [KRN.SOLV.CERT.AS, KRN.SOLV.CERT.RECOMP, KRN.SOLV.CERT.KKT, KRN.SOLV.CONIC.WRAP, CORE.JRN.CANON]
@@ -31,8 +33,8 @@ The public face of the certificate module. `certify` takes a converged conic sol
 **In:**
 - `certify(problem, solution, config) -> Result<Certified, CertError>` where `Certified { params, value, certificate }`
 - Trying candidates in the order from `KRN.SOLV.CERT.AS` and taking the first that recomputes and passes KKT
-- `Certificate { kind, active_set, multipliers, kkt, thresholds, cond, flags: CertFlags { tie_broken, local_optimum_only }, params, value, algorithm, digest }`
-- Canonical serialisation (RFC 8785 JSON, floats as IEEE-754 hex) and SHA-256 digest through `CORE.JRN.CANON`
+- `Certificate { kind, active_set, multipliers, kkt, thresholds, cond, is_linear, flags: CertFlags { local_optimum_only }, params, value, algorithm, digest }`; `tie_broken` is returned on `Certified`, outside the digest
+- Canonical serialisation (RFC 8785 JSON in the `fid-kci` kernel canonical form, floats in the CORE.JRN.CANON `F64Bits` form `0x` + 16 hex digits) and the SHA-256 digest over those bytes
 - `set_local_optimum_only()` for multi-start callers, which re-derives the digest
 
 **Out** (and which node owns it instead):
@@ -79,6 +81,13 @@ The public face of the certificate module. `certify` takes a converged conic sol
 
 - The certificate schema must match what `TRUST.VERIFY` rechecks; agree on `fid.cert@1` when TRUST's recheck leaf is written. The verifier needs the problem data (points) too, which the ResultRecord's input digests reference.
 - Depending on `CORE.JRN.CANON` is layer-legal (L0 to L0) but brings its SHA-256 dependency into the kernel closure; it must be on `kernel-allowlist.toml`.
+- **Applied at build (KRN.SOLV.CERT.CT, #333 and its review):**
+  - *Bytes and digest.* The bytes of `fid.cert@1` are defined by the `fid-kci` kernel canonical form (RFC 8785 JSON restricted to strings, arrays and objects), and the digest is the SHA-256 of those bytes (body without `digest`). `fid-kci` is used instead of `fid-canon` because `fid-canon` is model layer and `fid-solv` is kernel, so nothing is added to `kernel-allowlist.toml`.
+  - *Values.* Floats are written in the CORE.JRN.CANON `F64Bits` form, `0x` followed by 16 lowercase hex digits of the IEEE-754 bits, and only that form is parsed. Integers are decimal strings. **Deliberate deviation:** booleans are the strings `"true"`/`"false"`, because the `fid-kci` writer has no JSON booleans.
+  - *`tie_broken`.* It is not in the certificate or its digest: the candidate list depends on the solution's slacks, so REQ-003 excludes it. `Certified::tie_broken()` returns it as an in-memory diagnostic (REQ-001 and AC-2 are checked there). `CertFlags` holds only `local_optimum_only`.
+  - *Dual thresholds.* The certificate records each active row's `hi||grad g_i||` (`kkt.gradient_norms_hi`). Parse and the self-check recompute every `thr_i = down(down(tol_d * gradient_lo) / ghi_i)` bit for bit (0 when the rounded numerator is not positive, so every `thr_i` is 0 when `gradient_lo` is 0).
+  - *Global versus local.* The certificate records `is_linear`, and `steps` must match it. A KKT certificate implies a global optimum only for a linear or convex problem. `local_optimum_only` signals multi-start disagreement that a caller observed.
+  - *Signature and errors.* `certify` also takes the `ConicProblem`, which the extraction needs; row `i` of it must be the constraint labelled `row_labels()[i]`. `CertificateFailed` carries the first candidate's KKT report or, when its recomputation or check failed first, that error. `CertError::code()` gives a stable code. The conversion into a `KRN.SOLV` `SolverError` is not built, because the only `SolverError` today is the conic wrapper's, which has no certificate cause.
 - **Enclosure obligation (from KRN.SOLV.CERT.RECOMP, #321):** every `ActiveSetProblem` must implement `value_enclosure`, and a nonlinear one also `residual_enclosure` and `jacobian_enclosure`; otherwise recomputation, and so `certify`, fails with `BoundNotProven`. For a linear problem the proven bound applies to the f64 data as given (the Jacobian and residuals at p = 0 are taken as the exact system).
 
 ## Children

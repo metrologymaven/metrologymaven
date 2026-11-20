@@ -1,6 +1,6 @@
 [package]
 name = "fid-gdt"
-description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (GDT.RES.ROWFLOW.ROSTER), the row review state machine (GDT.RES.ROWFLOW.STATE), defaults profiles (GDT.CHAR.DPROF), governing specs (GDT.CHAR.SPEC), characteristic identity (GDT.CHAR.IDENT), the resolver commands (GDT.RES.RESOLVE), ResultRecord assembly (GDT.CHAR.RECORD) and datum definitions (GDT.DRF.DATUM)"
+description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (GDT.RES.ROWFLOW.ROSTER), the row review state machine (GDT.RES.ROWFLOW.STATE), the interpretation status register (GDT.RES.STATUS), defaults profiles (GDT.CHAR.DPROF), governing specs (GDT.CHAR.SPEC), characteristic identity (GDT.CHAR.IDENT), the resolver commands (GDT.RES.RESOLVE), ResultRecord assembly (GDT.CHAR.RECORD) and datum definitions (GDT.DRF.DATUM)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -40,6 +40,10 @@ fid-project = { path = "../fid-project" }
 # AUTO.REC.ADOPT pattern). Engine layer, below services; fid-journal and fid-store, which it
 # builds on, are already in this crate's tree through fid-io-reg.
 fid-bus = { path = "../fid-bus" }
+# GDT.RES.STATUS: the conflict-of-interest inputs (`gdt-reviewer-register/v1`,
+# `gdt-profiles/v1`, owned by OUTR.GDTC) are TOML files, read as untyped tables (duplicate keys
+# refused by the parser). Same pinned version and features as fid-outreach; already in the lock.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
 
 [dev-dependencies]
 # GDT.CHAR.IDENT tests read the QIF fixtures with the project's hardened XML reader

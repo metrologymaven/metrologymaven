@@ -82,9 +82,12 @@ fn unc_defs() -> Result<Vec<CommandDef>, DefError> {
     Ok(fid_unc::model_store::declarations().into_iter().map(|d| d.def).collect())
 }
 
-/// Every crate on main that declares commands, sorted by crate name.
-pub const SOURCES: [Source; 10] = [
+/// Every crate on main that declares commands, sorted by crate name. `fid-bus` declares the
+/// four request commands of CORE.BUS.POL.PROJ (`request.list_requests@1`,
+/// `request.withdraw_request@1`, `request.reject_request@1`, internal `request.file_request@1`).
+pub const SOURCES: [Source; 11] = [
     Source { krate: "fid-align", defs: fid_align::command_defs },
+    Source { krate: "fid-bus", defs: fid_bus::policy::projection::command_defs },
     Source { krate: "fid-dep", defs: dep_defs },
     Source { krate: "fid-geo-cmd", defs: fid_geo_cmd::command_defs },
     Source { krate: "fid-jobs", defs: fid_jobs::command_defs },

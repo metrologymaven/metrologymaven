@@ -503,3 +503,26 @@ fn the_lifecycle_commands_are_in_the_manifest_with_their_classes() {
         }
     }
 }
+
+/// CORE.BUS.POL.PROJ's request commands are collected into the workspace manifest
+/// (hand-labelled from spec/core/bus/pol/proj/NODE.md, Design): list and withdraw exposed on
+/// MCP, reject human-only and never on MCP, the internal filing command on no surface.
+#[test]
+fn the_request_commands_are_in_the_manifest() {
+    let commands = workspace_commands();
+    let get =
+        |id: &str| commands.iter().find(|(i, _)| i == id).map(|(_, c)| c.clone()).unwrap_or_else(|| panic!("{id}"));
+    for (id, class, projection, human_only, mcp) in [
+        ("request.list_requests@1", "R0", "exposed", false, true),
+        ("request.withdraw_request@1", "W1", "exposed", false, true),
+        ("request.reject_request@1", "W1", "never", true, false),
+        ("request.file_request@1", "W1", "never", false, false),
+    ] {
+        let c = get(id);
+        assert_eq!(c.get("side_effect"), Some(&CValue::Str(class.into())), "{id}");
+        assert_eq!(c.get("mcp_projection"), Some(&CValue::Str(projection.into())), "{id}");
+        assert_eq!(c.get("human_only"), Some(&CValue::Bool(human_only)), "{id}");
+        assert_eq!(on_mcp(&c), mcp, "{id}");
+    }
+    assert!(strs(get("request.file_request@1").get("exposure")).is_empty());
+}

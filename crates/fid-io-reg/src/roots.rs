@@ -163,7 +163,7 @@ impl fmt::Display for RelPath {
 
 /// True if `c` is a plain file or folder name that cannot name anything but a child of
 /// its parent folder on any supported platform.
-fn plain_name(c: &str) -> bool {
+pub(crate) fn plain_name(c: &str) -> bool {
     if c.is_empty() || c.bytes().all(|b| b == b'.' || b == b' ') {
         // Empty (`//`, a leading separator: absolute or UNC) or `..`, and dot-and-space
         // names Windows may normalise to `..`.

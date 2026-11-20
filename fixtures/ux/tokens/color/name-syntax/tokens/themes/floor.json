@@ -1,0 +1,16 @@
+{
+  "bindings": {
+    "sem.brand.accent": "{prim.color.blue.600}",
+    "sem.focus.ring": "{prim.color.blue.600}",
+    "sem.shade.base": "{prim.color.neutral.0}",
+    "sem.status.conforms": "{prim.color.green.700}",
+    "sem.status.nonconforms": "{prim.color.red.700}",
+    "sem.surface.base": "{prim.color.neutral.0}",
+    "sem.text.muted": "{prim.color.neutral.500}",
+    "sem.text.primary": "{prim.color.neutral.900}",
+    "sem.text.value.claimed": "{prim.color.magenta.700}",
+    "sem.text.value.measured": "{prim.color.neutral.900}"
+  },
+  "format": "fid-design-theme@1",
+  "theme": "floor"
+}
