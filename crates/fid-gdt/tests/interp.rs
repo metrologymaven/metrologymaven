@@ -17,14 +17,14 @@ use fid_gdt::chars::interp::{
     MAX_RULE_ROWS, PROVISIONAL_LABEL_KEY, PROVISIONAL_LABEL_TEXT, REGISTER_UNAVAILABLE,
 };
 use fid_gdt::chars::record::{
-    invoke_cli, invoke_mcp, invoke_mcp_tool, AlgorithmRef, EvaluationBasis, InputDigests, KernelVersion, Measurand,
-    Quantity, RecordError, ResultRecord, ResultRecordBuilder, ResultStore, RunId, Uncertainty, GET_RESULT_CLI,
-    GET_RESULT_MCP,
+    command_def, invoke_cli, invoke_mcp, invoke_mcp_tool, AlgorithmRef, EvaluationBasis, InputDigests, KernelVersion,
+    Measurand, Quantity, RecordError, ResultRecord, ResultRecordBuilder, ResultStore, RunId, Uncertainty,
+    GET_RESULT_CLI, GET_RESULT_MCP,
 };
 use fid_gdt::chars::spec::{GoverningSpec, SpecError};
 use fid_gdt::dmt_flow::roster::Roster;
 use fid_gdt::dmt_flow::status::{row_content_digest, CoiInputs, JournalExtract, Published, Purpose, RuleKind};
-use fid_gdt::requires_provisional_label;
+use fid_gdt::{requires_provisional_label, requires_provisional_label_bytes};
 use fid_gps::dmt::row::row_from_value;
 use fid_gps::dmt::{DmtKey, DmtRow};
 use fid_io_reg::Principal;
@@ -155,9 +155,13 @@ fn register_file(c: &CValue) -> Option<Vec<u8>> {
     }
 }
 
+fn journal_of(c: &CValue) -> JournalExtract {
+    JournalExtract::load(&read(&format!("interp/{}", st(c, "journal")))).unwrap()
+}
+
 fn view(c: &CValue, purpose: Purpose) -> RegisterView {
     match register_file(c) {
-        None => RegisterView::none(),
+        None => RegisterView::none(&journal_of(c)),
         Some(file) => RegisterView::load(&file, &Inputs::of(c).sources(), purpose),
     }
 }
@@ -170,9 +174,16 @@ fn sha(bytes: &[u8]) -> Digest {
     Digest::from_bytes(fid_canon::digest_bytes(bytes).0)
 }
 
+/// The evaluated chain of the record inputs: the flatness row's default variant (the
+/// synthetic position, datum-frame and size rows share it).
+fn flat_chain() -> String {
+    st(&json("record/flatness_inputs.json"), "operator_chain_digest").to_owned()
+}
+
 /// The non-interpretation fields of `fixtures/gdt/record/flatness_inputs.json`, with UEC-0
-/// and no bound rule, for the characteristic `char` and primary row `primary`.
-fn base(char: &str, primary: &str) -> ResultRecordBuilder {
+/// and no bound rule, for the characteristic `char`, primary row `primary` and evaluated
+/// chain `chain`.
+fn base(char: &str, primary: &str, chain: &str) -> ResultRecordBuilder {
     let o = json("record/flatness_inputs.json");
     fn structural(reason: &'static str) -> SpecError {
         SpecError::BadRequest { reason }
@@ -191,7 +202,7 @@ fn base(char: &str, primary: &str) -> ResultRecordBuilder {
         .input_digests(InputDigests::new(digests).unwrap())
         .journal_entry(Digest::parse(st(&o, "journal_entry")).unwrap())
         .dmt_row(DmtKey::parse(primary).unwrap())
-        .operator_chain_digest(Digest::parse(st(&o, "operator_chain_digest")).unwrap())
+        .operator_chain_digest(Digest::parse(chain).unwrap())
         .dmt_digest(Digest::parse(st(&o, "dmt_digest")).unwrap())
 }
 
@@ -201,7 +212,7 @@ fn build_with(c: &CValue, v: &RegisterView) -> Result<ResultRecord, RecordError>
     let refs: Vec<&DmtRow> = rows.iter().collect();
     let p = profile();
     let profile = if get(c, "profile") == &CValue::Bool(true) { Some(&p) } else { None };
-    base("flat-1", st(c, "primary")).interpretation(&refs, profile, v).finish()
+    base("flat-1", st(c, "primary"), st(c, "operator_chain_digest")).interpretation(&refs, profile, v).finish()
 }
 
 fn build(name: &str) -> ResultRecord {
@@ -219,7 +230,7 @@ fn record_json(r: &ResultRecord) -> CValue {
 fn every_case_matches_the_reference() {
     let all = cases();
     let CValue::Obj(cs) = get(&all, "cases") else { panic!("cases") };
-    assert_eq!(cs.len(), 14);
+    assert_eq!(cs.len(), 19);
     for (name, c) in cs {
         let want = get(c, "expect");
         let v = view(c, Purpose::Evaluate);
@@ -322,8 +333,52 @@ fn ac5_draft_rule_is_not_admitted_and_nothing_is_emitted() {
     // Without the agent's row the same evaluation builds.
     let flat = row("flat");
     let p = profile();
-    let ok = base("flat-1", flat.key().as_str()).interpretation(&[&flat], Some(&p), &view(&c, Purpose::Evaluate));
+    let ok = base("flat-1", flat.key().as_str(), &flat_chain()).interpretation(
+        &[&flat],
+        Some(&p),
+        &view(&c, Purpose::Evaluate),
+    );
     assert!(ok.finish().is_ok());
+}
+
+#[test]
+fn an_agent_draft_is_refused_with_no_register_or_an_unverified_one() {
+    // Decision on #332: an agent-authored draft row is refused whatever the register state;
+    // it is never emitted, not even as provisional.
+    for (name, code) in [("draft_row_no_register", "none"), ("draft_row_unverified", "register_not_published")] {
+        let c = case(name);
+        let v = view(&c, Purpose::Evaluate);
+        assert_eq!(v.code(), code, "{name}");
+        let e = build_with(&c, &v).unwrap_err();
+        assert_eq!(e.rule(), Some("dmt:asme/position/mmc@1"), "{name}");
+    }
+}
+
+#[test]
+fn the_primary_row_must_contain_the_evaluated_chain() {
+    // The tampered chain evaluated with only the signed-off revision passed: refused.
+    let c = case("chain_not_in_primary");
+    let e = build_with(&c, &view(&c, Purpose::Evaluate)).unwrap_err();
+    assert_eq!(e, RecordError::IncompleteResult { field: "interpretation_rules" });
+    // The tampered chain passed alongside the signed-off revision of the same key: both are
+    // listed, the tampered one not in the register, so the record is provisional.
+    let r = build("tampered_with_signed");
+    let flat: Vec<(RuleStatus, Option<&str>)> = r
+        .interpretation_rules()
+        .iter()
+        .filter(|u| u.rule() == "dmt:asme/flatness/none@1")
+        .map(|u| (u.status(), u.reason().map(|x| x.as_str())))
+        .collect();
+    assert_eq!(flat, [(RuleStatus::SignedOff, None), (RuleStatus::Provisional, Some("not_in_register"))]);
+    assert!(requires_provisional_label(&r));
+}
+
+#[test]
+fn an_empty_pinned_prior_is_refused() {
+    let c = case("empty_prior");
+    assert_eq!(view(&c, Purpose::Evaluate).code(), "empty_pinned_prior");
+    let r = build("empty_prior");
+    assert!(r.interpretation_rules().iter().all(|u| u.reason().map(|x| x.as_str()) == Some("unverified_register")));
 }
 
 #[test]
@@ -336,7 +391,11 @@ fn ac6_missing_rows_primary_or_profile_is_incomplete() {
     // A profile other than the spec's defaults profile is not the characteristic's profile.
     let other = parse_profile(&read("dprof/asme_placeholder_1.1.0.json"), &vocab()).unwrap();
     let flat = row("flat");
-    let b = base("flat-1", flat.key().as_str()).interpretation(&[&flat], Some(&other), &RegisterView::none());
+    let b = base("flat-1", flat.key().as_str(), &flat_chain()).interpretation(
+        &[&flat],
+        Some(&other),
+        &view(&case("no_register"), Purpose::Evaluate),
+    );
     assert_eq!(b.finish().unwrap_err(), want);
 }
 
@@ -368,11 +427,16 @@ fn rows_are_deduplicated_and_bounded() {
     let v = view(&c, Purpose::Evaluate);
     let flat = row("flat");
     let p = profile();
-    let once = base("flat-1", flat.key().as_str()).interpretation(&[&flat], Some(&p), &v).finish().unwrap();
-    let twice = base("flat-1", flat.key().as_str()).interpretation(&[&flat, &flat], Some(&p), &v).finish().unwrap();
+    let once =
+        base("flat-1", flat.key().as_str(), &flat_chain()).interpretation(&[&flat], Some(&p), &v).finish().unwrap();
+    let twice = base("flat-1", flat.key().as_str(), &flat_chain())
+        .interpretation(&[&flat, &flat], Some(&p), &v)
+        .finish()
+        .unwrap();
     assert_eq!(once.canonical_json(), twice.canonical_json());
     let many: Vec<&DmtRow> = vec![&flat; MAX_RULE_ROWS + 1];
-    let e = base("flat-1", flat.key().as_str()).interpretation(&many, Some(&p), &v).finish().unwrap_err();
+    let e =
+        base("flat-1", flat.key().as_str(), &flat_chain()).interpretation(&many, Some(&p), &v).finish().unwrap_err();
     assert_eq!(e, RecordError::InvalidField { field: "interpretation_rules" });
 }
 
@@ -430,10 +494,20 @@ fn ac8_replay_with_the_pinned_register_is_identical_and_without_it_not_replayabl
 #[test]
 fn unverified_and_no_register_records_replay_their_fail_safe_labels() {
     let empty = RegisterStore::new();
-    for name in ["no_register", "forged_register", "currency_r1_stale"] {
+    // No register pinned: nothing to load, the no_register labels replay.
+    let c = case("no_register");
+    let out = replay_with(&build("no_register"), &c, &Inputs::of(&c), &empty);
+    assert_eq!(out.outcome, ReplayOutcome::Identical);
+    // A pinned register must be in the store even when it did not verify; the fail-safe
+    // unverified_register labels then replay.
+    for name in ["forged_register", "currency_r1_stale"] {
         let c = case(name);
         let r = build(name);
         let out = replay_with(&r, &c, &Inputs::of(&c), &empty);
+        assert_eq!((out.outcome, out.reason), (ReplayOutcome::NotReplayable, Some(REGISTER_UNAVAILABLE)), "{name}");
+        let mut store = RegisterStore::new();
+        store.put(&register_file(&c).unwrap()).unwrap();
+        let out = replay_with(&r, &c, &Inputs::of(&c), &store);
         assert_eq!(out.outcome, ReplayOutcome::Identical, "{name}");
     }
 }
@@ -497,6 +571,63 @@ fn ac10_mcp_structured_and_text_content_carry_the_label() {
     assert!(matches!(get(&s, "interpretation_rules"), CValue::Arr(a) if a.len() == 4));
     assert!(out.text.lines().any(|l| l == "interpretation: provisional"));
     assert_eq!(out.structured, invoke_mcp(&store, A, GET_RESULT_MCP, params.as_bytes()).unwrap());
+    // The structured result validates against the published result schema ...
+    let schema = command_def().unwrap().result_schema;
+    conforms(&schema, &s, "result").unwrap();
+    // ... which requires the three fields, the enum and the record schema tag.
+    for k in ["interpretation", "interpretation_rules", "interpretation_register", "schema"] {
+        let CValue::Obj(mut m) = s.clone() else { panic!("object") };
+        m.remove(k);
+        assert!(conforms(&schema, &CValue::Obj(m), "result").is_err(), "{k}");
+    }
+    for (k, bad) in [("interpretation", "maybe"), ("schema", "fid.gdt-result/1")] {
+        let CValue::Obj(mut m) = s.clone() else { panic!("object") };
+        m.insert(k.to_owned(), CValue::Str(bad.to_owned()));
+        assert!(conforms(&schema, &CValue::Obj(m), "result").is_err(), "{k}");
+    }
+}
+
+/// A checker for the JSON Schema subset the result schema uses. An unknown keyword fails the
+/// test, so a schema change must extend this checker on purpose.
+fn conforms(schema: &CValue, v: &CValue, at: &str) -> Result<(), String> {
+    let CValue::Obj(s) = schema else { return Err(format!("{at}: schema is not an object")) };
+    for (k, kv) in s {
+        let ok = match (k.as_str(), kv) {
+            ("description", _) => true,
+            ("type", CValue::Str(t)) => matches!(
+                (t.as_str(), v),
+                ("object", CValue::Obj(_)) | ("string", CValue::Str(_)) | ("array", CValue::Arr(_))
+            ),
+            ("enum", CValue::Arr(e)) => e.contains(v),
+            ("required", CValue::Arr(r)) => {
+                let CValue::Obj(o) = v else { return Err(format!("{at}: required on a non-object")) };
+                r.iter().all(|k| matches!(k, CValue::Str(k) if o.contains_key(k)))
+            }
+            ("properties", CValue::Obj(props)) => {
+                if let CValue::Obj(o) = v {
+                    for (pk, ps) in props {
+                        if let Some(pv) = o.get(pk) {
+                            conforms(ps, pv, &format!("{at}/{pk}"))?;
+                        }
+                    }
+                }
+                true
+            }
+            ("items", item) => {
+                if let CValue::Arr(a) = v {
+                    for (i, x) in a.iter().enumerate() {
+                        conforms(item, x, &format!("{at}/{i}"))?;
+                    }
+                }
+                true
+            }
+            (other, _) => return Err(format!("{at}: keyword {other} not supported by the test checker")),
+        };
+        if !ok {
+            return Err(format!("{at}: fails {k}"));
+        }
+    }
+    Ok(())
 }
 
 #[test]
@@ -507,6 +638,47 @@ fn ac11_requires_provisional_label_follows_interpretation() {
         let r = build(name);
         assert_eq!(requires_provisional_label(&r), r.interpretation() == Interpretation::Provisional);
     }
+}
+
+#[test]
+fn the_bytes_predicate_is_provisional_unless_a_v2_record_is_signed_off() {
+    let r = build("position_mmc_mixed");
+    assert!(requires_provisional_label_bytes(r.canonical_json()));
+    let canon = |v: &CValue| fid_canon::to_canonical_bytes(v).unwrap();
+    // The same record with every rule and the label signed off (hand-edited bytes): false.
+    let CValue::Obj(mut m) = record_json(&r) else { panic!("object") };
+    m.insert("interpretation".to_owned(), CValue::Str("signed_off".to_owned()));
+    let Some(CValue::Arr(rules)) = m.get_mut("interpretation_rules") else { panic!("rules") };
+    for rule in rules.iter_mut() {
+        let CValue::Obj(o) = rule else { panic!("rule") };
+        o.insert("status".to_owned(), CValue::Str("signed_off".to_owned()));
+    }
+    let signed = CValue::Obj(m.clone());
+    assert!(!requires_provisional_label_bytes(&canon(&signed)));
+    // Anything else is provisional: a /1 record, a missing or other label, a provisional rule
+    // under a signed-off label, an empty rule list, unreadable bytes.
+    let edit = |k: &str, v: Option<CValue>| {
+        let mut x = m.clone();
+        match v {
+            Some(v) => x.insert(k.to_owned(), v),
+            None => x.remove(k),
+        };
+        canon(&CValue::Obj(x))
+    };
+    assert!(requires_provisional_label_bytes(&edit("schema", Some(CValue::Str("fid.gdt-result/1".to_owned())))));
+    assert!(requires_provisional_label_bytes(&edit("interpretation", None)));
+    assert!(requires_provisional_label_bytes(&edit("interpretation", Some(CValue::Str("SIGNED_OFF".to_owned())))));
+    assert!(requires_provisional_label_bytes(&edit("interpretation", Some(CValue::Bool(true)))));
+    assert!(requires_provisional_label_bytes(&edit("interpretation_rules", Some(CValue::Arr(Vec::new())))));
+    assert!(requires_provisional_label_bytes(&edit("interpretation_rules", None)));
+    let mut mixed = m.clone();
+    let Some(CValue::Arr(rules)) = mixed.get_mut("interpretation_rules") else { panic!("rules") };
+    let CValue::Obj(o) = &mut rules[0] else { panic!("rule") };
+    o.insert("status".to_owned(), CValue::Str("provisional".to_owned()));
+    assert!(requires_provisional_label_bytes(&canon(&CValue::Obj(mixed))));
+    assert!(requires_provisional_label_bytes(b"not json"));
+    assert!(requires_provisional_label_bytes(b"[]"));
+    assert!(requires_provisional_label_bytes(b""));
 }
 
 #[test]

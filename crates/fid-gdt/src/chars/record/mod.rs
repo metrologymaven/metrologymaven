@@ -23,10 +23,10 @@
 //! [`invoke_mcp`] are its CLI (`fid gdt get-result`) and MCP (`gdt_get_result`) entry
 //! points, and [`command_def`] its registry definition.
 //!
-//! # Wire form (`fid.gdt-result/1`, RFC 8785)
+//! # Wire form (`fid.gdt-result/2`, RFC 8785)
 //!
 //! ```json
-//! { "schema": "fid.gdt-result/1", "run": "R", "characteristic": "C", "measurand": "...",
+//! { "schema": "fid.gdt-result/2", "run": "R", "characteristic": "C", "measurand": "...",
 //!   "evaluation_basis": "POINTS", "value": { "value": "0x<bits>", "unit": "si:m" },
 //!   "uncertainty": { "class": "UEC-2", "uec0_reason": null, "method": "LPU",
 //!                    "statement": "sha256:...", "unit": "si:m", "u_std": null,
@@ -41,8 +41,16 @@
 //!   "algorithm": "gdt.form.flatness.minzone@1.0.0", "kernel_version": "0.1.0",
 //!   "input_digests": ["sha256:..."], "journal_entry": "sha256:...",
 //!   "dmt_row": "dmt:asme/flatness/none@1", "operator_chain_digest": "sha256:...",
-//!   "dmt_digest": "sha256:..." }
+//!   "dmt_digest": "sha256:...", "interpretation": "provisional",
+//!   "interpretation_register": "sha256:..." | "none",
+//!   "interpretation_rules": [ { "rule": "dmt:...", "kind": "dmt_row", "revision": 1,
+//!                               "content_digest": "sha256:...", "status": "signed_off",
+//!                               "reason": null }, ... ] }
 //! ```
+//!
+//! `/2` adds the interpretation block of `GDT.CHAR.INTERP` to `/1`. A reader that meets a
+//! `/1` record, or a record without a readable `interpretation`, treats the result as
+//! provisional ([`crate::requires_provisional_label_bytes`]).
 //!
 //! `decision.source` is `unc` for a decision UNC returned and `gdt_not_decidable` for the two
 //! reasons GDT records itself. Numbers are IEEE-754 bit patterns (`"0x"` + 16 hex digits).

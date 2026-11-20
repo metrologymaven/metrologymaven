@@ -4,7 +4,7 @@
 Writes the synthetic builder inputs of AC-1 (`flatness_inputs.json`) and, for each case
 below, the RFC 8785 canonical JSON the ResultRecord must have (`expected/<case>.json`),
 following the record wire form pinned in the leaf's module documentation
-(`fid.gdt-result/1`):
+(`fid.gdt-result/2`):
 
 - every CONSTITUTION section 5 field plus `dmt_row`, `operator_chain_digest`, `dmt_digest`;
 - `value` and the uncertainty numbers as IEEE-754 bit patterns `"0x"` + 16 hex digits;
@@ -20,7 +20,10 @@ following the record wire form pinned in the leaf's module documentation
   defaults profile of `spec` (`../dprof/asme_placeholder_1.0.0.json`), each `provisional`
   with reason `no_register`; the row's digest is SHA-256 of its canonical JSON without
   `review`, the profile's SHA-256 of its canonical JSON; revision null for the row, 1 for the
-  profile; `interpretation` `provisional`; `interpretation_register` `none`.
+  profile; `interpretation` `provisional`; `interpretation_register` `none`;
+- `operator_chain_digest` is the chain digest of that row's default variant (SHA-256 of the
+  canonical JSON `{"steps": [{"alg", "kind", "params"}], "variant"}`), since the interpretation
+  block ties the primary row to the evaluated chain.
 
 Cases:
 - `flatness_conforms` (AC-1): UEC-2 LPU statement, stub `dr:simple-acceptance@1` -> CONFORMS;
@@ -112,7 +115,7 @@ INPUTS = {
     "input_digests": sorted([sha("synthetic points of flat-1"), sha("synthetic feature fit of flat-1")]),
     "journal_entry": sha("synthetic journal entry 1"),
     "dmt_row": "dmt:asme/flatness/none@1",
-    "operator_chain_digest": sha("synthetic operator chain"),
+    "operator_chain_digest": None,  # set below from the row's default variant
     "dmt_digest": sha("synthetic dmt table"),
     "rule_stub": {"rule": "dr:simple-acceptance@1", "outcome": "CONFORMS"},
 }
@@ -146,6 +149,14 @@ def uncertainty(stmt_bytes):
 
 ROW = json.loads((HERE.parent / "status" / "rows.json").read_text(encoding="utf-8"))["rows"]["a"]
 PROFILE = json.loads((HERE.parent / "dprof" / "asme_placeholder_1.0.0.json").read_text(encoding="utf-8"))
+
+
+def chain_digest(row, variant):
+    chain = [v for v in row["variants"] if v["variant"] == variant][0]
+    return sha(jcs({"steps": chain["steps"], "variant": chain["variant"]}))
+
+
+INPUTS["operator_chain_digest"] = chain_digest(ROW, ROW["default_variant"])
 
 
 def interpretation():
@@ -184,7 +195,7 @@ def record(stmt_name, rule_bound):
     else:
         decision = {"source": "gdt_not_decidable", "rule": None, "outcome": "NOT_DECIDABLE",
                     "reason": "no_rule_bound", "basis": None}
-    r = {"schema": "fid.gdt-result/1"}
+    r = {"schema": "fid.gdt-result/2"}
     for k in ("run", "characteristic", "measurand", "evaluation_basis", "spec", "algorithm", "kernel_version",
               "input_digests", "journal_entry", "dmt_row", "operator_chain_digest", "dmt_digest"):
         r[k] = INPUTS[k]

@@ -9,7 +9,7 @@
 //! provisional record always shows the label `interpretation: provisional`
 //! (`GDT.CHAR.INTERP` REQ-009).
 
-use super::builder::ResultRecord;
+use super::builder::{ResultRecord, RECORD_SCHEMA};
 use super::store::{get_record, get_result, ResultStore, GET_RESULT_COMMAND};
 use super::RecordError;
 use fid_canon::{CValue, CanonError};
@@ -194,6 +194,38 @@ fn id_schema(description: &str) -> CValue {
     obj([("type", text("string")), ("pattern", text(ID_PATTERN)), ("description", text(description))])
 }
 
+/// The result schema: the canonical record, with its schema tag and the interpretation
+/// block of `GDT.CHAR.INTERP` required (`interpretation` an enum, `interpretation_rules` an
+/// array of rule uses, `interpretation_register` a digest or `none`).
+fn result_schema() -> CValue {
+    let rule = obj([
+        ("type", text("object")),
+        ("required", strs(&["content_digest", "kind", "reason", "revision", "rule", "status"])),
+        (
+            "properties",
+            obj([
+                ("content_digest", obj([("type", text("string"))])),
+                ("kind", obj([("enum", strs(&["dmt_row", "profile"]))])),
+                ("rule", obj([("type", text("string"))])),
+                ("status", obj([("enum", strs(&["provisional", "signed_off"]))])),
+            ]),
+        ),
+    ]);
+    obj([
+        ("type", text("object")),
+        ("required", strs(&["interpretation", "interpretation_register", "interpretation_rules", "schema"])),
+        (
+            "properties",
+            obj([
+                ("schema", obj([("enum", strs(&[RECORD_SCHEMA]))])),
+                ("interpretation", obj([("enum", strs(&["provisional", "signed_off"]))])),
+                ("interpretation_register", obj([("type", text("string"))])),
+                ("interpretation_rules", obj([("type", text("array")), ("items", rule)])),
+            ]),
+        ),
+    ])
+}
+
 /// The registry definition of `gdt.get_result@1` (R0, D0, CLI and MCP), built through
 /// [`CommandDef::from_value`] so every field rule of the registry applies.
 pub fn command_def() -> Result<CommandDef, DefError> {
@@ -212,7 +244,7 @@ pub fn command_def() -> Result<CommandDef, DefError> {
                 ("properties", obj([("char", id_schema("The characteristic.")), ("run", id_schema("The run."))])),
             ]),
         ),
-        ("result_schema", obj([("type", text("object"))])),
+        ("result_schema", result_schema()),
         ("side_effect", text("R0")),
         ("mcp_projection", text("exposed")),
         ("determinism", text("D0")),

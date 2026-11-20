@@ -1,5 +1,23 @@
 {
  "cases": {
+  "chain_not_in_primary": {
+   "expect": {
+    "error": "incomplete_result{interpretation_rules}"
+   },
+   "journal": "flatness_signed/journal.json",
+   "operator_chain_digest": "sha256:7d7379d5b17186bbf02efe5a3c54d03b606869cdd1004eb7a25e18b7a866d865",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "flatness_signed/published.json",
+   "profile": true,
+   "published": "flatness_signed/published.json",
+   "register": "flatness_signed/register.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat"
+   ]
+  },
   "currency_r1_stale": {
    "expect": {
     "interpretation": "provisional",
@@ -25,6 +43,7 @@
     "verification": "stale_register"
    },
    "journal": "currency/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "currency/published_v1.json",
    "profile": true,
@@ -62,6 +81,7 @@
     "verification": "verified"
    },
    "journal": "currency/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "currency/published_v1.json",
    "profile": true,
@@ -104,6 +124,7 @@
     "verification": "verified"
    },
    "journal": "currency/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "currency/published_v1.json",
    "profile": true,
@@ -141,6 +162,7 @@
     "verification": "published_unreadable"
    },
    "journal": "currency/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "currency/published_v1.json",
    "profile": true,
@@ -158,6 +180,7 @@
     "error": "rule_not_admitted{dmt:asme/position/mmc@1}"
    },
    "journal": "draft_row/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "draft_row/published.json",
    "profile": true,
@@ -169,6 +192,82 @@
    "rows": [
     "flat",
     "pos"
+   ]
+  },
+  "draft_row_no_register": {
+   "expect": {
+    "error": "rule_not_admitted{dmt:asme/position/mmc@1}"
+   },
+   "journal": "draft_row/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "draft_row/published.json",
+   "profile": true,
+   "published": "draft_row/published.json",
+   "register": null,
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat",
+    "pos"
+   ]
+  },
+  "draft_row_unverified": {
+   "expect": {
+    "error": "rule_not_admitted{dmt:asme/position/mmc@1}"
+   },
+   "journal": "draft_row/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "flatness_signed/published.json",
+   "profile": true,
+   "published": "flatness_signed/published.json",
+   "register": "draft_row/register.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat",
+    "pos"
+   ]
+  },
+  "empty_prior": {
+   "expect": {
+    "interpretation": "provisional",
+    "interpretation_register": "sha256:217a12695f7f4b3dba3f1be5c6eddb305eef8b72019884db039455f7ccfe33dc",
+    "interpretation_rules": [
+     {
+      "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+      "kind": "dmt_row",
+      "reason": "unverified_register",
+      "revision": null,
+      "rule": "dmt:asme/flatness/none@1",
+      "status": "provisional"
+     },
+     {
+      "content_digest": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "kind": "profile",
+      "reason": "unverified_register",
+      "revision": 1,
+      "rule": "dp:asme-y14.5-2018@1.0.0",
+      "status": "provisional"
+     }
+    ],
+    "verification": "empty_pinned_prior"
+   },
+   "journal": "flatness_signed/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "published_empty.json",
+   "profile": true,
+   "published": "flatness_signed/published.json",
+   "register": "flatness_signed/register.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat"
    ]
   },
   "flatness_signed": {
@@ -196,6 +295,7 @@
     "verification": "verified"
    },
    "journal": "flatness_signed/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "flatness_signed/published.json",
    "profile": true,
@@ -233,6 +333,7 @@
     "verification": "foreign_roster"
    },
    "journal": "flatness_signed/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "flatness_signed/published.json",
    "profile": true,
@@ -271,6 +372,7 @@
     "verification": "register_mismatch"
    },
    "journal": "flatness_signed/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "flatness_signed/published.json",
    "profile": true,
@@ -288,6 +390,7 @@
     "error": "incomplete_result{interpretation_rules}"
    },
    "journal": "flatness_signed/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "flatness_signed/published.json",
    "profile": false,
@@ -325,6 +428,7 @@
     "verification": "none"
    },
    "journal": "flatness_signed/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "flatness_signed/published.json",
    "profile": true,
@@ -342,6 +446,7 @@
     "error": "incomplete_result{interpretation_rules}"
    },
    "journal": "flatness_signed/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "flatness_signed/published.json",
    "profile": true,
@@ -393,6 +498,7 @@
     "verification": "verified"
    },
    "journal": "position_mmc_mixed/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/position/mmc@1",
    "prior": "position_mmc_mixed/published.json",
    "profile": true,
@@ -412,6 +518,7 @@
     "error": "incomplete_result{interpretation_rules}"
    },
    "journal": "flatness_signed/journal.json",
+   "operator_chain_digest": "sha256:7bf205723b701e3a981344356aad316a21e46049c4955c0d3a1ff0b5d51239d2",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "flatness_signed/published.json",
    "profile": true,
@@ -449,6 +556,7 @@
     "verification": "verified"
    },
    "journal": "flatness_signed/journal.json",
+   "operator_chain_digest": "sha256:7d7379d5b17186bbf02efe5a3c54d03b606869cdd1004eb7a25e18b7a866d865",
    "primary": "dmt:asme/flatness/none@1",
    "prior": "flatness_signed/published.json",
    "profile": true,
@@ -458,6 +566,53 @@
     "roster.json"
    ],
    "rows": [
+    "flat_tampered"
+   ]
+  },
+  "tampered_with_signed": {
+   "expect": {
+    "interpretation": "provisional",
+    "interpretation_register": "sha256:217a12695f7f4b3dba3f1be5c6eddb305eef8b72019884db039455f7ccfe33dc",
+    "interpretation_rules": [
+     {
+      "content_digest": "sha256:69859e58889ad4f8653df394579c6b0450b31af25cf2360694960c55551aea36",
+      "kind": "dmt_row",
+      "reason": null,
+      "revision": 1,
+      "rule": "dmt:asme/flatness/none@1",
+      "status": "signed_off"
+     },
+     {
+      "content_digest": "sha256:9a8499526f900917b06e11d9902fe4d7beb7e8dfb615da850045c195ce6ebd12",
+      "kind": "dmt_row",
+      "reason": "not_in_register",
+      "revision": null,
+      "rule": "dmt:asme/flatness/none@1",
+      "status": "provisional"
+     },
+     {
+      "content_digest": "sha256:287a04d6c384768b1e44c85b3c4ae851912d700b723dcd28b72e395065ec84dc",
+      "kind": "profile",
+      "reason": "no_signoff_path",
+      "revision": 1,
+      "rule": "dp:asme-y14.5-2018@1.0.0",
+      "status": "provisional"
+     }
+    ],
+    "verification": "verified"
+   },
+   "journal": "flatness_signed/journal.json",
+   "operator_chain_digest": "sha256:7d7379d5b17186bbf02efe5a3c54d03b606869cdd1004eb7a25e18b7a866d865",
+   "primary": "dmt:asme/flatness/none@1",
+   "prior": "flatness_signed/published.json",
+   "profile": true,
+   "published": "flatness_signed/published.json",
+   "register": "flatness_signed/register.json",
+   "rosters": [
+    "roster.json"
+   ],
+   "rows": [
+    "flat",
     "flat_tampered"
    ]
   }

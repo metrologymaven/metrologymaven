@@ -11,12 +11,22 @@
 //!   from a caller, a table or a register), its status and its reason (REQ-001, REQ-002).
 //! - [`RegisterView`]: the status register an evaluation consults. Its only constructors are
 //!   [`RegisterView::none`] and [`RegisterView::load`], which loads `gdt-published/v1` with
-//!   [`Published::load_extending`] against a pinned prior (never a bare `load`) and checks the
-//!   register file with [`verify_register`]. A rule's status comes from [`status_of`] on a
-//!   register that verified, and only from there; a missing register gives
+//!   [`Published::load_extending`] against a non-empty pinned prior (never a bare `load`) and
+//!   checks the register file with [`verify_register`]. A rule's status comes from
+//!   [`status_of`] on a register that verified, and only from there; a missing register gives
 //!   `provisional`/`no_register`, a register (or published list) that does not verify gives
 //!   `provisional`/`unverified_register` (REQ-003). Fail closed: nothing but a verified
 //!   register can ever yield `signed_off`.
+//! - **Drafts are refused whatever the register state.** Both constructors take the
+//!   `GDT.RES.ROWFLOW` journal; a row whose (key, content digest) only an agent or a script
+//!   ever proposed (no human proposal of that key carries the digest) is a draft and fails the
+//!   build with `rule_not_admitted{rule}`, with a verified register, an unverified one or none
+//!   (REQ-005). A verified register's `draft` status is refused too. A draft is never emitted,
+//!   not even as provisional.
+//! - The primary row is tied to the evaluated chain: some row with the primary key
+//!   (`dmt_row`) must have a variant whose chain digest is the record's
+//!   `operator_chain_digest`, else `incomplete_result{interpretation_rules}`. So a signed-off
+//!   revision cannot vouch for a chain it does not contain.
 //! - New evaluations need a register verified with [`Purpose::Evaluate`], which accepts only
 //!   the latest published register; a view checked for replay is treated as unverified by
 //!   the builder (REQ-003, AC-13).
@@ -26,23 +36,29 @@
 //!   [`ResultRecordBuilder::finish`](super::record::ResultRecordBuilder::finish).
 //! - [`InterpretationPin`]: what the evaluating command writes into its journal entry (the
 //!   register digest and how it verified); [`replay_interpretation`] loads the pinned
-//!   register from a [`RegisterStore`], verifies it with [`Purpose::Replay`] and recomputes
+//!   register from a [`RegisterStore`] (it must be there: `register_unavailable` otherwise),
+//!   verifies a `verified` pin with [`Purpose::Replay`] and recomputes
 //!   the block: `IDENTICAL`, `DIVERGENT`, or `NOT_REPLAYABLE` with `register_unavailable`,
 //!   never a re-labelled record (REQ-007).
-//! - [`requires_provisional_label`] is the one predicate reports, exports and the release
-//!   queue call (REQ-009); the label text comes from catalog key
+//! - [`requires_provisional_label`] (on a record) and [`requires_provisional_label_bytes`] (on
+//!   stored canonical bytes) are the predicates reports, exports and the release queue call
+//!   (REQ-009); the bytes form says true for anything but a `fid.gdt-result/2` record whose
+//!   `interpretation` and every rule are `signed_off` (an older `/1` record, a missing or
+//!   unreadable field all count as provisional). The label text comes from catalog key
 //!   [`PROVISIONAL_LABEL_KEY`].
 //!
 //! Deterministic (D0): no clock, sorted collections only, no floating point, no panics.
 
 use crate::chars::dprof::{ProfileDoc, ProfileRef};
-use crate::chars::record::{RecordError, ResultRecord};
+use crate::chars::record::{RecordError, ResultRecord, RECORD_SCHEMA};
 use crate::dmt_flow::roster::Roster;
 use crate::dmt_flow::status::{
     row_content_digest, status_of, verify_register, CheckedRegister, CoiInputs, JournalExtract, Published, Purpose,
-    Reason, RuleKind, Status, Verification,
+    Reason, RuleKind, Status, Verification, PROPOSE_COMMAND,
 };
+use fid_bus::principal::PrincipalKind;
 use fid_canon::CValue;
+use fid_gps::dmt::row::row_from_value;
 use fid_gps::dmt::DmtRow;
 use fid_replay::ReplayOutcome;
 use fid_types::Digest;
@@ -64,6 +80,9 @@ pub const MAX_RULE_ROWS: usize = 64;
 pub const MAX_STORED_REGISTERS: usize = 4096;
 /// Largest register file a [`RegisterStore`] takes, in bytes.
 pub const MAX_REGISTER_BYTES: usize = 64 * 1024 * 1024;
+/// Largest record [`requires_provisional_label_bytes`] reads, in bytes (larger: provisional).
+pub const MAX_RECORD_BYTES: usize = 16 * 1024 * 1024;
+const MAX_RECORD_DEPTH: usize = 8;
 
 const FIELD: &str = "interpretation_rules";
 
@@ -115,6 +134,24 @@ impl Interpretation {
 /// and the release batch call this and nothing else.
 pub fn requires_provisional_label(record: &ResultRecord) -> bool {
     record.interpretation() == Interpretation::Provisional
+}
+
+/// [`requires_provisional_label`] on stored canonical record bytes (REQ-009), for readers
+/// that never hold a [`ResultRecord`] (reports, exports, the release queue). False only for
+/// a readable `fid.gdt-result/2` record whose `interpretation` is `signed_off` and whose
+/// `interpretation_rules` are non-empty and all `signed_off`; true for anything else: bytes
+/// that do not parse (or exceed [`MAX_RECORD_BYTES`]), another schema (a `/1` record has no
+/// interpretation block), or a missing, mistyped or other `interpretation`.
+pub fn requires_provisional_label_bytes(record: &[u8]) -> bool {
+    let signed = CValue::Str(Interpretation::SignedOff.as_str().to_owned());
+    let Ok(CValue::Obj(o)) = fid_canon::parse_with_limits(record, MAX_RECORD_BYTES, MAX_RECORD_DEPTH) else {
+        return true;
+    };
+    if o.get("schema") != Some(&CValue::Str(RECORD_SCHEMA.to_owned())) || o.get("interpretation") != Some(&signed) {
+        return true;
+    }
+    let Some(CValue::Arr(rules)) = o.get("interpretation_rules") else { return true };
+    rules.is_empty() || !rules.iter().all(|r| matches!(r, CValue::Obj(m) if m.get("status") == Some(&signed)))
 }
 
 /// The status of a rule in a record. There is no `draft`: a draft rule never reaches one.
@@ -193,7 +230,13 @@ impl RuleUse {
 /// What [`RegisterView::load`] checks a register file against. `published` is the raw
 /// `gdt-published/v1` list from the DMT data repository; it is loaded only with
 /// [`Published::load_extending`] against `pinned_prior`, so a rewritten or truncated list
-/// never verifies anything.
+/// never verifies anything. An empty `pinned_prior` is refused (`empty_pinned_prior`): it
+/// would accept any list.
+///
+/// **Trust.** The check is only as good as `pinned_prior`: it must come from a place the
+/// caller trusts independently of `published` (a copy pinned in the project, or the list as
+/// of the last verified release), never from the same download. A self-made prior admits a
+/// self-made list.
 #[derive(Debug, Clone, Copy)]
 pub struct RegisterSources<'a> {
     /// The `GDT.RES.ROWFLOW` journal extract the register is rebuilt from.
@@ -222,32 +265,70 @@ enum View {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RegisterView {
     view: View,
+    /// Agent-only (row key, content digest) pairs of the ROWFLOW journal ([`agent_drafts`]).
+    drafts: BTreeSet<(String, Digest)>,
 }
 
-/// Unverified reasons a pin may record (the `verify_register` codes plus the list loader's).
-const UNVERIFIED_CODES: [&str; 5] =
-    ["register_mismatch", "register_not_published", "foreign_roster", "stale_register", "published_unreadable"];
+/// Unverified reasons a pin may record (the `verify_register` codes plus the loader's).
+const UNVERIFIED_CODES: [&str; 6] = [
+    "register_mismatch",
+    "register_not_published",
+    "foreign_roster",
+    "stale_register",
+    "published_unreadable",
+    "empty_pinned_prior",
+];
+
+/// The (row key, content digest) pairs that only agents or scripts ever proposed in the
+/// `GDT.RES.ROWFLOW` journal: every `gdt.propose_dmt_row@1` entry's row is read and its
+/// content digest recomputed; pairs some human proposal also carries are removed. These are
+/// drafts whatever the register says (D-045, REQ-005).
+fn agent_drafts(journal: &JournalExtract) -> BTreeSet<(String, Digest)> {
+    let mut agent = BTreeSet::new();
+    let mut human = BTreeSet::new();
+    for e in journal.entries() {
+        if e.command() != PROPOSE_COMMAND {
+            continue;
+        }
+        let Some(row) = e.row().and_then(|v| row_from_value(v).ok()) else { continue };
+        let Ok(d) = row_content_digest(&row) else { continue };
+        let pair = (row.key().as_str().to_owned(), d);
+        if e.principal_kind() == PrincipalKind::Human {
+            human.insert(pair);
+        } else {
+            agent.insert(pair);
+        }
+    }
+    agent.difference(&human).cloned().collect()
+}
 
 impl RegisterView {
-    /// No register loaded: every rule is `provisional`/`no_register`.
-    pub fn none() -> RegisterView {
-        RegisterView { view: View::None }
+    /// No register loaded: every rule is `provisional`/`no_register`. The ROWFLOW journal is
+    /// still required: it decides which rows are agent drafts.
+    pub fn none(journal: &JournalExtract) -> RegisterView {
+        RegisterView { view: View::None, drafts: agent_drafts(journal) }
     }
 
-    /// Loads `gdt-published/v1` with [`Published::load_extending`] against the pinned prior
-    /// (`published_unreadable` when it is malformed or not append-only), then checks `file`
-    /// with [`verify_register`] for `purpose`. Any failure gives an unverified view.
+    /// Refuses an empty pinned prior (`empty_pinned_prior`), loads `gdt-published/v1` with
+    /// [`Published::load_extending`] against it (`published_unreadable` when it is malformed
+    /// or not append-only), then checks `file` with [`verify_register`] for `purpose`. Any
+    /// failure gives an unverified view.
     pub fn load(file: &[u8], sources: &RegisterSources<'_>, purpose: Purpose) -> RegisterView {
+        let drafts = agent_drafts(sources.journal);
         let file_digest = sha(file);
+        let unverified = |code, drafts| RegisterView { view: View::Unverified { file: file_digest, code }, drafts };
+        if sources.pinned_prior.entries().is_empty() {
+            return unverified("empty_pinned_prior", drafts);
+        }
         let Ok(published) = Published::load_extending(sources.published, sources.pinned_prior) else {
-            return RegisterView { view: View::Unverified { file: file_digest, code: "published_unreadable" } };
+            return unverified("published_unreadable", drafts);
         };
         let checked = verify_register(file, sources.journal, sources.rosters, sources.coi, &published, purpose);
         match checked.verification() {
             Verification::Verified { digest } if checked.register().is_some() => {
-                RegisterView { view: View::Verified { checked: Box::new(checked), digest } }
+                RegisterView { view: View::Verified { checked: Box::new(checked), digest }, drafts }
             }
-            v => RegisterView { view: View::Unverified { file: file_digest, code: v.code() } },
+            v => unverified(v.code(), drafts),
         }
     }
 
@@ -420,8 +501,10 @@ pub(crate) fn register_cvalue(d: Option<Digest>) -> CValue {
 pub struct Interpreted {
     rules: Vec<RuleUse>,
     row_keys: BTreeSet<String>,
+    /// (row key, chain digest) of every variant of every row passed.
+    chains: BTreeSet<(String, Digest)>,
     profile: Option<ProfileRef>,
-    draft: Option<String>,
+    drafts: BTreeSet<String>,
     pin: InterpretationPin,
     error: Option<RecordError>,
 }
@@ -453,8 +536,9 @@ impl Interpreted {
         let mut out = Interpreted {
             rules: Vec::new(),
             row_keys: BTreeSet::new(),
+            chains: BTreeSet::new(),
             profile: None,
-            draft: None,
+            drafts: BTreeSet::new(),
             pin: InterpretationPin::of(view),
             error: None,
         };
@@ -469,8 +553,15 @@ impl Interpreted {
                 out.error = Some(RecordError::InvalidField { field: FIELD });
                 return out;
             };
-            out.row_keys.insert(row.key().as_str().to_owned());
-            uses.insert((RuleKind::DmtRow, row.key().as_str().to_owned(), d));
+            let key = row.key().as_str().to_owned();
+            if view.drafts.contains(&(key.clone(), d)) {
+                out.drafts.insert(key.clone());
+            }
+            for c in row.variants() {
+                out.chains.insert((key.clone(), c.digest()));
+            }
+            out.row_keys.insert(key.clone());
+            uses.insert((RuleKind::DmtRow, key, d));
         }
         if let Some(doc) = profile {
             // Recomputed from the canonical bytes, never the digest the document carries.
@@ -482,9 +573,7 @@ impl Interpreted {
             let (status, reason, revision) = view.answer(purpose, kind, &rule, digest);
             let status = match status {
                 Status::Draft => {
-                    if out.draft.is_none() {
-                        out.draft = Some(rule.clone());
-                    }
+                    out.drafts.insert(rule);
                     continue;
                 }
                 Status::Provisional => RuleStatus::Provisional,
@@ -496,20 +585,26 @@ impl Interpreted {
         out
     }
 
-    /// The checks of `finish` (REQ-005, REQ-006): the setter error; rows present, the
-    /// primary row among them, the profile present and equal to the spec's; no draft rule.
-    pub(crate) fn finish(self, primary: &str, spec_profile: &ProfileRef) -> Result<Block, RecordError> {
+    /// The checks of `finish` (REQ-005, REQ-006), in order: the setter error; rows present,
+    /// the primary row among them, and a primary-key row with a variant whose chain digest is
+    /// the record's `operator_chain_digest`; the profile present and equal to the spec's
+    /// (all `incomplete_result{interpretation_rules}`); then no draft rule
+    /// (`rule_not_admitted{rule}`, the first in byte order).
+    pub(crate) fn finish(self, primary: &str, chain: Digest, spec_profile: &ProfileRef) -> Result<Block, RecordError> {
         if let Some(e) = self.error {
             return Err(e);
         }
         if self.row_keys.is_empty() || !self.row_keys.contains(primary) {
             return Err(incomplete());
         }
+        if !self.chains.contains(&(primary.to_owned(), chain)) {
+            return Err(incomplete());
+        }
         match &self.profile {
             Some(p) if p == spec_profile => {}
             _ => return Err(incomplete()),
         }
-        if let Some(rule) = self.draft {
+        if let Some(rule) = self.drafts.into_iter().next() {
             return Err(RecordError::RuleNotAdmitted { rule });
         }
         Ok(Block {
@@ -522,7 +617,7 @@ impl Interpreted {
 
     /// The block without the record checks (replay compares only the three fields).
     fn fields(&self) -> Option<(CValue, CValue, CValue)> {
-        if self.error.is_some() || self.draft.is_some() {
+        if self.error.is_some() || !self.drafts.is_empty() {
             return None;
         }
         Some((
@@ -608,12 +703,13 @@ impl InterpretationReplay {
 /// Replays the interpretation block of a recorded ResultRecord (REQ-007, AC-8, AC-13).
 ///
 /// `recorded` is the record's canonical JSON, `pin` the [`InterpretationPin`] of its journal
-/// entry, `rows` and `profile` the inputs the evaluation used. For a pin that says
-/// `verified`, the register is taken from `store` by the pinned digest and checked with
-/// [`RegisterView::load`] for [`Purpose::Replay`] (an older published register is valid for
-/// replay); if it is missing or does not verify, the outcome is `NOT_REPLAYABLE` with
-/// [`REGISTER_UNAVAILABLE`]. A pin recording an unverified register or none recomputes the
-/// same fail-safe labels without a register. The recomputed `interpretation`,
+/// entry, `rows` and `profile` the inputs the evaluation used. Whenever the pin names a
+/// register, replay loads it from `store` by that digest; if it is not there (or its bytes do
+/// not hash to the digest), the outcome is `NOT_REPLAYABLE` with [`REGISTER_UNAVAILABLE`]. A
+/// `verified` pin's register is then checked with [`RegisterView::load`] for
+/// [`Purpose::Replay`] (an older published register is valid for replay) and must verify
+/// (else [`REGISTER_UNAVAILABLE`] too); a pin recording an unverified register recomputes the
+/// same fail-safe `unverified_register` labels, and a pin of `none` the `no_register` ones. The recomputed `interpretation`,
 /// `interpretation_register` and `interpretation_rules` must equal the recorded ones
 /// (`IDENTICAL`), else `DIVERGENT`.
 pub fn replay_interpretation(
@@ -636,19 +732,22 @@ pub fn replay_interpretation(
         return InterpretationReplay::not_replayable("bad_record");
     };
     let view = match (pin.state, pin.register) {
-        (PinState::Verified, Some(d)) => {
-            let Some(bytes) = store.get(&d) else {
+        (PinState::None, None) => RegisterView::none(sources.journal),
+        (PinState::None, Some(_)) | (_, None) => return InterpretationReplay::not_replayable("bad_pin"),
+        (state, Some(d)) => {
+            let Some(bytes) = store.get(&d).filter(|b| sha(b) == d) else {
                 return InterpretationReplay::not_replayable(REGISTER_UNAVAILABLE);
             };
-            let v = RegisterView::load(bytes, sources, Purpose::Replay);
-            if !v.is_verified() || v.digest() != Some(d) {
-                return InterpretationReplay::not_replayable(REGISTER_UNAVAILABLE);
+            if let PinState::Unverified(code) = state {
+                RegisterView { view: View::Unverified { file: d, code }, drafts: agent_drafts(sources.journal) }
+            } else {
+                let v = RegisterView::load(bytes, sources, Purpose::Replay);
+                if !v.is_verified() || v.digest() != Some(d) {
+                    return InterpretationReplay::not_replayable(REGISTER_UNAVAILABLE);
+                }
+                v
             }
-            v
         }
-        (PinState::Unverified(code), Some(file)) => RegisterView { view: View::Unverified { file, code } },
-        (PinState::None, None) => RegisterView::none(),
-        _ => return InterpretationReplay::not_replayable("bad_pin"),
     };
     let again = Interpreted::compute(rows, profile, &view, Purpose::Replay);
     match again.fields() {
@@ -690,7 +789,7 @@ mod tests {
 
     #[test]
     fn a_none_view_answers_no_register_and_pins_none() {
-        let v = RegisterView::none();
+        let v = RegisterView { view: View::None, drafts: BTreeSet::new() };
         let (st, r, rev) = v.answer(Purpose::Evaluate, RuleKind::DmtRow, "x", Digest::TOMBSTONE);
         assert_eq!((st, r, rev), (Status::Provisional, Some(Reason::NoRegister), None));
         let (_, _, rev) = v.answer(Purpose::Evaluate, RuleKind::Profile, "x", Digest::TOMBSTONE);
@@ -703,7 +802,10 @@ mod tests {
 
     #[test]
     fn pins_round_trip_and_refuse_inconsistent_forms() {
-        let v = RegisterView { view: View::Unverified { file: Digest::TOMBSTONE, code: "stale_register" } };
+        let v = RegisterView {
+            view: View::Unverified { file: Digest::TOMBSTONE, code: "stale_register" },
+            drafts: BTreeSet::new(),
+        };
         let pin = InterpretationPin::of(&v);
         let b = pin.canonical_bytes().unwrap_or_default();
         assert_eq!(InterpretationPin::from_canonical_bytes(&b), Some(pin));
@@ -759,11 +861,14 @@ mod tests {
             status: RuleStatus::SignedOff,
             reason: None,
         };
+        let mut chains = BTreeSet::new();
+        chains.insert((key.to_owned(), Digest::from_bytes([1; 32])));
         let interp = Interpreted {
             rules: vec![flat, prof],
             row_keys,
+            chains,
             profile: Some(profile),
-            draft: None,
+            drafts: BTreeSet::new(),
             pin: InterpretationPin { register: Some(Digest::from_bytes([9; 32])), state: PinState::Verified },
             error: None,
         };

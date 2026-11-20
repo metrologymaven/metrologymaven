@@ -16,7 +16,7 @@ use fid_types::Digest;
 use std::collections::BTreeMap;
 
 /// `schema` value of a canonical record.
-pub const RECORD_SCHEMA: &str = "fid.gdt-result/1";
+pub const RECORD_SCHEMA: &str = "fid.gdt-result/2";
 /// `decision.source` of a decision UNC returned.
 pub const DECISION_SOURCE_UNC: &str = "unc";
 /// `decision.source` of a `NOT_DECIDABLE` GDT records itself (no rule, or no UNC decision).
@@ -733,7 +733,7 @@ impl ResultRecordBuilder<Interpreted> {
                 None => {}
             }
         }
-        let block = self.interp.finish(dmt_row.as_str(), spec.defaults_profile())?;
+        let block = self.interp.finish(dmt_row.as_str(), operator_chain_digest, spec.defaults_profile())?;
         let mut record = ResultRecord {
             run: self.run,
             characteristic: self.characteristic,

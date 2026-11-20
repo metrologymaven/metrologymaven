@@ -484,6 +484,26 @@ fn record_facts_must_agree_with_the_parsed_statement() {
 }
 
 #[test]
+fn both_record_schema_versions_are_read_and_others_refused() {
+    let (mut w, _, cases) = bracket();
+    let journal = fixture("bracket_3stage/journal.json");
+    let project = uuid(st(&cases, "project"));
+    let r1 = entry_text(&journal, st(&cases, "r1"));
+    assert_eq!(r1.matches(r#""schema":"fid.gdt-result/1""#).count(), 1);
+    // `/2` (GDT.CHAR.INTERP) reads like `/1`: same value field and evidence.
+    let v2 = uuid("019a9a9b-0008-7000-8000-000000000011");
+    let head = commit_result(&mut w, project, v2, r1.replace("fid.gdt-result/1", RESULT_RECORD_SCHEMA_V2), 0xc1);
+    let lookup = HeadLookup::new(&w.journal, project, &JournalHead::parse(&head).unwrap()).unwrap();
+    let v = lookup.result(&v2).unwrap();
+    assert!(v.evidence().statement_checked() && v.evidence().looks_measured());
+    // Any other version is refused.
+    let v3 = uuid("019a9a9b-0008-7000-8000-000000000012");
+    let head = commit_result(&mut w, project, v3, r1.replace("fid.gdt-result/1", "fid.gdt-result/3"), 0xc2);
+    let lookup = HeadLookup::new(&w.journal, project, &JournalHead::parse(&head).unwrap()).unwrap();
+    assert_eq!(lookup.result(&v3).unwrap_err(), LookupFault::Invalid("record schema"));
+}
+
+#[test]
 fn a_not_yet_committed_entity_of_another_kind_is_not_found() {
     let (w, _, cases) = bracket();
     let project = uuid(st(&cases, "project"));

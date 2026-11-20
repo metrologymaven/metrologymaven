@@ -18,6 +18,7 @@ use fid_gdt::chars::record::{
     ResultStore, RunId, Uncertainty, GET_RESULT_CLI, GET_RESULT_COMMAND, GET_RESULT_MCP,
 };
 use fid_gdt::chars::spec::{GoverningSpec, SpecError};
+use fid_gdt::dmt_flow::status::JournalExtract;
 use fid_gps::dmt::row::row_from_value;
 use fid_gps::dmt::{DmtKey, DmtRow};
 use fid_io_reg::Principal;
@@ -167,7 +168,9 @@ fn builder_with(
         b = b.dmt_digest(digest(s(o, "dmt_digest")));
     }
     let row = flatness_row();
-    b.interpretation(&[&row], Some(&profile()), &RegisterView::none())
+    let journal = std::fs::read(format!("{GDT}interp/flatness_signed/journal.json")).unwrap();
+    let journal = JournalExtract::load(&journal).unwrap();
+    b.interpretation(&[&row], Some(&profile()), &RegisterView::none(&journal))
 }
 
 /// The AC-1 builder: UEC-2 statement, stub rule returning CONFORMS.

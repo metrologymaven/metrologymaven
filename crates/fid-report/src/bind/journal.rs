@@ -42,8 +42,12 @@ use fid_project::Uuid;
 use fid_types::Digest;
 use std::collections::BTreeMap;
 
-/// Wire schema of a GDT ResultRecord.
+/// Wire schema of a GDT ResultRecord without the interpretation block.
 pub const RESULT_RECORD_SCHEMA: &str = "fid.gdt-result/1";
+/// Wire schema of a GDT ResultRecord with the interpretation block (`GDT.CHAR.INTERP`). Its
+/// value fields and evidence read exactly like `/1`; whether it needs the provisional label
+/// is `fid_gdt::requires_provisional_label_bytes` (a `/1` record always does).
+pub const RESULT_RECORD_SCHEMA_V2: &str = "fid.gdt-result/2";
 /// The value field of a `fid.gdt-result/1` record.
 pub const RECORD_VALUE_FIELD: &str = "/value";
 /// Largest stored record or statement this module reads, in bytes.
@@ -559,8 +563,9 @@ fn read_record(bytes: &[u8]) -> Result<(Vec<ValueField>, Evidence), LookupFault>
         return Err(LookupFault::Invalid("record not canonical"));
     }
     let CValue::Obj(o) = &v else { return Err(bad) };
-    if o.get("schema") != Some(&CValue::Str(RESULT_RECORD_SCHEMA.to_string())) {
-        return Err(LookupFault::Invalid("record schema"));
+    match o.get("schema") {
+        Some(CValue::Str(s)) if s == RESULT_RECORD_SCHEMA || s == RESULT_RECORD_SCHEMA_V2 => {}
+        _ => return Err(LookupFault::Invalid("record schema")),
     }
     let Some(CValue::Obj(value)) = o.get("value") else { return Err(bad) };
     let (Some(CValue::Str(bits)), Some(CValue::Str(unit)), 2) = (value.get("value"), value.get("unit"), value.len())

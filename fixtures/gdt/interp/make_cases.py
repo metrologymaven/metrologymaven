@@ -19,9 +19,16 @@ outcome from the leaf's rules:
   absent: provisional/not_in_register.
 - Revision: the register entry's; 1 for a profile without one (profiles are immutable,
   revision always 1); null for a row without one.
-- REQ-004: signed_off exactly when every rule is. REQ-005: a draft rule refuses the record
-  with rule_not_admitted naming it. REQ-006: no rows, the primary row absent or no profile
-  is incomplete_result{interpretation_rules}.
+- REQ-004: signed_off exactly when every rule is.
+- REQ-006 (checked first): no rows, the primary row absent, no row with the primary key
+  whose variant chain hashes to the record's operator_chain_digest (chain digest: SHA-256 of
+  the canonical JSON `{"steps", "variant"}` of one variant), or no profile is
+  incomplete_result{interpretation_rules}.
+- REQ-005 (then): a draft refuses the record with rule_not_admitted naming the first draft
+  key in byte order. A row is a draft when its (key, content digest) was proposed in the
+  ROWFLOW journal only by agents or scripts (no human proposal of that key carries it),
+  whatever the register state, or when a verified register says draft.
+- The pinned prior must be non-empty (else empty_pinned_prior).
 - `interpretation_register`: the digest of the register file consulted, or `none`.
 
 The register fold, verification and roster/conflict inputs come from the status reference
@@ -117,16 +124,42 @@ def published(*regs):
 # ------------------------------------------------------------------ the oracle
 
 
+def chain_digest(row, variant):
+    chain = [v for v in row["variants"] if v["variant"] == variant][0]
+    return sha(canon({"steps": chain["steps"], "variant": chain["variant"]}).encode("utf-8"))
+
+
+def default_chain(row):
+    return chain_digest(row, row["default_variant"])
+
+
+def journal_drafts(entries):
+    agent, human = set(), set()
+    for e in entries:
+        if e["command"] != status.PROPOSE:
+            continue
+        pair = (e["row"]["key"], content_digest(e["row"]))
+        (human if e["principal"]["kind"] == "human" else agent).add(pair)
+    return agent - human
+
+
 def verification(file_bytes, genuine_bytes, current, pub, prior, purpose):
+    if not prior["entries"]:
+        return "empty_pinned_prior"
     if pub["entries"][: len(prior["entries"])] != prior["entries"]:
         return "published_unreadable"
     return status.verify(file_bytes, genuine_bytes, current, pub, purpose)
 
 
-def interp(rows, profile, reg, code, file_bytes, primary):
+def interp(rows, profile, reg, code, file_bytes, primary, chain, entries):
     """The expected block, or the expected error."""
-    if not rows or primary not in [r["key"] for r in rows] or not profile:
-        return {"error": "incomplete_result{interpretation_rules}"}
+    incomplete = {"error": "incomplete_result{interpretation_rules}"}
+    if not rows or primary not in [r["key"] for r in rows]:
+        return incomplete
+    chains = {chain_digest(r, v["variant"]) for r in rows if r["key"] == primary for v in r["variants"]}
+    if chain not in chains or not profile:
+        return incomplete
+    drafts = {r["key"] for r in rows if (r["key"], content_digest(r)) in journal_drafts(entries)}
     uses = sorted({("dmt_row", r["key"], content_digest(r)) for r in rows} | {("profile", PROFILE_ID, PROFILE_DIGEST)})
     rules = []
     for kind, rule, digest in uses:
@@ -142,9 +175,12 @@ def interp(rows, profile, reg, code, file_bytes, primary):
             else:
                 st, reason, revision = "provisional", "not_in_register", fallback
         if st == "draft":
-            return {"error": "rule_not_admitted{%s}" % rule}
+            drafts.add(rule)
+            continue
         rules.append({"content_digest": digest, "kind": kind, "reason": reason, "revision": revision,
                       "rule": rule, "status": st})
+    if drafts:
+        return {"error": "rule_not_admitted{%s}" % sorted(drafts)[0]}
     label = "signed_off" if all(r["status"] == "signed_off" for r in rules) else "provisional"
     return {"interpretation": label, "interpretation_register": sha(file_bytes) if file_bytes is not None else "none",
             "interpretation_rules": rules, "verification": code}
@@ -161,12 +197,17 @@ def files():
     cases = {}
 
     def add(name, *, journal, register, genuine, published_file, prior_file, pub, prior, rows, primary,
-            profile=True, current=ROSTER_DIGEST, rosters=("roster.json",), reg=None):
+            profile=True, current=ROSTER_DIGEST, rosters=("roster.json",), reg=None, chain=None):
         code = "none" if register is None else verification(out[register], genuine, current, pub, prior, "evaluate")
         file_bytes = None if register is None else out[register]
+        if chain is None:
+            chain = default_chain([r for r in ROWS.values() if r["key"] == primary][0])
+        entries = json.loads(out[journal])["entries"]
         cases[name] = {"journal": journal, "register": register, "published": published_file, "prior": prior_file,
                        "rosters": list(rosters), "rows": rows, "primary": primary, "profile": profile,
-                       "expect": interp([ROWS[r] for r in rows], profile, reg, code, file_bytes, primary)}
+                       "operator_chain_digest": chain,
+                       "expect": interp([ROWS[r] for r in rows], profile, reg, code, file_bytes, primary, chain,
+                                        entries)}
 
     # AC-1: one flatness row signed off, the profile published (always provisional:
     # GDT.RES.STATUS REQ-006 gives profiles no sign-off path yet).
@@ -199,9 +240,23 @@ def files():
         prior_file="position_mmc_mixed/published.json", pub=pub_p, prior=pub_p, rows=["pos", "drf", "size"],
         primary=POS["key"], reg=reg_p)
 
-    # AC-3: the flatness row with an edited chain and signed-off review metadata.
+    # AC-3: the flatness row with an edited chain and signed-off review metadata, evaluated
+    # with that chain.
+    tampered_chain = default_chain(TAMPERED)
     add("tampered_row", register="flatness_signed/register.json", rows=["flat_tampered"], primary=FLAT["key"],
-        reg=reg_f, **flat_inputs)
+        reg=reg_f, chain=tampered_chain, **flat_inputs)
+    # The tampered chain passed alongside the signed-off revision of the same key: both rules
+    # are listed, the tampered one not in the register, so the record stays provisional.
+    add("tampered_with_signed", register="flatness_signed/register.json", rows=["flat", "flat_tampered"],
+        primary=FLAT["key"], reg=reg_f, chain=tampered_chain, **flat_inputs)
+    # The tampered chain evaluated, but only the signed-off revision passed: the primary row
+    # does not contain the evaluated chain.
+    add("chain_not_in_primary", register="flatness_signed/register.json", rows=["flat"], primary=FLAT["key"],
+        reg=reg_f, chain=tampered_chain, **flat_inputs)
+    # An empty pinned prior verifies nothing.
+    out["published_empty.json"] = pretty(published())
+    add("empty_prior", register="flatness_signed/register.json", rows=["flat"], primary=FLAT["key"], reg=reg_f,
+        **dict(flat_inputs, prior_file="published_empty.json", prior=published()))
 
     # AC-4: the register edited to mark the profile signed_off; and one recording a roster
     # the published list does not name.
@@ -231,6 +286,14 @@ def files():
     add("draft_row", journal="draft_row/journal.json", register="draft_row/register.json", genuine=b_d,
         published_file="draft_row/published.json", prior_file="draft_row/published.json", pub=pub_d, prior=pub_d,
         rows=["flat", "pos"], primary=FLAT["key"], reg=reg_d)
+    # The same agent draft with no register, and with a register that does not verify (not
+    # in the published list given): refused all the same.
+    add("draft_row_no_register", journal="draft_row/journal.json", register=None, genuine=None,
+        published_file="draft_row/published.json", prior_file="draft_row/published.json", pub=pub_d, prior=pub_d,
+        rows=["flat", "pos"], primary=FLAT["key"])
+    add("draft_row_unverified", journal="draft_row/journal.json", register="draft_row/register.json", genuine=b_d,
+        published_file="flatness_signed/published.json", prior_file="flatness_signed/published.json", pub=pub_f,
+        prior=pub_f, rows=["flat", "pos"], primary=FLAT["key"], reg=reg_d)
 
     # AC-6: no rows; the primary row absent; no profile.
     add("no_rule_list", register="flatness_signed/register.json", rows=[], primary=FLAT["key"], reg=reg_f,
@@ -298,13 +361,22 @@ def sanity(out):
     assert len(st("position_mmc_mixed")) == 4
     assert st("tampered_row")[0] == (FLAT["key"], "provisional", "not_in_register")
     assert content_digest(TAMPERED) != content_digest(FLAT)
-    for n in ("forged_register", "foreign_roster", "currency_r1_stale", "currency_rewritten_list"):
+    for n in ("forged_register", "foreign_roster", "currency_r1_stale", "currency_rewritten_list", "empty_prior"):
         assert all(r[1:] == ("provisional", "unverified_register") for r in st(n)), n
     assert c["forged_register"]["expect"]["verification"] == "register_mismatch"
     assert c["foreign_roster"]["expect"]["verification"] == "foreign_roster"
     assert c["currency_r1_stale"]["expect"]["verification"] == "stale_register"
     assert c["currency_rewritten_list"]["expect"]["verification"] == "published_unreadable"
-    assert c["draft_row"]["expect"] == {"error": "rule_not_admitted{%s}" % POS["key"]}
+    for n in ("draft_row", "draft_row_no_register", "draft_row_unverified"):
+        assert c[n]["expect"] == {"error": "rule_not_admitted{%s}" % POS["key"]}, n
+    assert verification(out["draft_row/register.json"], out["draft_row/register.json"], ROSTER_DIGEST,
+                        json.loads(out["flatness_signed/published.json"]),
+                        json.loads(out["flatness_signed/published.json"]), "evaluate") == "register_not_published"
+    assert c["chain_not_in_primary"]["expect"] == {"error": "incomplete_result{interpretation_rules}"}
+    assert [r[1:] for r in st("tampered_with_signed")] == [("signed_off", None), ("provisional", "not_in_register"),
+                                                            ("provisional", "no_signoff_path")]
+    assert c["tampered_with_signed"]["expect"]["interpretation"] == "provisional"
+    assert c["empty_prior"]["expect"]["verification"] == "empty_pinned_prior"
     for n in ("no_rule_list", "primary_absent", "missing_profile"):
         assert c[n]["expect"] == {"error": "incomplete_result{interpretation_rules}"}, n
     assert all(r[1:] == ("provisional", "no_register") for r in st("no_register"))
