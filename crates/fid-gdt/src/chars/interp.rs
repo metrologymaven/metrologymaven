@@ -403,7 +403,10 @@ impl InterpretationPin {
 }
 
 pub(crate) fn register_cvalue(d: Option<Digest>) -> CValue {
-    CValue::Str(d.map_or("none", |d| d.as_str()).to_owned())
+    CValue::Str(match d {
+        Some(d) => d.as_str().to_owned(),
+        None => "none".to_owned(),
+    })
 }
 
 // ------------------------------------------------------------------ the block
