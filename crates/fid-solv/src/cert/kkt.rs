@@ -137,7 +137,7 @@ impl Default for KktTolerances {
 }
 
 impl KktTolerances {
-    fn check(&self) -> Result<(), CertError> {
+    pub(crate) fn check(&self) -> Result<(), CertError> {
         let ok_tol = |t: f64| t.is_finite() && t >= 0.0;
         let ok = ok_tol(self.tol_p)
             && ok_tol(self.tol_d)

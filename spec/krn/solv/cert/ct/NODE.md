@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-solv]
 satisfies: [REQ-KRN.SOLV.CERT-003, REQ-KRN.SOLV.CERT-004, REQ-KRN.SOLV.CERT-005, REQ-KRN.SOLV.CERT-006]
 covers: []
 depends_on: [KRN.SOLV.CERT.AS, KRN.SOLV.CERT.RECOMP, KRN.SOLV.CERT.KKT, KRN.SOLV.CONIC.WRAP, CORE.JRN.CANON]
@@ -79,6 +80,7 @@ The public face of the certificate module. `certify` takes a converged conic sol
 
 - The certificate schema must match what `TRUST.VERIFY` rechecks; agree on `fid.cert@1` when TRUST's recheck leaf is written. The verifier needs the problem data (points) too, which the ResultRecord's input digests reference.
 - Depending on `CORE.JRN.CANON` is layer-legal (L0 to L0) but brings its SHA-256 dependency into the kernel closure; it must be on `kernel-allowlist.toml`.
+- **Applied at build (KRN.SOLV.CERT.CT):** the canonical JSON and SHA-256 come from `fid-kci` (kernel layer: RFC 8785 restricted to strings, arrays and objects, the same bytes `CORE.JRN.CANON` writes for such a value, and its portable SHA-256), not from `fid-canon` (model layer, which the kernel crate `fid-solv` may not depend on); so nothing is added to `kernel-allowlist.toml`. Every value is a string (floats as 16 hex digits of the IEEE-754 bits). `certify` also takes the `ConicProblem`, which the extraction needs; row `i` of it must be the constraint labelled `row_labels()[i]`. `CertificateFailed` carries the first candidate's KKT report or, when its recomputation or check failed first, that error. The conversion into a `KRN.SOLV` `SolverError` is not built: the only `SolverError` today is the conic wrapper's, which has no certificate cause.
 - **Enclosure obligation (from KRN.SOLV.CERT.RECOMP, #321):** every `ActiveSetProblem` must implement `value_enclosure`, and a nonlinear one also `residual_enclosure` and `jacobian_enclosure`; otherwise recomputation, and so `certify`, fails with `BoundNotProven`. For a linear problem the proven bound applies to the f64 data as given (the Jacobian and residuals at p = 0 are taken as the exact system).
 
 ## Children

@@ -1,18 +1,21 @@
 [package]
 name = "fid-solv"
-description = "Metrology Maven kernel optimisation drivers (KNP-1): deterministic seeded multi-start, nonlinear least squares and the conic (LP, QP, SOCP) wrapper, active-set extraction, recomputation and the proven KKT check (spec nodes KRN.SOLV.MSTART, KRN.SOLV.NLLS, KRN.SOLV.CONIC.WRAP, KRN.SOLV.CERT.AS, KRN.SOLV.CERT.RECOMP, KRN.SOLV.CERT.KKT)"
+description = "Metrology Maven kernel optimisation drivers (KNP-1): deterministic seeded multi-start, nonlinear least squares and the conic (LP, QP, SOCP) wrapper, active-set extraction, recomputation, the proven KKT check and certificates (spec nodes KRN.SOLV.MSTART, KRN.SOLV.NLLS, KRN.SOLV.CONIC.WRAP, KRN.SOLV.CERT.AS, KRN.SOLV.CERT.RECOMP, KRN.SOLV.CERT.KKT, KRN.SOLV.CERT.CT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
-# Kernel crate (KNP-1): no third-party dependencies; only fid-num (layer num) and the
-# vendored, KNP-1 patched conic solver fid-clarabel (layer kernel, KRN.SOLV.CONIC.PATCH),
-# which the conic module wraps (KRN.SOLV.CONIC.WRAP).
+# Kernel crate (KNP-1): no third-party dependencies; only fid-num and fid-types (layer num),
+# the vendored, KNP-1 patched conic solver fid-clarabel (layer kernel, KRN.SOLV.CONIC.PATCH),
+# which the conic module wraps (KRN.SOLV.CONIC.WRAP), and fid-kci (layer kernel) for the
+# certificate's RFC 8785 canonical JSON and portable SHA-256 (KRN.SOLV.CERT.CT).
 [dependencies]
 fid-clarabel = { path = "../../vendor/fid-clarabel/crate" }
+fid-kci = { path = "../fid-kci" }
 fid-num = { path = "../fid-num" }
+fid-types = { path = "../fid-types" }
 
 # Test-only: SHA-256 for golden digests (layer test-support).
 [dev-dependencies]

@@ -1868,8 +1868,10 @@ name = "fid-solv"
 version = "0.0.1"
 dependencies = [
  "fid-clarabel",
+ "fid-kci",
  "fid-num",
  "fid-testkit",
+ "fid-types",
 ]
 
 [[package]]
