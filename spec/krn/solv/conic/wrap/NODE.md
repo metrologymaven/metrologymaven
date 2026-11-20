@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-solv]
+built_pr: 312
 satisfies: [REQ-KRN.SOLV.CONIC-003, REQ-KRN.SOLV.CONIC-004]
 covers: []
 depends_on: [KRN.SOLV.CONIC.PATCH, KRN.NUM.ERR]
