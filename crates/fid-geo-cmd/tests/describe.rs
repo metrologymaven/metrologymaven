@@ -126,6 +126,9 @@ impl Expected {
 
 // ------------------------------------------------------------------ test project
 
+/// The tree, the edge index, the element states and the Record Journal length.
+type Snapshot = (BTreeMap<Uuid, TreeEntry>, CValue, Vec<(Uuid, ElementState)>, usize);
+
 struct Project {
     tree: BTreeMap<Uuid, TreeEntry>,
     edges: EdgeIndex,
@@ -180,7 +183,7 @@ impl Project {
     }
 
     /// Everything registration may change, for "changed nothing" checks.
-    fn snapshot(&self) -> (BTreeMap<Uuid, TreeEntry>, CValue, Vec<(Uuid, ElementState)>, usize) {
+    fn snapshot(&self) -> Snapshot {
         let states = self.states.iter().map(|(k, v)| (*k, *v)).collect();
         (self.tree.clone(), self.edges.to_value(), states, self.journal.len())
     }
