@@ -1081,9 +1081,8 @@ where
     R: IntoIterator<Item = Result<StoredEntry, ReadError>>,
 {
     let mut headers = Vec::new();
-    let mut scanned = 0usize;
     let mut last: Option<u64> = None;
-    for row in rows {
+    for (scanned, row) in rows.into_iter().enumerate() {
         let row = row?;
         let seq = u64::try_from(row.seq).map_err(|_| ReadError::Storage(format!("negative sequence {}", row.seq)))?;
         if seq < plan.start || last.is_some_and(|l| seq <= l) {
@@ -1095,7 +1094,6 @@ where
         if headers.len() >= MAX_PAGE || scanned >= MAX_SCAN {
             return Ok(ListPage { headers, next: Some(plan.token(seq)) });
         }
-        scanned += 1;
         last = Some(seq);
         let (o, hash) = check_row(&row, seq, &plan.stream).map_err(|f| {
             ReadError::Corrupt(Failure {

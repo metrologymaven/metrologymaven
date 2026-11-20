@@ -17,9 +17,9 @@ use fid_journal::verify::{
     StoredEntry, TrustedHead, VerifyOptions, VerifyReport, MAX_CHECKPOINTS, MAX_ENTRY_REFS, MAX_PAGE, REASONS,
 };
 use fid_journal::{
-    build, command_defs, list_store, parse_digest, verify_store, AiAssistance, AppendRequest, Clock, CommandDraft,
-    DraftBody, EntryDraft, EntryTime, Field, Journal, Manifests, OsSalts, PrincipalDraft, PrincipalKind, RecordedSalts,
-    Salt, GENESIS_PREV,
+    build, command_defs, parse_digest, verify_store, AiAssistance, AppendRequest, Clock, CommandDraft, DraftBody,
+    EntryDraft, EntryTime, Field, Journal, Manifests, OsSalts, PrincipalDraft, PrincipalKind, RecordedSalts, Salt,
+    GENESIS_PREV,
 };
 use fid_store::cas::PutOpts;
 use fid_store::schema::open_write;
@@ -363,7 +363,8 @@ fn ac2_bad_fixtures_report_kind_and_sequence() {
         let f = got.failure.unwrap();
         assert_eq!((f.kind.as_str(), f.seq), (kind, seq), "{name}");
         // The result value carries stream, sequence and kind.
-        let v = obj(&got_value(&f));
+        let value = got_value(&f);
+        let v = obj(&value);
         assert_eq!(st(v, "kind"), kind);
         assert_eq!(st(v, "stream"), STREAM);
     }
