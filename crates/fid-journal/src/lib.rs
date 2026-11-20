@@ -7,11 +7,17 @@
 //! (`CORE.JRN.CHAIN.CKPT`); without it the crate is the storage-free entry model plus the
 //! checkpoint record and its verifier.
 //!
+//! Module `branch` (`CORE.JRN.BR.NAME`) is the branch table: name rules, the branch events and
+//! their projection, and the planners of `journal.create_branch@1`, `journal.list_branches@1`,
+//! `journal.protect_branch@1` and `journal.set_branch_coediting@1`; with feature `store` it
+//! also declares those commands. The bus handlers are in `fid-journal-cmd`.
+//!
 //! Module `stream` (`CORE.JRN.STREAM.ALOG`) routes completed calls to their stream and writes
 //! the P0 Activity Log; with feature `store` it also declares the Activity Log settings.
 
 #[cfg(feature = "store")]
 pub mod append;
+pub mod branch;
 pub mod checkpoint;
 pub mod entry;
 pub mod stream;

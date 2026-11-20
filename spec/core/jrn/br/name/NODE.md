@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-journal, fid-journal-cmd]
 satisfies: [REQ-CORE.JRN.BR-001, REQ-CORE.JRN.BR-008]
 covers: []
 depends_on: [CORE.JRN.CHAIN.APPEND, CORE.JRN.CHAIN.CKPT, CORE.REG.DEF]
@@ -75,6 +76,10 @@ Named branches over the logical state DAG: create a branch at a head, list branc
 ## Open questions
 
 - Which commands count as "release" for REQ-006 is read from the W3 class of the committed command; confirm with `TRUST` that every release command is W3.
+- Built: the branch table, name rules, events, planners and definitions in `fid_journal::branch`; the bus handlers in the new crate `fid-journal-cmd` (engine), because `fid-journal` (model) may not depend on `fid-bus`. Independent oracle: `fixtures/core/jrn/br/name/make_cases.py` writes `cases.json`, which holds the synthetic 5-entry project in place of a `project/` folder.
+- Name rules are stricter than the REQ-002 pattern alone: also no empty, `.` or `..` path segment, no trailing `/`, and the name `agent` is refused, so no human branch can read as the agent namespace. An `agent` principal cannot create any branch through `journal.create_branch@1` (`validation/bad_branch_name`); agent branches come only from `plan_agent_branch`, called by `CORE.BUS.ROUTE`. There is no rename or delete, so names are never reused.
+- `journal.protect_branch@1` is declared on MCP as `request_only` (AC-3 needs an agent's MCP call to become a pending request); the `mcp:` list above names only create and list.
+- Deferred to unbuilt leaves: AC-1 end to end through `fid journal create-branch` and the "nothing is journaled" half of AC-2 need the commit stage (`CORE.BUS.PIPE.STAGE`) and the CLI wiring; AC-4's "in the same entry" needs the commit stage to call `release_protection`; AC-6's exact-mode replay needs `CORE.RPL.EXEC.LOOP`. The table-level halves of each are built and tested.
 
 ## Children
 

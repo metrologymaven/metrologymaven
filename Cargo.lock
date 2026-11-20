@@ -1561,9 +1561,21 @@ dependencies = [
  "fid-canon",
  "fid-journal",
  "fid-kci",
+ "fid-registry",
  "fid-store",
  "fid-types",
  "getrandom 0.2.17",
+]
+
+[[package]]
+name = "fid-journal-cmd"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-journal",
+ "fid-registry",
+ "fid-types",
 ]
 
 [[package]]
