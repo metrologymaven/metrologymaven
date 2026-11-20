@@ -354,6 +354,9 @@ def brand_size(m):
         m["brand"].append(f"sem.brand.b{i:02d}")
 
 
+# A semantic token explicitly typed as a dimension whose value aliases a colour primitive.
+SIZE_REF = {"sem": {"text": {"size-ref": {"$type": "dimension", "$value": "{" + P + "blue.600}"}}}}
+
 # name -> (mutation, hand-labelled exit code, hand-labelled "CODE subject" findings).
 LABELS = {
     "ok": (lambda m: None, 0, []),
@@ -456,12 +459,38 @@ LABELS = {
         lambda m: (
             m["extra"].__setitem__(
                 "tokens/semantic/size.tokens.json",
-                {"sem": {"text": {"size-ref": {"$type": "dimension", "$value": "{" + P + "blue.600}"}}}},
+                SIZE_REF,
             ),
             m["comp"].__setitem__("comp.button.fg.size", "{sem.text.size-ref}"),
         ),
         1,
-        ["TOK-COMP-SKIPS-SEM comp.button.fg.size"],
+        ["TOK-COMP-SKIPS-SEM comp.button.fg.size", "TOK-SCHEMA comp.button.fg.size", "TOK-SCHEMA sem.text.size-ref"],
+    ),
+    # Re-review of PR 330: a component that is untyped, or typed as something other than colour,
+    # aliasing that non-colour semantic token. Its chain ends at a colour primitive.
+    "untyped-comp-to-noncolour": (
+        lambda m: m["extra"].update(
+            {
+                "tokens/semantic/size.tokens.json": SIZE_REF,
+                "tokens/component/badge.tokens.json": {
+                    "comp": {"badge": {"fg": {"size": {"$value": "{sem.text.size-ref}"}}}}
+                },
+            }
+        ),
+        1,
+        ["TOK-SCHEMA comp.badge.fg.size", "TOK-SCHEMA sem.text.size-ref"],
+    ),
+    "mistyped-comp": (
+        lambda m: m["extra"].update(
+            {
+                "tokens/semantic/size.tokens.json": SIZE_REF,
+                "tokens/component/badge.tokens.json": {
+                    "comp": {"badge": {"fg": {"size": {"$type": "dimension", "$value": "{sem.text.size-ref}"}}}}
+                },
+            }
+        ),
+        1,
+        ["TOK-SCHEMA comp.badge.fg.size", "TOK-SCHEMA sem.text.size-ref"],
     ),
     # A claimed role 0.0x from a status colour in OKLab, though on its own ramp.
     "claimed-near-status": (

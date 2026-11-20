@@ -679,7 +679,9 @@
       },
       "exit": 1,
       "findings": [
-        "TOK-COMP-SKIPS-SEM comp.button.fg.size"
+        "TOK-COMP-SKIPS-SEM comp.button.fg.size",
+        "TOK-SCHEMA comp.button.fg.size",
+        "TOK-SCHEMA sem.text.size-ref"
       ]
     },
     "comp-to-prim": {
@@ -824,6 +826,55 @@
       "exit": 1,
       "findings": [
         "TOK-SCHEMA tokens/themes/hc.json"
+      ]
+    },
+    "mistyped-comp": {
+      "counts": {
+        "dark": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "floor": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "hc": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "light": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        }
+      },
+      "exit": 1,
+      "findings": [
+        "TOK-SCHEMA comp.badge.fg.size",
+        "TOK-SCHEMA sem.text.size-ref"
       ]
     },
     "name-syntax": {
@@ -1110,6 +1161,55 @@
       "exit": 1,
       "findings": [
         "TOK-UNRESOLVED dark sem.text.muted"
+      ]
+    },
+    "untyped-comp-to-noncolour": {
+      "counts": {
+        "dark": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "floor": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "hc": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "light": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        }
+      },
+      "exit": 1,
+      "findings": [
+        "TOK-SCHEMA comp.badge.fg.size",
+        "TOK-SCHEMA sem.text.size-ref"
       ]
     },
     "untyped-comp-to-prim": {

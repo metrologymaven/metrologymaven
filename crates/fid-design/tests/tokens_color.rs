@@ -165,6 +165,8 @@ fn ac3_component_aliasing_a_primitive_fails() {
     let t = stdout(&check(&fix("comp-to-prim"), false));
     assert!(t.contains("TOK-COMP-SKIPS-SEM comp.button.border.primary"), "{t}");
     fixture_case("comp-literal");
+    fixture_case("untyped-comp-to-noncolour");
+    fixture_case("mistyped-comp");
     // Review of PR 330: untyped and non-colour tokens do not escape the rule.
     fixture_case("untyped-comp-to-prim");
     fixture_case("comp-to-noncolour-sem");

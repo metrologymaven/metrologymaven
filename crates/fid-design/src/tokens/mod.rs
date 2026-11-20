@@ -56,7 +56,8 @@
 //!   Colour stays a second cue only (principle P-NOCOLOR): the word "claimed" is required by the
 //!   components.
 //! - `TOK-SCHEMA <file or name>`: an unreadable shape: invalid JSON, a missing file, wrong format
-//!   ID, a binding of a non-semantic name, a semantic default that differs from the light
+//!   ID, a token whose declared or inherited `$type` differs from the effective type of its alias
+//!   target, a token not in colour scope whose alias chain ends at a colour primitive, a binding of a non-semantic name, a semantic default that differs from the light
 //!   binding, a primitive that is not a literal, a bad pair tag, duplicates.
 //!
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable root or limits exceeded. Determinism D0:
@@ -581,6 +582,38 @@ impl Input {
 
     fn check(&self, mut f: Vec<Finding>) -> Report {
         let brand: BTreeSet<&str> = self.brand.iter().map(String::as_str).collect();
+
+        // Types agree along aliases, and no non-colour chain ends at a colour primitive.
+        for t in self.tokens.values() {
+            let Some(a) = t.alias() else {
+                continue;
+            };
+            let target = self.tokens.get(a).and_then(|x| effective_type(&self.tokens, x));
+            if let (Some(own), Some(theirs)) = (t.ty.as_deref(), target) {
+                if own != theirs {
+                    f.push(Finding::new(SCHEMA, &t.name, format!("$type {own} but aliases {a} of type {theirs}")));
+                }
+            }
+            if self.colour.contains(&t.name) {
+                continue;
+            }
+            let mut cur = a;
+            for _ in 0..MAX_ALIAS_DEPTH {
+                if self.prim.contains(cur) {
+                    let own = effective_type(&self.tokens, t).unwrap_or("untyped");
+                    f.push(Finding::new(
+                        SCHEMA,
+                        &t.name,
+                        format!("typed {own} but its alias chain ends at the colour primitive {cur}"),
+                    ));
+                    break;
+                }
+                match self.tokens.get(cur).and_then(Token::alias) {
+                    Some(n) => cur = n,
+                    None => break,
+                }
+            }
+        }
 
         // Primitives hold literals; components alias the semantic tier.
         for p in &self.prim {

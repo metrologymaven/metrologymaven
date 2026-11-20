@@ -1,0 +1,11 @@
+{
+  "comp": {
+    "badge": {
+      "fg": {
+        "size": {
+          "$value": "{sem.text.size-ref}"
+        }
+      }
+    }
+  }
+}
