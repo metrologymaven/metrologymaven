@@ -84,19 +84,13 @@ impl McpProjection {
     /// declaration is looser than the ceiling: the registry refuses that, and the projection
     /// fails closed with `projection_mismatch` rather than clamp it (REQ-006).
     pub fn for_declared(declared: DeclaredProjection, ceiling: McpProjection) -> Option<McpProjection> {
-        let at_ceiling = ceiling.declared_form();
-        if declared > at_ceiling {
-            return None;
+        match declared.cmp(&ceiling.declared_form()) {
+            std::cmp::Ordering::Greater => None,
+            std::cmp::Ordering::Equal => Some(ceiling),
+            std::cmp::Ordering::Less if declared == DeclaredProjection::Never => Some(McpProjection::None),
+            // Stricter than a ceiling that is at most `exposed`, and not `never`: `request_only`.
+            std::cmp::Ordering::Less => Some(McpProjection::RequestOnly),
         }
-        Some(if declared == at_ceiling {
-            ceiling
-        } else {
-            match declared {
-                DeclaredProjection::Exposed => ceiling,
-                DeclaredProjection::RequestOnly => McpProjection::RequestOnly,
-                DeclaredProjection::Never => McpProjection::None,
-            }
-        })
     }
 
     /// The registry's three-valued declaration this projection corresponds to. The registry
@@ -182,6 +176,10 @@ pub struct SurfaceProjection {
     pub mcp_name: String,
     pub py_module: String,
     pub py_name: String,
+    /// The MCP projection from the class table and the declaration (REQ-005, REQ-006). It does
+    /// not account for `exposure`: the bus treats a command without `mcp` among its surfaces
+    /// as `never` whatever this says, so a consumer must also check that `mcp` is in the
+    /// command's exposure (as the MCP emitter's `tool_for` does, AUTO.MCP.PROJ).
     pub mcp_projection: McpProjection,
     pub side_effect: SideEffect,
     pub determinism: Determinism,

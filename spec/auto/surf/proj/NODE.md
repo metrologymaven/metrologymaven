@@ -82,6 +82,7 @@ Synthetic manifests written by hand under `fixtures/manifest/` (CC-BY-4.0, proje
 
 ## Open questions
 
+- Switch `crates/fid-registry-build/tests/surface_projection.rs` from walking `SOURCES` to the shared `all_defs()` helper once #348 merges.
 - `exposure` without `mcp` makes the bus treat a command as `never`; the projection does not fold that into `mcp_projection` (the MCP emitter, `AUTO.MCP.PROJ`, applies it).
 
 ## Change log

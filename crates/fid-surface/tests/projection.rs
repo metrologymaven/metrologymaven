@@ -6,6 +6,7 @@
 use fid_canon::{digest_bytes, parse, CValue};
 use fid_surface::projection::{MAX_MANIFEST_BYTES, MAX_MANIFEST_DEPTH};
 use fid_surface::{project, McpProjection, ProjError};
+use fid_types::SideEffect;
 use std::path::{Path, PathBuf};
 
 fn root() -> PathBuf {
@@ -146,7 +147,12 @@ fn for_declared_table() {
         (M::None, D::Exposed, None),
         (M::None, D::RequestOnly, None),
         (M::None, D::Never, Some(M::None)),
+        // A human_only W1 command: the ceiling is tightened to request_only (D-031).
+        (M::for_command(SideEffect::W1, true), D::Exposed, None),
+        (M::for_command(SideEffect::W1, true), D::RequestOnly, Some(M::RequestOnly)),
+        (M::for_command(SideEffect::W1, true), D::Never, Some(M::None)),
     ];
+    assert_eq!(M::for_command(SideEffect::W1, true), M::RequestOnly);
     for (ceiling, declared, want) in table {
         assert_eq!(McpProjection::for_declared(declared, ceiling), want, "{ceiling:?} {declared:?}");
     }
