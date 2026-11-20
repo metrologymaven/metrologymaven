@@ -1,0 +1,8 @@
+{
+  "format": "status-skin@1",
+  "themes": {
+    "light": {
+      "indeterminate": "#1a7590"
+    }
+  }
+}

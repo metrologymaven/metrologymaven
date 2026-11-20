@@ -120,6 +120,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-eval-board" = "tool"
 "fid-shlint" = "tool"
 "fid-render" = "viewer"
+# Status markers, palette guard, provenance badges (VIZ.OVERLAY.STATUS).
+"fid-overlay" = "viewer"
 # View state model (VIZ.VIEW.STATE): ViewState, its canonical form and digest.
 "fid-view" = "viewer"
 "fid-eval-harness" = "tool"
