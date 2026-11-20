@@ -1,6 +1,6 @@
 [package]
 name = "fid-bus"
-description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles, MCP projection with pending requests and authored literal normalisation (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.UNIT)"
+description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles, MCP projection with pending requests, authored literal normalisation, and command resolution, parameter validation and preconditions (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.UNIT, CORE.BUS.PIPE.VALID)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -35,6 +35,11 @@ fid-kci = { path = "../fid-kci" }
 # CORE.BUS.POL.PROJ: request IDs are UUIDv7 values; the shared UUID type. Layer model, below the
 # bus; already in the workspace and the lock.
 fid-uuid = { path = "../fid-uuid" }
+# CORE.BUS.PIPE.VALID compiles JSON Schema `pattern`/`patternProperties` (an ECMA-262 subset,
+# translated) with the `regex` crate: finite automata, matching linear in the input, no
+# backtracking, with size and nesting limits. MIT OR Apache-2.0; already in the lock
+# (fid-io-reg, fid-vocab), same features.
+regex = { version = "1", default-features = false, features = ["std", "unicode"] }
 
 [target.'cfg(unix)'.dependencies]
 # O_NONBLOCK, O_NOCTTY and EXDEV constants only (CORE.BUS.POL.FS). Already in the lock.

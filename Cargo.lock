@@ -1161,6 +1161,7 @@ dependencies = [
  "fid-types",
  "fid-uuid",
  "libc",
+ "regex",
  "unicode-normalization",
  "winx",
 ]

@@ -1,0 +1,656 @@
+{
+ "commands": [
+  {
+   "id": "t.shapes",
+   "major": 1,
+   "title": "Test command",
+   "description": "Synthetic command of the CORE.BUS.PIPE.VALID test registry.",
+   "params_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "count",
+     "name"
+    ],
+    "properties": {
+     "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8,
+      "pattern": "^[a-z][a-z0-9_]*$"
+     },
+     "count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+     },
+     "step": {
+      "type": "number",
+      "x-quantity": "length",
+      "exclusiveMinimum": 0,
+      "multipleOf": 0.25
+     },
+     "mode": {
+      "enum": [
+       "fast",
+       "slow",
+       null
+      ]
+     },
+     "version": {
+      "const": 2
+     },
+     "tags": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "maxLength": 4
+      },
+      "maxItems": 3,
+      "uniqueItems": true
+     },
+     "when": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "day": {
+      "type": "string",
+      "format": "date"
+     },
+     "uid": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "host": {
+      "type": "string",
+      "format": "hostname"
+     },
+     "ip4": {
+      "type": "string",
+      "format": "ipv4"
+     },
+     "ip6": {
+      "type": "string",
+      "format": "ipv6"
+     },
+     "span": {
+      "type": "string",
+      "format": "duration"
+     },
+     "flag": {
+      "type": "boolean"
+     },
+     "note": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "x-untrusted": true
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "none",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [
+    "TestDone"
+   ],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false
+  },
+  {
+   "id": "t.combo",
+   "major": 1,
+   "title": "Test command",
+   "description": "Synthetic command of the CORE.BUS.PIPE.VALID test registry.",
+   "params_schema": {
+    "$defs": {
+     "pos": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "label": {
+      "type": "string",
+      "pattern": "^L[0-9]+$"
+     }
+    },
+    "type": "object",
+    "properties": {
+     "kind": {
+      "enum": [
+       "a",
+       "b"
+      ]
+     },
+     "a_val": {
+      "$ref": "#/$defs/pos"
+     },
+     "pair": {
+      "type": "array",
+      "prefixItems": [
+       {
+        "$ref": "#/$defs/label"
+       },
+       {
+        "type": "integer"
+       }
+      ],
+      "items": false
+     },
+     "list": {
+      "type": "array",
+      "contains": {
+       "const": "x"
+      },
+      "minContains": 1,
+      "maxContains": 2,
+      "unevaluatedItems": {
+       "type": "string"
+      }
+     },
+     "pick": {
+      "oneOf": [
+       {
+        "type": "integer",
+        "multipleOf": 2
+       },
+       {
+        "type": "integer",
+        "multipleOf": 3
+       }
+      ]
+     },
+     "any": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "integer",
+        "minimum": 100
+       }
+      ]
+     },
+     "nope": {
+      "not": {
+       "type": "string"
+      }
+     },
+     "both": {
+      "allOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "maximum": 5
+       }
+      ]
+     }
+    },
+    "patternProperties": {
+     "^x_[a-z]+$": {
+      "type": "integer"
+     }
+    },
+    "propertyNames": {
+     "maxLength": 12
+    },
+    "dependentRequired": {
+     "kind": [
+      "a_val"
+     ]
+    },
+    "dependentSchemas": {
+     "pair": {
+      "required": [
+       "kind"
+      ]
+     }
+    },
+    "if": {
+     "properties": {
+      "kind": {
+       "const": "b"
+      }
+     },
+     "required": [
+      "kind"
+     ]
+    },
+    "then": {
+     "required": [
+      "any"
+     ]
+    },
+    "else": {
+     "properties": {
+      "any": {
+       "type": "string"
+      }
+     }
+    },
+    "unevaluatedProperties": false
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "none",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [
+    "TestDone"
+   ],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false
+  },
+  {
+   "id": "t.measure",
+   "major": 1,
+   "title": "Test command",
+   "description": "Synthetic command of the CORE.BUS.PIPE.VALID test registry.",
+   "params_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "length"
+    ],
+    "properties": {
+     "length": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm",
+      "minimum": 0
+     },
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle"
+     },
+     "offset": {
+      "type": "array",
+      "items": {
+       "type": "number",
+       "x-quantity": "length"
+      },
+      "maxItems": 3
+     },
+     "feature": {
+      "type": "string",
+      "x-ref": "feature"
+     },
+     "datums": {
+      "type": "array",
+      "x-ref": "datum",
+      "x-selector": "list",
+      "maxItems": 3
+     },
+     "frame": {
+      "x-selector": "single"
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "none",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [
+    "TestDone"
+   ],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false
+  },
+  {
+   "id": "t.guarded",
+   "major": 1,
+   "title": "Test command",
+   "description": "Synthetic command of the CORE.BUS.PIPE.VALID test registry.",
+   "params_schema": {
+    "type": "object",
+    "required": [
+     "items",
+     "limit"
+    ],
+    "properties": {
+     "limit": {
+      "type": "integer"
+     },
+     "items": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      }
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "none",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [
+    {
+     "expr": "params.limit > 0",
+     "bound": 10,
+     "message_key": "t.guarded.limit_positive"
+    },
+    {
+     "expr": "all(x in params.items, x >= 0)",
+     "bound": 20,
+     "message_key": "t.guarded.items_nonnegative"
+    }
+   ],
+   "effects": [
+    "TestDone"
+   ],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false
+  },
+  {
+   "id": "t.old",
+   "major": 1,
+   "title": "Test command",
+   "description": "Synthetic command of the CORE.BUS.PIPE.VALID test registry.",
+   "params_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "n": {
+      "type": "integer"
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "none",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [
+    "TestDone"
+   ],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "deprecated",
+    "since": "2026-01-01",
+    "replaced_by": "t.old@2",
+    "remove_after": "2027-06-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false
+  },
+  {
+   "id": "t.old",
+   "major": 2,
+   "title": "Test command",
+   "description": "Synthetic command of the CORE.BUS.PIPE.VALID test registry.",
+   "params_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "n": {
+      "type": "integer"
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "none",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [
+    "TestDone"
+   ],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false
+  },
+  {
+   "id": "t.hidden",
+   "major": 1,
+   "title": "Test command",
+   "description": "Synthetic command of the CORE.BUS.PIPE.VALID test registry.",
+   "params_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "n": {
+      "type": "integer"
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "none",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [
+    "TestDone"
+   ],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "hidden",
+    "since": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false
+  },
+  {
+   "id": "t.gone",
+   "major": 1,
+   "title": "Test command",
+   "description": "Synthetic command of the CORE.BUS.PIPE.VALID test registry.",
+   "params_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "n": {
+      "type": "integer"
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "none",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [
+    "TestDone"
+   ],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "removed",
+    "since": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false
+  },
+  {
+   "id": "t.gone",
+   "major": 2,
+   "title": "Test command",
+   "description": "Synthetic command of the CORE.BUS.PIPE.VALID test registry.",
+   "params_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "n": {
+      "type": "integer"
+     }
+    }
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "none",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [
+    "TestDone"
+   ],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false
+  },
+  {
+   "id": "t.free",
+   "major": 1,
+   "title": "Test command",
+   "description": "Synthetic command of the CORE.BUS.PIPE.VALID test registry.",
+   "params_schema": {
+    "type": "object"
+   },
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "none",
+   "fs_effect": "none",
+   "undo": "head_move",
+   "preconditions": [],
+   "effects": [
+    "TestDone"
+   ],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "human_only": false,
+   "network": "none",
+   "web": "available",
+   "cli_bare": false
+  }
+ ]
+}
