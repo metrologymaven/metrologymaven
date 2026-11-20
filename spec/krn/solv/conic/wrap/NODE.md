@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-solv]
 satisfies: [REQ-KRN.SOLV.CONIC-003, REQ-KRN.SOLV.CONIC-004]
 covers: []
 depends_on: [KRN.SOLV.CONIC.PATCH, KRN.NUM.ERR]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # KRN.SOLV.CONIC.WRAP: Kernel conic API, fixed limits and error mapping
@@ -79,6 +80,11 @@ The only door from the kernel into the vendored solver. It defines one canonical
 ## Open questions
 
 - Limit values (200 iterations, 1e-10 tolerances) are placeholders until `KRN.SOLV.CONIC.XTEST` and the minimum-zone problems in `KRN.MZ` are run [unverified].
+- **As built (crates/fid-solv, module `conic`):** the error type is `ConicError { InvalidProblem { field }, WrongProblemClass { entry, has_p, has_soc }, TooLarge { kkt_dim, kkt_nnz }, FactorisationSetup, SetupRejected { reason }, Solver(SolverError) }`; `SolverError` is the struct of REQ-005 with `cause: ConicCause`. Its residuals and gap are `Option<f64>` (`None` when the solver's last value is not finite), so no NaN leaves the API. `ConicCause` adds to the five listed causes `AlmostSolved`, `AlmostPrimalInfeasible`, `AlmostDualInfeasible` (the solver's reduced-accuracy statuses, never accepted as solved), `NotRun` and `NonFiniteOutput` (status solved but a non-finite value). Field names are `"q"`, `"A"`, `"b"`, `"cones"`, `"P"`, checked in that order; a cone of dimension 0 is also rejected.
+- **As built, size budget:** before setup the wrapper checks the KKT bounds that `fid-clarabel` refuses as `BadInputData` (patch 0006, `MAX_ORDERING_DIM`/`MAX_ORDERING_NNZ`) and returns `TooLarge`; if the logical LDL factorisation could not be set up (the fill budget `MAX_ORDERING_FILL`), it returns `FactorisationSetup` without running the solver. Any other setup refusal is `SetupRejected`.
+- **As built, limits:** `ConicLimits::FIXED` (version 1) holds the placeholder values above (200 iterations, tolerances 1e-10, static regularisation 1e-8, 10 refinement steps). The wrapper writes every other solver setting out explicitly (presolve off, since the builder rejects non-finite `b`), and `limits_descriptor()` lists all 39 constants (floats as IEEE-754 hex, integers and flags as JSON values, the three ordering budgets included) as RFC 8785 canonical JSON. AC-4's test-only limits are a crate-internal unit test; no public entry point takes limits.
+- **As built, output pins:** the crate's own output bits on `small-v1` are pinned (SHA-256) in `tests/conic.rs`, one table for all targets, checked by CI on x86-64, ARM64 and wasm32; this is a regression pin, not part of the oracle. The cross-target test set itself stays with `KRN.SOLV.CONIC.XTEST`.
+- **Follow-up:** there is no `KRN.SOLV`-wide `SolverError` type yet (each module has its own), so the conversion the Design mentions is not written; add it when `KRN.SOLV.CERT` defines the shared type. The performance budget (1000 points, 3 unknowns, < 20 ms) is not measured [unverified].
 
 ## Children
 
