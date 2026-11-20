@@ -165,6 +165,9 @@ fn ac3_component_aliasing_a_primitive_fails() {
     let t = stdout(&check(&fix("comp-to-prim"), false));
     assert!(t.contains("TOK-COMP-SKIPS-SEM comp.button.border.primary"), "{t}");
     fixture_case("comp-literal");
+    // Review of PR 330: untyped and non-colour tokens do not escape the rule.
+    fixture_case("untyped-comp-to-prim");
+    fixture_case("comp-to-noncolour-sem");
 }
 
 #[test]
@@ -192,9 +195,16 @@ fn other_structural_errors() {
 
 #[test]
 fn claimed_values_never_look_measured() {
-    for name in
-        ["claimed-same-ramp", "claimed-via-measured", "claimed-via-brand", "comp-claimed-measured", "claimed-missing"]
-    {
+    for name in [
+        "claimed-same-ramp",
+        "claimed-via-measured",
+        "claimed-via-brand",
+        "comp-claimed-measured",
+        "claimed-missing",
+        "claimed-near-status",
+        "claimed-brand-ramp",
+        "claimed-prefix",
+    ] {
         fixture_case(name);
     }
 }
@@ -256,4 +266,24 @@ fn bad_usage_and_unreadable_root_exit_2() {
     assert_eq!(run(&["tokens-check", "--root"]).status.code(), Some(2));
     let missing = repo().join("fixtures/ux/tokens/color/no-such-dir");
     assert_eq!(check(&missing, false).status.code(), Some(2));
+}
+
+/// The OKLab distance floor between claimed roles and measured, brand-tier and status roles:
+/// this crate's OKLab equals the oracle's independent one, and every distance clears the floor.
+#[test]
+fn claimed_roles_keep_their_oklab_distance() {
+    use fid_design::tokens::{oklab::delta_e_ok, wcag::parse_hex, MIN_DELTA_E_OK};
+    let report = fid_design::tokens::check(&design()).unwrap();
+    let e = expected();
+    let want = arr(get(&e, &["shipped", "claimed_distances"]));
+    assert!(want.len() >= 4 * 3 * 11, "{}", want.len());
+    for w in want {
+        let theme = s(get(w, &["theme"]));
+        let values = &report.themes[theme].values;
+        let (c, o) = (s(get(w, &["claimed"])), s(get(w, &["other"])));
+        let d = delta_e_ok(parse_hex(&values[c].value).unwrap(), parse_hex(&values[o].value).unwrap());
+        let oracle = num(get(w, &["de_ok"]));
+        assert!((d - oracle).abs() < 1e-8, "{theme} {c}/{o}: {d} vs oracle {oracle}");
+        assert!(d >= MIN_DELTA_E_OK, "{theme} {c}/{o}: {d}");
+    }
 }

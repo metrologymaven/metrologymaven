@@ -180,8 +180,9 @@ P = "prim.color."
 NOCOLOR = " Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol."
 STATUS_NOTE = " Provisional value until spec node UX.TOKENS.STATUS ships the locked status palette."
 CLAIMED = (
-    " A claimed value never looks measured: this role uses a hue ramp that no measured-value role"
-    " uses, and is always shown with the word 'claimed' (UNC.UEC.CLASS)."
+    " A claimed value never looks measured: in every theme this role uses a hue ramp that no"
+    " measured-value or brand-tier role uses, stays at least 0.10 in OKLab from every measured,"
+    " brand-tier and status role, and is always shown with the word 'claimed' (UNC.UEC.CLASS)."
 )
 
 SEM = {
@@ -192,13 +193,13 @@ SEM = {
     "sem.text.inverse": ("Text on the inverse surface.", dict(light="neutral.50", dark="neutral.950", hc="neutral.0", floor="neutral.0")),
     "sem.text.link": ("Link text; links are also underlined.", dict(light="blue.700", dark="blue.300", hc="blue.800", floor="blue.800")),
     "sem.text.value.measured": ("A measured value.", dict(light="neutral.900", dark="neutral.50", hc="neutral.1000", floor="neutral.950")),
-    "sem.text.value.claimed": ("A claimed (declared or specification-derived) value." + CLAIMED, dict(light="magenta.700", dark="magenta.300", hc="magenta.800", floor="magenta.800")),
+    "sem.text.value.claimed": ("A claimed (declared or specification-derived) value." + CLAIMED, dict(light="magenta.700", dark="magenta.200", hc="magenta.800", floor="magenta.700")),
     # surfaces
     "sem.surface.base": ("Application background.", dict(light="neutral.0", dark="neutral.950", hc="neutral.0", floor="neutral.0")),
     "sem.surface.raised": ("Panels and cards above the base.", dict(light="neutral.50", dark="neutral.900", hc="neutral.0", floor="neutral.50")),
     "sem.surface.sunken": ("Wells, table headers.", dict(light="neutral.100", dark="neutral.1000", hc="neutral.50", floor="neutral.100")),
     "sem.surface.inverse": ("Inverse surface (tooltips, toasts).", dict(light="neutral.900", dark="neutral.100", hc="neutral.1000", floor="neutral.900")),
-    "sem.surface.value.claimed": ("Background tint behind a claimed value." + CLAIMED, dict(light="magenta.50", dark="magenta.950", hc="neutral.0", floor="magenta.50")),
+    "sem.surface.value.claimed": ("Background tint behind a claimed value." + CLAIMED, dict(light="magenta.200", dark="magenta.900", hc="magenta.200", floor="magenta.200")),
     # borders
     "sem.border.subtle": ("Decorative dividers (no contrast obligation).", dict(light="neutral.200", dark="neutral.800", hc="neutral.700", floor="neutral.300")),
     "sem.border.strong": ("Boundaries of inputs and controls.", dict(light="neutral.600", dark="neutral.400", hc="neutral.1000", floor="neutral.600")),
@@ -209,12 +210,12 @@ SEM = {
     "sem.status.conforms": ("Display state CONFORMS." + NOCOLOR + STATUS_NOTE, dict(light="green.700", dark="green.300", hc="green.900", floor="green.800")),
     "sem.status.nonconforms": ("Display state NONCONFORMS." + NOCOLOR + STATUS_NOTE, dict(light="red.700", dark="red.300", hc="red.800", floor="red.800")),
     "sem.status.indeterminate": ("Display state INDETERMINATE." + NOCOLOR + STATUS_NOTE, dict(light="amber.800", dark="amber.300", hc="amber.900", floor="amber.900")),
-    "sem.status.not-decidable": ("Display state NOT_DECIDABLE." + NOCOLOR + STATUS_NOTE, dict(light="violet.700", dark="violet.300", hc="violet.800", floor="violet.800")),
+    "sem.status.not-decidable": ("Display state NOT_DECIDABLE." + NOCOLOR + STATUS_NOTE, dict(light="violet.700", dark="violet.300", hc="violet.900", floor="violet.800")),
     "sem.status.not-evaluated": ("Display state not evaluated." + NOCOLOR + STATUS_NOTE, dict(light="neutral.700", dark="neutral.300", hc="neutral.800", floor="neutral.700")),
     "sem.status.stale": ("Display state stale." + NOCOLOR + STATUS_NOTE, dict(light="orange.700", dark="orange.300", hc="orange.900", floor="orange.800")),
     # brand (the brand tier; brand-neutral defaults until OUTR.BRAND.GUIDE.VISUAL)
     "sem.brand.accent": ("Brand accent: primary buttons and selection. Brand tier.", dict(light="blue.600", dark="blue.300", hc="blue.800", floor="blue.700")),
-    "sem.brand.accent-hover": ("Brand accent, hovered. Brand tier.", dict(light="blue.700", dark="blue.200", hc="blue.900", floor="blue.800")),
+    "sem.brand.accent-hover": ("Brand accent, hovered. Brand tier.", dict(light="blue.700", dark="blue.400", hc="blue.900", floor="blue.800")),
     "sem.brand.on-accent": ("Text and icons on the brand accent. Brand tier.", dict(light="neutral.0", dark="neutral.950", hc="neutral.0", floor="neutral.0")),
     "sem.brand.subtle": ("Brand tint for selected rows. Brand tier.", dict(light="blue.50", dark="blue.950", hc="blue.50", floor="blue.50")),
     # agent provenance
@@ -283,6 +284,11 @@ def pairs():
     for bg in ["sem.surface.base", "sem.surface.raised", "sem.surface.value.claimed"]:
         out.append(("sem.border.value.claimed", bg, "non-text"))
     out.append(("sem.focus.ring", "sem.brand.subtle", "non-text"))
+    out.append(("sem.text.value.claimed", "sem.brand.subtle", "text"))
+    for s in STATUS:
+        out.append((s, "sem.surface.sunken", "text"))
+    for bg in ["sem.surface.value.claimed", "sem.agent.surface"]:
+        out.append(("sem.focus.ring", bg, "non-text"))
     return sorted(set(out))
 
 

@@ -26,7 +26,7 @@
       },
       "value": {
         "claimed": {
-          "$description": "Dashed outline around a claimed value. A claimed value never looks measured: this role uses a hue ramp that no measured-value role uses, and is always shown with the word 'claimed' (UNC.UEC.CLASS). The value here is the light binding; every theme binds it in tokens/themes/.",
+          "$description": "Dashed outline around a claimed value. A claimed value never looks measured: in every theme this role uses a hue ramp that no measured-value or brand-tier role uses, stays at least 0.10 in OKLab from every measured, brand-tier and status role, and is always shown with the word 'claimed' (UNC.UEC.CLASS). The value here is the light binding; every theme binds it in tokens/themes/.",
           "$value": "{prim.color.magenta.600}"
         }
       }
@@ -100,8 +100,8 @@
       },
       "value": {
         "claimed": {
-          "$description": "Background tint behind a claimed value. A claimed value never looks measured: this role uses a hue ramp that no measured-value role uses, and is always shown with the word 'claimed' (UNC.UEC.CLASS). The value here is the light binding; every theme binds it in tokens/themes/.",
-          "$value": "{prim.color.magenta.50}"
+          "$description": "Background tint behind a claimed value. A claimed value never looks measured: in every theme this role uses a hue ramp that no measured-value or brand-tier role uses, stays at least 0.10 in OKLab from every measured, brand-tier and status role, and is always shown with the word 'claimed' (UNC.UEC.CLASS). The value here is the light binding; every theme binds it in tokens/themes/.",
+          "$value": "{prim.color.magenta.200}"
         }
       }
     },
@@ -128,7 +128,7 @@
       },
       "value": {
         "claimed": {
-          "$description": "A claimed (declared or specification-derived) value. A claimed value never looks measured: this role uses a hue ramp that no measured-value role uses, and is always shown with the word 'claimed' (UNC.UEC.CLASS). The value here is the light binding; every theme binds it in tokens/themes/.",
+          "$description": "A claimed (declared or specification-derived) value. A claimed value never looks measured: in every theme this role uses a hue ramp that no measured-value or brand-tier role uses, stays at least 0.10 in OKLab from every measured, brand-tier and status role, and is always shown with the word 'claimed' (UNC.UEC.CLASS). The value here is the light binding; every theme binds it in tokens/themes/.",
           "$value": "{prim.color.magenta.700}"
         },
         "measured": {

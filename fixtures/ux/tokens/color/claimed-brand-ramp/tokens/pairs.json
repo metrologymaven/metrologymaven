@@ -1,0 +1,20 @@
+{
+  "format": "fid-design-pairs@1",
+  "pairs": [
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.text.primary",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.text.muted",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.brand.accent",
+      "tag": "non-text"
+    }
+  ]
+}

@@ -21,7 +21,7 @@
     "sem.surface.inverse": "{prim.color.neutral.900}",
     "sem.surface.raised": "{prim.color.neutral.50}",
     "sem.surface.sunken": "{prim.color.neutral.100}",
-    "sem.surface.value.claimed": "{prim.color.magenta.50}",
+    "sem.surface.value.claimed": "{prim.color.magenta.200}",
     "sem.text.inverse": "{prim.color.neutral.50}",
     "sem.text.link": "{prim.color.blue.700}",
     "sem.text.muted": "{prim.color.neutral.700}",

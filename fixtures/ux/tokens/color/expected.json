@@ -192,6 +192,54 @@
         "TOK-BRAND-SIZE tokens/brand-tier.json"
       ]
     },
+    "claimed-brand-ramp": {
+      "counts": {
+        "dark": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "floor": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "hc": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "light": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        }
+      },
+      "exit": 1,
+      "findings": [
+        "TOK-CLAIMED-AS-MEASURED floor sem.text.value.claimed"
+      ]
+    },
     "claimed-missing": {
       "counts": {
         "dark": {
@@ -238,6 +286,106 @@
       "exit": 1,
       "findings": [
         "TOK-CLAIMED-AS-MEASURED sem.text.value.claimed"
+      ]
+    },
+    "claimed-near-status": {
+      "counts": {
+        "dark": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "floor": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "hc": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "light": {
+          "component": [
+            4,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        }
+      },
+      "exit": 1,
+      "findings": [
+        "TOK-CLAIMED-AS-MEASURED light sem.text.value.claimed"
+      ]
+    },
+    "claimed-prefix": {
+      "counts": {
+        "dark": {
+          "component": [
+            5,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "floor": {
+          "component": [
+            5,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "hc": {
+          "component": [
+            5,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "light": {
+          "component": [
+            5,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        }
+      },
+      "exit": 1,
+      "findings": [
+        "TOK-CLAIMED-AS-MEASURED comp.badge.claimed-bg",
+        "TOK-CLAIMED-AS-MEASURED dark comp.badge.claimed-bg",
+        "TOK-CLAIMED-AS-MEASURED floor comp.badge.claimed-bg",
+        "TOK-CLAIMED-AS-MEASURED hc comp.badge.claimed-bg",
+        "TOK-CLAIMED-AS-MEASURED light comp.badge.claimed-bg"
       ]
     },
     "claimed-same-ramp": {
@@ -484,6 +632,54 @@
       "exit": 1,
       "findings": [
         "TOK-COMP-SKIPS-SEM comp.button.fg.primary"
+      ]
+    },
+    "comp-to-noncolour-sem": {
+      "counts": {
+        "dark": {
+          "component": [
+            4,
+            1
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "floor": {
+          "component": [
+            4,
+            1
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "hc": {
+          "component": [
+            4,
+            1
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "light": {
+          "component": [
+            4,
+            1
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        }
+      },
+      "exit": 1,
+      "findings": [
+        "TOK-COMP-SKIPS-SEM comp.button.fg.size"
       ]
     },
     "comp-to-prim": {
@@ -915,9 +1111,851 @@
       "findings": [
         "TOK-UNRESOLVED dark sem.text.muted"
       ]
+    },
+    "untyped-comp-to-prim": {
+      "counts": {
+        "dark": {
+          "component": [
+            5,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "floor": {
+          "component": [
+            5,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "hc": {
+          "component": [
+            5,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        },
+        "light": {
+          "component": [
+            5,
+            0
+          ],
+          "semantic": [
+            9,
+            0
+          ]
+        }
+      },
+      "exit": 1,
+      "findings": [
+        "TOK-COMP-SKIPS-SEM comp.badge.border.primary"
+      ]
     }
   },
   "shipped": {
+    "claimed_distances": [
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.294216218,
+        "other": "sem.text.value.measured",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.213245979,
+        "other": "sem.brand.accent",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.225863395,
+        "other": "sem.brand.accent-hover",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.485720876,
+        "other": "sem.brand.on-accent",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.461320696,
+        "other": "sem.brand.subtle",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.31443414,
+        "other": "sem.status.conforms",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.256325111,
+        "other": "sem.status.indeterminate",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.166359772,
+        "other": "sem.status.nonconforms",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.145196704,
+        "other": "sem.status.not-decidable",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.187740085,
+        "other": "sem.status.not-evaluated",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.19590599,
+        "other": "sem.status.stale",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.591265421,
+        "other": "sem.text.value.measured",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.385525673,
+        "other": "sem.brand.accent",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.456837594,
+        "other": "sem.brand.accent-hover",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.13568973,
+        "other": "sem.brand.on-accent",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.115158077,
+        "other": "sem.brand.subtle",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.475131669,
+        "other": "sem.status.conforms",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.520133853,
+        "other": "sem.status.indeterminate",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.449527205,
+        "other": "sem.status.nonconforms",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.441903793,
+        "other": "sem.status.not-decidable",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.433027148,
+        "other": "sem.status.not-evaluated",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.441714112,
+        "other": "sem.status.stale",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.231408651,
+        "other": "sem.text.value.measured",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.226104451,
+        "other": "sem.brand.accent",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.209823728,
+        "other": "sem.brand.accent-hover",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.560390031,
+        "other": "sem.brand.on-accent",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.535637112,
+        "other": "sem.brand.subtle",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.301566577,
+        "other": "sem.status.conforms",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.2129536,
+        "other": "sem.status.indeterminate",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.144271089,
+        "other": "sem.status.nonconforms",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.120666223,
+        "other": "sem.status.not-decidable",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.166937908,
+        "other": "sem.status.not-evaluated",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.176901718,
+        "other": "sem.status.stale",
+        "theme": "light"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.306513433,
+        "other": "sem.text.value.measured",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.200003029,
+        "other": "sem.brand.accent",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.20156866,
+        "other": "sem.brand.accent-hover",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.517346778,
+        "other": "sem.brand.on-accent",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.517083565,
+        "other": "sem.brand.subtle",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.293912272,
+        "other": "sem.status.conforms",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.237174854,
+        "other": "sem.status.indeterminate",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.156465499,
+        "other": "sem.status.nonconforms",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.146453356,
+        "other": "sem.status.not-decidable",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.190301145,
+        "other": "sem.status.not-evaluated",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.201129308,
+        "other": "sem.status.stale",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.675409429,
+        "other": "sem.text.value.measured",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.518842776,
+        "other": "sem.brand.accent",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.441739647,
+        "other": "sem.brand.accent-hover",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.109551654,
+        "other": "sem.brand.on-accent",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.112280726,
+        "other": "sem.brand.subtle",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.540706075,
+        "other": "sem.status.conforms",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.527606539,
+        "other": "sem.status.indeterminate",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.512385746,
+        "other": "sem.status.nonconforms",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.511101033,
+        "other": "sem.status.not-decidable",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.510782873,
+        "other": "sem.status.not-evaluated",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.521015388,
+        "other": "sem.status.stale",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.116623161,
+        "other": "sem.text.value.measured",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.137755134,
+        "other": "sem.brand.accent",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.230165781,
+        "other": "sem.brand.accent-hover",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.664503477,
+        "other": "sem.brand.on-accent",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.665359362,
+        "other": "sem.brand.subtle",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.206633133,
+        "other": "sem.status.conforms",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.168467857,
+        "other": "sem.status.indeterminate",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.113166093,
+        "other": "sem.status.nonconforms",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.107612494,
+        "other": "sem.status.not-decidable",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.113331159,
+        "other": "sem.status.not-evaluated",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.14885664,
+        "other": "sem.status.stale",
+        "theme": "dark"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.404488288,
+        "other": "sem.text.value.measured",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.156098245,
+        "other": "sem.brand.accent",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.156707558,
+        "other": "sem.brand.accent-hover",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.627516634,
+        "other": "sem.brand.on-accent",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.602323607,
+        "other": "sem.brand.subtle",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.211432162,
+        "other": "sem.status.conforms",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.169448836,
+        "other": "sem.status.indeterminate",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.107135445,
+        "other": "sem.status.nonconforms",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.116927105,
+        "other": "sem.status.not-decidable",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.123691158,
+        "other": "sem.status.not-evaluated",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.149674764,
+        "other": "sem.status.stale",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.893889881,
+        "other": "sem.text.value.measured",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.521375242,
+        "other": "sem.brand.accent",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.594687497,
+        "other": "sem.brand.accent-hover",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.13568973,
+        "other": "sem.brand.on-accent",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.115158077,
+        "other": "sem.brand.subtle",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.60343389,
+        "other": "sem.status.conforms",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.596576957,
+        "other": "sem.status.indeterminate",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.516548734,
+        "other": "sem.status.nonconforms",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.589442508,
+        "other": "sem.status.not-decidable",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.511764499,
+        "other": "sem.status.not-evaluated",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.592283963,
+        "other": "sem.status.stale",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.404488288,
+        "other": "sem.text.value.measured",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.156098245,
+        "other": "sem.brand.accent",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.156707558,
+        "other": "sem.brand.accent-hover",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.627516634,
+        "other": "sem.brand.on-accent",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.602323607,
+        "other": "sem.brand.subtle",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.211432162,
+        "other": "sem.status.conforms",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.169448836,
+        "other": "sem.status.indeterminate",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.107135445,
+        "other": "sem.status.nonconforms",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.116927105,
+        "other": "sem.status.not-decidable",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.123691158,
+        "other": "sem.status.not-evaluated",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.149674764,
+        "other": "sem.status.stale",
+        "theme": "hc"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.287598386,
+        "other": "sem.text.value.measured",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.209823728,
+        "other": "sem.brand.accent",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.202908376,
+        "other": "sem.brand.accent-hover",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.560390031,
+        "other": "sem.brand.on-accent",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.535637112,
+        "other": "sem.brand.subtle",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.287258834,
+        "other": "sem.status.conforms",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.24835765,
+        "other": "sem.status.indeterminate",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.150529302,
+        "other": "sem.status.nonconforms",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.138003001,
+        "other": "sem.status.not-decidable",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.166937908,
+        "other": "sem.status.not-evaluated",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.border.value.claimed",
+        "de_ok": 0.187533897,
+        "other": "sem.status.stale",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.664503477,
+        "other": "sem.text.value.measured",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.456837594,
+        "other": "sem.brand.accent",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.521375242,
+        "other": "sem.brand.accent-hover",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.13568973,
+        "other": "sem.brand.on-accent",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.115158077,
+        "other": "sem.brand.subtle",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.538215248,
+        "other": "sem.status.conforms",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.596576957,
+        "other": "sem.status.indeterminate",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.516548734,
+        "other": "sem.status.nonconforms",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.512010201,
+        "other": "sem.status.not-decidable",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.433027148,
+        "other": "sem.status.not-evaluated",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.surface.value.claimed",
+        "de_ok": 0.51699839,
+        "other": "sem.status.stale",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.287598386,
+        "other": "sem.text.value.measured",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.209823728,
+        "other": "sem.brand.accent",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.202908376,
+        "other": "sem.brand.accent-hover",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.560390031,
+        "other": "sem.brand.on-accent",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.535637112,
+        "other": "sem.brand.subtle",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.287258834,
+        "other": "sem.status.conforms",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.24835765,
+        "other": "sem.status.indeterminate",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.150529302,
+        "other": "sem.status.nonconforms",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.138003001,
+        "other": "sem.status.not-decidable",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.166937908,
+        "other": "sem.status.not-evaluated",
+        "theme": "floor"
+      },
+      {
+        "claimed": "sem.text.value.claimed",
+        "de_ok": 0.187533897,
+        "other": "sem.status.stale",
+        "theme": "floor"
+      }
+    ],
     "counts": {
       "dark": {
         "component": [
@@ -962,7 +2000,7 @@
     },
     "exit": 0,
     "findings": [],
-    "min_margin": 0.568343,
+    "min_margin": 0.316245,
     "pairs": [
       {
         "bg": "sem.surface.base",
@@ -1039,7 +2077,7 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.border.value.claimed",
-        "ratio": 5.045877749,
+        "ratio": 3.796156823,
         "required": 3.0,
         "tag": "non-text",
         "theme": "light"
@@ -1085,6 +2123,14 @@
         "theme": "light"
       },
       {
+        "bg": "sem.agent.surface",
+        "fg": "sem.focus.ring",
+        "ratio": 4.764704981,
+        "required": 3.0,
+        "tag": "non-text",
+        "theme": "light"
+      },
+      {
         "bg": "sem.brand.subtle",
         "fg": "sem.focus.ring",
         "ratio": 4.712052116,
@@ -1117,6 +2163,14 @@
         "theme": "light"
       },
       {
+        "bg": "sem.surface.value.claimed",
+        "fg": "sem.focus.ring",
+        "ratio": 3.534386243,
+        "required": 3.0,
+        "tag": "non-text",
+        "theme": "light"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.conforms",
         "ratio": 6.525597888,
@@ -1128,6 +2182,14 @@
         "bg": "sem.surface.raised",
         "fg": "sem.status.conforms",
         "ratio": 6.076485057,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.conforms",
+        "ratio": 5.563650908,
         "required": 4.5,
         "tag": "text",
         "theme": "light"
@@ -1149,6 +2211,14 @@
         "theme": "light"
       },
       {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.indeterminate",
+        "ratio": 8.476133197,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "light"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.nonconforms",
         "ratio": 7.705218833,
@@ -1160,6 +2230,14 @@
         "bg": "sem.surface.raised",
         "fg": "sem.status.nonconforms",
         "ratio": 7.174920658,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.nonconforms",
+        "ratio": 6.569382376,
         "required": 4.5,
         "tag": "text",
         "theme": "light"
@@ -1181,6 +2259,14 @@
         "theme": "light"
       },
       {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.not-decidable",
+        "ratio": 6.417752071,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "light"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.not-evaluated",
         "ratio": 6.972012499,
@@ -1197,6 +2283,14 @@
         "theme": "light"
       },
       {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.not-evaluated",
+        "ratio": 5.944258953,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "light"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.stale",
         "ratio": 7.255450706,
@@ -1208,6 +2302,14 @@
         "bg": "sem.surface.raised",
         "fg": "sem.status.stale",
         "ratio": 6.756107034,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.stale",
+        "ratio": 6.185915161,
         "required": 4.5,
         "tag": "text",
         "theme": "light"
@@ -1319,7 +2421,7 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.text.primary",
-        "ratio": 12.443885631,
+        "ratio": 9.361887802,
         "required": 4.5,
         "tag": "text",
         "theme": "light"
@@ -1359,7 +2461,15 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.text.secondary",
-        "ratio": 9.091428585,
+        "ratio": 6.839739362,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "light"
+      },
+      {
+        "bg": "sem.brand.subtle",
+        "fg": "sem.text.value.claimed",
+        "ratio": 7.127541781,
         "required": 4.5,
         "tag": "text",
         "theme": "light"
@@ -1391,7 +2501,7 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.text.value.claimed",
-        "ratio": 7.106181141,
+        "ratio": 5.346181451,
         "required": 4.5,
         "tag": "text",
         "theme": "light"
@@ -1495,7 +2605,7 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.border.value.claimed",
-        "ratio": 6.33483555,
+        "ratio": 5.168475362,
         "required": 3.0,
         "tag": "non-text",
         "theme": "dark"
@@ -1535,9 +2645,17 @@
       {
         "bg": "sem.brand.accent-hover",
         "fg": "sem.brand.on-accent",
-        "ratio": 12.115309101,
+        "ratio": 6.720998447,
         "required": 4.5,
         "tag": "text",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.agent.surface",
+        "fg": "sem.focus.ring",
+        "ratio": 9.28993198,
+        "required": 3.0,
+        "tag": "non-text",
         "theme": "dark"
       },
       {
@@ -1573,6 +2691,14 @@
         "theme": "dark"
       },
       {
+        "bg": "sem.surface.value.claimed",
+        "fg": "sem.focus.ring",
+        "ratio": 7.729224095,
+        "required": 3.0,
+        "tag": "non-text",
+        "theme": "dark"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.conforms",
         "ratio": 9.736676062,
@@ -1584,6 +2710,14 @@
         "bg": "sem.surface.raised",
         "fg": "sem.status.conforms",
         "ratio": 7.748966718,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.conforms",
+        "ratio": 12.121256224,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -1605,6 +2739,14 @@
         "theme": "dark"
       },
       {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.indeterminate",
+        "ratio": 11.524907717,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "dark"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.nonconforms",
         "ratio": 8.985849747,
@@ -1616,6 +2758,14 @@
         "bg": "sem.surface.raised",
         "fg": "sem.status.nonconforms",
         "ratio": 7.151419045,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.nonconforms",
+        "ratio": 11.186547286,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -1637,6 +2787,14 @@
         "theme": "dark"
       },
       {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.not-decidable",
+        "ratio": 11.320462613,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "dark"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.not-evaluated",
         "ratio": 9.318194068,
@@ -1653,6 +2811,14 @@
         "theme": "dark"
       },
       {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.not-evaluated",
+        "ratio": 11.600285059,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "dark"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.stale",
         "ratio": 9.043857092,
@@ -1664,6 +2830,14 @@
         "bg": "sem.surface.raised",
         "fg": "sem.status.stale",
         "ratio": 7.197584387,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.stale",
+        "ratio": 11.258761035,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -1775,7 +2949,7 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.text.primary",
-        "ratio": 15.882783115,
+        "ratio": 12.95846949,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -1815,7 +2989,15 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.text.secondary",
-        "ratio": 12.279132342,
+        "ratio": 10.018317361,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "dark"
+      },
+      {
+        "bg": "sem.brand.subtle",
+        "fg": "sem.text.value.claimed",
+        "ratio": 11.788396189,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -1823,7 +3005,7 @@
       {
         "bg": "sem.surface.base",
         "fg": "sem.text.value.claimed",
-        "ratio": 8.828755825,
+        "ratio": 11.763332089,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -1831,7 +3013,7 @@
       {
         "bg": "sem.surface.raised",
         "fg": "sem.text.value.claimed",
-        "ratio": 7.026395314,
+        "ratio": 9.361887802,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -1839,7 +3021,7 @@
       {
         "bg": "sem.surface.sunken",
         "fg": "sem.text.value.claimed",
-        "ratio": 10.990979962,
+        "ratio": 14.644254507,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -1847,7 +3029,7 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.text.value.claimed",
-        "ratio": 8.927124701,
+        "ratio": 9.704419423,
         "required": 4.5,
         "tag": "text",
         "theme": "dark"
@@ -1951,7 +3133,7 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.border.value.claimed",
-        "ratio": 10.491564887,
+        "ratio": 7.316245066,
         "required": 3.0,
         "tag": "non-text",
         "theme": "hc"
@@ -1997,6 +3179,14 @@
         "theme": "hc"
       },
       {
+        "bg": "sem.agent.surface",
+        "fg": "sem.focus.ring",
+        "ratio": 9.915145088,
+        "required": 3.0,
+        "tag": "non-text",
+        "theme": "hc"
+      },
+      {
         "bg": "sem.brand.subtle",
         "fg": "sem.focus.ring",
         "ratio": 9.21813627,
@@ -2029,6 +3219,14 @@
         "theme": "hc"
       },
       {
+        "bg": "sem.surface.value.claimed",
+        "fg": "sem.focus.ring",
+        "ratio": 6.91428134,
+        "required": 3.0,
+        "tag": "non-text",
+        "theme": "hc"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.conforms",
         "ratio": 12.96616432,
@@ -2040,6 +3238,14 @@
         "bg": "sem.surface.raised",
         "fg": "sem.status.conforms",
         "ratio": 12.96616432,
+        "required": 7.0,
+        "tag": "text",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.conforms",
+        "ratio": 12.073790798,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -2061,6 +3267,14 @@
         "theme": "hc"
       },
       {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.indeterminate",
+        "ratio": 12.622592476,
+        "required": 7.0,
+        "tag": "text",
+        "theme": "hc"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.nonconforms",
         "ratio": 10.544109623,
@@ -2077,9 +3291,17 @@
         "theme": "hc"
       },
       {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.nonconforms",
+        "ratio": 9.818429768,
+        "required": 7.0,
+        "tag": "text",
+        "theme": "hc"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.not-decidable",
-        "ratio": 10.321287316,
+        "ratio": 13.833822119,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -2087,7 +3309,15 @@
       {
         "bg": "sem.surface.raised",
         "fg": "sem.status.not-decidable",
-        "ratio": 10.321287316,
+        "ratio": 13.833822119,
+        "required": 7.0,
+        "tag": "text",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.not-decidable",
+        "ratio": 12.88173357,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -2109,6 +3339,14 @@
         "theme": "hc"
       },
       {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.not-evaluated",
+        "ratio": 9.133215496,
+        "required": 7.0,
+        "tag": "text",
+        "theme": "hc"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.stale",
         "ratio": 13.697748379,
@@ -2120,6 +3358,14 @@
         "bg": "sem.surface.raised",
         "fg": "sem.status.stale",
         "ratio": 13.697748379,
+        "required": 7.0,
+        "tag": "text",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.stale",
+        "ratio": 12.755024866,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -2231,7 +3477,7 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.text.primary",
-        "ratio": 21.0,
+        "ratio": 14.644254507,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -2271,7 +3517,15 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.text.secondary",
-        "ratio": 21.0,
+        "ratio": 14.644254507,
+        "required": 7.0,
+        "tag": "text",
+        "theme": "hc"
+      },
+      {
+        "bg": "sem.brand.subtle",
+        "fg": "sem.text.value.claimed",
+        "ratio": 9.754035261,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -2303,7 +3557,7 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.text.value.claimed",
-        "ratio": 10.491564887,
+        "ratio": 7.316245066,
         "required": 7.0,
         "tag": "text",
         "theme": "hc"
@@ -2407,7 +3661,7 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.border.value.claimed",
-        "ratio": 7.106181141,
+        "ratio": 5.346181451,
         "required": 3.0,
         "tag": "non-text",
         "theme": "floor"
@@ -2453,6 +3707,14 @@
         "theme": "floor"
       },
       {
+        "bg": "sem.agent.surface",
+        "fg": "sem.focus.ring",
+        "ratio": 6.713237,
+        "required": 3.0,
+        "tag": "non-text",
+        "theme": "floor"
+      },
+      {
         "bg": "sem.brand.subtle",
         "fg": "sem.focus.ring",
         "ratio": 6.63905168,
@@ -2485,6 +3747,14 @@
         "theme": "floor"
       },
       {
+        "bg": "sem.surface.value.claimed",
+        "fg": "sem.focus.ring",
+        "ratio": 4.979777887,
+        "required": 3.0,
+        "tag": "non-text",
+        "theme": "floor"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.conforms",
         "ratio": 9.292356528,
@@ -2496,6 +3766,14 @@
         "bg": "sem.surface.raised",
         "fg": "sem.status.conforms",
         "ratio": 8.652826384,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.conforms",
+        "ratio": 7.922558013,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -2517,6 +3795,14 @@
         "theme": "floor"
       },
       {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.indeterminate",
+        "ratio": 11.55728969,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "floor"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.nonconforms",
         "ratio": 10.544109623,
@@ -2528,6 +3814,14 @@
         "bg": "sem.surface.raised",
         "fg": "sem.status.nonconforms",
         "ratio": 9.818429768,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.nonconforms",
+        "ratio": 8.989788535,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -2549,6 +3843,14 @@
         "theme": "floor"
       },
       {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.not-decidable",
+        "ratio": 8.799812758,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "floor"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.not-evaluated",
         "ratio": 6.972012499,
@@ -2565,6 +3867,14 @@
         "theme": "floor"
       },
       {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.not-evaluated",
+        "ratio": 5.944258953,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "floor"
+      },
+      {
         "bg": "sem.surface.base",
         "fg": "sem.status.stale",
         "ratio": 10.172028196,
@@ -2576,6 +3886,14 @@
         "bg": "sem.surface.raised",
         "fg": "sem.status.stale",
         "ratio": 9.471956193,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.surface.sunken",
+        "fg": "sem.status.stale",
+        "ratio": 8.672556122,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -2687,7 +4005,7 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.text.primary",
-        "ratio": 15.635901888,
+        "ratio": 11.763332089,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -2727,7 +4045,15 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.text.secondary",
-        "ratio": 9.091428585,
+        "ratio": 6.839739362,
+        "required": 4.5,
+        "tag": "text",
+        "theme": "floor"
+      },
+      {
+        "bg": "sem.brand.subtle",
+        "fg": "sem.text.value.claimed",
+        "ratio": 7.127541781,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -2735,7 +4061,7 @@
       {
         "bg": "sem.surface.base",
         "fg": "sem.text.value.claimed",
-        "ratio": 10.491564887,
+        "ratio": 7.666474959,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -2743,7 +4069,7 @@
       {
         "bg": "sem.surface.raised",
         "fg": "sem.text.value.claimed",
-        "ratio": 9.769501331,
+        "ratio": 7.138843264,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -2751,7 +4077,7 @@
       {
         "bg": "sem.surface.sunken",
         "fg": "sem.text.value.claimed",
-        "ratio": 8.944989488,
+        "ratio": 6.536349788,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -2759,7 +4085,7 @@
       {
         "bg": "sem.surface.value.claimed",
         "fg": "sem.text.value.claimed",
-        "ratio": 9.724803242,
+        "ratio": 5.346181451,
         "required": 4.5,
         "tag": "text",
         "theme": "floor"
@@ -2792,7 +4118,7 @@
     "values": {
       "dark": {
         "comp.button.bg.primary": "#9cc3ff",
-        "comp.button.bg.primary-hover": "#c6dcff",
+        "comp.button.bg.primary-hover": "#6aa4ff",
         "comp.button.border.secondary": "#9fa5ad",
         "comp.button.fg.primary": "#1c1d1f",
         "comp.button.fg.secondary": "#f5f7f9",
@@ -2805,9 +4131,9 @@
         "comp.table.bg.selected": "#111d30",
         "comp.table.border.row": "#404449",
         "comp.table.fg.header": "#d8dbdf",
-        "comp.value.bg.claimed": "#2a1524",
+        "comp.value.bg.claimed": "#481c3d",
         "comp.value.border.claimed": "#e676c9",
-        "comp.value.fg.claimed": "#f6a0dd",
+        "comp.value.fg.claimed": "#ffc7ed",
         "comp.value.fg.measured": "#f5f7f9",
         "sem.agent.accent": "#41b9b5",
         "sem.agent.surface": "#0d2120",
@@ -2816,7 +4142,7 @@
         "sem.border.subtle": "#404449",
         "sem.border.value.claimed": "#e676c9",
         "sem.brand.accent": "#9cc3ff",
-        "sem.brand.accent-hover": "#c6dcff",
+        "sem.brand.accent-hover": "#6aa4ff",
         "sem.brand.on-accent": "#1c1d1f",
         "sem.brand.subtle": "#111d30",
         "sem.focus.ring": "#9cc3ff",
@@ -2830,13 +4156,13 @@
         "sem.surface.inverse": "#ebedf0",
         "sem.surface.raised": "#2d2f32",
         "sem.surface.sunken": "#000000",
-        "sem.surface.value.claimed": "#2a1524",
+        "sem.surface.value.claimed": "#481c3d",
         "sem.text.inverse": "#1c1d1f",
         "sem.text.link": "#9cc3ff",
         "sem.text.muted": "#bcc1c8",
         "sem.text.primary": "#f5f7f9",
         "sem.text.secondary": "#d8dbdf",
-        "sem.text.value.claimed": "#f6a0dd",
+        "sem.text.value.claimed": "#ffc7ed",
         "sem.text.value.measured": "#f5f7f9"
       },
       "floor": {
@@ -2854,9 +4180,9 @@
         "comp.table.bg.selected": "#f2f7ff",
         "comp.table.border.row": "#bcc1c8",
         "comp.table.fg.header": "#404449",
-        "comp.value.bg.claimed": "#fff3fb",
+        "comp.value.bg.claimed": "#ffc7ed",
         "comp.value.border.claimed": "#902679",
-        "comp.value.fg.claimed": "#6b225a",
+        "comp.value.fg.claimed": "#902679",
         "comp.value.fg.measured": "#1c1d1f",
         "sem.agent.accent": "#006765",
         "sem.agent.surface": "#e4fdfb",
@@ -2879,13 +4205,13 @@
         "sem.surface.inverse": "#2d2f32",
         "sem.surface.raised": "#f5f7f9",
         "sem.surface.sunken": "#ebedf0",
-        "sem.surface.value.claimed": "#fff3fb",
+        "sem.surface.value.claimed": "#ffc7ed",
         "sem.text.inverse": "#ffffff",
         "sem.text.link": "#164183",
         "sem.text.muted": "#545a61",
         "sem.text.primary": "#1c1d1f",
         "sem.text.secondary": "#404449",
-        "sem.text.value.claimed": "#6b225a",
+        "sem.text.value.claimed": "#902679",
         "sem.text.value.measured": "#1c1d1f"
       },
       "hc": {
@@ -2903,7 +4229,7 @@
         "comp.table.bg.selected": "#f2f7ff",
         "comp.table.border.row": "#545a61",
         "comp.table.fg.header": "#000000",
-        "comp.value.bg.claimed": "#ffffff",
+        "comp.value.bg.claimed": "#ffc7ed",
         "comp.value.border.claimed": "#6b225a",
         "comp.value.fg.claimed": "#6b225a",
         "comp.value.fg.measured": "#000000",
@@ -2921,14 +4247,14 @@
         "sem.status.conforms": "#0f3919",
         "sem.status.indeterminate": "#402a00",
         "sem.status.nonconforms": "#7d1517",
-        "sem.status.not-decidable": "#4b317d",
+        "sem.status.not-decidable": "#332453",
         "sem.status.not-evaluated": "#404449",
         "sem.status.stale": "#4d2100",
         "sem.surface.base": "#ffffff",
         "sem.surface.inverse": "#000000",
         "sem.surface.raised": "#ffffff",
         "sem.surface.sunken": "#f5f7f9",
-        "sem.surface.value.claimed": "#ffffff",
+        "sem.surface.value.claimed": "#ffc7ed",
         "sem.text.inverse": "#ffffff",
         "sem.text.link": "#164183",
         "sem.text.muted": "#1c1d1f",
@@ -2952,7 +4278,7 @@
         "comp.table.bg.selected": "#f2f7ff",
         "comp.table.border.row": "#d8dbdf",
         "comp.table.fg.header": "#404449",
-        "comp.value.bg.claimed": "#fff3fb",
+        "comp.value.bg.claimed": "#ffc7ed",
         "comp.value.border.claimed": "#ab3f92",
         "comp.value.fg.claimed": "#902679",
         "comp.value.fg.measured": "#2d2f32",
@@ -2977,7 +4303,7 @@
         "sem.surface.inverse": "#2d2f32",
         "sem.surface.raised": "#f5f7f9",
         "sem.surface.sunken": "#ebedf0",
-        "sem.surface.value.claimed": "#fff3fb",
+        "sem.surface.value.claimed": "#ffc7ed",
         "sem.text.inverse": "#f5f7f9",
         "sem.text.link": "#1454b2",
         "sem.text.muted": "#545a61",

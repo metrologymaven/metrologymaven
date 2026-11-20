@@ -21,6 +21,7 @@ This module never imports `make_tokens.py` (the authoring script).
 
 import copy
 import json
+import math
 import pathlib
 import sys
 
@@ -29,6 +30,11 @@ ROOT = HERE.parents[3]
 DESIGN = ROOT / "design"
 THEMES = ["light", "dark", "hc", "floor"]
 MARGIN = 0.05
+# Maintainer decision on PR 330: claimed roles stay at least this far (OKLab, Euclidean) from
+# every measured, brand-tier and status role in every theme. Shipped values must clear it by
+# DE_MARGIN so that platform differences in cbrt cannot flip a verdict.
+MIN_DE_OK = 0.10
+DE_MARGIN = 0.005
 
 # ------------------------------------------------------------------ WCAG 2.2
 
@@ -56,6 +62,28 @@ def required(tag, theme):
         return 7.0
     return {"text": 4.5, "large-text": 3.0, "non-text": 3.0}[tag]
 
+
+def oklab(hexv):
+    """Bjorn Ottosson's OKLab (2020): linear sRGB -> LMS -> cube root -> Lab."""
+    r, g, b = (linear(int(hexv[i : i + 2], 16)) for i in (1, 3, 5))
+    lms = (
+        0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b,
+        0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b,
+        0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b,
+    )
+    l_, m_, s_ = (math.cbrt(x) for x in lms)
+    return (
+        0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+        1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+        0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_,
+    )
+
+
+def de_ok(a, b):
+    return math.dist(oklab(a), oklab(b))
+
+
+assert abs(de_ok("#000000", "#ffffff") - 1.0) < 1e-6
 
 # The WCAG 2.0/2.1 threshold 0.03928 and the 2.2 threshold 0.04045 agree on every 8-bit value.
 assert all((v / 255 <= 0.04045) == (v / 255 <= 0.03928) for v in range(256))
@@ -109,8 +137,27 @@ def alias(v):
     return None
 
 
+def effective_type(tokens, name):
+    """Declared type, else the first declared type along the token-file alias chain."""
+    for _ in range(17):
+        if name not in tokens:
+            return None
+        t, v = tokens[name]
+        if t is not None:
+            return t
+        name = alias(v)
+        if name is None:
+            return None
+    return None
+
+
+def is_colour(tokens, name):
+    t = effective_type(tokens, name)
+    return t == "color" if t is not None else name.split(".")[0] in ("prim", "sem", "comp")
+
+
 def colour_names(tokens, tier):
-    return sorted(n for n, (t, _) in tokens.items() if t == "color" and n.split(".")[0] == tier)
+    return sorted(n for n in tokens if n.split(".")[0] == tier and is_colour(tokens, n))
 
 
 def resolve(tokens, binds, theme, name):
@@ -128,7 +175,7 @@ def resolve(tokens, binds, theme, name):
             if cur is None:
                 return None
             continue
-        if cur not in tokens:
+        if cur not in tokens or (len(seen) > 1 and not is_colour(tokens, cur)):
             return None
         _, v = tokens[cur]
         nxt = alias(v)
@@ -170,10 +217,22 @@ def shipped():
         a = alias(tokens[n][1])
         assert a is not None and a.startswith("sem."), n
     assert len(brand) <= 12 and all(b.startswith("sem.brand.") for b in brand), brand
+
+    def side(n, word):
+        return any(seg.startswith(word) for seg in n.split(".")[1:])
+
+    claimed = [n for n in colour_names(tokens, "sem") if side(n, "claimed")]
+    measured = [n for n in colour_names(tokens, "sem") if side(n, "measured")]
+    status = [n for n in colour_names(tokens, "sem") if n.startswith("sem.status.")]
+    distances = []
     for t in THEMES:
-        measured = values[t]["sem.text.value.measured"][1].split(".")[2]
-        for c in ("sem.text.value.claimed", "sem.border.value.claimed"):
-            assert values[t][c][1].split(".")[2] != measured, (t, c)
+        for c in claimed:
+            for o in measured + brand + status:
+                d = de_ok(values[t][c][0], values[t][o][0])
+                assert d >= MIN_DE_OK + DE_MARGIN, (t, c, o, d)
+                if o not in status:
+                    assert values[t][c][1].split(".")[2] != values[t][o][1].split(".")[2], (t, c, o)
+                distances.append({"theme": t, "claimed": c, "other": o, "de_ok": round(d, 9)})
     out_pairs = []
     fails = []
     for t in THEMES:
@@ -191,6 +250,7 @@ def shipped():
         "counts": counts,
         "values": {t: {n: v[0] for n, v in sorted(values[t].items())} for t in THEMES},
         "pairs": out_pairs,
+        "claimed_distances": distances,
         "min_margin": round(min(p["ratio"] - p["required"] for p in out_pairs), 6),
     }
 
@@ -235,6 +295,7 @@ def base():
         ],
         "brand": ["sem.brand.accent"],
         "drop_theme": None,
+        "extra": {},
     }
 
 
@@ -273,6 +334,7 @@ def render(m):
         "pairs": [{"fg": f, "bg": b, "tag": g} for f, b, g in m["pairs"]],
     }
     files["tokens/brand-tier.json"] = {"format": "fid-design-brand-tier@1", "tokens": m["brand"]}
+    files.update(m["extra"])
     return files
 
 
@@ -379,6 +441,54 @@ LABELS = {
         lambda m: m["default_override"].__setitem__("sem.text.primary", "{" + P + "neutral.500}"),
         1,
         ["TOK-SCHEMA sem.text.primary"],
+    ),
+    # Review of PR 330: an untyped component alias straight to a primitive is still in scope.
+    "untyped-comp-to-prim": (
+        lambda m: m["extra"].__setitem__(
+            "tokens/component/badge.tokens.json",
+            {"comp": {"badge": {"border": {"primary": {"$value": "{" + P + "blue.600}"}}}}},
+        ),
+        1,
+        ["TOK-COMP-SKIPS-SEM comp.badge.border.primary"],
+    ),
+    # A colour component aliasing a semantic token typed as something else, which holds a prim.
+    "comp-to-noncolour-sem": (
+        lambda m: (
+            m["extra"].__setitem__(
+                "tokens/semantic/size.tokens.json",
+                {"sem": {"text": {"size-ref": {"$type": "dimension", "$value": "{" + P + "blue.600}"}}}},
+            ),
+            m["comp"].__setitem__("comp.button.fg.size", "{sem.text.size-ref}"),
+        ),
+        1,
+        ["TOK-COMP-SKIPS-SEM comp.button.fg.size"],
+    ),
+    # A claimed role 0.0x from a status colour in OKLab, though on its own ramp.
+    "claimed-near-status": (
+        lambda m: (
+            m["prim"].__setitem__("plum", {"700": "#a31220"}),
+            m["sem"]["sem.text.value.claimed"].__setitem__("light", P + "plum.700"),
+        ),
+        1,
+        ["TOK-CLAIMED-AS-MEASURED light sem.text.value.claimed"],
+    ),
+    # A claimed role on the brand ramp (same value as the brand accent).
+    "claimed-brand-ramp": (
+        lambda m: m["sem"]["sem.text.value.claimed"].__setitem__("floor", P + "blue.600"),
+        1,
+        ["TOK-CLAIMED-AS-MEASURED floor sem.text.value.claimed"],
+    ),
+    # Claimed/measured roles are matched by segment prefix, not only by the last segment.
+    "claimed-prefix": (
+        lambda m: m["comp"].__setitem__("comp.badge.claimed-bg", "{sem.text.value.measured}"),
+        1,
+        [
+            "TOK-CLAIMED-AS-MEASURED comp.badge.claimed-bg",
+            "TOK-CLAIMED-AS-MEASURED dark comp.badge.claimed-bg",
+            "TOK-CLAIMED-AS-MEASURED floor comp.badge.claimed-bg",
+            "TOK-CLAIMED-AS-MEASURED hc comp.badge.claimed-bg",
+            "TOK-CLAIMED-AS-MEASURED light comp.badge.claimed-bg",
+        ],
     ),
     "missing-theme": (lambda m: m.__setitem__("drop_theme", "hc"), 1, ["TOK-SCHEMA tokens/themes/hc.json"]),
 }

@@ -4,12 +4,15 @@
 //! `UX.TOKENS.CHECK`. The WCAG formula itself is in [`wcag`].
 //!
 //! Inputs below `<root>/tokens/`:
-//! - `**/*.tokens.json`: DTCG token files, read with `fid_design_pkg::tokens::collect`. A
-//!   colour token is one whose (declared or inherited) `$type` is `color`. Colour tokens are named
+//! - `**/*.tokens.json`: DTCG token files, read with `fid_design_pkg::tokens::collect`. Every
+//!   token of the `prim`, `sem` and `comp` tiers is a colour token unless its `$type` is
+//!   explicitly something else; an untyped alias takes the type of the first typed token on its
+//!   alias chain (untyped all the way: colour). Colour tokens are named
 //!   `<tier>.<group>.<role>[.<variant>]`: `prim.color.<hue>.<step>` (literal colours),
 //!   `sem.<group>.<role>[.<variant>]` with group in [`SEM_GROUPS`], and
 //!   `comp.<component>.<role>[.<variant>]`. Colour tokens of the `data` and `pal` tiers belong to
-//!   `UX.TOKENS.DATAPAL` and are only looked at by the brand rule.
+//!   `UX.TOKENS.DATAPAL` and are only looked at by the brand rule. Resolution never passes
+//!   through a non-colour token.
 //! - `themes/{light,dark,hc,floor}.json` (`fid-design-theme@1`):
 //!   `{ "format", "theme", "bindings": { "<sem name>": "{<target>}" } }`. A theme binds every
 //!   semantic colour token by alias; a semantic token's own `$value` in its token file must equal
@@ -37,20 +40,31 @@
 //!   brand-tier token.
 //! - `TOK-PAIR-UNKNOWN <name>`: a pair names something that is not a semantic colour token.
 //! - `TOK-CLAIMED-AS-MEASURED` (added by this leaf for the maintainer rule "claimed values never
-//!   look measured", UNC.UEC.CLASS): `sem.text.value.claimed` and `sem.text.value.measured` must
-//!   exist; no chain of a `*.claimed` token may pass through a `*.measured` or brand-tier token
-//!   (and the other way round), so neither a skin nor an alias can merge them; a component
-//!   `*.claimed`/`*.measured` token must alias a `sem.*.value.claimed`/`.measured` role; and in
-//!   every theme the `sem.text.*` and `sem.border.*` claimed roles must resolve to a primitive
-//!   hue ramp (`prim.color.<ramp>.*`) that no `sem.*.value.measured` role uses. Colour stays a
-//!   second cue only (principle P-NOCOLOR): the word "claimed" is required by the components.
+//!   look measured", UNC.UEC.CLASS). Naming rule: a colour token is a *claimed* role when a
+//!   segment after its tier starts with `claimed` (e.g. `sem.text.value.claimed`,
+//!   `comp.badge.claimed-bg`) and a *measured* role when one starts with `measured`; a name that
+//!   is both is a finding. The rule:
+//!   - `sem.text.value.claimed` and `sem.text.value.measured` exist;
+//!   - no chain of a claimed token passes through a measured or brand-tier token (and the other
+//!     way round), so neither an alias nor a brand skin can merge them;
+//!   - a claimed (measured) component token aliases a claimed (measured) semantic role;
+//!   - in every theme, every claimed semantic role (text, surface, border) resolves to a
+//!     primitive hue ramp (`prim.color.<ramp>.*`) that no measured role and no brand-tier role
+//!     uses, and lies at least [`MIN_DELTA_E_OK`] in OKLab ([`oklab`]) from every measured role,
+//!     every brand-tier role and every `sem.status.*` role.
+//!
+//!   Colour stays a second cue only (principle P-NOCOLOR): the word "claimed" is required by the
+//!   components.
 //! - `TOK-SCHEMA <file or name>`: an unreadable shape: invalid JSON, a missing file, wrong format
 //!   ID, a binding of a non-semantic name, a semantic default that differs from the light
 //!   binding, a primitive that is not a literal, a bad pair tag, duplicates.
 //!
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable root or limits exceeded. Determinism D0:
-//! sorted walk, `BTreeMap` only, no floating point, no clock.
+//! sorted walk, `BTreeMap` only, no clock. The one floating-point rule is the OKLab distance
+//! floor; the shipped values clear it by more than 1e-3, far above any last-bit difference in
+//! `cbrt` between platforms, and the report prints no floating-point value.
 
+pub mod oklab;
 pub mod wcag;
 
 use crate::finding::{findings_text, findings_value, read_text, Finding};
@@ -75,6 +89,9 @@ pub const SEM_GROUPS: [&str; 8] = ["agent", "border", "brand", "data", "focus", 
 pub const PAIR_TAGS: [&str; 3] = ["large-text", "non-text", "text"];
 /// Most names in the brand tier [unverified bound, REQ-UX.TOKENS.COLOR-005].
 pub const MAX_BRAND_TIER: usize = 12;
+/// Least OKLab distance between a claimed role and any measured, brand-tier or status role, in
+/// every theme (maintainer decision on PR 330).
+pub const MIN_DELTA_E_OK: f64 = 0.10;
 /// The one brand-tier name outside `sem.brand.*` (owned by `UX.TOKENS.TYPE`).
 pub const BRAND_EXTRA: &str = "type.family.display";
 /// Most alias hops followed from one name.
@@ -166,6 +183,8 @@ type Resolution = (Vec<String>, Result<Value, Broken>);
 
 struct Input {
     tokens: BTreeMap<String, Token>,
+    /// Every token in scope of the colour rules.
+    colour: BTreeSet<String>,
     prim: BTreeSet<String>,
     sem: BTreeSet<String>,
     comp: BTreeSet<String>,
@@ -179,8 +198,23 @@ fn tier(name: &str) -> &str {
     name.split('.').next().unwrap_or("")
 }
 
-fn last(name: &str) -> &str {
-    name.rsplit('.').next().unwrap_or("")
+/// Which side of the claimed/measured rule a name is on: a segment after the tier starting
+/// with `claimed` or `measured`.
+fn has_segment(name: &str, prefix: &str) -> bool {
+    name.split('.').skip(1).any(|s| s.starts_with(prefix))
+}
+
+fn is_claimed(name: &str) -> bool {
+    has_segment(name, "claimed")
+}
+
+fn is_measured(name: &str) -> bool {
+    has_segment(name, "measured")
+}
+
+/// The hue ramp of a primitive colour name (`prim.color.<ramp>.<step>`).
+fn ramp_of(prim: &str) -> Option<&str> {
+    prim.split('.').nth(2)
 }
 
 /// Names the brand tier may neither alias nor be aliased by (REQ-UX.TOKENS.COLOR-005).
@@ -188,8 +222,26 @@ fn forbidden(n: &str) -> bool {
     n.starts_with("sem.status.") || n.starts_with("sem.data.") || n.starts_with("data.") || n.starts_with("pal.")
 }
 
-fn is_colour(t: &Token) -> bool {
-    t.ty.as_deref() == Some("color")
+/// The declared type, or for an untyped alias the type of the first typed token on its
+/// token-file alias chain (`None` when nothing on the chain is typed).
+fn effective_type<'a>(tokens: &'a BTreeMap<String, Token>, t: &'a Token) -> Option<&'a str> {
+    let mut cur = t;
+    for _ in 0..=MAX_ALIAS_DEPTH {
+        if let Some(ty) = cur.ty.as_deref() {
+            return Some(ty);
+        }
+        cur = tokens.get(cur.alias()?)?;
+    }
+    None
+}
+
+/// In scope of the colour rules: typed (or inferred) `color`, or a `prim`/`sem`/`comp` token
+/// whose type is neither declared nor inferable.
+fn is_colour(tokens: &BTreeMap<String, Token>, t: &Token) -> bool {
+    match effective_type(tokens, t) {
+        Some(ty) => ty == "color",
+        None => matches!(tier(&t.name), "prim" | "sem" | "comp"),
+    }
 }
 
 /// Why a colour token name breaks the tier grammar, if it does.
@@ -347,7 +399,9 @@ impl Input {
             }
         }
         let (mut prim, mut sem, mut comp) = (BTreeSet::new(), BTreeSet::new(), BTreeSet::new());
-        for t in tokens.values().filter(|t| is_colour(t)) {
+        let mut colour = BTreeSet::new();
+        for t in tokens.values().filter(|t| is_colour(&tokens, t)) {
+            colour.insert(t.name.clone());
             if let Some(d) = name_defect(&t.name) {
                 f.push(Finding::new(NAME_SYNTAX, &t.name, d));
             }
@@ -377,7 +431,7 @@ impl Input {
         if let Some(v) = read_json(root, "tokens/brand-tier.json", &mut budget, f)? {
             brand = Self::parse_brand(&v, f);
         }
-        Ok(Input { tokens, prim, sem, comp, themes, pairs, brand })
+        Ok(Input { tokens, colour, prim, sem, comp, themes, pairs, brand })
     }
 
     fn parse_theme(v: &CValue, rel: &str, theme: &str, f: &mut Vec<Finding>) -> Option<BTreeMap<String, String>> {
@@ -492,6 +546,11 @@ impl Input {
                     }
                 }
             } else if let Some(tok) = self.tokens.get(&cur) {
+                if names.len() >= 2 && !self.colour.contains(&cur) {
+                    let at = names[names.len() - 2].clone();
+                    let d = format!("{cur} is not a colour token");
+                    return (names, Err((UNRESOLVED, at, d)));
+                }
                 match tok.alias() {
                     Some(a) => a.to_string(),
                     None => {
@@ -532,12 +591,13 @@ impl Input {
         let mut skips = BTreeSet::new();
         for c in &self.comp {
             match self.tokens.get(c).and_then(Token::alias) {
-                Some(a) if a.starts_with("sem.") => {}
+                Some(a) if self.sem.contains(a) => {}
                 Some(a) => {
+                    skips.insert(c.clone());
                     f.push(Finding::new(
                         COMP_SKIPS_SEM,
                         c,
-                        format!("aliases {a}; a component token aliases a sem.* token"),
+                        format!("aliases {a}; a component token aliases a semantic colour token"),
                     ));
                 }
                 None => {
@@ -618,20 +678,23 @@ impl Input {
                 ));
             }
         }
-        let claimed: BTreeSet<&str> =
-            self.sem.iter().chain(&self.comp).map(String::as_str).filter(|n| last(n) == "claimed").collect();
-        let measured: BTreeSet<&str> =
-            self.sem.iter().chain(&self.comp).map(String::as_str).filter(|n| last(n) == "measured").collect();
+        let roles = || self.sem.iter().chain(&self.comp).map(String::as_str);
+        for n in roles().filter(|n| is_claimed(n) && is_measured(n)) {
+            f.push(Finding::new(CLAIMED_AS_MEASURED, n, "a name is either claimed or measured, not both"));
+        }
+        let claimed: BTreeSet<&str> = roles().filter(|n| is_claimed(n) && !is_measured(n)).collect();
+        let measured: BTreeSet<&str> = roles().filter(|n| is_measured(n) && !is_claimed(n)).collect();
         for c in self.comp.iter().map(String::as_str) {
-            let want = match last(c) {
-                "claimed" => ".value.claimed",
-                "measured" => ".value.measured",
-                _ => continue,
+            let (want, side): (&str, fn(&str) -> bool) = if claimed.contains(c) {
+                ("claimed", is_claimed)
+            } else if measured.contains(c) {
+                ("measured", is_measured)
+            } else {
+                continue;
             };
-            let ok =
-                self.tokens.get(c).and_then(Token::alias).is_some_and(|a| a.starts_with("sem.") && a.ends_with(want));
+            let ok = self.tokens.get(c).and_then(Token::alias).is_some_and(|a| self.sem.contains(a) && side(a));
             if !ok {
-                f.push(Finding::new(CLAIMED_AS_MEASURED, c, format!("must alias a sem.*{want} role")));
+                f.push(Finding::new(CLAIMED_AS_MEASURED, c, format!("must alias a {want} semantic role")));
             }
         }
 
@@ -702,20 +765,7 @@ impl Input {
                     ));
                 }
             }
-            let ramp = |n: &str| r.values.get(n).and_then(|v| v.prim.split('.').nth(2).map(str::to_string));
-            let measured_ramps: BTreeSet<String> =
-                measured.iter().filter(|n| n.starts_with("sem.")).filter_map(|&n| ramp(n)).collect();
-            for &c in claimed.iter().filter(|n| n.starts_with("sem.text.") || n.starts_with("sem.border.")) {
-                if let Some(h) = ramp(c) {
-                    if measured_ramps.contains(&h) {
-                        f.push(Finding::new(
-                            CLAIMED_AS_MEASURED,
-                            format!("{theme} {c}"),
-                            format!("uses the {h} ramp, which a measured-value role also uses"),
-                        ));
-                    }
-                }
-            }
+            claimed_distance(theme, &r, &claimed, &measured, &brand, &mut f);
             themes.insert(theme.to_string(), r);
         }
         for ((b, n, outward), ts) in brand_hits {
@@ -738,6 +788,52 @@ impl Input {
             pairs: self.pairs.clone(),
             themes,
             findings: f,
+        }
+    }
+}
+
+/// The ramp and distance floor of `TOK-CLAIMED-AS-MEASURED` in one theme: every claimed
+/// semantic role against every measured and brand-tier role (different ramp and at least
+/// [`MIN_DELTA_E_OK`]) and every `sem.status.*` role (at least [`MIN_DELTA_E_OK`]).
+fn claimed_distance(
+    theme: &str,
+    r: &ThemeResult,
+    claimed: &BTreeSet<&str>,
+    measured: &BTreeSet<&str>,
+    brand: &BTreeSet<&str>,
+    f: &mut Vec<Finding>,
+) {
+    let sem = |n: &&&str| n.starts_with("sem.");
+    let mut others: BTreeMap<&str, bool> = BTreeMap::new();
+    for &n in measured.iter().filter(sem).chain(brand.iter().filter(sem)) {
+        others.insert(n, true);
+    }
+    for n in r.values.keys().map(String::as_str).filter(|n| n.starts_with("sem.status.")) {
+        others.entry(n).or_insert(false);
+    }
+    for &c in claimed.iter().filter(sem) {
+        let Some(cv) = r.values.get(c) else {
+            continue;
+        };
+        for (&o, &same_ramp_banned) in &others {
+            let Some(ov) = r.values.get(o) else {
+                continue;
+            };
+            let subject = format!("{theme} {c}");
+            if same_ramp_banned && ramp_of(&cv.prim).is_some() && ramp_of(&cv.prim) == ramp_of(&ov.prim) {
+                let h = ramp_of(&cv.prim).unwrap_or("");
+                f.push(Finding::new(CLAIMED_AS_MEASURED, &subject, format!("uses the {h} ramp, as {o} does")));
+            }
+            if let (Some(a), Some(b)) = (wcag::parse_hex(&cv.value), wcag::parse_hex(&ov.value)) {
+                let d = oklab::delta_e_ok(a, b);
+                if d < MIN_DELTA_E_OK {
+                    f.push(Finding::new(
+                        CLAIMED_AS_MEASURED,
+                        &subject,
+                        format!("OKLab distance {d:.3} from {o}; at least {MIN_DELTA_E_OK:.2}"),
+                    ));
+                }
+            }
         }
     }
 }
