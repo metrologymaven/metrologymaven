@@ -876,18 +876,16 @@ fn short_name_alias(name: &str) -> bool {
     name.as_bytes().windows(2).any(|w| w[0] == b'~' && w[1].is_ascii_digit())
 }
 
-/// The requested components of a target text: a handle's relative path, or a raw path's
-/// normal components.
+/// The components of a target text the short-name rule applies to: every component of a
+/// handle's relative path, and the file name of a human's raw path (its folders are the
+/// human's own ambient path and may legitimately be spelled with short names, such as a
+/// `RUNNER~1` profile folder; the final name is also covered by the listing check).
 fn requested_components(target: &str) -> Vec<String> {
     match RootHandle::parse(target) {
         Ok(h) => h.rel.components().to_vec(),
-        Err(_) => std::path::Path::new(target)
-            .components()
-            .filter_map(|c| match c {
-                std::path::Component::Normal(n) => Some(n.to_string_lossy().into_owned()),
-                _ => None,
-            })
-            .collect(),
+        Err(_) => {
+            std::path::Path::new(target).file_name().map(|n| vec![n.to_string_lossy().into_owned()]).unwrap_or_default()
+        }
     }
 }
 
