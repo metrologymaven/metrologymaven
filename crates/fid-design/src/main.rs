@@ -3,7 +3,7 @@
 //! `fid-design tokens-check --root <dir> [--json]`,
 //! `fid-design status-check --root <dir> [--json]`,
 //! `fid-design palettes-check --root <dir> [--baseline <digests>] [--json]`,
-//! `fid-design color-check --root <dir> [--out <file>] [--json]`,
+//! `fid-design color-check --root <dir> [--baseline <digests>] [--out <file>] [--json]`,
 //! `fid-design princ-check [--file <md>] [--json]` and
 //! `fid-design words-check --copy <jsonl> [--words <json>] [--json]` and
 //! `fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>]
@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 const USAGE: &str =
-    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design color-check --root <design dir> [--out <file>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]";
+    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]";
 
 #[derive(Default)]
 struct Args {
@@ -141,7 +141,7 @@ fn main() -> ExitCode {
         || args.base.is_some()
         || args.pr.is_some()
         || args.all
-        || (args.baseline.is_some() && cmd != "palettes-check")
+        || (args.baseline.is_some() && cmd != "palettes-check" && cmd != "color-check")
         || (args.out.is_some() && cmd != "color-check")
     {
         return usage();
@@ -184,7 +184,7 @@ fn main() -> ExitCode {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
             Err(e) => fail(e),
         },
-        ("color-check", Some(root), None, None) => match fid_design::color::check(root) {
+        ("color-check", Some(root), None, None) => match fid_design::color::check(root, args.baseline.as_deref()) {
             Ok(r) => {
                 if let Some(out) = &args.out {
                     let written =

@@ -1,0 +1,29 @@
+{
+  "comp": {
+    "$type": "color",
+    "value": {
+      "bg": {
+        "claimed": {
+          "$description": "Cell tint behind a claimed number.",
+          "$value": "{sem.surface.value.claimed}"
+        }
+      },
+      "border": {
+        "claimed": {
+          "$description": "Dashed outline of a claimed number.",
+          "$value": "{sem.border.value.claimed}"
+        }
+      },
+      "fg": {
+        "claimed": {
+          "$description": "A claimed number; the cell also shows the word 'claimed'.",
+          "$value": "{sem.text.value.claimed}"
+        },
+        "measured": {
+          "$description": "A measured number.",
+          "$value": "{sem.text.value.measured}"
+        }
+      }
+    }
+  }
+}

@@ -28,8 +28,17 @@
 //! records the WCAG version, the colour-difference formula and the CVD model with the digest of
 //! its parameter table (REQ-UX.TOKENS.CHECK-002, REQ-UX.TOKENS-008).
 //!
-//! Semi-transparent colours (`#rrggbbaa`) are composited over the pair's background in 8-bit
-//! sRGB before measuring; a background with alpha is `CHECK-INPUT`.
+//! Semi-transparent colours (`#rrggbbaa`) are composited over the pair's opaque background in
+//! sRGB-encoded values, both rounded to 8 bits ([`composite`], what an 8-bit renderer shows) and at
+//! full precision ([`composite_exact`]); the pair's ratio is the smaller of the two contrasts, so
+//! it fails when either is below the threshold (maintainer decision on PR 349). A background with
+//! alpha is `CHECK-INPUT`.
+//!
+//! With `--baseline <digests>` the palettes are checked against a frozen baseline of digests
+//! (`PAL-IMMUTABLE`, [`crate::palettes`]); CI passes the committed baseline.
+//!
+//! `CHECK-INPUT <ref>` also fires when the reported L* monotonicity or an adjacent-step verdict of
+//! an odd stepped palette disagrees with `palettes-check`'s `PAL-LIGHTNESS` or `PAL-DELTA`.
 //!
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable tree or report path. Determinism D1:
 //! `BTreeMap` only, no clock; f64 transcendental functions may differ in the last bit between
@@ -137,6 +146,47 @@ pub fn composite(fg: Rgb, alpha: u8, bg: Rgb) -> Rgb {
     out
 }
 
+/// `fg` composited over the opaque `bg` at full precision: sRGB-encoded channels in `[0, 1]`.
+pub fn composite_exact(fg: Rgb, alpha: u8, bg: Rgb) -> [f64; 3] {
+    let a = f64::from(alpha);
+    let mut out = [0.0; 3];
+    for (i, o) in out.iter_mut().enumerate() {
+        *o = (a * f64::from(fg[i]) + (255.0 - a) * f64::from(bg[i])) / 255.0 / 255.0;
+    }
+    out
+}
+
+fn linear_f(c: f64) -> f64 {
+    if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
+}
+
+/// WCAG contrast of an sRGB-encoded colour in `[0, 1]` against an opaque 8-bit colour.
+pub fn contrast_exact(c: [f64; 3], bg: Rgb) -> f64 {
+    let l1 = 0.2126 * linear_f(c[0]) + 0.7152 * linear_f(c[1]) + 0.0722 * linear_f(c[2]);
+    let l2 = crate::tokens::wcag::relative_luminance(bg);
+    let (hi, lo) = if l1 >= l2 { (l1, l2) } else { (l2, l1) };
+    (hi + 0.05) / (lo + 0.05)
+}
+
+/// The contrast of a pair: for a foreground with alpha, the smaller of the 8-bit and the
+/// full-precision composite's contrast.
+pub fn pair_ratio(fg: Rgb, alpha: u8, bg: Rgb) -> f64 {
+    let eight = contrast_ratio(composite(fg, alpha, bg), bg);
+    if alpha == 255 {
+        return eight;
+    }
+    let exact = contrast_exact(composite_exact(fg, alpha, bg), bg);
+    if exact < eight {
+        exact
+    } else {
+        eight
+    }
+}
+
 /// The canonical JSON form of the CVD parameter table and its `sha256:` digest.
 pub fn cvd_table_digest() -> Result<String, fid_canon::CanonError> {
     let mut m = BTreeMap::new();
@@ -150,11 +200,12 @@ pub fn cvd_table_digest() -> Result<String, fid_canon::CanonError> {
     fid_canon::digest(&CValue::Obj(m)).map(|d| d.to_string())
 }
 
-/// Runs the gate on `<root>`. `Err` (exit 2): a sub-check cannot read the tree.
-pub fn check(root: &Path) -> Result<Report, String> {
+/// Runs the gate on `<root>`, with palette immutability against `baseline` when given. `Err`
+/// (exit 2): a sub-check cannot read the tree, or the baseline is unreadable or invalid.
+pub fn check(root: &Path, baseline: Option<&Path>) -> Result<Report, String> {
     let tokens = crate::tokens::check(root)?;
     let status = crate::status::check(root)?;
-    let palettes = crate::palettes::check(root, None)?;
+    let palettes = crate::palettes::check(root, baseline)?;
     let mut f = Vec::new();
     let mut r = Report::default();
     r.gates.insert("tokens-check", tokens.findings.len());
@@ -173,8 +224,12 @@ pub fn check(root: &Path) -> Result<Report, String> {
                 continue; // an unknown tag is TOK-SCHEMA
             };
             let subject = format!("{theme} {}/{}", p.fg, p.bg);
-            let (fg, bg) = match (get(&p.fg), get(&p.bg)) {
-                (Some((fg, fa)), Some((bg, 255))) => (composite(fg, fa, bg), bg),
+            let alpha_note = match get(&p.fg) {
+                Some((_, a)) if a < 255 => "; with alpha, the smaller of the 8-bit and the full-precision composite",
+                _ => "",
+            };
+            let ratio = match (get(&p.fg), get(&p.bg)) {
+                (Some((fg, fa)), Some((bg, 255))) => pair_ratio(fg, fa, bg),
                 (Some(_), Some(_)) => {
                     f.push(Finding::new(
                         CHECK_INPUT,
@@ -188,14 +243,13 @@ pub fn check(root: &Path) -> Result<Report, String> {
                     continue;
                 }
             };
-            let ratio = contrast_ratio(fg, bg);
             if ratio < required {
                 let hc_text = theme == "hc" && p.tag != "non-text";
                 let code = if hc_text { CONTRAST_HC } else { CONTRAST };
                 f.push(Finding::new(
                     code,
                     format!("{subject} {ratio:.2}"),
-                    format!("{} pair below {required}:1 (WCAG 2.2)", p.tag),
+                    format!("{} pair below {required}:1 (WCAG 2.2){alpha_note}", p.tag),
                 ));
             }
             r.pairs.push(PairResult {
@@ -270,6 +324,32 @@ pub fn check(root: &Path) -> Result<Report, String> {
         for i in 0..n.saturating_sub(1) {
             for v in Vision::ALL {
                 adjacent.push((i, v, delta_e2000_under(v, p.colors[i], p.colors[i + 1])));
+            }
+        }
+        // The reported verdicts must agree with palettes-check's findings (odd stepped palettes:
+        // palettes-check reports an even count as PAL-STEPS and skips the arm rules).
+        if n % 2 == 1 {
+            let has =
+                |code: &str, subject: &str| palettes.findings.iter().any(|x| x.code == code && x.subject == subject);
+            if monotonic == has(crate::palettes::LIGHTNESS, reference) {
+                f.push(Finding::new(
+                    CHECK_INPUT,
+                    reference,
+                    "the reported L* monotonicity disagrees with palettes-check's PAL-LIGHTNESS",
+                ));
+            }
+            for i in 0..n - 1 {
+                let pass = adjacent.iter().filter(|(j, _, _)| *j == i).all(|(_, _, d)| *d >= MIN_STEP_DELTA_E2000);
+                if pass == has(crate::palettes::DELTA, &format!("{reference} {i} {}", i + 1)) {
+                    f.push(Finding::new(
+                        CHECK_INPUT,
+                        reference,
+                        format!(
+                            "the reported verdict of steps {i} and {} disagrees with palettes-check's PAL-DELTA",
+                            i + 1
+                        ),
+                    ));
+                }
             }
         }
         r.palettes.push(PaletteResult {
@@ -446,6 +526,15 @@ mod tests {
         assert_eq!(composite([0, 0, 0], 255, [255, 255, 255]), [0, 0, 0]);
         assert_eq!(composite([0, 0, 0], 0, [255, 255, 255]), [255, 255, 255]);
         assert_eq!(composite([0, 0, 0], 128, [255, 255, 255]), [127, 127, 127]);
+        // Opaque: the exact composite is the colour itself, and both paths agree.
+        let c = composite_exact([12, 200, 99], 255, [1, 2, 3]);
+        assert_eq!(c, [12.0 / 255.0, 200.0 / 255.0, 99.0 / 255.0]);
+        assert_eq!(pair_ratio([12, 200, 99], 255, [1, 2, 3]), contrast_ratio([12, 200, 99], [1, 2, 3]));
+        // The flip case of the PR 349 review: the 8-bit composite passes 3:1, the exact one fails.
+        let (fg, bg) = ([0xb5, 0x5b, 0x7b], [0xde, 0xdc, 0x05]);
+        assert!(contrast_ratio(composite(fg, 253, bg), bg) >= 3.0);
+        assert!(contrast_exact(composite_exact(fg, 253, bg), bg) < 3.0);
+        assert!(pair_ratio(fg, 253, bg) < 3.0);
         assert!(cvd_table_digest().is_ok_and(|d| d.starts_with("sha256:")));
     }
 }

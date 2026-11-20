@@ -274,7 +274,31 @@ def required(tag, theme):
 
 
 def composite(fg, alpha, bg):
+    """8-bit composite in sRGB-encoded values, rounded half up."""
     return [(alpha * f + (255 - alpha) * b + 127) // 255 for f, b in zip(fg, bg)]
+
+
+def composite_exact_ratio(fg, alpha, bg):
+    """Contrast of the full-precision composite (encoded channels in [0, 1]) against bg."""
+    enc = [(alpha * f + (255 - alpha) * b) / 255.0 / 255.0 for f, b in zip(fg, bg)]
+    lin = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in enc]
+    l1 = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+    l2 = rel_luminance(bg)
+    return (max(l1, l2) + 0.05) / (min(l1, l2) + 0.05)
+
+
+FLIPS = []  # (theme, pair, 8-bit ratio, exact ratio) of every alpha pair the two paths decide apart
+
+
+def pair_ratio(a_hex, b_hex):
+    """The gate's rule: with alpha, the smaller of the 8-bit and the exact composite's contrast."""
+    fg, bg = rgb(a_hex), rgb(b_hex)
+    if len(a_hex) == 7:
+        return wcag_ratio(fg, bg), None
+    alpha = int(a_hex[7:9], 16)
+    eight = wcag_ratio(composite(fg, alpha, bg), bg)
+    exact = composite_exact_ratio(fg, alpha, bg)
+    return min(eight, exact), (eight, exact)
 
 
 def report(files):
@@ -290,8 +314,9 @@ def report(files):
             a, b = sem[t].get(fg), sem[t].get(bg)
             assert a is not None and b is not None, (t, fg, bg)
             assert len(b) == 7, "no fixture has a background with alpha"
-            ca = composite(rgb(a), int(a[7:9], 16), rgb(b)) if len(a) == 9 else rgb(a)
-            ratio = wcag_ratio(ca, rgb(b))
+            ratio, both = pair_ratio(a, b)
+            if both and (both[0] >= need) != (both[1] >= need):
+                FLIPS.append((t, f"{fg}/{bg}", both[0], both[1]))
             if ratio < need:
                 code = "CONTRAST-HC" if t == "hc" and tag != "non-text" else "CONTRAST"
                 findings.append(f"{code} {t} {fg}/{bg} {'%.2f' % ratio}")
@@ -448,6 +473,23 @@ CLASH = "#a896b4"  # 11.8 from the dark theme's CONFORMS under simulated deutera
 PAIR = "sem.text.muted/sem.surface"
 
 # name -> (mutation, exit code, ["CODE subject", ...]); hand-labelled from the leaf's rules.
+def add_sem(group, role, target):
+    def fn(o):
+        o["sem"][group][role] = {"$value": "{" + target + "}"}
+
+    return edit_json("tokens/semantic/color.tokens.json", fn)
+
+
+def add_pair(fg, bg, tag):
+    def fn(o):
+        o["pairs"].append({"fg": fg, "bg": bg, "tag": tag})
+
+    return edit_json("tokens/pairs.json", fn)
+
+
+OVERLAY = "#b55b7bfd"  # alpha 253 (the PR 349 review's flip case)
+HIGHLIGHT = "#dedc05"
+
 LABELS = {
     "ok": (lambda files: None, 0, []),
     # AC-2: the light theme's muted text at 4.20:1 on the base surface (lower on raised and sunken).
@@ -476,6 +518,21 @@ LABELS = {
     ),
     # AC-4: the dark theme's NONCONFORMS a lavender that normal vision tells from the azure
     # CONFORMS (36) but simulated deuteranopia (11.8) and protanopia (9.8) do not.
+    # A semi-transparent non-text overlay over a highlight surface in every theme: composited to
+    # 8 bits it reaches 3.003:1, at full precision only 2.998:1, so the pair fails (printed 3.00).
+    "alpha-flip": (
+        chain(
+            add_prim("overlay", "500", OVERLAY),
+            add_prim("lemon", "300", HIGHLIGHT),
+            add_sem("border", "overlay", "prim.color.overlay.500"),
+            add_sem("surface", "highlight", "prim.color.lemon.300"),
+            *[bind(t, "sem.border.overlay", "prim.color.overlay.500") for t in THEMES],
+            *[bind(t, "sem.surface.highlight", "prim.color.lemon.300") for t in THEMES],
+            add_pair("sem.border.overlay", "sem.surface.highlight", "non-text"),
+        ),
+        1,
+        [f"CONTRAST {t} sem.border.overlay/sem.surface.highlight 3.00" for t in THEMES],
+    ),
     "deutan-clash": (
         chain(
             add_prim("lavender", "400", CLASH),
@@ -500,9 +557,13 @@ def main():
         fn(tree)
         for rel, text in tree.items():
             files[f"{name}/{rel}"] = text
+        FLIPS.clear()
         got = report(tree)[3]
         own = sorted(f for f in findings if f.startswith(OWN))
         assert got == own, (name, got, own)
+        if name == "alpha-flip":
+            # The fixture exercises composite(): the 8-bit path alone would pass every theme.
+            assert len(FLIPS) == 4 and all(e >= 3.0 > x for _, _, e, x in FLIPS), FLIPS
         expected["fixtures"][name] = {"exit": code, "findings": sorted(set(findings))}
     files["expected.json"] = dump(expected)
     files["expected-report.json"] = dump(shipped_report())

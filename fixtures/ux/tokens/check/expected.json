@@ -1,5 +1,14 @@
 {
   "fixtures": {
+    "alpha-flip": {
+      "exit": 1,
+      "findings": [
+        "CONTRAST dark sem.border.overlay/sem.surface.highlight 3.00",
+        "CONTRAST floor sem.border.overlay/sem.surface.highlight 3.00",
+        "CONTRAST hc sem.border.overlay/sem.surface.highlight 3.00",
+        "CONTRAST light sem.border.overlay/sem.surface.highlight 3.00"
+      ]
+    },
     "deutan-clash": {
       "exit": 1,
       "findings": [

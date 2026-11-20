@@ -1,0 +1,340 @@
+{
+  "format": "fid-design-pairs@1",
+  "pairs": [
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.agent.accent",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.agent.accent",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.agent.accent",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.agent.surface",
+      "fg": "sem.agent.text",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.border.strong",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.border.strong",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.border.strong",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.border.value.claimed",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.border.value.claimed",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.value.claimed",
+      "fg": "sem.border.value.claimed",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.brand.accent",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.brand.accent",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.brand.accent",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.brand.accent",
+      "fg": "sem.brand.on-accent",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.brand.accent-hover",
+      "fg": "sem.brand.on-accent",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.agent.surface",
+      "fg": "sem.focus.ring",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.brand.subtle",
+      "fg": "sem.focus.ring",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.focus.ring",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.focus.ring",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.focus.ring",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.value.claimed",
+      "fg": "sem.focus.ring",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.status.conforms",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.status.conforms",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.status.conforms",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.status.indeterminate",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.status.indeterminate",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.status.indeterminate",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.status.nonconforms",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.status.nonconforms",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.status.nonconforms",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.status.not-decidable",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.status.not-decidable",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.status.not-decidable",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.status.not-evaluated",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.status.not-evaluated",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.status.not-evaluated",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.status.stale",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.status.stale",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.status.stale",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.inverse",
+      "fg": "sem.text.inverse",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.brand.subtle",
+      "fg": "sem.text.link",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.text.link",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.text.link",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.text.link",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.text.muted",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.text.muted",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.text.muted",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.agent.surface",
+      "fg": "sem.text.primary",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.brand.subtle",
+      "fg": "sem.text.primary",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.text.primary",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.text.primary",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.text.primary",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.value.claimed",
+      "fg": "sem.text.primary",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.brand.subtle",
+      "fg": "sem.text.secondary",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.text.secondary",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.text.secondary",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.text.secondary",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.value.claimed",
+      "fg": "sem.text.secondary",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.brand.subtle",
+      "fg": "sem.text.value.claimed",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.text.value.claimed",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.text.value.claimed",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.text.value.claimed",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.value.claimed",
+      "fg": "sem.text.value.claimed",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.text.value.measured",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.raised",
+      "fg": "sem.text.value.measured",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.sunken",
+      "fg": "sem.text.value.measured",
+      "tag": "text"
+    },
+    {
+      "bg": "sem.surface.highlight",
+      "fg": "sem.border.overlay",
+      "tag": "non-text"
+    }
+  ]
+}

@@ -150,6 +150,29 @@ fn ac4_deuteranopia_clash() {
     assert!(t.contains("STATUS-DISTANCE deuteranopia"), "{t}");
 }
 
+/// Alpha: a semi-transparent foreground is composited over its background; the pair fails when
+/// either the 8-bit or the full-precision composite is below the threshold (the PR 349 flip case:
+/// 3.003:1 at 8 bits, 2.998:1 exact).
+#[test]
+fn alpha_composite_fails_on_either_path() {
+    let t = fixture_case("alpha-flip");
+    assert!(t.contains("CONTRAST light sem.border.overlay/sem.surface.highlight 3.00"), "{t}");
+    assert!(t.contains("full-precision composite"), "{t}");
+}
+
+/// Palette immutability inside the gate: with the committed baseline (as CI runs it) the shipped
+/// tree passes, and a changed frozen palette is refused with PAL-IMMUTABLE.
+#[test]
+fn baseline_refuses_a_changed_frozen_palette() {
+    let b = fix("palette-baseline.json");
+    let b = b.to_str().unwrap();
+    assert_eq!(gate(&design(), &["--baseline", b]).status.code(), Some(0));
+    let o = gate(&repo().join("fixtures/ux/tokens/datapal/changed-v1"), &["--baseline", b]);
+    assert_eq!(o.status.code(), Some(1));
+    assert!(stdout(&o).contains("PAL-IMMUTABLE pal.step.tol@1"), "{}", stdout(&o));
+    assert!(!stdout(&gate(&repo().join("fixtures/ux/tokens/datapal/changed-v1"), &[])).contains("PAL-IMMUTABLE"));
+}
+
 /// AC-5 and REQ-005: CIEDE2000 reproduces the published test data within 1e-4.
 #[test]
 fn ac5_sharma_test_data() {
@@ -212,7 +235,7 @@ fn bad_usage_and_unreadable_input_exit_2() {
 fn every_fixture_is_labelled() {
     let e = parse(&std::fs::read(fix("expected.json")).unwrap());
     let CValue::Obj(m) = get(&e, &["fixtures"]) else { panic!() };
-    assert_eq!(m.len(), 4);
+    assert_eq!(m.len(), 5);
     for n in m.keys() {
         assert!(fix(n).join("tokens").is_dir(), "{n}");
     }
