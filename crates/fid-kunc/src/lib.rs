@@ -5,12 +5,14 @@
 //! [`UncertaintyStatement`] with its canonical JSON and digest, see [`statement`]),
 //! `UNC.UEC.CLASS` (evidence class assignment, rule set `uec-assign@1`, see [`uec`]) and
 //! `UNC.MODEL.DIST` (input distributions, moments, seeded sampling and the correlation check,
-//! see [`dist`]).
+//! see [`dist`]) and `UNC.MODEL.GRAPH.SCHEMA` (the Uncertainty Model graph types, the
+//! `uncertainty-model/v1` document, its canonical form and digest, see [`model`]).
 //!
 //! The `statement` module never computes an uncertainty. It holds what other nodes computed
 //! or a person declared, and refuses any statement that breaks the invariants.
 
 pub mod dist;
+pub mod model;
 pub mod statement;
 pub mod uec;
 
