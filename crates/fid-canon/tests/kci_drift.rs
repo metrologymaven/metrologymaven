@@ -86,3 +86,13 @@ fn fid_canon_matches_the_kernel_manifest_fixture() {
     let pretty = std::fs::read(format!("{dir}manifest/ok-whitespace.json")).unwrap();
     assert_eq!(fid_canon::canonicalize(&pretty).unwrap(), bytes);
 }
+
+/// The kernel writer's bytes of a whole Uncertainty Model (UNC.MODEL.GRAPH.SCHEMA, written by
+/// fid-kunc through fid-kci and pinned by the Python reference) are already fid-canon
+/// canonical: re-canonicalising them changes nothing.
+#[test]
+fn uncertainty_model_canonical_bytes_are_fid_canon_canonical() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/unc/model/graph/bore_ls.canon.json");
+    let bytes = std::fs::read(path).unwrap();
+    assert_eq!(fid_canon::canonicalize(&bytes).unwrap(), bytes);
+}
