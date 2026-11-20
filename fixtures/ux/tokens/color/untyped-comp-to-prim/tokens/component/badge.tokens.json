@@ -1,0 +1,11 @@
+{
+  "comp": {
+    "badge": {
+      "border": {
+        "primary": {
+          "$value": "{prim.color.blue.600}"
+        }
+      }
+    }
+  }
+}

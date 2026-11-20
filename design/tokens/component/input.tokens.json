@@ -1,0 +1,33 @@
+{
+  "comp": {
+    "$type": "color",
+    "input": {
+      "bg": {
+        "default": {
+          "$description": "Input field fill.",
+          "$value": "{sem.surface.base}"
+        }
+      },
+      "border": {
+        "default": {
+          "$description": "Input boundary.",
+          "$value": "{sem.border.strong}"
+        },
+        "focus": {
+          "$description": "Input boundary with keyboard focus.",
+          "$value": "{sem.focus.ring}"
+        }
+      },
+      "fg": {
+        "default": {
+          "$description": "Input text.",
+          "$value": "{sem.text.primary}"
+        },
+        "placeholder": {
+          "$description": "Placeholder text.",
+          "$value": "{sem.text.muted}"
+        }
+      }
+    }
+  }
+}

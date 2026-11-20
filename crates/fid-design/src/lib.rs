@@ -5,9 +5,11 @@
 //! - [`princ`]: `princ-check` (`UX.SYSTEM.PRINC`).
 //! - [`words`]: `words-check` (`UX.SYSTEM.PRINC`).
 //! - [`review`]: `review-check` (`UX.SYSTEM.REVIEW`).
+//! - [`tokens`]: `tokens-check` (`UX.TOKENS.COLOR`).
 
 pub mod finding;
 pub mod pkg;
 pub mod princ;
 pub mod review;
+pub mod tokens;
 pub mod words;

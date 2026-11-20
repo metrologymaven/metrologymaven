@@ -1,0 +1,34 @@
+{
+  "comp": {
+    "$type": "color",
+    "button": {
+      "bg": {
+        "primary": {
+          "$value": "{sem.brand.accent}"
+        }
+      },
+      "border": {
+        "primary": {
+          "$value": "{prim.color.blue.600}"
+        }
+      }
+    },
+    "input": {
+      "fg": {
+        "placeholder": {
+          "$value": "{sem.text.muted}"
+        }
+      }
+    },
+    "value": {
+      "fg": {
+        "claimed": {
+          "$value": "{sem.text.value.claimed}"
+        },
+        "measured": {
+          "$value": "{sem.text.value.measured}"
+        }
+      }
+    }
+  }
+}

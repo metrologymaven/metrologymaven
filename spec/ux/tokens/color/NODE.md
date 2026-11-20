@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-design]
+built_pr: 330
 satisfies: [REQ-UX.TOKENS-001, REQ-UX.TOKENS-002, REQ-UX.TOKENS-003, REQ-UX.TOKENS-004, REQ-UX.TOKENS-010]
 covers: []
 depends_on: [UX.SYSTEM.PKG]
@@ -73,6 +75,9 @@ The colour values of the design system and the tier structure all other tokens f
 
 - VIZ.SHELL.THEME's scope still says "token model and the four built-in themes"; the agreed boundary is that VIZ owns the runtime model and this node owns names and values. VIZ.SHELL.THEME should declare `uses_artifacts: [UX.TOKENS.COLOR]` (not editable from here).
 - Brand values from OUTR.BRAND.GUIDE.VISUAL (`brand/brand-tier.toml`) are adopted by a reviewed PR that copies them into `sem.brand.*`; UX does not read OUTR files automatically.
+- AC-5 pending UX.TOKENS.CHECK: until `color-check` exists, the contrast of every declared pair is shown by a provisional test (`tokens::wcag`, matched to the independent Python oracle in `fixtures/ux/tokens/color/`).
+- REQ-UX.TOKENS.COLOR-006 review record pending: the originality declarations are in `design/review/origin/tokens/`, but no `design-review@1` record can be valid while `design/review/dress-rules.json` is empty and no human approver has signed.
+- Hard requirement for UX.TOKENS.STATUS (from the PR 330 review): whatever values replace the provisional `sem.status.*` bindings must stay at least 0.10 in OKLab from every claimed role (`sem.*.value.claimed`) in every theme, because `tokens-check` enforces that floor (`TOK-CLAIMED-AS-MEASURED`). The provisional values meet it (smallest distance 0.107).
 
 ## Children
 
