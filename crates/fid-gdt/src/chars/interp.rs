@@ -264,7 +264,7 @@ impl RegisterView {
     pub fn code(&self) -> &'static str {
         match &self.view {
             View::None => "none",
-            View::Unverified { code, .. } => *code,
+            View::Unverified { code, .. } => code,
             View::Verified { .. } => "verified",
         }
     }
@@ -341,7 +341,7 @@ impl InterpretationPin {
     fn of(view: &RegisterView) -> InterpretationPin {
         let state = match &view.view {
             View::None => PinState::None,
-            View::Unverified { code, .. } => PinState::Unverified(*code),
+            View::Unverified { code, .. } => PinState::Unverified(code),
             View::Verified { .. } => PinState::Verified,
         };
         InterpretationPin { register: view.digest(), state }
@@ -390,7 +390,7 @@ impl InterpretationPin {
         let state = match m.get("register_verification")? {
             CValue::Str(s) if s == "none" => PinState::None,
             CValue::Str(s) if s == "verified" => PinState::Verified,
-            CValue::Str(s) => PinState::Unverified(*UNVERIFIED_CODES.iter().find(|c| **c == s.as_str())?),
+            CValue::Str(s) => PinState::Unverified(UNVERIFIED_CODES.iter().find(|c| **c == s.as_str())?),
             _ => return None,
         };
         // A register exactly when one was consulted.
