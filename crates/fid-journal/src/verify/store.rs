@@ -222,7 +222,10 @@ pub fn verify_store(store: &Store, stream: &str, opts: &VerifyOptions) -> Result
             let mut refs_st = conn.prepare(REFS_SQL)?;
             let mut st = conn.prepare(ROWS_SQL)?;
             let header_cap = to_i64(u64::try_from(MAX_HEADER_BYTES).unwrap_or(1 << 20));
-            let rows = st.query_map([to_i64(start.seq), header_cap, max_entries], |r| {
+            // A full verification reads every row, so a row stored below sequence 1 is seen (and
+            // fails as `sequence/reorder`) instead of being skipped by the range.
+            let first = if start.seq == 1 { i64::MIN } else { to_i64(start.seq) };
+            let rows = st.query_map([first, header_cap, max_entries], |r| {
                 Ok(stored((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?)))
             })?;
             let rows = rows.map(|row| -> Result<StoredEntry, ReadError> {

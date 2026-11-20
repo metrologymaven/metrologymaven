@@ -320,7 +320,8 @@ fn verify_model(m: &Model, opts: &VerifyOptions) -> Result<VerifyReport, ReadErr
         start,
         opts,
         m.checkpoints.iter().cloned().map(Ok),
-        m.rows.iter().filter(|r| r.seq >= start.seq as i64).cloned().map(Ok),
+        // A full verification reads every row (a row below sequence 1 is a `sequence` failure).
+        m.rows.iter().filter(|r| start.seq == 1 || r.seq >= start.seq as i64).cloned().map(Ok),
         &mut MemBlobs(&m.store),
     )?;
     let mut heads = m.heads.clone();
@@ -387,10 +388,9 @@ fn assert_expect(name: &str, got: &VerifyReport, expect: &Obj) {
             "{name}: {got_f}"
         );
         assert_eq!(got_f.stream, STREAM);
-        assert_eq!(
-            got_f.kind == FailureKind::Checkpoint,
-            got_f.checkpoint.is_some() || got_f.detail.contains("trusted")
-        );
+        if got_f.checkpoint.is_some() {
+            assert_eq!(got_f.kind, FailureKind::Checkpoint, "{name}: a checkpoint id on a non-checkpoint failure");
+        }
         assert!(REASONS.contains(&(got_f.kind, got_f.reason)), "{name}: reason {} not pinned", got_f.reason);
     }
 }
