@@ -2,23 +2,31 @@
 //!
 //! ```text
 //! {"artifact":"<id>","branch":"<branch>","by":"<principal id>","command":"program.register@1",
-//!  "digest":"sha256:<hex>","note":"<text>","source_digest":"sha256:<hex>","state":"registered",
-//!  "version":1}
+//!  "content":"<canonical bytes>","digest":"sha256:<hex>","note":"<text>",
+//!  "source_digest":"sha256:<hex>","state":"registered","version":1}
 //! ```
 //!
+//! `content` is present exactly on `register` events: the frozen canonical bytes of the
+//! version (a program's canonical JSON, or a script bundle's), as a JSON string. That makes
+//! the journal the durable record of every version's bytes, and replay rebuilds them from it.
 //! `note` and `source_digest` are present only when set. `state` is the state after the
 //! transition. The principal kind is not in the event: it is in the journal envelope the bus
 //! writes, and replay reads it from there. The reader is strict: unknown, missing or mistyped
 //! keys and bytes that are not canonical are refused.
 
+use super::bundle::MAX_BUNDLE_BYTES;
 use super::command::Verb;
 use super::{ArtifactId, LifeState, MAX_NOTE_BYTES, MAX_VERSIONS};
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
 use fid_types::Digest;
 use std::collections::BTreeMap;
 
-/// Largest event, in bytes.
-pub const MAX_EVENT_BYTES: usize = 8 * 1024 + 6 * MAX_NOTE_BYTES;
+/// Largest frozen content, in bytes: the larger of a program and a script bundle.
+pub const MAX_CONTENT_BYTES: usize =
+    if fid_program::MAX_BYTES > MAX_BUNDLE_BYTES { fid_program::MAX_BYTES } else { MAX_BUNDLE_BYTES };
+/// Largest event, in bytes. Content is canonical JSON, so as a JSON string each byte takes at
+/// most two (`"` and `\` are escaped; control characters are already escaped in it).
+pub const MAX_EVENT_BYTES: usize = 8 * 1024 + 6 * MAX_NOTE_BYTES + 2 * MAX_CONTENT_BYTES;
 const MAX_EVENT_DEPTH: usize = 2;
 /// Longest principal identity or branch name, in bytes (as `fid_bus::principal::MAX_ID_BYTES`).
 const MAX_NAME_BYTES: usize = 256;
@@ -44,6 +52,8 @@ pub struct LifeEvent {
     pub source_digest: Option<Digest>,
     /// The caller's note, if any.
     pub note: Option<String>,
+    /// The frozen canonical bytes, on `register` events only.
+    pub content: Option<String>,
 }
 
 /// Why event bytes were refused.
@@ -67,6 +77,9 @@ impl LifeEvent {
         o.insert("branch".to_owned(), text(&self.branch));
         o.insert("by".to_owned(), text(&self.by));
         o.insert("command".to_owned(), text(self.command()));
+        if let Some(c) = &self.content {
+            o.insert("content".to_owned(), text(c));
+        }
         o.insert("digest".to_owned(), text(self.digest.as_str()));
         if let Some(n) = &self.note {
             o.insert("note".to_owned(), text(n));
@@ -118,6 +131,13 @@ impl LifeEvent {
             }
             _ => return Err(BadEvent("missing version")),
         };
+        let content = opt("content")?.map(str::to_owned);
+        if content.is_some() != (verb == Verb::Register) {
+            return Err(BadEvent("content belongs to register events only"));
+        }
+        if content.as_ref().is_some_and(|c| c.len() > MAX_CONTENT_BYTES) {
+            return Err(BadEvent("content too long"));
+        }
         let note = opt("note")?.map(str::to_owned);
         if note.as_ref().is_some_and(|n| n.len() > MAX_NOTE_BYTES) {
             return Err(BadEvent("note too long"));
@@ -132,6 +152,7 @@ impl LifeEvent {
             state: LifeState::parse(s("state")?).ok_or(BadEvent("bad state"))?,
             source_digest: opt("source_digest")?.map(digest).transpose()?,
             note,
+            content,
         };
         if e.state != verb.to_state() {
             return Err(BadEvent("state does not match the command"));

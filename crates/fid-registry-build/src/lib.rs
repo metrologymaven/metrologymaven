@@ -67,8 +67,9 @@ fn store_defs() -> Result<Vec<CommandDef>, DefError> {
 }
 
 /// The two adoption commands of `AUTO.REC.ADOPT` (`human_only`, request-only on MCP) and the
-/// eight lifecycle commands of `AUTO.REC.LIFE` (register and unregister W2; release and
-/// deprecate W3, `human_only`, request-only on MCP), declared with the registry macros.
+/// ten lifecycle commands of `AUTO.REC.LIFE` (register, unregister and open_draft W2;
+/// release and deprecate W3, `human_only`, request-only on MCP), declared with the registry
+/// macros.
 fn program_rec_defs() -> Result<Vec<CommandDef>, DefError> {
     let adopt = fid_program_rec::adopt::declarations().into_iter().map(|d| d.def);
     let life = fid_program_rec::life::declarations().into_iter().map(|d| d.def);

@@ -414,8 +414,8 @@ fn the_adoption_commands_are_human_only_and_request_only_in_the_manifest() {
     }
 }
 
-/// AUTO.REC.LIFE's eight lifecycle commands are collected into the workspace manifest:
-/// register and unregister W2 and exposed; release and deprecate W3, `human_only` and
+/// AUTO.REC.LIFE's ten lifecycle commands are collected into the workspace manifest:
+/// register, unregister and open_draft W2 and exposed; release and deprecate W3, `human_only` and
 /// request-only on MCP (hand-labelled from spec/auto/rec/life/NODE.md, REQ-003).
 #[test]
 fn the_lifecycle_commands_are_in_the_manifest_with_their_classes() {
@@ -426,6 +426,7 @@ fn the_lifecycle_commands_are_in_the_manifest_with_their_classes() {
             ("unregister", "W2", false, "exposed"),
             ("release", "W3", true, "request_only"),
             ("deprecate", "W3", true, "request_only"),
+            ("open_draft", "W2", false, "exposed"),
         ] {
             let id = format!("{kind}.{verb}@1");
             let (_, c) = commands.iter().find(|(i, _)| *i == id).unwrap_or_else(|| panic!("{id} collected"));

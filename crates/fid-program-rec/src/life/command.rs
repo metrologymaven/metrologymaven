@@ -1,4 +1,4 @@
-//! The eight lifecycle commands, declared with the registry macros, with their CLI and MCP
+//! The ten lifecycle commands, declared with the registry macros, with their CLI and MCP
 //! entry points.
 //!
 //! | Command | Class | MCP |
@@ -7,17 +7,23 @@
 //! | `program.unregister@1`, `script.unregister@1` | W2 | exposed |
 //! | `program.release@1`, `script.release@1` | W3, `human_only` | request-only |
 //! | `program.deprecate@1`, `script.deprecate@1` | W3, `human_only` | request-only |
+//! | `program.open_draft@1`, `script.open_draft@1` | W2 | exposed |
+//!
+//! `open_draft` opens a new editable draft that copies an identified (registered, released or
+//! deprecated) version and records its digest as the draft's source (REQ-005). The frozen
+//! version is not touched; the edit path copies [`LifeStore::frozen_bytes`] into the project
+//! draft. Registering that draft unchanged is a `conflict`: a new version needs new content.
 //!
 //! Parameters: the artifact ID (`program` or `script`), `expected_digest` and an optional
 //! `note`. For `register`, `expected_digest` is the digest of the draft the caller means to
 //! freeze; for the others it names the version. A mismatch is `conflict`. Results: `state`,
 //! `version`, `digest`.
 //!
-//! CLI: `fid program|script register|unregister|release|deprecate --program <id> |
+//! CLI: `fid program|script register|unregister|release|deprecate|open-draft --program <id> |
 //! --script <id> --expected-digest <sha256:..> [--note <text>] [--json]`.
 //!
 //! MCP: `program_register`, ..., `script_deprecate`. The W3 tools are **request-only**:
-//! [`invoke_mcp`] reads the parameters strictly, files a request for a person through the
+//! [`invoke_mcp`] reads and validates the parameters fully, files a request for a person through the
 //! [`LifeRequests`] seam and returns [`McpReply::RequestFiled`]; it never runs the command,
 //! so the state does not change.
 //!
@@ -71,6 +77,10 @@ pub const SCRIPT_UNREGISTER: &str = "script.unregister@1";
 pub const SCRIPT_RELEASE: &str = "script.release@1";
 /// `script.deprecate@1`.
 pub const SCRIPT_DEPRECATE: &str = "script.deprecate@1";
+/// `program.open_draft@1`.
+pub const PROGRAM_OPEN_DRAFT: &str = "program.open_draft@1";
+/// `script.open_draft@1`.
+pub const SCRIPT_OPEN_DRAFT: &str = "script.open_draft@1";
 
 /// Largest MCP parameter payload, in bytes.
 pub const MAX_PARAMS_BYTES: usize = 1024 + 6 * MAX_NOTE_BYTES;
@@ -80,7 +90,7 @@ const MAX_CLI_ARGS: usize = 12;
 
 // ------------------------------------------------------------------ verbs
 
-/// The four lifecycle commands of each artifact kind.
+/// The five lifecycle commands of each artifact kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Verb {
     /// draft → registered (W2).
@@ -91,24 +101,40 @@ pub enum Verb {
     Release,
     /// released → deprecated (W3).
     Deprecate,
+    /// identified version → a new open draft copying it (W2); the version is unchanged.
+    OpenDraft,
 }
 
 impl Verb {
-    /// All four, in declaration order.
-    pub const ALL: [Verb; 4] = [Verb::Register, Verb::Unregister, Verb::Release, Verb::Deprecate];
+    /// All five, in declaration order.
+    pub const ALL: [Verb; 5] = [Verb::Register, Verb::Unregister, Verb::Release, Verb::Deprecate, Verb::OpenDraft];
 
-    /// The CLI subcommand and command-name suffix.
+    /// The command-name suffix and MCP tool suffix.
     pub fn as_str(self) -> &'static str {
         match self {
             Verb::Register => "register",
             Verb::Unregister => "unregister",
             Verb::Release => "release",
             Verb::Deprecate => "deprecate",
+            Verb::OpenDraft => "open_draft",
+        }
+    }
+
+    /// The CLI subcommand.
+    pub fn cli_word(self) -> &'static str {
+        match self {
+            Verb::OpenDraft => "open-draft",
+            Verb::Register | Verb::Unregister | Verb::Release | Verb::Deprecate => self.as_str(),
         }
     }
 
     fn parse(s: &str) -> Option<Verb> {
         Verb::ALL.into_iter().find(|v| v.as_str() == s)
+    }
+
+    /// Whether the command is W3 (human only).
+    pub fn is_w3(self) -> bool {
+        matches!(self, Verb::Release | Verb::Deprecate)
     }
 
     /// The state the transition leads to.
@@ -118,6 +144,7 @@ impl Verb {
             Verb::Unregister => LifeState::Draft,
             Verb::Release => LifeState::Released,
             Verb::Deprecate => LifeState::Deprecated,
+            Verb::OpenDraft => LifeState::Draft,
         }
     }
 
@@ -128,10 +155,12 @@ impl Verb {
             (ArtifactKind::Program, Verb::Unregister) => PROGRAM_UNREGISTER,
             (ArtifactKind::Program, Verb::Release) => PROGRAM_RELEASE,
             (ArtifactKind::Program, Verb::Deprecate) => PROGRAM_DEPRECATE,
+            (ArtifactKind::Program, Verb::OpenDraft) => PROGRAM_OPEN_DRAFT,
             (ArtifactKind::Script, Verb::Register) => SCRIPT_REGISTER,
             (ArtifactKind::Script, Verb::Unregister) => SCRIPT_UNREGISTER,
             (ArtifactKind::Script, Verb::Release) => SCRIPT_RELEASE,
             (ArtifactKind::Script, Verb::Deprecate) => SCRIPT_DEPRECATE,
+            (ArtifactKind::Script, Verb::OpenDraft) => SCRIPT_OPEN_DRAFT,
         }
     }
 
@@ -157,6 +186,12 @@ pub trait Drafts {
 /// The journal seam the host wires (the Record Journal behind the bus). `Ok` holds the
 /// sequence number of the committed, durable entry; `Err` means nothing was committed
 /// (display-safe reason).
+///
+/// **One sequence.** [`LifeJournal`] and [`crate::adopt::AdoptJournal`] must be handles to
+/// the same journal and return numbers from one entry sequence. Script registration records
+/// its authorship with the lifecycle entry's number, and an adoption is ordered against
+/// authorship by entry number; two independent counters would let an adoption appear older
+/// or newer than the work it covers.
 pub trait LifeJournal {
     /// Commits one lifecycle event on the branch it names.
     fn commit(&mut self, event: &LifeEvent) -> Result<u64, String>;
@@ -201,7 +236,7 @@ pub struct LifeCtx<'a> {
 
 // ------------------------------------------------------------------ params and results
 
-/// Parameters of the four `program.*` lifecycle commands.
+/// Parameters of the five `program.*` lifecycle commands.
 #[derive(FidSchema, Debug, Clone, PartialEq, Eq)]
 pub struct ProgramLifeParams {
     #[fid(description = "The program (its program_id).", pattern = UUID7_PATTERN)]
@@ -215,7 +250,7 @@ pub struct ProgramLifeParams {
     pub note: Option<String>,
 }
 
-/// Parameters of the four `script.*` lifecycle commands.
+/// Parameters of the five `script.*` lifecycle commands.
 #[derive(FidSchema, Debug, Clone, PartialEq, Eq)]
 pub struct ScriptLifeParams {
     #[fid(description = "The script.", pattern = crate::adopt::SCRIPT_ID_PATTERN)]
@@ -441,8 +476,9 @@ fn facts(view: &View<'_>, id: &ArtifactId, digest: &Digest, bytes: &[u8]) -> Res
 }
 
 /// Runs every check of a transition against read-only views and returns what to commit.
-/// Order: register: open draft, draft exists, digest, version limit; the others: version by
-/// digest, transition table, open draft (unregister), release preconditions.
+/// Order: open_draft: identified version by digest, draft closed; register: open draft, draft
+/// exists, digest, no identified version with the same content, version limit; the others:
+/// version by digest, transition table, open draft (unregister), release preconditions.
 pub(crate) fn prepare(
     view: &View<'_>,
     verb: Verb,
@@ -464,7 +500,25 @@ pub(crate) fn prepare(
         state: to,
         source_digest: source,
         note,
+        content: None,
     };
+    if verb == Verb::OpenDraft {
+        let Some((version, _)) = lv.identified(expected) else {
+            if lv.exists() || draft_known(view.drafts, id) {
+                return Err(LifeError::Conflict {
+                    detail: "no registered, released or deprecated version has the expected digest".to_owned(),
+                });
+            }
+            return Err(LifeError::ArtifactNotFound { artifact });
+        };
+        if lv.draft_open() {
+            return Err(LifeError::Conflict { detail: "a draft of the artifact is already open".to_owned() });
+        }
+        return Ok(Prepared {
+            event: event(version, *expected, Some(*expected), note),
+            change: Change::OpenDraft { id: id.clone(), source: *expected },
+        });
+    }
     if verb == Verb::Register {
         if !lv.draft_open() || !transition_allowed(LifeState::Draft, to) {
             let from = lv.head_state().unwrap_or(LifeState::Registered);
@@ -475,12 +529,20 @@ pub(crate) fn prepare(
         if digest != *expected {
             return Err(LifeError::Conflict { detail: format!("the draft is {}", digest.as_str()) });
         }
+        if let Some((v, state)) = lv.identified(&digest) {
+            // One identity, one state: re-registering the bytes of an identified version
+            // under a new number could undo a deprecation or a release.
+            return Err(LifeError::Conflict {
+                detail: format!("version {v} already has this content and is {}", state.as_str()),
+            });
+        }
         let version = lv.next_version().ok_or(LifeError::Internal { reason: "the lineage has too many versions" })?;
         let source = lv.draft_source();
-        return Ok(Prepared {
-            event: event(version, digest, source, note),
-            change: Change::Register { id: id.clone(), digest, source, bytes },
-        });
+        let content = String::from_utf8(bytes.clone())
+            .map_err(|_| LifeError::Internal { reason: "canonical bytes are not UTF-8" })?;
+        let mut e = event(version, digest, source, note);
+        e.content = Some(content);
+        return Ok(Prepared { event: e, change: Change::Register { id: id.clone(), digest, source, bytes } });
     }
     let Some((version, state, source, bytes)) = lv.find(expected) else {
         if lv.exists() {
@@ -577,14 +639,17 @@ fn run(
     ctx.store.apply(&prepared.change, entry);
     if let (Verb::Register, ArtifactId::Script(script)) = (verb, &id) {
         // AUTO.REC.ADOPT: script registration records who authored the version, so an agent's
-        // version needs a person's adoption before release.
+        // version needs a person's adoption before release. Registering is not authoring: if
+        // any non-human authorship of this content is on record, a person who registers (or
+        // re-registers) it is not recorded as its author, so it stays unadopted until a person
+        // adopts it with `script.adopt_version@1`.
         let digest = prepared.event.digest;
-        ctx.provenance.record_authorship(
-            Target::ScriptVersion { script: script.clone(), version: digest },
-            digest,
-            ctx.principal,
-            entry,
-        );
+        let target = Target::ScriptVersion { script: script.clone(), version: digest };
+        let non_human = ctx.provenance.authorships().iter().any(|a| a.target == target && !is_person(a.principal_kind));
+        let person_over_non_human = non_human && is_person(ctx.principal.kind());
+        if !person_over_non_human {
+            ctx.provenance.record_authorship(target, digest, ctx.principal, entry);
+        }
     }
     Ok(LifeResult::from_event(&prepared.event))
 }
@@ -774,15 +839,61 @@ pub fn script_deprecate(ctx: &mut LifeCtx<'_>, params: ScriptLifeParams) -> Resu
     run(ctx, Verb::Deprecate, ArtifactKind::Script, &params.script, &params.expected_digest, params.note.as_deref())
 }
 
+#[fid_command(
+    id = "program.open_draft",
+    major = 1,
+    title = "Open program draft",
+    description = "Opens a new editable draft of a program that copies a registered, released or deprecated version and records its digest as the source. The version itself is unchanged. Agents open drafts on their agent branch.",
+    side_effect = W2,
+    mcp_projection = Exposed,
+    determinism = D0,
+    idempotency = None,
+    fs_effect = None,
+    undo = HeadMove,
+    preconditions = [],
+    effects = [PROGRAM_OPEN_DRAFT],
+    algorithms = [],
+    exposure = [Cli, Mcp, Gui],
+    lifecycle(state = "active", since = "2026-11-19"),
+    web = Available,
+)]
+pub fn program_open_draft(ctx: &mut LifeCtx<'_>, params: ProgramLifeParams) -> Result<LifeResult, LifeError> {
+    run(ctx, Verb::OpenDraft, ArtifactKind::Program, &params.program, &params.expected_digest, params.note.as_deref())
+}
+
+#[fid_command(
+    id = "script.open_draft",
+    major = 1,
+    title = "Open script draft",
+    description = "Opens a new editable draft of a script that copies a registered, released or deprecated version and records its digest as the source. The version itself is unchanged. Agents open drafts on their agent branch.",
+    side_effect = W2,
+    mcp_projection = Exposed,
+    determinism = D0,
+    idempotency = None,
+    fs_effect = None,
+    undo = HeadMove,
+    preconditions = [],
+    effects = [SCRIPT_OPEN_DRAFT],
+    algorithms = [],
+    exposure = [Cli, Mcp, Gui],
+    lifecycle(state = "active", since = "2026-11-19"),
+    web = Available,
+)]
+pub fn script_open_draft(ctx: &mut LifeCtx<'_>, params: ScriptLifeParams) -> Result<LifeResult, LifeError> {
+    run(ctx, Verb::OpenDraft, ArtifactKind::Script, &params.script, &params.expected_digest, params.note.as_deref())
+}
+
 fid_commands![
     program_register,
     program_unregister,
     program_release,
     program_deprecate,
+    program_open_draft,
     script_register,
     script_unregister,
     script_release,
     script_deprecate,
+    script_open_draft,
 ];
 
 /// The declared definition of a command.
@@ -792,10 +903,12 @@ pub(crate) fn def_for(verb: Verb, kind: ArtifactKind) -> CommandDef {
         (ArtifactKind::Program, Verb::Unregister) => __fid_command_program_unregister().def,
         (ArtifactKind::Program, Verb::Release) => __fid_command_program_release().def,
         (ArtifactKind::Program, Verb::Deprecate) => __fid_command_program_deprecate().def,
+        (ArtifactKind::Program, Verb::OpenDraft) => __fid_command_program_open_draft().def,
         (ArtifactKind::Script, Verb::Register) => __fid_command_script_register().def,
         (ArtifactKind::Script, Verb::Unregister) => __fid_command_script_unregister().def,
         (ArtifactKind::Script, Verb::Release) => __fid_command_script_release().def,
         (ArtifactKind::Script, Verb::Deprecate) => __fid_command_script_deprecate().def,
+        (ArtifactKind::Script, Verb::OpenDraft) => __fid_command_script_open_draft().def,
     }
 }
 
@@ -837,7 +950,7 @@ pub fn mcp_params(tool: &str, raw: &[u8]) -> Result<LifeCall, LifeError> {
     call_from(kind, verb, &o)
 }
 
-/// Reads `fid <args>`: `program|script register|unregister|release|deprecate --program <P> |
+/// Reads `fid <args>`: `program|script register|unregister|release|deprecate|open-draft --program <P> |
 /// --script <X> --expected-digest <D> [--note <text>] [--json]`. Unknown, repeated or
 /// value-less options and stray words are `bad_params`.
 pub fn cli_params(args: &[&str]) -> Result<LifeCall, LifeError> {
@@ -849,7 +962,7 @@ pub fn cli_params(args: &[&str]) -> Result<LifeCall, LifeError> {
         .into_iter()
         .find(|k| k.as_str() == *group)
         .ok_or(LifeError::bad("unknown command group"))?;
-    let verb = Verb::parse(sub).ok_or(LifeError::bad("unknown subcommand"))?;
+    let verb = Verb::ALL.into_iter().find(|v| v.cli_word() == *sub).ok_or(LifeError::bad("unknown subcommand"))?;
     let id_flag = match kind {
         ArtifactKind::Program => "--program",
         ArtifactKind::Script => "--script",
@@ -888,6 +1001,7 @@ fn dispatch(ctx: &mut LifeCtx<'_>, call: LifeCall) -> Result<LifeResult, LifeErr
                 Verb::Unregister => program_unregister(ctx, p),
                 Verb::Release => program_release(ctx, p),
                 Verb::Deprecate => program_deprecate(ctx, p),
+                Verb::OpenDraft => program_open_draft(ctx, p),
             }
         }
         ArtifactKind::Script => {
@@ -897,6 +1011,7 @@ fn dispatch(ctx: &mut LifeCtx<'_>, call: LifeCall) -> Result<LifeResult, LifeErr
                 Verb::Unregister => script_unregister(ctx, p),
                 Verb::Release => script_release(ctx, p),
                 Verb::Deprecate => script_deprecate(ctx, p),
+                Verb::OpenDraft => script_open_draft(ctx, p),
             }
         }
     }
@@ -911,6 +1026,12 @@ pub fn invoke_mcp(ctx: &mut LifeCtx<'_>, tool: &str, raw: &[u8]) -> Result<McpRe
     let call = mcp_params(tool, raw)?;
     let def = def_for(call.verb, call.kind);
     if def.effective_projection() != Projection::Exposed {
+        // Validate fully before filing anything: a request a person would have to refuse is
+        // never filed.
+        ArtifactId::parse(call.kind, &call.artifact)?;
+        Digest::parse(&call.expected_digest)
+            .map_err(|_| LifeError::bad("expected_digest is not sha256:<64 lowercase hex>"))?;
+        check_note(call.note.as_deref())?;
         let params = to_canonical_bytes(&call.to_value())
             .map_err(|_| LifeError::Internal { reason: "the request cannot be serialised" })?;
         let request = LifeRequest { command: call.command(), params, requester: ctx.principal.reference() };

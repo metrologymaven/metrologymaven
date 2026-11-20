@@ -8,6 +8,8 @@ Independent reference: nothing here runs the Rust code.
   code point equals sorting by UTF-16 code units, and json.dumps without ASCII escaping is the
   JCS form). Step H1 is written by a person, A1 and A2 by an agent.
 - `fixtures/script/hello/main.py`: a one-file script bundle.
+- `minimal-edited.json`: `minimal.json` with one comment step added, the content an edit
+  makes in a new draft opened from a released `minimal.json` (version 3 of the lineage).
 - `expected.json`: digests from hashlib over the canonical bytes; the canonical script bundle
   form is the one documented in crates/fid-program-rec/src/life/bundle.rs; the expected events
   and results are hand-labelled from spec/auto/rec/life/NODE.md (REQ-001..006, AC-1..AC-7) and
@@ -35,6 +37,7 @@ A2 = "019a0000-0003-7000-8000-00000000c003"  # agent
 HUMAN = "alice"
 BRANCH = "main"
 SCRIPT = "hello"
+EDIT_STEP = "019a0000-0009-7000-8000-00000000d009"
 HELLO_PY = b'print("hello from a Metrology Maven script")\n'
 
 
@@ -75,18 +78,20 @@ def bundle(files):
     return canon({"files": files, "format": "fid-script-bundle", "format_version": 1})
 
 
-def event(command, artifact, d, state, version):
-    return canon(
-        {
-            "artifact": artifact,
-            "branch": BRANCH,
-            "by": HUMAN,
-            "command": command,
-            "digest": d,
-            "state": state,
-            "version": version,
-        }
-    ).decode("ascii")
+def event(command, artifact, d, state, version, content=None):
+    e = {
+        "artifact": artifact,
+        "branch": BRANCH,
+        "by": HUMAN,
+        "command": command,
+        "digest": d,
+        "state": state,
+        "version": version,
+    }
+    if content is not None:
+        # Register events carry the frozen canonical bytes as a JSON string (event.rs).
+        e["content"] = content.decode("ascii")
+    return canon(e).decode("ascii")
 
 
 def result(d, state, version):
@@ -97,14 +102,19 @@ def build():
     minimal = (FIX / "program" / "valid" / "minimal.json").read_bytes()
     assert json.loads(minimal)["program_id"] == MINIMAL_ID
     md = digest(minimal)
+    edited_obj = json.loads(minimal)
+    edited_obj["main"].append({"kind": "comment", "step_id": EDIT_STEP, "text": "Added in a new draft."})
+    edited = canon(edited_obj)
     agent = canon(agent_steps())
-    sd = digest(bundle({"main.py": HELLO_PY.decode("ascii")}))
+    sb = bundle({"main.py": HELLO_PY.decode("ascii")})
+    sd = digest(sb)
     expected = {
         "program": MINIMAL_ID,
         "minimal_digest": md,
+        "edited_digest": digest(edited),
         "human": HUMAN,
         "branch": BRANCH,
-        "ac1_register_event": event("program.register@1", MINIMAL_ID, md, "registered", 1),
+        "ac1_register_event": event("program.register@1", MINIMAL_ID, md, "registered", 1, minimal),
         "ac1_release_event": event("program.release@1", MINIMAL_ID, md, "released", 1),
         "ac1_register_result": result(md, "registered", 1),
         "ac1_release_result": result(md, "released", 1),
@@ -115,7 +125,7 @@ def build():
         "ac4_unadopted": [A1, A2],
         "script": SCRIPT,
         "script_digest": sd,
-        "ac6_register_event": event("script.register@1", SCRIPT, sd, "registered", 1),
+        "ac6_register_event": event("script.register@1", SCRIPT, sd, "registered", 1, sb),
         "ac6_release_event": event("script.release@1", SCRIPT, sd, "released", 1),
         "ac6_register_result": result(sd, "registered", 1),
         "ac6_release_result": result(sd, "released", 1),
@@ -124,6 +134,7 @@ def build():
     return {
         FIX / "program" / "agent-steps.json": agent,
         FIX / "script" / "hello" / "main.py": HELLO_PY,
+        HERE / "minimal-edited.json": edited,
         HERE / "expected.json": json.dumps(expected, indent=2, sort_keys=True).encode("utf-8") + b"\n",
     }
 

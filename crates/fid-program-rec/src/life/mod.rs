@@ -20,11 +20,14 @@
 //!   [`LifeStore::versions`], [`LifeStore::by_digest`], [`LifeStore::run_gate`],
 //!   [`LifeStore::frozen_bytes`].
 //! - Edit API for `AUTO.PROG.EDIT.OPS`: [`LifeStore::guard_edit`] (`immutable` unless the
-//!   lineage has an open draft) and [`LifeStore::begin_draft`] (a new draft that copies a
-//!   frozen version and records its digest as the source, REQ-005).
-//! - [`command`]: the eight commands `program.{register,unregister,release,deprecate}@1` and
-//!   `script.{...}@1`, with their CLI and MCP entry points. `register` and `unregister` are W2;
-//!   `release` and `deprecate` are W3, `human_only` and request-only on MCP.
+//!   lineage has an open draft). A new draft that copies a frozen version and records its
+//!   digest as the source (REQ-005) is opened only by the journaled, authorised command
+//!   `program.open_draft@1` / `script.open_draft@1`; the edit path then copies
+//!   [`LifeStore::frozen_bytes`] into the project draft.
+//! - [`command`]: the ten commands `program.{register,unregister,release,deprecate,open_draft}@1`
+//!   and `script.{...}@1`, with their CLI and MCP entry points. `register`, `unregister` and
+//!   `open_draft` are W2; `release` and `deprecate` are W3, `human_only` and request-only on
+//!   MCP.
 //! - [`event`]: the journal event of a transition; [`mod@replay`]: exact replay.
 //! - [`bundle`]: the canonical form of a script bundle.
 //!
@@ -34,6 +37,17 @@
 //! state only off agent branches; every non-human principal (agent, script, service, device,
 //! system) writes it only on an agent branch `agent/<client>/<n>`. Every refusal commits
 //! nothing.
+//!
+//! **Durable content.** A `register` event carries the frozen canonical bytes themselves
+//! ([`LifeEvent::content`]), so the journal holds every version's bytes and [`replay()`]
+//! rebuilds the whole store, frozen bytes included, from the journal alone. The in-memory
+//! [`LifeStore`] is a derived view of the journal.
+//!
+//! **One identity, one state.** A version cannot be registered again under a new number while
+//! any identified (registered, released or deprecated) version of its lineage has the same
+//! digest (`conflict`), so a new draft must actually change the content; a deprecation can
+//! never be undone by re-registering the same bytes. Queries by digest also take the most
+//! restrictive state if digests ever repeat (deprecated first).
 //!
 //! **Fail closed.** A transition changes the store only after its journal entry is committed.
 //! A release is refused unless `program.check@1` passes and `AUTO.REC.ADOPT` reports no
@@ -417,6 +431,34 @@ pub struct LifeStore {
 pub(crate) enum Change {
     Register { id: ArtifactId, digest: Digest, source: Option<Digest>, bytes: Vec<u8> },
     SetState { id: ArtifactId, version: u32, to: LifeState },
+    OpenDraft { id: ArtifactId, source: Digest },
+}
+
+/// Restrictiveness of an identified state for runs: deprecated over released over registered.
+/// A retired (`draft`) version identifies nothing.
+fn restriction(state: LifeState) -> Option<u8> {
+    match state {
+        LifeState::Draft => None,
+        LifeState::Registered => Some(1),
+        LifeState::Released => Some(2),
+        LifeState::Deprecated => Some(3),
+    }
+}
+
+/// The identified version with `digest` whose state is the most restrictive (newest among
+/// equals), with its index.
+fn most_restrictive<'a>(versions: &'a [Version], digest: &Digest) -> Option<(usize, &'a Version)> {
+    let mut best: Option<(u8, usize, &Version)> = None;
+    for (i, v) in versions.iter().enumerate() {
+        if v.digest != *digest {
+            continue;
+        }
+        let Some(r) = restriction(v.state) else { continue };
+        if best.map_or(true, |(b, _, _)| r >= b) {
+            best = Some((r, i, v));
+        }
+    }
+    best.map(|(_, i, v)| (i, v))
 }
 
 impl LifeStore {
@@ -455,16 +497,14 @@ impl LifeStore {
             .unwrap_or_default()
     }
 
-    /// The identified version of `id` with this digest: the newest one that is registered,
-    /// released or deprecated. A retired (unregistered) version identifies nothing.
+    /// The identified version of `id` with this digest: a registered, released or deprecated
+    /// one. If several have it, the most restrictive state wins (deprecated, then released,
+    /// then registered; the newest among equals). A retired (unregistered) version identifies
+    /// nothing.
     pub fn by_digest(&self, id: &ArtifactId, digest: &Digest) -> Option<Lifecycle> {
         let l = self.lineages.get(id)?;
-        l.versions
-            .iter()
-            .enumerate()
-            .rev()
-            .find(|(_, v)| v.digest == *digest && v.state != LifeState::Draft)
-            .map(|(i, v)| LifeStore::lifecycle_of(id, i, v))
+        let (i, v) = most_restrictive(&l.versions, digest)?;
+        Some(LifeStore::lifecycle_of(id, i, v))
     }
 
     /// What a run of `id` at `digest` may expect.
@@ -495,34 +535,14 @@ impl LifeStore {
 
     /// The edit guard every edit command calls before changing `id` (REQ-005): `immutable`
     /// unless `id` has an open draft. Registered, released and deprecated versions are never
-    /// editable; editing starts from [`LifeStore::begin_draft`].
+    /// editable; editing starts from a new draft opened by `program.open_draft@1` /
+    /// `script.open_draft@1`.
     pub fn guard_edit(&self, id: &ArtifactId) -> Result<(), LifeError> {
         if self.draft_open(id) {
             Ok(())
         } else {
             Err(LifeError::Immutable { artifact: id.to_string() })
         }
-    }
-
-    /// Opens a new draft of `id` that copies the identified version with digest `from` and
-    /// records `from` as its source (REQ-005). Returns the bytes to copy into the draft. The
-    /// frozen version is not touched. Called by the edit path inside its own journaled
-    /// command. Errors: `artifact_not_found` (no versions), `conflict` (a draft is already
-    /// open, or no identified version has this digest).
-    pub fn begin_draft(&mut self, id: &ArtifactId, from: &Digest) -> Result<Vec<u8>, LifeError> {
-        let l = self.lineages.get_mut(id).ok_or_else(|| LifeError::ArtifactNotFound { artifact: id.to_string() })?;
-        if l.draft.is_some() {
-            return Err(LifeError::Conflict { detail: "a draft is already open".to_owned() });
-        }
-        let bytes = l
-            .versions
-            .iter()
-            .rev()
-            .find(|v| v.digest == *from && v.state != LifeState::Draft)
-            .map(|v| v.bytes.clone())
-            .ok_or_else(|| LifeError::Conflict { detail: "no identified version has this digest".to_owned() })?;
-        l.draft = Some(Draft { source: Some(*from) });
-        Ok(bytes)
     }
 
     /// Applies a committed change. Crate-internal: only the commands reach it, after their
@@ -539,6 +559,10 @@ impl LifeStore {
                     entry,
                 });
                 l.draft = None;
+            }
+            Change::OpenDraft { id, source } => {
+                let l = self.lineages.entry(id.clone()).or_default();
+                l.draft = Some(Draft { source: Some(*source) });
             }
             Change::SetState { id, version, to } => {
                 let Some(l) = self.lineages.get_mut(id) else { return };
@@ -591,10 +615,58 @@ impl LineageView<'_> {
         self.lineage.and_then(|l| l.versions.iter().rev().find(|v| v.state != LifeState::Draft)).map(|v| v.state)
     }
 
+    /// The identified version with this digest (most restrictive state): (number, state).
+    pub(crate) fn identified(&self, digest: &Digest) -> Option<(u32, LifeState)> {
+        let (i, v) = most_restrictive(&self.lineage?.versions, digest)?;
+        Some((u32::try_from(i + 1).ok()?, v.state))
+    }
+
     /// The newest version with this digest, any state: (number, state, source, bytes).
     pub(crate) fn find(&self, digest: &Digest) -> Option<(u32, LifeState, Option<Digest>, &[u8])> {
         let l = self.lineage?;
         let (i, v) = l.versions.iter().enumerate().rev().find(|(_, v)| v.digest == *digest)?;
         Some((u32::try_from(i + 1).ok()?, v.state, v.source, v.bytes.as_slice()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+    use super::*;
+
+    fn d(b: u8) -> Digest {
+        Digest::from_bytes([b; 32])
+    }
+
+    /// If two identified versions ever share a digest, queries by digest return the most
+    /// restrictive state: deprecated wins over a later registered or released copy.
+    #[test]
+    fn repeated_digest_takes_the_most_restrictive_state() {
+        let id = ArtifactId::Program(Uuid7::from_parts(1, [7; 10]));
+        let mut s = LifeStore::new();
+        let reg = |s: &mut LifeStore, e| {
+            s.apply(&Change::Register { id: id.clone(), digest: d(1), source: None, bytes: vec![1] }, e)
+        };
+        reg(&mut s, 1);
+        s.apply(&Change::SetState { id: id.clone(), version: 1, to: LifeState::Released }, 2);
+        s.apply(&Change::SetState { id: id.clone(), version: 1, to: LifeState::Deprecated }, 3);
+        reg(&mut s, 4);
+        s.apply(&Change::SetState { id: id.clone(), version: 2, to: LifeState::Released }, 5);
+        reg(&mut s, 6);
+        assert_eq!(s.run_gate(&id, &d(1)), RunGate::Deprecated { version: 1 });
+        assert_eq!(s.by_digest(&id, &d(1)).unwrap().state, LifeState::Deprecated);
+        assert_eq!(s.lineage_view(&id).identified(&d(1)), Some((1, LifeState::Deprecated)));
+        // Without the deprecated one, released wins over a newer registered copy.
+        let mut t = LifeStore::new();
+        let reg2 = |t: &mut LifeStore, e| {
+            t.apply(&Change::Register { id: id.clone(), digest: d(2), source: None, bytes: vec![2] }, e)
+        };
+        reg2(&mut t, 1);
+        t.apply(&Change::SetState { id: id.clone(), version: 1, to: LifeState::Released }, 2);
+        reg2(&mut t, 3);
+        assert_eq!(t.run_gate(&id, &d(2)), RunGate::Runnable { version: 1, state: LifeState::Released });
+        // A retired version identifies nothing.
+        t.apply(&Change::SetState { id: id.clone(), version: 2, to: LifeState::Draft }, 4);
+        assert_eq!(t.by_digest(&id, &d(2)).unwrap().version, 1);
     }
 }
