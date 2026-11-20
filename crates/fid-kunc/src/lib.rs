@@ -6,7 +6,9 @@
 //! `UNC.UEC.CLASS` (evidence class assignment, rule set `uec-assign@1`, see [`uec`]) and
 //! `UNC.MODEL.DIST` (input distributions, moments, seeded sampling and the correlation check,
 //! see [`dist`]), `UNC.MODEL.GRAPH.SCHEMA` (the Uncertainty Model graph types, the
-//! `uncertainty-model/v1` document, its canonical form and digest, see [`model`]) and
+//! `uncertainty-model/v1` document, its canonical form and digest, see [`model`]),
+//! `UNC.MODEL.GRAPH.CHECK` (structural validation into a `ValidModel`, see
+//! [`model::validate`]) and
 //! `UNC.PROP.MCM.INTVL` (Monte Carlo coverage intervals and estimate outputs from samples,
 //! see [`prop::mcm::interval`]).
 //!

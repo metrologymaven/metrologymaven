@@ -1,0 +1,58 @@
+cycle.json	cycle n3 n3,n5,n7
+self_loop.json	cycle thermal thermal
+unknown_operator.json	unknown_operator thermal unc.op.scale@9.9.9
+unknown_operator_id.json	unknown_operator fit fit.circle.mz@1.0.0
+unsourced_input.json	unsourced_input probe_r
+source_tombstone.json	unsourced_input pts_noise
+source_empty_digest.json	unsourced_input form
+unit_m_to_rad.json	unit_mismatch fit tilt tilt value
+unit_rad_to_one.json	unit_mismatch fit tilt tilt value
+unit_kind.json	unit_mismatch fit noise pts_noise value
+arity_short.json	arity_mismatch thermal strain 2 1
+arity_output.json	arity_mismatch d_bore value 1 2
+unreachable_output.json	arity_mismatch orphan value 1 0
+unreachable_output.json	unreachable_output orphan
+dangling_node.json	dangling_edge ghost2 value ghost value
+dangling_port.json	dangling_edge fit_residual value fit resid
+dangling_port.json	unreachable_output fit_residual
+edge_into_input.json	dangling_edge tilt value probe_r value
+edge_out_of_output.json	dangling_edge thermal value d_bore value
+edge_out_of_output.json	arity_mismatch thermal value 1 2
+correlation_not_input.json	correlation_not_input fit fit
+correlation_not_input.json	correlation_not_input fit zz_ghost
+correlation_indefinite.json	invalid_correlation form indefinite
+correlation_asymmetric.json	invalid_correlation scale_err asymmetric
+correlation_diagonal.json	invalid_correlation scale_err diagonal
+correlation_range.json	invalid_correlation scale_err off_diagonal_range
+all_five.json	cycle n3 n3,n5,n7
+all_five.json	unknown_operator thermal unc.op.scale@9.9.9
+all_five.json	unsourced_input probe_r
+all_five.json	unit_mismatch fit tilt tilt value
+all_five.json	invalid_correlation form indefinite
+all_five_shuffled.json	cycle n3 n3,n5,n7
+all_five_shuffled.json	unknown_operator thermal unc.op.scale@9.9.9
+all_five_shuffled.json	unsourced_input probe_r
+all_five_shuffled.json	unit_mismatch fit tilt tilt value
+all_five_shuffled.json	invalid_correlation form indefinite
+all_codes.json	dangling_edge ghost2 value ghost value
+all_codes.json	cycle n3 n3,n5,n7
+all_codes.json	unknown_operator thermal unc.op.scale@9.9.9
+all_codes.json	unsourced_input probe_r
+all_codes.json	unit_mismatch fit tilt tilt value
+all_codes.json	arity_mismatch orphan value 1 0
+all_codes.json	arity_mismatch thermal strain 2 1
+all_codes.json	unreachable_output orphan
+all_codes.json	correlation_not_input fit fit
+all_codes.json	correlation_not_input fit zz_ghost
+all_codes.json	invalid_correlation form indefinite
+all_codes_shuffled.json	dangling_edge ghost2 value ghost value
+all_codes_shuffled.json	cycle n3 n3,n5,n7
+all_codes_shuffled.json	unknown_operator thermal unc.op.scale@9.9.9
+all_codes_shuffled.json	unsourced_input probe_r
+all_codes_shuffled.json	unit_mismatch fit tilt tilt value
+all_codes_shuffled.json	arity_mismatch orphan value 1 0
+all_codes_shuffled.json	arity_mismatch thermal strain 2 1
+all_codes_shuffled.json	unreachable_output orphan
+all_codes_shuffled.json	correlation_not_input fit fit
+all_codes_shuffled.json	correlation_not_input fit zz_ghost
+all_codes_shuffled.json	invalid_correlation form indefinite

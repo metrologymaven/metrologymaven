@@ -6,8 +6,9 @@
 //! the digest of its full parameter set and declared ports), output nodes, edges between
 //! `(node, port)` endpoints and correlation groups. This module owns the types, the
 //! `uncertainty-model/v1` document schema, the canonical form and the SHA-256 digest.
-//! Structural validation (cycles, manifest membership, arity, units on edges, unsourced
-//! inputs, correlation mathematics) is `UNC.MODEL.GRAPH.CHECK`; storage is
+//! Structural validation (dangling edges, cycles, manifest membership, arity, units on
+//! edges, unsourced inputs, unreachable outputs, correlation groups) is
+//! `UNC.MODEL.GRAPH.CHECK`, implemented by [`validate`] (submodule `check`); storage is
 //! `UNC.MODEL.GRAPH.STORE`.
 //!
 //! [`UncertaintyModel`] values come from two places only, [`UncertaintyModel::new`] and
@@ -105,8 +106,11 @@
 //! first, every sort is total, so the first error reported by this stage does not depend on
 //! the order of nodes, edges, groups or group inputs (port lists keep their declared order).
 
+mod check;
 mod reader;
 mod wire;
+
+pub use check::{validate, ModelError, ValidModel, VALUE_PORT};
 
 use std::fmt;
 
