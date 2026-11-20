@@ -32,7 +32,10 @@
 //!   [`MAX_SAMPLES`] samples (REQ-003).
 //! - `PAL-LICENCE <ref>`: an empty source, or a licence other than one of
 //!   [`THIRD_PARTY_LICENCES`]; [`PROJECT_LICENCE`] is accepted only for a palette made by this
-//!   project, whose source starts with [`ORIGINAL`] (REQ-003, LICENSE.md).
+//!   project, whose source starts with [`ORIGINAL`] (REQ-003, LICENSE.md). The prefix is
+//!   cross-checked against the review record: a source starting [`ORIGINAL`] needs a valid
+//!   originality declaration `review/origin/tokens/palettes/<ref>.json.origin.json`
+//!   ([`crate::review::check_decl`]), and a palette from elsewhere must not have one.
 //! - `PAL-IMMUTABLE <ref>`: with `--baseline`, a baseline palette whose colours now give another
 //!   digest, or that is no longer in the catalogue (REQ-004).
 //!
@@ -48,10 +51,18 @@
 //! - `PAL-OOT <ref> <theme> under|over`: an out-of-tolerance colour (the palette's `under` and
 //!   `over`, the out-of-tolerance region colours of the status palette's nonconforming set) less
 //!   than [`crate::status::MIN_DELTA_E2000`] from that theme's `sem.status.conforms`
-//!   (REQ-UX.TOKENS-009); `PAL-OOT <theme> sem.status.conforms` when that token does not resolve.
+//!   (REQ-UX.TOKENS-009), or less than [`MIN_OOT_NEUTRAL_DELTA_E2000`] from one of that theme's
+//!   neutral status colours ([`NEUTRAL_TOKENS`], as `STATUS-DISTANCE`);
+//!   `PAL-OOT <ref> under|over`: an out-of-tolerance colour less than
+//!   [`MIN_OOT_INRANGE_DELTA_E2000`] from any in-range colour (step or sample) of any palette in
+//!   the catalogue, so that an out-of-range region never looks in range (maintainer decision on
+//!   PR 345); `PAL-OOT <theme> <token>` when one of those status tokens does not resolve.
 //! - `PAL-CONTRAST <ref> <theme> under|over`: an out-of-tolerance colour below
 //!   [`MIN_OOT_CONTRAST`]:1 (WCAG 2.2 contrast, SC 1.4.11) against that theme's
 //!   `sem.surface.base`; `PAL-CONTRAST <theme> sem.surface.base` when that token does not resolve.
+//! - `PAL-UNIFORM <ref>`: a continuous palette whose CIEDE2000 (normal vision) between samples
+//!   `i` and `i + `[`WINDOW`], over every `i`, varies by more than [`MAX_WINDOW_RATIO`] (largest
+//!   over smallest), or is zero somewhere: the map is not perceptually uniform.
 //! - `PAL-CLAIMED <ref> <theme>`: a colour of the palette (steps or samples, `under`, `over`)
 //!   less than [`crate::tokens::MIN_DELTA_E_OK`] in OKLab from a claimed semantic role of that
 //!   theme (`sem.*` with a segment starting `claimed`): data colours are measured values, and
@@ -85,7 +96,7 @@ pub const PAL_DIR: &str = "tokens/palettes";
 /// The catalogue, relative to the design root.
 pub const CATALOGUE_FILE: &str = "tokens/palettes/catalogue.json";
 /// Palettes the catalogue must hold (REQ-UX.TOKENS.DATAPAL-001).
-pub const REQUIRED: [&str; 4] = ["pal.step.tol@1", "pal.step.cvd@1", "pal.cont.viridis@1", "pal.cont.cividis@1"];
+pub const REQUIRED: [&str; 4] = ["pal.step.tol@1", "pal.step.cvd@1", "pal.cont.seq-a@1", "pal.cont.seq-cvd@1"];
 /// The default deviation palette (REQ-UX.TOKENS.DATAPAL-001).
 pub const DEFAULT: &str = "pal.step.cvd@1";
 /// Step-count bounds of a stepped palette (REQ-UX.TOKENS.DATAPAL-002).
@@ -111,6 +122,19 @@ pub const ORIGINAL: &str = "original: ";
 /// The out-of-tolerance reference colour and the surface the colours sit on.
 pub const CONFORMS_TOKEN: &str = "sem.status.conforms";
 pub const SURFACE_TOKEN: &str = "sem.surface.base";
+/// The neutral status colours the out-of-tolerance colours keep away from (UX.TOKENS.STATUS).
+pub const NEUTRAL_TOKENS: [&str; 3] =
+    ["sem.status.indeterminate", "sem.status.not-decidable", "sem.status.not-evaluated"];
+/// Least CIEDE2000 between an out-of-tolerance colour and a neutral status colour, under every
+/// vision condition (as `STATUS-DISTANCE`).
+pub const MIN_OOT_NEUTRAL_DELTA_E2000: f64 = crate::status::MIN_NEUTRAL_DELTA_E2000;
+/// Least CIEDE2000 between an out-of-tolerance colour and any in-range colour of any catalogue
+/// palette, under every vision condition (maintainer decision on PR 345).
+pub const MIN_OOT_INRANGE_DELTA_E2000: f64 = 10.0;
+/// Span, in samples, of the perceptual-uniformity windows of a continuous palette.
+pub const WINDOW: usize = 16;
+/// Largest ratio of the biggest to the smallest window difference of a continuous palette.
+pub const MAX_WINDOW_RATIO: f64 = 1.5;
 
 const MAX_FILE_BYTES: u64 = 1024 * 1024;
 const MAX_PALETTES: usize = 64;
@@ -128,6 +152,7 @@ pub const DELTA: &str = "PAL-DELTA";
 pub const OOT: &str = "PAL-OOT";
 pub const CONTRAST: &str = "PAL-CONTRAST";
 pub const CLAIMED: &str = "PAL-CLAIMED";
+pub const UNIFORM: &str = "PAL-UNIFORM";
 
 /// Kind of a palette.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -269,7 +294,8 @@ pub fn check(root: &Path, baseline: Option<&Path>) -> Result<Report, String> {
         let text = read_text(&root.join(&rel), MAX_FILE_BYTES)?;
         match fid_canon::parse_with_limits(text.as_bytes(), MAX_FILE_BYTES as usize, fid_design_pkg::MAX_JSON_DEPTH) {
             Ok(v) => {
-                if let Some(c) = parse_palette(reference, &v, &mut r, &mut f) {
+                let decl = read_decl(root, reference)?;
+                if let Some(c) = parse_palette(reference, &v, decl, &mut r, &mut f) {
                     colours.insert(reference.clone(), c);
                 }
             }
@@ -455,12 +481,35 @@ fn read_baseline(p: &Path) -> Result<BTreeMap<String, String>, String> {
     Ok(out)
 }
 
+/// The originality declaration of a palette file: `None` when there is none, else whether it
+/// is valid for that artefact.
+fn read_decl(root: &Path, reference: &str) -> Result<Option<Result<(), String>>, String> {
+    let artefact = format!("{PAL_DIR}/{reference}.json");
+    let rel = format!("{}{artefact}{}", crate::review::ORIGIN_DIR, crate::review::ORIGIN_SUFFIX);
+    let p = root.join(&rel);
+    match std::fs::symlink_metadata(&p) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(format!("cannot read {}: {e}", p.display())),
+        Ok(m) if !m.is_file() => Ok(Some(Err(format!("{rel} is not a regular file")))),
+        Ok(_) => {
+            let text = read_text(&p, MAX_FILE_BYTES)?;
+            Ok(Some(crate::review::check_decl(&text, &artefact).map_err(|e| format!("{rel}: {e}"))))
+        }
+    }
+}
+
 const KEYS_STEPPED: [&str; 10] =
     ["centre_index", "colors", "digest", "id", "kind", "licence", "over", "source", "under", "version"];
 
 /// Structural rules of one palette file. Returns the colours when the kind and every colour
 /// are valid.
-fn parse_palette(reference: &str, v: &CValue, r: &mut Report, f: &mut Vec<Finding>) -> Option<Colours> {
+fn parse_palette(
+    reference: &str,
+    v: &CValue,
+    decl: Option<Result<(), String>>,
+    r: &mut Report,
+    f: &mut Vec<Finding>,
+) -> Option<Colours> {
     let schema = |f: &mut Vec<Finding>, d: String| f.push(Finding::new(SCHEMA, reference, d));
     let CValue::Obj(m) = v else {
         schema(f, "must be a JSON object".to_string());
@@ -607,6 +656,26 @@ fn parse_palette(reference: &str, v: &CValue, r: &mut Report, f: &mut Vec<Findin
                     ),
                 ));
             }
+            // The `original:` claim and the review record must agree.
+            let original = src.starts_with(ORIGINAL);
+            match (&decl, original) {
+                (None, true) => f.push(Finding::new(
+                    LICENCE,
+                    reference,
+                    format!(
+                        "source says {ORIGINAL:?} but there is no originality declaration {}{PAL_DIR}/{reference}.json{}",
+                        crate::review::ORIGIN_DIR,
+                        crate::review::ORIGIN_SUFFIX
+                    ),
+                )),
+                (Some(Err(e)), _) => f.push(Finding::new(LICENCE, reference, format!("invalid originality declaration: {e}"))),
+                (Some(Ok(())), false) => f.push(Finding::new(
+                    LICENCE,
+                    reference,
+                    format!("an originality declaration exists but the source does not start {ORIGINAL:?}"),
+                )),
+                _ => {}
+            }
         }
         (s, l) => {
             if s.is_some_and(|x| !matches!(x, CValue::Str(_))) || l.is_some_and(|x| !matches!(x, CValue::Str(_))) {
@@ -646,8 +715,20 @@ pub fn delta_pairs(kind: Kind, n: usize) -> Vec<(Option<usize>, Option<usize>)> 
     out
 }
 
-/// Per theme: CONFORMS, the base surface and the claimed roles.
-type ThemeEnv = (Option<Rgb>, Option<Rgb>, Vec<(String, Rgb)>);
+/// What the out-of-tolerance and claimed rules read in one theme.
+struct ThemeEnv {
+    conforms: Option<Rgb>,
+    base: Option<Rgb>,
+    neutral: Vec<(&'static str, Rgb)>,
+    claimed: Vec<(String, Rgb)>,
+}
+
+/// CIEDE2000 (normal vision) between samples `i` and `i + WINDOW`, for every `i`.
+pub fn window_differences(colors: &[Rgb]) -> Vec<f64> {
+    let labs: Vec<[f64; 3]> =
+        colors.iter().map(|c| lab_of_linear([linear(c[0]), linear(c[1]), linear(c[2])])).collect();
+    labs.iter().zip(labs.iter().skip(WINDOW)).map(|(a, b)| crate::status::ciede2000::delta_e2000(*a, *b)).collect()
+}
 
 fn perceptual(pals: &BTreeMap<String, Colours>, tokens: &crate::tokens::Report, f: &mut Vec<Finding>) {
     // Per theme: CONFORMS, the base surface and the claimed roles.
@@ -657,12 +738,17 @@ fn perceptual(pals: &BTreeMap<String, Colours>, tokens: &crate::tokens::Report, 
         let get = |n: &str| values.and_then(|v| v.get(n)).and_then(|x| parse_hex(&x.value));
         let conforms = get(CONFORMS_TOKEN);
         let base = get(SURFACE_TOKEN);
-        if conforms.is_none() {
-            f.push(Finding::new(
-                OOT,
-                format!("{theme} {CONFORMS_TOKEN}"),
-                "does not resolve to an opaque colour; the out-of-tolerance distance cannot be verified",
-            ));
+        let mut neutral = Vec::new();
+        for n in std::iter::once(CONFORMS_TOKEN).chain(NEUTRAL_TOKENS) {
+            match get(n) {
+                Some(c) if n != CONFORMS_TOKEN => neutral.push((n, c)),
+                Some(_) => {}
+                None => f.push(Finding::new(
+                    OOT,
+                    format!("{theme} {n}"),
+                    "does not resolve to an opaque colour; the out-of-tolerance distance cannot be verified",
+                )),
+            }
         }
         if base.is_none() {
             f.push(Finding::new(
@@ -679,8 +765,10 @@ fn perceptual(pals: &BTreeMap<String, Colours>, tokens: &crate::tokens::Report, 
                     .collect()
             })
             .unwrap_or_default();
-        env.insert(theme, (conforms, base, claimed));
+        env.insert(theme, ThemeEnv { conforms, base, neutral, claimed });
     }
+    let inrange: Vec<(&str, usize, Rgb)> =
+        pals.iter().flat_map(|(r, p)| p.colors.iter().enumerate().map(move |(i, c)| (r.as_str(), i, *c))).collect();
 
     for (reference, p) in pals {
         let n = p.colors.len();
@@ -715,6 +803,18 @@ fn perceptual(pals: &BTreeMap<String, Colours>, tokens: &crate::tokens::Report, 
                 if !monotonic(&ls) {
                     f.push(Finding::new(LIGHTNESS, reference, "CIELAB L* is not strictly monotonic along the samples"));
                 }
+                let w = window_differences(&p.colors);
+                let lo = w.iter().copied().fold(f64::INFINITY, f64::min);
+                let hi = w.iter().copied().fold(0.0, f64::max);
+                if !w.is_empty() && (lo <= 0.0 || hi / lo > MAX_WINDOW_RATIO) {
+                    f.push(Finding::new(
+                        UNIFORM,
+                        reference,
+                        format!(
+                            "CIEDE2000 over {WINDOW}-sample windows ranges from {lo:.2} to {hi:.2}; the largest may be at most {MAX_WINDOW_RATIO} times the smallest"
+                        ),
+                    ));
+                }
             }
             Kind::Stepped => {}
         }
@@ -734,8 +834,43 @@ fn perceptual(pals: &BTreeMap<String, Colours>, tokens: &crate::tokens::Report, 
             }
         }
 
-        for (theme, (conforms, base, claimed)) in &env {
+        // Out-of-range colours never look in range, in any catalogue palette.
+        for (side, c) in [("under", p.under), ("over", p.over)] {
+            let mut worst: Option<(f64, Vision, &str, usize)> = None;
+            for (r, i, x) in &inrange {
+                let (d, v) = min_delta_e2000(c, *x);
+                if worst.map_or(true, |w| d < w.0) {
+                    worst = Some((d, v, r, *i));
+                }
+            }
+            if let Some((d, v, r, i)) = worst.filter(|w| w.0 < MIN_OOT_INRANGE_DELTA_E2000) {
+                f.push(Finding::new(
+                    OOT,
+                    format!("{reference} {side}"),
+                    format!(
+                        "CIEDE2000 {d:.2} from colour {i} of {r} under {}; at least {MIN_OOT_INRANGE_DELTA_E2000} from every in-range colour",
+                        v.as_str()
+                    ),
+                ));
+            }
+        }
+
+        for (theme, env) in &env {
+            let (conforms, base, claimed) = (&env.conforms, &env.base, &env.claimed);
             for (side, c) in [("under", p.under), ("over", p.over)] {
+                for (n, x) in &env.neutral {
+                    let (d, v) = min_delta_e2000(c, *x);
+                    if d < MIN_OOT_NEUTRAL_DELTA_E2000 {
+                        f.push(Finding::new(
+                            OOT,
+                            format!("{reference} {theme} {side}"),
+                            format!(
+                                "CIEDE2000 {d:.2} from {n} under {}; at least {MIN_OOT_NEUTRAL_DELTA_E2000}",
+                                v.as_str()
+                            ),
+                        ));
+                    }
+                }
                 // REQ-UX.TOKENS-009: out-of-tolerance colours keep away from CONFORMS.
                 if let Some(cf) = conforms {
                     let (d, v) = min_delta_e2000(c, *cf);

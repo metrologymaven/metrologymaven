@@ -11,6 +11,15 @@
     "status": {
       "conforms": {
         "$value": "{prim.color.status-conforms.light}"
+      },
+      "indeterminate": {
+        "$value": "{prim.color.status-indeterminate.light}"
+      },
+      "not-decidable": {
+        "$value": "{prim.color.status-not-decidable.light}"
+      },
+      "not-evaluated": {
+        "$value": "{prim.color.status-not-evaluated.light}"
       }
     },
     "surface": {

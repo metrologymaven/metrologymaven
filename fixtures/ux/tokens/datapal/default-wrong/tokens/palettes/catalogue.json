@@ -4,7 +4,7 @@
   "palettes": [
     "pal.step.cvd@1",
     "pal.step.tol@1",
-    "pal.cont.viridis@1",
-    "pal.cont.cividis@1"
+    "pal.cont.seq-a@1",
+    "pal.cont.seq-cvd@1"
   ]
 }

@@ -30,6 +30,48 @@
           "$value": "#00637e"
         }
       },
+      "status-indeterminate": {
+        "dark": {
+          "$value": "#eadba3"
+        },
+        "floor": {
+          "$value": "#392e00"
+        },
+        "hc": {
+          "$value": "#221d06"
+        },
+        "light": {
+          "$value": "#392e00"
+        }
+      },
+      "status-not-decidable": {
+        "dark": {
+          "$value": "#f6fae1"
+        },
+        "floor": {
+          "$value": "#1c1f0c"
+        },
+        "hc": {
+          "$value": "#1c1f0c"
+        },
+        "light": {
+          "$value": "#1c1f0c"
+        }
+      },
+      "status-not-evaluated": {
+        "dark": {
+          "$value": "#f5f7f9"
+        },
+        "floor": {
+          "$value": "#1c1d1f"
+        },
+        "hc": {
+          "$value": "#000000"
+        },
+        "light": {
+          "$value": "#1c1d1f"
+        }
+      },
       "surface-base": {
         "dark": {
           "$value": "#1c1d1f"

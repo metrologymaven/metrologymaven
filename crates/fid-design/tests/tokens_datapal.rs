@@ -8,7 +8,8 @@
 use fid_canon::CValue;
 use fid_design::palettes::{
     chroma, delta_pairs, digest, lstar, min_delta_e2000, Kind, CONFORMS_TOKEN, DEFAULT, MAX_NEUTRAL_CHROMA,
-    MIN_OOT_CONTRAST, MIN_STEP_DELTA_E2000, REQUIRED, SURFACE_TOKEN,
+    MAX_WINDOW_RATIO, MIN_OOT_CONTRAST, MIN_OOT_INRANGE_DELTA_E2000, MIN_OOT_NEUTRAL_DELTA_E2000, MIN_STEP_DELTA_E2000,
+    NEUTRAL_TOKENS, REQUIRED, SURFACE_TOKEN, WINDOW,
 };
 use fid_design::status::cvd::{delta_e2000_under, Vision};
 use fid_design::tokens::oklab::delta_e_ok;
@@ -222,6 +223,8 @@ fn structural_errors() {
         "extra-key",
         "wrong-kind",
         "id-mismatch",
+        "origin-missing",
+        "origin-wrong-artefact",
     ] {
         fixture_case(name);
     }
@@ -229,7 +232,19 @@ fn structural_errors() {
 
 #[test]
 fn perceptual_errors() {
-    for name in ["lightness-step", "lightness-cont", "delta", "oot-blue", "contrast", "claimed"] {
+    for name in [
+        "lightness-step",
+        "lightness-cont",
+        "delta",
+        "delta-mirror",
+        "delta-under",
+        "delta-over",
+        "oot-blue",
+        "oot-over",
+        "contrast",
+        "claimed",
+        "uniform",
+    ] {
         fixture_case(name);
     }
 }
@@ -325,6 +340,60 @@ fn out_of_tolerance_colours_keep_away_from_conforms() {
     }
 }
 
+/// Out-of-range colours never look in range: every palette's `under` and `over` are at least
+/// CIEDE2000 10 from every in-range colour of every shipped palette, and from the neutral status
+/// colours of every theme, under the four vision conditions; the least distances equal the
+/// oracle's.
+#[test]
+fn out_of_range_colours_differ_from_every_in_range_and_neutral_colour() {
+    let values = shipped_values();
+    let sem = shipped_sem();
+    let all: Vec<Rgb> = values.values().flat_map(|(c, _, _)| c.iter().copied()).collect();
+    let e = expected();
+    for (rf, rec) in obj(get(&e, &["shipped", "palettes"])) {
+        let (_, under, over) = values[rf];
+        for (side, c) in [("under", under), ("over", over)] {
+            let d = all.iter().map(|x| min_delta_e2000(c, *x).0).fold(f64::INFINITY, f64::min);
+            let want = num(get(rec, &["oot_inrange_min", side]));
+            assert!((d - want).abs() < 1e-6, "{rf} {side}: {d} vs oracle {want}");
+            assert!(d >= MIN_OOT_INRANGE_DELTA_E2000, "{rf} {side}: {d}");
+            let mut n = f64::INFINITY;
+            for row in sem.values() {
+                for t in NEUTRAL_TOKENS {
+                    n = n.min(min_delta_e2000(c, row[t]).0);
+                }
+            }
+            let want = num(get(rec, &["oot_neutral_min", side]));
+            assert!((n - want).abs() < 1e-6, "{rf} {side}: {n} vs oracle {want}");
+            assert!(n >= MIN_OOT_NEUTRAL_DELTA_E2000, "{rf} {side}: {n}");
+        }
+    }
+}
+
+/// Perceptual uniformity of the continuous maps: CIEDE2000 between samples i and i + 16 stays
+/// within a factor MAX_WINDOW_RATIO; this crate's minimum and maximum equal the oracle's.
+#[test]
+fn continuous_maps_are_perceptually_uniform() {
+    let values = shipped_values();
+    let e = expected();
+    let mut seen = 0;
+    for (rf, rec) in obj(get(&e, &["shipped", "palettes"])) {
+        let CValue::Obj(m) = rec else { panic!() };
+        let Some(w) = m.get("window_de2000") else {
+            continue;
+        };
+        seen += 1;
+        assert_eq!(num(get(w, &["window"])), WINDOW as f64);
+        let d = fid_design::palettes::window_differences(&values[rf].0);
+        let lo = d.iter().copied().fold(f64::INFINITY, f64::min);
+        let hi = d.iter().copied().fold(0.0, f64::max);
+        assert!((lo - num(get(w, &["min"]))).abs() < 1e-6, "{rf}");
+        assert!((hi - num(get(w, &["max"]))).abs() < 1e-6, "{rf}");
+        assert!(hi / lo <= MAX_WINDOW_RATIO, "{rf}: {}", hi / lo);
+    }
+    assert_eq!(seen, 2);
+}
+
 /// UX.TOKENS.COLOR's claimed-versus-measured floor: no palette colour lies within OKLab 0.10 of a
 /// claimed role in any theme; the least distance equals the oracle's.
 #[test]
@@ -399,7 +468,7 @@ fn bad_usage_and_unreadable_input_exit_2() {
 fn every_fixture_is_labelled() {
     let e = expected();
     let names: BTreeSet<&String> = obj(get(&e, &["fixtures"])).keys().collect();
-    assert_eq!(names.len(), 28);
+    assert_eq!(names.len(), 35);
     for n in names {
         assert!(fix(n).join("tokens/palettes").is_dir(), "{n}");
     }

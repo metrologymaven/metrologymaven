@@ -1,0 +1,133 @@
+{
+  "prim": {
+    "$type": "color",
+    "color": {
+      "border-value-claimed": {
+        "dark": {
+          "$value": "#e676c9"
+        },
+        "floor": {
+          "$value": "#902679"
+        },
+        "hc": {
+          "$value": "#6b225a"
+        },
+        "light": {
+          "$value": "#ab3f92"
+        }
+      },
+      "status-conforms": {
+        "dark": {
+          "$value": "#00b5e4"
+        },
+        "floor": {
+          "$value": "#00637e"
+        },
+        "hc": {
+          "$value": "#004b61"
+        },
+        "light": {
+          "$value": "#00637e"
+        }
+      },
+      "status-indeterminate": {
+        "dark": {
+          "$value": "#eadba3"
+        },
+        "floor": {
+          "$value": "#392e00"
+        },
+        "hc": {
+          "$value": "#221d06"
+        },
+        "light": {
+          "$value": "#392e00"
+        }
+      },
+      "status-not-decidable": {
+        "dark": {
+          "$value": "#f6fae1"
+        },
+        "floor": {
+          "$value": "#1c1f0c"
+        },
+        "hc": {
+          "$value": "#1c1f0c"
+        },
+        "light": {
+          "$value": "#1c1f0c"
+        }
+      },
+      "status-not-evaluated": {
+        "dark": {
+          "$value": "#f5f7f9"
+        },
+        "floor": {
+          "$value": "#1c1d1f"
+        },
+        "hc": {
+          "$value": "#000000"
+        },
+        "light": {
+          "$value": "#1c1d1f"
+        }
+      },
+      "surface-base": {
+        "dark": {
+          "$value": "#1c1d1f"
+        },
+        "floor": {
+          "$value": "#ffffff"
+        },
+        "hc": {
+          "$value": "#ffffff"
+        },
+        "light": {
+          "$value": "#ffffff"
+        }
+      },
+      "surface-value-claimed": {
+        "dark": {
+          "$value": "#481c3d"
+        },
+        "floor": {
+          "$value": "#ffc7ed"
+        },
+        "hc": {
+          "$value": "#ffc7ed"
+        },
+        "light": {
+          "$value": "#ffc7ed"
+        }
+      },
+      "text-value-claimed": {
+        "dark": {
+          "$value": "#ffc7ed"
+        },
+        "floor": {
+          "$value": "#902679"
+        },
+        "hc": {
+          "$value": "#6b225a"
+        },
+        "light": {
+          "$value": "#902679"
+        }
+      },
+      "text-value-measured": {
+        "dark": {
+          "$value": "#f5f7f9"
+        },
+        "floor": {
+          "$value": "#1c1d1f"
+        },
+        "hc": {
+          "$value": "#000000"
+        },
+        "light": {
+          "$value": "#2d2f32"
+        }
+      }
+    }
+  }
+}

@@ -11,7 +11,7 @@ Expected values, none produced by the Rust code under test:
 * The structural findings of every error-path fixture (`PAL-SCHEMA`, `PAL-STEPS`, `PAL-CENTRE`
   index, `PAL-SAMPLES`, `PAL-LICENCE`, `PAL-DEFAULT`, `PAL-IMMUTABLE`) are hand-labelled below
   (`LABELS`) from the leaf's rules, next to the one mutation each fixture makes to a copy of the
-  shipped palettes. The perceptual findings (`PAL-LIGHTNESS`, `PAL-DELTA`, `PAL-OOT`,
+  shipped palettes. The perceptual findings (`PAL-LIGHTNESS`, `PAL-DELTA`, `PAL-UNIFORM`, `PAL-OOT`,
   `PAL-CONTRAST`, `PAL-CLAIMED`, neutral centre) are hand-labelled too, and this script
   recomputes them with its own colour maths and fails if a label disagrees.
 * For the shipped `design/tokens/palettes/`, this script reads the files and the token tree
@@ -44,7 +44,7 @@ PALS = "tokens/palettes"
 
 THEMES = ["light", "dark", "hc", "floor"]
 VISIONS = ["normal", "protanopia", "deuteranopia", "tritanopia"]
-REQUIRED = ["pal.step.tol@1", "pal.step.cvd@1", "pal.cont.viridis@1", "pal.cont.cividis@1"]
+REQUIRED = ["pal.step.tol@1", "pal.step.cvd@1", "pal.cont.seq-a@1", "pal.cont.seq-cvd@1"]
 DEFAULT = "pal.step.cvd@1"
 
 MIN_STEP_DE = 10.0  # REQ-UX.TOKENS-007 [unverified threshold]
@@ -57,6 +57,12 @@ MIN_DE_OK = 0.10  # UX.TOKENS.COLOR floor: claimed roles vs measured data
 DE_OK_MARGIN = 0.005
 MAX_NEUTRAL_CHROMA = 0.02  # OKLab chroma of a neutral centre [unverified]
 MIN_LSTAR_STEP = 0.02  # shipped continuous maps rise by at least this per sample
+MIN_OOT_INRANGE_DE = 10.0  # out-of-range colours vs every in-range colour (maintainer, PR 345)
+MIN_OOT_NEUTRAL_DE = 10.0  # out-of-range colours vs the neutral status colours (as STATUS-DISTANCE)
+NEUTRAL = ["sem.status.indeterminate", "sem.status.not-decidable", "sem.status.not-evaluated"]
+WINDOW = 16  # perceptual uniformity: CIEDE2000 between samples i and i + WINDOW
+MAX_WINDOW_RATIO = 1.5  # largest over smallest window difference of a continuous map
+ORIGIN = "review/origin/"
 
 # ------------------------------------------------------------------ colour maths
 
@@ -247,13 +253,21 @@ def is_claimed(name):
 # ------------------------------------------------------------------ perceptual rules
 
 
+def windows(cols):
+    labs = [cielab(simulate(x, "normal")) for x in cols]
+    return [ciede2000(labs[i], labs[i + WINDOW]) for i in range(len(cols) - WINDOW)]
+
+
 def perceptual(pals, sem):
     """The perceptual findings of a palette set (`ref -> palette`) against `sem` (theme -> name -> hex)."""
     out = set()
     for t in THEMES:
-        for n in ("sem.status.conforms", "sem.surface.base"):
+        for n in ["sem.status.conforms"] + NEUTRAL:
             if n not in sem.get(t, {}):
-                out.add(("PAL-OOT" if "status" in n else "PAL-CONTRAST") + f" {t} {n}")
+                out.add(f"PAL-OOT {t} {n}")
+        if "sem.surface.base" not in sem.get(t, {}):
+            out.add(f"PAL-CONTRAST {t} sem.surface.base")
+    inrange = [c for p in pals.values() for c in p["colors"]]
     for ref, p in pals.items():
         cols, under, over = p["colors"], p["under"], p["over"]
         n = len(cols)
@@ -277,6 +291,9 @@ def perceptual(pals, sem):
             d = [b - a for a, b in zip(ls, ls[1:])]
             if not (all(x > 0 for x in d) or all(x < 0 for x in d)):
                 out.add(f"PAL-LIGHTNESS {ref}")
+            w = windows(cols)
+            if w and (min(w) == 0.0 or max(w) / min(w) > MAX_WINDOW_RATIO):
+                out.add(f"PAL-UNIFORM {ref}")
 
         def col(k):
             return under if k == "under" else over if k == "over" else cols[k]
@@ -284,10 +301,15 @@ def perceptual(pals, sem):
         for a, b in pairs:
             if de_min(col(a), col(b)) < MIN_STEP_DE:
                 out.add(f"PAL-DELTA {ref} {a} {b}")
+        for side, x in (("under", under), ("over", over)):
+            if any(de_min(x, c) < MIN_OOT_INRANGE_DE for c in inrange):
+                out.add(f"PAL-OOT {ref} {side}")
         for t in THEMES:
             row = sem.get(t, {})
             for side, x in (("under", under), ("over", over)):
                 if "sem.status.conforms" in row and de_min(x, row["sem.status.conforms"]) < MIN_OOT_DE:
+                    out.add(f"PAL-OOT {ref} {t} {side}")
+                if any(nn in row and de_min(x, row[nn]) < MIN_OOT_NEUTRAL_DE for nn in NEUTRAL):
                     out.add(f"PAL-OOT {ref} {t} {side}")
                 if "sem.surface.base" in row and contrast(x, row["sem.surface.base"]) < MIN_CONTRAST:
                     out.add(f"PAL-CONTRAST {ref} {t} {side}")
@@ -295,6 +317,18 @@ def perceptual(pals, sem):
             if any(math.dist(oklab(x), oklab(c)) < MIN_DE_OK for x in cols + [under, over] for c in claimed):
                 out.add(f"PAL-CLAIMED {ref} {t}")
     return out
+
+
+def origin_ok(decl, ref):
+    """Whether an originality declaration is valid for the palette file of `ref`."""
+    return (
+        isinstance(decl, dict)
+        and sorted(decl) == ["artefact", "author", "date", "references", "statement_version"]
+        and decl["artefact"] == f"{PALS}/{ref}.json"
+        and decl["statement_version"] == "originality-statement@1"
+        and isinstance(decl["references"], list)
+        and len(decl["references"]) > 0
+    )
 
 
 # ------------------------------------------------------------------ the shipped palettes
@@ -325,6 +359,7 @@ def shipped():
         assert p["id"] == pid and p["version"] == int(major)
         assert p["kind"] == ("stepped" if pid.startswith("pal.step.") else "continuous")
         assert p["licence"] == "CC-BY-4.0" and p["source"].startswith("original: "), ref
+        assert origin_ok(load_json(DESIGN / ORIGIN / PALS / f"{ref}.json.origin.json"), ref), ref
         cols, under, over = p["colors"], p["under"], p["over"]
         for h in cols + [under, over]:
             assert h == h.lower() and len(channels(h)) == 3, h
@@ -359,6 +394,11 @@ def shipped():
                 fails.append(f"{ref}: lightness rises by only {step:.4f} somewhere")
             oks = [math.dist(oklab(a), oklab(b)) for a, b in zip(cols, cols[1:])]
             rec["oklab_step"] = {"min": round(min(oks), 9), "max": round(max(oks), 9), "total": round(sum(oks), 9)}
+            w = windows(cols)
+            ratio = max(w) / min(w)
+            rec["window_de2000"] = {"window": WINDOW, "min": round(min(w), 9), "max": round(max(w), 9), "ratio": round(ratio, 9)}
+            if ratio > MAX_WINDOW_RATIO - 0.1:
+                fails.append(f"{ref}: window ratio {ratio:.3f}")
             pairs = [("under", 0, under, cols[0]), (n - 1, "over", cols[-1], over)]
         rec["pairs"] = []
         for a, b, x, y in pairs:
@@ -367,6 +407,17 @@ def shipped():
                 fails.append(f"{ref} {a}/{b}: dE2000 {min(ds.values()):.3f}")
             rec["pairs"].append({"a": str(a), "b": str(b), "de2000": ds})
         rec["oot"], rec["oot_contrast"], rec["claimed_min"] = [], [], {}
+        allrange = [c for q in pals.values() for c in q["colors"]]
+        rec["oot_inrange_min"] = {}
+        for side, x in (("under", under), ("over", over)):
+            d = min(de_min(x, c) for c in allrange)
+            if d < MIN_OOT_INRANGE_DE + STEP_MARGIN:
+                fails.append(f"{ref} {side}: dE2000 {d:.3f} from an in-range colour")
+            rec["oot_inrange_min"][side] = round(d, 9)
+            d = min(de_min(x, sem[t][nn]) for t in THEMES for nn in NEUTRAL)
+            if d < MIN_OOT_NEUTRAL_DE + STEP_MARGIN:
+                fails.append(f"{ref} {side}: dE2000 {d:.3f} from a neutral status colour")
+            rec.setdefault("oot_neutral_min", {})[side] = round(d, 9)
         for t in THEMES:
             for side, x in (("under", under), ("over", over)):
                 for v in VISIONS:
@@ -396,7 +447,7 @@ def shipped():
 
 # ------------------------------------------------------------------ fixtures
 
-SEM_NAMES = ["sem.status.conforms", "sem.surface.base", "sem.text.value.measured"]
+SEM_NAMES = ["sem.status.conforms", "sem.surface.base", "sem.text.value.measured"] + NEUTRAL
 
 
 def token_tree(sem):
@@ -428,7 +479,8 @@ def token_tree(sem):
 
 def base_state():
     cat, pals = read_palettes(DESIGN)
-    return {"catalogue": copy.deepcopy(cat), "pals": copy.deepcopy(pals), "extra": {}, "baseline": None}
+    origin = {r: load_json(DESIGN / ORIGIN / PALS / f"{r}.json.origin.json") for r in pals}
+    return {"catalogue": copy.deepcopy(cat), "pals": copy.deepcopy(pals), "origin": origin, "extra": {}, "baseline": None}
 
 
 def redigest(p):
@@ -490,7 +542,7 @@ def setcol(i, h):
 
 
 CAT = "tokens/palettes/catalogue.json"
-TOL, CVD, VIR, CIV = REQUIRED
+TOL, CVD, SEQ, SCVD = REQUIRED
 
 
 def add_v2(m):
@@ -500,6 +552,18 @@ def add_v2(m):
     redigest(p)
     m["pals"]["pal.step.tol@2"] = p
     m["catalogue"]["palettes"].append("pal.step.tol@2")
+    m["origin"]["pal.step.tol@2"] = dict(m["origin"][TOL], artefact=f"{PALS}/pal.step.tol@2.json")
+
+
+def uneven(p):
+    """A continuous map that crawls before it runs: 80 samples that only raise the first
+    sample's blue channel by one (each strictly lighter, by a tiny step), then the rest of the
+    map from its first sample lighter than those."""
+    cols = p["colors"]
+    r, g, b = channels(cols[0])
+    pre = ["#%02x%02x%02x" % (r, g, b + i) for i in range(80)]
+    k = next(j for j in range(len(cols)) if lstar(cols[j]) > lstar(pre[-1]))
+    p["colors"] = pre + cols[k:]
 
 
 def swap(i, j):
@@ -534,27 +598,27 @@ LABELS = {
         ["PAL-IMMUTABLE " + TOL, "PAL-SCHEMA " + CAT],
     ),
     # The file's digest does not match its colours.
-    "digest-mismatch": (edit(VIR, set_key("digest", "sha256:" + "0" * 64), rehash=False), 1, ["PAL-SCHEMA " + VIR]),
+    "digest-mismatch": (edit(SEQ, set_key("digest", "sha256:" + "0" * 64), rehash=False), 1, ["PAL-SCHEMA " + SEQ]),
     "centre-off": (edit(TOL, set_key("centre_index", 4)), 1, ["PAL-CENTRE " + TOL]),
     # A tinted centre (a pale green instead of the neutral grey).
     "centre-tinted": (edit(CVD, setcol(4, "#e4f5e4")), 1, ["PAL-CENTRE " + CVD]),
-    "samples": (edit(CIV, lambda p: p["colors"].pop()), 1, ["PAL-SAMPLES " + CIV]),
-    "licence-nc": (edit(CIV, set_key("licence", "CC-BY-NC-4.0"), rehash=False), 1, ["PAL-LICENCE " + CIV]),
+    "samples": (edit(SCVD, lambda p: p["colors"].pop()), 1, ["PAL-SAMPLES " + SCVD]),
+    "licence-nc": (edit(SCVD, set_key("licence", "CC-BY-NC-4.0"), rehash=False), 1, ["PAL-LICENCE " + SCVD]),
     # CC-BY-4.0 is only for project-made ("original: ...") palettes.
     "licence-third-party": (
-        edit(VIR, set_key("source", "matplotlib viridis data"), rehash=False),
+        edit(SEQ, set_key("source", "published viridis data"), rehash=False),
         1,
-        ["PAL-LICENCE " + VIR],
+        ["PAL-LICENCE " + SEQ],
     ),
     "default-wrong": (lambda m: m["catalogue"].__setitem__("default", TOL), 1, ["PAL-DEFAULT " + CAT]),
     "default-missing": (lambda m: m["catalogue"].pop("default"), 1, ["PAL-DEFAULT " + CAT]),
-    "required-missing": (drop_pal(CIV), 1, ["PAL-SCHEMA " + CAT]),
+    "required-missing": (drop_pal(SCVD), 1, ["PAL-SCHEMA " + CAT]),
     "unlisted-file": (lambda m: m["extra"].__setitem__("tokens/palettes/notes.json", {}), 1, ["PAL-SCHEMA tokens/palettes/notes.json"]),
     "no-catalogue": (lambda m: m.__setitem__("catalogue", None), 1, ["PAL-SCHEMA " + CAT]),
-    "bad-hex": (edit(TOL, set_key("under", "#B18E15"), rehash=False), 1, ["PAL-SCHEMA " + TOL]),
+    "bad-hex": (edit(TOL, set_key("under", "#7C6D45"), rehash=False), 1, ["PAL-SCHEMA " + TOL]),
     "extra-key": (edit(CVD, set_key("note", "x"), rehash=False), 1, ["PAL-SCHEMA " + CVD]),
-    "wrong-kind": (edit(CIV, del_key("kind"), rehash=False), 1, ["PAL-SCHEMA " + CIV]),
-    "id-mismatch": (edit(VIR, set_key("version", 2), rehash=False), 1, ["PAL-SCHEMA " + VIR]),
+    "wrong-kind": (edit(SCVD, del_key("kind"), rehash=False), 1, ["PAL-SCHEMA " + SCVD]),
+    "id-mismatch": (edit(SEQ, set_key("version", 2), rehash=False), 1, ["PAL-SCHEMA " + SEQ]),
     # Perceptual rules (labels confirmed by this script's own maths).
     # Two blue steps swapped: the blue arm's lightness is no longer monotonic.
     "lightness-step": (
@@ -563,33 +627,79 @@ LABELS = {
         ["PAL-LIGHTNESS " + TOL],
     ),
     # Two samples of a continuous map swapped.
-    "lightness-cont": (edit(VIR, swap(100, 101)), 1, ["PAL-LIGHTNESS " + VIR]),
+    "lightness-cont": (edit(SEQ, swap(100, 101)), 1, ["PAL-LIGHTNESS " + SEQ]),
     # The second orange step nearly equal to the first.
     "delta": (edit(CVD, setcol(6, "#e9c197")), 1, ["PAL-DELTA " + CVD + " 5 6"]),
     # Under-range drawn in the blue arm's colour: it is CONFORMS-like and next to the blue end.
     "oot-blue": (
         edit(CVD, set_key("under", "#2a76c3")),
         1,
-        ["PAL-OOT " + CVD + f" {t} under" for t in THEMES],
+        ["PAL-OOT " + CVD + f" {t} under" for t in THEMES] + ["PAL-OOT " + CVD + " under"],
     ),
-    # Over-range too light to see on a white surface.
+    # Over-range too light to see on a white surface. A pale yellow is also an in-range colour (the
+    # light end of seq-a) and near the dark theme's pale INDETERMINATE.
     "contrast": (
         edit(TOL, set_key("over", "#ffe680")),
         1,
-        ["PAL-CONTRAST " + TOL + f" {t} over" for t in ("light", "hc", "floor")],
+        ["PAL-CONTRAST " + TOL + f" {t} over" for t in ("light", "hc", "floor")]
+        + ["PAL-OOT " + TOL + " over", "PAL-OOT " + TOL + " dark over"],
     ),
     # Under-range drawn in the claimed border colour of the light theme: too near the claimed
     # roles of light and floor (the same values), and, like every magenta, under 20 from an azure
     # CONFORMS once colour vision is simulated.
     "claimed": (
-        edit(CIV, set_key("under", "#ab3f92")),
+        edit(SCVD, set_key("under", "#ab3f92")),
         1,
-        ["PAL-CLAIMED " + CIV + f" {t}" for t in ("light", "floor")]
-        + ["PAL-OOT " + CIV + f" {t} under" for t in THEMES],
+        ["PAL-CLAIMED " + SCVD + f" {t}" for t in ("light", "floor")]
+        + ["PAL-OOT " + SCVD + f" {t} under" for t in THEMES]
+        + ["PAL-OOT " + SCVD + " under"],
+    ),
+    # PAL-DELTA on a mirrored pair: the last orange step drawn in a dark blue like the first blue
+    # step, so the two arms meet.
+    "delta-mirror": (edit(CVD, setcol(8, "#16437f")), 1, ["PAL-DELTA " + CVD + " 0 8"]),
+    # PAL-DELTA between under and the first step: under drawn in the first blue step's colour.
+    # It is then also an in-range colour, near the dark azure CONFORMS of light, hc and floor, and
+    # too dark on the dark surface.
+    "delta-under": (
+        edit(TOL, set_key("under", "#1a338b")),
+        1,
+        ["PAL-DELTA " + TOL + " under 0", "PAL-OOT " + TOL + " under", "PAL-CONTRAST " + TOL + " dark under"]
+        + ["PAL-OOT " + TOL + f" {t} under" for t in ("light", "hc", "floor")],
+    ),
+    # PAL-DELTA between the last step and over: over drawn in the last orange step's colour. It is
+    # then also an in-range colour and too dark on the dark surface.
+    "delta-over": (
+        edit(TOL, set_key("over", "#882903")),
+        1,
+        ["PAL-DELTA " + TOL + " 10 over", "PAL-OOT " + TOL + " over", "PAL-CONTRAST " + TOL + " dark over"]
+        # and near the dark neutral status colours of the light and floor themes.
+        + ["PAL-OOT " + TOL + f" {t} over" for t in ("light", "floor")],
+    ),
+    # Over-side PAL-OOT: over drawn in a mid azure, near CONFORMS in light, dark and floor (hc's is
+    # darker) and near the blue arm's steps.
+    "oot-over": (
+        edit(CVD, set_key("over", "#3d8fb0")),
+        1,
+        ["PAL-OOT " + CVD + " over"] + ["PAL-OOT " + CVD + f" {t} over" for t in ("light", "dark", "floor")],
+    ),
+    # PAL-UNIFORM: the blue-yellow map with a slow start (tiny steps in the blue channel only),
+    # still strictly lighter at every sample.
+    "uniform": (
+        edit(SCVD, uneven),
+        1,
+        ["PAL-UNIFORM " + SCVD],
+    ),
+    # PAL-LICENCE: a palette claimed as original without its originality declaration.
+    "origin-missing": (lambda m: m["origin"].pop(SEQ), 1, ["PAL-LICENCE " + SEQ]),
+    # PAL-LICENCE: the declaration names another artefact.
+    "origin-wrong-artefact": (
+        lambda m: m["origin"].__setitem__(SCVD, dict(m["origin"][SCVD], artefact="tokens/palettes/other.json")),
+        1,
+        ["PAL-LICENCE " + SCVD],
     ),
 }
 
-PERCEPTUAL = ("PAL-LIGHTNESS", "PAL-DELTA", "PAL-OOT", "PAL-CONTRAST", "PAL-CLAIMED")
+PERCEPTUAL = ("PAL-LIGHTNESS", "PAL-DELTA", "PAL-OOT", "PAL-CONTRAST", "PAL-CLAIMED", "PAL-UNIFORM")
 
 
 def canon(obj):
@@ -609,6 +719,9 @@ def all_files(sem, digests):
             out[f"{name}/{CAT}"] = m["catalogue"]
         for ref, p in m["pals"].items():
             out[f"{name}/{PALS}/{ref}.json"] = p
+        for ref, decl in m["origin"].items():
+            if ref in m["pals"]:
+                out[f"{name}/{ORIGIN}{PALS}/{ref}.json.origin.json"] = decl
         for rel, obj in m["extra"].items():
             out[f"{name}/{rel}"] = obj
         baseline = None

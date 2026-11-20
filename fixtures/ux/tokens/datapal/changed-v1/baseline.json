@@ -1,9 +1,9 @@
 {
   "digests": {
-    "pal.cont.cividis@1": "sha256:87ab857ee8dda176638eec705cca9387a968f488db5ba2a13913aad64ce9711d",
-    "pal.cont.viridis@1": "sha256:404eec97e8a66eb27a6e64610c36d396b9d750b38ba341b1f6975d87caa40b6e",
-    "pal.step.cvd@1": "sha256:98200d8f97a20896c9152a2d5906b8cee0eda28f9db7390845ee4b4da6e0c754",
-    "pal.step.tol@1": "sha256:de2692effb5695249397722a30898076f6d4237cbe53697a1e055c8e38ad5335"
+    "pal.cont.seq-a@1": "sha256:9e563d63685b087b42c33e4252f299c04b9aeac396284b2d0a5c5186bd77bf69",
+    "pal.cont.seq-cvd@1": "sha256:460e003cb86f8a1553996a8c593955be78da6b8905be1371fa3daf1ffa859845",
+    "pal.step.cvd@1": "sha256:69b962adfcd57855366c7c6d91039e127ba39af1055a6eebe5924627ba402f39",
+    "pal.step.tol@1": "sha256:5d6cc8fff3d0c9ef7f3b67c6c78301eacf2b1c5adda09ded685db45b36fb4f23"
   },
   "format": "palette-digests@1"
 }

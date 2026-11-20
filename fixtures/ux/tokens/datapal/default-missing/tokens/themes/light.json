@@ -2,6 +2,9 @@
   "bindings": {
     "sem.border.value.claimed": "{prim.color.border-value-claimed.light}",
     "sem.status.conforms": "{prim.color.status-conforms.light}",
+    "sem.status.indeterminate": "{prim.color.status-indeterminate.light}",
+    "sem.status.not-decidable": "{prim.color.status-not-decidable.light}",
+    "sem.status.not-evaluated": "{prim.color.status-not-evaluated.light}",
     "sem.surface.base": "{prim.color.surface-base.light}",
     "sem.surface.value.claimed": "{prim.color.surface-value-claimed.light}",
     "sem.text.value.claimed": "{prim.color.text-value-claimed.light}",

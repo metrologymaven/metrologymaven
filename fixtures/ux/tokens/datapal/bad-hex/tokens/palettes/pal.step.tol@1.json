@@ -13,12 +13,12 @@
     "#b74506",
     "#872701"
   ],
-  "digest": "sha256:de2692effb5695249397722a30898076f6d4237cbe53697a1e055c8e38ad5335",
+  "digest": "sha256:5d6cc8fff3d0c9ef7f3b67c6c78301eacf2b1c5adda09ded685db45b36fb4f23",
   "id": "pal.step.tol",
   "kind": "stepped",
   "licence": "CC-BY-4.0",
-  "over": "#ea6878",
+  "over": "#8b5f57",
   "source": "original: generated for this project by fixtures/ux/tokens/datapal/make_palettes.py in OKLCH, a finer stepped tolerance map with a neutral centre and blue and orange arms",
-  "under": "#B18E15",
+  "under": "#7C6D45",
   "version": 1
 }

@@ -11,12 +11,12 @@
     "#c9690c",
     "#873d02"
   ],
-  "digest": "sha256:3ba392305de92b77deae4bd6162376353c4b929983d28563dd30fa55b99cebf8",
+  "digest": "sha256:3c5ff1cc77e4c5471d1ee568886d12aa50620ed0225cad7496c48404379243e0",
   "id": "pal.step.cvd",
   "kind": "stepped",
   "licence": "CC-BY-4.0",
-  "over": "#ea6878",
+  "over": "#8b5f57",
   "source": "original: generated for this project by fixtures/ux/tokens/datapal/make_palettes.py in OKLCH, a neutral centre with blue and orange arms kept apart under colour-vision deficiency",
-  "under": "#b18e15",
+  "under": "#7c6d45",
   "version": 1
 }

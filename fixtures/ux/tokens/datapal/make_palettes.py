@@ -17,17 +17,20 @@ rounded to 8 bits. No step, sample or hex value is taken from another palette:
   neutral grey centre, a blue arm (negative deviations) and an orange arm (positive deviations),
   lightness falling and chroma rising away from the centre. Blue and orange stay apart under the
   three dichromacies, unlike red and green (the spec's design method).
-* `pal.cont.viridis@1` and `pal.cont.cividis@1` keep the IDs the spec gives them, but their
-  samples are not the published viridis (van der Walt and Smith, 2015) or cividis (Nunez,
-  Anderton and Renslow, 2018) data. They are this project's own maps built to the same published
-  design goals: lightness rising strictly from dark to light, `viridis` sweeping hue from
-  blue-violet through teal to yellow, `cividis` staying on the blue-yellow axis that protanopia
-  and deuteranopia keep. The source field of each file says so.
+* `pal.cont.seq-a@1` and `pal.cont.seq-cvd@1` are sequential maps of this project's own: lightness
+  rising strictly from dark to light, samples spaced evenly by CIEDE2000 arc length, `seq-a`
+  sweeping hue from blue-violet through teal to yellow and `seq-cvd` on one straight OKLab line
+  from blue to yellow, the axis that protanopia and deuteranopia keep. They were inspired by the
+  published design goals of viridis (van der Walt, Smith and Firing; CC0) and cividis (Nuñez,
+  Anderton and Renslow, 2018), and copy no sample of either.
 * All four share one out-of-range pair, the out-of-tolerance region colours of the locked status
-  palette's nonconforming set: `under` an ochre and `over` a coral. They are warm because
-  CONFORMS is azure: no blue, violet, teal or green colour of mid lightness is CIEDE2000 20 from
-  every theme's CONFORMS under all four vision conditions (REQ-UX.TOKENS-009), and mid lightness
-  is what gives them 3:1 against both the light and the dark base surface.
+  palette's nonconforming set: `under` a muted olive and `over` a muted rose-brown. Mid lightness
+  gives them 3:1 against both the light and the dark base surface; being warm keeps them
+  CIEDE2000 20 from every theme's azure CONFORMS under all four vision conditions
+  (REQ-UX.TOKENS-009); low chroma keeps them CIEDE2000 10 from every in-range colour of every
+  shipped palette and from the neutral status colours under all four vision conditions. They
+  were picked by a grid search in OKLCH over those rules. Under simulated dichromacy the two are
+  only about 6 apart, so the stripe cue and the legend tell under-range from over-range.
 
 OKLab is Bjorn Ottosson's published colour space (2020); only its conversion formulas are used.
 """
@@ -103,8 +106,8 @@ def cie_lstar(rgb):
 
 # ------------------------------------------------------------------ palettes
 
-UNDER = (0.66, 0.13, 90.0)  # ochre
-OVER = (0.68, 0.16, 15.0)  # coral
+UNDER = (0.54, 0.06, 90.0)  # muted olive
+OVER = (0.53, 0.06, 30.0)  # muted rose-brown
 
 # Stepped: (OKLab L, chroma, hue) from the blue end through the neutral centre to the orange end.
 STEPPED = {
@@ -134,16 +137,15 @@ STEPPED = {
     ],
 }
 
-# Continuous: control points (t, L, C, H); L, C and H are interpolated linearly in t.
+# Continuous: control points (OKLab L, chroma, hue), joined by straight segments in OKLab
+# (L, a, b). The samples are then spaced evenly along the path by CIEDE2000 arc length, so
+# equal steps in the data give roughly equal colour differences (perceptual uniformity).
 CONTINUOUS = {
-    "pal.cont.viridis": [(0.0, 0.32, 0.100, 262.0), (0.5, 0.625, 0.110, 195.0), (1.0, 0.93, 0.170, 108.0)],
-    "pal.cont.cividis": [
-        (0.0, 0.31, 0.085, 255.0),
-        (0.5, 0.62, 0.000, 255.0),
-        (0.5, 0.62, 0.000, 95.0),
-        (1.0, 0.93, 0.150, 98.0),
-    ],
+    "pal.cont.seq-a": [(0.32, 0.100, 262.0), (0.625, 0.110, 195.0), (0.93, 0.170, 108.0)],
+    # One straight segment from blue to yellow: it passes close to grey without a kink.
+    "pal.cont.seq-cvd": [(0.33, 0.085, 258.0), (0.92, 0.110, 92.0)],
 }
+DENSE = 4096
 SAMPLES = 256
 MIN_LSTAR_STEP = 0.05  # every sample is lighter than the one before by at least this (CIELAB L*)
 
@@ -152,39 +154,102 @@ SOURCES = {
     "in OKLCH, a neutral centre with blue and orange arms kept apart under colour-vision deficiency",
     "pal.step.tol": "original: generated for this project by fixtures/ux/tokens/datapal/make_palettes.py "
     "in OKLCH, a finer stepped tolerance map with a neutral centre and blue and orange arms",
-    "pal.cont.viridis": "original: generated for this project by fixtures/ux/tokens/datapal/make_palettes.py "
-    "along an OKLCH path to the published design goals of viridis (van der Walt and Smith, 2015); "
-    "no published viridis sample is copied",
-    "pal.cont.cividis": "original: generated for this project by fixtures/ux/tokens/datapal/make_palettes.py "
-    "on the OKLab blue-yellow axis to the published design goals of cividis (Nunez, Anderton and "
-    "Renslow, 2018); no published cividis sample is copied",
+    "pal.cont.seq-a": "original: generated for this project by fixtures/ux/tokens/datapal/make_palettes.py "
+    "along an OKLab path from blue-violet through teal to yellow, spaced by CIEDE2000; inspired only by "
+    "the design goals of viridis (Stefan van der Walt, Nathaniel Smith and Eric Firing; CC0), no sample copied",
+    "pal.cont.seq-cvd": "original: generated for this project by fixtures/ux/tokens/datapal/make_palettes.py "
+    "on one OKLab line from blue to yellow, spaced by CIEDE2000; inspired only by the design goals of "
+    "cividis (Jamie R. Nuñez, Christopher R. Anderton and Ryan S. Renslow, 2018), no sample copied",
 }
 LICENCE = "CC-BY-4.0"  # project-made data (LICENSE.md)
 DEFAULT = "pal.step.cvd@1"
-ORDER = ["pal.step.cvd@1", "pal.step.tol@1", "pal.cont.viridis@1", "pal.cont.cividis@1"]
+ORDER = ["pal.step.cvd@1", "pal.step.tol@1", "pal.cont.seq-a@1", "pal.cont.seq-cvd@1"]
+
+
+def cielab_of_rgb_float(lin):
+    r, g, b = lin
+    x = (0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / 0.95047
+    y = 0.2126729 * r + 0.7151522 * g + 0.0721750 * b
+    z = (0.0193339 * r + 0.1191920 * g + 0.9503041 * b) / 1.08883
+    d = 6.0 / 29.0
+
+    def f(t):
+        return t ** (1.0 / 3.0) if t > d ** 3 else t / (3.0 * d * d) + 4.0 / 29.0
+
+    return (116.0 * f(y) - 16.0, 500.0 * (f(x) - f(y)), 200.0 * (f(y) - f(z)))
+
+
+def de2000(p, q):
+    """CIEDE2000 (Sharma, Wu and Dalal, 2005), used here only to space the samples."""
+    L1, a1, b1 = p
+    L2, a2, b2 = q
+    cb = (math.hypot(a1, b1) + math.hypot(a2, b2)) / 2.0
+    g = 0.5 * (1.0 - math.sqrt(cb ** 7 / (cb ** 7 + 25.0 ** 7)))
+    a1, a2 = a1 * (1.0 + g), a2 * (1.0 + g)
+    c1, c2 = math.hypot(a1, b1), math.hypot(a2, b2)
+    h1 = math.degrees(math.atan2(b1, a1)) % 360.0 if c1 else 0.0
+    h2 = math.degrees(math.atan2(b2, a2)) % 360.0 if c2 else 0.0
+    if c1 * c2 == 0.0:
+        dh, hb = 0.0, h1 + h2
+    else:
+        dh = h2 - h1
+        dh = dh - 360.0 if dh > 180.0 else dh + 360.0 if dh < -180.0 else dh
+        hb = (h1 + h2) / 2.0 if abs(h1 - h2) <= 180.0 else (h1 + h2 + 360.0) / 2.0 if h1 + h2 < 360.0 else (h1 + h2 - 360.0) / 2.0
+    dH = 2.0 * math.sqrt(c1 * c2) * math.sin(math.radians(dh / 2.0))
+    lb, cbp = (L1 + L2) / 2.0, (c1 + c2) / 2.0
+    t = 1 - 0.17 * math.cos(math.radians(hb - 30)) + 0.24 * math.cos(math.radians(2 * hb)) + 0.32 * math.cos(math.radians(3 * hb + 6)) - 0.20 * math.cos(math.radians(4 * hb - 63))
+    sl = 1.0 + 0.015 * (lb - 50.0) ** 2 / math.sqrt(20.0 + (lb - 50.0) ** 2)
+    sc, sh = 1.0 + 0.045 * cbp, 1.0 + 0.015 * cbp * t
+    rt = -2.0 * math.sqrt(cbp ** 7 / (cbp ** 7 + 25.0 ** 7)) * math.sin(math.radians(60.0 * math.exp(-(((hb - 275.0) / 25.0) ** 2))))
+    x, y, z = (L2 - L1) / sl, (c2 - c1) / sc, dH / sh
+    return math.sqrt(x * x + y * y + z * z + rt * y * z)
+
+
+def fit_lab(L, a, b):
+    """Linear sRGB of an OKLab colour, chroma reduced (hue kept) until it fits the gamut."""
+    C, H = math.hypot(a, b), math.degrees(math.atan2(b, a))
+    while True:
+        lin = linear_of_oklch(L, C, H)
+        if all(-1e-6 <= x <= 1.0 + 1e-6 for x in lin) or C <= 0.0:
+            return [min(1.0, max(0.0, x)) for x in lin]
+        C = max(0.0, C - 0.001)
 
 
 def continuous(points):
-    out = []
+    labs = [(L, C * math.cos(math.radians(H)), C * math.sin(math.radians(H))) for L, C, H in points]
+    seg = len(labs) - 1
+    dense = []
+    for i in range(DENSE + 1):
+        u = i * seg / DENSE
+        j = min(int(u), seg - 1)
+        f = u - j
+        p, q = labs[j], labs[j + 1]
+        dense.append(fit_lab(*(p[k] + (q[k] - p[k]) * f for k in range(3))))
+    cie = [cielab_of_rgb_float(x) for x in dense]
+    arc = [0.0]
+    for p, q in zip(cie, cie[1:]):
+        arc.append(arc[-1] + de2000(p, q))
+    out, j = [], 0
     for i in range(SAMPLES):
-        t = i / (SAMPLES - 1)
-        j = max(k for k in range(len(points) - 1) if points[k][0] <= t and points[k + 1][0] > points[k][0])
-        a, b = points[j], points[j + 1]
-        u = min(1.0, (t - a[0]) / (b[0] - a[0]))
-        L, C, H = (a[n] + (b[n] - a[n]) * u for n in (1, 2, 3))
-        target = (L, C, H)
-        rgb = rgb_of_oklch(*target)
+        want = arc[-1] * i / (SAMPLES - 1)
+        while j < DENSE and arc[j + 1] < want:
+            j += 1
+        span = arc[j + 1] - arc[j] if j < DENSE else 1.0
+        f = 0.0 if j >= DENSE or span == 0.0 else (want - arc[j]) / span
+        a, b = dense[j], dense[min(j + 1, DENSE)]
+        lin = [a[k] + (b[k] - a[k]) * f for k in range(3)]
+        rgb = tuple(round(255.0 * encode(x)) for x in lin)
         if out and cie_lstar(rgb) < cie_lstar(out[-1]) + MIN_LSTAR_STEP:
             # Rounding to 8 bits broke the strict lightness rise: take the nearest 8-bit
-            # neighbour (OKLab distance to the target) that keeps it.
-            want = oklab_of_rgb(rgb)
+            # neighbour (OKLab distance) that keeps it.
+            target = oklab_of_rgb(rgb)
             cands = []
             for dr in range(-2, 3):
                 for dg in range(-2, 3):
                     for db in range(-2, 3):
                         c = (rgb[0] + dr, rgb[1] + dg, rgb[2] + db)
                         if all(0 <= x <= 255 for x in c) and cie_lstar(c) >= cie_lstar(out[-1]) + MIN_LSTAR_STEP:
-                            cands.append((math.dist(oklab_of_rgb(c), want), c))
+                            cands.append((math.dist(oklab_of_rgb(c), target), c))
             if not cands:
                 raise SystemExit(f"cannot keep the lightness rising at sample {i}")
             rgb = min(cands)[1]
@@ -233,7 +298,7 @@ AUTHOR = (
 REFS = [
     "The UX.TOKENS, UX.TOKENS.DATAPAL, UX.TOKENS.STATUS and UX.SYSTEM.PRINC spec nodes in this repository",
     "The OKLab colour space conversion formulas published by Bjorn Ottosson (2020)",
-    "The published design goals (not the data) of the viridis colour map (van der Walt and Smith, 2015) and of cividis (Nunez, Anderton and Renslow, 2018)",
+    "The published design goals, as inspiration only and not the data, of the viridis colour map (Stefan van der Walt, Nathaniel Smith and Eric Firing; CC0) and of cividis (Jamie R. Nuñez, Christopher R. Anderton and Ryan S. Renslow, 2018)",
     "The CIEDE2000 colour-difference formula (Sharma, Wu and Dalal, 2005), used only to verify the values",
     "The colour-vision-deficiency simulation matrices of Machado, Oliveira and Fernandes (2009) at severity 1.0, used only to verify the values",
     "WCAG 2.2 success criterion 1.4.11 (the 3:1 non-text contrast threshold only)",

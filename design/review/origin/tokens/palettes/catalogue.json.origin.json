@@ -5,7 +5,7 @@
   "references": [
     "The UX.TOKENS, UX.TOKENS.DATAPAL, UX.TOKENS.STATUS and UX.SYSTEM.PRINC spec nodes in this repository",
     "The OKLab colour space conversion formulas published by Bjorn Ottosson (2020)",
-    "The published design goals (not the data) of the viridis colour map (van der Walt and Smith, 2015) and of cividis (Nunez, Anderton and Renslow, 2018)",
+    "The published design goals, as inspiration only and not the data, of the viridis colour map (Stefan van der Walt, Nathaniel Smith and Eric Firing; CC0) and of cividis (Jamie R. Nuñez, Christopher R. Anderton and Ryan S. Renslow, 2018)",
     "The CIEDE2000 colour-difference formula (Sharma, Wu and Dalal, 2005), used only to verify the values",
     "The colour-vision-deficiency simulation matrices of Machado, Oliveira and Fernandes (2009) at severity 1.0, used only to verify the values",
     "WCAG 2.2 success criterion 1.4.11 (the 3:1 non-text contrast threshold only)"
