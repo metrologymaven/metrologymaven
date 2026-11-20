@@ -1,0 +1,46 @@
+{
+  "sem": {
+    "$type": "color",
+    "border": {
+      "value": {
+        "claimed": {
+          "$value": "{prim.color.border-value-claimed.light}"
+        }
+      }
+    },
+    "status": {
+      "conforms": {
+        "$value": "{prim.color.status-conforms.light}"
+      },
+      "indeterminate": {
+        "$value": "{prim.color.status-indeterminate.light}"
+      },
+      "not-decidable": {
+        "$value": "{prim.color.status-not-decidable.light}"
+      },
+      "not-evaluated": {
+        "$value": "{prim.color.status-not-evaluated.light}"
+      }
+    },
+    "surface": {
+      "base": {
+        "$value": "{prim.color.surface-base.light}"
+      },
+      "value": {
+        "claimed": {
+          "$value": "{prim.color.surface-value-claimed.light}"
+        }
+      }
+    },
+    "text": {
+      "value": {
+        "claimed": {
+          "$value": "{prim.color.text-value-claimed.light}"
+        },
+        "measured": {
+          "$value": "{prim.color.text-value-measured.light}"
+        }
+      }
+    }
+  }
+}

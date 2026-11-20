@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""Independent reference for KRN.SOLV.CERT.KKT on cylinders far from the origin (CC-BY-4.0
+project data).
+
+Writes fixtures/solv/cert/kkt-far-v1/cases.txt. The problems are the 16 `cyl-far-*` minimum-zone
+cylinders of fixtures/solv/cert/recomp-floor-v1 (generated again here by that script's own
+functions, so the points, sets and optima are the same bytes): axis about 300 mm from the origin
+in x and y, heights z in [300, 300 + L]. Their constraint gradients in the tilt parameters reach
+about 300, which is what defeated the stationarity check at the float multipliers.
+
+Everything is decided with the stdlib decimal module at 90 significant digits (software
+arithmetic, correctly rounded square roots) and fractions.Fraction; nothing here runs or reads
+the Rust code or any solver, and nothing uses the platform libm.
+
+Cases:
+
+- `far-NN` (expect certified): the set is the planted contact set, verified a strict local
+  minimum by recomp-floor-v1 (multipliers >= 1e-3, other rows inside by width / 1000). The
+  exact multipliers mu (G^T mu = -grad f at the 90-digit optimum, rows in set order) are
+  recorded to the nearest double, so the Rust test checks that the proven multiplier box holds
+  them.
+- `far-NN-swap-dual` / `far-NN-swap-primal` (must not certify): one contact row of the set
+  exchanged for the same-side row of a non-contact point. The exchanged system is polished by
+  Newton's method (residual below 1e-75) from the original optimum, and at its root the exact
+  multipliers and every constraint are evaluated. A `dual` case has every non-set row inside by
+  at least 1e-5 (primal feasible, so primal and complementarity hold with a wide margin against
+  the 1e-9 relative thresholds) and a multiplier <= -1e-3 (dual certainly violated: the dual
+  thresholds are about 1e-11). A `primal` case has some row outside by at least 1e-5 (primal
+  certainly violated; the primal threshold is 1e-9 * data_scale, about 3e-7). For k in 0 .. 15
+  the first exchange of each kind in (contact order, point order) is taken, up to SWAPS cases of
+  each kind in total.
+
+Output lines (hex = 16 lowercase hex digits of an IEEE-754 double):
+  case <name> kind cyl
+  points <x y z per point, hex>
+  start <hex per parameter>
+  set <point:side ...>             sorted
+  params <hex per parameter>       the root of the set's equations, nearest double
+  multipliers <hex per set row>    exact multipliers in sorted set order, nearest double
+  expect certified | violated <primal|dual>
+  end
+"""
+
+import importlib.util
+import sys
+from decimal import Decimal
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+OUT = HERE / "cases.txt"
+SRC = HERE.parent / "recomp-floor-v1" / "make_cases.py"
+SWAPS = 3
+
+
+def load_floor():
+    spec = importlib.util.spec_from_file_location("recomp_floor_v1", SRC)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+F = load_floor()
+dec, fl, hx, solve, dist_grad, polish = F.dec, F.fl, F.hx, F.solve, F.dist_grad, F.polish
+
+
+def grad_rows(pts, labels, p):
+    """Rows of G (constraint gradients in set order): inner g = r_in - d, outer g = d - r_out."""
+    rows = []
+    for i, side in labels:
+        _, g = dist_grad(pts[i], p, 4)
+        if side == 0:
+            rows.append([-v for v in g] + [Decimal(1), Decimal(0)])
+        else:
+            rows.append(g + [Decimal(0), Decimal(-1)])
+    return rows
+
+
+def multipliers(pts, labels, p):
+    rows = grad_rows(pts, labels, p)
+    gt = [[rows[r][k] for r in range(6)] for k in range(6)]
+    return solve(gt, [Decimal(0)] * 4 + [Decimal(1), Decimal(-1)])
+
+
+def constraints(pts, p):
+    """Every row g_i, rows point by point, side 0 then 1."""
+    out = []
+    for pt in pts:
+        d, _ = dist_grad(pt, p, 4)
+        out.append(p[4] - d)
+        out.append(d - p[5])
+    return out
+
+
+def classify(pts, labels, p):
+    """'dual', 'primal' or None for an exchanged set with root p (see the module docs)."""
+    mu = multipliers(pts, labels, p)
+    if mu is None:
+        return None
+    in_set = {2 * i + s for i, s in labels}
+    others = [g for j, g in enumerate(constraints(pts, p)) if j not in in_set]
+    worst = max(others)
+    margin = Decimal("1e-5")
+    if worst >= margin:
+        return "primal"
+    if worst <= -margin and min(mu) <= Decimal("-1e-3"):
+        return "dual"
+    return None
+
+
+def fmt_labels(labels):
+    return " ".join(f"{i}:{s}" for i, s in labels)
+
+
+def emit(out, name, pts, start, labels, p, mu, expect):
+    out.append(f"case {name} kind cyl")
+    out.append("points " + " ".join(hx(c) for q in pts for c in q))
+    out.append("start " + " ".join(hx(v) for v in start))
+    out.append("set " + fmt_labels(labels))
+    out.append("params " + " ".join(hx(fl(v)) for v in p))
+    out.append("multipliers " + " ".join(hx(fl(v)) for v in mu))
+    out.append("expect " + expect)
+    out.append("end")
+
+
+def render():
+    out = [
+        "# KRN.SOLV.CERT.KKT fixture kkt-far-v1 (CC-BY-4.0). Generated by make_cases.py; do not edit.",
+        "# The 16 cyl-far minimum-zone cylinders of recomp-floor-v1 (must certify) and exchanged",
+        "# non-optimal sets (must not: primal or dual certainly violated). See make_cases.py.",
+    ]
+    swaps = {"dual": 0, "primal": 0}
+    for k in range(16):
+        pts, start, labels, p, _ = F.make_cylinder("far", k, True)
+        emit(out, f"far-{k:02d}", pts, start, labels, p, multipliers(pts, labels, p), "certified")
+        contacts = {i for i, _ in labels}
+        found = set()
+        wanted = lambda: {kind for kind, n in swaps.items() if n < SWAPS} - found  # noqa: E731
+        for j in range(len(labels)):
+            for i in range(len(pts)):
+                if not wanted():
+                    break
+                if i in contacts:
+                    continue
+                cand = sorted(labels[:j] + labels[j + 1 :] + [(i, labels[j][1])])
+                q = polish(pts, cand, p, 4)
+                if q is None:
+                    continue
+                kind = classify(pts, cand, q)
+                if kind is None or kind in found or swaps[kind] >= SWAPS:
+                    continue
+                found.add(kind)
+                swaps[kind] += 1
+                emit(out, f"far-{k:02d}-swap-{kind}", pts, start, cand, q, multipliers(pts, cand, q), f"violated {kind}")
+    assert swaps == {"dual": SWAPS, "primal": SWAPS}, swaps
+    return "\n".join(out) + "\n"
+
+
+def main():
+    text = render()
+    if "--check" in sys.argv[1:]:
+        if not (OUT.exists() and OUT.read_text(encoding="utf-8") == text):
+            print(f"{OUT} is stale; rerun without --check", file=sys.stderr)
+            return 1
+        print(f"{OUT} is up to date")
+        return 0
+    OUT.write_text(text, encoding="utf-8", newline="\n")
+    print(f"wrote {OUT}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
