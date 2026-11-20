@@ -194,32 +194,67 @@ fn id_schema(description: &str) -> CValue {
     obj([("type", text("string")), ("pattern", text(ID_PATTERN)), ("description", text(description))])
 }
 
-/// The result schema: the canonical record, with its schema tag and the interpretation
-/// block of `GDT.CHAR.INTERP` required (`interpretation` an enum, `interpretation_rules` an
-/// array of rule uses, `interpretation_register` a digest or `none`).
+/// Pattern of `interpretation_register`: a register digest or `none`.
+pub const REGISTER_FIELD_PATTERN: &str = "^(none|sha256:[0-9a-f]{64})$";
+
+fn typed(t: &str) -> CValue {
+    obj([("type", text(t))])
+}
+
+/// The result schema: the canonical record, closed (`additionalProperties: false`), with its
+/// schema tag and the interpretation block of `GDT.CHAR.INTERP` required:
+/// `interpretation` an enum, `interpretation_rules` an array of closed rule uses (`reason` a
+/// reason code or null, `revision` an integer of at least 1 or null), and
+/// `interpretation_register` a digest or `none` ([`REGISTER_FIELD_PATTERN`]).
 fn result_schema() -> CValue {
+    let reasons = CValue::Arr(
+        ["awaiting_review", "superseded", "not_in_register", "no_signoff_path", "no_register", "unverified_register"]
+            .iter()
+            .map(|s| text(s))
+            .chain(std::iter::once(CValue::Null))
+            .collect(),
+    );
     let rule = obj([
         ("type", text("object")),
+        ("additionalProperties", CValue::Bool(false)),
         ("required", strs(&["content_digest", "kind", "reason", "revision", "rule", "status"])),
         (
             "properties",
             obj([
-                ("content_digest", obj([("type", text("string"))])),
-                ("kind", obj([("enum", strs(&["dmt_row", "profile"]))])),
-                ("rule", obj([("type", text("string"))])),
-                ("status", obj([("enum", strs(&["provisional", "signed_off"]))])),
+                ("content_digest", obj([("type", text("string")), ("pattern", text(fid_types::Digest::PATTERN))])),
+                ("kind", obj([("type", text("string")), ("enum", strs(&["dmt_row", "profile"]))])),
+                ("reason", obj([("type", strs(&["string", "null"])), ("enum", reasons)])),
+                ("revision", obj([("type", strs(&["integer", "null"])), ("minimum", CValue::Num(1.0))])),
+                ("rule", typed("string")),
+                ("status", obj([("type", text("string")), ("enum", strs(&["provisional", "signed_off"]))])),
             ]),
         ),
     ]);
     obj([
         ("type", text("object")),
+        ("additionalProperties", CValue::Bool(false)),
         ("required", strs(&["interpretation", "interpretation_register", "interpretation_rules", "schema"])),
         (
             "properties",
             obj([
-                ("schema", obj([("enum", strs(&[RECORD_SCHEMA]))])),
-                ("interpretation", obj([("enum", strs(&["provisional", "signed_off"]))])),
-                ("interpretation_register", obj([("type", text("string"))])),
+                ("schema", obj([("type", text("string")), ("enum", strs(&[RECORD_SCHEMA]))])),
+                ("run", typed("string")),
+                ("characteristic", typed("string")),
+                ("measurand", typed("string")),
+                ("evaluation_basis", typed("string")),
+                ("value", typed("object")),
+                ("uncertainty", typed("object")),
+                ("decision", typed("object")),
+                ("spec", typed("object")),
+                ("algorithm", typed("string")),
+                ("kernel_version", typed("string")),
+                ("input_digests", typed("array")),
+                ("journal_entry", typed("string")),
+                ("dmt_row", typed("string")),
+                ("operator_chain_digest", typed("string")),
+                ("dmt_digest", typed("string")),
+                ("interpretation", obj([("type", text("string")), ("enum", strs(&["provisional", "signed_off"]))])),
+                ("interpretation_register", obj([("type", text("string")), ("pattern", text(REGISTER_FIELD_PATTERN))])),
                 ("interpretation_rules", obj([("type", text("array")), ("items", rule)])),
             ]),
         ),

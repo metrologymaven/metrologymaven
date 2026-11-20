@@ -19,7 +19,7 @@ use fid_gdt::chars::interp::{
 use fid_gdt::chars::record::{
     command_def, invoke_cli, invoke_mcp, invoke_mcp_tool, AlgorithmRef, EvaluationBasis, InputDigests, KernelVersion,
     Measurand, Quantity, RecordError, ResultRecord, ResultRecordBuilder, ResultStore, RunId, Uncertainty,
-    GET_RESULT_CLI, GET_RESULT_MCP,
+    GET_RESULT_CLI, GET_RESULT_MCP, REGISTER_FIELD_PATTERN,
 };
 use fid_gdt::chars::spec::{GoverningSpec, SpecError};
 use fid_gdt::dmt_flow::roster::Roster;
@@ -580,10 +580,46 @@ fn ac10_mcp_structured_and_text_content_carry_the_label() {
         m.remove(k);
         assert!(conforms(&schema, &CValue::Obj(m), "result").is_err(), "{k}");
     }
-    for (k, bad) in [("interpretation", "maybe"), ("schema", "fid.gdt-result/1")] {
+    for (k, bad) in [
+        ("interpretation", "maybe"),
+        ("schema", "fid.gdt-result/1"),
+        ("interpretation_register", "sha256:12"),
+        ("interpretation_register", "None"),
+        ("unexpected", "x"),
+    ] {
         let CValue::Obj(mut m) = s.clone() else { panic!("object") };
         m.insert(k.to_owned(), CValue::Str(bad.to_owned()));
-        assert!(conforms(&schema, &CValue::Obj(m), "result").is_err(), "{k}");
+        assert!(conforms(&schema, &CValue::Obj(m), "result").is_err(), "{k}={bad}");
+    }
+    // A "none" register validates; rule fields are typed and closed.
+    let CValue::Obj(mut m) = s.clone() else { panic!("object") };
+    m.insert("interpretation_register".to_owned(), CValue::Str("none".to_owned()));
+    conforms(&schema, &CValue::Obj(m), "result").unwrap();
+    for (k, bad) in [
+        ("reason", CValue::Str("odd".to_owned())),
+        ("reason", CValue::Num(1.0)),
+        ("revision", CValue::Num(0.0)),
+        ("revision", CValue::Num(1.5)),
+        ("revision", CValue::Str("1".to_owned())),
+        ("status", CValue::Str("draft".to_owned())),
+        ("extra", CValue::Null),
+    ] {
+        let CValue::Obj(mut m) = s.clone() else { panic!("object") };
+        let Some(CValue::Arr(rules)) = m.get_mut("interpretation_rules") else { panic!("rules") };
+        let CValue::Obj(o) = &mut rules[0] else { panic!("rule") };
+        o.insert(k.to_owned(), bad);
+        assert!(conforms(&schema, &CValue::Obj(m), "result").is_err(), "rule {k}");
+    }
+}
+
+fn type_ok(t: &str, v: &CValue) -> bool {
+    match (t, v) {
+        ("object", CValue::Obj(_))
+        | ("string", CValue::Str(_))
+        | ("array", CValue::Arr(_))
+        | ("null", CValue::Null) => true,
+        ("integer", CValue::Num(n)) => n.fract() == 0.0,
+        _ => false,
     }
 }
 
@@ -594,10 +630,25 @@ fn conforms(schema: &CValue, v: &CValue, at: &str) -> Result<(), String> {
     for (k, kv) in s {
         let ok = match (k.as_str(), kv) {
             ("description", _) => true,
-            ("type", CValue::Str(t)) => matches!(
-                (t.as_str(), v),
-                ("object", CValue::Obj(_)) | ("string", CValue::Str(_)) | ("array", CValue::Arr(_))
-            ),
+            ("type", CValue::Str(t)) => type_ok(t, v),
+            ("type", CValue::Arr(ts)) => ts.iter().any(|t| matches!(t, CValue::Str(t) if type_ok(t, v))),
+            ("pattern", CValue::Str(p)) => {
+                let CValue::Str(x) = v else { return Err(format!("{at}: pattern on a non-string")) };
+                if p == Digest::PATTERN {
+                    Digest::parse(x).is_ok()
+                } else if p == REGISTER_FIELD_PATTERN {
+                    x == "none" || Digest::parse(x).is_ok()
+                } else {
+                    return Err(format!("{at}: pattern {p} not supported by the test checker"));
+                }
+            }
+            ("minimum", CValue::Num(m)) => !matches!(v, CValue::Num(n) if n < m),
+            ("additionalProperties", CValue::Bool(false)) => {
+                let (CValue::Obj(o), Some(CValue::Obj(props))) = (v, s.get("properties")) else {
+                    return Err(format!("{at}: additionalProperties without properties"));
+                };
+                o.keys().all(|k| props.contains_key(k))
+            }
             ("enum", CValue::Arr(e)) => e.contains(v),
             ("required", CValue::Arr(r)) => {
                 let CValue::Obj(o) = v else { return Err(format!("{at}: required on a non-object")) };
@@ -676,6 +727,12 @@ fn the_bytes_predicate_is_provisional_unless_a_v2_record_is_signed_off() {
     let CValue::Obj(o) = &mut rules[0] else { panic!("rule") };
     o.insert("status".to_owned(), CValue::Str("provisional".to_owned()));
     assert!(requires_provisional_label_bytes(&canon(&CValue::Obj(mixed))));
+    // Non-canonical bytes of a signed-off record (whitespace, key order) are provisional.
+    let pretty = String::from_utf8(canon(&signed)).unwrap().replacen(',', ", ", 1);
+    assert!(requires_provisional_label_bytes(pretty.as_bytes()));
+    let mut spaced = canon(&signed);
+    spaced.push(b' ');
+    assert!(requires_provisional_label_bytes(&spaced));
     assert!(requires_provisional_label_bytes(b"not json"));
     assert!(requires_provisional_label_bytes(b"[]"));
     assert!(requires_provisional_label_bytes(b""));

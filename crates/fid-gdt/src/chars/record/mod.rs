@@ -112,7 +112,7 @@ pub use builder::{
 };
 pub use command::{
     command_def, invoke_cli, invoke_mcp, invoke_mcp_tool, render_text, McpToolResult, GET_RESULT_CLI, GET_RESULT_MCP,
-    MAX_PARAMS_BYTES,
+    MAX_PARAMS_BYTES, REGISTER_FIELD_PATTERN,
 };
 pub use fields::{AlgorithmRef, EvaluationBasis, InputDigests, KernelVersion, Measurand, Quantity, RunId};
 pub use store::{get_record, get_result, ResultStore, GET_RESULT_COMMAND, MAX_RECORDS};

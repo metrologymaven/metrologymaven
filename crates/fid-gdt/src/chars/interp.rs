@@ -140,13 +140,17 @@ pub fn requires_provisional_label(record: &ResultRecord) -> bool {
 /// that never hold a [`ResultRecord`] (reports, exports, the release queue). False only for
 /// a readable `fid.gdt-result/2` record whose `interpretation` is `signed_off` and whose
 /// `interpretation_rules` are non-empty and all `signed_off`; true for anything else: bytes
-/// that do not parse (or exceed [`MAX_RECORD_BYTES`]), another schema (a `/1` record has no
+/// that do not parse, are not RFC 8785 canonical (a round trip must give the same bytes) or
+/// exceed [`MAX_RECORD_BYTES`], another schema (a `/1` record has no
 /// interpretation block), or a missing, mistyped or other `interpretation`.
 pub fn requires_provisional_label_bytes(record: &[u8]) -> bool {
     let signed = CValue::Str(Interpretation::SignedOff.as_str().to_owned());
-    let Ok(CValue::Obj(o)) = fid_canon::parse_with_limits(record, MAX_RECORD_BYTES, MAX_RECORD_DEPTH) else {
+    let Ok(v) = fid_canon::parse_with_limits(record, MAX_RECORD_BYTES, MAX_RECORD_DEPTH) else { return true };
+    // Only canonical bytes are a stored record: anything else is provisional.
+    if fid_canon::to_canonical_bytes(&v).ok().as_deref() != Some(record) {
         return true;
-    };
+    }
+    let CValue::Obj(o) = v else { return true };
     if o.get("schema") != Some(&CValue::Str(RECORD_SCHEMA.to_owned())) || o.get("interpretation") != Some(&signed) {
         return true;
     }
