@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-kunc]
 satisfies: [REQ-UNC.PROP.MCM-006]
 covers: []
 depends_on: [KRN.NUM.RED, KRN.NUM.FN]
@@ -74,6 +75,7 @@ Turns a set of Monte Carlo output values into the summary JCGM 101:2008 describe
 ## Open questions
 
 - The rank rule must be checked against the free JCGM 101 text [unverified].
+- **AC-H1 measured (fid-kunc `tests/interval.rs`, M = 10^6, 100 seeds, release build):** the symmetric-interval endpoints meet the hypothesis (rect4 100/100 and 100/100; exp1 100/100 and 99/100 seeds within 3 asymptotic standard errors). The shortest-interval endpoints do not: rect4 50/100 per endpoint (exact two-sided 95 % bounds [0.398, 0.602]), and the exp1 boundary endpoint 96/100 ([0.901, 0.989]) under a substitute tolerance of 3 / (M f(0)), because the order-statistic standard error is zero at a support boundary. At M = 10^4 rect4 passes 86/100, so the shortfall grows with M, which is consistent with shortest-window endpoints converging more slowly than M^(-1/2) [unverified: cube-root rate]. The hypothesis is falsified for shortest intervals as stated; its tolerance should be restated (for example against a long-run reference) by an uncertainty expert.
 
 ## Children
 
