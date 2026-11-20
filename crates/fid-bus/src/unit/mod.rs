@@ -31,7 +31,9 @@
 //! `num / den`, times Π = `PI_256 / 2^254` when the factor says so, the exact rational
 //! `c * 10^k * num [* PI_256] / (den [* 2^254])` is formed with big integers (powers of two
 //! kept apart as a binary exponent) and rounded once to the nearest `f64`, ties to even,
-//! subnormals included (REQ-002). No floating-point arithmetic happens anywhere: the result
+//! subnormals included (REQ-002). "Exactly once" is relative to the catalogue's Π: for angle
+//! units the factor holds `PI_256 / 2^254` as an exact rational (the constant `GEO.FRAME.UNITS`
+//! pins), not the real number π. No floating-point arithmetic happens anywhere: the result
 //! is assembled from its bits. The sign is the sign written, so `-0` gives `-0.0`. Fail
 //! closed: a result beyond the largest finite `f64` (the exact value is at least
 //! `2^1024 - 2^970`), or a non-zero value that rounds to zero (below or at half the smallest
@@ -43,6 +45,14 @@
 //!
 //! Affine units (degrees Celsius) are not in the catalogue for P0, so they are refused as
 //! `unit_mismatch` like any unit the kind does not accept.
+//!
+//! # Relation to `GEO.FRAME.UNITS`
+//!
+//! `fid_geo_frame::units` parses the same grammar with the same factors and Π, but with other
+//! limits. It accepts 40 significant digits where the bus accepts 64, has no exponent limit,
+//! and rounds tiny values to zero (`1e-400 m` gives 0.0 there and `literal_out_of_range`
+//! here). Values both accept agree bit for bit. Consolidating the two into `fid-num` is a
+//! follow-up recorded in both leaves' NODE.md.
 
 mod big;
 
@@ -429,17 +439,24 @@ fn to_bits(value: &DecimalString, factor: Factor) -> Result<u64, BusError> {
     Ok(sign | bits)
 }
 
-/// `(num / den, num % den)` for a quotient below 2^54, by shift and subtract; a larger
-/// quotient is a broken invariant and refused.
+/// `(num / den, num % den)` for a quotient below 2^54, by long division one quotient bit at a
+/// time (the remainder is shifted, the divisor never is); a larger quotient is a broken
+/// invariant and refused.
 fn div_small_quotient(num: &Big, den: &Big) -> Result<(u64, Big), BusError> {
-    if num.cmp_mag(&den.shl(54)) != Ordering::Less {
+    let top = den.shl(54);
+    if num.cmp_mag(&top) != Ordering::Less {
         return Err(invariant("quotient above 2^54"));
     }
-    let mut rem = num.clone();
+    // Start from the bits of num above 2^54 (below den, by the check above), then bring down one
+    // bit of num per step: before each subtraction rem < 2 * den, so each quotient bit is 0 or 1.
+    let mut rem = num.shr(54);
     let mut q: u64 = 0;
     for i in (0..54u64).rev() {
-        let part = den.shl(i);
-        if let Some(r) = rem.checked_sub(&part) {
+        rem = rem.shl(1);
+        if num.bit(i) {
+            rem.mul_small_add(1, 1);
+        }
+        if let Some(r) = rem.checked_sub(den) {
             rem = r;
             q |= 1 << i;
         }

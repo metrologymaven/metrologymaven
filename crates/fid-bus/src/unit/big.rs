@@ -139,6 +139,27 @@ impl Big {
         b
     }
 
+    /// `floor(self / 2^n)`.
+    pub(crate) fn shr(&self, n: u64) -> Big {
+        let words = usize::try_from(n / 32).unwrap_or(usize::MAX);
+        let bits = (n % 32) as u32;
+        let src = self.limbs.get(words..).unwrap_or(&[]);
+        let mut out = Vec::with_capacity(src.len());
+        for (i, &l) in src.iter().enumerate() {
+            let hi = if bits == 0 { 0 } else { src.get(i + 1).map_or(0, |&h| h << (32 - bits)) };
+            out.push((l >> bits) | hi);
+        }
+        let mut b = Big { limbs: out };
+        b.trim();
+        b
+    }
+
+    /// Bit `n` (bit 0 is the least significant).
+    pub(crate) fn bit(&self, n: u64) -> bool {
+        let word = usize::try_from(n / 32).unwrap_or(usize::MAX);
+        self.limbs.get(word).is_some_and(|l| (l >> (n % 32)) & 1 == 1)
+    }
+
     pub(crate) fn cmp_mag(&self, other: &Big) -> Ordering {
         match self.limbs.len().cmp(&other.limbs.len()) {
             Ordering::Equal => {}
@@ -202,6 +223,13 @@ mod tests {
         assert_eq!(sq, expect);
         assert_eq!(Big::from_u64(3).checked_sub(&Big::from_u64(4)), None);
         assert_eq!(Big::from_u64(4).checked_sub(&Big::from_u64(4)).unwrap(), Big::zero());
+        let x = Big::from_decimal(b"123456789012345678901234567890").unwrap();
+        for n in [0u64, 1, 31, 32, 33, 64, 97, 200] {
+            assert_eq!(x.shl(n).shr(n), x);
+            assert_eq!(x.shl(n).bit(n), x.bit(0));
+        }
+        assert_eq!(x.shr(200), Big::zero());
+        assert_eq!(Big::from_u64(0b1011).shr(1), Big::from_u64(0b101));
         let mut p = Big::from_u64(1);
         p.mul_pow5(27);
         assert_eq!(p, Big::from_decimal(b"7450580596923828125").unwrap());

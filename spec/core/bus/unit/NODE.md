@@ -36,7 +36,7 @@ Converts a value typed by a person or script with a unit (for example `10.1 mm`)
 ## Requirements
 
 - **REQ-CORE.BUS.UNIT-001** When a parameter carries an authored literal, the bus shall record its decimal digits and unit symbol exactly as entered in the command arguments.
-- **REQ-CORE.BUS.UNIT-002** When a literal is normalised, the bus shall compute the exact rational product of the decimal value and the catalogue conversion factor and round it to the nearest f64, ties to even, exactly once.
+- **REQ-CORE.BUS.UNIT-002** When a literal is normalised, the bus shall compute the exact rational product of the decimal value and the catalogue conversion factor (for angle units, a factor that includes the catalogue's Π, `PI_256` / 2^254, taken as exact) and round it to the nearest f64, ties to even, exactly once.
 - **REQ-CORE.BUS.UNIT-003** If the literal's unit is not an accepted unit of the parameter's quantity kind, then the bus shall return a typed `validation` error with reason `unit_mismatch`.
 - **REQ-CORE.BUS.UNIT-004** If a literal has more than 64 significant digits or a decimal exponent outside the range -400 to 400, then the bus shall return a typed `validation` error with reason `literal_out_of_range`.
 - **REQ-CORE.BUS.UNIT-005** The normalisation shall record the algorithm ID `core.unit.normalise@1.0.0` in the entry's algorithm list.
@@ -72,6 +72,8 @@ Converts a value typed by a person or script with a unit (for example `10.1 mm`)
 ## Open questions
 
 - Affine units (temperature in degrees Celsius or Fahrenheit) need an offset and are deferred to a later version of the algorithm.
+- "Exactly one rounding" is relative to the catalogue's Π (`PI_256` / 2^254, a 256-bit rational fixed by `GEO.FRAME.UNITS`), not to the real number π. A degree value is the correctly rounded `value × PI_256 / (180 × 2^254)`.
+- **Follow-up: one parser.** This leaf (`fid_bus::unit`, PR #331) and `GEO.FRAME.UNITS` (`fid_geo_frame::units`) each have their own decimal parser and big integer, and they differ. The bus accepts 64 significant digits and geo-frame accepts 40. The bus refuses a decimal exponent outside -400..400, overflow, and a non-zero value that rounds to zero (`literal_out_of_range`), while geo-frame has no exponent limit and rounds tiny values to zero (`1e-400 m` gives 0.0 there and `literal_out_of_range` here). Both use the same grammar, factors and Π, so every accepted value agrees bit for bit. Consolidate both into one exact-decimal routine in `fid-num`, keeping each caller's limits as parameters.
 
 ## Children
 
