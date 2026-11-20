@@ -1304,6 +1304,7 @@ dependencies = [
  "fid-kci",
  "fid-num",
  "fid-solv",
+ "fid-testkit",
  "fid-types",
 ]
 
