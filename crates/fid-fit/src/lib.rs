@@ -3,7 +3,8 @@
 //!
 //! Modules land one spec leaf at a time; see `spec/krn/lsq/`. This crate starts with the
 //! shared fit contract ([`contract`], spec node `KRN.LSQ.TRAIT`) that every fitting method
-//! (least squares, minimum zone, envelope) implements. [`tan_rock`] (spec node
+//! (least squares, minimum zone, envelope) implements, and the closed-form least-squares point,
+//! line and plane fits ([`ls_lin`], spec node `KRN.LSQ.LIN`). [`tan_rock`] (spec node
 //! `KRN.ENV.TAN.ROCK`) holds the tangential variant table and the rocking report shared by the
 //! tangential fits.
 
@@ -13,4 +14,5 @@
 #![allow(clippy::result_large_err)]
 
 pub mod contract;
+pub mod ls_lin;
 pub mod tan_rock;

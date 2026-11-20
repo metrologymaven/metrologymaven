@@ -21,6 +21,20 @@
 //! ```
 //!
 //! (shown wrapped; the bytes are compact, keys in this order).
+//!
+//! # Wire form of result values (note for `CORE.REG`)
+//!
+//! A row declares a field's *value type*; the canonical result bytes of
+//! [`super::encode`] carry the values as JSON strings, never JSON numbers, so a reader must
+//! map them: `number` is a string of exactly 16 lowercase hexadecimal digits, the IEEE-754
+//! binary64 bit pattern (so `-0.0`, infinities and every bit of precision survive);
+//! `integer` is a string of decimal digits without leading zeros; `number_array` and
+//! `integer_array` are JSON arrays of those strings; `points` is an array of three-element
+//! `number` arrays; `string` is a plain JSON string. Result objects nest by the dotted field
+//! names (`stats.rms` is member `rms` of object `stats`). The encoding also writes
+//! `feature.kind` (the primitive slug, not a row field) and `certificate: null` when a method
+//! produces no certificate (`certificate.*` are optional fields). The `fid-fit` test
+//! `ls_lin::real_results_match_command_rows` checks real results against these rules.
 
 use fid_kci::AlgorithmId;
 use fid_types::{CommandId, CommandName, Determinism, SideEffect};
@@ -126,7 +140,7 @@ const fn fld(
 }
 
 /// Parameters every fit command takes, in row order.
-const PARAMS: [Field; 18] = [
+const PARAMS: [Field; 19] = [
     fld("points", ValueType::Points, L, true),
     fld("normals", ValueType::Points, D, false),
     fld("weights", ValueType::NumberArray, D, false),
@@ -137,6 +151,7 @@ const PARAMS: [Field; 18] = [
     fld("constraints.projection_plane.n", ValueType::NumberArray, D, false),
     fld("thresholds.rank_tol", ValueType::Number, D, true),
     fld("thresholds.min_coverage", ValueType::Number, A, true),
+    fld("thresholds.eig_ratio_max", ValueType::Number, D, true),
     fld("nlls.method", ValueType::String, None, true),
     fld("nlls.max_iter", ValueType::Integer, C, true),
     fld("nlls.tol_grad", ValueType::Number, D, true),

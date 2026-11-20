@@ -15,6 +15,11 @@ pub const DEFAULT_RANK_TOL: f64 = 1e-9;
 /// `f64` with bits `0x3FD6_5718_4AE7_4487` (`core::f64::consts::PI / 9.0`).
 pub const DEFAULT_MIN_COVERAGE: f64 = 0.3490658503988659;
 
+/// Default largest accepted eigenvalue ratio of a closed-form direction (see
+/// [`Thresholds::eig_ratio_max`]): `0.9`, so the direction's sensitivity to a perturbation of
+/// the scatter matrix is amplified at most `1 / (1 - 0.9) = 10` times (Davis-Kahan bound).
+pub const DEFAULT_EIG_RATIO_MAX: f64 = 0.9;
+
 /// `2 * pi` as an `f64` (exactly twice `core::f64::consts::PI`).
 pub const TWO_PI: f64 = 2.0 * core::f64::consts::PI;
 
@@ -48,11 +53,20 @@ pub struct Thresholds {
     pub rank_tol: f64,
     /// Smallest accepted angular coverage of circle-type data, radians, in `[0, 2 pi]`.
     pub min_coverage: f64,
+    /// Largest accepted ratio `lb / la` of the competing eigenvalue `lb` to the eigenvalue
+    /// `la` that defines a closed-form direction (least-squares lines and planes, spec node
+    /// `KRN.LSQ.LIN`); a larger ratio means no unique direction (`IllConditioned`). Finite, in
+    /// `[0, 1)`.
+    pub eig_ratio_max: f64,
 }
 
 impl Default for Thresholds {
     fn default() -> Self {
-        Thresholds { rank_tol: DEFAULT_RANK_TOL, min_coverage: DEFAULT_MIN_COVERAGE }
+        Thresholds {
+            rank_tol: DEFAULT_RANK_TOL,
+            min_coverage: DEFAULT_MIN_COVERAGE,
+            eig_ratio_max: DEFAULT_EIG_RATIO_MAX,
+        }
     }
 }
 
@@ -126,6 +140,9 @@ impl FitParams {
         }
         if !((0.0..=TWO_PI).contains(&t.min_coverage)) {
             return bad("thresholds.min_coverage");
+        }
+        if !((0.0..1.0).contains(&t.eig_ratio_max)) {
+            return bad("thresholds.eig_ratio_max");
         }
         let mut seen = [false; 3];
         for c in &self.constraints {
