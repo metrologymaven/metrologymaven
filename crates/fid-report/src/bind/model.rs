@@ -310,6 +310,21 @@ impl QuantityUnit {
 /// but never turn it into text itself.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Quantity {
-    pub value: SiValue,
-    pub unit: QuantityUnit,
+    value: SiValue,
+    unit: QuantityUnit,
+}
+
+impl Quantity {
+    /// Built only from a stored record read at a head (`journal`).
+    pub(crate) fn new(value: SiValue, unit: QuantityUnit) -> Quantity {
+        Quantity { value, unit }
+    }
+
+    pub fn value(&self) -> SiValue {
+        self.value
+    }
+
+    pub fn unit(&self) -> QuantityUnit {
+        self.unit
+    }
 }

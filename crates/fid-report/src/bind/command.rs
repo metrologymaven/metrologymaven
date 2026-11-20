@@ -6,9 +6,11 @@
 //! The handler checks everything that can fail before it commits, in this order, and a
 //! refused call journals nothing:
 //!
-//! 1. principal and branch (`report.policy`): an agent (an `agent` principal, or any MCP
-//!    call) writes only on its agent branch `agent/<client>/<n>`; a person never writes on an
-//!    agent branch (CONSTITUTION §3 W2, CORE.BUS.ROUTE). Scripts follow the bus's routing;
+//! 1. principal and branch (`report.policy`), in this precedence: any MCP call, whatever
+//!    its principal, and any `agent` principal write only on an agent branch
+//!    `agent/<client>/<n>` (so a human over MCP on an agent branch is allowed); otherwise a
+//!    human never writes on an agent branch. Whether the agent branch is the caller's own is
+//!    checked by the bus (CORE.BUS.ROUTE), not here. Scripts follow the bus's routing;
 //! 2. parameters (`report.bad_params`; a reference carrying anything besides `kind` and `id`
 //!    is `report.binding_has_value`);
 //! 3. the report and the block (`report.not_found`), then the kind's resolver
@@ -21,7 +23,8 @@
 //!    `report.value_binding_invalid`, `no_statement`; a statement not stored is
 //!    `report.not_found`);
 //! 6. the kind places the bindings ([`super::BlockResolver::place`]); the command writes the
-//!    `binding@1` under `binding`; a JSON number anywhere in the new payload is
+//!    `binding@1` under `binding`; a value anywhere in the new payload outside its ID
+//!    fields (a JSON number, number text, a bit pattern: [`super::find_value`]) is
 //!    `report.binding_has_value`; then DOC's checks (kind, value rule) run in [`Op::apply`].
 //!
 //! It then commits the new stored report and one `report.bind_block@1` event through the
@@ -30,7 +33,7 @@
 use super::error::BindError;
 use super::journal::{HeadLookup, JournalReads, Lookup, LookupFault};
 use super::model::{Binding, Ref, RefKind, ValueBinding, BINDING_KEY, MAX_FIELD_ID_BYTES, MAX_REFS};
-use super::resolve::{fault, find_number, resolve_ref, FieldSource, ResolverRegistry};
+use super::resolve::{fault, refuse_value, resolve_ref, FieldSource, ResolverRegistry};
 use crate::doc::defs::ID_PATTERN;
 use crate::doc::kind::PayloadError;
 use crate::doc::{
@@ -226,10 +229,10 @@ fn check_branch(ctx: &BindCtx<'_>) -> Result<(), BindError> {
 /// The value bindings of one `result` reference at the lookup's head (step 5).
 fn record_bindings(block: BlockId, id: &Uuid, lookup: &dyn Lookup) -> Result<Vec<ValueBinding>, BindError> {
     let record = lookup.result(id).map_err(|e| fault(block, &id.to_string(), e))?;
-    let mut out = Vec::with_capacity(record.values.len());
-    for f in &record.values {
-        let statement = f.statement.ok_or_else(|| {
-            BindError::from(ReportError::ValueBindingInvalid(PayloadError::new(f.field, "no_statement")))
+    let mut out = Vec::with_capacity(record.values().len());
+    for f in record.values() {
+        let statement = f.statement().ok_or_else(|| {
+            BindError::from(ReportError::ValueBindingInvalid(PayloadError::new(f.field(), "no_statement")))
         })?;
         lookup.statement(&statement).map_err(|e| match e {
             LookupFault::Invalid(r) => BindError::StoreInvalid(r),
@@ -237,8 +240,8 @@ fn record_bindings(block: BlockId, id: &Uuid, lookup: &dyn Lookup) -> Result<Vec
         })?;
         out.push(ValueBinding {
             record: *id,
-            record_digest: record.digest,
-            field: f.field.to_string(),
+            record_digest: record.digest(),
+            field: f.field().to_string(),
             statement_digest: statement,
         });
     }
@@ -308,9 +311,7 @@ pub fn bind_block(ctx: &mut BindCtx<'_>, params: BindBlockParams) -> Result<Bind
     };
     payload.insert(BINDING_KEY.to_string(), binding.to_value());
     let payload = CValue::Obj(payload);
-    if let Some(at) = find_number(&payload) {
-        return Err(BindError::BindingHasValue(PayloadError::new(&at, "number")));
-    }
+    refuse_value(&payload)?;
     let payload = CanonicalJson::new(&payload)
         .ok_or_else(|| ReportError::InvalidBlockPayload(PayloadError::new("", "payload_bounds")))?;
     let op = Op::BindBlock { report: rid, block: bid, payload };

@@ -2,27 +2,35 @@
 //! and the typed [`Lookup`] over it ([`HeadLookup`]).
 //!
 //! The project store adapter (owned by the command bus, like [`crate::doc::ReportBackend`])
-//! answers four questions: where a head sits in the journal, which head is current, and
-//! for a stable ID or a statement digest, which project owns it, at which journal position
-//! it was committed, what kind it is and its stored canonical bytes. [`HeadLookup`] turns
-//! those answers into typed views as of exactly one head:
+//! answers: where a head sits in the journal, which head is current, and for a stable ID
+//! (or a project's statement digest) what the store held *as of a journal position*
+//! ([`AtHead`]): the version committed at or before it, or the fact that the entity was
+//! committed only later (with its owner and kind), or nothing. [`HeadLookup`] turns those
+//! answers into typed views as of exactly one head:
 //!
-//! 1. an entity of another project is [`LookupFault::CrossProject`], checked first, so
-//!    nothing about the other project's journal (whether, when or as what the ID was
-//!    committed) can be learned from the answer;
-//! 2. an entity committed after the head is [`LookupFault::Unjournaled`];
+//! 1. ownership is checked for ResultRecords and characteristics only (the leaf's Open
+//!    question: cross-project data enters reports only as statistics series, so saved views
+//!    and series are not owner-checked here); an entity of another project is
+//!    [`LookupFault::CrossProject`], checked before position, so nothing about the other
+//!    project's journal (whether, when or as what the ID was committed) can be learned;
+//! 2. an entity committed only after the head is [`LookupFault::Unjournaled`];
 //! 3. an absent entity, or one of another kind, is [`LookupFault::NotFound`].
+//!
+//! Statements are looked up by (project, digest): the same statement bytes may be stored by
+//! two projects.
 //!
 //! ResultRecords are read in their `fid.gdt-result/1` wire form (GDT.CHAR.RECORD): the
 //! stored bytes must be canonical, and the record has one value field, `/value`, whose
-//! uncertainty statement is the digest at `/uncertainty/statement` (`null` for UEC-0).
-//! Record bytes never leave this module: a [`ResultView`] holds the record's ID, digest and
-//! typed value fields only.
+//! uncertainty statement is the digest at `/uncertainty/statement` (`null` for UEC-0). The
+//! record's evidence facts (evaluation basis, decision, evidence class and method, and the
+//! claimed / declared-input / uncharacterized-input facts) are read into [`Evidence`], so
+//! no downstream kind ever has to invent them. Record bytes never leave this module.
 
 use super::error::BindError;
 use super::model::{JournalHead, Quantity, QuantityUnit};
 use crate::fmt::SiValue;
 use fid_canon::{digest_bytes, parse_with_limits, to_canonical_bytes, CValue};
+use fid_gdt::chars::record::EvaluationBasis;
 use fid_project::Uuid;
 use fid_types::Digest;
 use std::collections::BTreeMap;
@@ -33,6 +41,8 @@ pub const RESULT_RECORD_SCHEMA: &str = "fid.gdt-result/1";
 pub const RECORD_VALUE_FIELD: &str = "/value";
 /// Largest stored record or statement this module reads, in bytes.
 pub const MAX_ENTITY_BYTES: usize = 1024 * 1024;
+/// Most versions [`MemoryJournal`] keeps per entity.
+pub const MAX_VERSIONS: usize = 1024;
 const MAX_ENTITY_DEPTH: usize = 32;
 
 /// What a journaled entity is.
@@ -45,16 +55,27 @@ pub enum EntityKind {
     Statement,
 }
 
-/// One journaled entity as the store holds it.
+/// One journaled version of an entity as the store holds it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Journaled {
     /// The owning project.
     pub project: Uuid,
-    /// Journal position of the entry that committed it (0 is the first entry).
+    /// Journal position of the entry that committed this version (0 is the first entry).
     pub seq: u64,
     pub kind: EntityKind,
-    /// Stored canonical bytes.
+    /// Stored canonical bytes of this version.
     pub bytes: Vec<u8>,
+}
+
+/// What the store held for one key as of a journal position.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AtHead {
+    /// Never committed.
+    Absent,
+    /// First committed after the position, by `project`, as `kind`.
+    NotYet { project: Uuid, kind: EntityKind },
+    /// The newest version committed at or before the position.
+    Committed(Journaled),
 }
 
 /// Read access to the project store and its Record Journal.
@@ -64,20 +85,20 @@ pub trait JournalReads {
     /// The current head (`None` for an empty journal). Used by `report.bind_block@1` only:
     /// resolution always names its head.
     fn current_head(&self) -> Option<JournalHead>;
-    /// The entity with this stable ID.
-    fn entity(&self, id: &Uuid) -> Option<Journaled>;
-    /// The stored uncertainty statement with this digest.
-    fn statement(&self, digest: &Digest) -> Option<Journaled>;
+    /// The entity with this stable ID as of journal position `seq`.
+    fn entity(&self, id: &Uuid, seq: u64) -> AtHead;
+    /// `project`'s stored uncertainty statement with this digest as of position `seq`.
+    fn statement(&self, project: &Uuid, digest: &Digest, seq: u64) -> AtHead;
 }
 
 /// An in-memory store and journal, for tests and tools. Each [`MemoryJournal::append`] is
-/// one journal entry with its head.
+/// one journal entry with its head; appending an existing ID again commits a new version.
 #[derive(Debug, Clone, Default)]
 pub struct MemoryJournal {
     heads: BTreeMap<JournalHead, u64>,
     order: Vec<JournalHead>,
-    entities: BTreeMap<Uuid, Journaled>,
-    statements: BTreeMap<Digest, Journaled>,
+    entities: BTreeMap<Uuid, Vec<Journaled>>,
+    statements: BTreeMap<(Uuid, Digest), Journaled>,
 }
 
 impl MemoryJournal {
@@ -86,8 +107,9 @@ impl MemoryJournal {
     }
 
     /// Appends one entry committing an entity of `project`: `id` names it, except for a
-    /// statement, which is keyed by the SHA-256 of `bytes`. A repeated head or ID is
-    /// `report.store_invalid`.
+    /// statement, which is keyed by (project, SHA-256 of `bytes`). A repeated head or
+    /// statement, a new version of an ID under another project or kind, or more than
+    /// [`MAX_VERSIONS`] versions is `report.store_invalid`.
     pub fn append(
         &mut self,
         head: JournalHead,
@@ -104,21 +126,35 @@ impl MemoryJournal {
         match (kind, id) {
             (EntityKind::Statement, None) => {
                 let d = Digest::from_bytes(digest_bytes(&entry.bytes).0);
-                if self.statements.insert(d, entry).is_some() {
+                if self.statements.insert((project, d), entry).is_some() {
                     return Err(BindError::StoreInvalid("repeated statement"));
                 }
             }
             (EntityKind::Statement, Some(_)) | (_, None) => return Err(BindError::StoreInvalid("entry key")),
             (_, Some(id)) => {
-                if self.entities.contains_key(&id) {
-                    return Err(BindError::StoreInvalid("repeated id"));
+                let versions = self.entities.entry(id).or_default();
+                if let Some(first) = versions.first() {
+                    if first.project != project || first.kind != kind {
+                        return Err(BindError::StoreInvalid("id reused"));
+                    }
                 }
-                self.entities.insert(id, entry);
+                if versions.len() >= MAX_VERSIONS {
+                    return Err(BindError::StoreInvalid("too many versions"));
+                }
+                versions.push(entry);
             }
         }
         self.heads.insert(head, seq);
         self.order.push(head);
         Ok(())
+    }
+}
+
+fn at(versions: &[Journaled], seq: u64) -> AtHead {
+    match (versions.iter().rev().find(|v| v.seq <= seq), versions.first()) {
+        (Some(v), _) => AtHead::Committed(v.clone()),
+        (None, Some(f)) => AtHead::NotYet { project: f.project, kind: f.kind },
+        (None, None) => AtHead::Absent,
     }
 }
 
@@ -131,12 +167,140 @@ impl JournalReads for MemoryJournal {
         self.order.last().copied()
     }
 
-    fn entity(&self, id: &Uuid) -> Option<Journaled> {
-        self.entities.get(id).cloned()
+    fn entity(&self, id: &Uuid, seq: u64) -> AtHead {
+        self.entities.get(id).map_or(AtHead::Absent, |v| at(v, seq))
     }
 
-    fn statement(&self, digest: &Digest) -> Option<Journaled> {
-        self.statements.get(digest).cloned()
+    fn statement(&self, project: &Uuid, digest: &Digest, seq: u64) -> AtHead {
+        self.statements.get(&(*project, *digest)).map_or(AtHead::Absent, |v| at(std::slice::from_ref(v), seq))
+    }
+}
+
+// ------------------------------------------------------------------ evidence
+
+/// Decision outcome of a record (CONSTITUTION §5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Outcome {
+    Conforms,
+    Nonconforms,
+    Indeterminate,
+    NotDecidable,
+}
+
+impl Outcome {
+    pub fn parse(s: &str) -> Option<Outcome> {
+        match s {
+            "CONFORMS" => Some(Outcome::Conforms),
+            "NONCONFORMS" => Some(Outcome::Nonconforms),
+            "INDETERMINATE" => Some(Outcome::Indeterminate),
+            "NOT_DECIDABLE" => Some(Outcome::NotDecidable),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Outcome::Conforms => "CONFORMS",
+            Outcome::Nonconforms => "NONCONFORMS",
+            Outcome::Indeterminate => "INDETERMINATE",
+            Outcome::NotDecidable => "NOT_DECIDABLE",
+        }
+    }
+}
+
+/// Uncertainty evidence class (UNC.UEC): UEC-0 means "not evaluated".
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum EvidenceClass {
+    Uec0,
+    Uec1,
+    Uec2,
+    Uec3,
+}
+
+impl EvidenceClass {
+    pub fn parse(s: &str) -> Option<EvidenceClass> {
+        match s {
+            "UEC-0" => Some(EvidenceClass::Uec0),
+            "UEC-1" => Some(EvidenceClass::Uec1),
+            "UEC-2" => Some(EvidenceClass::Uec2),
+            "UEC-3" => Some(EvidenceClass::Uec3),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            EvidenceClass::Uec0 => "UEC-0",
+            EvidenceClass::Uec1 => "UEC-1",
+            EvidenceClass::Uec2 => "UEC-2",
+            EvidenceClass::Uec3 => "UEC-3",
+        }
+    }
+}
+
+/// The evidence facts of a journaled ResultRecord, read from its stored bytes: how the
+/// value was obtained and what its uncertainty and decision rest on. A claimed,
+/// declared-input, uncharacterized-input, UEC-0, `RESULTS_ONLY` or `DIRECT_READING` value
+/// therefore never looks measured ([`Evidence::looks_measured`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Evidence {
+    basis: EvaluationBasis,
+    class: EvidenceClass,
+    method: Option<String>,
+    claimed: bool,
+    declared_input: bool,
+    uncharacterized_input: bool,
+    outcome: Outcome,
+    decision_source: String,
+    rule: Option<String>,
+    reason: Option<String>,
+}
+
+impl Evidence {
+    /// `POINTS`, `FEATURES`, `RESULTS_ONLY` or `DIRECT_READING`, exactly as journaled.
+    pub fn basis(&self) -> EvaluationBasis {
+        self.basis
+    }
+    pub fn class(&self) -> EvidenceClass {
+        self.class
+    }
+    /// The uncertainty method (`LPU`, `DECLARED`, ...), absent for UEC-0.
+    pub fn method(&self) -> Option<&str> {
+        self.method.as_deref()
+    }
+    pub fn is_claimed(&self) -> bool {
+        self.claimed
+    }
+    pub fn rests_on_declared_input(&self) -> bool {
+        self.declared_input
+    }
+    pub fn rests_on_uncharacterized_input(&self) -> bool {
+        self.uncharacterized_input
+    }
+    pub fn outcome(&self) -> Outcome {
+        self.outcome
+    }
+    /// `unc` or `gdt_not_decidable`.
+    pub fn decision_source(&self) -> &str {
+        &self.decision_source
+    }
+    /// The decision rule ID, if a rule was bound.
+    pub fn rule(&self) -> Option<&str> {
+        self.rule.as_deref()
+    }
+    /// The not-decidable reason, if any.
+    pub fn reason(&self) -> Option<&str> {
+        self.reason.as_deref()
+    }
+    /// Whether the value may be shown as measured: evaluated from points or features, with an
+    /// evaluated (UEC-1..3) uncertainty that is neither claimed nor rests on declared or
+    /// uncharacterized input.
+    pub fn looks_measured(&self) -> bool {
+        matches!(self.basis, EvaluationBasis::Points | EvaluationBasis::Features)
+            && self.class != EvidenceClass::Uec0
+            && !self.claimed
+            && !self.declared_input
+            && !self.uncharacterized_input
     }
 }
 
@@ -145,9 +309,9 @@ impl JournalReads for MemoryJournal {
 /// Why a lookup failed. Callers add the block and the ID.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LookupFault {
-    /// No such entity (or one of another kind) in this project.
+    /// No such entity (or one of another kind).
     NotFound,
-    /// Committed after the head.
+    /// Committed only after the head.
     Unjournaled,
     /// Owned by this other project.
     CrossProject(Uuid),
@@ -159,21 +323,46 @@ pub enum LookupFault {
 /// record references for it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ValueField {
-    pub field: &'static str,
-    pub quantity: Quantity,
-    pub statement: Option<Digest>,
+    field: &'static str,
+    quantity: Quantity,
+    statement: Option<Digest>,
 }
 
-/// A ResultRecord as of a head: its ID, the SHA-256 of its stored bytes, and its value
-/// fields as typed quantities.
+impl ValueField {
+    pub fn field(&self) -> &'static str {
+        self.field
+    }
+    pub fn quantity(&self) -> Quantity {
+        self.quantity
+    }
+    pub fn statement(&self) -> Option<Digest> {
+        self.statement
+    }
+}
+
+/// A ResultRecord as of a head: its ID, the SHA-256 of its stored bytes, its value fields
+/// as typed quantities and its evidence facts.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResultView {
-    pub id: Uuid,
-    pub digest: Digest,
-    pub values: Vec<ValueField>,
+    id: Uuid,
+    digest: Digest,
+    values: Vec<ValueField>,
+    evidence: Evidence,
 }
 
 impl ResultView {
+    pub fn id(&self) -> Uuid {
+        self.id
+    }
+    pub fn digest(&self) -> Digest {
+        self.digest
+    }
+    pub fn values(&self) -> &[ValueField] {
+        &self.values
+    }
+    pub fn evidence(&self) -> &Evidence {
+        &self.evidence
+    }
     /// The value field at `pointer`, if `pointer` names one.
     pub fn value_field(&self, pointer: &str) -> Option<&ValueField> {
         self.values.iter().find(|v| v.field == pointer)
@@ -181,11 +370,20 @@ impl ResultView {
 }
 
 /// A journaled entity whose content its block kind reads (characteristic, saved view,
-/// statistics series): its ID and the SHA-256 of its stored bytes.
+/// statistics series): its ID and the SHA-256 of its stored bytes at the head.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EntityView {
-    pub id: Uuid,
-    pub digest: Digest,
+    id: Uuid,
+    digest: Digest,
+}
+
+impl EntityView {
+    pub fn id(&self) -> Uuid {
+        self.id
+    }
+    pub fn digest(&self) -> Digest {
+        self.digest
+    }
 }
 
 /// A stored uncertainty statement whose bytes hash to [`StatementBytes::digest`]. The bytes
@@ -213,7 +411,7 @@ pub trait Lookup {
     fn characteristic(&self, id: &Uuid) -> Result<EntityView, LookupFault>;
     fn named_view(&self, id: &Uuid) -> Result<EntityView, LookupFault>;
     fn series(&self, id: &Uuid) -> Result<EntityView, LookupFault>;
-    /// The statement with this digest; its stored bytes must hash to it.
+    /// The project's statement with this digest; its stored bytes must hash to it.
     fn statement(&self, digest: &Digest) -> Result<StatementBytes, LookupFault>;
 }
 
@@ -231,23 +429,27 @@ impl<'a> HeadLookup<'a> {
         Ok(HeadLookup { journal, project, seq })
     }
 
-    /// Project first, then position, then kind (see the module documentation).
-    fn visible(&self, found: Option<Journaled>, kind: EntityKind) -> Result<Journaled, LookupFault> {
-        let j = found.ok_or(LookupFault::NotFound)?;
-        if j.project != self.project {
-            return Err(LookupFault::CrossProject(j.project));
+    /// Ownership (results, characteristics, statements only), then position, then kind
+    /// (see the module documentation).
+    fn visible(&self, found: AtHead, kind: EntityKind) -> Result<Journaled, LookupFault> {
+        let owned = matches!(kind, EntityKind::Result | EntityKind::Characteristic | EntityKind::Statement);
+        let (project, found_kind) = match &found {
+            AtHead::Absent => return Err(LookupFault::NotFound),
+            AtHead::NotYet { project, kind } => (*project, *kind),
+            AtHead::Committed(j) => (j.project, j.kind),
+        };
+        if owned && project != self.project {
+            return Err(LookupFault::CrossProject(project));
         }
-        if j.seq > self.seq {
-            return Err(LookupFault::Unjournaled);
-        }
-        if j.kind != kind {
+        let AtHead::Committed(j) = found else { return Err(LookupFault::Unjournaled) };
+        if found_kind != kind || j.seq > self.seq {
             return Err(LookupFault::NotFound);
         }
         Ok(j)
     }
 
     fn entity_view(&self, id: &Uuid, kind: EntityKind) -> Result<EntityView, LookupFault> {
-        let j = self.visible(self.journal.entity(id), kind)?;
+        let j = self.visible(self.journal.entity(id, self.seq), kind)?;
         Ok(EntityView { id: *id, digest: sha256(&j.bytes) })
     }
 }
@@ -258,9 +460,9 @@ fn sha256(bytes: &[u8]) -> Digest {
 
 impl Lookup for HeadLookup<'_> {
     fn result(&self, id: &Uuid) -> Result<ResultView, LookupFault> {
-        let j = self.visible(self.journal.entity(id), EntityKind::Result)?;
-        let values = read_record(&j.bytes)?;
-        Ok(ResultView { id: *id, digest: sha256(&j.bytes), values })
+        let j = self.visible(self.journal.entity(id, self.seq), EntityKind::Result)?;
+        let (values, evidence) = read_record(&j.bytes)?;
+        Ok(ResultView { id: *id, digest: sha256(&j.bytes), values, evidence })
     }
 
     fn characteristic(&self, id: &Uuid) -> Result<EntityView, LookupFault> {
@@ -276,7 +478,8 @@ impl Lookup for HeadLookup<'_> {
     }
 
     fn statement(&self, digest: &Digest) -> Result<StatementBytes, LookupFault> {
-        let j = self.visible(self.journal.statement(digest), EntityKind::Statement)?;
+        let found = self.journal.statement(&self.project, digest, self.seq);
+        let j = self.visible(found, EntityKind::Statement)?;
         if sha256(&j.bytes) != *digest {
             return Err(LookupFault::Invalid("statement digest"));
         }
@@ -284,8 +487,27 @@ impl Lookup for HeadLookup<'_> {
     }
 }
 
-/// The value fields of a stored `fid.gdt-result/1` record (canonical bytes required).
-fn read_record(bytes: &[u8]) -> Result<Vec<ValueField>, LookupFault> {
+type Obj = BTreeMap<String, CValue>;
+
+fn opt_str(o: &Obj, k: &str) -> Result<Option<String>, LookupFault> {
+    match o.get(k) {
+        Some(CValue::Null) => Ok(None),
+        Some(CValue::Str(s)) => Ok(Some(s.clone())),
+        _ => Err(LookupFault::Invalid("record")),
+    }
+}
+
+fn flag(o: &Obj, k: &str) -> Result<bool, LookupFault> {
+    match o.get(k) {
+        Some(CValue::Bool(b)) => Ok(*b),
+        _ => Err(LookupFault::Invalid("record")),
+    }
+}
+
+/// The value fields and evidence of a stored `fid.gdt-result/1` record (canonical bytes
+/// required). The decision's evidence basis, when present, must state the same class,
+/// method, facts and statement as the uncertainty (`record evidence`).
+fn read_record(bytes: &[u8]) -> Result<(Vec<ValueField>, Evidence), LookupFault> {
     let bad = LookupFault::Invalid("record");
     let v = parse_with_limits(bytes, MAX_ENTITY_BYTES, MAX_ENTITY_DEPTH).map_err(|_| bad)?;
     if to_canonical_bytes(&v).map_err(|_| bad)? != bytes {
@@ -301,19 +523,54 @@ fn read_record(bytes: &[u8]) -> Result<Vec<ValueField>, LookupFault> {
         return Err(bad);
     };
     let unit = QuantityUnit::parse(unit).ok_or(bad)?;
-    let bits = bits
+    let hex = bits
         .strip_prefix("0x")
         .filter(|h| h.len() == 16 && h.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c)));
-    let bits = bits.and_then(|h| u64::from_str_radix(h, 16).ok()).ok_or(bad)?;
-    let Some(CValue::Obj(unc)) = o.get("uncertainty") else { return Err(bad) };
-    let statement = match unc.get("statement") {
-        Some(CValue::Null) => None,
-        Some(CValue::Str(s)) => Some(Digest::parse(s).map_err(|_| bad)?),
+    let bits = hex.and_then(|h| u64::from_str_radix(h, 16).ok()).ok_or(bad)?;
+    let basis = match o.get("evaluation_basis") {
+        Some(CValue::Str(s)) => EvaluationBasis::from_wire(s).ok_or(bad)?,
         _ => return Err(bad),
     };
-    Ok(vec![ValueField {
-        field: RECORD_VALUE_FIELD,
-        quantity: Quantity { value: SiValue::from_bits(bits), unit },
-        statement,
-    }])
+    let Some(CValue::Obj(unc)) = o.get("uncertainty") else { return Err(bad) };
+    let statement = opt_str(unc, "statement")?.map(|s| Digest::parse(&s)).transpose().map_err(|_| bad)?;
+    let class = opt_str(unc, "class")?.and_then(|c| EvidenceClass::parse(&c)).ok_or(bad)?;
+    let method = opt_str(unc, "method")?;
+    let (claimed, declared_input, uncharacterized_input) =
+        (flag(unc, "claimed")?, flag(unc, "declared_input")?, flag(unc, "uncharacterized_input")?);
+    let Some(CValue::Obj(dec)) = o.get("decision") else { return Err(bad) };
+    let outcome = opt_str(dec, "outcome")?.and_then(|s| Outcome::parse(&s)).ok_or(bad)?;
+    let decision_source = opt_str(dec, "source")?.ok_or(bad)?;
+    if !matches!(decision_source.as_str(), "unc" | "gdt_not_decidable") {
+        return Err(bad);
+    }
+    match dec.get("basis") {
+        Some(CValue::Null) => {}
+        Some(CValue::Obj(b)) => {
+            let same = opt_str(b, "class")? == Some(class.as_str().to_string())
+                && opt_str(b, "method")? == method
+                && flag(b, "claimed")? == claimed
+                && flag(b, "declared_input")? == declared_input
+                && flag(b, "uncharacterized_input")? == uncharacterized_input
+                && opt_str(b, "statement")? == statement.map(|d| d.as_str().to_string());
+            if !same {
+                return Err(LookupFault::Invalid("record evidence"));
+            }
+        }
+        _ => return Err(bad),
+    }
+    let evidence = Evidence {
+        basis,
+        class,
+        method,
+        claimed,
+        declared_input,
+        uncharacterized_input,
+        outcome,
+        decision_source,
+        rule: opt_str(dec, "rule")?,
+        reason: opt_str(dec, "reason")?,
+    };
+    let field =
+        ValueField { field: RECORD_VALUE_FIELD, quantity: Quantity::new(SiValue::from_bits(bits), unit), statement };
+    Ok((vec![field], evidence))
 }

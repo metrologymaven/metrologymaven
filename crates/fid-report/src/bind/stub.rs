@@ -9,7 +9,7 @@
 use super::error::BindError;
 use super::journal::Lookup;
 use super::model::{Binding, ValueBinding, BINDING_KEY};
-use super::resolve::{BlockResolver, ResolveContext, Resolved, ResolvedBlock};
+use super::resolve::{BlockResolver, ResolveContext, Resolved};
 use crate::doc::kind::{BlockKind, PayloadError};
 use crate::doc::{BlockKindId, CanonicalJson};
 use fid_canon::CValue;
@@ -79,16 +79,8 @@ impl BlockResolver for TableResolver {
         Ok(CValue::Obj(out))
     }
 
-    fn resolve(
-        &self,
-        view: Resolved,
-        _ctx: &ResolveContext<'_>,
-        _lookup: &dyn Lookup,
-    ) -> Result<ResolvedBlock, BindError> {
-        let layout = CValue::Obj(BTreeMap::from([(
-            "rows".to_string(),
-            CValue::Arr(view.values.iter().map(|v| CValue::Str(v.pointer.clone())).collect()),
-        )]));
-        ResolvedBlock::new(view, layout)
+    fn resolve(&self, view: &Resolved, _ctx: &ResolveContext<'_>, _lookup: &dyn Lookup) -> Result<CValue, BindError> {
+        let rows = view.values().iter().map(|v| CValue::Str(v.pointer().to_string())).collect();
+        Ok(CValue::Obj(BTreeMap::from([("rows".to_string(), CValue::Arr(rows))])))
     }
 }

@@ -281,8 +281,14 @@ fn ac1_bind_stores_only_ids_and_journals_one_event() {
     for row in arr(get(&payload, "rows")) {
         assert_eq!(st(get(row, "value"), "schema"), "value_binding@1");
     }
-    // The result validates against the declared result schema.
+    // The params and the result validate against the declared schemas.
     let decl = &declarations()[0];
+    let params = CValue::Obj(BTreeMap::from([
+        ("report".to_string(), CValue::Str(w.report.uuid().to_string())),
+        ("block".to_string(), CValue::Str(b.uuid().to_string())),
+        ("refs".to_string(), get(&result, "refs").clone()),
+    ]));
+    conforms(&decl.def.params_schema, &params, "").unwrap();
     conforms(&decl.def.result_schema, &result, "").unwrap();
 }
 
@@ -313,6 +319,8 @@ fn ac2_a_reference_or_payload_carrying_a_value_is_refused() {
     assert_eq!(e.code(), st(ac2, "code"));
     assert_eq!(st(&e.to_value(), "field"), st(ac2, "field"));
     assert_eq!(w.journaled(), before);
+    // The AC-2 params also fail the declared params schema (a ref is exactly {kind, id}).
+    conforms(&declarations()[0].def.params_schema, &params, "").unwrap_err();
     // A payload holding a number next to the bound record (in an undeclared place DOC
     // accepts) is refused when bound, and nothing is journaled.
     let noted = w.add(&parse(br#"{"note":{"value":12.003},"rows":[]}"#).unwrap(), "table");
@@ -320,6 +328,52 @@ fn ac2_a_reference_or_payload_carrying_a_value_is_refused() {
     let e = w.bind(noted, "--results", st(&cases, "r1")).unwrap_err();
     assert_eq!(e.code(), "report.binding_has_value");
     assert_eq!(st(&e.to_value(), "field"), "/note/value");
+    assert_eq!(w.journaled(), before);
+    // Resolving that payload is refused too.
+    let e = w.resolve(noted, st(&cases, "current_head")).unwrap_err();
+    assert_eq!(e.code(), "report.binding_has_value");
+    assert_eq!(st(&e.to_value(), "reason"), "number");
+}
+
+#[test]
+fn value_text_and_bit_patterns_are_refused_at_bind_and_at_resolve() {
+    let (mut w, _, cases) = bracket();
+    for x in arr(get(&cases, "value_strings")) {
+        let (text, reason) = (st(x, "text"), st(x, "reason"));
+        let note = CValue::Obj(BTreeMap::from([
+            ("note".to_string(), CValue::Arr(vec![CValue::Str("C01".to_string()), CValue::Str(text.to_string())])),
+            ("rows".to_string(), CValue::Arr(Vec::new())),
+        ]));
+        let blk = w.add(&note, "table");
+        let before = w.journaled();
+        let e = w.bind(blk, "--results", st(&cases, "r1")).unwrap_err();
+        assert_eq!(e.code(), "report.binding_has_value", "{text}");
+        assert_eq!((st(&e.to_value(), "field"), st(&e.to_value(), "reason")), ("/note/1", reason), "{text}");
+        assert_eq!(w.journaled(), before);
+        let e = w.resolve(blk, st(&cases, "current_head")).unwrap_err();
+        assert_eq!(st(&e.to_value(), "reason"), reason, "{text}");
+        assert!(is_number_text(text) || is_bit_pattern(text));
+    }
+    for x in arr(get(&cases, "not_value_strings")) {
+        let CValue::Str(text) = x else { panic!() };
+        assert!(!is_number_text(text) && !is_bit_pattern(text), "{text}");
+        let note = CValue::Obj(BTreeMap::from([
+            ("note".to_string(), CValue::Str(text.clone())),
+            ("rows".to_string(), CValue::Arr(Vec::new())),
+        ]));
+        let blk = w.add(&note, "table");
+        w.bind(blk, "--results", st(&cases, "r1")).unwrap();
+        w.resolve(blk, st(&cases, "current_head")).unwrap();
+    }
+}
+
+#[test]
+fn a_uec0_result_cannot_be_bound() {
+    let (mut w, b, cases) = bracket();
+    let before = w.journaled();
+    let e = w.bind(b, "--results", st(&cases, "uec0_record")).unwrap_err();
+    assert_eq!(e.code(), "report.value_binding_invalid");
+    assert_eq!(st(&e.to_value(), "reason"), "no_statement");
     assert_eq!(w.journaled(), before);
 }
 
@@ -334,21 +388,36 @@ fn ac3_resolution_is_as_of_the_given_head() {
     assert_eq!(e.code(), "report.unjournaled_record");
     let ok = w.resolve(b, st(&cases, "current_head")).unwrap();
     let view = ok.view();
-    assert_eq!(view.block, b);
-    assert_eq!(view.refs.len(), 2);
+    assert_eq!(view.block(), b);
+    assert_eq!(view.refs().len(), 2);
     let expected = arr(get(&cases, "ac3_values"));
-    assert_eq!(view.values.len(), expected.len());
-    for (v, x) in view.values.iter().zip(expected) {
-        assert_eq!(v.pointer, st(x, "pointer"));
-        assert_eq!(v.binding.record, uuid(st(x, "record")));
-        assert_eq!(v.quantity.unit.as_str(), st(x, "unit"));
+    assert_eq!(view.values().len(), expected.len());
+    for (v, x) in view.values().iter().zip(expected) {
+        assert_eq!(v.pointer(), st(x, "pointer"));
+        assert_eq!(v.binding().record, uuid(st(x, "record")));
+        assert_eq!(v.quantity().unit().as_str(), st(x, "unit"));
         let bits = u64::from_str_radix(st(x, "bits").trim_start_matches("0x"), 16).unwrap();
-        assert_eq!(v.quantity.value, SiValue::from_bits(bits));
-        assert_eq!(v.statement.digest(), digest(st(x, "statement_digest")));
+        assert_eq!(v.quantity().value(), SiValue::from_bits(bits));
+        assert_eq!(v.statement().digest(), digest(st(x, "statement_digest")));
         assert_eq!(
-            Digest::from_bytes(fid_canon::digest_bytes(v.statement.as_bytes()).0),
+            Digest::from_bytes(fid_canon::digest_bytes(v.statement().as_bytes()).0),
             digest(st(x, "statement_digest"))
         );
+        // The evidence facts come from the journaled record (hand-labelled in the fixture).
+        let ev = get(x, "evidence");
+        let e = v.evidence();
+        assert_eq!(e.basis().wire(), st(ev, "basis"));
+        assert_eq!(e.class().as_str(), st(ev, "class"));
+        assert_eq!(e.method(), Some(st(ev, "method")));
+        assert_eq!(CValue::Bool(e.is_claimed()), *get(ev, "claimed"));
+        assert_eq!(e.outcome().as_str(), st(ev, "outcome"));
+        let rule = match get(ev, "rule") {
+            CValue::Str(r) => Some(r.as_str()),
+            _ => None,
+        };
+        assert_eq!(e.rule(), rule);
+        assert_eq!(CValue::Bool(e.looks_measured()), *get(ev, "looks_measured"));
+        assert!(!e.rests_on_declared_input() && !e.rests_on_uncharacterized_input());
     }
     // The layout holds pointers only; resolution journals nothing.
     assert_eq!(canon(ok.layout()), r#"{"rows":["/rows/0/value","/rows/1/value"]}"#);
@@ -384,7 +453,7 @@ fn ac3_every_reference_kind_is_looked_up_at_the_head() {
     let ok = w.resolve(b, st(&cases, "current_head")).unwrap();
     let kinds: Vec<&str> = ok
         .view()
-        .refs
+        .refs()
         .iter()
         .map(|r| match r {
             ResolvedRef::Characteristic(_) => "characteristic",
@@ -447,9 +516,20 @@ fn ac4_cross_project_ids_are_refused_and_leak_nothing() {
     assert_eq!(e, BindError::CrossProjectBinding { block: held, project: foreign });
     let CValue::Obj(o) = e.to_value() else { panic!() };
     assert_eq!(o.keys().map(String::as_str).collect::<Vec<_>>(), keys);
+    // Saved views and series are not owner-checked (cross-project data enters reports as
+    // statistics series): a series journaled by B binds in A.
+    let series = uuid("019a9a9b-0007-7000-8000-000000000001");
+    let head = JournalHead::parse(&format!("sha256:{}", "8".repeat(64))).unwrap();
+    w.journal.append(head, foreign, EntityKind::Series, Some(series), br#"{"name":"B trend"}"#.to_vec()).unwrap();
+    w.bind(b, "--series", &series.to_string()).unwrap();
+    w.resolve(b, &head.digest().as_str().to_string()).unwrap();
     // A's own record binds and resolves.
     w.bind(b, "--results", st(get(&cases, "a"), "record")).unwrap();
-    w.resolve(b, st(&cases, "current_head")).unwrap();
+    w.resolve(b, &head.digest().as_str().to_string()).unwrap();
+    // Both projects store byte-identical statements; each record resolves its own.
+    let tj = fixture("two_projects/journal.json");
+    let stmts: Vec<&CValue> = arr(get(&tj, "entries")).iter().filter(|e| st(e, "kind") == "statement").collect();
+    assert_eq!(st(stmts[0], "text"), st(stmts[1], "text"));
 }
 
 // ------------------------------------------------------------------ AC-5
@@ -608,17 +688,86 @@ fn the_command_is_declared_with_the_registry_macros() {
     assert_eq!(o.keys().map(String::as_str).collect::<Vec<_>>(), ["id", "kind"]);
 }
 
+/// A hostile `text` resolver: it tries to bring a value in through its layout, or to read
+/// a record that is not at the head through the lookup it is given.
+struct Evil {
+    record: Uuid,
+    layout: &'static str,
+}
+
+impl BlockResolver for Evil {
+    fn kind(&self) -> BlockKindId {
+        BlockKindId::new("text").unwrap()
+    }
+
+    fn place(
+        &self,
+        _p: &fid_report::doc::CanonicalJson,
+        _b: &Binding,
+        _v: &[ValueBinding],
+    ) -> Result<CValue, fid_report::doc::PayloadError> {
+        Ok(CValue::Obj(BTreeMap::new()))
+    }
+
+    fn resolve(&self, _view: &Resolved, _ctx: &ResolveContext<'_>, lookup: &dyn Lookup) -> Result<CValue, BindError> {
+        match lookup.result(&self.record) {
+            Err(LookupFault::Unjournaled) => Err(BindError::BadParams("lookup refused the record")),
+            Err(_) => Err(BindError::BadParams("other fault")),
+            Ok(_) => Ok(parse(self.layout.as_bytes()).unwrap()),
+        }
+    }
+}
+
 #[test]
-fn a_layout_holding_a_number_is_refused() {
-    let view = Resolved {
-        block: BlockId::new(uuid("019a9969-3402-7000-8000-000000000003")).unwrap(),
-        kind: BlockKindId::new("table").unwrap(),
-        refs: Vec::new(),
-        values: Vec::new(),
-    };
-    let e = ResolvedBlock::new(view, parse(br#"{"a":[{"b":1.5}]}"#).unwrap()).unwrap_err();
-    assert_eq!(e.code(), "report.binding_has_value");
-    assert_eq!(st(&e.to_value(), "field"), "/a/0/b");
+fn a_resolver_cannot_bring_in_a_value_or_a_record_not_at_the_head() {
+    let (mut w, _, cases) = bracket();
+    let text = w.add(&parse(br#"{"text":"notes"}"#).unwrap(), "text");
+    let r2 = uuid(st(&cases, "r2"));
+    for (layout, reason) in [
+        (r#"{"leak":12.003}"#, "number"),
+        (r#"{"leak":"0x3f847ae147ae147b"}"#, "bit_pattern"),
+        (r#"{"leak":["ok","12.003 mm"]}"#, "number_text"),
+    ] {
+        let mut reg = ResolverRegistry::new();
+        reg.register(Box::new(Evil { record: r2, layout })).unwrap();
+        w.resolvers = reg;
+        // Before r2 is journaled, the lookup the resolver gets refuses it.
+        let e = w.resolve(text, st(&cases, "h0")).unwrap_err();
+        assert_eq!(e, BindError::BadParams("lookup refused the record"));
+        // At the head, whatever the resolver puts in its layout is checked by the engine.
+        let e = w.resolve(text, st(&cases, "current_head")).unwrap_err();
+        assert_eq!(e.code(), "report.binding_has_value");
+        assert_eq!(st(&e.to_value(), "reason"), reason, "{layout}");
+    }
+    // A layout without values passes; the view is still the engine's (no values here).
+    let mut reg = ResolverRegistry::new();
+    reg.register(Box::new(Evil { record: r2, layout: r#"{"caption":"C01"}"# })).unwrap();
+    w.resolvers = reg;
+    let ok = w.resolve(text, st(&cases, "current_head")).unwrap();
+    assert!(ok.view().values().is_empty());
+}
+
+#[test]
+fn resolution_reads_the_record_bytes_at_the_head() {
+    let (mut w, b, cases) = bound();
+    let at_bind = st(&cases, "current_head").to_string();
+    // A later version of r1 (another measurand) is committed after the bind.
+    let journal = fixture("bracket_3stage/journal.json");
+    let r1 = st(&cases, "r1");
+    let old = arr(get(&journal, "entries")).iter().find(|e| matches!(get(e, "id"), CValue::Str(s) if s == r1)).unwrap();
+    let new_text = st(old, "text").replace("two-point size", "two-point size, re-evaluated");
+    let later = format!("sha256:{}", "9".repeat(64));
+    let project = uuid(st(&cases, "project"));
+    w.journal
+        .append(JournalHead::parse(&later).unwrap(), project, EntityKind::Result, Some(uuid(r1)), new_text.into_bytes())
+        .unwrap();
+    // At the bind head the binding resolves; at the later head r1's stored bytes differ.
+    w.resolve(b, &at_bind).unwrap();
+    let e = w.resolve(b, &later).unwrap_err();
+    assert_eq!(
+        e,
+        BindError::BindingDigestMismatch { block: b, binding: "/rows/0/value".to_string(), digest: "record_digest" }
+    );
 }
 
 // ------------------------------------------------------------------ schema checker

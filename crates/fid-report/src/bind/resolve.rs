@@ -4,30 +4,41 @@
 //! nothing is ever journaled:
 //!
 //! 1. the block's kind has a registered [`BlockResolver`] (`report.no_resolver`);
-//! 2. the head is an entry of the journal (`report.not_found`);
-//! 3. the stored `binding@1` reads back (`report.store_invalid`);
-//! 4. every reference, in binding order, as of the head: an entity of another project is
-//!    `report.cross_project_binding` (block and foreign project only); one committed after
-//!    the head is `report.unjournaled_record` (block and ID); an absent one, a field no
-//!    [`FieldSource`] supplies, or an entity of another kind is `report.not_found`;
-//! 5. every declared value field, in the kind's order: its `value_binding@1` reads back
+//! 2. the payload holds no value ([`find_value`]: no JSON number, no number text, no bit
+//!    pattern outside its ID fields; `report.binding_has_value`);
+//! 3. the head is an entry of the journal (`report.not_found`);
+//! 4. the stored `binding@1` reads back (`report.store_invalid`);
+//! 5. every reference, in binding order, as of the head: a ResultRecord or characteristic
+//!    of another project is `report.cross_project_binding` (block and foreign project
+//!    only); an entity committed only after the head is `report.unjournaled_record` (block
+//!    and ID); an absent one, a field no [`FieldSource`] supplies, or an entity of another
+//!    kind is `report.not_found`;
+//! 6. every declared value field, in the kind's order: its `value_binding@1` reads back
 //!    (DOC's codes), names a record the binding references (`report.value_binding_invalid`,
-//!    `record_not_bound`); the SHA-256 of the stored record equals `record_digest`
-//!    (`report.binding_digest_mismatch`, `record_digest`); `field` is one of the record's
-//!    value fields (`report.binding_field_not_value`); the record references exactly
-//!    `statement_digest` for that field and the stored statement hashes to it
-//!    (`report.binding_digest_mismatch`, `statement_digest`);
-//! 6. the kind's resolver builds the [`ResolvedBlock`] from the typed [`Resolved`] view.
+//!    `record_not_bound`); the SHA-256 of the record stored at the head equals
+//!    `record_digest` (`report.binding_digest_mismatch`, `record_digest`); `field` is one
+//!    of the record's value fields (`report.binding_field_not_value`); the record references
+//!    exactly `statement_digest` for that field and the project's stored statement hashes to
+//!    it (`report.binding_digest_mismatch`, `statement_digest`);
+//! 7. the kind's resolver returns a layout from the typed [`Resolved`] view; the engine
+//!    refuses a layout holding a value ([`find_value`]) and builds the [`ResolvedBlock`].
 //!
-//! Values reach the kind only as [`Quantity`] (an [`crate::fmt::SiValue`] and a unit), and
-//! never from the block or the caller: from the stored record whose digest was just
-//! recomputed. A [`ResolvedBlock`]'s layout may hold no JSON number.
+//! The view is the engine's: [`Resolved`], [`ResolvedValue`] and [`crate::bind::Quantity`]
+//! have private fields and no public constructor, and a resolver returns only a layout, so
+//! a resolver cannot add, change or swap a value, and cannot bring in one that is not at the
+//! head. Values reach the kind only as a [`Quantity`] with its record's [`Evidence`]:
+//!
+//! ```compile_fail
+//! fn forge(view: &fid_report::bind::Resolved) -> fid_report::bind::ResolvedBlock {
+//!     fid_report::bind::ResolvedBlock::new(view.clone(), fid_canon::CValue::Null).unwrap()
+//! }
+//! ```
 
 use super::error::BindError;
-use super::journal::{EntityView, HeadLookup, JournalReads, Lookup, LookupFault, StatementBytes};
-use super::model::{Binding, FieldId, JournalHead, Quantity, Ref, ValueBinding};
+use super::journal::{EntityView, Evidence, HeadLookup, JournalReads, Lookup, LookupFault, StatementBytes};
+use super::model::{Binding, FieldId, JournalHead, Quantity, Ref, ValueBinding, BINDING_KEY, BINDING_SCHEMA};
 use crate::doc::kind::PayloadError;
-use crate::doc::value::resolve_pointer;
+use crate::doc::value::{resolve_pointer, VALUE_BINDING_SCHEMA};
 use crate::doc::{Block, BlockId, BlockKindId, CanonicalJson, KindRegistry, ReportError, Text, Untrusted};
 use fid_canon::CValue;
 use fid_project::Uuid;
@@ -92,27 +103,67 @@ pub enum ResolvedRef {
     },
 }
 
-/// One resolved value field: the payload pointer, the binding, the typed quantity from the
-/// stored record and the stored statement it references.
+/// One resolved value field: the payload pointer, the binding, the typed quantity and the
+/// evidence facts from the record stored at the head, and the stored statement it
+/// references.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResolvedValue {
-    pub pointer: String,
-    pub binding: ValueBinding,
-    pub quantity: Quantity,
-    pub statement: StatementBytes,
+    pointer: String,
+    binding: ValueBinding,
+    quantity: Quantity,
+    evidence: Evidence,
+    statement: StatementBytes,
+}
+
+impl ResolvedValue {
+    /// The value field's RFC 6901 pointer in the block payload.
+    pub fn pointer(&self) -> &str {
+        &self.pointer
+    }
+    pub fn binding(&self) -> &ValueBinding {
+        &self.binding
+    }
+    pub fn quantity(&self) -> Quantity {
+        self.quantity
+    }
+    /// Evaluation basis, decision and claim facts of the record: a claimed, declared-input,
+    /// UEC-0, `RESULTS_ONLY` or `DIRECT_READING` value never looks measured.
+    pub fn evidence(&self) -> &Evidence {
+        &self.evidence
+    }
+    pub fn statement(&self) -> &StatementBytes {
+        &self.statement
+    }
 }
 
 /// The typed view a [`BlockResolver`] gets: the block, its references in binding order and
-/// its value fields in the kind's order, all resolved as of the context's head.
+/// its value fields in the kind's order, all resolved as of the context's head. Built only
+/// by [`resolve_block`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct Resolved {
-    pub block: BlockId,
-    pub kind: BlockKindId,
-    pub refs: Vec<ResolvedRef>,
-    pub values: Vec<ResolvedValue>,
+    block: BlockId,
+    kind: BlockKindId,
+    refs: Vec<ResolvedRef>,
+    values: Vec<ResolvedValue>,
 }
 
-/// A resolved block: the typed view plus the kind's layout (structure without values).
+impl Resolved {
+    pub fn block(&self) -> BlockId {
+        self.block
+    }
+    pub fn kind(&self) -> &BlockKindId {
+        &self.kind
+    }
+    pub fn refs(&self) -> &[ResolvedRef] {
+        &self.refs
+    }
+    pub fn values(&self) -> &[ResolvedValue] {
+        &self.values
+    }
+}
+
+/// A resolved block: the engine's typed view plus the kind's layout (structure without
+/// values). Built only by [`resolve_block`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResolvedBlock {
     view: Resolved,
@@ -120,10 +171,10 @@ pub struct ResolvedBlock {
 }
 
 impl ResolvedBlock {
-    /// Refuses a layout holding a JSON number anywhere (`report.binding_has_value`): values
-    /// travel in [`Resolved::values`] only.
-    pub fn new(view: Resolved, layout: CValue) -> Result<ResolvedBlock, BindError> {
-        find_number(&layout).map_or(Ok(()), |p| Err(BindError::BindingHasValue(PayloadError::new(&p, "number"))))?;
+    /// Refuses a layout holding a value ([`find_value`], `report.binding_has_value`):
+    /// values travel in [`Resolved::values`] only.
+    pub(crate) fn new(view: Resolved, layout: CValue) -> Result<ResolvedBlock, BindError> {
+        refuse_value(&layout)?;
         Ok(ResolvedBlock { view, layout })
     }
 
@@ -136,11 +187,71 @@ impl ResolvedBlock {
     }
 }
 
-/// The pointer of the first JSON number in `v` (depth first, objects in key order, arrays
-/// in index order), if any. Iterative; memory is one borrowed entry per visited node, and
-/// pointer text is built only for the node reported (cut at 128 bytes by
-/// [`PayloadError::new`]).
-pub(crate) fn find_number(v: &CValue) -> Option<String> {
+// ------------------------------------------------------------------ the no-value rule
+
+/// Whether `s` is value text (REQ-001): optional blanks, an optional sign (`+`, `-`,
+/// U+2212), a decimal mantissa (`d+`, `d+.`, `d+.d+` or `.d+`, with `.` or `,` as the
+/// separator, ASCII digits), an optional exponent (`e`/`E`, optional sign, `d+`), then
+/// optionally blanks and a unit (a first character that is an ASCII letter or one of
+/// `µ μ ° % ' " ′ ″`, then any of those, ASCII digits, `/ ^ · . ² ³`), then optional
+/// blanks. Blanks are U+0020, U+0009, U+00A0 and U+202F.
+pub fn is_number_text(s: &str) -> bool {
+    let blank = |c: char| matches!(c, ' ' | '\t' | '\u{a0}' | '\u{202f}');
+    let unit_start = |c: char| c.is_ascii_alphabetic() || matches!(c, 'µ' | 'μ' | '°' | '%' | '\'' | '"' | '′' | '″');
+    let unit_char = |c: char| unit_start(c) || c.is_ascii_digit() || matches!(c, '/' | '^' | '·' | '.' | '²' | '³');
+    let c: Vec<char> = s.trim_matches(blank).chars().collect();
+    let mut i = 0;
+    if matches!(c.first(), Some('+' | '-' | '\u{2212}')) {
+        i += 1;
+    }
+    let digits = |i: &mut usize| {
+        let start = *i;
+        while c.get(*i).is_some_and(char::is_ascii_digit) {
+            *i += 1;
+        }
+        *i - start
+    };
+    let int = digits(&mut i);
+    let mut frac = 0;
+    if matches!(c.get(i), Some('.' | ',')) {
+        i += 1;
+        frac = digits(&mut i);
+    }
+    if int == 0 && frac == 0 {
+        return false;
+    }
+    if matches!(c.get(i), Some('e' | 'E')) {
+        let mut j = i + 1;
+        if matches!(c.get(j), Some('+' | '-' | '\u{2212}')) {
+            j += 1;
+        }
+        if digits(&mut j) > 0 {
+            i = j;
+        }
+    }
+    while c.get(i).is_some_and(|x| blank(*x)) {
+        i += 1;
+    }
+    match c.get(i) {
+        None => true,
+        Some(&x) if unit_start(x) => c.get(i + 1..).is_some_and(|rest| rest.iter().all(|x| unit_char(*x))),
+        Some(_) => false,
+    }
+}
+
+/// Whether `s` is an IEEE-754 bit pattern: `0x` or `0X` and at least one hex digit.
+pub fn is_bit_pattern(s: &str) -> bool {
+    let h = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X"));
+    h.is_some_and(|h| !h.is_empty() && h.bytes().all(|c| c.is_ascii_hexdigit()))
+}
+
+/// The pointer and reason of the first value in `v` (depth first, objects in key order,
+/// arrays in index order): a JSON number (`number`), a bit pattern (`bit_pattern`) or value
+/// text (`number_text`) in any string. ID fields are skipped: the payload's top-level
+/// `binding` and every object tagged `binding@1` or `value_binding@1`. Iterative; memory
+/// is one borrowed entry per visited node, and pointer text is built only for the node
+/// reported (cut at 128 bytes).
+pub fn find_value(v: &CValue) -> Option<(String, &'static str)> {
     enum Step<'a> {
         Root,
         Key(&'a str),
@@ -150,28 +261,40 @@ pub(crate) fn find_number(v: &CValue) -> Option<String> {
     let mut stack: Vec<(usize, &CValue)> = vec![(0, v)];
     let mut found = None;
     while let Some((i, v)) = stack.pop() {
-        match v {
-            CValue::Num(_) | CValue::I64(_) | CValue::U64(_) | CValue::F64Bits(_) => {
-                found = Some(i);
-                break;
-            }
+        let reason = match v {
+            CValue::Num(_) | CValue::I64(_) | CValue::U64(_) | CValue::F64Bits(_) => Some("number"),
+            CValue::Str(s) if is_bit_pattern(s) => Some("bit_pattern"),
+            CValue::Str(s) if is_number_text(s) => Some("number_text"),
             CValue::Obj(o) => {
-                for (k, c) in o.iter().rev() {
-                    stack.push((trail.len(), c));
-                    trail.push((i, Step::Key(k)));
+                let tagged =
+                    matches!(o.get("schema"), Some(CValue::Str(t)) if t == VALUE_BINDING_SCHEMA || t == BINDING_SCHEMA);
+                if !tagged {
+                    for (k, c) in o.iter().rev() {
+                        if i == 0 && k == BINDING_KEY {
+                            continue;
+                        }
+                        stack.push((trail.len(), c));
+                        trail.push((i, Step::Key(k)));
+                    }
                 }
+                None
             }
             CValue::Arr(a) => {
                 for (j, c) in a.iter().enumerate().rev() {
                     stack.push((trail.len(), c));
                     trail.push((i, Step::Index(j)));
                 }
+                None
             }
-            _ => {}
+            _ => None,
+        };
+        if let Some(r) = reason {
+            found = Some((i, r));
+            break;
         }
     }
+    let (mut at, reason) = found?;
     let mut steps = Vec::new();
-    let mut at = found?;
     while let Some((parent, step)) = trail.get(at) {
         steps.push(step);
         at = *parent;
@@ -193,7 +316,15 @@ pub(crate) fn find_number(v: &CValue) -> Option<String> {
             }
         }
     }
-    Some(out)
+    Some((out, reason))
+}
+
+/// [`find_value`] as an error (`report.binding_has_value`).
+pub(crate) fn refuse_value(v: &CValue) -> Result<(), BindError> {
+    match find_value(v) {
+        Some((at, reason)) => Err(BindError::BindingHasValue(PayloadError::new(&at, reason))),
+        None => Ok(()),
+    }
 }
 
 // ------------------------------------------------------------------ resolvers
@@ -213,13 +344,9 @@ pub trait BlockResolver {
         binding: &Binding,
         values: &[ValueBinding],
     ) -> Result<CValue, PayloadError>;
-    /// Builds the resolved block from the typed view.
-    fn resolve(
-        &self,
-        view: Resolved,
-        ctx: &ResolveContext<'_>,
-        lookup: &dyn Lookup,
-    ) -> Result<ResolvedBlock, BindError>;
+    /// The kind's layout for the engine's typed view: structure only (pointers, IDs, labels
+    /// keys), never a value. The engine builds the [`ResolvedBlock`].
+    fn resolve(&self, view: &Resolved, ctx: &ResolveContext<'_>, lookup: &dyn Lookup) -> Result<CValue, BindError>;
 }
 
 /// Registered resolvers, keyed by kind ID.
@@ -282,7 +409,7 @@ pub(crate) fn resolve_ref(
     Ok(match r {
         Ref::Result(u) => {
             let v = lookup.result(u).map_err(|e| f(u, e))?;
-            ResolvedRef::Result { id: v.id, digest: v.digest }
+            ResolvedRef::Result { id: v.id(), digest: v.digest() }
         }
         Ref::Characteristic(u) => ResolvedRef::Characteristic(lookup.characteristic(u).map_err(|e| f(u, e))?),
         Ref::NamedView(u) => ResolvedRef::NamedView(lookup.named_view(u).map_err(|e| f(u, e))?),
@@ -294,7 +421,7 @@ pub(crate) fn resolve_ref(
     })
 }
 
-/// Resolves one value field at `pointer` (step 5 of the module documentation).
+/// Resolves one value field at `pointer` (step 6 of the module documentation).
 fn resolve_value(
     block: BlockId,
     pointer: &str,
@@ -310,20 +437,26 @@ fn resolve_value(
     }
     let mismatch = |digest| BindError::BindingDigestMismatch { block, binding: pointer.to_string(), digest };
     let record = lookup.result(&vb.record).map_err(|e| fault(block, &vb.record.to_string(), e))?;
-    if record.digest != vb.record_digest {
+    if record.digest() != vb.record_digest {
         return Err(mismatch("record_digest"));
     }
     let field = record
         .value_field(&vb.field)
         .ok_or_else(|| BindError::BindingFieldNotValue { block, binding: pointer.to_string() })?;
-    if field.statement != Some(vb.statement_digest) {
+    if field.statement() != Some(vb.statement_digest) {
         return Err(mismatch("statement_digest"));
     }
     let statement = lookup.statement(&vb.statement_digest).map_err(|e| match e {
         LookupFault::Invalid(_) => mismatch("statement_digest"),
         other => fault(block, &vb.record.to_string(), other),
     })?;
-    Ok(ResolvedValue { pointer: pointer.to_string(), quantity: field.quantity, binding: vb, statement })
+    Ok(ResolvedValue {
+        pointer: pointer.to_string(),
+        quantity: field.quantity(),
+        evidence: record.evidence().clone(),
+        binding: vb,
+        statement,
+    })
 }
 
 /// Resolves `block` as of `ctx.head` (see the module documentation for the order of the
@@ -336,8 +469,9 @@ pub fn resolve_block(
     journal: &dyn JournalReads,
 ) -> Result<ResolvedBlock, BindError> {
     let resolver = resolvers.get(block.kind())?;
-    let lookup = HeadLookup::new(journal, ctx.project, &ctx.head)?;
     let payload = block.payload().value();
+    refuse_value(payload)?;
+    let lookup = HeadLookup::new(journal, ctx.project, &ctx.head)?;
     let binding = Binding::of_payload(payload)?;
     let id = block.id();
     let refs =
@@ -347,5 +481,6 @@ pub fn resolve_block(
     let values =
         fields.iter().map(|p| resolve_value(id, p, payload, &binding, &lookup)).collect::<Result<Vec<_>, _>>()?;
     let view = Resolved { block: id, kind: block.kind().clone(), refs, values };
-    resolver.resolve(view, ctx, &lookup)
+    let layout = resolver.resolve(&view, ctx, &lookup)?;
+    ResolvedBlock::new(view, layout)
 }

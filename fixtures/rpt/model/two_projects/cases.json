@@ -3,9 +3,9 @@
   "binding": {
    "field": "/value",
    "record": "019a9a9b-0005-7001-8000-000000000001",
-   "record_digest": "sha256:5e3dbcc9b27f3ed6dce277155944eefbb295141b3fd53e4158e749b88b677116",
+   "record_digest": "sha256:edaf8ef45982d5a52b525c4cc6bfa1569ac7f26341c4b74fa9845c064755afc9",
    "schema": "value_binding@1",
-   "statement_digest": "sha256:ea4ce753c4d7e1b3961f98fef58d08a4303ee049ab4113b1c035096dd3509518"
+   "statement_digest": "sha256:6a6cdc65f53f954ffddb202b258fa6cdf3647af009c75b251e949031f37e6bc5"
   },
   "characteristic": "019a9a9b-0005-7000-8000-000000000001",
   "record": "019a9a9b-0005-7001-8000-000000000001"
@@ -14,14 +14,14 @@
   "binding": {
    "field": "/value",
    "record": "019a9a9b-0006-7001-8000-000000000001",
-   "record_digest": "sha256:f49918a62c1edfefcd428053c93fc112bb212c5b8181dccbc6f76e00d32ae8d5",
+   "record_digest": "sha256:3c26e014397caca609467e019f73666e97bbe20700ab5b9861565cc06141fc32",
    "schema": "value_binding@1",
-   "statement_digest": "sha256:1d78e2e30bb975d559e4cddeee83afa775818334f10b433b8a1678c4d35cb2bd"
+   "statement_digest": "sha256:6a6cdc65f53f954ffddb202b258fa6cdf3647af009c75b251e949031f37e6bc5"
   },
   "characteristic": "019a9a9b-0006-7000-8000-000000000001",
   "record": "019a9a9b-0006-7001-8000-000000000001"
  },
- "current_head": "sha256:3a3b364f679428ece4f5b958812b704d6514f7f43dd7bd6698c1e81bb622699b",
+ "current_head": "sha256:fdeda7eb226d0aec133aabf2d5728b6b94943a3cbd859020acf6e864c3d72534",
  "expected": {
   "code": "report.cross_project_binding",
   "error_keys": [

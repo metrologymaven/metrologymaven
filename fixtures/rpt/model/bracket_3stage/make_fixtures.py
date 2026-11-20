@@ -100,16 +100,40 @@ def statement(cid: str, stage: int, c: int) -> dict:
     }
 
 
-def record(run: str, cid: str, c: int, value: float, stmt_digest: str) -> dict:
+# Evidence profiles (hand-chosen, hand-labelled): how each stage's values were obtained.
+# "measured": POINTS, UEC-1 by LPU, decided by a UNC rule; looks measured.
+# "transcribed": RESULTS_ONLY, claimed (DECLARED) uncertainty, not decidable; never looks measured.
+# "uec0": POINTS but uncertainty not evaluated (no statement); never looks measured.
+PROFILES = {
+    "measured": {"basis": "POINTS", "class": "UEC-1", "method": "LPU", "claimed": False,
+                 "source": "unc", "rule": "dr:simple-acceptance@1", "outcome": "CONFORMS", "reason": None,
+                 "looks_measured": True},
+    "transcribed": {"basis": "RESULTS_ONLY", "class": "UEC-1", "method": "DECLARED", "claimed": True,
+                    "source": "gdt_not_decidable", "rule": None, "outcome": "NOT_DECIDABLE",
+                    "reason": "no_rule_bound", "looks_measured": False},
+    "uec0": {"basis": "POINTS", "class": "UEC-0", "method": None, "claimed": False,
+             "source": "gdt_not_decidable", "rule": None, "outcome": "NOT_DECIDABLE",
+             "reason": "unc_no_decision", "looks_measured": False},
+}
+STAGE_PROFILE = {1: "measured", 2: "measured", 3: "transcribed"}
+
+
+def record(run: str, cid: str, c: int, value: float, stmt_digest, profile: str) -> dict:
     z = "sha256:" + "0" * 63 + "1"
+    p = PROFILES[profile]
+    uec0 = p["class"] == "UEC-0"
+    facts = {"claimed": p["claimed"], "declared_input": False, "uncharacterized_input": False}
+    basis = None
+    if p["source"] == "unc":
+        basis = dict(facts, **{"class": p["class"], "method": p["method"], "statement": stmt_digest})
     return {
         "algorithm": "gdt.size.two_point@1.0.0",
         "characteristic": cid,
-        "decision": {"basis": None, "outcome": "NOT_DECIDABLE", "reason": "no_rule_bound", "rule": None,
-                     "source": "gdt_not_decidable"},
+        "decision": {"basis": basis, "outcome": p["outcome"], "reason": p["reason"], "rule": p["rule"],
+                     "source": p["source"]},
         "dmt_digest": z,
         "dmt_row": "dmt:asme/size/none@1",
-        "evaluation_basis": "POINTS",
+        "evaluation_basis": p["basis"],
         "input_digests": [],
         "journal_entry": z,
         "kernel_version": "0.1.0",
@@ -119,12 +143,18 @@ def record(run: str, cid: str, c: int, value: float, stmt_digest: str) -> dict:
         "schema": "fid.gdt-result/1",
         "spec": {"defaults_profile": "dp:fixture@1", "dialect": "ASME", "inherited_from": "explicit",
                  "standards": []},
-        "uncertainty": {"claimed": True, "class": "UEC-1", "declared_input": False,
-                        "expanded": {"U": bits(0.000004), "k": bits(2.0)}, "interval": None,
-                        "method": "DECLARED", "statement": stmt_digest, "u_std": None,
-                        "uec0_reason": None, "uncharacterized_input": False, "unit": "si:m"},
+        "uncertainty": dict(facts, **{
+            "class": p["class"],
+            "expanded": None if uec0 else {"U": bits(0.000004), "k": bits(2.0)},
+            "interval": None, "method": p["method"], "statement": stmt_digest, "u_std": None,
+            "uec0_reason": "not_evaluated" if uec0 else None, "unit": None if uec0 else "si:m"}),
         "value": {"unit": "si:m", "value": bits(value)},
     }
+
+
+def evidence(profile: str) -> dict:
+    p = PROFILES[profile]
+    return {k: p[k] for k in ("basis", "class", "method", "claimed", "outcome", "rule", "looks_measured")}
 
 
 class Journal:
@@ -164,12 +194,15 @@ def bracket():
             j.add(PROJECT, "statement", None, json.loads(stmt))
             value = 0.01 + c * 0.001 + s * 0.000001
             rid = eid(4, s, c)
-            doc = record(run, cid, c, value, sd)
+            doc = record(run, cid, c, value, sd, STAGE_PROFILE[s])
             j.add(PROJECT, "result", rid, doc)
-            records[(s, c)] = (rid, jcs(doc).decode("utf-8"), sd, bits(value))
+            records[(s, c)] = (rid, jcs(doc).decode("utf-8"), sd, bits(value), STAGE_PROFILE[s])
     r1, r2 = records[(1, 1)], records[(STAGES, CHARS)]
     assert j.entries[-1]["id"] == r2[0]
     h0 = j.entries[-2]["head"]
+    # A UEC-0 result (no statement), committed after r2: it cannot be bound (no_statement).
+    r0 = eid(4, 9, 1)
+    j.add(PROJECT, "result", r0, record(eid(3, 9, 0), chars[0], 1, 0.011, None, "uec0"))
     # AC-1: bind r1, r2 to a table block holding {"rows": []}.
     report, page, block = v7(0), v7(1), v7(2)
     refs = [{"id": r1[0], "kind": "result"}, {"id": r2[0], "kind": "result"}]
@@ -195,6 +228,7 @@ def bracket():
         "title": TITLE,
         "r1": r1[0],
         "r2": r2[0],
+        "uec0_record": r0,
         "characteristic_1": chars[0],
         "view": view,
         "series": series,
@@ -209,7 +243,8 @@ def bracket():
         },
         # The resolved values of AC-3 at the current head, in value-field order.
         "ac3_values": [
-            {"pointer": f"/rows/{i}/value", "record": r[0], "unit": "si:m", "bits": r[3], "statement_digest": r[2]}
+            {"pointer": f"/rows/{i}/value", "record": r[0], "unit": "si:m", "bits": r[3], "statement_digest": r[2],
+             "evidence": evidence(r[4])}
             for i, r in enumerate((r1, r2))
         ],
         # AC-2: a reference carrying a value, hand-labelled.
@@ -222,6 +257,13 @@ def bracket():
         # pointers stand for them; the others are real non-value fields.
         "ac8_fields": ["/nominal", "/limits/upper", "/uncertainty/expanded/U", "/value/value", "/value/unit",
                        "/decision", ""],
+        # REQ-001 value text and bit patterns in a payload (hand-labelled).
+        "value_strings": [
+            {"text": "12.003", "reason": "number_text"}, {"text": "12,003 mm", "reason": "number_text"},
+            {"text": "-1.5e-3m", "reason": "number_text"}, {"text": "−.5 µm", "reason": "number_text"},
+            {"text": "0x3f847ae147ae147b", "reason": "bit_pattern"}, {"text": "0X1F", "reason": "bit_pattern"},
+        ],
+        "not_value_strings": ["C01", "top view", "e5", "-", ".", "12-3", "Rev. B", "/rows/0/value", "ISO 1101"],
     }
     return {"project": PROJECT, "entries": j.entries}, cases
 
@@ -232,11 +274,11 @@ def two_projects():
     for name, project, g in (("a", PROJECT_A, 5), ("b", PROJECT_B, 6)):
         cid = eid(g, 0, 1)
         j.add(project, "characteristic", cid, characteristic(cid, 1))
-        stmt = jcs(statement(cid, 1, 1))
+        stmt = jcs(statement("shared", 1, 1))  # identical bytes in A and B
         sd = sha(stmt)
         j.add(project, "statement", None, json.loads(stmt))
         rid = eid(g, 1, 1)
-        doc = record(eid(g, 2, 0), cid, 1, 0.011, sd)
+        doc = record(eid(g, 2, 0), cid, 1, 0.011, sd, "measured")
         j.add(project, "result", rid, doc)
         out[name] = {"characteristic": cid, "record": rid,
                      "binding": binding_of(rid, jcs(doc).decode("utf-8"), sd)}
