@@ -8,7 +8,7 @@
 //! 1. **definition**: the definition names the command, is W1 with `fs_effect: write_root`,
 //!    D0, declares its own record as its effect, has a `path_like` `target`, a `dry_run`
 //!    flag, and `format` exactly when the command takes one;
-//! 2. **dry run**: a report with `dry_run: true` and the stored digest, no record, the root
+//! 2. **dry run**: a report with `dry_run: true` and the stored digest, nothing to journal, the root
 //!    unchanged (so a writer whose bytes vary per process, by time or hash order, fails);
 //! 3. **sink failure** after [`Fixture::fail_after`] bytes: the export fails, the root is
 //!    unchanged (no file, no temp file);
@@ -21,8 +21,16 @@
 //! 7. **no clobbering**: the same export again fails `target_exists`, the file unchanged;
 //! 8. **replay** into the emptied root is `IDENTICAL`;
 //! 9. **options**: every option the format's export descriptor declares (the `properties` of
-//!    its options schema) is varied by some [`Fixture::option_variants`] entry, and each
-//!    variant either changes the output digest or is refused (`bad_options`).
+//!    its options schema) has at least one accepted [`Fixture::option_variants`] entry that
+//!    changes it and changes the output digest; every variant either changes the output or
+//!    is refused (`bad_options`).
+//!
+//! Between steps 4 and 5, **principals**: an agent's raw path is `raw_path_forbidden`, an
+//! agent's `force_extension` is refused, a target with another export format's extension is
+//! `format_mismatch` (if the registry has one), and a human may force it (dry run). After
+//! step 7 the **overwrite** path runs as an agent: the file is replaced with the same bytes
+//! and the record says `overwrite`. The record names [`Fixture::format`], and the dry run's
+//! would-be record equals the real one.
 //!
 //! The kit removes only the file it wrote.
 
@@ -141,8 +149,8 @@ pub struct Fixture<'a> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConformanceError {
     /// The step (`definition`, `setup`, `dry_run`, `sink_failure`, `cancel`,
-    /// `cancel_mid_write`, `prepare_place`, `prepare_discard`, `no_clobber`, `replay`,
-    /// `options`).
+    /// `cancel_mid_write`, `principals`, `prepare_place`, `prepare_discard`, `no_clobber`,
+    /// `overwrite`, `replay`, `options`).
     pub step: &'static str,
     /// The command ID.
     pub command: String,
@@ -214,6 +222,24 @@ fn declared_options(reg: &Registry, format: &FormatId) -> Vec<String> {
     }
 }
 
+/// An extension some other export format declares and `format` does not, if any.
+fn foreign_extension(reg: &Registry, format: &FormatId) -> Option<String> {
+    let own: Vec<String> = reg.get(format, Direction::Export).map(|d| d.extensions().to_vec()).unwrap_or_default();
+    reg.list(Direction::Export, crate::detect::OriginFilter::Any)
+        .into_iter()
+        .filter(|d| d.id() != format)
+        .flat_map(|d| d.extensions().iter().cloned())
+        .find(|e| !own.contains(e))
+}
+
+fn expect_err<T>(r: Result<T, ExportError>, want: impl Fn(&ExportError) -> bool, what: &str) -> Result<(), String> {
+    match r {
+        Err(e) if want(&e) => Ok(()),
+        Err(e) => Err(format!("{what}: unexpected error {}", e.code())),
+        Ok(_) => Err(format!("{what}: succeeded")),
+    }
+}
+
 /// Runs the kit for one command (see the module documentation).
 pub fn check<S: ?Sized>(
     cmd: &dyn ExportRun<S>,
@@ -244,29 +270,31 @@ pub fn check<S: ?Sized>(
     let mut params = ExportParams::new(fx.source.clone(), cmd.takes_format().then(|| fx.format.clone()), &target);
     params.options = fx.options.clone();
     let env = ExportEnv::new(fx.registry, fx.roots, Principal::Script);
+    let agent = ExportEnv::new(fx.registry, fx.roots, Principal::Agent);
+    let human = ExportEnv::new(fx.registry, fx.roots, Principal::Human);
     let dry_of = |p: &ExportParams| {
         let mut d = p.clone();
         d.dry_run = true;
         d
     };
 
-    // 2. Dry run, against the stored digest.
+    // 2. Dry run, against the stored digest; its would-be record is compared in step 5.
     let dry = cmd.run(&env, &dry_of(&params), src).map_err(|e| fail("dry_run", format!("failed: {e}")))?;
-    if dry.event.is_some() || !dry.report.dry_run() {
+    if dry.journal().is_some() || !dry.report.dry_run() {
         return Err(fail("dry_run", "a dry run must report dry_run and journal nothing".into()));
     }
     if dry.report.sha256() != fx.expected_sha256 {
         return Err(fail("dry_run", format!("digest {} is not the stored one", dry.report.sha256().as_str())));
     }
+    if dry.event.format != *fx.format {
+        return Err(fail("dry_run", "the record names another format".into()));
+    }
     unchanged("dry_run")?;
 
     // 3. Sink failure.
     let faulted = ExportEnv { fault: Some(Fault::FailAfter(fx.fail_after)), ..env };
-    match cmd.run(&faulted, &params, src) {
-        Ok(_) => return Err(fail("sink_failure", "the export succeeded on a failing sink".into())),
-        Err(ExportError::Io(IoError::Io { .. })) => {}
-        Err(e) => return Err(fail("sink_failure", format!("unexpected error {}", e.code()))),
-    }
+    expect_err(cmd.run(&faulted, &params, src), |e| matches!(e, ExportError::Io(IoError::Io { .. })), "failing sink")
+        .map_err(|d| fail("sink_failure", d))?;
     unchanged("sink_failure")?;
 
     // 4. Cancel before the start and mid-write.
@@ -276,14 +304,39 @@ pub fn check<S: ?Sized>(
         ("cancel_mid_write", ExportEnv { fault: Some(Fault::CancelMidWrite), ..env }),
     ] {
         for p in [&params, &dry_of(&params)] {
-            match cmd.run(&env, p, src) {
-                Err(ExportError::Cancelled) => {}
-                Ok(_) => return Err(fail(step, "a cancelled export succeeded".into())),
-                Err(e) => return Err(fail(step, format!("unexpected error {}", e.code()))),
-            }
+            expect_err(cmd.run(&env, p, src), |e| *e == ExportError::Cancelled, "cancelled export")
+                .map_err(|d| fail(step, d))?;
         }
         unchanged(step)?;
     }
+
+    // Principals: an agent's raw path, force_extension for humans only, format_mismatch.
+    let raw = fx.root_dir.join(fx.file_name).to_string_lossy().into_owned();
+    let mut raw_params = params.clone();
+    raw_params.target = raw;
+    for p in [&raw_params, &dry_of(&raw_params)] {
+        expect_err(cmd.run(&agent, p, src), |e| *e == ExportError::Io(IoError::RawPathForbidden), "agent raw path")
+            .map_err(|d| fail("principals", d))?;
+    }
+    let mut forced = dry_of(&params);
+    forced.force_extension = true;
+    expect_err(cmd.run(&agent, &forced, src), |e| *e == ExportError::ForceExtensionHumanOnly, "agent force")
+        .map_err(|d| fail("principals", d))?;
+    if let Some(ext) = foreign_extension(fx.registry, fx.format) {
+        let mut mism = params.clone();
+        mism.target = format!("root://{}/conformance.{ext}", fx.root_id);
+        for p in [&mism, &dry_of(&mism)] {
+            expect_err(cmd.run(&env, p, src), |e| *e == ExportError::Io(IoError::FormatMismatch), "format_mismatch")
+                .map_err(|d| fail("principals", d))?;
+        }
+        let mut forced = dry_of(&mism);
+        forced.force_extension = true;
+        let out = cmd.run(&human, &forced, src).map_err(|e| fail("principals", format!("human force failed: {e}")))?;
+        if !out.event.force_extension || out.event.principal != Principal::Human {
+            return Err(fail("principals", "the forced record does not say so".into()));
+        }
+    }
+    unchanged("principals")?;
 
     // 5. Prepare, then place.
     let path = fx.root_dir.join(fx.file_name);
@@ -294,17 +347,20 @@ pub fn check<S: ?Sized>(
     let real = prepared.place().map_err(|e| fail("prepare_place", format!("place failed: {e}")))?;
     let bytes = std::fs::read(&path).map_err(|e| fail("prepare_place", format!("no file: {:?}", e.kind())))?;
     let sha = format!("sha256:{}", hex(&Sha256::digest(&bytes)));
-    let Some(event) = &real.event else { return Err(fail("prepare_place", "no journal record".into())) };
+    let Some(event) = real.journal() else { return Err(fail("prepare_place", "no journal record".into())) };
     let same = sha == fx.expected_sha256.as_str()
         && real.report.sha256().as_str() == sha
         && real.report.bytes() == bytes.len() as u64
         && event.sha256.as_str() == sha
         && event.bytes == real.report.bytes()
-        && dry.report.bytes() == real.report.bytes()
         && event.command.as_str() == id
+        && event.format == *fx.format
         && event.lossy == *real.report.lossy();
     if !same {
-        return Err(fail("prepare_place", "file, stored digest, report, dry run and record disagree".into()));
+        return Err(fail("prepare_place", "file, stored digest, report and record disagree".into()));
+    }
+    if dry.event != *event {
+        return Err(fail("prepare_place", "the dry run's would-be record differs from the real one".into()));
     }
     if listing(fx.root_dir).map_err(|d| fail("prepare_place", d))? != [fx.file_name.to_string()] {
         return Err(fail("prepare_place", "unexpected files in the root".into()));
@@ -314,14 +370,21 @@ pub fn check<S: ?Sized>(
         return Err(fail("prepare_place", "the record does not read back".into()));
     }
 
-    // 7. No clobbering.
-    match cmd.run(&env, &params, src) {
-        Err(ExportError::Io(IoError::TargetExists)) => {}
-        Ok(_) => return Err(fail("no_clobber", "a second export overwrote the file".into())),
-        Err(e) => return Err(fail("no_clobber", format!("unexpected error {}", e.code()))),
-    }
+    // 7. No clobbering; then the overwrite path, as an agent.
+    expect_err(cmd.run(&env, &params, src), |e| *e == ExportError::Io(IoError::TargetExists), "second export")
+        .map_err(|d| fail("no_clobber", d))?;
     if std::fs::read(&path).ok().as_deref() != Some(bytes.as_slice()) {
         return Err(fail("no_clobber", "the file changed".into()));
+    }
+    let mut over = params.clone();
+    over.overwrite = true;
+    let out = cmd.run(&agent, &over, src).map_err(|e| fail("overwrite", format!("failed: {e}")))?;
+    let replaced = std::fs::read(&path).map(|b| format!("sha256:{}", hex(&Sha256::digest(&b))));
+    if replaced.as_deref().ok() != Some(fx.expected_sha256.as_str()) || !out.event.overwrite {
+        return Err(fail("overwrite", "the overwritten file or its record is wrong".into()));
+    }
+    if listing(fx.root_dir).map_err(|d| fail("overwrite", d))? != [fx.file_name.to_string()] {
+        return Err(fail("overwrite", "unexpected files in the root".into()));
     }
 
     // 8. Replay into the emptied root.
@@ -338,24 +401,29 @@ pub fn check<S: ?Sized>(
     prepared.discard();
     unchanged("prepare_discard")?;
 
-    // 9. Declared options change the output or are refused.
-    for name in declared_options(fx.registry, fx.format) {
-        let covered = fx.option_variants.iter().any(|v| match (v, fx.options) {
-            (CValue::Obj(v), CValue::Obj(base)) => v.get(&name).is_some() && v.get(&name) != base.get(&name),
-            _ => false,
-        });
-        if !covered {
-            return Err(fail("options", format!("declared option {name} is not varied by any variant")));
-        }
-    }
+    // 9. Each declared option has an accepted variant that changes the output; every
+    //    variant changes the output or is refused.
+    let mut accepted: Vec<String> = Vec::new();
     for (i, v) in fx.option_variants.iter().enumerate() {
         let mut p = dry_of(&params);
         p.options = v.clone();
         match cmd.run(&env, &p, src) {
-            Ok(out) if out.report.sha256() != dry.report.sha256() => {}
+            Ok(out) if out.report.sha256() != dry.report.sha256() => {
+                if let (CValue::Obj(v), CValue::Obj(base)) = (v, fx.options) {
+                    accepted.extend(v.iter().filter(|(k, x)| base.get(*k) != Some(*x)).map(|(k, _)| k.clone()));
+                }
+            }
             Ok(_) => return Err(fail("options", format!("variant {i} does not change the output"))),
             Err(ExportError::BadOptions(_)) => {}
             Err(e) => return Err(fail("options", format!("variant {i}: unexpected error {}", e.code()))),
+        }
+    }
+    for name in declared_options(fx.registry, fx.format) {
+        if !accepted.contains(&name) {
+            return Err(fail(
+                "options",
+                format!("declared option {name} has no accepted variant that changes the output"),
+            ));
         }
     }
     unchanged("options")?;

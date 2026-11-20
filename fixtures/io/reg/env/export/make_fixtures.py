@@ -6,7 +6,9 @@ Stdlib only; shares no code with the Rust crate. It writes:
   nanometre coordinates; some points carry a colour the format cannot hold);
 - `expected.json`: for the AC-1 export (stride 1) and a stride-3 export, the file's byte
   count and SHA-256, the canonical export report (real and dry run) and the canonical
-  `export.file@1` journal record of a `script` principal, with the report digest.
+  `export.file@1` journal record of a `script` principal, with the report digest (SHA-256
+  of the canonical report without its `dry_run` key, so a dry run's would-be record is the
+  same).
 
 The test format is defined here and in the Rust test writer from the same written rule
 (the leaf's "test-only format"):
@@ -118,7 +120,7 @@ def case(data, stride):
         "options": {"stride": stride},
         "overwrite": False,
         "principal": "script",
-        "report_sha256": sha(real.encode("utf-8")),
+        "report_sha256": sha(jcs({k: v for k, v in report(False).items() if k != "dry_run"}).encode("utf-8")),
         "sha256": sha(body),
         "source": SOURCE,
         "target": TARGET,

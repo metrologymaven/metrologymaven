@@ -25,11 +25,13 @@
 //!    or read-only file under `overwrite` is `target_protected`);
 //! 6. the bytes go to an [`AtomicWriter`]'s temp file, which is then flushed, synced and
 //!    closed, or, for `dry_run`, to a [`CountingSink`], so no file is created (REQ-002);
-//! 7. the [`ExportReport`], its digest and (unless a dry run) the [`ExportEvent`] are built.
+//! 7. the [`ExportReport`] and the [`ExportEvent`] are built; for a dry run the event is the
+//!    would-be record, equal to the real run's (its report digest leaves out `dry_run`).
 //!
 //! **Place** ([`PreparedExport::place`]): the synced temp file is moved onto the target
 //! (no clobbering). [`PreparedExport::discard`] (or drop) removes the temp file instead. The
-//! bus adapter places only after the journal commit succeeded, and discards otherwise.
+//! bus adapter places only after the journal commit succeeded, and discards otherwise; a
+//! prepared export older than [`MAX_PREPARED_AGE`] is not placed.
 //!
 //! A writer error, a sink error, a cancel (checked before the first byte, on every write,
 //! after the writer returns and before placing) or a failed placement leaves no file and
@@ -46,7 +48,7 @@ use crate::limits::{LimitKind, Principal, DEFAULT_BYTES};
 use crate::prov::VersionToken;
 use crate::report::{ExportReport, FormatId, Location, ReportBuilder, ReportError, TypeName, MAX_LOSSY};
 use crate::roots::{plain_name, Direction, RootHandle, RootSet};
-use crate::write::{AtomicWriter, WriteOptions, WriteReceipt};
+use crate::write::{AtomicWriter, TargetRefusal, WriteOptions, WriteReceipt};
 use fid_canon::CValue;
 use fid_replay::ReplayOutcome;
 use fid_types::{CommandId, Digest};
@@ -55,11 +57,20 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::io;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 
 /// Command ID of the generic export command.
 pub const EXPORT_FILE: &str = "export.file@1";
-/// Export command names no format may take: `export.file` and `export.list_formats`.
-pub const RESERVED_EXPORT_NAMES: &[&str] = &["export.file", "export.list_formats"];
+/// Export command names no format command may take: the generic command, the listing, and
+/// the export commands implemented outside the skeleton (`export.results_csv`, fid-io-res).
+/// Per-format commands the spec names (`export.mesh_stl@1` and so on) are not reserved: their
+/// leaves build them from the skeleton. The registry's duplicate check
+/// (`fid_registry::validate`) is the backstop for any other clash.
+pub const RESERVED_EXPORT_NAMES: &[&str] = &["export.file", "export.list_formats", "export.results_csv"];
+/// Longest time a [`PreparedExport`] may wait before [`PreparedExport::place`]; older ones are
+/// refused (`cancelled/timeout`) and discarded. Well below the one-hour stale-temp sweep of
+/// `IO.REG.WRITE` ([`crate::write::STALE_AFTER`]), so a waiting temp file is never swept.
+pub const MAX_PREPARED_AGE: Duration = Duration::from_secs(15 * 60);
 /// Most entity IDs one `source` selection may name.
 pub const MAX_SOURCE_IDS: usize = 100_000;
 /// Longest `target` text, in bytes.
@@ -306,6 +317,8 @@ pub enum ExportError {
     ForceExtensionHumanOnly,
     /// A per-format command ID is reserved or already registered.
     CommandIdTaken,
+    /// A prepared export waited longer than [`MAX_PREPARED_AGE`] before being placed.
+    PreparedExpired,
     /// The parameters do not fit the command's params schema.
     BadParams(&'static str),
     /// The writer refused the options.
@@ -325,6 +338,7 @@ impl From<IoError> for ExportError {
 impl ExportError {
     /// The leaf's own stable code: the [`IoError`] code, or `writer_failed`,
     /// `target_protected`, `cancelled`, `force_extension_human_only`, `command_id_taken`,
+    /// `prepared_expired`,
     /// `bad_params`, `bad_options`, `bad_event`, `internal`.
     pub fn code(&self) -> &'static str {
         match self {
@@ -334,6 +348,7 @@ impl ExportError {
             ExportError::Cancelled => "cancelled",
             ExportError::ForceExtensionHumanOnly => "force_extension_human_only",
             ExportError::CommandIdTaken => "command_id_taken",
+            ExportError::PreparedExpired => "prepared_expired",
             ExportError::BadParams(_) => "bad_params",
             ExportError::BadOptions(_) => "bad_options",
             ExportError::BadEvent(_) => "bad_event",
@@ -353,6 +368,7 @@ impl ExportError {
             ExportError::Writer(_) => ("internal", "handler_failed"),
             ExportError::TargetProtected(_) => ("policy", "target_protected"),
             ExportError::Cancelled => ("cancelled", "requested"),
+            ExportError::PreparedExpired => ("cancelled", "timeout"),
             ExportError::ForceExtensionHumanOnly => ("policy", "human_only"),
             ExportError::BadParams(_) | ExportError::BadOptions(_) | ExportError::BadEvent(_) => {
                 ("validation", "schema")
@@ -596,7 +612,8 @@ pub struct ExportEvent {
     pub bytes: u64,
     /// Names the format could not represent, sorted.
     pub lossy: BTreeSet<TypeName>,
-    /// SHA-256 of the canonical [`ExportReport`] (the result digest, CONSTITUTION §3).
+    /// SHA-256 of the canonical [`ExportReport`] without its `dry_run` flag (the result
+    /// digest, CONSTITUTION §3; the same for a dry run and the real run).
     pub report_sha256: Digest,
 }
 
@@ -769,8 +786,21 @@ impl<'a> ExportEnv<'a> {
 pub struct ExportOutput {
     /// The command result.
     pub report: ExportReport,
-    /// The journal record; `None` for a dry run, which commits nothing.
-    pub event: Option<ExportEvent>,
+    /// The record a real run commits. For a dry run it is the would-be record, equal to what
+    /// the same real run would commit (CORE.BUS.PIPE.STAGE dry runs return their events);
+    /// it is never journaled.
+    pub event: ExportEvent,
+}
+
+impl ExportOutput {
+    /// The record to journal: `None` for a dry run.
+    pub fn journal(&self) -> Option<&ExportEvent> {
+        if self.report.dry_run() {
+            None
+        } else {
+            Some(&self.event)
+        }
+    }
 }
 
 /// A prepared export: bytes written to a synced temp file next to the target (none for a
@@ -780,6 +810,7 @@ pub struct ExportOutput {
 pub struct PreparedExport {
     file: Option<AtomicWriter>,
     out: ExportOutput,
+    prepared_at: Instant,
 }
 
 impl PreparedExport {
@@ -788,14 +819,33 @@ impl PreparedExport {
         &self.out.report
     }
 
-    /// The record to journal; `None` for a dry run.
-    pub fn event(&self) -> Option<&ExportEvent> {
-        self.out.event.as_ref()
+    /// The record (the would-be record for a dry run).
+    pub fn event(&self) -> &ExportEvent {
+        &self.out.event
     }
 
-    /// Moves the file into place (nothing to do for a dry run). Fails `target_exists` if a
-    /// target appeared since preparing, or `io`; the temp file is then removed.
+    /// The record to journal: `None` for a dry run.
+    pub fn journal(&self) -> Option<&ExportEvent> {
+        self.out.journal()
+    }
+
+    /// Test seam: makes the prepared export look `by` older. Exists only with the
+    /// `test-hooks` feature.
+    #[cfg(any(test, feature = "test-hooks"))]
+    #[doc(hidden)]
+    pub fn age_by(&mut self, by: Duration) {
+        if let Some(t) = self.prepared_at.checked_sub(by) {
+            self.prepared_at = t;
+        }
+    }
+
+    /// Moves the file into place (nothing to do for a dry run). Fails `prepared_expired`
+    /// past [`MAX_PREPARED_AGE`], `target_exists` if a target appeared since preparing, or
+    /// `io`; the temp file is then removed.
     pub fn place(self) -> Result<ExportOutput, ExportError> {
+        if self.prepared_at.elapsed() > MAX_PREPARED_AGE {
+            return Err(ExportError::PreparedExpired);
+        }
         if let Some(w) = self.file {
             let r = w.commit()?;
             if r.sha256 != *self.out.report.sha256() || r.bytes != self.out.report.bytes() {
@@ -817,6 +867,39 @@ impl PreparedExport {
 struct Authority {
     force_allowed: bool,
     record_as: Principal,
+}
+
+/// True for a name holding `~` followed by a digit: the shape of a Windows 8.3 short-name
+/// alias (`LONGNA~1.STE`). Refused on every platform, as CORE.BUS.POL.FS does for handles,
+/// so a target means the same everywhere and can never alias a longer name.
+fn short_name_alias(name: &str) -> bool {
+    name.as_bytes().windows(2).any(|w| w[0] == b'~' && w[1].is_ascii_digit())
+}
+
+/// The requested components of a target text: a handle's relative path, or a raw path's
+/// normal components.
+fn requested_components(target: &str) -> Vec<String> {
+    match RootHandle::parse(target) {
+        Ok(h) => h.rel.components().to_vec(),
+        Err(_) => std::path::Path::new(target)
+            .components()
+            .filter_map(|c| match c {
+                std::path::Component::Normal(n) => Some(n.to_string_lossy().into_owned()),
+                _ => None,
+            })
+            .collect(),
+    }
+}
+
+/// The record's report digest: SHA-256 of the canonical report without its `dry_run` flag,
+/// so a dry run's would-be record equals the real one.
+fn report_digest(report: &ExportReport) -> Result<Digest, ExportError> {
+    let mut v = report.to_cvalue();
+    if let CValue::Obj(o) = &mut v {
+        o.remove("dry_run");
+    }
+    let bytes = fid_canon::to_canonical_bytes(&v).map_err(|_| ExportError::Internal("report is not canonical"))?;
+    Ok(Digest::from_bytes(Sha256::digest(&bytes).into()))
 }
 
 /// The report location of a target text, as given (normal form for a handle).
@@ -903,14 +986,15 @@ fn prepare_with<W: Writer + ?Sized>(
         // A human's raw path: the same component rule as a handle's.
         return Err(IoError::PathOutsideRoot.into());
     }
+    if requested_components(&params.target).iter().any(|c| short_name_alias(c)) {
+        return Err(IoError::PathOutsideRoot.into());
+    }
     check_extension(env.registry, &format, name, params.force_extension)?;
 
     let wopts = WriteOptions { overwrite: params.overwrite, max_bytes: env.max_bytes };
-    AtomicWriter::check(&target, wopts).map_err(|e| match e {
-        IoError::Io { kind: io::ErrorKind::InvalidInput | io::ErrorKind::PermissionDenied, .. } => {
-            ExportError::TargetProtected(e)
-        }
-        e => ExportError::Io(e),
+    AtomicWriter::check_classified(&target, wopts).map_err(|r| match r {
+        TargetRefusal::Protected(e) => ExportError::TargetProtected(e),
+        TargetRefusal::Other(e) => ExportError::Io(e),
     })?;
 
     let mut report = ReportBuilder::new();
@@ -928,27 +1012,23 @@ fn prepare_with<W: Writer + ?Sized>(
     };
 
     let report = report.finish_export(format.clone(), location.clone(), receipt.sha256, receipt.bytes, params.dry_run);
-    let report_sha256 = report.digest().map_err(|_| ExportError::Internal("report is not canonical"))?;
-    let event = if params.dry_run {
-        None
-    } else {
-        Some(ExportEvent {
-            command: command.clone(),
-            principal: auth.record_as,
-            source: params.source.clone(),
-            target: location,
-            format,
-            writer_version: writer.version().clone(),
-            options,
-            overwrite: params.overwrite,
-            force_extension: params.force_extension,
-            sha256: receipt.sha256,
-            bytes: receipt.bytes,
-            lossy: report.lossy().clone(),
-            report_sha256,
-        })
+    let report_sha256 = report_digest(&report)?;
+    let event = ExportEvent {
+        command: command.clone(),
+        principal: auth.record_as,
+        source: params.source.clone(),
+        target: location,
+        format,
+        writer_version: writer.version().clone(),
+        options,
+        overwrite: params.overwrite,
+        force_extension: params.force_extension,
+        sha256: receipt.sha256,
+        bytes: receipt.bytes,
+        lossy: report.lossy().clone(),
+        report_sha256,
     };
-    Ok(PreparedExport { file, out: ExportOutput { report, event } })
+    Ok(PreparedExport { file, out: ExportOutput { report, event }, prepared_at: Instant::now() })
 }
 
 fn caller(env: &ExportEnv<'_>) -> Authority {
@@ -997,8 +1077,12 @@ pub fn run_export<W: Writer + ?Sized>(
 
 /// Exact-mode replay of a recorded export: the same command, writer and parameters
 /// (`overwrite` and `force_extension` included) run again against `env` (an empty export
-/// root for AC-6). A recorded `force_extension` is honoured only when the recorded principal
-/// is a human. `IDENTICAL` when the new record equals the recorded one (same bytes, digest,
+/// root for AC-6).
+///
+/// **Trust:** `event` must be a record read from the verified journal (CORE.JRN chain
+/// checked), never one supplied by a caller: the record's `principal` decides what replay
+/// may do. A recorded `force_extension` is honoured only when the recorded principal is a
+/// human **and** the replaying principal (`env.principal`) is a human too. `IDENTICAL` when the new record equals the recorded one (same bytes, digest,
 /// lossy list, writer version and report), `DIVERGENT` otherwise; `NOT_REPLAYABLE` for
 /// another command, another format, a human's raw path, or a forced extension recorded for
 /// a principal that may not force it.
@@ -1013,7 +1097,7 @@ pub fn replay_export<W: Writer + ?Sized>(
     if event.command != *command || event.format != *writer.format() {
         return Ok(ReplayOutcome::NotReplayable);
     }
-    if event.force_extension && event.principal != Principal::Human {
+    if event.force_extension && (event.principal != Principal::Human || env.principal != Principal::Human) {
         return Ok(ReplayOutcome::NotReplayable);
     }
     let Some(handle) = event.target.as_handle() else { return Ok(ReplayOutcome::NotReplayable) };
@@ -1027,10 +1111,7 @@ pub fn replay_export<W: Writer + ?Sized>(
     params.force_extension = event.force_extension;
     let auth = Authority { force_allowed: event.principal == Principal::Human, record_as: event.principal };
     let out = run_with(env, auth, command, writer, &params, source)?;
-    Ok(match out.event {
-        Some(e) if e == *event => ReplayOutcome::Identical,
-        _ => ReplayOutcome::Divergent,
-    })
+    Ok(if out.event == *event { ReplayOutcome::Identical } else { ReplayOutcome::Divergent })
 }
 
 /// The command ID `export.<format>@1` of a per-format command: the format ID with `-`

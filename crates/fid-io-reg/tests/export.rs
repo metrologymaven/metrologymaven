@@ -266,7 +266,7 @@ fn ac1_export_writes_the_file_and_one_event_holds_its_digest() {
     assert_eq!(out.report.sha256().as_str(), sha_of(&file));
     assert_eq!(out.report.canonical_bytes().unwrap(), exp.get("stride1", "report").as_bytes());
 
-    let event = out.event.unwrap();
+    let event = out.journal().cloned().unwrap();
     assert_eq!(event.command.as_str(), EXPORT_FILE);
     assert_eq!(event.sha256.as_str(), sha_of(&file));
     assert_eq!(event.to_json().unwrap(), exp.get("stride1", "event").as_bytes());
@@ -279,7 +279,7 @@ fn ac1_export_writes_the_file_and_one_event_holds_its_digest() {
     let out3 =
         generic(&w).run_value(&env3, &params_json(",\"options\":{\"stride\":3}", "root://out/a.ftp"), &src).unwrap();
     assert_eq!(sha_of(&fs::read(t3.out().join("a.ftp")).unwrap()), exp.get("stride3", "sha256"));
-    assert_eq!(out3.event.unwrap().to_json().unwrap(), exp.get("stride3", "event").as_bytes());
+    assert_eq!(out3.journal().cloned().unwrap().to_json().unwrap(), exp.get("stride3", "event").as_bytes());
 }
 
 #[test]
@@ -293,7 +293,12 @@ fn ac2_dry_run_reports_the_same_digest_and_leaves_the_root_unchanged() {
     assert_eq!(out.report.sha256().as_str(), exp.get("stride1", "sha256"));
     assert!(out.report.dry_run());
     assert_eq!(out.report.canonical_bytes().unwrap(), exp.get("stride1", "dry_report").as_bytes());
-    assert!(out.event.is_none(), "a dry run journals nothing");
+    assert!(out.journal().is_none(), "a dry run journals nothing");
+    // ... but returns the would-be record, equal to the real run's (STAGE dry runs); the
+    // reference record is a script's, this run an agent's.
+    assert_eq!(out.event.principal, Principal::Agent);
+    let as_script = ExportEvent { principal: Principal::Script, ..out.event.clone() };
+    assert_eq!(as_script.to_json().unwrap(), exp.get("stride1", "event").as_bytes());
     assert_eq!(listing(&t.out()), ["keep.txt"]);
     assert_eq!(fs::read(t.out().join("keep.txt")).unwrap(), b"keep");
 
@@ -455,7 +460,7 @@ fn ac5_an_agent_with_a_raw_path_gets_raw_path_forbidden() {
     let human = ExportEnv::new(&reg, &roots, Principal::Human);
     let out = generic(&w).run_value(&human, &params_json("", &raw), &src).unwrap();
     assert_eq!(listing(&t.out()), ["a.ftp"]);
-    let event = out.event.unwrap();
+    let event = out.journal().cloned().unwrap();
     assert!(event.target.as_handle().is_none());
     assert_eq!(ExportEvent::from_json(&event.to_json().unwrap()).unwrap(), event);
     fs::remove_file(t.out().join("a.ftp")).unwrap();
@@ -1120,23 +1125,29 @@ fn a_human_forced_export_replays_identically_and_only_for_a_human_record() {
     let human = ExportEnv::new(&reg, &roots, Principal::Human);
     let out =
         generic(&w).run_value(&human, &params_json(",\"force_extension\":true", "root://out/a.stl"), &src).unwrap();
-    let event = out.event.unwrap();
+    let event = out.journal().cloned().unwrap();
     assert!(event.force_extension && !event.overwrite);
     assert_eq!(event.principal, Principal::Human);
     assert_eq!(ExportEvent::from_json(&event.to_json().unwrap()).unwrap(), event);
 
-    // Replayed by a script into an empty root: the recorded human's force is honoured.
+    // Replayed by a human into an empty root: the recorded human's force is honoured.
     let t2 = Tmp::new("force2");
     let roots2 = t2.roots();
     let script = ExportEnv::new(&reg, &roots2, Principal::Script);
-    assert_eq!(generic(&w).replay(&script, &event, &src).unwrap(), ReplayOutcome::Identical);
+    let human2 = ExportEnv::new(&reg, &roots2, Principal::Human);
+    // A script or agent replaying a forced record: not replayable, nothing written.
+    assert_eq!(generic(&w).replay(&script, &event, &src).unwrap(), ReplayOutcome::NotReplayable);
+    let agent2 = ExportEnv::new(&reg, &roots2, Principal::Agent);
+    assert_eq!(generic(&w).replay(&agent2, &event, &src).unwrap(), ReplayOutcome::NotReplayable);
+    assert!(listing(&t2.out()).is_empty());
+    assert_eq!(generic(&w).replay(&human2, &event, &src).unwrap(), ReplayOutcome::Identical);
     assert_eq!(listing(&t2.out()), ["a.stl"]);
     // A record claiming a forced extension for a script is not replayable.
     let t3 = Tmp::new("force3");
     let roots3 = t3.roots();
-    let script3 = ExportEnv::new(&reg, &roots3, Principal::Script);
+    let human3 = ExportEnv::new(&reg, &roots3, Principal::Human);
     let forged = ExportEvent { principal: Principal::Script, ..event.clone() };
-    assert_eq!(generic(&w).replay(&script3, &forged, &src).unwrap(), ReplayOutcome::NotReplayable);
+    assert_eq!(generic(&w).replay(&human3, &forged, &src).unwrap(), ReplayOutcome::NotReplayable);
     assert!(listing(&t3.out()).is_empty());
     // A recorded overwrite is replayed too: over an existing file it replaces it.
     let t4 = Tmp::new("force4");
@@ -1144,7 +1155,7 @@ fn a_human_forced_export_replays_identically_and_only_for_a_human_record() {
     let roots4 = t4.roots();
     let env4 = ExportEnv::new(&reg, &roots4, Principal::Script);
     let out = generic(&w).run_value(&env4, &params_json(",\"overwrite\":true", "root://out/a.ftp"), &src).unwrap();
-    let ev = out.event.unwrap();
+    let ev = out.journal().cloned().unwrap();
     assert!(ev.overwrite);
     assert_eq!(generic(&w).replay(&env4, &ev, &src).unwrap(), ReplayOutcome::Identical);
 }
@@ -1160,7 +1171,7 @@ fn prepare_writes_only_a_temp_file_and_place_or_discard_finishes_it() {
 
     let prepared = f.prepare(&env, &p, &src).unwrap();
     // The record and its report digest exist before anything is placed.
-    let ev = prepared.event().unwrap().clone();
+    let ev = prepared.journal().unwrap().clone();
     assert_eq!(ev.to_json().unwrap(), exp.get("stride1", "event").as_bytes());
     assert_eq!(prepared.report().sha256().as_str(), exp.get("stride1", "sha256"));
     let names = listing(&t.out());
@@ -1178,7 +1189,7 @@ fn prepare_writes_only_a_temp_file_and_place_or_discard_finishes_it() {
     fs::remove_file(t.out().join("a.ftp")).unwrap();
 
     let out = f.prepare(&env, &p, &src).unwrap().place().unwrap();
-    assert_eq!(out.event.unwrap(), ev);
+    assert_eq!(out.journal().cloned().unwrap(), ev);
     assert_eq!(sha_of(&fs::read(t.out().join("a.ftp")).unwrap()), exp.get("stride1", "sha256"));
 
     // A bus-level dry run becomes the export's own dry run: no file, not even a temp one.
@@ -1186,9 +1197,10 @@ fn prepare_writes_only_a_temp_file_and_place_or_discard_finishes_it() {
     p2.apply_bus_dry_run(true);
     assert!(p2.dry_run);
     let prepared = f.prepare(&env, &p2, &src).unwrap();
-    assert!(prepared.event().is_none());
+    assert!(prepared.journal().is_none());
+    assert_eq!(prepared.event().sha256.as_str(), ev.sha256.as_str());
     assert_eq!(listing(&t.out()), ["a.ftp"]);
-    assert!(prepared.place().unwrap().event.is_none());
+    assert!(prepared.place().unwrap().journal().is_none());
     assert_eq!(listing(&t.out()), ["a.ftp"]);
     p2.apply_bus_dry_run(false);
     assert!(p2.dry_run, "a bus flag never clears the export's own dry run");
@@ -1419,4 +1431,100 @@ fn the_conformance_kit_catches_broken_writers() {
         conformance::check(&generic(&w), &export_file_def(&k.reg).unwrap(), &src, &fx).unwrap_err().step,
         "setup"
     );
+}
+
+// ---------------------------------------------------------------------------------------
+// 8.3 short names, dry-run records, prepared age
+
+#[test]
+fn short_name_aliases_are_refused() {
+    let t = Tmp::new("alias");
+    let (reg, roots, src, w) = (registry(), t.roots(), points(), test_points());
+    let env = ExportEnv::new(&reg, &roots, Principal::Human);
+    fs::write(t.out().join("longfilename.ftp"), b"keep").unwrap();
+    // The 8.3 shape is refused on every platform, as a handle and as a raw path, dry run too.
+    let dir = t.out().to_string_lossy().replace('\\', "/");
+    for target in
+        ["root://out/LONGFI~1.FTP".to_string(), "root://out/a~1.ftp".to_string(), format!("{dir}/LONGFI~1.FTP")]
+    {
+        for extra in [",\"overwrite\":true", ",\"overwrite\":true,\"dry_run\":true", ""] {
+            let e = generic(&w).run_value(&env, &params_json(extra, &target), &src).unwrap_err();
+            assert_eq!(e, ExportError::Io(IoError::PathOutsideRoot), "{target} {extra}");
+            assert_eq!(e.bus_code(), ("policy", "outside_root"));
+        }
+    }
+    assert_eq!(fs::read(t.out().join("longfilename.ftp")).unwrap(), b"keep");
+    // A name in another ASCII case is the same entry on a case-insensitive file system.
+    // (On a case-sensitive one it is a new file.) Either way the export succeeds.
+    generic(&w).run_value(&env, &params_json(",\"overwrite\":true", "root://out/LongFileName.ftp"), &src).unwrap();
+}
+
+/// The reviewer's reproduction: on Windows, `overwrite` through the real 8.3 alias of an
+/// existing long name must not replace it, even past the lexical rule (the listing check).
+#[cfg(windows)]
+#[test]
+fn a_real_8dot3_alias_never_replaces_the_long_name() {
+    let t = Tmp::new("alias83");
+    fs::write(t.out().join("longfilename.ftp"), b"keep").unwrap();
+    // Ask Windows for the short name (none when 8.3 names are off on this volume).
+    let listing_x = std::process::Command::new("cmd").args(["/C", "dir", "/X"]).current_dir(t.out()).output().unwrap();
+    let text = String::from_utf8_lossy(&listing_x.stdout).to_string();
+    let short = text
+        .lines()
+        .filter(|l| l.ends_with("longfilename.ftp"))
+        .flat_map(|l| l.split_whitespace())
+        .find(|w| w.contains('~'))
+        .map(str::to_string);
+    let (reg, roots, src, w) = (registry(), t.roots(), points(), test_points());
+    let env = ExportEnv::new(&reg, &roots, Principal::Human);
+    // The lexical rule refuses the alias shape whether or not the volume has short names.
+    let target = format!("root://out/{}", short.clone().unwrap_or_else(|| "LONGFI~1.FTP".to_string()));
+    let e = generic(&w).run_value(&env, &params_json(",\"overwrite\":true", &target), &src).unwrap_err();
+    assert_eq!(e, ExportError::Io(IoError::PathOutsideRoot));
+    // The listing check alone (as the atomic writer runs it): the alias resolves to an entry
+    // listed under another name, so the write path refuses it too.
+    if let Some(short) = short {
+        let set = t.roots();
+        let tgt = set.resolve_export(Principal::Human, &t.out().join(&short).to_string_lossy()).unwrap();
+        let e = fid_io_reg::AtomicWriter::check(&tgt, fid_io_reg::WriteOptions::overwrite(true)).unwrap_err();
+        assert_eq!(e, IoError::PathOutsideRoot);
+        let e = fid_io_reg::AtomicWriter::create(tgt, fid_io_reg::WriteOptions::overwrite(true)).unwrap_err();
+        assert_eq!(e, IoError::PathOutsideRoot);
+    }
+    assert_eq!(fs::read(t.out().join("longfilename.ftp")).unwrap(), b"keep");
+    assert_eq!(listing(&t.out()), ["longfilename.ftp"]);
+}
+
+#[test]
+fn a_dry_run_returns_the_record_a_real_run_commits() {
+    let (reg, src, w) = (registry(), points(), test_points());
+    for (name, extra) in [("dry-a", ""), ("dry-b", ",\"options\":{\"stride\":3}")] {
+        let t = Tmp::new(name);
+        let roots = t.roots();
+        let env = ExportEnv::new(&reg, &roots, Principal::Agent);
+        let dry = generic(&w)
+            .run_value(&env, &params_json(&format!("{extra},\"dry_run\":true"), "root://out/a.ftp"), &src)
+            .unwrap();
+        assert!(listing(&t.out()).is_empty());
+        let real = generic(&w).run_value(&env, &params_json(extra, "root://out/a.ftp"), &src).unwrap();
+        assert_eq!(dry.event, real.event);
+        assert_eq!(Some(&dry.event), real.journal());
+        assert_ne!(dry.report, real.report, "the reports differ only in dry_run");
+    }
+}
+
+#[test]
+fn a_prepared_export_too_old_is_not_placed() {
+    use fid_io_reg::env::export::MAX_PREPARED_AGE;
+    assert!(MAX_PREPARED_AGE < fid_io_reg::write::STALE_AFTER);
+    let t = Tmp::new("aged");
+    let (reg, roots, src, w) = (registry(), t.roots(), points(), test_points());
+    let env = ExportEnv::new(&reg, &roots, Principal::Script);
+    let p = ExportParams::from_value(&params_json("", "root://out/a.ftp"), true).unwrap();
+    let mut prepared = generic(&w).prepare(&env, &p, &src).unwrap();
+    prepared.age_by(MAX_PREPARED_AGE + std::time::Duration::from_secs(1));
+    let e = prepared.place().unwrap_err();
+    assert_eq!(e, ExportError::PreparedExpired);
+    assert_eq!(e.bus_code(), ("cancelled", "timeout"));
+    assert!(listing(&t.out()).is_empty(), "the temp file is removed");
 }
