@@ -72,7 +72,7 @@ fn call(class: SideEffect, n: u64) -> EntryDraft {
         reason: None,
         human_assertion: None,
         body: DraftBody::Command(CommandDraft {
-            id: "test.read@1".to_string(),
+            id: "test.read".to_string(),
             major: 1,
             class,
             determinism: Determinism::D0,
@@ -243,7 +243,7 @@ fn ac2_recording_gates_r0_calls() {
     match &h["command"] {
         CValue::Obj(c) => {
             assert_eq!(s(c, "class"), "R0");
-            assert_eq!(s(c, "id"), "test.read@1");
+            assert_eq!(s(c, "id"), "test.read");
         }
         other => panic!("command {other:?}"),
     }
