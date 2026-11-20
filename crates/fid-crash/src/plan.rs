@@ -8,7 +8,7 @@
 use std::fmt;
 
 /// One kill: its number in the run (from 0) and the delay, in microseconds, between the
-/// writer reporting ready and the kill.
+/// writer reporting ready (or, see [`KillInstant::from_spawn`], being spawned) and the kill.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct KillInstant {
     pub kill: u64,
@@ -22,6 +22,14 @@ impl fmt::Display for KillInstant {
 }
 
 impl KillInstant {
+    /// Whether the delay is counted from the writer's spawn rather than from its `READY`
+    /// line: every fourth kill (kill numbers 3, 7, 11, ...), so kills also land in the
+    /// writer's start-up (store open, WAL recovery, lock takeover). A pure function of the
+    /// kill number, so a printed instant reproduces with the same reference point.
+    pub fn from_spawn(&self) -> bool {
+        self.kill % 4 == 3
+    }
+
     /// Parses `<kill>:<delay_us>`, the form [`KillInstant`]'s `Display` prints.
     pub fn parse(s: &str) -> Option<KillInstant> {
         let (k, d) = s.split_once(':')?;

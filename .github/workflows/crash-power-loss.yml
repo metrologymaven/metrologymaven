@@ -5,6 +5,7 @@ name: crash-power-loss
 # (see crates/fid-crash/src/power.rs). 200 power cuts with the real writer must pass every
 # check; the self-test writer that commits a row before flushing its blob must be caught with
 # a missing or corrupt blob. Nightly, on demand, and on PRs that touch the harness or the store.
+# This job is the only evidence for REQ-004 and AC-3; it is path-filtered and not a required check.
 on:
   schedule:
     - cron: "17 3 * * *"
@@ -25,11 +26,13 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
           toolchain: stable
       - name: Build the harness with the self-test writers
-        run: cargo build --locked --release -p fid-crash --features fault-inject
+        run: cargo build --locked --release -p fid-crash --features fault-inject,bus-errors
       - name: Flakey device with ext4
         shell: bash
         run: |
@@ -46,21 +49,31 @@ jobs:
           sudo mkfs.ext4 -q /dev/mapper/fidcrash
           sudo mkdir -p /mnt/fidcrash
           sudo mount /dev/mapper/fidcrash /mnt/fidcrash
+          # The harness runs as the runner user; only its dmsetup, mount, umount and sync calls
+          # use sudo (crates/fid-crash/src/power.rs).
+          sudo chown "$(id -u):$(id -g)" /mnt/fidcrash
           echo "FLAKEY_DEV=$dev" >> "$GITHUB_ENV"
           echo "FLAKEY_SECTORS=$sectors" >> "$GITHUB_ENV"
       - name: 200 power cuts with the real writer pass (REQ-004)
         shell: bash
         run: |
-          sudo target/release/fid-crash run --power-loss --dm-name fidcrash --dm-dev "$FLAKEY_DEV" \
+          target/release/fid-crash run --power-loss --dm-name fidcrash --dm-dev "$FLAKEY_DEV" \
             --dm-sectors "$FLAKEY_SECTORS" --mount /mnt/fidcrash --seed 1 --kills 200
       - name: Row before blob flush is caught (AC-3)
         shell: bash
         run: |
           set +e
-          out=$(sudo target/release/fid-crash run --mode row-before-blob-flush --power-loss --dm-name fidcrash \
+          out=$(target/release/fid-crash run --mode row-before-blob-flush --power-loss --dm-name fidcrash \
             --dm-dev "$FLAKEY_DEV" --dm-sectors "$FLAKEY_SECTORS" --mount /mnt/fidcrash --seed 1 --kills 200)
           code=$?
           set -e
           echo "$out"
           test "$code" -eq 1
           echo "$out" | grep -Eq '^FAIL blob_(missing|corrupt): .*\(seed 1, instant [0-9]+:[0-9]+\)$'
+      - name: Tear down the flakey device
+        if: always()
+        shell: bash
+        run: |
+          sudo umount /mnt/fidcrash || true
+          sudo dmsetup remove fidcrash || true
+          if [ -n "${FLAKEY_DEV:-}" ]; then sudo losetup -d "$FLAKEY_DEV" || true; fi

@@ -122,32 +122,120 @@ fn failures_map_to_v3_reasons() {
     }
 }
 
-/// Test hooks stay out of normal builds: no manifest in the workspace enables `fault-inject`
-/// or fid-store's `test-probe` outside `[dev-dependencies]`.
-#[test]
-fn fault_injection_is_test_only() {
-    let crates = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
-    let mut checked = 0;
-    for e in std::fs::read_dir(&crates).unwrap() {
-        let manifest = e.unwrap().path().join("Cargo.toml");
-        let Ok(text) = std::fs::read_to_string(&manifest) else { continue };
-        checked += 1;
-        let mut section = String::new();
-        for line in text.lines() {
-            let t = line.trim();
-            if t.starts_with('[') {
-                section = t.to_string();
-                continue;
-            }
-            if t.starts_with('#') || !section.contains("dependencies") || section.contains("dev-dependencies") {
-                continue;
-            }
-            assert!(
-                !t.contains("fault-inject") && !t.contains("test-probe"),
-                "{}: {section} enables a test hook: {t}",
-                manifest.display()
-            );
+/// The test hooks: fid-store's commit probe and this crate's feature that forwards it, each
+/// with the crate whose `[features]` table may declare it.
+const HOOKS: [(&str, &str); 2] = [("test-probe", "fid-store"), ("fault-inject", "fid-crash")];
+
+/// The table a TOML line opens, without brackets or quotes (`[[bin]]` gives `bin`).
+fn header(line: &str) -> Option<String> {
+    let t = line.trim();
+    if !t.starts_with('[') {
+        return None;
+    }
+    let inner = t.trim_start_matches('[');
+    let end = inner.find(']')?;
+    Some(inner[..end].trim().replace([' ', '"', '\''], ""))
+}
+
+fn is_dev_section(section: &str) -> bool {
+    section == "dev-dependencies"
+        || section.starts_with("dev-dependencies.")
+        || (section.starts_with("target.") && section.contains(".dev-dependencies"))
+}
+
+/// Lines of the manifest of crate `owner` that name a test hook outside a dev-dependency
+/// table. The only other place allowed is the owning crate's `[features]` table, on the line
+/// that declares the hook itself (`test-probe = []`, `fault-inject = ["fid-store/test-probe"]`).
+fn violations(text: &str, owner: &str) -> Vec<String> {
+    let mut section = String::new();
+    let mut out = Vec::new();
+    for (i, line) in text.lines().enumerate() {
+        if let Some(h) = header(line) {
+            section = h;
+            continue;
+        }
+        let code = line.split('#').next().unwrap_or("");
+        if !HOOKS.iter().any(|(h, _)| code.contains(h)) {
+            continue;
+        }
+        let declaration = section == "features"
+            && HOOKS.iter().any(|(h, o)| {
+                *o == owner && code.trim_start().strip_prefix(h).is_some_and(|r| r.trim_start().starts_with('='))
+            });
+        if !(is_dev_section(&section) || declaration) {
+            out.push(format!("line {}: [{section}] {}", i + 1, line.trim()));
         }
     }
-    assert!(checked > 10);
+    out
+}
+
+fn manifests(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+    for e in std::fs::read_dir(dir).unwrap() {
+        let p = e.unwrap().path();
+        let name = p.file_name().unwrap().to_string_lossy().to_string();
+        if p.is_dir() {
+            if name != "target" && !name.starts_with('.') {
+                manifests(&p, out);
+            }
+        } else if name == "Cargo.toml" {
+            out.push(p);
+        }
+    }
+}
+
+/// Test hooks stay out of normal builds: no manifest of the workspace (the root with its
+/// `[workspace.dependencies]`, every crate, nested manifests such as `fuzz/`, vendored
+/// crates) enables `fault-inject` or fid-store's `test-probe` outside `[dev-dependencies]`,
+/// including through another crate's `[features]`. CI also checks the resolved release
+/// graph (`cargo tree -e normal,build -i fid-store`, rust.yml).
+#[test]
+fn fault_injection_is_test_only() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut files = vec![root.join("Cargo.toml")];
+    manifests(&root.join("crates"), &mut files);
+    manifests(&root.join("vendor"), &mut files);
+    assert!(files.len() > 50, "found only {} manifests", files.len());
+    assert!(files.iter().any(|f| f.parent().is_some_and(|d| d.ends_with("fuzz"))), "no nested fuzz manifest seen");
+    let mut bad = Vec::new();
+    let mut dev_uses = 0;
+    for f in &files {
+        let text = std::fs::read_to_string(f).unwrap();
+        let owner = f.parent().and_then(|d| d.file_name()).map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+        for v in violations(&text, &owner) {
+            bad.push(format!("{}: {v}", f.display()));
+        }
+        dev_uses += text.lines().filter(|l| HOOKS.iter().any(|(h, _)| l.contains(h)) && l.contains("features")).count();
+    }
+    assert!(bad.is_empty(), "test hooks enabled outside [dev-dependencies]:\n{}", bad.join("\n"));
+    assert!(dev_uses >= 2, "the scan saw the known dev-dependency uses");
+}
+
+#[test]
+fn the_hook_scan_catches_every_non_dev_form() {
+    let bad = [
+        "[dependencies]\nfid-store = { path = \"x\", features = [\"test-probe\"] }\n",
+        "[dependencies.fid-store]\npath = \"x\"\nfeatures = [\"test-probe\"]\n",
+        "[target.'cfg(unix)'.dependencies]\nfid-crash = { path = \"x\", features = [\"fault-inject\"] }\n",
+        "[build-dependencies]\nfid-crash = { path = \"x\", features = [\"fault-inject\"] }\n",
+        "[workspace.dependencies]\nfid-store = { path = \"x\", features = [\"test-probe\"] }\n",
+        "[features]\ndefault = [\"fid-store/test-probe\"]\n",
+        "[features]\nhooks = [\"fid-crash/fault-inject\"]\n",
+    ];
+    for text in bad {
+        assert_eq!(violations(text, "fid-other").len(), 1, "{text}");
+    }
+    let good = [
+        "[dev-dependencies]\nfid-store = { path = \"x\", features = [\"test-probe\"] }\n",
+        "[dev-dependencies.fid-crash]\nfeatures = [\"fault-inject\"]\n",
+        "[target.'cfg(unix)'.dev-dependencies]\nfid-store = { path = \"x\", features = [\"test-probe\"] }\n",
+        "[dependencies]\n# a comment naming test-probe\nfid-store = { path = \"x\" }\n",
+    ];
+    for text in good {
+        assert!(violations(text, "fid-other").is_empty(), "{text}");
+    }
+    assert!(violations("[features]\ntest-probe = []\n", "fid-store").is_empty());
+    assert!(violations("[features]\nfault-inject = [\"fid-store/test-probe\"]\n", "fid-crash").is_empty());
+    assert_eq!(violations("[features]\ntest-probe = []\n", "fid-other").len(), 1);
+    assert_eq!(violations("[features]\ndefault = [\"fault-inject\"]\n", "fid-crash").len(), 1);
+    assert_eq!(violations("[features]\ndefault = [\"test-probe\"]\n", "fid-store").len(), 1);
 }

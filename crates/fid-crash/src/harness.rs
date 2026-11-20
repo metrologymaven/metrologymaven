@@ -3,7 +3,7 @@
 //! Protocol on the writer's stdout, one line each: `READY <next seq>` once the store is open,
 //! `ACK <seq>` after each commit returned success (flushed before the next commit starts),
 //! optional adapter lines, and `DONE` if the writer reaches its commit budget. The parent waits
-//! for `READY`, sleeps the seeded delay of the kill, kills the writer (`SIGKILL` on Unix,
+//! for `READY` (every fourth kill: only for the spawn), sleeps the seeded delay of the kill, kills the writer (`SIGKILL` on Unix,
 //! `TerminateProcess` on Windows, both through `std::process::Child::kill`), reaps it, reads
 //! every `ACK` it wrote before dying, optionally cuts power, and checks the reopened store.
 
@@ -157,6 +157,25 @@ impl Drop for Writer {
     }
 }
 
+/// Files of a store that opening it for writing can change: the database and its companions
+/// and the lock record. Blobs are only read by the check.
+const MUTABLE_FILES: [&str; 5] = ["project.db", "project.db-wal", "project.db-shm", "lock", "format"];
+
+/// Copies the files of `root` that a write open may change into `image` (replacing it).
+fn snapshot(root: &Path, image: &Path) -> Result<(), String> {
+    let _ = std::fs::remove_dir_all(image);
+    std::fs::create_dir_all(image).map_err(|e| format!("{}: {e}", image.display()))?;
+    for name in MUTABLE_FILES {
+        let from = root.join(name);
+        match std::fs::copy(&from, image.join(name)) {
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(format!("{}: {e}", from.display())),
+        }
+    }
+    Ok(())
+}
+
 /// A harness run.
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -230,6 +249,7 @@ pub fn run(config: &Config, adapter: &dyn CrashAdapter, log: &mut dyn Write) -> 
         let fail = |f: CrashFailure, log: &mut dyn Write| {
             let f = f.at(config.seed, *instant);
             let _ = writeln!(log, "FAIL {f}");
+            #[cfg(feature = "bus-errors")]
             let _ = writeln!(log, "bus error: {}", f.to_bus_error());
             let _ = writeln!(log, "reproduce: --seed {} --instant {instant}", config.seed);
             f
@@ -249,7 +269,11 @@ pub fn run(config: &Config, adapter: &dyn CrashAdapter, log: &mut dyn Write) -> 
             summary.stores += 1;
         }
         let mut w = Writer::spawn(&config.writer, &root).map_err(|e| fail(refused(e), log))?;
-        w.wait_for("READY").map_err(|e| fail(refused(e), log))?;
+        // Every fourth kill is timed from the spawn, so it can land while the writer is still
+        // starting: opening the store, recovering the WAL, taking over the stale lock.
+        if !instant.from_spawn() {
+            w.wait_for("READY").map_err(|e| fail(refused(e), log))?;
+        }
         std::thread::sleep(Duration::from_micros(instant.delay_us));
         let (acks, _) = w.kill().map_err(|e| fail(refused(e), log))?;
         if let Some(p) = &config.power {
@@ -257,7 +281,30 @@ pub fn run(config: &Config, adapter: &dyn CrashAdapter, log: &mut dyn Write) -> 
         }
         summary.acked += acks.len() as u64;
         acked.extend(acks);
-        last_n = adapter.check(&root, &acked).map_err(|f| fail(f, log))?;
+        // The check opens the store for writing (WAL recovery, checkpoint, lock takeover), so
+        // the post-crash database files are copied first and kept if the check fails.
+        let image = config.work_dir.join("post-crash");
+        let saved = snapshot(&root, &image);
+        match adapter.check(&root, &acked) {
+            Ok(n) => last_n = n,
+            Err(f) => {
+                let f = fail(f, log);
+                match saved {
+                    Ok(()) => {
+                        let _ = writeln!(
+                            log,
+                            "post-crash database files kept in {} (blobs are in {}, which the check only reads)",
+                            image.display(),
+                            root.display()
+                        );
+                    }
+                    Err(e) => {
+                        let _ = writeln!(log, "post-crash database files could not be kept: {e}");
+                    }
+                }
+                return Err(f);
+            }
+        }
         summary.kills += 1;
     }
     summary.recovered += last_n;

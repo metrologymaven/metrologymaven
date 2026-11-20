@@ -9,11 +9,15 @@
 //! replays its journal), which is what the disk holds after a power cut. This is the recipe
 //! of the xfstests `dmflakey` helpers [unverified that every runner kernel ships dm-flakey].
 //!
-//! The commands (`dmsetup`, `mount`, `umount`, `sync`) need root; the CI job runs the harness
-//! with `sudo`. Windows and macOS have no power-loss mode (stated in the PR and NODE.md).
+//! Only the commands that need root (`dmsetup`, `mount`, `umount`, `sync`) run with
+//! privileges, through `sudo -n`, each bounded by [`COMMAND_TIMEOUT`]; the harness and the
+//! writer run as the invoking user on a mount it owns. Windows and macOS have no power-loss
+//! mode (NODE.md, Open questions).
 
+use std::io::Read;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
 
 /// The device-mapper target and the mount point the store lives on.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,13 +32,43 @@ pub struct PowerCut {
     pub mount: PathBuf,
 }
 
+/// Longest one privileged command may run before it is killed and the cut fails.
+pub const COMMAND_TIMEOUT: Duration = Duration::from_secs(60);
+
+/// Runs `sudo -n <program> <args>` with a [`COMMAND_TIMEOUT`]. Only these commands run with
+/// privileges; the harness itself runs as the invoking user.
 fn run(program: &str, args: &[&str]) -> Result<(), String> {
-    let out = Command::new(program).args(args).output().map_err(|e| format!("{program}: {e}"))?;
-    if out.status.success() {
-        Ok(())
-    } else {
-        Err(format!("{program} {args:?}: {} {}", out.status, String::from_utf8_lossy(&out.stderr).trim()))
+    let mut child = Command::new("sudo")
+        .arg("-n")
+        .arg(program)
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("sudo {program}: {e}"))?;
+    let start = Instant::now();
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) if start.elapsed() < COMMAND_TIMEOUT => std::thread::sleep(Duration::from_millis(20)),
+            Ok(None) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(format!("{program} {args:?}: no exit within {COMMAND_TIMEOUT:?}"));
+            }
+            Err(e) => return Err(format!("{program}: {e}")),
+        }
+    };
+    if status.success() {
+        return Ok(());
     }
+    let mut err = String::new();
+    if let Some(mut e) = child.stderr.take() {
+        // Bounded: the child has exited, so this reads what is left in the pipe.
+        let _ = (&mut e).take(4096).read_to_string(&mut err);
+    }
+    Err(format!("{program} {args:?}: {status} {}", err.trim()))
 }
 
 impl PowerCut {

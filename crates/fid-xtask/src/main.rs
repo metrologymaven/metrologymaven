@@ -326,8 +326,8 @@ fn gen_surfaces(args: &[String]) -> ExitCode {
 }
 
 /// CORE.STO.SQL.CRASH: `crash-harness [--seed N] [--kills N] [--power-loss ...]`. Runs
-/// `fid-crash run` (a `tool` crate that builds SQLite, so it is not linked into xtask), in
-/// release, with the same arguments and exit code.
+/// `fid-crash run` (a `test-support` crate that builds SQLite, so it is not linked into xtask),
+/// in release with its `bus-errors` feature, with the same arguments and exit code.
 fn crash_harness(args: &[String]) -> ExitCode {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
     let manifest = concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.toml");
@@ -340,6 +340,8 @@ fn crash_harness(args: &[String]) -> ExitCode {
             manifest,
             "-p",
             "fid-crash",
+            "--features",
+            "bus-errors",
             "--bin",
             "fid-crash",
             "--",

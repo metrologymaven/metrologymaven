@@ -1,6 +1,7 @@
 //! What a failed check reports (REQ-CORE.STO.SQL.CRASH-003, -005).
 
 use crate::plan::KillInstant;
+#[cfg(feature = "bus-errors")]
 use fid_bus::err::{BusError, Detail, InternalReason};
 use std::fmt;
 
@@ -60,7 +61,8 @@ impl CrashFailure {
     /// The failure as a bus error of the published catalogue (v3): a damaged or tampered
     /// store is `internal/storage`; an acknowledged commit that is gone is
     /// `internal/invariant_violated` (the store broke its own durability promise). Never a
-    /// success value: a refused store has no "ok" form.
+    /// success value: a refused store has no "ok" form. Needs the `bus-errors` feature.
+    #[cfg(feature = "bus-errors")]
     pub fn to_bus_error(&self) -> BusError {
         let reason = match self.kind {
             FailureKind::AckMissing => InternalReason::InvariantViolated,

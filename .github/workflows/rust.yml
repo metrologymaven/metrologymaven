@@ -139,6 +139,22 @@ jobs:
           fi
           control=$(cargo tree --workspace --target all -e normal,build,dev -i fid-bus -f '{p} {f}')
           echo "$control" | grep -q 'permit-test-hooks' || { echo "control run does not see the feature"; exit 1; }
+      - name: Release builds never enable the store's commit probe (CORE.STO.SQL.CRASH)
+        # `test-probe` compiles fid-store's CommitProbe, which can fail or hang a commit; only
+        # dev-dependencies may enable it (fid-store's own, and fid-crash's `fault-inject`). Same
+        # check as the egress hooks above: the release graph must not show it, the control run
+        # with dev-dependencies must. crates/fid-crash/tests/oracle.rs also scans the manifests.
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          release=$(cargo tree --workspace --target all -e normal,build -i fid-store -f '{p} {f}')
+          echo "$release" | head -n 1
+          echo "$release" | grep -q '^fid-store ' || { echo "fid-store is missing from the tree"; exit 1; }
+          if echo "$release" | grep -q 'test-probe'; then
+            echo "test-probe is enabled in a release build:"; echo "$release" | grep 'test-probe'; exit 1
+          fi
+          control=$(cargo tree --workspace --target all -e normal,build,dev -i fid-store -f '{p} {f}')
+          echo "$control" | grep -q 'test-probe' || { echo "control run does not see the feature"; exit 1; }
       - name: Dataset catalogue admission check via cargo xtask (ECO.DATA.CAT AC-1)
         run: cargo xtask datasets-check --catalogue fixtures/datasets/valid.toml --domains fixtures/datasets/domains.txt
       - name: Support matrix validates via cargo xtask (PLAT.MATRIX.FILE AC-1)

@@ -113,10 +113,10 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-timeline" = "tool"
 "fid-outreach" = "tool"
 "fid-platform" = "tool"
-# Crash and power-loss harness (CORE.STO.SQL.CRASH): test tooling over fid-store, fid-canon and fid-bus
-# (engine). Engine, not tool: its tests enable its own `fault-inject` feature through a dev-dependency
-# on itself, and nothing may depend on a tool crate. Nothing ships it.
-"fid-crash" = "engine"
+# Crash and power-loss harness (CORE.STO.SQL.CRASH): test support over fid-store and fid-canon (model),
+# usable as a dev-dependency by CORE.JRN.CHAIN and CORE.RPL.RECON.FOLD tests. Its optional `bus-errors`
+# feature adds fid-bus (engine); nothing ships it.
+"fid-crash" = "test-support"
 "fid-design" = "tool"
 "fid-design-pkg" = "model"
 "fid-eval-pred" = "model"
