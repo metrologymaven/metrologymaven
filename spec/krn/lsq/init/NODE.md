@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-fit]
+built_pr: 358
 satisfies: [REQ-KRN.LSQ-003, REQ-KRN.LSQ-008]
 covers: []
 depends_on: [KRN.LSQ.TRAIT, KRN.SOLV.MSTART, KRN.NUM.LA]
@@ -69,7 +70,7 @@ Cylinder, cone and torus fits are non-convex in the axis direction and converge 
 ## Open questions
 
 - The perturbation box and start count are placeholders; tune them on ORS partial-feature cases from `UNC` before freezing the algorithm version.
-- **As built (#TBD):** the leaf's own cylinder rule (16 fixed candidates) left a full cylinder 15 degrees off when its principal axes were mixed (length near sqrt(6) radii), the cylinder axis left cones 40 degrees off, and the plane fit left a fat quarter torus 30 degrees off, so REQ-001, -003 and -004 now include a pinned refinement and a cone and torus score (REQ-001, -003 and -004 amended). On the fixture every primary is within 0.3 degrees, 90-degree coverage included. `AxialStart` wraps the `StartSpec` with the frame its parameters refer to.
+- **As built (#358):** the leaf's own cylinder rule (16 fixed candidates) left a full cylinder 15 degrees off when its principal axes were mixed (length near sqrt(6) radii), the cylinder axis left cones 40 degrees off, and the plane fit left a fat quarter torus 30 degrees off, so REQ-001, -003 and -004 now include a pinned refinement and a cone and torus score (REQ-001, -003 and -004 amended). On the fixture every primary is within 0.3 degrees, 90-degree coverage included. `AxialStart` wraps the `StartSpec` with the frame its parameters refer to.
 
 ## Change log
 
