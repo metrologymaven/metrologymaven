@@ -305,6 +305,54 @@ fn on_mcp(o: &std::collections::BTreeMap<String, CValue>) -> bool {
         && !matches!(o.get("mcp_projection"), Some(CValue::Str(p)) if p == "never")
 }
 
+/// GEO.TYPES.REG AC-6 (hand-labelled from spec/geo/types/reg/NODE.md, Design): the workspace
+/// manifest carries `geo.describe_element@1`, class R0, projected to MCP as `exposed`, so the
+/// tool `geo_describe_element` is generated from it.
+#[test]
+fn geo_describe_element_is_exposed_in_the_workspace_manifest() {
+    let commands = workspace_commands();
+    let (_, c) = commands.iter().find(|(id, _)| id == "geo.describe_element@1").expect("collected");
+    assert_eq!(c.get("mcp_projection"), Some(&CValue::Str("exposed".into())));
+    assert_eq!(c.get("side_effect"), Some(&CValue::Str("R0".into())));
+    assert!(on_mcp(c));
+    assert_eq!(fid_registry::tool_name("geo.describe_element", 1), "geo_describe_element");
+}
+
+/// GEO.TYPES.REG errors map onto the bus error catalogue (v2) only: every (code, reason) pair
+/// `fid_geo_cmd::GeoCmdError::bus_error` returns is a published pair, and `id_collision` is
+/// the shared `conflict/id_collision` (hand-labelled from crates/fid-bus/src/error.rs).
+#[test]
+fn geo_cmd_errors_map_onto_the_bus_catalogue() {
+    use fid_geo_cmd::GeoCmdError as E;
+    let id = fid_uuid::Uuid::from_u128(7);
+    let all = [
+        E::NotFound(id),
+        E::NotGeometry(id),
+        E::BadParams("x"),
+        E::UnknownCommand("x".into()),
+        E::IdCollision(id),
+        E::BadSourceId("x"),
+        E::DuplicateInput(id),
+        E::DigestMismatch(id),
+        E::BadOutput("x"),
+        E::Geometry(fid_geo_types::GeoTypeError::Empty),
+        E::KindMismatch { expected: fid_geo_types::ElementKind::Mesh, found: fid_geo_types::ElementKind::PointSet },
+        E::InputLimit("x"),
+        E::Edge(fid_dep::EdgeError::UnknownElement(id)),
+        E::Edge(fid_dep::EdgeError::Cycle(vec![id])),
+        E::Prop(fid_dep::PropError::NotInPass(id)),
+        E::Id(fid_project::IdError::BadId),
+        E::Internal("x"),
+    ];
+    for e in &all {
+        let (code, reason) = e.bus_error();
+        let bus = fid_bus::error::BusError::from_wire(code, reason, "d");
+        assert!(bus.is_some(), "{e}: {code}/{reason} is not in the bus catalogue");
+    }
+    let bus = fid_bus::error::BusError::from_wire("conflict", "id_collision", "d").unwrap();
+    assert_eq!(E::IdCollision(id).bus_error(), (bus.code().as_str(), bus.reason()));
+}
+
 /// CORE.STO.SET's four commands are collected into the workspace manifest (hand-labelled
 /// from spec/core/sto/set/NODE.md, Design).
 #[test]

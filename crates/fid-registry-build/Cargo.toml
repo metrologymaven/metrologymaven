@@ -17,6 +17,9 @@ fid-registry = { path = "../fid-registry" }
 # functions. Layers engine (fid-align, fid-dep, fid-jobs, fid-project-cmd) and services (fid-report).
 fid-align = { path = "../fid-align" }
 fid-dep = { path = "../fid-dep" }
+# `geo.describe_element@1` (GEO.TYPES.REG), read through `fid_geo_cmd::command_defs()`.
+# Layer engine.
+fid-geo-cmd = { path = "../fid-geo-cmd" }
 fid-jobs = { path = "../fid-jobs" }
 fid-project-cmd = { path = "../fid-project-cmd" }
 fid-report = { path = "../fid-report" }
@@ -30,6 +33,12 @@ fid-store = { path = "../fid-store" }
 # workspace settings manifest: `fid_bus::policy::fs::fs_settings` (`bus.fs_roots`). Layer
 # engine, below services; already in the lock.
 fid-bus = { path = "../fid-bus" }
+
+[dev-dependencies]
+# Error values for the bus-catalogue mapping test of fid-geo-cmd's errors.
+fid-geo-types = { path = "../fid-geo-types" }
+fid-project = { path = "../fid-project" }
+fid-uuid = { path = "../fid-uuid" }
 
 [lints]
 workspace = true

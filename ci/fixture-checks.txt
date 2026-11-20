@@ -52,6 +52,7 @@ python fixtures/geo/nurbs/invert/make_invert_fixtures.py --fuzz --check
 python fixtures/geo/ooc/make_cache_fixtures.py --check
 python fixtures/geo/ooc/make_layout_fixtures.py --check
 python fixtures/geo/types/make_mesh_fixtures.py --check
+python fixtures/geo/types/reg/make_reg_fixtures.py --check
 python fixtures/hal/idl/base/cfg/make_fixtures.py --check
 python fixtures/hal/idl/base/err/make_fixtures.py --check
 python fixtures/hal/idl/stamp/make_fixtures.py --check
@@ -111,6 +112,7 @@ python fixtures/solv/vend/make_fixtures.py --check
 python fixtures/unc/class/make_table.py --check
 python fixtures/unc/dec/type/make_fixtures.py --check
 python fixtures/unc/dist/make_fixtures.py --check
+python fixtures/unc/mcm/intvl/make_fixtures.py --check
 python fixtures/unc/model/graph/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/ux/system/princ/make_fixtures.py --check
