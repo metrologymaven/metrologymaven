@@ -1,0 +1,381 @@
+{
+ "description": "the cylinder window with a slit: the generator edge u = 0.25, v in [0, 0.01] used up and down by the loop (GEO.CAD.TOPO.TRIM review)",
+ "license": "CC-BY-4.0",
+ "body_id": "511d511d511d511d511d511d511d511d",
+ "vertices": [
+  {
+   "point": [
+    0.04387912809451864,
+    -0.02397127693021015,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.04844562108553224,
+    0.012370197962726148,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.04387912809451864,
+    0.02397127693021015,
+    0.0
+   ]
+  },
+  {
+   "point": [
+    0.04387912809451864,
+    0.02397127693021015,
+    0.02
+   ]
+  },
+  {
+   "point": [
+    0.04387912809451864,
+    -0.02397127693021015,
+    0.02
+   ]
+  },
+  {
+   "point": [
+    0.04844562108553224,
+    0.012370197962726148,
+    0.01
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 1,
+   "range": [
+    -0.5,
+    0.25
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.05,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-bottom-l"
+  },
+  {
+   "start": 1,
+   "end": 5,
+   "range": [
+    0.0,
+    0.01
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.04844562108553224,
+     0.012370197962726148,
+     0.0
+    ],
+    "axis": [
+     0.9689124217106447,
+     0.24740395925452294,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "label": "e-slit"
+  },
+  {
+   "start": 1,
+   "end": 2,
+   "range": [
+    0.25,
+    0.5
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.05,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-bottom-r"
+  },
+  {
+   "start": 2,
+   "end": 3,
+   "range": [
+    0.0,
+    0.02
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.04387912809451864,
+     0.02397127693021015,
+     0.0
+    ],
+    "axis": [
+     0.8775825618903728,
+     0.479425538604203,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "label": "e-right"
+  },
+  {
+   "start": 4,
+   "end": 3,
+   "range": [
+    -0.5,
+    0.5
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.05,
+    "origin": [
+     0.0,
+     0.0,
+     0.02
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-top"
+  },
+  {
+   "start": 0,
+   "end": 4,
+   "range": [
+    0.0,
+    0.02
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.04387912809451864,
+     -0.02397127693021015,
+     0.0
+    ],
+    "axis": [
+     0.8775825618903728,
+     -0.479425538604203,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "label": "e-left"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0
+    ],
+    "dir": [
+     1.0,
+     0.0
+    ]
+   },
+   "label": "c-bottom-l"
+  },
+  {
+   "edge": 1,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.25,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     1.0
+    ]
+   },
+   "label": "c-slit-up"
+  },
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.25,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     1.0
+    ]
+   },
+   "label": "c-slit-down"
+  },
+  {
+   "edge": 2,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0
+    ],
+    "dir": [
+     1.0,
+     0.0
+    ]
+   },
+   "label": "c-bottom-r"
+  },
+  {
+   "edge": 3,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.5,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     1.0
+    ]
+   },
+   "label": "c-right"
+  },
+  {
+   "edge": 4,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.02
+    ],
+    "dir": [
+     1.0,
+     0.0
+    ]
+   },
+   "label": "c-top"
+  },
+  {
+   "edge": 5,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     -0.5,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     1.0
+    ]
+   },
+   "label": "c-left"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "outer": true,
+   "label": "l-slit"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "cylinder",
+    "radius": 0.05,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "f-slit"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": false
+  }
+ ]
+}

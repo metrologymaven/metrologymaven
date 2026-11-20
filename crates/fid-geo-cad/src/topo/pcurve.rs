@@ -252,12 +252,12 @@ impl Pcurves {
 
 // ---------------------------------------------------------------- geometry helpers
 
-fn hypot(x: f64, y: f64) -> Option<f64> {
+pub(crate) fn hypot(x: f64, y: f64) -> Option<f64> {
     fid_num::f::hypot(x, y).ok()
 }
 
 /// `hypot(hypot(e0, e1), e2)` with `e = a - b`.
-fn dist3(a: [f64; 3], b: [f64; 3]) -> Option<f64> {
+pub(crate) fn dist3(a: [f64; 3], b: [f64; 3]) -> Option<f64> {
     let e = [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
     let d = hypot(hypot(e[0], e[1])?, e[2])?;
     if d.is_finite() {
@@ -273,7 +273,7 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
 }
 
 /// `floor(x)`; `x` is finite.
-fn floor(x: f64) -> f64 {
+pub(crate) fn floor(x: f64) -> f64 {
     x.floor()
 }
 
@@ -291,7 +291,7 @@ fn reduce(j: f64, p: f64) -> f64 {
     j - floor(j / p + 0.5) * p
 }
 
-fn larger(a: f64, b: f64) -> f64 {
+pub(crate) fn larger(a: f64, b: f64) -> f64 {
     if b > a {
         b
     } else {
@@ -300,20 +300,20 @@ fn larger(a: f64, b: f64) -> f64 {
 }
 
 #[derive(Clone, Copy)]
-enum Surf<'a> {
+pub(crate) enum Surf<'a> {
     A(&'a AnalyticSurface),
     N(&'a NurbsSurface),
 }
 
 impl<'a> Surf<'a> {
-    fn of(def: &'a SurfaceDef) -> Option<Surf<'a>> {
+    pub(crate) fn of(def: &'a SurfaceDef) -> Option<Surf<'a>> {
         if let Some(a) = def.as_analytic() {
             return Some(Surf::A(a));
         }
         def.as_nurbs().map(Surf::N)
     }
 
-    fn periods(&self) -> [Option<f64>; DIM] {
+    pub(crate) fn periods(&self) -> [Option<f64>; DIM] {
         use core::f64::consts::TAU;
         match self {
             Surf::A(a) => match a {
@@ -367,7 +367,7 @@ impl<'a> Surf<'a> {
         }
     }
 
-    fn point(&self, uv: [f64; DIM]) -> Result<[f64; 3], EvalError> {
+    pub(crate) fn point(&self, uv: [f64; DIM]) -> Result<[f64; 3], EvalError> {
         let [u, v] = self.param(uv);
         Ok(match self {
             Surf::A(a) => a.eval(u, v, 0)?.p,
@@ -436,7 +436,7 @@ fn curve_point(c: &CurveDef, t: f64) -> Result<[f64; 3], EvalError> {
     }
 }
 
-fn pcurve_point(p: &Curve2, t: f64) -> Result<[f64; DIM], EvalError> {
+pub(crate) fn pcurve_point(p: &Curve2, t: f64) -> Result<[f64; DIM], EvalError> {
     if let Some((o, d)) = p.as_line() {
         let uv = [o[0] + t * d[0], o[1] + t * d[1]];
         if !(uv[0].is_finite() && uv[1].is_finite()) {
@@ -454,7 +454,7 @@ fn pcurve_point(p: &Curve2, t: f64) -> Result<[f64; DIM], EvalError> {
 }
 
 /// `t0 + ((t1 - t0) * k) / n` for `k < n`, `t1` for `k = n`.
-fn grid(t0: f64, t1: f64, k: usize, n: usize) -> f64 {
+pub(crate) fn grid(t0: f64, t1: f64, k: usize, n: usize) -> f64 {
     if k == n {
         t1
     } else {
