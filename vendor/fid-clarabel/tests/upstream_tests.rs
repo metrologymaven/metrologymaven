@@ -108,9 +108,6 @@ mod basic_lp {
 
 mod basic_qp {
     #![allow(non_snake_case)]
-    #[cfg(target_family = "wasm")]
-    use wasm_bindgen_test::*;
-
     use fid_clarabel::{algebra::*, solver::*};
 
     #[allow(clippy::type_complexity)]
@@ -292,14 +289,8 @@ mod basic_qp {
         assert!(solver.solution.obj_val_dual.is_nan());
     }
 
-    // a minimal test to check that the wasm build is working
-
-    #[cfg(target_family = "wasm")]
-    #[wasm_bindgen_test]
-    fn test_qp_feasible_wasm() {
-        wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
-        test_qp_feasible();
-    }
+    // (upstream's wasm-bindgen browser test is not ported: the kernel runs these tests on
+    // wasm32-wasip1 directly)
 }
 
 mod basic_socp {
