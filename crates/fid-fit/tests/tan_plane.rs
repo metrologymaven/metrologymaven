@@ -549,7 +549,7 @@ fn canonical_bytes() {
 /// the stable encoding of `encode_err`), recorded from a local x86-64 run and checked by CI on
 /// every target. One value serves all targets because they agree bit for bit; a target that
 /// diverged would get its own `#[cfg(target_arch)]` value here.
-const OUTPUT_PIN: &str = "sha256:567dafa22d1642c17548b31246f7e96a76562c042cbbf119eb770d54d89126f0";
+const OUTPUT_PIN: &str = "sha256:d1f118e9e847e37adbb4539c24184de0077e6d2f525ffc141bcf05adcc954897";
 
 #[test]
 fn ac5_output_bits_pinned() {

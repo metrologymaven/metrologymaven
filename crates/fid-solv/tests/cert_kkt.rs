@@ -602,17 +602,21 @@ fn unproven_multipliers_are_undecidable() {
     assert_eq!((r.status(), r.reason()), (KktStatus::Undecidable, Some(KktFail::MultipliersNotProven)));
     assert_eq!(r.multipliers().len(), 3);
     assert!(r.multiplier_bounds().iter().all(|b| *b == f64::INFINITY));
+    // Fallback (unchanged): stationarity is the residual at the float multipliers.
+    assert_eq!(r.stationarity(), r.stationarity_float());
+    assert!(r.stationarity().hi().is_finite());
 }
 
 /// Zero tolerances: the exact optimum lies on the active constraints, so the proven
 /// enclosures of primal feasibility and complementarity straddle the zero threshold and an
-/// optimal set is never rounded into a pass. (Stationarity at the float multipliers may be
-/// certainly violated at tolerance 0, since they are not the exact ones: e.g. `flat-08`.) A
-/// certain violation wins over undecidable conditions.
+/// optimal set is never rounded into a pass. Stationarity is proven exact at the proven
+/// multipliers (`[0, 0]`, satisfied even at tolerance 0); the residual at the float multipliers,
+/// recorded for information, may be certainly above a zero threshold (e.g. `flat-08`) without
+/// deciding anything. A certain violation wins over undecidable conditions.
 #[test]
 fn borderline_is_never_a_pass() {
     let zero = KktTolerances { tol_p: 0.0, tol_d: 0.0, tol_s: 0.0, tol_c: 0.0, ..KktTolerances::default() };
-    let mut undecidable = 0;
+    let (mut undecidable, mut float_violated) = (0, 0);
     for c in parse().iter().filter(|c| c.kind != "circle") {
         let prob = problem_of(c);
         let r = check(prob.as_ref(), &recomputed(prob.as_ref(), &c.set), &zero).unwrap();
@@ -622,17 +626,18 @@ fn borderline_is_never_a_pass() {
         if c.expect == "certified" {
             assert_eq!(r.primal().verdict(), Verdict::Undecidable, "{}", c.name);
             assert_eq!(r.dual().verdict(), Verdict::Satisfied, "{}", c.name);
-            if r.status() == KktStatus::Undecidable {
-                assert_eq!(r.reason(), Some(KktFail::Primal), "{}", c.name);
-                undecidable += 1;
-            } else {
-                assert_eq!(r.reason(), Some(KktFail::Stationarity), "{}", c.name);
+            assert_eq!((r.stationarity().hi(), r.stationarity().verdict()), (0.0, Verdict::Satisfied), "{}", c.name);
+            if r.stationarity_float().verdict() == Verdict::Violated {
+                float_violated += 1;
             }
+            assert_eq!((r.status(), r.reason()), (KktStatus::Undecidable, Some(KktFail::Primal)), "{}", c.name);
+            undecidable += 1;
         } else {
             assert_eq!(r.status(), KktStatus::Violated, "{}", c.name);
         }
     }
     assert!(undecidable > 0);
+    assert!(float_violated > 0);
 }
 
 #[test]
@@ -810,7 +815,7 @@ fn put(h: &mut Sha256Hasher, c: Condition) {
 /// by CI on x86-64 Linux and Windows, ARM64 macOS and wasm32 under wasmtime. One value serves
 /// all targets: REQ-KRN.SOLV.CERT.KKT-005 requires them to agree bit for bit, so a target that
 /// diverges is a failure, not a new pin.
-const OUTPUT_PIN: &str = "sha256:9faa8727180ab2e9643dd79bdbc976d97aa3d475bdf821e63d5cb647b42fb263";
+const OUTPUT_PIN: &str = "sha256:0f58ecbbadad04d89c092cb66ee026f929dce292609efffb73617bbf2644b6fa";
 
 #[test]
 fn ac4_output_bits_pinned() {
@@ -823,7 +828,7 @@ fn ac4_output_bits_pinned() {
                 for v in r.multipliers().iter().chain(r.multiplier_bounds()) {
                     h.update(&v.to_bits().to_le_bytes());
                 }
-                for cond in [r.primal(), r.dual(), r.stationarity(), r.complementarity()] {
+                for cond in [r.primal(), r.dual(), r.stationarity(), r.stationarity_float(), r.complementarity()] {
                     put(&mut h, cond);
                 }
                 let s = r.scales();

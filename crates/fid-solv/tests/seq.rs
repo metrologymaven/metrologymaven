@@ -1041,7 +1041,7 @@ fn converged_but_uncertified_start_disagrees() {
 /// `encode_err`), recorded from a local x86-64 run and checked by CI on every target. One value
 /// serves all targets because they agree bit for bit; a target that diverged would get its own
 /// `#[cfg(target_arch)]` value here.
-const OUTPUT_PIN: &str = "sha256:f467440e0c03bfe1c00f5329dd02219b8d42a9bf52e446a2f428aa79ed8e6fa8";
+const OUTPUT_PIN: &str = "sha256:35c9592abbe5c72a346ad18d82115b8cd32919304f832b4bb3f60c0296e8a91c";
 
 #[test]
 fn ac6_output_bits_pinned() {
