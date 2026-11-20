@@ -45,6 +45,7 @@ python fixtures/geo/nurbs/analytic/make_analytic_fixtures.py --check
 python fixtures/geo/nurbs/eval/make_eval_fixtures.py --check
 python fixtures/geo/nurbs/invert/make_invert_fixtures.py --check
 python fixtures/geo/nurbs/invert/make_invert_fixtures.py --fuzz --check
+python fixtures/geo/ooc/make_cache_fixtures.py --check
 python fixtures/geo/ooc/make_layout_fixtures.py --check
 python fixtures/geo/types/make_mesh_fixtures.py --check
 python fixtures/hal/idl/base/cfg/make_fixtures.py --check
@@ -61,6 +62,7 @@ python fixtures/io/reg/prov/make_cases.py --check
 python fixtures/io/res/trans/model/make_fixtures.py --check
 python fixtures/knp1/data/make_fixtures.py --check
 python fixtures/knp1/seeded/make_expected.py --check
+python fixtures/knp1/typed/make_canary.py --check
 python fixtures/knp1/typed/make_expected.py --check
 python fixtures/knp1/typed/make_messages.py --check
 python fixtures/man/check_manifest_schema.py

@@ -556,6 +556,70 @@ fn reason(v: Option<&toml::Value>, what: &str) -> Result<String, SynError> {
     }
 }
 
+/// The directory state rustc keeps while resolving modules (`rustc_expand::module`): `dir` is
+/// the module's directory relative to the crate root, and `relative` the file stem a non-mod-rs
+/// file adds before its first nested module directory.
+#[derive(Debug, Clone)]
+struct ModDir {
+    dir: Vec<String>,
+    relative: Option<String>,
+}
+
+/// A module's `#[path]` attribute.
+enum PathAttr {
+    None,
+    /// The literal and the `path` token.
+    Lit(String, usize),
+    /// The `path` token and why the scan cannot evaluate it.
+    Unknown(usize, &'static str),
+}
+
+/// Whether a file is "mod-rs" (a crate root or a `mod.rs`: its child modules live in its own
+/// directory) by its path in the crate: `mod.rs`, `src/lib.rs`, `src/main.rs`, `build.rs`,
+/// `src/bin/<x>.rs`, `src/bin/<x>/main.rs`, and `<x>.rs` or `<x>/main.rs` under `examples/`,
+/// `tests/` and `benches/`. `None` for another `lib.rs` or `main.rs`, which may be either.
+fn mod_rs_kind(file: &str) -> Option<bool> {
+    let parts: Vec<&str> = file.split('/').collect();
+    let name = parts.last().copied().unwrap_or_default();
+    let root = matches!(
+        parts.as_slice(),
+        ["src", "lib.rs"]
+            | ["src", "main.rs"]
+            | ["build.rs"]
+            | ["src", "bin", _]
+            | ["src", "bin", _, "main.rs"]
+            | ["examples" | "tests" | "benches", _]
+            | ["examples" | "tests" | "benches", _, "main.rs"]
+    );
+    if name == "mod.rs" || root {
+        Some(true)
+    } else if name == "lib.rs" || name == "main.rs" {
+        None
+    } else {
+        Some(false)
+    }
+}
+
+/// `rel` joined to `dir` with `.` and `..` resolved lexically; `None` when `rel` is absolute,
+/// has a backslash or drive, or climbs out of the crate root.
+fn join_rel(dir: &[String], rel: &str) -> Option<Vec<String>> {
+    let b = rel.as_bytes();
+    if rel.is_empty() || rel.starts_with('/') || rel.contains('\\') || (b.len() >= 2 && b[1] == b':') {
+        return None;
+    }
+    let mut out = dir.to_vec();
+    for seg in rel.split('/') {
+        match seg {
+            "" | "." => {}
+            ".." => {
+                out.pop()?;
+            }
+            s => out.push(s.to_string()),
+        }
+    }
+    Some(out)
+}
+
 fn valid_relpath(p: &str) -> bool {
     let b = p.as_bytes();
     !p.is_empty()
@@ -680,6 +744,12 @@ pub struct FileRef<'a> {
 
 /// Scans one source file. Never fails: anything it cannot classify is a `KNP1-PARSE` finding.
 pub fn scan_file(f: FileRef<'_>, bytes: &[u8], cfg: &Config) -> Outcome {
+    scan_file_with(f, bytes, cfg, None).0
+}
+
+/// [`scan_file`] with a forced mod-rs reading (`Some`), also returning the listed files this
+/// file loads through an out-of-line `#[path]` or a plain `include!`.
+fn scan_file_with(f: FileRef<'_>, bytes: &[u8], cfg: &Config, mod_rs: Option<bool>) -> (Outcome, BTreeSet<String>) {
     let mut out = Outcome::default();
     let parse = |line: u32, col: u32, excerpt: &[u8], msg: String| Finding {
         rule: Rule::Parse,
@@ -694,7 +764,7 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], cfg: &Config) -> Outcome {
     if bytes.len() as u64 > MAX_FILE_BYTES {
         let m = format!("file larger than {MAX_FILE_BYTES} bytes: not scanned");
         out.findings.push(parse(1, 1, m.as_bytes(), m.clone()));
-        return out;
+        return (out, BTreeSet::new());
     }
     let text = match std::str::from_utf8(bytes) {
         Ok(t) => t,
@@ -707,7 +777,7 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], cfg: &Config) -> Outcome {
             let line = u32::try_from(line).unwrap_or(u32::MAX);
             let col = u32::try_from(col).unwrap_or(u32::MAX);
             out.findings.push(parse(line, col, m.as_bytes(), m.clone()));
-            return out;
+            return (out, BTreeSet::new());
         }
     };
     let text = text.strip_prefix('\u{feff}').unwrap_or(text);
@@ -717,16 +787,17 @@ pub fn scan_file(f: FileRef<'_>, bytes: &[u8], cfg: &Config) -> Outcome {
         Err(e) => {
             let excerpt = line_text(&lines, e.line).unwrap_or(&e.message).as_bytes().to_vec();
             out.findings.push(parse(e.line, e.col, &excerpt, format!("cannot lex file: {}", e.message)));
-            return out;
+            return (out, BTreeSet::new());
         }
     };
     let mut s = Scan::new(f, cfg, &toks, &lines);
+    s.mod_rs = mod_rs;
     s.run();
     out.findings = s.hits.into_values().collect();
     out.notes = s.notes.into_values().collect();
     sort_findings(&mut out.findings);
     sort_findings(&mut out.notes);
-    out
+    (out, s.reached)
 }
 
 fn line_text<'l>(lines: &[&'l str], line: u32) -> Option<&'l str> {
@@ -757,6 +828,16 @@ struct Scan<'a> {
     partner: Vec<usize>,
     in_use: Vec<bool>,
     in_attr: Vec<bool>,
+    /// Tokens inside a `macro_rules!` body or `macro` item (a code template).
+    in_template: Vec<bool>,
+    /// `path` tokens of `#[path]` attributes that module resolution has handled.
+    mod_paths: BTreeSet<usize>,
+    /// Mod-rs reading forced by the caller (a crate root from the manifest, or a file reached
+    /// through `#[path]` or `include!`); `None` infers it from the file's path.
+    mod_rs: Option<bool>,
+    /// Listed files this file loads through an out-of-line `#[path]` or a plain `include!`:
+    /// rustc reads those as mod-rs files.
+    reached: BTreeSet<String>,
     aliases: BTreeMap<String, Vec<Vec<String>>>,
     /// Token indices of facade-path `KNP1-LIBM` names (never findings there).
     exempt: BTreeSet<usize>,
@@ -779,6 +860,10 @@ impl<'a> Scan<'a> {
             partner: vec![usize::MAX; n],
             in_use: vec![false; n],
             in_attr: vec![false; n],
+            in_template: vec![false; n],
+            mod_paths: BTreeSet::new(),
+            mod_rs: None,
+            reached: BTreeSet::new(),
             aliases: BTreeMap::new(),
             exempt: BTreeSet::new(),
             hits: BTreeMap::new(),
@@ -869,6 +954,7 @@ impl<'a> Scan<'a> {
         }
         self.check_metavariables();
         self.check_macro_args_and_mods();
+        self.check_module_files();
         for i in 0..self.toks.len() {
             if let Some((segs, toks, absolute, end)) = self.path_at(i) {
                 let call = self.is(end, &Kind::Open(Delim::Paren));
@@ -917,6 +1003,204 @@ impl<'a> Scan<'a> {
             for k in i..=close {
                 if let Some(b) = self.in_attr.get_mut(k) {
                     *b = true;
+                }
+            }
+        }
+    }
+
+    // -------------------------------------------------------------- module files
+
+    /// Resolves every out-of-line `mod name;` of the file the way rustc does and reports
+    /// `KNP1-INCLUDE` (never waivable) when the file it loads is not one the scan lists, or when
+    /// the scan cannot tell which file that is. See [`mod_rs_kind`] and [`ModDir`].
+    fn check_module_files(&mut self) {
+        match self.mod_rs.or_else(|| mod_rs_kind(self.f.file)) {
+            Some(mod_rs) => self.resolve_modules(mod_rs),
+            None => {
+                // A `lib.rs`/`main.rs` that is not a known crate root: both readings must hold.
+                self.resolve_modules(true);
+                self.resolve_modules(false);
+            }
+        }
+    }
+
+    /// The outer attributes (`#[…]`, as `[` and `]` indices) of the item whose keyword is at `i`,
+    /// after an optional visibility.
+    fn outer_attrs(&self, i: usize) -> Vec<(usize, usize)> {
+        let mut j = i;
+        if j > 0 && self.is(j - 1, &Kind::Close(Delim::Paren)) {
+            let o = self.partner.get(j - 1).copied().unwrap_or(usize::MAX);
+            if o != usize::MAX && o > 0 && self.keyword(o - 1, "pub") {
+                j = o - 1;
+            }
+        } else if j > 0 && self.keyword(j - 1, "pub") {
+            j -= 1;
+        }
+        let mut out = Vec::new();
+        while j > 0 && self.is(j - 1, &Kind::Close(Delim::Bracket)) {
+            let o = self.partner.get(j - 1).copied().unwrap_or(usize::MAX);
+            if o == usize::MAX || o == 0 || !self.is(o - 1, &Kind::Pound) {
+                break;
+            }
+            out.push((o, j - 1));
+            j = o - 1;
+        }
+        out
+    }
+
+    /// The `#[path]` of an item: none, a plain string literal (with its `path` token), or one the
+    /// scan cannot evaluate (`cfg_attr(…, path = …)`, a macro, several, a non-literal).
+    fn path_attr(&mut self, attrs: &[(usize, usize)]) -> PathAttr {
+        let mut found: Vec<PathAttr> = Vec::new();
+        for &(open, close) in attrs {
+            let first = open + 1;
+            if self.ident(first) == Some("path") {
+                self.mod_paths.insert(first);
+                let lit = match self.t(first + 2) {
+                    Some(Token {
+                        kind: Kind::Lit { kind: LitKind::Str | LitKind::RawStr, suffix: false },
+                        text,
+                        ..
+                    }) if self.is(first + 1, &Kind::Eq) && first + 3 == close => Some(text.clone()),
+                    _ => None,
+                };
+                found.push(match lit {
+                    Some(p) => PathAttr::Lit(p, first),
+                    None => PathAttr::Unknown(first, "a `#[path]` whose value is not one plain string literal"),
+                });
+            } else {
+                for k in first..close {
+                    let after_sep = k > 0 && self.is(k - 1, &Kind::PathSep);
+                    if self.ident(k) == Some("path") && !after_sep {
+                        self.mod_paths.insert(k);
+                        found.push(PathAttr::Unknown(k, "a `path` inside another attribute (`cfg_attr`)"));
+                    }
+                }
+            }
+        }
+        match found.len() {
+            0 => PathAttr::None,
+            1 => found.pop().unwrap_or(PathAttr::None),
+            _ => match found.into_iter().next() {
+                Some(PathAttr::Lit(_, t) | PathAttr::Unknown(t, _)) => {
+                    PathAttr::Unknown(t, "several `#[path]` attributes")
+                }
+                _ => PathAttr::None,
+            },
+        }
+    }
+
+    fn listed(&self, p: &str) -> bool {
+        self.f.crate_files.iter().any(|f| f == p)
+    }
+
+    fn resolve_modules(&mut self, mod_rs: bool) {
+        let parts: Vec<&str> = self.f.file.split('/').collect();
+        let (name, dir) = parts.split_last().map_or(("", &[][..]), |(n, d)| (*n, d));
+        let start = ModDir {
+            dir: dir.iter().map(|s| (*s).to_string()).collect(),
+            relative: if mod_rs { None } else { name.strip_suffix(".rs").map(str::to_string) },
+        };
+        // (close index of the inline module's brace, its directory; None when unknown)
+        let mut stack: Vec<(usize, Option<ModDir>)> = Vec::new();
+        let n = self.toks.len();
+        let reading = if mod_rs { "mod-rs" } else { "non-mod-rs" };
+        for i in 0..n {
+            while stack.last().is_some_and(|(close, _)| i > *close) {
+                stack.pop();
+            }
+            if !self.keyword(i, "mod") {
+                continue;
+            }
+            let Some(m) = self.ident(i + 1).map(str::to_string) else { continue };
+            let inline = self.is(i + 2, &Kind::Open(Delim::Brace));
+            let out_of_line = self.is(i + 2, &Kind::Semi);
+            if !inline && !out_of_line {
+                continue;
+            }
+            let attrs = self.outer_attrs(i);
+            let path = self.path_attr(&attrs);
+            let cur: Option<ModDir> = match stack.last() {
+                Some((_, d)) => d.clone(),
+                None => Some(start.clone()),
+            };
+            if inline {
+                let close = self.partner.get(i + 2).copied().unwrap_or(usize::MAX);
+                let next = match (&cur, &path) {
+                    (Some(c), PathAttr::None) => {
+                        let mut dir = c.dir.clone();
+                        dir.extend(c.relative.clone());
+                        dir.push(m.clone());
+                        Some(ModDir { dir, relative: None })
+                    }
+                    (Some(c), PathAttr::Lit(p, t)) => match join_rel(&c.dir, p) {
+                        Some(dir) => Some(ModDir { dir, relative: None }),
+                        None => {
+                            self.hit(
+                                *t,
+                                &Rule::Include,
+                                format!("inline `#[path = \"{p}\"] mod {m}` leaves the crate"),
+                            );
+                            None
+                        }
+                    },
+                    (Some(_), PathAttr::Unknown(t, why)) => {
+                        let msg = format!("inline `mod {m}` with {why}: the scan cannot tell where its modules are");
+                        self.hit(*t, &Rule::Include, msg);
+                        None
+                    }
+                    (None, _) => None,
+                };
+                stack.push((close, next));
+                continue;
+            }
+            // Out-of-line `mod m;`.
+            if self.templated(i) {
+                self.hit(
+                    i + 1,
+                    &Rule::Include,
+                    format!("`mod {m};` inside a macro template: resolved at the call site"),
+                );
+                continue;
+            }
+            let Some(c) = cur else {
+                let msg = format!("`mod {m};` inside an inline module whose directory the scan cannot tell");
+                self.hit(i + 1, &Rule::Include, msg);
+                continue;
+            };
+            match path {
+                PathAttr::Unknown(t, why) => {
+                    self.hit(
+                        t,
+                        &Rule::Include,
+                        format!("`mod {m};` with {why}: the scan cannot tell which file rustc loads"),
+                    );
+                }
+                PathAttr::Lit(p, t) => match join_rel(&c.dir, &p) {
+                    Some(target) if self.listed(&target.join("/")) => {
+                        self.reached.insert(target.join("/"));
+                    }
+                    Some(target) => {
+                        let msg = format!(
+                            "`#[path = \"{p}\"] mod {m};` loads `{}`, which the scan does not list",
+                            target.join("/")
+                        );
+                        self.hit(t, &Rule::Include, msg);
+                    }
+                    None => self.hit(t, &Rule::Include, format!("`#[path = \"{p}\"] mod {m};` leaves the crate")),
+                },
+                PathAttr::None => {
+                    let mut base = c.dir.clone();
+                    base.extend(c.relative.clone());
+                    let file = [base.clone(), vec![format!("{m}.rs")]].concat().join("/");
+                    let dir_mod = [base, vec![m.clone(), "mod.rs".to_string()]].concat().join("/");
+                    let found = [&file, &dir_mod].iter().filter(|p| self.listed(p)).count();
+                    if found != 1 {
+                        let why =
+                            if found == 0 { "neither is a file the scan lists" } else { "both are listed (ambiguous)" };
+                        let msg = format!("`mod {m};` loads `{file}` or `{dir_mod}` ({reading} file): {why}");
+                        self.hit(i + 1, &Rule::Include, msg);
+                    }
                 }
             }
         }
@@ -1535,6 +1819,7 @@ impl<'a> Scan<'a> {
                 }
             }
         }
+        self.in_template.clone_from(&in_template);
         for i in 0..n {
             let Some(name) = self.ident(i) else { continue };
             let prev = i.checked_sub(1).and_then(|p| self.kind(p));
@@ -1570,6 +1855,13 @@ impl<'a> Scan<'a> {
                             format!("`{name}` in a macro transcriber: a code template naming a banned item")
                         } else {
                             format!("`{name}` passed to a macro or a metavariable: it may be called")
+                        };
+                        // Never waivable: in a template a relative path resolves at the call
+                        // site, and a code `include` of an unknown argument is unscanned code.
+                        let rule = if kind == P::IncludeMacro && (template || name == "include") {
+                            &Rule::Include
+                        } else {
+                            rule
                         };
                         if *rule == Rule::Libm {
                             self.libm(i, m);
@@ -1667,9 +1959,15 @@ impl<'a> Scan<'a> {
             }
         }
         if name == "path" && self.in_attr.get(i).copied().unwrap_or(false) && self.is(i + 1, &Kind::Eq) {
-            for (rule, pat) in patterns(P::Attr) {
-                if pat == name && !self.safe_include(i + 2, None) {
-                    self.hit(i, rule, "`#[path]` names a file the scan does not list".to_string());
+            for (_, pat) in patterns(P::Attr) {
+                if pat != name {
+                    continue;
+                }
+                if self.templated(i) {
+                    self.hit(i, &Rule::Include, "`#[path]` inside a macro template".to_string());
+                } else if !self.mod_paths.contains(&i) {
+                    let m = "`#[path]` not on a module declaration the scan resolves".to_string();
+                    self.hit(i, &Rule::Include, m);
                 }
             }
         }
@@ -1684,32 +1982,48 @@ impl<'a> Scan<'a> {
         for (rule, pat) in patterns(P::IncludeMacro) {
             if pat == name {
                 let close = self.partner.get(i + 2).copied().unwrap_or(usize::MAX);
-                if !self.safe_include(i + 3, Some(close)) {
+                if self.templated(i) {
+                    // rustc resolves the path against the outermost call site, not this file.
+                    let m = format!("`{name}!` inside a macro template: its path resolves at the call site");
+                    self.hit(i, &Rule::Include, m);
+                } else if let Some(target) = self.include_target(i + 3, Some(close)) {
+                    if name == "include" {
+                        self.reached.insert(target);
+                    }
+                } else {
+                    // Code the scan does not see is never waivable; data stays KNP1-IO-FS.
+                    let rule = if name == "include" { &Rule::Include } else { rule };
                     self.hit(i, rule, format!("`{name}!` of a file the scan does not list"));
                 }
             }
         }
     }
 
-    /// True when token `i` is a plain string literal naming a `.rs` file that this scan lists
-    /// (relative to the current file's directory), and (for a macro) it is the only argument.
-    fn safe_include(&self, i: usize, close: Option<usize>) -> bool {
+    /// True when token `i` lies inside a `macro_rules!` body or `macro` item.
+    fn templated(&self, i: usize) -> bool {
+        self.in_template.get(i).copied().unwrap_or(false)
+    }
+
+    /// When token `i` is a plain string literal naming a `.rs` file that this scan lists
+    /// (relative to the current file's directory), and (for a macro) it is the only argument:
+    /// that file, crate-relative.
+    fn include_target(&self, i: usize, close: Option<usize>) -> Option<String> {
         let Some(Token { kind: Kind::Lit { kind: LitKind::Str | LitKind::RawStr, suffix: false }, text, .. }) =
             self.t(i)
         else {
-            return false;
+            return None;
         };
         if let Some(c) = close {
             if c != i + 1 {
-                return false;
+                return None;
             }
         }
         if !text.ends_with(".rs") || !valid_relpath(text) {
-            return false;
+            return None;
         }
         let dir = self.f.file.rsplit_once('/').map_or("", |(d, _)| d);
         let target = if dir.is_empty() { text.clone() } else { format!("{dir}/{text}") };
-        self.f.crate_files.contains(&target)
+        self.f.crate_files.contains(&target).then_some(target)
     }
 
     /// True when a token range holds a float marker: a float literal, `f32`/`f64`, a
@@ -1911,6 +2225,84 @@ fn proc_macro_finding(c: &graph::CrateEntry) -> Result<Option<Finding>, SynError
     }))
 }
 
+/// Crate roots the manifest names (`[lib] path`, `[[bin]]`/`[[example]]`/`[[test]]`/`[[bench]]`
+/// `path`, `package.build`), crate-relative: rustc reads them as mod-rs files whatever their
+/// name. A root the scan cannot determine (a `path` that is not a string, leaves the crate or is
+/// absolute; a target list that is not a list of tables; a `[lib] path` the scan does not list)
+/// is `KNP1-INCLUDE` (never waivable) at `Cargo.toml` 1:1. A manifest that is not valid TOML is
+/// already `KNP1-PARSE` ([`proc_macro_finding`]).
+fn crate_roots(c: &graph::CrateEntry) -> Result<(BTreeSet<String>, Option<Finding>), SynError> {
+    let bytes = read_bounded(&c.root.join("Cargo.toml"), MAX_CONFIG_BYTES).map_err(|e| SynError {
+        code: SynErrorCode::Read,
+        message: format!("{} {} Cargo.toml: {e}", c.name, c.version),
+    })?;
+    let Some(t) = std::str::from_utf8(&bytes).ok().and_then(|t| t.parse::<toml::Table>().ok()) else {
+        return Ok((BTreeSet::new(), None));
+    };
+    let mut roots = BTreeSet::new();
+    let mut bad: Vec<String> = Vec::new();
+    let mut add = |what: &str, v: Option<&toml::Value>, must_list: bool| match v {
+        None => {}
+        Some(toml::Value::String(p)) => match join_rel(&[], p) {
+            Some(parts) if !parts.is_empty() => {
+                let r = parts.join("/");
+                if must_list && !c.files.contains(&r) {
+                    bad.push(format!("{what} path {p:?} is not a file the scan lists"));
+                }
+                roots.insert(r);
+            }
+            _ => bad.push(format!("{what} path {p:?} leaves the crate")),
+        },
+        Some(_) => bad.push(format!("{what} path is not a string")),
+    };
+    let mut shape: Vec<String> = Vec::new();
+    match t.get("lib") {
+        None => {}
+        Some(toml::Value::Table(l)) => add("[lib]", l.get("path"), true),
+        Some(_) => shape.push("[lib] is not a table".to_string()),
+    }
+    for key in ["bin", "example", "test", "bench"] {
+        match t.get(key) {
+            None => {}
+            Some(toml::Value::Array(a)) => {
+                for e in a {
+                    match e {
+                        toml::Value::Table(tt) => add(&format!("[[{key}]]"), tt.get("path"), false),
+                        _ => shape.push(format!("[[{key}]] entry is not a table")),
+                    }
+                }
+            }
+            Some(_) => shape.push(format!("[[{key}]] is not a list of tables")),
+        }
+    }
+    if let Some(toml::Value::Table(pkg)) = t.get("package") {
+        match pkg.get("build") {
+            None | Some(toml::Value::Boolean(_)) => {}
+            v => add("package.build", v, false),
+        }
+    }
+    bad.extend(shape);
+    let finding = (!bad.is_empty()).then(|| {
+        let message = format!(
+            "{} {}: the scan cannot determine the crate roots rustc reads as mod-rs files: {}",
+            c.name,
+            c.version,
+            bad.join("; ")
+        );
+        Finding {
+            rule: Rule::Include,
+            crate_name: c.name.clone(),
+            crate_version: c.version.clone(),
+            file: "Cargo.toml".to_string(),
+            line: 1,
+            column: 1,
+            excerpt_digest: input_digest(message.as_bytes()),
+            message,
+        }
+    });
+    Ok((roots, finding))
+}
+
 /// Scans every listed file of every crate of the closure, in the closure's sorted order.
 /// Fails with `KNP1-READ` if a listed file cannot be read and with `KNP1-CONFIG-INVALID` if a
 /// facade file is not part of the closure.
@@ -1948,6 +2340,10 @@ pub fn scan_closure(closure: &Closure, cfg: &Config) -> Result<Outcome, SynError
         if let Some(f) = proc_macro_finding(c)? {
             out.findings.push(f);
         }
+        let (roots, root_finding) = crate_roots(c)?;
+        out.findings.extend(root_finding);
+        let mut mod_rs_done: BTreeSet<String> = BTreeSet::new();
+        let mut pending: BTreeSet<String> = BTreeSet::new();
         for file in &c.files {
             let path = c.root.join(file);
             let bytes = read_bounded(&path, MAX_FILE_BYTES).map_err(|e| SynError {
@@ -1955,13 +2351,41 @@ pub fn scan_closure(closure: &Closure, cfg: &Config) -> Result<Outcome, SynError
                 message: format!("{} {} {file}: {e}", c.name, c.version),
             })?;
             let fr = FileRef { crate_name: &c.name, crate_version: &c.version, file, crate_files: &c.files };
-            let o = scan_file(fr, &bytes, cfg);
+            // Every file first gets the reading its path implies.
+            let (o, reached) = scan_file_with(fr, &bytes, cfg, None);
             out.findings.extend(o.findings);
             out.notes.extend(o.notes);
+            if roots.contains(file) {
+                pending.insert(file.clone());
+            }
+            pending.extend(reached);
+        }
+        // rustc reads every manifest crate root, and every file loaded through `#[path]` or
+        // `include!`, as a mod-rs file: scan those again with that reading (until no new file is
+        // reached). Both readings' findings are kept, since such a file may also be a module of
+        // its own (a `[[bin]] path = "src/bin.rs"` that `src/lib.rs` also declares as `mod bin;`).
+        while let Some(file) = pending.pop_first() {
+            if !mod_rs_done.insert(file.clone()) || !c.files.contains(&file) {
+                continue;
+            }
+            let bytes = read_bounded(&c.root.join(&file), MAX_FILE_BYTES).map_err(|e| SynError {
+                code: SynErrorCode::Read,
+                message: format!("{} {} {file}: {e}", c.name, c.version),
+            })?;
+            let fr = FileRef { crate_name: &c.name, crate_version: &c.version, file: &file, crate_files: &c.files };
+            let (o, reached) = scan_file_with(fr, &bytes, cfg, Some(true));
+            out.findings.extend(o.findings);
+            out.notes.extend(o.notes);
+            pending.extend(reached);
         }
     }
-    sort_findings(&mut out.findings);
-    sort_findings(&mut out.notes);
+    for list in [&mut out.findings, &mut out.notes] {
+        sort_findings(list);
+        list.dedup_by(|a, b| {
+            (&a.crate_name, &a.crate_version, &a.file, a.line, a.column, a.rule.id(), &a.message)
+                == (&b.crate_name, &b.crate_version, &b.file, b.line, b.column, b.rule.id(), &b.message)
+        });
+    }
     Ok(out)
 }
 
