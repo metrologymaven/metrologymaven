@@ -21,7 +21,10 @@ pub mod table;
 
 pub use ident::{AlgId, Dialect, DmtKey, OperatorKind, SemVer, MAX_SEMVER_PART};
 pub use profile_keys::{profile_vocabulary, ProfileKeyRule, NAMED_PROFILE_KEYS, PROFILE_KEYS_SCHEMA};
-pub use row::{ClauseRef, DmtRow, Operator, OperatorChain, Param, ParamKind, ReviewState, Reviewers, RowStatus};
+pub use row::{
+    row_content_digest, ClauseRef, DmtRow, Operator, OperatorChain, Param, ParamKind, ReviewState, Reviewers,
+    RowStatus, CONTENT_DIGEST_EXCLUDED,
+};
 pub use table::{DmtTable, TABLE_SCHEMA};
 
 use std::fmt;

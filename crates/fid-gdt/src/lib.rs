@@ -3,6 +3,9 @@
 //!
 //! - [`dmt_flow::roster`] (`GDT.RES.ROWFLOW.ROSTER`): the `dmt-reviewers/v1` roster file,
 //!   its loader, its digest and the reviewer role lookup;
+//! - [`dmt_flow::state`] (`GDT.RES.ROWFLOW.STATE`): row revisions, the review state machine
+//!   (two distinct human roster reviewers, edition-held attestations, reset on any content
+//!   change, content digest bound to the reviewed content) and its journal records;
 //! - [`chars::dprof`] (`GDT.CHAR.DPROF`): defaults profiles as immutable, content-addressed,
 //!   versioned objects, with the publish and re-point commands, their journal events and
 //!   exact replay;

@@ -18,7 +18,7 @@ determinism: D0
 cli: [fid gdt export-rule-status]
 mcp: [gdt_export_rule_status]
 journal: [gdt.export_rule_status@1]
-updated: 2026-11-19
+updated: 2026-11-20
 ---
 
 # GDT.RES.STATUS: Interpretation status register and sign-off binding
@@ -95,6 +95,9 @@ Synthetic revisions, review events, rosters, reviewer and profile registries and
 
 - The profile sign-off key depends on how `GDT.RES.ROWASME.DPROF` settles profile review; REQ-006 fails closed (`no_signoff_path`) until then.
 - The conflict inputs are public files owned by `OUTR.GDTC`; reading them as artifacts keeps GDT below OUTR in the layer order. Until they exist, the build uses empty conflict inputs, which count every approval that passes the other checks; the project-published register is only produced with real conflict inputs.
+- **Built ahead (PR #320):** `row_content_digest` (REQ-001) and `DmtRow::content_cvalue` were built in `fid-gps` (module `dmt`) by `GDT.RES.ROWFLOW.STATE`, which needs the same digest; this leaf uses that function and must not add a second one. The rest of this leaf is unbuilt.
+- **STATE's `signed_off` is not a counted sign-off (PR #320 review):** `GDT.RES.ROWFLOW.STATE` reaches `signed_off` when two distinct roster reviewers hold live approvals and applies no conflict-of-interest rule. This leaf shall never copy that state into the register: it recounts approvals from the journal under REQ-003 (organisation, sponsorship, recusal) and derives the status itself. It may rebuild revisions with STATE's `replay`, which re-checks the workflow invariants from the journaled records.
+- **Trusted rosters for STATE's `replay` and `transition` (PR #320 re-review):** both trust the roster they are given, so a self-made roster can make any principal a reviewer. This leaf's verified loader (rosters at digests listed in `gdt-published/v1`) should produce a `TrustedRosters` type that STATE's `replay` and `transition` then require, so the type enforces the precondition; until it exists the precondition is documented on those functions and is the caller's duty.
 - `GDT.RES.RESOLVE` (built) should expose `row_content_digest` of the row it resolved in `Resolution::Resolved`; until it does, `GDT.CHAR.INTERP` calls `row_content_digest` on the resolved row itself.
 
 ## Children

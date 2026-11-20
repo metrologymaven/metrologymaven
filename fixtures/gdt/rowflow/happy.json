@@ -1,0 +1,100 @@
+{
+ "case": "happy",
+ "roster": "state_roster.json",
+ "rows": "state_rows.json",
+ "events": [
+  {
+   "op": "propose",
+   "row": "supported",
+   "author": {
+    "kind": "human",
+    "id": "author-a"
+   },
+   "at": "2026-11-20"
+  },
+  {
+   "op": "review",
+   "reviewer": {
+    "kind": "human",
+    "id": "rev-one"
+   },
+   "decision": "approve",
+   "attest": "cited",
+   "reviewed": "current",
+   "at": "2026-11-20"
+  },
+  {
+   "op": "review",
+   "reviewer": {
+    "kind": "human",
+    "id": "rev-two"
+   },
+   "decision": "approve",
+   "attest": "cited",
+   "reviewed": "current",
+   "at": "2026-11-20"
+  }
+ ],
+ "expected": [
+  {
+   "ok": {
+    "revision": 1,
+    "key": "dmt:asme/flatness/none@1",
+    "state": "draft",
+    "content_digest": "sha256:1f65fa44e5dd1f2420e4272775e18525a5d36f8248952d294becfdaa653c162a",
+    "author_kind": "human",
+    "provenance": "human",
+    "derived_from": null,
+    "approvals": [],
+    "reviews": 0,
+    "review_state": {
+     "state": "draft"
+    },
+    "idrs": []
+   }
+  },
+  {
+   "ok": {
+    "revision": 1,
+    "key": "dmt:asme/flatness/none@1",
+    "state": "under_review",
+    "content_digest": "sha256:1f65fa44e5dd1f2420e4272775e18525a5d36f8248952d294becfdaa653c162a",
+    "author_kind": "human",
+    "provenance": "human",
+    "derived_from": null,
+    "approvals": [
+     "r1"
+    ],
+    "reviews": 1,
+    "review_state": {
+     "state": "under_review"
+    },
+    "idrs": []
+   }
+  },
+  {
+   "ok": {
+    "revision": 1,
+    "key": "dmt:asme/flatness/none@1",
+    "state": "signed_off",
+    "content_digest": "sha256:1f65fa44e5dd1f2420e4272775e18525a5d36f8248952d294becfdaa653c162a",
+    "author_kind": "human",
+    "provenance": "human",
+    "derived_from": null,
+    "approvals": [
+     "r1",
+     "r2"
+    ],
+    "reviews": 2,
+    "review_state": {
+     "state": "signed_off",
+     "reviewers": [
+      "r1",
+      "r2"
+     ]
+    },
+    "idrs": []
+   }
+  }
+ ]
+}

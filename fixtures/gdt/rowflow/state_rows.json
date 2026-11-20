@@ -1,0 +1,381 @@
+{
+ "rows": {
+  "supported": {
+   "key": "dmt:asme/flatness/none@1",
+   "dialect": "asme",
+   "editions": [
+    "syn-a-2001",
+    "syn-b-2010"
+   ],
+   "characteristic": "flatness",
+   "modifiers": [],
+   "clauses": [
+    {
+     "designator": "syn-std-a",
+     "edition": "2001",
+     "clause": "4.2"
+    },
+    {
+     "designator": "syn-std-b",
+     "edition": "2010",
+     "clause": "7"
+    }
+   ],
+   "variants": [
+    {
+     "variant": "surface",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {}
+      }
+     ]
+    }
+   ],
+   "default_variant": "surface",
+   "actual_value": "av.synthetic.flatness@1",
+   "decision_rule_hint": "dr.synthetic.default@1",
+   "ors_cases": [
+    "ors:synthetic/flatness.001"
+   ],
+   "status": "supported",
+   "limitations": [],
+   "review": {
+    "state": "draft"
+   },
+   "notes": "Synthetic row for workflow tests; not an interpretation of any standard.",
+   "synthetic": true
+  },
+  "supported_v2": {
+   "key": "dmt:asme/flatness/none@1",
+   "dialect": "asme",
+   "editions": [
+    "syn-a-2001",
+    "syn-b-2010"
+   ],
+   "characteristic": "flatness",
+   "modifiers": [],
+   "clauses": [
+    {
+     "designator": "syn-std-a",
+     "edition": "2001",
+     "clause": "4.2"
+    },
+    {
+     "designator": "syn-std-b",
+     "edition": "2010",
+     "clause": "7"
+    }
+   ],
+   "variants": [
+    {
+     "variant": "surface",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {}
+      }
+     ]
+    }
+   ],
+   "default_variant": "surface",
+   "actual_value": "av.synthetic.flatness@1",
+   "decision_rule_hint": "dr.synthetic.default@1",
+   "ors_cases": [
+    "ors:synthetic/flatness.001"
+   ],
+   "status": "supported",
+   "limitations": [],
+   "review": {
+    "state": "draft"
+   },
+   "notes": "Synthetic row, second wording of the note.",
+   "synthetic": true
+  },
+  "supported_review_only": {
+   "key": "dmt:asme/flatness/none@1",
+   "dialect": "asme",
+   "editions": [
+    "syn-a-2001",
+    "syn-b-2010"
+   ],
+   "characteristic": "flatness",
+   "modifiers": [],
+   "clauses": [
+    {
+     "designator": "syn-std-a",
+     "edition": "2001",
+     "clause": "4.2"
+    },
+    {
+     "designator": "syn-std-b",
+     "edition": "2010",
+     "clause": "7"
+    }
+   ],
+   "variants": [
+    {
+     "variant": "surface",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {}
+      }
+     ]
+    }
+   ],
+   "default_variant": "surface",
+   "actual_value": "av.synthetic.flatness@1",
+   "decision_rule_hint": "dr.synthetic.default@1",
+   "ors_cases": [
+    "ors:synthetic/flatness.001"
+   ],
+   "status": "supported",
+   "limitations": [],
+   "review": {
+    "state": "signed_off",
+    "reviewers": [
+     "r1",
+     "r2"
+    ]
+   },
+   "notes": "Synthetic row for workflow tests; not an interpretation of any standard.",
+   "synthetic": true
+  },
+  "supported_synthetic_flip": {
+   "key": "dmt:asme/flatness/none@1",
+   "dialect": "asme",
+   "editions": [
+    "syn-a-2001",
+    "syn-b-2010"
+   ],
+   "characteristic": "flatness",
+   "modifiers": [],
+   "clauses": [
+    {
+     "designator": "syn-std-a",
+     "edition": "2001",
+     "clause": "4.2"
+    },
+    {
+     "designator": "syn-std-b",
+     "edition": "2010",
+     "clause": "7"
+    }
+   ],
+   "variants": [
+    {
+     "variant": "surface",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {}
+      }
+     ]
+    }
+   ],
+   "default_variant": "surface",
+   "actual_value": "av.synthetic.flatness@1",
+   "decision_rule_hint": "dr.synthetic.default@1",
+   "ors_cases": [
+    "ors:synthetic/flatness.001"
+   ],
+   "status": "supported",
+   "limitations": [],
+   "review": {
+    "state": "draft"
+   },
+   "notes": "Synthetic row for workflow tests; not an interpretation of any standard.",
+   "synthetic": false
+  },
+  "placeholder": {
+   "key": "dmt:iso/flatness/none@1",
+   "dialect": "iso",
+   "editions": [
+    "syn-c-2015"
+   ],
+   "characteristic": "flatness",
+   "modifiers": [],
+   "clauses": [
+    {
+     "designator": "syn-std-c",
+     "edition": "2015",
+     "clause": "5.1"
+    }
+   ],
+   "variants": [
+    {
+     "variant": "placeholder",
+     "steps": []
+    }
+   ],
+   "default_variant": "placeholder",
+   "actual_value": "av.synthetic.flatness@1",
+   "decision_rule_hint": "dr.synthetic.default@1",
+   "ors_cases": [
+    "ors:synthetic/flatness.001"
+   ],
+   "status": "unsupported",
+   "limitations": [],
+   "review": {
+    "state": "draft"
+   },
+   "notes": "Synthetic placeholder row; no chain yet.",
+   "synthetic": true
+  },
+  "other_key": {
+   "key": "dmt:asme/circularity/none@1",
+   "dialect": "asme",
+   "editions": [
+    "syn-a-2001",
+    "syn-b-2010"
+   ],
+   "characteristic": "circularity",
+   "modifiers": [],
+   "clauses": [
+    {
+     "designator": "syn-std-a",
+     "edition": "2001",
+     "clause": "4.2"
+    },
+    {
+     "designator": "syn-std-b",
+     "edition": "2010",
+     "clause": "7"
+    }
+   ],
+   "variants": [
+    {
+     "variant": "surface",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {}
+      }
+     ]
+    }
+   ],
+   "default_variant": "surface",
+   "actual_value": "av.synthetic.flatness@1",
+   "decision_rule_hint": "dr.synthetic.default@1",
+   "ors_cases": [
+    "ors:synthetic/flatness.001"
+   ],
+   "status": "supported",
+   "limitations": [],
+   "review": {
+    "state": "draft"
+   },
+   "notes": "Synthetic row for workflow tests; not an interpretation of any standard.",
+   "synthetic": true
+  }
+ },
+ "content_digests": {
+  "other_key": "sha256:d99c123b0cc61ed845f46996336a9c3e02bb392620da6e145395074bb6b6f944",
+  "placeholder": "sha256:3b772ea391f77070821e2c988b2b0c07e733e09e3c21836ef19bd3f076180bcb",
+  "supported": "sha256:1f65fa44e5dd1f2420e4272775e18525a5d36f8248952d294becfdaa653c162a",
+  "supported_review_only": "sha256:1f65fa44e5dd1f2420e4272775e18525a5d36f8248952d294becfdaa653c162a",
+  "supported_synthetic_flip": "sha256:c41f504ab771bb4bebd229b1e64aafc319517ba6b2cf0ca0dc492d2cbcdfdc7b",
+  "supported_v2": "sha256:4f91c76c98949aa2cd2be88d63e166b6eb407be0028a0e0453e41e1244501283"
+ }
+}

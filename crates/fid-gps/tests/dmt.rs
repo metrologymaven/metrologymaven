@@ -703,3 +703,53 @@ fn clause_refs_and_reviewers_are_validated_on_construction() {
     assert_eq!(malformed(&ids(&["rev-b", "rev-a"]).unwrap_err()), "not_sorted");
     assert_eq!(ids(&["r".repeat(65).as_str()]).unwrap_err(), DmtError::FieldTooLong { field: "reviewers" });
 }
+
+// ------------------------------------------------------------------ content digest (D-045)
+
+/// REQ-GDT.RES.STATUS-001, as built for `GDT.RES.ROWFLOW.STATE`: the content digest covers
+/// every row field except `review`. Expected digests come from the independent reference
+/// `fixtures/gdt/rowflow/make_state_cases.py` (`state_rows.json`).
+#[test]
+fn content_digest_covers_every_field_but_review() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gdt/rowflow/state_rows.json");
+    let doc = fid_canon::parse(&std::fs::read(path).unwrap()).unwrap();
+    let CValue::Obj(top) = &doc else { panic!("not an object") };
+    let (Some(CValue::Obj(rows)), Some(CValue::Obj(want))) = (top.get("rows"), top.get("content_digests")) else {
+        panic!("bad state_rows.json")
+    };
+    assert_eq!(rows.len(), want.len());
+    let mut got = BTreeMap::new();
+    for (name, v) in rows {
+        let row = row_from_value(v).unwrap();
+        let d = fid_gps::dmt::row_content_digest(&row).unwrap();
+        assert_eq!(Some(&s(d.as_str())), want.get(name), "{name}");
+        // The row digest (REQ-004) still covers `review`; the content digest never does.
+        let CValue::Obj(content) = row.content_cvalue() else { panic!("content is not an object") };
+        assert!(!content.contains_key(fid_gps::dmt::CONTENT_DIGEST_EXCLUDED));
+        assert_eq!(content.len(), 15, "every DmtRow field but review");
+        got.insert(name.clone(), d);
+    }
+    assert_eq!(got["supported"], got["supported_review_only"], "review must not change the content digest");
+    assert_ne!(got["supported"], got["supported_v2"], "notes are content");
+    assert_ne!(got["supported"], got["supported_synthetic_flip"], "synthetic is content");
+    let a = row_from_value(&rows["supported"]).unwrap();
+    let b = row_from_value(&rows["supported_review_only"]).unwrap();
+    assert_ne!(a.digest(), b.digest(), "the row digest still covers review");
+}
+
+#[test]
+fn with_review_replaces_only_the_review_state() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gdt/rowflow/state_rows.json");
+    let doc = fid_canon::parse(&std::fs::read(path).unwrap()).unwrap();
+    let CValue::Obj(top) = &doc else { panic!("not an object") };
+    let Some(CValue::Obj(rows)) = top.get("rows") else { panic!("bad state_rows.json") };
+    let draft = row_from_value(&rows["supported"]).unwrap();
+    let signed_file = row_from_value(&rows["supported_review_only"]).unwrap();
+    let signed = Reviewers::new(vec!["r1".to_owned(), "r2".to_owned()]).unwrap();
+    let rebuilt = draft.with_review(ReviewState::SignedOff(signed)).unwrap();
+    // Same as the row loaded with that review state: canonical bytes, row digest, everything.
+    assert_eq!(rebuilt, signed_file);
+    assert_eq!(rebuilt.digest(), Digest::from_bytes(fid_canon::digest_bytes(rebuilt.canonical_bytes()).0));
+    assert_eq!(fid_gps::dmt::row_content_digest(&rebuilt).unwrap(), fid_gps::dmt::row_content_digest(&draft).unwrap());
+    assert_eq!(rebuilt.with_review(ReviewState::Draft).unwrap(), draft);
+}

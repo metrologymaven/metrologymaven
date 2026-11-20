@@ -1,6 +1,6 @@
 [package]
 name = "fid-gdt"
-description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (GDT.RES.ROWFLOW.ROSTER), defaults profiles (GDT.CHAR.DPROF), governing specs (GDT.CHAR.SPEC), characteristic identity (GDT.CHAR.IDENT), the resolver commands (GDT.RES.RESOLVE), ResultRecord assembly (GDT.CHAR.RECORD) and datum definitions (GDT.DRF.DATUM)"
+description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (GDT.RES.ROWFLOW.ROSTER), the row review state machine (GDT.RES.ROWFLOW.STATE), defaults profiles (GDT.CHAR.DPROF), governing specs (GDT.CHAR.SPEC), characteristic identity (GDT.CHAR.IDENT), the resolver commands (GDT.RES.RESOLVE), ResultRecord assembly (GDT.CHAR.RECORD) and datum definitions (GDT.DRF.DATUM)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -34,6 +34,12 @@ fid-registry = { path = "../fid-registry" }
 # GDT.CHAR.IDENT: every identity goes through the project ID service (IdService, IdIndex,
 # ObservationSource and Uuid; CORE.PRJ.CONT.ID, model layer).
 fid-project = { path = "../fid-project" }
+
+# GDT.RES.ROWFLOW.STATE: authors and reviewers are bus-derived principals (CORE.BUS.PRIN), the
+# only way to learn a principal's kind, so a request can never claim to be human (the
+# AUTO.REC.ADOPT pattern). Engine layer, below services; fid-journal and fid-store, which it
+# builds on, are already in this crate's tree through fid-io-reg.
+fid-bus = { path = "../fid-bus" }
 
 [dev-dependencies]
 # GDT.CHAR.IDENT tests read the QIF fixtures with the project's hardened XML reader

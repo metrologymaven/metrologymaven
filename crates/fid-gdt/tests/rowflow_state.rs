@@ -1,0 +1,864 @@
+//! Acceptance criteria of spec node GDT.RES.ROWFLOW.STATE (AC-1 .. AC-7) plus the D-045
+//! content-digest binding. Every case file under `fixtures/gdt/rowflow/` (`happy.json`,
+//! `self_review.json`, ...) holds an event list and, per event, the outcome labelled by the
+//! independent stdlib-Python reference `fixtures/gdt/rowflow/make_state_cases.py`; the Rust
+//! crate never produced an expected value. The format checks at the end are hand-labelled
+//! from the leaf's rules. Rows, keys, designators, editions, clause numbers, reviewer IDs and
+//! identities are all invented; no standards text. Principals are derived by the bus from
+//! channels, the only way to build one.
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+use fid_bus::principal::{
+    Channel, ChannelKind, Identity, OsUser, Principal, PrincipalId, PrincipalKind, SessionId, SessionKey, SessionTable,
+};
+use fid_canon::{parse, to_canonical_bytes, CValue};
+use fid_gdt::dmt_flow::roster::{Date, Roster, RosterView};
+use fid_gdt::dmt_flow::state::{
+    propose, replay, transition, Attestation, Decision, FlowError, FlowState, IdrDraft, Provenance, RecordedFlow,
+    ReviewEvent, RowRevision, MAX_ATTESTATIONS, MAX_IDR_POSITIONS,
+};
+use fid_gps::dmt::row::row_from_value;
+use fid_gps::dmt::{row_content_digest, DmtRow, ReviewState, Reviewers};
+use fid_types::Digest;
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
+
+// ------------------------------------------------------------------ fixtures
+
+fn fixtures() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gdt/rowflow")
+}
+
+fn doc(name: &str) -> CValue {
+    parse(&std::fs::read(fixtures().join(name)).unwrap()).unwrap()
+}
+
+fn obj(v: &CValue) -> &BTreeMap<String, CValue> {
+    match v {
+        CValue::Obj(m) => m,
+        other => panic!("not an object: {other:?}"),
+    }
+}
+
+fn arr(v: &CValue) -> &[CValue] {
+    match v {
+        CValue::Arr(a) => a,
+        other => panic!("not an array: {other:?}"),
+    }
+}
+
+fn st(v: &CValue) -> &str {
+    match v {
+        CValue::Str(s) => s,
+        other => panic!("not a string: {other:?}"),
+    }
+}
+
+fn get<'a>(v: &'a CValue, k: &str) -> &'a CValue {
+    obj(v).get(k).unwrap_or_else(|| panic!("missing {k}"))
+}
+
+fn roster() -> Roster {
+    Roster::load(&std::fs::read(fixtures().join("state_roster.json")).unwrap()).unwrap()
+}
+
+fn rows() -> BTreeMap<String, DmtRow> {
+    let d = doc("state_rows.json");
+    obj(get(&d, "rows")).iter().map(|(k, v)| (k.clone(), row_from_value(v).unwrap())).collect()
+}
+
+fn date(s: &str) -> Date {
+    Date::parse(s).unwrap()
+}
+
+fn day() -> Date {
+    date("2026-11-20")
+}
+
+// ------------------------------------------------------------------ principals
+
+struct TestChannel {
+    kind: ChannelKind,
+    identity: Identity,
+    session: SessionKey,
+}
+
+impl Channel for TestChannel {
+    fn kind(&self) -> ChannelKind {
+        self.kind
+    }
+    fn authenticated_identity(&self) -> Option<Identity> {
+        Some(self.identity.clone())
+    }
+    fn session(&self) -> &SessionKey {
+        &self.session
+    }
+}
+
+/// A principal of `kind` as the bus derives it: GUI is `human`, MCP `agent`, a CLI session
+/// that was never upgraded `script`.
+fn principal(table: &mut SessionTable, kind: &str, subject: &str) -> Principal {
+    let ch = match kind {
+        "human" => ChannelKind::Gui,
+        "agent" => ChannelKind::Mcp,
+        "script" => ChannelKind::Cli,
+        other => panic!("unknown kind {other}"),
+    };
+    let mut identity = Identity::new(PrincipalId::new(subject).unwrap());
+    identity.os_user = Some(OsUser::new(&subject.to_ascii_lowercase()).unwrap());
+    let session = table.open_session(SessionId::new(&format!("{kind}-{subject}")).unwrap()).unwrap();
+    let c = TestChannel { kind: ch, identity, session };
+    let p = table.derive_principal(&c).unwrap();
+    assert_eq!(p.kind().as_str(), kind);
+    p
+}
+
+fn principal_of(table: &mut SessionTable, v: &CValue) -> Principal {
+    principal(table, st(get(v, "kind")), st(get(v, "id")))
+}
+
+// ------------------------------------------------------------------ the runner
+
+fn num(n: usize) -> CValue {
+    CValue::Num(f64::from(u32::try_from(n).unwrap()))
+}
+
+fn s(v: &str) -> CValue {
+    CValue::Str(v.to_owned())
+}
+
+fn o<const N: usize>(fields: [(&str, CValue); N]) -> CValue {
+    CValue::Obj(fields.into_iter().map(|(k, v)| (k.to_owned(), v)).collect())
+}
+
+/// The outcome summary in the reference's shape.
+fn summary(rev: &RowRevision) -> CValue {
+    let approvals: Vec<CValue> = rev.live_approvals().iter().map(|r| s(r.as_str())).collect();
+    let mapped = match rev.review_state().unwrap() {
+        ReviewState::Draft => o([("state", s("draft"))]),
+        ReviewState::UnderReview => o([("state", s("under_review"))]),
+        ReviewState::SignedOff(r) => {
+            o([("reviewers", CValue::Arr(r.as_slice().iter().map(|x| s(x)).collect())), ("state", s("signed_off"))])
+        }
+    };
+    let derived = match rev.derived_from() {
+        None => CValue::Null,
+        Some(d) => o([("content_digest", s(d.content_digest.as_str())), ("revision", num(d.revision as usize))]),
+    };
+    let idrs = rev
+        .idrs()
+        .iter()
+        .map(|i| o([("id", s(i.id())), ("positions", num(i.positions().len())), ("status", s(i.status().as_str()))]))
+        .collect();
+    o([
+        ("approvals", CValue::Arr(approvals)),
+        ("author_kind", s(rev.author_kind().as_str())),
+        ("content_digest", s(rev.content_digest().as_str())),
+        ("derived_from", derived),
+        ("idrs", CValue::Arr(idrs)),
+        ("key", s(rev.key().as_str())),
+        ("provenance", s(rev.provenance().as_str())),
+        ("review_state", mapped),
+        ("reviews", num(rev.reviews().len())),
+        ("revision", num(rev.revision() as usize)),
+        ("state", s(rev.state().as_str())),
+    ])
+}
+
+fn error_value(e: &FlowError) -> CValue {
+    let detail = match e {
+        FlowError::AttestationMissing { designator, edition } => {
+            o([("designator", s(designator)), ("edition", s(edition))])
+        }
+        FlowError::BadTransition { state, event } => o([("event", s(event)), ("state", s(state.as_str()))]),
+        FlowError::FieldTooLong { field } => o([("field", s(field))]),
+        FlowError::BadIdr { reason } | FlowError::BadAttestation { reason } => o([("reason", s(reason))]),
+        _ => CValue::Obj(BTreeMap::new()),
+    };
+    o([("error", o([("code", s(e.code())), ("detail", detail)]))])
+}
+
+fn cited(rev: &RowRevision) -> Vec<Attestation> {
+    rev.cited_editions()
+        .into_iter()
+        .map(|(designator, edition)| Attestation::EditionHeld { designator, edition })
+        .collect()
+}
+
+fn attestations(spec: &CValue, rev: &RowRevision) -> Vec<Attestation> {
+    match spec {
+        CValue::Str(t) if t == "cited" => cited(rev),
+        CValue::Str(t) if t == "placeholder" => vec![Attestation::NotRequiredPlaceholder],
+        CValue::Str(t) if t == "none" => Vec::new(),
+        CValue::Arr(pairs) => pairs
+            .iter()
+            .map(|p| {
+                let p = arr(p);
+                Attestation::EditionHeld { designator: st(&p[0]).to_owned(), edition: st(&p[1]).to_owned() }
+            })
+            .collect(),
+        other => panic!("bad attest {other:?}"),
+    }
+}
+
+struct Run {
+    outcomes: Vec<CValue>,
+    revisions: Vec<RowRevision>,
+    records: Vec<Vec<u8>>,
+    /// What the journal holds per successful step: entry header principal kind and identity,
+    /// the proposed row
+    /// (for a proposal) and the record payload.
+    journal: Vec<(PrincipalKind, String, Option<DmtRow>, CValue)>,
+}
+
+fn run_case(name: &str) -> (Run, Vec<CValue>) {
+    let d = doc(&format!("{name}.json"));
+    let roster = roster();
+    let rows = rows();
+    let mut table = SessionTable::new();
+    let mut rev: Option<RowRevision> = None;
+    let mut run = Run { outcomes: Vec::new(), revisions: Vec::new(), records: Vec::new(), journal: Vec::new() };
+    for ev in arr(get(&d, "events")) {
+        let at = date(st(get(ev, "at")));
+        let before = rev.clone();
+        let kind: PrincipalKind;
+        let who: String;
+        let mut proposed: Option<DmtRow> = None;
+        let result = match st(get(ev, "op")) {
+            "propose" => {
+                let author = principal_of(&mut table, get(ev, "author"));
+                kind = author.kind();
+                who = author.id().as_str().to_owned();
+                let row = rows[st(get(ev, "row"))].clone();
+                proposed = Some(row.clone());
+                propose(rev.as_ref(), row, &author, at)
+            }
+            "review" => {
+                let current = rev.as_ref().unwrap();
+                let reviewer = principal_of(&mut table, get(ev, "reviewer"));
+                kind = reviewer.kind();
+                who = reviewer.id().as_str().to_owned();
+                let decision = match st(get(ev, "decision")) {
+                    "approve" => Decision::Approve,
+                    "request_changes" => Decision::RequestChanges,
+                    other => panic!("bad decision {other}"),
+                };
+                let reviewed_digest = match st(get(ev, "reviewed")) {
+                    "current" => current.content_digest(),
+                    other => row_content_digest(&rows[other]).unwrap(),
+                };
+                let idr = obj(ev).get("idr").map(|i| IdrDraft {
+                    question_code: st(get(i, "question_code")).to_owned(),
+                    positions: arr(get(i, "positions")).iter().map(|p| st(p).to_owned()).collect(),
+                });
+                let event = ReviewEvent {
+                    reviewer: &reviewer,
+                    decision,
+                    attestations: attestations(get(ev, "attest"), current),
+                    reviewed_digest,
+                    idr,
+                    at,
+                };
+                transition(current, &event, &roster)
+            }
+            other => panic!("bad op {other}"),
+        };
+        match result {
+            Ok(step) => {
+                run.outcomes.push(o([("ok", summary(&step.revision))]));
+                let bytes = step.record.canonical_bytes().unwrap();
+                run.journal.push((kind, who, proposed, parse(&bytes).unwrap()));
+                run.records.push(bytes);
+                run.revisions.push(step.revision.clone());
+                rev = Some(step.revision);
+            }
+            Err(e) => {
+                // The input revision is unchanged and nothing is returned to journal.
+                assert_eq!(rev, before, "{name}: a failed event changed the revision");
+                run.outcomes.push(error_value(&e));
+            }
+        }
+    }
+    let expected = arr(get(&d, "expected")).to_vec();
+    (run, expected)
+}
+
+fn check_case(name: &str) -> Run {
+    let (run, expected) = run_case(name);
+    assert_eq!(run.outcomes.len(), expected.len(), "{name}");
+    for (i, (got, want)) in run.outcomes.iter().zip(&expected).enumerate() {
+        assert_eq!(
+            String::from_utf8(to_canonical_bytes(got).unwrap()).unwrap(),
+            String::from_utf8(to_canonical_bytes(want).unwrap()).unwrap(),
+            "{name}: event {i}"
+        );
+    }
+    run
+}
+
+// ------------------------------------------------------------------ every labelled case
+
+const CASES: [&str; 16] = [
+    "agent_authored",
+    "agent_reviewer",
+    "backdated",
+    "dup_reviewer",
+    "forged_review",
+    "happy",
+    "idr",
+    "key_change",
+    "no_attestation",
+    "not_in_roster",
+    "placeholder",
+    "placeholder_on_supported",
+    "reset",
+    "same_person_two_principals",
+    "self_review",
+    "synthetic_flip",
+];
+
+#[test]
+fn every_case_matches_the_reference() {
+    for name in CASES {
+        check_case(name);
+    }
+    // Every case file the reference wrote is exercised.
+    let mut on_disk: Vec<String> = std::fs::read_dir(fixtures())
+        .unwrap()
+        .filter_map(|e| {
+            let n = e.unwrap().file_name().into_string().unwrap();
+            let stem = n.strip_suffix(".json")?.to_owned();
+            // Roster error fixtures may not even parse; only case files hold `events`.
+            let d = parse(&std::fs::read(fixtures().join(&n)).ok()?).ok()?;
+            matches!(&d, CValue::Obj(m) if m.contains_key("events")).then_some(stem)
+        })
+        .collect();
+    on_disk.sort();
+    let mut listed: Vec<String> = CASES.iter().map(|s| (*s).to_owned()).collect();
+    listed.sort();
+    assert_eq!(on_disk, listed);
+}
+
+// ------------------------------------------------------------------ AC-1
+
+#[test]
+fn ac1_happy_path_signs_off_with_sorted_reviewers() {
+    let run = check_case("happy");
+    let states: Vec<FlowState> = run.revisions.iter().map(RowRevision::state).collect();
+    assert_eq!(states, [FlowState::Draft, FlowState::UnderReview, FlowState::SignedOff]);
+    let last = run.revisions.last().unwrap();
+    let want = Reviewers::new(vec!["r1".to_owned(), "r2".to_owned()]).unwrap();
+    assert_eq!(last.review_state().unwrap(), ReviewState::SignedOff(want));
+    // Every review record carries the roster digest it was checked against.
+    let roster = roster();
+    assert!(last.reviews().iter().all(|r| r.roster_digest() == roster.roster_digest()));
+    assert!(last.reviews().iter().all(|r| r.reviewed_digest() == last.content_digest()));
+}
+
+#[test]
+fn transitions_are_journal_records() {
+    let (run, _) = run_case("happy");
+    let events: Vec<(String, Option<String>, String)> = run
+        .records
+        .iter()
+        .map(|b| {
+            let v = parse(b).unwrap();
+            let from = match get(&v, "from") {
+                CValue::Null => None,
+                f => Some(st(f).to_owned()),
+            };
+            (st(get(&v, "event")).to_owned(), from, st(get(&v, "to")).to_owned())
+        })
+        .collect();
+    assert_eq!(
+        events,
+        [
+            ("propose".to_owned(), None, "draft".to_owned()),
+            ("approve".to_owned(), Some("draft".to_owned()), "under_review".to_owned()),
+            ("approve".to_owned(), Some("under_review".to_owned()), "signed_off".to_owned()),
+        ]
+    );
+    let review = parse(&run.records[1]).unwrap();
+    assert_eq!(st(get(&review, "reviewer")), "r1");
+    assert_eq!(st(get(&review, "roster_digest")), roster().roster_digest().as_str());
+    assert_eq!(st(get(&review, "content_digest")), run.revisions[0].content_digest().as_str());
+}
+
+#[test]
+fn reviewers_are_pseudonymous() {
+    let run = check_case("happy");
+    let bytes = run.revisions.last().unwrap().canonical_bytes().unwrap();
+    let text = String::from_utf8(bytes).unwrap();
+    let mut all = text.clone();
+    for r in &run.records {
+        all.push_str(std::str::from_utf8(r).unwrap());
+    }
+    // Roster IDs only: never a reviewer's principal identity or display name.
+    // No principal identity in any journal record (the entry header carries it).
+    for r in &run.records {
+        assert!(!std::str::from_utf8(r).unwrap().contains("author-a"), "author identity in a record");
+    }
+    for leak in ["rev-one", "rev-two", "Reviewer One", "Reviewer Two", "fictional"] {
+        assert!(!all.contains(leak), "{leak} leaked into a record");
+    }
+    assert!(text.contains("\"reviewer\":\"r1\"") && text.contains("\"reviewer\":\"r2\""));
+}
+
+// ------------------------------------------------------------------ AC-2
+
+#[test]
+fn ac2_error_paths() {
+    for (name, code) in [
+        ("self_review", "reviewer_is_author"),
+        ("dup_reviewer", "duplicate_reviewer"),
+        ("not_in_roster", "reviewer_not_in_roster"),
+        ("agent_reviewer", "reviewer_not_human"),
+        ("no_attestation", "attestation_missing"),
+    ] {
+        let (run, _) = run_case(name);
+        check_case(name);
+        assert!(
+            run.outcomes.iter().any(|v| obj(v).get("error").is_some_and(|e| st(get(e, "code")) == code)),
+            "{name} never failed with {code}"
+        );
+    }
+}
+
+// ------------------------------------------------------------------ AC-3
+
+#[test]
+fn ac3_agent_revision_needs_a_human_reproposal() {
+    let run = check_case("agent_authored");
+    let agent_rev = &run.revisions[0];
+    assert_eq!(agent_rev.author_kind(), PrincipalKind::Agent);
+    assert_eq!(agent_rev.provenance(), Provenance::Agent);
+    let human_rev = &run.revisions[1];
+    assert_eq!(human_rev.provenance(), Provenance::Human);
+    let d = human_rev.derived_from().unwrap();
+    assert_eq!((d.revision, d.content_digest), (1, agent_rev.content_digest()));
+    assert_eq!(run.revisions.last().unwrap().state(), FlowState::SignedOff);
+}
+
+#[test]
+fn every_non_human_author_is_refused_like_an_agent() {
+    let rows = rows();
+    let roster = roster();
+    let mut table = SessionTable::new();
+    let script = principal(&mut table, "script", "batch-job");
+    let r1 = principal(&mut table, "human", "rev-one");
+    let rev = propose(None, rows["supported"].clone(), &script, day()).unwrap().revision;
+    assert_eq!(rev.provenance(), Provenance::Agent);
+    let ev = approve(&r1, &rev);
+    assert_eq!(transition(&rev, &ev, &roster).unwrap_err(), FlowError::AgentAuthoredRevision);
+}
+
+// ------------------------------------------------------------------ AC-4 and D-045
+
+#[test]
+fn ac4_content_change_resets_a_signed_off_row() {
+    let run = check_case("reset");
+    let signed = &run.revisions[2];
+    assert_eq!(signed.state(), FlowState::SignedOff);
+    let new = &run.revisions[3];
+    assert_eq!((new.state(), new.reviews().len(), new.revision()), (FlowState::Draft, 0, 2));
+    assert_ne!(new.content_digest(), signed.content_digest());
+    assert_eq!(new.review_state().unwrap(), ReviewState::Draft);
+}
+
+#[test]
+fn synthetic_flip_changes_the_digest_and_resets() {
+    let run = check_case("synthetic_flip");
+    let signed = &run.revisions[2];
+    let flipped = &run.revisions[3];
+    assert_eq!(signed.state(), FlowState::SignedOff);
+    let (signed_row, flipped_row) = (signed.reviewed_row().unwrap(), flipped.reviewed_row().unwrap());
+    assert_eq!(signed_row.synthetic(), !flipped_row.synthetic());
+    assert_ne!(signed.content_digest(), flipped.content_digest());
+    assert_eq!((flipped.state(), flipped.reviews().len()), (FlowState::Draft, 0));
+    assert_eq!(flipped.derived_from().unwrap().content_digest, signed.content_digest());
+    // The digest of the row actually held, recomputed, equals the reference's.
+    let d = doc("state_rows.json");
+    let want = st(get(get(&d, "content_digests"), "supported_synthetic_flip"));
+    assert_eq!(flipped.content_digest().as_str(), want);
+    assert_eq!(row_content_digest(&flipped_row).unwrap(), flipped.content_digest());
+}
+
+#[test]
+fn a_row_cannot_carry_its_own_sign_off() {
+    // Review of #320: a proposed row whose `review` field already says signed_off{r1, r2} is
+    // refused, and a row leaves the workflow only with the review state the workflow derived.
+    check_case("forged_review");
+    let rows = rows();
+    let mut table = SessionTable::new();
+    let author = principal(&mut table, "human", "author-a");
+    let forged = rows["supported_review_only"].clone();
+    assert!(matches!(forged.review(), ReviewState::SignedOff(_)));
+    assert_eq!(propose(None, forged, &author, day()).unwrap_err(), FlowError::ReviewFieldNotDraft);
+    let under = rows["supported"].with_review(ReviewState::UnderReview).unwrap();
+    assert_eq!(propose(None, under, &author, day()).unwrap_err(), FlowError::ReviewFieldNotDraft);
+
+    let draft = propose(None, rows["supported"].clone(), &author, day()).unwrap().revision;
+    assert_eq!(*draft.reviewed_row().unwrap().review(), ReviewState::Draft);
+    let run = check_case("happy");
+    let signed = run.revisions.last().unwrap();
+    let out = signed.reviewed_row().unwrap();
+    assert_eq!(*out.review(), signed.review_state().unwrap());
+    assert_eq!(row_content_digest(&out).unwrap(), signed.content_digest());
+    // The row file with the same review field is byte-identical to what the workflow emits.
+    assert_eq!(out, rows["supported_review_only"]);
+}
+
+// ------------------------------------------------------------------ AC-5, AC-6
+
+#[test]
+fn ac5_placeholder_attestation() {
+    let run = check_case("placeholder");
+    assert_eq!(run.revisions.last().unwrap().state(), FlowState::SignedOff);
+    let (run, _) = run_case("placeholder_on_supported");
+    check_case("placeholder_on_supported");
+    let err = get(&run.outcomes[1], "error");
+    assert_eq!(st(get(err, "code")), "bad_attestation");
+    assert_eq!(st(get(get(err, "detail"), "reason")), "placeholder_not_allowed");
+}
+
+#[test]
+fn ac6_idr_position_limit() {
+    let run = check_case("idr");
+    let opened = &run.revisions[2];
+    assert_eq!(opened.state(), FlowState::Draft);
+    assert!(opened.live_approvals().is_empty());
+    assert_eq!(opened.idrs().len(), 1);
+    assert_eq!(opened.idrs()[0].positions()[0].chars().count(), 280);
+    assert_eq!(opened.reviews().last().unwrap().idr(), Some(opened.idrs()[0].id()));
+}
+
+// ------------------------------------------------------------------ AC-7
+
+#[test]
+fn ac7_same_events_give_identical_bytes() {
+    for name in CASES {
+        let (a, _) = run_case(name);
+        let (b, _) = run_case(name);
+        assert_eq!(a.records, b.records, "{name}");
+        let bytes = |r: &Run| r.revisions.iter().map(|v| v.canonical_bytes().unwrap()).collect::<Vec<_>>();
+        assert_eq!(bytes(&a), bytes(&b), "{name}");
+    }
+}
+
+// ------------------------------------------------------------------ hand-labelled format checks
+
+fn approve<'a>(who: &'a Principal, rev: &RowRevision) -> ReviewEvent<'a> {
+    ReviewEvent {
+        reviewer: who,
+        decision: Decision::Approve,
+        attestations: cited(rev),
+        reviewed_digest: rev.content_digest(),
+        idr: None,
+        at: day(),
+    }
+}
+
+#[test]
+fn idr_and_attestation_formats() {
+    let rows = rows();
+    let roster = roster();
+    let mut table = SessionTable::new();
+    let author = principal(&mut table, "human", "author-a");
+    let r1 = principal(&mut table, "human", "rev-one");
+    let rev = propose(None, rows["supported"].clone(), &author, day()).unwrap().revision;
+    let idr = |code: &str, positions: Vec<String>| Some(IdrDraft { question_code: code.to_owned(), positions });
+
+    let mut ev = approve(&r1, &rev);
+    ev.idr = idr("zone_shape", vec!["A reading.".to_owned()]);
+    assert_eq!(transition(&rev, &ev, &roster).unwrap_err(), FlowError::BadIdr { reason: "idr_on_approve" });
+
+    ev.decision = Decision::RequestChanges;
+    for (code, positions, want) in [
+        ("Zone", vec!["a".to_owned()], FlowError::BadIdr { reason: "bad_question_code" }),
+        ("", vec!["a".to_owned()], FlowError::BadIdr { reason: "bad_question_code" }),
+        ("zone", Vec::new(), FlowError::BadIdr { reason: "bad_position_count" }),
+        ("zone", vec!["a".to_owned(); MAX_IDR_POSITIONS + 1], FlowError::BadIdr { reason: "bad_position_count" }),
+        ("zone", vec![String::new()], FlowError::BadIdr { reason: "bad_position" }),
+        ("zone", vec!["line\nbreak".to_owned()], FlowError::BadIdr { reason: "bad_position" }),
+        ("zone", vec!["\u{e9}".repeat(281)], FlowError::FieldTooLong { field: "position" }),
+    ] {
+        ev.idr = idr(code, positions);
+        assert_eq!(transition(&rev, &ev, &roster).unwrap_err(), want, "{code}");
+    }
+    // 280 non-ASCII characters is within the limit: the limit counts characters, not bytes.
+    ev.idr = idr("zone", vec!["\u{e9}".repeat(280)]);
+    assert_eq!(transition(&rev, &ev, &roster).unwrap().revision.idrs()[0].id(), "idr-1-1");
+
+    let mut ev = approve(&r1, &rev);
+    ev.attestations = vec![Attestation::NotRequiredPlaceholder; MAX_ATTESTATIONS + 1];
+    assert_eq!(transition(&rev, &ev, &roster).unwrap_err(), FlowError::FieldTooLong { field: "attestations" });
+    let mut ev = approve(&r1, &rev);
+    ev.attestations.push(Attestation::EditionHeld { designator: "d".repeat(33), edition: "1".to_owned() });
+    assert_eq!(transition(&rev, &ev, &roster).unwrap_err(), FlowError::FieldTooLong { field: "attestation" });
+    // Duplicate and extra attestations are harmless; the record keeps them sorted and unique.
+    let mut ev = approve(&r1, &rev);
+    let first = ev.attestations[0].clone();
+    ev.attestations.insert(0, first);
+    ev.attestations.push(Attestation::EditionHeld { designator: "syn-std-z".to_owned(), edition: "1999".to_owned() });
+    let next = transition(&rev, &ev, &roster).unwrap().revision;
+    let rec = next.reviews()[0].edition_attestations();
+    assert_eq!(rec.len(), 3);
+    assert!(rec.windows(2).all(|w| w[0] < w[1]));
+}
+
+#[test]
+fn stale_review_names_a_digest_other_than_the_revisions() {
+    let rows = rows();
+    let roster = roster();
+    let mut table = SessionTable::new();
+    let author = principal(&mut table, "human", "author-a");
+    let r1 = principal(&mut table, "human", "rev-one");
+    let rev = propose(None, rows["supported"].clone(), &author, day()).unwrap().revision;
+    let mut ev = approve(&r1, &rev);
+    ev.reviewed_digest = Digest::TOMBSTONE;
+    assert_eq!(transition(&rev, &ev, &roster).unwrap_err(), FlowError::StaleReview);
+}
+
+#[test]
+fn roster_role_is_checked_on_the_review_date() {
+    let rows = rows();
+    let roster = roster();
+    let mut table = SessionTable::new();
+    let author = principal(&mut table, "human", "author-a");
+    // r5 held the role until 2026-11-01 (exclusive).
+    let r5 = principal(&mut table, "human", "rev-five");
+    let rev = propose(None, rows["supported"].clone(), &author, date("2026-10-01")).unwrap().revision;
+    let mut ev = approve(&r5, &rev);
+    ev.at = date("2026-10-31");
+    assert_eq!(transition(&rev, &ev, &roster).unwrap().revision.live_approvals()[0].as_str(), "r5");
+    ev.at = date("2026-11-01");
+    assert_eq!(transition(&rev, &ev, &roster).unwrap_err(), FlowError::ReviewerNotInRoster);
+}
+
+#[test]
+fn request_changes_from_an_approver_clears_approvals_and_allows_reapproval() {
+    let rows = rows();
+    let roster = roster();
+    let mut table = SessionTable::new();
+    let author = principal(&mut table, "human", "author-a");
+    let r1 = principal(&mut table, "human", "rev-one");
+    let rev = propose(None, rows["supported"].clone(), &author, day()).unwrap().revision;
+    let rev = transition(&rev, &approve(&r1, &rev), &roster).unwrap().revision;
+    let mut rc = approve(&r1, &rev);
+    rc.decision = Decision::RequestChanges;
+    let step = transition(&rev, &rc, &roster).unwrap();
+    assert_eq!((step.record.from(), step.record.to()), (Some(FlowState::UnderReview), FlowState::Draft));
+    let rev = step.revision;
+    assert!(rev.live_approvals().is_empty());
+    assert_eq!(rev.reviews().len(), 2, "history is kept");
+    let rev = transition(&rev, &approve(&r1, &rev), &roster).unwrap().revision;
+    assert_eq!(rev.state(), FlowState::UnderReview);
+}
+
+#[test]
+fn error_codes_and_display() {
+    let cases = [
+        (FlowError::AgentAuthoredRevision, "agent_authored_revision"),
+        (
+            FlowError::AttestationMissing { designator: "syn-std-a".into(), edition: "2001".into() },
+            "attestation_missing{syn-std-a, 2001}",
+        ),
+        (FlowError::ReviewerIsAuthor, "reviewer_is_author"),
+        (FlowError::DuplicateReviewer, "duplicate_reviewer"),
+        (FlowError::ReviewerNotInRoster, "reviewer_not_in_roster"),
+        (FlowError::ReviewerNotHuman, "reviewer_not_human"),
+        (FlowError::FieldTooLong { field: "position" }, "field_too_long{position}"),
+        (
+            FlowError::BadTransition { state: FlowState::SignedOff, event: "approve" },
+            "bad_transition{signed_off, approve}",
+        ),
+        (FlowError::StaleReview, "stale_review"),
+        (FlowError::KeyMismatch, "key_mismatch"),
+        (FlowError::BadIdr { reason: "bad_position" }, "bad_idr{bad_position}"),
+        (FlowError::BadAttestation { reason: "placeholder_not_allowed" }, "bad_attestation{placeholder_not_allowed}"),
+        (FlowError::BackdatedReview, "backdated_review"),
+        (FlowError::ReviewFieldNotDraft, "review_field_not_draft"),
+        (FlowError::ContentDigest { reason: "x" }, "content_digest_unavailable{x}"),
+        (FlowError::ReviewersInvalid { reason: "bad_count" }, "reviewers_invalid{bad_count}"),
+        (FlowError::UnknownRoster, "unknown_roster"),
+        (FlowError::ReplayMismatch { reason: "record_differs" }, "replay_mismatch{record_differs}"),
+    ];
+    for (e, text) in cases {
+        assert_eq!(e.to_string(), text);
+        assert!(text.starts_with(e.code()));
+    }
+}
+
+// ------------------------------------------------------------------ backdating
+
+#[test]
+fn reviews_cannot_be_backdated() {
+    check_case("backdated");
+    let rows = rows();
+    let roster = roster();
+    let mut table = SessionTable::new();
+    let author = principal(&mut table, "human", "author-a");
+    let r1 = principal(&mut table, "human", "rev-one");
+    let r2 = principal(&mut table, "human", "rev-two");
+    let rev = propose(None, rows["supported"].clone(), &author, day()).unwrap().revision;
+    let mut ev = approve(&r1, &rev);
+    ev.at = date("2026-11-19");
+    assert_eq!(transition(&rev, &ev, &roster).unwrap_err(), FlowError::BackdatedReview);
+    ev.at = date("2026-11-22");
+    let rev = transition(&rev, &ev, &roster).unwrap().revision;
+    let mut ev = approve(&r2, &rev);
+    ev.at = date("2026-11-21");
+    assert_eq!(transition(&rev, &ev, &roster).unwrap_err(), FlowError::BackdatedReview);
+    ev.at = date("2026-11-22");
+    assert_eq!(transition(&rev, &ev, &roster).unwrap().revision.state(), FlowState::SignedOff);
+}
+
+// ------------------------------------------------------------------ replay from the journal
+
+/// Splits a run's journal into revisions and replays each from its records.
+fn replay_run(run: &Run, roster: &Roster) -> Vec<RowRevision> {
+    let mut out: Vec<RowRevision> = Vec::new();
+    let mut group: Vec<RecordedFlow> = Vec::new();
+    let mut row: Option<DmtRow> = None;
+    let flush = |row: &mut Option<DmtRow>, group: &mut Vec<RecordedFlow>, out: &mut Vec<RowRevision>| {
+        if let Some(r) = row.take() {
+            let rev = replay(out.last(), r, group, &[roster]).unwrap();
+            out.push(rev);
+            group.clear();
+        }
+    };
+    for (kind, id, proposed, record) in &run.journal {
+        if proposed.is_some() {
+            flush(&mut row, &mut group, &mut out);
+            row.clone_from(proposed);
+        }
+        group.push(RecordedFlow { principal_kind: *kind, principal_id: id.clone(), record: record.clone() });
+    }
+    flush(&mut row, &mut group, &mut out);
+    out
+}
+
+#[test]
+fn replay_round_trips_every_case() {
+    let roster = roster();
+    for name in CASES {
+        let (run, _) = run_case(name);
+        let rebuilt = replay_run(&run, &roster);
+        // The last revision of each proposal group equals what the live calls produced.
+        let mut live: Vec<RowRevision> = Vec::new();
+        for (rev, (_, _, proposed, _)) in run.revisions.iter().zip(&run.journal) {
+            if proposed.is_some() || live.is_empty() {
+                live.push(rev.clone());
+            } else if let Some(last) = live.last_mut() {
+                *last = rev.clone();
+            }
+        }
+        assert_eq!(rebuilt, live, "{name}");
+    }
+}
+
+fn happy_entries() -> (DmtRow, Vec<RecordedFlow>) {
+    let (run, _) = run_case("happy");
+    let row = run.journal[0].2.clone().unwrap();
+    let entries = run
+        .journal
+        .iter()
+        .map(|(k, id, _, r)| RecordedFlow { principal_kind: *k, principal_id: id.clone(), record: r.clone() })
+        .collect();
+    (row, entries)
+}
+
+fn set(v: &mut CValue, k: &str, x: CValue) {
+    match v {
+        CValue::Obj(m) => {
+            m.insert(k.to_owned(), x);
+        }
+        _ => panic!("not an object"),
+    }
+}
+
+#[test]
+fn replay_refuses_a_tampered_journal() {
+    let roster = roster();
+    let (row, good) = happy_entries();
+    let signed = replay(None, row.clone(), &good, &[&roster]).unwrap();
+    assert_eq!(signed.state(), FlowState::SignedOff);
+    let run = |entries: &[RecordedFlow]| replay(None, row.clone(), entries, &[&roster]).unwrap_err();
+    let differs = FlowError::ReplayMismatch { reason: "record_differs" };
+
+    // A forged final state.
+    let mut e = good.clone();
+    set(&mut e[2].record, "to", s("under_review"));
+    assert_eq!(run(&e), differs);
+    // A dropped approval: the next record's `from` no longer fits.
+    let e = vec![good[0].clone(), good[2].clone()];
+    assert_eq!(run(&e), differs);
+    // An inserted extra approval after sign-off.
+    let mut e = good.clone();
+    e.push(good[2].clone());
+    assert_eq!(run(&e), FlowError::BadTransition { state: FlowState::SignedOff, event: "approve" });
+    // A reviewer ID swapped in the payload: the header's principal holds r2, not r3 or r4.
+    let reviewer_differs = FlowError::ReplayMismatch { reason: "reviewer_differs" };
+    let mut e = good.clone();
+    set(&mut e[2].record, "reviewer", s("r3"));
+    assert_eq!(run(&e), reviewer_differs);
+    // A valid but different roster ID (r4 holds the ASME role) swapped in.
+    let mut e = good.clone();
+    set(&mut e[1].record, "reviewer", s("r4"));
+    assert_eq!(run(&e), reviewer_differs);
+    // One human journaling both approvals, the second naming r2.
+    let mut e = good.clone();
+    e[2].principal_id = "rev-one".to_owned();
+    assert_eq!(run(&e), reviewer_differs);
+    // The author journaling a review that names r2, in any letter case.
+    for author in ["author-a", "Author-A"] {
+        let mut e = good.clone();
+        e[2].principal_id = author.to_owned();
+        assert_eq!(run(&e), FlowError::ReviewerIsAuthor, "{author}");
+    }
+    // A review entry whose principal holds no role.
+    let mut e = good.clone();
+    e[2].principal_id = "nobody".to_owned();
+    assert_eq!(run(&e), FlowError::ReviewerNotInRoster);
+    // The author identity comes from the propose entry's header: a different author there
+    // makes r1's own review a self-review.
+    let mut e = good.clone();
+    e[0].principal_id = "rev-one".to_owned();
+    assert_eq!(run(&e), FlowError::ReviewerIsAuthor);
+    // A review carried by a non-human journal entry.
+    let mut e = good.clone();
+    e[1].principal_kind = PrincipalKind::Agent;
+    assert_eq!(run(&e), FlowError::ReviewerNotHuman);
+    // A roster replay was not given.
+    let mut e = good.clone();
+    set(&mut e[1].record, "roster_digest", s(Digest::TOMBSTONE.as_str()));
+    assert_eq!(run(&e), FlowError::UnknownRoster);
+    // A stale reviewed digest.
+    let mut e = good.clone();
+    set(&mut e[1].record, "reviewed_digest", s(Digest::TOMBSTONE.as_str()));
+    assert_eq!(run(&e), FlowError::StaleReview);
+    // A backdated review.
+    let mut e = good.clone();
+    set(&mut e[1].record, "at", s("2026-11-19"));
+    assert_eq!(run(&e), FlowError::BackdatedReview);
+    // A proposal whose content digest does not match the row.
+    let mut e = good.clone();
+    set(&mut e[0].record, "content_digest", s(Digest::TOMBSTONE.as_str()));
+    assert_eq!(run(&e), differs);
+    // A proposal journaled by an agent but claiming a human author.
+    let mut e = good.clone();
+    e[0].principal_kind = PrincipalKind::Agent;
+    assert_eq!(run(&e), FlowError::ReplayMismatch { reason: "principal_kind" });
+    // Structure.
+    assert_eq!(run(&[]), FlowError::ReplayMismatch { reason: "empty" });
+    assert_eq!(run(&good[1..]), FlowError::ReplayMismatch { reason: "first_not_propose" });
+    let mut e = good.clone();
+    e.insert(1, good[0].clone());
+    assert_eq!(run(&e), FlowError::ReplayMismatch { reason: "propose_inside_revision" });
+    let mut e = good.clone();
+    set(&mut e[1].record, "reviewer", CValue::Bool(true));
+    assert_eq!(run(&e), FlowError::ReplayMismatch { reason: "malformed_record" });
+    // A forged row (its own review field signed off) cannot be replayed in either.
+    let forged = rows()["supported_review_only"].clone();
+    assert_eq!(replay(None, forged, &good, &[&roster]).unwrap_err(), FlowError::ReviewFieldNotDraft);
+}
