@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-crash]
+built_pr: 350
 satisfies: [REQ-CORE.STO.SQL-005]
 covers: []
 depends_on: [CORE.STO.SQL.TXN, CORE.JRN.CANON]
