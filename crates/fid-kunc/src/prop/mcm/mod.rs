@@ -3,18 +3,21 @@
 //! Engine functions only (BLOCK, ADAPT, INTVL, SAMP are L0 in this crate); the command
 //! `unc.propagate_mcm@1` and its block scheduling are in the L2 command crate.
 //!
-//! Implemented: [`interval`] (`UNC.PROP.MCM.INTVL`) and [`adapt`] (the adaptive stopping
-//! rule, `UNC.PROP.MCM.ADAPT`). Not yet built: trial blocks (`UNC.PROP.MCM.BLOCK`, blocked
-//! on `UNC.MODEL.GRAPH`) and retained sample sets (`UNC.PROP.MCM.SAMP`).
+//! Implemented: [`block`] (trial-block sampling and per-trial kernel evaluation,
+//! `UNC.PROP.MCM.BLOCK`), [`interval`] (`UNC.PROP.MCM.INTVL`) and [`adapt`] (the adaptive
+//! stopping rule, `UNC.PROP.MCM.ADAPT`). Not yet built: retained sample sets
+//! (`UNC.PROP.MCM.SAMP`).
 //!
 //! Nothing in this module produces an uncertainty statement or an evidence class. A
 //! Monte Carlo summary is a model-based (simulated) result; the class and the claim rules
 //! are applied by `UNC.UEC.CLASS` and `UNC.PROP.SELECT` when a statement is made from it.
 
+use crate::dist::DistError;
 use core::fmt;
 use fid_num::NumError;
 
 pub mod adapt;
+pub mod block;
 pub mod interval;
 
 /// Errors of the Monte Carlo engine functions.
@@ -40,6 +43,27 @@ pub enum McmError {
     /// A numeric error from `fid-num`: a NaN or infinite value (with the index of the first
     /// offending element of the value set, in input order) or an overflow in a reduction.
     Num(NumError),
+    /// `provenance`: the model, the release manifest and the running kernel are not bound
+    /// to each other (`detail`: `model_manifest`, `kernel_manifest_unset`,
+    /// `kernel_manifest_mismatch` or `kernel_unavailable`; `UNC.PROP.MCM.BLOCK`).
+    Provenance { detail: &'static str },
+    /// `unsupported_model`: the block engine cannot evaluate this model (`detail`:
+    /// `operator_not_in_kernel`, `operator_arity` or `correlated_non_normal`).
+    UnsupportedModel { detail: &'static str },
+    /// `invalid_block`: a block spec with `block_size` 0 or trial indices outside the
+    /// addressable range (`detail`: `block_size` or `index`).
+    InvalidBlock { detail: &'static str },
+    /// `block_spec_mismatch`: the block spec's `model_digest` or `inputs_digest` differs from
+    /// the prepared model or sampling plan.
+    BlockSpecMismatch { field: &'static str },
+    /// `kernel`: a kernel error that is not a per-trial algorithm failure (floating-point
+    /// environment, lookup, card, arity, digest or parameter validation), raised by the call
+    /// of global trial `trial`; `code` is the kernel's code.
+    Kernel { code: &'static str, trial: u64 },
+    /// A distribution error that is not a per-trial failure (`UNC.MODEL.DIST`).
+    Dist(DistError),
+    /// `internal`: an invariant of a validated model did not hold (`detail` names it).
+    Internal { detail: &'static str },
 }
 
 impl McmError {
@@ -53,6 +77,13 @@ impl McmError {
             McmError::InvalidSummary { .. } => "invalid_summary",
             McmError::CapExceeded { .. } => "cap_exceeded",
             McmError::Num(_) => "numeric",
+            McmError::Provenance { .. } => "provenance",
+            McmError::UnsupportedModel { .. } => "unsupported_model",
+            McmError::InvalidBlock { .. } => "invalid_block",
+            McmError::BlockSpecMismatch { .. } => "block_spec_mismatch",
+            McmError::Kernel { .. } => "kernel",
+            McmError::Dist(_) => "distribution",
+            McmError::Internal { .. } => "internal",
         }
     }
 }
@@ -74,6 +105,13 @@ impl fmt::Display for McmError {
             McmError::InvalidSummary { block: None } => write!(f, "invalid_summary: overall u"),
             McmError::CapExceeded { blocks, max } => write!(f, "cap_exceeded: {blocks} blocks, at most {max}"),
             McmError::Num(e) => write!(f, "numeric: {e}"),
+            McmError::Provenance { detail } => write!(f, "provenance: {detail}"),
+            McmError::UnsupportedModel { detail } => write!(f, "unsupported_model: {detail}"),
+            McmError::InvalidBlock { detail } => write!(f, "invalid_block: {detail}"),
+            McmError::BlockSpecMismatch { field } => write!(f, "block_spec_mismatch: {field}"),
+            McmError::Kernel { code, trial } => write!(f, "kernel: {code} at trial {trial}"),
+            McmError::Dist(e) => write!(f, "distribution: {e}"),
+            McmError::Internal { detail } => write!(f, "internal: {detail}"),
         }
     }
 }

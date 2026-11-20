@@ -1,0 +1,112 @@
+{
+  "schema": "uncertainty-model/v1",
+  "name": "fail-fit",
+  "semver": "1.0.0",
+  "inputs": [
+    {
+      "id": "radius",
+      "quantity_kind": "length",
+      "unit": "si:m",
+      "distribution": {
+        "kind": "normal",
+        "params": {
+          "mu": "3f60624dd2f1a9fc",
+          "sigma": "3f50624dd2f1a9fc"
+        }
+      },
+      "source": {
+        "kind": "declared",
+        "digest": "sha256:748fc330738b61a583e9c8be160cde007cefaed3087eeaa4213ee021fc304280",
+        "author": "metrology-maven fixtures"
+      }
+    },
+    {
+      "id": "offset",
+      "quantity_kind": "length",
+      "unit": "si:m",
+      "distribution": {
+        "kind": "rect",
+        "params": {
+          "a": "bf1a36e2eb1c432d",
+          "b": "3f1a36e2eb1c432d"
+        }
+      },
+      "source": {
+        "kind": "declared",
+        "digest": "sha256:819b995a81e241f98fae6789d78efe6278c0a7754c5f71d86ec5c30b7c9df3a4",
+        "author": "metrology-maven fixtures"
+      }
+    }
+  ],
+  "operators": [
+    {
+      "id": "fit",
+      "algorithm_id": "test.mcm.circle_fit",
+      "algorithm_version": "1.0.0",
+      "params": {
+        "points": "8"
+      },
+      "ports_in": [
+        {
+          "name": "radius",
+          "quantity_kind": "length",
+          "unit": "si:m",
+          "arity": "1"
+        },
+        {
+          "name": "offset",
+          "quantity_kind": "length",
+          "unit": "si:m",
+          "arity": "1"
+        }
+      ],
+      "ports_out": [
+        {
+          "name": "diameter",
+          "quantity_kind": "length",
+          "unit": "si:m"
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "id": "d",
+      "quantity_kind": "length",
+      "unit": "si:m"
+    }
+  ],
+  "edges": [
+    {
+      "from": {
+        "node": "radius",
+        "port": "value"
+      },
+      "to": {
+        "node": "fit",
+        "port": "radius"
+      }
+    },
+    {
+      "from": {
+        "node": "offset",
+        "port": "value"
+      },
+      "to": {
+        "node": "fit",
+        "port": "offset"
+      }
+    },
+    {
+      "from": {
+        "node": "fit",
+        "port": "diameter"
+      },
+      "to": {
+        "node": "d",
+        "port": "value"
+      }
+    }
+  ],
+  "correlations": []
+}
