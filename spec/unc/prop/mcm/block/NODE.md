@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-kunc]
+built_pr: 338
 satisfies: [REQ-UNC.PROP.MCM-001, REQ-UNC.PROP.MCM-004, REQ-UNC.PROP.MCM-005]
 covers: []
 depends_on: [UNC.MODEL.GRAPH, UNC.MODEL.DIST, KRN.MAN.KCI, KRN.NUM.RNG]
@@ -82,6 +83,7 @@ Evaluates one fixed-size block of Monte Carlo trials. Each trial's inputs are dr
 - **Applied (correlation groups).** A model correlation group is drawn as one `UNC.MODEL.DIST` multivariate normal at the stream of its first (smallest-ID) input. Its components use DIST's multivariate sub-stream, addressed by component, rather than separate consecutive user streams. The other members' ordinals stay unused, so independent inputs keep their own ordinal streams. A group with a non-normal member is refused (`unsupported_model{correlated_non_normal}`) because no copula is specified. `UNC.MODEL.DIST` or `UNC.MODEL.GRAPH` would have to specify one first.
 - **Applied (AC-2 wording).** `fid-num` has no normal draw of its own. "The `fid-num` normal draw at (7, 0, 12 345)" is read as `UNC.MODEL.DIST`'s normal sampler on the `fid-num` Philox block at that address.
 - **Applied (AC-H1 test).** The Kolmogorov-Smirnov critical value is the asymptotic 0.99 quantile of the Kolmogorov distribution (1.62762, from the oracle), with Stephens' finite-sample factor sqrt(n) + 0.12 + 0.11 / sqrt(n) [unverified: Stephens 1970 modification]. The band is the exact two-sided 99 % band of Binomial(100, 0.01), [0, 4]. CI runs 100 seeds at 2000 trials (4 shuffled blocks of 500) on every target; the hypothesis scale runs with `UNC_MCM_BLOCK_FULL=1`.
+- **Measured (#338; `UNC_MCM_BLOCK_FULL=1`, release, x86-64 Windows).** AC-H1 at 10^6 trials per seed (100 shuffled blocks of 10 000): the KS test rejected 1 of 100 seeds, inside the band [0, 4]; the largest scaled statistic was 1.6313 against 1.6276. The CI smoke (2000 trials per seed) also rejects 1 of 100. Supported.
 - **Open (performance).** The budget of 10 000 trials of a 360-point LS circle fit in under 5 s is not measured: no LS circle-fit kernel algorithm is registered yet. It should be measured in `UNC.PROP.MCM.CMD` once one is.
 
 ## Children
