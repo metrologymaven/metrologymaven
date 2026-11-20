@@ -1101,6 +1101,11 @@ fn multi_version_lineage_replays_from_the_journal_alone() {
     let id = ArtifactId::Program(Uuid7::parse(&p).unwrap());
     w.cli(&alice, MAIN, &args("program", "open-draft", &p, &d)).unwrap();
     w.project.programs = vec![edited()];
+    // The edit path records who wrote the new step (AUTO.REC.ADOPT); here, the person.
+    let ed = edited();
+    let step = *ed.step_ids().last().unwrap();
+    let content = *step_contents(&ed).unwrap().get(&step).unwrap();
+    w.prov.record_authorship(Target::Step { program: ed.program_id, step }, content, &alice, 50);
     w.cli(&alice, MAIN, &args("program", "register", &p, &e)).unwrap();
     w.cli(&alice, MAIN, &args("program", "release", &p, &e)).unwrap();
     w.cli(&alice, MAIN, &args("program", "deprecate", &p, &d)).unwrap();
