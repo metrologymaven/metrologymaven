@@ -323,7 +323,9 @@ fn backtracking_is_bounded_per_statement() {
     )])
     .unwrap();
     let mut data = b"EXPL/".to_vec();
-    data.extend(std::iter::repeat(&b"A,"[..]).take(30).flatten());
+    for _ in 0..30 {
+        data.extend_from_slice(b"A,");
+    }
     data.extend_from_slice(b"B\n");
     for lenient in [false, true] {
         let err = parse_in(&data, &registry, None, opts(lenient)).unwrap_err();
