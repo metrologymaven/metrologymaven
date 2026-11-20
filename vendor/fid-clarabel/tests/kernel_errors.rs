@@ -92,7 +92,7 @@ fn malformed_and_non_finite_input_is_bad_input_not_a_panic() {
     assert!(bad_input(&broken, &q, &A, &b, &cones));
     assert!(bad_input(&P, &q, &broken, &b, &cones));
     // ragged rows: From gives a matrix that fails check_format
-    let ragged = CscMatrix::from(vec![vec![1.0, 0.0], vec![1.0]].iter());
+    let ragged = CscMatrix::from([vec![1.0, 0.0], vec![1.0]].iter());
     assert!(ragged.check_format().is_err());
     assert!(bad_input(&P, &q, &ragged, &b, &cones));
     // NaN and infinities
