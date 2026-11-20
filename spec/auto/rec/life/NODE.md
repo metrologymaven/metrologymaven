@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-program-rec]
+built_pr: 309
 satisfies: [REQ-AUTO.REC-005, REQ-AUTO.REC-006, REQ-AUTO.REC-007, REQ-AUTO.REC-009]
 covers: []
 depends_on: [AUTO.PROG.FMT, AUTO.REC.ADOPT, CORE.BUS]
