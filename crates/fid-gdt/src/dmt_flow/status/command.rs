@@ -11,12 +11,11 @@ use super::register::{build_register, digest_of, RuleStatusRegister};
 use super::StatusError;
 use crate::dmt_flow::roster::Roster;
 use fid_canon::{to_canonical_bytes, CValue, CanonError};
-use fid_io_reg::{Principal, RootSet};
+use fid_io_reg::{AtomicWriter, Principal, RootSet, WriteOptions};
 use fid_registry::{CommandDef, DefError};
 use fid_replay::ReplayOutcome;
 use fid_types::Digest;
 use std::collections::BTreeMap;
-use std::io::Write;
 
 /// Command ID.
 pub const EXPORT_COMMAND: &str = "gdt.export_rule_status@1";
@@ -143,10 +142,10 @@ impl Exported {
 
 /// Runs `gdt.export_rule_status@1`: builds the register from the journal up to `at` (default:
 /// head), writes it to `out` (a `.json` file) and `sha256:<hex>` plus a newline to `out` +
-/// `.sha256`, both new
-/// files under an approved export root (`export_root_denied{<io code>}` otherwise; an agent or
-/// script must name a `root://` handle), and returns the event to journal. Same inputs, same
-/// bytes.
+/// `.sha256`, both new files under an approved export root (`export_root_denied{<io code>}`
+/// otherwise, `target_exists` if either exists; an agent or script must name a `root://`
+/// handle), and returns the event to journal. Both files are written atomically through
+/// [`AtomicWriter`] and fully written before either is committed. Same inputs, same bytes.
 pub fn export_rule_status(
     ctx: &ExportContext<'_>,
     principal: Principal,
@@ -162,12 +161,17 @@ pub fn export_rule_status(
     let denied = |e: fid_io_reg::IoError| StatusError::ExportRootDenied { reason: e.code() };
     let target = ctx.roots.resolve_export(principal, out).map_err(denied)?;
     let digest_target = ctx.roots.resolve_export(principal, &format!("{out}{DIGEST_SUFFIX}")).map_err(denied)?;
-    let write = |t: &fid_io_reg::ExportTarget, data: &[u8]| -> Result<(), StatusError> {
-        let mut f = t.create_new().map_err(denied)?;
-        f.write_all(data).and_then(|()| f.sync_all()).map_err(|_| StatusError::ExportRootDenied { reason: "io" })
-    };
-    write(&target, &bytes)?;
-    write(&digest_target, format!("{}\n", digest.as_str()).as_bytes())?;
+    // Both writers are created (each refuses an existing target) and filled before either is
+    // committed; a failure up to that point removes both temp files and creates nothing.
+    let opts = WriteOptions::overwrite(false);
+    let mut register_writer = AtomicWriter::create(target, opts).map_err(denied)?;
+    let mut digest_writer = AtomicWriter::create(digest_target, opts).map_err(denied)?;
+    register_writer.write_bytes(&bytes).map_err(denied)?;
+    digest_writer.write_bytes(format!("{}\n", digest.as_str()).as_bytes()).map_err(denied)?;
+    // The digest file is committed first: if the register's commit then fails, what is left
+    // is a digest without a register, which no reader takes for a register.
+    digest_writer.commit().map_err(denied)?;
+    register_writer.commit().map_err(denied)?;
     let built = register.built_from();
     let event = ExportEvent {
         journal_head: built.journal_head,

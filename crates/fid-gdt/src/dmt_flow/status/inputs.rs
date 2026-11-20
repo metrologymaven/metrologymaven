@@ -344,6 +344,16 @@ impl Published {
         self.entries.iter().enumerate().find(|(_, e)| e.register_digest == register)
     }
 
+    /// Loads a list and checks that it extends `pinned_prior` ([`Published::check_extends`]).
+    /// This is the loader for consumers of the list: `GDT.CHAR.INTERP` and the publishing CI
+    /// job load `gdt-published/v1` through it against a pinned earlier copy, so a rewritten
+    /// or truncated list is refused (`published_unreadable{not_append_only}`).
+    pub fn load_extending(bytes: &[u8], pinned_prior: &Published) -> Result<Published, StatusError> {
+        let p = Published::load(bytes)?;
+        p.check_extends(pinned_prior)?;
+        Ok(p)
+    }
+
     /// Checks that this list is `earlier` with entries appended, nothing removed, changed or
     /// reordered (`published_unreadable{not_append_only}` otherwise; REQ-010).
     pub fn check_extends(&self, earlier: &Published) -> Result<(), StatusError> {
@@ -371,8 +381,12 @@ impl Published {
 }
 
 /// Rosters whose digests `gdt-published/v1` lists. The only constructor is
-/// [`Published::trusted_rosters`], so holding one proves the check ran; the state machine's
-/// `transition` and `replay` take this type instead of a bare roster.
+/// [`Published::trusted_rosters`], so holding one proves that check ran; the state machine's
+/// `transition` and `replay` take this type instead of a bare roster. The trust is only as
+/// good as the list it was checked against: it rests on where the caller got
+/// `gdt-published/v1` (the DMT data repository, loaded with [`Published::load_extending`]
+/// against a pinned prior), not on the type. A caller that hands in a self-made list can still
+/// admit a self-made roster.
 ///
 /// ```compile_fail
 /// let _ = fid_gdt::dmt_flow::status::TrustedRosters { rosters: Default::default(), current: None };
@@ -442,7 +456,7 @@ impl CoiInputs {
                 Some(toml::Value::Array(a)) if a.len() <= MAX_RECUSALS => a
                     .iter()
                     .map(|x| match x {
-                        toml::Value::String(s) if !s.is_empty() && s.len() <= MAX_COI_ID_LEN => Ok(s.clone()),
+                        toml::Value::String(s) if is_rule_id(s) => Ok(s.clone()),
                         _ => Err(coi("bad_recusal")),
                     })
                     .collect::<Result<BTreeSet<_>, _>>()?,
@@ -508,6 +522,21 @@ impl CoiInputs {
         let bytes = to_canonical_bytes(&self.to_cvalue()).map_err(|e| coi(e.code()))?;
         Ok(Digest::from_bytes(digest_bytes(&bytes).0))
     }
+}
+
+/// Whether `id` is a rule ID exactly as the register writes it: a DMT key (`dmt:<dialect>/
+/// <characteristic>/<modifiers>@<major>`) or a profile ID without digest (`dp:<dialect>-
+/// <edition>@<x.y.z>`). Anything else (another case, a missing version, a digest suffix)
+/// would never match a rule and so would fail open; it is refused.
+fn is_rule_id(id: &str) -> bool {
+    if id.len() > MAX_COI_ID_LEN {
+        return false;
+    }
+    if fid_gps::dmt::DmtKey::parse(id).is_ok_and(|k| k.as_str() == id) {
+        return true;
+    }
+    let probe = format!("{id}#sha256:{}", "0".repeat(64));
+    ProfileRef::parse(&probe).is_some_and(|r| r.id().to_string() == id)
 }
 
 fn s(v: &str) -> CValue {

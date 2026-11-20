@@ -30,7 +30,10 @@
 //!   without a matching entry in a verified register (REQ-008).
 //! - [`TrustedRosters`] holds only rosters whose digests `gdt-published/v1` lists; it has no
 //!   public constructor other than [`Published::trusted_rosters`], and STATE's `transition`
-//!   and `replay` require it, so a self-made roster cannot make anyone a reviewer.
+//!   and `replay` require it, so no bare roster reaches them. The trust rests on where the
+//!   caller got `gdt-published/v1` (the DMT data repository, loaded with
+//!   [`Published::load_extending`] against a pinned prior); a self-made list still admits a
+//!   self-made roster.
 //! - [`export_rule_status`] is the command `gdt.export_rule_status@1` (W1, `write_root`).
 //!
 //! **Pseudonymous.** The register names reviewers by roster reviewer ID only; it never holds a

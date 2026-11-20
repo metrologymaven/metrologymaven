@@ -223,7 +223,7 @@ class Journal:
     def _entry(self, command, kind, pid, record, row=None):
         i = len(self.entries)
         e = {"hash": sha(("%s/%d" % (self.case, i)).encode("ascii")),
-             "utc": "%sT09:%02d:00Z" % (DAY, i), "command": command,
+             "utc": "%sT%02d:%02d:00Z" % (DAY, 9 + i // 60, i % 60), "command": command,
              "principal": {"kind": kind, "id": pid}, "record": record}
         if row is not None:
             e["row"] = row
@@ -351,7 +351,7 @@ def register(journal, current_digest, loaded):
                         "rule": pid, "status": "provisional"})
     entries.sort(key=lambda x: (x["rule"], x["revision"]))
     built = {"coi_digest": coi_digest(loaded), "journal_head": journal.entries[-1]["hash"],
-             "roster_digest": current_digest}
+             "roster_digest": current_digest, "trusted_rosters": [ROSTER_DIGEST]}
     return {"built_from": built, "entries": entries, "schema": REGISTER_SCHEMA}
 
 
@@ -431,6 +431,15 @@ CASES = {
     # A request_changes after one approval clears it; a later approval alone is not enough.
     "request_changes": lambda j: (j.propose("a"), j.review("r1", "rev-one"),
                                   j.review("r2", "rev-two", decision="request_changes"), j.review("r1", "rev-one")),
+    # (A, request_changes, A, B): signed off, citing A's later approval entry.
+    "request_changes_resign": lambda j: (j.propose("a"), j.review("r1", "rev-one"),
+                                         j.review("r2", "rev-two", decision="request_changes"),
+                                         j.review("r1", "rev-one"), j.review("r2", "rev-two")),
+    # A long alternating approve / request_changes journal (the rebuild is one STATE step per
+    # entry); it ends with one live approval.
+    "alternating": lambda j: (j.propose("a"), [(j.review("r1", "rev-one"),
+                                                j.review("r2", "rev-two", decision="request_changes"))
+                                               for _ in range(60)], j.review("r1", "rev-one")),
     # AC-10: the signed-off row re-proposed with only `synthetic` flipped.
     "synthetic_flip": lambda j: (happy_actions(j), j.propose("a_flip")),
 }
@@ -568,6 +577,13 @@ def sanity(out):
     for case in ("wrong_digest", "agent_approval", "same_org", "recused", "unregistered", "request_changes"):
         assert row_status(case)[0] == "provisional", case
     assert row_status("same_org_no_coi") == ("signed_off", None, ["r1", "r3"])
+    assert row_status("request_changes_resign") == ("signed_off", None, ["r1", "r2"])
+    rcr = json.loads(out["request_changes_resign/journal.json"])["entries"]
+    cited = [a["journal_entry"] for a in reg("request_changes_resign")["entries"][0]["approvals"]]
+    assert cited == [rcr[3]["hash"], rcr[4]["hash"]], "the later live approval is cited"
+    alt = json.loads(out["alternating/journal.json"])["entries"]
+    assert row_status("alternating") == ("provisional", "awaiting_review", ["r1"])
+    assert reg("alternating")["entries"][0]["approvals"][0]["journal_entry"] == alt[-1]["hash"]
     assert row_status("synthetic_flip") == ("provisional", "awaiting_review", [])
     assert row_status("synthetic_flip", 1) == ("provisional", "superseded", ["r1", "r2"])
     profiles = [e for e in reg("happy")["entries"] if e["kind"] == "profile"]

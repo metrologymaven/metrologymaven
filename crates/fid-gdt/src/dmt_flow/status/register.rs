@@ -5,7 +5,7 @@ use super::inputs::{CoiInputs, JournalEntry, JournalExtract, TrustedRosters, Utc
 use super::{Reason, Status, StatusError, PROPOSE_COMMAND, REVIEW_COMMAND};
 use crate::chars::dprof::{Branch, DprofEvent, ProfileRef, PUBLISH_COMMAND};
 use crate::dmt_flow::roster::{ReviewerId, Roster};
-use crate::dmt_flow::state::{replay, Decision, FlowError, Provenance, RecordedFlow, RowRevision};
+use crate::dmt_flow::state::{replay, replay_review, Decision, FlowError, Provenance, RecordedFlow, RowRevision};
 use fid_bus::principal::PrincipalKind;
 use fid_canon::{digest_bytes, to_canonical_bytes, CValue};
 use fid_gps::dmt::row::row_from_value;
@@ -107,7 +107,7 @@ impl RuleStatusEntry {
 }
 
 /// What a register was built from.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuiltFrom {
     /// Hash of the last journal entry folded.
     pub journal_head: Digest,
@@ -115,14 +115,17 @@ pub struct BuiltFrom {
     pub roster_digest: Digest,
     /// Digest of the conflict-of-interest inputs ([`CoiInputs::digest`]).
     pub coi_digest: Digest,
+    /// Digests of the trusted rosters reviews were checked against, ascending.
+    pub trusted_rosters: Vec<Digest>,
 }
 
 impl BuiltFrom {
-    fn to_cvalue(self) -> CValue {
+    fn to_cvalue(&self) -> CValue {
         obj([
             ("coi_digest", s(self.coi_digest.as_str())),
             ("journal_head", s(self.journal_head.as_str())),
             ("roster_digest", s(self.roster_digest.as_str())),
+            ("trusted_rosters", CValue::Arr(self.trusted_rosters.iter().map(|d| s(d.as_str())).collect())),
         ])
     }
 
@@ -138,10 +141,19 @@ impl BuiltFrom {
             Some(CValue::Str(t)) => Digest::parse(t).map_err(|_| unreadable("bad_digest")),
             _ => Err(unreadable("missing_field")),
         };
+        let Some(CValue::Arr(list)) = b.get("trusted_rosters") else { return Err(unreadable("missing_field")) };
+        let trusted_rosters = list
+            .iter()
+            .map(|x| match x {
+                CValue::Str(t) => Digest::parse(t).map_err(|_| unreadable("bad_digest")),
+                _ => Err(unreadable("bad_digest")),
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(BuiltFrom {
             journal_head: d("journal_head")?,
             roster_digest: d("roster_digest")?,
             coi_digest: d("coi_digest")?,
+            trusted_rosters,
         })
     }
 }
@@ -157,8 +169,8 @@ pub struct RuleStatusRegister {
 
 impl RuleStatusRegister {
     /// What it was built from.
-    pub fn built_from(&self) -> BuiltFrom {
-        self.built_from
+    pub fn built_from(&self) -> &BuiltFrom {
+        &self.built_from
     }
 
     /// The entries, ascending by (rule ID, revision).
@@ -252,8 +264,12 @@ pub fn build_register(
         None => journal_extract.entries(),
     };
     let last = entries.last().ok_or(journal("empty"))?;
-    let built_from =
-        BuiltFrom { journal_head: last.hash(), roster_digest: current.digest(), coi_digest: coi.digest()? };
+    let built_from = BuiltFrom {
+        journal_head: last.hash(),
+        roster_digest: current.digest(),
+        coi_digest: coi.digest()?,
+        trusted_rosters: trusted.digests().copied().collect(),
+    };
 
     let mut rows: BTreeMap<&str, Vec<Group<'_>>> = BTreeMap::new();
     let mut profiles: BTreeMap<String, (ProfileRef, &JournalEntry)> = BTreeMap::new();
@@ -347,22 +363,16 @@ fn rebuild<'a>(
     if record_str(g.propose, "at") != Some(g.propose.utc().date()) {
         return Err(journal("date_mismatch"));
     }
-    let mut accepted = vec![recorded(g.propose)];
-    let mut rev = replay(prev, row.clone(), &accepted, trusted).map_err(|e| journal(proposal_reason(&e)))?;
+    let mut rev = replay(prev, row, &[recorded(g.propose)], trusted).map_err(|e| journal(proposal_reason(&e)))?;
     let mut applied = Vec::new();
+    // One STATE step per entry (linear): `replay_review` is exactly `replay`'s loop body.
     for e in &g.reviews {
         if record_str(e, "at") != Some(e.utc().date()) {
             continue;
         }
-        accepted.push(recorded(e));
-        match replay(prev, row.clone(), &accepted, trusted) {
-            Ok(r) => {
-                rev = r;
-                applied.push(*e);
-            }
-            Err(_) => {
-                accepted.pop();
-            }
+        if let Ok(r) = replay_review(&rev, &recorded(e), trusted) {
+            rev = r;
+            applied.push(*e);
         }
     }
     Ok((rev, applied))

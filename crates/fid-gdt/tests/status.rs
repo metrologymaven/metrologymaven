@@ -22,9 +22,10 @@ use fid_types::Digest;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-const CASES: [&str; 16] = [
+const CASES: [&str; 18] = [
     "agent_approval",
     "agent_draft",
+    "alternating",
     "agent_rewritten",
     "changed",
     "currency",
@@ -34,6 +35,7 @@ const CASES: [&str; 16] = [
     "one_approval",
     "recused",
     "request_changes",
+    "request_changes_resign",
     "same_org",
     "same_org_no_coi",
     "synthetic_flip",
@@ -603,4 +605,193 @@ fn public_register_files_hold_no_identities() {
         }
     }
     assert_eq!(seen.len(), CASES.len());
+}
+
+// ------------------------------------------------------------------ review follow-ups (hand-labelled)
+
+#[test]
+fn export_is_atomic_and_leaves_no_orphan() {
+    let c = case("happy");
+    let d = scratch("atomic");
+    let roots = roots(&d);
+    let main = roster("roster.json");
+    let trusted = trusted(&c);
+    let ctx = ExportContext { roots: &roots, journal: &c.journal, current: &main, trusted: &trusted, coi: &c.coi };
+    // The digest target exists: nothing is written, not even the register.
+    std::fs::write(d.join("a.json.sha256"), b"left over").unwrap();
+    let e = export_rule_status(&ctx, Principal::Human, "root://exports/a.json", None).unwrap_err();
+    assert_eq!(e, StatusError::ExportRootDenied { reason: "target_exists" });
+    assert!(!d.join("a.json").exists());
+    assert_eq!(std::fs::read(d.join("a.json.sha256")).unwrap(), b"left over");
+    // The digest target is a folder: the second writer fails, the first leaves nothing.
+    std::fs::create_dir(d.join("b.json.sha256")).unwrap();
+    assert_eq!(
+        export_rule_status(&ctx, Principal::Human, "root://exports/b.json", None).unwrap_err().code(),
+        "export_root_denied"
+    );
+    assert!(!d.join("b.json").exists());
+    // The register target exists: the digest file is not written either.
+    std::fs::write(d.join("c.json"), b"old").unwrap();
+    assert_eq!(
+        export_rule_status(&ctx, Principal::Human, "root://exports/c.json", None).unwrap_err(),
+        StatusError::ExportRootDenied { reason: "target_exists" }
+    );
+    assert!(!d.join("c.json.sha256").exists());
+    // No temp files are left behind.
+    let names: Vec<String> =
+        std::fs::read_dir(&d).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+    assert!(names.iter().all(|n| !n.starts_with(".fid-tmp-")), "{names:?}");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn recusals_must_be_rule_ids() {
+    let profiles = read("profiles.toml");
+    let with = |recusal: &str| {
+        let body = format!("[[reviewer]]\nid = \"r1\"\norg_id = \"org-1\"\nrecusals = [\"{recusal}\"]\n");
+        CoiInputs::load(body.as_bytes(), &profiles)
+    };
+    assert!(with("dmt:asme/flatness/none@1").is_ok());
+    assert!(with("dp:asme-syn-2001@1.0.0").is_ok());
+    for bad in [
+        "DMT:asme/flatness/none@1",
+        "dmt:ASME/flatness/none@1",
+        "dmt:asme/flatness/none",
+        "dp:asme-syn-2001@1.0",
+        "dp:asme-syn-2001@1.0.0#sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "flatness",
+        "",
+    ] {
+        assert_eq!(with(bad).unwrap_err(), StatusError::CoiInputsUnreadable { reason: "bad_recusal" }, "{bad}");
+    }
+}
+
+#[test]
+fn published_list_loads_only_as_an_extension_of_a_pinned_prior() {
+    let c = case("currency");
+    let bytes = read("currency/published.json");
+    let full = Published::load(&bytes).unwrap();
+    let first_only = Published::load(
+        format!(
+            r#"{{"entries":[{{"register_digest":"{}","roster_digest":"{}"}}],"schema":"gdt-published/v1"}}"#,
+            full.entries()[0].register_digest.as_str(),
+            full.entries()[0].roster_digest.as_str()
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+    assert_eq!(Published::load_extending(&bytes, &first_only).unwrap(), c.published);
+    assert_eq!(Published::load_extending(&bytes, &full).unwrap(), full);
+    // A list that drops its latest entry no longer extends the pinned copy.
+    let truncated = format!(
+        r#"{{"entries":[{{"register_digest":"{}","roster_digest":"{}"}}],"schema":"gdt-published/v1"}}"#,
+        full.entries()[0].register_digest.as_str(),
+        full.entries()[0].roster_digest.as_str()
+    );
+    assert_eq!(
+        Published::load_extending(truncated.as_bytes(), &full).unwrap_err(),
+        StatusError::PublishedUnreadable { reason: "not_append_only" }
+    );
+}
+
+#[test]
+fn register_records_its_trusted_rosters() {
+    let c = case("happy");
+    let checked =
+        verify_register(&read("happy/register.json"), &c.journal, &c.rosters, &c.coi, &c.published, Purpose::Evaluate);
+    let built = checked.register().unwrap().built_from();
+    assert_eq!(built.trusted_rosters, [roster("roster.json").digest()]);
+}
+
+/// A checker for the JSON Schema subset the command definition uses (as in `datum.rs`). An
+/// unknown keyword fails the test, so a schema change must extend this checker on purpose.
+fn conforms(schema: &CValue, v: &CValue, at: &str) -> Result<(), String> {
+    let CValue::Obj(s) = schema else { return Err(format!("{at}: schema is not an object")) };
+    for (k, kv) in s {
+        let ok = match (k.as_str(), kv) {
+            ("description", _) | ("path_like", CValue::Bool(true)) => true,
+            ("type", CValue::Str(t)) => match (t.as_str(), v) {
+                ("object", CValue::Obj(_)) | ("string", CValue::Str(_)) => true,
+                ("integer", CValue::Num(n)) => n.fract() == 0.0,
+                _ => false,
+            },
+            ("pattern", CValue::Str(p)) => {
+                if p != Digest::PATTERN {
+                    return Err(format!("{at}: pattern {p} not supported by the test checker"));
+                }
+                matches!(v, CValue::Str(x) if Digest::parse(x).is_ok())
+            }
+            ("x-extensions", CValue::Arr(exts)) => {
+                let CValue::Str(x) = v else { return Err(format!("{at}: x-extensions on a non-string")) };
+                exts.iter().any(|e| matches!(e, CValue::Str(e) if x.to_ascii_lowercase().ends_with(&format!(".{e}"))))
+            }
+            ("minimum", CValue::Num(m)) => matches!(v, CValue::Num(n) if n >= m),
+            ("required", CValue::Arr(r)) => {
+                let CValue::Obj(o) = v else { return Err(format!("{at}: required on a non-object")) };
+                r.iter().all(|k| matches!(k, CValue::Str(k) if o.contains_key(k)))
+            }
+            ("additionalProperties", CValue::Bool(false)) => {
+                let (CValue::Obj(o), Some(CValue::Obj(props))) = (v, s.get("properties")) else {
+                    return Err(format!("{at}: additionalProperties without properties"));
+                };
+                o.keys().all(|k| props.contains_key(k))
+            }
+            ("properties", CValue::Obj(props)) => {
+                if let CValue::Obj(o) = v {
+                    for (pk, ps) in props {
+                        if let Some(pv) = o.get(pk) {
+                            conforms(ps, pv, &format!("{at}/{pk}"))?;
+                        }
+                    }
+                }
+                true
+            }
+            (other, _) => return Err(format!("{at}: keyword {other} not supported by the test checker")),
+        };
+        if !ok {
+            return Err(format!("{at}: fails {k}"));
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn params_and_results_conform_to_the_published_schemas() {
+    let def = command_def().unwrap();
+    let c = case("happy");
+    let head = c.journal.head().unwrap();
+    // Real parameters, as both surfaces send them.
+    for raw in [
+        r#"{"out":"root://exports/a.json"}"#.to_owned(),
+        format!(r#"{{"at":"{}","out":"root://exports/b.json"}}"#, head.as_str()),
+    ] {
+        conforms(&def.params_schema, &parse(raw.as_bytes()).unwrap(), "params").unwrap();
+    }
+    // A real result.
+    let d = scratch("schema");
+    let roots = roots(&d);
+    let main = roster("roster.json");
+    let trusted = trusted(&c);
+    let ctx = ExportContext { roots: &roots, journal: &c.journal, current: &main, trusted: &trusted, coi: &c.coi };
+    let ex = export_rule_status(&ctx, Principal::Agent, "root://exports/r.json", None).unwrap();
+    conforms(&def.result_schema, &parse(&ex.result_bytes().unwrap()).unwrap(), "result").unwrap();
+    let _ = std::fs::remove_dir_all(&d);
+    // Negative cases.
+    for raw in [
+        r#"{}"#,
+        r#"{"out":"root://exports/a.txt"}"#,
+        r#"{"out":"root://exports/a.json","at":"sha256:12"}"#,
+        r#"{"out":"root://exports/a.json","extra":"x"}"#,
+        r#"{"out":7}"#,
+    ] {
+        assert!(conforms(&def.params_schema, &parse(raw.as_bytes()).unwrap(), "params").is_err(), "{raw}");
+    }
+    for raw in [
+        r#"{"entries":2,"path":"p","register_digest":"sha256:12","roster_digest":"sha256:12"}"#.to_owned(),
+        format!(r#"{{"entries":-1,"path":"p","register_digest":"{h}","roster_digest":"{h}"}}"#, h = head.as_str()),
+        format!(r#"{{"entries":2,"path":"p","register_digest":"{h}"}}"#, h = head.as_str()),
+        format!(r#"{{"entries":1.5,"path":"p","register_digest":"{h}","roster_digest":"{h}"}}"#, h = head.as_str()),
+    ] {
+        assert!(conforms(&def.result_schema, &parse(raw.as_bytes()).unwrap(), "result").is_err(), "{raw}");
+    }
 }

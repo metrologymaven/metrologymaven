@@ -782,7 +782,8 @@ fn propose_as(prev: Option<&RowRevision>, row: DmtRow, author: Author, at: Date)
 /// The reviewer is checked against [`TrustedRosters::current`], the roster of the latest
 /// register the project published (`gdt-published/v1`); `unknown_roster` when the loader was
 /// not given that roster (checked after check 5). A [`TrustedRosters`] can only come from the
-/// verified loader of `GDT.RES.STATUS`, so a self-made roster cannot make anyone a reviewer.
+/// loader of `GDT.RES.STATUS`, which admits only rosters the given `gdt-published/v1` lists; the
+/// trust rests on where that list came from.
 pub fn transition(rev: &RowRevision, event: &ReviewEvent<'_>, rosters: &TrustedRosters) -> Result<Step, FlowError> {
     check_state(rev, event.decision)?;
     if event.reviewer.kind() != PrincipalKind::Human {
@@ -937,8 +938,8 @@ fn finish_review(
 /// inserted record is refused.
 ///
 /// **Trusted rosters:** `rosters` is a [`TrustedRosters`], which only the verified loader of
-/// `GDT.RES.STATUS` builds (rosters whose digests `gdt-published/v1` lists), so a self-made
-/// roster cannot make any principal a reviewer.
+/// `GDT.RES.STATUS` builds (rosters whose digests the given `gdt-published/v1` lists); the trust
+/// rests on where that list came from.
 pub fn replay(
     prev: Option<&RowRevision>,
     row: DmtRow,
@@ -961,52 +962,64 @@ pub fn replay(
     let mut rev = step.revision;
 
     for entry in rest {
-        let r = &entry.record;
-        let decision = match field_str(r, "event")? {
-            "propose" => return Err(mismatch("propose_inside_revision")),
-            other => Decision::parse(other).ok_or_else(|| mismatch("malformed_record"))?,
-        };
-        let at = date_of(r)?;
-        let reviewed = digest_of(r, "reviewed_digest")?;
-        let roster_digest = digest_of(r, "roster_digest")?;
-        let rid = ReviewerId::parse(field_str(r, "reviewer")?).map_err(|_| mismatch("malformed_record"))?;
-        let attestations = match field(r, "attestations")? {
-            CValue::Arr(a) => a.iter().map(Attestation::from_cvalue).collect::<Result<Vec<_>, _>>()?,
-            _ => return Err(mismatch("malformed_record")),
-        };
-        let idr = match field(r, "idr")? {
-            CValue::Null => None,
-            v => Some(IdrDraft {
-                question_code: field_str(v, "question_code")?.to_owned(),
-                positions: match field(v, "positions")? {
-                    CValue::Arr(a) => a
-                        .iter()
-                        .map(|p| match p {
-                            CValue::Str(t) => Ok(t.clone()),
-                            _ => Err(mismatch("malformed_record")),
-                        })
-                        .collect::<Result<Vec<_>, _>>()?,
-                    _ => return Err(mismatch("malformed_record")),
-                },
-            }),
-        };
-
-        check_state(&rev, decision)?;
-        if entry.principal_kind != PrincipalKind::Human {
-            return Err(FlowError::ReviewerNotHuman);
-        }
-        check_time_and_digest(&rev, at, reviewed)?;
-        let roster = rosters.get(roster_digest).ok_or(FlowError::UnknownRoster)?;
-        if check_reviewer(&rev, &entry.principal_id, roster, at)? != rid {
-            return Err(mismatch("reviewer_differs"));
-        }
-        let input =
-            ReviewInput { decision, attestations: &attestations, reviewed_digest: reviewed, idr: idr.as_ref(), at };
-        let step = finish_review(&rev, rid, roster_digest, input)?;
-        same_record(&step.record, r)?;
-        rev = step.revision;
+        rev = replay_review(&rev, entry, rosters)?;
     }
     Ok(rev)
+}
+
+/// One step of [`replay`]: applies one journaled review entry to `rev`, with every check of
+/// [`replay`] (and in the same order), and returns the next revision. `replay(prev, row,
+/// [p, r1, .., rn], rosters)` equals folding `replay_review` over `r1 .. rn` from
+/// `replay(prev, row, [p], rosters)`; callers that apply entries one at a time use this to
+/// stay linear.
+pub fn replay_review(
+    rev: &RowRevision,
+    entry: &RecordedFlow,
+    rosters: &TrustedRosters,
+) -> Result<RowRevision, FlowError> {
+    let r = &entry.record;
+    let decision = match field_str(r, "event")? {
+        "propose" => return Err(mismatch("propose_inside_revision")),
+        other => Decision::parse(other).ok_or_else(|| mismatch("malformed_record"))?,
+    };
+    let at = date_of(r)?;
+    let reviewed = digest_of(r, "reviewed_digest")?;
+    let roster_digest = digest_of(r, "roster_digest")?;
+    let rid = ReviewerId::parse(field_str(r, "reviewer")?).map_err(|_| mismatch("malformed_record"))?;
+    let attestations = match field(r, "attestations")? {
+        CValue::Arr(a) => a.iter().map(Attestation::from_cvalue).collect::<Result<Vec<_>, _>>()?,
+        _ => return Err(mismatch("malformed_record")),
+    };
+    let idr = match field(r, "idr")? {
+        CValue::Null => None,
+        v => Some(IdrDraft {
+            question_code: field_str(v, "question_code")?.to_owned(),
+            positions: match field(v, "positions")? {
+                CValue::Arr(a) => a
+                    .iter()
+                    .map(|p| match p {
+                        CValue::Str(t) => Ok(t.clone()),
+                        _ => Err(mismatch("malformed_record")),
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
+                _ => return Err(mismatch("malformed_record")),
+            },
+        }),
+    };
+
+    check_state(rev, decision)?;
+    if entry.principal_kind != PrincipalKind::Human {
+        return Err(FlowError::ReviewerNotHuman);
+    }
+    check_time_and_digest(rev, at, reviewed)?;
+    let roster = rosters.get(roster_digest).ok_or(FlowError::UnknownRoster)?;
+    if check_reviewer(rev, &entry.principal_id, roster, at)? != rid {
+        return Err(mismatch("reviewer_differs"));
+    }
+    let input = ReviewInput { decision, attestations: &attestations, reviewed_digest: reviewed, idr: idr.as_ref(), at };
+    let step = finish_review(rev, rid, roster_digest, input)?;
+    same_record(&step.record, r)?;
+    Ok(step.revision)
 }
 
 fn same_record(built: &FlowRecord, journaled: &CValue) -> Result<(), FlowError> {

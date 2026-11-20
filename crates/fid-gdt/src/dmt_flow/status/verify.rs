@@ -89,7 +89,8 @@ impl CheckedRegister {
 ///
 /// 1. the file's `built_from` must be readable (`register_mismatch` otherwise);
 /// 2. its roster digest must be listed in `published` (`foreign_roster`);
-/// 3. `rosters` must hold that roster (`register_mismatch`) and only listed rosters
+/// 3. `rosters` must hold that roster and every trusted roster the file records
+///    (`register_mismatch`), and they and the recorded ones must all be listed
 ///    (`foreign_roster`);
 /// 4. the register rebuilt from `journal` up to the file's `journal_head`, with those rosters
 ///    and `coi`, must be byte-identical to the file (`register_mismatch`);
@@ -112,7 +113,20 @@ pub fn verify_register(
     let Some(current) = rosters.iter().find(|r| r.digest() == built.roster_digest) else {
         return fail(Unverified::RegisterMismatch);
     };
-    let Ok(trusted) = published.trusted_rosters(rosters.to_vec()) else { return fail(Unverified::ForeignRoster) };
+    if rosters.iter().any(|r| !published.lists_roster(r.digest()))
+        || built.trusted_rosters.iter().any(|d| !published.lists_roster(*d))
+    {
+        return fail(Unverified::ForeignRoster);
+    }
+    // The rebuild uses exactly the trusted rosters the file records; each must be given.
+    let mut chosen = Vec::with_capacity(built.trusted_rosters.len());
+    for d in &built.trusted_rosters {
+        match rosters.iter().find(|r| r.digest() == *d) {
+            Some(r) => chosen.push(r.clone()),
+            None => return fail(Unverified::RegisterMismatch),
+        }
+    }
+    let Ok(trusted) = published.trusted_rosters(chosen) else { return fail(Unverified::ForeignRoster) };
     let Ok(rebuilt) = build_register(journal, Some(built.journal_head), current, &trusted, coi) else {
         return fail(Unverified::RegisterMismatch);
     };
