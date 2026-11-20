@@ -217,7 +217,7 @@ pub fn is_bidi_control(c: char) -> bool {
 }
 
 /// Whether `s` is in NFC: the quick check, then a full comparison when it is inconclusive.
-fn is_nfc(s: &str) -> bool {
+pub(crate) fn is_nfc(s: &str) -> bool {
     match is_nfc_quick(s.chars()) {
         IsNormalized::Yes => true,
         IsNormalized::No => false,

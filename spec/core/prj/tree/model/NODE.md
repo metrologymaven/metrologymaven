@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-project, fid-project-cmd]
 satisfies: [REQ-CORE.PRJ.TREE-001, REQ-CORE.PRJ.TREE-003, REQ-CORE.PRJ.TREE-004, REQ-CORE.PRJ.TREE-007]
 covers: [GOM.PRJ.03, PW.PRJ.03]
 depends_on: [CORE.PRJ.CONT.ID, CORE.PRJ.CONT.HIER, CORE.BUS.PIPE.HANDLER, CORE.REG.DEF]

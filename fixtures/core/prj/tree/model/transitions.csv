@@ -1,0 +1,17 @@
+from,to,setup,expect
+current,current,current,invalid_transition
+current,outdated,current,ok
+current,failed,current,invalid_transition
+current,not_computed,current,invalid_transition
+outdated,current,current>outdated,ok
+outdated,outdated,current>outdated,invalid_transition
+outdated,failed,current>outdated,ok
+outdated,not_computed,current>outdated,invalid_transition
+failed,current,failed,invalid_transition
+failed,outdated,failed,ok
+failed,failed,failed,invalid_transition
+failed,not_computed,failed,invalid_transition
+not_computed,current,,ok
+not_computed,outdated,,invalid_transition
+not_computed,failed,,ok
+not_computed,not_computed,,invalid_transition

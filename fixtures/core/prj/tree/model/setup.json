@@ -1,0 +1,19 @@
+{
+  "default_stage": "4d88b526-4cc0-513c-a5dc-f45ccac0d2c1",
+  "namespace": "3f6c2a1e-8b4d-4e0f-9a7b-5c1d2e3f4a6b",
+  "root": "a0b24188-bf08-524e-808d-85cde3bcbbc7",
+  "types": [
+    {
+      "display_kind": "point",
+      "type_id": "test.alpha"
+    },
+    {
+      "display_kind": "plane",
+      "type_id": "test.beta"
+    },
+    {
+      "display_kind": "cylinder",
+      "type_id": "test.gamma"
+    }
+  ]
+}
