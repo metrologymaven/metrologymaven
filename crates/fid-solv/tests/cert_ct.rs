@@ -696,7 +696,15 @@ fn tampered_dual_thresholds_are_refused() {
         ),
         inc("stationarity_float")
     );
-    // the decided stationarity must stay within its threshold
+    // stationarity is exactly [0, 0] in a certificate: neither a value within the threshold nor
+    // one above it is accepted
+    assert_eq!(
+        tampered_redigested(
+            "\"stationarity\":{\"hi\":\"0x0000000000000000\"",
+            "\"stationarity\":{\"hi\":\"0x3d20000000000000\""
+        ),
+        inc("stationarity")
+    );
     assert_eq!(
         tampered_redigested(
             "\"stationarity\":{\"hi\":\"0x0000000000000000\"",

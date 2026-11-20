@@ -45,7 +45,10 @@
 //! **Self-consistency** ([`Certificate::check_consistency`]) is checked before a certificate
 //! is returned and when one is parsed: lengths, finiteness, ordering, `lo <= hi <= threshold`
 //! for primal feasibility, stationarity and complementarity, each of their thresholds equal to
-//! `tol * scale` as KRN.SOLV.CERT.KKT forms it, `0 <= lo <= hi` and the stationarity threshold
+//! `tol * scale` as KRN.SOLV.CERT.KKT forms it, stationarity exactly `[+0, +0]` (a certificate
+//! exists only when the multipliers are proven; its finite `multiplier_bounds` record that
+//! proof, which a verifier must re-run, since self-consistency alone proves nothing),
+//! `0 <= lo <= hi` and the stationarity threshold
 //! for the information-only `stationarity_float` (the residual at the float multipliers), and the dual condition recomputed row by row
 //! from the recorded multipliers, bounds and per-row thresholds, each per-row threshold
 //! recomputed bit for bit as `down(down(tol_d * gradient_lo) / ghi_i)` (0 when the rounded
@@ -185,8 +188,10 @@ pub struct KktRecord {
     pub primal: RecordedCondition,
     /// Dual feasibility, `max(0, -min_i lambda*_i)`; threshold the smallest per-row threshold.
     pub dual: RecordedCondition,
-    /// Stationarity; threshold `tol_s * gradient`. In a certificate the multipliers are
-    /// proven, so this is `[0, 0]` at the exact multipliers (KRN.SOLV.CERT.KKT step 8).
+    /// Stationarity; threshold `tol_s * gradient`. A certificate exists only when the
+    /// multipliers are proven (its finite `multiplier_bounds` record that proof), so this is
+    /// exactly `[+0, +0]` at the exact multipliers (KRN.SOLV.CERT.KKT step 8); anything else is
+    /// `Inconsistent { detail: "stationarity" }`.
     pub stationarity: RecordedCondition,
     /// For information only: the proven enclosure of the stationarity residual at the recorded
     /// float multipliers, with the same threshold. It may exceed the threshold; it is checked
@@ -588,7 +593,16 @@ impl Certificate {
         if !decided(k.primal, t.tol_p * k.scales.data, f64::NEG_INFINITY) {
             return Err(inconsistent("primal"));
         }
-        if !decided(k.stationarity, t.tol_s * k.scales.gradient, 0.0) {
+        // A certificate is issued only when the multipliers are proven (finite
+        // `multiplier_bounds`, checked above, is the certificate's record of that Krawczyk proof),
+        // so stationarity is exactly [0, 0] at the proven multipliers (KRN.SOLV.CERT.KKT step 8).
+        // This check is internal consistency only: a verifier (TRUST) must re-run the multiplier
+        // Krawczyk test to trust it.
+        let zero = |v: f64| v.to_bits() == 0.0_f64.to_bits();
+        if !(decided(k.stationarity, t.tol_s * k.scales.gradient, 0.0)
+            && zero(k.stationarity.lo)
+            && zero(k.stationarity.hi))
+        {
             return Err(inconsistent("stationarity"));
         }
         if !decided(k.complementarity, t.tol_c * k.scales.data, 0.0) {
