@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-journal]
 satisfies: [REQ-CORE.JRN.CHAIN-006, REQ-CORE.JRN.CHAIN-007, REQ-CORE.JRN.CHAIN-008]
 covers: []
 depends_on: [CORE.JRN.CHAIN.APPEND, CORE.JRN.CHAIN.CKPT, CORE.JRN.ENTRY, CORE.STO.CAS, CORE.REG.DEF]
@@ -17,7 +18,7 @@ determinism: D0
 cli: [fid journal list-entries, fid journal verify-chain]
 mcp: [journal_list_entries, journal_verify_chain]
 journal: [journal.list_entries@1, journal.verify_chain@1]
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # CORE.JRN.CHAIN.VERIFY: Verify and list commands
@@ -71,7 +72,15 @@ The two read commands over the physical journal. `journal.verify_chain@1` recomp
 
 ## Open questions
 
-- None.
+- Build: module `verify` of `fid-journal`. The verifier core (`verify_rows`, `list_rows`) is storage-free; with feature `store` it reads the project database (`verify_store`, `list_store`, `Journal::verify_chain`, `Journal::list_entries`) on a read-only open and needs no `Journal` (whose open refuses a broken chain). `command_defs()` declares both commands (R0, D0, CLI and MCP).
+- Build: the result's `failure` adds `reason` (a finer cause within the five REQ-002 kinds, e.g. `hash/non_canonical`, `hash/unknown_version`, `sequence/gap`, `sequence/header_seq`, `link/genesis`, `blob/payload_mismatch`, `checkpoint/truncated`) and `checkpoint` (row id). Non-canonical header bytes and an unknown `schema_version` are kind `hash`; a dropped, reordered or swapped entry is `sequence`. The full ordered check list is pinned in the module documentation and in `fixtures/core/jrn/chain/verify/make_fixtures.py`.
+- Build: a checkpoint row that fails on its own (malformed body, unknown format, foreign stream, columns differing from the body) is reported before the entry walk with `seq: null`.
+- Build: a truncated tail is visible only through a checkpoint above the end (`checkpoint/truncated`) or a caller's trusted head (`VerifyOptions::trusted`, e.g. a signed checkpoint held by TRUST). A journal truncated below every checkpoint it still holds verifies; the fixture case `truncate_tail_no_checkpoint` records this.
+- Build: the payload is checked when present: it must hash to its digest and reproduce every header commitment (`blob/payload_mismatch`); an absent payload file counts as `without_payload` (REQ-007), a missing payload row is a failure.
+- Build: a verification failure is a successful call with `ok: false`; callers that must refuse on it (`Bus::execute`, replay, the extract adapter) use `internal/invariant_violated`. Command refusals map to catalogue v3: `not_found/unknown_stream|unknown_branch`, `validation/bad_range|bad_token|stale_token|schema|input_limit`, `cancelled/requested`, `internal/storage`. A listed row that does not verify on its own is `internal/invariant_violated`, never listed.
+- Build: list pages scan at most 100,000 rows; a page can carry a token with fewer than 1,000 headers. The token binds 16 hex digits of the query digest (`stale_token` for another query). Parameters `from_seq`/`to_seq` are decimal strings, as every u64 in the journal.
+- Deferred to the bus (CORE.BUS.ROUTE, CORE.BUS.PIPE.STAGE, not built): the CLI `fid journal verify-chain | list-entries` and MCP surfaces, the R0 handlers that hand the project store to these functions, and AC-5 (one Activity Log record while recording). AC-1 and AC-4 are tested at library level; the read-only property (REQ-006) is tested by comparing every table before and after.
+- Performance budget (1 M entries in < 60 s) not measured.
 
 ## Children
 

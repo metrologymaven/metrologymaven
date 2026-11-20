@@ -1549,6 +1549,7 @@ dependencies = [
  "fid-canon",
  "fid-journal",
  "fid-kci",
+ "fid-registry",
  "fid-store",
  "fid-types",
  "getrandom 0.2.17",

@@ -1,0 +1,3292 @@
+{
+ "cases": [
+  {
+   "expect": {
+    "checked": {
+     "blobs": 20,
+     "checkpoints": 2,
+     "entries": 500,
+     "without_payload": 0
+    },
+    "ok": true
+   },
+   "mutations": [],
+   "name": "good"
+  },
+  {
+   "expect": {
+    "checked": {
+     "blobs": 20,
+     "checkpoints": 2,
+     "entries": 500,
+     "without_payload": 500
+    },
+    "ok": true
+   },
+   "mutations": [
+    {
+     "op": "remove_payloads"
+    }
+   ],
+   "name": "no_payloads"
+  },
+  {
+   "expect": {
+    "checked": {
+     "blobs": 20,
+     "checkpoints": 0,
+     "entries": 500,
+     "without_payload": 0
+    },
+    "ok": true
+   },
+   "mutations": [
+    {
+     "op": "drop_checkpoints"
+    }
+   ],
+   "name": "no_checkpoints"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 137
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"suggested\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:713f40a44f19fc97459569179124409a8200da4abfb7652a1113efd2fe19c472\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:a7f6e71890dd1b6314fef8f9fa3dc7e70ab68581acfda270ec760b0ffe2fd2bc\",\"id\":\"program.add_step\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:7f67145bdf6e9ab1edd4ae21b81ed7f86abbd8c9b5e7974a4d3048e1d5632375\",\"entity\":\"F-0137\"}],\"seed\":\"138\"},\"hash\":\"sha256:b3e9c0ea01f2d4af5474bce336fef713203c84a6c29d49cb639c6e85fec16ad5\",\"kind\":\"command\",\"logical_parent\":\"sha256:706b2357a19da655e7119fac019855a02ec6d65712d21a2bd44e587ad4d0cb74\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:706b2357a19da655e7119fac019855a02ec6d65712d21a2bd44e587ad4d0cb74\",\"principal\":{\"commit\":\"sha256:296f0598910479459c7e43f4715e3905f9b38abe607e8dc8624deea66f0103ff\",\"kind\":\"agent\",\"on_behalf_of_commit\":\"sha256:14c3840b22fd3ad258aec8f69900df885d4d0f93429c8d66fc10459b8eb07f8c\"},\"schema_version\":1,\"seq\":\"137\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"960000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:15:59Z\"}}",
+     "op": "set_header",
+     "seq": 137
+    }
+   ],
+   "name": "bad_hash"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "link",
+     "reason": "broken",
+     "seq": 211
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:4463cdfeae929a91d5389169e92069049091fb94ef0f2de3d6a2ec5777bf1abc\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:6838e2512420dd604226a624f5b64c904ecd7eb5955adac0f8e6e2169303cb5a\",\"id\":\"feature.set_nominal\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:0ef6de3a4a017115ac21ad1514d14ecf99346860ef8f11c06059ff2dc2b360fe\",\"entity\":\"F-0211\"}],\"seed\":\"211\"},\"hash\":\"sha256:7e276aadee2f17f428e17f081407848c8867d06bf2efe4dc6c73d86abdd196ac\",\"kind\":\"command\",\"logical_parent\":\"sha256:8969a4df967cdb7f24e2daa1f62b1ea9a2fa3ae82f5c5d94baf0da02b7f3e244\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:8969a4df967cdb7f24e2daa1f62b1ea9a2fa3ae82f5c5d94baf0da02b7f3e240\",\"principal\":{\"commit\":\"sha256:9df4fb5f6e227420f87cb7bb385042b59d5a53fa315571664b0a2748a748446d\",\"kind\":\"service\"},\"schema_version\":1,\"seq\":\"211\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"1478000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:24:37Z\"}}",
+     "op": "set_header",
+     "seq": 211
+    },
+    {
+     "column": "hash",
+     "op": "set_column",
+     "seq": 211,
+     "value": "sha256:7e276aadee2f17f428e17f081407848c8867d06bf2efe4dc6c73d86abdd196ac"
+    },
+    {
+     "column": "prev_hash",
+     "op": "set_column",
+     "seq": 211,
+     "value": "sha256:8969a4df967cdb7f24e2daa1f62b1ea9a2fa3ae82f5c5d94baf0da02b7f3e240"
+    }
+   ],
+   "name": "bad_link"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 14
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 25,
+     "digest": "sha256:48e4758ba5d7ec3352eed24180233e123fe93cffc3757cdb9bd8c52b42b97e21",
+     "op": "flip_store"
+    }
+   ],
+   "name": "bad_blob"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "column_mismatch",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 448,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "bad_checkpoint"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 113
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1074,
+     "op": "flip_header",
+     "seq": 113
+    }
+   ],
+   "name": "flip_header_00"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 370
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 8818,
+     "op": "flip_header",
+     "seq": 370
+    }
+   ],
+   "name": "flip_header_01"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 373
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 6767,
+     "op": "flip_header",
+     "seq": 373
+    }
+   ],
+   "name": "flip_header_02"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 241
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 813,
+     "op": "flip_header",
+     "seq": 241
+    }
+   ],
+   "name": "flip_header_03"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 379
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 5531,
+     "op": "flip_header",
+     "seq": 379
+    }
+   ],
+   "name": "flip_header_04"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 4
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 992,
+     "op": "flip_header",
+     "seq": 4
+    }
+   ],
+   "name": "flip_header_05"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 174
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 8897,
+     "op": "flip_header",
+     "seq": 174
+    }
+   ],
+   "name": "flip_header_06"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 44
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 7961,
+     "op": "flip_header",
+     "seq": 44
+    }
+   ],
+   "name": "flip_header_07"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 278
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 2292,
+     "op": "flip_header",
+     "seq": 278
+    }
+   ],
+   "name": "flip_header_08"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 412
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 4208,
+     "op": "flip_header",
+     "seq": 412
+    }
+   ],
+   "name": "flip_header_09"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 445
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 777,
+     "op": "flip_header",
+     "seq": 445
+    }
+   ],
+   "name": "flip_header_10"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 188
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 2507,
+     "op": "flip_header",
+     "seq": 188
+    }
+   ],
+   "name": "flip_header_11"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 280
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 6438,
+     "op": "flip_header",
+     "seq": 280
+    }
+   ],
+   "name": "flip_header_12"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 141
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 6227,
+     "op": "flip_header",
+     "seq": 141
+    }
+   ],
+   "name": "flip_header_13"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 491
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1268,
+     "op": "flip_header",
+     "seq": 491
+    }
+   ],
+   "name": "flip_header_14"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 151
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 152,
+     "op": "flip_header",
+     "seq": 151
+    }
+   ],
+   "name": "flip_header_15"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 423
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 3981,
+     "op": "flip_header",
+     "seq": 423
+    }
+   ],
+   "name": "flip_header_16"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 284
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 7097,
+     "op": "flip_header",
+     "seq": 284
+    }
+   ],
+   "name": "flip_header_17"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 314
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 3507,
+     "op": "flip_header",
+     "seq": 314
+    }
+   ],
+   "name": "flip_header_18"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 400
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 847,
+     "op": "flip_header",
+     "seq": 400
+    }
+   ],
+   "name": "flip_header_19"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 88
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 4311,
+     "op": "flip_header",
+     "seq": 88
+    }
+   ],
+   "name": "flip_header_20"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 313
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 4936,
+     "op": "flip_header",
+     "seq": 313
+    }
+   ],
+   "name": "flip_header_21"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 339
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 8030,
+     "op": "flip_header",
+     "seq": 339
+    }
+   ],
+   "name": "flip_header_22"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 282
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 2291,
+     "op": "flip_header",
+     "seq": 282
+    }
+   ],
+   "name": "flip_header_23"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 464
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 7444,
+     "op": "flip_header",
+     "seq": 464
+    }
+   ],
+   "name": "flip_header_24"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 192
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 5248,
+     "op": "flip_header",
+     "seq": 192
+    }
+   ],
+   "name": "flip_header_25"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 490
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 9418,
+     "op": "flip_header",
+     "seq": 490
+    }
+   ],
+   "name": "flip_header_26"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 138
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1609,
+     "op": "flip_header",
+     "seq": 138
+    }
+   ],
+   "name": "flip_header_27"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 259
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 6920,
+     "op": "flip_header",
+     "seq": 259
+    }
+   ],
+   "name": "flip_header_28"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 3
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 3553,
+     "op": "flip_header",
+     "seq": 3
+    }
+   ],
+   "name": "flip_header_29"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 388
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 6571,
+     "op": "flip_header",
+     "seq": 388
+    }
+   ],
+   "name": "flip_header_30"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 30
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 2024,
+     "op": "flip_header",
+     "seq": 30
+    }
+   ],
+   "name": "flip_header_31"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 308
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 407,
+     "op": "flip_header",
+     "seq": 308
+    }
+   ],
+   "name": "flip_header_32"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 233
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1888,
+     "op": "flip_header",
+     "seq": 233
+    }
+   ],
+   "name": "flip_header_33"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 322
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1346,
+     "op": "flip_header",
+     "seq": 322
+    }
+   ],
+   "name": "flip_header_34"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 360
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 9613,
+     "op": "flip_header",
+     "seq": 360
+    }
+   ],
+   "name": "flip_header_35"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 121
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 4485,
+     "op": "flip_header",
+     "seq": 121
+    }
+   ],
+   "name": "flip_header_36"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 320
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1290,
+     "op": "flip_header",
+     "seq": 320
+    }
+   ],
+   "name": "flip_header_37"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 327
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 7010,
+     "op": "flip_header",
+     "seq": 327
+    }
+   ],
+   "name": "flip_header_38"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 484
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 3646,
+     "op": "flip_header",
+     "seq": 484
+    }
+   ],
+   "name": "flip_header_39"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 58
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 6489,
+     "op": "flip_header",
+     "seq": 58
+    }
+   ],
+   "name": "flip_header_40"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 359
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 4644,
+     "op": "flip_header",
+     "seq": 359
+    }
+   ],
+   "name": "flip_header_41"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 478
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 8844,
+     "op": "flip_header",
+     "seq": 478
+    }
+   ],
+   "name": "flip_header_42"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 125
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 5061,
+     "op": "flip_header",
+     "seq": 125
+    }
+   ],
+   "name": "flip_header_43"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 117
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 7524,
+     "op": "flip_header",
+     "seq": 117
+    }
+   ],
+   "name": "flip_header_44"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 28
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 866,
+     "op": "flip_header",
+     "seq": 28
+    }
+   ],
+   "name": "flip_header_45"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "hash_mismatch",
+     "seq": 360
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 5962,
+     "op": "flip_header",
+     "seq": 360
+    }
+   ],
+   "name": "flip_header_46"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 46
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 4717,
+     "op": "flip_header",
+     "seq": 46
+    }
+   ],
+   "name": "flip_header_47"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 77
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1758,
+     "digest": "sha256:b3fcd1cec7b75bf49c49d2a6153d08d549779ccbefc5310f4f5949f585ad11d4",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_payload_0"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 374
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 226,
+     "digest": "sha256:84beb143dcb9920303a941b2a2716dda73bf73396f5ee79f9de12c019d3313c2",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_payload_1"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 212
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1316,
+     "digest": "sha256:51e6e8301c04e7aa1949ef96c91d83c8539a0524c3e803604f6c6334e673d8fb",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_payload_2"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 274
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 764,
+     "digest": "sha256:37ae63a6ec000d51af726f0390c6d06f0d38e2638ecb38a4a4ef5bedd00a2452",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_payload_3"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 451
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 2153,
+     "digest": "sha256:c06f87381252ba46477fc0e280bd58444d175976ca0d5f337b34029b2edc4908",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_payload_4"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 436
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 443,
+     "digest": "sha256:c933a226089c650fc5395cb783ddd7ed04245942d42dc63f3c40e8d117b25199",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_payload_5"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 120
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1503,
+     "digest": "sha256:1a1b370fd544f8f5df7cb8bd9159e6bc2c1bbd27e7fdf5a2e4d1f859ed5d66a3",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_payload_6"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 394
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 281,
+     "digest": "sha256:bf99536aab47cad2da11e7e39fa104af745cb44a28344e08453a4cdea2293e59",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_payload_7"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 7
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 112,
+     "digest": "sha256:b9e3805e375151a98f598c9ccc808dae687869bad0d78390ca45d3ee6e2a8540",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_blob_0"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 14
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 50,
+     "digest": "sha256:48e4758ba5d7ec3352eed24180233e123fe93cffc3757cdb9bd8c52b42b97e21",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_blob_1"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 56
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 167,
+     "digest": "sha256:3686a0a4c795db48b7db6332d53978f2851d217b4e770d4aab77f3bd7786b321",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_blob_2"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 98
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 135,
+     "digest": "sha256:b7abc3eb3c51fbca608176c64e1a133ce5666f8c614f32550189aa71fbe21a1e",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_blob_3"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 84
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 48,
+     "digest": "sha256:a4f9128e0d85d309932dc45835314acdd2a64017c353819e838e374b16e1d2b9",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_blob_4"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "corrupt",
+     "seq": 126
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 227,
+     "digest": "sha256:ccc86cacc8dfc3e575508e22358261f2fec6618f2add8bb0202fdfc4557a7085",
+     "op": "flip_store"
+    }
+   ],
+   "name": "flip_blob_5"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "unknown_format",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 211,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_00"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "column_mismatch",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 843,
+     "id": 2,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_01"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 718,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_02"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1491,
+     "id": 2,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_03"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1266,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_04"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "column_mismatch",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 769,
+     "id": 2,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_05"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1285,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_06"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1079,
+     "id": 2,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_07"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 145,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_08"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1421,
+     "id": 2,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_09"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 31,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_10"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "column_mismatch",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 912,
+     "id": 2,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_11"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 585,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_12"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 445,
+     "id": 2,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_13"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "column_mismatch",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 544,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_14"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 89,
+     "id": 2,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_15"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1439,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_16"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1213,
+     "id": 2,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_17"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1177,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_18"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 811,
+     "id": 2,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_19"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 1415,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_20"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "column_mismatch",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 664,
+     "id": 2,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_21"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 860,
+     "id": 1,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_22"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "bit": 785,
+     "id": 2,
+     "op": "flip_checkpoint"
+    }
+   ],
+   "name": "flip_checkpoint_23"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "column_mismatch",
+     "seq": 475
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "column": "hash",
+     "op": "set_column",
+     "seq": 475,
+     "value": "sha256:f7c2b40d32e93d74d2d43c86ea950a0acadf2d45f9376ee594ba18532a068647"
+    }
+   ],
+   "name": "flip_column_hash"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "link",
+     "reason": "column_mismatch",
+     "seq": 333
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "column": "prev_hash",
+     "op": "set_column",
+     "seq": 333,
+     "value": "sha256:f108d32f8014f11cdc679c2b02a7616aaac28d82e78d9501d541116dd750bf0b"
+    }
+   ],
+   "name": "flip_column_prev_hash"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "column_mismatch",
+     "seq": 320
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "column": "branch",
+     "op": "set_column",
+     "seq": 320,
+     "value": "main"
+    }
+   ],
+   "name": "column_branch"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "column_mismatch",
+     "seq": 100
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "column": "kind",
+     "op": "set_column",
+     "seq": 100,
+     "value": "command"
+    }
+   ],
+   "name": "column_kind"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "column_mismatch",
+     "seq": 12
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "column": "stream",
+     "op": "set_column",
+     "seq": 12,
+     "value": "ledger"
+    }
+   ],
+   "name": "column_stream"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "sequence",
+     "reason": "gap",
+     "seq": 123
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "op": "drop",
+     "seq": 123
+    }
+   ],
+   "name": "drop_middle"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "sequence",
+     "reason": "gap",
+     "seq": 1
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "op": "drop",
+     "seq": 1
+    }
+   ],
+   "name": "drop_first"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "sequence",
+     "reason": "header_seq",
+     "seq": 123
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "op": "drop_renumber",
+     "seq": 123
+    }
+   ],
+   "name": "drop_renumber"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "sequence",
+     "reason": "header_seq",
+     "seq": 1
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "op": "drop_renumber",
+     "seq": 1
+    }
+   ],
+   "name": "drop_renumber_first"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "sequence",
+     "reason": "header_seq",
+     "seq": 40
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "a": 40,
+     "b": 41,
+     "op": "swap"
+    }
+   ],
+   "name": "swap_adjacent"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "sequence",
+     "reason": "header_seq",
+     "seq": 10
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "a": 10,
+     "b": 390,
+     "op": "swap"
+    }
+   ],
+   "name": "swap_far"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "truncated",
+     "seq": 500
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "keep": 490,
+     "op": "truncate"
+    }
+   ],
+   "name": "truncate_tail"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "truncated",
+     "seq": 250
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "keep": 200,
+     "op": "truncate"
+    }
+   ],
+   "name": "truncate_below_first_checkpoint"
+  },
+  {
+   "expect": {
+    "checked": {
+     "blobs": 20,
+     "checkpoints": 0,
+     "entries": 490,
+     "without_payload": 0
+    },
+    "ok": true
+   },
+   "mutations": [
+    {
+     "keep": 490,
+     "op": "truncate"
+    },
+    {
+     "op": "drop_checkpoints"
+    }
+   ],
+   "name": "truncate_tail_no_checkpoint"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "link",
+     "reason": "broken",
+     "seq": 301
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"none\",\"branch\":\"alt/1\",\"hash\":\"sha256:000f1cfc933048e266a6e3703834c558c9f13358c764a4baa3c9c3f6f65bdcd4\",\"head_move\":{\"from\":\"sha256:964264687f95d15a09ccbd006b13b0332e887ffda6254178213eb8314512e8bf\",\"to\":\"sha256:2654fa83b3707d5a95e1975af8613ea9589cc41ec4058ade9287335745eac3db\"},\"kind\":\"head_move\",\"logical_parent\":\"sha256:dbfbb20d4e2240b0c1bc5db75b0c53cf2d59bbeef6fab599366b8d6ec73566a5\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:dbfbb20d4e2240b0c1bc5db75b0c53cf2d59bbeef6fab599366b8d6ec73566a5\",\"principal\":{\"commit\":\"sha256:6cb9194b272f87e0f243bb6c30ba5039b0215246845cab01cf7d6f58576bec88\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"300\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"2101000000000\",\"sync\":\"unsynced\",\"utc\":\"2026-11-01T08:35:00.300Z\"}}",
+     "op": "set_header",
+     "seq": 300
+    },
+    {
+     "column": "hash",
+     "op": "set_column",
+     "seq": 300,
+     "value": "sha256:000f1cfc933048e266a6e3703834c558c9f13358c764a4baa3c9c3f6f65bdcd4"
+    }
+   ],
+   "name": "fork_middle"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "forked_head",
+     "seq": 500
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"hash\":\"sha256:40b9954a22a80763769f1596c619b68e089eed60a71f857b4509ecefdae1811b\",\"head_move\":{\"from\":\"sha256:989ac57668c49ddc0ec313d39033d24fef2e9465be81a5b70a66538b1064bea7\",\"to\":\"sha256:7fb9211fac247c12343fae962f2fae302678f7156dde388993c09265530c9b7b\"},\"kind\":\"head_move\",\"logical_parent\":\"sha256:83b7f9b5ac6d1ebdcac985f92b61832493e5754eb0acb1214eacfa4f0625f17a\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:83b7f9b5ac6d1ebdcac985f92b61832493e5754eb0acb1214eacfa4f0625f17a\",\"principal\":{\"commit\":\"sha256:d8ed2201910270b4af5a0e60048af3939a02e04ba38abf5b464682b762c4d2b3\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"500\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"3501000000000\",\"sync\":\"unsynced\",\"utc\":\"2026-11-01T08:58:20Z\"}}",
+     "op": "set_header",
+     "seq": 500
+    },
+    {
+     "column": "hash",
+     "op": "set_column",
+     "seq": 500,
+     "value": "sha256:40b9954a22a80763769f1596c619b68e089eed60a71f857b4509ecefdae1811b"
+    }
+   ],
+   "name": "fork_tail"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "forked_head",
+     "seq": 300
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "body": "{\"count\":\"300\",\"format\":\"linear-v1\",\"head\":\"sha256:bddac689ccc1cca24b9489fe8d514f94c4bb2680600042f10254b9665ccfffc3\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:bddac689ccc1cca24b9489fe8d514f94c4bb2680600042f10254b9665ccfffc3",
+     "id": 3,
+     "op": "add_checkpoint",
+     "stream": "record"
+    }
+   ],
+   "name": "forged_checkpoint_head"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "truncated",
+     "seq": 600
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "body": "{\"count\":\"600\",\"format\":\"linear-v1\",\"head\":\"sha256:2d8fa1112de6ca36a2d374b96b1252727cf9a7b3b0f228db306c9c4814cc9e72\",\"reason\":\"export\",\"seq\":\"600\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:2d8fa1112de6ca36a2d374b96b1252727cf9a7b3b0f228db306c9c4814cc9e72",
+     "id": 3,
+     "op": "add_checkpoint",
+     "stream": "record"
+    }
+   ],
+   "name": "forged_checkpoint_beyond"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "body": "{\"count\":\"301\",\"format\":\"linear-v1\",\"head\":\"sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
+     "id": 3,
+     "op": "add_checkpoint",
+     "stream": "record"
+    }
+   ],
+   "name": "forged_checkpoint_count"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "unknown_format",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "body": "{\"count\":\"300\",\"format\":\"merkle-v1\",\"head\":\"sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
+     "id": 3,
+     "op": "add_checkpoint",
+     "stream": "record"
+    }
+   ],
+   "name": "forged_checkpoint_format"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "column_mismatch",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "body": "{\"count\":\"300\",\"format\":\"linear-v1\",\"head\":\"sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:dbfbb20d4e2240b0c1bc5db75b0c53cf2d59bbeef6fab599366b8d6ec73566a5",
+     "id": 3,
+     "op": "add_checkpoint",
+     "stream": "record"
+    }
+   ],
+   "name": "forged_checkpoint_row"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "foreign_stream",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "body": "{\"count\":\"300\",\"format\":\"linear-v1\",\"head\":\"sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"ledger\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
+     "id": 3,
+     "op": "add_checkpoint",
+     "stream": "ledger"
+    }
+   ],
+   "name": "forged_checkpoint_stream"
+  },
+  {
+   "expect": {
+    "checked": {
+     "blobs": 20,
+     "checkpoints": 3,
+     "entries": 500,
+     "without_payload": 0
+    },
+    "ok": true
+   },
+   "mutations": [
+    {
+     "body": "{\"count\":\"300\",\"format\":\"linear-v1\",\"head\":\"sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
+     "id": 3,
+     "op": "add_checkpoint",
+     "stream": "record"
+    }
+   ],
+   "name": "genuine_extra_checkpoint"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "malformed",
+     "seq": null
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "body": "{\"count\":\"300\", \"format\":\"linear-v1\",\"head\":\"sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
+     "id": 3,
+     "op": "add_checkpoint",
+     "stream": "record"
+    }
+   ],
+   "name": "checkpoint_non_canonical"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "unknown_version",
+     "seq": 77
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"suggested\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:22c108f1be3d8ae26d295a3508f9d1607a5d16ec018c7d5921c7b72fe331da07\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:c71cfdb37655c0595fed2edabd4d09da845e24c47c1edbac22212b91ff3b1cce\",\"id\":\"program.add_step\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:f6aed0dc74197e71ee7adeb46ab2781d9eaa3470a00c5cd6fbadb0141efdc1dc\",\"entity\":\"F-0077\"}],\"seed\":\"77\"},\"hash\":\"sha256:83704b6bb85292e1c091647cd9878f2c15b922e661c2e5da157c311fc3d7ce37\",\"kind\":\"command\",\"logical_parent\":\"sha256:43d784dd0e54fe40daded0946966e37da2298185c9a1fb8c6ee7762018f959b0\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:43d784dd0e54fe40daded0946966e37da2298185c9a1fb8c6ee7762018f959b0\",\"principal\":{\"commit\":\"sha256:da4e2f93301da80f8738820018d8f1ef9ec69236c408d3c6bc50fa80849652da\",\"kind\":\"agent\",\"on_behalf_of_commit\":\"sha256:d23e21364b65be1cadd9a39cc11cf3fa5710e30e02ab0ea65c4d98a41569c0bf\"},\"reason_commit\":\"sha256:f65693e25afe37176808ee84f75dad096e19ef407cdc47d01f8a955fb5d4fc1c\",\"schema_version\":2,\"seq\":\"77\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"540000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:08:59Z\"}}",
+     "op": "set_header",
+     "seq": 77
+    },
+    {
+     "column": "hash",
+     "op": "set_column",
+     "seq": 77,
+     "value": "sha256:83704b6bb85292e1c091647cd9878f2c15b922e661c2e5da157c311fc3d7ce37"
+    }
+   ],
+   "name": "unknown_version"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "schema",
+     "seq": 77
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"suggested\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:22c108f1be3d8ae26d295a3508f9d1607a5d16ec018c7d5921c7b72fe331da07\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:c71cfdb37655c0595fed2edabd4d09da845e24c47c1edbac22212b91ff3b1cce\",\"id\":\"program.add_step\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:f6aed0dc74197e71ee7adeb46ab2781d9eaa3470a00c5cd6fbadb0141efdc1dc\",\"entity\":\"F-0077\"}],\"seed\":\"77\"},\"hash\":\"sha256:62680e6d1101328893409ba824a89087c46ee0055b4afaa7e998123e97c84707\",\"kind\":\"command\",\"logical_parent\":\"sha256:43d784dd0e54fe40daded0946966e37da2298185c9a1fb8c6ee7762018f959b0\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:43d784dd0e54fe40daded0946966e37da2298185c9a1fb8c6ee7762018f959b0\",\"principal\":{\"commit\":\"sha256:da4e2f93301da80f8738820018d8f1ef9ec69236c408d3c6bc50fa80849652da\",\"kind\":\"agent\",\"on_behalf_of_commit\":\"sha256:d23e21364b65be1cadd9a39cc11cf3fa5710e30e02ab0ea65c4d98a41569c0bf\"},\"reason_commit\":\"sha256:f65693e25afe37176808ee84f75dad096e19ef407cdc47d01f8a955fb5d4fc1c\",\"schema_version\":1,\"seq\":\"77\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"540000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:08:59Z\"}}",
+     "op": "set_header",
+     "seq": 77
+    },
+    {
+     "column": "hash",
+     "op": "set_column",
+     "seq": 77,
+     "value": "sha256:62680e6d1101328893409ba824a89087c46ee0055b4afaa7e998123e97c84707"
+    }
+   ],
+   "name": "schema_missing_branch"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "schema",
+     "seq": 77
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"suggested\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:22c108f1be3d8ae26d295a3508f9d1607a5d16ec018c7d5921c7b72fe331da07\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:c71cfdb37655c0595fed2edabd4d09da845e24c47c1edbac22212b91ff3b1cce\",\"id\":\"program.add_step\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:f6aed0dc74197e71ee7adeb46ab2781d9eaa3470a00c5cd6fbadb0141efdc1dc\",\"entity\":\"F-0077\"}],\"seed\":\"77\"},\"extra\":\"x\",\"hash\":\"sha256:152afbf6ea6999eae136cd67d22891fd4776e8d2400971ac332bacb0dfea5f07\",\"kind\":\"command\",\"logical_parent\":\"sha256:43d784dd0e54fe40daded0946966e37da2298185c9a1fb8c6ee7762018f959b0\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:43d784dd0e54fe40daded0946966e37da2298185c9a1fb8c6ee7762018f959b0\",\"principal\":{\"commit\":\"sha256:da4e2f93301da80f8738820018d8f1ef9ec69236c408d3c6bc50fa80849652da\",\"kind\":\"agent\",\"on_behalf_of_commit\":\"sha256:d23e21364b65be1cadd9a39cc11cf3fa5710e30e02ab0ea65c4d98a41569c0bf\"},\"reason_commit\":\"sha256:f65693e25afe37176808ee84f75dad096e19ef407cdc47d01f8a955fb5d4fc1c\",\"schema_version\":1,\"seq\":\"77\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"540000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:08:59Z\"}}",
+     "op": "set_header",
+     "seq": 77
+    },
+    {
+     "column": "hash",
+     "op": "set_column",
+     "seq": 77,
+     "value": "sha256:152afbf6ea6999eae136cd67d22891fd4776e8d2400971ac332bacb0dfea5f07"
+    }
+   ],
+   "name": "schema_unknown_field"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "non_canonical",
+     "seq": 88
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"none\", \"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:f8e7d3acc547d5e5cbd270de65caff603cd031e58400175b2595084dccc92e2f\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:85917072a3016c88229fce30b568aee4fd0fd25d8b831af3aed99624fead2231\",\"id\":\"feature.set_nominal\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:1b91f2eb4dc7ad1e3ef2d543be01eb2376127e0ecfd1a6ffa429731528f7dc64\",\"entity\":\"F-0088\"}],\"seed\":\"88\"},\"hash\":\"sha256:1bfd8b5bee69f8dc5b557a9dbf998b656cbb2bb3f679cdb19535d4cfec5bb3cd\",\"kind\":\"command\",\"logical_parent\":\"sha256:2623abf7912d1c3a8d9ffe9be95dcfd85d5c3f1dd6588cc99cd31314f5856eba\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:2623abf7912d1c3a8d9ffe9be95dcfd85d5c3f1dd6588cc99cd31314f5856eba\",\"principal\":{\"commit\":\"sha256:ff5e9bce2396923002ae21674949412ad9d26364fdba10d4e551c4f1eb6b82d8\",\"kind\":\"human\"},\"reason_commit\":\"sha256:03fbab151fbd700f0a1330ba34c5e072928b3f84f46e28be2c889db7af2dec24\",\"schema_version\":1,\"seq\":\"88\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"617000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:10:16Z\"}}",
+     "op": "set_header",
+     "seq": 88
+    }
+   ],
+   "name": "non_canonical_whitespace"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "non_canonical",
+     "seq": 88
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"branch\":\"main\",\"ai_assistance\":\"none\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:f8e7d3acc547d5e5cbd270de65caff603cd031e58400175b2595084dccc92e2f\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:85917072a3016c88229fce30b568aee4fd0fd25d8b831af3aed99624fead2231\",\"id\":\"feature.set_nominal\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:1b91f2eb4dc7ad1e3ef2d543be01eb2376127e0ecfd1a6ffa429731528f7dc64\",\"entity\":\"F-0088\"}],\"seed\":\"88\"},\"hash\":\"sha256:1bfd8b5bee69f8dc5b557a9dbf998b656cbb2bb3f679cdb19535d4cfec5bb3cd\",\"kind\":\"command\",\"logical_parent\":\"sha256:2623abf7912d1c3a8d9ffe9be95dcfd85d5c3f1dd6588cc99cd31314f5856eba\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:2623abf7912d1c3a8d9ffe9be95dcfd85d5c3f1dd6588cc99cd31314f5856eba\",\"principal\":{\"commit\":\"sha256:ff5e9bce2396923002ae21674949412ad9d26364fdba10d4e551c4f1eb6b82d8\",\"kind\":\"human\"},\"reason_commit\":\"sha256:03fbab151fbd700f0a1330ba34c5e072928b3f84f46e28be2c889db7af2dec24\",\"schema_version\":1,\"seq\":\"88\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"617000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:10:16Z\"}}",
+     "op": "set_header",
+     "seq": 88
+    }
+   ],
+   "name": "non_canonical_order"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 88
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:f8e7d3acc547d5e5cbd270de65caff603cd031e58400175b2595084dccc92e2f\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:85917072a3016c88229fce30b568aee4fd0fd25d8b831af3aed99624fead2231\",\"id\":\"feature.set_nominal\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:1b91f2eb4dc7ad1e3ef2d543be01eb2376127e0ecfd1a6ffa429731528f7dc64\",\"entity\":\"F-0088\"}],\"seed\":\"88\"},\"hash\":\"sha256:1bfd8b5bee69f8dc5b557a9dbf998b656cbb2bb3f679cdb19535d4cfec5bb3cd\",\"kind\":\"command\",\"logical_parent\":\"sha256:2623abf7912d1c3a8d9ffe9be95dcfd85d5c3f1dd6588cc99cd31314f5856eba\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:2623abf7912d1c3a8d9ffe9be95dcfd85d5c3f1dd6588cc99cd31314f5856eba\",\"principal\":{\"commit\":\"sha256:ff5e9bce2396923002ae21674949412ad9d26364fdba10d4e551c4f1eb6b82d8\",\"kind\":\"human\"},\"reason_commit\":\"sha256:03fbab151fbd700f0a1330ba34c5e072928b3f84f46e28be2c889db7af2dec24\",\"schema_version\":1,\"seq\":\"88\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"617000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:10:16Z\"}",
+     "op": "set_header",
+     "seq": 88
+    }
+   ],
+   "name": "malformed_header"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 88
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"none\",\"ai_assistance\":\"none\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:f8e7d3acc547d5e5cbd270de65caff603cd031e58400175b2595084dccc92e2f\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:85917072a3016c88229fce30b568aee4fd0fd25d8b831af3aed99624fead2231\",\"id\":\"feature.set_nominal\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:1b91f2eb4dc7ad1e3ef2d543be01eb2376127e0ecfd1a6ffa429731528f7dc64\",\"entity\":\"F-0088\"}],\"seed\":\"88\"},\"hash\":\"sha256:1bfd8b5bee69f8dc5b557a9dbf998b656cbb2bb3f679cdb19535d4cfec5bb3cd\",\"kind\":\"command\",\"logical_parent\":\"sha256:2623abf7912d1c3a8d9ffe9be95dcfd85d5c3f1dd6588cc99cd31314f5856eba\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:2623abf7912d1c3a8d9ffe9be95dcfd85d5c3f1dd6588cc99cd31314f5856eba\",\"principal\":{\"commit\":\"sha256:ff5e9bce2396923002ae21674949412ad9d26364fdba10d4e551c4f1eb6b82d8\",\"kind\":\"human\"},\"reason_commit\":\"sha256:03fbab151fbd700f0a1330ba34c5e072928b3f84f46e28be2c889db7af2dec24\",\"schema_version\":1,\"seq\":\"88\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"617000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:10:16Z\"}}",
+     "op": "set_header",
+     "seq": 88
+    }
+   ],
+   "name": "duplicate_key_header"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "sequence",
+     "reason": "header_seq",
+     "seq": 92
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"suggested\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:c8006fed0a238afc9f2cdbec04146d139303d50af41b762361cf6d3f4e16357a\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:e31634a0922402b4159231ff68ea3fc169fef1fac912a4bed4320eca14650db2\",\"id\":\"project.set_tags\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:c54ccc8cdf535ce397ac1cbf13cd03232014363e1cb5410ed80d39bb000d1500\",\"entity\":\"F-0093\"}],\"seed\":\"93\"},\"hash\":\"sha256:82dcabe8c3f95f329118b166c4a2fd3714ddf7bda85fecdddc3626b6c4881e4a\",\"kind\":\"command\",\"logical_parent\":\"sha256:514911f1b380d3cd4322a91791a71cf3c2704c4d589c45ef4edb2a07179ae26a\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:514911f1b380d3cd4322a91791a71cf3c2704c4d589c45ef4edb2a07179ae26a\",\"principal\":{\"commit\":\"sha256:77b2e4c4e42706d8c76965a46fa5e0927b1fb542e5c54be7ea48ac96fc649439\",\"kind\":\"agent\",\"on_behalf_of_commit\":\"sha256:ab2899d9c6c464ce3a3f03df6deadc050484a9d792d9c6901104bf4eaf978743\"},\"schema_version\":1,\"seq\":\"93\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"652000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:10:51.093Z\"}}",
+     "op": "set_header",
+     "seq": 92
+    },
+    {
+     "column": "hash",
+     "op": "set_column",
+     "seq": 92,
+     "value": "sha256:82dcabe8c3f95f329118b166c4a2fd3714ddf7bda85fecdddc3626b6c4881e4a"
+    }
+   ],
+   "name": "header_seq_mismatch"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "link",
+     "reason": "genesis",
+     "seq": 1
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"hash\":\"sha256:f8ac677f9623b6c28c208161e668e59ca326e8c4d986ceb03480a0c91ae2c0e4\",\"kind\":\"session_header\",\"logical_parent\":null,\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:0bb8cb21219f2c71b605e4a2dfda0caa7048a8e5db4d9afe604c679f17b09e58\",\"principal\":{\"commit\":\"sha256:f976fb3f5150ee1e6ce46774d1cd9da3af3d059d6694ee0e96c6328623b6a31f\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"1\",\"session\":{\"app_version\":\"0.1.0\",\"session_id\":\"s-0001\"},\"stream\":\"record\",\"time\":{\"mono_ns\":\"8000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:00:07Z\"}}",
+     "op": "set_header",
+     "seq": 1
+    },
+    {
+     "column": "hash",
+     "op": "set_column",
+     "seq": 1,
+     "value": "sha256:f8ac677f9623b6c28c208161e668e59ca326e8c4d986ceb03480a0c91ae2c0e4"
+    },
+    {
+     "column": "prev_hash",
+     "op": "set_column",
+     "seq": 1,
+     "value": "sha256:0bb8cb21219f2c71b605e4a2dfda0caa7048a8e5db4d9afe604c679f17b09e58"
+    }
+   ],
+   "name": "genesis_prev"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "sequence",
+     "reason": "foreign_stream",
+     "seq": 33
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "header": "{\"ai_assistance\":\"suggested\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:44a84a7a4bd17c99e1e89dab82485bc10e50f2dcaf9ed014956535a4f729aa0c\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:10a8de2981a89cd6d576e11e0fbf21b38c506c94e69f56e89825f6b3649691c4\",\"id\":\"project.set_tags\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:b11b15d61bdd9bc09e39e7691f620132d4134574ba230458e0043f6615f69272\",\"entity\":\"F-0033\"}],\"seed\":\"33\"},\"hash\":\"sha256:2dab9646ec59f599f425eb9856a349b26e74507e4142c32dcf719e01c17ea825\",\"kind\":\"command\",\"logical_parent\":\"sha256:71856fe2694b4a3e249cfade60d9919c19bcb5d2f5fc4a29230738f4a12983c7\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:71856fe2694b4a3e249cfade60d9919c19bcb5d2f5fc4a29230738f4a12983c7\",\"principal\":{\"commit\":\"sha256:979f22d72e6f9ba31a9549557a9d1b8e3f48d15c04538dd6a96db601614da4fd\",\"kind\":\"agent\",\"on_behalf_of_commit\":\"sha256:743584b03d9d3ca83060935de261d77b76cd798fa374585e0d5e159ff1ec62ea\"},\"reason_commit\":\"sha256:1188400f7f9fb283ac734b393a767bd3c0c6ce86b5e7b39f49764d60e20f303e\",\"schema_version\":1,\"seq\":\"33\",\"stream\":\"ledger\",\"time\":{\"mono_ns\":\"232000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:03:51.033Z\"}}",
+     "op": "set_header",
+     "seq": 33
+    },
+    {
+     "column": "hash",
+     "op": "set_column",
+     "seq": 33,
+     "value": "sha256:2dab9646ec59f599f425eb9856a349b26e74507e4142c32dcf719e01c17ea825"
+    }
+   ],
+   "name": "foreign_stream_header"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "missing",
+     "seq": 14
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "digest": "sha256:48e4758ba5d7ec3352eed24180233e123fe93cffc3757cdb9bd8c52b42b97e21",
+     "op": "remove_store"
+    }
+   ],
+   "name": "blob_missing"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "payload_ref_missing",
+     "seq": 49
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "op": "set_refs",
+     "refs": [
+      [
+       "ref",
+       "sha256:48e4758ba5d7ec3352eed24180233e123fe93cffc3757cdb9bd8c52b42b97e21"
+      ]
+     ],
+     "seq": 49
+    }
+   ],
+   "name": "payload_missing_ref"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "payload_ref_duplicate",
+     "seq": 49
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "op": "set_refs",
+     "refs": [
+      [
+       "payload",
+       "sha256:72588f370da2e219236ce925c6e252c5ee1d7d0d826a1fac6a5c7185656c4c79"
+      ],
+      [
+       "payload",
+       "sha256:4bcc4b1a4e1a57e9395d57aea94ae2c6baad671829ea64606bd95beab848ee29"
+      ]
+     ],
+     "seq": 49
+    }
+   ],
+   "name": "payload_duplicate_ref"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "payload_mismatch",
+     "seq": 49
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "op": "set_refs",
+     "refs": [
+      [
+       "payload",
+       "sha256:4bcc4b1a4e1a57e9395d57aea94ae2c6baad671829ea64606bd95beab848ee29"
+      ],
+      [
+       "ref",
+       "sha256:48e4758ba5d7ec3352eed24180233e123fe93cffc3757cdb9bd8c52b42b97e21"
+      ]
+     ],
+     "seq": 49
+    }
+   ],
+   "name": "payload_swapped"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "unknown_role",
+     "seq": 49
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "op": "set_refs",
+     "refs": [
+      [
+       "payload",
+       "sha256:72588f370da2e219236ce925c6e252c5ee1d7d0d826a1fac6a5c7185656c4c79"
+      ],
+      [
+       "thumbnail",
+       "sha256:48e4758ba5d7ec3352eed24180233e123fe93cffc3757cdb9bd8c52b42b97e21"
+      ]
+     ],
+     "seq": 49
+    }
+   ],
+   "name": "unknown_role"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "blob",
+     "reason": "payload_mismatch",
+     "seq": 49
+    },
+    "ok": false
+   },
+   "mutations": [
+    {
+     "content": "{\"args\":{\"tags\":[\"t0\"],\"target\":\"F-9999\"},\"events\":[{\"n\":49,\"type\":\"feature.set_nominal@1\"}],\"identity\":{\"name\":\"Søren\",\"user\":\"op-15\"},\"on_behalf_of\":{\"user\":\"op-03\"},\"salts\":{\"args\":\"0524c5a99efe91a3260d62e1acae7a39\",\"events\":\"5b7ef9615a4c2c7f23304de88a94bb13\",\"identity\":\"61fa79e744c9dc30bf284b32804a0209\",\"on_behalf_of\":\"479bf90df08fd0de87b3559223caa5b8\"}}",
+     "digest": "sha256:63d037c84f0bfc66668092e6d1f4afa5866921f8c78ab2f0db6750a9b581508b",
+     "op": "put_store"
+    },
+    {
+     "op": "set_refs",
+     "refs": [
+      [
+       "payload",
+       "sha256:63d037c84f0bfc66668092e6d1f4afa5866921f8c78ab2f0db6750a9b581508b"
+      ],
+      [
+       "ref",
+       "sha256:48e4758ba5d7ec3352eed24180233e123fe93cffc3757cdb9bd8c52b42b97e21"
+      ]
+     ],
+     "seq": 49
+    }
+   ],
+   "name": "payload_forged"
+  },
+  {
+   "expect": {
+    "checked": {
+     "blobs": 20,
+     "checkpoints": 2,
+     "entries": 500,
+     "without_payload": 1
+    },
+    "ok": true
+   },
+   "mutations": [
+    {
+     "digest": "sha256:6f66afa0d076d380ec07254fb52c7275aa2d0265da3a886d7b72fc3eee02e970",
+     "op": "remove_store"
+    }
+   ],
+   "name": "one_payload_removed"
+  }
+ ],
+ "lists": [
+  {
+   "query": {
+    "branch": "main",
+    "command": "project.set_tags@1"
+   },
+   "seqs": [
+    3,
+    6,
+    9,
+    12,
+    15,
+    18,
+    21,
+    24,
+    27,
+    30,
+    33,
+    36,
+    39,
+    42,
+    45,
+    48,
+    51,
+    54,
+    57,
+    60,
+    63,
+    66,
+    69,
+    72,
+    75,
+    78,
+    81,
+    84,
+    87,
+    90,
+    93,
+    96,
+    99,
+    102,
+    105,
+    108,
+    111,
+    114,
+    117,
+    120,
+    123,
+    126,
+    129,
+    132,
+    135,
+    138,
+    141,
+    144,
+    147,
+    153,
+    156,
+    159,
+    162,
+    165,
+    168,
+    171,
+    174,
+    177,
+    180,
+    183,
+    186,
+    189,
+    192,
+    195,
+    198,
+    201,
+    204,
+    207,
+    210,
+    213,
+    216,
+    219,
+    222,
+    225,
+    228,
+    231,
+    234,
+    237,
+    240,
+    243,
+    246,
+    249,
+    252,
+    255,
+    258,
+    261,
+    264,
+    267,
+    270,
+    273,
+    276,
+    279,
+    282,
+    285,
+    288,
+    291,
+    294,
+    297,
+    342,
+    345,
+    348,
+    351,
+    354,
+    357,
+    360,
+    363,
+    366,
+    369,
+    372,
+    375,
+    378,
+    381,
+    384,
+    387,
+    390,
+    393,
+    396,
+    399,
+    402,
+    405,
+    408,
+    411,
+    414,
+    417,
+    420,
+    423,
+    426,
+    429,
+    432,
+    435,
+    438,
+    441,
+    444,
+    447,
+    453,
+    456,
+    459,
+    462,
+    465,
+    468,
+    471,
+    474,
+    477,
+    480,
+    483,
+    486,
+    489,
+    492,
+    495,
+    498
+   ]
+  },
+  {
+   "query": {
+    "from_seq": "100",
+    "principal_kind": "agent",
+    "to_seq": "200"
+   },
+   "seqs": [
+    101,
+    105,
+    109,
+    113,
+    117,
+    121,
+    125,
+    129,
+    133,
+    137,
+    141,
+    145,
+    149,
+    153,
+    157,
+    161,
+    165,
+    169,
+    173,
+    177,
+    181,
+    185,
+    189,
+    193,
+    197
+   ]
+  },
+  {
+   "query": {
+    "branch": "alt/1"
+   },
+   "seqs": [
+    300,
+    301,
+    302,
+    303,
+    304,
+    305,
+    306,
+    307,
+    308,
+    309,
+    310,
+    311,
+    312,
+    313,
+    314,
+    315,
+    316,
+    317,
+    318,
+    319,
+    320,
+    321,
+    322,
+    323,
+    324,
+    325,
+    326,
+    327,
+    328,
+    329,
+    330,
+    331,
+    332,
+    333,
+    334,
+    335,
+    336,
+    337,
+    338,
+    339
+   ]
+  },
+  {
+   "query": {
+    "command": "feature.set_nominal@2"
+   },
+   "seqs": []
+  },
+  {
+   "query": {},
+   "seqs": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99,
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109,
+    110,
+    111,
+    112,
+    113,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119,
+    120,
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129,
+    130,
+    131,
+    132,
+    133,
+    134,
+    135,
+    136,
+    137,
+    138,
+    139,
+    140,
+    141,
+    142,
+    143,
+    144,
+    145,
+    146,
+    147,
+    148,
+    149,
+    150,
+    151,
+    152,
+    153,
+    154,
+    155,
+    156,
+    157,
+    158,
+    159,
+    160,
+    161,
+    162,
+    163,
+    164,
+    165,
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    172,
+    173,
+    174,
+    175,
+    176,
+    177,
+    178,
+    179,
+    180,
+    181,
+    182,
+    183,
+    184,
+    185,
+    186,
+    187,
+    188,
+    189,
+    190,
+    191,
+    192,
+    193,
+    194,
+    195,
+    196,
+    197,
+    198,
+    199,
+    200,
+    201,
+    202,
+    203,
+    204,
+    205,
+    206,
+    207,
+    208,
+    209,
+    210,
+    211,
+    212,
+    213,
+    214,
+    215,
+    216,
+    217,
+    218,
+    219,
+    220,
+    221,
+    222,
+    223,
+    224,
+    225,
+    226,
+    227,
+    228,
+    229,
+    230,
+    231,
+    232,
+    233,
+    234,
+    235,
+    236,
+    237,
+    238,
+    239,
+    240,
+    241,
+    242,
+    243,
+    244,
+    245,
+    246,
+    247,
+    248,
+    249,
+    250,
+    251,
+    252,
+    253,
+    254,
+    255,
+    256,
+    257,
+    258,
+    259,
+    260,
+    261,
+    262,
+    263,
+    264,
+    265,
+    266,
+    267,
+    268,
+    269,
+    270,
+    271,
+    272,
+    273,
+    274,
+    275,
+    276,
+    277,
+    278,
+    279,
+    280,
+    281,
+    282,
+    283,
+    284,
+    285,
+    286,
+    287,
+    288,
+    289,
+    290,
+    291,
+    292,
+    293,
+    294,
+    295,
+    296,
+    297,
+    298,
+    299,
+    300,
+    301,
+    302,
+    303,
+    304,
+    305,
+    306,
+    307,
+    308,
+    309,
+    310,
+    311,
+    312,
+    313,
+    314,
+    315,
+    316,
+    317,
+    318,
+    319,
+    320,
+    321,
+    322,
+    323,
+    324,
+    325,
+    326,
+    327,
+    328,
+    329,
+    330,
+    331,
+    332,
+    333,
+    334,
+    335,
+    336,
+    337,
+    338,
+    339,
+    340,
+    341,
+    342,
+    343,
+    344,
+    345,
+    346,
+    347,
+    348,
+    349,
+    350,
+    351,
+    352,
+    353,
+    354,
+    355,
+    356,
+    357,
+    358,
+    359,
+    360,
+    361,
+    362,
+    363,
+    364,
+    365,
+    366,
+    367,
+    368,
+    369,
+    370,
+    371,
+    372,
+    373,
+    374,
+    375,
+    376,
+    377,
+    378,
+    379,
+    380,
+    381,
+    382,
+    383,
+    384,
+    385,
+    386,
+    387,
+    388,
+    389,
+    390,
+    391,
+    392,
+    393,
+    394,
+    395,
+    396,
+    397,
+    398,
+    399,
+    400,
+    401,
+    402,
+    403,
+    404,
+    405,
+    406,
+    407,
+    408,
+    409,
+    410,
+    411,
+    412,
+    413,
+    414,
+    415,
+    416,
+    417,
+    418,
+    419,
+    420,
+    421,
+    422,
+    423,
+    424,
+    425,
+    426,
+    427,
+    428,
+    429,
+    430,
+    431,
+    432,
+    433,
+    434,
+    435,
+    436,
+    437,
+    438,
+    439,
+    440,
+    441,
+    442,
+    443,
+    444,
+    445,
+    446,
+    447,
+    448,
+    449,
+    450,
+    451,
+    452,
+    453,
+    454,
+    455,
+    456,
+    457,
+    458,
+    459,
+    460,
+    461,
+    462,
+    463,
+    464,
+    465,
+    466,
+    467,
+    468,
+    469,
+    470,
+    471,
+    472,
+    473,
+    474,
+    475,
+    476,
+    477,
+    478,
+    479,
+    480,
+    481,
+    482,
+    483,
+    484,
+    485,
+    486,
+    487,
+    488,
+    489,
+    490,
+    491,
+    492,
+    493,
+    494,
+    495,
+    496,
+    497,
+    498,
+    499,
+    500
+   ]
+  }
+ ],
+ "stream": "record"
+}

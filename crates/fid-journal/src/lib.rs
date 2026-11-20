@@ -7,6 +7,10 @@
 //! (`CORE.JRN.CHAIN.CKPT`); without it the crate is the storage-free entry model plus the
 //! checkpoint record and its verifier.
 //!
+//! Module `verify` (`CORE.JRN.CHAIN.VERIFY`) verifies the hash chain, blobs and checkpoints of
+//! stored rows and lists entry headers; with feature `store` it reads them from the project
+//! database and declares `journal.verify_chain@1` and `journal.list_entries@1`.
+//!
 //! Module `stream` (`CORE.JRN.STREAM.ALOG`) routes completed calls to their stream and writes
 //! the P0 Activity Log; with feature `store` it also declares the Activity Log settings.
 
@@ -15,10 +19,17 @@ pub mod append;
 pub mod checkpoint;
 pub mod entry;
 pub mod stream;
+pub mod verify;
 
 #[cfg(feature = "store")]
 pub use checkpoint::{BranchHead, HeadsRebuilt, StoredCheckpoint};
 pub use checkpoint::{Checkpoint, CheckpointError, Coverage, LedgerHead, Link, Verified};
+#[cfg(feature = "store")]
+pub use verify::{command_defs, list_store, verify_store};
+pub use verify::{
+    list_rows, plan_list, verify_rows, BlobSource, BlobState, Checked, CheckpointRow, Failure, FailureKind, ListPage,
+    ListPlan, ListQuery, ListedEntry, ReadError, Start, StoredEntry, TrustedHead, VerifyOptions, VerifyReport,
+};
 
 #[cfg(feature = "test-hooks")]
 pub use append::FaultHook;
