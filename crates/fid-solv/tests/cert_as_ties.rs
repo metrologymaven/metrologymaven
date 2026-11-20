@@ -265,7 +265,7 @@ fn refused_basis_falls_back_to_the_lexicographic_sets() {
     let conic = c.zone.conic();
     let only = solution(&c.zone, &reduced, true);
     let prop = extract(&conic, &only, &c.zone.row_labels(), 3, &th()).unwrap();
-    assert_eq!(prop.uncertified_sets(), &[reduced.clone()]);
+    assert_eq!(prop.uncertified_sets(), std::slice::from_ref(&reduced));
     let rec = recompute(&c.zone, &prop, 0, &RecompConfig::default()).unwrap();
     let rep = check(&c.zone, &rec, &KktTolerances::default()).unwrap();
     assert_eq!((rep.status(), rep.reason()), (KktStatus::Violated, Some(KktFail::Primal)));
