@@ -1,0 +1,10 @@
+# UNC.PROP.MCM.ADAPT D0 bit pins: crate output, regenerate with UNC_MCM_ADAPT_PRINT_BITS=1
+# sequence h decision s_estimate s_u s_low s_high (IEEE-754 bits, hex)
+summaries_converge.json 2 continue 3f8fbe76c8b439ff 3f6cac083126e97f 3fb0a3d70a3d70bf 3fb0a3d70a3d70bf
+summaries_converge.json 3 continue 3f830775d9a9a655 3f609c28c1760182 3fa5626cc277860c 3fa4b136396e4dc7
+summaries_converge.json 4 continue 3f7b38a08929493d 3f587642dacba7ca 3f9f6c4e0af2c533 3f9f00cdc22ed006
+summaries_converge.json 5 stop 3f757ac768363248 3f52f74205e57b06 3f985c9a8236e72e 3f9803d25ddc97dd
+summaries_slow.json 2 continue 3fc3333333333340 3f9eb851eb851ebf 3fc333333333332f 3fc99999999999a0
+summaries_slow.json 3 cap_reached 3fc62b9586ad0a31 3fa047d2ef7f491f 3fc62b9586ad0a28 3fcd8f7208e6b836
+ac_h_seeds_0_1 stop_blocks normal4:2 normal4:7 rect4:2 rect4:2
+ac_h_seeds_0_1 sha256:384e1dd862036588947bef8734cce481ec38e0675413ce87a616aafd51b0ce8e
