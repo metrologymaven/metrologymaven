@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::disallowed_types)]
 //! The value rule of RPT.MODEL.DOC (reviews of #232): declared value fields hold
 //! `value_binding@1` references only, never literal values; escaping covers every Cf and
 //! default-ignorable character; duplicate keys are refused; replay checks the project.

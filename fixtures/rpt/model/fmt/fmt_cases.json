@@ -1,0 +1,725 @@
+{
+ "cases": [
+  {
+   "acceptance": null,
+   "decimals": 3,
+   "kind": "length",
+   "limits": {
+    "lower": "0.012",
+    "unit": "si",
+    "upper": "0.013"
+   },
+   "name": "len_mm_auth3_conforms",
+   "outcome": "CONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f8948a661fef899"
+  },
+  {
+   "acceptance": null,
+   "decimals": null,
+   "kind": "length",
+   "limits": null,
+   "name": "len_mm_default_nolimits",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f9999999999999a"
+  },
+  {
+   "acceptance": null,
+   "decimals": 4,
+   "kind": "length",
+   "limits": {
+    "lower": "0.03",
+    "unit": "si",
+    "upper": "0.032"
+   },
+   "name": "len_in_auth4_conforms",
+   "outcome": "CONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "in",
+   "value_bits": "0x3fa00e212af2f2d1"
+  },
+  {
+   "acceptance": null,
+   "decimals": null,
+   "kind": "length",
+   "limits": null,
+   "name": "len_um_default",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "um",
+   "value_bits": "0x3ee9e3fe580f5494"
+  },
+  {
+   "acceptance": null,
+   "decimals": 3,
+   "kind": "length",
+   "limits": null,
+   "name": "len_mm_grouping",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x40934a456d5cfaad"
+  },
+  {
+   "acceptance": null,
+   "decimals": 4,
+   "kind": "length",
+   "limits": null,
+   "name": "len_m_auth4",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "m",
+   "value_bits": "0x3ff3c0c1fc8f3238"
+  },
+  {
+   "acceptance": null,
+   "decimals": 3,
+   "kind": "length",
+   "limits": {
+    "lower": "-0.00001",
+    "unit": "si",
+    "upper": "0.00001"
+   },
+   "name": "len_mm_negative_below",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0xbee9cb8320b15070"
+  },
+  {
+   "acceptance": null,
+   "decimals": 3,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.00005"
+   },
+   "name": "ac2_side_rule",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f0a36e2eb1c432e"
+  },
+  {
+   "acceptance": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.000048"
+   },
+   "decimals": 3,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.00005"
+   },
+   "name": "ac4_guard_band",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:guard-band(r=1)@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f092a73c906e3da"
+  },
+  {
+   "acceptance": null,
+   "decimals": 4,
+   "kind": "angle",
+   "limits": null,
+   "name": "ang_deg_auth4",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "deg",
+   "value_bits": "0x3fe0000000000000"
+  },
+  {
+   "acceptance": null,
+   "decimals": null,
+   "kind": "angle",
+   "limits": null,
+   "name": "ang_rad_default",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "rad",
+   "value_bits": "0x3fbf9add3739635f"
+  },
+  {
+   "acceptance": null,
+   "decimals": null,
+   "kind": "angle",
+   "limits": {
+    "lower": "44.9",
+    "unit": "deg",
+    "upper": "45.1"
+   },
+   "name": "ang_deg_default_within",
+   "outcome": "CONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "deg",
+   "value_bits": "0x3fe921fb54442d18"
+  },
+  {
+   "acceptance": null,
+   "decimals": 2,
+   "kind": "scalar",
+   "limits": null,
+   "name": "scalar_auth2",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "1",
+   "value_bits": "0x3fef9adc8fb86f48"
+  },
+  {
+   "acceptance": null,
+   "decimals": null,
+   "kind": "scalar",
+   "limits": {
+    "lower": "3",
+    "unit": "si",
+    "upper": "4"
+   },
+   "name": "scalar_default_conforms",
+   "outcome": "CONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "1",
+   "value_bits": "0x400921f9f01b866e"
+  },
+  {
+   "acceptance": null,
+   "decimals": 2,
+   "kind": "scalar",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.30000000000000004"
+   },
+   "name": "scalar_tie_at_cap",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "1",
+   "value_bits": "0x3fd3333333333334"
+  },
+  {
+   "acceptance": null,
+   "decimals": 4,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.0254"
+   },
+   "name": "nc_in_just_above",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "in",
+   "value_bits": "0x3f9a027525460aa7"
+  },
+  {
+   "acceptance": null,
+   "decimals": 1,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.00001"
+   },
+   "name": "nc_um_just_above",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "um",
+   "value_bits": "0x3ee4f8b588e368f2"
+  },
+  {
+   "acceptance": null,
+   "decimals": 3,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.5"
+   },
+   "name": "nc_m_just_above",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "m",
+   "value_bits": "0x3fe0000000000001"
+  },
+  {
+   "acceptance": null,
+   "decimals": null,
+   "kind": "angle",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.1"
+   },
+   "name": "nc_rad_just_above",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "rad",
+   "value_bits": "0x3fb999999999999a"
+  },
+  {
+   "acceptance": null,
+   "decimals": 4,
+   "kind": "angle",
+   "limits": {
+    "lower": null,
+    "unit": "deg",
+    "upper": "30"
+   },
+   "name": "nc_deg_just_above",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "deg",
+   "value_bits": "0x3fe0c152382d7366"
+  },
+  {
+   "acceptance": null,
+   "decimals": 0,
+   "kind": "angle",
+   "limits": {
+    "lower": null,
+    "unit": "deg",
+    "upper": "30"
+   },
+   "name": "nc_dms_just_above",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "dms",
+   "value_bits": "0x3fe0c152382d7366"
+  },
+  {
+   "acceptance": null,
+   "decimals": 2,
+   "kind": "scalar",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "1"
+   },
+   "name": "nc_one_just_above",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "1",
+   "value_bits": "0x3ff0000000000001"
+  },
+  {
+   "acceptance": null,
+   "decimals": 3,
+   "kind": "length",
+   "limits": {
+    "lower": "0.00001",
+    "unit": "si",
+    "upper": null
+   },
+   "name": "nc_mm_just_below",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3ee4f8b588e368f0"
+  },
+  {
+   "acceptance": null,
+   "decimals": 4,
+   "kind": "angle",
+   "limits": null,
+   "name": "wrap_deg_360",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "deg",
+   "value_bits": "0x401921fb54442d18"
+  },
+  {
+   "acceptance": null,
+   "decimals": 0,
+   "kind": "angle",
+   "limits": null,
+   "name": "wrap_dms_360",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "dms",
+   "value_bits": "0x401921fb54442d18"
+  },
+  {
+   "acceptance": null,
+   "decimals": 4,
+   "kind": "angle",
+   "limits": null,
+   "name": "wrap_deg_below_zero",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "deg",
+   "value_bits": "0xbe112e0be826d695"
+  },
+  {
+   "acceptance": null,
+   "decimals": 1,
+   "kind": "angle",
+   "limits": null,
+   "name": "wrap_dms_below_zero",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "dms",
+   "value_bits": "0xbe112e0be826d695"
+  },
+  {
+   "acceptance": null,
+   "decimals": 4,
+   "kind": "angle",
+   "limits": {
+    "lower": "0",
+    "unit": "deg",
+    "upper": null
+   },
+   "name": "nc_wrap_below_zero",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "deg",
+   "value_bits": "0xbd719799812dea11"
+  },
+  {
+   "acceptance": null,
+   "decimals": 4,
+   "kind": "angle",
+   "limits": {
+    "lower": null,
+    "unit": "deg",
+    "upper": "359.99"
+   },
+   "name": "nc_wrap_below_2pi_deg",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "deg",
+   "value_bits": "0x401921fb54442d18"
+  },
+  {
+   "acceptance": null,
+   "decimals": 0,
+   "kind": "angle",
+   "limits": {
+    "lower": null,
+    "unit": "deg",
+    "upper": "359.99"
+   },
+   "name": "nc_wrap_below_2pi_dms",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "dms",
+   "value_bits": "0x401921fb54442d18"
+  },
+  {
+   "acceptance": null,
+   "decimals": 0,
+   "kind": "length",
+   "limits": null,
+   "name": "sweep_mm_d0",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f8948b0f905440f"
+  },
+  {
+   "acceptance": null,
+   "decimals": 1,
+   "kind": "length",
+   "limits": null,
+   "name": "sweep_mm_d1",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f8948b0f905440f"
+  },
+  {
+   "acceptance": null,
+   "decimals": 2,
+   "kind": "length",
+   "limits": null,
+   "name": "sweep_mm_d2",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f8948b0f905440f"
+  },
+  {
+   "acceptance": null,
+   "decimals": 3,
+   "kind": "length",
+   "limits": null,
+   "name": "sweep_mm_d3",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f8948b0f905440f"
+  },
+  {
+   "acceptance": null,
+   "decimals": 4,
+   "kind": "length",
+   "limits": null,
+   "name": "sweep_mm_d4",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f8948b0f905440f"
+  },
+  {
+   "acceptance": null,
+   "decimals": 5,
+   "kind": "length",
+   "limits": null,
+   "name": "sweep_mm_d5",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f8948b0f905440f"
+  },
+  {
+   "acceptance": null,
+   "decimals": 6,
+   "kind": "length",
+   "limits": null,
+   "name": "sweep_mm_d6",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f8948b0f905440f"
+  },
+  {
+   "acceptance": null,
+   "decimals": 7,
+   "kind": "length",
+   "limits": null,
+   "name": "sweep_mm_d7",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f8948b0f905440f"
+  },
+  {
+   "acceptance": null,
+   "decimals": 8,
+   "kind": "length",
+   "limits": null,
+   "name": "sweep_mm_d8",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f8948b0f905440f"
+  },
+  {
+   "acceptance": null,
+   "decimals": 9,
+   "kind": "length",
+   "limits": null,
+   "name": "sweep_mm_d9",
+   "outcome": "NOT_DECIDABLE",
+   "rule": null,
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3f8948b0f905440f"
+  },
+  {
+   "acceptance": null,
+   "decimals": 0,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.0000125"
+   },
+   "name": "sweep_nc_mm_d0",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3eea36e2eb1c432e"
+  },
+  {
+   "acceptance": null,
+   "decimals": 1,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.0000125"
+   },
+   "name": "sweep_nc_mm_d1",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3eea36e2eb1c432e"
+  },
+  {
+   "acceptance": null,
+   "decimals": 2,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.0000125"
+   },
+   "name": "sweep_nc_mm_d2",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3eea36e2eb1c432e"
+  },
+  {
+   "acceptance": null,
+   "decimals": 3,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.0000125"
+   },
+   "name": "sweep_nc_mm_d3",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3eea36e2eb1c432e"
+  },
+  {
+   "acceptance": null,
+   "decimals": 4,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.0000125"
+   },
+   "name": "sweep_nc_mm_d4",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3eea36e2eb1c432e"
+  },
+  {
+   "acceptance": null,
+   "decimals": 5,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.0000125"
+   },
+   "name": "sweep_nc_mm_d5",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3eea36e2eb1c432e"
+  },
+  {
+   "acceptance": null,
+   "decimals": 6,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.0000125"
+   },
+   "name": "sweep_nc_mm_d6",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3eea36e2eb1c432e"
+  },
+  {
+   "acceptance": null,
+   "decimals": 7,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.0000125"
+   },
+   "name": "sweep_nc_mm_d7",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3eea36e2eb1c432e"
+  },
+  {
+   "acceptance": null,
+   "decimals": 8,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.0000125"
+   },
+   "name": "sweep_nc_mm_d8",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3eea36e2eb1c432e"
+  },
+  {
+   "acceptance": null,
+   "decimals": 9,
+   "kind": "length",
+   "limits": {
+    "lower": null,
+    "unit": "si",
+    "upper": "0.0000125"
+   },
+   "name": "sweep_nc_mm_d9",
+   "outcome": "NONCONFORMS",
+   "rule": "dr:simple-acceptance@1",
+   "statement": "uec1_lpu.json",
+   "unit": "mm",
+   "value_bits": "0x3eea36e2eb1c432e"
+  }
+ ],
+ "schema": "rpt-fmt-cases@1"
+}

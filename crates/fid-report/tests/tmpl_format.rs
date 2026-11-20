@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::disallowed_types)]
 //! Acceptance tests of RPT.MODEL.TMPL.FORMAT (AC-1, AC-2, AC-3) and the pinned Design
 //! rules. Expected bytes, digests, pointers and reasons come from
 //! fixtures/rpt/model/tmpl/make_fixtures.py (independent Python) or are hand-labelled here

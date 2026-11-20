@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::disallowed_types)]
 //! RPT.OUTPUT.PDF.TEXT acceptance tests. Expected values come from
 //! `fixtures/rpt/output/text/make_fixtures.py` (an independent Python implementation of the
 //! spec's rules) or are hand-labelled (`ac4-*.txt`/`.cmap`, the literals below); none is

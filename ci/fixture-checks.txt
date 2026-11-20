@@ -87,6 +87,7 @@ python fixtures/rdl/format/make_fixtures.py --check
 python fixtures/rel/guide/make_fixtures.py --check
 python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
+python fixtures/rpt/model/fmt/make_cases.py --check
 python fixtures/rpt/model/tmpl/check_schema.py
 python fixtures/rpt/model/tmpl/make_fixtures.py --check
 python fixtures/rpt/model/tmpl/make_slot_fixtures.py --check
@@ -115,3 +116,5 @@ python tools/fixtures/geo_sel_sets.py --check
 python tools/fixtures/geo_tree_cases.py --check
 python tools/fixtures/geo_units_cases.py --check
 python tools/fixtures/geo_xform_cases.py --check
+python tools/rpt_float_lint.py
+python tools/rpt_float_lint.py --clippy-selftest

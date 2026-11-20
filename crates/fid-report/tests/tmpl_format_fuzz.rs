@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::disallowed_types)]
 //! AC-4 of RPT.MODEL.TMPL.FORMAT: a structure-aware fuzzer (seed 3, 1 000 000 iterations).
 //!
 //! The full 1 000 000 iterations run only with `TMPL_FUZZ_FULL=1` (one dedicated

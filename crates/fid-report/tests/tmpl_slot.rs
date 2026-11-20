@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::disallowed_types)]
 //! Acceptance tests of RPT.MODEL.TMPL.SLOT (AC-1 to AC-4) and the pinned Design rules.
 //! Expected bytes, orders, pointers and reasons come from
 //! fixtures/rpt/model/tmpl/make_slot_fixtures.py (independent Python) or are hand-labelled

@@ -121,10 +121,7 @@ fn schema_version(v: &CValue) -> Result<u32, TemplateError> {
     let bad = || TemplateError::invalid("/schema_version", "bad_version");
     match o.get("schema_version") {
         None => Err(TemplateError::invalid("/schema_version", "missing_field")),
-        Some(CValue::Num(f)) if (0.0..=f64::from(u32::MAX)).contains(f) && f.fract() == 0.0 => {
-            // Exact: an integral f64 in u32 range converts without loss.
-            Ok(*f as u32)
-        }
+        Some(v @ CValue::Num(_)) => crate::json_num::as_u32(v).ok_or_else(bad),
         Some(s @ CValue::Str(_)) => read::dec_u32(s, "/schema_version").map_err(|_| bad()),
         Some(_) => Err(bad()),
     }

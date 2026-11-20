@@ -1028,6 +1028,11 @@ name = "fid-report"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-gdt",
+ "fid-io-res",
+ "fid-kdec",
+ "fid-kunc",
+ "fid-num",
  "fid-project",
  "fid-registry",
  "fid-replay",
