@@ -1,0 +1,36 @@
+{
+  "derived": {
+    "command": "geo.test_vertices_to_points@1",
+    "id": "a313b1b2-4910-597d-9482-360ef5355d9f",
+    "inputs_given": [
+      [
+        "0190a5b2-7c3d-7000-8000-000000000002",
+        "sha256:655751031228a03476f0c421f832666af6b04af6097bc6cf6e0746962ff2d3d1"
+      ],
+      [
+        "0190a5b2-7c3d-7000-8000-000000000001",
+        "sha256:86b2f32590ee8757f60819780c4319a00edd6e707dccced3e85218d3b1e0be82"
+      ]
+    ],
+    "name": "{\"command\":\"geo.test_vertices_to_points@1\",\"inputs\":[{\"digest\":\"sha256:86b2f32590ee8757f60819780c4319a00edd6e707dccced3e85218d3b1e0be82\",\"id\":\"0190a5b2-7c3d-7000-8000-000000000001\"},{\"digest\":\"sha256:655751031228a03476f0c421f832666af6b04af6097bc6cf6e0746962ff2d3d1\",\"id\":\"0190a5b2-7c3d-7000-8000-000000000002\"}],\"kind\":\"geo_derived\",\"output\":\"points\",\"params\":\"sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a\"}",
+    "output": "points",
+    "params": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "describe": {
+    "mesh_cube": "{\"aabb\":{\"max\":[1,1,1],\"min\":[0,0,0],\"source\":\"computed\"},\"channels\":[],\"digest\":\"sha256:655751031228a03476f0c421f832666af6b04af6097bc6cf6e0746962ff2d3d1\",\"frame\":\"0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0\",\"id\":\"0190a5b2-7c3d-7000-8000-000000000002\",\"kind\":\"Mesh\",\"origin\":\"imported\",\"points\":8,\"source_id\":\"0190a5b2-7c3d-7000-8000-000000000002\",\"topology\":{\"boundary_edges\":0,\"closed\":true,\"components\":1,\"degenerate\":0,\"misoriented_pairs\":0,\"nonmanifold_edges\":0,\"oriented\":true},\"triangles\":12}",
+    "pointset_small": "{\"aabb\":{\"max\":[0.09999144568854762,0.09997112188035139,0.09998112547789245],\"min\":[0.000029625737438210287,0.00004569455229637143,0.00006183128616780165],\"source\":\"computed\"},\"channels\":[],\"digest\":\"sha256:86b2f32590ee8757f60819780c4319a00edd6e707dccced3e85218d3b1e0be82\",\"frame\":\"394638a9-9813-c3a1-c84b-7d129f5b73de\",\"id\":\"0190a5b2-7c3d-7000-8000-000000000001\",\"kind\":\"PointSet\",\"origin\":\"imported\",\"points\":1000,\"source_id\":\"0190a5b2-7c3d-7000-8000-000000000001\",\"topology\":null,\"triangles\":null}"
+  },
+  "generator": "fixtures/geo/types/reg/make_reg_fixtures.py (stdlib, independent of fid-geo-cmd)",
+  "ids": {
+    "mesh_cube": "0190a5b2-7c3d-7000-8000-000000000002",
+    "pointset_small": "0190a5b2-7c3d-7000-8000-000000000001"
+  },
+  "imported_text": {
+    "id": "1236549b-f43a-5dbc-8b79-48bf27d2ee9f",
+    "name": "{\"kind\":\"geo_imported_source\",\"source_id\":\"step:#123\"}",
+    "source_id": "step:#123"
+  },
+  "license": "CC-BY-4.0",
+  "namespace": "8e3f6a52-1c2d-4b7e-9f10-2a3b4c5d6e7f",
+  "spec": "GEO.TYPES.REG"
+}

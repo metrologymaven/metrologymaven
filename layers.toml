@@ -55,6 +55,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-dep" = "engine"
 # Alignment element (ALN.MODEL.ELEM): needs fid-dep (engine), so engine, not model.
 "fid-align" = "engine"
+# GEO command adapter (GEO.TYPES.REG): element registration and geo.describe_element@1; needs
+# fid-dep (engine), so engine, outside the kernel graph.
+"fid-geo-cmd" = "engine"
 "fid-hal-runtime" = "engine"
 "fid-surface" = "services"
 "fid-report-pdf" = "services"
