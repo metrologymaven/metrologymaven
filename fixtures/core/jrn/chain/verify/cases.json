@@ -2,12 +2,16 @@
  "cases": [
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "checked": {
      "blobs": 20,
      "checkpoints": 2,
      "entries": 500,
      "without_payload": 0
     },
+    "from_seq": "1",
     "ok": true
    },
    "mutations": [],
@@ -15,12 +19,16 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "checked": {
      "blobs": 20,
      "checkpoints": 2,
      "entries": 500,
      "without_payload": 500
     },
+    "from_seq": "1",
     "ok": true
    },
    "mutations": [
@@ -32,12 +40,16 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "checked": {
      "blobs": 20,
      "checkpoints": 0,
      "entries": 500,
      "without_payload": 0
     },
+    "from_seq": "1",
     "ok": true
    },
    "mutations": [
@@ -49,11 +61,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 137
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -67,11 +83,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "link",
      "reason": "broken",
      "seq": 211
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -97,11 +117,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 14
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -115,11 +139,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "column_mismatch",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -133,11 +161,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 113
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -151,11 +183,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 370
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -169,11 +205,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 373
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -187,11 +227,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 241
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -205,11 +249,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 379
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -223,11 +271,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 4
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -241,11 +293,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 174
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -259,11 +315,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 44
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -277,11 +337,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 278
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -295,11 +359,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 412
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -313,11 +381,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 445
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -331,11 +403,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 188
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -349,11 +425,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 280
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -367,11 +447,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 141
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -385,11 +469,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 491
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -403,11 +491,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 151
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -421,11 +513,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 423
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -439,11 +535,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 284
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -457,11 +557,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 314
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -475,11 +579,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 400
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -493,11 +601,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 88
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -511,11 +623,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 313
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -529,11 +645,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 339
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -547,11 +667,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 282
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -565,11 +689,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 464
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -583,11 +711,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 192
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -601,11 +733,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 490
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -619,11 +755,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 138
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -637,11 +777,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 259
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -655,11 +799,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 3
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -673,11 +821,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 388
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -691,11 +843,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 30
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -709,11 +865,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 308
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -727,11 +887,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 233
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -745,11 +909,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 322
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -763,11 +931,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 360
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -781,11 +953,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 121
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -799,11 +975,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 320
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -817,11 +997,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 327
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -835,11 +1019,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 484
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -853,11 +1041,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 58
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -871,11 +1063,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 359
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -889,11 +1085,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 478
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -907,11 +1107,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 125
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -925,11 +1129,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 117
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -943,11 +1151,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 28
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -961,11 +1173,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "hash_mismatch",
      "seq": 360
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -979,11 +1195,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 46
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -997,11 +1217,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 77
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1015,11 +1239,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 374
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1033,11 +1261,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 212
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1051,11 +1283,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 274
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1069,11 +1305,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 451
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1087,11 +1327,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 436
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1105,11 +1349,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 120
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1123,11 +1371,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 394
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1141,11 +1393,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 7
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1159,11 +1415,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 14
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1177,11 +1437,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 56
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1195,11 +1459,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 98
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1213,11 +1481,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 84
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1231,11 +1503,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "corrupt",
      "seq": 126
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1249,11 +1525,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "unknown_format",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1267,11 +1547,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "column_mismatch",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1285,11 +1569,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1303,11 +1591,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1321,11 +1613,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1339,11 +1635,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "column_mismatch",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1357,11 +1657,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1375,11 +1679,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1393,11 +1701,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1411,11 +1723,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1429,11 +1745,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1447,11 +1767,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "column_mismatch",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1465,11 +1789,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1483,11 +1811,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1501,11 +1833,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "column_mismatch",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1519,11 +1855,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1537,11 +1877,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1555,11 +1899,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1573,11 +1921,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1591,11 +1943,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1609,11 +1965,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1627,11 +1987,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "column_mismatch",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1645,11 +2009,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1663,11 +2031,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1681,11 +2053,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "column_mismatch",
      "seq": 475
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1700,11 +2076,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "link",
      "reason": "column_mismatch",
      "seq": 333
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1719,11 +2099,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "column_mismatch",
      "seq": 320
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1738,11 +2122,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "column_mismatch",
      "seq": 100
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1757,11 +2145,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "column_mismatch",
      "seq": 12
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1776,11 +2168,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "sequence",
      "reason": "gap",
      "seq": 123
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1793,11 +2189,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "sequence",
      "reason": "gap",
      "seq": 1
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1810,11 +2210,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "sequence",
      "reason": "header_seq",
      "seq": 123
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1827,11 +2231,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "sequence",
      "reason": "header_seq",
      "seq": 1
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1844,11 +2252,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "sequence",
      "reason": "header_seq",
      "seq": 40
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1862,11 +2274,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "sequence",
      "reason": "header_seq",
      "seq": 10
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1880,11 +2296,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "truncated",
      "seq": 500
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1897,11 +2317,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "truncated",
      "seq": 250
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1914,12 +2338,16 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "checked": {
      "blobs": 20,
      "checkpoints": 0,
      "entries": 490,
      "without_payload": 0
     },
+    "from_seq": "1",
     "ok": true
    },
    "mutations": [
@@ -1935,11 +2363,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "link",
      "reason": "broken",
      "seq": 301
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1959,11 +2391,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "forked_head",
      "seq": 500
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -1983,11 +2419,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "forked_head",
      "seq": 300
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2003,11 +2443,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "truncated",
      "seq": 600
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2023,11 +2467,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2043,11 +2491,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "unknown_format",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2063,11 +2515,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "column_mismatch",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2083,11 +2539,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "foreign_stream",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2103,12 +2563,16 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "checked": {
      "blobs": 20,
      "checkpoints": 3,
      "entries": 500,
      "without_payload": 0
     },
+    "from_seq": "1",
     "ok": true
    },
    "mutations": [
@@ -2124,11 +2588,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "checkpoint",
      "reason": "malformed",
      "seq": null
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2144,11 +2612,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "unknown_version",
      "seq": 77
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2168,11 +2640,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "schema",
      "seq": 77
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2192,11 +2668,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "schema",
      "seq": 77
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2216,11 +2696,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "non_canonical",
      "seq": 88
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2234,11 +2718,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "non_canonical",
      "seq": 88
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2252,11 +2740,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 88
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2270,11 +2762,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "hash",
      "reason": "malformed",
      "seq": 88
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2288,11 +2784,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "sequence",
      "reason": "header_seq",
      "seq": 92
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2312,11 +2812,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "link",
      "reason": "genesis",
      "seq": 1
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2342,11 +2846,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "sequence",
      "reason": "foreign_stream",
      "seq": 33
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2366,11 +2874,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "missing",
      "seq": 14
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2383,11 +2895,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "payload_ref_missing",
      "seq": 49
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2406,11 +2922,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "payload_ref_duplicate",
      "seq": 49
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2433,11 +2953,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "payload_mismatch",
      "seq": 49
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2460,11 +2984,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "unknown_role",
      "seq": 49
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2487,11 +3015,15 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "failure": {
      "kind": "blob",
      "reason": "payload_mismatch",
      "seq": 49
     },
+    "from_seq": "1",
     "ok": false
    },
    "mutations": [
@@ -2519,12 +3051,16 @@
   },
   {
    "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
     "checked": {
      "blobs": 20,
      "checkpoints": 2,
      "entries": 500,
      "without_payload": 1
     },
+    "from_seq": "1",
     "ok": true
    },
    "mutations": [
@@ -2534,6 +3070,433 @@
     }
    ],
    "name": "one_payload_removed"
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "bad_id",
+     "seq": null
+    },
+    "from_seq": "1",
+    "ok": false
+   },
+   "mutations": [
+    {
+     "body": "{\"count\":\"300\",\"format\":\"linear-v1\",\"head\":\"sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
+     "id": 0,
+     "op": "add_checkpoint",
+     "stream": "record"
+    }
+   ],
+   "name": "checkpoint_id_0"
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "bad_id",
+     "seq": null
+    },
+    "from_seq": "1",
+    "ok": false
+   },
+   "mutations": [
+    {
+     "body": "{\"count\":\"300\",\"format\":\"linear-v1\",\"head\":\"sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
+     "id": -5,
+     "op": "add_checkpoint",
+     "stream": "record"
+    }
+   ],
+   "name": "checkpoint_id_minus5"
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
+    "checked": {
+     "blobs": 20,
+     "checkpoints": 2,
+     "entries": 500,
+     "without_payload": 0
+    },
+    "from_seq": "1",
+    "ok": true
+   },
+   "mutations": [
+    {
+     "branch": "main",
+     "entry_hash": "sha256:db60d77f6befffd64250c9a962438398c86707eec3180d29fb5a9685f3cdc3b2",
+     "op": "add_head"
+    },
+    {
+     "branch": "alt/1",
+     "entry_hash": "sha256:47f031e653799fde042ff6e59f5387dc41a93f9c8037b094cc92ecb68762d657",
+     "op": "add_head"
+    }
+   ],
+   "name": "head_ok"
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
+    "failure": {
+     "kind": "link",
+     "reason": "head_past_chain",
+     "seq": null
+    },
+    "from_seq": "1",
+    "ok": false
+   },
+   "mutations": [
+    {
+     "branch": "main",
+     "entry_hash": "sha256:e47c2f583726b472440715110e23e6567c2da2f18a8f9815cb491791c7ce277d",
+     "op": "add_head"
+    }
+   ],
+   "name": "head_past_chain"
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
+    "failure": {
+     "kind": "link",
+     "reason": "head_branch",
+     "seq": null
+    },
+    "from_seq": "1",
+    "ok": false
+   },
+   "mutations": [
+    {
+     "branch": "alt/1",
+     "entry_hash": "sha256:db60d77f6befffd64250c9a962438398c86707eec3180d29fb5a9685f3cdc3b2",
+     "op": "add_head"
+    }
+   ],
+   "name": "head_other_branch"
+  },
+  {
+   "expect": {
+    "refused": "bad_range"
+   },
+   "from_seq": "301",
+   "mutations": [],
+   "name": "from_unanchored"
+  },
+  {
+   "expect": {
+    "refused": "bad_range"
+   },
+   "from_seq": "301",
+   "mutations": [
+    {
+     "fake_below": "sha256:d7abeecb86be96d294ef0dc5eb46774d58593dcb95c8f0d0c3c54a2e5ac7b02f",
+     "op": "relink_from",
+     "seq": 301
+    },
+    {
+     "op": "drop_checkpoints"
+    }
+   ],
+   "name": "from_attack_unanchored"
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
+    "failure": {
+     "kind": "hash",
+     "reason": "column_mismatch",
+     "seq": 300
+    },
+    "from_seq": "1",
+    "ok": false
+   },
+   "mutations": [
+    {
+     "fake_below": "sha256:d7abeecb86be96d294ef0dc5eb46774d58593dcb95c8f0d0c3c54a2e5ac7b02f",
+     "op": "relink_from",
+     "seq": 301
+    },
+    {
+     "op": "drop_checkpoints"
+    }
+   ],
+   "name": "from_attack_full"
+  },
+  {
+   "expect": {
+    "anchor": {
+     "checkpoint": "3",
+     "kind": "checkpoint",
+     "seq": "300"
+    },
+    "checked": {
+     "blobs": 20,
+     "checkpoints": 1,
+     "entries": 200,
+     "without_payload": 0
+    },
+    "from_seq": "301",
+    "ok": true
+   },
+   "from_seq": "301",
+   "mutations": [
+    {
+     "body": "{\"count\":\"300\",\"format\":\"linear-v1\",\"head\":\"sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
+     "id": 3,
+     "op": "add_checkpoint",
+     "stream": "record"
+    }
+   ],
+   "name": "from_checkpoint_anchor"
+  },
+  {
+   "expect": {
+    "refused": "bad_range"
+   },
+   "from_seq": "301",
+   "mutations": [
+    {
+     "body": "{\"count\":\"300\",\"format\":\"linear-v1\",\"head\":\"sha256:dbfbb20d4e2240b0c1bc5db75b0c53cf2d59bbeef6fab599366b8d6ec73566a5\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
+     "id": 3,
+     "op": "add_checkpoint",
+     "stream": "record"
+    }
+   ],
+   "name": "from_checkpoint_anchor_wrong_head"
+  },
+  {
+   "expect": {
+    "anchor": {
+     "checkpoint": "1",
+     "kind": "checkpoint",
+     "seq": "250"
+    },
+    "checked": {
+     "blobs": 20,
+     "checkpoints": 1,
+     "entries": 250,
+     "without_payload": 0
+    },
+    "from_seq": "251",
+    "ok": true
+   },
+   "from_seq": "251",
+   "mutations": [],
+   "name": "from_existing_checkpoint"
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "trusted",
+     "seq": "300"
+    },
+    "checked": {
+     "blobs": 20,
+     "checkpoints": 1,
+     "entries": 200,
+     "without_payload": 0
+    },
+    "from_seq": "301",
+    "ok": true
+   },
+   "from_seq": "301",
+   "mutations": [],
+   "name": "from_trusted_anchor",
+   "trusted": {
+    "exact": false,
+    "head": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
+    "seq": "300"
+   }
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "trusted",
+     "seq": "300"
+    },
+    "failure": {
+     "kind": "link",
+     "reason": "broken",
+     "seq": 301
+    },
+    "from_seq": "301",
+    "ok": false
+   },
+   "from_seq": "301",
+   "mutations": [
+    {
+     "fake_below": "sha256:d7abeecb86be96d294ef0dc5eb46774d58593dcb95c8f0d0c3c54a2e5ac7b02f",
+     "op": "relink_from",
+     "seq": 301
+    },
+    {
+     "op": "drop_checkpoints"
+    }
+   ],
+   "name": "from_trusted_anchor_attack",
+   "trusted": {
+    "exact": false,
+    "head": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
+    "seq": "300"
+   }
+  },
+  {
+   "expect": {
+    "refused": "bad_range"
+   },
+   "from_seq": "301",
+   "mutations": [],
+   "name": "from_trusted_below_anchor",
+   "trusted": {
+    "exact": false,
+    "head": "sha256:c92c33ba1d693adaa05546a72749a9c2913ea38a1abe4b7ee43216565e7d555c",
+    "seq": "200"
+   }
+  },
+  {
+   "expect": {
+    "refused": "bad_range"
+   },
+   "from_seq": "301",
+   "mutations": [],
+   "name": "from_trusted_above_unanchored",
+   "trusted": {
+    "exact": false,
+    "head": "sha256:a9962dc400c0162e07dbddcaf5a48056279c28a74db8f7975d55850ba4c90748",
+    "seq": "400"
+   }
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "trusted",
+     "seq": "500"
+    },
+    "checked": {
+     "blobs": 0,
+     "checkpoints": 0,
+     "entries": 0,
+     "without_payload": 0
+    },
+    "from_seq": "501",
+    "ok": true
+   },
+   "from_seq": "501",
+   "mutations": [],
+   "name": "from_tail_plus_one",
+   "trusted": {
+    "exact": true,
+    "head": "sha256:db60d77f6befffd64250c9a962438398c86707eec3180d29fb5a9685f3cdc3b2",
+    "seq": "500"
+   }
+  },
+  {
+   "expect": {
+    "refused": "bad_range"
+   },
+   "from_seq": "502",
+   "mutations": [],
+   "name": "from_beyond_tail"
+  },
+  {
+   "expect": {
+    "refused": "bad_range"
+   },
+   "from_seq": "0",
+   "mutations": [],
+   "name": "from_zero"
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "forked_head",
+     "seq": 250
+    },
+    "from_seq": "1",
+    "ok": false
+   },
+   "mutations": [],
+   "name": "trusted_forked",
+   "trusted": {
+    "exact": false,
+    "head": "sha256:2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881",
+    "seq": "250"
+   }
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
+    "failure": {
+     "kind": "sequence",
+     "reason": "extended",
+     "seq": 251
+    },
+    "from_seq": "1",
+    "ok": false
+   },
+   "mutations": [],
+   "name": "trusted_exact_extended",
+   "trusted": {
+    "exact": true,
+    "head": "sha256:06fcd36031ee01d2910ff183928fbf04e35badb599e75b2df0fe1712df784e56",
+    "seq": "250"
+   }
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "truncated",
+     "seq": 500
+    },
+    "from_seq": "1",
+    "ok": false
+   },
+   "mutations": [
+    {
+     "keep": 490,
+     "op": "truncate"
+    },
+    {
+     "op": "drop_checkpoints"
+    }
+   ],
+   "name": "trusted_truncated",
+   "trusted": {
+    "exact": true,
+    "head": "sha256:db60d77f6befffd64250c9a962438398c86707eec3180d29fb5a9685f3cdc3b2",
+    "seq": "500"
+   }
   }
  ],
  "lists": [

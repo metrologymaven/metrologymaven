@@ -12,12 +12,18 @@
 //!
 //! # Pinned rules
 //!
-//! - **Checkpoint rows first**, in row-id order (at most [`MAX_CHECKPOINTS`]). The body is
+//! - **Checkpoint rows first**, in row-id order (at most [`MAX_CHECKPOINTS`]). A row id below
+//!   1 (append never writes one) is `checkpoint/bad_id`. The body is
 //!   decoded with [`Checkpoint::from_bytes`] (canonical bytes, `linear-v1` layout): an unknown
 //!   `format` is `checkpoint/unknown_format`, any other decoding failure
 //!   `checkpoint/malformed`. A row of another stream is `checkpoint/foreign_stream`; a body
 //!   whose stream or head differs from the row's columns is `checkpoint/column_mismatch`.
 //!   These failures carry the checkpoint row id and no sequence.
+//! - **Blobs verified means the stored reference set.** The `entry_blobs` rows of an entry are
+//!   not committed in its header (the entry model of `CORE.JRN.ENTRY` and the append of
+//!   `CORE.JRN.CHAIN.APPEND` do not hash them), so the verifier checks the blobs the rows name
+//!   and the payload against the header's commitments, but cannot tell a referenced-blob row
+//!   that was removed, or one that was added, from the original set.
 //! - **Entries in sequence order**, position p from the first sequence verified. Per row, in
 //!   this order (the first failing check is reported, at sequence p):
 //!   1. column `seq` != p: `sequence/gap` (above p: an entry is missing) or
@@ -52,10 +58,18 @@
 //!   `checkpoint/truncated`: the journal lost its tail. Without a checkpoint above the end a
 //!   truncated tail cannot be seen from the journal alone; callers holding a trusted head
 //!   pass it as [`VerifyOptions::trusted`].
-//! - **Start.** By default from sequence 1 with the zero `prev`. With `from_seq` = n > 1 the
-//!   walk starts at n and trusts the stored `hash` column of entry n - 1 as the previous
-//!   hash; checkpoints below n are not checked or counted. `from_seq` 0 or above the tail
-//!   plus one is `validation/bad_range`.
+//! - **Start ([`resolve_start`]), fail closed.** By default from sequence 1 with the zero
+//!   `prev` ([`Anchor::Genesis`]). `from_seq` = n > 1 is accepted only when entry n - 1 is
+//!   anchored on something verified: a [`TrustedHead`] at n - 1 (its head is the previous
+//!   hash, [`Anchor::Trusted`]), or a checkpoint row at n - 1 that passes on its own and whose
+//!   head equals the stored `hash` column of entry n - 1 ([`Anchor::Checkpoint`]). Anything
+//!   else, a trusted head below n - 1, `from_seq` 0 or above the tail plus one, is
+//!   `validation/bad_range`. The report carries `from_seq` and the anchor, so a partial
+//!   verification is never mistaken for a full one. Checkpoints below n are not checked or
+//!   counted. A checkpoint anchor lives in the same database as the rows; only a trusted head
+//!   held outside the journal protects against an editor who rewrites both.
+//! - **Head cache ([`check_heads`]).** After a successful walk every `heads` row must name an
+//!   entry of the journal (`link/head_past_chain`) on its own branch (`link/head_branch`).
 //! - **Counts** on success: entries walked, distinct referenced blobs checked, checkpoints
 //!   checked, entries whose payload blob is absent.
 //! - **Bounds.** [`VerifyOptions::max_entries`] rows, [`VerifyOptions::max_blobs`] distinct
@@ -153,7 +167,7 @@ impl fmt::Display for FailureKind {
 }
 
 /// Every failure reason, by kind (module documentation, Pinned rules).
-pub const REASONS: [(FailureKind, &str); 28] = [
+pub const REASONS: [(FailureKind, &str); 31] = [
     (FailureKind::Hash, "oversize"),
     (FailureKind::Hash, "malformed"),
     (FailureKind::Hash, "non_canonical"),
@@ -169,6 +183,8 @@ pub const REASONS: [(FailureKind, &str); 28] = [
     (FailureKind::Link, "column_mismatch"),
     (FailureKind::Link, "genesis"),
     (FailureKind::Link, "broken"),
+    (FailureKind::Link, "head_past_chain"),
+    (FailureKind::Link, "head_branch"),
     (FailureKind::Blob, "unknown_role"),
     (FailureKind::Blob, "bad_ref"),
     (FailureKind::Blob, "payload_ref_missing"),
@@ -176,6 +192,7 @@ pub const REASONS: [(FailureKind, &str); 28] = [
     (FailureKind::Blob, "corrupt"),
     (FailureKind::Blob, "payload_mismatch"),
     (FailureKind::Blob, "missing"),
+    (FailureKind::Checkpoint, "bad_id"),
     (FailureKind::Checkpoint, "malformed"),
     (FailureKind::Checkpoint, "unknown_format"),
     (FailureKind::Checkpoint, "foreign_stream"),
@@ -407,16 +424,151 @@ impl Default for VerifyOptions {
     }
 }
 
-/// Where the walk starts: the first sequence and the hash it must link to.
+/// What the first verified entry links to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Anchor {
+    /// Sequence 1 and the zero digest: a full verification.
+    Genesis,
+    /// The stored hash of entry `seq`, confirmed by checkpoint row `checkpoint` at `seq`.
+    Checkpoint { seq: u64, checkpoint: i64 },
+    /// The caller's [`TrustedHead`] at `seq`.
+    Trusted { seq: u64 },
+}
+
+impl Anchor {
+    /// `{kind, seq?, checkpoint?}` with decimal strings.
+    pub fn to_value(&self) -> CValue {
+        let mut o = BTreeMap::new();
+        let kind = match self {
+            Anchor::Genesis => "genesis",
+            Anchor::Checkpoint { seq, checkpoint } => {
+                o.insert("seq".to_string(), CValue::Str(seq.to_string()));
+                o.insert("checkpoint".to_string(), CValue::Str(checkpoint.to_string()));
+                "checkpoint"
+            }
+            Anchor::Trusted { seq } => {
+                o.insert("seq".to_string(), CValue::Str(seq.to_string()));
+                "trusted"
+            }
+        };
+        o.insert("kind".to_string(), CValue::Str(kind.to_string()));
+        CValue::Obj(o)
+    }
+}
+
+/// Where the walk starts: the first sequence, the hash it must link to and why that hash is
+/// trusted. Build one with [`resolve_start`] (or [`Start::GENESIS`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Start {
     pub seq: u64,
     pub prev: Digest,
+    pub anchor: Anchor,
 }
 
 impl Start {
     /// Sequence 1, linking to the zero digest.
-    pub const GENESIS: Start = Start { seq: FIRST_SEQ, prev: GENESIS_PREV };
+    pub const GENESIS: Start = Start { seq: FIRST_SEQ, prev: GENESIS_PREV, anchor: Anchor::Genesis };
+}
+
+/// Most checkpoint rows read as anchor candidates for a partial verification.
+pub const MAX_ANCHOR_CANDIDATES: usize = 16;
+
+/// The start of a verification from `from_seq` over a journal whose tail is `tail` (module
+/// documentation, Start). `below_hash` is the stored `hash` column of entry `from_seq - 1`;
+/// `candidates` the checkpoint rows whose `entry_hash` is that column, in row-id order (at most
+/// [`MAX_ANCHOR_CANDIDATES`] are read). Anything not anchored is `validation/bad_range`.
+pub fn resolve_start<C>(
+    stream: &str,
+    from_seq: u64,
+    tail: u64,
+    trusted: Option<TrustedHead>,
+    below_hash: Option<&str>,
+    candidates: C,
+) -> Result<Start, ReadError>
+where
+    C: IntoIterator<Item = Result<CheckpointRow, ReadError>>,
+{
+    if from_seq == 0 || from_seq > tail.saturating_add(1) {
+        return Err(ReadError::BadRange(format!("from_seq {from_seq}, journal tail {tail}")));
+    }
+    if from_seq == FIRST_SEQ {
+        return Ok(Start::GENESIS);
+    }
+    let below = from_seq - 1;
+    if let Some(t) = trusted {
+        if t.seq < below {
+            return Err(ReadError::BadRange(format!(
+                "trusted head at {} is below from_seq - 1 = {below}: entries between are unverified",
+                t.seq
+            )));
+        }
+        if t.seq == below {
+            return Ok(Start { seq: from_seq, prev: t.head, anchor: Anchor::Trusted { seq: below } });
+        }
+    }
+    let unanchored = || {
+        ReadError::BadRange(format!(
+            "from_seq {from_seq} needs a verified anchor: a checkpoint at {below} matching the stored hash, \
+             or a trusted head at {below}"
+        ))
+    };
+    let stored = below_hash.and_then(parse_digest).ok_or_else(unanchored)?;
+    for row in candidates.into_iter().take(MAX_ANCHOR_CANDIDATES) {
+        let row = row?;
+        if parse_digest(&row.entry_hash) != Some(stored) {
+            continue;
+        }
+        if let Ok(cp) = decode_checkpoint(&row, stream) {
+            if cp.seq == below && cp.head == stored {
+                return Ok(Start {
+                    seq: from_seq,
+                    prev: stored,
+                    anchor: Anchor::Checkpoint { seq: below, checkpoint: row.id },
+                });
+            }
+        }
+    }
+    Err(unanchored())
+}
+
+/// Most head-cache rows checked.
+pub const MAX_HEADS: usize = 65_536;
+
+/// After a successful walk, checks the derived head cache (`heads` rows `(branch,
+/// entry_hash)`, in branch order): a row naming no entry of the journal is
+/// `link/head_past_chain`, one naming an entry of another branch `link/head_branch` (both
+/// without a sequence). `lookup` gives the branch column of the entry whose stored `hash`
+/// column is the given text. A stale row naming an older entry of its branch is allowed
+/// (`CORE.JRN.CHAIN.CKPT`: the journal wins). Does nothing on a failed report.
+pub fn check_heads<H, L>(report: &mut VerifyReport, heads: H, mut lookup: L) -> Result<(), ReadError>
+where
+    H: IntoIterator<Item = Result<(String, String), ReadError>>,
+    L: FnMut(&str) -> Result<Option<String>, ReadError>,
+{
+    if !report.ok() {
+        return Ok(());
+    }
+    for (i, head) in heads.into_iter().enumerate() {
+        if i >= MAX_HEADS {
+            return Err(ReadError::InputLimit(format!("more than {MAX_HEADS} head rows")));
+        }
+        let (branch, entry_hash) = head?;
+        let reason = match lookup(&entry_hash)? {
+            None => "head_past_chain",
+            Some(b) if b != branch => "head_branch",
+            Some(_) => continue,
+        };
+        report.failure = Some(Failure {
+            stream: report.stream.clone(),
+            seq: None,
+            kind: FailureKind::Link,
+            reason,
+            checkpoint: None,
+            detail: format!("head of branch {:?} names {:?}", echo(&branch), echo(&entry_hash)),
+        });
+        return Ok(());
+    }
+    Ok(())
 }
 
 /// What a verification checked.
@@ -432,7 +584,10 @@ pub struct Checked {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VerifyReport {
     pub stream: String,
+    /// First sequence verified: 1 for a full verification.
     pub from_seq: u64,
+    /// What the first verified entry was linked to.
+    pub anchor: Anchor,
     /// `None` when the journal verified.
     pub failure: Option<Failure>,
     /// Counts up to the failure, or of the whole walk on success.
@@ -445,8 +600,8 @@ impl VerifyReport {
         self.failure.is_none()
     }
 
-    /// The command result `{ok, failure?, checked: {entries, blobs, checkpoints,
-    /// without_payload}}`; counts are decimal strings.
+    /// The command result `{ok, from_seq, anchor, failure?, checked: {entries, blobs,
+    /// checkpoints, without_payload}}`; sequences and counts are decimal strings.
     pub fn to_value(&self) -> CValue {
         let n = |v: u64| CValue::Str(v.to_string());
         let mut checked = BTreeMap::new();
@@ -456,6 +611,8 @@ impl VerifyReport {
         checked.insert("without_payload".to_string(), n(self.checked.without_payload));
         let mut o = BTreeMap::new();
         o.insert("ok".to_string(), CValue::Bool(self.ok()));
+        o.insert("from_seq".to_string(), CValue::Str(self.from_seq.to_string()));
+        o.insert("anchor".to_string(), self.anchor.to_value());
         o.insert("checked".to_string(), CValue::Obj(checked));
         if let Some(f) = &self.failure {
             o.insert("failure".to_string(), f.to_value());
@@ -645,6 +802,9 @@ fn decode_checkpoint(row: &CheckpointRow, stream: &str) -> Result<Cp, Found> {
         checkpoint: Some(row.id),
         detail,
     };
+    if row.id < 1 {
+        return Err(at("bad_id", format!("row id {} (append writes ids from 1)", row.id)));
+    }
     let cp = match Checkpoint::from_bytes(&row.body) {
         Ok(cp) => cp,
         Err(CheckpointError::UnknownFormat(f)) => {
@@ -681,8 +841,13 @@ where
     R: IntoIterator<Item = Result<StoredEntry, ReadError>>,
     B: BlobSource + ?Sized,
 {
-    let mut report =
-        VerifyReport { stream: stream.to_string(), from_seq: start.seq, failure: None, checked: Checked::default() };
+    let mut report = VerifyReport {
+        stream: stream.to_string(),
+        from_seq: start.seq,
+        anchor: start.anchor,
+        failure: None,
+        checked: Checked::default(),
+    };
     let fail = |report: &mut VerifyReport, seq: Option<u64>, f: Found| {
         report.failure = Some(Failure {
             stream: stream.to_string(),

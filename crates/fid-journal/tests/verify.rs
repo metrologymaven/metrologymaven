@@ -10,11 +10,12 @@
 //! test and the append round trip are hand-labelled from the spec rules.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_canon::{digest_bytes, parse, CValue, Digest};
+use fid_canon::{digest_bytes, parse, to_canonical_bytes, CValue, Digest};
 use fid_journal::checkpoint::{Reason, MAX_CHECKPOINT_BYTES};
 use fid_journal::verify::{
-    list_rows, plan_list, verify_rows, BlobSource, BlobState, CheckpointRow, FailureKind, ListQuery, ReadError, Start,
-    StoredEntry, TrustedHead, VerifyOptions, VerifyReport, MAX_CHECKPOINTS, MAX_ENTRY_REFS, MAX_PAGE, REASONS,
+    check_heads, list_rows, plan_list, resolve_start, verify_rows, Anchor, BlobSource, BlobState, CheckpointRow,
+    FailureKind, ListQuery, ReadError, Start, StoredEntry, TrustedHead, VerifyOptions, VerifyReport, LIST_ENTRIES,
+    MAX_CHECKPOINTS, MAX_ENTRY_REFS, MAX_PAGE, REASONS, VERIFY_CHAIN,
 };
 use fid_journal::{
     build, command_defs, parse_digest, verify_store, AiAssistance, AppendRequest, Clock, CommandDraft, DraftBody,
@@ -98,6 +99,7 @@ fn digest(s: &str) -> Digest {
 
 #[derive(Clone)]
 struct Model {
+    heads: Vec<(String, String)>,
     rows: Vec<StoredEntry>,
     store: BTreeMap<[u8; 32], Vec<u8>>,
     checkpoints: Vec<CheckpointRow>,
@@ -148,7 +150,7 @@ fn good() -> Model {
             }
         })
         .collect();
-    Model { rows, store, checkpoints }
+    Model { heads: Vec::new(), rows, store, checkpoints }
 }
 
 fn flip(b: &mut [u8], bit: i64) {
@@ -254,12 +256,38 @@ fn apply(base: &Model, muts: &[CValue]) -> Model {
                 flip(&mut c.body, int(mu, "bit"));
             }
             "drop_checkpoints" => m.checkpoints.clear(),
+            "add_head" => m.heads.push((st(mu, "branch").into(), st(mu, "entry_hash").into())),
+            "relink_from" => relink_from(&mut m, int(mu, "seq"), st(mu, "fake_below")),
             other => panic!("unknown mutation {other}"),
         }
     }
     m.rows.sort_by_key(|r| r.seq);
     m.checkpoints.sort_by_key(|c| c.id);
     m
+}
+
+/// The `relink_from` mutation: entry n-1's stored hash becomes `fake`, and entries n.. are
+/// re-hashed so each links to the one below (the reviewer's attack on an unanchored
+/// `from_seq`). Same meaning as in make_fixtures.py.
+fn relink_from(m: &mut Model, n: i64, fake: &str) {
+    row_at(m, n - 1).hash = fake.to_string();
+    let mut prev = fake.to_string();
+    m.rows.sort_by_key(|r| r.seq);
+    for r in m.rows.iter_mut().filter(|r| r.seq >= n) {
+        let CValue::Obj(mut h) = parse(&r.header).unwrap() else { panic!() };
+        h.insert("prev".into(), CValue::Str(prev.clone()));
+        if !matches!(h.get("logical_parent"), Some(CValue::Null) | None) {
+            h.insert("logical_parent".into(), CValue::Str(prev.clone()));
+        }
+        h.remove("hash");
+        let hash = digest_bytes(&to_canonical_bytes(&CValue::Obj(h.clone())).unwrap()).to_string();
+        h.insert("hash".into(), CValue::Str(hash.clone()));
+        r.header = to_canonical_bytes(&CValue::Obj(h)).unwrap();
+        r.header_len = r.header.len() as u64;
+        r.hash = hash.clone();
+        r.prev_hash = Some(prev);
+        prev = hash;
+    }
 }
 
 /// The blob store of a model, hashing on its own.
@@ -279,15 +307,56 @@ impl BlobSource for MemBlobs<'_> {
     }
 }
 
+/// The whole pipeline over a model, as `verify_store` runs it: anchor, walk, head cache.
 fn verify_model(m: &Model, opts: &VerifyOptions) -> Result<VerifyReport, ReadError> {
-    verify_rows(
+    let from = opts.from_seq.unwrap_or(1);
+    let tail = m.rows.iter().map(|r| r.seq).max().unwrap_or(0) as u64;
+    let below = if from > 1 { m.rows.iter().find(|r| r.seq as u64 == from - 1).map(|r| r.hash.clone()) } else { None };
+    let candidates: Vec<_> =
+        m.checkpoints.iter().filter(|c| Some(&c.entry_hash) == below.as_ref()).cloned().map(Ok).collect();
+    let start = resolve_start(STREAM, from, tail, opts.trusted, below.as_deref(), candidates)?;
+    let mut report = verify_rows(
         STREAM,
-        Start::GENESIS,
+        start,
         opts,
         m.checkpoints.iter().cloned().map(Ok),
-        m.rows.iter().cloned().map(Ok),
+        m.rows.iter().filter(|r| r.seq >= start.seq as i64).cloned().map(Ok),
         &mut MemBlobs(&m.store),
-    )
+    )?;
+    let mut heads = m.heads.clone();
+    heads.sort();
+    check_heads(&mut report, heads.into_iter().map(Ok), |h| {
+        Ok(m.rows.iter().find(|r| r.hash == h).map(|r| r.branch.clone()))
+    })?;
+    Ok(report)
+}
+
+/// The options of an oracle case (`from_seq`, `trusted`).
+fn case_opts(case: &Obj) -> VerifyOptions {
+    let trusted = case.get("trusted").map(|t| {
+        let t = obj(t);
+        TrustedHead {
+            seq: st(t, "seq").parse().unwrap(),
+            head: digest(st(t, "head")),
+            exact: matches!(t.get("exact"), Some(CValue::Bool(true))),
+        }
+    });
+    VerifyOptions {
+        from_seq: case.get("from_seq").map(|_| st(case, "from_seq").parse().unwrap()),
+        trusted,
+        ..VerifyOptions::default()
+    }
+}
+
+/// The oracle's outcome of a case: the expectation, or the refusal reason.
+fn check_case(name: &str, got: Result<VerifyReport, ReadError>, expect: &Obj) {
+    match expect.get("refused") {
+        Some(CValue::Str(r)) => {
+            let e = got.err().unwrap_or_else(|| panic!("{name}: expected the refusal {r}"));
+            assert_eq!(e.bus_code(), ("validation", r.as_str()), "{name}: {e}");
+        }
+        _ => assert_expect(name, &got.unwrap_or_else(|e| panic!("{name}: refused {e}")), expect),
+    }
 }
 
 fn cases() -> Obj {
@@ -296,6 +365,8 @@ fn cases() -> Obj {
 
 /// Compares a report with the oracle's `expect`.
 fn assert_expect(name: &str, got: &VerifyReport, expect: &Obj) {
+    assert_eq!(got.from_seq.to_string(), st(expect, "from_seq"), "{name}: from_seq");
+    assert_eq!(&got.anchor.to_value(), expect.get("anchor").unwrap(), "{name}: anchor");
     let ok = matches!(expect.get("ok"), Some(CValue::Bool(true)));
     if ok {
         assert!(got.ok(), "{name}: expected ok, got {:?}", got.failure);
@@ -337,11 +408,11 @@ fn every_oracle_case_reaches_the_oracle_outcome() {
         let case = obj(case);
         let name = st(case, "name");
         let m = apply(&base, arr(case, "mutations"));
-        let got = verify_model(&m, &VerifyOptions::default()).unwrap_or_else(|e| panic!("{name}: refused {e}"));
-        assert_expect(name, &got, obj(case.get("expect").unwrap()));
-        if let Some(f) = &got.failure {
+        let got = verify_model(&m, &case_opts(case));
+        if let Ok(Some(f)) = got.as_ref().map(|r| r.failure.as_ref()) {
             kinds.insert(f.kind);
         }
+        check_case(name, got, obj(case.get("expect").unwrap()));
     }
     assert_eq!(kinds.len(), FailureKind::ALL.len(), "every failure kind is exercised");
 }
@@ -374,7 +445,7 @@ fn got_value(f: &fid_journal::Failure) -> CValue {
     f.to_value()
 }
 
-/// A single flipped bit at every byte of a header (rotating the bit) never verifies: it is a
+/// Every single-bit flip of a header (all 8 bits of every byte) never verifies: it is a
 /// `hash` failure at that sequence. Each run verifies just that entry, linked to the stored
 /// hash below it.
 #[test]
@@ -383,7 +454,8 @@ fn a_flipped_bit_anywhere_in_a_header_is_a_hash_failure_at_that_sequence() {
     for seq in [1usize, 2, 250, 500] {
         let row = &base.rows[seq - 1];
         let prev = if seq == 1 { GENESIS_PREV } else { digest(&base.rows[seq - 2].hash) };
-        let start = Start { seq: seq as u64, prev };
+        let anchor = if seq == 1 { Anchor::Genesis } else { Anchor::Trusted { seq: seq as u64 - 1 } };
+        let start = Start { seq: seq as u64, prev, anchor };
         let clean = verify_rows(
             STREAM,
             start,
@@ -393,13 +465,13 @@ fn a_flipped_bit_anywhere_in_a_header_is_a_hash_failure_at_that_sequence() {
             &mut MemBlobs(&base.store),
         );
         assert!(clean.unwrap().ok());
-        for byte in 0..row.header.len() {
+        for bit in 0..row.header.len() * 8 {
             let mut r = row.clone();
-            flip(&mut r.header, (byte * 8 + byte % 7) as i64);
+            flip(&mut r.header, bit as i64);
             let got =
                 verify_rows(STREAM, start, &VerifyOptions::default(), Vec::new(), [Ok(r)], &mut MemBlobs(&base.store));
             let f = got.unwrap().failure.unwrap();
-            assert_eq!((f.kind, f.seq), (FailureKind::Hash, Some(seq as u64)), "seq {seq} byte {byte}: {f}");
+            assert_eq!((f.kind, f.seq), (FailureKind::Hash, Some(seq as u64)), "seq {seq} bit {bit}: {f}");
         }
     }
 }
@@ -431,7 +503,7 @@ fn bounds_are_refusals_not_success() {
     // Too many checkpoints.
     let mut m = base.clone();
     let one = m.checkpoints[0].clone();
-    m.checkpoints = (0..=MAX_CHECKPOINTS as i64).map(|id| CheckpointRow { id, ..one.clone() }).collect();
+    m.checkpoints = (1..=MAX_CHECKPOINTS as i64 + 1).map(|id| CheckpointRow { id, ..one.clone() }).collect();
     assert!(matches!(verify_model(&m, &VerifyOptions::default()), Err(ReadError::InputLimit(_))));
 
     // A blob digest column that is not a digest, a null prev_hash column, a negative sequence.
@@ -476,23 +548,22 @@ fn a_trusted_head_catches_a_truncated_tail_without_checkpoints() {
 }
 
 #[test]
-fn verification_from_a_later_sequence_links_to_the_stored_hash_below() {
+fn a_walk_from_a_later_sequence_links_to_its_anchor() {
     let base = good();
-    let start = Start { seq: 301, prev: digest(&base.rows[299].hash) };
-    let rows = base.rows[300..].iter().cloned().map(Ok);
+    let anchored = Start { seq: 301, prev: digest(&base.rows[299].hash), anchor: Anchor::Trusted { seq: 300 } };
     let got = verify_rows(
         STREAM,
-        start,
+        anchored,
         &VerifyOptions::default(),
         base.checkpoints.iter().cloned().map(Ok),
-        rows,
+        base.rows[300..].iter().cloned().map(Ok),
         &mut MemBlobs(&base.store),
     )
     .unwrap();
     assert!(got.ok(), "{:?}", got.failure);
     // 200 entries; only the checkpoint at 500 is at or above the start.
-    assert_eq!((got.checked.entries, got.checked.checkpoints), (200, 1));
-    let bad = Start { seq: 301, prev: GENESIS_PREV };
+    assert_eq!((got.checked.entries, got.checked.checkpoints, got.from_seq), (200, 1, 301));
+    let bad = Start { seq: 301, prev: GENESIS_PREV, anchor: Anchor::Trusted { seq: 300 } };
     let got = verify_rows(
         STREAM,
         bad,
@@ -644,13 +715,12 @@ fn draft(seq: u64, command: &str) -> EntryDraft {
     }
 }
 
-/// AC-4, paging: 2,500 matching entries among 2,600 come back as pages of 1,000, 1,000 and 500,
-/// in sequence order, with tokens only on the first two (hand-labelled from REQ-005).
-#[test]
-fn ac4_2500_matches_come_back_in_three_pages() {
+/// `n` valid chained entries built by `entry::build`; every 26th is `feature.set_nominal@1`,
+/// the rest `project.set_tags@1`.
+fn synthetic(n: u64) -> Vec<StoredEntry> {
     let mut rows = Vec::new();
     let mut prev = GENESIS_PREV;
-    for seq in 1..=2600u64 {
+    for seq in 1..=n {
         let cmd = if seq % 26 == 0 { "feature.set_nominal" } else { "project.set_tags" };
         let e = build(&draft(seq, cmd), seq, prev, &mut OsSalts).unwrap();
         let header = fid_canon::to_canonical_bytes(&e.header.to_value()).unwrap();
@@ -667,6 +737,14 @@ fn ac4_2500_matches_come_back_in_three_pages() {
         });
         prev = e.header.hash;
     }
+    rows
+}
+
+/// AC-4, paging: 2,500 matching entries among 2,600 come back as pages of 1,000, 1,000 and 500,
+/// in sequence order, with tokens only on the first two (hand-labelled from REQ-005).
+#[test]
+fn ac4_2500_matches_come_back_in_three_pages() {
+    let rows = synthetic(2600);
     let q =
         ListQuery { branch: Some("main".into()), command: Some("project.set_tags@1".into()), ..ListQuery::default() };
     let pages = all_pages(&rows, &q);
@@ -783,6 +861,13 @@ fn project_of(tag: &str, base: &Model, m: &Model) -> (TempDir, PathBuf) {
     let db = open_write(&loc, &lock.unwrap()).unwrap();
     let conn = db.connection();
     conn.execute_batch("PRAGMA foreign_keys=OFF").unwrap();
+    for (branch, entry_hash) in &m.heads {
+        conn.execute(
+            "INSERT INTO heads (branch, entry_hash) VALUES (?1, ?2)",
+            [Value::Text(branch.clone()), Value::Text(entry_hash.clone())],
+        )
+        .unwrap();
+    }
     for c in &m.checkpoints {
         conn.execute(
             "INSERT INTO checkpoints (id, stream, entry_hash, body) VALUES (?1, ?2, ?3, ?4)",
@@ -888,6 +973,11 @@ fn tamper_cases_through_the_store_reach_the_oracle_outcome() {
         "fork_tail",
         "payload_forged",
         "blob_missing",
+        "checkpoint_id_minus5",
+        "head_past_chain",
+        "from_attack_unanchored",
+        "from_checkpoint_anchor",
+        "from_trusted_anchor_attack",
     ];
     for case in arr(&c, "cases").iter().map(obj) {
         let name = st(case, "name");
@@ -897,8 +987,8 @@ fn tamper_cases_through_the_store_reach_the_oracle_outcome() {
         let m = apply(&base, arr(case, "mutations"));
         let (_t, root) = project_of(name, &base, &m);
         let store = Store::open(&root, OpenMode::Read).unwrap();
-        let got = verify_store(&store, STREAM, &VerifyOptions::default()).unwrap();
-        assert_expect(&format!("{name} (store)"), &got, obj(case.get("expect").unwrap()));
+        let got = verify_store(&store, STREAM, &case_opts(case));
+        check_case(&format!("{name} (store)"), got, obj(case.get("expect").unwrap()));
     }
 }
 

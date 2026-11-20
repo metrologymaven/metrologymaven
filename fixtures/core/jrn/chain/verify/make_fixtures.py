@@ -22,7 +22,16 @@ Files written next to this script (CC-BY-4.0):
 
 Verification rules (the outcome contract this reference and the Rust verifier share):
 
-Checkpoint rows first, in row-id order. Body over 4096 bytes, not strict JSON (UTF-8, no
+Start. from_seq 1 starts at sequence 1 linking to the zero digest (anchor "genesis").
+from_seq n > 1 is accepted only when entry n-1 is anchored on something verified: a
+trusted head at n-1 (its head is the previous hash; anchor "trusted"), else a checkpoint
+row at n-1 (one of the first 16 rows, by id, whose entry_hash is the stored hash of entry
+n-1) that passes on its own and names that hash (anchor "checkpoint"). A trusted head below
+n-1, no anchor, from_seq 0 or above the tail plus one: refused, validation/bad_range. The
+result carries from_seq and the anchor. Checkpoints below n are not checked or counted.
+
+Checkpoint rows first, in row-id order. A row id below 1: kind `checkpoint`, reason
+`bad_id` (seq null). Body over 4096 bytes, not strict JSON (UTF-8, no
 duplicate keys), not an object, missing/invalid fields, or bytes that are not the canonical
 form: kind `checkpoint`, reason `malformed` (seq null). A `format` string other than
 `linear-v1`, read before every other field: `unknown_format` (seq null). The row's stream
@@ -55,8 +64,16 @@ Then the entries in sequence order, position p = 1, 2, ... For each row:
     `missing`; bytes not hashing to the digest: `blob`/`corrupt`.
 18. checkpoints at this sequence (row-id order): head != entry hash: `checkpoint`/
     `forked_head`.
-After the last row, a checkpoint above it (lowest sequence first): `checkpoint`/`truncated`
-at the checkpoint's sequence. The first failure stops verification. Success reports the
+A trusted head: with `exact`, any entry after it is `sequence`/`extended` (checked first at
+each row); at its sequence a hash other than its head is `checkpoint`/`forked_head` (after
+the checkpoints of step 18). After the last row, a checkpoint above it (lowest sequence
+first): `checkpoint`/`truncated` at the checkpoint's sequence; then a trusted head above it,
+the same at its sequence. Then the head cache, in branch order: a row naming no entry's
+stored hash is `link`/`head_past_chain`, one naming an entry of another branch
+`link`/`head_branch` (seq null).
+
+The referenced-blob rows of an entry are not committed in its header (CORE.JRN.ENTRY and
+CHAIN.APPEND do not hash them): "blobs verified" covers the stored reference set. The first failure stops verification. Success reports the
 counts: entries, distinct referenced blobs, checkpoints, entries without payload.
 
 Run:  python fixtures/core/jrn/chain/verify/make_fixtures.py [--check]
@@ -419,6 +436,26 @@ def apply(m, muts):
             for c in m["checkpoints"]:
                 if c["id"] == mu["id"]:
                     c["body"] = flip(c["body"], mu["bit"])
+        elif op == "add_head":
+            m.setdefault("heads", []).append([mu["branch"], mu["entry_hash"]])
+        elif op == "relink_from":
+            # The reviewer's attack: rewrite the stored hash of entry n-1 and re-chain n.. on it.
+            n = mu["seq"]
+            prev = mu["fake_below"]
+            row_at(m, n - 1)["hash"] = prev
+            for r in sorted(m["rows"], key=lambda r: r["seq"]):
+                if r["seq"] < n:
+                    continue
+                h = json.loads(r["header"].decode("utf-8"))
+                h["prev"] = prev
+                if h.get("logical_parent") is not None:
+                    h["logical_parent"] = prev
+                h.pop("hash")
+                h["hash"] = sha(cbytes(h))
+                r["header"] = cbytes(h)
+                r["hash"] = h["hash"]
+                r["prev_hash"] = prev
+                prev = h["hash"]
         elif op == "drop_checkpoints":
             m["checkpoints"] = []
         else:
@@ -546,22 +583,75 @@ def payload_ok(h, b):
     return True
 
 
-def verify(m, stream=STREAM):
+class Refused(Exception):
+    def __init__(self, code):
+        super().__init__(code)
+        self.code = code
+
+
+def checkpoint_row_ok(c, stream):
+    """(seq, head) of a checkpoint row that passes on its own, else raises Fail (seq None)."""
+    if c["id"] < 1:
+        raise Fail(None, "checkpoint", "bad_id")
+    seq, head, body_stream = decode_checkpoint(c["body"])
+    if c["stream"] != stream:
+        raise Fail(None, "checkpoint", "foreign_stream")
+    if body_stream != c["stream"] or head != c["entry_hash"]:
+        raise Fail(None, "checkpoint", "column_mismatch")
+    return seq, head
+
+
+def resolve_start(m, stream, from_seq, trusted):
+    """(first seq, prev, anchor) or raises Refused("bad_range")."""
+    tail = max((r["seq"] for r in m["rows"]), default=0)
+    if from_seq < 1 or from_seq > tail + 1:
+        raise Refused("bad_range")
+    if from_seq == 1:
+        return 1, ZERO, {"kind": "genesis"}
+    below_seq = from_seq - 1
+    if trusted is not None and trusted["seq"] < below_seq:
+        raise Refused("bad_range")
+    if trusted is not None and trusted["seq"] == below_seq:
+        return from_seq, trusted["head"], {"kind": "trusted", "seq": str(below_seq)}
+    below = [r for r in m["rows"] if r["seq"] == below_seq]
+    if not below or not DIGEST_RE.match(below[0]["hash"]):
+        raise Refused("bad_range")
+    stored = below[0]["hash"]
+    for c in sorted((c for c in m["checkpoints"] if c["entry_hash"] == stored), key=lambda c: c["id"])[:16]:
+        try:
+            seq, head = checkpoint_row_ok(c, stream)
+        except Fail:
+            continue
+        if seq == below_seq and head == stored:
+            return from_seq, stored, {"kind": "checkpoint", "seq": str(below_seq), "checkpoint": str(c["id"])}
+    raise Refused("bad_range")
+
+
+def verify(m, stream=STREAM, from_seq=1, trusted=None):
+    """The report dict, or raises Fail (with the start attached) or Refused."""
+    first, prev, anchor = resolve_start(m, stream, from_seq, trusted)
+    start = {"from_seq": str(first), "anchor": anchor}
+    try:
+        return dict(walk(m, stream, first, prev, trusted), **start)
+    except Fail as f:
+        f.start = start
+        raise
+
+
+def walk(m, stream, first, prev, trusted):
     cps = []
     for c in sorted(m["checkpoints"], key=lambda c: c["id"]):
-        seq, head, body_stream = decode_checkpoint(c["body"])
-        if c["stream"] != stream:
-            raise Fail(None, "checkpoint", "foreign_stream")
-        if body_stream != c["stream"] or head != c["entry_hash"]:
-            raise Fail(None, "checkpoint", "column_mismatch")
-        cps.append((seq, c["id"], head))
-    rows = sorted(m["rows"], key=lambda r: r["seq"])
-    p = 0
-    prev = ZERO
+        seq, head = checkpoint_row_ok(c, stream)
+        if seq >= first:
+            cps.append((seq, c["id"], head))
+    rows = sorted((r for r in m["rows"] if r["seq"] >= first), key=lambda r: r["seq"])
+    p = first - 1
     checked_blobs = set()
     without_payload = 0
     for r in rows:
         p += 1
+        if trusted is not None and trusted["exact"] and p > trusted["seq"]:
+            raise Fail(p, "sequence", "extended")
         if r["seq"] != p:
             raise Fail(p, "sequence", "gap" if r["seq"] > p else "reorder")
         hb = r["header"]
@@ -623,18 +713,35 @@ def verify(m, stream=STREAM):
         for seq, _, head in sorted(cps, key=lambda x: x[1]):
             if seq == p and head != h["hash"]:
                 raise Fail(p, "checkpoint", "forked_head")
+        if trusted is not None and trusted["seq"] == p and trusted["head"] != h["hash"]:
+            raise Fail(p, "checkpoint", "forked_head")
         prev = h["hash"]
     beyond = sorted((seq, cid) for seq, cid, _ in cps if seq > p)
     if beyond:
         raise Fail(beyond[0][0], "checkpoint", "truncated")
-    return {"entries": p, "blobs": len(checked_blobs), "checkpoints": len(cps), "without_payload": without_payload}
+    if trusted is not None and trusted["seq"] > p:
+        raise Fail(trusted["seq"], "checkpoint", "truncated")
+    # The head cache: every row must name an entry of the journal, on its own branch.
+    by_hash = {r["hash"]: r for r in m["rows"]}
+    for branch, entry_hash in sorted(m.get("heads", [])):
+        r = by_hash.get(entry_hash)
+        if r is None:
+            raise Fail(None, "link", "head_past_chain")
+        if r["branch"] != branch:
+            raise Fail(None, "link", "head_branch")
+    return {"entries": p - first + 1, "blobs": len(checked_blobs), "checkpoints": len(cps),
+            "without_payload": without_payload}
 
 
-def outcome(m):
+def outcome(m, from_seq=1, trusted=None):
     try:
-        return {"ok": True, "checked": verify(m)}
+        r = verify(m, STREAM, from_seq, trusted)
+        start = {"from_seq": r.pop("from_seq"), "anchor": r.pop("anchor")}
+        return dict({"ok": True, "checked": r}, **start)
     except Fail as f:
-        return {"ok": False, "failure": {"seq": f.seq, "kind": f.kind, "reason": f.reason}}
+        return dict({"ok": False, "failure": {"seq": f.seq, "kind": f.kind, "reason": f.reason}}, **f.start)
+    except Refused as e:
+        return {"refused": e.code}
 
 
 # ------------------------------------------------------------------ cases
@@ -655,8 +762,14 @@ def cases(good):
     d = Draw("CORE.JRN.CHAIN.VERIFY/cases")
     out = []
 
-    def add(name, muts):
-        out.append({"name": name, "mutations": muts, "expect": outcome(apply(model, muts))})
+    def add(name, muts, from_seq=None, trusted=None):
+        case = {"name": name, "mutations": muts}
+        if from_seq is not None:
+            case["from_seq"] = str(from_seq)
+        if trusted is not None:
+            case["trusted"] = {"seq": str(trusted["seq"]), "head": trusted["head"], "exact": trusted["exact"]}
+        case["expect"] = outcome(apply(model, muts), 1 if from_seq is None else from_seq, trusted)
+        out.append(case)
 
     add("good", [])
     add("no_payloads", [{"op": "remove_payloads"}])
@@ -806,6 +919,42 @@ def cases(good):
                            {"op": "set_refs", "seq": 49, "refs": [["payload", sha(fb.encode())]] +
                             [["ref", r] for r in e["refs"]]}])
     add("one_payload_removed", [{"op": "remove_store", "digest": good["entries"][9]["payload_digest"]}])
+
+    # Checkpoint row ids that append never writes.
+    for cid in (0, -5):
+        add("checkpoint_id_%s" % str(cid).replace("-", "minus"), [ckpt(cid, 300, real300)])
+
+    # The head cache.
+    add("head_ok", [{"op": "add_head", "branch": "main", "entry_hash": good["entries"][499]["hash"]},
+                    {"op": "add_head", "branch": "alt/1", "entry_hash": good["entries"][338]["hash"]}])
+    add("head_past_chain", [{"op": "add_head", "branch": "main", "entry_hash": sha(b"a head beyond the chain")}])
+    add("head_other_branch", [{"op": "add_head", "branch": "alt/1", "entry_hash": good["entries"][499]["hash"]}])
+
+    # Partial verification and its anchor (from_seq > 1).
+    fake = sha(b"forged hash of entry 300")
+    attack = [{"op": "relink_from", "seq": 301, "fake_below": fake}, {"op": "drop_checkpoints"}]
+    real300_head = {"seq": 300, "head": real300, "exact": False}
+    add("from_unanchored", [], from_seq=301)
+    add("from_attack_unanchored", attack, from_seq=301)
+    add("from_attack_full", attack)
+    add("from_checkpoint_anchor", [ckpt(3, 300, real300)], from_seq=301)
+    add("from_checkpoint_anchor_wrong_head", [ckpt(3, 300, good["entries"][298]["hash"],
+                                                    entry_hash=real300)], from_seq=301)
+    add("from_existing_checkpoint", [], from_seq=251)
+    add("from_trusted_anchor", [], from_seq=301, trusted=real300_head)
+    add("from_trusted_anchor_attack", attack, from_seq=301, trusted=real300_head)
+    add("from_trusted_below_anchor", [], from_seq=301, trusted={"seq": 200, "head": good["entries"][199]["hash"],
+                                                              "exact": False})
+    add("from_trusted_above_unanchored", [], from_seq=301,
+        trusted={"seq": 400, "head": good["entries"][399]["hash"], "exact": False})
+    add("from_tail_plus_one", [], from_seq=501, trusted={"seq": 500, "head": good["entries"][499]["hash"],
+                                                       "exact": True})
+    add("from_beyond_tail", [], from_seq=502)
+    add("from_zero", [], from_seq=0)
+    add("trusted_forked", [], trusted={"seq": 250, "head": sha(b"x"), "exact": False})
+    add("trusted_exact_extended", [], trusted={"seq": 250, "head": good["entries"][249]["hash"], "exact": True})
+    add("trusted_truncated", [{"op": "truncate", "keep": 490}, {"op": "drop_checkpoints"}],
+        trusted={"seq": 500, "head": good["entries"][499]["hash"], "exact": True})
     return out
 
 
@@ -847,7 +996,8 @@ def build():
     good = build_good()
     model = to_model(good)
     res = outcome(model)
-    assert res == {"ok": True, "checked": {"entries": 500, "blobs": 20, "checkpoints": 2, "without_payload": 0}}, res
+    assert res == {"ok": True, "checked": {"entries": 500, "blobs": 20, "checkpoints": 2, "without_payload": 0},
+                   "from_seq": "1", "anchor": {"kind": "genesis"}}, res
     cs = cases(good)
     names = [c["name"] for c in cs]
     assert len(names) == len(set(names))
@@ -857,12 +1007,17 @@ def build():
     assert expect["bad_link"]["failure"] == {"seq": 211, "kind": "link", "reason": "broken"}
     assert expect["bad_blob"]["failure"]["kind"] == "blob"
     assert expect["bad_checkpoint"]["failure"]["kind"] == "checkpoint"
-    assert expect["no_payloads"] == {"ok": True, "checked": {"entries": 500, "blobs": 20, "checkpoints": 2,
-                                                              "without_payload": 500}}
+    assert expect["no_payloads"]["checked"] == {"entries": 500, "blobs": 20, "checkpoints": 2,
+                                                 "without_payload": 500}
+    assert expect["from_unanchored"] == {"refused": "bad_range"}
+    assert expect["from_attack_unanchored"] == {"refused": "bad_range"}
+    assert expect["from_attack_full"]["failure"]["seq"] == 300
+    assert expect["from_trusted_anchor_attack"]["failure"] == {"seq": 301, "kind": "link", "reason": "broken"}
+    assert expect["from_checkpoint_anchor"]["ok"] and expect["from_trusted_anchor"]["ok"]
     # No tamper case except the intended ones passes.
     for c in cs:
         if c["name"].startswith(("flip_header", "flip_payload", "flip_blob", "flip_column", "drop", "swap",
-                                 "fork", "forged")):
+                                 "fork", "forged", "head_past", "head_other", "checkpoint_id")):
             assert not c["expect"]["ok"], c["name"]
     lists = [{"query": q, "seqs": list_expect(good, q)} for q in LIST_QUERIES]
     assert len(lists[0]["seqs"]) > 100 and lists[3]["seqs"] == [] and len(lists[4]["seqs"]) == N_ENTRIES

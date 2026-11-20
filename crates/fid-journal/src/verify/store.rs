@@ -22,13 +22,21 @@
 //! - **Stream.** One stream per database (`CORE.JRN.CHAIN.APPEND`): the journal's stream is
 //!   given by the caller (a [`Journal`]'s own); a `stream` parameter naming another is
 //!   `not_found/unknown_stream`.
-//! - **from_seq.** 1 to the tail sequence plus one; else `validation/bad_range`. Above 1 the
-//!   walk links to the stored `hash` column of entry `from_seq - 1`.
+//! - **from_seq.** Anchored as [`super::resolve_start`] pins (a trusted head at `from_seq - 1`,
+//!   or a checkpoint row at `from_seq - 1` matching the stored hash, read by `entry_hash`);
+//!   anything else is `validation/bad_range`.
+//! - **Head cache.** After a successful walk the `heads` rows are checked with
+//!   [`super::check_heads`], each entry looked up by its stored hash.
+//! - **Verification blocks appends.** The whole walk, blob checks included, runs inside one
+//!   [`fid_store::Store::read`], which holds the store's connection mutex: appends and other
+//!   reads of the same open project wait until it ends (other processes read the WAL snapshot).
+//!   A bounded-window verification that releases the lock between windows is a follow-up.
 //! - **Branch.** A `branch` filter naming no entry is `not_found/unknown_branch`.
 
 use super::{
-    is_stream_name, list_rows, plan_list, verify_rows, BlobSource, BlobState, CheckpointRow, ListPage, ListQuery,
-    ReadError, Start, StoredEntry, VerifyOptions, VerifyReport, MAX_HEADER_BYTES, MAX_PAYLOAD_BYTES, MAX_SCAN,
+    check_heads, is_stream_name, list_rows, plan_list, resolve_start, verify_rows, BlobSource, BlobState,
+    CheckpointRow, ListPage, ListQuery, ReadError, StoredEntry, VerifyOptions, VerifyReport, MAX_HEADER_BYTES,
+    MAX_PAYLOAD_BYTES, MAX_SCAN,
 };
 use crate::append::Journal;
 use crate::entry::parse_digest;
@@ -54,13 +62,41 @@ fn text_of(v: Option<Vec<u8>>) -> String {
     v.and_then(|b| String::from_utf8(b).ok()).unwrap_or_default()
 }
 
-/// `seq, hash, stream, branch, kind, prev_hash, header (if within the bound), length(header)`,
-/// every text column cast to bytes so a value of another type cannot fail the read.
-const ROWS_SQL: &str = "SELECT seq, CAST(hash AS BLOB), CAST(stream AS BLOB), CAST(branch AS BLOB),      CAST(kind AS BLOB), CAST(prev_hash AS BLOB),      CASE WHEN length(CAST(header AS BLOB)) <= ?2 THEN CAST(header AS BLOB) ELSE NULL END,      length(CAST(header AS BLOB)) FROM entries WHERE seq >= ?1 ORDER BY seq LIMIT ?3";
-/// At most `MAX_ENTRY_REFS` + 1 rows.
-const REFS_SQL: &str = "SELECT CAST(role AS BLOB), CAST(digest AS BLOB) FROM entry_blobs      WHERE entry_hash = ?1 ORDER BY role, digest LIMIT 4098";
-/// At most `MAX_CHECKPOINTS` + 1 rows, bodies cut after `MAX_CHECKPOINT_BYTES` + 1 bytes.
-const CHECKPOINTS_SQL: &str = "SELECT id, CAST(stream AS BLOB), CAST(entry_hash AS BLOB),      substr(CAST(body AS BLOB), 1, 4097) FROM checkpoints ORDER BY id LIMIT 65537";
+/// `seq, hash, stream, branch, kind, prev_hash, header (if within the bound), length(header)`.
+/// Every unverified column is cast to bytes (a value of another type cannot fail the read) and
+/// cut one byte past its longest valid length, so an over-long value stays longer than any
+/// valid one and never matches: digests 71 bytes, stream 64, kind 16, branch at most the
+/// header bound (a branch is part of its header).
+const ROWS_SQL: &str = concat!(
+    "SELECT seq, substr(CAST(hash AS BLOB), 1, 72), substr(CAST(stream AS BLOB), 1, 65), ",
+    "substr(CAST(branch AS BLOB), 1, 1048577), substr(CAST(kind AS BLOB), 1, 17), ",
+    "substr(CAST(prev_hash AS BLOB), 1, 72), ",
+    "CASE WHEN length(CAST(header AS BLOB)) <= ?2 THEN CAST(header AS BLOB) ELSE NULL END, ",
+    "length(CAST(header AS BLOB)) FROM entries WHERE seq >= ?1 ORDER BY seq LIMIT ?3"
+);
+/// At most `MAX_ENTRY_REFS` + 1 rows; role cut at 17 bytes, digest at 72.
+const REFS_SQL: &str = concat!(
+    "SELECT substr(CAST(role AS BLOB), 1, 17), substr(CAST(digest AS BLOB), 1, 72) FROM entry_blobs ",
+    "WHERE entry_hash = ?1 ORDER BY role, digest LIMIT 4098"
+);
+/// At most `MAX_CHECKPOINTS` + 1 rows; stream cut at 65 bytes, entry hash at 72, body after
+/// `MAX_CHECKPOINT_BYTES` + 1.
+const CHECKPOINTS_SQL: &str = concat!(
+    "SELECT id, substr(CAST(stream AS BLOB), 1, 65), substr(CAST(entry_hash AS BLOB), 1, 72), ",
+    "substr(CAST(body AS BLOB), 1, 4097) FROM checkpoints ORDER BY id LIMIT 65537"
+);
+/// Anchor candidates: checkpoint rows naming one entry hash, at most `MAX_ANCHOR_CANDIDATES`.
+const ANCHOR_SQL: &str = concat!(
+    "SELECT id, substr(CAST(stream AS BLOB), 1, 65), substr(CAST(entry_hash AS BLOB), 1, 72), ",
+    "substr(CAST(body AS BLOB), 1, 4097) FROM checkpoints WHERE entry_hash = ?1 ORDER BY id LIMIT 16"
+);
+/// The head cache in branch order, at most `MAX_HEADS` + 1 rows.
+const HEADS_SQL: &str = concat!(
+    "SELECT substr(CAST(branch AS BLOB), 1, 1048577), substr(CAST(entry_hash AS BLOB), 1, 72) ",
+    "FROM heads ORDER BY branch LIMIT 65537"
+);
+/// The branch column of the entry with a given stored hash.
+const BRANCH_OF_SQL: &str = "SELECT substr(CAST(branch AS BLOB), 1, 1048577) FROM entries WHERE hash = ?1 LIMIT 1";
 
 type Bytes = Option<Vec<u8>>;
 type RowTuple = (i64, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Option<i64>);
@@ -138,34 +174,41 @@ impl BlobSource for StoreBlobs<'_> {
 }
 
 /// Verifies the chain of `stream` in `store` (module documentation; [`super::verify_rows`]).
+/// Holds the store's connection mutex for the whole walk, so appends through the same open
+/// store wait until it returns.
 pub fn verify_store(store: &Store, stream: &str, opts: &VerifyOptions) -> Result<VerifyReport, ReadError> {
     check_stream(stream, opts.stream.as_ref())?;
     let tail = tail_seq(store)?;
     let from = opts.from_seq.unwrap_or(1);
-    if from == 0 || from > tail.saturating_add(1) {
-        return Err(ReadError::BadRange(format!("from_seq {from}, journal tail {tail}")));
-    }
     let max_entries = to_i64(opts.max_entries.saturating_add(1));
     let mut blobs = StoreBlobs { store };
     store
         .read(|conn| {
-            let start = if from == 1 {
-                Start::GENESIS
+            // The anchor of a partial verification.
+            let below: Bytes = if from > 1 {
+                conn.query_row(
+                    "SELECT substr(CAST(hash AS BLOB), 1, 72) FROM entries WHERE seq = ?1",
+                    [to_i64(from - 1)],
+                    |r| r.get(0),
+                )
+                .unwrap_or(None)
             } else {
-                let below: Bytes = conn
-                    .query_row("SELECT CAST(hash AS BLOB) FROM entries WHERE seq = ?1", [to_i64(from - 1)], |r| {
-                        r.get(0)
-                    })
-                    .unwrap_or(None);
-                match parse_digest(&text_of(below)) {
-                    Some(prev) => Start { seq: from, prev },
-                    None => {
-                        return Ok(Err(ReadError::BadRange(format!(
-                            "entry {} below from_seq has no readable hash",
-                            from - 1
-                        ))))
-                    }
-                }
+                None
+            };
+            let below = below.map(|b| text_of(Some(b)));
+            let mut anchor_st = conn.prepare(ANCHOR_SQL)?;
+            let candidates = anchor_st.query_map([below.as_deref().unwrap_or("")], |r| {
+                Ok(CheckpointRow {
+                    id: r.get(0)?,
+                    stream: text_of(r.get(1)?),
+                    entry_hash: text_of(r.get(2)?),
+                    body: r.get::<_, Bytes>(3)?.unwrap_or_default(),
+                })
+            })?;
+            let candidates = candidates.map(|r| r.map_err(|e| storage("read checkpoints", e)));
+            let start = match resolve_start(stream, from, tail, opts.trusted, below.as_deref(), candidates) {
+                Ok(s) => s,
+                Err(e) => return Ok(Err(e)),
             };
             let mut cps = conn.prepare(CHECKPOINTS_SQL)?;
             let checkpoints = cps.query_map([], |r| {
@@ -180,7 +223,7 @@ pub fn verify_store(store: &Store, stream: &str, opts: &VerifyOptions) -> Result
             let mut refs_st = conn.prepare(REFS_SQL)?;
             let mut st = conn.prepare(ROWS_SQL)?;
             let header_cap = to_i64(u64::try_from(MAX_HEADER_BYTES).unwrap_or(1 << 20));
-            let rows = st.query_map([to_i64(from), header_cap, max_entries], |r| {
+            let rows = st.query_map([to_i64(start.seq), header_cap, max_entries], |r| {
                 Ok(stored((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?)))
             })?;
             let rows = rows.map(|row| -> Result<StoredEntry, ReadError> {
@@ -193,7 +236,27 @@ pub fn verify_store(store: &Store, stream: &str, opts: &VerifyOptions) -> Result
                 }
                 Ok(row)
             });
-            Ok(verify_rows(stream, start, opts, checkpoints, rows, &mut blobs))
+            let mut report = match verify_rows(stream, start, opts, checkpoints, rows, &mut blobs) {
+                Ok(r) => r,
+                Err(e) => return Ok(Err(e)),
+            };
+            // The head cache.
+            let mut heads_st = conn.prepare(HEADS_SQL)?;
+            let heads = heads_st.query_map([], |r| Ok((text_of(r.get(0)?), text_of(r.get(1)?))))?;
+            let heads = heads.map(|r| r.map_err(|e| storage("read heads", e)));
+            let mut branch_st = conn.prepare(BRANCH_OF_SQL)?;
+            let lookup = |hash: &str| -> Result<Option<String>, ReadError> {
+                let mut rows =
+                    branch_st.query_map([hash], |r| r.get::<_, Bytes>(0)).map_err(|e| storage("read entries", e))?;
+                match rows.next() {
+                    None => Ok(None),
+                    Some(b) => Ok(Some(text_of(b.map_err(|e| storage("read entries", e))?))),
+                }
+            };
+            if let Err(e) = check_heads(&mut report, heads, lookup) {
+                return Ok(Err(e));
+            }
+            Ok(Ok(report))
         })
         .map_err(|e| storage("verify", e))?
 }
@@ -226,7 +289,8 @@ pub fn list_store(store: &Store, stream: &str, q: &ListQuery) -> Result<ListPage
 }
 
 impl Journal {
-    /// `journal.verify_chain@1` over this journal's stream ([`verify_store`]).
+    /// `journal.verify_chain@1` over this journal's stream ([`verify_store`]). Holds the store's
+    /// connection for the whole walk: appends to this journal wait until it returns.
     pub fn verify_chain(&self, opts: &VerifyOptions) -> Result<VerifyReport, ReadError> {
         self.check_poison().map_err(|e| ReadError::Storage(e.to_string()))?;
         verify_store(&self.store, &self.stream, opts)
@@ -269,6 +333,8 @@ fn object(required: &[&str], properties: CValue) -> CValue {
 const SEQ: &str = "^[1-9][0-9]{0,19}$";
 const COUNT: &str = "^(0|[1-9][0-9]{0,19})$";
 const STREAM: &str = "^[a-z][a-z0-9_]{0,63}$";
+/// A SQLite row id as stored: any 64-bit integer, so a tampered id is still reported.
+const ROW_ID: &str = "^(0|-?[1-9][0-9]{0,18})$";
 
 fn verify_params() -> CValue {
     object(
@@ -285,11 +351,30 @@ fn verify_result() -> CValue {
     obj([
         ("type", text("object")),
         ("additionalProperties", CValue::Bool(false)),
-        ("required", strs(&["checked", "ok"])),
+        ("required", strs(&["anchor", "checked", "from_seq", "ok"])),
         (
             "properties",
             obj([
                 ("ok", obj([("type", text("boolean")), ("description", text("True when the chain verified."))])),
+                ("from_seq", string(SEQ, "First sequence verified; 1 for a full verification.")),
+                (
+                    "anchor",
+                    object(
+                        &["kind"],
+                        obj([
+                            (
+                                "kind",
+                                obj([
+                                    ("type", text("string")),
+                                    ("enum", strs(&["genesis", "checkpoint", "trusted"])),
+                                    ("description", text("What the first verified entry links to.")),
+                                ]),
+                            ),
+                            ("seq", string(SEQ, "Sequence of the anchoring entry (from_seq - 1).")),
+                            ("checkpoint", string(ROW_ID, "Row id of the anchoring checkpoint.")),
+                        ]),
+                    ),
+                ),
                 (
                     "failure",
                     object(
@@ -300,7 +385,7 @@ fn verify_result() -> CValue {
                                 "seq",
                                 obj([
                                     ("type", strs(&["string", "null"])),
-                                    ("description", text("Sequence of the first failure; null for a checkpoint row.")),
+                                    ("description", text("Sequence of the first failure; null when not at an entry.")),
                                 ]),
                             ),
                             (
@@ -312,7 +397,10 @@ fn verify_result() -> CValue {
                                 ]),
                             ),
                             ("reason", string("^[a-z][a-z_]*$", "Finer reason within the kind.")),
-                            ("checkpoint", string(SEQ, "Checkpoint row id of a checkpoint failure.")),
+                            (
+                                "checkpoint",
+                                string(ROW_ID, "Checkpoint row id of a checkpoint failure, as stored (untrusted)."),
+                            ),
                         ]),
                     ),
                 ),

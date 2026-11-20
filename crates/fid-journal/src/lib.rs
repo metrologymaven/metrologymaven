@@ -24,12 +24,13 @@ pub mod verify;
 #[cfg(feature = "store")]
 pub use checkpoint::{BranchHead, HeadsRebuilt, StoredCheckpoint};
 pub use checkpoint::{Checkpoint, CheckpointError, Coverage, LedgerHead, Link, Verified};
+pub use verify::{
+    check_heads, list_rows, plan_list, resolve_start, verify_rows, Anchor, BlobSource, BlobState, Checked,
+    CheckpointRow, Failure, FailureKind, ListPage, ListPlan, ListQuery, ListedEntry, ReadError, Start, StoredEntry,
+    TrustedHead, VerifyOptions, VerifyReport,
+};
 #[cfg(feature = "store")]
 pub use verify::{command_defs, list_store, verify_store};
-pub use verify::{
-    list_rows, plan_list, verify_rows, BlobSource, BlobState, Checked, CheckpointRow, Failure, FailureKind, ListPage,
-    ListPlan, ListQuery, ListedEntry, ReadError, Start, StoredEntry, TrustedHead, VerifyOptions, VerifyReport,
-};
 
 #[cfg(feature = "test-hooks")]
 pub use append::FaultHook;
