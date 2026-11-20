@@ -15,7 +15,7 @@ use fid_num::la::{lstsq, Mat};
 use fid_solv::cert::recomp::{ActiveSetProblem, Interval};
 use fid_solv::cert::{CertError, CertKind, Certificate, RowLabel};
 use fid_solv::conic::{Cone, ConicProblem, ConicProblemBuilder, Csc};
-use fid_solv::mstart::{generate_starts, StartSpec, StartSummary};
+use fid_solv::mstart::{generate_starts, StartError, StartSpec, StartSummary};
 use fid_solv::seq::{solve, solve_multi, LinearisableProblem, SeqCause, SeqConfig, SeqOutcome, SolverError};
 use fid_testkit::Sha256Hasher;
 
@@ -118,8 +118,11 @@ enum Family {
 
 /// One test problem. Rows: (i, 0) `g = r_in - d_i`, (i, 1) `g = d_i - r_out` (MIC: only
 /// (i, 0) with `g = r - d_i`), point by point. `objective` (the merit the driver minimises)
-/// is the zone width at the centre or axis with the radii eliminated (`max d - min d`; MIC:
-/// `-min d`). `nominal` is the cylinder axis the recomputation's Gauss-Newton start uses
+/// is the value plus the exact penalty `PENALTY * max(0, max_i g_i)` (`PENALTY` is above the
+/// multiplier sum, 2 for a zone and 1 for an MIC). `anchor` (test only) adds
+/// `1e3 * max_j |p_j - anchor_j|`, so that every step is rejected; `no_mirror_enclosure` (test
+/// only) withholds the residual enclosure of a set in the mirrored half, so that certification
+/// of the mirrored optimum fails. `nominal` is the cylinder axis the recomputation's Gauss-Newton start uses
 /// (problem data: the fixture's least-squares axis, or for the twin the planted direction,
 /// mirrored for a set in the mirrored half).
 #[derive(Debug, Clone)]
@@ -131,7 +134,12 @@ struct Prob {
     region: Option<Vec<(f64, f64)>>,
     enclosures: bool,
     infeasible: bool,
+    anchor: Option<Vec<f64>>,
+    no_mirror_enclosure: bool,
 }
+
+/// The exact-penalty factor of the test merit.
+const PENALTY: f64 = 4.0;
 
 impl Prob {
     fn new(family: Family, flat: &[f64]) -> Prob {
@@ -139,7 +147,17 @@ impl Prob {
             Family::Cyl => flat.chunks(3).map(|c| [c[0], c[1], c[2]]).collect(),
             _ => flat.chunks(2).map(|c| [c[0], c[1], 0.0]).collect(),
         };
-        Prob { family, pts, nominal: [0.0; 4], mirror_half: None, region: None, enclosures: true, infeasible: false }
+        Prob {
+            family,
+            pts,
+            nominal: [0.0; 4],
+            mirror_half: None,
+            region: None,
+            enclosures: true,
+            infeasible: false,
+            anchor: None,
+            no_mirror_enclosure: false,
+        }
     }
     /// Number of geometric parameters (before the radii).
     fn geo(&self) -> usize {
@@ -372,7 +390,8 @@ impl ActiveSetProblem for Prob {
         Ok(Mat::from_rows(&rows)?)
     }
     fn residual_enclosure(&self, set: &[RowLabel], p: &[f64]) -> Result<Option<Vec<Interval>>, CertError> {
-        if !self.enclosures {
+        let mirrored = self.mirror_half.is_some_and(|h| set.iter().all(|l| l.point as usize >= h));
+        if !self.enclosures || (self.no_mirror_enclosure && mirrored) {
             return Ok(None);
         }
         let b: Vec<Interval> = p.iter().map(|&x| ip(x)).collect();
@@ -486,13 +505,19 @@ impl LinearisableProblem for Prob {
         Ok((prob, self.value(p)?))
     }
     fn objective(&self, p: &[f64]) -> Result<f64, CertError> {
-        let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
-        for i in 0..self.pts.len() {
-            let d = self.dist(i, p).0;
-            lo = f::total_min(lo, d)?;
-            hi = f::total_max(hi, d)?;
+        let mut viol = 0.0_f64;
+        for g in self.constraint_values(p)? {
+            viol = f::total_max(viol, g)?;
         }
-        Ok(if self.family == Family::Mic { -lo } else { hi - lo })
+        let mut f = self.value(p)? + PENALTY * viol;
+        if let Some(a) = &self.anchor {
+            let mut d = 0.0_f64;
+            for (x, y) in p.iter().zip(a) {
+                d = f::total_max(d, (x - y).abs())?;
+            }
+            f += 1e3 * d;
+        }
+        Ok(f)
     }
     fn outer_region(&self) -> Option<Vec<(f64, f64)>> {
         self.region.clone()
@@ -712,12 +737,13 @@ fn labels_of(set: &[RowLabel]) -> String {
 /// A stable encoding of a driver error: codes and fields, never `Debug` output.
 fn encode_err(e: &SolverError) -> String {
     let mut out = format!(
-        "{};it={};radius={};set={};otb={}",
+        "{};it={};radius={};set={};otb={};conv={}",
         e.cause.code(),
         e.iterations,
         bits_of(&[e.radius]),
         labels_of(&e.active_set),
-        e.on_trust_boundary
+        e.on_trust_boundary,
+        e.converged
     );
     match &e.cause {
         SeqCause::Cert(c) | SeqCause::Callback(c) => {
@@ -766,13 +792,21 @@ fn ac3_errors() -> Vec<SolverError> {
     assert_eq!(e.cause, SeqCause::StepBoundCollapsed, "{e}");
     assert_eq!((e.iterations, e.radius), (0, 1.0));
     errs.push(e);
+
+    // Every step is rejected (the merit rises away from the start): the radius shrinks while
+    // the bound is active and the run ends in StepBoundCollapsed, never in success (REQ-003).
+    let stubborn = Prob { anchor: Some(c.start.clone()), ..p.clone() };
+    let e = solve(&stubborn, &c.start, &SeqConfig { radius_min: 1e-6, ..config(&p) }).unwrap_err();
+    assert_eq!(e.cause, SeqCause::StepBoundCollapsed, "{e}");
+    assert!(e.radius < 1e-6 && e.iterations >= 10 && !e.converged, "{e}");
+    errs.push(e);
     errs
 }
 
 #[test]
 fn ac3_error_paths() {
     let errs = ac3_errors();
-    assert_eq!(errs.len(), 3);
+    assert_eq!(errs.len(), 4);
 }
 
 #[test]
@@ -789,6 +823,7 @@ fn certificate_failure_is_a_failure() {
         _ => panic!("{e}"),
     }
     assert_eq!(e.active_set, c.set);
+    assert!(e.converged && !e.on_trust_boundary);
 }
 
 #[test]
@@ -823,19 +858,35 @@ fn mic_boxed(c: &Case, edge: f64) -> Prob {
 fn ac4_outcomes() -> (SolverError, SeqOutcome) {
     let c = first_case("mic");
     assert_ne!(c.start[0], c.params[0]);
-    // The true centre lies outside the box: the run converges onto the box edge, where the
-    // unconstrained problem has no KKT point, so certification fails closed with the flag.
+    let free = solve_case(&c);
+    // The true centre lies outside the box. The iterates stop on the box edge, where the
+    // unconstrained problem has no KKT point; the run goes on without the box, certifies the
+    // true centre, finds it outside and returns the AC-4 error with the flag and no value.
     let mid = 0.5 * (c.start[0] + c.params[0]);
     let p = mic_boxed(&c, mid);
     let e = solve(&p, &c.start, &config(&p)).unwrap_err();
-    assert!(e.on_trust_boundary, "{e}");
-    assert!(matches!(e.cause, SeqCause::Cert(_)), "{e}");
-    // The box edge passes through the true centre: certified, and on the boundary.
-    let p = mic_boxed(&c, c.params[0]);
+    assert_eq!(e.cause, SeqCause::OutsideOuterRegion, "{e}");
+    assert!(e.on_trust_boundary && e.converged, "{e}");
+    assert_eq!(e.active_set, c.set);
+    // The box edge passes just beyond the true centre (within the boundary tolerance): the
+    // centre is certified inside the box and flagged, and equals the free run's certificate.
+    let edge = if c.start[0] < c.params[0] { c.params[0] + 1e-9 } else { c.params[0] - 1e-9 };
+    let p = mic_boxed(&c, edge);
     let out = solve(&p, &c.start, &config(&p)).unwrap();
     assert!(out.on_trust_boundary);
-    let free = solve_case(&c);
     assert_eq!(out.certified.certificate().digest(), free.certified.certificate().digest());
+    // The flag comes from the certified point, so another start gives the same flag.
+    let other = seeded_starts(&c, &problem_of(&c)).into_iter().find(|s| {
+        if c.start[0] < c.params[0] {
+            s[0] < edge
+        } else {
+            s[0] > edge
+        }
+    });
+    let other = other.unwrap();
+    let again = solve(&p, &other, &config(&p)).unwrap();
+    assert!(again.on_trust_boundary);
+    assert_eq!(again.certified.certificate().digest(), free.certified.certificate().digest());
     (e, out)
 }
 
@@ -920,6 +971,28 @@ fn ac5_multi_start() {
     assert!(!out.best.certified.certificate().flags().local_optimum_only);
 }
 
+#[test]
+fn converged_but_uncertified_start_disagrees() {
+    // The twin with the mirrored optimum uncertifiable: the starts that reach it converge but
+    // fail certification. The certified starts all agree, yet the result is flagged.
+    let c = first_case("twin");
+    let p = Prob { no_mirror_enclosure: true, ..problem_of(&c) };
+    let out = solve_multi(&p, &twin_spec(), &config(&p)).unwrap();
+    assert!(out.agreement);
+    assert!(out.local_optimum_only);
+    assert!(out.best.certified.certificate().flags().local_optimum_only);
+    assert_eq!(out.best.certified.certificate().active_set(), c.set.as_slice());
+    let failed: Vec<&SolverError> = out
+        .per_start
+        .iter()
+        .filter_map(|s| match s {
+            StartSummary::Failed(StartError::Solver(e)) => Some(e),
+            _ => None,
+        })
+        .collect();
+    assert!(!failed.is_empty() && failed.iter().all(|e| e.converged && matches!(e.cause, SeqCause::Cert(_))));
+}
+
 // ------------------------------------------------------------------ AC-6 output pin
 
 /// Output-bit pin: regression pin of this crate's own output (every AC-1 certificate's bytes,
@@ -927,7 +1000,7 @@ fn ac5_multi_start() {
 /// `encode_err`), recorded from a local x86-64 run and checked by CI on every target. One value
 /// serves all targets because they agree bit for bit; a target that diverged would get its own
 /// `#[cfg(target_arch)]` value here.
-const OUTPUT_PIN: &str = "sha256:0a9e00d2fb0ba5391845b46ac8aef57edd2704738936f0635badb3fc4388554e";
+const OUTPUT_PIN: &str = "sha256:92c4db207a51defe18e878907daefcf617bab95d0c451a75c94caebcf0249178";
 
 #[test]
 fn ac6_output_bits_pinned() {

@@ -7,16 +7,16 @@
 //! pipeline ([`crate::cert::certify`], KRN.SOLV.CERT.CT) and returns **only** the certified
 //! result: the iterate never leaves this module as a value. [`solve_multi`] runs [`solve`] from
 //! the seeded starts of [`crate::mstart`] and flags the certificate `local_optimum_only` when the
-//! certified results of the starts disagree.
+//! certified results of the starts disagree, or when a start converged but could not be
+//! certified.
 //!
 //! # Procedure (pinned)
 //!
-//! 1. **Checks**, in this order (each failure is [`SeqCause::InvalidInput`] naming the field,
-//!    except a callback's own error, which is [`SeqCause::Callback`]): the config
-//!    ([`SeqConfig::check`]); `n_params() >= 1`; `scales()` of length `n`, each finite and
-//!    positive; the start of length `n` and finite; the outer region, if any, of length `n`
-//!    with `lo <= hi` (either end may be infinite, neither NaN) and the start inside it;
-//!    `data_scale()` finite and positive; the row labels; `objective(start)` finite.
+//! 1. **Checks**, in this order (each failure is [`SeqCause::InvalidInput`] naming the field):
+//!    the config ([`SeqConfig::check`]); `n_params() >= 1`; `scales()` of length `n`, each
+//!    finite and positive; the start of length `n` and finite; the outer region, if any, of
+//!    length `n` with `lo <= hi` (either end may be infinite, neither NaN) and the start inside
+//!    it. Then `objective(start)` must be finite.
 //! 2. **Iteration** `k = 1, 2, ..`: if `radius < radius_min` the result is
 //!    [`SeqCause::StepBoundCollapsed`]. Otherwise `local_problem(p)` gives the local problem in
 //!    the step `dp` (`n` variables, no quadratic term, row `i` the constraint labelled
@@ -34,37 +34,61 @@
 //!    iteration's active set (also when the extraction reports `ActiveSetUndetermined`, which
 //!    carries them).
 //! 6. **Step test.** `predicted = f(p) - m(dp)` with `f` = [`LinearisableProblem::objective`];
-//!    the step bound is *active* when some `|dp_j| >= BOUND_ACTIVE_FRAC * t_j`. A step whose
-//!    bound is inactive and whose `predicted <= decrease_tol_rel * data_scale` is a **null
-//!    step**: the model offers no decrease beyond the conic solver's accuracy, so the point
-//!    stays, the radius stays and the step taken is 0. Otherwise `p+ = p + dp` (clamped into
-//!    the outer region), `rho = (f(p) - f(p+)) / predicted` (undefined when `predicted <= 0`),
-//!    the step is accepted iff `rho > 0.1`, and the radius is updated by REQ-007:
-//!    `rho < 0.25` (or undefined) gives `radius / 4`; `rho > 0.75` with the bound active gives
-//!    `min(2 radius, radius_max)`; otherwise it is unchanged.
-//! 7. **Stop rule** (REQ-002): `stable` counts the consecutive iterations whose active set
-//!    equals the previous iteration's. The driver stops with success when
-//!    `stable >= stable_iters` and the step norm `max_j |dp_j| / scale_j` (0 for a null step)
-//!    is at most `step_tol_rel * (1 + max_j |p_j| / scale_j)`. After `max_iter` iterations
-//!    without success the result is [`SeqCause::IterationLimit`].
+//!    the step bound is *active* when some `|dp_j| >= BOUND_ACTIVE_FRAC * t_j`. With
+//!    `tol = decrease_tol_rel * max(|f(p)|, DECREASE_FLOOR)`, a step whose bound is inactive and
+//!    whose `|predicted| <= tol` is a **null step** (the model offers no change beyond the
+//!    tolerance) and is not taken. Every other step is evaluated: `p+ = p + dp` (clamped into
+//!    the outer region), `rho = (f(p) - f(p+)) / predicted` (undefined when `predicted <= 0`,
+//!    so a negative predicted decrease shrinks the radius), the step is accepted iff
+//!    `rho > 0.1`, and the radius is updated by REQ-007: `rho < 0.25` (or undefined) gives
+//!    `radius / 4`; `rho > 0.75` with the bound active gives `min(2 radius, radius_max)`;
+//!    otherwise it is unchanged.
+//! 7. **Stop rule** (REQ-002). A *moving* iteration is one that changed the point or the
+//!    radius; every evaluated step is one (a rejected step always shrinks the radius).
+//!    `stable` counts the consecutive moving iterations whose active set equals the previous
+//!    moving iteration's; a null step never advances it. The run stops with success
+//!    - on a **null step** whose active set equals the last moving iteration's set, with
+//!      `stable >= stable_iters` (the null step's subproblem is new: the point or radius
+//!      changed since the last one); or
+//!    - on an **accepted** step with the bound inactive, `stable >= stable_iters` and step norm
+//!      `max_j |dp_j| / scale_j <= step_tol_rel * (1 + max_j |p_j| / scale_j)`.
+//!
+//!    A null step that does not stop the run shrinks the radius (`radius / 4`), so the next
+//!    subproblem differs; that makes it a moving iteration. A bound-active step is never a
+//!    success, so a radius that keeps shrinking ends in `StepBoundCollapsed` (REQ-003). After
+//!    `max_iter` iterations without success the result is [`SeqCause::IterationLimit`].
 //! 8. **Certify** (REQ-005): `cert::certify` on the local problem of the last iteration and its
 //!    solution with the step-bound rows removed (REQ-006), with `cfg.kind` and `cfg.cert`. Its
 //!    error is [`SeqCause::Cert`] and no value (fail closed: a `certificate_failed` is never
-//!    replaced by the iterate). `on_trust_boundary` (REQ-004) is set when an outer region is
-//!    given and the final point lies within `boundary_tol_rel * scale_j` of one of its finite
-//!    ends; it is reported on the outcome and on a certification error.
+//!    replaced by the iterate).
+//! 9. **Outer region** (REQ-004). The region confines the iterates. If certification fails
+//!    and the final iterate lies within `boundary_tol_rel * scale_j` of the region's boundary,
+//!    the loop continues from that point **without** the region (the iteration count goes on)
+//!    and the new final subproblem is certified. The flags are then computed from the
+//!    **certified** parameters and their proven bounds only: a certified point outside the
+//!    region is [`SeqCause::OutsideOuterRegion`] with `on_trust_boundary = true` and no value;
+//!    a certified point whose enclosure, widened by `boundary_tol_rel * scale_j`, reaches the
+//!    boundary is returned with `on_trust_boundary = true`. So every start that certifies the
+//!    same point gets the same flag.
 //!
-//! Every error carries the last active set, the radius, the iteration count and the
-//! `on_trust_boundary` flag, and no value (REQ-003).
+//! Every error carries the last active set, the radius and the iteration count, and no value
+//! (REQ-003).
+//!
+//! # What a certificate proves
+//!
+//! A certificate proves a KKT point with `n` independent active rows and positive multipliers,
+//! that is a **strict local minimum** of the problem. It does not prove a global one. Nor does
+//! `local_optimum_only = false`: that only says the starts of [`solve_multi`] that were tried
+//! did not disagree.
 //!
 //! # What reaches a digest
 //!
 //! Only the [`Certified`] result, whose certificate is built from the recomputed active-set
-//! optimum (REQ-KRN.SOLV-006). [`SeqOutcome::iterations`], [`SeqOutcome::on_trust_boundary`]
-//! and [`SeqOutcome::history`] come from the iterates; they are diagnostics, never values of
-//! record, and callers must not journal them as results. [`solve_multi`] compares the starts by
-//! their **certified** values and parameters, so `local_optimum_only` does not depend on an
-//! iterate either.
+//! optimum (REQ-KRN.SOLV-006). [`SeqOutcome::iterations`] and [`SeqOutcome::history`] come from
+//! the iterates; they are diagnostics, never values of record, and callers must not journal
+//! them as results. [`SeqOutcome::on_trust_boundary`] comes from the certified parameters.
+//! [`solve_multi`] compares the starts by their **certified** values and parameters, so
+//! `local_optimum_only` does not depend on an iterate either.
 //!
 //! # Determinism
 //!
@@ -85,7 +109,7 @@ use crate::cert::{certify, ActiveSetProblem, CertConfig, CertError, CertKind, Ce
 use crate::conic::{
     solve_lp, solve_socp, Cone, ConicCause, ConicError, ConicProblem, ConicProblemBuilder, ConicSolution, Csc,
 };
-use crate::mstart::{self, MultiStartError, MultiStartOutcome, StartSpec};
+use crate::mstart::{self, MultiStartError, MultiStartOutcome, StartError, StartSpec, StartSummary};
 
 /// Default iteration limit.
 pub const DEFAULT_MAX_ITER: u32 = 100;
@@ -94,10 +118,12 @@ pub const DEFAULT_MAX_ITER: u32 = 100;
 pub const DEFAULT_STABLE_ITERS: u32 = 3;
 /// Default relative step tolerance (REQ-008, [unverified]).
 pub const DEFAULT_STEP_TOL_REL: f64 = 1e-12;
-/// Default relative decrease tolerance of the null-step rule, relative to the problem's data
-/// scale ([unverified]). Above the conic solver's gap and feasibility tolerances (`1e-10`), so
-/// a step that only moves within the solver's own accuracy is a null step.
+/// Default relative decrease tolerance of the null-step rule, relative to the objective
+/// `max(|f(p)|, DECREASE_FLOOR)` ([unverified]).
 pub const DEFAULT_DECREASE_TOL_REL: f64 = 1e-9;
+/// Floor of the objective magnitude in the null-step tolerance (`2^-1022`), so that a zero
+/// objective gives a zero (not undefined) tolerance.
+pub const DECREASE_FLOOR: f64 = f64::MIN_POSITIVE;
 /// Default relative distance (in units of `scale_j`) within which the final point counts as on
 /// the outer region's boundary ([unverified]).
 pub const DEFAULT_BOUNDARY_TOL_REL: f64 = 1e-6;
@@ -137,10 +163,11 @@ pub trait LinearisableProblem: ActiveSetProblem {
     /// objective at zero step, `m0`, so that `m0 + q'dp` models the objective at `p + dp`.
     fn local_problem(&self, p: &[f64]) -> Result<(ConicProblem, f64), CertError>;
 
-    /// The objective the driver minimises, evaluated at any point (for a zone problem, the zone
-    /// width at the given axis or centre, with the radius parameters eliminated, so that it is
-    /// defined at points where the radius parameters are slightly infeasible). At a feasible
-    /// point it equals the model at zero step.
+    /// The merit the driver minimises, evaluated at any point, including points where the
+    /// constraints are slightly violated (for example the objective plus an exact penalty
+    /// `M * max(0, max_i g_i)` with `M` above the sum of the multipliers). At a feasible point it
+    /// should equal the model at zero step, and it should not be below it elsewhere, so the
+    /// predicted decrease `f(p) - m(dp)` is not negative.
     fn objective(&self, p: &[f64]) -> Result<f64, CertError>;
 
     /// An optional outer trust region: per-parameter absolute bounds `(lo, hi)` (either end may
@@ -161,11 +188,11 @@ pub struct SeqConfig {
     pub stable_iters: u32,
     /// Relative step tolerance of the stop rule (finite, not negative).
     pub step_tol_rel: f64,
-    /// Relative decrease tolerance of the null-step rule, times the data scale (finite, not
-    /// negative).
+    /// Relative decrease tolerance of the null-step rule, times `max(|f(p)|, DECREASE_FLOOR)`
+    /// (finite, not negative).
     pub decrease_tol_rel: f64,
-    /// Relative boundary tolerance of `on_trust_boundary`, times `scale_j` (finite, not
-    /// negative).
+    /// Relative boundary tolerance, times `scale_j`, added to the certified parameter bound
+    /// when deciding `on_trust_boundary` (finite, not negative).
     pub boundary_tol_rel: f64,
     /// Initial radius (finite, positive).
     pub radius_0: f64,
@@ -264,6 +291,9 @@ pub enum SeqCause {
     /// The active-set classification or the certificate pipeline failed (including
     /// `certificate_failed`); no value is returned.
     Cert(CertError),
+    /// The certified point lies outside the caller's outer region (REQ-004, AC-4); the
+    /// certified result is not returned.
+    OutsideOuterRegion,
 }
 
 impl SeqCause {
@@ -279,6 +309,7 @@ impl SeqCause {
             SeqCause::StepBoundCollapsed => "step_bound_collapsed",
             SeqCause::Conic(_) => "conic",
             SeqCause::Cert(_) => "cert",
+            SeqCause::OutsideOuterRegion => "outside_outer_region",
         }
     }
 }
@@ -295,9 +326,13 @@ pub struct SolverError {
     pub radius: f64,
     /// Iterations completed.
     pub iterations: u32,
-    /// The final point lies on the outer region's boundary (only ever set on a certification
-    /// error after convergence).
+    /// The certified point reaches the outer region's boundary (set only with
+    /// [`SeqCause::OutsideOuterRegion`]; computed from the certified parameters and their proven
+    /// bounds, never from an iterate).
     pub on_trust_boundary: bool,
+    /// The loop met its stop rule; the run then failed certification or the region check.
+    /// [`solve_multi`] treats such a start as disagreeing.
+    pub converged: bool,
 }
 
 impl fmt::Display for SolverError {
@@ -319,7 +354,10 @@ impl fmt::Display for SolverError {
             SeqCause::Callback(e) | SeqCause::Cert(e) => write!(f, ": {e}"),
             SeqCause::Numeric(e) => write!(f, ": {e}"),
             SeqCause::Conic(e) => write!(f, ": {e}"),
-            SeqCause::IterationLimit | SeqCause::SubproblemInfeasible | SeqCause::StepBoundCollapsed => Ok(()),
+            SeqCause::IterationLimit
+            | SeqCause::SubproblemInfeasible
+            | SeqCause::StepBoundCollapsed
+            | SeqCause::OutsideOuterRegion => Ok(()),
         }
     }
 }
@@ -349,7 +387,8 @@ pub struct IterSummary {
     pub accepted: bool,
     /// Size of the strongly active set.
     pub active_rows: usize,
-    /// Consecutive iterations with an unchanged active set, after this one.
+    /// Consecutive moving iterations (point or radius changed) with an unchanged active set,
+    /// after this one.
     pub stable: u32,
 }
 
@@ -360,8 +399,10 @@ pub struct SeqOutcome {
     pub certified: Certified,
     /// Iterations performed (diagnostic).
     pub iterations: u32,
-    /// The final point lies on the outer region's boundary (REQ-004), so the caller can raise
-    /// its own typed error.
+    /// The certified point's proven enclosure, widened by `boundary_tol_rel * scale_j`, reaches
+    /// the outer region's boundary (REQ-004), so the caller can raise its own typed error.
+    /// Computed from the certified parameters only, so every start that certifies the same
+    /// point gets the same flag.
     pub on_trust_boundary: bool,
     /// Per-iteration diagnostics; never enter a digest.
     pub history: Vec<IterSummary>,
@@ -402,12 +443,20 @@ impl State {
             radius: self.radius,
             iterations: self.iterations,
             on_trust_boundary: false,
+            converged: false,
         }
     }
 }
 
+/// The checked inputs of a run.
+struct Checked {
+    scales: Vec<f64>,
+    region: Option<Vec<(f64, f64)>>,
+    labels: Vec<RowLabel>,
+}
+
 /// The last subproblem of a converged run: the local problem and its solution without the
-/// step-bound rows.
+/// step-bound rows, and the final point.
 struct Final {
     local: ConicProblem,
     solution: ConicSolution,
@@ -427,25 +476,43 @@ pub fn solve<P: LinearisableProblem + ?Sized>(
 ) -> Result<SeqOutcome, SolverError> {
     let mut st = State { active_set: Vec::new(), radius: cfg.radius_0, iterations: 0 };
     let mut history = Vec::new();
-    let fin = iterate(problem, start, cfg, &mut st, &mut history)?;
-    let on_trust_boundary = match problem.outer_region() {
-        Some(region) => on_boundary(&fin.p, &problem.scales(), &region, cfg.boundary_tol_rel),
-        None => false,
-    };
-    match certify(problem, &fin.local, &fin.solution, cfg.kind, &cfg.cert) {
-        Ok(certified) => Ok(SeqOutcome { certified, iterations: st.iterations, on_trust_boundary, history }),
-        Err(e) => {
-            let mut err = st.fail(SeqCause::Cert(e));
-            err.on_trust_boundary = on_trust_boundary;
-            Err(err)
+    let checked = check_inputs(problem, start, cfg).map_err(|c| st.fail(c))?;
+    let region = checked.region.as_deref();
+    let mut fin = iterate(problem, start, cfg, &checked, region, &mut st, &mut history)?;
+    let mut result = certify(problem, &fin.local, &fin.solution, cfg.kind, &cfg.cert);
+    if let (Err(_), Some(r)) = (&result, region) {
+        if near_boundary(&fin.p, &checked.scales, r, cfg.boundary_tol_rel) {
+            // Phase 2: the outer region stopped the iterates short of a KKT point. Continue
+            // without it, so the certified point (not the iterate) decides the boundary flag.
+            fin = iterate(problem, &fin.p, cfg, &checked, None, &mut st, &mut history)?;
+            result = certify(problem, &fin.local, &fin.solution, cfg.kind, &cfg.cert);
         }
     }
+    let certified = result.map_err(|e| SolverError { converged: true, ..st.fail(SeqCause::Cert(e)) })?;
+    let (on_trust_boundary, outside) = match region {
+        Some(r) => certified_boundary(
+            certified.params(),
+            certified.certificate().param_bounds(),
+            &checked.scales,
+            r,
+            cfg.boundary_tol_rel,
+        ),
+        None => (false, false),
+    };
+    if outside {
+        return Err(SolverError { on_trust_boundary: true, converged: true, ..st.fail(SeqCause::OutsideOuterRegion) });
+    }
+    Ok(SeqOutcome { certified, iterations: st.iterations, on_trust_boundary, history })
 }
 
 /// Runs [`solve`] from every start of `spec` in index order through [`mstart::run`]
 /// (REQ-009). Starts are compared by their **certified** value and parameters; the selected
 /// start's certificate gets `local_optimum_only` when the certified results disagree within
-/// `spec.tolerances`.
+/// `spec.tolerances`, **or** when any start converged (met the stop rule) but then failed
+/// certification or left the outer region: such a start found a different point that the run
+/// cannot vouch for, so it is never counted as agreeing. [`MultiStartOutcome::agreement`] keeps
+/// mstart's meaning (agreement of the certified results); [`MultiStartOutcome::local_optimum_only`]
+/// is the flag set on the certificate.
 ///
 /// # Errors
 ///
@@ -463,6 +530,11 @@ pub fn solve_multi<P: LinearisableProblem + ?Sized>(
         Ok((outcome, value, params))
     })
     .map_err(MultiError::Start)?;
+    let converged_but_failed =
+        out.per_start.iter().any(|s| matches!(s, StartSummary::Failed(StartError::Solver(e)) if e.converged));
+    if converged_but_failed {
+        out.local_optimum_only = true;
+    }
     if out.local_optimum_only {
         out.best.certified.set_local_optimum_only().map_err(MultiError::Flag)?;
     }
@@ -473,14 +545,12 @@ fn invalid(field: &'static str) -> SeqCause {
     SeqCause::InvalidInput { field }
 }
 
-/// Step 1 of the procedure: input checks. Returns the scales, the outer region, the data
-/// scale and the row labels.
-#[allow(clippy::type_complexity)]
+/// Step 1 of the procedure: input checks.
 fn check_inputs<P: LinearisableProblem + ?Sized>(
     problem: &P,
     start: &[f64],
     cfg: &SeqConfig,
-) -> Result<(Vec<f64>, Option<Vec<(f64, f64)>>, f64, Vec<RowLabel>), SeqCause> {
+) -> Result<Checked, SeqCause> {
     cfg.check()?;
     let n = problem.n_params();
     if n == 0 {
@@ -502,11 +572,7 @@ fn check_inputs<P: LinearisableProblem + ?Sized>(
             return Err(invalid("start"));
         }
     }
-    let data_scale = problem.data_scale().map_err(SeqCause::Callback)?;
-    if !(data_scale.is_finite() && data_scale > 0.0) {
-        return Err(invalid("data_scale"));
-    }
-    Ok((scales, region, data_scale, problem.row_labels()))
+    Ok(Checked { scales, region, labels: problem.row_labels() })
 }
 
 fn objective_at<P: LinearisableProblem + ?Sized>(problem: &P, p: &[f64]) -> Result<f64, SeqCause> {
@@ -514,20 +580,22 @@ fn objective_at<P: LinearisableProblem + ?Sized>(problem: &P, p: &[f64]) -> Resu
     fid_num::check_finite("seq.objective", f).map_err(SeqCause::Numeric)
 }
 
-/// Steps 1 to 7: the loop. Returns the last subproblem of a converged run.
+/// Steps 2 to 7: the loop from `start` with the iterates confined to `region`. Returns the last
+/// subproblem of a converged run. Iterations count on in `st` across calls.
 fn iterate<P: LinearisableProblem + ?Sized>(
     problem: &P,
     start: &[f64],
     cfg: &SeqConfig,
+    checked: &Checked,
+    region: Option<&[(f64, f64)]>,
     st: &mut State,
     history: &mut Vec<IterSummary>,
 ) -> Result<Final, SolverError> {
-    let (scales, region, data_scale, labels) = check_inputs(problem, start, cfg).map_err(|c| st.fail(c))?;
+    let scales = &checked.scales;
     let n = scales.len();
     let mut p = start.to_vec();
     let mut f_p = objective_at(problem, &p).map_err(|c| st.fail(c))?;
-    let dec_tol = cfg.decrease_tol_rel * data_scale;
-    let mut prev_set: Option<Vec<RowLabel>> = None;
+    let mut last_moving: Option<Vec<RowLabel>> = None;
     let mut stable: u32 = 0;
     while st.iterations < cfg.max_iter {
         if st.radius < cfg.radius_min {
@@ -540,51 +608,26 @@ fn iterate<P: LinearisableProblem + ?Sized>(
         fid_num::check_finite("seq.model0", m0).map_err(|e| st.fail(SeqCause::Numeric(e)))?;
         let radius = st.radius;
         let bounds: Vec<f64> = scales.iter().map(|s| radius * s).collect();
-        let (lower, upper) = step_box(&p, &bounds, region.as_deref()).map_err(|c| st.fail(c))?;
+        let (lower, upper) = step_box(&p, &bounds, region).map_err(|c| st.fail(c))?;
         let full = append_box(&local, &lower, &upper).map_err(|c| st.fail(c))?;
         let solved = if full.has_soc() { solve_socp(&full) } else { solve_lp(&full) };
         let sol = solved.map_err(|e| st.fail(conic_cause(e)))?;
         st.iterations += 1;
         let stripped = strip(&local, &sol).map_err(|c| st.fail(c))?;
-        let set = strongly_active(problem, &local, &stripped, &labels, &cfg.thresholds).map_err(|c| st.fail(c))?;
+        let set =
+            strongly_active(problem, &local, &stripped, &checked.labels, &cfg.thresholds).map_err(|c| st.fail(c))?;
         st.active_set = set;
 
         let dp = &stripped.x;
-        let qdp = red::dot(local.q(), dp).map_err(|e| st.fail(SeqCause::Numeric(e)))?;
+        let num = |e: NumError| SeqCause::Numeric(e);
+        let qdp = red::dot(local.q(), dp).map_err(|e| st.fail(num(e)))?;
         let predicted = f_p - (m0 + qdp);
-        let step_norm = scaled_norm(dp, &scales).map_err(|e| st.fail(SeqCause::Numeric(e)))?;
+        let step_norm = scaled_norm(dp, scales).map_err(|e| st.fail(num(e)))?;
         let bound_active = dp.iter().zip(&bounds).any(|(d, b)| d.abs() >= BOUND_ACTIVE_FRAC * b);
-        let null_step = !bound_active && predicted <= dec_tol;
+        let dec_tol = cfg.decrease_tol_rel * total_max(f_p.abs(), DECREASE_FLOOR).map_err(|e| st.fail(num(e)))?;
+        let null_step = !bound_active && predicted.abs() <= dec_tol;
         let (mut actual, mut rho, mut accepted) = (None, None, false);
-        let taken_norm = if null_step {
-            0.0
-        } else {
-            let p_new = advance(&p, dp, region.as_deref()).map_err(|c| st.fail(c))?;
-            let f_new = objective_at(problem, &p_new).map_err(|c| st.fail(c))?;
-            let act = f_p - f_new;
-            actual = Some(act);
-            rho = if predicted > 0.0 { Some(act / predicted) } else { None };
-            accepted = rho.is_some_and(|r| r > RHO_ACCEPT);
-            st.radius = match rho {
-                Some(r) if r >= RHO_SHRINK => {
-                    if r > RHO_EXPAND && bound_active {
-                        total_min(EXPAND_FACTOR * st.radius, cfg.radius_max)
-                            .map_err(|e| st.fail(SeqCause::Numeric(e)))?
-                    } else {
-                        st.radius
-                    }
-                }
-                _ => st.radius / SHRINK_DIVISOR,
-            };
-            if accepted {
-                p = p_new;
-                f_p = f_new;
-            }
-            step_norm
-        };
-        stable = if prev_set.as_ref() == Some(&st.active_set) { stable.saturating_add(1) } else { 0 };
-        prev_set = Some(st.active_set.clone());
-        history.push(IterSummary {
+        let mut summary = IterSummary {
             iteration: st.iterations,
             radius,
             predicted,
@@ -596,10 +639,50 @@ fn iterate<P: LinearisableProblem + ?Sized>(
             accepted,
             active_rows: st.active_set.len(),
             stable,
-        });
-        let p_norm = scaled_norm(&p, &scales).map_err(|e| st.fail(SeqCause::Numeric(e)))?;
+        };
+        if null_step {
+            // The step is not taken. Success only when this subproblem's set equals the last
+            // moving iteration's set and that set was stable over enough moving iterations.
+            if last_moving.as_ref() == Some(&st.active_set) && stable >= cfg.stable_iters {
+                history.push(summary);
+                return Ok(Final { local, solution: stripped, p });
+            }
+            // Not yet stable: shrink the radius so the next subproblem differs (this makes the
+            // iteration a moving one; a repeat of the same subproblem would add no evidence).
+            st.radius = radius / SHRINK_DIVISOR;
+        } else {
+            let p_new = advance(&p, dp, region).map_err(|c| st.fail(c))?;
+            let f_new = objective_at(problem, &p_new).map_err(|c| st.fail(c))?;
+            let act = f_p - f_new;
+            actual = Some(act);
+            rho = if predicted > 0.0 { Some(act / predicted) } else { None };
+            accepted = rho.is_some_and(|r| r > RHO_ACCEPT);
+            st.radius = match rho {
+                Some(r) if r >= RHO_SHRINK => {
+                    if r > RHO_EXPAND && bound_active {
+                        total_min(EXPAND_FACTOR * radius, cfg.radius_max).map_err(|e| st.fail(num(e)))?
+                    } else {
+                        radius
+                    }
+                }
+                _ => radius / SHRINK_DIVISOR,
+            };
+            if accepted {
+                p = p_new;
+                f_p = f_new;
+            }
+        }
+        // Every iteration that gets here changed the point or the radius (a moving iteration).
+        stable = if last_moving.as_ref() == Some(&st.active_set) { stable.saturating_add(1) } else { 0 };
+        last_moving = Some(st.active_set.clone());
+        summary.actual = actual;
+        summary.rho = rho;
+        summary.accepted = accepted;
+        summary.stable = stable;
+        history.push(summary);
+        let p_norm = scaled_norm(&p, scales).map_err(|e| st.fail(num(e)))?;
         let step_tol = cfg.step_tol_rel * (1.0 + p_norm);
-        if stable >= cfg.stable_iters && taken_norm <= step_tol {
+        if accepted && !bound_active && stable >= cfg.stable_iters && step_norm <= step_tol {
             return Ok(Final { local, solution: stripped, p });
         }
     }
@@ -726,12 +809,31 @@ fn strongly_active<P: ActiveSetProblem + ?Sized>(
     }
 }
 
-/// Whether `p` lies within `tol * scale_j` of a finite end of the outer region.
-fn on_boundary(p: &[f64], scales: &[f64], region: &[(f64, f64)], tol: f64) -> bool {
+/// Whether the iterate `p` lies within `tol * scale_j` of a finite end of the outer region (used
+/// only to decide whether to continue without the region; never reported).
+fn near_boundary(p: &[f64], scales: &[f64], region: &[(f64, f64)], tol: f64) -> bool {
     p.iter().zip(scales).zip(region).any(|((&x, &s), &(lo, hi))| {
         let near = tol * s;
         (lo.is_finite() && x - lo <= near) || (hi.is_finite() && hi - x <= near)
     })
+}
+
+/// The boundary flags of a **certified** point: `(on_trust_boundary, outside)`. `outside` when
+/// some certified `p_j` lies beyond a finite end of the region; `on_trust_boundary` when the
+/// proven enclosure `p_j +- param_bounds_j`, widened by `tol * scale_j`, reaches a finite end
+/// (or the point is outside).
+fn certified_boundary(p: &[f64], bounds: &[f64], scales: &[f64], region: &[(f64, f64)], tol: f64) -> (bool, bool) {
+    let (mut touch, mut outside) = (false, false);
+    for (((&x, &b), &s), &(lo, hi)) in p.iter().zip(bounds).zip(scales).zip(region) {
+        let reach = b + tol * s;
+        if (lo.is_finite() && x < lo) || (hi.is_finite() && x > hi) {
+            outside = true;
+        }
+        if (lo.is_finite() && x - reach <= lo) || (hi.is_finite() && x + reach >= hi) {
+            touch = true;
+        }
+    }
+    (touch || outside, outside)
 }
 
 #[cfg(test)]
@@ -749,10 +851,16 @@ mod tests {
     #[test]
     fn boundary_test_uses_finite_ends_only() {
         let inf = f64::INFINITY;
-        assert!(on_boundary(&[1.0], &[1.0], &[(-inf, 1.0)], 0.0));
-        assert!(!on_boundary(&[0.5], &[1.0], &[(-inf, inf)], 1e300));
-        assert!(on_boundary(&[0.9], &[1.0], &[(0.0, 1.0)], 0.1));
-        assert!(!on_boundary(&[0.5], &[1.0], &[(0.0, 1.0)], 0.1));
+        assert!(near_boundary(&[1.0], &[1.0], &[(-inf, 1.0)], 0.0));
+        assert!(!near_boundary(&[0.5], &[1.0], &[(-inf, inf)], 1e300));
+        assert!(near_boundary(&[0.9], &[1.0], &[(0.0, 1.0)], 0.1));
+        assert!(!near_boundary(&[0.5], &[1.0], &[(0.0, 1.0)], 0.1));
+        let r = [(0.0, 1.0)];
+        assert_eq!(certified_boundary(&[0.5], &[0.1], &[1.0], &r, 0.0), (false, false));
+        assert_eq!(certified_boundary(&[0.95], &[0.1], &[1.0], &r, 0.0), (true, false));
+        assert_eq!(certified_boundary(&[0.8], &[0.1], &[1.0], &r, 0.1), (true, false));
+        assert_eq!(certified_boundary(&[1.5], &[0.0], &[1.0], &r, 0.0), (true, true));
+        assert_eq!(certified_boundary(&[-0.5], &[0.0], &[1.0], &[(0.0, inf)], 0.0), (true, true));
     }
 
     #[test]

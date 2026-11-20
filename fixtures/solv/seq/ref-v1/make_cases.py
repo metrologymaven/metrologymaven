@@ -24,6 +24,8 @@ side 0 then side 1 where a point has two rows.
   g = r - d_i <= 0; f = -r (the value of record is -r). 10 points on a ring. Exhaustive search
   over triples: circumcentre exact, empty circle by exact comparison, kept only when the
   centre lies strictly inside the contact triangle (positive multipliers); the largest r wins.
+  The reference is the largest strict local maximum with its centre inside the contact
+  triangle, not a claimed global maximum.
 - mzcyl (minimum-zone cylinder axis, CertKind::Zone): p = (x0, y0, a, b, r_in, r_out), the axis
   through (x0, y0, 0) with direction (a, b, 1); rows as for mzc with d_i the distance of point i
   to the axis. 12 points on a cylinder with planted form error (heights centred on z = 0):
