@@ -177,8 +177,7 @@ pub trait StateView {
 pub struct ValidParams(CValue);
 
 impl ValidParams {
-    /// Wraps parameters the validation stage accepted.
-    #[allow(dead_code)] // first caller: CORE.BUS.PIPE.VALID
+    /// Wraps parameters the validation stage accepted (`validate`).
     pub(crate) fn from_validated(value: CValue) -> Self {
         ValidParams(value)
     }

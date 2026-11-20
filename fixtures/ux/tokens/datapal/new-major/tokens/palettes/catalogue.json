@@ -1,0 +1,11 @@
+{
+  "default": "pal.step.cvd@1",
+  "format": "palette-catalogue@1",
+  "palettes": [
+    "pal.step.cvd@1",
+    "pal.step.tol@1",
+    "pal.cont.seq-a@1",
+    "pal.cont.seq-cvd@1",
+    "pal.step.tol@2"
+  ]
+}

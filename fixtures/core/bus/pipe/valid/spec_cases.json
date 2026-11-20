@@ -1,0 +1,175 @@
+{
+ "description": "Hand-labelled JSON Schema 2020-12 cases for CORE.BUS.PIPE.VALID. Each verdict was derived by hand from the 2020-12 specification text (Core: sections 8.2.3 $ref, 10.2.1 allOf/anyOf/oneOf/not, 10.2.2 if/then/else and dependentSchemas, 10.3.1 prefixItems/items/contains, 10.3.2 properties/patternProperties/additionalProperties, 11 unevaluatedItems/unevaluatedProperties with annotation collection; Validation: section 6), not from the bus validator's design, and not taken from any third-party test suite (D-038). Both crates/fid-bus/tests/valid.rs and make_cases.py (the reference oracle) are checked against it. CC-BY-4.0.",
+ "groups": [
+  {
+   "name": "$ref recursion through $defs",
+   "schema": {
+    "$defs": {
+     "node": {
+      "type": "object",
+      "properties": {"value": {"type": "integer"}, "children": {"type": "array", "items": {"$ref": "#/$defs/node"}}},
+      "additionalProperties": false
+     }
+    },
+    "$ref": "#/$defs/node"
+   },
+   "tests": [
+    {"note": "two levels, all integers", "data": {"value": 1, "children": [{"value": 2, "children": []}]}, "valid": true},
+    {"note": "empty node", "data": {}, "valid": true},
+    {"note": "wrong type two levels down", "data": {"value": 1, "children": [{"value": 2, "children": [{"value": "x"}]}]}, "valid": false},
+    {"note": "extra member in a child", "data": {"value": 1, "children": [{"extra": 1}]}, "valid": false},
+    {"note": "root not an object", "data": [], "valid": false}
+   ]
+  },
+  {
+   "name": "$ref to the root",
+   "schema": {"type": "object", "properties": {"next": {"$ref": "#"}, "n": {"type": "integer"}}, "required": ["n"]},
+   "tests": [
+    {"note": "chain of three", "data": {"n": 1, "next": {"n": 2, "next": {"n": 3}}}, "valid": true},
+    {"note": "missing n deep in the chain", "data": {"n": 1, "next": {"next": {"n": 3}}}, "valid": false}
+   ]
+  },
+  {
+   "name": "oneOf: exactly one subschema",
+   "schema": {"oneOf": [{"type": "integer"}, {"type": ["number", "boolean"], "minimum": 2}]},
+   "tests": [
+    {"note": "integer below 2 matches the first only", "data": 1, "valid": true},
+    {"note": "non-integer at least 2 matches the second only", "data": 2.5, "valid": true},
+    {"note": "integer at least 2 matches both", "data": 3, "valid": false},
+    {"note": "non-integer below 2 matches neither", "data": 1.5, "valid": false},
+    {"note": "minimum ignores non-numbers, so a boolean matches only the second (its type allows booleans)", "data": true, "valid": true}
+   ]
+  },
+  {
+   "name": "anyOf and allOf",
+   "schema": {"anyOf": [{"type": "string", "maxLength": 2}, {"type": "number", "minimum": 10}], "allOf": [{"not": {"const": "no"}}]},
+   "tests": [
+    {"note": "short string", "data": "ab", "valid": true},
+    {"note": "big number", "data": 10, "valid": true},
+    {"note": "neither branch", "data": 9, "valid": false},
+    {"note": "anyOf passes, allOf/not fails", "data": "no", "valid": false}
+   ]
+  },
+  {
+   "name": "unevaluatedProperties sees properties and allOf",
+   "schema": {"properties": {"a": {}}, "allOf": [{"properties": {"b": {}}}], "unevaluatedProperties": false},
+   "tests": [
+    {"note": "a from properties, b from allOf", "data": {"a": 1, "b": 2}, "valid": true},
+    {"note": "c evaluated by nothing", "data": {"a": 1, "c": 3}, "valid": false}
+   ]
+  },
+  {
+   "name": "unevaluatedProperties with anyOf: annotations of every passing branch",
+   "schema": {
+    "anyOf": [
+     {"properties": {"x": {"const": 1}}, "required": ["x"]},
+     {"properties": {"y": {}}, "required": ["y"]}
+    ],
+    "unevaluatedProperties": false
+   },
+   "tests": [
+    {"note": "first branch passes and evaluates x", "data": {"x": 1}, "valid": true},
+    {"note": "both branches pass, x and y evaluated", "data": {"x": 1, "y": 2}, "valid": true},
+    {"note": "no branch passes", "data": {"x": 2}, "valid": false},
+    {"note": "second branch passes, z unevaluated", "data": {"y": 1, "z": 1}, "valid": false},
+    {"note": "first branch fails, so its x is not evaluated", "data": {"x": 2, "y": 1}, "valid": false}
+   ]
+  },
+  {
+   "name": "unevaluatedProperties with if/then",
+   "schema": {"if": {"properties": {"k": {"const": "a"}}}, "then": {"properties": {"v": {}}}, "unevaluatedProperties": false},
+   "tests": [
+    {"note": "if passes (k evaluated), then evaluates v", "data": {"k": "a", "v": 1}, "valid": true},
+    {"note": "empty object: if passes vacuously", "data": {}, "valid": true},
+    {"note": "if fails, so its annotation on k is dropped", "data": {"k": "b"}, "valid": false}
+   ]
+  },
+  {
+   "name": "unevaluatedItems after prefixItems",
+   "schema": {"prefixItems": [{"type": "string"}], "unevaluatedItems": false},
+   "tests": [
+    {"note": "only the prefix", "data": ["a"], "valid": true},
+    {"note": "one item past the prefix", "data": ["a", 1], "valid": false},
+    {"note": "not an array: ignored", "data": "a", "valid": true}
+   ]
+  },
+  {
+   "name": "unevaluatedItems sees contains",
+   "schema": {"contains": {"type": "string"}, "unevaluatedItems": {"type": "integer"}},
+   "tests": [
+    {"note": "string matched by contains, integer by unevaluatedItems", "data": ["a", 1], "valid": true},
+    {"note": "boolean neither contained nor an integer", "data": ["a", true], "valid": false},
+    {"note": "no string at all", "data": [1, 2], "valid": false}
+   ]
+  },
+  {
+   "name": "additionalProperties with patternProperties",
+   "schema": {
+    "properties": {"id": {"type": "string"}},
+    "patternProperties": {"^x-": {"type": "integer"}},
+    "additionalProperties": false
+   },
+   "tests": [
+    {"note": "named and patterned", "data": {"id": "a", "x-n": 1}, "valid": true},
+    {"note": "patterned member of the wrong type", "data": {"id": "a", "x-n": "s"}, "valid": false},
+    {"note": "member neither named nor patterned", "data": {"id": "a", "y": 1}, "valid": false},
+    {"note": "the pattern is anchored at the start only", "data": {"x-": 1}, "valid": true},
+    {"note": "a match must start the name", "data": {"ax-b": 1}, "valid": false}
+   ]
+  },
+  {
+   "name": "additionalProperties ignores allOf",
+   "schema": {"allOf": [{"properties": {"b": {}}}], "properties": {"a": {}}, "additionalProperties": false},
+   "tests": [
+    {"note": "b is additional for the outer schema", "data": {"a": 1, "b": 2}, "valid": false},
+    {"note": "a alone", "data": {"a": 1}, "valid": true}
+   ]
+  },
+  {
+   "name": "pattern",
+   "schema": {"pattern": "^[0-9]{3}$"},
+   "tests": [
+    {"note": "three digits", "data": "123", "valid": true},
+    {"note": "four digits", "data": "1234", "valid": false},
+    {"note": "non-strings are ignored", "data": 123, "valid": true}
+   ]
+  },
+  {
+   "name": "pattern is a search",
+   "schema": {"pattern": "c+"},
+   "tests": [
+    {"note": "anywhere in the string", "data": "abccd", "valid": true},
+    {"note": "absent", "data": "abd", "valid": false}
+   ]
+  },
+  {
+   "name": "dependentSchemas and dependentRequired",
+   "schema": {"dependentSchemas": {"a": {"required": ["b"]}}, "dependentRequired": {"c": ["d"]}},
+   "tests": [
+    {"note": "a with b, no c", "data": {"a": 1, "b": 2}, "valid": true},
+    {"note": "a without b", "data": {"a": 1}, "valid": false},
+    {"note": "c without d", "data": {"c": 1}, "valid": false},
+    {"note": "neither trigger", "data": {"x": 1}, "valid": true}
+   ]
+  },
+  {
+   "name": "contains with minContains 0 and uniqueItems",
+   "schema": {"contains": {"const": 1}, "minContains": 0, "uniqueItems": true},
+   "tests": [
+    {"note": "empty array", "data": [], "valid": true},
+    {"note": "1 and 1.0 are equal numbers", "data": [1, 1.0], "valid": false},
+    {"note": "objects equal regardless of member order", "data": [{"a": 1, "b": 2}, {"b": 2, "a": 1}], "valid": false},
+    {"note": "distinct values", "data": [1, "1", true], "valid": true}
+   ]
+  },
+  {
+   "name": "multipleOf in decimal",
+   "schema": {"type": "number", "multipleOf": 0.1},
+   "tests": [
+    {"note": "0.3 is three tenths", "data": 0.3, "valid": true},
+    {"note": "1e20 is a multiple", "data": 1e20, "valid": true},
+    {"note": "0.35 is not", "data": 0.35, "valid": false}
+   ]
+  }
+ ]
+}

@@ -1,0 +1,9 @@
+{
+  "digests": {
+    "pal.cont.seq-a@1": "sha256:9e563d63685b087b42c33e4252f299c04b9aeac396284b2d0a5c5186bd77bf69",
+    "pal.cont.seq-cvd@1": "sha256:460e003cb86f8a1553996a8c593955be78da6b8905be1371fa3daf1ffa859845",
+    "pal.step.cvd@1": "sha256:69b962adfcd57855366c7c6d91039e127ba39af1055a6eebe5924627ba402f39",
+    "pal.step.tol@1": "sha256:5d6cc8fff3d0c9ef7f3b67c6c78301eacf2b1c5adda09ded685db45b36fb4f23"
+  },
+  "format": "palette-digests@1"
+}
