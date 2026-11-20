@@ -1,0 +1,88 @@
+{
+  "cues": {
+    "conforms": {
+      "glyph": "state.conforms",
+      "text": "icon.state.conforms"
+    },
+    "indeterminate": {
+      "glyph": "state.indeterminate",
+      "text": "icon.state.indeterminate"
+    },
+    "nonconforms": {
+      "glyph": "state.nonconforms",
+      "text": "icon.state.nonconforms"
+    },
+    "not-decidable": {
+      "glyph": "state.not-decidable",
+      "text": "icon.state.not-decidable"
+    },
+    "not-evaluated": {
+      "glyph": "state.not-evaluated",
+      "text": "icon.state.not-evaluated"
+    },
+    "out-of-tolerance": {
+      "glyph": "pattern.out-of-tolerance",
+      "text": "icon.pattern.out-of-tolerance"
+    },
+    "stale": {
+      "glyph": "state.stale",
+      "text": "icon.state.stale"
+    }
+  },
+  "format": "status-palette@1",
+  "formula": "ciede2000",
+  "locked": true,
+  "min_delta_e2000": 20,
+  "sets": {
+    "conforming": [
+      "conforms"
+    ],
+    "nonconforming": [
+      "nonconforms",
+      "out-of-tolerance",
+      "stale"
+    ]
+  },
+  "themes": {
+    "dark": {
+      "conforms": "#40c0e0",
+      "indeterminate": "#d0e000",
+      "nonconforms": "#ffa0a0",
+      "not-decidable": "#c0f020",
+      "not-evaluated": "#f0f0f0",
+      "stale": "#f08020"
+    },
+    "floor": {
+      "conforms": "#00607a",
+      "indeterminate": "#002000",
+      "nonconforms": "#b01020",
+      "not-decidable": "#000040",
+      "not-evaluated": "#202020",
+      "stale": "#8a4000"
+    },
+    "hc": {
+      "conforms": "#004050",
+      "indeterminate": "#101000",
+      "nonconforms": "#900010",
+      "not-decidable": "#201000",
+      "not-evaluated": "#000000",
+      "stale": "#603000"
+    },
+    "light": {
+      "conforms": "#00607a",
+      "indeterminate": "#002000",
+      "nonconforms": "#b01020",
+      "not-decidable": "#000040",
+      "not-evaluated": "#202020",
+      "stale": "#8a4000"
+    },
+    "print": {
+      "conforms": "#00607a",
+      "indeterminate": "#002000",
+      "nonconforms": "#b01020",
+      "not-decidable": "#000040",
+      "not-evaluated": "#202020",
+      "stale": "#8a4000"
+    }
+  }
+}

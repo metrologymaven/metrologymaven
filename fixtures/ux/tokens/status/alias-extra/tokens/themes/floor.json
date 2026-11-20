@@ -1,0 +1,13 @@
+{
+  "bindings": {
+    "sem.status.conforms": "{prim.color.fix.conforms-floor}",
+    "sem.status.indeterminate": "{prim.color.fix.indeterminate-floor}",
+    "sem.status.nonconforms": "{prim.color.fix.nonconforms-floor}",
+    "sem.status.not-decidable": "{prim.color.fix.not-decidable-floor}",
+    "sem.status.not-evaluated": "{prim.color.fix.not-evaluated-floor}",
+    "sem.status.pending": "{prim.color.fix.stale-floor}",
+    "sem.status.stale": "{prim.color.fix.stale-floor}"
+  },
+  "format": "fid-design-theme@1",
+  "theme": "floor"
+}
