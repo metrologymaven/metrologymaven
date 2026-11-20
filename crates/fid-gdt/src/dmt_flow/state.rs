@@ -72,7 +72,7 @@
 //! while the review history is kept. The revision is `signed_off` exactly when two distinct
 //! reviewers hold live approvals (REQ-003). No floating point, no hash maps, no panics.
 
-use super::roster::{Date, Dialect as RosterDialect, ReviewerId, Roster, RosterView};
+use super::roster::{Date, Dialect as RosterDialect, ReviewerId, Roster};
 use fid_bus::principal::{Principal, PrincipalKind};
 use fid_canon::{digest_bytes, to_canonical_bytes, CValue};
 use fid_gps::dmt::{row_content_digest, Dialect, DmtKey, DmtRow, ReviewState, Reviewers, RowStatus};
@@ -161,7 +161,7 @@ pub enum FlowError {
     /// `replay_mismatch{reason}`: the journaled records do not rebuild the same revision.
     ReplayMismatch {
         /// `empty`, `first_not_propose`, `propose_inside_revision`, `malformed_record`,
-        /// `principal_kind` or `record_differs`.
+        /// `principal_kind`, `reviewer_differs` or `record_differs`.
         reason: &'static str,
     },
 }
@@ -700,12 +700,15 @@ pub struct Step {
 }
 
 /// One journaled transition as [`replay`] reads it back: the record payload as stored, and
-/// the principal kind of the journal entry that carries it (from the entry header, which the
-/// bus wrote; never from the payload).
+/// the principal of the journal entry that carries it. Kind and identity come from the entry
+/// header, which the bus wrote; they are never read from the payload, and no payload carries
+/// a principal identity.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordedFlow {
-    /// Principal kind of the journal entry.
+    /// Principal kind of the journal entry header.
     pub principal_kind: PrincipalKind,
+    /// Principal identity of the journal entry header.
+    pub principal_id: String,
     /// The payload, as parsed from the journal.
     pub record: CValue,
 }
@@ -740,9 +743,9 @@ fn propose_as(prev: Option<&RowRevision>, row: DmtRow, author: Author, at: Date)
         }
     };
     let provenance = if author.is_human() { Provenance::Human } else { Provenance::Agent };
+    // No principal identity in the payload: the journal entry header carries it.
     let value = obj([
         ("at", s(&at.to_string())),
-        ("author", author_cvalue(&author)),
         ("author_kind", s(author.kind.as_str())),
         ("content_digest", s(content_digest.as_str())),
         ("derived_from", derived_cvalue(derived_from)),
@@ -774,26 +777,20 @@ fn propose_as(prev: Option<&RowRevision>, row: DmtRow, author: Author, at: Date)
 /// Applies one review event (REQ-001 .. 005, 007; REQ-GDT.RES.ROWFLOW-006). The checks run in
 /// the order of the module documentation; on any failure `rev` is unchanged and nothing is
 /// returned to journal.
-pub fn transition(rev: &RowRevision, event: &ReviewEvent<'_>, roster: &dyn RosterView) -> Result<Step, FlowError> {
+///
+/// `roster` must be the project-published roster (`dmt-reviewers/v1` from the DMT data
+/// repository); see [`replay`] for the same precondition.
+pub fn transition(rev: &RowRevision, event: &ReviewEvent<'_>, roster: &Roster) -> Result<Step, FlowError> {
     check_state(rev, event.decision)?;
     if event.reviewer.kind() != PrincipalKind::Human {
         return Err(FlowError::ReviewerNotHuman);
     }
     check_time_and_digest(rev, event.at, event.reviewed_digest)?;
-    let reviewer_id = event.reviewer.id().as_str();
-    if reviewer_id.eq_ignore_ascii_case(&rev.author.id) {
-        return Err(FlowError::ReviewerIsAuthor);
-    }
-    let dialect = roster_dialect(rev.row.dialect());
-    let rid =
-        roster.has_role(&roster_identity(reviewer_id), dialect, event.at).ok_or(FlowError::ReviewerNotInRoster)?;
-    if roster.has_role(&roster_identity(&rev.author.id), dialect, event.at).as_ref() == Some(&rid) {
-        return Err(FlowError::ReviewerIsAuthor);
-    }
+    let rid = check_reviewer(rev, event.reviewer.id().as_str(), roster, event.at)?;
     finish_review(
         rev,
         rid,
-        roster.roster_digest(),
+        roster.digest(),
         ReviewInput {
             decision: event.decision,
             attestations: &event.attestations,
@@ -813,6 +810,20 @@ fn check_state(rev: &RowRevision, decision: Decision) -> Result<(), FlowError> {
         return Err(FlowError::AgentAuthoredRevision);
     }
     Ok(())
+}
+
+/// Checks 6 to 8: the reviewing principal is not the author, holds a roster role for the
+/// row's dialect on `at`, and that roster ID is not also the author's. Returns the ID.
+fn check_reviewer(rev: &RowRevision, reviewer_id: &str, roster: &Roster, at: Date) -> Result<ReviewerId, FlowError> {
+    if reviewer_id.eq_ignore_ascii_case(&rev.author.id) {
+        return Err(FlowError::ReviewerIsAuthor);
+    }
+    let dialect = roster_dialect(rev.row.dialect());
+    let rid = roster.has_role(&roster_identity(reviewer_id), dialect, at).ok_or(FlowError::ReviewerNotInRoster)?;
+    if roster.has_role(&roster_identity(&rev.author.id), dialect, at).as_ref() == Some(&rid) {
+        return Err(FlowError::ReviewerIsAuthor);
+    }
+    Ok(rid)
 }
 
 /// Checks 4 and 5: the date never goes back, and the reviewer read this content.
@@ -906,15 +917,27 @@ fn finish_review(
 /// key (or `None` for the first), `row` the row the proposal journaled (with `review:
 /// draft`), and `rosters` every roster the reviews may name by digest.
 ///
-/// Every invariant is checked again, in the order [`propose`] and [`transition`] use: the
-/// proposal must name the entry's own principal kind as author kind; every review must come
-/// from a `human` entry, name a roster given here (`unknown_roster`) in which the reviewer ID
-/// held the role for the row's dialect on the review date (`reviewer_not_in_roster`) and
-/// which does not bind the author to that ID (`reviewer_is_author`); the rest
-/// (state, author, dates, digest, duplicates, attestations, IDR) is the same code as
-/// [`transition`]. Finally each rebuilt record must equal the journaled payload byte for byte
-/// in RFC 8785 form (`replay_mismatch{record_differs}`), so an edited, dropped, reordered or
+/// Principals come only from the entry headers ([`RecordedFlow::principal_kind`] and
+/// [`RecordedFlow::principal_id`]): the author of the revision is the proposal entry's
+/// principal, and each review is bound to its entry's principal. Every invariant is checked
+/// again with the same code and in the same order as [`propose`] and [`transition`]: the
+/// proposal's `author_kind` must be its entry's kind (`replay_mismatch{principal_kind}`);
+/// every review entry must be `human`, must not be the author (ASCII case-insensitive), and
+/// its principal must hold, in the roster the review names (`unknown_roster` if not given),
+/// a role for the row's dialect on the review date whose reviewer ID is the one the record
+/// names (`reviewer_not_in_roster`, else `replay_mismatch{reviewer_differs}`), and which the
+/// author does not also hold (`reviewer_is_author`). So one person cannot journal two
+/// approvals under two reviewer IDs, and an author cannot journal a review naming someone
+/// else. Finally each rebuilt record must equal the journaled payload byte for byte in RFC
+/// 8785 form (`replay_mismatch{record_differs}`), so an edited, dropped, reordered or
 /// inserted record is refused.
+///
+/// **Precondition (trusted rosters):** `rosters` must hold only rosters the project
+/// published (`dmt-reviewers/v1` from the DMT data repository, at digests recorded by
+/// `GDT.RES.STATUS`'s `gdt-published/v1`). Replay trusts a roster it is given; a caller that
+/// passes a self-made roster can make any principal a reviewer. The verified loader that
+/// would let the type enforce this (a `TrustedRosters` built only from published digests)
+/// belongs to `GDT.RES.STATUS`, which is not built yet; until then this is the caller's duty.
 pub fn replay(
     prev: Option<&RowRevision>,
     row: DmtRow,
@@ -925,12 +948,12 @@ pub fn replay(
     if field_str(&first.record, "event")? != "propose" {
         return Err(mismatch("first_not_propose"));
     }
-    let author_v = field(&first.record, "author")?;
-    let kind = PrincipalKind::parse(field_str(author_v, "kind")?).map_err(|_| mismatch("malformed_record"))?;
+    let kind =
+        PrincipalKind::parse(field_str(&first.record, "author_kind")?).map_err(|_| mismatch("malformed_record"))?;
     if kind != first.principal_kind {
         return Err(mismatch("principal_kind"));
     }
-    let author = Author { kind, id: field_str(author_v, "id")?.to_owned() };
+    let author = Author { kind, id: first.principal_id.clone() };
     let at = date_of(&first.record)?;
     let step = propose_as(prev, row, author, at)?;
     same_record(&step.record, &first.record)?;
@@ -973,12 +996,8 @@ pub fn replay(
         }
         check_time_and_digest(&rev, at, reviewed)?;
         let roster = rosters.iter().find(|ro| ro.digest() == roster_digest).ok_or(FlowError::UnknownRoster)?;
-        let dialect = roster_dialect(rev.row.dialect());
-        if !roster.get(rid.as_str()).is_some_and(|e| e.grants(dialect, at)) {
-            return Err(FlowError::ReviewerNotInRoster);
-        }
-        if roster.has_role(&roster_identity(&rev.author.id), dialect, at).as_ref() == Some(&rid) {
-            return Err(FlowError::ReviewerIsAuthor);
+        if check_reviewer(&rev, &entry.principal_id, roster, at)? != rid {
+            return Err(mismatch("reviewer_differs"));
         }
         let input =
             ReviewInput { decision, attestations: &attestations, reviewed_digest: reviewed, idr: idr.as_ref(), at };

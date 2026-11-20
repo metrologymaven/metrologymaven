@@ -205,9 +205,10 @@ struct Run {
     outcomes: Vec<CValue>,
     revisions: Vec<RowRevision>,
     records: Vec<Vec<u8>>,
-    /// What the journal holds per successful step: entry principal kind, the proposed row
+    /// What the journal holds per successful step: entry header principal kind and identity,
+    /// the proposed row
     /// (for a proposal) and the record payload.
-    journal: Vec<(PrincipalKind, Option<DmtRow>, CValue)>,
+    journal: Vec<(PrincipalKind, String, Option<DmtRow>, CValue)>,
 }
 
 fn run_case(name: &str) -> (Run, Vec<CValue>) {
@@ -221,11 +222,13 @@ fn run_case(name: &str) -> (Run, Vec<CValue>) {
         let at = date(st(get(ev, "at")));
         let before = rev.clone();
         let kind: PrincipalKind;
+        let who: String;
         let mut proposed: Option<DmtRow> = None;
         let result = match st(get(ev, "op")) {
             "propose" => {
                 let author = principal_of(&mut table, get(ev, "author"));
                 kind = author.kind();
+                who = author.id().as_str().to_owned();
                 let row = rows[st(get(ev, "row"))].clone();
                 proposed = Some(row.clone());
                 propose(rev.as_ref(), row, &author, at)
@@ -234,6 +237,7 @@ fn run_case(name: &str) -> (Run, Vec<CValue>) {
                 let current = rev.as_ref().unwrap();
                 let reviewer = principal_of(&mut table, get(ev, "reviewer"));
                 kind = reviewer.kind();
+                who = reviewer.id().as_str().to_owned();
                 let decision = match st(get(ev, "decision")) {
                     "approve" => Decision::Approve,
                     "request_changes" => Decision::RequestChanges,
@@ -263,7 +267,7 @@ fn run_case(name: &str) -> (Run, Vec<CValue>) {
             Ok(step) => {
                 run.outcomes.push(o([("ok", summary(&step.revision))]));
                 let bytes = step.record.canonical_bytes().unwrap();
-                run.journal.push((kind, proposed, parse(&bytes).unwrap()));
+                run.journal.push((kind, who, proposed, parse(&bytes).unwrap()));
                 run.records.push(bytes);
                 run.revisions.push(step.revision.clone());
                 rev = Some(step.revision);
@@ -390,6 +394,10 @@ fn reviewers_are_pseudonymous() {
         all.push_str(std::str::from_utf8(r).unwrap());
     }
     // Roster IDs only: never a reviewer's principal identity or display name.
+    // No principal identity in any journal record (the entry header carries it).
+    for r in &run.records {
+        assert!(!std::str::from_utf8(r).unwrap().contains("author-a"), "author identity in a record");
+    }
     for leak in ["rev-one", "rev-two", "Reviewer One", "Reviewer Two", "fictional"] {
         assert!(!all.contains(leak), "{leak} leaked into a record");
     }
@@ -719,12 +727,12 @@ fn replay_run(run: &Run, roster: &Roster) -> Vec<RowRevision> {
             group.clear();
         }
     };
-    for (kind, proposed, record) in &run.journal {
+    for (kind, id, proposed, record) in &run.journal {
         if proposed.is_some() {
             flush(&mut row, &mut group, &mut out);
             row.clone_from(proposed);
         }
-        group.push(RecordedFlow { principal_kind: *kind, record: record.clone() });
+        group.push(RecordedFlow { principal_kind: *kind, principal_id: id.clone(), record: record.clone() });
     }
     flush(&mut row, &mut group, &mut out);
     out
@@ -738,7 +746,7 @@ fn replay_round_trips_every_case() {
         let rebuilt = replay_run(&run, &roster);
         // The last revision of each proposal group equals what the live calls produced.
         let mut live: Vec<RowRevision> = Vec::new();
-        for (rev, (_, proposed, _)) in run.revisions.iter().zip(&run.journal) {
+        for (rev, (_, _, proposed, _)) in run.revisions.iter().zip(&run.journal) {
             if proposed.is_some() || live.is_empty() {
                 live.push(rev.clone());
             } else if let Some(last) = live.last_mut() {
@@ -751,8 +759,12 @@ fn replay_round_trips_every_case() {
 
 fn happy_entries() -> (DmtRow, Vec<RecordedFlow>) {
     let (run, _) = run_case("happy");
-    let row = run.journal[0].1.clone().unwrap();
-    let entries = run.journal.iter().map(|(k, _, r)| RecordedFlow { principal_kind: *k, record: r.clone() }).collect();
+    let row = run.journal[0].2.clone().unwrap();
+    let entries = run
+        .journal
+        .iter()
+        .map(|(k, id, _, r)| RecordedFlow { principal_kind: *k, principal_id: id.clone(), record: r.clone() })
+        .collect();
     (row, entries)
 }
 
@@ -785,10 +797,34 @@ fn replay_refuses_a_tampered_journal() {
     let mut e = good.clone();
     e.push(good[2].clone());
     assert_eq!(run(&e), FlowError::BadTransition { state: FlowState::SignedOff, event: "approve" });
-    // A reviewer swapped for one without the role (r3 is ISO only).
+    // A reviewer ID swapped in the payload: the header's principal holds r2, not r3 or r4.
+    let reviewer_differs = FlowError::ReplayMismatch { reason: "reviewer_differs" };
     let mut e = good.clone();
     set(&mut e[2].record, "reviewer", s("r3"));
+    assert_eq!(run(&e), reviewer_differs);
+    // A valid but different roster ID (r4 holds the ASME role) swapped in.
+    let mut e = good.clone();
+    set(&mut e[1].record, "reviewer", s("r4"));
+    assert_eq!(run(&e), reviewer_differs);
+    // One human journaling both approvals, the second naming r2.
+    let mut e = good.clone();
+    e[2].principal_id = "rev-one".to_owned();
+    assert_eq!(run(&e), reviewer_differs);
+    // The author journaling a review that names r2, in any letter case.
+    for author in ["author-a", "Author-A"] {
+        let mut e = good.clone();
+        e[2].principal_id = author.to_owned();
+        assert_eq!(run(&e), FlowError::ReviewerIsAuthor, "{author}");
+    }
+    // A review entry whose principal holds no role.
+    let mut e = good.clone();
+    e[2].principal_id = "nobody".to_owned();
     assert_eq!(run(&e), FlowError::ReviewerNotInRoster);
+    // The author identity comes from the propose entry's header: a different author there
+    // makes r1's own review a self-review.
+    let mut e = good.clone();
+    e[0].principal_id = "rev-one".to_owned();
+    assert_eq!(run(&e), FlowError::ReviewerIsAuthor);
     // A review carried by a non-human journal entry.
     let mut e = good.clone();
     e[1].principal_kind = PrincipalKind::Agent;
