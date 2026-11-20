@@ -272,7 +272,8 @@ fn ac11_export_is_deterministic_and_replays_identical() {
     assert_eq!(replay_export(&lost, &c.journal, &main, &trusted, &c.coi), ReplayOutcome::NotReplayable);
 
     // An export at an earlier journal entry is AC-12's R1.
-    let r1 = &arr(&case("currency").expected, "registers")[0];
+    let currency = case("currency");
+    let r1 = &arr(&currency.expected, "registers")[0];
     let at = digest(st(r1, "head"));
     let early = export_rule_status(&ctx, Principal::Human, "root://exports/r1.json", Some(at)).unwrap();
     assert_eq!(early.bytes, read("currency/register_r1.json"));

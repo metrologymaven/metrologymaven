@@ -370,7 +370,7 @@ fn rebuild<'a>(
 
 fn proposal_reason(e: &FlowError) -> &'static str {
     match e {
-        FlowError::ReplayMismatch { reason } => *reason,
+        FlowError::ReplayMismatch { reason } => reason,
         other => other.code(),
     }
 }
