@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-kunc]
 satisfies: [REQ-UNC.PROP.MCM-004]
 covers: []
 depends_on: [UNC.PROP.MCM.BLOCK, KRN.MAN.KCI]
@@ -17,7 +18,7 @@ determinism: D2
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # UNC.PROP.MCM.SAMP: Retained sample sets and their digest
@@ -73,6 +74,15 @@ Defines the canonical byte format `mcm-samples@1` in which Monte Carlo output sa
 ## Open questions
 
 - The 64 MiB default cap is unmeasured against DEC and XFM needs [unverified].
+- **Applied (byte layout).** `u64` little-endian header length `H`; `H` bytes of RFC 8785 header `{"failed","inputs","model","outputs":[...],"profile","seed","trials","version":"mcm-samples@1"}` (integers as decimal strings, outputs in ascending byte order, the column order of `BlockOut`); per output `trials - failed` little-endian f64; then `failed` little-endian `u64` indices, strictly ascending. Size `8 + H + 8 (K (T - F) + F)`. The full rules are in the module documentation of `fid-kunc` `prop::mcm::samples`.
+- **Applied (failure codes not retained).** BLOCK records `(index, code, detail)` per failed trial. Scope names only the failed-index list, so the codes are not in the set; they stay in the blocks and belong in the run record (`UNC.PROP.MCM.CMD`).
+- **Applied (`encode(blocks, header, cap)`).** The header carries `trials` and `failed`, and the encoder checks them against the blocks. The blocks must be exactly blocks `0 .. n` of one size, with one column per header output, finite values and failed indices inside each block's range. Anything else is `samples_invalid{detail}`. The checks run before the cap test. Errors are `McmError::SamplesNotRetained{size}` and `McmError::SamplesInvalid{detail}` (details: `blocks`, `columns`, `block_size`, `non_finite`, `failed`, `trials`, `failed_count`, `outputs`, `counts`; for the decoder also `too_large`, `length`, `header`, `version`).
+- **Applied (bounded decoder).** `decode(bytes, cap)` refuses input over `cap` (`too_large`) and headers over 1 MiB. It accepts only the canonical header bytes, so one sample set has exactly one encoding and one digest. REQ-003's count and length mismatch is `samples_invalid{length}`, and an unknown version is `samples_invalid{version}`.
+- **Applied (oracle bit exactness).** The digest pins every sample bit. A correctly rounded 60-digit ln differs from the crate's fdlibm ln in the last place for about 2.6 % of AS241 tail calls, and that changes one linear2 sample. So `fixtures/unc/mcm/samp/make_fixtures.py` ports the published fdlibm logarithm to Python binary64 (no platform libm) and checks every call against the 60-digit ln (within 1 ulp). Its linear2 and fail_fit digests match the crate on every CI target, wasm32 included.
+- **Open (profile digest; for UNC.PROP.MCM.ADAPT or UNC.PROP.MCM.CMD).** The header's `profile` digest is opaque here. `AdaptProfile` has no canonical form or digest yet. ADAPT or CMD should define one so that the header names the profile the run used.
+- **Open (storage; for UNC.PROP.MCM.CMD).** CMD stores the bytes under their digest and records `samples_not_retained{size}` in the run record when the cap is exceeded.
+- **Measured (performance; release, x86-64 Windows, 3 runs).** Encoding 10^6 samples took 51 to 57 ms with the digest included. SHA-256 alone took 43 to 48 ms (the kernel's portable SHA-256, `KRN.MAN.KCI`), and the byte layout took about 8 ms. The 50 ms budget is met by the layout but not with the digest. A faster digest is a `KRN.MAN.KCI` matter.
+- **Deferred (AC-H1).** AC-H1 needs `UNC.DEC` (conformance probability), `UNC.ORS.UNC.BASE` (known-truth cases) and `UNC.PROP.MCM.CMD` (runs at ADAPT's trial counts), none of them built. When it is measured, the retention claim should use an exact one-sided binomial band, since only low retention falsifies: with N runs, falsified if the retained count is below the largest k with P(K < k) <= 0.05 under Binomial(N, 0.95). For the 6 runs named (4 JCGM 101:2008 clause 9 examples [unverified: clause 9 numbering] and 2 ORS cases), that is k = 5 (P(K < 5) = 0.0328). The bit-for-bit recomputed probability has no band.
 
 ## Children
 
