@@ -30,7 +30,7 @@ pub fn export_registry() -> Result<Registry, String> {
         Vec::new(),
         vec!["ftp".to_string()],
         CValue::Obj(BTreeMap::new()),
-        Phase::new(0).map_err(|e| err("phase", e))?,
+        Phase::new(0).ok_or_else(|| "phase 0 is not valid".to_string())?,
         Origin::FirstParty,
         Direction::Export,
     )
