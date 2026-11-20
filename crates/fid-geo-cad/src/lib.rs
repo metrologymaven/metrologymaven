@@ -14,16 +14,19 @@
 //! imported or derived trimming curve of every coedge, with its measured 3-D deviation, and
 //! the per-face parameter chart that unwraps loops on periodic surfaces.
 //!
-//! Trim classification (`GEO.CAD.TOPO.TRIM`),
-//! geometric validation (`GEO.CAD.TOPO.VALID`) and the commands (`GEO.CAD.TOPO.CMD`) are
+//! Implemented leaf: `GEO.CAD.TOPO.TRIM` (see [`topo::trim`]): [`TrimIndex`] and
+//! [`classify_uv`], whether a parameter lies inside, outside or on the boundary of a trimmed
+//! face, with exact crossing decisions and a boundary band stated in metres.
+//!
+//! Geometric validation (`GEO.CAD.TOPO.VALID`) and the commands (`GEO.CAD.TOPO.CMD`) are
 //! other leaves.
 
 pub mod topo;
 
 pub use topo::{
-    body_digest, decode, derive_coedge, derive_pcurves, encode, pcurve_disagreement, AdjError, Adjacency, Body,
-    BodyBuilder, Coedge, CoedgeIx, Curve2, CurveDef, CurveParams, DecodeError, DisagreementError, Edge, EdgeIx,
+    body_digest, classify_uv, decode, derive_coedge, derive_pcurves, encode, pcurve_disagreement, AdjError, Adjacency,
+    Body, BodyBuilder, Coedge, CoedgeIx, Curve2, CurveDef, CurveParams, DecodeError, DisagreementError, Edge, EdgeIx,
     EntityIx, EntityKind, Face, FaceChart, FaceIx, FailReason, Frame, GeomError, IndexPath, InversionFault, Label,
     Loop, LoopIx, PairingFault, PcurveError, Pcurves, Sense, Shell, ShellIx, SurfaceDef, SurfaceParams, TopoBuildError,
-    TopologyId, TrimCurve, Vertex, VertexIx, DEFAULT_TOL_M,
+    TopologyId, TrimClass, TrimCurve, TrimError, TrimIndex, TrimSeg, Undecidable, Vertex, VertexIx, DEFAULT_TOL_M,
 };

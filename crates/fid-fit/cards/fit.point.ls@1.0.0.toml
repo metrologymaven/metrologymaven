@@ -1,0 +1,14 @@
+# Spec card (KRN.LSQ.LIN). Cite designators and clause numbers only; never paste standards text.
+id = "fit.point.ls@1.0.0"
+title = "Least-squares point (centroid)"
+method = "Centroid of the points by fixed-order compensated sums; residuals are the distances to the centroid. Closed form, no iteration."
+applicability = "At least 1 point. Coordinates in metres, finite and not subnormal; at most 2^24 points."
+references = [
+  "Shakarji, C. M. (1998). Least-squares fitting algorithms of the NIST algorithm testing system. Journal of Research of the National Institute of Standards and Technology 103(6).",
+]
+determinism = "D0"
+failure_modes = [
+  "A cluster with a few far outliers moves the centroid; select points first (KRN.OUT).",
+  "Residuals are unsigned distances, so their mean is not zero.",
+]
+validation = "Bit-exact model and 80-digit exact reference: fixtures/fit/lin-synth-v1 (make_lin_fixtures.py), checked on x86-64, ARM64 and wasm32."

@@ -1,6 +1,6 @@
 [package]
 name = "fid-design"
-description = "Design-system tooling commands; first module: pkg-check and pkg-diff (spec node UX.SYSTEM.PKG)"
+description = "Design-system tooling commands: pkg-check and pkg-diff (UX.SYSTEM.PKG), princ-check and words-check (UX.SYSTEM.PRINC)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

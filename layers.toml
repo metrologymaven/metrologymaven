@@ -64,6 +64,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # the engine and services crates that declare commands.
 "fid-registry-build" = "services"
 "fid-program" = "services"
+# Record to program and release lifecycle (AUTO.REC.ADOPT first): needs fid-program (services) and fid-bus (engine).
+"fid-program-rec" = "services"
 "fid-io-reg" = "services"
 "fid-io-dmis" = "services"
 "fid-io-e57" = "services"
@@ -109,3 +111,5 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-eval-harness" = "tool"
 "fid-eval-redteam" = "tool"
 "fid-testkit" = "test-support"
+# VIZ.SHELL.SPKTREE throwaway toolkit spike; never a dependency of product crates.
+"fid-spike-ui" = "viewer"

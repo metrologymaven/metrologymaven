@@ -1,0 +1,97 @@
+{
+ "description": "spherical cap v > 0.5 rad of a sphere r 0.05 m: one latitude circle winding once in u, material on its left (GEO.CAD.TOPO.TRIM)",
+ "license": "CC-BY-4.0",
+ "body_id": "ca95ca95ca95ca95ca95ca95ca95ca95",
+ "vertices": [
+  {
+   "point": [
+    0.04387912809451864,
+    0.0,
+    0.02397127693021015
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.04387912809451864,
+    "origin": [
+     0.0,
+     0.0,
+     0.02397127693021015
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-latitude"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-latitude"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0
+   ],
+   "outer": true,
+   "label": "l-latitude"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "sphere",
+    "radius": 0.05,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "f-cap"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": false
+  }
+ ]
+}

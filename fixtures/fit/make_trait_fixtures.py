@@ -428,6 +428,7 @@ def make_row():
         field("constraints.projection_plane.n", "number_array", D, False),
         field("thresholds.rank_tol", "number", D),
         field("thresholds.min_coverage", "number", A),
+        field("thresholds.eig_ratio_max", "number", D),
         field("nlls.method", "string"),
         field("nlls.max_iter", "integer", C),
         field("nlls.tol_grad", "number", D),

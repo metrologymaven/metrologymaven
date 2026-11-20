@@ -1,0 +1,55 @@
+# VIZ.SHELL.SPKTREE results: element tree with 10k items
+
+Overall: **fail**
+
+## Environment
+
+- Hardware: Test rig | 16 GB \u{202e}
+- GPU adapter: iGPU (Vulkan)
+- Profile: not the PLAT H1 reference machine; timings are [unverified] for H1
+- Versions: egui 0.33.3, wgpu 27.0.1, winit 0.30.13
+
+## Criteria
+
+| Criterion | Measured | Threshold | Result |
+|---|---|---|---|
+| AC-1 scroll, p95 frame time | 40.000 ms (n = 3) | < 33 ms | fail |
+| AC-2 expand-all, p95 frame time | 6.000 ms (n = 2) | < 33 ms | pass |
+| AC-2 collapse-all, p95 frame time | - | < 33 ms | not run |
+| REQ-002 filter typing, p95 frame time | 33.000 ms (n = 1) | < 33 ms | fail |
+| AC-3 keyboard sequence | 47 of 48 steps | all steps | fail |
+| AC-4 screen reader (manual) | see log | role, name, level, expanded for 5 items | not run |
+
+## Recommendation
+
+- AC-1 scroll: fail, measured 40.000 ms (n = 3).
+- REQ-002 filter typing: fail, measured 33.000 ms (n = 1).
+- AC-3 keyboard: fail, measured 47 of 48 steps.
+
+Fall back to D-005 option B for the element tree screen. The spike adopts nothing; the maintainers confirm or reopen D-005.
+
+## Frame-time summary
+
+| Series | n | min | median | p95 | max |
+|---|---|---|---|---|---|
+| scroll | 3 | 10.000 ms | 20.000 ms | 40.000 ms | 40.000 ms |
+| expand-all | 2 | 5.000 ms | 5.000 ms | 6.000 ms | 6.000 ms |
+| filter-typing | 1 | 33.000 ms | 33.000 ms | 33.000 ms | 33.000 ms |
+
+Raw per-frame timings: `timings.csv` (series, index, ms).
+
+## Manual screen-reader check (AC-4)
+
+Screen reader and version:
+
+| Item | Role | Name | Level | Expanded |
+|---|---|---|---|---|
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
+| 4 | | | | |
+| 5 | | | | |
+
+## Limitations
+
+- Rows announce\u{200b} only when visible

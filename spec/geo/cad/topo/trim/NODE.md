@@ -9,6 +9,8 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-cad]
+built_pr: 295
 satisfies: [REQ-GEO.CAD.TOPO-003]
 covers: []
 depends_on: [GEO.CAD.TOPO.MODEL, GEO.CAD.TOPO.PCURVE, GEO.NURBS.EVAL]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # GEO.CAD.TOPO.TRIM: Trimmed-face point classification
@@ -60,14 +62,23 @@ Decides whether a surface parameter (u, v) lies inside, outside or on the bounda
 - **Registry command(s):** none; library leaf.
 - **Data structures:** `TrimIndex { segments: Vec<TrimSeg { a: [f64; 2], b: [f64; 2], loop_ix, coedge_ix, bbox }>, chart: FaceChart }`; `TrimClass`.
 - **Algorithm:** flatten each trimming curve to a uv polyline whose surface image is within tol/4 of the curve (imported pcurves are flattened by fixed bisection; derived ones are already polylines); boundary band check first (candidate segments by bbox inflated by a uv bound derived from the surface's maximum first-derivative norm over the segment box, then exact 3D point-to-segment-image distance by GEO.NURBS.EVAL at a fixed sample count, refined by bisection); otherwise crossing number with half-open rule (count a segment when exactly one endpoint has v ≥ query v).
-- **Errors:** `BadTolerance`, `OutsideDomain`.
+- **Amendment (maintainer decisions on the review of PR 295, 2026-11-20).** These rules replace the parts of the Algorithm above that they cover. `crates/fid-geo-cad/src/topo/trim.rs` holds the full pinned text.
+  - *Chart points* are exact `x + k·P`: binary64 `x` plus whole periods `k`. Periods are never added in floating point.
+  - *Seams.* An edge used by exactly two coedges of the same face is a seam only if the face has a periodic direction and the two uses lie `k ≠ 0` periods apart. Otherwise both uses are ordinary boundary, as for a bridge or slit on a plane. If the two uses coincide (`k = 0`, for example a sphere's meridian seam), the second use is lifted one period to the side where the material lies: the left of the first use for a `Same` face, the right for `Reversed`. A connector next to a seam (a pole connector) is not boundary. On a sphere, vertices within 2⁻⁴⁰ of ±π/2 are put on the pole.
+  - *Inside and outside on a face with exactly one periodic direction.* Cast the ray in the non-periodic direction and count the crossings above q of the lifted loop curves (all chart copies), with the half-open rule in the periodic direction. Material lies on the left of every loop (on the right for a `Reversed` face). The far end of the ray (band top or pole) is material when the topmost curve has material above it. A segment at the greatest height decides this directly; otherwise the turn at the topmost vertex does. q is inside when far end XOR odd count. A point exactly on a seam or pole connector is inside. This classifies winding loops (bands, caps), seam faces and closed faces.
+  - *Other faces.* With no periodic direction, use the even-odd ray `+u`. With two periodic directions, use even-odd over chart copies; a winding loop or seam there is `Undecidable`.
+  - *Undecidable.* A face whose pcurves failed, whose loop is incomplete, whose NURBS pcurve does not flatten, or which is otherwise undecidable returns a typed `Undecidable` error and never a guess.
+  - *Flattening.* Imported NURBS pcurves are flattened at `tol_m / 4` for each query tolerance.
+  - *Band.* The band is a branch and bound with per-surface Lipschitz bounds. Its guard is a stated forward-error bound on evaluation, distance, uv rounding and period drift. Every point within `tol_m` is `OnBoundary`, and the band is closed outward by at most `tol_m·2⁻¹³` plus the guard.
+  - *Copy limit.* A periodic coordinate more than 2²⁰ periods from the chart is `OutsideDomain`.
+- **Errors:** `BadTolerance`, `OutsideDomain`, `Undecidable`.
 - **Determinism:** D0.
 - **Performance budget:** median 2 µs per classification on a face with 200 boundary segments [unverified].
 - **Crate:** `fid-geo-cad` (L0, KNP-1 applies).
 
 ## Test fixtures
 
-- `plate_with_hole.json`, `cylinder_window.json`: hand-written analytic faces with closed-form answers. CC-BY-4.0.
+- `plate_with_hole.json`, `cylinder_window.json`, `trim_polygons.json`, `sphere_seam_closed.json`, `sphere_cap.json` (with PCURVE's `cylinder_band.json` and `cylinder_capped.json`): analytic faces with exact-rational or closed-form answers from `make_trim_fixtures.py`. CC-BY-4.0.
 
 ## Build prompt
 

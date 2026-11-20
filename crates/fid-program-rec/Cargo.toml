@@ -1,0 +1,30 @@
+[package]
+name = "fid-program-rec"
+description = "Metrology Maven record-to-program and release lifecycle: agent-provenance gate on release (AUTO.REC.ADOPT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Bus-derived principals and the D-031 `human_only` class check (CORE.BUS.PRIN, CORE.BUS.POL.CLASS).
+# Layer engine, below fid-program-rec (services).
+fid-bus = { path = "../fid-bus" }
+# Canonical JSON of journal events and bounded MCP parameter parsing. Layer model.
+fid-canon = { path = "../fid-canon" }
+# Program documents, step IDs in document order and the program digest (AUTO.PROG.FMT). Layer services.
+fid-program = { path = "../fid-program" }
+# Command declarations through the registry macros (CORE.REG.DEF.MACRO). Layer model.
+fid-registry = { path = "../fid-registry" }
+# Exact-replay outcome classes (CORE.RPL). Layer engine.
+fid-replay = { path = "../fid-replay" }
+# Shared `sha256:` digests (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+
+[dev-dependencies]
+# Test-only: the journal entry types a human session upgrade needs (CORE.BUS.PRIN, D-012).
+fid-journal = { path = "../fid-journal" }
+
+[lints]
+workspace = true

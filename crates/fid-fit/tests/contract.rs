@@ -426,7 +426,7 @@ fn ac6_row_validation_errors() {
         Err(RowError::UnknownQuantity { field: "feature.half_angle" })
     );
     assert_eq!(
-        tamper(|r| r.params[10].quantity = Some(("count", "1"))),
+        tamper(|r| r.params[11].quantity = Some(("count", "1"))),
         Err(RowError::UnexpectedQuantity { field: "nlls.method" })
     );
     let dup = Field { name: "points", ty: ValueType::Boolean, quantity: None, required: false };

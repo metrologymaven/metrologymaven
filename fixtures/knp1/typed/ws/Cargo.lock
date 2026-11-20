@@ -19,6 +19,10 @@ name = "typed-deep"
 version = "0.0.1"
 
 [[package]]
+name = "typed-e0277"
+version = "0.0.1"
+
+[[package]]
 name = "typed-facade"
 version = "0.0.1"
 
