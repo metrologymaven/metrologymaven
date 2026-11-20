@@ -1,0 +1,46 @@
+{
+ "entries": [
+  {
+   "head": "sha256:d21a5af33c33bc2ef8d59f078049ea272172c8922508679c64870fdc4f0f957d",
+   "id": "019a9a9b-0005-7000-8000-000000000001",
+   "kind": "characteristic",
+   "project": "019a9a9a-0000-7000-8000-00000000000a",
+   "text": "{\"id\":\"019a9a9b-0005-7000-8000-000000000001\",\"name\":\"C01\",\"nominal\":{\"unit\":\"si:m\",\"value\":\"0x3f86872b020c49ba\"},\"schema\":\"fixture.characteristic/1\"}"
+  },
+  {
+   "head": "sha256:678c548eefc79966c3843bf28097e2a9b87ccc7927d2ebd668a247591a1431cd",
+   "id": null,
+   "kind": "statement",
+   "project": "019a9a9a-0000-7000-8000-00000000000a",
+   "text": "{\"characteristic\":\"019a9a9b-0005-7000-8000-000000000001\",\"class\":\"UEC-1\",\"expanded\":{\"U\":\"0x3ec19db7358bd307\",\"k\":\"0x4000000000000000\"},\"method\":\"DECLARED\",\"schema\":\"fixture.unc-statement/1\",\"stage\":\"1\",\"unit\":\"si:m\"}"
+  },
+  {
+   "head": "sha256:d3634453481cd374a504492d28fed227b1e1f1928948ca6925d4ec5f2b163b1f",
+   "id": "019a9a9b-0005-7001-8000-000000000001",
+   "kind": "result",
+   "project": "019a9a9a-0000-7000-8000-00000000000a",
+   "text": "{\"algorithm\":\"gdt.size.two_point@1.0.0\",\"characteristic\":\"019a9a9b-0005-7000-8000-000000000001\",\"decision\":{\"basis\":null,\"outcome\":\"NOT_DECIDABLE\",\"reason\":\"no_rule_bound\",\"rule\":null,\"source\":\"gdt_not_decidable\"},\"dmt_digest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000001\",\"dmt_row\":\"dmt:asme/size/none@1\",\"evaluation_basis\":\"POINTS\",\"input_digests\":[],\"journal_entry\":\"sha256:0000000000000000000000000000000000000000000000000000000000000001\",\"kernel_version\":\"0.1.0\",\"measurand\":\"bracket C01 two-point size\",\"operator_chain_digest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000001\",\"run\":\"019a9a9b-0005-7002-8000-000000000000\",\"schema\":\"fid.gdt-result/1\",\"spec\":{\"defaults_profile\":\"dp:fixture@1\",\"dialect\":\"ASME\",\"inherited_from\":\"explicit\",\"standards\":[]},\"uncertainty\":{\"claimed\":true,\"class\":\"UEC-1\",\"declared_input\":false,\"expanded\":{\"U\":\"0x3ed0c6f7a0b5ed8d\",\"k\":\"0x4000000000000000\"},\"interval\":null,\"method\":\"DECLARED\",\"statement\":\"sha256:ea4ce753c4d7e1b3961f98fef58d08a4303ee049ab4113b1c035096dd3509518\",\"u_std\":null,\"uec0_reason\":null,\"uncharacterized_input\":false,\"unit\":\"si:m\"},\"value\":{\"unit\":\"si:m\",\"value\":\"0x3f86872b020c49ba\"}}"
+  },
+  {
+   "head": "sha256:a1a6aac0d1b6ce62a9dbb8ca32de288ed5f749d09726f29e77c98158afef82a8",
+   "id": "019a9a9b-0006-7000-8000-000000000001",
+   "kind": "characteristic",
+   "project": "019a9a9a-0000-7000-8000-00000000000b",
+   "text": "{\"id\":\"019a9a9b-0006-7000-8000-000000000001\",\"name\":\"C01\",\"nominal\":{\"unit\":\"si:m\",\"value\":\"0x3f86872b020c49ba\"},\"schema\":\"fixture.characteristic/1\"}"
+  },
+  {
+   "head": "sha256:02781c6d0f525b7946e8619a966524f5423fbc8742b8ebc2a192e3adfeb631fa",
+   "id": null,
+   "kind": "statement",
+   "project": "019a9a9a-0000-7000-8000-00000000000b",
+   "text": "{\"characteristic\":\"019a9a9b-0006-7000-8000-000000000001\",\"class\":\"UEC-1\",\"expanded\":{\"U\":\"0x3ec19db7358bd307\",\"k\":\"0x4000000000000000\"},\"method\":\"DECLARED\",\"schema\":\"fixture.unc-statement/1\",\"stage\":\"1\",\"unit\":\"si:m\"}"
+  },
+  {
+   "head": "sha256:3a3b364f679428ece4f5b958812b704d6514f7f43dd7bd6698c1e81bb622699b",
+   "id": "019a9a9b-0006-7001-8000-000000000001",
+   "kind": "result",
+   "project": "019a9a9a-0000-7000-8000-00000000000b",
+   "text": "{\"algorithm\":\"gdt.size.two_point@1.0.0\",\"characteristic\":\"019a9a9b-0006-7000-8000-000000000001\",\"decision\":{\"basis\":null,\"outcome\":\"NOT_DECIDABLE\",\"reason\":\"no_rule_bound\",\"rule\":null,\"source\":\"gdt_not_decidable\"},\"dmt_digest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000001\",\"dmt_row\":\"dmt:asme/size/none@1\",\"evaluation_basis\":\"POINTS\",\"input_digests\":[],\"journal_entry\":\"sha256:0000000000000000000000000000000000000000000000000000000000000001\",\"kernel_version\":\"0.1.0\",\"measurand\":\"bracket C01 two-point size\",\"operator_chain_digest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000001\",\"run\":\"019a9a9b-0006-7002-8000-000000000000\",\"schema\":\"fid.gdt-result/1\",\"spec\":{\"defaults_profile\":\"dp:fixture@1\",\"dialect\":\"ASME\",\"inherited_from\":\"explicit\",\"standards\":[]},\"uncertainty\":{\"claimed\":true,\"class\":\"UEC-1\",\"declared_input\":false,\"expanded\":{\"U\":\"0x3ed0c6f7a0b5ed8d\",\"k\":\"0x4000000000000000\"},\"interval\":null,\"method\":\"DECLARED\",\"statement\":\"sha256:1d78e2e30bb975d559e4cddeee83afa775818334f10b433b8a1678c4d35cb2bd\",\"u_std\":null,\"uec0_reason\":null,\"uncharacterized_input\":false,\"unit\":\"si:m\"},\"value\":{\"unit\":\"si:m\",\"value\":\"0x3f86872b020c49ba\"}}"
+  }
+ ]
+}

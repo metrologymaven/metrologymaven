@@ -12,7 +12,11 @@
 //! report.remove_page@1    {type, report, page, force, report_digest}
 //! report.add_block@1      {type, report, page, after, block, kind, kind_version, payload, report_digest}
 //! report.remove_block@1   {type, report, block, report_digest}
+//! report.bind_block@1     {type, report, block, payload, report_digest}
 //! ```
+//!
+//! `report.bind_block@1` (spec node `RPT.MODEL.BIND.RESOLVE`) holds the block's whole new
+//! payload: its `binding@1` and its `value_binding@1` fields, IDs and digests only.
 
 use super::error::ReportError;
 use super::kind::KindRegistry;
@@ -31,6 +35,8 @@ pub const ADD_PAGE: &str = "report.add_page@1";
 pub const REMOVE_PAGE: &str = "report.remove_page@1";
 pub const ADD_BLOCK: &str = "report.add_block@1";
 pub const REMOVE_BLOCK: &str = "report.remove_block@1";
+/// `report.bind_block@1` (`RPT.MODEL.BIND.RESOLVE`).
+pub const BIND_BLOCK: &str = "report.bind_block@1";
 /// The read-only command; it journals nothing.
 pub const SHOW_REPORT: &str = "report.show_report@1";
 
@@ -66,6 +72,12 @@ pub enum Op {
         report: ReportId,
         block: BlockId,
     },
+    /// Replaces a block's payload with its bound form (`report.bind_block@1`).
+    BindBlock {
+        report: ReportId,
+        block: BlockId,
+        payload: CanonicalJson,
+    },
 }
 
 impl Op {
@@ -77,6 +89,7 @@ impl Op {
             Op::RemovePage { .. } => REMOVE_PAGE,
             Op::AddBlock { .. } => ADD_BLOCK,
             Op::RemoveBlock { .. } => REMOVE_BLOCK,
+            Op::BindBlock { .. } => BIND_BLOCK,
         }
     }
 
@@ -86,7 +99,8 @@ impl Op {
             | Op::AddPage { report, .. }
             | Op::RemovePage { report, .. }
             | Op::AddBlock { report, .. }
-            | Op::RemoveBlock { report, .. } => *report,
+            | Op::RemoveBlock { report, .. }
+            | Op::BindBlock { report, .. } => *report,
         }
     }
 
@@ -110,6 +124,11 @@ impl Op {
                 r.insert_block(&page.uuid(), after.map(|a| a.uuid()).as_ref(), b)?;
             }
             Op::RemoveBlock { block, .. } => r.remove_block(&block.uuid())?,
+            Op::BindBlock { block, payload, .. } => {
+                let b = r.block(&block.uuid()).ok_or(ReportError::NotFound(block.uuid()))?;
+                check_block(kinds, b.kind(), b.kind_version(), payload)?;
+                r.set_block_payload(&block.uuid(), payload.clone())?;
+            }
         }
         Ok(r)
     }
@@ -179,6 +198,10 @@ impl ReportEvent {
                 put("payload", payload_value(payload));
             }
             Op::RemoveBlock { block, .. } => put("block", id(block.uuid())),
+            Op::BindBlock { block, payload, .. } => {
+                put("block", id(block.uuid()));
+                put("payload", payload_value(payload));
+            }
         }
         CValue::Obj(o)
     }
@@ -206,6 +229,7 @@ impl ReportEvent {
                 &["type", "report", "page", "after", "block", "kind", "kind_version", "payload", "report_digest"]
             }
             REMOVE_BLOCK => &["type", "report", "block", "report_digest"],
+            BIND_BLOCK => &["type", "report", "block", "payload", "report_digest"],
             _ => return Err(ReportError::StoreInvalid("unknown event type")),
         };
         let o = exact_obj(v, keys)?;
@@ -247,6 +271,7 @@ impl ReportEvent {
                     payload: payload_from_value(field(o, "payload")?)?,
                 }
             }
+            BIND_BLOCK => Op::BindBlock { report, block: block()?, payload: payload_from_value(field(o, "payload")?)? },
             _ => Op::RemoveBlock { report, block: block()? },
         };
         Ok(ReportEvent { op, report_digest })

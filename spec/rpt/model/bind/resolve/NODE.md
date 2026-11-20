@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-report]
 satisfies: [REQ-RPT.MODEL.BIND-001, REQ-RPT.MODEL.BIND-004, REQ-RPT.MODEL.BIND-005, REQ-RPT.MODEL.BIND-010]
 covers: [GOM.RPT.07]
 depends_on: [RPT.MODEL.DOC, RPT.MODEL.TMPL.SLOT, CORE.JRN, CORE.PRJ.CONT, GDT.CHAR.RECORD]
@@ -60,7 +61,13 @@ Two halves of the same contract. `report.bind_block@1` stores in a block only th
 - **Errors:** `report.binding_has_value`, `report.unjournaled_record`, `report.cross_project_binding`, `report.no_resolver`, `report.not_found`.
 - **Determinism:** D0; lookups are pure reads at a fixed head.
 - **Performance budget:** 10 000 lookups in under 100 ms on reference hardware [unverified until measured].
-- **Crate:** `fid-report`.
+- **Crate:** `fid-report` (module `bind`).
+- **Pinned at build** (each rule has a test in `crates/fid-report/tests/bind.rs`):
+  - *Stored binding.* A bound block's payload holds `binding` = `{"refs": [{"id", "kind"}], "schema": "binding@1"}` (kinds `result`, `characteristic`, `named_view`, `series`, `field`; IDs are canonical UUIDs, field IDs `^[a-z][a-z0-9_.]{0,63}$`; order kept, repeats refused, at most 4096). A reference has exactly `id` and `kind`: any other key is `report.binding_has_value` naming it, and so is a JSON number anywhere in the payload the command stores. Kinds that bind accept the reserved key `binding`.
+  - *Values.* For each `result` reference the command writes one `value_binding@1` per value field of the stored record; the kind places them through `BlockResolver::place` (added to the Design's trait: the engine cannot know a kind's payload layout). ResultRecords are read in the `fid.gdt-result/1` wire form (`GDT.CHAR.RECORD`), whose one value field is `/value` with its statement at `/uncertainty/statement`; a value field without a statement (UEC-0) cannot be bound (`report.value_binding_invalid`, `no_statement`), since `value_binding@1` requires `statement_digest`.
+  - *Resolution order.* resolver (`report.no_resolver`), head (`report.not_found`), stored binding, references in order (project first, so a foreign entity is `report.cross_project_binding` holding only the block and the foreign project; then journal position, `report.unjournaled_record` for any journaled kind; then kind, `report.not_found`), then each declared value field (record referenced by the binding, record digest, value field, statement digest, in that order). The kind gets a typed `Resolved` view whose values are `Quantity` (`SiValue` plus unit); record bytes never reach it, and a `ResolvedBlock` layout may hold no JSON number.
+  - *Journal seam.* `JournalReads` (head position, current head, entity by ID, statement by digest) is implemented by the store adapter of the bus; `MemoryJournal` in memory. `report.bind_block@1` reads at the current head; resolution only at the head it is given.
+  - *Command.* Declared with `#[fid_command]` (W2, D0, `idempotency: none`, `undo: head_move`, MCP exposed). One event `report.bind_block@1 {type, report, block, payload, report_digest}` replayed by `RPT.MODEL.DOC`'s `replay_exact`. An agent principal or any MCP call writes only on its agent branch `agent/<client>/<n>`; a person never on an agent branch (`report.policy`). CLI: `fid report bind-block --report <r> --block <b> [--results|--characteristics|--views|--series|--fields a,b] --json` (`--report` added: block IDs are unique per report only).
 
 ## Test fixtures
 
