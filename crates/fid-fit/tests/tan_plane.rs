@@ -8,6 +8,8 @@
 //! `OUTPUT_PIN` is a regression pin of this crate's own output (not an oracle); CI checks it on
 //! x86-64 Linux and Windows, ARM64 macOS and wasm32.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::needless_range_loop)]
+// `FitError` is large by design (see the note in `fid-fit`'s lib.rs); the helpers return it whole.
+#![allow(clippy::result_large_err)]
 
 use fid_fit::contract::{Constraint, Fit, FitError, FitParams, FittedFeature, Method, PointsView, Weights};
 use fid_fit::tan_plane::{
