@@ -66,7 +66,7 @@ struct Hooks;
 
 impl fid_bus::validate::Hooks for Hooks {
     fn literal(&self, kind: &str, value: &CValue) -> Result<fid_bus::unit::Normalised, fid_bus::error::BusError> {
-        fid_bus::unit::normalise_value(value, kind, &fid_registry::Catalogue::geo_frame())
+        fid_bus::unit::normalise_value(value, kind, &fid_registry::Catalogue::geo_frame().unwrap())
     }
     fn entity(&self, _id: &str) -> fid_bus::validate::RefLookup {
         fid_bus::validate::RefLookup::Missing
