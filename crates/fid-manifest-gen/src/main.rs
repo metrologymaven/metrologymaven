@@ -4,7 +4,20 @@
 //! fid-manifest-gen toolchain-check  [--workspace <dir>]
 //! fid-manifest-gen toolchain-digest [--workspace <dir>] [--rustc <program>] [--record <file>]
 //! fid-manifest-gen toolchain-flags  [--workspace <dir>]
+//! fid-manifest-gen core   --config <manifest-gen.toml> --out <core.json> [--constant <file>]
+//! fid-manifest-gen finish --core <core.json> --artifacts <artifacts.toml> --out <kernel-manifest.json>
+//!                         [--xart <program>] [--timeout-ms <ms>] [--work-dir <dir>]
 //! ```
+//!
+//! `core` (stage one, KRN.MAN.MANI.GEN) gathers the manifest core from the sources the
+//! configuration names, writes the stage-one manifest (canonical, no artifacts) to `--out`,
+//! writes the generated `manifest_core_digest` constant to `--constant` when given, and prints
+//! the core digest. `finish` (stage two) hashes every artifact of the list, asks each for its
+//! core digest through `fid-xart run` (default program `fid-xart`, deadline 60 000 ms), and
+//! writes the full manifest to `--out` and prints its digest. Both remove `--out` first, so a
+//! failed run leaves no stale file. Exit codes: 0 written, 1 refused (a typed error such as
+//! `missing_source: <field>` or `core_digest_mismatch: <artifact>`, printed on stdout), 2 usage
+//! or I/O error.
 //!
 //! `toolchain-check` checks the kernel build settings in `<dir>/kernel-build` (KRN.MAN.REPRO
 //! AC-4) without running a toolchain. `toolchain-digest` also runs `<program> -vV` and
@@ -21,6 +34,7 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
+use fid_manifest_gen::gen::{self, Config, GenError, XartReporter};
 use fid_manifest_gen::toolchain::{
     self, Inputs, ToolchainError, CARGO_CONFIG, KERNEL_BUILD, LOCKFILE, MAX_LOCKFILE_BYTES, MAX_RUSTC_OUTPUT_BYTES,
     MAX_SETTINGS_BYTES, RUST_TOOLCHAIN, SETTINGS_DIR, WORKSPACE_CONFIG, WORKSPACE_MANIFEST,
@@ -28,11 +42,103 @@ use fid_manifest_gen::toolchain::{
 
 const USAGE: &str = "usage: fid-manifest-gen toolchain-check [--workspace <dir>]\n\
        fid-manifest-gen toolchain-digest [--workspace <dir>] [--rustc <program>] [--record <file>]\n\
-       fid-manifest-gen toolchain-flags [--workspace <dir>]";
+       fid-manifest-gen toolchain-flags [--workspace <dir>]\n\
+       fid-manifest-gen core --config <manifest-gen.toml> --out <core.json> [--constant <file>]\n\
+       fid-manifest-gen finish --core <core.json> --artifacts <artifacts.toml> --out <kernel-manifest.json> \
+[--xart <program>] [--timeout-ms <ms>] [--work-dir <dir>]";
 
 enum Failure {
     Refused(ToolchainError),
+    Gen(GenError),
     Usage(String),
+}
+
+impl From<GenError> for Failure {
+    fn from(e: GenError) -> Self {
+        Failure::Gen(e)
+    }
+}
+
+/// `--flag value` pairs, each flag at most once and in `allowed`.
+fn flags<'a>(args: &'a [String], allowed: &[&str]) -> Result<Vec<(&'a str, &'a str)>, Failure> {
+    let mut out: Vec<(&str, &str)> = Vec::new();
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if !allowed.contains(&a.as_str()) || out.iter().any(|(k, _)| *k == a.as_str()) {
+            return Err(Failure::Usage(format!("unknown or repeated option {a}")));
+        }
+        let v = it.next().ok_or_else(|| Failure::Usage(format!("{a}: missing value")))?;
+        out.push((a.as_str(), v.as_str()));
+    }
+    Ok(out)
+}
+
+fn flag<'a>(f: &[(&str, &'a str)], key: &str) -> Option<&'a str> {
+    f.iter().find(|(k, _)| *k == key).map(|(_, v)| *v)
+}
+
+fn required<'a>(f: &[(&str, &'a str)], key: &str) -> Result<&'a str, Failure> {
+    flag(f, key).ok_or_else(|| Failure::Usage(format!("missing {key}")))
+}
+
+/// Removes a stale output file; a missing one is fine.
+fn remove_stale(out: &Path) -> Result<(), Failure> {
+    match std::fs::remove_file(out) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(Failure::Usage(format!("{}: cannot remove the stale file: {e}", out.display()))),
+    }
+}
+
+fn write(path: &Path, bytes: &[u8]) -> Result<(), Failure> {
+    std::fs::write(path, bytes).map_err(|e| Failure::Usage(format!("{}: {e}", path.display())))
+}
+
+fn core_command(rest: &[String]) -> Result<(), Failure> {
+    let f = flags(rest, &["--config", "--out", "--constant"])?;
+    let out = Path::new(required(&f, "--out")?);
+    remove_stale(out)?;
+    let config = Config::load(Path::new(required(&f, "--config")?))?;
+    let stage = gen::core(&config)?;
+    if let Some(c) = flag(&f, "--constant") {
+        write(Path::new(c), &stage.constant)?;
+    }
+    write(out, stage.manifest.canonical_json())?;
+    println!("{}", stage.manifest.core_digest());
+    Ok(())
+}
+
+fn finish_command(rest: &[String]) -> Result<(), Failure> {
+    let f = flags(rest, &["--core", "--artifacts", "--out", "--xart", "--timeout-ms", "--work-dir"])?;
+    let out = Path::new(required(&f, "--out")?);
+    remove_stale(out)?;
+    let read_all = |key: &str| -> Result<Vec<u8>, Failure> {
+        let p = required(&f, key)?;
+        std::fs::read(p).map_err(|e| Failure::Usage(format!("{p}: {e}")))
+    };
+    let stage_one = read_all("--core")?;
+    let artifacts = gen::parse_artifacts(&read_all("--artifacts")?)?;
+    let timeout_ms = match flag(&f, "--timeout-ms") {
+        None => 60_000,
+        Some(v) => v
+            .parse::<u64>()
+            .ok()
+            .filter(|ms| (1..=86_400_000).contains(ms))
+            .ok_or_else(|| Failure::Usage("bad --timeout-ms".to_string()))?,
+    };
+    let work_dir = match flag(&f, "--work-dir") {
+        Some(d) => PathBuf::from(d),
+        None => match out.parent() {
+            Some(p) if !p.as_os_str().is_empty() => p.to_path_buf(),
+            _ => PathBuf::from("."),
+        },
+    };
+    let mut reporter =
+        XartReporter { program: flag(&f, "--xart").unwrap_or("fid-xart").to_string(), work_dir, timeout_ms };
+    let manifest = gen::finish(&stage_one, &artifacts, &mut reporter)?;
+    write(out, manifest.canonical_json())?;
+    println!("{}", manifest.manifest_digest());
+    Ok(())
 }
 
 impl From<ToolchainError> for Failure {
@@ -170,6 +276,8 @@ fn run(args: &[String]) -> Result<(), Failure> {
             println!("{}", rec.digest);
             Ok(())
         }
+        "core" => core_command(rest),
+        "finish" => finish_command(rest),
         _ => Err(Failure::Usage(format!("unknown command {cmd}"))),
     }
 }
@@ -179,6 +287,14 @@ fn main() -> ExitCode {
     match run(&args) {
         Ok(()) => ExitCode::SUCCESS,
         Err(Failure::Refused(e)) => {
+            println!("{e}");
+            ExitCode::from(1)
+        }
+        Err(Failure::Gen(e @ GenError::Io { .. })) => {
+            eprintln!("error: {e}");
+            ExitCode::from(2)
+        }
+        Err(Failure::Gen(e)) => {
             println!("{e}");
             ExitCode::from(1)
         }

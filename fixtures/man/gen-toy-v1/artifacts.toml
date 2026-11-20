@@ -1,0 +1,7 @@
+# Artifacts for `fid-manifest-gen finish` (fixture gen-toy-v1). Paths are relative to the
+# directory finish runs in; `command` answers one call on stdin (the pinned runner).
+[[artifact]]
+role = "wasm"
+target = "wasm32-wasip1"
+file = "artifacts/toy-kernel.wasm"
+command = ["fid-wasm-check", "run", "wasm-runtime.toml", "wasm-imports.allow", "artifacts/toy-kernel.wasm"]

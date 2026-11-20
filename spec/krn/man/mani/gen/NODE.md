@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-manifest-gen, fid-kci, fid-kernel-wasm]
 satisfies: [REQ-KRN.MAN.MANI-001, REQ-KRN.MAN.MANI-002, REQ-KRN.MAN.MANI-004]
 covers: []
 depends_on: [KRN.MAN.MANI.SCHEMA, KRN.MAN.MANI.IMPL, KRN.MAN.KCI, KRN.MAN.CARD, KRN.MAN.REPRO, KRN.MAN.XART, KRN.NUM.FN]
