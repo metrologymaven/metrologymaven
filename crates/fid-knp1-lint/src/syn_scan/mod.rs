@@ -2351,18 +2351,19 @@ pub fn scan_closure(closure: &Closure, cfg: &Config) -> Result<Outcome, SynError
                 message: format!("{} {} {file}: {e}", c.name, c.version),
             })?;
             let fr = FileRef { crate_name: &c.name, crate_version: &c.version, file, crate_files: &c.files };
-            let forced = roots.contains(file).then_some(true);
-            let (o, reached) = scan_file_with(fr, &bytes, cfg, forced);
+            // Every file first gets the reading its path implies.
+            let (o, reached) = scan_file_with(fr, &bytes, cfg, None);
             out.findings.extend(o.findings);
             out.notes.extend(o.notes);
-            if forced.is_some() {
-                mod_rs_done.insert(file.clone());
+            if roots.contains(file) {
+                pending.insert(file.clone());
             }
             pending.extend(reached);
         }
-        // rustc reads every file loaded through `#[path]` or `include!` as a mod-rs file: scan
-        // those again with that reading (until no new file is reached). Both readings' findings
-        // are kept, since such a file may also be a module of its own.
+        // rustc reads every manifest crate root, and every file loaded through `#[path]` or
+        // `include!`, as a mod-rs file: scan those again with that reading (until no new file is
+        // reached). Both readings' findings are kept, since such a file may also be a module of
+        // its own (a `[[bin]] path = "src/bin.rs"` that `src/lib.rs` also declares as `mod bin;`).
         while let Some(file) = pending.pop_first() {
             if !mod_rs_done.insert(file.clone()) || !c.files.contains(&file) {
                 continue;

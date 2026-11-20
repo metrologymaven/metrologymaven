@@ -704,7 +704,8 @@ fn module_declarations_resolve_like_rustc_and_unlisted_module_files_are_never_wa
     // is excluded, and module resolution may not reach it.
     let dir = "syn/mod-resolve";
     let root = fix(dir);
-    let exclude: Vec<String> = ["src/bin/**", "custom-root/**", "bad-root/**"].iter().map(|s| s.to_string()).collect();
+    let exclude: Vec<String> =
+        ["src/bin/**", "bin-root/**", "custom-root/**", "bad-root/**"].iter().map(|s| s.to_string()).collect();
     let files = enumerate_files(&root, &exclude, &BTreeSet::new()).unwrap();
     assert!(!files.iter().any(|f| f.starts_with("src/bin/")), "{files:?}");
     let mut e = entry("knp1-syn-mod-resolve", "0.0.1", dir);
@@ -750,6 +751,16 @@ fn custom_crate_roots_are_mod_rs_files_and_undeterminable_roots_fail_closed() {
     let out = scan(vec![e], &Config::default());
     assert_eq!(lines(&out.findings), ["KNP1-INCLUDE knp1-syn-mod-root 0.0.1 src/kernel.rs:2:5"]);
     assert!(out.findings[0].message.contains("src/bin/mod.rs"), "{}", out.findings[0].message);
+    // Round 4: a manifest root that is also a library module gets both readings. As the `b`
+    // binary's root, src/bin.rs's `mod x;` is the listed src/x.rs; as `mod bin;` of the library
+    // it is the excluded src/bin/x.rs.
+    let dir = "syn/mod-resolve/bin-root";
+    let mut e = entry("knp1-syn-bin-root", "0.0.1", dir);
+    e.files = enumerate_files(&fix(dir), &["src/bin/**".to_string()], &BTreeSet::new()).unwrap();
+    assert_eq!(e.files, ["src/bin.rs", "src/lib.rs", "src/x.rs"]);
+    let out = scan(vec![e], &Config::default());
+    assert_eq!(lines(&out.findings), ["KNP1-INCLUDE knp1-syn-bin-root 0.0.1 src/bin.rs:2:5"]);
+    assert!(out.findings[0].message.contains("src/bin/x.rs"), "{}", out.findings[0].message);
     // A library path the scan cannot place: never-waivable KNP1-INCLUDE at the manifest.
     let out = scan(vec![entry("knp1-syn-bad-root", "0.0.1", "syn/mod-resolve/bad-root")], &Config::default());
     assert_eq!(lines(&out.findings), ["KNP1-INCLUDE knp1-syn-bad-root 0.0.1 Cargo.toml:1:1"]);
