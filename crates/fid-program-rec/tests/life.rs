@@ -937,7 +937,7 @@ fn lifecycle_and_adoption_share_one_journal_sequence() {
     let release = args("script", "release", "hello", &d);
     let adopt = ["script", "adopt-version", "--script", "hello", "--version-digest", d.as_str()];
 
-    let run = |shared: bool| -> (Result<Vec<u8>, LifeError>, Vec<(u64, String)>) {
+    let run = |shared: bool| -> RunOutcome {
         let one = Rc::new(RefCell::new(Seq::default()));
         let other = if shared { Rc::clone(&one) } else { Rc::new(RefCell::new(Seq::default())) };
         let mut life = LifeHandle(Rc::clone(&one));
@@ -986,6 +986,9 @@ fn lifecycle_and_adoption_share_one_journal_sequence() {
     let (out, _) = run(false);
     assert_eq!(out.unwrap_err().code(), "unadopted_version");
 }
+
+/// The release result and the shared journal's entries.
+type RunOutcome = (Result<Vec<u8>, LifeError>, Vec<(u64, String)>);
 
 /// One journal with one entry sequence.
 #[derive(Default)]
