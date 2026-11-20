@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-manifest-gen, fid-wasm-check]
+built_pr: 318
 satisfies: [REQ-KRN.MAN-009]
 covers: []
 depends_on: [KRN.MAN.WASM]
