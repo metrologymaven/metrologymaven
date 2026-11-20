@@ -64,8 +64,15 @@ example. May `deny.toml` ignore them, and under what limits?
    - any workspace crate other than `fid-spike-ui` reaches one of the four crates, directly or
      transitively, through normal, build or dev dependencies (including by depending on
      `fid-spike-ui` itself);
-   - an entry's expiry date has passed (system date at test time, or `FID_DENY_TODAY`), or is
-     later than 2027-03-01;
+   - a path from `fid-spike-ui` reaches `ttf-parser` without going through `epaint`, or a zbus
+     crate without going through `accesskit_unix`;
+   - an entry's expiry date has passed, or is later than 2027-03-01. The date is the later of
+     the system date at test time and `FID_DENY_TODAY`, so an override can only move it
+     forward, never keep an expired exception alive;
+   - `[advisories]` holds a key other than `version`, `yanked` and `ignore` (so no
+     `unmaintained` or `unsound` scope change), `yanked` is not `"deny"`, `[graph]` holds a key
+     other than `all-features` (so no `exclude`, `exclude-dev` or `targets`), or
+     `all-features` is not `true`;
    - egui 0.34 or later is in the graph;
    - `deny.toml` ignores an advisory that is not listed in `deny_scope::EXCEPTIONS`, or an
      entry's reason is incomplete;

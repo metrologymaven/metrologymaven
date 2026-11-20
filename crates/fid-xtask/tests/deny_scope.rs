@@ -2,11 +2,13 @@
 //!
 //! `real_workspace_*` checks this repository's `deny.toml` against its resolved graph (all
 //! targets, all features) and today's date; the other tests pin each rule on hand-built
-//! `cargo metadata` graphs. Set `FID_DENY_TODAY=YYYY-MM-DD` to check against a fixed date
-//! instead of the system clock.
+//! `cargo metadata` graphs. `FID_DENY_TODAY=YYYY-MM-DD` can only move the date later than the
+//! system clock (`effective_today`), never keep an expired exception alive.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_xtask::deny_scope::{check, expiry, parse_ignores, Date, EXCEPTIONS, LATEST_EXPIRY, SCOPED_ROOT};
+use fid_xtask::deny_scope::{
+    check, effective_today, expiry, parse_ignores, Date, EXCEPTIONS, LATEST_EXPIRY, SCOPED_ROOT,
+};
 use fid_xtask::Graph;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -15,13 +17,14 @@ fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-/// Today: `FID_DENY_TODAY` when set (deterministic), otherwise the system clock (UTC).
+/// Today: the later of the system clock (UTC) and `FID_DENY_TODAY`, when set.
 fn today() -> Date {
-    if let Ok(s) = std::env::var("FID_DENY_TODAY") {
-        return Date::parse(s.trim()).unwrap_or_else(|| panic!("FID_DENY_TODAY={s:?} is not YYYY-MM-DD"));
-    }
     let secs = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-    Date::from_unix_days(i64::try_from(secs / 86_400).unwrap())
+    let system = Date::from_unix_days(i64::try_from(secs / 86_400).unwrap());
+    let over = std::env::var("FID_DENY_TODAY")
+        .ok()
+        .map(|s| Date::parse(s.trim()).unwrap_or_else(|| panic!("FID_DENY_TODAY={s:?} is not YYYY-MM-DD")));
+    effective_today(system, over)
 }
 
 #[test]
@@ -36,7 +39,7 @@ fn real_workspace_exceptions_are_scoped_and_unexpired() {
 fn real_deny_toml_ignores_exactly_the_listed_advisories() {
     let deny = std::fs::read_to_string(root().join("deny.toml")).unwrap();
     let ids: Vec<String> = parse_ignores(&deny).unwrap().into_iter().map(|i| i.id).collect();
-    let want: Vec<String> = EXCEPTIONS.iter().map(|(id, _)| id.to_string()).collect();
+    let want: Vec<String> = EXCEPTIONS.iter().map(|(id, _, _)| id.to_string()).collect();
     assert_eq!(ids, want);
     for ig in parse_ignores(&deny).unwrap() {
         assert_eq!(expiry(ig.reason.as_deref().unwrap()), Some(LATEST_EXPIRY), "{}", ig.id);
@@ -114,9 +117,12 @@ fn entry(id: &str, crate_name: &str, expires: &str) -> String {
     )
 }
 
+/// The non-ignore part of a compliant deny.toml.
+const HEAD: &str = "[graph]\nall-features = true\n\n[advisories]\nversion = 2\nyanked = \"deny\"\n";
+
 fn deny(expires: &str) -> String {
-    let mut s = String::from("[advisories]\nversion = 2\nignore = [\n");
-    for (id, crates) in EXCEPTIONS {
+    let mut s = format!("{HEAD}ignore = [\n");
+    for (id, crates, _) in EXCEPTIONS {
         s += &entry(id, crates[0], expires);
     }
     s + "]\n"
@@ -143,6 +149,10 @@ fn another_workspace_crate_reaching_an_advisory_crate_fails() {
     assert_eq!(
         got,
         [
+            // The spike reaches fid-hal-idl too, so its path now also skips accesskit_unix.
+            "RUSTSEC-2026-0370: bypass_path fid-spike-ui -> fid-hal-idl -> zbus -> zvariant (must go through accesskit_unix)",
+            "RUSTSEC-2026-0371: bypass_path fid-spike-ui -> fid-hal-idl -> zbus -> zbus_names (must go through accesskit_unix)",
+            "RUSTSEC-2026-0372: bypass_path fid-spike-ui -> fid-hal-idl -> zbus -> zvariant -> zvariant_derive (must go through accesskit_unix)",
             "fid-cli: escaped_scope fid-cli -> fid-hal-idl -> zbus -> zbus_names",
             "fid-hal-idl: escaped_scope fid-hal-idl -> zbus -> zbus_names",
         ]
@@ -174,7 +184,7 @@ fn passed_expiry_fails() {
     let after = Date { y: 2027, m: 3, d: 2 };
     let got = check(&deny("2027-03-01"), &graph(PKGS, EDGES), after).unwrap();
     let want: Vec<String> =
-        EXCEPTIONS.iter().map(|(id, _)| format!("{id}: expired on 2027-03-01 (today 2027-03-02)")).collect();
+        EXCEPTIONS.iter().map(|(id, _, _)| format!("{id}: expired on 2027-03-01 (today 2027-03-02)")).collect();
     assert_eq!(got, want);
 }
 
@@ -183,7 +193,7 @@ fn expiry_past_the_limit_fails() {
     let got = check(&deny("2027-03-02"), &graph(PKGS, EDGES), DAY).unwrap();
     let want: Vec<String> = EXCEPTIONS
         .iter()
-        .map(|(id, _)| format!("{id}: expired date 2027-03-02 is past the D-044 limit 2027-03-01"))
+        .map(|(id, _, _)| format!("{id}: expired date 2027-03-02 is past the D-044 limit 2027-03-01"))
         .collect();
     assert_eq!(got, want);
 }
@@ -193,7 +203,7 @@ fn egui_034_ends_every_exception() {
     let pkgs: Vec<(&str, &str)> = PKGS.iter().map(|&(n, v)| if n == "egui" { (n, "0.34.0") } else { (n, v) }).collect();
     let got = check(&deny("2027-03-01"), &graph(&pkgs, EDGES), DAY).unwrap();
     let want: Vec<String> =
-        EXCEPTIONS.iter().map(|(id, _)| format!("{id}: egui_upgraded egui >= 0.34 is in the graph")).collect();
+        EXCEPTIONS.iter().map(|(id, _, _)| format!("{id}: egui_upgraded egui >= 0.34 is in the graph")).collect();
     assert_eq!(got, want);
 }
 
@@ -208,7 +218,7 @@ fn unlisted_ignore_fails() {
 
 #[test]
 fn reasons_must_be_complete() {
-    let base = "[advisories]\nignore = [\n";
+    let base = format!("{HEAD}ignore = [\n");
     let bare = format!("{base}\"RUSTSEC-2026-0192\"]\n");
     assert_eq!(check(&bare, &graph(PKGS, EDGES), DAY).unwrap(), ["RUSTSEC-2026-0192: bad_reason missing"]);
 
@@ -267,4 +277,56 @@ fn dates() {
     }
     assert!(Date { y: 2027, m: 3, d: 2 } > LATEST_EXPIRY);
     assert_eq!(LATEST_EXPIRY.to_string(), "2027-03-01");
+}
+
+#[test]
+fn earlier_date_override_cannot_keep_an_expired_exception_alive() {
+    let system = Date { y: 2027, m: 3, d: 2 };
+    let earlier = Some(Date { y: 2026, m: 1, d: 1 });
+    assert_eq!(effective_today(system, earlier), system);
+    let got = check(&deny("2027-03-01"), &graph(PKGS, EDGES), effective_today(system, earlier)).unwrap();
+    assert_eq!(got.len(), EXCEPTIONS.len(), "{got:?}");
+    assert!(got.iter().all(|f| f.contains(": expired on 2027-03-01 (today 2027-03-02)")), "{got:?}");
+    // A later override does move the date forward.
+    assert_eq!(effective_today(DAY, Some(Date { y: 2030, m: 1, d: 1 })), Date { y: 2030, m: 1, d: 1 });
+    assert_eq!(effective_today(DAY, None), DAY);
+}
+
+#[test]
+fn other_relaxations_beside_the_ignores_fail() {
+    let ok = deny("2027-03-01");
+    let g = graph(PKGS, EDGES);
+    assert_eq!(check(&ok, &g, DAY).unwrap(), Vec::<String>::new());
+    let beside = " is not allowed beside the D-044 exceptions";
+    let cases = [
+        ("[advisories]\n", "[advisories]\nunmaintained = \"workspace\"\n", format!("advisories.unmaintained{beside}")),
+        ("[advisories]\n", "[advisories]\nunsound = \"workspace\"\n", format!("advisories.unsound{beside}")),
+        ("[graph]\n", "[graph]\nexclude = [\"fid-cli\"]\n", format!("graph.exclude{beside}")),
+        ("[graph]\n", "[graph]\nexclude-dev = true\n", format!("graph.exclude-dev{beside}")),
+        ("[graph]\n", "[graph]\ntargets = [\"x86_64-pc-windows-msvc\"]\n", format!("graph.targets{beside}")),
+        ("yanked = \"deny\"", "yanked = \"warn\"", "advisories.yanked must be \"deny\"".to_string()),
+        ("all-features = true", "all-features = false", "graph.all-features must be true".to_string()),
+    ];
+    for (from, to, want) in cases {
+        let d = ok.replacen(from, to, 1);
+        assert_ne!(d, ok, "{to}");
+        assert_eq!(check(&d, &g, DAY).unwrap(), [format!("deny.toml: relaxed_config {want}")], "{to}");
+    }
+}
+
+#[test]
+fn spike_paths_must_go_through_the_granted_crate() {
+    let mut edges = EDGES.to_vec();
+    edges.push(("egui-winit", "zbus", "normal"));
+    edges.push(("fid-spike-ui", "ttf-parser", "dev"));
+    let got = check(&deny("2027-03-01"), &graph(PKGS, &edges), DAY).unwrap();
+    assert_eq!(
+        got,
+        [
+            "RUSTSEC-2026-0192: bypass_path fid-spike-ui -> ttf-parser (must go through epaint)",
+            "RUSTSEC-2026-0370: bypass_path fid-spike-ui -> egui-winit -> zbus -> zvariant (must go through accesskit_unix)",
+            "RUSTSEC-2026-0371: bypass_path fid-spike-ui -> egui-winit -> zbus -> zbus_names (must go through accesskit_unix)",
+            "RUSTSEC-2026-0372: bypass_path fid-spike-ui -> egui-winit -> zbus -> zvariant -> zvariant_derive (must go through accesskit_unix)",
+        ]
+    );
 }

@@ -15,7 +15,17 @@
 //!   ("2027-03-01 or the egui >= 0.34 upgrade, whichever comes first");
 //! - `escaped_scope`: a workspace crate other than [`SCOPED_ROOT`] reaches an advisory crate,
 //!   directly or transitively, through normal, build or dev dependencies;
-//! - `stale_ignore`: an advisory crate is no longer in the graph, so its ignore can go.
+//! - `stale_ignore`: an advisory crate is no longer in the graph, so its ignore can go;
+//! - `bypass_path`: `fid-spike-ui` reaches an advisory crate without going through the crate
+//!   the exception was granted for (`epaint` for `ttf-parser`, `accesskit_unix` for the zbus
+//!   crates);
+//! - `relaxed_config`: `[advisories]` holds a key other than `version`, `yanked` and `ignore`,
+//!   `yanked` is not `"deny"`, `[graph]` holds a key other than `all-features`, or
+//!   `all-features` is not `true`. So `unmaintained`/`unsound` scope changes, `exclude`,
+//!   `exclude-dev` or `targets` cannot slip in beside the exceptions.
+//!
+//! The date is the later of the system date and any override ([`effective_today`]): an
+//! override can only move it forward, never keep an expired exception alive.
 //!
 //! The graph must be resolved for all targets and all features ([`Graph::load_all_targets`]):
 //! `zvariant` and friends only appear on Linux, through `accesskit_unix`.
@@ -32,13 +42,27 @@ pub const LATEST_EXPIRY: Date = Date { y: 2027, m: 3, d: 1 };
 /// Every exception ends when egui reaches this (major, minor) version.
 pub const EGUI_END: (u64, u64) = (0, 34);
 
-/// Advisory ID and the crates it names. Each entry is decided separately (D-044).
-pub const EXCEPTIONS: &[(&str, &[&str])] = &[
-    ("RUSTSEC-2026-0192", &["ttf-parser"]),
-    ("RUSTSEC-2026-0370", &["zvariant"]),
-    ("RUSTSEC-2026-0371", &["zbus_names"]),
-    ("RUSTSEC-2026-0372", &["zvariant_derive"]),
+/// Advisory ID, the crates it names, and the crate every path from [`SCOPED_ROOT`] to them
+/// must go through. Each entry is decided separately (D-044).
+pub const EXCEPTIONS: &[(&str, &[&str], &str)] = &[
+    ("RUSTSEC-2026-0192", &["ttf-parser"], "epaint"),
+    ("RUSTSEC-2026-0370", &["zvariant"], "accesskit_unix"),
+    ("RUSTSEC-2026-0371", &["zbus_names"], "accesskit_unix"),
+    ("RUSTSEC-2026-0372", &["zvariant_derive"], "accesskit_unix"),
 ];
+
+/// Keys allowed in `[advisories]` and `[graph]`; anything else is a `relaxed_config` finding.
+pub const ADVISORIES_KEYS: &[&str] = &["version", "yanked", "ignore"];
+pub const GRAPH_KEYS: &[&str] = &["all-features"];
+
+/// The date the check uses: the later of the system date and an optional override. An override
+/// can make the check stricter (test a future date) but never older than the clock.
+pub fn effective_today(system: Date, override_date: Option<Date>) -> Date {
+    match override_date {
+        Some(d) if d > system => d,
+        _ => system,
+    }
+}
 
 /// A calendar date (proleptic Gregorian), ordered by (year, month, day).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -158,8 +182,9 @@ fn version_of(v: &str) -> Option<(u64, u64)> {
 }
 
 /// First path (crate names) from `root` to a crate named in `targets`, over every resolved
-/// edge (dev-dependencies included), visiting dependencies in (name, ID) order.
-fn first_path(g: &Graph, root: &str, targets: &BTreeSet<&str>) -> Option<Vec<String>> {
+/// edge (dev-dependencies included), visiting dependencies in (name, ID) order and never
+/// entering a crate named in `avoid`.
+fn first_path(g: &Graph, root: &str, targets: &BTreeSet<&str>, avoid: &BTreeSet<&str>) -> Option<Vec<String>> {
     let name = |id: &str| g.names.get(id).cloned().unwrap_or_else(|| id.to_string());
     let mut parent: BTreeMap<&str, &str> = BTreeMap::new();
     let mut seen: BTreeSet<&str> = BTreeSet::from([root]);
@@ -168,7 +193,7 @@ fn first_path(g: &Graph, root: &str, targets: &BTreeSet<&str>) -> Option<Vec<Str
         let mut next: Vec<&str> = g.edges.get(node).into_iter().flatten().map(|e| e.to.as_str()).collect();
         next.sort_by_key(|id| (name(id), id.to_string()));
         for n in next {
-            if !seen.insert(n) {
+            if avoid.contains(name(n).as_str()) || !seen.insert(n) {
                 continue;
             }
             parent.insert(n, node);
@@ -192,8 +217,9 @@ fn first_path(g: &Graph, root: &str, targets: &BTreeSet<&str>) -> Option<Vec<Str
 /// Returns sorted findings, one per line: `<advisory or crate>: <rule> <detail>`.
 pub fn check(deny_toml: &str, g: &Graph, today: Date) -> Result<Vec<String>, String> {
     let ignores = parse_ignores(deny_toml)?;
-    let table: BTreeMap<&str, &[&str]> = EXCEPTIONS.iter().copied().collect();
+    let table: BTreeMap<&str, (&[&str], &str)> = EXCEPTIONS.iter().map(|&(id, c, via)| (id, (c, via))).collect();
     let mut out = BTreeSet::new();
+    relaxed_config(deny_toml, &mut out)?;
     let present: BTreeSet<&str> = g.names.values().map(String::as_str).collect();
 
     let egui: Vec<(u64, u64)> = g
@@ -206,7 +232,7 @@ pub fn check(deny_toml: &str, g: &Graph, today: Date) -> Result<Vec<String>, Str
 
     let mut targets: BTreeSet<&str> = BTreeSet::new();
     for ig in &ignores {
-        let Some(crates) = table.get(ig.id.as_str()) else {
+        let Some(&(crates, via)) = table.get(ig.id.as_str()) else {
             out.insert(format!("{}: unlisted_ignore not in fid_xtask::deny_scope::EXCEPTIONS", ig.id));
             continue;
         };
@@ -246,6 +272,18 @@ pub fn check(deny_toml: &str, g: &Graph, today: Date) -> Result<Vec<String>, Str
                 out.insert(format!("{c}: stale_ignore {} names a crate no longer in the graph", ig.id));
             }
         }
+        let spike: Vec<&str> = g
+            .members
+            .iter()
+            .filter(|id| g.names.get(*id).is_some_and(|n| n == SCOPED_ROOT))
+            .map(String::as_str)
+            .collect();
+        let only: BTreeSet<&str> = crates.iter().copied().collect();
+        for root in spike {
+            if let Some(path) = first_path(g, root, &only, &BTreeSet::from([via])) {
+                out.insert(format!("{}: bypass_path {} (must go through {via})", ig.id, path.join(" -> ")));
+            }
+        }
     }
 
     if !targets.is_empty() {
@@ -256,10 +294,41 @@ pub fn check(deny_toml: &str, g: &Graph, today: Date) -> Result<Vec<String>, Str
             if root_name == SCOPED_ROOT {
                 continue;
             }
-            if let Some(path) = first_path(g, root_id, &targets) {
+            if let Some(path) = first_path(g, root_id, &targets, &BTreeSet::new()) {
                 out.insert(format!("{root_name}: escaped_scope {}", path.join(" -> ")));
             }
         }
     }
     Ok(out.into_iter().collect())
+}
+
+/// `relaxed_config` findings: unknown keys in `[advisories]` or `[graph]`, `yanked` other than
+/// `"deny"`, or `all-features` other than `true` (a missing key counts as relaxed).
+fn relaxed_config(deny_toml: &str, out: &mut BTreeSet<String>) -> Result<(), String> {
+    let t = deny_toml.parse::<toml::Table>().map_err(|e| format!("deny.toml: {e}"))?;
+    let empty = toml::Table::new();
+    let section = |name: &str| section_of(&t, &empty, name);
+    for (name, allowed) in [("advisories", ADVISORIES_KEYS), ("graph", GRAPH_KEYS)] {
+        for key in section(name)?.keys() {
+            if !allowed.contains(&key.as_str()) {
+                out.insert(format!(
+                    "deny.toml: relaxed_config {name}.{key} is not allowed beside the D-044 exceptions"
+                ));
+            }
+        }
+    }
+    if section("advisories")?.get("yanked").and_then(toml::Value::as_str) != Some("deny") {
+        out.insert("deny.toml: relaxed_config advisories.yanked must be \"deny\"".to_string());
+    }
+    if section("graph")?.get("all-features").and_then(toml::Value::as_bool) != Some(true) {
+        out.insert("deny.toml: relaxed_config graph.all-features must be true".to_string());
+    }
+    Ok(())
+}
+
+fn section_of<'a>(t: &'a toml::Table, empty: &'a toml::Table, name: &str) -> Result<&'a toml::Table, String> {
+    match t.get(name) {
+        None => Ok(empty),
+        Some(v) => v.as_table().ok_or_else(|| format!("deny.toml: [{name}] is not a table")),
+    }
 }
