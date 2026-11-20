@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-program-rec]
 satisfies: [REQ-AUTO.REC-005, REQ-AUTO.REC-006, REQ-AUTO.REC-007, REQ-AUTO.REC-009]
 covers: []
 depends_on: [AUTO.PROG.FMT, AUTO.REC.ADOPT, CORE.BUS]
@@ -80,6 +81,8 @@ The lifecycle state machine draft → registered → released → deprecated (pl
 
 - `unregister` is added here to make the registered → draft transition of REQ-AUTO.REC-005 a named command.
 - Which principal kind a human at the CLI has (and so whether `fid program release` can be performed from a terminal) is D-012.
+- **Built in `fid-program-rec` (module `life`); follow-ups for unbuilt leaves:** (a) `program.check@1` (`AUTO.PROG.CHECK`) is a `ProgramChecker` seam; until it is built the host wires `CheckerUnavailable`, so every program release is `check_failed` (fail closed). (b) The bus does not evaluate preconditions yet (`CORE.BUS.PIPE.VALID`): the release preconditions are declared in the registry as FPL over the context root `artifact` (`artifact.check_passed`, `artifact.unadopted`) and the handler evaluates its own declarations with the registry evaluator. (c) `AUTO.PROG.EDIT.OPS` must call `LifeStore::guard_edit` (AC-2 `immutable`) and start new drafts with `LifeStore::begin_draft`. (d) AC-5's verifier half waits for `fid-verify`; deprecation provably touches only the lifecycle state. (e) The script bundle format is open (`AUTO.PY.SDK`); a bundle's canonical form is RFC 8785 JSON of its UTF-8 files (`life::bundle`) until that node defines one. (f) MCP W3 calls file a request through a `LifeRequests` seam for the Proposal Inbox.
+- Errors added to the Design list: `artifact_not_found`, `unadopted_version` (script release), `policy_refused`, `bad_params`, `journal`, `request_failed`, `internal`.
 
 ## Children
 
