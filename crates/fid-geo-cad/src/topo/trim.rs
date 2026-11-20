@@ -363,8 +363,11 @@ fn nurbs_lip(n: &NurbsSurface) -> Option<[f64; DIM]> {
     Some([dir(n.knots_u().as_slice(), n.degree_u())?, dir(n.knots_v().as_slice(), n.degree_v())?])
 }
 
+/// Lipschitz bounds `[Lu, Lv]` and, for a cone, `(r0, tan a)`.
+type Lipschitz = ([f64; DIM], Option<(f64, f64)>);
+
 /// Lipschitz bounds `[Lu, Lv]` and the cone parameters.
-fn lipschitz(s: Surf<'_>) -> Option<([f64; DIM], Option<(f64, f64)>)> {
+fn lipschitz(s: Surf<'_>) -> Option<Lipschitz> {
     match s {
         Surf::A(a) => match a {
             AnalyticSurface::Plane(_) => Some(([1.0, 1.0], None)),
@@ -432,6 +435,9 @@ fn flatten(
     }
     Ok(out)
 }
+
+/// A coedge's charted polyline, the coedge and its seam flag.
+type Part = (Vec<[f64; DIM]>, CoedgeIx, bool);
 
 /// One coedge's charted polyline.
 fn coedge_polyline(
@@ -539,7 +545,7 @@ impl TrimIndex {
             let lp = body.r#loop(lx).ok_or(Undecidable::IncompleteLoop { r#loop: lx })?;
             let offset = self.chart.loop_offsets.get(j).copied().unwrap_or([0.0; DIM]);
             // (polyline, coedge, seam) per coedge, charted.
-            let mut parts: Vec<(Vec<[f64; DIM]>, CoedgeIx, bool)> = Vec::with_capacity(lp.coedges().len());
+            let mut parts: Vec<Part> = Vec::with_capacity(lp.coedges().len());
             let mut prev_end: Option<[f64; DIM]> = None;
             for &cx in lp.coedges() {
                 let mut pts = coedge_polyline(body, pcurves, s, &periods, &domain, cx)?;
