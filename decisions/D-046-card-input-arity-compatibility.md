@@ -58,6 +58,6 @@ semver change? More generally, which card changes need an algorithm version bump
 
 - `spec/krn/man/card/NODE.md` "Schema changes" links this record.
 - #311 (`unc.prop.mcm_adapt@1.0.0`) merged first; PR 315 adds its `input_arity` (`"2"`).
-  #317 adds `input_arity` to its cards after PR 315 merges. These algorithms are unreleased, so
-  rule 1 applies to them too.
+  #317 (`fid-xart` test algorithms) also merged first; PR 315 gives them `"0.."` (echo) and `"0"`
+  (recurse). These algorithms are unreleased, so rule 1 applies to them too.
 - Amending this rule needs a new decision record whose frontmatter lists `D-046` in `amends:`.
