@@ -175,7 +175,16 @@
       "id": "fit",
       "algorithm_id": "fit.circle.ls",
       "algorithm_version": "1.0.0",
-      "params_digest": "sha256:2c1dda5df6dd7e713d1e7f7e3cb646814c4791ce9df04f5b7ca3dfbfea2f53b1",
+      "params": {
+        "max_iter": "50",
+        "outlier": {
+          "policy": "none",
+          "k": "3"
+        },
+        "tolerance": "3d719799812dea11",
+        "weights": []
+      },
+      "params_digest": "sha256:644b57ab93adeebda1a3723867929daf8ebc2051283c2f8018cead6c18c9f309",
       "ports_in": [
         {
           "name": "probe_r",
@@ -219,6 +228,9 @@
       "id": "thermal",
       "algorithm_id": "unc.op.scale",
       "algorithm_version": "1.0.0",
+      "params": {
+        "mode": "multiplicative"
+      },
       "params_digest": "sha256:71c2959c9d9eba2d9e509367d06d488c8f360164f653f38b6e05e0f7e2121880",
       "ports_in": [
         {

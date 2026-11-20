@@ -12,6 +12,9 @@ independently of the Rust code:
 - canonical JSON: members sorted by key (all text is printable ASCII, so Python's
   code-point order equals RFC 8785's UTF-16 order), no whitespace, no escapes;
 - every f64 is struct.pack('>d', x).hex(); arity is a decimal string;
+- each operator embeds its full `params` object; params_digest = sha256 of the params'
+  own canonical JSON, always written in the canonical form (the authored file supplies it,
+  the shuffled file omits it, so both the checked and the derived path are exercised);
 - digest = hashlib.sha256 of the canonical bytes, written as sha256:<hex>.
 
 Files:
@@ -19,7 +22,7 @@ Files:
   bore_ls.canon.json        its canonical bytes (no trailing newline)
   bore_ls.sha256            sha256:<hex> of bore_ls.canon.json (AC-1)
   bore_ls_shuffled.json     same model: nodes, edges, groups, group inputs and members permuted (AC-2)
-  bore_ls_param.json        one operator parameter changed (fit max_iter 50 -> 51) (AC-3)
+  bore_ls_param.json        one embedded operator parameter changed (fit max_iter 50 -> 51) (AC-3)
   bore_ls_param.sha256      its digest
   dup_node.json             an output reuses an input id (AC-4: duplicate_node)
   bad_name.json             name with an upper-case letter (AC-4: schema_invalid{name})
@@ -61,7 +64,7 @@ def params_digest(params):
     return "sha256:" + hashlib.sha256(canon_bytes(params)).hexdigest()
 
 
-FIT_PARAMS = {"max_iter": "50", "outlier_policy": "none", "tolerance": h(1e-12)}
+FIT_PARAMS = {"max_iter": "50", "outlier": {"policy": "none", "k": "3"}, "tolerance": h(1e-12), "weights": []}
 SCALE_PARAMS = {"mode": "multiplicative"}
 
 
@@ -109,6 +112,7 @@ def model(fit_params=FIT_PARAMS):
                 "id": "fit",
                 "algorithm_id": "fit.circle.ls",
                 "algorithm_version": "1.0.0",
+                "params": fit_params,
                 "params_digest": params_digest(fit_params),
                 "ports_in": [
                     port_in("probe_r", "length", "si:m", 1),
@@ -122,6 +126,7 @@ def model(fit_params=FIT_PARAMS):
                 "id": "thermal",
                 "algorithm_id": "unc.op.scale",
                 "algorithm_version": "1.0.0",
+                "params": SCALE_PARAMS,
                 "params_digest": params_digest(SCALE_PARAMS),
                 "ports_in": [port_in("value", "length", "si:m", 1), port_in("strain", "strain", "si:1", 2)],
                 "ports_out": [port_out("value", "length", "si:m")],
@@ -163,6 +168,8 @@ def permute_group(g, order):
 
 def canonical(m):
     c = copy.deepcopy(m)
+    for op in c["operators"]:
+        op["params_digest"] = params_digest(op["params"])
     for k in ("inputs", "operators", "outputs"):
         c[k].sort(key=lambda n: n["id"])
     c["edges"].sort(key=lambda e: (e["to"]["node"], e["to"]["port"], e["from"]["node"], e["from"]["port"]))
@@ -192,6 +199,8 @@ def shuffled(m):
     s = copy.deepcopy(m)
     s["inputs"] = rotate(s["inputs"][::-1], 2)
     s["operators"] = s["operators"][::-1]
+    for op in s["operators"]:
+        del op["params_digest"]
     s["outputs"] = s["outputs"][::-1]
     s["edges"] = rotate(s["edges"], 4)[::-1]
     s["correlations"] = [permute_group(s["correlations"][1], [2, 0, 1]), permute_group(s["correlations"][0], [1, 0])]
@@ -255,6 +264,17 @@ def in_two_groups(m):
     m["correlations"][0] = {"inputs": ["scale_err", "thermal_strain", "tilt"], "matrix": mat([[1, 0, 0], [0, 1, 0], [0, 0, 1]])}
 
 
+def dup_node_bad_copy(m):
+    bad = copy.deepcopy(m["inputs"][2])
+    bad["quantity_kind"] = "Bad"
+    m["inputs"].insert(0, bad)
+
+
+def two_groups_and_bad_matrix(m):
+    in_two_groups(m)
+    m["correlations"][1]["matrix"] = mat([[1, 0.1], [0.1, 1]])
+
+
 def dup_node_inputs(m):
     m["inputs"].append(copy.deepcopy(m["inputs"][2]))
 
@@ -311,6 +331,18 @@ INVALID = [
     ("characteristic_space", mutated(set_in(["outputs", 0, "characteristic"], "DIM 1")),
      "schema_invalid", "outputs.characteristic"),
     ("dup_node_inputs", mutated(dup_node_inputs), "duplicate_node", "form"),
+    ("dup_node_bad_copy", mutated(dup_node_bad_copy), "duplicate_node", "form"),
+    ("params_digest_mismatch", mutated(set_in(["operators", 0, "params_digest"], params_digest(SCALE_PARAMS))),
+     "schema_invalid", "operators.params_digest"),
+    ("params_digest_bad", mutated(set_in(["operators", 0, "params_digest"], "sha256:00")),
+     "schema_invalid", "operators.params_digest"),
+    ("params_missing", mutated(del_in(["operators", 0, "params"])), "schema_invalid", "operators.params"),
+    ("params_not_object", mutated(set_in(["operators", 0, "params"], ["50"])), "schema_invalid", "operators.params"),
+    ("params_number", authored(model()).replace(b'"max_iter": "50"', b'"max_iter": 50'), "schema_invalid", "json.value"),
+    ("params_escape", authored(model()).replace(b'"policy": "none"', b'"policy": "n\\u006fne"'),
+     "schema_invalid", "json.escape"),
+    ("algorithm_id_65", mutated(set_in(["operators", 0, "algorithm_id"], "fit.circle." + "l" * 54)),
+     "schema_invalid", "operators.algorithm_id"),
     ("dup_edge", mutated(dup_edge), "schema_invalid", "edges"),
     ("edge_port_upper", mutated(set_in(["edges", 0, "to", "port"], "Probe_r")), "schema_invalid", "edges.to.port"),
     ("group_single", mutated(set_in(["correlations", 0], {"inputs": ["scale_err"], "matrix": mat([[1]])})),
@@ -320,6 +352,7 @@ INVALID = [
     ("group_repeat_input", mutated(set_in(["correlations", 0, "inputs"], ["scale_err", "scale_err"])),
      "schema_invalid", "correlations.inputs"),
     ("input_in_two_groups", mutated(in_two_groups), "schema_invalid", "correlations.inputs"),
+    ("input_in_two_groups_bad_matrix", mutated(two_groups_and_bad_matrix), "schema_invalid", "correlations.inputs"),
     ("duplicate_key", dup_key_text(), "schema_invalid", "json.duplicate_key"),
     ("trailing_data", authored(model()) + b"{}", "schema_invalid", "json.trailing_data"),
     ("bom", b"\xef\xbb\xbf" + authored(model()), "schema_invalid", "json.value"),

@@ -1,3 +1,4 @@
+algorithm_id_65.json schema_invalid operators.algorithm_id
 algorithm_upper.json schema_invalid operators.algorithm
 arity_number.json schema_invalid json.value
 arity_zero.json schema_invalid operators.ports_in.arity
@@ -14,6 +15,7 @@ depth_33.json too_large -
 dist_extra_param.json schema_invalid inputs.distribution.params
 dist_kind.json schema_invalid inputs.distribution.kind
 dup_edge.json schema_invalid edges
+dup_node_bad_copy.json duplicate_node form
 dup_node_inputs.json duplicate_node form
 dup_port.json schema_invalid operators.ports_in
 duplicate_key.json schema_invalid json.duplicate_key
@@ -24,10 +26,17 @@ group_repeat_input.json schema_invalid correlations.inputs
 group_single.json schema_invalid correlations.inputs
 hex_upper.json schema_invalid inputs.distribution.params.sigma
 input_in_two_groups.json schema_invalid correlations.inputs
+input_in_two_groups_bad_matrix.json schema_invalid correlations.inputs
 missing_semver.json schema_invalid semver
 nan.json schema_invalid inputs.distribution.params.sigma
 neg_zero.json schema_invalid inputs.distribution.params.mu
 node_id_upper.json schema_invalid inputs.id
+params_digest_bad.json schema_invalid operators.params_digest
+params_digest_mismatch.json schema_invalid operators.params_digest
+params_escape.json schema_invalid json.escape
+params_missing.json schema_invalid operators.params
+params_not_object.json schema_invalid operators.params
+params_number.json schema_invalid json.value
 quantity_kind.json schema_invalid outputs.quantity_kind
 rect_reversed.json schema_invalid inputs.distribution.params.b
 schema_v2.json schema_invalid schema

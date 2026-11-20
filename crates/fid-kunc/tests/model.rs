@@ -8,10 +8,11 @@
 //! (Linux, Windows) and ARM64 (macOS).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+use fid_kci::kci::json::Json;
 use fid_kunc::dist::{Distribution, Quantity, UnitCode};
 use fid_kunc::model::{
     CorrelationGroup, Edge, Endpoint, InPort, InputNode, InputSourceKind, ModelParts, OperatorNode, OutPort,
-    OutputNode, SchemaError, SourceRef, UncertaintyModel, MAX_INPUT_BYTES, SCHEMA,
+    OutputNode, SchemaError, SourceRef, UncertaintyModel, MAX_INPUT_BYTES, MAX_PARAMS_DEPTH, MAX_VALUES, SCHEMA,
 };
 use fid_kunc::{ModelRef, StatementParts};
 use fid_types::Digest;
@@ -130,11 +131,18 @@ fn ac3_changed_parameter_changes_the_digest() {
     let b = parse("bore_ls_param.json");
     assert_ne!(a.digest(), b.digest());
     assert_eq!(b.digest().as_str(), text("bore_ls_param.sha256"));
-    // Only the fit operator's params_digest differs.
-    assert_ne!(a.operators()[0].params_digest, b.operators()[0].params_digest);
+    // Only the fit operator's embedded params differ, and with them its derived digest.
+    let (fa, fb) = (&a.operators()[0], &b.operators()[0]);
+    assert_ne!(fa.params_digest().unwrap(), fb.params_digest().unwrap());
     let mut pa = a.parts().clone();
-    pa.operators[0].params_digest = b.operators()[0].params_digest;
+    pa.operators[0].params = fb.params.clone();
     assert_eq!(&pa, b.parts());
+    // The digest is SHA-256 of the params object's own RFC 8785 bytes, and the canonical
+    // form writes it next to the params.
+    let bytes = fid_kci::kci::json::to_canonical(&fa.params).unwrap();
+    assert_eq!(fa.params_digest().unwrap(), fid_kci::kci::sha256_digest(&bytes));
+    let canon = std::str::from_utf8(a.canonical_json()).unwrap();
+    assert!(canon.contains(&format!("\"params_digest\":\"{}\"", fa.params_digest().unwrap())));
 }
 
 #[test]
@@ -144,6 +152,7 @@ fn req003_any_field_change_changes_the_digest() {
     let variants: Vec<Edit> = vec![
         Box::new(|q| q.semver = "1.0.1".into()),
         Box::new(|q| q.operators[1].algorithm_version = "1.0.1".into()),
+        Box::new(|q| q.operators[1].params = Json::Obj(vec![("mode".into(), Json::Str("additive".into()))])),
         Box::new(|q| q.operators[1].ports_in[1].arity = 3),
         Box::new(|q| q.operators[0].ports_in.swap(0, 1)),
         Box::new(|q| q.outputs[0].characteristic = None),
@@ -240,7 +249,7 @@ fn small() -> ModelParts {
             id: "op".into(),
             algorithm_id: "unc.op.sum".into(),
             algorithm_version: "1.0.0".into(),
-            params_digest: d("{}"),
+            params: Json::Obj(vec![("mode".into(), Json::Str("plain".into()))]),
             ports_in: vec![InPort {
                 name: "x".into(),
                 quantity_kind: "length".into(),
@@ -335,6 +344,33 @@ fn constructor_refuses_what_the_document_cannot_hold() {
             }),
         ),
         ("name", Box::new(|p| p.name = String::new())),
+        ("operators.algorithm_id", Box::new(|p| p.operators[0].algorithm_id = format!("unc.op.{}", "s".repeat(58)))),
+        ("operators.params", Box::new(|p| p.operators[0].params = Json::Arr(vec![]))),
+        (
+            "operators.params",
+            Box::new(|p| {
+                let k = |v: &str| ("k".to_owned(), Json::Str(v.into()));
+                p.operators[0].params = Json::Obj(vec![k("1"), k("2")]);
+            }),
+        ),
+        (
+            "operators.params",
+            Box::new(|p| p.operators[0].params = Json::Obj(vec![("k".into(), Json::Str("a\"b".into()))])),
+        ),
+        (
+            "operators.params",
+            Box::new(|p| p.operators[0].params = Json::Obj(vec![("k\u{202e}".into(), Json::Str(String::new()))])),
+        ),
+        (
+            "operators.params",
+            Box::new(|p| {
+                let mut v = Json::Str("x".into());
+                for _ in 0..MAX_PARAMS_DEPTH {
+                    v = Json::Arr(vec![v]);
+                }
+                p.operators[0].params = Json::Obj(vec![("k".into(), v)]);
+            }),
+        ),
         ("semver", Box::new(|p| p.semver = "1.0.0+build".into())),
     ];
     for (field, f) in cases {
@@ -358,6 +394,50 @@ fn first_error_does_not_depend_on_input_order() {
     let want = Err(SchemaError::SchemaInvalid { field: "inputs.source.author" });
     let mut r = p.clone();
     r.inputs.reverse();
+    assert_eq!(UncertaintyModel::new(p), want);
+    assert_eq!(UncertaintyModel::new(r), want);
+}
+
+#[test]
+fn params_at_the_depth_limit_round_trip() {
+    let mut p = small();
+    let mut v = Json::Str("x".into());
+    for _ in 0..MAX_PARAMS_DEPTH - 1 {
+        v = Json::Arr(vec![v]);
+    }
+    p.operators[0].params = Json::Obj(vec![("k".into(), v)]);
+    let m = UncertaintyModel::new(p).unwrap();
+    assert_eq!(UncertaintyModel::parse(m.canonical_json()).unwrap(), m);
+}
+
+#[test]
+fn a_model_too_big_for_the_reader_is_refused_in_memory() {
+    let mut p = small();
+    let many = vec![Json::Str(String::new()); MAX_VALUES];
+    p.operators[0].params = Json::Obj(vec![("k".into(), Json::Arr(many))]);
+    assert_eq!(UncertaintyModel::new(p), Err(SchemaError::TooLarge));
+}
+
+#[test]
+fn repeated_ids_are_reported_before_field_errors_in_any_order() {
+    // Two inputs share the ID "b"; one copy also has a bad quantity kind. Whichever copy
+    // comes first, the error is duplicate_node.
+    let mut p = small();
+    let mut copy = p.inputs[0].clone();
+    copy.quantity_kind = "Bad".into();
+    p.inputs.push(copy);
+    let mut r = p.clone();
+    r.inputs.reverse();
+    let want = Err(SchemaError::DuplicateNode { id: "b".into() });
+    assert_eq!(UncertaintyModel::new(p), want);
+    assert_eq!(UncertaintyModel::new(r), want);
+
+    // An input in two groups, one of which also has a bad matrix: always correlations.inputs.
+    let mut p = small();
+    p.correlations.push(CorrelationGroup { inputs: vec!["a".into(), "c".into()], matrix: vec![vec![1.0]] });
+    let mut r = p.clone();
+    r.correlations.reverse();
+    let want = Err(SchemaError::SchemaInvalid { field: "correlations.inputs" });
     assert_eq!(UncertaintyModel::new(p), want);
     assert_eq!(UncertaintyModel::new(r), want);
 }

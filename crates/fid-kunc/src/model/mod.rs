@@ -25,7 +25,8 @@
 //!   "inputs":    [{ "id", "quantity_kind", "unit",
 //!                   "distribution": { "kind", "params": { <name>: <f64> ... } },
 //!                   "source"?: { "kind", "digest", "author" } }],
-//!   "operators": [{ "id", "algorithm_id", "algorithm_version", "params_digest",
+//!   "operators": [{ "id", "algorithm_id", "algorithm_version", "params": { ... },
+//!                   "params_digest"?,
 //!                   "ports_in":  [{ "name", "quantity_kind", "unit", "arity" }],
 //!                   "ports_out": [{ "name", "quantity_kind", "unit" }] }],
 //!   "outputs":   [{ "id", "quantity_kind", "unit", "characteristic"? }],
@@ -45,6 +46,15 @@
 //! - `source.kind`: `certificate`, `dcc`, `qualification`, `type_a_dataset`, `declared`.
 //!   `source` may be absent; `UNC.MODEL.GRAPH.CHECK` reports such an input as
 //!   `unsourced_input`.
+//! - `params`: the operator's full parameter set, embedded so a model document is
+//!   self-contained and replayable. Any object of objects, arrays and strings within the
+//!   reader rules (printable ASCII without `"` or `\`). `params_digest` is derived from it:
+//!   SHA-256 of its RFC 8785 bytes (REQ-UNC.MODEL.GRAPH.SCHEMA-003). A document may omit
+//!   `params_digest`; when it supplies one, it must equal the recomputed digest
+//!   (`schema_invalid{operators.params_digest}`). The canonical form always writes it.
+//! - Ports of input and output nodes are implicit: an input node has exactly one output port
+//!   and an output node exactly one input port, both named `value`. Edges name them like
+//!   any other port; `UNC.MODEL.GRAPH.CHECK` resolves endpoints.
 //!
 //! # Text (untrusted)
 //!
@@ -58,8 +68,8 @@
 //!   accepts);
 //! - node IDs, port names and edge endpoints: `[a-z0-9][a-z0-9_.-]{0,63}`;
 //! - `quantity_kind`: `[a-z][a-z0-9_]{0,63}`;
-//! - `algorithm_id` and `algorithm_version`: together a kernel algorithm ID
-//!   `module.feature.method@MAJOR.MINOR.PATCH` (`fid_kci::AlgorithmId`);
+//! - `algorithm_id` (at most [`MAX_ID_BYTES`]) and `algorithm_version`: together a kernel
+//!   algorithm ID `module.feature.method@MAJOR.MINOR.PATCH` (`fid_kci::AlgorithmId`);
 //! - `characteristic`: `[A-Za-z0-9][A-Za-z0-9._:-]{0,127}`;
 //! - `source.author`: 1..=256 bytes of `0x20..=0x7e` except `"` and `\`, without leading,
 //!   trailing or doubled spaces.
@@ -78,22 +88,29 @@
 //!
 //! [`UncertaintyModel::parse`]: input size over [`MAX_INPUT_BYTES`] fails `too_large`; the
 //! reader (syntax, value types, printable ASCII, escapes, duplicate member names, trailing
-//! data) fails `schema_invalid{json.*}`, and nesting deeper than [`MAX_DEPTH`] fails
-//! `too_large`; then the document is mapped member by member in schema order (missing,
-//! unknown or wrongly typed members, bad numbers, enums, digests and distribution
-//! parameters fail `schema_invalid{<path>}`; an unknown member reports the path of its
-//! object, the root being `model`). Then, as for [`UncertaintyModel::new`], on the sorted
-//! parts: `name`, `semver`; every input, operator and output field in sorted order;
-//! `duplicate_node` naming the smallest repeated ID (one ID space for all three kinds);
-//! edges, then a repeated edge (`schema_invalid{edges}`); correlation groups (fewer than
-//! two inputs, a repeated input in a group or across groups, a matrix that is not
-//! `n x n`, a non-finite or negative-zero entry).
+//! data) fails `schema_invalid{json.*}`, and nesting deeper than [`MAX_DEPTH`] or more than
+//! [`MAX_VALUES`] values fails `too_large`; then the document is mapped member by member
+//! in document order (missing, unknown or wrongly typed members, bad numbers, enums,
+//! digests, distribution parameters and a `params_digest` that differs from its `params`
+//! fail `schema_invalid{<path>}`; an unknown member reports the path of its object, the
+//! root being `model`). These parse-stage errors depend on the document's order.
+//!
+//! Then, as for [`UncertaintyModel::new`], on parts sorted into canonical order:
+//! `duplicate_node` naming the smallest repeated ID (one ID space for all three kinds); an
+//! input repeated within or across correlation groups (`schema_invalid{correlations.inputs}`);
+//! `name`, `semver`; every input, operator and output field in sorted order; edges, then a
+//! repeated edge (`schema_invalid{edges}`); correlation groups (fewer than two inputs, a
+//! matrix that is not `n x n`, a non-finite or negative-zero entry); last, the canonical
+//! document must fit the reader's own bounds (`too_large`). With repeated IDs refused
+//! first, every sort is total, so the first error reported by this stage does not depend on
+//! the order of nodes, edges, groups or group inputs (port lists keep their declared order).
 
 mod reader;
 mod wire;
 
 use std::fmt;
 
+use fid_kci::kci::json::{to_canonical, Json};
 use fid_types::Digest;
 
 use crate::dist::{Distribution, Params, UnitCode};
@@ -111,6 +128,12 @@ pub const MAX_ID_BYTES: usize = 64;
 pub const MAX_CHAR_ID_BYTES: usize = 128;
 /// Longest source author, in bytes.
 pub const MAX_AUTHOR_BYTES: usize = 256;
+/// Most JSON values (strings, arrays and objects; member names not counted) in a document:
+/// `2^20`.
+pub const MAX_VALUES: usize = 1 << 20;
+/// Deepest nesting inside an operator's `params` (the object itself is depth 1): the
+/// document's [`MAX_DEPTH`] less the three levels that enclose it.
+pub const MAX_PARAMS_DEPTH: usize = MAX_DEPTH - 3;
 
 /// Errors of this module (REQ-UNC.MODEL.GRAPH.SCHEMA-004).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -118,7 +141,8 @@ pub enum SchemaError {
     /// The document or parts break the schema at `field` (a fixed path such as
     /// `inputs.distribution.params.sigma`, or `json.<detail>` for the reader).
     SchemaInvalid { field: &'static str },
-    /// The document is larger than [`MAX_INPUT_BYTES`] or nested deeper than [`MAX_DEPTH`].
+    /// The document is larger than [`MAX_INPUT_BYTES`], nested deeper than [`MAX_DEPTH`] or
+    /// holds more than [`MAX_VALUES`] values.
     TooLarge,
     /// Two nodes share an ID (the smallest such ID).
     DuplicateNode { id: String },
@@ -254,8 +278,9 @@ pub struct OperatorNode {
     pub algorithm_id: String,
     /// `MAJOR.MINOR.PATCH`.
     pub algorithm_version: String,
-    /// Digest of the operator's full parameter set.
-    pub params_digest: Digest,
+    /// The operator's full parameter set: an object (see the module documentation). Its
+    /// digest is derived, never supplied: [`Self::params_digest`].
+    pub params: Json,
     /// In the operator's argument order.
     pub ports_in: Vec<InPort>,
     /// In the operator's result order.
@@ -263,6 +288,15 @@ pub struct OperatorNode {
 }
 
 impl OperatorNode {
+    /// SHA-256 of the RFC 8785 bytes of [`Self::params`] (REQ-UNC.MODEL.GRAPH.SCHEMA-003).
+    /// Fails `schema_invalid{operators.params}` when `params` is not an object within the
+    /// text and nesting rules; never fails on an operator of an [`UncertaintyModel`].
+    pub fn params_digest(&self) -> Result<Digest, SchemaError> {
+        check(params_ok(&self.params), "operators.params")?;
+        let bytes = to_canonical(&self.params).map_err(|_| invalid("operators.params"))?;
+        Ok(fid_kci::kci::sha256_digest(&bytes))
+    }
+
     /// The kernel algorithm ID `algorithm_id@algorithm_version`, if both parts are valid.
     pub fn algorithm(&self) -> Option<fid_kci::AlgorithmId> {
         fid_kci::AlgorithmId::parse(&format!("{}@{}", self.algorithm_id, self.algorithm_version)).ok()
@@ -328,6 +362,11 @@ impl UncertaintyModel {
     pub fn new(mut parts: ModelParts) -> Result<UncertaintyModel, SchemaError> {
         canonicalize(&mut parts)?;
         let canonical = wire::to_canonical(&parts)?;
+        // Every model in memory is also a document the reader accepts (size, depth, values).
+        if canonical.len() > MAX_INPUT_BYTES {
+            return Err(SchemaError::TooLarge);
+        }
+        reader::read(&canonical)?;
         let digest = fid_kci::kci::sha256_digest(&canonical);
         Ok(UncertaintyModel { parts, canonical, digest })
     }
@@ -510,6 +549,23 @@ fn canonicalize(p: &mut ModelParts) -> Result<(), SchemaError> {
     p.outputs.sort_by(|a, b| by_bytes(&a.id, &b.id));
     p.edges.sort_by(|a, b| edge_key(a).cmp(&edge_key(b)));
 
+    // Repeated IDs first: once they are refused, every sort above and below is total, so the
+    // checks that follow see one order whatever the input order was.
+    let mut ids: Vec<&str> = p.inputs.iter().map(|n| n.id.as_str()).collect();
+    ids.extend(p.operators.iter().map(|n| n.id.as_str()));
+    ids.extend(p.outputs.iter().map(|n| n.id.as_str()));
+    ids.sort_by(|a, b| by_bytes(a, b));
+    if let Some(w) = ids.windows(2).find(|w| w[0] == w[1]) {
+        return Err(SchemaError::DuplicateNode { id: w[0].to_owned() });
+    }
+    check(unique(p.correlations.iter().flat_map(|g| g.inputs.iter().map(String::as_str))), "correlations.inputs")?;
+    // Sorting by the smallest input is the canonical group order (each group's first input
+    // after its own sort); no input is shared, so the order is total.
+    p.correlations.sort_by(|a, b| {
+        let first = |g: &CorrelationGroup| g.inputs.iter().map(|s| s.as_bytes()).min().unwrap_or_default().to_vec();
+        first(a).cmp(&first(b))
+    });
+
     check(is_model_name(&p.name), "name")?;
     check(is_semver(&p.semver), "semver")?;
     for n in &p.inputs {
@@ -521,9 +577,13 @@ fn canonicalize(p: &mut ModelParts) -> Result<(), SchemaError> {
             check(is_author(&s.author), "inputs.source.author")?;
         }
     }
-    for n in &p.operators {
+    for n in &mut p.operators {
         check(is_node_id(&n.id), "operators.id")?;
+        check(n.algorithm_id.len() <= MAX_ID_BYTES, "operators.algorithm_id")?;
         check(n.algorithm().is_some(), "operators.algorithm")?;
+        check(params_ok(&n.params), "operators.params")?;
+        // Canonical member order inside params, so equal models compare equal in memory.
+        check(sort_members(&mut n.params), "operators.params")?;
         for port in &n.ports_in {
             check(is_node_id(&port.name), "operators.ports_in.name")?;
             check(is_quantity_kind(&port.quantity_kind), "operators.ports_in.quantity_kind")?;
@@ -544,14 +604,6 @@ fn canonicalize(p: &mut ModelParts) -> Result<(), SchemaError> {
         }
     }
 
-    let mut ids: Vec<&str> = p.inputs.iter().map(|n| n.id.as_str()).collect();
-    ids.extend(p.operators.iter().map(|n| n.id.as_str()));
-    ids.extend(p.outputs.iter().map(|n| n.id.as_str()));
-    ids.sort_by(|a, b| by_bytes(a, b));
-    if let Some(w) = ids.windows(2).find(|w| w[0] == w[1]) {
-        return Err(SchemaError::DuplicateNode { id: w[0].to_owned() });
-    }
-
     for e in &p.edges {
         check(is_node_id(&e.from.node), "edges.from.node")?;
         check(is_node_id(&e.from.port), "edges.from.port")?;
@@ -560,19 +612,45 @@ fn canonicalize(p: &mut ModelParts) -> Result<(), SchemaError> {
     }
     check(!p.edges.windows(2).any(|w| w[0] == w[1]), "edges")?;
 
-    // Sorting by the smallest input first is the canonical group order (each group's first
-    // input after its own sort), and makes the first reported error order-independent.
-    p.correlations.sort_by(|a, b| {
-        let first = |g: &CorrelationGroup| g.inputs.iter().map(|s| s.as_bytes()).min().unwrap_or_default().to_vec();
-        first(a).cmp(&first(b))
-    });
     for g in &mut p.correlations {
         canonical_group(g)?;
     }
-    let mut all: Vec<&str> = p.correlations.iter().flat_map(|g| g.inputs.iter().map(String::as_str)).collect();
-    all.sort_by(|a, b| by_bytes(a, b));
-    check(!all.windows(2).any(|w| w[0] == w[1]), "correlations.inputs")?;
     Ok(())
+}
+
+/// Text inside `params`: any length (including empty) of `0x20..=0x7e` except `"` and `\`,
+/// the strings the reader accepts.
+fn is_params_text(s: &str) -> bool {
+    s.bytes().all(|c| (0x20..=0x7e).contains(&c) && c != b'"' && c != b'\\')
+}
+
+/// `params` is an object, nested at most [`MAX_PARAMS_DEPTH`] deep, whose member names and
+/// strings are params text. Member names are unique (checked by the canonical writer).
+pub(crate) fn params_ok(j: &Json) -> bool {
+    matches!(j, Json::Obj(_)) && params_value_ok(j, 1)
+}
+
+/// Sorts object members by name (byte order equals UTF-16 order on params text) at every
+/// level; false on a repeated member name. Only called after [`params_ok`], which bounds the
+/// depth.
+fn sort_members(j: &mut Json) -> bool {
+    match j {
+        Json::Str(_) => true,
+        Json::Arr(items) => items.iter_mut().all(sort_members),
+        Json::Obj(members) => {
+            members.sort_by(|a, b| by_bytes(&a.0, &b.0));
+            !members.windows(2).any(|w| w[0].0 == w[1].0) && members.iter_mut().all(|(_, x)| sort_members(x))
+        }
+    }
+}
+
+fn params_value_ok(j: &Json, depth: usize) -> bool {
+    match j {
+        Json::Str(s) => is_params_text(s),
+        _ if depth > MAX_PARAMS_DEPTH => false,
+        Json::Arr(items) => items.iter().all(|x| params_value_ok(x, depth + 1)),
+        Json::Obj(members) => members.iter().all(|(k, x)| is_params_text(k) && params_value_ok(x, depth + 1)),
+    }
 }
 
 fn unique<'a>(names: impl Iterator<Item = &'a str>) -> bool {

@@ -169,7 +169,9 @@
 					"name": "strain"
 				}
 			],
-			"params_digest": "sha256:71c2959c9d9eba2d9e509367d06d488c8f360164f653f38b6e05e0f7e2121880",
+			"params": {
+				"mode": "multiplicative"
+			},
 			"algorithm_version": "1.0.0",
 			"algorithm_id": "unc.op.scale",
 			"id": "thermal"
@@ -213,7 +215,15 @@
 					"name": "tilt"
 				}
 			],
-			"params_digest": "sha256:2c1dda5df6dd7e713d1e7f7e3cb646814c4791ce9df04f5b7ca3dfbfea2f53b1",
+			"params": {
+				"weights": [],
+				"tolerance": "3d719799812dea11",
+				"outlier": {
+					"k": "3",
+					"policy": "none"
+				},
+				"max_iter": "50"
+			},
 			"algorithm_version": "1.0.0",
 			"algorithm_id": "fit.circle.ls",
 			"id": "fit"

@@ -734,17 +734,8 @@ fn is_unit(s: &str) -> bool {
     UNITS.contains(&s)
 }
 
-/// `MAJOR.MINOR.PATCH`, each 1..=9 digits without leading zeros.
-fn is_semver(s: &str) -> bool {
-    let parts: Vec<&str> = s.split('.').collect();
-    parts.len() == 3
-        && parts.iter().all(|n| {
-            !n.is_empty()
-                && n.len() <= 9
-                && n.bytes().all(|b| b.is_ascii_digit())
-                && (n.len() == 1 || !n.starts_with('0'))
-        })
-}
+// `MAJOR.MINOR.PATCH`: one rule shared with the model graph (`UNC.MODEL.GRAPH.SCHEMA`).
+use crate::model::is_semver;
 
 fn text(ok: bool, field: &'static str) -> Result<(), StmtError> {
     if ok {

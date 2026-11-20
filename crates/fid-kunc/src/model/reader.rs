@@ -1,11 +1,12 @@
 //! Bounded reader for model documents: objects, arrays and strings of printable ASCII
 //! without escapes, with insignificant whitespace. Anything else fails closed with
-//! `schema_invalid{json.<detail>}`; nesting deeper than [`MAX_DEPTH`] fails `too_large`.
+//! `schema_invalid{json.<detail>}`; nesting deeper than [`MAX_DEPTH`] or more than
+//! [`MAX_VALUES`] values fails `too_large`.
 //! Iterative, so the call stack does not grow with the input.
 
 use fid_kci::kci::json::Json;
 
-use super::{invalid, SchemaError, MAX_DEPTH};
+use super::{invalid, SchemaError, MAX_DEPTH, MAX_VALUES};
 
 /// A container being filled.
 enum Frame {
@@ -16,11 +17,13 @@ enum Frame {
 struct Reader<'a> {
     b: &'a [u8],
     i: usize,
+    /// Values started so far (strings, arrays, objects).
+    values: usize,
 }
 
 /// Reads one value spanning the whole input.
 pub(crate) fn read(input: &[u8]) -> Result<Json, SchemaError> {
-    let mut r = Reader { b: input, i: 0 };
+    let mut r = Reader { b: input, i: 0, values: 0 };
     r.ws();
     let v = r.value()?;
     r.ws();
@@ -64,6 +67,12 @@ impl Reader<'_> {
 
     /// Reads the start of a value: a complete string, or an opened container.
     fn start(&mut self, depth: usize) -> Result<Result<Json, Frame>, SchemaError> {
+        if matches!(self.peek(), Some(b'"' | b'[' | b'{')) {
+            self.values += 1;
+            if self.values > MAX_VALUES {
+                return Err(SchemaError::TooLarge);
+            }
+        }
         match self.peek() {
             Some(b'"') => Ok(Ok(Json::Str(self.string()?))),
             Some(b'[' | b'{') if depth >= MAX_DEPTH => Err(SchemaError::TooLarge),
@@ -215,6 +224,28 @@ mod tests {
         let deep_obj = format!("{}\"x\"{}", "{\"a\":".repeat(MAX_DEPTH + 1), "}".repeat(MAX_DEPTH + 1));
         assert_eq!(err(&deep_obj), SchemaError::TooLarge);
         assert_eq!(err(&"[".repeat(1_000_000)), SchemaError::TooLarge);
+    }
+
+    #[test]
+    fn value_count_is_bounded_at_2_pow_20() {
+        // One array holding MAX_VALUES - 1 strings: MAX_VALUES values in all.
+        let doc = |strings: usize| {
+            let mut s = String::with_capacity(3 * strings + 2);
+            s.push('[');
+            for i in 0..strings {
+                if i > 0 {
+                    s.push(',');
+                }
+                s.push_str("\"\"");
+            }
+            s.push(']');
+            s
+        };
+        assert!(read(doc(MAX_VALUES - 1).as_bytes()).is_ok());
+        assert_eq!(err(&doc(MAX_VALUES)), SchemaError::TooLarge);
+        // Containers count too.
+        let arrays = format!("[{}]", vec!["[]"; MAX_VALUES].join(","));
+        assert_eq!(err(&arrays), SchemaError::TooLarge);
     }
 
     #[test]

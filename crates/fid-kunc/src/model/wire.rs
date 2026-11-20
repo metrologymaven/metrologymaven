@@ -94,16 +94,17 @@ pub(crate) fn to_canonical(p: &ModelParts) -> Result<Vec<u8>, SchemaError> {
                     ])
                 })
                 .collect();
-            obj(vec![
+            Ok(obj(vec![
                 ("id", s(&n.id)),
                 ("algorithm_id", s(&n.algorithm_id)),
                 ("algorithm_version", s(&n.algorithm_version)),
-                ("params_digest", s(n.params_digest.as_str())),
+                ("params", n.params.clone()),
+                ("params_digest", s(n.params_digest()?.as_str())),
                 ("ports_in", Json::Arr(ins)),
                 ("ports_out", Json::Arr(outs)),
-            ])
+            ]))
         })
-        .collect();
+        .collect::<Result<Vec<Json>, SchemaError>>()?;
     let outputs = p
         .outputs
         .iter()
@@ -322,7 +323,8 @@ fn operator_of(j: Json) -> Result<OperatorNode, SchemaError> {
     let algorithm_id = string(o.need("algorithm_id", "operators.algorithm_id")?, "operators.algorithm_id")?;
     let algorithm_version =
         string(o.need("algorithm_version", "operators.algorithm_version")?, "operators.algorithm_version")?;
-    let params_digest = digest_of(o.need("params_digest", "operators.params_digest")?, "operators.params_digest")?;
+    let params = o.need("params", "operators.params")?;
+    let supplied = o.take("params_digest").map(|d| digest_of(d, "operators.params_digest")).transpose()?;
     let ports_in = array(o.need("ports_in", "operators.ports_in")?, "operators.ports_in")?
         .into_iter()
         .map(in_port_of)
@@ -332,7 +334,13 @@ fn operator_of(j: Json) -> Result<OperatorNode, SchemaError> {
         .map(out_port_of)
         .collect::<Result<_, _>>()?;
     o.finish()?;
-    Ok(OperatorNode { id, algorithm_id, algorithm_version, params_digest, ports_in, ports_out })
+    let node = OperatorNode { id, algorithm_id, algorithm_version, params, ports_in, ports_out };
+    // The digest is derived from `params`; a supplied one is only a check.
+    let derived = node.params_digest()?;
+    if supplied.is_some_and(|d| d != derived) {
+        return Err(invalid("operators.params_digest"));
+    }
+    Ok(node)
 }
 
 fn output_of(j: Json) -> Result<OutputNode, SchemaError> {
