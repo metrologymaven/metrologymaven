@@ -441,8 +441,8 @@ fn ac2_same_name_and_semver_with_another_digest_is_a_version_conflict() {
         err,
         StoreError::VersionConflict {
             model: "um:bore-ls@1.0.0".to_owned(),
-            stored: ex.d("bore_ls_digest"),
-            given: ex.d("bore_ls_param_digest"),
+            stored: Box::new(ex.d("bore_ls_digest")),
+            given: Box::new(ex.d("bore_ls_param_digest")),
         }
     );
     // The journal head is unchanged and nothing was stored.
@@ -514,7 +514,7 @@ fn ac4_show_returns_the_stored_model_and_refuses_a_wrong_digest() {
     let wrong = format!("um:bore-ls@1.0.0#{}", ex.s("bore_ls_param_digest"));
     assert_eq!(
         show(&mut w, &wrong).unwrap_err(),
-        StoreError::DigestMismatch { expected: ex.d("bore_ls_param_digest"), found: ex.d("bore_ls_digest") }
+        StoreError::mismatch(ex.d("bore_ls_param_digest"), ex.d("bore_ls_digest"))
     );
     assert_eq!(code(show(&mut w, "um:bore-ls@2.0.0")), "model_not_found");
     assert_eq!(code(show(&mut w, &ex.s("bore_ls_param_digest"))), "model_not_found");
@@ -648,7 +648,13 @@ fn ac6_a_release_manifest_whose_core_differs_from_the_running_kernel_is_refused(
         Box::new(toy()),
     );
     let err = w.cli(&a, MAIN, &create_args("bore_ls.json")).unwrap_err();
-    assert_eq!(err, StoreError::KernelManifestMismatch { running: stub_core, manifest: ex.d("toy_core_digest") });
+    assert_eq!(
+        err,
+        StoreError::KernelManifestMismatch {
+            running: Box::new(stub_core),
+            manifest: Box::new(ex.d("toy_core_digest"))
+        }
+    );
     assert_eq!(code(w.cli(&a, MAIN, &["unc", "validate-model", "--file", "bore_ls.json"])), "kernel_manifest_mismatch");
     assert!(w.store.is_empty() && w.journal.entries.is_empty() && w.blobs.0.borrow().is_empty());
 
@@ -730,7 +736,10 @@ fn ac6_prop_refuses_a_valid_model_checked_against_another_manifest() {
     let under_stub = validate(&model, &stub).unwrap();
     assert_eq!(
         ensure_running_manifest(&under_stub, &release).unwrap_err(),
-        StoreError::ModelManifestStale { model: stub.manifest_digest(), running: ex.d("toy_manifest_digest") }
+        StoreError::ModelManifestStale {
+            model: Box::new(stub.manifest_digest()),
+            running: Box::new(ex.d("toy_manifest_digest")),
+        }
     );
 }
 

@@ -318,9 +318,11 @@ pub(crate) fn check_create(
     ensure_running_manifest(&valid, release)?;
     match store.get(model.name(), model.semver()) {
         Some(s) if s.model_ref.digest == model.digest() => Ok(Plan::AlreadyStored(s.author_kind)),
-        Some(s) => {
-            Err(StoreError::VersionConflict { model: model.id(), stored: s.model_ref.digest, given: model.digest() })
-        }
+        Some(s) => Err(StoreError::VersionConflict {
+            model: model.id(),
+            stored: Box::new(s.model_ref.digest),
+            given: Box::new(model.digest()),
+        }),
         None => Ok(Plan::New),
     }
 }
@@ -342,7 +344,7 @@ pub(crate) fn put_verified(blobs: &dyn ModelBlobs, model: &UncertaintyModel) -> 
     let key = blobs.put(bytes).map_err(|d| StoreError::BlobStore { detail: echo(&d) })?;
     let back = blobs.get(&key).map_err(|d| StoreError::BlobStore { detail: echo(&d) })?;
     if back.as_slice() != bytes || key.size != bytes.len() as u64 {
-        return Err(StoreError::DigestMismatch { expected: model.digest(), found: sha256_digest(&back) });
+        return Err(StoreError::mismatch(model.digest(), sha256_digest(&back)));
     }
     Ok(key)
 }

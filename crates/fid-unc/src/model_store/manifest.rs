@@ -109,7 +109,7 @@ pub fn bind_release_manifest(
         KernelManifest::parse_canonical(&bytes).map_err(|e| StoreError::KernelManifestInvalid { code: e.code() })?;
     let core = *manifest.core_digest();
     if core != running {
-        return Err(StoreError::KernelManifestMismatch { running, manifest: core });
+        return Err(StoreError::KernelManifestMismatch { running: Box::new(running), manifest: Box::new(core) });
     }
     let digest = manifest.manifest_digest();
     Ok(ReleaseManifest { manifest, digest })

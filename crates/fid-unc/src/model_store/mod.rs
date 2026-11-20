@@ -139,17 +139,17 @@ pub enum StoreError {
     /// The release manifest is not a canonical kernel manifest (manifest error code).
     KernelManifestInvalid { code: &'static str },
     /// The release manifest's core digest differs from the running kernel's.
-    KernelManifestMismatch { running: Digest, manifest: Digest },
+    KernelManifestMismatch { running: Box<Digest>, manifest: Box<Digest> },
     /// A `ValidModel` was checked against another manifest than the running one (`UNC.PROP`).
-    ModelManifestStale { model: Digest, running: Digest },
+    ModelManifestStale { model: Box<Digest>, running: Box<Digest> },
     /// The model fails validation; every finding, in `fid-kunc` order.
     ModelInvalid { findings: Vec<String> },
     /// The `(name, semver)` is stored with another digest.
-    VersionConflict { model: String, stored: Digest, given: Digest },
+    VersionConflict { model: String, stored: Box<Digest>, given: Box<Digest> },
     /// No stored version matches the reference.
     ModelNotFound { model: String },
     /// A reference or the stored bytes disagree with the stored digest.
-    DigestMismatch { expected: Digest, found: Digest },
+    DigestMismatch { expected: Box<Digest>, found: Box<Digest> },
     /// The blob store failed.
     BlobStore { detail: String },
     /// The journal did not commit the event; nothing was stored.
@@ -180,6 +180,11 @@ impl StoreError {
             StoreError::Journal { .. } => "journal_failed",
             StoreError::Internal { .. } => "internal",
         }
+    }
+
+    /// `digest_mismatch` with the expected and the found digest.
+    pub fn mismatch(expected: Digest, found: Digest) -> StoreError {
+        StoreError::DigestMismatch { expected: Box::new(expected), found: Box::new(found) }
     }
 
     pub(crate) fn bad(detail: &'static str) -> StoreError {
@@ -353,9 +358,10 @@ impl ModelStore {
                     .get(name, semver)
                     .ok_or_else(|| StoreError::ModelNotFound { model: format!("um:{name}@{semver}") })?;
                 match digest {
-                    Some(d) if *d != stored.model_ref.digest => {
-                        Err(StoreError::DigestMismatch { expected: *d, found: stored.model_ref.digest })
-                    }
+                    Some(d) if *d != stored.model_ref.digest => Err(StoreError::DigestMismatch {
+                        expected: Box::new(*d),
+                        found: Box::new(stored.model_ref.digest),
+                    }),
                     _ => Ok(stored),
                 }
             }
@@ -432,15 +438,15 @@ pub fn read_back(stored: &StoredModel, blobs: &dyn ModelBlobs) -> Result<Uncerta
     let bytes = blobs.get(&stored.blob).map_err(|d| StoreError::BlobStore { detail: echo(&d) })?;
     let found = sha256_digest(&bytes);
     if found != expected {
-        return Err(StoreError::DigestMismatch { expected, found });
+        return Err(StoreError::mismatch(expected, found));
     }
-    let model = UncertaintyModel::parse(&bytes).map_err(|_| StoreError::DigestMismatch { expected, found })?;
+    let model = UncertaintyModel::parse(&bytes).map_err(|_| StoreError::mismatch(expected, found))?;
     if model.digest() != expected
         || model.canonical_json() != bytes.as_slice()
         || model.name() != stored.name()
         || model.semver() != stored.model_ref.semver
     {
-        return Err(StoreError::DigestMismatch { expected, found: model.digest() });
+        return Err(StoreError::mismatch(expected, model.digest()));
     }
     Ok(model)
 }
@@ -452,7 +458,7 @@ pub fn ensure_running_manifest(model: &ValidModel, running: &ReleaseManifest) ->
     if m == r {
         Ok(())
     } else {
-        Err(StoreError::ModelManifestStale { model: m, running: r })
+        Err(StoreError::ModelManifestStale { model: Box::new(m), running: Box::new(r) })
     }
 }
 
