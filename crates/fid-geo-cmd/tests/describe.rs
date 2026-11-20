@@ -15,10 +15,10 @@ use fid_canon::{parse, to_canonical_bytes, CValue};
 use fid_dep::{EdgeIndex, EdgesSet, ElementState, ElementStates, RecomputeMode};
 use fid_geo_cmd::{
     command_defs, derive_id, describe_element, imported_text_id, invoke_cli, invoke_mcp, register_element,
-    replace_element, ActivityEntry, DescribeParams, GeoCmdError, GeoTx, IdOrigin, Registered, Surface, TreeEntry,
-    CLI_DESCRIBE, DESCRIBE_ELEMENT, MCP_DESCRIBE,
+    replace_element, ActivityEntry, Derivation, DescribeParams, GeoCmdError, GeoTx, IdOrigin, Registered, Surface,
+    TreeEntry, CLI_DESCRIBE, DESCRIBE_ELEMENT, MCP_DESCRIBE,
 };
-use fid_geo_types::{digest, FrameRef, GeometryElement, Mesh, PointBuffer, PointSet};
+use fid_geo_types::{digest, Aabb, CadBodyRef, FrameRef, GeometryElement, Mesh, PointBuffer, PointSet};
 use fid_project::{Bits, Observation, ReplaySource};
 use fid_registry::{tool_name, Catalogue, CommandDecl};
 use fid_types::{CommandId, Digest};
@@ -169,7 +169,9 @@ impl Project {
 
     fn register(&mut self, element: GeometryElement, origin: IdOrigin) -> Result<Registered, GeoCmdError> {
         let r = register_element(&mut self.tx(), element, origin)?;
-        self.journal.push(to_canonical_bytes(&r.edges.to_value()).unwrap());
+        if let Some(e) = &r.edges {
+            self.journal.push(to_canonical_bytes(&e.to_value()).unwrap());
+        }
         Ok(r)
     }
 
@@ -209,7 +211,12 @@ fn derived_origin(exp: &Expected) -> IdOrigin {
             (Uuid::parse(id).unwrap(), Digest::parse(d).unwrap())
         })
         .collect();
-    IdOrigin::Derived { command: CommandId::parse(&exp.str(&["derived", "command"])).unwrap(), inputs }
+    IdOrigin::Derived(Derivation {
+        command: CommandId::parse(&exp.str(&["derived", "command"])).unwrap(),
+        params: Digest::parse(&exp.str(&["derived", "params"])).unwrap(),
+        output: exp.str(&["derived", "output"]),
+        inputs,
+    })
 }
 
 fn derived_element() -> GeometryElement {
@@ -343,16 +350,29 @@ fn ac4_a_derived_element_gets_the_same_uuidv5_every_time() {
         // The new element depends on both inputs, and is current.
         let mut inputs = vec![exp.uuid(&["ids", "pointset_small"]), exp.uuid(&["ids", "mesh_cube"])];
         inputs.sort();
-        assert_eq!(r.edges, EdgesSet::new(r.id, inputs).unwrap());
+        assert_eq!(r.edges, Some(EdgesSet::new(r.id, inputs).unwrap()));
+        assert!(!r.already);
         assert_eq!(p.states.get(&r.id), Some(ElementState::Current));
         ids.push(r.id);
     }
     assert_eq!(ids, [want, want]);
     // The pure function agrees, and the input order does not matter.
-    let IdOrigin::Derived { command, mut inputs } = derived_origin(&exp) else { panic!() };
-    assert_eq!(derive_id(exp.uuid(&["namespace"]), &command, &inputs).unwrap(), want);
-    inputs.reverse();
-    assert_eq!(derive_id(exp.uuid(&["namespace"]), &command, &inputs).unwrap(), want);
+    let IdOrigin::Derived(mut d) = derived_origin(&exp) else { panic!() };
+    assert_eq!(derive_id(exp.uuid(&["namespace"]), &d).unwrap(), want);
+    d.inputs.reverse();
+    assert_eq!(derive_id(exp.uuid(&["namespace"]), &d).unwrap(), want);
+    // Another output of the same run, or other parameters, is another element.
+    let mut other = d.clone();
+    other.output = "normals".into();
+    assert_ne!(derive_id(exp.uuid(&["namespace"]), &other).unwrap(), want);
+    let mut other = d.clone();
+    other.params = Digest::parse(&format!("sha256:{}", "1".repeat(64))).unwrap();
+    assert_ne!(derive_id(exp.uuid(&["namespace"]), &other).unwrap(), want);
+    for bad in ["", "a	b"] {
+        let mut other = d.clone();
+        other.output = bad.into();
+        assert_eq!(derive_id(exp.uuid(&["namespace"]), &other).unwrap_err().code(), "bad_output");
+    }
 }
 
 #[test]
@@ -375,16 +395,23 @@ fn ac4_imported_source_ids_are_kept() {
     let id = exp.str(&["ids", "pointset_small"]);
     let r = p.register(pointset_small(), IdOrigin::Imported(id.clone())).unwrap();
     assert_eq!(r.id.to_string(), id);
-    assert_eq!(r.edges, EdgesSet::new(r.id, Vec::new()).unwrap());
+    assert_eq!(r.edges, Some(EdgesSet::new(r.id, Vec::new()).unwrap()));
 }
 
 #[test]
-fn registering_the_same_derived_element_twice_in_one_project_collides() {
+fn re_registering_an_identical_derivation_is_a_no_op_and_a_different_one_collides() {
     let exp = Expected::load();
     let mut p = with_fixtures(&exp);
     let r = p.register(derived_element(), derived_origin(&exp)).unwrap();
     let before = p.snapshot();
-    assert_eq!(p.register(derived_element(), derived_origin(&exp)).unwrap_err(), GeoCmdError::IdCollision(r.id));
+    // Same kind, digest and inputs: Ok, `already`, no new edges event, nothing changed.
+    let again = p.register(derived_element(), derived_origin(&exp)).unwrap();
+    assert_eq!(again, Registered { id: r.id, digest: r.digest, edges: None, already: true });
+    assert_eq!(p.snapshot(), before);
+    // The same derivation with different content (one point moved) is a collision.
+    let moved = PointSet::from_points(FrameRef::from_bytes([0x0f; 16]), &[[0.5, 0.5, 0.5]]).unwrap();
+    let e = p.register(GeometryElement::PointSet(moved), derived_origin(&exp)).unwrap_err();
+    assert_eq!(e, GeoCmdError::IdCollision(r.id));
     assert_eq!(p.snapshot(), before);
 }
 
@@ -396,10 +423,18 @@ fn derivation_inputs_are_checked_before_anything_changes() {
     let command = CommandId::parse("geo.test_vertices_to_points@1").unwrap();
     let a = exp.uuid(&["ids", "pointset_small"]);
     let d = Digest::parse(&format!("sha256:{}", "0".repeat(64))).unwrap();
-    let dup = IdOrigin::Derived { command: command.clone(), inputs: vec![(a, d), (a, d)] };
-    assert_eq!(p.register(derived_element(), dup).unwrap_err(), GeoCmdError::DuplicateInput(a));
+    let params = Digest::parse(&exp.str(&["derived", "params"])).unwrap();
+    let derived = |inputs: Vec<(Uuid, Digest)>| {
+        IdOrigin::Derived(Derivation { command: command.clone(), params, output: "points".into(), inputs })
+    };
+    assert_eq!(
+        p.register(derived_element(), derived(vec![(a, d), (a, d)])).unwrap_err(),
+        GeoCmdError::DuplicateInput(a)
+    );
+    // A geometric input given with a digest other than its current one.
+    assert_eq!(p.register(derived_element(), derived(vec![(a, d)])).unwrap_err(), GeoCmdError::DigestMismatch(a));
     let ghost = Uuid::parse("0190a5b2-7c3d-7000-8000-0000000000ee").unwrap();
-    let missing = IdOrigin::Derived { command, inputs: vec![(ghost, d)] };
+    let missing = derived(vec![(ghost, d)]);
     let e = p.register(derived_element(), missing).unwrap_err();
     assert_eq!(e.code(), "not_found");
     assert!(matches!(e, GeoCmdError::Edge(fid_dep::EdgeError::DanglingInput { input, .. }) if input == ghost), "{e:?}");
@@ -454,7 +489,7 @@ fn ac5_replacement_keeps_the_id_updates_the_digest_and_outdates_dependents() {
     let old = obj_of(&p.cli(&mesh.to_string()).unwrap());
     let new_mesh = mesh_open_box();
     let new_digest = digest(&new_mesh);
-    let r = replace_element(&mut p.tx(), &mesh, new_mesh).unwrap();
+    let r = replace_element(&mut p.tx(), &mesh, new_mesh, &[]).unwrap();
     assert_eq!(r.id, mesh);
     assert_eq!(r.digest_after, new_digest);
     assert_ne!(r.digest_before, r.digest_after);
@@ -492,10 +527,13 @@ fn replacement_refusals_change_nothing() {
     let before = p.snapshot();
     let pts = PointSet::new(FrameRef::from_bytes([1; 16]), PointBuffer::from_points(&[[0.0; 3]]), Default::default());
     let as_points = GeometryElement::PointSet(pts.unwrap());
-    let e = replace_element(&mut p.tx(), &mesh, as_points).unwrap_err();
+    let e = replace_element(&mut p.tx(), &mesh, as_points, &[]).unwrap_err();
     assert_eq!(e.code(), "kind_mismatch");
-    assert_eq!(replace_element(&mut p.tx(), &ghost, mesh_cube()).unwrap_err(), GeoCmdError::NotFound(ghost));
-    assert_eq!(replace_element(&mut p.tx(), &feature, mesh_cube()).unwrap_err(), GeoCmdError::NotGeometry(feature));
+    assert_eq!(replace_element(&mut p.tx(), &ghost, mesh_cube(), &[]).unwrap_err(), GeoCmdError::NotFound(ghost));
+    assert_eq!(
+        replace_element(&mut p.tx(), &feature, mesh_cube(), &[]).unwrap_err(),
+        GeoCmdError::NotGeometry(feature)
+    );
     assert_eq!(p.snapshot(), before);
 }
 
@@ -520,4 +558,236 @@ fn ac6_the_tool_is_in_the_manifest_with_projection_exposed() {
     assert_eq!(c.get("determinism"), Some(&CValue::Str("D0".into())));
     let Some(CValue::Arr(exposure)) = c.get("exposure") else { panic!() };
     assert!(exposure.contains(&CValue::Str("mcp".into())) && exposure.contains(&CValue::Str("cli".into())));
+}
+
+#[test]
+fn a_change_reaches_transitive_dependents() {
+    // mesh -> derived point set -> feature: both downstream elements become outdated.
+    let exp = Expected::load();
+    let mut p = with_fixtures(&exp);
+    let mesh = exp.uuid(&["ids", "mesh_cube"]);
+    let derived = p.register(derived_element(), derived_origin(&exp)).unwrap().id;
+    let feature = Uuid::parse("0190a5b2-7c3d-7000-8000-0000000000aa").unwrap();
+    p.edges.apply(&[EdgesSet::new(feature, vec![derived]).unwrap()]).unwrap();
+    p.tree.insert(feature, TreeEntry::Other { kind: "feature".into() });
+    p.states.insert(feature, ElementState::Current);
+    let o = obj_of(&p.cli(&derived.to_string()).unwrap());
+    assert_eq!(o.get("origin"), Some(&CValue::Str("derived".into())));
+
+    let r = replace_element(&mut p.tx(), &mesh, mesh_open_box(), &[]).unwrap();
+    // Propagation order: the derived element before the feature computed from it.
+    assert_eq!(r.propagation.marking.marked(), [derived, feature]);
+    assert_eq!(p.states.get(&derived), Some(ElementState::Outdated));
+    assert_eq!(p.states.get(&feature), Some(ElementState::Outdated));
+}
+
+#[test]
+fn a_dependent_recomputed_in_the_same_commit_is_current() {
+    let exp = Expected::load();
+    let mut p = with_fixtures(&exp);
+    let mesh = exp.uuid(&["ids", "mesh_cube"]);
+    let derived = p.register(derived_element(), derived_origin(&exp)).unwrap().id;
+    let feature = Uuid::parse("0190a5b2-7c3d-7000-8000-0000000000aa").unwrap();
+    p.edges.apply(&[EdgesSet::new(feature, vec![derived]).unwrap()]).unwrap();
+    p.tree.insert(feature, TreeEntry::Other { kind: "feature".into() });
+    p.states.insert(feature, ElementState::Current);
+    // The derived element was outdated by an earlier change and is recomputed now.
+    p.states.insert(derived, ElementState::Outdated);
+
+    let r = replace_element(&mut p.tx(), &mesh, mesh_open_box(), &[derived]).unwrap();
+    assert!(!r.propagation.marking.pending().contains(&derived));
+    assert_eq!(r.propagation.marking.marked(), [feature]);
+    assert_eq!(p.states.get(&derived), Some(ElementState::Current));
+    assert_eq!(p.states.get(&feature), Some(ElementState::Outdated));
+
+    // An element outside the pass cannot be listed as recomputed; nothing changes.
+    let other = exp.uuid(&["ids", "pointset_small"]);
+    let before = p.snapshot();
+    let e = replace_element(&mut p.tx(), &mesh, mesh_cube(), &[other]).unwrap_err();
+    assert_eq!(e.code(), "not_in_pass");
+    assert_eq!(p.snapshot(), before);
+}
+
+#[test]
+fn a_uuid_source_id_in_any_case_is_imported_and_kept_verbatim() {
+    let exp = Expected::load();
+    let mut p = Project::new(&exp);
+    let id = exp.uuid(&["ids", "mesh_cube"]);
+    let upper = id.to_string().to_uppercase();
+    let r = p.register(mesh_cube(), IdOrigin::Imported(upper.clone())).unwrap();
+    assert_eq!(r.id, id);
+    let o = obj_of(&p.cli(&id.to_string()).unwrap());
+    assert_eq!(o.get("source_id"), Some(&CValue::Str(upper)));
+    assert_eq!(o.get("origin"), Some(&CValue::Str("imported".into())));
+    // The same ID in canonical form collides.
+    let e = p.register(mesh_cube(), IdOrigin::Imported(id.to_string())).unwrap_err();
+    assert_eq!(e, GeoCmdError::IdCollision(id));
+}
+
+fn cad_body() -> GeometryElement {
+    let aabb = Aabb::new([-0.5, 0.0, 0.25], [0.5, 1.0, 0.75]).unwrap();
+    let src = Digest::parse(&format!("sha256:{}", "ab".repeat(32))).unwrap();
+    GeometryElement::CadBody(CadBodyRef::new(FrameRef::from_bytes([9; 16]), [3; 16], src, aabb))
+}
+
+fn empty_points() -> GeometryElement {
+    GeometryElement::PointSet(PointSet::from_points(FrameRef::from_bytes([2; 16]), &[]).unwrap())
+}
+
+#[test]
+fn a_cad_body_box_is_claimed_and_an_empty_element_has_no_box() {
+    let exp = Expected::load();
+    let recorded = vec![
+        Observation::NowMs(0x0190_a5b2_7c3d),
+        Observation::RandomBits(Bits::new(74, 7).unwrap()),
+        Observation::NowMs(0x0190_a5b2_7c3e),
+        Observation::RandomBits(Bits::new(74, 8).unwrap()),
+    ];
+    let mut p = Project::with_observations(&exp, recorded);
+    let cad = p.register(cad_body(), IdOrigin::New).unwrap().id;
+    let o = obj_of(&p.cli(&cad.to_string()).unwrap());
+    let Some(CValue::Obj(b)) = o.get("aabb") else { panic!() };
+    assert_eq!(b.get("source"), Some(&CValue::Str("claimed".into())));
+    assert_eq!(b.get("min"), Some(&CValue::Arr(vec![CValue::Num(-0.5), CValue::Num(0.0), CValue::Num(0.25)])));
+    for key in ["points", "triangles", "topology", "source_id"] {
+        assert_eq!(o.get(key), Some(&CValue::Null), "{key}");
+    }
+    assert_eq!(o.get("kind"), Some(&CValue::Str("CadBodyRef".into())));
+    assert_eq!(o.get("origin"), Some(&CValue::Str("new".into())));
+    let empty = p.register(empty_points(), IdOrigin::New).unwrap().id;
+    let o = obj_of(&p.cli(&empty.to_string()).unwrap());
+    assert_eq!(o.get("aabb"), Some(&CValue::Null));
+    assert_eq!(o.get("points"), Some(&CValue::Num(0.0)));
+}
+
+// ------------------------------------------------------------------ published schemas
+
+const ID_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
+const DIGEST_PATTERN: &str = "^sha256:[0-9a-f]{64}$";
+
+/// The two patterns the definition uses, matched by hand (no regex engine in the workspace).
+fn matches_pattern(p: &str, x: &str) -> bool {
+    let hex = |s: &str| s.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c));
+    match p {
+        ID_PATTERN => {
+            let parts: Vec<&str> = x.split('-').collect();
+            parts.iter().map(|s| s.len()).eq([8, 4, 4, 4, 12]) && parts.iter().all(|s| hex(s))
+        }
+        DIGEST_PATTERN => x.strip_prefix("sha256:").is_some_and(|h| h.len() == 64 && hex(h)),
+        other => panic!("pattern {other} not supported by the test checker"),
+    }
+}
+
+fn type_ok(t: &str, v: &CValue) -> bool {
+    match (t, v) {
+        ("object", CValue::Obj(_)) | ("array", CValue::Arr(_)) | ("string", CValue::Str(_)) => true,
+        ("boolean", CValue::Bool(_)) | ("null", CValue::Null) | ("number", CValue::Num(_)) => true,
+        ("integer", CValue::Num(n)) => n.fract() == 0.0,
+        _ => false,
+    }
+}
+
+/// A checker for the JSON Schema subset the definition uses (after fid-gdt's datum tests).
+/// An unknown keyword fails the test, so a schema change must extend this checker on purpose.
+fn conforms(schema: &CValue, v: &CValue, at: &str) -> Result<(), String> {
+    let CValue::Obj(s) = schema else { return Err(format!("{at}: schema is not an object")) };
+    for (k, kv) in s {
+        let ok = match (k.as_str(), kv) {
+            ("description", _) | ("x-quantity", _) | ("x-unit", _) | ("x-ref", _) => true,
+            ("type", CValue::Str(t)) => type_ok(t, v),
+            ("type", CValue::Arr(ts)) => ts.iter().any(|t| matches!(t, CValue::Str(t) if type_ok(t, v))),
+            ("enum", CValue::Arr(e)) => e.contains(v),
+            ("pattern", CValue::Str(p)) => match v {
+                CValue::Str(x) => matches_pattern(p, x),
+                _ => true,
+            },
+            ("minimum", CValue::Num(m)) => !matches!(v, CValue::Num(n) if n < m),
+            ("required", CValue::Arr(r)) => match v {
+                CValue::Obj(o) => r.iter().all(|k| matches!(k, CValue::Str(k) if o.contains_key(k))),
+                _ => true,
+            },
+            ("additionalProperties", CValue::Bool(false)) => match (v, s.get("properties")) {
+                (CValue::Obj(o), Some(CValue::Obj(props))) => o.keys().all(|k| props.contains_key(k)),
+                (CValue::Obj(_), _) => return Err(format!("{at}: additionalProperties without properties")),
+                _ => true,
+            },
+            ("properties", CValue::Obj(props)) => {
+                if let CValue::Obj(o) = v {
+                    for (pk, ps) in props {
+                        if let Some(pv) = o.get(pk) {
+                            conforms(ps, pv, &format!("{at}/{pk}"))?;
+                        }
+                    }
+                }
+                true
+            }
+            ("items", item) => {
+                if let CValue::Arr(a) = v {
+                    for (i, x) in a.iter().enumerate() {
+                        conforms(item, x, &format!("{at}/{i}"))?;
+                    }
+                }
+                true
+            }
+            ("minItems", CValue::Num(n)) => !matches!(v, CValue::Arr(a) if (a.len() as f64) < *n),
+            ("maxItems", CValue::Num(n)) => !matches!(v, CValue::Arr(a) if (a.len() as f64) > *n),
+            (other, _) => return Err(format!("{at}: keyword {other} not supported by the test checker")),
+        };
+        if !ok {
+            return Err(format!("{at}: fails {k}"));
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn results_and_params_conform_to_the_published_schemas() {
+    let exp = Expected::load();
+    let def = command_defs().unwrap().remove(0);
+    let geo = Catalogue::geo_frame().unwrap();
+    assert_eq!(fid_registry::check_schema(&def.params_schema, &geo), vec![]);
+    assert_eq!(fid_registry::check_schema(&def.result_schema, &geo), vec![]);
+
+    // Both fixture outputs, from the independent reference.
+    for key in ["pointset_small", "mesh_cube"] {
+        conforms(&def.result_schema, &parse(exp.str(&["describe", key]).as_bytes()).unwrap(), key).unwrap();
+    }
+    // A CAD body (claimed box, null counts) and an empty element (null box), as described.
+    let recorded = vec![
+        Observation::NowMs(1),
+        Observation::RandomBits(Bits::new(74, 1).unwrap()),
+        Observation::NowMs(2),
+        Observation::RandomBits(Bits::new(74, 2).unwrap()),
+    ];
+    let mut p = Project::with_observations(&exp, recorded);
+    for e in [cad_body(), empty_points()] {
+        let id = p.register(e, IdOrigin::New).unwrap().id;
+        let out = parse(&p.cli(&id.to_string()).unwrap()).unwrap();
+        conforms(&def.result_schema, &out, "described").unwrap();
+    }
+    // Results the schema must refuse.
+    let mut bad = obj_of(exp.str(&["describe", "mesh_cube"]).as_bytes());
+    bad.remove("origin");
+    assert!(conforms(&def.result_schema, &CValue::Obj(bad), "no origin").is_err());
+    let mut bad = obj_of(exp.str(&["describe", "mesh_cube"]).as_bytes());
+    let Some(CValue::Obj(t)) = bad.get_mut("topology") else { panic!() };
+    t.remove("closed");
+    assert!(conforms(&def.result_schema, &CValue::Obj(bad), "no closed").is_err());
+    let mut bad = obj_of(exp.str(&["describe", "mesh_cube"]).as_bytes());
+    let Some(CValue::Obj(b)) = bad.get_mut("aabb") else { panic!() };
+    b.remove("source");
+    assert!(conforms(&def.result_schema, &CValue::Obj(bad), "no source").is_err());
+
+    // Real parameters conform; bad ones do not.
+    let good = format!("{{\"element\":\"{}\"}}", exp.str(&["ids", "mesh_cube"]));
+    conforms(&def.params_schema, &parse(good.as_bytes()).unwrap(), "params").unwrap();
+    for bad in [
+        "{}".to_string(),
+        "{\"element\":1}".to_string(),
+        "{\"element\":\"not-a-uuid\"}".to_string(),
+        format!("{{\"element\":\"{}\"}}", exp.str(&["ids", "mesh_cube"]).to_uppercase()),
+        format!("{{\"element\":\"{}\",\"x\":1}}", exp.str(&["ids", "mesh_cube"])),
+    ] {
+        assert!(conforms(&def.params_schema, &parse(bad.as_bytes()).unwrap(), &bad).is_err(), "{bad}");
+    }
 }

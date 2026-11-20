@@ -23,6 +23,7 @@ pub use describe::{
 };
 pub use error::GeoCmdError;
 pub use register::{
-    derive_id, imported_text_id, kind_name, register_element, replace_element, ElementFacts, ElementTree, EntityId,
-    GeoEntry, GeoTx, IdOrigin, Registered, Replaced, TreeEntry, MAX_COUNT, MAX_SOURCE_ID_BYTES,
+    derive_id, imported_text_id, kind_name, register_element, replace_element, Derivation, ElementFacts, ElementTree,
+    EntityId, GeoEntry, GeoTx, IdOrigin, OriginKind, Registered, Replaced, TreeEntry, DERIVED_TAG, IMPORTED_SOURCE_TAG,
+    MAX_COUNT, MAX_OUTPUT_BYTES, MAX_SOURCE_ID_BYTES,
 };

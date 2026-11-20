@@ -4,12 +4,14 @@
 //! returns them as RFC 8785 canonical JSON:
 //!
 //! ```text
-//! {"aabb": {"max": [x, y, z], "min": [x, y, z]} | null,   metres; null with no points
+//! {"aabb": {"max": [x, y, z], "min": [x, y, z],          metres; null with no points
+//!           "source": "computed" | "claimed"} | null,     claimed: a CAD body's import box
 //!  "channels": ["normal", ...],                           per-point channels present
 //!  "digest": "sha256:<64 hex>",                           GEO.TYPES.DIGEST content digest
 //!  "frame": "<uuid>",                                     the 16 frame-ID bytes
 //!  "id": "<uuid>",                                        the entity ID
 //!  "kind": "PointSet" | "PointCloud" | "Mesh" | "CadBodyRef",
+//!  "origin": "imported" | "new" | "derived",              how the ID was assigned
 //!  "points": n | null,                                    vertices for a mesh; null for a CAD body
 //!  "source_id": "<text>" | null,                          the imported source ID, verbatim
 //!  "topology": {...} | null,                              mesh topology facts
@@ -23,7 +25,7 @@
 //! only gets read access to the tree, so it cannot change anything.
 
 use crate::error::{kept, GeoCmdError};
-use crate::register::{kind_name, ElementFacts, ElementTree, EntityId, TreeEntry};
+use crate::register::{kind_name, ElementTree, EntityId, GeoEntry, TreeEntry};
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue, CanonError};
 use fid_geo_types::TopologyFacts;
 use fid_registry::{CommandDef, DefError};
@@ -120,18 +122,24 @@ fn topology_value(t: &TopologyFacts) -> CValue {
     ])
 }
 
-/// The describe result of element `id` with cached `facts`.
-fn description(id: &EntityId, facts: &ElementFacts, source_id: Option<&str>) -> CValue {
+/// The describe result of element `id` from its cached facts.
+fn description(id: &EntityId, g: &GeoEntry) -> CValue {
+    let facts = &g.facts;
     let opt = |v: Option<CValue>| v.unwrap_or(CValue::Null);
+    let source = if facts.aabb_claimed { "claimed" } else { "computed" };
     obj([
-        ("aabb", opt(facts.aabb.map(|b| obj([("max", xyz(b.max())), ("min", xyz(b.min()))])))),
+        (
+            "aabb",
+            opt(facts.aabb.map(|b| obj([("max", xyz(b.max())), ("min", xyz(b.min())), ("source", text(source))]))),
+        ),
         ("channels", CValue::Arr(facts.channels.iter().map(|c| text(c)).collect())),
         ("digest", text(facts.digest.to_digest().as_str())),
         ("frame", text(&Uuid::from_bytes(facts.frame.to_bytes()).to_string())),
         ("id", text(&id.to_string())),
         ("kind", text(kind_name(facts.kind))),
+        ("origin", text(g.origin.as_str())),
         ("points", opt(facts.points.map(num))),
-        ("source_id", opt(source_id.map(text))),
+        ("source_id", opt(g.source_id.as_deref().map(text))),
         ("topology", opt(facts.topology.as_ref().map(topology_value))),
         ("triangles", opt(facts.triangles.map(num))),
     ])
@@ -143,7 +151,7 @@ pub fn describe_element(tree: &dyn ElementTree, params: &DescribeParams) -> Resu
     match tree.get(&params.element) {
         None => Err(GeoCmdError::NotFound(params.element)),
         Some(TreeEntry::Other { .. }) => Err(GeoCmdError::NotGeometry(params.element)),
-        Some(TreeEntry::Geometry(g)) => Ok(description(&params.element, &g.facts, g.source_id.as_deref())),
+        Some(TreeEntry::Geometry(g)) => Ok(description(&params.element, g)),
     }
 }
 
@@ -244,6 +252,18 @@ fn result_schema() -> CValue {
         ("type", nullable("object")),
         ("additionalProperties", CValue::Bool(false)),
         (
+            "required",
+            strs(&[
+                "boundary_edges",
+                "closed",
+                "components",
+                "degenerate",
+                "misoriented_pairs",
+                "nonmanifold_edges",
+                "oriented",
+            ]),
+        ),
+        (
             "properties",
             obj([
                 ("boundary_edges", count.clone()),
@@ -269,6 +289,7 @@ fn result_schema() -> CValue {
                 "frame",
                 "id",
                 "kind",
+                "origin",
                 "points",
                 "source_id",
                 "topology",
@@ -283,7 +304,15 @@ fn result_schema() -> CValue {
                     obj([
                         ("type", nullable("object")),
                         ("additionalProperties", CValue::Bool(false)),
-                        ("properties", obj([("max", corner.clone()), ("min", corner)])),
+                        ("required", strs(&["max", "min", "source"])),
+                        (
+                            "properties",
+                            obj([
+                                ("max", corner.clone()),
+                                ("min", corner),
+                                ("source", obj([("type", text("string")), ("enum", strs(&["claimed", "computed"]))])),
+                            ]),
+                        ),
                     ]),
                 ),
                 ("channels", obj([("type", text("array")), ("items", obj([("type", text("string"))]))])),
@@ -294,6 +323,7 @@ fn result_schema() -> CValue {
                     "kind",
                     obj([("type", text("string")), ("enum", strs(&["CadBodyRef", "Mesh", "PointCloud", "PointSet"]))]),
                 ),
+                ("origin", obj([("type", text("string")), ("enum", strs(&["derived", "imported", "new"]))])),
                 ("points", nullable_count.clone()),
                 ("source_id", obj([("type", nullable("string"))])),
                 ("topology", topology),

@@ -1,7 +1,7 @@
 //! The error type of the crate: a closed set with stable codes.
 
 use fid_dep::{EdgeError, PropError};
-use fid_geo_types::ElementKind;
+use fid_geo_types::{ElementKind, GeoTypeError};
 use fid_project::IdError;
 use fid_uuid::Uuid;
 use std::fmt;
@@ -28,6 +28,13 @@ pub enum GeoCmdError {
     BadSourceId(&'static str),
     /// A derivation input is listed twice.
     DuplicateInput(Uuid),
+    /// A derivation input is a geometric element whose current digest differs from the
+    /// digest given for it.
+    DigestMismatch(Uuid),
+    /// A derivation output name is empty, too long or holds a control character.
+    BadOutput(&'static str),
+    /// The element's bounding box could not be computed (any error but `empty`).
+    Geometry(GeoTypeError),
     /// A replacement would change the element's kind.
     KindMismatch { expected: ElementKind, found: ElementKind },
     /// A size budget was exceeded. Holds the name of the budget.
@@ -54,6 +61,9 @@ impl GeoCmdError {
             GeoCmdError::IdCollision(_) => "id_collision",
             GeoCmdError::BadSourceId(_) => "bad_source_id",
             GeoCmdError::DuplicateInput(_) => "duplicate_input",
+            GeoCmdError::DigestMismatch(_) => "digest_mismatch",
+            GeoCmdError::BadOutput(_) => "bad_output",
+            GeoCmdError::Geometry(e) => e.code(),
             GeoCmdError::KindMismatch { .. } => "kind_mismatch",
             GeoCmdError::InputLimit(_) => "input_limit",
             GeoCmdError::Edge(e) => e.code(),
@@ -80,9 +90,12 @@ impl fmt::Display for GeoCmdError {
             GeoCmdError::NotFound(id)
             | GeoCmdError::NotGeometry(id)
             | GeoCmdError::IdCollision(id)
-            | GeoCmdError::DuplicateInput(id) => write!(f, ": {id}"),
+            | GeoCmdError::DuplicateInput(id)
+            | GeoCmdError::DigestMismatch(id) => write!(f, ": {id}"),
+            GeoCmdError::Geometry(e) => write!(f, ": {e}"),
             GeoCmdError::BadParams(s)
             | GeoCmdError::BadSourceId(s)
+            | GeoCmdError::BadOutput(s)
             | GeoCmdError::InputLimit(s)
             | GeoCmdError::Internal(s) => write!(f, ": {s}"),
             GeoCmdError::UnknownCommand(s) => write!(f, ": {s:?}"),

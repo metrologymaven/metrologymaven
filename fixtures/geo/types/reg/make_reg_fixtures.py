@@ -10,21 +10,26 @@ Python standard library only; nothing is taken from a run of the Rust code.
 Rules applied (spec/geo/types/reg/NODE.md, Design; pinned in crates/fid-geo-cmd):
 - The result is RFC 8785 canonical JSON: keys sorted, no whitespace, numbers in the
   ECMAScript Number-to-String form.
-- `kind` is the type name (`PointSet`, `PointCloud`, `Mesh`, `CadBodyRef`); `points` is the
+- `kind` is the type name (`PointSet`, `PointCloud`, `Mesh`, `CadBodyRef`); `origin` is how
+  the ID was assigned (`imported`, `new`, `derived`); `points` is the
   point (or vertex) count; `triangles` is the triangle count of a mesh and null otherwise;
-  `aabb` is `{"max": [x, y, z], "min": [x, y, z]}` in metres; `frame` is the 16 frame-ID
+  `aabb` is `{"max": [x, y, z], "min": [x, y, z], "source": "computed"}` in metres
+  (`claimed` only for a CAD body's import box); `frame` is the 16 frame-ID
   bytes as a lowercase hyphenated UUID; `digest` is `sha256:` plus the hex of the GEO.TYPES
   digest vector; `channels` are the per-point channel names present; `topology` is the mesh
   topology facts object (null for other kinds); `id` is the entity ID and `source_id` the
   imported source ID kept verbatim (null when none).
 - A derived ID is UUIDv5 (RFC 9562) in the project namespace over the canonical JSON
-  `{"command": <command ID>, "inputs": [{"digest": d, "id": i}, ...]}`, inputs sorted by ID.
-- An imported source ID that is not a canonical UUID is kept verbatim as `source_id`; the
-  entity ID is UUIDv5 in the project namespace over `{"source_id": <text>}`.
+  `{"command": <command ID>, "inputs": [{"digest": d, "id": i}, ...], "kind": "geo_derived",
+  "output": <output name>, "params": <params digest>}`, inputs sorted by ID.
+- An imported source ID that is not a UUID is kept verbatim as `source_id`; the entity ID
+  is UUIDv5 in the project namespace over
+  `{"kind": "geo_imported_source", "source_id": <text>}`.
 
 Run:  python fixtures/geo/types/reg/make_reg_fixtures.py [--check]
 """
 
+import hashlib
 import json
 import struct
 import sys
@@ -41,6 +46,9 @@ NAMESPACE = "8e3f6a52-1c2d-4b7e-9f10-2a3b4c5d6e7f"
 POINTSET_ID = "0190a5b2-7c3d-7000-8000-000000000001"
 MESH_ID = "0190a5b2-7c3d-7000-8000-000000000002"
 DERIVE_COMMAND = "geo.test_vertices_to_points@1"
+DERIVE_OUTPUT = "points"
+# The params digest of the producing command: SHA-256 of the canonical params `{}`.
+DERIVE_PARAMS = "sha256:" + hashlib.sha256(b"{}").hexdigest()
 IMPORTED_TEXT = "step:#123"
 
 
@@ -118,12 +126,17 @@ def describe_pointset_small():
     count = int(rec["count"][0])
     assert count == len(points) == 1000
     return {
-        "aabb": {"max": [f64(h) for h in rec["aabb_max"]], "min": [f64(h) for h in rec["aabb_min"]]},
+        "aabb": {
+            "max": [f64(h) for h in rec["aabb_max"]],
+            "min": [f64(h) for h in rec["aabb_min"]],
+            "source": "computed",
+        },
         "channels": [],
         "digest": digest_of("pointset_small"),
         "frame": hyphenated(rec["frame"][0]),
         "id": POINTSET_ID,
         "kind": "PointSet",
+        "origin": "imported",
         "points": count,
         "source_id": POINTSET_ID,
         "topology": None,
@@ -141,12 +154,14 @@ def describe_mesh_cube():
         "aabb": {
             "max": [max(v[i] for v in verts) for i in range(3)],
             "min": [min(v[i] for v in verts) for i in range(3)],
+            "source": "computed",
         },
         "channels": [],
         "digest": digest_of("mesh_cube"),
         "frame": hyphenated(frame),
         "id": MESH_ID,
         "kind": "Mesh",
+        "origin": "imported",
         "points": len(verts),
         "source_id": MESH_ID,
         "topology": facts,
@@ -165,10 +180,12 @@ def build():
     # Given out of ID order on purpose: the mesh ID sorts after the point set ID.
     given = [[MESH_ID, mc["digest"]], [POINTSET_ID, ps["digest"]]]
     inputs = [{"digest": d, "id": i} for i, d in sorted(given)]
-    derive_name = canon({"command": DERIVE_COMMAND, "inputs": inputs})
-    import_name = canon({"source_id": IMPORTED_TEXT})
+    derive_name = canon({"command": DERIVE_COMMAND, "inputs": inputs, "kind": "geo_derived",
+                         "output": DERIVE_OUTPUT, "params": DERIVE_PARAMS})
+    import_name = canon({"kind": "geo_imported_source", "source_id": IMPORTED_TEXT})
     return {
-        "derived": {"command": DERIVE_COMMAND, "id": v5(derive_name), "inputs_given": given, "name": derive_name},
+        "derived": {"command": DERIVE_COMMAND, "id": v5(derive_name), "inputs_given": given, "name": derive_name,
+                    "output": DERIVE_OUTPUT, "params": DERIVE_PARAMS},
         "describe": {"mesh_cube": canon(mc), "pointset_small": canon(ps)},
         "generator": "fixtures/geo/types/reg/make_reg_fixtures.py (stdlib, independent of fid-geo-cmd)",
         "ids": {"mesh_cube": MESH_ID, "pointset_small": POINTSET_ID},
