@@ -148,14 +148,14 @@ pub(crate) fn to_canonical(p: &ModelParts) -> Result<Vec<u8>, SchemaError> {
 /// An object whose members are taken one by one; leftovers are unknown members.
 struct Obj {
     members: Vec<(String, Json)>,
-    path: &'static str,
+    at: &'static str,
 }
 
 impl Obj {
-    fn of(j: Json, path: &'static str) -> Result<Obj, SchemaError> {
+    fn of(j: Json, at: &'static str) -> Result<Obj, SchemaError> {
         match j {
-            Json::Obj(members) => Ok(Obj { members, path }),
-            _ => Err(invalid(path)),
+            Json::Obj(members) => Ok(Obj { members, at }),
+            _ => Err(invalid(at)),
         }
     }
 
@@ -173,7 +173,7 @@ impl Obj {
         if self.members.is_empty() {
             Ok(())
         } else {
-            Err(invalid(self.path))
+            Err(invalid(self.at))
         }
     }
 }
@@ -345,8 +345,8 @@ fn output_of(j: Json) -> Result<OutputNode, SchemaError> {
     Ok(OutputNode { id, quantity_kind, unit, characteristic })
 }
 
-fn endpoint_of(j: Json, path: &'static str, node: &'static str, port: &'static str) -> Result<Endpoint, SchemaError> {
-    let mut o = Obj::of(j, path)?;
+fn endpoint_of(j: Json, at: &'static str, node: &'static str, port: &'static str) -> Result<Endpoint, SchemaError> {
+    let mut o = Obj::of(j, at)?;
     let n = string(o.need("node", node)?, node)?;
     let p = string(o.need("port", port)?, port)?;
     o.finish()?;
