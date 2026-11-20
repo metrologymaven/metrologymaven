@@ -646,9 +646,12 @@ pub fn delta_pairs(kind: Kind, n: usize) -> Vec<(Option<usize>, Option<usize>)> 
     out
 }
 
+/// Per theme: CONFORMS, the base surface and the claimed roles.
+type ThemeEnv = (Option<Rgb>, Option<Rgb>, Vec<(String, Rgb)>);
+
 fn perceptual(pals: &BTreeMap<String, Colours>, tokens: &crate::tokens::Report, f: &mut Vec<Finding>) {
     // Per theme: CONFORMS, the base surface and the claimed roles.
-    let mut env: BTreeMap<&str, (Option<Rgb>, Option<Rgb>, Vec<(String, Rgb)>)> = BTreeMap::new();
+    let mut env: BTreeMap<&str, ThemeEnv> = BTreeMap::new();
     for theme in THEMES {
         let values = tokens.themes.get(theme).map(|t| &t.values);
         let get = |n: &str| values.and_then(|v| v.get(n)).and_then(|x| parse_hex(&x.value));
