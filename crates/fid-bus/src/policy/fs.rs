@@ -281,7 +281,7 @@ const LOOKALIKES: &[char] = &[
 
 /// Windows reserved device names (with any extension, and with trailing spaces before the
 /// dot), refused on every platform so the outcome does not depend on the OS.
-fn windows_device(c: &str) -> bool {
+pub(crate) fn windows_device(c: &str) -> bool {
     let stem = c.split('.').next().unwrap_or(c).trim_end_matches(' ').to_ascii_uppercase();
     match stem.as_str() {
         "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$" | "CLOCK$" => true,
@@ -801,7 +801,7 @@ impl ResolvedPath {
 /// (`O_NOFOLLOW` on Unix; `FILE_FLAG_OPEN_REPARSE_POINT` on Windows, then refused if the opened
 /// file is a reparse point), so the name whose extension was checked is the file opened. With
 /// `root_bound`, a file with more than one hard link is refused (`outside_root`).
-fn open_checked(dir: &Dir, rel: &Path, root_bound: bool) -> Result<File, BusError> {
+pub(crate) fn open_checked(dir: &Dir, rel: &Path, root_bound: bool) -> Result<File, BusError> {
     let meta = dir.symlink_metadata(rel).map_err(|e| io_refusal(&e))?;
     if meta.file_type().is_symlink() {
         return Err(outside("the file is a link"));

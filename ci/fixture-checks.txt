@@ -128,6 +128,7 @@ python fixtures/scan/make_mesh_quality.py --check
 python fixtures/solv/cert/as-v1/make_cases.py --check
 python fixtures/solv/cert/ct-v1/make_cases.py --check
 python fixtures/solv/cert/kkt-v1/make_cases.py --check
+python fixtures/solv/cert/recomp-floor-v1/make_cases.py --check
 python fixtures/solv/cert/recomp-v1/make_cases.py --check
 python fixtures/solv/make_mstart_fixtures.py --check
 python fixtures/solv/patch/ldl-order-v1/make_orders.py --check
@@ -141,6 +142,7 @@ python fixtures/unc/dist/make_fixtures.py --check
 python fixtures/unc/mcm/adapt/make_fixtures.py --check
 python fixtures/unc/mcm/block/make_fixtures.py --check
 python fixtures/unc/mcm/intvl/make_fixtures.py --check
+python fixtures/unc/mcm/samp/make_fixtures.py --check
 python fixtures/unc/model/graph/make_check_fixtures.py --check
 python fixtures/unc/model/graph/make_fixtures.py --check
 python fixtures/unc/model/graph/store/make_store_fixtures.py --check

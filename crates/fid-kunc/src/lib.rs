@@ -11,8 +11,10 @@
 //! [`model::validate`]),
 //! `UNC.PROP.MCM.BLOCK` (trial-block sampling and per-trial kernel evaluation, see
 //! [`prop::mcm::block`]), `UNC.PROP.MCM.INTVL` (Monte Carlo coverage intervals and estimate
-//! outputs from samples, see [`prop::mcm::interval`]) and `UNC.PROP.MCM.ADAPT` (the adaptive
-//! stopping rule `mcm-adapt@1` and trial cap, see [`prop::mcm::adapt`]).
+//! outputs from samples, see [`prop::mcm::interval`]), `UNC.PROP.MCM.ADAPT` (the adaptive
+//! stopping rule `mcm-adapt@1` and trial cap, see [`prop::mcm::adapt`]) and
+//! `UNC.PROP.MCM.SAMP` (retained sample sets `mcm-samples@1` and their digest, see
+//! [`prop::mcm::samples`]).
 //!
 //! The `statement` module never computes an uncertainty. It holds what other nodes computed
 //! or a person declared, and refuses any statement that breaks the invariants.

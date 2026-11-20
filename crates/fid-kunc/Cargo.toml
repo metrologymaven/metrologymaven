@@ -1,6 +1,6 @@
 [package]
 name = "fid-kunc"
-description = "Metrology Maven kernel uncertainty types: evidence classes UEC-0..3 and the validated uncertainty statement with its canonical JSON and digest (spec node UNC.UEC.STMT), evidence class assignment uec-assign@1 (UNC.UEC.CLASS), input distributions and correlation (UNC.MODEL.DIST), the Uncertainty Model graph types, canonical form and digest (UNC.MODEL.GRAPH.SCHEMA) and its structural validation (UNC.MODEL.GRAPH.CHECK), Monte Carlo trial blocks through the kernel call interface (UNC.PROP.MCM.BLOCK), coverage intervals from samples (UNC.PROP.MCM.INTVL) and the adaptive Monte Carlo stopping rule mcm-adapt@1 (UNC.PROP.MCM.ADAPT)"
+description = "Metrology Maven kernel uncertainty types: evidence classes UEC-0..3 and the validated uncertainty statement with its canonical JSON and digest (spec node UNC.UEC.STMT), evidence class assignment uec-assign@1 (UNC.UEC.CLASS), input distributions and correlation (UNC.MODEL.DIST), the Uncertainty Model graph types, canonical form and digest (UNC.MODEL.GRAPH.SCHEMA) and its structural validation (UNC.MODEL.GRAPH.CHECK), Monte Carlo trial blocks through the kernel call interface (UNC.PROP.MCM.BLOCK), coverage intervals from samples (UNC.PROP.MCM.INTVL), the adaptive Monte Carlo stopping rule mcm-adapt@1 (UNC.PROP.MCM.ADAPT) and retained sample sets mcm-samples@1 (UNC.PROP.MCM.SAMP)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

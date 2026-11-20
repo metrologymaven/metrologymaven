@@ -4,9 +4,9 @@
 //! `unc.propagate_mcm@1` and its block scheduling are in the L2 command crate.
 //!
 //! Implemented: [`block`] (trial-block sampling and per-trial kernel evaluation,
-//! `UNC.PROP.MCM.BLOCK`), [`interval`] (`UNC.PROP.MCM.INTVL`) and [`adapt`] (the adaptive
-//! stopping rule, `UNC.PROP.MCM.ADAPT`). Not yet built: retained sample sets
-//! (`UNC.PROP.MCM.SAMP`).
+//! `UNC.PROP.MCM.BLOCK`), [`interval`] (`UNC.PROP.MCM.INTVL`), [`adapt`] (the adaptive
+//! stopping rule, `UNC.PROP.MCM.ADAPT`) and [`samples`] (retained sample sets
+//! `mcm-samples@1` and their digest, `UNC.PROP.MCM.SAMP`).
 //!
 //! Nothing in this module produces an uncertainty statement or an evidence class. A
 //! Monte Carlo summary is a model-based (simulated) result; the class and the claim rules
@@ -19,6 +19,7 @@ use fid_num::NumError;
 pub mod adapt;
 pub mod block;
 pub mod interval;
+pub mod samples;
 
 /// Errors of the Monte Carlo engine functions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,6 +65,12 @@ pub enum McmError {
     Dist(DistError),
     /// `internal`: an invariant of a validated model did not hold (`detail` names it).
     Internal { detail: &'static str },
+    /// `samples_not_retained`: the encoded sample set would be `size` bytes, more than the
+    /// retention cap; no bytes were produced (REQ-UNC.PROP.MCM.SAMP-002).
+    SamplesNotRetained { size: u64 },
+    /// `samples_invalid`: a sample set (or the blocks and header given to the encoder) is
+    /// inconsistent (`detail` names the check; `UNC.PROP.MCM.SAMP`).
+    SamplesInvalid { detail: &'static str },
 }
 
 impl McmError {
@@ -84,6 +91,8 @@ impl McmError {
             McmError::Kernel { .. } => "kernel",
             McmError::Dist(_) => "distribution",
             McmError::Internal { .. } => "internal",
+            McmError::SamplesNotRetained { .. } => "samples_not_retained",
+            McmError::SamplesInvalid { .. } => "samples_invalid",
         }
     }
 }
@@ -112,6 +121,8 @@ impl fmt::Display for McmError {
             McmError::Kernel { code, trial } => write!(f, "kernel: {code} at trial {trial}"),
             McmError::Dist(e) => write!(f, "distribution: {e}"),
             McmError::Internal { detail } => write!(f, "internal: {detail}"),
+            McmError::SamplesNotRetained { size } => write!(f, "samples_not_retained: {size} bytes over the cap"),
+            McmError::SamplesInvalid { detail } => write!(f, "samples_invalid: {detail}"),
         }
     }
 }
