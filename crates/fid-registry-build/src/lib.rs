@@ -67,9 +67,10 @@ fn store_defs() -> Result<Vec<CommandDef>, DefError> {
 }
 
 /// Every crate on main that declares commands, sorted by crate name.
-pub const SOURCES: [Source; 6] = [
+pub const SOURCES: [Source; 7] = [
     Source { krate: "fid-align", defs: fid_align::command_defs },
     Source { krate: "fid-dep", defs: dep_defs },
+    Source { krate: "fid-geo-cmd", defs: fid_geo_cmd::command_defs },
     Source { krate: "fid-jobs", defs: fid_jobs::command_defs },
     Source { krate: "fid-registry", defs: registry_defs },
     Source { krate: "fid-report", defs: fid_report::doc::command_defs },

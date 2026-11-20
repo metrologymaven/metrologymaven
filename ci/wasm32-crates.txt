@@ -6,6 +6,7 @@ fid-canon
 fid-construct
 fid-fit
 fid-geo-cad
+fid-geo-cmd
 fid-geo-dist --test mesh
 fid-geo-frame
 fid-geo-index

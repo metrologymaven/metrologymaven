@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-cmd]
 satisfies: [REQ-GEO.TYPES-007, REQ-GEO.TYPES-008]
 covers: []
 depends_on: [GEO.TYPES.DIGEST, CORE.PRJ, CORE.REG, CORE.DEP]

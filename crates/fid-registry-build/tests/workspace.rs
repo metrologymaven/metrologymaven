@@ -305,6 +305,19 @@ fn on_mcp(o: &std::collections::BTreeMap<String, CValue>) -> bool {
         && !matches!(o.get("mcp_projection"), Some(CValue::Str(p)) if p == "never")
 }
 
+/// GEO.TYPES.REG AC-6 (hand-labelled from spec/geo/types/reg/NODE.md, Design): the workspace
+/// manifest carries `geo.describe_element@1`, class R0, projected to MCP as `exposed`, so the
+/// tool `geo_describe_element` is generated from it.
+#[test]
+fn geo_describe_element_is_exposed_in_the_workspace_manifest() {
+    let commands = workspace_commands();
+    let (_, c) = commands.iter().find(|(id, _)| id == "geo.describe_element@1").expect("collected");
+    assert_eq!(c.get("mcp_projection"), Some(&CValue::Str("exposed".into())));
+    assert_eq!(c.get("side_effect"), Some(&CValue::Str("R0".into())));
+    assert!(on_mcp(c));
+    assert_eq!(fid_registry::tool_name("geo.describe_element", 1), "geo_describe_element");
+}
+
 /// CORE.STO.SET's four commands are collected into the workspace manifest (hand-labelled
 /// from spec/core/sto/set/NODE.md, Design).
 #[test]
