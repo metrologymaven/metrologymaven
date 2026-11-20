@@ -1,0 +1,833 @@
+{
+ "cases": [
+  {
+   "case": "list_params_empty",
+   "command": "request.list_requests@1",
+   "document": {},
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "params"
+  },
+  {
+   "case": "list_params_state",
+   "command": "request.list_requests@1",
+   "document": {
+    "state": "pending"
+   },
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "params"
+  },
+  {
+   "case": "list_params_bad_state",
+   "command": "request.list_requests@1",
+   "document": {
+    "state": "open"
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "enum",
+    "outcome": "error",
+    "pointer": "/state",
+    "reason": "schema"
+   },
+   "target": "params"
+  },
+  {
+   "case": "list_params_extra",
+   "command": "request.list_requests@1",
+   "document": {
+    "state": "pending",
+    "x": 1
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "additionalProperties",
+    "outcome": "error",
+    "pointer": "/x",
+    "reason": "schema"
+   },
+   "target": "params"
+  },
+  {
+   "case": "list_result_empty",
+   "command": "request.list_requests@1",
+   "document": {
+    "requests": []
+   },
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "result"
+  },
+  {
+   "case": "list_result_record",
+   "command": "request.list_requests@1",
+   "document": {
+    "requests": [
+     {
+      "command": "align.run_321@1",
+      "filed_at_head": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "params_commitment": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b",
+      "requester": {
+       "id": "agent-1",
+       "kind": "agent"
+      },
+      "seq": 1,
+      "state": "pending"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "result"
+  },
+  {
+   "case": "list_result_resolved",
+   "command": "request.list_requests@1",
+   "document": {
+    "requests": [
+     {
+      "command": "align.run_321@1",
+      "filed_at_head": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "params_commitment": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "reason": "dup",
+      "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b",
+      "requester": {
+       "id": "agent-1",
+       "kind": "agent"
+      },
+      "resolved_by": {
+       "id": "alice",
+       "kind": "human"
+      },
+      "seq": 1,
+      "state": "rejected"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "result"
+  },
+  {
+   "case": "list_result_seq",
+   "command": "request.list_requests@1",
+   "document": {
+    "requests": [
+     {
+      "command": "align.run_321@1",
+      "filed_at_head": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "params_commitment": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b",
+      "requester": {
+       "id": "agent-1",
+       "kind": "agent"
+      },
+      "seq": 0,
+      "state": "pending"
+     }
+    ]
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "minimum",
+    "outcome": "error",
+    "pointer": "/requests/0/seq",
+    "reason": "schema"
+   },
+   "target": "result"
+  },
+  {
+   "case": "list_result_state",
+   "command": "request.list_requests@1",
+   "document": {
+    "requests": [
+     {
+      "command": "align.run_321@1",
+      "filed_at_head": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "params_commitment": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b",
+      "requester": {
+       "id": "agent-1",
+       "kind": "agent"
+      },
+      "seq": 1,
+      "state": "pending"
+     },
+     {
+      "command": "align.run_321@1",
+      "filed_at_head": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "params_commitment": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b",
+      "requester": {
+       "id": "agent-1",
+       "kind": "agent"
+      },
+      "seq": 1,
+      "state": "open"
+     }
+    ]
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "enum",
+    "outcome": "error",
+    "pointer": "/requests/1/state",
+    "reason": "schema"
+   },
+   "target": "result"
+  },
+  {
+   "case": "list_result_requester",
+   "command": "request.list_requests@1",
+   "document": {
+    "requests": [
+     {
+      "command": "align.run_321@1",
+      "filed_at_head": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "params_commitment": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b",
+      "requester": {
+       "id": "r2",
+       "kind": "robot"
+      },
+      "seq": 1,
+      "state": "pending"
+     }
+    ]
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "enum",
+    "outcome": "error",
+    "pointer": "/requests/0/requester/kind",
+    "reason": "schema"
+   },
+   "target": "result"
+  },
+  {
+   "case": "list_result_uppercase_id",
+   "command": "request.list_requests@1",
+   "document": {
+    "requests": [
+     {
+      "command": "align.run_321@1",
+      "filed_at_head": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "params_commitment": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "request": "0190A1B2-C3D4-7E5F-8A6B-7C8D9E0F1A2B",
+      "requester": {
+       "id": "agent-1",
+       "kind": "agent"
+      },
+      "seq": 1,
+      "state": "pending"
+     }
+    ]
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "pattern",
+    "outcome": "error",
+    "pointer": "/requests/0/request",
+    "reason": "schema"
+   },
+   "target": "result"
+  },
+  {
+   "case": "list_result_missing",
+   "command": "request.list_requests@1",
+   "document": {
+    "requests": [
+     {
+      "command": "align.run_321@1",
+      "params_commitment": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b",
+      "requester": {
+       "id": "agent-1",
+       "kind": "agent"
+      },
+      "seq": 1,
+      "state": "pending"
+     }
+    ]
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "required",
+    "outcome": "error",
+    "pointer": "/requests/0",
+    "reason": "schema"
+   },
+   "target": "result"
+  },
+  {
+   "case": "list_result_commitment",
+   "command": "request.list_requests@1",
+   "document": {
+    "requests": [
+     {
+      "command": "align.run_321@1",
+      "filed_at_head": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "params_commitment": "sha256:x",
+      "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b",
+      "requester": {
+       "id": "agent-1",
+       "kind": "agent"
+      },
+      "seq": 1,
+      "state": "pending"
+     }
+    ]
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "pattern",
+    "outcome": "error",
+    "pointer": "/requests/0/params_commitment",
+    "reason": "schema"
+   },
+   "target": "result"
+  },
+  {
+   "case": "withdraw_ok",
+   "command": "request.withdraw_request@1",
+   "document": {
+    "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b"
+   },
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "params"
+  },
+  {
+   "case": "withdraw_missing",
+   "command": "request.withdraw_request@1",
+   "document": {},
+   "expect": {
+    "code": "validation",
+    "keyword": "required",
+    "outcome": "error",
+    "pointer": "",
+    "reason": "schema"
+   },
+   "target": "params"
+  },
+  {
+   "case": "withdraw_uuid_v4",
+   "command": "request.withdraw_request@1",
+   "document": {
+    "request": "0190a1b2-c3d4-4e5f-8a6b-7c8d9e0f1a2b"
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "pattern",
+    "outcome": "error",
+    "pointer": "/request",
+    "reason": "schema"
+   },
+   "target": "params"
+  },
+  {
+   "case": "withdraw_result",
+   "command": "request.withdraw_request@1",
+   "document": {},
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "result"
+  },
+  {
+   "case": "withdraw_result_extra",
+   "command": "request.withdraw_request@1",
+   "document": {
+    "ok": true
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "additionalProperties",
+    "outcome": "error",
+    "pointer": "/ok",
+    "reason": "schema"
+   },
+   "target": "result"
+  },
+  {
+   "case": "reject_ok",
+   "command": "request.reject_request@1",
+   "document": {
+    "reason": "duplicate",
+    "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b"
+   },
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "params"
+  },
+  {
+   "case": "reject_empty_reason",
+   "command": "request.reject_request@1",
+   "document": {
+    "reason": "",
+    "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b"
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "minLength",
+    "outcome": "error",
+    "pointer": "/reason",
+    "reason": "schema"
+   },
+   "target": "params"
+  },
+  {
+   "case": "reject_long_reason",
+   "command": "request.reject_request@1",
+   "document": {
+    "reason": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+    "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b"
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "maxLength",
+    "outcome": "error",
+    "pointer": "/reason",
+    "reason": "schema"
+   },
+   "target": "params"
+  },
+  {
+   "case": "reject_reason_2000",
+   "command": "request.reject_request@1",
+   "document": {
+    "reason": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+    "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b"
+   },
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "params"
+  },
+  {
+   "case": "file_ok",
+   "command": "request.file_request@1",
+   "document": {
+    "command": "align.run_321@1",
+    "params": {
+     "a": [
+      1
+     ]
+    }
+   },
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "params"
+  },
+  {
+   "case": "file_bad_command",
+   "command": "request.file_request@1",
+   "document": {
+    "command": "Align@1",
+    "params": {}
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "pattern",
+    "outcome": "error",
+    "pointer": "/command",
+    "reason": "schema"
+   },
+   "target": "params"
+  },
+  {
+   "case": "file_params_type",
+   "command": "request.file_request@1",
+   "document": {
+    "command": "align.run_321@1",
+    "params": []
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "type",
+    "outcome": "error",
+    "pointer": "/params",
+    "reason": "schema"
+   },
+   "target": "params"
+  },
+  {
+   "case": "file_result",
+   "command": "request.file_request@1",
+   "document": {
+    "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b"
+   },
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "result"
+  },
+  {
+   "case": "file_result_extra",
+   "command": "request.file_request@1",
+   "document": {
+    "extra": 1,
+    "request": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b"
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "additionalProperties",
+    "outcome": "error",
+    "pointer": "/extra",
+    "reason": "schema"
+   },
+   "target": "result"
+  },
+  {
+   "case": "show_params_empty",
+   "command": "registry.show_manifest@1",
+   "document": {},
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "params"
+  },
+  {
+   "case": "show_params_full",
+   "command": "registry.show_manifest@1",
+   "document": {
+    "full": true
+   },
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "params"
+  },
+  {
+   "case": "show_params_full_type",
+   "command": "registry.show_manifest@1",
+   "document": {
+    "full": "yes"
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "type",
+    "outcome": "error",
+    "pointer": "/full",
+    "reason": "schema"
+   },
+   "target": "params"
+  },
+  {
+   "case": "show_params_unknown",
+   "command": "registry.show_manifest@1",
+   "document": {
+    "verbose": true
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "additionalProperties",
+    "outcome": "error",
+    "pointer": "/verbose",
+    "reason": "schema"
+   },
+   "target": "params"
+  },
+  {
+   "case": "show_result",
+   "command": "registry.show_manifest@1",
+   "document": {
+    "bytes": "{}",
+    "digest": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+   },
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "result"
+  },
+  {
+   "case": "show_result_digest",
+   "command": "registry.show_manifest@1",
+   "document": {
+    "digest": "sha256:0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "pattern",
+    "outcome": "error",
+    "pointer": "/digest",
+    "reason": "schema"
+   },
+   "target": "result"
+  },
+  {
+   "case": "show_result_missing",
+   "command": "registry.show_manifest@1",
+   "document": {
+    "bytes": "{}"
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "required",
+    "outcome": "error",
+    "pointer": "",
+    "reason": "schema"
+   },
+   "target": "result"
+  }
+ ],
+ "commands": {
+  "registry.show_manifest@1": {
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "check": {
+      "description": "The text of a manifest to verify instead of showing the one in force; at most 67108864 characters (maxLength), and refused as manifest_invalid above 67108864 bytes of UTF-8.",
+      "maxLength": 67108864,
+      "type": "string"
+     },
+     "full": {
+      "default": false,
+      "description": "Also return the manifest bytes.",
+      "type": "boolean"
+     }
+    },
+    "type": "object"
+   },
+   "result_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "bytes": {
+      "type": "string"
+     },
+     "digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+     }
+    },
+    "required": [
+     "digest"
+    ],
+    "type": "object"
+   }
+  },
+  "request.file_request@1": {
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "command": {
+      "pattern": "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?@[0-9]{1,5}$",
+      "type": "string"
+     },
+     "params": {
+      "type": "object"
+     }
+    },
+    "required": [
+     "command",
+     "params"
+    ],
+    "type": "object"
+   },
+   "result_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "request": {
+      "description": "Request ID, a lowercase UUIDv7.",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+     }
+    },
+    "required": [
+     "request"
+    ],
+    "type": "object"
+   }
+  },
+  "request.list_requests@1": {
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "state": {
+      "enum": [
+       "pending",
+       "approved",
+       "rejected",
+       "withdrawn"
+      ]
+     }
+    },
+    "required": [],
+    "type": "object"
+   },
+   "result_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "requests": {
+      "items": {
+       "additionalProperties": false,
+       "properties": {
+        "command": {
+         "pattern": "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?@[0-9]{1,5}$",
+         "type": "string"
+        },
+        "filed_at_head": {
+         "description": "Branch head when the request was filed.",
+         "pattern": "^sha256:[0-9a-f]{64}$",
+         "type": "string"
+        },
+        "params_commitment": {
+         "description": "Digest of the request's canonical parameters.",
+         "pattern": "^sha256:[0-9a-f]{64}$",
+         "type": "string"
+        },
+        "reason": {
+         "description": "Rejection reason, untrusted text.",
+         "type": "string",
+         "x-untrusted": true
+        },
+        "request": {
+         "description": "Request ID, a lowercase UUIDv7.",
+         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+         "type": "string"
+        },
+        "requester": {
+         "additionalProperties": false,
+         "description": "Who filed the request.",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "kind": {
+           "enum": [
+            "human",
+            "agent",
+            "script",
+            "service",
+            "device",
+            "system"
+           ]
+          }
+         },
+         "required": [
+          "id",
+          "kind"
+         ],
+         "type": "object"
+        },
+        "resolved_by": {
+         "additionalProperties": false,
+         "description": "Who approved, rejected or withdrew it.",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "kind": {
+           "enum": [
+            "human",
+            "agent",
+            "script",
+            "service",
+            "device",
+            "system"
+           ]
+          }
+         },
+         "required": [
+          "id",
+          "kind"
+         ],
+         "type": "object"
+        },
+        "seq": {
+         "minimum": 1,
+         "type": "integer"
+        },
+        "state": {
+         "enum": [
+          "pending",
+          "approved",
+          "rejected",
+          "withdrawn"
+         ]
+        }
+       },
+       "required": [
+        "command",
+        "filed_at_head",
+        "params_commitment",
+        "request",
+        "requester",
+        "seq",
+        "state"
+       ],
+       "type": "object"
+      },
+      "type": "array"
+     }
+    },
+    "required": [
+     "requests"
+    ],
+    "type": "object"
+   }
+  },
+  "request.reject_request@1": {
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "reason": {
+      "description": "Why the request is rejected; untrusted text, 1 to 2000 characters.",
+      "maxLength": 2000,
+      "minLength": 1,
+      "type": "string",
+      "x-untrusted": true
+     },
+     "request": {
+      "description": "Request ID, a lowercase UUIDv7.",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+     }
+    },
+    "required": [
+     "reason",
+     "request"
+    ],
+    "type": "object"
+   },
+   "result_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "required": [],
+    "type": "object"
+   }
+  },
+  "request.withdraw_request@1": {
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "request": {
+      "description": "Request ID, a lowercase UUIDv7.",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+     }
+    },
+    "required": [
+     "request"
+    ],
+    "type": "object"
+   },
+   "result_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "required": [],
+    "type": "object"
+   }
+  }
+ }
+}

@@ -7,6 +7,7 @@ pub mod policy;
 pub mod principal;
 mod unicode16;
 pub mod unit;
+pub mod validate;
 
 /// Short alias for [`error`].
 pub use self::error as err;
@@ -43,4 +44,9 @@ pub use principal::{
 pub use unit::{
     algorithm_id, normalise, normalise_value, AuthoredLiteral, DecimalString, Normalised, UnitSymbol, ALGORITHM,
     MAX_EXPONENT, MAX_LITERAL_BYTES, MAX_SIG_DIGITS, MIN_EXPONENT,
+};
+pub use validate::{
+    check_preconditions, is_replay_engine, resolve, validate_params, validate_params_json, CommandTable, Deprecation,
+    JsonPointer, NoRoots, NormalisedParam, Resolved, TableCache, TableError, Validated, ValidationError,
+    MAX_PARAMS_BYTES, MAX_PARAMS_DEPTH, MAX_PARAMS_ELEMENTS, REPLAY_PRINCIPAL_ID,
 };
