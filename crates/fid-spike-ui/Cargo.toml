@@ -1,0 +1,40 @@
+[package]
+name = "fid-spike-ui"
+description = "Metrology Maven throwaway UI toolkit spike: element tree with 10k items beside a wgpu viewport (spec node VIZ.SHELL.SPKTREE). Never a dependency of product crates."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# The library (tree model, keyboard rules, accessibility facts, statistics, report) is pure
+# Rust so CI tests it without a GPU. Its one dependency is fid-hal-idl for `UntrustedText`
+# (CONSTITUTION C6): item names are file data and are only ever shown escaped.
+[dependencies]
+fid-hal-idl = { path = "../fid-hal-idl" }
+
+# The `tree10k` example is the egui + winit + wgpu prototype that D-005 names. The toolkit
+# crates are dev-dependencies so the library never carries them. Default features are off
+# on purpose (deny.toml licence and advisory gates):
+# - egui `default_fonts` pulls `epaint_default_fonts` (OFL-1.1 AND Ubuntu-font-1.0, not in
+#   deny.toml's allow list): the example loads a system font at run time instead.
+# - wgpu `metal` pulls `metal`, which depends on `paste` (RUSTSEC-2024-0436, unmaintained):
+#   only the dx12 and vulkan backends are built, which covers the Windows H1 profile.
+# - egui-winit `clipboard` pulls `clipboard-win` (BSL-1.0, not allowed); `links` pulls a
+#   browser launcher the spike does not need.
+# - winit `wayland-dlopen` keeps Linux builds from linking libwayland at build time.
+[dev-dependencies]
+egui = { version = "0.33", default-features = false, features = ["accesskit"] }
+egui-winit = { version = "0.33", default-features = false, features = ["accesskit", "x11", "wayland"] }
+egui-wgpu = { version = "0.33", default-features = false, features = ["winit"] }
+wgpu = { version = "27", default-features = false, features = ["dx12", "vulkan", "wgsl", "std", "parking_lot"] }
+winit = { version = "0.30", default-features = false, features = ["rwh_06", "x11", "wayland", "wayland-dlopen"] }
+# Blocks on wgpu's async adapter and surface set-up in the example's main thread.
+pollster = "0.4"
+
+[[example]]
+name = "tree10k"
+
+[lints]
+workspace = true
