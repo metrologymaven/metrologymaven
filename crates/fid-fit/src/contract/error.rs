@@ -6,6 +6,11 @@ use fid_num::NumError;
 use fid_solv::nlls::{Diagnostics, NllsConfig, SolverError};
 
 use super::primitive::{Method, Primitive};
+// `TanVariant` lives in `tan_rock` because spec node KRN.ENV.TAN.ROCK owns it (with the
+// defined-pairs table); the contract's error type names it only so that an undefined
+// (primitive, variant) pair can be reported with both values (REQ-KRN.ENV.TAN.ROCK-004).
+// `tan_rock` itself depends on the contract, never the other way round for behaviour: this is
+// a type-only reference within one crate, so no module cycle in logic arises.
 use crate::tan_rock::TanVariant;
 
 /// Why a fit, a check or a contract operation returned no result. Every variant carries
@@ -50,6 +55,11 @@ pub enum FitError {
     /// The tangential variant is not defined for the primitive (`tan_rock::DEFINED_PAIRS`).
     /// Its code is `method_undefined`, like [`FitError::MethodUndefined`].
     TanMethodUndefined { primitive: Primitive, variant: TanVariant },
+    /// Two or more candidates for the same contact set share the best objective bit for bit
+    /// but carry different features (for example opposite-sign normals). There is no rule
+    /// that may pick one, so the rocking report refuses them (`tan_rock::rock_report`).
+    /// `first_contact` and `contacts` (the set's lowest point index and size) identify the set.
+    AmbiguousCandidate { first_contact: u32, contacts: usize },
     /// A parameter is out of range; `field` names it (for example `thresholds.rank_tol`).
     InvalidParams { field: &'static str },
     /// A direction vector is zero or too small to normalise (norm below `2^-1022`).
@@ -79,6 +89,7 @@ impl FitError {
             FitError::IllConditioned { .. } => "ill_conditioned",
             FitError::NotConverged { .. } => "not_converged",
             FitError::MethodUndefined { .. } | FitError::TanMethodUndefined { .. } => "method_undefined",
+            FitError::AmbiguousCandidate { .. } => "ambiguous_candidate",
             FitError::InvalidParams { .. } => "invalid_params",
             FitError::InvalidDirection => "invalid_direction",
             FitError::Solver(_) => "solver",
@@ -120,6 +131,10 @@ impl fmt::Display for FitError {
             FitError::TanMethodUndefined { primitive, variant } => {
                 write!(f, "fit: tangential variant {} undefined for {}", variant.slug(), primitive.slug())
             }
+            FitError::AmbiguousCandidate { first_contact, contacts } => write!(
+                f,
+                "fit: candidates for the contact set starting at point {first_contact} ({contacts} contacts) tie on the objective with different features"
+            ),
             FitError::InvalidParams { field } => write!(f, "fit: invalid parameter {field}"),
             FitError::InvalidDirection => write!(f, "fit: zero or too small direction vector"),
             FitError::Solver(e) => write!(f, "fit: {e}"),

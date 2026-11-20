@@ -7,12 +7,13 @@
 //! expected bytes (REQ-005).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_fit::contract::{FitError, FittedFeature, PointsView, Primitive};
+use fid_fit::contract::{command_row, FitError, FittedFeature, Method, PointsView, Primitive};
 use fid_fit::tan_rock::{
     check_defined, encode_report, is_defined, rock_report, CandidateSet, MaterialSide, TanVariant, TieBreak,
     DEFINED_PAIRS, MAX_CANDIDATES,
 };
 use fid_num::NumError;
+use fid_types::Determinism;
 
 const CASES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/fit/tan-rock-v1/cases.txt");
 const CROWNED: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/fit/tan-rock-v1/crowned-plate.txt");
@@ -118,7 +119,7 @@ fn every_fixture_case_matches_the_oracle() {
 
 #[test]
 fn ac1_crowned_plate_lists_four_sets_in_the_documented_order() {
-    let c = case("crowned_minimax");
+    let c = case("crowned_l1");
     // The candidates refer to the crowned plate's points: 25 points, apex first.
     let xyz = points(CROWNED);
     let pts = PointsView::new(&xyz, None).unwrap();
@@ -134,7 +135,7 @@ fn ac1_crowned_plate_lists_four_sets_in_the_documented_order() {
     assert_eq!(r.selected().unwrap().contacts, vec![0, 1, 2]);
     assert!(r.rocking);
     assert_eq!(r.tie_break, TieBreak::ContactOrder);
-    assert_eq!((r.merged, r.feature_ties, r.excluded), (4, 0, 0));
+    assert_eq!((r.merged, r.excluded), (4, 0));
     // The kept duplicate of {0,2,3} is the converged one, not the one-ulp-worse start.
     assert_eq!(r.candidates[2].objective, c.cands[3].objective);
 }
@@ -299,15 +300,99 @@ fn rock_tol_edges_and_negative_zero() {
     assert_eq!((r.excluded, r.tie_break), (1, TieBreak::Objective));
 }
 
+fn plane(contacts: &[u32], objective: f64, n: [f64; 3]) -> CandidateSet {
+    CandidateSet { contacts: contacts.to_vec(), objective, feature: FittedFeature::Plane { p: [0.0; 3], n } }
+}
+
 #[test]
-fn objective_tie_with_other_features_is_counted_not_hidden() {
-    let a = CandidateSet { feature: FittedFeature::Plane { p: [0.0; 3], n: [0.0, 0.6, 0.8] }, ..cand(&[0, 1, 2], 1.0) };
-    let b = cand(&[2, 1, 0], 1.0);
-    for input in [vec![a.clone(), b.clone()], vec![b.clone(), a.clone()]] {
-        let r = rock_report(&input, 0.0).unwrap();
-        assert_eq!((r.merged, r.feature_ties), (1, 1));
-        // The smaller canonical bytes win: n = (0, 0, 1) encodes "0000..." before "3fe3...".
-        assert_eq!(r.candidates[0].feature, b.feature);
+fn objective_tie_between_different_features_is_refused() {
+    let want = Err(FitError::AmbiguousCandidate { first_contact: 0, contacts: 3 });
+    // Opposite-sign normals (the two material sides) for one contact set, same objective bits.
+    let up = plane(&[0, 1, 2], 1.0, [0.0, 0.0, 1.0]);
+    let down = plane(&[2, 1, 0], 1.0, [0.0, 0.0, -1.0]);
+    // Any other feature difference with a bit-equal objective is refused the same way.
+    let tilt = plane(&[1, 0, 2], 1.0, [0.0, 0.6, 0.8]);
+    let other = plane(&[5, 6], 0.5, [0.0, 0.0, 1.0]);
+    for pair in [[&up, &down], [&down, &up], [&up, &tilt], [&tilt, &up]] {
+        let input = vec![pair[0].clone(), other.clone(), pair[1].clone()];
+        assert_eq!(rock_report(&input, 0.5), want);
+        assert_eq!(rock_report(&input, 0.5).unwrap_err().code(), "ambiguous_candidate");
+    }
+    // Two ambiguous sets: the first in contact order is named, whatever the input order.
+    let later = [plane(&[3, 4], 1.0, [0.0, 0.0, 1.0]), plane(&[4, 3], 1.0, [0.0, 0.0, -1.0])];
+    let input = vec![later[0].clone(), up.clone(), later[1].clone(), down.clone()];
+    assert_eq!(rock_report(&input, 0.5), want);
+    let rev: Vec<_> = input.iter().rev().cloned().collect();
+    assert_eq!(rock_report(&rev, 0.5), want);
+    // Not ties: exact repeats merge, and a different feature with a worse objective loses.
+    let worse = plane(&[0, 1, 2], f64::from_bits(1.0f64.to_bits() + 1), [0.0, 0.0, -1.0]);
+    let r = rock_report(&[up.clone(), worse, up.clone()], 0.0).unwrap();
+    assert_eq!((r.candidates.len(), r.merged), (1, 2));
+    assert_eq!(r.candidates[0].feature, up.feature);
+}
+
+#[test]
+fn contract_tangential_table_matches_defined_pairs() {
+    for &p in Primitive::ALL {
+        let any = TanVariant::ALL.iter().any(|&v| is_defined(p, v));
+        assert_eq!(Method::Tangential.defined_for(p), any, "{}", p.slug());
+    }
+    assert!(Method::Tangential.defined_for(Primitive::Cylinder));
+    assert!(!Method::Tangential.defined_for(Primitive::Line3));
+    // fit.tan_line3@1 is no longer emitted; fit.tan_cylinder@1 is.
+    assert_eq!(
+        command_row(Primitive::Line3, Method::Tangential, (1, 0, 0), Determinism::D0).unwrap_err(),
+        FitError::MethodUndefined { primitive: Primitive::Line3, method: Method::Tangential }
+    );
+    let row = command_row(Primitive::Cylinder, Method::Tangential, (1, 0, 0), Determinism::D0).unwrap();
+    row.validate().unwrap();
+    assert_eq!(row.command.as_str(), "fit.tan_cylinder@1");
+    let names: Vec<String> = Primitive::ALL
+        .iter()
+        .filter_map(|&p| command_row(p, Method::Tangential, (1, 0, 0), Determinism::D0).ok())
+        .map(|r| r.command.as_str().to_string())
+        .collect();
+    assert_eq!(names, ["fit.tan_line2@1", "fit.tan_plane@1", "fit.tan_cylinder@1"]);
+}
+
+/// Not a timing test (the budget is unmeasured): 1000 candidates in 250 contact sets, four
+/// starts each, with objectives on a grid so some are bit-equal, give a well-formed report
+/// that does not depend on the input order.
+#[test]
+fn smoke_1000_candidates() {
+    let mut cands = Vec::new();
+    for start in 0..4u32 {
+        for set in 0..250u32 {
+            // Contact sets {set, set + 1000, set + 2000}, listed in a start-dependent order.
+            let mut contacts = vec![set, set + 1000, set + 2000];
+            contacts.rotate_left(start as usize % 3);
+            // Objective 1 + (set mod 50) / 1024 (exact), one ulp worse on starts 1 and 3.
+            let base = 1.0 + f64::from(set % 50) / 1024.0;
+            let objective = if start % 2 == 1 { f64::from_bits(base.to_bits() + 1) } else { base };
+            cands.push(plane(&contacts, objective, [0.0, 0.0, 1.0]));
+        }
+    }
+    assert_eq!(cands.len(), 1000);
+    // rock_tol = 4/1024 keeps objective levels 0..=4 (bound 1 + 4/1024 exactly): 5 levels x 5 sets.
+    let r = rock_report(&cands, 4.0 / 1024.0).unwrap();
+    assert_eq!(r.merged, 750);
+    assert_eq!(r.candidates.len(), 25);
+    assert_eq!(r.excluded, 225);
+    assert!(r.rocking);
+    assert_eq!(r.tie_break, TieBreak::ContactOrder);
+    let firsts: Vec<u32> = r.candidates.iter().map(|c| c.contacts[0]).collect();
+    let mut want = Vec::new();
+    for level in 0..5u32 {
+        want.extend((0..5u32).map(|k| level + 50 * k));
+    }
+    assert_eq!(firsts, want);
+    assert!(r
+        .candidates
+        .iter()
+        .all(|c| c.objective.to_bits() == (1.0 + f64::from(c.contacts[0] % 50) / 1024.0).to_bits()));
+    let want_bytes = encode_report(&r).unwrap();
+    for seed in [7u64, 99, 12345] {
+        assert_eq!(encode_report(&rock_report(&shuffled(&cands, seed), 4.0 / 1024.0).unwrap()).unwrap(), want_bytes);
     }
 }
 

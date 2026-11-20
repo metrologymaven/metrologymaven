@@ -17,17 +17,23 @@ Nothing here runs the Rust code (stdlib only).
    points, related by the 90-degree rotation (x, y) -> (-y, x); the flat plate has 1 set of
    4 points. The script asserts both.
 2. Candidate values. Each plane's feature is (p = the first contact point, n = the outward
-   unit normal) and its objective is the external minimax value of that plane, the largest
-   perpendicular distance of any point below it. Both come from exact rationals and one
+   unit normal). The crowned plate's objective is the constrained-L1 value of the plane (the
+   sum of the perpendicular distances of all points below it); the flat plate's is the
+   external minimax value (the largest such distance). Both come from exact rationals and one
    correctly rounded square root (integer isqrt, rounding decided exactly), so the four
    crowned facets get bit-equal objectives by symmetry, as AC-1 needs. The multi-start lists
    are simulated (the plane fit, KRN.ENV.TAN.PLANE, is not built yet): each stable set is
    found by one or more starts, with exact repeats, a not-fully-converged repeat one ulp
    worse with a perturbed normal, and unsorted contact lists.
-   Caveat recorded for KRN.ENV.TAN.PLANE: these are resting facets, not minimax optima.
-   Every tangential variant is a convex problem, so a 4-fold symmetric point set always has
-   a symmetric optimum; here the horizontal plane through the apex has the smaller minimax
-   value written in the crowned plate header.
+   Which variant rocks on the crowned plate (checked exactly, see `variant_optima`): with
+   perpendicular distances the objectives are not convex in the plane parameters. Over a
+   grid of supporting planes (gradients in steps of h/(8a) up to 3h/a, each lifted until it
+   touches), constrained L1 is smallest exactly at the four facets (strict optima: the
+   vertical sum of distances is the same for every supporting plane through the apex, and
+   the perpendicular sum divides it by the largest normal tilt, reached at the facets),
+   while external minimax (1.5h) and constrained L2 (49h^2) are smallest only at the
+   horizontal plane through the apex, contact set {0}. So the fixture's facet candidates are
+   real constrained-L1 optima, and KRN.ENV.TAN.PLANE's AC-2 is stated per variant.
 3. The report oracle, written from the spec's rules, not from the Rust code: a dict keyed by
    the sorted contact tuple keeps the smallest (objective, canonical feature bytes); the
    filter is decided twice, exactly (obj - best <= rock_tol * best in rationals) and by the
@@ -138,13 +144,38 @@ def stable_sets(pts):
     return found
 
 
-def plane_values(pts, contacts, n):
-    """(feature (p, n_unit), minimax objective) of the supporting plane with normal n."""
+def plane_values(pts, contacts, n, variant):
+    """(feature (p, n_unit), objective) of the supporting plane with normal n, for variant
+    "minimax" (largest perpendicular distance) or "l1" (sum of perpendicular distances)."""
     s = dot(n, n)
     off = dot(n, pts[contacts[0]])
-    depth = max(off - dot(n, p) for p in pts)
+    gaps = [off - dot(n, p) for p in pts]
+    assert min(gaps) == 0
+    num = max(gaps) if variant == "minimax" else sum(gaps)
     unit = tuple(signed_sqrt_ratio(c, s) + 0.0 for c in n)
-    return (pts[contacts[0]], unit), sqrt_round(depth * depth / s)
+    return (pts[contacts[0]], unit), sqrt_round(num * num / s)
+
+
+def variant_optima(pts, facets):
+    """Exact comparison of the three objectives over a grid of supporting planes
+    z = c + gx x + gy y (c lifted until the plane touches). Returns the squared objectives
+    (minimax^2, L2, L1^2) of the best plane per variant and the gradients attaining them."""
+    step = Fraction(H) / Fraction(A) / 8
+    grads = [(i * step, j * step) for i in range(-24, 25) for j in range(-24, 25)]
+    for n in facets.values():
+        grads.append((-Fraction(n[0]) / n[2], -Fraction(n[1]) / n[2]))
+    best = [None, None, None]
+    for gx, gy in grads:
+        c = max(Fraction(z) - gx * Fraction(x) - gy * Fraction(y) for x, y, z in pts)
+        gaps = [c + gx * Fraction(x) + gy * Fraction(y) - Fraction(z) for x, y, z in pts]
+        w = 1 + gx * gx + gy * gy
+        vals = (max(gaps) ** 2 / w, sum(g * g for g in gaps) / w, sum(gaps) ** 2 / w)
+        for v in range(3):
+            if best[v] is None or vals[v] < best[v][0]:
+                best[v] = (vals[v], {(gx, gy)})
+            elif vals[v] == best[v][0]:
+                best[v][1].add((gx, gy))
+    return best
 
 
 # --- the report oracle ----------------------------------------------------------------------
@@ -167,12 +198,11 @@ def report(cands, rock_tol):
         assert obj >= 0.0
         groups.setdefault(key, []).append((Fraction(obj), feature_bytes(feat), obj, feat))
     best_of = {}
-    ties = 0
     for key, members in groups.items():
-        lo = min(members, key=lambda m: (m[0], m[1]))
-        best_of[key] = (None, lo[2], lo[3])
+        lo = min(members, key=lambda m: m[0])
         if any(m[0] == lo[0] and m[1] != lo[1] for m in members):
-            ties += 1
+            raise SystemExit(f"ambiguous candidate {key}: tied objective, different features")
+        best_of[key] = (None, lo[2], lo[3])
     best = min(Fraction(v[1]) for v in best_of.values())
     best_f = float(best)
     bound = best_f + rock_tol * best_f
@@ -196,7 +226,7 @@ def report(cands, rock_tol):
         tie_break = "objective"
     merged = len(cands) - len(best_of)
     out = '{"rock_tol":"' + hx(rock_tol + 0.0) + '","selected":"0","rocking":' + ("true" if len(kept) > 1 else "false")
-    out += ',"tie_break":"' + tie_break + '","merged":"' + str(merged) + '","feature_ties":"' + str(ties)
+    out += ',"tie_break":"' + tie_break + '","merged":"' + str(merged)
     out += '","excluded":"' + str(excluded) + '","candidates":['
     parts = []
     for _, key, obj, feat in kept:
@@ -225,15 +255,21 @@ def plate_cases():
     cs = stable_sets(crowned)
     want = {(0, 1, 2), (0, 2, 3), (0, 3, 4), (0, 1, 4)}
     assert set(cs) == want, sorted(cs)
-    vals = {k: plane_values(crowned, k, n) for k, n in cs.items()}
+    vals = {k: plane_values(crowned, k, n, "l1") for k, n in cs.items()}
     objs = {bits(v[1]) for v in vals.values()}
     assert len(objs) == 1, "the four facets must have bit-equal objectives"
-    horiz = max(H - p[2] for p in crowned)
     facet_obj = next(iter(vals.values()))[1]
-    assert horiz < facet_obj
+    # Which variant rocks: L1 is smallest exactly at the four facets; minimax and L2 only at
+    # the horizontal plane through the apex (gradient 0), with values 1.5h and 49h^2.
+    best = variant_optima(crowned, cs)
+    facet_grads = {(-Fraction(n[0]) / n[2], -Fraction(n[1]) / n[2]) for n in cs.values()}
+    assert best[2][1] == facet_grads, best[2][1]
+    assert best[0][1] == {(0, 0)} and best[0][0] == (Fraction(3, 2) * Fraction(H)) ** 2
+    assert best[1][1] == {(0, 0)} and best[1][0] == 49 * Fraction(H) ** 2
+    horiz = {"minimax": 1.5 * H, "l2": float(best[1][0]), "l1": 34 * H}
     fs = stable_sets(flat)
     assert list(fs) == [(0, 1, 2, 3)], sorted(fs)
-    flat_feat, flat_obj = plane_values(flat, (0, 1, 2, 3), fs[(0, 1, 2, 3)])
+    flat_feat, flat_obj = plane_values(flat, (0, 1, 2, 3), fs[(0, 1, 2, 3)], "minimax")
 
     def c(key, contacts=None, worse=False):
         feat, obj = vals[key]
@@ -258,7 +294,7 @@ def plate_cases():
         ([2, 3, 0, 1], flat_obj, flat_feat),
     ]
     return crowned, flat, facet_obj, horiz, [
-        ("crowned_minimax", "AC-1/AC-2: 8 simulated starts on the crowned plate", 1e-9, crowned_cands),
+        ("crowned_l1", "AC-1/AC-2: 8 simulated constrained-L1 starts on the crowned plate", 1e-9, crowned_cands),
         ("flat_minimax", "AC-3: 4 simulated starts on the flat plate", 1e-9, flat_cands),
     ]
 
@@ -269,10 +305,10 @@ def synth_cases():
     tilt = (0.0, 0.6, 0.8)
     tilt2 = (0.6, 0.0, 0.8)
     x = 1.5e-5
-    ties = [
+    prefix = [
         ([5, 2], x, (pa, up)),
         ([2, 5, 9], x, (pa, up)),
-        ([2, 5], x, (pa, tilt)),
+        ([2, 5], 2 * x, (pa, tilt)),
         ([8, 1, 7], x + x * 5e-4, (pa, tilt2)),
         ([3], 2 * x, (pa, up)),
         ([2, 5], x, (pa, up)),
@@ -289,7 +325,7 @@ def synth_cases():
         ([9, 8, 7], -0.0, (pa, tilt2)),
     ]
     return [
-        ("synth_ties", "feature tie, prefix order, exclusion", 1e-3, ties),
+        ("synth_prefix", "duplicates, prefix order, exclusion", 1e-3, prefix),
         ("synth_objective", "selection by a strictly lower objective", 1e-6, by_objective),
         ("synth_zero", "best objective zero, -0.0 objective, subnormal excluded", 0.5, zero),
     ]
@@ -339,9 +375,10 @@ def main():
             [
                 "Point 0 is the apex (0, 0, h), points 1-4 the high corners (+-a, +-a, 0), the rest a",
                 "5x5 grid at z = -h/2; a = 2^-4 m, h = 2^-15 m. Stable sets: {0,1,2} {0,1,4} {0,2,3}",
-                f"{{0,3,4}}, each facet's minimax value {facet_obj!r} m ({hx(facet_obj)}). The horizontal",
-                f"plane through the apex has the smaller minimax value {horiz!r} m: the facets are",
-                "resting positions, not minimax optima (see the script's docstring).",
+                f"{{0,3,4}}, each facet's constrained-L1 value {facet_obj!r} m ({hx(facet_obj)}): the four",
+                f"strict L1 optima (horizontal plane through the apex: {horiz['l1']!r} m). External minimax",
+                f"and constrained L2 have one optimum, the horizontal plane through the apex, contact {{0}}:",
+                f"minimax 1.5h = {horiz['minimax']!r} m, L2 49h^2 = {horiz['l2']!r} m^2 (script docstring).",
             ],
         ),
         f"{DIR}/flat-plate.txt": points_text(

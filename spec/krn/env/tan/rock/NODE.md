@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # KRN.ENV.TAN.ROCK: Rocking candidate sets, tie-break and tangential variant table
@@ -43,7 +43,7 @@ A datum feature that rocks (a slightly convex face on a surface plate) has more 
 
 ## Acceptance criteria
 
-- **AC-1** Given fixture `fixtures/fit/tan-rock-v1` (a crowned plate with 4 symmetric high points, so 4 three-point contact sets with equal objective), when candidates from the plane fit's multi-start are passed in, then the report lists the 4 sets in the documented order, `selected` is the first and `rocking` is true.
+- **AC-1** Given fixture `fixtures/fit/tan-rock-v1` (a crowned plate with an apex plus 4 symmetric high corners, so 4 three-point contact sets with equal objective), when candidates from the plane fit's multi-start are passed in, then the report lists the 4 sets in the documented order, `selected` is the first and `rocking` is true.
 - **AC-2** Given the same candidates shuffled, then the report is byte-identical.
 - **AC-3** Given a flat plate with one stable set, then `rocking` is false and one candidate is listed.
 - **AC-4** (error path) Given a lookup for (sphere, ConstrainedL1), then it returns `method_undefined{primitive: sphere, variant: constrained_l1}`.

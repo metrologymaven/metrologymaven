@@ -6,9 +6,9 @@
 //! `.CYL`) pass every candidate contact set their multi-start runs (and any hull-neighbour
 //! search) find to [`rock_report`], which deduplicates them, keeps those within `rock_tol` of
 //! the best, orders them by one pinned rule and marks the first one selected. Nothing is
-//! picked silently: the report says how the selection was decided ([`TieBreak`]) and how many
-//! duplicates were merged, how many of those merges were themselves ties
-//! ([`RockReport::feature_ties`]) and how many distinct sets fell outside `rock_tol`.
+//! picked silently: the report says how the selection was decided ([`TieBreak`]), how many
+//! duplicates were merged and how many distinct sets fell outside `rock_tol`, and a duplicate
+//! that cannot be merged by rule (an objective tie between different features) is refused.
 //!
 //! This module also owns the shared [`TanVariant`] and [`MaterialSide`] types and the table of
 //! defined (primitive, variant) pairs ([`DEFINED_PAIRS`], [`check_defined`]).
@@ -26,10 +26,13 @@
 //!    becomes `+0.0`. No candidates, or more than [`MAX_CANDIDATES`], is
 //!    `InvalidParams{field: "candidates"}`.
 //! 2. **Deduplication** (REQ-001): candidates are grouped by their sorted contact indices.
-//!    Within a group the kept one has the lowest objective (IEEE-754 total order); among
-//!    equal objectives, the feature whose canonical bytes ([`encode_feature`]) are
-//!    lexicographically smallest. Such a feature tie is counted in
-//!    [`RockReport::feature_ties`], never hidden.
+//!    Within a group the kept one has the lowest objective (IEEE-754 total order). Members
+//!    that repeat it exactly (bit-equal objective and identical canonical feature bytes,
+//!    [`encode_feature`]) merge. A member with the bit-equal lowest objective but a different
+//!    feature (for example the opposite-sign normal, which is the other material side) has no
+//!    rule that may choose between them, so the report is refused with
+//!    `FitError::AmbiguousCandidate` naming the set (its lowest index and size; the first such
+//!    set in contact order, so the error does not depend on input order either).
 //! 3. **Filter** (REQ-002): with `best` the lowest objective over the distinct sets,
 //!    `bound = best + rock_tol * best`, evaluated as one IEEE-754 binary64 product and one
 //!    sum, each rounded to nearest-even (no FMA). A distinct set is a candidate iff its
@@ -243,9 +246,6 @@ pub struct RockReport {
     pub tie_break: TieBreak,
     /// Input candidates folded into another one with the same contact set.
     pub merged: u32,
-    /// Distinct contact sets whose best objective was shared by two or more different
-    /// features (rule 2 picked the smallest canonical bytes).
-    pub feature_ties: u32,
     /// Distinct contact sets left out because their objective exceeded the bound.
     pub excluded: u32,
 }
@@ -269,7 +269,7 @@ fn count(n: usize) -> u32 {
     u32::try_from(n).unwrap_or(u32::MAX)
 }
 
-/// A validated candidate with its feature's canonical bytes (the feature tie key).
+/// A validated candidate with its feature's canonical bytes (the duplicate key).
 struct Norm {
     set: CandidateSet,
     key: Vec<u8>,
@@ -329,11 +329,10 @@ pub fn rock_report(cands: &[CandidateSet], rock_tol: f64) -> Result<RockReport, 
             .then_with(|| a.key.cmp(&b.key))
     });
     // `heads[k]`: element k is the first (kept) one of its contact group. Within a group the
-    // members are sorted by (objective, feature bytes), so the members sharing the head's
-    // objective and feature bytes come right after it; the first member after them with the
-    // head's objective bits is a feature tie (counted once per group).
+    // members are sorted by (objective, feature bytes), so a member with the head's objective
+    // bits and other feature bytes is an unresolvable tie (rule 2). Groups are visited in
+    // contact order, so the reported set is the first such set in that order.
     let mut heads = alloc::<bool>(all.len())?;
-    let mut feature_ties = 0usize;
     let mut h = 0usize;
     for k in 0..all.len() {
         let head = k == 0 || all[k - 1].set.contacts != all[k].set.contacts;
@@ -342,9 +341,12 @@ pub fn rock_report(cands: &[CandidateSet], rock_tol: f64) -> Result<RockReport, 
             h = k;
             continue;
         }
-        let same_obj = |j: usize| all[j].set.objective.to_bits() == all[h].set.objective.to_bits();
-        if same_obj(k) && all[k].key != all[h].key && same_obj(k - 1) && all[k - 1].key == all[h].key {
-            feature_ties += 1;
+        if all[k].set.objective.to_bits() == all[h].set.objective.to_bits() && all[k].key != all[h].key {
+            let c = &all[h].set.contacts;
+            return Err(FitError::AmbiguousCandidate {
+                first_contact: c.first().copied().unwrap_or(0),
+                contacts: c.len(),
+            });
         }
     }
     let total_in = all.len();
@@ -386,7 +388,6 @@ pub fn rock_report(cands: &[CandidateSet], rock_tol: f64) -> Result<RockReport, 
         rock_tol,
         tie_break,
         merged: count(merged),
-        feature_ties: count(feature_ties),
         excluded: count(excluded),
     })
 }
@@ -437,7 +438,7 @@ impl Out {
 ///
 /// ```text
 /// {"rock_tol":<f>,"selected":<i>,"rocking":true|false,"tie_break":"<single|objective|contact_order>",
-///  "merged":<i>,"feature_ties":<i>,"excluded":<i>,
+///  "merged":<i>,"excluded":<i>,
 ///  "candidates":[{"contacts":[<i>...],"objective":<f>,"feature":<feature>}...]}
 /// ```
 ///
@@ -454,8 +455,6 @@ pub fn encode_report(r: &RockReport) -> Result<Vec<u8>, FitError> {
     o.s(r.tie_break.as_str())?;
     o.s("\",\"merged\":")?;
     o.i(r.merged)?;
-    o.s(",\"feature_ties\":")?;
-    o.i(r.feature_ties)?;
     o.s(",\"excluded\":")?;
     o.i(r.excluded)?;
     o.s(",\"candidates\":[")?;

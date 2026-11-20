@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid fit tan-plane]
 mcp: [fit_tan_plane]
 journal: [fit.tan_plane@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # KRN.ENV.TAN.PLANE: Tangential plane in three variants
@@ -42,7 +42,7 @@ The plane that touches a surface from its material-free side, as a surface plate
 ## Acceptance criteria
 
 - **AC-1** Given fixture `fixtures/fit/tan-plane-v1` (seeded plates with known convex form, 100 to 100 000 points), when `fid fit tan-plane --variant <v> --side <dir> --seed 1 --json` runs for each variant, then all points are on the material side within 1e-12 m and the objective matches the generator's analytic optimum within 1e-9 m [unverified].
-- **AC-2** Given the crowned plate of `fixtures/fit/tan-rock-v1`, then the result's `RockReport` lists 4 candidates and `rocking` is true for the minimax variant.
+- **AC-2** Given the crowned plate of `fixtures/fit/tan-rock-v1`, then with `constrained_l1` the `RockReport` lists the 4 facet sets and `rocking` is true; with `external_minimax` it lists one candidate {0}, objective 1.5h, `rocking` false.
 - **AC-3** (error path) Given a call without `--variant`, then it fails with `InvalidParams{field: "variant"}` and journals nothing.
 - **AC-4** Given a fixed normal, then the plane passes through the extreme point and `rocking` is false.
 - **AC-5** Given AC-1 on x86-64, ARM64 and wasm32 with the same seed, then output digests are identical; replay in exact mode is `IDENTICAL`.
