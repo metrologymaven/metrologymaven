@@ -1,6 +1,6 @@
 [package]
 name = "fid-gdt"
-description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (GDT.RES.ROWFLOW.ROSTER), defaults profiles (GDT.CHAR.DPROF), governing specs (GDT.CHAR.SPEC), the resolver commands (GDT.RES.RESOLVE), ResultRecord assembly (GDT.CHAR.RECORD) and datum definitions (GDT.DRF.DATUM)"
+description = "Metrology Maven GD&T characteristics and DMT workflow; today the DMT reviewer roster (GDT.RES.ROWFLOW.ROSTER), defaults profiles (GDT.CHAR.DPROF), governing specs (GDT.CHAR.SPEC), characteristic identity (GDT.CHAR.IDENT), the resolver commands (GDT.RES.RESOLVE), ResultRecord assembly (GDT.CHAR.RECORD) and datum definitions (GDT.DRF.DATUM)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -31,6 +31,14 @@ fid-kunc = { path = "../fid-kunc" }
 # GDT.CHAR.RECORD: the registry definition of `gdt.get_result@1`, built through the
 # registry's field rules (CORE.REG.DEF), as fid-align does for its reads. Layer model.
 fid-registry = { path = "../fid-registry" }
+# GDT.CHAR.IDENT: the project's UUID type and RFC 9562 UUIDv7 construction, and its
+# ObservationSource for callers that record observed inputs (CORE.PRJ.CONT.ID; model layer).
+fid-project = { path = "../fid-project" }
+
+[dev-dependencies]
+# GDT.CHAR.IDENT tests read the QIF fixtures with the project's hardened XML reader
+# (IO.QIF.XML.PARSE, same services layer) to build the identity view of an element.
+fid-xml = { path = "../fid-xml" }
 
 [lints]
 workspace = true

@@ -12,6 +12,9 @@
 //! - [`chars::record`] (`GDT.CHAR.RECORD`): the ResultRecord builder every evaluation ends
 //!   in, the binding of the UNC decision (GDT never decides conformance), one record per
 //!   characteristic per run, and `gdt.get_result@1`;
+//! - [`chars::ident`] (`GDT.CHAR.IDENT`): the stable identity of a characteristic (imported
+//!   QPId kept, else one UUIDv7 from an injected clock and seeded RNG), the edit check that
+//!   rejects identity changes, and the native-QPId / `fx:qpid` mapping of QIF elements;
 //! - [`resolve`] (`GDT.RES.RESOLVE`): the commands `gdt.resolve_chain@1` and
 //!   `gdt.get_dmt_row@1` over the pure resolver of `fid-gps`, behind the governing-spec gate;
 //! - [`drf::datum`] (`GDT.DRF.DATUM`): datum declarations (label, datum feature, nominal faces,

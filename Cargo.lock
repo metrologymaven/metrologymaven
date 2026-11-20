@@ -614,9 +614,11 @@ dependencies = [
  "fid-io-reg",
  "fid-kdec",
  "fid-kunc",
+ "fid-project",
  "fid-registry",
  "fid-replay",
  "fid-types",
+ "fid-xml",
 ]
 
 [[package]]
