@@ -515,7 +515,7 @@ mod tests {
         let x: Vec<f64> = (0..m).map(|i| i as f64).collect();
         let colptr = vec![0, m, 2 * m];
         let rowval: Vec<usize> = (0..m).chain(0..m).collect();
-        let nzval: Vec<f64> = x.iter().copied().chain(core::iter::repeat(-1.0).take(m)).collect();
+        let nzval: Vec<f64> = x.iter().copied().chain(core::iter::repeat_n(-1.0, m)).collect();
         let a = Csc::new(m, 2, colptr, rowval, nzval);
         let mut b = ConicProblemBuilder::new(vec![0.0, 1.0], a, x.clone(), vec![Cone::Nonneg(m)]);
         if quadratic {
