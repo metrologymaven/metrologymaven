@@ -71,31 +71,38 @@ off? And how is engine work kept from running ahead of expert review?
    has re-proposed; it is never evaluated), `provisional` or `signed_off`.
 5. **Pacing.** No GD&T work beyond the **first-review subset** until every rule of that
    subset is signed off. The subset:
-   - datum reference frames from planar and cylindrical datum features;
+   - datum reference frames from planar and cylindrical datum features at RMB (no datum
+     targets, no common datums, no MMB or LMB);
    - position, both RFS and at MMC with bonus tolerance (with the size rows those need);
    - flatness;
-   - profile of a surface.
+   - profile of a surface, single segment (no composite profile).
 
    "GD&T work" means new or changed DMT rows outside the subset, and claiming or marking
    built any `GDT` leaf that serves only callouts outside the subset. Shared machinery
    (schema, resolver, workflow, record, zone engine, lint) and leaves built before this
-   decision are not paced. `GDT.RES.PACE` enforces this in CI.
-6. **Rationale.** Agent build speed must not outrun expert review.
+   decision are not paced. `GDT.RES.PACE` enforces this in CI from explicit key and leaf
+   lists, deciding completeness only from a status register it has verified.
+6. **Trust.** A status register counts only when it is rebuilt from the journal and matches
+   the register and roster digests the project publishes; otherwise every rule is
+   `provisional` (`unverified_register`). Rule digests are always recomputed from the row
+   actually evaluated.
+7. **Rationale.** Agent build speed must not outrun expert review.
 
 ## Consequences
 
 - New leaves: `GDT.RES.STATUS` (status register and sign-off binding), `GDT.CHAR.PDIFF`
   (one data set under two profiles, per-rule difference), `GDT.RES.PACE` (pacing gate) and
-  `GDT.CHAR.INTERP` (the `interpretation` block of the ResultRecord). New requirements
-  REQ-GDT-009 and REQ-GDT-010 trace them.
-- `GDT.RES.ROWFLOW.REVIEW` gains the reviewed-digest check (`stale_review`).
+  `GDT.CHAR.INTERP` (the `interpretation` block of the ResultRecord), and `IO.RES.ILABEL`
+  (exports refuse a provisional record a format cannot label). New requirements REQ-GDT-009
+  and REQ-GDT-010 trace the GDT leaves.
+- `GDT.RES.ROWFLOW.REVIEW` gains the reviewed-digest check (`stale_review`) and refuses
+  quoted standards text (`standards_quote`).
 - `RPT.MODEL.FMT` gains the `ProvisionalInterpretation` label, which its existing
   label rule (REQ-RPT.MODEL.FMT-014) makes every renderer show.
-- REQ-IO.RES-013 now names the `interpretation` label among the fields every results export
-  carries. Follow-ups are noted, as open questions, on `IO.RES` (export children write the
-  rule list and refuse a format that cannot carry the label), `RPT.FORMS.FINAL` and
-  `AGENT.GATEPREP` (the H2 release batch shows the label on every provisional record and
-  refuses a release artifact that omits it).
+- REQ-IO.RES-013 and -014: every results export carries the `interpretation` label, and a
+  provisional record is refused (`interpretation_label_unsupported`) by a format that cannot
+  carry it. REQ-RPT.FORMS.FINAL-006 and REQ-AGENT.GATEPREP-002: a release, including one
+  from the H2 batch, is refused while a provisional row is rendered without its label.
 - The subset includes profile of a surface (`GDT.PROF.SURF`, phase P1b) and cylindrical
   datum features, which the P1a ASME inventory (`GDT.RES.ROWASME`) does not list. This
   decision does not move phase tags. The inventory and phase tags are to be aligned in a
@@ -103,4 +110,7 @@ off? And how is engine work kept from running ahead of expert review?
   phase and the P1a rows outside the subset wait.
 - The community side (public rule pages, profiles, cases, reviewers, benchmark suites and
   guardrails) is specified in `OUTR.GDTC`.
-- Amending the subset or the pacing rule needs a new decision record.
+- `REQ-OUTR.GDTC-008` narrows D-021 option B for GD&T: the project does not publish, host or
+  aggregate third-party comparisons with named products either.
+- Amending the subset or the pacing rule needs a new decision record whose frontmatter lists
+  `D-045` in `amends:`.

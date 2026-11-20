@@ -63,7 +63,7 @@ An interpretation profile is a named set of rule choices: in the engine, a defau
 ## Design
 
 - **Command:** `fid-outreach gdt-profile-pages --registry <file> --status <file> --profiles <dir> --as-of <date> --out <dir> [--json]`. Project tooling; nearest class W1. `--as-of` replaces the clock.
-- **Registry (`gdt-profiles/v1`):** `[[profile]] id` (full `dp:` reference with digest), `title` (at most 80 characters), `kind`, `sponsor` (an organisation name or a forge login; no contact data), `confirmed` (date), `state`, `default` (bool), `retired` (date, required when retired). Duplicate IDs and duplicate keys are refused.
+- **Registry (`gdt-profiles/v1`):** `[[profile]] id` (full `dp:` reference with digest), `title` (at most 80 characters), `kind`, `sponsor` (an organisation name or a forge login, published with the sponsor's consent; no contact data), `sponsor_org` (the sponsoring organisation's pseudonymous `org-…` ID from the reviewer register's ID space, used by conflict checks), `confirmed` (date), `state`, `default` (bool), `retired` (date, required when retired). Duplicate IDs and duplicate keys are refused.
 - **Algorithm:** validate the registry; join with the status register and the profile files (`fid.defaults-profile/1`); compute key differences against the default of the same dialect and edition; render; run the GUARD standards-text lint on the output; move into place.
 - **Errors:** `over_cap`, `sponsor_missing`, `sponsor_stale`, `default_count{dialect, edition}`, `unpublished_profile`, `lint_failed`; exit 0, 1, 2.
 - **Determinism:** D0.

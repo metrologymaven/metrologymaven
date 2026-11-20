@@ -53,7 +53,7 @@ The public side of D-045. GD&T interpretation is the part of the platform most o
 - **REQ-OUTR.GDTC-003** The project shall publish interpretation profiles only from a registry holding at most a fixed number of active profiles, each with a named sponsor, and with exactly one profile marked default per dialect and edition.
 - **REQ-OUTR.GDTC-004** A submitted case (part, callout and data with a known truth from the project's generators and oracle) shall move through the states submitted, published, in discussion and resolved, and a resolved case shall become a permanent regression fixture credited to its submitter under the DCO.
 - **REQ-OUTR.GDTC-005** No fixture, case page or case file shall contain personal contact data.
-- **REQ-OUTR.GDTC-006** The project shall publish the public reviewer role with its qualification criteria and conflict-of-interest rules, and each rule page shall credit the reviewers who signed off its current revision.
+- **REQ-OUTR.GDTC-006** The project shall publish the public reviewer role with its qualification criteria and conflict-of-interest rules, and each rule page shall credit the reviewers who signed off its current revision, by display name where consent is recorded and otherwise by a pseudonymous ID; no reviewer name or organisation shall appear in a public file without recorded consent.
 - **REQ-OUTR.GDTC-007** The project shall publish its GD&T reference suites with inputs in open formats, expected values with tolerances and a self-scoring tool, so that anyone can run any software against them.
 - **REQ-OUTR.GDTC-008** The project shall never publish, host or aggregate result comparisons against named commercial products; users run the suites and report their own results themselves.
 - **REQ-OUTR.GDTC-009** Every interpretation rule shall have a decision owner and a decision deadline, and an overdue decision shall be escalated under the D-003 process.
@@ -71,7 +71,8 @@ RULES, PROFILE, CASE, REVIEW, SUITE, GUARD.
 ## Open questions
 
 - The profile cap (8 active profiles) and the 12-month sponsor re-confirmation in `OUTR.GDTC.PROFILE` are proposals for maintainers to confirm by RFC under D-003.
-- D-021 allows third-party comparisons published as signed statements (option B) after counsel review. For GD&T, REQ-OUTR.GDTC-008 is stricter: the project does not publish or host them at all. If D-021 option B is later used for other benchmark kinds, `OUTR.BENCH.CMP` keeps that path; this node does not.
+- The overdue escalation step in `OUTR.GDTC.GUARD` (REQ-005, REQ-006) is pending a D-003 RFC.
+- D-021 allows third-party comparisons published as signed statements (option B) after counsel review. For GD&T, REQ-OUTR.GDTC-008 narrows option B: the project does not publish, host or aggregate them at all (recorded in D-045 Consequences). If D-021 option B is later used for other benchmark kinds, `OUTR.BENCH.CMP` keeps that path; this node does not.
 
 ## Split rationale
 

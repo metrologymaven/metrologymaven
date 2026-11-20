@@ -9,15 +9,15 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
-satisfies: [REQ-RPT.FORMS.FINAL-001, REQ-RPT.FORMS.FINAL-002, REQ-RPT.FORMS.FINAL-003]
+satisfies: [REQ-RPT.FORMS.FINAL-001, REQ-RPT.FORMS.FINAL-002, REQ-RPT.FORMS.FINAL-003, REQ-RPT.FORMS.FINAL-006]
 covers: []
-depends_on: [RPT.FORMS.HDR, RPT.FORMS.ROWS, RPT.FORMS.PPAP, CORE.JRN, CORE.BUS.PRIN]
+depends_on: [RPT.FORMS.HDR, RPT.FORMS.ROWS, RPT.FORMS.PPAP, RPT.MODEL.FMT, GDT.CHAR.INTERP, CORE.JRN, CORE.BUS.PRIN]
 side_effect: [R0, R0, W2, W2]
 determinism: D0
 cli: [fid report check-fai, fid report check-ppap, fid report adopt-fai, fid report adopt-ppap]
 mcp: [report_check_fai, report_check_ppap, report_adopt_fai, report_adopt_ppap]
 journal: [report.check_fai@1, report.check_ppap@1, report.adopt_fai@1, report.adopt_ppap@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # RPT.FORMS.FINAL.CHECK: Form completeness check and adoption of agent-authored form content
@@ -54,6 +54,8 @@ Says, before anyone tries to finalise, everything that stands between an FAI or 
 - **AC-5** Given fixture `fixtures/rpt/forms/ppap_6parts_gap` (part 4 missing for balloon 7, one `NONCONFORMS` row), when `fid report check-ppap --json` runs, then it lists `missing_result 7 parts [4]` as blocking and the nonconforming row as a note only.
 - **AC-6** (determinism) Given AC-2, when the check runs twice, then the canonical JSON reports are byte-identical.
 - **AC-7** (replay) Given the journal from AC-3, when replayed in exact mode, then the outcome is `IDENTICAL` and the adoption is reproduced.
+- **AC-8** (D-045) Given fixture `fixtures/rpt/forms/fai_provisional` (balloon 4 from a provisional record, rendered with the label), when the check runs, then it lists a `provisional_interpretation` note for balloon 4 and no blocker; given `fai_provisional_unlabelled` (the same row rendered through a test renderer that drops the label), then it lists a blocking `provisional_label_missing 4`.
+- **AC-9** (H2 queue, D-045) Given an H2 release batch (`AGENT.GATEPREP`) that holds the form of `fai_provisional_unlabelled`, when the human runs the batch's release action, then finalisation is refused with `report.provisional_label_missing` naming balloon 4, no W3 revision is written, and the batch shows the record's `interpretation: provisional` label and its provisional rules.
 
 ## Design
 
@@ -83,12 +85,15 @@ Says, before anyone tries to finalise, everything that stands between an FAI or 
 >
 > **Inputs:** FAI records and header (`RPT.FORMS.HDR`), form 3 row builder (`RPT.FORMS.ROWS`), PPAP rows (`RPT.FORMS.PPAP`), journal entries with principals (`CORE.JRN`, `CORE.BUS.PRIN`).
 >
-> **Acceptance:** AC-1..AC-7 in `spec/rpt/forms/final/check/NODE.md` with fixtures `fixtures/rpt/forms/{fai_complete,fai_gaps,fai_agent_balloon,ppap_6parts_gap}`.
+> **D-045:** add blocker `provisional_label_missing` (a row from a record with `interpretation: provisional` whose rendered `ValueText` lacks `ProvisionalInterpretation`) and note `provisional_interpretation` for every such row.
+>
+> **Acceptance:** AC-1..AC-9 in `spec/rpt/forms/final/check/NODE.md` with fixtures `fixtures/rpt/forms/{fai_complete,fai_gaps,fai_agent_balloon,ppap_6parts_gap}`.
 >
 > **Constraints:** CONSTITUTION C5 (humans adopt agent work), C6 (header text is untrusted), §3 (`human_only`), §8 (no panic, no `unsafe`, deny `unwrap`/`expect`/`panic`/`todo`/`unimplemented`/`unreachable`); no std HashMap/HashSet.
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** REQ-011 and AC-8, AC-9 add the provisional-label blocker; fixtures `fai_provisional` and `fai_provisional_unlabelled` are new.
 - **Revise for D-036/D-037 (accepted 2026-11-17):** finalisation is gate H2: present all records and the agent-authored choices they depend on as one batch; release and adoption are a single human act.
 - Disposition of `NONCONFORMS` and `NOT_DECIDABLE` rows (material review) is not owned by any RPT node. This leaf treats both as notes, following the parent's assumption that an FAI may document a failure. The parent's Scope line about "`NOT_DECIDABLE` outcomes without disposition" is therefore not a blocker here; confirm with a quality-domain maintainer.
 - The rule "a later human `*.adopt_*` entry lists the adopted entry hashes" assumes every adoption command journals the hashes it adopts. Verify against `GDT` and `ALN` adoption leaves; if they journal object IDs instead, map IDs to entries here.
