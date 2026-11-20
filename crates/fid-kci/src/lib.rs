@@ -10,5 +10,6 @@ pub use cards::{
 };
 pub use kci::{
     evaluate, AlgorithmFailure, AlgorithmTable, Digest, KernelAlgorithm, KernelCall, KernelError, KernelResult,
+    MANIFEST_CORE_DIGEST_QUERY,
 };
 pub use manifest::{KernelManifest, ManifestCore, ManifestError};

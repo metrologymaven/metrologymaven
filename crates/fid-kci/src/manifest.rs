@@ -33,7 +33,7 @@ use std::fmt;
 
 use crate::cards::AlgorithmId;
 use crate::kci::json::{to_canonical, Json};
-use crate::kci::{sha256_digest, Digest};
+use crate::kci::{sha256_digest, Digest, RESERVED_MODULE};
 
 /// The only schema version this module reads and writes.
 pub const SCHEMA_VERSION: &str = "1";
@@ -306,7 +306,8 @@ impl ManifestCore {
         if self.algorithms.len() > MAX_ALGORITHMS {
             return Err(ManifestError::TooLarge { what: "core.algorithms", limit: MAX_ALGORITHMS });
         }
-        if self.algorithms.iter().any(|a| a.id.to_string().len() > MAX_ID_LEN) {
+        // The reserved module belongs to the kernel's own queries, never to a listed algorithm.
+        if self.algorithms.iter().any(|a| a.id.to_string().len() > MAX_ID_LEN || a.id.module == RESERVED_MODULE) {
             return Err(ManifestError::BadValue("core.algorithms[].id"));
         }
         if let Some(index) = first_unsorted(&self.algorithms, |a, b| a.id.cmp(&b.id)) {

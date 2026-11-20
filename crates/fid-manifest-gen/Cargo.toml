@@ -1,6 +1,6 @@
 [package]
 name = "fid-manifest-gen"
-description = "Metrology Maven build-time kernel manifest generator: per-algorithm implementation digests over the crate closure (spec node KRN.MAN.MANI.IMPL) and the toolchain-and-flags digest of the kernel build (KRN.MAN.REPRO)"
+description = "Metrology Maven build-time kernel manifest generator: per-algorithm implementation digests over the crate closure (spec node KRN.MAN.MANI.IMPL), the toolchain-and-flags digest of the kernel build (KRN.MAN.REPRO) and the two-stage manifest generator (KRN.MAN.MANI.GEN)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -19,6 +19,9 @@ fid-canon = { path = "../fid-canon" }
 # The kernel's SHA-256, canonical JSON writer, AlgorithmId and strict manifest reader
 # (KRN.MAN.KCI, KRN.MAN.MANI.SCHEMA), reused so digests are computed by the kernel's own code.
 fid-kci = { path = "../fid-kci" }
+# The facade self-test (KRN.NUM.FN) the manifest's facade_selftest_digest is computed from; already
+# in the graph through fid-kci (layer num).
+fid-num = { path = "../fid-num" }
 # Reads the workspace Cargo.lock (each closure crate's entry is hashed). The same toml 0.8 with the
 # same feature set that fid-xtask and fid-knp1-lint already use, so no new crate enters the graph;
 # it rejects duplicate keys.

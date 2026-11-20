@@ -75,6 +75,7 @@ python fixtures/knp1/typed/make_canary.py --check
 python fixtures/knp1/typed/make_expected.py --check
 python fixtures/knp1/typed/make_messages.py --check
 python fixtures/man/check_manifest_schema.py
+python fixtures/man/gen-toy-v1/make_fixtures.py --check
 python fixtures/man/make_implclosure_fixtures.py --check
 python fixtures/man/make_kci_fixtures.py --check
 python fixtures/man/make_manifest_fixtures.py --check

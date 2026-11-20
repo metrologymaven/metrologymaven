@@ -11,7 +11,7 @@
 //!
 //! `main` exits 3 if stdout cannot be written. Nothing is written to stderr.
 
-use fid_kci::{evaluate, AlgorithmTable};
+use fid_kci::{evaluate, AlgorithmTable, Digest};
 
 use crate::call::parse_call;
 
@@ -31,17 +31,32 @@ fn error(code: &str) -> Vec<u8> {
     out
 }
 
-/// The table this build evaluates with: the stand-in test algorithms (only with the
+/// The algorithms of this build: the stand-in test algorithms (only with the
 /// `test-algorithms` feature).
 #[cfg(feature = "test-algorithms")]
-pub fn reference_table() -> Option<AlgorithmTable> {
+fn algorithm_table() -> Option<AlgorithmTable> {
     crate::stand_in::table()
 }
 
-/// The table this build evaluates with: empty until the `fid-kernel` assembly crate exists.
+/// The algorithms of this build: none until the `fid-kernel` assembly crate exists.
 #[cfg(not(feature = "test-algorithms"))]
-pub fn reference_table() -> Option<AlgorithmTable> {
+fn algorithm_table() -> Option<AlgorithmTable> {
     AlgorithmTable::new(Vec::new(), fid_kci::CardRegistry::default()).ok()
+}
+
+/// Attaches the generated manifest core digest `embedded` (if any) to `table`. A constant that
+/// is not a well-formed digest gives no table (`table_unavailable`), never a wrong answer.
+pub fn with_embedded_digest(table: AlgorithmTable, embedded: Option<&str>) -> Option<AlgorithmTable> {
+    match embedded {
+        None => Some(table),
+        Some(text) => Digest::parse(text).ok().map(|d| table.with_manifest_core_digest(d)),
+    }
+}
+
+/// The table this build evaluates with, carrying the compiled-in manifest core digest
+/// ([`crate::manifest_core_digest::MANIFEST_CORE_DIGEST`]) for the self-report query.
+pub fn reference_table() -> Option<AlgorithmTable> {
+    with_embedded_digest(algorithm_table()?, crate::manifest_core_digest::MANIFEST_CORE_DIGEST)
 }
 
 /// Stdout bytes and exit code for one call read from stdin.
