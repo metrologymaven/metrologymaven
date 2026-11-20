@@ -53,9 +53,23 @@
 //! Check order of an event, first failure wins: body shape (`schema`), name (`name`), type
 //! (`unregistered_type`), references (`bad_reference`, `bad_stage`), depth (`hierarchy`),
 //! ID (`bad_id`, `id_collision`), then the transition (`invalid_transition`).
+//!
+//! Stages (spec node `CORE.PRJ.STAGE.MODEL`, see [`crate::stage`]): the tree also holds the
+//! explicit stage records and applies `StageAdded`, `StageRemoved` and `StagesReordered`.
+//! [`Tree::stages`] is the project's stage sequence, removed stages included;
+//! [`Tree::live_stages`] leaves the removed ones out. Every element has a slot for every
+//! live stage and may keep slots for removed ones (their data stays); a new element gets
+//! one slot per live stage, and slots of removed stages cannot change. A state with
+//! explicit stages adds the key `"stage_records": {<id>: <stage body>}` to
+//! [`Tree::to_value`]; a project without explicit stages keeps the exact form above, so its
+//! digest is unchanged. [`Tree::stage_digest`] is the digest of one stage's data.
 
 use crate::container::{is_bidi_control, is_nfc};
 use crate::id::{IdError, IdIndex, IdService, ReplaySource, Uuid};
+use crate::stage::{
+    check_permutation, removed_stage, reordered, stage_from_added, stage_list_id, Stage, STAGES_REORDERED, STAGE_ADDED,
+    STAGE_EVENTS, STAGE_KIND, STAGE_LIST_KIND, STAGE_REMOVED,
+};
 use fid_canon::CValue;
 use fid_types::Digest;
 use std::collections::BTreeMap;
@@ -116,6 +130,14 @@ pub enum TreeError {
     Id(IdError),
     /// The tree breaks one of its invariants (`invariant_violated`).
     Invariant(String),
+    /// A stage label or serial breaks the text rules (`label`).
+    Label,
+    /// A named stage is not a live stage of the project (`stage_not_found`).
+    StageNotFound(Uuid),
+    /// The stage to remove is the active stage (`stage_active`).
+    StageActive(Uuid),
+    /// A reorder list is not a permutation of the run's live stages (`bad_order`).
+    BadOrder(String),
 }
 
 impl TreeError {
@@ -135,6 +157,10 @@ impl TreeError {
             TreeError::IdCollision(_) => "id_collision",
             TreeError::Id(e) => e.code(),
             TreeError::Invariant(_) => "invariant_violated",
+            TreeError::Label => "label",
+            TreeError::StageNotFound(_) => "stage_not_found",
+            TreeError::StageActive(_) => "stage_active",
+            TreeError::BadOrder(_) => "bad_order",
         }
     }
 }
@@ -149,7 +175,11 @@ impl fmt::Display for TreeError {
             | TreeError::UnknownEvent(m)
             | TreeError::BadReference(m)
             | TreeError::Hierarchy(m)
-            | TreeError::Invariant(m) => write!(f, "{}: {m}", self.code()),
+            | TreeError::Invariant(m)
+            | TreeError::BadOrder(m) => write!(f, "{}: {m}", self.code()),
+            TreeError::Label => write!(f, "label: must be 1..=256 characters, NFC, no control"),
+            TreeError::StageNotFound(s) => write!(f, "stage_not_found: {s}"),
+            TreeError::StageActive(s) => write!(f, "stage_active: {s} is the active stage"),
             TreeError::Name => write!(f, "name: must be 0..={MAX_NAME_CHARS} characters, NFC, no control"),
             TreeError::BadStage(s) => write!(f, "bad_stage: {s}"),
             TreeError::InvalidTransition { from, to } => {
@@ -380,7 +410,10 @@ impl ElementTypeRegistry {
         if !is_event_type(event_type) {
             return Err(schema("event type must be 1..=128 bytes of [A-Za-z][A-Za-z0-9_.@]*"));
         }
-        if CORE_EVENTS.contains(&event_type) || self.events.contains_key(event_type) {
+        if CORE_EVENTS.contains(&event_type)
+            || STAGE_EVENTS.contains(&event_type)
+            || self.events.contains_key(event_type)
+        {
             return Err(TreeError::DuplicateEvent(event_type.to_string()));
         }
         self.events.insert(event_type.to_string(), translate);
@@ -487,6 +520,32 @@ impl Element {
             ("visible", CValue::Bool(self.visible)),
         ]);
     }
+
+    /// Sets one slot, updating the cached body in place (a stage event touches every
+    /// element, so a full rebuild per element would cost O(stages) each).
+    fn put_slot(&mut self, stage: Uuid, slot: Slot) {
+        self.slots.insert(stage, slot);
+        if let CValue::Obj(b) = &mut self.body {
+            if let Some(CValue::Obj(s)) = b.get_mut("slots") {
+                s.insert(stage.to_string(), slot.to_value());
+                return;
+            }
+        }
+        self.rebuild_body();
+    }
+
+    /// Removes one slot, updating the cached body in place; returns the slot.
+    fn take_slot(&mut self, stage: &Uuid) -> Option<Slot> {
+        let old = self.slots.remove(stage);
+        if let CValue::Obj(b) = &mut self.body {
+            if let Some(CValue::Obj(s)) = b.get_mut("slots") {
+                s.remove(&stage.to_string());
+                return old;
+            }
+        }
+        self.rebuild_body();
+        old
+    }
 }
 
 /// A group of elements and groups. The root group has no parent.
@@ -529,10 +588,27 @@ impl Group {
 
 // ------------------------------------------------------------------ tree
 
+/// The stage fields of the tree, saved before a stage event so a refused commit can be
+/// rolled back.
+struct StageSnapshot {
+    stages: Vec<Uuid>,
+    active_stage: Uuid,
+    records: BTreeMap<Uuid, Stage>,
+    list_body: CValue,
+}
+
 /// What one change replaced, so a refused commit can be rolled back.
 enum Undo {
     Element(Uuid, Option<Element>),
     Group(Uuid, Option<Group>),
+    Stages(Box<StageSnapshot>),
+    /// A `StageAdded` gave every element a slot for `stage` (moved from `adopted_from`, the
+    /// implicit default stage, when it was the first explicit stage). Undone by the inverse
+    /// move, so a stage event does not copy every element.
+    StageSlots {
+        stage: Uuid,
+        adopted_from: Option<Uuid>,
+    },
 }
 
 /// The in-memory element tree of one project.
@@ -544,10 +620,13 @@ pub struct Tree {
     active_stage: Uuid,
     elements: BTreeMap<Uuid, Element>,
     groups: BTreeMap<Uuid, Group>,
+    stage_list: Uuid,
+    records: BTreeMap<Uuid, Stage>,
+    list_body: CValue,
 }
 
 /// The reserved UUIDv5 of the project namespace for `{"kind": <kind>}`.
-fn reserved_id(namespace: Uuid, kind: &str) -> Result<Uuid, TreeError> {
+pub(crate) fn reserved_id(namespace: Uuid, kind: &str) -> Result<Uuid, TreeError> {
     let mut no_source = ReplaySource::new(Vec::new());
     let none: Vec<Uuid> = Vec::new();
     let ids = IdService::new(namespace, &mut no_source, &none);
@@ -560,9 +639,22 @@ impl Tree {
     pub fn new(namespace: Uuid, registry: Arc<ElementTypeRegistry>) -> Result<Tree, TreeError> {
         let root = reserved_id(namespace, "project.tree_root")?;
         let stage = reserved_id(namespace, "project.default_stage")?;
+        let stage_list = stage_list_id(namespace)?;
         let mut groups = BTreeMap::new();
         groups.insert(root, Group::new(root, None, ElementName::default()));
-        Ok(Tree { registry, root, stages: vec![stage], active_stage: stage, elements: BTreeMap::new(), groups })
+        let mut tree = Tree {
+            registry,
+            root,
+            stages: vec![stage],
+            active_stage: stage,
+            elements: BTreeMap::new(),
+            groups,
+            stage_list,
+            records: BTreeMap::new(),
+            list_body: CValue::Null,
+        };
+        tree.rebuild_list();
+        Ok(tree)
     }
 
     pub fn registry(&self) -> &ElementTypeRegistry {
@@ -574,9 +666,80 @@ impl Tree {
         self.root
     }
 
-    /// The stages: the implicit default stage while the project has no explicit stages.
+    /// The stage sequence in project order, removed stages included: the implicit default
+    /// stage while the project has no explicit stages.
     pub fn stages(&self) -> &[Uuid] {
         &self.stages
+    }
+
+    /// The live (not removed) stages, in project order.
+    pub fn live_stages(&self) -> Vec<Uuid> {
+        self.stages.iter().filter(|s| self.is_live(s)).copied().collect()
+    }
+
+    fn is_live(&self, stage: &Uuid) -> bool {
+        self.stages.contains(stage) && !self.records.get(stage).is_some_and(Stage::removed)
+    }
+
+    /// Whether the project has explicit stages (else it has only the implicit default stage).
+    pub fn has_explicit_stages(&self) -> bool {
+        !self.records.is_empty()
+    }
+
+    /// The explicit stage with this ID, removed or not.
+    pub fn stage(&self, id: &Uuid) -> Option<&Stage> {
+        self.records.get(id)
+    }
+
+    /// Every explicit stage, removed ones included, in project order.
+    pub fn stage_records(&self) -> impl Iterator<Item = &Stage> {
+        self.stages.iter().filter_map(|s| self.records.get(s))
+    }
+
+    /// The position of a stage in the project sequence (removed stages count).
+    pub fn stage_order(&self, id: &Uuid) -> Option<usize> {
+        self.stages.iter().position(|s| s == id)
+    }
+
+    /// The live explicit stages whose untrusted label is exactly `label`, in project order.
+    /// Labels need not be unique, so this may return several.
+    pub fn stages_labelled(&self, label: &str) -> Vec<Uuid> {
+        self.stage_records().filter(|s| !s.removed() && s.label().as_untrusted_str() == label).map(Stage::id).collect()
+    }
+
+    /// The stage an import or another stage-targeting command writes to: `stage` when it is a
+    /// live stage of the project, else `stage_not_found`; the active stage when `None`.
+    pub fn target_stage(&self, stage: Option<&Uuid>) -> Result<Uuid, TreeError> {
+        match stage {
+            None => Ok(self.active_stage),
+            Some(s) if self.is_live(s) => Ok(*s),
+            Some(s) => Err(TreeError::StageNotFound(*s)),
+        }
+    }
+
+    /// The ID of the stage list entity (see [`crate::stage`]).
+    pub fn stage_list_id(&self) -> Uuid {
+        self.stage_list
+    }
+
+    /// One stage's data: `{"elements": {<id>: {"digest", "state"}}, "stage": <id>}` over
+    /// every element holding a slot for the stage. `bad_stage` if the stage is not in the
+    /// project sequence (a removed stage keeps its data and has a value).
+    pub fn stage_value(&self, stage: &Uuid) -> Result<CValue, TreeError> {
+        if !self.stages.contains(stage) {
+            return Err(TreeError::BadStage(*stage));
+        }
+        let elements =
+            self.elements.iter().filter_map(|(id, e)| e.slots.get(stage).map(|s| (id.to_string(), s.to_value())));
+        Ok(obj([("elements", CValue::Obj(elements.collect())), ("stage", uuid_value(stage))]))
+    }
+
+    /// The per-stage data digest: SHA-256 of the RFC 8785 bytes of [`Tree::stage_value`].
+    /// Changing one stage's slots leaves every other stage's digest unchanged.
+    pub fn stage_digest(&self, stage: &Uuid) -> Result<Digest, TreeError> {
+        let d = fid_canon::digest(&self.stage_value(stage)?)
+            .map_err(|e| invariant(format!("stage data has no canonical form: {e}")))?;
+        Ok(Digest::from_bytes(d.0))
     }
 
     pub fn active_stage(&self) -> Uuid {
@@ -616,21 +779,50 @@ impl Tree {
         if let Some(e) = self.elements.get(id) {
             return Some((&e.type_id, &e.body));
         }
+        if let Some(s) = self.records.get(id) {
+            return Some((STAGE_KIND, s.body()));
+        }
+        if *id == self.stage_list {
+            return Some((STAGE_LIST_KIND, &self.list_body));
+        }
         self.groups.get(id).map(|g| (GROUP_KIND, &g.body))
     }
 
+    fn list_value(&self) -> CValue {
+        let ids = self.stages.iter().filter(|s| self.records.contains_key(s)).map(uuid_value).collect();
+        obj([("active_stage", uuid_value(&self.active_stage)), ("stages", CValue::Arr(ids))])
+    }
+
+    fn rebuild_list(&mut self) {
+        self.list_body = self.list_value();
+    }
+
+    fn stage_snapshot(&self) -> Undo {
+        Undo::Stages(Box::new(StageSnapshot {
+            stages: self.stages.clone(),
+            active_stage: self.active_stage,
+            records: self.records.clone(),
+            list_body: self.list_body.clone(),
+        }))
+    }
+
     /// The ordered tree: `{"active_stage", "elements": {<id>: <element body>}, "groups":
-    /// {<id>: <group body>}, "root", "stages": [<id>, ...]}`.
+    /// {<id>: <group body>}, "root", "stages": [<id>, ...]}`, plus `"stage_records": {<id>:
+    /// <stage body>}` when the project has explicit stages.
     pub fn to_value(&self) -> CValue {
         let elements = self.elements.iter().map(|(id, e)| (id.to_string(), e.body.clone())).collect();
         let groups = self.groups.iter().map(|(id, g)| (id.to_string(), g.body.clone())).collect();
-        obj([
-            ("active_stage", uuid_value(&self.active_stage)),
-            ("elements", CValue::Obj(elements)),
-            ("groups", CValue::Obj(groups)),
-            ("root", uuid_value(&self.root)),
-            ("stages", CValue::Arr(self.stages.iter().map(uuid_value).collect())),
-        ])
+        let mut v = BTreeMap::new();
+        v.insert("active_stage".to_string(), uuid_value(&self.active_stage));
+        v.insert("elements".to_string(), CValue::Obj(elements));
+        v.insert("groups".to_string(), CValue::Obj(groups));
+        v.insert("root".to_string(), uuid_value(&self.root));
+        v.insert("stages".to_string(), CValue::Arr(self.stages.iter().map(uuid_value).collect()));
+        if !self.records.is_empty() {
+            let records = self.records.iter().map(|(id, s)| (id.to_string(), s.body().clone())).collect();
+            v.insert("stage_records".to_string(), CValue::Obj(records));
+        }
+        CValue::Obj(v)
     }
 
     /// The canonical state digest: SHA-256 of the RFC 8785 bytes of [`Tree::to_value`] (REQ-007).
@@ -687,6 +879,21 @@ impl Tree {
                         Undo::Group(id, None) => {
                             self.groups.remove(&id);
                         }
+                        Undo::Stages(snap) => {
+                            let snap = *snap;
+                            self.stages = snap.stages;
+                            self.active_stage = snap.active_stage;
+                            self.records = snap.records;
+                            self.list_body = snap.list_body;
+                        }
+                        Undo::StageSlots { stage, adopted_from } => {
+                            for e in self.elements.values_mut() {
+                                let slot = e.take_slot(&stage);
+                                if let (Some(old), Some(slot)) = (adopted_from, slot) {
+                                    e.put_slot(old, slot);
+                                }
+                            }
+                        }
                     }
                 }
                 Err(e)
@@ -705,6 +912,9 @@ impl Tree {
     ) -> Result<(), TreeError> {
         if CORE_EVENTS.contains(&event_type) {
             return self.apply_core(event_type, body, undo, created);
+        }
+        if STAGE_EVENTS.contains(&event_type) {
+            return self.apply_stage(event_type, body, undo, created);
         }
         let translate = *self.registry.events.get(event_type).ok_or_else(|| {
             TreeError::UnknownEvent(if is_event_type(event_type) {
@@ -752,6 +962,74 @@ impl Tree {
                 undo.push(Undo::Element(id, Some(e.clone())));
                 e.slots.insert(stage, slot);
                 e.rebuild_body();
+            }
+            other => return Err(TreeError::UnknownEvent(other.to_string())),
+        }
+        Ok(())
+    }
+
+    /// A stage event (see [`crate::stage`]).
+    fn apply_stage(
+        &mut self,
+        event_type: &str,
+        body: &CValue,
+        undo: &mut Vec<Undo>,
+        created: &mut Vec<Uuid>,
+    ) -> Result<(), TreeError> {
+        match event_type {
+            STAGE_ADDED => {
+                let stage = stage_from_added(body)?;
+                let id = self.import_id(stage.id())?;
+                undo.push(self.stage_snapshot());
+                // The first explicit stage takes the place of the implicit default stage.
+                let adopt = if self.records.is_empty() { self.stages.first().copied() } else { None };
+                undo.push(Undo::StageSlots { stage: id, adopted_from: adopt });
+                for e in self.elements.values_mut() {
+                    let slot = match adopt {
+                        Some(old) => e.take_slot(&old).unwrap_or(Slot::NEW),
+                        None => Slot::NEW,
+                    };
+                    e.put_slot(id, slot);
+                }
+                if adopt.is_some() {
+                    self.stages = vec![id];
+                    self.active_stage = id;
+                } else {
+                    self.stages.push(id);
+                }
+                self.records.insert(id, stage);
+                self.rebuild_list();
+                created.push(id);
+            }
+            STAGE_REMOVED => {
+                let id = removed_stage(body)?;
+                if !self.records.contains_key(&id) || !self.is_live(&id) {
+                    return Err(TreeError::StageNotFound(id));
+                }
+                if id == self.active_stage {
+                    return Err(TreeError::StageActive(id));
+                }
+                undo.push(self.stage_snapshot());
+                if let Some(s) = self.records.get_mut(&id) {
+                    s.set_removed(true);
+                }
+                self.rebuild_list();
+            }
+            STAGES_REORDERED => {
+                let (run, order) = reordered(body)?;
+                let live: Vec<Uuid> =
+                    self.stage_records().filter(|s| !s.removed() && s.run() == run).map(Stage::id).collect();
+                check_permutation(&order, &live)?;
+                undo.push(self.stage_snapshot());
+                let mut next = order.into_iter();
+                for slot in self.stages.iter_mut() {
+                    if live.contains(slot) {
+                        if let Some(id) = next.next() {
+                            *slot = id;
+                        }
+                    }
+                }
+                self.rebuild_list();
             }
             other => return Err(TreeError::UnknownEvent(other.to_string())),
         }
@@ -830,7 +1108,7 @@ impl Tree {
         }
         self.existing_group(parent)?;
         let id = self.import_id(id)?;
-        let slots = self.stages.iter().map(|s| (*s, Slot::NEW)).collect();
+        let slots = self.live_stages().into_iter().map(|s| (s, Slot::NEW)).collect();
         let mut e =
             Element { id, type_id: type_id.to_string(), parent, name, slots, visible, meta, body: CValue::Null };
         e.rebuild_body();
@@ -851,7 +1129,7 @@ impl Tree {
             return Err(schema("a current slot must carry a digest"));
         }
         let e = self.elements.get(&id).ok_or_else(|| TreeError::BadReference(format!("element {id} not found")))?;
-        if !self.stages.contains(&stage) {
+        if !self.is_live(&stage) {
             return Err(TreeError::BadStage(stage));
         }
         // Every element has a slot per stage (an invariant), so a missing one is corrupt state.
@@ -873,13 +1151,34 @@ impl Tree {
             Some(g) if g.parent.is_none() => {}
             _ => return Err(invariant("root group missing or has a parent".to_string())),
         }
-        if !self.stages.contains(&self.active_stage) {
-            return Err(invariant("active stage is not a stage".to_string()));
+        if !self.is_live(&self.active_stage) {
+            return Err(invariant("active stage is not a live stage".to_string()));
         }
         let sorted = self.stages_sorted();
         if sorted.windows(2).any(|w| w[0] == w[1]) {
             return Err(invariant("stage IDs are not distinct".to_string()));
         }
+        if self.records.is_empty() {
+            if self.stages.len() != 1 {
+                return Err(invariant("a project without explicit stages has exactly one stage".to_string()));
+            }
+        } else if !self.records.keys().eq(sorted.iter()) {
+            return Err(invariant("stage records and the stage sequence disagree".to_string()));
+        }
+        for (key, s) in &self.records {
+            if *key != s.id() {
+                return Err(invariant(format!("stage {} is filed under {key}", s.id())));
+            }
+            let fresh =
+                Stage::new(s.id(), s.run(), s.label().clone(), s.serial().cloned(), s.metadata().clone(), s.removed());
+            if fresh != *s {
+                return Err(invariant(format!("stage {} body is stale", s.id())));
+            }
+        }
+        if self.list_value() != self.list_body {
+            return Err(invariant("stage list is stale".to_string()));
+        }
+        let live = self.live_stages();
         for (key, g) in &self.groups {
             if *key != g.id {
                 return Err(invariant(format!("group {} is filed under {key}", g.id)));
@@ -905,7 +1204,7 @@ impl Tree {
             if self.registry.get(&e.type_id).is_none() {
                 return Err(invariant(format!("element {} has an unregistered type", e.id)));
             }
-            if !e.slots.keys().eq(sorted.iter()) {
+            if !live.iter().all(|s| e.slots.contains_key(s)) || !e.slots.keys().all(|s| self.stages.contains(s)) {
                 return Err(invariant(format!("element {} does not have one slot per stage", e.id)));
             }
             if e.slots.values().any(|s| s.state == ElementState::Current && s.digest.is_none()) {
@@ -928,9 +1227,13 @@ impl Tree {
 }
 
 impl IdIndex for Tree {
-    /// Elements, groups (the root included) and stages hold IDs.
+    /// Elements, groups (the root included), stages and the stage list hold IDs.
     fn contains_id(&self, id: &Uuid) -> bool {
-        self.elements.contains_key(id) || self.groups.contains_key(id) || self.stages.contains(id)
+        self.elements.contains_key(id)
+            || self.groups.contains_key(id)
+            || self.stages.contains(id)
+            || self.records.contains_key(id)
+            || *id == self.stage_list
     }
 }
 

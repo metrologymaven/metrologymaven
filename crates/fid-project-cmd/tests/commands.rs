@@ -15,7 +15,9 @@ use fid_project::{
     Bits, Container, ContainerError, ContainerKind, CreatedBy, IdError, Observation, Recording, ReplaySource, Uuid,
     CONTAINER_CREATED,
 };
-use fid_project_cmd::{command_defs, created_by, register, result_of, run_create, to_bus_error, SharedSource};
+use fid_project_cmd::{
+    command_defs, container_defs, created_by, register, result_of, run_create, to_bus_error, SharedSource,
+};
 use fid_registry::{check_schema, validate, Catalogue, CommandDecl, CommandDef};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
@@ -237,7 +239,11 @@ fn created_by_comes_from_the_principal() {
 /// CLI and MCP; their schemas pass the keyword checker and the definitions pass VAL.
 #[test]
 fn command_definitions() {
-    let defs = command_defs().unwrap();
+    let defs = container_defs().unwrap();
+    // The crate's full list is the container commands, then the stage commands.
+    let all: Vec<String> = command_defs().unwrap().iter().map(|d| format!("{}@{}", d.id, d.major)).collect();
+    assert_eq!(all.len(), 8);
+    assert!(all.iter().zip(&defs).all(|(a, d)| *a == format!("{}@{}", d.id, d.major)));
     let ids: Vec<String> = defs.iter().map(|d| format!("{}@{}", d.id, d.major)).collect();
     assert_eq!(
         ids,

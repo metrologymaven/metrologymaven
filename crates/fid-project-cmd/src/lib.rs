@@ -15,6 +15,8 @@
 //!   state becomes `internal/invariant_violated`.
 //! - [`tree`]: the element tree on the bus (spec node `CORE.PRJ.TREE.MODEL`, bus half): the
 //!   [`StateView`] over `fid_project::Tree` and the mapping of tree refusals to bus errors.
+//! - [`stage`]: the four stage commands (spec node `CORE.PRJ.STAGE.MODEL`, bus half).
+//!   [`command_defs`] lists the container commands, then the stage commands.
 
 use fid_bus::error::{BusError, ConflictReason, Detail, InternalReason, ValidationReason};
 use fid_bus::handler::{
@@ -31,6 +33,7 @@ use fid_registry::{CommandDef, DefError};
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
+pub mod stage;
 pub mod tree;
 
 const LIFECYCLE_SINCE: &str = "2026-11-19";
@@ -145,7 +148,7 @@ impl Handler for CreateHandler {
 
 /// Registers the four create handlers, each with its definition from [`command_defs`].
 pub fn register(set: &mut HandlerSet, namespace: Uuid, source: &SharedSource) -> Result<(), BusError> {
-    let defs = command_defs().map_err(|e| {
+    let defs = container_defs().map_err(|e| {
         BusError::Internal(InternalReason::InvariantViolated, Detail::new(&format!("container definitions: {e}")))
     })?;
     for (kind, def) in ContainerKind::ALL.into_iter().zip(defs) {
@@ -190,9 +193,17 @@ fn object(required: &[&str], properties: CValue) -> CValue {
 
 const IMPORTED: &str = "Imported ID, kept unchanged; omit it to get a new UUIDv7.";
 
-/// The four command definitions, in [`ContainerKind::ALL`] order. Built through
-/// [`CommandDef::from_value`], so every field rule of the registry applies.
+/// Every command definition of this crate: the four container commands in
+/// [`ContainerKind::ALL`] order, then the four stage commands ([`stage::command_defs`]).
 pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
+    let mut defs = container_defs()?;
+    defs.extend(stage::command_defs()?);
+    Ok(defs)
+}
+
+/// The four container command definitions, in [`ContainerKind::ALL`] order. Built through
+/// [`CommandDef::from_value`], so every field rule of the registry applies.
+pub fn container_defs() -> Result<Vec<CommandDef>, DefError> {
     let rule = "untrusted text, 1 to 256 characters, no control or bidi control, NFC (else validation/label).";
     let label_req = || label_schema(&format!("Label; {rule} Need not be unique."));
     let label_opt = || label_schema(&format!("Optional label; {rule} Need not be unique."));

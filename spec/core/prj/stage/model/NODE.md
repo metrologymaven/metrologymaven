@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-project, fid-project-cmd]
 satisfies: [REQ-CORE.PRJ.STAGE-001, REQ-CORE.PRJ.STAGE-003, REQ-CORE.PRJ.STAGE-004, REQ-CORE.PRJ.STAGE-006]
 covers: [GOM.PRJ.02, PW.PRJ.02]
 depends_on: [CORE.PRJ.CONT.HIER, CORE.PRJ.CONT.ID, CORE.PRJ.TREE.MODEL, CORE.BUS.PIPE.HANDLER, CORE.REG.DEF]
@@ -74,6 +75,14 @@ Lets one project hold many measured instances (parts, serials, repeated measurem
 ## Open questions
 
 - PolyWorks multi-piece projects may differ from GOM stages [unverified]; confirm by seed verification before freezing.
+- Build: the CLI `fid project add-stage | remove-stage | reorder-stages | list-stages` and MCP `project_*_stage(s)` surfaces are not wired; they come from the four `CommandDef`s once the registry surface generator exists (as for #300). The bus commit stage (`CORE.BUS.PIPE.STAGE`), journal undo (`CORE.JRN.UNDO.MOVE`) and the replay loop (`CORE.RPL.EXEC.LOOP`) are not built, so AC-1, AC-3 and AC-5 are tested at the handler level: events are folded into the tree state, undo is the state at the previous head, and replay re-runs the handlers with a `ReplaySource` of the recorded observations.
+- Build: the split follows #300: model and command logic in `fid-project` (module `stage`, events applied by `tree`), bus handlers and definitions in `fid-project-cmd` (module `stage`).
+- Build: the first `StageAdded` of a project that has only the implicit default stage of `CORE.PRJ.TREE.MODEL` takes its place: each element's default-stage slot moves, unchanged, to the new stage, which becomes the active stage. "A project with one stage" (p100) therefore has one stage whether or not it was named, and no data is lost. AC-2 is read as 1,000 stages in total: the script adds S2 .. S1000 to p100's S1.
+- Build: `order` is not stored on the stage; it is the stage's position in the project's stage sequence (removed stages keep their positions). A reorder names one run's live stages, which fill the positions those stages held.
+- Build: a removed stage keeps every element's slot for it (its data) but takes no new slots, refuses slot changes (`bad_stage`) and gives new elements no slot. Stage events from a domain are refused at registration (`duplicate_event`).
+- Build: errors map to the bus catalogue v3 without new reasons: `stage_active` is `precondition/stage_active`; a reorder that is not a permutation is `validation/bad_stage`; a stage that is not live is `not_found/unknown_entity` (model code `stage_not_found`, which `IO.REG.ENV.IMPORT` can reuse through `Tree::target_stage`); bad label or serial text is `validation/label`; a run that is not a Run is `validation/bad_reference`.
+- Build: for `IO.REG.ENV.IMPORT` the tree offers `target_stage(Option<stage>)` (the live stage, or the active stage), `stages_labelled(label)` (lookup by name; labels need not be unique) and `stage_digest(stage)` (the per-stage data digest that REQ-IO.REG.ENV.IMPORT-003 compares).
+- Build: like the container commands, `project.add_stage@1` also takes an optional imported `id`; omitted, a UUIDv7 is drawn. `metadata` is always `{}` until a command sets it.
 
 ## Children
 

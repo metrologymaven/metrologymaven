@@ -22,9 +22,17 @@
 //!   `internal/handler_failed`.
 //! - [`to_replay_error`] (replay path): as [`to_bus_error`], except that
 //!   `invalid_transition` is `internal/invariant_violated`. A journaled commit was accepted
-//!   once, so a transition it can no longer make means the state is corrupt.
+//!   once, so a transition it can no longer make means the state is corrupt. The stage
+//!   state rules (`stage_not_found`, `stage_active`, `bad_order`) are treated the same way.
+//! - Stage refusals (spec node `CORE.PRJ.STAGE.MODEL`, catalogue v3): `label` is
+//!   `validation/label`, `bad_order` is `validation/bad_stage`, `stage_not_found` is
+//!   `not_found/unknown_entity` and `stage_active` is `precondition/stage_active`.
+//! - The state view also serves the stage records (kind `project.stage`) and the stage list
+//!   (kind `project.stage_list`), which the stage commands read.
 
-use fid_bus::error::{BusError, ConflictReason, Detail, InternalReason, PreconditionReason, ValidationReason};
+use fid_bus::error::{
+    BusError, ConflictReason, Detail, InternalReason, NotFoundReason, PreconditionReason, ValidationReason,
+};
 use fid_bus::handler::{EntityId, EntityRef, Event, SettingKey, StateView};
 use fid_canon::{CValue, Digest};
 use fid_project::{IdError, Tree, TreeError, TreeEvent, Uuid};
@@ -43,6 +51,10 @@ pub fn to_bus_error(e: &TreeError) -> BusError {
         TreeError::IdCollision(_) => BusError::Conflict(ConflictReason::IdCollision, d),
         TreeError::Id(_) => BusError::Internal(InternalReason::HandlerFailed, d),
         TreeError::InvalidTransition { .. } => BusError::Precondition(PreconditionReason::InvalidTransition, d),
+        TreeError::Label => BusError::Validation(ValidationReason::Label, d),
+        TreeError::BadOrder(_) => BusError::Validation(ValidationReason::BadStage, d),
+        TreeError::StageNotFound(_) => BusError::NotFound(NotFoundReason::UnknownEntity, d),
+        TreeError::StageActive(_) => BusError::Precondition(PreconditionReason::StageActive, d),
         TreeError::DuplicateType(_)
         | TreeError::DuplicateEvent(_)
         | TreeError::UnknownEvent(_)
@@ -55,9 +67,10 @@ pub fn to_bus_error(e: &TreeError) -> BusError {
 /// [`to_bus_error`].
 pub fn to_replay_error(e: &TreeError) -> BusError {
     match e {
-        TreeError::InvalidTransition { .. } => {
-            BusError::Internal(InternalReason::InvariantViolated, Detail::new(&e.to_string()))
-        }
+        TreeError::InvalidTransition { .. }
+        | TreeError::StageNotFound(_)
+        | TreeError::StageActive(_)
+        | TreeError::BadOrder(_) => BusError::Internal(InternalReason::InvariantViolated, Detail::new(&e.to_string())),
         other => to_bus_error(other),
     }
 }
@@ -84,7 +97,9 @@ impl TreeState {
     /// Wraps `tree` at branch head `head`, with no settings.
     pub fn new(tree: Tree, head: Digest) -> Result<TreeState, BusError> {
         let mut ids = BTreeMap::new();
-        for id in tree.groups().map(|g| g.id()).chain(tree.elements().map(|e| e.id())) {
+        let stages: Vec<Uuid> = tree.stage_records().map(|s| s.id()).collect();
+        let all = tree.groups().map(|g| g.id()).chain(tree.elements().map(|e| e.id())).chain(stages);
+        for id in all.chain(std::iter::once(tree.stage_list_id())) {
             ids.insert(id, entity_id(&id)?);
         }
         Ok(TreeState { tree, ids, head, settings: BTreeMap::new() })
