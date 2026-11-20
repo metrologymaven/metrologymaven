@@ -164,6 +164,43 @@ def make_row():
     )
 
 
+def make_offset_row():
+    """A second sample row exercising every value type and quantity kind."""
+    prm = [
+        field("inputs", "element_ref_array"),
+        field("thresholds.angular", "number", "angle"),
+        field("thresholds.distance", "number", "length"),
+        field("params.offset", "number", "length"),
+        field("params.branch", "integer", "count", False),
+        field("params.rule", "string"),
+        field("params.strict", "boolean", None, False),
+    ]
+    res = [
+        field("algorithm", "string"),
+        field("inputs", "element_ref_array"),
+        field("params_digest", "string"),
+        field("output_digest", "string"),
+        field("element.p", "number_array", "length"),
+        field("element.n", "number_array", "dimensionless"),
+        field("element.samples", "points", "length", False),
+        field("element.source", "element_ref", None, False),
+    ]
+    check_fields(prm)
+    check_fields(res)
+    return canon(
+        {
+            "algorithms": ["construct.offset.plane@1.0.0", "construct.offset.point@1.0.0"],
+            "command": "construct.offset@1",
+            "determinism": "D0",
+            "dry_run": "R1",
+            "params": prm,
+            "result": res,
+            "row": "construct.command_row@1",
+            "side_effect": "W2",
+        }
+    )
+
+
 def make_canon(pairs):
     ida, idb, a, b, _, _ = pairs[0]
     p = params(ANGULAR, DISTANCE)
@@ -201,6 +238,7 @@ def make_canon(pairs):
         ("event_type", CMD_MID),
         ("event_payload", event),
         ("row_bytes", make_row()),
+        ("row_offset_bytes", make_offset_row()),
     ]
     head = [
         "# KRN.CONS.DECL AC-2/AC-5: canonical bytes for pair 0 of pairs.txt (CC-BY-4.0).",

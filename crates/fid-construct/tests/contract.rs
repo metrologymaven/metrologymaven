@@ -12,7 +12,10 @@ use fid_construct::contract::{
     Field, InputKind, Inputs, Measure, QuantityKind, Role, RowError, UndefinedReason, ValueType, COMMON_PARAMS,
     JOURNAL_FIELDS, MAX_INPUTS,
 };
-use fid_fit::contract::{FittedFeature, Primitive, V3};
+use fid_fit::contract::{
+    algorithm_id, encode, FitDiagnostics, FitResult, FittedFeature, Method, Primitive, StopReason, V3,
+};
+use fid_kci::kci::json::{to_canonical, Json};
 use fid_num::f;
 use fid_types::{CommandId, Determinism};
 
@@ -307,20 +310,35 @@ fn ac2_output_and_event_match_reference() {
 
 // ------------------------------------------------------------------ AC-3
 
-fn near_cases() -> Vec<(String, [V3; 4], f64, String, Vec<String>)> {
+/// One line of `near-parallel.txt`.
+struct NearCase {
+    name: String,
+    line_p: V3,
+    line_d: V3,
+    plane_p: V3,
+    plane_n: V3,
+    threshold: f64,
+    expected: String,
+    value: Vec<String>,
+}
+
+fn near_cases() -> Vec<NearCase> {
     let text = read(NEAR);
     data_lines(&text)
         .map(|l| {
             let t: Vec<&str> = l.split(' ').collect();
             let v: Vec<f64> = t[1..14].iter().map(|s| unhex(s)).collect();
             let p = |i: usize| [v[3 * i], v[3 * i + 1], v[3 * i + 2]];
-            (
-                t[0].to_string(),
-                [p(0), p(1), p(2), p(3)],
-                v[12],
-                t[14].to_string(),
-                t[15..].iter().map(|s| s.to_string()).collect(),
-            )
+            NearCase {
+                name: t[0].to_string(),
+                line_p: p(0),
+                line_d: p(1),
+                plane_p: p(2),
+                plane_n: p(3),
+                threshold: v[12],
+                expected: t[14].to_string(),
+                value: t[15..].iter().map(|s| s.to_string()).collect(),
+            }
         })
         .collect()
 }
@@ -329,11 +347,11 @@ fn near_cases() -> Vec<(String, [V3; 4], f64, String, Vec<String>)> {
 fn ac3_near_parallel_is_ill_conditioned_with_no_element() {
     let cases = near_cases();
     assert_eq!(cases.len(), 3);
-    for (name, [lp, ld, pp, pn], thr, expected, value) in cases {
-        let params = ConstructParams::new(thr, 1e-6).unwrap();
+    for NearCase { name, line_p, line_d, plane_p, plane_n, threshold, expected, value } in cases {
+        let params = ConstructParams::new(threshold, 1e-6).unwrap();
         let inputs = [
-            ElementGeom::Feature(FittedFeature::Line3 { p: lp, d: ld }),
-            ElementGeom::Feature(FittedFeature::Plane { p: pp, n: pn }),
+            ElementGeom::Feature(FittedFeature::Line3 { p: line_p, d: line_d }),
+            ElementGeom::Feature(FittedFeature::Plane { p: plane_p, n: plane_n }),
         ];
         let got = run(&LinePlane::new(), &inputs, &params);
         match expected.as_str() {
@@ -469,6 +487,30 @@ fn ac5_rows_declare_quantity_and_unit_on_every_numeric_field() {
     for f in row.params().iter().chain(row.result()) {
         assert_eq!(f.ty.is_numeric(), f.quantity.is_some(), "{}", f.name);
     }
+    // The second sample row (every value type and quantity kind), also checked against the
+    // JSON Schema by fixtures/cons/check_row_schema.py.
+    let offset = CommandRow::new(
+        CommandId::parse("construct.offset@1").unwrap(),
+        &[
+            ConstructAlgorithmId::parse("construct.offset.plane@1.0.0").unwrap(),
+            ConstructAlgorithmId::parse("construct.offset.point@1.0.0").unwrap(),
+        ],
+        Determinism::D0,
+        &[
+            Field::new("params.offset", ValueType::Number, Some(QuantityKind::Length), true),
+            Field::new("params.branch", ValueType::Integer, Some(QuantityKind::Count), false),
+            Field::new("params.rule", ValueType::String, None, true),
+            Field::new("params.strict", ValueType::Boolean, None, false),
+        ],
+        &[
+            Field::new("element.p", ValueType::NumberArray, Some(QuantityKind::Length), true),
+            Field::new("element.n", ValueType::NumberArray, Some(QuantityKind::Dimensionless), true),
+            Field::new("element.samples", ValueType::Points, Some(QuantityKind::Length), false),
+            Field::new("element.source", ValueType::ElementRef, None, false),
+        ],
+    )
+    .unwrap();
+    assert_eq!(String::from_utf8(offset.to_json()).unwrap(), canon("row_offset_bytes"));
     assert_eq!(validate_fields(&COMMON_PARAMS), Ok(()));
     assert_eq!(validate_fields(&JOURNAL_FIELDS), Ok(()));
     // Sample rows that break the rule are refused.
@@ -607,3 +649,135 @@ const NAMES: [&str; 64] = [
     "v32", "v33", "v34", "v35", "v36", "v37", "v38", "v39", "v40", "v41", "v42", "v43", "v44", "v45", "v46", "v47",
     "v48", "v49", "v50", "v51", "v52", "v53", "v54", "v55", "v56", "v57", "v58", "v59", "v60", "v61", "v62", "v63",
 ];
+
+// ------------------------------------------------------------------ feature encoding drift guard
+
+/// A JSON value as `fid_fit::contract::encode` writes it (strings, arrays, objects, null).
+#[derive(Debug, Clone, PartialEq)]
+enum V {
+    S(String),
+    A(Vec<V>),
+    O(Vec<(String, V)>),
+    Null,
+}
+
+/// A small parser for the compact, ASCII, number-free JSON of the two encoders.
+fn parse(b: &[u8], i: &mut usize) -> V {
+    match b[*i] {
+        b'"' => {
+            *i += 1;
+            let mut s = String::new();
+            while b[*i] != b'"' {
+                if b[*i] == b'\\' {
+                    *i += 1;
+                }
+                s.push(char::from(b[*i]));
+                *i += 1;
+            }
+            *i += 1;
+            V::S(s)
+        }
+        b'[' => {
+            *i += 1;
+            let mut items = Vec::new();
+            while b[*i] != b']' {
+                items.push(parse(b, i));
+                if b[*i] == b',' {
+                    *i += 1;
+                }
+            }
+            *i += 1;
+            V::A(items)
+        }
+        b'{' => {
+            *i += 1;
+            let mut members = Vec::new();
+            while b[*i] != b'}' {
+                let V::S(k) = parse(b, i) else { panic!("key at {i}") };
+                assert_eq!(b[*i], b':');
+                *i += 1;
+                members.push((k, parse(b, i)));
+                if b[*i] == b',' {
+                    *i += 1;
+                }
+            }
+            *i += 1;
+            V::O(members)
+        }
+        b'n' => {
+            assert_eq!(&b[*i..*i + 4], b"null");
+            *i += 4;
+            V::Null
+        }
+        c => panic!("unexpected byte {c} at {i}"),
+    }
+}
+
+fn parse_all(bytes: &[u8]) -> V {
+    let mut i = 0;
+    let v = parse(bytes, &mut i);
+    assert_eq!(i, bytes.len());
+    v
+}
+
+fn member(v: &V, key: &str) -> V {
+    let V::O(m) = v else { panic!("not an object") };
+    m.iter().find(|(k, _)| k == key).map(|(_, x)| x.clone()).unwrap()
+}
+
+fn to_json(v: &V) -> Json {
+    match v {
+        V::S(s) => Json::Str(s.clone()),
+        V::A(a) => Json::Arr(a.iter().map(to_json).collect()),
+        V::O(m) => Json::Obj(m.iter().map(|(k, x)| (k.clone(), to_json(x))).collect()),
+        V::Null => panic!("null inside a feature"),
+    }
+}
+
+/// For every primitive, the `feature` object of `fid_fit::contract::encode`, re-canonicalised
+/// by the kernel's RFC 8785 writer, equals the `feature` object of the constructed element's
+/// canonical bytes: the two encoders cannot drift apart.
+#[test]
+fn feature_encoding_matches_fid_fit_encode() {
+    use FittedFeature as F;
+    let v = [1.0, 2.0, 2.0];
+    let feats = [
+        F::Point { c: v },
+        F::Line2 { p: [1.0, 2.0], d: [0.0, -1.0] },
+        F::Line3 { p: v, d: v },
+        F::Plane { p: [0.1, -2.5, 1000.0], n: [0.0, 0.0, -1.0] },
+        F::Circle2 { c: [0.0, 0.5], r: 1.0 },
+        F::Circle3 { c: v, n: v, r: 1.0 },
+        F::Sphere { c: v, r: 1.0 },
+        F::Cylinder { p: v, d: v, r: 1.0 },
+        F::Cone { apex: v, d: [0.0, 0.0, -2.0], half_angle: 0.5 },
+        F::Torus { c: v, n: v, major_r: 2.0, minor_r: 0.5 },
+        F::Slot { c: v, n: [0.0, 0.0, 1.0], d: [1.0, 0.0, 0.0], length: 3.0, width: 1.0 },
+        F::Rectangle { c: v, n: [0.0, 0.0, 1.0], d: [1.0, 0.0, 0.0], length: 3.0, width: 1.0 },
+        F::Ellipse { c: v, n: [0.0, 0.0, 1.0], d: [1.0, 0.0, 0.0], a: 3.0, b: 1.0 },
+        F::Paraboloid { apex: v, d: [0.0, -1.0, 0.0], focal: 0.25 },
+        F::Polyline { vertices: vec![v, [0.0; 3], [-1.5, 0.25, 3.0]] },
+        F::Spline { degree: 1, knots: vec![0.0, 0.0, 1.0, 1.0], control: vec![v, [0.0; 3]] },
+    ];
+    assert_eq!(feats.len(), Primitive::ALL.len());
+    let mut seen: Vec<Primitive> = Vec::new();
+    for f in feats {
+        let p = f.primitive();
+        seen.push(p);
+        let alg = algorithm_id(p, Method::LeastSquares, (1, 0, 0)).unwrap();
+        let diag = FitDiagnostics { grad_norm: 0.0, rank: 1, cond: 1.0, iterations: 0, stop: StopReason::ClosedForm };
+        let r = FitResult::assemble(&f, vec![0.5], diag, None, alg).unwrap();
+        let fit_feature = member(&parse_all(&encode(&r).unwrap()), "feature");
+        let bytes = ConstructedElement::feature(&f).unwrap().canonical_bytes();
+        let ours = member(&parse_all(&bytes), "feature");
+        let want = String::from_utf8(to_canonical(&to_json(&fit_feature)).unwrap()).unwrap();
+        let got = String::from_utf8(to_canonical(&to_json(&ours)).unwrap()).unwrap();
+        assert_eq!(got, want, "{}", p.slug());
+        // The bytes we emit are already that canonical form, verbatim.
+        let raw = String::from_utf8(bytes).unwrap();
+        assert!(raw.starts_with(&format!("{{\"feature\":{want},")), "{raw}");
+    }
+    seen.sort();
+    seen.dedup();
+    assert_eq!(seen.len(), Primitive::ALL.len());
+}

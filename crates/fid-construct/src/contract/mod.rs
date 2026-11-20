@@ -53,8 +53,10 @@ pub use rows::{
 use fid_types::{CommandId, Digest};
 
 /// A construction (REQ-KRN.CONS.DECL-001). The value holds only configuration fixed when it
-/// was built (its [`Declared`] input references and options), never geometry or a cache;
-/// [`harness::check`] detects violations.
+/// was built (its [`Declared`] input references and options), never geometry or a cache.
+/// It cannot read undeclared supplied inputs; geometry captured in the construction value at
+/// `make()` is a contract violation the harness cannot detect. [`harness::check`] detects
+/// state that changes between calls.
 pub trait Construction {
     /// The dependency declaration under `params` (normally
     /// `DependencyDecl::new(&self.declared, params)`).

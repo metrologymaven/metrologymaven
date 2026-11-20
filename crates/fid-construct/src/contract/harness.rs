@@ -13,8 +13,10 @@
 //! 4. **Return.** After all replacements, evaluating the original inputs again on the used
 //!    value gives the outcome of step 2, so no state leaked between calls.
 //!
-//! A construction that kept hidden state (a cache, a counter, a copy of an earlier input)
-//! fails step 2, 3 or 4.
+//! A construction that keeps state changing between calls (a cache, a counter, a copy of an
+//! earlier input) fails step 2, 3 or 4. Geometry captured in the construction value at
+//! `make()` is a contract violation the harness cannot detect: every value from `make` holds
+//! the same capture, so all comparisons agree.
 
 use super::error::ConstructError;
 use super::geom::ElementGeom;

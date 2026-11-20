@@ -1,13 +1,14 @@
-//! Inputs bound to a declaration: the only channel through which a construction reads
-//! geometry.
+//! Inputs bound to a declaration: the only channel through which a construction receives
+//! supplied geometry.
 //!
 //! [`Inputs::bind`] pairs a [`DependencyDecl`] with the supplied geometry, in declared
 //! order, after checking the count and every input. A construction then reads an input only
 //! by an [`ElementRef`] the declaration lists (the handle it built its declaration from):
 //! asking for any other reference is [`ConstructError::UndeclaredInput`]. Since `evaluate`
 //! receives nothing but the bound inputs and the parameters (no store, no project, no
-//! clock), a construction cannot read an element it did not declare; the
-//! [`super::harness`] additionally detects hidden state kept in the construction value.
+//! clock), a construction cannot read undeclared supplied inputs; geometry captured in the
+//! construction value at `make()` is a contract violation the harness cannot detect. The
+//! [`super::harness`] does detect state that changes between calls (counters, caches).
 
 use fid_fit::contract::{FittedFeature, Primitive, V3};
 
