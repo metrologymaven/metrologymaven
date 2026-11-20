@@ -998,6 +998,7 @@ name = "fid-registry-build"
 version = "0.0.1"
 dependencies = [
  "fid-align",
+ "fid-bus",
  "fid-canon",
  "fid-dep",
  "fid-jobs",

@@ -224,3 +224,33 @@ fn rust_types_map_to_json_types() {
     assert_eq!(text(&p["type"]), r#"{"maximum":65535,"minimum":0,"type":"integer"}"#);
     assert_eq!(text(&o["required"]), r#"["lengths","set","signed","small","text"]"#);
 }
+
+// ------------------------------------------------------------ file parameters
+
+/// A command with file parameters (CORE.BUS.POL.FS), as a domain crate declares it.
+#[allow(dead_code)]
+#[derive(FidSchema)]
+struct ImportParams {
+    #[fid(path_like, extensions = ["step", "stl"], description = "The part file.")]
+    source: String,
+    #[fid(path_like)]
+    sidecar: Option<String>,
+    #[fid(max_length = 64)]
+    label: String,
+}
+
+/// CORE.REG.DEF.SCHEMA REQ-010: `#[fid(path_like, extensions = [...])]` emits `path_like` and
+/// `x-extensions` exactly as written, and the schema passes the keyword checker.
+#[test]
+fn path_like_fields_emit_the_file_keywords() {
+    let want = parse(
+        br#"{"additionalProperties":false,"properties":{"label":{"maxLength":64,"type":"string"},
+"sidecar":{"path_like":true,"type":"string"},
+"source":{"description":"The part file.","path_like":true,"type":"string","x-extensions":["step","stl"]}},
+"required":["label","source"],"type":"object"}"#,
+    )
+    .unwrap();
+    assert_eq!(ImportParams::schema(), want);
+    let catalogue = Catalogue::geo_frame().expect("GEO.FRAME.UNITS catalogue");
+    assert_eq!(check_schema(&ImportParams::schema(), &catalogue), Vec::new());
+}

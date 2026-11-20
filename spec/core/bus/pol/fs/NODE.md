@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # CORE.BUS.POL.FS: File handles and approved roots
@@ -72,9 +72,9 @@ The bus-side guard for file-system parameters. Agents and scripts never pass raw
 - A time-of-check to time-of-use gap remains between resolution and the handler's open; `CORE.STO` should open through the resolved directory handle where the platform allows [unverified per platform].
 - **Applied (build, `fid-bus` `policy::fs`):**
   - `ResolvedPath` holds the canonical root folder open as a capability (`cap-std`) and opens only through it (`open_read`, `create_new`), repeating the checks at open. The final component is opened without following links (`O_NOFOLLOW`; on Windows `FILE_FLAG_OPEN_REPARSE_POINT` and an opened reparse point is refused), so the checked name stays authoritative for the extension rule. A file with more than one hard link is refused on Unix (`st_nlink`) and Windows (`nNumberOfLinks`). `create_new` is exclusive, so no overwrite race. **Residual:** an intermediate folder swapped after resolution for a link that stays inside the root is still followed at open (containment and the extension rule hold); Windows files that are reparse points for other reasons (cloud placeholders, deduplicated files) are refused.
-  - Roots are the admin setting `bus.fs_roots` (machine scope only, declared with `fid_settings!` in `fid-bus`), `[{id, kind: import|export, path, extensions?}]`, read through `fid_store::settings::resolve` against the module's own declaration, so a value at user or project scope is ignored. A malformed value is refused as a whole. There is no public constructor from a raw value outside test support. **Follow-up:** collect `fid_bus::policy::fs::fs_settings` into the workspace settings manifest (`fid-registry-build`).
+  - Roots are the admin setting `bus.fs_roots` (machine scope only, declared with `fid_settings!` in `fid-bus`), `[{id, kind: import|export, path, extensions?}]`, read through `fid_store::settings::resolve` against the module's own declaration, so a value at user or project scope is ignored. A malformed value is refused as a whole. There is no public constructor from a raw value outside test support. **Resolved:** `fid_bus::policy::fs::fs_settings` is collected into the workspace settings manifest by `fid-registry-build` (`SETTINGS_SOURCES`, `workspace_settings`); a test reads the exported `settings-manifest.json` and asserts `bus.fs_roots` is `admin: true` with scopes `["machine"]` only.
   - The command's extension list is the parameter-schema keyword `x-extensions` next to `"path_like": true`; a `path_like` parameter without it allows no file (fail closed). Only top-level `path_like` properties are supported; a nested one is refused (`internal/invariant_violated`).
-- **Open (blocks use):** `x-extensions` and `path_like` are not yet in the CORE.REG.DEF.SCHEMA keyword vocabulary, so no command whose parameter schema is checked by that vocabulary can declare a file parameter, and none can use this module, until that follow-up adds both keywords.
+- **Resolved (maintainer decision):** `path_like` and `x-extensions` are in the `CORE.REG.DEF.SCHEMA` keyword vocabulary (REQ-010, vocabulary version 2): `path_like` is `true` on a top-level string property only, matching this module's refusal of nested declarations; `x-extensions` is a non-empty, sorted, unique list of lowercase extensions without the dot (`^[a-z0-9]{1,16}$`, at most 64), allowed only next to `path_like`. The derive emits both (`#[fid(path_like, extensions = ["step", "stl"])]`). A test declares such a command with the macros, checks that it passes the schema checker and VAL, and resolves handles through this module against that schema.
   - A `..` segment is never resolved (`outside_root`, AC-4), even when it would stay inside the root. Raw paths are refused for every principal kind but `human` (service, device and system too). A human's raw path must be absolute.
   - A missing file or folder is `precondition/false`; a handle naming a folder or other non-regular file is `bad_handle`; other file-system faults are `internal/storage`.
 

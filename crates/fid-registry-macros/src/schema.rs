@@ -7,7 +7,8 @@ use syn::ext::IdentExt;
 use syn::spanned::Spanned;
 use syn::visit::Visit;
 use syn::{
-    Attribute, Data, DeriveInput, Expr, ExprLit, ExprUnary, Fields, Ident, Lit, LitBool, LitStr, Type, TypePath, UnOp,
+    Attribute, Data, DeriveInput, Expr, ExprArray, ExprLit, ExprUnary, Fields, Ident, Lit, LitBool, LitStr, Token,
+    Type, TypePath, UnOp,
 };
 
 pub fn expand(input: TokenStream) -> syn::Result<TokenStream> {
@@ -78,6 +79,10 @@ struct FieldAttrs {
     unit: Option<LitStr>,
     default: Option<Expr>,
     untrusted: Option<LitBool>,
+    /// `path_like` (a flag): the field is a file handle (`"path_like": true`, CORE.BUS.POL.FS).
+    path_like: Option<proc_macro2::Span>,
+    /// `extensions = ["step", "stl"]`: `x-extensions`, checked by [`extension_list`].
+    extensions: Option<(proc_macro2::Span, Vec<String>)>,
     /// (keyword, value expression, applies to the element schema).
     keywords: Vec<(&'static str, Expr, bool)>,
 }
@@ -112,13 +117,24 @@ fn field_attrs(attrs: &[Attribute]) -> syn::Result<FieldAttrs> {
                 "unit" => f.unit = Some(meta.value()?.parse()?),
                 "default" => f.default = Some(meta.value()?.parse()?),
                 "untrusted" => f.untrusted = Some(meta.value()?.parse()?),
+                "path_like" => {
+                    if meta.input.peek(Token![=]) || meta.input.peek(syn::token::Paren) {
+                        return Err(meta.error("`path_like` is a flag and takes no value"));
+                    }
+                    f.path_like = Some(meta.path.span());
+                }
+                "extensions" => {
+                    let span = meta.path.span();
+                    let list: ExprArray = meta.value()?.parse()?;
+                    f.extensions = Some((span, extension_list(&list)?));
+                }
                 other => match EXPR_KEYWORDS.iter().find(|(name, _, _)| *name == other) {
                     Some((_, json, leaf)) => f.keywords.push((json, meta.value()?.parse()?, *leaf)),
                     None => {
                         return Err(meta.error(format!(
                             "unknown #[fid] field attribute `{other}`; expected one of quantity, unit, \
                              description, default, minimum, maximum, min_length, \
-                             max_length, pattern, min_items, max_items, untrusted, rename"
+                             max_length, pattern, min_items, max_items, untrusted, path_like, extensions, rename"
                         )))
                     }
                 },
@@ -127,6 +143,37 @@ fn field_attrs(attrs: &[Attribute]) -> syn::Result<FieldAttrs> {
         })?;
     }
     Ok(f)
+}
+
+/// The extensions of `extensions = [...]`: a non-empty array of string literals, each 1 to 16
+/// lowercase ASCII letters or digits without the dot, sorted and distinct (the
+/// `x-extensions` rule of CORE.REG.DEF.SCHEMA), so the schema is exactly what is written.
+fn extension_list(list: &ExprArray) -> syn::Result<Vec<String>> {
+    if list.elems.is_empty() {
+        return Err(syn::Error::new(list.span(), "`extensions` must list at least one extension"));
+    }
+    if list.elems.len() > 64 {
+        return Err(syn::Error::new(list.span(), "`extensions` lists at most 64 extensions"));
+    }
+    let mut out: Vec<String> = Vec::new();
+    for e in &list.elems {
+        let Expr::Lit(ExprLit { lit: Lit::Str(lit), .. }) = e else {
+            return Err(syn::Error::new(e.span(), "an extension must be a string literal such as \"stl\""));
+        };
+        let ext = lit.value();
+        let valid = (1..=16).contains(&ext.len()) && ext.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit());
+        if !valid {
+            return Err(syn::Error::new(
+                lit.span(),
+                format!("{ext:?} is not a valid extension: 1 to 16 lowercase ASCII letters or digits, without the dot"),
+            ));
+        }
+        if out.last().is_some_and(|prev| prev.as_str() >= ext.as_str()) {
+            return Err(syn::Error::new(lit.span(), "`extensions` must be distinct and in sorted order"));
+        }
+        out.push(ext);
+    }
+    Ok(out)
 }
 
 /// The value of a `default = LIT` (an optional `-` before a numeric literal), checked against
@@ -246,6 +293,12 @@ fn struct_body(name: &syn::Ident, fields: &Fields, container: &Container) -> syn
         if let (Some(u), None) = (&attrs.unit, &attrs.quantity) {
             errors.at(u.span(), format!("field `{fname}` has a unit but no quantity"));
         }
+        if let (Some((span, _)), None) = (&attrs.extensions, &attrs.path_like) {
+            errors.at(*span, format!("field `{fname}`: `extensions` needs `path_like`"));
+        }
+        if let (Some(span), Some(_)) = (&attrs.path_like, &attrs.quantity) {
+            errors.at(*span, format!("field `{fname}`: a path_like field is a string and cannot carry a quantity"));
+        }
         for lit in [&attrs.quantity, &attrs.unit].into_iter().flatten() {
             if lit.value().is_empty() {
                 errors.at(lit.span(), "a quantity or unit must not be empty");
@@ -266,6 +319,11 @@ fn struct_body(name: &syn::Ident, fields: &Fields, container: &Container) -> syn
         if let Some(u) = &attrs.unit {
             sets.push(quote! { #rt::set_leaf(&mut __fid_field, "x-unit", #rt::text(#u)); });
         }
+        if let Some((_, exts)) = &attrs.extensions {
+            sets.push(quote! {
+                #rt::set(&mut __fid_field, "x-extensions", #rt::CValue::Arr(::std::vec![#(#rt::text(#exts)),*]));
+            });
+        }
         if let Some(b) = &attrs.untrusted {
             sets.push(quote! { #rt::set_leaf(&mut __fid_field, "x-untrusted", #rt::CValue::Bool(#b)); });
         }
@@ -280,8 +338,11 @@ fn struct_body(name: &syn::Ident, fields: &Fields, container: &Container) -> syn
         if let Some(d) = default {
             sets.push(quote! { #rt::set(&mut __fid_field, "default", #d); });
         }
-        // A field with a quantity is a number: FidNumber, never FidSchema (REQ-002).
-        let schema = if attrs.quantity.is_some() {
+        // A field with a quantity is a number: FidNumber, never FidSchema (REQ-002). A path_like
+        // field is a String or an Option<String> (PathLikeField).
+        let schema = if attrs.path_like.is_some() {
+            quote_spanned! { ty.span()=> #rt::path_like_schema_of::<#ty>() }
+        } else if attrs.quantity.is_some() {
             quote_spanned! { ty.span()=> #rt::number_schema_of::<#ty>() }
         } else {
             quote_spanned! { ty.span()=> #rt::schema_of::<#ty>() }

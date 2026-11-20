@@ -2,8 +2,9 @@
 """Validate the CORE.REG.DEF.SCHEMA fixtures against schemas/registry-keywords.schema.json
 with an independent JSON Schema 2020-12 implementation (AC-1): every valid schema passes;
 every invalid schema whose fault the meta-schema can see fails. The faults that need the
-unit catalogue or the depth limit (unknown_quantity, angle_unit_on_length, depth_65) are
-listed as not decidable by the meta-schema; depth_65 is not run through the meta-schema at
+unit catalogue, the depth limit or the position of a keyword in the document
+(unknown_quantity, angle_unit_on_length, depth_65, nested_path_like) are listed as not
+decidable by the meta-schema; depth_65 is not run through the meta-schema at
 all, because jsonschema's unevaluatedProperties evaluation is exponential in nesting depth.
 Needs: pip install jsonschema
 """
@@ -16,7 +17,7 @@ from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parent.parent
 FIX = ROOT / "fixtures" / "core" / "reg" / "def" / "schema"
-CATALOGUE_OR_LIMIT = {"unknown_quantity", "angle_unit_on_length", "depth_65"}
+CATALOGUE_OR_LIMIT = {"unknown_quantity", "angle_unit_on_length", "depth_65", "nested_path_like"}
 
 
 def main() -> int:
@@ -35,7 +36,7 @@ def main() -> int:
             continue
         ok = v.is_valid(json.loads(f.read_text(encoding="utf-8"))["schema"])
         if f.stem in CATALOGUE_OR_LIMIT:
-            print(f"note invalid/{f.name}: needs the catalogue or the depth limit (meta-schema says {'valid' if ok else 'invalid'})")
+            print(f"note invalid/{f.name}: needs the catalogue, the depth limit or the keyword position (meta-schema says {'valid' if ok else 'invalid'})")
         elif ok:
             bad += 1
             print(f"FAIL invalid/{f.name}: should NOT validate")

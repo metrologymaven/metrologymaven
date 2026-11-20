@@ -4,7 +4,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::{parse, to_canonical_bytes, CValue};
-use fid_registry::schema::{canonical_len, MAX_ISSUES, STANDARDS_REF_PATTERN};
+use fid_registry::schema::{canonical_len, EXTENSION_PATTERN, MAX_EXTENSIONS, MAX_ISSUES, STANDARDS_REF_PATTERN};
 use fid_registry::{
     check_schema, check_schema_json, registry_keywords_schema, validate_with, Catalogue, CatalogueError, CommandDecl,
     EntityType, GeoFrameUnits, Limits, ProjectKeyword, QuantityCatalogue, QuantityKinds, Rational, RuleCode,
@@ -94,7 +94,7 @@ fn ac1_meta_schema_is_generated() {
     );
 }
 
-/// REQ-001 / REQ-008: the meta-schema admits exactly the seven project keywords, with the
+/// REQ-001 / REQ-008: the meta-schema admits exactly the nine project keywords, with the
 /// closed lists and the standards-reference pattern of the checker.
 #[test]
 fn ac1_meta_schema_matches_the_checker() {
@@ -102,7 +102,9 @@ fn ac1_meta_schema_matches_the_checker() {
     assert_eq!(meta["unevaluatedProperties"], CValue::Bool(false));
     assert_eq!(meta["$schema"], CValue::Str("https://json-schema.org/draft/2020-12/schema".into()));
     let CValue::Obj(props) = &meta["properties"] else { panic!() };
-    let x: Vec<&str> = props.keys().filter(|k| k.starts_with("x-")).map(String::as_str).collect();
+    let refused = ["$dynamicRef", "$recursiveAnchor", "$recursiveRef", "definitions", "dependencies"];
+    let x: Vec<&str> =
+        props.keys().map(String::as_str).filter(|k| !k.starts_with('$') && !refused.contains(k)).collect();
     let want: Vec<&str> = ProjectKeyword::ALL.iter().map(|p| p.as_str()).collect();
     assert_eq!(x, want);
     let strs = |v: &CValue| match v {
@@ -121,6 +123,14 @@ fn ac1_meta_schema_matches_the_checker() {
     assert_eq!(strs(&xsel["enum"]), SelectorForm::ALL.iter().map(|e| e.as_str().to_string()).collect::<Vec<_>>());
     let CValue::Obj(xstd) = &props["x-standards-ref"] else { panic!() };
     assert_eq!(xstd["pattern"], CValue::Str(STANDARDS_REF_PATTERN.into()));
+    let CValue::Obj(xext) = &props["x-extensions"] else { panic!() };
+    let CValue::Obj(items) = &xext["items"] else { panic!() };
+    assert_eq!(items["pattern"], CValue::Str(EXTENSION_PATTERN.into()));
+    assert_eq!(xext["maxItems"], CValue::Num(MAX_EXTENSIONS as f64));
+    assert_eq!(props["path_like"], json(r#"{"const":true}"#));
+    let CValue::Obj(dep) = &meta["dependentSchemas"] else { panic!() };
+    assert_eq!(dep["x-extensions"], json(r#"{"required":["path_like"]}"#));
+    assert_eq!(dep["path_like"], json(r#"{"properties":{"type":{"const":"string"}},"required":["type"]}"#));
     for old in ["$dynamicRef", "$recursiveAnchor", "$recursiveRef", "definitions", "dependencies"] {
         assert_eq!(props[old], CValue::Bool(false), "{old}");
     }
@@ -136,7 +146,9 @@ fn ac2_invalid_fixtures_report_exactly_their_code() {
     let want = [
         "angle_unit_on_length",
         "depth_65",
+        "extensions_without_path_like",
         "external_ref",
+        "nested_path_like",
         "standards_ref_with_text",
         "unknown_quantity",
         "untrusted_on_number",
@@ -485,6 +497,64 @@ fn project_keyword_values() {
     assert_eq!(check_text(&long), one("bad_standards_ref", "/x-standards-ref"));
     // x-ui never changes validation: a schema inside it is data.
     assert_eq!(check_text(r#"{"x-ui":{"schema":{"type":"bogus","x-foo":1}}}"#), vec![]);
+}
+
+/// REQ-010: `path_like` and `x-extensions` (the file parameters of CORE.BUS.POL.FS).
+#[test]
+fn path_like_and_extensions() {
+    let top = |p: &str| format!(r#"{{"type":"object","properties":{{"f":{p}}}}}"#);
+    assert_eq!(check_text(&top(r#"{"type":"string","path_like":true,"x-extensions":["step","stl"]}"#)), vec![]);
+    // Without a list the parameter allows no file (the guard fails closed); still a valid schema.
+    assert_eq!(check_text(&top(r#"{"type":"string","path_like":true}"#)), vec![]);
+    let at = "/properties/f/path_like";
+    assert_eq!(check_text(&top(r#"{"type":"string","path_like":false}"#)), one("bad_keyword_value", at));
+    assert_eq!(check_text(&top(r#"{"type":"string","path_like":"yes"}"#)), one("bad_keyword_value", at));
+    for t in [r#""integer""#, r#"["string","null"]"#, r#""array""#] {
+        let doc = top(&format!(r#"{{"type":{t},"path_like":true}}"#));
+        assert_eq!(check_text(&doc), one("misplaced_path_like", at), "{doc}");
+    }
+    assert_eq!(check_text(&top(r#"{"path_like":true}"#)), one("misplaced_path_like", at));
+    // Only /properties/<name>: not the root, not nested, not in $defs or applicators.
+    for (doc, at) in [
+        (r#"{"type":"string","path_like":true}"#, "/path_like"),
+        (
+            r#"{"properties":{"a":{"type":"object","properties":{"b":{"type":"string","path_like":true}}}}}"#,
+            "/properties/a/properties/b/path_like",
+        ),
+        (
+            r#"{"properties":{"a":{"type":"array","items":{"type":"string","path_like":true}}}}"#,
+            "/properties/a/items/path_like",
+        ),
+        (r#"{"$defs":{"f":{"type":"string","path_like":true}}}"#, "/$defs/f/path_like"),
+        (r#"{"anyOf":[{"properties":{"f":{"type":"string","path_like":true}}}]}"#, "/anyOf/0/properties/f/path_like"),
+        (r#"{"patternProperties":{"^f$":{"type":"string","path_like":true}}}"#, "/patternProperties/^f$/path_like"),
+        // "path_like": true where the guard would count it but no schema keyword is.
+        (r#"{"properties":{"path_like":true}}"#, "/properties/path_like"),
+        (r#"{"patternProperties":{"path_like":true}}"#, "/patternProperties/path_like"),
+        (r#"{"properties":{"f":{"type":"object","default":{"path_like":true}}}}"#, "/properties/f/default/path_like"),
+        (r#"{"x-ui":{"hint":{"path_like":true}}}"#, "/x-ui/hint/path_like"),
+    ] {
+        assert_eq!(check_text(doc), one("misplaced_path_like", at), "{doc}");
+    }
+    // A data member that is not `true` is plain data.
+    assert_eq!(check_text(r#"{"x-ui":{"path_like":false},"const":{"path_like":1}}"#), vec![]);
+    let ext = "/properties/f/x-extensions";
+    for list in [
+        r#"[]"#,
+        r#"["stl","step"]"#,
+        r#"["stl","stl"]"#,
+        r#"["STL"]"#,
+        r#"[".stl"]"#,
+        r#"["st l"]"#,
+        r#""stl""#,
+        r#"[1]"#,
+    ] {
+        let doc = top(&format!(r#"{{"type":"string","path_like":true,"x-extensions":{list}}}"#));
+        assert_eq!(check_text(&doc), one("bad_keyword_value", ext), "{doc}");
+    }
+    let long = top(&format!(r#"{{"type":"string","path_like":true,"x-extensions":["{}"]}}"#, "a".repeat(17)));
+    assert_eq!(check_text(&long), one("bad_keyword_value", ext));
+    assert_eq!(check_text(&top(r#"{"type":"string","x-extensions":["stl"]}"#)), one("misplaced_path_like", ext));
 }
 
 /// Standard keyword values, the dialect and property names (VAL conventions).

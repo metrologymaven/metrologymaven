@@ -53,6 +53,14 @@
         "null"
       ],
       "x-untrusted": false
+    },
+    "probe_file": {
+      "type": "string",
+      "path_like": true,
+      "x-extensions": [
+        "step",
+        "stl"
+      ]
     }
   }
 }

@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
-const CASES: [&str; 8] = [
+const CASES: [&str; 13] = [
     "f64_without_quantity",
     "f64_alias_without_quantity",
     "result_type_mismatch",
@@ -25,6 +25,11 @@ const CASES: [&str; 8] = [
     "missing_web",
     "default_type_mismatch",
     "default_out_of_range",
+    "path_like_on_number",
+    "path_like_on_list",
+    "extensions_without_path_like",
+    "extensions_unsorted",
+    "extension_with_dot",
 ];
 
 /// Longest one nested `cargo check` may run before it is killed and the test fails.

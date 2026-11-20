@@ -9,8 +9,9 @@ use fid_canon::{parse, CValue};
 use fid_registry::manifest::{check_manifest, ManifestError, SHOW_MANIFEST};
 use fid_registry::{Catalogue, CommandDef, DefError, QuantityCatalogue, RuleCode};
 use fid_registry_build::{
-    build, build_workspace, declarations, manifest_in_force, merge_catalogues, workspace_catalogue, BuildError,
-    QuantitySource, Source, QUANTITY_SOURCES, SOURCES,
+    build, build_workspace, declarations, manifest_in_force, merge_catalogues, settings, workspace_catalogue,
+    workspace_settings, BuildError, QuantitySource, SettingsSource, Source, QUANTITY_SOURCES, SETTINGS_SOURCES,
+    SOURCES,
 };
 
 fn geo() -> Catalogue {
@@ -350,4 +351,48 @@ fn set_admin_value_has_no_mcp_exposure_in_the_exported_manifest() {
         .map(|(id, _)| id.as_str())
         .collect();
     assert!(a0_on_mcp.is_empty(), "{a0_on_mcp:?}");
+}
+
+// ------------------------------------------------------------------ settings manifest
+
+/// The workspace settings manifest collects `fid-bus`'s `bus.fs_roots`, and the exported
+/// `settings-manifest.json` declares it admin and machine scope only (CORE.BUS.POL.FS REQ-006:
+/// roots are an A0 admin setting). Expected values from the CORE.BUS.POL.FS Design.
+#[test]
+fn fs_roots_is_admin_and_machine_only_in_the_settings_manifest() {
+    let names: Vec<_> = SETTINGS_SOURCES.iter().map(|s| s.krate).collect();
+    let mut sorted = names.clone();
+    sorted.sort_unstable();
+    sorted.dedup();
+    assert_eq!(names, sorted);
+
+    let catalogue = workspace_catalogue().unwrap();
+    let registry = workspace_settings(&catalogue).unwrap();
+    let bytes = registry.manifest().unwrap();
+    let CValue::Obj(doc) = parse(&bytes).unwrap() else { panic!("object") };
+    assert_eq!(doc["format"], CValue::Str("fid-settings-manifest/1".into()));
+    let CValue::Arr(items) = &doc["settings"] else { panic!("settings") };
+    let entry = items
+        .iter()
+        .find_map(|i| match i {
+            CValue::Obj(o) if o.get("key") == Some(&CValue::Str("bus.fs_roots".into())) => Some(o),
+            _ => None,
+        })
+        .expect("bus.fs_roots in the settings manifest");
+    assert_eq!(entry["admin"], CValue::Bool(true));
+    assert_eq!(entry["scopes"], CValue::Arr(vec![CValue::Str("machine".into())]));
+    assert_eq!(entry["owner"], CValue::Str("bus".into()));
+    assert_eq!(entry["default"], CValue::Arr(vec![]));
+    // The exported manifest reads back to the same registry.
+    let again = fid_store::settings::SettingsRegistry::from_manifest(&bytes, &catalogue).unwrap();
+    assert_eq!(again, registry);
+}
+
+/// A key declared by two crates is refused as a whole.
+#[test]
+fn a_setting_declared_twice_is_refused() {
+    let twice = [SETTINGS_SOURCES[0], SettingsSource { krate: "fid-other", settings: SETTINGS_SOURCES[0].settings }];
+    let e = settings(&twice, &geo()).unwrap_err();
+    assert_eq!(e.code(), "settings_invalid");
+    assert_eq!(e, BuildError::Settings { key: Some("bus.fs_roots".into()), settings_code: "duplicate_key" });
 }

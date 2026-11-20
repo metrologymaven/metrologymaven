@@ -234,6 +234,46 @@ fn derive_errors() {
     .is_ok());
 }
 
+#[test]
+fn path_like_fields() {
+    let out = schema::expand(quote!(
+        struct P {
+            #[fid(path_like, extensions = ["step", "stl"])]
+            source: String,
+            #[fid(path_like)]
+            target: Option<String>,
+        }
+    ))
+    .unwrap()
+    .to_string();
+    assert!(out.contains("path_like_schema_of :: < String >"), "{out}");
+    assert!(out.contains("path_like_schema_of :: < Option < String > >"), "{out}");
+    assert!(out.contains("\"x-extensions\""), "{out}");
+    assert!(out.contains("text (\"step\") , :: fid_registry :: decl :: rt :: text (\"stl\")"), "{out}");
+    for (attr, want) in [
+        (quote!(#[fid(extensions = ["stl"])]), "`extensions` needs `path_like`"),
+        (quote!(#[fid(path_like, extensions = [])]), "at least one extension"),
+        (quote!(#[fid(path_like, extensions = ["stl", "step"])]), "distinct and in sorted order"),
+        (quote!(#[fid(path_like, extensions = ["stl", "stl"])]), "distinct and in sorted order"),
+        (quote!(#[fid(path_like, extensions = ["STL"])]), "is not a valid extension"),
+        (quote!(#[fid(path_like, extensions = [".stl"])]), "is not a valid extension"),
+        (quote!(#[fid(path_like, extensions = ["abcdefghijklmnopq"])]), "is not a valid extension"),
+        (quote!(#[fid(path_like, extensions = [STL])]), "must be a string literal"),
+        (quote!(#[fid(path_like, extensions = "stl")]), "expected square brackets"),
+        (quote!(#[fid(path_like = true)]), "`path_like` is a flag"),
+        (quote!(#[fid(path_like, path_like)]), "given twice"),
+        (quote!(#[fid(path_like, quantity = "length")]), "cannot carry a quantity"),
+    ] {
+        let err = derive_err(quote!(
+            struct P {
+                #attr
+                f: String,
+            }
+        ));
+        assert!(err.contains(want), "{attr}: {err}");
+    }
+}
+
 fn command_err(args: TokenStream, item: TokenStream) -> String {
     match command::expand_command(args, item) {
         Ok(t) => panic!("expected an error, got {t}"),

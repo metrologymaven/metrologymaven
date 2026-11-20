@@ -35,12 +35,17 @@ mod util;
 /// | `min_length = EXPR`, `max_length = EXPR`, `pattern = EXPR` | string limits |
 /// | `min_items = EXPR`, `max_items = EXPR` | array limits |
 /// | `untrusted = BOOL` | `x-untrusted` |
+/// | `path_like` | `"path_like": true`: a file handle parameter (CORE.BUS.POL.FS); the field must be `String` or `Option<String>` |
+/// | `extensions = ["step", "stl"]` | `x-extensions` (needs `path_like`; lowercase, without the dot, sorted and distinct) |
 /// | `rename = "name"` | the JSON property name |
 ///
 /// An `f64` field must have a quantity (`quantity = "dimensionless"` for a pure ratio): `f64` has
 /// no `FidSchema`, only `FidNumber`, which the derive uses for a field with a quantity.
 /// A type naming itself (`Self`, or its own name as a one-segment path) is refused; mutual
-/// recursion through another type is not detected (see NODE.md).
+/// recursion through another type is not detected (see NODE.md). The registry accepts
+/// `path_like` only on a top-level parameter (`/properties/<name>`): a `path_like` field of a
+/// type that is itself used as a field is refused at validation (`misplaced_path_like`,
+/// CORE.REG.DEF.SCHEMA).
 ///
 /// Value keywords (quantity, unit, bounds, string limits, `x-untrusted`) apply to the element
 /// schema of an array field; the others to the field's own schema. An `Option<T>` field is not
