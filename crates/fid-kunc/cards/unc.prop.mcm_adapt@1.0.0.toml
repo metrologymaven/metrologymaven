@@ -1,0 +1,15 @@
+# Spec card (UNC.PROP.MCM.ADAPT, rule mcm-adapt@1). Cite designators and clause numbers only; never paste standards text.
+id = "unc.prop.mcm_adapt@1.0.0"
+title = "Adaptive Monte Carlo stopping rule and trial cap (mcm-adapt@1)"
+method = "Trials run in blocks of M = max(10 000, ceil(100 / (1 - p))) with p read as the decimal it was written as. After each block h >= 2, for each of the block estimate, block standard uncertainty and the two block coverage-interval endpoints, s = standard deviation associated with the average of the h block values (divisor h (h - 1)). The tolerance delta is half a unit of the last of n_dig significant digits of the overall u(y), found by exact integer comparisons (a rounding carry raises the digit position). Stop when 2 s <= delta for all four, compared exactly; otherwise report cap_reached (flag not_converged, with the four s and delta) if one more block would exceed the cap; otherwise continue. Pure function of the block summaries: replays exactly with a counter-addressed RNG."
+applicability = "Monte Carlo propagation with a scalar output, 0 < p < 1, 1 <= n_dig <= 17, cap >= 2 M. The caller supplies per-block summaries and the overall u(y) of all trials so far, and chooses the interval kind (probabilistically symmetric or shortest)."
+references = [
+  "JCGM 101:2008 (GUM Supplement 1), clause 7.9 (adaptive Monte Carlo procedure), clauses 7.9.2 and 7.9.4 [unverified: clause numbering]",
+]
+determinism = "D0"
+failure_modes = [
+  "Clause 7.9 gives no coverage-of-truth guarantee; the shortfall below 0.95 is a property of the rule (s with h-1 dof, optional stopping). Simulated runs of the published rule on two closed-form additive models put the stopped endpoints within delta of the analytic values in about 93 to 94 % of runs; about a quarter of runs stop at h = 2.",
+  "u(y) near a digit boundary (for example 0.995 at two digits) changes delta by a factor of ten between consecutive blocks.",
+  "A run that cannot meet the tolerance within the cap returns cap_reached with flag not_converged; its result must not be reported as converged.",
+]
+validation = "Decisions, spreads, tolerances and block sizes against an independent stdlib-Python exact-rational oracle (fixtures/unc/mcm/adapt/make_fixtures.py); D0 bit pins checked on x86-64, ARM64 and wasm32. Implementation check (simulated, not measured; run with UNC_MCM_ADAPT_FULL=1, not in CI): over 1000 seeds on the normal-input and rectangular-input additive models, the counts of runs whose estimate, u(y) and endpoints end within delta (999, 1000, 935, 940 and 1000, 1000, 938, 950) all agree at level 0.01, by an exact conditional binomial test, with the rates an independent Python reference simulation of the rule predicts [simulated]; median trial counts equal the asymptotic predictions (50 000 and 40 000)."
