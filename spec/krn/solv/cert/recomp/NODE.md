@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # KRN.SOLV.CERT.RECOMP: ActiveSetProblem callback and deterministic recomputation
@@ -45,7 +45,7 @@ Computes the reported optimum from the active set alone. The caller's `ActiveSet
 
 - **REQ-KRN.SOLV.CERT.RECOMP-001** The recomputation shall take as inputs only the candidate set, the problem data held by the `ActiveSetProblem`, and fixed constants, and shall never read the conic solution or any solver iterate.
 - **REQ-KRN.SOLV.CERT.RECOMP-002** When `is_linear()` is true, the module shall solve the active-set system once by `KRN.NUM.LA.QR` least squares and shall return `RankDeficient` if its rank under the recorded tolerance is below the parameter count.
-- **REQ-KRN.SOLV.CERT.RECOMP-003** When `is_linear()` is false, the module shall run exactly 8 [unverified] Gauss-Newton steps on the active-set equations from `start_from_set(set)`, each solved by QR, and shall return `RecomputeNoConvergence` if the final step norm exceeds 4 u times the parameter norm.
+- **REQ-KRN.SOLV.CERT.RECOMP-003** When `is_linear()` is false, the module shall run exactly 8 [unverified] Gauss-Newton steps on the active-set equations from `start_from_set(set)`, each solved by QR, and shall return `RecomputeNoConvergence` if the final step norm exceeds 4 u times the parameter norm plus twice the norm of the proven Krawczyk radius (4 u times the parameter norm alone when no radius is proven).
 - **REQ-KRN.SOLV.CERT.RECOMP-004** If the condition estimate of the active-set system exceeds the configured threshold (default 1e12 [unverified]), then the module shall return `IllConditioned { cond }` and no value.
 - **REQ-KRN.SOLV.CERT.RECOMP-005** For the same set and data, the recomputed parameters and value shall be bit-identical regardless of the order in which the conic solution listed its rows and on x86-64, ARM64 and wasm32.
 
@@ -60,7 +60,7 @@ Computes the reported optimum from the active set alone. The caller's `ActiveSet
 
 - **Registry command(s):** none; library API `fid_solv::cert::recomp::{ActiveSetProblem, recompute, Recomputed, RecompConfig}`.
 - **Data structures:** `trait ActiveSetProblem { fn n_params(&self) -> usize; fn expected_active(&self) -> usize; fn row_labels(&self) -> Vec<RowLabel>; fn is_linear(&self) -> bool; fn start_from_set(&self, set: &[RowLabel]) -> Result<Vec<f64>, CertError>; fn residuals_and_jacobian(&self, set: &[RowLabel], p: &[f64]) -> Result<(Vec<f64>, Mat), CertError>; fn value(&self, p: &[f64]) -> Result<f64, CertError>; fn constraint_values(&self, p: &[f64]) -> Result<Vec<f64>, CertError>; fn objective_gradient(&self, p: &[f64]) -> Result<Vec<f64>, CertError>; fn constraint_gradients(&self, set: &[RowLabel], p: &[f64]) -> Result<Mat, CertError>; }` (the last three are used by `KRN.SOLV.CERT.KKT`); `RecompConfig { rel_tol, cond_max, gn_steps }`. The trait also has three enclosure methods with `None` defaults: `residual_enclosure(set, p) -> Result<Option<Vec<Interval>>, CertError>`, `jacobian_enclosure(set, box) -> Result<Option<Vec<Interval>>, CertError>` (row-major) and `value_enclosure(box) -> Result<Option<Interval>, CertError>`; `Interval` is outward-rounded interval arithmetic. Signature: `recompute(problem, proposal: &Proposal, candidate: usize, cfg) -> Result<Recomputed, CertError>` (a set reaches it only as an uncertified candidate; a crate-internal `recompute_set` serves `KRN.SOLV.CERT.CT`). `Recomputed { set, params, value, cond, steps, param_bounds, value_bound }` with crate-private fields and accessors: `|params[i] - p*_i| <= param_bounds[i]` and `|value - value(p*)| <= value_bound` for the unique exact root `p*` in the box, proven by a Krawczyk test.
-- **Algorithm:** sort the set; linear: build system, QR least squares; nonlinear: p0 = start_from_set, then fixed GN steps p <- p - lstsq(J, r), then the step-norm test; condition from the QR diagnostics.
+- **Algorithm:** sort the set; linear: build system, QR least squares; nonlinear: p0 = start_from_set, then fixed GN steps p <- p - lstsq(J, r); condition from the QR diagnostics; then the Krawczyk bound `k`, and only then (nonlinear) the convergence test on the last step `s`: with a proven `k`, accept when `||s|| <= 4 u ||p|| + 2 ||k||` (allowance rounded up); without one, `||s|| > 4 u ||p||` is `RecomputeNoConvergence` and otherwise the bound's own error is returned. Rationale: at convergence a step on plain-f64 residuals is rounding noise of about cond * u * (operand size), above 4 u ||p|| for partial arcs, long cylinders and parts far from the origin; `k` already covers it, because `residual_enclosure` encloses the residual's real rounding. The step test is a heuristic against unconverged iterates; soundness rests on the Krawczyk proof and the KKT check, and problems need no double-double residuals.
 - **Errors:** `CertError::{RankDeficient{rank}, IllConditioned{cond}, RecomputeNoConvergence{step_norm}, Callback{reason}, Numeric(NumError), BoundNotProven{reason}}` with `BoundFailure::{NotSquare, NoEnclosure, NotContracting, Overflow}`: fail closed, no result without a proven bound; an active set larger than `n_params` is solved by least squares and then fails with `NotSquare`.
 - **Determinism:** D0.
 - **Performance budget:** < 50 microseconds for a 7-parameter set [unverified until measured].
@@ -68,7 +68,7 @@ Computes the reported optimum from the active set alone. The caller's `ActiveSet
 
 ## Test fixtures
 
-`fixtures/solv/cert/recomp-v1`: committed generator with exact or 50-digit references; CC-BY-4.0. Test-only `ActiveSetProblem` implementations for straightness, flatness and minimum-zone circle live in the test module.
+`fixtures/solv/cert/recomp-v1`: committed generator with exact or 50-digit references; CC-BY-4.0. Test-only `ActiveSetProblem` implementations for straightness, flatness and minimum-zone circle live in the test module. `fixtures/solv/cert/recomp-floor-v1`: partial arcs, long cylinders and cylinders 300 mm from the origin with plain-f64 residuals (90-digit references) that the step-only rule refused, and one unconverged case that must still fail; CC-BY-4.0.
 
 ## Build prompt
 
@@ -78,6 +78,10 @@ Computes the reported optimum from the active set alone. The caller's `ActiveSet
 
 - `GDT.ZONE.POSE.LIN` and `KRN.MZ.LIN` were written against the open `ActiveSetProblem` interface; they must implement `start_from_set` so the nonlinear start does not depend on the iterate (for the linear GD&T rows, `is_linear() = true` and no start is needed).
 - **Enclosure obligation (from KRN.SOLV.CERT.RECOMP, #321):** every `ActiveSetProblem` must implement `value_enclosure`, and a nonlinear one also `residual_enclosure` and `jacobian_enclosure`; otherwise recomputation, and so `certify`, fails with `BoundNotProven`. For a linear problem the proven bound applies to the f64 data as given (the Jacobian and residuals at p = 0 are taken as the exact system).
+
+## Change log
+
+- REQ-003 amended 2026-11-20 (maintainer decision, #337 review): convergence test after the Krawczyk bound, allowance 4 u ||p|| + 2 ||k||
 
 ## Children
 

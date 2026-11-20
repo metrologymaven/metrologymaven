@@ -100,7 +100,8 @@ pub enum CertError {
         cond: f64,
     },
     /// The last Gauss-Newton step on a nonlinear active-set system is longer than `4 u` times
-    /// the parameter norm (REQ-KRN.SOLV.CERT.RECOMP-003).
+    /// the parameter norm plus twice the norm of the proven radius, or than `4 u` times the
+    /// parameter norm when no radius is proven (REQ-KRN.SOLV.CERT.RECOMP-003).
     RecomputeNoConvergence {
         /// 2-norm of the last step.
         step_norm: f64,

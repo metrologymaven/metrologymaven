@@ -35,10 +35,23 @@
 //!    `steps = gn_steps`.
 //! 4. **Condition**: the condition estimate of the final factorization (`Factorization::cond`,
 //!    `+inf` beyond range) above `cond_max` is [`CertError::IllConditioned`], and no value.
-//! 5. **Convergence** (nonlinear only): with `s` = `red::norm2` of the last step and
-//!    `thr = (4 u) * red::norm2(p)` (`u = 2^-53`, one rounding), `s > thr` is
-//!    [`CertError::RecomputeNoConvergence`].
-//! 6. **Proven forward error bound** (below); then `value = value(p)`.
+//! 5. **Proven forward error bound** (below): `k = param_bounds`. A non-square system has no
+//!    bound (`NotSquare`).
+//! 6. **Convergence** (nonlinear only), decided **after** the bound: with `s` = `red::norm2` of
+//!    the last step and `thr = (4 u) * red::norm2(p)` (`u = 2^-53`, one rounding):
+//!    - bound proven: accepted when `s <= thr + 2 * red::norm2(k)` (the allowance rounded up),
+//!      else [`CertError::RecomputeNoConvergence`];
+//!    - no bound: `s > thr` is [`CertError::RecomputeNoConvergence`], otherwise the bound's own
+//!      error (`BoundNotProven`, a callback error, ...).
+//!
+//!    At convergence a Gauss-Newton step on `f64` residuals is rounding noise of size about
+//!    `cond * u * (operand size)`, which can exceed `4 u ||p||` (partial arcs, long cylinders,
+//!    parts far from the origin). The proven radius `k` already contains that noise: the
+//!    residual enclosure covers the rounding of the residual evaluation, and `k >= |Y [f]|`.
+//!    The step test is a heuristic against accepting an unconverged iterate; soundness rests on
+//!    the Krawczyk proof and the KKT check, so widening the test by `2 ||k||` admits no
+//!    unproven result.
+//! 7. `value = value(p)` and its bound.
 //!
 //! # Proven forward error bound (fail closed)
 //!
@@ -104,7 +117,7 @@ pub const DEFAULT_COND_MAX: f64 = 1e12;
 pub const DEFAULT_REL_TOL: f64 = 1.0 / 1_125_899_906_842_624.0;
 
 /// Gauss-Newton convergence factor: the last step may be at most `4 u` times the parameter
-/// norm (REQ-KRN.SOLV.CERT.RECOMP-003).
+/// norm plus twice the norm of the proven radius (REQ-KRN.SOLV.CERT.RECOMP-003).
 pub const STEP_TOL: f64 = 4.0 * UNIT_ROUNDOFF;
 
 /// Krawczyk attempts (epsilon inflations) before the bound is declared not proven.
@@ -361,34 +374,20 @@ pub(crate) fn recompute_set<P: ActiveSetProblem + ?Sized>(
     if diag.cond > cfg.cond_max || diag.cond.is_nan() {
         return Err(CertError::IllConditioned { cond: diag.cond });
     }
-    if let Some(step) = last_step {
-        let step_norm = red::norm2(&step)?;
-        let thr = STEP_TOL * red::norm2(&params)?;
-        if step_norm > thr {
-            return Err(CertError::RecomputeNoConvergence { step_norm });
-        }
-    }
+    // Nonlinear: the last step and the rounding part of the allowance, `4 u ||p||`.
+    let step = match last_step {
+        Some(step) => Some((red::norm2(&step)?, STEP_TOL * red::norm2(&params)?)),
+        None => None,
+    };
 
-    if k != n {
-        return Err(not_proven(BoundFailure::NotSquare));
-    }
-    let y = approximate_inverse(&q, cfg.rel_tol)?;
-    let param_bounds = if problem.is_linear() {
-        let f = linear_residual_enclosure(&j, &r, &params)?;
-        let jp = points(j.data())?;
-        krawczyk(&params, &f, &y, |_| Ok(jp.clone()))?
+    let param_bounds = if k != n {
+        Err(not_proven(BoundFailure::NotSquare))
     } else {
-        let f = problem.residual_enclosure(&set, &params)?.ok_or(not_proven(BoundFailure::NoEnclosure))?;
-        if f.len() != k {
-            return Err(CertError::Shape { field: "residual_enclosure", expected: k, got: f.len() });
-        }
-        krawczyk(&params, &f, &y, |b| {
-            let e = problem.jacobian_enclosure(&set, b)?.ok_or(not_proven(BoundFailure::NoEnclosure))?;
-            if e.len() != k * n {
-                return Err(CertError::Shape { field: "jacobian_enclosure", expected: k * n, got: e.len() });
-            }
-            Ok(e)
-        })?
+        proven_bounds(problem, &set, &params, &q, &j, &r, cfg.rel_tol)
+    };
+    let param_bounds = match step {
+        Some((step_norm, thr)) => converged(step_norm, thr, param_bounds)?,
+        None => param_bounds?,
     };
 
     let value = problem.value(&params)?;
@@ -399,6 +398,60 @@ pub(crate) fn recompute_set<P: ActiveSetProblem + ?Sized>(
     let enc = problem.value_enclosure(&bx)?.ok_or(not_proven(BoundFailure::NoEnclosure))?;
     let value_bound = enc.dist_from(value)?;
     Ok(Recomputed { set, params, value, cond: diag.cond, steps, param_bounds, value_bound })
+}
+
+/// The Krawczyk bound of the module docs on a square system (`k == n`).
+fn proven_bounds<P: ActiveSetProblem + ?Sized>(
+    problem: &P,
+    set: &[RowLabel],
+    params: &[f64],
+    q: &Qr,
+    j: &Mat,
+    r: &[f64],
+    rel_tol: f64,
+) -> Result<Vec<f64>, CertError> {
+    let (k, n) = (set.len(), params.len());
+    let y = approximate_inverse(q, rel_tol)?;
+    if problem.is_linear() {
+        let f = linear_residual_enclosure(j, r, params)?;
+        let jp = points(j.data())?;
+        return krawczyk(params, &f, &y, |_| Ok(jp.clone()));
+    }
+    let f = problem.residual_enclosure(set, params)?.ok_or(not_proven(BoundFailure::NoEnclosure))?;
+    if f.len() != k {
+        return Err(CertError::Shape { field: "residual_enclosure", expected: k, got: f.len() });
+    }
+    krawczyk(params, &f, &y, |b| {
+        let e = problem.jacobian_enclosure(set, b)?.ok_or(not_proven(BoundFailure::NoEnclosure))?;
+        if e.len() != k * n {
+            return Err(CertError::Shape { field: "jacobian_enclosure", expected: k * n, got: e.len() });
+        }
+        Ok(e)
+    })
+}
+
+/// The convergence rule of a nonlinear recomputation (module docs, step 6), applied after the
+/// Krawczyk test. `step_norm` is `||s||` of the last Gauss-Newton step, `thr` is `4 u ||p||`,
+/// `bounds` the outcome of the Krawczyk test.
+///
+/// - Proven radius `k`: accepted when `||s|| <= 4 u ||p|| + 2 ||k||` (the allowance is rounded
+///   up), else [`CertError::RecomputeNoConvergence`].
+/// - No proof: if `||s|| > 4 u ||p||` the result is [`CertError::RecomputeNoConvergence`] (as
+///   before the proof existed in the rule), otherwise the proof's own error.
+pub(crate) fn converged(step_norm: f64, thr: f64, bounds: Result<Vec<f64>, CertError>) -> Result<Vec<f64>, CertError> {
+    let no_conv = CertError::RecomputeNoConvergence { step_norm };
+    match bounds {
+        Ok(k) => {
+            let allowance = add_up(thr, mul_up(red::norm2(&k)?, 2.0)?)?;
+            if step_norm <= allowance {
+                Ok(k)
+            } else {
+                Err(no_conv)
+            }
+        }
+        Err(_) if step_norm > thr => Err(no_conv),
+        Err(e) => Err(e),
+    }
 }
 
 pub(crate) fn not_proven(reason: BoundFailure) -> CertError {
@@ -687,6 +740,26 @@ mod tests {
             recompute_set(&Tiny { value_enc: false }, &[l(0), l(1)], &cfg),
             Err(CertError::BoundNotProven { reason: BoundFailure::NoEnclosure })
         );
+    }
+
+    #[test]
+    fn convergence_rule() {
+        let nc = |s: f64| Err(CertError::RecomputeNoConvergence { step_norm: s });
+        let k = || Ok(vec![3e-12, 4e-12]); // ||k|| = 5e-12, allowance thr + 1e-11
+                                           // Proven: accepted up to thr + 2 ||k||, refused above.
+        assert_eq!(converged(1e-11, 1e-14, k()), k());
+        assert_eq!(converged(1.0009e-11, 1e-14, k()), k());
+        assert_eq!(converged(1.0011e-11, 1e-14, k()), nc(1.0011e-11));
+        assert_eq!(converged(2e-11, 1e-14, k()), nc(2e-11));
+        assert_eq!(converged(0.0, 0.0, Ok(vec![0.0, 0.0])), Ok(vec![0.0, 0.0]));
+        assert_eq!(converged(1e-300, 0.0, Ok(vec![0.0, 0.0])), nc(1e-300));
+        // Not proven: the step test alone decides which error is reported.
+        let np = || Err(not_proven(BoundFailure::NotContracting));
+        assert_eq!(converged(1e-13, 1e-14, np()), nc(1e-13));
+        assert_eq!(converged(1e-15, 1e-14, np()), np());
+        let ns = || Err(not_proven(BoundFailure::NotSquare));
+        assert_eq!(converged(1e-13, 1e-14, ns()), nc(1e-13));
+        assert_eq!(converged(1e-14, 1e-14, ns()), ns());
     }
 
     #[test]
