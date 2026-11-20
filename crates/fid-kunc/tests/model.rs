@@ -16,6 +16,9 @@ use fid_kunc::model::{
 use fid_kunc::{ModelRef, StatementParts};
 use fid_types::Digest;
 
+/// A change applied to model parts.
+type Edit = Box<dyn Fn(&mut ModelParts)>;
+
 const FIX: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/unc/model/graph/");
 
 fn read(rel: &str) -> Vec<u8> {
@@ -138,7 +141,7 @@ fn ac3_changed_parameter_changes_the_digest() {
 fn req003_any_field_change_changes_the_digest() {
     let base = parse("bore_ls.json");
     let p = base.parts().clone();
-    let variants: Vec<Box<dyn Fn(&mut ModelParts)>> = vec![
+    let variants: Vec<Edit> = vec![
         Box::new(|q| q.semver = "1.0.1".into()),
         Box::new(|q| q.operators[1].algorithm_version = "1.0.1".into()),
         Box::new(|q| q.operators[1].ports_in[1].arity = 3),
@@ -299,7 +302,7 @@ fn model_ref_is_accepted_by_the_statement_type() {
 
 #[test]
 fn constructor_refuses_what_the_document_cannot_hold() {
-    let cases: Vec<(&str, Box<dyn Fn(&mut ModelParts)>)> = vec![
+    let cases: Vec<(&str, Edit)> = vec![
         ("inputs.unit", Box::new(|p| p.inputs[0].unit = UnitCode::Radian)),
         (
             "inputs.distribution.params",
