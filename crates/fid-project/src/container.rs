@@ -362,6 +362,7 @@ impl Container {
         };
         let parent = match o.get("parent") {
             Some(CValue::Null) if kind == ContainerKind::Part => None,
+            _ if kind == ContainerKind::Part => return Err(bad_state("a part has no parent")),
             other => Some(state_uuid(other)?),
         };
         let need = |l: Option<Label>| l.ok_or_else(|| bad_state("container label must be a string"));
