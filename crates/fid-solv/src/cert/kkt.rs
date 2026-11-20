@@ -137,7 +137,7 @@ impl Default for KktTolerances {
 }
 
 impl KktTolerances {
-    fn check(&self) -> Result<(), CertError> {
+    pub(crate) fn check(&self) -> Result<(), CertError> {
         let ok_tol = |t: f64| t.is_finite() && t >= 0.0;
         let ok = ok_tol(self.tol_p)
             && ok_tol(self.tol_d)
@@ -262,6 +262,7 @@ pub struct KktReport {
     multipliers: Vec<f64>,
     multiplier_bounds: Vec<f64>,
     dual_thresholds: Vec<f64>,
+    gradient_norms_hi: Vec<f64>,
     primal: Condition,
     dual: Condition,
     stationarity: Condition,
@@ -286,6 +287,13 @@ impl KktReport {
     /// The per-row dual thresholds `thr_i`, in set order (empty when degenerate).
     pub fn dual_thresholds(&self) -> &[f64] {
         &self.dual_thresholds
+    }
+    /// The proven upper bounds `hi(||grad g_i(X)||_2)` of the active rows' constraint gradient
+    /// norms that the dual thresholds divide by, in set order (empty when degenerate). With
+    /// [`KktScales::gradient_lo`] they let a verifier recompute every
+    /// [`Self::dual_thresholds`] entry bit for bit.
+    pub fn gradient_norms_hi(&self) -> &[f64] {
+        &self.gradient_norms_hi
     }
     /// Primal feasibility: `max_i g_i(p*)` over every row.
     pub fn primal(&self) -> Condition {
@@ -409,6 +417,7 @@ pub fn check<P: ActiveSetProblem + ?Sized>(
         multipliers: Vec::new(),
         multiplier_bounds: Vec::new(),
         dual_thresholds: Vec::new(),
+        gradient_norms_hi: Vec::new(),
         primal,
         dual: Condition::unknown(0.0),
         stationarity: Condition::unknown(thr_s),
@@ -429,8 +438,8 @@ pub fn check<P: ActiveSetProblem + ?Sized>(
         // Per-row dual thresholds, rounded down: tol_d * lo||grad f(X)|| / hi||grad g_i(X)||.
         let (flo, _) = norm_bounds(&fe)?;
         out.scales.gradient_lo = flo;
-        let num = down(tol.tol_d * flo);
         let mut thr_d = Vec::with_capacity(n);
+        let mut ghis = Vec::with_capacity(n);
         for i in 0..n {
             let row = ge.get(i * n..(i + 1) * n).ok_or(not_proven(BoundFailure::NoEnclosure))?;
             let (_, ghi) = norm_bounds(row)?;
@@ -438,11 +447,12 @@ pub fn check<P: ActiveSetProblem + ?Sized>(
             if row.iter().all(|e| e.mag() == 0.0) {
                 return Err(CertError::InvalidInput { field: "constraint_gradient_zero" });
             }
-            let t = if num > 0.0 { down(num / ghi) } else { 0.0 };
+            let t = dual_threshold(tol.tol_d, flo, ghi);
             if !t.is_finite() {
                 return Err(CertError::InvalidInput { field: "dual_threshold" });
             }
             thr_d.push(t);
+            ghis.push(ghi);
         }
         let mut thr_min = f64::INFINITY;
         for &t in &thr_d {
@@ -511,6 +521,7 @@ pub fn check<P: ActiveSetProblem + ?Sized>(
         }
         out.multipliers = lambda;
         out.dual_thresholds = thr_d;
+        out.gradient_norms_hi = ghis;
     }
 
     let conds = [
@@ -540,6 +551,17 @@ fn threshold(tol: f64, scale: f64) -> Result<f64, CertError> {
         Ok(t)
     } else {
         Err(CertError::InvalidInput { field: "tolerances" })
+    }
+}
+
+/// The dual threshold of one row (step 7): `down(down(tol_d * gradient_lo) / ghi)`, or 0 when
+/// the rounded-down numerator is not positive (in particular when `gradient_lo` is 0).
+pub(crate) fn dual_threshold(tol_d: f64, gradient_lo: f64, ghi: f64) -> f64 {
+    let num = down(tol_d * gradient_lo);
+    if num > 0.0 {
+        down(num / ghi)
+    } else {
+        0.0
     }
 }
 

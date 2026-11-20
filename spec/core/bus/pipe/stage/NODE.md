@@ -17,7 +17,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # CORE.BUS.PIPE.STAGE: Stage orchestration, all-or-nothing commit, jobs, reads and overhead
@@ -43,6 +43,7 @@ updated: 2026-11-17
 - **REQ-CORE.BUS.PIPE.STAGE-008** When `dry_run` is set, the bus shall run every stage up to and including the effects check, return the events it would commit, and commit nothing.
 - **REQ-CORE.BUS.PIPE.STAGE-009** When `run_handlers_as_system` is called by a `system` principal, the bus shall run validate, precondition, handler and effects check for each listed command against the given state view and return the events without committing; any other principal shall get a `policy` error.
 - **REQ-CORE.BUS.PIPE.STAGE-010** The bus shall add no more than 1 ms median overhead per R0 command, measured over 10,000 calls of a no-op R0 command on reference hardware [unverified until measured].
+- **REQ-CORE.BUS.PIPE.STAGE-011** When a handler whose command declares an `fs_effect` other than `none` succeeds, the bus shall have it prepare its file under a temporary name, commit the journal entry, and only then place the file, discarding the prepared file if the commit fails; when `dry_run` is set, the bus shall pass it to the handler as the handler's own dry run, so no file (temporary or final) is written, and still return the would-be events.
 
 ## Acceptance criteria
 
@@ -56,6 +57,7 @@ updated: 2026-11-17
 - **AC-8** Given `dry_run` on a W2 command, then the returned events equal those of a real run and the journal is unchanged.
 - **AC-9** (error path) Given a `script` principal calling `run_handlers_as_system`, then the result is `policy`.
 - **AC-10** Given the benchmark `bench_r0_overhead` (10,000 no-op R0 calls), when run on reference hardware, then the median overhead is below 1 ms [unverified until measured].
+- **AC-11** (error path) Given a test `write_root` command whose handler prepares a file, when the journal commit is forced to fail, then no file exists at or beside the target; when the commit succeeds, the file exists only after the entry is committed; and with `dry_run`, the returned events equal those of a real run and the export root is unchanged.
 
 ## Design
 

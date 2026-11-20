@@ -122,6 +122,7 @@ python fixtures/rpt/output/text/make_fixtures.py --check
 python fixtures/scan/cmp/make_field_golden.py --check
 python fixtures/scan/make_mesh_quality.py --check
 python fixtures/solv/cert/as-v1/make_cases.py --check
+python fixtures/solv/cert/ct-v1/make_cases.py --check
 python fixtures/solv/cert/kkt-v1/make_cases.py --check
 python fixtures/solv/cert/recomp-v1/make_cases.py --check
 python fixtures/solv/make_mstart_fixtures.py --check
