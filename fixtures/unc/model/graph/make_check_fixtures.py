@@ -487,7 +487,7 @@ def main():
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
     if check:
-        on_disk = {"bad/" + p.name for p in BAD.glob("*") if p.is_file()}
+        on_disk = {p.relative_to(HERE).as_posix() for p in BAD.rglob("*") if p.is_file()}
         for extra in sorted(on_disk - set(files)):
             print("not generated: " + extra)
             bad += 1

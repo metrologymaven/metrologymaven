@@ -45,14 +45,15 @@ updated: 2026-11-20
 ## Acceptance criteria
 
 - **AC-1** Given `fixtures/unc/model/graph/bore_ls.json` and manifest stub `manifest_stub.json`, then validation returns `ValidModel`.
-- **AC-2** (error paths) Given `fixtures/unc/model/graph/bad/` (cycle among n3, n5, n7; unknown operator; unsourced input; mm-to-rad edge; indefinite correlation), then each yields its code with the named node, and a file with all five yields five findings in the stated order.
+- **AC-2** (error paths) Given `fixtures/unc/model/graph/bad/` (cycle among n3, n5, n7; unknown operator; unsourced input; m-to-rad edge; indefinite correlation), then each yields its code with the named node, and a file with all five yields five findings in the stated order.
 - **AC-3** (performance) Given a generated 1 000-node chain model (seed `0x47524150`), then validation completes within budget on the reference runner.
 
 ## Design
 
 - **Registry command(s):** none (called by `unc.validate_model@1` in `UNC.MODEL.GRAPH.STORE`).
-- **Algorithm:** Kahn topological sort with BTreeMap-ordered ready set; manifest lookup; unit dimension vectors compared exactly; correlation via `dist::validate_correlation`.
-- **Errors:** findings `cycle`, `unknown_operator`, `unsourced_input`, `unit_mismatch`, `arity_mismatch`, `invalid_correlation`.
+- **Algorithm:** Kahn topological sort with BTreeMap-ordered ready set; manifest lookup; unit codes compared exactly (`si:m`, `si:rad`, `si:1`; `si:rad` and `si:1` differ although both have dimension one) together with quantity kinds; iterative Tarjan for the cycle members; correlation via `dist::validate_correlation`.
+- **Errors:** findings, in pass order: `dangling_edge`, `cycle`, `unknown_operator`, `unsourced_input`, `arity_mismatch`, `unit_mismatch`, `unreachable_output`, `correlation_not_input`, `invalid_correlation` (see Resolved at build).
+- **Manifest precondition:** `validate` trusts the manifest it is given; provenance is the caller's job. `UNC.MODEL.GRAPH.STORE` takes the manifest only from the release manifest file, read with `KernelManifest::parse_canonical`, whose core digest must equal the core digest the running kernel artifact reports (`manifest_core_digest`, `KRN.MAN.MANI.GEN`); the manifest never comes from command parameters. `UNC.PROP` refuses a `ValidModel` whose `manifest_digest()` differs from the running kernel's manifest digest.
 - **Determinism:** D0.
 - **Performance budget:** REQ-006.
 - **Crate:** `fid-kunc` (module `model`).
@@ -67,7 +68,8 @@ updated: 2026-11-20
 
 ## Open questions
 
-- None.
+- **Operator port signatures are not yet bound to the algorithm.** This leaf checks edges against the ports the model *declares* (unit, quantity kind, arity), but nothing yet checks that those declarations match the real signature of `algorithm_id@algorithm_version`. Follow-up leaf: publish each algorithm's port signature (names, quantity kinds, unit codes, arities, in argument order) in its `KRN.MAN.CARD` card or the kernel manifest entry, and add a pass here that refuses a declared port list that differs from it.
+- **Until then, the kernel call must refuse an argument-count mismatch.** `fid_kci::kci::evaluate` (`KRN.MAN.KCI`) does not do this today: it checks input digests and calls `KernelAlgorithm::validate` (params only), then passes `inputs` to `run`, so each algorithm must refuse a wrong input count itself. `KRN.MAN.KCI` should add an input-count check against the declared signature before `run`; until it does, `UNC.PROP` must not rely on this leaf for argument counts.
 
 ## Resolved at build
 
