@@ -4,9 +4,11 @@
 //! ([`active`], KRN.SOLV.CERT.AS), recomputes the optimum from a candidate, checks the KKT
 //! conditions independently and packages a certificate. [`recomp`] (KRN.SOLV.CERT.RECOMP)
 //! recomputes the optimum on one candidate from the problem data, with a proven forward error
-//! bound. Modules land one spec leaf at a time; see `spec/krn/solv/cert/`.
+//! bound. [`kkt`] (KRN.SOLV.CERT.KKT) proves or refutes the KKT conditions at the exact optimum
+//! enclosed by a recomputation. Modules land one spec leaf at a time; see `spec/krn/solv/cert/`.
 
 pub mod active;
+pub mod kkt;
 pub mod recomp;
 
 use core::fmt;

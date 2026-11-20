@@ -1,6 +1,6 @@
 [package]
 name = "fid-solv"
-description = "Metrology Maven kernel optimisation drivers (KNP-1): deterministic seeded multi-start, nonlinear least squares and the conic (LP, QP, SOCP) wrapper, active-set extraction and recomputation (spec nodes KRN.SOLV.MSTART, KRN.SOLV.NLLS, KRN.SOLV.CONIC.WRAP, KRN.SOLV.CERT.AS, KRN.SOLV.CERT.RECOMP)"
+description = "Metrology Maven kernel optimisation drivers (KNP-1): deterministic seeded multi-start, nonlinear least squares and the conic (LP, QP, SOCP) wrapper, active-set extraction, recomputation and the proven KKT check (spec nodes KRN.SOLV.MSTART, KRN.SOLV.NLLS, KRN.SOLV.CONIC.WRAP, KRN.SOLV.CERT.AS, KRN.SOLV.CERT.RECOMP, KRN.SOLV.CERT.KKT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
