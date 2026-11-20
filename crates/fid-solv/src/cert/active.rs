@@ -11,6 +11,11 @@
 //! - **ambiguous**: `s_i <= slack_rel * scale_s` but not strongly active;
 //! - **inactive**: `s_i > slack_rel * scale_s`.
 //!
+//! The slack test is one-sided: a negative slack (an infeasible iterate) counts as small
+//! slack however large its magnitude, so such a row is strongly active or ambiguous, never
+//! inactive. A candidate built on it is still only a proposal; recomputation and the KKT
+//! check decide.
+//!
 //! **Every comparison is exact.** The products `slack_rel * scale_s` and
 //! `mult_rel * scale_y` are never rounded: each side is compared as an exact rational number
 //! (integer significands and binary exponents, see `cmp_scaled`), so a row lies on the side of
@@ -18,11 +23,19 @@
 //! the caller's two thresholds, recorded in the output with the scales. No floating-point
 //! arithmetic other than `abs` is performed, so the output is bit-identical on every target.
 //!
-//! The candidate sets have the caller's expected size, are sorted by label, and are listed in
+//! **Path independence.** The candidate sets are every subset of the expected size of the
+//! small-slack rows (strongly active and ambiguous together), sorted by label and listed in
 //! ascending lexicographic order of their sorted labels (the tie-break order of
-//! REQ-KRN.SOLV.CERT-004: lowest point indices first). A borderline row is never resolved by
-//! guessing: it is reported as ambiguous, and every set it could complete is listed for the
-//! certificate pipeline to try in order.
+//! REQ-KRN.SOLV.CERT-004: lowest point indices first). The multipliers only split the
+//! small-slack rows into the two diagnostic lists; they do not change the sets. So a vertex
+//! solution and an interior solution of the same tied problem, which differ in their
+//! multipliers, give the same candidate list, and the lowest certifiable basis the
+//! certificate pipeline finds does not depend on the solver's path.
+//!
+//! **Uncertified.** The result is a [`Proposal`]: its sets are guesses until the
+//! certificate pipeline (`KRN.SOLV.CERT.CT`, `certify`) recomputes the optimum from one of
+//! them and passes the KKT check. Outside this crate the sets are readable only through
+//! [`Proposal::uncertified_sets`], and a `Proposal` cannot be built.
 
 use core::cmp::Ordering;
 
@@ -54,38 +67,65 @@ pub struct Thresholds {
     pub mult_rel: f64,
 }
 
-/// The candidate active sets of one solution, in try order.
+/// The **uncertified** candidate active sets of one solution, in try order. Only the
+/// certificate pipeline in this crate turns a candidate into a certified active set; nothing
+/// outside `fid-solv` may treat a candidate as an active set. The fields are crate-private,
+/// so a `Proposal` is made only by [`extract`].
 #[derive(Debug, Clone, PartialEq)]
-pub struct Candidates {
-    /// Candidate sets, each of the expected size and sorted by label, in ascending
-    /// lexicographic order; at least one and at most [`MAX_CANDIDATES`].
-    pub sets: Vec<Vec<RowLabel>>,
-    /// Strongly active rows, sorted.
-    pub strongly_active: Vec<RowLabel>,
-    /// Ambiguous rows (small slack, multiplier not clearly positive), sorted.
-    pub ambiguous: Vec<RowLabel>,
+#[must_use]
+pub struct Proposal {
+    pub(crate) sets: Vec<Vec<RowLabel>>,
+    pub(crate) strongly_active: Vec<RowLabel>,
+    pub(crate) ambiguous: Vec<RowLabel>,
+    pub(crate) thresholds: Thresholds,
+    pub(crate) scales: (f64, f64),
+    pub(crate) tie_broken: bool,
+    pub(crate) over_determined: bool,
+}
+
+impl Proposal {
+    /// The candidate sets, **uncertified**: each of the expected size and sorted by label, in
+    /// ascending lexicographic order; at least one and at most [`MAX_CANDIDATES`]. None of
+    /// them is an active set until `certify` has recomputed and KKT-checked it.
+    pub fn uncertified_sets(&self) -> &[Vec<RowLabel>] {
+        &self.sets
+    }
+    /// Strongly active rows, sorted (diagnostic; depends on the multipliers).
+    pub fn strongly_active(&self) -> &[RowLabel] {
+        &self.strongly_active
+    }
+    /// Ambiguous rows (small slack, multiplier not clearly positive), sorted (diagnostic;
+    /// depends on the multipliers).
+    pub fn ambiguous(&self) -> &[RowLabel] {
+        &self.ambiguous
+    }
     /// The thresholds used.
-    pub thresholds: Thresholds,
+    pub fn thresholds(&self) -> Thresholds {
+        self.thresholds
+    }
     /// The scales used: `(scale_s, scale_y)`.
-    pub scales: (f64, f64),
-    /// More than one candidate set exists.
-    pub tie_broken: bool,
-    /// More rows are strongly active than the expected size (a primal-degenerate optimum,
-    /// such as two points at equal deviation with both multipliers positive). The sets are
-    /// then the subsets of the strongly active rows of the expected size; ambiguous rows are
-    /// not used.
-    pub over_determined: bool,
+    pub fn scales(&self) -> (f64, f64) {
+        self.scales
+    }
+    /// More than one candidate set exists (more small-slack rows than the expected size).
+    pub fn tie_broken(&self) -> bool {
+        self.tie_broken
+    }
+    /// More rows are strongly active than the expected size: a primal-degenerate optimum
+    /// such as two points at equal deviation with both multipliers positive (what an
+    /// interior-point method returns for a tie). Diagnostic only: it depends on the
+    /// multipliers and does not change the sets, so it must not enter a certificate digest.
+    pub fn over_determined(&self) -> bool {
+        self.over_determined
+    }
 }
 
 /// Extracts the candidate active sets of `solution`, a solution of `problem`.
 ///
 /// `labels[i]` labels row `i`; `expected` is the size of an active set (for example the
-/// number of parameters of a minimum-zone problem). Candidates:
-///
-/// - with at most `expected` strongly active rows: every set that holds all strongly active
-///   rows and is completed from the ambiguous rows (REQ-KRN.SOLV.CERT.AS-002, -003);
-/// - with more than `expected` strongly active rows: every subset of the strongly active
-///   rows of size `expected` (`over_determined`).
+/// number of parameters of a minimum-zone problem). The candidates are every subset of size
+/// `expected` of the small-slack rows (strongly active and ambiguous), in lexicographic
+/// order (REQ-KRN.SOLV.CERT.AS-002, -003).
 ///
 /// Inputs are checked in this order: thresholds and `expected` (`InvalidInput`), cones
 /// (`InvalidInput { field: "cones" }` unless every cone is nonnegative), lengths of `labels`,
@@ -95,14 +135,15 @@ pub struct Candidates {
 /// # Errors
 ///
 /// The input errors above, and [`CertError::ActiveSetUndetermined`] when fewer rows than
-/// `expected` have small slack, or when more than [`MAX_CANDIDATES`] sets would be listed.
+/// `expected` have small slack (`TooFewRows`), or when more than [`MAX_CANDIDATES`] sets
+/// would be listed (`OverCap`).
 pub fn extract(
     problem: &ConicProblem,
     solution: &ConicSolution,
     labels: &[RowLabel],
     expected: usize,
     thresholds: &Thresholds,
-) -> Result<Candidates, CertError> {
+) -> Result<Proposal, CertError> {
     let th = *thresholds;
     let valid = |t: f64| t.is_finite() && t >= 0.0;
     if !valid(th.slack_rel) || !valid(th.mult_rel) {
@@ -145,10 +186,12 @@ pub fn extract(
 
     let mut strongly_active = Vec::new();
     let mut ambiguous = Vec::new();
+    let mut small = Vec::new();
     for ((label, &s), &y) in labels.iter().zip(&solution.s).zip(&solution.y) {
         if cmp_scaled(s, th.slack_rel, scale_s)? == Ordering::Greater {
             continue;
         }
+        small.push(*label);
         if y > 0.0 && cmp_scaled(y, th.mult_rel, scale_y)? != Ordering::Less {
             strongly_active.push(*label);
         } else {
@@ -157,32 +200,25 @@ pub fn extract(
     }
     strongly_active.sort_unstable();
     ambiguous.sort_unstable();
+    small.sort_unstable();
 
-    let undetermined = |strongly_active: Vec<RowLabel>,
-                        ambiguous: Vec<RowLabel>,
-                        cause: Undetermined|
-     -> Result<Candidates, CertError> {
-        Err(CertError::ActiveSetUndetermined { strongly_active, ambiguous, cause })
-    };
-    let over_determined = strongly_active.len() > expected;
-    let (base, pool, k): (&[RowLabel], &[RowLabel], usize) = if over_determined {
-        (&[], &strongly_active, expected)
+    let cause = if small.len() < expected {
+        Some(Undetermined::TooFewRows)
+    } else if !binomial_within_cap(small.len(), expected) {
+        Some(Undetermined::OverCap)
     } else {
-        let k = expected - strongly_active.len();
-        if ambiguous.len() < k {
-            return undetermined(strongly_active, ambiguous, Undetermined::TooFewRows);
-        }
-        (&strongly_active, &ambiguous, k)
+        None
     };
-    if !binomial_within_cap(pool.len(), k) {
-        return undetermined(strongly_active, ambiguous, Undetermined::OverCap);
+    if let Some(cause) = cause {
+        return Err(CertError::ActiveSetUndetermined { strongly_active, ambiguous, cause });
     }
-    let mut sets = combinations(base, pool, k);
-    // Already in order (adding the same sorted base to k-subsets taken in lexicographic order
-    // keeps the order); sorted again so the order never rests on that argument alone.
+    let mut sets = combinations(&small, expected);
+    // Already in order (k-subsets of a sorted pool taken in lexicographic index order); sorted
+    // again so the order never rests on that argument alone.
     sets.sort_unstable();
     let tie_broken = sets.len() > 1;
-    Ok(Candidates {
+    let over_determined = strongly_active.len() > expected;
+    Ok(Proposal {
         sets,
         strongly_active,
         ambiguous,
@@ -212,15 +248,14 @@ fn binomial_within_cap(n: usize, k: usize) -> bool {
     true
 }
 
-/// Every set `base ∪ T` with `T` a `k`-subset of `pool`, each sorted, with the `T` taken in
-/// lexicographic order of their pool indices by an iterative generator. `k <= pool.len()`.
-fn combinations(base: &[RowLabel], pool: &[RowLabel], k: usize) -> Vec<Vec<RowLabel>> {
+/// Every `k`-subset of `pool` (sorted), each sorted, taken in lexicographic order of their
+/// pool indices by an iterative generator. `k <= pool.len()`.
+fn combinations(pool: &[RowLabel], k: usize) -> Vec<Vec<RowLabel>> {
     let n = pool.len();
     let mut sets = Vec::new();
     let mut idx: Vec<usize> = (0..k).collect();
     loop {
-        let mut set = base.to_vec();
-        set.extend(idx.iter().filter_map(|&i| pool.get(i).copied()));
+        let mut set: Vec<RowLabel> = idx.iter().filter_map(|&i| pool.get(i).copied()).collect();
         set.sort_unstable();
         sets.push(set);
         // Advance to the next combination: the rightmost index that can still grow grows by
@@ -322,19 +357,13 @@ mod tests {
     #[test]
     fn combinations_in_lexicographic_order() {
         let l = |point| RowLabel { point, side: 0 };
-        let pool = [l(1), l(3), l(5), l(7)];
-        let got = combinations(&[l(4)], &pool, 2);
-        let want: Vec<Vec<RowLabel>> = vec![
-            vec![l(1), l(3), l(4)],
-            vec![l(1), l(4), l(5)],
-            vec![l(1), l(4), l(7)],
-            vec![l(3), l(4), l(5)],
-            vec![l(3), l(4), l(7)],
-            vec![l(4), l(5), l(7)],
-        ];
+        let pool = [l(1), l(3), l(4), l(5)];
+        let got = combinations(&pool, 3);
+        let want: Vec<Vec<RowLabel>> =
+            vec![vec![l(1), l(3), l(4)], vec![l(1), l(3), l(5)], vec![l(1), l(4), l(5)], vec![l(3), l(4), l(5)]];
         assert_eq!(got, want);
-        assert_eq!(combinations(&[l(2)], &pool, 0), vec![vec![l(2)]]);
-        assert_eq!(combinations(&[], &pool, 4), vec![pool.to_vec()]);
+        assert_eq!(combinations(&pool, 4), vec![pool.to_vec()]);
+        assert_eq!(combinations(&pool, 1).len(), 4);
     }
 
     #[test]

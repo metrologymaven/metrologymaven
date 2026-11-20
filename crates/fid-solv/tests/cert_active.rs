@@ -6,7 +6,7 @@
 //! output (not an oracle); CI checks them on x86-64 Linux and Windows, ARM64 macOS and wasm32.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_solv::cert::active::{extract, Candidates, RowLabel, Thresholds, MAX_CANDIDATES};
+use fid_solv::cert::active::{extract, Proposal, RowLabel, Thresholds, MAX_CANDIDATES};
 use fid_solv::cert::{CertError, Undetermined};
 use fid_solv::conic::{solve_lp, Cone, ConicProblem, ConicProblemBuilder, ConicResiduals, ConicSolution, Csc};
 use fid_testkit::Sha256Hasher;
@@ -146,7 +146,7 @@ fn solution(c: &Case) -> ConicSolution {
     }
 }
 
-fn run(c: &Case) -> Result<Candidates, CertError> {
+fn run(c: &Case) -> Result<Proposal, CertError> {
     extract(&problem(c), &solution(c), &c.labels, c.expected, &c.thresholds)
 }
 
@@ -154,18 +154,18 @@ fn bits(v: (f64, f64)) -> (u64, u64) {
     (v.0.to_bits(), v.1.to_bits())
 }
 
-fn check_case(c: &Case, got: &Result<Candidates, CertError>) {
+fn check_case(c: &Case, got: &Result<Proposal, CertError>) {
     match c.result[0].as_str() {
         "ok" => {
             let g = got.as_ref().unwrap_or_else(|e| panic!("{}: {e:?}", c.name));
-            assert_eq!(g.sets, c.sets, "{}: sets", c.name);
-            assert_eq!(g.strongly_active, c.strongly_active, "{}: strongly active", c.name);
-            assert_eq!(g.ambiguous, c.ambiguous, "{}: ambiguous", c.name);
-            assert_eq!(g.tie_broken, c.result[2] == "1", "{}: tie_broken", c.name);
-            assert_eq!(g.over_determined, c.result[4] == "1", "{}: over_determined", c.name);
-            assert_eq!(bits(g.scales), bits(c.scales), "{}: scales", c.name);
+            assert_eq!(g.uncertified_sets(), &c.sets[..], "{}: sets", c.name);
+            assert_eq!(g.strongly_active(), &c.strongly_active[..], "{}: strongly active", c.name);
+            assert_eq!(g.ambiguous(), &c.ambiguous[..], "{}: ambiguous", c.name);
+            assert_eq!(g.tie_broken(), c.result[2] == "1", "{}: tie_broken", c.name);
+            assert_eq!(g.over_determined(), c.result[4] == "1", "{}: over_determined", c.name);
+            assert_eq!(bits(g.scales()), bits(c.scales), "{}: scales", c.name);
             assert_eq!(
-                bits((g.thresholds.slack_rel, g.thresholds.mult_rel)),
+                bits((g.thresholds().slack_rel, g.thresholds().mult_rel)),
                 bits((c.thresholds.slack_rel, c.thresholds.mult_rel)),
                 "{}: thresholds recorded",
                 c.name
@@ -200,7 +200,7 @@ fn ac1_fixture_cases() {
         if c.kind == "nondegenerate" {
             assert_eq!(c.sets, c.known, "{}: the known contact set", c.name);
         }
-        if c.kind.starts_with("tie-") && c.kind != "tie-vertex" {
+        if c.kind.starts_with("tie-") {
             // every planted contact basis is listed, in lexicographic order
             let at: Vec<usize> = c.known.iter().map(|k| c.sets.iter().position(|s| s == k).unwrap()).collect();
             assert!(at.windows(2).all(|w| w[0] < w[1]), "{}", c.name);
@@ -208,9 +208,11 @@ fn ac1_fixture_cases() {
     }
 }
 
-/// AC-1 on solver output: each planted LP solved by the conic wrapper, then extracted. Every
-/// contact row comes out strongly active (the interior-point method converges to the analytic
-/// centre of the optimal dual face), so the tied cases are over-determined.
+/// AC-1 on solver output: each planted LP solved by the conic wrapper, then extracted. The
+/// candidates equal the fixture's (path independence: the oracle's vertex, sub-threshold and
+/// interior duals and the solver's own multipliers give one list). Every contact row comes out
+/// strongly active (the interior-point method converges to the analytic centre of the optimal
+/// dual face), so the tied cases are over-determined.
 #[test]
 fn ac1_solved_by_the_wrapper() {
     let (th, cases) = parse();
@@ -219,12 +221,13 @@ fn ac1_solved_by_the_wrapper() {
         let p = problem(c);
         let sol = solve_lp(&p).unwrap();
         let got = extract(&p, &sol, &c.labels, c.expected, &th).unwrap();
-        assert_eq!(got.sets, c.solver_sets, "{}", c.name);
-        assert!(got.ambiguous.is_empty(), "{}", c.name);
-        assert_eq!(got.tie_broken, c.solver_sets.len() > 1, "{}", c.name);
-        assert_eq!(got.over_determined, c.solver_sets.len() > 1, "{}", c.name);
+        assert_eq!(got.uncertified_sets(), &c.solver_sets[..], "{}", c.name);
+        assert_eq!(got.uncertified_sets(), &c.sets[..], "{}: path independence", c.name);
+        assert!(got.ambiguous().is_empty(), "{}", c.name);
+        assert_eq!(got.tie_broken(), c.solver_sets.len() > 1, "{}", c.name);
+        assert_eq!(got.over_determined(), c.solver_sets.len() > 1, "{}", c.name);
         if c.kind == "nondegenerate" {
-            assert_eq!(got.sets, c.known, "{}", c.name);
+            assert_eq!(got.uncertified_sets(), &c.known[..], "{}", c.name);
         }
         solved += 1;
     }
@@ -235,11 +238,8 @@ fn by_points(sets: &[Vec<RowLabel>]) -> Vec<Vec<u32>> {
     sets.iter().map(|s| s.iter().map(|l| l.point).collect()).collect()
 }
 
-/// AC-2, hand-labelled: 5 points, v = (-1, 1, 0, 1, -1), points 1 and 3 both on the upper
-/// boundary of the zone (line 0, half-width 1). Rows 0:0 and 4:0 have clearly positive
-/// multipliers, the tied rows 1:1 and 3:1 multipliers below the threshold.
-#[test]
-fn ac2_five_point_tie() {
+/// AC-2's problem with the given multipliers on rows 0:0, 1:1, 3:1, 4:0 (all slacks exact).
+fn ac2_problem(mult: [f64; 4]) -> (ConicProblem, ConicSolution, Vec<RowLabel>) {
     let v = [-1.0, 1.0, 0.0, 1.0, -1.0];
     let (mut rows, mut b, mut s, mut y, mut lab) = (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
     for (i, &vi) in v.iter().enumerate() {
@@ -250,8 +250,10 @@ fn ac2_five_point_tie() {
             b.push(if lower { vi } else { -vi });
             s.push(if lower { vi + 1.0 } else { 1.0 - vi });
             y.push(match (i, side) {
-                (0, 0) | (4, 0) => 0.25,
-                (1, 1) | (3, 1) => 1e-15,
+                (0, 0) => mult[0],
+                (1, 1) => mult[1],
+                (3, 1) => mult[2],
+                (4, 0) => mult[3],
                 _ => 0.0,
             });
             lab.push(RowLabel { point: i as u32, side });
@@ -266,28 +268,65 @@ fn ac2_five_point_tie() {
         iterations: 0,
         residuals: ConicResiduals { primal: 0.0, dual: 0.0, gap_abs: 0.0, gap_rel: 0.0 },
     };
-    let th = Thresholds { slack_rel: 1e-9, mult_rel: 1e-9 };
-    let got = extract(&p, &sol, &lab, 3, &th).unwrap();
-    assert_eq!(by_points(&got.sets), vec![vec![0, 1, 4], vec![0, 3, 4]]);
-    assert_eq!(by_points(&got.sets[..1]), vec![vec![0, 1, 4]]);
-    assert!(got.tie_broken && !got.over_determined);
-    // the same problem in the fixture (oracle-checked)
-    let (_, cases) = parse();
-    let c = cases.iter().find(|c| c.name == "ac2-five-point-tie").unwrap();
-    assert_eq!(by_points(&run(c).unwrap().sets), vec![vec![0, 1, 4], vec![0, 3, 4]]);
+    (p, sol, lab)
 }
 
-/// AC-2's problem solved by the wrapper: the solver gives all four contact rows positive
-/// multipliers, so the set is over-determined and its four 3-subsets are listed; the two
-/// bases {0, 1, 4} and {0, 3, 4} are among them, in that order.
+const AC2_SETS: [[u32; 3]; 4] = [[0, 1, 3], [0, 1, 4], [0, 3, 4], [1, 3, 4]];
+
+/// AC-2 (amended): 5 points, v = (-1, 1, 0, 1, -1), points 1 and 3 both on the upper boundary
+/// of the zone (line 0, half-width 1), expected 3. The small-slack rows are 0:0, 1:1, 3:1,
+/// 4:0, so the candidates are their four 3-subsets in lexicographic order; the two bases
+/// {0, 1, 4} and {0, 3, 4} are among them in that order ({0, 1, 3} and {1, 3, 4} have no
+/// nonnegative dual and fail the KKT check in `KRN.SOLV.CERT.CT`).
 #[test]
-fn ac2_solved_is_over_determined() {
-    let (th, cases) = parse();
+fn ac2_five_point_tie() {
+    let (p, sol, lab) = ac2_problem([0.25, 1e-15, 1e-15, 0.25]);
+    let th = Thresholds { slack_rel: 1e-9, mult_rel: 1e-9 };
+    let got = extract(&p, &sol, &lab, 3, &th).unwrap();
+    assert_eq!(by_points(got.uncertified_sets()), AC2_SETS.map(Vec::from).to_vec());
+    assert!(got.tie_broken() && !got.over_determined());
+    // the same problem in the fixture (oracle-checked) and solved by the wrapper
+    let (sth, cases) = parse();
     let c = cases.iter().find(|c| c.name == "ac2-five-point-tie").unwrap();
-    let p = problem(c);
-    let got = extract(&p, &solve_lp(&p).unwrap(), &c.labels, 3, &th).unwrap();
-    assert_eq!(by_points(&got.sets), vec![vec![0, 1, 3], vec![0, 1, 4], vec![0, 3, 4], vec![1, 3, 4]]);
-    assert!(got.tie_broken && got.over_determined);
+    assert_eq!(by_points(run(c).unwrap().uncertified_sets()), AC2_SETS.map(Vec::from).to_vec());
+    let pc = problem(c);
+    let solved = extract(&pc, &solve_lp(&pc).unwrap(), &c.labels, 3, &sth).unwrap();
+    assert_eq!(by_points(solved.uncertified_sets()), AC2_SETS.map(Vec::from).to_vec());
+    assert!(solved.over_determined());
+}
+
+/// Path independence: a vertex solution and an interior solution of the same tie LP (they
+/// differ only in the multipliers) give the same candidate list. AC-2's problem: the two
+/// vertex duals (3/8, 1/2, 0, 1/8) and (1/8, 0, 1/2, 3/8), their mean (an interior point of
+/// the dual face) and a sub-threshold iterate. Also every tied fixture LP against the
+/// wrapper's own (interior-point) solution.
+#[test]
+fn vertex_and_interior_solutions_agree() {
+    let th = Thresholds { slack_rel: 1e-9, mult_rel: 1e-9 };
+    let duals =
+        [[0.375, 0.5, 0.0, 0.125], [0.125, 0.0, 0.5, 0.375], [0.25, 0.25, 0.25, 0.25], [0.25, 1e-15, 1e-15, 0.25]];
+    let lists: Vec<(Vec<Vec<u32>>, bool)> = duals
+        .iter()
+        .map(|d| {
+            let (p, sol, lab) = ac2_problem(*d);
+            let got = extract(&p, &sol, &lab, 3, &th).unwrap();
+            (by_points(got.uncertified_sets()), got.over_determined())
+        })
+        .collect();
+    for (sets, _) in &lists {
+        assert_eq!(sets, &AC2_SETS.map(Vec::from).to_vec());
+    }
+    // the diagnostic flag does depend on the path (vertex: no, interior: yes)
+    assert_eq!(lists.iter().map(|l| l.1).collect::<Vec<_>>(), vec![false, false, true, false]);
+
+    let (sth, cases) = parse();
+    for c in cases.iter().filter(|c| c.kind.starts_with("tie-")) {
+        let p = problem(c);
+        let solved = extract(&p, &solve_lp(&p).unwrap(), &c.labels, c.expected, &sth).unwrap();
+        let given = run(c).unwrap();
+        assert_eq!(solved.uncertified_sets(), given.uncertified_sets(), "{}", c.name);
+        assert!(solved.tie_broken() && given.tie_broken(), "{}", c.name);
+    }
 }
 
 /// AC-3: only 2 rows of small slack, expected size 4.
@@ -359,9 +398,9 @@ const TH: Thresholds = Thresholds { slack_rel: 1e-9, mult_rel: 1e-9 };
 fn single_candidate_req_002() {
     let (p, sol, lab) = tiny();
     let got = extract(&p, &sol, &lab, 1, &TH).unwrap();
-    assert_eq!(got.sets, vec![vec![RowLabel { point: 0, side: 0 }]]);
-    assert!(!got.tie_broken && !got.over_determined && got.ambiguous.is_empty());
-    assert_eq!(bits(got.scales), bits((1.0, 1.0)));
+    assert_eq!(got.uncertified_sets(), &[vec![RowLabel { point: 0, side: 0 }]]);
+    assert!(!got.tie_broken() && !got.over_determined() && got.ambiguous().is_empty());
+    assert_eq!(bits(got.scales()), bits((1.0, 1.0)));
 }
 
 #[test]
@@ -405,17 +444,18 @@ fn cap_is_256() {
     assert_eq!(MAX_CANDIDATES, 256);
     let (_, cases) = parse();
     let c = cases.iter().find(|c| c.name == "at-cap-252").unwrap();
-    assert_eq!(run(c).unwrap().sets.len(), 252);
+    assert_eq!(run(c).unwrap().uncertified_sets().len(), 252);
 }
 
-fn digest(name: &str, r: &Result<Candidates, CertError>, h: &mut Sha256Hasher) {
+fn digest(name: &str, r: &Result<Proposal, CertError>, h: &mut Sha256Hasher) {
     h.update(name.as_bytes());
     match r {
         Ok(c) => {
-            for v in [c.scales.0, c.scales.1, c.thresholds.slack_rel, c.thresholds.mult_rel] {
+            let (sc, th) = (c.scales(), c.thresholds());
+            for v in [sc.0, sc.1, th.slack_rel, th.mult_rel] {
                 h.update(&v.to_bits().to_le_bytes());
             }
-            h.update(&[u8::from(c.tie_broken), u8::from(c.over_determined)]);
+            h.update(&[u8::from(c.tie_broken()), u8::from(c.over_determined())]);
             let mut put = |ls: &[RowLabel], tag: u8| {
                 h.update(&[tag]);
                 for l in ls {
@@ -423,9 +463,9 @@ fn digest(name: &str, r: &Result<Candidates, CertError>, h: &mut Sha256Hasher) {
                     h.update(&[l.side]);
                 }
             };
-            put(&c.strongly_active, 1);
-            put(&c.ambiguous, 2);
-            for s in &c.sets {
+            put(c.strongly_active(), 1);
+            put(c.ambiguous(), 2);
+            for s in c.uncertified_sets() {
                 put(s, 3);
             }
         }
@@ -437,7 +477,7 @@ fn digest(name: &str, r: &Result<Candidates, CertError>, h: &mut Sha256Hasher) {
 /// wrapper-solved LPs), recorded from a local x86-64 run and checked by CI on every target.
 /// One value serves all targets because they agree bit for bit; a target that diverged would
 /// get its own `#[cfg(target_arch)]` value here.
-const OUTPUT_PIN: &str = "sha256:ea0527f11a80f1d7ec8ff1f97bab5f7f2f4f7be1521cbca6d2aa40c64ba3b4b8";
+const OUTPUT_PIN: &str = "sha256:151983945983a1091ac92bb6545c4fc7026a6a6299a275e6f6f1c102005f5f1f";
 
 #[test]
 fn output_bits_pinned() {

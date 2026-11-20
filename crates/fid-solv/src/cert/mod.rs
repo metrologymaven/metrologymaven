@@ -9,10 +9,11 @@ pub mod active;
 
 use core::fmt;
 
-pub use active::RowLabel;
+pub use active::{Proposal, RowLabel};
 
 /// Why no candidate list could be returned (REQ-KRN.SOLV.CERT.AS-004).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Undetermined {
     /// Fewer rows have small slack (strongly active plus ambiguous) than the expected size.
     TooFewRows,

@@ -24,14 +24,17 @@ Kinds:
 - nondegenerate (30): 3 alternating contacts; one basis; the dual is that basis's solution.
 - tie-ambiguous (5, AC-2's 5-point problem among them): 4 contacts with two bases; the two
   rows in both bases carry the mean of the two bases' duals and the two tied rows carry tiny
-  multipliers (an iterate that has not separated the tie), so the tied rows are ambiguous and
-  the candidates are exactly the two bases.
+  multipliers (an iterate that has not separated the tie), so the tied rows are ambiguous.
 - tie-overdetermined (5): 4 contacts with two bases; the dual is the mean of the two bases'
   (the kind of point an interior-point method converges to), so all 4 rows are strongly
-  active and the candidates are the 3-subsets of them.
+  active (over_determined).
 - tie-vertex (2, beyond the 40): 4 contacts, the dual is the first basis's (a vertex), so
-  the fourth contact row is ambiguous but the strongly active rows already have the expected
-  size: one candidate, tie_broken 0.
+  the fourth contact row is ambiguous.
+
+Candidates are every 3-subset of the small-slack rows, whatever the multipliers, so all three
+tie kinds give the same list for the same contacts: the four 3-subsets of the contact rows,
+tie_broken 1, with both bases among them in order (path independence). The script asserts
+this for every LP case.
 - boundary: one- and two-row problems whose slack or multiplier sits at or within one ulp of
   slack_rel * scale_s or mult_rel * scale_y, where rounding the product would misclassify.
 - undetermined: too few small-slack rows, and more candidates than the cap.
@@ -41,10 +44,8 @@ either sign, multipliers get small noise, inactive rows get tiny positive multip
 are listed in a seeded shuffled order (labels shuffled with them).
 
 `solver_set` lines give, for the LP cases, the candidates expected when the Rust test solves
-the LP itself with `solver_thresholds`: every contact row strongly active (an interior-point
-method converges to the analytic centre of the optimal dual face, which is positive on every
-contact row of these problems), so the 3-subsets of the contacts. That expectation rests on
-the solver's accuracy (slack of contact rows below 1e-6 * scale, multipliers above
+the LP itself with `solver_thresholds`: the 3-subsets of the contact rows, the same list as
+`set`. That expectation rests on the solver's accuracy (slack of contact rows below
 1e-6 * scale); the margins here are > 0.1 on every other row.
 
 Format: `case <name> kind <kind>` ... `end`. Floats are IEEE-754 bit patterns in hex.
@@ -127,17 +128,14 @@ def classify(b, s, y, th):
 
 
 def candidates(labels, classes, expected):
+    """Every expected-size subset of the small-slack rows (S and A), lexicographic."""
     strong = sorted(l for l, c in zip(labels, classes) if c == "S")
     amb = sorted(l for l, c in zip(labels, classes) if c == "A")
-    if len(strong) > expected:
-        sets = [sorted(c) for c in combinations(strong, expected)]
-        over = True
-    else:
-        k = expected - len(strong)
-        if len(amb) < k:
-            return strong, amb, ("undetermined", "TooFewRows")
-        sets = [sorted(strong + list(c)) for c in combinations(amb, k)]
-        over = False
+    small = sorted(strong + amb)
+    if len(small) < expected:
+        return strong, amb, ("undetermined", "TooFewRows")
+    sets = [sorted(c) for c in combinations(small, expected)]
+    over = len(strong) > expected
     if len(sets) > CAP:
         return strong, amb, ("undetermined", "OverCap")
     sets.sort()
@@ -361,12 +359,12 @@ def undetermined_cases():
     # AC-3 shape: 2 rows of small slack, expected 4
     out.append(one_var("too-few-rows", "undetermined", [1.0] * 6, [0.0, 0.0, 0.5, 0.5, 0.5, 0.5],
                        [0.5, 0.5, 0.0, 0.0, 0.0, 0.0], [(i, 0) for i in range(6)], 4, TH))
-    # 1 strong + 12 ambiguous, expected 7: C(12, 6) = 924 > 256
+    # 1 strong + 12 ambiguous, expected 7: C(13, 7) = 1716 > 256
     out.append(one_var("over-cap", "undetermined", [1.0] * 13, [0.0] * 13, [0.5] + [0.0] * 12,
                        [(i, 1) for i in range(13)], 7, TH))
-    # exactly at the cap: 1 strong + C(256, 1)... kept small: C(10, 5) = 252 <= 256
-    out.append(one_var("at-cap-252", "boundary", [1.0] * 11, [0.0] * 11, [0.5] + [0.0] * 10,
-                       [(i, 0) for i in range(11)], 6, TH))
+    # just under the cap: 10 small-slack rows, expected 5: C(10, 5) = 252 <= 256
+    out.append(one_var("at-cap-252", "boundary", [1.0] * 10, [0.0] * 10, [0.5] + [0.0] * 9,
+                       [(i, 0) for i in range(10)], 5, TH))
     # over-determined over the cap: 12 strong rows, expected 5: C(12, 5) = 792 > 256
     out.append(one_var("over-determined-over-cap", "undetermined", [1.0] * 12, [0.0] * 12,
                        [0.25] * 12, [(i, 0) for i in range(12)], 5, TH))
@@ -409,12 +407,15 @@ def render_case(c):
             # every planted basis must be among the candidates, in order
             idx = [sets.index(k) for k in c["known"] if k in sets]
             assert idx == sorted(idx), c["name"]
+            # path independence: whatever the multipliers (vertex, sub-threshold or interior),
+            # the candidates are the 3-subsets of the contact rows
+            assert sets == c["solver_sets"], c["name"]
             if c["kind"] == "nondegenerate":
-                assert sets == c["known"] and not tie, c["name"]
+                assert sets == c["known"] and not tie and not over, c["name"]
             elif c["kind"] == "tie-vertex":
-                assert sets == c["known"][:1] and not tie and amb, c["name"]
+                assert tie and not over and amb, c["name"]
             elif c["kind"] == "tie-ambiguous":
-                assert sets == c["known"] and tie and not over, c["name"]
+                assert tie and not over and len(amb) == 2, c["name"]
             else:
                 assert tie and over and len(sets) == 4, c["name"]
     else:
