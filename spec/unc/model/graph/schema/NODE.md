@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-kunc]
+built_pr: 310
 satisfies: [REQ-UNC.MODEL.GRAPH-001]
 covers: []
 depends_on: [UNC.MODEL.DIST, UNC.UEC.STMT, CORE.JRN.CANON]
