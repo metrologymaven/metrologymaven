@@ -23,6 +23,7 @@ disallowed-methods = [
     { path = "fid_kunc::dist::Distribution::std_uncertainty", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_kunc::dist::open_unit", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_kunc::dist::ppnd16", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_kunc::prop::mcm::adapt::AdaptProfile::p", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_num::err::check_finite", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_num::f::FnId::eval", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_num::f::acos", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
