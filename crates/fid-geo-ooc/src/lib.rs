@@ -6,7 +6,9 @@
 //! is one **chunk**, a versioned byte blob stored in the CORE.STO content-addressed store,
 //! and a **manifest** names the whole chunked cloud. [`to_chunks`] and [`to_memory`]
 //! convert in both directions; [`ChunkWriter`] builds the same chunks from points streamed
-//! in original order with bounded memory, for files larger than memory.
+//! in original order with bounded memory, for files larger than memory. [`ChunkCache`]
+//! (spec node `GEO.OOC.CACHE`) loads chunks on demand under a memory budget, verifying
+//! each against its manifest digest.
 //!
 //! Everything below is pinned for format version 1 and reproduced by the independent
 //! Python reference `fixtures/geo/ooc/make_layout_fixtures.py`.
@@ -81,6 +83,7 @@
 //! [`to_memory`] rebuilds the cloud and checks it reproduces this digest
 //! (REQ-GEO.OOC.LAYOUT-002); the writer computes it from spilled columns.
 
+pub mod cache;
 mod cell;
 mod error;
 mod format;
@@ -88,6 +91,10 @@ mod layout;
 mod store;
 pub mod writer;
 
+pub use cache::{
+    load_cost, resident_cost, CacheConfig, CacheStats, ChunkCache, ChunkHandle, Eviction, DEFAULT_CACHE_BUDGET,
+    ENTRY_OVERHEAD,
+};
 pub use cell::{CellCode, Grid, GRID_CELLS, MAX_DEPTH};
 pub use error::{Fault, OocError};
 pub use format::{

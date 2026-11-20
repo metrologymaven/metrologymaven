@@ -1,7 +1,12 @@
 //! Typed errors of the chunk layout, the byte formats and the streaming writer.
 
+use crate::cell::CellCode;
 use core::fmt;
 use fid_geo_types::GeoTypeError;
+
+fn hex(d: &[u8; 32]) -> String {
+    d.iter().map(|b| format!("{b:02x}")).collect()
+}
 
 /// What is wrong with the bytes of a chunk or a manifest (inside
 /// [`OocError::CorruptChunk`] and [`OocError::CorruptManifest`]).
@@ -110,6 +115,13 @@ pub enum OocError {
     AllocationFailed { needed: u64 },
     /// An earlier I/O error left this writer unusable.
     WriterFailed,
+    /// The bytes loaded for chunk `cell` of the cloud whose manifest digest is `cloud` do
+    /// not match the manifest's address `digest` for it (REQ-GEO.OOC.CACHE-003). Nothing
+    /// was cached.
+    ChunkIntegrity { cloud: [u8; 32], cell: CellCode, digest: [u8; 32] },
+    /// A chunk load needs `needed` bytes of the cache budget, but `pinned` bytes are pinned
+    /// and the budget cannot hold both (REQ-GEO.OOC.CACHE-002).
+    CacheExhausted { needed: u64, pinned: u64 },
 }
 
 impl OocError {
@@ -135,6 +147,8 @@ impl OocError {
             OocError::Spill { .. } => "spill",
             OocError::AllocationFailed { .. } => "allocation_failed",
             OocError::WriterFailed => "writer_failed",
+            OocError::ChunkIntegrity { .. } => "chunk_integrity",
+            OocError::CacheExhausted { .. } => "cache_exhausted",
         }
     }
 }
@@ -161,6 +175,12 @@ impl fmt::Display for OocError {
             OocError::Spill { kind, detail } => write!(f, "spill: {kind:?}: {detail}"),
             OocError::AllocationFailed { needed } => write!(f, "allocation_failed: {needed} bytes"),
             OocError::WriterFailed => write!(f, "writer_failed"),
+            OocError::ChunkIntegrity { cloud, cell, digest } => {
+                write!(f, "chunk_integrity: cloud {}, cell {}, digest {}", hex(cloud), cell.raw(), hex(digest))
+            }
+            OocError::CacheExhausted { needed, pinned } => {
+                write!(f, "cache_exhausted: needs {needed} bytes, {pinned} bytes pinned")
+            }
         }
     }
 }

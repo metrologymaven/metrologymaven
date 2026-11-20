@@ -347,6 +347,7 @@ fn rule_ids_are_stable() {
         ("KNP1-PARSE", Rule::Parse),
         ("KNP1-PARSE-RESOLVE", Rule::ParseResolve),
         ("KNP1-CFG", Rule::Cfg),
+        ("KNP1-INCLUDE", Rule::Include),
     ];
     for (id, rule) in fixed {
         assert_eq!(Rule::parse(id), Some(rule.clone()));
@@ -370,8 +371,10 @@ fn rule_ids_are_stable() {
         assert_eq!(Rule::parse(bad), None, "{bad}");
     }
     let cat = catalogue();
-    assert_eq!(cat.len(), 19);
+    assert_eq!(cat.len(), 20);
     assert!(!Rule::Cfg.is_waivable());
+    assert!(!Rule::Include.is_waivable());
+    assert!(Rule::IoFs.is_waivable());
     assert!(!Rule::Flag("WRAPPER".into()).is_waivable());
     assert_eq!(Rule::parse("KNP1-TYPED-BUILD"), Some(Rule::Typed("BUILD".into())));
     assert!(!Rule::Typed("BUILD".into()).is_waivable());

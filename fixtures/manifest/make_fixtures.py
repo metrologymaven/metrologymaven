@@ -64,7 +64,7 @@ def sha(b):
 
 
 def definition(name, major, side_effect, declared, human_only=False, params=None, required=(), result=None,
-               title=None, description=None):
+               title=None, description=None, effects=()):
     d = {
         "id": name,
         "major": major,
@@ -79,7 +79,7 @@ def definition(name, major, side_effect, declared, human_only=False, params=None
         "fs_effect": "none",
         "undo": "not_undoable",
         "preconditions": [],
-        "effects": [],
+        "effects": list(effects),
         "algorithms": [],
         "exposure": ["cli", "mcp", "python"],
         "lifecycle": {"state": "active"},
@@ -262,6 +262,41 @@ def long_name():
     return manifest([definition("demo." + "x" * 60, 1, "R0", "exposed")])
 
 
+# ------------------------------------------------------------------ AUTO.SURF.ROOTS
+
+# Pinned rule (AUTO.SURF.ROOTS REQ-006, mirrored by crates/fid-surface/src/roots.rs): a command
+# changes the roots if its declared effects list ROOTS_EFFECT or its class is A0.
+ROOTS_EFFECT = "RootsChanged"
+PRINCIPAL_KINDS = ["human", "agent", "script", "service", "device", "system"]
+
+
+def roots_config():
+    file_param = {"type": "string", "path_like": True, "x-extensions": ["stl"]}
+    return manifest(sorted([
+        definition("files.import_mesh", 1, "R1", "exposed", params={"source": file_param}, required=("source",)),
+        definition("files.export_table", 1, "W1", "exposed", params={"target": file_param}, effects=("TableExported",)),
+        definition("help.show_version", 1, "R0", "exposed"),
+        # AC-5: an A0 command declaring the roots effect.
+        definition("settings.set_roots", 1, "A0", "never", effects=(ROOTS_EFFECT,),
+                   params={"roots": {"type": "array"}}),
+        # The generic admin-setting command: A0, its effect names no key.
+        definition("settings.set_admin_value", 1, "A0", "never", human_only=True,
+                   effects=("settings.set_admin_value@1",)),
+        # A W2 command (MCP-exposed by class) that declares the roots effect: hidden by metadata.
+        definition("project.set_import_root", 1, "W2", "exposed", effects=("Other", ROOTS_EFFECT)),
+    ], key=lambda d: (d["id"].encode(), d["major"])))
+
+
+def roots_visibility(manifest_bytes):
+    doc = json.loads(manifest_bytes)
+    ids = sorted((d["id"].encode("utf-8"), d["major"], f"{d['id']}@{d['major']}") for d in doc["commands"])
+    root_config = [cid for _, _, cid in ids
+                   if any(d["id"] + "@" + str(d["major"]) == cid and
+                          (d["side_effect"] == "A0" or ROOTS_EFFECT in d["effects"]) for d in doc["commands"])]
+    visible = {k: [cid for _, _, cid in ids if k == "human" or cid not in root_config] for k in PRINCIPAL_KINDS}
+    return canon({"root_config": root_config, "visible": visible}) + b"\n"
+
+
 # ------------------------------------------------------------------ fuzz corpus
 
 
@@ -383,7 +418,10 @@ def outputs():
         MAN / "bad-projection.json": bad_projection(),
         MAN / "collision.json": collision(),
         MAN / "long-name.json": long_name(),
+        MAN / "roots-config.json": roots_config(),
     }
+    reference_project(files[MAN / "roots-config.json"])  # must project cleanly
+    files[PROJ / "roots-config.visible.json"] = roots_visibility(files[MAN / "roots-config.json"])
     files[PROJ / "min-classes.golden.json"] = reference_project(files[MAN / "min-classes.json"])
     expected = {}
     for p in (MAN / "bad-projection.json", MAN / "collision.json", MAN / "long-name.json"):

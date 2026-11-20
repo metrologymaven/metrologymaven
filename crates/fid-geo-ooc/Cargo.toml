@@ -1,6 +1,6 @@
 [package]
 name = "fid-geo-ooc"
-description = "Metrology Maven out-of-core point clouds: octree chunk layout, versioned chunk and manifest byte formats in the content-addressed store, conversion to and from in-memory clouds, and the bounded-memory streaming chunk writer (spec node GEO.OOC.LAYOUT)"
+description = "Metrology Maven out-of-core point clouds: octree chunk layout, versioned chunk and manifest byte formats in the content-addressed store, conversion to and from in-memory clouds, the bounded-memory streaming chunk writer (spec node GEO.OOC.LAYOUT), and the budgeted, digest-verifying chunk cache (GEO.OOC.CACHE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -30,8 +30,8 @@ store = ["dep:fid-store"]
 fid-canon = { path = "../fid-canon" }
 # Test-only: the seeded Philox generator that regenerates fixture cloud_5e6 (KRN.NUM.RNG).
 fid-num = { path = "../fid-num" }
-# Test-only: counting global allocator for the writer memory test (AC-3) and the budget
-# refusal test (AC-4). The workspace forbids `unsafe`, so a test cannot implement
+# Test-only: counting global allocator for the writer memory test (AC-3), the budget
+# refusal test (AC-4) and the chunk cache peak test (GEO.OOC.CACHE AC-1). The workspace forbids `unsafe`, so a test cannot implement
 # GlobalAlloc itself; fid-program uses the same crate for the same reason.
 cap = { version = "0.1.2", features = ["stats"] }
 

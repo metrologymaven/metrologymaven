@@ -1838,7 +1838,10 @@ dependencies = [
 name = "fid-surface"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
  "fid-canon",
+ "fid-journal",
+ "fid-registry",
  "fid-types",
  "fid-uuid",
 ]
