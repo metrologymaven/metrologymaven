@@ -1,0 +1,258 @@
+{
+ "commands": [
+  {
+   "algorithms": [],
+   "cli_bare": false,
+   "description": "Synthetic command of the CORE.BUS.POL.PROJ test registry.",
+   "determinism": "D0",
+   "effects": [
+    "TestDone"
+   ],
+   "exposure": [
+    "cli",
+    "gui",
+    "mcp"
+   ],
+   "fs_effect": "none",
+   "human_only": false,
+   "id": "test.run_exposed",
+   "idempotency": "none",
+   "lifecycle": {
+    "since": "2026-11-20",
+    "state": "active"
+   },
+   "major": 1,
+   "mcp_projection": "exposed",
+   "network": "none",
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "count": {
+      "type": "integer"
+     },
+     "dry": {
+      "type": "boolean"
+     },
+     "target": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "target"
+    ],
+    "type": "object"
+   },
+   "preconditions": [],
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W1",
+   "title": "Exposed command",
+   "undo": "head_move",
+   "web": "available"
+  },
+  {
+   "algorithms": [],
+   "cli_bare": false,
+   "description": "Synthetic command of the CORE.BUS.POL.PROJ test registry.",
+   "determinism": "D0",
+   "effects": [
+    "TestDone"
+   ],
+   "exposure": [
+    "cli",
+    "gui",
+    "mcp"
+   ],
+   "fs_effect": "none",
+   "human_only": false,
+   "id": "test.run_request",
+   "idempotency": "none",
+   "lifecycle": {
+    "since": "2026-11-20",
+    "state": "active"
+   },
+   "major": 1,
+   "mcp_projection": "request_only",
+   "network": "none",
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "count": {
+      "type": "integer"
+     },
+     "dry": {
+      "type": "boolean"
+     },
+     "target": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "target"
+    ],
+    "type": "object"
+   },
+   "preconditions": [],
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "title": "Request-only command",
+   "undo": "head_move",
+   "web": "available"
+  },
+  {
+   "algorithms": [],
+   "cli_bare": false,
+   "description": "Synthetic command of the CORE.BUS.POL.PROJ test registry.",
+   "determinism": "D0",
+   "effects": [
+    "TestDone"
+   ],
+   "exposure": [
+    "cli",
+    "gui",
+    "mcp"
+   ],
+   "fs_effect": "none",
+   "human_only": false,
+   "id": "test.run_never",
+   "idempotency": "none",
+   "lifecycle": {
+    "since": "2026-11-20",
+    "state": "active"
+   },
+   "major": 1,
+   "mcp_projection": "never",
+   "network": "none",
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "count": {
+      "type": "integer"
+     },
+     "dry": {
+      "type": "boolean"
+     },
+     "target": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "target"
+    ],
+    "type": "object"
+   },
+   "preconditions": [],
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "R0",
+   "title": "Never-projected command",
+   "undo": "head_move",
+   "web": "available"
+  },
+  {
+   "algorithms": [],
+   "cli_bare": false,
+   "description": "Synthetic command of the CORE.BUS.POL.PROJ test registry.",
+   "determinism": "D0",
+   "effects": [
+    "TestDone"
+   ],
+   "exposure": [
+    "cli",
+    "gui",
+    "mcp"
+   ],
+   "fs_effect": "none",
+   "human_only": true,
+   "id": "test.adopt_human",
+   "idempotency": "none",
+   "lifecycle": {
+    "since": "2026-11-20",
+    "state": "active"
+   },
+   "major": 1,
+   "mcp_projection": "exposed",
+   "network": "none",
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "count": {
+      "type": "integer"
+     },
+     "dry": {
+      "type": "boolean"
+     },
+     "target": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "target"
+    ],
+    "type": "object"
+   },
+   "preconditions": [],
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "title": "Human-only command",
+   "undo": "head_move",
+   "web": "available"
+  },
+  {
+   "algorithms": [],
+   "cli_bare": false,
+   "description": "Synthetic command of the CORE.BUS.POL.PROJ test registry.",
+   "determinism": "D0",
+   "effects": [
+    "TestDone"
+   ],
+   "exposure": [
+    "cli",
+    "gui"
+   ],
+   "fs_effect": "none",
+   "human_only": false,
+   "id": "test.run_local",
+   "idempotency": "none",
+   "lifecycle": {
+    "since": "2026-11-20",
+    "state": "active"
+   },
+   "major": 1,
+   "mcp_projection": "exposed",
+   "network": "none",
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "count": {
+      "type": "integer"
+     },
+     "dry": {
+      "type": "boolean"
+     },
+     "target": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "target"
+    ],
+    "type": "object"
+   },
+   "preconditions": [],
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W1",
+   "title": "Command without an MCP surface",
+   "undo": "head_move",
+   "web": "available"
+  }
+ ]
+}
