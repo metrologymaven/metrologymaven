@@ -90,7 +90,6 @@ How lengths and angles cross the kernel boundary: an authored decimal keeps its 
 ## Open questions
 
 - Whether other domains (UNC, RPT) should reuse this module for non-length quantities, which would move it to a shared crate; kept in GEO.FRAME for now as the parent scoped it.
-- **Follow-up: one parser.** `CORE.BUS.UNIT` (`fid_bus::unit`, PR #331) normalises authored literals with its own decimal parser and big integer. It uses the same grammar, factors and Π, so every value both accept agrees bit for bit, but the limits differ. This leaf accepts 40 significant digits and the bus accepts 64. This leaf has no exponent limit and rounds tiny values to zero (`1e-400 m` gives 0.0), while the bus refuses a decimal exponent outside -400..400, overflow, and a non-zero value that rounds to zero (`literal_out_of_range`). Consolidate both into one exact-decimal routine in `fid-num`, keeping each caller's limits as parameters.
 
 ## Children
 

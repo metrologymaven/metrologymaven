@@ -56,7 +56,6 @@ updated: 2026-11-17
 - **AC-8** Given `dry_run` on a W2 command, then the returned events equal those of a real run and the journal is unchanged.
 - **AC-9** (error path) Given a `script` principal calling `run_handlers_as_system`, then the result is `policy`.
 - **AC-10** Given the benchmark `bench_r0_overhead` (10,000 no-op R0 calls), when run on reference hardware, then the median overhead is below 1 ms [unverified until measured].
-- **AC-11** (replay) Given the journal entry of `CORE.BUS.UNIT` AC-2 (`10.1 mm` for a length parameter), when it is replayed in exact mode on another platform class in CI, then the outcome is `IDENTICAL` (the replay half of `CORE.BUS.UNIT` AC-6).
 
 ## Design
 

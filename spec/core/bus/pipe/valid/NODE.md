@@ -57,7 +57,7 @@ The resolve, validate and precondition stages. VALID looks up `id@major` in the 
 - **Registry command(s):** none; pipeline stages.
 - **Data structures:** `Resolved { def: &CommandDef, lifecycle }`; `ValidationError { pointer: JsonPointer, keyword, reason }`; compiled schema cache keyed by manifest digest.
 - **Algorithm:** resolve by exact `(id, major)` lookup; compile each schema once per manifest digest; validate with an allowlisted JSON Schema 2020-12 validator plus project keyword hooks; walk `x-ref` values and query the state view; call `unit::normalise` on literal objects; evaluate preconditions with the registry evaluator and its step counter.
-- **Errors:** `not_found`, `hidden_command`, `validation` (reasons `schema`, `bad_reference`, `unit_mismatch`, `literal_out_of_range`, `literal_syntax`, `input_limit`), `precondition` (reason `false`, `step_bound_exceeded`).
+- **Errors:** `not_found`, `hidden_command`, `validation` (reasons `schema`, `bad_reference`, `unit_mismatch`, `literal_out_of_range`, `input_limit`), `precondition` (reason `false`, `step_bound_exceeded`).
 - **Determinism:** D0; document-order traversal, no clock.
 - **Performance budget:** validation of a 1 KiB parameter document in < 50 µs with a warm schema cache [unverified until measured].
 - **Crate:** `fid-bus` (module `validate`).
