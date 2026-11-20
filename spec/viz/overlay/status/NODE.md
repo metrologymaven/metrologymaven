@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-overlay]
+built_pr: 355
 satisfies: [REQ-VIZ.OVERLAY-005, REQ-VIZ.OVERLAY-006, REQ-VIZ.OVERLAY-008]
 covers: []
 depends_on: [VIZ.RENDER.SCENE.PROJ]
