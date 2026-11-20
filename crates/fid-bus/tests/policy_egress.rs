@@ -776,7 +776,7 @@ fn parameters_cannot_widen_egress() {
         r#","url":"https://evil.example/x""#.to_string(),
         format!(r#","note":"{long}""#),
         r#","note":"line\nbreak""#.to_string(),
-        r#","note":"bidi‮override""#.to_string(),
+        r#","note":"bidi\u202eoverride""#.to_string(),
         r#","note":7"#.to_string(),
     ] {
         let p = json(&format!(r#"{{"artifact":"{d}","destination":"upload"{extra}}}"#));
