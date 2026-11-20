@@ -1,0 +1,15 @@
+# Spec card (KRN.LSQ.LIN). Cite designators and clause numbers only; never paste standards text.
+id = "fit.plane.ls@1.0.0"
+title = "Least-squares plane"
+method = "The plane passes through the centroid with the eigenvector of the smallest eigenvalue of the 3 x 3 centred scatter matrix as normal (cyclic Jacobi on centred, scaled data). With a fixed normal the plane passes through the centroid with that normal. Residuals are signed distances, positive on the normal side."
+applicability = "At least 3 points not collinear; the two smallest scatter eigenvalues must differ by more than 1/cond_limit relative."
+references = [
+  "Shakarji, C. M. (1998). Least-squares fitting algorithms of the NIST algorithm testing system. Journal of Research of the National Institute of Standards and Technology 103(6).",
+  "Golub, G. H. and Van Loan, C. F. (2013). Matrix Computations, 4th ed., section 8.5 (Jacobi methods).",
+]
+determinism = "D0"
+failure_modes = [
+  "Nearly collinear points leave the rotation about their line ill-determined: Collinear or IllConditioned.",
+  "A cloud with three similar principal moments (a blob) has no unique normal: IllConditioned.",
+]
+validation = "Bit-exact model and 80-digit exact reference: fixtures/fit/lin-synth-v1 (make_lin_fixtures.py), checked on x86-64, ARM64 and wasm32. Pending: PTB TraCIM Gaussian and NIST ATS plane sets through UNC.RDL once their terms are settled (D-038)."

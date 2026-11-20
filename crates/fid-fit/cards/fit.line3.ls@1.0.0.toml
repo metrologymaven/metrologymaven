@@ -1,0 +1,15 @@
+# Spec card (KRN.LSQ.LIN). Cite designators and clause numbers only; never paste standards text.
+id = "fit.line3.ls@1.0.0"
+title = "Least-squares 3D line"
+method = "The line passes through the centroid along the eigenvector of the largest eigenvalue of the 3 x 3 centred scatter matrix (cyclic Jacobi on centred, scaled data). With a fixed direction the line passes through the centroid along it. Residuals are orthogonal distances."
+applicability = "At least 2 points not all coincident; the two largest scatter eigenvalues must differ by more than 1/cond_limit relative."
+references = [
+  "Shakarji, C. M. (1998). Least-squares fitting algorithms of the NIST algorithm testing system. Journal of Research of the National Institute of Standards and Technology 103(6).",
+  "Golub, G. H. and Van Loan, C. F. (2013). Matrix Computations, 4th ed., section 8.5 (Jacobi methods).",
+]
+determinism = "D0"
+failure_modes = [
+  "Points on a circle, or any set with two equal leading principal moments, have no unique direction: IllConditioned.",
+  "Orthogonal-distance residuals are unsigned, so their mean is not zero.",
+]
+validation = "Bit-exact model and 80-digit exact reference: fixtures/fit/lin-synth-v1 (make_lin_fixtures.py), checked on x86-64, ARM64 and wasm32. Pending: PTB TraCIM Gaussian and NIST ATS line sets through UNC.RDL once their terms are settled (D-038)."

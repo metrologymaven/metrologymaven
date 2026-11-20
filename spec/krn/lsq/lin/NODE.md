@@ -72,6 +72,8 @@ TraCIM Gaussian line and plane sets and NIST ATS datasets, frozen in the RDL by 
 ## Open questions
 
 - None beyond the parent's R1/W2 convention.
+- **Partial build (`fid-fit` module `ls_lin`, not yet marked built).** Done: the four algorithms with fixed-direction and projection-plane variants, residuals, statistics and diagnostics, spec cards (`crates/fid-fit/cards/`), command data rows, and AC-3, AC-4 and AC-6 in `crates/fid-fit/tests/ls_lin.rs` against `fixtures/fit/lin-synth-v1`. Remaining: (1) the registry, CLI and MCP layer of `fit.ls_*@1` (W2 commit with R1 dry run, one journaled event per commit, REQ-008, AC-5), which needs `CORE.REG` to read the kernel's fit data rows (see `KRN.LSQ.TRAIT` open questions); (2) AC-1 and AC-2, which need the TraCIM and NIST ATS sets in the RDL (`UNC.RDL`, terms open in D-038); (3) switching from the interim in-crate cyclic Jacobi to `fid_num::la::sym_eig` once `KRN.NUM.LA.EIG` is built.
+- **Choices made at build time (confirm in review).** Algorithm IDs and commands use the contract's primitive slugs (`fit.line2.ls@1.0.0`, `fit.ls_line2@1`, and `line3` likewise), not `line2d` / `line3d`, because `FitResult::assemble` requires the slug. REQ-004's tolerance is the eigenvalue-gap condition `la / (la - lb)` against `nlls.cond_limit` (equality within relative tolerance `1 / cond_limit`); `IllConditioned` and the diagnostics carry that ratio. Per-point weights are refused (`InvalidParams`), not implemented.
 
 ## Children
 
