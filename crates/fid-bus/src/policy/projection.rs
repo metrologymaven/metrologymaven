@@ -557,8 +557,9 @@ impl Filing {
     /// again here: at most [`MAX_FILED_PARAMS_BYTES`] canonical bytes
     /// (`validation/input_limit`) and conforming to the structural keywords of `def`'s
     /// `params_schema` (`validation/schema`), so a request cannot hold parameters the target
-    /// command would refuse.
-    fn new(
+    /// command would refuse. Also used by `policy::egress`, which files `script` calls of
+    /// `egress.send@1` (REQ-CORE.BUS.POL.EGRESS-002).
+    pub(crate) fn new(
         principal: &Principal,
         def: &CommandDef,
         params: &ValidParams,

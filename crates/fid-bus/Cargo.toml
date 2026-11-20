@@ -1,6 +1,6 @@
 [package]
 name = "fid-bus"
-description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles, MCP projection with pending requests and authored literal normalisation (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.UNIT)"
+description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles, MCP projection with pending requests, authored literal normalisation and the egress primitive (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.UNIT, CORE.BUS.POL.EGRESS)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -48,10 +48,16 @@ winx = "0.36"
 [features]
 # `ValidParams::for_tests` for this crate's integration tests; never enabled by other crates.
 test-support = []
+# CORE.BUS.POL.EGRESS test hooks: `issue_permit_for_tests` (mints a NetPermit outside the
+# pipeline), `Destinations::from_value` (destinations not read from the admin setting) and
+# `NetworkRootTransport::failing_after_for_tests`. Only `[dev-dependencies]` may enable it;
+# `tests/test_hooks.rs` fails if any crate enables it from `[dependencies]`.
+permit-test-hooks = []
 
 [dev-dependencies]
-# Integration tests build handler parameters through the test-support constructor.
-fid-bus = { path = ".", features = ["test-support"] }
+# Integration tests build handler parameters through the test-support constructor and use the
+# egress test hooks.
+fid-bus = { path = ".", features = ["test-support", "permit-test-hooks"] }
 
 [lints]
 workspace = true

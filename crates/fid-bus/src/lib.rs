@@ -24,6 +24,11 @@ pub use handler::{
 pub use policy::class::{
     authorise_cancel, authorise_class, class_rule, policy_matrix_json, policy_matrix_value, ClassRule,
 };
+pub use policy::egress::{
+    permits_network, ApprovalDialog, Cleared, Destination, DestinationId, DestinationKind, Destinations,
+    EgressApproval, EgressDecision, EgressPrompt, EgressSender, HttpMethod, HttpsUrl, NetPermit, NetworkRootTransport,
+    Outcome, PermitScope, SendOutcome, SendParams, Sent, Transport, Transports,
+};
 pub use policy::projection::{
     authorise, authorise_projection, list_requests, Approval, Authorised, Decision, Filing, Projected, RejectHandler,
     RequestBook, RequestId, RequestRecord, RequestState, WithdrawHandler,

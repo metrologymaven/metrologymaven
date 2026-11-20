@@ -214,3 +214,5 @@ fixtures/profile/** -text
 # GDT.CHAR.IDENT fixtures: QIF files and expected.json written by make_fixtures.py, which
 # --check compares byte for byte; never convert line endings.
 fixtures/gdt/ident/** -text
+# CORE.BUS.POL.EGRESS artifact: random bytes from a fixed seed, digested by make_fixtures.py --check.
+fixtures/core/bus/pol/egress/artifact.bin binary

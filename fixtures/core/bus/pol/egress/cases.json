@@ -1,0 +1,1484 @@
+{
+  "artifact": {
+    "digest": "sha256:f1beea0eff5a5ef287303cd674aede40fe4370b8e77414814e7e69ca519595af",
+    "file": "artifact.bin",
+    "size": 4099
+  },
+  "config_digests": [
+    {
+      "destination": {
+        "id": "lab-share",
+        "kind": "network_root",
+        "path": "/srv/egress/lab"
+      },
+      "digest": "sha256:b21b473fb2a8a7df7d89f47aa9e53ff2aafb4e255b5deadf8e57b4952e70e447"
+    },
+    {
+      "destination": {
+        "id": "lab-share",
+        "kind": "network_root",
+        "path": "C:\\egress\\lab"
+      },
+      "digest": "sha256:4a549986483830365ff44971d2842e7ff60f03a0f2bb2582617ebfb4df3b3511"
+    },
+    {
+      "destination": {
+        "id": "upload",
+        "kind": "https",
+        "method": "PUT",
+        "url": "https://upload.example.org/inbox"
+      },
+      "digest": "sha256:fcb844802a517e8457bece5a2cc396fb6203855103db7b1fcfde6ec203038e1c"
+    }
+  ],
+  "ids": [
+    {
+      "id": "lab-share",
+      "name": "ok",
+      "valid": true
+    },
+    {
+      "id": "a",
+      "name": "ok",
+      "valid": true
+    },
+    {
+      "id": "0_x-y",
+      "name": "ok",
+      "valid": true
+    },
+    {
+      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "name": "ok",
+      "valid": true
+    },
+    {
+      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "name": "too long",
+      "valid": false
+    },
+    {
+      "id": "",
+      "name": "empty",
+      "valid": false
+    },
+    {
+      "id": "Lab-share",
+      "name": "uppercase",
+      "valid": false
+    },
+    {
+      "id": "-lab",
+      "name": "leading dash",
+      "valid": false
+    },
+    {
+      "id": "_lab",
+      "name": "leading underscore",
+      "valid": false
+    },
+    {
+      "id": "lab share",
+      "name": "space",
+      "valid": false
+    },
+    {
+      "id": "lab.share",
+      "name": "dot",
+      "valid": false
+    },
+    {
+      "id": "l\u0430b",
+      "name": "Cyrillic a lookalike",
+      "valid": false
+    },
+    {
+      "id": "\uff4cab",
+      "name": "fullwidth letter",
+      "valid": false
+    },
+    {
+      "id": "lab\u200dshare",
+      "name": "zero width joiner",
+      "valid": false
+    },
+    {
+      "id": "\u0131d",
+      "name": "dotless i",
+      "valid": false
+    }
+  ],
+  "root_paths": [
+    {
+      "name": "unix absolute",
+      "path": "/srv/egress/lab",
+      "platform": "unix",
+      "valid": true
+    },
+    {
+      "name": "unix relative",
+      "path": "srv/egress",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix dot dot",
+      "path": "/srv/../etc",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix dot",
+      "path": "/srv/./lab",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix trailing dot dot",
+      "path": "/srv/lab/..",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix NUL",
+      "path": "/srv/a\u0000b",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix newline",
+      "path": "/srv/a\nb",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "unix backslash dot dot",
+      "path": "/srv\\..\\etc",
+      "platform": "unix",
+      "valid": false
+    },
+    {
+      "name": "windows drive",
+      "path": "C:\\egress\\lab",
+      "platform": "windows",
+      "valid": true
+    },
+    {
+      "name": "windows UNC share",
+      "path": "\\\\server\\share\\inbox",
+      "platform": "windows",
+      "valid": true
+    },
+    {
+      "name": "windows drive relative",
+      "path": "C:egress",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows dot dot",
+      "path": "C:\\egress\\..\\x",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows forward dot dot",
+      "path": "C:/egress/../x",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows verbatim",
+      "path": "\\\\?\\C:\\egress",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows verbatim UNC",
+      "path": "\\\\?\\UNC\\server\\share",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows device",
+      "path": "\\\\.\\COM1",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows device slashes",
+      "path": "//./pipe/x",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows NT object",
+      "path": "\\??\\C:\\egress",
+      "platform": "windows",
+      "valid": false
+    },
+    {
+      "name": "windows DEL",
+      "path": "C:\\a\u007fb",
+      "platform": "windows",
+      "valid": false
+    }
+  ],
+  "settings": [
+    {
+      "name": "empty",
+      "platform": "all",
+      "valid": true,
+      "value": []
+    },
+    {
+      "name": "unix root and https",
+      "platform": "unix",
+      "valid": true,
+      "value": [
+        {
+          "id": "lab-share",
+          "kind": "network_root",
+          "path": "/srv/egress/lab"
+        },
+        {
+          "id": "upload",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "windows root and https",
+      "platform": "windows",
+      "valid": true,
+      "value": [
+        {
+          "id": "lab-share",
+          "kind": "network_root",
+          "path": "C:\\egress\\lab"
+        },
+        {
+          "id": "upload",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "post method",
+      "platform": "all",
+      "valid": true,
+      "value": [
+        {
+          "id": "upload",
+          "kind": "https",
+          "method": "POST",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "not an array",
+      "platform": "all",
+      "valid": false,
+      "value": {
+        "id": "x"
+      }
+    },
+    {
+      "name": "duplicate id",
+      "platform": "all",
+      "valid": false,
+      "value": [
+        {
+          "id": "upload",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "upload",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://other.example/inbox"
+        }
+      ]
+    },
+    {
+      "name": "unknown field",
+      "platform": "all",
+      "valid": false,
+      "value": [
+        {
+          "header": "x",
+          "id": "upload",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "path on https",
+      "platform": "all",
+      "valid": false,
+      "value": [
+        {
+          "id": "upload",
+          "kind": "https",
+          "method": "PUT",
+          "path": "/srv",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "url on network root",
+      "platform": "unix",
+      "valid": false,
+      "value": [
+        {
+          "id": "lab-share",
+          "kind": "network_root",
+          "path": "/srv/egress/lab",
+          "url": "https://a.example/x"
+        }
+      ]
+    },
+    {
+      "name": "unknown kind",
+      "platform": "all",
+      "valid": false,
+      "value": [
+        {
+          "id": "upload",
+          "kind": "ftp",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "lowercase method",
+      "platform": "all",
+      "valid": false,
+      "value": [
+        {
+          "id": "upload",
+          "kind": "https",
+          "method": "put",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "GET method",
+      "platform": "all",
+      "valid": false,
+      "value": [
+        {
+          "id": "upload",
+          "kind": "https",
+          "method": "GET",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "missing method",
+      "platform": "all",
+      "valid": false,
+      "value": [
+        {
+          "id": "upload",
+          "kind": "https",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "bad url",
+      "platform": "all",
+      "valid": false,
+      "value": [
+        {
+          "id": "upload",
+          "kind": "https",
+          "method": "PUT",
+          "url": "http://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "relative path",
+      "platform": "all",
+      "valid": false,
+      "value": [
+        {
+          "id": "lab-share",
+          "kind": "network_root",
+          "path": "egress/lab"
+        }
+      ]
+    },
+    {
+      "name": "uppercase id",
+      "platform": "all",
+      "valid": false,
+      "value": [
+        {
+          "id": "Upload",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "lookalike id",
+      "platform": "all",
+      "valid": false,
+      "value": [
+        {
+          "id": "uplo\u0430d",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "too many",
+      "platform": "all",
+      "valid": false,
+      "value": [
+        {
+          "id": "d0",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d1",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d2",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d3",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d4",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d5",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d6",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d7",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d8",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d9",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d10",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d11",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d12",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d13",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d14",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d15",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d16",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d17",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d18",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d19",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d20",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d21",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d22",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d23",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d24",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d25",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d26",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d27",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d28",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d29",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d30",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d31",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d32",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d33",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d34",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d35",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d36",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d37",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d38",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d39",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d40",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d41",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d42",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d43",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d44",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d45",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d46",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d47",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d48",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d49",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d50",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d51",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d52",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d53",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d54",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d55",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d56",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d57",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d58",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d59",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d60",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d61",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d62",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d63",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d64",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    },
+    {
+      "name": "sixty-four",
+      "platform": "all",
+      "valid": true,
+      "value": [
+        {
+          "id": "d0",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d1",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d2",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d3",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d4",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d5",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d6",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d7",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d8",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d9",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d10",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d11",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d12",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d13",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d14",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d15",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d16",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d17",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d18",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d19",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d20",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d21",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d22",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d23",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d24",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d25",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d26",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d27",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d28",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d29",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d30",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d31",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d32",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d33",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d34",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d35",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d36",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d37",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d38",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d39",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d40",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d41",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d42",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d43",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d44",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d45",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d46",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d47",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d48",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d49",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d50",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d51",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d52",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d53",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d54",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d55",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d56",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d57",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d58",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d59",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d60",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d61",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d62",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        },
+        {
+          "id": "d63",
+          "kind": "https",
+          "method": "PUT",
+          "url": "https://upload.example.org/inbox"
+        }
+      ]
+    }
+  ],
+  "urls": [
+    {
+      "name": "plain",
+      "url": "https://upload.example.org/inbox",
+      "valid": true
+    },
+    {
+      "name": "port",
+      "url": "https://upload.example.org:8443/inbox/",
+      "valid": true
+    },
+    {
+      "name": "ipv4",
+      "url": "https://192.0.2.10/put",
+      "valid": true
+    },
+    {
+      "name": "single label",
+      "url": "https://localhost/x",
+      "valid": true
+    },
+    {
+      "name": "unreserved path",
+      "url": "https://a.example/a-b_c.d~e/f",
+      "valid": true
+    },
+    {
+      "name": "root path",
+      "url": "https://a.example/",
+      "valid": true
+    },
+    {
+      "name": "http",
+      "url": "http://upload.example.org/inbox",
+      "valid": false
+    },
+    {
+      "name": "uppercase scheme",
+      "url": "HTTPS://upload.example.org/inbox",
+      "valid": false
+    },
+    {
+      "name": "uppercase host",
+      "url": "https://Upload.example.org/inbox",
+      "valid": false
+    },
+    {
+      "name": "no path",
+      "url": "https://upload.example.org",
+      "valid": false
+    },
+    {
+      "name": "user info",
+      "url": "https://user@upload.example.org/inbox",
+      "valid": false
+    },
+    {
+      "name": "user info lookalike",
+      "url": "https://upload.example.org@evil.example/inbox",
+      "valid": false
+    },
+    {
+      "name": "query",
+      "url": "https://upload.example.org/inbox?x=1",
+      "valid": false
+    },
+    {
+      "name": "fragment",
+      "url": "https://upload.example.org/inbox#f",
+      "valid": false
+    },
+    {
+      "name": "percent escape",
+      "url": "https://upload.example.org/in%62ox",
+      "valid": false
+    },
+    {
+      "name": "percent in host",
+      "url": "https://upload%2eexample.org/inbox",
+      "valid": false
+    },
+    {
+      "name": "backslash",
+      "url": "https://upload.example.org\\@evil.example/inbox",
+      "valid": false
+    },
+    {
+      "name": "idn punycode",
+      "url": "https://xn--pple-43d.com/inbox",
+      "valid": false
+    },
+    {
+      "name": "reserved label",
+      "url": "https://ab--cd.example/inbox",
+      "valid": false
+    },
+    {
+      "name": "non-ascii host",
+      "url": "https://\u0430pple.com/inbox",
+      "valid": false
+    },
+    {
+      "name": "fullwidth dot",
+      "url": "https://upload\uff0eexample.org/inbox",
+      "valid": false
+    },
+    {
+      "name": "trailing dot",
+      "url": "https://upload.example.org./inbox",
+      "valid": false
+    },
+    {
+      "name": "empty label",
+      "url": "https://upload..example.org/inbox",
+      "valid": false
+    },
+    {
+      "name": "label leading dash",
+      "url": "https://-upload.example.org/inbox",
+      "valid": false
+    },
+    {
+      "name": "underscore host",
+      "url": "https://up_load.example.org/inbox",
+      "valid": false
+    },
+    {
+      "name": "ipv6",
+      "url": "https://[2001:db8::1]/inbox",
+      "valid": false
+    },
+    {
+      "name": "decimal ip",
+      "url": "https://3221225994/inbox",
+      "valid": false
+    },
+    {
+      "name": "short ip",
+      "url": "https://192.0.2/inbox",
+      "valid": false
+    },
+    {
+      "name": "octal ip",
+      "url": "https://0300.0.2.10/inbox",
+      "valid": false
+    },
+    {
+      "name": "hex ip",
+      "url": "https://0xc0.0.2.10/inbox",
+      "valid": false
+    },
+    {
+      "name": "ip over 255",
+      "url": "https://192.0.2.256/inbox",
+      "valid": false
+    },
+    {
+      "name": "numeric last label",
+      "url": "https://example.123/inbox",
+      "valid": false
+    },
+    {
+      "name": "port zero",
+      "url": "https://a.example:0/x",
+      "valid": false
+    },
+    {
+      "name": "port leading zero",
+      "url": "https://a.example:0443/x",
+      "valid": false
+    },
+    {
+      "name": "port too big",
+      "url": "https://a.example:65536/x",
+      "valid": false
+    },
+    {
+      "name": "empty port",
+      "url": "https://a.example:/x",
+      "valid": false
+    },
+    {
+      "name": "dot segment",
+      "url": "https://a.example/a/./b",
+      "valid": false
+    },
+    {
+      "name": "dot dot segment",
+      "url": "https://a.example/a/../b",
+      "valid": false
+    },
+    {
+      "name": "empty segment",
+      "url": "https://a.example/a//b",
+      "valid": false
+    },
+    {
+      "name": "space",
+      "url": "https://a.example/a b",
+      "valid": false
+    },
+    {
+      "name": "tab",
+      "url": "https://a.example/a\tb",
+      "valid": false
+    },
+    {
+      "name": "label 64 bytes",
+      "url": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example/x",
+      "valid": false
+    },
+    {
+      "name": "label 63 bytes",
+      "url": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example/x",
+      "valid": true
+    },
+    {
+      "name": "NUL",
+      "url": "https://a.example/a\u0000b",
+      "valid": false
+    },
+    {
+      "name": "DEL",
+      "url": "https://a.example/a\u007fb",
+      "valid": false
+    },
+    {
+      "name": "two ports",
+      "url": "https://a.example:1:2/x",
+      "valid": false
+    },
+    {
+      "name": "2048 bytes",
+      "url": "https://a.example/pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+      "valid": true
+    },
+    {
+      "name": "2049 bytes",
+      "url": "https://a.example/ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+      "valid": false
+    }
+  ]
+}

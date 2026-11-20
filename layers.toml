@@ -51,6 +51,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-hal-idl" = "model"
 "fid-replay" = "engine"
 "fid-bus" = "engine"
+# Network facade (CORE.BUS.POL.EGRESS): socket functions that take fid-bus's NetPermit, which only
+# the bus can issue; engine because it depends on fid-bus.
+"fid-net" = "engine"
 "fid-jobs" = "engine"
 # Project commands on the bus (CORE.PRJ.CONT.HIER): the handlers and registry definitions of
 # the fid-project (model) container rules; engine because they implement fid-bus handlers.
