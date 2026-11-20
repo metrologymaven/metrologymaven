@@ -188,6 +188,8 @@ pub struct Report {
     pub palettes: BTreeMap<String, Summary>,
     /// Whether a baseline was given.
     pub baseline: bool,
+    /// The palettes whose kind and colours are valid, by reference (read by `color-check`).
+    pub colours: BTreeMap<String, Colours>,
     /// Sorted, de-duplicated.
     pub findings: Vec<Finding>,
 }
@@ -335,6 +337,7 @@ pub fn check(root: &Path, baseline: Option<&Path>) -> Result<Report, String> {
     f.sort();
     f.dedup();
     r.findings = f;
+    r.colours = colours;
     Ok(r)
 }
 

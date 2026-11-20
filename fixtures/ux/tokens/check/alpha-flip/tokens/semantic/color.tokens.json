@@ -1,0 +1,147 @@
+{
+  "sem": {
+    "$type": "color",
+    "agent": {
+      "accent": {
+        "$description": "Accent of agent-authored content; always with the agent icon and label (UX.PATTERN). The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.teal.600}"
+      },
+      "surface": {
+        "$description": "Background of agent-authored proposals. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.teal.50}"
+      },
+      "text": {
+        "$description": "Text that labels agent-authored content. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.teal.800}"
+      }
+    },
+    "border": {
+      "overlay": {
+        "$value": "{prim.color.overlay.500}"
+      },
+      "strong": {
+        "$description": "Boundaries of inputs and controls. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.600}"
+      },
+      "subtle": {
+        "$description": "Decorative dividers (no contrast obligation). The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.200}"
+      },
+      "value": {
+        "claimed": {
+          "$description": "Dashed outline around a claimed value. A claimed value never looks measured: in every theme this role uses a hue ramp that no measured-value or brand-tier role uses, stays at least 0.10 in OKLab from every measured, brand-tier and status role, and is always shown with the word 'claimed' (UNC.UEC.CLASS). The value here is the light binding; every theme binds it in tokens/themes/.",
+          "$value": "{prim.color.magenta.600}"
+        }
+      }
+    },
+    "brand": {
+      "accent": {
+        "$description": "Brand accent: primary buttons and selection. Brand tier. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.blue.600}"
+      },
+      "accent-hover": {
+        "$description": "Brand accent, hovered. Brand tier. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.blue.700}"
+      },
+      "on-accent": {
+        "$description": "Text and icons on the brand accent. Brand tier. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.0}"
+      },
+      "subtle": {
+        "$description": "Brand tint for selected rows. Brand tier. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.blue.50}"
+      }
+    },
+    "focus": {
+      "ring": {
+        "$description": "Keyboard focus indicator. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.blue.600}"
+      }
+    },
+    "status": {
+      "conforms": {
+        "$description": "Display state CONFORMS. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown with glyph state.conforms and the text of message icon.state.conforms. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.azure.700}"
+      },
+      "indeterminate": {
+        "$description": "Display state INDETERMINATE. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown with glyph state.indeterminate and the text of message icon.state.indeterminate. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.yellow.900}"
+      },
+      "nonconforms": {
+        "$description": "Display state NONCONFORMS. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown with glyph state.nonconforms and the text of message icon.state.nonconforms. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.red.600}"
+      },
+      "not-decidable": {
+        "$description": "Display state NOT_DECIDABLE. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown with glyph state.not-decidable and the text of message icon.state.not-decidable. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.olive.950}"
+      },
+      "not-evaluated": {
+        "$description": "Display state not evaluated. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown with glyph state.not-evaluated and the text of message icon.state.not-evaluated. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.950}"
+      },
+      "stale": {
+        "$description": "Display state stale. Colour is never the only cue (principle P-NOCOLOR): always shown with a word and a symbol. Locked value of the status palette tokens/status.json (spec node UX.TOKENS.STATUS); shown with glyph state.stale and the text of message icon.state.stale. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.orange.700}"
+      }
+    },
+    "surface": {
+      "base": {
+        "$description": "Application background. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.0}"
+      },
+      "highlight": {
+        "$value": "{prim.color.lemon.300}"
+      },
+      "inverse": {
+        "$description": "Inverse surface (tooltips, toasts). The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.900}"
+      },
+      "raised": {
+        "$description": "Panels and cards above the base. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.50}"
+      },
+      "sunken": {
+        "$description": "Wells, table headers. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.100}"
+      },
+      "value": {
+        "claimed": {
+          "$description": "Background tint behind a claimed value. A claimed value never looks measured: in every theme this role uses a hue ramp that no measured-value or brand-tier role uses, stays at least 0.10 in OKLab from every measured, brand-tier and status role, and is always shown with the word 'claimed' (UNC.UEC.CLASS). The value here is the light binding; every theme binds it in tokens/themes/.",
+          "$value": "{prim.color.magenta.200}"
+        }
+      }
+    },
+    "text": {
+      "inverse": {
+        "$description": "Text on the inverse surface. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.50}"
+      },
+      "link": {
+        "$description": "Link text; links are also underlined. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.blue.700}"
+      },
+      "muted": {
+        "$description": "Hints and placeholders (still meets text contrast). The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.700}"
+      },
+      "primary": {
+        "$description": "Body text and default numbers. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.900}"
+      },
+      "secondary": {
+        "$description": "Labels and secondary text. The value here is the light binding; every theme binds it in tokens/themes/.",
+        "$value": "{prim.color.neutral.800}"
+      },
+      "value": {
+        "claimed": {
+          "$description": "A claimed (declared or specification-derived) value. A claimed value never looks measured: in every theme this role uses a hue ramp that no measured-value or brand-tier role uses, stays at least 0.10 in OKLab from every measured, brand-tier and status role, and is always shown with the word 'claimed' (UNC.UEC.CLASS). The value here is the light binding; every theme binds it in tokens/themes/.",
+          "$value": "{prim.color.magenta.700}"
+        },
+        "measured": {
+          "$description": "A measured value. The value here is the light binding; every theme binds it in tokens/themes/.",
+          "$value": "{prim.color.neutral.900}"
+        }
+      }
+    }
+  }
+}

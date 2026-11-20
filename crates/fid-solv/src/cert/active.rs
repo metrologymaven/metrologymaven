@@ -32,6 +32,24 @@
 //! multipliers, give the same candidate list, and the lowest certifiable basis the
 //! certificate pipeline finds does not depend on the solver's path.
 //!
+//! **Over the cap** (REQ-KRN.SOLV.CERT.AS-007). [`extract`] reports `OverCap` when more than
+//! [`MAX_CANDIDATES`] sets exist. The certificate pipeline uses `propose` instead, which never
+//! does: for a linear problem whose conic problem is an LP in `expected` variables it reduces the
+//! tied pool to **one** basis, the exact Bland-order phase-1 simplex on the multiplier system
+//! `A_pool^T y = -q, y >= 0` with the pool rows in label order (`super::basis`): `expected`
+//! independent rows with nonnegative multipliers, decided in exact integer arithmetic (no such
+//! basis: `NoBasis`, fail closed), followed as a fallback by the first [`MAX_CANDIDATES`]
+//! lexicographic sets; for any other problem it lists only those first sets, generated lazily.
+//! Recomputation and the KKT check still decide.
+//!
+//! The basis does not depend on the solution's multipliers `y`, but it does depend on the conic
+//! data `A` and `q`. When the conic problem is fixed problem data (an LP), it is path
+//! independent like the list. When `q` comes from an iterate (`KRN.SOLV.SEQ` certifies the
+//! linearisation at its final iterate, whose objective is the gradient there), two solver paths
+//! that end at slightly different iterates can choose different bases and so give different
+//! certificates and digests: each is still D0 for its seed, and `KRN.ENV.TAN.ROCK`'s
+//! deduplication merges the equal results.
+//!
 //! **Uncertified.** The result is a [`Proposal`]: its sets are guesses until the
 //! certificate pipeline (`KRN.SOLV.CERT.CT`, `certify`) recomputes the optimum from one of
 //! them and passes the KKT check. Outside this crate the sets are readable only through
@@ -81,6 +99,8 @@ pub struct Proposal {
     pub(crate) scales: (f64, f64),
     pub(crate) tie_broken: bool,
     pub(crate) over_determined: bool,
+    pub(crate) reduced: bool,
+    pub(crate) truncated: bool,
 }
 
 impl Proposal {
@@ -118,6 +138,17 @@ impl Proposal {
     pub fn over_determined(&self) -> bool {
         self.over_determined
     }
+    /// The first set is the exact basis reduction of an over-cap tied pool of a linear problem
+    /// (REQ-KRN.SOLV.CERT.AS-007); the first [`MAX_CANDIDATES`] lexicographic sets follow it as
+    /// the fallback.
+    pub fn reduced(&self) -> bool {
+        self.reduced
+    }
+    /// The enumerated sets are only the first [`MAX_CANDIDATES`] of an over-cap enumeration (the
+    /// certificate pipeline over the cap; REQ-KRN.SOLV.CERT.AS-007).
+    pub fn truncated(&self) -> bool {
+        self.truncated
+    }
 }
 
 /// Extracts the candidate active sets of `solution`, a solution of `problem`.
@@ -144,6 +175,142 @@ pub fn extract(
     expected: usize,
     thresholds: &Thresholds,
 ) -> Result<Proposal, CertError> {
+    let pool = classify(problem, solution, labels, expected, thresholds)?;
+    if !binomial_within_cap(pool.small.len(), expected) {
+        return Err(pool.undetermined(Undetermined::OverCap));
+    }
+    let sets = combinations(&pool.small, expected, usize::MAX);
+    Ok(pool.into_proposal(sets))
+}
+
+/// The proposal the certificate pipeline (`KRN.SOLV.CERT.CT`) uses (REQ-KRN.SOLV.CERT.AS-007).
+/// Within the cap it is [`extract`]'s list. Over the cap:
+///
+/// - a **linear** problem (`linear`, the problem's `is_linear()`) whose conic problem is an LP
+///   (no quadratic term) in exactly `expected` variables gets first the exact Bland-order basis
+///   reduction of the multiplier system `A_pool^T y = -q, y >= 0` over the small-slack rows in
+///   label order (`super::basis::reduce`): `expected` independent rows with nonnegative
+///   multipliers, independent of the solution's multipliers `y` (it depends on the conic data
+///   `A` and `q`; see the module docs). Then, as a fallback for a basis that RECOMP or KKT
+///   refuses, the first [`MAX_CANDIDATES`] sets of the lexicographic order (lazily; the basis is
+///   not repeated). No such basis is `ActiveSetUndetermined { cause: NoBasis }`.
+/// - any other problem gets the first [`MAX_CANDIDATES`] sets of the lexicographic order,
+///   generated lazily (the rest are never formed), and [`Proposal::truncated`] is set.
+///
+/// # Errors
+///
+/// As [`extract`], except that `OverCap` is never returned; `NoBasis` as above.
+pub(crate) fn propose(
+    problem: &ConicProblem,
+    solution: &ConicSolution,
+    labels: &[RowLabel],
+    expected: usize,
+    thresholds: &Thresholds,
+    linear: bool,
+) -> Result<Proposal, CertError> {
+    let pool = classify(problem, solution, labels, expected, thresholds)?;
+    if binomial_within_cap(pool.small.len(), expected) {
+        let sets = combinations(&pool.small, expected, usize::MAX);
+        return Ok(pool.into_proposal(sets));
+    }
+    if linear && problem.p().is_none() && problem.n() == expected {
+        let rows = pool_rows(problem, labels, &pool.small)?;
+        return match super::basis::reduce(&rows, problem.q()) {
+            Some(idx) => {
+                let set: Vec<RowLabel> = idx.iter().filter_map(|&k| pool.small.get(k).copied()).collect();
+                if set.len() != expected {
+                    return Err(pool.undetermined(Undetermined::NoBasis));
+                }
+                // Fallback: the first MAX_CANDIDATES sets of the lexicographic order follow the
+                // basis (it is not repeated), so a basis that RECOMP or KKT refuses does not end
+                // the search.
+                let lex = combinations(&pool.small, expected, MAX_CANDIDATES);
+                let mut p = pool.into_proposal(lex);
+                p.sets.retain(|s| *s != set);
+                p.sets.insert(0, set);
+                p.tie_broken = true;
+                p.reduced = true;
+                p.truncated = true;
+                Ok(p)
+            }
+            None => Err(pool.undetermined(Undetermined::NoBasis)),
+        };
+    }
+    let sets = combinations(&pool.small, expected, MAX_CANDIDATES);
+    let mut p = pool.into_proposal(sets);
+    p.truncated = true;
+    Ok(p)
+}
+
+/// The classified rows of one solution (the checks and the classification of [`extract`]).
+struct Pool {
+    small: Vec<RowLabel>,
+    strongly_active: Vec<RowLabel>,
+    ambiguous: Vec<RowLabel>,
+    thresholds: Thresholds,
+    scales: (f64, f64),
+    expected: usize,
+}
+
+impl Pool {
+    fn undetermined(self, cause: Undetermined) -> CertError {
+        CertError::ActiveSetUndetermined { strongly_active: self.strongly_active, ambiguous: self.ambiguous, cause }
+    }
+
+    fn into_proposal(self, mut sets: Vec<Vec<RowLabel>>) -> Proposal {
+        // Already in order (k-subsets of a sorted pool taken in lexicographic index order);
+        // sorted again so the order never rests on that argument alone.
+        sets.sort_unstable();
+        let tie_broken = self.small.len() > self.expected;
+        let over_determined = self.strongly_active.len() > self.expected;
+        Proposal {
+            sets,
+            strongly_active: self.strongly_active,
+            ambiguous: self.ambiguous,
+            thresholds: self.thresholds,
+            scales: self.scales,
+            tie_broken,
+            over_determined,
+            reduced: false,
+            truncated: false,
+        }
+    }
+}
+
+/// Rows of the conic `A` for the labels `set` (sorted; dense, `n` columns each). One pass over
+/// the labels builds the row -> position map (`O(m log |set|)`), one pass over the nonzeros fills
+/// the rows (`O(nnz)`).
+fn pool_rows(problem: &ConicProblem, labels: &[RowLabel], set: &[RowLabel]) -> Result<Vec<Vec<f64>>, CertError> {
+    let n = problem.n();
+    let position: Vec<Option<usize>> = labels.iter().map(|l| set.binary_search(l).ok()).collect();
+    let a = problem.a();
+    let mut rows = vec![vec![0.0; n]; set.len()];
+    for col in 0..n {
+        let (lo, hi) = match (a.colptr.get(col), a.colptr.get(col + 1)) {
+            (Some(&lo), Some(&hi)) => (lo, hi),
+            _ => return Err(CertError::InvalidInput { field: "a" }),
+        };
+        for k in lo..hi {
+            let (Some(&r), Some(&v)) = (a.rowval.get(k), a.nzval.get(k)) else {
+                return Err(CertError::InvalidInput { field: "a" });
+            };
+            let at = position.get(r).copied().ok_or(CertError::InvalidInput { field: "a" })?;
+            if let Some(slot) = at.and_then(|q| rows.get_mut(q)).and_then(|row| row.get_mut(col)) {
+                *slot = v;
+            }
+        }
+    }
+    Ok(rows)
+}
+
+/// The input checks and the classification of [`extract`]; `TooFewRows` here.
+fn classify(
+    problem: &ConicProblem,
+    solution: &ConicSolution,
+    labels: &[RowLabel],
+    expected: usize,
+    thresholds: &Thresholds,
+) -> Result<Pool, CertError> {
     let th = *thresholds;
     let valid = |t: f64| t.is_finite() && t >= 0.0;
     if !valid(th.slack_rel) || !valid(th.mult_rel) {
@@ -202,31 +369,10 @@ pub fn extract(
     ambiguous.sort_unstable();
     small.sort_unstable();
 
-    let cause = if small.len() < expected {
-        Some(Undetermined::TooFewRows)
-    } else if !binomial_within_cap(small.len(), expected) {
-        Some(Undetermined::OverCap)
-    } else {
-        None
-    };
-    if let Some(cause) = cause {
-        return Err(CertError::ActiveSetUndetermined { strongly_active, ambiguous, cause });
+    if small.len() < expected {
+        return Err(CertError::ActiveSetUndetermined { strongly_active, ambiguous, cause: Undetermined::TooFewRows });
     }
-    let mut sets = combinations(&small, expected);
-    // Already in order (k-subsets of a sorted pool taken in lexicographic index order); sorted
-    // again so the order never rests on that argument alone.
-    sets.sort_unstable();
-    let tie_broken = sets.len() > 1;
-    let over_determined = strongly_active.len() > expected;
-    Ok(Proposal {
-        sets,
-        strongly_active,
-        ambiguous,
-        thresholds: th,
-        scales: (scale_s, scale_y),
-        tie_broken,
-        over_determined,
-    })
+    Ok(Pool { small, strongly_active, ambiguous, thresholds: th, scales: (scale_s, scale_y), expected })
 }
 
 /// Whether `n choose k` (with `k <= n`) is at most [`MAX_CANDIDATES`]. Exact: with
@@ -248,13 +394,17 @@ fn binomial_within_cap(n: usize, k: usize) -> bool {
     true
 }
 
-/// Every `k`-subset of `pool` (sorted), each sorted, taken in lexicographic order of their
-/// pool indices by an iterative generator. `k <= pool.len()`.
-fn combinations(pool: &[RowLabel], k: usize) -> Vec<Vec<RowLabel>> {
+/// The first `limit` `k`-subsets of `pool` (sorted), each sorted, taken in lexicographic order
+/// of their pool indices by an iterative generator (lazily: later subsets are never formed).
+/// `k <= pool.len()`.
+fn combinations(pool: &[RowLabel], k: usize, limit: usize) -> Vec<Vec<RowLabel>> {
     let n = pool.len();
     let mut sets = Vec::new();
     let mut idx: Vec<usize> = (0..k).collect();
     loop {
+        if sets.len() >= limit {
+            return sets;
+        }
         let mut set: Vec<RowLabel> = idx.iter().filter_map(|&i| pool.get(i).copied()).collect();
         set.sort_unstable();
         sets.push(set);
@@ -336,6 +486,7 @@ fn cmp_scaled(v: f64, t: f64, w: f64) -> Result<Ordering, CertError> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -358,12 +509,72 @@ mod tests {
     fn combinations_in_lexicographic_order() {
         let l = |point| RowLabel { point, side: 0 };
         let pool = [l(1), l(3), l(4), l(5)];
-        let got = combinations(&pool, 3);
+        let got = combinations(&pool, 3, usize::MAX);
         let want: Vec<Vec<RowLabel>> =
             vec![vec![l(1), l(3), l(4)], vec![l(1), l(3), l(5)], vec![l(1), l(4), l(5)], vec![l(3), l(4), l(5)]];
         assert_eq!(got, want);
-        assert_eq!(combinations(&pool, 4), vec![pool.to_vec()]);
-        assert_eq!(combinations(&pool, 1).len(), 4);
+        assert_eq!(combinations(&pool, 4, usize::MAX), vec![pool.to_vec()]);
+        assert_eq!(combinations(&pool, 1, usize::MAX).len(), 4);
+        assert_eq!(combinations(&pool, 3, 2), want[..2].to_vec());
+    }
+
+    /// `m` rows `(i, 0)` of the LP `min t` over `p = (a, t)`, row `i`: `a x_i - t <= x_i` with
+    /// `x_i = i`, every slack 0 (all tied); 2 variables. `quadratic` adds a `P` term.
+    fn tied_lp(m: usize, quadratic: bool) -> (ConicProblem, ConicSolution, Vec<RowLabel>) {
+        use crate::conic::{ConicProblemBuilder, ConicResiduals, Csc};
+        let x: Vec<f64> = (0..m).map(|i| i as f64).collect();
+        let colptr = vec![0, m, 2 * m];
+        let rowval: Vec<usize> = (0..m).chain(0..m).collect();
+        let nzval: Vec<f64> = x.iter().copied().chain(core::iter::repeat_n(-1.0, m)).collect();
+        let a = Csc::new(m, 2, colptr, rowval, nzval);
+        let mut b = ConicProblemBuilder::new(vec![0.0, 1.0], a, x.clone(), vec![Cone::Nonneg(m)]);
+        if quadratic {
+            b = b.p(Csc::new(2, 2, vec![0, 1, 1], vec![0], vec![1.0]));
+        }
+        let sol = ConicSolution {
+            x: vec![1.0, 0.0],
+            y: vec![1.0 / m as f64; m],
+            s: vec![0.0; m],
+            objective: 0.0,
+            iterations: 1,
+            residuals: ConicResiduals { primal: 0.0, dual: 0.0, gap_abs: 0.0, gap_rel: 0.0 },
+        };
+        let labels = (0..m as u32).map(|point| RowLabel { point, side: 0 }).collect();
+        (b.build().unwrap(), sol, labels)
+    }
+
+    #[test]
+    fn propose_over_the_cap() {
+        let th = Thresholds { slack_rel: 0.0, mult_rel: 0.0 };
+        let l = |point| RowLabel { point, side: 0 };
+        let (p, sol, labels) = tied_lp(300, false);
+        assert!(matches!(
+            extract(&p, &sol, &labels, 2, &th),
+            Err(CertError::ActiveSetUndetermined { cause: Undetermined::OverCap, .. })
+        ));
+        // Linear LP in 2 variables: one exact basis. Only row 0 (x = 0) carries the multiplier
+        // (y_0 = 1), so the basis is row 0 and the lowest row that completes it (y = 0).
+        // The fallback follows: the first 256 lexicographic sets without the basis repeated.
+        let r = propose(&p, &sol, &labels, 2, &th, true).unwrap();
+        assert!(r.reduced() && r.truncated() && r.tie_broken());
+        let sets = r.uncertified_sets();
+        assert_eq!(sets[0], vec![l(0), l(1)]);
+        assert_eq!(sets.len(), MAX_CANDIDATES);
+        assert_eq!(sets[1], vec![l(0), l(2)]);
+        assert!(sets[1..].iter().all(|s| *s != sets[0]));
+        // Nonlinear: the first 256 sets in lexicographic order, generated lazily.
+        let r = propose(&p, &sol, &labels, 2, &th, false).unwrap();
+        assert!(r.truncated() && !r.reduced());
+        assert_eq!(r.uncertified_sets().len(), MAX_CANDIDATES);
+        assert_eq!(r.uncertified_sets()[0], vec![l(0), l(1)]);
+        assert_eq!(r.uncertified_sets()[255], vec![l(0), l(256)]);
+        // Linear, but not an LP in `expected` variables (or with a quadratic term): capped.
+        assert!(propose(&p, &sol, &labels, 3, &th, true).unwrap().truncated());
+        let (q, sol_q, labels_q) = tied_lp(300, true);
+        assert!(propose(&q, &sol_q, &labels_q, 2, &th, true).unwrap().truncated());
+        // Within the cap propose is extract.
+        let (p, sol, labels) = tied_lp(20, false);
+        assert_eq!(propose(&p, &sol, &labels, 2, &th, true), extract(&p, &sol, &labels, 2, &th));
     }
 
     #[test]
