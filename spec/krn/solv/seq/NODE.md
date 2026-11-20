@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-solv]
 satisfies: [REQ-KRN.SOLV-001, REQ-KRN.SOLV-008, REQ-KRN.SOLV-009]
 covers: []
 depends_on: [KRN.SOLV.CONIC.WRAP, KRN.SOLV.CERT.AS, KRN.SOLV.CERT.CT, KRN.SOLV.MSTART, KRN.NUM.RED, KRN.NUM.FN, KRN.NUM.ERR]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # KRN.SOLV.SEQ: Sequential linearisation driver
@@ -95,6 +96,16 @@ Minimum-zone, maximum-inscribed and tangential problems for curved features are 
 - The active-set stability count and step tolerance may need to be per quantity kind (REP-1 table in the concept doc) [unverified]. **Applied as a leaf (2026-11-17):** both are `SeqConfig` fields set by the caller (REQ-008), with defaults until REP-1 is adopted in the constitution.
 - `GDT.ZONE.POSE.LIN` was written against the open `LinearisableProblem` interface; it must provide `scales` and label its rows as `ActiveSetProblem` labels.
 - The `history` diagnostics are useful for debugging but are not values of record; callers must not journal them as results.
+- **Applied at build (KRN.SOLV.SEQ):**
+  - *Null step.* A step whose bound is inactive and whose predicted decrease `f(p) - m(dp)` is at most `decrease_tol_rel * data_scale` (new `SeqConfig` field, default `1e-9` [unverified]) is not taken: the point and radius stay and the step norm is 0. The conic solver's tolerances are `1e-10`, so the IPM step at a converged point is noise of that size and could never meet the `1e-12` step tolerance of REQ-008 on its own; without this rule the radius would oscillate at the noise floor. REQ-002 is unchanged: success still needs the active set stable for `stable_iters` iterations and a step norm below `step_tol_rel * (1 + max_j |p_j| / scale_j)`.
+  - *Predicted decrease.* `rho = (f(p) - f(p+)) / (f(p) - (m0 + q'dp))`, with `f` = `objective(p)` and `m0` the model at zero step. For zone problems `objective` is the width with the radius parameters eliminated (defined at slightly infeasible radii), which keeps the predicted decrease nonnegative. Undefined `rho` (predicted `<= 0`) shrinks the radius. The step bound is active when some `|dp_j| >= 0.999 * radius * scale_j`.
+  - *`on_trust_boundary`.* Set when the final point lies within `boundary_tol_rel * scale_j` (new field, default `1e-6` [unverified]) of a finite end of the outer region. Certification is still run on the unconstrained problem (fail closed). If the converged point is a KKT point of it, the result is returned with the flag. Otherwise the run is a `Cert` error that carries `on_trust_boundary = true` and no value. AC-4 tests both: a box edge through the true MIC centre (certified, flag set) and a box that excludes it (error, flag set).
+  - *Signatures.* `LinearisableProblem` callbacks return `Result<_, CertError>`, like `ActiveSetProblem`. `outer_region` defaults to `None`. `SeqConfig` also holds `kind: CertKind` for `certify`. `SolverError` is a struct `{ cause: SeqCause, active_set, radius, iterations, on_trust_boundary }`. `SeqCause` has the five causes of the Design plus `InvalidInput`, `Callback` and `Numeric`, and a stable `code()`. `solve_multi(problem, &StartSpec, cfg)` returns mstart's `MultiStartOutcome<SeqOutcome, SolverError>`. The starts are compared by their **certified** value and parameters, so `local_optimum_only` never depends on an iterate.
+  - *Classification.* The per-iteration active set is the `strongly_active` list of `cert::active::extract` on the stripped subproblem, with `SeqConfig::thresholds`.
+- **For routing to other leaves (not changed here):**
+  - `KRN.SOLV.CERT.AS`: `extract` accepts only nonnegative-orthant rows, so an SOCP subproblem can be solved but not classified or certified. SEQ fails it closed with `Cert(InvalidInput { field: "cones" })`. SOCP extraction needs a rule there before `KRN.ENV` uses SOCP subproblems.
+  - `KRN.SOLV.CERT.RECOMP`: the Gauss-Newton convergence test (last step `<= 4 u ||p||`) sits at the rounding-noise floor of a plain `f64` residual. An uncentred cylinder with condition near 10 failed it in 2 of 20 cases. The SEQ test problems evaluate their residuals in double-double, which removes the failures. `KRN.MZ` cylinder and cone problems will hit the same limit, so the test should allow for `cond * u`, or the leaf should state the residual accuracy it needs.
+  - The cylinder references in `fixtures/solv/seq/ref-v1` are proven strict local minima (6 independent active rows, multipliers `>= 1e-3`) with no rival strict local minimum within one contact exchange. They are not proven global. The circle references are global (exact exhaustive search).
 
 ## Children
 
