@@ -25,6 +25,7 @@ python fixtures/core/sto/set/make_fixtures.py --check
 python fixtures/core/sto/sql/schema/make_fixture.py --check
 python fixtures/dsse/make_fixtures.py --check
 python fixtures/fetch/make_fixtures.py --check
+python fixtures/fit/make_lin_fixtures.py --check
 python fixtures/fit/make_trait_fixtures.py --check
 python fixtures/flow/fixes/make_fixtures.py --check
 python fixtures/flow/journey/make_fixtures.py --check
@@ -40,6 +41,7 @@ python fixtures/gdt/zone/make_shapes_fixtures.py --check
 python fixtures/geo/cad/topo/make_adj_fixtures.py --check
 python fixtures/geo/cad/topo/make_pcurve_fixtures.py --check
 python fixtures/geo/cad/topo/make_topo_fixtures.py --check
+python fixtures/geo/cad/topo/make_trim_fixtures.py --check
 python fixtures/geo/index/make_bvh_fixtures.py --check
 python fixtures/geo/nurbs/analytic/make_analytic_fixtures.py --check
 python fixtures/geo/nurbs/eval/make_eval_fixtures.py --check

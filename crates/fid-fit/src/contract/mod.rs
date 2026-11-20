@@ -41,7 +41,9 @@ pub use degen::{
 pub use encode::encode;
 pub use error::{FitError, NotConvergedReason};
 pub use normalise::{Centred, Normalisation};
-pub use params::{Constraint, FitParams, Thresholds, Weights, DEFAULT_MIN_COVERAGE, DEFAULT_RANK_TOL, TWO_PI};
+pub use params::{
+    Constraint, FitParams, Thresholds, Weights, DEFAULT_EIG_RATIO_MAX, DEFAULT_MIN_COVERAGE, DEFAULT_RANK_TOL, TWO_PI,
+};
 pub use points::{PointsView, MAX_POINTS, UNIT_NORMAL_TOL};
 pub use primitive::{
     algorithm_id, foot_of_perpendicular, normalize_direction, normalize_direction2, unit_direction, FittedFeature,

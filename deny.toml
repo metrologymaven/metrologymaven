@@ -6,6 +6,21 @@ all-features = true
 [advisories]
 version = 2
 yanked = "deny"
+# Scoped, dated exceptions for the egui UI spike (decision D-044). One entry per advisory,
+# each justified on its own; never widen an entry to cover another crate. A new advisory
+# (for example through wgpu for VIZ.RENDER.FRAME.GRAPH) needs its own entry and its own
+# justification. `cargo test -p fid-xtask --test deny_scope` fails if an advisory crate is
+# reached from any workspace crate other than fid-spike-ui, if an entry's expiry has passed,
+# if egui >= 0.34 is in the graph, if the spike reaches one without going through epaint
+# (ttf-parser) or accesskit_unix (zbus crates), if an ignore here is not listed in
+# fid_xtask::deny_scope::EXCEPTIONS, or if [advisories] or [graph] gain any other key
+# (unmaintained/unsound scope, exclude, exclude-dev, targets) or relax yanked/all-features.
+ignore = [
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser 0.25: only via fid-spike-ui -> egui 0.33 (epaint -> ab_glyph -> owned_ttf_parser -> ttf-parser), dev-dependencies of the tree10k spike example; unmaintained, not a vulnerability; fixed upstream in egui 0.34, which needs Rust 1.92. D-044: expires 2027-03-01 or the egui >= 0.34 upgrade, whichever comes first." },
+    { id = "RUSTSEC-2026-0370", reason = "zvariant 5: only via fid-spike-ui -> egui-winit 0.33 -> accesskit_winit -> accesskit_unix (Linux screen-reader support, AT-SPI over zbus 5), dev-dependencies of the tree10k spike example; unmaintained, not a vulnerability (merged into zbus 6). D-044: expires 2027-03-01 or the egui >= 0.34 upgrade, whichever comes first." },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names 4: only via fid-spike-ui -> egui-winit 0.33 -> accesskit_winit -> accesskit_unix (Linux screen-reader support, AT-SPI over zbus 5), dev-dependencies of the tree10k spike example; unmaintained, not a vulnerability (merged into zbus 6). D-044: expires 2027-03-01 or the egui >= 0.34 upgrade, whichever comes first." },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive 5: only via fid-spike-ui -> egui-winit 0.33 -> accesskit_winit -> accesskit_unix (Linux screen-reader support, AT-SPI over zbus 5), dev-dependencies of the tree10k spike example; unmaintained, not a vulnerability (merged into zbus 6). D-044: expires 2027-03-01 or the egui >= 0.34 upgrade, whichever comes first." },
+]
 
 [licenses]
 version = 2

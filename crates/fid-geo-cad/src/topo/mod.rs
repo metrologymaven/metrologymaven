@@ -7,6 +7,8 @@
 //! - [`adj`]: [`Adjacency`], the derived adjacency index and its queries (`GEO.CAD.TOPO.ADJ`).
 //! - [`pcurve`]: [`derive_pcurves`], a trimming curve for every coedge and a parameter chart
 //!   for every face (`GEO.CAD.TOPO.PCURVE`).
+//! - [`trim`]: [`TrimIndex`] and [`classify_uv`], inside, outside or on the boundary of a
+//!   trimmed face (`GEO.CAD.TOPO.TRIM`).
 //!
 //! The pinned encoding and check order are documented in `spec/geo/cad/topo/model/NODE.md`
 //! (Design) and implemented independently by `fixtures/geo/cad/topo/make_topo_fixtures.py`.
@@ -16,6 +18,7 @@ pub mod encode;
 pub mod geom;
 pub mod model;
 pub mod pcurve;
+pub mod trim;
 mod uuid;
 
 pub use adj::{AdjError, Adjacency};
@@ -30,3 +33,4 @@ pub use pcurve::{
     derive_coedge, derive_pcurves, pcurve_disagreement, DisagreementError, FaceChart, FailReason, InversionFault,
     PcurveError, Pcurves, TrimCurve, DEFAULT_TOL_M,
 };
+pub use trim::{classify_uv, TrimClass, TrimError, TrimIndex, TrimSeg, Undecidable};
