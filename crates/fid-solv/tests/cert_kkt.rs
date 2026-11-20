@@ -53,6 +53,7 @@ struct LinZone {
     grad_enc: bool,
     degenerate: bool,
     wide_grad: bool,
+    zero_grad_enc: bool,
     scale: Option<f64>,
 }
 
@@ -71,6 +72,7 @@ impl LinZone {
             grad_enc: true,
             degenerate: false,
             wide_grad: false,
+            zero_grad_enc: false,
             scale: None,
         }
     }
@@ -184,6 +186,9 @@ impl ActiveSetProblem for LinZone {
     ) -> Result<Option<Vec<Interval>>, CertError> {
         if !self.enclosures || !self.grad_enc {
             return Ok(None);
+        }
+        if self.zero_grad_enc {
+            return Ok(Some(vec![ip(0.0); set.len() * self.n_params()]));
         }
         let w = if self.wide_grad { 1e3 } else { 0.0 };
         Ok(Some(self.grad_rows(set).into_iter().flatten().map(|v| Interval::new(v - w, v + w).unwrap()).collect()))
@@ -781,6 +786,17 @@ fn zero_dual_thresholds_need_proven_signs() {
     let r = check(&prob, &recomputed(&prob, &c.set), &KktTolerances { tol_d: 0.0, ..c.tol }).unwrap();
     assert!(r.dual_thresholds().iter().all(|&t| t == 0.0));
     assert_eq!(r.dual().verdict(), Verdict::Satisfied);
+}
+
+/// A row-gradient enclosure of zero norm (contradicting the full-rank float gradients) is a
+/// distinct input error, not a zero threshold.
+#[test]
+fn zero_norm_gradient_enclosure_is_an_error() {
+    let c = first("straightness");
+    let mut prob = LinZone::new(1, &c.points);
+    let rec = recomputed(&prob, &c.set);
+    prob.zero_grad_enc = true;
+    assert_eq!(check(&prob, &rec, &c.tol), Err(CertError::InvalidInput { field: "constraint_gradient_zero" }));
 }
 
 fn put(h: &mut Sha256Hasher, c: Condition) {

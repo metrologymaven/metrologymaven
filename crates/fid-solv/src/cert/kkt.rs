@@ -56,13 +56,20 @@
 //!    `grad f`. Both norms are bounded over `X` from the enclosures (the lower bound of the
 //!    objective gradient norm, the upper bound of the constraint gradient norm), and the
 //!    product and quotient are rounded down, so the threshold is never larger than the exact
-//!    one. If the lower bound of `||grad f||` is 0 (or the upper bound of `||grad g_i||` is not
-//!    positive), `thr_i = 0`: the row passes only if `lambda*_i >= 0` is proven (fail closed
-//!    toward violated or undecidable). Row `i` is satisfied when `lo(Lambda_i) >= -thr_i`,
+//!    one. If the lower bound of `||grad f||` is 0, `thr_i = 0`: the row passes only if
+//!    `lambda*_i >= 0` is proven (fail closed toward violated or undecidable). A row whose
+//!    gradient enclosure is identically zero (every entry `[0, 0]`, contradicting the full-rank
+//!    float gradients) is `InvalidInput { field: "constraint_gradient_zero" }`; a threshold that
+//!    overflows is `InvalidInput { field: "dual_threshold" }`. Because each `thr_i` is rounded
+//!    down, a dual verdict of Violated is relative to the recorded threshold: the rounding can
+//!    only produce false negatives (a row judged against a slightly smaller threshold), never a
+//!    false pass. Row `i` is satisfied when `lo(Lambda_i) >= -thr_i`,
 //!    violated when `hi(Lambda_i) < -thr_i`, undecidable otherwise; the condition is violated
 //!    if any row is, satisfied if every row is, undecidable otherwise. Its recorded enclosure
-//!    is that of `max(0, -min_i lambda*_i)` and its recorded threshold the smallest `thr_i`;
-//!    every `thr_i` is in [`KktReport::dual_thresholds`]. (A threshold relative to
+//!    is that of `max(0, -min_i lambda*_i)` and its recorded threshold only the smallest
+//!    `thr_i`, so a satisfied dual condition may have `hi` above that threshold: verifiers must
+//!    recheck row by row against [`KktReport::dual_thresholds`] (which `KRN.SOLV.CERT.CT` puts
+//!    into the certificate). (A threshold relative to
 //!    `max |lambda|` would let a large multiplier excuse a materially negative one.)
 //! 8. **Stationarity**: `|| G(p*)^T lambda + grad f(p*) ||_2` at the reported **float**
 //!    multipliers `lambda` (not at `lambda*`), enclosed componentwise and then normed with
@@ -146,7 +153,11 @@ impl KktTolerances {
     }
 }
 
-/// The outcome of one condition.
+/// The outcome of one condition. For primal feasibility, stationarity and complementarity it
+/// compares the enclosure with the single recorded threshold. Dual feasibility is decided row
+/// by row against [`KktReport::dual_thresholds`]; its `Satisfied` does not imply `hi <=
+/// threshold` for the recorded (smallest) threshold, and its `Violated` is relative to the
+/// rounded-down per-row thresholds (false negatives only).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verdict {
     /// The exact residual is certainly at most the threshold.
@@ -188,7 +199,9 @@ pub enum KktStatus {
 
 /// One condition: a proven enclosure `[lo, hi]` of its exact residual, the recorded absolute
 /// threshold and the verdict. `hi` is `+inf` when no bound exists (degenerate gradients or
-/// unproven multipliers).
+/// unproven multipliers). For the dual condition, `threshold` is only the smallest per-row
+/// threshold and the verdict is decided row by row: verifiers must use
+/// [`KktReport::dual_thresholds`], not `hi <= threshold`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Condition {
     lo: f64,
@@ -219,7 +232,8 @@ impl Condition {
     pub fn hi(&self) -> f64 {
         self.hi
     }
-    /// The absolute threshold (`tol * scale`).
+    /// The absolute threshold (`tol * scale`; for the dual condition the smallest per-row
+    /// threshold, see [`KktReport::dual_thresholds`]).
     pub fn threshold(&self) -> f64 {
         self.threshold
     }
@@ -420,9 +434,13 @@ pub fn check<P: ActiveSetProblem + ?Sized>(
         for i in 0..n {
             let row = ge.get(i * n..(i + 1) * n).ok_or(not_proven(BoundFailure::NoEnclosure))?;
             let (_, ghi) = norm_bounds(row)?;
-            let t = if num > 0.0 && ghi > 0.0 { down(num / ghi) } else { 0.0 };
+            // The upper norm bound is rounded up and never 0, so test the entries themselves.
+            if row.iter().all(|e| e.mag() == 0.0) {
+                return Err(CertError::InvalidInput { field: "constraint_gradient_zero" });
+            }
+            let t = if num > 0.0 { down(num / ghi) } else { 0.0 };
             if !t.is_finite() {
-                return Err(CertError::InvalidInput { field: "tolerances" });
+                return Err(CertError::InvalidInput { field: "dual_threshold" });
             }
             thr_d.push(t);
         }
