@@ -1972,6 +1972,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-xart"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-kci",
+]
+
+[[package]]
 name = "fid-xml"
 version = "0.0.1"
 dependencies = [

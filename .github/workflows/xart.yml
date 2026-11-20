@@ -1,0 +1,219 @@
+name: xart
+# Cross-host and cross-artifact bit-identity gate (spec node KRN.MAN.XART, AC-1 to AC-4).
+# One WASM module is built and sealed once; every host in crates/fid-xart/xart-matrix.toml runs
+# the call set through it under the pinned wasmtime, and through two native artifacts (the
+# native shim and the deliberately divergent test artifact). The gate job compares the tables.
+# Runs only when the kernel, the artifact tooling or the fixtures change, to keep CI light.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/xart.yml"
+      - "Cargo.lock"
+      - "crates/fid-canon/**"
+      - "crates/fid-kci/**"
+      - "crates/fid-kernel-wasm/**"
+      - "crates/fid-num/**"
+      - "crates/fid-types/**"
+      - "crates/fid-wasm-check/**"
+      - "crates/fid-xart/**"
+      - "fixtures/man/xart-calls-v1/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/xart.yml"
+      - "Cargo.lock"
+      - "crates/fid-canon/**"
+      - "crates/fid-kci/**"
+      - "crates/fid-kernel-wasm/**"
+      - "crates/fid-num/**"
+      - "crates/fid-types/**"
+      - "crates/fid-wasm-check/**"
+      - "crates/fid-xart/**"
+      - "fixtures/man/xart-calls-v1/**"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  module:
+    # The stand-in test algorithms are compiled only with the test-algorithms feature; the
+    # reference build registers none until fid-kernel exists (KRN.MAN.WASM).
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+          targets: wasm32-wasip1
+      - name: Build and seal the WASM test module
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build -q --release --target wasm32-wasip1 -p fid-kernel-wasm --features test-algorithms
+          cargo build -q -p fid-wasm-check
+          mkdir -p "$RUNNER_TEMP/module"
+          target/debug/fid-wasm-check seal target/wasm32-wasip1/release/fid-kernel-wasm.wasm "$RUNNER_TEMP/module/fid-kernel-wasm-test.wasm"
+          sha256sum "$RUNNER_TEMP/module/fid-kernel-wasm-test.wasm"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xart-wasm-module
+          path: ${{ runner.temp }}/module/fid-kernel-wasm-test.wasm
+          if-no-files-found: error
+  host:
+    needs: module
+    strategy:
+      fail-fast: false
+      # Keep in step with crates/fid-xart/xart-matrix.toml; a host missing here is `not_run`.
+      # Archive digests are the ones GitHub records for the wasmtime v49.0.6 release assets.
+      matrix:
+        include:
+          - host: linux-arm64
+            runner: ubuntu-24.04-arm
+            optional: false
+            wasmtime: aarch64-linux
+            archive: tar.xz
+            sha256: a84a45f7be136988c6aee53d9a983d0f6cf3ecb518ec190e03501afb24017c34
+          - host: linux-x86_64
+            runner: ubuntu-latest
+            optional: false
+            wasmtime: x86_64-linux
+            archive: tar.xz
+            sha256: 15625b129e54534793dc77965d6912a5307db8e8e90ee114f52ef62ce6e4f918
+          - host: macos-arm64
+            runner: macos-latest
+            optional: false
+            wasmtime: aarch64-macos
+            archive: tar.xz
+            sha256: d119614aef5d5628d96ed97b918b48ce460fda5fe1453b58c18bf6bbca2d1909
+          - host: macos-x86_64
+            runner: macos-15-intel
+            optional: true
+            wasmtime: x86_64-macos
+            archive: tar.xz
+            sha256: 47a19dc9b1f48ef6b262f64863f4b0a965d2b56dd30cc62051e52ffdd3ffe1c6
+          - host: windows-arm64
+            runner: windows-11-arm
+            optional: true
+            wasmtime: aarch64-windows
+            archive: zip
+            sha256: 3276b4b009e766d7dd748a7447a4f280702ef4ca7a0b51d552815d9cfe11ec3d
+          - host: windows-x86_64
+            runner: windows-latest
+            optional: false
+            wasmtime: x86_64-windows
+            archive: zip
+            sha256: ac2c5bd77d7ea4e09ac3490259326456e900fa72c2aa2e40d21ba176d5ab81b6
+    runs-on: ${{ matrix.runner }}
+    # An optional host that fails leaves no table; the gate lists it as not_run (REQ-005).
+    continue-on-error: ${{ matrix.optional }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - name: Install wasmtime v49.0.6 (archive SHA-256 pinned and verified before use)
+        shell: bash
+        env:
+          ASSET: wasmtime-v49.0.6-${{ matrix.wasmtime }}.${{ matrix.archive }}
+          SHA256: ${{ matrix.sha256 }}
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/wasmtime"
+          mkdir -p "$d"
+          curl --proto '=https' --tlsv1.2 -fsSL --retry 5 -o "$d/$ASSET" \
+            "https://github.com/bytecodealliance/wasmtime/releases/download/v49.0.6/$ASSET"
+          if command -v sha256sum > /dev/null; then sum="sha256sum"; else sum="shasum -a 256"; fi
+          got=$(cd "$d" && $sum "$ASSET" | cut -d' ' -f1)
+          if [ "$got" != "$SHA256" ]; then echo "::error::$ASSET has SHA-256 $got"; exit 1; fi
+          case "$ASSET" in
+            *.zip) unzip -q "$d/$ASSET" -d "$d" ;;
+            *) tar -xJf "$d/$ASSET" -C "$d" ;;
+          esac
+          echo "$d/wasmtime-v49.0.6-${{ matrix.wasmtime }}" >> "$GITHUB_PATH"
+      - run: wasmtime --version
+      - uses: actions/download-artifact@v4
+        with:
+          name: xart-wasm-module
+          path: ${{ runner.temp }}/module
+      - name: Build fid-xart, the pinned runner and the native artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build -q --release -p fid-xart -p fid-wasm-check
+          cargo build -q --release -p fid-kernel-wasm --features test-algorithms
+      - name: Digest tables (WASM under the pinned runner, native shim, divergent test artifact)
+        shell: bash
+        env:
+          HOST: ${{ matrix.host }}
+        run: |
+          set -euo pipefail
+          x=""; if [ "$RUNNER_OS" = Windows ]; then x=".exe"; fi
+          b=target/release
+          c=crates/fid-kernel-wasm
+          m="$RUNNER_TEMP/module/fid-kernel-wasm-test.wasm"
+          out="$RUNNER_TEMP/tables"
+          mkdir -p "$out"
+          run() { "$b/fid-xart$x" run --calls fixtures/man/xart-calls-v1/calls.txt --host "$HOST" "$@"; }
+          run --kind wasm --artifact kernel-wasm-test --artifact-file "$m" --out "$out/wasm-$HOST.json" \
+            -- "$b/fid-wasm-check$x" run $c/wasm-runtime.toml $c/wasm-imports.allow "$m"
+          run --kind native --artifact native-shim --artifact-file "$b/fid-kernel-wasm$x" \
+            --out "$out/native-$HOST-shim.json" -- "$b/fid-kernel-wasm$x"
+          run --kind native --artifact native-reversed --artifact-file "$b/xart-test-artifact-reversed$x" \
+            --out "$out/native-$HOST-reversed.json" -- "$b/xart-test-artifact-reversed$x"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xart-table-${{ matrix.host }}
+          path: ${{ runner.temp }}/tables/*.json
+          if-no-files-found: error
+  gate:
+    needs: host
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: xart-table-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/tables
+      - name: Compare the tables (AC-1 to AC-4)
+        # The Python-derived reference table stands in as the "previous release", so the patch
+        # gate also checks every host's WASM digests against the independent oracle.
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build -q -p fid-xart
+          ls -l "$RUNNER_TEMP/tables"
+          for r in 1 2; do
+            target/debug/fid-xart compare --matrix crates/fid-xart/xart-matrix.toml --tables "$RUNNER_TEMP/tables" \
+              --release patch --previous fixtures/man/xart-calls-v1/reference-table.json --out "$RUNNER_TEMP/report-$r.json"
+          done
+          cmp "$RUNNER_TEMP/report-1.json" "$RUNNER_TEMP/report-2.json"
+          python3 - "$RUNNER_TEMP/report-1.json" <<'EOF'
+          import json, sys
+          r = json.load(open(sys.argv[1]))
+          print(json.dumps(r, indent=1))
+          assert r["gate"] == "pass", r["failures"]
+          # AC-2: the divergent artifact is measured on every host that ran, and does not gate.
+          rev = [n for n in r["native"] if n["artifact"] == "native-reversed"]
+          assert rev, "no divergent native table"
+          for n in rev:
+              echo = {a["algorithm"]: a for a in n["algorithms"]}["test.echo.identity@1.0.0"]
+              assert (echo["calls"], echo["matches"]) == ("8", "5"), n
+          EOF
+          mkdir -p "$RUNNER_TEMP/report"
+          cp "$RUNNER_TEMP/report-1.json" "$RUNNER_TEMP/report/xart-report.json"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: xart-report
+          path: ${{ runner.temp }}/report/xart-report.json
+          if-no-files-found: ignore

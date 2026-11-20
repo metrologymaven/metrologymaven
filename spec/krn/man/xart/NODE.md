@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-xart]
 satisfies: [REQ-KRN.MAN-006, REQ-KRN.MAN-007, REQ-KRN.MAN-010]
 covers: []
 depends_on: [KRN.MAN.WASM, KRN.MAN.KCI]
