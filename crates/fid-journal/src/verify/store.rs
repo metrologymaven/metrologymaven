@@ -39,7 +39,6 @@ use super::{
     MAX_PAYLOAD_BYTES, MAX_SCAN,
 };
 use crate::append::Journal;
-use crate::entry::parse_digest;
 use fid_canon::{CValue, Digest};
 use fid_registry::{CommandDef, DefError};
 use fid_store::{Store, TxnError};
