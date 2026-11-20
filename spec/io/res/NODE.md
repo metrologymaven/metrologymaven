@@ -15,7 +15,7 @@ depends_on: [IO.REG, IO.QIF, IO.DMIS]
 cli: [fid import results*, fid export results*]
 mcp: [import_results*, export_results*]
 journal: [import.results*, export.results*]
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # IO.RES: Results and SPC formats, transcription records
@@ -55,7 +55,7 @@ Moves characteristic results in and out. Inbound, it turns third-party results (
 - **REQ-IO.RES-010** The system shall export results as AQDEF DFQ built from publicly documented K-fields, and every such export and its documentation shall be labelled as not Q-DAS certified.
 - **REQ-IO.RES-011** The system shall export results in a PiWeb-importable form [unverified: whether a public format specification exists; may become plugin-only].
 - **REQ-IO.RES-012** When a report file export is requested, the system shall write the report produced by RPT to an approved export root and shall not itself lay out report content.
-- **REQ-IO.RES-013** Exported results shall carry each ResultRecord's `evaluation_basis`, uncertainty class and decision rule wherever the target format has a field or extension for them.
+- **REQ-IO.RES-013** Exported results shall carry each ResultRecord's `evaluation_basis`, uncertainty class, decision rule and `interpretation` label (D-045) wherever the target format has a field or extension for them.
 
 ## Interfaces
 
@@ -68,6 +68,7 @@ TRANS (transcription record model and source mapping), QIFR (QIF Results and Sta
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** REQ-IO.RES-013 now includes the `interpretation` label. Still to add in the export children (`IO.RES.QIFR`, `IO.RES.CSV`, `IO.RES.AQDEF`, `IO.RES.PIWEB`, `IO.RES.REPORT`): write the `interpretation_rules` list where the format allows, and refuse to export a provisional record (`GDT.CHAR.INTERP`) to a format that can carry neither the label nor an extension for it, instead of writing it unlabelled.
 - GOM.EXP.03 (export reports as PDF) is in IO's covers, but RPT owns PDF output. This node covers it only as the export envelope (REQ-IO.RES-012). If maintainers prefer, the seed could be moved to RPT, which would need a change to IO's `covers:` in the parent.
 - AQDEF is owned by a competitor; certification terms and fees are [unverified]. VDA QDX as a neutral alternative is not in IO's scope yet.
 - Where the ResultRecord type itself lives (CORE data model or GDT) is not settled in the parents; this node only consumes it.

@@ -9,13 +9,13 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
-satisfies: [REQ-GDT-001, REQ-GDT-007]
+satisfies: [REQ-GDT-001, REQ-GDT-007, REQ-GDT-009]
 covers: [GOM.GDT.17, PCD.DIM.02, PCD.DIM.05, PW.GDT.08]
 depends_on: [CORE, IO, UNC.UEC, UNC.DEC]
 cli: [fid gdt *-characteristic, fid gdt *-defaults-profile, fid gdt *-result]
 mcp: [gdt_*_characteristic, gdt_*_defaults_profile, gdt_*_result]
 journal: [gdt.*_characteristic, gdt.*_defaults_profile]
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # GDT.CHAR: Characteristic model, dialects and result records
@@ -55,6 +55,9 @@ Owns the data that every other GDT child reads and writes: the characteristic (a
 - **REQ-GDT.CHAR-007** The ResultRecord decision field shall be filled only from a decision returned by a UNC decision rule; if no rule is bound or UNC returns none, then the decision outcome shall be `NOT_DECIDABLE` with a reason code, and GDT shall never compute a conformance outcome itself.
 - **REQ-GDT.CHAR-008** The ResultRecord shall record `evaluation_basis` (`POINTS`, `FEATURES`, `RESULTS_ONLY` or `DIRECT_READING`) as declared by the evaluating child and shall never upgrade it.
 - **REQ-GDT.CHAR-009** A characteristic's identity (QPId where QIF provides a slot, otherwise the `fx:qpid` extension) shall remain unchanged across edits, re-evaluation and re-export.
+- **REQ-GDT.CHAR-010** Every ResultRecord shall carry an `interpretation` label (`provisional` or `signed_off`) and the list of every interpretation rule the evaluation used (the defaults profile and each DMT row), each with its ID, version, content digest and status, plus the digest of the status register consulted (D-045).
+- **REQ-GDT.CHAR-011** If any interpretation rule an evaluation used has status `draft`, then the builder shall refuse the record with `rule_not_admitted` naming the rule, and no value shall be emitted.
+- **REQ-GDT.CHAR-012** When asked to compare two defaults profiles over the same characteristics and data, the system shall evaluate each characteristic under both and report, per characteristic, every rule whose choice differs between the profiles and the value difference attributed to each such rule (D-045 interpretation profiles).
 
 ## Interfaces
 
@@ -67,6 +70,7 @@ MODEL (QIF characteristic + FCF types), SPEC (governing spec and defaults profil
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** REQ-GDT.CHAR-010 and -011 add the `interpretation` block to every ResultRecord, owned by the new leaf `GDT.CHAR.INTERP`, which extends the builder of `GDT.CHAR.RECORD` without changing its existing requirements; REQ-GDT.CHAR-012 adds profile comparison (`GDT.CHAR.PDIFF`).
 - Should a tenant default dialect be allowed at all, or must every plan pick explicitly? The concept docs allow a tenant default shown on every report; confirm with the steering group.
 - Who may publish a defaults profile (any contributor, or only reviewers of the DMT)? Linked to the DMT authorship question on `GDT`.
 
@@ -87,3 +91,5 @@ Alternatives considered:
 | GDT.CHAR.SPEC | Governing spec, dialect selection and refusal (leaf) | 001 002 003 | GOM.GDT.17, PCD.DIM.05, PW.GDT.08 |
 | GDT.CHAR.DPROF | Defaults profiles: immutable versioned objects (leaf) | 004 | none |
 | GDT.CHAR.RECORD | ResultRecord assembly and decision binding (leaf) | 006 007 008 | none |
+| GDT.CHAR.INTERP | Interpretation block and provisional label in results (leaf) | 010 011 | none |
+| GDT.CHAR.PDIFF | One data set under two profiles: per-rule difference (leaf) | 012 | none |

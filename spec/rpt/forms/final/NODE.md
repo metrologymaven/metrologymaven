@@ -15,7 +15,7 @@ depends_on: [RPT.FORMS.ROWS, RPT.FORMS.PPAP, CORE.BUS, CORE.JRN, CORE.STO]
 cli: [fid report check-fai, fid report finalize-fai, fid report check-ppap, fid report finalize-ppap, fid report adopt-fai, fid report adopt-ppap, fid report list-final-fai]
 mcp: [report_check_fai, report_check_ppap, report_adopt_fai, report_adopt_ppap, report_list_final_fai]
 journal: [report.finalize_fai@1, report.finalize_ppap@1, report.adopt_fai@1, report.adopt_ppap@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # RPT.FORMS.FINAL: Form completeness check and finalisation
@@ -56,6 +56,7 @@ CHECK (completeness rules), FREEZE (W3 finalisation and revisions).
 
 ## Open questions
 
+- **Revise for D-045 (accepted 2026-11-19):** a record whose `interpretation` is `provisional` (`GDT.CHAR.INTERP`) may be released only with the label `interpretation: provisional` visible on every value it supplies; the release check shall refuse a released artifact whose rendering of such a record lacks the `ProvisionalInterpretation` label (`RPT.MODEL.FMT`).
 - **Revise for D-036/D-037 (accepted 2026-11-17):** finalisation is gate H2 (batched release-and-adoption queue, AGENT.GATEPREP).
 - Is a `NONCONFORMS` row a blocker for finalisation, or is a failed FAI still a valid final record? Assumed valid: an FAI may document a failure, but every row must have a result.
 

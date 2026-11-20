@@ -11,14 +11,14 @@ owners: []
 claimed_by:
 satisfies: [REQ-RPT.MODEL-005, REQ-RPT.MODEL-006, REQ-RPT.MODEL-007, REQ-RPT.MODEL-008, REQ-RPT.MODEL-009]
 covers: []
-depends_on: [KRN.NUM.FMT.REG, KRN.NUM.FMT.LEN, KRN.NUM.FMT.ANG, KRN.NUM.KDEC, UNC.DEC.TYPE, UNC.UEC.CLASS, IO.RES.TRANS.MODEL, GDT.CHAR.RECORD, CORE.STO.SET]
+depends_on: [KRN.NUM.FMT.REG, KRN.NUM.FMT.LEN, KRN.NUM.FMT.ANG, KRN.NUM.KDEC, UNC.DEC.TYPE, UNC.UEC.CLASS, IO.RES.TRANS.MODEL, GDT.CHAR.RECORD, GDT.CHAR.INTERP, CORE.STO.SET]
 uses_artifacts: [I18N.LOCALE, I18N.CATALOG]
 side_effect: R1
 determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # RPT.MODEL.FMT: Value formatting, decision display and source labels
@@ -34,7 +34,7 @@ The single place in RPT where a value of record becomes text. It chooses the ker
 - Formatter selection: kind by characteristic type (length, angle, scalar), display unit (authored unit unless the report overrides it), precision (authored decimals, else the per-unit default setting)
 - Conformance-safe call: pass the limits the decision was made against, consume `digits_added`, `tie_at_max_precision` and `undecidable_side` from `KRN.NUM.FMT`
 - Locale presentation: decimal separator, integer grouping and minus sign from the pinned locale data published by `I18N.LOCALE`, applied to the canonical string only
-- Labels: decision outcome and rule ID; UEC display with UEC-0 as "not evaluated"; `transcribed` status with source software and version for `RESULTS_ONLY`; gauge ID for `DIRECT_READING`
+- Labels: decision outcome and rule ID; UEC display with UEC-0 as "not evaluated"; `transcribed` status with source software and version for `RESULTS_ONLY`; gauge ID for `DIRECT_READING`; `ProvisionalInterpretation` for a record whose interpretation is provisional (D-045)
 - Fixed texts as catalog message keys with English fallback
 - The CI rule that forbids float formatting in RPT crates
 
@@ -61,6 +61,7 @@ The single place in RPT where a value of record becomes text. It chooses the ker
 - **REQ-RPT.MODEL.FMT-012** `fmt_value` shall be the only producer of value text in RPT. It shall format only a value resolved by `RPT.MODEL.BIND` from a `value_binding@1`, and each `ValueText` shall carry its own labels: `Claimed`, `DeclaredInput` and `UncharacterizedInput` exactly when the stored fid-kunc statement's `is_claimed()`, `rests_on_declared_input()` and `rests_on_uncharacterized_input()` are true.
 - **REQ-RPT.MODEL.FMT-013** Each `ValueText` shall carry `side`, taken from the formatter's result and never inferred from the printed string: `above` (the value lies strictly above the upper limit it was formatted against), `below` (strictly below the lower limit), `within` (inside all limits it was formatted against, limits included), `not_applicable` (no limit was given, e.g. a requirement, a nominal-only value or a value with no decision against limits) or `undecidable` (the formatter could not place the printed text strictly on one side at its maximum precision). It shall carry marker `undecidable_side` exactly when `side` is `undecidable`, and a value whose decision is `NONCONFORMS` shall print strictly beyond the violated limit (#200, REQ-RPT.MODEL.FMT-003) unless `side` is `undecidable`.
 - **REQ-RPT.MODEL.FMT-014** Every renderer of a `ValueText` (report blocks, PDF, spreadsheet, CSV and on-screen views) shall show its labels and markers with the value, and the `ValueText` API shall offer no accessor that returns the display or canonical text without its labels and markers.
+- **REQ-RPT.MODEL.FMT-015** When a ResultRecord's `interpretation` is `provisional` (`requires_provisional_label`, `GDT.CHAR.INTERP`), every `ValueText` and `OutcomeText` formatted from it shall carry the label `ProvisionalInterpretation`, rendered from catalog key `gdt.interpretation.provisional` (`interpretation: provisional`), and no report setting, template or locale shall remove or shorten it (D-045).
 
 ## Acceptance criteria
 
@@ -75,6 +76,7 @@ The single place in RPT where a value of record becomes text. It chooses the ker
 - **AC-9** (FMT-012 labels) Given a value whose stored statement is `fixtures/unc/stmt/valid/uec1_declared.json`, one on `uec1_spec_derived.json` and one on `uec2_lpu.json`, when each is formatted, then their labels are exactly {`Claimed`, `DeclaredInput`, `UncharacterizedInput`}, {`Claimed`, `UncharacterizedInput`} and {} respectively, and two values in one table each keep their own labels.
 - **AC-10** (FMT-013 side) Given the AC-3 angle record for which `fmt.angle@1` returns `undecidable_side`, then its `ValueText` has `side = undecidable` and the `undecidable_side` marker, and no other case in AC-1..AC-4 carries that marker; given the AC-2 and AC-4 `NONCONFORMS` records, then `side` is `above` and the printed text is strictly greater than the limit; a conforming record has `side = within` and a requirement (no limits) `side = not_applicable`.
 - **AC-11** (FMT-014 API) Given the public API of module `fmt`, when a compile-fail test calls any accessor that would return the display or canonical string alone, then it does not compile; the only text accessor returns the text together with its labels and markers.
+- **AC-12** (FMT-015, D-045) Given a record from fixture `fixtures/gdt/interp/position_mmc_mixed/` and one from `flatness_signed/`, when each value and outcome is formatted, then the first carries `ProvisionalInterpretation` with the text `interpretation: provisional` and the second does not; a template that hides labels still renders it for the first.
 
 ## Design
 
@@ -99,12 +101,15 @@ The single place in RPT where a value of record becomes text. It chooses the ker
 >
 > **Rules:** call the kernel formatters through `fid_num::fmt::format` (`fmt.length@1`, `fmt.scalar@1`, `fmt.angle@1`) and never format floats yourself (add a workspace lint for `fid-report*` crates that rejects float `Display`/`format!`). Unit = authored unit or report override; precision = authored decimals or the user setting `report.default_decimals` (mm 3, um 1, in 4, deg 4, rad 6, unit 4). For `NONCONFORMS`, pass the limits the decision used (acceptance limits for guard-banded rules, else spec limits) so the kernel's side-preserving rule adds digits; record `digits_added`. `tie_at_max_precision` or `undecidable_side` -> visible marker plus warning `report.display_tie` / `report.display_undecidable`. Display string = canonical string with the pinned locale data's decimal separator, integer grouping and minus sign; never re-round; must stay injective over the I18N golden corpus. Labels: outcome and rule ID, UEC with UEC-0 as the catalog "not evaluated" text, `transcribed` + software name/version for `RESULTS_ONLY`, gauge ID for `DIRECT_READING`. Non-finite or unsupported type -> `report.unformattable`.
 >
-> **Acceptance:** AC-1..AC-11 in `spec/rpt/model/fmt/NODE.md`.
+> **Labels (D-045):** when `fid_gdt::requires_provisional_label(record)` is true, add `ProvisionalInterpretation` (catalog key `gdt.interpretation.provisional`) to every `ValueText` and `OutcomeText` from that record; no setting, template or locale may drop it.
+>
+> **Acceptance:** AC-1..AC-12 in `spec/rpt/model/fmt/NODE.md`.
 >
 > **Constraints:** CONSTITUTION C1 (no value or decision computed here), C6, §4 (one journaled exact conversion), §8 (no panic, no `unsafe`, deny `unwrap`/`expect`); no std HashMap/HashSet; do not link I18N runtime crates (read their published data files).
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** REQ-RPT.MODEL.FMT-015 adds the `ProvisionalInterpretation` label; REQ-RPT.MODEL.FMT-014 already makes every renderer show it.
 - **Revise for D-035 (accepted 2026-11-17):** call the L0 I18N locale render transform directly instead of re-applying I18N's rules.
 - **Applied (KRN.NUM.FMT.LEN note):** the parent requirement REQ-RPT.MODEL.FMT-003 described RPT requesting one digit at a time. The kernel formatter already does this when given limits, so this leaf passes the limits and consumes `digits_added` and `tie_at_max_precision` instead of looping; the parent's intent is unchanged.
 - **Confirmed for RPT (KRN.NUM.FMT.LEN open question):** a conforming value that rounds to its limit may print as the limit; REQ-RPT-007 forbids only the nonconforming case. `UNC.DEC` should still confirm before `fmt.length@1` is frozen.

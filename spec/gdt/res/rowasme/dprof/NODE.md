@@ -17,7 +17,7 @@ uses_artifacts: [GDT.RES.SCHEMA]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # GDT.RES.ROWASME.DPROF: ASME Y14.5-2018 defaults profile values
@@ -56,6 +56,7 @@ None for agents.
 
 ## Open questions
 
+- **D-045 (accepted 2026-11-19):** profiles count as interpretation rules; until the profile sign-off path above is settled, `GDT.RES.STATUS` reports every profile `provisional` (`no_signoff_path`), so every result is labelled `interpretation: provisional`. Settling the sign-off key is therefore on the critical path of the first-review subset.
 - Profiles are not DMT rows, so `gdt.review_dmt_row@1` cannot review them as written. Either profiles become a row-like record that the ROWFLOW state machine accepts (a key of the form `dmt:asme/defaults_profile/none@v`) or `GDT.CHAR.DPROF` gains its own review step. Proposed: the row-like key, so one workflow and one gate cover both; confirm with the `GDT.CHAR.DPROF` maintainers.
 - REQ-003's gate check is not in `GDT.RES.ROWASME.GATE` yet; add it when the profile representation above is settled.
 - Blocked on people: the paid author(s) and licences (D-009, D-016).

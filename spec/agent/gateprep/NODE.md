@@ -16,7 +16,7 @@ uses_artifacts: []
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # AGENT.GATEPREP: Gate preparation: previews, batched queues, evidence packs
@@ -51,6 +51,7 @@ Split along the Scope items above.
 
 ## Open questions
 
+- **Revise for D-045 (accepted 2026-11-19):** the H2 release queue shall list, per record, its `interpretation` label and the provisional rules behind it, and shall not offer a release action that hides them; the H4 evidence pack per row shall show the rule's content digest that the reviewer signs (`GDT.RES.ROWFLOW.REVIEW`, `stale_review`).
 - Added by D-037 (accepted 2026-11-17); not yet expanded.
 
 ## Children
