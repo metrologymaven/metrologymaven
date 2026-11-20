@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-crash]
+built_pr: 350
 satisfies: [REQ-CORE.STO.SQL-005]
 covers: []
 depends_on: [CORE.STO.SQL.TXN, CORE.JRN.CANON]
@@ -68,6 +70,8 @@ None stored; all data is generated from the seed. CI jobs on the Tier 1 OS runne
 ## Open questions
 
 - Which fault-injecting layer to use on Linux CI (a device-mapper log-writes target or a FUSE layer) is [unverified]; Windows and macOS have no power-loss mode, and the gap must be stated in the platform matrix.
+- Built (fid-crash): the Linux power-loss mode uses the kernel's dm-flakey target with `drop_writes` (switched with `dmsetup suspend --nolockfs`, then unmount and remount), in `.github/workflows/crash-power-loss.yml`. That job is the only evidence for REQ-004 and AC-3; it runs nightly, on demand and on path-filtered PRs, and is not a required check. The harness lives in its own `test-support` crate `fid-crash` (with `cargo xtask crash-harness` running it) rather than inside `fid-xtask`, because it links `fid-store` and therefore builds SQLite, which `fid-xtask` must not need. Its default features reach only model-layer crates (`fid-store`, `fid-canon`, `fid-types`), so `CORE.JRN.CHAIN` (`fid-journal`, model) can use it as a dev-dependency for REQ-006; the mapping to bus errors (`fid-bus`, engine) is behind its optional `bus-errors` feature.
+- **Follow-up for PLAT.MATRIX:** Windows and macOS have no power-loss mode (no dm-flakey equivalent on those CI runners); only kill-based crash testing runs there. The platform matrix (`platform/support-matrix.toml`, owned by `PLAT.MATRIX`) should state this gap for `CORE.STO.SQL.CRASH`; not done here (lane rule).
 
 ## Children
 

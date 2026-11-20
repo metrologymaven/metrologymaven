@@ -90,6 +90,7 @@ fn main() -> ExitCode {
         Some("conic-audit") => fid_xtask::conic_audit::cli(&args[1..]),
         Some("registry-gate") => fid_xtask::registry_gate::cli(&args[1..]),
         Some("gen-surfaces") => gen_surfaces(&args[1..]),
+        Some("crash-harness") => crash_harness(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
         Some("apps-policy") => apps_policy_check(&args[1..]),
         Some("study-tasks-check") => study_tasks_check(&args[1..]),
@@ -319,6 +320,39 @@ fn gen_surfaces(args: &[String]) -> ExitCode {
         Ok(s) => ExitCode::from(s.code().and_then(|c| u8::try_from(c).ok()).unwrap_or(2)),
         Err(e) => {
             eprintln!("gen-surfaces: cannot run cargo: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+/// CORE.STO.SQL.CRASH: `crash-harness [--seed N] [--kills N] [--power-loss ...]`. Runs
+/// `fid-crash run` (a `test-support` crate that builds SQLite, so it is not linked into xtask),
+/// in release with its `bus-errors` feature, with the same arguments and exit code.
+fn crash_harness(args: &[String]) -> ExitCode {
+    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
+    let manifest = concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.toml");
+    let status = Command::new(cargo)
+        .args([
+            "run",
+            "-q",
+            "--release",
+            "--manifest-path",
+            manifest,
+            "-p",
+            "fid-crash",
+            "--features",
+            "bus-errors",
+            "--bin",
+            "fid-crash",
+            "--",
+            "run",
+        ])
+        .args(args)
+        .status();
+    match status {
+        Ok(s) => ExitCode::from(s.code().and_then(|c| u8::try_from(c).ok()).unwrap_or(2)),
+        Err(e) => {
+            eprintln!("crash-harness: cannot run cargo: {e}");
             ExitCode::from(2)
         }
     }
