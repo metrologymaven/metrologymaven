@@ -9,15 +9,17 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-gdt]
+built_pr: 301
 satisfies: [REQ-GDT.CHAR-009]
 covers: []
-depends_on: [GDT.CHAR.MODEL]
+depends_on: [CORE.PRJ.CONT.ID]
 side_effect: R1
 determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-19
 ---
 
 # GDT.CHAR.IDENT: Stable characteristic identity
@@ -50,9 +52,9 @@ Gives every characteristic one identity that never changes from plan to result t
 ## Design
 
 - **Registry command(s):** none of its own; called by `gdt.create_characteristic@1`, `gdt.edit_characteristic@1` and the export path.
-- **Data structures:** `CharId(Uuid)` newtype with `source: Imported | Assigned`; `QpidSlot = Native | FxAttribute`.
-- **Algorithm:** on create, take the imported QPId if present, else draw a UUIDv7 from the injected clock and seeded counter RNG (no system time inside the library); on edit, compare and reject a change; on export, write native slot or `fx:qpid`.
-- **Errors:** `identity_immutable`, `malformed_qpid`.
+- **Data structures:** `CharId(Uuid)` newtype with `source: Imported | Assigned`; `QpidSlot = Native | FxAttribute`. As built (PR #301): `CharIdentity` in module `chars::qpid`, equal, ordered and hashed by UUID value only; its characteristic key is the lowercase UUID, and the verbatim imported text is kept for native-slot export only.
+- **Algorithm:** on create, take the imported QPId if present, else draw a UUIDv7 from the injected clock and seeded counter RNG (no system time inside the library); on edit, compare and reject a change; on export, write native slot or `fx:qpid`. As built: every assignment goes through the `CORE.PRJ.CONT.ID` ID service (`import_uuid` for imported QPIds, `new_v7` for new ones) and is checked against the project ID index, with no redraw on collision; the seeded counter RNG is a test-only observation source, and replay uses the recorded observations. An `fx:qpid` value is accepted only in the exact lowercase form this leaf writes.
+- **Errors:** `identity_immutable`, `malformed_qpid`, plus `id_collision` and the observation errors passed through from `CORE.PRJ.CONT.ID`.
 - **Determinism:** D0 given injected clock and seed.
 - **Performance budget:** negligible (< 1 µs per call) [unverified].
 - **Crate:** `fid-gdt`.
@@ -67,7 +69,8 @@ Two small hand-written QIF 3.0 files (`imported_qpid.qif`, `no_qpid_slot.qif`) a
 
 ## Open questions
 
-- None.
+- The `fx:qpid` attribute name is not yet reserved in the versioned `fx` catalogue (see the Open questions of `CORE.PRJ.QIF`). Until it is, a third-party UUID written under that name in the exact lowercase form would be adopted as the identity.
+- End-to-end coverage of AC-1 to AC-3 through `IO.QIF` and `GDT.CHAR.MODEL` is AC-7 of `GDT.CHAR.MODEL.CMDS`; this leaf tests them on the identity fields of one element.
 
 ## Children
 

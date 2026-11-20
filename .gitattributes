@@ -205,3 +205,6 @@ fixtures/pkg/malformed/** -text
 fixtures/pkg/reader/** -text
 # TRUST.PROFILE.DEFS: canonical profile documents compared byte for byte (no trailing newline).
 fixtures/profile/** -text
+# GDT.CHAR.IDENT fixtures: QIF files and expected.json written by make_fixtures.py, which
+# --check compares byte for byte; never convert line endings.
+fixtures/gdt/ident/** -text

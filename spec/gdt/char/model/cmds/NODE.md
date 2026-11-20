@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid gdt create-characteristic, fid gdt edit-characteristic]
 mcp: [gdt_create_characteristic, gdt_edit_characteristic]
 journal: [gdt.create_characteristic@1, gdt.edit_characteristic@1]
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # GDT.CHAR.MODEL.CMDS: Create and edit characteristic commands
@@ -47,6 +47,7 @@ The two registry commands that add a characteristic (with its feature control fr
 - **AC-4** (error path) Given an unknown characteristic id for edit, then `not_found` and nothing journaled.
 - **AC-5** Given `--dry-run`, then the output equals AC-1's characteristic and the journal is unchanged.
 - **AC-6** (replay) Exact replay of AC-1 and AC-2 gives `IDENTICAL`.
+- **AC-7** (identity end to end) Given `fixtures/gdt/ident/imported_qpid.qif` and `fixtures/gdt/ident/no_qpid_slot.qif` read with `IO.QIF`'s reader and mapped by `GDT.CHAR.MODEL.QIFMAP`, when each characteristic is created with the `GDT.CHAR.IDENT` identity provider, edited three times with `gdt.edit_characteristic@1`, mapped back and written with `IO.QIF`'s test writer, and the written file is re-imported, then the outcomes of `GDT.CHAR.IDENT` AC-1 to AC-3 hold on the written files: the native QPId is byte-identical, and the slotless element carries an `fx:qpid` that re-imports to the same identity.
 
 ## Design
 
@@ -68,6 +69,7 @@ Synthetic plan and characteristic JSON (CC0, in-repo).
 
 ## Open questions
 
+- `IdentityProvider::assign` is shown above as infallible, but the built `GDT.CHAR.IDENT` assigner (`fid_gdt::chars::qpid::QpidAssigner::assign`) returns `Result<CharIdentity, IdentError>`. It fails with `id_collision` when the project already holds the ID, with `malformed_qpid`, and with observation errors such as `replay_exhausted`. The trait needs a fallible signature, and the commands must pass those errors through and journal nothing. `GDT.CHAR.IDENT` now depends only on `CORE.PRJ.CONT.ID`, so the cycle noted below no longer applies to it.
 - `GDT.CHAR.IDENT` and `GDT.CHAR.SPEC` declare `depends_on: [GDT.CHAR.MODEL]` (the whole module) although they need only `GDT.CHAR.MODEL.TYPES`. Narrowing them would let this leaf call them directly instead of through injected traits; that is their owners' change.
 
 ## Children

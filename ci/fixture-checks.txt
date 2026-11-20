@@ -34,6 +34,7 @@ python fixtures/gdt/dmt/check_schema.py
 python fixtures/gdt/dmt/make_fixtures.py --check
 python fixtures/gdt/dprof/make_cases.py --check
 python fixtures/gdt/drf/build/make_cases.py --check
+python fixtures/gdt/ident/make_fixtures.py --check
 python fixtures/gdt/resolve/make_cases.py --check
 python fixtures/gdt/spec/make_fixtures.py --check
 python fixtures/gdt/zone/make_shapes_fixtures.py --check
