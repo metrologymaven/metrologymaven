@@ -1,0 +1,9 @@
+# KRN.NUM.LINT.SYN, #288 re-review: module declarations resolve the way rustc does, and a module
+# file the scan does not list (here everything under the excluded src/bin/) is KNP1-INCLUDE.
+[package]
+name = "knp1-syn-mod-resolve"
+version = "0.0.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+exclude = ["src/bin/**"]

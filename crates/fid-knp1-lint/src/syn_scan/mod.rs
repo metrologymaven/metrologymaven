@@ -556,6 +556,70 @@ fn reason(v: Option<&toml::Value>, what: &str) -> Result<String, SynError> {
     }
 }
 
+/// The directory state rustc keeps while resolving modules (`rustc_expand::module`): `dir` is
+/// the module's directory relative to the crate root, and `relative` the file stem a non-mod-rs
+/// file adds before its first nested module directory.
+#[derive(Debug, Clone)]
+struct ModDir {
+    dir: Vec<String>,
+    relative: Option<String>,
+}
+
+/// A module's `#[path]` attribute.
+enum PathAttr {
+    None,
+    /// The literal and the `path` token.
+    Lit(String, usize),
+    /// The `path` token and why the scan cannot evaluate it.
+    Unknown(usize, &'static str),
+}
+
+/// Whether a file is "mod-rs" (a crate root or a `mod.rs`: its child modules live in its own
+/// directory) by its path in the crate: `mod.rs`, `src/lib.rs`, `src/main.rs`, `build.rs`,
+/// `src/bin/<x>.rs`, `src/bin/<x>/main.rs`, and `<x>.rs` or `<x>/main.rs` under `examples/`,
+/// `tests/` and `benches/`. `None` for another `lib.rs` or `main.rs`, which may be either.
+fn mod_rs_kind(file: &str) -> Option<bool> {
+    let parts: Vec<&str> = file.split('/').collect();
+    let name = parts.last().copied().unwrap_or_default();
+    let root = matches!(
+        parts.as_slice(),
+        ["src", "lib.rs"]
+            | ["src", "main.rs"]
+            | ["build.rs"]
+            | ["src", "bin", _]
+            | ["src", "bin", _, "main.rs"]
+            | ["examples" | "tests" | "benches", _]
+            | ["examples" | "tests" | "benches", _, "main.rs"]
+    );
+    if name == "mod.rs" || root {
+        Some(true)
+    } else if name == "lib.rs" || name == "main.rs" {
+        None
+    } else {
+        Some(false)
+    }
+}
+
+/// `rel` joined to `dir` with `.` and `..` resolved lexically; `None` when `rel` is absolute,
+/// has a backslash or drive, or climbs out of the crate root.
+fn join_rel(dir: &[String], rel: &str) -> Option<Vec<String>> {
+    let b = rel.as_bytes();
+    if rel.is_empty() || rel.starts_with('/') || rel.contains('\\') || (b.len() >= 2 && b[1] == b':') {
+        return None;
+    }
+    let mut out = dir.to_vec();
+    for seg in rel.split('/') {
+        match seg {
+            "" | "." => {}
+            ".." => {
+                out.pop()?;
+            }
+            s => out.push(s.to_string()),
+        }
+    }
+    Some(out)
+}
+
 fn valid_relpath(p: &str) -> bool {
     let b = p.as_bytes();
     !p.is_empty()
@@ -759,6 +823,8 @@ struct Scan<'a> {
     in_attr: Vec<bool>,
     /// Tokens inside a `macro_rules!` body or `macro` item (a code template).
     in_template: Vec<bool>,
+    /// `path` tokens of `#[path]` attributes that module resolution has handled.
+    mod_paths: BTreeSet<usize>,
     aliases: BTreeMap<String, Vec<Vec<String>>>,
     /// Token indices of facade-path `KNP1-LIBM` names (never findings there).
     exempt: BTreeSet<usize>,
@@ -782,6 +848,7 @@ impl<'a> Scan<'a> {
             in_use: vec![false; n],
             in_attr: vec![false; n],
             in_template: vec![false; n],
+            mod_paths: BTreeSet::new(),
             aliases: BTreeMap::new(),
             exempt: BTreeSet::new(),
             hits: BTreeMap::new(),
@@ -872,6 +939,7 @@ impl<'a> Scan<'a> {
         }
         self.check_metavariables();
         self.check_macro_args_and_mods();
+        self.check_module_files();
         for i in 0..self.toks.len() {
             if let Some((segs, toks, absolute, end)) = self.path_at(i) {
                 let call = self.is(end, &Kind::Open(Delim::Paren));
@@ -920,6 +988,202 @@ impl<'a> Scan<'a> {
             for k in i..=close {
                 if let Some(b) = self.in_attr.get_mut(k) {
                     *b = true;
+                }
+            }
+        }
+    }
+
+    // -------------------------------------------------------------- module files
+
+    /// Resolves every out-of-line `mod name;` of the file the way rustc does and reports
+    /// `KNP1-INCLUDE` (never waivable) when the file it loads is not one the scan lists, or when
+    /// the scan cannot tell which file that is. See [`mod_rs_kind`] and [`ModDir`].
+    fn check_module_files(&mut self) {
+        match mod_rs_kind(self.f.file) {
+            Some(mod_rs) => self.resolve_modules(mod_rs),
+            None => {
+                // A `lib.rs`/`main.rs` that is not a known crate root: both readings must hold.
+                self.resolve_modules(true);
+                self.resolve_modules(false);
+            }
+        }
+    }
+
+    /// The outer attributes (`#[…]`, as `[` and `]` indices) of the item whose keyword is at `i`,
+    /// after an optional visibility.
+    fn outer_attrs(&self, i: usize) -> Vec<(usize, usize)> {
+        let mut j = i;
+        if j > 0 && self.is(j - 1, &Kind::Close(Delim::Paren)) {
+            let o = self.partner.get(j - 1).copied().unwrap_or(usize::MAX);
+            if o != usize::MAX && o > 0 && self.keyword(o - 1, "pub") {
+                j = o - 1;
+            }
+        } else if j > 0 && self.keyword(j - 1, "pub") {
+            j -= 1;
+        }
+        let mut out = Vec::new();
+        while j > 0 && self.is(j - 1, &Kind::Close(Delim::Bracket)) {
+            let o = self.partner.get(j - 1).copied().unwrap_or(usize::MAX);
+            if o == usize::MAX || o == 0 || !self.is(o - 1, &Kind::Pound) {
+                break;
+            }
+            out.push((o, j - 1));
+            j = o - 1;
+        }
+        out
+    }
+
+    /// The `#[path]` of an item: none, a plain string literal (with its `path` token), or one the
+    /// scan cannot evaluate (`cfg_attr(…, path = …)`, a macro, several, a non-literal).
+    fn path_attr(&mut self, attrs: &[(usize, usize)]) -> PathAttr {
+        let mut found: Vec<PathAttr> = Vec::new();
+        for &(open, close) in attrs {
+            let first = open + 1;
+            if self.ident(first) == Some("path") {
+                self.mod_paths.insert(first);
+                let lit = match self.t(first + 2) {
+                    Some(Token {
+                        kind: Kind::Lit { kind: LitKind::Str | LitKind::RawStr, suffix: false },
+                        text,
+                        ..
+                    }) if self.is(first + 1, &Kind::Eq) && first + 3 == close => Some(text.clone()),
+                    _ => None,
+                };
+                found.push(match lit {
+                    Some(p) => PathAttr::Lit(p, first),
+                    None => PathAttr::Unknown(first, "a `#[path]` whose value is not one plain string literal"),
+                });
+            } else {
+                for k in first..close {
+                    let after_sep = k > 0 && self.is(k - 1, &Kind::PathSep);
+                    if self.ident(k) == Some("path") && !after_sep {
+                        self.mod_paths.insert(k);
+                        found.push(PathAttr::Unknown(k, "a `path` inside another attribute (`cfg_attr`)"));
+                    }
+                }
+            }
+        }
+        match found.len() {
+            0 => PathAttr::None,
+            1 => found.pop().unwrap_or(PathAttr::None),
+            _ => match found.into_iter().next() {
+                Some(PathAttr::Lit(_, t) | PathAttr::Unknown(t, _)) => {
+                    PathAttr::Unknown(t, "several `#[path]` attributes")
+                }
+                _ => PathAttr::None,
+            },
+        }
+    }
+
+    fn listed(&self, p: &str) -> bool {
+        self.f.crate_files.iter().any(|f| f == p)
+    }
+
+    fn resolve_modules(&mut self, mod_rs: bool) {
+        let parts: Vec<&str> = self.f.file.split('/').collect();
+        let (name, dir) = parts.split_last().map_or(("", &[][..]), |(n, d)| (*n, d));
+        let start = ModDir {
+            dir: dir.iter().map(|s| (*s).to_string()).collect(),
+            relative: if mod_rs { None } else { name.strip_suffix(".rs").map(str::to_string) },
+        };
+        // (close index of the inline module's brace, its directory; None when unknown)
+        let mut stack: Vec<(usize, Option<ModDir>)> = Vec::new();
+        let n = self.toks.len();
+        let reading = if mod_rs { "mod-rs" } else { "non-mod-rs" };
+        for i in 0..n {
+            while stack.last().is_some_and(|(close, _)| i > *close) {
+                stack.pop();
+            }
+            if !self.keyword(i, "mod") {
+                continue;
+            }
+            let Some(m) = self.ident(i + 1).map(str::to_string) else { continue };
+            let inline = self.is(i + 2, &Kind::Open(Delim::Brace));
+            let out_of_line = self.is(i + 2, &Kind::Semi);
+            if !inline && !out_of_line {
+                continue;
+            }
+            let attrs = self.outer_attrs(i);
+            let path = self.path_attr(&attrs);
+            let cur: Option<ModDir> = match stack.last() {
+                Some((_, d)) => d.clone(),
+                None => Some(start.clone()),
+            };
+            if inline {
+                let close = self.partner.get(i + 2).copied().unwrap_or(usize::MAX);
+                let next = match (&cur, &path) {
+                    (Some(c), PathAttr::None) => {
+                        let mut dir = c.dir.clone();
+                        dir.extend(c.relative.clone());
+                        dir.push(m.clone());
+                        Some(ModDir { dir, relative: None })
+                    }
+                    (Some(c), PathAttr::Lit(p, t)) => match join_rel(&c.dir, p) {
+                        Some(dir) => Some(ModDir { dir, relative: None }),
+                        None => {
+                            self.hit(
+                                *t,
+                                &Rule::Include,
+                                format!("inline `#[path = \"{p}\"] mod {m}` leaves the crate"),
+                            );
+                            None
+                        }
+                    },
+                    (Some(_), PathAttr::Unknown(t, why)) => {
+                        let msg = format!("inline `mod {m}` with {why}: the scan cannot tell where its modules are");
+                        self.hit(*t, &Rule::Include, msg);
+                        None
+                    }
+                    (None, _) => None,
+                };
+                stack.push((close, next));
+                continue;
+            }
+            // Out-of-line `mod m;`.
+            if self.templated(i) {
+                self.hit(
+                    i + 1,
+                    &Rule::Include,
+                    format!("`mod {m};` inside a macro template: resolved at the call site"),
+                );
+                continue;
+            }
+            let Some(c) = cur else {
+                let msg = format!("`mod {m};` inside an inline module whose directory the scan cannot tell");
+                self.hit(i + 1, &Rule::Include, msg);
+                continue;
+            };
+            match path {
+                PathAttr::Unknown(t, why) => {
+                    self.hit(
+                        t,
+                        &Rule::Include,
+                        format!("`mod {m};` with {why}: the scan cannot tell which file rustc loads"),
+                    );
+                }
+                PathAttr::Lit(p, t) => match join_rel(&c.dir, &p) {
+                    Some(target) if self.listed(&target.join("/")) => {}
+                    Some(target) => {
+                        let msg = format!(
+                            "`#[path = \"{p}\"] mod {m};` loads `{}`, which the scan does not list",
+                            target.join("/")
+                        );
+                        self.hit(t, &Rule::Include, msg);
+                    }
+                    None => self.hit(t, &Rule::Include, format!("`#[path = \"{p}\"] mod {m};` leaves the crate")),
+                },
+                PathAttr::None => {
+                    let mut base = c.dir.clone();
+                    base.extend(c.relative.clone());
+                    let file = [base.clone(), vec![format!("{m}.rs")]].concat().join("/");
+                    let dir_mod = [base, vec![m.clone(), "mod.rs".to_string()]].concat().join("/");
+                    let found = [&file, &dir_mod].iter().filter(|p| self.listed(p)).count();
+                    if found != 1 {
+                        let why =
+                            if found == 0 { "neither is a file the scan lists" } else { "both are listed (ambiguous)" };
+                        let msg = format!("`mod {m};` loads `{file}` or `{dir_mod}` ({reading} file): {why}");
+                        self.hit(i + 1, &Rule::Include, msg);
+                    }
                 }
             }
         }
@@ -1684,8 +1948,9 @@ impl<'a> Scan<'a> {
                 }
                 if self.templated(i) {
                     self.hit(i, &Rule::Include, "`#[path]` inside a macro template".to_string());
-                } else if !self.safe_include(i + 2, None) {
-                    self.hit(i, &Rule::Include, "`#[path]` names a file the scan does not list".to_string());
+                } else if !self.mod_paths.contains(&i) {
+                    let m = "`#[path]` not on a module declaration the scan resolves".to_string();
+                    self.hit(i, &Rule::Include, m);
                 }
             }
         }

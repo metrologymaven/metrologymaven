@@ -682,6 +682,8 @@ fn unscanned_code_includes_are_never_waivable_and_data_includes_stay_waivable() 
             "KNP1-INCLUDE 1:26",
             "KNP1-INCLUDE 1:50",
             "KNP1-INCLUDE 2:28",
+            // `mod q;` inside a template resolves at the call site.
+            "KNP1-INCLUDE 2:49",
             // A code `include!` of an unlisted file.
             "KNP1-INCLUDE 3:14",
             // Data: waivable KNP1-IO-FS (the type-aware check reports these too).
@@ -694,4 +696,66 @@ fn unscanned_code_includes_are_never_waivable_and_data_includes_stay_waivable() 
     for f in &out.findings {
         assert_eq!(f.rule.is_waivable(), f.rule == Rule::IoFs, "{f:?}");
     }
+}
+
+#[test]
+fn module_declarations_resolve_like_rustc_and_unlisted_module_files_are_never_waivable() {
+    // #288 round-2 re-review. Hand-labelled from rustc's module rules (NODE.md): `src/bin/**`
+    // is excluded, and module resolution may not reach it.
+    let dir = "syn/mod-resolve";
+    let root = fix(dir);
+    let files = enumerate_files(&root, &["src/bin/**".to_string()], &BTreeSet::new()).unwrap();
+    assert!(!files.iter().any(|f| f.starts_with("src/bin/")), "{files:?}");
+    let mut e = entry("knp1-syn-mod-resolve", "0.0.1", dir);
+    e.files = files;
+    let out = scan(vec![e], &Config::default());
+    let c = "KNP1-INCLUDE knp1-syn-mod-resolve 0.0.1";
+    assert_eq!(
+        lines(&out.findings),
+        [
+            // (a) `mod bin { #[path = "x.rs"] mod x; }` loads src/bin/x.rs, not the listed src/x.rs.
+            format!("{c} src/lib.rs:6:7"),
+            // (b) `mod bin { mod w; }` loads src/bin/w.rs.
+            format!("{c} src/lib.rs:8:9"),
+            // `cfg_attr(…, path = …)`: undeterminable.
+            format!("{c} src/lib.rs:28:18"),
+            // (b) `mod bin;` from a crate root: src/bin.rs or src/bin/mod.rs, neither listed.
+            format!("{c} src/main.rs:2:5"),
+        ],
+        "{:#?}",
+        out.findings
+    );
+    assert!(out.findings.iter().all(|f| !f.rule.is_waivable()));
+    assert!(out.findings[0].message.contains("src/bin/x.rs"), "{}", out.findings[0].message);
+    assert!(out.findings[1].message.contains("src/bin/w.rs"), "{}", out.findings[1].message);
+}
+
+#[test]
+fn module_resolution_edge_cases() {
+    let files: Vec<String> =
+        ["src/lib.rs", "src/a.rs", "src/a/mod.rs", "src/k/lib.rs", "src/k/c.rs", "src/k/lib/c.rs", "src/m.rs"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+    let cfg = Config::default();
+    let s = |file: &str, src: &str| {
+        let f = FileRef { crate_name: "k", crate_version: "1.0.0", file, crate_files: &files };
+        short(&scan_file(f, src.as_bytes(), &cfg).findings)
+    };
+    // Both `a.rs` and `a/mod.rs` listed: rustc rejects it, the scan cannot pick one.
+    assert_eq!(s("src/lib.rs", "mod a;"), ["KNP1-INCLUDE@1:5"]);
+    assert!(s("src/lib.rs", "mod m;").is_empty());
+    // Leaving the crate, absolute, or several `#[path]`s.
+    assert_eq!(s("src/lib.rs", "#[path = \"../../m.rs\"] mod q;"), ["KNP1-INCLUDE@1:3"]);
+    assert_eq!(s("src/lib.rs", "#[path = \"/m.rs\"] mod q;"), ["KNP1-INCLUDE@1:3"]);
+    assert_eq!(s("src/lib.rs", "#[path = \"m.rs\"] #[path = \"m.rs\"] mod q;"), ["KNP1-INCLUDE@1:20"]);
+    // A `#[path]` built by a macro.
+    assert_eq!(s("src/lib.rs", "#[path = concat!(\"m\", \".rs\")] mod q;"), ["KNP1-INCLUDE@1:3"]);
+    // A `lib.rs` that is not a known crate root may be read either way: both must resolve.
+    assert_eq!(s("src/k/lib.rs", "mod c;"), [] as [&str; 0]);
+    assert_eq!(s("src/k/lib.rs", "mod d;"), ["KNP1-INCLUDE@1:5"]);
+    // `pub(crate)` visibility between the attribute and `mod`.
+    assert!(s("src/lib.rs", "#[path = \"m.rs\"] pub(crate) mod q;").is_empty());
+    // A `#[path]` on anything but a module.
+    assert_eq!(s("src/lib.rs", "#[path = \"m.rs\"] fn q() {}"), ["KNP1-INCLUDE@1:3"]);
 }
