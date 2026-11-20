@@ -2,5 +2,10 @@
 //! registry command. Each UX leaf adds its check as a module and a subcommand.
 //!
 //! - [`pkg`]: `pkg-check` and `pkg-diff` (`UX.SYSTEM.PKG`).
+//! - [`princ`]: `princ-check` (`UX.SYSTEM.PRINC`).
+//! - [`words`]: `words-check` (`UX.SYSTEM.PRINC`).
 
+pub mod finding;
 pub mod pkg;
+pub mod princ;
+pub mod words;

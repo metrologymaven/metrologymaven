@@ -15,7 +15,7 @@ pub fn c() -> &'static str {
     include_str!("misc.rs")
 }
 
-#[path = "../../outside.rs"] //~ KNP1-IO-FS=path
+#[path = "../../outside.rs"] //~ KNP1-INCLUDE=path
 pub mod outside;
 
 #[path = "shadow.rs"]

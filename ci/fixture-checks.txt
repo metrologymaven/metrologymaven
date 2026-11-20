@@ -62,6 +62,7 @@ python fixtures/io/reg/prov/make_cases.py --check
 python fixtures/io/res/trans/model/make_fixtures.py --check
 python fixtures/knp1/data/make_fixtures.py --check
 python fixtures/knp1/seeded/make_expected.py --check
+python fixtures/knp1/typed/make_canary.py --check
 python fixtures/knp1/typed/make_expected.py --check
 python fixtures/knp1/typed/make_messages.py --check
 python fixtures/man/check_manifest_schema.py
@@ -105,6 +106,7 @@ python fixtures/unc/class/make_table.py --check
 python fixtures/unc/dec/type/make_fixtures.py --check
 python fixtures/unc/dist/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
+python fixtures/ux/system/princ/make_fixtures.py --check
 python fixtures/viz/viewstate-samples/make_fixtures.py --check
 python tools/check_bench_schema.py
 python tools/check_command_defs.py

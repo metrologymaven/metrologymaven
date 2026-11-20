@@ -1,0 +1,11 @@
+# (c) A custom crate root: rustc reads src/kernel.rs as a mod-rs file.
+[package]
+name = "knp1-syn-mod-root"
+version = "0.0.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+exclude = ["src/bin/**"]
+
+[lib]
+path = "src/kernel.rs"

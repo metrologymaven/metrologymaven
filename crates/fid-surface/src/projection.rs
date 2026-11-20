@@ -169,6 +169,13 @@ pub struct SurfaceProjection {
     /// The registry does not declare this yet; always `false`, so surfaces refuse `--dry-run`.
     pub dry_run: bool,
     pub help: DocText,
+    /// Declared `effects` (journal event types), in manifest order. Registry metadata read by
+    /// [`crate::roots::is_root_config`] (AUTO.SURF.ROOTS); not part of [`Self::to_value`].
+    pub effects: Vec<String>,
+    /// The parameter schema declares `"path_like": true` somewhere other than on a top-level
+    /// property. Such a file parameter cannot be checked, so every surface refuses the command
+    /// ([`crate::roots::gate_raw_paths`]); not part of [`Self::to_value`].
+    pub nested_path_like: bool,
 }
 
 /// The projection of one manifest (REQ-001).
@@ -364,6 +371,19 @@ fn params_of(schema: &CValue, command: &str) -> Result<Vec<ParamSpec>, ProjError
     Ok(out)
 }
 
+/// Number of `"path_like": true` keywords anywhere in `v` (the same count CORE.BUS.POL.FS
+/// takes, so the surface and the bus agree on which commands declare a nested file parameter).
+fn count_path_like(v: &CValue) -> usize {
+    match v {
+        CValue::Obj(o) => {
+            let here = usize::from(o.get("path_like") == Some(&CValue::Bool(true)));
+            o.values().fold(here, |n, x| n.saturating_add(count_path_like(x)))
+        }
+        CValue::Arr(a) => a.iter().fold(0usize, |n, x| n.saturating_add(count_path_like(x))),
+        _ => 0,
+    }
+}
+
 /// Every field a CORE.REG.DEF.FIELD definition may carry.
 const DEF_FIELDS: [&str; 22] = [
     "id",
@@ -423,6 +443,7 @@ struct Def {
     mcp_projection: DeclaredProjection,
     determinism: Determinism,
     human_only: bool,
+    effects: Vec<String>,
 }
 
 impl Def {
@@ -483,8 +504,31 @@ fn read_def(index: usize, mut o: BTreeMap<String, CValue>) -> Result<Entry, Proj
     let (Some(params_schema), Some(result_schema)) = (o.remove("params_schema"), o.remove("result_schema")) else {
         return Err(at("missing schema"));
     };
-    let def =
-        Def { title, description, params_schema, result_schema, side_effect, mcp_projection, determinism, human_only };
+    let effects = match o.remove("effects") {
+        Some(CValue::Arr(items)) => {
+            let mut out = Vec::new();
+            out.try_reserve_exact(items.len()).map_err(|_| ProjError::AllocFailed)?;
+            for item in items {
+                match item {
+                    CValue::Str(s) => out.push(s),
+                    _ => return Err(at("effects must be an array of strings")),
+                }
+            }
+            out
+        }
+        _ => return Err(at("effects must be an array of strings")),
+    };
+    let def = Def {
+        title,
+        description,
+        params_schema,
+        result_schema,
+        side_effect,
+        mcp_projection,
+        determinism,
+        human_only,
+        effects,
+    };
     Ok(Entry { id, def })
 }
 
@@ -599,6 +643,7 @@ pub fn project(manifest: &[u8]) -> Result<Projection, ProjError> {
         claim(&mut mcp, NameKind::Mcp, mcp_name.clone(), command)?;
         claim(&mut py, NameKind::Python, format!("{py_module}.{py_name}"), command)?;
         let params = params_of(&def.params_schema, command)?;
+        let nested_path_like = count_path_like(&def.params_schema) != params.iter().filter(|p| p.path_like).count();
         let result = match &def.result_schema {
             CValue::Obj(o) => type_of(o, &format!("{command}: result_schema"))?,
             _ => return Err(parse_err(format!("{command}: result_schema must be an object"))),
@@ -618,6 +663,8 @@ pub fn project(manifest: &[u8]) -> Result<Projection, ProjError> {
             long_running: false,
             dry_run: false,
             help: DocText { title: def.title, description: def.description },
+            effects: def.effects,
+            nested_path_like,
             command_id: id,
         });
     }

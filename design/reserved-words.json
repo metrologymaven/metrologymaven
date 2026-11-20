@@ -1,0 +1,37 @@
+[
+  {
+    "word": "approve",
+    "meaning": "A person's recorded approval of an agent proposal, a program or a run. Never an automatic or agent action.",
+    "allowed_prefixes": ["program.release.", "review.human.", "run.approve."],
+    "case_insensitive": true,
+    "inflections": ["approval", "approvals", "approved", "approver", "approvers", "approves", "approving", "preapproved", "reapproved", "unapproved"]
+  },
+  {
+    "word": "conforms",
+    "meaning": "A characteristic's result lies within its tolerance under the stated decision rule.",
+    "allowed_prefixes": ["gdt.result.", "rpt.result."],
+    "case_insensitive": true,
+    "inflections": ["conform", "conformance", "conformant", "conformed", "conforming", "conformity", "nonconformance", "nonconformant", "nonconforming", "nonconformity"]
+  },
+  {
+    "word": "release",
+    "meaning": "Publishing a reviewed program version, or a software version, for use.",
+    "allowed_prefixes": ["program.release.", "rel."],
+    "case_insensitive": true,
+    "inflections": ["released", "releases", "releasing"]
+  },
+  {
+    "word": "sign",
+    "meaning": "Creating or applying a cryptographic signature.",
+    "allowed_prefixes": ["program.release.sign.", "trust.sign."],
+    "case_insensitive": true,
+    "inflections": ["cosigned", "countersigned", "signature", "signatures", "signed", "signer", "signers", "signing", "signoff", "signs"]
+  },
+  {
+    "word": "verified",
+    "meaning": "A check against a stated reference passed and was recorded: a signature or digest check, or an instrument performance verification.",
+    "allowed_prefixes": ["cal.verify.", "trust.verify."],
+    "case_insensitive": true,
+    "inflections": ["verification", "verifications", "verifier", "verifies", "verify", "verifying"]
+  }
+]
