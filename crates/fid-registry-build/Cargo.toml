@@ -19,6 +19,9 @@ fid-align = { path = "../fid-align" }
 fid-dep = { path = "../fid-dep" }
 fid-jobs = { path = "../fid-jobs" }
 fid-report = { path = "../fid-report" }
+# The adoption commands of AUTO.REC.ADOPT, read through `fid_program_rec::adopt::declarations()`.
+# Layer services, as this crate.
+fid-program-rec = { path = "../fid-program-rec" }
 # The settings commands (CORE.STO.SET), read through `fid_store::settings::declarations()`.
 # Layer model. Brings bundled SQLite into this build step; no new crate in the lock.
 fid-store = { path = "../fid-store" }
