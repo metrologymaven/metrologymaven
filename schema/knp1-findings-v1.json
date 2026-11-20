@@ -82,7 +82,7 @@
     "pos": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
     "rule": {
       "type": "string",
-      "pattern": "^KNP1-((FMA|POW|LIBM|MINMAX|HASH|SIMD|UNSAFE|IO-FS|IO-NET|CLOCK|ENV|THREAD|PARSE|PARSE-RESOLVE|CFG)|(FLAG|ALLOW|DATA|TYPED)-[A-Z0-9]+(-[A-Z0-9]+)*)$",
+      "pattern": "^KNP1-((FMA|POW|LIBM|MINMAX|HASH|SIMD|UNSAFE|IO-FS|IO-NET|CLOCK|ENV|THREAD|PARSE|PARSE-RESOLVE|CFG|INCLUDE)|(FLAG|ALLOW|DATA|TYPED)-[A-Z0-9]+(-[A-Z0-9]+)*)$",
       "maxLength": 64
     },
     "relpath": {
