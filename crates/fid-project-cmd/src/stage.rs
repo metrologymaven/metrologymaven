@@ -313,7 +313,8 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
         spec(
             StageOp::SetActive,
             "Set active stage",
-            "Makes a live stage the active stage; only the active-stage pointer changes, no data moves. Fails with              validation/bad_stage for a removed or unknown stage.",
+            "Makes a live stage the active stage; only the active-stage pointer changes, no data moves. Fails with \
+             validation/bad_stage for a removed or unknown stage.",
             object(&["stage"], obj([("stage", id_schema("The stage to activate."))])),
             object(&["stage"], obj([("stage", id_schema("The active stage."))])),
             "W2",

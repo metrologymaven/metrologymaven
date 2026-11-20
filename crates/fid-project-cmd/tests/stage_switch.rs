@@ -11,13 +11,16 @@ use fid_bus::unit::Normalised;
 use fid_bus::validate::{Compiled, Hooks, RefLookup};
 use fid_canon::{parse, to_canonical_bytes, CValue, Digest as CanonDigest};
 use fid_project::{
-    ElementTypeDef, ElementTypeRegistry, ReplaySource, StageContext, Tree, Uuid, ValueError, ACTIVE_STAGE_SET,
+    ElementState, ElementTypeDef, ElementTypeRegistry, ReplaySource, StageContext, Tree, Uuid, ValueError,
+    ACTIVE_STAGE_SET,
 };
 use fid_project_cmd::stage::{command_defs, result_of, run_stage, StageOp};
-use fid_project_cmd::stage_switch::{to_bus_error, value_key, CasValueStore, StoreValueCache};
+use fid_project_cmd::stage_switch::{
+    open_value_cache, to_bus_error, value_key, CasValueStore, StoreValueCache, MAX_VALUE_BYTES,
+};
 use fid_project_cmd::tree::TreeState;
 use fid_registry::CommandDef;
-use fid_store::cache::{Cache, CacheConfig};
+use fid_store::cache::Cache;
 use fid_store::cas::{BlobStore, PutOpts};
 use fid_types::Digest;
 use std::collections::BTreeMap;
@@ -265,7 +268,7 @@ fn ac4_values_from_the_store_and_cache() {
         run_stage(StageOp::SetActive, &p, get(ac1, "params"), namespace(), &mut ReplaySource::new(Vec::new())).unwrap();
     p.commit(&ev);
     let tree = p.tree.tree();
-    let mut cache = Cache::open(&dir.join("cache"), CacheConfig::default());
+    let mut cache = open_value_cache(&dir.join("cache"));
     let cas = CasValueStore(&store);
     let ids: Vec<Uuid> = tree.elements().map(|e| e.id()).collect();
     let first: Vec<Vec<u8>> = {
@@ -284,7 +287,7 @@ fn ac4_values_from_the_store_and_cache() {
     // Cache cleared: everything is loaded from the store again, equal.
     drop(cache);
     std::fs::remove_dir_all(dir.join("cache")).unwrap();
-    let mut cache = Cache::open(&dir.join("cache"), CacheConfig::default());
+    let mut cache = open_value_cache(&dir.join("cache"));
     {
         let mut ctx = StageContext::new(tree);
         let mut vc = StoreValueCache(&mut cache);
@@ -317,6 +320,43 @@ fn ac4_values_from_the_store_and_cache() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A chunked object (over 8 MiB) is never served: its slot digest names the chunk manifest,
+/// whose bytes would hash correctly, so the adapter refuses manifests and anything above
+/// `CHUNK_SIZE` as `storage` ("chunked object not supported"); the cache never stores more
+/// than one value's bytes.
+#[test]
+fn chunked_objects_are_refused() {
+    let dir = scratch("chunked");
+    let store = BlobStore::open(&dir.join("blobs")).unwrap();
+    let big = vec![7u8; usize::try_from(MAX_VALUE_BYTES).unwrap() + 1];
+    let addr = store.put_bytes(&big, PutOpts::default()).unwrap();
+    assert!(matches!(addr, fid_store::cas::Address::Object(_)));
+    let mut p = p3s();
+    let root = p.tree.tree().root();
+    let stage = p.tree.tree().active_stage();
+    let id = Uuid::from_u128(0x0190_ffff_0000_7000_8000_0000_0000_0001);
+    let el = format!(
+        r#"{{"body":{{"id":"{id}","meta":{{}},"name":"big","parent":"{root}","type":"test.point","visible":true}},"type":"ElementCreated"}}"#
+    );
+    let set = format!(
+        r#"{{"body":{{"digest":"{}","element":"{id}","stage":"{stage}","state":"current"}},"type":"ElementSlotSet"}}"#,
+        addr.digest()
+    );
+    p.commit(&[event(&parse(el.as_bytes()).unwrap()), event(&parse(set.as_bytes()).unwrap())]);
+    let mut cache = open_value_cache(&dir.join("cache"));
+    let cas = CasValueStore(&store);
+    let mut ctx = StageContext::new(p.tree.tree());
+    let err = ctx.value(&id, &mut StoreValueCache(&mut cache), &cas).unwrap_err();
+    assert_eq!(err.code(), "storage", "{err}");
+    assert!(err.to_string().contains("chunked object not supported"), "{err}");
+    // The cache skips a put above one value's size.
+    let d = addr.digest();
+    let mut vc = StoreValueCache(&mut cache);
+    fid_project::ValueCache::put(&mut vc, &d, &big);
+    assert!(fid_project::ValueCache::get(&mut vc, &d).is_none());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn value_errors_map_to_the_catalogue() {
     let id = Uuid::from_u128(1);
@@ -325,7 +365,7 @@ fn value_errors_map_to_the_catalogue() {
         (ValueError::BadReference(id), Code::Validation, "bad_reference"),
         (ValueError::StageNotFound(id), Code::Validation, "bad_stage"),
         (
-            ValueError::NoValue { element: id, stage: id, state: fid_project::ElementState::NotComputed },
+            ValueError::NoValue { element: id, stage: id, state: ElementState::NotComputed },
             Code::NotFound,
             "unknown_entity",
         ),
