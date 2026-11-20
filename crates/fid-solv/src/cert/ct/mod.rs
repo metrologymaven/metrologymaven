@@ -45,7 +45,8 @@
 //! **Self-consistency** ([`Certificate::check_consistency`]) is checked before a certificate
 //! is returned and when one is parsed: lengths, finiteness, ordering, `lo <= hi <= threshold`
 //! for primal feasibility, stationarity and complementarity, each of their thresholds equal to
-//! `tol * scale` as KRN.SOLV.CERT.KKT forms it, and the dual condition recomputed row by row
+//! `tol * scale` as KRN.SOLV.CERT.KKT forms it, `0 <= lo <= hi` and the stationarity threshold
+//! for the information-only `stationarity_float` (the residual at the float multipliers), and the dual condition recomputed row by row
 //! from the recorded multipliers, bounds and per-row thresholds, each per-row threshold
 //! recomputed bit for bit as `down(down(tol_d * gradient_lo) / ghi_i)` (0 when the rounded
 //! numerator is not positive, in particular when `gradient_lo` is 0), and `steps` matching
@@ -184,8 +185,13 @@ pub struct KktRecord {
     pub primal: RecordedCondition,
     /// Dual feasibility, `max(0, -min_i lambda*_i)`; threshold the smallest per-row threshold.
     pub dual: RecordedCondition,
-    /// Stationarity at the recorded multipliers; threshold `tol_s * gradient`.
+    /// Stationarity; threshold `tol_s * gradient`. In a certificate the multipliers are
+    /// proven, so this is `[0, 0]` at the exact multipliers (KRN.SOLV.CERT.KKT step 8).
     pub stationarity: RecordedCondition,
+    /// For information only: the proven enclosure of the stationarity residual at the recorded
+    /// float multipliers, with the same threshold. It may exceed the threshold; it is checked
+    /// for `0 <= lo <= hi` and the threshold, not against it.
+    pub stationarity_float: RecordedCondition,
     /// Complementarity, `max |g_i(p*)|` over the active rows; threshold `tol_c * data`.
     pub complementarity: RecordedCondition,
     /// The per-row dual thresholds `down(down(tol_d * gradient_lo) / gradient_norms_hi_i)`
@@ -349,6 +355,7 @@ impl Certificate {
                 primal: recorded(rep.primal()),
                 dual: recorded(rep.dual()),
                 stationarity: recorded(rep.stationarity()),
+                stationarity_float: recorded(rep.stationarity_float()),
                 complementarity: recorded(rep.complementarity()),
                 dual_thresholds: rep.dual_thresholds().to_vec(),
                 gradient_norms_hi: rep.gradient_norms_hi().to_vec(),
@@ -527,7 +534,7 @@ impl Certificate {
             return Err(inconsistent("active_set"));
         }
         let k = &self.kkt;
-        let conds = [k.primal, k.dual, k.stationarity, k.complementarity];
+        let conds = [k.primal, k.dual, k.stationarity, k.stationarity_float, k.complementarity];
         let scalars = [
             self.value,
             self.value_bound,
@@ -586,6 +593,10 @@ impl Certificate {
         }
         if !decided(k.complementarity, t.tol_c * k.scales.data, 0.0) {
             return Err(inconsistent("complementarity"));
+        }
+        let sf = k.stationarity_float;
+        if !(sf.lo >= 0.0 && sf.lo <= sf.hi && same(sf.threshold, t.tol_s * k.scales.gradient)) {
+            return Err(inconsistent("stationarity_float"));
         }
         if k.gradient_norms_hi.iter().any(|&g| g <= 0.0) {
             return Err(inconsistent("gradient_norms_hi"));

@@ -641,7 +641,9 @@ fn parse_fails_closed() {
     let mal = |detail| Err(CertError::Malformed { detail });
     let inc = |detail| Err(CertError::Inconsistent { detail });
     assert_eq!(tampered("\"0x3fd8000000000000\"", "\"0x3fd8000000000001\""), mal("digest_mismatch"));
-    assert_eq!(tampered("sha256:8", "sha256:9"), mal("digest_mismatch"));
+    let (_, _, golden_digest) = parse();
+    let other = if golden_digest.starts_with("sha256:0") { "sha256:1" } else { "sha256:0" };
+    assert_eq!(tampered(&golden_digest[..8], other), mal("digest_mismatch"));
     assert_eq!(tampered("\"is_linear\":\"true\"", "\"is_linear\":\"false\""), inc("steps"));
     assert_eq!(tampered("\"0x3fd8000000000000\"", "\"3fd8000000000000\""), mal("float"));
     assert_eq!(tampered("\"0x3fd8000000000000\"", "\"0X3fd8000000000000\""), mal("float"));
@@ -677,6 +679,31 @@ fn tampered_dual_thresholds_are_refused() {
     let inc = |detail| Err(CertError::Inconsistent { detail });
     // the untouched golden body re-digested parses (the helper itself is sound)
     assert!(tampered_redigested("\"kind\":\"zone\"", "\"kind\":\"zone\"").is_ok());
+    // stationarity is [0, 0] at the proven multipliers; the float residual is information only:
+    // above its threshold it still parses, but it must be ordered, nonnegative and carry the
+    // stationarity threshold.
+    let sf = "\"stationarity_float\":{\"hi\":\"0x3d20000000000000\",\"lo\":\"0x0000000000000000\"";
+    let big = "\"stationarity_float\":{\"hi\":\"0x3ff0000000000000\",\"lo\":\"0x3fe0000000000000\"";
+    assert!(tampered_redigested(sf, big).is_ok());
+    let swapped = "\"stationarity_float\":{\"hi\":\"0x0000000000000000\",\"lo\":\"0x3d20000000000000\"";
+    assert_eq!(tampered_redigested(sf, swapped), inc("stationarity_float"));
+    let neg = "\"stationarity_float\":{\"hi\":\"0x3d20000000000000\",\"lo\":\"0xbd20000000000000\"";
+    assert_eq!(tampered_redigested(sf, neg), inc("stationarity_float"));
+    assert_eq!(
+        tampered_redigested(
+            "\"lo\":\"0x0000000000000000\",\"threshold\":\"0x3e112e0be826d695\"},\"status",
+            "\"lo\":\"0x0000000000000000\",\"threshold\":\"0x3e112e0be826d696\"},\"status"
+        ),
+        inc("stationarity_float")
+    );
+    // the decided stationarity must stay within its threshold
+    assert_eq!(
+        tampered_redigested(
+            "\"stationarity\":{\"hi\":\"0x0000000000000000\"",
+            "\"stationarity\":{\"hi\":\"0x3ff0000000000000\""
+        ),
+        inc("stationarity")
+    );
     assert_eq!(
         tampered_redigested(
             "\"dual_thresholds\":[\"0x3e0b7cdfd9d7bdb7\"",
@@ -745,7 +772,7 @@ fn different_candidate_lists_same_digest() {
 /// the AC-3 error in the stable encoding of `encode_err`), recorded from a local x86-64 run and checked by CI on every target. One
 /// value serves all targets because they agree bit for bit; a target that diverged would get
 /// its own `#[cfg(target_arch)]` value here.
-const OUTPUT_PIN: &str = "sha256:f2970613c0c6b3cfb008ece929490b438efb00a977732b82d46e6f06868c926e";
+const OUTPUT_PIN: &str = "sha256:2197acf0e901812dfaeb3a3d7c23bfe66c8ebaef4704a5494f40415d0dfea9b1";
 
 fn bits_of(xs: &[f64]) -> String {
     xs.iter().map(|v| format!("0x{:016x}", v.to_bits())).collect::<Vec<_>>().join(",")
@@ -775,7 +802,7 @@ fn encode_err(e: &CertError) -> String {
                     Some(_) => "other",
                 };
                 out.push_str(&format!(";status={status};reason={reason}"));
-                for c in [r.primal(), r.dual(), r.stationarity(), r.complementarity()] {
+                for c in [r.primal(), r.dual(), r.stationarity(), r.stationarity_float(), r.complementarity()] {
                     out.push_str(&format!(";cond={}", bits_of(&[c.lo(), c.hi(), c.threshold()])));
                 }
                 out.push_str(&format!(
