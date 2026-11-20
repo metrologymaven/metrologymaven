@@ -1,0 +1,22 @@
+comment	1:1
+header	2:1	dmismn	'gdef feature fixture'	05.3	-
+header	3:1	filnam	'features'	05.3	-
+units	4:1	units	MM	ANGDEC	-
+feat	5:1	feat_point	F(PT1)	def	POINT	CART	-	-	10.0 20.0 0 0 0 1	-
+feat	6:1	feat_line	F(LN1)	def	LINE	CART	-	BND	0 0 0 50 0 0 0 0 1	-
+feat	7:1	feat_plane	F(PL1)	def	PLANE	CART	-	-	0 0 5 0 0 1	-
+feat	8:1	feat_circle	F(CI1)	def	CIRCLE	CART	INNER	-	25 25 0 0 0 1 12.5	-
+feat	9:1	feat_arc	F(AR1)	def	ARC	POL	OUTER	-	30 45 0 0 0 1 8 0 90	-
+feat	10:1	feat_cylndr	F(CY1)	def	CYLNDR	CART	INNER	-	0 0 0 0 0 1 10 20	-
+feat	11:1	feat_cone	F(CO1)	def	CONE	CART	OUTER	-	0 0 0 0 0 1 30	-
+feat	12:1	feat_sphere	f(sp1)	def	SPHERE	CART	OUTER	-	0 0 50 25.4	-
+feat	13:1	feat_ellips	F(EL1)	def	ELLIPS	CART	INNER	-	0 0 0 0 0 1 1 0 0 20 10	-
+feat	14:1	feat_cparln	F(SL1)	def	CPARLN	CART	INNER	ROUND	0 0 0 0 0 1 1 0 0 40 10	-
+feat	15:1	feat_torus	F(TO1)	def	TORUS	CART	OUTER	-	0 0 0 0 0 1 60 8	-
+feat	16:1	feat_edgept	F(EP1)	def	EDGEPT	CART	-	-	5 0 0 0 0 1 1 0 0	-
+feat	17:1	feat_gcurve	F(GC1)	def	GCURVE	CART	-	-	1 2 3 0 0 1	-
+feat	18:1	feat_gsurf	F(GS1)	def	GSURF	POL	-	-	10 30 0	-
+feat	19:1	feat_patern	F(PA1)	def	PATERN	-	-	-	-	F(CI1) F(CY1) f(sp1)
+comment	20:1
+feat	21:1	feat_compound	F(CP1)	def	COMPOUND	-	-	AXIAL	-	F(CI1) F(CY1)
+header	23:1	endfil	-	-	-

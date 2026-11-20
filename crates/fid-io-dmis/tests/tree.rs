@@ -345,12 +345,15 @@ fn byte_budget_of_the_reader_harness_applies() {
 }
 
 #[test]
-fn builtin_registry_is_empty_until_grammar_families_are_built() {
+fn builtin_registry_holds_the_gdef_family() {
     let registry = Registry::builtin().unwrap();
-    assert!(registry.is_empty());
-    let tree = parse(b"F(P1)=FEAT/POINT,CART,1,2,3,0,0,1\n", None).unwrap();
-    let Node::Unknown(u) = &tree.statements[0] else { panic!("expected an unknown node") };
-    assert_eq!(u.keyword.as_deref(), Some("FEAT"));
+    assert_eq!(registry.len(), fid_io_dmis::gdef::descriptors().len());
+    let tree = parse(b"F(P1)=FEAT/POINT,CART,1,2,3,0,0,1\nGOTO/1,2,3\n", None).unwrap();
+    let Node::Statement(s) = &tree.statements[0] else { panic!("expected a statement") };
+    assert_eq!(&*s.class, "feat_point");
+    // Program-only statements (IO.DMIS.PARSE.GEXEC, not built) stay unknown.
+    let Node::Unknown(u) = &tree.statements[1] else { panic!("expected an unknown node") };
+    assert_eq!(u.keyword.as_deref(), Some("GOTO"));
 }
 
 /// xorshift64*, so the property test needs no dependency and is reproducible.

@@ -3,6 +3,8 @@
 //! an independent Python reference, never from this crate.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+mod support;
+
 use fid_canon::{parse, CValue};
 use fid_io_dmis::conf::{
     generate, generate_files, parse_declarations, parse_inventory, stale_files, write_outputs, ConfError, Support,
@@ -156,13 +158,12 @@ fn ac4_check_fails_when_committed_table_differs() {
 
 #[test]
 fn ac4_committed_table_matches_declarations() {
-    // Every published declaration is `none` today, so the empty inventory proves nothing extra;
-    // CI also runs the check with the real `cargo test -- --list` inventory.
-    let out = generate_files(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("conformance/declarations.toml"),
-        &fixtures().join("tests.txt"),
-    )
-    .unwrap();
+    // The inventory is this crate's own tests, read from the sources, so `partial` claims that
+    // name them are accepted; CI also runs the check with the real `cargo test -- --list`
+    // inventory of the workspace.
+    let decl =
+        std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("conformance/declarations.toml")).unwrap();
+    let out = generate(&decl, &support::crate_test_inventory()).unwrap();
     assert!(stale_files(&out, &repo().join("docs/dmis")).is_empty(), "docs/dmis is stale; regenerate it");
 }
 

@@ -10,10 +10,12 @@
 # cannot back a claim), with IDs qualified as <package>::<target>::<test>. Declared test IDs
 # must use that form, e.g. "fid-io-dmis::acceptance::ac1_small_declarations_give_a_full_and_b_partial".
 #
-# Status: no DMIS lexer, parser, reader or writer exists yet, so every statement is declared
-# `none` for import and export. A declaration may move to `partial` or `full` only together
-# with the code and a test that proves it (the generator refuses claims without a test in
-# the inventory).
+# Status: the lexer, the statement tree and the GDEF grammar family (IO.DMIS.PARSE.GDEF) parse
+# the statements below into typed views, so they are declared `partial` for import: the
+# descriptor shapes are envelopes whose kind lists and value counts are [unverified] against
+# DMIS 5.3, and QPIds are not read yet. No reader or writer exists, so export stays `none`.
+# A declaration may move to `partial` or `full` only together with the code and a test that
+# proves it (the generator refuses claims without a test in the inventory).
 #
 # The gate checks only that each named test exists and is not ignored, not that it proves the
 # claim. Reviewers must check that the named tests actually exercise the declared support.
@@ -28,45 +30,87 @@ version = 1
 
 [[statement]]
 keyword = "DATDEF"
-import = "none"
+import = "partial"
 export = "none"
+tests = [
+  "fid-io-dmis::gdef::ac2_results_expose_values_and_flags",
+  "fid-io-dmis::gdef::datum_actual_form_parses_and_d_label_is_rejected",
+  "fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views",
+]
 
 [[statement]]
 keyword = "DMISMD"
-import = "none"
+import = "partial"
 export = "none"
+tests = [
+  "fid-io-dmis::gdef::module_header_parses_and_other_statements_stay_unknown",
+]
 
 [[statement]]
 keyword = "DMISMN"
-import = "none"
+import = "partial"
 export = "none"
+tests = [
+  "fid-io-dmis::gdef::ac1_every_feature_type_parses_into_its_view",
+  "fid-io-dmis::gdef::ac2_results_expose_values_and_flags",
+  "fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views",
+]
 
 [[statement]]
 keyword = "ENDFIL"
-import = "none"
+import = "partial"
 export = "none"
+tests = [
+  "fid-io-dmis::gdef::ac1_every_feature_type_parses_into_its_view",
+  "fid-io-dmis::gdef::ac2_results_expose_values_and_flags",
+  "fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views",
+  "fid-io-dmis::gdef::module_header_parses_and_other_statements_stay_unknown",
+]
 
 [[statement]]
 keyword = "FEAT"
-import = "none"
+import = "partial"
 export = "none"
+tests = [
+  "fid-io-dmis::gdef::ac1_every_feature_type_parses_into_its_view",
+  "fid-io-dmis::gdef::ac2_results_expose_values_and_flags",
+  "fid-io-dmis::gdef::malformed_statements_report_the_closest_class",
+]
 
 [[statement]]
 keyword = "FILNAM"
-import = "none"
+import = "partial"
 export = "none"
+tests = [
+  "fid-io-dmis::gdef::ac1_every_feature_type_parses_into_its_view",
+  "fid-io-dmis::gdef::ac2_results_expose_values_and_flags",
+]
 
 [[statement]]
 keyword = "TEXT"
-import = "none"
+import = "partial"
 export = "none"
+tests = [
+  "fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views",
+]
 
 [[statement]]
 keyword = "TOL"
-import = "none"
+import = "partial"
 export = "none"
+tests = [
+  "fid-io-dmis::gdef::ac2_results_expose_values_and_flags",
+  "fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views",
+  "fid-io-dmis::gdef::malformed_statements_report_the_closest_class",
+]
 
 [[statement]]
 keyword = "UNITS"
-import = "none"
+import = "partial"
 export = "none"
+tests = [
+  "fid-io-dmis::gdef::ac1_every_feature_type_parses_into_its_view",
+  "fid-io-dmis::gdef::ac2_results_expose_values_and_flags",
+  "fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views",
+  "fid-io-dmis::gdef::malformed_statements_report_the_closest_class",
+]
