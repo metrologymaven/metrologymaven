@@ -104,9 +104,12 @@ impl fmt::Debug for SettingsSource {
 }
 
 /// Every crate on main that declares settings, sorted by crate name: `fid-bus` declares the
-/// approved file roots `bus.fs_roots` (CORE.BUS.POL.FS).
-pub const SETTINGS_SOURCES: [SettingsSource; 1] =
-    [SettingsSource { krate: "fid-bus", settings: fid_bus::policy::fs::fs_settings }];
+/// approved file roots `bus.fs_roots` (CORE.BUS.POL.FS); `fid-journal` the Activity Log
+/// rotation settings `journal.activity_log_*` (CORE.JRN.STREAM.ALOG).
+pub const SETTINGS_SOURCES: [SettingsSource; 2] = [
+    SettingsSource { krate: "fid-bus", settings: fid_bus::policy::fs::fs_settings },
+    SettingsSource { krate: "fid-journal", settings: fid_journal::stream::activity_settings },
+];
 
 /// A crate's quantity-catalogue fragment function.
 pub type KindsFn = fn() -> &'static str;

@@ -1,0 +1,60 @@
+{
+  "cases": [
+    {
+      "change": {
+        "command": "test.sleep@1",
+        "error": null,
+        "from": null,
+        "job": "01890a5d-ac96-774b-bcce-b302099a8057",
+        "principal_kind": "human",
+        "to": "queued"
+      },
+      "digest": "sha256:019adddebd1c6ce5f10ebf64d15730773d8edeebcbd6bbb50eaa0c4da45898ea"
+    },
+    {
+      "change": {
+        "command": "test.sleep@1",
+        "error": null,
+        "from": "queued",
+        "job": "01890a5d-ac96-774b-bcce-b302099a8057",
+        "principal_kind": "human",
+        "to": "running"
+      },
+      "digest": "sha256:ef873a67521f3050ae86b553b3e227c0500603cf9092b8893d073b83603e9175"
+    },
+    {
+      "change": {
+        "command": "test.sleep@1",
+        "error": null,
+        "from": "running",
+        "job": "01890a5d-ac96-774b-bcce-b302099a8057",
+        "principal_kind": "human",
+        "to": "succeeded"
+      },
+      "digest": "sha256:82d07c4b0847ac1ea5995f54e05cd828f85d6c4b77bbc58299c120468bc779d8"
+    },
+    {
+      "change": {
+        "command": "test.sleep@1",
+        "error": "timeout",
+        "from": "running",
+        "job": "01890a5d-ac96-774b-bcce-b302099a8057",
+        "principal_kind": "agent",
+        "to": "failed"
+      },
+      "digest": "sha256:f114f97f42cd047aec21c0a5723ad66dfea9944a59aa1774513608734bde6cf7"
+    },
+    {
+      "change": {
+        "command": "test.sleep@1",
+        "error": "cancelled",
+        "from": "queued",
+        "job": "01890a5d-ac96-774b-bcce-b302099a8057",
+        "principal_kind": "script",
+        "to": "cancelled"
+      },
+      "digest": "sha256:316a98760160360b92916029f64e7cf5418949fe66293bdacf885ec5a48f4f82"
+    }
+  ],
+  "description": "Job lifecycle transition objects and their SHA-256 over RFC 8785, from make_fixtures.py. CC-BY-4.0."
+}
