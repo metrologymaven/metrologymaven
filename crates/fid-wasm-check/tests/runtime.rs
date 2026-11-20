@@ -186,7 +186,7 @@ fn calls_file_parses() {
         std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/man/wasm/calls-v1.txt"))
             .unwrap();
     let cases = parse_cases(&text).unwrap();
-    assert_eq!(cases.len(), 43);
+    assert_eq!(cases.len(), 44);
     assert_eq!(cases.iter().filter(|c| c.wasm_only).count(), 2);
     assert!(cases.iter().filter(|c| c.wasm_only).all(|c| c.exit == 3 && c.stdout == b"NOT_REPLAYABLE(resource)"));
     assert_eq!(parse_cases("a\tany\t{}\t9\tx\n"), Err(1));

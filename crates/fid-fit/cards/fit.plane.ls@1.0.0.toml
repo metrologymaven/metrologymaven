@@ -8,6 +8,7 @@ references = [
   "Golub, G. H. and Van Loan, C. F. (2013). Matrix Computations, 4th ed., section 8.5 (Jacobi methods).",
 ]
 determinism = "D0"
+input_arity = "1"
 failure_modes = [
   "Nearly collinear points leave the rotation about their line ill-determined: Collinear or IllConditioned.",
   "A cloud with two similar smallest principal moments (a blob, a cube) has no unique normal: IllConditioned with the eigenvalue ratio.",

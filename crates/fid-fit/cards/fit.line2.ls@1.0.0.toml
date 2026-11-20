@@ -8,6 +8,7 @@ references = [
   "Golub, G. H. and Van Loan, C. F. (2013). Matrix Computations, 4th ed., section 8.5 (Jacobi methods).",
 ]
 determinism = "D0"
+input_arity = "1"
 failure_modes = [
   "Points spread evenly in all in-plane directions (a ring) have no unique line direction: IllConditioned.",
   "A projection plane far from the data adds rounding in the projected coordinates (about 1e-13 m at 1 km).",

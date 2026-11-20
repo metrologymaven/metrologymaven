@@ -7,6 +7,7 @@ references = [
   "ASME Y14.5-2018, clause 5.4.4 (flatness)",
 ]
 determinism = "D0"
+input_arity = "1"
 failure_modes = [
   "Collinear points give an undefined plane.",
 ]

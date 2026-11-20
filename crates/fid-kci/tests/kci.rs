@@ -6,8 +6,8 @@
 use fid_kci::kci::json::{to_canonical, Json, JsonError};
 use fid_kci::kci::{sha256, sha256_digest, Digest, Sha256};
 use fid_kci::{
-    evaluate, parse_card, AlgorithmFailure, AlgorithmId, AlgorithmTable, CardRegistry, KernelAlgorithm, KernelCall,
-    KernelError,
+    evaluate, parse_card, AlgorithmFailure, AlgorithmId, AlgorithmTable, CardError, CardRegistry, InputArity,
+    KernelAlgorithm, KernelCall, KernelError,
 };
 use std::cell::Cell;
 use std::path::{Path, PathBuf};
@@ -180,6 +180,10 @@ impl KernelAlgorithm for Echo {
     fn id(&self) -> AlgorithmId {
         AlgorithmId::parse(self.id).unwrap()
     }
+    /// The echo takes any number of inputs (its card says `"0.."`).
+    fn input_arity(&self) -> InputArity {
+        InputArity::at_least(0)
+    }
     fn validate(&self, params: &[u8]) -> Result<(), KernelError> {
         self.calls.set(self.calls.get() + 1);
         if params.iter().all(|b| (0x20..=0x7e).contains(b)) {
@@ -220,6 +224,7 @@ fn echo_card() -> String {
         "determinism = \"D0\"",
         "failure_modes = [\"Non-printable parameter bytes are refused.\"]",
         "validation = \"fixtures/man/kci-calls-v1.txt\"",
+        "input_arity = \"0..\"",
     ]
     .join("\n")
 }
@@ -398,6 +403,9 @@ impl KernelAlgorithm for Impostor {
     fn id(&self) -> AlgorithmId {
         AlgorithmId::parse(ECHO).unwrap()
     }
+    fn input_arity(&self) -> InputArity {
+        InputArity::at_least(0)
+    }
     fn validate(&self, _: &[u8]) -> Result<(), KernelError> {
         if self.in_validate {
             Err(KernelError::DigestMismatch { input_index: 0 })
@@ -424,6 +432,175 @@ fn algorithms_cannot_impersonate_kernel_errors() {
         evaluate(&t, &call(ECHO, b"fail", None, &[])),
         Err(KernelError::Algorithm(AlgorithmFailure { code: "asked_to_fail" }))
     );
+    // An algorithm cannot fake the kernel's arity refusal either.
+    let fake = KernelError::InputArityMismatch { expected: InputArity::exactly(1), got: 0 };
+    struct FakeArity(KernelError);
+    impl KernelAlgorithm for FakeArity {
+        fn id(&self) -> AlgorithmId {
+            AlgorithmId::parse(ECHO).unwrap()
+        }
+        fn input_arity(&self) -> InputArity {
+            InputArity::at_least(0)
+        }
+        fn validate(&self, _: &[u8]) -> Result<(), KernelError> {
+            Ok(())
+        }
+        fn run(&self, _: &[u8], _: Option<u64>, _: &[&[u8]]) -> Result<Vec<u8>, KernelError> {
+            Err(self.0.clone())
+        }
+    }
+    let cards = CardRegistry::new(vec![parse_card(&echo_card()).unwrap()]).unwrap();
+    let t = AlgorithmTable::new(vec![Box::new(FakeArity(fake))], cards).unwrap();
+    assert_eq!(evaluate(&t, &call(ECHO, b"", None, &[])), Err(confined));
+}
+
+// ------------------------------------- REQ-KRN.MAN.KCI-008, -009: declared input arity
+
+/// A test algorithm whose `input_arity` is set per instance; `run` counts its calls and
+/// returns the inputs joined by `|`.
+struct Declared {
+    id: &'static str,
+    arity: InputArity,
+    calls: Rc<Cell<usize>>,
+}
+
+impl KernelAlgorithm for Declared {
+    fn id(&self) -> AlgorithmId {
+        AlgorithmId::parse(self.id).unwrap()
+    }
+    fn input_arity(&self) -> InputArity {
+        self.arity
+    }
+    fn validate(&self, _: &[u8]) -> Result<(), KernelError> {
+        self.calls.set(self.calls.get() + 1);
+        Ok(())
+    }
+    fn run(&self, _: &[u8], _: Option<u64>, inputs: &[&[u8]]) -> Result<Vec<u8>, KernelError> {
+        self.calls.set(self.calls.get() + 1);
+        Ok(inputs.join(&b'|'))
+    }
+}
+
+const PAIR: &str = "test.echo.pair@1.0.0";
+const RANGE: &str = "test.echo.range@1.0.0";
+
+/// `echo_card` with another ID and `input_arity`.
+fn card_with(id: &str, arity: &str) -> String {
+    echo_card().replace(ECHO, id).replace("input_arity = \"0..\"", &format!("input_arity = \"{arity}\""))
+}
+
+fn arity_table() -> (AlgorithmTable, Rc<Cell<usize>>, Rc<Cell<usize>>) {
+    let (pair_calls, range_calls) = (Rc::new(Cell::new(0)), Rc::new(Cell::new(0)));
+    let algs: Vec<Box<dyn KernelAlgorithm>> = vec![
+        Box::new(Declared { id: PAIR, arity: InputArity::exactly(2), calls: pair_calls.clone() }),
+        Box::new(Declared { id: RANGE, arity: InputArity::between(1, 3).unwrap(), calls: range_calls.clone() }),
+    ];
+    let cards = CardRegistry::new(vec![
+        parse_card(&card_with(PAIR, "2")).unwrap(),
+        parse_card(&card_with(RANGE, "1..=3")).unwrap(),
+    ])
+    .unwrap();
+    (AlgorithmTable::new(algs, cards).unwrap(), pair_calls, range_calls)
+}
+
+/// REQ-KRN.MAN.KCI-008: a call whose input count is outside the card's `input_arity` is
+/// refused with `InputArityMismatch` before any algorithm code runs (validate and run
+/// counters stay 0), and before inputs are hashed (a bad digest is not reported).
+#[test]
+fn wrong_input_count_is_refused_before_the_algorithm_runs() {
+    let (t, pair_calls, range_calls) = arity_table();
+    let inputs: [&[u8]; 5] = [b"a", b"b", b"c", b"d", b"e"];
+    for n in [0, 1, 3, 4, 5] {
+        let err = evaluate(&t, &call(PAIR, b"", None, &inputs[..n])).unwrap_err();
+        assert_eq!(err, KernelError::InputArityMismatch { expected: InputArity::exactly(2), got: n }, "n={n}");
+        assert_eq!(err.code(), "input_arity_mismatch");
+    }
+    for n in [0, 4, 5] {
+        let err = evaluate(&t, &call(RANGE, b"", None, &inputs[..n])).unwrap_err();
+        assert_eq!(err.code(), "input_arity_mismatch", "n={n}");
+    }
+    // Arity is checked before digests: a wrong count with a corrupt digest is an arity error.
+    let mut c = call(PAIR, b"", None, &inputs[..3]);
+    c.inputs[0].1 = sha256_digest(b"not a");
+    assert_eq!(evaluate(&t, &c).unwrap_err().code(), "input_arity_mismatch");
+    assert_eq!((pair_calls.get(), range_calls.get()), (0, 0), "no algorithm code may run");
+    // Accepted counts reach the algorithm (validate + run = 2 calls each).
+    assert_eq!(evaluate(&t, &call(PAIR, b"", None, &inputs[..2])).unwrap().output(), b"a|b");
+    assert_eq!(pair_calls.get(), 2);
+    for n in 1..=3 {
+        assert!(evaluate(&t, &call(RANGE, b"", None, &inputs[..n])).is_ok(), "n={n}");
+    }
+    assert_eq!(range_calls.get(), 6);
+}
+
+/// REQ-KRN.MAN.KCI-009: every algorithm's own `input_arity` must equal its card's; a drifted
+/// pair makes `AlgorithmTable::new` fail, so no table with drift can evaluate anything.
+#[test]
+fn card_and_implementation_arity_must_agree() {
+    // Every algorithm in this file's tables agrees with its card.
+    for (t, _, _) in [table(), arity_table()] {
+        for id in t.cards().ids() {
+            assert!(t.ids().contains(&id));
+        }
+    }
+    let drift = |card: &str, imp: InputArity| {
+        let cards = CardRegistry::new(vec![parse_card(&card_with(PAIR, card)).unwrap()]).unwrap();
+        let alg = Declared { id: PAIR, arity: imp, calls: Rc::new(Cell::new(0)) };
+        AlgorithmTable::new(vec![Box::new(alg)], cards)
+    };
+    assert!(drift("2", InputArity::exactly(2)).is_ok());
+    for (card, imp) in [
+        ("2", InputArity::exactly(1)),
+        ("2", InputArity::exactly(3)),
+        ("2", InputArity::at_least(2)),
+        ("2..", InputArity::exactly(2)),
+        ("1..=3", InputArity::between(1, 4).unwrap()),
+        ("0..", InputArity::at_least(1)),
+    ] {
+        let err = drift(card, imp).unwrap_err();
+        assert_eq!(err.code(), "card_arity_drift", "{card} vs {imp}");
+        assert_eq!(
+            err,
+            KernelError::CardArityDrift {
+                id: AlgorithmId::parse(PAIR).unwrap(),
+                card: InputArity::parse(card).unwrap(),
+                implementation: imp,
+            }
+        );
+    }
+}
+
+/// REQ-KRN.MAN.CARD-006: the `input_arity` spellings, their round trip and their refusals.
+#[test]
+fn input_arity_grammar() {
+    let ok = [
+        ("0", 0, Some(0)),
+        ("1", 1, Some(1)),
+        ("4294967295", u32::MAX, Some(u32::MAX)),
+        ("0..", 0, None),
+        ("2..", 2, None),
+        ("1..=3", 1, Some(3)),
+        ("0..=4294967295", 0, Some(u32::MAX)),
+    ];
+    for (s, min, max) in ok {
+        let a = InputArity::parse(s).unwrap();
+        assert_eq!((a.min(), a.max()), (min, max), "{s}");
+        assert_eq!(a.to_string(), s, "one spelling per value");
+    }
+    for s in
+        ["", "01", "-1", "1.5", "4294967296", "1..=1", "3..=2", "..3", "..", "1..2", "1..=", "1...", " 1", "1 ", "x"]
+    {
+        assert_eq!(InputArity::parse(s), Err(CardError::BadArity(s.to_string())), "{s:?}");
+    }
+    let a = InputArity::between(1, 3).unwrap();
+    assert_eq!([0, 1, 2, 3, 4].map(|n| a.accepts(n)), [false, true, true, true, false]);
+    assert!(InputArity::at_least(2).accepts(usize::MAX) && !InputArity::exactly(2).accepts(usize::MAX));
+    assert_eq!(InputArity::between(3, 2), None);
+    // A card without the field, or with a bad one, is refused.
+    let text = echo_card().replace("input_arity = \"0..\"", "");
+    assert_eq!(parse_card(&text), Err(CardError::MissingField("input_arity")));
+    let text = echo_card().replace("\"0..\"", "\"1..=1\"");
+    assert_eq!(parse_card(&text).unwrap_err().code(), "bad_arity");
 }
 
 #[test]

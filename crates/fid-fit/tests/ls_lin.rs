@@ -17,7 +17,7 @@ use fid_fit::contract::{
 };
 use fid_fit::ls_lin::{command_rows, projection_frame, sym_eig, Line2Ls, Line3Ls, PlaneLs, PointLs, PRIMITIVES};
 use fid_kci::kci::{sha256, to_hex};
-use fid_kci::{check, parse_card, CardRegistry};
+use fid_kci::{check, parse_card, CardRegistry, InputArity};
 use fid_types::{Determinism, SideEffect};
 
 const CASES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/fit/lin-synth-v1/cases.txt");
@@ -401,6 +401,24 @@ fn ac6_spec_cards() {
     assert!(cards.iter().all(|c| c.determinism == "D0"));
     let reg = CardRegistry::new(cards).unwrap();
     assert_eq!(reg.ids().len(), 4);
+}
+
+/// REQ-KRN.MAN.CARD-006 and REQ-KRN.MAN.KCI-009: each card's `input_arity` matches the
+/// implementation. `Fit::fit` takes exactly one point set (the bindings below stop compiling
+/// if a fit's signature changes), so every card must declare exactly one input. When these
+/// fits are registered as `KernelAlgorithm`s, `AlgorithmTable::new` enforces the same match.
+#[test]
+fn card_input_arity_matches_fit_signature() {
+    type FitFn<T> = fn(&T, &PointsView<'_>, &FitParams, Option<u64>) -> Result<FitResult, FitError>;
+    let _: FitFn<PointLs> = <PointLs as Fit>::fit;
+    let _: FitFn<Line2Ls> = <Line2Ls as Fit>::fit;
+    let _: FitFn<Line3Ls> = <Line3Ls as Fit>::fit;
+    let _: FitFn<PlaneLs> = <PlaneLs as Fit>::fit;
+    const POINT_SETS_PER_FIT: u32 = 1;
+    for text in CARDS {
+        let card = parse_card(text).unwrap();
+        assert_eq!(card.input_arity, InputArity::exactly(POINT_SETS_PER_FIT), "{}", card.id);
+    }
 }
 
 /// The four command data rows: W2 with R1 dry run, D0, every numeric field with a quantity

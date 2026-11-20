@@ -87,6 +87,84 @@ impl AlgorithmId {
     }
 }
 
+/// How many input blobs an algorithm takes (REQ-KRN.MAN.CARD-006): at least `min` and, when
+/// `max` is set, at most `max`. Card text: `"N"` (exactly N), `"N..=M"` (N to M inclusive,
+/// M > N) or `"N.."` (N or more). Each value has exactly one spelling, so the card's canonical
+/// bytes stay unique.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct InputArity {
+    min: u32,
+    max: Option<u32>,
+}
+
+impl InputArity {
+    /// Exactly `n` inputs.
+    pub const fn exactly(n: u32) -> Self {
+        InputArity { min: n, max: Some(n) }
+    }
+
+    /// `min` or more inputs.
+    pub const fn at_least(min: u32) -> Self {
+        InputArity { min, max: None }
+    }
+
+    /// `min` to `max` inputs inclusive; `None` when `max < min`.
+    pub const fn between(min: u32, max: u32) -> Option<Self> {
+        if max < min {
+            None
+        } else {
+            Some(InputArity { min, max: Some(max) })
+        }
+    }
+
+    /// Smallest accepted input count.
+    pub fn min(&self) -> u32 {
+        self.min
+    }
+
+    /// Largest accepted input count, or `None` when unbounded.
+    pub fn max(&self) -> Option<u32> {
+        self.max
+    }
+
+    /// True when a call with `n` inputs has an accepted input count.
+    pub fn accepts(&self, n: usize) -> bool {
+        match u32::try_from(n) {
+            Ok(n) => n >= self.min && !matches!(self.max, Some(m) if n > m),
+            // More than u32::MAX inputs: above every finite bound.
+            Err(_) => self.max.is_none(),
+        }
+    }
+
+    /// Parses the card spelling exactly (`"N"`, `"N..=M"` with M > N, `"N.."`); decimal
+    /// numbers without leading zeros that fit in a `u32`.
+    pub fn parse(s: &str) -> Result<Self, CardError> {
+        let bad = || CardError::BadArity(s.to_string());
+        if let Some((lo, hi)) = s.split_once("..=") {
+            let (lo, hi) = (version_part(lo).ok_or_else(bad)?, version_part(hi).ok_or_else(bad)?);
+            if hi <= lo {
+                return Err(bad());
+            }
+            Ok(InputArity { min: lo, max: Some(hi) })
+        } else if let Some(lo) = s.strip_suffix("..") {
+            Ok(InputArity::at_least(version_part(lo).ok_or_else(bad)?))
+        } else {
+            Ok(InputArity::exactly(version_part(s).ok_or_else(bad)?))
+        }
+    }
+}
+
+impl fmt::Display for InputArity {
+    /// The card spelling; `parse(x.to_string()) == x`.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.max {
+            Some(m) if m == self.min => write!(f, "{m}"),
+            Some(m) => write!(f, "{}..={m}", self.min),
+            None => write!(f, "{}..", self.min),
+        }
+    }
+}
+
 /// A parsed spec card (REQ-KRN.MAN.CARD-002).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecCard {
@@ -98,6 +176,9 @@ pub struct SpecCard {
     pub determinism: String,
     pub failure_modes: Vec<String>,
     pub validation: String,
+    /// The number of input blobs the algorithm takes (REQ-KRN.MAN.CARD-006); `evaluate`
+    /// refuses a call outside it (REQ-KRN.MAN.KCI-008).
+    pub input_arity: InputArity,
 }
 
 /// Card and ID errors, each with a stable code.
@@ -107,6 +188,8 @@ pub enum CardError {
     MissingField(&'static str),
     UnknownField(String),
     BadDeterminism(String),
+    /// The `input_arity` field is not `"N"`, `"N..=M"` (M > N) or `"N.."`.
+    BadArity(String),
     Syntax {
         line: usize,
         why: &'static str,
@@ -129,6 +212,7 @@ impl CardError {
             CardError::MissingField(_) => "missing_field",
             CardError::UnknownField(_) => "unknown_field",
             CardError::BadDeterminism(_) => "bad_determinism",
+            CardError::BadArity(_) => "bad_arity",
             CardError::Syntax { .. } => "syntax",
             CardError::TooLong { .. } => "too_long",
             CardError::StandardsTextSuspected { .. } => "standards_text_suspected",
@@ -144,6 +228,7 @@ impl fmt::Display for CardError {
             CardError::MissingField(k) => write!(f, "missing_field: {k}"),
             CardError::UnknownField(k) => write!(f, "unknown_field: {k}"),
             CardError::BadDeterminism(s) => write!(f, "bad_determinism: {s:?}"),
+            CardError::BadArity(s) => write!(f, "bad_arity: {s:?}"),
             CardError::Syntax { line, why } => write!(f, "syntax: line {line}: {why}"),
             CardError::TooLong { field } => write!(f, "too_long: {field} exceeds {MAX_FIELD_CHARS} characters"),
             CardError::StandardsTextSuspected { field } => {
@@ -283,8 +368,17 @@ const QUOTE_PAIRS: [(char, char); 6] = [
     ('\u{ab}', '\u{bb}'),
     ('\u{bb}', '\u{ab}'),
 ];
-const FIELDS: [&str; 8] =
-    ["id", "title", "method", "applicability", "references", "determinism", "failure_modes", "validation"];
+const FIELDS: [&str; 9] = [
+    "id",
+    "title",
+    "method",
+    "applicability",
+    "references",
+    "determinism",
+    "failure_modes",
+    "validation",
+    "input_arity",
+];
 const STANDARD_MARKERS: [&str; 10] = ["ISO", "ASME", "VDA", "VDI", "DIN", "JCGM", "IEC", "ANSI", "BS EN", "NIST"];
 
 /// Parses and checks one card (REQ-KRN.MAN.CARD-002, -004).
@@ -324,6 +418,7 @@ pub fn parse_card(text: &str) -> Result<SpecCard, CardError> {
         determinism: get_str("determinism")?,
         failure_modes: get_list("failure_modes")?,
         validation: get_str("validation")?,
+        input_arity: InputArity::parse(&get_str("input_arity")?)?,
     };
     if fid_types::Determinism::parse(&card.determinism).is_err() {
         return Err(CardError::BadDeterminism(card.determinism));
@@ -401,20 +496,31 @@ pub fn check(table_ids: &[AlgorithmId], card_ids: &[AlgorithmId]) -> CheckReport
 }
 
 /// Member keys of [`SpecCard::canonical_bytes`], in UTF-16 order (unit-tested in `kci::json`).
-pub(crate) const CARD_KEYS: [&str; 8] =
-    ["applicability", "determinism", "failure_modes", "id", "method", "references", "title", "validation"];
+pub(crate) const CARD_KEYS: [&str; 9] = [
+    "applicability",
+    "determinism",
+    "failure_modes",
+    "id",
+    "input_arity",
+    "method",
+    "references",
+    "title",
+    "validation",
+];
 
 impl SpecCard {
     /// Canonical card bytes (REQ-KRN.MAN.CARD-005): kernel canonical JSON of every field,
     /// keys in UTF-16 order, list items in card order, the ID in its display form.
     pub fn canonical_bytes(&self) -> Vec<u8> {
         let id = self.id.to_string();
-        let [k_app, k_det, k_fail, k_id, k_method, k_refs, k_title, k_val] = CARD_KEYS;
+        let arity = self.input_arity.to_string();
+        let [k_app, k_det, k_fail, k_id, k_arity, k_method, k_refs, k_title, k_val] = CARD_KEYS;
         crate::kci::json::fixed_object(&[
             (k_app, Flat::Str(&self.applicability)),
             (k_det, Flat::Str(&self.determinism)),
             (k_fail, Flat::List(&self.failure_modes)),
             (k_id, Flat::Str(&id)),
+            (k_arity, Flat::Str(&arity)),
             (k_method, Flat::Str(&self.method)),
             (k_refs, Flat::List(&self.references)),
             (k_title, Flat::Str(&self.title)),

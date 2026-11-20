@@ -5,7 +5,7 @@ pub mod cards;
 pub mod kci;
 pub mod manifest;
 
-pub use cards::{check, parse_card, AlgorithmId, CardError, CardRegistry, CheckReport, SpecCard};
+pub use cards::{check, parse_card, AlgorithmId, CardError, CardRegistry, CheckReport, InputArity, SpecCard};
 pub use kci::{
     evaluate, AlgorithmFailure, AlgorithmTable, Digest, KernelAlgorithm, KernelCall, KernelError, KernelResult,
 };

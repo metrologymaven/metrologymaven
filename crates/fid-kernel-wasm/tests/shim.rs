@@ -44,7 +44,7 @@ fn cases() -> Vec<Case> {
 fn ac2_every_native_row_gives_the_golden_stdout_and_exit_code() {
     let table = stand_in::table().expect("stand-in table builds");
     let all = cases();
-    assert_eq!(all.len(), 43);
+    assert_eq!(all.len(), 44);
     let mut ran = 0;
     for c in all.iter().filter(|c| !c.wasm_only) {
         let (code, out) = respond(Some(&table), &c.call);
@@ -52,7 +52,7 @@ fn ac2_every_native_row_gives_the_golden_stdout_and_exit_code() {
         assert_eq!(String::from_utf8(out).unwrap(), String::from_utf8(c.stdout.clone()).unwrap(), "{}", c.name);
         ran += 1;
     }
-    assert_eq!(ran, 41);
+    assert_eq!(ran, 42);
     // The 20 KRN.MAN.KCI calls are all present and all succeed.
     assert_eq!(all.iter().filter(|c| c.name.starts_with("kci-call-") && c.exit == 0).count(), 20);
 }

@@ -8,6 +8,7 @@ references = [
   "Golub, G. H. and Van Loan, C. F. (2013). Matrix Computations, 4th ed., section 8.5 (Jacobi methods).",
 ]
 determinism = "D0"
+input_arity = "1"
 failure_modes = [
   "Points on a circle (with or without noise), or any set with two nearly equal leading principal moments, have no unique direction: IllConditioned with the eigenvalue ratio.",
   "Orthogonal-distance residuals are unsigned, so their mean is not zero.",

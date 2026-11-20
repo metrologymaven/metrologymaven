@@ -7,6 +7,7 @@ references = [
   "Shakarji, C. M. (1998). Least-squares fitting algorithms of the NIST algorithm testing system. Journal of Research of the National Institute of Standards and Technology 103(6).",
 ]
 determinism = "D0"
+input_arity = "1"
 failure_modes = [
   "A cluster with a few far outliers moves the centroid; select points first (KRN.OUT).",
   "Residuals are unsigned distances, so their mean is not zero.",

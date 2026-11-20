@@ -68,8 +68,8 @@ updated: 2026-11-20
 
 ## Open questions
 
-- **Operator port signatures are not yet bound to the algorithm.** This leaf checks edges against the ports the model *declares* (unit, quantity kind, arity), but nothing yet checks that those declarations match the real signature of `algorithm_id@algorithm_version`. Follow-up leaf: publish each algorithm's port signature (names, quantity kinds, unit codes, arities, in argument order) in its `KRN.MAN.CARD` card or the kernel manifest entry, and add a pass here that refuses a declared port list that differs from it.
-- **Until then, the kernel call must refuse an argument-count mismatch.** `fid_kci::kci::evaluate` (`KRN.MAN.KCI`) does not do this today: it checks input digests and calls `KernelAlgorithm::validate` (params only), then passes `inputs` to `run`, so each algorithm must refuse a wrong input count itself. `KRN.MAN.KCI` should add an input-count check against the declared signature before `run`; until it does, `UNC.PROP` must not rely on this leaf for argument counts.
+- **Operator port signatures are only partly bound to the algorithm.** This leaf checks edges against the ports the model *declares* (unit, quantity kind, arity). Each algorithm's card now declares its input count (`input_arity`, REQ-KRN.MAN.CARD-006), and the card digest is in the manifest entry, but port names, quantity kinds and unit codes are not yet published. Follow-up leaf: publish the full port signature (names, quantity kinds, unit codes, arities, in argument order) in the card, and add a pass here that refuses a declared port list that differs from it (the count part can already compare against `input_arity`).
+- **Resolved 2026-11-20: the kernel call refuses an argument-count mismatch.** `fid_kci::kci::evaluate` now returns `InputArityMismatch` when a call's input count is outside the card's `input_arity`, before hashing inputs or running any algorithm code (REQ-KRN.MAN.KCI-008), and `AlgorithmTable::new` refuses a card whose arity differs from the implementation's (REQ-KRN.MAN.KCI-009). `UNC.PROP` can rely on the kernel for input counts; it still cannot rely on it for input kinds or units.
 
 ## Resolved at build
 

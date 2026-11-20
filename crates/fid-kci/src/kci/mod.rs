@@ -1,8 +1,9 @@
 //! Kernel call interface and digests. Spec node `KRN.MAN.KCI`.
 //!
 //! [`evaluate`] is the kernel's single, pure entry point. It probes the floating-point
-//! environment, looks the algorithm up, checks that it has a spec card, re-hashes every
-//! input and refuses a mismatch before any algorithm code runs, validates the parameters,
+//! environment, looks the algorithm up, checks that it has a spec card, refuses an input
+//! count outside the card's declared `input_arity`, re-hashes every input and refuses a
+//! mismatch before any algorithm code runs, validates the parameters,
 //! runs the algorithm and hashes the parameters and output itself. Every digest in a
 //! [`KernelResult`] is therefore produced inside this module.
 
@@ -11,7 +12,7 @@ pub mod sha256;
 
 use std::fmt;
 
-use crate::cards::{AlgorithmId, CardRegistry};
+use crate::cards::{AlgorithmId, CardRegistry, InputArity};
 use fid_num::err::{probe_fp_env, NumError};
 pub use fid_types::Digest;
 use json::{fixed_object, Flat};
@@ -119,6 +120,12 @@ pub enum KernelError {
     DuplicateAlgorithm(AlgorithmId),
     /// The algorithm itself failed.
     Algorithm(AlgorithmFailure),
+    /// The call's input count is outside the `input_arity` its spec card declares
+    /// (REQ-KRN.MAN.KCI-008). Raised before any input is hashed or any algorithm code runs.
+    InputArityMismatch { expected: InputArity, got: usize },
+    /// An algorithm's own [`KernelAlgorithm::input_arity`] differs from its card's
+    /// `input_arity`; the table refuses to build (REQ-KRN.MAN.KCI-009).
+    CardArityDrift { id: AlgorithmId, card: InputArity, implementation: InputArity },
 }
 
 impl KernelError {
@@ -132,6 +139,8 @@ impl KernelError {
             KernelError::FpEnvironment(_) => "fp_environment",
             KernelError::DuplicateAlgorithm(_) => "duplicate_algorithm",
             KernelError::Algorithm(_) => "algorithm_failed",
+            KernelError::InputArityMismatch { .. } => "input_arity_mismatch",
+            KernelError::CardArityDrift { .. } => "card_arity_drift",
         }
     }
 }
@@ -146,6 +155,12 @@ impl fmt::Display for KernelError {
             KernelError::FpEnvironment(e) => write!(f, "fp_environment: {e}"),
             KernelError::DuplicateAlgorithm(id) => write!(f, "duplicate_algorithm: {id}"),
             KernelError::Algorithm(a) => write!(f, "algorithm_failed: {}", a.code),
+            KernelError::InputArityMismatch { expected, got } => {
+                write!(f, "input_arity_mismatch: card declares {expected} inputs, call has {got}")
+            }
+            KernelError::CardArityDrift { id, card, implementation } => {
+                write!(f, "card_arity_drift: {id}: card declares {card} inputs, implementation {implementation}")
+            }
         }
     }
 }
@@ -156,6 +171,9 @@ impl std::error::Error for KernelError {}
 pub trait KernelAlgorithm {
     /// The algorithm's ID.
     fn id(&self) -> AlgorithmId;
+    /// How many input blobs `run` takes. Must equal the spec card's `input_arity`, or
+    /// [`AlgorithmTable::new`] refuses the table with [`KernelError::CardArityDrift`].
+    fn input_arity(&self) -> InputArity;
     /// Checks the canonical parameter bytes.
     fn validate(&self, params: &[u8]) -> Result<(), KernelError>;
     /// Computes the canonical output bytes.
@@ -176,7 +194,10 @@ impl fmt::Debug for AlgorithmTable {
 }
 
 impl AlgorithmTable {
-    /// Builds a table; fails on two algorithms with the same ID.
+    /// Builds a table; fails on two algorithms with the same ID, and on an algorithm whose
+    /// [`KernelAlgorithm::input_arity`] differs from its card's `input_arity`
+    /// (REQ-KRN.MAN.KCI-009). An algorithm without a card is accepted here and refused by
+    /// [`evaluate`] with `MissingSpecCard`.
     pub fn new(algorithms: Vec<Box<dyn KernelAlgorithm>>, cards: CardRegistry) -> Result<Self, KernelError> {
         let mut entries: Vec<(AlgorithmId, Box<dyn KernelAlgorithm>)> =
             algorithms.into_iter().map(|a| (a.id(), a)).collect();
@@ -184,6 +205,14 @@ impl AlgorithmTable {
         for pair in entries.windows(2) {
             if pair[0].0 == pair[1].0 {
                 return Err(KernelError::DuplicateAlgorithm(pair[0].0.clone()));
+            }
+        }
+        for (id, alg) in &entries {
+            if let Some(card) = cards.get(id) {
+                let implementation = alg.input_arity();
+                if card.input_arity != implementation {
+                    return Err(KernelError::CardArityDrift { id: id.clone(), card: card.input_arity, implementation });
+                }
             }
         }
         Ok(AlgorithmTable { entries, cards })
@@ -204,12 +233,14 @@ impl AlgorithmTable {
     }
 }
 
-/// The kernel's single evaluation function (REQ-KRN.MAN.KCI-001 .. -006).
+/// The kernel's single evaluation function (REQ-KRN.MAN.KCI-001 .. -006, -008).
 pub fn evaluate(table: &AlgorithmTable, call: &KernelCall) -> Result<KernelResult, KernelError> {
     probe_fp_env().map_err(KernelError::FpEnvironment)?;
     let alg = table.get(&call.algorithm).ok_or_else(|| KernelError::UnknownAlgorithm(call.algorithm.clone()))?;
-    if table.cards.get(&call.algorithm).is_none() {
-        return Err(KernelError::MissingSpecCard(call.algorithm.clone()));
+    let card = table.cards.get(&call.algorithm).ok_or_else(|| KernelError::MissingSpecCard(call.algorithm.clone()))?;
+    // Fail closed on the input count before hashing anything or calling the algorithm.
+    if !card.input_arity.accepts(call.inputs.len()) {
+        return Err(KernelError::InputArityMismatch { expected: card.input_arity, got: call.inputs.len() });
     }
     let mut input_digests = Vec::with_capacity(call.inputs.len());
     for (input_index, (bytes, claimed)) in call.inputs.iter().enumerate() {
