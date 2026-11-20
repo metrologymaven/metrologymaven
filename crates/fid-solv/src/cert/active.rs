@@ -37,10 +37,18 @@
 //! does: for a linear problem whose conic problem is an LP in `expected` variables it reduces the
 //! tied pool to **one** basis, the exact Bland-order phase-1 simplex on the multiplier system
 //! `A_pool^T y = -q, y >= 0` with the pool rows in label order (`super::basis`): `expected`
-//! independent rows with nonnegative multipliers, decided in exact integer arithmetic and
-//! independent of the solution's multipliers (no such basis: `NoBasis`, fail closed); for any
-//! other problem it lists only the first [`MAX_CANDIDATES`] sets of the lexicographic order,
-//! generated lazily. Recomputation and the KKT check still decide.
+//! independent rows with nonnegative multipliers, decided in exact integer arithmetic (no such
+//! basis: `NoBasis`, fail closed), followed as a fallback by the first [`MAX_CANDIDATES`]
+//! lexicographic sets; for any other problem it lists only those first sets, generated lazily.
+//! Recomputation and the KKT check still decide.
+//!
+//! The basis does not depend on the solution's multipliers `y`, but it does depend on the conic
+//! data `A` and `q`. When the conic problem is fixed problem data (an LP), it is path
+//! independent like the list. When `q` comes from an iterate (`KRN.SOLV.SEQ` certifies the
+//! linearisation at its final iterate, whose objective is the gradient there), two solver paths
+//! that end at slightly different iterates can choose different bases and so give different
+//! certificates and digests: each is still D0 for its seed, and `KRN.ENV.TAN.ROCK`'s
+//! deduplication merges the equal results.
 //!
 //! **Uncertified.** The result is a [`Proposal`]: its sets are guesses until the
 //! certificate pipeline (`KRN.SOLV.CERT.CT`, `certify`) recomputes the optimum from one of
@@ -130,13 +138,14 @@ impl Proposal {
     pub fn over_determined(&self) -> bool {
         self.over_determined
     }
-    /// The single set is the exact basis reduction of an over-cap tied pool of a linear problem
-    /// (REQ-KRN.SOLV.CERT.AS-007), not the enumeration.
+    /// The first set is the exact basis reduction of an over-cap tied pool of a linear problem
+    /// (REQ-KRN.SOLV.CERT.AS-007); the first [`MAX_CANDIDATES`] lexicographic sets follow it as
+    /// the fallback.
     pub fn reduced(&self) -> bool {
         self.reduced
     }
-    /// The sets are only the first [`MAX_CANDIDATES`] of an over-cap enumeration (a nonlinear
-    /// problem in the certificate pipeline; REQ-KRN.SOLV.CERT.AS-007).
+    /// The enumerated sets are only the first [`MAX_CANDIDATES`] of an over-cap enumeration (the
+    /// certificate pipeline over the cap; REQ-KRN.SOLV.CERT.AS-007).
     pub fn truncated(&self) -> bool {
         self.truncated
     }
@@ -178,11 +187,13 @@ pub fn extract(
 /// Within the cap it is [`extract`]'s list. Over the cap:
 ///
 /// - a **linear** problem (`linear`, the problem's `is_linear()`) whose conic problem is an LP
-///   (no quadratic term) in exactly `expected` variables gets **one** set: the exact Bland-order
-///   basis reduction of the multiplier system `A_pool^T y = -q, y >= 0` over the small-slack
-///   rows in label order (`super::basis::reduce`): `expected` independent rows with nonnegative
-///   multipliers, independent of the solution's multipliers. No such basis is
-///   `ActiveSetUndetermined { cause: NoBasis }`.
+///   (no quadratic term) in exactly `expected` variables gets first the exact Bland-order basis
+///   reduction of the multiplier system `A_pool^T y = -q, y >= 0` over the small-slack rows in
+///   label order (`super::basis::reduce`): `expected` independent rows with nonnegative
+///   multipliers, independent of the solution's multipliers `y` (it depends on the conic data
+///   `A` and `q`; see the module docs). Then, as a fallback for a basis that RECOMP or KKT
+///   refuses, the first [`MAX_CANDIDATES`] sets of the lexicographic order (lazily; the basis is
+///   not repeated). No such basis is `ActiveSetUndetermined { cause: NoBasis }`.
 /// - any other problem gets the first [`MAX_CANDIDATES`] sets of the lexicographic order,
 ///   generated lazily (the rest are never formed), and [`Proposal::truncated`] is set.
 ///
@@ -210,9 +221,16 @@ pub(crate) fn propose(
                 if set.len() != expected {
                     return Err(pool.undetermined(Undetermined::NoBasis));
                 }
-                let mut p = pool.into_proposal(vec![set]);
+                // Fallback: the first MAX_CANDIDATES sets of the lexicographic order follow the
+                // basis (it is not repeated), so a basis that RECOMP or KKT refuses does not end
+                // the search.
+                let lex = combinations(&pool.small, expected, MAX_CANDIDATES);
+                let mut p = pool.into_proposal(lex);
+                p.sets.retain(|s| *s != set);
+                p.sets.insert(0, set);
                 p.tie_broken = true;
                 p.reduced = true;
+                p.truncated = true;
                 Ok(p)
             }
             None => Err(pool.undetermined(Undetermined::NoBasis)),
@@ -259,17 +277,12 @@ impl Pool {
     }
 }
 
-/// Rows of the conic `A` for the labels `set` (dense, `n` columns each).
+/// Rows of the conic `A` for the labels `set` (sorted; dense, `n` columns each). One pass over
+/// the labels builds the row -> position map (`O(m log |set|)`), one pass over the nonzeros fills
+/// the rows (`O(nnz)`).
 fn pool_rows(problem: &ConicProblem, labels: &[RowLabel], set: &[RowLabel]) -> Result<Vec<Vec<f64>>, CertError> {
     let n = problem.n();
-    let mut index = Vec::with_capacity(labels.len());
-    let mut sorted: Vec<(RowLabel, usize)> = labels.iter().copied().zip(0..).collect();
-    sorted.sort_unstable();
-    for l in set {
-        let pos =
-            sorted.binary_search_by(|(r, _)| r.cmp(l)).map_err(|_| CertError::InvalidInput { field: "labels" })?;
-        index.push(sorted.get(pos).map(|(_, i)| *i).ok_or(CertError::InvalidInput { field: "labels" })?);
-    }
+    let position: Vec<Option<usize>> = labels.iter().map(|l| set.binary_search(l).ok()).collect();
     let a = problem.a();
     let mut rows = vec![vec![0.0; n]; set.len()];
     for col in 0..n {
@@ -281,12 +294,9 @@ fn pool_rows(problem: &ConicProblem, labels: &[RowLabel], set: &[RowLabel]) -> R
             let (Some(&r), Some(&v)) = (a.rowval.get(k), a.nzval.get(k)) else {
                 return Err(CertError::InvalidInput { field: "a" });
             };
-            for (dst, &src) in rows.iter_mut().zip(&index) {
-                if src == r {
-                    if let Some(slot) = dst.get_mut(col) {
-                        *slot = v;
-                    }
-                }
+            let at = position.get(r).copied().ok_or(CertError::InvalidInput { field: "a" })?;
+            if let Some(slot) = at.and_then(|q| rows.get_mut(q)).and_then(|row| row.get_mut(col)) {
+                *slot = v;
             }
         }
     }
@@ -544,9 +554,14 @@ mod tests {
         ));
         // Linear LP in 2 variables: one exact basis. Only row 0 (x = 0) carries the multiplier
         // (y_0 = 1), so the basis is row 0 and the lowest row that completes it (y = 0).
+        // The fallback follows: the first 256 lexicographic sets without the basis repeated.
         let r = propose(&p, &sol, &labels, 2, &th, true).unwrap();
-        assert!(r.reduced() && !r.truncated() && r.tie_broken());
-        assert_eq!(r.uncertified_sets(), &[vec![l(0), l(1)]]);
+        assert!(r.reduced() && r.truncated() && r.tie_broken());
+        let sets = r.uncertified_sets();
+        assert_eq!(sets[0], vec![l(0), l(1)]);
+        assert_eq!(sets.len(), MAX_CANDIDATES);
+        assert_eq!(sets[1], vec![l(0), l(2)]);
+        assert!(sets[1..].iter().all(|s| *s != sets[0]));
         // Nonlinear: the first 256 sets in lexicographic order, generated lazily.
         let r = propose(&p, &sol, &labels, 2, &th, false).unwrap();
         assert!(r.truncated() && !r.reduced());

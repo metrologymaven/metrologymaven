@@ -24,6 +24,13 @@ Cases (`pool` = the rows the Rust test gives slack 0; all others get a large sla
 - nobasis: the tie200 points with only the 100 upper rows in the pool: their multiplier
   system has no nonnegative solution (the second component forces sum y = 0, the third
   sum y = 2), so the reduction must propose nothing.
+- fallback: the tie200 points with the lower point of tie200's basis raised by 2^-16. Its row
+  stays in the pool (the test's slack threshold is 1e-6 * max|b|). A and q, and so the basis
+  (`reduced`), are unchanged, but the basis's vertex now violates the other lower rows by
+  `violation` (>= 1e-6, far above the 1e-9 * data_scale primal threshold), so KKT refuses it.
+  The expected certificate is the first set of the lexicographic order (at most 256, the basis
+  left out) whose exact vertex is feasible with nonnegative exact multipliers, each decision with
+  a margin of 1e-6; `tried` counts the sets certify tries, the basis included.
 
 The reduction (the rule of REQ-007): the system sum_k y_k a_k = -q, y >= 0 over the pool rows
 a_k in label order, solved by a phase-1 simplex from the all-artificial start (rows with a
@@ -49,6 +56,7 @@ Output lines:
 """
 
 import random
+from itertools import combinations, islice
 import sys
 from fractions import Fraction
 from pathlib import Path
@@ -171,6 +179,38 @@ def decide(pts, pool):
     return basis, p
 
 
+def first_certified(pts, pool, skip):
+    """The first set of the lexicographic order of `pool` (at most 256, `skip` left out) whose
+    exact vertex is feasible with nonnegative exact multipliers, every decision taken with a
+    margin of 1e-6 (so the Rust KKT check, with 1e-9 relative tolerances, agrees)."""
+    rows = {lab: (arow, b) for lab, arow, b in rows_of(pts)}
+    q = [Fraction(0), Fraction(0), Fraction(1)]
+    margin = Fraction(1, 10**6)
+    tried = 0
+    for cand in islice(combinations(pool, 3), 256):
+        cand = list(cand)
+        if cand == skip:
+            continue
+        tried += 1
+        a_b = [rows[lab][0] for lab in cand]
+        p = solve(a_b, [rows[lab][1] for lab in cand])
+        if p is None:
+            continue  # singular: RECOMP refuses it
+        worst = max(sum(u * v for u, v in zip(arow, p)) - b for arow, b in rows.values())
+        y = solve([[a_b[r][c] for r in range(3)] for c in range(3)], [-v for v in q])
+        assert worst <= 0 or worst >= margin, (cand, worst)
+        assert min(y) >= 0 or min(y) <= -margin, (cand, y)
+        if worst <= 0 and min(y) >= 0:
+            return cand, p, tried
+    return None, None, tried
+
+
+def worst_row(pts, basis):
+    rows = {lab: (arow, b) for lab, arow, b in rows_of(pts)}
+    p = solve([rows[lab][0] for lab in basis], [rows[lab][1] for lab in basis])
+    return max(sum(u * v for u, v in zip(arow, p)) - b for arow, b in rows.values())
+
+
 def dec(f):
     """An exact decimal of a dyadic rational."""
     f = Fraction(f)
@@ -209,6 +249,28 @@ def render():
             out.append("expect basis " + fmt(basis))
             out.append("params " + " ".join(dec(v) for v in p))
         out.append("end")
+    # fallback (see the module docs).
+    pool = sorted(tight(big))
+    basis, _ = decide(big, pool)
+    raised = next(lab[0] for lab in basis if lab[1] == 0)
+    delta = Fraction(1, 2**16)
+    pts = [(x, z + delta) if i == raised else (x, z) for i, (x, z) in enumerate(big)]
+    rows = {lab: (arow, b) for lab, arow, b in rows_of(pts)}
+    idx = bland([rows[lab][0] for lab in pool], [Fraction(0), Fraction(0), Fraction(1)])
+    assert [pool[k] for k in idx] == basis
+    worst = worst_row(pts, basis)
+    assert worst >= Fraction(1, 10**6), worst  # primal certainly violated (threshold ~2e-7)
+    cand, p, tried = first_certified(pts, pool, basis)
+    assert cand is not None and p == [Fraction(1, 8), Fraction(0), Fraction(2)], (cand, p)
+    out.append(f"case fallback points {len(pts)}")
+    out.append("points " + " ".join(f"{dec(x)} {dec(z)}" for x, z in pts))
+    out.append("pool " + fmt(pool))
+    out.append("reduced " + fmt(basis))
+    out.append(f"violation {dec(worst)}")
+    out.append("expect basis " + fmt(cand))
+    out.append("params " + " ".join(dec(v) for v in p))
+    out.append(f"tried {tried + 1}")
+    out.append("end")
     return "\n".join(out) + "\n"
 
 

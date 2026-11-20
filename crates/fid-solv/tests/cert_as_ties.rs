@@ -14,7 +14,8 @@ use std::time::Instant;
 use fid_num::f;
 use fid_num::la::Mat;
 use fid_solv::cert::active::{extract, RowLabel, Thresholds};
-use fid_solv::cert::recomp::{ActiveSetProblem, Interval};
+use fid_solv::cert::kkt::{check, KktFail, KktStatus, KktTolerances};
+use fid_solv::cert::recomp::{recompute, ActiveSetProblem, Interval, RecompConfig};
 use fid_solv::cert::{certify, CertConfig, CertError, CertKind, Undetermined};
 use fid_solv::conic::{Cone, ConicProblem, ConicProblemBuilder, ConicResiduals, ConicSolution, Csc};
 use fid_testkit::Sha256Hasher;
@@ -149,6 +150,7 @@ struct Case {
     pool: Vec<RowLabel>,
     basis: Option<Vec<RowLabel>>,
     params: Vec<f64>,
+    reduced: Option<Vec<RowLabel>>,
 }
 
 fn parse() -> Vec<Case> {
@@ -170,6 +172,7 @@ fn parse() -> Vec<Case> {
                 pool: labels(&get("pool")),
                 basis: expect.strip_prefix("basis ").map(labels),
                 params: nums(get("params")),
+                reduced: Some(get("reduced")).filter(|r| !r.is_empty()).map(|r| labels(&r)),
             });
         } else {
             let (k, v) = l.split_once(' ').unwrap_or((l, ""));
@@ -179,16 +182,19 @@ fn parse() -> Vec<Case> {
     out
 }
 
-/// A solution with slack 0 on the pool and 1 elsewhere; multipliers `y` on the pool rows, the
-/// rest 0. `vertex` puts them only on the first three pool rows, otherwise spreads them evenly
-/// (an interior solution).
+/// The planted optimum of every case.
+const OPT: [f64; 3] = [0.125, 0.0, 2.0];
+
+/// A solution with the exact slack at the optimum on the pool (0, or 2^-16 for the raised point
+/// of `fallback`) and 1 elsewhere; multipliers `y` on the pool rows, the rest 0. `vertex` puts
+/// them only on the first three pool rows, otherwise spreads them evenly (an interior solution).
 fn solution(z: &Zone, pool: &[RowLabel], vertex: bool) -> ConicSolution {
     let labels = z.row_labels();
     let mut s = Vec::new();
     let mut y = Vec::new();
     for l in &labels {
         let at = pool.iter().position(|p| p == l);
-        s.push(if at.is_some() { 0.0 } else { 1.0 });
+        s.push(if at.is_some() { -z.g(*l, &OPT) } else { 1.0 });
         y.push(match at {
             Some(_) if !vertex => 1.0 / pool.len() as f64,
             Some(k) if k < 3 => 0.5,
@@ -205,15 +211,16 @@ fn solution(z: &Zone, pool: &[RowLabel], vertex: bool) -> ConicSolution {
     }
 }
 
+/// Slack threshold `1e-6 * max|b|` (about 2.6e-5): the raised point's 2^-16 is small slack.
 fn th() -> Thresholds {
-    Thresholds { slack_rel: 1e-9, mult_rel: 1e-9 }
+    Thresholds { slack_rel: 1e-6, mult_rel: 1e-9 }
 }
 
 #[test]
 fn fixture_counts() {
     let cases = parse();
-    assert_eq!(cases.len(), 3);
-    assert_eq!(cases.iter().map(|c| c.pool.len()).collect::<Vec<_>>(), [200, 13, 100]);
+    assert_eq!(cases.len(), 4);
+    assert_eq!(cases.iter().map(|c| c.pool.len()).collect::<Vec<_>>(), [200, 13, 100, 200]);
 }
 
 /// The over-cap pools certify on the oracle's basis, from an interior and a vertex solution
@@ -246,6 +253,31 @@ fn over_cap_pools_certify_on_the_exact_basis() {
     }
 }
 
+/// Fallback: the reduced basis of `fallback` is refused by the KKT check (primal violated, as
+/// the oracle decided), and the first lexicographic set the oracle finds certifiable is the
+/// certificate.
+#[test]
+fn refused_basis_falls_back_to_the_lexicographic_sets() {
+    let c = parse().into_iter().find(|c| c.name == "fallback").unwrap();
+    let reduced = c.reduced.clone().unwrap();
+    assert_ne!(Some(&reduced), c.basis.as_ref());
+    // The reduced basis alone (a solution whose small-slack rows are exactly the basis).
+    let conic = c.zone.conic();
+    let only = solution(&c.zone, &reduced, true);
+    let prop = extract(&conic, &only, &c.zone.row_labels(), 3, &th()).unwrap();
+    assert_eq!(prop.uncertified_sets(), &[reduced.clone()]);
+    let rec = recompute(&c.zone, &prop, 0, &RecompConfig::default()).unwrap();
+    let rep = check(&c.zone, &rec, &KktTolerances::default()).unwrap();
+    assert_eq!((rep.status(), rep.reason()), (KktStatus::Violated, Some(KktFail::Primal)));
+    // The full pool: certified on the oracle's fallback set.
+    let got =
+        certify(&c.zone, &conic, &solution(&c.zone, &c.pool, false), CertKind::Zone, &CertConfig::new(th())).unwrap();
+    assert_eq!(got.certificate().active_set(), &c.basis.clone().unwrap()[..]);
+    for (i, (&g, &w)) in got.certificate().params().iter().zip(&c.params).enumerate() {
+        assert!((g - w).abs() <= got.certificate().param_bounds()[i], "param {i}");
+    }
+}
+
 /// A pool whose multiplier system has no nonnegative solution proposes nothing: fail closed.
 #[test]
 fn pool_without_a_basis_fails_closed() {
@@ -262,7 +294,7 @@ fn pool_without_a_basis_fails_closed() {
 
 /// Output-bit pin of every outcome, recorded from a local x86-64 run and checked by CI on every
 /// target (REQ-KRN.SOLV.CERT.AS-005).
-const OUTPUT_PIN: &str = "sha256:979707c415abb6daf46384ba16b60ccb58f46135df804b5ac660550b9b198705";
+const OUTPUT_PIN: &str = "sha256:50784ce2249306669ecc0b7a7b96ef791cef790312bdb67f44c88559b0c72278";
 
 #[test]
 fn output_bits_pinned() {

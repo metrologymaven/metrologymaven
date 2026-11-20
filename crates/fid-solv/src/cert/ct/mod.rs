@@ -9,8 +9,9 @@
 //!    `InvalidInput { field: "data_scale" }` for a value that is not finite and positive). These
 //!    fail the call; they are not candidate failures.
 //! 2. **Extraction** (`super::active::propose`, KRN.SOLV.CERT.AS: [`super::active::extract`]'s
-//!    list within its cap; over the cap one exact basis for a linear problem, else the first
-//!    `MAX_CANDIDATES` sets) with the problem's
+//!    list within its cap; over the cap, for a linear problem, one exact basis followed by the
+//!    first `MAX_CANDIDATES` lexicographic sets as a fallback, else those first sets alone) with
+//!    the problem's
 //!    [`ActiveSetProblem::row_labels`] as the labels of the conic rows **in that order** (row `i`
 //!    of the conic problem is the constraint labelled `row_labels()[i]`) and
 //!    [`ActiveSetProblem::expected_active`] as the set size. Its errors (including

@@ -17,19 +17,28 @@
 //! integers: the `f64` data are exact dyadic rationals, each column is scaled by its own power of
 //! two to integers (a positive scale changes no sign), and the tableau is updated by
 //! fraction-free (Bareiss) pivoting with exact division, so there is no rounding anywhere and no
-//! sign is ever guessed. The result depends only on the problem data and the pool (the
-//! multipliers `y` and slacks `s` of the solution enter only through the classification), so a
-//! vertex and an interior solution of the same tied LP give the same basis.
+//! sign is ever guessed. The result depends only on `A`, `q` and the pool (the multipliers `y`
+//! and slacks `s` of the solution enter only through the classification), so a vertex and an
+//! interior solution of the same tied LP give the same basis. It is not independent of the
+//! solving path when `q` itself comes from an iterate (`KRN.SOLV.SEQ`'s linearisation at its
+//! final iterate): two paths ending at slightly different iterates may choose different bases.
+//!
+//! **Cost.** At most `MAX_PIVOTS_PER_COLUMN * (m + n) * n` pivots (Bland's rule cannot cycle;
+//! the cap only bounds the work), each updating the `(n + 1) x (m + n + 1)` tableau with two
+//! products and one exact division per entry; the entries are minors of the scaled data, so
+//! their size is at most about `n` times the bit length of one scaled column entry plus
+//! `log2(n!)`.
 //!
 //! The basis is still only a proposal: `KRN.SOLV.CERT.RECOMP` and `KRN.SOLV.CERT.KKT` decide
 //! whether it is certified. `None` (fail closed) when the pool has no basis with nonnegative
-//! multipliers, its rows do not span `R^n`, or the iteration limit is reached.
+//! multipliers, its rows do not span `R^n`, or the pivot cap is reached.
 
 use core::cmp::Ordering;
 
-/// Pivots before the reduction gives up (fail closed). Bland's rule cannot cycle, so this only
-/// bounds the work; a phase 1 on `n` rows needs far fewer.
-const MAX_PIVOTS: usize = 100_000;
+/// Pivots per tableau column and row before the reduction gives up (fail closed): the cap is
+/// `MAX_PIVOTS_PER_COLUMN * (m + n) * n`. Bland's rule cannot cycle, so this only bounds the
+/// work; a phase 1 on `n` rows typically needs a few pivots per row.
+const MAX_PIVOTS_PER_COLUMN: usize = 4;
 
 // ------------------------------------------------------------------ exact integers
 
@@ -423,10 +432,13 @@ pub(crate) fn reduce(rows: &[Vec<f64>], q: &[f64]) -> Option<Vec<usize>> {
         }
     };
 
-    for _ in 0..MAX_PIVOTS {
+    let max_pivots = MAX_PIVOTS_PER_COLUMN.saturating_mul(m + n).saturating_mul(n);
+    let mut converged = false;
+    for _ in 0..max_pivots {
         // Bland: lowest column with a negative reduced cost (right-hand side excluded).
         let cost_row = t.get(n)?;
         let Some(s) = (0..m + n).find(|&k| cost_row.get(k).is_some_and(|c| actual(c, &d) == Ordering::Less)) else {
+            converged = true;
             break;
         };
         // Ratio test over rows with a positive entry; ties to the lowest basic index.
@@ -465,8 +477,8 @@ pub(crate) fn reduce(rows: &[Vec<f64>], q: &[f64]) -> Option<Vec<usize>> {
         pivot(&mut t, &mut d, r, s)?;
         *basis.get_mut(r)? = s;
     }
-    // Feasible only if the phase-1 objective is 0.
-    if t.get(n)?.get(width - 1)?.sign() != Ordering::Equal {
+    // The pivot cap was reached: fail closed. Feasible only if the phase-1 objective is 0.
+    if !converged || t.get(n)?.get(width - 1)?.sign() != Ordering::Equal {
         return None;
     }
     // Drive the remaining (zero-level) artificials out: lowest structural column with a nonzero
