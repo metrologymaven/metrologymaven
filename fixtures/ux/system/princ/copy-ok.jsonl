@@ -1,0 +1,15 @@
+{"id":"review.human.approve_button","text":"Approve"}
+{"id":"run.approve.confirm","text":"Approve this run? Your approval is recorded in the journal."}
+{"id":"program.release.title","text":"Release program version {version}"}
+{"id":"program.release.sign.button","text":"Sign and release"}
+{"id":"agent.proposal.apply_button","text":"Apply proposal"}
+{"id":"agent.proposal.reject_button","text":"Reject proposal"}
+{"id":"probe.signal.label","text":"Signal strength"}
+{"id":"viz.feature.designation","text":"Designated datum"}
+{"id":"viz.changes.label","text":"Unreleased changes"}
+{"id":"gdt.result.status","text":"Conforms to tolerance"}
+{"id":"trust.verify.result","text":"Digest verified"}
+{"id":"cal.verify.title","text":"Verify probe calibration"}
+{"id":"viz.shell.login","text":"Log in"}
+{"id":"viz.update.banner","text":"What's new in {version}"}
+{"id":"viz.empty.state","text":""}

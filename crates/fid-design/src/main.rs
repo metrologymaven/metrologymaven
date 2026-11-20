@@ -1,5 +1,7 @@
-//! `fid-design pkg-check --root <dir> [--json]` and
-//! `fid-design pkg-diff --from <dir> --to <dir> [--json]`.
+//! `fid-design pkg-check --root <dir> [--json]`,
+//! `fid-design pkg-diff --from <dir> --to <dir> [--json]`,
+//! `fid-design princ-check [--file <md>] [--json]` and
+//! `fid-design words-check --copy <jsonl> [--words <json>] [--json]`.
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage.
 
 use std::io::Write;
@@ -14,6 +16,9 @@ struct Args {
     root: Option<PathBuf>,
     from: Option<PathBuf>,
     to: Option<PathBuf>,
+    file: Option<PathBuf>,
+    copy: Option<PathBuf>,
+    words: Option<PathBuf>,
     json: bool,
 }
 
@@ -26,6 +31,9 @@ fn parse_args(args: &[String]) -> Option<Args> {
             "--root" => out.root = Some(PathBuf::from(it.next()?)),
             "--from" => out.from = Some(PathBuf::from(it.next()?)),
             "--to" => out.to = Some(PathBuf::from(it.next()?)),
+            "--file" => out.file = Some(PathBuf::from(it.next()?)),
+            "--copy" => out.copy = Some(PathBuf::from(it.next()?)),
+            "--words" => out.words = Some(PathBuf::from(it.next()?)),
             _ => return None,
         }
     }
@@ -73,6 +81,29 @@ fn main() -> ExitCode {
     let Some(args) = parse_args(&all[1..]) else {
         return usage();
     };
+    let pkg_flags = args.root.is_some() || args.from.is_some() || args.to.is_some();
+    let princ_flags = args.file.is_some() || args.copy.is_some() || args.words.is_some();
+    match cmd.as_str() {
+        "princ-check" if !pkg_flags && args.copy.is_none() && args.words.is_none() => {
+            let file = args.file.clone().unwrap_or_else(|| PathBuf::from(fid_design::princ::DEFAULT_FILE));
+            return match fid_design::princ::check(&file) {
+                Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+                Err(e) => fail(e),
+            };
+        }
+        "words-check" if !pkg_flags && args.file.is_none() => {
+            let Some(copy) = &args.copy else {
+                return usage();
+            };
+            let words = args.words.clone().unwrap_or_else(|| PathBuf::from(fid_design::words::DEFAULT_WORDS));
+            return match fid_design::words::check(copy, &words) {
+                Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+                Err(e) => fail(e),
+            };
+        }
+        _ if princ_flags => return usage(),
+        _ => {}
+    }
     match (cmd.as_str(), &args.root, &args.from, &args.to) {
         ("pkg-check", Some(root), None, None) => match fid_design::pkg::check(root) {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),

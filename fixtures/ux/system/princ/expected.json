@@ -1,0 +1,123 @@
+{
+  "princ": {
+    "shipped": {
+      "exit": 0,
+      "principles": [
+        "P-DATA",
+        "P-DENSE",
+        "P-EXPLAIN",
+        "P-FAMILIAR",
+        "P-KEYS",
+        "P-NOCOLOR"
+      ],
+      "findings": []
+    },
+    "no-dont.md": {
+      "exit": 1,
+      "principles": [
+        "P-DATA",
+        "P-DENSE",
+        "P-EXPLAIN",
+        "P-FAMILIAR",
+        "P-KEYS",
+        "P-NOCOLOR"
+      ],
+      "findings": [
+        "PRINC-EXAMPLE-MISSING P-DATA"
+      ]
+    },
+    "no-id.md": {
+      "exit": 1,
+      "principles": [
+        "P-DATA",
+        "P-EXPLAIN",
+        "P-FAMILIAR",
+        "P-KEYS",
+        "P-NOCOLOR"
+      ],
+      "findings": [
+        "PRINC-ID-MISSING Dense but calm",
+        "PRINC-ID-MISSING P-DENSE"
+      ]
+    },
+    "unknown.md": {
+      "exit": 1,
+      "principles": [
+        "P-DATA",
+        "P-DENSE",
+        "P-EXPLAIN",
+        "P-FAMILIAR",
+        "P-KEYS",
+        "P-NOCOLOR"
+      ],
+      "findings": [
+        "PRINC-EXAMPLE-MISSING P-KEYS",
+        "PRINC-UNKNOWN P-FAST",
+        "PRINC-UNKNOWN P-NOCOLOR"
+      ]
+    }
+  },
+  "words": {
+    "copy-ok.jsonl": {
+      "words": "shipped",
+      "exit": 0,
+      "messages": 15,
+      "findings": []
+    },
+    "copy-bad.jsonl": {
+      "words": "shipped",
+      "exit": 1,
+      "messages": 10,
+      "findings": [
+        "WORD-RESERVED approve agent.plan.status",
+        "WORD-RESERVED approve agent.proposal.apply_button",
+        "WORD-RESERVED approve agent.proposal.bulk_button",
+        "WORD-RESERVED approve run.approved.count",
+        "WORD-RESERVED conforms viz.inspect.badge",
+        "WORD-RESERVED release agent.proposal.bulk_button",
+        "WORD-RESERVED release program.sign.tooltip",
+        "WORD-RESERVED release viz.update.banner",
+        "WORD-RESERVED sign program.sign.tooltip",
+        "WORD-RESERVED sign viz.shell.login",
+        "WORD-RESERVED verified rpt.summary.note"
+      ]
+    },
+    "copy-schema.jsonl": {
+      "words": "shipped",
+      "exit": 1,
+      "messages": 2,
+      "findings": [
+        "WORD-RESERVED approve agent.x",
+        "WORDS-SCHEMA copy:2",
+        "WORDS-SCHEMA copy:3",
+        "WORDS-SCHEMA copy:4",
+        "WORDS-SCHEMA copy:5",
+        "WORDS-SCHEMA copy:6",
+        "WORDS-SCHEMA copy:7"
+      ]
+    },
+    "words-bad-copy.jsonl": {
+      "words": "words-bad.json",
+      "exit": 1,
+      "messages": 5,
+      "findings": [
+        "WORD-RESERVED Cert agent.c",
+        "WORD-RESERVED approve agent.a",
+        "WORDS-SCHEMA words[1]",
+        "WORDS-SCHEMA words[2]",
+        "WORDS-SCHEMA words[3]",
+        "WORDS-SCHEMA words[4]",
+        "WORDS-SCHEMA words[5]",
+        "WORDS-SCHEMA words[6]"
+      ]
+    },
+    "copy-ok.jsonl+words-object.json": {
+      "words": "words-object.json",
+      "exit": 1,
+      "messages": 15,
+      "findings": [
+        "WORDS-SCHEMA words"
+      ]
+    }
+  }
+}
