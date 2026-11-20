@@ -2,8 +2,15 @@
 //! pattern of the R0 reads of `fid-align` (`align.get_alignment@1`): both surfaces build the
 //! same parameters and call [`get_result`], so `fid gdt get-result --run R --char C --json`
 //! and the MCP tool `gdt_get_result` return the same bytes, the stored canonical JSON.
+//!
+//! Without `--json` the CLI prints [`render_text`], the human-readable form, and the MCP tool
+//! result ([`invoke_mcp_tool`]) carries the same text as its text content next to the
+//! canonical JSON as its structured content. Both show `interpretation: <value>`, so a
+//! provisional record always shows the label `interpretation: provisional`
+//! (`GDT.CHAR.INTERP` REQ-009).
 
-use super::store::{get_result, ResultStore, GET_RESULT_COMMAND};
+use super::builder::{ResultRecord, RECORD_SCHEMA};
+use super::store::{get_record, get_result, ResultStore, GET_RESULT_COMMAND};
 use super::RecordError;
 use fid_canon::{CValue, CanonError};
 use fid_io_reg::Principal;
@@ -41,10 +48,62 @@ fn params(o: &BTreeMap<String, CValue>) -> Result<(&str, &str), RecordError> {
     Ok((field("run")?, field("char")?))
 }
 
-/// Runs the MCP tool `gdt_get_result` on raw JSON parameters `{"run": .., "char": ..}`
-/// (at most [`MAX_PARAMS_BYTES`] bytes, one level, duplicate keys refused) for `principal`
-/// and returns the stored canonical bytes.
-pub fn invoke_mcp(store: &ResultStore, principal: Principal, tool: &str, raw: &[u8]) -> Result<Vec<u8>, RecordError> {
+/// The human-readable form of a record: one `name: value` line each for the run, the
+/// characteristic, the DMT row, the decision outcome (with its reason), the interpretation
+/// label ([`crate::chars::interp::Interpretation::line`]: catalog text
+/// `interpretation: provisional`, or `interpretation: signed_off`), the register consulted,
+/// and one `rule:` line per interpretation rule. IDs printed here are grammar-checked ASCII.
+pub fn render_text(record: &ResultRecord) -> String {
+    let mut out = String::new();
+    let mut line = |k: &str, v: &str| {
+        out.push_str(k);
+        out.push_str(": ");
+        out.push_str(v);
+        out.push('\n');
+    };
+    line("run", record.run().as_str());
+    line("characteristic", record.characteristic().as_str());
+    line("dmt_row", record.dmt_row().as_str());
+    let d = record.decision();
+    match d.reason() {
+        Some(r) => line("outcome", &format!("{} ({r})", d.outcome())),
+        None => line("outcome", d.outcome()),
+    }
+    out.push_str(record.interpretation().line());
+    out.push('\n');
+    let reg = record.interpretation_register();
+    out.push_str("interpretation_register: ");
+    out.push_str(reg.as_ref().map_or("none", |d| d.as_str()));
+    out.push('\n');
+    for r in record.interpretation_rules() {
+        let revision = r.revision().map_or_else(|| "-".to_owned(), |n| n.to_string());
+        out.push_str(&format!(
+            "rule: {} kind={} revision={} status={}",
+            r.rule(),
+            r.kind().as_str(),
+            revision,
+            r.status().as_str()
+        ));
+        if let Some(reason) = r.reason() {
+            out.push_str(&format!(" reason={}", reason.as_str()));
+        }
+        out.push('\n');
+    }
+    out
+}
+
+/// The MCP tool result of `gdt_get_result`: the stored canonical JSON as structured content
+/// and [`render_text`] as text content.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct McpToolResult {
+    /// Structured content: the record's canonical JSON (with `interpretation` and
+    /// `interpretation_rules`).
+    pub structured: Vec<u8>,
+    /// Text content: [`render_text`].
+    pub text: String,
+}
+
+fn mcp_params(tool: &str, raw: &[u8]) -> Result<BTreeMap<String, CValue>, RecordError> {
     if tool != GET_RESULT_MCP {
         return Err(bad("unknown tool"));
     }
@@ -54,13 +113,35 @@ pub fn invoke_mcp(store: &ResultStore, principal: Principal, tool: &str, raw: &[
         _ => bad("params are not valid JSON"),
     })?;
     let CValue::Obj(o) = v else { return Err(bad("params is not an object")) };
+    Ok(o)
+}
+
+/// Runs the MCP tool `gdt_get_result` on raw JSON parameters `{"run": .., "char": ..}`
+/// (at most [`MAX_PARAMS_BYTES`] bytes, one level, duplicate keys refused) for `principal`
+/// and returns the stored canonical bytes (the structured content of [`invoke_mcp_tool`]).
+pub fn invoke_mcp(store: &ResultStore, principal: Principal, tool: &str, raw: &[u8]) -> Result<Vec<u8>, RecordError> {
+    let o = mcp_params(tool, raw)?;
     let (run, char) = params(&o)?;
     get_result(store, principal, run, char).map(<[u8]>::to_vec)
 }
 
+/// [`invoke_mcp`] with the full tool result: structured content and text content.
+pub fn invoke_mcp_tool(
+    store: &ResultStore,
+    principal: Principal,
+    tool: &str,
+    raw: &[u8],
+) -> Result<McpToolResult, RecordError> {
+    let o = mcp_params(tool, raw)?;
+    let (run, char) = params(&o)?;
+    let r = get_record(store, principal, run, char)?;
+    Ok(McpToolResult { structured: r.canonical_json().to_vec(), text: render_text(r) })
+}
+
 /// Runs `fid gdt <args>` for `principal`: `get-result --run <R> --char <C> [--json]`. Output
-/// is the stored canonical JSON either way. Unknown subcommands, unknown, repeated or
-/// value-less options and stray arguments are `bad_params`.
+/// is the stored canonical JSON with `--json`, else [`render_text`] (UTF-8). Unknown
+/// subcommands, unknown, repeated or value-less options and stray arguments are
+/// `bad_params`.
 pub fn invoke_cli(store: &ResultStore, principal: Principal, args: &[&str]) -> Result<Vec<u8>, RecordError> {
     if args.len() > MAX_CLI_ARGS {
         return Err(bad("too many arguments"));
@@ -90,7 +171,11 @@ pub fn invoke_cli(store: &ResultStore, principal: Principal, args: &[&str]) -> R
         }
     }
     let (run, char) = params(&o)?;
-    get_result(store, principal, run, char).map(<[u8]>::to_vec)
+    if json {
+        get_result(store, principal, run, char).map(<[u8]>::to_vec)
+    } else {
+        get_record(store, principal, run, char).map(|r| render_text(r).into_bytes())
+    }
 }
 
 fn text(s: &str) -> CValue {
@@ -107,6 +192,73 @@ fn strs(items: &[&str]) -> CValue {
 
 fn id_schema(description: &str) -> CValue {
     obj([("type", text("string")), ("pattern", text(ID_PATTERN)), ("description", text(description))])
+}
+
+/// Pattern of `interpretation_register`: a register digest or `none`.
+pub const REGISTER_FIELD_PATTERN: &str = "^(none|sha256:[0-9a-f]{64})$";
+
+fn typed(t: &str) -> CValue {
+    obj([("type", text(t))])
+}
+
+/// The result schema: the canonical record, closed (`additionalProperties: false`), with its
+/// schema tag and the interpretation block of `GDT.CHAR.INTERP` required:
+/// `interpretation` an enum, `interpretation_rules` an array of closed rule uses (`reason` a
+/// reason code or null, `revision` an integer of at least 1 or null), and
+/// `interpretation_register` a digest or `none` ([`REGISTER_FIELD_PATTERN`]).
+fn result_schema() -> CValue {
+    let reasons = CValue::Arr(
+        ["awaiting_review", "superseded", "not_in_register", "no_signoff_path", "no_register", "unverified_register"]
+            .iter()
+            .map(|s| text(s))
+            .chain(std::iter::once(CValue::Null))
+            .collect(),
+    );
+    let rule = obj([
+        ("type", text("object")),
+        ("additionalProperties", CValue::Bool(false)),
+        ("required", strs(&["content_digest", "kind", "reason", "revision", "rule", "status"])),
+        (
+            "properties",
+            obj([
+                ("content_digest", obj([("type", text("string")), ("pattern", text(fid_types::Digest::PATTERN))])),
+                ("kind", obj([("type", text("string")), ("enum", strs(&["dmt_row", "profile"]))])),
+                ("reason", obj([("type", strs(&["string", "null"])), ("enum", reasons)])),
+                ("revision", obj([("type", strs(&["integer", "null"])), ("minimum", CValue::Num(1.0))])),
+                ("rule", typed("string")),
+                ("status", obj([("type", text("string")), ("enum", strs(&["provisional", "signed_off"]))])),
+            ]),
+        ),
+    ]);
+    obj([
+        ("type", text("object")),
+        ("additionalProperties", CValue::Bool(false)),
+        ("required", strs(&["interpretation", "interpretation_register", "interpretation_rules", "schema"])),
+        (
+            "properties",
+            obj([
+                ("schema", obj([("type", text("string")), ("enum", strs(&[RECORD_SCHEMA]))])),
+                ("run", typed("string")),
+                ("characteristic", typed("string")),
+                ("measurand", typed("string")),
+                ("evaluation_basis", typed("string")),
+                ("value", typed("object")),
+                ("uncertainty", typed("object")),
+                ("decision", typed("object")),
+                ("spec", typed("object")),
+                ("algorithm", typed("string")),
+                ("kernel_version", typed("string")),
+                ("input_digests", typed("array")),
+                ("journal_entry", typed("string")),
+                ("dmt_row", typed("string")),
+                ("operator_chain_digest", typed("string")),
+                ("dmt_digest", typed("string")),
+                ("interpretation", obj([("type", text("string")), ("enum", strs(&["provisional", "signed_off"]))])),
+                ("interpretation_register", obj([("type", text("string")), ("pattern", text(REGISTER_FIELD_PATTERN))])),
+                ("interpretation_rules", obj([("type", text("array")), ("items", rule)])),
+            ]),
+        ),
+    ])
 }
 
 /// The registry definition of `gdt.get_result@1` (R0, D0, CLI and MCP), built through
@@ -127,7 +279,7 @@ pub fn command_def() -> Result<CommandDef, DefError> {
                 ("properties", obj([("char", id_schema("The characteristic.")), ("run", id_schema("The run."))])),
             ]),
         ),
-        ("result_schema", obj([("type", text("object"))])),
+        ("result_schema", result_schema()),
         ("side_effect", text("R0")),
         ("mcp_projection", text("exposed")),
         ("determinism", text("D0")),

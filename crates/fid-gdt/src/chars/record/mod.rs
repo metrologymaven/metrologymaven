@@ -23,10 +23,10 @@
 //! [`invoke_mcp`] are its CLI (`fid gdt get-result`) and MCP (`gdt_get_result`) entry
 //! points, and [`command_def`] its registry definition.
 //!
-//! # Wire form (`fid.gdt-result/1`, RFC 8785)
+//! # Wire form (`fid.gdt-result/2`, RFC 8785)
 //!
 //! ```json
-//! { "schema": "fid.gdt-result/1", "run": "R", "characteristic": "C", "measurand": "...",
+//! { "schema": "fid.gdt-result/2", "run": "R", "characteristic": "C", "measurand": "...",
 //!   "evaluation_basis": "POINTS", "value": { "value": "0x<bits>", "unit": "si:m" },
 //!   "uncertainty": { "class": "UEC-2", "uec0_reason": null, "method": "LPU",
 //!                    "statement": "sha256:...", "unit": "si:m", "u_std": null,
@@ -41,8 +41,16 @@
 //!   "algorithm": "gdt.form.flatness.minzone@1.0.0", "kernel_version": "0.1.0",
 //!   "input_digests": ["sha256:..."], "journal_entry": "sha256:...",
 //!   "dmt_row": "dmt:asme/flatness/none@1", "operator_chain_digest": "sha256:...",
-//!   "dmt_digest": "sha256:..." }
+//!   "dmt_digest": "sha256:...", "interpretation": "provisional",
+//!   "interpretation_register": "sha256:..." | "none",
+//!   "interpretation_rules": [ { "rule": "dmt:...", "kind": "dmt_row", "revision": 1,
+//!                               "content_digest": "sha256:...", "status": "signed_off",
+//!                               "reason": null }, ... ] }
 //! ```
+//!
+//! `/2` adds the interpretation block of `GDT.CHAR.INTERP` to `/1`. A reader that meets a
+//! `/1` record, or a record without a readable `interpretation`, treats the result as
+//! provisional ([`crate::requires_provisional_label_bytes`]).
 //!
 //! `decision.source` is `unc` for a decision UNC returned and `gdt_not_decidable` for the two
 //! reasons GDT records itself. Numbers are IEEE-754 bit patterns (`"0x"` + 16 hex digits).
@@ -70,6 +78,26 @@
 //! for a call of fid-kdec's decision constructor and for a written `CONFORMS`, `NONCONFORMS` or `INDETERMINATE`
 //! outcome, and fails on either.
 //!
+//! # Interpretation block (`GDT.CHAR.INTERP`)
+//!
+//! Every record also carries `interpretation` (`provisional` | `signed_off`),
+//! `interpretation_rules` and `interpretation_register` (see [`crate::chars::interp`]). The
+//! builder is typed by its interpretation state: only a builder that went through
+//! [`ResultRecordBuilder::interpretation`] has `finish`, so a record without its
+//! `interpretation` field cannot be built or serialised. This does not build
+//! (`tests/compile_fail/record_interp.rs`):
+//!
+#![doc = "```compile_fail"]
+#![doc = include_str!("../../../tests/compile_fail/record_interp.rs")]
+#![doc = "```"]
+//!
+//! and its control, which differs only in the builder's type state, builds
+//! (`tests/compile_fail/record_interp_control.rs`):
+//!
+#![doc = "```"]
+#![doc = include_str!("../../../tests/compile_fail/record_interp_control.rs")]
+#![doc = "```"]
+//!
 //! Nothing here panics on any input, and every input is bounded.
 
 mod builder;
@@ -77,19 +105,23 @@ mod command;
 pub mod fields;
 mod store;
 
+pub use crate::chars::interp::{Interpreted, Uninterpreted};
 pub use builder::{
     NotDecidableReason, RecordDecision, ResultRecord, ResultRecordBuilder, Uncertainty, DECISION_SOURCE_GDT,
     DECISION_SOURCE_UNC, RECORD_SCHEMA,
 };
-pub use command::{command_def, invoke_cli, invoke_mcp, GET_RESULT_CLI, GET_RESULT_MCP, MAX_PARAMS_BYTES};
+pub use command::{
+    command_def, invoke_cli, invoke_mcp, invoke_mcp_tool, render_text, McpToolResult, GET_RESULT_CLI, GET_RESULT_MCP,
+    MAX_PARAMS_BYTES, REGISTER_FIELD_PATTERN,
+};
 pub use fields::{AlgorithmRef, EvaluationBasis, InputDigests, KernelVersion, Measurand, Quantity, RunId};
-pub use store::{get_result, ResultStore, GET_RESULT_COMMAND, MAX_RECORDS};
+pub use store::{get_record, get_result, ResultStore, GET_RESULT_COMMAND, MAX_RECORDS};
 
 use std::fmt;
 
 /// Errors of the builder, the store and `gdt.get_result@1`. [`RecordError::code`] is the
 /// stable code.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RecordError {
     /// `incomplete_result{field}`: a required field was never set.
     IncompleteResult {
@@ -141,6 +173,12 @@ pub enum RecordError {
     StoreFull,
     /// `canonical_encoding`: the record could not be written as canonical JSON.
     CanonicalEncoding,
+    /// `rule_not_admitted{rule}`: the evaluation used a rule whose status is `draft`
+    /// (`GDT.CHAR.INTERP` REQ-005); no record is emitted.
+    RuleNotAdmitted {
+        /// The rule ID (DMT key or profile ID).
+        rule: String,
+    },
 }
 
 impl RecordError {
@@ -163,6 +201,7 @@ impl RecordError {
             RecordError::NotFound => "not_found",
             RecordError::StoreFull => "store_full",
             RecordError::CanonicalEncoding => "canonical_encoding",
+            RecordError::RuleNotAdmitted { .. } => "rule_not_admitted",
         }
     }
 
@@ -176,11 +215,19 @@ impl RecordError {
             _ => None,
         }
     }
+
+    /// The rule a `rule_not_admitted` names.
+    pub fn rule(&self) -> Option<&str> {
+        match self {
+            RecordError::RuleNotAdmitted { rule } => Some(rule),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for RecordError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.detail() {
+        match self.detail().or(self.rule()) {
             Some(d) => write!(f, "{}{{{d}}}", self.code()),
             None => f.write_str(self.code()),
         }

@@ -19,6 +19,10 @@
 //! - [`chars::record`] (`GDT.CHAR.RECORD`): the ResultRecord builder every evaluation ends
 //!   in, the binding of the UNC decision (GDT never decides conformance), one record per
 //!   characteristic per run, and `gdt.get_result@1`;
+//! - [`chars::interp`] (`GDT.CHAR.INTERP`): the interpretation block of every record (the
+//!   rules used with recomputed digests, their statuses from a verified status register, the
+//!   `provisional` / `signed_off` label, the register pin and its replay) and
+//!   [`requires_provisional_label`] and [`requires_provisional_label_bytes`];
 //! - [`chars::qpid`] (`GDT.CHAR.IDENT`): the stable identity of a characteristic (imported
 //!   QPId kept, else one UUIDv7, both through the project ID service and checked for
 //!   collisions), the edit check that rejects identity changes, and the native-QPId /
@@ -31,6 +35,7 @@
 //! Nothing here panics on any input: every outcome is a returned `Result`.
 
 pub mod chars;
+pub use chars::interp::{requires_provisional_label, requires_provisional_label_bytes};
 pub mod dmt_flow;
 pub mod drf;
 pub mod resolve;

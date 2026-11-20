@@ -4,7 +4,7 @@
 Writes the synthetic builder inputs of AC-1 (`flatness_inputs.json`) and, for each case
 below, the RFC 8785 canonical JSON the ResultRecord must have (`expected/<case>.json`),
 following the record wire form pinned in the leaf's module documentation
-(`fid.gdt-result/1`):
+(`fid.gdt-result/2`):
 
 - every CONSTITUTION section 5 field plus `dmt_row`, `operator_chain_digest`, `dmt_digest`;
 - `value` and the uncertainty numbers as IEEE-754 bit patterns `"0x"` + 16 hex digits;
@@ -14,7 +14,16 @@ following the record wire form pinned in the leaf's module documentation
   `uncharacterized_input` when any source kind is not `dcc`, `qualification` or `type_a`;
   `statement` is the SHA-256 of the statement's canonical bytes;
 - `decision` from the bound rule stub: `source` `unc` with the stub's rule, outcome and the
-  statement's basis facts, or `gdt_not_decidable` with reason `no_rule_bound` and no rule.
+  statement's basis facts, or `gdt_not_decidable` with reason `no_rule_bound` and no rule;
+- the interpretation block of GDT.CHAR.INTERP, built here with no status register: the row
+  `dmt_row` names (the synthetic flatness row of `../status/rows.json`, row `a`) and the
+  defaults profile of `spec` (`../dprof/asme_placeholder_1.0.0.json`), each `provisional`
+  with reason `no_register`; the row's digest is SHA-256 of its canonical JSON without
+  `review`, the profile's SHA-256 of its canonical JSON; revision null for the row, 1 for the
+  profile; `interpretation` `provisional`; `interpretation_register` `none`;
+- `operator_chain_digest` is the chain digest of that row's default variant (SHA-256 of the
+  canonical JSON `{"steps": [{"alg", "kind", "params"}], "variant"}`), since the interpretation
+  block ties the primary row to the evaluated chain.
 
 Cases:
 - `flatness_conforms` (AC-1): UEC-2 LPU statement, stub `dr:simple-acceptance@1` -> CONFORMS;
@@ -60,6 +69,8 @@ def jcs(v):
         return "true"
     if v is False:
         return "false"
+    if isinstance(v, int):
+        return str(v)
     if isinstance(v, str):
         return jcs_string(v)
     if isinstance(v, list):
@@ -104,7 +115,7 @@ INPUTS = {
     "input_digests": sorted([sha("synthetic points of flat-1"), sha("synthetic feature fit of flat-1")]),
     "journal_entry": sha("synthetic journal entry 1"),
     "dmt_row": "dmt:asme/flatness/none@1",
-    "operator_chain_digest": sha("synthetic operator chain"),
+    "operator_chain_digest": None,  # set below from the row's default variant
     "dmt_digest": sha("synthetic dmt table"),
     "rule_stub": {"rule": "dr:simple-acceptance@1", "outcome": "CONFORMS"},
 }
@@ -136,6 +147,33 @@ def uncertainty(stmt_bytes):
     return u
 
 
+ROW = json.loads((HERE.parent / "status" / "rows.json").read_text(encoding="utf-8"))["rows"]["a"]
+PROFILE = json.loads((HERE.parent / "dprof" / "asme_placeholder_1.0.0.json").read_text(encoding="utf-8"))
+
+
+def chain_digest(row, variant):
+    chain = [v for v in row["variants"] if v["variant"] == variant][0]
+    return sha(jcs({"steps": chain["steps"], "variant": chain["variant"]}))
+
+
+INPUTS["operator_chain_digest"] = chain_digest(ROW, ROW["default_variant"])
+
+
+def interpretation():
+    row_digest = sha(jcs({k: v for k, v in ROW.items() if k != "review"}))
+    profile_digest = sha(jcs(PROFILE))
+    assert INPUTS["spec"]["defaults_profile"].endswith("#" + profile_digest)
+    assert ROW["key"] == INPUTS["dmt_row"]
+    profile_id = "dp:%s-%s@%s" % (PROFILE["dialect"], PROFILE["edition"], PROFILE["version"])
+    rules = [
+        {"content_digest": row_digest, "kind": "dmt_row", "reason": "no_register", "revision": None,
+         "rule": ROW["key"], "status": "provisional"},
+        {"content_digest": profile_digest, "kind": "profile", "reason": "no_register", "revision": 1,
+         "rule": profile_id, "status": "provisional"},
+    ]
+    return {"interpretation": "provisional", "interpretation_register": "none", "interpretation_rules": rules}
+
+
 def record(stmt_name, rule_bound):
     stmt_bytes = (STMT / stmt_name).read_bytes()
     u = uncertainty(stmt_bytes)
@@ -157,13 +195,14 @@ def record(stmt_name, rule_bound):
     else:
         decision = {"source": "gdt_not_decidable", "rule": None, "outcome": "NOT_DECIDABLE",
                     "reason": "no_rule_bound", "basis": None}
-    r = {"schema": "fid.gdt-result/1"}
+    r = {"schema": "fid.gdt-result/2"}
     for k in ("run", "characteristic", "measurand", "evaluation_basis", "spec", "algorithm", "kernel_version",
               "input_digests", "journal_entry", "dmt_row", "operator_chain_digest", "dmt_digest"):
         r[k] = INPUTS[k]
     r["value"] = {"value": INPUTS["value"], "unit": INPUTS["unit"]}
     r["uncertainty"] = u
     r["decision"] = decision
+    r.update(interpretation())
     return jcs(r)
 
 

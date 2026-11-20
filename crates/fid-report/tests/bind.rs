@@ -484,6 +484,55 @@ fn record_facts_must_agree_with_the_parsed_statement() {
 }
 
 #[test]
+fn both_record_schema_versions_are_read_and_others_refused() {
+    let (mut w, _, cases) = bracket();
+    let journal = fixture("bracket_3stage/journal.json");
+    let project = uuid(st(&cases, "project"));
+    let r1 = entry_text(&journal, st(&cases, "r1"));
+    assert_eq!(r1.matches(r#""schema":"fid.gdt-result/1""#).count(), 1);
+    // A `/2` record without the interpretation block is refused.
+    let bare = uuid("019a9a9b-0008-7000-8000-000000000011");
+    let head = commit_result(&mut w, project, bare, r1.replace("fid.gdt-result/1", RESULT_RECORD_SCHEMA_V2), 0xc1);
+    let lookup = HeadLookup::new(&w.journal, project, &JournalHead::parse(&head).unwrap()).unwrap();
+    assert_eq!(lookup.result(&bare).unwrap_err(), LookupFault::Invalid("record interpretation"));
+    // A `/1` record has no interpretation block: it reads, and it is provisional.
+    let v = lookup.result(&uuid(st(&cases, "r1"))).unwrap();
+    assert!(v.evidence().is_provisional());
+    // A `/2` record with the block reads like `/1`; its label follows the block.
+    let with_block = |status: &str| {
+        let CValue::Obj(mut m) = parse(r1.as_bytes()).unwrap() else { panic!("record") };
+        m.insert("schema".to_owned(), CValue::Str(RESULT_RECORD_SCHEMA_V2.to_owned()));
+        m.insert("interpretation".to_owned(), CValue::Str(status.to_owned()));
+        m.insert("interpretation_register".to_owned(), CValue::Str("none".to_owned()));
+        let rule = parse(
+            format!(
+                r#"{{"content_digest":"sha256:{}","kind":"dmt_row","reason":null,"revision":1,"rule":"dmt:asme/size/none@1","status":"{status}"}}"#,
+                "1".repeat(64)
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+        m.insert("interpretation_rules".to_owned(), CValue::Arr(vec![rule]));
+        String::from_utf8(to_canonical_bytes(&CValue::Obj(m)).unwrap()).unwrap()
+    };
+    let prov = uuid("019a9a9b-0008-7000-8000-000000000012");
+    let head = commit_result(&mut w, project, prov, with_block("provisional"), 0xc2);
+    let lookup = HeadLookup::new(&w.journal, project, &JournalHead::parse(&head).unwrap()).unwrap();
+    let v = lookup.result(&prov).unwrap();
+    assert!(v.evidence().statement_checked() && v.evidence().looks_measured());
+    assert!(v.evidence().is_provisional());
+    let signed = uuid("019a9a9b-0008-7000-8000-000000000013");
+    let head = commit_result(&mut w, project, signed, with_block("signed_off"), 0xc3);
+    let lookup = HeadLookup::new(&w.journal, project, &JournalHead::parse(&head).unwrap()).unwrap();
+    assert!(!lookup.result(&signed).unwrap().evidence().is_provisional());
+    // Any other version is refused.
+    let v3 = uuid("019a9a9b-0008-7000-8000-000000000014");
+    let head = commit_result(&mut w, project, v3, r1.replace("fid.gdt-result/1", "fid.gdt-result/3"), 0xc4);
+    let lookup = HeadLookup::new(&w.journal, project, &JournalHead::parse(&head).unwrap()).unwrap();
+    assert_eq!(lookup.result(&v3).unwrap_err(), LookupFault::Invalid("record schema"));
+}
+
+#[test]
 fn a_not_yet_committed_entity_of_another_kind_is_not_found() {
     let (w, _, cases) = bracket();
     let project = uuid(st(&cases, "project"));
