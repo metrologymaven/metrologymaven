@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-io-reg]
+built_pr: 329
 satisfies: [REQ-IO.REG.ENV-005]
 covers: []
 depends_on: [IO.REG.ENV.REPORT, IO.REG.DETECT, IO.REG.ROOTS, IO.REG.WRITE, CORE.BUS.PIPE]
