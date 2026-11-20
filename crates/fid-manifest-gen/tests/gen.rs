@@ -416,3 +416,39 @@ fn xart_table_rows_are_read_strictly() {
         assert!(parse_xart_table(ok.replace(from, to).as_bytes(), &id).is_err(), "{to}");
     }
 }
+
+/// A native artifact runs as its own file, so it must be an executable format (ELF, PE or
+/// Mach-O), never a script; a WASM artifact must be a module.
+#[test]
+fn artifacts_must_be_binaries_of_their_kind() {
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("gen-magic");
+    fs::create_dir_all(&dir).unwrap();
+    let script = dir.join("kernel.sh");
+    fs::write(&script, b"#!/bin/sh\necho hi\n").unwrap();
+    let elf = dir.join("kernel-elf");
+    fs::write(&elf, [0x7f, b'E', b'L', b'F', 2, 1, 1, 0]).unwrap();
+    let native = |file: &Path| ArtifactList {
+        wasm_check: "fid-wasm-check".to_string(),
+        runtime: None,
+        allow: None,
+        artifacts: vec![ArtifactSpec {
+            role: "native".to_string(),
+            target: "x86_64-unknown-linux-gnu".to_string(),
+            file: file.to_string_lossy().into_owned(),
+        }],
+    };
+    let core = read("expected-core.json");
+    let mut f = fake(Ok((0, read("expected-self-report.json"))));
+    let e = gen::finish(&core, &native(&script), &mut f).unwrap_err();
+    assert!(matches!(e, GenError::SourceInvalid { field: "artifacts", .. }), "{e}");
+    assert!(f.commands.is_empty());
+    // An ELF file passes the format check and is asked for its core digest.
+    let m = gen::finish(&core, &native(&elf), &mut f).unwrap();
+    assert_eq!(f.commands.len(), 1);
+    assert_eq!(m.artifacts()[0].role, "native");
+    // A WASM artifact that is not a module.
+    let mut list = artifacts(&toy(), "artifacts.toml");
+    list.artifacts[0].file = elf.to_string_lossy().into_owned();
+    let e = gen::finish(&core, &list, &mut f).unwrap_err();
+    assert!(matches!(e, GenError::SourceInvalid { field: "artifacts", .. }), "{e}");
+}

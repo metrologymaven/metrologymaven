@@ -48,6 +48,12 @@ for d in "$work/run-a/toy" "$work/run-b/nested/dir/toy"; do
     # The embedded constant is outside the core: stage one again gives the same bytes.
     fid-manifest-gen core --config manifest-gen.toml --out core-again.json > /dev/null
     cmp core.json core-again.json
+    # --constant may name only <workspace>/<constant>: another path is refused, and neither the
+    # stray file nor the stage-one output is written.
+    expect_fail "source_invalid: config: --constant must name ws/shim/src/manifest_core_digest.rs" \
+      fid-manifest-gen core --config manifest-gen.toml --out stray-core.json --constant stray.rs
+    test ! -e stray.rs && test ! -e stray-core.json
+    cmp ws/shim/src/manifest_core_digest.rs "$toy/expected-constant.rs"
     fid-manifest-gen finish --core core.json --artifacts artifacts.toml --out kernel-manifest.json > manifest-digest.txt
     cmp kernel-manifest.json "$toy/expected-manifest.json"
     cmp manifest-digest.txt "$toy/expected-manifest-digest.txt"

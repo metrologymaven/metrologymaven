@@ -915,6 +915,38 @@ pub fn hash_file(path: &Path) -> Result<Digest, GenError> {
     Ok(Digest::from_bytes(h.finish()))
 }
 
+/// Executable formats a native artifact may be: ELF, PE (`MZ`) and Mach-O (32/64-bit, either
+/// byte order, and universal binaries).
+const NATIVE_MAGIC: [&[u8]; 7] = [
+    b"\x7fELF",
+    b"MZ",
+    b"\xfe\xed\xfa\xce",
+    b"\xce\xfa\xed\xfe",
+    b"\xfe\xed\xfa\xcf",
+    b"\xcf\xfa\xed\xfe",
+    b"\xca\xfe\xba\xbe",
+];
+/// The WASM binary magic.
+const WASM_MAGIC: &[u8] = b"\0asm";
+
+/// Refuses an artifact whose first bytes are not its kind's binary format, so a native artifact
+/// cannot be a script (its command is the file itself) and a WASM artifact is a module.
+fn check_magic(a: &ArtifactSpec) -> Result<(), GenError> {
+    let path = Path::new(&a.file);
+    let mut head = Vec::with_capacity(4);
+    File::open(path).and_then(|f| f.take(4).read_to_end(&mut head)).map_err(|e| io_error(path, &e))?;
+    let ok = if a.kind() == "wasm" {
+        head.starts_with(WASM_MAGIC)
+    } else {
+        NATIVE_MAGIC.iter().any(|m| head.starts_with(m))
+    };
+    if ok {
+        Ok(())
+    } else {
+        Err(invalid(field::ARTIFACTS, format!("{} is not a {} binary", a.file, a.kind())))
+    }
+}
+
 /// Stage two (REQ-KRN.MAN.MANI.GEN-003): reads the stage-one manifest strictly, checks that
 /// the WASM runner applies the core's runtime settings, hashes every artifact, checks that each
 /// one reports the stage-one core digest and assembles the full manifest. Any artifact that
@@ -947,6 +979,7 @@ pub fn finish(
         let label = a.label();
         let command =
             a.command(list).ok_or_else(|| invalid(field::ARTIFACTS, "a wasm artifact needs runtime and allow"))?;
+        check_magic(a)?;
         let sha256 = hash_file(Path::new(&a.file))?;
         let report = reporter
             .report(a, &command, &call_set)
