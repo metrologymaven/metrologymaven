@@ -14,11 +14,11 @@ fid-canon = { path = "../fid-canon" }
 # CORE.REG.DEF.SCHEMA), and `registry.show_manifest@1` itself. Layer model.
 fid-registry = { path = "../fid-registry" }
 # The crates that declare commands today, read through their public `command_defs()`
-# functions. Layers engine (fid-align, fid-dep, fid-jobs, fid-project) and services (fid-report).
+# functions. Layers engine (fid-align, fid-dep, fid-jobs, fid-project-cmd) and services (fid-report).
 fid-align = { path = "../fid-align" }
 fid-dep = { path = "../fid-dep" }
 fid-jobs = { path = "../fid-jobs" }
-fid-project = { path = "../fid-project" }
+fid-project-cmd = { path = "../fid-project-cmd" }
 fid-report = { path = "../fid-report" }
 # The settings commands (CORE.STO.SET), read through `fid_store::settings::declarations()`.
 # Layer model. Brings bundled SQLite into this build step; no new crate in the lock.

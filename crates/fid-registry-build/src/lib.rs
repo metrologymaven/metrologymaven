@@ -71,7 +71,7 @@ pub const SOURCES: [Source; 7] = [
     Source { krate: "fid-align", defs: fid_align::command_defs },
     Source { krate: "fid-dep", defs: dep_defs },
     Source { krate: "fid-jobs", defs: fid_jobs::command_defs },
-    Source { krate: "fid-project", defs: fid_project::command_defs },
+    Source { krate: "fid-project-cmd", defs: fid_project_cmd::command_defs },
     Source { krate: "fid-registry", defs: registry_defs },
     Source { krate: "fid-report", defs: fid_report::doc::command_defs },
     Source { krate: "fid-store", defs: store_defs },

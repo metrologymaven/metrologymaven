@@ -58,8 +58,10 @@ CODES = {
         "not_undoable", "nothing_to_redo", "project_locked", "released_record", "stage_active",
     ],
     # CORE.BUS.ROUTE-004 (expected_head), CORE.BUS.PIPE.STAGE-005 (head moved during a job),
-    # writer lock held, expected content digest differs.
-    "conflict": ["expected_head_mismatch", "head_moved", "writer_locked", "expected_digest_mismatch"],
+    # writer lock held, expected content digest differs; v2: `id_collision`, an entity ID
+    # (imported or drawn) already in the project (CORE.PRJ.CONT.ID REQ-005, CORE.PRJ.CONT.HIER,
+    # GEO.TYPES.REG).
+    "conflict": ["expected_head_mismatch", "head_moved", "writer_locked", "expected_digest_mismatch", "id_collision"],
     # CORE.BUS.PIPE-002 (unknown ID, unknown or removed major) and lookups by ID.
     "not_found": [
         "unknown_command", "unknown_major", "removed_major",

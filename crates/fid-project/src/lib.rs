@@ -4,8 +4,8 @@ pub mod container;
 pub mod id;
 
 pub use container::{
-    command_defs, create, created_event, register, Container, ContainerError, ContainerKind, CreateHandler, Hierarchy,
-    Label, Part, Plan, Revision, Run, SharedSource, CONTAINER_CREATED, MAX_LABEL_CHARS,
+    create, Container, ContainerError, ContainerKind, ContainerView, CreatedBy, Hierarchy, Label, Part, Plan, Revision,
+    Run, CONTAINER_CREATED, MAX_LABEL_CHARS,
 };
 pub use id::{
     live_source, uuid_v5, uuid_v7, Bits, IdError, IdIndex, IdService, Observation, ObservationSource, Recording,

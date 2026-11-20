@@ -36,7 +36,7 @@ Pinned choices (stated in the PR):
 - check order: parameter shape, label, references (plan before revision for a run), the
   plan-revision rule, then the ID. Only a command that passes every check draws an ID;
 - an imported ID already in the project is `id_collision`, reported on the bus as
-  precondition/false until the bus catalogue has an `id_collision` reason.
+  conflict/id_collision (bus error catalogue v2).
 
 UUIDv7 convention (CORE.PRJ.CONT.ID): one 74-bit value R; rand_a = R >> 62, rand_b = the
 low 62 bits of R.
@@ -191,8 +191,8 @@ def main() -> int:
         err("imported_nil_id", "part", {"label": "N", "id": "00000000-0000-0000-0000-000000000000"}, v, "schema", "schema"),
         err("imported_max_id", "part", {"label": "N", "id": "ffffffff-ffff-ffff-ffff-ffffffffffff"}, v, "schema", "schema"),
         err("imported_uppercase_id", "part", {"label": "N", "id": unknown.upper()}, v, "schema", "schema"),
-        err("imported_id_collides", "part", {"label": "Dup", "id": P}, "precondition", "false", "id_collision"),
-        err("imported_id_collides_with_run", "plan", {"revision": R, "id": RUN}, "precondition", "false", "id_collision"),
+        err("imported_id_collides", "part", {"label": "Dup", "id": P}, "conflict", "id_collision", "id_collision"),
+        err("imported_id_collides_with_run", "plan", {"revision": R, "id": RUN}, "conflict", "id_collision", "id_collision"),
     ]
 
     # ---------------------------------------------------------------- more accepted commands

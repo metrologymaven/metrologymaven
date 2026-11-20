@@ -498,7 +498,7 @@
    "reason": "schema"
   },
   {
-   "code": "precondition",
+   "code": "conflict",
    "command": "project.create_part@1",
    "error": "id_collision",
    "name": "imported_id_collides",
@@ -506,10 +506,10 @@
     "id": "019a98ca-8300-7464-8eaa-d6d3dc86bc6b",
     "label": "Dup"
    },
-   "reason": "false"
+   "reason": "id_collision"
   },
   {
-   "code": "precondition",
+   "code": "conflict",
    "command": "project.create_plan@1",
    "error": "id_collision",
    "name": "imported_id_collides_with_run",
@@ -517,7 +517,7 @@
     "id": "019a98ca-8eb8-7c5e-a937-2659e398fa8e",
     "revision": "019a98ca-86e8-74eb-8453-dd893d6d7199"
    },
-   "reason": "false"
+   "reason": "id_collision"
   }
  ],
  "event_type": "ContainerCreated",

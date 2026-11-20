@@ -45,23 +45,32 @@ const REQ_001_CODES: [&str; 12] = [
 /// Digest of the frozen v1 baseline, pinned here so that regenerating or editing
 /// `bus-errors.v1.json` / `.digest` fails AC-1. Never change this constant.
 const V1_DIGEST: &str = "sha256:b741ab9fca53a6f299e7ea11345739c44df45284b2bc3c2fde0a68ec1edcb271";
+/// Digest of the frozen v2 baseline (v1 plus `conflict/id_collision`), pinned the same way.
+/// Never change this constant.
+const V2_DIGEST: &str = "sha256:54d2543ddeca083e52dd316b2c85eddcb6ee7493feb06fe3c17c92b3e49601c5";
 
-/// AC-1: the generated file lists exactly the twelve codes and its digest equals the
-/// committed `bus-errors.v1.digest` (both fixtures come from `make_bus_errors.py`).
+/// Checks that frozen baseline `vN` still has its pinned digest, file and digest file alike,
+/// and returns its bytes without the trailing newline.
+fn frozen(n: u32, pinned: &str) -> Vec<u8> {
+    let want = String::from_utf8(read(&format!("{FIXTURE_DIR}/bus-errors.v{n}.digest"))).unwrap();
+    assert_eq!(want.trim_end(), pinned, "the frozen v{n} baseline was regenerated or edited");
+    let mut bytes = read(&format!("{FIXTURE_DIR}/bus-errors.v{n}.json"));
+    assert_eq!(bytes.pop(), Some(b'\n'));
+    assert_eq!(fid_canon::digest_bytes(&bytes).to_string(), pinned, "bus-errors.v{n}.json was changed");
+    bytes
+}
+
+/// AC-1: the generated file lists exactly the twelve codes and equals the newest frozen
+/// baseline, `bus-errors.v2.json`, with the committed digest (both fixtures come from
+/// `make_bus_errors.py`). The v1 baseline stays frozen.
 #[test]
 fn ac1_generated_file_and_digest() {
     let bytes = bus_errors_json().unwrap();
-    let mut fixture = read(&format!("{FIXTURE_DIR}/bus-errors.v1.json"));
-    assert_eq!(fixture.pop(), Some(b'\n'));
-    assert_eq!(String::from_utf8(bytes.clone()).unwrap(), String::from_utf8(fixture).unwrap());
-
-    let want = String::from_utf8(read(&format!("{FIXTURE_DIR}/bus-errors.v1.digest"))).unwrap();
-    assert_eq!(want.trim_end(), V1_DIGEST, "the frozen v1 baseline was regenerated or edited");
-    assert_eq!(bus_errors_digest().unwrap().to_string(), V1_DIGEST);
-    assert_eq!(fid_canon::digest_bytes(&bytes).to_string(), V1_DIGEST);
-    let mut v1 = read(&format!("{FIXTURE_DIR}/bus-errors.v1.json"));
-    assert_eq!(v1.pop(), Some(b'\n'));
-    assert_eq!(fid_canon::digest_bytes(&v1).to_string(), V1_DIGEST, "bus-errors.v1.json was changed");
+    frozen(1, V1_DIGEST);
+    let newest = frozen(2, V2_DIGEST);
+    assert_eq!(String::from_utf8(bytes.clone()).unwrap(), String::from_utf8(newest).unwrap());
+    assert_eq!(bus_errors_digest().unwrap().to_string(), V2_DIGEST);
+    assert_eq!(fid_canon::digest_bytes(&bytes).to_string(), V2_DIGEST);
 
     let CValue::Obj(o) = parse(&bytes).unwrap() else { panic!("not an object") };
     let Some(CValue::Obj(codes)) = o.get("codes") else { panic!("no codes") };
@@ -91,11 +100,20 @@ fn published_files_are_generated() {
     check_generated("schema/bus-error.schema.json", &bus_error_schema());
 }
 
-/// REQ-003: the current build keeps every code and reason of v1.
+/// REQ-003: the current build keeps every code and reason of every frozen baseline, and v2
+/// is v1 plus `conflict/id_collision` only.
 #[test]
-fn current_is_compatible_with_v1() {
+fn current_is_compatible_with_v1_and_v2() {
     let v1 = parse_catalog(&read(&format!("{FIXTURE_DIR}/bus-errors.v1.json"))).unwrap();
+    let v2 = parse_catalog(&read(&format!("{FIXTURE_DIR}/bus-errors.v2.json"))).unwrap();
     assert_eq!(check_compatible(&v1, &current_catalog()), Ok(()));
+    assert_eq!(check_compatible(&v2, &current_catalog()), Ok(()));
+    let mut grown = v1.clone();
+    grown.get_mut("conflict").unwrap().insert("id_collision".to_string());
+    assert_eq!(grown, v2);
+    let e = BusError::Conflict(ConflictReason::IdCollision, Detail::empty());
+    assert_eq!((e.code(), e.reason()), (Code::Conflict, "id_collision"));
+    assert_eq!(ConflictReason::from_wire("id_collision"), Some(ConflictReason::IdCollision));
 }
 
 /// AC-2 (error path): renaming `conflict` to `head_conflict` fails, naming `conflict`.

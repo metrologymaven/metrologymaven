@@ -9,7 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
-built_in: [fid-project]
+built_in: [fid-project, fid-project-cmd]
 built_pr: 300
 satisfies: [REQ-CORE.PRJ.CONT-001, REQ-CORE.PRJ.CONT-002, REQ-CORE.PRJ.CONT-008]
 covers: []
@@ -75,8 +75,8 @@ The container entities of CONSTITUTION §5, Part → Revision → Plan → Run, 
 
 - The parent `CORE.PRJ.CONT` listed no `project.create_part@1`; it is added here because REQ-CORE.PRJ.CONT-001 needs Parts to exist.
 - Build (PR #300): the CLI `fid project create-*` and MCP `project_create_*` surfaces are not wired yet; they are to be generated from the four `CommandDef`s once the registry surface generator exists. The bus commit stage (`CORE.BUS.PIPE.STAGE`), journal undo (`CORE.JRN.UNDO.MOVE`) and the replay loop (`CORE.RPL.EXEC.LOOP`) are not built either, so AC-1 and AC-4 are tested at the handler level: the four events are folded into an in-memory state view, undo is the state at the previous head, and replay re-runs the handlers with a `ReplaySource` of the recorded observations. The end-to-end form of AC-1 and AC-4 remains for those leaves.
-- Build (PR #300): `fid-project` moves from layer model to engine, because its commands implement `fid_bus::Handler` (fid-bus is engine). Every crate that depends on fid-project is engine or above.
-- Build (PR #300): the bus error catalogue has no `id_collision` reason, so an imported (or drawn) ID already in the project is reported as `precondition/false` with a detail starting `id_collision`. Adding `id_collision` to the catalogue (CORE.BUS.PIPE.ERR) would let the handler return it directly.
+- Build (PR #300): the leaf is split over two crates so `fid-project` stays in layer model without the bus (and its SQLite): `fid-project` (module `container`) holds the types, labels, the checks and the `Hierarchy` helper; the engine crate `fid-project-cmd` holds the bus handlers, the registry definitions and `register` (the `fid-geo-cmd` pattern of #302).
+- Build (PR #300): an imported (or drawn) ID already in the project is `conflict/id_collision`, a reason added to the bus error catalogue as frozen baseline v2 (additions only; v1 unchanged). GEO.TYPES.REG (#302) uses the same reason.
 - Build (PR #300): AC-1 creates the plan and the run without a label while Design lists `label` for every command; `label` is required for part and revision and optional for plan and run (stored as `null`).
 
 ## Children
