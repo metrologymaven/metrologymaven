@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-cmd]
+built_pr: 302
 satisfies: [REQ-GEO.TYPES-007, REQ-GEO.TYPES-008]
 covers: []
 depends_on: [GEO.TYPES.DIGEST, CORE.PRJ, CORE.REG, CORE.DEP]
