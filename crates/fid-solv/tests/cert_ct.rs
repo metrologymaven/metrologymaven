@@ -324,7 +324,10 @@ fn ac1_two_paths_bit_identical() {
 
 // ------------------------------------------------------------------ AC-2
 
-fn tie_case(cases: &[Case], name: &str) -> (Lin, Vec<RowLabel>, Vec<(String, Vec<RowLabel>)>) {
+/// The oracle's outcome of each candidate, with its set.
+type Candidates = Vec<(String, Vec<RowLabel>)>;
+
+fn tie_case(cases: &[Case], name: &str) -> (Lin, Vec<RowLabel>, Candidates) {
     let c = cases.iter().find(|c| c.name == name).unwrap();
     let cands = c
         .all("candidate")
