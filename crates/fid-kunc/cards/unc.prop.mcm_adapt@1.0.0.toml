@@ -7,6 +7,7 @@ references = [
   "JCGM 101:2008 (GUM Supplement 1), clause 7.9 (adaptive Monte Carlo procedure), clauses 7.9.2 and 7.9.4 [unverified: clause numbering]",
 ]
 determinism = "D0"
+input_arity = "2"
 failure_modes = [
   "Clause 7.9 gives no coverage-of-truth guarantee; the shortfall below 0.95 is a property of the rule (s with h-1 dof, optional stopping). Simulated runs of the published rule on two closed-form additive models put the stopped endpoints within delta of the analytic values in about 93 to 94 % of runs; about a quarter of runs stop at h = 2.",
   "u(y) near a digit boundary (for example 0.995 at two digits) changes delta by a factor of ten between consecutive blocks.",

@@ -7,6 +7,7 @@ references = [
   "JCGM 101:2008, clause 7 (propagation of distributions)",
 ]
 determinism = "D1"
+input_arity = "1.."
 failure_modes = [
   "Heavy-tailed inputs need more samples than the default.",
 ]

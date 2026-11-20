@@ -99,10 +99,19 @@ def decimal_ok(p):
     return 0 < len(p) <= 20 and p.isdigit() and not (len(p) > 1 and p[:1] == b"0") and int(p) < 2**64
 
 
+# Each test algorithm's card `input_arity` (REQ-KRN.MAN.CARD-006) as (min, max or None):
+# echo "0.." takes any number of inputs, recurse "0" takes none.
+ARITY = {ECHO: (0, None), RECURSE: (0, 0)}
+
+
 def answer(alg, params, seed, inputs, claimed, reversed_echo):
-    """(exit, stdout) of the stand-in kernel for one call, in KCI evaluation order."""
+    """(exit, stdout) of the stand-in kernel for one call, in KCI evaluation order: lookup,
+    card, input count against the card's input_arity (REQ-KRN.MAN.KCI-008), digests, params, run."""
     if alg not in (ECHO, RECURSE):
         return 1, err("unknown_algorithm")
+    lo, hi = ARITY[alg]
+    if len(inputs) < lo or (hi is not None and len(inputs) > hi):
+        return 1, err("input_arity_mismatch")
     if claimed is not None and any(sha(x) != c for x, c in zip(inputs, claimed)):
         return 1, err("digest_mismatch")
     if alg == ECHO:

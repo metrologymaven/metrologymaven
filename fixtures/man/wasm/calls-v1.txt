@@ -26,6 +26,7 @@ echo-asked-to-fail	any	{"algorithm":"test.echo.identity@1.0.0","inputs":[],"para
 echo-nonprintable	any	{"algorithm":"test.echo.identity@1.0.0","inputs":[],"params":"01"}	1	{"error":"invalid_params"}
 unknown-algorithm	any	{"algorithm":"test.echo.identity@9.0.0","inputs":[],"params":""}	1	{"error":"unknown_algorithm"}
 recurse-bad-params	any	{"algorithm":"test.stack.recurse@1.0.0","inputs":[],"params":"3031"}	1	{"error":"invalid_params"}
+recurse-input-arity	any	{"algorithm":"test.stack.recurse@1.0.0","inputs":[{"bytes":"78","sha256":"sha256:2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881"}],"params":"31"}	1	{"error":"input_arity_mismatch"}
 malformed-space	any	{"algorithm":"test.echo.identity@1.0.0", "inputs":[{"bytes":"63","sha256":"sha256:2e7d2c03a9507ae265ecf5b5356885a53393a2029d241394997265a1a25aefc6"}],"params":"6162","seed":"3"}	2	{"error":"malformed_call"}
 malformed-key-order	any	{"inputs":[],"algorithm":"test.echo.identity@1.0.0","params":""}	2	{"error":"malformed_call"}
 malformed-upper-hex	any	{"algorithm":"test.echo.identity@1.0.0","inputs":[],"params":"AB"}	2	{"error":"malformed_call"}

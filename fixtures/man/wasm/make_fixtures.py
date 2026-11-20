@@ -314,6 +314,8 @@ cases.append(("echo-nonprintable", "any", call_json(ECHO, b"\x01", None, []), 1,
 cases.append(("unknown-algorithm", "any", call_json("test.echo.identity@9.0.0", b"", None, []), 1,
               err("unknown_algorithm")))
 cases.append(("recurse-bad-params", "any", call_json(RECURSE, b"01", None, []), 1, err("invalid_params")))
+# KRN.MAN.KCI REQ-008: the recursion card declares input_arity "0", so one input is refused.
+cases.append(("recurse-input-arity", "any", call_json(RECURSE, b"1", None, [b"x"]), 1, err("input_arity_mismatch")))
 # Malformed calls: exit 2.
 good = call_json(ECHO, b"ab", 3, [b"c"])
 malformed = [

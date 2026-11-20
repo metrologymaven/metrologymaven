@@ -1,7 +1,7 @@
 //! Acceptance criteria of spec node KRN.MAN.CARD (AC-1 .. AC-4).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_kci::{check, parse_card, AlgorithmId, CardError};
+use fid_kci::{check, parse_card, AlgorithmId, CardError, InputArity};
 use std::path::{Path, PathBuf};
 
 fn fixtures() -> PathBuf {
@@ -48,6 +48,9 @@ fn ac2_cards() {
     let c = parse_card(&read("valid-fit-cylinder-ls")).unwrap();
     assert_eq!(c.id, AlgorithmId::parse("fit.cylinder.ls@1.0.0").unwrap());
     assert_eq!(c.determinism, "D0");
+    assert_eq!(c.input_arity, InputArity::exactly(1));
+    let u = parse_card(&read("valid-unc-mc-sample")).unwrap();
+    assert_eq!(u.input_arity, InputArity::at_least(1));
 }
 
 /// AC-3: algorithms without cards and cards without algorithms are both reported.

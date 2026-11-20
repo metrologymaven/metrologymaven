@@ -8,6 +8,7 @@ references = [
   "Forbes, A. B. (1989). Least-squares best-fit geometric elements. NPL Report DITC 140/89.",
 ]
 determinism = "D0"
+input_arity = "1"
 failure_modes = [
   "Points on a narrow arc make the radius ill-conditioned.",
   "Two axis directions fit equally well when the points lie on a ring.",
