@@ -115,7 +115,7 @@ COMBO = {
         "pick": {"oneOf": [{"type": "integer", "multipleOf": 2}, {"type": "integer", "multipleOf": 3}]},
         "any": {"anyOf": [{"type": "string"}, {"type": "integer", "minimum": 100}]},
         "nope": {"not": {"type": "string"}},
-        "both": {"allOf": [{"type": "integer"}, {"maximum": 5}]},
+        "both": {"allOf": [{"type": "integer"}, {"type": "integer", "maximum": 5}]},
     },
     "patternProperties": {"^x_[a-z]+$": {"type": "integer"}},
     "propertyNames": {"maxLength": 12},
@@ -354,21 +354,36 @@ def ecma_class(p, i):
             i += 1
     if not items:
         raise Refused("empty class")
-    body, k = "", 0
+    # A "-" between two single characters is a range; first, last or right after a range it
+    # is a literal hyphen. Refused: two adjacent "-", and a "-" next to a class escape that
+    # is not first or last (ECMA-262 u-mode: ClassAtom "-" ClassAtom needs two characters).
+    body, k, after_range = "", 0, False
     while k < len(items):
         kind, val = items[k]
         nxt = items[k + 1] if k + 1 < len(items) else None
-        if kind == "dash" or (nxt is not None and nxt[0] == "dash"):
-            after = items[k + 2] if k + 2 < len(items) else None
-            if kind == "char" and after is not None and after[0] == "char":
+        after = items[k + 2] if k + 2 < len(items) else None
+        if kind == "dash":
+            if nxt is not None and nxt[0] == "dash":
+                raise Refused("adjacent hyphens")
+            if not (k == 0 or nxt is None or after_range):
+                raise Refused("range with a class escape")
+            body += py_char(ord("-"))
+            k += 1
+            after_range = False
+            continue
+        if nxt is not None and nxt[0] == "dash" and after is not None:
+            if kind == "char" and after[0] == "char":
                 if val > after[1]:
                     raise Refused("range out of order")
                 body += py_char(val) + "-" + py_char(after[1])
                 k += 3
+                after_range = True
                 continue
-            raise Refused("bare hyphen in a class")
+            if after[0] != "dash" or kind == "set":
+                raise Refused("range with a class escape")
         body += py_char(val) if kind == "char" else val
         k += 1
+        after_range = False
     return "[" + ("^" if neg else "") + body + "]", i
 
 

@@ -13,9 +13,9 @@
 //! command refuses every call rather than skip a keyword (fail closed).
 //!
 //! A literal is normalised for the keywords of the schema object holding `x-quantity` only, so
-//! compilation also refuses a numeric keyword connected through in-place applicators to a
-//! different `x-quantity` schema object, and `x-quantity` under `contains` or `not`
-//! (`quantity_rule`).
+//! compilation also refuses a numeric keyword in a schema object with neither its own
+//! `x-quantity` nor its own `type` excluding `object`, and `x-quantity` under `contains` or
+//! `not` (`quantity_rule`).
 //!
 //! # First failure in document order
 //!
@@ -697,61 +697,34 @@ fn has_numeric(o: &Obj) -> bool {
         || o.multiple_of.is_some()
 }
 
-fn find(parent: &mut [usize], mut x: usize) -> usize {
-    while let Some(&p) = parent.get(x) {
-        if p == x {
-            break;
-        }
-        let gp = parent.get(p).copied().unwrap_or(p);
-        if let Some(slot) = parent.get_mut(x) {
-            *slot = gp;
-        }
-        x = p;
-    }
-    x
+/// Whether a schema object's own `type` excludes `object`, so a literal (an object) can never
+/// pass it.
+fn excludes_object(o: &Obj) -> bool {
+    o.types.as_ref().is_some_and(|ts| !ts.contains(&JType::Object))
 }
 
-/// The `x-quantity` rule (maintainer decision in the review of #341). A literal is
+/// The `x-quantity` rule (maintainer decisions in the reviews of #341). A literal is
 /// normalised for the keywords of the schema object holding `x-quantity` only, so:
 ///
 /// 1. a numeric keyword (`minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`,
-///    `multipleOf`) in a schema object connected through in-place applicators (`$ref`,
-///    `allOf`, `anyOf`, `oneOf`, `not`, `if`, `then`, `else`, `dependentSchemas`) to a
-///    different schema object holding `x-quantity` is refused: an `x-quantity` schema carries
-///    its own numeric bounds. The check is conservative: any connection counts.
-/// 2. `x-quantity` reachable in place from a `contains` or `not` subschema is refused: those
-///    never keep what their subschema normalised.
+///    `multipleOf`) is accepted only in a schema object that has its own `x-quantity` or its
+///    own `type` excluding `object`. Elsewhere (in an applicator, a child schema, a `$defs`
+///    entry, anywhere) it could meet an authored literal it would silently ignore;
+/// 2. `x-quantity` reachable in place (`$ref`, `allOf`, `anyOf`, `oneOf`, `not`, `if`, `then`,
+///    `else`, `dependentSchemas`) from a `contains` or `not` subschema is refused: those never
+///    keep what their subschema normalised.
 fn quantity_rule(nodes: &[Node], positions: &BTreeMap<Vec<String>, NodeId>) -> Result<(), CompileError> {
     let path_of = |id: NodeId| positions.iter().find(|(_, n)| **n == id).map(|(p, _)| p.clone()).unwrap_or_default();
     let obj = |id: NodeId| match nodes.get(id) {
         Some(Node::Obj(o)) => Some(o.as_ref()),
         _ => None,
     };
-    let mut parent: Vec<usize> = (0..nodes.len()).collect();
     for id in 0..nodes.len() {
         let Some(o) = obj(id) else { continue };
-        for other in in_place(o) {
-            let (a, b) = (find(&mut parent, id), find(&mut parent, other));
-            if let Some(slot) = parent.get_mut(a) {
-                *slot = b;
-            }
-        }
-    }
-    let mut quantity_in: BTreeMap<usize, Vec<NodeId>> = BTreeMap::new();
-    for id in 0..nodes.len() {
-        if obj(id).is_some_and(|o| o.quantity.is_some()) {
-            quantity_in.entry(find(&mut parent, id)).or_default().push(id);
-        }
-    }
-    for id in 0..nodes.len() {
-        if !obj(id).is_some_and(has_numeric) {
-            continue;
-        }
-        let group = quantity_in.get(&find(&mut parent, id)).map(Vec::as_slice).unwrap_or(&[]);
-        if group.iter().any(|q| *q != id) {
+        if has_numeric(o) && o.quantity.is_none() && !excludes_object(o) {
             return Err(Builder::err(
                 &path_of(id),
-                "a numeric keyword applies where x-quantity sits in another schema object;                  put the bounds next to x-quantity",
+                "a numeric keyword needs x-quantity or a type excluding object in the same schema object",
             ));
         }
     }
@@ -1047,6 +1020,8 @@ impl Eval<'_> {
                 note(best, Fail::schema(ptr, "minItems", "array has too few items"));
             }
             if o.unique_items {
+                // One step per element, on top of the bytes canonicalised (re-review of #341).
+                self.charge(ptr, a.len() as u64)?;
                 let mut seen = Vec::with_capacity(a.len());
                 for (i, item) in a.iter().enumerate() {
                     seen.push(self.canon(item, &ptr.index(i))?);

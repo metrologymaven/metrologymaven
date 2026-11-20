@@ -31,13 +31,13 @@
   },
   {
    "name": "oneOf: exactly one subschema",
-   "schema": {"oneOf": [{"type": "integer"}, {"minimum": 2}]},
+   "schema": {"oneOf": [{"type": "integer"}, {"type": ["number", "boolean"], "minimum": 2}]},
    "tests": [
     {"note": "integer below 2 matches the first only", "data": 1, "valid": true},
     {"note": "non-integer at least 2 matches the second only", "data": 2.5, "valid": true},
     {"note": "integer at least 2 matches both", "data": 3, "valid": false},
     {"note": "non-integer below 2 matches neither", "data": 1.5, "valid": false},
-    {"note": "minimum ignores non-numbers, so a boolean matches only the second", "data": true, "valid": true}
+    {"note": "minimum ignores non-numbers, so a boolean matches only the second (its type allows booleans)", "data": true, "valid": true}
    ]
   },
   {
@@ -164,7 +164,7 @@
   },
   {
    "name": "multipleOf in decimal",
-   "schema": {"multipleOf": 0.1},
+   "schema": {"type": "number", "multipleOf": 0.1},
    "tests": [
     {"note": "0.3 is three tenths", "data": 0.3, "valid": true},
     {"note": "1e20 is a multiple", "data": 1e20, "valid": true},

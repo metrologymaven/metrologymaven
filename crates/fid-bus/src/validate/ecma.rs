@@ -13,8 +13,8 @@
 //!
 //! - accepted: literals; `.`; `^`, `$`; groups `( )`, `(?: )`, `(?<name> )`; `|`;
 //!   quantifiers `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}`, each optionally lazy (`?`);
-//!   classes `[...]`, `[^...]` with ranges `a-z` between two single characters (a literal
-//!   hyphen inside a class is written `\-`); escapes `\d \D \w \W \s \S` (the upper-case
+//!   classes `[...]`, `[^...]` with ranges `a-z` between two single characters, and a
+//!   literal `-` first, last, directly after a range, or escaped (`\-`); escapes `\d \D \w \W \s \S` (the upper-case
 //!   ones outside classes only), `\b` inside a class (backspace), `\t \n \v \f \r`, `\0` (not before a digit), `\xHH`,
 //!   `\uHHHH` (not a surrogate) and `\` before one of ``^$\.*+?()[]{}|/-``;
 //! - ECMA-262 meanings: `\d` is `[0-9]`, `\w` is `[0-9A-Za-z_]` (ASCII, as in ECMA-262
@@ -22,8 +22,9 @@
 //!   character except the four line terminators, `$` is the end of the input (no `m`
 //!   flag), and the match is a search anywhere in the string (an unanchored `test`);
 //! - refused: lookaround, backreferences, `\b \B` outside classes, `\p{..}`, `\c`, `\k`, inline flags,
-//!   `[]` and `[^]` (so also a `]` first in a class), an unescaped `-` in a class that is not
-//!   between two single characters (`[a-]`, `[-a]`, `[a--]`, `[^--/]`, `[\w-]`), a lone `{`,
+//!   `[]` and `[^]` (so also a `]` first in a class), a `-` next to another `-` in a class
+//!   (`[--a]`, `[a--]`, `[^--/]`) or between a class escape and anything (`[\d-z]`,
+//!   `[a-\d]`), a lone `{`,
 //!   `}` or `]`, any other escape, and patterns over
 //!   [`MAX_PATTERN_BYTES`] bytes or beyond the compiled-size and nesting limits.
 
@@ -228,30 +229,48 @@ fn class(chars: &[char], mut i: usize) -> Result<(String, usize), String> {
     if items.is_empty() {
         return Err(unsupported("an empty class"));
     }
-    // An unescaped `-` is only ever the range operator between two single characters; a
-    // literal hyphen is written `\-`. So `[a-]`, `[-a]`, `[a--]`, `[^--/]` and `[\d-z]` are
-    // refused rather than read as a narrower class than ECMA-262 means.
+    // ECMA-262 hyphens (maintainer decision in the re-review of #341): a `-` between two
+    // single characters is a range; a `-` first, last, or directly after a completed range is
+    // a literal hyphen (`[-a]`, `[a-]`, `[\w-]`, `[a-z-0]`). Refused: a `-` next to another
+    // `-` (`[--a]`, `[a--]`, `[^--/]`) and a `-` between a class escape and anything
+    // (`[\d-z]`, `[a-\d]`), whose ECMA meaning is a narrower or different class.
     let mut body = String::new();
     let mut k = 0;
+    let mut after_range = false;
     while let Some(item) = items.get(k) {
-        match (item, items.get(k + 1), items.get(k + 2)) {
+        let next = items.get(k + 1);
+        match (item, next, items.get(k + 2)) {
+            (Item::Dash, _, _) => {
+                if matches!(next, Some(Item::Dash)) {
+                    return Err(unsupported("two adjacent `-` in a class"));
+                }
+                if !(k == 0 || next.is_none() || after_range) {
+                    return Err(unsupported("a class range with a class escape"));
+                }
+                body.push_str(&hex(u32::from('-')));
+                k += 1;
+                after_range = false;
+            }
             (Item::Char(a), Some(Item::Dash), Some(Item::Char(b))) => {
                 if a > b {
                     return Err(unsupported("a class range out of order"));
                 }
                 body.push_str(&format!("{}-{}", hex(*a), hex(*b)));
                 k += 3;
+                after_range = true;
             }
-            (Item::Char(_) | Item::Set(_), Some(Item::Dash), _) | (Item::Dash, _, _) => {
-                return Err(unsupported("an unescaped `-` that is not between two characters (write `\\-`)"));
+            (Item::Char(_), Some(Item::Dash), Some(Item::Set(_))) | (Item::Set(_), Some(Item::Dash), Some(_)) => {
+                return Err(unsupported("a class range with a class escape"));
             }
             (Item::Char(a), _, _) => {
                 body.push_str(&hex(*a));
                 k += 1;
+                after_range = false;
             }
             (Item::Set(s), _, _) => {
                 body.push_str(s);
                 k += 1;
+                after_range = false;
             }
         }
     }
@@ -381,6 +400,10 @@ mod tests {
         assert!(!m("^.$", "\r") && !m("^.$", "\u{2028}") && m("^.$", "\u{1f600}"));
         assert!(!m("^a$", "a\n"), "$ is the end of input");
         assert!(m("^[\\d.\\-]+$", "1.5-2") && m("^[\\-a]$", "-") && m("^[a\\-]$", "-"));
+        // A `-` first, last or after a range is a literal hyphen (patterns of real commands).
+        assert!(m("^[a-z0-9][a-z0-9_-]*$", "egress-1_a") && !m("^[a-z0-9][a-z0-9_-]*$", "-a"));
+        assert!(m("^[-a]$", "-") && m("^[a-]$", "-") && m("^[\\w-]+$", "a-b") && m("^[-]$", "-"));
+        assert!(m("^[a-z-0]+$", "b-0") && !m("^[a-z-0]$", "1") && !m("^[^-]$", "-"));
         // `[\--/]` is the range U+002D..U+002F, so it holds `.`; its negation does not.
         assert!(m("^[\\--/]$", ".") && !m("^[^\\--/]+$", "a.b") && m("^[^\\--/]$", "a"));
         assert!(m("^[\\]a]$", "]") && m("^[\\[]$", "["));
@@ -396,8 +419,8 @@ mod tests {
         for p in [
             "(?=a)", "(?!a)", "(?<=a)", "(?<!a)", "(a)\\1", "\\k<n>", "\\bword", "\\B", "\\p{L}", "\\cA", "(?i)a",
             "[]", "[^]", "a{", "a}", "]", "[a", "\\", "\\q", "[\\D]", "[z-a]", "[\\d-z]", "\\ud800", "\\012", "\\x4",
-            // A bare `-` that is not between two characters (review of #341).
-            "[^--/]", "[a--]", "[--a]", "[a-]", "[-a]", "[-]", "[^-]", "[a-z-0]", "[\\w-]", "[a-\\d]", "[--]",
+            // Adjacent hyphens, and a hyphen between a class escape and anything (re-review of #341).
+            "[^--/]", "[a--]", "[--a]", "[--]", "[a-z--]", "[a-\\d]", "[\\d-z]", "[\\w-a]", "[\\w--]",
             // `]` first closes an empty class, which is refused.
             "[]a]", "[^]a]",
         ] {

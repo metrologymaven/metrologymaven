@@ -376,6 +376,9 @@ fn quantity_with_own_bounds_compiles() {
         r##"{"$defs":{"len":{"type":"number","x-quantity":"length","minimum":0}},"properties":{"a":{"$ref":"#/$defs/len"},"b":{"$ref":"#/$defs/len"}}}"##,
         r#"{"properties":{"a":{"x-quantity":"length","minimum":0},"n":{"type":"integer","minimum":1}}}"#,
         r#"{"type":"array","items":{"x-quantity":"length","maximum":2},"contains":{"type":"number"}}"#,
+        r#"{"anyOf":[{"x-quantity":"length","minimum":0},{"type":"integer","minimum":5}]}"#,
+        r#"{"type":["integer","null"],"exclusiveMaximum":10}"#,
+        r#"{"properties":{"a":{"x-quantity":"length"}},"allOf":[{"properties":{"a":{"type":"number","minimum":0}}}]}"#,
     ] {
         assert!(Compiled::compile(&parse(schema.as_bytes()).unwrap()).is_ok(), "{schema}");
     }
@@ -482,6 +485,24 @@ fn wide_documents_are_charged_per_member() {
     assert!(c.evaluate(&arrays, &NoHooks).is_ok(), "a few walks of a wide array fit the budget");
 }
 
+/// `uniqueItems` is charged one step per element on every check (re-review of #341).
+#[test]
+fn unique_items_is_charged_per_element() {
+    let mut defs = vec![r#""d0":{"uniqueItems":true}"#.to_string()];
+    for k in 1..=12 {
+        defs.push(format!(r##""d{k}":{{"allOf":[{{"$ref":"#/$defs/d{p}"}},{{"$ref":"#/$defs/d{p}"}}]}}"##, p = k - 1));
+    }
+    let schema = format!(r##"{{"$defs":{{{}}},"$ref":"#/$defs/d12"}}"##, defs.join(","));
+    let c = Compiled::compile(&parse(schema.as_bytes()).unwrap()).unwrap();
+    let distinct = CValue::Arr((0..100_000).map(|i| CValue::Num(f64::from(i))).collect());
+    let started = std::time::Instant::now();
+    let e = c.evaluate(&distinct, &NoHooks).unwrap_err();
+    assert_eq!((e.keyword, e.reason), ("input_limit", ValidationReason::InputLimit));
+    assert!(started.elapsed() < std::time::Duration::from_secs(60), "bounded time: {:?}", started.elapsed());
+    let once = Compiled::compile(&parse(br#"{"uniqueItems":true}"#).unwrap()).unwrap();
+    assert!(once.evaluate(&distinct, &NoHooks).is_ok(), "one check of a wide array fits the budget");
+}
+
 /// `format: "regex"` compiles each string: at most 64 checks per document, each charged by
 /// pattern size.
 #[test]
@@ -561,12 +582,19 @@ fn uncompilable_schema_fails_closed() {
         r#"{"items":[{}]}"#,
         r#"{"properties":{"a":{"$schema":"https://json-schema.org/draft/2020-12/schema"}}}"#,
         r#"{"multipleOf":0}"#,
-        // x-quantity behind an applicator with numeric keywords elsewhere (review of #341).
+        // A numeric keyword without its own x-quantity or a type excluding object (reviews of #341).
+        r#"{"minimum":0}"#,
+        r#"{"type":["number","object"],"maximum":1}"#,
         r##"{"$defs":{"len":{"type":"number","x-quantity":"length"}},"$ref":"#/$defs/len","minimum":0}"##,
         r#"{"allOf":[{"x-quantity":"length"},{"maximum":5}]}"#,
         r#"{"x-quantity":"length","allOf":[{"multipleOf":0.5}]}"#,
-        r#"{"anyOf":[{"x-quantity":"length","minimum":0},{"type":"integer","minimum":5}]}"#,
         r#"{"oneOf":[{"x-quantity":"length"}],"exclusiveMinimum":0}"#,
+        // The reviewer's child-applicator bypasses: the bound sits in another child schema.
+        r#"{"properties":{"a":{"type":"number","x-quantity":"length"}},"allOf":[{"properties":{"a":{"minimum":0}}}]}"#,
+        r#"{"properties":{"a":{"x-quantity":"length"}},"patternProperties":{"^a$":{"maximum":1}}}"#,
+        r#"{"properties":{"a":{"x-quantity":"length"}},"if":true,"then":{"properties":{"a":{"exclusiveMinimum":0}}}}"#,
+        r#"{"properties":{"a":{"x-quantity":"length"}},"dependentSchemas":{"b":{"properties":{"a":{"multipleOf":2}}}}}"#,
+        r#"{"items":{"x-quantity":"length"},"prefixItems":[{"minimum":0}]}"#,
         r#"{"if":{"x-quantity":"length"},"then":{"exclusiveMaximum":1}}"#,
         r#"{"properties":{"a":{"dependentSchemas":{"b":{"minimum":1}},"x-quantity":"length"}}}"#,
         // x-quantity under contains or not: those literals would never be normalised.

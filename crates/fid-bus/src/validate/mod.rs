@@ -391,6 +391,11 @@ impl<'a> Resolved<'a> {
     /// Validates a parsed parameter document (REQ-003..005, REQ-008). Its limits are checked
     /// first, without walking past them; only the number form JSON text produces is
     /// accepted (no `I64`, `U64` or `F64Bits`).
+    ///
+    /// **Warning:** integers above 2^53 that no binary64 number equals are refused only by
+    /// [`Resolved::validate_json`], which sees the JSON text. A parsed value has already been
+    /// rounded (`9007199254740993` became `9007199254740992`), so this entry point cannot refuse
+    /// it. Callers holding JSON text, the pipeline included, must use `validate_json`.
     pub fn validate_value(&self, params: &CValue, view: &dyn StateView) -> Result<Validated, ValidationError> {
         prescan(params)?;
         self.validate_checked(params.clone(), view)
@@ -460,6 +465,9 @@ pub fn resolve<'a>(table: &'a CommandTable, id: &str, major: u32, p: &Principal)
 }
 
 /// [`Resolved::validate_value`] with the refusal as a [`BusError`].
+///
+/// **Warning:** like [`Resolved::validate_value`], it cannot see integers above 2^53 that
+/// parsing rounded; callers holding JSON text must use [`validate_params_json`].
 pub fn validate_params(cmd: &Resolved<'_>, params: &CValue, view: &dyn StateView) -> Result<Validated, BusError> {
     cmd.validate_value(params, view).map_err(BusError::from)
 }

@@ -66,7 +66,16 @@ fn limbs(digits: &[u8]) -> Vec<u32> {
 fn exact(tok: &[u8], work: &mut u64) -> Option<bool> {
     let t = tok.strip_prefix(b"-").unwrap_or(tok);
     let (mant, exp) = match t.iter().position(|b| *b == b'e' || *b == b'E') {
-        Some(i) => (t.get(..i)?, std::str::from_utf8(t.get(i + 1..)?).ok()?.parse::<i64>().unwrap_or(i64::MAX)),
+        Some(i) => {
+            let text = std::str::from_utf8(t.get(i + 1..)?).ok()?;
+            match text.parse::<i64>() {
+                Ok(e) => (t.get(..i)?, e),
+                // An exponent beyond i64: negative means a value below any integer but zero,
+                // so not an integer above 2^53 (re-review of #341); positive is huge.
+                Err(_) if text.starts_with('-') => return Some(true),
+                Err(_) => (t.get(..i)?, i64::MAX),
+            }
+        }
         None => (t, 0),
     };
     let (int, frac) = match mant.iter().position(|b| *b == b'.') {
@@ -84,10 +93,10 @@ fn exact(tok: &[u8], work: &mut u64) -> Option<bool> {
     if e < 0 {
         return Some(true); // not an integer
     }
-    if d.len() as i64 + e <= 15 {
+    if (d.len() as i64).saturating_add(e) <= 15 {
         return Some(true); // below 10^15 < 2^53
     }
-    if d.len() as i64 + e <= 17 {
+    if (d.len() as i64).saturating_add(e) <= 17 {
         let mut v: u128 = d.iter().fold(0u128, |a, x| a * 10 + u128::from(x - b'0'));
         for _ in 0..e {
             v *= 10;
@@ -221,7 +230,10 @@ mod tests {
         {
             assert!(ex(s), "{s}");
         }
-        for s in ["9007199254740993", "-9007199254740993", "1e23", "1e30", "123456789012345678901"] {
+        assert!(ex("1e-99999999999999999999999") && ex("12345678901234567890e-99999999999999999999"));
+        for s in
+            ["9007199254740993", "-9007199254740993", "1e23", "1e30", "123456789012345678901", "3e99999999999999999999"]
+        {
             assert!(!ex(s), "{s}");
         }
     }
