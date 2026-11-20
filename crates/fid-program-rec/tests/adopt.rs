@@ -462,10 +462,10 @@ fn ac6_nothing_to_adopt_and_unknown_step() {
     let twice = format!("{},{}", ex.step("S2"), ex.step("S2"));
     let e = run_cli(&human, &mut store, &programs, &mut log, &cli_args(&ex.s("program"), &twice, &digest)).unwrap_err();
     assert_eq!(e.code(), "bad_params");
-    let mut both = cli_args(&ex.s("program"), &twice, &digest);
+    let prog = ex.s("program");
+    let mut both = cli_args(&prog, &twice, &digest);
     both.push("--all-unadopted");
     assert_eq!(run_cli(&human, &mut store, &programs, &mut log, &both).unwrap_err().code(), "bad_params");
-    let prog = ex.s("program");
     let neither = ["program", "adopt-steps", "--program", prog.as_str(), "--reviewed-digest", digest.as_str()];
     assert_eq!(run_cli(&human, &mut store, &programs, &mut log, &neither).unwrap_err().code(), "bad_params");
 
