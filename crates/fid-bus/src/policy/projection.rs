@@ -20,6 +20,16 @@
 //! `RequestApproved` event carries the request's record digest, and [`RequestBook`] refuses
 //! to fold one whose digest, requester or command differs from the record.
 //!
+//! Check order: for MCP or `agent` callers the projection check and filing come before the
+//! class check (`policy::class`), so an agent's call to a `human_only` or W3 command files a
+//! request; an approval runs the class check on the approving human. [`authorise`] is the
+//! one entry point and applies both checks in that order.
+//!
+//! The fold takes each entry's own principal and command ([`EntryOrigin`]) and never trusts
+//! an event body for them: a `Request*` event is accepted only in the entry of the command
+//! and principal it names, and the registry refuses those effect names on any other command
+//! (`fid_registry::RESERVED_EFFECTS`).
+//!
 //! The principal is always derived by the bus from the channel
 //! ([`SessionTable::derive_principal`]); nothing here reads a principal, a requester or an
 //! approver from the parameters. Parameters with extra fields are `validation/schema`.
@@ -51,8 +61,10 @@ use crate::error::{
     ValidationReason,
 };
 use crate::handler::{
-    EntityId, EntityRef, Event, EventType, Handler, HandlerCtx, HandlerError, SettingKey, StateView, ValidParams,
+    canonical_len, EntityId, EntityRef, Event, EventType, Handler, HandlerCtx, HandlerError, SettingKey, StateView,
+    ValidParams,
 };
+use crate::policy::class::authorise_class;
 use crate::principal::{
     Channel, ChannelKind, JournalAppend, Principal, PrincipalId, PrincipalKind, PrincipalRef, SessionTable,
 };
@@ -61,6 +73,7 @@ use fid_journal::{
     AiAssistance, CommandDraft, DraftBody, EntryDraft, EntryTime, Manifests, OutputDigest, TaggedDigest,
 };
 use fid_registry::{max_projection, CommandDef, DefError, Projection, Surface};
+use fid_store::settings::check::validate_value;
 use fid_types::{CommandId, Determinism, Digest, SideEffect};
 use fid_uuid::Uuid;
 use std::collections::{BTreeMap, BTreeSet};
@@ -86,6 +99,8 @@ pub const REJECT_REQUEST: &str = "request.reject_request";
 pub const FILE_REQUEST: &str = "request.file_request";
 /// Longest rejection reason, in characters (Unicode scalar values).
 pub const MAX_REASON_CHARS: usize = 2000;
+/// Largest canonical size of the parameters a pending request holds.
+pub const MAX_FILED_PARAMS_BYTES: u64 = 64 * 1024;
 /// Input tag of the parameters commitment in the filing entry.
 pub const PARAMS_TAG: &str = "param";
 
@@ -365,35 +380,55 @@ impl Authorised {
     }
 }
 
-/// The projection and approval step for one call. The principal is derived from `channel`
-/// by `table` and nowhere else. `params` are the call's parameters; `approval_of` the request
-/// a person approves, taken from the invocation, never from the parameters; `view` the
-/// state the call runs against (the request records and the branch head).
+/// The one entry point of the projection, approval and class checks for a call. The
+/// principal is derived from `channel` by `table` and nowhere else. `params` are the call's
+/// parameters as the validation stage accepted them against `def`'s `params_schema`
+/// ([`ValidParams`]); `approval_of` the request a person approves, taken from the
+/// invocation, never from the parameters; `view` the state the call runs against (the
+/// request records and the branch head).
 ///
-/// With `approval_of`: a principal that is not `human`, or a call on an MCP channel, is
-/// `policy/bad_approval`; an unknown request is `not_found/unknown_request`; a request that is
-/// not pending, names another command or major, or whose parameters commitment differs from
-/// `params` is `policy/bad_approval`. Otherwise the projection check applies, for an MCP
-/// channel or any `agent` principal. Pure: commits nothing and changes no request.
+/// Check order (maintainer decision on #328):
+///
+/// 1. With `approval_of`: a principal that is not `human`, or a call on an MCP channel, is
+///    `policy/bad_approval`; an unknown request is `not_found/unknown_request`; a request that
+///    is not pending, names another command or major, or whose parameters commitment differs
+///    from `params` is `policy/bad_approval`. Then the class check
+///    ([`authorise_class`]) applies to the approving human; then [`Decision::RunApproved`].
+/// 2. For an MCP channel or any `agent` principal: the projection check first. `never` is
+///    `policy/not_on_mcp`; `request_only` or `human_only` is [`Decision::File`] without the
+///    class check, so an agent's call to a `human_only` or W3 command becomes a pending
+///    request instead of `human_only` / `class_forbidden`; `exposed` then needs the class
+///    check.
+/// 3. Any other call: the class check, then [`Decision::Run`].
+///
+/// Pure: commits nothing and changes no request. Both [`Approval`] and [`Filing`] carry
+/// the head they were decided at; the commit stage must re-check it when it appends.
 pub fn authorise(
     table: &SessionTable,
     channel: &dyn Channel,
     def: &CommandDef,
-    params: &CValue,
+    params: &ValidParams,
     approval_of: Option<&RequestId>,
     view: &dyn StateView,
 ) -> Result<Authorised, BusError> {
     let principal = table.derive_principal(channel)?;
-    let kind = channel.kind();
-    let on_mcp = is_mcp_channel(kind) || principal.kind() == PrincipalKind::Agent;
+    let on_mcp = is_mcp_channel(channel.kind()) || principal.kind() == PrincipalKind::Agent;
     let decision = match approval_of {
-        Some(request) => Decision::RunApproved(approve(&principal, on_mcp, def, params, request, view)?),
-        None => {
-            let as_channel = if on_mcp { ChannelKind::Mcp } else { kind };
-            match authorise_projection(as_channel, def)? {
-                Projected::Run => Decision::Run,
-                Projected::PendingRequest => Decision::File(Filing::new(&principal, def, params, view)?),
+        Some(request) => {
+            let approval = approve(&principal, on_mcp, def, params.value(), request, view)?;
+            authorise_class(&principal, def)?;
+            Decision::RunApproved(approval)
+        }
+        None if on_mcp => match authorise_projection(ChannelKind::Mcp, def)? {
+            Projected::PendingRequest => Decision::File(Filing::new(&principal, def, params, view)?),
+            Projected::Run => {
+                authorise_class(&principal, def)?;
+                Decision::Run
             }
+        },
+        None => {
+            authorise_class(&principal, def)?;
+            Decision::Run
         }
     };
     Ok(Authorised { principal, decision })
@@ -435,6 +470,7 @@ fn approve(
         params_commitment: record.params_commitment,
         requested_by: record.requester.clone(),
         approved_by: principal.reference(),
+        decided_at_head: to_digest(view.head()),
     })
 }
 
@@ -447,9 +483,18 @@ pub struct Approval {
     params_commitment: Digest,
     requested_by: PrincipalRef,
     approved_by: PrincipalRef,
+    decided_at_head: Digest,
 }
 
 impl Approval {
+    /// The branch head the approval was decided at. Two approvals of one request decided at
+    /// the same head can both be produced; the commit stage (CORE.BUS.PIPE.STAGE) must
+    /// re-check at append time (compare-and-swap on the head, or under the append lock) so
+    /// only one commits; the fold refuses the second as a non-pending request.
+    pub fn decided_at_head(&self) -> Digest {
+        self.decided_at_head
+    }
+
     /// The approved request.
     pub fn request(&self) -> RequestId {
         self.request
@@ -466,11 +511,13 @@ impl Approval {
     }
 
     /// The `RequestApproved` event the approved command's commit carries:
-    /// `{approved_by, command, params_commitment, record_digest, request, requested_by}`.
+    /// `{approved_by, command, decided_at_head, params_commitment, record_digest, request,
+    /// requested_by}`.
     pub fn event(&self) -> Result<Event, BusError> {
         let body = obj([
             ("approved_by", principal_value(&self.approved_by)),
             ("command", text(self.command.as_str())),
+            ("decided_at_head", text(self.decided_at_head.as_str())),
             ("params_commitment", text(self.params_commitment.as_str())),
             ("record_digest", text(self.record_digest.as_str())),
             ("request", text(&self.request.to_string())),
@@ -501,14 +548,41 @@ pub struct Filing {
 }
 
 impl Filing {
-    fn new(principal: &Principal, def: &CommandDef, params: &CValue, view: &dyn StateView) -> Result<Filing, BusError> {
+    /// The parameters come from the validation stage. As defence in depth they are checked
+    /// again here: at most [`MAX_FILED_PARAMS_BYTES`] canonical bytes
+    /// (`validation/input_limit`) and conforming to the structural keywords of `def`'s
+    /// `params_schema` (`validation/schema`), so a request cannot hold parameters the target
+    /// command would refuse.
+    fn new(
+        principal: &Principal,
+        def: &CommandDef,
+        params: &ValidParams,
+        view: &dyn StateView,
+    ) -> Result<Filing, BusError> {
+        let value = params.value();
+        let len = canonical_len(value, MAX_FILED_PARAMS_BYTES)
+            .map_err(|e| schema(&format!("parameters have no canonical form: {}", e.code())))?;
+        if len > MAX_FILED_PARAMS_BYTES {
+            return Err(BusError::Validation(
+                ValidationReason::InputLimit,
+                Detail::new(&format!("parameters of a pending request are at most {MAX_FILED_PARAMS_BYTES} bytes")),
+            ));
+        }
+        validate_value(&def.params_schema, value).map_err(|e| {
+            schema(&format!("parameters do not match the params_schema of {}@{}: {e}", def.id, def.major))
+        })?;
         Ok(Filing {
             command: command_id(def)?,
-            params: params.clone(),
-            params_commitment: params_commitment(params)?,
+            params: value.clone(),
+            params_commitment: params_commitment(value)?,
             requester: principal.clone(),
             filed_at_head: to_digest(view.head()),
         })
+    }
+
+    /// The branch head the filing was decided at (recorded as `filed_at_head`).
+    pub fn decided_at_head(&self) -> Digest {
+        self.filed_at_head
     }
 
     /// The command the request is for.
@@ -744,6 +818,43 @@ impl RequestRecord {
     }
 }
 
+/// Who committed an entry and for which command, as the entry itself records it; what
+/// [`RequestBook::apply_entry`] checks request events against.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntryOrigin {
+    principal: PrincipalRef,
+    command: CommandId,
+}
+
+impl EntryOrigin {
+    /// The origin of an entry committed by `principal` for `command`.
+    pub fn new(principal: PrincipalRef, command: CommandId) -> EntryOrigin {
+        EntryOrigin { principal, command }
+    }
+
+    /// The origin of a command entry draft: its principal kind and identity (a string) and
+    /// its command `id@major`. Any other entry kind, or another identity shape, is
+    /// `internal/invariant_violated`.
+    pub fn from_draft(d: &EntryDraft) -> Result<EntryOrigin, BusError> {
+        let DraftBody::Command(c) = &d.body else { return Err(invariant("not a command entry")) };
+        let CValue::Str(identity) = &d.principal.identity else {
+            return Err(invariant("entry principal identity is not a string"));
+        };
+        let id = PrincipalId::new(identity).map_err(|_| invariant("entry principal identity is malformed"))?;
+        let command = CommandId::parse(&format!("{}@{}", c.id, c.major))
+            .map_err(|_| invariant("entry command id is malformed"))?;
+        Ok(EntryOrigin { principal: PrincipalRef { kind: d.principal.kind, id }, command })
+    }
+
+    pub fn principal(&self) -> &PrincipalRef {
+        &self.principal
+    }
+
+    pub fn command(&self) -> &CommandId {
+        &self.command
+    }
+}
+
 struct Stored {
     entity: EntityId,
     record: RequestRecord,
@@ -767,9 +878,23 @@ impl fmt::Debug for RequestBook {
 /// One parsed request event.
 enum Change {
     Filed(RequestRecord),
-    Approved { id: RequestId, record_digest: Digest, command: CommandId, requested_by: PrincipalRef, by: PrincipalRef },
-    Withdrawn { id: RequestId, by: PrincipalRef },
-    Rejected { id: RequestId, by: PrincipalRef, reason: Untrusted<String> },
+    Approved {
+        id: RequestId,
+        record_digest: Digest,
+        command: CommandId,
+        params_commitment: Digest,
+        requested_by: PrincipalRef,
+        by: PrincipalRef,
+    },
+    Withdrawn {
+        id: RequestId,
+        by: PrincipalRef,
+    },
+    Rejected {
+        id: RequestId,
+        by: PrincipalRef,
+        reason: Untrusted<String>,
+    },
 }
 
 impl Change {
@@ -799,12 +924,22 @@ impl Change {
             })
         } else if ty == REQUEST_APPROVED {
             let w = "RequestApproved";
-            let keys = ["approved_by", "command", "params_commitment", "record_digest", "request", "requested_by"];
+            let keys = [
+                "approved_by",
+                "command",
+                "decided_at_head",
+                "params_commitment",
+                "record_digest",
+                "request",
+                "requested_by",
+            ];
             let o = fields(body, w, &keys, &[])?;
+            digest_field(o, "decided_at_head", w)?;
             Change::Approved {
                 id: RequestId::parse(str_field(o, "request", w)?)?,
                 record_digest: digest_field(o, "record_digest", w)?,
                 command: CommandId::parse(str_field(o, "command", w)?).map_err(|_| schema("bad command id"))?,
+                params_commitment: digest_field(o, "params_commitment", w)?,
                 requested_by: principal_from(o.get("requested_by"), "RequestApproved.requested_by")?,
                 by: principal_from(o.get("approved_by"), "RequestApproved.approved_by")?,
             }
@@ -877,43 +1012,66 @@ impl RequestBook {
         }
     }
 
-    fn check(&self, c: &Change) -> Result<(), BusError> {
+    fn check(&self, origin: &EntryOrigin, c: &Change) -> Result<(), BusError> {
+        let refuse = |what: &str| Err(invariant(&format!("request {}: {what}", c.id())));
+        let is = |name: &str| origin.command.name() == name && origin.command.major() == 1;
         match c {
             Change::Filed(r) => {
                 if self.map.contains_key(&r.id) {
-                    return Err(invariant(&format!("request {} filed twice", r.id)));
+                    return refuse("filed twice");
+                }
+                if !is(FILE_REQUEST) || origin.principal != r.requester {
+                    return refuse("RequestFiled outside a request.file_request@1 entry of its requester");
                 }
             }
-            Change::Approved { id, record_digest, command, requested_by, by } => {
+            Change::Approved { id, record_digest, command, params_commitment, requested_by, by } => {
                 let r = self.pending(id)?;
-                let same =
-                    r.record_digest()? == *record_digest && r.command == *command && r.requester == *requested_by;
-                if !same || by.kind != PrincipalKind::Human {
-                    return Err(invariant(&format!("approval of request {id} does not match its record")));
+                let same = r.record_digest()? == *record_digest
+                    && r.command == *command
+                    && r.params_commitment == *params_commitment
+                    && r.requester == *requested_by;
+                if !same {
+                    return refuse("approval does not match the record");
+                }
+                if by.kind != PrincipalKind::Human || origin.principal != *by || origin.command != *command {
+                    return refuse("RequestApproved outside the approved command's entry of its human approver");
                 }
             }
             Change::Withdrawn { id, by } => {
+                if !is(WITHDRAW_REQUEST) || origin.principal != *by {
+                    return refuse("RequestWithdrawn outside a request.withdraw_request@1 entry of its withdrawer");
+                }
                 if self.pending(id)?.requester != *by {
-                    return Err(invariant(&format!("request {id} withdrawn by another principal")));
+                    return refuse("withdrawn by another principal");
                 }
             }
             Change::Rejected { id, by, .. } => {
+                if !is(REJECT_REQUEST) || origin.principal != *by {
+                    return refuse("RequestRejected outside a request.reject_request@1 entry of its rejecter");
+                }
                 self.pending(id)?;
                 if by.kind != PrincipalKind::Human {
-                    return Err(invariant(&format!("request {id} rejected by a non-human principal")));
+                    return refuse("rejected by a non-human principal");
                 }
             }
         }
         Ok(())
     }
 
-    /// Folds the events of one committed entry, in order. Events of other types are ignored.
-    /// Each request may be touched by at most one event of the entry. A malformed request
-    /// event, or one the records contradict (unknown or not pending request, a second filing,
-    /// an approval whose digest, command or requester differs, a withdrawal by another
-    /// principal, a non-human approver or rejecter), is `internal/invariant_violated`, and
-    /// then the book is unchanged.
-    pub fn apply_entry(&mut self, events: &[Event]) -> Result<(), BusError> {
+    /// Folds the events of one committed entry, in order; `origin` is the entry's own
+    /// principal and command, never read from an event body. Events of other types are
+    /// ignored. Each request may be touched by at most one event of the entry. The fold
+    /// refuses, with `internal/invariant_violated` and the book unchanged:
+    ///
+    /// - a malformed request event, an unknown or no longer pending request, a second filing;
+    /// - `RequestFiled` outside a `request.file_request@1` entry whose principal is the
+    ///   requester;
+    /// - `RequestApproved` whose record digest, command, parameters commitment or requester
+    ///   differs from the record, or that is not in an entry of the approved command whose
+    ///   principal is the `human` approver;
+    /// - `RequestWithdrawn` outside a `request.withdraw_request@1` entry of the requester;
+    /// - `RequestRejected` outside a `request.reject_request@1` entry of the `human` rejecter.
+    pub fn apply_entry(&mut self, origin: &EntryOrigin, events: &[Event]) -> Result<(), BusError> {
         let mut changes = Vec::new();
         let mut touched = BTreeSet::new();
         for e in events {
@@ -923,7 +1081,7 @@ impl RequestBook {
             if !touched.insert(c.id()) {
                 return Err(invariant(&format!("one entry touches request {} twice", c.id())));
             }
-            self.check(&c)?;
+            self.check(origin, &c)?;
             changes.push(c);
         }
         let mut next = self.filed;
@@ -1041,8 +1199,16 @@ impl Handler for WithdrawHandler {
     }
 }
 
+/// Characters a rejection reason may not hold: C0 controls (U+0000..U+001F, none excepted),
+/// DEL, C1 controls (U+0080..U+009F) and the bidi embedding, override and isolate controls
+/// (U+202A..U+202E, U+2066..U+2069).
+pub fn forbidden_in_reason(c: char) -> bool {
+    matches!(c, '\u{0}'..='\u{1f}' | '\u{7f}'..='\u{9f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+}
+
 /// The handler of `request.reject_request@1` (REQ-006): parameters `{request, reason}`, the
-/// reason 1 to [`MAX_REASON_CHARS`] characters of untrusted text (else `validation/schema`);
+/// reason 1 to [`MAX_REASON_CHARS`] characters of untrusted text without
+/// [`forbidden_in_reason`] characters (else `validation/schema`);
 /// only a `human` may reject (`policy/human_only`, also enforced by the class check); the
 /// request must be pending (`precondition/invalid_transition`); an unknown request is
 /// `not_found/unknown_request`. Returns one `RequestRejected` event holding the reason and
@@ -1058,6 +1224,13 @@ impl Handler for RejectHandler {
         let n = reason.chars().count();
         if n == 0 || n > MAX_REASON_CHARS {
             return Err(schema(&format!("reason must be 1 to {MAX_REASON_CHARS} characters")).into());
+        }
+        if let Some(c) = reason.chars().find(|c| forbidden_in_reason(*c)) {
+            return Err(schema(&format!(
+                "reason must not hold control or bidi-override characters (found U+{:04X})",
+                u32::from(c)
+            ))
+            .into());
         }
         let p = ctx.principal();
         if p.kind() != PrincipalKind::Human {

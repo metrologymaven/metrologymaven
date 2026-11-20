@@ -8,10 +8,11 @@ use fid_bus::error::{BusError, Code};
 use fid_bus::handler::{run_handler, CancelToken, Event, Handler, HandlerCtx, HandlerSet, StateView, ValidParams};
 use fid_bus::policy::class::authorise_class;
 use fid_bus::policy::projection::{
-    authorise, authorise_projection, command_defs, is_mcp_channel, list_requests, mcp_projection, params_commitment,
-    Approval, Decision, Filing, Projected, RecordContext, RejectHandler, RequestBook, RequestId, RequestRecord,
-    RequestState, WithdrawHandler, FILE_REQUEST, LIST_REQUESTS, MAX_REASON_CHARS, PARAMS_TAG, REJECT_REQUEST,
-    REQUEST_APPROVED, REQUEST_FILED, REQUEST_KIND, REQUEST_REJECTED, REQUEST_WITHDRAWN, WITHDRAW_REQUEST,
+    authorise, authorise_projection, command_defs, forbidden_in_reason, is_mcp_channel, list_requests, mcp_projection,
+    params_commitment, Approval, Decision, EntryOrigin, Filing, Projected, RecordContext, RejectHandler, RequestBook,
+    RequestId, RequestRecord, RequestState, WithdrawHandler, FILE_REQUEST, LIST_REQUESTS, MAX_FILED_PARAMS_BYTES,
+    MAX_REASON_CHARS, PARAMS_TAG, REJECT_REQUEST, REQUEST_APPROVED, REQUEST_FILED, REQUEST_KIND, REQUEST_REJECTED,
+    REQUEST_WITHDRAWN, WITHDRAW_REQUEST,
 };
 use fid_bus::principal::{
     Channel, ChannelKind, Identity, JournalAppend, OsUser, PrincipalId, PrincipalKind, PrincipalRef, SessionId,
@@ -22,7 +23,8 @@ use fid_journal::{
     build, AiAssistance, DraftBody, EntryDraft, EntryError, EntryTime, Field, Manifests, Salt, SaltSource, GENESIS_PREV,
 };
 use fid_registry::{check_schema, Catalogue, CommandDecl, CommandDef, Projection};
-use fid_types::{Determinism, SideEffect};
+use fid_types::{CommandId, Determinism, SideEffect};
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -177,11 +179,17 @@ struct World {
     table: SessionTable,
     book: RequestBook,
     journal: Journal,
+    last: RefCell<Option<EntryOrigin>>,
 }
 
 impl World {
     fn new() -> World {
-        World { table: SessionTable::new(), book: RequestBook::new(), journal: Journal::default() }
+        World {
+            table: SessionTable::new(),
+            book: RequestBook::new(),
+            journal: Journal::default(),
+            last: RefCell::new(None),
+        }
     }
 
     fn channel(&mut self, kind: ChannelKind, subject: &str) -> TestChannel {
@@ -196,7 +204,8 @@ impl World {
         approval_of: Option<&RequestId>,
     ) -> Result<Decision, BusError> {
         let view = self.book.view(HEAD);
-        authorise(&self.table, ch, &def(id), p, approval_of, &view).map(|a| a.into_parts().1)
+        authorise(&self.table, ch, &def(id), &ValidParams::for_tests(p.clone()), approval_of, &view)
+            .map(|a| a.into_parts().1)
     }
 
     /// Files `p` for command `id` over `ch` under request ID `n` and folds the entry.
@@ -208,8 +217,9 @@ impl World {
     fn commit_filing(&mut self, filing: &Filing, id: RequestId) -> Result<RequestId, BusError> {
         let view = self.book.view(HEAD);
         let got = filing.commit(id, &view, time(), &record_ctx(), &mut self.journal)?;
-        let events = draft_events(self.journal.drafts.last().unwrap());
-        self.book.apply_entry(&events).unwrap();
+        let draft = self.journal.drafts.last().unwrap();
+        let events = draft_events(draft);
+        self.book.apply_entry(&EntryOrigin::from_draft(draft).unwrap(), &events).unwrap();
         Ok(got)
     }
 
@@ -229,7 +239,24 @@ impl World {
         set.register(def(&format!("{REJECT_REQUEST}@1")), Box::new(RejectHandler)).unwrap();
         let ctx = HandlerCtx::derive(&self.table, ch, 0, CancelToken::never())?;
         let view = self.book.view(HEAD);
-        run_handler(&set, id, &view, &ValidParams::for_tests(p.clone()), &ctx).map(|c| c.events().to_vec())
+        let checked = run_handler(&set, id, &view, &ValidParams::for_tests(p.clone()), &ctx)?;
+        *self.last.borrow_mut() = Some(EntryOrigin::new(ctx.principal().reference(), CommandId::parse(id).unwrap()));
+        Ok(checked.events().to_vec())
+    }
+
+    /// The origin of an entry committed by `ch` for command `id`.
+    fn origin(&self, ch: &TestChannel, id: &str) -> EntryOrigin {
+        EntryOrigin::new(self.table.derive_principal(ch).unwrap().reference(), CommandId::parse(id).unwrap())
+    }
+
+    /// Folds `events` as the entry of the last successful [`World::run`].
+    fn fold_last_result(&mut self, events: &[Event]) -> Result<(), BusError> {
+        let origin = self.last.borrow().clone().unwrap();
+        self.book.apply_entry(&origin, events)
+    }
+
+    fn fold_last(&mut self, events: &[Event]) {
+        self.fold_last_result(events).unwrap();
     }
 }
 
@@ -452,14 +479,16 @@ fn ac2_never_over_mcp_is_refused_and_nothing_is_journaled() {
 fn a_principal_named_in_the_parameters_is_ignored() {
     let mut w = World::new();
     let agent = w.channel(ChannelKind::Mcp, "claude-a");
+    // Fields that name a principal are not part of the target's params_schema: refused.
     let p = json(r#"{"target":"plane-1","principal":{"kind":"human","id":"alice"},"approved_by":"alice"}"#);
-    let id = w.file(&agent, REQUEST_CMD, &p, 1);
+    assert_err(w.authorise(&agent, REQUEST_CMD, &p, None), Code::Validation, "schema");
+    assert_err(w.authorise(&agent, HUMAN_CMD, &p, None), Code::Validation, "schema");
+    assert!(w.journal.drafts.is_empty());
+    // The requester is the channel's principal.
+    let id = w.file(&agent, REQUEST_CMD, &filed_params(), 1);
     let r = w.record(id);
     assert_eq!(r.requester(), &PrincipalRef { kind: PrincipalKind::Agent, id: pid("claude-a") });
-    assert_eq!(r.params_commitment(), params_commitment(&p).unwrap());
-    // A human_only command stays a pending request whatever the parameters say.
-    let d = w.authorise(&agent, HUMAN_CMD, &p, None).unwrap();
-    assert!(matches!(d, Decision::File(_)));
+    assert_eq!(r.params_commitment(), params_commitment(&filed_params()).unwrap());
 }
 
 /// A request ID already in the book is `conflict/id_collision`, and nothing is appended.
@@ -493,10 +522,15 @@ fn request_ids_are_uuid_v7() {
 
 // ------------------------------------------------------------------ AC-3, AC-4, REQ-008
 
+/// The origin of the approved command's entry: the approving human, the approved command.
+fn approval_origin(approval: &Approval) -> EntryOrigin {
+    EntryOrigin::new(approval.approved_by().clone(), CommandId::parse(REQUEST_CMD).unwrap())
+}
+
 fn approve_entry(w: &mut World, approval: &Approval) {
     let events =
         [Event::new(fid_bus::handler::EventType::new("TestDone").unwrap(), json("{}")), approval.event().unwrap()];
-    w.book.apply_entry(&events).unwrap();
+    w.book.apply_entry(&approval_origin(approval), &events).unwrap();
 }
 
 /// AC-3: a GUI human invoking the same command and parameters (keys in another order) with
@@ -510,7 +544,8 @@ fn ac3_a_human_approval_runs_as_human_and_records_the_requester() {
     let alice = w.channel(ChannelKind::Gui, "alice");
     let p = json(r#"{"count":3,"target":"plane-1"}"#);
     let view = w.book.view(HEAD);
-    let a = authorise(&w.table, &alice, &def(REQUEST_CMD), &p, Some(&r), &view).unwrap();
+    let a =
+        authorise(&w.table, &alice, &def(REQUEST_CMD), &ValidParams::for_tests(p.clone()), Some(&r), &view).unwrap();
     assert_eq!(a.principal().kind(), PrincipalKind::Human);
     let Decision::RunApproved(approval) = a.decision().clone() else { panic!("{:?}", a.decision()) };
     assert_eq!(approval.request(), r);
@@ -534,7 +569,7 @@ fn ac3_a_human_approval_runs_as_human_and_records_the_requester() {
     assert_eq!(canon(one.get("resolved_by").unwrap()), canon(&json(r#"{"id":"alice","kind":"human"}"#)));
     // Replay of the same approval is refused: R is no longer pending.
     assert_err(w.authorise(&alice, REQUEST_CMD, &p, Some(&r)), Code::Policy, "bad_approval");
-    assert!(w.book.apply_entry(&[approval.event().unwrap()]).is_err());
+    assert!(w.book.apply_entry(&approval_origin(&approval), &[approval.event().unwrap()]).is_err());
     assert_eq!(w.record(r).state(), RequestState::Approved);
 }
 
@@ -570,13 +605,13 @@ fn ac4_approval_refusals() {
     // Withdrawn and rejected requests cannot be approved.
     let r1 = w.file(&agent, REQUEST_CMD, &filed_params(), 1);
     let ev = w.run(&agent, &format!("{WITHDRAW_REQUEST}@1"), &json(&format!(r#"{{"request":"{r1}"}}"#))).unwrap();
-    w.book.apply_entry(&ev).unwrap();
+    w.fold_last(&ev);
     assert_err(w.authorise(&alice, REQUEST_CMD, &filed_params(), Some(&r1)), Code::Policy, "bad_approval");
     let r2 = w.file(&agent, REQUEST_CMD, &filed_params(), 2);
     let ev = w
         .run(&alice, &format!("{REJECT_REQUEST}@1"), &json(&format!(r#"{{"request":"{r2}","reason":"no"}}"#)))
         .unwrap();
-    w.book.apply_entry(&ev).unwrap();
+    w.fold_last(&ev);
     assert_err(w.authorise(&alice, REQUEST_CMD, &filed_params(), Some(&r2)), Code::Policy, "bad_approval");
 }
 
@@ -626,7 +661,11 @@ fn the_fold_refuses_a_substituted_or_forged_approval() {
         ("unknown request", mutate("request", CValue::Str(rid(9).to_string()))),
         ("extra field", mutate("note", CValue::Null)),
     ] {
-        assert_err(w.book.apply_entry(std::slice::from_ref(&e)), Code::Internal, "invariant_violated");
+        assert_err(
+            w.book.apply_entry(&approval_origin(&a), std::slice::from_ref(&e)),
+            Code::Internal,
+            "invariant_violated",
+        );
         assert_eq!(w.record(r).state(), RequestState::Pending, "{name}");
     }
     // Two events for one request in one entry are refused, and neither is applied.
@@ -634,9 +673,9 @@ fn the_fold_refuses_a_substituted_or_forged_approval() {
         fid_bus::handler::EventType::new(REQUEST_WITHDRAWN).unwrap(),
         json(&format!(r#"{{"request":"{r}","withdrawn_by":{{"id":"claude-a","kind":"agent"}}}}"#)),
     );
-    assert_err(w.book.apply_entry(&[good.clone(), wd]), Code::Internal, "invariant_violated");
+    assert_err(w.book.apply_entry(&approval_origin(&a), &[good.clone(), wd]), Code::Internal, "invariant_violated");
     assert_eq!(w.record(r).state(), RequestState::Pending);
-    w.book.apply_entry(&[good]).unwrap();
+    w.book.apply_entry(&approval_origin(&a), &[good]).unwrap();
     assert_eq!(w.record(r).state(), RequestState::Approved);
 }
 
@@ -662,7 +701,7 @@ fn ac5_only_the_requester_withdraws() {
     let events = w.run(&agent, &cmd, &p).unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0].type_id().as_str(), REQUEST_WITHDRAWN);
-    w.book.apply_entry(&events).unwrap();
+    w.fold_last(&events);
     assert_eq!(w.record(r).state(), RequestState::Withdrawn);
     assert_eq!(w.record(r).resolved_by(), Some(&PrincipalRef { kind: PrincipalKind::Agent, id: pid("claude-a") }));
     assert_err(w.run(&agent, &cmd, &p), Code::Precondition, "invalid_transition");
@@ -708,7 +747,7 @@ fn ac6_a_human_rejects_with_an_untrusted_reason() {
     let body = obj(events[0].body());
     assert_eq!(st(body, "reason"), reason);
     assert_eq!(st(body, "reason_commitment"), st(rej, "commitment"));
-    w.book.apply_entry(&events).unwrap();
+    w.fold_last(&events);
     let rec = w.record(r);
     assert_eq!(rec.state(), RequestState::Rejected);
     assert_eq!(rec.reason().map(|u| u.as_untrusted().as_str()), Some(reason));
@@ -733,7 +772,7 @@ fn ac6_a_human_rejects_with_an_untrusted_reason() {
     assert_err(w.run(&alice, &cmd, &with(&"\u{e9}".repeat(MAX_REASON_CHARS + 1))), Code::Validation, "schema");
     assert_err(w.run(&alice, &cmd, &json(&format!(r#"{{"request":"{r2}"}}"#))), Code::Validation, "schema");
     let ok = w.run(&alice, &cmd, &with(&"\u{e9}".repeat(MAX_REASON_CHARS))).unwrap();
-    w.book.apply_entry(&ok).unwrap();
+    w.fold_last(&ok);
     assert_eq!(w.record(r2).state(), RequestState::Rejected);
     // A forged rejection whose reason does not match its commitment is refused by the fold.
     let r3 = w.file(&agent, REQUEST_CMD, &filed_params(), 3);
@@ -741,7 +780,7 @@ fn ac6_a_human_rejects_with_an_untrusted_reason() {
     b.insert("request".into(), CValue::Str(r3.to_string()));
     b.insert("reason".into(), CValue::Str("other".into()));
     let forged = Event::new(events[0].type_id().clone(), CValue::Obj(b));
-    assert_err(w.book.apply_entry(&[forged]), Code::Internal, "invariant_violated");
+    assert_err(w.fold_last_result(&[forged]), Code::Internal, "invariant_violated");
     assert_eq!(w.record(r3).state(), RequestState::Pending);
 }
 
@@ -758,7 +797,7 @@ fn list_requests_shows_own_or_all_by_filing_sequence() {
     let r2 = w.file(&b, HUMAN_CMD, &filed_params(), 3);
     let r3 = w.file(&a, HUMAN_CMD, &json(r#"{"target":"x"}"#), 1);
     let ev = w.run(&a, &format!("{WITHDRAW_REQUEST}@1"), &json(&format!(r#"{{"request":"{r3}"}}"#))).unwrap();
-    w.book.apply_entry(&ev).unwrap();
+    w.fold_last(&ev);
     let ids = |v: CValue| -> Vec<String> {
         arr(obj(&v), "requests").iter().map(|x| st(obj(x), "request").to_string()).collect()
     };
@@ -828,7 +867,7 @@ fn filing_and_folding_are_deterministic() {
     // Re-folding the recorded journal gives the same records.
     let mut book = RequestBook::new();
     for d in &drafts {
-        book.apply_entry(&draft_events(d)).unwrap();
+        book.apply_entry(&EntryOrigin::from_draft(d).unwrap(), &draft_events(d)).unwrap();
     }
     assert_eq!(book.len(), 1);
     assert_eq!(book.records()[0].state(), RequestState::Pending);
@@ -1023,11 +1062,11 @@ fn results_conform_to_the_result_schemas() {
     };
     approve_entry(&mut w, &ap);
     let ev = w.run(&a, &format!("{WITHDRAW_REQUEST}@1"), &json(&format!(r#"{{"request":"{r2}"}}"#))).unwrap();
-    w.book.apply_entry(&ev).unwrap();
+    w.fold_last(&ev);
     let ev = w
         .run(&alice, &format!("{REJECT_REQUEST}@1"), &json(&format!(r#"{{"request":"{r3}","reason":"wrong datum"}}"#)))
         .unwrap();
-    w.book.apply_entry(&ev).unwrap();
+    w.fold_last(&ev);
     let listed = w.list(&alice, &json("{}")).unwrap();
     let states: Vec<&str> = arr(obj(&listed), "requests").iter().map(|x| st(obj(x), "state")).collect();
     assert_eq!(states, ["approved", "withdrawn", "rejected", "pending"]);
@@ -1053,4 +1092,243 @@ fn results_conform_to_the_result_schemas() {
     }
     assert!(conforms(&schema(WITHDRAW_REQUEST), &json(r#"{"x":1}"#), "withdraw").is_err());
     assert!(conforms(&schema(FILE_REQUEST), &json(r#"{"request":"r"}"#), "file").is_err());
+}
+
+// ------------------------------------------------------------------ review of #328
+
+/// Check order: for an agent, projection and filing come before the class check, so a
+/// human_only W2 and a W3 command become pending requests (the class check alone would
+/// refuse them); the approving human passes the class check; outside MCP a script gets the
+/// class refusals.
+#[test]
+fn projection_and_filing_come_before_the_class_check() {
+    let mut w = World::new();
+    let agent = w.channel(ChannelKind::Mcp, "claude-a");
+    let alice = w.channel(ChannelKind::Gui, "alice");
+    let bob = w.channel(ChannelKind::Cli, "bob");
+    let p = json(r#"{"target":"plane-1"}"#);
+    let agent_p = w.table.derive_principal(&agent).unwrap();
+    let alice_p = w.table.derive_principal(&alice).unwrap();
+
+    // human_only W2: the class check alone says human_only; over MCP it files.
+    assert_err(authorise_class(&agent_p, &def(HUMAN_CMD)), Code::Policy, "human_only");
+    let Decision::File(f) = w.authorise(&agent, HUMAN_CMD, &p, None).unwrap() else { panic!("human_only") };
+    let r_human = w.commit_filing(&f, rid(1)).unwrap();
+    let Decision::RunApproved(a) = w.authorise(&alice, HUMAN_CMD, &p, Some(&r_human)).unwrap() else { panic!() };
+    assert_eq!(a.requested_by(), &agent_p.reference());
+
+    // W3: the class check alone says class_forbidden; over MCP it files.
+    let w3 = class_def("W3", "request_only", false);
+    let vp = ValidParams::for_tests(p.clone());
+    let decide = |w: &World, ch: &TestChannel, approval: Option<&RequestId>| {
+        let view = w.book.view(HEAD);
+        authorise(&w.table, ch, &w3, &vp, approval, &view).map(|a| a.into_parts().1)
+    };
+    assert_err(authorise_class(&agent_p, &w3), Code::Policy, "class_forbidden");
+    let Decision::File(f) = decide(&w, &agent, None).unwrap() else { panic!("W3") };
+    let r_w3 = w.commit_filing(&f, rid(2)).unwrap();
+    assert_eq!(w.record(r_w3).state(), RequestState::Pending);
+    // The approving human passes the class check, and the approval runs.
+    authorise_class(&alice_p, &w3).unwrap();
+    let Decision::RunApproved(a) = decide(&w, &alice, Some(&r_w3)).unwrap() else { panic!("approve W3") };
+    assert_eq!(a.approved_by(), &alice_p.reference());
+    // A script is refused the approval, and outside MCP gets the class refusals, not a request.
+    assert_err(decide(&w, &bob, Some(&r_w3)), Code::Policy, "bad_approval");
+    assert_err(decide(&w, &bob, None), Code::Policy, "class_forbidden");
+    assert_err(w.authorise(&bob, HUMAN_CMD, &p, None), Code::Policy, "human_only");
+    // M1 is never on MCP; an exposed W1 still runs for the agent after the class check.
+    let m1 = class_def("M1", "never", false);
+    let view = w.book.view(HEAD);
+    assert_err(authorise(&w.table, &agent, &m1, &vp, None, &view), Code::Policy, "not_on_mcp");
+    assert_eq!(w.authorise(&agent, "test.run_exposed@1", &p, None).unwrap(), Decision::Run);
+    assert_eq!(w.journal.drafts.len(), 2);
+}
+
+/// The fold takes the entry's own principal and command: a request event emitted by an
+/// agent-runnable command, by the wrong principal or in the wrong command's entry is refused.
+#[test]
+fn the_fold_checks_the_entry_principal_and_command() {
+    let mut w = World::new();
+    let agent = w.channel(ChannelKind::Mcp, "claude-a");
+    let alice = w.channel(ChannelKind::Gui, "alice");
+    let r = w.file(&agent, REQUEST_CMD, &filed_params(), 1);
+    let Decision::RunApproved(a) = w.authorise(&alice, REQUEST_CMD, &filed_params(), Some(&r)).unwrap() else {
+        panic!()
+    };
+    let approved = a.event().unwrap();
+    let withdraw = format!("{WITHDRAW_REQUEST}@1");
+    let reject = format!("{REJECT_REQUEST}@1");
+    let wd = w.run(&agent, &withdraw, &json(&format!(r#"{{"request":"{r}"}}"#))).unwrap();
+    let rj = w.run(&alice, &reject, &json(&format!(r#"{{"request":"{r}","reason":"no"}}"#))).unwrap();
+    let Decision::File(f) = w.authorise(&agent, HUMAN_CMD, &filed_params(), None).unwrap() else { panic!() };
+    let filed = f.event(rid(2)).unwrap();
+    let carol = w.channel(ChannelKind::Gui, "carol");
+    let cases: Vec<(&str, EntryOrigin, Event)> = vec![
+        ("approval forged by an agent-runnable command", w.origin(&agent, "test.run_exposed@1"), approved.clone()),
+        ("approval in the agent's entry of the approved command", w.origin(&agent, REQUEST_CMD), approved.clone()),
+        ("approval by the human in another command's entry", w.origin(&alice, "test.run_exposed@1"), approved.clone()),
+        ("approval by another human", w.origin(&carol, REQUEST_CMD), approved.clone()),
+        ("withdrawal outside withdraw_request", w.origin(&agent, "test.run_exposed@1"), wd[0].clone()),
+        ("withdrawal by another principal's entry", w.origin(&alice, &withdraw), wd[0].clone()),
+        ("rejection outside reject_request", w.origin(&alice, "test.run_exposed@1"), rj[0].clone()),
+        ("rejection in another principal's entry", w.origin(&agent, &reject), rj[0].clone()),
+        ("filing outside file_request", w.origin(&agent, "test.run_exposed@1"), filed.clone()),
+        ("filing in another principal's entry", w.origin(&alice, &format!("{FILE_REQUEST}@1")), filed.clone()),
+    ];
+    for (name, origin, e) in cases {
+        let got = w.book.apply_entry(&origin, std::slice::from_ref(&e));
+        assert_err(got, Code::Internal, "invariant_violated");
+        assert_eq!(w.record(r).state(), RequestState::Pending, "{name}");
+        assert!(w.book.get(&rid(2)).is_none(), "{name}");
+    }
+    // A parameters commitment that differs from the record is refused.
+    let mut b = obj(approved.body()).clone();
+    b.insert(
+        "params_commitment".into(),
+        CValue::Str(params_commitment(&json(r#"{"target":"x"}"#)).unwrap().as_str().into()),
+    );
+    let other = Event::new(approved.type_id().clone(), CValue::Obj(b));
+    assert_err(w.book.apply_entry(&approval_origin(&a), &[other]), Code::Internal, "invariant_violated");
+    // The genuine entries fold.
+    w.book.apply_entry(&w.origin(&agent, &format!("{FILE_REQUEST}@1")), &[filed]).unwrap();
+    w.book.apply_entry(&approval_origin(&a), &[approved]).unwrap();
+    assert_eq!(w.record(r).state(), RequestState::Approved);
+}
+
+/// An agent-runnable command cannot emit a request event: the effects check refuses an
+/// undeclared one, and the registry refuses declaring a reserved one on any other command.
+#[test]
+fn request_events_are_reserved_effects() {
+    struct Forger(Event);
+    impl Handler for Forger {
+        fn run(
+            &self,
+            _view: &dyn StateView,
+            _params: &ValidParams,
+            _ctx: &HandlerCtx,
+        ) -> Result<Vec<Event>, fid_bus::handler::HandlerError> {
+            Ok(vec![self.0.clone()])
+        }
+    }
+    let mut w = World::new();
+    let agent = w.channel(ChannelKind::Mcp, "claude-a");
+    let alice = w.channel(ChannelKind::Gui, "alice");
+    let r = w.file(&agent, REQUEST_CMD, &filed_params(), 1);
+    let Decision::RunApproved(a) = w.authorise(&alice, REQUEST_CMD, &filed_params(), Some(&r)).unwrap() else {
+        panic!()
+    };
+    let mut set = HandlerSet::new();
+    set.register(def("test.run_exposed@1"), Box::new(Forger(a.event().unwrap()))).unwrap();
+    let ctx = HandlerCtx::derive(&w.table, &agent, 0, CancelToken::never()).unwrap();
+    let view = w.book.view(HEAD);
+    let got = run_handler(&set, "test.run_exposed@1", &view, &ValidParams::for_tests(filed_params()), &ctx);
+    assert_err(got, Code::UndeclaredEffect, "undeclared_event_type");
+
+    for effect in ["RequestApproved", "RequestFiled", "RequestWithdrawn", "RequestRejected"] {
+        let mut v = obj(&def("test.run_exposed@1").to_value()).clone();
+        v.insert("effects".into(), CValue::Arr(vec![CValue::Str("TestDone".into()), CValue::Str(effect.into())]));
+        let errs = fid_registry::validate(&[CommandDecl(CValue::Obj(v))]);
+        let rules: Vec<(&str, Option<&str>)> = errs.iter().map(|e| (e.rule.as_str(), e.field.as_deref())).collect();
+        assert_eq!(rules, [("reserved_effect", Some("/effects/1"))], "{effect}");
+    }
+    assert_eq!(fid_registry::RESERVED_EFFECTS.len(), 4);
+}
+
+/// Races: two approvals of one request decided at the same head are both produced; each
+/// carries that head. Only the commit stage (CORE.BUS.PIPE.STAGE, not built) can make sure
+/// only one commits, by re-checking at append time; until then the fold refuses the second.
+#[test]
+fn two_approvals_at_one_head_are_both_produced() {
+    let mut w = World::new();
+    let agent = w.channel(ChannelKind::Mcp, "claude-a");
+    let alice = w.channel(ChannelKind::Gui, "alice");
+    let carol = w.channel(ChannelKind::Gui, "carol");
+    let r = w.file(&agent, REQUEST_CMD, &filed_params(), 1);
+    let Decision::RunApproved(a1) = w.authorise(&alice, REQUEST_CMD, &filed_params(), Some(&r)).unwrap() else {
+        panic!()
+    };
+    let Decision::RunApproved(a2) = w.authorise(&carol, REQUEST_CMD, &filed_params(), Some(&r)).unwrap() else {
+        panic!()
+    };
+    assert_eq!(a1.decided_at_head(), a2.decided_at_head());
+    assert_eq!(a1.decided_at_head().as_str(), HEAD.to_string());
+    let Decision::File(f) = w.authorise(&agent, HUMAN_CMD, &filed_params(), None).unwrap() else { panic!() };
+    assert_eq!(f.decided_at_head().as_str(), HEAD.to_string());
+    w.book.apply_entry(&approval_origin(&a1), &[a1.event().unwrap()]).unwrap();
+    assert_err(w.book.apply_entry(&approval_origin(&a2), &[a2.event().unwrap()]), Code::Internal, "invariant_violated");
+    assert_eq!(w.record(r).resolved_by(), Some(a1.approved_by()));
+}
+
+/// Parameters that do not fit the target command's params_schema, or are oversized, cannot
+/// be filed, and nothing is journaled.
+#[test]
+fn invalid_or_oversized_params_cannot_be_filed() {
+    let mut w = World::new();
+    let agent = w.channel(ChannelKind::Mcp, "claude-a");
+    for bad in [
+        r#"{}"#,
+        r#"{"count":3}"#,
+        r#"{"target":7}"#,
+        r#"{"target":"plane-1","count":"three"}"#,
+        r#"{"target":"plane-1","count":1.5}"#,
+        r#"{"target":"plane-1","extra":true}"#,
+        r#"["plane-1"]"#,
+    ] {
+        assert_err(w.authorise(&agent, REQUEST_CMD, &json(bad), None), Code::Validation, "schema");
+    }
+    let mut big = Obj::new();
+    big.insert("target".into(), CValue::Str("x".repeat(MAX_FILED_PARAMS_BYTES as usize)));
+    assert_err(w.authorise(&agent, REQUEST_CMD, &CValue::Obj(big), None), Code::Validation, "input_limit");
+    let mut fits = Obj::new();
+    fits.insert("target".into(), CValue::Str("x".repeat(MAX_FILED_PARAMS_BYTES as usize - 64)));
+    assert!(matches!(w.authorise(&agent, REQUEST_CMD, &CValue::Obj(fits), None), Ok(Decision::File(_))));
+    assert!(w.journal.drafts.is_empty());
+    assert!(w.book.is_empty());
+}
+
+/// A rejection reason with a C0 or C1 control, DEL or a bidi embedding, override or isolate
+/// character is `validation/schema`.
+#[test]
+fn reject_reasons_refuse_control_and_bidi_characters() {
+    let mut w = World::new();
+    let agent = w.channel(ChannelKind::Mcp, "claude-a");
+    let alice = w.channel(ChannelKind::Gui, "alice");
+    let r = w.file(&agent, REQUEST_CMD, &filed_params(), 1);
+    let cmd = format!("{REJECT_REQUEST}@1");
+    let with = |reason: &str| {
+        let mut o = Obj::new();
+        o.insert("request".into(), CValue::Str(r.to_string()));
+        o.insert("reason".into(), CValue::Str(reason.into()));
+        CValue::Obj(o)
+    };
+    for bad in [
+        "a\u{0}b",
+        "line\nbreak",
+        "tab\there",
+        "cr\r",
+        "\u{1f}",
+        "del\u{7f}",
+        "c1\u{85}",
+        "\u{9f}",
+        "x\u{202a}",
+        "x\u{202b}",
+        "x\u{202c}",
+        "x\u{202d}",
+        "evil\u{202e}txt",
+        "\u{2066}x",
+        "\u{2067}x",
+        "\u{2068}x",
+        "x\u{2069}",
+    ] {
+        let e = w.run(&alice, &cmd, &with(bad)).unwrap_err();
+        assert_eq!((e.code(), e.reason()), (Code::Validation, "schema"), "{bad:?}");
+        assert!(e.detail().as_untrusted_str().contains("bidi-override"), "{bad:?}");
+    }
+    for ok in ["wrong datum", "Bezug falsch: \u{e9}\u{4e2d}", "a b", "\u{200f}rtl mark"] {
+        assert!(!ok.chars().any(forbidden_in_reason), "{ok:?}");
+    }
+    assert_eq!(w.record(r).state(), RequestState::Pending);
+    let ev = w.run(&alice, &cmd, &with("Bezug falsch: \u{e9}")).unwrap();
+    w.fold_last(&ev);
+    assert_eq!(w.record(r).state(), RequestState::Rejected);
 }
