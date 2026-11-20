@@ -6,11 +6,15 @@
 //! `fid-store`, and the head cache and checkpoint table of module `checkpoint`
 //! (`CORE.JRN.CHAIN.CKPT`); without it the crate is the storage-free entry model plus the
 //! checkpoint record and its verifier.
+//!
+//! Module `stream` (`CORE.JRN.STREAM.ALOG`) routes completed calls to their stream and writes
+//! the P0 Activity Log; with feature `store` it also declares the Activity Log settings.
 
 #[cfg(feature = "store")]
 pub mod append;
 pub mod checkpoint;
 pub mod entry;
+pub mod stream;
 
 #[cfg(feature = "store")]
 pub use checkpoint::{BranchHead, HeadsRebuilt, StoredCheckpoint};

@@ -1503,6 +1503,7 @@ version = "0.0.1"
 dependencies = [
  "fid-bus",
  "fid-canon",
+ "fid-journal",
  "fid-registry",
  "fid-types",
  "fid-uuid",
@@ -1713,6 +1714,7 @@ dependencies = [
  "fid-canon",
  "fid-dep",
  "fid-jobs",
+ "fid-journal",
  "fid-program-rec",
  "fid-registry",
  "fid-report",

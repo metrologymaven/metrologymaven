@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-journal, fid-jobs]
 satisfies: [REQ-CORE.JRN.STREAM-001, REQ-CORE.JRN.STREAM-002, REQ-CORE.JRN.STREAM-003, REQ-CORE.JRN.STREAM-007]
 covers: []
 depends_on: [CORE.JRN.ENTRY, CORE.JRN.CHAIN.APPEND, CORE.JOB.SCHED, CORE.STO.LAYOUT, CORE.STO.SET]

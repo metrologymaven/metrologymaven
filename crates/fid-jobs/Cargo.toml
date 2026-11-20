@@ -1,6 +1,6 @@
 [package]
 name = "fid-jobs"
-description = "Metrology Maven jobs: progress and cancellation (CORE.JOB.PROG), job scheduler with queue, priorities, limits and timeouts (CORE.JOB.SCHED), job commands and the job-status contract (CORE.JOB.CMD)"
+description = "Metrology Maven jobs: progress and cancellation (CORE.JOB.PROG), job scheduler with queue, priorities, limits and timeouts (CORE.JOB.SCHED), job commands and the job-status contract (CORE.JOB.CMD), the Activity Log lifecycle sink (CORE.JRN.STREAM.ALOG)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -15,6 +15,10 @@ fid-bus = { path = "../fid-bus" }
 fid-canon = { path = "../fid-canon" }
 # CommandDef records and the FPL evaluator for the cancel precondition. Layer model.
 fid-registry = { path = "../fid-registry" }
+# The Activity Log (CORE.JRN.STREAM.ALOG): `activity` implements `LifecycleSink` for
+# `fid_journal::stream::ActivityLog`. Layer model, below fid-jobs; default features only (no
+# SQLite). The impl lives here because fid-journal (model) cannot depend on fid-jobs (engine).
+fid-journal = { path = "../fid-journal" }
 # Shared command IDs (AGENTS.md rule 14). Layer num, below fid-jobs (engine).
 fid-types = { path = "../fid-types" }
 # UUID value type for job IDs (UUIDv7 built here). Layer model, below fid-jobs.

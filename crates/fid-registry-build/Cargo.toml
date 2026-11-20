@@ -29,6 +29,10 @@ fid-store = { path = "../fid-store" }
 # workspace settings manifest: `fid_bus::policy::fs::fs_settings` (`bus.fs_roots`). Layer
 # engine, below services; already in the lock.
 fid-bus = { path = "../fid-bus" }
+# `fid_journal::stream::activity_settings` (the Activity Log rotation size and kept files,
+# CORE.JRN.STREAM.ALOG). Feature `store` because the declaration uses fid-store's macro. Layer
+# model; already in the lock.
+fid-journal = { path = "../fid-journal", features = ["store"] }
 
 [lints]
 workspace = true

@@ -2,8 +2,10 @@
 //!
 //! - [`progress`]: progress sink and cancellation token (`CORE.JOB.PROG`);
 //! - [`sched`]: job model, queue, priorities, limits and timeouts (`CORE.JOB.SCHED`);
-//! - [`commands`]: job commands and the job-status contract (`CORE.JOB.CMD`).
+//! - [`commands`]: job commands and the job-status contract (`CORE.JOB.CMD`);
+//! - [`activity`]: the [`LifecycleSink`] of the Activity Log (`CORE.JRN.STREAM.ALOG`).
 
+pub mod activity;
 pub mod commands;
 pub mod progress;
 pub mod sched;
