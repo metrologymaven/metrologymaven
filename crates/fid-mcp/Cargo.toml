@@ -27,7 +27,8 @@ fid-types = { path = "../fid-types" }
 fid-bus = { path = "../fid-bus", features = ["test-support"] }
 fid-journal = { path = "../fid-journal" }
 fid-registry = { path = "../fid-registry" }
-fid-registry-build = { path = "../fid-registry-build" }
+# `test_support::all_defs`: every declared command of the workspace.
+fid-registry-build = { path = "../fid-registry-build", features = ["test-support"] }
 
 [lints]
 workspace = true

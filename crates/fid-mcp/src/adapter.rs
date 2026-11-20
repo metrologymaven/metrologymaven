@@ -11,11 +11,16 @@
 //!   the principal from the channel (`CORE.BUS.PRIN`: an MCP channel is an `agent`). Tool
 //!   arguments go to the bus as the command's parameters and nothing else, so a `principal`
 //!   or `approval_of` member in them is just an unknown parameter the bus refuses.
-//! - **Request-only tools only file.** The bus decides (`CORE.BUS.POL.PROJ`); the adapter
-//!   then accepts for a request-only tool only an envelope that shows nothing ran
-//!   (`request_filed`, `failed`, `not_run`, `no_reply`, `cancelled`). Any other outcome means
-//!   the bus and the projection disagree, and the call is reported as
-//!   `internal/invariant_violated` instead of being passed on as a success.
+//! - **Request-only tools only file, and the bus is the only gate.** Whether a call runs or
+//!   becomes a pending request is decided by the bus alone (`CORE.BUS.POL.PROJ`, behind every
+//!   surface); the adapter cannot stop a command the bus chose to run. After the call it
+//!   accepts for a request-only tool only an envelope that shows nothing ran (`request_filed`,
+//!   `failed`, `not_run`, `no_reply`, `cancelled`). That check *detects*, it does not
+//!   *prevent*: any other outcome means the bus and the projection disagree, the action may
+//!   already have happened, and the adapter reports a [`Violation`] at error severity to the
+//!   [`AuditSink`] (for the session layer to log and keep for audit) and answers the agent
+//!   `internal/invariant_violated` instead of passing the result on as a success. The same
+//!   holds for an invalid envelope or one for another command.
 //!
 //! Every refusal is a code and reason of the bus error catalogue (`bus-errors.json`, v3):
 //! [`Refusal::code`] and [`Refusal::reason`].
@@ -108,6 +113,34 @@ impl ToolTable {
     pub fn is_empty(&self) -> bool {
         self.by_name.is_empty()
     }
+}
+
+/// Severity of an audit event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Severity {
+    /// The bus and the projection disagree, or the bus broke the envelope contract.
+    Error,
+}
+
+/// An invariant the bus broke on one call, reported for audit. The action the bus took may
+/// already have happened; this records it, it does not undo it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Violation {
+    pub severity: Severity,
+    /// The session's label.
+    pub session: String,
+    pub tool: String,
+    pub command: CommandId,
+    /// The envelope the bus returned, unchanged.
+    pub envelope: Envelope,
+    pub detail: String,
+}
+
+/// Where the adapter reports [`Violation`]s. The session layer (`AUTO.MCP.SESS`) logs them at
+/// error level and keeps them for audit.
+pub trait AuditSink {
+    /// Records one violation.
+    fn violation(&mut self, v: Violation);
 }
 
 /// Why the adapter refused a call. Each maps to one code and reason of the bus error
@@ -204,11 +237,13 @@ fn nothing_ran(outcome: &Outcome) -> bool {
 
 /// Calls tool `name` with `args` for `session` through `bus` (REQ-005) and returns the bus
 /// envelope. Refused before the bus when the tool is unknown or the arguments are not an
-/// object; refused after it when the envelope breaks an invariant (see the module docs).
+/// object. When the envelope breaks an invariant (see the module docs) the call is reported to
+/// `audit` and refused as `internal/invariant_violated`.
 pub fn call_tool(
     table: &ToolTable,
     session: &AgentSession,
     bus: &mut dyn McpBus,
+    audit: &mut dyn AuditSink,
     name: &str,
     args: &CValue,
 ) -> Result<Envelope, Refusal> {
@@ -219,24 +254,27 @@ pub fn call_tool(
         return Err(Refusal::BadArguments { detail: "tool arguments must be a JSON object".to_string() });
     }
     let env = bus.invoke(&BusCall { channel: CHANNEL, session, command, params: args });
-    if let Err(e) = env.validate() {
-        return Err(Refusal::InvariantViolated {
-            detail: format!("the bus returned an invalid envelope: {}", e.code()),
-        });
+    let broken = if let Err(e) = env.validate() {
+        Some(format!("the bus returned an invalid envelope: {}", e.code()))
+    } else if env.command_id != command.as_str() {
+        Some(format!("the bus answered for another command than {}", command.as_str()))
+    } else if kind == ToolKind::RequestOnly && !nothing_ran(&env.outcome) {
+        Some(format!("{} is request-only on MCP, but the bus reported {}", command.as_str(), env.outcome.as_str()))
+    } else {
+        None
+    };
+    match broken {
+        None => Ok(env),
+        Some(detail) => {
+            audit.violation(Violation {
+                severity: Severity::Error,
+                session: session.label().to_string(),
+                tool: name.to_string(),
+                command: command.clone(),
+                envelope: env,
+                detail: detail.clone(),
+            });
+            Err(Refusal::InvariantViolated { detail })
+        }
     }
-    if env.command_id != command.as_str() {
-        return Err(Refusal::InvariantViolated {
-            detail: format!("the bus answered for another command than {}", command.as_str()),
-        });
-    }
-    if kind == ToolKind::RequestOnly && !nothing_ran(&env.outcome) {
-        return Err(Refusal::InvariantViolated {
-            detail: format!(
-                "{} is request-only on MCP, but the bus reported {}",
-                command.as_str(),
-                env.outcome.as_str()
-            ),
-        });
-    }
-    Ok(env)
 }

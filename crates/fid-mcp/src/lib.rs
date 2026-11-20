@@ -13,8 +13,9 @@
 //!   uses for rejection reasons (`CORE.BUS.POL.PROJ`); generation refuses, never strips.
 //! - [`adapter`]: a tool call becomes one bus invocation on channel `mcp` for the session's
 //!   agent. The adapter never names a principal or an approval; the bus derives the
-//!   principal from the channel, and a request-only tool can only come back `request_filed`
-//!   or `failed`.
+//!   principal from the channel. The bus is the only gate: when it reports that a request-only
+//!   command ran, the adapter cannot undo that; it reports a violation for audit and refuses
+//!   the result.
 //!
 //! Which tool is listed is [`tools::decide`], a pure function of the class, the declared
 //! projection, `human_only` and the exposure, written to give the same answer as the bus's
@@ -25,7 +26,9 @@ pub mod adapter;
 pub mod text;
 pub mod tools;
 
-pub use adapter::{call_tool, AgentSession, BusCall, McpBus, Refusal, ToolTable, CHANNEL};
+pub use adapter::{
+    call_tool, AgentSession, AuditSink, BusCall, McpBus, Refusal, Severity, ToolTable, Violation, CHANNEL,
+};
 pub use tools::{
     decide, emit, tools, Annotations, Emitted, McpError, McpTool, ToolKind, MOTION_ALLOWLIST, MOTION_EFFECTS,
     REQUEST_ONLY_SENTENCE, SURFACE, TOOLS_FILE,

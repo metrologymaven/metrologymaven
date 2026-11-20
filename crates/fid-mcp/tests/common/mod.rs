@@ -60,44 +60,24 @@ pub fn tool_named<'a>(tools: &'a [McpTool], name: &str) -> &'a McpTool {
     tools.iter().find(|t| t.name == name).unwrap_or_else(|| panic!("no tool {name}"))
 }
 
-/// Whether `v` conforms to `schema`, for the keywords the MCP emitter writes: `type` (a name
-/// or a list), `properties`, `required` and `additionalProperties: false`. `{}` takes anything.
+/// Hooks for [`conforms`]: quantity literals are normalised against the GEO.FRAME.UNITS
+/// catalogue as the bus does (`CORE.BUS.UNIT`); no entity exists.
+struct Hooks;
+
+impl fid_bus::validate::Hooks for Hooks {
+    fn literal(&self, kind: &str, value: &CValue) -> Result<fid_bus::unit::Normalised, fid_bus::error::BusError> {
+        fid_bus::unit::normalise_value(value, kind, &fid_registry::Catalogue::geo_frame())
+    }
+    fn entity(&self, _id: &str) -> fid_bus::validate::RefLookup {
+        fid_bus::validate::RefLookup::Missing
+    }
+}
+
+/// Whether `v` conforms to `schema`, checked by the bus's own JSON Schema 2020-12 validator
+/// (`fid_bus::validate::Compiled`, CORE.BUS.PIPE.VALID): every keyword the generated schemas
+/// use is asserted (`allOf`, `if`/`then`/`else`, `enum`, `const`, `pattern`, `minLength`,
+/// `required`, `additionalProperties`, the quantity literals). The schema must compile.
 pub fn conforms(schema: &CValue, v: &CValue) -> bool {
-    let CValue::Obj(s) = schema else { return false };
-    let type_ok = |t: &str| match (t, v) {
-        ("object", CValue::Obj(_))
-        | ("array", CValue::Arr(_))
-        | ("string", CValue::Str(_))
-        | ("boolean", CValue::Bool(_))
-        | ("null", CValue::Null) => true,
-        ("number", CValue::Num(_) | CValue::I64(_) | CValue::U64(_)) => true,
-        ("integer", CValue::Num(n)) => n.fract() == 0.0,
-        ("integer", CValue::I64(_) | CValue::U64(_)) => true,
-        _ => false,
-    };
-    match s.get("type") {
-        None => {}
-        Some(CValue::Str(t)) if type_ok(t) => {}
-        Some(CValue::Arr(ts)) if ts.iter().any(|t| matches!(t, CValue::Str(t) if type_ok(t))) => {}
-        Some(_) => return false,
-    }
-    let CValue::Obj(o) = v else { return true };
-    if let Some(CValue::Arr(req)) = s.get("required") {
-        if !req.iter().all(|r| matches!(r, CValue::Str(r) if o.contains_key(r))) {
-            return false;
-        }
-    }
-    let props = match s.get("properties") {
-        Some(CValue::Obj(p)) => p.clone(),
-        _ => BTreeMap::new(),
-    };
-    for (k, x) in o {
-        match props.get(k) {
-            Some(ps) if !conforms(ps, x) => return false,
-            Some(_) => {}
-            None if s.get("additionalProperties") == Some(&CValue::Bool(false)) => return false,
-            None => {}
-        }
-    }
-    true
+    let c = fid_bus::validate::Compiled::compile(schema).unwrap_or_else(|e| panic!("schema does not compile: {e}"));
+    c.evaluate(v, &Hooks).is_ok()
 }

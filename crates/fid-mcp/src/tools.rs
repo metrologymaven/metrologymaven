@@ -14,7 +14,8 @@
 //!   followed, for a request-only tool, by one space and [`REQUEST_ONLY_SENTENCE`] (or the
 //!   sentence alone when the description is empty). No other text is added.
 //! - **Input schema**: an object with `additionalProperties: false`, one property per
-//!   parameter and `required` in byte order. A parameter with a quantity kind or unit is
+//!   parameter and `required` in byte order. A parameter with `x-unit` but no `x-quantity` is
+//!   `schema_unrepresentable`. A parameter with a quantity kind is
 //!   `{value: string, unit: string}` (both required, no other member) with `x-quantity` and
 //!   `x-unit` copied from the registry when declared, and no default; it must be declared
 //!   `number` (type `object`) or `number` or `null` (type `[null, object]`), else
@@ -226,7 +227,10 @@ fn type_schema(ty: &str) -> Option<CValue> {
 }
 
 fn param_schema(sp: &SurfaceProjection, p: &ParamSpec) -> Result<CValue, McpError> {
-    if p.quantity_kind.is_some() || p.unit.is_some() {
+    if p.quantity_kind.is_none() && p.unit.is_some() {
+        return Err(unrepresentable(sp, format!("parameter {:?} declares x-unit without x-quantity", p.name)));
+    }
+    if p.quantity_kind.is_some() {
         let ty = match p.ty.as_str() {
             "number" => s("object"),
             "null|number" => CValue::Arr(vec![s("null"), s("object")]),

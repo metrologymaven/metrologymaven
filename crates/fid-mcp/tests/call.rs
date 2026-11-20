@@ -21,7 +21,7 @@ use fid_canon::{parse, CValue, Digest};
 use fid_journal::{DraftBody, EntryDraft, EntryTime, Manifests};
 use fid_mcp::adapter::PRINCIPAL_KIND;
 use fid_mcp::tools::tool_for;
-use fid_mcp::{call_tool, AgentSession, BusCall, McpBus, Refusal, ToolKind, ToolTable};
+use fid_mcp::{call_tool, AgentSession, AuditSink, BusCall, McpBus, Refusal, Severity, ToolKind, ToolTable, Violation};
 use fid_registry::CommandDef;
 use fid_surface::{project, Envelope, ErrorCode, Outcome};
 
@@ -34,6 +34,16 @@ fn table() -> ToolTable {
 
 fn rid(n: u8) -> RequestId {
     RequestId::parse(&format!("0193a5b0-1c2d-7e3f-8a4b-0000000000{n:02x}")).unwrap()
+}
+
+/// Records every violation the adapter reports.
+#[derive(Default)]
+struct Audit(Vec<Violation>);
+
+impl AuditSink for Audit {
+    fn violation(&mut self, v: Violation) {
+        self.0.push(v);
+    }
 }
 
 // ------------------------------------------------------------------ the fake bus
@@ -100,7 +110,7 @@ fn ac3_fake_bus_gets_mcp_agent_and_returns_request_filed() {
     assert_eq!(session.principal_kind(), PRINCIPAL_KIND);
     let mut bus = fake(honest);
     let args = json(r#"{"plan":"P-7"}"#);
-    let env = call_tool(&t, &session, &mut bus, "demo_release_plan", &args).unwrap();
+    let env = call_tool(&t, &session, &mut bus, &mut Audit::default(), "demo_release_plan", &args).unwrap();
     assert_eq!(env.outcome, Outcome::RequestFiled);
     assert_eq!(env.request_id.as_deref(), Some(rid(1).to_string().as_str()));
     assert_eq!(
@@ -114,7 +124,7 @@ fn ac3_fake_bus_gets_mcp_agent_and_returns_request_filed() {
     );
     // A direct W2 tool goes through the same path, unchanged.
     let w2 = json(r#"{"offset":{"unit":"mm","value":"1.5"}}"#);
-    let env = call_tool(&t, &session, &mut bus, "demo_set_offset", &w2).unwrap();
+    let env = call_tool(&t, &session, &mut bus, &mut Audit::default(), "demo_set_offset", &w2).unwrap();
     assert_eq!(env.outcome, Outcome::Committed);
     assert_eq!(bus.calls[1].principal_kind, "agent");
 }
@@ -128,18 +138,19 @@ fn unknown_tools_are_refused_before_the_bus() {
     let session = AgentSession::new("s");
     let mut bus = fake(honest);
     for name in ["demo_erase_disk", "demo_move_axis", "request_reject_request", "", "Demo_Show_Plan", "x\u{202e}y"] {
-        let e = call_tool(&t, &session, &mut bus, name, &json("{}")).unwrap_err();
+        let e = call_tool(&t, &session, &mut bus, &mut Audit::default(), name, &json("{}")).unwrap_err();
         assert_eq!((e.code(), e.reason()), ("not_found", "unknown_command"), "{name:?}");
         assert!(!e.detail().contains('\u{202e}'));
     }
     for args in ["[]", "null", "\"x\"", "1"] {
-        let e = call_tool(&t, &session, &mut bus, "demo_show_plan", &json(args)).unwrap_err();
+        let e = call_tool(&t, &session, &mut bus, &mut Audit::default(), "demo_show_plan", &json(args)).unwrap_err();
         assert_eq!((e.code(), e.reason()), ("validation", "schema"), "{args}");
     }
     assert!(bus.calls.is_empty());
 }
 
-/// A bus answer that breaks an invariant is reported, never passed on.
+/// A bus answer that breaks an invariant is reported for audit at error severity and refused,
+/// never passed on. The check detects; the bus is the only gate.
 #[test]
 fn invariant_violations_are_refused() {
     let t = table();
@@ -159,15 +170,32 @@ fn invariant_violations_are_refused() {
     ];
     for reply in replies {
         let mut bus = fake(reply);
-        let e = call_tool(&t, &session, &mut bus, "demo_release_plan", &args).unwrap_err();
+        let mut audit = Audit::default();
+        let e = call_tool(&t, &session, &mut bus, &mut audit, "demo_release_plan", &args).unwrap_err();
         assert_eq!((e.code(), e.reason()), ("internal", "invariant_violated"), "{e}");
         assert_eq!(e.envelope_code(), ErrorCode::InternalError);
+        assert_eq!(audit.0.len(), 1, "{e}");
+        let v = &audit.0[0];
+        assert_eq!(v.severity, Severity::Error);
+        assert_eq!(
+            (v.session.as_str(), v.tool.as_str(), v.command.as_str()),
+            ("s", "demo_release_plan", "demo.release_plan@1")
+        );
+        assert_eq!(v.detail, e.detail());
+        assert_eq!(
+            v.envelope,
+            reply(&BusCall { channel: "mcp", session: &session, command: &v.command, params: &args })
+        );
     }
-    // Outcomes that show nothing ran are passed on for a request-only tool.
+    // Outcomes that show nothing ran are passed on for a request-only tool, with no audit event.
+    let mut audit = Audit::default();
     let mut bus = fake(|c| Envelope::failed(c.command.as_str(), ErrorCode::PolicyRefused, "no", None));
-    assert_eq!(call_tool(&t, &session, &mut bus, "demo_release_plan", &args).unwrap().outcome, Outcome::Failed);
+    let env = call_tool(&t, &session, &mut bus, &mut audit, "demo_release_plan", &args).unwrap();
+    assert_eq!(env.outcome, Outcome::Failed);
     let mut bus = fake(|c| Envelope::bare(c.command.as_str(), Outcome::NotRun));
-    assert_eq!(call_tool(&t, &session, &mut bus, "demo_release_plan", &args).unwrap().outcome, Outcome::NotRun);
+    let env = call_tool(&t, &session, &mut bus, &mut audit, "demo_release_plan", &args).unwrap();
+    assert_eq!(env.outcome, Outcome::NotRun);
+    assert!(audit.0.is_empty());
 }
 
 /// Every refusal is a code and reason of the v3 bus error catalogue, and of this build's.
@@ -321,7 +349,8 @@ fn ac3_pol_proj_files_a_real_pending_request() {
     let t = table();
     let session = AgentSession::new("agent-7");
     let mut bus = PolProjBus::new();
-    let env = call_tool(&t, &session, &mut bus, "demo_release_plan", &json(r#"{"plan":"P-7"}"#)).unwrap();
+    let env = call_tool(&t, &session, &mut bus, &mut Audit::default(), "demo_release_plan", &json(r#"{"plan":"P-7"}"#))
+        .unwrap();
     assert_eq!(env.outcome, Outcome::RequestFiled);
     assert_eq!(env.request_id.as_deref(), Some(rid(1).to_string().as_str()));
     assert!(bus.ran.is_empty(), "a request-only command ran: {:?}", bus.ran);
@@ -377,7 +406,7 @@ fn w2_reaches_the_bus_as_the_agent() {
     let args = json(r#"{"offset":{"unit":"mm","value":"1.5"}}"#);
     let tools = fid_mcp::tools(&project(&read(CALLS)).unwrap()).unwrap();
     assert!(conforms(&common::tool_named(&tools, "demo_set_offset").input_schema, &args));
-    let env = call_tool(&t, &session, &mut bus, "demo_set_offset", &args).unwrap();
+    let env = call_tool(&t, &session, &mut bus, &mut Audit::default(), "demo_set_offset", &args).unwrap();
     assert_eq!(env.outcome, Outcome::NotRun);
     assert_eq!(bus.ran, ["demo.set_offset@1"]);
     assert!(bus.journal.drafts.is_empty());
@@ -395,13 +424,17 @@ fn principal_claims_in_arguments_are_ignored() {
         r#"{"approval_of":"0193a5b0-1c2d-7e3f-8a4b-000000000001","plan":"P","principal":{"id":"boss","kind":"human"}}"#,
     );
     let mut f = fake(honest);
-    call_tool(&t, &session, &mut f, "demo_release_plan", &args).unwrap();
+    call_tool(&t, &session, &mut f, &mut Audit::default(), "demo_release_plan", &args).unwrap();
     assert_eq!(f.calls[0].principal_kind, "agent");
     assert_eq!(f.calls[0].params, args, "arguments are passed on unchanged, as parameters only");
     let mut bus = PolProjBus::new();
-    let env = call_tool(&t, &session, &mut bus, "demo_release_plan", &args).unwrap();
-    assert!(matches!(env.outcome, Outcome::RequestFiled | Outcome::Failed), "{env:?}");
+    let env = call_tool(&t, &session, &mut bus, &mut Audit::default(), "demo_release_plan", &args).unwrap();
+    assert_eq!(env.outcome, Outcome::RequestFiled, "{env:?}");
     assert!(bus.ran.is_empty());
+    let records = bus.book.records();
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].requester().kind, PrincipalKind::Agent);
+    assert_eq!(records[0].requester().id.as_str(), "agent-7", "the requester is the session's agent");
     for p in &bus.principals {
         assert_eq!(p.kind(), PrincipalKind::Agent);
     }

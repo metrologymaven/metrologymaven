@@ -14,6 +14,7 @@ use fid_bus::policy::projection::{
     REASON_FORBIDDEN_RANGES,
 };
 use fid_bus::principal::{Channel, ChannelKind, Identity, OsUser, PrincipalId, SessionId, SessionKey, SessionTable};
+use fid_bus::validate::Compiled;
 use fid_canon::Digest;
 use fid_mcp::adapter::PRINCIPAL_KIND;
 use fid_mcp::text::{forbidden, FORBIDDEN_RANGES};
@@ -152,11 +153,15 @@ fn every_class_combination_agrees_with_the_bus() {
 /// emitter builds a tool from the command's real parameter and result schemas.
 #[test]
 fn whole_registry_agrees_with_the_bus() {
-    let mut defs = Vec::new();
-    for s in fid_registry_build::SOURCES {
-        defs.extend((s.defs)().unwrap_or_else(|e| panic!("{}: {e:?}", s.krate)));
+    // Every declared command: SOURCES plus egress, RDL, GDT (3), the package reader, report
+    // binding and the two export commands.
+    let all = fid_registry_build::test_support::all_defs().unwrap();
+    let krates: std::collections::BTreeSet<&str> = all.iter().map(|(k, _)| k.as_str()).collect();
+    for k in ["fid-bus (egress)", "fid-rdl", "fid-gdt", "fid-pkg", "fid-report (bind)", "fid-io-reg"] {
+        assert!(krates.contains(k), "{k} is missing from the walk");
     }
-    assert!(defs.len() >= 20, "{}", defs.len());
+    let defs: Vec<CommandDef> = all.into_iter().map(|(_, d)| d).collect();
+    assert!(defs.len() >= 30, "{}", defs.len());
     let mut table = SessionTable::new();
     let ch = mcp_channel(&mut table);
     let mut refused_by_surface = Vec::new();
@@ -171,6 +176,12 @@ fn whole_registry_agrees_with_the_bus() {
                 assert_eq!(mcp_word(tool.as_ref().map(|t| t.kind)), bus, "{id}: emitter");
                 if let Some(t) = tool {
                     assert_eq!(t.name, sp.mcp_name, "{id}");
+                    // The bus's own validator compiles both generated schemas.
+                    for (what, schema) in [("input", &t.input_schema), ("output", &t.output_schema)] {
+                        if let Err(e) = Compiled::compile(schema) {
+                            panic!("{id}: {what} schema does not compile for the bus: {e}");
+                        }
+                    }
                 }
             }
             Err(e) => {

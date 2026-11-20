@@ -26,6 +26,9 @@
 //! catalogue), whose `manifest()` is the workspace `settings-manifest.json`. A refused
 //! declaration or a key declared by two crates is `settings_invalid`.
 
+#[cfg(feature = "test-support")]
+pub mod test_support;
+
 use fid_canon::CValue;
 use fid_registry::catalogue::{is_kind_name, MAX_CATALOGUE_BYTES};
 use fid_registry::manifest::{export_with, Export, ManifestError, ManifestInForce};

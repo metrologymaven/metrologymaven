@@ -19,7 +19,7 @@ Pinned rules (mirrored by crates/fid-mcp, stated in the PR):
   description, plus " " + REQUEST_ONLY_SENTENCE for a request-only tool (the sentence alone if the
   description is empty);
 - input schema: {additionalProperties: false, properties, required (byte order), type: object};
-  a parameter with x-quantity or x-unit is {value: string, unit: string} (type must be number) with
+  a parameter with x-unit but no x-quantity is schema_unrepresentable; a parameter with x-quantity is {value: string, unit: string} (type must be number) with
   x-quantity / x-unit copied and no default, type object, or [null, object] when declared number or null;
   otherwise {type: T}, {type: [T...]} for a union of JSON
   types, {} for no type or a "#..." $ref, plus "default" when declared; anything else is
@@ -192,7 +192,9 @@ def tool_of(d):
     props = {}
     for pname, p in ps.get("properties", {}).items():
         ty = type_of(p)
-        if "x-quantity" in p or "x-unit" in p:
+        if "x-unit" in p and "x-quantity" not in p:
+            raise Refused("schema_unrepresentable", cid)
+        if "x-quantity" in p:
             if ty not in ("number", "null|number"):
                 raise Refused("schema_unrepresentable", cid)
             q = {
@@ -333,6 +335,8 @@ def cases():
         "schema-optional-quantity": manifest([plain("demo.set_o", "W1", "exposed",
                                                     params={"o": {"type": ["number", "null"], "x-quantity": "time",
                                                                   "x-unit": "s"}})]),
+        "schema-unit-only": manifest([plain("demo.set_u", "W1", "exposed",
+                                            params={"u": {"type": "number", "x-unit": "mm"}})]),
         "schema-type": manifest([plain("demo.set_t", "W1", "exposed", params={"t": {"type": "decimal"}})]),
         "schema-result": manifest([plain("demo.show_r", "R0", "exposed",
                                          result={"$ref": "https://example.invalid/r.json"})]),
