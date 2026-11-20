@@ -22,6 +22,8 @@ fid-canon = { path = "../fid-canon" }
 fid-surface = { path = "../fid-surface" }
 # Shared command ID and `sha256:` digest types.
 fid-types = { path = "../fid-types" }
+# The MCP emitter (AUTO.MCP.PROJ, services layer), registered in `registered()`.
+fid-mcp = { path = "../fid-mcp" }
 
 [lints]
 workspace = true

@@ -8,60 +8,12 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_bus::validate::Compiled;
-use fid_canon::CValue;
-use fid_io_reg::env::export::command::{export_file_def, format_def};
-use fid_io_reg::{Direction, FormatDescriptor, FormatId, Origin, Phase, Registry, VersionRange};
 use fid_registry::CommandDef;
-use fid_registry_build::SOURCES;
-use std::collections::BTreeMap;
+use fid_registry_build::test_support;
 
-/// A registry with one export format, so the export commands have a parameter schema.
-fn export_registry() -> Registry {
-    let mut r = Registry::new();
-    let d = FormatDescriptor::new(
-        FormatId::new("fid-test-points").unwrap(),
-        VersionRange::new("1", "1").unwrap(),
-        Vec::new(),
-        vec!["ftp".to_string()],
-        CValue::Obj(BTreeMap::new()),
-        Phase::new(0).unwrap(),
-        Origin::FirstParty,
-        Direction::Export,
-    )
-    .unwrap();
-    r.register(d).unwrap();
-    r
-}
-
+/// Every declared command of the workspace (`fid_registry_build::test_support::all_defs`).
 fn all_defs() -> Vec<(String, CommandDef)> {
-    let mut defs: Vec<(String, CommandDef)> = Vec::new();
-    for s in SOURCES.iter() {
-        for d in (s.defs)().unwrap_or_else(|e| panic!("{}: {e}", s.krate)) {
-            defs.push((s.krate.to_string(), d));
-        }
-    }
-    let mut extra = |krate: &str, ds: Vec<CommandDef>| defs.extend(ds.into_iter().map(|d| (krate.to_string(), d)));
-    extra("fid-bus (egress)", fid_bus::policy::egress::command_defs().unwrap());
-    extra("fid-rdl", fid_rdl::command_defs().unwrap());
-    extra(
-        "fid-gdt",
-        vec![
-            fid_gdt::chars::record::command_def().unwrap(),
-            fid_gdt::dmt_flow::status::command_def().unwrap(),
-            fid_gdt::drf::datum::command_def().unwrap(),
-        ],
-    );
-    extra("fid-pkg", fid_pkg::reader::declarations().into_iter().map(|d| d.def).collect());
-    extra("fid-report (bind)", fid_report::bind::declarations().into_iter().map(|d| d.def).collect());
-    let reg = export_registry();
-    extra(
-        "fid-io-reg",
-        vec![
-            export_file_def(&reg).unwrap(),
-            format_def(&reg, &FormatId::new("fid-test-points").unwrap(), &[]).unwrap(),
-        ],
-    );
-    defs
+    test_support::all_defs().unwrap()
 }
 
 #[test]
