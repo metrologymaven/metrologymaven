@@ -25,10 +25,7 @@ struct Problem {
 
 /// Settings of example_lp.rs and example_box.rs.
 fn lp_settings() -> DefaultSettings {
-    let mut s = DefaultSettings::default();
-    s.equilibrate_enable = true;
-    s.max_iter = 50;
-    s
+    DefaultSettings { equilibrate_enable: true, max_iter: 50, ..DefaultSettings::default() }
 }
 
 fn problems() -> Vec<Problem> {
