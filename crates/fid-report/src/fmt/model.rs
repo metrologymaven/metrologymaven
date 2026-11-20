@@ -109,6 +109,12 @@ impl SiValue {
         SiValue(q.value())
     }
 
+    /// The value whose IEEE-754 bits are `bits` (the `"0x<16 hex>"` wire form of a stored
+    /// record, read by `RPT.MODEL.BIND`).
+    pub fn from_bits(bits: u64) -> SiValue {
+        SiValue(f64::from_bits(bits))
+    }
+
     pub(in crate::fmt) const fn get(self) -> f64 {
         self.0
     }
