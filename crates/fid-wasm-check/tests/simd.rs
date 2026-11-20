@@ -12,7 +12,7 @@ fn module(bodies: &[Vec<u8>]) -> Vec<u8> {
     let mut m = vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00];
     m.extend_from_slice(&[1, 4, 0x01, 0x60, 0x00, 0x00]);
     let mut funcs = vec![bodies.len() as u8];
-    funcs.extend(std::iter::repeat(0u8).take(bodies.len()));
+    funcs.resize(1 + bodies.len(), 0);
     m.extend_from_slice(&[3, funcs.len() as u8]);
     m.extend_from_slice(&funcs);
     let mut code = vec![bodies.len() as u8];
