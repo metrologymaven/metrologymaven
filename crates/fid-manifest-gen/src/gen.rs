@@ -46,7 +46,7 @@ use std::process::{Command, Stdio};
 
 use fid_canon::CValue;
 use fid_kci::kci::json::{to_canonical, Json};
-use fid_kci::kci::{sha256_digest, Sha256};
+use fid_kci::kci::{sha256_digest, Sha256, RESERVED_MODULE};
 use fid_kci::manifest::{
     AlgorithmEntry, Artifact, KernelManifest, ManifestCore, ManifestError, NativeGate, ReplayRuntime,
 };
@@ -57,7 +57,7 @@ use fid_num::f::{selftest_inputs, selftest_outputs, FnId, SELFTEST_INPUTS_PER_FN
 use toml::{Table, Value};
 
 use crate::implclosure::{
-    git_tracked_files, impl_digests, FsTree, ImplError, Metadata, Registration, SourceTree, TrackedFiles,
+    git_tracked_files, impl_digests, FsTree, ImplError, IoKind, Metadata, Registration, SourceTree, TrackedFiles,
     MAX_METADATA_BYTES,
 };
 
@@ -111,6 +111,9 @@ pub enum GenError {
     /// An algorithm's implementation closure reads the generated constant, so the core would
     /// depend on its own digest.
     ConstantInClosure { constant: String },
+    /// The generated constant in the workspace is missing or is not exactly the generator's
+    /// output for no digest or for a well-formed digest (it was edited by hand).
+    ConstantInvalid { constant: String, reason: &'static str },
     /// An artifact reported a core digest other than the stage-one core digest, or reported
     /// none (REQ-KRN.MAN.MANI.GEN-003).
     CoreDigestMismatch { artifact: String },
@@ -129,6 +132,7 @@ impl GenError {
             GenError::SchemaInvalid(_) => "schema_invalid",
             GenError::ImplDigest(_) => "impl_digest",
             GenError::ConstantInClosure { .. } => "constant_in_closure",
+            GenError::ConstantInvalid { .. } => "constant_invalid",
             GenError::CoreDigestMismatch { .. } => "core_digest_mismatch",
             GenError::SelfReportFailed { .. } => "self_report_failed",
             GenError::Io { .. } => "io",
@@ -145,6 +149,7 @@ impl fmt::Display for GenError {
             GenError::SchemaInvalid(e) => write!(f, "{code}: {e}"),
             GenError::ImplDigest(e) => write!(f, "{code}: {e}"),
             GenError::ConstantInClosure { constant } => write!(f, "{code}: {constant}"),
+            GenError::ConstantInvalid { constant, reason } => write!(f, "{code}: {constant}: {reason}"),
             GenError::CoreDigestMismatch { artifact } => write!(f, "{code}: {artifact}"),
             GenError::SelfReportFailed { artifact, reason } => write!(f, "{code}: {artifact}: {reason}"),
             GenError::Io { path, reason } => write!(f, "{code}: {path}: {reason}"),
@@ -327,6 +332,9 @@ impl Config {
                     let id_text = required_str(e, "id")?;
                     let id = AlgorithmId::parse(&id_text)
                         .map_err(|_| invalid(field::CONFIG, format!("bad algorithm id {id_text:?}")))?;
+                    if id.module == RESERVED_MODULE {
+                        return Err(invalid(field::CONFIG, format!("module of {id_text:?} is reserved")));
+                    }
                     algorithms.push(AlgorithmSource {
                         id,
                         crate_name: required_str(e, "crate")?,
@@ -626,6 +634,31 @@ pub fn render_constant(digest: Option<&Digest>) -> Vec<u8> {
     .into_bytes()
 }
 
+/// Checks that the file at the constant's path is exactly [`render_constant`] of `None` or of
+/// a well-formed digest (`ConstantInvalid` otherwise, or when it is absent). It is excluded from
+/// the source tree digest, so only this check stops a hand-edited file from being built in.
+fn check_constant(tree: &dyn SourceTree, constant: &str) -> Result<Option<Digest>, GenError> {
+    let bad = |reason| GenError::ConstantInvalid { constant: constant.to_string(), reason };
+    let bytes = match tree.read_optional(constant) {
+        Ok(Some(b)) => b,
+        Ok(None) | Err(ImplError::Io { kind: IoKind::NotFound, .. }) => return Err(bad("missing")),
+        Err(e) => return Err(e.into()),
+    };
+    if bytes == render_constant(None) {
+        return Ok(None);
+    }
+    let text = std::str::from_utf8(&bytes).map_err(|_| bad("not the generator's output"))?;
+    let digest = text
+        .split_once("Option<&str> = Some(\"")
+        .and_then(|(_, rest)| rest.split_once("\")"))
+        .and_then(|(d, _)| Digest::parse(d).ok())
+        .ok_or_else(|| bad("not the generator's output"))?;
+    if bytes != render_constant(Some(&digest)) {
+        return Err(bad("not the generator's output"));
+    }
+    Ok(Some(digest))
+}
+
 /// The result of stage one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StageOne {
@@ -647,6 +680,7 @@ pub fn core(config: &Config) -> Result<StageOne, GenError> {
     let tracked = tracked_files(config, ws)?;
     let tree = FsTree::new(ws, tracked.clone());
     let source_tree_digest = source_tree_digest(&tracked, &tree, &config.constant)?;
+    check_constant(&tree, &config.constant)?;
     if !tracked.contains("Cargo.lock") {
         return Err(GenError::MissingSource { field: field::LOCKFILE });
     }
@@ -680,15 +714,44 @@ pub fn core(config: &Config) -> Result<StageOne, GenError> {
 
 // ------------------------------------------------------------------------------ stage two
 
-/// One built artifact and the command that answers one call on stdin (the
-/// `fid-kernel-wasm` protocol): the pinned runner for the WASM module, the binary itself for a
-/// native build.
+/// The default program of the pinned WASM runner (KRN.MAN.WASM).
+pub const DEFAULT_WASM_CHECK: &str = "fid-wasm-check";
+
+/// One built artifact. The command that asks it for its core digest is derived from its kind
+/// and its file, never read from the list ([`ArtifactSpec::command`]), so the file that is
+/// hashed is the file that answers.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ArtifactSpec {
+    /// `^[a-z][a-z0-9_-]{0,63}$`; role `wasm` is the WASM module, any other role a native build.
     pub role: String,
+    /// `^[a-z0-9][a-z0-9_.-]{0,63}$` without `..`.
     pub target: String,
-    pub file: PathBuf,
-    pub command: Vec<String>,
+    /// The artifact file, as written in the list (relative to the directory `finish` runs in).
+    pub file: String,
+}
+
+/// The artifact list given to `finish`.
+///
+/// ```toml
+/// runtime = "crates/fid-kernel-wasm/wasm-runtime.toml"   # needed with a wasm artifact
+/// allow = "crates/fid-kernel-wasm/wasm-imports.allow"    # needed with a wasm artifact
+///
+/// [[artifact]]
+/// role = "wasm"
+/// target = "wasm32-wasip1"
+/// file = "dist/fid-kernel-wasm.wasm"
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArtifactList {
+    /// The pinned runner program (not read from the list; [`DEFAULT_WASM_CHECK`] unless the
+    /// caller sets it).
+    pub wasm_check: String,
+    /// The runtime settings the WASM runner applies; their SHA-256 must be the core's
+    /// `replay_runtime.config_digest`.
+    pub runtime: Option<String>,
+    /// The WASM import allowlist the runner checks.
+    pub allow: Option<String>,
+    pub artifacts: Vec<ArtifactSpec>,
 }
 
 impl ArtifactSpec {
@@ -705,51 +768,101 @@ impl ArtifactSpec {
             "native"
         }
     }
+
+    /// The command that answers one call on stdin: `[file]` for a native artifact, and
+    /// `<wasm_check> run <runtime> <allow> <file>` for the WASM module, with `file` exactly as
+    /// listed. `None` for a WASM artifact when the list names no runtime or allowlist.
+    pub fn command(&self, list: &ArtifactList) -> Option<Vec<String>> {
+        if self.kind() == "native" {
+            return Some(vec![self.file.clone()]);
+        }
+        Some(vec![
+            list.wasm_check.clone(),
+            "run".to_string(),
+            list.runtime.clone()?,
+            list.allow.clone()?,
+            self.file.clone(),
+        ])
+    }
 }
 
-/// Parses the artifact list (`[[artifact]]` tables with `role`, `target`, `file` and
-/// `command`, a non-empty array of strings). Paths are used as written (relative to the
-/// directory `finish` runs in).
-pub fn parse_artifacts(bytes: &[u8]) -> Result<Vec<ArtifactSpec>, GenError> {
+/// `^[a-z][a-z0-9_-]{0,63}$` (the manifest schema's role rule).
+fn is_role(s: &str) -> bool {
+    let b = s.as_bytes();
+    (1..=64).contains(&b.len())
+        && b[0].is_ascii_lowercase()
+        && b.iter().all(|&c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'_' || c == b'-')
+}
+
+/// `^[a-z0-9][a-z0-9_.-]{0,63}$` (the manifest schema's target rule) without `..`, so a label
+/// built from it never names another directory.
+fn is_target(s: &str) -> bool {
+    let b = s.as_bytes();
+    (1..=64).contains(&b.len())
+        && (b[0].is_ascii_lowercase() || b[0].is_ascii_digit())
+        && b.iter().all(|&c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, b'_' | b'.' | b'-'))
+        && !s.contains("..")
+}
+
+/// A file argument: non-empty, no NUL, and not starting with `-` (never read as an option).
+fn is_file_arg(s: &str) -> bool {
+    !s.is_empty() && !s.starts_with('-') && !s.contains('\0')
+}
+
+/// Parses the artifact list (see [`ArtifactList`]). Roles and targets are checked before they
+/// are used in labels or file names; a `command` key, or any other unknown key, is refused.
+/// A native artifact's file must contain a path separator, so its command never searches
+/// `PATH`.
+pub fn parse_artifacts(bytes: &[u8]) -> Result<ArtifactList, GenError> {
     let f = field::ARTIFACTS;
     let text = std::str::from_utf8(bytes).map_err(|_| invalid(f, "not UTF-8"))?;
     let t: Table = text.parse().map_err(|e: toml::de::Error| invalid(f, e.message().to_string()))?;
-    if let Some(k) = t.keys().find(|k| k.as_str() != "artifact") {
+    if let Some(k) = t.keys().find(|k| !["allow", "artifact", "runtime"].contains(&k.as_str())) {
         return Err(invalid(f, format!("unknown key {k}")));
     }
+    let file_key = |key: &str| -> Result<Option<String>, GenError> {
+        match t.get(key) {
+            None => Ok(None),
+            Some(Value::String(x)) if is_file_arg(x) => Ok(Some(x.clone())),
+            Some(_) => Err(invalid(f, format!("{key} must be a file path not starting with -"))),
+        }
+    };
+    let runtime = file_key("runtime")?;
+    let allow = file_key("allow")?;
     let Some(Value::Array(list)) = t.get("artifact") else {
         return Err(invalid(f, "needs at least one [[artifact]]"));
     };
-    let mut out = Vec::with_capacity(list.len());
+    let mut artifacts = Vec::with_capacity(list.len());
     for v in list {
         let Value::Table(e) = v else {
             return Err(invalid(f, "artifact entries must be tables"));
         };
-        if let Some(k) = e.keys().find(|k| !["command", "file", "role", "target"].contains(&k.as_str())) {
+        if let Some(k) = e.keys().find(|k| !["file", "role", "target"].contains(&k.as_str())) {
             return Err(invalid(f, format!("unknown key artifact.{k}")));
         }
         let get = |key: &str| match e.get(key) {
-            Some(Value::String(x)) if !x.is_empty() => Ok(x.clone()),
-            _ => Err(invalid(f, format!("artifact.{key} must be a non-empty string"))),
+            Some(Value::String(x)) => Ok(x.clone()),
+            _ => Err(invalid(f, format!("artifact.{key} must be a string"))),
         };
-        let command = match e.get("command") {
-            Some(Value::Array(a)) if !a.is_empty() => a
-                .iter()
-                .map(|x| match x {
-                    Value::String(x) => Ok(x.clone()),
-                    _ => Err(invalid(f, "artifact.command entries must be strings")),
-                })
-                .collect::<Result<Vec<_>, _>>()?,
-            _ => return Err(invalid(f, "artifact.command must be a non-empty array")),
-        };
-        out.push(ArtifactSpec {
-            role: get("role")?,
-            target: get("target")?,
-            file: PathBuf::from(get("file")?),
-            command,
-        });
+        let a = ArtifactSpec { role: get("role")?, target: get("target")?, file: get("file")? };
+        if !is_role(&a.role) {
+            return Err(invalid(f, format!("bad role {:?}", a.role)));
+        }
+        if !is_target(&a.target) {
+            return Err(invalid(f, format!("bad target {:?}", a.target)));
+        }
+        if !is_file_arg(&a.file) {
+            return Err(invalid(f, format!("bad file {:?}", a.file)));
+        }
+        if a.kind() == "native" && !a.file.contains('/') && !a.file.contains('\\') {
+            return Err(invalid(f, format!("native file {:?} needs a path separator (./name)", a.file)));
+        }
+        if a.kind() == "wasm" && (runtime.is_none() || allow.is_none()) {
+            return Err(invalid(f, "a wasm artifact needs runtime and allow"));
+        }
+        artifacts.push(a);
     }
-    Ok(out)
+    Ok(ArtifactList { wasm_check: DEFAULT_WASM_CHECK.to_string(), runtime, allow, artifacts })
 }
 
 /// What an artifact answered to the self-report call, as the runner tabulated it.
@@ -765,8 +878,9 @@ pub struct SelfReport {
 
 /// Asks one artifact the self-report call set (one call, [`SELF_REPORT_CALL`]).
 pub trait SelfReporter {
-    /// `Err` when the artifact could not answer (the run failed closed).
-    fn report(&mut self, artifact: &ArtifactSpec, call_set: &[u8]) -> Result<SelfReport, String>;
+    /// Runs `command` (from [`ArtifactSpec::command`]) for `artifact`; `Err` when the artifact
+    /// could not answer (the run failed closed).
+    fn report(&mut self, artifact: &ArtifactSpec, command: &[String], call_set: &[u8]) -> Result<SelfReport, String>;
 }
 
 /// The call-set file sent to `fid-xart` (one line, `<name><TAB><call>`).
@@ -801,31 +915,41 @@ pub fn hash_file(path: &Path) -> Result<Digest, GenError> {
     Ok(Digest::from_bytes(h.finish()))
 }
 
-/// Stage two (REQ-KRN.MAN.MANI.GEN-003): reads the stage-one manifest strictly, hashes every
-/// artifact, checks that each one reports the stage-one core digest and assembles the full
-/// manifest. Any artifact that answers anything but exactly the expected bytes with exit 0
-/// (another digest, no digest, a kernel error) is `CoreDigestMismatch`; one that cannot
-/// answer is `SelfReportFailed`; either stops the run and no manifest is built.
+/// Stage two (REQ-KRN.MAN.MANI.GEN-003): reads the stage-one manifest strictly, checks that
+/// the WASM runner applies the core's runtime settings, hashes every artifact, checks that each
+/// one reports the stage-one core digest and assembles the full manifest. Any artifact that
+/// answers anything but exactly the expected bytes with exit 0 (another digest, no digest, a
+/// kernel error) is `CoreDigestMismatch`; one that cannot answer is `SelfReportFailed`; either
+/// stops the run and no manifest is built.
 pub fn finish(
     stage_one: &[u8],
-    artifacts: &[ArtifactSpec],
+    list: &ArtifactList,
     reporter: &mut dyn SelfReporter,
 ) -> Result<KernelManifest, GenError> {
     let first = KernelManifest::parse_canonical(stage_one).map_err(GenError::SchemaInvalid)?;
     if !first.artifacts().is_empty() {
         return Err(invalid(field::CORE, "the stage-one manifest already lists artifacts"));
     }
-    if artifacts.is_empty() {
+    if list.artifacts.is_empty() {
         return Err(invalid(field::ARTIFACTS, "no artifacts"));
+    }
+    if let Some(runtime) = &list.runtime {
+        let bytes = read_optional(Path::new(runtime), field::REPLAY_RUNTIME, MAX_SOURCE_BYTES)?
+            .ok_or(GenError::MissingSource { field: field::REPLAY_RUNTIME })?;
+        if sha256_digest(&bytes) != first.core().replay_runtime.config_digest {
+            return Err(invalid(field::REPLAY_RUNTIME, "the runner's runtime file is not the core's replay_runtime"));
+        }
     }
     let expected = sha256_digest(&expected_answer(first.core_digest())?);
     let call_set = self_report_call_set();
-    let mut out = Vec::with_capacity(artifacts.len());
-    for a in artifacts {
+    let mut out = Vec::with_capacity(list.artifacts.len());
+    for a in &list.artifacts {
         let label = a.label();
-        let sha256 = hash_file(&a.file)?;
+        let command =
+            a.command(list).ok_or_else(|| invalid(field::ARTIFACTS, "a wasm artifact needs runtime and allow"))?;
+        let sha256 = hash_file(Path::new(&a.file))?;
         let report = reporter
-            .report(a, &call_set)
+            .report(a, &command, &call_set)
             .map_err(|reason| GenError::SelfReportFailed { artifact: label.clone(), reason })?;
         if report.artifact_sha256 != sha256 {
             return Err(GenError::SelfReportFailed {
@@ -865,11 +989,35 @@ fn row_str<'v>(v: &'v CValue, key: &str) -> Result<&'v str, String> {
     }
 }
 
-/// Reads the one row of a `fid-xart` table.
-pub fn parse_xart_table(bytes: &[u8]) -> Result<SelfReport, String> {
+/// What a `fid-xart` table for one self-report must say about itself.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TableIdentity {
+    /// The artifact label passed to `--artifact`.
+    pub artifact: String,
+    /// The kind passed to `--kind`.
+    pub kind: String,
+    /// SHA-256 of the call-set file passed to `--calls`.
+    pub call_set_digest: Digest,
+}
+
+/// Reads the one row of a `fid-xart` table, checking that the table is for `expected` (artifact
+/// label, kind, call set, host) and that its one row is the self-report call.
+pub fn parse_xart_table(bytes: &[u8], expected: &TableIdentity) -> Result<SelfReport, String> {
     let v = fid_canon::parse(bytes).map_err(|e| format!("table: {}", e.code()))?;
     if row_str(&v, "schema")? != "fid-xart-table@1" {
         return Err("table: unknown schema".to_string());
+    }
+    if row_str(&v, "artifact")? != expected.artifact {
+        return Err("table: another artifact".to_string());
+    }
+    if row_str(&v, "kind")? != expected.kind {
+        return Err("table: another kind".to_string());
+    }
+    if row_str(&v, "host")? != XART_HOST {
+        return Err("table: another host".to_string());
+    }
+    if row_str(&v, "call_set_digest")? != expected.call_set_digest.as_str() {
+        return Err("table: another call set".to_string());
     }
     let artifact_sha256 = Digest::parse(row_str(&v, "artifact_sha256")?).map_err(|_| "table: artifact_sha256")?;
     let rows = match member(&v, "rows") {
@@ -879,8 +1027,11 @@ pub fn parse_xart_table(bytes: &[u8]) -> Result<SelfReport, String> {
     let [row] = rows.as_slice() else {
         return Err(format!("table: {} rows, expected 1", rows.len()));
     };
-    if row_str(row, "name")? != SELF_REPORT_NAME {
+    if row_str(row, "name")? != SELF_REPORT_NAME || row_str(row, "call")? != "0" {
         return Err("table: row is not the self-report call".to_string());
+    }
+    if row_str(row, "algorithm")? != MANIFEST_CORE_DIGEST_QUERY {
+        return Err("table: row is for another algorithm".to_string());
     }
     let exit = match row_str(row, "exit")? {
         "0" => 0,
@@ -892,7 +1043,7 @@ pub fn parse_xart_table(bytes: &[u8]) -> Result<SelfReport, String> {
 }
 
 impl SelfReporter for XartReporter {
-    fn report(&mut self, artifact: &ArtifactSpec, call_set: &[u8]) -> Result<SelfReport, String> {
+    fn report(&mut self, artifact: &ArtifactSpec, command: &[String], call_set: &[u8]) -> Result<SelfReport, String> {
         let label = artifact.label();
         let calls = self.work_dir.join(format!("{label}.self-report-calls.txt"));
         let table = self.work_dir.join(format!("{label}.self-report-table.json"));
@@ -908,7 +1059,7 @@ impl SelfReporter for XartReporter {
             .arg("--timeout-ms")
             .arg(self.timeout_ms.to_string())
             .arg("--")
-            .args(&artifact.command)
+            .args(command)
             .stdin(Stdio::null())
             .output();
         let _ = std::fs::remove_file(&calls);
@@ -921,6 +1072,11 @@ impl SelfReporter for XartReporter {
         }
         let bytes = read_optional(&table, field::ARTIFACTS, MAX_TABLE_BYTES).map_err(|e| e.to_string())?;
         let _ = std::fs::remove_file(&table);
-        parse_xart_table(&bytes.ok_or("fid-xart wrote no table")?)
+        let expected = TableIdentity {
+            artifact: label,
+            kind: artifact.kind().to_string(),
+            call_set_digest: sha256_digest(call_set),
+        };
+        parse_xart_table(&bytes.ok_or("fid-xart wrote no table")?, &expected)
     }
 }

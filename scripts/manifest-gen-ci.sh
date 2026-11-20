@@ -17,7 +17,7 @@
 set -euo pipefail
 
 root=$(pwd)
-cargo build -q -p fid-manifest-gen -p fid-xart -p fid-wasm-check
+cargo build -q --locked -p fid-manifest-gen -p fid-xart -p fid-wasm-check
 export PATH="$root/target/debug:$PATH"
 toy="$root/fixtures/man/gen-toy-v1"
 work="${RUNNER_TEMP:-/tmp}/manifest-gen"
@@ -71,28 +71,34 @@ rm "$work/no-rdl/rdl-release.json"
 test ! -e "$work/no-rdl/core.json"
 
 # The real kernel module with the generated constant (WASM through the pinned runner, and the
-# native build of the same shim).
+# native build of the same shim). There is no real release configuration yet (KRN.SOLV.CONIC
+# publishes no limits file and UNC.RDL.FREEZE is unbuilt), so the module is built with the TOY
+# core's constant: this checks the embedding path end to end (constant compiled in, self-report
+# through fid-xart, finish), not a release. The resulting manifest pairs the toy core with these
+# artifacts; it stays in RUNNER_TEMP, is never uploaded or published, and is deleted with the
+# runner.
 constant=crates/fid-kernel-wasm/src/manifest_core_digest.rs
 trap 'git checkout -- "$constant"' EXIT
 cp "$work/run-a/toy/ws/shim/src/manifest_core_digest.rs" "$constant"
-cargo build -q --release --target wasm32-wasip1 -p fid-kernel-wasm --target-dir target/manifest-gen-wasm
-cargo build -q -p fid-kernel-wasm --target-dir target/manifest-gen-native
+cargo build -q --locked --release --target wasm32-wasip1 -p fid-kernel-wasm --target-dir target/manifest-gen-wasm
+cargo build -q --locked -p fid-kernel-wasm --target-dir target/manifest-gen-native
 fid-wasm-check seal target/manifest-gen-wasm/wasm32-wasip1/release/fid-kernel-wasm.wasm "$work/kernel.wasm"
 cp target/manifest-gen-native/debug/fid-kernel-wasm "$work/kernel-native"
 runtime="$root/crates/fid-kernel-wasm/wasm-runtime.toml"
 allow="$root/crates/fid-kernel-wasm/wasm-imports.allow"
 cat > "$work/kernel-artifacts.toml" <<EOF
+runtime = "$runtime"
+allow = "$allow"
+
 [[artifact]]
 role = "native"
 target = "x86_64-unknown-linux-gnu"
 file = "$work/kernel-native"
-command = ["$work/kernel-native"]
 
 [[artifact]]
 role = "wasm"
 target = "wasm32-wasip1"
 file = "$work/kernel.wasm"
-command = ["fid-wasm-check", "run", "$runtime", "$allow", "$work/kernel.wasm"]
 EOF
 fid-manifest-gen finish --core "$work/run-a/toy/core.json" --artifacts "$work/kernel-artifacts.toml" \
   --out "$work/kernel-manifest.json"
@@ -100,7 +106,7 @@ fid-wasm-check manifest "$work/kernel-manifest.json" "$work/kernel.wasm" "$allow
 
 # Built with the committed `None` constant, the module reports no core digest.
 git checkout -- "$constant"
-cargo build -q -p fid-kernel-wasm --target-dir target/manifest-gen-native
+cargo build -q --locked -p fid-kernel-wasm --target-dir target/manifest-gen-native
 cp target/manifest-gen-native/debug/fid-kernel-wasm "$work/kernel-native"
 expect_fail "core_digest_mismatch: native-x86_64-unknown-linux-gnu" \
   fid-manifest-gen finish --core "$work/run-a/toy/core.json" --artifacts "$work/kernel-artifacts.toml" \

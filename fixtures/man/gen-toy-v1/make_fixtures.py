@@ -170,12 +170,15 @@ CONFIG = (
 
 ARTIFACTS = (
     b"# Artifacts for `fid-manifest-gen finish` (fixture gen-toy-v1). Paths are relative to the\n"
-    b"# directory finish runs in; `command` answers one call on stdin (the pinned runner).\n"
+    b"# directory finish runs in. The command is derived from the kind: a wasm artifact runs as\n"
+    b"# `fid-wasm-check run <runtime> <allow> <file>` (the pinned runner).\n"
+    b'runtime = "wasm-runtime.toml"\n'
+    b'allow = "wasm-imports.allow"\n'
+    b"\n"
     b"[[artifact]]\n"
     b'role = "wasm"\n'
     b'target = "wasm32-wasip1"\n'
     b'file = "artifacts/toy-kernel.wasm"\n'
-    b'command = ["fid-wasm-check", "run", "wasm-runtime.toml", "wasm-imports.allow", "artifacts/toy-kernel.wasm"]\n'
 )
 
 ARTIFACTS_OTHER = ARTIFACTS.replace(b"toy-kernel.wasm", b"other-core.wasm")

@@ -103,3 +103,16 @@ fn no_algorithm_may_register_under_the_reserved_module() {
     // A neighbouring module is an ordinary algorithm.
     assert!(AlgorithmTable::new(vec![Box::new(Named("kernels.any.thing@1.0.0"))], CardRegistry::default()).is_ok());
 }
+
+/// The reserved module is refused in a manifest's algorithm list and in a spec card.
+#[test]
+fn reserved_module_is_refused_in_manifests_and_cards() {
+    let m = fid_kci::KernelManifest::parse(&std::fs::read(toy().join("expected-core.json")).unwrap()).unwrap();
+    let mut core = m.core().clone();
+    core.algorithms[0].id = AlgorithmId::parse("kernel.plane.lsq@1.10.0").unwrap();
+    assert_eq!(core.validate(), Err(fid_kci::ManifestError::BadValue("core.algorithms[].id")));
+    let card = std::fs::read_to_string(toy().join("cards/fit-plane-lsq.toml")).unwrap();
+    assert!(fid_kci::parse_card(&card).is_ok());
+    let reserved = card.replace("id = \"fit.plane.lsq@1.10.0\"", "id = \"kernel.plane.lsq@1.10.0\"");
+    assert_eq!(fid_kci::parse_card(&reserved).unwrap_err().code(), "bad_id");
+}

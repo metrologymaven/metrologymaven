@@ -6,14 +6,17 @@
 //! fid-manifest-gen toolchain-flags  [--workspace <dir>]
 //! fid-manifest-gen core   --config <manifest-gen.toml> --out <core.json> [--constant <file>]
 //! fid-manifest-gen finish --core <core.json> --artifacts <artifacts.toml> --out <kernel-manifest.json>
-//!                         [--xart <program>] [--timeout-ms <ms>] [--work-dir <dir>]
+//!                         [--xart <program>] [--wasm-check <program>] [--timeout-ms <ms>] [--work-dir <dir>]
 //! ```
 //!
 //! `core` (stage one, KRN.MAN.MANI.GEN) gathers the manifest core from the sources the
 //! configuration names, writes the stage-one manifest (canonical, no artifacts) to `--out`,
-//! writes the generated `manifest_core_digest` constant to `--constant` when given, and prints
-//! the core digest. `finish` (stage two) hashes every artifact of the list, asks each for its
-//! core digest through `fid-xart run` (default program `fid-xart`, deadline 60 000 ms), and
+//! writes the generated `manifest_core_digest` constant when `--constant` names the configured
+//! constant file (`<workspace>/<constant>`; any other path is refused), and prints the core
+//! digest. `finish` (stage two) hashes every artifact of the list, asks each for its
+//! core digest through `fid-xart run` (default program `fid-xart`, deadline 60 000 ms) with a
+//! command derived from the artifact's kind (native: the file itself; wasm: `fid-wasm-check run
+//! <runtime> <allow> <file>`), and
 //! writes the full manifest to `--out` and prints its digest. Both remove `--out` first, so a
 //! failed run leaves no stale file. Exit codes: 0 written, 1 refused (a typed error such as
 //! `missing_source: <field>` or `core_digest_mismatch: <artifact>`, printed on stdout), 2 usage
@@ -45,7 +48,7 @@ const USAGE: &str = "usage: fid-manifest-gen toolchain-check [--workspace <dir>]
        fid-manifest-gen toolchain-flags [--workspace <dir>]\n\
        fid-manifest-gen core --config <manifest-gen.toml> --out <core.json> [--constant <file>]\n\
        fid-manifest-gen finish --core <core.json> --artifacts <artifacts.toml> --out <kernel-manifest.json> \
-[--xart <program>] [--timeout-ms <ms>] [--work-dir <dir>]";
+[--xart <program>] [--wasm-check <program>] [--timeout-ms <ms>] [--work-dir <dir>]";
 
 enum Failure {
     Refused(ToolchainError),
@@ -101,7 +104,21 @@ fn core_command(rest: &[String]) -> Result<(), Failure> {
     let config = Config::load(Path::new(required(&f, "--config")?))?;
     let stage = gen::core(&config)?;
     if let Some(c) = flag(&f, "--constant") {
-        write(Path::new(c), &stage.constant)?;
+        // Only the configured constant may be written: `--constant` must name
+        // <workspace>/<constant> (core has checked that the file exists).
+        let ws = config.workspace.clone().unwrap_or_default();
+        let target = ws.join(&stage.constant_path);
+        let same = match (std::fs::canonicalize(c), std::fs::canonicalize(&target)) {
+            (Ok(a), Ok(b)) => a == b,
+            _ => false,
+        };
+        if !same {
+            return Err(Failure::Gen(GenError::SourceInvalid {
+                field: gen::field::CONFIG,
+                reason: format!("--constant must name {}", target.display()),
+            }));
+        }
+        write(&target, &stage.constant)?;
     }
     write(out, stage.manifest.canonical_json())?;
     println!("{}", stage.manifest.core_digest());
@@ -109,7 +126,7 @@ fn core_command(rest: &[String]) -> Result<(), Failure> {
 }
 
 fn finish_command(rest: &[String]) -> Result<(), Failure> {
-    let f = flags(rest, &["--core", "--artifacts", "--out", "--xart", "--timeout-ms", "--work-dir"])?;
+    let f = flags(rest, &["--core", "--artifacts", "--out", "--xart", "--wasm-check", "--timeout-ms", "--work-dir"])?;
     let out = Path::new(required(&f, "--out")?);
     remove_stale(out)?;
     let read_all = |key: &str| -> Result<Vec<u8>, Failure> {
@@ -117,7 +134,10 @@ fn finish_command(rest: &[String]) -> Result<(), Failure> {
         std::fs::read(p).map_err(|e| Failure::Usage(format!("{p}: {e}")))
     };
     let stage_one = read_all("--core")?;
-    let artifacts = gen::parse_artifacts(&read_all("--artifacts")?)?;
+    let mut artifacts = gen::parse_artifacts(&read_all("--artifacts")?)?;
+    if let Some(p) = flag(&f, "--wasm-check") {
+        artifacts.wasm_check = p.to_string();
+    }
     let timeout_ms = match flag(&f, "--timeout-ms") {
         None => 60_000,
         Some(v) => v
