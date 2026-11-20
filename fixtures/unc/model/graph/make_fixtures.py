@@ -388,6 +388,9 @@ def outputs():
     return files
 
 
+CHECK_FILES = {"manifest_stub.json", "bore_ls.order.txt"}
+
+
 def main():
     check = "--check" in sys.argv[1:]
     bad = 0
@@ -403,6 +406,8 @@ def main():
             path.write_bytes(data)
     if check:
         on_disk = {p.relative_to(HERE).as_posix() for p in HERE.rglob("*") if p.is_file() and p.suffix in (".json", ".txt", ".sha256")}
+        # Files of UNC.MODEL.GRAPH.CHECK, written and checked by make_check_fixtures.py.
+        on_disk = {r for r in on_disk if not r.startswith("bad/") and r not in CHECK_FILES}
         for extra in sorted(on_disk - set(files)):
             print("not generated: " + extra)
             bad += 1

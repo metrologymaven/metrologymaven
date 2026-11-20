@@ -1,0 +1,438 @@
+{
+	"correlations": [
+		{
+			"matrix": [
+				[
+					"3ff0000000000000",
+					"bfeccccccccccccd",
+					"3feccccccccccccd"
+				],
+				[
+					"bfeccccccccccccd",
+					"3ff0000000000000",
+					"3feccccccccccccd"
+				],
+				[
+					"3feccccccccccccd",
+					"3feccccccccccccd",
+					"3ff0000000000000"
+				]
+			],
+			"inputs": [
+				"pts_noise",
+				"form",
+				"tilt"
+			]
+		},
+		{
+			"matrix": [
+				[
+					"3ff0000000000000",
+					"3fd0000000000000"
+				],
+				[
+					"3fd0000000000000",
+					"3ff0000000000000"
+				]
+			],
+			"inputs": [
+				"thermal_strain",
+				"scale_err"
+			]
+		}
+	],
+	"edges": [
+		{
+			"to": {
+				"port": "form",
+				"node": "fit"
+			},
+			"from": {
+				"port": "value",
+				"node": "form"
+			}
+		},
+		{
+			"to": {
+				"port": "noise",
+				"node": "fit"
+			},
+			"from": {
+				"port": "value",
+				"node": "pts_noise"
+			}
+		},
+		{
+			"to": {
+				"port": "probe_r",
+				"node": "fit"
+			},
+			"from": {
+				"port": "value",
+				"node": "probe_r"
+			}
+		},
+		{
+			"to": {
+				"port": "value",
+				"node": "n3"
+			},
+			"from": {
+				"port": "value",
+				"node": "n7"
+			}
+		},
+		{
+			"to": {
+				"port": "value",
+				"node": "n7"
+			},
+			"from": {
+				"port": "value",
+				"node": "n5"
+			}
+		},
+		{
+			"to": {
+				"port": "value",
+				"node": "n5"
+			},
+			"from": {
+				"port": "value",
+				"node": "n3"
+			}
+		},
+		{
+			"to": {
+				"port": "value",
+				"node": "fit_residual"
+			},
+			"from": {
+				"port": "residual",
+				"node": "fit"
+			}
+		},
+		{
+			"to": {
+				"port": "value",
+				"node": "d_bore"
+			},
+			"from": {
+				"port": "value",
+				"node": "thermal"
+			}
+		},
+		{
+			"to": {
+				"port": "strain",
+				"node": "thermal"
+			},
+			"from": {
+				"port": "value",
+				"node": "scale_err"
+			}
+		},
+		{
+			"to": {
+				"port": "strain",
+				"node": "thermal"
+			},
+			"from": {
+				"port": "value",
+				"node": "thermal_strain"
+			}
+		},
+		{
+			"to": {
+				"port": "value",
+				"node": "thermal"
+			},
+			"from": {
+				"port": "diameter",
+				"node": "fit"
+			}
+		},
+		{
+			"to": {
+				"port": "tilt",
+				"node": "fit"
+			},
+			"from": {
+				"port": "value",
+				"node": "tilt"
+			}
+		}
+	],
+	"outputs": [
+		{
+			"unit": "si:m",
+			"quantity_kind": "length",
+			"id": "fit_residual"
+		},
+		{
+			"characteristic": "DIM-1",
+			"unit": "si:m",
+			"quantity_kind": "length",
+			"id": "d_bore"
+		}
+	],
+	"operators": [
+		{
+			"ports_out": [
+				{
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "value"
+				}
+			],
+			"ports_in": [
+				{
+					"arity": "1",
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "value"
+				}
+			],
+			"params": {
+				"mode": "multiplicative"
+			},
+			"algorithm_version": "1.0.0",
+			"algorithm_id": "unc.op.scale",
+			"id": "n7"
+		},
+		{
+			"ports_out": [
+				{
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "value"
+				}
+			],
+			"ports_in": [
+				{
+					"arity": "1",
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "value"
+				}
+			],
+			"params": {
+				"mode": "multiplicative"
+			},
+			"algorithm_version": "1.0.0",
+			"algorithm_id": "unc.op.scale",
+			"id": "n5"
+		},
+		{
+			"ports_out": [
+				{
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "value"
+				}
+			],
+			"ports_in": [
+				{
+					"arity": "1",
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "value"
+				}
+			],
+			"params": {
+				"mode": "multiplicative"
+			},
+			"algorithm_version": "1.0.0",
+			"algorithm_id": "unc.op.scale",
+			"id": "n3"
+		},
+		{
+			"ports_out": [
+				{
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "value"
+				}
+			],
+			"ports_in": [
+				{
+					"arity": "1",
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "value"
+				},
+				{
+					"arity": "2",
+					"unit": "si:1",
+					"quantity_kind": "strain",
+					"name": "strain"
+				}
+			],
+			"params_digest": "sha256:71c2959c9d9eba2d9e509367d06d488c8f360164f653f38b6e05e0f7e2121880",
+			"params": {
+				"mode": "multiplicative"
+			},
+			"algorithm_version": "9.9.9",
+			"algorithm_id": "unc.op.scale",
+			"id": "thermal"
+		},
+		{
+			"ports_out": [
+				{
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "diameter"
+				},
+				{
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "residual"
+				}
+			],
+			"ports_in": [
+				{
+					"arity": "1",
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "probe_r"
+				},
+				{
+					"arity": "1",
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "noise"
+				},
+				{
+					"arity": "1",
+					"unit": "si:m",
+					"quantity_kind": "length",
+					"name": "form"
+				},
+				{
+					"arity": "1",
+					"unit": "si:rad",
+					"quantity_kind": "angle",
+					"name": "tilt"
+				}
+			],
+			"params_digest": "sha256:644b57ab93adeebda1a3723867929daf8ebc2051283c2f8018cead6c18c9f309",
+			"params": {
+				"weights": [],
+				"tolerance": "3d719799812dea11",
+				"outlier": {
+					"k": "3",
+					"policy": "none"
+				},
+				"max_iter": "50"
+			},
+			"algorithm_version": "1.0.0",
+			"algorithm_id": "fit.circle.ls",
+			"id": "fit"
+		}
+	],
+	"inputs": [
+		{
+			"source": {
+				"author": "QA team",
+				"digest": "sha256:fc239058affc2eba39a9d56c5ab3a7b10f4ed3b2e53ea21c74c8b071b4cf9d0e",
+				"kind": "qualification"
+			},
+			"distribution": {
+				"params": {
+					"b": "3f1a36e2eb1c432d",
+					"a": "bf1a36e2eb1c432d"
+				},
+				"kind": "arcsine"
+			},
+			"unit": "si:m",
+			"quantity_kind": "length",
+			"id": "tilt"
+		},
+		{
+			"source": {
+				"author": "Scale Cal GmbH",
+				"digest": "sha256:7084db610d29e508efa16cbd521877e447eba7b2e874195f9422fb55a36be546",
+				"kind": "certificate"
+			},
+			"distribution": {
+				"params": {
+					"c": "0000000000000000",
+					"b": "3eb0c6f7a0b5ed8d",
+					"a": "beb0c6f7a0b5ed8d"
+				},
+				"kind": "tri"
+			},
+			"unit": "si:1",
+			"quantity_kind": "strain",
+			"id": "scale_err"
+		},
+		{
+			"source": {
+				"author": "J. Doe",
+				"digest": "sha256:6372055b5ae08432799aa179974fd264ece9069e1ed984c2aa62035b3561c6c1",
+				"kind": "declared"
+			},
+			"distribution": {
+				"params": {
+					"b": "3ec34b365f379dfc",
+					"a": "bec34b365f379dfc"
+				},
+				"kind": "rect"
+			},
+			"unit": "si:1",
+			"quantity_kind": "strain",
+			"id": "thermal_strain"
+		},
+		{
+			"source": {
+				"author": "QA team",
+				"digest": "sha256:57b314e2aeb400a82a45c5555048aabb8b0d4c6e0d5a929cae7d00490f46614b",
+				"kind": "qualification"
+			},
+			"distribution": {
+				"params": {
+					"beta": "3fe0000000000000",
+					"b": "3eb0c6f7a0b5ed8d",
+					"a": "beb0c6f7a0b5ed8d"
+				},
+				"kind": "trap"
+			},
+			"unit": "si:m",
+			"quantity_kind": "length",
+			"id": "form"
+		},
+		{
+			"source": {
+				"author": "metrology-maven fixtures",
+				"digest": "sha256:1ec6ec762d50feb1b2bcf2ff632fa3849c1dda9f7e206b12f488187872fe7653",
+				"kind": "type_a_dataset"
+			},
+			"distribution": {
+				"params": {
+					"nu": "4022000000000000",
+					"s": "3eaad7f29abcaf48",
+					"mu": "0000000000000000"
+				},
+				"kind": "scaled_t"
+			},
+			"unit": "si:m",
+			"quantity_kind": "length",
+			"id": "pts_noise"
+		},
+		{
+			"distribution": {
+				"params": {
+					"sigma": "3e9421f5f40d8376",
+					"mu": "3f50624dd2f1a9fc"
+				},
+				"kind": "normal"
+			},
+			"unit": "si:m",
+			"quantity_kind": "length",
+			"id": "probe_r"
+		}
+	],
+	"semver": "1.0.0",
+	"name": "bore-ls",
+	"schema": "uncertainty-model/v1"
+}

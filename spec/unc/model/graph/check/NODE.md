@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-kunc]
 satisfies: [REQ-UNC.MODEL.GRAPH-002, REQ-UNC.MODEL.GRAPH-003, REQ-UNC.MODEL.GRAPH-004, REQ-UNC.MODEL.GRAPH-005, REQ-UNC.MODEL.GRAPH-008]
 covers: []
 depends_on: [UNC.MODEL.GRAPH.SCHEMA, UNC.MODEL.DIST, KRN.MAN.MANI]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # UNC.MODEL.GRAPH.CHECK: Structural validation passes
@@ -66,6 +67,18 @@ updated: 2026-11-17
 ## Open questions
 
 - None.
+
+## Resolved at build
+
+- **Passes.** Besides the five named passes, validation fails closed on three more findings, numbered into the pinned order: `dangling_edge` (pass 1: an edge end whose node or port does not exist, or that points the wrong way, out of an output node or into an input node), `unreachable_output` (pass 6: no input reaches the output over resolved edges) and `correlation_not_input` (pass 7: a group member that is not an input node). The order is dangling_edge, cycle, unknown_operator, unsourced_input, arity_mismatch and unit_mismatch, unreachable_output, correlation_not_input, invalid_correlation; the five findings of AC-2 keep their stated relative order.
+- **Resolution.** A source is an input's implicit port `value` or an operator output port; a target is an operator input port or an output's implicit `value` (arity 1). Arity counts every edge whose target resolves, even if its source dangles, so one broken edge is not also reported as a missing connection. Cycles, unit checks and reachability use only edges with both ends resolved.
+- **Cycles.** After Kahn leaves nodes, each strongly connected component of the remainder that is a cycle (two or more nodes, or a self-loop) is one `cycle` finding naming its lowest node ID and listing its members (iterative Tarjan, linear time, no recursion).
+- **Units** are compared as unit codes exactly. `si:rad` and `si:1` share a dimension vector but are different codes, so an angle cannot flow silently into a ratio port; quantity kinds must also be equal. Both give `unit_mismatch`.
+- **Empty digest** (REQ-003): a source digest is empty when it is the tombstone digest (64 zeros) or the SHA-256 of zero bytes.
+- **Sort key** (REQ-006): pass, node ID, then the remaining fields, all as bytes (arity numbers by value; on one port `arity_mismatch` sorts before `unit_mismatch`). The node ID of an edge finding is its target node; of a correlation finding, the group's smallest input ID.
+- **Manifest.** Membership is exact `algorithm_id@algorithm_version` in `KernelManifest::core().algorithms` (`KRN.MAN.MANI.SCHEMA`, in `fid-kci`). Each entry carries its `KRN.MAN.CARD` digest, so a listed operator also has a registered card. `KRN.MAN.MANI.GEN`, which produces the real manifest, is not needed here: the caller (`UNC.MODEL.GRAPH.STORE`) supplies the manifest.
+- **`ValidModel`** has private fields and no constructor other than `validate`; it keeps the model, the digest of the manifest it was checked against, and the Kahn order (smallest ready ID first).
+- **Error type.** Findings are `fid_kunc::model::ModelError` (one line each via `Display`, `<code> <node> ...`). The parent's `Result<ValidModel, ModelError>` is read as `Result<ValidModel, Vec<ModelError>>`, as this leaf's Purpose states.
 
 ## Children
 
