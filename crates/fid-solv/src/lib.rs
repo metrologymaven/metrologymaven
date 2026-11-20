@@ -8,3 +8,4 @@ pub mod cert;
 pub mod conic;
 pub mod mstart;
 pub mod nlls;
+pub mod seq;
