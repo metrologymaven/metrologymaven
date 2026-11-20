@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-project, fid-project-cmd]
+built_pr: 354
 satisfies: [REQ-CORE.PRJ.STAGE-002, REQ-CORE.PRJ.STAGE-005, REQ-CORE.PRJ.STAGE-006]
 covers: []
 depends_on: [CORE.PRJ.STAGE.MODEL, CORE.PRJ.TREE.MODEL, CORE.BUS.PIPE.HANDLER, CORE.REG.DEF, CORE.STO.CACHE]
