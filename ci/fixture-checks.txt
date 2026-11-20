@@ -1,5 +1,5 @@
-# Python fixture checks run by the Linux test job in .github/workflows/rust.yml.
 # One shell command per line, run in file order from the repository root; the first failure
+# Python fixture checks run by the Linux test job in .github/workflows/rust.yml.
 # fails the step. Keep the lines sorted (LC_ALL=C sort) and unique; CI checks both.
 python -m unittest discover -s tools/house_rules/tests -v
 python -m unittest discover -s tools/repo_template/tests -v
@@ -114,6 +114,7 @@ python fixtures/rpt/output/text/make_fixtures.py --check
 python fixtures/scan/cmp/make_field_golden.py --check
 python fixtures/scan/make_mesh_quality.py --check
 python fixtures/solv/cert/as-v1/make_cases.py --check
+python fixtures/solv/cert/kkt-v1/make_cases.py --check
 python fixtures/solv/cert/recomp-v1/make_cases.py --check
 python fixtures/solv/make_mstart_fixtures.py --check
 python fixtures/solv/patch/ldl-order-v1/make_orders.py --check
