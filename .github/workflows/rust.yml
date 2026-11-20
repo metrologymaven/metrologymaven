@@ -122,6 +122,23 @@ jobs:
         run: cargo check --manifest-path crates/fid-io-las/fuzz/Cargo.toml
       - name: No side doors (CORE.BUS.LINT)
         run: cargo xtask lint-crate-graph
+      - name: Release builds never enable the egress test hooks (CORE.BUS.POL.EGRESS)
+        # `permit-test-hooks` mints network permits outside the pipeline. Resolve the features of
+        # fid-bus as a release (non-test) build of the whole workspace would, for every target and
+        # with dev-dependencies left out, and fail if the feature is on. The control run with
+        # dev-dependencies must see it (fid-bus's own dev-dependency), so the check is not vacuous.
+        # tests/test_hooks.rs still scans the manifests.
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          release=$(cargo tree --workspace --target all -e normal,build -i fid-bus -f '{p} {f}')
+          echo "$release" | head -n 1
+          echo "$release" | grep -q '^fid-bus ' || { echo "fid-bus is missing from the tree"; exit 1; }
+          if echo "$release" | grep -q 'permit-test-hooks'; then
+            echo "permit-test-hooks is enabled in a release build:"; echo "$release" | grep 'permit-test-hooks'; exit 1
+          fi
+          control=$(cargo tree --workspace --target all -e normal,build,dev -i fid-bus -f '{p} {f}')
+          echo "$control" | grep -q 'permit-test-hooks' || { echo "control run does not see the feature"; exit 1; }
       - name: Dataset catalogue admission check via cargo xtask (ECO.DATA.CAT AC-1)
         run: cargo xtask datasets-check --catalogue fixtures/datasets/valid.toml --domains fixtures/datasets/domains.txt
       - name: Support matrix validates via cargo xtask (PLAT.MATRIX.FILE AC-1)
