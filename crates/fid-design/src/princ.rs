@@ -10,7 +10,8 @@
 //! - `PRINC-ID-MISSING <heading>`: a section heading without a stable ID;
 //!   `PRINC-ID-MISSING <P-ID>`: a required principle has no section.
 //! - `PRINC-EXAMPLE-MISSING <P-ID or heading>`: no non-empty `### Do` or `### Don't`.
-//! - `PRINC-UNKNOWN <P-ID>`: an ID outside the six of REQ-001, or an ID defined twice.
+//! - `PRINC-UNKNOWN <P-ID>`: an ID outside the six of REQ-001.
+//! - `PRINC-DUPLICATE <P-ID>`: an ID with more than one section.
 //!
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable input.
 
@@ -31,6 +32,7 @@ pub const PRINCIPLES: [&str; 6] = ["P-DATA", "P-DENSE", "P-EXPLAIN", "P-FAMILIAR
 pub const ID_MISSING: &str = "PRINC-ID-MISSING";
 pub const EXAMPLE_MISSING: &str = "PRINC-EXAMPLE-MISSING";
 pub const UNKNOWN: &str = "PRINC-UNKNOWN";
+pub const DUPLICATE: &str = "PRINC-DUPLICATE";
 
 /// One `##` section of the document.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -158,7 +160,7 @@ pub fn check_text(text: &str) -> Report {
                 f.push(Finding::new(UNKNOWN, id, format!("line {}: not one of {}", s.line, PRINCIPLES.join(", "))));
             }
             if let Some(first) = seen.get(id) {
-                f.push(Finding::new(UNKNOWN, id, format!("line {}: defined again (first on line {first})", s.line)));
+                f.push(Finding::new(DUPLICATE, id, format!("line {}: defined again (first on line {first})", s.line)));
             } else {
                 seen.insert(id.clone(), s.line);
             }

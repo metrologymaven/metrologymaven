@@ -53,8 +53,8 @@ The two short documents every design review cites: the design principles (with "
 
 - **Commands:** `fid-design princ-check [--file <md>] [--json]`, `fid-design words-check --copy <jsonl> [--words <json>] [--json]`. Project tooling, not registry commands; nearest class R0.
 - **Formats:** principle headings `## P-<ID>: <title>` with `### Do` and `### Don't` subsections. `reserved-words@1`: `[{ word, meaning, allowed_prefixes: [..], case_insensitive: true }]`. UI-copy export: JSON Lines `{ "id": "<message id>", "text": "<English source>" }`, which I18N or VIZ produce from their catalogue (this node defines the export shape only).
-- **Matching:** whole-word, case-insensitive, also matching simple inflections listed per word (e.g. approve, approved, approval).
-- **Errors:** `PRINC-ID-MISSING`, `PRINC-EXAMPLE-MISSING`, `PRINC-UNKNOWN`, `WORD-RESERVED`, `WORDS-SCHEMA`.
+- **Matching:** whole-word, case-insensitive (Turkish İ and ı fold to i), also matching simple inflections listed per word (e.g. approve, approved, approval). Fails closed with `WORDS-OBFUSCATED <id>` on invisible or formatting characters, compatibility forms (ligatures, fullwidth, mathematical alphanumerics) and words mixing Latin with Cyrillic or Greek letters; accented Latin is not flagged. Message IDs use `[a-z0-9._]`; prefixes end in `.`.
+- **Errors:** `PRINC-ID-MISSING`, `PRINC-EXAMPLE-MISSING`, `PRINC-UNKNOWN`, `PRINC-DUPLICATE`, `WORD-RESERVED`, `WORDS-OBFUSCATED`, `WORDS-SCHEMA`.
 - **Determinism:** D0 (text parsing, sorted output).
 - **Crate:** `fid-design` (Tooling layer), modules `princ` and `words`.
 

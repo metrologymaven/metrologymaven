@@ -6,4 +6,7 @@ not json
 [1]
 {"id":"a.e","text":"Approve","id":"z"}
 {"id":"agent.x","text":"Approved"}
+{"id":"Agent.Upper","text":"x"}
+{"id":"agent-x","text":"x"}
+{"id":"","text":"x"}
 

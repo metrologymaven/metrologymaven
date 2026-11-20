@@ -55,7 +55,23 @@ Some words carry legal, quality-system or security meaning. Each has exactly one
 meaning and may appear only under the listed message-ID prefixes. The machine-readable list is
 [`reserved-words.json`](reserved-words.json) (`reserved-words@1`); `fid-design words-check`
 reports every UI string that uses a reserved word, or one of its listed inflections, outside its
-prefixes. Matching is whole-word and case-insensitive.
+prefixes. Matching is whole-word and case-insensitive; Turkish "İ" and "ı" count as "i".
+
+The check fails closed (`WORDS-OBFUSCATED`) on any message containing an invisible or
+formatting character (soft hyphen, combining grapheme joiner, zero-width and direction marks,
+word joiners, byte-order mark), a compatibility form (ligatures such as "ﬁ", fullwidth letters,
+mathematical bold and similar letters), or a word that mixes Latin letters with Cyrillic or
+Greek ones. Accented Latin letters (German, French and similar copy) are not flagged. Message
+IDs use only `a-z`, `0-9`, `.` and `_`; permitted prefixes end in `.`.
+
+What the check still does not catch, so reviewers must:
+
+- a reserved word spelled entirely in Cyrillic or Greek look-alike letters;
+- misspellings, spaced-out letters ("a p p r o v e") and synonyms ("OK'd", "greenlit");
+- inflections not listed in `reserved-words.json`, and compounds written as one word that are
+  not listed;
+- meaning carried by icons, images, colour or layout instead of text;
+- strings that never reach the UI-copy export (hard-coded text, server messages).
 
 | Word | Only permitted meaning | Message-ID prefixes |
 |---|---|---|

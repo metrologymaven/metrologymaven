@@ -51,9 +51,9 @@
         "P-NOCOLOR"
       ],
       "findings": [
+        "PRINC-DUPLICATE P-NOCOLOR",
         "PRINC-EXAMPLE-MISSING P-KEYS",
-        "PRINC-UNKNOWN P-FAST",
-        "PRINC-UNKNOWN P-NOCOLOR"
+        "PRINC-UNKNOWN P-FAST"
       ]
     }
   },
@@ -61,7 +61,7 @@
     "copy-ok.jsonl": {
       "words": "shipped",
       "exit": 0,
-      "messages": 15,
+      "messages": 19,
       "findings": []
     },
     "copy-bad.jsonl": {
@@ -82,39 +82,92 @@
         "WORD-RESERVED verified rpt.summary.note"
       ]
     },
+    "copy-obfuscated.jsonl": {
+      "words": "shipped",
+      "exit": 1,
+      "messages": 23,
+      "findings": [
+        "WORD-RESERVED approve agent.cgj",
+        "WORD-RESERVED approve agent.g2",
+        "WORD-RESERVED approve agent.h",
+        "WORD-RESERVED approve agent.l",
+        "WORD-RESERVED approve agent.l2",
+        "WORD-RESERVED conforms agent.k",
+        "WORD-RESERVED conforms agent.o",
+        "WORD-RESERVED release agent.rlm",
+        "WORD-RESERVED sign agent.bom",
+        "WORD-RESERVED sign agent.m",
+        "WORD-RESERVED sign agent.m2",
+        "WORD-RESERVED verified agent.g",
+        "WORD-RESERVED verified agent.n",
+        "WORDS-OBFUSCATED agent.a",
+        "WORDS-OBFUSCATED agent.b",
+        "WORDS-OBFUSCATED agent.bom",
+        "WORDS-OBFUSCATED agent.c",
+        "WORDS-OBFUSCATED agent.cgj",
+        "WORDS-OBFUSCATED agent.d",
+        "WORDS-OBFUSCATED agent.e",
+        "WORDS-OBFUSCATED agent.f",
+        "WORDS-OBFUSCATED agent.greek",
+        "WORDS-OBFUSCATED agent.h",
+        "WORDS-OBFUSCATED agent.i",
+        "WORDS-OBFUSCATED agent.rlm"
+      ]
+    },
     "copy-schema.jsonl": {
       "words": "shipped",
       "exit": 1,
       "messages": 2,
       "findings": [
         "WORD-RESERVED approve agent.x",
+        "WORDS-SCHEMA copy:10",
+        "WORDS-SCHEMA copy:11",
         "WORDS-SCHEMA copy:2",
         "WORDS-SCHEMA copy:3",
         "WORDS-SCHEMA copy:4",
         "WORDS-SCHEMA copy:5",
         "WORDS-SCHEMA copy:6",
-        "WORDS-SCHEMA copy:7"
+        "WORDS-SCHEMA copy:7",
+        "WORDS-SCHEMA copy:9"
+      ]
+    },
+    "copy-empty.jsonl": {
+      "words": "shipped",
+      "exit": 1,
+      "messages": 0,
+      "findings": [
+        "WORDS-SCHEMA copy"
       ]
     },
     "words-bad-copy.jsonl": {
       "words": "words-bad.json",
       "exit": 1,
-      "messages": 5,
+      "messages": 4,
       "findings": [
-        "WORD-RESERVED Cert agent.c",
         "WORD-RESERVED approve agent.a",
+        "WORDS-SCHEMA words",
         "WORDS-SCHEMA words[1]",
         "WORDS-SCHEMA words[2]",
         "WORDS-SCHEMA words[3]",
         "WORDS-SCHEMA words[4]",
         "WORDS-SCHEMA words[5]",
-        "WORDS-SCHEMA words[6]"
+        "WORDS-SCHEMA words[6]",
+        "WORDS-SCHEMA words[7]",
+        "WORDS-SCHEMA words[8]"
       ]
     },
     "copy-ok.jsonl+words-object.json": {
       "words": "words-object.json",
       "exit": 1,
-      "messages": 15,
+      "messages": 19,
+      "findings": [
+        "WORDS-SCHEMA words"
+      ]
+    },
+    "copy-ok.jsonl+words-empty.json": {
+      "words": "words-empty.json",
+      "exit": 1,
+      "messages": 19,
       "findings": [
         "WORDS-SCHEMA words"
       ]

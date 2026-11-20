@@ -7,20 +7,26 @@ Synthetic data, CC-BY-4.0. Python stdlib only. Run from any directory:
     python fixtures/ux/system/princ/make_fixtures.py --check  # fail if files differ or labels disagree
 
 The expected results in `expected.json` are hand-labelled from the leaf's Requirements and
-Design (written below as literals, not computed by the code under test). `--check` also runs a
-small independent Python reading of the same rules over the fixtures, the shipped
+Design (written below as literals, not computed by the code under test). `--check` also runs an
+independent Python reading of the same rules over every fixture and the shipped
 `design/principles.md` and `design/reserved-words.json`, and fails if it disagrees with a label.
+The oracle does not mirror the Rust tokenizer: it searches each reserved form with a regular
+expression bounded by non-word characters, classifies characters with `unicodedata`
+(general category, decomposition tag, character name) rather than code-point ranges, and
+validates both input files with `json` and a duplicate-key hook.
 """
 
 import json
 import pathlib
 import re
 import sys
+import unicodedata
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
 
 PRINCIPLES = ["P-DATA", "P-DENSE", "P-EXPLAIN", "P-FAMILIAR", "P-KEYS", "P-NOCOLOR"]
+REQUIRED_WORDS = ["approve", "conforms", "release", "sign", "verified"]
 
 TITLES = {
     "P-DENSE": "Dense but calm",
@@ -95,6 +101,11 @@ COPY_OK = [
     {"id": "viz.shell.login", "text": "Log in"},
     {"id": "viz.update.banner", "text": "What's new in {version}"},
     {"id": "viz.empty.state", "text": ""},
+    {"id": "rpt.export.title", "text": "Export report…"},
+    # Accented Latin copy (German, French) and all-Greek copy stay clean.
+    {"id": "viz.sample.de", "text": "Größe prüfen"},
+    {"id": "viz.sample.fr", "text": "Vérifier la cote"},
+    {"id": "viz.sample.el", "text": "Μέτρηση"},
 ]
 
 COPY_BAD = [
@@ -110,6 +121,34 @@ COPY_BAD = [
     {"id": "program.sign.tooltip", "text": "Signed by the release manager; signature checked"},
 ]
 
+# Evasion attempts (review of #297) and the forms added to the shipped list.
+COPY_OBFUSCATED = [
+    {"id": "agent.a", "text": "аpprove"},  # Cyrillic a + Latin
+    {"id": "agent.b", "text": "ap­prove"},  # soft hyphen
+    {"id": "agent.c", "text": "appr​ove"},  # zero-width space
+    {"id": "agent.cgj", "text": "͏approve"},  # combining grapheme joiner
+    {"id": "agent.d", "text": "Veriﬁed"},  # fi ligature
+    {"id": "agent.e", "text": "ＡＰＰＲＯＶＥ"},  # fullwidth APPROVE
+    {"id": "agent.f", "text": "\U0001d400\U0001d429\U0001d429\U0001d42b\U0001d428\U0001d42f\U0001d41e"},  # math bold
+    {"id": "agent.g", "text": "VERİFİED"},  # Turkish dotted capital I
+    {"id": "agent.g2", "text": "Approvıng"},  # Turkish dotless i
+    {"id": "agent.h", "text": "approve⁠"},  # word joiner
+    {"id": "agent.i", "text": "‮evorppa"},  # right-to-left override
+    {"id": "agent.bom", "text": "Sign﻿ed"},  # byte-order mark inside a word
+    {"id": "agent.rlm", "text": "‏Release"},  # right-to-left mark
+    {"id": "agent.greek", "text": "Vεrified"},  # Greek epsilon + Latin
+    {"id": "agent.k", "text": "Nonconforming part"},
+    {"id": "agent.l", "text": "Preapproved"},
+    {"id": "agent.l2", "text": "Unapproved, then reapproved"},
+    {"id": "agent.m", "text": "Signoff required"},
+    {"id": "agent.m2", "text": "Cosigned and countersigned"},
+    {"id": "agent.n", "text": "Verifier output"},
+    {"id": "agent.o", "text": "Conformity, conformant, nonconformity, nonconformance, nonconformant"},
+    # All-Cyrillic look-alikes are a documented gap: not flagged.
+    {"id": "viz.sample.ru", "text": "Проверено"},
+    {"id": "viz.sample.de", "text": "Maße bestätigt"},
+]
+
 COPY_SCHEMA = (
     '{"id":"a.b","text":"ok"}\n'
     "not json\n"
@@ -119,8 +158,13 @@ COPY_SCHEMA = (
     "[1]\n"
     '{"id":"a.e","text":"Approve","id":"z"}\n'
     '{"id":"agent.x","text":"Approved"}\n'
+    '{"id":"Agent.Upper","text":"x"}\n'
+    '{"id":"agent-x","text":"x"}\n'
+    '{"id":"","text":"x"}\n'
     "\n"
 )
+
+COPY_EMPTY = "\n\n"
 
 WORDS_BAD = (
     "[\n"
@@ -131,19 +175,20 @@ WORDS_BAD = (
     '  {"word": "conforms", "meaning": "Prefixes not an array.", "allowed_prefixes": "gdt.", "case_insensitive": true},\n'
     '  {"word": "verified", "meaning": "Flag not a boolean.", "allowed_prefixes": [], "case_insensitive": "yes"},\n'
     '  {"word": "sign", "meaning": "Unknown key.", "allowed_prefixes": [], "case_insensitive": true, "colour": "red"},\n'
-    '  {"word": "Cert", "meaning": "Case-sensitive test word.", "allowed_prefixes": ["trust."], "case_insensitive": false}\n'
+    '  {"word": "cert", "meaning": "Case-sensitive matching is not allowed.", "allowed_prefixes": ["trust."], "case_insensitive": false},\n'
+    '  {"word": "audit", "meaning": "Prefix without a trailing dot.", "allowed_prefixes": ["trust"], "case_insensitive": true}\n'
     "]\n"
 )
 
 WORDS_BAD_COPY = [
     {"id": "agent.a", "text": "approved"},
     {"id": "agent.b", "text": "cert CERT"},
-    {"id": "agent.c", "text": "Cert"},
-    {"id": "trust.d", "text": "Cert"},
+    {"id": "agent.c", "text": "audit log"},
     {"id": "agent.e", "text": "sign in"},
 ]
 
 WORDS_OBJECT = '{"format": "reserved-words@1", "words": []}\n'
+WORDS_EMPTY = "[]\n"
 
 FILES = {
     "no-dont.md": no_dont(),
@@ -151,13 +196,17 @@ FILES = {
     "unknown.md": unknown(),
     "copy-ok.jsonl": jsonl(COPY_OK),
     "copy-bad.jsonl": jsonl(COPY_BAD),
+    "copy-obfuscated.jsonl": jsonl(COPY_OBFUSCATED),
     "copy-schema.jsonl": COPY_SCHEMA,
+    "copy-empty.jsonl": COPY_EMPTY,
     "words-bad.json": WORDS_BAD,
     "words-bad-copy.jsonl": jsonl(WORDS_BAD_COPY),
     "words-object.json": WORDS_OBJECT,
+    "words-empty.json": WORDS_EMPTY,
 }
 
-# Hand-labelled expectations: exit code and the sorted "CODE subject" of every finding.
+# Hand-labelled expectations: exit code and the "CODE subject" of every finding (the report
+# lists them sorted; the labels are sorted here so they can be written in any order).
 EXPECTED = {
     "princ": {
         "shipped": {"exit": 0, "principles": PRINCIPLES, "findings": []},
@@ -171,14 +220,14 @@ EXPECTED = {
             "exit": 1,
             "principles": PRINCIPLES,
             "findings": [
+                "PRINC-DUPLICATE P-NOCOLOR",
                 "PRINC-EXAMPLE-MISSING P-KEYS",
                 "PRINC-UNKNOWN P-FAST",
-                "PRINC-UNKNOWN P-NOCOLOR",
             ],
         },
     },
     "words": {
-        "copy-ok.jsonl": {"words": "shipped", "exit": 0, "messages": 15, "findings": []},
+        "copy-ok.jsonl": {"words": "shipped", "exit": 0, "messages": 19, "findings": []},
         "copy-bad.jsonl": {
             "words": "shipped",
             "exit": 1,
@@ -197,6 +246,38 @@ EXPECTED = {
                 "WORD-RESERVED verified rpt.summary.note",
             ],
         },
+        "copy-obfuscated.jsonl": {
+            "words": "shipped",
+            "exit": 1,
+            "messages": 23,
+            "findings": [
+                "WORDS-OBFUSCATED agent.a",
+                "WORDS-OBFUSCATED agent.b",
+                "WORDS-OBFUSCATED agent.c",
+                "WORDS-OBFUSCATED agent.cgj",
+                "WORD-RESERVED approve agent.cgj",
+                "WORDS-OBFUSCATED agent.d",
+                "WORDS-OBFUSCATED agent.e",
+                "WORDS-OBFUSCATED agent.f",
+                "WORD-RESERVED verified agent.g",
+                "WORD-RESERVED approve agent.g2",
+                "WORDS-OBFUSCATED agent.h",
+                "WORD-RESERVED approve agent.h",
+                "WORDS-OBFUSCATED agent.i",
+                "WORDS-OBFUSCATED agent.bom",
+                "WORD-RESERVED sign agent.bom",
+                "WORDS-OBFUSCATED agent.rlm",
+                "WORD-RESERVED release agent.rlm",
+                "WORDS-OBFUSCATED agent.greek",
+                "WORD-RESERVED conforms agent.k",
+                "WORD-RESERVED approve agent.l",
+                "WORD-RESERVED approve agent.l2",
+                "WORD-RESERVED sign agent.m",
+                "WORD-RESERVED sign agent.m2",
+                "WORD-RESERVED verified agent.n",
+                "WORD-RESERVED conforms agent.o",
+            ],
+        },
         "copy-schema.jsonl": {
             "words": "shipped",
             "exit": 1,
@@ -209,31 +290,45 @@ EXPECTED = {
                 "WORDS-SCHEMA copy:5",
                 "WORDS-SCHEMA copy:6",
                 "WORDS-SCHEMA copy:7",
+                "WORDS-SCHEMA copy:9",
+                "WORDS-SCHEMA copy:10",
+                "WORDS-SCHEMA copy:11",
             ],
         },
+        "copy-empty.jsonl": {"words": "shipped", "exit": 1, "messages": 0, "findings": ["WORDS-SCHEMA copy"]},
         "words-bad-copy.jsonl": {
             "words": "words-bad.json",
             "exit": 1,
-            "messages": 5,
+            "messages": 4,
             "findings": [
-                "WORD-RESERVED Cert agent.c",
                 "WORD-RESERVED approve agent.a",
+                "WORDS-SCHEMA words",
                 "WORDS-SCHEMA words[1]",
                 "WORDS-SCHEMA words[2]",
                 "WORDS-SCHEMA words[3]",
                 "WORDS-SCHEMA words[4]",
                 "WORDS-SCHEMA words[5]",
                 "WORDS-SCHEMA words[6]",
+                "WORDS-SCHEMA words[7]",
+                "WORDS-SCHEMA words[8]",
             ],
         },
         "copy-ok.jsonl+words-object.json": {
             "words": "words-object.json",
             "exit": 1,
-            "messages": 15,
+            "messages": 19,
+            "findings": ["WORDS-SCHEMA words"],
+        },
+        "copy-ok.jsonl+words-empty.json": {
+            "words": "words-empty.json",
+            "exit": 1,
+            "messages": 19,
             "findings": ["WORDS-SCHEMA words"],
         },
     },
 }
+for _case in EXPECTED["words"].values():
+    _case["findings"] = sorted(_case["findings"])
 
 
 # ---- Independent oracle (Python reading of the leaf's rules) -------------------------------
@@ -269,8 +364,10 @@ def oracle_princ(text):
         if s["id"] is None:
             found.append(("PRINC-ID-MISSING", s["h"]))
         else:
-            if s["id"] not in PRINCIPLES or s["id"] in seen:
+            if s["id"] not in PRINCIPLES:
                 found.append(("PRINC-UNKNOWN", s["id"]))
+            if s["id"] in seen:
+                found.append(("PRINC-DUPLICATE", s["id"]))
             seen.add(s["id"])
         if not s["do"]:
             found.append(("PRINC-EXAMPLE-MISSING", subj))
@@ -283,24 +380,136 @@ def oracle_princ(text):
     return sorted(p for p in seen if p in PRINCIPLES), keys
 
 
-def oracle_words(copy_text, words):
-    """`words`: parsed list of valid entries (the oracle trusts the shipped list's shape)."""
-    out = set()
-    n = 0
-    for line in copy_text.splitlines():
+class DupKey(ValueError):
+    pass
+
+
+def no_dups(pairs):
+    keys = [k for k, _ in pairs]
+    if len(keys) != len(set(keys)):
+        raise DupKey("duplicate key")
+    return dict(pairs)
+
+
+def loads(text):
+    return json.loads(text, object_pairs_hook=no_dups)
+
+
+ID_RE = re.compile(r"[a-z0-9._]+")
+WORD_RE = re.compile(r"[^\W_]+")
+
+
+def oracle_words_file(text):
+    """Returns (valid entries, finding subjects) for a reserved-word list."""
+    try:
+        doc = loads(text)
+    except ValueError:
+        return [], ["words"]
+    if not isinstance(doc, list) or not doc:
+        return [], ["words"]
+    valid, subjects, owners = [], [], {}
+    for i, e in enumerate(doc):
+        ok = (
+            isinstance(e, dict)
+            and set(e) <= {"word", "meaning", "allowed_prefixes", "case_insensitive", "inflections"}
+            and isinstance(e.get("word"), str)
+            and WORD_RE.fullmatch(e["word"]) is not None
+            and isinstance(e.get("meaning"), str)
+            and e["meaning"].strip() != ""
+            and isinstance(e.get("allowed_prefixes"), list)
+            and all(isinstance(p, str) and ID_RE.fullmatch(p) and p.endswith(".") and len(p) > 1 for p in e["allowed_prefixes"])
+            and e.get("case_insensitive") is True
+            and isinstance(e.get("inflections", []), list)
+            and all(isinstance(x, str) and WORD_RE.fullmatch(x) for x in e.get("inflections", []))
+        )
+        if ok:
+            forms = [e["word"]] + e.get("inflections", [])
+            keys = [fold(f) for f in forms]
+            if len(set(keys)) != len(keys) or any(k in owners for k in keys):
+                ok = False
+            else:
+                for k in keys:
+                    owners[k] = e["word"]
+        if ok:
+            valid.append(e)
+        else:
+            subjects.append(f"words[{i}]")
+    names = {fold(e["word"]) for e in valid}
+    if any(r not in names for r in REQUIRED_WORDS):
+        subjects.append("words")
+    return valid, subjects
+
+
+def oracle_copy(text):
+    """Returns (messages, finding subjects) for a UI-copy export."""
+    msgs, subjects, seen = [], [], set()
+    for n, line in enumerate(text.split("\n"), start=1):
         if not line.strip():
             continue
-        m = json.loads(line)
-        n += 1
-        for tok in re.split(r"[^\w]|_", m["text"]):
-            if not tok:
+        try:
+            m = loads(line)
+        except ValueError:
+            subjects.append(f"copy:{n}")
+            continue
+        if (
+            not isinstance(m, dict)
+            or set(m) != {"id", "text"}
+            or not isinstance(m["id"], str)
+            or not isinstance(m["text"], str)
+            or not ID_RE.fullmatch(m["id"])
+            or m["id"] in seen
+        ):
+            subjects.append(f"copy:{n}")
+            continue
+        seen.add(m["id"])
+        msgs.append(m)
+    if not msgs:
+        subjects.append("copy")
+    return msgs, subjects
+
+
+def fold(s):
+    return s.replace("İ", "i").replace("ı", "i").lower()
+
+
+def suspicious(text):
+    """Invisible, compatibility-form or mixed-script content, judged by Unicode properties."""
+    for ch in text:
+        cat = unicodedata.category(ch)
+        tag = unicodedata.decomposition(ch).split(" ")[0]
+        if cat == "Cf" or ch == "͏":
+            return True
+        if tag in ("<wide>", "<font>") or (tag == "<compat>" and cat.startswith("L")):
+            return True
+    for w in re.findall(r"\w+", text):
+        scripts = set()
+        for ch in w:
+            name = unicodedata.name(ch, "")
+            for s in ("LATIN", "CYRILLIC", "GREEK"):
+                if name.startswith(s):
+                    scripts.add(s)
+        if "LATIN" in scripts and len(scripts) > 1:
+            return True
+    return False
+
+
+def oracle_words(copy_text, words_text):
+    words, subjects = oracle_words_file(words_text)
+    msgs, copy_subjects = oracle_copy(copy_text)
+    keys = {f"WORDS-SCHEMA {s}" for s in subjects + copy_subjects}
+    for m in msgs:
+        text = fold(m["text"])
+        if suspicious(m["text"]):
+            keys.add(f"WORDS-OBFUSCATED {m['id']}")
+        for w in words:
+            if any(m["id"].startswith(p) for p in w["allowed_prefixes"]):
                 continue
-            for w in words:
-                forms = [w["word"]] + w.get("inflections", [])
-                hit = tok.lower() in [f.lower() for f in forms] if w["case_insensitive"] else tok in forms
-                if hit and not any(m["id"].startswith(p) for p in w["allowed_prefixes"]):
-                    out.add(f"WORD-RESERVED {w['word']} {m['id']}")
-    return n, sorted(out)
+            for form in [w["word"]] + w.get("inflections", []):
+                pat = r"(?<![^\W_])" + re.escape(fold(form)) + r"(?![^\W_])"
+                if re.search(pat, text):
+                    keys.add(f"WORD-RESERVED {w['word']} {m['id']}")
+                    break
+    return len(msgs), sorted(keys)
 
 
 def oracle_check():
@@ -313,19 +522,18 @@ def oracle_check():
         e = EXPECTED["princ"][name]
         if keys != e["findings"] or ids != e["principles"] or e["exit"] != (1 if keys else 0):
             errors.append(f"princ {name}: oracle {ids} {keys} != label {e}")
-    words = json.loads((ROOT / "design" / "reserved-words.json").read_text(encoding="utf-8"))
-    for w in ("approve", "release", "sign", "conforms", "verified"):
-        if w not in [x["word"] for x in words]:
-            errors.append(f"shipped reserved-words.json lacks {w}")
+    shipped_words = (ROOT / "design" / "reserved-words.json").read_text(encoding="utf-8")
+    words = loads(shipped_words)
     approve = [x for x in words if x["word"] == "approve"]
     want = ["program.release.", "review.human.", "run.approve."]
     if not approve or sorted(approve[0]["allowed_prefixes"]) != want:
         errors.append("approve must be permitted under exactly " + ", ".join(want))
-    for name in ("copy-ok.jsonl", "copy-bad.jsonl"):
-        n, keys = oracle_words(FILES[name], words)
-        e = EXPECTED["words"][name]
-        if keys != e["findings"] or n != e["messages"]:
-            errors.append(f"words {name}: oracle {n} {keys} != label {e}")
+    for key, e in EXPECTED["words"].items():
+        copy = FILES[key.split("+")[0]]
+        wtext = shipped_words if e["words"] == "shipped" else FILES[e["words"]]
+        n, keys = oracle_words(copy, wtext)
+        if keys != e["findings"] or n != e["messages"] or e["exit"] != (1 if keys else 0):
+            errors.append(f"words {key}: oracle {n} {keys} != label {e}")
     return errors
 
 
@@ -342,8 +550,7 @@ def main():
                 bad.append(f"{name} differs from make_fixtures.py output")
         else:
             p.write_bytes(data)
-    errs = oracle_check()
-    bad += errs
+    bad += oracle_check()
     for b in bad:
         print("FAIL:", b, file=sys.stderr)
     if bad:

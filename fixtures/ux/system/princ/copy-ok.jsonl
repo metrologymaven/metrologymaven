@@ -13,3 +13,7 @@
 {"id":"viz.shell.login","text":"Log in"}
 {"id":"viz.update.banner","text":"What's new in {version}"}
 {"id":"viz.empty.state","text":""}
+{"id":"rpt.export.title","text":"Export report…"}
+{"id":"viz.sample.de","text":"Größe prüfen"}
+{"id":"viz.sample.fr","text":"Vérifier la cote"}
+{"id":"viz.sample.el","text":"Μέτρηση"}

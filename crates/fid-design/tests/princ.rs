@@ -156,14 +156,21 @@ fn ac4_approve_outside_permitted_prefixes_fails() {
 }
 
 #[test]
-fn words_malformed_copy_lines_are_schema_findings() {
+fn words_malformed_copy_lines_and_empty_export_are_schema_findings() {
     words_case("copy-schema.jsonl");
+    words_case("copy-empty.jsonl");
 }
 
 #[test]
-fn words_malformed_word_list_entries_and_case_sensitive_word() {
+fn words_obfuscation_fails_closed_and_added_forms_match() {
+    words_case("copy-obfuscated.jsonl");
+}
+
+#[test]
+fn words_malformed_or_incomplete_word_lists() {
     words_case("words-bad-copy.jsonl");
     words_case("copy-ok.jsonl+words-object.json");
+    words_case("copy-ok.jsonl+words-empty.json");
 }
 
 #[test]
@@ -182,8 +189,14 @@ fn shipped_words_meet_req_004() {
     }
     for e in &entries {
         assert!(matches!(get(e, &["meaning"]), CValue::Str(s) if !s.is_empty()));
-        assert!(!strs(get(e, &["allowed_prefixes"])).is_empty());
+        let prefixes = strs(get(e, &["allowed_prefixes"]));
+        assert!(!prefixes.is_empty());
+        assert!(prefixes.iter().all(|p| p.ends_with('.')));
+        assert_eq!(get(e, &["case_insensitive"]), &CValue::Bool(true));
     }
+    // The shipped list itself raises no schema finding.
+    let text = std::fs::read_to_string(shipped("reserved-words.json")).unwrap();
+    assert!(fid_design::words::parse_words(&text).findings.is_empty());
 }
 
 #[test]
@@ -233,7 +246,29 @@ fn library_matches_whole_words_case_insensitively() {
     let copy = "{\"id\":\"viz.a\",\"text\":\"pre-approved\"}\n{\"id\":\"viz.b\",\"text\":\"preapproved\"}\n";
     let r = fid_design::words::check_text(copy, &words);
     let keys: Vec<String> = r.findings.iter().map(|f| format!("{} {}", f.code, f.subject)).collect();
-    assert_eq!(keys, ["WORD-RESERVED approve viz.a"]);
+    assert_eq!(keys, ["WORD-RESERVED approve viz.a", "WORD-RESERVED approve viz.b"]);
     // Output is deterministic.
     assert_eq!(r, fid_design::words::check_text(copy, &words));
+}
+
+#[test]
+fn obfuscation_reasons_and_accented_latin() {
+    use fid_design::words::obfuscation;
+    assert!(obfuscation("Gr\u{f6}\u{df}e pr\u{fc}fen, v\u{e9}rifier, \u{c5}ngstr\u{f6}m").is_empty());
+    assert!(obfuscation("Export report\u{2026} 12.004 mm \u{b1} 0.5\u{b0}").is_empty());
+    for bad in [
+        "a\u{ad}b",
+        "a\u{34f}b",
+        "a\u{200d}b",
+        "a\u{202a}b",
+        "a\u{206f}b",
+        "\u{feff}a",
+        "\u{fb00}",
+        "\u{ff41}",
+        "\u{1d7ff}",
+    ] {
+        assert_eq!(obfuscation(bad).len(), 1, "{bad:?}");
+    }
+    assert!(!obfuscation("\u{3b1}pprove").is_empty());
+    assert!(obfuscation("\u{3b1}\u{3b2}\u{3b3} \u{430}\u{431}").is_empty());
 }
