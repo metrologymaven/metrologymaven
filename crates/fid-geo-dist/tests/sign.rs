@@ -109,17 +109,20 @@ fn cube() -> MeshData {
 struct Expected {
     header: BTreeMap<String, String>,
     labels: Vec<u8>,
+    analytic: Vec<u8>,
     samples: BTreeMap<usize, (u8, u64, u64)>,
 }
 
 fn parse_expected(text: &str) -> Expected {
     let mut header = BTreeMap::new();
     let mut labels = Vec::new();
+    let mut analytic = Vec::new();
     let mut samples = BTreeMap::new();
     for ln in text.lines().filter(|l| !l.starts_with('#')) {
         let (k, v) = ln.split_once(' ').unwrap();
         match k {
             "l" => labels.extend_from_slice(v.as_bytes()),
+            "a" => analytic.extend_from_slice(v.as_bytes()),
             "s" => {
                 let f: Vec<&str> = v.split(' ').collect();
                 let h = |s: &str| u64::from_str_radix(s, 16).unwrap();
@@ -130,7 +133,7 @@ fn parse_expected(text: &str) -> Expected {
             }
         }
     }
-    Expected { header, labels, samples }
+    Expected { header, labels, analytic, samples }
 }
 
 fn points_digest(pts: &[[f64; 3]]) -> String {
@@ -280,6 +283,7 @@ fn ac2_concave_convex_edges_agree_with_analytic_sign() {
     let ex = parse_expected(&read("dist/sphere_concave_convex/expected.txt"));
     let generated: usize = ex.header["generated"].parse().unwrap();
     assert_eq!(ex.labels.len(), generated);
+    assert_eq!(ex.analytic.len(), generated);
     assert_eq!(ex.header["kept"], "10000");
 
     let mut edges: Vec<(u64, u64)> = Vec::new();
@@ -297,7 +301,7 @@ fn ac2_concave_convex_edges_agree_with_analytic_sign() {
         let (lo, hi) = edges[g.below(edges.len() as u64) as usize];
         let (a, b) = (m.verts[lo as usize], m.verts[hi as usize]);
         let t = g.unit();
-        let h = pow2(-(5 + g.below(8) as i32));
+        let h = pow2(-(5 + g.below(3) as i32));
         let mut q = [0.0; 3];
         for (j, slot) in q.iter_mut().enumerate() {
             *slot = (a[j] + t * (b[j] - a[j])) + (2.0 * g.unit() - 1.0) * h;
@@ -311,12 +315,21 @@ fn ac2_concave_convex_edges_agree_with_analytic_sign() {
     let st = SignTarget::new(MeshTarget::new(&mesh, &bvh).unwrap()).unwrap();
     let (mut kept, mut sampled) = (0usize, 0usize);
     for (i, p) in pts.iter().enumerate() {
-        if ex.labels[i] == b'x' {
-            continue;
-        }
-        kept += 1;
+        // Every generated point: the exact mesh side (or Undecidable within 2^-30 m of the mesh).
         let r = st.signed_distance(*p).unwrap();
-        check_label(ex.labels[i], &r, i);
+        let side = ex.labels[i];
+        check_label(side, &r, i);
+        // Points outside the mesh-approximation band (exact mesh side equals analytic side):
+        // the certified sign is the analytic surface's.
+        let want = match (side, ex.analytic[i]) {
+            (b'o', b'+') => Some(SignStatus::Outside),
+            (b'i', b'-') => Some(SignStatus::Inside),
+            _ => None,
+        };
+        if let Some(w) = want {
+            kept += 1;
+            assert_eq!(r.status, w, "point {i}: analytic side");
+        }
         if check_sample(&ex, i, &r) {
             sampled += 1;
         }
@@ -473,6 +486,84 @@ fn ac5_cad_rule_matches_mesh_rule() {
     assert_eq!(cad_sign([0.75, 0.5, 0.75], [1.0, 0.5, 1.0], 0.0, &edge_in).unwrap().status, SignStatus::Inside);
 }
 
+fn unit(n: [f64; 3]) -> [f64; 3] {
+    let l = fid_num::f::sqrt((n[0] * n[0] + n[1] * n[1]) + n[2] * n[2]).unwrap();
+    [n[0] / l, n[1] / l, n[2] / l]
+}
+
+fn tri_normal(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> [f64; 3] {
+    let (u, v) = ([b[0] - a[0], b[1] - a[1], b[2] - a[2]], [c[0] - a[0], c[1] - a[1], c[2] - a[2]]);
+    [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]
+}
+
+/// AC-5 at a concave edge of the star-shaped mesh: the CAD rule with the two face normals and
+/// angles pi gives the mesh rule's status wherever the mesh foot lies on that edge.
+#[test]
+fn ac5_cad_rule_matches_mesh_rule_at_concave_edge() {
+    let m = parse_mesh(&read("dist/sphere_concave_convex/mesh.txt"), true);
+    let (mesh, bvh) = build(&m);
+    let target = MeshTarget::new(&mesh, &bvh).unwrap();
+    let st = SignTarget::new(target).unwrap();
+    let v = |i: u64| m.verts[i as usize];
+    // The first concave edge in sorted order: the opposite vertex of the second triangle lies
+    // above the first triangle's plane.
+    let mut found = None;
+    'search: for (t1, a) in m.tris.iter().enumerate() {
+        for k in 0..3 {
+            let (s, e) = (a[k], a[(k + 1) % 3]);
+            for (t2, b) in m.tris.iter().enumerate() {
+                if t2 != t1 && b.contains(&s) && b.contains(&e) {
+                    let d = *b.iter().find(|&&x| x != s && x != e).unwrap();
+                    let n1 = tri_normal(v(a[0]), v(a[1]), v(a[2]));
+                    let w = [v(d)[0] - v(s)[0], v(d)[1] - v(s)[1], v(d)[2] - v(s)[2]];
+                    if (w[0] * n1[0] + w[1] * n1[1]) + w[2] * n1[2] > 1e-4 {
+                        found = Some((s, e, t1, t2));
+                        break 'search;
+                    }
+                }
+            }
+        }
+    }
+    let (s, e, t1, t2) = found.unwrap();
+    let n = |t: usize| {
+        let x = m.tris[t];
+        unit(tri_normal(v(x[0]), v(x[1]), v(x[2])))
+    };
+    let incident = [(n(t1), PI), (n(t2), PI)];
+    let key = if s < e { (s, e) } else { (e, s) };
+    let mut g = SplitMix(0x636f_6e63_6176_6501);
+    let (mut agree, mut inside) = (0, 0);
+    for _ in 0..3000 {
+        let t = g.unit();
+        let h = pow2(-(6 + g.below(6) as i32));
+        // Mostly along the inward bisector -(n1 + n2), where a concave edge is the foot.
+        let depth = h * (0.5 + 0.5 * g.unit());
+        let mut p = [0.0; 3];
+        for (j, slot) in p.iter_mut().enumerate() {
+            let bis = incident[0].0[j] + incident[1].0[j];
+            *slot = ((v(s)[j] + t * (v(e)[j] - v(s)[j])) - bis * depth) + (2.0 * g.unit() - 1.0) * (h * 0.0625);
+        }
+        let hit = match target.closest(p, &MeshQuery::default()).unwrap() {
+            MeshProjection::Hit(h) => h,
+            MeshProjection::NoHit => panic!("no hit"),
+        };
+        if global_feature(&mesh, &hit) != Some(key) || hit.dist == 0.0 {
+            continue;
+        }
+        let r = st.signed(p, &hit).unwrap();
+        let c = cad_sign(p, hit.foot, 0.0, &incident).unwrap();
+        if r.sign_defined() && c.sign_defined() {
+            assert_eq!(c.status, r.status, "{p:?}");
+            agree += 1;
+            if r.status == SignStatus::Inside {
+                inside += 1;
+            }
+        }
+    }
+    // A concave edge is the closest feature only from inside.
+    assert!(agree > 100 && inside == agree, "{agree} {inside}");
+}
+
 #[test]
 fn cad_rule_honours_foot_error_and_zero() {
     let inc = [([0.0, 0.0, 1.0], PI)];
@@ -613,6 +704,86 @@ fn thinner_than_rounding_is_undecidable() {
     assert!((r.unsigned - 0.5).abs() <= r.bound);
 }
 
+/// REQ-004: a computed zero distance still runs the topology check. A point exactly on the hole's
+/// boundary edge 1-6 computes to zero distance and is Undefined, with distance +0.0.
+#[test]
+fn computed_zero_on_boundary_is_undefined() {
+    let mut m = cube();
+    m.tris.pop();
+    let (mesh, bvh) = build(&m);
+    let st = SignTarget::new(MeshTarget::new(&mesh, &bvh).unwrap()).unwrap();
+    for p in [[1.0, 0.5, 0.5], [1.0, 0.0, 0.25], [1.0, 1.0, 1.0]] {
+        let r = st.signed_distance(p).unwrap();
+        assert_eq!(r.unsigned.to_bits(), 0, "{p:?}");
+        assert_eq!(r.status, SignStatus::Undefined(SignUndefined::Boundary), "{p:?}");
+        assert_eq!(r.distance.to_bits(), 0);
+        assert!(!r.sign_defined());
+    }
+    // Away from the hole a computed zero is OnSurface.
+    assert_eq!(st.signed_distance([0.5, 0.5, 0.0]).unwrap().status, SignStatus::OnSurface);
+}
+
+/// The sign of the exact `a + b + c - 1` for binary64 values in `[2^-60, 1]` (all integer
+/// multiples of 2^-120, so the sum is exact in `i128`), and its magnitude rounded to `f64`.
+fn residual_sign(p: [f64; 3]) -> (i8, f64) {
+    // Every coordinate here is at least 2^-60 or zero, so 2^-120 is a common quantum.
+    let q = |x: f64| -> i128 {
+        assert!(x == 0.0 || x >= pow2(-60));
+        (x * pow2(120)) as i128
+    };
+    let r = q(p[0]) + q(p[1]) + q(p[2]) - (1i128 << 120);
+    ((r > 0) as i8 - (r < 0) as i8, (r.unsigned_abs() as f64) * pow2(-120))
+}
+
+/// REQ-004 on a tilted face: points computed within rounding of the plane x + y + z = 1 either
+/// get the exact sign of the residual, OnSurface with a bound covering the exact distance, or
+/// Undecidable; never a wrong sign.
+#[test]
+fn tilted_triangle_near_plane() {
+    let verts = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
+    let tris = [[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]];
+    let (mesh, bvh) = mesh_of(&verts, &tris);
+    let st = SignTarget::new(MeshTarget::new(&mesh, &bvh).unwrap()).unwrap();
+    let mut g = SplitMix(0x7469_6c74_6564_0001);
+    let (mut zero, mut undecided, mut signed) = (0, 0, 0);
+    for _ in 0..4000 {
+        let a = 0.05 + 0.4 * g.unit();
+        let b = 0.05 + 0.4 * g.unit();
+        let mut c = (1.0 - a) - b;
+        // Nudge by 0 to 2^30 ulps either way.
+        let span = 1u64 << g.below(31);
+        let mag = g.below(span) as i64;
+        let k = if g.below(2) == 0 { -mag } else { mag };
+        c = f64::from_bits((c.to_bits() as i64 + k) as u64);
+        let p = [a, b, c];
+        let (sgn, res) = residual_sign(p);
+        let r = st.signed_distance(p).unwrap();
+        // Exact distance to the plane (the foot is inside the face): |res| / sqrt(3) <= |res|.
+        let d_exact_hi = res;
+        let d_exact_lo = res * 0.577;
+        assert!((r.unsigned - d_exact_lo).abs() <= r.bound + (d_exact_hi - d_exact_lo), "{p:?}");
+        match r.status {
+            SignStatus::Outside => {
+                assert_eq!(sgn, 1, "{p:?}");
+                signed += 1;
+            }
+            SignStatus::Inside => {
+                assert_eq!(sgn, -1, "{p:?}");
+                signed += 1;
+            }
+            SignStatus::OnSurface => {
+                assert_eq!(r.distance.to_bits(), 0);
+                assert!(d_exact_lo <= r.bound, "{p:?}: exact distance beyond the bound");
+                zero += 1;
+            }
+            SignStatus::Undecidable => undecided += 1,
+            SignStatus::Undefined(u) => panic!("{p:?}: {u:?}"),
+        }
+    }
+    println!("tilted: {signed} signed, {zero} on surface, {undecided} undecidable");
+    assert!(signed + zero + undecided == 4000 && signed > 1000 && zero > 0 && undecided > 0);
+}
+
 // ------------------------------------------------------------------ errors and determinism
 
 #[test]
@@ -628,12 +799,6 @@ fn errors() {
     let hit = MeshHit { tri: 0, dist: -1.0, ..hit };
     assert_eq!(st.signed([0.0; 3], &hit), Err(SignError::InvalidHit));
 
-    let other = parse_mesh(&read("types/mesh_open_flipped.txt"), false);
-    let (omesh, _) = build(&other);
-    let wrong = PseudoNormals::build(&omesh).unwrap();
-    assert_eq!(SignTarget::with_normals(target, wrong).err(), Some(SignError::NormalsMismatch));
-    let right = PseudoNormals::build(&mesh).unwrap();
-    assert!(SignTarget::with_normals(target, right).is_ok());
     assert_eq!(SignError::InvalidHit.code(), "invalid_hit");
     assert_eq!(SignUndefined::NonManifoldVertex.code(), "non_manifold_vertex");
 }

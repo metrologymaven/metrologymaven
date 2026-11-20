@@ -17,12 +17,15 @@ Writes (or, with --check, regenerates and compares byte for byte):
       r(u) = 1 + A (ux^4 + uy^4 + uz^4), A = 3/4 (an octahedron subdivided 16 times; it has
       both convex and concave edges, counted exactly below).
   fixtures/geo/dist/sphere_concave_convex/expected.txt
-      AC-2: seeded points near mesh edges, labelled by the EXACT inside test of the mesh
-      (rational cone and orientation tests) and of the analytic surface (rational comparison
-      |q|^2 < r^2); points where the two disagree (between mesh and surface) or that lie on
-      either are marked 'x' and skipped. Plus a bit-exact model result for every 16th point.
+      AC-2: seeded points near mesh edges (offsets up to 2^-5..2^-7 m), EVERY point labelled
+      with the EXACT side of the mesh (integer cone and orientation tests; O / I within 2^-30 m
+      of the mesh, by exact distances) and of the analytic surface (rational |q|^2 < r^2). Points
+      whose two sides agree are the AC-2 points proper (kept until there are 10 000); the rest lie
+      in the mesh-approximation band and are checked against the mesh side only. Plus a
+      bit-exact model result for every 16th point. Also a sweep of the fid-num atan2 model
+      against a Decimal oracle (error <= 2^-49, the bound sign.rs assumes).
 
-Stdlib only (struct, hashlib, fractions, math.isqrt, importlib). No platform libm: square roots
+Stdlib only (struct, hashlib, fractions, decimal, math.isqrt, importlib). No platform libm: square roots
 are correctly rounded from integer square roots, and atan2 is the bit-exact model of fid-num's
 vendored atan2 (fixtures/num/make_fn_fixtures.py). Never runs the Rust code.
 
@@ -42,6 +45,7 @@ import hashlib
 import importlib.util
 import struct
 import sys
+from decimal import localcontext
 from fractions import Fraction
 from math import isqrt
 from pathlib import Path
@@ -453,7 +457,7 @@ def upper_on_triangle(p, c):
     for k in range(3):
         if ee[k][0] > 0.0:
             t = tn[k][0] / ee[k][0]
-            tau = ex(0.0 if t < 0.0 else (1.0 if t > 1.0 else t))
+            tau = ex(total_clamp01(t))
             take(norm([sub(w[k][j], mul(tau, ev[k][j])) for j in range(3)]))
     if all(s[0] >= s[1] for s in side):
         s = vdot(w[0], n)
@@ -462,6 +466,15 @@ def upper_on_triangle(p, c):
             take(div(eabs(s), ln))
     assert best != INF
     return best
+
+
+def total_clamp01(t):
+    """fid_num::f::total_clamp(t, 0.0, 1.0): IEEE totalOrder, so -0.0 becomes +0.0."""
+    if t < 0.0 or (t == 0.0 and bits(t) >> 63):
+        return 0.0
+    if t > 1.0:
+        return 1.0
+    return t
 
 
 def box_lb(p, c):
@@ -584,15 +597,16 @@ def model_signed(nm, p):
     t_hit, d = mesh_hit(nm.verts, nm.tris, p)
     c = [nm.verts[i] for i in nm.tris[t_hit]]
     upper = upper_on_triangle(p, c)
-    if d == 0.0:
-        return 2, 0.0, upper
     u2 = (upper * upper) * UP + ETA
     vd = Verdict()
     for t, tri in enumerate(nm.tris):
         if box_lb(p, [nm.verts[i] for i in tri]) > u2:
             continue
         analyse(nm, p, t, upper, vd)
-    if not vd.any:
+    if d == 0.0:
+        status = 10 + vd.undefined if vd.undefined is not None else 2
+        d = 0.0
+    elif not vd.any:
         status = 3
     elif vd.undefined is not None:
         status = 10 + vd.undefined
@@ -696,7 +710,7 @@ def check_model(label, res, where):
     elif label in "OI":
         assert status in (want, 3), f"{where}: model status {status}, exact label {label}"
     else:
-        assert status == 2 and bits(res[1]) == 0, f"{where}: on-surface point gave {res}"
+        assert status in (2, 3) and bits(res[1]) == bits(abs(res[1])), f"{where}: on-surface point gave {res}"
 
 
 def chunk_lines(labels):
@@ -879,31 +893,65 @@ class Exact:
         return n < 0
 
 
-def sphere_queries(verts, edges, ex_):
-    """The pinned AC-2 stream: (points, labels, convex count, concave count)."""
+class BandIndex:
+    """Triangles by grid cell (cell 1/16 m), each registered in every cell its box, widened by
+    2^-29, overlaps: every triangle within 2^-30 m of a point is listed in the point's cell."""
+
+    C = 0.0625
+
+    def __init__(self, verts, tris):
+        self.verts, self.tris, self.cells = verts, tris, {}
+        w = pow2(-29)
+        for t, tri in enumerate(tris):
+            c = [verts[i] for i in tri]
+            lo_ = [min(v[k] for v in c) - w for k in range(3)]
+            hi_ = [max(v[k] for v in c) + w for k in range(3)]
+            rng = [range(int(lo_[k] // self.C), int(hi_[k] // self.C) + 1) for k in range(3)]
+            for x in rng[0]:
+                for y in rng[1]:
+                    for z in rng[2]:
+                        self.cells.setdefault((x, y, z), []).append(t)
+
+    def near(self, q):
+        """True when the exact distance from q to the mesh is below 2^-30 m."""
+        cand = self.cells.get(tuple(int(q[k] // self.C) for k in range(3)), [])
+        fl = [GD.model_tri(q, *[self.verts[i] for i in self.tris[t]])[1] for t in cand]
+        if not fl or min(fl) > pow2(-58):  # float model error is far below the 2^-30 margin
+            return False
+        return min(GD.exact_tri(q, *[self.verts[i] for i in self.tris[t]])[1] for t in cand) < BAND2
+
+
+def sphere_queries(verts, tris, edges, ex_):
+    """The pinned AC-2 stream: (points, side labels, analytic labels, convex, concave).
+
+    Side labels (exact mesh test): o outside, i inside, O / I the same within 2^-30 m of the
+    mesh, z on the mesh. Analytic labels: + outside, - inside, 0 on the analytic surface. A point
+    is kept (AC-2 proper) when its side is o or i and the analytic side agrees; the stream runs
+    until 10 000 points are kept."""
     g = SplitMix(SEED_SPH)
-    pts, labels = [], []
+    band = BandIndex(verts, tris)
+    pts, side, ana = [], [], []
     kept = convex = concave = 0
     while kept < N_SPH_KEEP:
         e = g.below(len(edges))
         lo_, hi_ = edges[e]
         a, b = verts[lo_], verts[hi_]
         t = g.unit()
-        h = pow2(-(5 + g.below(8)))
+        h = pow2(-(5 + g.below(3)))
         q = tuple((a[j] + t * (b[j] - a[j])) + (2.0 * g.unit() - 1.0) * h for j in range(3))
         pts.append(q)
         ms = ex_.mesh_side(q, (lo_, hi_))
         an = ex_.analytic_side(q)
-        if ms == 0 or ms != an:
-            labels.append("x")
-            continue
-        labels.append("+" if ms > 0 else "-")
-        kept += 1
-        if ex_.convex(lo_, hi_):
-            convex += 1
-        else:
-            concave += 1
-    return pts, "".join(labels), convex, concave
+        nb = ms != 0 and band.near(q)
+        side.append("z" if ms == 0 else {1: "o", -1: "i"}[ms].upper() if nb else {1: "o", -1: "i"}[ms])
+        ana.append({1: "+", -1: "-", 0: "0"}[an])
+        if ms != 0 and not nb and ms == an:
+            kept += 1
+            if ex_.convex(lo_, hi_):
+                convex += 1
+            else:
+                concave += 1
+    return pts, "".join(side), "".join(ana), convex, concave
 
 
 def sphere_text():
@@ -912,31 +960,66 @@ def sphere_text():
     edges = sorted_edges(tris)
     n_convex_edges = sum(1 for lo_, hi_ in edges if ex_.convex(lo_, hi_))
     n_concave_edges = len(edges) - n_convex_edges
-    pts, labels, convex, concave = sphere_queries(verts, edges, ex_)
+    pts, side, ana, convex, concave = sphere_queries(verts, tris, edges, ex_)
     assert n_concave_edges > 0 and n_convex_edges > 0
     assert concave >= 1000 and convex >= 1000, (convex, concave)
+    counts = {c: side.count(c) for c in "oOiIz"}
     nm = Normals(verts, tris)
     lines = [
         "# GEO.DIST.SIGN AC-2 (CC-BY-4.0). Written by tools/fixtures/geo_dist_sign.py; do not edit.",
         "# Mesh: mesh.txt. Points: the pinned stream of sphere_queries() near its sorted edges.",
-        "# Labels: + outside, - inside (the exact mesh test and the analytic surface agree),",
-        "# x skipped (they disagree, or the point lies on either).",
+        "# l: exact mesh side of EVERY point: o outside, i inside, O / I the same within 2^-30 m of",
+        "# the mesh (the sign or Undecidable), z on the mesh.",
+        "# a: exact side of the analytic surface: + outside, - inside, 0 on it. Kept points (o / i",
+        "# with the same analytic side) are the AC-2 points proper.",
         "# s <index> <status code> <signed distance bits> <bound bits>: bit-exact model results.",
         f"seed {SEED_SPH:#018x}",
         f"generated {len(pts)}",
         f"kept {N_SPH_KEEP}",
+        "side_counts " + " ".join(f"{c}={counts[c]}" for c in "oOiIz"),
         f"edges convex={n_convex_edges} concave={n_concave_edges}",
         f"kept_near convex={convex} concave={concave}",
         f"points_sha256 {points_digest(pts)}",
     ]
-    lines += chunk_lines(labels)
+    lines += chunk_lines(side)
+    lines += [f"a {ana[i:i + 100]}" for i in range(0, len(ana), 100)]
     for i in range(0, len(pts), SPH_SAMPLE):
-        if labels[i] == "x":
-            continue
         r = model_signed(nm, pts[i])
-        check_model(labels[i], r, f"sphere point {i}")
+        check_model(side[i], r, f"sphere point {i}")
         lines.append(f"s {i} {r[0]} {hx(r[1])} {hx(r[2])}")
+    print("sphere sides:", counts, "kept convex/concave:", convex, concave)
     return mesh_text(verts, tris), "\n".join(lines) + "\n"
+
+
+# ------------------------------------------------------------------ fid-num atan2 accuracy
+
+
+def atan2_sweep():
+    """Asserts |m_atan2(y, x) - atan2(y, x)| <= 2^-49 (ATAN2_ERROR) for y >= 0, the domain the
+    angle rule uses, against the 90-digit Decimal oracle of fixtures/num/make_fn_fixtures.py.
+    m_atan2 is the bit-exact model of fid-num's atan2, which changes musl's (VENDOR.md item 4:
+    division residual inside atan, one final rounding of pi - atan for x < 0)."""
+    g = SplitMix(0x6174_616E_3273_7770)
+    cases = []
+    for _ in range(3000):
+        x = (2.0 * g.unit() - 1.0) * pow2(g.below(40) - 20)
+        y = g.unit() * pow2(g.below(40) - 20)
+        cases.append((y, x))
+    for k in range(1, 60):
+        e = pow2(-k)
+        cases += [(e, 1.0), (e, -1.0), (1.0, e), (1.0, -e), (1.0, 1.0 + e), (1.0, -1.0 - e)]
+    cases += [(1.0, 0.0), (0.0, 1.0), (0.0, -1.0), (1.0, 1.0), (1.0, -1.0)]
+    worst = Fraction(0)
+    lim = Fraction(1, 2**49)
+    with localcontext() as c:
+        c.prec = 80
+        for y, x in cases:
+            got = Fraction(FN.m_atan2(y, x))
+            ref = FN.oracle("atan2", y, x)
+            err = abs(got - Fraction(ref))
+            assert err <= lim, (y, x, float(err))
+            worst = err if err > worst else worst
+    return len(cases), float(worst / lim)
 
 
 # ------------------------------------------------------------------ main
@@ -968,6 +1051,8 @@ def main():
     ap.add_argument("--check", action="store_true", help="compare with the committed fixtures")
     args = ap.parse_args()
     self_test()
+    n_at, worst = atan2_sweep()
+    print(f"atan2 sweep: {n_at} cases, worst error {worst:.3f} x 2^-49")
     failures = []
     cube, counts = cube_text()
     write_or_check(OUT_CUBE, cube, args.check, failures)

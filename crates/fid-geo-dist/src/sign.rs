@@ -24,8 +24,8 @@
 //! when it is certain for **every** feature that could be `F*`:
 //!
 //! 1. `U`: an upper bound of the exact distance `d*`, from the triangle of the given hit (its
-//!    three corners, the points `s + tau (e - s)` of its edges with `tau` the clamped float
-//!    projection parameter, and the plane distance when the projection is certainly inside).
+//!    three corners, the points `s + tau (e - s)` of its edges with `tau` the float projection
+//!    parameter `tn.v / ee.v` limited to `[0, 1]` by `fid_num::f::total_clamp`, and the plane distance when the projection is certainly inside).
 //! 2. Candidates: every triangle whose box lower bound (the pinned squared distance from `p` to
 //!    the box of its corners, times `1 - 2^-50`, minus `2^-1022`) is at most
 //!    `U2 = (U*U) (1 + 2^-50) + 2^-1022`. Found through the `fid-geo-index` hierarchy; the set
@@ -38,13 +38,17 @@
 //!    `side = n . (ev x w)`), and it **survives** unless the lower end of its distance interval
 //!    exceeds `U`. The exact closest feature always survives.
 //! 4. Over all survivors: if any has a topology status other than OK, the result is
-//!    [`SignStatus::Undefined`] with the most severe reason (REQ-003); else if every decision
+//!    [`SignStatus::Undefined`] with the most severe reason (REQ-003); else if the hit's
+//!    computed distance is exactly zero, [`SignStatus::OnSurface`] (REQ-004); else if every decision
 //!    interval is certainly positive, [`SignStatus::Outside`]; if every one is certainly
 //!    negative, [`SignStatus::Inside`]; otherwise [`SignStatus::Undecidable`].
 //!
-//! A hit at distance exactly zero is [`SignStatus::OnSurface`] with signed distance `+0.0`
-//! (REQ-004), before any of the above. Every result carries [`Signed::bound`], a proven bound on
-//! `|d* - distance|`: `max(U - d, d - L)` rounded up, `L` the least lower end over survivors.
+//! `OnSurface` means: the computed distance is exactly zero, the signed distance is `+0.0`, no
+//! possible foot feature is undefined, and the exact distance satisfies `d* <= bound` (it need not
+//! be zero: a point within rounding of a tilted face can compute to zero). A computed zero on a
+//! boundary, non-manifold, misoriented or degenerate feature is `Undefined`, distance `+0.0`.
+//! Every result carries [`Signed::bound`], a proven bound on `|d* - distance|`:
+//! `max(U - d, d - L)` rounded up, `L` the least lower end over survivors.
 //!
 //! Decision values: vertex `(p - v) . N_v`; edge `r . N_e` with `t = tn / ee` and
 //! `r = w - t ev` (the exact foot on the edge line); interior `(p - a) . n` (equal to
@@ -82,8 +86,11 @@
 //! is degenerate unless `r > delta (1 + 2^-50)`; then the error is
 //! `grow(2 delta / r + 2^-49)`: `2 delta / r` bounds the angle between the computed and exact
 //! `(x, y)`, and `2^-49` (four ulps of pi) bounds `fid_num::f::atan2`'s own error, taken from
-//! KRN.NUM.FN's 1-ulp claim (REQ-KRN.NUM.FN-006, held on its self-test inputs; for every input it
-//! is [unverified]). Unit normals are `n_k / sqrt(n . n)` with these rules.
+//! KRN.NUM.FN's 1-ulp claim (REQ-KRN.NUM.FN-006; fid-num's atan2 changes musl's per
+//! `crates/fid-num/src/f/vendor/VENDOR.md` item 4). `tools/fixtures/geo_dist_sign.py` sweeps the
+//! bit-exact atan2 model against a 90-digit Decimal oracle and asserts the bound (worst case about
+//! 0.14 x 2^-49 on its 3 359 cases); for every input it is [unverified]. Unit normals are
+//! `n_k / sqrt(n . n)` with these rules.
 //!
 //! # Determinism (D0, KNP-1)
 //!
@@ -96,7 +103,7 @@ use core::f64::consts::{PI, TAU};
 use core::fmt;
 use core::ops::ControlFlow;
 
-use fid_geo_types::{FrameRef, Mesh};
+use fid_geo_types::Mesh;
 
 use crate::mesh::{DistError, MeshHit, MeshProjection, MeshQuery, MeshTarget, COORD_LIMIT};
 
@@ -173,7 +180,8 @@ pub enum SignStatus {
     Outside,
     /// Certainly on the other side.
     Inside,
-    /// The computed distance is exactly zero; the signed distance is `+0.0`.
+    /// The computed distance is exactly zero and no possible foot feature is undefined; the
+    /// signed distance is `+0.0` and the exact distance is at most [`Signed::bound`].
     OnSurface,
     /// Rounding (or a nearer-than-rounding second sheet) could change the sign; none is given.
     Undecidable,
@@ -227,8 +235,6 @@ pub enum SignError {
         /// Corner index (0, 1, 2).
         corner: u8,
     },
-    /// The pseudo-normals were built for another mesh (frame or counts differ).
-    NormalsMismatch,
     /// The hit names no triangle of the mesh or has a negative or non-finite distance.
     InvalidHit,
     /// The mesh has no triangle, so there is nothing to measure against.
@@ -255,7 +261,6 @@ impl SignError {
         match self {
             SignError::Dist(e) => e.code(),
             SignError::BadTriangle { .. } => "bad_triangle",
-            SignError::NormalsMismatch => "normals_mismatch",
             SignError::InvalidHit => "invalid_hit",
             SignError::EmptyMesh => "empty_mesh",
             SignError::BadCadInput { .. } => "bad_cad_input",
@@ -272,7 +277,6 @@ impl fmt::Display for SignError {
             SignError::BadTriangle { triangle, corner } => {
                 write!(f, "corner {corner} of triangle {triangle} exceeds 2^250 m")
             }
-            SignError::NormalsMismatch => write!(f, "pseudo-normals were built for another mesh"),
             SignError::InvalidHit => write!(f, "hit does not belong to this mesh"),
             SignError::EmptyMesh => write!(f, "mesh has no triangle"),
             SignError::BadCadInput { field, index } => write!(f, "cad_sign input {field} (entry {index}) is invalid"),
@@ -317,7 +321,6 @@ pub struct EdgeNormal {
 /// Angle-weighted pseudo-normals and topology statuses of one mesh (REQ-002, REQ-006).
 #[derive(Debug, Clone, PartialEq)]
 pub struct PseudoNormals {
-    frame: FrameRef,
     vertex: Vec<FeatureNormal>,
     edge: Vec<EdgeNormal>,
     triangle: Vec<Topology>,
@@ -711,7 +714,7 @@ impl PseudoNormals {
             }
             *at_mut(&mut vertex, v)? = feature;
         }
-        Ok(PseudoNormals { frame: mesh.frame(), vertex, edge: edges, triangle: tri_status })
+        Ok(PseudoNormals { vertex, edge: edges, triangle: tri_status })
     }
 
     /// The pseudo-normal and status of vertex `v`.
@@ -732,12 +735,6 @@ impl PseudoNormals {
     /// The status of triangle `t`'s interior.
     pub fn triangle(&self, t: u64) -> Option<Topology> {
         usize::try_from(t).ok().and_then(|i| self.triangle.get(i)).copied()
-    }
-
-    fn matches(&self, mesh: &Mesh) -> bool {
-        self.frame == mesh.frame()
-            && self.vertex.len() as u64 == mesh.vertex_count()
-            && self.triangle.len() as u64 == mesh.triangle_count()
     }
 }
 
@@ -839,15 +836,7 @@ fn upper_on_triangle(p: &V3, c: &[V3; 3]) -> Result<f64, SignError> {
     for k in 0..3 {
         if tv.ee[k].v > 0.0 {
             let t = tv.tn[k].v / tv.ee[k].v;
-            // KNP-1 bans f64::clamp; the comparisons are the pinned clamp.
-            #[allow(clippy::manual_clamp)]
-            let tau = Ev::x(if t < 0.0 {
-                0.0
-            } else if t > 1.0 {
-                1.0
-            } else {
-                t
-            });
+            let tau = Ev::x(fid_num::f::total_clamp(t, 0.0, 1.0).map_err(|_| SignError::Inconsistent)?);
             let r = [
                 tv.w[k][0].sub(tau.mul(tv.ev[k][0])),
                 tv.w[k][1].sub(tau.mul(tv.ev[k][1])),
@@ -1003,15 +992,6 @@ impl<'m> SignTarget<'m> {
         Ok(SignTarget { target, normals })
     }
 
-    /// Uses pseudo-normals built earlier; fails with [`SignError::NormalsMismatch`] when their
-    /// frame, vertex count or triangle count differs from the mesh's.
-    pub fn with_normals(target: MeshTarget<'m>, normals: PseudoNormals) -> Result<SignTarget<'m>, SignError> {
-        if !normals.matches(target.mesh()) {
-            return Err(SignError::NormalsMismatch);
-        }
-        Ok(SignTarget { target, normals })
-    }
-
     /// The pseudo-normals.
     pub fn normals(&self) -> &PseudoNormals {
         &self.normals
@@ -1042,9 +1022,6 @@ impl<'m> SignTarget<'m> {
         }
         let c = corners(mesh, &tri_index(mesh, hit.tri)?)?;
         let upper = upper_on_triangle(&p, &c)?;
-        if d == 0.0 {
-            return Ok(Signed { distance: 0.0, unsigned: 0.0, status: SignStatus::OnSurface, bound: upper });
-        }
         let u2 = (upper * upper) * UP + ETA;
         let leaf_limit = u2 * GROW + 4.0 * ETA;
         let mut verdict =
@@ -1088,7 +1065,12 @@ fn round_up(x: f64) -> f64 {
 }
 
 fn conclude(d: f64, upper: f64, v: &Verdict) -> Signed {
-    let status = if !v.any {
+    let status = if d == 0.0 {
+        match v.undefined {
+            Some(r) => SignStatus::Undefined(r),
+            None => SignStatus::OnSurface,
+        }
+    } else if !v.any {
         SignStatus::Undecidable
     } else if let Some(r) = v.undefined {
         SignStatus::Undefined(r)
@@ -1102,6 +1084,7 @@ fn conclude(d: f64, upper: f64, v: &Verdict) -> Signed {
     let low = if v.any { v.low } else { 0.0 };
     let (a, b) = (round_up(upper - d), round_up(d - low));
     let bound = if a > b { a } else { b };
+    let d = if d == 0.0 { 0.0 } else { d };
     let distance = if status == SignStatus::Inside { -d } else { d };
     Signed { distance, unsigned: d, status, bound }
 }
