@@ -113,6 +113,7 @@ python fixtures/solv/make_mstart_fixtures.py --check
 python fixtures/solv/patch/ldl-order-v1/make_orders.py --check
 python fixtures/solv/patch/upstream-examples-v1/check_objectives.py
 python fixtures/solv/vend/make_fixtures.py --check
+python fixtures/solv/wrap/small-v1/make_fixtures.py --check
 python fixtures/unc/class/make_table.py --check
 python fixtures/unc/dec/type/make_fixtures.py --check
 python fixtures/unc/dist/make_fixtures.py --check

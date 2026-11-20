@@ -4,5 +4,6 @@
 //!
 //! Modules land one spec leaf at a time; see `spec/krn/solv/`.
 
+pub mod conic;
 pub mod mstart;
 pub mod nlls;
