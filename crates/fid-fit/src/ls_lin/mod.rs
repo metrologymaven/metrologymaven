@@ -26,12 +26,21 @@
 //! 4. **Direction and conditioning.** line3: `d` = eigenvector of the largest eigenvalue,
 //!    relevant pair `(la, lb) = (l_2, l_1)`; plane: `n` = eigenvector of the smallest,
 //!    `(la, lb) = (l_1, l_0)`; line2: `d` = eigenvector of the larger, `(la, lb) = (l_1, l_0)`.
-//!    The eigenvalue-gap condition is `cond = la / (la - lb)` (`+inf` when `la - lb <= 0`);
-//!    `cond > nlls.cond_limit` (or not finite) is [`FitError::IllConditioned`] carrying it
-//!    (`None` when infinite): the two eigenvalues are equal within the relative tolerance
-//!    `1 / cond_limit` and no direction is unique. Directions go through
-//!    `normalize_direction` (`normalize_direction2` for line2). A fixed direction is
-//!    `normalize_direction` of the constraint (for line2 see rule 7) and `cond = 1`.
+//!    The eigenvalue ratio is `ratio = total_max(0, lb) / la`; `ratio >
+//!    thresholds.eig_ratio_max` (or `la <= 0`, or a non-finite ratio) is
+//!    [`FitError::IllConditioned`] carrying the ratio (`None` when it is not finite): the
+//!    competing eigenvalue is too close to the defining one for a unique direction.
+//!    Why a ratio, and the default `0.9`: for a perturbation `E` of the scatter matrix (rounding,
+//!    or the noise of the data) with `||E||_2 = eps * la`, the direction turns by at most
+//!    `eps * la / (la - lb) = eps / (1 - ratio)` radians (Davis-Kahan sin-theta bound, to
+//!    first order). `ratio <= 0.9` bounds that amplification by 10. The ratio of the
+//!    eigenvalues (second moments) is unaffected by the size or units of the data, and a
+//!    shape whose two moments are equal in the noise-free geometry (a circle or ring for a
+//!    line, an isotropic blob or a circle for a plane's in-plane pair) has a ratio near 1
+//!    whatever the noise, while a long line or a flat patch has a ratio near 0. Directions
+//!    go through `normalize_direction` (`normalize_direction2` for line2). A fixed direction
+//!    is `normalize_direction` of the constraint (for line2 see rule 7) and its ratio is 0
+//!    (no competing direction).
 //! 5. **Feature.** Every feature passes through the centroid: the scaled feature has its
 //!    point at the origin and is mapped back with `Normalisation::inverse_feature`, so the
 //!    point is `0 * s + c` = the `red::mean` centroid.
@@ -61,7 +70,8 @@
 //!    `[sum r, dot(r, P_x), dot(r, P_y), dot(r, P_z)]` with `P_i = q_i - r_i n` (the last
 //!    three dropped with a fixed normal). The rank is the number of free parameters (point 3;
 //!    line3 4, fixed 2; line2 2, fixed 1; plane 3, fixed 1), full whenever the checks and the
-//!    conditioning test passed; `cond` as in rule 4 (1 for the point); iterations 0; stop
+//!    conditioning test passed; `cond` is the eigenvalue ratio of rule 4 (0 for the point and
+//!    for fixed directions); iterations 0; stop
 //!    `closed_form`.
 //!
 //! The fits are deterministic (D0) and ignore the seed.
@@ -74,7 +84,7 @@ mod eig;
 
 pub use eig::{sym_eig, SymEig, EIG_MAX_SWEEPS};
 
-use fid_num::{red, NumError};
+use fid_num::{f, red, NumError};
 use fid_types::Determinism;
 
 use crate::contract::{
@@ -196,14 +206,17 @@ fn scatter<const K: usize>(cols: &[Vec<f64>; K]) -> Result<[[f64; K]; K], FitErr
     Ok(s)
 }
 
-/// Rule 4: the eigenvalue-gap condition of the pair `(la, lb)`, `la >= lb`.
-fn gap_cond(la: f64, lb: f64, limit: f64) -> Result<f64, FitError> {
-    let gap = la - lb;
-    let cond = if gap > 0.0 { la / gap } else { f64::INFINITY };
-    if cond.is_finite() && cond <= limit {
-        Ok(cond)
+/// Rule 4: the eigenvalue ratio `total_max(0, lb) / la` of the pair `(la, lb)`, `la >= lb`,
+/// accepted when at most `max`.
+fn eig_ratio(la: f64, lb: f64, max: f64) -> Result<f64, FitError> {
+    if la <= 0.0 || !la.is_finite() {
+        return Err(FitError::IllConditioned { cond: None });
+    }
+    let ratio = f::total_max(0.0, lb)? / la;
+    if ratio.is_finite() && ratio <= max {
+        Ok(ratio)
     } else {
-        Err(FitError::IllConditioned { cond: if cond.is_finite() { Some(cond) } else { None } })
+        Err(FitError::IllConditioned { cond: if ratio.is_finite() { Some(ratio) } else { None } })
     }
 }
 
@@ -271,7 +284,7 @@ impl Fit for PointLs {
         }
         let cols = columns::<3>(&c)?;
         let grad = [red::sum(&cols[0])?, red::sum(&cols[1])?, red::sum(&cols[2])?];
-        let diag = diagnostics(&grad, 3, 1.0)?;
+        let diag = diagnostics(&grad, 3, 0.0)?;
         finish(Primitive::Point, &c, FittedFeature::Point { c: [0.0; 3] }, res, diag)
     }
 }
@@ -285,10 +298,10 @@ impl Fit for Line3Ls {
         let fixed = params_for(Primitive::Line3, pts, params)?;
         let c = centre(Primitive::Line3, pts, params, fixed.is_some())?;
         let (d, cond) = match fixed {
-            Some(f) => (normalize_direction(f)?, 1.0),
+            Some(f) => (normalize_direction(f)?, 0.0),
             None => {
                 let e = sym_eig(&scatter(&columns::<3>(&c)?)?)?;
-                let cond = gap_cond(e.values[2], e.values[1], params.nlls.cond_limit)?;
+                let cond = eig_ratio(e.values[2], e.values[1], params.thresholds.eig_ratio_max)?;
                 (normalize_direction(e.vectors[2])?, cond)
             }
         };
@@ -313,10 +326,10 @@ impl Fit for PlaneLs {
         let fixed = params_for(Primitive::Plane, pts, params)?;
         let c = centre(Primitive::Plane, pts, params, fixed.is_some())?;
         let (n, cond) = match fixed {
-            Some(f) => (normalize_direction(f)?, 1.0),
+            Some(f) => (normalize_direction(f)?, 0.0),
             None => {
                 let e = sym_eig(&scatter(&columns::<3>(&c)?)?)?;
-                let cond = gap_cond(e.values[1], e.values[0], params.nlls.cond_limit)?;
+                let cond = eig_ratio(e.values[1], e.values[0], params.thresholds.eig_ratio_max)?;
                 (normalize_direction(e.vectors[0])?, cond)
             }
         };
@@ -404,10 +417,10 @@ impl Fit for Line2Ls {
         let view = PointsView::new(&buf, None)?;
         let c = centre(Primitive::Line2, &view, params, fixed2.is_some())?;
         let (d, cond): (V2, f64) = match fixed2 {
-            Some(d) => (d, 1.0),
+            Some(d) => (d, 0.0),
             None => {
                 let e = sym_eig(&scatter(&columns::<2>(&c)?)?)?;
-                let cond = gap_cond(e.values[1], e.values[0], params.nlls.cond_limit)?;
+                let cond = eig_ratio(e.values[1], e.values[0], params.thresholds.eig_ratio_max)?;
                 (normalize_direction2(e.vectors[1])?, cond)
             }
         };

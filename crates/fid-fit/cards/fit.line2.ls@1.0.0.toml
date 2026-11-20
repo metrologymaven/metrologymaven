@@ -2,7 +2,7 @@
 id = "fit.line2.ls@1.0.0"
 title = "Least-squares 2D line in a projection plane"
 method = "Points are projected orthogonally onto a given plane (default z = 0) in a pinned in-plane frame; the line passes through the projected centroid along the eigenvector of the larger eigenvalue of the 2 x 2 centred scatter matrix (cyclic Jacobi). A fixed direction is projected onto the plane instead. Residuals are signed in-plane distances."
-applicability = "At least 2 points not all coincident after projection; the two scatter eigenvalues must differ by more than 1/cond_limit relative. A fixed direction must not be (nearly) normal to the plane."
+applicability = "At least 2 points not all coincident after projection; the ratio of the smaller to the larger scatter eigenvalue must be at most thresholds.eig_ratio_max. Default 0.9: a perturbation of the scatter matrix of relative size eps turns the direction by at most eps / (1 - ratio) radians (Davis-Kahan bound), so the amplification is at most 10. A fixed direction must not be (nearly) normal to the plane."
 references = [
   "Shakarji, C. M. (1998). Least-squares fitting algorithms of the NIST algorithm testing system. Journal of Research of the National Institute of Standards and Technology 103(6).",
   "Golub, G. H. and Van Loan, C. F. (2013). Matrix Computations, 4th ed., section 8.5 (Jacobi methods).",

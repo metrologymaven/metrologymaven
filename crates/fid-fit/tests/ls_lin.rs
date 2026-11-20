@@ -12,7 +12,8 @@
 #![allow(clippy::result_large_err)]
 
 use fid_fit::contract::{
-    encode, Constraint, Fit, FitError, FitParams, FitResult, FittedFeature, Method, PointsView, StopReason, Weights,
+    encode, Constraint, Fit, FitError, FitParams, FitResult, FittedFeature, Method, PointsView, StopReason, ValueType,
+    Weights,
 };
 use fid_fit::ls_lin::{command_rows, projection_frame, sym_eig, Line2Ls, Line3Ls, PlaneLs, PointLs, PRIMITIVES};
 use fid_kci::kci::{sha256, to_hex};
@@ -79,14 +80,23 @@ fn cases() -> Vec<Case> {
 }
 
 fn params_of(c: &Case) -> FitParams {
+    params_and_keys(c).0
+}
+
+/// The parameters of a case and the command-row parameter names they set (the points, the
+/// default thresholds of `FitParams::new` and each constraint).
+fn params_and_keys(c: &Case) -> (FitParams, Vec<&'static str>) {
     let mut p = FitParams::new(Method::LeastSquares);
+    let mut keys = vec!["points", "thresholds.rank_tol", "thresholds.min_coverage", "thresholds.eig_ratio_max"];
     if let Some(f) = c.get("fixed") {
         p.constraints.push(Constraint::FixedAxisDirection(v3(&hexes(f))));
+        keys.push("constraints.fixed_axis_direction");
     }
     if let Some(pp) = c.get("plane_p") {
         p.constraints.push(Constraint::ProjectionPlane { p: v3(&hexes(pp)), n: v3(&hexes(c.field("plane_n"))) });
+        keys.extend(["constraints.projection_plane.p", "constraints.projection_plane.n"]);
     }
-    p
+    (p, keys)
 }
 
 fn run(prim: &str, pts: &PointsView<'_>, params: &FitParams, seed: Option<u64>) -> Result<FitResult, FitError> {
@@ -119,7 +129,7 @@ fn max_diff(a: &[f64], b: &[f64]) -> f64 {
 #[test]
 fn ac3_far_from_origin_bytes_digests_and_accuracy() {
     let all = cases();
-    assert_eq!(all.len(), 10);
+    assert_eq!(all.len(), 14);
     let mut ok = 0;
     for c in &all {
         if c.field("expect") != "ok" {
@@ -150,26 +160,61 @@ fn ac3_far_from_origin_bytes_digests_and_accuracy() {
     assert_eq!(ok, 9);
 }
 
-/// AC-4: 200 points spread evenly on a circle give `IllConditioned` for a 3D line, carrying
-/// the eigenvalue-gap condition of the model; the plane through the same points is fine.
+/// AC-4: 200 points spread evenly on a 5 m circle 1 km out (exact, 1 nm and 1 um noise) give
+/// `IllConditioned` for a 3D line, carrying the model's eigenvalue ratio; likewise a noisy
+/// circle for a 2D line and a noisy cube (isotropic scatter) for a plane. The plane through
+/// the exact circle is fine.
 #[test]
-fn ac4_circle_line3_is_ill_conditioned() {
+fn ac4_ill_conditioned_cases() {
     let all = cases();
-    let c = all.iter().find(|c| c.name == "circle-line3").unwrap();
-    assert_eq!(c.field("expect"), "ill_conditioned");
-    let xyz = hexes(c.field("xyz"));
-    let pts = PointsView::new(&xyz, None).unwrap();
     let params = FitParams::new(Method::LeastSquares);
-    match Line3Ls.fit(&pts, &params, None) {
-        Err(FitError::IllConditioned { cond: Some(k) }) => {
-            assert_eq!(k.to_bits(), hex(c.field("cond")).to_bits());
-            assert!(k > params.nlls.cond_limit);
+    let ill: Vec<&Case> = all.iter().filter(|c| c.field("expect") == "ill_conditioned").collect();
+    let names: Vec<&str> = ill.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(names, ["circle-line3", "circle-1nm-line3", "circle-1um-line3", "circle-1um-line2", "cube-1um-plane"]);
+    for c in ill {
+        let xyz = hexes(c.field("xyz"));
+        let pts = PointsView::new(&xyz, None).unwrap();
+        match run(c.field("primitive"), &pts, &params, None) {
+            Err(FitError::IllConditioned { cond: Some(k) }) => {
+                assert_eq!(k.to_bits(), hex(c.field("cond")).to_bits(), "{}", c.name);
+                assert!(k > params.thresholds.eig_ratio_max && k <= 1.0, "{}", c.name);
+            }
+            other => panic!("{}: expected IllConditioned, got {other:?}", c.name),
         }
-        other => panic!("expected IllConditioned, got {other:?}"),
     }
+    let line = all.iter().find(|c| c.name == "circle-line3").unwrap();
     let plane = all.iter().find(|c| c.name == "circle-plane").unwrap();
-    assert_eq!(plane.field("xyz"), c.field("xyz"));
-    assert!(PlaneLs.fit(&pts, &params, None).is_ok());
+    assert_eq!(plane.field("xyz"), line.field("xyz"));
+    let xyz = hexes(plane.field("xyz"));
+    assert!(PlaneLs.fit(&PointsView::new(&xyz, None).unwrap(), &params, None).is_ok());
+}
+
+/// The clean long line and flat plane pass with a large margin (ratio below 1e-9 against the
+/// limit 0.9), the ratio is reported in the diagnostics, and the threshold is what decides:
+/// a limit of 0 turns the same fit into `IllConditioned`; a limit outside `[0, 1)` is refused.
+#[test]
+fn eig_ratio_threshold() {
+    let all = cases();
+    for name in ["line3-far", "plane-far", "line2-xy", "line2-tilted", "circle-plane"] {
+        let c = all.iter().find(|c| c.name == name).unwrap();
+        let xyz = hexes(c.field("xyz"));
+        let pts = PointsView::new(&xyz, None).unwrap();
+        let p = params_of(c);
+        let r = run(c.field("primitive"), &pts, &p, None).unwrap();
+        assert!(r.diagnostics.cond >= 0.0 && r.diagnostics.cond < 1e-9, "{name}: ratio {:e}", r.diagnostics.cond);
+        let mut strict = p.clone();
+        strict.thresholds.eig_ratio_max = 0.0;
+        if r.diagnostics.cond > 0.0 {
+            let want = Err(FitError::IllConditioned { cond: Some(r.diagnostics.cond) });
+            assert_eq!(run(c.field("primitive"), &pts, &strict, None), want, "{name}");
+        }
+        for bad in [1.0, -0.1, f64::NAN] {
+            let mut q = p.clone();
+            q.thresholds.eig_ratio_max = bad;
+            let want = Err(FitError::InvalidParams { field: "thresholds.eig_ratio_max" });
+            assert_eq!(run(c.field("primitive"), &pts, &q, None), want, "{name}");
+        }
+    }
 }
 
 /// Fits are deterministic and ignore the seed (D0).
@@ -211,7 +256,7 @@ fn exact_plane_and_line() {
     let FittedFeature::Line3 { p, d } = r.feature else { panic!() };
     assert_eq!(d, [1.0, 0.0, 0.0]);
     assert_eq!(p, [1000.375, 5.0, -3.0]);
-    assert_eq!(r.diagnostics.cond, 1.0);
+    assert_eq!(r.diagnostics.cond, 0.0);
     assert_eq!(r.diagnostics.rank, 4);
     assert!(r.residuals.iter().all(|x| *x == 0.0));
 
@@ -231,7 +276,7 @@ fn point_is_centroid_with_distances() {
     let r = PointLs.fit(&pts, &FitParams::new(Method::LeastSquares), None).unwrap();
     assert_eq!(r.feature, FittedFeature::Point { c: [0.0, 0.0, 0.0] });
     assert_eq!(r.residuals, vec![3.0, 3.0, 3.0, 3.0]);
-    assert_eq!((r.diagnostics.rank, r.diagnostics.cond, r.diagnostics.grad_norm), (3, 1.0, 0.0));
+    assert_eq!((r.diagnostics.rank, r.diagnostics.cond, r.diagnostics.grad_norm), (3, 0.0, 0.0));
     assert_eq!(r.algorithm.to_string(), "fit.point.ls@1.0.0");
 
     let one = [7.0, -8.0, 9.0];
@@ -277,7 +322,7 @@ fn error_paths() {
     fixed.constraints.push(Constraint::FixedAxisDirection([0.0, 0.0, -1.0]));
     let r = Line3Ls.fit(&one, &fixed, None).unwrap();
     assert_eq!(r.feature, FittedFeature::Line3 { p: [1.0, 2.0, 3.0], d: [0.0, 0.0, 1.0] });
-    assert_eq!((r.diagnostics.rank, r.diagnostics.cond), (2, 1.0));
+    assert_eq!((r.diagnostics.rank, r.diagnostics.cond), (2, 0.0));
     let r = PlaneLs.fit(&one, &fixed, None).unwrap();
     assert_eq!(r.feature, FittedFeature::Plane { p: [1.0, 2.0, 3.0], n: [0.0, 0.0, 1.0] });
     assert_eq!(r.diagnostics.rank, 1);
@@ -372,4 +417,134 @@ fn command_rows_validate() {
     }
     let want = read(TRAIT_ROW);
     assert_eq!(String::from_utf8(rows[3].to_json().unwrap()).unwrap(), want.trim_end());
+}
+
+/// A minimal reader for the canonical result JSON (`contract::encode`): strings without
+/// escapes, arrays, objects and `null`, which is all that encoding writes.
+#[derive(Debug)]
+enum J {
+    S(String),
+    A(Vec<J>),
+    O(Vec<(String, J)>),
+    Null,
+}
+
+fn parse_json(b: &[u8], i: &mut usize) -> J {
+    match b[*i] {
+        b'"' => {
+            let start = *i + 1;
+            let end = start + b[start..].iter().position(|&c| c == b'"').unwrap();
+            *i = end + 1;
+            J::S(String::from_utf8(b[start..end].to_vec()).unwrap())
+        }
+        b'[' => {
+            *i += 1;
+            let mut v = Vec::new();
+            while b[*i] != b']' {
+                v.push(parse_json(b, i));
+                if b[*i] == b',' {
+                    *i += 1;
+                }
+            }
+            *i += 1;
+            J::A(v)
+        }
+        b'{' => {
+            *i += 1;
+            let mut v = Vec::new();
+            while b[*i] != b'}' {
+                let J::S(k) = parse_json(b, i) else { panic!("key") };
+                assert_eq!(b[*i], b':');
+                *i += 1;
+                v.push((k, parse_json(b, i)));
+                if b[*i] == b',' {
+                    *i += 1;
+                }
+            }
+            *i += 1;
+            J::O(v)
+        }
+        b'n' => {
+            assert_eq!(&b[*i..*i + 4], b"null");
+            *i += 4;
+            J::Null
+        }
+        c => panic!("unexpected byte {c}"),
+    }
+}
+
+/// Leaves of the result object with dotted names (`feature.p`, `stats.rms`, ...).
+fn flatten<'a>(prefix: &str, j: &'a J, out: &mut Vec<(String, &'a J)>) {
+    match j {
+        J::O(members) => {
+            for (k, v) in members {
+                let name = if prefix.is_empty() { k.clone() } else { format!("{prefix}.{k}") };
+                flatten(&name, v, out);
+            }
+        }
+        _ => out.push((prefix.to_string(), j)),
+    }
+}
+
+fn is_hex_f64(j: &J) -> bool {
+    matches!(j, J::S(s) if s.len() == 16 && s.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c)))
+}
+
+fn is_dec_int(j: &J) -> bool {
+    matches!(j, J::S(s) if !s.is_empty() && s.bytes().all(|c| c.is_ascii_digit()) && (s == "0" || !s.starts_with('0')))
+}
+
+/// The wire form of each command-layer value type (the note for CORE.REG in
+/// `contract::rows`): number = 16-hex-digit IEEE-754 bit string, integer = decimal string,
+/// arrays of those, points = array of 3-element number arrays, string = JSON string.
+fn wire_matches(ty: ValueType, j: &J) -> bool {
+    match (ty, j) {
+        (ValueType::Number, _) => is_hex_f64(j),
+        (ValueType::Integer, _) => is_dec_int(j),
+        (ValueType::NumberArray, J::A(v)) => v.iter().all(is_hex_f64),
+        (ValueType::IntegerArray, J::A(v)) => v.iter().all(is_dec_int),
+        (ValueType::Points, J::A(v)) => {
+            v.iter().all(|p| matches!(p, J::A(c) if c.len() == 3 && c.iter().all(is_hex_f64)))
+        }
+        (ValueType::String, J::S(_)) => true,
+        _ => false,
+    }
+}
+
+/// For each primitive, a real `FitResult` (from the fixture) flattened from its canonical
+/// bytes carries every required result field of its command row with the declared type, and
+/// nothing undeclared except `feature.kind` and a `null` certificate; every parameter a case
+/// sets is a declared parameter of the row.
+#[test]
+fn real_results_match_command_rows() {
+    let all = cases();
+    let rows = command_rows().unwrap();
+    for (row, case) in rows.iter().zip(["point-far", "line2-xy", "line3-far", "plane-far"]) {
+        let c = all.iter().find(|c| c.name == case).unwrap();
+        let xyz = hexes(c.field("xyz"));
+        let r = run(c.field("primitive"), &PointsView::new(&xyz, None).unwrap(), &params_of(c), None).unwrap();
+        assert_eq!(row.algorithm, r.algorithm);
+        let bytes = encode(&r).unwrap();
+        let mut i = 0;
+        let json = parse_json(&bytes, &mut i);
+        assert_eq!(i, bytes.len());
+        let mut leaves = Vec::new();
+        flatten("", &json, &mut leaves);
+        for f in &row.result {
+            match leaves.iter().find(|(k, _)| k == f.name) {
+                Some((_, j)) => assert!(wire_matches(f.ty, j), "{case}: {} is not a {:?}: {j:?}", f.name, f.ty),
+                None => assert!(!f.required, "{case}: required field {} missing", f.name),
+            }
+        }
+        for (k, j) in &leaves {
+            let declared = row.result.iter().any(|f| f.name == k);
+            let allowed = k == "feature.kind" || (k == "certificate" && matches!(j, J::Null));
+            assert!(declared || allowed, "{case}: undeclared result field {k}");
+        }
+    }
+    for c in all.iter() {
+        for k in params_and_keys(c).1 {
+            assert!(rows[0].params.iter().any(|f| f.name == k), "{}: undeclared param {k}", c.name);
+        }
+    }
 }

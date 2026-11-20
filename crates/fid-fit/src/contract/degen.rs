@@ -319,5 +319,8 @@ fn check_thresholds(t: &Thresholds) -> Result<(), FitError> {
     if !((0.0..=TWO_PI).contains(&t.min_coverage)) {
         return Err(FitError::InvalidParams { field: "thresholds.min_coverage" });
     }
+    if !((0.0..1.0).contains(&t.eig_ratio_max)) {
+        return Err(FitError::InvalidParams { field: "thresholds.eig_ratio_max" });
+    }
     Ok(())
 }

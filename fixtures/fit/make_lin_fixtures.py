@@ -43,7 +43,7 @@ BLOCK = 256
 U = 2.0 ** -53
 BIG = 2.0 ** 256
 MAX_SWEEPS = 50
-COND_LIMIT = 1e12  # fid_solv NllsConfig::default().cond_limit
+EIG_RATIO_MAX = 0.9  # contract DEFAULT_EIG_RATIO_MAX
 RANK_TOL = 1e-9  # contract DEFAULT_RANK_TOL
 MIN_NORMAL = 2.2250738585072014e-308
 PI50 = Decimal("3.14159265358979323846264338327950288419716939937510582097494459")
@@ -142,12 +142,36 @@ def gen_line2_tilted(rnd, n):
     return pts
 
 
-def gen_circle(n, r):
+def gen_circle(n, r, rnd=None, noise=0.0):
+    """n points evenly on a circle of radius r about B in the plane of E1, E2; with `rnd`,
+    each coordinate gets uniform noise in [-noise, noise]."""
     pts = []
     for k in range(n):
         s, c = dsincos(Fraction(360 * k, n))
-        pts.append(add(B, scale(r * c, E1), scale(r * s, E2)))
+        p = add(B, scale(r * c, E1), scale(r * s, E2))
+        if rnd is not None:
+            p = tuple(p[j] + rnd.uniform(-noise, noise) for j in range(3))
+        pts.append(p)
     return pts
+
+
+def gen_circle_xy(rnd, n, r, noise):
+    """A horizontal circle 1 km out (for line2 in the default plane), with noise."""
+    pts = []
+    for k in range(n):
+        s, c = dsincos(Fraction(360 * k, n))
+        pts.append((600.0 + r * c + rnd.uniform(-noise, noise),
+                    800.0 + r * s + rnd.uniform(-noise, noise),
+                    5.0 + rnd.uniform(-noise, noise)))
+    return pts
+
+
+def gen_cube(rnd, side, noise):
+    """The 8 vertices of a cube about B (isotropic scatter), with noise."""
+    h = side / 2
+    return [tuple(B[j] + sx * h + rnd.uniform(-noise, noise) if j == 0 else
+                  B[j] + (sy if j == 1 else sz) * h + rnd.uniform(-noise, noise) for j in range(3))
+            for sx in (-1.0, 1.0) for sy in (-1.0, 1.0) for sz in (-1.0, 1.0)]
 
 
 # ---------------------------------------------------------------- 2. exact reference
@@ -193,7 +217,18 @@ def dec_eig(m):
     else:
         raise AssertionError("decimal Jacobi did not converge")
     order = sorted(range(n), key=lambda i: a[i][i])
-    return [a[i][i] for i in order], [[v[r][i] for r in range(n)] for i in order]
+    vals = [a[i][i] for i in order]
+    vecs = [[v[r][i] for r in range(n)] for i in order]
+    # Self-check: eigen-residual ||M v - l v|| and orthonormality of the vectors.
+    scale_m = fro.sqrt() if fro > 0 else Decimal(1)
+    for lam, vec in zip(vals, vecs):
+        res = sum((sum(m[i][j] * vec[j] for j in range(n)) - lam * vec[i]) ** 2 for i in range(n)).sqrt()
+        assert res <= scale_m * Decimal(10) ** -60, ("eigen-residual", res)
+    for i in range(n):
+        for j in range(n):
+            dot = sum(vecs[i][k] * vecs[j][k] for k in range(n))
+            assert abs(dot - (1 if i == j else 0)) <= Decimal(10) ** -60, ("orthonormality", i, j)
+    return vals, vecs
 
 
 def dec_sign(v):
@@ -207,7 +242,8 @@ def dec_sign(v):
 
 def exact_fit(prim, coords, fixed):
     """coords: list of tuples (3D, or 2D plane coordinates for line2) of binary64 values.
-    Returns (point, direction, rms, cond) in Decimal; cond is None for fixed directions."""
+    Returns (point, direction, rms, ratio) in Decimal; ratio (competing over defining
+    eigenvalue, negative clamped to 0) is None for fixed directions."""
     getcontext().prec = 80
     dim = len(coords[0])
     n = len(coords)
@@ -224,10 +260,10 @@ def exact_fit(prim, coords, fixed):
         u = dec_sign([Decimal(x) for x in fixed])
     elif prim == "plane":
         u = dec_sign(vecs[0])
-        cond = vals[1] / (vals[1] - vals[0])
+        cond = max(vals[0], Decimal(0)) / vals[1]
     else:
         u = dec_sign(vecs[-1])
-        cond = vals[-1] / (vals[-1] - vals[-2])
+        cond = max(vals[-2], Decimal(0)) / vals[-1]
     total = Decimal(0)
     for d in dev:
         dd = [dec(x) for x in d]
@@ -427,12 +463,13 @@ class Ill(Exception):
         self.cond = cond
 
 
-def gap_cond(la, lb):
-    gap = la - lb
-    cond = la / gap if gap > 0.0 else math.inf
-    if math.isfinite(cond) and cond <= COND_LIMIT:
-        return cond
-    raise Ill(cond)
+def eig_ratio(la, lb):
+    if not la > 0.0:
+        raise Ill(math.inf)
+    ratio = tmax(0.0, lb) / la
+    if math.isfinite(ratio) and ratio <= EIG_RATIO_MAX:
+        return ratio
+    raise Ill(ratio)
 
 
 def stats(r):
@@ -502,10 +539,10 @@ def model(prim, pts, fixed=None, plane=None):
         c, s, q = centre(proj)
         if fixed2 is None:
             vals, vecs = sym_eig(scatter(q, 2))
-            cond = gap_cond(vals[1], vals[0])
+            cond = eig_ratio(vals[1], vals[0])
             d = nd(vecs[1])
         else:
-            d, cond = fixed2, 1.0
+            d, cond = fixed2, 0.0
         t, w = line_parts(q, d)
         res = [(d[0] * p[1] - d[1] * p[0]) * s for p in q]
         grad = line_grad(t, w, fixed2 is None)
@@ -517,14 +554,14 @@ def model(prim, pts, fixed=None, plane=None):
     if prim == "point":
         res = [red_norm2(p) * s for p in q]
         grad = [red_sum([p[k] for p in q]) for k in range(3)]
-        return [("c", cpt)], res, (red_norm2(grad), 3, 1.0), None
+        return [("c", cpt)], res, (red_norm2(grad), 3, 0.0), None
     if prim == "line3":
         if fixed is None:
             vals, vecs = sym_eig(scatter(q, 3))
-            cond = gap_cond(vals[2], vals[1])
+            cond = eig_ratio(vals[2], vals[1])
             d = nd(vecs[2])
         else:
-            d, cond = nd(list(fixed)), 1.0
+            d, cond = nd(list(fixed)), 0.0
         t, w = line_parts(q, d)
         res = [red_norm2([w[0][i], w[1][i], w[2][i]]) * s for i in range(len(q))]
         grad = line_grad(t, w, fixed is None)
@@ -533,10 +570,10 @@ def model(prim, pts, fixed=None, plane=None):
     assert prim == "plane"
     if fixed is None:
         vals, vecs = sym_eig(scatter(q, 3))
-        cond = gap_cond(vals[1], vals[0])
+        cond = eig_ratio(vals[1], vals[0])
         n = nd(vecs[0])
     else:
-        n, cond = nd(list(fixed)), 1.0
+        n, cond = nd(list(fixed)), 0.0
     r = [red_dot(p, n) for p in q]
     g = [red_sum(r)]
     if fixed is None:
@@ -578,31 +615,33 @@ def make_case(name, prim, pts, fixed=None, plane=None, note=""):
         lines.append("plane_n " + " ".join(hx(x) for x in plane[1]))
     lines.append(f"n {len(pts)}")
     lines.append("xyz " + " ".join(hx(v) for p in pts for v in p))
-    try:
-        feat, res, diag, extra = model(prim, pts, fixed, plane)
-    except Ill as e:
-        # AC-4: the exact reference must agree that no direction is unique.
-        _, _, _, cond_exact = exact_fit(prim, pts, None)
-        assert cond_exact > COND_LIMIT, (name, cond_exact)
-        lines.append("expect ill_conditioned")
-        lines.append("cond " + ("none" if not math.isfinite(e.cond) else hx(e.cond)))
-        lines.append(f"# exact eigenvalue-gap condition {cond_exact:.6e}")
-        lines.append("end")
-        return "\n".join(lines)
-    # Exact reference on the same inputs (line2: on the exact projection with the pinned frame).
+    # Exact reference inputs. line2: the exact projection of the points, and of the fixed
+    # direction, on the pinned frame (the frame vectors are a convention, taken as given).
+    coords, fixed_ref = pts, fixed
     if prim == "line2":
-        e1, e2, p0 = extra
+        p0, e1, e2 = frame(plane)
         coords = []
         for x in pts:
             dx = [Fraction(x[k]) - Fraction(p0[k]) for k in range(3)]
             coords.append((sum(dx[k] * Fraction(e1[k]) for k in range(3)),
                            sum(dx[k] * Fraction(e2[k]) for k in range(3))))
-        fixed_ref = None
         if fixed is not None:
-            fixed_ref = [x for x in dict(feat)["d"]]
-        cref, uref, rmsref, _ = exact_fit(prim, coords, fixed_ref)
-    else:
-        cref, uref, rmsref, _ = exact_fit(prim, pts, fixed)
+            fixed_ref = [dec(sum(Fraction(fixed[k]) * Fraction(e[k]) for k in range(3))) for e in (e1, e2)]
+    try:
+        feat, res, diag, extra = model(prim, pts, fixed, plane)
+    except Ill as e:
+        # AC-4: the exact reference must agree that no direction is unique.
+        _, _, _, ratio_exact = exact_fit(prim, coords, None)
+        assert ratio_exact > Decimal(EIG_RATIO_MAX), (name, ratio_exact)
+        lines.append("expect ill_conditioned")
+        lines.append("cond " + ("none" if not math.isfinite(e.cond) else hx(e.cond)))
+        lines.append(f"# exact eigenvalue ratio {ratio_exact:.12f} (limit {EIG_RATIO_MAX})")
+        lines.append("end")
+        return "\n".join(lines)
+    cref, uref, rmsref, ratio_exact = exact_fit(prim, coords, fixed_ref)
+    if ratio_exact is not None:
+        assert ratio_exact <= Decimal("0.001"), (name, "clean case needs a large margin", ratio_exact)
+        lines.append(f"# exact eigenvalue ratio {ratio_exact:.6e} (limit {EIG_RATIO_MAX})")
     fd = dict(feat)
     pkey = "c" if prim == "point" else "p"
     # The model against the exact reference: centroid within 1e-12 m, direction within 1e-12,
@@ -651,6 +690,14 @@ def build():
     circle = gen_circle(200, 5.0)
     cases.append(make_case("circle-line3", "line3", circle,
                            note="AC-4: 200 points evenly on a 5 m circle, line3 has no unique direction"))
+    cases.append(make_case("circle-1nm-line3", "line3", gen_circle(200, 5.0, random.Random(16), 1e-9),
+                           note="AC-4: the same circle with 1 nm noise per coordinate"))
+    cases.append(make_case("circle-1um-line3", "line3", gen_circle(200, 5.0, random.Random(17), 1e-6),
+                           note="AC-4: the same circle with 1 um noise per coordinate"))
+    cases.append(make_case("circle-1um-line2", "line2", gen_circle_xy(random.Random(18), 200, 5.0, 1e-6),
+                           note="AC-4 for line2: horizontal 5 m circle, 1 um noise, default plane"))
+    cases.append(make_case("cube-1um-plane", "plane", gen_cube(random.Random(19), 0.1, 1e-6),
+                           note="AC-4 for plane: the 8 vertices of a 0.1 m cube (isotropic), 1 um noise"))
     cases.append(make_case("circle-plane", "plane", circle,
                            note="control: the same circle has a well-defined plane"))
     head = [
@@ -659,8 +706,8 @@ def build():
         "# Per case: primitive, optional fixed direction and projection plane, the points;",
         "# expect ok: exact 80-digit reference point, direction and RMS residual (decimal),",
         "# then the canonical encoding and SHA-256 from the bit-exact model of the pinned rules;",
-        "# expect ill_conditioned: the model's eigenvalue-gap condition (hex, or none if infinite).",
-        "# Default parameters: FitParams::new(LeastSquares) (cond_limit 1e12, rank_tol 1e-9).",
+        "# expect ill_conditioned: the model's eigenvalue ratio (hex, or none if not finite).",
+        "# Default parameters: FitParams::new(LeastSquares) (eig_ratio_max 0.9, rank_tol 1e-9).",
     ]
     return "\n".join(head) + "\n" + "\n".join(cases) + "\n"
 
