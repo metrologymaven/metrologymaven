@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-fit]
+built_pr: 304
 satisfies: [REQ-KRN.ENV.TAN-003, REQ-KRN.ENV.TAN-004]
 covers: []
 depends_on: [KRN.LSQ.TRAIT, KRN.SOLV.MSTART, KRN.NUM.RED, KRN.NUM.FN]
