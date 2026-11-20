@@ -1,0 +1,15 @@
+schema = "1"
+
+[toolchain]
+commit_hash = "29483883eed69d5fb4db01964cdf2af4d86e9cb2"
+llvm_version = "20.1.7"
+
+[artifact]
+package = "fid-kernel-wasm"
+bin = "fid-kernel-wasm"
+
+[remap]
+workspace = "/fid/src"
+cargo_home = "/fid/cargo-home"
+vendor = "/fid/vendor"
+target_dir = "/fid/target"

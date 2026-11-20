@@ -1,0 +1,1 @@
+error bad_value: kernel-build/rust-toolchain.toml: toolchain.channel

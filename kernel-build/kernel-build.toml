@@ -1,0 +1,21 @@
+# Kernel artifact build settings that neither rustup nor Cargo hold (spec node KRN.MAN.REPRO).
+# Read by `fid-manifest-gen toolchain-digest` and by scripts/rebuild-kernel.sh (which reads only
+# simple `key = "value"` lines, so keep that form).
+schema = "1"
+
+# What `rustc -vV` of the pinned channel reports; any other build of the same release (a
+# distribution's rustc with its own LLVM, say) fails the toolchain check.
+[toolchain]
+commit_hash = "29483883eed69d5fb4db01964cdf2af4d86e9cb2"
+llvm_version = "20.1.7"
+
+[artifact]
+package = "fid-kernel-wasm"
+bin = "fid-kernel-wasm"
+
+# Fixed prefixes the build's absolute paths are remapped to (--remap-path-prefix).
+[remap]
+workspace = "/fid/src"
+cargo_home = "/fid/cargo-home"
+vendor = "/fid/vendor"
+target_dir = "/fid/target"
