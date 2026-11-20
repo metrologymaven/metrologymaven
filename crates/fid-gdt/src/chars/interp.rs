@@ -680,7 +680,7 @@ mod tests {
         assert_eq!(Interpretation::of(&[]), Interpretation::Provisional);
         let s = rule(RuleStatus::SignedOff);
         let p = rule(RuleStatus::Provisional);
-        assert_eq!(Interpretation::of(&[s.clone()]), Interpretation::SignedOff);
+        assert_eq!(Interpretation::of(std::slice::from_ref(&s)), Interpretation::SignedOff);
         assert_eq!(Interpretation::of(&[s.clone(), s.clone()]), Interpretation::SignedOff);
         assert_eq!(Interpretation::of(&[s.clone(), p.clone()]), Interpretation::Provisional);
         assert_eq!(Interpretation::of(&[p]), Interpretation::Provisional);
