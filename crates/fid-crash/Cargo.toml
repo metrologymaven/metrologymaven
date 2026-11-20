@@ -1,0 +1,37 @@
+[package]
+name = "fid-crash"
+description = "Metrology Maven crash and power-loss harness for the project store: a writer child commits a synthetic hash chain, the parent kills it at seeded instants and checks the reopened store (spec node CORE.STO.SQL.CRASH)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-crash"
+path = "src/main.rs"
+
+[dependencies]
+# The synthetic chain's RFC 8785 form and SHA-256 (CORE.JRN.CANON) and the shared digest type.
+fid-canon = { path = "../fid-canon" }
+fid-types = { path = "../fid-types" }
+# The store under test (CORE.STO.SQL.TXN). Its `test-probe` feature is enabled only through
+# this crate's `fault-inject` feature below, never by a normal build.
+fid-store = { path = "../fid-store" }
+# Failures map to the published bus error catalogue (internal/storage, internal/invariant_violated).
+fid-bus = { path = "../fid-bus" }
+
+[features]
+# Test-only: the broken writer modes of the self-tests (AC-2, AC-3) and the step probe that
+# hangs or fails a writer at an exact commit step. Enabled only by the dev-dependency below.
+fault-inject = ["fid-store/test-probe"]
+
+[dev-dependencies]
+fid-crash = { path = ".", features = ["fault-inject"] }
+# Tamper tests edit a closed store's database directly (dev-only, so the CORE.BUS.LINT
+# sqlite_driver rule, which ignores dev edges, still holds); the version fid-store pins (D-043).
+rusqlite = { version = "=0.41.1", default-features = false, features = ["bundled"] }
+
+[lints]
+workspace = true

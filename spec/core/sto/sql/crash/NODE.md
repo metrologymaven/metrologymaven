@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-crash]
 satisfies: [REQ-CORE.STO.SQL-005]
 covers: []
 depends_on: [CORE.STO.SQL.TXN, CORE.JRN.CANON]
@@ -68,6 +69,7 @@ None stored; all data is generated from the seed. CI jobs on the Tier 1 OS runne
 ## Open questions
 
 - Which fault-injecting layer to use on Linux CI (a device-mapper log-writes target or a FUSE layer) is [unverified]; Windows and macOS have no power-loss mode, and the gap must be stated in the platform matrix.
+- Built (fid-crash): the Linux power-loss mode uses the kernel's dm-flakey target with `drop_writes` (switched with `dmsetup suspend --nolockfs`, then unmount and remount), in `.github/workflows/crash-power-loss.yml`. The harness lives in its own crate `fid-crash` (with `cargo xtask crash-harness` running it) rather than inside `fid-xtask`, because it links `fid-store` and therefore builds SQLite, which `fid-xtask` must not need. The Windows and macOS power-loss gap is not yet stated in the platform matrix (owned by `PLAT.MATRIX`).
 
 ## Children
 

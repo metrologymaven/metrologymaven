@@ -1207,6 +1207,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-crash"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-crash",
+ "fid-store",
+ "fid-types",
+ "rusqlite",
+]
+
+[[package]]
 name = "fid-ctrl"
 version = "0.0.1"
 dependencies = [

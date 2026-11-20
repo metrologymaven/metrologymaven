@@ -1,0 +1,66 @@
+name: crash-power-loss
+# CORE.STO.SQL.CRASH REQ-004 and AC-3: the crash harness in Linux power-loss mode. The store
+# lives on ext4 on a device-mapper flakey target over a loop device; after each kill the target
+# drops every write the kernel had not yet sent to the device and the file system is remounted
+# (see crates/fid-crash/src/power.rs). 200 power cuts with the real writer must pass every
+# check; the self-test writer that commits a row before flushing its blob must be caught with
+# a missing or corrupt blob. Nightly, on demand, and on PRs that touch the harness or the store.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "crates/fid-crash/**"
+      - "crates/fid-store/**"
+      - ".github/workflows/crash-power-loss.yml"
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  power-loss:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - name: Build the harness with the self-test writers
+        run: cargo build --locked --release -p fid-crash --features fault-inject
+      - name: Flakey device with ext4
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! sudo modprobe dm-flakey; then
+            sudo apt-get update -q
+            sudo apt-get install -y -q "linux-modules-extra-$(uname -r)"
+            sudo modprobe dm-flakey
+          fi
+          truncate -s 512M "$RUNNER_TEMP/flakey.img"
+          dev=$(sudo losetup --find --show "$RUNNER_TEMP/flakey.img")
+          sectors=$(sudo blockdev --getsz "$dev")
+          sudo dmsetup create fidcrash --table "0 $sectors flakey $dev 0 180 0"
+          sudo mkfs.ext4 -q /dev/mapper/fidcrash
+          sudo mkdir -p /mnt/fidcrash
+          sudo mount /dev/mapper/fidcrash /mnt/fidcrash
+          echo "FLAKEY_DEV=$dev" >> "$GITHUB_ENV"
+          echo "FLAKEY_SECTORS=$sectors" >> "$GITHUB_ENV"
+      - name: 200 power cuts with the real writer pass (REQ-004)
+        shell: bash
+        run: |
+          sudo target/release/fid-crash run --power-loss --dm-name fidcrash --dm-dev "$FLAKEY_DEV" \
+            --dm-sectors "$FLAKEY_SECTORS" --mount /mnt/fidcrash --seed 1 --kills 200
+      - name: Row before blob flush is caught (AC-3)
+        shell: bash
+        run: |
+          set +e
+          out=$(sudo target/release/fid-crash run --mode row-before-blob-flush --power-loss --dm-name fidcrash \
+            --dm-dev "$FLAKEY_DEV" --dm-sectors "$FLAKEY_SECTORS" --mount /mnt/fidcrash --seed 1 --kills 200)
+          code=$?
+          set -e
+          echo "$out"
+          test "$code" -eq 1
+          echo "$out" | grep -Eq '^FAIL blob_(missing|corrupt): .*\(seed 1, instant [0-9]+:[0-9]+\)$'
