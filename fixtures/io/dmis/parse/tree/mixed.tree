@@ -1,0 +1,10 @@
+mode	strict
+statement	1:1	feat_point	F(P1)	FEAT	/word:POINT,word:CART,number:10,number:20,number:0,number:0,number:0,number:1
+tokens	F(P1)	=	FEAT	/	POINT	,	CART	,	10	,	20	,	0	,	0	,	0	,	1
+unknown	2:1	FOO	-
+tokens	FOO	/	1	,	2
+mode	lenient
+statement	1:1	feat_point	F(P1)	FEAT	/word:POINT,word:CART,number:10,number:20,number:0,number:0,number:0,number:1
+tokens	F(P1)	=	FEAT	/	POINT	,	CART	,	10	,	20	,	0	,	0	,	0	,	1
+unknown	2:1	FOO	-
+tokens	FOO	/	1	,	2

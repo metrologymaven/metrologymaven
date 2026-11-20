@@ -1,0 +1,5 @@
+mode	strict
+error	malformed	1	14	output
+mode	lenient
+unknown	1:1	OUTPUT	shape_mismatch
+tokens	OUTPUT	/	FA(P1)	,

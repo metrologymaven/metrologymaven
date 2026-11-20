@@ -1,0 +1,18 @@
+$$ hand-written test program for the statement tree (CC-BY-4.0)
+UNITS/MM,ANGDEC
+units/inch
+f(p1)=feat/point,pol,1.5,-2,+0.25,0,0,1
+F(C1)=FEAT/CIRCLE,INNER,CART,1,2,3,0,0,1,12.5
+T(DIAM_1)=TOL/DIAM,-0.01,0.01 , $
+  $$ a comment inside the chain
+  MMC
+TEXT/OPER,Clamp the part, then press start
+TEXT/OUTFIL,'report ''one'''
+V(N1)=NESTT/A,(1,(2,3),4),B=C
+NESTT/B,(1,2)
+NESTT/C
+OUTPUT/FA(P1),TA(DIAM_1)
+V(X)=BAR/'s',(1,2
+5,6
+DMISMN/'tree test',05.3
+ENDFIL
