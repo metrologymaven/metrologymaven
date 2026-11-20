@@ -111,5 +111,5 @@ fn registry_knows_its_majors() {
     assert!(r.knows("FEAT"));
     assert!(!r.knows("FOO"));
     assert_eq!(r.len(), 8);
-    assert!(Registry::builtin().unwrap().is_empty());
+    assert_eq!(Registry::builtin().unwrap().len(), fid_io_dmis::gdef::descriptors().len());
 }

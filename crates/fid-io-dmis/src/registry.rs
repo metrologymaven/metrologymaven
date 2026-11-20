@@ -15,7 +15,7 @@
 //! [`MAX_SHAPE_DEPTH`]), never the input.
 
 use crate::lex::{LexOptions, TokenKind};
-use crate::tree::{Arg, Item};
+use crate::tree::{Arg, Item, Statement};
 use fid_canon::{to_canonical_bytes, CValue};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -278,11 +278,11 @@ pub struct Registry {
     classes: BTreeMap<Box<str>, Box<str>>,
 }
 
-/// The descriptors registered by the built-in grammar families. The families
-/// `IO.DMIS.PARSE.GDEF` and `IO.DMIS.PARSE.GEXEC` add theirs here; neither is built yet, so
-/// the list is empty and every statement parses as `Unknown`.
+/// The descriptors registered by the built-in grammar families: `IO.DMIS.PARSE.GDEF`
+/// ([`crate::gdef`]) today; `IO.DMIS.PARSE.GEXEC` adds its own here once built, so program-only
+/// statements still parse as `Unknown`.
 pub fn builtin_descriptors() -> Vec<StatementDescriptor> {
-    Vec::new()
+    crate::gdef::descriptors()
 }
 
 fn valid_class(s: &str) -> bool {
@@ -661,6 +661,16 @@ impl Registry {
             }
         }
         Ok(out)
+    }
+
+    /// Matcher steps the descriptors of `statement`'s major word use on its label and fields:
+    /// the work [`crate::tree::parse_with`] charges to the per-statement cap and the file budget
+    /// (the classes it holds need not match). `None` if it would pass [`MAX_MATCH_STEPS`].
+    /// Lets grammar families show that their shapes stay inside the budget.
+    pub fn match_steps(&self, statement: &Statement) -> Option<u32> {
+        let mut steps = Steps { used: 0, limit: MAX_MATCH_STEPS };
+        let prefix = statement.label.as_ref().map(|l| l.prefix());
+        self.attempt(statement.major_word(), prefix, &statement.args, &mut steps).ok().map(|_| steps.used)
     }
 
     /// `dmis-statement-classes.json` (schema `fid.dmis-classes` v1, RFC 8785 canonical JSON):

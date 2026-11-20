@@ -1,0 +1,18 @@
+comment	1:1
+header	2:1	dmismn	'gdef results fixture'	05.3	-
+header	3:1	filnam	'results'	05.3	-
+units	4:1	units	MM	ANGDEC	TEMPC
+feat	5:1	feat_point_actual	FA(PT1)	actual	POINT	CART	-	-	10.002 19.998 0.001 0 0 1	-
+feat	6:1	feat_circle_actual	FA(CI1)	actual	CIRCLE	CART	INNER	-	25.003 24.997 0 0 0 1 12.512	-
+feat	7:1	feat_plane_actual	FA(PL1)	actual	PLANE	POL	-	-	0 0 5.01 0 0 1	-
+feat	8:1	feat_cylndr_actual	FA(CY1)	actual	CYLNDR	CART	INNER	-	0.01 -0.02 0 0 0 1 10.004	-
+feat	9:1	feat_patern_actual	FA(PA1)	actual	PATERN	-	-	-	-	FA(CI1) FA(CY1)
+tol	10:1	tol_diam_actual	TA(D1)	actual	DIAM	size	0.012	-	-	INTOL
+tol	11:1	tol_rad_actual	TA(R1)	actual	RAD	size	-0.15	-	-	OUTOL
+tol	12:1	tol_pos_actual	TA(P1)	actual	POS	location	0.183	MMC	DAT(A) DAT(B)	INTOL
+tol	13:1	tol_flat_actual	TA(F1)	actual	FLAT	form	0.031	-	-	OUTOL
+tol	14:1	tol_parlel_actual	TA(PA1)	actual	PARLEL	orientation	0.02	-	DAT(A)	INTOL
+tol	15:1	tol_profs_actual	TA(PS1)	actual	PROFS	profile	-0.12 0.08	-	DAT(A) DAT(B)	INTOL
+tol	16:1	tol_trnout_actual	TA(TR1)	actual	TRNOUT	runout	0.07	-	DAT(A) DAT(B)	OUTOL
+datum	17:1	datdef	FA(PL1)	DAT(A)
+header	18:1	endfil	-	-	-

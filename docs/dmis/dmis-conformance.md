@@ -11,12 +11,12 @@ _No statement is tagged to a conformance module level yet._
 
 | Statement | Import | Export | Module levels | Tests |
 | --- | --- | --- | --- | --- |
-| DATDEF | none | none | unassigned | none |
-| DMISMD | none | none | unassigned | none |
-| DMISMN | none | none | unassigned | none |
-| ENDFIL | none | none | unassigned | none |
-| FEAT | none | none | unassigned | none |
-| FILNAM | none | none | unassigned | none |
-| TEXT | none | none | unassigned | none |
-| TOL | none | none | unassigned | none |
-| UNITS | none | none | unassigned | none |
+| DATDEF | partial | none | unassigned | `fid-io-dmis::gdef::ac2_results_expose_values_and_flags`, `fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views` |
+| DMISMD | partial | none | unassigned | `fid-io-dmis::gdef::module_header_parses_and_other_statements_stay_unknown` |
+| DMISMN | partial | none | unassigned | `fid-io-dmis::gdef::ac1_every_feature_type_parses_into_its_view`, `fid-io-dmis::gdef::ac2_results_expose_values_and_flags`, `fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views` |
+| ENDFIL | partial | none | unassigned | `fid-io-dmis::gdef::ac1_every_feature_type_parses_into_its_view`, `fid-io-dmis::gdef::ac2_results_expose_values_and_flags`, `fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views`, `fid-io-dmis::gdef::module_header_parses_and_other_statements_stay_unknown` |
+| FEAT | partial | none | unassigned | `fid-io-dmis::gdef::ac1_every_feature_type_parses_into_its_view`, `fid-io-dmis::gdef::ac2_results_expose_values_and_flags`, `fid-io-dmis::gdef::malformed_statements_report_the_closest_class` |
+| FILNAM | partial | none | unassigned | `fid-io-dmis::gdef::ac1_every_feature_type_parses_into_its_view`, `fid-io-dmis::gdef::ac2_results_expose_values_and_flags` |
+| TEXT | partial | none | unassigned | `fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views` |
+| TOL | partial | none | unassigned | `fid-io-dmis::gdef::ac2_results_expose_values_and_flags`, `fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views`, `fid-io-dmis::gdef::malformed_statements_report_the_closest_class` |
+| UNITS | partial | none | unassigned | `fid-io-dmis::gdef::ac1_every_feature_type_parses_into_its_view`, `fid-io-dmis::gdef::ac2_results_expose_values_and_flags`, `fid-io-dmis::gdef::definitions_and_header_statements_parse_into_views`, `fid-io-dmis::gdef::malformed_statements_report_the_closest_class` |

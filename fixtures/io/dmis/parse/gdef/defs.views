@@ -1,0 +1,27 @@
+comment	1:1
+header	2:1	dmismn	'gdef definitions fixture'	05.3	-
+units	3:1	units	INCH	ANGDMS	TEMPF
+text	4:1	text	OPER	'Load the synthetic part'
+text	5:1	text	OUTFIL	free text kept raw
+datum	6:1	datdef	F(PL1)	DAT(A)
+datum	7:1	datdef	FA(CI1)	DA(B)
+tol	8:1	tol_diam	T(D1)	def	DIAM	size	-0.05 0.05	-	-	-
+tol	9:1	tol_rad	T(R1)	def	RAD	size	-0.1 0.1	-	-	-
+tol	10:1	tol_width	T(W1)	def	WIDTH	size	-0.2 0.2	-	-	-
+tol	11:1	tol_distb	T(DB1)	def	DISTB	location	40 -0.1 0.1	NOMINL AVG	-	-
+tol	12:1	tol_anglb	T(AB1)	def	ANGLB	location	30 -0.5 0.5	-	-	-
+tol	13:1	tol_pos	T(P1)	def	POS	location	0.2	MMC	DAT(A) DAT(B)	-
+tol	14:1	tol_concen	T(CC1)	def	CONCEN	location	0.05	-	DAT(A)	-
+tol	15:1	tol_flat	T(F1)	def	FLAT	form	0.02	-	-	-
+tol	16:1	tol_strght	T(S1)	def	STRGHT	form	0.01	-	-	-
+tol	17:1	tol_cirlty	T(C1)	def	CIRLTY	form	0.015	-	-	-
+tol	18:1	tol_cylcty	T(Y1)	def	CYLCTY	form	0.03	-	-	-
+tol	19:1	tol_parlel	T(PA1)	def	PARLEL	orientation	0.05	-	DAT(A)	-
+tol	20:1	tol_perpnd	T(PE1)	def	PERPND	orientation	0.05	-	DAT(A)	-
+tol	21:1	tol_anglr	T(AN1)	def	ANGLR	orientation	0.1 30	-	DAT(B)	-
+tol	22:1	tol_profl	T(PL1)	def	PROFL	profile	-0.1 0.1	-	DAT(A)	-
+tol	23:1	tol_profp	T(PP1)	def	PROFP	profile	0.2	-	-	-
+tol	24:1	tol_profs	T(PS1)	def	PROFS	profile	-0.25 0.25	-	DAT(A) DAT(B)	-
+tol	25:1	tol_crnout	T(CR1)	def	CRNOUT	runout	0.04	-	DAT(A)	-
+tol	26:1	tol_trnout	T(TR1)	def	TRNOUT	runout	0.06	-	DAT(A) DAT(B)	-
+header	27:1	endfil	-	-	-
