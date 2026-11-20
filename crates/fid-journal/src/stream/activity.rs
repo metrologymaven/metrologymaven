@@ -7,9 +7,19 @@
 //!   rotations; `prev` is always [`GENESIS_PREV`] (no previous-hash links). The detachable
 //!   payload (salts and committed values) is not written: the Activity Log keeps what the
 //!   header shows (command, class, principal kind, time, input and output digests).
-//! - **Files.** The current file is `<dir>/activity.log`. Rotation renames it to
-//!   `activity.<n>.log`, `n` counting up from 1 (one more than the highest `n` present), then
-//!   deletes the lowest-numbered rotated files beyond `keep`. A line is written whole with one
+//! - **Classes.** [`ActivityLog::append`] takes only `command` drafts of class R0 or R1; any
+//!   other draft is refused with [`CLASS_REFUSED`], so a committed (W-class or other) command
+//!   can never land in the Activity Log.
+//! - **One writer per directory.** The first write takes `<dir>/activity.lock`, created with
+//!   `create_new`, and holds it until the log is dropped, which removes it. A second
+//!   `ActivityLog` on the same directory (in this or another process) gets
+//!   [`UNAVAILABLE`] warnings while the lock exists. A lock left by a crashed process must be
+//!   removed by hand (or by the host at start-up) before the directory is written again.
+//! - **Files.** The current file is `<dir>/activity.log`. Rotation moves it to
+//!   `activity.<n>.log`, `n` counting up from 1 (one more than the highest `n` present), without
+//!   ever replacing a file: it hard-links the current file to the new name, trying the next `n`
+//!   while the name is taken, then removes the old name. It then deletes the lowest-numbered
+//!   rotated files beyond `keep`. A line is written whole with one
 //!   `write_all`; a line that would take the current file past `max_bytes` goes to a fresh
 //!   file, so no line is split across files. A line longer than [`MAX_LINE_BYTES`] is refused.
 //! - **Flush.** Lines are not fsynced one by one (the Activity Log is not a record of state);
@@ -51,6 +61,12 @@ pub const DEFAULT_KEEP: usize = 8;
 pub const MAX_LINE_BYTES: usize = 1024 * 1024;
 /// The warning code of a failed write (the leaf's only error).
 pub const UNAVAILABLE: &str = "activity_log_unavailable";
+/// The code of a draft refused because it is not an R0 or R1 command.
+pub const CLASS_REFUSED: &str = "activity_class_refused";
+/// The lock file that makes one writer per directory.
+pub const LOCK_FILE: &str = "activity.lock";
+/// Most names tried for one rotation before giving up.
+const MAX_ROTATION_TRIES: u64 = 1000;
 /// Command ID of a job lifecycle record.
 pub const LIFECYCLE_COMMAND: &str = "job.lifecycle";
 /// Branch of a job lifecycle record (jobs are not branch-scoped).
@@ -61,7 +77,7 @@ pub const LIFECYCLE_IDENTITY: &str = "scheduler";
 /// A failed Activity Log write. The call that produced the record still succeeds (REQ-008).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ActivityWarning {
-    /// Always [`UNAVAILABLE`].
+    /// [`UNAVAILABLE`], or [`CLASS_REFUSED`] for a draft that may not be written here.
     pub code: &'static str,
     /// What failed, for the log of the host.
     pub detail: String,
@@ -171,6 +187,9 @@ pub struct JobChange<'a> {
     pub error: Option<&'a str>,
     /// Monotonic clock time of the change, in nanoseconds.
     pub at_ns: u64,
+    /// Wall-clock time of the change since the Unix epoch, when the source knows it; written as
+    /// `time.utc`. `None` stamps the write time instead.
+    pub wall: Option<Duration>,
 }
 
 impl JobChange<'_> {
@@ -196,6 +215,8 @@ impl JobChange<'_> {
 }
 
 struct State {
+    /// The lock file, once this log holds it.
+    lock: Option<PathBuf>,
     file: Option<File>,
     size: u64,
     next_seq: u64,
@@ -239,7 +260,14 @@ impl ActivityLog {
             config,
             manifests,
             clock,
-            state: Mutex::new(State { file: None, size: 0, next_seq: 1, seq_known: false, next_rotation: 1 }),
+            state: Mutex::new(State {
+                lock: None,
+                file: None,
+                size: 0,
+                next_seq: 1,
+                seq_known: false,
+                next_rotation: 1,
+            }),
             warnings: AtomicU64::new(0),
             last_warning: Mutex::new(None),
         }
@@ -256,9 +284,20 @@ impl ActivityLog {
     }
 
     /// Writes one record built from `draft` (its `stream` is replaced by `activity`) and
-    /// returns its entry hash. A failure is a warning: the caller's call still succeeds.
+    /// returns its entry hash. Only `command` drafts of class R0 or R1 are taken; anything else
+    /// is refused with [`CLASS_REFUSED`] and nothing is written. A failure is a warning: the
+    /// caller's call still succeeds.
     pub fn append(&self, draft: &EntryDraft) -> Result<Digest, ActivityWarning> {
-        let r = self.append_inner(draft);
+        let r = match &draft.body {
+            DraftBody::Command(c) if matches!(c.class, SideEffect::R0 | SideEffect::R1) => self.append_inner(draft),
+            DraftBody::Command(c) => Err(ActivityWarning {
+                code: CLASS_REFUSED,
+                detail: format!("class {} never goes to the Activity Log", c.class),
+            }),
+            _ => {
+                Err(ActivityWarning { code: CLASS_REFUSED, detail: format!("a {} entry is not a call", draft.kind()) })
+            }
+        };
         if let Err(w) = &r {
             self.note(w);
         }
@@ -271,7 +310,8 @@ impl ActivityLog {
     /// principal kind `system` ([`LIFECYCLE_IDENTITY`]) on [`LIFECYCLE_BRANCH`]. Its committed
     /// arguments are the transition object ([`JobChange::to_value`]); its one output names the
     /// job as entity, with [`JobChange::digest`] as digest. `time.mono_ns` is the change's
-    /// clock time and `time.utc` the injected wall clock's.
+    /// clock time; `time.utc` is [`JobChange::wall`], the change's own wall-clock time, or the
+    /// injected wall clock's reading at write time when the change carries none.
     pub fn record_lifecycle(&self, change: &JobChange<'_>) -> Result<Digest, ActivityWarning> {
         let r = self.lifecycle_draft(change).and_then(|d| self.append_inner(&d));
         if let Err(w) = &r {
@@ -287,7 +327,11 @@ impl ActivityLog {
             stream: ACTIVITY_STREAM.to_string(),
             branch: LIFECYCLE_BRANCH.to_string(),
             logical_parent: None,
-            time: EntryTime { utc: format_utc(self.clock.now()), mono_ns: change.at_ns, sync: "unknown".to_string() },
+            time: EntryTime {
+                utc: format_utc(change.wall.unwrap_or_else(|| self.clock.now())),
+                mono_ns: change.at_ns,
+                sync: "unknown".to_string(),
+            },
             principal: PrincipalDraft {
                 kind: PrincipalKind::System,
                 identity: CValue::Str(LIFECYCLE_IDENTITY.to_string()),
@@ -382,6 +426,15 @@ impl ActivityLog {
     fn open_current(&self, st: &mut State) -> Result<(), ActivityWarning> {
         std::fs::create_dir_all(&self.dir)
             .map_err(|e| ActivityWarning::new(format!("create {}: {e}", self.dir.display())))?;
+        if st.lock.is_none() {
+            let lock = self.dir.join(LOCK_FILE);
+            OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&lock)
+                .map_err(|e| ActivityWarning::new(format!("{} (one writer per directory): {e}", lock.display())))?;
+            st.lock = Some(lock);
+        }
         let rotated = self.rotated()?;
         st.next_rotation = rotated.last().map_or(1, |(n, _)| n.saturating_add(1));
         let path = self.dir.join(CURRENT_FILE);
@@ -434,9 +487,25 @@ impl ActivityLog {
             f.sync_all().map_err(|e| ActivityWarning::new(format!("sync {CURRENT_FILE}: {e}")))?;
         }
         let from = self.dir.join(CURRENT_FILE);
-        let to = self.dir.join(rotated_file_name(st.next_rotation));
-        std::fs::rename(&from, &to)
-            .map_err(|e| ActivityWarning::new(format!("rename {CURRENT_FILE} to {}: {e}", to.display())))?;
+        // No-clobber move: a hard link fails on an existing name, so a rotated file is never
+        // replaced; a taken name moves on to the next number.
+        let mut linked = false;
+        for _ in 0..MAX_ROTATION_TRIES {
+            let to = self.dir.join(rotated_file_name(st.next_rotation));
+            st.next_rotation = st.next_rotation.saturating_add(1);
+            match std::fs::hard_link(&from, &to) {
+                Ok(()) => {
+                    linked = true;
+                    break;
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(e) => return Err(ActivityWarning::new(format!("link {CURRENT_FILE} to {}: {e}", to.display()))),
+            }
+        }
+        if !linked {
+            return Err(ActivityWarning::new("no free rotated file name"));
+        }
+        std::fs::remove_file(&from).map_err(|e| ActivityWarning::new(format!("remove old {CURRENT_FILE}: {e}")))?;
         if let Ok(rotated) = self.rotated() {
             let excess = rotated.len().saturating_sub(self.config.keep);
             for (_, p) in rotated.iter().take(excess) {
@@ -450,8 +519,12 @@ impl ActivityLog {
 
 impl Drop for ActivityLog {
     fn drop(&mut self) {
-        if let Some(f) = self.lock().file.take() {
+        let mut st = self.lock();
+        if let Some(f) = st.file.take() {
             let _ = f.sync_all();
+        }
+        if let Some(lock) = st.lock.take() {
+            let _ = std::fs::remove_file(lock);
         }
     }
 }

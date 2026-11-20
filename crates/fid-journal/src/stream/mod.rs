@@ -15,9 +15,11 @@
 //!
 //! **Activity Log** ([`ActivityLog`]). Record Journal entry headers with stream `activity`,
 //! one canonical JSON line per record, without previous-hash links (every `prev` is
-//! [`crate::GENESIS_PREV`]), rotating by size (REQ-005, REQ-006). Job lifecycle changes are
+//! [`crate::GENESIS_PREV`]), rotating by size (REQ-005, REQ-006). It takes only R0 and R1
+//! commands, and one writer per directory (a lock file). Job lifecycle changes are
 //! written whether or not a recording session is active (REQ-004): the `LifecycleSink`
-//! implementation lives in `fid-jobs` (layer engine, above this crate) and calls
+//! implementation (`fid_jobs::activity::ActivityLogSink`) lives in `fid-jobs` (layer engine,
+//! above this crate); it queues events off the scheduler's lock to a writer thread that calls
 //! [`ActivityLog::record_lifecycle`]. A write that fails is a warning
 //! ([`ActivityWarning`], code `activity_log_unavailable`) and never fails the call (REQ-008).
 //!
@@ -34,8 +36,8 @@ mod settings;
 
 pub use activity::{
     format_utc, rotated_file_name, ActivityLog, ActivityLogConfig, ActivityWarning, JobChange, SystemUtc, UtcClock,
-    ACTIVITY_STREAM, CURRENT_FILE, DEFAULT_KEEP, DEFAULT_MAX_BYTES, LIFECYCLE_BRANCH, LIFECYCLE_COMMAND,
-    LIFECYCLE_IDENTITY, MAX_LINE_BYTES, UNAVAILABLE,
+    ACTIVITY_STREAM, CLASS_REFUSED, CURRENT_FILE, DEFAULT_KEEP, DEFAULT_MAX_BYTES, LIFECYCLE_BRANCH, LIFECYCLE_COMMAND,
+    LIFECYCLE_IDENTITY, LOCK_FILE, MAX_LINE_BYTES, UNAVAILABLE,
 };
 #[cfg(feature = "store")]
 pub use settings::{activity_settings, KEEP_KEY, MAX_BYTES_KEY};
@@ -122,6 +124,7 @@ pub struct RouteContext {
 
 /// The stream a completed call belongs to, or `None` when it is not stored at all
 /// (REQ-001..-003). D0: a pure function of its arguments.
+#[must_use]
 pub fn route(class: SideEffect, principal: Locality, ctx: &RouteContext) -> Option<StreamId> {
     match class {
         SideEffect::W1
@@ -175,6 +178,7 @@ impl RecordingFlag {
 }
 
 /// What happened to one completed call.
+#[must_use]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CallOutcome {
     /// The stream the call belongs to. [`StreamId::Record`] and [`StreamId::AccessLedger`] are
@@ -260,6 +264,7 @@ impl Streams {
     }
 
     /// [`route`] with the current context.
+    #[must_use]
     pub fn route(
         &self,
         class: SideEffect,
@@ -272,6 +277,7 @@ impl Streams {
     /// Routes a completed call by its draft's class and writes it to the Activity Log when it
     /// belongs there. A failed write is reported in [`CallOutcome::warning`], never as an
     /// error (REQ-008). Record Journal and Access Ledger calls are returned unwritten.
+    #[must_use = "a Record Journal or Access Ledger call must still be written by the caller"]
     pub fn complete_call(
         &self,
         principal: Locality,

@@ -9,8 +9,8 @@
 use fid_canon::{parse, to_canonical_bytes, CValue, Digest};
 use fid_journal::stream::{
     activity_settings, rotated_file_name, route, ActivityLog, ActivityLogConfig, CallError, Locality, ProgramStepRef,
-    RecordingFlag, RouteContext, StreamId, Streams, CURRENT_FILE, DEFAULT_KEEP, DEFAULT_MAX_BYTES, KEEP_KEY,
-    MAX_BYTES_KEY, UNAVAILABLE,
+    RecordingFlag, RouteContext, StreamId, Streams, CLASS_REFUSED, CURRENT_FILE, DEFAULT_KEEP, DEFAULT_MAX_BYTES,
+    KEEP_KEY, LOCK_FILE, MAX_BYTES_KEY, UNAVAILABLE,
 };
 use fid_journal::{
     session_start, validate_header_value, verify_header_value, AiAssistance, CommandDraft, DraftBody, EntryDraft,
@@ -473,4 +473,91 @@ fn recording_flag() {
     assert_eq!(f.recording_id().as_deref(), Some("r2"));
     f.set_recording(false, None);
     assert!(!f.is_recording() && f.recording_id().is_none());
+}
+
+// ------------------------------------------------------------------ review fixes
+
+/// Only R0 and R1 commands reach the Activity Log: a W2 draft (or any committed class, or a
+/// non-command entry) given straight to `append` is refused and nothing is written.
+#[test]
+fn append_refuses_committed_classes() {
+    let t = TempDir::new("class");
+    let dir = t.p("alog");
+    let log = ActivityLog::new(&dir, ActivityLogConfig::default(), manifests());
+    let e = log.append(&call(SideEffect::W2, 1)).unwrap_err();
+    assert_eq!(e.code, CLASS_REFUSED);
+    for class in SideEffect::ALL.iter().copied().filter(|c| !matches!(c, SideEffect::R0 | SideEffect::R1)) {
+        assert_eq!(log.append(&call(class, 2)).unwrap_err().code, CLASS_REFUSED, "{class}");
+    }
+    let session = session_start(
+        "activity",
+        "main",
+        EntryTime { utc: "2026-11-19T08:00:00Z".to_string(), mono_ns: 0, sync: "ntp".to_string() },
+        PrincipalDraft { kind: PrincipalKind::Human, identity: CValue::Str("u".to_string()), on_behalf_of: None },
+        AiAssistance::None,
+        manifests(),
+        SessionInfo { session_id: "s".to_string(), app_version: "0.0.1".to_string() },
+    );
+    assert_eq!(log.append(&session).unwrap_err().code, CLASS_REFUSED);
+    assert!(!dir.join(CURRENT_FILE).exists(), "nothing was written");
+    // R0 and R1 still go through.
+    log.append(&call(SideEffect::R0, 3)).unwrap();
+    log.append(&call(SideEffect::R1, 4)).unwrap();
+    log.close().unwrap();
+    assert_eq!(read_lines(&dir.join(CURRENT_FILE)).len(), 2);
+}
+
+/// One writer per directory: a second log on the same directory gets warnings until the
+/// first is dropped, which releases the lock file.
+#[test]
+fn one_writer_per_directory() {
+    let t = TempDir::new("lock");
+    let dir = t.p("alog");
+    let first = ActivityLog::new(&dir, ActivityLogConfig::default(), manifests());
+    first.append(&call(SideEffect::R0, 1)).unwrap();
+    assert!(dir.join(LOCK_FILE).exists());
+    let second = ActivityLog::new(&dir, ActivityLogConfig::default(), manifests());
+    let e = second.append(&call(SideEffect::R0, 2)).unwrap_err();
+    assert_eq!(e.code, UNAVAILABLE);
+    assert!(e.detail.contains(LOCK_FILE), "{}", e.detail);
+    drop(first);
+    assert!(!dir.join(LOCK_FILE).exists(), "the lock is released on drop");
+    second.append(&call(SideEffect::R0, 3)).unwrap();
+    drop(second);
+    let lines = read_lines(&dir.join(CURRENT_FILE));
+    assert_eq!(lines.len(), 2);
+    check_line(&lines[1], 2);
+}
+
+/// Rotation never replaces a file: a rotated name that appeared after the log opened is
+/// skipped and left as it was.
+#[test]
+fn rotation_does_not_clobber() {
+    let t = TempDir::new("noclobber");
+    let dir = t.p("alog");
+    let log = ActivityLog::new(&dir, ActivityLogConfig { max_bytes: 65_536, keep: 8 }, manifests());
+    log.append(&call(SideEffect::R0, 0)).unwrap();
+    // Appears after the log opened, so the log's next number is still 1.
+    std::fs::write(dir.join(rotated_file_name(1)), b"foreign\n").unwrap();
+    let mut i = 1;
+    while !dir.join(rotated_file_name(2)).exists() {
+        log.append(&call(SideEffect::R0, i)).unwrap();
+        i += 1;
+        assert!(i < 10_000, "never rotated");
+    }
+    log.close().unwrap();
+    assert_eq!(std::fs::read(dir.join(rotated_file_name(1))).unwrap(), b"foreign\n");
+    let moved = read_lines(&dir.join(rotated_file_name(2)));
+    check_line(&moved[0], 1);
+}
+
+/// Both Activity Log settings are user or machine scope only: the log is local to a machine.
+#[test]
+fn settings_are_user_and_machine_scope_only() {
+    let registry = SettingsRegistry::build(&activity_settings()).unwrap();
+    for key in [MAX_BYTES_KEY, KEEP_KEY] {
+        let decl = registry.get(key).unwrap();
+        assert_eq!(decl.scopes().collect::<Vec<_>>(), vec![Scope::User, Scope::Machine], "{key}");
+        assert!(!decl.admin());
+    }
 }

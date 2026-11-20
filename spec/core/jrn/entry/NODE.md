@@ -67,6 +67,7 @@ Defines what one journal entry contains and how it is hashed: the header fields,
 - **Determinism:** D0 given salts; salt generation is class N and the salts are recorded in the payload.
 - **Performance budget:** build and hash a 4 KiB header in < 50 µs [unverified until measured].
 - **Crate:** `fid-journal` (module `entry`).
+- **Unchained streams:** the schema's `prev` is required on every entry, but only chained streams link it. Stream `activity` (the P0 Activity Log, `CORE.JRN.STREAM.ALOG`) is unchained: every `activity` entry carries `prev` = `sha256:` followed by 64 zeros and its `seq` only counts lines. Chaining of the Activity Log is P1b (`CORE.JRN.STREAM.COMPACT`).
 
 ## Test fixtures
 
@@ -80,6 +81,7 @@ Defines what one journal entry contains and how it is hashed: the header fields,
 
 - **Resolved with `CORE.RPL.EXEC`'s expectations:** salts are class N and replay substitutes the recorded salts.
 - `TRUST.CHAIN` consumes `entry.schema.json`; it should declare `uses_artifacts: [CORE.JRN.ENTRY]` when next changed.
+- **Follow-up: a `job_lifecycle` entry kind.** The Activity Log writes job lifecycle changes as `command` entries with the reserved command ID `job.lifecycle` (R0, determinism N, principal kind `system`), because the schema has no kind for them (`CORE.JRN.STREAM.ALOG`, PR #307). A dedicated kind `job_lifecycle` with a readable body (job ID, command, from, to, error) would remove the reserved ID and show the transition in the header; it needs a schema change here. Until then `fid-registry-build` tests that no registry command takes the ID `job.lifecycle`.
 
 ## Children
 

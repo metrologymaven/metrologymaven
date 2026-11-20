@@ -1,4 +1,5 @@
-//! The Activity Log settings (`CORE.STO.SET`, REQ-CORE.JRN.STREAM.ALOG-006).
+//! The Activity Log settings (`CORE.STO.SET`, REQ-CORE.JRN.STREAM.ALOG-006). The log is local
+//! to a machine, so both settings live in the user and machine scopes only, never in a project.
 
 use super::activity::{ActivityLogConfig, DEFAULT_KEEP, DEFAULT_MAX_BYTES};
 use fid_canon::CValue;
@@ -16,7 +17,7 @@ fid_store::fid_settings! {
         owner: "journal",
         schema: r#"{"type": "integer", "minimum": 65536, "maximum": 1099511627776}"#,
         default: "67108864",
-        scopes: [Project, User, Machine],
+        scopes: [User, Machine],
         admin: false,
     }
     {
@@ -24,7 +25,7 @@ fid_store::fid_settings! {
         owner: "journal",
         schema: r#"{"type": "integer", "minimum": 0, "maximum": 1000}"#,
         default: "8",
-        scopes: [Project, User, Machine],
+        scopes: [User, Machine],
         admin: false,
     }
 }

@@ -384,6 +384,9 @@ pub struct LifecycleEvent {
     pub error: Option<JobErrorCode>,
     /// Clock time of the change.
     pub at: Duration,
+    /// Wall-clock time of the change, since the Unix epoch (UTC); the same reading the job
+    /// record stores.
+    pub wall: Duration,
 }
 
 /// Receives job lifecycle events, in order. The journal wires it to the Activity Log.
@@ -450,7 +453,7 @@ struct Inner<T> {
 }
 
 impl<T: Send + 'static> Inner<T> {
-    fn emit(&self, record: &JobRecord, from: Option<JobState>, at: Duration) {
+    fn emit(&self, record: &JobRecord, from: Option<JobState>, at: Duration, wall: Duration) {
         self.sink.emit(&LifecycleEvent {
             job: record.id,
             command: record.command.clone(),
@@ -459,6 +462,7 @@ impl<T: Send + 'static> Inner<T> {
             to: record.state,
             error: record.error,
             at,
+            wall,
         });
     }
 
@@ -480,7 +484,7 @@ impl<T: Send + 'static> Inner<T> {
             entry.record.ended_wall = Some(wall);
             ended.push_back(entry.record.id);
         }
-        self.emit(&entry.record, Some(from), now);
+        self.emit(&entry.record, Some(from), now, wall);
     }
 
     /// Drops the oldest-ended records beyond the retention cap.
@@ -735,7 +739,7 @@ impl<T: Send + 'static> Jobs<T> {
             error: None,
             error_detail: None,
         };
-        self.inner.emit(&record, None, now);
+        self.inner.emit(&record, None, now, record.submitted_wall);
         st.jobs
             .insert(id, Entry { record, progress, timeout: opts.timeout, handler: Some(exec.handler), result: None });
         match opts.class {
