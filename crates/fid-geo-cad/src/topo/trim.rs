@@ -1346,8 +1346,8 @@ mod tests {
         assert_eq!(NURBS_EVAL_REL, 2f64.powi(-40));
         assert_eq!(UV_REL, 2f64.powi(-50));
         assert_eq!(DRIFT_REL, 2f64.powi(-51));
-        // binary64 TAU is within 2^-51 of 2 pi (TAU - 2 pi = -2.449e-16).
-        assert!(core::hint::black_box(2.449_293_598_294_706_4e-16) < DRIFT_REL);
+        // binary64 TAU is within 2^-51 of 2 pi (TAU - 2 pi = -2.449e-16): checked at compile time.
+        const _: () = assert!(2.449_293_598_294_706_4e-16 < DRIFT_REL);
     }
 
     #[test]
