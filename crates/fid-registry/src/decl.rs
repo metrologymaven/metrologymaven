@@ -272,6 +272,27 @@ pub mod rt {
         T::number_schema()
     }
 
+    /// A type a field with `#[fid(path_like)]` may have: `String`, or `Option<String>` for an
+    /// optional file parameter. A file handle is one string (CORE.BUS.POL.FS), never a number,
+    /// a list or an object.
+    #[diagnostic::on_unimplemented(
+        message = "`{Self}` cannot be a path_like parameter",
+        label = "a field with #[fid(path_like)] must be a String or an Option<String>"
+    )]
+    pub trait PathLikeField {}
+
+    impl PathLikeField for String {}
+
+    impl PathLikeField for Option<String> {}
+
+    /// The schema of a `path_like` field, before `x-extensions` is added:
+    /// `{"path_like": true, "type": "string"}`.
+    pub fn path_like_schema_of<T: PathLikeField + ?Sized>() -> CValue {
+        let mut o = super::typed("string");
+        o.insert("path_like".to_string(), CValue::Bool(true));
+        CValue::Obj(o)
+    }
+
     /// Literal kinds of `#[fid(default = ...)]`.
     #[derive(Debug)]
     pub struct BoolLit;

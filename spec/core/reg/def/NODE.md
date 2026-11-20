@@ -15,7 +15,7 @@ depends_on: [GEO.FRAME.UNITS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # CORE.REG.DEF: Command definition model, schema keywords and quantity catalogue
@@ -28,7 +28,7 @@ Defines what a command declaration *is*: the fields every domain crate fills in,
 
 **In:**
 - The definition record: ID, major, title, parameter schema, result schema, side-effect class, MCP projection, determinism class, idempotency, `fs_effect`, undo behaviour, preconditions, declared effects, kernel algorithm IDs, exposure, lifecycle fields, and the policy fields `human_only` (D-031), `network`, `web`, `web_note` and `cli_bare`
-- JSON Schema 2020-12 dialect plus project keywords `x-quantity`, `x-unit`, `x-ref`, `x-selector`, `x-standards-ref`, `x-ui`, `x-untrusted`
+- JSON Schema 2020-12 dialect plus project keywords `x-quantity`, `x-unit`, `x-ref`, `x-selector`, `x-standards-ref`, `x-ui`, `x-untrusted`, `path_like`, `x-extensions`
 - A read-only facade over the unit catalogue (the catalogue itself is owned by `GEO.FRAME.UNITS`, CONSTITUTION §2.1)
 - The precondition expression language and its step bound
 - Task-guide declarations (consumed by `AUTO.MCP.SKILLS` and `AGENT.SKILLS`)
@@ -44,7 +44,7 @@ Defines what a command declaration *is*: the fields every domain crate fills in,
 ## Requirements
 
 - **REQ-CORE.REG.DEF-001** The definition model shall hold, for each command, the fields ID, major, title, parameter schema, result schema, side-effect class, MCP projection, determinism class, idempotency, `fs_effect`, undo behaviour, preconditions, declared effects, algorithm IDs, exposure and lifecycle state.
-- **REQ-CORE.REG.DEF-002** Parameter and result schemas shall be JSON Schema 2020-12 documents that use no vocabulary beyond the standard keywords and the project keywords `x-quantity`, `x-unit`, `x-ref`, `x-selector`, `x-standards-ref`, `x-ui` and `x-untrusted`.
+- **REQ-CORE.REG.DEF-002** Parameter and result schemas shall be JSON Schema 2020-12 documents that use no vocabulary beyond the standard keywords and the project keywords `x-quantity`, `x-unit`, `x-ref`, `x-selector`, `x-standards-ref`, `x-ui`, `x-untrusted`, `path_like` and `x-extensions`.
 - **REQ-CORE.REG.DEF-003** The definition model shall take every quantity kind, its SI canonical unit, its accepted authoring units and their exact rational conversion factors from the unit catalogue published by `GEO.FRAME.UNITS`, and shall define no unit of its own.
 - **REQ-CORE.REG.DEF-004** Every `x-quantity` value shall name a kind in the unit catalogue, and every `x-unit` value shall be an accepted unit of that kind.
 - **REQ-CORE.REG.DEF-005** The precondition language shall be non-Turing-complete, and every precondition evaluation shall terminate within a declared step bound of at most 10,000 steps [unverified that 10,000 suffices].
@@ -67,6 +67,7 @@ Applied: FIELD, SCHEMA, PRED, MACRO, plus GUIDE for task guides. The former QTY 
 
 - **Applied (constitution amendment §2.1):** the unit catalogue is owned by `GEO.FRAME.UNITS` (L0). REQ-003 was reworded from "the quantity catalogue shall give..." to "take ... from the catalogue"; the title still says "quantity catalogue" to stay in step with the parent's Children table.
 - `GEO.FRAME.UNITS` currently scopes only length and angle and leaves other kinds to "the domains that need them". REQ-CORE.REG-004 needs kinds such as time, temperature, dimensionless ratio, count, area and force in one catalogue. Cross-domain request to GEO.FRAME: extend the catalogue (one owner) rather than let each domain add kinds.
+- **Applied (request from `CORE.BUS.POL.FS`, maintainer decision after #286):** the file-parameter keywords `path_like` and `x-extensions` joined the vocabulary (REQ-002; `CORE.REG.DEF.SCHEMA` REQ-010, keyword vocabulary version 2).
 - **Applied (requests from other nodes):** `human_only` (D-031), `web`/`web_note` (`PLAT.WEB.DIFF`), `network` (`PLAT.DEPLOY.OFFLINE` NETLIST), `x-untrusted` result markers (`AUTO.MCP.TAINT`), task guides (`AUTO.MCP.SKILLS`, `AGENT.SKILLS`) and `cli_bare` (`PLAT.DOCTOR.CMD`). REQ-009 and REQ-010 were added for them.
 - Sibling follow-ups that this node cannot write: `CORE.REG.VAL` needs rules for `human_only` with a projection looser than `request_only`, at most one `cli_bare` per domain, and `network` consistent with class; `CORE.REG.MAN` needs a `task_guides` array in the manifest.
 - `FLOW.DEADEND` asks whether its dead-end catalogue should be a manifest field; not added, because no requirement or decision asks for it yet.

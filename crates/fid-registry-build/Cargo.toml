@@ -22,6 +22,10 @@ fid-report = { path = "../fid-report" }
 # The settings commands (CORE.STO.SET), read through `fid_store::settings::declarations()`.
 # Layer model. Brings bundled SQLite into this build step; no new crate in the lock.
 fid-store = { path = "../fid-store" }
+# The settings each crate declares with `fid_settings!` (CORE.STO.SET), collected into the
+# workspace settings manifest: `fid_bus::policy::fs::fs_settings` (`bus.fs_roots`). Layer
+# engine, below services; already in the lock.
+fid-bus = { path = "../fid-bus" }
 
 [lints]
 workspace = true

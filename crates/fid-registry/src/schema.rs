@@ -1,7 +1,7 @@
 //! Schema keyword vocabulary, meta-schema and schema checker. Spec node
 //! `CORE.REG.DEF.SCHEMA` (REQ-001 to REQ-003, REQ-006 to REQ-009).
 //!
-//! Parameter and result schemas are JSON Schema 2020-12 plus seven project keywords
+//! Parameter and result schemas are JSON Schema 2020-12 plus nine project keywords
 //! ([`ProjectKeyword`]). [`check_schema`] refuses every keyword outside a closed, sorted table
 //! ([`KEYWORDS`]) and checks every keyword value; [`registry_keywords_schema`] is the same
 //! vocabulary as a meta-schema, checked in as `schemas/registry-keywords.schema.json`.
@@ -29,7 +29,7 @@ pub const SCHEMA_MAX_DEPTH: usize = 64;
 /// Most issues reported for one document; beyond it the list ends with `too_many_issues`.
 pub const MAX_ISSUES: usize = 10_000;
 /// Version of the project vocabulary; a change to a closed list is a new version.
-pub const REGISTRY_KEYWORDS_VERSION: u32 = 1;
+pub const REGISTRY_KEYWORDS_VERSION: u32 = 2;
 /// `$id` of the meta-schema.
 pub const REGISTRY_KEYWORDS_ID: &str = "https://metrologymaven.io/schemas/registry-keywords.schema.json";
 /// The `x-standards-ref` pattern (REQ-007): an identifier-like designator (a letter, then
@@ -40,6 +40,12 @@ pub const STANDARDS_REF_PATTERN: &str = "^[A-Za-z][A-Za-z0-9.-]{0,15}:[0-9]{4}( 
 pub const MAX_DESIGNATOR: usize = 16;
 /// Longest `x-standards-ref`.
 pub const MAX_STANDARDS_REF: usize = 64;
+/// The pattern of one `x-extensions` entry: a lowercase file extension without the dot.
+pub const EXTENSION_PATTERN: &str = "^[a-z0-9]{1,16}$";
+/// Longest `x-extensions` entry, in bytes (the guard's `MAX_EXT_BYTES`, CORE.BUS.POL.FS).
+pub const MAX_EXTENSION_BYTES: usize = 16;
+/// Most entries of one `x-extensions` list (the guard's `MAX_EXTENSIONS`, CORE.BUS.POL.FS).
+pub const MAX_EXTENSIONS: usize = 64;
 
 macro_rules! closed_enum {
     ($(#[$m:meta])* $name:ident { $($variant:ident => $s:literal),+ $(,)? }) => {
@@ -75,8 +81,10 @@ macro_rules! closed_enum {
 }
 
 closed_enum! {
-    /// The seven project keywords (REQ-001).
+    /// The nine project keywords (REQ-001), in byte order.
     ProjectKeyword {
+        PathLike => "path_like",
+        XExtensions => "x-extensions",
         XQuantity => "x-quantity",
         XRef => "x-ref",
         XSelector => "x-selector",
@@ -125,6 +133,7 @@ closed_enum! {
         BadStandardsRef => "bad_standards_ref",
         DuplicateKey => "duplicate_key",
         ExternalRef => "external_ref",
+        MisplacedPathLike => "misplaced_path_like",
         SchemaTooDeep => "schema_too_deep",
         SchemaTooLarge => "schema_too_large",
         TooManyIssues => "too_many_issues",
@@ -205,8 +214,8 @@ impl Keyword {
 
 /// The closed keyword vocabulary, sorted by byte order for binary search: the 2020-12
 /// vocabularies (without the deprecated `definitions`, `dependencies`, `$recursiveAnchor`,
-/// `$recursiveRef`) plus the seven project keywords.
-pub const KEYWORDS: [(&str, Role); 64] = [
+/// `$recursiveRef`) plus the nine project keywords.
+pub const KEYWORDS: [(&str, Role); 66] = [
     ("$anchor", Role::Anchor),
     ("$comment", Role::Str),
     ("$defs", Role::SchemaMap),
@@ -250,6 +259,7 @@ pub const KEYWORDS: [(&str, Role); 64] = [
     ("multipleOf", Role::PositiveNumber),
     ("not", Role::Schema),
     ("oneOf", Role::SchemaList),
+    ("path_like", Role::Project(ProjectKeyword::PathLike)),
     ("pattern", Role::Str),
     ("patternProperties", Role::PatternMap),
     ("prefixItems", Role::SchemaList),
@@ -264,6 +274,7 @@ pub const KEYWORDS: [(&str, Role); 64] = [
     ("unevaluatedProperties", Role::Schema),
     ("uniqueItems", Role::Bool),
     ("writeOnly", Role::Bool),
+    ("x-extensions", Role::Project(ProjectKeyword::XExtensions)),
     ("x-quantity", Role::Project(ProjectKeyword::XQuantity)),
     ("x-ref", Role::Project(ProjectKeyword::XRef)),
     ("x-selector", Role::Project(ProjectKeyword::XSelector)),
@@ -453,6 +464,37 @@ pub fn is_standards_ref(s: &str) -> bool {
             .strip_prefix(" cl. ")
             .is_some_and(|n| (1..=16).contains(&n.len()) && n.bytes().all(|c| c.is_ascii_digit() || c == b'.'));
     designator_ok && edition_ok && clause_ok
+}
+
+/// Whether `s` matches [`EXTENSION_PATTERN`]: 1 to 16 lowercase ASCII letters or digits.
+pub fn is_extension(s: &str) -> bool {
+    (1..=MAX_EXTENSION_BYTES).contains(&s.len()) && s.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+}
+
+/// Whether `v` is a valid `x-extensions` value: a non-empty array of at most
+/// [`MAX_EXTENSIONS`] strings matching [`EXTENSION_PATTERN`], strictly increasing in byte order
+/// (so sorted and unique).
+pub fn is_extension_list(v: &CValue) -> bool {
+    let CValue::Arr(items) = v else { return false };
+    if items.is_empty() || items.len() > MAX_EXTENSIONS {
+        return false;
+    }
+    let mut prev: Option<&str> = None;
+    for item in items {
+        let CValue::Str(s) = item else { return false };
+        if !is_extension(s) || prev.is_some_and(|p| p >= s.as_str()) {
+            return false;
+        }
+        prev = Some(s);
+    }
+    true
+}
+
+/// Whether `path` (the position of a schema object) is a top-level property of the schema,
+/// `/properties/<name>`: the only position `path_like` may take (CORE.BUS.POL.FS reads only
+/// those).
+fn top_level_property(path: &[Seg<'_>]) -> bool {
+    matches!(path, [Seg::Key("properties"), Seg::Key(_)])
 }
 
 /// Whether `s` is an anchor name (`^[A-Za-z_][-A-Za-z0-9._]*$`, as the 2020-12 core
@@ -671,11 +713,12 @@ impl Checker<'_> {
             }
             (Kind::SchemaMap, CValue::Obj(m)) => {
                 self.case_check(m, path);
+                self.stray_path_like(m, path);
                 for k in m.keys() {
                     self.check_name(k, pointer(path));
                 }
             }
-            (Kind::PatternMap, CValue::Obj(_)) => {}
+            (Kind::PatternMap, CValue::Obj(m)) => self.stray_path_like(m, path),
             (Kind::SchemaMap | Kind::PatternMap, _) => {
                 self.push(pointer(path), SchemaCode::BadSchema, "must be an object of schemas".to_string())
             }
@@ -683,8 +726,24 @@ impl Checker<'_> {
             (Kind::SchemaList, _) => {
                 self.push(pointer(path), SchemaCode::BadSchema, "must be a non-empty array of schemas".to_string())
             }
-            (Kind::Data, CValue::Obj(m)) => self.case_check(m, path),
+            (Kind::Data, CValue::Obj(m)) => {
+                self.case_check(m, path);
+                self.stray_path_like(m, path);
+            }
             _ => {}
+        }
+    }
+
+    /// A `"path_like": true` member of an object that is not a schema (a map of schemas, or
+    /// data such as `const`, `default` or `x-ui`). CORE.BUS.POL.FS counts every such member
+    /// and refuses a command with one anywhere but on a top-level property, so the checker
+    /// refuses it too [`SchemaCode::MisplacedPathLike`].
+    fn stray_path_like(&mut self, m: &BTreeMap<String, CValue>, path: &[Seg<'_>]) {
+        if m.get("path_like") == Some(&CValue::Bool(true)) {
+            let mut p = path.to_vec();
+            p.push(Seg::Key("path_like"));
+            let msg = "\"path_like\": true outside a schema position".to_string();
+            self.push(pointer(&p), SchemaCode::MisplacedPathLike, msg);
         }
     }
 
@@ -858,15 +917,38 @@ impl Checker<'_> {
                     let msg = "$dynamicRef is not supported: its target is resolved at evaluation time".to_string();
                     self.push(kp(k), SchemaCode::UnwalkedRef, msg);
                 }
-                Role::Project(p) => self.project(p, v, m, kp(k)),
+                Role::Project(p) => self.project(p, v, m, path, kp(k)),
             }
         }
     }
 
-    /// The project keywords (REQ-003, REQ-006 to REQ-008).
-    fn project(&mut self, p: ProjectKeyword, v: &CValue, m: &BTreeMap<String, CValue>, at: String) {
+    /// The project keywords (REQ-003, REQ-006 to REQ-008, REQ-010); `path` is the position of
+    /// the schema object `m`.
+    fn project(&mut self, p: ProjectKeyword, v: &CValue, m: &BTreeMap<String, CValue>, path: &[Seg<'_>], at: String) {
         let kv = SchemaCode::BadKeywordValue;
         match p {
+            ProjectKeyword::PathLike => {
+                if v != &CValue::Bool(true) {
+                    self.push(at, kv, "path_like must be true".to_string());
+                } else if !top_level_property(path) {
+                    let msg = "path_like is allowed only on a top-level property (/properties/<name>)".to_string();
+                    self.push(at, SchemaCode::MisplacedPathLike, msg);
+                } else if m.get("type") != Some(&CValue::Str("string".to_string())) {
+                    self.push(at, SchemaCode::MisplacedPathLike, "path_like needs type string".to_string());
+                }
+            }
+            ProjectKeyword::XExtensions => {
+                if !is_extension_list(v) {
+                    let msg = format!(
+                        "x-extensions must be a non-empty, sorted array of at most {MAX_EXTENSIONS} distinct strings \
+                         matching {EXTENSION_PATTERN}"
+                    );
+                    self.push(at, kv, msg);
+                } else if !m.contains_key("path_like") {
+                    let msg = "x-extensions needs a sibling path_like: true".to_string();
+                    self.push(at, SchemaCode::MisplacedPathLike, msg);
+                }
+            }
             ProjectKeyword::XQuantity => match v {
                 CValue::Str(q) if self.catalogue.kind(q).is_some() => {}
                 CValue::Str(q) => {
@@ -952,7 +1034,7 @@ fn strs(items: &[&str]) -> CValue {
 }
 
 /// The meta-schema `registry-keywords.schema.json` (REQ-001): the 2020-12 meta-schema plus
-/// the seven project keywords, with `unevaluatedProperties: false` so that no other keyword
+/// the nine project keywords, with `unevaluatedProperties: false` so that no other keyword
 /// is admitted, the deprecated 2019-09 keywords and `$dynamicRef` refused, and `$ref`
 /// limited to `#...` (REQ-002). Checked in as canonical JSON plus a newline.
 pub fn registry_keywords_schema() -> CValue {
@@ -983,6 +1065,17 @@ pub fn registry_keywords_schema() -> CValue {
                 ("$recursiveRef", f.clone()),
                 ("definitions", f.clone()),
                 ("dependencies", f),
+                ("path_like", obj([("const", CValue::Bool(true))])),
+                (
+                    "x-extensions",
+                    obj([
+                        ("type", s("array")),
+                        ("minItems", CValue::Num(1.0)),
+                        ("maxItems", CValue::Num(64.0)),
+                        ("uniqueItems", CValue::Bool(true)),
+                        ("items", obj([("type", s("string")), ("pattern", s(EXTENSION_PATTERN))])),
+                    ]),
+                ),
                 ("x-quantity", obj([("type", s("string")), ("pattern", s("^[a-z][a-z0-9_]{0,31}$"))])),
                 ("x-unit", obj([("type", s("string")), ("pattern", s("^[!-~]{1,16}$"))])),
                 ("x-ref", obj([("enum", strs(&entity))])),
@@ -1002,6 +1095,11 @@ pub fn registry_keywords_schema() -> CValue {
         (
             "dependentSchemas",
             obj([
+                (
+                    "path_like",
+                    obj([("required", strs(&["type"])), ("properties", obj([("type", obj([("const", s("string"))]))]))]),
+                ),
+                ("x-extensions", obj([("required", strs(&["path_like"]))])),
                 ("x-unit", obj([("required", strs(&["x-quantity"]))])),
                 (
                     "x-untrusted",
@@ -1033,7 +1131,7 @@ mod tests {
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(names, sorted);
-        assert_eq!(names.len(), 64);
+        assert_eq!(names.len(), 66);
         for (k, _) in all_keywords() {
             assert!(lookup(k).is_some(), "{k}");
         }
@@ -1106,6 +1204,30 @@ mod tests {
         }
         assert!(is_standards_ref(&format!("A{}:2017 cl. {}", "B".repeat(15), "1".repeat(16))));
         assert!(!is_standards_ref(&format!("A{}:2017", "B".repeat(16))));
+    }
+
+    #[test]
+    fn extensions() {
+        for ok in ["stl", "step", "3mf", "a", "abcdefghijklmnop"] {
+            assert!(is_extension(ok), "{ok}");
+        }
+        for bad in ["", "STL", ".stl", "st l", "st-l", "\u{17f}tl", "abcdefghijklmnopq"] {
+            assert!(!is_extension(bad), "{bad}");
+        }
+        let list = |xs: &[&str]| CValue::Arr(xs.iter().map(|x| s(x)).collect());
+        assert!(is_extension_list(&list(&["step", "stl"])));
+        assert!(!is_extension_list(&list(&[])));
+        assert!(!is_extension_list(&list(&["stl", "step"])));
+        assert!(!is_extension_list(&list(&["stl", "stl"])));
+        let max: Vec<String> = (0..MAX_EXTENSIONS).map(|i| format!("e{i:03}")).collect();
+        let max: Vec<&str> = max.iter().map(String::as_str).collect();
+        assert!(is_extension_list(&list(&max)));
+        let over: Vec<String> = (0..=MAX_EXTENSIONS).map(|i| format!("e{i:03}")).collect();
+        let over: Vec<&str> = over.iter().map(String::as_str).collect();
+        assert!(!is_extension_list(&list(&over)));
+        assert!(!is_extension_list(&s("stl")));
+        // The meta-schema writes the limit as a literal.
+        assert_eq!(MAX_EXTENSIONS, 64);
     }
 
     #[test]

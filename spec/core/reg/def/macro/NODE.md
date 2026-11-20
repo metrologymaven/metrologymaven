@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # CORE.REG.DEF.MACRO: Declaration macros and compile-time handler checks
@@ -59,6 +59,7 @@ The API every domain crate uses to declare commands. A derive macro generates a 
 - **Defaults:** `#[fid(default = LIT)]` (a bool, string, integer or float literal, with an optional `-` on numbers) is checked against the field type at compile time through `rt::AcceptsDefault<kind>`; a wrong kind or an out-of-range value does not compile.
 - **Recursion:** the derive refuses a field type that names the type itself (`Self`, or its own name as a one-segment path; `other::Foo` inside `Foo` is a different type and is allowed). Mutual recursion through another type (`A` holds `B`, `B` holds `A`) cannot be seen by a macro that reads one item; generating such a schema does not terminate. It is a documented limit, with no run-time guard.
 - **Handler lookup:** `HandlerRef::get::<F>()` returns `None` when `F` is not the handler's exact pointer type. A caller (the bus, `CORE.BUS.PIPE`) shall turn that `None` into a typed error naming the command, and shall never skip the command or fall back to another handler.
+- **File parameters:** `#[fid(path_like)]` emits `"path_like": true` and `#[fid(extensions = ["step", "stl"])]` emits `x-extensions` (`CORE.REG.DEF.SCHEMA` REQ-010). The field type must implement `rt::PathLikeField` (`String`, `Option<String>`), so any other type does not compile; `extensions` without `path_like`, an empty, unsorted or duplicate list, an extension that is not 1 to 16 lowercase ASCII letters or digits, `path_like` with a value, and `path_like` with a quantity are compile errors. A `path_like` field in a type used as another type's field is not caught here: `CORE.REG.DEF.SCHEMA` refuses it (`misplaced_path_like`). Compile-fail cases `path_like_on_number`, `path_like_on_list`, `extensions_without_path_like`, `extensions_unsorted`, `extension_with_dot`.
 - **Errors:** compile errors only.
 - **Determinism:** D0 for generated output.
 - **Performance budget:** none at run time.

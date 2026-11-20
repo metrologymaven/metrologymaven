@@ -17,7 +17,7 @@ use fid_bus::principal::{
 };
 use fid_canon::{parse, to_canonical_bytes, CValue, Digest};
 use fid_journal::{EntryDraft, EntryTime, Manifests};
-use fid_registry::CommandDef;
+use fid_registry::{check_schema, fid_command, validate, Catalogue, CommandDef, FidSchema};
 use fid_store::settings::{encode_record, FileStore, ProjectValues, Scope, SettingsRegistry, Sources};
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
@@ -740,6 +740,87 @@ fn nested_path_like_is_refused() {
     let mut params = BTreeMap::new();
     params.insert("opts".to_string(), CValue::Obj(inner));
     assert_reason(check_raw_paths(&agent, &def, &CValue::Obj(params)), Code::Internal, "invariant_violated");
+    // The schema checker refuses the same declaration, so it never reaches the registry.
+    let catalogue = Catalogue::geo_frame().unwrap();
+    let issues = check_schema(&def.params_schema, &catalogue);
+    assert_eq!(issues.len(), 1, "{issues:?}");
+    assert_eq!(issues[0].code.as_str(), "misplaced_path_like");
+    assert_eq!(issues[0].pointer, "/properties/opts/properties/file/path_like");
+}
+
+// ------------------------------------------------------------------ declared through the macros
+
+/// A file-import command as a domain crate declares it with the registry macros.
+#[derive(FidSchema)]
+pub struct ImportPartParams {
+    #[fid(path_like, extensions = ["step", "stl"], description = "The part file.")]
+    pub source: String,
+    #[fid(max_length = 64)]
+    pub note: Option<String>,
+}
+
+#[derive(FidSchema)]
+pub struct ImportPartResult {
+    pub part: String,
+}
+
+#[fid_command(
+    id = "test.import_part",
+    major = 1,
+    title = "Import part",
+    description = "Imports a part file from an approved import root.",
+    side_effect = R1,
+    mcp_projection = Exposed,
+    determinism = D0,
+    idempotency = Natural,
+    fs_effect = ReadRoot,
+    undo = NotUndoable,
+    preconditions = [],
+    effects = [],
+    algorithms = [],
+    exposure = [Cli, Mcp],
+    lifecycle(state = "active", since = "2026-11-19"),
+    web = Available,
+)]
+fn import_part(_ctx: (), _p: ImportPartParams) -> Result<ImportPartResult, BusError> {
+    Ok(ImportPartResult { part: String::new() })
+}
+
+/// CORE.REG.DEF.SCHEMA REQ-010 with CORE.BUS.POL.FS: a command declaring a `path_like`
+/// parameter with `x-extensions` passes the keyword checker and VAL, and the guard reads both
+/// keywords from that same schema: the parameter is found, its list allows `stl` and `step`
+/// and refuses anything else.
+#[test]
+fn macro_declared_file_parameter_passes_val_and_drives_the_guard() {
+    let decl = __fid_command_import_part();
+    let def = &decl.def;
+    let catalogue = Catalogue::geo_frame().unwrap();
+    assert_eq!(check_schema(&def.params_schema, &catalogue), vec![]);
+    assert_eq!(check_schema(&def.result_schema, &catalogue), vec![]);
+    assert_eq!(validate(&[decl.to_validation()]), vec![]);
+
+    assert_eq!(path_like_params(def), vec!["source".to_string()]);
+    let tree = Tree::new();
+    let roots = tree.roots();
+    let mut table = SessionTable::new();
+    let agent = principal_as(&mut table, PrincipalKind::Agent);
+    let mut params = BTreeMap::new();
+    params.insert("source".to_string(), CValue::Str("root:imports/part.stl".into()));
+    check_raw_paths(&agent, def, &CValue::Obj(params)).unwrap();
+    resolve(&agent, def, "source", "root:imports/part.stl", &roots).unwrap();
+    resolve(&agent, def, "source", "root:shop/fixture.step", &roots).unwrap();
+    // Not in the declared list: the guard read x-extensions, not a default.
+    assert_reason(resolve(&agent, def, "source", "root:imports/notes.txt", &roots), Code::Policy, "extension_refused");
+    assert_reason(
+        resolve(&agent, def, "source", "root:imports/part.stl.exe", &roots),
+        Code::Policy,
+        "extension_refused",
+    );
+    // `note` is not a file parameter.
+    assert_reason(resolve(&agent, def, "note", "root:imports/part.stl", &roots), Code::Internal, "invariant_violated");
+    // An agent still may not pass a raw path to the declared parameter.
+    let raw = tree.p("imports/part.stl").to_string_lossy().to_string();
+    assert_reason(resolve(&agent, def, "source", &raw, &roots), Code::Policy, "raw_path_refused");
 }
 
 /// Unix: a FIFO is not a regular file; it is refused without blocking.

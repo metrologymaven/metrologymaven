@@ -120,6 +120,8 @@ VALID = {
             "tilt": {"type": "number", "x-quantity": "angle", "x-unit": "deg", "default": 0},
             "label": {"type": "string", "maxLength": 128, "x-untrusted": True},
             "note": {"type": ["string", "null"], "x-untrusted": False},
+            # REQ-010: a file parameter (CORE.BUS.POL.FS): top level, string, sorted extensions.
+            "probe_file": {"type": "string", "path_like": True, "x-extensions": ["step", "stl"]},
         },
     },
     "refs_and_defs": {
@@ -197,6 +199,18 @@ INVALID = {
         wrap({"type": "string", "x-standards-ref": "ISO-1101:2017 cl. 8.2 the zone is limited by two lines"}),
         "bad_standards_ref",
         "/properties/a/x-standards-ref",
+    ),
+    # REQ-010: path_like only on a top-level property; here on an array's items.
+    "nested_path_like": (
+        wrap({"type": "array", "items": {"type": "string", "path_like": True, "x-extensions": ["stl"]}}),
+        "misplaced_path_like",
+        "/properties/a/items/path_like",
+    ),
+    # REQ-010: x-extensions only next to path_like.
+    "extensions_without_path_like": (
+        wrap({"type": "string", "x-extensions": ["stl"]}),
+        "misplaced_path_like",
+        "/properties/a/x-extensions",
     ),
     # REQ-009: 65 levels; the innermost object is the first container below level 64.
     "depth_65": (
