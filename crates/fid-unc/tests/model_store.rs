@@ -85,6 +85,9 @@ impl Expected {
     }
 }
 
+// An inline document fits in the MCP parameter limit even with every byte escaped.
+const _: () = assert!(MAX_PARAMS_BYTES > 2 * fid_kunc::model::MAX_INPUT_BYTES);
+
 const MAIN: &str = "main";
 const AGENT_BRANCH: &str = "agent/claude-client/1";
 
@@ -837,7 +840,6 @@ fn surface_readers_are_strict() {
     }
     assert_eq!(code(w.cli(&a, MAIN, &create_args("missing.json"))), "file_unreadable");
     assert!(w.store.is_empty() && w.journal.entries.is_empty());
-    assert!(MAX_PARAMS_BYTES > 2 * fid_kunc::model::MAX_INPUT_BYTES);
 
     // Events are read strictly.
     let ev = CreateModelEvent::from_canonical_bytes(&ex.b("ac1_event")).unwrap();
