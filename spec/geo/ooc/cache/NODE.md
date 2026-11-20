@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-ooc]
+built_pr: 294
 satisfies: [REQ-GEO.OOC-001, REQ-GEO.OOC-006]
 covers: []
 depends_on: [GEO.OOC.LAYOUT, CORE.STO]
