@@ -13,6 +13,9 @@ fid-canon = { path = "../fid-canon" }
 fid-uuid = { path = "../fid-uuid" }
 # Operating-system CSPRNG for the random bits of live UUIDv7s.
 getrandom = "0.2"
+# CORE.PRJ.CONT.HIER: container labels must be NFC (journaled for good; text rules of #290).
+# MIT OR Apache-2.0; already in the tree (fid-bus, fid-pkg, fid-profile, fid-vocab).
+unicode-normalization = "0.1.24"
 
 [lints]
 workspace = true

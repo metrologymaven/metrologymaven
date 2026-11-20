@@ -190,7 +190,7 @@ reason_enum!(
 reason_enum!(
     /// Reasons for `conflict` (CORE.BUS.ROUTE, CORE.BUS.PIPE.STAGE). `id_collision`
     /// (added in catalogue v2): an entity ID, imported or drawn, is already in the project
-    /// (CORE.PRJ.CONT.ID REQ-005; used by CORE.PRJ.CONT.HIER and GEO.TYPES.REG).
+    /// (CORE.PRJ.CONT.ID REQ-004; used by CORE.PRJ.CONT.HIER and GEO.TYPES.REG).
     ConflictReason {
         ExpectedHeadMismatch => "expected_head_mismatch",
         HeadMoved => "head_moved",

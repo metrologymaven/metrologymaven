@@ -962,6 +962,7 @@ dependencies = [
  "fid-canon",
  "fid-uuid",
  "getrandom",
+ "unicode-normalization",
 ]
 
 [[package]]

@@ -321,8 +321,30 @@ fn labels_are_one_to_256_characters() {
     assert!(Label::new(&"\u{1F600}".repeat(MAX_LABEL_CHARS)).is_ok());
     assert_eq!(Label::new(&"a".repeat(MAX_LABEL_CHARS + 1)), Err(ContainerError::Label));
     // Untrusted text is kept as given, never interpreted.
-    let l = Label::new("<b>{{x}}</b>\u{202e}").unwrap();
-    assert_eq!(l.as_untrusted_str(), "<b>{{x}}</b>\u{202e}");
+    let l = Label::new("<b>{{x}}</b> \u{1F469}\u{200D}\u{1F527}").unwrap();
+    assert_eq!(l.as_untrusted_str(), "<b>{{x}}</b> \u{1F469}\u{200D}\u{1F527}");
+    // Labels are journaled for good: no Cc control, no bidi control, NFC only (#290 rules).
+    for bad in [
+        "<b>{{x}}</b>\u{202e}",
+        "a\u{0}b",
+        "a\tb",
+        "a\u{7f}",
+        "a\u{9f}",
+        "\u{202a}x",
+        "x\u{2066}",
+        "x\u{2069}",
+        "a\u{200e}",
+        "a\u{200f}",
+        "a\u{61c}",
+        "e\u{301}",
+        "\u{212b}",
+    ] {
+        assert_eq!(Label::new(bad), Err(ContainerError::Label), "{bad:?}");
+    }
+    assert!(Label::new("\u{e9}\u{c5}").is_ok());
+    // The bidi set is the listed controls only; a zero-width joiner is not one.
+    assert!(fid_project::container::is_bidi_control('\u{202e}'));
+    assert!(!fid_project::container::is_bidi_control('\u{200d}'));
 }
 
 #[test]
@@ -400,9 +422,11 @@ fn drawn_id_collision_and_id_service_faults() {
     let cases = load("cases.json");
     let first = obj(&arr(obj(&cases), "ac1")[0]);
     let (state, _) = after_ac1();
-    let mut again = ReplaySource::new(observations_of(first));
+    let mut again = Recording::new(ReplaySource::new(observations_of(first)));
     let err = run_case(&state, "project.create_part@1", first.get("params").unwrap(), &mut again).unwrap_err();
     assert_eq!(err, ContainerError::IdCollision(uuid(st(first, "id"))));
+    // The one refusal after the draw: its observations are recorded, so replay matches.
+    assert_eq!(again.observations(), observations_of(first).as_slice());
     let mut empty = ReplaySource::new(Vec::new());
     let err = run_case(&state, "project.create_part@1", first.get("params").unwrap(), &mut empty).unwrap_err();
     assert_eq!(err.code(), "replay_exhausted");

@@ -15,7 +15,7 @@ use fid_project::{
     Bits, Container, ContainerError, ContainerKind, CreatedBy, IdError, Observation, Recording, ReplaySource, Uuid,
     CONTAINER_CREATED,
 };
-use fid_project_cmd::{command_defs, created_by, register, run_create, to_bus_error, SharedSource};
+use fid_project_cmd::{command_defs, created_by, register, result_of, run_create, to_bus_error, SharedSource};
 use fid_registry::{check_schema, validate, Catalogue, CommandDecl, CommandDef};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
@@ -282,4 +282,147 @@ fn handlers_register_on_the_bus() {
     let err = register(&mut set, NAMESPACE, &source).unwrap_err();
     assert_eq!(err.code(), Code::Internal);
     assert_eq!(set.len(), 4);
+}
+
+// ------------------------------------------------------------------ published schemas
+
+/// A checker for the JSON Schema subset the four definitions use (as in
+/// `fid-gdt/tests/datum.rs`). An unknown keyword or pattern fails the test, so a schema change
+/// must extend this checker on purpose.
+fn conforms(schema: &CValue, v: &CValue, at: &str) -> Result<(), String> {
+    let CValue::Obj(s) = schema else { return Err(format!("{at}: schema is not an object")) };
+    for (k, kv) in s {
+        let ok = match (k.as_str(), kv) {
+            ("description", _) | ("x-untrusted", CValue::Bool(true)) => true,
+            ("type", CValue::Str(t)) => matches!(
+                (t.as_str(), v),
+                ("object", CValue::Obj(_)) | ("string", CValue::Str(_)) | ("null", CValue::Null)
+            ),
+            ("pattern", CValue::Str(p)) => {
+                let CValue::Str(x) = v else { return Err(format!("{at}: pattern on a non-string")) };
+                matches_pattern(p, x)
+            }
+            ("required", CValue::Arr(r)) => {
+                let CValue::Obj(o) = v else { return Err(format!("{at}: required on a non-object")) };
+                r.iter().all(|k| matches!(k, CValue::Str(k) if o.contains_key(k)))
+            }
+            ("additionalProperties", CValue::Bool(false)) => {
+                let (CValue::Obj(o), Some(CValue::Obj(props))) = (v, s.get("properties")) else {
+                    return Err(format!("{at}: additionalProperties without properties or object"));
+                };
+                o.keys().all(|k| props.contains_key(k))
+            }
+            ("properties", CValue::Obj(props)) => {
+                if let CValue::Obj(o) = v {
+                    for (pk, ps) in props {
+                        if let Some(pv) = o.get(pk) {
+                            conforms(ps, pv, &format!("{at}/{pk}"))?;
+                        }
+                    }
+                }
+                true
+            }
+            (other, _) => return Err(format!("{at}: keyword {other} not supported by the test checker")),
+        };
+        if !ok {
+            return Err(format!("{at}: fails {k}"));
+        }
+    }
+    Ok(())
+}
+
+/// The one pattern the definitions use, matched by hand (no regex engine in the workspace).
+fn matches_pattern(p: &str, x: &str) -> bool {
+    match p {
+        "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" => {
+            let b = x.as_bytes();
+            b.len() == 36
+                && b.iter().enumerate().all(|(i, c)| match i {
+                    8 | 13 | 18 | 23 => *c == b'-',
+                    _ => matches!(c, b'0'..=b'9' | b'a'..=b'f'),
+                })
+        }
+        other => panic!("pattern {other} not supported by the test checker"),
+    }
+}
+
+/// Every accepted fixture command (AC-1, the AC-2 setup, `more_ok`).
+fn accepted_cases(c: &CValue) -> Vec<Obj> {
+    let top = obj(c);
+    let mut out: Vec<Obj> = arr(top, "ac1").iter().map(|x| obj(x).clone()).collect();
+    out.extend(arr(obj(top.get("ac2").unwrap()), "setup").iter().map(|x| obj(x).clone()));
+    out.extend(arr(top, "more_ok").iter().map(|x| obj(x).clone()));
+    out
+}
+
+/// The result of every accepted command, built by `result_of` from its container, equals the
+/// fixture's expected result and conforms to the command's `result_schema`; malformed results
+/// do not.
+#[test]
+fn results_conform_to_the_result_schemas() {
+    let c = cases();
+    for case in accepted_cases(&c) {
+        let command = st(&case, "command");
+        let event = obj(case.get("event").unwrap());
+        let container = Container::from_value(event.get("body").unwrap()).unwrap();
+        let result = result_of(&container);
+        assert_eq!(canon(&result), canon(case.get("result").unwrap()), "{command}");
+        conforms(&def_of(command).result_schema, &result, command).unwrap();
+    }
+    let id = |s: &str| CValue::Str(s.to_string());
+    let ok = "019a98ca-8300-7464-8eaa-d6d3dc86bc6b";
+    let part = def_of("project.create_part@1").result_schema;
+    let one = |k: &str, v: CValue| CValue::Obj([(k.to_string(), v)].into_iter().collect());
+    conforms(&part, &one("part", id(ok)), "ok").unwrap();
+    let mut extra = BTreeMap::new();
+    extra.insert("part".to_string(), id(ok));
+    extra.insert("extra".to_string(), CValue::Null);
+    for (name, bad) in [
+        ("empty", CValue::Obj(BTreeMap::new())),
+        ("other kind", one("plan", id(ok))),
+        ("uppercase", one("part", id(&ok.to_uppercase()))),
+        ("not a uuid", one("part", id("part-1"))),
+        ("not a string", one("part", CValue::Num(5.0))),
+        ("extra key", CValue::Obj(extra)),
+        ("not an object", id(ok)),
+    ] {
+        assert!(conforms(&part, &bad, name).is_err(), "{name} conforms");
+    }
+}
+
+/// Every accepted command's parameters conform to its `params_schema`. The refusals that
+/// are about shape fail it; the label refusals pass it (the schema has no length or text
+/// rule, so the handler gives the specific `validation/label`), and so do the nil and max
+/// imported IDs, which only the ID service refuses.
+#[test]
+fn params_conform_to_the_params_schemas() {
+    let c = cases();
+    for case in accepted_cases(&c) {
+        let command = st(&case, "command");
+        conforms(&def_of(command).params_schema, case.get("params").unwrap(), command).unwrap();
+    }
+    let handler_only = ["imported_nil_id", "imported_max_id"];
+    let mut shape_refusals = 0;
+    for e in arr(obj(&c), "errors") {
+        let o = obj(e);
+        let name = st(o, "name");
+        let verdict = conforms(&def_of(st(o, "command")).params_schema, o.get("params").unwrap(), name);
+        if st(o, "error") == "schema" && !handler_only.contains(&name) {
+            assert!(verdict.is_err(), "{name} conforms to params_schema");
+            shape_refusals += 1;
+        } else {
+            assert!(verdict.is_ok(), "{name}: {verdict:?}");
+        }
+    }
+    for name in [
+        "unknown_parameter",
+        "label_not_a_string",
+        "uppercase_reference",
+        "part_without_label",
+        "revision_without_part",
+        "run_without_revision",
+    ] {
+        assert!(arr(obj(&c), "errors").iter().any(|e| st(obj(e), "name") == name), "{name}");
+    }
+    assert!(shape_refusals >= 6);
 }

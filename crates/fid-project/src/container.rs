@@ -4,7 +4,8 @@
 //! - [`Part`], [`Revision`], [`Plan`] and [`Run`] are the only container kinds
 //!   ([`ContainerKind`], REQ-001). A Revision has one Part, a Plan one Revision, and a Run one
 //!   Plan and that Plan's Revision. Labels are untrusted text of 1 to [`MAX_LABEL_CHARS`]
-//!   characters and need not be unique (REQ-006).
+//!   characters and need not be unique (REQ-006); because they are journaled for good, a
+//!   label holding a Cc control, a bidi control or non-NFC text is refused ([`Label::new`]).
 //! - [`create`] is the whole logic of the four create commands. It reads the state through a
 //!   [`ContainerView`] (via the [`Hierarchy`] helper) and returns the new [`Container`]; it
 //!   writes nothing. The bus handlers, registry definitions and the mapping to bus errors
@@ -13,12 +14,15 @@
 //! - Check order, first failure wins: parameter shape (`schema`), label (`label`),
 //!   references (`bad_reference`: missing or of the wrong kind; for a Run the Plan before the
 //!   Revision), the Plan-Revision rule (`hierarchy`, REQ-002), then the ID. Only a command
-//!   that passes every check draws an ID, so a refused command records no observation.
+//!   that passes every check draws an ID, so a command refused by those checks records no
+//!   observation. The one exception is a drawn ID that collides (below): its observations
+//!   were drawn and stay recorded.
 //! - IDs (REQ-004): an imported `id` is kept unchanged through [`IdService::import_uuid`]
 //!   (`id_collision` if the project has it); otherwise a UUIDv7 is drawn through
 //!   [`IdService::new_v7`] from the [`ObservationSource`], which records its time and random
 //!   bits for replay. A drawn ID the project already has also fails closed with
-//!   `id_collision` (no retry).
+//!   `id_collision` (no retry); the observations of that draw are recorded, so a replay of
+//!   the refused call draws and refuses the same way.
 //!
 //! Wire form of an entity, also the body of its `ContainerCreated` event (RFC 8785):
 //! `{"created_by": {"id", "kind"}, "id", "kind", "label", "parent"}` plus `"revision"` for a
@@ -31,6 +35,7 @@ use crate::id::{IdError, IdIndex, IdService, ObservationSource, Uuid};
 use fid_canon::CValue;
 use std::collections::BTreeMap;
 use std::fmt;
+use unicode_normalization::{is_nfc_quick, IsNormalized, UnicodeNormalization};
 
 /// Longest label, in Unicode scalar values (REQ-006).
 pub const MAX_LABEL_CHARS: usize = 256;
@@ -178,14 +183,21 @@ impl fmt::Display for ContainerKind {
 }
 
 /// A container label: untrusted text (CONSTITUTION C6) of 1 to [`MAX_LABEL_CHARS`]
-/// characters. Stored and shown as given, never interpreted, not required to be unique.
+/// characters (Unicode scalar values), with no Cc control character, no bidi control
+/// ([`is_bidi_control`]), and in Unicode Normalization Form C: the text rules of
+/// TRUST.PROFILE.DEFS (#290). Stored and shown as given, never interpreted, not required
+/// to be unique.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Label(String);
 
 impl Label {
-    /// Checks the length; `label` if empty or too long.
+    /// Checks the text; `label` if it is empty, longer than [`MAX_LABEL_CHARS`], holds a Cc
+    /// control or a bidi control, or is not NFC.
     pub fn new(text: &str) -> Result<Label, ContainerError> {
         if text.is_empty() || text.chars().nth(MAX_LABEL_CHARS).is_some() {
+            return Err(ContainerError::Label);
+        }
+        if text.chars().any(|c| c.is_control() || is_bidi_control(c)) || !is_nfc(text) {
             return Err(ContainerError::Label);
         }
         Ok(Label(text.to_string()))
@@ -194,6 +206,22 @@ impl Label {
     /// The untrusted text, for display or storage only.
     pub fn as_untrusted_str(&self) -> &str {
         &self.0
+    }
+}
+
+/// Bidirectional formatting controls: embeddings and overrides (U+202A..U+202E), isolates
+/// (U+2066..U+2069), the left-to-right and right-to-left marks (U+200E, U+200F) and the
+/// Arabic letter mark (U+061C). Text holding them can show in another order than it is stored.
+pub fn is_bidi_control(c: char) -> bool {
+    matches!(c, '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}' | '\u{200E}' | '\u{200F}' | '\u{061C}')
+}
+
+/// Whether `s` is in NFC: the quick check, then a full comparison when it is inconclusive.
+fn is_nfc(s: &str) -> bool {
+    match is_nfc_quick(s.chars()) {
+        IsNormalized::Yes => true,
+        IsNormalized::No => false,
+        IsNormalized::Maybe => s.nfc().eq(s.chars()),
     }
 }
 
@@ -541,7 +569,8 @@ enum Links {
 
 /// Runs the create command of `kind` against `view` with the parameter object `params` for
 /// `created_by`, drawing a new ID from `source` when no `id` is imported. Returns the new
-/// container; writes nothing. A refused command draws nothing from `source`.
+/// container; writes nothing. A command refused before the ID step draws nothing from
+/// `source`; a drawn ID that collides is refused after its draw, which stays recorded.
 pub fn create(
     kind: ContainerKind,
     view: &dyn ContainerView,

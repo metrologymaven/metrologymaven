@@ -78,6 +78,7 @@ The container entities of CONSTITUTION §5, Part → Revision → Plan → Run, 
 - Build (PR #300): the leaf is split over two crates so `fid-project` stays in layer model without the bus (and its SQLite): `fid-project` (module `container`) holds the types, labels, the checks and the `Hierarchy` helper; the engine crate `fid-project-cmd` holds the bus handlers, the registry definitions and `register` (the `fid-geo-cmd` pattern of #302).
 - Build (PR #300): an imported (or drawn) ID already in the project is `conflict/id_collision`, a reason added to the bus error catalogue as frozen baseline v2 (additions only; v1 unchanged). GEO.TYPES.REG (#302) uses the same reason.
 - Build (PR #300): AC-1 creates the plan and the run without a label while Design lists `label` for every command; `label` is required for part and revision and optional for plan and run (stored as `null`).
+- Build (PR #300): label rule, checked by the handler only: 1 to 256 Unicode scalar values, no Cc control character, no bidi control (U+202A..U+202E, U+2066..U+2069, U+200E, U+200F, U+061C) and NFC, the text rules of TRUST.PROFILE.DEFS (#290), because labels are journaled for good; any failure is `validation/label`. The published `params_schema` declares the label as an untrusted string with no `minLength` or `maxLength`, so a too short or too long label gets the specific `label` reason instead of `schema`.
 
 ## Children
 

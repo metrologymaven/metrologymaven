@@ -23,7 +23,7 @@ use fid_canon::CValue;
 use fid_project::container::ID_PATTERN;
 use fid_project::{
     create, Container, ContainerError, ContainerKind, ContainerView, CreatedBy, ObservationSource, Uuid,
-    CONTAINER_CREATED, MAX_LABEL_CHARS,
+    CONTAINER_CREATED,
 };
 use fid_registry::{CommandDef, DefError};
 use std::fmt;
@@ -73,6 +73,12 @@ pub fn to_bus_error(e: &ContainerError) -> BusError {
 /// The `ContainerCreated` event of a new container; its body is [`Container::to_value`].
 pub fn created_event(c: &Container) -> Result<Event, BusError> {
     Ok(Event::new(EventType::new(CONTAINER_CREATED)?, c.to_value()))
+}
+
+/// The command result of a new container, as its `result_schema` declares it:
+/// `{"part": <id>}`, `{"revision": <id>}`, `{"plan": <id>}` or `{"run": <id>}`.
+pub fn result_of(c: &Container) -> CValue {
+    obj([(c.kind().short(), text(&c.id().to_string()))])
 }
 
 /// Runs one create command as its handler does, with the principal already reduced to a
@@ -162,15 +168,11 @@ fn id_schema(description: &str) -> CValue {
     obj([("type", text("string")), ("pattern", text(ID_PATTERN)), ("description", text(description))])
 }
 
+/// A label: a string only. The length and text rules (1 to [`fid_project::MAX_LABEL_CHARS`] characters,
+/// no Cc or bidi control, NFC) are checked by the handler, so a caller gets the specific
+/// `validation/label` reason instead of a generic `validation/schema`.
 fn label_schema(description: &str) -> CValue {
-    let max = u32::try_from(MAX_LABEL_CHARS).unwrap_or(u32::MAX);
-    obj([
-        ("type", text("string")),
-        ("minLength", CValue::Num(1.0)),
-        ("maxLength", CValue::Num(f64::from(max))),
-        ("x-untrusted", CValue::Bool(true)),
-        ("description", text(description)),
-    ])
+    obj([("type", text("string")), ("x-untrusted", CValue::Bool(true)), ("description", text(description))])
 }
 
 fn object(required: &[&str], properties: CValue) -> CValue {
@@ -187,8 +189,9 @@ const IMPORTED: &str = "Imported ID, kept unchanged; omit it to get a new UUIDv7
 /// The four command definitions, in [`ContainerKind::ALL`] order. Built through
 /// [`CommandDef::from_value`], so every field rule of the registry applies.
 pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
-    let label_req = || label_schema("Label; untrusted text of 1 to 256 characters, need not be unique.");
-    let label_opt = || label_schema("Optional label; untrusted text of 1 to 256 characters, need not be unique.");
+    let rule = "untrusted text, 1 to 256 characters, no control or bidi control, NFC (else validation/label).";
+    let label_req = || label_schema(&format!("Label; {rule} Need not be unique."));
+    let label_opt = || label_schema(&format!("Optional label; {rule} Need not be unique."));
     let specs: [(ContainerKind, &str, &str, CValue); 4] = [
         (
             ContainerKind::Part,

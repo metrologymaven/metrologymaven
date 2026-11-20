@@ -30,7 +30,10 @@ Pinned choices (stated in the PR):
   `parent` (null for a part, the part of a revision, the revision of a plan, the plan of a
   run) and, for a run only, `revision`;
 - `label` is required for part and revision and optional for plan and run (AC-1 creates
-  the plan and the run without one); a label is 1..=256 Unicode scalar values;
+  the plan and the run without one); a label is 1..=256 Unicode scalar values with no Cc
+  control, no bidi control (U+202A..U+202E, U+2066..U+2069, U+200E, U+200F, U+061C) and in
+  NFC (the text rules of #290); anything else is `label`;
+- every accepted command's result is `{<part|revision|plan|run>: <new ID>}`;
 - references and imported IDs are canonical lowercase hyphenated UUID text; anything else
   is validation/schema, as is the nil or max UUID as an imported ID;
 - check order: parameter shape, label, references (plan before revision for a run), the
@@ -47,6 +50,7 @@ Run:  python fixtures/core/prj/cont/hier/make_fixtures.py [--check]
 import hashlib
 import json
 import sys
+import unicodedata
 import uuid
 from pathlib import Path
 
@@ -109,6 +113,18 @@ class Model:
         return ms, r
 
 
+BIDI = {0x200E, 0x200F, 0x061C} | set(range(0x202A, 0x202F)) | set(range(0x2066, 0x206A))
+
+
+def label_ok(text: str) -> bool:
+    """The label rule, from the leaf and #290: length, no Cc, no bidi control, NFC."""
+    return (
+        1 <= len(text) <= 256
+        and not any(unicodedata.category(c) == "Cc" or ord(c) in BIDI for c in text)
+        and unicodedata.is_normalized("NFC", text)
+    )
+
+
 def ok_step(model, kind, params, label, parent, revision=None, imported=None):
     """An accepted command: draws an observation unless `imported`, returns the case."""
     case = {"command": COMMAND[kind], "params": params}
@@ -123,6 +139,7 @@ def ok_step(model, kind, params, label, parent, revision=None, imported=None):
     model.entities[ident] = b
     case["event"] = event(b)
     case["id"] = ident
+    case["result"] = {kind: ident}
     return case
 
 
@@ -177,6 +194,20 @@ def main() -> int:
         err("run_both_bad_plan_first", "run", {"plan": unknown, "revision": P}, v, "bad_reference", "bad_reference"),
         err("empty_label", "part", {"label": ""}, v, "label", "label"),
         err("label_257_chars", "part", {"label": "x" * 257}, v, "label", "label"),
+        err("label_with_bell", "part", {"label": "Bra\u0007cket"}, v, "label", "label"),
+        err("label_with_newline", "part", {"label": "line 1\nline 2"}, v, "label", "label"),
+        err("label_with_tab", "revision", {"part": P, "label": "B\t2"}, v, "label", "label"),
+        err("label_with_del", "part", {"label": "x\u007f"}, v, "label", "label"),
+        err("label_with_c1_control", "part", {"label": "x\u0085"}, v, "label", "label"),
+        err("label_with_rlo", "part", {"label": "abc\u202edef"}, v, "label", "label"),
+        err("label_with_lre", "part", {"label": "\u202aabc"}, v, "label", "label"),
+        err("label_with_rli", "plan", {"revision": R, "label": "\u2067x"}, v, "label", "label"),
+        err("label_with_pdi", "run", {"plan": PL, "revision": R, "label": "x\u2069"}, v, "label", "label"),
+        err("label_with_lrm", "part", {"label": "a\u200eb"}, v, "label", "label"),
+        err("label_with_rlm", "part", {"label": "a\u200fb"}, v, "label", "label"),
+        err("label_with_alm", "part", {"label": "a\u061cb"}, v, "label", "label"),
+        err("label_not_nfc", "part", {"label": "Bracke\u0301t"}, v, "label", "label"),
+        err("label_not_nfc_hangul", "part", {"label": "\u1100\u1161"}, v, "label", "label"),
         err("plan_empty_label", "plan", {"revision": R, "label": ""}, v, "label", "label"),
         # The label is checked before the references.
         err("label_before_reference", "revision", {"part": unknown, "label": ""}, v, "label", "label"),
@@ -204,6 +235,9 @@ def main() -> int:
     for name, kind, params, label, parent, rev, imp in [
         ("imported_part_id", "part", {"label": "Imported", "id": imported}, "Imported", None, None, imported),
         ("label_256_chars", "part", {"label": "é" * 256}, "é" * 256, None, None, None),
+        ("label_nfc_composed", "part", {"label": "Br\u00e9cket \uac00"}, "Br\u00e9cket \uac00", None, None, None),
+        ("label_markup_and_zwj", "part", {"label": "<b>{{x}}</b> \U0001f469\u200d\U0001f527"},
+         "<b>{{x}}</b> \U0001f469\u200d\U0001f527", None, None, None),
         ("second_revision", "revision", {"part": P, "label": "B"}, "B", P, None, None),
         ("labelled_plan", "plan", {"revision": R, "label": "Plan 2"}, "Plan 2", R, None, None),
         ("second_run_same_plan", "run", {"plan": PL, "revision": R, "label": "Run 2"}, "Run 2", PL, R, None),
@@ -215,6 +249,14 @@ def main() -> int:
         case = ok_step(m3, kind, params, label, parent, rev, imp)
         case["name"] = name
         more_ok.append(case)
+
+    # The hand labels agree with the label rule.
+    for e in errors:
+        if "label" in e["params"] and isinstance(e["params"]["label"], str):
+            assert label_ok(e["params"]["label"]) == (e["error"] != "label"), e["name"]
+    for c in ac1 + ac2["setup"] + more_ok:
+        if "label" in c["params"]:
+            assert label_ok(c["params"]["label"]), c["params"]
 
     out = {
         "principal": PRINCIPAL,
