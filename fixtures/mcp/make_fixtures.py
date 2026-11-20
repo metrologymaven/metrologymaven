@@ -19,8 +19,9 @@ Pinned rules (mirrored by crates/fid-mcp, stated in the PR):
   description, plus " " + REQUEST_ONLY_SENTENCE for a request-only tool (the sentence alone if the
   description is empty);
 - input schema: {additionalProperties: false, properties, required (byte order), type: object};
-  a parameter with x-unit but no x-quantity is schema_unrepresentable; a parameter with x-quantity is {value: string, unit: string} (type must be number) with
-  x-quantity / x-unit copied and no default, type object, or [null, object] when declared number or null;
+  a parameter with x-unit but no x-quantity is schema_unrepresentable; a parameter with x-quantity is
+  {value: string, unit: string} (type must be number) with x-unit copied, description QUANTITY_TEMPLATE
+  with the kind, no x-quantity and no default, type object, or [null, object] when declared number or null;
   otherwise {type: T}, {type: [T...]} for a union of JSON
   types, {} for no type or a "#..." $ref, plus "default" when declared; anything else is
   schema_unrepresentable;
@@ -47,6 +48,7 @@ MAN = ROOT / "fixtures" / "manifest"
 QCD = "sha256:" + "ab" * 32
 
 REQUEST_ONLY_SENTENCE = "Calling this tool only files a request for a human to review; it performs nothing itself."
+QUANTITY_TEMPLATE = "A {kind} quantity: the value as a decimal string and its unit."
 MOTION_EFFECTS = {"run_ticket.create", "run_ticket.approve", "run_ticket.release"}
 MOTION_ALLOWLIST = {"cmm.request_hold@1"}
 JSON_TYPES = {"array", "boolean", "integer", "null", "number", "object", "string"}
@@ -202,8 +204,7 @@ def tool_of(d):
                 "additionalProperties": False, "required": ["unit", "value"],
                 "properties": {"unit": {"type": "string"}, "value": {"type": "string"}},
             }
-            if "x-quantity" in p:
-                q["x-quantity"] = p["x-quantity"]
+            q["description"] = QUANTITY_TEMPLATE.replace("{kind}", p["x-quantity"])
             if "x-unit" in p:
                 q["x-unit"] = p["x-unit"]
             props[pname] = q

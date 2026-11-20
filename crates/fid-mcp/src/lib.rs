@@ -31,5 +31,5 @@ pub use adapter::{
 };
 pub use tools::{
     decide, emit, tools, Annotations, Emitted, McpError, McpTool, ToolKind, MOTION_ALLOWLIST, MOTION_EFFECTS,
-    REQUEST_ONLY_SENTENCE, SURFACE, TOOLS_FILE,
+    QUANTITY_TEMPLATE, REQUEST_ONLY_SENTENCE, SURFACE, TOOLS_FILE,
 };

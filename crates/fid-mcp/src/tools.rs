@@ -16,8 +16,11 @@
 //! - **Input schema**: an object with `additionalProperties: false`, one property per
 //!   parameter and `required` in byte order. A parameter with `x-unit` but no `x-quantity` is
 //!   `schema_unrepresentable`. A parameter with a quantity kind is
-//!   `{value: string, unit: string}` (both required, no other member) with `x-quantity` and
-//!   `x-unit` copied from the registry when declared, and no default; it must be declared
+//!   `{value: string, unit: string}` (both required, no other member), the authored literal
+//!   the bus normalises (`CORE.BUS.UNIT`), with `x-unit` copied when declared, the
+//!   description [`QUANTITY_TEMPLATE`] with the kind filled in, and no default. `x-quantity`
+//!   is not copied: to the bus validator it means "this schema checks the normalised number",
+//!   which an object schema is not. It must be declared
 //!   `number` (type `object`) or `number` or `null` (type `[null, object]`), else
 //!   `schema_unrepresentable`. Any other parameter is `{type: T}` for a JSON
 //!   type, `{type: [T, ...]}` for a union of JSON types, and `{}` for `any` or a `#...`
@@ -51,6 +54,8 @@ pub const TOOLS_FILE: &str = "mcp-tools.json";
 /// The fixed sentence every request-only tool's description ends with (REQ-004).
 pub const REQUEST_ONLY_SENTENCE: &str =
     "Calling this tool only files a request for a human to review; it performs nothing itself.";
+/// The description of a quantity parameter; `{kind}` is the registry's `x-quantity`.
+pub const QUANTITY_TEMPLATE: &str = "A {kind} quantity: the value as a decimal string and its unit.";
 /// Declared effects that create, approve or release a motion run ticket (D-008).
 pub const MOTION_EFFECTS: [&str; 3] = ["run_ticket.create", "run_ticket.approve", "run_ticket.release"];
 /// Commands that may declare a [`MOTION_EFFECTS`] effect and still be listed (D-008: the
@@ -250,7 +255,7 @@ fn param_schema(sp: &SurfaceProjection, p: &ParamSpec) -> Result<CValue, McpErro
             obj([("unit", obj([("type", s("string"))])), ("value", obj([("type", s("string"))]))]),
         );
         if let Some(k) = &p.quantity_kind {
-            o.insert("x-quantity".to_string(), s(k));
+            o.insert("description".to_string(), CValue::Str(QUANTITY_TEMPLATE.replace("{kind}", k)));
         }
         if let Some(u) = &p.unit {
             o.insert("x-unit".to_string(), s(u));

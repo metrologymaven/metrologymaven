@@ -161,7 +161,8 @@ fn schema_shapes() {
     let props = get(&t.input_schema, "properties");
     let q = get(props, "offset");
     assert_eq!(st(q, "type"), "object");
-    assert_eq!(st(q, "x-quantity"), "length");
+    assert_eq!(st(q, "description"), "A length quantity: the value as a decimal string and its unit.");
+    assert!(matches!(q, CValue::Obj(o) if !o.contains_key("x-quantity")));
     assert_eq!(st(q, "x-unit"), "mm");
     assert_eq!(get(q, "additionalProperties"), &CValue::Bool(false));
     assert!(matches!(q, CValue::Obj(o) if !o.contains_key("default")), "a quantity carries no default");
