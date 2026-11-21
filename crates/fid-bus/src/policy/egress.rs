@@ -15,7 +15,10 @@
 //!   digest, or one older than [`APPROVAL_MAX_AGE`]; a principal that is neither `human`,
 //!   `agent` nor `script` (REQ-002).
 //! - `validation/bad_artifact`: the artifact is not in the store, is larger than one blob,
-//!   or its bytes do not hash to the digest (REQ-003).
+//!   its bytes do not hash to the digest (REQ-003), or they are a chunk manifest. The bytes
+//!   are read with `BlobStore::read_object`, which expands a chunked object's manifest; the
+//!   hash rule then refuses that expansion, so a chunked object is never sent and nor is a
+//!   manifest (maintainer decisions on #336 and #357).
 //! - `validation/schema`: parameters with unknown or missing fields, a malformed digest, or
 //!   a note that is too long or holds control, format or other forbidden characters.
 //! - `policy/class_forbidden`: a network permit asked for a class other than X1, I1 or D1,
@@ -78,7 +81,7 @@ use cap_std::fs::Dir;
 use fid_canon::CValue;
 use fid_journal::EntryTime;
 use fid_registry::{CommandDef, DefError};
-use fid_store::cas::{BlobStore, CasError, CHUNK_SIZE};
+use fid_store::cas::{BlobStore, CasError, ChunkManifest, CHUNK_SIZE};
 use fid_store::settings::{
     machine_config_dir, resolve as resolve_settings, user_config_dir, FileStore, Scope, SettingWarning,
     SettingsRegistry, Sources,
@@ -1293,13 +1296,14 @@ impl<'a> EgressSender<'a> {
         EgressSender { store, transports }
     }
 
-    /// The artifact's own bytes, through `BlobStore::read_object` (CORE.STO.CAS REQ-010): the
-    /// digest of a chunked object gives the object, never its manifest, so a manifest is
-    /// never sent as if it were the data (maintainer decision on #336). At most
-    /// [`MAX_ARTIFACT_BYTES`]: a larger artifact, which every chunked object this store
-    /// writes is, is refused before it is read.
+    /// The artifact's bytes: exactly the bytes the approved digest names (REQ-003). Read with
+    /// `BlobStore::read_object` (CORE.STO.CAS REQ-010), bounded by [`MAX_ARTIFACT_BYTES`],
+    /// then checked to hash to the digest, so bytes that are not the approved artifact (the
+    /// expansion of a manifest, which anyone can store) are never sent; and refused when they
+    /// are a chunk manifest, so the name of a chunked object is never sent as its manifest
+    /// (maintainer decisions on #336 and #357). Chunked objects are therefore not sent.
     fn load(&self, digest: &Digest) -> Result<Vec<u8>, BusError> {
-        self.store.read_object(digest, MAX_ARTIFACT_BYTES).map_err(|e| match e {
+        let bytes = self.store.read_object(digest, MAX_ARTIFACT_BYTES).map_err(|e| match e {
             CasError::Integrity(_) => bad_artifact(&format!("artifact {digest} does not verify")),
             CasError::NotFound(_) => bad_artifact(&format!("artifact {digest} is not in the store")),
             CasError::OutOfRange { .. } => {
@@ -1308,7 +1312,16 @@ impl<'a> EgressSender<'a> {
             CasError::ManifestInvalid(_) | CasError::Io(_) => {
                 bad_artifact(&format!("artifact {digest} cannot be read: {}", e.code()))
             }
-        })
+        })?;
+        if Digest::from_bytes(fid_canon::digest_bytes(&bytes).0) != *digest {
+            return Err(bad_artifact(&format!(
+                "artifact {digest} names a chunked object; only bytes that hash to the approved digest are sent"
+            )));
+        }
+        if ChunkManifest::parse(&bytes).is_ok() {
+            return Err(bad_artifact(&format!("artifact {digest} is a chunk manifest; manifests are not sent")));
+        }
+        Ok(bytes)
     }
 
     /// Sends a cleared egress under `permit` (REQ-001, REQ-006): `class_forbidden` unless
@@ -1316,8 +1329,8 @@ impl<'a> EgressSender<'a> {
     /// `bad_destination` if the destination is no longer in `current` (the setting as read
     /// now) and `no_approval` if its configuration digest changed since the approval;
     /// `bad_destination` when this build has no transport for the kind; `bad_artifact`
-    /// when the artifact is missing, larger than one blob, does not verify, or names a chunk
-    /// manifest whose object cannot be verified (a manifest is never sent). Nothing is
+    /// when the artifact is missing, larger than one blob, does not verify, does not hash to
+    /// the approved digest, or is a chunk manifest. Nothing is
     /// sent on any of these. Then the transport is called exactly once (not at all when
     /// cancellation was already requested) and the outcome is recorded.
     pub fn send(

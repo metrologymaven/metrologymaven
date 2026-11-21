@@ -6,7 +6,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::CValue;
-use fid_store::cas::CHUNK_SIZE;
+use fid_store::cas::{CHUNK_SIZE, MAX_OBJECT_CHUNKS};
 use fid_store::{Address, BlobRef, BlobStore, CasError, ChunkManifest, PutOpts};
 use fid_types::Digest;
 use sha2::{Digest as _, Sha256};
@@ -239,12 +239,12 @@ fn max_len_is_enforced_before_allocation() {
     assert_eq!(store.probe().chunks_verified, 3);
 }
 
-/// A manifest is never returned as content: a planted manifest whose chunks are absent is
-/// refused, one whose chunk has the wrong length is `manifest_invalid`, and one whose chunks
-/// are present is read as the object it names. A plain blob that merely starts like a
-/// manifest is returned as itself.
+/// A `put`-shaped manifest is never returned as content: one whose chunks are absent is
+/// `not_found`, one whose chunk has the wrong length `manifest_invalid` (checked before the
+/// result is allocated). Manifests of a shape `put` never writes, and blobs that merely start
+/// like a manifest, are plain data.
 #[test]
-fn manifests_are_never_returned() {
+fn put_shaped_manifests_are_never_returned() {
     let t = TempDir::new("planted");
     let store = t.store();
     let missing =
@@ -252,19 +252,46 @@ fn manifests_are_never_returned() {
     let d = plant(&store, &missing);
     assert!(ChunkManifest::parse(&missing).is_ok());
     assert_eq!(code(store.read_object(&d, u64::MAX)), "not_found");
-    // One real 10-byte chunk, listed with chunk_size 10: the object is those 10 bytes.
+    // Two real chunks of 10 bytes listed as 8 MiB chunks: refused on the length precheck.
     let chunk = store.put_bytes(b"0123456789", PutOpts::default()).unwrap().digest();
+    let wrong = manifest_text(2 * CHUNK_SIZE, CHUNK_SIZE, &[chunk.as_str().to_string(), chunk.as_str().to_string()]);
+    let dw = plant(&store, &wrong);
+    store.reset_probe();
+    assert_eq!(code(store.read_object(&dw, u64::MAX)), "manifest_invalid");
+    assert_eq!(store.probe().chunks_verified, 0, "refused before any chunk is read");
+    assert!(store.probe().peak_buffer_bytes < 64 * 1024);
+    // A manifest `put` never writes (chunk_size 10) is plain data: returned as its own bytes.
     let small = manifest_text(10, 10, &[chunk.as_str().to_string()]);
     let ds = plant(&store, &small);
-    assert_eq!(store.read_object(&ds, 10).unwrap(), b"0123456789");
-    assert_eq!(code(store.read_object(&ds, 9)), "out_of_range");
-    // The chunk is listed as 4 bytes long: the object cannot be verified.
-    let wrong = manifest_text(4, 4, &[chunk.as_str().to_string()]);
-    let dw = plant(&store, &wrong);
-    assert_eq!(code(store.read_object(&dw, 100)), "manifest_invalid");
+    assert!(ChunkManifest::parse(&small).is_ok());
+    assert_eq!(store.read_object(&ds, 1000).unwrap(), small);
+    // `size` not above CHUNK_SIZE: plain data too.
+    let one = manifest_text(CHUNK_SIZE, CHUNK_SIZE, &[chunk.as_str().to_string()]);
+    let d1 = plant(&store, &one);
+    assert_eq!(store.read_object(&d1, 1000).unwrap(), one);
     // Starts like a manifest, is not one: plain data.
     let lookalike = b"{\"chunk_size\":\"not a manifest\"}".to_vec();
     let dl = store.put_bytes(&lookalike, PutOpts::default()).unwrap().digest();
     assert_eq!(store.read_object(&dl, 100).unwrap(), lookalike);
-    assert_eq!(code(store.read_object(&dl, 5)), "out_of_range");
+    match store.read_object(&dl, 5) {
+        Err(CasError::OutOfRange { start: 0, end, size: 5 }) => assert_eq!(end, lookalike.len() as u64),
+        other => panic!("{other:?}"),
+    }
+}
+
+/// A `put`-shaped manifest over the object cap: `out_of_range` naming the object's size (not
+/// the manifest's length) when that is over `max_len`, else `manifest_invalid`.
+#[test]
+fn over_cap_manifest_reports_the_content_size() {
+    let t = TempDir::new("overcap");
+    let store = t.store();
+    let n = MAX_OBJECT_CHUNKS as u64 + 1;
+    let chunks: Vec<String> = (0..n).map(|i| format!("sha256:{i:064x}")).collect();
+    let text = manifest_text(n * CHUNK_SIZE, CHUNK_SIZE, &chunks);
+    let d = plant(&store, &text);
+    match store.read_object(&d, 10) {
+        Err(CasError::OutOfRange { start: 0, end, size: 10 }) => assert_eq!(end, n * CHUNK_SIZE),
+        other => panic!("{other:?}"),
+    }
+    assert_eq!(code(store.read_object(&d, u64::MAX)), "manifest_invalid");
 }
