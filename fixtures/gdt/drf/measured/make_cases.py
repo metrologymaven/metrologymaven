@@ -39,6 +39,8 @@ With `--check` the files are rebuilt in memory and compared byte for byte with t
 All geometry is synthetic, in metres; no standards text; CC0.
 """
 
+import copy
+import importlib.util
 import json
 import sys
 from decimal import Decimal, getcontext
@@ -49,6 +51,10 @@ from pathlib import Path
 getcontext().prec = 60
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "cases.json"
+# The status reference of GDT.RES.STATUS: canonical JSON, SHA-256 and the row content digest.
+_spec = importlib.util.spec_from_file_location("status_reference", HERE.parent.parent / "status" / "make_cases.py")
+status = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(status)
 
 MINIMAX = "fit.plane.tan_minimax@1.0.0"
 L1 = "fit.plane.tan_l1@1.0.0"
@@ -354,8 +360,8 @@ def build():
     return (json.dumps(doc, indent=1, sort_keys=True) + "\n").encode("utf-8")
 
 
-def frame_table(alg):
-    row = {
+def frame_row(alg):
+    return {
         "actual_value": "av.synthetic.datum_frame@1",
         "characteristic": "datum_frame",
         "clauses": [{"clause": "0", "designator": "asme-y14.5", "edition": "2018"}],
@@ -368,7 +374,7 @@ def frame_table(alg):
         "modifiers": ["rmb"],
         "notes": "Synthetic planar datum frame row for GDT.DRF.BUILD tests; not an interpretation of any standard.",
         "ors_cases": ["ors:synthetic/datum_frame.001"],
-        "review": {"state": "draft"},
+        "review": {"state": "under_review"},
         "status": "supported",
         "synthetic": True,
         "variants": [
@@ -382,15 +388,47 @@ def frame_table(alg):
             }
         ],
     }
-    doc = {"rows": [row], "schema": "fid.dmt-table/1", "version": "1.0.0"}
+
+
+def frame_table(alg):
+    doc = {"rows": [frame_row(alg)], "schema": "fid.dmt-table/1", "version": "1.0.0"}
     return (json.dumps(doc, indent=1, sort_keys=True) + "\n").encode("utf-8")
 
 
 TABLES = {"minimax": MINIMAX, "l1": L1, "l2": L2, "minzone": "syn.assoc.min_zone@0.1.0"}
 
 
+def draft_journal():
+    """A `gdt-rowflow-journal/v1` extract in which only an agent ever proposed the minimax
+    frame row: under D-045 that row is a draft (its content digest has no human proposal)."""
+    row = copy.deepcopy(frame_row(MINIMAX))
+    row["review"] = {"state": "draft"}
+    record = {
+        "at": "2026-11-20",
+        "author_kind": "agent",
+        "content_digest": status.content_digest(row),
+        "derived_from": None,
+        "event": "propose",
+        "from": None,
+        "key": ROW,
+        "provenance": "agent",
+        "revision": "1",
+        "to": "draft",
+    }
+    entry = {
+        "command": status.PROPOSE,
+        "principal": {"id": "agent-one", "kind": "agent"},
+        "record": record,
+        "row": row,
+        "utc": "2026-11-20T09:00:00Z",
+    }
+    entry["hash"] = status.sha(status.canon(entry).encode("utf-8"))
+    doc = {"entries": [entry], "schema": "gdt-rowflow-journal/v1"}
+    return (json.dumps(doc, indent=1, sort_keys=True) + "\n").encode("utf-8")
+
+
 def outputs():
-    out = {OUT: build()}
+    out = {OUT: build(), HERE / "journal_agent_draft.json": draft_journal()}
     for name, alg in TABLES.items():
         out[HERE / f"frame_table_{name}.json"] = frame_table(alg)
     return out

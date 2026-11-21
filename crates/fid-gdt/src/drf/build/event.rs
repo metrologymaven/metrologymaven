@@ -17,13 +17,15 @@
 //! event whose recorded principal differs from its entry's is `DIVERGENT`. The step is
 //! `IDENTICAL` when the re-derived event's canonical bytes equal the recorded bytes,
 //! `NOT_REPLAYABLE` when the bytes are not a readable event or a measured point set it names is
-//! no longer available with that digest, and `DIVERGENT` otherwise (including a command that
+//! no longer available with that digest or the pinned register cannot be loaded and
+//! re-verified for replay, and `DIVERGENT` otherwise (including a command that
 //! now fails). Replay stops at the first step that is not `IDENTICAL`.
 
-use super::{build_drf, BuildError, BuildInputs, BuildRequest, DrfStore, BUILD_COMMAND};
+use super::{build_for, BuildError, BuildInputs, BuildRequest, DrfStore, BUILD_COMMAND};
 use crate::chars::dprof::store::parse_principal;
 use crate::chars::dprof::{Branch, CharId};
-use crate::chars::interp::InterpretationPin;
+use crate::chars::interp::{InterpretationPin, RegisterSources, RegisterStore, RegisterView};
+use crate::dmt_flow::status::Purpose;
 use fid_canon::CValue;
 use fid_io_reg::Principal;
 use fid_replay::ReplayOutcome;
@@ -217,7 +219,23 @@ pub struct DrfReplayed {
     pub store: DrfStore,
 }
 
-fn step(store: &mut DrfStore, inp: &BuildInputs<'_>, entry: Principal, recorded: &[u8]) -> ReplayOutcome {
+/// What replay reads besides the build inputs: the registers by digest and the sources a
+/// `verified` pin's register is re-checked against (`GDT.CHAR.INTERP`).
+#[derive(Debug, Clone, Copy)]
+pub struct ReplayRegisters<'a> {
+    /// The registers the pins may name.
+    pub store: &'a RegisterStore,
+    /// The journal, rosters, conflict inputs and published lists of the check.
+    pub sources: &'a RegisterSources<'a>,
+}
+
+fn step(
+    store: &mut DrfStore,
+    inp: &BuildInputs<'_>,
+    regs: &ReplayRegisters<'_>,
+    entry: Principal,
+    recorded: &[u8],
+) -> ReplayOutcome {
     let Ok(e) = DrfEvent::from_canonical_bytes(recorded) else {
         return ReplayOutcome::NotReplayable;
     };
@@ -227,9 +245,14 @@ fn step(store: &mut DrfStore, inp: &BuildInputs<'_>, entry: Principal, recorded:
     if e.measurements().iter().any(|(f, d)| inp.points.digest(f) != Some(*d)) {
         return ReplayOutcome::NotReplayable;
     }
+    // The pinned register, checked for replay, never the caller's current one.
+    let Ok(view) = RegisterView::for_replay(e.pin(), regs.store, regs.sources) else {
+        return ReplayOutcome::NotReplayable;
+    };
+    let pinned = BuildInputs { register: &view, ..*inp };
     let datums: Vec<&str> = e.datums().iter().map(String::as_str).collect();
     let req = BuildRequest { char: e.char().as_str(), datums: &datums };
-    let derived = build_drf(store, inp, entry, &req, false).ok();
+    let derived = build_for(store, &pinned, entry, &req, false, Purpose::Replay).ok();
     match derived.as_ref().and_then(|b| b.event()).and_then(|d| d.canonical_bytes().ok()) {
         Some(bytes) if bytes == recorded => ReplayOutcome::Identical,
         _ => ReplayOutcome::Divergent,
@@ -238,13 +261,21 @@ fn step(store: &mut DrfStore, inp: &BuildInputs<'_>, entry: Principal, recorded:
 
 /// Replays `events` from `start`: each item is the principal of the journal entry that holds
 /// the event and the event's recorded canonical bytes, in journal order. `inp` holds the
-/// inputs the events read (the register view must be the pinned one; another register gives
-/// other bytes and so `DIVERGENT`).
-pub fn replay(start: &DrfStore, inp: &BuildInputs<'_>, events: &[(Principal, Vec<u8>)]) -> DrfReplayed {
+/// inputs the events read; its `register` is not used: each event is re-run against the
+/// register its pin names, loaded from `regs` and re-checked for [`Purpose::Replay`] (so a
+/// register that was the latest when the DRF was built still replays exactly after a newer
+/// one is published). A pinned register that is missing or no longer verifies is
+/// `NOT_REPLAYABLE`.
+pub fn replay(
+    start: &DrfStore,
+    inp: &BuildInputs<'_>,
+    regs: &ReplayRegisters<'_>,
+    events: &[(Principal, Vec<u8>)],
+) -> DrfReplayed {
     let mut store = start.clone();
     let mut steps = Vec::with_capacity(events.len());
     for (entry, recorded) in events {
-        let o = step(&mut store, inp, *entry, recorded);
+        let o = step(&mut store, inp, regs, *entry, recorded);
         steps.push(o);
         if o != ReplayOutcome::Identical {
             break;

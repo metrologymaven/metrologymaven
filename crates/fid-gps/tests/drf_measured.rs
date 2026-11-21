@@ -226,3 +226,66 @@ fn frame_tables_load_and_name_their_simulator() {
         assert_eq!(variant_of(assoc[0].alg()).is_some(), known, "{name}");
     }
 }
+
+/// `off_nominal{label}`: a secondary face whose points, seen along the primary normal, lie on
+/// one line running along its own nominal normal has its constrained optimum at 90 degrees to
+/// the nominal (every hull-edge normal is perpendicular to it), so it is refused rather than
+/// turned into a datum facing sideways.
+#[test]
+fn a_secondary_facing_sideways_is_off_nominal() {
+    let mut c = case("ab_minimax");
+    let n_a = c.datums[0].nominal;
+    let n_b = c.datums[1].nominal;
+    let p0 = [c.datums[1].xyz[0], c.datums[1].xyz[1], c.datums[1].xyz[2]];
+    let mut xyz = Vec::new();
+    for s in [0.0, 0.004, 0.011, 0.02] {
+        for t in [-0.01, -0.03] {
+            for k in 0..3 {
+                xyz.push(p0[k] + s * n_b[k] + t * n_a[k]);
+            }
+        }
+    }
+    c.datums[1].xyz = xyz;
+    assert_eq!(run(&c).unwrap_err().to_string(), "off_nominal{B}");
+}
+
+/// `flagged_fit{label}`: a strongly twisted face (a 4 x 4 grid on `z = 16 x y` over a
+/// 0.1 m square, about 0.04 m of twist, minus up to 3 mm of pseudo-random depth) has several
+/// competing minimax vertices; `fid-fit`'s five starts do not all certify to the same one, so
+/// its certificate is flagged `local_optimum_only`. Called directly, `fit_tan_plane` returns
+/// the flagged fit; the measured path refuses it, as the `Fit` trait's `FlaggedFit` would.
+#[test]
+fn a_flagged_fit_is_never_a_datum() {
+    use fid_fit::contract::{FitParams, Method, PointsView};
+    use fid_fit::tan_plane::{fit_tan_plane, TanPlaneParams};
+    use fid_fit::tan_rock::{MaterialSide, TanVariant};
+    // Deterministic depths: a 64-bit LCG (Knuth's MMIX constants), seed 0.
+    let mut s: u64 = 1_442_695_040_888_963_407;
+    let mut r = || {
+        s = s.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+        ((s >> 11) as f64) / ((1_u64 << 53) as f64)
+    };
+    let mut xyz = Vec::new();
+    for i in 0..4 {
+        for j in 0..4 {
+            let x = -0.05 + 0.1 * f64::from(i) / 3.0;
+            let y = -0.05 + 0.1 * f64::from(j) / 3.0;
+            xyz.extend_from_slice(&[x, y, 20.0 * 2e-3 * (x * y / 0.0025) - 3e-3 * r()]);
+        }
+    }
+    let up = [0.0, 0.0, 1.0];
+    let pts = PointsView::new(&xyz, None).unwrap();
+    let tp = TanPlaneParams {
+        variant: Some(TanVariant::ExternalMinimax),
+        material_side: MaterialSide::outward(up).unwrap(),
+        side_tol: SIDE_TOL,
+        rock_tol: fid_gps::drf::plane_sim::ROCK_TOL,
+        starts: fid_gps::drf::plane_sim::STARTS,
+    };
+    let direct = fit_tan_plane(&pts, &FitParams::new(Method::Tangential), &tp, None).unwrap();
+    assert!(direct.certificate.as_ref().unwrap().flags().local_optimum_only, "the face must flag its fit");
+    let c = case("a_minimax");
+    let plane = MeasuredPlane { label: "A", xyz: &xyz, nominal_outward: up };
+    let e = build_measured_planar_drf(&[plane], &c.alg, &c.row).unwrap_err();
+    assert_eq!(e.to_string(), "flagged_fit{A}");
+}

@@ -60,10 +60,11 @@ pub mod event;
 pub use command::{
     build_command_def, get_command_def, invoke_cli, invoke_mcp, BUILD_DRF_CLI, BUILD_DRF_MCP, GET_DRF_CLI, GET_DRF_MCP,
 };
-pub use event::{replay, DrfEvent, DrfReplayed};
+pub use event::{replay, DrfEvent, DrfReplayed, ReplayRegisters};
 
 use crate::chars::dprof::{Branch, CharId, DprofState};
-use crate::chars::interp::{register_cvalue, Interpreted, RegisterView};
+use crate::chars::dprof::{ProfileDoc, ProfileRef};
+use crate::chars::interp::{register_cvalue, Block, Interpreted, RegisterView};
 use crate::chars::interp::{PROVISIONAL_LABEL_TEXT, SIGNED_OFF_LINE};
 use crate::chars::record::RecordError;
 use crate::chars::spec::{SpecError, SpecState};
@@ -71,7 +72,7 @@ use crate::dmt_flow::status::Purpose;
 use crate::drf::datum::{DatumLabel, DatumModel, FeatureType, RefId};
 use crate::resolve::{resolve_chain, CharacteristicRef, CommandError, CHAR_SCHEMA};
 use fid_canon::CValue;
-use fid_gps::dmt::{AlgId, DmtTable, OperatorKind};
+use fid_gps::dmt::{AlgId, DmtRow, DmtTable, OperatorKind};
 use fid_gps::drf::build::{Dof, DofSet, Precedence, SimGeometry};
 use fid_gps::drf::plane_sim::{build_measured_planar_drf, MeasuredPlane, PlaneEvidence, SimError};
 use fid_gps::resolve::Resolution;
@@ -650,6 +651,44 @@ pub fn build_drf(
     req: &BuildRequest<'_>,
     dry_run: bool,
 ) -> Result<Built, BuildError> {
+    build_for(store, inp, principal, req, dry_run, Purpose::Evaluate)
+}
+
+/// The row a frame chain must resolve to: a `datum_frame` row whose only modifier is `rmb`
+/// (`material_boundary_mismatch{row}` otherwise).
+pub(crate) fn check_frame_row(row: &DmtRow) -> Result<(), BuildError> {
+    if row.characteristic() != FRAME_CHARACTERISTIC || row.modifiers().len() != 1 || row.modifiers()[0] != RMB {
+        return Err(BuildError::MaterialBoundaryMismatch { row: row.key().as_str().to_owned() });
+    }
+    Ok(())
+}
+
+/// The interpretation block of a DRF (D-045): the row and the profile against `register` for
+/// `purpose`, checked by `GDT.CHAR.INTERP`'s `finish` against the evaluated chain and the
+/// spec's profile (`rule_not_admitted{rule}`, `incomplete_result{interpretation_rules}`).
+pub(crate) fn interpretation(
+    row: &DmtRow,
+    chain: Digest,
+    profile: &ProfileDoc,
+    spec_profile: &ProfileRef,
+    register: &RegisterView,
+    purpose: Purpose,
+) -> Result<Block, BuildError> {
+    Interpreted::compute(&[row], Some(profile), register, purpose)
+        .finish(row.key().as_str(), chain, spec_profile)
+        .map_err(BuildError::Interpretation)
+}
+
+/// [`build_drf`] for an evaluation needing a register verified for `purpose` (replay passes
+/// [`Purpose::Replay`] with the pinned register).
+pub(crate) fn build_for(
+    store: &mut DrfStore,
+    inp: &BuildInputs<'_>,
+    principal: Principal,
+    req: &BuildRequest<'_>,
+    dry_run: bool,
+    purpose: Purpose,
+) -> Result<Built, BuildError> {
     let (char, refs) = parse_request(req)?;
     for r in &refs {
         if r.boundary != Boundary::Rmb {
@@ -685,9 +724,7 @@ pub fn build_drf(
     };
     let table = inp.table.ok_or(BuildError::Chain(CommandError::DmtNotLoaded))?;
     let row = table.get(res.row().as_str()).ok_or(BuildError::ChainNotResolved { outcome: "UNRESOLVED" })?;
-    if row.characteristic() != FRAME_CHARACTERISTIC || row.modifiers().len() != 1 || row.modifiers()[0] != RMB {
-        return Err(BuildError::MaterialBoundaryMismatch { row: row.key().as_str().to_owned() });
-    }
+    check_frame_row(row)?;
     let alg = simulator(res.chain())?;
 
     // The interpretation block (D-045): no DRF without it.
@@ -695,9 +732,7 @@ pub fn build_drf(
     let gs = inp.spec.require_governing_spec(principal, char.as_str(), inp.dprof).map_err(spec_err)?;
     let stored =
         inp.dprof.resolve(Branch::for_principal(principal), gs.defaults_profile()).map_err(|e| spec_err(e.into()))?;
-    let block = Interpreted::compute(&[row], Some(stored.doc()), inp.register, Purpose::Evaluate)
-        .finish(row.key().as_str(), res.chain_digest(), gs.defaults_profile())
-        .map_err(BuildError::Interpretation)?;
+    let block = interpretation(row, res.chain_digest(), stored.doc(), gs.defaults_profile(), inp.register, purpose)?;
 
     // The measured points, simulated in precedence order.
     let mut measured = Vec::with_capacity(defs.len());
@@ -786,4 +821,72 @@ pub fn build_drf(
 /// unchanged (`drf_unknown{id}` otherwise).
 pub fn get_drf<'s>(store: &'s DrfStore, principal: Principal, id: &str) -> Result<&'s [u8], BuildError> {
     store.get(principal, id).ok_or_else(|| BuildError::DrfUnknown { id: echo(id) })
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::*;
+    use crate::chars::dprof::{parse_profile, KeyVocabulary};
+    use crate::dmt_flow::status::JournalExtract;
+
+    fn read(rel: &str) -> Vec<u8> {
+        std::fs::read(format!("{}/../../fixtures/gdt/{rel}", env!("CARGO_MANIFEST_DIR"))).unwrap()
+    }
+
+    fn frame_row() -> DmtRow {
+        DmtTable::load(&read("drf/measured/frame_table_minimax.json"))
+            .unwrap()
+            .get("dmt:asme/datum_frame/rmb@1")
+            .unwrap()
+            .clone()
+    }
+
+    fn profile() -> ProfileDoc {
+        let v = fid_canon::parse(&read("dprof/vocabulary.json")).unwrap();
+        let CValue::Obj(o) = v else { panic!("vocabulary") };
+        let Some(CValue::Arr(keys)) = o.get("keys") else { panic!("keys") };
+        let vocab = KeyVocabulary::new(keys.iter().map(|k| match k {
+            CValue::Str(s) => s.as_str(),
+            _ => panic!("key"),
+        }))
+        .unwrap();
+        parse_profile(&read("dprof/asme_placeholder_1.0.0.json"), &vocab).unwrap()
+    }
+
+    fn no_register() -> RegisterView {
+        let j = format!(r#"{{"entries":[],"schema":"{}"}}"#, crate::dmt_flow::status::JOURNAL_SCHEMA);
+        RegisterView::none(&JournalExtract::load(j.as_bytes()).unwrap())
+    }
+
+    /// `incomplete_result{interpretation_rules}`: the profile the evaluation used is not the
+    /// one the governing spec names (same ID, other digest), or the evaluated chain is not a
+    /// variant of the row. The command always passes matching ones, so this is checked here.
+    #[test]
+    fn an_interpretation_block_that_does_not_match_the_spec_is_incomplete() {
+        let row = frame_row();
+        let chain = row.variants()[0].digest();
+        let doc = profile();
+        let good = ProfileRef::new(doc.profile().id(), Digest::from_bytes(fid_canon::digest_bytes(doc.canonical()).0));
+        let reg = no_register();
+        assert!(interpretation(&row, chain, &doc, &good, &reg, Purpose::Evaluate).is_ok());
+        let other = ProfileRef::new(doc.profile().id(), Digest::from_bytes([7; 32]));
+        let e = interpretation(&row, chain, &doc, &other, &reg, Purpose::Evaluate).err().unwrap();
+        assert_eq!(e.to_string(), "incomplete_result{interpretation_rules}");
+        let e = interpretation(&row, Digest::from_bytes([1; 32]), &doc, &good, &reg, Purpose::Evaluate).err().unwrap();
+        assert_eq!(e.code(), "incomplete_result");
+    }
+
+    /// `material_boundary_mismatch{row}`: a resolved row that is not a `datum_frame` row at
+    /// RMB is never used as the frame's interpretation (the resolver keys rows by modifier, so
+    /// the command cannot reach this with a consistent table; checked here).
+    #[test]
+    fn a_row_that_is_not_the_rmb_frame_row_is_refused() {
+        assert!(check_frame_row(&frame_row()).is_ok());
+        let t = DmtTable::load(&read("dmt/synthetic_table_v1.json")).unwrap();
+        for key in ["dmt:asme/flatness/none@1", "dmt:asme/position/mmc@1"] {
+            let e = check_frame_row(t.get(key).unwrap()).unwrap_err();
+            assert_eq!(e.to_string(), format!("material_boundary_mismatch{{{key}}}"));
+        }
+    }
 }

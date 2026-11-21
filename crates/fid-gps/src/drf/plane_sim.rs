@@ -5,7 +5,8 @@
 //! Each datum plane is the tangential plane of `fid-fit` (`KRN.ENV.TAN.PLANE`) in the variant
 //! the DMT row's association step names ([`variant_of`]; constrained L2 is refused because
 //! `fid-fit` cannot certify it). Only a certified or closed-form result is ever used; an
-//! iterate, a failed start or an uncertified fit never becomes a datum.
+//! iterate, a failed start, an uncertified fit or a certified fit flagged
+//! `local_optimum_only` (its starts disagreed: `flagged_fit{label}`) never becomes a datum.
 //!
 //! # Orientation constraint per datum (pinned)
 //!
@@ -44,7 +45,9 @@
 //! The hull is Andrew's monotone chain (sorted with `total_cmp`, collinear points dropped);
 //! candidates are tried in hull order and the first with the smallest objective wins, so the
 //! choice is deterministic. When a window end is at least as good as the best candidate the
-//! optimum lies at 90 degrees to the nominal and the datum is refused (`off_nominal{label}`).
+//! optimum lies at 90 degrees to the nominal and the datum is refused (`off_nominal{label}`);
+//! so is a selected normal more than 60 degrees from the nominal ([`MIN_NOMINAL_COS`]), which
+//! catches a face seen edge-on whose hull rounding hides the window end.
 //! The orientation of near-collinear hull points is decided in floating point
 //! [unverified: no robust predicate]. Constrained L2 is not concave on its pieces, so it is
 //! refused here (`simulation_failed{label:not_certifiable}`), as `fid-fit` refuses it with a free
@@ -71,6 +74,9 @@ pub const ROCK_TOL: f64 = 1e-9;
 /// Starts of a free-normal fit: the least-squares start and the ring of four tilts, so no
 /// random start and no seed.
 pub const STARTS: u32 = 1 + fid_fit::tan_plane::RING_STARTS;
+/// Smallest cosine between a rotation-constrained datum's selected normal and its nominal
+/// (made perpendicular to `z`): 60 degrees; a larger angle is `off_nominal{label}`.
+pub const MIN_NOMINAL_COS: f64 = 0.5;
 /// Most hull-edge candidates of one rotation-constrained datum.
 pub const MAX_CANDIDATES: usize = 4096;
 
@@ -118,7 +124,8 @@ pub struct PlaneEvidence {
     pub optimality: &'static str,
     /// The `fid.cert@1` certificate digest (free normal only).
     pub certificate: Option<Digest>,
-    /// The certificate's `local_optimum_only` flag (free normal only; false otherwise).
+    /// The certificate's `local_optimum_only` flag: always false, since a flagged fit is
+    /// refused (`flagged_fit{label}`); kept so the document states it.
     pub local_optimum_only: bool,
     /// `fid-fit`'s output digest of the selected fit.
     pub fit_digest: Digest,
@@ -193,6 +200,13 @@ pub enum SimError {
         /// The datum.
         label: String,
     },
+    /// `flagged_fit{label}`: a certified fit whose starts disagreed (`local_optimum_only`),
+    /// refused as `fid-fit`'s `FitError::FlaggedFit` refuses it behind the `Fit` trait: a
+    /// flagged fit is never a datum.
+    FlaggedFit {
+        /// The datum.
+        label: String,
+    },
     /// `off_nominal{label}`: the constrained optimum lies at 90 degrees to the nominal.
     OffNominal {
         /// The datum.
@@ -210,6 +224,7 @@ impl SimError {
             SimError::ObliqueDatum { .. } => "oblique_datum_unsupported",
             SimError::Fit { .. } => "simulation_failed",
             SimError::NotCertified { .. } => "not_certified",
+            SimError::FlaggedFit { .. } => "flagged_fit",
             SimError::OffNominal { .. } => "off_nominal",
         }
     }
@@ -223,6 +238,7 @@ impl fmt::Display for SimError {
             | SimError::NominalInvalid { label: s }
             | SimError::ObliqueDatum { label: s }
             | SimError::NotCertified { label: s }
+            | SimError::FlaggedFit { label: s }
             | SimError::OffNominal { label: s } => write!(f, "{}{{{}}}", self.code(), s.escape_debug()),
             SimError::Fit { label, code } => write!(f, "{}{{{}:{code}}}", self.code(), label.escape_debug()),
         }
@@ -334,6 +350,11 @@ impl Ctx<'_> {
         };
         if orientation == Orientation::Free && certificate.is_none() {
             return Err(SimError::NotCertified { label: self.label.to_owned() });
+        }
+        // Every datum: a certificate flagged `local_optimum_only` (the starts disagreed) is
+        // refused, never accepted with its flag.
+        if local_optimum_only {
+            return Err(SimError::FlaggedFit { label: self.label.to_owned() });
         }
         Ok(PlaneEvidence {
             orientation,
@@ -456,6 +477,15 @@ fn about_z(
         }
     }
     let best = best.ok_or_else(|| SimError::OffNominal { label: ctx.label.to_owned() })?;
+    // Guard against rounding defeating the window-end test (a face seen edge-on): the
+    // selected normal must lie within 60 degrees of the nominal.
+    let tilted = match best.feature {
+        FittedFeature::Plane { n, .. } => dot(n, e1) < MIN_NOMINAL_COS,
+        _ => true,
+    };
+    if tilted {
+        return Err(SimError::OffNominal { label: ctx.label.to_owned() });
+    }
     let v: Vec<f64> = uv.iter().map(|p| p[1]).collect();
     let neg: Vec<f64> = v.iter().map(|x| -x).collect();
     if end_value(ctx.variant, &v) <= best.objective || end_value(ctx.variant, &neg) <= best.objective {
@@ -547,4 +577,33 @@ pub fn build_measured_planar_drf(
     }
     let drf = build_drf(&datums)?;
     Ok(MeasuredDrf { drf, datums, evidence })
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::*;
+
+    fn closed_form() -> TanPlaneResult {
+        let xyz = [0.0, 0.0, 0.0, 1.0, 0.0, -1e-6, 0.0, 1.0, -2e-6];
+        let pts = PointsView::new(&xyz, None).unwrap();
+        let ctx = Ctx { label: "A", variant: TanVariant::ExternalMinimax };
+        ctx.fit(&pts, Some([0.0, 0.0, 1.0]), [0.0, 0.0, 1.0]).unwrap()
+    }
+
+    /// Results are certified only: a free-normal result without a certificate, or a
+    /// strict-local one without its certificate, is `not_certified{label}`.
+    #[test]
+    fn an_uncertified_result_is_never_a_datum() {
+        let ctx = Ctx { label: "A", variant: TanVariant::ExternalMinimax };
+        let r = closed_form();
+        assert_eq!(r.optimality, Optimality::ClosedForm);
+        assert!(ctx.evidence(&r, Orientation::Fixed, "closed_form", 1).is_ok());
+        let e = ctx.evidence(&r, Orientation::Free, "strict_local", 1).unwrap_err();
+        assert_eq!(e.to_string(), "not_certified{A}");
+        let mut uncertified = r.clone();
+        uncertified.optimality = Optimality::StrictLocal;
+        let e = ctx.evidence(&uncertified, Orientation::Free, "strict_local", 1).unwrap_err();
+        assert_eq!(e.code(), "not_certified");
+    }
 }

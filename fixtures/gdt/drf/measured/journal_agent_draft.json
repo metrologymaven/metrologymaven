@@ -1,0 +1,81 @@
+{
+ "entries": [
+  {
+   "command": "gdt.propose_dmt_row@1",
+   "hash": "sha256:baf1f66b22a833dff4ca8e24cb446e6bb43e66bd21281b16d1341e5966584b80",
+   "principal": {
+    "id": "agent-one",
+    "kind": "agent"
+   },
+   "record": {
+    "at": "2026-11-20",
+    "author_kind": "agent",
+    "content_digest": "sha256:903e7c49e1bd2bee4ab1f4a015e5bf8d6162deaa21f84e61fd84a8ebfa894d56",
+    "derived_from": null,
+    "event": "propose",
+    "from": null,
+    "key": "dmt:asme/datum_frame/rmb@1",
+    "provenance": "agent",
+    "revision": "1",
+    "to": "draft"
+   },
+   "row": {
+    "actual_value": "av.synthetic.datum_frame@1",
+    "characteristic": "datum_frame",
+    "clauses": [
+     {
+      "clause": "0",
+      "designator": "asme-y14.5",
+      "edition": "2018"
+     }
+    ],
+    "decision_rule_hint": "dr.synthetic.default@1",
+    "default_variant": "planar",
+    "dialect": "asme",
+    "editions": [
+     "y14.5-2018"
+    ],
+    "key": "dmt:asme/datum_frame/rmb@1",
+    "limitations": [],
+    "modifiers": [
+     "rmb"
+    ],
+    "notes": "Synthetic planar datum frame row for GDT.DRF.BUILD tests; not an interpretation of any standard.",
+    "ors_cases": [
+     "ors:synthetic/datum_frame.001"
+    ],
+    "review": {
+     "state": "draft"
+    },
+    "status": "supported",
+    "synthetic": true,
+    "variants": [
+     {
+      "steps": [
+       {
+        "alg": "syn.partition.whole_feature@0.1.0",
+        "kind": "partition",
+        "params": {}
+       },
+       {
+        "alg": "syn.extract.all_points@0.1.0",
+        "kind": "extraction",
+        "params": {
+         "min_points": "3"
+        }
+       },
+       {
+        "alg": "fit.plane.tan_minimax@1.0.0",
+        "kind": "association",
+        "params": {}
+       }
+      ],
+      "variant": "planar"
+     }
+    ]
+   },
+   "utc": "2026-11-20T09:00:00Z"
+  }
+ ],
+ "schema": "gdt-rowflow-journal/v1"
+}
