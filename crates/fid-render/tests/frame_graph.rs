@@ -67,10 +67,13 @@ fn shipped_policy_gives_each_host_its_row() {
     assert!(matches!(policy_order_from_file(&root().join("no/such.toml"), &Host::current()), Err(PolicyError::Io(_))));
 }
 
+/// A malformed policy text and the check its error must pass.
+type PolicyCase = (&'static str, fn(&PolicyError) -> bool);
+
 #[test]
 fn malformed_policies_are_refused() {
     let h = host("linux", "x86_64");
-    let cases: [(&str, fn(&PolicyError) -> bool); 7] = [
+    let cases: [PolicyCase; 7] = [
         ("schema_version = 2\n[[row]]\nos='linux'\narch='x86_64'\nbackends=['vulkan']", |e| {
             matches!(e, PolicyError::Schema(_))
         }),
