@@ -215,7 +215,7 @@ fn a_fragment_carrying_pi_hex_is_refused() {
 fn the_workspace_catalogue_digest_is_pinned() {
     assert_eq!(
         workspace_catalogue().unwrap().digest().to_string(),
-        "sha256:8c5b179d22187a8f7a85b7ad1acce2babe6a7cbd41ff7da18e9b9761a13a5ad4"
+        "sha256:a84ae1aec18503359642ab70fb1fbf8a4d88f9670a73e4fcca759e316973923f"
     );
 }
 

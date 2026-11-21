@@ -98,7 +98,7 @@ Hand-written header fixtures under `fixtures/io/cad/step/hdr/` (CC-BY-4.0).
 ## Change log
 
 - 2026-11-21, maintainer decision (follow-up to #377): `GEO.FRAME.UNITS` gained `cm`, so a centimetre file records `cm` in its provenance instead of failing `step_unit_unsupported`, and an overridden centimetre context passes its real declared unit to `IO.REG.PROV`'s override row (the stand-in unit is gone). `StepLengthUnit::to_length_unit` is now total. This closes the open question on centimetre.
-- 2026-11-21, review N1 of #377: the declared unit is part of the provenance group key and of its signature (`declared=<unit|none>`). Two contexts overridden to the same unit from different declared units (e.g. um and in) were one group before, which hid that their geometry was rescaled by different factors; they are now separate groups. Every group signature gains the `declared=` field. Fixture `override_um_inch.stp` and three oracle cases were added (25 files, 37 cases).
+- 2026-11-21, review N1 of #377: the declared unit is part of the provenance group key and of its signature (`declared=<unit|none>`). Two contexts overridden to the same unit from different declared units (e.g. um and in) were one group before, which hid that their geometry was rescaled by different factors; they are now separate groups. The `step.units.group_<k>` signature format therefore changed: every group value now includes `declared=<unit|none>` after `source=`, so consumers parsing the old format must be updated. Fixture `override_um_inch.stp` and three oracle cases were added (25 files, 37 cases).
 
 ## Children
 

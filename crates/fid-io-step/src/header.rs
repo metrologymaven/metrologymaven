@@ -1176,8 +1176,9 @@ impl StepHeaderInfo {
                 // replaced by the caller's. The record carries the effective unit.
                 Some(c) => match c.declared.map(StepLengthUnit::to_length_unit) {
                     Some(d) if d != g => resolve_unit(Some(d), Some(g), true),
-                    // Unreachable by construction; refused rather than recorded as `caller`.
-                    _ => Err(IoError::UnitConflict),
+                    // Unreachable by construction; refused, naming the overridden context,
+                    // rather than recorded as `caller`.
+                    _ => return Err(HeaderError::UnitConflict { context: c.context }),
                 },
                 None => resolve_unit(None, Some(g), false),
             };

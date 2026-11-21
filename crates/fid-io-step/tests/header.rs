@@ -18,7 +18,7 @@ use fid_io_step::header::{
 };
 use fid_io_step::{
     parse, resolve_header, AngleUnit, HeaderError, HeaderOptions, StepHeaderInfo, StepLengthUnit, StepSchema, StepText,
-    WarningDetail,
+    UnitContext, WarningDetail,
 };
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -367,6 +367,48 @@ fn centimetre_is_recorded_in_provenance() {
              contexts=1 first=#14"
         )
     );
+}
+
+/// The defensive branch of `provenance_unit`: an `override` context with no declared unit
+/// cannot come out of `resolve_header`, but if one exists it is refused, naming that
+/// overridden context (not the first affected one), and never recorded as `caller`.
+#[test]
+fn an_override_without_a_declared_unit_is_refused_naming_that_context() {
+    let ctx = |context: u64, declared: Option<StepLengthUnit>, source: UnitSource| UnitContext {
+        context,
+        length_unit: StepLengthUnit::Mm,
+        length_factor_m: 0.001,
+        declared,
+        angle: None,
+        uncertainty: None,
+        source,
+        owns_geometry: true,
+    };
+    let mut contexts = BTreeMap::new();
+    // #10 is the first affected context (caller-filled); #20 is the broken override.
+    contexts.insert(10, ctx(10, None, UnitSource::Caller));
+    contexts.insert(20, ctx(20, None, UnitSource::Override));
+    let info = StepHeaderInfo {
+        schema: StepSchema::Ap242,
+        raw_schema: StepText::default(),
+        originating_system: StepText::default(),
+        file_name: Default::default(),
+        description: Default::default(),
+        contexts,
+        unitless: Vec::new(),
+        warnings: Vec::new(),
+    };
+    let o = opts(Some(LengthUnit::Mm), true);
+    assert_eq!(info.provenance_unit(&o), Err(HeaderError::UnitConflict { context: 20 }));
+    // An override whose declared unit equals the effective one is refused the same way.
+    let mut same = info.clone();
+    same.contexts.insert(20, ctx(20, Some(StepLengthUnit::Mm), UnitSource::Override));
+    assert_eq!(same.provenance_unit(&o), Err(HeaderError::UnitConflict { context: 20 }));
+    // With a real declared unit it resolves as an override, never as `caller`.
+    let mut ok = info.clone();
+    ok.contexts.insert(20, ctx(20, Some(StepLengthUnit::Um), UnitSource::Override));
+    let u = ok.provenance_unit(&o).unwrap();
+    assert_eq!((u.unit(), u.source()), (LengthUnit::Mm, UnitSource::Override));
 }
 
 /// Review N1 of #377: two contexts overridden to the same unit from different declared
