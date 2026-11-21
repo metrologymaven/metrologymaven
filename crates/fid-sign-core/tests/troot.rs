@@ -16,8 +16,8 @@ use fid_registry::decl::CommandDecl;
 use fid_sign_core::troot::{
     check_envelope, check_signature, declarations, invoke_cli, invoke_mcp, CheckParams, Keyring, Revocations,
     SignatureStatus, TrustInputs, TrustRoot, TrustedKey, UtcTime, DETAILS, MAX_FILE_BYTES, MAX_KEYID_TRIALS,
-    MAX_SIGNATURES_PER_PACKAGE, MAX_SIGNATURE_STATEMENT_BYTES, MCP_CHECK, NOTES, SIGNATURE_PREDICATE_TYPE,
-    TROOT_REASONS,
+    MAX_SIGNATURES_PER_PACKAGE, MAX_SIGNATURE_STATEMENT_BYTES, MAX_VERIFIED_BYTES, MCP_CHECK, NOTES,
+    SIGNATURE_PREDICATE_TYPE, TROOT_REASONS,
 };
 use fid_sign_core::{Envelope, Sig};
 
@@ -407,7 +407,8 @@ fn env(payload: Vec<u8>, keyid: &str) -> Envelope {
 fn one(e: &Envelope, root: &TrustRoot) -> (SignatureStatus, Option<String>) {
     let (rev, ring) = (Revocations::default(), Keyring::default());
     let inputs = TrustInputs { trust_root: root, revocations: &rev, keyring: &ring, as_of: None };
-    let r = check_envelope(e, "signatures/x", Some(&"a".repeat(64)), &inputs, 0);
+    let mut budget = MAX_VERIFIED_BYTES;
+    let r = check_envelope(e, "signatures/x", Some(&"a".repeat(64)), &inputs, 0, &mut budget).unwrap();
     assert_eq!(r.len(), 1);
     (r[0].status, r[0].detail.clone())
 }
@@ -458,4 +459,38 @@ fn bounds_64_junk_envelopes_finish_quickly_and_verify_nothing() {
     // Generous for debug builds and wasm: no signature is verified, so this is reading and
     // hashing about 200 KiB.
     assert!(took < std::time::Duration::from_secs(20), "{took:?} for {}", c.name);
+}
+
+#[test]
+fn bounds_verification_budget_edge() {
+    use sha2::Digest as _;
+    assert_eq!(MAX_VERIFIED_BYTES, 256 * 1024 * 1024);
+    // A payload that is the statement itself (bound, so it would be verified).
+    let payload = br#"{"statement":"stand-in"}"#.to_vec();
+    let digest: String = sha2::Sha256::digest(&payload).iter().map(|b| format!("{b:02x}")).collect();
+    let root = root_of(3);
+    let fp = root.keys[0].fingerprint.as_str().to_owned();
+    let (rev, ring) = (Revocations::default(), Keyring::default());
+    let inputs = TrustInputs { trust_root: &root, revocations: &rev, keyring: &ring, as_of: None };
+    let e = env(payload.clone(), &fp);
+    let len = u64::try_from(e.pae().len()).unwrap();
+    // One keyid signature costs one PAE.
+    let mut exact = len;
+    let r = check_envelope(&e, "s", Some(&digest), &inputs, 0, &mut exact).unwrap();
+    assert_eq!((r.len(), exact), (1, 0));
+    let mut short = len - 1;
+    let err = check_envelope(&e, "s", Some(&digest), &inputs, 0, &mut short).unwrap_err();
+    assert_eq!((err.needed, err.left, short), (len, len - 1, len - 1));
+    // An empty keyid costs one PAE per listed key (three here).
+    let e = env(payload, "");
+    let mut exact = 3 * len;
+    assert!(check_envelope(&e, "s", Some(&digest), &inputs, 0, &mut exact).is_ok());
+    assert_eq!(exact, 0);
+    let mut short = 3 * len - 1;
+    assert!(check_envelope(&e, "s", Some(&digest), &inputs, 0, &mut short).is_err());
+    // An unbound envelope costs nothing, even with no budget left.
+    let mut none = 0;
+    let unbound = env(b"not the statement".to_vec(), &fp);
+    let r = check_envelope(&unbound, "s", Some(&digest), &inputs, 0, &mut none).unwrap();
+    assert_eq!(r[0].detail.as_deref(), Some("payload_not_bound"));
 }

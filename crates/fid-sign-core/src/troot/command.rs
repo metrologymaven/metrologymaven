@@ -30,7 +30,7 @@ use fid_registry::{fid_command, fid_commands, FidSchema};
 
 use super::{
     check_envelope, Keyring, Revocations, SignatureEntry, SignatureStatus, TrootError, TrustInputs, TrustRoot, UtcTime,
-    MAX_FILE_BYTES, MAX_SIGNATURES_PER_PACKAGE,
+    MAX_FILE_BYTES, MAX_SIGNATURES_PER_PACKAGE, MAX_VERIFIED_BYTES,
 };
 use crate::{Envelope, SigError, MAX_ENVELOPE_BYTES};
 
@@ -58,6 +58,9 @@ pub enum CheckError {
     Trust(TrootError),
     /// `sig.malformed`: an envelope is not a well-formed DSSE envelope, or there are too many.
     Signature { entry: String, error: SigError },
+    /// `sig.malformed`, reason `verify_budget`: verifying `entry` would hash more than
+    /// [`MAX_VERIFIED_BYTES`] over the package; refused before verifying it.
+    Budget { entry: String, needed: u64, left: u64 },
     /// `params.invalid`: a handle is empty or too long, or `as_of` is not an RFC 3339 UTC time.
     Params(&'static str),
 }
@@ -69,6 +72,7 @@ impl CheckError {
             CheckError::Package(e) => e.code(),
             CheckError::Trust(e) => e.code(),
             CheckError::Signature { error, .. } => error.code(),
+            CheckError::Budget { .. } => "sig.malformed",
             CheckError::Params(_) => "params.invalid",
         }
     }
@@ -78,6 +82,7 @@ impl CheckError {
         match self {
             CheckError::Package(e) => Some(e.reason()),
             CheckError::Trust(e) => Some(e.reason),
+            CheckError::Budget { .. } => Some("verify_budget"),
             CheckError::Signature { .. } | CheckError::Params(_) => None,
         }
     }
@@ -89,6 +94,10 @@ impl fmt::Display for CheckError {
             CheckError::Package(e) => write!(f, "{e}"),
             CheckError::Trust(e) => write!(f, "{e}"),
             CheckError::Signature { entry, error } => write!(f, "{entry}: {error}"),
+            CheckError::Budget { entry, needed, left } => write!(
+                f,
+                "sig.malformed (verify_budget): {entry} needs up to {needed} PAE bytes hashed, {left} left of {MAX_VERIFIED_BYTES}"
+            ),
             CheckError::Params(m) => write!(f, "params.invalid: {m}"),
         }
     }
@@ -224,6 +233,7 @@ pub fn check_package<R: Read + Seek>(src: R, inputs: &TrustInputs<'_>) -> Result
     let package_status = if names.is_empty() { PackageStatus::Unsigned } else { PackageStatus::Signed };
     let cap = u64::try_from(MAX_ENVELOPE_BYTES).unwrap_or(u64::MAX);
     let mut signatures = Vec::new();
+    let mut budget = MAX_VERIFIED_BYTES;
     for name in names {
         let bytes = reader.read_member(&name, cap).map_err(CheckError::Package)?.unwrap_or_default();
         let envelope =
@@ -236,7 +246,9 @@ pub fn check_package<R: Read + Seek>(src: R, inputs: &TrustInputs<'_>) -> Result
             });
         }
         let first = u32::try_from(signatures.len()).unwrap_or(u32::MAX);
-        signatures.extend(check_envelope(&envelope, &name, statement.as_deref(), inputs, first));
+        let checked = check_envelope(&envelope, &name, statement.as_deref(), inputs, first, &mut budget)
+            .map_err(|b| CheckError::Budget { entry: name.clone(), needed: b.needed, left: b.left })?;
+        signatures.extend(checked);
     }
     Ok(SignatureReport { package_status, statement_sha256: statement, signatures })
 }

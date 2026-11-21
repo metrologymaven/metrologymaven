@@ -74,6 +74,11 @@ pub const SIGNATURE_PREDICATE_TYPE: &str = "https://metrologymaven.io/signature/
 pub const MAX_SIGNATURE_STATEMENT_BYTES: usize = 1024 * 1024;
 /// Most signatures checked in one package, over all envelopes; more is `sig.malformed`.
 pub const MAX_SIGNATURES_PER_PACKAGE: usize = 64;
+/// Most PAE bytes hashed for verification over one package (each verification hashes its
+/// envelope's whole PAE once). An envelope whose worst-case verification cost would pass the
+/// budget is refused before any of its signatures is verified: `sig.malformed`, reason
+/// `verify_budget` (fail closed).
+pub const MAX_VERIFIED_BYTES: u64 = 256 * 1024 * 1024;
 /// An empty keyid is tried against the listed keys only when at most this many are listed
 /// (trust root plus keyring); otherwise it is `UNKNOWN_KEY` `keyid_missing`, untried.
 pub const MAX_KEYID_TRIALS: usize = 16;
@@ -568,17 +573,32 @@ impl<'a> TrustInputs<'a> {
 ///
 /// Two envelopes may carry the same signature; each is reported. Catching a replayed signer
 /// is `TRUST.ESIG.MULTI`'s job (its `sequence_index` and `prior` chain), not this check's.
+///
+/// `budget` is what is left of the package's [`MAX_VERIFIED_BYTES`]. A bound envelope is
+/// charged its worst case before any verification: the PAE length times one trial per
+/// signature with a keyid, and times the number of listed keys per signature with an empty
+/// keyid (when it will be tried at all). If that exceeds `budget`, nothing is verified and the
+/// result is [`BudgetExceeded`]; an unbound envelope costs nothing.
 pub fn check_envelope(
     envelope: &Envelope,
     envelope_path: &str,
     statement_sha256: Option<&str>,
     inputs: &TrustInputs<'_>,
     first_index: u32,
-) -> Vec<SignatureEntry> {
+    budget: &mut u64,
+) -> Result<Vec<SignatureEntry>, BudgetExceeded> {
     let bound = binding(envelope, statement_sha256);
     let message = match bound {
         Binding::Unbound(_) => Vec::new(),
-        _ => envelope.pae(),
+        _ => {
+            let message = envelope.pae();
+            let cost = verification_cost(envelope, inputs, message.len());
+            if cost > *budget {
+                return Err(BudgetExceeded { needed: cost, left: *budget });
+            }
+            *budget -= cost;
+            message
+        }
     };
     let mut out = Vec::with_capacity(envelope.signatures.len());
     for (i, sig) in envelope.signatures.iter().enumerate() {
@@ -663,7 +683,31 @@ pub fn check_envelope(
         }
         out.push(finish(entry, status, detail));
     }
-    out
+    Ok(out)
+}
+
+/// The verification budget of a package is spent: `sig.malformed`, reason `verify_budget`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BudgetExceeded {
+    /// Worst-case PAE bytes the envelope would hash.
+    pub needed: u64,
+    /// What was left of [`MAX_VERIFIED_BYTES`].
+    pub left: u64,
+}
+
+/// Worst-case PAE bytes hashed to verify every signature of a bound envelope.
+fn verification_cost(envelope: &Envelope, inputs: &TrustInputs<'_>, pae_len: usize) -> u64 {
+    let listed = inputs.listed();
+    let trials: u64 = envelope
+        .signatures
+        .iter()
+        .map(|s| match (s.keyid.is_empty(), listed <= MAX_KEYID_TRIALS) {
+            (false, _) => 1,
+            (true, true) => u64::try_from(listed).unwrap_or(u64::MAX),
+            (true, false) => 0,
+        })
+        .fold(0u64, u64::saturating_add);
+    trials.saturating_mul(u64::try_from(pae_len).unwrap_or(u64::MAX))
 }
 
 fn classify_time(
