@@ -1,0 +1,879 @@
+{
+ "catalog_id": "01936b2e-7a00-7000-8000-00000000c0de",
+ "columns": [
+  "project_id",
+  "record_id",
+  "part",
+  "revision",
+  "plan",
+  "run",
+  "stage",
+  "characteristic",
+  "timestamp",
+  "value_literal",
+  "unit",
+  "si_value",
+  "decision_outcome",
+  "rule_id",
+  "evaluation_basis",
+  "uec_class",
+  "claimed",
+  "declared_input",
+  "uncharacterized_input",
+  "interpretation",
+  "record_status",
+  "journal_seq",
+  "journal_entry_hash",
+  "entry_status"
+ ],
+ "entries": [
+  [
+   {
+    "t": "text",
+    "v": "01936b2e-7a00-7000-8000-000000000001"
+   },
+   {
+    "t": "text",
+    "v": "r-0001"
+   },
+   {
+    "t": "text",
+    "v": "BRK-100"
+   },
+   {
+    "t": "text",
+    "v": "B"
+   },
+   {
+    "t": "text",
+    "v": "plan-1"
+   },
+   {
+    "t": "text",
+    "v": "run-1"
+   },
+   {
+    "t": "text",
+    "v": "released"
+   },
+   {
+    "t": "text",
+    "v": "flatness A"
+   },
+   {
+    "t": "text",
+    "v": "2026-11-01T08:00:00Z"
+   },
+   {
+    "t": "text",
+    "v": "0.012"
+   },
+   {
+    "t": "text",
+    "v": "mm"
+   },
+   {
+    "t": "real",
+    "v": "1.2e-05"
+   },
+   {
+    "t": "text",
+    "v": "CONFORMS"
+   },
+   {
+    "t": "text",
+    "v": "unc.dec.simple@1"
+   },
+   {
+    "t": "text",
+    "v": "FEATURES"
+   },
+   {
+    "t": "text",
+    "v": "UEC-2"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "text",
+    "v": "signed_off"
+   },
+   {
+    "t": "text",
+    "v": "active"
+   },
+   {
+    "t": "int",
+    "v": "3"
+   },
+   {
+    "t": "text",
+    "v": "sha256:b24d8696ad83bd16142fd849c41f1bfb001513897fce244fad4e406f60fe7fe6"
+   },
+   {
+    "t": "text",
+    "v": "ok"
+   }
+  ],
+  [
+   {
+    "t": "text",
+    "v": "01936b2e-7a00-7000-8000-000000000001"
+   },
+   {
+    "t": "text",
+    "v": "r-0002"
+   },
+   {
+    "t": "text",
+    "v": "BRK-100"
+   },
+   {
+    "t": "text",
+    "v": "B"
+   },
+   {
+    "t": "text",
+    "v": "plan-1"
+   },
+   {
+    "t": "text",
+    "v": "run-1"
+   },
+   {
+    "t": "text",
+    "v": "released"
+   },
+   {
+    "t": "text",
+    "v": "position 1"
+   },
+   {
+    "t": "text",
+    "v": "2026-11-01T08:00:00Z"
+   },
+   {
+    "t": "text",
+    "v": "0.25"
+   },
+   {
+    "t": "text",
+    "v": "mm"
+   },
+   {
+    "t": "real",
+    "v": "0.00025"
+   },
+   {
+    "t": "text",
+    "v": "CONFORMS"
+   },
+   {
+    "t": "text",
+    "v": "unc.dec.simple@1"
+   },
+   {
+    "t": "text",
+    "v": "POINTS"
+   },
+   {
+    "t": "text",
+    "v": "UEC-3"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "text",
+    "v": "provisional"
+   },
+   {
+    "t": "text",
+    "v": "active"
+   },
+   {
+    "t": "int",
+    "v": "4"
+   },
+   {
+    "t": "text",
+    "v": "sha256:b1d69bd28dffa184d1f47e48ebff7b0fc4fae9cd9bcadf15bcbfc96c6ffa30db"
+   },
+   {
+    "t": "text",
+    "v": "ok"
+   }
+  ],
+  [
+   {
+    "t": "text",
+    "v": "01936b2e-7a00-7000-8000-000000000001"
+   },
+   {
+    "t": "text",
+    "v": "r-0003"
+   },
+   {
+    "t": "text",
+    "v": "BRK-100"
+   },
+   {
+    "t": "text",
+    "v": "B"
+   },
+   {
+    "t": "text",
+    "v": "plan-1"
+   },
+   {
+    "t": "text",
+    "v": "run-1"
+   },
+   {
+    "t": "text",
+    "v": "released"
+   },
+   {
+    "t": "text",
+    "v": "diameter 2"
+   },
+   {
+    "t": "text",
+    "v": "2026-11-01T08:00:00Z"
+   },
+   {
+    "t": "text",
+    "v": "10.004"
+   },
+   {
+    "t": "text",
+    "v": "mm"
+   },
+   {
+    "t": "real",
+    "v": "0.010004"
+   },
+   {
+    "t": "text",
+    "v": "INDETERMINATE"
+   },
+   {
+    "t": "text",
+    "v": "unc.dec.simple@1"
+   },
+   {
+    "t": "text",
+    "v": "RESULTS_ONLY"
+   },
+   {
+    "t": "text",
+    "v": "UEC-1"
+   },
+   {
+    "t": "int",
+    "v": "1"
+   },
+   {
+    "t": "int",
+    "v": "1"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "text",
+    "v": "signed_off"
+   },
+   {
+    "t": "text",
+    "v": "active"
+   },
+   {
+    "t": "int",
+    "v": "5"
+   },
+   {
+    "t": "text",
+    "v": "sha256:dca52f13cea1e495b569031af544de01b42b2e918075d3e7aedb844eb2e73652"
+   },
+   {
+    "t": "text",
+    "v": "ok"
+   }
+  ],
+  [
+   {
+    "t": "text",
+    "v": "01936b2e-7a00-7000-8000-000000000001"
+   },
+   {
+    "t": "text",
+    "v": "r-0010"
+   },
+   {
+    "t": "text",
+    "v": "BRK-100"
+   },
+   {
+    "t": "text",
+    "v": "B"
+   },
+   {
+    "t": "text",
+    "v": "plan-1"
+   },
+   {
+    "t": "text",
+    "v": "run-1"
+   },
+   {
+    "t": "text",
+    "v": "released"
+   },
+   {
+    "t": "text",
+    "v": "profile 4"
+   },
+   {
+    "t": "text",
+    "v": "2026-11-01T08:00:00Z"
+   },
+   {
+    "t": "null"
+   },
+   {
+    "t": "null"
+   },
+   {
+    "t": "null"
+   },
+   {
+    "t": "text",
+    "v": "NOT_DECIDABLE"
+   },
+   {
+    "t": "null"
+   },
+   {
+    "t": "text",
+    "v": "FEATURES"
+   },
+   {
+    "t": "text",
+    "v": "UEC-0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "text",
+    "v": "signed_off"
+   },
+   {
+    "t": "text",
+    "v": "voided"
+   },
+   {
+    "t": "int",
+    "v": "9"
+   },
+   {
+    "t": "text",
+    "v": "sha256:56d0493e84a6fa5e939317cfb2092a5a683235a930f4acb9b870f035e66f6364"
+   },
+   {
+    "t": "text",
+    "v": "unverified"
+   }
+  ],
+  [
+   {
+    "t": "text",
+    "v": "01936b2e-7a00-7000-8000-000000000001"
+   },
+   {
+    "t": "text",
+    "v": "r-0011"
+   },
+   {
+    "t": "text",
+    "v": "BRK'); DROP TABLE entry; --"
+   },
+   {
+    "t": "text",
+    "v": "B"
+   },
+   {
+    "t": "text",
+    "v": "plan-1"
+   },
+   {
+    "t": "text",
+    "v": "run-1"
+   },
+   {
+    "t": "text",
+    "v": "released"
+   },
+   {
+    "t": "text",
+    "v": "char \u202egnirts\u202c"
+   },
+   {
+    "t": "text",
+    "v": "2026-11-01T08:00:00Z"
+   },
+   {
+    "t": "text",
+    "v": "-1.5e-3"
+   },
+   {
+    "t": "text",
+    "v": "rad"
+   },
+   {
+    "t": "real",
+    "v": "-0.0015"
+   },
+   {
+    "t": "text",
+    "v": "CONFORMS"
+   },
+   {
+    "t": "text",
+    "v": "unc.dec.simple@1"
+   },
+   {
+    "t": "text",
+    "v": "FEATURES"
+   },
+   {
+    "t": "text",
+    "v": "UEC-1"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "1"
+   },
+   {
+    "t": "text",
+    "v": "signed_off"
+   },
+   {
+    "t": "text",
+    "v": "superseded"
+   },
+   {
+    "t": "int",
+    "v": "12"
+   },
+   {
+    "t": "text",
+    "v": "sha256:2a9a24ba5f598bb074a47c6e764f7645988f2a8dcba368c2ce738e0ad03adc5a"
+   },
+   {
+    "t": "text",
+    "v": "ok"
+   }
+  ],
+  [
+   {
+    "t": "text",
+    "v": "01936b2e-7a00-7000-8000-000000000002"
+   },
+   {
+    "t": "text",
+    "v": "a"
+   },
+   {
+    "t": "text",
+    "v": "HSG-7"
+   },
+   {
+    "t": "null"
+   },
+   {
+    "t": "text",
+    "v": "plan-1"
+   },
+   {
+    "t": "text",
+    "v": "run-1"
+   },
+   {
+    "t": "text",
+    "v": "released"
+   },
+   {
+    "t": "text",
+    "v": "flatness top"
+   },
+   {
+    "t": "text",
+    "v": "2026-10-31T23:59:59.250Z"
+   },
+   {
+    "t": "text",
+    "v": "0.003"
+   },
+   {
+    "t": "text",
+    "v": "mm"
+   },
+   {
+    "t": "real",
+    "v": "3e-06"
+   },
+   {
+    "t": "text",
+    "v": "NONCONFORMS"
+   },
+   {
+    "t": "text",
+    "v": "unc.dec.simple@1"
+   },
+   {
+    "t": "text",
+    "v": "DIRECT_READING"
+   },
+   {
+    "t": "text",
+    "v": "UEC-2"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "text",
+    "v": "signed_off"
+   },
+   {
+    "t": "text",
+    "v": "active"
+   },
+   {
+    "t": "int",
+    "v": "2"
+   },
+   {
+    "t": "text",
+    "v": "sha256:af0edab845fe08f16e7a0eb88c63acf19b8a523b006f08a9a1f45d7d756582ab"
+   },
+   {
+    "t": "text",
+    "v": "ok"
+   }
+  ],
+  [
+   {
+    "t": "text",
+    "v": "01936b2e-7a00-7000-8000-000000000002"
+   },
+   {
+    "t": "text",
+    "v": "b"
+   },
+   {
+    "t": "text",
+    "v": "HSG-7"
+   },
+   {
+    "t": "text",
+    "v": "B"
+   },
+   {
+    "t": "text",
+    "v": "plan-1"
+   },
+   {
+    "t": "text",
+    "v": "run-1"
+   },
+   {
+    "t": "text",
+    "v": "released"
+   },
+   {
+    "t": "text",
+    "v": "bore \u00f8 12"
+   },
+   {
+    "t": "text",
+    "v": "2026-11-01T08:00:00Z"
+   },
+   {
+    "t": "text",
+    "v": "12.0"
+   },
+   {
+    "t": "text",
+    "v": "mm"
+   },
+   {
+    "t": "real",
+    "v": "0.012"
+   },
+   {
+    "t": "text",
+    "v": "CONFORMS"
+   },
+   {
+    "t": "text",
+    "v": "unc.dec.simple@1"
+   },
+   {
+    "t": "text",
+    "v": "FEATURES"
+   },
+   {
+    "t": "text",
+    "v": "UEC-2"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "text",
+    "v": "signed_off"
+   },
+   {
+    "t": "text",
+    "v": "active"
+   },
+   {
+    "t": "int",
+    "v": "7"
+   },
+   {
+    "t": "text",
+    "v": "sha256:d1052ffab72e43e803d5cc4288cf054d5c9e5734030aca25c227f3e83dbcfb65"
+   },
+   {
+    "t": "text",
+    "v": "stale"
+   }
+  ],
+  [
+   {
+    "t": "text",
+    "v": "01936b2e-7a00-7000-8000-000000000003"
+   },
+   {
+    "t": "text",
+    "v": "x-1"
+   },
+   {
+    "t": "text",
+    "v": "FIX-1"
+   },
+   {
+    "t": "text",
+    "v": "B"
+   },
+   {
+    "t": "text",
+    "v": "plan-1"
+   },
+   {
+    "t": "text",
+    "v": "run-1"
+   },
+   {
+    "t": "text",
+    "v": "released"
+   },
+   {
+    "t": "text",
+    "v": "nul\u0000inside"
+   },
+   {
+    "t": "text",
+    "v": "2026-11-01T08:00:00Z"
+   },
+   {
+    "t": "text",
+    "v": "1"
+   },
+   {
+    "t": "text",
+    "v": "1"
+   },
+   {
+    "t": "real",
+    "v": "1.0"
+   },
+   {
+    "t": "text",
+    "v": "CONFORMS"
+   },
+   {
+    "t": "text",
+    "v": "unc.dec.simple@1"
+   },
+   {
+    "t": "text",
+    "v": "FEATURES"
+   },
+   {
+    "t": "text",
+    "v": "UEC-2"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "int",
+    "v": "0"
+   },
+   {
+    "t": "text",
+    "v": "signed_off"
+   },
+   {
+    "t": "text",
+    "v": "active"
+   },
+   {
+    "t": "int",
+    "v": "1"
+   },
+   {
+    "t": "text",
+    "v": "sha256:d7150a665130d99ae8fd2b5c01ac169b766997d2903986b8b79bf66b3eb7698c"
+   },
+   {
+    "t": "text",
+    "v": "unavailable"
+   }
+  ]
+ ],
+ "owner": "metrology lab 3",
+ "projects": [
+  {
+   "availability": {
+    "t": "text",
+    "v": "available"
+   },
+   "handle": {
+    "t": "text",
+    "v": "bracket-line"
+   },
+   "head_hash": {
+    "t": "text",
+    "v": "sha256:2a9a24ba5f598bb074a47c6e764f7645988f2a8dcba368c2ce738e0ad03adc5a"
+   },
+   "last_seq": {
+    "t": "int",
+    "v": "12"
+   },
+   "project_id": {
+    "t": "text",
+    "v": "01936b2e-7a00-7000-8000-000000000001"
+   }
+  },
+  {
+   "availability": {
+    "t": "text",
+    "v": "available"
+   },
+   "handle": {
+    "t": "text",
+    "v": "Housing"
+   },
+   "head_hash": {
+    "t": "text",
+    "v": "sha256:d1052ffab72e43e803d5cc4288cf054d5c9e5734030aca25c227f3e83dbcfb65"
+   },
+   "last_seq": {
+    "t": "int",
+    "v": "7"
+   },
+   "project_id": {
+    "t": "text",
+    "v": "01936b2e-7a00-7000-8000-000000000002"
+   }
+  },
+  {
+   "availability": {
+    "t": "text",
+    "v": "unavailable"
+   },
+   "handle": {
+    "t": "text",
+    "v": "fixture-test"
+   },
+   "head_hash": {
+    "t": "null"
+   },
+   "last_seq": {
+    "t": "null"
+   },
+   "project_id": {
+    "t": "text",
+    "v": "01936b2e-7a00-7000-8000-000000000003"
+   }
+  }
+ ],
+ "schema_version": 2,
+ "tags": 0
+}

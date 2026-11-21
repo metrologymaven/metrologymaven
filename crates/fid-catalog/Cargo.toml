@@ -1,0 +1,30 @@
+[package]
+name = "fid-catalog"
+description = "Metrology Maven results catalog: local SQLite index of ResultRecord summaries across registered projects, its schema, forward migrations and location setting (spec node RPT.CATALOG.STORE.SCHEMA)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# The setting value type and canonical JSON. Layer model.
+fid-canon = { path = "../fid-canon" }
+# UUIDv7 for a new catalog ID from an observation source (CORE.PRJ.CONT.ID). Layer model.
+fid-project = { path = "../fid-project" }
+# `fid_settings!` and settings resolution for `stats.catalog_path` (CORE.STO.SET), and the
+# Windows verbatim path helper. Layer model; already in the lock.
+fid-store = { path = "../fid-store" }
+# `sha256:` digests and the forbidden-character table for untrusted display text.
+fid-types = { path = "../fid-types" }
+fid-uuid = { path = "../fid-uuid" }
+# SQLite for the catalog file: the version and features fid-store pins (D-043); this crate's
+# own use is decision D-047. Adds no crate to the lock.
+rusqlite = { version = "=0.41.1", default-features = false, features = ["bundled"] }
+
+[dev-dependencies]
+# File digests in the tests (AC-3: the refused file is unchanged); already in the lock.
+sha2 = "0.10"
+
+[lints]
+workspace = true

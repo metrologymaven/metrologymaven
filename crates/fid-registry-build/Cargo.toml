@@ -41,6 +41,9 @@ fid-unc = { path = "../fid-unc" }
 # request commands of CORE.BUS.POL.PROJ (`fid_bus::policy::projection::command_defs`). Layer
 # engine, below services; already in the lock.
 fid-bus = { path = "../fid-bus" }
+# `fid_catalog::catalog_settings` (`stats.catalog_path`, RPT.CATALOG.STORE.SCHEMA), collected into
+# the workspace settings manifest. Layer services, as this crate; adds no crate outside the lock.
+fid-catalog = { path = "../fid-catalog" }
 # `fid_journal::stream::activity_settings` (the Activity Log rotation size and kept files,
 # CORE.JRN.STREAM.ALOG), the branch commands `fid_journal::branch::command_defs`
 # (CORE.JRN.BR.NAME) and the branch diff `fid_journal::diff::command_defs` (CORE.JRN.BR.DIFF). Feature `store` because the declaration uses fid-store's macro. Layer

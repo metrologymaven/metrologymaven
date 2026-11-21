@@ -455,6 +455,27 @@ fn fs_roots_is_admin_and_machine_only_in_the_settings_manifest() {
     assert_eq!(again, registry);
 }
 
+/// `fid-catalog` contributes `stats.catalog_path`: user scope only, not admin, default `""`
+/// (the per-user data directory). Expected values from the RPT.CATALOG.STORE.SCHEMA Design.
+#[test]
+fn catalog_path_is_a_user_setting_in_the_settings_manifest() {
+    let catalogue = workspace_catalogue().unwrap();
+    let bytes = workspace_settings(&catalogue).unwrap().manifest().unwrap();
+    let CValue::Obj(doc) = parse(&bytes).unwrap() else { panic!("object") };
+    let CValue::Arr(items) = &doc["settings"] else { panic!("settings") };
+    let entry = items
+        .iter()
+        .find_map(|i| match i {
+            CValue::Obj(o) if o.get("key") == Some(&CValue::Str("stats.catalog_path".into())) => Some(o),
+            _ => None,
+        })
+        .expect("stats.catalog_path in the settings manifest");
+    assert_eq!(entry["admin"], CValue::Bool(false));
+    assert_eq!(entry["scopes"], CValue::Arr(vec![CValue::Str("user".into())]));
+    assert_eq!(entry["owner"], CValue::Str("stats".into()));
+    assert_eq!(entry["default"], CValue::Str(String::new()));
+}
+
 /// A key declared by two crates is refused as a whole.
 #[test]
 fn a_setting_declared_twice_is_refused() {
