@@ -20,6 +20,11 @@
 //! headers (`journal.diff_branch@1`); with feature `store` it reads them from the project
 //! database and declares the command. The bus handler is in `fid-journal-cmd`.
 //!
+//! Module `promote` (`CORE.JRN.BR.PROMO`) is the person/agent gate: the planner and the
+//! origin-bound fold of `journal.promote_branch@1`, `journal.promote_protected_branch@1` and
+//! `journal.request_promote_branch@1`, the `Rebaser` and `AssertionCheck` traits, and with
+//! feature `store` the three definitions. The bus handlers are in `fid-journal-cmd`.
+//!
 //! Module `stream` (`CORE.JRN.STREAM.ALOG`) routes completed calls to their stream and writes
 //! the P0 Activity Log; with feature `store` it also declares the Activity Log settings.
 
@@ -29,6 +34,7 @@ pub mod branch;
 pub mod checkpoint;
 pub mod diff;
 pub mod entry;
+pub mod promote;
 pub mod stream;
 pub mod verify;
 
