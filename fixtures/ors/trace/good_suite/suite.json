@@ -1,0 +1,22 @@
+{
+ "cases": [
+  "ors:trace/circle_area.001",
+  "ors:trace/cylindricity.001",
+  "ors:trace/flatness.001",
+  "ors:trace/flatness.002",
+  "ors:trace/position.001",
+  "ors:trace/sphere_radius.001"
+ ],
+ "changelog": [
+  {
+   "cases": [],
+   "reason": "First release of the synthetic checker suite.",
+   "version": "1.0.0"
+  }
+ ],
+ "dmt_digest": "sha256:8b1559ad1ccdf3072720cd10553b056c83eabaa1f95482f1ddb66995439992e2",
+ "licence": "CC-BY-4.0",
+ "name": "ors-trace-good",
+ "schema": "ors-suite/v1",
+ "version": "1.0.0"
+}

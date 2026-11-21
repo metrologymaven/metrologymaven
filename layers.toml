@@ -104,6 +104,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-mig" = "services"
 # RDL record format (UNC.RDL.FORMAT): needs fid-surface (services) and fid-replay (engine).
 "fid-rdl" = "services"
+# Open Reference Suites (UNC.ORS.TRACE): over fid-rdl and fid-surface (services), fid-gps (model).
+"fid-ors" = "services"
 "fid-cli" = "app"
 "fid-kernel-wasm" = "app"
 "fid-xtask" = "tool"

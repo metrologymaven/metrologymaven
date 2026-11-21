@@ -101,13 +101,14 @@ fn unc_defs() -> Result<Vec<CommandDef>, DefError> {
 /// `fid-journal` declares the four branch commands of CORE.JRN.BR.NAME and the branch diff of
 /// CORE.JRN.BR.DIFF (handlers in `fid-journal-cmd`). `fid-profile-cmd` declares
 /// `sign.set_profile@1` and `sign.show_profile@1` of TRUST.PROFILE.SELECT.
-pub const SOURCES: [Source; 13] = [
+pub const SOURCES: [Source; 14] = [
     Source { krate: "fid-align", defs: fid_align::command_defs },
     Source { krate: "fid-bus", defs: fid_bus::policy::projection::command_defs },
     Source { krate: "fid-dep", defs: dep_defs },
     Source { krate: "fid-geo-cmd", defs: fid_geo_cmd::command_defs },
     Source { krate: "fid-jobs", defs: fid_jobs::command_defs },
     Source { krate: "fid-journal", defs: journal_defs },
+    Source { krate: "fid-ors", defs: fid_ors::command_defs },
     Source { krate: "fid-profile-cmd", defs: fid_profile_cmd::command_defs },
     Source { krate: "fid-program-rec", defs: program_rec_defs },
     Source { krate: "fid-project-cmd", defs: fid_project_cmd::command_defs },

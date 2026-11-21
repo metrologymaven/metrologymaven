@@ -463,6 +463,29 @@ fn from_scene_display_status() {
     assert_eq!(from_display_status(&err), Err(StatusError::KernelError("kdec.overflow".to_string())));
 }
 
+/// AC-12 (built with VIZ.RENDER.SCENE.STALE): a stale scene node maps to the stale state with
+/// its glyph, pattern and text in every theme, never the conforming or nonconforming ones, and
+/// keeps its evidence facts. The node's kernel outcome before it went stale was CONFORMS.
+#[test]
+fn ac12_stale_scene_status_renders_stale() {
+    let digest = "sha256:958a708e1b6ddb321c110164aabc291f48f38f1d76c89b16d9cfeed0ae24047e";
+    for (flags, claimed) in [("---", false), ("c--", true)] {
+        let d = DisplayStatus::parse(&format!("stale:{flags}:{digest}")).unwrap();
+        let (st, ev) = from_display_status(&d).unwrap();
+        assert_eq!((st, ev.claimed), (DisplayState::Stale, claimed), "{flags}");
+        for theme in Theme::ALL {
+            let g = status_glyph(st, theme);
+            assert_eq!((g.glyph, g.pattern, g.text), ("state.stale", "pattern.stale", "Stale"));
+            for decided in [DisplayState::Conforms, DisplayState::Nonconforms] {
+                let other = status_glyph(decided, theme);
+                assert_ne!(g.glyph, other.glyph);
+                assert_ne!(g.pattern, other.pattern);
+                assert_ne!(g.text, other.text);
+            }
+        }
+    }
+}
+
 #[test]
 fn badges_are_distinct() {
     let glyphs: BTreeSet<&str> = Provenance::ALL.iter().map(|p| provenance_badge(*p).glyph).collect();

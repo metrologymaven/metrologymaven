@@ -1,6 +1,6 @@
 [package]
 name = "fid-geo-ooc"
-description = "Metrology Maven out-of-core point clouds: octree chunk layout, versioned chunk and manifest byte formats in the content-addressed store, conversion to and from in-memory clouds, the bounded-memory streaming chunk writer (spec node GEO.OOC.LAYOUT), and the budgeted, digest-verifying chunk cache (GEO.OOC.CACHE)"
+description = "Metrology Maven out-of-core point clouds: octree chunk layout, versioned chunk and manifest byte formats in the content-addressed store, conversion to and from in-memory clouds, the bounded-memory streaming chunk writer (spec node GEO.OOC.LAYOUT), the budgeted, digest-verifying chunk cache (GEO.OOC.CACHE) and ordered full-resolution point streaming (GEO.OOC.STREAM)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
