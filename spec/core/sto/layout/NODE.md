@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # CORE.STO.LAYOUT: Project directory layout, locking and cross-platform file behaviour
@@ -45,6 +45,9 @@ Fixes where a project's bytes live on disk and how they are protected. A project
 - **REQ-CORE.STO.LAYOUT-008** If the project folder is on a network file system, then opening it for writing shall fail with `network_fs_unsupported`, and opening it read-only shall be allowed [unverified that detection is reliable on all three OS].
 - **REQ-CORE.STO.LAYOUT-009** If `format` names a layout version newer than the running build supports, then opening for writing shall fail with `layout_too_new`.
 - **REQ-CORE.STO.LAYOUT-010** The store shall publish `storage-writers.toml`, a machine-readable list of the crates allowed to write project files, for `CORE.BUS.LINT` to read.
+- **REQ-CORE.STO.LAYOUT-011** When the store creates or opens a project from a `CORE.BUS.POL.FS` folder target, it shall open the folder through the target and refuse with `outside_root` if the opened folder's identity differs from the one the target recorded.
+- **REQ-CORE.STO.LAYOUT-012** When a project is copied, the store shall write the copy into a new temporary sibling folder in the same parent folder (and so the same root), copy `project.db` only with the SQLite online backup API from a read transaction of the source, copy every blob by re-reading and re-hashing it against its digest name, fsync every written file and folder, and then rename the temporary folder to the target name.
+- **REQ-CORE.STO.LAYOUT-013** If a project copy fails at any step, including a crash, then no folder shall appear at the target name, the temporary folder shall be removed (at once on an error, or by the next copy into the same parent folder after a crash), and the source project shall be unchanged.
 
 ## Acceptance criteria
 
@@ -55,6 +58,9 @@ Fixes where a project's bytes live on disk and how they are protected. A project
 - **AC-5** Given a recursive listing of the project after the fixture session `fixtures/core/sto/layout/session_100`, then every name matches `^[a-z0-9_.-]+$` and no two names are equal after case folding and NFC.
 - **AC-6** (error path) Given `format` reading `fid-project-layout@99`, then a write open fails with `layout_too_new`.
 - **AC-7** Given `storage-writers.toml`, when `CORE.BUS.LINT` runs on the clean fixture workspace, then it parses the file and passes.
+- **AC-8** Given a project with 20 entities and 50 blobs open for writing in another thread that keeps committing, when it is copied, then the copy opens, its `project.db` passes `PRAGMA integrity_check`, its entries are a prefix-consistent snapshot of the source (every entry up to one sequence number, none after), and every blob re-hashes to its name.
+- **AC-9** (crash) Given a copy killed by the crash harness of `CORE.STO.SQL.CRASH` at 50 points (seed 11) spread over database backup, blob copy, fsync and rename, when the parent folder is listed and the next copy runs, then no folder exists at the target name unless the rename completed, in which case it is a complete project that passes AC-8's checks. No temporary folder survives the next copy, and the source passes `journal.verify_chain@1` unchanged.
+- **AC-10** (error path) Given a target name that exists, or a blob whose content no longer matches its name, then the copy fails (`not_empty` or `blob_corrupt`), nothing appears at the target and no temporary folder remains.
 
 ## Design
 
@@ -70,6 +76,15 @@ Fixes where a project's bytes live on disk and how they are protected. A project
 - **Determinism:** D0 for path and name handling.
 - **Performance budget:** open with lock in < 50 ms [unverified until measured].
 - **Crate:** `fid-store` (module `layout`); `storage-writers.toml` at the workspace root listing `fid-store`.
+- **Folder targets (REQ-011, added 2026-11-21):** `ProjectLocation::create_at(&dyn VerifiedFolder)` and `ProjectLocation::open_at(&dyn VerifiedFolder, mode)` take a folder verified by `CORE.BUS.POL.FS` in place of a `&Path`. The trait gives the re-derived absolute path and the recorded identity; this module defines it and `fid-bus` implements it for `CreatedFolder` and `ProjectFolder`. They open the folder by its re-derived path, compare the opened directory's identity (`(st_dev, st_ino)`; Windows volume serial and file ID) with the recorded one, and then proceed as `create` and `open`. The `&Path` forms stay for human raw paths and tests.
+- **Atomic copy (REQ-012, REQ-013, added 2026-11-21, maintainer decision):** `ProjectLocation::copy_to(&self, target: &dyn CopyTarget, finish: impl FnOnce(&ProjectLocation, &Locked) -> Result<(), StoreError>) -> Result<ProjectLocation, StoreError>`, where `CopyTarget` (implemented by `fid-bus` for a not-yet-created `write_root` `FolderTarget`) gives the verified parent folder, its identity and the target name:
+  1. Create the temporary sibling `.fid-copy-<32 lowercase hex random>` in the target's parent folder. The name is fixed ASCII plus hex, so REQ-007 holds. Write no `format` yet, so a crash leaves a folder that is not a project.
+  2. Database: open the source with a read transaction and copy it with `sqlite3_backup_step(-1)` (whole database in one step, so the copy is one consistent snapshot even while the source keeps committing in WAL mode). Never copy `project.db` or its `-wal`/`-shm` files as raw bytes. Then run `PRAGMA integrity_check` and the `CORE.STO.SQL.SCHEMA` tamper checks on the copy.
+  3. Blobs (`CORE.STO.CAS`): copy each object by streaming its bytes and re-computing SHA-256. A mismatch with the digest name is `blob_corrupt` and aborts the copy. Blobs are listed from the database snapshot of step 2, so a blob written after the snapshot is not copied and none referenced by the snapshot is missing. `kernels/` is copied the same way. `tmp/` and `lock` are never copied.
+  4. Write `format` with a new layout UUID (the copy is another store instance with its own cache), take the copy's lock, and run `finish` (for example `CORE.PRJ.CONT.LIFE`'s genesis entry). An error from `finish` aborts the copy.
+  5. fsync every file, every folder and the temporary folder. Rename the temporary folder to the target name with a no-replace rename (`renameat2(RENAME_NOREPLACE)` on Linux, `renamex_np(RENAME_EXCL)` on macOS, `MoveFileExW` without `MOVEFILE_REPLACE_EXISTING` on Windows). An existing target is `not_empty`. Then fsync the parent folder.
+  6. On any error, remove the temporary folder (best effort, logged) and return the error. After a crash, `copy_to` deletes any `.fid-copy-*` sibling whose `lock` is not held by a live process. Only folders matching that exact pattern are ever deleted.
+- **Project UUID vs project ID:** the `format` UUID names the store instance and its cache folder. A copy gets a new one. It is not the project ID. The project ID and namespace are the identity record of `CORE.PRJ.CONT.LIFE` (the verified genesis entry), so neither value has two sources of truth.
 
 ## Test fixtures
 
@@ -84,10 +99,16 @@ Fixes where a project's bytes live on disk and how they are protected. A project
 - **Resolved (folder vs archive):** folder (see Design). Maintainers may still want a single-file project as a product choice; if so, a decision should be opened then.
 - **Resolved (network shares):** write opens refused, read-only allowed; whether read-only WAL databases open reliably on SMB is [unverified].
 - **Resolved at build (name of the marker file):** REQ-001 named it `FORMAT`, which conflicts with REQ-007 and AC-5 (lowercase names only); it is `format`.
-- **Project UUID source of truth:** the UUID lives in line 2 of `format`. A later project table (`CORE.PRJ`, `CORE.STO.SQL`) must read it from there or keep it identical, so that the UUID never has two sources of truth.
+- **Project UUID source of truth:** the UUID lives in line 2 of `format`. A later project table (`CORE.PRJ`, `CORE.STO.SQL`) must read it from there or keep it identical, so that the UUID never has two sources of truth. **Resolved 2026-11-21:** it is the store-instance UUID only. The project ID lives in the genesis entry (`CORE.PRJ.CONT.LIFE`), see Design.
 - **Host identity:** the lock record's host is the `uname` node name (Linux, macOS) or `COMPUTERNAME` (Windows). Renaming a machine makes its own stale locks look foreign; recovery is the human-confirmed `force_unlock` above. A more stable machine identity (for example a machine UUID) may replace the host name later [unverified that one is readable on all three OS without platform FFI].
 - **Residual link race on Windows:** directory listings (`list`) still go by path, and the project root's own parent chain is not held, so the root itself can be renamed away while it is open. Writes and reads below the root are handle-checked, so they cannot be redirected through a link. A fully handle-relative design would need `NtCreateFile` with a root directory handle, which means FFI [unverified that it is needed].
 - `kernels/` is reserved for kernel artifacts carried with a project (`CORE.RPL.EXEC.VERIFY`, D-020).
+- **Pending build:** REQ-011 to REQ-013 and AC-8 to AC-10 (added 2026-11-21) are not yet implemented. `built_in` covers REQ-001 to REQ-010 and AC-1 to AC-7.
+- The no-replace rename on Linux needs `renameat2`, which some file systems do not support [unverified which]. Where it fails with `EINVAL`, the copy fails closed (`io`) rather than falling back to a replacing rename.
+
+## Change log
+
+- 2026-11-21: REQ-011 to REQ-013 and AC-8 to AC-10 added. Projects are opened from `CORE.BUS.POL.FS` folder targets with an identity check. The atomic project copy uses a temporary sibling folder, the SQLite online backup API, re-hashed blobs, fsync and a no-replace rename, and no partial project survives a crash. The `format` UUID is clarified as the store-instance UUID, not the project ID. Maintainer decision, to unblock `CORE.PRJ.CONT.LIFE`. No existing requirement changes.
 
 ## Children
 
