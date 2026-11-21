@@ -357,7 +357,7 @@ MIN_POSITIVE = from_bits(0x0010000000000000)
 
 
 def ok_weight(w):
-    return w == w and abs(w) != float("inf") and (w == 0.0 or (w > 0.0 and w >= MIN_POSITIVE))
+    return w == w and abs(w) != float("inf") and (w == 0.0 or w >= MIN_POSITIVE)
 
 
 def combine(n, per_point, regions):

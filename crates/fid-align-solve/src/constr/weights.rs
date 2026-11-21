@@ -63,7 +63,7 @@ impl fmt::Display for WeightInput {
 
 /// `+0`, `-0` or a finite, normal, positive binary64.
 fn ok_weight(w: f64) -> bool {
-    w.is_finite() && (w == 0.0 || (w > 0.0 && w >= f64::MIN_POSITIVE))
+    w.is_finite() && (w == 0.0 || w >= f64::MIN_POSITIVE)
 }
 
 fn pos0(w: f64) -> f64 {

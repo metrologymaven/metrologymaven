@@ -4,6 +4,7 @@
 use fid_geo_frame::xform::{mat_mul, mat_vec, Matrix3};
 use fid_geo_frame::{Rigid, Transform};
 use fid_num::f;
+use fid_types::Digest;
 
 use super::{rigid_of, xform_err, ConstrError, ConstraintSet, Dof, B_MAX, LOCK_TOL};
 
@@ -25,8 +26,52 @@ pub struct Linearisation {
     drz: Matrix3,
     rl: Matrix3,
     m: Transform,
+    certified: CertifiedPose,
+}
+
+/// A pose that passed [`verify_locks`] for one constraint set. Its fields are private and its
+/// only constructors are [`verify_locks`] (and through it [`linearise`] and
+/// [`pose_from_params`]), so holding one proves that the lock check ran on exactly this pose
+/// and found every locked component within [`LOCK_TOL`]. It records the digests and start pose
+/// of the set it was certified against; [`CertifiedPose::is_for`] tells a consumer whether it
+/// belongs to the set at hand. An API that hands a best-fit pose onward (towards `fid_fit::Fit`)
+/// takes this type, never a bare `Rigid`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CertifiedPose {
     pose: Rigid,
     relative: [f64; 6],
+    start: Rigid,
+    locks_digest: Digest,
+    weights_digest: Digest,
+}
+
+impl CertifiedPose {
+    /// The pose: data coordinates to the parent frame.
+    pub fn pose(&self) -> Rigid {
+        self.pose
+    }
+
+    /// Its components `tx, ty, tz, a, b, c` in the lock frame relative to the start pose, as
+    /// [`verify_locks`] measured them.
+    pub fn relative(&self) -> [f64; 6] {
+        self.relative
+    }
+
+    /// The locks digest of the set it was certified against.
+    pub fn locks_digest(&self) -> Digest {
+        self.locks_digest
+    }
+
+    /// The weights digest of the set it was certified against.
+    pub fn weights_digest(&self) -> Digest {
+        self.weights_digest
+    }
+
+    /// True when it was certified against a set with the same locks digest (locks and lock
+    /// frame), weights digest and start pose as `cs`.
+    pub fn is_for(&self, cs: &ConstraintSet) -> bool {
+        self.locks_digest == cs.locks_digest && self.weights_digest == cs.weights_digest && self.start == cs.start
+    }
 }
 
 fn finite3(v: &[f64; 3]) -> bool {
@@ -43,9 +88,14 @@ fn checked_mat_vec(r: &Matrix3, x: &[f64; 3], op: &'static str) -> Result<[f64; 
 }
 
 impl Linearisation {
-    /// The pose: data coordinates to the parent frame (certified against the locks).
+    /// The pose: data coordinates to the parent frame (the certified pose's).
     pub fn pose(&self) -> Rigid {
-        self.pose
+        self.certified.pose
+    }
+
+    /// The certified pose.
+    pub fn certified(&self) -> &CertifiedPose {
+        &self.certified
     }
 
     /// All six parameters, locked ones `+0.0`, in the order `tx, ty, tz, a, b, c`.
@@ -66,7 +116,7 @@ impl Linearisation {
     /// The pose's components in the lock frame relative to the start pose, as
     /// [`verify_locks`] measured them.
     pub fn relative(&self) -> [f64; 6] {
-        self.relative
+        self.certified.relative
     }
 
     /// The three rows (x, y, z of `P(x)`) of the derivative of the moved point by all six
@@ -144,22 +194,21 @@ pub fn linearise(cs: &ConstraintSet, free: &[f64]) -> Result<Linearisation, Cons
     let l = Transform::Rigid(cs.lock_frame);
     let dm = d.compose(&m).map_err(xform_err("pose"))?;
     let pose = rigid_of(l.compose(&dm).map_err(xform_err("pose"))?, "pose")?;
-    let relative = verify_locks(cs, &pose)?;
-    Ok(Linearisation { params, sin, cos, rx, ry, rz, drx, dry, drz, rl: cs.lock_frame.r(), m, pose, relative })
+    let certified = verify_locks(cs, &pose)?;
+    Ok(Linearisation { params, sin, cos, rx, ry, rz, drx, dry, drz, rl: cs.lock_frame.r(), m, certified })
 }
 
-/// The pose at `free` (REQ-ALN.BFIT.CONSTR-001); `linearise(cs, free)?.pose()`.
-pub fn pose_from_params(cs: &ConstraintSet, free: &[f64]) -> Result<Rigid, ConstrError> {
-    Ok(linearise(cs, free)?.pose())
+/// The certified pose at `free` (REQ-ALN.BFIT.CONSTR-001); `linearise(cs, free)?.certified()`.
+pub fn pose_from_params(cs: &ConstraintSet, free: &[f64]) -> Result<CertifiedPose, ConstrError> {
+    Ok(linearise(cs, free)?.certified)
 }
 
 /// Measures `pose` in the lock frame relative to the start pose, `D' = L⁻¹ ∘ pose ∘ P0⁻¹ ∘ L`,
-/// and returns its six components `tx, ty, tz, a, b, c` with `a = atan2(R21, R22)`,
+/// and certifies it: the [`CertifiedPose`] holds its six components `tx, ty, tz, a, b, c` with `a = atan2(R21, R22)`,
 /// `b = atan2(-R20, hypot(R21, R22))`, `c = atan2(R10, R00)` (`fid_num::f`). Refuses with
 /// `lock_drift` naming the first locked component (fixed order) whose magnitude exceeds
-/// [`LOCK_TOL`] (REQ-ALN.BFIT.CONSTR-002). A loop calls this on its final pose before it
-/// returns an alignment.
-pub fn verify_locks(cs: &ConstraintSet, pose: &Rigid) -> Result<[f64; 6], ConstrError> {
+/// [`LOCK_TOL`] (REQ-ALN.BFIT.CONSTR-002). This is the only way to obtain a [`CertifiedPose`].
+pub fn verify_locks(cs: &ConstraintSet, pose: &Rigid) -> Result<CertifiedPose, ConstrError> {
     const OP: &str = "verify_locks";
     let l = Transform::Rigid(cs.lock_frame);
     let t1 = Transform::Rigid(cs.start_inv).compose(&l).map_err(xform_err(OP))?;
@@ -178,7 +227,13 @@ pub fn verify_locks(cs: &ConstraintSet, pose: &Rigid) -> Result<[f64; 6], Constr
             return Err(ConstrError::LockDrift { dof: d, value: v });
         }
     }
-    Ok(comps)
+    Ok(CertifiedPose {
+        pose: *pose,
+        relative: comps,
+        start: cs.start,
+        locks_digest: cs.locks_digest,
+        weights_digest: cs.weights_digest,
+    })
 }
 
 /// A dense row-major Jacobian holding only the free columns.

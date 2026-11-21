@@ -68,6 +68,8 @@ The constrained-best-fit building block: a pose parameterisation in a named lock
 - **Algorithm:** pose = lock-frame conjugation of (translation, Rz·Ry·Rx) applied to the start pose; Jacobian columns of the six parameters at the current point, free columns selected in fixed order. Rotations through fid-num `sin`/`cos`.
 - **Errors:** `all_dof_locked`, `frame_not_found`, `lock_parameterisation_singular`, `invalid_weight`.
 - **Determinism:** D0 under KNP-1.
+- **Weight range checks (as built, #376):** a combined weight is refused with `invalid_weight` if any single multiplication, taken in the pinned order (per-point weight, then regions in order), overflows, goes subnormal or underflows to a spurious zero. Whether a point is refused can therefore depend on the region order; for a given input the outcome is deterministic.
+- **Lock certificate (as built, #376):** a pose that passed the lock check is a `CertifiedPose` (private constructor, produced only by `verify_locks`, `linearise` and `pose_from_params`); the best-fit loops hand poses onward only as `CertifiedPose`.
 - **Performance budget:** combined weights for 1 M points and 16 regions in under 30 ms [unverified until measured].
 - **Crate:** `fid-align-solve` (kernel layer; provisional name).
 

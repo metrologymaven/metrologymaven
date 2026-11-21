@@ -253,7 +253,7 @@ fn ac1_locks_sweep_against_reference() {
             assert!((g - want).abs() <= 1e-9, "mask {} {}: {g} vs {want}", c.mask, d.name());
         }
         let fin = linearise(&cs, &got).unwrap();
-        let rel = verify_locks(&cs, &fin.pose()).unwrap();
+        let rel = verify_locks(&cs, &fin.pose()).unwrap().relative();
         for d in Dof::ALL {
             if locks.is_locked(d) {
                 assert_eq!(fin.params()[d.index()].to_bits(), 0, "locked parameter is +0.0");
@@ -384,37 +384,66 @@ fn gimbal_guard_and_parameter_checks() {
     assert_eq!(pose_from_params(&cs, &[f64::MAX, f64::MAX, f64::MAX, 0.0, 0.0, 0.0]).unwrap_err().code(), "non_finite");
 }
 
-/// REQ-002: a pose that moves a locked component is refused, never certified.
+/// `base` followed by the motion `x -> rot x + shift` expressed in the lock frame.
+fn nudge(cs: &ConstraintSet, base: &Rigid, rot: [[f64; 3]; 3], shift: [f64; 3]) -> Rigid {
+    let m = Transform::Rigid(Rigid::new(rot, shift).unwrap());
+    let lt = Transform::Rigid(cs.lock_frame());
+    let conj = lt.compose(&m).unwrap().compose(&lt.inverse().unwrap()).unwrap();
+    match conj.compose(&Transform::Rigid(*base)).unwrap() {
+        Transform::Rigid(r) => r,
+        _ => unreachable!(),
+    }
+}
+
+const E: f64 = 1e-9;
+const I3: [[f64; 3]; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
+const ROT_X: [[f64; 3]; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, -E], [0.0, E, 1.0]];
+const ROT_Y: [[f64; 3]; 3] = [[1.0, 0.0, E], [0.0, 1.0, 0.0], [-E, 0.0, 1.0]];
+const ROT_Z: [[f64; 3]; 3] = [[1.0, -E, 0.0], [E, 1.0, 0.0], [0.0, 0.0, 1.0]];
+
+/// REQ-002: a pose that moves a locked component is refused, never certified: locked
+/// translations with free rotations, and each locked rotation a, b and c, each nudged by
+/// 1e-9 in the lock frame. A nudge of a free component stays certified. (A rotation nudge
+/// also turns the translation, so the case that rotates with tx locked has ty = 0.)
 #[test]
 fn lock_drift_is_refused() {
     let s = sweep();
     let t = tree(s.lock_id, s.lock);
-    let locks = DofLocks::NONE.with(Dof::Tx).with(Dof::Rz);
-    let cs = set(&s, &t, locks.bits()).unwrap();
-    let base = pose_from_params(&cs, &[0.001, 0.002, 0.01, -0.02]).unwrap();
-    assert!(verify_locks(&cs, &base).is_ok());
-    // Shift by 1e-9 m along the lock frame's x axis: tx drifts.
-    let l = cs.lock_frame().r();
-    let dx = [l[0][0] * 1e-9, l[1][0] * 1e-9, l[2][0] * 1e-9];
-    let bt = base.t();
-    let shifted = Rigid::new(base.r(), [bt[0] + dx[0], bt[1] + dx[1], bt[2] + dx[2]]).unwrap();
-    match verify_locks(&cs, &shifted).unwrap_err() {
-        ConstrError::LockDrift { dof, value } => {
-            assert_eq!(dof, Dof::Tx);
-            assert!((value - 1e-9).abs() < 1e-12);
+    let x = [E, 0.0, 0.0];
+    let y = [0.0, E, 0.0];
+    let z = [0.0; 3];
+    // (locks, free parameters, rotation, shift, the dof that must drift or None)
+    let cases: Vec<(DofLocks, Vec<f64>, [[f64; 3]; 3], [f64; 3], Option<Dof>)> = vec![
+        (DofLocks::NONE.with(Dof::Tx).with(Dof::Rz), vec![0.001, 0.002, 0.01, -0.02], I3, x, Some(Dof::Tx)),
+        (DofLocks::NONE.with(Dof::Tx).with(Dof::Rz), vec![0.0, 0.002, 0.01, -0.02], ROT_Z, z, Some(Dof::Rz)),
+        (DofLocks::NONE.with(Dof::Tx).with(Dof::Rz), vec![0.001, 0.002, 0.01, -0.02], I3, y, None),
+        (DofLocks::NONE.with(Dof::Rx), vec![0.001, 0.002, 0.003, 0.02, -0.03], ROT_X, z, Some(Dof::Rx)),
+        (DofLocks::NONE.with(Dof::Rx), vec![0.001, 0.002, 0.003, 0.02, -0.03], ROT_Z, z, None),
+        (DofLocks::NONE.with(Dof::Ry), vec![0.001, 0.002, 0.003, 0.02, -0.03], ROT_Y, z, Some(Dof::Ry)),
+        // Translation locked, all three rotations free.
+        (DofLocks::NONE.with(Dof::Ty), vec![0.001, 0.003, 0.02, -0.03, 0.04], I3, y, Some(Dof::Ty)),
+        (DofLocks::NONE.with(Dof::Ty), vec![0.001, 0.003, 0.02, -0.03, 0.04], I3, x, None),
+    ];
+    for (i, (locks, free, rot, shift, want)) in cases.into_iter().enumerate() {
+        let cs = set(&s, &t, locks.bits()).unwrap();
+        let base = pose_from_params(&cs, &free).unwrap();
+        assert!(base.is_for(&cs));
+        assert_eq!(verify_locks(&cs, &base.pose()).unwrap(), base, "case {i}");
+        let moved = nudge(&cs, &base.pose(), rot, shift);
+        match (verify_locks(&cs, &moved), want) {
+            (Err(ConstrError::LockDrift { dof, value }), Some(d)) => {
+                assert_eq!(dof, d, "case {i}");
+                assert!(value.abs() > LOCK_TOL && (value.abs() - E).abs() < 1e-11, "case {i}: {value}");
+            }
+            (Ok(c), None) => assert!(c.is_for(&cs), "case {i}"),
+            (got, want) => panic!("case {i}: {got:?}, expected drift of {want:?}"),
         }
-        e => panic!("{e:?}"),
     }
-    // Rotate by 1e-9 rad about the lock frame's z axis (after the pose): c drifts.
-    let (sn, cn) = (1e-9_f64, 1.0_f64);
-    let rz = Transform::Rigid(Rigid::new([[cn, -sn, 0.0], [sn, cn, 0.0], [0.0, 0.0, 1.0]], [0.0; 3]).unwrap());
-    let lt = Transform::Rigid(cs.lock_frame());
-    let conj = lt.compose(&rz).unwrap().compose(&lt.inverse().unwrap()).unwrap();
-    let rotated = match conj.compose(&Transform::Rigid(base)).unwrap() {
-        Transform::Rigid(r) => r,
-        _ => unreachable!(),
-    };
-    assert_eq!(verify_locks(&cs, &rotated).unwrap_err().code(), "lock_drift");
+    // A certificate names its set: another lock pattern's set does not accept it.
+    let a = set(&s, &t, DofLocks::NONE.with(Dof::Tx).bits()).unwrap();
+    let b = set(&s, &t, DofLocks::NONE.with(Dof::Ty).bits()).unwrap();
+    let c = pose_from_params(&a, &[0.0; 5]).unwrap();
+    assert!(c.is_for(&a) && !c.is_for(&b));
 }
 
 // ------------------------------------------------------------------ AC-4, AC-5, AC-6

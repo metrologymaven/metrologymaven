@@ -30,7 +30,9 @@
 //! certified, not assumed: every [`linearise`] and [`pose_from_params`] call evaluates the
 //! components of the produced pose in the lock frame relative to the start pose (see
 //! [`verify_locks`]) and refuses with `lock_drift` if a locked one differs from 0 by more than
-//! [`LOCK_TOL`] (`1e-12` m or rad). Rounding in the conjugation is about `1e-16` times the
+//! [`LOCK_TOL`] (`1e-12` m or rad). A pose that passed is a [`CertifiedPose`]; that type has
+//! private fields and no constructor outside [`verify_locks`], so a value of it can only come
+//! from a pose on which the check ran and passed. Rounding in the conjugation is about `1e-16` times the
 //! magnitudes of the frames' translations, so the refusal happens only for absurd frame sizes;
 //! it is never relaxed.
 //!
@@ -64,7 +66,10 @@
 //! multiplied by each region's weight, regions in order, members in order (one IEEE
 //! multiplication each). A product that is infinite, subnormal, or zero while both factors are
 //! not, is refused with `invalid_weight` naming that point: a weight is never silently
-//! saturated or flushed. If no combined weight is positive, `invalid_weight` (`all_zero`).
+//! saturated or flushed. The check is per multiplication, in the pinned region order, so
+//! whether a point's product overflows or underflows on the way can depend on the order of the
+//! regions (`1e300` by `1e10` then by `1e-10` is refused, the reverse order is not); for a
+//! given input the result, accepted or refused, is deterministic. If no combined weight is positive, `invalid_weight` (`all_zero`).
 //! A combined weight of 0 excludes the point.
 //!
 //! # Digests (REQ-ALN.BFIT.CONSTR-008)
@@ -80,10 +85,15 @@
 //!
 //! # Fail closed
 //!
-//! Nothing here panics; NaN and infinities are errors; buffers are reserved fallibly. A loop
-//! that returns an alignment certifies its final pose with [`verify_locks`] before it hands the
-//! result out (through `fid_fit::Fit` or its own result type), so a pose that does not honour
-//! its locks is refused, never returned.
+//! Nothing here panics; NaN and infinities are errors; buffers are reserved fallibly.
+//!
+//! What the code enforces: [`pose_from_params`] and [`verify_locks`] return a
+//! [`CertifiedPose`], never a bare `Rigid`, and a [`CertifiedPose`] exists only for a pose that
+//! passed the lock check of the set whose digests it records ([`CertifiedPose::is_for`]). What
+//! it cannot enforce from this crate: the best-fit loops (`ALN.BFIT.ICP`, `ALN.BFIT.FEAT`) are
+//! not built yet, so the rule that every API handing a best-fit pose onward (towards
+//! `fid_fit::Fit`) takes a [`CertifiedPose`] binds those leaves; `Linearisation::pose` still
+//! exposes the iterate as a `Rigid` for the loop's own residuals.
 
 mod pose;
 mod weights;
@@ -94,7 +104,8 @@ use fid_types::Digest;
 use std::fmt;
 
 pub use pose::{
-    linearise, pose_from_params, reduced_jacobian, verify_locks, Jacobian, Linearisation, MAX_JACOBIAN_ROWS,
+    linearise, pose_from_params, reduced_jacobian, verify_locks, CertifiedPose, Jacobian, Linearisation,
+    MAX_JACOBIAN_ROWS,
 };
 pub use weights::{RegionWeight, WeightInput, WeightSpec, MAX_POINTS, MAX_REGIONS};
 

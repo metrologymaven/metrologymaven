@@ -16,9 +16,9 @@ pub mod constr;
 pub mod report;
 
 pub use constr::{
-    combined_weights, linearise, pose_from_params, reduced_jacobian, validate, verify_locks, ConstrError,
-    ConstraintSet, Dof, DofLocks, FrameContext, Jacobian, Linearisation, LockFrameRef, RegionWeight, WeightInput,
-    WeightSpec, B_MAX, LOCK_TOL,
+    combined_weights, linearise, pose_from_params, reduced_jacobian, validate, verify_locks, CertifiedPose,
+    ConstrError, ConstraintSet, Dof, DofLocks, FrameContext, Jacobian, Linearisation, LockFrameRef, RegionWeight,
+    WeightInput, WeightSpec, B_MAX, LOCK_TOL,
 };
 pub use report::{
     Disposition, Entry, EntryKind, EntryRef, EntryView, Length, LengthVec, RejectReason, ReportBuilder, ReportError,
