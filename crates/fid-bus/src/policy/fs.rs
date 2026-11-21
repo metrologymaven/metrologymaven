@@ -76,16 +76,17 @@
 
 use crate::error::{BusError, Detail, InternalReason, PolicyReason, PreconditionReason};
 use crate::principal::{forbidden, Principal, PrincipalKind};
-use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt};
+use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt};
 use cap_std::fs::Dir;
 use fid_canon::CValue;
 use fid_registry::{CommandDef, FsEffect};
+use fid_store::layout::{CopyTarget, FolderId, VerifiedFolder, COPY_PREFIX, FORMAT_FILE, FORMAT_TAG};
 use fid_store::settings::{resolve as resolve_settings, Scope, SettingWarning, SettingsRegistry, Sources};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::fs::File;
-use std::io;
+use std::io::{self, Read};
 use std::path::{Component, Path, PathBuf, Prefix};
 use unicode_normalization::is_nfc;
 
@@ -1180,6 +1181,377 @@ fn link_components(target: &Path, root_key: &[KeyPart]) -> Result<(bool, Vec<OsS
         }
     }
     Ok((true, out))
+}
+
+// ------------------------------------------------------------------ folder targets
+
+/// What a folder target is resolved for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FolderUse {
+    /// `write_root`: a folder to create, or a copy target (export root).
+    Write,
+    /// An existing project folder to open (`open_project`; import or export root, REQ-011).
+    Open,
+}
+
+/// A folder target that passed the checks of [`resolve_folder`] (REQ-007 to REQ-011). Only
+/// this module builds one. It holds the canonical root folder (or, for a human's raw path, the
+/// canonical parent folder) open as a capability and the link-free path of the folder below it.
+/// It implements no `Display`; its `Debug` shows the handle only (REQ-010).
+pub struct FolderTarget {
+    dir: Dir,
+    canon: PathBuf,
+    root_key: Vec<KeyPart>,
+    rel: PathBuf,
+    handle: String,
+    folder_use: FolderUse,
+    read_only: bool,
+}
+
+impl fmt::Debug for FolderTarget {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FolderTarget").field("handle", &self.handle).field("read_only", &self.read_only).finish()
+    }
+}
+
+/// A folder [`FolderTarget::create_new`] created. Implements `fid_store`'s `VerifiedFolder`.
+pub struct CreatedFolder {
+    path: PathBuf,
+    id: FolderId,
+    handle: String,
+}
+
+/// An existing project folder [`FolderTarget::open_project`] opened. Implements `fid_store`'s
+/// `VerifiedFolder`; read-only when it was resolved in an import root (REQ-011).
+pub struct ProjectFolder {
+    path: PathBuf,
+    id: FolderId,
+    read_only: bool,
+    handle: String,
+}
+
+/// A copy target [`FolderTarget::into_copy_target`] checked: an existing parent folder and an
+/// absent name. Implements `fid_store`'s `CopyTarget`; creates nothing.
+pub struct FolderCopyTarget {
+    parent: PathBuf,
+    parent_id: FolderId,
+    name: String,
+    handle: String,
+}
+
+macro_rules! handle_only_debug {
+    ($t:ty) => {
+        impl fmt::Debug for $t {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_struct(stringify!($t)).field("handle", &self.handle).finish_non_exhaustive()
+            }
+        }
+    };
+}
+handle_only_debug!(CreatedFolder);
+handle_only_debug!(ProjectFolder);
+handle_only_debug!(FolderCopyTarget);
+
+impl CreatedFolder {
+    /// The handle the folder was resolved from.
+    pub fn handle(&self) -> &str {
+        &self.handle
+    }
+}
+
+impl ProjectFolder {
+    /// The handle the folder was resolved from.
+    pub fn handle(&self) -> &str {
+        &self.handle
+    }
+
+    /// Resolved in an import root: open read-only, write nothing (REQ-011).
+    pub fn is_read_only(&self) -> bool {
+        self.read_only
+    }
+}
+
+impl FolderCopyTarget {
+    /// The handle the target was resolved from.
+    pub fn handle(&self) -> &str {
+        &self.handle
+    }
+}
+
+impl VerifiedFolder for CreatedFolder {
+    fn folder_path(&self) -> &Path {
+        &self.path
+    }
+    fn folder_id(&self) -> FolderId {
+        self.id
+    }
+    fn read_only(&self) -> bool {
+        false
+    }
+}
+
+impl VerifiedFolder for ProjectFolder {
+    fn folder_path(&self) -> &Path {
+        &self.path
+    }
+    fn folder_id(&self) -> FolderId {
+        self.id
+    }
+    fn read_only(&self) -> bool {
+        self.read_only
+    }
+}
+
+impl CopyTarget for FolderCopyTarget {
+    fn parent_path(&self) -> &Path {
+        &self.parent
+    }
+    fn parent_id(&self) -> FolderId {
+        self.parent_id
+    }
+    fn target_name(&self) -> &str {
+        &self.name
+    }
+}
+
+/// Whether `name` uses the store's temporary-copy prefix (ASCII case-insensitive, REQ-007).
+fn is_copy_name(name: &str) -> bool {
+    name.get(..COPY_PREFIX.len()).is_some_and(|p| p.eq_ignore_ascii_case(COPY_PREFIX))
+}
+
+/// The identity of a folder opened through a capability.
+fn dir_id(d: &Dir) -> Result<FolderId, BusError> {
+    let file = d.try_clone().map_err(|e| storage(&e))?.into_std_file();
+    #[cfg(windows)]
+    if handle_info(&file)?.reparse_point {
+        return Err(outside("the folder is a reparse point"));
+    }
+    FolderId::of(&file).map_err(|e| storage(&e))
+}
+
+/// Refuses a link or other reparse point at `rel` below `dir` (`outside_root`, wherever it
+/// points: REQ-008, AC-6). `Ok(false)` if nothing is there, `Ok(true)` for a plain entry.
+fn plain_entry(dir: &Dir, rel: &Path) -> Result<bool, BusError> {
+    match dir.symlink_metadata(rel) {
+        Ok(m) if m.file_type().is_symlink() => Err(outside("the target is a link")),
+        Ok(_) => Ok(true),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(io_refusal(&e)),
+    }
+}
+
+/// The parameter must be a top-level `path_like` property without `x-extensions`: a folder has
+/// no extension (Design, "Folder targets").
+fn folder_param(def: &CommandDef, param: &str) -> Result<(), BusError> {
+    no_nested_path_like(def)?;
+    let prop = match &def.params_schema {
+        CValue::Obj(o) => match o.get("properties") {
+            Some(CValue::Obj(props)) => props.get(param),
+            _ => None,
+        },
+        _ => None,
+    };
+    let Some(CValue::Obj(prop)) = prop else {
+        return Err(invariant("the parameter is not declared by the command"));
+    };
+    if prop.get(PATH_LIKE_KEYWORD) != Some(&CValue::Bool(true)) {
+        return Err(invariant("the parameter is not declared path_like"));
+    }
+    if prop.contains_key(EXTENSIONS_KEYWORD) {
+        return Err(invariant("a folder parameter declares x-extensions"));
+    }
+    Ok(())
+}
+
+/// Resolves the value of the `path_like` parameter `param` of `def` as a folder target
+/// (REQ-007): the raw-path, lexical, root-kind and containment rules of [`resolve`], with no
+/// link followed out of the root and no extension rule. A `write_root` command resolves a
+/// folder to create or a copy target in an export root; a `read_root` command resolves an
+/// existing project folder in an import root (read-only, REQ-011) or an export root. A last
+/// component starting `.fid-copy-` is `bad_handle`.
+///
+/// Errors: `policy` with reason `raw_path_refused`, `bad_handle`, `bad_root`, `outside_root` or
+/// `would_overwrite`; `precondition/false` for a missing folder or parent; `internal/storage`;
+/// `internal/invariant_violated` for a parameter that is not a folder parameter of `def`.
+pub fn resolve_folder(
+    principal: &Principal,
+    def: &CommandDef,
+    param: &str,
+    value: &str,
+    roots: &Roots,
+) -> Result<FolderTarget, BusError> {
+    folder_param(def, param)?;
+    let folder_use = match def.fs_effect {
+        FsEffect::WriteRoot => FolderUse::Write,
+        FsEffect::ReadRoot => FolderUse::Open,
+        FsEffect::None => return Err(policy(PolicyReason::BadRoot, "the command declares no file effect")),
+    };
+    let kind = principal.kind();
+    let (dir, canon, root_key, rel, read_only) = if is_handle(value) {
+        let handle = FileHandle::parse(value)?;
+        if is_copy_name(handle.rel.file_name()) {
+            return Err(bad_handle("the name is reserved for a copy in progress"));
+        }
+        let root =
+            roots.get(&handle.root).ok_or_else(|| policy(PolicyReason::BadRoot, "the root is not configured"))?;
+        let read_only = match (folder_use, root.kind) {
+            (FolderUse::Write, RootKind::Export) => false,
+            (FolderUse::Write, RootKind::Import) => {
+                return Err(policy(PolicyReason::BadRoot, &format!("root {} is an import root", root.id)))
+            }
+            (FolderUse::Open, RootKind::Import) => true,
+            (FolderUse::Open, RootKind::Export) => false,
+        };
+        let canon = std::fs::canonicalize(&root.path).map_err(|_| missing("the approved root is not available"))?;
+        let root_key = path_key(&canon).ok_or_else(|| missing("the approved root is not an absolute local path"))?;
+        let dir = Dir::open_ambient_dir(&canon, cap_std::ambient_authority()).map_err(|e| storage(&e))?;
+        let segs = handle.rel.segments();
+        let (last, folders) = segs.split_last().ok_or_else(|| bad_handle("the handle names the root itself"))?;
+        let mut rel: PathBuf = walk(&canon, &root_key, folders)?.iter().collect();
+        let parent = std::fs::canonicalize(canon.join(&rel)).map_err(|e| io_refusal(&e))?;
+        if !at_or_below(&parent, &root_key) || !std::fs::metadata(&parent).map_err(|e| io_refusal(&e))?.is_dir() {
+            return Err(outside("the parent folder resolves outside its approved root"));
+        }
+        rel.push(last);
+        (dir, canon, root_key, rel, read_only)
+    } else {
+        if !may_pass_raw(kind) {
+            return Err(raw_refused(kind));
+        }
+        if value.len() > MAX_RAW_PATH_BYTES || value.contains('\0') {
+            return Err(bad_handle("the raw path is too long or holds NUL"));
+        }
+        let p = Path::new(value);
+        if !p.is_absolute() {
+            return Err(bad_handle("a raw path must be absolute"));
+        }
+        let name = p.file_name().and_then(OsStr::to_str).ok_or_else(|| bad_handle("the raw path names no folder"))?;
+        if is_copy_name(name) {
+            return Err(bad_handle("the name is reserved for a copy in progress"));
+        }
+        let parent = p.parent().ok_or_else(|| bad_handle("the raw path names no folder"))?;
+        let canon = std::fs::canonicalize(parent).map_err(|e| io_refusal(&e))?;
+        let root_key = path_key(&canon).ok_or_else(|| bad_handle("the raw path is not an absolute local path"))?;
+        let dir = Dir::open_ambient_dir(&canon, cap_std::ambient_authority()).map_err(|e| io_refusal(&e))?;
+        (dir, canon, root_key, PathBuf::from(name), false)
+    };
+    let exists = plain_entry(&dir, &rel)?;
+    match (folder_use, exists) {
+        (FolderUse::Write, true) => {
+            return Err(policy(PolicyReason::WouldOverwrite, "the target already exists; write_root never overwrites"))
+        }
+        (FolderUse::Open, false) => return Err(missing("the folder does not exist")),
+        _ => {}
+    }
+    Ok(FolderTarget { dir, canon, root_key, rel, handle: value.to_string(), folder_use, read_only })
+}
+
+impl FolderTarget {
+    /// The canonical path of the folder, checked to lie strictly below the root.
+    fn canonical(&self) -> Result<PathBuf, BusError> {
+        let full = std::fs::canonicalize(self.canon.join(&self.rel)).map_err(|e| io_refusal(&e))?;
+        if strictly_below(&full, &self.root_key) {
+            Ok(full)
+        } else {
+            Err(outside("the folder resolves outside its approved root"))
+        }
+    }
+
+    /// Opens the folder below the root capability without following a link at the last
+    /// component.
+    fn open_folder(&self) -> Result<Dir, BusError> {
+        if plain_entry(&self.dir, &self.rel)? {
+            self.dir.open_dir_nofollow(&self.rel).map_err(|e| {
+                if is_link_refusal(&e) {
+                    outside("the folder became a link")
+                } else {
+                    io_refusal(&e)
+                }
+            })
+        } else {
+            Err(missing("the folder does not exist"))
+        }
+    }
+
+    /// Creates the folder exclusively through the root capability (REQ-008): a link at the
+    /// target is `outside_root`, any other existing entry `would_overwrite`; nothing is
+    /// created then. Only for `write_root`.
+    pub fn create_new(self) -> Result<CreatedFolder, BusError> {
+        if self.folder_use != FolderUse::Write {
+            return Err(invariant("create_new on a folder resolved for opening"));
+        }
+        if let Err(e) = self.dir.create_dir(&self.rel) {
+            if plain_entry(&self.dir, &self.rel)? {
+                return Err(policy(
+                    PolicyReason::WouldOverwrite,
+                    "the target already exists; write_root never overwrites",
+                ));
+            }
+            return Err(io_refusal(&e));
+        }
+        let opened = self.open_folder()?;
+        let id = dir_id(&opened)?;
+        let path = self.canonical()?;
+        Ok(CreatedFolder { path, id, handle: self.handle })
+    }
+
+    /// Opens an existing project folder (REQ-009): no link at the last component, no reparse
+    /// point, and a regular, non-link `format` file whose first line starts with the layout tag;
+    /// otherwise `outside_root` or `precondition/false`. Read-only when resolved in an import
+    /// root (REQ-011). Only for `read_root`.
+    pub fn open_project(self) -> Result<ProjectFolder, BusError> {
+        if self.folder_use != FolderUse::Open {
+            return Err(invariant("open_project on a folder resolved for writing"));
+        }
+        let opened = self.open_folder()?;
+        let mut format = open_checked(&opened, Path::new(FORMAT_FILE), false)
+            .map_err(|_| missing("the folder has no valid project format file"))?;
+        let mut head = Vec::new();
+        Read::by_ref(&mut format).take(4096).read_to_end(&mut head).map_err(|e| storage(&e))?;
+        let first = head.split(|b| *b == b'\n').next().unwrap_or_default();
+        if !first.starts_with(FORMAT_TAG.as_bytes()) {
+            return Err(missing("the folder has no valid project format file"));
+        }
+        let id = dir_id(&opened)?;
+        let path = self.canonical()?;
+        Ok(ProjectFolder { path, id, read_only: self.read_only, handle: self.handle })
+    }
+
+    /// Checks a save-as target without creating anything (Design, never `create_new`): the
+    /// parent folder exists below the root and the name is absent (`would_overwrite`, or
+    /// `outside_root` for a link). The store creates the target only by its no-replace rename.
+    /// Only for `write_root`.
+    pub fn into_copy_target(self) -> Result<FolderCopyTarget, BusError> {
+        if self.folder_use != FolderUse::Write {
+            return Err(invariant("into_copy_target on a folder resolved for opening"));
+        }
+        if plain_entry(&self.dir, &self.rel)? {
+            return Err(policy(PolicyReason::WouldOverwrite, "the target already exists; write_root never overwrites"));
+        }
+        let name = self
+            .rel
+            .file_name()
+            .and_then(OsStr::to_str)
+            .ok_or_else(|| bad_handle("the target names no folder"))?
+            .to_string();
+        let parent_rel = self.rel.parent().map(Path::to_path_buf).unwrap_or_default();
+        let parent_dir = if parent_rel.as_os_str().is_empty() {
+            self.dir.try_clone().map_err(|e| storage(&e))?
+        } else {
+            self.dir.open_dir_nofollow(&parent_rel).map_err(|e| io_refusal(&e))?
+        };
+        let parent_id = dir_id(&parent_dir)?;
+        let parent = std::fs::canonicalize(self.canon.join(&parent_rel)).map_err(|e| io_refusal(&e))?;
+        if !at_or_below(&parent, &self.root_key) {
+            return Err(outside("the parent folder resolves outside its approved root"));
+        }
+        Ok(FolderCopyTarget { parent, parent_id, name, handle: self.handle })
+    }
+
+    /// Resolved in an import root (REQ-011).
+    pub fn is_read_only(&self) -> bool {
+        self.read_only
+    }
 }
 
 #[cfg(test)]

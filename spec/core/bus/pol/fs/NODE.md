@@ -99,7 +99,12 @@ The bus-side guard for file-system parameters. Agents and scripts never pass raw
 - **Resolved (maintainer decision):** `path_like` and `x-extensions` are in the `CORE.REG.DEF.SCHEMA` keyword vocabulary (REQ-010, vocabulary version 2): `path_like` is `true` on a top-level string property only, matching this module's refusal of nested declarations; `x-extensions` is a non-empty, sorted, unique list of lowercase extensions without the dot (`^[a-z0-9]{1,16}$`, at most 64), allowed only next to `path_like`. The derive emits both (`#[fid(path_like, extensions = ["step", "stl"])]`). A test declares such a command with the macros, checks that it passes the schema checker and VAL, and resolves handles through this module against that schema.
   - A `..` segment is never resolved (`outside_root`, AC-4), even when it would stay inside the root. Raw paths are refused for every principal kind but `human` (service, device and system too). A human's raw path must be absolute.
   - A missing file or folder is `precondition/false`; a handle naming a folder or other non-regular file is `bad_handle`; other file-system faults are `internal/storage`. This still holds for `resolve`; folders are resolved only through `resolve_folder` (REQ-007).
-- **Pending build:** REQ-007 to REQ-011 and AC-5 to AC-8 (added 2026-11-21) are not yet implemented. `built_in` covers REQ-001 to REQ-006 and AC-1 to AC-4. The follow-up build adds `resolve_folder`, `FolderTarget` and `CopyTarget` to `fid-bus` `policy::fs`. Its code doc comments are written in that build PR, not here.
+- **Applied (build, folder targets):** REQ-007 to REQ-011 and AC-5 to AC-8 are implemented in `fid-bus` `policy::fs` (`resolve_folder`, `FolderTarget`, `CreatedFolder`, `ProjectFolder`, `FolderCopyTarget`) and tested in `crates/fid-bus/tests/policy_fs_folder.rs`. Choices made at build:
+  - The copy target type is named `FolderCopyTarget`, because `CopyTarget` is the `fid-store` trait it implements.
+  - A `read_root` folder parameter resolves an existing folder for `open_project`; a `write_root` one resolves a folder to create or a copy target. The folder use comes from the command's `fs_effect`, and calling the other method is `internal/invariant_violated`.
+  - A human's raw path is a folder below its canonical parent. It is never read-only, and the same link and copy-name rules apply.
+  - `open_project` reads `format` through the opened folder with the module's checked open (`open_checked`). A link or non-regular `format` file is `precondition/false`, like a missing one.
+  - The folder identity comes from the opened capability handle through `fid_store::FolderId::of`.
 
 ## Change log
 

@@ -9,6 +9,9 @@ pub mod txn;
 
 pub use cache::{Cache, CacheConfig, CacheKey, CacheMode, CacheWarning};
 pub use cas::{Address, BlobRef, BlobStore, CasError, ChunkManifest, ObjectRef, Probe, PutOpts};
-pub use layout::{Area, HexName, LockInfo, Locked, OpenMode, ProjectLocation, StoreError, StoreWarning};
+pub use layout::{
+    Area, CopyTarget, FolderId, HexName, LockInfo, Locked, OpenMode, ProjectLocation, StoreError, StoreWarning,
+    VerifiedFolder,
+};
 pub use schema::{Database, Migration, MigrationPlan, SchemaError, SchemaVersion};
 pub use txn::{Committed, RowOp, Store, Txn, TxnError, Value};

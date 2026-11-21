@@ -124,6 +124,26 @@ impl Dir {
         Ok(Dir { fd: self.fd.try_clone()? })
     }
 
+    /// Device and inode of this directory (`CORE.STO.LAYOUT` REQ-011).
+    pub(super) fn identity(&self) -> io::Result<super::FolderId> {
+        stat_id(&self.fd)
+    }
+
+    /// Renames `from` to `to`, both entries of this directory, never replacing an existing
+    /// `to` (`RENAME_NOREPLACE` on Linux, `RENAME_EXCL` on macOS). An existing target is
+    /// `AlreadyExists`; a file system without the flag fails (`EINVAL`), never falling back
+    /// to a replacing rename.
+    #[cfg(any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "ios"))]
+    pub(super) fn rename_noreplace(&self, from: &str, to: &str) -> io::Result<()> {
+        rfs::renameat_with(&self.fd, from, &self.fd, to, rfs::RenameFlags::NOREPLACE).map_err(io::Error::from)
+    }
+
+    /// No no-replace rename on this platform: fail closed.
+    #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "ios")))]
+    pub(super) fn rename_noreplace(&self, _from: &str, _to: &str) -> io::Result<()> {
+        Err(io::Error::new(io::ErrorKind::Unsupported, "no no-replace rename on this platform"))
+    }
+
     /// Names in this directory (without `.` and `..`) and whether each is a directory
     /// (symbolic links count as files).
     pub(super) fn entries(&self) -> io::Result<Vec<(String, bool)>> {
@@ -220,6 +240,13 @@ impl LockHandle {
         // Closing the descriptor releases the lock as well; unlock explicitly first anyway.
         let _ = rfs::flock(&self.file, FlockOperation::Unlock);
     }
+}
+
+/// Device and inode of an open file or directory.
+#[allow(clippy::unnecessary_cast)]
+pub(super) fn stat_id(fd: impl std::os::fd::AsFd) -> io::Result<super::FolderId> {
+    let st = rfs::fstat(fd)?;
+    Ok(super::FolderId::from_parts(st.st_dev as u64, st.st_ino as u64))
 }
 
 pub(super) fn host_name() -> String {

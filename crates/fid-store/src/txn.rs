@@ -39,7 +39,7 @@
 //! WAL discards the uncommitted transaction on the next open (REQ-005).
 
 use crate::cas::{self, Address, BlobStore, CasError, PutOpts, Stored};
-use crate::layout::{OpenMode, ProjectLocation, StoreError};
+use crate::layout::{OpenMode, ProjectLocation, StoreError, VerifiedFolder, BLOBS_DIR};
 use crate::schema::{self, Database, SchemaError, MUTABLE_TABLES, TABLES};
 use crate::Locked;
 use fid_types::Digest;
@@ -321,6 +321,42 @@ impl Store {
     /// callers such as `fid-journal` whose API hands over the location and the lock.
     pub fn open_locked(location: ProjectLocation, lock: Locked) -> Result<Store, TxnError> {
         Store::finish_open(location, Some(lock), OpenMode::Write)
+    }
+
+    /// [`Store::create`] in a folder `CORE.BUS.POL.FS` just created (`FolderTarget::create_new`):
+    /// the folder's identity is checked before the layout is written and again after the
+    /// database is opened (`CORE.STO.LAYOUT` REQ-011).
+    pub fn create_at(folder: &dyn VerifiedFolder) -> Result<Store, TxnError> {
+        let (location, lock) = ProjectLocation::create_at(folder)?;
+        let store = Store::finish_open(location, Some(lock), OpenMode::Write)?;
+        store.location.check_identity(folder.folder_id())?;
+        Ok(store)
+    }
+
+    /// [`Store::open`] of a folder `CORE.BUS.POL.FS` resolved (`FolderTarget::open_project`),
+    /// with the identity checked when the folder is opened and again after the database is
+    /// opened. A read-only folder (import root) opens only with [`OpenMode::Read`], takes no
+    /// lock and writes no file: the database is opened `immutable` and the blob store without
+    /// creating anything (`read_only_unavailable` when that is not possible).
+    pub fn open_at(folder: &dyn VerifiedFolder, mode: OpenMode) -> Result<Store, TxnError> {
+        let (location, lock) = ProjectLocation::open_at(folder, mode)?;
+        let store = if folder.read_only() {
+            let db = schema::open_read_immutable(&location)?;
+            let blobs = BlobStore::open_existing(&location.root().join(BLOBS_DIR))?;
+            Store {
+                location,
+                lock: None,
+                blobs,
+                mode: OpenMode::Read,
+                db: Mutex::new(db),
+                #[cfg(any(test, feature = "test-probe"))]
+                probe: None,
+            }
+        } else {
+            Store::finish_open(location, lock, mode)?
+        };
+        store.location.check_identity(folder.folder_id())?;
+        Ok(store)
     }
 
     fn finish_open(location: ProjectLocation, lock: Option<Locked>, mode: OpenMode) -> Result<Store, TxnError> {

@@ -119,6 +119,27 @@ impl Dir {
         Ok(Dir { path: self.path.clone(), held: self.held.clone() })
     }
 
+    /// Volume serial number and file index of this directory (`CORE.STO.LAYOUT` REQ-011).
+    pub(super) fn identity(&self) -> io::Result<super::FolderId> {
+        let h = self.held.last().ok_or_else(|| io::Error::other("directory handle missing"))?;
+        file_id(h)
+    }
+
+    /// Renames `from` to `to`, both entries of this directory. `winx` has no no-replace move
+    /// and FFI would need `unsafe`, so the target is checked to be absent and then moved with
+    /// `std::fs::rename`, which cannot replace a non-empty folder. An empty folder created at
+    /// `to` in between may be replaced; that race is accepted (maintainer decision, spec
+    /// `CORE.STO.LAYOUT` Design). The caller checks the target's identity afterwards.
+    pub(super) fn rename_noreplace(&self, from: &str, to: &str) -> io::Result<()> {
+        let target = self.path.join(to);
+        match fs::symlink_metadata(&target) {
+            Ok(_) => return Err(io::Error::new(io::ErrorKind::AlreadyExists, "the target exists")),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e),
+        }
+        fs::rename(self.path.join(from), target)
+    }
+
     pub(super) fn entries(&self) -> io::Result<Vec<(String, bool)>> {
         let mut out = Vec::new();
         for ent in fs::read_dir(&self.path)? {
@@ -204,6 +225,12 @@ impl LockHandle {
     pub(super) fn release(self) {
         drop(self.file);
     }
+}
+
+/// Volume serial number and file index of an open file or directory.
+pub(super) fn file_id(f: &File) -> io::Result<super::FolderId> {
+    let i = winx::winapi_util::file::information(f)?;
+    Ok(super::FolderId::from_parts(i.volume_serial_number(), i.file_index()))
 }
 
 pub(super) fn host_name() -> String {
