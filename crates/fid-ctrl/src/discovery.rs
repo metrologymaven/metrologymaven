@@ -122,7 +122,7 @@ pub const UNSAFE_DIR: &str = "ctrl_unsafe_runtime_dir";
 /// The current user is the owner of `probe`, a file this process just created inside
 /// it, so no platform call is needed.
 #[cfg(unix)]
-fn check_dir(dir: &Path, probe: &fs::File) -> io::Result<()> {
+pub(crate) fn check_dir(dir: &Path, probe: &fs::File) -> io::Result<()> {
     use std::os::unix::fs::MetadataExt;
     let meta = fs::symlink_metadata(dir)?;
     let me = probe.metadata()?.uid();
@@ -144,7 +144,7 @@ fn check_dir(dir: &Path, probe: &fs::File) -> io::Result<()> {
 }
 
 #[cfg(not(unix))]
-fn check_dir(_dir: &Path, _probe: &fs::File) -> io::Result<()> {
+pub(crate) fn check_dir(_dir: &Path, _probe: &fs::File) -> io::Result<()> {
     Ok(())
 }
 

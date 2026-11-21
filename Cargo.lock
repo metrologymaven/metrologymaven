@@ -1228,6 +1228,7 @@ dependencies = [
  "fid-surface",
  "getrandom 0.2.17",
  "hmac",
+ "libc",
  "sha2 0.11.0",
  "zeroize",
 ]

@@ -3,10 +3,11 @@
 //!
 //! Authentication (AUTO.CTRL.AUTH): each connection starts unauthenticated. `hello` gets a
 //! fresh server nonce; `auth` consumes it (one attempt per nonce), re-reads the token file
-//! with its permission check, verifies the client proof in constant time and answers with the
-//! server proof. Any other operation before that, a wrong or malformed proof, `auth` without
-//! a pending nonce, or a second `auth` gets `auth_failed` and the connection closes; wide
-//! token-file permissions get `token_permissions` and close. Authentication must complete
+//! with its permission check, verifies the client proof (bound to this instance ID) in
+//! constant time and answers with the server proof. Any other operation before that, a wrong
+//! or malformed proof, `auth` without a pending nonce, or a second `auth` gets `auth_failed`
+//! and the connection closes. A token file that is too open gets `token_permissions` and
+//! close, and is replaced by a new token. Authentication must complete
 //! within `first_request_timeout` of connecting. Only authenticated requests reach the
 //! [`Handler`].
 
@@ -168,16 +169,21 @@ impl Server {
     /// Validates the address, creates the token file if it is missing, binds an ephemeral
     /// loopback port, writes the discovery file and starts accepting. A non-loopback address
     /// logs `ctrl_non_loopback` and returns before any socket or file exists. A token file
-    /// with wide permissions does not stop the start: it is logged as `token_permissions`
-    /// and every authentication is refused until the file is recreated.
+    /// that is too open does not stop the start: it is replaced by a new owner-only token and
+    /// logged as `token_permissions`, so the old token is never accepted.
     pub fn start(config: Config, handler: Arc<dyn Handler>, log: Arc<dyn Log>) -> Result<Server, StartError> {
         let Some(ip) = loopback_address(&config.address) else {
             log.log(WireError::NonLoopback.code(), &format!("refusing to listen on {:?}", config.address));
             return Err(StartError::NonLoopback(config.address));
         };
         let token = TokenFile::ensure(&config.token_path).map_err(StartError::Token)?;
-        if let Err(e) = token.load() {
-            log.log(e.code(), "the token file is refused; every authentication will fail until it is recreated");
+        match token.load() {
+            Ok(_) => {}
+            Err(AuthError::TokenPermissions) => log.log(
+                AuthError::TokenPermissions.code(),
+                "the token file was too open or not a regular file; it was replaced with a new token",
+            ),
+            Err(e) => log.log(e.code(), "the token file cannot be read; every authentication will fail"),
         }
         let listener = TcpListener::bind(SocketAddr::new(ip, 0))?;
         listener.set_nonblocking(true)?;
@@ -597,15 +603,15 @@ fn authenticate(req: &Request, writer: &mut TcpStream, shared: &Arc<Shared>, sta
     let token = match shared.token.load() {
         Ok(t) => t,
         Err(AuthError::TokenPermissions) => {
-            let why = "the token file grants access to another principal";
+            let why = "the token file was too open or not a regular file; it was replaced with a new token";
             return refuse_auth(writer, shared, req.id, AuthError::TokenPermissions, why);
         }
         Err(e) => return refuse_auth(writer, shared, req.id, e, "the token file cannot be read"),
     };
-    if !auth::verify_client_proof(&token, &server_nonce, &client_nonce, &proof) {
+    if !auth::verify_client_proof(&token, &shared.instance_id, &server_nonce, &client_nonce, &proof) {
         return refuse_auth(writer, shared, req.id, AuthError::AuthFailed, "wrong proof");
     }
-    let server = auth::server_proof(&token, &client_nonce, &server_nonce);
+    let server = auth::server_proof(&token, &shared.instance_id, &client_nonce, &server_nonce);
     drop(token);
     let reply = Reply { v: req.v, id: Some(req.id), body: ReplyBody::Event(auth_event(&server.to_hex())) };
     if send(writer, &reply, AUTH_OP).is_err() {

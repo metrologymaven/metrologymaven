@@ -107,9 +107,13 @@ impl Client {
         let r = self.hello();
         assert_hello_ok(&r);
         let server_nonce = Nonce::from_hex(str_field(event(&r), "nonce")).unwrap();
+        // The client checks the instance against the discovery file before authenticating.
+        let discovered = Discovery::decode(&std::fs::read(app.server.discovery_path()).unwrap()).unwrap();
+        let instance = str_field(event(&r), "instance_id").to_string();
+        assert_eq!(instance, discovered.instance_id);
         let token = Token::from_bytes(std::fs::read(&app.token).unwrap().try_into().unwrap());
         let client_nonce = Nonce::random().unwrap();
-        let proof = client_proof(&token, &server_nonce, &client_nonce);
+        let proof = client_proof(&token, &instance, &server_nonce, &client_nonce);
         self.send(&format!(
             r#"{{"v":1,"id":2,"op":"auth","params":{{"nonce":"{}","proof":"{}"}}}}"#,
             client_nonce.to_hex(),
@@ -118,7 +122,7 @@ impl Client {
         let r = self.recv("auth");
         assert_eq!(str_field(event(&r), "kind"), "auth", "{r:?}");
         let server = Proof::from_hex(str_field(event(&r), "proof")).unwrap();
-        assert!(verify_server_proof(&token, &client_nonce, &server_nonce, &server));
+        assert!(verify_server_proof(&token, &instance, &client_nonce, &server_nonce, &server));
     }
 }
 

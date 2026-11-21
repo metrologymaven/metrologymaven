@@ -8,20 +8,22 @@ license.workspace = true
 repository.workspace = true
 
 # Windows only: the crate is empty on every other target.
-# windows-sys: the Win32 security API (GetSecurityInfo, SetSecurityInfo, the process token).
+# windows-sys: the Win32 security API (CreateFileW with a security descriptor, GetSecurityInfo,
+# the process token).
 # MIT OR Apache-2.0, maintained by Microsoft; 0.61.2 is already in the lock.
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_Security",
     "Win32_Security_Authorization",
+    "Win32_Storage_FileSystem",
     "Win32_System_Threading",
 ] }
 
 # The workspace forbids `unsafe` (CONSTITUTION §8), and `forbid` cannot be lifted inside a
-# crate. This crate is the named exception the AUTO.CTRL.AUTH build prompt allows ("no `unsafe`
-# beyond the OS ACL shim"): it denies `unsafe` at crate level and allows it only on the one FFI
-# module. The other lints are the workspace's, copied.
+# crate. This crate is the named exception of decisions/D-048: it denies `unsafe` at crate level
+# and allows it only on `mod ffi`. The clippy table must stay a superset of the workspace's;
+# `cargo test -p fid-xtask --test unsafe_exception` enforces both.
 [lints.rust]
 unsafe_code = "deny"
 

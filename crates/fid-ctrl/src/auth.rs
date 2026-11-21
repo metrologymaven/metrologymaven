@@ -1,10 +1,14 @@
 //! Challenge-response proofs (REQ-AUTO.CTRL.AUTH-003, -004, -006). Spec node `AUTO.CTRL.AUTH`.
 //!
-//! The server's `hello` carries a fresh 32-byte nonce. The client answers `auth` with its own
-//! 32-byte nonce and `HMAC-SHA256(token, "fid-ctrl-client-v1" ‖ server_nonce ‖ client_nonce)`;
-//! the server verifies that in constant time and answers with
-//! `HMAC-SHA256(token, "fid-ctrl-server-v1" ‖ client_nonce ‖ server_nonce)`, which the client
-//! verifies the same way. The labels and nonces have fixed lengths, so the concatenation is
+//! The server's `hello` carries a fresh 32-byte nonce and its `instance_id`. The client checks
+//! that `instance_id` against the discovery file it connected from, then answers `auth` with
+//! its own 32-byte nonce and
+//! `HMAC-SHA256(token, "fid-ctrl-client-v1" ‖ server_nonce ‖ client_nonce ‖ instance_id)`.
+//! The server verifies that in constant time against its own instance ID and answers with
+//! `HMAC-SHA256(token, "fid-ctrl-server-v1" ‖ client_nonce ‖ server_nonce ‖ instance_id)`,
+//! which the client verifies the same way. Binding the instance ID means a proof made for one
+//! app instance is useless on another that shares the token file (a relay). The labels and
+//! nonces have fixed lengths and the instance ID (UTF-8) comes last, so the concatenation is
 //! unambiguous. Nonces and proofs travel as 64 lowercase hex digits.
 //!
 //! [`Token`] has no `Debug`, `Display` or byte accessor and is zeroised on drop, so the secret
@@ -63,7 +67,7 @@ impl Token {
         Token(bytes)
     }
 
-    fn mac(&self, label: &[u8], first: &Nonce, second: &Nonce) -> Hmac<Sha256> {
+    fn mac(&self, label: &[u8], first: &Nonce, second: &Nonce, instance_id: &str) -> Hmac<Sha256> {
         // HMAC accepts keys of any length, so this cannot fail; the fallback keeps the
         // no-panic rule and is never taken.
         let mut mac = match <Hmac<Sha256> as KeyInit>::new_from_slice(&self.0) {
@@ -73,6 +77,7 @@ impl Token {
         mac.update(label);
         mac.update(&first.0);
         mac.update(&second.0);
+        mac.update(instance_id.as_bytes());
         mac
     }
 }
@@ -129,24 +134,36 @@ fn finish(mac: Hmac<Sha256>) -> Proof {
     Proof(p)
 }
 
-/// `HMAC-SHA256(token, CLIENT_LABEL ‖ server_nonce ‖ client_nonce)`.
-pub fn client_proof(token: &Token, server_nonce: &Nonce, client_nonce: &Nonce) -> Proof {
-    finish(token.mac(CLIENT_LABEL, server_nonce, client_nonce))
+/// `HMAC-SHA256(token, CLIENT_LABEL ‖ server_nonce ‖ client_nonce ‖ instance_id)`.
+pub fn client_proof(token: &Token, instance_id: &str, server_nonce: &Nonce, client_nonce: &Nonce) -> Proof {
+    finish(token.mac(CLIENT_LABEL, server_nonce, client_nonce, instance_id))
 }
 
-/// `HMAC-SHA256(token, SERVER_LABEL ‖ client_nonce ‖ server_nonce)`.
-pub fn server_proof(token: &Token, client_nonce: &Nonce, server_nonce: &Nonce) -> Proof {
-    finish(token.mac(SERVER_LABEL, client_nonce, server_nonce))
+/// `HMAC-SHA256(token, SERVER_LABEL ‖ client_nonce ‖ server_nonce ‖ instance_id)`.
+pub fn server_proof(token: &Token, instance_id: &str, client_nonce: &Nonce, server_nonce: &Nonce) -> Proof {
+    finish(token.mac(SERVER_LABEL, client_nonce, server_nonce, instance_id))
 }
 
 /// Constant-time check of a client proof (the MAC crate's `verify_slice`).
-pub fn verify_client_proof(token: &Token, server_nonce: &Nonce, client_nonce: &Nonce, proof: &Proof) -> bool {
-    token.mac(CLIENT_LABEL, server_nonce, client_nonce).verify_slice(&proof.0).is_ok()
+pub fn verify_client_proof(
+    token: &Token,
+    instance_id: &str,
+    server_nonce: &Nonce,
+    client_nonce: &Nonce,
+    proof: &Proof,
+) -> bool {
+    token.mac(CLIENT_LABEL, server_nonce, client_nonce, instance_id).verify_slice(&proof.0).is_ok()
 }
 
 /// Constant-time check of a server proof, for the client side (REQ-AUTO.CTRL.AUTH-004).
-pub fn verify_server_proof(token: &Token, client_nonce: &Nonce, server_nonce: &Nonce, proof: &Proof) -> bool {
-    token.mac(SERVER_LABEL, client_nonce, server_nonce).verify_slice(&proof.0).is_ok()
+pub fn verify_server_proof(
+    token: &Token,
+    instance_id: &str,
+    client_nonce: &Nonce,
+    server_nonce: &Nonce,
+    proof: &Proof,
+) -> bool {
+    token.mac(SERVER_LABEL, client_nonce, server_nonce, instance_id).verify_slice(&proof.0).is_ok()
 }
 
 fn to_hex(b: &[u8]) -> String {
