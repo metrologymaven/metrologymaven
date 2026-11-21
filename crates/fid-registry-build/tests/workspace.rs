@@ -6,13 +6,14 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::{parse, CValue};
-use fid_registry::manifest::{check_manifest, ManifestError, SHOW_MANIFEST};
+use fid_registry::manifest::{check_manifest, invoke_mcp, sees, Audience, ManifestError, MCP_SHOW, SHOW_MANIFEST};
 use fid_registry::{Catalogue, CommandDef, DefError, QuantityCatalogue, RuleCode};
 use fid_registry_build::{
     build, build_workspace, declarations, manifest_in_force, merge_catalogues, settings, workspace_catalogue,
     workspace_settings, BuildError, QuantitySource, SettingsSource, Source, QUANTITY_SOURCES, SETTINGS_SOURCES,
     SOURCES,
 };
+use std::collections::BTreeSet;
 
 fn geo() -> Catalogue {
     Catalogue::geo_frame().unwrap()
@@ -547,4 +548,96 @@ fn the_request_commands_are_in_the_manifest() {
         assert_eq!(on_mcp(&c), mcp, "{id}");
     }
     assert!(strs(get("request.file_request@1").get("exposure")).is_empty());
+}
+
+/// D-035: over MCP, the workspace manifest names no command an agent cannot see, and a
+/// person's manifest still holds them all.
+#[test]
+fn the_workspace_agent_view_hides_every_command_mcp_never_projects() {
+    let m = manifest_in_force(workspace_catalogue().unwrap()).unwrap();
+    let decls = declarations(&SOURCES).unwrap();
+    let defs: Vec<CommandDef> = decls.iter().map(|d| CommandDef::from_value(d.0.clone()).unwrap()).collect();
+    let hidden: Vec<&CommandDef> = defs.iter().filter(|d| !sees(Audience::Agent, d)).collect();
+    assert!(!hidden.is_empty());
+    assert!(hidden.iter().any(|d| d.human_only));
+    let mut log = Vec::new();
+    let out = invoke_mcp(&m, &mut log, MCP_SHOW, b"{\"full\":true}").unwrap();
+    let CValue::Obj(o) = parse(&out).unwrap() else { panic!() };
+    let Some(CValue::Str(text)) = o.get("bytes") else { panic!() };
+    // Scan the decoded strings (values and keys), not the escaped JSON text, so an ID right
+    // after an escape such as `\n` is still found.
+    let view = parse(text.as_bytes()).unwrap();
+    // Names an agent may see: every visible ID (a hidden major of a visible name is checked as
+    // `<id>@<major>` only).
+    let visible: BTreeSet<&str> = defs.iter().filter(|d| sees(Audience::Agent, d)).map(|d| d.id.as_str()).collect();
+    for d in &hidden {
+        let full = format!("{}@{}", d.id, d.major);
+        assert!(!names_in(&view, &full), "{full} named in the agent view");
+        if !visible.contains(d.id.as_str()) {
+            assert!(!names_in(&view, &d.id), "{full}: {} named in the agent view", d.id);
+        }
+    }
+    assert_eq!(m.agent_view().definitions.len(), defs.len() - hidden.len());
+    assert_eq!(m.export().definitions.len(), defs.len());
+}
+
+/// Whether any decoded string of `v` (object keys included) holds `word` as a bare word.
+fn names_in(v: &CValue, word: &str) -> bool {
+    match v {
+        CValue::Str(s) => names(s, word),
+        CValue::Arr(items) => items.iter().any(|x| names_in(x, word)),
+        CValue::Obj(o) => o.iter().any(|(k, x)| names(k, word) || names_in(x, word)),
+        _ => false,
+    }
+}
+
+fn ident(b: u8) -> bool {
+    b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_'
+}
+
+/// Whether `text` holds `word` as a bare word, anywhere (JSON fields and prose alike): the
+/// character before is not in `[a-z0-9_.]`, and the one after is not either, except a `.`
+/// that ends a sentence (not followed by `[a-z0-9_]`), so "see cmm.move_to." still counts.
+fn names(text: &str, word: &str) -> bool {
+    let t = text.as_bytes();
+    let mut from = 0;
+    while let Some(i) = text[from..].find(word) {
+        let start = from + i;
+        let end = start + word.len();
+        let before_ok = start == 0 || !(ident(t[start - 1]) || t[start - 1] == b'.');
+        let after_ok = match t.get(end) {
+            None => true,
+            Some(&b'.') => !t.get(end + 1).is_some_and(|&c| ident(c)),
+            Some(&c) => !ident(c),
+        };
+        if before_ok && after_ok {
+            return true;
+        }
+        from = start + 1;
+    }
+    false
+}
+
+#[test]
+fn names_matches_bare_words_only() {
+    assert!(names("{\"id\":\"cmm.move_to\"}", "cmm.move_to"));
+    assert!(names("replaced by cmm.move_to@1.", "cmm.move_to@1"));
+    assert!(names("Use cmm.move_to.", "cmm.move_to"));
+    assert!(names("cmm.move_to", "cmm.move_to"));
+    assert!(!names("cmm.move_tool", "cmm.move_to"));
+    assert!(!names("xcmm.move_to", "cmm.move_to"));
+    assert!(!names("a.cmm.move_to", "cmm.move_to"));
+    assert!(!names("cmm.move_to.x", "cmm.move_to"));
+    assert!(!names("cmm.move_to@12", "cmm.move_to@1"));
+    assert!(!names("cmm.move_to_slow", "cmm.move_to"));
+    // Control characters are boundaries once the JSON escapes are decoded.
+    assert!(names("home.\ncmm.move_to", "cmm.move_to"));
+    assert!(names("home.\tcmm.move_to@1", "cmm.move_to@1"));
+    // In the escaped JSON text the `n` of `\n` would hide the ID; decoded, it is found.
+    let doc = parse(br#"{"a":[{"description":"home.\ncmm.move_to"}],"b":"tab\tcmm.move_to@1"}"#).unwrap();
+    assert!(!names(r#"home.\ncmm.move_to"#, "cmm.move_to"));
+    assert!(names_in(&doc, "cmm.move_to"));
+    assert!(names_in(&doc, "cmm.move_to@1"));
+    assert!(names_in(&parse(br#"{"cmm.move_to":1}"#).unwrap(), "cmm.move_to"));
+    assert!(!names_in(&parse(br#"{"x":"cmm.move_tool"}"#).unwrap(), "cmm.move_to"));
 }

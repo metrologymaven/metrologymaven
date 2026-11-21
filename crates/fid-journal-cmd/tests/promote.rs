@@ -393,7 +393,7 @@ fn ac4_ac5_projection_and_class() {
     let request = &defs[REQUEST_PROMOTE_BRANCH];
     assert_eq!(authorise_projection(ChannelKind::Mcp, promote).unwrap(), Projected::PendingRequest);
     let e = authorise_projection(ChannelKind::Mcp, protected).unwrap_err();
-    assert_eq!((e.code(), e.reason()), (Code::Policy, "not_on_mcp"));
+    assert_eq!((e.code(), e.reason()), (Code::NotFound, "unknown_command"));
     assert_eq!(authorise_projection(ChannelKind::Mcp, request).unwrap(), Projected::Run);
     let script = ctx(ChannelKind::Cli);
     let e = authorise_class(script.principal(), promote).unwrap_err();

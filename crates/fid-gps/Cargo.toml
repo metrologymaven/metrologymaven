@@ -1,6 +1,6 @@
 [package]
 name = "fid-gps"
-description = "Metrology Maven GD&T evaluation library; today the Dialect Mapping Table schema (GDT.RES.SCHEMA), the pure interpretation resolver (GDT.RES.RESOLVE) and the tolerance-zone shapes with fixed-pose usage (GDT.ZONE.ZTYPE) and DRF construction with its measured planar path (GDT.DRF.BUILD)"
+description = "Metrology Maven GD&T evaluation library; today the Dialect Mapping Table schema (GDT.RES.SCHEMA), the pure interpretation resolver (GDT.RES.RESOLVE) and the tolerance-zone shapes with fixed-pose usage (GDT.ZONE.ZTYPE) and DRF construction with its measured planar and cylindrical paths (GDT.DRF.BUILD)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -19,8 +19,10 @@ fid-types = { path = "../fid-types" }
 fid-num = { path = "../fid-num" }
 # The validated rigid transform a zone pose can be taken from (GEO.FRAME.XFORM).
 fid-geo-frame = { path = "../fid-geo-frame" }
-# GDT.DRF.BUILD (measured planar path): the certified tangential plane of KRN.ENV.TAN.PLANE
-# that simulates each planar datum (kernel layer, below model; KNP-1, no third-party deps).
+# GDT.DRF.BUILD (measured path): the certified tangential plane of KRN.ENV.TAN.PLANE that
+# simulates each planar datum and the certified minimum circumscribed cylinder of
+# KRN.ENV.MCC.CYL that simulates each external cylindrical datum (kernel layer, below model;
+# KNP-1, no third-party deps).
 fid-fit = { path = "../fid-fit" }
 
 [lints]

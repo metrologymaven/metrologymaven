@@ -3,6 +3,7 @@
 pub mod expr;
 pub mod family;
 pub mod fmt;
+pub mod oper;
 
 pub use fmt::{
     parse_cost, program_schema, step_fields, Arg, Bound, Branch, LoopMode, Opaque, Program, ProgramError, Step,
@@ -15,4 +16,9 @@ pub use expr::syntax::{parse_expr, print_expr, Expr, ExprKind, ParseError, Span}
 pub use family::{
     binding_from_json, binding_from_value, binding_to_value, check_binding, check_decls, Binding, BindingError,
     BoundValue, Family, ParamDecl, ParamType, Variant,
+};
+
+pub use oper::{
+    answer_from_json, operator_schema, validate, AnswerValue, AuthoredText, Decimal, ErrorCode, Field, FieldError,
+    OperatorDescriptor, ResponseType, Rules, UntrustedText, ValidAnswer, OPERATOR_FORMAT,
 };

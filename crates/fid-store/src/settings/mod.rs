@@ -197,7 +197,8 @@ impl SettingsError {
     /// | `storage` | `internal` | `storage` |
     ///
     /// `policy` also covers the surface and human-principal checks of `set_admin_value`, which
-    /// are defence in depth behind the bus's own `not_on_mcp` and `human_only` refusals.
+    /// are defence in depth behind the bus's own refusals: a command MCP never projects is
+    /// `not_found/unknown_command` over MCP (D-035), and `policy/human_only` elsewhere.
     pub fn bus_code(&self) -> (&'static str, &'static str) {
         match self {
             SettingsError::AdminSetting(_) => ("policy", "class_forbidden"),

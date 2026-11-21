@@ -579,6 +579,35 @@
     "reason": "schema"
    },
    "target": "result"
+  },
+  {
+   "case": "show_result_agent_view",
+   "command": "registry.show_manifest@1",
+   "document": {
+    "bytes": "{}",
+    "digest": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "view": "agent"
+   },
+   "expect": {
+    "outcome": "ok"
+   },
+   "target": "result"
+  },
+  {
+   "case": "show_result_view_other",
+   "command": "registry.show_manifest@1",
+   "document": {
+    "digest": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "view": "person"
+   },
+   "expect": {
+    "code": "validation",
+    "keyword": "pattern",
+    "outcome": "error",
+    "pointer": "/view",
+    "reason": "schema"
+   },
+   "target": "result"
   }
  ],
  "commands": {
@@ -607,6 +636,11 @@
      },
      "digest": {
       "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+     },
+     "view": {
+      "description": "Present, as agent, when the result shows the agent view: the manifest of the commands an agent can see, whose digest is the digest of that view, not of the full manifest.",
+      "pattern": "^agent$",
       "type": "string"
      }
     },

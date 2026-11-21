@@ -64,6 +64,7 @@ python fixtures/gdt/dmt/check_schema.py
 python fixtures/gdt/dmt/make_fixtures.py --check
 python fixtures/gdt/dprof/make_cases.py --check
 python fixtures/gdt/drf/build/make_cases.py --check
+python fixtures/gdt/drf/cyl/make_cases.py --check
 python fixtures/gdt/drf/measured/make_cases.py --check
 python fixtures/gdt/ident/make_fixtures.py --check
 python fixtures/gdt/interp/make_cases.py --check
@@ -127,6 +128,7 @@ python fixtures/num/fmt/make_reg_fixtures.py --check
 python fixtures/num/la/make_la_fixtures.py --check
 python fixtures/num/la/make_qr_fixtures.py --check
 python fixtures/num/make_red_fixtures.py --check
+python fixtures/operator/make_fixtures.py --check
 python fixtures/ors/trace/make_fixtures.py --check
 python fixtures/outr/bench/recipe/make_fixtures.py --check
 python fixtures/outr/site/import/make_fixtures.py --check

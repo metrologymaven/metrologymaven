@@ -1,0 +1,1 @@
+{"fields":[{"name":"count","response":"integer","rules":{"max":"10","min":"1"}},{"name":"note","response":"text","rules":{"max_length":5}},{"name":"fixture","response":"choice","rules":{"choices":["F1","F2"]}}],"format":"operator-v1","prompt":"Record the setup."}

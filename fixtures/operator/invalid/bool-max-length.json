@@ -1,0 +1,1 @@
+{"fields":[{"name":"ok","response":"bool","rules":{"max_length":4}}],"format":"operator-v1","prompt":"p"}
