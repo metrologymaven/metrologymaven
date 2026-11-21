@@ -116,6 +116,40 @@ fn ac2_inch_and_tenth_millimetre() {
     assert_ne!(twice.to_bits(), n.si().to_bits());
 }
 
+/// Centimetre (maintainer decision, needed by IO.CAD.STEP.HDR): exact factor 1/100, symbol
+/// `cm`, one rounding. Values hand-labelled: 1 cm and 10 mm are both the f64 nearest 0.01;
+/// 2.54 cm is the f64 nearest 0.0254 (1 in); 0.7 cm is the f64 nearest 0.007, which
+/// rounding twice (0.7 to f64, then times 0.01) misses by one ulp (checked with exact
+/// decimals).
+#[test]
+fn centimetre_is_exact_and_round_trips() {
+    let cm = Unit::Length(LengthUnit::Cm);
+    assert_eq!(LengthUnit::Cm.symbol(), "cm");
+    assert_eq!(LengthUnit::Cm.ratio(), (1, 100));
+    assert_eq!(cm.to_string(), "cm");
+    assert_eq!(Unit::from_symbol("cm"), Some(cm));
+    assert_eq!(Unit::from_symbol("CM"), None);
+    assert_eq!(LengthUnit::ALL.iter().filter(|u| u.symbol() == "cm").count(), 1);
+
+    let one = AuthoredQuantity::parse("1", cm).unwrap();
+    assert_eq!(one.si(), 0.01);
+    assert_eq!(one.si().to_bits(), to_si("10", MM).unwrap().to_bits());
+    assert_eq!(one.to_record_json(), r#"{"si_hex":"3f847ae147ae147b","text":"1","unit":"cm"}"#);
+    assert_eq!(to_si("2.54", cm).unwrap(), to_si("1", IN).unwrap());
+    let n = to_si("0.7", cm).unwrap();
+    assert_eq!(n, 0.007);
+    let mut twice = 0.7f64;
+    twice *= 0.01;
+    assert_ne!(twice.to_bits(), n.to_bits());
+    assert_eq!(to_si("-0", cm).unwrap().to_bits(), 1 << 63);
+
+    assert_eq!(format(0.0254, cm, 2).unwrap(), "2.54");
+    assert_eq!(format(-0.0254, cm, 2).unwrap(), "-2.54");
+    assert_eq!(format(0.01, cm, 0).unwrap(), "1");
+    assert_eq!(format(1.0, cm, 3).unwrap(), "100.000");
+    assert_eq!(format(f64::NAN, cm, 2), Err(UnitsError::NonFinite));
+}
+
 /// AC-3: typed errors for overflow, NaN, comma decimal and a 41-digit decimal.
 #[test]
 fn ac3_typed_errors() {

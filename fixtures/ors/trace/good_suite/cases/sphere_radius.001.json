@@ -1,0 +1,53 @@
+{
+ "acceptance_tolerance": {
+  "unit": "m",
+  "value_hex": "0x3e112e0be826d695"
+ },
+ "basis": "closed_form_math",
+ "case": "ors:trace/sphere_radius.001",
+ "citations": "none",
+ "dataset": {
+  "aim": "gdt.synthetic.closed_form",
+  "cross_check": [],
+  "id": "rdl:O/gdt.synthetic.closed_form/sphere-radius/0001",
+  "inputs": [
+   {
+    "digest": "sha256:aade7fac29967471a855f761a4826684dbeac79f43337c3b3017f5ebd8572cb3",
+    "role": "points",
+    "unit": "mm"
+   }
+  ],
+  "licence": "CC-BY-4.0",
+  "provenance": {
+   "source": "Synthetic fixture for the UNC.ORS.TRACE checker tests; not a measurement and not an interpretation of any standard."
+  },
+  "reference": {
+   "outputs": [
+    {
+     "kind": "length",
+     "name": "value",
+     "test_uncertainty_hex": "0x3c40000000000000",
+     "value_hex": "0x3f9999999999999a"
+    }
+   ],
+   "precision_digits": 17
+  },
+  "schema": "rdl-dataset/v1",
+  "tier": "O",
+  "visibility": "public"
+ },
+ "dialect": "none",
+ "expected": {
+  "unit": "m",
+  "value_hex": "0x3f9999999999999a"
+ },
+ "note": "Synthetic case; the clause number is invented for checker tests.",
+ "review": {
+  "authors": [
+   "case-author-a"
+  ],
+  "reviewers": [],
+  "status": "draft"
+ },
+ "schema": "ors-case/v1"
+}

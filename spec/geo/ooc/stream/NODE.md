@@ -73,7 +73,11 @@ The only way kernel operations read a chunked cloud: a stream of full-resolution
 
 ## Open questions
 
-- None.
+- **Build status (partial, not marked built).** Crate `fid-geo-ooc` module `stream` implements and tests AC-1, AC-2 and AC-3. **AC-4 is open:** `LodPoints` is defined by `GEO.OOC.LOD`, which is not built yet, so the compile-fail test cannot be written; it lands with GEO.OOC.LOD (its AC-5 is the same test). Set `built_in` once AC-4 passes.
+- The trait in `fid-geo-types` returns `GeoTypeError`, not `OocError` as the Design says; the build added `GeoTypeError::Cancelled` and `GeoTypeError::Source { code, detail }` so stream errors reach kernel consumers with their stable code.
+- **Untrusted manifests (maintainer decision, 2026-11-21).** In spatial order an original index repeated in two chunks cannot be detected without memory proportional to the cloud. So a manifest that does not come from this process's own trusted writer (`to_chunks`, `to_chunks_in`, `ChunkWriter`) must pass one original-order verification (the exactly-once proof) before spatial streaming. `ChunkStream` takes a `Provenance` (`TrustedWriter` or `Untrusted`) and records a `verified` state. `ChunkStream::verify` runs the pass, and an original-order stream that reaches its end marks itself verified. A spatial stream of an unverified untrusted manifest is refused with `OocError::UnverifiedManifest`. The provenance is the caller's statement; nothing in the manifest proves it.
+- **Small caches are slow in original order (accepted for now).** When the cache budget holds far fewer chunks than the cloud has, and the original order jumps between chunks, the merge re-fetches chunks often. Memory stays bounded, but time grows with the number of re-fetches.
+- Multi-pass merging was not needed: the merge keeps 24 bytes of cursor state per chunk (bounded by the manifest) and pins at most `fan_in` chunks, re-fetching others through the chunk cache.
 
 ## Children
 

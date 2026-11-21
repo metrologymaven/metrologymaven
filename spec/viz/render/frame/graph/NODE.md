@@ -20,7 +20,7 @@ determinism: N
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # VIZ.RENDER.FRAME.GRAPH: Frame graph, backend selection and ID and depth buffers
@@ -78,6 +78,7 @@ The GPU entry point: create the wgpu device on a backend chosen by a documented 
 - Build (Windows CI on WARP, review of #368): WebGPU copies depth textures only whole, so `read_depth` copies the whole depth target to a staging buffer and crops the rectangle on the CPU (`crop_rows`); a target whose staging buffer exceeds the device's `max_buffer_size` is `readback_too_large`. ID readback (`Rg32Uint`) still copies only the rectangle. Possible follow-up for high-resolution picking: a pass that copies depth into an `R32Float` target so a rectangle can be copied alone.
 - Build: the device is created with no optional feature and the adapter's own limits; narrowing to a tier's limits is `VIZ.RENDER.FRAME.TIER`. Target creation, frames and readbacks run inside validation and out-of-memory error scopes (`gpu`), and an error outside any scope is kept by an `on_uncaptured_error` handler instead of wgpu's panicking default and returned as `gpu` by the next call; a lost device is `device_lost` on the next call.
 - Cross-domain (resolved 2026-11-21, #372): `PLAT.GPU.DETECT` now depends on `PLAT.GPU.POLICY` only, not on VIZ, and its crate `fid-gpu-select` (viewer layer, on `fid-gpu-policy`) hands its selection to this leaf as a plain-data `AdapterChoice`, so there is no code edge either way. This leaf still reads the policy file as an artifact; it could use `fid-gpu-policy`'s reader instead now that it sits below the tool layer (#371), a follow-up.
+- Build (DETECT follow-up, maintainer-approved): **the wgpu instance has only the selected backend, and never one whose probe hung or failed.** `WgpuSource::for_choice(choice, &ProbeExclusions)` creates its instance (on the caller's thread) with `instance_backends`: with an `AdapterChoice`, only the choice's wgpu backend (every backend for a `software` choice or none), minus every excluded backend. When nothing compiled is left, no instance is created at all. `ProbeExclusions { timed_out, failed }` is plain data: the caller copies `GpuSelection::probe_timeout` and `probe_failed` from `PLAT.GPU.DETECT`, by name (`from_names`; an unknown name is refused, not dropped), so there is no code edge to `fid-gpu-select`. `select_excluding`, which `FrameGraph::create` and `start` use with the source's exclusions, never requests an excluded backend, the choice's own included. It records it as an attempt with reason `excluded: the PLAT.GPU.DETECT probe of this backend timed out` (or `failed`) and tries the next backend. A backend in the order that is outside a choice-limited instance fails with `backend not enabled on this instance`, so fallbacks after a chosen hardware backend reach only `software` on that backend's own CPU adapter (WARP on DX12, lavapipe on Vulkan); re-selecting another hardware backend is DETECT's job. `WgpuSource::new()` keeps the earlier behaviour (every compiled backend, nothing excluded) for callers without a DETECT selection. Tests: the scripted `AdapterSource` fake (`excluded_backends_are_never_requested`), `instance_backends`, and the real source with excluded and foreign backends refused before any driver call.
 
 ## Children
 

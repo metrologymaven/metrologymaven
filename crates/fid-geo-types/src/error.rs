@@ -34,6 +34,13 @@ pub enum GeoTypeError {
     /// A working allocation of construction failed; `needed` is the total working size
     /// in bytes (GEO.TYPES.MESH). Nothing is created.
     AllocationFailed { needed: u64 },
+    /// A [`crate::PointSource`] was cancelled between blocks (GEO.OOC.STREAM). No partial
+    /// block is returned.
+    Cancelled,
+    /// A [`crate::PointSource`] could not produce its next block (GEO.OOC.STREAM: a chunk
+    /// store, cache or integrity error). `code` is the source's own stable error code and
+    /// `detail` its message.
+    Source { code: &'static str, detail: String },
 }
 
 impl GeoTypeError {
@@ -51,6 +58,8 @@ impl GeoTypeError {
             GeoTypeError::InvertedAabb { .. } => "inverted_aabb",
             GeoTypeError::AllocationBudget { .. } => "allocation_budget",
             GeoTypeError::AllocationFailed { .. } => "allocation_failed",
+            GeoTypeError::Cancelled => "cancelled",
+            GeoTypeError::Source { .. } => "source",
         }
     }
 }
@@ -83,6 +92,8 @@ impl fmt::Display for GeoTypeError {
             GeoTypeError::AllocationFailed { needed } => {
                 write!(f, "could not allocate {needed} working bytes for mesh construction")
             }
+            GeoTypeError::Cancelled => f.write_str("point source cancelled"),
+            GeoTypeError::Source { code, detail } => write!(f, "point source failed: {code}: {detail}"),
         }
     }
 }

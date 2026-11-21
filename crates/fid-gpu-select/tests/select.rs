@@ -8,8 +8,8 @@
 use fid_gpu_policy::policy::{parse_known_bad, parse_policy, Backend, GpuOs, KnownBad, Minimum, PolicyRow};
 use fid_gpu_policy::{Arch, Version};
 use fid_gpu_select::{
-    driver_version_of, parse_adapters, select, AdapterChoice, AdapterInfo, Cause, DeviceType, Probe, Prober, Rejection,
-    DEFAULT_PROBE_TIMEOUT, USER_OVERRIDE,
+    driver_version_of, parse_adapters, select, AdapterChoice, AdapterInfo, Cause, DeviceType, FallbackCause, Probe,
+    Prober, Rejection, DEFAULT_PROBE_TIMEOUT, USER_OVERRIDE,
 };
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -41,6 +41,7 @@ fn ac1_discrete_dx12() {
     let s = select(&adapters("adapters-win-discrete.json"), &[], &windows_row(), &none(), None);
     assert_eq!(s.backend, Backend::Dx12);
     assert!(!s.fallback);
+    assert_eq!(s.fallback_cause, FallbackCause::None);
     let a = s.adapter.as_ref().unwrap();
     assert_eq!((a.name.as_str(), a.vendor_id, a.device_id), ("Fixture Discrete GPU", 0x7E57_0010, 0x200));
     assert_eq!(a.device_type, DeviceType::Discrete);
@@ -61,6 +62,7 @@ fn ac2_vm_below_every_minimum_is_software() {
     let s = select(&adapters("adapters-vm-none.json"), &[], &windows_row(), &none(), None);
     assert_eq!(s.backend, Backend::Software);
     assert!(s.fallback);
+    assert_eq!(s.fallback_cause, FallbackCause::NoQualifyingAdapter);
     assert!(s.adapter.is_none());
     assert!(s.reason.contains("Fixture Basic Display Adapter"), "{}", s.reason);
     assert!(s.reason.contains("below_minimum"), "{}", s.reason);
@@ -94,11 +96,12 @@ fn ac4_force_software_beats_the_override() {
     let s = select(&adapters("adapters-win-discrete.json"), &[], &windows_row(), &kb, Some(Backend::Vulkan));
     assert_eq!(s.backend, Backend::Software);
     assert!(s.fallback);
+    assert_eq!(s.fallback_cause, FallbackCause::KnownBad, "the override is beaten, not the cause");
     assert_eq!(s.known_bad, ["detect-force-vulkan"]);
     assert!(s.reason.contains("detect-force-vulkan"), "{}", s.reason);
     // Without the override, DX12 comes first and keeps the adapter with its workaround.
     let s = select(&adapters("adapters-win-discrete.json"), &[], &windows_row(), &kb, None);
-    assert_eq!((s.backend, s.fallback), (Backend::Dx12, false));
+    assert_eq!((s.backend, s.fallback, s.fallback_cause), (Backend::Dx12, false, FallbackCause::None));
     assert_eq!(s.workarounds, ["no_msaa"]);
     assert_eq!(s.known_bad, ["detect-workaround-dx12"]);
 }
@@ -126,6 +129,8 @@ fn software_override_selects_software() {
     for k in [none(), kb] {
         let s = select(&a, &[], &windows_row(), &k, Some(Backend::Software));
         assert_eq!((s.backend, s.fallback), (Backend::Software, true));
+        // Structured, so PLAT.DOCTOR does not read this as a machine of GPU class `software`.
+        assert_eq!(s.fallback_cause, FallbackCause::UserOverride);
         assert!(s.adapter.is_none());
         assert!(s.reason.starts_with(USER_OVERRIDE), "{}", s.reason);
         assert!(s.known_bad.is_empty() && s.workarounds.is_empty(), "no adapter is evaluated");
@@ -137,6 +142,9 @@ fn software_override_selects_software() {
     let s = select(&a, &hung, &windows_row(), &none(), Some(Backend::Software));
     assert_eq!(s.reason, "vulkan: probe_timeout; user_override: software requested by the caller");
     assert_eq!(s.probe_timeout, [Backend::Vulkan]);
+    assert_eq!(s.fallback_cause, FallbackCause::UserOverride, "a probe timeout does not change the cause");
+    let json = String::from_utf8(s.to_json().unwrap()).unwrap();
+    assert!(json.contains("\"fallback\":true,\"fallback_cause\":\"user_override\""), "{json}");
     // The probe never touches the driver under a software override.
     let calls = Arc::new(AtomicUsize::new(0));
     let p = Probe::new(Counting(Arc::clone(&calls)));
@@ -173,6 +181,7 @@ fn cpu_adapters_and_unknown_versions() {
     };
     let s = select(std::slice::from_ref(&cpu), &[], &row, &none(), None);
     assert_eq!((s.backend, s.fallback), (Backend::Software, true));
+    assert_eq!(s.fallback_cause, FallbackCause::NoQualifyingAdapter);
     assert_eq!(s.rejections[0].cause, Cause::NotHardware);
     // Unknown API and driver versions do not fail a minimum by themselves; they are listed.
     let unknown = AdapterInfo {
@@ -337,6 +346,7 @@ fn failing_and_panicking_probes_are_rejections() {
     assert!(matches!(&r.rejections[1], Rejection { backend: Backend::Vulkan, cause: Cause::ProbeFailed(_), .. }));
     let s = select(&r.adapters, &r.rejections, &row, &none(), None);
     assert_eq!((s.backend, s.fallback), (Backend::Software, true));
+    assert_eq!(s.fallback_cause, FallbackCause::NoQualifyingAdapter, "every probe failed");
     assert_eq!(r.failed(), [Backend::Dx12, Backend::Vulkan]);
     assert_eq!((s.probe_failed, s.probe_timeout), (vec![Backend::Dx12, Backend::Vulkan], vec![]));
     // A failed or panicked probe is not left in flight: the next probe runs it again.
@@ -356,7 +366,34 @@ fn ac7_json_is_deterministic() {
     let golden = read("selection-win-discrete.golden.json");
     assert_eq!(one, golden, "\n got: {}\nwant: {}", String::from_utf8_lossy(&one), String::from_utf8_lossy(&golden));
     let sw = select(&adapters("adapters-vm-none.json"), &[], &windows_row(), &none(), None).to_json().unwrap();
-    assert!(String::from_utf8(sw).unwrap().contains("\"adapter\":null"));
+    let sw = String::from_utf8(sw).unwrap();
+    assert!(sw.contains("\"adapter\":null"), "{sw}");
+    assert!(sw.contains("\"fallback_cause\":\"no_qualifying_adapter\""), "{sw}");
+}
+
+/// `fallback_cause` names round-trip, and `fallback` is set exactly when the cause is not `none`.
+#[test]
+fn fallback_cause_names() {
+    for (c, name) in [
+        (FallbackCause::None, "none"),
+        (FallbackCause::NoQualifyingAdapter, "no_qualifying_adapter"),
+        (FallbackCause::KnownBad, "known_bad"),
+        (FallbackCause::UserOverride, "user_override"),
+    ] {
+        assert_eq!(c.as_str(), name);
+        assert_eq!(FallbackCause::parse(name), Some(c));
+    }
+    assert_eq!(FallbackCause::parse("software"), None);
+    let a = adapters("adapters-win-discrete.json");
+    let force = parse_known_bad(&read("known-bad-detect-force.toml")).unwrap();
+    for (kb, o) in
+        [(none(), None), (none(), Some(Backend::Software)), (force.clone(), Some(Backend::Vulkan)), (force, None)]
+    {
+        let s = select(&a, &[], &windows_row(), &kb, o);
+        assert_eq!(s.fallback, s.fallback_cause != FallbackCause::None, "{s:?}");
+    }
+    let s = select(&adapters("adapters-vm-none.json"), &[], &windows_row(), &none(), None);
+    assert_eq!((s.fallback, s.fallback_cause), (true, FallbackCause::NoQualifyingAdapter));
 }
 
 #[test]
