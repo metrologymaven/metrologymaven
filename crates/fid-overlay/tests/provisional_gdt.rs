@@ -30,7 +30,7 @@ fn record(label: &str, rules: &[&str]) -> Vec<u8> {
 
 fn rendered(bytes: &[u8]) -> CValue {
     let i = Interpretation::from_requires_label(requires_provisional_label_bytes(bytes));
-    let item = GdtResultItem::new(DisplayState::Nonconforms, i)
+    let item = GdtResultItem::builder(DisplayState::Nonconforms, i)
         .number(0.042)
         .provenance(Provenance::Computed)
         .build()

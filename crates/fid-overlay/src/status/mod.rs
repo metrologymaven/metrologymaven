@@ -799,7 +799,7 @@ impl OverlayItem {
 
 impl GdtResultItem {
     /// A GD&T result with its interpretation (required).
-    pub fn new(state: DisplayState, interpretation: Interpretation) -> GdtResultBuilder {
+    pub fn builder(state: DisplayState, interpretation: Interpretation) -> GdtResultBuilder {
         GdtResultBuilder { inner: OverlayItem::status(state), interpretation }
     }
 

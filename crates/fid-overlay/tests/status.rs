@@ -265,7 +265,7 @@ fn ac4_missing_provenance() {
 /// AC-5: the same inputs give identical bytes and digests.
 #[test]
 fn ac5_pure() {
-    let item = GdtResultItem::new(DisplayState::Indeterminate, Interpretation::Provisional)
+    let item = GdtResultItem::builder(DisplayState::Indeterminate, Interpretation::Provisional)
         .number(-0.003)
         .provenance(Provenance::Computed)
         .build()
@@ -328,7 +328,7 @@ fn ac7_cases_render_as_labelled() {
     got.insert(
         "gdt-provisional",
         gdt(
-            GdtResultItem::new(DisplayState::Nonconforms, Interpretation::Provisional)
+            GdtResultItem::builder(DisplayState::Nonconforms, Interpretation::Provisional)
                 .number(1.25)
                 .provenance(Provenance::Computed),
             "gdt-provisional",
@@ -337,7 +337,7 @@ fn ac7_cases_render_as_labelled() {
     got.insert(
         "gdt-signed-off",
         gdt(
-            GdtResultItem::new(DisplayState::Conforms, Interpretation::SignedOff)
+            GdtResultItem::builder(DisplayState::Conforms, Interpretation::SignedOff)
                 .number(1.25)
                 .provenance(Provenance::Measured),
             "gdt-signed-off",
