@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-vreplay]
+built_pr: 412
 satisfies: [REQ-TRUST.REPLAY-002, REQ-TRUST.REPLAY-003, REQ-TRUST.REPLAY-004, REQ-TRUST.REPLAY-006]
 covers: []
 depends_on: [TRUST.PKG.READER, UNC.RDL.REP]
