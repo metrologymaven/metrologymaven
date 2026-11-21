@@ -383,7 +383,7 @@ fn card_and_command_row() {
     assert_eq!(card.id.to_string(), "fit.cylinder.ls@1.0.0");
     assert_eq!(card.determinism, "D0");
     assert_eq!(card.input_arity, InputArity::exactly(1));
-    let report = check(&[CylinderLs.algorithm_id()], &[card.id.clone()]);
+    let report = check(&[CylinderLs.algorithm_id()], std::slice::from_ref(&card.id));
     assert!(report.is_clean(), "{report:?}");
     let row = cylinder_command_row().unwrap();
     row.validate().unwrap();
