@@ -52,12 +52,12 @@ pub const VERIFY_CHAIN: &str = "journal.verify_chain";
 pub const LIST_ENTRIES: &str = "journal.list_entries";
 const LIFECYCLE_SINCE: &str = "2026-11-20";
 
-fn storage(what: &str, e: impl std::fmt::Display) -> ReadError {
+pub(crate) fn storage(what: &str, e: impl std::fmt::Display) -> ReadError {
     ReadError::Storage(format!("{what}: {e}"))
 }
 
 /// A column read as bytes (`CAST(.. AS BLOB)`): UTF-8 text, else empty.
-fn text_of(v: Option<Vec<u8>>) -> String {
+pub(crate) fn text_of(v: Option<Vec<u8>>) -> String {
     v.and_then(|b| String::from_utf8(b).ok()).unwrap_or_default()
 }
 
@@ -66,7 +66,7 @@ fn text_of(v: Option<Vec<u8>>) -> String {
 /// cut one byte past its longest valid length, so an over-long value stays longer than any
 /// valid one and never matches: digests 71 bytes, stream 64, kind 16, branch at most the
 /// header bound (a branch is part of its header).
-const ROWS_SQL: &str = concat!(
+pub(crate) const ROWS_SQL: &str = concat!(
     "SELECT seq, substr(CAST(hash AS BLOB), 1, 72), substr(CAST(stream AS BLOB), 1, 65), ",
     "substr(CAST(branch AS BLOB), 1, 1048577), substr(CAST(kind AS BLOB), 1, 17), ",
     "substr(CAST(prev_hash AS BLOB), 1, 72), ",
@@ -92,14 +92,14 @@ const HEADS_SQL: &str = concat!(
 /// The branch column of the entry with a given stored hash.
 const BRANCH_OF_SQL: &str = "SELECT substr(CAST(branch AS BLOB), 1, 1048577) FROM entries WHERE hash = ?1 LIMIT 1";
 
-type Bytes = Option<Vec<u8>>;
-type RowTuple = (i64, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Option<i64>);
+pub(crate) type Bytes = Option<Vec<u8>>;
+pub(crate) type RowTuple = (i64, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Option<i64>);
 
-fn to_i64(n: u64) -> i64 {
+pub(crate) fn to_i64(n: u64) -> i64 {
     i64::try_from(n).unwrap_or(i64::MAX)
 }
 
-fn stored(t: RowTuple) -> StoredEntry {
+pub(crate) fn stored(t: RowTuple) -> StoredEntry {
     let (seq, hash, stream, branch, kind, prev_hash, header, len) = t;
     StoredEntry {
         seq,
@@ -122,7 +122,7 @@ fn tail_seq(store: &Store) -> Result<u64, ReadError> {
     u64::try_from(max).map_err(|_| ReadError::Storage("negative tail sequence".into()))
 }
 
-fn check_stream(stream: &str, asked: Option<&String>) -> Result<(), ReadError> {
+pub(crate) fn check_stream(stream: &str, asked: Option<&String>) -> Result<(), ReadError> {
     if !is_stream_name(stream) {
         return Err(ReadError::BadParam(format!("journal stream {stream:?} is not an identifier")));
     }

@@ -14,16 +14,28 @@
 //!   `not_found/unknown_branch`, `not_found/unknown_entity`, `policy/class_forbidden`,
 //!   `policy/human_only`, `internal/invariant_violated`.
 //!
+//! - [`DiffHandler`], [`run_diff`] and [`register_diff`]: `journal.diff_branch@1` (spec node
+//!   `CORE.JRN.BR.DIFF`, R0). The handler reads the branch table from a [`BranchSource`] and
+//!   the diff from a [`DiffSource`] (the journal's verified headers, `fid_journal::diff`),
+//!   passes the call's cancel token through, and returns no events; [`diff_bus_error`] maps
+//!   every refusal to the bus error of the same code and reason (catalogue v3). Nothing in the
+//!   result comes from the caller's principal or from an event body: principal kinds are the
+//!   verified entry headers', owners the origin-bound branch table's.
+//!
 //! Agent branches (`agent/<client>/<n>`) are not created here: the routing module
 //! (`CORE.BUS.ROUTE`) adds them through the journal's crate-private route planner.
 
-use fid_bus::error::{BusError, Detail, InternalReason, NotFoundReason, PolicyReason, ValidationReason};
+use fid_bus::error::{
+    BusError, CancelledReason, Detail, InternalReason, NotFoundReason, PolicyReason, ValidationReason,
+};
 use fid_bus::handler::{Event, EventType, Handler, HandlerCtx, HandlerError, HandlerSet, StateView, ValidParams};
 use fid_canon::CValue;
 use fid_journal::branch::{
     command_defs, plan_coediting, plan_create, plan_protect, Actor, BranchError, BranchEvent, Branches, EntryOrigin,
     EventSource, CREATE_BRANCH, LIST_BRANCHES, MAIN, PROTECT_BRANCH, SET_BRANCH_COEDITING,
 };
+use fid_journal::diff::{BranchDiff, CancelFlag, DiffError, DiffOptions};
+use fid_journal::verify::ReadError;
 use fid_types::Digest;
 use fid_types::SideEffect;
 use std::collections::BTreeMap;
@@ -201,6 +213,108 @@ pub fn register(set: &mut HandlerSet, source: &Arc<dyn BranchSource>) -> Result<
             return Err(invariant("branch definitions out of order"));
         }
         set.register(def, Box::new(BranchHandler::new(op, Arc::clone(source))))?;
+    }
+    Ok(())
+}
+
+// ------------------------------------------------------------------ journal.diff_branch@1
+
+/// Where the diff handler reads the diff. The bus wiring implements it over the journal.
+///
+/// Contract: [`DiffSource::diff`] is `fid_journal::diff::diff_store` (or
+/// `Journal::diff_branch`) over the project's journal stream, with `branches` and `opts`
+/// passed through unchanged: computed from verified entry headers only.
+pub trait DiffSource: Send + Sync {
+    fn diff(
+        &self,
+        branches: &Branches,
+        source: &str,
+        target: &str,
+        opts: &DiffOptions,
+    ) -> Result<BranchDiff, DiffError>;
+}
+
+/// The bus error of a diff refusal: same code, same reason (catalogue v3).
+pub fn diff_bus_error(e: &DiffError) -> BusError {
+    let d = Detail::new(&e.detail());
+    match e {
+        DiffError::UnknownBranch(_) => BusError::NotFound(NotFoundReason::UnknownBranch, d),
+        DiffError::Corrupt(_) | DiffError::Tampered(_) => BusError::Internal(InternalReason::InvariantViolated, d),
+        DiffError::InputLimit(_) => BusError::Validation(ValidationReason::InputLimit, d),
+        DiffError::Cancelled => BusError::Cancelled(CancelledReason::Requested, d),
+        DiffError::Read(r) => match r {
+            ReadError::UnknownStream(_) => BusError::NotFound(NotFoundReason::UnknownStream, d),
+            ReadError::UnknownBranch(_) => BusError::NotFound(NotFoundReason::UnknownBranch, d),
+            ReadError::BadRange(_) => BusError::Validation(ValidationReason::BadRange, d),
+            ReadError::BadParam(_) => BusError::Validation(ValidationReason::Schema, d),
+            ReadError::BadToken => BusError::Validation(ValidationReason::BadToken, d),
+            ReadError::StaleToken => BusError::Validation(ValidationReason::StaleToken, d),
+            ReadError::InputLimit(_) => BusError::Validation(ValidationReason::InputLimit, d),
+            ReadError::Cancelled => BusError::Cancelled(CancelledReason::Requested, d),
+            ReadError::Storage(_) => BusError::Internal(InternalReason::Storage, d),
+            ReadError::Corrupt(_) => BusError::Internal(InternalReason::InvariantViolated, d),
+        },
+    }
+}
+
+/// Runs `journal.diff_branch@1` for the call `ctx`: the result value
+/// (`branch-diff.schema.json`). The call's cancel token stops the walk.
+pub fn run_diff(
+    branches: &dyn BranchSource,
+    journal: &dyn DiffSource,
+    params: &CValue,
+    ctx: &HandlerCtx,
+) -> Result<CValue, BusError> {
+    let source = text(params, "source")?;
+    let target = text(params, "target")?;
+    let table = branches.branches().map_err(|e| invariant(&format!("branch table: {e}")))?;
+    let token = ctx.cancel().clone();
+    let cancel: CancelFlag = Arc::new(move || token.is_cancelled());
+    let opts = DiffOptions { cancel: Some(cancel), ..DiffOptions::default() };
+    journal.diff(&table, source, target, &opts).map(|d| d.to_value()).map_err(|e| diff_bus_error(&e))
+}
+
+/// The handler of `journal.diff_branch@1` (R0: no events).
+pub struct DiffHandler {
+    branches: Arc<dyn BranchSource>,
+    journal: Arc<dyn DiffSource>,
+}
+
+impl DiffHandler {
+    pub fn new(branches: Arc<dyn BranchSource>, journal: Arc<dyn DiffSource>) -> DiffHandler {
+        DiffHandler { branches, journal }
+    }
+}
+
+impl fmt::Debug for DiffHandler {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DiffHandler").finish_non_exhaustive()
+    }
+}
+
+impl Handler for DiffHandler {
+    fn run(&self, _view: &dyn StateView, params: &ValidParams, ctx: &HandlerCtx) -> Result<Vec<Event>, HandlerError> {
+        if ctx.cancel().is_cancelled() {
+            return Err(HandlerError::Cancelled);
+        }
+        run_diff(self.branches.as_ref(), self.journal.as_ref(), params.value(), ctx)?;
+        Ok(Vec::new())
+    }
+}
+
+/// Registers the handler of `journal.diff_branch@1` with its definition from
+/// `fid_journal::diff::command_defs`.
+pub fn register_diff(
+    set: &mut HandlerSet,
+    branches: &Arc<dyn BranchSource>,
+    journal: &Arc<dyn DiffSource>,
+) -> Result<(), BusError> {
+    let defs = fid_journal::diff::command_defs().map_err(|e| invariant(&format!("diff definition: {e}")))?;
+    for def in defs {
+        if def.id != fid_journal::diff::DIFF_BRANCH {
+            return Err(invariant("unexpected diff definition"));
+        }
+        set.register(def, Box::new(DiffHandler::new(Arc::clone(branches), Arc::clone(journal))))?;
     }
     Ok(())
 }

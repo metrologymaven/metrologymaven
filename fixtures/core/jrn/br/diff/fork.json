@@ -1,0 +1,241 @@
+{
+ "branches": [
+  {
+   "created_from": null,
+   "name": "main"
+  },
+  {
+   "created_from": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+   "name": "s"
+  },
+  {
+   "created_from": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+   "name": "orphan"
+  },
+  {
+   "created_from": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+   "name": "t2"
+  },
+  {
+   "created_from": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+   "name": "agent/claude/1"
+  },
+  {
+   "created_from": "sha256:13b408a783bf894b8d154f812fe75bf8e9e522eccf3c944e107cceb817d6a943",
+   "name": "u"
+  }
+ ],
+ "entries": [
+  {
+   "branch": "main",
+   "hash": "sha256:d7c6f27c1cd48f812fbf5eca77d3104f7a22b4c34b8623199fcb55d387054db8",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"hash\":\"sha256:d7c6f27c1cd48f812fbf5eca77d3104f7a22b4c34b8623199fcb55d387054db8\",\"kind\":\"session_header\",\"logical_parent\":null,\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"principal\":{\"commit\":\"sha256:9bedb48e3b5741b5fc72f7ab483601fc2c231ccc2777a5749c45fd9a4aff63f4\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"1\",\"session\":{\"app_version\":\"0.1.0\",\"session_id\":\"s-0001\"},\"stream\":\"record\",\"time\":{\"mono_ns\":\"1000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:01:00Z\"}}",
+   "kind": "session_header",
+   "prev_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+   "refs": [
+    [
+     "payload",
+     "sha256:6eea669bf3561ac9bf504b7683d5222675181e4c356a1d15f9b857c2ed30c5b1"
+    ]
+   ],
+   "seq": 1,
+   "stream": "record"
+  },
+  {
+   "branch": "main",
+   "hash": "sha256:e1225a95c2a7c0c78de719d423c430697b5d4166097c63e018fa59abf3f15a7f",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:f4f259892bb93e2fd369f55892ac8842ff658ca6b2f162c71916acaa14b73d29\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:f99d4a80833cd52804163129f9b1223747f38d4ed30bfd9072ef8c6b64b071f4\",\"id\":\"project.add_features\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:f6891a9e8413113dc400e586d3f9aadd8dd3193a2c02c2410639dd5d3f7f4290\",\"entity\":\"e1\"},{\"digest\":\"sha256:932c4a447454546b27546a639ff363e19d25607d73b6652564b3c1dce2670f52\",\"entity\":\"e2\"}],\"seed\":\"2\"},\"hash\":\"sha256:e1225a95c2a7c0c78de719d423c430697b5d4166097c63e018fa59abf3f15a7f\",\"kind\":\"command\",\"logical_parent\":null,\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:d7c6f27c1cd48f812fbf5eca77d3104f7a22b4c34b8623199fcb55d387054db8\",\"principal\":{\"commit\":\"sha256:f7bc31df95000fd2c69c9eb62685ad9aea09afe8dd2d89a03abdfeca5c13a301\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"2\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"2000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:02:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:d7c6f27c1cd48f812fbf5eca77d3104f7a22b4c34b8623199fcb55d387054db8",
+   "refs": [
+    [
+     "payload",
+     "sha256:d2a81b0b3d1ea58bbafcd5e3e10e6ec1ac4c0f7e901ecc7cffdcd5a30a1f416a"
+    ]
+   ],
+   "seq": 2,
+   "stream": "record"
+  },
+  {
+   "branch": "main",
+   "hash": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:8cd7cefd234f484824035192b72109701082bdf97ca52b5b61ed7c40f7bb0f4c\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:20e95a1838be478114221b0821e934363146e589de6e6d440c8361cc22d6aafa\",\"id\":\"project.add_features\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:4c071018f9a033970de8908924ae7a429d8791174a9dfd0e7045f12821d53975\",\"entity\":\"e3\"},{\"digest\":\"sha256:84cba6613c52e01956e1d117f4ffe9c8ac9566f434a352c7027abf04c51aa556\",\"entity\":\"e4\"},{\"digest\":\"sha256:24b47d1bd7e8f5517669db8173f657b4ad408fade0d8b073f34e2a0b11e02e54\",\"entity\":\"e5\"}],\"seed\":\"3\"},\"hash\":\"sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5\",\"kind\":\"command\",\"logical_parent\":\"sha256:e1225a95c2a7c0c78de719d423c430697b5d4166097c63e018fa59abf3f15a7f\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:e1225a95c2a7c0c78de719d423c430697b5d4166097c63e018fa59abf3f15a7f\",\"principal\":{\"commit\":\"sha256:2328177d85478337dc35e038d0d975aac9e2056333e951f166f82db6aad35882\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"3\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"3000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:03:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:e1225a95c2a7c0c78de719d423c430697b5d4166097c63e018fa59abf3f15a7f",
+   "refs": [
+    [
+     "payload",
+     "sha256:a837b2378542e78a8344462f425a37a6c555f03d843a911d9200d2ab2a597dd5"
+    ]
+   ],
+   "seq": 3,
+   "stream": "record"
+  },
+  {
+   "branch": "main",
+   "hash": "sha256:d555269eb4dc1528a244f7efb9ec4806f3a015c901699510bffe1e5180d7c03c",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:18fff04d774795063f1c36d37ef06134ebc00a029a487787425b3edfddf4c172\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:a615d8e6ef428ad68757641941cf4ac0ace5d9f5c4953af520e3e327800b403d\",\"id\":\"journal.create_branch\",\"inputs\":[],\"major\":1,\"outputs\":[],\"seed\":\"4\"},\"hash\":\"sha256:d555269eb4dc1528a244f7efb9ec4806f3a015c901699510bffe1e5180d7c03c\",\"kind\":\"command\",\"logical_parent\":\"sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5\",\"principal\":{\"commit\":\"sha256:f9c832a86b5269632782745782eaa06174bbd032b0ee8eb746d042ff9750802e\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"4\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"4000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:04:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+   "refs": [
+    [
+     "payload",
+     "sha256:93e36de797564e8a5b21bdd05c56afd643e3ea019a73d42bd77ebea27c331e47"
+    ]
+   ],
+   "seq": 4,
+   "stream": "record"
+  },
+  {
+   "branch": "s",
+   "hash": "sha256:8c4cfffdeef87c8e687b40fe0e1f6cc2d8aa0e9df204ed32c08e1d7ac6166b0f",
+   "header": "{\"ai_assistance\":\"authored\",\"branch\":\"s\",\"hash\":\"sha256:8c4cfffdeef87c8e687b40fe0e1f6cc2d8aa0e9df204ed32c08e1d7ac6166b0f\",\"kind\":\"session_header\",\"logical_parent\":null,\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:d555269eb4dc1528a244f7efb9ec4806f3a015c901699510bffe1e5180d7c03c\",\"principal\":{\"commit\":\"sha256:f648200d3b8b7a11b89efc67b42ae7a56e1f60a936be778456da137033e8c052\",\"kind\":\"agent\"},\"schema_version\":1,\"seq\":\"5\",\"session\":{\"app_version\":\"0.1.0\",\"session_id\":\"s-0005\"},\"stream\":\"record\",\"time\":{\"mono_ns\":\"5000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:05:00Z\"}}",
+   "kind": "session_header",
+   "prev_hash": "sha256:d555269eb4dc1528a244f7efb9ec4806f3a015c901699510bffe1e5180d7c03c",
+   "refs": [
+    [
+     "payload",
+     "sha256:f8c29732888cff5995689ee68477041a70ea612423e68cc078e02519d5021a34"
+    ]
+   ],
+   "seq": 5,
+   "stream": "record"
+  },
+  {
+   "branch": "s",
+   "hash": "sha256:0a3dfc45e6e019363dd687e8bd2359364c1cab0ed9e2a5455359006ea2b8b580",
+   "header": "{\"ai_assistance\":\"authored\",\"branch\":\"s\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:d6beddcadcd71e6c17e9f48ca9e8d525244f0440db91a73ff17dfba7c5ca8b41\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:684c747a4eab5f37886f09d62d5741880db63ad7d4756ef07d3f3295de667df8\",\"id\":\"feature.add\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:8bd485eb5b0972e9e66acf9cc14f92e1422b9ca17b3d7cf76b989ff3341d7fc5\",\"entity\":\"e6\"}],\"seed\":\"6\"},\"hash\":\"sha256:0a3dfc45e6e019363dd687e8bd2359364c1cab0ed9e2a5455359006ea2b8b580\",\"kind\":\"command\",\"logical_parent\":\"sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:8c4cfffdeef87c8e687b40fe0e1f6cc2d8aa0e9df204ed32c08e1d7ac6166b0f\",\"principal\":{\"commit\":\"sha256:5539b28297e67e8ee55969943b03a661ddf7f327d0d1d309edbe0ef5bcea8ad5\",\"kind\":\"agent\"},\"schema_version\":1,\"seq\":\"6\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"6000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:06:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:8c4cfffdeef87c8e687b40fe0e1f6cc2d8aa0e9df204ed32c08e1d7ac6166b0f",
+   "refs": [
+    [
+     "payload",
+     "sha256:e2b3967debfc1c18df8b5574ed4ab303674f823aa9a7cfafda73d57223608170"
+    ]
+   ],
+   "seq": 6,
+   "stream": "record"
+  },
+  {
+   "branch": "main",
+   "hash": "sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:9351b4d23f053ada80981bc6ba95fb75e57a3d84386ae14571db25583f000be6\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:ae206e45c0316ce89f67bcdae92e84bdc93a0f3113b5de73d62433f0ee995531\",\"id\":\"feature.set_nominal\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:0f63a32730b0a6bb34b57c0aa93debd1ef83b305a40086dfcf4a25002d78df1c\",\"entity\":\"e4\"}],\"seed\":\"7\"},\"hash\":\"sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b\",\"kind\":\"command\",\"logical_parent\":\"sha256:d555269eb4dc1528a244f7efb9ec4806f3a015c901699510bffe1e5180d7c03c\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:0a3dfc45e6e019363dd687e8bd2359364c1cab0ed9e2a5455359006ea2b8b580\",\"principal\":{\"commit\":\"sha256:3d90d57e78cdedea502d8365b2e43f34f461d42ffc0e760fc3812b7a4a62232d\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"7\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"7000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:07:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:0a3dfc45e6e019363dd687e8bd2359364c1cab0ed9e2a5455359006ea2b8b580",
+   "refs": [
+    [
+     "payload",
+     "sha256:5a2e5ef1794970945d26fa5380d7879ad3d80442842fc3846724275022565b0e"
+    ]
+   ],
+   "seq": 7,
+   "stream": "record"
+  },
+  {
+   "branch": "s",
+   "hash": "sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503",
+   "header": "{\"ai_assistance\":\"authored\",\"branch\":\"s\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:10e9b265525cb31e4dee078070873a7de9176ea522e438db629a65a30ad43045\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:05dfbcb6053b622f76e334dd5b4566ff8a9556b3d46e7f42d74899896a7654c5\",\"id\":\"feature.edit\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"entity\":\"e2\"},{\"digest\":\"sha256:70e8d9f2e5d279af80dbf1ef4df0c05f4d0812315854c142e0dfb3b9ce62b167\",\"entity\":\"e3\"}],\"seed\":\"8\"},\"hash\":\"sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503\",\"kind\":\"command\",\"logical_parent\":\"sha256:0a3dfc45e6e019363dd687e8bd2359364c1cab0ed9e2a5455359006ea2b8b580\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b\",\"principal\":{\"commit\":\"sha256:3cc6bd6fb645dd4fce5999a8180255c65243a521eee07da27519b880ec0b24fe\",\"kind\":\"agent\"},\"schema_version\":1,\"seq\":\"8\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"8000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:08:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b",
+   "refs": [
+    [
+     "payload",
+     "sha256:c4770370d11fec79432fe945c849ba176b4bbb3ce31512f661e4b3f376bc0a8b"
+    ]
+   ],
+   "seq": 8,
+   "stream": "record"
+  },
+  {
+   "branch": "main",
+   "hash": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:4a4f4302ed8295308377fc64658453c7f6a06dfbe2a2425cfa70824b36d140d8\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:11af529a0ce335fb471931a770346e729a7f6c24765e246e1943cebeadf97430\",\"id\":\"feature.set_nominal\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:6e7787c869c6b6aaec8bebf8a1060bb00440e25a84864ef3668330f65a808d41\",\"entity\":\"e3\"}],\"seed\":\"9\"},\"hash\":\"sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be\",\"kind\":\"command\",\"logical_parent\":\"sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503\",\"principal\":{\"commit\":\"sha256:6cf580c7b7269ba86ee83d66b93a85f9c3574bea6de476ebc584f38cbd24ee87\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"9\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"9000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:09:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503",
+   "refs": [
+    [
+     "payload",
+     "sha256:6bce443bc8ec70e7c8a4e7212a4dd979d4363b0a6bbd225d7860861d1e06f9f4"
+    ]
+   ],
+   "seq": 9,
+   "stream": "record"
+  },
+  {
+   "branch": "s",
+   "hash": "sha256:b042e1cb7ef8ca97b514b2e3dfdf46b3d66fa5c48270bf37264cf6320f5212d1",
+   "header": "{\"ai_assistance\":\"authored\",\"branch\":\"s\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:0291519dadffd9948b53a06005fd9dd5b6efd473c8c393c300da469c75bc0cab\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:407a03c57b43ced1e8e20db3b4101ef2581f7b68f99f894cfec7147449f1fc3b\",\"id\":\"feature.set_nominal\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:93f11e71c0be1cc2ebe82cbd91cee0311aaf2c1288a50f8bad6fdb3f8671d0a2\",\"entity\":\"e5\"},{\"digest\":\"sha256:030671683ca1bd7a1d7d8efe0d41b1e99a080351b53e5fd4a3e1c051e9516e01\"}],\"seed\":\"10\"},\"hash\":\"sha256:b042e1cb7ef8ca97b514b2e3dfdf46b3d66fa5c48270bf37264cf6320f5212d1\",\"kind\":\"command\",\"logical_parent\":\"sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be\",\"principal\":{\"commit\":\"sha256:bfbc7fff29eb8ff788efa1c9359efbc50e0eb1e95a9227fd254c67bd3c755306\",\"kind\":\"agent\"},\"schema_version\":1,\"seq\":\"10\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"10000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:10:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+   "refs": [
+    [
+     "payload",
+     "sha256:feea695701e52f24819c09af81c27107a65bb12db7879fe0d9cdbcae9f2a73b9"
+    ]
+   ],
+   "seq": 10,
+   "stream": "record"
+  },
+  {
+   "branch": "s",
+   "hash": "sha256:1eeab1a294f051631a8e16ab389cc2859b037f049197679817de9a828460e0dd",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"s\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:f7bf3d7010386a779e33df48c1c65f9ecaac4755874f085eea4dea1a9b962cb3\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:43bc681d77b8a917f441035c2a30e90f9f618d80f1d4965be7832d20abfb581e\",\"id\":\"feature.set_nominal\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:24b47d1bd7e8f5517669db8173f657b4ad408fade0d8b073f34e2a0b11e02e54\",\"entity\":\"e5\"}],\"seed\":\"11\"},\"hash\":\"sha256:1eeab1a294f051631a8e16ab389cc2859b037f049197679817de9a828460e0dd\",\"kind\":\"command\",\"logical_parent\":\"sha256:b042e1cb7ef8ca97b514b2e3dfdf46b3d66fa5c48270bf37264cf6320f5212d1\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:b042e1cb7ef8ca97b514b2e3dfdf46b3d66fa5c48270bf37264cf6320f5212d1\",\"principal\":{\"commit\":\"sha256:e22366de5d0606d2c3991a9babfce3d0573e2e848a0dbf28eb9ebf6007f896af\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"11\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"11000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:11:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:b042e1cb7ef8ca97b514b2e3dfdf46b3d66fa5c48270bf37264cf6320f5212d1",
+   "refs": [
+    [
+     "payload",
+     "sha256:c169f2b1d145cb9e15d883cf65b817723f2b038b8db8403be72ac3a86623d8e8"
+    ]
+   ],
+   "seq": 11,
+   "stream": "record"
+  },
+  {
+   "branch": "main",
+   "hash": "sha256:13b408a783bf894b8d154f812fe75bf8e9e522eccf3c944e107cceb817d6a943",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"hash\":\"sha256:13b408a783bf894b8d154f812fe75bf8e9e522eccf3c944e107cceb817d6a943\",\"kind\":\"session_header\",\"logical_parent\":null,\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:1eeab1a294f051631a8e16ab389cc2859b037f049197679817de9a828460e0dd\",\"principal\":{\"commit\":\"sha256:1fd262a47bf2fea5a61ae045d3b5658b8312e544af5f59fce30c7fedba35deb4\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"12\",\"session\":{\"app_version\":\"0.1.0\",\"session_id\":\"s-0012\"},\"stream\":\"record\",\"time\":{\"mono_ns\":\"12000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:12:00Z\"}}",
+   "kind": "session_header",
+   "prev_hash": "sha256:1eeab1a294f051631a8e16ab389cc2859b037f049197679817de9a828460e0dd",
+   "refs": [
+    [
+     "payload",
+     "sha256:e11ff3f18921d9d08eecfa107f5ae03212a6b634e91765f5f3630b33db373f39"
+    ]
+   ],
+   "seq": 12,
+   "stream": "record"
+  },
+  {
+   "branch": "orphan",
+   "hash": "sha256:52303a9836374865b5d7ab0caf7cbe5c732f70ab486649f20fbf52a69445ce26",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"orphan\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:53046ebf2b3233db42cd2ada3f9c8e8797467e2ae1db3a2d543f9518a55464aa\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:71475639c8d314246f310fc11b37fa3ca38490e405da69930149e02fa11fe2c5\",\"id\":\"project.add_features\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:4b6add11adac79d1c3474f959efe3bacf48306400953dfd40da81025f7d4ff26\",\"entity\":\"e9\"}],\"seed\":\"13\"},\"hash\":\"sha256:52303a9836374865b5d7ab0caf7cbe5c732f70ab486649f20fbf52a69445ce26\",\"kind\":\"command\",\"logical_parent\":null,\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:13b408a783bf894b8d154f812fe75bf8e9e522eccf3c944e107cceb817d6a943\",\"principal\":{\"commit\":\"sha256:bf72ee041a4f46cef6f6c7e6462808c9cef589614af651ddcfd2df5f85c1b62e\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"13\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"13000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:13:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:13b408a783bf894b8d154f812fe75bf8e9e522eccf3c944e107cceb817d6a943",
+   "refs": [
+    [
+     "payload",
+     "sha256:254d44e92a2ae98d628e1aed1a7d0d273aa92c695ba86279a5af76038057a3ce"
+    ]
+   ],
+   "seq": 13,
+   "stream": "record"
+  },
+  {
+   "branch": "agent/claude/1",
+   "hash": "sha256:c0bae7a2bece68532870f360c1d56a668e2e6500e9aa8daf1c344152baaee616",
+   "header": "{\"ai_assistance\":\"authored\",\"branch\":\"agent/claude/1\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:36451dbf474c15ce03258c4bc9807d2053999e520a427011ec191ba254e29a81\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:a4cd1fc04b41ffdef7ab64b4a2ba61137a6e464bbe04833177dc41d0f9d514e5\",\"id\":\"feature.set_nominal\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:3544c3c005e0dcbf61a412dfed089a90e05602ee37c68a3d0b75a7010483e5d1\",\"entity\":\"e1\"},{\"digest\":\"sha256:c1495165a8acd270c6d9e98918ecda3e20c447848c70139626e4a73d092fd93e\",\"entity\":\"e1\"}],\"seed\":\"14\"},\"hash\":\"sha256:c0bae7a2bece68532870f360c1d56a668e2e6500e9aa8daf1c344152baaee616\",\"kind\":\"command\",\"logical_parent\":\"sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:52303a9836374865b5d7ab0caf7cbe5c732f70ab486649f20fbf52a69445ce26\",\"principal\":{\"commit\":\"sha256:405c8984de45d4ebcbe21887e498a03bfbaa62dd4d3ce89710d1482fea692e98\",\"kind\":\"agent\"},\"schema_version\":1,\"seq\":\"14\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"14000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-20T09:14:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:52303a9836374865b5d7ab0caf7cbe5c732f70ab486649f20fbf52a69445ce26",
+   "refs": [
+    [
+     "payload",
+     "sha256:6ce637835114a30614a4ec2441271f9388783714f0e34c23bafa53304862eda6"
+    ]
+   ],
+   "seq": 14,
+   "stream": "record"
+  }
+ ],
+ "stream": "record"
+}

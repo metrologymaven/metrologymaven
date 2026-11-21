@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-journal, fid-journal-cmd]
 satisfies: [REQ-CORE.JRN.BR-002]
 covers: []
 depends_on: [CORE.JRN.BR.NAME, CORE.JRN.CHAIN.APPEND, CORE.JRN.ENTRY, CORE.REG.DEF]
@@ -68,6 +69,10 @@ Answers "what would promoting this branch change?" without re-executing anything
 
 - Value-level deltas for the Proposal Inbox result layer would come from replay comparison; confirm the split with `VIZ.INBOX`.
 - This leaf relies on entity-tagged output digests in the entry header (`CORE.JRN.ENTRY`).
+- Build choices (module docs of `fid_journal::diff` pin them): the diff reads verified headers only (CHAIN.VERIFY steps 1 to 14, no blobs, no head cache); a branch's head is its last `command` or `head_move` entry, else its `created_from`; session headers and principal upgrades are not logical states; a `logical_parent` must name an earlier verified entry. `CORE.BUS.ROUTE` and `CORE.JRN.UNDO` should set `logical_parent` to match, and UNDO should confirm how a `head_move` is walked (here: through its `logical_parent`, like any entry).
+- Branch existence, `created_from` and owner come from `CORE.JRN.BR.NAME`'s origin-bound table, which is folded from event bodies in payloads; with payloads removed (AC-3) that table must still be available from somewhere. Confirm with BR.NAME.
+- Without a trusted head a journal rewritten from some entry on, or cut at its tail, cannot be detected (CHAIN.VERIFY's limit); the diff takes an optional trusted head. Until TRUST.VERIFY, the bus passes none.
+- The result also names each side (`branch`, `head`, `owner`) and each command reference carries the verified header's principal kind; `VIZ.INBOX` may rely on both.
 
 ## Children
 

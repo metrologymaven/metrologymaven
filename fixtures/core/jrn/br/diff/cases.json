@@ -1,0 +1,1139 @@
+{
+ "diffs": [
+  {
+   "expect": {
+    "result": {
+     "added": [
+      {
+       "conflict": false,
+       "id": "e6",
+       "source_commands": [
+        {
+         "command": "feature.add@1",
+         "entry": "sha256:0a3dfc45e6e019363dd687e8bd2359364c1cab0ed9e2a5455359006ea2b8b580",
+         "principal": "agent",
+         "seq": "6"
+        }
+       ],
+       "source_digest": "sha256:8bd485eb5b0972e9e66acf9cc14f92e1422b9ca17b3d7cf76b989ff3341d7fc5",
+       "target_commands": [],
+       "target_digest": null
+      }
+     ],
+     "ancestor": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+     "changed": [
+      {
+       "conflict": true,
+       "id": "e3",
+       "source_commands": [
+        {
+         "command": "feature.edit@1",
+         "entry": "sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503",
+         "principal": "agent",
+         "seq": "8"
+        }
+       ],
+       "source_digest": "sha256:70e8d9f2e5d279af80dbf1ef4df0c05f4d0812315854c142e0dfb3b9ce62b167",
+       "target_commands": [
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+         "principal": "human",
+         "seq": "9"
+        }
+       ],
+       "target_digest": "sha256:6e7787c869c6b6aaec8bebf8a1060bb00440e25a84864ef3668330f65a808d41"
+      },
+      {
+       "conflict": false,
+       "id": "e4",
+       "source_commands": [],
+       "source_digest": "sha256:84cba6613c52e01956e1d117f4ffe9c8ac9566f434a352c7027abf04c51aa556",
+       "target_commands": [
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b",
+         "principal": "human",
+         "seq": "7"
+        }
+       ],
+       "target_digest": "sha256:0f63a32730b0a6bb34b57c0aa93debd1ef83b305a40086dfcf4a25002d78df1c"
+      }
+     ],
+     "removed": [
+      {
+       "conflict": false,
+       "id": "e2",
+       "source_commands": [
+        {
+         "command": "feature.edit@1",
+         "entry": "sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503",
+         "principal": "agent",
+         "seq": "8"
+        }
+       ],
+       "source_digest": null,
+       "target_commands": [],
+       "target_digest": "sha256:932c4a447454546b27546a639ff363e19d25607d73b6652564b3c1dce2670f52"
+      }
+     ],
+     "source": {
+      "branch": "s",
+      "head": "sha256:1eeab1a294f051631a8e16ab389cc2859b037f049197679817de9a828460e0dd",
+      "owner": "human"
+     },
+     "target": {
+      "branch": "main",
+      "head": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+      "owner": "human"
+     }
+    }
+   },
+   "name": "ac1_fork",
+   "source": "s",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "result": {
+     "added": [],
+     "ancestor": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+     "changed": [],
+     "removed": [],
+     "source": {
+      "branch": "t2",
+      "head": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+      "owner": "human"
+     },
+     "target": {
+      "branch": "main",
+      "head": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+      "owner": "human"
+     }
+    }
+   },
+   "name": "ac2_no_changes",
+   "source": "t2",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "result": {
+     "added": [],
+     "ancestor": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+     "changed": [
+      {
+       "conflict": false,
+       "id": "e2",
+       "source_commands": [],
+       "source_digest": "sha256:932c4a447454546b27546a639ff363e19d25607d73b6652564b3c1dce2670f52",
+       "target_commands": [
+        {
+         "command": "feature.edit@1",
+         "entry": "sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503",
+         "principal": "agent",
+         "seq": "8"
+        }
+       ],
+       "target_digest": null
+      },
+      {
+       "conflict": true,
+       "id": "e3",
+       "source_commands": [
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+         "principal": "human",
+         "seq": "9"
+        }
+       ],
+       "source_digest": "sha256:6e7787c869c6b6aaec8bebf8a1060bb00440e25a84864ef3668330f65a808d41",
+       "target_commands": [
+        {
+         "command": "feature.edit@1",
+         "entry": "sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503",
+         "principal": "agent",
+         "seq": "8"
+        }
+       ],
+       "target_digest": "sha256:70e8d9f2e5d279af80dbf1ef4df0c05f4d0812315854c142e0dfb3b9ce62b167"
+      },
+      {
+       "conflict": false,
+       "id": "e4",
+       "source_commands": [
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b",
+         "principal": "human",
+         "seq": "7"
+        }
+       ],
+       "source_digest": "sha256:0f63a32730b0a6bb34b57c0aa93debd1ef83b305a40086dfcf4a25002d78df1c",
+       "target_commands": [],
+       "target_digest": "sha256:84cba6613c52e01956e1d117f4ffe9c8ac9566f434a352c7027abf04c51aa556"
+      },
+      {
+       "conflict": false,
+       "id": "e6",
+       "source_commands": [],
+       "source_digest": null,
+       "target_commands": [
+        {
+         "command": "feature.add@1",
+         "entry": "sha256:0a3dfc45e6e019363dd687e8bd2359364c1cab0ed9e2a5455359006ea2b8b580",
+         "principal": "agent",
+         "seq": "6"
+        }
+       ],
+       "target_digest": "sha256:8bd485eb5b0972e9e66acf9cc14f92e1422b9ca17b3d7cf76b989ff3341d7fc5"
+      }
+     ],
+     "removed": [],
+     "source": {
+      "branch": "main",
+      "head": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+      "owner": "human"
+     },
+     "target": {
+      "branch": "s",
+      "head": "sha256:1eeab1a294f051631a8e16ab389cc2859b037f049197679817de9a828460e0dd",
+      "owner": "human"
+     }
+    }
+   },
+   "name": "swapped",
+   "source": "main",
+   "target": "s"
+  },
+  {
+   "expect": {
+    "result": {
+     "added": [],
+     "ancestor": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+     "changed": [
+      {
+       "conflict": false,
+       "id": "e1",
+       "source_commands": [
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:c0bae7a2bece68532870f360c1d56a668e2e6500e9aa8daf1c344152baaee616",
+         "principal": "agent",
+         "seq": "14"
+        }
+       ],
+       "source_digest": "sha256:c1495165a8acd270c6d9e98918ecda3e20c447848c70139626e4a73d092fd93e",
+       "target_commands": [],
+       "target_digest": "sha256:f6891a9e8413113dc400e586d3f9aadd8dd3193a2c02c2410639dd5d3f7f4290"
+      }
+     ],
+     "removed": [],
+     "source": {
+      "branch": "agent/claude/1",
+      "head": "sha256:c0bae7a2bece68532870f360c1d56a668e2e6500e9aa8daf1c344152baaee616",
+      "owner": "agent"
+     },
+     "target": {
+      "branch": "main",
+      "head": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+      "owner": "human"
+     }
+    }
+   },
+   "name": "agent_branch",
+   "source": "agent/claude/1",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "result": {
+     "added": [],
+     "ancestor": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+     "changed": [
+      {
+       "conflict": false,
+       "id": "e1",
+       "source_commands": [],
+       "source_digest": "sha256:f6891a9e8413113dc400e586d3f9aadd8dd3193a2c02c2410639dd5d3f7f4290",
+       "target_commands": [
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:c0bae7a2bece68532870f360c1d56a668e2e6500e9aa8daf1c344152baaee616",
+         "principal": "agent",
+         "seq": "14"
+        }
+       ],
+       "target_digest": "sha256:c1495165a8acd270c6d9e98918ecda3e20c447848c70139626e4a73d092fd93e"
+      }
+     ],
+     "removed": [],
+     "source": {
+      "branch": "main",
+      "head": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+      "owner": "human"
+     },
+     "target": {
+      "branch": "agent/claude/1",
+      "head": "sha256:c0bae7a2bece68532870f360c1d56a668e2e6500e9aa8daf1c344152baaee616",
+      "owner": "agent"
+     }
+    }
+   },
+   "name": "main_vs_agent_branch",
+   "source": "main",
+   "target": "agent/claude/1"
+  },
+  {
+   "expect": {
+    "result": {
+     "added": [
+      {
+       "conflict": false,
+       "id": "e9",
+       "source_commands": [
+        {
+         "command": "project.add_features@1",
+         "entry": "sha256:52303a9836374865b5d7ab0caf7cbe5c732f70ab486649f20fbf52a69445ce26",
+         "principal": "human",
+         "seq": "13"
+        }
+       ],
+       "source_digest": "sha256:4b6add11adac79d1c3474f959efe3bacf48306400953dfd40da81025f7d4ff26",
+       "target_commands": [],
+       "target_digest": null
+      }
+     ],
+     "ancestor": null,
+     "changed": [
+      {
+       "conflict": false,
+       "id": "e1",
+       "source_commands": [],
+       "source_digest": null,
+       "target_commands": [
+        {
+         "command": "project.add_features@1",
+         "entry": "sha256:e1225a95c2a7c0c78de719d423c430697b5d4166097c63e018fa59abf3f15a7f",
+         "principal": "human",
+         "seq": "2"
+        }
+       ],
+       "target_digest": "sha256:f6891a9e8413113dc400e586d3f9aadd8dd3193a2c02c2410639dd5d3f7f4290"
+      },
+      {
+       "conflict": false,
+       "id": "e2",
+       "source_commands": [],
+       "source_digest": null,
+       "target_commands": [
+        {
+         "command": "project.add_features@1",
+         "entry": "sha256:e1225a95c2a7c0c78de719d423c430697b5d4166097c63e018fa59abf3f15a7f",
+         "principal": "human",
+         "seq": "2"
+        }
+       ],
+       "target_digest": "sha256:932c4a447454546b27546a639ff363e19d25607d73b6652564b3c1dce2670f52"
+      },
+      {
+       "conflict": false,
+       "id": "e3",
+       "source_commands": [],
+       "source_digest": null,
+       "target_commands": [
+        {
+         "command": "project.add_features@1",
+         "entry": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+         "principal": "human",
+         "seq": "3"
+        },
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+         "principal": "human",
+         "seq": "9"
+        }
+       ],
+       "target_digest": "sha256:6e7787c869c6b6aaec8bebf8a1060bb00440e25a84864ef3668330f65a808d41"
+      },
+      {
+       "conflict": false,
+       "id": "e4",
+       "source_commands": [],
+       "source_digest": null,
+       "target_commands": [
+        {
+         "command": "project.add_features@1",
+         "entry": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+         "principal": "human",
+         "seq": "3"
+        },
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b",
+         "principal": "human",
+         "seq": "7"
+        }
+       ],
+       "target_digest": "sha256:0f63a32730b0a6bb34b57c0aa93debd1ef83b305a40086dfcf4a25002d78df1c"
+      },
+      {
+       "conflict": false,
+       "id": "e5",
+       "source_commands": [],
+       "source_digest": null,
+       "target_commands": [
+        {
+         "command": "project.add_features@1",
+         "entry": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+         "principal": "human",
+         "seq": "3"
+        }
+       ],
+       "target_digest": "sha256:24b47d1bd7e8f5517669db8173f657b4ad408fade0d8b073f34e2a0b11e02e54"
+      }
+     ],
+     "removed": [],
+     "source": {
+      "branch": "orphan",
+      "head": "sha256:52303a9836374865b5d7ab0caf7cbe5c732f70ab486649f20fbf52a69445ce26",
+      "owner": "human"
+     },
+     "target": {
+      "branch": "main",
+      "head": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+      "owner": "human"
+     }
+    }
+   },
+   "name": "disjoint",
+   "source": "orphan",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "result": {
+     "added": [],
+     "ancestor": "sha256:1eeab1a294f051631a8e16ab389cc2859b037f049197679817de9a828460e0dd",
+     "changed": [],
+     "removed": [],
+     "source": {
+      "branch": "s",
+      "head": "sha256:1eeab1a294f051631a8e16ab389cc2859b037f049197679817de9a828460e0dd",
+      "owner": "human"
+     },
+     "target": {
+      "branch": "s",
+      "head": "sha256:1eeab1a294f051631a8e16ab389cc2859b037f049197679817de9a828460e0dd",
+      "owner": "human"
+     }
+    }
+   },
+   "name": "same_branch",
+   "source": "s",
+   "target": "s"
+  },
+  {
+   "expect": {
+    "result": {
+     "added": [],
+     "ancestor": null,
+     "changed": [
+      {
+       "conflict": false,
+       "id": "e1",
+       "source_commands": [],
+       "source_digest": null,
+       "target_commands": [
+        {
+         "command": "project.add_features@1",
+         "entry": "sha256:e1225a95c2a7c0c78de719d423c430697b5d4166097c63e018fa59abf3f15a7f",
+         "principal": "human",
+         "seq": "2"
+        }
+       ],
+       "target_digest": "sha256:f6891a9e8413113dc400e586d3f9aadd8dd3193a2c02c2410639dd5d3f7f4290"
+      },
+      {
+       "conflict": false,
+       "id": "e2",
+       "source_commands": [],
+       "source_digest": null,
+       "target_commands": [
+        {
+         "command": "project.add_features@1",
+         "entry": "sha256:e1225a95c2a7c0c78de719d423c430697b5d4166097c63e018fa59abf3f15a7f",
+         "principal": "human",
+         "seq": "2"
+        }
+       ],
+       "target_digest": "sha256:932c4a447454546b27546a639ff363e19d25607d73b6652564b3c1dce2670f52"
+      },
+      {
+       "conflict": false,
+       "id": "e3",
+       "source_commands": [],
+       "source_digest": null,
+       "target_commands": [
+        {
+         "command": "project.add_features@1",
+         "entry": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+         "principal": "human",
+         "seq": "3"
+        },
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+         "principal": "human",
+         "seq": "9"
+        }
+       ],
+       "target_digest": "sha256:6e7787c869c6b6aaec8bebf8a1060bb00440e25a84864ef3668330f65a808d41"
+      },
+      {
+       "conflict": false,
+       "id": "e4",
+       "source_commands": [],
+       "source_digest": null,
+       "target_commands": [
+        {
+         "command": "project.add_features@1",
+         "entry": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+         "principal": "human",
+         "seq": "3"
+        },
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b",
+         "principal": "human",
+         "seq": "7"
+        }
+       ],
+       "target_digest": "sha256:0f63a32730b0a6bb34b57c0aa93debd1ef83b305a40086dfcf4a25002d78df1c"
+      },
+      {
+       "conflict": false,
+       "id": "e5",
+       "source_commands": [],
+       "source_digest": null,
+       "target_commands": [
+        {
+         "command": "project.add_features@1",
+         "entry": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+         "principal": "human",
+         "seq": "3"
+        }
+       ],
+       "target_digest": "sha256:24b47d1bd7e8f5517669db8173f657b4ad408fade0d8b073f34e2a0b11e02e54"
+      }
+     ],
+     "removed": [],
+     "source": {
+      "branch": "u",
+      "head": "sha256:13b408a783bf894b8d154f812fe75bf8e9e522eccf3c944e107cceb817d6a943",
+      "owner": "human"
+     },
+     "target": {
+      "branch": "main",
+      "head": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+      "owner": "human"
+     }
+    }
+   },
+   "name": "head_at_session_entry",
+   "source": "u",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "reason": "unknown_branch"
+    }
+   },
+   "name": "ac4_unknown_source",
+   "source": "nope",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "reason": "unknown_branch"
+    }
+   },
+   "name": "ac4_unknown_target",
+   "source": "main",
+   "target": "nope"
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "reason": "unknown_branch"
+    }
+   },
+   "name": "ac4_malformed_name",
+   "source": "Bad Name",
+   "target": "main"
+  }
+ ],
+ "stream": "record",
+ "tampers": [
+  {
+   "expect": {
+    "result": {
+     "added": [
+      {
+       "conflict": false,
+       "id": "e6",
+       "source_commands": [
+        {
+         "command": "feature.add@1",
+         "entry": "sha256:0a3dfc45e6e019363dd687e8bd2359364c1cab0ed9e2a5455359006ea2b8b580",
+         "principal": "agent",
+         "seq": "6"
+        }
+       ],
+       "source_digest": "sha256:8bd485eb5b0972e9e66acf9cc14f92e1422b9ca17b3d7cf76b989ff3341d7fc5",
+       "target_commands": [],
+       "target_digest": null
+      }
+     ],
+     "ancestor": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+     "changed": [
+      {
+       "conflict": true,
+       "id": "e3",
+       "source_commands": [
+        {
+         "command": "feature.edit@1",
+         "entry": "sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503",
+         "principal": "agent",
+         "seq": "8"
+        }
+       ],
+       "source_digest": "sha256:70e8d9f2e5d279af80dbf1ef4df0c05f4d0812315854c142e0dfb3b9ce62b167",
+       "target_commands": [
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+         "principal": "human",
+         "seq": "9"
+        }
+       ],
+       "target_digest": "sha256:6e7787c869c6b6aaec8bebf8a1060bb00440e25a84864ef3668330f65a808d41"
+      },
+      {
+       "conflict": false,
+       "id": "e4",
+       "source_commands": [],
+       "source_digest": "sha256:84cba6613c52e01956e1d117f4ffe9c8ac9566f434a352c7027abf04c51aa556",
+       "target_commands": [
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b",
+         "principal": "human",
+         "seq": "7"
+        }
+       ],
+       "target_digest": "sha256:0f63a32730b0a6bb34b57c0aa93debd1ef83b305a40086dfcf4a25002d78df1c"
+      }
+     ],
+     "removed": [
+      {
+       "conflict": false,
+       "id": "e2",
+       "source_commands": [
+        {
+         "command": "feature.edit@1",
+         "entry": "sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503",
+         "principal": "agent",
+         "seq": "8"
+        }
+       ],
+       "source_digest": null,
+       "target_commands": [],
+       "target_digest": "sha256:932c4a447454546b27546a639ff363e19d25607d73b6652564b3c1dce2670f52"
+      }
+     ],
+     "source": {
+      "branch": "s",
+      "head": "sha256:1eeab1a294f051631a8e16ab389cc2859b037f049197679817de9a828460e0dd",
+      "owner": "human"
+     },
+     "target": {
+      "branch": "main",
+      "head": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+      "owner": "human"
+     }
+    }
+   },
+   "mutations": [
+    {
+     "op": "set_refs",
+     "refs": []
+    }
+   ],
+   "name": "ac3_payloads_removed",
+   "source": "s",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "result": {
+     "added": [
+      {
+       "conflict": false,
+       "id": "e6",
+       "source_commands": [
+        {
+         "command": "feature.add@1",
+         "entry": "sha256:0a3dfc45e6e019363dd687e8bd2359364c1cab0ed9e2a5455359006ea2b8b580",
+         "principal": "agent",
+         "seq": "6"
+        }
+       ],
+       "source_digest": "sha256:8bd485eb5b0972e9e66acf9cc14f92e1422b9ca17b3d7cf76b989ff3341d7fc5",
+       "target_commands": [],
+       "target_digest": null
+      }
+     ],
+     "ancestor": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+     "changed": [
+      {
+       "conflict": true,
+       "id": "e3",
+       "source_commands": [
+        {
+         "command": "feature.edit@1",
+         "entry": "sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503",
+         "principal": "agent",
+         "seq": "8"
+        }
+       ],
+       "source_digest": "sha256:70e8d9f2e5d279af80dbf1ef4df0c05f4d0812315854c142e0dfb3b9ce62b167",
+       "target_commands": [
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+         "principal": "human",
+         "seq": "9"
+        }
+       ],
+       "target_digest": "sha256:6e7787c869c6b6aaec8bebf8a1060bb00440e25a84864ef3668330f65a808d41"
+      },
+      {
+       "conflict": false,
+       "id": "e4",
+       "source_commands": [],
+       "source_digest": "sha256:84cba6613c52e01956e1d117f4ffe9c8ac9566f434a352c7027abf04c51aa556",
+       "target_commands": [
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b",
+         "principal": "human",
+         "seq": "7"
+        }
+       ],
+       "target_digest": "sha256:0f63a32730b0a6bb34b57c0aa93debd1ef83b305a40086dfcf4a25002d78df1c"
+      }
+     ],
+     "removed": [
+      {
+       "conflict": false,
+       "id": "e2",
+       "source_commands": [
+        {
+         "command": "feature.edit@1",
+         "entry": "sha256:c70ebfa3bf29e09d2a412d996c0dd62a1e8d26ff210aee5c4daf249a4de0e503",
+         "principal": "agent",
+         "seq": "8"
+        }
+       ],
+       "source_digest": null,
+       "target_commands": [],
+       "target_digest": "sha256:932c4a447454546b27546a639ff363e19d25607d73b6652564b3c1dce2670f52"
+      }
+     ],
+     "source": {
+      "branch": "s",
+      "head": "sha256:1eeab1a294f051631a8e16ab389cc2859b037f049197679817de9a828460e0dd",
+      "owner": "human"
+     },
+     "target": {
+      "branch": "main",
+      "head": "sha256:eb73bae789280951ca0973ec6958b366cb93ebba0c0367a692f2ac426eaca3be",
+      "owner": "human"
+     }
+    }
+   },
+   "mutations": [
+    {
+     "op": "set_refs",
+     "refs": [
+      [
+       "payload",
+       "sha256:46d10ba04d50e180f6a7c257a426e84af5b3eb2028466744fcbff7bb994ee045"
+      ]
+     ]
+    }
+   ],
+   "name": "payload_rows_forged",
+   "source": "s",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "internal",
+     "failure": {
+      "kind": "hash",
+      "reason": "hash_mismatch",
+      "seq": "8"
+     },
+     "reason": "invariant_violated"
+    }
+   },
+   "mutations": [
+    {
+     "op": "set_header_field",
+     "path": [
+      "principal",
+      "kind"
+     ],
+     "seq": 8,
+     "value": "human"
+    }
+   ],
+   "name": "principal_edited_no_rehash",
+   "source": "s",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "internal",
+     "failure": {
+      "kind": "hash",
+      "reason": "hash_mismatch",
+      "seq": "6"
+     },
+     "reason": "invariant_violated"
+    }
+   },
+   "mutations": [
+    {
+     "op": "set_header_field",
+     "path": [
+      "command",
+      "outputs",
+      0,
+      "digest"
+     ],
+     "seq": 6,
+     "value": "sha256:0a350092ecf555df54bdf20c61c616219a0e19745852d78ac5a0c0625339c9a6"
+    }
+   ],
+   "name": "output_edited_no_rehash",
+   "source": "s",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "internal",
+     "failure": {
+      "kind": "hash",
+      "reason": "column_mismatch",
+      "seq": "8"
+     },
+     "reason": "invariant_violated"
+    }
+   },
+   "mutations": [
+    {
+     "column": "branch",
+     "op": "set_column",
+     "seq": 8,
+     "value": "main"
+    }
+   ],
+   "name": "branch_column_forged",
+   "source": "s",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "internal",
+     "failure": {
+      "kind": "hash",
+      "reason": "column_mismatch",
+      "seq": "9"
+     },
+     "reason": "invariant_violated"
+    }
+   },
+   "mutations": [
+    {
+     "column": "hash",
+     "op": "set_column",
+     "seq": 9,
+     "value": "sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b"
+    }
+   ],
+   "name": "hash_column_forged",
+   "source": "s",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "internal",
+     "failure": {
+      "kind": "sequence",
+      "reason": "gap",
+      "seq": "7"
+     },
+     "reason": "invariant_violated"
+    }
+   },
+   "mutations": [
+    {
+     "op": "drop",
+     "seq": 7
+    }
+   ],
+   "name": "row_dropped",
+   "source": "s",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "result": {
+     "added": [
+      {
+       "conflict": false,
+       "id": "e6",
+       "source_commands": [
+        {
+         "command": "feature.add@1",
+         "entry": "sha256:0a3dfc45e6e019363dd687e8bd2359364c1cab0ed9e2a5455359006ea2b8b580",
+         "principal": "agent",
+         "seq": "6"
+        }
+       ],
+       "source_digest": "sha256:8bd485eb5b0972e9e66acf9cc14f92e1422b9ca17b3d7cf76b989ff3341d7fc5",
+       "target_commands": [],
+       "target_digest": null
+      }
+     ],
+     "ancestor": "sha256:586554b2dbe0d2576ee575b8e8d1ef57de33564e2d3de5eb780a99402be200a5",
+     "changed": [
+      {
+       "conflict": true,
+       "id": "e3",
+       "source_commands": [
+        {
+         "command": "feature.edit@1",
+         "entry": "sha256:9cc4e71e8eb24192aaad3f7e7f906b5e4e73fc8500c9bfb46f53d3718e1f3684",
+         "principal": "human",
+         "seq": "8"
+        }
+       ],
+       "source_digest": "sha256:70e8d9f2e5d279af80dbf1ef4df0c05f4d0812315854c142e0dfb3b9ce62b167",
+       "target_commands": [
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:96b74f0bf6067ffdb6e120cb8f23b17195d3c750e7afd168b346bdfca0199ba1",
+         "principal": "human",
+         "seq": "9"
+        }
+       ],
+       "target_digest": "sha256:6e7787c869c6b6aaec8bebf8a1060bb00440e25a84864ef3668330f65a808d41"
+      },
+      {
+       "conflict": false,
+       "id": "e4",
+       "source_commands": [],
+       "source_digest": "sha256:84cba6613c52e01956e1d117f4ffe9c8ac9566f434a352c7027abf04c51aa556",
+       "target_commands": [
+        {
+         "command": "feature.set_nominal@1",
+         "entry": "sha256:033553955c1882c5dbf197cc70fadf83ed9c9ecb54eb94f04e1b8f086b99d79b",
+         "principal": "human",
+         "seq": "7"
+        }
+       ],
+       "target_digest": "sha256:0f63a32730b0a6bb34b57c0aa93debd1ef83b305a40086dfcf4a25002d78df1c"
+      }
+     ],
+     "removed": [
+      {
+       "conflict": false,
+       "id": "e2",
+       "source_commands": [
+        {
+         "command": "feature.edit@1",
+         "entry": "sha256:9cc4e71e8eb24192aaad3f7e7f906b5e4e73fc8500c9bfb46f53d3718e1f3684",
+         "principal": "human",
+         "seq": "8"
+        }
+       ],
+       "source_digest": null,
+       "target_commands": [],
+       "target_digest": "sha256:932c4a447454546b27546a639ff363e19d25607d73b6652564b3c1dce2670f52"
+      }
+     ],
+     "source": {
+      "branch": "s",
+      "head": "sha256:f9fff37a4ec286be2d3422a6a3d2375ebdfe2f8c40d8bd2c9adbc28a09eccd96",
+      "owner": "human"
+     },
+     "target": {
+      "branch": "main",
+      "head": "sha256:96b74f0bf6067ffdb6e120cb8f23b17195d3c750e7afd168b346bdfca0199ba1",
+      "owner": "human"
+     }
+    }
+   },
+   "mutations": [
+    {
+     "op": "rewrite_field",
+     "path": [
+      "principal",
+      "kind"
+     ],
+     "seq": 8,
+     "value": "human"
+    }
+   ],
+   "name": "principal_rewritten_unanchored",
+   "source": "s",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "internal",
+     "failure": {
+      "kind": "checkpoint",
+      "reason": "forked_head",
+      "seq": "14"
+     },
+     "reason": "invariant_violated"
+    }
+   },
+   "mutations": [
+    {
+     "op": "rewrite_field",
+     "path": [
+      "principal",
+      "kind"
+     ],
+     "seq": 8,
+     "value": "human"
+    }
+   ],
+   "name": "principal_rewritten_trusted_tail",
+   "source": "s",
+   "target": "main",
+   "trusted": {
+    "exact": true,
+    "head": "sha256:c0bae7a2bece68532870f360c1d56a668e2e6500e9aa8daf1c344152baaee616",
+    "seq": "14"
+   }
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "internal",
+     "failure": {
+      "kind": "checkpoint",
+      "reason": "truncated",
+      "seq": "14"
+     },
+     "reason": "invariant_violated"
+    }
+   },
+   "mutations": [
+    {
+     "op": "drop",
+     "seq": 14
+    }
+   ],
+   "name": "tail_truncated_trusted",
+   "source": "s",
+   "target": "main",
+   "trusted": {
+    "exact": true,
+    "head": "sha256:c0bae7a2bece68532870f360c1d56a668e2e6500e9aa8daf1c344152baaee616",
+    "seq": "14"
+   }
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "internal",
+     "failure": {
+      "kind": "sequence",
+      "reason": "extended",
+      "seq": "14"
+     },
+     "reason": "invariant_violated"
+    }
+   },
+   "mutations": [],
+   "name": "tail_extended_trusted",
+   "source": "s",
+   "target": "main",
+   "trusted": {
+    "exact": true,
+    "head": "sha256:52303a9836374865b5d7ab0caf7cbe5c732f70ab486649f20fbf52a69445ce26",
+    "seq": "13"
+   }
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "internal",
+     "reason": "invariant_violated"
+    }
+   },
+   "mutations": [
+    {
+     "op": "rewrite_field",
+     "path": [
+      "logical_parent"
+     ],
+     "seq": 9,
+     "value": "sha256:20aeff0494e828d188c704e1f488a589b15ae01d11f6cb129f62129caa6cc543"
+    }
+   ],
+   "name": "dangling_logical_parent",
+   "source": "s",
+   "target": "main"
+  },
+  {
+   "expect": {
+    "error": {
+     "code": "internal",
+     "reason": "invariant_violated"
+    }
+   },
+   "mutations": [
+    {
+     "branch": "t2",
+     "op": "set_created_from",
+     "value": "sha256:20aeff0494e828d188c704e1f488a589b15ae01d11f6cb129f62129caa6cc543"
+    }
+   ],
+   "name": "table_created_from_dangling",
+   "source": "t2",
+   "target": "main"
+  }
+ ]
+}

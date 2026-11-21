@@ -94,7 +94,7 @@
 //! `validation/bad_token`; one minted for another query `validation/stale_token`.
 
 #[cfg(feature = "store")]
-mod store;
+pub(crate) mod store;
 
 #[cfg(feature = "store")]
 pub use store::{command_defs, list_store, verify_store, LIST_ENTRIES, VERIFY_CHAIN};
@@ -704,6 +704,34 @@ fn check_row(row: &StoredEntry, seq: u64, stream: &str) -> Result<(Obj, Digest),
     let prev = parse_digest(header_text(&o, "prev"));
     if row.prev_hash.as_deref().and_then(parse_digest) != prev || prev.is_none() {
         return Err(found(FailureKind::Link, "column_mismatch", "prev_hash column differs from header.prev"));
+    }
+    Ok((o, hash))
+}
+
+/// Steps 1 to 14 on one row at position `p` of `stream` whose predecessor hashes to `prev`
+/// (the zero digest at sequence 1), for readers that use headers only (module `diff`): the
+/// same checks and the same located failures as [`verify_rows`], without the blob steps.
+/// Returns the verified header object and its hash.
+pub(crate) fn check_linked(row: &StoredEntry, p: u64, stream: &str, prev: &Digest) -> Result<(Obj, Digest), Failure> {
+    let at = |f: Found| Failure {
+        stream: stream.to_string(),
+        seq: Some(p),
+        kind: f.kind,
+        reason: f.reason,
+        checkpoint: f.checkpoint,
+        detail: f.detail,
+    };
+    let col = u64::try_from(row.seq).ok();
+    if col != Some(p) {
+        let reason = if col.is_some_and(|c| c > p) { "gap" } else { "reorder" };
+        return Err(at(found(FailureKind::Sequence, reason, format!("stored sequence {}", row.seq))));
+    }
+    let (o, hash) = check_row(row, p, stream).map_err(at)?;
+    let header_prev = parse_digest(header_text(&o, "prev"));
+    if header_prev != Some(*prev) {
+        let reason = if p == FIRST_SEQ { "genesis" } else { "broken" };
+        let detail = format!("prev {}, expected {}", header_text(&o, "prev"), digest_str(prev));
+        return Err(at(found(FailureKind::Link, reason, detail)));
     }
     Ok((o, hash))
 }
