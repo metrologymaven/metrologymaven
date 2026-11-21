@@ -9,18 +9,30 @@
 //!  "inputs": {<param>: {"handle": "<data handle>", "sha256": "sha256:<hex>"}, ...},
 //!  "lifecycle_state": "draft" | "registered" | "released" | "deprecated",
 //!  "outcome": "pending" | "succeeded" | "failed" | "cancelled",
-//!  "override_deprecated": <bool>,           a person's deprecation override, as applied
+//!  "override_deprecated": <bool>,           the deprecation override, as requested
 //!  "principal": {"id": "<id>", "kind": "<kind>"},
 //!  "program_digest": "sha256:<hex>",
 //!  "program_id": "<uuidv7>",
 //!  "program_version": <n> | null,           null for a draft (no version)
 //!  "run_id": "<uuidv7>",
-//!  "trial": <bool>,
+//!  "trial": <bool>,                         as requested
 //!  "variant": "<name>" | null}
 //! ```
 //!
 //! `program_version` and `lifecycle_state` are the lifecycle the run was decided against
 //! (REQ-CORE.RPL.RECON.FOLD-008 (d)); see [`crate::ledger`].
+//!
+//! **The `program.run@1` parameters** of a run are a function of its record ([`run_params`]):
+//!
+//! ```text
+//! {"binding": {..}, "inputs": {<param>: "<handle>", ..}, "override_deprecated": <bool>,
+//!  "program": "<uuidv7>", "program_digest": "sha256:..", "trial": <bool>, "variant": "<name>" | null}
+//! ```
+//!
+//! `binding` is the binding the run uses (for a variant run, the variant's binding, which the
+//! front end resolves and the handler re-checks), `inputs` every data handle the run reads.
+//! `AUTO.RUN.EXEC.CMD` takes exactly this object as its parameters, so the bus's parameters
+//! commitment of the entry binds the run to the program, binding, inputs and flags asked for.
 
 use fid_bus::principal::{PrincipalId, PrincipalKind, PrincipalRef};
 use fid_canon::{parse, to_canonical_bytes, CValue};
@@ -308,6 +320,26 @@ impl RunRecord {
             outcome: Outcome::parse(text("outcome")?).ok_or(RecordError("outcome"))?,
         })
     }
+}
+
+/// The `program.run@1` parameters of `record` (module docs).
+pub fn run_params(record: &RunRecord) -> CValue {
+    let inputs = record.inputs.iter().map(|(k, d)| (k.clone(), s(&d.handle))).collect();
+    let pairs: [(&str, CValue); 7] = [
+        ("binding", binding_to_value(&record.binding)),
+        ("inputs", CValue::Obj(inputs)),
+        ("override_deprecated", CValue::Bool(record.override_deprecated)),
+        ("program", s(&record.program_id.to_string())),
+        ("program_digest", s(record.program_digest.as_str())),
+        ("trial", CValue::Bool(record.trial)),
+        ("variant", opt_str(&record.variant)),
+    ];
+    CValue::Obj(pairs.into_iter().map(|(k, v)| (k.to_owned(), v)).collect())
+}
+
+/// The journal branch of run `run_id`: exactly `run/<run_id>`.
+pub fn run_branch(run_id: Uuid7) -> String {
+    format!("run/{run_id}")
 }
 
 /// The JSON Schema (2020-12) of a record: the Run entity's fields (module docs).

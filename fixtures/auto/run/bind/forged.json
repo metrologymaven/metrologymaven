@@ -2,7 +2,21 @@
  {
   "apply": "admitted",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -16,7 +30,21 @@
  {
   "apply": "admitted",
   "base": "human_trial",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:9fa23a00a20ee703802ffec6700f35dc8050645c4b43ec46a4dff7177799fff5",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -30,7 +58,21 @@
  {
   "apply": "admitted",
   "base": "human_override",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:5449002150900dc0908a394746a23912fd327d89dfb69e5a4d92d885d8e84b90",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -45,10 +87,19 @@
   "apply": "refused",
   "base": "agent_released",
   "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
    "origin_principal": {
     "id": "mallory",
     "kind": "agent"
-   }
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -63,7 +114,21 @@
  {
   "apply": "refused",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -83,11 +148,19 @@
   "apply": "refused",
   "base": "agent_released",
   "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
    "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
    "origin_principal": {
     "id": "alice",
     "kind": "human"
-   }
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -103,7 +176,19 @@
   "apply": "refused",
   "base": "agent_released",
   "entry": {
-   "journal_kind": "script"
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "script",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -119,11 +204,19 @@
   "apply": "refused",
   "base": "human_trial",
   "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
    "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
    "origin_principal": {
     "id": "agent-1",
     "kind": "agent"
-   }
+   },
+   "params_commitment": "sha256:9fa23a00a20ee703802ffec6700f35dc8050645c4b43ec46a4dff7177799fff5",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -139,8 +232,19 @@
   "apply": "refused",
   "base": "agent_released",
   "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
    "journal_command": "program.run_batch",
-   "origin_command": "program.run_batch@1"
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run_batch@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -156,8 +260,19 @@
   "apply": "refused",
   "base": "agent_released",
   "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
    "journal_major": 2,
-   "origin_command": "program.run@2"
+   "origin_command": "program.run@2",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -173,7 +288,19 @@
   "apply": "refused",
   "base": "agent_released",
   "entry": {
-   "journal_command": "program.register"
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.register",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -189,7 +316,19 @@
   "apply": "refused",
   "base": "agent_released",
   "entry": {
-   "class": "W3"
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W3",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -205,6 +344,18 @@
   "apply": "refused",
   "base": "agent_released",
   "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
    "source": "bus_route"
   },
   "events": [
@@ -221,7 +372,19 @@
   "apply": "refused",
   "base": "agent_released",
   "entry": {
-   "params_commitment": "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -235,16 +398,144 @@
  },
  {
   "apply": "refused",
-  "base": "agent_released",
+  "base": "human_trial",
   "entry": {
-   "branch": "run/2"
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
   ],
   "item": "a",
   "lifecycle": "as_prepared",
-  "name": "a_other_branch",
+  "name": "a_committed_without_trial",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "human_override",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_committed_without_override",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "human_trial",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_record_forges_trial_flag",
+  "precommit": "refused",
+  "record": {
+   "trial": true
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "human_override",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_record_forges_override_flag",
+  "precommit": "refused",
+  "record": {
+   "override_deprecated": true
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:8bce9e5e4392d4a4c1187a3f93d22296aefa52618a066d57bc7cf80d82c9a117",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_committed_other_binding",
   "precommit": "refused",
   "record": {},
   "replay": false
@@ -252,7 +543,169 @@
  {
   "apply": "refused",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_record_forges_binding",
+  "precommit": "refused",
+  "record": {
+   "binding": {
+    "hole_spacing": {
+     "unit": "mm",
+     "value": "130"
+    },
+    "scan": "input:scans/bracket-120.ply"
+   }
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:35459e51a28117ce1b392ce4ca4dfcd393953e67cd1a163434ea7a71693c600f",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_committed_other_input",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:0f5a3d50bb5bc28d8cb1a2d8f270470ef662c4b4201b40ca413189754b795890",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_committed_other_variant",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:0392c30209289c6a8e15f5162b2638672b01c1fdefceb242ca7ea204c21cb723",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_committed_other_program_digest",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "branch": "run/018f0000-0000-7000-8000-0000000009ff",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_entry_on_other_branch",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -269,8 +722,19 @@
   "apply": "refused",
   "base": "agent_released",
   "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
    "journal_command": "project.create_run",
-   "origin_command": "project.create_run@1"
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "project.create_run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -285,7 +749,21 @@
  {
   "apply": "refused",
   "base": "human_trial",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:9fa23a00a20ee703802ffec6700f35dc8050645c4b43ec46a4dff7177799fff5",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted",
    "RequestApproved"
@@ -300,7 +778,21 @@
  {
   "apply": "refused",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RequestFiled",
    "RunStarted"
@@ -315,7 +807,21 @@
  {
   "apply": "refused",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted",
    "RunStarted"
@@ -330,7 +836,21 @@
  {
   "apply": "ignored",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "StageAdded"
   ],
@@ -344,7 +864,21 @@
  {
   "apply": "refused",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -358,7 +892,21 @@
  {
   "apply": "refused",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -374,7 +922,21 @@
  {
   "apply": "refused",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:0392c30209289c6a8e15f5162b2638672b01c1fdefceb242ca7ea204c21cb723",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -390,7 +952,21 @@
  {
   "apply": "refused",
   "base": "human_trial",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:9fa23a00a20ee703802ffec6700f35dc8050645c4b43ec46a4dff7177799fff5",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -399,15 +975,28 @@
   "name": "d_claims_released_while_registered",
   "precommit": "conflict",
   "record": {
-   "lifecycle_state": "released",
-   "trial": false
+   "lifecycle_state": "released"
   },
   "replay": false
  },
  {
   "apply": "refused",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -423,7 +1012,18 @@
   "base": "agent_released",
   "entry": {
    "branch": "main",
-   "promoted_from": "sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef"
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": "sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -439,7 +1039,19 @@
   "apply": "refused",
   "base": "agent_released",
   "entry": {
-   "branch": "main"
+   "branch": "main",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -454,10 +1066,22 @@
   "replay": false
  },
  {
-  "apply": "admitted",
+  "apply": "refused",
   "base": "agent_released",
   "entry": {
-   "branch": "agent/claude-client/1"
+   "branch": "agent/claude-client/1",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -465,7 +1089,7 @@
   "item": "e",
   "lifecycle": "as_prepared",
   "name": "e_run_on_agent_branch",
-  "precommit": "ok",
+  "precommit": "refused",
   "record": {
    "branch": "agent/claude-client/1"
   },
@@ -473,13 +1097,81 @@
  },
  {
   "apply": "refused",
-  "base": "human_trial",
+  "base": "agent_released",
   "entry": {
+   "branch": "run/018f0000-0000-7000-8000-0000000009ff",
+   "class": "W2",
+   "journal_command": "program.run",
    "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
    "origin_principal": {
     "id": "agent-1",
     "kind": "agent"
-   }
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "e",
+  "lifecycle": "as_prepared",
+  "name": "e_run_on_another_runs_branch",
+  "precommit": "refused",
+  "record": {
+   "branch": "run/018f0000-0000-7000-8000-0000000009ff"
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "branch": "run/",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "e",
+  "lifecycle": "as_prepared",
+  "name": "e_run_branch_prefix_only",
+  "precommit": "refused",
+  "record": {
+   "branch": "run/"
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "human_trial",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:9fa23a00a20ee703802ffec6700f35dc8050645c4b43ec46a4dff7177799fff5",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -499,7 +1191,21 @@
  {
   "apply": "refused",
   "base": "human_trial",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -516,11 +1222,19 @@
   "apply": "refused",
   "base": "human_override",
   "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
    "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
    "origin_principal": {
     "id": "agent-1",
     "kind": "agent"
-   }
+   },
+   "params_commitment": "sha256:5449002150900dc0908a394746a23912fd327d89dfb69e5a4d92d885d8e84b90",
+   "promoted_from": null,
+   "source": "handler"
   },
   "events": [
    "RunStarted"
@@ -540,7 +1254,21 @@
  {
   "apply": "refused",
   "base": "human_override",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -554,25 +1282,83 @@
   "replay": false
  },
  {
-  "apply": "refused",
+  "apply": "admitted",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:5449002150900dc0908a394746a23912fd327d89dfb69e5a4d92d885d8e84b90",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
   "item": "policy",
   "lifecycle": "as_prepared",
   "name": "p_override_on_released",
-  "precommit": "refused",
+  "precommit": "ok",
   "record": {
    "override_deprecated": true
   },
   "replay": false
  },
  {
+  "apply": "admitted",
+  "base": "agent_released",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:9fa23a00a20ee703802ffec6700f35dc8050645c4b43ec46a4dff7177799fff5",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "policy",
+  "lifecycle": "as_prepared",
+  "name": "p_agent_trial_released",
+  "precommit": "ok",
+  "record": {
+   "trial": true
+  },
+  "replay": false
+ },
+ {
   "apply": "refused",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -588,7 +1374,21 @@
  {
   "apply": "refused",
   "base": "agent_released",
-  "entry": {},
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "agent",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
   "events": [
    "RunStarted"
   ],
@@ -598,22 +1398,6 @@
   "precommit": "refused",
   "record": {
    "approved_by": "alice"
-  },
-  "replay": false
- },
- {
-  "apply": "admitted",
-  "base": "agent_released",
-  "entry": {},
-  "events": [
-   "RunStarted"
-  ],
-  "item": "policy",
-  "lifecycle": "as_prepared",
-  "name": "p_agent_trial_released",
-  "precommit": "ok",
-  "record": {
-   "trial": true
   },
   "replay": false
  }

@@ -13,7 +13,7 @@ use fid_bus::BusError;
 use fid_canon::{parse, CValue, Digest as CanonDigest};
 use fid_journal::{EntryDraft, EntryTime, Manifests};
 use fid_program::{Program, Uuid7};
-use fid_program_rec::adopt::{ProvenanceStore, ScriptId};
+use fid_program_rec::adopt::{self, AdoptCtx, AdoptEvent, AdoptJournal, Programs, ProvenanceStore, ScriptId};
 use fid_program_rec::life::{
     invoke_cli, CheckVerdict, Drafts, LifeCtx, LifeEvent, LifeJournal, LifeRequest, LifeRequests, LifeStore,
     ProgramChecker, ScriptBundle,
@@ -81,8 +81,22 @@ impl Drafts for Project {
     }
 }
 
+impl Programs for Project {
+    fn program(&self, id: &Uuid7) -> Option<&Program> {
+        (self.0.program_id == *id).then_some(&self.0)
+    }
+}
+
+/// One journal for lifecycle and adoption entries: one entry sequence (AUTO.REC.LIFE).
 #[derive(Default)]
 struct Log(u64);
+
+impl AdoptJournal for Log {
+    fn commit(&mut self, _event: &AdoptEvent) -> Result<u64, String> {
+        self.0 += 1;
+        Ok(100 + self.0)
+    }
+}
 
 impl LifeJournal for Log {
     fn commit(&mut self, _event: &LifeEvent) -> Result<u64, String> {
@@ -153,6 +167,20 @@ impl World {
             .unwrap_or_else(|e| panic!("program {verb}: {e}"));
     }
 
+    /// Alice adopts every step of the bracket program (AUTO.REC.ADOPT): the steps have no
+    /// recorded authorship, so a release is `unadopted_steps` until a person adopts them.
+    pub fn adopt_all(&mut self) {
+        let p = bracket();
+        let id = p.program_id.to_string();
+        let d = p.digest().unwrap();
+        let mut ctx =
+            AdoptCtx { principal: &self.alice, store: &mut self.prov, programs: &self.project, journal: &mut self.log };
+        let args =
+            ["program", "adopt-steps", "--program", &id, "--all-unadopted", "--reviewed-digest", d.as_str(), "--json"];
+        adopt::invoke_cli(&mut ctx, &args).unwrap_or_else(|e| panic!("program adopt-steps: {e}"));
+        assert!(self.prov.unadopted_steps(&p).is_empty());
+    }
+
     /// A world whose bracket program is in `state` (version 1).
     pub fn at(state: &str) -> World {
         let mut w = World::new();
@@ -164,6 +192,9 @@ impl World {
             other => panic!("{other}"),
         };
         for v in verbs {
+            if *v == "release" {
+                w.adopt_all();
+            }
             w.life(v);
         }
         w

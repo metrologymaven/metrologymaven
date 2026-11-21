@@ -22,4 +22,6 @@ pub use prepare::{
     decided_lifecycle, prepare_run, BindCtx, BindingSource, InputSource, ProgramRef, RunError, RunFlags, RunIds,
     RunPlan,
 };
-pub use record::{record_schema, InputDigest, Outcome, RecordError, RunRecord, RECORD_KEYS, RECORD_SCHEMA};
+pub use record::{
+    record_schema, run_branch, run_params, InputDigest, Outcome, RecordError, RunRecord, RECORD_KEYS, RECORD_SCHEMA,
+};

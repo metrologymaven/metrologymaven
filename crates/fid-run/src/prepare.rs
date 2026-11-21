@@ -12,8 +12,10 @@
 //!    its kind): released → any principal; draft or registered → only a `human` with
 //!    [`RunFlags::trial`] (`not_released` otherwise); deprecated → only a `human` with
 //!    [`RunFlags::override_deprecated`] (`deprecated` otherwise). The trial flag only lowers
-//!    a run's standing, so any principal may set it on a released program. The override flag is
-//!    recorded only where it was applied (on a deprecated program).
+//!    a run's standing, so any principal may set it on a released program. Both flags are
+//!    recorded as requested (they are part of the `program.run@1` parameters the ledger
+//!    checks, [`crate::record::run_params`]); the override lifts a refusal only on a
+//!    deprecated program.
 //! 3. **Binding check**: the program's family (`AUTO.PROG.FAMILY`), the variant's binding or
 //!    the caller's binding, then `check_binding`; any error is `binding_invalid` with the full
 //!    list.
@@ -187,20 +189,19 @@ pub fn decided_lifecycle(store: &LifeStore, program_id: Uuid7, digest: &Digest) 
     }
 }
 
-/// REQ-001/002 on a principal kind and the flags as recorded. `Ok` holds the flags the
-/// record carries: (`trial`, `override_deprecated`).
+/// REQ-001/002 on a principal kind and the flags as requested (and recorded).
 pub(crate) fn principal_rule(
     state: LifeState,
     version: Option<u32>,
     kind: PrincipalKind,
     flags: RunFlags,
-) -> Result<(bool, bool), RunError> {
+) -> Result<(), RunError> {
     let person = kind == PrincipalKind::Human;
     match state {
-        LifeState::Released => Ok((flags.trial, false)),
-        LifeState::Draft | LifeState::Registered if person && flags.trial => Ok((true, false)),
+        LifeState::Released => Ok(()),
+        LifeState::Draft | LifeState::Registered if person && flags.trial => Ok(()),
         LifeState::Draft | LifeState::Registered => Err(RunError::NotReleased { state }),
-        LifeState::Deprecated if person && flags.override_deprecated => Ok((flags.trial, true)),
+        LifeState::Deprecated if person && flags.override_deprecated => Ok(()),
         LifeState::Deprecated => Err(RunError::Deprecated { version: version.unwrap_or(0) }),
     }
 }
@@ -252,7 +253,7 @@ pub fn prepare_run(
     let (version, state) = decided_lifecycle(ctx.lifecycle, program.program_id, &digest);
 
     // 2. Principal rules.
-    let (trial, override_deprecated) = principal_rule(state, version, principal.kind(), flags)?;
+    principal_rule(state, version, principal.kind(), flags)?;
 
     // 3. Binding.
     let family = Family::from_program(&program, ctx.catalogue).map_err(|errors| RunError::BindingInvalid { errors })?;
@@ -297,8 +298,8 @@ pub fn prepare_run(
         variant,
         inputs,
         principal: principal.reference(),
-        trial,
-        override_deprecated,
+        trial: flags.trial,
+        override_deprecated: flags.override_deprecated,
         branch: None,
         outcome: Outcome::Pending,
     };

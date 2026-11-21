@@ -60,9 +60,11 @@ fn ac1_released_program_by_binding_and_for_a_person() {
     // A trial of a released program only marks the run; anyone may ask for it.
     let t = prepare(&w, identified(), b120(), &w.agent, TRIAL).unwrap().record;
     assert!(t.trial());
-    // An override on a program that is not deprecated is not applied, so not recorded.
+    // Flags are recorded as requested (they are part of the run's parameters); an override
+    // has no effect on a program that is not deprecated.
     let o = prepare(&w, identified(), b120(), &w.alice, OVERRIDE).unwrap().record;
-    assert!(!o.override_deprecated());
+    assert!(o.override_deprecated());
+    assert_eq!(o.lifecycle_state(), LifeState::Released);
 }
 
 // ------------------------------------------------------------------ AC-2

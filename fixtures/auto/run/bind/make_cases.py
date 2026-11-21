@@ -15,8 +15,10 @@ Writes:
   crates/fid-run/src/record.rs.
 - `fixtures/auto/run/bind/forged.json`: the forged-event oracle cases of
   REQ-CORE.RPL.RECON.FOLD-008 (g) for the run ledger, items (a) to (e) plus the record policy,
-  each with the verdict this script's own implementation of the ledger rules (`verdict` below,
-  written from the module docs of crates/fid-run/src/ledger.rs) gives.
+  each with its verdict hand-labelled from FOLD-008 (a)-(g) and REQ-AUTO.RUN.BIND-001/002; a
+  plain reading of those rules (`cross_check`) only guards against a mislabelled case. Each
+  case's full entry record, parameters commitment included (SHA-256 of the RFC 8785 bytes of
+  the program.run@1 parameters), is written out.
 
 Canonical JSON: every string here is ASCII and every number a small integer, so json.dumps with
 sorted keys and no whitespace is the RFC 8785 form.
@@ -39,7 +41,6 @@ SCAN_HANDLE = "input:scans/bracket-120.ply"
 PROGRAM_ID = "018f0000-0000-7000-8000-000000000100"
 AGENT = {"id": "agent-1", "kind": "agent"}
 HUMAN = {"id": "alice", "kind": "human"}
-RUN_BRANCH = "run/1"
 RUN_STARTED = "RunStarted"
 RUN_COMMAND = "program.run"
 PARAMS_COMMITMENT = "sha256:" + "ab" * 32
@@ -141,17 +142,129 @@ def record(program_digest, scan_digest, rid, principal, state, trial, override, 
     }
 
 
-# ------------------------------------------------------------------ the ledger rules
+# ------------------------------------------------------------------ program.run@1 parameters
+
+
+def run_params(r):
+    """The program.run@1 parameters of a record (pinned in crates/fid-run/src/record.rs docs):
+    the program, its digest, the binding, every input handle, the variant and both flags."""
+    return {
+        "binding": copy.deepcopy(r["binding"]),
+        "inputs": {k: v["handle"] for k, v in r["inputs"].items()},
+        "override_deprecated": r["override_deprecated"],
+        "program": r["program_id"],
+        "program_digest": r["program_digest"],
+        "trial": r["trial"],
+        "variant": r["variant"],
+    }
+
+
+def commitment(params):
+    """CORE.BUS.POL.PROJ params_commitment: SHA-256 of the RFC 8785 bytes."""
+    return sha(canon(params).encode("ascii"))
+
+
+# ------------------------------------------------------------------ forged cases
+#
+# Every case changes one thing against a legitimate run start and carries its verdict,
+# HAND-LABELLED from REQ-CORE.RPL.RECON.FOLD-008 (a)-(g) and REQ-AUTO.RUN.BIND-001/002, not
+# derived from any implementation:
+#   (a) origin: principal, command id@major, class, adding stage, parameters and branch are the
+#       entry's own -> any mismatch is refused (fatal, rule (f));
+#   (b) RunStarted under any other command is refused;
+#   (c) RunStarted beside any Request* event, or twice, is refused;
+#   (d) a run whose decided-against (version, state) no longer holds, or a replay of a run
+#       already admitted, is refused by the fold and `conflict` at the commit stage;
+#   (e) a promoted copy is skipped (leaf's stated rule); a run starts only on run/<run_id>;
+#   policy: draft/registered need a person's trial, deprecated a person's override.
+# Verdicts: apply in {admitted, refused, skipped, ignored}; precommit in {ok, conflict,
+# refused, skipped, ignored}. A refused-by-(a)/(b)/(c)/(e)/policy case is refused in both.
+#
+# By default the forged entry commits the parameters of the (possibly forged) record, so a
+# case tests exactly its one fault; `committed` overrides what the entry committed.
+
+R = ("refused", "refused")
+OK = ("admitted", "ok")
+STALE = ("refused", "conflict")
+SKIP = ("skipped", "skipped")
+IGNORE = ("ignored", "ignored")
+
+OTHER_RUN = "018f0000-0000-7000-8000-0000000009ff"
+
+# (name, item, base, entry overrides, record overrides, committed-params overrides, events,
+#  lifecycle at commit, replay, hand-labelled (apply, precommit))
+CASES = [
+    ("base_agent_released", "base", "agent_released", {}, {}, {}, None, "as_prepared", False, OK),
+    ("base_human_trial_registered", "base", "human_trial", {}, {}, {}, None, "as_prepared", False, OK),
+    ("base_human_override_deprecated", "base", "human_override", {}, {}, {}, None, "as_prepared", False, OK),
+    ("a_other_principal_id", "a", "agent_released", {"origin_principal": {"id": "mallory", "kind": "agent"}}, {}, {}, None, "as_prepared", False, R),
+    ("a_record_claims_human", "a", "agent_released", {}, {"principal": HUMAN}, {}, None, "as_prepared", False, R),
+    ("a_origin_human_record_agent", "a", "agent_released", {"origin_principal": HUMAN, "journal_kind": "human"}, {}, {}, None, "as_prepared", False, R),
+    ("a_journal_kind_differs", "a", "agent_released", {"journal_kind": "script"}, {}, {}, None, "as_prepared", False, R),
+    ("a_agent_forges_trial_of_human", "a", "human_trial", {"origin_principal": AGENT, "journal_kind": "agent"}, {}, {}, None, "as_prepared", False, R),
+    ("a_other_command", "a", "agent_released", {"origin_command": "program.run_batch@1", "journal_command": "program.run_batch"}, {}, {}, None, "as_prepared", False, R),
+    ("a_other_major", "a", "agent_released", {"origin_command": "program.run@2", "journal_major": 2}, {}, {}, None, "as_prepared", False, R),
+    ("a_journal_command_differs", "a", "agent_released", {"journal_command": "program.register"}, {}, {}, None, "as_prepared", False, R),
+    ("a_other_class", "a", "agent_released", {"class": "W3"}, {}, {}, None, "as_prepared", False, R),
+    ("a_added_by_bus", "a", "agent_released", {"source": "bus_route"}, {}, {}, None, "as_prepared", False, R),
+    ("a_other_params_commitment", "a", "agent_released", {"params_commitment": OTHER_COMMITMENT}, {}, {}, None, "as_prepared", False, R),
+    ("a_committed_without_trial", "a", "human_trial", {}, {}, {"trial": False}, None, "as_prepared", False, R),
+    ("a_committed_without_override", "a", "human_override", {}, {}, {"override_deprecated": False}, None, "as_prepared", False, R),
+    ("a_record_forges_trial_flag", "a", "human_trial", {}, {"trial": True}, {"trial": False}, None, "as_prepared", False, R),
+    ("a_record_forges_override_flag", "a", "human_override", {}, {"override_deprecated": True}, {"override_deprecated": False}, None, "as_prepared", False, R),
+    ("a_committed_other_binding", "a", "agent_released", {}, {}, {"binding": {"hole_spacing": {"unit": "mm", "value": "130"}, "scan": SCAN_HANDLE}}, None, "as_prepared", False, R),
+    ("a_record_forges_binding", "a", "agent_released", {}, {"binding": {"hole_spacing": {"unit": "mm", "value": "130"}, "scan": SCAN_HANDLE}}, {"binding": copy.deepcopy(B120)}, None, "as_prepared", False, R),
+    ("a_committed_other_input", "a", "agent_released", {}, {}, {"inputs": {"scan": "input:scans/other.ply"}}, None, "as_prepared", False, R),
+    ("a_committed_other_variant", "a", "agent_released", {}, {}, {"variant": "B-4IN"}, None, "as_prepared", False, R),
+    ("a_committed_other_program_digest", "a", "agent_released", {}, {}, {"program_digest": OTHER_DIGEST}, None, "as_prepared", False, R),
+    ("a_entry_on_other_branch", "a", "agent_released", {"branch": "run/" + OTHER_RUN}, {}, {}, None, "as_prepared", False, R),
+    ("a_record_branch_null", "a", "agent_released", {}, {"branch": None}, {}, None, "as_prepared", False, R),
+    ("b_reserved_effect_other_command", "b", "agent_released", {"origin_command": "project.create_run@1", "journal_command": "project.create_run"}, {}, {}, None, "as_prepared", False, R),
+    ("c_request_approved", "c", "human_trial", {}, {}, {}, [RUN_STARTED, "RequestApproved"], "as_prepared", False, R),
+    ("c_request_filed", "c", "agent_released", {}, {}, {}, ["RequestFiled", RUN_STARTED], "as_prepared", False, R),
+    ("c_two_run_started", "c", "agent_released", {}, {}, {}, [RUN_STARTED, RUN_STARTED], "as_prepared", False, R),
+    ("c_no_run_started", "c", "agent_released", {}, {}, {}, ["StageAdded"], "as_prepared", False, IGNORE),
+    ("d_deprecated_since_prepared", "d", "agent_released", {}, {}, {}, None, "deprecated", False, STALE),
+    ("d_other_version", "d", "agent_released", {}, {"program_version": 2}, {}, None, "as_prepared", False, STALE),
+    ("d_other_digest", "d", "agent_released", {}, {"program_digest": OTHER_DIGEST}, {}, None, "as_prepared", False, STALE),
+    ("d_claims_released_while_registered", "d", "human_trial", {}, {"lifecycle_state": "released"}, {}, None, "as_prepared", False, STALE),
+    ("d_replayed_entry", "d", "agent_released", {}, {}, {}, None, "as_prepared", True, STALE),
+    ("e_promoted_copy", "e", "agent_released", {"promoted_from": PROMOTED_FROM, "branch": "main"}, {}, {}, None, "as_prepared", False, SKIP),
+    ("e_run_on_main", "e", "agent_released", {"branch": "main"}, {"branch": "main"}, {}, None, "as_prepared", False, R),
+    ("e_run_on_agent_branch", "e", "agent_released", {"branch": "agent/claude-client/1"}, {"branch": "agent/claude-client/1"}, {}, None, "as_prepared", False, R),
+    ("e_run_on_another_runs_branch", "e", "agent_released", {"branch": "run/" + OTHER_RUN}, {"branch": "run/" + OTHER_RUN}, {}, None, "as_prepared", False, R),
+    ("e_run_branch_prefix_only", "e", "agent_released", {"branch": "run/"}, {"branch": "run/"}, {}, None, "as_prepared", False, R),
+    ("p_agent_trial_registered", "policy", "human_trial", {"origin_principal": AGENT, "journal_kind": "agent"}, {"principal": AGENT}, {}, None, "as_prepared", False, R),
+    ("p_human_registered_without_trial", "policy", "human_trial", {}, {"trial": False}, {}, None, "as_prepared", False, R),
+    ("p_agent_override_deprecated", "policy", "human_override", {"origin_principal": AGENT, "journal_kind": "agent"}, {"principal": AGENT}, {}, None, "as_prepared", False, R),
+    ("p_human_deprecated_without_override", "policy", "human_override", {}, {"override_deprecated": False}, {}, None, "as_prepared", False, R),
+    ("p_override_on_released", "policy", "agent_released", {}, {"override_deprecated": True}, {}, None, "as_prepared", False, OK),
+    ("p_agent_trial_released", "policy", "agent_released", {}, {"trial": True}, {}, None, "as_prepared", False, OK),
+    ("p_outcome_not_pending", "policy", "agent_released", {}, {"outcome": "succeeded"}, {}, None, "as_prepared", False, R),
+    ("p_unknown_record_field", "policy", "agent_released", {}, {"approved_by": "alice"}, {}, None, "as_prepared", False, R),
+]
+
+# The lifecycle state each base was prepared against (version 1).
+BASE_STATE = {
+    "agent_released": "released",
+    "human_trial": "registered",
+    "human_override": "deprecated",
+}
+
+
+# ------------------------------------------------------------------ cross-check of the labels
+#
+# A plain reading of the rules above, used only to catch a mislabelled case: the script fails if
+# it disagrees with a hand label. The labels, not this function, are what the Rust test asserts.
 
 
 def policy_ok(r):
-    """REQ-AUTO.RUN.BIND-001/002 as the ledger re-checks them on a record."""
     human = r["principal"]["kind"] == "human"
     state = r["lifecycle_state"]
     if state == "released":
-        return r["override_deprecated"] is False
+        return True
     if state in ("draft", "registered"):
-        return human and r["trial"] is True and r["override_deprecated"] is False
+        return human and r["trial"] is True
     if state == "deprecated":
         return human and r["override_deprecated"] is True
     return False
@@ -163,159 +276,85 @@ def well_formed(r):
     p = r["principal"]
     if not isinstance(p, dict) or sorted(p) != ["id", "kind"]:
         return False
-    if p["kind"] not in ("human", "agent", "script", "service", "device", "system"):
-        return False
     if r["lifecycle_state"] not in ("draft", "registered", "released", "deprecated"):
         return False
-    if not isinstance(r["trial"], bool) or not isinstance(r["override_deprecated"], bool):
+    if r["outcome"] not in ("pending", "succeeded", "failed", "cancelled"):
         return False
-    if r["lifecycle_state"] == "draft":
-        return r["program_version"] is None
-    return isinstance(r["program_version"], int) and r["program_version"] >= 1
+    return isinstance(r["trial"], bool) and isinstance(r["override_deprecated"], bool)
 
 
-def verdict(case, store, admitted, mode):
-    """`admitted`, `refused`, `skipped`, `ignored` (apply), or `ok`, `conflict`, `refused`,
-    `skipped`, `ignored` (precommit)."""
-    events = case["events"]
-    mine = [e for e in events if e == RUN_STARTED]
+def cross_check(e, r, events, store, admitted, mode):
+    mine = [x for x in events if x == RUN_STARTED]
     if not mine:
         return "ignored"
-    if len(mine) > 1:
+    if len(mine) > 1 or any(x.startswith("Request") for x in events):
         return "refused"
-    if any(e.startswith("Request") for e in events):
-        return "refused"
-    e = case["entry_full"]
     if e["promoted_from"] is not None:
         return "skipped"
-    if e["origin_command"] != RUN_COMMAND + "@1":
-        return "refused"
-    if e["journal_command"] != RUN_COMMAND or e["journal_major"] != 1:
+    if (e["origin_command"], e["journal_command"], e["journal_major"]) != (RUN_COMMAND + "@1", RUN_COMMAND, 1):
         return "refused"
     if e["class"] != "W2" or e["source"] != "handler":
         return "refused"
-    r = case["record_full"]
     if not well_formed(r):
         return "refused"
     if r["principal"] != e["origin_principal"] or e["journal_kind"] != r["principal"]["kind"]:
         return "refused"
-    if case["body_params_commitment"] != e["params_commitment"]:
+    if commitment(run_params(r)) != e["params_commitment"]:
         return "refused"
-    if not isinstance(r["branch"], str) or r["branch"] == "main" or r["branch"] != e["branch"]:
+    own = "run/" + r["run_id"]
+    if r["branch"] != own or e["branch"] != own:
         return "refused"
-    if r["outcome"] != "pending":
-        return "refused"
-    if not policy_ok(r):
+    if r["outcome"] != "pending" or not policy_ok(r):
         return "refused"
     stale = "conflict" if mode == "precommit" else "refused"
-    key = (r["program_id"], r["program_digest"])
-    now = store.get(key, (None, "draft"))
-    if now != (r["program_version"], r["lifecycle_state"]):
+    if store.get((r["program_id"], r["program_digest"]), (None, "draft")) != (r["program_version"], r["lifecycle_state"]):
         return stale
     if r["run_id"] in admitted:
         return stale
     return "ok" if mode == "precommit" else "admitted"
 
 
-# ------------------------------------------------------------------ forged cases
-
-DEFAULT_ENTRY = {
-    "branch": RUN_BRANCH,
-    "class": "W2",
-    "journal_command": RUN_COMMAND,
-    "journal_major": 1,
-    "origin_command": RUN_COMMAND + "@1",
-    "params_commitment": PARAMS_COMMITMENT,
-    "promoted_from": None,
-    "source": "handler",
-}
-
-# (name, FOLD-008 item, base, entry overrides, record overrides, events, lifecycle, replay)
-CASES = [
-    ("base_agent_released", "base", "agent_released", {}, {}, None, "as_prepared", False),
-    ("base_human_trial_registered", "base", "human_trial", {}, {}, None, "as_prepared", False),
-    ("base_human_override_deprecated", "base", "human_override", {}, {}, None, "as_prepared", False),
-    ("a_other_principal_id", "a", "agent_released", {"origin_principal": {"id": "mallory", "kind": "agent"}}, {}, None, "as_prepared", False),
-    ("a_record_claims_human", "a", "agent_released", {}, {"principal": HUMAN}, None, "as_prepared", False),
-    ("a_origin_human_record_agent", "a", "agent_released", {"origin_principal": HUMAN, "journal_kind": "human"}, {}, None, "as_prepared", False),
-    ("a_journal_kind_differs", "a", "agent_released", {"journal_kind": "script"}, {}, None, "as_prepared", False),
-    ("a_agent_forges_trial_of_human", "a", "human_trial", {"origin_principal": AGENT, "journal_kind": "agent"}, {}, None, "as_prepared", False),
-    ("a_other_command", "a", "agent_released", {"origin_command": "program.run_batch@1", "journal_command": "program.run_batch"}, {}, None, "as_prepared", False),
-    ("a_other_major", "a", "agent_released", {"origin_command": "program.run@2", "journal_major": 2}, {}, None, "as_prepared", False),
-    ("a_journal_command_differs", "a", "agent_released", {"journal_command": "program.register"}, {}, None, "as_prepared", False),
-    ("a_other_class", "a", "agent_released", {"class": "W3"}, {}, None, "as_prepared", False),
-    ("a_added_by_bus", "a", "agent_released", {"source": "bus_route"}, {}, None, "as_prepared", False),
-    ("a_other_params_commitment", "a", "agent_released", {"params_commitment": OTHER_COMMITMENT}, {}, None, "as_prepared", False),
-    ("a_other_branch", "a", "agent_released", {"branch": "run/2"}, {}, None, "as_prepared", False),
-    ("a_record_branch_null", "a", "agent_released", {}, {"branch": None}, None, "as_prepared", False),
-    ("b_reserved_effect_other_command", "b", "agent_released", {"origin_command": "project.create_run@1", "journal_command": "project.create_run"}, {}, None, "as_prepared", False),
-    ("c_request_approved", "c", "human_trial", {}, {}, [RUN_STARTED, "RequestApproved"], "as_prepared", False),
-    ("c_request_filed", "c", "agent_released", {}, {}, ["RequestFiled", RUN_STARTED], "as_prepared", False),
-    ("c_two_run_started", "c", "agent_released", {}, {}, [RUN_STARTED, RUN_STARTED], "as_prepared", False),
-    ("c_no_run_started", "c", "agent_released", {}, {}, ["StageAdded"], "as_prepared", False),
-    ("d_deprecated_since_prepared", "d", "agent_released", {}, {}, None, "deprecated", False),
-    ("d_other_version", "d", "agent_released", {}, {"program_version": 2}, None, "as_prepared", False),
-    ("d_other_digest", "d", "agent_released", {}, {"program_digest": OTHER_DIGEST}, None, "as_prepared", False),
-    ("d_claims_released_while_registered", "d", "human_trial", {}, {"lifecycle_state": "released", "trial": False}, None, "as_prepared", False),
-    ("d_replayed_entry", "d", "agent_released", {}, {}, None, "as_prepared", True),
-    ("e_promoted_copy", "e", "agent_released", {"promoted_from": PROMOTED_FROM, "branch": "main"}, {}, None, "as_prepared", False),
-    ("e_run_on_main", "e", "agent_released", {"branch": "main"}, {"branch": "main"}, None, "as_prepared", False),
-    ("e_run_on_agent_branch", "e", "agent_released", {"branch": "agent/claude-client/1"}, {"branch": "agent/claude-client/1"}, None, "as_prepared", False),
-    ("p_agent_trial_registered", "policy", "human_trial", {"origin_principal": AGENT, "journal_kind": "agent"}, {"principal": AGENT}, None, "as_prepared", False),
-    ("p_human_registered_without_trial", "policy", "human_trial", {}, {"trial": False}, None, "as_prepared", False),
-    ("p_agent_override_deprecated", "policy", "human_override", {"origin_principal": AGENT, "journal_kind": "agent"}, {"principal": AGENT}, None, "as_prepared", False),
-    ("p_human_deprecated_without_override", "policy", "human_override", {}, {"override_deprecated": False}, None, "as_prepared", False),
-    ("p_override_on_released", "policy", "agent_released", {}, {"override_deprecated": True}, None, "as_prepared", False),
-    ("p_outcome_not_pending", "policy", "agent_released", {}, {"outcome": "succeeded"}, None, "as_prepared", False),
-    ("p_unknown_record_field", "policy", "agent_released", {}, {"approved_by": "alice"}, None, "as_prepared", False),
-    ("p_agent_trial_released", "policy", "agent_released", {}, {"trial": True}, None, "as_prepared", False),
-]
-
-# The lifecycle each base was prepared against: (version, state) of the program's digest.
-BASE_STATE = {
-    "agent_released": "released",
-    "human_trial": "registered",
-    "human_override": "deprecated",
-}
-
-
 def forged(program_digest, scan_digest):
+    branch = "run/" + run_id(1)
     bases = {
-        "agent_released": record(program_digest, scan_digest, run_id(1), AGENT, "released", False, False, RUN_BRANCH),
-        "human_trial": record(program_digest, scan_digest, run_id(1), HUMAN, "registered", True, False, RUN_BRANCH),
-        "human_override": record(program_digest, scan_digest, run_id(1), HUMAN, "deprecated", False, True, RUN_BRANCH),
+        "agent_released": record(program_digest, scan_digest, run_id(1), AGENT, "released", False, False, branch),
+        "human_trial": record(program_digest, scan_digest, run_id(1), HUMAN, "registered", True, False, branch),
+        "human_override": record(program_digest, scan_digest, run_id(1), HUMAN, "deprecated", False, True, branch),
     }
     out = []
-    for name, item, base, entry_o, record_o, events, lifecycle, replay in CASES:
+    for name, item, base, entry_o, record_o, committed_o, events, lifecycle, replay, label in CASES:
         r = copy.deepcopy(bases[base])
         r.update(copy.deepcopy(record_o))
-        e = dict(DEFAULT_ENTRY)
-        e["origin_principal"] = dict(bases[base]["principal"])
-        e["journal_kind"] = bases[base]["principal"]["kind"]
-        e.update(copy.deepcopy(entry_o))
-        case = {
-            "body_params_commitment": PARAMS_COMMITMENT,
-            "entry_full": e,
-            "events": events if events is not None else [RUN_STARTED],
-            "record_full": r,
+        committed = run_params(r) if well_formed(r) else run_params(bases[base])
+        committed.update(copy.deepcopy(committed_o))
+        e = {
+            "branch": branch,
+            "class": "W2",
+            "journal_command": RUN_COMMAND,
+            "journal_kind": bases[base]["principal"]["kind"],
+            "journal_major": 1,
+            "origin_command": RUN_COMMAND + "@1",
+            "origin_principal": dict(bases[base]["principal"]),
+            "params_commitment": commitment(committed),
+            "promoted_from": None,
+            "source": "handler",
         }
+        e.update(copy.deepcopy(entry_o))
+        events = events if events is not None else [RUN_STARTED]
         state = BASE_STATE[base] if lifecycle == "as_prepared" else lifecycle
         store = {(PROGRAM_ID, program_digest): (1, state)}
-        if replay:
-            first = verdict(case, store, set(), "apply")
-            assert first == "admitted", name
-            admitted = {r["run_id"]}
-        else:
-            admitted = set()
+        admitted = {r["run_id"]} if replay else set()
+        got = (cross_check(e, r, events, store, admitted, "apply"), cross_check(e, r, events, store, admitted, "precommit"))
+        assert got == label, "%s: hand label %s, rules say %s" % (name, label, got)
         out.append({
-            "apply": verdict(case, store, admitted, "apply"),
+            "apply": label[0],
             "base": base,
-            "entry": entry_o,
-            "events": case["events"],
+            "entry": e,
+            "events": events,
             "item": item,
             "lifecycle": lifecycle,
             "name": name,
-            "precommit": verdict(case, store, admitted, "precommit"),
+            "precommit": label[1],
             "record": record_o,
             "replay": replay,
         })
