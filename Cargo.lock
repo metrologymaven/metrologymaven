@@ -1672,7 +1672,10 @@ dependencies = [
 name = "fid-mig"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
  "fid-canon",
+ "fid-io-reg",
+ "fid-registry",
  "fid-types",
 ]
 
@@ -1875,6 +1878,7 @@ dependencies = [
  "fid-io-reg",
  "fid-jobs",
  "fid-journal",
+ "fid-mig",
  "fid-ors",
  "fid-pkg",
  "fid-profile-cmd",
@@ -2148,8 +2152,10 @@ dependencies = [
  "fid-canon",
  "fid-mig",
  "fid-registry",
+ "fid-registry-build",
  "fid-types",
  "fid-uuid",
+ "fid-vocab",
  "sha2 0.10.9",
  "toml",
 ]
