@@ -1861,6 +1861,9 @@ dependencies = [
  "fid-kdec",
  "fid-types",
  "fid-uuid",
+ "pollster",
+ "toml",
+ "wgpu",
 ]
 
 [[package]]

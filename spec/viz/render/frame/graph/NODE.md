@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-render]
 satisfies: [REQ-VIZ.RENDER.FRAME-001, REQ-VIZ.RENDER.FRAME-004]
 covers: []
 depends_on: [VIZ.RENDER.SCENE.IDTAB, VIZ.RENDER.SCENE.PROJ]
@@ -68,6 +69,12 @@ The GPU entry point: create the wgpu device on a backend chosen by a documented 
 
 ## Open questions
 
+- Build: `platform/gpu-policy.toml` is read as an artifact by `fid_render::frame::graph::policy_order` (only `schema_version` and each row's `os`, `arch` and `backends`), not through `fid-platform`, which is a tool-layer crate the viewer layer cannot depend on. A missing file, no row for the host or an invalid file gives `[software]` plus the error as a warning (`order_or_software`), the safe default of `PLAT.GPU.POLICY`. The reader accepts `gl` and `webgpu`, which `PLAT.GPU.POLICY`'s schema does not list yet; AC-2's recorded sample (`fixtures/viz/frame-graph/policy-vulkan-gl.toml`) uses `gl`. `PLAT.GPU.POLICY` should add `gl` (and `webgpu` for the browser build) or AC-2 should name a listed backend.
+- Build: precedence is injected `AdapterChoice` first, then the backend the setting `viz.render.backend` names (`auto` or unset keeps the policy), then the policy order, each backend once; a backend that fails is recorded and the next is tried, so an override that yields no adapter falls back to the policy with its reason in `FrameGraph::tried`. A setting that names no backend is `bad_setting`. `software` means a CPU adapter (`DeviceType::Cpu`) on any compiled backend; the hardware backends skip CPU adapters.
+- Build: wgpu 27 is built with the `dx12` and `vulkan` backends only (as in the `VIZ.SHELL.SPKTREE` spike: `metal` pulls `paste`, RUSTSEC-2024-0436, and `gles` is not vetted against deny.toml). So macOS has no backend in this build and GL is not compiled anywhere: requests for them fail with "backend not compiled into this build". REQ-FRAME-001 ("every backend the pinned wgpu exposes") needs `metal` and `gles` once their dependencies pass deny.toml.
+- Build: AC-1 runs on the software adapter wherever one exists. On GitHub's Windows runners that is WARP (DX12), where the test must pass; the Linux and macOS runners have no CPU adapter (no lavapipe or llvmpipe installed), so the test reports that and returns there. AC-2..AC-5 use a scripted `AdapterSource` fake and run everywhere. The golden cube's vertices are given in clip space by `fixtures/viz/golden-cube/make_fixtures.py`, which also labels the expected IDs, primitive pairs and reversed-Z depths (the face centre lies on the shared diagonal, so either of the face's two primitives is accepted).
+- Build: a pass's inputs are checked when it registers: each must be a frame target (`colour`, `depth`, `id`, cleared before the first pass) or an output of an already registered pass with a lower order key, so producers register before consumers. Two passes with the same order key are refused (`DuplicateOrder`, not in the error list above) so the order never depends on registration order. Pass-owned transient targets are logical names only: per-frame allocation of transient textures (the Scope's "per-frame resource lifetimes") is left to the passes until a pass needs a shared transient.
+- Build: the device is created with no optional feature and the adapter's own limits; narrowing to a tier's limits is `VIZ.RENDER.FRAME.TIER`. A frame's wgpu validation errors are caught with an error scope (`gpu`), and a lost device is `device_lost` on the next call.
 - Cross-domain: `PLAT.GPU.DETECT` declares `depends_on: [VIZ]`, so this leaf cannot take a code edge to it without a cycle. It reads the policy file as an artifact and accepts the selection as injected data; PLAT.GPU.DETECT should narrow its dependency to this node or drop it.
 
 ## Children

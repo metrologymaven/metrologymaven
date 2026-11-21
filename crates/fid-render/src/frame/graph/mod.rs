@@ -1,0 +1,608 @@
+//! The frame graph (spec leaf `VIZ.RENDER.FRAME.GRAPH`): backend selection and device
+//! creation ([`backend`]), pass registration ([`passes`]), the frame's colour, reversed-Z
+//! depth and ID targets ([`FrameTargets`]) and their rectangle readback for picking.
+//!
+//! Side-effect class R0 (it reads the policy file and draws into GPU memory it owns or the
+//! caller hands it); determinism class N for the pixels (GPU output), while the backend order
+//! and the pass order are deterministic. No UI-toolkit dependency: the frame is drawn into a
+//! `wgpu::Texture` the caller supplies or takes ([`FrameTargets::colour`]).
+//!
+//! - **Targets** (REQ-004): colour (caller's format, or [`COLOUR_FORMAT`]), depth
+//!   [`DEPTH_FORMAT`] with reversed Z (cleared to 0.0, nearer is larger, compare `Greater`)
+//!   and ID [`ID_FORMAT`] (`Rg32Uint`: red the render ID, green the primitive or point index;
+//!   render ID 0 means no drawable). Every frame clears all three before the first pass.
+//! - **Device**: the selected adapter's device is created with no optional feature and the
+//!   adapter's own limits (tier classification and narrower limits are `VIZ.RENDER.FRAME.TIER`).
+//!   A device that cannot be created counts as a failed attempt and the next backend is tried.
+//! - **Errors**: wgpu validation errors of a frame or readback are caught with an error scope
+//!   and returned as [`GraphError::Gpu`]; a lost device is [`GraphError::DeviceLost`] on the
+//!   next call (recovery is `VIZ.RENDER.RECOVER`).
+//! - **Readback** (REQ-005): [`FrameGraph::read_id`] and [`FrameGraph::read_depth`] copy a
+//!   pixel rectangle of the ID or depth target to a staging buffer and map it. These are the
+//!   only GPU reads in the crate; the staging buffers are declared as ID and depth targets in
+//!   `shaders/manifest.toml` (`fid-shlint` REQ-002).
+
+pub mod backend;
+pub mod passes;
+
+pub use backend::{
+    order_or_software, policy_order, policy_order_from_file, resolve_order, select, AdapterChoice, AdapterSource,
+    Attempt, Backend, Host, PolicyError, Selected, BACKEND_SETTING,
+};
+pub use passes::{Pass, PassContext, PassDecl, PassId, PassList, TargetId, COLOUR, DEPTH, FRAME_TARGETS, ID};
+
+use std::fmt;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc, Mutex};
+
+/// Colour format of targets the graph creates.
+pub const COLOUR_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
+/// Depth format (reversed Z).
+pub const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
+/// ID format: render ID and primitive or point index.
+pub const ID_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rg32Uint;
+/// Depth clear value: the far plane under reversed Z.
+pub const DEPTH_CLEAR: f32 = 0.0;
+/// Most pixels one readback may cover (a 4096 x 4096 rectangle).
+pub const MAX_READBACK_PIXELS: u64 = 4096 * 4096;
+
+/// A frame graph error.
+#[derive(Debug, Clone, PartialEq)]
+pub enum GraphError {
+    /// No backend yielded an adapter; every attempt in order with its reason (REQ-002).
+    NoAdapter { tried: Vec<Attempt> },
+    /// A pass reads a target no earlier pass writes (REQ-003).
+    UnresolvedInput { pass: PassId, input: TargetId },
+    /// A pass with this ID is already registered.
+    DuplicatePass { pass: PassId },
+    /// Another pass already has this order key.
+    DuplicateOrder { order: u32, pass: PassId, existing: PassId },
+    /// The setting `viz.render.backend` names no backend.
+    BadSetting(String),
+    /// The device was lost (forwarded to `VIZ.RENDER.RECOVER`).
+    DeviceLost(String),
+    /// A wgpu error during a frame or a readback.
+    Gpu(String),
+    /// A pass's `record` failed; nothing of the frame was submitted.
+    PassFailed { pass: PassId, reason: String },
+    /// A caller-supplied texture cannot be a frame target.
+    BadTarget(String),
+    /// A readback rectangle is empty, too large or outside the target.
+    BadRect { x: u32, y: u32, width: u32, height: u32 },
+}
+
+impl fmt::Display for GraphError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            GraphError::NoAdapter { tried } => {
+                write!(f, "no_adapter: no backend yielded an adapter")?;
+                for a in tried {
+                    write!(f, "; {}: {}", a.backend, a.reason)?;
+                }
+                Ok(())
+            }
+            GraphError::UnresolvedInput { pass, input } => {
+                write!(f, "unresolved_input: pass {pass} reads `{input}`, which no earlier pass writes")
+            }
+            GraphError::DuplicatePass { pass } => write!(f, "duplicate_pass: pass {pass} is already registered"),
+            GraphError::DuplicateOrder { order, pass, existing } => {
+                write!(f, "duplicate_order: pass {pass} has order key {order}, already used by {existing}")
+            }
+            GraphError::BadSetting(s) => write!(f, "bad_setting: viz.render.backend = `{s}` is not a backend"),
+            GraphError::DeviceLost(m) => write!(f, "device_lost: {m}"),
+            GraphError::Gpu(m) => write!(f, "gpu: {m}"),
+            GraphError::PassFailed { pass, reason } => write!(f, "pass_failed: {pass}: {reason}"),
+            GraphError::BadTarget(m) => write!(f, "bad_target: {m}"),
+            GraphError::BadRect { x, y, width, height } => {
+                write!(f, "bad_rect: {width}x{height} at ({x}, {y}) is empty, too large or outside the target")
+            }
+        }
+    }
+}
+
+impl std::error::Error for GraphError {}
+
+/// What [`WgpuSource`] hands back for a selected backend.
+#[derive(Debug)]
+pub struct GpuAdapter {
+    pub info: wgpu::AdapterInfo,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
+}
+
+/// Adapters of a real wgpu instance over every backend compiled into this build.
+#[derive(Debug)]
+pub struct WgpuSource {
+    instance: Option<wgpu::Instance>,
+}
+
+impl WgpuSource {
+    /// An instance over every compiled backend. With none compiled for this target, every
+    /// request fails with that reason (wgpu would panic on creating the instance).
+    pub fn new() -> WgpuSource {
+        if wgpu::Instance::enabled_backend_features().is_empty() {
+            return WgpuSource { instance: None };
+        }
+        let desc = wgpu::InstanceDescriptor { backends: wgpu::Backends::all(), ..Default::default() };
+        WgpuSource { instance: Some(wgpu::Instance::new(&desc)) }
+    }
+}
+
+impl Default for WgpuSource {
+    fn default() -> Self {
+        WgpuSource::new()
+    }
+}
+
+/// Rank of an adapter type for a hardware backend (lower is preferred); CPU adapters are
+/// only taken for [`Backend::Software`].
+fn hardware_rank(t: wgpu::DeviceType) -> Option<u8> {
+    match t {
+        wgpu::DeviceType::DiscreteGpu => Some(0),
+        wgpu::DeviceType::IntegratedGpu => Some(1),
+        wgpu::DeviceType::VirtualGpu => Some(2),
+        wgpu::DeviceType::Other => Some(3),
+        wgpu::DeviceType::Cpu => None,
+    }
+}
+
+impl AdapterSource for WgpuSource {
+    type Adapter = GpuAdapter;
+
+    fn request(&self, backend: Backend, choice: Option<&AdapterChoice>) -> Result<GpuAdapter, String> {
+        let Some(instance) = &self.instance else {
+            return Err("no wgpu backend is compiled in for this target".into());
+        };
+        let wanted = backend.wgpu_backends();
+        if !wgpu::Instance::enabled_backend_features().intersects(wanted) {
+            return Err("backend not compiled into this build".into());
+        }
+        let adapters = instance.enumerate_adapters(wanted);
+        if adapters.is_empty() {
+            return Err("no adapter".into());
+        }
+        let mut best: Option<(u8, wgpu::Adapter)> = None;
+        for a in adapters {
+            let info = a.get_info();
+            if choice.is_some_and(|c| !c.matches(&info)) {
+                continue;
+            }
+            let rank = match backend {
+                Backend::Software => (info.device_type == wgpu::DeviceType::Cpu).then_some(0),
+                _ => hardware_rank(info.device_type),
+            };
+            if let Some(r) = rank {
+                if best.as_ref().is_none_or(|(b, _)| r < *b) {
+                    best = Some((r, a));
+                }
+            }
+        }
+        let Some((_, adapter)) = best else {
+            return Err(match (backend, choice) {
+                (_, Some(_)) => "the chosen adapter is not present".into(),
+                (Backend::Software, None) => "no CPU adapter".into(),
+                _ => "only CPU adapters (software is tried as its own backend)".into(),
+            });
+        };
+        let desc = wgpu::DeviceDescriptor {
+            label: Some("fid-render frame graph"),
+            required_features: wgpu::Features::empty(),
+            required_limits: adapter.limits(),
+            experimental_features: wgpu::ExperimentalFeatures::disabled(),
+            memory_hints: wgpu::MemoryHints::Performance,
+            trace: wgpu::Trace::Off,
+        };
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&desc)).map_err(|e| format!("device creation failed: {e}"))?;
+        Ok(GpuAdapter { info: adapter.get_info(), device, queue })
+    }
+}
+
+/// The frame's colour, depth and ID targets, all of one size.
+#[derive(Debug)]
+pub struct FrameTargets {
+    width: u32,
+    height: u32,
+    colour: wgpu::Texture,
+    colour_view: wgpu::TextureView,
+    depth: wgpu::Texture,
+    depth_view: wgpu::TextureView,
+    id: wgpu::Texture,
+    id_view: wgpu::TextureView,
+}
+
+fn target(device: &wgpu::Device, label: &str, w: u32, h: u32, format: wgpu::TextureFormat) -> wgpu::Texture {
+    device.create_texture(&wgpu::TextureDescriptor {
+        label: Some(label),
+        size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+            | wgpu::TextureUsages::COPY_SRC
+            | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    })
+}
+
+impl FrameTargets {
+    /// Targets of `width` x `height` with a new colour texture of [`COLOUR_FORMAT`].
+    pub fn new(graph: &FrameGraph, width: u32, height: u32) -> Result<FrameTargets, GraphError> {
+        check_size(graph, width, height)?;
+        let colour = target(&graph.device, "frame colour", width, height, COLOUR_FORMAT);
+        Ok(FrameTargets::around(graph, colour))
+    }
+
+    /// Targets around a colour texture the caller owns. It must be a single-sample 2D texture
+    /// with `RENDER_ATTACHMENT` usage.
+    pub fn with_colour(graph: &FrameGraph, colour: wgpu::Texture) -> Result<FrameTargets, GraphError> {
+        if !colour.usage().contains(wgpu::TextureUsages::RENDER_ATTACHMENT) {
+            return Err(GraphError::BadTarget("the colour texture lacks RENDER_ATTACHMENT usage".into()));
+        }
+        if colour.dimension() != wgpu::TextureDimension::D2 || colour.sample_count() != 1 {
+            return Err(GraphError::BadTarget("the colour texture is not a single-sample 2D texture".into()));
+        }
+        if colour.depth_or_array_layers() != 1 || colour.mip_level_count() != 1 {
+            return Err(GraphError::BadTarget("the colour texture has layers or mip levels".into()));
+        }
+        check_size(graph, colour.width(), colour.height())?;
+        Ok(FrameTargets::around(graph, colour))
+    }
+
+    fn around(graph: &FrameGraph, colour: wgpu::Texture) -> FrameTargets {
+        let (width, height) = (colour.width(), colour.height());
+        let depth = target(&graph.device, "frame depth", width, height, DEPTH_FORMAT);
+        let id = target(&graph.device, "frame id", width, height, ID_FORMAT);
+        let view = |t: &wgpu::Texture| t.create_view(&wgpu::TextureViewDescriptor::default());
+        FrameTargets {
+            width,
+            height,
+            colour_view: view(&colour),
+            depth_view: view(&depth),
+            id_view: view(&id),
+            colour,
+            depth,
+            id,
+        }
+    }
+
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
+    /// The colour texture (the frame's output to the caller).
+    pub fn colour(&self) -> &wgpu::Texture {
+        &self.colour
+    }
+
+    pub fn colour_format(&self) -> wgpu::TextureFormat {
+        self.colour.format()
+    }
+
+    pub fn colour_view(&self) -> &wgpu::TextureView {
+        &self.colour_view
+    }
+
+    pub fn depth(&self) -> &wgpu::Texture {
+        &self.depth
+    }
+
+    pub fn depth_view(&self) -> &wgpu::TextureView {
+        &self.depth_view
+    }
+
+    pub fn id(&self) -> &wgpu::Texture {
+        &self.id
+    }
+
+    pub fn id_view(&self) -> &wgpu::TextureView {
+        &self.id_view
+    }
+}
+
+fn check_size(graph: &FrameGraph, width: u32, height: u32) -> Result<(), GraphError> {
+    let max = graph.device.limits().max_texture_dimension_2d;
+    if width == 0 || height == 0 || width > max || height > max {
+        return Err(GraphError::BadTarget(format!("size {width}x{height} outside 1..={max}")));
+    }
+    Ok(())
+}
+
+/// A pixel rectangle of the frame targets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Rect {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
+/// The GPU entry point: the device of the selected backend and the registered passes.
+#[derive(Debug)]
+pub struct FrameGraph {
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    backend: Backend,
+    info: wgpu::AdapterInfo,
+    tried: Vec<Attempt>,
+    passes: PassList,
+    lost: Arc<Mutex<Option<String>>>,
+    lost_flag: Arc<AtomicBool>,
+}
+
+impl FrameGraph {
+    /// Selects a backend from `source` in `order` (see [`resolve_order`]) and creates its
+    /// device.
+    pub fn create(
+        source: &WgpuSource,
+        order: &[Backend],
+        choice: Option<&AdapterChoice>,
+    ) -> Result<FrameGraph, GraphError> {
+        let s = select(source, order, choice)?;
+        Ok(FrameGraph::from_selected(s))
+    }
+
+    fn from_selected(s: Selected<GpuAdapter>) -> FrameGraph {
+        let lost = Arc::new(Mutex::new(None));
+        let lost_flag = Arc::new(AtomicBool::new(false));
+        let (l, f) = (Arc::clone(&lost), Arc::clone(&lost_flag));
+        s.adapter.device.set_device_lost_callback(move |reason, msg| {
+            if let Ok(mut g) = l.lock() {
+                *g = Some(format!("{reason:?}: {msg}"));
+            }
+            f.store(true, Ordering::SeqCst);
+        });
+        FrameGraph {
+            device: s.adapter.device,
+            queue: s.adapter.queue,
+            backend: s.backend,
+            info: s.adapter.info,
+            tried: s.tried,
+            passes: PassList::new(),
+            lost,
+            lost_flag,
+        }
+    }
+
+    /// The backend in use.
+    pub fn backend(&self) -> Backend {
+        self.backend
+    }
+
+    /// The adapter in use.
+    pub fn adapter_info(&self) -> &wgpu::AdapterInfo {
+        &self.info
+    }
+
+    /// The backends tried before the one in use, with their reasons.
+    pub fn tried(&self) -> &[Attempt] {
+        &self.tried
+    }
+
+    pub fn device(&self) -> &wgpu::Device {
+        &self.device
+    }
+
+    pub fn queue(&self) -> &wgpu::Queue {
+        &self.queue
+    }
+
+    /// Registers a pass ([`PassList::register`]).
+    pub fn register(&mut self, decl: PassDecl) -> Result<(), GraphError> {
+        self.passes.register(decl)
+    }
+
+    /// The registered pass IDs in execution order.
+    pub fn pass_order(&self) -> Vec<PassId> {
+        self.passes.order()
+    }
+
+    fn check_lost(&self) -> Result<(), GraphError> {
+        if self.lost_flag.load(Ordering::SeqCst) {
+            let msg = self.lost.lock().ok().and_then(|g| g.clone()).unwrap_or_else(|| "device lost".into());
+            return Err(GraphError::DeviceLost(msg));
+        }
+        Ok(())
+    }
+
+    fn scoped<T>(&self, f: impl FnOnce() -> Result<T, GraphError>) -> Result<T, GraphError> {
+        self.check_lost()?;
+        self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+        self.device.push_error_scope(wgpu::ErrorFilter::OutOfMemory);
+        let r = f();
+        let oom = pollster::block_on(self.device.pop_error_scope());
+        let validation = pollster::block_on(self.device.pop_error_scope());
+        self.check_lost()?;
+        if let Some(e) = validation.or(oom) {
+            return Err(GraphError::Gpu(e.to_string()));
+        }
+        r
+    }
+
+    /// Renders one frame into `targets`: clears colour to `clear`, depth to [`DEPTH_CLEAR`]
+    /// and ID to 0, then runs every pass in ascending order key and submits.
+    pub fn render(&mut self, targets: &FrameTargets, clear: wgpu::Color) -> Result<(), GraphError> {
+        self.check_lost()?;
+        self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let r = self.encode_frame(targets, clear);
+        let validation = pollster::block_on(self.device.pop_error_scope());
+        self.check_lost()?;
+        if let Some(e) = validation {
+            return Err(GraphError::Gpu(e.to_string()));
+        }
+        r
+    }
+
+    fn encode_frame(&mut self, targets: &FrameTargets, clear: wgpu::Color) -> Result<(), GraphError> {
+        let mut encoder =
+            self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("frame graph") });
+        {
+            let _clear = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("frame clear"),
+                color_attachments: &[
+                    Some(wgpu::RenderPassColorAttachment {
+                        view: targets.colour_view(),
+                        depth_slice: None,
+                        resolve_target: None,
+                        ops: wgpu::Operations { load: wgpu::LoadOp::Clear(clear), store: wgpu::StoreOp::Store },
+                    }),
+                    Some(wgpu::RenderPassColorAttachment {
+                        view: targets.id_view(),
+                        depth_slice: None,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                            store: wgpu::StoreOp::Store,
+                        },
+                    }),
+                ],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: targets.depth_view(),
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(DEPTH_CLEAR),
+                        store: wgpu::StoreOp::Store,
+                    }),
+                    stencil_ops: None,
+                }),
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+        }
+        for p in self.passes.iter_mut() {
+            let mut ctx = PassContext { device: &self.device, queue: &self.queue, encoder: &mut encoder, targets };
+            p.run.record(&mut ctx).map_err(|reason| GraphError::PassFailed { pass: p.id, reason })?;
+        }
+        self.queue.submit([encoder.finish()]);
+        Ok(())
+    }
+
+    /// The ID target over `rect`, row by row: `[render ID, primitive or point index]` per
+    /// pixel, render ID 0 for no drawable.
+    pub fn read_id(&self, targets: &FrameTargets, rect: Rect) -> Result<Vec<[u32; 2]>, GraphError> {
+        self.scoped(|| {
+            let (layout, size) = readback_layout(targets, rect, 8)?;
+            let id_readback = self.staging(size, "id readback");
+            self.copy_out(targets.id(), wgpu::TextureAspect::All, rect, &id_readback, layout);
+            let (tx, rx) = mpsc::channel();
+            id_readback.map_async(wgpu::MapMode::Read, .., move |r| {
+                let _ = tx.send(r);
+            });
+            let bytes = self.finish_map(&id_readback, rx)?;
+            Ok(rows(&bytes, rect, layout, 8)
+                .map(|px| {
+                    [u32::from_le_bytes([px[0], px[1], px[2], px[3]]), u32::from_le_bytes([px[4], px[5], px[6], px[7]])]
+                })
+                .collect())
+        })
+    }
+
+    /// The depth target over `rect`, row by row (reversed Z: 0.0 is the far plane or no
+    /// drawable).
+    pub fn read_depth(&self, targets: &FrameTargets, rect: Rect) -> Result<Vec<f32>, GraphError> {
+        self.scoped(|| {
+            let (layout, size) = readback_layout(targets, rect, 4)?;
+            let depth_readback = self.staging(size, "depth readback");
+            self.copy_out(targets.depth(), wgpu::TextureAspect::DepthOnly, rect, &depth_readback, layout);
+            let (tx, rx) = mpsc::channel();
+            depth_readback.map_async(wgpu::MapMode::Read, .., move |r| {
+                let _ = tx.send(r);
+            });
+            let bytes = self.finish_map(&depth_readback, rx)?;
+            Ok(rows(&bytes, rect, layout, 4).map(|px| f32::from_le_bytes([px[0], px[1], px[2], px[3]])).collect())
+        })
+    }
+
+    fn staging(&self, size: u64, label: &str) -> wgpu::Buffer {
+        self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some(label),
+            size,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        })
+    }
+
+    fn copy_out(
+        &self,
+        texture: &wgpu::Texture,
+        aspect: wgpu::TextureAspect,
+        rect: Rect,
+        buffer: &wgpu::Buffer,
+        layout: Layout,
+    ) {
+        let mut encoder =
+            self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("frame readback") });
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d { x: rect.x, y: rect.y, z: 0 },
+                aspect,
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(layout.bytes_per_row),
+                    rows_per_image: Some(rect.height),
+                },
+            },
+            wgpu::Extent3d { width: rect.width, height: rect.height, depth_or_array_layers: 1 },
+        );
+        self.queue.submit([encoder.finish()]);
+    }
+
+    fn finish_map(
+        &self,
+        buffer: &wgpu::Buffer,
+        rx: mpsc::Receiver<Result<(), wgpu::BufferAsyncError>>,
+    ) -> Result<Vec<u8>, GraphError> {
+        self.device
+            .poll(wgpu::PollType::Wait { submission_index: None, timeout: None })
+            .map_err(|e| GraphError::Gpu(e.to_string()))?;
+        match rx.recv() {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => return Err(GraphError::Gpu(e.to_string())),
+            Err(_) => return Err(GraphError::Gpu("readback mapping was never completed".into())),
+        }
+        let bytes = buffer.get_mapped_range(..).to_vec();
+        buffer.unmap();
+        Ok(bytes)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Layout {
+    bytes_per_row: u32,
+}
+
+/// Checks `rect` against the targets and returns the aligned row layout and buffer size.
+fn readback_layout(targets: &FrameTargets, rect: Rect, texel: u32) -> Result<(Layout, u64), GraphError> {
+    let bad = GraphError::BadRect { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    let inside = rect.x.checked_add(rect.width).is_some_and(|e| e <= targets.width())
+        && rect.y.checked_add(rect.height).is_some_and(|e| e <= targets.height());
+    if rect.width == 0 || rect.height == 0 || !inside {
+        return Err(bad);
+    }
+    if u64::from(rect.width) * u64::from(rect.height) > MAX_READBACK_PIXELS {
+        return Err(bad);
+    }
+    let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+    let unpadded = rect.width.checked_mul(texel).ok_or_else(|| bad.clone())?;
+    let bytes_per_row = unpadded.div_ceil(align).checked_mul(align).ok_or(bad)?;
+    Ok((Layout { bytes_per_row }, u64::from(bytes_per_row) * u64::from(rect.height)))
+}
+
+/// The texels of `rect` in `bytes` (rows padded to `layout.bytes_per_row`), row by row.
+fn rows<'a>(bytes: &'a [u8], rect: Rect, layout: Layout, texel: u32) -> impl Iterator<Item = &'a [u8]> + 'a {
+    let (bpr, texel) = (layout.bytes_per_row as usize, texel as usize);
+    let row_len = rect.width as usize * texel;
+    bytes
+        .chunks(bpr)
+        .take(rect.height as usize)
+        .flat_map(move |row| row.get(..row_len).unwrap_or(&[]).chunks_exact(texel))
+}
