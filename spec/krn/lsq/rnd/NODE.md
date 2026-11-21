@@ -14,10 +14,10 @@ covers: [GOM.CON.18, PW.CON.01, PW.CON.02, SA.REL.01]
 depends_on: [KRN.LSQ.TRAIT, KRN.LSQ.LIN, KRN.SOLV.NLLS]
 side_effect: W2
 determinism: D0
-cli: [fid fit ls-circle2d, fid fit ls-circle3d, fid fit ls-sphere]
-mcp: [fit_ls_circle2d, fit_ls_circle3d, fit_ls_sphere]
-journal: [fit.ls_circle2d@1, fit.ls_circle3d@1, fit.ls_sphere@1]
-updated: 2026-11-16
+cli: [fid fit ls-circle2, fid fit ls-circle3, fid fit ls-sphere]
+mcp: [fit_ls_circle2, fit_ls_circle3, fit_ls_sphere]
+journal: [fit.ls_circle2@1, fit.ls_circle3@1, fit.ls_sphere@1]
+updated: 2026-11-21
 ---
 
 # KRN.LSQ.RND: Least-squares circle and sphere fits
@@ -72,6 +72,8 @@ TraCIM Gaussian and NIST ATS sets from `UNC.RDL` at CI time (licence [unverified
 ## Open questions
 
 - The default coverage threshold is a placeholder; it may belong in a defaults profile owned by `GDT`.
+- **Partial build (`fid-fit` module `ls_rnd`, not marked built).** Done: `fit.circle2.ls@1.0.0`, `fit.circle3.ls@1.0.0` and `fit.sphere.ls@1.0.0` with the fixed-radius constraint (and the projection plane for circle2), algebraic starts, LM refinement with analytic Jacobians, the 3D circle's normal by tangent-plane parameters about the `ls_lin` plane normal, coverage and conditioning refusals, spec cards (`crates/fid-fit/cards/`), the three command data rows, and AC-3, AC-4 and the fit part of AC-5 in `crates/fid-fit/tests/ls_rnd.rs` against `fixtures/fit/rnd-partial-v1` (`make_rnd_fixtures.py`, a 60-digit Decimal Gauss-Newton reference). Remaining: (1) the registry, CLI and MCP layer and the journal event (REQ-008, AC-5's "journals nothing", AC-6), which, as for `KRN.LSQ.LIN` and `KRN.LSQ.AXIS.CYL`, waits for `CORE.REG` to read the kernel's fit data rows; (2) AC-1 and AC-2, which need the TraCIM and NIST ATS sets in the RDL (`UNC.RDL`, D-038).
+- **Choices made at build time (confirm in review).** (a) Algorithm IDs, commands, CLI and MCP names use the contract's primitive slugs (`circle2`, `circle3`; this leaf said `circle2d` / `circle3d`), as `KRN.LSQ.LIN` did. (b) The contract's default coverage is 20 degrees; this leaf's 30-degree default is `ls_rnd::DEFAULT_MIN_COVERAGE`, applied by `ls_rnd::default_params()`; the fits use whatever `params.thresholds.min_coverage` holds. (c) The contract checks coverage for circles only; for the sphere the coverage is the apex angle of the smallest cone about the mean direction from the algebraic centre that holds every point (`ls_rnd::sphere_coverage`; a cap of apex angle A has coverage A, a full sphere 360 degrees). (d) The algebraic start is Kasa only, without Pratt normalisation: it is only a start, and LM reaches the same minimum on the fixture down to 45 degrees. (e) The 3D circle minimises two residuals per point (height over the plane and in-plane radial deviation), whose squares sum to the squared 3D distance, so the Jacobian stays smooth at zero distance; the reported residual is the signed 3D distance. (f) `IllConditioned` carries the condition number only (the contract's variant); coverage and point count are in `InsufficientCoverage`. (g) AC-3's "1e-6 relative radius error" is checked against the least-squares reference of the same points (the fit's convergence), not the planted radius, which the 1 micrometre noise moves by more on 45-degree arcs. (h) With a fixed radius the contract's point counts still apply (circle 3, sphere 4). (i) One solve from the start, no multi-start, so `local_optimum_only` is never set.
 
 ## Children
 

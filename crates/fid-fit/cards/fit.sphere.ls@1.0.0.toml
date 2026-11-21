@@ -1,0 +1,17 @@
+# Spec card (KRN.LSQ.RND). Cite designators and clause numbers only; never paste standards text.
+id = "fit.sphere.ls@1.0.0"
+title = "Least-squares sphere"
+method = "Minimises the sum of squared distances |q_i - c| - r on centred, scaled data by Levenberg-Marquardt (fid_solv::nlls) with an analytic Jacobian, from the algebraic (Kasa) sphere solved by blocked Householder QR. Optional fixed radius. Residuals are signed distances, positive outside."
+applicability = "At least 4 points, not coplanar, with coverage at least thresholds.min_coverage: the apex angle of the smallest cone about the mean direction from the algebraic centre that holds every point (a full sphere is 360 degrees; 30 degrees through ls_rnd::default_params [unverified])."
+references = [
+  "Shakarji, C. M. (1998). Least-squares fitting algorithms of the NIST algorithm testing system. Journal of Research of the National Institute of Standards and Technology 103(6).",
+  "Forbes, A. B. (1989). Least-squares best-fit geometric elements. NPL Report DITC 140/89. [unverified citation]",
+  "More, J. J. (1978). The Levenberg-Marquardt algorithm: implementation and theory. Lecture Notes in Mathematics 630.",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Small caps: the centre along the cap axis and the radius are strongly correlated; below the coverage threshold the fit is refused with insufficient_coverage.",
+  "Coplanar points: Coplanar; fewer than 4 points: TooFewPoints; a degenerate algebraic start: IllConditioned.",
+]
+validation = "Decimal (60-digit) Gauss-Newton reference of the same least-squares problem: fixtures/fit/rnd-partial-v1 (make_rnd_fixtures.py), including centres 1 km from the origin, checked on x86-64, ARM64 and wasm32. Pending: PTB TraCIM Gaussian and NIST ATS sphere sets through UNC.RDL (D-038)."
