@@ -289,7 +289,7 @@ impl Layout {
     }
 }
 
-fn row_mut<'a>(j: &'a mut [f64], i: usize, np: usize) -> Result<&'a mut [f64], NumError> {
+fn row_mut(j: &mut [f64], i: usize, np: usize) -> Result<&mut [f64], NumError> {
     j.get_mut(i * np..(i + 1) * np).ok_or(NumError::Domain { op: OP, detail: "jac_len" })
 }
 
