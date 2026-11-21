@@ -1,0 +1,35 @@
+[package]
+name = "fid-ctrl-acl"
+description = "Metrology Maven control-channel token file ACL shim for Windows: owner-only protected DACL and its check (spec node AUTO.CTRL.AUTH, named unsafe exception)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Windows only: the crate is empty on every other target.
+# windows-sys: the Win32 security API (GetSecurityInfo, SetSecurityInfo, the process token).
+# MIT OR Apache-2.0, maintained by Microsoft; 0.61.2 is already in the lock.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_System_Threading",
+] }
+
+# The workspace forbids `unsafe` (CONSTITUTION §8), and `forbid` cannot be lifted inside a
+# crate. This crate is the named exception the AUTO.CTRL.AUTH build prompt allows ("no `unsafe`
+# beyond the OS ACL shim"): it denies `unsafe` at crate level and allows it only on the one FFI
+# module. The other lints are the workspace's, copied.
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+undocumented_unsafe_blocks = "deny"
+manual_is_multiple_of = "allow"
+unnecessary_map_or = "allow"
+chunks_exact_to_as_chunks = "allow"

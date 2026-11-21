@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-ctrl, fid-ctrl-acl]
 satisfies: [REQ-AUTO.CTRL-002, REQ-AUTO.CTRL-003, REQ-AUTO.CTRL-004]
 covers: []
 depends_on: [AUTO.CTRL.WIRE]

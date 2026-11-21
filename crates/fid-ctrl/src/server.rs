@@ -1,13 +1,24 @@
 //! Loopback listener (REQ-AUTO.CTRL.WIRE-001, -002, -005, -006): one thread per
 //! connection, bounded reads with deadlines, and the discovery file's lifetime.
+//!
+//! Authentication (AUTO.CTRL.AUTH): each connection starts unauthenticated. `hello` gets a
+//! fresh server nonce; `auth` consumes it (one attempt per nonce), re-reads the token file
+//! with its permission check, verifies the client proof in constant time and answers with the
+//! server proof. Any other operation before that, a wrong or malformed proof, `auth` without
+//! a pending nonce, or a second `auth` gets `auth_failed` and the connection closes; wide
+//! token-file permissions get `token_permissions` and close. Authentication must complete
+//! within `first_request_timeout` of connecting. Only authenticated requests reach the
+//! [`Handler`].
 
+use crate::auth::{self, AuthError, Nonce, AUTH_OP};
 use crate::discovery::{self, Discovery};
 use crate::error::{StartError, WireError};
 use crate::frame::{Frame, LineReader};
 use crate::msg::{
-    hello_event, hello_versions, negotiate, parse_request, reply_limit, request_limit, Reply, ReplyBody, Request,
-    HELLO_OP, PROTOCOL_VERSIONS,
+    auth_event, auth_params, hello_event, hello_versions, negotiate, parse_request, reply_limit, request_limit, Reply,
+    ReplyBody, Request, HELLO_OP, PROTOCOL_VERSIONS,
 };
+use crate::token::TokenFile;
 use std::collections::BTreeMap;
 use std::io::{self, ErrorKind, Read, Write};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, Shutdown, SocketAddr, TcpListener, TcpStream};
@@ -78,11 +89,13 @@ pub struct Config {
     pub address: String,
     /// Per-user runtime directory for the discovery file (location per OS: PLAT).
     pub discovery_dir: PathBuf,
+    /// The token file (AUTO.CTRL.AUTH; location per OS: PLAT). Created at start if missing.
+    pub token_path: PathBuf,
     /// Most concurrent connections.
     pub max_connections: usize,
     /// Longest wait for the first byte of the first request after connecting. Short, so
-    /// unauthenticated sockets cannot hold connection slots; AUTH must complete
-    /// authentication within it.
+    /// unauthenticated sockets cannot hold connection slots. Authentication must also
+    /// complete within this time of connecting (AUTO.CTRL.WIRE Design note on AUTH).
     pub first_request_timeout: Duration,
     /// Longest wait for the first byte of each later line.
     pub idle_timeout: Duration,
@@ -97,10 +110,11 @@ pub struct Config {
 impl Config {
     /// Defaults: 8 connections, 10 s to the first request, 300 s idle, 10 s per line,
     /// 10 s per write, 2 s drain (the timeouts are this crate's choice [unverified]).
-    pub fn new(address: &str, discovery_dir: &Path) -> Self {
+    pub fn new(address: &str, discovery_dir: &Path, token_path: &Path) -> Self {
         Config {
             address: address.to_string(),
             discovery_dir: discovery_dir.to_path_buf(),
+            token_path: token_path.to_path_buf(),
             max_connections: DEFAULT_MAX_CONNECTIONS,
             first_request_timeout: Duration::from_secs(10),
             idle_timeout: Duration::from_secs(300),
@@ -130,6 +144,7 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
 struct Shared {
     config: Config,
     instance_id: String,
+    token: TokenFile,
     handler: Arc<dyn Handler>,
     log: Arc<dyn Log>,
     stop: AtomicBool,
@@ -150,14 +165,20 @@ pub struct Server {
 }
 
 impl Server {
-    /// Validates the address, binds an ephemeral loopback port, writes the discovery
-    /// file and starts accepting. A non-loopback address logs `ctrl_non_loopback` and
-    /// returns before any socket exists.
+    /// Validates the address, creates the token file if it is missing, binds an ephemeral
+    /// loopback port, writes the discovery file and starts accepting. A non-loopback address
+    /// logs `ctrl_non_loopback` and returns before any socket or file exists. A token file
+    /// with wide permissions does not stop the start: it is logged as `token_permissions`
+    /// and every authentication is refused until the file is recreated.
     pub fn start(config: Config, handler: Arc<dyn Handler>, log: Arc<dyn Log>) -> Result<Server, StartError> {
         let Some(ip) = loopback_address(&config.address) else {
             log.log(WireError::NonLoopback.code(), &format!("refusing to listen on {:?}", config.address));
             return Err(StartError::NonLoopback(config.address));
         };
+        let token = TokenFile::ensure(&config.token_path).map_err(StartError::Token)?;
+        if let Err(e) = token.load() {
+            log.log(e.code(), "the token file is refused; every authentication will fail until it is recreated");
+        }
         let listener = TcpListener::bind(SocketAddr::new(ip, 0))?;
         listener.set_nonblocking(true)?;
         let local_addr = listener.local_addr()?;
@@ -168,6 +189,7 @@ impl Server {
         let shared = Arc::new(Shared {
             config,
             instance_id,
+            token,
             handler,
             log,
             stop: AtomicBool::new(false),
@@ -359,19 +381,25 @@ fn discard_briefly(stream: &mut TcpStream) {
     let _ = stream.set_nonblocking(false);
 }
 
-/// A socket reader with a deadline: `idle` until the first byte of a line, then `line`.
+/// A socket reader with a deadline: `idle` until the first byte of a line, then `line`,
+/// never later than `cap` (the authentication deadline, while unauthenticated).
 struct Deadline {
     stream: TcpStream,
     idle: Duration,
     line: Duration,
     deadline: Instant,
     in_line: bool,
+    cap: Option<Instant>,
 }
 
 impl Deadline {
     fn arm(&mut self, in_line: bool) {
         self.in_line = in_line;
-        self.deadline = Instant::now() + if in_line { self.line } else { self.idle };
+        let d = Instant::now() + if in_line { self.line } else { self.idle };
+        self.deadline = match self.cap {
+            Some(c) if c < d => c,
+            _ => d,
+        };
     }
 }
 
@@ -401,6 +429,16 @@ enum Next {
     Close,
 }
 
+/// A connection's authentication state. The server nonce is held only until one `auth`.
+enum AuthState {
+    /// No `hello` yet, or the last nonce was used.
+    Fresh,
+    /// `hello` sent this nonce; the next `auth` consumes it.
+    Challenged(Nonce),
+    /// Both proofs exchanged.
+    Authenticated,
+}
+
 fn serve(stream: TcpStream, shared: &Arc<Shared>) {
     let Ok(read_half) = stream.try_clone() else {
         return;
@@ -413,7 +451,9 @@ fn serve(stream: TcpStream, shared: &Arc<Shared>) {
         line: cfg.line_timeout,
         deadline: Instant::now(),
         in_line: false,
+        cap: Some(Instant::now() + cfg.first_request_timeout),
     });
+    let mut state = AuthState::Fresh;
     loop {
         if shared.stop.load(Ordering::SeqCst) {
             return;
@@ -423,9 +463,12 @@ fn serve(stream: TcpStream, shared: &Arc<Shared>) {
         match reader.next_line(request_limit("")) {
             Ok(Frame::Line(line)) => {
                 reader.get_mut().idle = cfg.idle_timeout;
-                if let Next::Close = on_line(&line, &mut writer, shared) {
+                if let Next::Close = on_line(&line, &mut writer, shared, &mut state) {
                     close(&mut reader, &mut writer, cfg.drain_timeout);
                     return;
+                }
+                if let AuthState::Authenticated = state {
+                    reader.get_mut().cap = None;
                 }
             }
             Ok(Frame::TooLarge) => {
@@ -478,7 +521,7 @@ fn send(writer: &mut TcpStream, reply: &Reply, op: &str) -> io::Result<()> {
     writer.flush()
 }
 
-fn on_line(line: &[u8], writer: &mut TcpStream, shared: &Arc<Shared>) -> Next {
+fn on_line(line: &[u8], writer: &mut TcpStream, shared: &Arc<Shared>, state: &mut AuthState) -> Next {
     let ok = |r: io::Result<()>| if r.is_ok() { Next::Continue } else { Next::Close };
     let req = match parse_request(line) {
         Ok(r) => r,
@@ -506,9 +549,69 @@ fn on_line(line: &[u8], writer: &mut TcpStream, shared: &Arc<Shared>) -> Next {
             let _ = send(writer, &Reply::error(Some(req.id), WireError::VersionUnsupported, msg), "");
             return Next::Close;
         };
-        let reply = Reply { v, id: Some(req.id), body: ReplyBody::Event(hello_event(v, &shared.instance_id)) };
+        let nonce = match state {
+            AuthState::Authenticated => None,
+            _ => match Nonce::random() {
+                Ok(n) => Some(n),
+                Err(e) => return refuse_auth(writer, shared, req.id, e, "no server nonce"),
+            },
+        };
+        let hex = nonce.map(|n| n.to_hex());
+        if let Some(n) = nonce {
+            *state = AuthState::Challenged(n);
+        }
+        let event = hello_event(v, &shared.instance_id, hex.as_deref());
+        let reply = Reply { v, id: Some(req.id), body: ReplyBody::Event(event) };
         return ok(send(writer, &reply, HELLO_OP));
+    }
+    if req.op.as_str() == AUTH_OP {
+        return authenticate(&req, writer, shared, state);
+    }
+    if !matches!(state, AuthState::Authenticated) {
+        return refuse_auth(writer, shared, req.id, AuthError::AuthFailed, "not authenticated");
     }
     let body = shared.handler.handle(&req);
     ok(send(writer, &Reply { v: req.v, id: Some(req.id), body }, req.op.as_str()))
+}
+
+/// Sends an authentication error and closes. The message is fixed text: never token bytes.
+fn refuse_auth(writer: &mut TcpStream, shared: &Arc<Shared>, id: u64, code: AuthError, why: &str) -> Next {
+    shared.log.log(code.code(), why);
+    let _ = send(writer, &Reply::auth_error(Some(id), code, why), "");
+    Next::Close
+}
+
+/// One `auth` attempt: consumes the pending server nonce whatever the outcome.
+fn authenticate(req: &Request, writer: &mut TcpStream, shared: &Arc<Shared>, state: &mut AuthState) -> Next {
+    let pending = std::mem::replace(state, AuthState::Fresh);
+    let server_nonce = match pending {
+        AuthState::Challenged(n) => n,
+        AuthState::Fresh => return refuse_auth(writer, shared, req.id, AuthError::AuthFailed, "auth without a hello"),
+        AuthState::Authenticated => {
+            return refuse_auth(writer, shared, req.id, AuthError::AuthFailed, "already authenticated")
+        }
+    };
+    let Some((client_nonce, proof)) = auth_params(req) else {
+        return refuse_auth(writer, shared, req.id, AuthError::AuthFailed, "auth params must be {nonce, proof}");
+    };
+    let token = match shared.token.load() {
+        Ok(t) => t,
+        Err(AuthError::TokenPermissions) => {
+            let why = "the token file grants access to another principal";
+            return refuse_auth(writer, shared, req.id, AuthError::TokenPermissions, why);
+        }
+        Err(e) => return refuse_auth(writer, shared, req.id, e, "the token file cannot be read"),
+    };
+    if !auth::verify_client_proof(&token, &server_nonce, &client_nonce, &proof) {
+        return refuse_auth(writer, shared, req.id, AuthError::AuthFailed, "wrong proof");
+    }
+    let server = auth::server_proof(&token, &client_nonce, &server_nonce);
+    drop(token);
+    let reply = Reply { v: req.v, id: Some(req.id), body: ReplyBody::Event(auth_event(&server.to_hex())) };
+    if send(writer, &reply, AUTH_OP).is_err() {
+        return Next::Close;
+    }
+    *state = AuthState::Authenticated;
+    shared.log.log("ctrl_authenticated", "client proof verified");
+    Next::Continue
 }

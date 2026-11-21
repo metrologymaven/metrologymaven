@@ -1,11 +1,16 @@
 //! Acceptance criteria of spec node AUTO.CTRL.WIRE (AC-1, AC-2, AC-3, AC-5) and the
 //! requirements behind them, against an in-process test app. Every listener binds port 0.
+//! Operations need an authenticated connection (AUTO.CTRL.AUTH); [`Client::login`] runs the
+//! handshake. The authentication acceptance criteria are in `tests/auth.rs`.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::{parse, CValue};
+use fid_ctrl::auth::{client_proof, verify_server_proof};
 use fid_ctrl::frame::{Frame, LineReader};
 use fid_ctrl::msg::MAX_SCREENSHOT_REPLY_BYTES;
-use fid_ctrl::{Config, Discovery, Handler, Log, MemoryLog, Reply, ReplyBody, Request, Server, StartError};
+use fid_ctrl::{
+    Config, Discovery, Handler, Log, MemoryLog, Nonce, Proof, Reply, ReplyBody, Request, Server, StartError, Token,
+};
 use fid_surface::Envelope;
 use std::collections::BTreeMap;
 use std::io::Write;
@@ -35,19 +40,27 @@ fn temp_dir(name: &str) -> PathBuf {
     d
 }
 
+/// The token file of a test app: outside the discovery directory, so that directory holds
+/// only the discovery file.
+fn token_path(name: &str) -> PathBuf {
+    temp_dir(&format!("{name}-token")).join("ctrl.token")
+}
+
 struct App {
     server: Server,
     log: Arc<MemoryLog>,
     dir: PathBuf,
+    token: PathBuf,
 }
 
 fn app_with(name: &str, tune: impl FnOnce(&mut Config)) -> App {
     let dir = temp_dir(name);
-    let mut cfg = Config::new("127.0.0.1", &dir);
+    let token = token_path(name);
+    let mut cfg = Config::new("127.0.0.1", &dir, &token);
     tune(&mut cfg);
     let log = Arc::new(MemoryLog::default());
     let server = Server::start(cfg, Arc::new(TestOps), log.clone() as Arc<dyn Log>).unwrap();
-    App { server, log, dir }
+    App { server, log, dir, token }
 }
 
 fn app(name: &str) -> App {
@@ -88,6 +101,25 @@ impl Client {
         self.send(r#"{"v":1,"id":1,"op":"hello","params":{"versions":[1]}}"#);
         self.recv("hello")
     }
+
+    /// `hello` then `auth` with the app's token; both proofs must verify.
+    fn login(&mut self, app: &App) {
+        let r = self.hello();
+        assert_hello_ok(&r);
+        let server_nonce = Nonce::from_hex(str_field(event(&r), "nonce")).unwrap();
+        let token = Token::from_bytes(std::fs::read(&app.token).unwrap().try_into().unwrap());
+        let client_nonce = Nonce::random().unwrap();
+        let proof = client_proof(&token, &server_nonce, &client_nonce);
+        self.send(&format!(
+            r#"{{"v":1,"id":2,"op":"auth","params":{{"nonce":"{}","proof":"{}"}}}}"#,
+            client_nonce.to_hex(),
+            proof.to_hex()
+        ));
+        let r = self.recv("auth");
+        assert_eq!(str_field(event(&r), "kind"), "auth", "{r:?}");
+        let server = Proof::from_hex(str_field(event(&r), "proof")).unwrap();
+        assert!(verify_server_proof(&token, &client_nonce, &server_nonce, &server));
+    }
 }
 
 fn event(r: &Reply) -> &BTreeMap<String, CValue> {
@@ -120,8 +152,9 @@ fn assert_hello_ok(r: &Reply) {
 fn ac1_non_loopback_address_binds_nothing_and_logs() {
     for addr in ["0.0.0.0", "::", "192.168.1.10", "127.0.0.2", "localhost", "", "127.0.0.1:80", "::ffff:127.0.0.1"] {
         let dir = temp_dir("ac1");
+        let token = token_path("ac1");
         let log = Arc::new(MemoryLog::default());
-        let r = Server::start(Config::new(addr, &dir), Arc::new(TestOps), log.clone() as Arc<dyn Log>);
+        let r = Server::start(Config::new(addr, &dir, &token), Arc::new(TestOps), log.clone() as Arc<dyn Log>);
         match r {
             Err(e @ StartError::NonLoopback(_)) => assert_eq!(e.code(), "ctrl_non_loopback"),
             Err(e) => panic!("{addr}: wrong error {e}"),
@@ -129,8 +162,9 @@ fn ac1_non_loopback_address_binds_nothing_and_logs() {
         }
         assert!(log.contains("ctrl_non_loopback"), "{addr}");
         assert!(!log.contains("ctrl_listening"), "{addr}");
-        // No discovery file (the directory is not even created).
+        // No discovery file (the directory is not even created), and no token file.
         assert!(!dir.exists(), "{addr}");
+        assert!(!token.exists(), "{addr}");
     }
 }
 
@@ -178,8 +212,8 @@ fn ac3_two_mib_line_is_rejected_and_server_keeps_working() {
     c.expect_closed();
     assert!(a.log.contains("message_too_large"));
     let mut c2 = Client::connect(&a);
-    assert_hello_ok(&c2.hello());
-    c2.send(r#"{"v":1,"id":2,"op":"ping","params":{}}"#);
+    c2.login(&a);
+    c2.send(r#"{"v":1,"id":3,"op":"ping","params":{}}"#);
     assert_eq!(str_field(event(&c2.recv("ping")), "kind"), "pong");
 }
 
@@ -190,6 +224,7 @@ fn line_of_exactly_one_mib_is_accepted_and_one_more_byte_is_not() {
     let tail = r#""}}"#;
     let fill = 1024 * 1024 - head.len() - tail.len();
     let mut c = Client::connect(&a);
+    c.login(&a);
     c.send(&format!("{head}{}{tail}", "x".repeat(fill)));
     let r = c.recv("ping");
     assert_eq!(r.id, Some(9));
@@ -219,6 +254,8 @@ fn hello_negotiates_and_operations_get_replies() {
     let r = c.recv("hello");
     assert_hello_ok(&r);
     assert_eq!(str_field(event(&r), "instance_id"), a.server.instance_id());
+    let mut c = Client::connect(&a);
+    c.login(&a);
     c.send(r#"{"v":1,"id":42,"op":"env.test","params":{}}"#);
     let r = c.recv("env.test");
     assert_eq!(r.id, Some(42));
@@ -232,6 +269,7 @@ fn hello_negotiates_and_operations_get_replies() {
 fn malformed_lines_get_typed_replies_and_the_connection_survives() {
     let a = app("malformed");
     let mut c = Client::connect(&a);
+    c.login(&a);
     for (line, id) in [
         ("not json", None),
         ("", None),
@@ -331,7 +369,7 @@ fn silent_new_connection_is_closed_at_the_first_request_deadline() {
     c.expect_closed();
     // Well under the 300 s idle timeout.
     assert!(t.elapsed() < Duration::from_secs(30));
-    assert_eq!(Config::new("127.0.0.1", &a.dir).first_request_timeout, Duration::from_secs(10));
+    assert_eq!(Config::new("127.0.0.1", &a.dir, &a.token).first_request_timeout, Duration::from_secs(10));
 }
 
 /// Every logged detail and reply message stays one short line whatever the peer sent.
@@ -347,6 +385,7 @@ fn assert_echo_is_bounded(a: &App, r: &Reply) {
 fn hostile_unknown_keys_are_escaped_and_truncated() {
     let a = app("keys");
     let mut c = Client::connect(&a);
+    c.login(&a);
     c.send(r#"{"v":1,"id":21,"op":"ping","params":{},"a\nfake_log_line\r":1}"#);
     let r = c.recv("ping");
     assert_eq!(error_code(&r), "malformed_message");
@@ -374,8 +413,10 @@ fn hostile_unknown_keys_are_escaped_and_truncated() {
 #[test]
 fn shared_or_symlinked_runtime_directory_is_refused() {
     use std::os::unix::fs::PermissionsExt;
+    let token = token_path("unsafe-dir");
     let start = |dir: &std::path::Path| {
-        Server::start(Config::new("127.0.0.1", dir), Arc::new(TestOps), Arc::new(MemoryLog::default()) as Arc<dyn Log>)
+        let cfg = Config::new("127.0.0.1", dir, &token);
+        Server::start(cfg, Arc::new(TestOps), Arc::new(MemoryLog::default()) as Arc<dyn Log>)
     };
     let refused = |r: Result<Server, StartError>| match r {
         Err(StartError::Io(e)) => assert!(e.to_string().contains("ctrl_unsafe_runtime_dir"), "{e}"),
@@ -416,6 +457,7 @@ fn partial_frame_at_eof_is_dropped_without_reply() {
 fn pipelined_requests_are_answered_in_order() {
     let a = app("pipeline");
     let mut c = Client::connect(&a);
+    c.login(&a);
     let mut batch = String::new();
     for id in 1..=50 {
         batch.push_str(&format!("{{\"v\":1,\"id\":{id},\"op\":\"ping\",\"params\":{{}}}}\n"));
@@ -441,8 +483,9 @@ fn stop_closes_open_connections() {
 #[test]
 fn ipv6_loopback_is_accepted_where_the_host_has_it() {
     let dir = temp_dir("v6");
+    let token = token_path("v6");
     let log = Arc::new(MemoryLog::default());
-    match Server::start(Config::new("::1", &dir), Arc::new(TestOps), log as Arc<dyn Log>) {
+    match Server::start(Config::new("::1", &dir, &token), Arc::new(TestOps), log as Arc<dyn Log>) {
         Ok(s) => {
             assert!(s.local_addr().ip().is_loopback() && s.local_addr().is_ipv6());
             let d = Discovery::decode(&std::fs::read(s.discovery_path()).unwrap()).unwrap();
