@@ -6,10 +6,11 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_render::frame::graph::{
-    order_or_software, policy_order, policy_order_from_file, resolve_order, select, AdapterChoice, AdapterSource,
-    Attempt, Backend, FrameGraph, FrameTargets, GraphError, Host, Pass, PassContext, PassDecl, PassId, PassList,
-    PolicyError, Rect, TargetId, WgpuSource, BACKEND_SETTING, COLOUR, DEPTH, ID, ID_FORMAT, REASON_CHOICE_ABSENT,
-    REASON_NOT_COMPILED, REASON_NO_ADAPTER, REASON_NO_BACKEND_FOR_TARGET, REASON_NO_CPU_ADAPTER,
+    order_or_software, pick_adapter, policy_order, policy_order_from_file, resolve_order, select, AdapterChoice,
+    AdapterSource, Attempt, Backend, FrameGraph, FrameTargets, GraphError, Host, Pass, PassContext, PassDecl, PassId,
+    PassList, PolicyError, Rect, TargetId, WgpuSource, BACKEND_SETTING, COLOUR, DEPTH, ID, ID_FORMAT,
+    REASON_CHOICE_ABSENT, REASON_NOT_COMPILED, REASON_NO_ADAPTER, REASON_NO_BACKEND_FOR_TARGET, REASON_NO_CPU_ADAPTER,
+    REASON_ONLY_CPU,
 };
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -559,4 +560,46 @@ fn ac1_golden_cube_ids_and_depth() {
 /// Reasons that mean no adapter exists on this host or build (the only ones AC-1 may skip on).
 fn absent(reason: &str) -> bool {
     [REASON_NO_ADAPTER, REASON_NO_CPU_ADAPTER, REASON_NOT_COMPILED, REASON_NO_BACKEND_FOR_TARGET].contains(&reason)
+}
+
+fn info(name: &str, vendor: u32, device: u32, t: wgpu::DeviceType, backend: wgpu::Backend) -> wgpu::AdapterInfo {
+    wgpu::AdapterInfo {
+        name: name.into(),
+        vendor,
+        device,
+        device_type: t,
+        driver: String::new(),
+        driver_info: String::new(),
+        backend,
+    }
+}
+
+/// Adapter picking over scripted adapter lists (review of #368): `software` stays CPU-only
+/// even with a choice, so a Software choice never selects a GPU; a hardware backend skips CPU
+/// adapters unless a choice names one; ties keep enumeration order.
+#[test]
+fn pick_adapter_rules() {
+    use wgpu::{Backend as B, DeviceType as T};
+    let dx = [
+        info("Integrated", 0x8086, 0x9a49, T::IntegratedGpu, B::Dx12),
+        info("Discrete", 0x10de, 0x2684, T::DiscreteGpu, B::Dx12),
+        info("Microsoft Basic Render Driver", 0x1414, 0x8c, T::Cpu, B::Dx12),
+    ];
+    assert_eq!(pick_adapter(Backend::Dx12, None, &dx), Ok(1), "discrete first");
+    assert_eq!(pick_adapter(Backend::Software, None, &dx), Ok(2));
+    let any_software = AdapterChoice { backend: Backend::Software, vendor: None, device: None, name: None };
+    assert_eq!(pick_adapter(Backend::Software, Some(&any_software), &dx), Ok(2), "never the GPU");
+    let gpu_as_software = AdapterChoice { backend: Backend::Software, vendor: Some(0x10de), device: None, name: None };
+    assert_eq!(pick_adapter(Backend::Software, Some(&gpu_as_software), &dx), Err(REASON_CHOICE_ABSENT.into()));
+    let warp = AdapterChoice { backend: Backend::Dx12, vendor: Some(0x1414), device: Some(0x8c), name: None };
+    assert_eq!(pick_adapter(Backend::Dx12, Some(&warp), &dx), Ok(2), "a WARP choice on dx12 is honoured");
+    let any_dx = AdapterChoice { backend: Backend::Dx12, vendor: None, device: None, name: None };
+    assert_eq!(pick_adapter(Backend::Dx12, Some(&any_dx), &dx), Ok(1), "a broad choice still prefers hardware");
+    let cpu_only = [info("llvmpipe", 0x10005, 0, T::Cpu, B::Vulkan)];
+    assert_eq!(pick_adapter(Backend::Vulkan, None, &cpu_only), Err(REASON_ONLY_CPU.into()));
+    assert_eq!(pick_adapter(Backend::Software, None, &cpu_only), Ok(0));
+    let gpus = [info("Discrete", 0x10de, 0x2684, T::DiscreteGpu, B::Vulkan)];
+    assert_eq!(pick_adapter(Backend::Software, None, &gpus), Err(REASON_NO_CPU_ADAPTER.into()));
+    let twins = [info("A", 1, 1, T::DiscreteGpu, B::Vulkan), info("B", 1, 2, T::DiscreteGpu, B::Vulkan)];
+    assert_eq!(pick_adapter(Backend::Vulkan, None, &twins), Ok(0), "ties keep enumeration order");
 }

@@ -61,7 +61,9 @@ pub enum GraphError {
     BadSetting(String),
     /// The device was lost (forwarded to `VIZ.RENDER.RECOVER`).
     DeviceLost(String),
-    /// A wgpu error during a frame or a readback.
+    /// A wgpu error during target creation, a frame or a readback. An error no error scope
+    /// caught (kept by the device's uncaptured-error handler) is returned by whichever of these
+    /// calls comes next, so it may belong to an earlier operation.
     Gpu(String),
     /// A pass's `record` failed; nothing of the frame was submitted.
     PassFailed { pass: PassId, reason: String },
@@ -159,6 +161,42 @@ fn hardware_rank(t: wgpu::DeviceType) -> Option<u8> {
     }
 }
 
+/// Which of `infos` (one backend's adapters, in enumeration order) a request takes, or the
+/// reason none qualifies. `software` takes only CPU adapters, with or without a choice; a
+/// hardware backend takes the best of discrete, integrated, virtual, other, and skips CPU
+/// adapters unless an injected choice names one (a WARP choice on dx12 is honoured). A
+/// choice narrows the candidates by its vendor, device and name. Ties keep enumeration order.
+pub fn pick_adapter(
+    backend: Backend,
+    choice: Option<&AdapterChoice>,
+    infos: &[wgpu::AdapterInfo],
+) -> Result<usize, String> {
+    let mut best: Option<(u8, usize)> = None;
+    for (i, info) in infos.iter().enumerate() {
+        if choice.is_some_and(|c| !c.matches(info)) {
+            continue;
+        }
+        let rank = match (backend, choice) {
+            (Backend::Software, _) => (info.device_type == wgpu::DeviceType::Cpu).then_some(0),
+            (_, Some(_)) => Some(hardware_rank(info.device_type).unwrap_or(4)),
+            (_, None) => hardware_rank(info.device_type),
+        };
+        if let Some(r) = rank {
+            if best.is_none_or(|(b, _)| r < b) {
+                best = Some((r, i));
+            }
+        }
+    }
+    best.map(|(_, i)| i).ok_or_else(|| {
+        match (backend, choice) {
+            (_, Some(_)) => REASON_CHOICE_ABSENT,
+            (Backend::Software, None) => REASON_NO_CPU_ADAPTER,
+            _ => REASON_ONLY_CPU,
+        }
+        .to_string()
+    })
+}
+
 impl AdapterSource for WgpuSource {
     type Adapter = GpuAdapter;
 
@@ -174,31 +212,10 @@ impl AdapterSource for WgpuSource {
         if adapters.is_empty() {
             return Err(REASON_NO_ADAPTER.into());
         }
-        let mut best: Option<(u8, wgpu::Adapter)> = None;
-        for a in adapters {
-            let info = a.get_info();
-            if choice.is_some_and(|c| !c.matches(&info)) {
-                continue;
-            }
-            // An injected choice is honoured whatever the adapter type (a WARP choice on dx12
-            // included); without one, CPU adapters are only taken as `software`.
-            let rank = match (backend, choice) {
-                (_, Some(_)) => Some(hardware_rank(info.device_type).unwrap_or(4)),
-                (Backend::Software, None) => (info.device_type == wgpu::DeviceType::Cpu).then_some(0),
-                _ => hardware_rank(info.device_type),
-            };
-            if let Some(r) = rank {
-                if best.as_ref().is_none_or(|(b, _)| r < *b) {
-                    best = Some((r, a));
-                }
-            }
-        }
-        let Some((_, adapter)) = best else {
-            return Err(match (backend, choice) {
-                (_, Some(_)) => REASON_CHOICE_ABSENT.into(),
-                (Backend::Software, None) => REASON_NO_CPU_ADAPTER.into(),
-                _ => REASON_ONLY_CPU.into(),
-            });
+        let infos: Vec<wgpu::AdapterInfo> = adapters.iter().map(wgpu::Adapter::get_info).collect();
+        let pick = pick_adapter(backend, choice, &infos)?;
+        let Some(adapter) = adapters.into_iter().nth(pick) else {
+            return Err(REASON_NO_ADAPTER.into());
         };
         let desc = wgpu::DeviceDescriptor {
             label: Some("fid-render frame graph"),
