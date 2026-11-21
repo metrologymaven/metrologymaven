@@ -4,7 +4,7 @@
 use super::{kind_dim, DiagCode, Dim, ExprDiag, Kind, Type};
 use crate::expr::syntax::{BinaryOp, Expr, ExprKind, Span, UnaryOp};
 use fid_registry::QuantityCatalogue;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// The function library, sorted, with its arity (`None` = two or more for `min`/`max`, one
 /// or more for `format`). Signatures (types only; `AUTO.PROG.EXPR.EVAL` evaluates them):
@@ -48,8 +48,11 @@ pub(crate) struct Kinds {
 }
 
 impl Kinds {
-    pub(crate) fn new(cat: &dyn QuantityCatalogue) -> Kinds {
+    /// Fails with the first unit symbol (byte order) that two kinds share: such a symbol
+    /// has no single kind, so the catalogue is refused rather than resolved last-wins.
+    pub(crate) fn new(cat: &dyn QuantityCatalogue) -> Result<Kinds, String> {
         let mut k = Kinds { dims: BTreeMap::new(), units: BTreeMap::new(), by_dim: BTreeMap::new() };
+        let mut dup = BTreeSet::new();
         for name in cat.kind_names() {
             let d = kind_dim(name);
             k.dims.insert(name.to_string(), d);
@@ -58,11 +61,18 @@ impl Kinds {
             }
             if let Some(info) = cat.kind(name) {
                 for u in &info.units {
-                    k.units.insert(u.symbol.clone(), name.to_string());
+                    if let Some(prev) = k.units.insert(u.symbol.clone(), name.to_string()) {
+                        if prev != name {
+                            dup.insert(u.symbol.clone());
+                        }
+                    }
                 }
             }
         }
-        k
+        match dup.into_iter().next() {
+            Some(sym) => Err(sym),
+            None => Ok(k),
+        }
     }
 
     /// Whether the catalogue has this kind.
@@ -102,7 +112,12 @@ pub fn type_of(
     vars: &BTreeMap<String, Type>,
     cat: &dyn QuantityCatalogue,
 ) -> (Option<Type>, Vec<ExprDiag>) {
-    let kinds = Kinds::new(cat);
+    let kinds = match Kinds::new(cat) {
+        Ok(k) => k,
+        Err(sym) => {
+            return (None, vec![ExprDiag { code: DiagCode::CatalogueInvalid, span: expr.span, names: vec![sym] }]);
+        }
+    };
     let mut out = Vec::new();
     let t = infer(expr, &|n: &str| vars.get(n).map(|t| Some(t.clone())), &kinds, &mut out);
     (t, out)
@@ -152,6 +167,16 @@ pub(crate) fn infer(expr: &Expr, env: Env<'_>, kinds: &Kinds, out: &mut Vec<Expr
     diags.sort_by_key(|d| (d.span.start, d.span.end));
     out.extend(diags);
     vals.pop().flatten()
+}
+
+/// The string-literal text of the two operands, when they are literals.
+type Lits<'e> = (Option<&'e str>, Option<&'e str>);
+
+fn literal(e: &Expr) -> Option<&str> {
+    match &e.kind {
+        ExprKind::Str(s) => Some(s),
+        _ => None,
+    }
 }
 
 struct Typer<'a> {
@@ -224,7 +249,10 @@ impl Typer<'_> {
                 other => self.mismatch(sp, NUMBER, other),
             },
             (ExprKind::Unary(UnaryOp::Not, _), [x]) => self.boolean(sp, x),
-            (ExprKind::Binary(op, ..), [l, r]) => self.binary(sp, *op, l, r),
+            (ExprKind::Binary(op, le, re), [l, r]) => {
+                let lits = (literal(le), literal(re));
+                self.binary(sp, *op, l, r, lits)
+            }
             (ExprKind::Cond(..), [c, x, y]) => {
                 self.boolean(sp, c)?;
                 self.unify(sp, x, y)
@@ -241,7 +269,7 @@ impl Typer<'_> {
         }
     }
 
-    fn binary(&mut self, sp: Span, op: BinaryOp, l: &Type, r: &Type) -> Option<Type> {
+    fn binary(&mut self, sp: Span, op: BinaryOp, l: &Type, r: &Type, lits: Lits<'_>) -> Option<Type> {
         use BinaryOp as B;
         match op {
             B::And | B::Or => {
@@ -252,7 +280,7 @@ impl Typer<'_> {
             B::Div => self.product(sp, l, r, -1),
             B::Add | B::Sub | B::Rem => self.additive(sp, l, r),
             B::Lt | B::Le | B::Gt | B::Ge => self.compare(sp, l, r).map(|_| Type::Bool),
-            B::Eq | B::Ne => self.equality(sp, l, r).map(|_| Type::Bool),
+            B::Eq | B::Ne => self.equality(sp, l, r, lits).map(|_| Type::Bool),
         }
     }
 
@@ -282,11 +310,22 @@ impl Typer<'_> {
         }
     }
 
-    fn equality(&mut self, sp: Span, l: &Type, r: &Type) -> Option<Type> {
+    /// `==`, `!=`. An `enum` meets an `enum` sharing at least one member, or a string
+    /// literal that is one of its members; never a computed `string`.
+    fn equality(&mut self, sp: Span, l: &Type, r: &Type, lits: Lits<'_>) -> Option<Type> {
         let numeric = |t: &Type| t.is_number() || matches!(t, Type::Quantity(_));
         match (l, r) {
             (a, b) if numeric(a) || numeric(b) => self.compare(sp, l, r),
-            (Type::Enum(_) | Type::Str, Type::Enum(_)) | (Type::Enum(_), Type::Str) => Some(Type::Bool),
+            (Type::Enum(a), Type::Enum(b)) if a.intersection(b).next().is_some() => Some(Type::Bool),
+            (Type::Enum(_), Type::Enum(_)) => self.mismatch(sp, &l.to_string(), r),
+            (Type::Enum(set), Type::Str) | (Type::Str, Type::Enum(set)) => {
+                let (e, lit) = if matches!(l, Type::Enum(_)) { (l, lits.1) } else { (r, lits.0) };
+                match lit {
+                    Some(v) if set.contains(v) => Some(Type::Bool),
+                    Some(v) => self.diag(DiagCode::TypeMismatch, sp, vec![e.to_string(), format!("{v:?}")]),
+                    None => self.mismatch(sp, &e.to_string(), &Type::Str),
+                }
+            }
             (a, b) if a == b && !matches!(a, Type::Formula(_)) => Some(Type::Bool),
             (a, b) => self.mismatch(sp, &a.to_string(), b),
         }
@@ -306,7 +345,9 @@ impl Typer<'_> {
     /// `*` (`sign` 1) and `/` (`sign` -1).
     fn product(&mut self, sp: Span, l: &Type, r: &Type, sign: i8) -> Option<Type> {
         match (l, r) {
-            (Type::Int, Type::Int) => Some(Type::Int),
+            // `/` of two `int`s is `decimal` (maintainer decision on PR #418); integer
+            // division is written `floor(a / b)`.
+            (Type::Int, Type::Int) if sign > 0 => Some(Type::Int),
             (a, b) if a.is_number() && b.is_number() => Some(Type::Decimal),
             (Type::Quantity(_), b) if b.is_number() => Some(l.clone()),
             (a, Type::Quantity(_)) if a.is_number() && sign > 0 => Some(r.clone()),
@@ -389,7 +430,10 @@ impl Typer<'_> {
             ("len", [Type::List(_) | Type::Str]) => Some(Type::Int),
             ("len", [x]) => self.mismatch(sp, "list", x),
             ("contains", [Type::Str, Type::Str]) => Some(Type::Bool),
-            ("contains", [Type::List(t), v]) => self.equality(sp, t, v).map(|_| Type::Bool),
+            ("contains", [Type::List(t), v]) => {
+                let lit = exprs.get(1).and_then(literal);
+                self.equality(sp, t, v, (None, lit)).map(|_| Type::Bool)
+            }
             ("contains", [x, _]) => self.mismatch(sp, "list", x),
             ("format", [Type::Str, ..]) => Some(Type::Str),
             ("format", [x, ..]) => self.mismatch(sp, "string", x),

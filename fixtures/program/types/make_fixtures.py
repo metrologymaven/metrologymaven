@@ -256,6 +256,9 @@ def bore():
     s13 = assign(p, "ok", "fine", "bool")
     s14 = assign(p, "tol", "d / nominal", "decimal")
     s15 = assign(p, "n", "round(bore.axis_tilt / 1[deg])", "int")
+    s15b = assign(p, "mode", '"slow"', "string")
+    s15c = assign(p, "ok", 'mode == "fast" or mode != mode', "bool")
+    s15d = assign(p, "tol", "floor(n / 2) + n / 2", "decimal")
     s16 = p.step("jump", cond="ok", label="end")
     p.typed(s16, "cond", "ok", "bool")
     s17 = p.step("label", name="end")
@@ -264,7 +267,7 @@ def bore():
     s20 = p.step("return", expr=r)
     p.typed(s20, "expr", r, "bool")
     sub = {"body": [s20], "name": "check", "params": [{"name": "x", "type": QL}], "returns": "bool"}
-    main = [s1, s2, s3, s4, s7, s10, s12, s13, s14, s15, s16, s17, s18]
+    main = [s1, s2, s3, s4, s7, s10, s12, s13, s14, s15, s15b, s15c, s15d, s16, s17, s18]
     variables = [("d", QL), ("ok", "bool"), ("n", "int"), ("tol", "decimal"), ("mode", "enum<fast|slow>")]
     return p.doc(main, variables, [NOMINAL], [sub]), p.report()
 
@@ -395,6 +398,63 @@ def type_mismatch():
     return p.doc(main, [("n", "int"), ("s", "string"), ("ok", "bool"), ("w", QL)]), p.report()
 
 
+def enums():
+    """Enum equality and assignment: members only (review of PR #418)."""
+    p = P(10)
+    E = "enum<fast|slow>"
+    main = []
+    src = 'mode == "medium"'
+    s = assign(p, "ok", src)
+    p.diag("type_mismatch", [E, '"medium"'], "expr", s, p.whole(src))
+    main.append(s)
+    src = "mode == other"
+    s = assign(p, "ok", src)
+    p.diag("type_mismatch", [E, "enum<x|y>"], "expr", s, p.whole(src))
+    main.append(s)
+    src = "mode == s"
+    s = assign(p, "ok", src)
+    p.diag("type_mismatch", [E, "string"], "expr", s, p.whole(src))
+    main.append(s)
+    src = '"medium"'
+    s = assign(p, "mode", src, "string")
+    p.diag("type_mismatch", [E, '"medium"'], "expr", s, p.whole(src))
+    main.append(s)
+    s = assign(p, "mode", "s", "string")
+    p.diag("type_mismatch", [E, "string"], "expr", s, (0, 1))
+    main.append(s)
+    s = p.step("invoke", args={"approach": ex(src), "index": lit(1)}, command="probe.touch_point", major=2)
+    p.typed(s, "args.approach", src, "string")
+    p.diag("type_mismatch", [E, '"medium"'], "args.approach", s, p.whole(src))
+    main.append(s)
+    variables = [("mode", E), ("other", "enum<x|y>"), ("s", "string"), ("ok", "bool")]
+    return p.doc(main, variables), p.report()
+
+
+def scoping():
+    """Read-only names, loop bounds, unknown kinds and majors, subroutine scope."""
+    p = P(11)
+    p.diag("type_unknown", ["record<probe.touch_point@1>"], "variables.r")
+    p.diag("type_unknown", ["quantity<volume>"], "variables.k")
+    s1 = p.step("invoke", args={"index": lit(1)}, bind="t", command="probe.touch_point", major=2)
+    s3 = assign(p, "i", "2", "int")
+    s2 = p.step("loop", body=[s3], mode="counted", var="i", max_iterations=5, **{"from": "1.5", "to": "x", "step": "1"})
+    p.typed(s2, "from", "1.5", "decimal")
+    p.typed(s2, "to", "x", QL)
+    p.typed(s2, "step", "1", "int")
+    p.diag("type_mismatch", ["int", "decimal"], "from", s2, (0, 3))
+    p.diag("type_mismatch", ["int", QL], "to", s2, (0, 1))
+    p.diag("read_only", ["i"], "var", s3)
+    s4 = assign(p, "nominal", "x", QL)
+    p.diag("read_only", ["nominal"], "var", s4)
+    s5 = p.step("call", args={}, subroutine="peek")
+    s6 = assign(p, "x", "t.deviation")
+    p.diag("undeclared", ["t"], "expr", s6, (0, 1))
+    s7 = assign(p, "n", "n", "int")
+    sub = {"body": [s6, s7], "name": "peek", "params": []}
+    variables = [("n", "int"), ("x", QL), ("r", "record<probe.touch_point@1>"), ("k", "quantity<volume>")]
+    return p.doc([s1, s2, s4, s5], variables, [NOMINAL], [sub]), p.report()
+
+
 CASES = {
     "valid/bore": bore,
     "valid/area": area,
@@ -405,6 +465,8 @@ CASES = {
     "out-of-block": out_of_block,
     "redeclared": redeclared,
     "type-mismatch": type_mismatch,
+    "enums": enums,
+    "scoping": scoping,
 }
 
 

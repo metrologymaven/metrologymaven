@@ -3,7 +3,7 @@
 
 use super::infer::{infer, Kinds};
 use super::{Diag, DiagCode, ExprDiag, Kind, RecordType, Site, Type, TypeReport, Typed};
-use crate::expr::syntax::{parse_expr, Name, ParseError, Span};
+use crate::expr::syntax::{parse_expr, ExprKind, Name, ParseError, Span};
 use crate::family::ParamType;
 use crate::fmt::{Arg, LoopMode, Opaque, Program, Step, StepKind, Uuid7};
 use fid_canon::CValue;
@@ -20,13 +20,30 @@ const MAX_ECHO: usize = 64;
 /// units of `catalogue` (REQ-AUTO.PROG.EXPR.TYPES-001 to -007). See the module docs for the
 /// rules and the diagnostic order. Never fails; a malformed part is a diagnostic.
 pub fn check_types(program: &Program, manifest: &Manifest, catalogue: &dyn QuantityCatalogue) -> TypeReport {
-    let mut w = Walker {
-        kinds: Kinds::new(catalogue),
-        manifest,
-        scopes: Vec::new(),
-        subs: BTreeMap::new(),
-        report: TypeReport::default(),
+    // The catalogue must be the one the manifest was built against, and its unit symbols
+    // must name one kind each; otherwise nothing is typed.
+    let digest = catalogue.digest();
+    if manifest.quantity_catalogue_digest != digest {
+        let names = vec![manifest.quantity_catalogue_digest.to_string(), digest.to_string()];
+        let diagnostics =
+            vec![Diag { code: DiagCode::CatalogueMismatch, step: None, slot: "catalogue".into(), span: None, names }];
+        return TypeReport { types: BTreeMap::new(), diagnostics };
+    }
+    let kinds = match Kinds::new(catalogue) {
+        Ok(k) => k,
+        Err(sym) => {
+            let names = vec![echo(&sym)];
+            let diagnostics = vec![Diag {
+                code: DiagCode::CatalogueInvalid,
+                step: None,
+                slot: "catalogue".into(),
+                span: None,
+                names,
+            }];
+            return TypeReport { types: BTreeMap::new(), diagnostics };
+        }
     };
+    let mut w = Walker { kinds, manifest, scopes: Vec::new(), subs: BTreeMap::new(), report: TypeReport::default() };
     w.globals(program);
     w.signatures(program);
     w.block(&program.main, &Ret::Main, None);
@@ -36,7 +53,7 @@ pub fn check_types(program: &Program, manifest: &Manifest, catalogue: &dyn Quant
         let mut frame = BTreeMap::new();
         if let Some(sig) = w.subs.get(&sub.name) {
             for (p, t) in &sig.params {
-                frame.entry(p.clone()).or_insert_with(|| t.clone());
+                frame.entry(p.clone()).or_insert_with(|| Var::new(t.clone(), false));
             }
         }
         let ret = match w.subs.get(&sub.name) {
@@ -66,7 +83,21 @@ struct ParamInfo {
     value_of_record: bool,
 }
 
-type Frame = BTreeMap<String, Option<Type>>;
+/// A visible name: its type (`None` if already reported as bad) and whether `assign` may
+/// change it (part-family parameters and counted-loop variables may not).
+#[derive(Debug, Clone)]
+struct Var {
+    ty: Option<Type>,
+    read_only: bool,
+}
+
+impl Var {
+    fn new(ty: Option<Type>, read_only: bool) -> Var {
+        Var { ty, read_only }
+    }
+}
+
+type Frame = BTreeMap<String, Var>;
 
 struct Walker<'a> {
     kinds: Kinds,
@@ -93,20 +124,24 @@ impl Walker<'_> {
         self.report.diagnostics.push(Diag { code, step: Some(step), slot: slot.to_string(), span, names });
     }
 
-    fn lookup(&self, name: &str) -> Option<Option<Type>> {
+    fn lookup(&self, name: &str) -> Option<Var> {
         self.scopes.iter().rev().find_map(|f| f.get(name)).cloned()
     }
 
     /// Declares in the innermost block; `false` if that block already has the name.
     fn declare(&mut self, name: &str, ty: Option<Type>) -> bool {
+        self.declare_var(name, Var::new(ty, false))
+    }
+
+    fn declare_var(&mut self, name: &str, var: Var) -> bool {
         match self.scopes.last_mut() {
             Some(f) if f.contains_key(name) => false,
             Some(f) => {
-                f.insert(name.to_string(), ty);
+                f.insert(name.to_string(), var);
                 true
             }
             None => {
-                self.scopes.push(BTreeMap::from([(name.to_string(), ty)]));
+                self.scopes.push(BTreeMap::from([(name.to_string(), var)]));
                 true
             }
         }
@@ -119,7 +154,7 @@ impl Walker<'_> {
         for p in &program.params {
             let Some(CValue::Str(name)) = p.get("name") else { continue };
             let ty = self.param_decl_type(p);
-            if !self.declare(name, ty) {
+            if !self.declare_var(name, Var::new(ty, true)) {
                 self.decl_diag(DiagCode::Redeclared, format!("params.{name}"), vec![echo(name)]);
             }
         }
@@ -191,10 +226,11 @@ impl Walker<'_> {
         self.scopes.pop();
     }
 
-    /// Types one expression source at `step`/`slot`; records its type. Returns the type
-    /// and the expression's span. A source that does not parse is `type_unknown` with the
-    /// parser's code (span at the offending offset for a syntax error).
-    fn expr(&mut self, step: Uuid7, slot: &str, src: &str) -> (Option<Type>, Option<Span>) {
+    /// Types one expression source at `step`/`slot`; records its type. Returns the type,
+    /// the expression's span and, when the whole expression is a string literal, its text.
+    /// A source that does not parse is `type_unknown` with the parser's code (span at the
+    /// offending offset for a syntax error).
+    fn expr(&mut self, step: Uuid7, slot: &str, src: &str) -> Value {
         let ast = match parse_expr(src) {
             Ok(a) => a,
             Err(e) => {
@@ -203,12 +239,12 @@ impl Walker<'_> {
                     ParseError::TooLarge(_) => None,
                 };
                 self.step_diag(DiagCode::TypeUnknown, step, slot, span, vec![e.code().to_string()]);
-                return (None, None);
+                return Value { ty: None, span: None, literal: None };
             }
         };
         let mut diags: Vec<ExprDiag> = Vec::new();
         let scopes = &self.scopes;
-        let env = |n: &str| scopes.iter().rev().find_map(|f| f.get(n)).cloned();
+        let env = |n: &str| scopes.iter().rev().find_map(|f| f.get(n)).map(|v| v.ty.clone());
         let ty = infer(&ast, &env, &self.kinds, &mut diags);
         for d in diags {
             self.step_diag(d.code, step, slot, Some(d.span), d.names);
@@ -217,21 +253,33 @@ impl Walker<'_> {
             let site = Site { step, slot: slot.to_string() };
             self.report.types.insert(site, Typed { ty: t.clone(), span: ast.span, not_of_record: true });
         }
-        (ty, Some(ast.span))
+        let literal = match &ast.kind {
+            ExprKind::Str(s) => Some(s.clone()),
+            _ => None,
+        };
+        Value { ty, span: Some(ast.span), literal }
     }
 
-    /// `type_mismatch` unless a value of type `value` may be stored where `target` is
-    /// declared (REQ-007: equal types, `int` into `decimal`, an `enum` into a superset).
-    fn assign_check(&mut self, step: Uuid7, slot: &str, span: Option<Span>, target: &Type, value: &Type) {
-        if !assignable(target, value) {
-            self.step_diag(DiagCode::TypeMismatch, step, slot, span, vec![target.to_string(), value.to_string()]);
+    /// `type_mismatch` unless `v` may be stored where `target` is declared (REQ-007: equal
+    /// types, `int` into `decimal`, an `enum` into a superset, a member string literal into
+    /// an `enum`). Silent when `v` has no type (already reported).
+    fn assign_check(&mut self, step: Uuid7, slot: &str, target: &Type, v: &Value) {
+        let Some(t) = &v.ty else { return };
+        let member = matches!((target, t, &v.literal), (Type::Enum(set), Type::Str, Some(l)) if set.contains(l));
+        if !member && !assignable(target, t) {
+            let found = match (target, &v.literal) {
+                (Type::Enum(_), Some(l)) => format!("{l:?}"),
+                _ => t.to_string(),
+            };
+            self.step_diag(DiagCode::TypeMismatch, step, slot, v.span, vec![target.to_string(), found]);
         }
     }
 
-    fn want_bool(&mut self, step: Uuid7, slot: &str, src: &str) {
-        if let (Some(t), span) = self.expr(step, slot, src) {
-            if t != Type::Bool {
-                self.step_diag(DiagCode::TypeMismatch, step, slot, span, vec!["bool".into(), t.to_string()]);
+    fn want(&mut self, step: Uuid7, slot: &str, src: &str, want: Type) {
+        let v = self.expr(step, slot, src);
+        if let Some(t) = v.ty {
+            if t != want {
+                self.step_diag(DiagCode::TypeMismatch, step, slot, v.span, vec![want.to_string(), t.to_string()]);
             }
         }
     }
@@ -241,20 +289,19 @@ impl Walker<'_> {
         match &s.kind {
             StepKind::Invoke { command, major, args, bind } => self.invoke(id, command, *major, args, bind.as_deref()),
             StepKind::Assign { var, expr } => {
-                let (t, span) = self.expr(id, "expr", expr);
+                let v = self.expr(id, "expr", expr);
                 match self.lookup(var) {
                     None => self.step_diag(DiagCode::Undeclared, id, "var", None, vec![echo(var)]),
-                    Some(Some(vt)) => {
-                        if let Some(t) = t {
-                            self.assign_check(id, "expr", span, &vt, &t);
-                        }
+                    Some(Var { read_only: true, .. }) => {
+                        self.step_diag(DiagCode::ReadOnly, id, "var", None, vec![echo(var)]);
                     }
-                    Some(None) => {}
+                    Some(Var { ty: Some(vt), .. }) => self.assign_check(id, "expr", &vt, &v),
+                    Some(Var { ty: None, .. }) => {}
                 }
             }
             StepKind::If { branches, else_body } => {
                 for (i, b) in branches.iter().enumerate() {
-                    self.want_bool(id, &format!("branches.{i}.cond"), &b.cond);
+                    self.want(id, &format!("branches.{i}.cond"), &b.cond, Type::Bool);
                     self.block(&b.body, ret, None);
                 }
                 self.block(else_body, ret, None);
@@ -262,28 +309,18 @@ impl Walker<'_> {
             StepKind::Loop { mode, body, .. } => match mode {
                 LoopMode::Counted { var, from, to, step } => {
                     for (slot, src) in [("from", from), ("to", to), ("step", step)] {
-                        if let (Some(t), span) = self.expr(id, slot, src) {
-                            if t != Type::Int {
-                                self.step_diag(
-                                    DiagCode::TypeMismatch,
-                                    id,
-                                    slot,
-                                    span,
-                                    vec!["int".into(), t.to_string()],
-                                );
-                            }
-                        }
+                        self.want(id, slot, src, Type::Int);
                     }
-                    self.block(body, ret, Some(BTreeMap::from([(var.clone(), Some(Type::Int))])));
+                    self.block(body, ret, Some(BTreeMap::from([(var.clone(), Var::new(Some(Type::Int), true))])));
                 }
                 LoopMode::While { cond } => {
-                    self.want_bool(id, "cond", cond);
+                    self.want(id, "cond", cond, Type::Bool);
                     self.block(body, ret, None);
                 }
             },
             StepKind::Call { subroutine, args, bind } => self.call(id, subroutine, args, bind.as_deref()),
             StepKind::Return { expr } => self.ret(id, expr.as_deref(), ret),
-            StepKind::Jump { cond: Some(c), .. } => self.want_bool(id, "cond", c),
+            StepKind::Jump { cond: Some(c), .. } => self.want(id, "cond", c, Type::Bool),
             StepKind::Jump { cond: None, .. }
             | StepKind::Label { .. }
             | StepKind::Operator { .. }
@@ -303,16 +340,12 @@ impl Walker<'_> {
         for (name, arg) in args {
             let Arg::Expr(src) = arg else { continue };
             let slot = format!("args.{name}");
-            let (t, span) = self.expr(id, &slot, src);
+            let v = self.expr(id, &slot, src);
             match params.get(name) {
                 Some(p) if p.value_of_record => {
-                    self.step_diag(DiagCode::ExpressionValueOfRecord, id, &slot, span, vec![echo(name)]);
+                    self.step_diag(DiagCode::ExpressionValueOfRecord, id, &slot, v.span, vec![echo(name)]);
                 }
-                Some(ParamInfo { ty: Some(pt), .. }) => {
-                    if let Some(t) = t {
-                        self.assign_check(id, &slot, span, pt, &t);
-                    }
-                }
+                Some(ParamInfo { ty: Some(pt), .. }) => self.assign_check(id, &slot, pt, &v),
                 _ => {}
             }
         }
@@ -331,11 +364,8 @@ impl Walker<'_> {
         let mut out = BTreeMap::new();
         let Some(CValue::Obj(props)) = obj(schema).and_then(|m| m.get("properties")) else { return out };
         for (name, s) in props {
-            let m = obj(s);
-            let flag = m.and_then(|m| m.get("value_of_record")) == Some(&CValue::Bool(true));
-            let result_ref = m.and_then(|m| m.get("x-ref")) == Some(&CValue::Str("result".into()));
             let ty = schema_type(s, name, &self.kinds, 0);
-            out.insert(name.clone(), ParamInfo { ty, value_of_record: flag || result_ref });
+            out.insert(name.clone(), ParamInfo { ty, value_of_record: value_of_record(s, schema, 0) });
         }
         out
     }
@@ -348,15 +378,11 @@ impl Walker<'_> {
         for (name, arg) in args {
             let Arg::Expr(src) = arg else { continue };
             let slot = format!("args.{name}");
-            let (t, span) = self.expr(id, &slot, src);
+            let v = self.expr(id, &slot, src);
             let Some((params, _)) = &sig else { continue };
             match params.iter().find(|(p, _)| p == name) {
                 None => self.step_diag(DiagCode::Undeclared, id, &slot, None, vec![echo(name)]),
-                Some((_, Some(pt))) => {
-                    if let Some(t) = t {
-                        self.assign_check(id, &slot, span, pt, &t);
-                    }
-                }
+                Some((_, Some(pt))) => self.assign_check(id, &slot, pt, &v),
                 Some((_, None)) => {}
             }
         }
@@ -378,19 +404,72 @@ impl Walker<'_> {
     fn ret(&mut self, id: Uuid7, expr: Option<&str>, ret: &Ret) {
         let got = expr.map(|src| self.expr(id, "expr", src));
         match (ret, got) {
-            (Ret::Main | Ret::Sub(None), Some((Some(t), span))) => {
+            (Ret::Main | Ret::Sub(None), Some(Value { ty: Some(t), span, .. })) => {
                 self.step_diag(DiagCode::TypeMismatch, id, "expr", span, vec!["none".into(), t.to_string()]);
             }
             (Ret::Sub(Some(Some(rt))), None) => {
                 self.step_diag(DiagCode::TypeMismatch, id, "expr", None, vec![rt.to_string(), "none".into()]);
             }
-            (Ret::Sub(Some(Some(rt))), Some((Some(t), span))) => {
+            (Ret::Sub(Some(Some(rt))), Some(v)) => {
                 let rt = rt.clone();
-                self.assign_check(id, "expr", span, &rt, &t);
+                self.assign_check(id, "expr", &rt, &v);
             }
             _ => {}
         }
     }
+}
+
+/// A typed top-level expression: its type (`None` if already reported), span, and its text
+/// when it is a single string literal.
+struct Value {
+    ty: Option<Type>,
+    span: Option<Span>,
+    literal: Option<String>,
+}
+
+/// Whether a parameter schema holds a value of record anywhere inside it: a schema with
+/// `"value_of_record": true` or `"x-ref": "result"`, found through `items`, `prefixItems`,
+/// `allOf`, `anyOf`, `oneOf`, `properties` and local `$ref`s (`#/$defs/<name>` of the
+/// command's `params_schema`). Fails closed: a `$ref` that does not resolve, or nesting
+/// deeper than [`MAX_TYPE_DEPTH`], counts as a value of record.
+pub fn value_of_record(s: &CValue, root: &CValue, depth: usize) -> bool {
+    if depth > MAX_TYPE_DEPTH {
+        return true;
+    }
+    let Some(m) = obj(s) else { return false };
+    if m.get("value_of_record") == Some(&CValue::Bool(true)) || m.get("x-ref") == Some(&CValue::Str("result".into())) {
+        return true;
+    }
+    let next = depth.saturating_add(1);
+    if let Some(r) = m.get("$ref") {
+        let target = match r {
+            CValue::Str(r) => r
+                .strip_prefix("#/$defs/")
+                .and_then(|name| obj(root)?.get("$defs").and_then(obj).and_then(|d| d.get(name))),
+            _ => None,
+        };
+        match target {
+            Some(t) if value_of_record(t, root, next) => return true,
+            Some(_) => {}
+            None => return true,
+        }
+    }
+    if m.get("items").is_some_and(|i| value_of_record(i, root, next)) {
+        return true;
+    }
+    for key in ["prefixItems", "allOf", "anyOf", "oneOf"] {
+        if let Some(CValue::Arr(items)) = m.get(key) {
+            if items.iter().any(|i| value_of_record(i, root, next)) {
+                return true;
+            }
+        }
+    }
+    if let Some(CValue::Obj(props)) = m.get("properties") {
+        if props.values().any(|p| value_of_record(p, root, next)) {
+            return true;
+        }
+    }
+    false
 }
 
 /// Whether `value` may be stored where `target` is declared.

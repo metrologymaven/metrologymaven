@@ -20,7 +20,7 @@
 //! `quantity`+`quantity_kind`→`quantity<kind>`, `ref:<e>`→`element<e>`,
 //! `data_handle`→`element<data_handle>`.
 //!
-//! **Kinds and dimensions.** Kinds come from the registry [`QuantityCatalogue`]; their
+//! **Kinds and dimensions.** Kinds come from the registry [`QuantityCatalogue`](fid_registry::QuantityCatalogue); their
 //! dimensions from the pinned table [`KIND_DIMS`] (the catalogue carries no dimensions).
 //! `*` and `/` of quantities add or subtract the exponents of [`Dim`]; the result is the one
 //! catalogue kind with that dimension, `decimal` when the dimension is empty, or else an
@@ -30,11 +30,27 @@
 //! [`KIND_DIMS`] can be added, compared and scaled by plain numbers but not multiplied by
 //! another quantity (`type_unknown`).
 //!
-//! **Operators.** `int` op `int` is `int` for `* / % + -` (so `/` of two `int`s is `int`; the
-//! evaluator decides how it rounds); `int` with `decimal` is `decimal` (the only implicit
-//! conversion). `+ - %`, comparisons, `min` and `max` need equal kinds (`unit_mismatch`
+//! **`dimensionless` and `decimal`.** The catalogue kind `dimensionless` (ratios with units
+//! such as `%` or `ppm`) has [`Dim::NONE`] and stays a kind: `quantity<dimensionless>` is
+//! not a plain number, so `+`, `-` and comparisons against `int`/`decimal` are
+//! `unit_mismatch`, and it is never assigned to a `decimal`. Its products follow the
+//! dimension (`quantity<dimensionless> * quantity<length>` is a length). A product or
+//! quotient whose dimension comes out empty is always `decimal`, never
+//! `quantity<dimensionless>`, because the catalogue unit it would carry is unknown.
+//!
+//! **Catalogue.** The catalogue must be the one the manifest names: if
+//! `manifest.quantity_catalogue_digest` differs from [`QuantityCatalogue::digest`](fid_registry::QuantityCatalogue::digest), the
+//! report holds one `catalogue_mismatch` declaration diagnostic naming both digests and
+//! types nothing. A unit symbol of two kinds is refused the same way (`catalogue_invalid`).
+//!
+//! **Operators.** `int` op `int` is `int` for `* % + -`; `/` of two `int`s is `decimal`
+//! (maintainer decision on PR #418), so integer division is written `floor(a / b)`. `int`
+//! with `decimal` is `decimal` (the only implicit conversion). `+ - %`, comparisons, `min` and `max` need equal kinds (`unit_mismatch`
 //! naming both kinds, `number` for a plain number). `==`/`!=` also accept two equal
-//! non-numeric types, and an `enum` against an `enum` or a `string`. `and`, `or`, `not`
+//! non-numeric types, two `enum`s that share a member, and an `enum` against a string
+//! literal that is one of its members (`mode == "fast"`); a non-member literal or a
+//! computed `string` is `type_mismatch`. A member string literal may be assigned or passed
+//! where an `enum` is declared. `and`, `or`, `not`
 //! and conditions need `bool`. A quantity divided out to an empty dimension is `decimal`.
 //!
 //! **Scopes.** One global block holds the part-family parameters, then the program
@@ -43,11 +59,21 @@
 //! loop body is a block. An invoke or call `bind` declares a new name, visible from the
 //! next step to the end of the enclosing block; an `assign` only assigns. A name declared
 //! twice in one block is `redeclared`; an inner block may shadow an outer name.
+//! Part-family parameters and counted-loop variables are read-only: `assign` to one is
+//! `read_only`.
+//!
+//! **Jumps.** Scoping is lexical and ignores `jump`: a `jump` forward over the step that
+//! binds a name leaves the name in scope (typed) but unassigned on that path. Whether every
+//! use is preceded by an assignment on every path is a control-flow question for
+//! `AUTO.PROG.FLOW` (definite-assignment check), not checked here.
 //!
 //! **Values of record (C1).** Every expression type carries `not_of_record`. A manifest
-//! parameter is a value of record when its schema has `"value_of_record": true` or, until
-//! `CORE.REG.DEF` names that keyword, `"x-ref": "result"`; an `{"expr": ...}` argument for
-//! it is `expression_value_of_record` whatever its type.
+//! parameter is a value of record when its schema, or any schema inside it through
+//! `items`, `prefixItems`, `allOf`, `anyOf`, `oneOf`, `properties` or a local `$ref`, has
+//! `"value_of_record": true` or, until `CORE.REG.DEF` names that keyword,
+//! `"x-ref": "result"`; an unresolvable `$ref` counts as one (fail closed). An
+//! `{"expr": ...}` argument for it is `expression_value_of_record` whatever its type.
+//! `{"literal": ...}` arguments are not checked here.
 //!
 //! **Order.** Declaration diagnostics first (parameters, variables, subroutine
 //! signatures), then steps in document order (`main`, then each subroutine, depth first);
@@ -59,7 +85,7 @@
 mod check;
 mod infer;
 
-pub use check::{assignable, check_types, MAX_TYPE_DEPTH};
+pub use check::{assignable, check_types, value_of_record, MAX_TYPE_DEPTH};
 pub use infer::{type_of, LIBRARY};
 
 use crate::fmt::Uuid7;
@@ -87,12 +113,13 @@ const fn dim(exp: [i8; 7], angle: i8) -> Dim {
 
 /// Dimensions of the catalogue kinds the checker knows, sorted by name. A catalogue kind
 /// outside this table has no dimension.
-pub const KIND_DIMS: [(&str, Dim); 18] = [
+pub const KIND_DIMS: [(&str, Dim); 19] = [
     ("acceleration", dim([1, 0, -2, 0, 0, 0, 0], 0)),
     ("amount_of_substance", dim([0, 0, 0, 0, 0, 1, 0], 0)),
     ("angle", dim([0; 7], 1)),
     ("angular_velocity", dim([0, 0, -1, 0, 0, 0, 0], 1)),
     ("area", dim([2, 0, 0, 0, 0, 0, 0], 0)),
+    ("dimensionless", Dim::NONE),
     ("electric_current", dim([0, 0, 0, 1, 0, 0, 0], 0)),
     ("energy", dim([2, 1, -2, 0, 0, 0, 0], 0)),
     ("force", dim([1, 1, -2, 0, 0, 0, 0], 0)),
@@ -107,6 +134,11 @@ pub const KIND_DIMS: [(&str, Dim); 18] = [
     ("velocity", dim([1, 0, -1, 0, 0, 0, 0], 0)),
     ("volume", dim([3, 0, 0, 0, 0, 0, 0], 0)),
 ];
+
+/// Catalogue kinds known to have no dimension in [`KIND_DIMS`] on purpose. A test checks
+/// that every kind of every catalogue in the workspace is in one of the two lists, so a new
+/// kind is a decision, not a silent `type_unknown`. Empty today.
+pub const NO_DIMENSION_KINDS: [&str; 0] = [];
 
 /// The pinned dimension of a kind name, if any.
 pub fn kind_dim(name: &str) -> Option<Dim> {
@@ -258,6 +290,12 @@ pub enum DiagCode {
     Redeclared,
     TypeMismatch,
     ExpressionValueOfRecord,
+    /// The manifest's `quantity_catalogue_digest` is not the catalogue's digest.
+    CatalogueMismatch,
+    /// The catalogue gives one unit symbol to two kinds.
+    CatalogueInvalid,
+    /// `assign` to a part-family parameter or a counted-loop variable.
+    ReadOnly,
 }
 
 impl DiagCode {
@@ -271,6 +309,9 @@ impl DiagCode {
             DiagCode::Redeclared => "redeclared",
             DiagCode::TypeMismatch => "type_mismatch",
             DiagCode::ExpressionValueOfRecord => "expression_value_of_record",
+            DiagCode::CatalogueMismatch => "catalogue_mismatch",
+            DiagCode::CatalogueInvalid => "catalogue_invalid",
+            DiagCode::ReadOnly => "read_only",
         }
     }
 }

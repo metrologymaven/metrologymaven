@@ -4,10 +4,10 @@
 //! here derives an expected value from this crate.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_canon::{parse, to_canonical_bytes, CValue};
-use fid_program::expr::types::{assignable, KIND_DIMS, LIBRARY};
+use fid_canon::{digest_bytes, parse, to_canonical_bytes, CValue};
+use fid_program::expr::types::{assignable, kind_dim, value_of_record, KIND_DIMS, LIBRARY, NO_DIMENSION_KINDS};
 use fid_program::{check_types, parse_expr, type_of, DiagCode, Dim, Kind, Program, Type, TypeReport};
-use fid_registry::{Catalogue, Manifest, QuantityCatalogue};
+use fid_registry::{Catalogue, Factor, KindInfo, Manifest, QuantityCatalogue};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -135,6 +135,166 @@ fn other_diagnostics() {
     assert_case("type-mismatch");
 }
 
+/// Enum equality and assignment take members only; read-only names, loop bounds, a record
+/// of a major the manifest lacks, a kind the catalogue lacks, and a subroutine that reads
+/// `main`'s bindings (review of PR #418).
+#[test]
+fn enums_and_scoping() {
+    assert_case("enums");
+    assert_case("scoping");
+    let r = run("scoping");
+    let codes: Vec<_> = r.diagnostics.iter().map(|d| (d.code.as_str(), d.slot.as_str())).collect();
+    assert_eq!(
+        codes,
+        [
+            ("type_unknown", "variables.r"),
+            ("type_unknown", "variables.k"),
+            ("type_mismatch", "from"),
+            ("type_mismatch", "to"),
+            ("read_only", "var"),
+            ("read_only", "var"),
+            ("undeclared", "expr"),
+        ]
+    );
+}
+
+/// A catalogue other than the manifest's: one declaration diagnostic naming both digests,
+/// nothing typed.
+#[test]
+fn catalogue_digest_mismatch() {
+    let geo_bytes = std::fs::read(root().join("fixtures/core/reg/def/schema/catalogue/geo_frame_units.json")).unwrap();
+    let geo = Catalogue::from_json(&geo_bytes).unwrap();
+    let r = check_types(&program("valid/bore"), &manifest(), &geo);
+    assert!(r.types.is_empty());
+    assert_eq!(r.diagnostics.len(), 1);
+    let d = &r.diagnostics[0];
+    assert_eq!(d.code, DiagCode::CatalogueMismatch);
+    assert_eq!(d.step, None);
+    let canonical = to_canonical_bytes(&parse(&geo_bytes).unwrap()).unwrap();
+    assert_eq!(d.names, [manifest().quantity_catalogue_digest.to_string(), digest_bytes(&canonical).to_string()]);
+}
+
+/// A catalogue that gives one symbol to two kinds is refused, never resolved last-wins.
+struct DupCatalogue {
+    kinds: Vec<KindInfo>,
+    digest: fid_types::Digest,
+}
+
+impl QuantityCatalogue for DupCatalogue {
+    fn kind_names(&self) -> Vec<&str> {
+        self.kinds.iter().map(|k| k.name.as_str()).collect()
+    }
+    fn kind(&self, name: &str) -> Option<&KindInfo> {
+        self.kinds.iter().find(|k| k.name == name)
+    }
+    fn factor(&self, unit: &str) -> Option<Factor> {
+        self.kinds.iter().flat_map(|k| &k.units).find(|u| u.symbol == unit).map(|u| u.factor)
+    }
+    fn digest(&self) -> fid_types::Digest {
+        self.digest.clone()
+    }
+}
+
+#[test]
+fn duplicate_unit_symbol_refused() {
+    let base = catalogue();
+    let mut kinds: Vec<KindInfo> = base.kind_names().iter().map(|n| base.kind(n).unwrap().clone()).collect();
+    let mm =
+        kinds.iter().find(|k| k.name == "length").unwrap().units.iter().find(|u| u.symbol == "mm").unwrap().clone();
+    kinds.iter_mut().find(|k| k.name == "time").unwrap().units.push(mm);
+    let dup = DupCatalogue { kinds, digest: manifest().quantity_catalogue_digest };
+    let r = check_types(&program("valid/bore"), &manifest(), &dup);
+    assert!(r.types.is_empty());
+    assert_eq!(r.diagnostics.len(), 1);
+    assert_eq!(r.diagnostics[0].code, DiagCode::CatalogueInvalid);
+    assert_eq!(r.diagnostics[0].names, ["mm"]);
+    let (t, d) = type_of(&parse_expr("1[s]").unwrap(), &BTreeMap::new(), &dup);
+    assert_eq!(t, None);
+    assert_eq!(d[0].code, DiagCode::CatalogueInvalid);
+}
+
+fn json(s: &str) -> CValue {
+    parse(s.as_bytes()).unwrap()
+}
+
+/// `value_of_record` is found through `items`, `allOf` and local `$ref`s, and fails closed.
+#[test]
+fn value_of_record_nested() {
+    let root = json(r##"{"$defs":{"nom":{"type":"number","value_of_record":true},"plain":{"type":"number"}}}"##);
+    let vor = |s: &str| value_of_record(&json(s), &root, 0);
+    assert!(vor(r#"{"type":"number","value_of_record":true}"#));
+    assert!(vor(r#"{"type":"string","x-ref":"result"}"#));
+    assert!(vor(r#"{"items":{"type":"number","value_of_record":true},"type":"array"}"#));
+    assert!(vor(r#"{"allOf":[{"type":"number"},{"value_of_record":true}]}"#));
+    assert!(vor(r##"{"$ref":"#/$defs/nom"}"##));
+    assert!(vor(r##"{"items":{"$ref":"#/$defs/nom"},"type":"array"}"##));
+    assert!(vor(r##"{"$ref":"#/$defs/missing"}"##));
+    assert!(vor(r#"{"$ref":"https://example.org/x.json"}"#));
+    assert!(vor(r#"{"properties":{"a":{"value_of_record":true}},"type":"object"}"#));
+    assert!(!vor(r##"{"$ref":"#/$defs/plain"}"##));
+    assert!(!vor(r#"{"items":{"type":"number"},"type":"array"}"#));
+    assert!(!vor(r#"{"type":"number","value_of_record":false}"#));
+}
+
+/// Every kind of every catalogue in the workspace has a pinned dimension or is listed as
+/// having none on purpose.
+#[test]
+fn workspace_kinds_have_dimensions() {
+    fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
+        for e in std::fs::read_dir(dir).unwrap() {
+            let p = e.unwrap().path();
+            if p.is_dir() {
+                walk(&p, out);
+            } else if p.extension().is_some_and(|x| x == "json") && p.metadata().is_ok_and(|m| m.len() <= 1024 * 1024) {
+                out.push(p);
+            }
+        }
+    }
+    let mut files = Vec::new();
+    walk(&root().join("fixtures"), &mut files);
+    let mut kinds: Vec<String> = Catalogue::geo_frame().unwrap().kind_names().iter().map(|s| s.to_string()).collect();
+    let mut docs = 0;
+    for f in files {
+        let bytes = std::fs::read(&f).unwrap();
+        let needle: &[u8] = b"\"fid-quantity-catalogue/1\"";
+        if !bytes.windows(needle.len()).any(|w| w == needle) {
+            continue;
+        }
+        if let Ok(c) = Catalogue::from_json(&bytes) {
+            docs += 1;
+            kinds.extend(c.kind_names().iter().map(|s| s.to_string()));
+        }
+    }
+    assert!(docs >= 4, "found {docs} catalogue documents");
+    for k in kinds {
+        assert!(kind_dim(&k).is_some() || NO_DIMENSION_KINDS.contains(&k.as_str()), "kind {k} has no dimension");
+    }
+    assert_eq!(kind_dim("dimensionless"), Some(Dim::NONE));
+}
+
+/// `dimensionless` is a kind, not a plain number; an empty product is `decimal`.
+#[test]
+fn dimensionless_kind() {
+    let mut v = Catalogue::geo_frame().unwrap().to_value();
+    let CValue::Obj(m) = &mut v else { panic!() };
+    let Some(CValue::Arr(ks)) = m.get_mut("kinds") else { panic!() };
+    ks.insert(
+        1,
+        json(r#"{"canonical":"1","kind":"dimensionless","units":[{"den":"1","num":"1","pi":false,"symbol":"1"},{"den":"1000000","num":"1","pi":false,"symbol":"ppm"}]}"#),
+    );
+    let cat = Catalogue::from_json(&to_canonical_bytes(&v).unwrap()).unwrap();
+    let vars = vars(&[("r", Type::Quantity(Kind::Named("dimensionless".into()))), ("l", len())]);
+    let ty = |src: &str| {
+        let (t, d) = type_of(&parse_expr(src).unwrap(), &vars, &cat);
+        (t.map(|t| t.to_string()), d.iter().map(|d| d.code.as_str()).collect::<Vec<_>>())
+    };
+    assert_eq!(ty("r * l"), (Some("quantity<length>".into()), vec![]));
+    assert_eq!(ty("l / l"), (Some("decimal".into()), vec![]));
+    assert_eq!(ty("r + 1"), (None, vec!["unit_mismatch"]));
+    assert_eq!(ty("r + 3[ppm]"), (Some("quantity<dimensionless>".into()), vec![]));
+    assert!(!assignable(&Type::Decimal, &Type::Quantity(Kind::Named("dimensionless".into()))));
+}
+
 /// AC-6: the same program and manifest give byte-identical reports; the committed expected
 /// bytes pin them across platforms (CI runs this on Linux, Windows and macOS).
 #[test]
@@ -144,7 +304,7 @@ fn ac6_deterministic() {
         let b = to_canonical_bytes(&run(name).to_value()).unwrap();
         assert_eq!(a, b, "{name}");
     }
-    assert_eq!(cases().len(), 9);
+    assert_eq!(cases().len(), 11);
 }
 
 fn vars(pairs: &[(&str, Type)]) -> BTreeMap<String, Type> {
@@ -200,7 +360,9 @@ fn expressions() {
     };
     ok("n + 1", "int");
     ok("n + 1.5", "decimal");
-    ok("n / 2", "int");
+    ok("n / 2", "decimal");
+    ok("floor(n / 2)", "int");
+    ok("n % 2", "int");
     ok("l * 2", "quantity<length>");
     ok("2 * l", "quantity<length>");
     ok("l / t", "quantity<dim:m*s^-1>");

@@ -82,6 +82,12 @@ Gives every expression a static type and every variable a declared type and scop
 
 - REQ-006 needs the manifest to flag parameters that hold values of record (`value_of_record: true`); `CORE.REG.DEF` does not name this keyword yet. Until it does, the checker treats every parameter typed as a ResultRecord value as `value_of_record`.
 
+- **Blocking for AUTO.PROG.INTERP.CALL (owner `CORE.REG.DEF`):** CORE.REG.DEF must accept the `value_of_record` keyword in parameter (and result) schemas before INTERP.CALL is built. The registry schema vocabulary refuses it today, so a real manifest cannot carry it. Until then the checker also treats `"x-ref": "result"` as a value of record (built in PR #418).
+- **`not_of_record` vs INTERP.CALL:** this leaf tags every expression value `not_of_record`, including a plain field read such as `{"expr": "r.diameter"}`. REQ-AUTO.PROG.INTERP.CALL-007 binds result fields marked value of record as `of_record`. So passing a bound value-of-record field through an expression is refused here but would carry `of_record` at run time. One of the two must change. Either a bare variable or field reference keeps its tag (and TYPES tracks it), or the only route is a `{"literal": ...}` or dedicated reference argument. Owners: AUTO.PROG.EXPR and AUTO.PROG.INTERP.CALL.
+- **Literal arguments to value-of-record parameters:** `{"literal": ...}` arguments are not checked here. A literal is recorded program text, not a measured value. Whether a hand-written literal may fill a `value_of_record` parameter (for example a nominal) needs a rule in AUTO.PROG.CHECK or CORE.REG.DEF.
+- **Integer division (maintainer decision on PR #418):** `int / int` is typed `decimal`; integer division is written `floor(a / b)`. AUTO.PROG.EXPR.EVAL must evaluate `/` of two `int`s as an exact decimal quotient (with `decimal_overflow` when it does not terminate within its digits) and agree with this typing.
+- **Jumps over a binding (AUTO.PROG.FLOW):** scoping here is lexical. A forward `jump` over the invoke or call step that binds a name leaves the name in scope but unassigned on that path. AUTO.PROG.FLOW should add a definite-assignment check over its CFG, so that every use is preceded by a binding or assignment on every path.
+
 ## Children
 
 _Leaf: none._
