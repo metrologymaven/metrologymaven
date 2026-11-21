@@ -776,8 +776,8 @@ impl TemplateBackend for Tampered {
     fn template_events(&self) -> Result<Vec<TemplateEvent>, ReportError> {
         self.0.template_events()
     }
-    fn commit_save(&mut self, object: Vec<u8>, event: TemplateEvent) -> Result<(), ReportError> {
-        self.0.commit_save(object, event)
+    fn commit_save(&mut self, object: Vec<u8>, expected: Expected, event: TemplateEvent) -> Result<(), VerError> {
+        self.0.commit_save(object, expected, event)
     }
     fn commit_apply(
         &mut self,
