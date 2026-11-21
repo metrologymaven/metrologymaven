@@ -237,7 +237,7 @@ fn pilot_never_confidently_wrong() {
 fn degenerate_active_set_is_refused() {
     let mut n = 0;
     for (c, r) in outcomes().iter().filter(|(c, _)| flag(c) == Some("degenerate_active_set")) {
-        let e = r.as_ref().map(|m| cyl(m)).unwrap_err();
+        let e = r.as_ref().map(cyl).unwrap_err();
         assert!(matches!(e, FitError::SeqFailed { .. }), "{}: {e:?}", c.name);
         let v = c.get("points").unwrap();
         let t = MccCylinderFit.fit(&PointsView::new(&v, None).unwrap(), &params(c), Some(SEED));
