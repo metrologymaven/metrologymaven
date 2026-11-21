@@ -1,0 +1,11 @@
+{
+  "artefact": "tokens/space.tokens.json",
+  "author": "Claude Code (Claude Opus 5.5), agent author of UX.TOKENS.SPACE; values chosen for this project on a 4 px grid",
+  "date": "2026-11-21",
+  "references": [
+    "The UX.TOKENS and UX.TOKENS.SPACE spec nodes in this repository",
+    "WCAG 2.2 success criterion 2.5.8 (target size minimum, threshold only)",
+    "The Design Tokens Community Group format draft pinned by UX.SYSTEM.PKG (token syntax only)"
+  ],
+  "statement_version": "originality-statement@1"
+}

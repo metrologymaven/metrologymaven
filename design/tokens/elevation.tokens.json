@@ -1,0 +1,68 @@
+{
+  "elev": {
+    "$type": "shadow",
+    "$description": "Elevation levels (UX.TOKENS.SPACE), at most five. Every level is also shown by its surface and border cue ($extensions org.metrologymaven.elevation, names of sem.surface.* and sem.border.* tokens), so the high-contrast theme can show elevation without shadows. No two levels share a cue.",
+    "0": {
+      "$description": "Flat: the page itself.",
+      "$extensions": {
+        "org.metrologymaven.elevation": {
+          "surface": "sem.surface.base"
+        }
+      },
+      "$value": {
+        "blur": "0px",
+        "color": "#00000000",
+        "offsetX": "0px",
+        "offsetY": "0px",
+        "spread": "0px"
+      }
+    },
+    "1": {
+      "$description": "Raised: cards and panels.",
+      "$extensions": {
+        "org.metrologymaven.elevation": {
+          "surface": "sem.surface.raised"
+        }
+      },
+      "$value": {
+        "blur": "2px",
+        "color": "#0000001f",
+        "offsetX": "0px",
+        "offsetY": "1px",
+        "spread": "0px"
+      }
+    },
+    "2": {
+      "$description": "Floating: menus and popovers.",
+      "$extensions": {
+        "org.metrologymaven.elevation": {
+          "border": "sem.border.subtle",
+          "surface": "sem.surface.raised"
+        }
+      },
+      "$value": {
+        "blur": "8px",
+        "color": "#00000029",
+        "offsetX": "0px",
+        "offsetY": "4px",
+        "spread": "0px"
+      }
+    },
+    "3": {
+      "$description": "Modal: dialogs above a scrim.",
+      "$extensions": {
+        "org.metrologymaven.elevation": {
+          "border": "sem.border.strong",
+          "surface": "sem.surface.raised"
+        }
+      },
+      "$value": {
+        "blur": "24px",
+        "color": "#00000033",
+        "offsetX": "0px",
+        "offsetY": "8px",
+        "spread": "0px"
+      }
+    }
+  }
+}

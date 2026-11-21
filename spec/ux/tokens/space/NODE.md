@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-design]
 satisfies: [REQ-UX.TOKENS-001, REQ-UX.TOKENS-012, REQ-UX.TOKENS-013]
 covers: []
 depends_on: [UX.SYSTEM.PKG]
@@ -66,7 +67,9 @@ The non-colour layout values: a 4 px spacing grid, compact and comfortable densi
 
 ## Open questions
 
-- None.
+- **Built in `fid-design` (module `space`).** AC-1 to AC-4 are tested with `fixtures/ux/tokens/space/` (26 fixtures, hand-labelled and confirmed by the independent oracle `make_fixtures.py`). The shipped tokens are `design/tokens/{space,size,elevation,motion}.tokens.json` and the density modes `design/tokens/density/{comfortable,compact}.json` (`fid-design-density@1`). CI runs `space-check --root design` from `ci/fixture-checks.txt`, next to `color-check`.
+- **Pinned choices.** The minimum target is per theme and density mode (`target_min` in each density file); `size.target.min` is the light/comfortable value and bounds width and height alike. The spec's `reduced_duration` is spelled `reduced-duration`, because token names allow no underscore (UX.SYSTEM.PKG); each motion token is a group of `duration`, `easing` (`cubicBezier`) and `reduced-duration`. An elevation level names its non-shadow cue in `$extensions."org.metrologymaven.elevation"` (`surface` and/or `border`, names of `sem.surface.*` / `sem.border.*` colour tokens, not aliases, so the colour tier's rules are untouched), and no two levels may share a cue. Shape errors use one extra code, `SPACE-SCHEMA`.
+- Not checked here: that the cues of different levels also resolve to different colours in the `hc` theme (the cue names differ; their colours are `UX.TOKENS.COLOR`'s).
 
 ## Children
 

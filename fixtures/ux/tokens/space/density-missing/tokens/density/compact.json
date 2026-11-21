@@ -1,0 +1,15 @@
+{
+  "bindings": {
+    "sem.space.gap.sm": "{prim.space.1}",
+    "sem.space.inset.md": "{prim.space.2}",
+    "sem.space.inset.sm": "{prim.space.1}"
+  },
+  "density": "compact",
+  "format": "fid-design-density@1",
+  "target_min": {
+    "dark": "24px",
+    "floor": "44px",
+    "hc": "24px",
+    "light": "24px"
+  }
+}
