@@ -1,0 +1,45 @@
+{
+ "changes": [
+  {
+   "id": "demo.export",
+   "major": 1,
+   "kind": "added",
+   "compat": "additive",
+   "fields": []
+  },
+  {
+   "id": "demo.legacy",
+   "major": 1,
+   "kind": "removed",
+   "compat": "breaking",
+   "fields": []
+  },
+  {
+   "id": "demo.measure",
+   "major": 1,
+   "kind": "changed",
+   "compat": "additive",
+   "fields": [
+    "/params_schema/properties/retries"
+   ]
+  },
+  {
+   "id": "demo.probe",
+   "major": 1,
+   "kind": "lifecycle",
+   "compat": "additive",
+   "fields": [
+    "/lifecycle"
+   ]
+  },
+  {
+   "id": "demo.scan",
+   "major": 1,
+   "kind": "changed",
+   "compat": "breaking",
+   "fields": [
+    "/params_schema/properties/speed/type"
+   ]
+  }
+ ]
+}

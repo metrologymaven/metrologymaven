@@ -10,6 +10,7 @@ pub mod guide;
 pub mod lifecycle;
 pub mod manifest;
 pub mod pred;
+pub mod query;
 pub mod schema;
 pub mod validate;
 

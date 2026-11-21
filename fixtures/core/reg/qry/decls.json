@@ -1,0 +1,714 @@
+{
+ "decls": [
+  {
+   "id": "align.run_bestfit",
+   "major": 1,
+   "title": "Fixture align.run_bestfit@1",
+   "description": "Fixture declaration for side-effect class W2.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D3",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "mcp",
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available",
+   "human_only": true
+  },
+  {
+   "id": "align.run_bestfit",
+   "major": 2,
+   "title": "Query fixture align.run_bestfit@2",
+   "description": "Fixture declaration for side-effect class W2.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "W2",
+   "mcp_projection": "exposed",
+   "determinism": "D3",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "mcp",
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "hidden",
+    "since": "2026-06-01"
+   },
+   "web": "available",
+   "human_only": false
+  },
+  {
+   "id": "align.set_datum",
+   "major": 1,
+   "title": "Query fixture align.set_datum@1",
+   "description": "Fixture declaration for side-effect class W1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "W1",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available",
+   "human_only": false,
+   "network": "none",
+   "cli_bare": false
+  },
+  {
+   "id": "gdt.evaluate_flatness",
+   "major": 1,
+   "title": "Query fixture gdt.evaluate_flatness@1",
+   "description": "Fixture declaration for side-effect class R0.",
+   "params_schema": {
+    "type": "object",
+    "$defs": {
+     "len": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "properties": {
+     "nominal": {
+      "$ref": "#/$defs/len"
+     },
+     "offsets": {
+      "type": "array",
+      "items": {
+       "type": "number",
+       "x-quantity": "length",
+       "x-unit": "mm"
+      },
+      "minItems": 1,
+      "maxItems": 8
+     },
+     "pair": {
+      "type": "array",
+      "prefixItems": [
+       {
+        "type": "number",
+        "x-quantity": "length",
+        "x-unit": "mm"
+       },
+       {
+        "type": "number",
+        "x-quantity": "angle",
+        "x-unit": "deg"
+       }
+      ]
+     },
+     "limit": {
+      "anyOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": [
+         "number",
+         "null"
+        ],
+        "x-quantity": "length",
+        "minimum": 0,
+        "maximum": 1
+       }
+      ]
+     },
+     "count": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+     }
+    },
+    "patternProperties": {
+     "^[a-z]+$": {
+      "type": "string"
+     },
+     "^[A-Z]+$": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "nominal"
+    ]
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "deprecated",
+    "since": "2026-09-01",
+    "replaced_by": "gdt.evaluate_flatness@2"
+   },
+   "web": "available"
+  },
+  {
+   "id": "gdt.evaluate_flatness",
+   "major": 2,
+   "title": "Query fixture gdt.evaluate_flatness@2",
+   "description": "Fixture declaration for side-effect class R0.",
+   "params_schema": {
+    "type": "object",
+    "$defs": {
+     "len": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "properties": {
+     "nominal": {
+      "$ref": "#/$defs/len"
+     },
+     "offsets": {
+      "type": "array",
+      "items": {
+       "type": "number",
+       "x-quantity": "length",
+       "x-unit": "mm"
+      },
+      "minItems": 1,
+      "maxItems": 8
+     },
+     "pair": {
+      "type": "array",
+      "prefixItems": [
+       {
+        "type": "number",
+        "x-quantity": "length",
+        "x-unit": "mm"
+       },
+       {
+        "type": "number",
+        "x-quantity": "angle",
+        "x-unit": "deg"
+       }
+      ]
+     },
+     "limit": {
+      "anyOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": [
+         "number",
+         "null"
+        ],
+        "x-quantity": "length",
+        "minimum": 0,
+        "maximum": 1
+       }
+      ]
+     },
+     "count": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+     }
+    },
+    "patternProperties": {
+     "^[a-z]+$": {
+      "type": "string"
+     },
+     "^[A-Z]+$": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "nominal"
+    ]
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "R0",
+   "mcp_projection": "exposed",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "python",
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "record.release_fai",
+   "major": 1,
+   "title": "Fixture record.release_fai@1",
+   "description": "Fixture declaration for side-effect class W3.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "W3",
+   "mcp_projection": "request_only",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "sign.set_profile",
+   "major": 1,
+   "title": "Query fixture sign.set_profile@1",
+   "description": "Fixture declaration for side-effect class A0.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "A0",
+   "mcp_projection": "never",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "unavailable",
+   "web_note": "Desktop only.",
+   "human_only": true
+  },
+  {
+   "id": "cmm.move_to",
+   "major": 1,
+   "title": "Fixture cmm.move_to@1",
+   "description": "Fixture declaration for side-effect class M1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "M1",
+   "mcp_projection": "never",
+   "determinism": "D0",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "project.list_features",
+   "major": 1,
+   "title": "Query fixture project.list_features@1",
+   "description": "Fixture declaration for side-effect class R1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "R1",
+   "mcp_projection": "exposed",
+   "determinism": "D1",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "removed",
+    "since": "2026-10-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "sim.read_probe",
+   "major": 1,
+   "title": "Fixture sim.read_probe@1",
+   "description": "Fixture declaration for side-effect class I1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "I1",
+   "mcp_projection": "exposed",
+   "determinism": "N",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "gui",
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available",
+   "human_only": false
+  },
+  {
+   "id": "sim.read_prob",
+   "major": 1,
+   "title": "Query fixture sim.read_prob@1",
+   "description": "Fixture declaration for side-effect class I1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "I1",
+   "mcp_projection": "exposed",
+   "determinism": "N",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "sim.read_probes",
+   "major": 1,
+   "title": "Query fixture sim.read_probes@1",
+   "description": "Fixture declaration for side-effect class I1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "I1",
+   "mcp_projection": "exposed",
+   "determinism": "N",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "active",
+    "since": "2026-01-01"
+   },
+   "web": "available"
+  }
+ ]
+}
