@@ -49,6 +49,7 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::io;
 use std::path::Path;
+use std::sync::atomic::{AtomicU8, Ordering};
 #[cfg(any(test, feature = "test-probe"))]
 use std::sync::Arc;
 use std::sync::{Mutex, MutexGuard};
@@ -155,6 +156,9 @@ pub enum TxnError {
     CorruptBlob(Digest),
     /// The store was opened read-only.
     ReadOnly,
+    /// [`Store::claim_append`]: the store's journal append path is claimed by another holder
+    /// in this process, or was poisoned by a commit whose outcome is unknown.
+    Claimed(String),
     /// A row operation names an unknown table or a malformed column, upserts an append-only
     /// table, writes `schema_meta`, or repeats a column.
     InvalidRow(String),
@@ -181,6 +185,7 @@ impl TxnError {
             TxnError::DanglingBlob(_) => "dangling_blob",
             TxnError::CorruptBlob(_) => "corrupt_blob",
             TxnError::ReadOnly => "read_only",
+            TxnError::Claimed(_) => "claimed",
             TxnError::InvalidRow(_) => "invalid_row",
             TxnError::AppendOnly => schema::APPEND_ONLY,
             TxnError::Busy => "busy",
@@ -199,6 +204,7 @@ impl fmt::Display for TxnError {
             TxnError::DanglingBlob(d) => write!(f, "dangling_blob: {d} is neither in the transaction nor stored"),
             TxnError::CorruptBlob(d) => write!(f, "corrupt_blob: content stored under {d} does not match it"),
             TxnError::ReadOnly => write!(f, "read_only: the store was opened read-only"),
+            TxnError::Claimed(why) => write!(f, "claimed: {why}"),
             TxnError::InvalidRow(why) => write!(f, "invalid_row: {why}"),
             TxnError::AppendOnly => write!(f, "append_only: rows of this table cannot be changed or removed"),
             TxnError::Busy => write!(f, "busy: the database stayed locked by another connection"),
@@ -295,9 +301,16 @@ pub struct Store {
     /// Opened read-only from an import root with SQLite `immutable=1` (`open_at`): the
     /// project's `lock` must stay free of writers while it is read.
     immutable: bool,
+    /// State of the journal append claim ([`Store::claim_append`]): [`CLAIM_FREE`],
+    /// [`CLAIM_HELD`] or [`CLAIM_POISONED`].
+    append_claim: AtomicU8,
     #[cfg(any(test, feature = "test-probe"))]
     probe: Option<Arc<dyn CommitProbe>>,
 }
+
+const CLAIM_FREE: u8 = 0;
+const CLAIM_HELD: u8 = 1;
+const CLAIM_POISONED: u8 = 2;
 
 impl fmt::Debug for Store {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -364,6 +377,7 @@ impl Store {
                 blobs,
                 mode: OpenMode::Read,
                 immutable: true,
+                append_claim: AtomicU8::new(CLAIM_FREE),
                 db: Mutex::new(db),
                 #[cfg(any(test, feature = "test-probe"))]
                 probe: None,
@@ -391,6 +405,7 @@ impl Store {
             blobs,
             mode,
             immutable: false,
+            append_claim: AtomicU8::new(CLAIM_FREE),
             db: Mutex::new(db),
             #[cfg(any(test, feature = "test-probe"))]
             probe: None,
@@ -415,6 +430,32 @@ impl Store {
     /// The project's blob store (reads; writes belong in a transaction).
     pub fn blobs(&self) -> &BlobStore {
         &self.blobs
+    }
+
+    /// Claims this store's journal append path for the caller (`CORE.JRN.CHAIN.APPEND`,
+    /// appending on a borrowed store): the proof a `&Store` lender gives that the borrower may
+    /// append. Refuses a store not opened for writing, or opened `immutable`, with
+    /// `read_only`; a store whose write lock is gone or no longer the file at `lock` with
+    /// `lock_lost`; and, with `claimed`, a store whose append path another [`AppendClaim`] of
+    /// this process holds, or that a claim poisoned ([`AppendClaim::poison`]) and only a
+    /// reopen clears. Dropping the claim releases it.
+    pub fn claim_append(&self) -> Result<AppendClaim<'_>, TxnError> {
+        if self.mode != OpenMode::Write || self.immutable {
+            return Err(TxnError::ReadOnly);
+        }
+        let claim = match self.append_claim.compare_exchange(CLAIM_FREE, CLAIM_HELD, Ordering::SeqCst, Ordering::SeqCst)
+        {
+            Ok(_) => AppendClaim { store: self },
+            Err(CLAIM_POISONED) => {
+                return Err(TxnError::Claimed(
+                    "an earlier append on this store failed with an unknown outcome; reopen the project".into(),
+                ))
+            }
+            Err(_) => return Err(TxnError::Claimed("the store's append path is already claimed".into())),
+        };
+        // Checked with the claim held, so a failure releases it on drop.
+        claim.verify_lock()?;
+        Ok(claim)
     }
 
     /// Starts collecting a transaction. Nothing is written before [`Txn::commit`].
@@ -469,6 +510,49 @@ impl Store {
     #[allow(clippy::unused_self, clippy::unnecessary_wraps)]
     fn report(&self, _event: &CommitEvent) -> Result<(), TxnError> {
         Ok(())
+    }
+}
+
+/// An exclusive in-process claim on a writable store's journal append path, from
+/// [`Store::claim_append`]. It borrows the store, so the store (its connection, write lock and
+/// blob store) outlives it; dropping it releases the claim unless it was poisoned.
+pub struct AppendClaim<'s> {
+    store: &'s Store,
+}
+
+impl fmt::Debug for AppendClaim<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AppendClaim").field("root", &self.store.location.root()).finish()
+    }
+}
+
+impl<'s> AppendClaim<'s> {
+    /// The claimed store.
+    pub fn store(&self) -> &'s Store {
+        self.store
+    }
+
+    /// Checks that the store still holds its project write lock and that the lock file is
+    /// still the file at `lock` (`lock_lost` otherwise). [`Txn::commit`] checks it again under
+    /// the commit mutex.
+    pub fn verify_lock(&self) -> Result<(), TxnError> {
+        match &self.store.lock {
+            Some(lock) => Ok(lock.verify()?),
+            None => Err(StoreError::LockLost.into()),
+        }
+    }
+
+    /// Marks the append path poisoned: a commit's outcome is unknown, so no later claim on
+    /// this store is granted until the project is reopened (a new [`Store`]).
+    pub fn poison(&self) {
+        self.store.append_claim.store(CLAIM_POISONED, Ordering::SeqCst);
+    }
+}
+
+impl Drop for AppendClaim<'_> {
+    fn drop(&mut self) {
+        // Leaves a poisoned claim poisoned.
+        let _ = self.store.append_claim.compare_exchange(CLAIM_HELD, CLAIM_FREE, Ordering::SeqCst, Ordering::SeqCst);
     }
 }
 

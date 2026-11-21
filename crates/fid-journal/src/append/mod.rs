@@ -78,6 +78,11 @@
 //!   most one request), [`MAX_BLOBS`] referenced blobs per entry, [`MAX_HEADER_BYTES`] of
 //!   header and [`CHUNK_SIZE`] of payload (`input_limit` beyond). No panics: lock poisoning
 //!   is recovered, every arithmetic step is checked.
+//! - **Borrowed store (REQ-008).** [`Journal::on_store`] appends on a [`Store`] the caller
+//!   lends (for example the copy [`Store::copy_to`] hands its `finish`), through the same
+//!   engine ([`Core`]) as [`Journal`]: same checks, rows, commit and poison rules, after
+//!   proving the store is writable and holds its write lock ([`Store::claim_append`]). See
+//!   module `borrowed`.
 
 use crate::entry::{
     build, parse_digest, verify_header_value, EntryDraft, EntryError, OsSalts, RecordedSalts, FIRST_SEQ, GENESIS_PREV,
@@ -92,6 +97,9 @@ use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+mod borrowed;
+pub use borrowed::JournalRef;
 
 /// The hash of an appended entry.
 pub type EntryHash = Digest;
@@ -139,6 +147,9 @@ pub enum JournalError {
     InputLimit(String),
     /// A checkpoint was asked for a stream with no entries (`CORE.JRN.CHAIN.CKPT`).
     EmptyStream(String),
+    /// [`Journal::on_store`]: the lent store is not opened for writing, or no longer holds
+    /// its project write lock.
+    ReadOnly(String),
 }
 
 impl JournalError {
@@ -154,6 +165,7 @@ impl JournalError {
             JournalError::ChainInvalid(_) => "chain_invalid",
             JournalError::InputLimit(_) => "input_limit",
             JournalError::EmptyStream(_) => "empty_stream",
+            JournalError::ReadOnly(_) => "read_only",
         }
     }
 }
@@ -177,6 +189,7 @@ impl fmt::Display for JournalError {
             JournalError::ChainInvalid(m) => write!(f, "chain_invalid: {m}"),
             JournalError::InputLimit(m) => write!(f, "input_limit: {m}"),
             JournalError::EmptyStream(s) => write!(f, "empty_stream: stream {s:?} has no entries"),
+            JournalError::ReadOnly(m) => write!(f, "read_only: {m}"),
         }
     }
 }
@@ -500,6 +513,20 @@ fn from_store(d: &StoreDigest) -> Digest {
     Digest(d.to_bytes())
 }
 
+/// The append engine over one store, shared by [`Journal`] (owned store) and
+/// [`JournalRef`] (borrowed store), so both paths run the same checks, staging, commit and
+/// poison rules and write the same bytes.
+pub(crate) struct Core<'a> {
+    pub(crate) store: &'a Store,
+    pub(crate) stream: &'a str,
+    pub(crate) clock: &'a dyn Clock,
+    pub(crate) poisoned: &'a AtomicBool,
+    /// The store lock (see [`Journal`]'s `gate`).
+    pub(crate) gate: &'a Mutex<()>,
+    #[cfg(feature = "test-hooks")]
+    pub(crate) hook: Option<&'a Mutex<Option<FaultHook>>>,
+}
+
 /// One request's rows and payload, staged before they enter the batch transaction.
 struct Staged {
     entry: Vec<(&'static str, Value)>,
@@ -524,34 +551,9 @@ impl Journal {
         stream: &str,
         clock: Arc<dyn Clock>,
     ) -> Result<Journal, JournalError> {
-        if !is_ident(stream) {
-            return Err(JournalError::Schema(format!("stream {stream:?} is not a lowercase identifier")));
-        }
+        check_stream_name(stream)?;
         let store = Store::open_locked(location, lock).map_err(|e| failed("open project", e))?;
-        let (count, min, max, others) = store
-            .read(|conn| {
-                let (count, min, max): (i64, i64, i64) = conn.query_row(
-                    "SELECT count(*), coalesce(min(seq), 0), coalesce(max(seq), 0) FROM entries",
-                    [],
-                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-                )?;
-                let others: i64 =
-                    conn.query_row("SELECT count(*) FROM entries WHERE stream <> ?1", [stream], |r| r.get(0))?;
-                Ok((count, min, max, others))
-            })
-            .map_err(|e| failed("read chain", e))?;
-        if count != max || (count > 0 && min != 1) {
-            return Err(JournalError::ChainInvalid(format!(
-                "sequences are not 1..{count} without gaps (min {min}, max {max})"
-            )));
-        }
-        if others != 0 {
-            return Err(JournalError::ChainInvalid(format!(
-                "the database holds {others} entries of another stream than {stream:?}"
-            )));
-        }
-        walk_chain(&store)?;
-        read_tail(&store, stream)?;
+        check_chain(&store, stream)?;
         Ok(Journal {
             stream: stream.to_string(),
             clock,
@@ -563,6 +565,19 @@ impl Journal {
             #[cfg(feature = "test-hooks")]
             hook: Mutex::new(None),
         })
+    }
+
+    /// The shared append engine over this journal's store.
+    pub(crate) fn core(&self) -> Core<'_> {
+        Core {
+            store: &self.store,
+            stream: &self.stream,
+            clock: &*self.clock,
+            poisoned: &self.poisoned,
+            gate: &self.gate,
+            #[cfg(feature = "test-hooks")]
+            hook: Some(&self.hook),
+        }
     }
 
     /// The stream this journal appends to.
@@ -582,12 +597,7 @@ impl Journal {
 
     /// The current chain tail, verified; `None` for an empty chain.
     pub fn tail(&self) -> Result<Option<Tail>, JournalError> {
-        self.check_poison()?;
-        let _gate = guard(&self.gate);
-        // Again under the lock: a batch that held it may have poisoned the journal meanwhile,
-        // and the tail it leaves is not known to be the durable one.
-        self.check_poison()?;
-        read_tail(&self.store, &self.stream)
+        self.core().tail()
     }
 
     /// The connection's durability pragmas as SQLite reports them.
@@ -616,60 +626,13 @@ impl Journal {
     }
 
     pub(crate) fn check_poison(&self) -> Result<(), JournalError> {
-        if self.is_poisoned() {
-            return Err(JournalError::AppendFailed(
-                "journal poisoned: an earlier COMMIT failed with an unknown outcome; reopen the project".into(),
-            ));
-        }
-        Ok(())
-    }
-
-    /// Calls the hook at `p`: `false` means the hook refused.
-    fn hook_refuses(&self, p: CrashPoint) -> bool {
-        #[cfg(feature = "test-hooks")]
-        {
-            let hook = guard(&self.hook).clone();
-            if let Some(h) = hook {
-                return !h(p);
-            }
-        }
-        #[cfg(not(feature = "test-hooks"))]
-        let _ = p;
-        false
-    }
-
-    /// Calls the hook at `p`; a refusal before the COMMIT is an injected `append_failed`.
-    fn at(&self, p: CrashPoint) -> Result<(), JournalError> {
-        if self.hook_refuses(p) && p.before_commit() {
-            return Err(JournalError::AppendFailed(format!("injected fault at {}", p.as_str())));
-        }
-        Ok(())
-    }
-
-    /// Checks done before queueing: stream, blob list.
-    fn precheck(&self, req: &AppendRequest) -> Result<(), JournalError> {
-        if req.draft.stream != self.stream {
-            return Err(JournalError::Schema(format!(
-                "draft.stream {:?} is not this journal's stream {:?}",
-                req.draft.stream, self.stream
-            )));
-        }
-        if req.blobs.len() > MAX_BLOBS {
-            return Err(JournalError::InputLimit(format!("{} referenced blobs, at most {MAX_BLOBS}", req.blobs.len())));
-        }
-        let mut seen = BTreeSet::new();
-        for d in &req.blobs {
-            if !seen.insert(d.0) {
-                return Err(JournalError::Schema(format!("blob {d} is listed twice")));
-            }
-        }
-        Ok(())
+        self.core().check_poison()
     }
 
     /// Appends one entry (see the module documentation for the pinned rules).
     pub fn append(&self, req: AppendRequest) -> Result<EntryHash, JournalError> {
-        self.precheck(&req)?;
-        self.at(CrashPoint::Prechecked)?;
+        self.core().precheck(&req)?;
+        self.core().at(CrashPoint::Prechecked)?;
         let mut q = guard(&self.queue);
         while q.waiting.len() >= MAX_QUEUE {
             q = self.changed.wait(q).unwrap_or_else(PoisonError::into_inner);
@@ -681,7 +644,7 @@ impl Journal {
             if let Some(outcome) = q.done.remove(&ticket) {
                 drop(q);
                 if outcome.is_ok() {
-                    let _ = self.at(CrashPoint::Returning);
+                    let _ = self.core().at(CrashPoint::Returning);
                 }
                 return outcome;
             }
@@ -702,7 +665,7 @@ impl Journal {
             q.leader = false;
             self.changed.notify_all();
             if any_ok {
-                let _ = self.at(CrashPoint::ResultsPublished);
+                let _ = self.core().at(CrashPoint::ResultsPublished);
             }
         }
     }
@@ -710,11 +673,12 @@ impl Journal {
     /// Runs one batch in as few transactions as [`MAX_BATCH_BYTES`] allows (one, unless the
     /// payloads are large); one outcome per request, in arrival order.
     fn commit_batch(&self, batch: &[Pending]) -> Vec<(u64, Outcome)> {
-        let _gate = guard(&self.gate);
+        let core = self.core();
+        let _gate = guard(core.gate);
         let mut outcomes = Vec::with_capacity(batch.len());
         let mut rest = batch;
         while !rest.is_empty() {
-            match self.transaction(rest) {
+            match core.transaction(rest) {
                 Ok((done, used)) => {
                     outcomes.extend(done);
                     rest = rest.get(used..).unwrap_or_default();
@@ -727,18 +691,82 @@ impl Journal {
         }
         outcomes
     }
+}
+
+impl Core<'_> {
+    /// The current chain tail, verified; `None` for an empty chain (see [`Journal::tail`]).
+    pub(crate) fn tail(&self) -> Result<Option<Tail>, JournalError> {
+        self.check_poison()?;
+        let _gate = guard(self.gate);
+        // Again under the lock: a batch that held it may have poisoned the journal meanwhile,
+        // and the tail it leaves is not known to be the durable one.
+        self.check_poison()?;
+        read_tail(self.store, self.stream)
+    }
+
+    /// `append_failed` while poisoned (a COMMIT's outcome is unknown).
+    pub(crate) fn check_poison(&self) -> Result<(), JournalError> {
+        if self.poisoned.load(AtomicOrdering::SeqCst) {
+            return Err(JournalError::AppendFailed(
+                "journal poisoned: an earlier COMMIT failed with an unknown outcome; reopen the project".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Calls the hook at `p`: `false` means the hook refused.
+    fn hook_refuses(&self, p: CrashPoint) -> bool {
+        #[cfg(feature = "test-hooks")]
+        {
+            let hook = self.hook.and_then(|h| guard(h).clone());
+            if let Some(h) = hook {
+                return !h(p);
+            }
+        }
+        #[cfg(not(feature = "test-hooks"))]
+        let _ = p;
+        false
+    }
+
+    /// Calls the hook at `p`; a refusal before the COMMIT is an injected `append_failed`.
+    fn at(&self, p: CrashPoint) -> Result<(), JournalError> {
+        if self.hook_refuses(p) && p.before_commit() {
+            return Err(JournalError::AppendFailed(format!("injected fault at {}", p.as_str())));
+        }
+        Ok(())
+    }
+
+    /// Checks done before queueing: stream, blob list.
+    pub(crate) fn precheck(&self, req: &AppendRequest) -> Result<(), JournalError> {
+        if req.draft.stream != self.stream {
+            return Err(JournalError::Schema(format!(
+                "draft.stream {:?} is not this journal's stream {:?}",
+                req.draft.stream, self.stream
+            )));
+        }
+        if req.blobs.len() > MAX_BLOBS {
+            return Err(JournalError::InputLimit(format!("{} referenced blobs, at most {MAX_BLOBS}", req.blobs.len())));
+        }
+        let mut seen = BTreeSet::new();
+        for d in &req.blobs {
+            if !seen.insert(d.0) {
+                return Err(JournalError::Schema(format!("blob {d} is listed twice")));
+            }
+        }
+        Ok(())
+    }
 
     /// One transaction over a prefix of `rest`: the outcomes of the requests it took and how
     /// many it took (at least one). `Err` fails every request of `rest`; nothing of them is
     /// visible unless the error says the outcome is unknown.
-    fn transaction(&self, rest: &[Pending]) -> Result<(Vec<(u64, Outcome)>, usize), JournalError> {
+    pub(crate) fn transaction(&self, rest: &[Pending]) -> Result<(Vec<(u64, Outcome)>, usize), JournalError> {
         self.check_poison()?;
         self.at(CrashPoint::BatchTaken)?;
         // The write lock is verified by `Txn::commit`, under the store's commit mutex.
         self.at(CrashPoint::LockVerified)?;
         let mut txn = self.store.transaction();
         self.at(CrashPoint::Begun)?;
-        let mut tail = read_tail(&self.store, &self.stream)?;
+        let mut tail = read_tail(self.store, self.stream)?;
         self.at(CrashPoint::TailRead)?;
         let mut outcomes = Vec::with_capacity(rest.len());
         let mut staged_bytes: usize = 0;
@@ -925,6 +953,44 @@ impl Journal {
         self.at(CrashPoint::SavepointReleased)?;
         Ok(Ok((Tail { seq, hash, utc: req.draft.time.utc.clone() }, bytes)))
     }
+}
+
+/// Refuses a stream name that is not a lowercase identifier (`schema`).
+pub(crate) fn check_stream_name(stream: &str) -> Result<(), JournalError> {
+    if !is_ident(stream) {
+        return Err(JournalError::Schema(format!("stream {stream:?} is not a lowercase identifier")));
+    }
+    Ok(())
+}
+
+/// The chain checks of [`Journal::open`] on an opened store: sequences 1..n without gaps,
+/// one stream, every `prev_hash` linking to the `hash` below it, and a tail that verifies.
+pub(crate) fn check_chain(store: &Store, stream: &str) -> Result<(), JournalError> {
+    let (count, min, max, others) = store
+        .read(|conn| {
+            let (count, min, max): (i64, i64, i64) = conn.query_row(
+                "SELECT count(*), coalesce(min(seq), 0), coalesce(max(seq), 0) FROM entries",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )?;
+            let others: i64 =
+                conn.query_row("SELECT count(*) FROM entries WHERE stream <> ?1", [stream], |r| r.get(0))?;
+            Ok((count, min, max, others))
+        })
+        .map_err(|e| failed("read chain", e))?;
+    if count != max || (count > 0 && min != 1) {
+        return Err(JournalError::ChainInvalid(format!(
+            "sequences are not 1..{count} without gaps (min {min}, max {max})"
+        )));
+    }
+    if others != 0 {
+        return Err(JournalError::ChainInvalid(format!(
+            "the database holds {others} entries of another stream than {stream:?}"
+        )));
+    }
+    walk_chain(store)?;
+    read_tail(store, stream)?;
+    Ok(())
 }
 
 /// A commit error whose outcome is known: the transaction rolled back, nothing is visible.
