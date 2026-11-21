@@ -1,0 +1,4018 @@
+{
+  "cases": {
+    "claimed-computed": {
+      "color": "#00637e",
+      "format": "status-render@1",
+      "glyph": "state.conforms",
+      "interpretation": null,
+      "labels": [
+        {
+          "key": "value.claimed",
+          "text": "claimed"
+        }
+      ],
+      "pattern": "pattern.conforms",
+      "state": "conforms",
+      "text": "Conforms",
+      "text_key": "icon.state.conforms",
+      "theme": "light",
+      "value": {
+        "badge": {
+          "glyph": "badge.computed",
+          "provenance": "computed",
+          "text": "Computed",
+          "text_key": "icon.badge.computed"
+        },
+        "number": 1.25,
+        "role": "sem.text.value.claimed"
+      }
+    },
+    "evidence-declared-status-only": {
+      "color": "#00b5e4",
+      "format": "status-render@1",
+      "glyph": "state.conforms",
+      "interpretation": null,
+      "labels": [
+        {
+          "key": "value.claimed",
+          "text": "claimed"
+        },
+        {
+          "key": "label.declared-input",
+          "text": "declared input"
+        }
+      ],
+      "pattern": "pattern.conforms",
+      "state": "conforms",
+      "text": "Conforms",
+      "text_key": "icon.state.conforms",
+      "theme": "dark",
+      "value": null
+    },
+    "evidence-indeterminate-du": {
+      "color": "#392e00",
+      "format": "status-render@1",
+      "glyph": "state.indeterminate",
+      "interpretation": null,
+      "labels": [
+        {
+          "key": "value.claimed",
+          "text": "claimed"
+        },
+        {
+          "key": "label.declared-input",
+          "text": "declared input"
+        },
+        {
+          "key": "label.uncharacterized-input",
+          "text": "uncharacterized input"
+        }
+      ],
+      "pattern": "pattern.indeterminate",
+      "state": "indeterminate",
+      "text": "Indeterminate",
+      "text_key": "icon.state.indeterminate",
+      "theme": "light",
+      "value": {
+        "badge": {
+          "glyph": "badge.computed",
+          "provenance": "computed",
+          "text": "Computed",
+          "text_key": "icon.badge.computed"
+        },
+        "number": 1.25,
+        "role": "sem.text.value.claimed"
+      }
+    },
+    "gdt-provisional": {
+      "color": "#a90617",
+      "format": "status-render@1",
+      "glyph": "state.nonconforms",
+      "interpretation": {
+        "cue": "badge.provisional",
+        "label_key": "gdt.interpretation.provisional",
+        "provisional": true,
+        "text": "interpretation: provisional"
+      },
+      "labels": [],
+      "pattern": "pattern.nonconforms",
+      "state": "nonconforms",
+      "text": "Does not conform",
+      "text_key": "icon.state.nonconforms",
+      "theme": "hc",
+      "value": {
+        "badge": {
+          "glyph": "badge.computed",
+          "provenance": "computed",
+          "text": "Computed",
+          "text_key": "icon.badge.computed"
+        },
+        "number": 1.25,
+        "role": "sem.text.value.measured"
+      }
+    },
+    "gdt-signed-off": {
+      "color": "#00637e",
+      "format": "status-render@1",
+      "glyph": "state.conforms",
+      "interpretation": {
+        "cue": null,
+        "label_key": null,
+        "provisional": false,
+        "text": "interpretation: signed_off"
+      },
+      "labels": [],
+      "pattern": "pattern.conforms",
+      "state": "conforms",
+      "text": "Conforms",
+      "text_key": "icon.state.conforms",
+      "theme": "floor",
+      "value": {
+        "badge": {
+          "glyph": "badge.measured",
+          "provenance": "measured",
+          "text": "Measured",
+          "text_key": "icon.badge.measured"
+        },
+        "number": 1.25,
+        "role": "sem.text.value.measured"
+      }
+    },
+    "not-decidable-entered": {
+      "color": "#1c1f0c",
+      "format": "status-render@1",
+      "glyph": "state.not-decidable",
+      "interpretation": null,
+      "labels": [
+        {
+          "key": "value.claimed",
+          "text": "claimed"
+        }
+      ],
+      "pattern": "pattern.not-decidable",
+      "state": "not-decidable",
+      "text": "Not decidable",
+      "text_key": "icon.state.not-decidable",
+      "theme": "hc",
+      "value": {
+        "badge": {
+          "glyph": "badge.entered",
+          "provenance": "entered",
+          "text": "Entered",
+          "text_key": "icon.badge.entered"
+        },
+        "number": 1.25,
+        "role": "sem.text.value.claimed"
+      }
+    },
+    "status-only": {
+      "color": "#f58028",
+      "format": "status-render@1",
+      "glyph": "state.stale",
+      "interpretation": null,
+      "labels": [],
+      "pattern": "pattern.stale",
+      "state": "stale",
+      "text": "Stale",
+      "text_key": "icon.state.stale",
+      "theme": "dark",
+      "value": null
+    }
+  },
+  "digests": [
+    {
+      "digest": "sha256:462abb44d19a1532ceb06adc45cdb1f8aaaef894882b7c3d84934b19677e0a75",
+      "provenance": "measured",
+      "state": "conforms",
+      "theme": "light"
+    },
+    {
+      "digest": "sha256:4ddb74b611f391a678b941212b356554c16932712519d558f15c59e69f1668dc",
+      "provenance": "computed",
+      "state": "nonconforms",
+      "theme": "hc"
+    },
+    {
+      "digest": "sha256:8049e6220cb5711db36e264d09434940b22830c9c8917ff9bfc2fe098d23a0b5",
+      "provenance": "suggested",
+      "state": "stale",
+      "theme": "dark"
+    }
+  ],
+  "guard": {
+    "min_delta_e2000": 20.0,
+    "min_neutral_delta_e2000": 10.0,
+    "min_stale_delta_e2000_normal": 10.0
+  },
+  "locked": {
+    "dark": {
+      "conforms": "#00b5e4",
+      "indeterminate": "#eadba3",
+      "nonconforms": "#ff7269",
+      "not-decidable": "#f6fae1",
+      "not-evaluated": "#f5f7f9",
+      "over-tolerance": "#8b5f57",
+      "stale": "#f58028",
+      "under-tolerance": "#7c6d45"
+    },
+    "floor": {
+      "conforms": "#00637e",
+      "indeterminate": "#392e00",
+      "nonconforms": "#c72d2e",
+      "not-decidable": "#1c1f0c",
+      "not-evaluated": "#1c1d1f",
+      "over-tolerance": "#8b5f57",
+      "stale": "#8c4200",
+      "under-tolerance": "#7c6d45"
+    },
+    "hc": {
+      "conforms": "#004b61",
+      "indeterminate": "#221d06",
+      "nonconforms": "#a90617",
+      "not-decidable": "#1c1f0c",
+      "not-evaluated": "#000000",
+      "over-tolerance": "#8b5f57",
+      "stale": "#6b3100",
+      "under-tolerance": "#7c6d45"
+    },
+    "light": {
+      "conforms": "#00637e",
+      "indeterminate": "#392e00",
+      "nonconforms": "#c72d2e",
+      "not-decidable": "#1c1f0c",
+      "not-evaluated": "#1c1d1f",
+      "over-tolerance": "#8b5f57",
+      "stale": "#8c4200",
+      "under-tolerance": "#7c6d45"
+    }
+  },
+  "matrix": [
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#00637e",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "conforms",
+      "theme": "light"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#00b5e4",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "conforms",
+      "theme": "dark"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#004b61",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "conforms",
+      "theme": "hc"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#00637e",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "conforms",
+      "theme": "floor"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#00637e",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "conforms",
+      "theme": "light"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#00b5e4",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "conforms",
+      "theme": "dark"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#004b61",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "conforms",
+      "theme": "hc"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#00637e",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "conforms",
+      "theme": "floor"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#00637e",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "conforms",
+      "theme": "light"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#00b5e4",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "conforms",
+      "theme": "dark"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#004b61",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "conforms",
+      "theme": "hc"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#00637e",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "conforms",
+      "theme": "floor"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#00637e",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "conforms",
+      "theme": "light"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#00b5e4",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "conforms",
+      "theme": "dark"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#004b61",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "conforms",
+      "theme": "hc"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#00637e",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "conforms",
+      "theme": "floor"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#00637e",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "conforms",
+      "theme": "light"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#00b5e4",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "conforms",
+      "theme": "dark"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#004b61",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "conforms",
+      "theme": "hc"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#00637e",
+        "format": "status-render@1",
+        "glyph": "state.conforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.conforms",
+        "state": "conforms",
+        "text": "Conforms",
+        "text_key": "icon.state.conforms",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "conforms",
+      "theme": "floor"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#c72d2e",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "light"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#ff7269",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "dark"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#a90617",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "hc"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#c72d2e",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "floor"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#c72d2e",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "light"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#ff7269",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "dark"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#a90617",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "hc"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#c72d2e",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "floor"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#c72d2e",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "light"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#ff7269",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "dark"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#a90617",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "hc"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#c72d2e",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "floor"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#c72d2e",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "light"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#ff7269",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "dark"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#a90617",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "hc"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#c72d2e",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "floor"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#c72d2e",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "light"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#ff7269",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "dark"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#a90617",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "hc"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#c72d2e",
+        "format": "status-render@1",
+        "glyph": "state.nonconforms",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.nonconforms",
+        "state": "nonconforms",
+        "text": "Does not conform",
+        "text_key": "icon.state.nonconforms",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "nonconforms",
+      "theme": "floor"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#392e00",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "light"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#eadba3",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "dark"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#221d06",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "hc"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#392e00",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "floor"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#392e00",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "light"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#eadba3",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "dark"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#221d06",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "hc"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#392e00",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "floor"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#392e00",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "light"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#eadba3",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "dark"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#221d06",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "hc"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#392e00",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "floor"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#392e00",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "light"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#eadba3",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "dark"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#221d06",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "hc"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#392e00",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "floor"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#392e00",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "light"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#eadba3",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "dark"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#221d06",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "hc"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#392e00",
+        "format": "status-render@1",
+        "glyph": "state.indeterminate",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.indeterminate",
+        "state": "indeterminate",
+        "text": "Indeterminate",
+        "text_key": "icon.state.indeterminate",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "indeterminate",
+      "theme": "floor"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "light"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#f6fae1",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "dark"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "hc"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "floor"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "light"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#f6fae1",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "dark"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "hc"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "floor"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "light"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#f6fae1",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "dark"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "hc"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "floor"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "light"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#f6fae1",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "dark"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "hc"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "floor"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "light"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#f6fae1",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "dark"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "hc"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#1c1f0c",
+        "format": "status-render@1",
+        "glyph": "state.not-decidable",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-decidable",
+        "state": "not-decidable",
+        "text": "Not decidable",
+        "text_key": "icon.state.not-decidable",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-decidable",
+      "theme": "floor"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#1c1d1f",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "light"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#f5f7f9",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "dark"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#000000",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "hc"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#1c1d1f",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "floor"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#1c1d1f",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "light"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#f5f7f9",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "dark"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#000000",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "hc"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#1c1d1f",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "floor"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#1c1d1f",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "light"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#f5f7f9",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "dark"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#000000",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "hc"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#1c1d1f",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "floor"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#1c1d1f",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "light"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#f5f7f9",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "dark"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#000000",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "hc"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#1c1d1f",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "floor"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#1c1d1f",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "light"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#f5f7f9",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "dark"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#000000",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "hc"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#1c1d1f",
+        "format": "status-render@1",
+        "glyph": "state.not-evaluated",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.not-evaluated",
+        "state": "not-evaluated",
+        "text": "Not evaluated",
+        "text_key": "icon.state.not-evaluated",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "not-evaluated",
+      "theme": "floor"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#8c4200",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "stale",
+      "theme": "light"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#f58028",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "stale",
+      "theme": "dark"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#6b3100",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "stale",
+      "theme": "hc"
+    },
+    {
+      "provenance": "computed",
+      "render": {
+        "color": "#8c4200",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.computed",
+            "provenance": "computed",
+            "text": "Computed",
+            "text_key": "icon.badge.computed"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "stale",
+      "theme": "floor"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#8c4200",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "stale",
+      "theme": "light"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#f58028",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "stale",
+      "theme": "dark"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#6b3100",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "stale",
+      "theme": "hc"
+    },
+    {
+      "provenance": "measured",
+      "render": {
+        "color": "#8c4200",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.measured",
+            "provenance": "measured",
+            "text": "Measured",
+            "text_key": "icon.badge.measured"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.measured"
+        }
+      },
+      "state": "stale",
+      "theme": "floor"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#8c4200",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "stale",
+      "theme": "light"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#f58028",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "stale",
+      "theme": "dark"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#6b3100",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "stale",
+      "theme": "hc"
+    },
+    {
+      "provenance": "entered",
+      "render": {
+        "color": "#8c4200",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.entered",
+            "provenance": "entered",
+            "text": "Entered",
+            "text_key": "icon.badge.entered"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "stale",
+      "theme": "floor"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#8c4200",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "stale",
+      "theme": "light"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#f58028",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "stale",
+      "theme": "dark"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#6b3100",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "stale",
+      "theme": "hc"
+    },
+    {
+      "provenance": "reported-by-source",
+      "render": {
+        "color": "#8c4200",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.reported-by-source",
+            "provenance": "reported-by-source",
+            "text": "Reported by source",
+            "text_key": "icon.badge.reported-by-source"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "stale",
+      "theme": "floor"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#8c4200",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "light",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "stale",
+      "theme": "light"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#f58028",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "dark",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "stale",
+      "theme": "dark"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#6b3100",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "hc",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "stale",
+      "theme": "hc"
+    },
+    {
+      "provenance": "suggested",
+      "render": {
+        "color": "#8c4200",
+        "format": "status-render@1",
+        "glyph": "state.stale",
+        "interpretation": null,
+        "labels": [
+          {
+            "key": "value.claimed",
+            "text": "claimed"
+          }
+        ],
+        "pattern": "pattern.stale",
+        "state": "stale",
+        "text": "Stale",
+        "text_key": "icon.state.stale",
+        "theme": "floor",
+        "value": {
+          "badge": {
+            "glyph": "badge.suggested",
+            "provenance": "suggested",
+            "text": "Suggested",
+            "text_key": "icon.badge.suggested"
+          },
+          "number": 1.25,
+          "role": "sem.text.value.claimed"
+        }
+      },
+      "state": "stale",
+      "theme": "floor"
+    }
+  ],
+  "patterns": {
+    "pattern.conforms": {
+      "kind": "solid"
+    },
+    "pattern.indeterminate": {
+      "kind": "dots",
+      "period": 6,
+      "radius": 1
+    },
+    "pattern.nonconforms": {
+      "kind": "cross",
+      "period": 6,
+      "width": 1
+    },
+    "pattern.not-decidable": {
+      "angle": 90,
+      "dash": 0,
+      "kind": "hatch",
+      "period": 6,
+      "width": 1
+    },
+    "pattern.not-evaluated": {
+      "angle": 0,
+      "dash": 0,
+      "kind": "hatch",
+      "period": 8,
+      "width": 1
+    },
+    "pattern.out-of-tolerance": {
+      "kind": "cross",
+      "period": 4,
+      "width": 2
+    },
+    "pattern.over-tolerance": {
+      "angle": 45,
+      "dash": 0,
+      "kind": "hatch",
+      "period": 4,
+      "refines": "pattern.out-of-tolerance",
+      "width": 2
+    },
+    "pattern.stale": {
+      "angle": 45,
+      "dash": 3,
+      "kind": "hatch",
+      "period": 8,
+      "width": 1
+    },
+    "pattern.under-tolerance": {
+      "angle": 135,
+      "dash": 0,
+      "kind": "hatch",
+      "period": 4,
+      "refines": "pattern.out-of-tolerance",
+      "width": 2
+    }
+  },
+  "regions": {
+    "dark": {
+      "over": {
+        "color": "#8b5f57",
+        "pattern": "pattern.over-tolerance",
+        "text": "Above tolerance",
+        "text_key": "icon.pattern.over-tolerance"
+      },
+      "under": {
+        "color": "#7c6d45",
+        "pattern": "pattern.under-tolerance",
+        "text": "Below tolerance",
+        "text_key": "icon.pattern.under-tolerance"
+      }
+    },
+    "floor": {
+      "over": {
+        "color": "#8b5f57",
+        "pattern": "pattern.over-tolerance",
+        "text": "Above tolerance",
+        "text_key": "icon.pattern.over-tolerance"
+      },
+      "under": {
+        "color": "#7c6d45",
+        "pattern": "pattern.under-tolerance",
+        "text": "Below tolerance",
+        "text_key": "icon.pattern.under-tolerance"
+      }
+    },
+    "hc": {
+      "over": {
+        "color": "#8b5f57",
+        "pattern": "pattern.over-tolerance",
+        "text": "Above tolerance",
+        "text_key": "icon.pattern.over-tolerance"
+      },
+      "under": {
+        "color": "#7c6d45",
+        "pattern": "pattern.under-tolerance",
+        "text": "Below tolerance",
+        "text_key": "icon.pattern.under-tolerance"
+      }
+    },
+    "light": {
+      "over": {
+        "color": "#8b5f57",
+        "pattern": "pattern.over-tolerance",
+        "text": "Above tolerance",
+        "text_key": "icon.pattern.over-tolerance"
+      },
+      "under": {
+        "color": "#7c6d45",
+        "pattern": "pattern.under-tolerance",
+        "text": "Below tolerance",
+        "text_key": "icon.pattern.under-tolerance"
+      }
+    }
+  },
+  "skins": {
+    "skin-azure-nonconform.json": {
+      "schema": false,
+      "violation": [
+        "NONCONFORMS",
+        "light"
+      ]
+    },
+    "skin-azure-over-tolerance.json": {
+      "schema": false,
+      "violation": [
+        "OVER_TOLERANCE",
+        "dark"
+      ]
+    },
+    "skin-darker-red.json": {
+      "schema": false,
+      "violation": null
+    },
+    "skin-inversion.json": {
+      "schema": true,
+      "violation": null
+    },
+    "skin-near-azure-indeterminate.json": {
+      "schema": false,
+      "violation": [
+        "INDETERMINATE",
+        "light"
+      ]
+    },
+    "skin-not-evaluated-as-stale.json": {
+      "schema": false,
+      "violation": [
+        "NOT_EVALUATED",
+        "floor"
+      ]
+    },
+    "skin-stale-as-nonconforms.json": {
+      "schema": false,
+      "violation": [
+        "STALE",
+        "hc"
+      ]
+    },
+    "skin-stale-near-nonconforms.json": {
+      "schema": false,
+      "violation": [
+        "STALE",
+        "light"
+      ]
+    }
+  }
+}
