@@ -385,6 +385,8 @@ impl Authorised {
 ///
 /// Check order (maintainer decision on #328):
 ///
+/// 0. For an MCP channel or any `agent` principal, a `never` command is refused as
+///    `not_found/unknown_command` before any other check, `approval_of` included (D-035).
 /// 1. With `approval_of`: a principal that is not `human`, or a call on an MCP channel, is
 ///    `policy/bad_approval`; an unknown request is `not_found/unknown_request`; a request that
 ///    is not pending, names another command or major, or whose parameters commitment differs
@@ -409,6 +411,12 @@ pub fn authorise(
 ) -> Result<Authorised, BusError> {
     let principal = table.derive_principal(channel)?;
     let on_mcp = is_mcp_channel(channel.kind()) || principal.kind() == PrincipalKind::Agent;
+    // D-035: to an MCP or agent caller a `never` command does not exist, so it is refused as
+    // unknown before anything else, approval included (an approval would otherwise answer
+    // `policy/bad_approval` and so reveal the command).
+    if on_mcp && mcp_projection(def) == Projection::Never {
+        return Err(unknown_command(&def.id, def.major));
+    }
     let decision = match approval_of {
         Some(request) => {
             let approval = approve(&principal, on_mcp, def, params.value(), request, view)?;

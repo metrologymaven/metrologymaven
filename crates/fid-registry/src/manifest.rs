@@ -24,13 +24,22 @@
 //! [`check_manifest`] verifies a supplied manifest (`manifest_invalid`), and
 //! [`command_def`] / [`show_manifest`] / [`invoke_cli`] / [`invoke_mcp`] are the R0 command
 //! `registry.show_manifest@1` (REQ-006).
+//!
+//! **Registry visibility (D-035, CONSTITUTION §8).** To an [`Audience::Agent`] (any MCP
+//! channel, or an `agent` principal wherever it arrives) a command whose MCP projection
+//! ([`mcp_projection`], the bus rule) is `never` does not exist. `show_manifest` therefore
+//! gives an agent the *agent view* ([`ManifestInForce::agent_view`]): the manifest exported
+//! from the visible declarations only, with every lifecycle `replaced_by` that names a command
+//! outside that view removed. Its bytes, its `commands` count and its digest (the SHA-256 of
+//! those bytes, labelled `"view": "agent"` in the result) say nothing about hidden commands.
+//! An [`Audience::Person`] gets the full manifest and its digest, as before.
 
 use crate::catalogue::{Catalogue, QuantityCatalogue};
-use crate::def::CommandDef;
+use crate::def::{CommandDef, Projection};
 use crate::validate::{validate_with, CommandDecl, Limits, ValidationError};
 use fid_canon::{digest_bytes, parse, parse_with_limits, to_canonical_bytes, CValue, CanonError};
-use fid_types::Digest;
-use std::collections::BTreeMap;
+use fid_types::{CommandId, Digest};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 /// The manifest format version written in `format`.
@@ -54,6 +63,8 @@ pub const MAX_PARAMS_DEPTH: usize = 4;
 const MAX_CLI_ARGS: usize = 8;
 const LIFECYCLE_SINCE: &str = "2026-11-19";
 const DIGEST_PATTERN: &str = "^sha256:[0-9a-f]{64}$";
+/// The `view` label of a result that shows the agent view.
+pub const AGENT_VIEW: &str = "agent";
 const TOP_FIELDS: [&str; 3] = ["commands", "format", "quantity_catalogue_digest"];
 
 /// Why an export, a check or a show call failed. Messages never echo input text.
@@ -343,14 +354,24 @@ pub fn manifest_schema() -> CValue {
 #[derive(Debug, Clone)]
 pub struct ManifestInForce {
     export: Export,
+    agent: Export,
     catalogue: Catalogue,
 }
 
 impl ManifestInForce {
-    /// Exports `decls` against `catalogue` ([`export_with`]).
+    /// Exports `decls` against `catalogue` ([`export_with`]), and the agent view of them.
     pub fn new(decls: &[CommandDecl], catalogue: Catalogue) -> Result<ManifestInForce, ManifestError> {
         let export = export_with(decls, &catalogue)?;
-        Ok(ManifestInForce { export, catalogue })
+        // VAL has just passed on `decls`; the agent view only drops declarations and
+        // `replaced_by` fields, which no VAL rule needs, so it is not validated again.
+        let agent = export_validated(&agent_decls(decls)?, &catalogue)?;
+        Ok(ManifestInForce { export, agent, catalogue })
+    }
+
+    /// The agent view: the manifest of the commands an [`Audience::Agent`] can see (see the
+    /// module docs). Its digest is the digest of these bytes, not of the full manifest.
+    pub fn agent_view(&self) -> &Export {
+        &self.agent
     }
 
     /// The exported bytes.
@@ -372,6 +393,47 @@ impl ManifestInForce {
     pub fn catalogue(&self) -> &Catalogue {
         &self.catalogue
     }
+}
+
+/// Who is asking (D-035): the audience of CORE.REG.QRY's queries.
+pub use crate::query::Audience;
+/// The MCP projection rule of the bus (`fid_bus::policy::projection` re-exports it).
+pub use crate::validate::mcp_projection;
+
+/// Whether `audience` can see `def`: a person sees every command, an agent only those whose
+/// MCP projection is not `never` (D-035).
+pub fn sees(audience: Audience, def: &CommandDef) -> bool {
+    audience == Audience::Person || mcp_projection(def) != Projection::Never
+}
+
+/// The declarations of the agent view: those an agent [`sees`], each with a lifecycle
+/// `replaced_by` removed unless it names a command in the view.
+fn agent_decls(decls: &[CommandDecl]) -> Result<Vec<CommandDecl>, ManifestError> {
+    let mut kept = Vec::new();
+    for decl in decls {
+        let def = CommandDef::from_value(decl.0.clone())
+            .map_err(|_| ManifestError::Invalid("a validated declaration did not parse".into()))?;
+        if sees(Audience::Agent, &def) {
+            kept.push(def);
+        }
+    }
+    let visible: BTreeSet<(String, u32)> = kept.iter().map(|d| (d.id.clone(), d.major)).collect();
+    Ok(kept
+        .into_iter()
+        .map(|mut def| {
+            let keep = match def.lifecycle.get("replaced_by") {
+                None => true,
+                Some(CValue::Str(s)) => {
+                    CommandId::parse(s).map(|t| visible.contains(&(t.name().to_string(), t.major()))).unwrap_or(false)
+                }
+                Some(_) => false,
+            };
+            if !keep {
+                def.lifecycle.remove("replaced_by");
+            }
+            CommandDecl::from_def(&def)
+        })
+        .collect())
 }
 
 /// Parameters of `registry.show_manifest@1`: `full` (default false) and optional `check`,
@@ -407,20 +469,34 @@ impl ShowParams {
     }
 }
 
-/// The result `{digest, bytes?}`: the digest of the manifest in force (or of the checked
-/// manifest, which must pass [`check_manifest`]), and with `full` its text.
-pub fn show_manifest(m: &ManifestInForce, p: &ShowParams) -> Result<CValue, ManifestError> {
+/// The result `{digest, bytes?, view?}`. For a person: the digest of the manifest in force
+/// and, with `full`, its text. For an agent: the same for the agent view
+/// ([`ManifestInForce::agent_view`]), with `"view": "agent"`, so hidden commands appear
+/// nowhere (D-035). With `check`, for either audience: the digest (and text) of the supplied
+/// manifest, which must pass [`check_manifest`].
+pub fn show_manifest(m: &ManifestInForce, audience: Audience, p: &ShowParams) -> Result<CValue, ManifestError> {
+    let mut view = None;
     let (digest, bytes) = match &p.check {
         Some(text) => (check_manifest(text.as_bytes(), &m.catalogue)?, text.as_str()),
         None => {
-            let s = std::str::from_utf8(m.bytes()).map_err(|_| ManifestError::Canonical("invalid_utf8"))?;
-            (m.digest(), s)
+            let e = match audience {
+                Audience::Person => &m.export,
+                Audience::Agent => {
+                    view = Some(AGENT_VIEW);
+                    &m.agent
+                }
+            };
+            let s = std::str::from_utf8(&e.bytes).map_err(|_| ManifestError::Canonical("invalid_utf8"))?;
+            (e.digest, s)
         }
     };
     let mut o = BTreeMap::new();
     o.insert("digest".to_string(), CValue::Str(digest.to_string()));
     if p.full {
         o.insert("bytes".to_string(), CValue::Str(bytes.to_string()));
+    }
+    if let Some(v) = view {
+        o.insert("view".to_string(), CValue::Str(v.to_string()));
     }
     Ok(CValue::Obj(o))
 }
@@ -439,14 +515,14 @@ pub struct ActivityEntry {
     pub surface: Surface,
 }
 
-fn run(m: &ManifestInForce, params: &CValue) -> Result<Vec<u8>, ManifestError> {
-    let result = show_manifest(m, &ShowParams::from_value(params)?)?;
+fn run(m: &ManifestInForce, audience: Audience, params: &CValue) -> Result<Vec<u8>, ManifestError> {
+    let result = show_manifest(m, audience, &ShowParams::from_value(params)?)?;
     to_canonical_bytes(&result).map_err(canon)
 }
 
 /// Runs the MCP tool `registry_show_manifest` on raw JSON parameters (at most
 /// [`MAX_PARAMS_BYTES`] bytes, [`MAX_PARAMS_DEPTH`] levels, duplicate keys refused) and returns
-/// the canonical result bytes. The call is logged to `log`.
+/// the canonical result bytes, always as [`Audience::Agent`]. The call is logged to `log`.
 pub fn invoke_mcp(
     m: &ManifestInForce,
     log: &mut Vec<ActivityEntry>,
@@ -459,16 +535,18 @@ pub fn invoke_mcp(
     log.push(ActivityEntry { command: SHOW_MANIFEST, surface: Surface::Mcp });
     let value = parse_with_limits(params, MAX_PARAMS_BYTES, MAX_PARAMS_DEPTH)
         .map_err(|_| ManifestError::BadParams("params are not valid JSON within the limits"))?;
-    run(m, &value)
+    run(m, Audience::Agent, &value)
 }
 
 /// Runs `fid registry show-manifest [--full] [--check <file>] [--json]`. `read` loads the
 /// `--check` file (the caller bounds the read; more than [`MAX_MANIFEST_BYTES`] is refused
 /// here too). Output is canonical JSON either way. Unknown or repeated options are refused.
-/// The call is logged to `log`.
+/// `audience` is the caller's: [`Audience::Agent`] for an `agent` principal, which sees the
+/// agent view on the CLI too. The call is logged to `log`.
 pub fn invoke_cli(
     m: &ManifestInForce,
     log: &mut Vec<ActivityEntry>,
+    audience: Audience,
     args: &[&str],
     read: &dyn Fn(&str) -> Option<Vec<u8>>,
 ) -> Result<Vec<u8>, ManifestError> {
@@ -506,8 +584,13 @@ pub fn invoke_cli(
     if let Some(text) = check {
         params.insert("check".to_string(), CValue::Str(text));
     }
-    run(m, &CValue::Obj(params))
+    run(m, audience, &CValue::Obj(params))
 }
+
+/// `registry.show_manifest@1`'s description.
+pub const SHOW_DESCRIPTION: &str = "Returns the digest of the registry manifest in force and, with full, its canonical bytes; with check, verifies a supplied manifest instead. An agent gets the agent view: only the commands it can see.";
+/// The description of the result's `view` field.
+pub const VIEW_DESCRIPTION: &str = "Present, as agent, when the result shows the agent view: the manifest of the commands an agent can see, whose digest is the digest of that view, not of the full manifest.";
 
 /// The registry definition of `registry.show_manifest@1` (R0, MCP exposed, D0).
 pub fn command_def() -> Result<CommandDef, crate::def::DefError> {
@@ -545,6 +628,14 @@ pub fn command_def() -> Result<CommandDef, crate::def::DefError> {
             obj([
                 ("digest", obj([("type", text("string")), ("pattern", text(DIGEST_PATTERN))])),
                 ("bytes", obj([("type", text("string"))])),
+                (
+                    "view",
+                    obj([
+                        ("type", text("string")),
+                        ("pattern", text("^agent$")),
+                        ("description", text(VIEW_DESCRIPTION)),
+                    ]),
+                ),
             ]),
         ),
     ]);
@@ -552,7 +643,7 @@ pub fn command_def() -> Result<CommandDef, crate::def::DefError> {
         ("id", text("registry.show_manifest")),
         ("major", CValue::Num(1.0)),
         ("title", text("Show manifest")),
-        ("description", text("Returns the digest of the registry manifest in force and, with full, its canonical bytes; with check, verifies a supplied manifest instead.")),
+        ("description", text(SHOW_DESCRIPTION)),
         ("params_schema", params),
         ("result_schema", result),
         ("side_effect", text("R0")),

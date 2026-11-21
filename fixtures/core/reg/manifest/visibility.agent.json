@@ -1,0 +1,40 @@
+{
+ "visible": [
+  [
+   "align.run_bestfit",
+   1
+  ],
+  [
+   "egress.send",
+   1
+  ],
+  [
+   "gdt.evaluate_flatness",
+   1
+  ],
+  [
+   "gdt.evaluate_old",
+   1
+  ],
+  [
+   "project.list_features",
+   1
+  ],
+  [
+   "project.list_features",
+   2
+  ],
+  [
+   "record.release_fai",
+   1
+  ],
+  [
+   "report.set_title",
+   1
+  ],
+  [
+   "sim.read_probe",
+   1
+  ]
+ ]
+}
