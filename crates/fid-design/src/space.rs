@@ -17,7 +17,10 @@
 //!   allow no underscore (`UX.SYSTEM.PKG`).
 //! - `elevation.tokens.json`: levels `elev.0` .. `elev.<n-1>`, each a `shadow` token whose
 //!   `$extensions."org.metrologymaven.elevation"` names a `surface` and/or `border` cue: a
-//!   `sem.surface.*` or `sem.border.*` token of `semantic/color.tokens.json`.
+//!   `sem.surface.*` or `sem.border.*` token of `semantic/color.tokens.json`. Each cue is
+//!   resolved to a colour in every theme of [`THEMES`] with the colour tier's own resolution
+//!   (`crate::tokens::check`: theme bindings, aliases, primitives; its findings are that
+//!   command's and are not repeated here).
 //!
 //! Rules (findings, exit 1):
 //! - `SPACE-GRID <name>`: a `prim.space.*` token, a `sem.space.*` default or a density binding
@@ -31,20 +34,28 @@
 //! - `MOTION-REDUCED <name>`: a motion token without a valid duration, easing or
 //!   reduced-duration, or with a reduced-duration other than 0 ms (REQ-003).
 //! - `MOTION-LONG <name>`: a `motion.panel.*` duration above 250 ms (REQ-003).
+//! - `SPACE-SCHEMA tokens/motion.tokens.json` with detail `no motion token`: the file holds no
+//!   motion token at all (one finding).
 //! - `ELEV-LEVELS`: more than [`MAX_ELEVATION_LEVELS`] levels, or levels not named `0`..`n-1`
 //!   (REQ-004).
 //! - `ELEV-NOSHADOW-CUE <name>`: a level without a surface or border cue, with an unknown cue
-//!   key, a cue that is not a `sem.surface.*` / `sem.border.*` colour token, or the same cues as
-//!   a lower level, so that without shadows it could not be told apart (REQ-004).
+//!   key, a cue that is not a `sem.surface.*` / `sem.border.*` colour token, the same cue names
+//!   as a lower level, a cue that does not resolve to a colour in some theme, or, in some theme,
+//!   the same resolved surface and border colours as a lower level (a missing cue counts as
+//!   "none" on both sides), so that without shadows it could not be told apart (REQ-004). At
+//!   most one such finding per level, at the higher level of a colliding pair.
 //! - `SPACE-SCHEMA <file or name>`: a missing or unreadable file, a wrong format ID, a value of
-//!   the wrong `$type`, a malformed shadow, or an unknown key; DTCG syntax findings of the
+//!   the wrong `$type`, a malformed shadow, an unknown key, or an elevation level name that is
+//!   not a decimal integer below 2^64 without leading zeros; DTCG syntax findings of the
 //!   package reader also land here.
 //!
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable root or limits exceeded. Determinism D0:
 //! fixed files, `BTreeMap` only, no clock, and every comparison is on exact decimals (no
 //! floating point but the easing range check on parsed JSON numbers).
 
+use crate::color::parse_rgba;
 use crate::finding::{findings_text, findings_value, read_text, Finding};
+use crate::tokens::wcag::Rgb;
 use crate::tokens::THEMES;
 use fid_canon::CValue;
 use fid_design_pkg::tokens::{collect, parse_alias, Token};
@@ -363,7 +374,7 @@ fn check_targets(mode: &str, v: Option<&CValue>, f: &mut Vec<Finding>) -> Option
 
 // ------------------------------------------------------------------ motion
 
-fn check_motion(motion: &BTreeMap<String, Token>, r: &mut Report, f: &mut Vec<Finding>) {
+fn check_motion(motion: &BTreeMap<String, Token>, read: bool, r: &mut Report, f: &mut Vec<Finding>) {
     let mut groups: BTreeMap<String, BTreeMap<&str, &Token>> = BTreeMap::new();
     for (name, t) in motion {
         let split = name.rsplit_once('.').filter(|(g, _)| g.starts_with("motion.") && g.matches('.').count() == 2);
@@ -379,6 +390,9 @@ fn check_motion(motion: &BTreeMap<String, Token>, r: &mut Report, f: &mut Vec<Fi
         }
     }
     r.motion_tokens = groups.len();
+    if read && groups.is_empty() {
+        f.push(Finding::new(SCHEMA, "tokens/motion.tokens.json", "no motion token"));
+    }
     for (g, parts) in &groups {
         let duration =
             parts.get("duration").copied().filter(|t| t.ty.as_deref() == Some("duration")).and_then(str_value);
@@ -428,17 +442,19 @@ fn check_elevation(
     elev: &BTreeMap<String, Token>,
     raw: Option<&CValue>,
     colours: &BTreeMap<String, Token>,
+    themes: &BTreeMap<String, crate::tokens::ThemeResult>,
     r: &mut Report,
     f: &mut Vec<Finding>,
 ) {
     let mut levels: BTreeMap<u64, &Token> = BTreeMap::new();
     for (name, t) in elev {
         match name.strip_prefix("elev.").filter(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit())) {
-            Some(n) if n.len() == 1 || !n.starts_with('0') => {
-                if let Ok(k) = n.parse::<u64>() {
+            Some(n) if n.len() == 1 || !n.starts_with('0') => match n.parse::<u64>() {
+                Ok(k) => {
                     levels.insert(k, t);
                 }
-            }
+                Err(_) => f.push(Finding::new(SCHEMA, name.clone(), "an elevation level number must be below 2^64")),
+            },
             _ => f.push(Finding::new(SCHEMA, name.clone(), "an elevation token is elev.<level>")),
         }
     }
@@ -452,7 +468,9 @@ fn check_elevation(
     if levels.is_empty() {
         f.push(Finding::new(LEVELS, "elev", "no elevation level"));
     }
-    let mut seen: BTreeSet<(Option<String>, Option<String>)> = BTreeSet::new();
+    let mut seen: BTreeSet<Cue> = BTreeSet::new();
+    // Per theme: the resolved look of every lower level, with its level number.
+    let mut looks: Looks = BTreeMap::new();
     for (k, t) in &levels {
         let name = format!("elev.{k}");
         if t.ty.as_deref() != Some("shadow") || !valid_shadow(&t.value) {
@@ -462,15 +480,73 @@ fn check_elevation(
                 "an elevation level is a shadow {blur,color,offsetX,offsetY,spread}",
             ));
         }
-        match cue_of(raw, *k, colours) {
-            Err(why) => f.push(Finding::new(NO_CUE, name, why)),
-            Ok(cue) => {
-                if !seen.insert(cue) {
-                    f.push(Finding::new(NO_CUE, name, "the same surface and border cue as a lower level"));
-                }
+        let cue = match cue_of(raw, *k, colours) {
+            Err(why) => {
+                f.push(Finding::new(NO_CUE, name, why));
+                continue;
             }
+            Ok(cue) => cue,
+        };
+        if !seen.insert(cue.clone()) {
+            f.push(Finding::new(NO_CUE, name, "the same surface and border cue as a lower level"));
+            continue;
+        }
+        if let Some(why) = colour_collision(&cue, *k, themes, &mut looks) {
+            f.push(Finding::new(NO_CUE, name, why));
         }
     }
+}
+
+/// A level's look without shadows in one theme: the resolved surface and border colours.
+type Look = (Option<(Rgb, u8)>, Option<(Rgb, u8)>);
+/// Per theme, the look of every level recorded so far, with its level number.
+type Looks = BTreeMap<&'static str, Vec<(Look, u64)>>;
+
+fn hex(c: Option<(Rgb, u8)>) -> String {
+    match c {
+        None => "none".to_string(),
+        Some(([r, g, b], 255)) => format!("#{r:02x}{g:02x}{b:02x}"),
+        Some(([r, g, b], a)) => format!("#{r:02x}{g:02x}{b:02x}{a:02x}"),
+    }
+}
+
+/// Resolves `cue` in every theme and records it in `looks`. Returns why the level cannot be told
+/// apart from a lower one without shadows: an unresolved cue in some theme, or the first theme
+/// (in [`THEMES`] order) where it looks like a lower level. A level that fails is not recorded.
+fn colour_collision(
+    cue: &Cue,
+    k: u64,
+    themes: &BTreeMap<String, crate::tokens::ThemeResult>,
+    looks: &mut Looks,
+) -> Option<String> {
+    let mut mine: Vec<(&'static str, Look)> = Vec::new();
+    for theme in THEMES {
+        let resolve = |n: &Option<String>| -> Result<Option<(Rgb, u8)>, String> {
+            let Some(n) = n else { return Ok(None) };
+            themes
+                .get(theme)
+                .and_then(|t| t.values.get(n))
+                .and_then(|v| parse_rgba(&v.value))
+                .map(Some)
+                .ok_or_else(|| format!("{n} does not resolve to a colour in theme {theme}"))
+        };
+        let look = match (resolve(&cue.0), resolve(&cue.1)) {
+            (Ok(s), Ok(b)) => (s, b),
+            (Err(why), _) | (_, Err(why)) => return Some(why),
+        };
+        if let Some((_, lower)) = looks.get(theme).and_then(|l| l.iter().find(|(x, _)| *x == look)) {
+            return Some(format!(
+                "in theme {theme} it looks like elev.{lower} without shadows (surface {}, border {})",
+                hex(look.0),
+                hex(look.1)
+            ));
+        }
+        mine.push((theme, look));
+    }
+    for (theme, look) in mine {
+        looks.entry(theme).or_default().push((look, k));
+    }
+    None
 }
 
 fn valid_shadow(v: &CValue) -> bool {
@@ -557,11 +633,13 @@ pub fn check(root: &Path) -> Result<Report, String> {
         (None, _) => f.push(Finding::new(TARGET, "default", "size.target.min is missing or not a dimension")),
         (Some(_), None) => {}
     }
-    let motion = tokens_of(root, "motion.tokens.json", &mut f)?;
-    check_motion(&motion, &mut r, &mut f);
+    let (motion, motion_raw) = tokens_and_raw(root, "motion.tokens.json", &mut f)?;
+    check_motion(&motion, motion_raw.is_some(), &mut r, &mut f);
     let (elev, raw) = tokens_and_raw(root, "elevation.tokens.json", &mut f)?;
     let colours = tokens_of(root, "semantic/color.tokens.json", &mut f)?;
-    check_elevation(&elev, raw.as_ref(), &colours, &mut r, &mut f);
+    // The colour tier's per-theme resolution; its own findings belong to tokens-check.
+    let themes = crate::tokens::check(root)?.themes;
+    check_elevation(&elev, raw.as_ref(), &colours, &themes, &mut r, &mut f);
     f.sort();
     f.dedup();
     r.findings = f;

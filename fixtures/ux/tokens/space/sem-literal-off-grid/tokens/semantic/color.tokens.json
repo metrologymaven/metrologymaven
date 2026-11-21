@@ -3,21 +3,21 @@
     "$type": "color",
     "border": {
       "strong": {
-        "$value": "#555555"
+        "$value": "{prim.color.neutral.600}"
       },
       "subtle": {
-        "$value": "#cccccc"
+        "$value": "{prim.color.neutral.200}"
       }
     },
     "surface": {
       "base": {
-        "$value": "#ffffff"
+        "$value": "{prim.color.neutral.0}"
       },
       "raised": {
-        "$value": "#f5f5f5"
+        "$value": "{prim.color.neutral.50}"
       },
       "sunken": {
-        "$value": "#eeeeee"
+        "$value": "{prim.color.neutral.100}"
       }
     }
   }

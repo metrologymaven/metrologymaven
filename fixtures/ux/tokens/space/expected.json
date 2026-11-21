@@ -43,10 +43,28 @@
         "ELEV-NOSHADOW-CUE elev.1"
       ]
     },
+    "elev-cue-unresolved": {
+      "exit": 1,
+      "findings": [
+        "ELEV-NOSHADOW-CUE elev.2"
+      ]
+    },
     "elev-gap": {
       "exit": 1,
       "findings": [
         "ELEV-LEVELS elev"
+      ]
+    },
+    "elev-hc-collision": {
+      "exit": 1,
+      "findings": [
+        "ELEV-NOSHADOW-CUE elev.1"
+      ]
+    },
+    "elev-huge-level": {
+      "exit": 1,
+      "findings": [
+        "SPACE-SCHEMA elev.18446744073709551616"
       ]
     },
     "elev-no-cue": {
@@ -89,6 +107,12 @@
       "exit": 1,
       "findings": [
         "MOTION-REDUCED motion.feedback.press"
+      ]
+    },
+    "motion-empty": {
+      "exit": 1,
+      "findings": [
+        "SPACE-SCHEMA tokens/motion.tokens.json"
       ]
     },
     "motion-long": {
