@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 
 /// Every message key value display uses, with its English fallback text.
 pub const MESSAGES: &[(&str, &str)] = &[
+    ("gdt.interpretation.provisional", "interpretation: provisional"),
     ("report.label.claimed", "claimed"),
     ("report.label.declared_input", "rests on declared input"),
     ("report.label.gauge", "gauge"),

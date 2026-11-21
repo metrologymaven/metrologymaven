@@ -1,0 +1,4 @@
+[
+  {"api_version": "10.0", "backend": "dx12", "device_id": "0x00000001", "device_type": "other", "driver_version": "10.0", "name": "Fixture Basic Display Adapter", "vendor_id": "0x7e570020"},
+  {"api_version": "1.0", "backend": "vulkan", "device_id": "0x00000001", "device_type": "other", "driver_version": "0.9", "name": "Fixture Basic Display Adapter", "vendor_id": "0x7e570020"}
+]

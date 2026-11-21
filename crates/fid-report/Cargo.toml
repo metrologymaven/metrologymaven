@@ -43,9 +43,13 @@ test-kinds = []
 # Test-only hook `fmt::fmt_value_with` that takes another formatter (a stub or a coarse pi
 # ladder) for RPT.MODEL.FMT AC-3. Off by default; enabled only through the dev-dependency.
 test-formatter = []
+# Test-only hook `fmt::InterpretationStatus::test_of_record_bytes` that reads a status from
+# hand-made record bytes (RPT.MODEL.FMT AC-12). Off by default; enabled only through the
+# dev-dependency. Shipped builds read a status only from BIND's journaled records.
+test-interpretation = []
 
 [dev-dependencies]
-fid-report = { path = ".", features = ["test-kinds", "test-formatter"] }
+fid-report = { path = ".", features = ["test-kinds", "test-formatter", "test-interpretation"] }
 
 [lints]
 workspace = true

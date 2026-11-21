@@ -202,3 +202,5 @@ python tools/fixtures/geo_xform_cases.py --check
 python tools/fixtures/nurbs_cert.py fixtures/geo/nurbs
 python tools/rpt_float_lint.py
 python tools/rpt_float_lint.py --clippy-selftest
+python tools/rpt_float_lint.py --mir
+python tools/rpt_float_lint.py --mir-selftest
