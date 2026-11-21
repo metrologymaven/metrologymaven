@@ -3,6 +3,7 @@
 
 pub mod error;
 pub mod handler;
+pub mod pipeline;
 pub mod policy;
 pub mod principal;
 mod unicode16;
@@ -21,6 +22,10 @@ pub use handler::{
     canonical_len, effects_check, run_handler, CancelSource, CancelToken, CheckedEvents, EntityId, EntityRef, Event,
     EventType, Handler, HandlerCtx, HandlerError, HandlerSet, SettingKey, StateView, ValidParams, MAX_EVENTS,
     MAX_EVENT_BODY_BYTES,
+};
+pub use pipeline::{
+    journal_error, Bus, BusEnv, BusParts, Call, CommandResult, CommitHook, CommitRecord, Invocation, LeadingEntries,
+    OpenBranch, RecordJournal, Router, Stage, StageProbe, SystemCall, Watch,
 };
 pub use policy::class::{
     authorise_cancel, authorise_class, class_rule, policy_matrix_json, policy_matrix_value, ClassRule,

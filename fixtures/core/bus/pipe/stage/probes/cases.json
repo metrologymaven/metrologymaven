@@ -1,0 +1,253 @@
+{
+ "forced": [
+  {
+   "ran": [
+    "resolve"
+   ],
+   "stage": "resolve"
+  },
+  {
+   "ran": [
+    "resolve",
+    "validate"
+   ],
+   "stage": "validate"
+  },
+  {
+   "ran": [
+    "resolve",
+    "validate",
+    "authorise"
+   ],
+   "stage": "authorise"
+  },
+  {
+   "ran": [
+    "resolve",
+    "validate",
+    "authorise",
+    "precondition"
+   ],
+   "stage": "precondition"
+  },
+  {
+   "ran": [
+    "resolve",
+    "validate",
+    "authorise",
+    "precondition",
+    "route"
+   ],
+   "stage": "route"
+  },
+  {
+   "ran": [
+    "resolve",
+    "validate",
+    "authorise",
+    "precondition",
+    "route",
+    "handler"
+   ],
+   "stage": "handler"
+  },
+  {
+   "ran": [
+    "resolve",
+    "validate",
+    "authorise",
+    "precondition",
+    "route",
+    "handler",
+    "effects"
+   ],
+   "stage": "effects"
+  },
+  {
+   "ran": [
+    "resolve",
+    "validate",
+    "authorise",
+    "precondition",
+    "route",
+    "handler",
+    "effects",
+    "commit"
+   ],
+   "stage": "commit"
+  }
+ ],
+ "order": [
+  "resolve",
+  "validate",
+  "authorise",
+  "precondition",
+  "route",
+  "handler",
+  "effects",
+  "commit"
+ ],
+ "real": [
+  {
+   "channel": "gui",
+   "code": "not_found",
+   "command": "test.missing@1",
+   "params": {
+    "count": 1,
+    "target": "a"
+   },
+   "ran": [
+    "resolve"
+   ],
+   "reason": "unknown_command",
+   "stage": "resolve"
+  },
+  {
+   "channel": "gui",
+   "code": "validation",
+   "command": "test.write@1",
+   "params": {
+    "count": 1,
+    "target": 1
+   },
+   "ran": [
+    "resolve",
+    "validate"
+   ],
+   "reason": "schema",
+   "stage": "validate"
+  },
+  {
+   "channel": "cli",
+   "code": "policy",
+   "command": "test.release@1",
+   "params": {
+    "count": 1,
+    "reason": "r",
+    "target": "a"
+   },
+   "ran": [
+    "resolve",
+    "validate",
+    "authorise"
+   ],
+   "reason": "class_forbidden",
+   "stage": "authorise"
+  },
+  {
+   "channel": "gui",
+   "code": "precondition",
+   "command": "test.write@1",
+   "params": {
+    "count": 0,
+    "target": "a"
+   },
+   "ran": [
+    "resolve",
+    "validate",
+    "authorise",
+    "precondition"
+   ],
+   "reason": "false",
+   "stage": "precondition"
+  },
+  {
+   "channel": "gui",
+   "code": "conflict",
+   "command": "test.write@1",
+   "expected_head": "wrong",
+   "params": {
+    "count": 1,
+    "target": "a"
+   },
+   "ran": [
+    "resolve",
+    "validate",
+    "authorise",
+    "precondition",
+    "route"
+   ],
+   "reason": "expected_head_mismatch",
+   "stage": "route"
+  },
+  {
+   "channel": "gui",
+   "code": "precondition",
+   "command": "test.write@1",
+   "params": {
+    "count": 1,
+    "target": "refuse"
+   },
+   "ran": [
+    "resolve",
+    "validate",
+    "authorise",
+    "precondition",
+    "route",
+    "handler"
+   ],
+   "reason": "false",
+   "stage": "handler"
+  },
+  {
+   "channel": "gui",
+   "code": "undeclared_effect",
+   "command": "test.write@1",
+   "params": {
+    "count": 1,
+    "target": "undeclared"
+   },
+   "ran": [
+    "resolve",
+    "validate",
+    "authorise",
+    "precondition",
+    "route",
+    "handler",
+    "effects"
+   ],
+   "reason": "undeclared_event_type",
+   "stage": "effects"
+  },
+  {
+   "channel": "gui",
+   "code": "conflict",
+   "command": "test.write@1",
+   "hook_refuses": true,
+   "params": {
+    "count": 1,
+    "target": "a"
+   },
+   "ran": [
+    "resolve",
+    "validate",
+    "authorise",
+    "precondition",
+    "route",
+    "handler",
+    "effects",
+    "commit"
+   ],
+   "reason": "head_moved",
+   "stage": "commit"
+  }
+ ],
+ "request": {
+  "channel": "mcp",
+  "command": "test.request@1",
+  "entries_appended": 1,
+  "handler_calls": 0,
+  "params": {
+   "count": 2,
+   "target": "a"
+  },
+  "params_commitment": "sha256:1303a6354d7c317370f4452c1cf57806ed2fe4c97df204a39560bd24ed52a8bb",
+  "ran": [
+   "resolve",
+   "validate",
+   "authorise",
+   "route",
+   "commit"
+  ]
+ }
+}
