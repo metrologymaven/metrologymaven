@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-render]
 satisfies: [REQ-VIZ.RENDER.SCENE-004]
 covers: []
 depends_on: [VIZ.RENDER.SCENE.PROJ, CORE.DEP.PROP]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # VIZ.RENDER.SCENE.STALE: Stale marking and digest check
@@ -66,6 +67,13 @@ Show a result as stale from the moment an upstream input changes until recompute
 ## Open questions
 
 - None.
+
+## As built
+
+- `fid-render` module `scene::stale` (PR to follow in `built_pr`). `DisplayStatus::Stale` carries `since_digest` and the `evidence` facts (claimed, declared input, uncharacterized input) of the status it replaced, so a claimed or provisional value never looks measured while stale (D-045). Serialised `stale:<flags>:<since digest>`. A document may not supply `Stale` (`StaleInDocument`).
+- REQ-002 is built strictly: a stale node leaves `Stale` only when the projector delivers it again **and** CORE's mark on its element is cleared (`clear_outdated`, or `recomputed` for both in one batch). A new digest while the mark is still set keeps the node stale with the new data. This implies REQ-002's condition and never shows a result CORE still calls outdated as current. A node added for a marked element starts stale.
+- REQ-003: `StyleResolver::new` refuses status styles where a stale style equals any conforming or nonconforming style, a stale value with evidence facts looks like a stale measured one, or a conforming or nonconforming value with evidence facts looks measured. The stale styles are read once, at construction.
+- `fid-overlay` `from_display_status` maps `Stale` to `DisplayState::Stale` with its evidence (VIZ.OVERLAY.STATUS AC-12, tested there).
 
 ## Children
 

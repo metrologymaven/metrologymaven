@@ -40,6 +40,10 @@
 //! - **Status** (C2). [`DisplayStatus`] carries the kdec outcome (including `INDETERMINATE`
 //!   and `NOT_DECIDABLE(reason)`) with the claimed, declared-input and
 //!   uncharacterized-input flags; it is copied, never mapped, so no fact is lost or upgraded.
+//!   The one exception is staleness (`VIZ.RENDER.SCENE.STALE`, module
+//!   [`stale`](super::stale)): a node of an element CORE marks `outdated` shows
+//!   [`DisplayStatus::Stale`] instead, which keeps the evidence flags. A document may not
+//!   supply `Stale` itself ([`SceneError::StaleInDocument`]): staleness is the scene's.
 //! - **Serialised form** (AC-1, AC-3). One line per node, ascending by render ID:
 //!   `<rid> <identity> <kind> <frame> <ox> <oy> <oz> <minx> <miny> <minz> <maxx> <maxy> <maxz>
 //!   <style> <status> <proj error> <digest>\n`, status as in [`DisplayStatus`], proj error
@@ -68,6 +72,7 @@ use fid_kdec::Outcome as KernelOutcome;
 use fid_types::Digest;
 
 use super::idtab::{DerivedId, EntityId, IdError, IdTable, Identity, RenderId, ViewOp, MAX_IDS_PER_ENTITY};
+use super::stale::{next_status, Evidence};
 
 /// Largest number of elements in one [`Document`] (and in one dirty set).
 pub const MAX_ELEMENTS: usize = 1 << 20;
@@ -177,18 +182,28 @@ pub struct KernelStatus {
     pub uncharacterized_input: bool,
 }
 
-/// The display status of a node, supplied by the kernel through the element (C2). The
-/// shape is the one pinned by `VIZ.RENDER.SCENE.STALE` minus its `Stale` variant, which that
-/// leaf adds. Nothing here upgrades or drops a kernel fact.
+/// The display status of a node, supplied by the kernel through the element (C2), or `Stale`
+/// while CORE marks the element `outdated` (`VIZ.RENDER.SCENE.STALE`). Nothing here upgrades
+/// or drops a kernel fact.
 ///
 /// Serialised (pinned): `kernel:<OUTCOME>:<flags>` where `<OUTCOME>` is the kdec wire name and
 /// `NOT_DECIDABLE` is written `NOT_DECIDABLE(<reason>)`, and `<flags>` is three characters,
 /// `c` (claimed), `d` (declared input), `u` (uncharacterized input), each `-` when unset;
-/// `not_evaluated`; `error:<code>` with a token code.
+/// `stale:<flags>:<since digest>` with the same flags and the `sha256:` digest the node
+/// displayed when it became stale; `not_evaluated`; `error:<code>` with a token code.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DisplayStatus {
     /// A kernel decision.
     Kernel(KernelStatus),
+    /// The node's element is (or was, until the projector delivers again) marked `outdated`
+    /// by CORE; its kernel outcome must not be shown (`VIZ.RENDER.SCENE.STALE` REQ-003).
+    Stale {
+        /// The data digest the node displayed when it became stale.
+        since_digest: Digest,
+        /// The evidence facts of the status it replaced, kept so a claimed or provisional
+        /// value never looks measured, even while stale (D-045).
+        evidence: Evidence,
+    },
     /// Nothing evaluated (plain geometry, or no decision yet).
     NotEvaluated,
     /// Evaluation failed in the kernel, with its error code.
@@ -231,6 +246,12 @@ impl DisplayStatus {
         if let Some(code) = s.strip_prefix("error:") {
             return StatusCode::new(code).map(DisplayStatus::Error).map_err(|_| SceneError::BadStatus);
         }
+        if let Some(rest) = s.strip_prefix("stale:") {
+            let (flags, digest) = rest.split_once(':').ok_or(SceneError::BadStatus)?;
+            let evidence = parse_flags(flags)?;
+            let since_digest = Digest::parse(digest).map_err(|_| SceneError::BadStatus)?;
+            return Ok(DisplayStatus::Stale { since_digest, evidence });
+        }
         let rest = s.strip_prefix("kernel:").ok_or(SceneError::BadStatus)?;
         let (outcome, flags) = rest.rsplit_once(':').ok_or(SceneError::BadStatus)?;
         let outcome = match outcome.strip_prefix("NOT_DECIDABLE(") {
@@ -241,21 +262,39 @@ impl DisplayStatus {
             None => KernelOutcome::from_wire(outcome, None),
         }
         .map_err(|_| SceneError::BadStatus)?;
-        let flag = |i: usize, set: u8| match flags.as_bytes().get(i) {
-            Some(&c) if c == set => Ok(true),
-            Some(b'-') => Ok(false),
-            _ => Err(SceneError::BadStatus),
-        };
-        if flags.len() != 3 {
-            return Err(SceneError::BadStatus);
-        }
+        let e = parse_flags(flags)?;
         Ok(DisplayStatus::Kernel(KernelStatus {
             outcome,
-            claimed: flag(0, b'c')?,
-            declared_input: flag(1, b'd')?,
-            uncharacterized_input: flag(2, b'u')?,
+            claimed: e.claimed,
+            declared_input: e.declared_input,
+            uncharacterized_input: e.uncharacterized_input,
         }))
     }
+
+    /// Whether the status is [`DisplayStatus::Stale`].
+    pub const fn is_stale(&self) -> bool {
+        matches!(self, DisplayStatus::Stale { .. })
+    }
+}
+
+/// Parses the three evidence flags `c`, `d`, `u` (each `-` when unset).
+fn parse_flags(flags: &str) -> Result<Evidence, SceneError> {
+    let b = flags.as_bytes();
+    if b.len() != 3 {
+        return Err(SceneError::BadStatus);
+    }
+    let flag = |i: usize, set: u8| match b.get(i) {
+        Some(&c) if c == set => Ok(true),
+        Some(b'-') => Ok(false),
+        _ => Err(SceneError::BadStatus),
+    };
+    Ok(Evidence { claimed: flag(0, b'c')?, declared_input: flag(1, b'd')?, uncharacterized_input: flag(2, b'u')? })
+}
+
+/// Writes the three evidence flags.
+fn write_flags(f: &mut fmt::Formatter<'_>, e: Evidence) -> fmt::Result {
+    let c = |on: bool, ch: char| if on { ch } else { '-' };
+    write!(f, "{}{}{}", c(e.claimed, 'c'), c(e.declared_input, 'd'), c(e.uncharacterized_input, 'u'))
 }
 
 impl fmt::Display for DisplayStatus {
@@ -268,8 +307,13 @@ impl fmt::Display for DisplayStatus {
                     Some(r) => write!(f, "{}({})", k.outcome.wire(), r.wire())?,
                     None => f.write_str(k.outcome.wire())?,
                 }
-                let c = |on: bool, ch: char| if on { ch } else { '-' };
-                write!(f, ":{}{}{}", c(k.claimed, 'c'), c(k.declared_input, 'd'), c(k.uncharacterized_input, 'u'))
+                f.write_str(":")?;
+                write_flags(f, Evidence::of_kernel(k))
+            }
+            DisplayStatus::Stale { since_digest, evidence } => {
+                f.write_str("stale:")?;
+                write_flags(f, *evidence)?;
+                write!(f, ":{}", since_digest.as_str())
             }
             DisplayStatus::NotEvaluated => f.write_str("not_evaluated"),
             DisplayStatus::Error(code) => write!(f, "error:{}", code.as_str()),
@@ -405,7 +449,8 @@ pub struct Document {
 
 impl Document {
     /// A document from elements in tree order. Fails with [`SceneError::TooManyElements`],
-    /// [`SceneError::DuplicateEntity`] or [`SceneError::NonFiniteOrigin`].
+    /// [`SceneError::DuplicateEntity`], [`SceneError::NonFiniteOrigin`] or
+    /// [`SceneError::StaleInDocument`].
     pub fn new(elements: Vec<ElementView>) -> Result<Document, SceneError> {
         if elements.len() > MAX_ELEMENTS {
             return Err(SceneError::TooManyElements);
@@ -414,6 +459,9 @@ impl Document {
         for (i, el) in elements.iter().enumerate() {
             if !el.origin_m.iter().all(|v| v.is_finite()) {
                 return Err(SceneError::NonFiniteOrigin(el.entity));
+            }
+            if el.status.is_stale() {
+                return Err(SceneError::StaleInDocument(el.entity));
             }
             if index.insert(el.entity, i).is_some() {
                 return Err(SceneError::DuplicateEntity(el.entity));
@@ -693,6 +741,9 @@ pub enum SceneError {
     DuplicateEntity(EntityId),
     /// An element origin is NaN or infinite.
     NonFiniteOrigin(EntityId),
+    /// An element's status is `Stale`: staleness is set by the scene from CORE's `outdated`
+    /// marks (`VIZ.RENDER.SCENE.STALE`), never supplied by the document.
+    StaleInDocument(EntityId),
     /// An element names a frame the frame tree does not hold.
     UnknownFrame {
         /// The element.
@@ -719,6 +770,7 @@ impl SceneError {
             SceneError::TooManyElements => "TooManyElements",
             SceneError::DuplicateEntity(_) => "DuplicateEntity",
             SceneError::NonFiniteOrigin(_) => "NonFiniteOrigin",
+            SceneError::StaleInDocument(_) => "StaleInDocument",
             SceneError::UnknownFrame { .. } => "UnknownFrame",
             SceneError::DuplicateProjector(_) => "DuplicateProjector",
             SceneError::TooManyKinds => "TooManyKinds",
@@ -731,7 +783,9 @@ impl SceneError {
 impl fmt::Display for SceneError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SceneError::DuplicateEntity(e) | SceneError::NonFiniteOrigin(e) => write!(f, "{}: {e}", self.code()),
+            SceneError::DuplicateEntity(e) | SceneError::NonFiniteOrigin(e) | SceneError::StaleInDocument(e) => {
+                write!(f, "{}: {e}", self.code())
+            }
             SceneError::UnknownFrame { entity, frame } => write!(f, "{}: {entity} names {frame}", self.code()),
             SceneError::DuplicateProjector(k) => write!(f, "{}: {k}", self.code()),
             SceneError::Id(e) => write!(f, "{e}"),
@@ -776,11 +830,13 @@ pub struct Outcome {
     pub diagnostics: Vec<Diagnostic>,
 }
 
-/// The scene graph of one session: nodes ordered by render ID, plus the session's ID table.
+/// The scene graph of one session: nodes ordered by render ID, the session's ID table and
+/// the entities CORE currently marks `outdated` (`VIZ.RENDER.SCENE.STALE`).
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SceneGraph {
-    ids: IdTable,
-    nodes: BTreeMap<RenderId, SceneNode>,
+    pub(super) ids: IdTable,
+    pub(super) nodes: BTreeMap<RenderId, SceneNode>,
+    pub(super) outdated: BTreeSet<EntityId>,
 }
 
 impl SceneGraph {
@@ -791,7 +847,7 @@ impl SceneGraph {
 
     /// An empty graph whose ID table allocates at most `limit` IDs.
     pub fn with_id_limit(limit: u32) -> SceneGraph {
-        SceneGraph { ids: IdTable::with_limit(limit), nodes: BTreeMap::new() }
+        SceneGraph { ids: IdTable::with_limit(limit), nodes: BTreeMap::new(), outdated: BTreeSet::new() }
     }
 
     /// Full projection of `doc` into a new graph (tree order).
@@ -879,7 +935,12 @@ impl SceneGraph {
                     batch.retired.push(rid);
                 }
             }
-            for p in planned {
+            let marked = self.outdated.contains(&entity);
+            for mut p in planned {
+                // VIZ.RENDER.SCENE.STALE REQ-002: a node of an element still marked outdated
+                // stays (or becomes) stale; otherwise it shows the delivered kernel status.
+                let current = self.ids.render_id_of(p.identity).and_then(|rid| self.nodes.get(&rid));
+                p.status = next_status(&p.status, p.data_digest, current, marked);
                 match self.ids.render_id_of(p.identity) {
                     Some(rid) => {
                         if !self.nodes.get(&rid).is_some_and(|n| n.same_as(&p)) {
