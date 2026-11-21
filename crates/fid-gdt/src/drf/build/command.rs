@@ -39,7 +39,7 @@ const BUILD_PARAMS: [&str; 3] = ["char", "datums", "dry_run"];
 #[derive(Debug, Clone, PartialEq)]
 pub enum Outcome {
     /// `gdt.build_drf@1`.
-    Built(Built),
+    Built(Box<Built>),
     /// `gdt.get_drf@1`: the stored bytes, unchanged.
     Drf(Vec<u8>),
 }
@@ -97,7 +97,8 @@ fn run_build(
         Some(CValue::Bool(b)) => *b,
         Some(_) => return Err(bad("parameter is not a boolean")),
     };
-    build_drf(store, inp, principal, &BuildRequest { char, datums: &datums }, dry_run).map(Outcome::Built)
+    build_drf(store, inp, principal, &BuildRequest { char, datums: &datums }, dry_run)
+        .map(|b| Outcome::Built(Box::new(b)))
 }
 
 fn run_get(store: &DrfStore, principal: Principal, o: &BTreeMap<String, CValue>) -> Result<Outcome, BuildError> {
