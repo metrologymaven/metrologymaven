@@ -848,7 +848,7 @@ fn every_record_is_readable_at_its_bounds() {
     p.insert("origin_claim".into(), text.clone());
     p.insert("options".into(), options.clone());
     let p = CValue::Obj(p);
-    let sha = fid_types::Digest::from_bytes(<[u8; 32]>::from(sha2_digest(&canon(&p))));
+    let sha = fid_types::Digest::from_bytes(sha2_digest(&canon(&p)));
     let id = Uuid::parse("0190aaaa-0000-7000-8000-000000000001").unwrap();
     let handle = format!("root://in/{}x.ftp", format!("{}/", "a".repeat(199)).repeat(19));
     let ev = ImportEvent {
