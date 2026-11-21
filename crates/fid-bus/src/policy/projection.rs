@@ -4,7 +4,9 @@
 //! depth). On an MCP channel ([`is_mcp_channel`]), or for any `agent` principal wherever it
 //! arrives, a command runs only when it is projected `exposed`; a `request_only` or
 //! `human_only` command becomes a pending request for a person; a `never` command, or one
-//! without `mcp` among its surfaces, is refused with `policy/not_on_mcp` (REQ-001, REQ-002).
+//! without `mcp` among its surfaces, is refused exactly as a command that does not exist:
+//! `not_found/unknown_command` with the same detail ([`crate::validate::unknown_command`]),
+//! so an agent cannot learn that a hidden command exists (REQ-001, REQ-002, D-035).
 //! The projection used is the stricter of the declared one (`human_only` clamps it to
 //! `request_only`, `CommandDef::effective_projection`) and the ceiling of the command's
 //! class (`fid_registry::max_projection`), so a definition that slipped past the registry
@@ -48,8 +50,9 @@
 //! `request.withdraw_request@1` (W1, [`WithdrawHandler`]), `request.reject_request@1` (W1,
 //! `human_only`, projection `never`, [`RejectHandler`]) and the internal
 //! `request.file_request@1` (W1, no surface, written only by [`Filing::commit`]). Every error
-//! is from the bus error catalogue: `policy` (`not_on_mcp`, `bad_approval`,
-//! `not_requester`, `human_only`), `not_found/unknown_request`, `conflict/id_collision`,
+//! is from the bus error catalogue: `policy` (`bad_approval`, `not_requester`,
+//! `human_only`), `not_found/unknown_command` (a `never` command over MCP),
+//! `not_found/unknown_request`, `conflict/id_collision`,
 //! `precondition/invalid_transition` (withdrawing or rejecting a request that is no longer
 //! pending), `validation/schema`, and `internal/invariant_violated` only for a journal that
 //! contradicts itself. Determinism D0.
@@ -68,6 +71,7 @@ use crate::policy::class::authorise_class;
 use crate::principal::{
     Channel, ChannelKind, JournalAppend, Principal, PrincipalId, PrincipalKind, PrincipalRef, SessionTable,
 };
+use crate::validate::unknown_command;
 use fid_canon::{CValue, Digest as CanonDigest};
 use fid_journal::{
     AiAssistance, CommandDraft, DraftBody, EntryDraft, EntryTime, Manifests, OutputDigest, TaggedDigest,
@@ -321,16 +325,15 @@ pub enum Projected {
 pub use fid_registry::mcp_projection;
 
 /// The projection check (REQ-001, REQ-002). Off MCP channels it always passes. On MCP:
-/// `never` is `policy/not_on_mcp`; `request_only` or `human_only` is
+/// `never` is refused byte for byte as an unknown command (`not_found/unknown_command`,
+/// [`crate::validate::unknown_command`]; D-035); `request_only` or `human_only` is
 /// [`Projected::PendingRequest`]; `exposed` is [`Projected::Run`]. Pure.
 pub fn authorise_projection(channel: ChannelKind, def: &CommandDef) -> Result<Projected, BusError> {
     if !is_mcp_channel(channel) {
         return Ok(Projected::Run);
     }
     match mcp_projection(def) {
-        Projection::Never => {
-            Err(policy(PolicyReason::NotOnMcp, &format!("{}@{} is not available over MCP", def.id, def.major)))
-        }
+        Projection::Never => Err(unknown_command(&def.id, def.major)),
         Projection::RequestOnly => Ok(Projected::PendingRequest),
         Projection::Exposed if def.human_only => Ok(Projected::PendingRequest),
         Projection::Exposed => Ok(Projected::Run),
@@ -388,7 +391,7 @@ impl Authorised {
 ///    from `params` is `policy/bad_approval`. Then the class check
 ///    ([`authorise_class`]) applies to the approving human; then [`Decision::RunApproved`].
 /// 2. For an MCP channel or any `agent` principal: the projection check first. `never` is
-///    `policy/not_on_mcp`; `request_only` or `human_only` is [`Decision::File`] without the
+///    `not_found/unknown_command`, exactly as for a command that does not exist; `request_only` or `human_only` is [`Decision::File`] without the
 ///    class check, so an agent's call to a `human_only` or W3 command becomes a pending
 ///    request instead of `human_only` / `class_forbidden`; `exposed` then needs the class
 ///    check.

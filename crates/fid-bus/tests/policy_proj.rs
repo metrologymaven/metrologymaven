@@ -323,9 +323,9 @@ fn the_class_ceiling_caps_a_declared_projection() {
         ("W3", "pending"),
         ("X1", "pending"),
         ("D1", "pending"),
-        ("M1", "policy/not_on_mcp"),
-        ("S1", "policy/not_on_mcp"),
-        ("A0", "policy/not_on_mcp"),
+        ("M1", "not_found/unknown_command"),
+        ("S1", "not_found/unknown_command"),
+        ("A0", "not_found/unknown_command"),
     ];
     assert_eq!(expect.len(), SideEffect::ALL.len());
     for (class, want) in expect {
@@ -339,12 +339,15 @@ fn the_class_ceiling_caps_a_declared_projection() {
         // human_only makes every class at most a pending request; never stays never.
         let h = class_def(class, "exposed", true);
         let got_h = authorise_projection(ChannelKind::ServerMcp, &h).map_err(|e| e.reason().to_string());
-        let want_h =
-            if want == "policy/not_on_mcp" { Err("not_on_mcp".to_string()) } else { Ok(Projected::PendingRequest) };
+        let want_h = if want == "not_found/unknown_command" {
+            Err("unknown_command".to_string())
+        } else {
+            Ok(Projected::PendingRequest)
+        };
         assert_eq!(got_h, want_h, "{class} human_only");
         let n = class_def(class, "never", true);
         assert_eq!(mcp_projection(&n), Projection::Never);
-        assert_err(authorise_projection(ChannelKind::Mcp, &n), Code::Policy, "not_on_mcp");
+        assert_err(authorise_projection(ChannelKind::Mcp, &n), Code::NotFound, "unknown_command");
     }
 }
 
@@ -455,20 +458,20 @@ fn ac1_mcp_calls_to_request_only_and_human_only_commands_file_requests() {
 }
 
 /// AC-2: the `never` command (and a command with no MCP surface) over MCP is
-/// `policy/not_on_mcp`, and nothing is journaled.
+/// `not_found/unknown_command`, exactly as an unknown command, and nothing is journaled.
 #[test]
 fn ac2_never_over_mcp_is_refused_and_nothing_is_journaled() {
     let mut w = World::new();
     for kind in [ChannelKind::Mcp, ChannelKind::ServerMcp] {
         let agent = w.channel(kind, "claude-a");
         for cmd in ["test.run_never@1", "test.run_local@1"] {
-            assert_err(w.authorise(&agent, cmd, &filed_params(), None), Code::Policy, "not_on_mcp");
+            assert_err(w.authorise(&agent, cmd, &filed_params(), None), Code::NotFound, "unknown_command");
         }
         // The internal filing command and the human-only reject are not on MCP either.
         let r = json(&format!(r#"{{"request":"{}","reason":"x"}}"#, rid(1)));
-        assert_err(w.authorise(&agent, &format!("{REJECT_REQUEST}@1"), &r, None), Code::Policy, "not_on_mcp");
+        assert_err(w.authorise(&agent, &format!("{REJECT_REQUEST}@1"), &r, None), Code::NotFound, "unknown_command");
         let f = json(r#"{"command":"test.run_request@1","params":{}}"#);
-        assert_err(w.authorise(&agent, &format!("{FILE_REQUEST}@1"), &f, None), Code::Policy, "not_on_mcp");
+        assert_err(w.authorise(&agent, &format!("{FILE_REQUEST}@1"), &f, None), Code::NotFound, "unknown_command");
     }
     assert!(w.journal.drafts.is_empty());
     assert!(w.book.is_empty());
@@ -1147,7 +1150,7 @@ fn projection_and_filing_come_before_the_class_check() {
     // M1 is never on MCP; an exposed W1 still runs for the agent after the class check.
     let m1 = class_def("M1", "never", false);
     let view = w.book.view(HEAD);
-    assert_err(authorise(&w.table, &agent, &m1, &vp, None, &view), Code::Policy, "not_on_mcp");
+    assert_err(authorise(&w.table, &agent, &m1, &vp, None, &view), Code::NotFound, "unknown_command");
     assert_eq!(w.authorise(&agent, "test.run_exposed@1", &p, None).unwrap(), Decision::Run);
     assert_eq!(w.journal.drafts.len(), 2);
 }
@@ -1416,4 +1419,50 @@ fn the_fold_checks_the_entry_params_commitment() {
     assert_eq!(right.params_commitment(), a.params_commitment());
     w.book.apply_entry(&right, &[a.event().unwrap()]).unwrap();
     assert_eq!(w.record(r).state(), RequestState::Approved);
+}
+
+/// D-035: over MCP a `never` command is refused exactly as a command the bus does not hold.
+/// The refusal of each hidden command (declared `never`, no MCP surface, a `human_only` W1
+/// declared `never`, and every class whose ceiling is `never`) is compared byte for byte, as
+/// RFC 8785 JSON of code, reason and detail, with what `CommandTable::resolve` returns for the
+/// same `id@major` from a table that does not hold it.
+#[test]
+fn a_never_command_over_mcp_is_refused_byte_for_byte_as_an_unknown_command() {
+    let mut w = World::new();
+    let agent = w.channel(ChannelKind::Mcp, "claude-a");
+    let agent_p = w.table.derive_principal(&agent).unwrap();
+    let mut hidden: Vec<CommandDef> =
+        ["test.run_never@1", "test.run_local@1", &format!("{REJECT_REQUEST}@1")].into_iter().map(def).collect();
+    for class in ["M1", "S1", "A0"] {
+        let mut d = class_def(class, "exposed", false);
+        d.id = format!("test.class_{}", class.to_ascii_lowercase());
+        hidden.push(d);
+    }
+    let visible = def("test.run_exposed@1");
+    let table = fid_bus::validate::CommandTable::build(
+        Digest([7; 32]),
+        vec![visible.clone()],
+        Catalogue::geo_frame().unwrap(),
+        &fid_registry::ContextTypes::new(),
+    )
+    .unwrap();
+    assert!(table.resolve(&visible.id, visible.major, &agent_p).is_ok());
+    let view = w.book.view(HEAD);
+    for d in &hidden {
+        assert_eq!(mcp_projection(d), Projection::Never, "{}", d.id);
+        let Err(unknown) = table.resolve(&d.id, d.major, &agent_p) else { panic!("{} resolved", d.id) };
+        let unknown = unknown.to_json().unwrap();
+        for kind in [ChannelKind::Mcp, ChannelKind::ServerMcp] {
+            let e = authorise_projection(kind, d).unwrap_err();
+            assert_eq!(e.to_json().unwrap(), unknown, "{} on {kind}", d.id);
+        }
+        let vp = ValidParams::for_tests(json("{}"));
+        let e = authorise(&w.table, &agent, d, &vp, None, &view).unwrap_err();
+        assert_eq!(e.to_json().unwrap(), unknown, "{} via authorise", d.id);
+        // Nothing in the refusal names MCP or the projection.
+        let text = String::from_utf8(unknown).unwrap();
+        assert!(text.contains("unknown_command") && !text.contains("MCP") && !text.contains("not_on_mcp"), "{text}");
+    }
+    assert!(w.journal.drafts.is_empty());
+    assert!(w.book.is_empty());
 }
