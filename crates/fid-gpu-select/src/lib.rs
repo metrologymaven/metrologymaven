@@ -14,10 +14,16 @@
 //!
 //!   No survivor gives `software` with `fallback = true` and a reason listing every rejected
 //!   adapter with its cause.
-//! - [`probe`] lists adapters per backend through a [`Prober`] (the real one is
-//!   [`WgpuProber`], no surface), each backend on a worker thread with a deadline; a backend
-//!   that fails or does not answer in time becomes a [`Rejection`] (`probe_failed`,
-//!   `probe_timeout`), never an error or a panic.
+//! - An allowed `software` override selects `software` at once (reason `user_override`), so a
+//!   user whose GPU driver crashes can escape it; [`Probe::run_with_override`] then probes
+//!   nothing. An override the row does not list is ignored and noted in `unverified`.
+//! - [`Probe`] lists adapters per backend through a [`Prober`] (the real one is
+//!   [`WgpuProber`], no surface, shared as [`Probe::wgpu`]), each backend on a worker thread
+//!   with a deadline; a backend that fails or does not answer in time becomes a [`Rejection`]
+//!   (`probe_failed`, `probe_timeout`), never an error or a panic. A backend still hung from
+//!   an earlier probe is `probe_timeout` at once, without a new thread. The result lists the
+//!   backends that timed out or failed ([`GpuSelection::probe_timeout`],
+//!   [`GpuSelection::probe_failed`]).
 //! - [`GpuSelection::to_json`] is the canonical JSON of REQ-007; [`GpuSelection::adapter_choice`]
 //!   is the plain-data choice `VIZ.RENDER.FRAME.GRAPH` takes (no code edge either way).
 //!
@@ -25,15 +31,17 @@
 //! - A CPU adapter on a hardware backend (lavapipe on Vulkan, WARP on DX12) is never selected
 //!   as that backend: it is rejected as `not_hardware`, because REQ-002 makes `software` the
 //!   answer when no hardware adapter qualifies.
-//! - wgpu reports neither the API version nor a numeric driver version. [`WgpuProber`] parses
-//!   the first dotted number of the driver string and leaves the API version unknown. An
-//!   unknown version never fails a minimum by itself: the check is skipped and listed in
-//!   [`GpuSelection::unverified`]. A known-bad entry with a driver range applies to an adapter
-//!   whose driver version is unknown (the safe side), also listed there.
+//! - wgpu reports neither the API version nor a numeric driver version. [`WgpuProber`] reads
+//!   the first dotted numeric token of the driver string ([`driver_version_of`]) and records
+//!   only a guaranteed API floor ([`AdapterInfo::api_floor`]: DX12 11.0, or 11.1 from wgpu's
+//!   features; Vulkan 1.0). A minimum at or below the floor is met; above it, the API minimum
+//!   is unverified, listed in [`GpuSelection::unverified`], and does not reject the adapter.
+//!   An unknown driver version is handled the same way. A known-bad entry with a driver range
+//!   applies to an adapter whose driver version is unknown (the safe side), also listed there.
 
 mod probe;
 
-pub use probe::{driver_version_of, probe, ProbeReport, Prober, WgpuProber, DEFAULT_PROBE_TIMEOUT};
+pub use probe::{driver_version_of, Probe, ProbeReport, Prober, WgpuProber, DEFAULT_PROBE_TIMEOUT};
 
 use fid_canon::CValue;
 use fid_gpu_policy::policy::{Backend, BadAction, BadEntry, GpuOs, KnownBad, PolicyRow};
@@ -95,6 +103,10 @@ pub struct AdapterInfo {
     pub driver_version: Option<Version>,
     /// `None` when the graphics layer does not report it (wgpu never does).
     pub api_version: Option<Version>,
+    /// The lowest API version the graphics layer guarantees for this adapter, a proxy read
+    /// when `api_version` is unknown (see [`WgpuProber`]). It can show a minimum is met, never
+    /// that it is missed.
+    pub api_floor: Option<Version>,
 }
 
 /// Why an adapter or a backend was not selected.
@@ -178,7 +190,26 @@ pub struct GpuSelection {
     /// Checks that could not be made (an unknown API or driver version), and the override
     /// when the row does not allow it.
     pub unverified: Vec<String>,
+    /// Backends whose probe timed out (or was still hung from an earlier probe), in the order
+    /// of the probe rejections. The frame graph must not touch them.
+    pub probe_timeout: Vec<Backend>,
+    /// Backends whose probe failed.
+    pub probe_failed: Vec<Backend>,
 }
+
+/// The backends of the backend-level rejections (`adapter` is `None`) whose cause matches.
+pub(crate) fn probe_backends(rejections: &[Rejection], cause: impl Fn(&Cause) -> bool) -> Vec<Backend> {
+    let mut out = Vec::new();
+    for r in rejections.iter().filter(|r| r.adapter.is_none() && cause(&r.cause)) {
+        if !out.contains(&r.backend) {
+            out.push(r.backend);
+        }
+    }
+    out
+}
+
+/// The reason given when the caller's override selects `software`.
+pub const USER_OVERRIDE: &str = "user_override";
 
 /// A known-bad entry applies to `a` on `os`. With an unknown driver version, an entry with a
 /// driver range applies (the safe side) and `unknown` is set.
@@ -198,9 +229,11 @@ fn entry_applies(e: &BadEntry, os: GpuOs, a: &AdapterInfo, unknown: &mut bool) -
 }
 
 /// Selects the backend and adapter (see the crate documentation). `probe_rejections` are the
-/// backend-level failures of [`probe`]; they are carried into the result. `override_backend`
-/// is tried first when the row lists it (and is not `software`); otherwise it is ignored and
-/// noted in `unverified`.
+/// backend-level failures of [`Probe::run`]; they are carried into the result.
+/// `override_backend` is tried first when the row lists it: a hardware backend moves to the
+/// front of the order (a known-bad `force_software` still wins); `software` is selected at
+/// once with reason `user_override` and `fallback = true`, without evaluating any adapter. An
+/// override the row does not list is ignored and noted in `unverified`.
 pub fn select(
     adapters: &[AdapterInfo],
     probe_rejections: &[Rejection],
@@ -210,14 +243,19 @@ pub fn select(
 ) -> GpuSelection {
     let mut order: Vec<Backend> = row.backends.iter().copied().filter(|b| *b != Backend::Software).collect();
     let mut unverified = Vec::new();
-    if let Some(o) = override_backend {
-        match order.iter().position(|b| *b == o) {
+    match override_backend {
+        Some(Backend::Software) if row.backends.contains(&Backend::Software) => {
+            let why = format!("{USER_OVERRIDE}: software requested by the caller");
+            return software(probe_rejections.to_vec(), Vec::new(), unverified, Some(why));
+        }
+        Some(o) => match order.iter().position(|b| *b == o) {
             Some(i) => {
                 let b = order.remove(i);
                 order.insert(0, b);
             }
-            None => unverified.push(format!("override {o} is not a hardware backend of the policy row; ignored")),
-        }
+            None => unverified.push(format!("override {o} is not a backend of the policy row; ignored")),
+        },
+        None => {}
     }
     let mut candidates: Vec<(usize, u8, usize, &AdapterInfo)> = Vec::new();
     let mut rejections: Vec<Rejection> = probe_rejections.to_vec();
@@ -281,6 +319,8 @@ pub fn select(
             }
         }
         let reason = rejections.iter().map(ToString::to_string).collect::<Vec<_>>().join("; ");
+        let probe_timeout = probe_backends(&rejections, |c| matches!(c, Cause::ProbeTimeout));
+        let probe_failed = probe_backends(&rejections, |c| matches!(c, Cause::ProbeFailed(_)));
         return GpuSelection {
             backend: a.backend,
             adapter: Some(SelectedAdapter {
@@ -296,6 +336,8 @@ pub fn select(
             known_bad: applied,
             workarounds,
             unverified,
+            probe_timeout,
+            probe_failed,
         };
     }
     software(rejections, applied, unverified, None)
@@ -305,20 +347,25 @@ fn meets_minimum(row: &PolicyRow, a: &AdapterInfo, unverified: &mut Vec<String>)
     let Some(min) = row.min.get(&a.backend) else {
         return true;
     };
-    match &a.api_version {
-        Some(v) if *v < min.api => return false,
-        Some(_) => {}
-        None => unverified
-            .push(format!("{} on {}: API version unknown; minimum {} not checked", a.name, a.backend, min.api)),
+    match (&a.api_version, &a.api_floor) {
+        (Some(v), _) if *v < min.api => return false,
+        (Some(_), _) => {}
+        // The guaranteed floor meets the minimum: verified without the exact version.
+        (None, Some(f)) if *f >= min.api => {}
+        (None, Some(f)) => unverified.push(format!(
+            "{} on {}: API version unknown (at least {f}); minimum {} unverified",
+            a.name, a.backend, min.api
+        )),
+        (None, None) => {
+            unverified.push(format!("{} on {}: API version unknown; minimum {} unverified", a.name, a.backend, min.api))
+        }
     }
     if let Some(dmin) = &min.driver {
         match &a.driver_version {
             Some(v) if v < dmin => return false,
             Some(_) => {}
-            None => unverified.push(format!(
-                "{} on {}: driver version unknown; minimum driver {dmin} not checked",
-                a.name, a.backend
-            )),
+            None => unverified
+                .push(format!("{} on {}: driver version unknown; minimum driver {dmin} unverified", a.name, a.backend)),
         }
     }
     true
@@ -332,6 +379,8 @@ fn software(
 ) -> GpuSelection {
     let mut lines: Vec<String> = rejections.iter().map(ToString::to_string).collect();
     lines.push(forced.unwrap_or_else(|| "no hardware adapter qualifies; software".to_string()));
+    let probe_timeout = probe_backends(&rejections, |c| matches!(c, Cause::ProbeTimeout));
+    let probe_failed = probe_backends(&rejections, |c| matches!(c, Cause::ProbeFailed(_)));
     GpuSelection {
         backend: Backend::Software,
         adapter: None,
@@ -341,7 +390,13 @@ fn software(
         known_bad,
         workarounds: Vec::new(),
         unverified,
+        probe_timeout,
+        probe_failed,
     }
+}
+
+fn backends(v: &[Backend]) -> CValue {
+    CValue::Arr(v.iter().map(|b| s(b.as_str())).collect())
 }
 
 fn s(v: &str) -> CValue {
@@ -359,7 +414,7 @@ fn hex(n: u32) -> CValue {
 impl GpuSelection {
     /// REQ-007 as a value: `backend`, `adapter` (`name`, `vendor_id`, `device_id` as `0x`
     /// hex, `device_type`, `driver_version`, or `null` for software), `fallback`, `reason`,
-    /// `rejections`, `known_bad`, `workarounds`, `unverified`.
+    /// `rejections`, `known_bad`, `workarounds`, `unverified`, `probe_timeout`, `probe_failed`.
     pub fn to_cvalue(&self) -> CValue {
         let mut m = BTreeMap::new();
         m.insert("format".to_string(), s(SELECTION_FORMAT));
@@ -397,6 +452,8 @@ impl GpuSelection {
         m.insert("known_bad".to_string(), strs(&self.known_bad));
         m.insert("workarounds".to_string(), strs(&self.workarounds));
         m.insert("unverified".to_string(), strs(&self.unverified));
+        m.insert("probe_timeout".to_string(), backends(&self.probe_timeout));
+        m.insert("probe_failed".to_string(), backends(&self.probe_failed));
         CValue::Obj(m)
     }
 
@@ -426,8 +483,9 @@ impl GpuSelection {
 }
 
 /// Parses a recorded adapter list (`fixtures/plat/gpu/adapters-*.json`): a JSON array of
-/// `{ backend, name, vendor_id, device_id, device_type, driver_version, api_version }`, IDs as
-/// `"0x..."` strings, versions as dotted strings or `null`. Duplicate keys are refused.
+/// `{ backend, name, vendor_id, device_id, device_type, driver_version, api_version }` and an
+/// optional `api_floor`, IDs as `"0x..."` strings, versions as dotted strings or `null`.
+/// Duplicate and unknown keys are refused.
 pub fn parse_adapters(bytes: &[u8]) -> Result<Vec<AdapterInfo>, String> {
     let v = fid_canon::parse_with_limits(bytes, 1024 * 1024, 8).map_err(|e| format!("not valid JSON: {}", e.code()))?;
     let CValue::Arr(items) = v else {
@@ -437,10 +495,10 @@ pub fn parse_adapters(bytes: &[u8]) -> Result<Vec<AdapterInfo>, String> {
     for (i, it) in items.iter().enumerate() {
         let at = format!("adapter {i}");
         let CValue::Obj(m) = it else { return Err(format!("{at} is not an object")) };
-        let keys: Vec<&str> = m.keys().map(String::as_str).collect();
+        let keys: Vec<&str> = m.keys().map(String::as_str).filter(|k| *k != "api_floor").collect();
         let want = ["api_version", "backend", "device_id", "device_type", "driver_version", "name", "vendor_id"];
         if keys != want {
-            return Err(format!("{at} must have exactly the keys {}", want.join(", ")));
+            return Err(format!("{at} must have exactly the keys {} (and optionally api_floor)", want.join(", ")));
         }
         let text = |k: &str| match m.get(k) {
             Some(CValue::Str(x)) => Ok(x.as_str()),
@@ -469,6 +527,7 @@ pub fn parse_adapters(bytes: &[u8]) -> Result<Vec<AdapterInfo>, String> {
             device_type: DeviceType::parse(text("device_type")?).ok_or_else(|| format!("{at}: unknown device_type"))?,
             driver_version: ver("driver_version")?,
             api_version: ver("api_version")?,
+            api_floor: if m.contains_key("api_floor") { ver("api_floor")? } else { None },
         });
     }
     Ok(out)
