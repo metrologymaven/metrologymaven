@@ -7,7 +7,9 @@
 //! `fid-design princ-check [--file <md>] [--json]` and
 //! `fid-design words-check --copy <jsonl> [--words <json>] [--json]` and
 //! `fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>]
-//! [--deny-names <file>] [--json]` or `review-check --all --root <design dir> [--base <repo>] ..`.
+//! [--deny-names <file>] [--json]` or `review-check --all --root <design dir> [--base <repo>] ..`,
+//! `fid-design icons-prov --root <design dir> --attribution <file> [--json]` and
+//! `fid-design icons-registry --manifest <file> --root <design dir> [--json]`.
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage.
 
 use std::io::Write;
@@ -15,7 +17,9 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 const USAGE: &str =
-    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]";
+    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]
+       fid-design icons-prov --root <design dir> --attribution <file> [--json]
+       fid-design icons-registry --manifest <file> --root <design dir> [--json]";
 
 #[derive(Default)]
 struct Args {
@@ -30,6 +34,8 @@ struct Args {
     base: Option<PathBuf>,
     baseline: Option<PathBuf>,
     out: Option<PathBuf>,
+    attribution: Option<PathBuf>,
+    manifest: Option<PathBuf>,
     pr: Option<u64>,
     all: bool,
     json: bool,
@@ -52,6 +58,8 @@ fn parse_args(args: &[String]) -> Option<Args> {
             "--base" => out.base = Some(PathBuf::from(it.next()?)),
             "--baseline" => out.baseline = Some(PathBuf::from(it.next()?)),
             "--out" => out.out = Some(PathBuf::from(it.next()?)),
+            "--attribution" => out.attribution = Some(PathBuf::from(it.next()?)),
+            "--manifest" => out.manifest = Some(PathBuf::from(it.next()?)),
             "--pr" => {
                 let n: u64 = it.next()?.parse().ok()?;
                 if n == 0 {
@@ -109,6 +117,38 @@ fn main() -> ExitCode {
     };
     let pkg_flags = args.root.is_some() || args.from.is_some() || args.to.is_some();
     let princ_flags = args.file.is_some() || args.copy.is_some() || args.words.is_some();
+    if cmd == "icons-prov" || cmd == "icons-registry" {
+        let others = princ_flags
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.pr.is_some()
+            || args.all;
+        let Some(root) = args.root.clone() else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        return match (cmd.as_str(), &args.attribution, &args.manifest) {
+            ("icons-prov", Some(attr), None) => match fid_design::icons_prov::check_prov(&root, attr) {
+                Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+                Err(e) => fail(e),
+            },
+            ("icons-registry", None, Some(man)) => match fid_design::icons_prov::check_registry(man, &root) {
+                Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+                Err(e) => fail(e),
+            },
+            _ => usage(),
+        };
+    }
+    if args.attribution.is_some() || args.manifest.is_some() {
+        return usage();
+    }
     if cmd == "review-check" {
         let mode_ok = if args.all { args.changed.is_none() && args.pr.is_none() } else { args.changed.is_some() };
         let Some(root) = args.root.clone() else {

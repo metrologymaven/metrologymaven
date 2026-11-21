@@ -1,0 +1,2967 @@
+{
+ "about": "GEO.DIST.BATCH AC-3. Written by tools/fixtures/geo_dist_batch.py; never edit by hand. CC-BY-4.0. Numbers are binary64 bit patterns in hex (u64 of to_bits). Lines p + s v, s of either sign. foot: the exact intersection rounded per axis; distance: |s| |v| and signed: s |v| (sign of s), both rounded from 60-digit decimals; tri: the winning triangle, null when several share the nearest point.",
+ "cases": [
+  {
+   "designed": true,
+   "distance": "4000000000000000",
+   "foot": [
+    "3fe0000000000000",
+    "3fd0000000000000",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fe0000000000000",
+    "3fd0000000000000",
+    "4008000000000000"
+   ],
+   "signed": "4000000000000000",
+   "tri": 0,
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "bff0000000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "hit": false,
+   "max_distance": "3ff8000000000000",
+   "mesh": "cube",
+   "p": [
+    "3fe0000000000000",
+    "3fd0000000000000",
+    "4008000000000000"
+   ],
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "bff0000000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "distance": "4000000000000000",
+   "foot": [
+    "3fe0000000000000",
+    "3fd0000000000000",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": "4000000000000000",
+   "mesh": "cube",
+   "p": [
+    "3fe0000000000000",
+    "3fd0000000000000",
+    "4008000000000000"
+   ],
+   "signed": "4000000000000000",
+   "tri": 0,
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "bff0000000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "distance": "4000000000000000",
+   "foot": [
+    "3fe0000000000000",
+    "3fd0000000000000",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fe0000000000000",
+    "3fd0000000000000",
+    "4008000000000000"
+   ],
+   "signed": "c000000000000000",
+   "tri": 0,
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "3ff0000000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "distance": "4000000000000000",
+   "foot": [
+    "3fe0000000000000",
+    "3fe0000000000000",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fe0000000000000",
+    "3fe0000000000000",
+    "4008000000000000"
+   ],
+   "signed": "4000000000000000",
+   "tri": null,
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "bff0000000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "distance": "4000000000000000",
+   "foot": [
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "4008000000000000"
+   ],
+   "signed": "4000000000000000",
+   "tri": null,
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "bff0000000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "distance": "3fe6666666666666",
+   "foot": [
+    "3fb999999999999a",
+    "3fc999999999999a",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fb999999999999a",
+    "3fc999999999999a",
+    "3fd3333333333333"
+   ],
+   "signed": "3fe6666666666666",
+   "tri": 1,
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "3ff0000000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "distance": "3fe6666666666666",
+   "foot": [
+    "3fb999999999999a",
+    "3fc999999999999a",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fb999999999999a",
+    "3fc999999999999a",
+    "3fd3333333333333"
+   ],
+   "signed": "bfe6666666666666",
+   "tri": 1,
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "bff0000000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "distance": "3fe6666666666666",
+   "foot": [
+    "3fb999999999999a",
+    "3fc999999999999a",
+    "bff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fb999999999999a",
+    "3fc999999999999a",
+    "bfd3333333333333"
+   ],
+   "signed": "bfe6666666666666",
+   "tri": 2,
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "3ff0000000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "distance": "4010000000000000",
+   "foot": [
+    "3fd0000000000000",
+    "3fe0000000000000",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fd0000000000000",
+    "3fe0000000000000",
+    "4014000000000000"
+   ],
+   "signed": "4010000000000000",
+   "tri": 1,
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "81a56e1fc2f8f359"
+   ]
+  },
+  {
+   "designed": true,
+   "distance": "4010000000000000",
+   "foot": [
+    "3fd0000000000000",
+    "3fe0000000000000",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fd0000000000000",
+    "3fe0000000000000",
+    "4014000000000000"
+   ],
+   "signed": "4010000000000000",
+   "tri": 1,
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "c1124f8000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "4008000000000000",
+    "4008000000000000",
+    "4008000000000000"
+   ],
+   "v": [
+    "3ff0000000000000",
+    "0000000000000000",
+    "0000000000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "distance": "4010000000000000",
+   "foot": [
+    "3fe0000000000000",
+    "3fd0000000000000",
+    "bff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fe0000000000000",
+    "3fd0000000000000",
+    "4008000000000000"
+   ],
+   "signed": "4010000000000000",
+   "subset": [
+    2,
+    3
+   ],
+   "tri": 3,
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "bff0000000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fe0000000000000",
+    "3fd0000000000000",
+    "4008000000000000"
+   ],
+   "subset": [
+    4,
+    5
+   ],
+   "v": [
+    "0000000000000000",
+    "0000000000000000",
+    "bff0000000000000"
+   ]
+  },
+  {
+   "designed": true,
+   "distance": "3ff0000000000000",
+   "foot": [
+    "3ff0000000000000",
+    "3fe0000000000000",
+    "3fd0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "4000000000000000",
+    "3fe0000000000000",
+    "3fd0000000000000"
+   ],
+   "signed": "3ff0000000000000",
+   "tri": 4,
+   "v": [
+    "bff0000000000000",
+    "0000000000000000",
+    "0000000000000000"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400492435b94e5b2",
+   "foot": [
+    "3fc90d378204ebf4",
+    "3ff0000000000000",
+    "3fb534c592158442"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "bff69cda308a9696",
+    "400710d11901c0c0",
+    "3fe8bf2c9072590c"
+   ],
+   "signed": "400492435b94e5b2",
+   "tri": 9,
+   "v": [
+    "40061e756fbc611b",
+    "c009e36f0f277f0b",
+    "bff2fc0b1ad2740e"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3fffd0b184915f2b",
+   "foot": [
+    "bff0000000000000",
+    "bfe8b1837e8437b9",
+    "bfe4084cd070e310"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "bffc7f13dd61faaa",
+    "3fe65617ace09e40",
+    "bffb6d0b49265a2a"
+   ],
+   "signed": "3fffd0b184915f2b",
+   "tri": 6,
+   "v": [
+    "3fe78e241021f6e1",
+    "bff6298d158ddcee",
+    "3ff06889ed8036f1"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3fa44ccb3fe4da93",
+   "foot": [
+    "3ff0000000000000",
+    "3fdf21bb5c797a2d",
+    "3fe465fe6b4040c2"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3ff0831398c832e0",
+    "3fe01a89937a7008",
+    "3fe4eb797e64b32c"
+   ],
+   "signed": "bfa44ccb3fe4da93",
+   "tri": 5,
+   "v": [
+    "3ffb7bbeadecf6d6",
+    "3fecddbcd4107968",
+    "3febfccb73468c4a"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ffad42b3b82bee1",
+   "foot": [
+    "bfd2f86b1abf4006",
+    "bff0000000000000",
+    "bfd4c1570e4b8080"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fb2fd2a7a39db00",
+    "bffcca5ec5f7862b",
+    "bffc03ce0a739a42"
+   ],
+   "signed": "3ffad42b3b82bee1",
+   "tri": 10,
+   "v": [
+    "bfa8342073ddaa5f",
+    "3fba1aeea9b2bb45",
+    "3fc74b35b69f5527"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff826167c428822",
+   "foot": [
+    "bfe3df6404613f0c",
+    "bfea372b6ff2edc9",
+    "bff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fd0cd0f6d7a6d80",
+    "bffe96c38ba2a157",
+    "bff8d1035d7ebfb3"
+   ],
+   "signed": "3ff826167c428822",
+   "tri": 3,
+   "v": [
+    "bff45ed535b4bf51",
+    "3ff9309f6de7957a",
+    "3fe96899ca643813"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "40119f5d1ca1df50",
+   "foot": [
+    "3fda62759939531e",
+    "bff0000000000000",
+    "3fd132b3deee6877"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "c001f4221e618e51",
+    "c005455b0d39fdda",
+    "c006a3769004e874"
+   ],
+   "signed": "40119f5d1ca1df50",
+   "tri": 10,
+   "v": [
+    "3fe8eb2f90a8599a",
+    "3fdf1f2296c58746",
+    "3fed10c3f73b601c"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "40080285dba14bea",
+   "foot": [
+    "3f97cfa618e0ef33",
+    "bf9022dce092fb2f",
+    "bff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "bffdf109bd5f5a25",
+    "3ff3486b2f5f0c30",
+    "c007da8d20034f06"
+   ],
+   "signed": "40080285dba14bea",
+   "tri": 3,
+   "v": [
+    "400a57cea87ee7c4",
+    "c000f9ea68214c2a",
+    "400b8de3b0ec70ef"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3fd5877b0dd46a05",
+   "foot": [
+    "3fef7e2ff2b99826",
+    "3ff0000000000000",
+    "bfe4d78b111d7325"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3ff08ba3e06c952c",
+    "3ff546ba14f1bd38",
+    "bfe37085f73cee20"
+   ],
+   "signed": "3fd5877b0dd46a05",
+   "tri": 9,
+   "v": [
+    "bfa73b1fdf69cf2b",
+    "bfd32cfe97cc84c3",
+    "bfa46331fe46afc9"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "40041a856814de78",
+   "foot": [
+    "3fe2144081b89a41",
+    "3ff0000000000000",
+    "bfefb893b79a9c81"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "40011a01a2135188",
+    "400793ed987a293c",
+    "bfe895860d651b10"
+   ],
+   "signed": "c0041a856814de78",
+   "tri": 9,
+   "v": [
+    "4004fd2ce0223685",
+    "4009fca89ba6442c",
+    "3fd7cfc731b3925c"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400524844033561c",
+   "foot": [
+    "3ff0000000000000",
+    "bfdab617c126ebc9",
+    "bfc7d3a3543880c7"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3ffdb1686be4446c",
+    "3fe7a41e2a1ede80",
+    "c00339d07b6e0185"
+   ],
+   "signed": "400524844033561c",
+   "tri": 5,
+   "v": [
+    "c003e97130ebe1db",
+    "c00ae651950f44d8",
+    "4019cac37a678b85"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fda93f4bfc2ae40",
+    "3ff490f44ce78b68",
+    "bffa5f6f8a8b2d94"
+   ],
+   "v": [
+    "bfdafed8512d870d",
+    "3ff5d19795ec9edf",
+    "bfd789b2ac8c8b66"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff5e25e2a1369cf",
+   "foot": [
+    "3fa21d4e473fa5e2",
+    "bfe4189b6d6b67e7",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": "400d81937e2ffcda",
+   "mesh": "cube",
+   "p": [
+    "3fe99f508fcfc218",
+    "bfe5c49077de69b0",
+    "40010f2aa2f16e08"
+   ],
+   "signed": "bff5e25e2a1369cf",
+   "tri": 0,
+   "v": [
+    "400bc875614432ad",
+    "bfce57fbe7073f39",
+    "40148dfd3698609a"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff98980cf21724d",
+   "foot": [
+    "3fda923b3fe6db2a",
+    "bff0000000000000",
+    "3fea0666223de826"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3ff1088eea4dc88c",
+    "bffe32418bdc1470",
+    "3fff85ed0a74dce0"
+   ],
+   "signed": "3ff98980cf21724d",
+   "tri": 11,
+   "v": [
+    "bfde83f9641f4a39",
+    "3fe4d89981ea2f22",
+    "bfeb2e6bf15a0ded"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3fef4e2e186e0324",
+   "mesh": "cube",
+   "p": [
+    "bff4399879a9cb0d",
+    "4003ac28d7db6232",
+    "c0050e75ed02e350"
+   ],
+   "v": [
+    "3ffbc2995e4cd865",
+    "bff77a48d0d3375d",
+    "4009706c6098bdf2"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400195af907f1c8f",
+   "foot": [
+    "3fe97a7d281bbe55",
+    "bff0000000000000",
+    "3fe0b3488c94d2e8"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "40069039f61d841a",
+    "bff8e514ea8e07d3",
+    "3ff2c81f1e69b694"
+   ],
+   "signed": "c00195af907f1c8f",
+   "tri": 10,
+   "v": [
+    "3fc93fe3a24f832f",
+    "bfabbcebc3a16127",
+    "3fb043da55f80e4d"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4005ff81afc1034e",
+   "foot": [
+    "3f5f7a484ed3bde2",
+    "bfe87506f1c1a223",
+    "bff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3ff652774fc5af30",
+    "c004841a72ff895a",
+    "c0045711b2663e3c"
+   ],
+   "signed": "c005ff81afc1034e",
+   "tri": 3,
+   "v": [
+    "3ff9d225d682ca49",
+    "c000ae99ffd72dd0",
+    "bffc96847e88361b"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "40010ed0621ed272",
+    "bff440b816641947",
+    "c001e9f5a7bf5966"
+   ],
+   "v": [
+    "bfc392376de2a5ec",
+    "3f95a6209f6acd72",
+    "3fdc92cd59a5ef5f"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ffbbdcc1421bab6",
+   "foot": [
+    "bff0000000000000",
+    "bfd194f86b1c1c25",
+    "3f5e34ecb1ca8df5"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "c0054dee6d9ab786",
+    "bfdabdb0b030f228",
+    "bfdde600cc4f6dd0"
+   ],
+   "signed": "3ffbbdcc1421bab6",
+   "tri": 6,
+   "v": [
+    "400356c352cc18ae",
+    "3fcaa06eee492e2c",
+    "3fe5d0c5b04b6c4f"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff14f69bdbffd04",
+   "foot": [
+    "3fee6e3caed3da5b",
+    "3fe77d4ccd353f59",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fdfe50eb2592bc0",
+    "3fe759bddb36f688",
+    "3f91c257e4a87580"
+   ],
+   "signed": "bff14f69bdbffd04",
+   "tri": 0,
+   "v": [
+    "bfce106abe4fa3bc",
+    "bf6273f24a736a90",
+    "bfe0517c5135a01a"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4002d59ea24bfba0",
+   "foot": [
+    "bff0000000000000",
+    "bfc1c0a8e4cbb00a",
+    "3fd670d4873520cc"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "c00162ad4b633bd2",
+    "3ff74086bf397220",
+    "bfeda93469069b28"
+   ],
+   "signed": "c002d59ea24bfba0",
+   "tri": 6,
+   "v": [
+    "bfe9f0f07bd70fc8",
+    "3ff199b34207a1fb",
+    "bfec3fada7c96b0f"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff4a10515afe710",
+   "foot": [
+    "3fe9ac38fb6a4a16",
+    "3fe32b02803ac2e3",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": "3ffb2f9bdabd9694",
+   "mesh": "cube",
+   "p": [
+    "3ff0f8c97c1fb3ac",
+    "3ff74b84a2f5e11c",
+    "3ffed9139e3d4dec"
+   ],
+   "signed": "3ff4a10515afe710",
+   "tri": 0,
+   "v": [
+    "bff814a1147551ef",
+    "c013f5ab38e0bba7",
+    "c0159d61b4823388"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ffe780b08722ca3",
+   "foot": [
+    "3ff0000000000000",
+    "bfe65edb702b784e",
+    "3fcb3fd7568a16c3"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "400375b8ac901126",
+    "bff4ea2b26397ac2",
+    "3ff4f788a36ad194"
+   ],
+   "signed": "3ffe780b08722ca3",
+   "tri": 5,
+   "v": [
+    "c0052ff6f4586272",
+    "3ff1fcf7264cd8db",
+    "c0003bc44d3c743b"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3fe3850ab1a0fcc8",
+   "mesh": "cube",
+   "p": [
+    "bfe3e541b089cba0",
+    "400555dfb8de8e78",
+    "40048b6b1a2ab90a"
+   ],
+   "v": [
+    "bf88e47073bf5bf9",
+    "3fca7a16ec794064",
+    "3fd4bce19ae2455b"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3fff0cceb0038ec1",
+   "foot": [
+    "bfe1d8163515e4ea",
+    "bff0000000000000",
+    "bfeca93d41d75b5b"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "bffd7511f915926c",
+    "c00382820a019b92",
+    "bff1ddebcef5adbe"
+   ],
+   "signed": "bfff0cceb0038ec1",
+   "tri": 10,
+   "v": [
+    "c01124d393b57a73",
+    "c01337c81c58ee93",
+    "bfe79e53037ea14a"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3fef39da7d9561dc",
+   "mesh": "cube",
+   "p": [
+    "3ff3444bda42d930",
+    "c005716c98de4632",
+    "3fe2c14999eb546c"
+   ],
+   "v": [
+    "3fd90d3ed5559261",
+    "c0016b41f21fec2a",
+    "bf8266861343990e"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400bc0ac63f0dd3f",
+   "foot": [
+    "3fc5f954840dbd19",
+    "bff0000000000000",
+    "3fc74400ea5fe207"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "c0022c9fd720fbd8",
+    "c004cf1eadad41ba",
+    "bffb06d4e1dfcb73"
+   ],
+   "signed": "400bc0ac63f0dd3f",
+   "tri": 11,
+   "v": [
+    "4018897ddcc799bd",
+    "40101416cddb3a2c",
+    "4012c9ab134a620b"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3feb47687ec2c70c",
+   "mesh": "cube",
+   "p": [
+    "3ff6d295c4e9a400",
+    "bfe33891a4b7a8e8",
+    "bff8765e5ff7e086"
+   ],
+   "v": [
+    "3ff3b0ede04bd9c2",
+    "3fb6782af03adace",
+    "bfe7f5ab217945db"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "400edc15d5001d25",
+   "mesh": "cube",
+   "p": [
+    "3ffbe95f01fb6618",
+    "3ffcb9c313527b2c",
+    "bfde822f8c275248"
+   ],
+   "v": [
+    "3fdcda51a3a7404d",
+    "3fbca578aba21c3c",
+    "3fb8fe74c4eae370"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "40013edd67732b96",
+   "mesh": "cube",
+   "p": [
+    "4006897488b82432",
+    "3ff1ba73fbe73e44",
+    "c00190a5f5905644"
+   ],
+   "v": [
+    "40061ebd2e319fe9",
+    "3fff65a22ac464f1",
+    "bff94c53661a31a6"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400075a05f7d8fb4",
+   "foot": [
+    "3ff0000000000000",
+    "bfcb14b55031abc1",
+    "bfef220e758d903a"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3ffec0b45fdc0c74",
+    "bfe36e38775fdfe0",
+    "c006272288d8b481"
+   ],
+   "signed": "400075a05f7d8fb4",
+   "tri": 4,
+   "v": [
+    "c000a5e89bb42f33",
+    "3fec92dbf9263758",
+    "401037394523e2b3"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400aa544f510ead9",
+   "foot": [
+    "bff0000000000000",
+    "3fbdf5ed28c1115d",
+    "3feb936c704e79c0"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "c000777207c4d35c",
+    "3fbb35fbba0a6300",
+    "c0025edd69242eca"
+   ],
+   "signed": "c00aa544f510ead9",
+   "tri": 6,
+   "v": [
+    "bff5d5fc915a488a",
+    "bf8c5e10abc4c9bc",
+    "c0104a2bc7b65331"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff5b479b327eb5e",
+   "foot": [
+    "3fefbc1a0dd737b2",
+    "3ff0000000000000",
+    "bfe26c28f84c1c37"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3ff8235ff60575cc",
+    "40020106a1edaf6a",
+    "bfe581f3f14bfd70"
+   ],
+   "signed": "bff5b479b327eb5e",
+   "tri": 9,
+   "v": [
+    "3ff15003bbaf0b51",
+    "4004f0c7395c0975",
+    "bfc9d4d3555b1292"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff8b0e01c8484f5",
+   "foot": [
+    "3fe6bc61c316fa58",
+    "bfe2c72c91cdcf49",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": "400bda8e485c6847",
+   "mesh": "cube",
+   "p": [
+    "3ff391ce2e24d790",
+    "bffd3b807f2c5553",
+    "3ffc30d342700580"
+   ],
+   "signed": "bff8b0e01c8484f5",
+   "tri": 0,
+   "v": [
+    "3fe185831b4a1ab5",
+    "bff5323d33280435",
+    "3fea0b2d1a3dd1b9"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3feebd0a16f1aee4",
+   "foot": [
+    "bfe195f343b96ede",
+    "bff0000000000000",
+    "3feba01211932c73"
+   ],
+   "hit": true,
+   "max_distance": "40057e2fcdd17b73",
+   "mesh": "cube",
+   "p": [
+    "bfe82ecd76c08aa0",
+    "bffc35766b609066",
+    "3ff68bd9f201b9e0"
+   ],
+   "signed": "3feebd0a16f1aee4",
+   "tri": 11,
+   "v": [
+    "3fd8ca93a7531148",
+    "3ff6f09fa361805f",
+    "bff0690319723baa"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3fd9ba2ce1444344",
+   "foot": [
+    "bfea3fd38bc7c7e0",
+    "3fd8cb5259755ba0",
+    "bff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "bfeed1ce430dede8",
+    "3fe033f6a3f52474",
+    "bff5b3fe01b3053c"
+   ],
+   "signed": "bfd9ba2ce1444344",
+   "tri": 2,
+   "v": [
+    "bfafb7985a572852",
+    "3faa699bd5c8240f",
+    "bfc3ca2270a6e742"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "4003b056f2aabd9e",
+   "mesh": "cube",
+   "p": [
+    "c0075bb4cb9f07d0",
+    "bffd59e092050818",
+    "40030e49639e8906"
+   ],
+   "v": [
+    "400aefee509051a7",
+    "3feead9928ed3e23",
+    "c008fc8b3175fc8c"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3fffa2e3fe5576ef",
+   "foot": [
+    "3fe8bbea65f7a79a",
+    "3ff0000000000000",
+    "bfd5f4e3330f6832"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3ffc0e73255db178",
+    "3ffdfcde6c3b2850",
+    "3ff227a529f968a0"
+   ],
+   "signed": "bfffa2e3fe5576ef",
+   "tri": 9,
+   "v": [
+    "400021402de57309",
+    "3ffcc2cbba412b12",
+    "40084ecb79619588"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "40015f24917053be",
+   "foot": [
+    "3ff0000000000000",
+    "3fe57a18d1bab86b",
+    "bfd482b86182bad2"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "40019659dd023794",
+    "bfe1a7efdfc1ba94",
+    "3ff03d7c47ca7b2c"
+   ],
+   "signed": "c0015f24917053be",
+   "tri": 4,
+   "v": [
+    "3fd88854d52cda72",
+    "bfd908ad56faa12b",
+    "3fdb56aefb88065d"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3fe8512edd98204c",
+   "mesh": "cube",
+   "p": [
+    "bfc87b0e970773c0",
+    "bffd7cffedda370f",
+    "bff962eae924f7a2"
+   ],
+   "v": [
+    "bfda9f2760831218",
+    "bffb65ef06472bb6",
+    "c01611f4c9e71b26"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4001f26176ba068f",
+   "foot": [
+    "3fd8b6b6c6ed48d6",
+    "3fe5058b3b970b8a",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fef2b37a26b7ab8",
+    "3ff9ce675919ae30",
+    "40078a29083d5d0a"
+   ],
+   "signed": "4001f26176ba068f",
+   "tri": 1,
+   "v": [
+    "bfed05bea7352cee",
+    "bff798e7222d7700",
+    "c007f95ea6521bcc"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3fed28125cfe9214",
+   "foot": [
+    "3fd80dfa46e6c1c0",
+    "3ff0000000000000",
+    "bfe9244d1aacaf25"
+   ],
+   "hit": true,
+   "max_distance": "3ff3f9bef07c6ba4",
+   "mesh": "cube",
+   "p": [
+    "3fd63c704271a140",
+    "3ffe91dd107e3178",
+    "bfe98b88fdec85a8"
+   ],
+   "signed": "bfed28125cfe9214",
+   "tri": 9,
+   "v": [
+    "bf95478adce6d606",
+    "3fe54fa93f04e884",
+    "bf82dffff41b02e8"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4001d7bd50b43f89",
+   "foot": [
+    "3fd03339d57c9f69",
+    "3fd9c1f49437dfc2",
+    "bff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "bfdce29bbcffc2c0",
+    "3ffcdf820edc929c",
+    "c004ae1b54be73d4"
+   ],
+   "signed": "c001d7bd50b43f89",
+   "tri": 2,
+   "v": [
+    "bff742573782e726",
+    "4007258e588a409d",
+    "c00a2a90175f5013"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff4f02731051a23",
+   "foot": [
+    "3ff0000000000000",
+    "bfc1c120c267fa0d",
+    "3fd3f76bcc468e4a"
+   ],
+   "hit": true,
+   "max_distance": "40024b8b13a0c227",
+   "mesh": "cube",
+   "p": [
+    "4001eec0c6a78708",
+    "bfa5895071e5ba00",
+    "bfb7103180b599c0"
+   ],
+   "signed": "3ff4f02731051a23",
+   "tri": 5,
+   "v": [
+    "bff7e877355124a1",
+    "bfbdc68f4e7235f4",
+    "3fdef818952a9faa"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3ff97f595caf00ae",
+   "mesh": "cube",
+   "p": [
+    "3fe084c4b3812ee8",
+    "c003f48769882892",
+    "3ffe84c106799c40"
+   ],
+   "v": [
+    "3fd43950380a5f74",
+    "bfe7e876622a67a0",
+    "3ff5d980e1e58401"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3ff1cea251e6a3c6",
+   "mesh": "cube",
+   "p": [
+    "c000ea8431a36f4b",
+    "3ffefba52d4211b8",
+    "bff669050f6f1149"
+   ],
+   "v": [
+    "3ff1757610b5e720",
+    "bfe8135969a942a2",
+    "3ff0fa435df61f51"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3fe195e1d613a70a",
+   "foot": [
+    "3fd838dccca93223",
+    "3fe1544b469992da",
+    "bff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fc975398e353c20",
+    "3fd0e07eb48b8d70",
+    "bff705621cb4638c"
+   ],
+   "signed": "3fe195e1d613a70a",
+   "tri": 2,
+   "v": [
+    "3fe86e4b904ab923",
+    "3ff2e628209b23ff",
+    "3ffdd956d2a05e25"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3fc6b5f14b69a1c0",
+   "foot": [
+    "bfdb4be45ab0bcad",
+    "bff0000000000000",
+    "bfd8bc68e9730e96"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "bfe23de98ba6fe20",
+    "bff1a174f249dec0",
+    "bfda25c1e23899a0"
+   ],
+   "signed": "3fc6b5f14b69a1c0",
+   "tri": 11,
+   "v": [
+    "400a6a134f23d279",
+    "4002c0f1d4aeb604",
+    "3fe03ba98b109232"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4006b5a7baf8121e",
+   "foot": [
+    "bfe62295c76d6b76",
+    "bfb9d91b5960cae1",
+    "bff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "bfe0abec8adfa978",
+    "40018b6dcf601158",
+    "c0054e5579753e8f"
+   ],
+   "signed": "4006b5a7baf8121e",
+   "tri": 2,
+   "v": [
+    "bfa25c3a9afca39a",
+    "bfded6388f2c071a",
+    "3fd65b86ecedb76c"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff6502caf480d42",
+   "foot": [
+    "3ff0000000000000",
+    "bfdb261dedf1fd7a",
+    "3fe8e727a3294350"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3ffff33d11bf7a38",
+    "bff27aa868757757",
+    "3ff6c8d0a6ab1be0"
+   ],
+   "signed": "bff6502caf480d42",
+   "tri": 5,
+   "v": [
+    "4012eb520bd3636f",
+    "c00bbc948028e683",
+    "40088347ce009406"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ffc739703d7d8c2",
+   "foot": [
+    "3ff0000000000000",
+    "3fe2d6c7986d4717",
+    "3fd70a735453bd91"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "4004ebdf834bde1c",
+    "3fe9f98aa73886bc",
+    "3ff11d363f4e9d68"
+   ],
+   "signed": "3ffc739703d7d8c2",
+   "tri": 4,
+   "v": [
+    "c011e57dad87dff2",
+    "bfe3c439f10a881c",
+    "bfff736eae1daddc"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4003a9627d1c08f7",
+   "foot": [
+    "3fe5a139267b69f2",
+    "3f6b9bab630f5b56",
+    "bff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "4000ee1c1f6360c4",
+    "3fccc71e97bada70",
+    "c007d522fb1d5573"
+   ],
+   "signed": "c003a9627d1c08f7",
+   "tri": 3,
+   "v": [
+    "4017df2f0d2ea9ea",
+    "3fed5cee6d728e12",
+    "c020667e32345c98"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "40008e2791e9049c",
+    "c0070d5963ed6c38",
+    "3feddd608eeb19b0"
+   ],
+   "v": [
+    "40013e690ee450d5",
+    "c0042c23dea486b1",
+    "bfd3833eda533268"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4004f61a7a013b00",
+   "foot": [
+    "3fc1f735b0428a1f",
+    "bff0000000000000",
+    "bfe17d7150af8874"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "bfec63992be6ee28",
+    "c0036149173532a6",
+    "c003f046728366f2"
+   ],
+   "signed": "4004f61a7a013b00",
+   "tri": 10,
+   "v": [
+    "3ffe7f410f43a03c",
+    "40051c396401974e",
+    "400ce02011c1a33e"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff2c407f4f1d334",
+   "foot": [
+    "bff0000000000000",
+    "3fd7c989d9fa6246",
+    "bfb7993dcf8f5d53"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "bff9915cc958afff",
+    "3fee236af0edd7f8",
+    "bfed966bf301d1e8"
+   ],
+   "signed": "3ff2c407f4f1d334",
+   "tri": 7,
+   "v": [
+    "3ff795e02ce6878a",
+    "bff67cc328da06da",
+    "40006a82a117f686"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400945421692a88d",
+   "foot": [
+    "3fe83b4d97c1ad6f",
+    "bfedad246aedb220",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "4005ddeb02774d64",
+    "c006f876954ff9b9",
+    "40041e06da498892"
+   ],
+   "signed": "400945421692a88d",
+   "tri": 0,
+   "v": [
+    "c008ac236fbb5701",
+    "40084544a3634bf6",
+    "c002e9363529b7b9"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4003eeb4deb874b9",
+   "foot": [
+    "3ff0000000000000",
+    "3fa1fabeecf7a03f",
+    "bfe40acf35a03ea3"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "4006b274fb6a1a0a",
+    "3fd72db4cf99c118",
+    "3ff0651c7d006ff4"
+   ],
+   "signed": "4003eeb4deb874b9",
+   "tri": 4,
+   "v": [
+    "bff2c54c08d30020",
+    "bfcabb8a54475874",
+    "bff0de70ee89c67a"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400ebeba1af78b37",
+   "foot": [
+    "3fb9135ec3cbcb72",
+    "bfe23c9b3227b1ef",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "c0056d2d53ec4e7c",
+    "c007087b03103bc8",
+    "4002854382e8c9c6"
+   ],
+   "signed": "400ebeba1af78b37",
+   "tri": 0,
+   "v": [
+    "40106f0ecb731646",
+    "400b56b4ca7f56c3",
+    "bfff2343397ca908"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400bec8dd23ac3a6",
+   "foot": [
+    "3fd30fb867cfeca7",
+    "3ff0000000000000",
+    "bfdbbbe74fbcf7d6"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "cube",
+   "p": [
+    "3fd5b464fc301148",
+    "4006e0d35d217720",
+    "400429460e3054f0"
+   ],
+   "signed": "400bec8dd23ac3a6",
+   "tri": 9,
+   "v": [
+    "bfb1f079b811d434",
+    "c0093e77a8a00ac0",
+    "c0140b7e39ca1b53"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "4004259efc906f8a",
+   "mesh": "cube",
+   "p": [
+    "c005d04b8431ed49",
+    "400795c6628c03ee",
+    "c001de77435e1bba"
+   ],
+   "v": [
+    "3fe7697fc1c8a8a3",
+    "bff090eca2cfcded",
+    "3febf9e5198c18ad"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff17dabed496f68",
+   "foot": [
+    "3fd9bec7210197a1",
+    "bfb492e46595e121",
+    "3ff0000000000000"
+   ],
+   "hit": true,
+   "max_distance": "400ea1dd65588e26",
+   "mesh": "cube",
+   "p": [
+    "3ff0a3ad15e73ea0",
+    "3fdb73085e680720",
+    "3ffba340fbf2fb58"
+   ],
+   "signed": "3ff17dabed496f68",
+   "tri": 0,
+   "v": [
+    "bff70d76a17bb75e",
+    "bff268eea07929bf",
+    "bffa4b457d9820be"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff77814541cda8d",
+   "foot": [
+    "3fe9e7d9a016eb9e",
+    "3ff1d7607a8513f8",
+    "3fb8c546f9b5e537"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "3fb8b5762cf649c0",
+    "40002fc7e51c5908",
+    "bfe9d97363b78f20"
+   ],
+   "signed": "3ff77814541cda8d",
+   "tri": 0,
+   "v": [
+    "3fbe1ee3f1c430d5",
+    "bfc32efe6f46a9f7",
+    "3fc31b0578d0fa2a"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bff9c056095c8c32",
+    "3ffbdd140fa4f8c0",
+    "3ff3690ac068fed4"
+   ],
+   "v": [
+    "40181dce1f2abcb3",
+    "bfcd85daefd6abbb",
+    "3fe2d15f64155701"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3ff8dfe12fffa796",
+   "mesh": "tetra",
+   "p": [
+    "3ff2afacbf5c5738",
+    "4002c8e2145e6ddc",
+    "3ff2c16ead2e3fb8"
+   ],
+   "v": [
+    "bfa78e914cfb2c1c",
+    "3fbdf000431c8f46",
+    "3faa3adbbd0b4a00"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "4005f1ca8e09f0d0",
+    "400063f9b71d3a3e",
+    "3fe9d873866c5a90"
+   ],
+   "v": [
+    "3fe9faada765145b",
+    "3ffde54a34557ef0",
+    "3fb1b5564345b567"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400212ea8510094f",
+   "foot": [
+    "3fe8302ad202d0f5",
+    "3fd2e659b2ef6317",
+    "3fefb2ee1aa0662d"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bfe55cf4920181e4",
+    "bfe5d1634475b778",
+    "400394d84ea77b1e"
+   ],
+   "signed": "400212ea8510094f",
+   "tri": 1,
+   "v": [
+    "400532c378cd90f1",
+    "3ffd1a34327c3405",
+    "c005b2e4a66aec7f"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "3fdd0a925f9e8620",
+    "4005eee1bffc5292",
+    "400687e43907f87a"
+   ],
+   "v": [
+    "4001e6b4e37f128f",
+    "bff83b522bc84c54",
+    "c003679c2bc2e0a1"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400e5a6f3de6fb41",
+   "foot": [
+    "3feffc9011ae56da",
+    "3fc9c654d1cd9be4",
+    "bfa42078b7648a59"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bff2bdea9824fac0",
+    "bfecf16771fe6494",
+    "c007953ff003879c"
+   ],
+   "signed": "c00e5a6f3de6fb41",
+   "tri": 0,
+   "v": [
+    "c0166eb641ec2b65",
+    "c006da6d4453f407",
+    "c01e0de74a1e1929"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff9f46a9eccd25e",
+   "foot": [
+    "3ff52971de411cae",
+    "3fe72ec8b3ba4dc7",
+    "bfb23a02f01ad5af"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "3ff7141f79e0d9e0",
+    "3ffb973e107b5228",
+    "bff57c6af23d5b96"
+   ],
+   "signed": "3ff9f46a9eccd25e",
+   "tri": 0,
+   "v": [
+    "bfd1eece7e5cda06",
+    "c002b61ead0c88c6",
+    "4007cbb6118f719c"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "40040d20b717c57c",
+    "3fe88fc14d3fb4ac",
+    "400463d94d65f5bc"
+   ],
+   "v": [
+    "c000d8a3153cc8ac",
+    "bfb8856546dc71db",
+    "bff13504a27f60fa"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "c005e8d5c6fea6fe",
+    "3ff1a5e18d91bd60",
+    "bff2d53ecf8994e5"
+   ],
+   "v": [
+    "4011119770f775b3",
+    "3fee35b96c9017c5",
+    "3ffda790f72a23da"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "3faeb281702c5fc0",
+    "bffa6f2197b30e38",
+    "bfc7d380daf08b60"
+   ],
+   "v": [
+    "3ff1869dafb8ac3f",
+    "3fede9b4f396f986",
+    "3fe1bdbccbae6e21"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "3ffd6afb2180d2b8",
+    "4004ffab15dba3e8",
+    "3ffab7f9fdedc410"
+   ],
+   "v": [
+    "3fd3cdd48ec9ba52",
+    "3ff504ddb6eb576f",
+    "40053ba93c512f15"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "401195259c045192",
+   "foot": [
+    "3fea12b94b6e2594",
+    "3ff3793968a0b623",
+    "3fbaf031368448b8"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "3fcead8e2ef63d10",
+    "c007a9bb35c77ab2",
+    "bff24ddf9b325f9c"
+   ],
+   "signed": "401195259c045192",
+   "tri": 0,
+   "v": [
+    "3fdcf322a8042ea1",
+    "400a450814809941",
+    "3fef711583397692"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bff49cfa81204a65",
+    "bfe41fc2f02b9ec8",
+    "bff0188394f323ba"
+   ],
+   "v": [
+    "3fd9580e6975a739",
+    "3fdac39cf914e128",
+    "3fd812976f4a83a6"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3ff56e06922badc0",
+   "mesh": "tetra",
+   "p": [
+    "c001544b61d8f2a6",
+    "40071f0710b43792",
+    "4004af6d1a8bbc38"
+   ],
+   "v": [
+    "c0100acbbaa64bd2",
+    "4002ff759e9390a1",
+    "40048aa26154833f"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3fc2ab4ca1e6ad10",
+   "mesh": "tetra",
+   "p": [
+    "c001473775e1f66c",
+    "bfd7032500c2e1d0",
+    "bff6097182a7f141"
+   ],
+   "v": [
+    "c00adb1bf09eb4aa",
+    "bfdf777379c44d13",
+    "c00182ff5fc71eb1"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4001c1aaa4bc564a",
+   "foot": [
+    "3fee2ac3378f3df1",
+    "3fd2fce21797247b",
+    "bf90137463e142e0"
+   ],
+   "hit": true,
+   "max_distance": "4004e8cd1d8ab277",
+   "mesh": "tetra",
+   "p": [
+    "3fd64cae9a023480",
+    "3fd4bcd9b70e9250",
+    "c0013b7d80b2d3ad"
+   ],
+   "signed": "4001c1aaa4bc564a",
+   "tri": 0,
+   "v": [
+    "3ff77046609f0ed8",
+    "bfb140eac8bd714d",
+    "4015157c38f255e4"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "c0015ba260be382d",
+    "bff3bfbc7269ef02",
+    "c0067c95c314616c"
+   ],
+   "v": [
+    "c00183cfa7c88f10",
+    "c000fd545eee8175",
+    "bffd3fa6cc56b79e"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4005fb32777a91b7",
+   "foot": [
+    "3fe2c9192680eccc",
+    "3fc33c0c0951762d",
+    "3fe8b1a69e4f8b66"
+   ],
+   "hit": true,
+   "max_distance": "40089c1a4f759127",
+   "mesh": "tetra",
+   "p": [
+    "3ff04a45972abf94",
+    "c00475a1f627879a",
+    "3fe2f6200ff37568"
+   ],
+   "signed": "c005fb32777a91b7",
+   "tri": 1,
+   "v": [
+    "3fe8932cccbc819c",
+    "c0134b7a44591a97",
+    "bfd46cb6fa7bb42f"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400f057fe8f125c0",
+   "foot": [
+    "3ff08f8f185a06d4",
+    "3fca6d4aae24db48",
+    "bfa87e3f7475bedb"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bff052df9b626b12",
+    "c006e9364323dd58",
+    "bff398e9f2991907"
+   ],
+   "signed": "400f057fe8f125c0",
+   "tri": 0,
+   "v": [
+    "40000c25079e42cc",
+    "4007f90dedddcd46",
+    "3ff26135298b5b7a"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bfede6a8abc30bcc",
+    "40031d8c82176d04",
+    "c007758de9670f8b"
+   ],
+   "v": [
+    "c001ac39c6219723",
+    "3ff060e85d363856",
+    "c00826ad56c14c50"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff0ef9fccc53643",
+   "foot": [
+    "3fe143e7ebce783d",
+    "3fcf905a3cf2aee6",
+    "3fb4fd82d067636d"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bfc30a33783acec0",
+    "bfca956f02eefd00",
+    "bfe29c3a796a3520"
+   ],
+   "signed": "3ff0ef9fccc53643",
+   "tri": 0,
+   "v": [
+    "400bc5d497511c94",
+    "4002549212d3f2d5",
+    "400ac6703495212a"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "40153baf49e1bf58",
+   "foot": [
+    "3ff8d55eec3feec3",
+    "3fe32c8444ac7941",
+    "bfc21efde7adfb4d"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "c007ce5791e17de0",
+    "40021ddbc3aeba26",
+    "c002d8c0e626bb6e"
+   ],
+   "signed": "c0153baf49e1bf58",
+   "tri": 0,
+   "v": [
+    "bff5464c890a09c6",
+    "3fdf4cda5b5863d2",
+    "bfe4ced7066858c6"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400176cd0a8997bd",
+   "foot": [
+    "3feaf30ccf4fbd0f",
+    "3fa369e21b534430",
+    "bf8eb27583e62b5a"
+   ],
+   "hit": true,
+   "max_distance": "400a042585ed4379",
+   "mesh": "tetra",
+   "p": [
+    "bfd7c5a5b7ce9990",
+    "bfed2e5c1e875d10",
+    "bff8fa558a60ff2e"
+   ],
+   "signed": "400176cd0a8997bd",
+   "tri": 0,
+   "v": [
+    "40018a8da0c6f2f0",
+    "3ffb7509345cbc3e",
+    "400658ef3821e8f6"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bff0c825a871b19c",
+    "c007035a46e8792b",
+    "3fd765da426aff30"
+   ],
+   "v": [
+    "bfd1a45b6ea1fd4e",
+    "bfdfcb2887ea67d6",
+    "3fafa2a892251029"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400d6447d5cca4c4",
+   "foot": [
+    "3ff4b638ade26795",
+    "3ff14530a29bdf78",
+    "bf9eace2692a38a0"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bff62104fd823a07",
+    "3fd52f34895abee0",
+    "c003743f8d2bf31d"
+   ],
+   "signed": "c00d6447d5cca4c4",
+   "tri": 0,
+   "v": [
+    "c00196951f9abd62",
+    "bfe3a9f5fd36202c",
+    "bfff8dc7e93b8307"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "3ffc7a27cde85d2c",
+    "4007bd734d9babd4",
+    "c000b12ce00a1a38"
+   ],
+   "v": [
+    "bf559dfd6ab17b04",
+    "3fa269c8d28ed06d",
+    "bfa1acd16875ef4d"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3febd54aafcc8df4",
+   "mesh": "tetra",
+   "p": [
+    "3ff6d9d1e77096c8",
+    "bfede4cc7fb4d014",
+    "3ff4768b8b6aee68"
+   ],
+   "v": [
+    "bfd18748a9af8c03",
+    "c004b3aee4714fdd",
+    "3fdfed0bbdafb141"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "4009e0e362703a15",
+   "mesh": "tetra",
+   "p": [
+    "c0049758a6fec2b8",
+    "c0029ef089f1c691",
+    "3fec7883ff645fcc"
+   ],
+   "v": [
+    "c01c811ba5b9ccc5",
+    "c016346c057baac3",
+    "3fb72d32322a7f5e"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "40068b05c1bd1448",
+    "3ffb1dad74e6dac4",
+    "bfe7d7a99f7fee5c"
+   ],
+   "v": [
+    "bff617192ed387d3",
+    "c003fdc48ea562e5",
+    "3ff2aa9d86e3f939"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3ff25e0607aef768",
+   "mesh": "tetra",
+   "p": [
+    "4001195f6bd1c1c0",
+    "3fffbe8085364908",
+    "4006cdc9e4e46648"
+   ],
+   "v": [
+    "3fb9326e675d0be2",
+    "3fbe91c4642e6438",
+    "40006df5ee3dab48"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ff9319767fafd07",
+   "foot": [
+    "3ff2892a135cb82d",
+    "3ff50936e5f7e160",
+    "3fc60ed19f7de625"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "3ff829775412c02c",
+    "4006c8697d7631b6",
+    "3fcf64f72a1089e0"
+   ],
+   "signed": "3ff9319767fafd07",
+   "tri": 2,
+   "v": [
+    "bfcaabd6ca7cdf3f",
+    "bfed12380982486c",
+    "bfa621518a0f95be"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bff351e64f763bad",
+    "bff7a926415c1e9f",
+    "c004326a410142e6"
+   ],
+   "v": [
+    "c0063a9a115b33c3",
+    "c0027db992efe35f",
+    "c0159a07364c04c1"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3ffb315da9fed780",
+   "mesh": "tetra",
+   "p": [
+    "bffe3355caafecd9",
+    "3ff30de6bfa1f5ec",
+    "bfeef88256a13778"
+   ],
+   "v": [
+    "4007e3ede34a1985",
+    "bfe0c4f49ffa3fdd",
+    "3ff586103ffe7022"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "40095f19e98b8f0b",
+   "foot": [
+    "3fe44184528f7c78",
+    "3fe1fefd312de504",
+    "3fe95459cd730bf5"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "c0008bab17f38310",
+    "3ff09018f189938c",
+    "bfe9a66e66094490"
+   ],
+   "signed": "40095f19e98b8f0b",
+   "tri": 3,
+   "v": [
+    "3ff63556c5ff858c",
+    "bfcf190ffd3d1bcb",
+    "3fea32352a2fb51d"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "c0019d5b329bd88e",
+    "c0026b6bdabaa34e",
+    "bfbdeb14a51fab40"
+   ],
+   "v": [
+    "400c589172276510",
+    "4000099d5264caaf",
+    "3fef5a6a148ef42c"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400c6b7a0b88fa8c",
+   "foot": [
+    "3fefc94874a7390c",
+    "3fea86d590dffba5",
+    "3f97199bb7ce7134"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bff21ddd29424749",
+    "3fabf30e38627140",
+    "c005bb50303a9d8a"
+   ],
+   "signed": "400c6b7a0b88fa8c",
+   "tri": 0,
+   "v": [
+    "3f8ba3485ca58389",
+    "3f74231e658aedde",
+    "3f91ce8872007422"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "40046b57d202742c",
+    "3fd6f17946f8b830",
+    "bff2a80d6e047efe"
+   ],
+   "v": [
+    "bfe3a5077a1b18c7",
+    "bfcf01fcb18459a4",
+    "4008540242da7996"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4007016afbbcbf5b",
+   "foot": [
+    "3fe73ce7740d071b",
+    "3ffaf7652ff9cef4",
+    "3fc61c1116b0f583"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "40027b3060753a82",
+    "40071aac883ec308",
+    "bffe784c7996624d"
+   ],
+   "signed": "c007016afbbcbf5b",
+   "tri": 0,
+   "v": [
+    "3fd256a9a27540d1",
+    "3fcbd8d67d881137",
+    "bfd80c3f9d6c081c"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "40037497bf4097b6",
+    "3ff29ed6edf72210",
+    "3fd3d3c3ea8f5130"
+   ],
+   "v": [
+    "3f701237142612ff",
+    "bf6440f514284ed9",
+    "bf751fc0bbb4e2ef"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3fc69663634bc730",
+   "mesh": "tetra",
+   "p": [
+    "3fd42bf5e3f49c00",
+    "3ff3da80f65c5890",
+    "bfe6fae98b6fcc08"
+   ],
+   "v": [
+    "bfde91a08d57b16c",
+    "bfc30c4aba8c4a2e",
+    "bfe487505439a401"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bfd51aadab61da30",
+    "c00762ed1912130a",
+    "3fbf03872a83bc00"
+   ],
+   "v": [
+    "bfc3f9cbed29b3cd",
+    "bfe55de6033af254",
+    "3fae1a580d88025a"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3ff8dc1f76f031ec",
+   "mesh": "tetra",
+   "p": [
+    "bfdc1b783fe01be0",
+    "3ffbf0fcdb9b44d0",
+    "c0067741f8118b90"
+   ],
+   "v": [
+    "c004255f70b9d28f",
+    "3ff374cecda2e7a8",
+    "c01684128924ff02"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "40098a567b4fbc61",
+   "foot": [
+    "3fe4680973303054",
+    "3fe3643b20abe597",
+    "3fb77028188c8480"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "3ff8e84c6cdbdf00",
+    "3fd075a1aba513a0",
+    "c0079131f4e18220"
+   ],
+   "signed": "40098a567b4fbc61",
+   "tri": 0,
+   "v": [
+    "bff2da9eefd530cf",
+    "3fdc9fa5e6c38b50",
+    "400f2848435b1859"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3ffdbe4b05addc62",
+   "mesh": "tetra",
+   "p": [
+    "c0034a33646e1f44",
+    "4001fef82f85499c",
+    "bff598ccedecc617"
+   ],
+   "v": [
+    "400108c4de0abefe",
+    "bfe53d65b818bc14",
+    "40017989b6632f81"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "3ffa4040d555586a",
+   "foot": [
+    "3ff7b3cac1514048",
+    "3fe196276c2ab7be",
+    "3fe53d56d3f94580"
+   ],
+   "hit": true,
+   "max_distance": "400bbb246ae4fa86",
+   "mesh": "tetra",
+   "p": [
+    "400607781940bebc",
+    "3ff0f0cc4652e400",
+    "3ff90e0211afa230"
+   ],
+   "signed": "3ffa4040d555586a",
+   "tri": 2,
+   "v": [
+    "bfc7d15bf57f961b",
+    "bfb310d77696db59",
+    "bfc0e3c5880badc6"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "4002c09a9b7917d6",
+    "3ffc41d002539124",
+    "3ff620c0544bf094"
+   ],
+   "v": [
+    "3fdeadf7bda227e1",
+    "3ff58ff46437d1d5",
+    "3ff28f25e7d623e3"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4006ac69b4e5de28",
+   "foot": [
+    "3ff4a5025bcedfe5",
+    "3fe38e410362f321",
+    "bfb2e8bcbd322412"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "3fe7a805acefa8e0",
+    "bff35a2a9e1d6145",
+    "c001662aa47677aa"
+   ],
+   "signed": "4006ac69b4e5de28",
+   "tri": 0,
+   "v": [
+    "3fd007774773df18",
+    "3fea7b14eda5e7ca",
+    "3fee8f1fd5c5f1a8"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bfed563484566810",
+    "bff9c8232cfd3dc6",
+    "4000547cbf166b42"
+   ],
+   "v": [
+    "3fd53e75ce78aa2e",
+    "3fe59b6d05e9b304",
+    "bfda56aa90a6576d"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "4005a00fc11f24d7",
+   "mesh": "tetra",
+   "p": [
+    "3ff3bb1d42759584",
+    "bfffbf0c00ebfcc5",
+    "bfe19a172d5adca0"
+   ],
+   "v": [
+    "3fc5ad1b52b59f1b",
+    "40058ed5f707aff9",
+    "4001cfbd53bcbec0"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "c0012f973363c919",
+    "4007bf9e84468384",
+    "400204aa0242ca46"
+   ],
+   "v": [
+    "4013a2eca6017ce2",
+    "c004740f703dee22",
+    "c002dd647e5c6e03"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "400470b4f7fd2cb6",
+    "c0039fb7756ee13c",
+    "4000a08784c07fe2"
+   ],
+   "v": [
+    "c0020156f9493052",
+    "401db1e5c45fe59c",
+    "bffc681e36f0e60a"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4001c495ba56c3d3",
+   "foot": [
+    "3fe31d0a37acbb45",
+    "3ff29b5619d2fa16",
+    "3fd2f87c9adcab26"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bfd16baf41d8e618",
+    "40072ab673a4a056",
+    "bfe92ed676b769d0"
+   ],
+   "signed": "c001c495ba56c3d3",
+   "tri": 3,
+   "v": [
+    "c002021519af04ff",
+    "4011f209284a9302",
+    "c0067024a931aaf9"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "4009f63a961d5aea",
+   "foot": [
+    "3fe0c768b3382127",
+    "3fcdfca11ba02425",
+    "3fe3ace447c9ed90"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bffaa9da6b2f69c3",
+    "c000cc2eb5aeb452",
+    "3fb4dea5e47f3f80"
+   ],
+   "signed": "c009f63a961d5aea",
+   "tri": 3,
+   "v": [
+    "bfd18bb74efd8bc9",
+    "bfd2b13b4ba581a0",
+    "bfb115de4e901630"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "4005dd4e7818685f",
+   "mesh": "tetra",
+   "p": [
+    "400213987ff1408a",
+    "3ff250ab75ca2020",
+    "bff826ca8cb37319"
+   ],
+   "v": [
+    "3fd46d37aede382c",
+    "3fcfefb9ace8046a",
+    "bfd4085ec30f50b8"
+   ]
+  },
+  {
+   "designed": false,
+   "distance": "400478466d544c8d",
+   "foot": [
+    "3fe72011c729ee62",
+    "3fe26fc610cf10ae",
+    "3ff188f09e307de3"
+   ],
+   "hit": true,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bffc701e74c95579",
+    "3ff18476ec3094f0",
+    "3fedba9ce6aa6f38"
+   ],
+   "signed": "400478466d544c8d",
+   "tri": 3,
+   "v": [
+    "40130b9787332b17",
+    "bfef9c83ab28aeca",
+    "3fd457eb1ba96b9f"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "3fb29cb1ad49fde0",
+    "40061aacb99f2b18",
+    "400313b29a555702"
+   ],
+   "v": [
+    "bfe53157d9243dac",
+    "3ff69b976554adc2",
+    "3fe06b76e91b8647"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": null,
+   "mesh": "tetra",
+   "p": [
+    "bfef1dfe8164aa68",
+    "bff1188aaa0d4a0b",
+    "3ff80ba3c17a57c8"
+   ],
+   "v": [
+    "c0059576d6a74e5e",
+    "bff4f75d83f1cd65",
+    "3ff40dadfd3e0967"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3ff62c9f170bf52e",
+   "mesh": "tetra",
+   "p": [
+    "3ff2ae509ab41da8",
+    "bff4cd0cadf112f3",
+    "3ff692d177a0fc78"
+   ],
+   "v": [
+    "3fd99461631e61a1",
+    "c0016bc7159a5207",
+    "3fc9fac77a09033b"
+   ]
+  },
+  {
+   "designed": false,
+   "hit": false,
+   "max_distance": "3ff92316da71e79c",
+   "mesh": "tetra",
+   "p": [
+    "3feec44e81400380",
+    "3ff028e84cf57760",
+    "4003384a94348c1c"
+   ],
+   "v": [
+    "bff716858b57a89c",
+    "3ff201e8955634ea",
+    "40053812e5fca535"
+   ]
+  }
+ ],
+ "meshes": {
+  "cube": {
+   "triangles": [
+    [
+     1,
+     5,
+     7
+    ],
+    [
+     1,
+     7,
+     3
+    ],
+    [
+     0,
+     2,
+     6
+    ],
+    [
+     0,
+     6,
+     4
+    ],
+    [
+     4,
+     6,
+     7
+    ],
+    [
+     4,
+     7,
+     5
+    ],
+    [
+     0,
+     1,
+     3
+    ],
+    [
+     0,
+     3,
+     2
+    ],
+    [
+     2,
+     3,
+     7
+    ],
+    [
+     2,
+     7,
+     6
+    ],
+    [
+     0,
+     4,
+     5
+    ],
+    [
+     0,
+     5,
+     1
+    ]
+   ],
+   "vertices": [
+    [
+     "bff0000000000000",
+     "bff0000000000000",
+     "bff0000000000000"
+    ],
+    [
+     "bff0000000000000",
+     "bff0000000000000",
+     "3ff0000000000000"
+    ],
+    [
+     "bff0000000000000",
+     "3ff0000000000000",
+     "bff0000000000000"
+    ],
+    [
+     "bff0000000000000",
+     "3ff0000000000000",
+     "3ff0000000000000"
+    ],
+    [
+     "3ff0000000000000",
+     "bff0000000000000",
+     "bff0000000000000"
+    ],
+    [
+     "3ff0000000000000",
+     "bff0000000000000",
+     "3ff0000000000000"
+    ],
+    [
+     "3ff0000000000000",
+     "3ff0000000000000",
+     "bff0000000000000"
+    ],
+    [
+     "3ff0000000000000",
+     "3ff0000000000000",
+     "3ff0000000000000"
+    ]
+   ]
+  },
+  "tetra": {
+   "triangles": [
+    [
+     0,
+     2,
+     1
+    ],
+    [
+     0,
+     1,
+     3
+    ],
+    [
+     1,
+     2,
+     3
+    ],
+    [
+     2,
+     0,
+     3
+    ]
+   ],
+   "vertices": [
+    [
+     "3fd3333333333333",
+     "bfc999999999999a",
+     "3fb999999999999a"
+    ],
+    [
+     "4000cccccccccccd",
+     "3fd999999999999a",
+     "bfd3333333333333"
+    ],
+    [
+     "3fe6666666666666",
+     "3ffe666666666666",
+     "3fc999999999999a"
+    ],
+    [
+     "3feccccccccccccd",
+     "3fe3333333333333",
+     "3ffb333333333333"
+    ]
+   ]
+  }
+ }
+}

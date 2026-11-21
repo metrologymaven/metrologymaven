@@ -1,6 +1,6 @@
 [package]
 name = "fid-render"
-description = "Metrology Maven renderer core: render-ID allocation and entity lookup tables (VIZ.RENDER.SCENE.IDTAB), view-model projection and dirty-set re-projection (VIZ.RENDER.SCENE.PROJ)"
+description = "Metrology Maven renderer core: render-ID allocation and entity lookup tables (VIZ.RENDER.SCENE.IDTAB), view-model projection and dirty-set re-projection (VIZ.RENDER.SCENE.PROJ), the wgpu frame graph with backend selection and ID and depth buffers (VIZ.RENDER.FRAME.GRAPH)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
-# Viewer layer. No GPU, windowing or UI-toolkit crate (C2, checked by fid-shlint REQ-003).
+# Viewer layer. No windowing or UI-toolkit crate (C2, checked by fid-shlint REQ-003).
 [dependencies]
 # Entity IDs are UUIDs (CONSTITUTION §5); `fid_uuid::Uuid` is the workspace's UUID value type,
 # the same one fid-project's ID service hands out. No third-party dependency is added.
@@ -23,6 +23,15 @@ fid-geo-types = { path = "../fid-geo-types" }
 fid-kci = { path = "../fid-kci" }
 fid-kdec = { path = "../fid-kdec" }
 fid-types = { path = "../fid-types" }
+# VIZ.RENDER.FRAME.GRAPH: the GPU. The same wgpu 27 and features as the VIZ.SHELL.SPKTREE spike
+# (already in Cargo.lock and passing deny.toml): dx12 and vulkan only, because `metal` pulls
+# `paste` (RUSTSEC-2024-0436) and `gles` is not yet vetted; default features off.
+wgpu = { version = "27", default-features = false, features = ["dx12", "vulkan", "wgsl", "std", "parking_lot"] }
+# Blocks on wgpu's adapter, device, error-scope and readback futures (already in Cargo.lock).
+pollster = "0.4"
+# Reads the backend policy file platform/gpu-policy.toml as an untyped table (PLAT.GPU.POLICY),
+# the same pinned parser as fid-platform; duplicate keys are rejected by the parser.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
 
 [lints]
 workspace = true

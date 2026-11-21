@@ -30,7 +30,10 @@
 //! - [`resolve`] (`GDT.RES.RESOLVE`): the commands `gdt.resolve_chain@1` and
 //!   `gdt.get_dmt_row@1` over the pure resolver of `fid-gps`, behind the governing-spec gate;
 //! - [`drf::datum`] (`GDT.DRF.DATUM`): datum declarations (label, datum feature, nominal faces,
-//!   feature type, datum targets) and the command `gdt.define_datum@1`.
+//!   feature type, datum targets) and the command `gdt.define_datum@1`;
+//! - [`drf::build`] (`GDT.DRF.BUILD`): DRF construction from declared planar datums at RMB,
+//!   simulated from measured points by certified tangential planes, with the commands
+//!   `gdt.build_drf@1` and `gdt.get_drf@1`, the provisional label of D-045 and exact replay.
 //!
 //! Nothing here panics on any input: every outcome is a returned `Result`.
 

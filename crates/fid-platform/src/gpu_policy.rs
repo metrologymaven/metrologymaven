@@ -19,7 +19,7 @@ pub const DEFAULT_PHASE: Phase = Phase::P1a;
 /// REQ-PLAT.GPU.POLICY-002: every support-matrix row whose tier is Tier 1 or Tier 2 and
 /// effective at `phase` (`phase >= since_phase`) needs a policy row for its OS (via
 /// [`GpuOs::from_family`]) and architecture. Every OS family of matrix schema 1 is a desktop
-/// OS. Returns one `NoPolicyRow` per missing (os, arch), sorted by ([`GpuOs`], [`Arch`]).
+/// OS. Returns one `NoPolicyRow` per missing (os, arch), sorted by ([`GpuOs`], [`Arch`](crate::matrix::Arch)).
 pub fn check_coverage(policy: &GpuPolicy, matrix: &Matrix, phase: Phase) -> Vec<GpuPolicyError> {
     let mut missing = BTreeSet::new();
     for r in &matrix.rows {
