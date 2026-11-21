@@ -384,7 +384,10 @@ pub fn render_fragment(c: &Checked) -> Option<String> {
     Some(s)
 }
 
-fn manifest_arg(args: &[String], usage: &str) -> Result<(Option<String>, Vec<(String, String)>), ExitCode> {
+/// The `--manifest` value and the other `(flag, value)` pairs of a command line.
+type Args = (Option<String>, Vec<(String, String)>);
+
+fn manifest_arg(args: &[String], usage: &str) -> Result<Args, ExitCode> {
     let mut manifest = None;
     let mut rest = Vec::new();
     let mut it = args.iter();
