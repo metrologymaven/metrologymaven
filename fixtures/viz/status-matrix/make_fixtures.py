@@ -23,6 +23,7 @@ Expected values, none produced by the Rust code under test:
 This module imports no other oracle and no authoring script.
 """
 
+import hashlib
 import json
 import math
 import pathlib
@@ -44,6 +45,7 @@ CLAIMS = {"entered", "reported-by-source", "suggested"}
 VISIONS = ["normal", "protanopia", "deuteranopia", "tritanopia"]
 MIN_DE = 20.0
 MIN_NEUTRAL_DE = 10.0
+MIN_STALE_NORMAL_DE = 10.0  # stale vs nonconforms under normal vision (maintainer, PR 355)
 
 # Hand-labelled from the leaf's design.
 TEXT = {
@@ -162,16 +164,27 @@ def locked():
     return {t: dict(status["themes"][t], **{"under-tolerance": under, "over-tolerance": over}) for t in THEMES}
 
 
+def de_normal(a, b):
+    return de2000(lab(a, "normal"), lab(b, "normal"))
+
+
+LOCKED_PAL = None  # set in main()
+
+
 def violation(pal):
-    """The guard's first violation, as (slot, theme), in theme then slot order."""
+    """The guard's first violation, as (slot, theme), in theme then slot order. Distances to
+    CONFORMS are taken from the locked CONFORMS."""
     for t in THEMES:
         row = pal[t]
+        conforms = LOCKED_PAL[t]["conforms"]
+        if row["conforms"] != conforms:
+            return "conforms", t
         for slot in SLOTS[1:]:
-            if de_min(row[slot], row["conforms"]) < MIN_DE:
+            if de_min(row[slot], conforms) < MIN_DE:
                 return slot, t
             if slot in NEUTRAL and any(de_min(row[slot], row[x]) < MIN_NEUTRAL_DE for x in ("nonconforms", "stale")):
                 return slot, t
-            if slot == "stale" and row[slot] == row["nonconforms"]:
+            if slot == "stale" and (row[slot] == row["nonconforms"] or de_normal(row[slot], row["nonconforms"]) < MIN_STALE_NORMAL_DE):
                 return slot, t
     return None
 
@@ -179,10 +192,13 @@ def violation(pal):
 # ------------------------------------------------------------------ render specs
 
 
-def render(theme, state, colours, provenance=None, claimed=False, interpretation=None):
+def render(theme, state, colours, provenance=None, claimed=False, declared=False, uncharacterized=False, interpretation=None):
+    """The render spec, hand-labelled from the leaf's rules: any evidence fact or a claim
+    provenance gives the claimed role and the word "claimed"; each of declared and
+    uncharacterized input adds its own label."""
+    styled = claimed or declared or uncharacterized or provenance in CLAIMS
     value = None
     if provenance is not None:
-        is_claimed = claimed or provenance in CLAIMS
         value = {
             "number": NUMBER,
             "badge": {
@@ -191,9 +207,15 @@ def render(theme, state, colours, provenance=None, claimed=False, interpretation
                 "text_key": f"icon.badge.{provenance}",
                 "text": BADGE_TEXT[provenance],
             },
-            "role": "sem.text.value.claimed" if is_claimed else "sem.text.value.measured",
-            "claimed_label": {"key": "value.claimed", "text": "claimed"} if is_claimed else None,
+            "role": "sem.text.value.claimed" if styled else "sem.text.value.measured",
         }
+    labels = []
+    if styled:
+        labels.append({"key": "value.claimed", "text": "claimed"})
+    if declared:
+        labels.append({"key": "label.declared-input", "text": "declared input"})
+    if uncharacterized:
+        labels.append({"key": "label.uncharacterized-input", "text": "uncharacterized input"})
     interp = None
     if interpretation == "provisional":
         interp = {"provisional": True, "label_key": "gdt.interpretation.provisional", "text": "interpretation: provisional", "cue": "badge.provisional"}
@@ -209,8 +231,15 @@ def render(theme, state, colours, provenance=None, claimed=False, interpretation
         "text": TEXT[state],
         "color": colours[theme][state],
         "value": value,
+        "labels": labels,
         "interpretation": interp,
     }
+
+
+def digest(obj):
+    """sha256: of the RFC 8785 form (ASCII strings, the number 1.25, sorted keys, no spaces)."""
+    text = json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return "sha256:" + hashlib.sha256(text.encode("ascii")).hexdigest()
 
 
 # ------------------------------------------------------------------ skins
@@ -235,6 +264,14 @@ def skins(pal):
         "skin-stale-as-nonconforms.json": (skin({"hc": {"stale": pal["hc"]["nonconforms"]}}), ["STALE", "hc"]),
         # REQ-003: not-evaluated drawn in the stale colour.
         "skin-not-evaluated-as-stale.json": (skin({"floor": {"not-evaluated": pal["floor"]["stale"]}}), ["NOT_EVALUATED", "floor"]),
+        # The reviewer's inversion (PR 355): CONFORMS red and NONCONFORMS azure. Skins may not set
+        # CONFORMS at all, so the file is refused as SkinSchema.
+        "skin-inversion.json": (
+            skin({"light": {"conforms": light["nonconforms"], "nonconforms": light["conforms"]}}),
+            "schema",
+        ),
+        # REQ-003: stale a red-orange within 10 of NONCONFORMS under normal vision.
+        "skin-stale-near-nonconforms.json": (skin({"light": {"stale": "#b9361f"}}), ["STALE", "light"]),
         # A valid skin: a slightly darker NONCONFORMS red in light, which every rule still allows.
         "skin-darker-red.json": (skin({"light": {"nonconforms": "#b82628"}}), None),
     }
@@ -246,8 +283,12 @@ def canon(obj):
 
 def main():
     check = "--check" in sys.argv[1:]
+    global LOCKED_PAL
     pal = locked()
+    LOCKED_PAL = pal
     assert violation(pal) is None, violation(pal)
+    for t in THEMES:
+        assert round(de_normal(pal[t]["stale"], pal[t]["nonconforms"]), 1) >= 18.0, t  # 18.0 (hc) to 19.3
     matrix = []
     for s in STATES:
         for p in PROVENANCES:
@@ -258,7 +299,19 @@ def main():
         "status-only": render("dark", "stale", pal),
         "gdt-provisional": render("hc", "nonconforms", pal, provenance="computed", interpretation="provisional"),
         "gdt-signed-off": render("floor", "conforms", pal, provenance="measured", interpretation="signed_off"),
+        # The scene status `kernel:INDETERMINATE:-du`: declared and uncharacterized input.
+        "evidence-indeterminate-du": render("light", "indeterminate", pal, provenance="computed", declared=True, uncharacterized=True),
+        # `kernel:CONFORMS:-d-` without a number: the labels still show.
+        "evidence-declared-status-only": render("dark", "conforms", pal, declared=True),
+        # `kernel:NOT_DECIDABLE(u_missing):---` with an entered number.
+        "not-decidable-entered": render("hc", "not-decidable", pal, provenance="entered"),
     }
+    digests = [
+        {"state": m["state"], "provenance": m["provenance"], "theme": m["theme"], "digest": digest(m["render"])}
+        for m in matrix
+        if (m["state"], m["provenance"], m["theme"]) in {("conforms", "measured", "light"), ("stale", "suggested", "dark"), ("nonconforms", "computed", "hc")}
+    ]
+    assert len(digests) == 3
     regions = {
         t: {
             "under": {"pattern": "pattern.under-tolerance", "text_key": "icon.pattern.under-tolerance", "text": "Below tolerance", "color": pal[t]["under-tolerance"]},
@@ -269,23 +322,29 @@ def main():
     files = {}
     skin_expect = {}
     for name, (obj, want) in skins(pal).items():
+        if want == "schema":
+            assert any("conforms" in row for row in obj["themes"].values()), name
+            skin_expect[name] = {"schema": True, "violation": None}
+            files[f"../{name}"] = canon(obj)
+            continue
         merged = {t: dict(pal[t]) for t in THEMES}
         for t, row in obj["themes"].items():
             merged[t].update(row)
         got = violation(merged)
         got = [SLOT_UPPER[got[0]], got[1]] if got else None
         assert got == want, (name, got, want)
-        skin_expect[name] = {"violation": want}
+        skin_expect[name] = {"schema": False, "violation": want}
         files[f"../{name}"] = canon(obj)
     files["expected.json"] = canon(
         {
             "locked": pal,
             "matrix": matrix,
             "cases": cases,
+            "digests": digests,
             "regions": regions,
             "skins": skin_expect,
             "patterns": PATTERNS,
-            "guard": {"min_delta_e2000": MIN_DE, "min_neutral_delta_e2000": MIN_NEUTRAL_DE},
+            "guard": {"min_delta_e2000": MIN_DE, "min_neutral_delta_e2000": MIN_NEUTRAL_DE, "min_stale_delta_e2000_normal": MIN_STALE_NORMAL_DE},
         }
     )
     bad = []

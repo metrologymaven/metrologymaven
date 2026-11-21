@@ -18,14 +18,21 @@
 //! - [`PATTERNS`]: the pattern definitions, among them `pattern.out-of-tolerance` (the generic
 //!   cue of UX.TOKENS.STATUS) refined by `pattern.under-tolerance` and `pattern.over-tolerance`.
 //!   VIZ.OVERLAY.CMAP draws them on out-of-range regions ([`out_of_tolerance_cue`]).
-//! - [`OverlayItem`]: a number cannot be built without a provenance (`MissingProvenance`), a
-//!   GD&T result cannot be built without its interpretation (the caller passes
-//!   `fid_gdt::requires_provisional_label_bytes` of the stored record; D-045), and a claimed
-//!   value never gets the measured styling.
+//! - [`OverlayItem`] (a status marker) and [`GdtResultItem`] (a GD&T result): a number cannot
+//!   be built without a provenance (`MissingProvenance`), and a value that is claimed, rests on
+//!   declared or uncharacterized input, or has a claim provenance never gets the measured
+//!   styling. **A caller showing a GD&T result must use [`GdtResultItem`]**, whose constructor
+//!   takes the [`Interpretation`] computed by `fid_gdt::requires_provisional_label_bytes` on the
+//!   stored record bytes (D-045); [`OverlayItem`] cannot carry an interpretation, so a GD&T
+//!   result shown through it would show no provisional label. VIZ.SHELL, the consumer, must test
+//!   that every GD&T result it shows goes through [`GdtResultItem`].
 //! - [`RenderSpec`]: what an item looks like in a theme, with canonical JSON bytes and a digest.
 //!
-//! Determinism D0: tables, `BTreeMap`, plain f64 arithmetic without fused multiply-add; no clock,
-//! no randomness, no toolkit state.
+//! Determinism D0 for the mapping: tables, `BTreeMap`, no clock, no randomness, no toolkit state.
+//! The guard's colour differences use the standard library's `powf`, `cbrt`, `atan2`, `sin`,
+//! `cos` and `exp`, whose last bits may differ between platforms, so a skin colour within about
+//! 1e-12 of a threshold could get a different verdict on another platform; every shipped and
+//! fixture colour is far from that.
 
 pub mod colour;
 
@@ -418,6 +425,10 @@ pub const LOCKED_MIN_DELTA_E2000: f64 = 20.0;
 /// `STATUS-DISTANCE`).
 pub const LOCKED_MIN_NEUTRAL_DELTA_E2000: f64 = 10.0;
 
+/// Least CIEDE2000, under normal vision, between stale and nonconforms (maintainer decision on
+/// PR 355; the locked palette gives at least 18).
+pub const LOCKED_MIN_STALE_DELTA_E2000_NORMAL: f64 = 10.0;
+
 /// The guard's configuration.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PaletteGuardConfig {
@@ -426,6 +437,9 @@ pub struct PaletteGuardConfig {
     /// Indeterminate, not-decidable and not-evaluated keep at least this from nonconforms and
     /// stale (REQ-003).
     pub min_neutral_delta_e2000: f64,
+    /// Stale keeps at least this from nonconforms under normal vision (REQ-003). Under simulated
+    /// dichromacy the two only have to differ: the glyph and the word tell them apart.
+    pub min_stale_delta_e2000_normal: f64,
 }
 
 impl Default for PaletteGuardConfig {
@@ -433,6 +447,7 @@ impl Default for PaletteGuardConfig {
         PaletteGuardConfig {
             min_delta_e2000: LOCKED_MIN_DELTA_E2000,
             min_neutral_delta_e2000: LOCKED_MIN_NEUTRAL_DELTA_E2000,
+            min_stale_delta_e2000_normal: LOCKED_MIN_STALE_DELTA_E2000_NORMAL,
         }
     }
 }
@@ -471,6 +486,9 @@ impl Skin {
             };
             for (k, c) in row {
                 let slot = Slot::parse(k).ok_or_else(|| bad(&format!("unknown slot {k:?}")))?;
+                if slot == CONFORMS_SLOT {
+                    return Err(bad(&format!("{t}: the conforms colour is locked; a skin may not set it")));
+                }
                 let rgb = match c {
                     CValue::Str(s) => parse_hex(s),
                     _ => None,
@@ -482,6 +500,8 @@ impl Skin {
         Ok(out)
     }
 }
+
+const CONFORMS_SLOT: Slot = Slot::State(DisplayState::Conforms);
 
 const NEUTRAL: [DisplayState; 3] =
     [DisplayState::Indeterminate, DisplayState::NotDecidable, DisplayState::NotEvaluated];
@@ -537,14 +557,22 @@ impl Palette {
         }
     }
 
-    /// The first rule a palette breaks, in [`Theme::ALL`] then [`Slot::ALL`] order:
-    /// - every slot other than CONFORMS at least `min_delta_e2000` from CONFORMS (REQ-002);
+    /// The first rule a palette breaks, in [`Theme::ALL`] then [`Slot::ALL`] order. Distances
+    /// to CONFORMS are measured against the **locked** CONFORMS colour, whatever the palette
+    /// holds:
+    /// - CONFORMS is the locked colour;
+    /// - every other slot at least `min_delta_e2000` from the locked CONFORMS (REQ-002);
     /// - indeterminate, not-decidable and not-evaluated at least `min_neutral_delta_e2000` from
-    ///   nonconforms and stale, and stale not the nonconforms colour (REQ-003).
+    ///   nonconforms and stale; stale at least `min_stale_delta_e2000_normal` from nonconforms
+    ///   under normal vision and not the same colour (REQ-003).
     pub fn violation(&self, config: &PaletteGuardConfig) -> Option<(Slot, Theme)> {
+        let locked = Palette::locked();
         for theme in Theme::ALL {
             let c = |s: Slot| self.colour(s, theme);
-            let conforms = c(Slot::State(DisplayState::Conforms));
+            let conforms = locked.colour(CONFORMS_SLOT, theme);
+            if c(CONFORMS_SLOT) != conforms {
+                return Some((CONFORMS_SLOT, theme));
+            }
             for slot in Slot::ALL.into_iter().skip(1) {
                 let x = c(slot);
                 if min_delta_e2000(x, conforms).0 < config.min_delta_e2000 {
@@ -557,7 +585,11 @@ impl Palette {
                     {
                         return Some((slot, theme));
                     }
-                    if s == DisplayState::Stale && x == nc[0] {
+                    if s == DisplayState::Stale
+                        && (x == nc[0]
+                            || colour::delta_e2000_under(Vision::Normal, x, nc[0])
+                                < config.min_stale_delta_e2000_normal)
+                    {
                         return Some((slot, theme));
                     }
                 }
@@ -567,8 +599,15 @@ impl Palette {
     }
 
     /// Applies a skin through the guard: either every colour of the skin is taken, or none is
-    /// and the palette keeps its colours ([`StatusError::LockedPaletteViolation`]).
+    /// and the palette keeps its colours ([`StatusError::LockedPaletteViolation`]). A skin that
+    /// sets CONFORMS is refused as [`StatusError::SkinSchema`].
     pub fn apply(&mut self, skin: &Skin, config: &PaletteGuardConfig) -> Result<(), StatusError> {
+        if let Some((t, _)) = skin.colours.keys().find(|(_, slot)| *slot == CONFORMS_SLOT) {
+            return Err(StatusError::SkinSchema(format!(
+                "{}: the conforms colour is locked; a skin may not set it",
+                t.name()
+            )));
+        }
         let mut next = self.clone();
         for ((theme, slot), rgb) in &skin.colours {
             next.colours[theme.index()][Palette::slot_index(*slot)] = *rgb;
@@ -585,10 +624,30 @@ impl Palette {
 
 // ------------------------------------------------------------------ kernel status
 
-/// The display state of a scene node's status (VIZ.RENDER.SCENE.PROJ) and whether its value is
-/// claimed. A kernel evaluation error has no display state ([`StatusError::KernelError`]); the
+/// The evidence facts of a kernel decision that a display must keep (`fid_kdec::EvidenceBasis`,
+/// carried by VIZ.RENDER.SCENE.PROJ): any of them means the value may not look measured
+/// (RPT.MODEL.BIND's `looks_measured()` is false).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub struct Evidence {
+    /// The value was declared or derived from a specification, not evaluated.
+    pub claimed: bool,
+    /// The value rests on at least one declared input.
+    pub declared_input: bool,
+    /// The value rests on at least one uncharacterized input.
+    pub uncharacterized_input: bool,
+}
+
+impl Evidence {
+    /// Whether any fact is set.
+    pub fn any(self) -> bool {
+        self.claimed || self.declared_input || self.uncharacterized_input
+    }
+}
+
+/// The display state of a scene node's status (VIZ.RENDER.SCENE.PROJ) and its evidence facts,
+/// all kept. A kernel evaluation error has no display state ([`StatusError::KernelError`]); the
 /// stale state comes from VIZ.RENDER.SCENE.STALE, which adds it to `DisplayStatus`.
-pub fn from_display_status(s: &DisplayStatus) -> Result<(DisplayState, bool), StatusError> {
+pub fn from_display_status(s: &DisplayStatus) -> Result<(DisplayState, Evidence), StatusError> {
     match s {
         DisplayStatus::Kernel(k) => {
             let state = match k.outcome {
@@ -597,9 +656,14 @@ pub fn from_display_status(s: &DisplayStatus) -> Result<(DisplayState, bool), St
                 Outcome::Indeterminate => DisplayState::Indeterminate,
                 Outcome::NotDecidable(_) => DisplayState::NotDecidable,
             };
-            Ok((state, k.claimed))
+            let evidence = Evidence {
+                claimed: k.claimed,
+                declared_input: k.declared_input,
+                uncharacterized_input: k.uncharacterized_input,
+            };
+            Ok((state, evidence))
         }
-        DisplayStatus::NotEvaluated => Ok((DisplayState::NotEvaluated, false)),
+        DisplayStatus::NotEvaluated => Ok((DisplayState::NotEvaluated, Evidence::default())),
         DisplayStatus::Error(code) => Err(StatusError::KernelError(code.as_str().to_string())),
     }
 }
@@ -615,7 +679,7 @@ pub enum Interpretation {
 
 impl Interpretation {
     /// From the result of `fid_gdt::requires_provisional_label_bytes(record)`, which the caller
-    /// computes on the stored record bytes.
+    /// must compute on the stored record bytes of the result it shows.
     pub fn from_requires_label(requires_provisional_label: bool) -> Interpretation {
         if requires_provisional_label {
             Interpretation::Provisional
@@ -632,54 +696,145 @@ pub const PROVISIONAL_LABEL_TEXT: &str = "interpretation: provisional";
 pub const SIGNED_OFF_LINE: &str = "interpretation: signed_off";
 /// The glyph cue of a provisional result (UX.ICONS.CLASS ID).
 pub const PROVISIONAL_CUE: &str = "badge.provisional";
-/// The word every claimed value carries, and its colour role (UX.TOKENS.COLOR).
+/// The word every value with the claimed styling carries, and the colour roles (UX.TOKENS.COLOR).
 pub const CLAIMED_LABEL_KEY: &str = "value.claimed";
 pub const CLAIMED_LABEL_TEXT: &str = "claimed";
 pub const CLAIMED_ROLE: &str = "sem.text.value.claimed";
 pub const MEASURED_ROLE: &str = "sem.text.value.measured";
+/// The evidence labels of a value resting on declared or uncharacterized input.
+pub const DECLARED_LABEL_KEY: &str = "label.declared-input";
+pub const DECLARED_LABEL_TEXT: &str = "declared input";
+pub const UNCHARACTERIZED_LABEL_KEY: &str = "label.uncharacterized-input";
+pub const UNCHARACTERIZED_LABEL_TEXT: &str = "uncharacterized input";
 
-/// A displayed number and its provenance.
+/// A displayed number and its provenance. Built only through an item builder:
+///
+/// ```compile_fail
+/// let v = fid_overlay::status::Value { number: 1.0, provenance: fid_overlay::status::Provenance::Measured };
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Value {
-    pub number: f64,
-    pub provenance: Provenance,
+    number: f64,
+    provenance: Provenance,
 }
 
-/// A status marker, with an optional badged number and, for a GD&T result, its interpretation.
+impl Value {
+    pub fn number(&self) -> f64 {
+        self.number
+    }
+
+    pub fn provenance(&self) -> Provenance {
+        self.provenance
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct Parts {
+    state: DisplayState,
+    evidence: Evidence,
+    value: Option<Value>,
+}
+
+/// A status marker, with an optional badged number. It cannot carry a GD&T interpretation: a
+/// GD&T result is a [`GdtResultItem`]. Built only through [`OverlayItem::status`]:
+///
+/// ```compile_fail
+/// use fid_overlay::status::{DisplayState, OverlayItem};
+/// let i = OverlayItem { state: DisplayState::Conforms };
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct OverlayItem {
-    pub state: DisplayState,
-    pub claimed: bool,
-    pub value: Option<Value>,
-    pub interpretation: Option<Interpretation>,
+    parts: Parts,
+}
+
+/// A GD&T result: a status marker that always carries its [`Interpretation`] (D-045). A caller
+/// showing a GD&T result **must** build it here, with
+/// `Interpretation::from_requires_label(fid_gdt::requires_provisional_label_bytes(record))`
+/// computed on the result's stored record bytes.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GdtResultItem {
+    parts: Parts,
+    interpretation: Interpretation,
 }
 
 /// Builds an [`OverlayItem`]; [`ItemBuilder::build`] enforces the item rules.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ItemBuilder {
     state: DisplayState,
-    claimed: bool,
+    evidence: Evidence,
     number: Option<f64>,
     provenance: Option<Provenance>,
-    interpretation: Option<Interpretation>,
+}
+
+/// Builds a [`GdtResultItem`] with the same rules.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GdtResultBuilder {
+    inner: ItemBuilder,
+    interpretation: Interpretation,
 }
 
 impl OverlayItem {
     /// A status marker.
     pub fn status(state: DisplayState) -> ItemBuilder {
-        ItemBuilder { state, claimed: false, number: None, provenance: None, interpretation: None }
+        ItemBuilder { state, evidence: Evidence::default(), number: None, provenance: None }
     }
 
-    /// A GD&T result: its interpretation is required (D-045).
-    pub fn gdt_result(state: DisplayState, interpretation: Interpretation) -> ItemBuilder {
-        ItemBuilder { state, claimed: false, number: None, provenance: None, interpretation: Some(interpretation) }
+    pub fn state(&self) -> DisplayState {
+        self.parts.state
+    }
+
+    pub fn evidence(&self) -> Evidence {
+        self.parts.evidence
+    }
+
+    pub fn value(&self) -> Option<Value> {
+        self.parts.value
+    }
+
+    /// The item's look in a theme with a palette (pure; REQ-005).
+    pub fn render(&self, palette: &Palette, theme: Theme) -> RenderSpec {
+        render_parts(&self.parts, None, palette, theme)
+    }
+}
+
+impl GdtResultItem {
+    /// A GD&T result with its interpretation (required).
+    pub fn new(state: DisplayState, interpretation: Interpretation) -> GdtResultBuilder {
+        GdtResultBuilder { inner: OverlayItem::status(state), interpretation }
+    }
+
+    pub fn state(&self) -> DisplayState {
+        self.parts.state
+    }
+
+    pub fn evidence(&self) -> Evidence {
+        self.parts.evidence
+    }
+
+    pub fn value(&self) -> Option<Value> {
+        self.parts.value
+    }
+
+    pub fn interpretation(&self) -> Interpretation {
+        self.interpretation
+    }
+
+    /// The result's look in a theme with a palette (pure; REQ-005, REQ-006).
+    pub fn render(&self, palette: &Palette, theme: Theme) -> RenderSpec {
+        render_parts(&self.parts, Some(self.interpretation), palette, theme)
     }
 }
 
 impl ItemBuilder {
+    /// The evidence facts of the kernel decision ([`from_display_status`]).
+    pub fn evidence(mut self, e: Evidence) -> ItemBuilder {
+        self.evidence = e;
+        self
+    }
+
     /// The value is claimed (the kernel's `claimed` flag).
     pub fn claimed(mut self, claimed: bool) -> ItemBuilder {
-        self.claimed = claimed;
+        self.evidence.claimed = claimed;
         self
     }
 
@@ -693,10 +848,7 @@ impl ItemBuilder {
         self
     }
 
-    /// `MissingProvenance` for a number without a provenance (REQ-004), `ProvenanceWithoutNumber`
-    /// for the other way round, `NonFiniteNumber`, and `ClaimedAsMeasured` for a claimed value
-    /// badged `measured`.
-    pub fn build(self) -> Result<OverlayItem, StatusError> {
+    fn parts(&self) -> Result<Parts, StatusError> {
         let value = match (self.number, self.provenance) {
             (Some(_), None) => return Err(StatusError::MissingProvenance),
             (None, Some(_)) => return Err(StatusError::ProvenanceWithoutNumber),
@@ -704,36 +856,70 @@ impl ItemBuilder {
             (Some(number), Some(provenance)) => Some(Value { number, provenance }),
             (None, None) => None,
         };
-        if self.claimed && value.is_some_and(|v| v.provenance == Provenance::Measured) {
+        if self.evidence.any() && value.is_some_and(|v| v.provenance == Provenance::Measured) {
             return Err(StatusError::ClaimedAsMeasured);
         }
-        Ok(OverlayItem { state: self.state, claimed: self.claimed, value, interpretation: self.interpretation })
+        Ok(Parts { state: self.state, evidence: self.evidence, value })
+    }
+
+    /// `MissingProvenance` for a number without a provenance (REQ-004), `ProvenanceWithoutNumber`
+    /// for the other way round, `NonFiniteNumber`, and `ClaimedAsMeasured` for a value that is
+    /// claimed or rests on declared or uncharacterized input but is badged `measured`.
+    pub fn build(self) -> Result<OverlayItem, StatusError> {
+        self.parts().map(|parts| OverlayItem { parts })
     }
 }
 
-/// What an item looks like in a theme.
+impl GdtResultBuilder {
+    pub fn evidence(mut self, e: Evidence) -> GdtResultBuilder {
+        self.inner = self.inner.evidence(e);
+        self
+    }
+
+    pub fn claimed(mut self, claimed: bool) -> GdtResultBuilder {
+        self.inner = self.inner.claimed(claimed);
+        self
+    }
+
+    pub fn number(mut self, n: f64) -> GdtResultBuilder {
+        self.inner = self.inner.number(n);
+        self
+    }
+
+    pub fn provenance(mut self, p: Provenance) -> GdtResultBuilder {
+        self.inner = self.inner.provenance(p);
+        self
+    }
+
+    /// The rules of [`ItemBuilder::build`].
+    pub fn build(self) -> Result<GdtResultItem, StatusError> {
+        self.inner.parts().map(|parts| GdtResultItem { parts, interpretation: self.interpretation })
+    }
+}
+
+fn render_parts(parts: &Parts, interpretation: Option<Interpretation>, palette: &Palette, theme: Theme) -> RenderSpec {
+    RenderSpec {
+        theme,
+        glyph: palette.glyph(parts.state, theme),
+        value: parts.value.map(|v| (v, provenance_badge(v.provenance))),
+        evidence: parts.evidence,
+        interpretation,
+    }
+}
+
+/// What an item looks like in a theme. Only [`OverlayItem::render`] and
+/// [`GdtResultItem::render`] make one:
+///
+/// ```compile_fail
+/// let r = fid_overlay::status::RenderSpec { theme: fid_overlay::status::Theme::Light };
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct RenderSpec {
-    pub theme: Theme,
-    pub glyph: StatusGlyph,
-    pub value: Option<(Value, Badge)>,
-    /// Whether the number gets the claimed styling (role, word); never the measured one.
-    pub claimed: bool,
-    pub interpretation: Option<Interpretation>,
-}
-
-impl OverlayItem {
-    /// The item's look in a theme with a palette (pure; REQ-005).
-    pub fn render(&self, palette: &Palette, theme: Theme) -> RenderSpec {
-        let claimed = self.claimed || self.value.is_some_and(|v| v.provenance.is_claim());
-        RenderSpec {
-            theme,
-            glyph: palette.glyph(self.state, theme),
-            value: self.value.map(|v| (v, provenance_badge(v.provenance))),
-            claimed,
-            interpretation: self.interpretation,
-        }
-    }
+    theme: Theme,
+    glyph: StatusGlyph,
+    value: Option<(Value, Badge)>,
+    evidence: Evidence,
+    interpretation: Option<Interpretation>,
 }
 
 fn s(x: &str) -> CValue {
@@ -744,9 +930,41 @@ fn obj(items: Vec<(&str, CValue)>) -> CValue {
     CValue::Obj(items.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
 }
 
+fn label(key: &str, text: &str) -> CValue {
+    obj(vec![("key", s(key)), ("text", s(text))])
+}
+
 impl RenderSpec {
+    pub fn theme(&self) -> Theme {
+        self.theme
+    }
+
+    pub fn glyph(&self) -> StatusGlyph {
+        self.glyph
+    }
+
+    pub fn value(&self) -> Option<(Value, Badge)> {
+        self.value
+    }
+
+    pub fn evidence(&self) -> Evidence {
+        self.evidence
+    }
+
+    pub fn interpretation(&self) -> Option<Interpretation> {
+        self.interpretation
+    }
+
+    /// Whether the claimed styling applies: an evidence fact is set, or the number's provenance
+    /// is a claim (entered, reported by source, suggested). Then the value never gets the
+    /// measured role (REQ-007).
+    pub fn claimed_styling(&self) -> bool {
+        self.evidence.any() || self.value.is_some_and(|(v, _)| v.provenance.is_claim())
+    }
+
     pub fn to_cvalue(&self) -> CValue {
         let g = &self.glyph;
+        let claimed = self.claimed_styling();
         let value = match &self.value {
             None => CValue::Null,
             Some((v, b)) => obj(vec![
@@ -760,17 +978,19 @@ impl RenderSpec {
                         ("text", s(b.text)),
                     ]),
                 ),
-                ("role", s(if self.claimed { CLAIMED_ROLE } else { MEASURED_ROLE })),
-                (
-                    "claimed_label",
-                    if self.claimed {
-                        obj(vec![("key", s(CLAIMED_LABEL_KEY)), ("text", s(CLAIMED_LABEL_TEXT))])
-                    } else {
-                        CValue::Null
-                    },
-                ),
+                ("role", s(if claimed || v.provenance.is_claim() { CLAIMED_ROLE } else { MEASURED_ROLE })),
             ]),
         };
+        let mut labels = Vec::new();
+        if claimed {
+            labels.push(label(CLAIMED_LABEL_KEY, CLAIMED_LABEL_TEXT));
+        }
+        if self.evidence.declared_input {
+            labels.push(label(DECLARED_LABEL_KEY, DECLARED_LABEL_TEXT));
+        }
+        if self.evidence.uncharacterized_input {
+            labels.push(label(UNCHARACTERIZED_LABEL_KEY, UNCHARACTERIZED_LABEL_TEXT));
+        }
         let interpretation = match self.interpretation {
             None => CValue::Null,
             Some(Interpretation::Provisional) => obj(vec![
@@ -796,6 +1016,7 @@ impl RenderSpec {
             ("text", s(g.text)),
             ("color", s(&to_hex(g.color))),
             ("value", value),
+            ("labels", CValue::Arr(labels)),
             ("interpretation", interpretation),
         ])
     }

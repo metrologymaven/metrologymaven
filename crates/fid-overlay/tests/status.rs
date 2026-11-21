@@ -8,9 +8,9 @@
 use fid_canon::CValue;
 use fid_overlay::status::colour::to_hex;
 use fid_overlay::status::{
-    from_display_status, out_of_tolerance_cue, pattern_def, provenance_badge, status_glyph, DisplayState,
-    Interpretation, OverlayItem, Palette, PaletteGuardConfig, PatternKind, Provenance, Side, Skin, Slot, StatusError,
-    Theme, PATTERNS,
+    from_display_status, out_of_tolerance_cue, pattern_def, provenance_badge, status_glyph, DisplayState, Evidence,
+    GdtResultItem, Interpretation, OverlayItem, Palette, PaletteGuardConfig, PatternKind, Provenance, Side, Skin, Slot,
+    StatusError, Theme, PATTERNS,
 };
 use fid_render::scene::proj::DisplayStatus;
 use std::collections::{BTreeMap, BTreeSet};
@@ -122,6 +122,10 @@ fn skin(name: &str) -> Skin {
     Skin::parse(&std::fs::read(viz(name)).unwrap()).unwrap()
 }
 
+fn is_schema_skin(name: &str) -> bool {
+    get(&expected(), &["skins", name, "schema"]) == &CValue::Bool(true)
+}
+
 fn violation_of(name: &str) -> Option<(String, String)> {
     let e = expected();
     match get(&e, &["skins", name, "violation"]) {
@@ -132,6 +136,11 @@ fn violation_of(name: &str) -> Option<(String, String)> {
 }
 
 fn guard_case(name: &str) {
+    if is_schema_skin(name) {
+        let got = Skin::parse(&std::fs::read(viz(name)).unwrap());
+        assert!(matches!(got, Err(StatusError::SkinSchema(_))), "{name}: {got:?}");
+        return;
+    }
     let mut p = Palette::locked();
     let got = p.apply(&skin(name), &PaletteGuardConfig::default());
     match violation_of(name) {
@@ -183,12 +192,27 @@ fn guard_cases() {
         "skin-stale-as-nonconforms.json",
         "skin-not-evaluated-as-stale.json",
         "skin-darker-red.json",
+        "skin-inversion.json",
+        "skin-stale-near-nonconforms.json",
     ] {
         guard_case(name);
     }
     let e = expected();
     let CValue::Obj(m) = get(&e, &["skins"]) else { panic!() };
-    assert_eq!(m.len(), 6);
+    assert_eq!(m.len(), 8);
+}
+
+/// PR 355: a skin may not set CONFORMS (no palette inversion), not even when built in code, and
+/// distances are measured against the locked CONFORMS.
+#[test]
+fn conforms_is_locked() {
+    let mut s = Skin::default();
+    s.colours.insert((Theme::Light, Slot::State(DisplayState::Conforms)), [0xc7, 0x2d, 0x2e]);
+    s.colours.insert((Theme::Light, Slot::State(DisplayState::Nonconforms)), [0x00, 0x63, 0x7e]);
+    let mut p = Palette::locked();
+    assert!(matches!(p.apply(&s, &PaletteGuardConfig::default()), Err(StatusError::SkinSchema(_))));
+    assert_eq!(p, Palette::locked());
+    assert!(is_schema_skin("skin-inversion.json"));
 }
 
 #[test]
@@ -222,13 +246,26 @@ fn ac4_missing_provenance() {
         OverlayItem::status(DisplayState::Conforms).claimed(true).number(1.0).provenance(Provenance::Measured).build(),
         Err(StatusError::ClaimedAsMeasured)
     );
+    for e in [
+        Evidence { declared_input: true, ..Evidence::default() },
+        Evidence { uncharacterized_input: true, ..Evidence::default() },
+    ] {
+        assert_eq!(
+            OverlayItem::status(DisplayState::Conforms)
+                .evidence(e)
+                .number(1.0)
+                .provenance(Provenance::Measured)
+                .build(),
+            Err(StatusError::ClaimedAsMeasured)
+        );
+    }
     assert!(OverlayItem::status(DisplayState::Conforms).build().is_ok());
 }
 
 /// AC-5: the same inputs give identical bytes and digests.
 #[test]
 fn ac5_pure() {
-    let item = OverlayItem::gdt_result(DisplayState::Indeterminate, Interpretation::Provisional)
+    let item = GdtResultItem::new(DisplayState::Indeterminate, Interpretation::Provisional)
         .number(-0.003)
         .provenance(Provenance::Computed)
         .build()
@@ -240,44 +277,110 @@ fn ac5_pure() {
     assert!(a.digest().unwrap().starts_with("sha256:"));
 }
 
-/// AC-7 (structure) and the claimed rule: the hand-labelled cases render exactly.
+fn scene(wire: &str) -> (DisplayState, Evidence) {
+    from_display_status(&DisplayStatus::parse(wire).unwrap()).unwrap()
+}
+
+/// AC-7 (structure), the claimed rule and the kernel evidence facts: the hand-labelled cases
+/// render exactly.
 #[test]
 fn ac7_cases_render_as_labelled() {
     let e = expected();
     let palette = Palette::locked();
-    let cases: BTreeMap<&str, OverlayItem> = [
-        (
-            "claimed-computed",
+    let theme_of = |name: &str| theme(s(get(get(&e, &["cases", name]), &["theme"])));
+    let mut got: BTreeMap<&str, Vec<u8>> = BTreeMap::new();
+    let item = |b: fid_overlay::status::ItemBuilder, name: &str| {
+        b.build().unwrap().render(&palette, theme_of(name)).to_canonical_bytes().unwrap()
+    };
+    got.insert(
+        "claimed-computed",
+        item(
             OverlayItem::status(DisplayState::Conforms).claimed(true).number(1.25).provenance(Provenance::Computed),
+            "claimed-computed",
         ),
-        ("status-only", OverlayItem::status(DisplayState::Stale)),
-        (
-            "gdt-provisional",
-            OverlayItem::gdt_result(DisplayState::Nonconforms, Interpretation::Provisional)
+    );
+    got.insert("status-only", item(OverlayItem::status(DisplayState::Stale), "status-only"));
+    let (st, ev) = scene("kernel:INDETERMINATE:-du");
+    assert_eq!(ev, Evidence { claimed: false, declared_input: true, uncharacterized_input: true });
+    got.insert(
+        "evidence-indeterminate-du",
+        item(
+            OverlayItem::status(st).evidence(ev).number(1.25).provenance(Provenance::Computed),
+            "evidence-indeterminate-du",
+        ),
+    );
+    let (st, ev) = scene("kernel:CONFORMS:-d-");
+    got.insert(
+        "evidence-declared-status-only",
+        item(OverlayItem::status(st).evidence(ev), "evidence-declared-status-only"),
+    );
+    let (st, ev) = scene("kernel:NOT_DECIDABLE(u_missing):---");
+    got.insert(
+        "not-decidable-entered",
+        item(
+            OverlayItem::status(st).evidence(ev).number(1.25).provenance(Provenance::Entered),
+            "not-decidable-entered",
+        ),
+    );
+    let gdt = |b: fid_overlay::status::GdtResultBuilder, name: &str| {
+        b.build().unwrap().render(&palette, theme_of(name)).to_canonical_bytes().unwrap()
+    };
+    got.insert(
+        "gdt-provisional",
+        gdt(
+            GdtResultItem::new(DisplayState::Nonconforms, Interpretation::Provisional)
                 .number(1.25)
                 .provenance(Provenance::Computed),
+            "gdt-provisional",
         ),
-        (
-            "gdt-signed-off",
-            OverlayItem::gdt_result(DisplayState::Conforms, Interpretation::SignedOff)
+    );
+    got.insert(
+        "gdt-signed-off",
+        gdt(
+            GdtResultItem::new(DisplayState::Conforms, Interpretation::SignedOff)
                 .number(1.25)
                 .provenance(Provenance::Measured),
+            "gdt-signed-off",
         ),
-    ]
-    .into_iter()
-    .map(|(k, b)| (k, b.build().unwrap()))
-    .collect();
-    for (name, item) in &cases {
-        let want = get(&e, &["cases", name]);
-        let r = item.render(&palette, theme(s(get(want, &["theme"]))));
-        assert_eq!(r.to_canonical_bytes().unwrap(), canon(want), "{name}");
+    );
+    let CValue::Obj(cases) = get(&e, &["cases"]) else { panic!() };
+    assert_eq!(cases.len(), got.len());
+    for (name, bytes) in &got {
+        assert_eq!(bytes, &canon(get(&e, &["cases", name])), "{name}");
     }
-    // A claimed value never gets the measured styling, whatever its provenance.
+    // A value with the claimed styling never gets the measured role, whatever its provenance.
     for p in Provenance::ALL.into_iter().filter(|p| *p != Provenance::Measured) {
-        let item = OverlayItem::status(DisplayState::Conforms).claimed(true).number(2.0).provenance(p).build().unwrap();
-        let v = item.render(&palette, Theme::Light).to_cvalue();
-        assert_eq!(s(get(&v, &["value", "role"])), "sem.text.value.claimed", "{p:?}");
-        assert_eq!(s(get(&v, &["value", "claimed_label", "text"])), "claimed", "{p:?}");
+        for ev in [
+            Evidence { claimed: true, ..Evidence::default() },
+            Evidence { declared_input: true, ..Evidence::default() },
+            Evidence { uncharacterized_input: true, ..Evidence::default() },
+        ] {
+            let it =
+                OverlayItem::status(DisplayState::Conforms).evidence(ev).number(2.0).provenance(p).build().unwrap();
+            let r = it.render(&palette, Theme::Light);
+            assert!(r.claimed_styling());
+            let v = r.to_cvalue();
+            assert_eq!(s(get(&v, &["value", "role"])), "sem.text.value.claimed", "{p:?} {ev:?}");
+            let labels: Vec<&str> = arr(get(&v, &["labels"])).iter().map(|l| s(get(l, &["text"]))).collect();
+            assert!(labels.contains(&"claimed"), "{p:?} {ev:?}");
+        }
+    }
+}
+
+/// The oracle's `sha256:` digests of three matrix rows are pinned.
+#[test]
+fn pinned_digests() {
+    let e = expected();
+    let rows = arr(get(&e, &["digests"]));
+    assert_eq!(rows.len(), 3);
+    for w in rows {
+        let item = OverlayItem::status(state(s(get(w, &["state"]))))
+            .number(1.25)
+            .provenance(provenance(s(get(w, &["provenance"]))))
+            .build()
+            .unwrap();
+        let r = item.render(&Palette::locked(), theme(s(get(w, &["theme"]))));
+        assert_eq!(r.digest().unwrap(), s(get(w, &["digest"])));
     }
 }
 
@@ -346,12 +449,16 @@ fn from_scene_display_status() {
         ("kernel:CONFORMS:---", DisplayState::Conforms, false),
         ("kernel:NONCONFORMS:c--", DisplayState::Nonconforms, true),
         ("kernel:INDETERMINATE:-du", DisplayState::Indeterminate, false),
+        ("kernel:NOT_DECIDABLE(u_missing):c--", DisplayState::NotDecidable, true),
         ("not_evaluated", DisplayState::NotEvaluated, false),
     ];
     for (wire, want, claimed) in cases {
         let d = DisplayStatus::parse(wire).unwrap();
-        assert_eq!(from_display_status(&d), Ok((want, claimed)), "{wire}");
+        let (st, ev) = from_display_status(&d).unwrap();
+        assert_eq!((st, ev.claimed), (want, claimed), "{wire}");
     }
+    let (_, ev) = scene("kernel:INDETERMINATE:-du");
+    assert!(ev.declared_input && ev.uncharacterized_input && !ev.claimed);
     let err = DisplayStatus::parse("error:kdec.overflow").unwrap();
     assert_eq!(from_display_status(&err), Err(StatusError::KernelError("kdec.overflow".to_string())));
 }

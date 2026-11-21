@@ -7,7 +7,7 @@
 use fid_canon::CValue;
 use fid_gdt::chars::interp::{PROVISIONAL_LABEL_KEY, PROVISIONAL_LABEL_TEXT, SIGNED_OFF_LINE};
 use fid_gdt::requires_provisional_label_bytes;
-use fid_overlay::status::{DisplayState, Interpretation, OverlayItem, Palette, Provenance, Theme, PROVISIONAL_CUE};
+use fid_overlay::status::{DisplayState, GdtResultItem, Interpretation, Palette, Provenance, Theme, PROVISIONAL_CUE};
 use std::collections::BTreeMap;
 
 /// Canonical bytes of a minimal `fid.gdt-result/2` interpretation block: the label and the
@@ -30,7 +30,7 @@ fn record(label: &str, rules: &[&str]) -> Vec<u8> {
 
 fn rendered(bytes: &[u8]) -> CValue {
     let i = Interpretation::from_requires_label(requires_provisional_label_bytes(bytes));
-    let item = OverlayItem::gdt_result(DisplayState::Nonconforms, i)
+    let item = GdtResultItem::new(DisplayState::Nonconforms, i)
         .number(0.042)
         .provenance(Provenance::Computed)
         .build()
