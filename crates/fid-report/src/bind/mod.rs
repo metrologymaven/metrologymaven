@@ -25,13 +25,16 @@
 //! project store through [`JournalReads`] ([`MemoryJournal`] in memory), wrapped by the typed
 //! [`Lookup`] at one head ([`HeadLookup`]).
 //!
-//! Out of scope: repetition and multi-stage expansion (`RPT.MODEL.BIND.EXPAND`), the
-//! resolved document and its digest (`RPT.MODEL.BIND.GEN`), formatting (`RPT.MODEL.FMT`)
+//! [`expand`] (module [`expand`](mod@expand), `RPT.MODEL.BIND.EXPAND`) turns a template's slots
+//! into expanded blocks with plain bindings at a journal head.
+//!
+//! Out of scope: the resolved document and its digest (`RPT.MODEL.BIND.GEN`), formatting (`RPT.MODEL.FMT`)
 //! and the real kinds' payloads and resolvers (`RPT.MODEL.BLOCKS.*`, `RPT.FORMS`,
 //! `RPT.BALLOON`).
 
 pub mod command;
 pub mod error;
+pub mod expand;
 pub mod journal;
 pub mod model;
 pub mod resolve;
@@ -43,6 +46,10 @@ pub use command::{
     Caller, Principal, RefParam, CLI_BIND, CLI_GROUP, MCP_BIND, REF_ID_PATTERN,
 };
 pub use error::BindError;
+pub use expand::{
+    expand, CharacteristicItem, ExpandError, ExpandItem, ExpandedBlock, ItemKind, MemoryModel, ProjectModel,
+    QueryProvider, ResultItem, Role, RunItem, StageItem, EXPANSION_SCHEMA, MAX_CELLS, MAX_COLUMNS, MAX_PAGES, MAX_ROWS,
+};
 pub use journal::{
     AtHead, EntityKind, EntityView, Evidence, EvidenceClass, HeadLookup, JournalReads, Journaled, Lookup, LookupFault,
     MemoryJournal, Outcome, ResultView, StatementBytes, ValueField, RECORD_VALUE_FIELD, RESULT_RECORD_SCHEMA,

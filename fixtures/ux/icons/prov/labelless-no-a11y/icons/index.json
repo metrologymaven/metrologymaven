@@ -1,0 +1,9 @@
+{
+  "format": "icon-index@1",
+  "icons": [
+    {
+      "labelless": true,
+      "name": "save"
+    }
+  ]
+}

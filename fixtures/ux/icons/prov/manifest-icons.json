@@ -1,0 +1,23 @@
+{
+  "commands": [
+    {
+      "icon": "align.bestfit-x",
+      "id": "align.run_bestfit",
+      "major": 1
+    },
+    {
+      "icon": "align.fit",
+      "id": "align.run_fit",
+      "major": 1
+    },
+    {
+      "icon": "save",
+      "id": "file.save",
+      "major": 2
+    },
+    {
+      "id": "view.reset",
+      "major": 1
+    }
+  ]
+}
