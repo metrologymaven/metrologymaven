@@ -33,6 +33,8 @@ const TOL_NORMAL: f64 = 2e-11;
 const TOL_RMS_REL: f64 = 1e-11;
 /// AC-3's literal bound on the relative radius error of converged cases [unverified].
 const AC3_RADIUS_REL: f64 = 1e-6;
+// The radius tolerance is within AC-3's bound, so meeting it meets AC-3.
+const _: () = assert!(TOL_LEN_REL <= AC3_RADIUS_REL);
 
 fn hexes(s: &str) -> Vec<f64> {
     s.split_whitespace().map(|t| f64::from_bits(u64::from_str_radix(t, 16).unwrap())).collect()
@@ -172,7 +174,7 @@ fn ac3_matches_reference() {
         };
         let drms = (f.stats.rms - c.one("ref_rms")).abs() / c.one("ref_rms");
         assert!(dc <= TOL_LEN_REL, "{}: centre {dc:e}", c.name);
-        assert!(dr <= TOL_LEN_REL && dr <= AC3_RADIUS_REL, "{}: radius {dr:e}", c.name);
+        assert!(dr <= TOL_LEN_REL, "{}: radius {dr:e}", c.name);
         assert!(dn <= TOL_NORMAL, "{}: normal {dn:e}", c.name);
         assert!(drms <= TOL_RMS_REL, "{}: rms {drms:e}", c.name);
         if c.get("fixed_r").is_some() {
