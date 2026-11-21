@@ -76,6 +76,12 @@ pub enum FitError {
     InvalidParams { field: &'static str },
     /// A direction vector is zero or too small to normalise (norm below `2^-1022`).
     InvalidDirection,
+    /// An ill-posed cone (`ls_cone`, KRN.LSQ.AXIS.CONE): its fitted `half_angle` (radians) is
+    /// within the configured threshold of 0 (near-cylinder) or of `pi / 2` (near-plane), or the
+    /// condition estimate `cond` of the scaled Jacobian at the fit is above the cone's limit
+    /// (for example a short axial extent). `cond` is `None` beyond the `f64` range. Code
+    /// `ill_conditioned`, like [`FitError::IllConditioned`].
+    IllPosedCone { half_angle: f64, cond: Option<f64> },
     /// A converged least-squares fit whose residual RMS `rms` is not below `bound` (by a
     /// relative margin), the RMS of the best plane its feature family tends to as the radius
     /// grows (both metres). The family's least-squares infimum is at most the bound's, so the fit
@@ -113,7 +119,7 @@ impl FitError {
             FitError::Collinear { .. } => "collinear",
             FitError::Coplanar { .. } => "coplanar",
             FitError::InsufficientCoverage { .. } => "insufficient_coverage",
-            FitError::IllConditioned { .. } => "ill_conditioned",
+            FitError::IllConditioned { .. } | FitError::IllPosedCone { .. } => "ill_conditioned",
             FitError::NotConverged { .. } => "not_converged",
             FitError::MethodUndefined { .. } | FitError::TanMethodUndefined { .. } => "method_undefined",
             FitError::AmbiguousCandidate { .. } => "ambiguous_candidate",
@@ -155,6 +161,12 @@ impl fmt::Display for FitError {
             }
             FitError::IllConditioned { cond: Some(c) } => write!(f, "fit: ill-conditioned (cond {c:e})"),
             FitError::IllConditioned { cond: None } => write!(f, "fit: ill-conditioned (cond beyond range)"),
+            FitError::IllPosedCone { half_angle, cond: Some(c) } => {
+                write!(f, "fit: ill-posed cone (half-angle {half_angle:e} rad, cond {c:e})")
+            }
+            FitError::IllPosedCone { half_angle, cond: None } => {
+                write!(f, "fit: ill-posed cone (half-angle {half_angle:e} rad, cond beyond range)")
+            }
             FitError::NotConverged { iterations, reason, .. } => {
                 write!(f, "fit: not converged after {iterations} iterations ({})", reason.as_str())
             }

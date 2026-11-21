@@ -1,0 +1,21 @@
+# Spec card (KRN.LSQ.AXIS.CONE). Cite designators and clause numbers only; never paste standards text.
+id = "fit.cone.ls@1.0.0"
+title = "Least-squares cone"
+method = "Minimises the sum of squared orthogonal distances e_i = (rho_i - r) cos(alpha) - t_i sin(alpha) to the generator line in each point's meridian plane, on centred, scaled data, by Levenberg-Marquardt (fid_solv::nlls) with an analytic Jacobian. Parameters: the axis by two tangent-plane parameters about the current axis, the axis point in the normal plane, the radius r at that point and the half-angle alpha; there is no apex parameter. After each converged solve the cone is put in canonical form (alpha in (0, pi/2), the axis from the apex into the cone), re-anchored at the foot of the perpendicular from the centroid with the radius there, and the solve repeated (at most 8 rounds). Every start of the KRN.LSQ.INIT StartSpec (8 seeded starts) runs through fid_solv::mstart; the lowest objective wins and local_optimum_only is set when the converged starts disagree. Optional fixed half-angle. The apex is computed only for output and reported only within apex_report_limit_m of the reference point."
+applicability = "At least 6 points, not coplanar. Ill-posed cones are refused with ill_conditioned (IllPosedCone, with the half-angle and the condition number): a fitted half-angle within near_zero of 0 (near-cylinder) or within near_ninety of 90 degrees (near-plane), 0.1 degree each by default [unverified], or a scaled-Jacobian condition estimate above cond_limit (300 by default [unverified]), which a short axial extent or a narrow radial band produces. A fit whose residual RMS is not below (1 + 1e-9) times the least-squares plane's is refused with implausible_fit; suspect_axis is set above 0.3 times it [unverified]. The Fit trait refuses flagged fits (flagged_fit). Reference for the exclusion of wide-angle cones from testing: ISO 10360-6:2001 [unverified clause]."
+references = [
+  "Forbes, A. B. (1989). Least-squares best-fit geometric elements. NPL Report DITC 140/89. [unverified citation]",
+  "Shakarji, C. M. (1998). Least-squares fitting algorithms of the NIST algorithm testing system. Journal of Research of the National Institute of Standards and Technology 103(6).",
+  "More, J. J. (1978). The Levenberg-Marquardt algorithm: implementation and theory. Lecture Notes in Mathematics 630.",
+  "ISO 10360-6:2001 (designator only; the exclusion of wide-angle cones from testing) [unverified clause]",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Near-cylinder cones: the apex is far away and poorly determined, and the cone is indistinguishable from a cylinder; refused below near_zero.",
+  "Near-plane cones: the axis position is weakly determined; refused above 90 degrees minus near_ninety or by the condition limit.",
+  "Short axial extent or a narrow radial band: tilting and shifting the axis become indistinguishable; refused by the condition limit.",
+  "Every start converging to the same wrong axis: agreement holds, so the plane-RMS rules refuse or flag it.",
+  "Coplanar points (a circle) are Coplanar with the condition number; fewer than 6 points are TooFewPoints.",
+]
+validation = "Decimal (60-digit) Gauss-Newton reference of the same least-squares problem: fixtures/fit/axis-cone-v1 (make_axis_cone_fixtures.py), half-angles 5 to 70 degrees, partial coverage, a fixed half-angle and axes 1 km from the origin, checked on x86-64, ARM64 and wasm32; hand-labelled ill-posed cases at 0.01 and 89.99 degrees and a short band. Pending: PTB TraCIM Gaussian and NIST ATS cone sets through UNC.RDL (D-038)."
