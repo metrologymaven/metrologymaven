@@ -1162,6 +1162,7 @@ pub trait ImportRun {
 }
 
 /// `import.file@1`: one skeleton, the reader picked by detection or by `format`.
+#[derive(Default)]
 pub struct ImportFile<'r> {
     readers: BTreeMap<FormatId, Box<dyn Reader + 'r>>,
 }
@@ -1169,12 +1170,6 @@ pub struct ImportFile<'r> {
 impl fmt::Debug for ImportFile<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ImportFile").field("formats", &self.readers.keys().collect::<Vec<_>>()).finish()
-    }
-}
-
-impl Default for ImportFile<'_> {
-    fn default() -> Self {
-        ImportFile { readers: BTreeMap::new() }
     }
 }
 
