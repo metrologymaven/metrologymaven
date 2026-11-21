@@ -7,6 +7,11 @@
 //! (`CORE.JRN.CHAIN.CKPT`); without it the crate is the storage-free entry model plus the
 //! checkpoint record and its verifier.
 //!
+//! Module `branch` (`CORE.JRN.BR.NAME`) is the branch table: name rules, the branch events and
+//! their projection, and the planners of `journal.create_branch@1`, `journal.list_branches@1`,
+//! `journal.protect_branch@1` and `journal.set_branch_coediting@1`; with feature `store` it
+//! also declares those commands. The bus handlers are in `fid-journal-cmd`.
+//!
 //! Module `verify` (`CORE.JRN.CHAIN.VERIFY`) verifies the hash chain, blobs and checkpoints of
 //! stored rows and lists entry headers; with feature `store` it reads them from the project
 //! database and declares `journal.verify_chain@1` and `journal.list_entries@1`.
@@ -16,6 +21,7 @@
 
 #[cfg(feature = "store")]
 pub mod append;
+pub mod branch;
 pub mod checkpoint;
 pub mod entry;
 pub mod stream;

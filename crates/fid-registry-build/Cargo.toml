@@ -39,7 +39,8 @@ fid-unc = { path = "../fid-unc" }
 # engine, below services; already in the lock.
 fid-bus = { path = "../fid-bus" }
 # `fid_journal::stream::activity_settings` (the Activity Log rotation size and kept files,
-# CORE.JRN.STREAM.ALOG). Feature `store` because the declaration uses fid-store's macro. Layer
+# CORE.JRN.STREAM.ALOG), and the branch commands `fid_journal::branch::command_defs`
+# (CORE.JRN.BR.NAME). Feature `store` because the declaration uses fid-store's macro. Layer
 # model; already in the lock.
 fid-journal = { path = "../fid-journal", features = ["store"] }
 
