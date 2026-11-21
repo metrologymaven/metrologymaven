@@ -629,7 +629,7 @@ pub fn diagnose(
             if i < m {
                 scaling.push_row(&jacobian[i * n..(i + 1) * n], &mut block)?;
             } else {
-                block.extend(core::iter::repeat(0.0).take(n));
+                block.extend(core::iter::repeat_n(0.0, n));
             }
         }
         let a = Mat::new(head + take, n, block).map_err(CondError::Numeric)?;
