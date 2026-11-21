@@ -185,3 +185,58 @@ fn owner_only_options() -> fs::OpenOptions {
     o.write(true).create_new(true);
     o
 }
+
+/// Reads and decodes one discovery file (spec node `AUTO.CTRL.CLIENT`). The read is bounded to
+/// [`MAX_DISCOVERY_BYTES`] + 1 bytes; a symbolic link, a non-regular file, a larger file or one
+/// that does not decode is `InvalidData` (or the OS error). The file holds no secret, so nothing
+/// else is checked here: the client binds what it reads to the server's `hello` and proofs.
+pub fn read(path: &Path) -> io::Result<Discovery> {
+    use std::io::Read;
+    let meta = fs::symlink_metadata(path)?;
+    if !meta.is_file() {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "discovery path is not a regular file"));
+    }
+    let mut bytes = Vec::new();
+    fs::File::open(path)?.take(MAX_DISCOVERY_BYTES as u64 + 1).read_to_end(&mut bytes)?;
+    if bytes.len() > MAX_DISCOVERY_BYTES {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "discovery file too large"));
+    }
+    Discovery::decode(&bytes)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "discovery file does not decode"))
+}
+
+/// Longest instance ID accepted in a discovery file name.
+pub const MAX_INSTANCE_ID_BYTES: usize = 64;
+
+/// True for an instance ID that is safe in a file name: 1 to 64 ASCII letters, digits, `-`, `_`.
+pub fn valid_instance_id(id: &str) -> bool {
+    !id.is_empty()
+        && id.len() <= MAX_INSTANCE_ID_BYTES
+        && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+}
+
+/// Most discovery files [`candidates`] returns.
+pub const MAX_CANDIDATES: usize = 64;
+
+/// The discovery files in `dir` (`fid-ctrl-<instance_id>.json` with a valid instance ID), sorted
+/// by name, at most [`MAX_CANDIDATES`]. A missing directory gives an empty list.
+pub fn candidates(dir: &Path) -> io::Result<Vec<PathBuf>> {
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(e),
+    };
+    let mut out = Vec::new();
+    for entry in entries {
+        let entry = entry?;
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else { continue };
+        let Some(id) = name.strip_prefix(FILE_PREFIX).and_then(|n| n.strip_suffix(".json")) else { continue };
+        if valid_instance_id(id) {
+            out.push(entry.path());
+        }
+    }
+    out.sort();
+    out.truncate(MAX_CANDIDATES);
+    Ok(out)
+}

@@ -125,6 +125,51 @@ impl TokenFile {
         }
     }
 
+    /// Opens an existing token file for a client (spec node `AUTO.CTRL.CLIENT`): nothing is
+    /// created, written, replaced or remembered. The directory gets the same privacy check as in
+    /// [`TokenFile::ensure`] (Unix: opened once with `O_DIRECTORY|O_NOFOLLOW` and checked on that
+    /// descriptor; Windows: not a reparse point and a private DACL); a missing directory is an
+    /// error. Read the token with [`TokenFile::read_checked`]. On Windows a file owned by
+    /// BUILTIN\Administrators is refused: the app creates every token file with the user as owner.
+    pub fn open_existing(path: &Path) -> io::Result<TokenFile> {
+        let dir_path = match path.parent() {
+            Some(d) if !d.as_os_str().is_empty() => d.to_path_buf(),
+            _ => PathBuf::from("."),
+        };
+        let Some(name) = path.file_name().map(OsStr::to_os_string) else {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "token path has no file name"));
+        };
+        #[cfg(unix)]
+        let uid = rustix::process::geteuid().as_raw();
+        #[cfg(unix)]
+        let dir = Dir::open(&dir_path, uid)?;
+        #[cfg(not(unix))]
+        let dir = Dir::open(&dir_path)?;
+        Ok(TokenFile {
+            path: path.to_path_buf(),
+            name,
+            dir,
+            #[cfg(unix)]
+            uid,
+            preexisting: AtomicBool::new(false),
+            refused: Mutex::new(Vec::new()),
+            replacing: Mutex::new(()),
+        })
+    }
+
+    /// The client-side read: the same no-follow open and checks on the handle as
+    /// [`TokenFile::load`] (a regular file, owner-only), but a refused file is never replaced,
+    /// since the file belongs to the app. `token_permissions` for a file that is too open, a link,
+    /// a reparse point or not a regular file; `token_io` if it cannot be opened or read or does not
+    /// hold exactly 32 bytes.
+    pub fn read_checked(&self) -> Result<Token, AuthError> {
+        match self.open_checked() {
+            Ok((Some(f), Permissions::OwnerOnly)) => read_token(f),
+            Ok((_, Permissions::Wider(_))) => Err(AuthError::TokenPermissions),
+            Ok((None, Permissions::OwnerOnly)) | Err(_) => Err(AuthError::TokenIo),
+        }
+    }
+
     /// The token file's path.
     pub fn path(&self) -> &Path {
         &self.path

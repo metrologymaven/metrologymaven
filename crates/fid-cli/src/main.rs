@@ -2,6 +2,7 @@
 //!
 //! First slice: `fid canon` exposes the canonical-JSON crate (CORE.JRN.CANON) so
 //! people, agents and CI can hash journal-style JSON exactly the way the kernel will.
+//! `fid ctrl status` / `fid ctrl ping` are control-channel diagnostics (AUTO.CTRL.CLIENT).
 //! The registry-driven command surface (AUTO.SURF) replaces this hand-written parser later.
 //! Exit codes and `--json` output follow AUTO.CLI.OUT (`fid_cli::ExitCode`, `fid_cli::Output`):
 //! under `--json` every result, including usage and input errors, is one envelope on stdout.
@@ -21,6 +22,7 @@ USAGE:
                                   with --digest print only its sha256 digest
     fid canon [FILE] --json       Print a result envelope (schema/envelope-v1.json)
                                   with the canonical value and its digest
+{CTRL}
     fid --version                 Print the version
     fid --help                    Print this help
 
@@ -43,6 +45,12 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Some("canon") => canon(&args[1..]),
+        Some("ctrl") => {
+            let env = |k: &str| std::env::var(k).ok();
+            let mut stdout = std::io::stdout().lock();
+            let mut stderr = std::io::stderr().lock();
+            fid_cli::ctrl::run(&args[1..], &env, &mut stdout, &mut stderr).into()
+        }
         Some(other) => {
             let msg = format!("unknown command `{other}`");
             if !json {
@@ -56,7 +64,7 @@ fn main() -> ExitCode {
 
 /// The usage text followed by the exit-code table, generated from [`fid_cli::ExitCode`].
 fn help() -> String {
-    let mut s = USAGE.to_string();
+    let mut s = USAGE.replace("{CTRL}", fid_cli::ctrl::USAGE);
     for c in Fx::ALL {
         s.push_str(&format!("\n    {}  {:<15} {}", c.code(), c.name(), c.meaning()));
     }

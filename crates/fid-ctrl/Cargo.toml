@@ -1,13 +1,14 @@
 [package]
 name = "fid-ctrl"
-description = "Metrology Maven control-channel transport: loopback listener, discovery file, bounded JSON-lines framing (spec node AUTO.CTRL.WIRE) and challenge-response authentication (AUTO.CTRL.AUTH)"
+description = "Metrology Maven control-channel transport: loopback listener, discovery file, bounded JSON-lines framing (spec node AUTO.CTRL.WIRE), challenge-response authentication (AUTO.CTRL.AUTH) and the client (AUTO.CTRL.CLIENT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
-# Workspace crates: canonical JSON (fid-canon) and the shared envelope (fid-surface).
+# Workspace crates: canonical JSON (fid-canon), the shared envelope and invocation tracker
+# (fid-surface), and the UUID type of idempotency keys and job IDs (fid-uuid, AUTO.CTRL.CLIENT).
 # Networking and threads are std only.
 # AUTO.CTRL.AUTH, all RustCrypto or rust-random crates already in the lock, MIT OR Apache-2.0:
 # - hmac 0.13 + sha2 0.11: HMAC-SHA256 proofs with constant-time verification (the vetted
@@ -17,6 +18,7 @@ repository.workspace = true
 [dependencies]
 fid-canon = { path = "../fid-canon" }
 fid-surface = { path = "../fid-surface" }
+fid-uuid = { path = "../fid-uuid" }
 getrandom = "0.2"
 hmac = "0.13"
 sha2 = "0.11"
@@ -27,6 +29,10 @@ zeroize = "1"
 # Unix: rustix 1 (safe wrappers, Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT, already in
 # the lock through tempfile and others) for the directory-relative token file operations:
 # open(O_DIRECTORY|O_NOFOLLOW), openat, statat, linkat, renameat, unlinkat, and geteuid.
+# Tests drive the client through the AUTO.SURF.JOBS tracker, whose command IDs are fid-types'.
+[dev-dependencies]
+fid-types = { path = "../fid-types" }
+
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1", features = ["fs", "process"] }
 
