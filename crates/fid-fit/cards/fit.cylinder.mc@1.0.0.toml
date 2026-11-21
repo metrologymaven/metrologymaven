@@ -1,0 +1,18 @@
+# Spec card (KRN.ENV.MCC.CYL). Cite designators and clause numbers only; never paste standards text.
+id = "fit.cylinder.mc@1.0.0"
+title = "Minimum circumscribed cylinder"
+method = "The smallest cylinder containing every point. Parameters: two tangent-plane axis parameters, two axis offsets and the radius about the least-squares cylinder's axis (fit.cylinder.ls, anchored at mid-height). Each step of fid_solv::seq solves the LP of the linearised rows dist(p_i, axis) - R <= 0 with a trust-region bound; every start's final active set is certified by fid_solv::cert (recomputed optimum with proven bounds, proven KKT check). 8 seeded starts in the tilt and offset box the least-squares zone allows run through fid_solv::mstart; local_optimum_only is set when the certified starts disagree, a start converged without a certificate, or the least-squares start was flagged. The radius is recomputed from the contacts and the final axis. With a fixed axis direction the convex 2D problem is solved and its certified optimum is global."
+applicability = "At least 5 points, not coplanar, not a disc (axial thickness at least 0.01 of the half width). The certificate proves a strict local minimum, not a global one (free direction). Fits refused: a certified radius above the feasible least-squares-axis radius (implausible_fit: not the global optimum) and a point outside the recomputed radius by more than 1e-12 m (side_violation). suspect_axis (axis weakly determined or wrong) is set when the zone about the fitted axis exceeds 3 times the zone about the least-squares axis [unverified]. The Fit trait refuses flagged fits (flagged_fit)."
+references = [
+  "Anthony, G. T. et al. (1996). Reference software for finding Chebyshev best-fit geometric elements. Precision Engineering 19. [unverified citation]",
+  "Conn, A. R., Gould, N. I. M. and Toint, Ph. L. (2000). Trust-Region Methods. SIAM.",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Non-convex in the axis: different starts can certify different local minima (two near-equal envelope axes): local_optimum_only.",
+  "Data that only covers half the circumference or a short arc has an enclosing cylinder unrelated to the measured surface: refused or flagged.",
+  "Contacts tied with the active set (more than five points on the envelope): the nonlinear certificate tries the first candidate sets only; it certifies one of them or fails closed.",
+  "A disc of points has no axial extent to fix the tilt: IllConditioned with width / thickness.",
+]
+validation = "Planted envelopes with five KKT contacts and positive multipliers, recomputed exactly in 60-digit Decimal on the rounded points: fixtures/fit/mcc-cyl-v1 (make_mcc_cyl_fixtures.py), including an axis 1 km from the origin, 200-degree coverage and 4 000 points; checked on x86-64, ARM64 and wasm32. Pending: open RDL reference cases (UNC.RDL.FREEZE)."

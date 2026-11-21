@@ -34,7 +34,8 @@
 //!    perpendicular from the centroid (the origin) onto the axis, `(E1', E2')` by the basis rule,
 //!    and the solve is repeated from `a = b = u = v = 0` (and the current `r`). This stops after
 //!    a round with no accepted step, or after [`REPARAM_ROUNDS`] rounds. A later round that
-//!    fails (any solver error) ends the rounds and keeps the last converged round, so a start
+//!    fails with a solver error (not a numeric one: a non-finite value or an allocation failure
+//!    passes through) ends the rounds and keeps the last converged round, so a start
 //!    that converged is never discarded by its re-anchoring. So the reported
 //!    gradient, rank and condition are those of the tangent-plane parameters about the final
 //!    axis, and the iteration count is the sum over the rounds. (The NLLS driver has no
@@ -338,8 +339,14 @@ fn solve_rounds(q: &[f64], fr0: Frame, layout: Layout, x0: Vec<f64>, cfg: &NllsC
         let prob = Problem { q, fr, layout };
         let res = match nlls::solve(&prob, &x, cfg) {
             Ok(res) => res,
-            // A later round's failure keeps the converged earlier round (rule 5).
-            Err(_) if done.is_some() => break,
+            // A later round's solver failure keeps the converged earlier round (rule 5); a
+            // numeric error (non-finite value, allocation failure) always passes through.
+            Err(e)
+                if done.is_some()
+                    && !matches!(e, nlls::SolverError::Numeric { .. } | nlls::SolverError::NonFinite { .. }) =>
+            {
+                break
+            }
             Err(e) => return Err(FitError::from_solver(e, cfg)),
         };
         iterations = iterations.saturating_add(res.iterations);
