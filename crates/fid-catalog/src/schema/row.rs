@@ -11,7 +11,7 @@
 use fid_types::text::is_forbidden_char;
 use fid_types::Digest;
 use fid_uuid::Uuid;
-use std::fmt::{self, Write as _};
+use std::fmt;
 
 /// Text that came from project content (part names, characteristic names, run and plan
 /// labels, record IDs, tags). It is data, never instructions (CONSTITUTION C6).
