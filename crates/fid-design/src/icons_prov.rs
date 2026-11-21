@@ -18,9 +18,12 @@
 //!
 //! A missing declaration or provenance file is `PROV-MISSING`; an invalid one, both declaration
 //! locations at once, a provenance file whose SVG does not exist, or a tree that cannot be fully
-//! walked is `PROV-SCHEMA`. A `third_party` source must be the text of a Markdown heading
-//! (`#` to `######`) of the given `ATTRIBUTION.md`, else `PROV-ATTRIBUTION`; a heading, not
-//! any substring, so a short source cannot match by accident.
+//! walked is `PROV-SCHEMA`. A third-party record must agree with itself and its declaration
+//! (maintainer decision, review of #369): its `licence` equals `third_party.licence` and one of
+//! the declaration's `references` names the source, else `PROV-SCHEMA`. Its source must be a
+//! `### <source>` entry of the given `ATTRIBUTION.md` whose `**Files:**` bullet names the icon
+//! path and whose `**Licence:**` bullet gives `third_party.licence`, else `PROV-ATTRIBUTION`
+//! (see [`attribution_entries`]); `#` and `##` headings are titles, never entries.
 //!
 //! # The icon index
 //!
@@ -169,16 +172,97 @@ pub fn parse_record(text: &str, artefact: &str) -> Result<Record, String> {
     Ok(Record { licence, third_party })
 }
 
-/// The Markdown heading texts of an `ATTRIBUTION.md` (`#` to `######`, then a space).
-pub fn attribution_headings(text: &str) -> BTreeSet<String> {
-    text.lines()
-        .filter_map(|l| {
-            let hashes = l.len() - l.trim_start_matches('#').len();
-            let rest = &l[hashes..];
-            ((1..=6).contains(&hashes) && rest.starts_with(' ')).then(|| rest.trim().to_string())
-        })
-        .filter(|h| !h.is_empty())
-        .collect()
+/// One asset entry of an `ATTRIBUTION.md`: a `### <name>` heading and the backtick-quoted
+/// spans of its `- **Files:**` and `- **Licence:**` bullets (a bullet runs on over indented
+/// continuation lines until the next bullet, blank line or heading).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AttributionEntry {
+    pub files: Vec<String>,
+    /// The spans of the licence bullet that are SPDX expressions.
+    pub licences: BTreeSet<String>,
+}
+
+fn backticks(s: &str) -> Vec<String> {
+    s.split('`').skip(1).step_by(2).map(str::to_string).collect()
+}
+
+/// The asset entries of an `ATTRIBUTION.md`, by heading text. Only `###` headings are entries:
+/// `#` and `##` are document and section titles. A heading listed twice keeps its first entry.
+pub fn attribution_entries(text: &str) -> BTreeMap<String, AttributionEntry> {
+    #[derive(PartialEq)]
+    enum Bullet {
+        None,
+        Files,
+        Licence,
+    }
+    let mut out: BTreeMap<String, AttributionEntry> = BTreeMap::new();
+    let mut cur: Option<(String, AttributionEntry)> = None;
+    let mut bullet = Bullet::None;
+    let flush = |cur: &mut Option<(String, AttributionEntry)>, out: &mut BTreeMap<String, AttributionEntry>| {
+        if let Some((h, e)) = cur.take() {
+            out.entry(h).or_insert(e);
+        }
+    };
+    for line in text.lines() {
+        let hashes = line.len() - line.trim_start_matches('#').len();
+        if hashes > 0 && line[hashes..].starts_with(' ') {
+            flush(&mut cur, &mut out);
+            bullet = Bullet::None;
+            let h = line[hashes..].trim();
+            if hashes == 3 && !h.is_empty() {
+                cur = Some((h.to_string(), AttributionEntry::default()));
+            }
+            continue;
+        }
+        let Some((_, e)) = cur.as_mut() else { continue };
+        let t = line.trim_start();
+        if line.trim().is_empty() {
+            bullet = Bullet::None;
+            continue;
+        }
+        let body = if let Some(rest) = t.strip_prefix("- **Files:**") {
+            bullet = Bullet::Files;
+            rest
+        } else if let Some(rest) = t.strip_prefix("- **Licence:**") {
+            bullet = Bullet::Licence;
+            rest
+        } else if t.starts_with("- ") || t == line {
+            // Another bullet, or an unindented line: not a continuation.
+            bullet = Bullet::None;
+            continue;
+        } else {
+            t
+        };
+        match bullet {
+            Bullet::Files => e.files.extend(backticks(body)),
+            Bullet::Licence => e.licences.extend(backticks(body).into_iter().filter(|l| spdx_ok(l))),
+            Bullet::None => {}
+        }
+    }
+    flush(&mut cur, &mut out);
+    out
+}
+
+/// Why the attribution entry for `source` does not cover `icon` under `licence`, or `None`.
+/// The entry's Files must name the icon path (below the design root, or ending in `/<path>`
+/// when written from the repository root) and its Licence must include `licence`.
+pub fn attribution_defect(
+    entries: &BTreeMap<String, AttributionEntry>,
+    source: &str,
+    icon: &str,
+    licence: &str,
+) -> Option<String> {
+    let Some(e) = entries.get(source) else {
+        return Some(format!("third-party source {source:?} is not a `###` entry of the attribution file"));
+    };
+    let suffix = format!("/{icon}");
+    if !e.files.iter().any(|f| f == icon || f.ends_with(&suffix)) {
+        return Some(format!("the attribution entry {source:?} does not list {icon} under **Files:**"));
+    }
+    if !e.licences.contains(licence) {
+        return Some(format!("the attribution entry {source:?} does not give the licence {licence}"));
+    }
+    None
 }
 
 /// One icon index entry, as far as this check reads it.
@@ -249,7 +333,7 @@ pub struct ProvReport {
 
 /// Runs `icons-prov`. `Err` is an unreadable input (exit 2).
 pub fn check_prov(root: &Path, attribution: &Path) -> Result<ProvReport, String> {
-    let headings = attribution_headings(&read_text(attribution, MAX_ATTRIBUTION_BYTES)?);
+    let entries = attribution_entries(&read_text(attribution, MAX_ATTRIBUTION_BYTES)?);
     let mut f = Vec::new();
     let mut files = BTreeSet::new();
     for dir in ICON_DIRS {
@@ -276,11 +360,12 @@ pub fn check_prov(root: &Path, attribution: &Path) -> Result<ProvReport, String>
             f.push(Finding::new(SCHEMA, icon, format!("icon path refused: {d}")));
             continue;
         }
-        check_icon(root, icon, &headings, &mut f)?;
+        check_icon(root, icon, &entries, &mut f)?;
     }
+    let icon_set: BTreeSet<&str> = icons.iter().map(String::as_str).collect();
     for p in files.iter().filter(|p| p.ends_with(RECORD_SUFFIX)) {
         let svg = &p[..p.len() - RECORD_SUFFIX.len()];
-        if !icons.iter().any(|i| i == svg) {
+        if !icon_set.contains(svg) {
             f.push(Finding::new(SCHEMA, p, "provenance file for an icon that does not exist"));
         }
     }
@@ -300,17 +385,47 @@ pub fn check_prov(root: &Path, attribution: &Path) -> Result<ProvReport, String>
     Ok(ProvReport { icons, index_entries, findings: f })
 }
 
-fn check_icon(root: &Path, icon: &str, headings: &BTreeSet<String>, f: &mut Vec<Finding>) -> Result<(), String> {
+/// The `references` of a declaration that `check_decl` accepted.
+fn decl_references(text: &str) -> Vec<String> {
+    match fid_canon::parse(text.as_bytes()) {
+        Ok(CValue::Obj(m)) => match m.get("references") {
+            Some(CValue::Arr(a)) => a
+                .iter()
+                .filter_map(|v| match v {
+                    CValue::Str(s) => Some(s.clone()),
+                    _ => None,
+                })
+                .collect(),
+            _ => Vec::new(),
+        },
+        _ => Vec::new(),
+    }
+}
+
+fn check_icon(
+    root: &Path,
+    icon: &str,
+    entries: &BTreeMap<String, AttributionEntry>,
+    f: &mut Vec<Finding>,
+) -> Result<(), String> {
     let beside = format!("{icon}{}", review::ORIGIN_SUFFIX);
     let central = format!("{}{icon}{}", review::ORIGIN_DIR, review::ORIGIN_SUFFIX);
-    let found: Vec<&String> =
-        [&beside, &central].into_iter().filter(|p| matches!(review::kind(root, p), Ok(review::Kind::File))).collect();
+    let mut found = Vec::new();
+    for p in [&beside, &central] {
+        // An I/O error is an unreadable input (exit 2), never a missing declaration.
+        if review::kind(root, p)? == review::Kind::File {
+            found.push(p);
+        }
+    }
+    // The declaration's references, when it is valid (`None`: missing or invalid, reported).
+    let mut references: Option<Vec<String>> = None;
     match found.as_slice() {
         [] => f.push(Finding::new(MISSING, icon, format!("no originality declaration ({beside} or {central})"))),
         [one] => {
             let text = read_text(&root.join(one.as_str()), MAX_RECORD_BYTES)?;
-            if let Err(e) = review::check_decl(&text, icon) {
-                f.push(Finding::new(SCHEMA, icon, format!("{one}: {e}")));
+            match review::check_decl(&text, icon) {
+                Err(e) => f.push(Finding::new(SCHEMA, icon, format!("{one}: {e}"))),
+                Ok(()) => references = Some(decl_references(&text)),
             }
         }
         _ => f.push(Finding::new(SCHEMA, icon, format!("declared twice ({beside} and {central})"))),
@@ -322,12 +437,28 @@ fn check_icon(root: &Path, icon: &str, headings: &BTreeSet<String>, f: &mut Vec<
             let text = read_text(&root.join(&rec), MAX_RECORD_BYTES)?;
             match parse_record(&text, icon) {
                 Err(e) => f.push(Finding::new(SCHEMA, icon, format!("{rec}: {e}"))),
-                Ok(Record { third_party: ThirdParty::Yes { source, .. }, .. }) if !headings.contains(&source) => {
-                    f.push(Finding::new(
-                        ATTRIBUTION,
-                        icon,
-                        format!("third-party source {source:?} is not a heading of the attribution file"),
-                    ));
+                Ok(Record { licence, third_party: ThirdParty::Yes { source, licence: tp_licence } }) => {
+                    // Maintainer decision (review of #369): a third-party record must agree with
+                    // itself and with its declaration.
+                    if licence != tp_licence {
+                        f.push(Finding::new(
+                            SCHEMA,
+                            icon,
+                            format!("{rec}: `licence` {licence} differs from `third_party.licence` {tp_licence}"),
+                        ));
+                    }
+                    if let Some(refs) = &references {
+                        if !refs.iter().any(|r| r.contains(source.as_str())) {
+                            f.push(Finding::new(
+                                SCHEMA,
+                                icon,
+                                format!("the originality declaration's references do not name the source {source:?}"),
+                            ));
+                        }
+                    }
+                    if let Some(d) = attribution_defect(entries, &source, icon, &tp_licence) {
+                        f.push(Finding::new(ATTRIBUTION, icon, d));
+                    }
                 }
                 Ok(_) => {}
             }

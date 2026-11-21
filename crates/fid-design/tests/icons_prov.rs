@@ -4,7 +4,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_design::icons_prov::{
-    attribution_headings, check_prov, check_registry, parse_index, parse_record, spdx_ok, ThirdParty,
+    attribution_defect, attribution_entries, check_prov, check_registry, parse_index, parse_record, spdx_ok, ThirdParty,
 };
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -36,6 +36,8 @@ fn ac1_shipped_icons_pass() {
     assert!(out(&o).contains("\"ok\":true"), "{}", out(&o));
     let r = check_prov(&root().join("design"), &root().join("ATTRIBUTION.md")).unwrap();
     assert!(r.findings.is_empty(), "{:?}", r.findings);
+    // No icon ships yet: this changes visibly when UX.ICONS.CORESET, CLASS or GDT add one.
+    assert_eq!(r.icons, Vec::<String>::new(), "icons now ship: update AC-1's expectations");
 }
 
 /// A complete set: beside and central declarations, a listed third-party icon, a labelless
@@ -159,7 +161,7 @@ fn record_rules_on_a_copy() {
     std::fs::copy(d.join("icons/thirdp.svg.origin.json"), d.join("icons/save.svg.origin.json")).unwrap();
     assert_eq!(codes(&d), [("PROV-SCHEMA".into(), "icons/save.svg".into())]);
     // A bad licence in the provenance file.
-    let d = fresh("licence");
+    let d = fresh("rec-licence");
     let p = d.join("icons/save.svg.prov.json");
     let t = std::fs::read_to_string(&p).unwrap().replace("CC-BY-4.0", "CC BY 4.0 (c)");
     std::fs::write(&p, t).unwrap();
@@ -200,8 +202,19 @@ fn spdx_and_headings_and_records() {
     for bad in ["", " MIT", "MIT AND", "AND", "MIT  OR Apache-2.0", "(MIT)", "MIT/X11", "-MIT"] {
         assert!(!spdx_ok(bad), "{bad:?}");
     }
-    let h = attribution_headings("# A\n## B c \n####### Too deep\n#NoSpace\ntext\n### \n");
-    assert_eq!(h.into_iter().collect::<Vec<_>>(), ["A", "B c"]);
+    let md = "# Title\n\n## Icons\n\n### Set A\n\n- **Files:** `design/icons/a.svg`,\n  `icons/b.svg`\n- **Licence:** SPDX `MIT`. Status: fine `not an id!`\n- **Notice:** `icons/c.svg`\n\n### Set B\n- **Files:** `icons/c.svg`\n#### Deep\n### Set A\n- **Files:** `icons/z.svg`\n";
+    let e = attribution_entries(md);
+    assert_eq!(e.keys().collect::<Vec<_>>(), ["Set A", "Set B"], "only ### headings are entries");
+    assert_eq!(e["Set A"].files, ["design/icons/a.svg", "icons/b.svg"], "continuation lines; first entry kept");
+    assert_eq!(e["Set A"].licences.iter().collect::<Vec<_>>(), ["MIT"]);
+    assert!(e["Set B"].licences.is_empty());
+    assert_eq!(attribution_defect(&e, "Set A", "icons/a.svg", "MIT"), None, "repository-root path");
+    assert_eq!(attribution_defect(&e, "Set A", "icons/b.svg", "MIT"), None);
+    assert!(attribution_defect(&e, "Set A", "icons/c.svg", "MIT").is_some(), "Notice is not Files");
+    assert!(attribution_defect(&e, "Set A", "icons/a.svg", "Apache-2.0").is_some());
+    assert!(attribution_defect(&e, "Set B", "icons/c.svg", "MIT").is_some(), "no licence bullet");
+    assert!(attribution_defect(&e, "Icons", "icons/a.svg", "MIT").is_some(), "a section title is not an entry");
+    assert!(attribution_defect(&e, "Title", "icons/a.svg", "MIT").is_some());
     let rec = |tp: &str| {
         format!(r#"{{"artefact":"icons/a.svg","format":"icon-provenance@1","licence":"MIT","third_party":{tp}}}"#)
     };
@@ -224,4 +237,62 @@ fn spdx_and_headings_and_records() {
     assert!(parse_index(r#"{"icons":[{"name":" a"}]}"#).is_err());
     let e = parse_index(r#"{"icons":[{"name":"a","labelless":true,"a11y_id":" "}]}"#).unwrap();
     assert_eq!(e[0].a11y_id, None, "a blank a11y_id counts as missing");
+}
+
+/// Review of #369: attribution matches only a `###` entry that lists the icon under Files and
+/// gives its licence; a third-party record must agree with itself and its declaration.
+#[test]
+fn third_party_records_and_attribution_entries() {
+    let attr = root().join(fx("ATTRIBUTION.md"));
+    let codes = |d: &Path| -> Vec<(String, String)> {
+        check_prov(d, &attr).unwrap().findings.into_iter().map(|f| (f.code.to_string(), f.subject)).collect()
+    };
+    let fresh = |tag: &str| {
+        let d = temp(tag);
+        copy_dir(&root().join(fx("ok")), &d);
+        d
+    };
+    let edit = |p: &Path, from: &str, to: &str| {
+        let t = std::fs::read_to_string(p).unwrap();
+        assert!(t.contains(from), "{from}");
+        std::fs::write(p, t.replace(from, to)).unwrap();
+    };
+    let one = |code: &str, icon: &str| vec![(code.to_string(), icon.to_string())];
+    // A section heading of the attribution file is not an entry.
+    let d = fresh("tp-section");
+    edit(&d.join("icons/thirdp.svg.prov.json"), "\"Example Glyph Set\"", "\"Icons\"");
+    edit(&d.join("icons/thirdp.svg.origin.json"), "the Example Glyph Set", "the Icons set");
+    assert_eq!(codes(&d), one("PROV-ATTRIBUTION", "icons/thirdp.svg"));
+    // The attribution entry gives another licence (the record itself is consistent).
+    let d = fresh("tp-licence");
+    edit(&d.join("icons/thirdp.svg.prov.json"), "\"MIT\"", "\"BSD-3-Clause\"");
+    assert_eq!(codes(&d), one("PROV-ATTRIBUTION", "icons/thirdp.svg"));
+    // The attribution entry does not list the icon under Files.
+    let d = fresh("tp-files");
+    for (from, to) in [
+        ("thirdp.svg", "other.svg"),
+        ("thirdp.svg.prov.json", "other.svg.prov.json"),
+        ("thirdp.svg.origin.json", "other.svg.origin.json"),
+    ] {
+        std::fs::rename(d.join("icons").join(from), d.join("icons").join(to)).unwrap();
+    }
+    edit(&d.join("icons/other.svg.prov.json"), "icons/thirdp.svg", "icons/other.svg");
+    edit(&d.join("icons/other.svg.origin.json"), "icons/thirdp.svg", "icons/other.svg");
+    assert_eq!(codes(&d), one("PROV-ATTRIBUTION", "icons/other.svg"));
+    // The top-level licence relicenses the third-party glyph.
+    let d = fresh("tp-relicence");
+    edit(
+        &d.join("icons/thirdp.svg.prov.json"),
+        "\"licence\": \"MIT\",\n  \"third_party\"",
+        "\"licence\": \"CC-BY-4.0\",\n  \"third_party\"",
+    );
+    assert_eq!(codes(&d), one("PROV-SCHEMA", "icons/thirdp.svg"));
+    // The declaration does not name the source ("drawn here, no other source").
+    let d = fresh("tp-refs");
+    edit(
+        &d.join("icons/thirdp.svg.origin.json"),
+        "Taken unchanged from the Example Glyph Set",
+        "Drawn here; no other source",
+    );
+    assert_eq!(codes(&d), one("PROV-SCHEMA", "icons/thirdp.svg"));
 }

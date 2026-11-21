@@ -1,9 +1,9 @@
 {
   "artefact": "icons/thirdp.svg",
-  "author": "Synthetic fixture author (UX.ICONS.PROV test data)",
+  "author": "Synthetic fixture (UX.ICONS.PROV test data); third-party glyph, not drawn here",
   "date": "2026-11-21",
   "references": [
-    "Drawn for this fixture from a plain square on the project grid; no other source"
+    "Taken unchanged from the Example Glyph Set (third party, MIT licence), listed in the attribution file"
   ],
   "statement_version": "originality-statement@1"
 }
