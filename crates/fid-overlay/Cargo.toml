@@ -1,0 +1,28 @@
+[package]
+name = "fid-overlay"
+description = "Metrology Maven viewer overlays: status markers, the locked status-palette guard, provenance badges and out-of-tolerance pattern definitions (VIZ.OVERLAY.STATUS)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Viewer layer. No GPU, windowing or UI-toolkit crate: the mapping is a pure function
+# (REQ-VIZ.OVERLAY.STATUS-005).
+[dependencies]
+# The display status a scene node carries (VIZ.RENDER.SCENE.PROJ, same layer) and the kernel
+# outcome inside it (UNC.DEC, kernel layer).
+fid-render = { path = "../fid-render" }
+fid-kdec = { path = "../fid-kdec" }
+# RFC 8785 canonical JSON and SHA-256 for the render-spec bytes and digest, and the strict
+# JSON reader for skins (CORE.JRN.CANON, model layer).
+fid-canon = { path = "../fid-canon" }
+
+[dev-dependencies]
+# D-045: the tests feed `fid_gdt::requires_provisional_label_bytes` into the item builder and
+# check the label constants. Test-only, so the viewer's runtime graph stays free of fid-gdt.
+fid-gdt = { path = "../fid-gdt" }
+
+[lints]
+workspace = true

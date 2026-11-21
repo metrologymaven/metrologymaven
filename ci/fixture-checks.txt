@@ -166,6 +166,7 @@ python fixtures/ux/tokens/color/make_tokens.py --check
 python fixtures/ux/tokens/datapal/make_fixtures.py --check
 python fixtures/ux/tokens/datapal/make_palettes.py --check
 python fixtures/ux/tokens/status/make_fixtures.py --check
+python fixtures/viz/status-matrix/make_fixtures.py --check
 python fixtures/viz/viewstate-samples/make_fixtures.py --check
 python tools/check_bench_schema.py
 python tools/check_command_defs.py
