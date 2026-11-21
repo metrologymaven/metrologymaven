@@ -35,8 +35,8 @@
 //! An [`Audience::Person`] gets the full manifest and its digest, as before.
 
 use crate::catalogue::{Catalogue, QuantityCatalogue};
-use crate::def::{CommandDef, Projection, Surface as Exposure};
-use crate::validate::{max_projection, validate_with, CommandDecl, Limits, ValidationError};
+use crate::def::{CommandDef, Projection};
+use crate::validate::{validate_with, CommandDecl, Limits, ValidationError};
 use fid_canon::{digest_bytes, parse, parse_with_limits, to_canonical_bytes, CValue, CanonError};
 use fid_types::{CommandId, Digest};
 use std::collections::{BTreeMap, BTreeSet};
@@ -395,32 +395,10 @@ impl ManifestInForce {
     }
 }
 
-/// Who is asking (D-035). TODO(#394): use `query::Audience` once CORE.REG.QRY merges.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Audience {
-    /// A human or script outside MCP: the full manifest.
-    Person,
-    /// An MCP channel or an `agent` principal: only the commands it can see.
-    Agent,
-}
-
-/// The projection MCP callers get for `def`: the stricter of the declared projection
-/// (`human_only` clamps it to `request_only`) and the ceiling of its class, and `never` when
-/// `mcp` is not among its surfaces. This is `fid_bus::policy::projection::mcp_projection`,
-/// which `fid-registry` cannot call (fid-bus depends on it); `fid-bus`'s test
-/// `show_manifest_projection` pins the two equal over every class, projection, `human_only`
-/// and exposure combination. TODO(#394): switch to `query::mcp_projection` (the shared
-/// function) once CORE.REG.QRY merges.
-pub fn mcp_projection(def: &CommandDef) -> Projection {
-    let declared = def.effective_projection();
-    let ceiling = max_projection(def.side_effect);
-    let p = if declared < ceiling { declared } else { ceiling };
-    if def.exposure.contains(&Exposure::Mcp) {
-        p
-    } else {
-        Projection::Never
-    }
-}
+/// Who is asking (D-035): the audience of CORE.REG.QRY's queries.
+pub use crate::query::Audience;
+/// The MCP projection rule of the bus (`fid_bus::policy::projection` re-exports it).
+pub use crate::validate::mcp_projection;
 
 /// Whether `audience` can see `def`: a person sees every command, an agent only those whose
 /// MCP projection is not `never` (D-035).
