@@ -1,6 +1,6 @@
 [package]
 name = "fid-journal-cmd"
-description = "Metrology Maven journal commands on the bus: handlers of journal.create_branch@1, journal.list_branches@1, journal.protect_branch@1, journal.set_branch_coediting@1 and journal.diff_branch@1 (spec nodes CORE.JRN.BR.NAME and CORE.JRN.BR.DIFF, bus half)"
+description = "Metrology Maven journal commands on the bus: handlers of journal.create_branch@1, journal.list_branches@1, journal.protect_branch@1, journal.set_branch_coediting@1, journal.diff_branch@1 and the three promotion commands (spec nodes CORE.JRN.BR.NAME, CORE.JRN.BR.DIFF and CORE.JRN.BR.PROMO, bus half)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

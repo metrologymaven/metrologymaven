@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-journal, fid-journal-cmd]
 satisfies: [REQ-CORE.JRN.BR-003, REQ-CORE.JRN.BR-004, REQ-CORE.JRN.BR-005, REQ-CORE.JRN.BR-006, REQ-CORE.JRN.BR-007]
 covers: []
 depends_on: [CORE.JRN.BR.NAME, CORE.JRN.BR.DIFF, CORE.JRN.CHAIN.APPEND, CORE.REG.DEF]
@@ -75,6 +76,9 @@ Moves work from a source branch onto a target branch. A fast-forward moves the t
 
 - **Revise for D-035 (accepted 2026-11-17):** in the Lean profile, the `AssertionCheck` for protected-branch promotion is satisfied by CORE.BUS.PRIN's `HumanPresence` confirmation; TRUST.ESIG is the Regulated path.
 - `CORE.RPL.RETGT` (REQ-CORE.RPL.RETGT-005) implements `Rebaser`, and `TRUST` implements `AssertionCheck`; both are wired by the app at start-up. A `depends_on` would create a cycle (`CORE.RPL` depends on `CORE.JRN`; `TRUST` is a higher layer), so none is declared.
+- **Build choices (maintainer decisions for the build, pinned in `fid_journal::promote`):** every call is bound to `source_head`, `target_head` and `diff` (SHA-256 of the canonical `journal.diff_branch@1` result it was approved against) and refused with `conflict/expected_head_mismatch` if either head moved (compare-and-swap on both heads, replacing REQ-007's "use the named source head") or `conflict/expected_digest_mismatch` if the diff differs, so a promotion cannot be replayed. Each command emits one event (`BranchPromoted`, `ProtectedBranchPromoted`, `PromotionRequested`, reserved to their commands in `fid_registry::RESERVED_EFFECTS`) instead of the Design's `HeadMoved`/`PromotedEntry`, because one registry effect has one owning command and one event lands whole. Source equal to target, a target in the `agent/` namespace, nothing to promote, or `promote_protected_branch` into an unprotected target are `precondition/false`. The fold accepts each event only from its command's handler, a human principal for promotions (W2, or W3 with a verified assertion and a matching pre-image) and the entry's real principal as requester.
+- **Obligation on the bus commit stage and `CORE.BUS.ROUTE`:** AC-1 and AC-2 are met at the event level. Writing the promotion as a `head_move` entry (fast-forward) or as one entry per re-executed step with `promoted_from` (rebased), each with the `logical_parent` BR.DIFF expects, is the commit stage's job, and it is not built yet. The commit stage must also verify the entry's human assertion before the fold may count it as `asserted`. AC-6 (exact-mode replay of the journal) needs that stage and `CORE.RPL`; here, planning and folding are tested to be deterministic.
+- `long-running` in the Design has no registry field yet; the Rebaser call takes the call's cancel token.
 - `journal.request_promote_branch@1` overlaps with the generic pending request filed when an agent calls the `human_only` `journal.promote_branch@1` over MCP; both are kept because REQ-CORE.JRN-012 names the explicit request. `VIZ.INBOX` should show both kinds.
 
 ## Children
