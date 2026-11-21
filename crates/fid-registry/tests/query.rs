@@ -55,6 +55,9 @@ fn manifests(p: &str) -> Option<Vec<u8>> {
         "v1.json" | "v2.json" | "tampered.json" | "valid.manifest.json" => {
             Some(std::fs::read(fixtures().join("manifest").join(name)).unwrap())
         }
+        "audience_a.manifest.json" | "audience_b.manifest.json" => {
+            Some(std::fs::read(fixtures().join("qry").join(name)).unwrap())
+        }
         _ => None,
     }
 }
@@ -222,8 +225,10 @@ fn ac3_diff_v1_v2_has_exactly_the_five_entries() {
     assert_eq!(get(measure, "compat"), &CValue::Str("additive".into()));
     assert_eq!(log, vec![ActivityEntry { command: DIFF_MANIFESTS, surface: Surface::Cli }]);
     // A manifest against itself has no change; the same call twice gives the same bytes.
-    let same = diff_manifests(&read("manifest/v1.json"), &read("manifest/v1.json")).unwrap();
-    assert_eq!(to_canonical_bytes(&same).unwrap(), b"{\"changes\":[]}".to_vec());
+    let same = diff_manifests(Audience::Person, &read("manifest/v1.json"), &read("manifest/v1.json")).unwrap();
+    assert_eq!(get(&same, "changes"), &CValue::Arr(Vec::new()));
+    assert_eq!(get(&same, "a_manifest_digest"), get(&want, "a_manifest_digest"));
+    assert_eq!(get(&same, "b_manifest_digest"), get(&want, "a_manifest_digest"));
     let again =
         invoke_cli(&r, &mut log, Audience::Person, &["diff-manifests", "v1.json", "v2.json"], &manifests).unwrap();
     assert_eq!(again, out);
@@ -413,4 +418,66 @@ fn levenshtein_matches_hand_values() {
     assert_eq!(levenshtein("align.run_bestfi", "align.run_bestfit"), 1);
     assert_eq!(levenshtein("r\u{e9}ad", "read"), 1);
     assert_eq!(levenshtein("flaw", "lawn"), 2);
+}
+
+// ------------------------------------------------------------------ #394 review
+
+#[test]
+fn diff_is_filtered_by_audience_and_carries_both_manifest_digests() {
+    let r = registry("qry");
+    let want = parse(&read("qry/audience.changes.json")).unwrap();
+    let mut log = Vec::new();
+    let person = invoke_cli(
+        &r,
+        &mut log,
+        Audience::Person,
+        &["diff-manifests", "audience_a.manifest.json", "audience_b.manifest.json", "--json"],
+        &manifests,
+    )
+    .unwrap();
+    assert_eq!(parse(&person).unwrap(), *get(&want, "person"));
+    let params = br#"{"a":"root:imports/audience_a.manifest.json","b":"root:imports/audience_b.manifest.json"}"#;
+    let agent = invoke_mcp(&r, &mut log, MCP_DIFF, params, &manifests).unwrap();
+    assert_eq!(parse(&agent).unwrap(), *get(&want, "agent"));
+    let cli_agent = invoke_cli(
+        &r,
+        &mut log,
+        Audience::Agent,
+        &["diff-manifests", "root:imports/audience_a.manifest.json", "root:imports/audience_b.manifest.json"],
+        &manifests,
+    )
+    .unwrap();
+    assert_eq!(cli_agent, agent);
+    // An exported manifest's digest is the SHA-256 of its exact (canonical) bytes.
+    let a = read("qry/audience_a.manifest.json");
+    assert_eq!(get(get(&want, "person"), "a_manifest_digest"), &CValue::Str(fid_canon::digest_bytes(&a).to_string()));
+}
+
+/// Every class x declared projection x human_only x mcp-in-exposure combination against the
+/// oracle's table (`qry/projection.json`).
+#[test]
+fn mcp_projection_matches_the_oracle_on_every_combination() {
+    let table = parse(&read("qry/projection.json")).unwrap();
+    let CValue::Arr(rows) = get(&table, "rows") else { panic!() };
+    assert_eq!(rows.len(), 11 * 3 * 2 * 2);
+    for row in rows {
+        let s = |k: &str| match get(row, k) {
+            CValue::Str(x) => x.clone(),
+            _ => panic!("{k}"),
+        };
+        let b = |k: &str| get(row, k) == &CValue::Bool(true);
+        let exposure = if b("on_mcp") { r#"["cli","mcp"]"# } else { r#"["cli"]"# };
+        let json = format!(
+            r#"{{"id":"test.combo","major":1,"title":"T","description":"D","params_schema":{{"type":"object"}},
+"result_schema":{{"type":"object"}},"side_effect":"{}","mcp_projection":"{}","determinism":"D0",
+"idempotency":"none","fs_effect":"none","undo":"not_undoable","preconditions":[],"effects":[],"algorithms":[],
+"exposure":{exposure},"lifecycle":{{"state":"active","since":"2026-01-01"}},"web":"available","human_only":{}}}"#,
+            s("side_effect"),
+            s("declared"),
+            b("human_only")
+        );
+        let def = fid_registry::CommandDef::from_json(json.as_bytes()).unwrap();
+        assert_eq!(query::mcp_projection(&def).as_str(), s("expect"), "{row:?}");
+        assert_eq!(fid_registry::mcp_projection(&def), query::mcp_projection(&def));
+    }
 }

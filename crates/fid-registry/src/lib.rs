@@ -48,6 +48,7 @@ pub use schema::{
     SchemaIssue, SelectorForm, SCHEMA_MAX_BYTES, SCHEMA_MAX_DEPTH,
 };
 pub use validate::{
-    errors_to_value, is_valid_id, max_projection, tool_name, unit_kind, validate, validate_json, validate_with,
-    CommandDecl, GeoFrameUnits, InputError, Limits, QuantityKinds, RuleCode, ValidationError, RESERVED_EFFECTS,
+    errors_to_value, is_valid_id, max_projection, mcp_projection, tool_name, unit_kind, validate, validate_json,
+    validate_with, CommandDecl, GeoFrameUnits, InputError, Limits, QuantityKinds, RuleCode, ValidationError,
+    RESERVED_EFFECTS,
 };

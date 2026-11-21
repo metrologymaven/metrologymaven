@@ -20,7 +20,8 @@ Pinned rules (also stated in the module docs of crates/fid-registry/src/query.rs
   and `lifecycle` match exactly; all given filters must match. Majors in state `hidden`
   appear only with `include_hidden: true`.
 - `describe_command` without `major` takes the highest `active` major; none is
-  `not_found`. The definition is the manifest's normal form without `definition_digest`;
+  `not_found`. For an agent, `lifecycle.replaced_by` is dropped when it names a command the
+  agent cannot see; `definition_digest` is always the digest of the full definition. The definition is the manifest's normal form without `definition_digest`;
   the digest is SHA-256 of its RFC 8785 bytes.
 - `not_found` suggests up to five distinct IDs the audience can see, closest first by
   Levenshtein distance over Unicode scalar values, ties by ID bytes.
@@ -28,7 +29,8 @@ Pinned rules (also stated in the module docs of crates/fid-registry/src/query.rs
   `added` (additive), `removed` (breaking), `lifecycle` (breaking only when the new state is
   `removed`), or `changed` (breaking when any classified change is breaking); `fields` is
   the sorted list of changed JSON pointers (`/lifecycle` included), empty for added and
-  removed. The classified changes are taken from the hand-labelled
+  removed. The result also carries `a_manifest_digest` and `b_manifest_digest`, SHA-256 of
+  the RFC 8785 form of each manifest. The classified changes are taken from the hand-labelled
   ../manifest/v1_v2.diff.json (fixtures/core/reg/ver/compat/make_fixtures.py).
 
 Outputs:
@@ -36,6 +38,12 @@ Outputs:
                       never-projected and MCP-less commands), derived from ../decls/valid.json
   cases.json          list/describe cases over decls.json ("qry") and ../decls/valid.json
                       ("valid"), each with its expected result or error
+  projection.json     the MCP projection of every class x projection x human_only x
+                      exposure combination
+  audience_{a,b}.manifest.json, audience.changes.json
+                      two manifests and the expected diff for a person and for an agent
+                      (an agent sees a change only when the command is not `never` on MCP in
+                      every manifest that holds it)
   v1_v2.changes.json  the expected `registry.diff_manifests@1` result for
                       ../manifest/v1.json -> v2.json (AC-3)
 
@@ -152,6 +160,18 @@ def qry_decls(valid):
         # Near neighbours for the suggestion tie-break.
         renamed("sim.read_probe", "sim.read_prob", exposure=["cli", "mcp"]),
         renamed("sim.read_probe", "sim.read_probes", exposure=["cli", "mcp"]),
+        # A visible deprecated major whose successor an agent cannot see (hidden and not on
+        # MCP): an agent's describe drops replaced_by (#394 review).
+        renamed("sim.read_probe", "x.tool", 1, exposure=["cli", "mcp"],
+                lifecycle={"state": "deprecated", "since": "2026-09-01", "replaced_by": "x.tool@2"}),
+        renamed("sim.read_probe", "x.tool", 2, exposure=["cli"],
+                lifecycle={"state": "hidden", "since": "2026-09-01"}),
+        # The same with a successor that is hidden but on MCP: an agent may list it with
+        # include_hidden, so replaced_by stays.
+        renamed("sim.read_probe", "y.tool", 1, exposure=["cli", "mcp"],
+                lifecycle={"state": "deprecated", "since": "2026-09-01", "replaced_by": "y.tool@2"}),
+        renamed("sim.read_probe", "y.tool", 2, exposure=["cli", "mcp"],
+                lifecycle={"state": "hidden", "since": "2026-09-01"}),
     ]
 
 
@@ -206,7 +226,15 @@ def describe_command(decls, audience, params):
     if not hit:
         return {"error": {"code": "not_found", "suggestions": suggestions(decls, audience, id_)}}
     body = normal(hit[0])
-    return {"ok": {"definition": body, "definition_digest": sha(jcs(body))}}
+    digest = sha(jcs(body))
+    successor = body["lifecycle"].get("replaced_by")
+    if audience == "agent" and successor is not None:
+        sid, _, smajor = successor.rpartition("@")
+        if not any(d["id"] == sid and str(d["major"]) == smajor for d in visible(decls, audience)):
+            body = copy.deepcopy(body)
+            del body["lifecycle"]["replaced_by"]
+    # The digest is always that of the full definition in the manifest.
+    return {"ok": {"definition": body, "definition_digest": digest}}
 
 
 def bad(name, source, audience, tool, params):
@@ -255,6 +283,10 @@ def cases(sources):
     add("agent_describe_never_m1", "qry", "agent", "describe", {"id": "cmm.move_to"})
     add("person_describe_no_mcp", "qry", "person", "describe", {"id": "align.set_datum"})
     add("agent_describe_typo_near_never", "qry", "agent", "describe", {"id": "sign.set_profil"})
+    add("agent_describe_drops_invisible_successor", "qry", "agent", "describe", {"id": "x.tool", "major": 1})
+    add("person_describe_keeps_successor", "qry", "person", "describe", {"id": "x.tool", "major": 1})
+    add("agent_describe_keeps_visible_successor", "qry", "agent", "describe", {"id": "y.tool", "major": 1})
+    add("agent_describe_invisible_successor_itself", "qry", "agent", "describe", {"id": "x.tool", "major": 2})
     add("describe_non_ascii", "qry", "person", "describe", {"id": "sim.réad_probe"})
 
     out.append(bad("list_unknown_key", "qry", "person", "list", {"domains": "align"}))
@@ -313,7 +345,91 @@ def expected_changes():
         ("demo.probe", "lifecycle", "additive"),
         ("demo.scan", "changed", "breaking"),
     ], out
-    return {"changes": out}
+    digests = {}
+    for side in ("v1", "v2"):
+        doc = json.loads((HERE.parent / "manifest" / f"{side}.json").read_text(encoding="utf-8"))
+        digests[side] = sha(jcs(doc))
+    return {"a_manifest_digest": digests["v1"], "b_manifest_digest": digests["v2"], "changes": out}
+
+
+# ------------------------------------------------------------------ audience-filtered diff
+
+def manifest_text(decls):
+    """A CORE.REG.MAN manifest (canonical bytes) of `decls`."""
+    catalogue = (HERE.parent / "def" / "schema" / "catalogue" / "geo_frame_units.sha256").read_text(
+        encoding="utf-8").strip()
+    commands = []
+    for d in sorted(decls, key=key):
+        body = normal(d)
+        body["definition_digest"] = sha(jcs(body))
+        commands.append(body)
+    return jcs({"format": 1, "quantity_catalogue_digest": catalogue, "commands": commands})
+
+
+def audience_diff(qry):
+    """Two manifests of the qry declarations and the expected diff per audience.
+
+    Hand-labelled changes from a to b:
+      align.set_datum@1  title changed     (never on MCP)    changed additive ["/title"]
+      cmm.move_home@1    added             (M1, never)       added additive
+      cmm.move_to@1      removed           (M1, never)       removed breaking
+      sim.read_prob@1    mcp dropped from exposure, so never on MCP in b only
+                                                             changed breaking ["/exposure"]
+      sim.read_probe@1   title changed     (exposed)         changed additive ["/title"]
+    An agent sees only the last: every other command is never-projected on at least one side.
+    """
+    a = copy.deepcopy(qry)
+    b = []
+    for d in copy.deepcopy(qry):
+        if (d["id"], d["major"]) == ("cmm.move_to", 1):
+            moved = copy.deepcopy(d)
+            moved["id"] = "cmm.move_home"
+            moved["title"] = "Query fixture cmm.move_home@1"
+            b.append(moved)
+            continue
+        if (d["id"], d["major"]) in (("align.set_datum", 1), ("sim.read_probe", 1)):
+            d["title"] = d["title"] + " (renamed)"
+        if (d["id"], d["major"]) == ("sim.read_prob", 1):
+            d["exposure"] = [x for x in d["exposure"] if x != "mcp"]
+        b.append(d)
+    person = [
+        {"id": "align.set_datum", "major": 1, "kind": "changed", "compat": "additive", "fields": ["/title"]},
+        {"id": "cmm.move_home", "major": 1, "kind": "added", "compat": "additive", "fields": []},
+        {"id": "cmm.move_to", "major": 1, "kind": "removed", "compat": "breaking", "fields": []},
+        {"id": "sim.read_prob", "major": 1, "kind": "changed", "compat": "breaking", "fields": ["/exposure"]},
+        {"id": "sim.read_probe", "major": 1, "kind": "changed", "compat": "additive", "fields": ["/title"]},
+    ]
+    # Independent check of the audience rule: visible on every side that holds the command.
+    def holds(ds, c):
+        return [d for d in ds if (d["id"], d["major"]) == (c["id"], c["major"])]
+    agent = [c for c in person if all(projection(d) != "never" for d in holds(a, c) + holds(b, c))]
+    assert [c["id"] for c in agent] == ["sim.read_probe"], agent
+    ta, tb = manifest_text(a), manifest_text(b)
+    digests = {"a_manifest_digest": sha(ta), "b_manifest_digest": sha(tb)}
+    return ta, tb, {"person": dict(digests, changes=person), "agent": dict(digests, changes=agent)}
+
+
+def projection_table():
+    """Every combination of class x declared projection x human_only x mcp in exposure, with the
+    MCP projection the rule gives (`projection` above, written from CORE.BUS.POL.PROJ)."""
+    rows = []
+    for cls in sorted(CEILING):
+        for declared in ["never", "request_only", "exposed"]:
+            for human_only in [False, True]:
+                for on_mcp in [False, True]:
+                    d = {"side_effect": cls, "mcp_projection": declared, "human_only": human_only,
+                         "exposure": ["cli", "mcp"] if on_mcp else ["cli"]}
+                    rows.append({"side_effect": cls, "declared": declared, "human_only": human_only,
+                                 "on_mcp": on_mcp, "expect": projection(d)})
+    assert len(rows) == 11 * 3 * 2 * 2
+    # Hand spot checks of the rule.
+    pick = {(r["side_effect"], r["declared"], r["human_only"], r["on_mcp"]): r["expect"] for r in rows}
+    assert pick[("W2", "exposed", True, True)] == "request_only"
+    assert pick[("R0", "exposed", False, False)] == "never"
+    assert pick[("W3", "exposed", False, True)] == "request_only"
+    assert pick[("A0", "exposed", False, True)] == "never"
+    assert pick[("R1", "request_only", False, True)] == "request_only"
+    return {"rows": rows}
 
 
 def render(doc):
@@ -323,8 +439,13 @@ def render(doc):
 def outputs():
     valid = json.loads(VALID.read_text(encoding="utf-8"))["decls"]
     qry = qry_decls(valid)
+    ta, tb, aud = audience_diff(qry)
     return {
+        "audience_a.manifest.json": ta,
+        "audience_b.manifest.json": tb,
+        "audience.changes.json": render(aud),
         "decls.json": render({"decls": qry}),
+        "projection.json": render(projection_table()),
         "cases.json": render({"cases": cases({"valid": valid, "qry": qry})}),
         "v1_v2.changes.json": render(expected_changes()),
     }

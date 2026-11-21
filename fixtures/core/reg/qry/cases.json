@@ -262,6 +262,22 @@
        "lifecycle": "active",
        "side_effect": "I1",
        "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 1,
+       "title": "Query fixture x.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "y.tool",
+       "major": 1,
+       "title": "Query fixture y.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
       }
      ]
     }
@@ -373,6 +389,38 @@
        "lifecycle": "active",
        "side_effect": "I1",
        "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 1,
+       "title": "Query fixture x.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 2,
+       "title": "Query fixture x.tool@2",
+       "lifecycle": "hidden",
+       "side_effect": "I1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "y.tool",
+       "major": 1,
+       "title": "Query fixture y.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "y.tool",
+       "major": 2,
+       "title": "Query fixture y.tool@2",
+       "lifecycle": "hidden",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
       }
      ]
     }
@@ -448,6 +496,22 @@
        "major": 1,
        "title": "Query fixture sim.read_probes@1",
        "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 1,
+       "title": "Query fixture x.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "y.tool",
+       "major": 1,
+       "title": "Query fixture y.tool@1",
+       "lifecycle": "deprecated",
        "side_effect": "I1",
        "mcp_projection": "exposed"
       }
@@ -537,6 +601,30 @@
        "lifecycle": "active",
        "side_effect": "I1",
        "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 1,
+       "title": "Query fixture x.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "y.tool",
+       "major": 1,
+       "title": "Query fixture y.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "y.tool",
+       "major": 2,
+       "title": "Query fixture y.tool@2",
+       "lifecycle": "hidden",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
       }
      ]
     }
@@ -624,6 +712,22 @@
        "lifecycle": "deprecated",
        "side_effect": "R0",
        "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 1,
+       "title": "Query fixture x.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "y.tool",
+       "major": 1,
+       "title": "Query fixture y.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
       }
      ]
     }
@@ -676,6 +780,22 @@
        "title": "Query fixture align.run_bestfit@2",
        "lifecycle": "hidden",
        "side_effect": "W2",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 2,
+       "title": "Query fixture x.tool@2",
+       "lifecycle": "hidden",
+       "side_effect": "I1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "y.tool",
+       "major": 2,
+       "title": "Query fixture y.tool@2",
+       "lifecycle": "hidden",
+       "side_effect": "I1",
        "mcp_projection": "exposed"
       }
      ]
@@ -1348,7 +1468,7 @@
       "sim.read_prob",
       "sim.read_probes",
       "align.run_bestfit",
-      "record.release_fai"
+      "x.tool"
      ]
     }
    }
@@ -1369,7 +1489,7 @@
       "sim.read_prob",
       "sim.read_probe",
       "sim.read_probes",
-      "project.list_features"
+      "x.tool"
      ]
     }
    }
@@ -1387,10 +1507,10 @@
      "code": "not_found",
      "suggestions": [
       "sim.read_prob",
+      "x.tool",
+      "y.tool",
       "sim.read_probe",
-      "sim.read_probes",
-      "align.run_bestfit",
-      "record.release_fai"
+      "sim.read_probes"
      ]
     }
    }
@@ -1475,7 +1595,229 @@
       "sim.read_probe",
       "sim.read_probes",
       "align.run_bestfit",
-      "record.release_fai"
+      "x.tool"
+     ]
+    }
+   }
+  },
+  {
+   "name": "agent_describe_drops_invisible_successor",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "describe",
+   "params": {
+    "id": "x.tool",
+    "major": 1
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "x.tool",
+      "major": 1,
+      "title": "Query fixture x.tool@1",
+      "description": "Fixture declaration for side-effect class I1.",
+      "params_schema": {
+       "type": "object",
+       "properties": {
+        "tolerance": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "required": [
+        "tolerance"
+       ],
+       "additionalProperties": false
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "I1",
+      "mcp_projection": "exposed",
+      "determinism": "N",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli",
+       "mcp"
+      ],
+      "lifecycle": {
+       "state": "deprecated",
+       "since": "2026-09-01"
+      },
+      "web": "available",
+      "human_only": false,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:2900024541358bcc47900d987cec6f5387da8fe5359551c9ba446ca3b5b442a5"
+    }
+   }
+  },
+  {
+   "name": "person_describe_keeps_successor",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "x.tool",
+    "major": 1
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "x.tool",
+      "major": 1,
+      "title": "Query fixture x.tool@1",
+      "description": "Fixture declaration for side-effect class I1.",
+      "params_schema": {
+       "type": "object",
+       "properties": {
+        "tolerance": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "required": [
+        "tolerance"
+       ],
+       "additionalProperties": false
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "I1",
+      "mcp_projection": "exposed",
+      "determinism": "N",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli",
+       "mcp"
+      ],
+      "lifecycle": {
+       "state": "deprecated",
+       "since": "2026-09-01",
+       "replaced_by": "x.tool@2"
+      },
+      "web": "available",
+      "human_only": false,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:2900024541358bcc47900d987cec6f5387da8fe5359551c9ba446ca3b5b442a5"
+    }
+   }
+  },
+  {
+   "name": "agent_describe_keeps_visible_successor",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "describe",
+   "params": {
+    "id": "y.tool",
+    "major": 1
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "y.tool",
+      "major": 1,
+      "title": "Query fixture y.tool@1",
+      "description": "Fixture declaration for side-effect class I1.",
+      "params_schema": {
+       "type": "object",
+       "properties": {
+        "tolerance": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "required": [
+        "tolerance"
+       ],
+       "additionalProperties": false
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "I1",
+      "mcp_projection": "exposed",
+      "determinism": "N",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli",
+       "mcp"
+      ],
+      "lifecycle": {
+       "state": "deprecated",
+       "since": "2026-09-01",
+       "replaced_by": "y.tool@2"
+      },
+      "web": "available",
+      "human_only": false,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:b24995655c16fc0148f423b90aaf9e7a75380c3c582410fe9a21c75b20e1ada5"
+    }
+   }
+  },
+  {
+   "name": "agent_describe_invisible_successor_itself",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "describe",
+   "params": {
+    "id": "x.tool",
+    "major": 2
+   },
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "suggestions": [
+      "x.tool",
+      "y.tool",
+      "sim.read_prob",
+      "sim.read_probe",
+      "sim.read_probes"
      ]
     }
    }

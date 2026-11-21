@@ -709,6 +709,199 @@
     "since": "2026-01-01"
    },
    "web": "available"
+  },
+  {
+   "id": "x.tool",
+   "major": 1,
+   "title": "Query fixture x.tool@1",
+   "description": "Fixture declaration for side-effect class I1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "I1",
+   "mcp_projection": "exposed",
+   "determinism": "N",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "deprecated",
+    "since": "2026-09-01",
+    "replaced_by": "x.tool@2"
+   },
+   "web": "available"
+  },
+  {
+   "id": "x.tool",
+   "major": 2,
+   "title": "Query fixture x.tool@2",
+   "description": "Fixture declaration for side-effect class I1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "I1",
+   "mcp_projection": "exposed",
+   "determinism": "N",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli"
+   ],
+   "lifecycle": {
+    "state": "hidden",
+    "since": "2026-09-01"
+   },
+   "web": "available"
+  },
+  {
+   "id": "y.tool",
+   "major": 1,
+   "title": "Query fixture y.tool@1",
+   "description": "Fixture declaration for side-effect class I1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "I1",
+   "mcp_projection": "exposed",
+   "determinism": "N",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "deprecated",
+    "since": "2026-09-01",
+    "replaced_by": "y.tool@2"
+   },
+   "web": "available"
+  },
+  {
+   "id": "y.tool",
+   "major": 2,
+   "title": "Query fixture y.tool@2",
+   "description": "Fixture declaration for side-effect class I1.",
+   "params_schema": {
+    "type": "object",
+    "properties": {
+     "tolerance": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm"
+     }
+    },
+    "required": [
+     "tolerance"
+    ],
+    "additionalProperties": false
+   },
+   "result_schema": {
+    "type": "object",
+    "properties": {
+     "angle": {
+      "type": "number",
+      "x-quantity": "angle",
+      "x-unit": "deg"
+     }
+    }
+   },
+   "side_effect": "I1",
+   "mcp_projection": "exposed",
+   "determinism": "N",
+   "idempotency": "natural",
+   "fs_effect": "none",
+   "undo": "not_undoable",
+   "preconditions": [],
+   "effects": [],
+   "algorithms": [],
+   "exposure": [
+    "cli",
+    "mcp"
+   ],
+   "lifecycle": {
+    "state": "hidden",
+    "since": "2026-09-01"
+   },
+   "web": "available"
   }
  ]
 }

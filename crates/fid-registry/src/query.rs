@@ -13,8 +13,8 @@
 //! - **MCP projection**: the stricter of the declared projection (`human_only` clamps it to
 //!   `request_only`, D-031) and the ceiling of the class (R0 R1 I1 W1 W2 `exposed`, W3 X1 D1
 //!   `request_only`, M1 S1 A0 `never`), and `never` when `mcp` is not in the exposure. This is
-//!   `fid_bus::policy::projection::mcp_projection`; `fid-registry-build`'s tests check that the
-//!   two agree on every workspace command.
+//!   [`crate::validate::mcp_projection`], which `fid_bus::policy::projection` re-exports, so
+//!   there is one rule and no copy.
 //! - **list_commands**: summaries `{id, major, title, lifecycle, side_effect,
 //!   mcp_projection}` sorted by ID bytes, then major (REQ-001). `domain` is the ID's text
 //!   before the first dot; all given filters must match; `hidden` majors only with
@@ -23,7 +23,10 @@
 //!   `definition_digest` (REQ-003). Without `major`, the highest `active` major; none is
 //!   `not_found`. Unknown ID or major: `not_found` with up to five distinct IDs the audience
 //!   can see, closest first by Levenshtein distance over Unicode scalar values, ties by ID bytes
-//!   (REQ-004).
+//!   (REQ-004). For an agent, `lifecycle.replaced_by` is dropped when it does not name a
+//!   command the agent can see, so a visible command never reveals a `never`-projected
+//!   successor; `definition_digest` is still the digest of the full definition in the manifest,
+//!   so it does not match the redacted text.
 //! - **diff_manifests**: each side is read through a file reader the caller supplies (the bus
 //!   resolves file handles, CORE.BUS.POL.FS), at most [`MAX_MANIFEST_BYTES`] bytes
 //!   (`input_too_large`). It must parse (duplicate keys refused), match `manifest.schema.json`
@@ -32,8 +35,11 @@
 //!   manifest of an older release may carry another one. One [`Change`] per changed (ID,
 //!   major), from [`crate::compat::diff`] (REQ-005): `added` (additive), `removed` (breaking),
 //!   `lifecycle` (breaking only when the new state is `removed`) or `changed` (breaking when
-//!   any classified change is); `fields` lists the changed JSON pointers. For an agent each
-//!   side must be a `root:` handle (defence in depth; the bus refuses raw paths first).
+//!   any classified change is); `fields` lists the changed JSON pointers. The result also
+//!   carries `a_manifest_digest` and `b_manifest_digest`, SHA-256 of the RFC 8785 form of each
+//!   manifest (for an exported manifest, its CORE.REG.MAN digest). For an agent, a change is
+//!   listed only when the command is not `never` on MCP in every manifest that holds it, and
+//!   each side must be a `root:` handle (defence in depth; the bus refuses raw paths first).
 //! - **Untrusted input**: MCP parameters at most [`MAX_PARAMS_BYTES`] bytes and
 //!   [`MAX_PARAMS_DEPTH`] levels, unknown keys and wrong types refused (`bad_params`), `domain`
 //!   at most [`MAX_DOMAIN_BYTES`], `id` at most [`MAX_ID_BYTES`], file arguments at most
@@ -41,10 +47,9 @@
 //!   output order never depends on hashing.
 
 use crate::compat::{self, CommandRef, Kind};
-use crate::def::{CommandDef, DefError, Projection, Surface as Exposure};
+use crate::def::{CommandDef, DefError, Projection};
 use crate::lifecycle::{Lifecycle, State};
 use crate::manifest::{ActivityEntry, ManifestInForce, Surface, MAX_MANIFEST_BYTES};
-use crate::validate::max_projection;
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
 use fid_types::{Digest, SideEffect};
 use std::collections::{BTreeMap, BTreeSet};
@@ -151,17 +156,9 @@ pub enum Audience {
     Agent,
 }
 
-/// The projection MCP callers get for `def` (see the module docs).
-pub fn mcp_projection(def: &CommandDef) -> Projection {
-    let declared = def.effective_projection();
-    let ceiling = max_projection(def.side_effect);
-    let p = if declared < ceiling { declared } else { ceiling };
-    if def.exposure.contains(&Exposure::Mcp) {
-        p
-    } else {
-        Projection::Never
-    }
-}
+/// The projection MCP callers get for `def`: [`crate::validate::mcp_projection`], the rule the
+/// bus itself enforces (re-exported here for callers of this module).
+pub use crate::validate::mcp_projection;
 
 fn sees(audience: Audience, def: &CommandDef) -> bool {
     audience == Audience::Person || mcp_projection(def) != Projection::Never
@@ -388,10 +385,34 @@ pub fn describe_command(r: &Registry, audience: Audience, p: &DescribeParams) ->
         None => majors.rev().find(|(_, e)| e.state == State::Active),
     };
     let Some((_, e)) = hit else { return Err(QueryError::NotFound(suggestions(r, audience, &p.id))) };
+    let mut definition = e.def.to_value();
+    if audience == Audience::Agent {
+        redact_successor(r, &mut definition);
+    }
     let mut o = BTreeMap::new();
-    o.insert("definition".to_string(), e.def.to_value());
+    o.insert("definition".to_string(), definition);
     o.insert("definition_digest".to_string(), CValue::Str(e.digest.to_string()));
     Ok(CValue::Obj(o))
+}
+
+/// Drops `lifecycle.replaced_by` from an agent's view when it names a command the agent cannot
+/// see (or does not name one at all), so a visible command never reveals a `never`-projected
+/// successor. `definition_digest` stays the digest of the full definition in the manifest.
+fn redact_successor(r: &Registry, definition: &mut CValue) {
+    let CValue::Obj(def) = definition else { return };
+    let Some(CValue::Obj(life)) = def.get_mut("lifecycle") else { return };
+    let visible = match life.get("replaced_by") {
+        None => return,
+        Some(CValue::Str(s)) => s
+            .rsplit_once('@')
+            .and_then(|(id, m)| m.parse::<u32>().ok().map(|m| (id.to_string(), m)))
+            .and_then(|k| r.entries.get(&k))
+            .is_some_and(|e| sees(Audience::Agent, &e.def)),
+        Some(_) => false,
+    };
+    if !visible {
+        life.remove("replaced_by");
+    }
 }
 
 // ------------------------------------------------------------------ diff
@@ -443,6 +464,13 @@ impl Change {
 
 /// Checks a supplied manifest (see the module docs) and reads it for diffing.
 pub fn read_manifest(bytes: &[u8]) -> Result<compat::Manifest, QueryError> {
+    read_supplied(bytes).map(|(m, _)| m)
+}
+
+/// [`read_manifest`] plus the manifest digest: SHA-256 of the RFC 8785 form of the parsed
+/// document. For a manifest exported by CORE.REG.MAN (already canonical) this is its digest;
+/// a pretty-printed copy of it has the same digest.
+pub fn read_supplied(bytes: &[u8]) -> Result<(compat::Manifest, Digest), QueryError> {
     let bad = |m: String| QueryError::ManifestInvalid(m);
     if bytes.len() > MAX_MANIFEST_BYTES {
         return Err(QueryError::InputTooLarge(bytes.len()));
@@ -476,7 +504,10 @@ pub fn read_manifest(bytes: &[u8]) -> Result<compat::Manifest, QueryError> {
     }
     // The definition rules (command-def.schema.json), every definition_digest recomputed and
     // compared, and repeated (ID, major) refused.
-    compat::Manifest::from_value(value).map_err(|e| bad(e.0))
+    let digest =
+        fid_canon::digest(&value).map(|d| Digest::from_bytes(d.0)).map_err(|e| bad(format!("json: {}", e.code())))?;
+    let manifest = compat::Manifest::from_value(value).map_err(|e| bad(e.0))?;
+    Ok((manifest, digest))
 }
 
 fn lifecycle_compat(new_state: Option<&str>) -> Kind {
@@ -522,11 +553,27 @@ pub fn changes(a: &compat::Manifest, b: &compat::Manifest) -> Vec<Change> {
     acc.into_values().collect()
 }
 
-/// `registry.diff_manifests@1` over the bytes of two manifests: `{changes: [Change]}`.
-pub fn diff_manifests(a: &[u8], b: &[u8]) -> Result<CValue, QueryError> {
-    let (a, b) = (read_manifest(a)?, read_manifest(b)?);
+/// Whether `audience` may see the change of `key` between `a` and `b`: the command must be
+/// visible to it in every manifest that holds it, so an agent learns nothing about a command
+/// that is `never` on MCP on either side (D-035).
+fn change_visible(audience: Audience, a: &compat::Manifest, b: &compat::Manifest, id: &str, major: u32) -> bool {
+    let key = CommandRef { id: id.to_string(), major };
+    [a.commands.get(&key), b.commands.get(&key)].into_iter().flatten().all(|d| sees(audience, d))
+}
+
+/// `registry.diff_manifests@1` over the bytes of two manifests for `audience`:
+/// `{a_manifest_digest, b_manifest_digest, changes: [Change]}`.
+pub fn diff_manifests(audience: Audience, a: &[u8], b: &[u8]) -> Result<CValue, QueryError> {
+    let ((a, da), (b, db)) = (read_supplied(a)?, read_supplied(b)?);
+    let list = changes(&a, &b)
+        .iter()
+        .filter(|c| change_visible(audience, &a, &b, &c.id, c.major))
+        .map(Change::to_value)
+        .collect();
     let mut o = BTreeMap::new();
-    o.insert("changes".to_string(), CValue::Arr(changes(&a, &b).iter().map(Change::to_value).collect()));
+    o.insert("a_manifest_digest".to_string(), CValue::Str(da.to_string()));
+    o.insert("b_manifest_digest".to_string(), CValue::Str(db.to_string()));
+    o.insert("changes".to_string(), CValue::Arr(list));
     Ok(CValue::Obj(o))
 }
 
@@ -574,7 +621,7 @@ fn run(r: &Registry, audience: Audience, q: Query, params: &CValue, read: ReadFi
             let p = DiffParams::from_value(params)?;
             let a = load(audience, &p.a, read)?;
             let b = load(audience, &p.b, read)?;
-            diff_manifests(&a, &b)?
+            diff_manifests(audience, &a, &b)?
         }
     };
     to_canonical_bytes(&result).map_err(|_| QueryError::Internal("result is not canonical JSON"))
@@ -919,7 +966,15 @@ pub fn diff_command_def() -> Result<CommandDef, DefError> {
             ("fields", obj([("type", text("array")), ("items", obj([("type", text("string"))]))])),
         ]),
     );
-    let result = closed(&["changes"], obj([("changes", obj([("type", text("array")), ("items", change)]))]));
+    let digest = || obj([("type", text("string")), ("pattern", text(DIGEST_PATTERN))]);
+    let result = closed(
+        &["a_manifest_digest", "b_manifest_digest", "changes"],
+        obj([
+            ("a_manifest_digest", described(digest(), "SHA-256 of the RFC 8785 form of manifest a.")),
+            ("b_manifest_digest", described(digest(), "SHA-256 of the RFC 8785 form of manifest b.")),
+            ("changes", obj([("type", text("array")), ("items", change)])),
+        ]),
+    );
     def(
         "registry.diff_manifests",
         "Diff manifests",

@@ -1,4 +1,6 @@
 {
+ "a_manifest_digest": "sha256:4a1b8e8d3e63ebef43bc22f5275c53fcdc81aa329f428c955b5988916a700c47",
+ "b_manifest_digest": "sha256:2ea74ea309d364fd21c01a77d94ada5d8c923898ca46383987038ad19d2a00eb",
  "changes": [
   {
    "id": "demo.export",
