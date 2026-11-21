@@ -3243,19 +3243,7 @@
   },
   {
    "expect": {
-    "anchor": {
-     "checkpoint": "3",
-     "kind": "checkpoint",
-     "seq": "300"
-    },
-    "checked": {
-     "blobs": 20,
-     "checkpoints": 1,
-     "entries": 200,
-     "without_payload": 0
-    },
-    "from_seq": "301",
-    "ok": true
+    "refused": "bad_range"
    },
    "from_seq": "301",
    "mutations": [
@@ -3276,6 +3264,72 @@
    "from_seq": "301",
    "mutations": [
     {
+     "fake_below": "sha256:d7abeecb86be96d294ef0dc5eb46774d58593dcb95c8f0d0c3c54a2e5ac7b02f",
+     "op": "relink_from",
+     "seq": 301
+    },
+    {
+     "op": "drop_checkpoints"
+    },
+    {
+     "body": "{\"count\":\"300\",\"format\":\"linear-v1\",\"head\":\"sha256:d7abeecb86be96d294ef0dc5eb46774d58593dcb95c8f0d0c3c54a2e5ac7b02f\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
+     "entry_hash": "sha256:d7abeecb86be96d294ef0dc5eb46774d58593dcb95c8f0d0c3c54a2e5ac7b02f",
+     "id": 3,
+     "op": "add_checkpoint",
+     "stream": "record"
+    }
+   ],
+   "name": "from_forged_checkpoint_attack"
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "hash",
+     "reason": "malformed",
+     "seq": 300
+    },
+    "refused": "invariant_violated"
+   },
+   "from_seq": "301",
+   "mutations": [
+    {
+     "bit": 321,
+     "op": "flip_header",
+     "seq": 300
+    }
+   ],
+   "name": "from_trusted_anchor_row_tampered",
+   "trusted": {
+    "exact": false,
+    "head": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
+    "seq": "300"
+   }
+  },
+  {
+   "expect": {
+    "failure": {
+     "kind": "checkpoint",
+     "reason": "forked_head",
+     "seq": 300
+    },
+    "refused": "invariant_violated"
+   },
+   "from_seq": "301",
+   "mutations": [],
+   "name": "from_trusted_head_mismatch",
+   "trusted": {
+    "exact": false,
+    "head": "sha256:dbfbb20d4e2240b0c1bc5db75b0c53cf2d59bbeef6fab599366b8d6ec73566a5",
+    "seq": "300"
+   }
+  },
+  {
+   "expect": {
+    "refused": "bad_range"
+   },
+   "from_seq": "301",
+   "mutations": [
+    {
      "body": "{\"count\":\"300\",\"format\":\"linear-v1\",\"head\":\"sha256:dbfbb20d4e2240b0c1bc5db75b0c53cf2d59bbeef6fab599366b8d6ec73566a5\",\"reason\":\"export\",\"seq\":\"300\",\"stream\":\"record\",\"time\":\"2026-11-02T00:00:00Z\"}",
      "entry_hash": "sha256:9883534671b307ddbcf29b711f7a6a5030796e6182bc0754fa4d626c84e538c9",
      "id": 3,
@@ -3287,19 +3341,7 @@
   },
   {
    "expect": {
-    "anchor": {
-     "checkpoint": "1",
-     "kind": "checkpoint",
-     "seq": "250"
-    },
-    "checked": {
-     "blobs": 20,
-     "checkpoints": 1,
-     "entries": 250,
-     "without_payload": 0
-    },
-    "from_seq": "251",
-    "ok": true
+    "refused": "bad_range"
    },
    "from_seq": "251",
    "mutations": [],
@@ -3331,17 +3373,12 @@
   },
   {
    "expect": {
-    "anchor": {
-     "kind": "trusted",
-     "seq": "300"
-    },
     "failure": {
-     "kind": "link",
-     "reason": "broken",
-     "seq": 301
+     "kind": "hash",
+     "reason": "column_mismatch",
+     "seq": 300
     },
-    "from_seq": "301",
-    "ok": false
+    "refused": "invariant_violated"
    },
    "from_seq": "301",
    "mutations": [

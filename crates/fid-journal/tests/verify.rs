@@ -311,10 +311,8 @@ impl BlobSource for MemBlobs<'_> {
 fn verify_model(m: &Model, opts: &VerifyOptions) -> Result<VerifyReport, ReadError> {
     let from = opts.from_seq.unwrap_or(1);
     let tail = m.rows.iter().map(|r| r.seq).max().unwrap_or(0) as u64;
-    let below = if from > 1 { m.rows.iter().find(|r| r.seq as u64 == from - 1).map(|r| r.hash.clone()) } else { None };
-    let candidates: Vec<_> =
-        m.checkpoints.iter().filter(|c| Some(&c.entry_hash) == below.as_ref()).cloned().map(Ok).collect();
-    let start = resolve_start(STREAM, from, tail, opts.trusted, below.as_deref(), candidates)?;
+    let below = if from > 1 { m.rows.iter().find(|r| r.seq as u64 == from - 1) } else { None };
+    let start = resolve_start(STREAM, from, tail, opts.trusted, below)?;
     let mut report = verify_rows(
         STREAM,
         start,
@@ -354,7 +352,16 @@ fn check_case(name: &str, got: Result<VerifyReport, ReadError>, expect: &Obj) {
     match expect.get("refused") {
         Some(CValue::Str(r)) => {
             let e = got.err().unwrap_or_else(|| panic!("{name}: expected the refusal {r}"));
-            assert_eq!(e.bus_code(), ("validation", r.as_str()), "{name}: {e}");
+            assert_eq!(e.bus_code().1, r.as_str(), "{name}: {e}");
+            if let Some(want) = expect.get("failure") {
+                let want = obj(want);
+                let ReadError::Corrupt(f) = &e else { panic!("{name}: expected a located refusal, got {e}") };
+                assert_eq!(
+                    (f.seq, f.kind.as_str(), f.reason),
+                    (Some(int(want, "seq") as u64), st(want, "kind"), st(want, "reason")),
+                    "{name}: {f}"
+                );
+            }
         }
         _ => assert_expect(name, &got.unwrap_or_else(|e| panic!("{name}: refused {e}")), expect),
     }
@@ -925,7 +932,11 @@ fn ac1_ac3_good_journal_verifies_through_the_store_and_nothing_is_written() {
     let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
     let j = Journal::open(loc, lock.unwrap(), STREAM).unwrap();
     assert!(j.verify_chain(&VerifyOptions::default()).unwrap().ok());
+    // A stored checkpoint at 250 does not anchor; a trusted head does.
     let from = VerifyOptions { from_seq: Some(251), ..VerifyOptions::default() };
+    assert!(matches!(j.verify_chain(&from), Err(ReadError::BadRange(_))));
+    let head = TrustedHead { seq: 250, head: digest(&base.rows[249].hash), exact: false };
+    let from = VerifyOptions { from_seq: Some(251), trusted: Some(head), ..VerifyOptions::default() };
     let r = j.verify_chain(&from).unwrap();
     assert_eq!((r.ok(), r.checked.entries, r.checked.checkpoints), (true, 250, 1));
     for bad in [0, 502] {
@@ -976,7 +987,8 @@ fn tamper_cases_through_the_store_reach_the_oracle_outcome() {
         "checkpoint_id_minus5",
         "head_past_chain",
         "from_attack_unanchored",
-        "from_checkpoint_anchor",
+        "from_forged_checkpoint_attack",
+        "from_trusted_anchor",
         "from_trusted_anchor_attack",
     ];
     for case in arr(&c, "cases").iter().map(obj) {

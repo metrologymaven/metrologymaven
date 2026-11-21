@@ -179,13 +179,8 @@ fn verify_results_validate_against_the_published_schema() {
     assert!(!got.ok());
     assert_valid(&result, &got.to_value(), "real failure");
 
-    // Every anchor, and every pinned reason with and without a sequence and with any row id.
-    for (anchor, from) in [
-        (Anchor::Genesis, 1),
-        (Anchor::Checkpoint { seq: 250, checkpoint: 1 }, 251),
-        (Anchor::Checkpoint { seq: 250, checkpoint: -7 }, 251),
-        (Anchor::Trusted { seq: 300 }, 301),
-    ] {
+    // Both anchors, and every pinned reason with and without a sequence and with any row id.
+    for (anchor, from) in [(Anchor::Genesis, 1), (Anchor::Trusted { seq: 300 }, 301)] {
         assert_valid(&result, &report_with(None, anchor, from).to_value(), "ok");
     }
     for (kind, reason) in REASONS {

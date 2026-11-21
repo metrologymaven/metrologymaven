@@ -59,15 +59,14 @@
 //!   truncated tail cannot be seen from the journal alone; callers holding a trusted head
 //!   pass it as [`VerifyOptions::trusted`].
 //! - **Start ([`resolve_start`]), fail closed.** By default from sequence 1 with the zero
-//!   `prev` ([`Anchor::Genesis`]). `from_seq` = n > 1 is accepted only when entry n - 1 is
-//!   anchored on something verified: a [`TrustedHead`] at n - 1 (its head is the previous
-//!   hash, [`Anchor::Trusted`]), or a checkpoint row at n - 1 that passes on its own and whose
-//!   head equals the stored `hash` column of entry n - 1 ([`Anchor::Checkpoint`]). Anything
-//!   else, a trusted head below n - 1, `from_seq` 0 or above the tail plus one, is
-//!   `validation/bad_range`. The report carries `from_seq` and the anchor, so a partial
-//!   verification is never mistaken for a full one. Checkpoints below n are not checked or
-//!   counted. A checkpoint anchor lives in the same database as the rows; only a trusted head
-//!   held outside the journal protects against an editor who rewrites both.
+//!   `prev` ([`Anchor::Genesis`]). `from_seq` = n > 1 needs the caller's [`TrustedHead`] at
+//!   exactly n - 1 ([`Anchor::Trusted`]). Stored checkpoints are not authenticated (anyone
+//!   who can edit the rows can insert one), so they never anchor until TRUST.VERIFY checks
+//!   their signatures. Without a trusted head at n - 1, `from_seq` 0 or above the tail plus
+//!   one is `validation/bad_range`. The anchoring row n - 1 must pass steps 2 to 13 and hash
+//!   to the trusted head, else the refusal is `internal/invariant_violated` located at n - 1.
+//!   The report carries `from_seq` and the anchor, so a partial verification is never
+//!   mistaken for a full one. Checkpoints below n are not checked or counted.
 //! - **Head cache ([`check_heads`]).** After a successful walk every `heads` row must name an
 //!   entry of the journal (`link/head_past_chain`) on its own branch (`link/head_branch`).
 //! - **Counts** on success: entries walked, distinct referenced blobs checked, checkpoints
@@ -429,8 +428,6 @@ impl Default for VerifyOptions {
 pub enum Anchor {
     /// Sequence 1 and the zero digest: a full verification.
     Genesis,
-    /// The stored hash of entry `seq`, confirmed by checkpoint row `checkpoint` at `seq`.
-    Checkpoint { seq: u64, checkpoint: i64 },
     /// The caller's [`TrustedHead`] at `seq`.
     Trusted { seq: u64 },
 }
@@ -441,11 +438,6 @@ impl Anchor {
         let mut o = BTreeMap::new();
         let kind = match self {
             Anchor::Genesis => "genesis",
-            Anchor::Checkpoint { seq, checkpoint } => {
-                o.insert("seq".to_string(), CValue::Str(seq.to_string()));
-                o.insert("checkpoint".to_string(), CValue::Str(checkpoint.to_string()));
-                "checkpoint"
-            }
             Anchor::Trusted { seq } => {
                 o.insert("seq".to_string(), CValue::Str(seq.to_string()));
                 "trusted"
@@ -470,65 +462,53 @@ impl Start {
     pub const GENESIS: Start = Start { seq: FIRST_SEQ, prev: GENESIS_PREV, anchor: Anchor::Genesis };
 }
 
-/// Most checkpoint rows read as anchor candidates for a partial verification.
-pub const MAX_ANCHOR_CANDIDATES: usize = 16;
-
 /// The start of a verification from `from_seq` over a journal whose tail is `tail` (module
-/// documentation, Start). `below_hash` is the stored `hash` column of entry `from_seq - 1`;
-/// `candidates` the checkpoint rows whose `entry_hash` is that column, in row-id order (at most
-/// [`MAX_ANCHOR_CANDIDATES`] are read). Anything not anchored is `validation/bad_range`.
-pub fn resolve_start<C>(
+/// documentation, Start). `below` is the stored row of entry `from_seq - 1`. A partial
+/// verification needs the caller's `trusted` head at exactly `from_seq - 1`; anything else is
+/// `validation/bad_range`. Stored checkpoints are not authenticated (TRUST.VERIFY is not
+/// built) and never anchor. The anchoring row itself must pass the row checks and hash to the
+/// trusted head; if not, the refusal is [`ReadError::Corrupt`] located at `from_seq - 1`.
+pub fn resolve_start(
     stream: &str,
     from_seq: u64,
     tail: u64,
     trusted: Option<TrustedHead>,
-    below_hash: Option<&str>,
-    candidates: C,
-) -> Result<Start, ReadError>
-where
-    C: IntoIterator<Item = Result<CheckpointRow, ReadError>>,
-{
+    below: Option<&StoredEntry>,
+) -> Result<Start, ReadError> {
     if from_seq == 0 || from_seq > tail.saturating_add(1) {
         return Err(ReadError::BadRange(format!("from_seq {from_seq}, journal tail {tail}")));
     }
     if from_seq == FIRST_SEQ {
         return Ok(Start::GENESIS);
     }
-    let below = from_seq - 1;
-    if let Some(t) = trusted {
-        if t.seq < below {
-            return Err(ReadError::BadRange(format!(
-                "trusted head at {} is below from_seq - 1 = {below}: entries between are unverified",
-                t.seq
-            )));
-        }
-        if t.seq == below {
-            return Ok(Start { seq: from_seq, prev: t.head, anchor: Anchor::Trusted { seq: below } });
-        }
-    }
-    let unanchored = || {
-        ReadError::BadRange(format!(
-            "from_seq {from_seq} needs a verified anchor: a checkpoint at {below} matching the stored hash, \
-             or a trusted head at {below}"
-        ))
+    let at = from_seq - 1;
+    let Some(t) = trusted.filter(|t| t.seq == at) else {
+        return Err(ReadError::BadRange(format!(
+            "from_seq {from_seq} needs a trusted head at sequence {at}; stored checkpoints are not authenticated"
+        )));
     };
-    let stored = below_hash.and_then(parse_digest).ok_or_else(unanchored)?;
-    for row in candidates.into_iter().take(MAX_ANCHOR_CANDIDATES) {
-        let row = row?;
-        if parse_digest(&row.entry_hash) != Some(stored) {
-            continue;
-        }
-        if let Ok(cp) = decode_checkpoint(&row, stream) {
-            if cp.seq == below && cp.head == stored {
-                return Ok(Start {
-                    seq: from_seq,
-                    prev: stored,
-                    anchor: Anchor::Checkpoint { seq: below, checkpoint: row.id },
-                });
-            }
-        }
+    let row = below
+        .filter(|r| u64::try_from(r.seq).ok() == Some(at))
+        .ok_or_else(|| ReadError::BadRange(format!("entry {at} below from_seq is not stored")))?;
+    let corrupt = |f: Found| {
+        ReadError::Corrupt(Failure {
+            stream: stream.to_string(),
+            seq: Some(at),
+            kind: f.kind,
+            reason: f.reason,
+            checkpoint: None,
+            detail: f.detail,
+        })
+    };
+    let (_, hash) = check_row(row, at, stream).map_err(corrupt)?;
+    if hash != t.head {
+        return Err(corrupt(found(
+            FailureKind::Checkpoint,
+            "forked_head",
+            format!("trusted head {}, entry hash {hash}", t.head),
+        )));
     }
-    Err(unanchored())
+    Ok(Start { seq: from_seq, prev: t.head, anchor: Anchor::Trusted { seq: at } })
 }
 
 /// Most head-cache rows checked.

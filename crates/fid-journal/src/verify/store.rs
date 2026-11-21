@@ -22,9 +22,9 @@
 //! - **Stream.** One stream per database (`CORE.JRN.CHAIN.APPEND`): the journal's stream is
 //!   given by the caller (a [`Journal`]'s own); a `stream` parameter naming another is
 //!   `not_found/unknown_stream`.
-//! - **from_seq.** Anchored as [`super::resolve_start`] pins (a trusted head at `from_seq - 1`,
-//!   or a checkpoint row at `from_seq - 1` matching the stored hash, read by `entry_hash`);
-//!   anything else is `validation/bad_range`.
+//! - **from_seq.** Anchored as [`super::resolve_start`] pins: only a caller's trusted head at
+//!   `from_seq - 1`, whose stored row is read and checked; anything else is
+//!   `validation/bad_range`.
 //! - **Head cache.** After a successful walk the `heads` rows are checked with
 //!   [`super::check_heads`], each entry looked up by its stored hash.
 //! - **Verification blocks appends.** The whole walk, blob checks included, runs inside one
@@ -83,11 +83,6 @@ const REFS_SQL: &str = concat!(
 const CHECKPOINTS_SQL: &str = concat!(
     "SELECT id, substr(CAST(stream AS BLOB), 1, 65), substr(CAST(entry_hash AS BLOB), 1, 72), ",
     "substr(CAST(body AS BLOB), 1, 4097) FROM checkpoints ORDER BY id LIMIT 65537"
-);
-/// Anchor candidates: checkpoint rows naming one entry hash, at most `MAX_ANCHOR_CANDIDATES`.
-const ANCHOR_SQL: &str = concat!(
-    "SELECT id, substr(CAST(stream AS BLOB), 1, 65), substr(CAST(entry_hash AS BLOB), 1, 72), ",
-    "substr(CAST(body AS BLOB), 1, 4097) FROM checkpoints WHERE entry_hash = ?1 ORDER BY id LIMIT 16"
 );
 /// The head cache in branch order, at most `MAX_HEADS` + 1 rows.
 const HEADS_SQL: &str = concat!(
@@ -183,29 +178,18 @@ pub fn verify_store(store: &Store, stream: &str, opts: &VerifyOptions) -> Result
     let mut blobs = StoreBlobs { store };
     store
         .read(|conn| {
-            // The anchor of a partial verification.
-            let below: Bytes = if from > 1 {
-                conn.query_row(
-                    "SELECT substr(CAST(hash AS BLOB), 1, 72) FROM entries WHERE seq = ?1",
-                    [to_i64(from - 1)],
-                    |r| r.get(0),
-                )
-                .unwrap_or(None)
+            // The anchoring row of a partial verification (entry from_seq - 1).
+            let mut below_st = conn.prepare(ROWS_SQL)?;
+            let header_cap = to_i64(u64::try_from(MAX_HEADER_BYTES).unwrap_or(1 << 20));
+            let below: Option<StoredEntry> = if from > 1 {
+                let mut rows = below_st.query_map([to_i64(from - 1), header_cap, 1], |r| {
+                    Ok(stored((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?)))
+                })?;
+                rows.next().transpose()?
             } else {
                 None
             };
-            let below = below.map(|b| text_of(Some(b)));
-            let mut anchor_st = conn.prepare(ANCHOR_SQL)?;
-            let candidates = anchor_st.query_map([below.as_deref().unwrap_or("")], |r| {
-                Ok(CheckpointRow {
-                    id: r.get(0)?,
-                    stream: text_of(r.get(1)?),
-                    entry_hash: text_of(r.get(2)?),
-                    body: r.get::<_, Bytes>(3)?.unwrap_or_default(),
-                })
-            })?;
-            let candidates = candidates.map(|r| r.map_err(|e| storage("read checkpoints", e)));
-            let start = match resolve_start(stream, from, tail, opts.trusted, below.as_deref(), candidates) {
+            let start = match resolve_start(stream, from, tail, opts.trusted, below.as_ref()) {
                 Ok(s) => s,
                 Err(e) => return Ok(Err(e)),
             };
@@ -221,7 +205,6 @@ pub fn verify_store(store: &Store, stream: &str, opts: &VerifyOptions) -> Result
             let checkpoints = checkpoints.map(|r| r.map_err(|e| storage("read checkpoints", e)));
             let mut refs_st = conn.prepare(REFS_SQL)?;
             let mut st = conn.prepare(ROWS_SQL)?;
-            let header_cap = to_i64(u64::try_from(MAX_HEADER_BYTES).unwrap_or(1 << 20));
             // A full verification reads every row, so a row stored below sequence 1 is seen (and
             // fails as `sequence/reorder`) instead of being skipped by the range.
             let first = if start.seq == 1 { i64::MIN } else { to_i64(start.seq) };
@@ -368,12 +351,11 @@ fn verify_result() -> CValue {
                                 "kind",
                                 obj([
                                     ("type", text("string")),
-                                    ("enum", strs(&["genesis", "checkpoint", "trusted"])),
+                                    ("enum", strs(&["genesis", "trusted"])),
                                     ("description", text("What the first verified entry links to.")),
                                 ]),
                             ),
-                            ("seq", string(SEQ, "Sequence of the anchoring entry (from_seq - 1).")),
-                            ("checkpoint", string(ROW_ID, "Row id of the anchoring checkpoint.")),
+                            ("seq", string(SEQ, "Sequence of the trusted anchoring entry (from_seq - 1).")),
                         ]),
                     ),
                 ),

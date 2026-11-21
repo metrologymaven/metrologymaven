@@ -23,12 +23,12 @@ Files written next to this script (CC-BY-4.0):
 Verification rules (the outcome contract this reference and the Rust verifier share):
 
 Start. from_seq 1 starts at sequence 1 linking to the zero digest (anchor "genesis").
-from_seq n > 1 is accepted only when entry n-1 is anchored on something verified: a
-trusted head at n-1 (its head is the previous hash; anchor "trusted"), else a checkpoint
-row at n-1 (one of the first 16 rows, by id, whose entry_hash is the stored hash of entry
-n-1) that passes on its own and names that hash (anchor "checkpoint"). A trusted head below
-n-1, no anchor, from_seq 0 or above the tail plus one: refused, validation/bad_range. The
-result carries from_seq and the anchor. Checkpoints below n are not checked or counted.
+from_seq n > 1 needs a caller's trusted head at exactly n-1 (anchor "trusted"); stored
+checkpoints are not authenticated (until TRUST.VERIFY checks their signatures) and never
+anchor. Without it, from_seq 0, or above the tail plus one: refused, validation/bad_range.
+The anchoring row n-1 itself must pass steps 2 to 13 and hash to the trusted head; if not,
+refused as internal/invariant_violated with the located failure (seq n-1). The result
+carries from_seq and the anchor. Checkpoints below n are not checked or counted.
 
 Checkpoint rows first, in row-id order. A row id below 1: kind `checkpoint`, reason
 `bad_id` (seq null). Body over 4096 bytes, not strict JSON (UTF-8, no
@@ -602,29 +602,33 @@ def checkpoint_row_ok(c, stream):
 
 
 def resolve_start(m, stream, from_seq, trusted):
-    """(first seq, prev, anchor) or raises Refused("bad_range")."""
+    """(first seq, prev, anchor), or raises Refused("bad_range") or Corrupt (a located failure
+    at the anchoring entry). Stored checkpoints are not authenticated (TRUST.VERIFY is not
+    built), so only a caller's trusted head anchors a partial verification."""
     tail = max((r["seq"] for r in m["rows"]), default=0)
     if from_seq < 1 or from_seq > tail + 1:
         raise Refused("bad_range")
     if from_seq == 1:
         return 1, ZERO, {"kind": "genesis"}
     below_seq = from_seq - 1
-    if trusted is not None and trusted["seq"] < below_seq:
+    if trusted is None or trusted["seq"] != below_seq:
         raise Refused("bad_range")
-    if trusted is not None and trusted["seq"] == below_seq:
-        return from_seq, trusted["head"], {"kind": "trusted", "seq": str(below_seq)}
     below = [r for r in m["rows"] if r["seq"] == below_seq]
-    if not below or not DIGEST_RE.match(below[0]["hash"]):
+    if not below:
         raise Refused("bad_range")
-    stored = below[0]["hash"]
-    for c in sorted((c for c in m["checkpoints"] if c["entry_hash"] == stored), key=lambda c: c["id"])[:16]:
-        try:
-            seq, head = checkpoint_row_ok(c, stream)
-        except Fail:
-            continue
-        if seq == below_seq and head == stored:
-            return from_seq, stored, {"kind": "checkpoint", "seq": str(below_seq), "checkpoint": str(c["id"])}
-    raise Refused("bad_range")
+    try:
+        h = check_row(below[0], below_seq, stream)
+    except Fail as f:
+        raise Corrupt(f)
+    if h["hash"] != trusted["head"]:
+        raise Corrupt(Fail(below_seq, "checkpoint", "forked_head"))
+    return from_seq, trusted["head"], {"kind": "trusted", "seq": str(below_seq)}
+
+
+class Corrupt(Exception):
+    def __init__(self, fail):
+        super().__init__(fail.kind)
+        self.fail = fail
 
 
 def verify(m, stream=STREAM, from_seq=1, trusted=None):
@@ -636,6 +640,40 @@ def verify(m, stream=STREAM, from_seq=1, trusted=None):
     except Fail as f:
         f.start = start
         raise
+
+
+def check_row(r, p, stream):
+    """Steps 2 to 13 on row r at sequence p; returns the header or raises Fail."""
+    hb = r["header"]
+    if len(hb) > MAX_HEADER:
+        raise Fail(p, "hash", "oversize")
+    try:
+        h = strict_parse(hb, MAX_HEADER)
+    except Malformed:
+        raise Fail(p, "hash", "malformed")
+    if not is_canonical(hb, h):
+        raise Fail(p, "hash", "non_canonical")
+    if not isinstance(h, dict) or not isinstance(h.get("hash"), str) or not DIGEST_RE.match(h["hash"]):
+        raise Fail(p, "hash", "schema")
+    bare = {k: v for k, v in h.items() if k != "hash"}
+    if sha(cbytes(bare)) != h["hash"]:
+        raise Fail(p, "hash", "hash_mismatch")
+    sv = h.get("schema_version")
+    if not (type(sv) in (int, float) and sv == 1):
+        raise Fail(p, "hash", "unknown_version")
+    if not schema_ok(h):
+        raise Fail(p, "hash", "schema")
+    if r["hash"] != h["hash"]:
+        raise Fail(p, "hash", "column_mismatch")
+    if h["seq"] != str(r["seq"]):
+        raise Fail(p, "sequence", "header_seq")
+    if h["stream"] != stream:
+        raise Fail(p, "sequence", "foreign_stream")
+    if r["stream"] != h["stream"] or r["branch"] != h["branch"] or r["kind"] != h["kind"]:
+        raise Fail(p, "hash", "column_mismatch")
+    if r["prev_hash"] != h["prev"]:
+        raise Fail(p, "link", "column_mismatch")
+    return h
 
 
 def walk(m, stream, first, prev, trusted):
@@ -654,35 +692,7 @@ def walk(m, stream, first, prev, trusted):
             raise Fail(p, "sequence", "extended")
         if r["seq"] != p:
             raise Fail(p, "sequence", "gap" if r["seq"] > p else "reorder")
-        hb = r["header"]
-        if len(hb) > MAX_HEADER:
-            raise Fail(p, "hash", "oversize")
-        try:
-            h = strict_parse(hb, MAX_HEADER)
-        except Malformed:
-            raise Fail(p, "hash", "malformed")
-        if not is_canonical(hb, h):
-            raise Fail(p, "hash", "non_canonical")
-        if not isinstance(h, dict) or not isinstance(h.get("hash"), str) or not DIGEST_RE.match(h["hash"]):
-            raise Fail(p, "hash", "schema")
-        bare = {k: v for k, v in h.items() if k != "hash"}
-        if sha(cbytes(bare)) != h["hash"]:
-            raise Fail(p, "hash", "hash_mismatch")
-        sv = h.get("schema_version")
-        if not (type(sv) in (int, float) and sv == 1):
-            raise Fail(p, "hash", "unknown_version")
-        if not schema_ok(h):
-            raise Fail(p, "hash", "schema")
-        if r["hash"] != h["hash"]:
-            raise Fail(p, "hash", "column_mismatch")
-        if h["seq"] != str(r["seq"]):
-            raise Fail(p, "sequence", "header_seq")
-        if h["stream"] != stream:
-            raise Fail(p, "sequence", "foreign_stream")
-        if r["stream"] != h["stream"] or r["branch"] != h["branch"] or r["kind"] != h["kind"]:
-            raise Fail(p, "hash", "column_mismatch")
-        if r["prev_hash"] != h["prev"]:
-            raise Fail(p, "link", "column_mismatch")
+        h = check_row(r, p, stream)
         if h["prev"] != prev:
             raise Fail(p, "link", "genesis" if p == 1 else "broken")
         roles = [role for role, _ in r["refs"]]
@@ -742,6 +752,9 @@ def outcome(m, from_seq=1, trusted=None):
         return dict({"ok": False, "failure": {"seq": f.seq, "kind": f.kind, "reason": f.reason}}, **f.start)
     except Refused as e:
         return {"refused": e.code}
+    except Corrupt as c:
+        f = c.fail
+        return {"refused": "invariant_violated", "failure": {"seq": f.seq, "kind": f.kind, "reason": f.reason}}
 
 
 # ------------------------------------------------------------------ cases
@@ -938,6 +951,12 @@ def cases(good):
     add("from_attack_unanchored", attack, from_seq=301)
     add("from_attack_full", attack)
     add("from_checkpoint_anchor", [ckpt(3, 300, real300)], from_seq=301)
+    # The re-review's attack: a forged checkpoint row matching the forged hash at n-1.
+    add("from_forged_checkpoint_attack", attack + [ckpt(3, 300, fake)], from_seq=301)
+    add("from_trusted_anchor_row_tampered", [{"op": "flip_header", "seq": 300, "bit": 8 * 40 + 1}], from_seq=301,
+        trusted=real300_head)
+    add("from_trusted_head_mismatch", [], from_seq=301,
+        trusted={"seq": 300, "head": good["entries"][298]["hash"], "exact": False})
     add("from_checkpoint_anchor_wrong_head", [ckpt(3, 300, good["entries"][298]["hash"],
                                                     entry_hash=real300)], from_seq=301)
     add("from_existing_checkpoint", [], from_seq=251)
@@ -1012,8 +1031,13 @@ def build():
     assert expect["from_unanchored"] == {"refused": "bad_range"}
     assert expect["from_attack_unanchored"] == {"refused": "bad_range"}
     assert expect["from_attack_full"]["failure"]["seq"] == 300
-    assert expect["from_trusted_anchor_attack"]["failure"] == {"seq": 301, "kind": "link", "reason": "broken"}
-    assert expect["from_checkpoint_anchor"]["ok"] and expect["from_trusted_anchor"]["ok"]
+    assert expect["from_trusted_anchor_attack"] == {
+        "refused": "invariant_violated", "failure": {"seq": 300, "kind": "hash", "reason": "column_mismatch"}}
+    for name in ("from_checkpoint_anchor", "from_existing_checkpoint", "from_forged_checkpoint_attack"):
+        assert expect[name] == {"refused": "bad_range"}, name
+    assert expect["from_trusted_anchor"]["ok"]
+    assert expect["from_trusted_anchor_row_tampered"]["refused"] == "invariant_violated"
+    assert expect["from_trusted_head_mismatch"]["failure"]["reason"] == "forked_head"
     # No tamper case except the intended ones passes.
     for c in cs:
         if c["name"].startswith(("flip_header", "flip_payload", "flip_blob", "flip_column", "drop", "swap",
