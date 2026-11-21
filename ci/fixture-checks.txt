@@ -119,6 +119,7 @@ python fixtures/num/fmt/make_reg_fixtures.py --check
 python fixtures/num/la/make_la_fixtures.py --check
 python fixtures/num/la/make_qr_fixtures.py --check
 python fixtures/num/make_red_fixtures.py --check
+python fixtures/ors/trace/make_fixtures.py --check
 python fixtures/outr/bench/recipe/make_fixtures.py --check
 python fixtures/outr/site/import/make_fixtures.py --check
 python fixtures/pkg/check_package.py --strict

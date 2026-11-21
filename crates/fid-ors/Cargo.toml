@@ -1,0 +1,34 @@
+[package]
+name = "fid-ors"
+description = "Metrology Maven Open Reference Suites: ors-case/v1, suite manifests, the traceability checker and the rdl.check_suite / rdl.list_suite commands (spec node UNC.ORS.TRACE)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# RFC 8785 canonical JSON, bounded parsing and SHA-256 (CORE.JRN.CANON). Layer model.
+fid-canon = { path = "../fid-canon" }
+# Shared `sha256:` digest type. Layer num.
+fid-types = { path = "../fid-types" }
+# The rdl-dataset/v1 record every case carries, its licence and text rules (UNC.RDL.FORMAT).
+# Layer services, the same layer as this crate.
+fid-rdl = { path = "../fid-rdl" }
+# The DMT table, its key grammar and digest, the label and reviewer-ID grammars and SemVer
+# (GDT.RES.SCHEMA). Layer model.
+fid-gps = { path = "../fid-gps" }
+# Command definitions through the registry's field rules (CORE.REG.DEF). Layer model.
+fid-registry = { path = "../fid-registry" }
+# The shared result envelope (AUTO.SURF.ENV). Layer services.
+fid-surface = { path = "../fid-surface" }
+# The replay outcome class for exact replay of activity records (CORE.RPL.CLASS). Layer engine.
+fid-replay = { path = "../fid-replay" }
+
+[dev-dependencies]
+# Command-schema tests validate real parameters and results with the bus's own compiled
+# schemas (fid_bus::validate::Compiled). Layer engine; already in the lock.
+fid-bus = { path = "../fid-bus" }
+
+[lints]
+workspace = true
