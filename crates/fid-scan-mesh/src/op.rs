@@ -144,7 +144,7 @@ impl MeshOpError {
             MeshOpError::AllocationFailed => "scan.mesh.allocation_failed",
             MeshOpError::Quality(e) => e.code(),
             MeshOpError::Geometry(_) => "scan.mesh.invalid_output",
-            MeshOpError::Op { code } => *code,
+            MeshOpError::Op { code } => code,
         }
     }
 }
