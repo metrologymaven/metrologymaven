@@ -14,7 +14,8 @@
 //!
 //!   No survivor gives `software` with `fallback = true` and a reason listing every rejected
 //!   adapter with its cause.
-//! - An allowed `software` override selects `software` at once (reason `user_override`), so a
+//! - An allowed `software` override selects `software` at once (`fallback_cause` and reason
+//!   `user_override`), so a
 //!   user whose GPU driver crashes can escape it; [`Probe::run_with_override`] then probes
 //!   nothing. An override the row does not list is ignored and noted in `unverified`.
 //! - [`Probe`] lists adapters per backend through a [`Prober`] (the real one is
@@ -50,7 +51,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 /// Report format ID of [`GpuSelection::to_json`].
-pub const SELECTION_FORMAT: &str = "gpu-selection@1";
+pub const SELECTION_FORMAT: &str = "gpu-selection@2";
 
 /// The kind of adapter, as the graphics API reports it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -136,6 +137,46 @@ impl fmt::Display for Cause {
     }
 }
 
+/// Why the selection is or is not a fallback: the structured form of `fallback`, so a reader
+/// (`PLAT.DOCTOR`, the notice) never has to parse `reason`. `fallback` is true exactly when
+/// this is not [`FallbackCause::None`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FallbackCause {
+    /// A hardware adapter was selected.
+    None,
+    /// No hardware adapter survived the minimums, the known-bad `avoid_backend` entries and
+    /// the probe (every rejection is listed).
+    NoQualifyingAdapter,
+    /// A known-bad `force_software` entry matched (its ID is in `known_bad`).
+    KnownBad,
+    /// The caller's allowed `software` override (the user's setting): the hardware was not
+    /// evaluated, so this says nothing about the machine's GPU class.
+    UserOverride,
+}
+
+impl FallbackCause {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            FallbackCause::None => "none",
+            FallbackCause::NoQualifyingAdapter => "no_qualifying_adapter",
+            FallbackCause::KnownBad => "known_bad",
+            FallbackCause::UserOverride => USER_OVERRIDE,
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<FallbackCause> {
+        [FallbackCause::None, FallbackCause::NoQualifyingAdapter, FallbackCause::KnownBad, FallbackCause::UserOverride]
+            .into_iter()
+            .find(|c| c.as_str() == s)
+    }
+}
+
+impl fmt::Display for FallbackCause {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// A rejected adapter (`adapter` is its name), or a whole backend (`adapter` is `None`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Rejection {
@@ -181,6 +222,9 @@ pub struct GpuSelection {
     pub adapter: Option<SelectedAdapter>,
     /// True when no hardware adapter was selected (no survivor, or `force_software`).
     pub fallback: bool,
+    /// Why `fallback` is set ([`FallbackCause::None`] when it is not). Classify by this, never
+    /// by `fallback` alone: a user override is a fallback on any hardware.
+    pub fallback_cause: FallbackCause,
     /// One line per rejection, then why software was chosen when it was.
     pub reason: String,
     pub rejections: Vec<Rejection>,
@@ -246,7 +290,7 @@ pub fn select(
     match override_backend {
         Some(Backend::Software) if row.backends.contains(&Backend::Software) => {
             let why = format!("{USER_OVERRIDE}: software requested by the caller");
-            return software(probe_rejections.to_vec(), Vec::new(), unverified, Some(why));
+            return software(probe_rejections.to_vec(), Vec::new(), unverified, FallbackCause::UserOverride, Some(why));
         }
         Some(o) => match order.iter().position(|b| *b == o) {
             Some(i) => {
@@ -296,7 +340,7 @@ pub fn select(
             Some((BadAction::ForceSoftware, e)) => {
                 applied.push(e.id.clone());
                 let why = format!("known-bad entry {} forces software for {} on {}", e.id, a.name, a.backend);
-                return software(rejections, applied, unverified, Some(why));
+                return software(rejections, applied, unverified, FallbackCause::KnownBad, Some(why));
             }
             Some((BadAction::AvoidBackend, e)) => {
                 applied.push(e.id.clone());
@@ -331,6 +375,7 @@ pub fn select(
                 driver_version: a.driver_version,
             }),
             fallback: false,
+            fallback_cause: FallbackCause::None,
             reason,
             rejections,
             known_bad: applied,
@@ -340,7 +385,7 @@ pub fn select(
             probe_failed,
         };
     }
-    software(rejections, applied, unverified, None)
+    software(rejections, applied, unverified, FallbackCause::NoQualifyingAdapter, None)
 }
 
 fn meets_minimum(row: &PolicyRow, a: &AdapterInfo, unverified: &mut Vec<String>) -> bool {
@@ -375,6 +420,7 @@ fn software(
     rejections: Vec<Rejection>,
     known_bad: Vec<String>,
     unverified: Vec<String>,
+    cause: FallbackCause,
     forced: Option<String>,
 ) -> GpuSelection {
     let mut lines: Vec<String> = rejections.iter().map(ToString::to_string).collect();
@@ -385,6 +431,7 @@ fn software(
         backend: Backend::Software,
         adapter: None,
         fallback: true,
+        fallback_cause: cause,
         reason: lines.join("; "),
         rejections,
         known_bad,
@@ -413,7 +460,8 @@ fn hex(n: u32) -> CValue {
 
 impl GpuSelection {
     /// REQ-007 as a value: `backend`, `adapter` (`name`, `vendor_id`, `device_id` as `0x`
-    /// hex, `device_type`, `driver_version`, or `null` for software), `fallback`, `reason`,
+    /// hex, `device_type`, `driver_version`, or `null` for software), `fallback`,
+    /// `fallback_cause` (`none`, `no_qualifying_adapter`, `known_bad`, `user_override`), `reason`,
     /// `rejections`, `known_bad`, `workarounds`, `unverified`, `probe_timeout`, `probe_failed`.
     pub fn to_cvalue(&self) -> CValue {
         let mut m = BTreeMap::new();
@@ -433,6 +481,7 @@ impl GpuSelection {
             },
         );
         m.insert("fallback".to_string(), CValue::Bool(self.fallback));
+        m.insert("fallback_cause".to_string(), s(self.fallback_cause.as_str()));
         m.insert("reason".to_string(), s(&self.reason));
         m.insert(
             "rejections".to_string(),
