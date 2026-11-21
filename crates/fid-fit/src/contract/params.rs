@@ -20,6 +20,14 @@ pub const DEFAULT_MIN_COVERAGE: f64 = 0.3490658503988659;
 /// the scatter matrix is amplified at most `1 / (1 - 0.9) = 10` times (Davis-Kahan bound).
 pub const DEFAULT_EIG_RATIO_MAX: f64 = 0.9;
 
+/// Default smallest accepted ratio of the data's RMS distance from its least-squares plane to
+/// the fit's residual RMS (see [`Thresholds::planarity_ratio_min`]): `10` [unverified].
+pub const DEFAULT_PLANARITY_RATIO_MIN: f64 = 10.0;
+
+/// Default largest accepted condition estimate of a converged iterative fit (see
+/// [`Thresholds::cond_max`]): `1e8` [unverified].
+pub const DEFAULT_COND_MAX: f64 = 1e8;
+
 /// `2 * pi` as an `f64` (exactly twice `core::f64::consts::PI`).
 pub const TWO_PI: f64 = 2.0 * core::f64::consts::PI;
 
@@ -58,6 +66,17 @@ pub struct Thresholds {
     /// `KRN.LSQ.LIN`); a larger ratio means no unique direction (`IllConditioned`). Finite, in
     /// `[0, 1)`.
     pub eig_ratio_max: f64,
+    /// Smallest accepted ratio `plane_rms / rms` of a surface fit (least-squares sphere, spec
+    /// node `KRN.LSQ.RND`): `plane_rms` is the RMS distance of the points from their
+    /// least-squares plane, `rms` the fit's residual RMS. A ratio that is not above this value
+    /// means the data is no further from a plane than from the fitted surface, which it does
+    /// not then determine (`Coplanar`). Finite, at least 1.
+    pub planarity_ratio_min: f64,
+    /// Largest accepted condition estimate of the Jacobian of a converged iterative fit
+    /// (least-squares circles and sphere, spec node `KRN.LSQ.RND`), checked on the result,
+    /// unlike `nlls.cond_limit`, which the solver checks at every iterate; a larger estimate is
+    /// `IllConditioned` (a weakly determined fit). Finite, at least 1.
+    pub cond_max: f64,
 }
 
 impl Default for Thresholds {
@@ -66,6 +85,8 @@ impl Default for Thresholds {
             rank_tol: DEFAULT_RANK_TOL,
             min_coverage: DEFAULT_MIN_COVERAGE,
             eig_ratio_max: DEFAULT_EIG_RATIO_MAX,
+            planarity_ratio_min: DEFAULT_PLANARITY_RATIO_MIN,
+            cond_max: DEFAULT_COND_MAX,
         }
     }
 }
@@ -143,6 +164,12 @@ impl FitParams {
         }
         if !((0.0..1.0).contains(&t.eig_ratio_max)) {
             return bad("thresholds.eig_ratio_max");
+        }
+        if !(t.planarity_ratio_min.is_finite() && t.planarity_ratio_min >= 1.0) {
+            return bad("thresholds.planarity_ratio_min");
+        }
+        if !(t.cond_max.is_finite() && t.cond_max >= 1.0) {
+            return bad("thresholds.cond_max");
         }
         let mut seen = [false; 3];
         for c in &self.constraints {

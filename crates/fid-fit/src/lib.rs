@@ -10,8 +10,9 @@
 //! its three variants. [`init`] (spec node `KRN.LSQ.INIT`) builds the deterministic starts of the
 //! axial fits (cylinder, cone, torus), and [`ls_cyl`] (spec node `KRN.LSQ.AXIS.CYL`) is the
 //! least-squares cylinder run from those starts. [`mcc_cyl`] (spec node `KRN.ENV.MCC.CYL`) is the
-//! certified minimum circumscribed cylinder. [`ls_cone`] (spec node `KRN.LSQ.AXIS.CONE`) is the
-//! least-squares cone, run from INIT's cone starts.
+//! certified minimum circumscribed cylinder. [`ls_rnd`] (spec node `KRN.LSQ.RND`) holds the
+//! least-squares 2D circle, 3D circle and sphere. [`ls_cone`] (spec node `KRN.LSQ.AXIS.CONE`)
+//! is the least-squares cone, run from INIT's cone starts.
 
 // `FitError` wraps `fid_solv::nlls::SolverError` by value (about 150 bytes, see the note in
 // `fid-solv`). It is returned at most once per fit, never in a loop, and boxing it would add an
@@ -23,6 +24,7 @@ pub mod init;
 pub mod ls_cone;
 pub mod ls_cyl;
 pub mod ls_lin;
+pub mod ls_rnd;
 pub mod mcc_cyl;
 pub mod tan_plane;
 pub mod tan_rock;

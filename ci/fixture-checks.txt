@@ -58,6 +58,7 @@ python fixtures/fit/make_axis_cyl_fixtures.py --check
 python fixtures/fit/make_init_fixtures.py --check
 python fixtures/fit/make_lin_fixtures.py --check
 python fixtures/fit/make_mcc_cyl_fixtures.py --check
+python fixtures/fit/make_rnd_fixtures.py --check
 python fixtures/fit/make_tan_plane_fixtures.py --check
 python fixtures/fit/make_tan_rock_fixtures.py --check
 python fixtures/fit/make_trait_fixtures.py --check
