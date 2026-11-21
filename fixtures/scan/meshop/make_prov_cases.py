@@ -22,7 +22,7 @@ Rules applied (from the spec and the crate's documented layouts):
   * Record (kernel canonical JSON, keys in byte order, numbers as strings):
         {"determinism":..,"inputs":[..],"kind":"scan.mesh_op_record@1","op":..,
          "output":..,"params":{..},"quality_after":Q,"quality_before":[Q..],
-         "seed":"<n>"|null,"synthesized":"<count>","triangles":"<count>"}
+         "quality_threshold":"1e-18","seed":"<n>"|null,"synthesized":"<count>","triangles":"<count>"}
     The quality reports Q are the `canonical` lines of the SCAN.POLY.QUAL reference
     fixtures (fixtures/scan/*.quality.txt, written by make_mesh_quality.py); the
     report does not depend on triangle or vertex order, so a filled open cube has the
@@ -37,6 +37,9 @@ Test operations (all copy input vertices 0..n-1 first, in order):
             (new vertices, in that order, coordinates 0.5 * (p + q)) into the derived
             children (a, m_ab, m_ca), (m_ab, b, m_bc), (m_ca, m_bc, c), (m_ab, m_bc, m_ca);
             other triangles are copied. AC-2.
+  mark      D0, no params: copy the vertices, create triangle 0 from its own (copied)
+            vertices and copy triangles 1..9: the open cube with triangle 0 flagged
+            synthesized, the input of split (callers cannot attach flags directly).
   shuffle   D2, no params, seed s: copy triangles in the order of a Fisher-Yates shuffle
             of 0..9 driven by splitmix64(s): for i = 9 down to 1, j = next() % (i + 1),
             swap(i, j). AC-4 (seeds 42 and 7).
@@ -57,6 +60,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SCAN = os.path.dirname(HERE)
 OUT = os.path.join(HERE, "prov_cases.txt")
 M64 = (1 << 64) - 1
+# The SCAN.POLY.QUAL default degenerate-area threshold, 1e-18 m^2, in ECMAScript number
+# form (RFC 8785 section 3.2.2.3: exponent >= 21 or <= -7 uses exponent notation).
+THRESHOLD = "1e-18"
 
 
 def load_mesh(name):
@@ -220,9 +226,10 @@ def record(det, inputs, op, output, params, q_after, q_before, seed, synth, tris
     seed_s = "null" if seed is None else '"%d"' % seed
     return (
         '{"determinism":"%s","inputs":[%s],"kind":"scan.mesh_op_record@1","op":"%s","output":"%s",'
-        '"params":%s,"quality_after":%s,"quality_before":[%s],"seed":%s,"synthesized":"%d","triangles":"%d"}'
-        % (det, ",".join('"%s"' % i for i in inputs), op, output, params, q_after, ",".join(q_before), seed_s,
-           synth, tris)
+        '"params":%s,"quality_after":%s,"quality_before":[%s],"quality_threshold":"%s","seed":%s,'
+        '"synthesized":"%d","triangles":"%d"}'
+        % (det, ",".join('"%s"' % i for i in inputs), op, output, params, q_after, ",".join(q_before), THRESHOLD,
+           seed_s, synth, tris)
     )
 
 
@@ -270,7 +277,17 @@ def render():
     lines += fill_lines
 
     flagged = [t == 0 for t in range(len(tris))]
+    b = Builder(verts, tris, none)
+    for v in range(len(verts)):
+        b.copy_vertex(v)
+    b.create_triangle(tuple(b.vmap[v] for v in tris[0]))
+    for t in range(1, len(tris)):
+        b.copy_triangle(t)
+    assert b.verts == verts and b.tris == tris and b.flags == flagged
     in_split = wire(derived_digest(frame, verts, tris, flagged))
+    lines += case_lines(
+        "mark", frame, raw, b, [],
+        lambda out: record("D0", [raw], "mesh.test_mark@1", out, "{}", q_open, [q_open], None, 1, 10))[0]
     b = Builder(verts, tris, flagged)
     op_split(b, {0, 1})
     lines += case_lines("split", frame, in_split, b, ["input_flags %s" % "".join("1" if f else "0" for f in flagged)],

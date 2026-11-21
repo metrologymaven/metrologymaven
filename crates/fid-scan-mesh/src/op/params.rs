@@ -40,6 +40,16 @@ pub struct ParamsWriter {
     bytes: usize,
 }
 
+/// The number of decimal digits of `v`.
+fn decimal_len(mut v: u64) -> usize {
+    let mut n = 1;
+    while v >= 10 {
+        v /= 10;
+        n += 1;
+    }
+    n
+}
+
 fn bad(reason: &'static str) -> MeshOpError {
     MeshOpError::BadParams { reason }
 }
@@ -50,7 +60,9 @@ impl ParamsWriter {
         ParamsWriter::default()
     }
 
-    fn put(&mut self, key: &str, value: String) -> Result<(), MeshOpError> {
+    /// Checks the key, the entry count and the byte budget for a value of `value_len`
+    /// bytes, before any value text is formatted or allocated.
+    fn admit(&mut self, key: &str, value_len: usize) -> Result<(), MeshOpError> {
         let kb = key.as_bytes();
         if kb.is_empty() || kb.len() > MAX_KEY_BYTES {
             return Err(bad("key length"));
@@ -64,44 +76,65 @@ impl ParamsWriter {
         if self.entries.len() >= MAX_PARAM_ENTRIES {
             return Err(bad("too many entries"));
         }
+        if value_len > MAX_PARAMS_BYTES {
+            return Err(bad("too large"));
+        }
         // "key":value plus a comma.
-        let add = kb.len() + value.len() + 4;
-        self.bytes = self.bytes.saturating_add(add);
-        if self.bytes > MAX_PARAMS_BYTES {
+        let total = self.bytes.saturating_add(kb.len() + value_len + 4);
+        if total > MAX_PARAMS_BYTES {
             return Err(bad("too large"));
         }
         self.entries.try_reserve(1).map_err(|_| MeshOpError::AllocationFailed)?;
-        self.entries.push((key.to_string(), value));
+        self.bytes = total;
         Ok(())
+    }
+
+    fn push(&mut self, key: &str, value: String) {
+        self.entries.push((key.to_string(), value));
     }
 
     /// An unsigned integer.
     pub fn u64(&mut self, key: &str, v: u64) -> Result<(), MeshOpError> {
-        self.put(key, format!("\"{v}\""))
+        self.admit(key, decimal_len(v) + 2)?;
+        self.push(key, format!("\"{v}\""));
+        Ok(())
     }
 
     /// A signed integer.
     pub fn i64(&mut self, key: &str, v: i64) -> Result<(), MeshOpError> {
-        self.put(key, format!("\"{v}\""))
+        self.admit(key, decimal_len(v.unsigned_abs()) + usize::from(v < 0) + 2)?;
+        self.push(key, format!("\"{v}\""));
+        Ok(())
     }
 
-    /// A finite `f64` (metres, radians, ...). NaN and infinities are refused.
+    /// A finite `f64` (metres, radians, ...). NaN and infinities are refused. The
+    /// ECMAScript form is at most 25 bytes.
     pub fn f64(&mut self, key: &str, v: f64) -> Result<(), MeshOpError> {
         let s = es_number(v).ok_or_else(|| bad("non-finite number"))?;
-        self.put(key, format!("\"{s}\""))
+        self.admit(key, s.len() + 2)?;
+        self.push(key, format!("\"{s}\""));
+        Ok(())
     }
 
     /// A boolean.
     pub fn bool(&mut self, key: &str, v: bool) -> Result<(), MeshOpError> {
-        self.put(key, if v { "true" } else { "false" }.to_string())
+        let t = if v { "true" } else { "false" };
+        self.admit(key, t.len())?;
+        self.push(key, t.to_string());
+        Ok(())
     }
 
     /// A string of printable ASCII (0x20 to 0x7e) without `"` and `\`.
     pub fn str(&mut self, key: &str, v: &str) -> Result<(), MeshOpError> {
+        if v.len() > MAX_PARAMS_BYTES {
+            return Err(bad("too large"));
+        }
         if !v.bytes().all(|c| (0x20..=0x7e).contains(&c) && c != b'"' && c != b'\\') {
             return Err(bad("string characters"));
         }
-        self.put(key, format!("\"{v}\""))
+        self.admit(key, v.len() + 2)?;
+        self.push(key, format!("\"{v}\""));
+        Ok(())
     }
 
     /// The canonical object. Duplicate keys are refused.
@@ -143,6 +176,19 @@ mod tests {
         let s = String::from_utf8(w.finish().unwrap()).unwrap();
         assert_eq!(s, r#"{"delta":"-3","keep_boundary":true,"max_move":"0.0005","mode":"fill all","target":"100"}"#);
         assert_eq!(ParamsWriter::new().finish().unwrap(), b"{}".to_vec());
+        let mut w = ParamsWriter::new();
+        w.u64("a", u64::MAX).unwrap();
+        w.i64("b", i64::MIN).unwrap();
+        let s = String::from_utf8(w.finish().unwrap()).unwrap();
+        assert_eq!(s, r#"{"a":"18446744073709551615","b":"-9223372036854775808"}"#);
+    }
+
+    #[test]
+    fn decimal_lengths() {
+        for (v, n) in [(0, 1), (9, 1), (10, 2), (99, 2), (100, 3), (u64::MAX, 20)] {
+            assert_eq!(decimal_len(v), n, "{v}");
+            assert_eq!(v.to_string().len(), n);
+        }
     }
 
     #[test]
@@ -172,5 +218,8 @@ mod tests {
         let long = "x".repeat(40_000);
         w.str("a", &long).unwrap();
         assert_eq!(code(w.str("b", &long)), "scan.mesh.bad_params");
+        // A value over the whole budget is refused before it is formatted.
+        let huge = "y".repeat(MAX_PARAMS_BYTES + 1);
+        assert_eq!(code(ParamsWriter::new().str("c", &huge)), "scan.mesh.bad_params");
     }
 }

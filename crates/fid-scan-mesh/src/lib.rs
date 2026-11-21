@@ -13,6 +13,6 @@ pub mod quality;
 
 pub use op::{
     check_determinism, check_input_intact, derived_digest, MeshOp, MeshOpBuilder, MeshOpError, MeshOpLimits,
-    MeshOpOutput, MeshView, OpParams, ParamsWriter, Registered, RunOptions, Synthesized, TriRef,
+    MeshOpOutput, MeshView, OpParams, ParamsWriter, Registered, RunOptions, Synthesized, TriRef, VerifiedMeshView,
 };
 pub use quality::{mesh_quality, AngleStats, MeshQualityReport, QualityError, DEFAULT_DEGENERATE_AREA};

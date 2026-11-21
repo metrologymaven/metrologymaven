@@ -13,12 +13,14 @@ pub struct Synthesized {
 
 impl Synthesized {
     /// No flags (zero triangles).
-    pub fn new() -> Synthesized {
+    pub(crate) fn new() -> Synthesized {
         Synthesized { words: Vec::new(), len: 0 }
     }
 
-    /// `len` flags, all false (fully measured).
-    pub fn all_false(len: u64) -> Result<Synthesized, MeshOpError> {
+    /// `len` flags, all false (fully measured). Crate-private, so callers cannot forge
+    /// all-measured flags for a derived mesh.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn all_false(len: u64) -> Result<Synthesized, MeshOpError> {
         let words = usize::try_from(len.div_ceil(64)).map_err(|_| MeshOpError::AllocationFailed)?;
         let mut v = Vec::new();
         v.try_reserve_exact(words).map_err(|_| MeshOpError::AllocationFailed)?;
@@ -26,8 +28,9 @@ impl Synthesized {
         Ok(Synthesized { words: v, len })
     }
 
-    /// The flags of `bits`, in order.
-    pub fn from_bools(bits: &[bool]) -> Result<Synthesized, MeshOpError> {
+    /// The flags of `bits`, in order. Crate-private, as [`Synthesized::all_false`].
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn from_bools(bits: &[bool]) -> Result<Synthesized, MeshOpError> {
         let mut s = Synthesized::new();
         s.reserve(bits.len() as u64)?;
         for &b in bits {
@@ -100,12 +103,6 @@ impl Synthesized {
     }
 }
 
-impl Default for Synthesized {
-    fn default() -> Self {
-        Synthesized::new()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
@@ -129,7 +126,7 @@ mod tests {
         // 0x01; bit 69 -> byte8 0x20; 9 bytes in all.
         assert_eq!(s.to_bytes().unwrap(), vec![0x01, 0x02, 0, 0, 0, 0, 0, 0, 0x21]);
         assert_eq!(Synthesized::all_false(70).unwrap(), Synthesized::from_bools(&[false; 70]).unwrap());
-        assert_eq!(Synthesized::all_false(0).unwrap(), Synthesized::default());
+        assert_eq!(Synthesized::all_false(0).unwrap(), Synthesized::new());
         assert!(Synthesized::all_false(0).unwrap().to_bytes().unwrap().is_empty());
     }
 }

@@ -13,7 +13,7 @@ use fid_kci::kci::sha256;
 use fid_scan_mesh::op::RECORD_KIND;
 use fid_scan_mesh::{
     check_input_intact, MeshOp, MeshOpBuilder, MeshOpError, MeshOpLimits, MeshView, OpParams, ParamsWriter, Registered,
-    RunOptions, Synthesized, TriRef,
+    RunOptions, Synthesized, TriRef, VerifiedMeshView,
 };
 use fid_types::{Determinism, Digest};
 
@@ -107,9 +107,21 @@ fn check_case(name: &str, out: &fid_scan_mesh::MeshOpOutput) {
     }
 }
 
+/// A raw measured mesh, verified against the digest it is stored by. These tests have no
+/// store; the stored digest stands in as the mesh's element digest (for the open cube it is
+/// also checked against the reference's `open_cube_digest` in AC-1).
+fn raw(mesh: &Mesh) -> VerifiedMeshView<'_> {
+    MeshView::unflagged(mesh).verified(&digest_mesh(mesh).to_digest()).unwrap()
+}
+
+/// The output of a run as the next run's input, verified against its recorded digest.
+fn derived(out: &fid_scan_mesh::MeshOpOutput) -> VerifiedMeshView<'_> {
+    MeshView::of_output(out).unwrap().verified(&out.output_digest()).unwrap()
+}
+
 // ---------------------------------------------------------------- test operations
 
-fn copy_all_vertices(inputs: &[MeshView<'_>], out: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+fn copy_all_vertices(inputs: &[VerifiedMeshView<'_>], out: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
     for v in 0..inputs[0].mesh().vertex_count() {
         out.copy_vertex(0, v)?;
     }
@@ -129,7 +141,12 @@ impl MeshOp for Fill {
     const ID: &'static str = "mesh.test_fill@1";
     const DETERMINISM: Determinism = Determinism::D0;
     type Params = FillParams;
-    fn run(&self, inputs: &[MeshView<'_>], _: &FillParams, out: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+    fn run(
+        &self,
+        inputs: &[VerifiedMeshView<'_>],
+        _: &FillParams,
+        out: &mut MeshOpBuilder<'_, '_>,
+    ) -> Result<(), MeshOpError> {
         copy_all_vertices(inputs, out)?;
         for t in 0..inputs[0].mesh().triangle_count() {
             out.copy_triangle(TriRef::new(0, t))?;
@@ -160,7 +177,7 @@ impl MeshOp for Split {
     type Params = SplitParams;
     fn run(
         &self,
-        inputs: &[MeshView<'_>],
+        inputs: &[VerifiedMeshView<'_>],
         p: &SplitParams,
         out: &mut MeshOpBuilder<'_, '_>,
     ) -> Result<(), MeshOpError> {
@@ -206,13 +223,37 @@ impl SplitMix {
     }
 }
 
+/// Copies the open cube with triangle 0 re-created from its own vertices, so flagged
+/// synthesized: the flagged input of AC-2 (callers cannot attach flags directly).
+struct Mark;
+impl MeshOp for Mark {
+    const ID: &'static str = "mesh.test_mark@1";
+    const DETERMINISM: Determinism = Determinism::D0;
+    type Params = ();
+    fn run(&self, inputs: &[VerifiedMeshView<'_>], _: &(), out: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+        let m = inputs[0].mesh();
+        copy_all_vertices(inputs, out)?;
+        let tri = m.triangle(0).unwrap().map(|v| out.copy_vertex(0, v).unwrap());
+        out.create_triangle(tri)?;
+        for t in 1..m.triangle_count() {
+            out.copy_triangle(TriRef::new(0, t))?;
+        }
+        Ok(())
+    }
+}
+
 /// Copies the triangles in a seeded random order (D2).
 struct Shuffle;
 impl MeshOp for Shuffle {
     const ID: &'static str = "mesh.test_shuffle@1";
     const DETERMINISM: Determinism = Determinism::D2;
     type Params = Seed;
-    fn run(&self, inputs: &[MeshView<'_>], p: &Seed, out: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+    fn run(
+        &self,
+        inputs: &[VerifiedMeshView<'_>],
+        p: &Seed,
+        out: &mut MeshOpBuilder<'_, '_>,
+    ) -> Result<(), MeshOpError> {
         copy_all_vertices(inputs, out)?;
         let mut order: Vec<u64> = (0..inputs[0].mesh().triangle_count()).collect();
         let mut rng = SplitMix(p.0);
@@ -233,7 +274,7 @@ impl MeshOp for Identity {
     const ID: &'static str = "mesh.test_identity@1";
     const DETERMINISM: Determinism = Determinism::D0;
     type Params = ();
-    fn run(&self, inputs: &[MeshView<'_>], _: &(), out: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+    fn run(&self, inputs: &[VerifiedMeshView<'_>], _: &(), out: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
         copy_all_vertices(inputs, out)?;
         for t in 0..inputs[0].mesh().triangle_count() {
             out.copy_triangle(TriRef::new(0, t))?;
@@ -248,25 +289,25 @@ impl MeshOp for Tolerant {
     const ID: &'static str = "mesh.test_tolerant@1";
     const DETERMINISM: Determinism = Determinism::D3;
     type Params = ();
-    fn run(&self, _: &[MeshView<'_>], _: &(), _: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+    fn run(&self, _: &[VerifiedMeshView<'_>], _: &(), _: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
         Ok(())
     }
 }
 
 /// Runs a closure as the operation (negative cases).
 struct With<F>(F);
-impl<F: Fn(&[MeshView<'_>], &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError>> MeshOp for With<F> {
+impl<F: Fn(&[VerifiedMeshView<'_>], &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError>> MeshOp for With<F> {
     const ID: &'static str = "mesh.test_with@1";
     const DETERMINISM: Determinism = Determinism::D0;
     type Params = ();
-    fn run(&self, inputs: &[MeshView<'_>], _: &(), out: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+    fn run(&self, inputs: &[VerifiedMeshView<'_>], _: &(), out: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
         (self.0)(inputs, out)
     }
 }
 
-fn run_with<F>(inputs: &[MeshView<'_>], f: F) -> Result<fid_scan_mesh::MeshOpOutput, MeshOpError>
+fn run_with<F>(inputs: &[VerifiedMeshView<'_>], f: F) -> Result<fid_scan_mesh::MeshOpOutput, MeshOpError>
 where
-    F: Fn(&[MeshView<'_>], &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError>,
+    F: Fn(&[VerifiedMeshView<'_>], &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError>,
 {
     Registered::new(With(f)).unwrap().run(inputs, &())
 }
@@ -278,15 +319,16 @@ where
 #[test]
 fn ac1_fill_open_cube() {
     let mesh = open_cube();
-    let before = digest_mesh(&mesh).to_digest();
-    assert_eq!(before, Digest::parse(read("meshop/prov_cases.txt").lines().nth(2).unwrap()[17..].trim()).unwrap());
-    let view = MeshView::unflagged(&mesh);
+    let stored = read("meshop/prov_cases.txt");
+    let stored = stored.lines().find_map(|l| l.strip_prefix("open_cube_digest ")).unwrap();
+    let before = Digest::parse(stored).unwrap();
+    let view = MeshView::unflagged(&mesh).verified(&before).unwrap();
     let out = Registered::new(Fill).unwrap().run(&[view], &FillParams).unwrap();
     assert_eq!(out.synthesized().count(), 2);
     assert_eq!(out.synthesized().get(10), Some(true));
     assert_eq!(out.synthesized().get(11), Some(true));
     assert_eq!(digest_mesh(&mesh).to_digest(), before, "input unchanged");
-    check_input_intact(&view, &before).unwrap();
+    check_input_intact(view.view(), &before).unwrap();
     assert_eq!(out.inputs(), &[before]);
     assert_eq!(out.params_json(), br#"{"face":"z0"}"#);
     assert_eq!(out.seed(), None);
@@ -307,11 +349,11 @@ fn ac1_fill_open_cube() {
 #[test]
 fn ac2_split_propagates_flags() {
     let mesh = open_cube();
-    let mut bits = vec![false; 10];
-    bits[0] = true;
-    let flags = Synthesized::from_bools(&bits).unwrap();
-    let view = MeshView::flagged(&mesh, &flags).unwrap();
-    assert_eq!(flag_string(&flags), get(&case("split"), "input_flags"));
+    let marked = Registered::new(Mark).unwrap().run(&[raw(&mesh)], &()).unwrap();
+    check_case("mark", &marked);
+    assert_eq!(flag_string(marked.synthesized()), get(&case("split"), "input_flags"));
+    let view = derived(&marked);
+    assert_eq!(view.digest(), digest(&case("split"), "input_digest"));
     let out = Registered::new(Split).unwrap().run(&[view], &SplitParams(vec![0, 1])).unwrap();
     let s = out.synthesized();
     for t in 0..4 {
@@ -338,7 +380,7 @@ fn ac3_d3_rejected_at_registration() {
 fn ac4_d2_seed_recorded_and_reproducible() {
     let mesh = open_cube();
     let reg = Registered::new(Shuffle).unwrap();
-    let view = MeshView::unflagged(&mesh);
+    let view = raw(&mesh);
     let a = reg.run(&[view], &Seed(42)).unwrap();
     let b = reg.run(&[view], &Seed(42)).unwrap();
     assert_eq!(a.output_digest(), b.output_digest());
@@ -358,7 +400,7 @@ fn ac4_d2_seed_recorded_and_reproducible() {
 #[test]
 fn ac5_identity_adds_all_false_attribute() {
     let mesh = open_cube();
-    let view = MeshView::unflagged(&mesh);
+    let view = raw(&mesh);
     assert!(!view.has_attribute());
     assert_eq!(view.synthesized(3), Some(false));
     let out = Registered::new(Identity).unwrap().run(&[view], &()).unwrap();
@@ -371,17 +413,16 @@ fn ac5_identity_adds_all_false_attribute() {
     // recorded output version.
     let laundered = MeshView::unflagged(out.mesh());
     assert_eq!(laundered.verified(&out.output_digest()).unwrap_err().code(), "scan.mesh.digest_mismatch");
-    let honest = MeshView::of_output(&out).unwrap();
+    let honest = derived(&out);
     assert!(honest.has_attribute());
-    honest.verified(&out.output_digest()).unwrap();
 }
 
 /// Chaining: the identity of the fill output keeps its flags and cites its version.
 #[test]
 fn chain_keeps_flags_and_cites_derived_input() {
     let mesh = open_cube();
-    let fill = Registered::new(Fill).unwrap().run(&[MeshView::unflagged(&mesh)], &FillParams).unwrap();
-    let view = MeshView::of_output(&fill).unwrap();
+    let fill = Registered::new(Fill).unwrap().run(&[raw(&mesh)], &FillParams).unwrap();
+    let view = derived(&fill);
     assert_eq!(view.digest(), fill.output_digest());
     let out = Registered::new(Identity).unwrap().run(&[view], &()).unwrap();
     assert_eq!(out.inputs(), &[fill.output_digest()]);
@@ -398,7 +439,7 @@ fn registration_and_seed_rules() {
         const ID: &'static str = "Mesh.Bad";
         const DETERMINISM: Determinism = Determinism::D0;
         type Params = ();
-        fn run(&self, _: &[MeshView<'_>], _: &(), _: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+        fn run(&self, _: &[VerifiedMeshView<'_>], _: &(), _: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
             Ok(())
         }
     }
@@ -409,12 +450,12 @@ fn registration_and_seed_rules() {
         const ID: &'static str = "mesh.test_noseed@1";
         const DETERMINISM: Determinism = Determinism::D2;
         type Params = ();
-        fn run(&self, _: &[MeshView<'_>], _: &(), _: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+        fn run(&self, _: &[VerifiedMeshView<'_>], _: &(), _: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
             Ok(())
         }
     }
     let mesh = open_cube();
-    let view = MeshView::unflagged(&mesh);
+    let view = raw(&mesh);
     assert_eq!(Registered::new(NoSeedD2).unwrap().run(&[view], &()).unwrap_err().code(), "scan.mesh.missing_seed");
 
     struct SeededD0;
@@ -422,7 +463,7 @@ fn registration_and_seed_rules() {
         const ID: &'static str = "mesh.test_seeded@1";
         const DETERMINISM: Determinism = Determinism::D0;
         type Params = Seed;
-        fn run(&self, _: &[MeshView<'_>], _: &Seed, _: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+        fn run(&self, _: &[VerifiedMeshView<'_>], _: &Seed, _: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
             Ok(())
         }
     }
@@ -435,33 +476,29 @@ fn input_refusals() {
     let mesh = open_cube();
     assert_eq!(run_with(&[], |_, _| Ok(())).unwrap_err().code(), "scan.mesh.no_input");
     let other = Mesh::from_points(FrameRef::from_bytes([9; 16]), &[[0.0, 0.0, 0.0]], &[]).unwrap();
-    let e = run_with(&[MeshView::unflagged(&mesh), MeshView::unflagged(&other)], |_, _| Ok(())).unwrap_err();
+    let e = run_with(&[raw(&mesh), raw(&other)], |_, _| Ok(())).unwrap_err();
     assert_eq!(e, MeshOpError::FrameMismatch { input: 1 });
-    let many = vec![MeshView::unflagged(&mesh); fid_scan_mesh::op::MAX_INPUTS + 1];
+    let many = vec![raw(&mesh); fid_scan_mesh::op::MAX_INPUTS + 1];
     assert_eq!(run_with(&many, |_, _| Ok(())).unwrap_err().code(), "scan.mesh.too_many_inputs");
-    let short = Synthesized::from_bools(&[true; 9]).unwrap();
-    let e = MeshView::flagged(&mesh, &short).unwrap_err();
-    assert_eq!(e, MeshOpError::AttributeLength { expected: 10, found: 9 });
     let wrong = Digest::parse(&format!("sha256:{}", "ab".repeat(32))).unwrap();
     assert_eq!(MeshView::unflagged(&mesh).verified(&wrong).unwrap_err().code(), "scan.mesh.digest_mismatch");
-    // A flagged view and an unflagged view of one mesh are different versions, and a flag
-    // change changes the version.
-    let none = Synthesized::all_false(10).unwrap();
-    let one = Synthesized::from_bools(&[false, false, false, false, false, false, false, false, false, true]).unwrap();
-    let d_none = MeshView::flagged(&mesh, &none).unwrap().digest();
-    let d_one = MeshView::flagged(&mesh, &one).unwrap().digest();
-    assert_ne!(d_none, MeshView::unflagged(&mesh).digest());
-    assert_ne!(d_none, d_one);
-    assert_eq!(
-        check_input_intact(&MeshView::flagged(&mesh, &one).unwrap(), &d_none).unwrap_err().code(),
-        "scan.mesh.digest_mismatch"
-    );
+    // The all-false output of an identity run, the one-flag output of Mark and the raw mesh
+    // share their geometry but are three different versions; no caller can relabel one as
+    // another.
+    let none = Registered::new(Identity).unwrap().run(&[raw(&mesh)], &()).unwrap();
+    let one = Registered::new(Mark).unwrap().run(&[raw(&mesh)], &()).unwrap();
+    assert_eq!(digest_mesh(none.mesh()), digest_mesh(one.mesh()));
+    let (d_raw, d_none, d_one) = (raw(&mesh).digest(), none.output_digest(), one.output_digest());
+    assert!(d_raw != d_none && d_none != d_one && d_raw != d_one);
+    let e = MeshView::of_output(&one).unwrap().verified(&d_none).unwrap_err();
+    assert_eq!(e.code(), "scan.mesh.digest_mismatch");
+    assert_eq!(check_input_intact(derived(&one).view(), &d_none).unwrap_err().code(), "scan.mesh.digest_mismatch");
 }
 
 #[test]
 fn builder_refusals() {
     let mesh = open_cube();
-    let views = [MeshView::unflagged(&mesh)];
+    let views = [raw(&mesh)];
     let code = |f: &dyn Fn(&mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError>| {
         run_with(&views, |_, b| f(b)).unwrap_err().code()
     };
@@ -495,7 +532,7 @@ fn builder_refusals() {
 #[test]
 fn limits_bound_the_output() {
     let mesh = open_cube();
-    let views = [MeshView::unflagged(&mesh)];
+    let views = [raw(&mesh)];
     let reg = Registered::new(Identity).unwrap();
     let tight = |v: u64, t: u64| RunOptions {
         limits: MeshOpLimits { max_vertices: v, max_triangles: t, work_budget_bytes: None },
@@ -509,8 +546,27 @@ fn limits_bound_the_output() {
         ..RunOptions::default()
     };
     assert_eq!(reg.run_with(&views, &(), &budget).unwrap_err().code(), "scan.mesh.invalid_output");
-    let bad_threshold = RunOptions { degenerate_area: 0.0, ..RunOptions::default() };
-    assert_eq!(reg.run_with(&views, &(), &bad_threshold).unwrap_err().code(), "scan.mesh.invalid_threshold");
+    for t in [0.0, -1e-18, f64::NAN, f64::INFINITY] {
+        let bad = RunOptions { degenerate_area: t, ..RunOptions::default() };
+        assert_eq!(reg.run_with(&views, &(), &bad).unwrap_err().code(), "scan.mesh.invalid_threshold", "{t}");
+    }
+}
+
+/// The quality threshold is in the record, so a non-default run is reproducible from it
+/// (hand-labelled ECMAScript forms).
+#[test]
+fn quality_threshold_recorded() {
+    let mesh = open_cube();
+    let reg = Registered::new(Identity).unwrap();
+    let default = reg.run(&[raw(&mesh)], &()).unwrap();
+    assert_eq!(default.quality_threshold(), "1e-18");
+    let opts = RunOptions { degenerate_area: 1e-6, ..RunOptions::default() };
+    let other = reg.run_with(&[raw(&mesh)], &(), &opts).unwrap();
+    assert_eq!(other.quality_threshold(), "0.000001");
+    let rec = String::from_utf8(other.record_json().to_vec()).unwrap();
+    assert!(rec.contains(r#""quality_threshold":"0.000001","seed":null"#), "{rec}");
+    assert_eq!(default.output_digest(), other.output_digest(), "same mesh");
+    assert_ne!(default.record_digest(), other.record_digest(), "different record");
 }
 
 /// Parameters that cannot be recorded canonically stop the run before the operation.
@@ -527,14 +583,19 @@ fn params_refused_before_run() {
         const ID: &'static str = "mesh.test_counting@1";
         const DETERMINISM: Determinism = Determinism::D0;
         type Params = BadParams;
-        fn run(&self, _: &[MeshView<'_>], _: &BadParams, _: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+        fn run(
+            &self,
+            _: &[VerifiedMeshView<'_>],
+            _: &BadParams,
+            _: &mut MeshOpBuilder<'_, '_>,
+        ) -> Result<(), MeshOpError> {
             self.0.set(self.0.get() + 1);
             Ok(())
         }
     }
     let runs = Cell::new(0);
     let mesh = open_cube();
-    let e = Registered::new(Counting(&runs)).unwrap().run(&[MeshView::unflagged(&mesh)], &BadParams).unwrap_err();
+    let e = Registered::new(Counting(&runs)).unwrap().run(&[raw(&mesh)], &BadParams).unwrap_err();
     assert_eq!(e.code(), "scan.mesh.bad_params");
     assert_eq!(runs.get(), 0);
 }

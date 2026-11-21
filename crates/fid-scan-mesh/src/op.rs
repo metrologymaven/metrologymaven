@@ -7,8 +7,10 @@
 //! * **Registration** ([`Registered::new`]) refuses any determinism class other than D0
 //!   and D2 (`scan.mesh.bad_determinism`, REQ-002) and an operation ID that is not a
 //!   command ID `name@major` (`scan.mesh.bad_op_id`). An unregistered operation cannot run.
-//! * **Inputs are read-only** (REQ-001): the operation receives `&[MeshView]`, shared
-//!   references to the input meshes and their flags. After the run every input's digest is
+//! * **Inputs are verified and read-only** (REQ-001): [`Registered::run`] accepts only
+//!   [`VerifiedMeshView`]s, which only [`MeshView::verified`] makes (the content digest
+//!   checked against the digest the caller fetched the version by). The operation receives
+//!   shared references to the input meshes and their flags. After the run every input's digest is
 //!   recomputed and compared with the one recorded before it ([`check_input_intact`],
 //!   `scan.mesh.input_mutated`), so the record can never cite an input that changed.
 //! * **Output only through the builder** ([`MeshOpBuilder`]): `copy_triangle` keeps the
@@ -19,8 +21,88 @@
 //! * **The record** ([`MeshOpOutput`]) is assembled by the runner, not the operation: the
 //!   operation ID, determinism class, the digest of every input version in order, the
 //!   canonical parameter JSON ([`OpParams`]), the seed (required for D2, refused for D0),
-//!   the `SCAN.POLY.QUAL` report of every input and of the output (REQ-005), the output
-//!   digest and the synthesized-triangle count.
+//!   the `SCAN.POLY.QUAL` report of every input and of the output (REQ-005) with the
+//!   degenerate-area threshold they used, the output digest and the synthesized-triangle
+//!   count.
+//!
+//! # Trust boundary
+//!
+//! * **A record is trustworthy only if every `inputs[]` digest resolves to a stored
+//!   version.** The contract proves that the output was computed from content with those
+//!   digests; it cannot prove where the caller got the expected digest it passed to
+//!   [`MeshView::verified`]. A digest the caller computed from content it holds, rather
+//!   than one it fetched a stored version by, proves nothing.
+//! * **The bare [`MeshOpOutput::mesh`] must never be stored as a raw GEO.TYPES element.**
+//!   Store the output as its derived version (mesh and flags, digest
+//!   [`MeshOpOutput::output_digest`]). The mesh alone carries no flags, and as an element
+//!   it would read as fully measured.
+//! * **Operations are trusted code.** `derive_triangle` is only for triangles that are
+//!   children of the cited source triangles (split, collapse, moved vertices of those
+//!   triangles); `copy_triangle` only for triangles kept unchanged; anything else is
+//!   `create_triangle`. The builder enforces the flag rule for whatever call is made, but it
+//!   cannot check geometrically that a derived triangle lies on its sources. An operation
+//!   that cites unrelated measured sources is a bug in that operation, caught by its own
+//!   tests and review; a deliberately dishonest operation is out of scope.
+//! * **Flags cannot be forged by callers.** Outside this crate there is no constructor of
+//!   [`Synthesized`] and no way to attach flags to a mesh; a flagged input can only be the
+//!   output of an earlier run ([`MeshView::of_output`]). (The real fix is a GEO.TYPES
+//!   `triangle_synthesized` channel; see the leaf's Open questions.)
+//!
+//! ```compile_fail,E0624
+//! use fid_scan_mesh::Synthesized;
+//! let all_measured = Synthesized::all_false(10);
+//! ```
+//!
+//! ```compile_fail,E0624
+//! use fid_scan_mesh::Synthesized;
+//! let all_measured = Synthesized::from_bools(&[false; 10]);
+//! ```
+//!
+//! ```compile_fail,E0624
+//! use fid_geo_types::{FrameRef, Mesh};
+//! use fid_scan_mesh::{MeshView, Synthesized};
+//! fn forge<'a>(mesh: &'a Mesh, flags: &'a Synthesized) {
+//!     let _ = MeshView::flagged(mesh, flags);
+//! }
+//! ```
+//!
+//! An unverified view does not run (the control block verifies it and compiles):
+//!
+//! ```compile_fail,E0308
+//! use fid_geo_types::{FrameRef, Mesh};
+//! use fid_scan_mesh::{MeshOp, MeshOpBuilder, MeshOpError, MeshView, Registered, VerifiedMeshView};
+//! struct Noop;
+//! impl MeshOp for Noop {
+//!     const ID: &'static str = "mesh.noop@1";
+//!     const DETERMINISM: fid_types::Determinism = fid_types::Determinism::D0;
+//!     type Params = ();
+//!     fn run(&self, _: &[VerifiedMeshView<'_>], _: &(), _: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+//!         Ok(())
+//!     }
+//! }
+//! let mesh = Mesh::from_points(FrameRef::from_bytes([1; 16]), &[[0.0; 3]], &[]).unwrap();
+//! let view: MeshView<'_> = MeshView::unflagged(&mesh);
+//! let _ = Registered::new(Noop).unwrap().run(&[view], &());
+//! ```
+//!
+//! ```
+//! use fid_geo_types::{FrameRef, Mesh};
+//! use fid_scan_mesh::{MeshOp, MeshOpBuilder, MeshOpError, MeshView, Registered, VerifiedMeshView};
+//! struct Noop;
+//! impl MeshOp for Noop {
+//!     const ID: &'static str = "mesh.noop@1";
+//!     const DETERMINISM: fid_types::Determinism = fid_types::Determinism::D0;
+//!     type Params = ();
+//!     fn run(&self, _: &[VerifiedMeshView<'_>], _: &(), _: &mut MeshOpBuilder<'_, '_>) -> Result<(), MeshOpError> {
+//!         Ok(())
+//!     }
+//! }
+//! let mesh = Mesh::from_points(FrameRef::from_bytes([1; 16]), &[[0.0; 3]], &[]).unwrap();
+//! let stored = fid_geo_types::digest_mesh(&mesh).to_digest(); // the digest it was fetched by
+//! let view = MeshView::unflagged(&mesh).verified(&stored).unwrap();
+//! let out = Registered::new(Noop).unwrap().run(&[view], &()).unwrap();
+//! assert_eq!(out.inputs(), &[stored]);
+//! ```
 //!
 //! # Digests
 //!
@@ -44,7 +126,8 @@
 //! The record's canonical JSON (kernel canonical JSON: keys in byte order, numbers as
 //! strings) has the keys `determinism`, `inputs`, `kind` (`scan.mesh_op_record@1`), `op`,
 //! `output`, `params`, `quality_after`, `quality_before` (one report per input),
-//! `seed` (decimal string or `null`), `synthesized` and `triangles`; its SHA-256 is
+//! `quality_threshold` (the degenerate-area threshold in m², ECMAScript number form, as a
+//! string), `seed` (decimal string or `null`), `synthesized` and `triangles`; its SHA-256 is
 //! [`MeshOpOutput::record_digest`].
 //!
 //! # Bounds and determinism
@@ -60,6 +143,7 @@ use fid_geo_types::{digest_mesh, AttributeSet, GeoTypeError, Mesh, MeshOptions, 
 use fid_kci::kci::{sha256, Sha256};
 use fid_types::{CommandId, Determinism, Digest};
 
+use crate::number::es_number;
 use crate::quality::{mesh_quality, MeshQualityReport, QualityError, DEFAULT_DEGENERATE_AREA};
 
 mod params;
@@ -219,8 +303,9 @@ impl<'a> MeshView<'a> {
         MeshView { mesh, flags: None, digest: digest_mesh(mesh).to_digest() }
     }
 
-    /// A mesh with its attribute; `flags` must have one value per triangle.
-    pub fn flagged(mesh: &'a Mesh, flags: &'a Synthesized) -> Result<MeshView<'a>, MeshOpError> {
+    /// A mesh with its attribute; `flags` must have one value per triangle. Crate-private:
+    /// callers get flagged views only from outputs ([`MeshView::of_output`]).
+    pub(crate) fn flagged(mesh: &'a Mesh, flags: &'a Synthesized) -> Result<MeshView<'a>, MeshOpError> {
         let digest = derived_digest(mesh, flags)?;
         Ok(MeshView { mesh, flags: Some(flags), digest })
     }
@@ -231,11 +316,13 @@ impl<'a> MeshView<'a> {
         MeshView::flagged(&out.mesh, &out.flags)
     }
 
-    /// This view if its content digest is `expected`, else `scan.mesh.digest_mismatch`.
-    /// Use it for every mesh version loaded by digest.
-    pub fn verified(self, expected: &Digest) -> Result<MeshView<'a>, MeshOpError> {
+    /// This view, verified, if its content digest is `expected`, else
+    /// `scan.mesh.digest_mismatch`. `expected` must be the digest the version was fetched
+    /// or stored by (see the trust boundary in the [module documentation](self)). The only
+    /// way to make a [`VerifiedMeshView`].
+    pub fn verified(self, expected: &Digest) -> Result<VerifiedMeshView<'a>, MeshOpError> {
         if self.digest == *expected {
-            Ok(self)
+            Ok(VerifiedMeshView(self))
         } else {
             Err(MeshOpError::DigestMismatch)
         }
@@ -266,6 +353,38 @@ impl<'a> MeshView<'a> {
             None => Some(false),
             Some(f) => f.get(t),
         }
+    }
+}
+
+/// A [`MeshView`] whose content digest matched an expected digest. Made only by
+/// [`MeshView::verified`]; the only input [`Registered::run`] accepts.
+#[derive(Debug, Clone, Copy)]
+pub struct VerifiedMeshView<'a>(MeshView<'a>);
+
+impl<'a> VerifiedMeshView<'a> {
+    /// The underlying view.
+    pub fn view(&self) -> &MeshView<'a> {
+        &self.0
+    }
+
+    /// The mesh.
+    pub fn mesh(&self) -> &'a Mesh {
+        self.0.mesh
+    }
+
+    /// The version digest (equal to the expected digest it was verified against).
+    pub fn digest(&self) -> Digest {
+        self.0.digest
+    }
+
+    /// Whether the mesh carries the attribute.
+    pub fn has_attribute(&self) -> bool {
+        self.0.has_attribute()
+    }
+
+    /// The flag of triangle `t`, as [`MeshView::synthesized`].
+    pub fn synthesized(&self, t: u64) -> Option<bool> {
+        self.0.synthesized(t)
     }
 }
 
@@ -333,7 +452,7 @@ const UNMAPPED: u64 = u64::MAX;
 /// Builds the output mesh. Flags follow from the method used, never from the operation.
 #[derive(Debug)]
 pub struct MeshOpBuilder<'b, 'a> {
-    inputs: &'b [MeshView<'a>],
+    inputs: &'b [VerifiedMeshView<'a>],
     limits: MeshOpLimits,
     x: Vec<f64>,
     y: Vec<f64>,
@@ -349,7 +468,7 @@ fn grow<T>(v: &mut Vec<T>) -> Result<(), MeshOpError> {
 }
 
 impl<'b, 'a> MeshOpBuilder<'b, 'a> {
-    fn new(inputs: &'b [MeshView<'a>], limits: MeshOpLimits) -> Result<Self, MeshOpError> {
+    fn new(inputs: &'b [VerifiedMeshView<'a>], limits: MeshOpLimits) -> Result<Self, MeshOpError> {
         let mut vmap = Vec::new();
         vmap.try_reserve_exact(inputs.len()).map_err(|_| MeshOpError::AllocationFailed)?;
         vmap.resize_with(inputs.len(), Vec::new);
@@ -376,7 +495,10 @@ impl<'b, 'a> MeshOpBuilder<'b, 'a> {
     }
 
     fn input(&self, input: usize) -> Result<&MeshView<'a>, MeshOpError> {
-        self.inputs.get(input).ok_or(MeshOpError::InvalidIndex { input: input as u64, index: 0 })
+        self.inputs
+            .get(input)
+            .map(VerifiedMeshView::view)
+            .ok_or(MeshOpError::InvalidIndex { input: input as u64, index: 0 })
     }
 
     fn push_vertex(&mut self, p: [f64; 3]) -> Result<u64, MeshOpError> {
@@ -495,7 +617,7 @@ pub trait MeshOp {
     /// Runs the operation on read-only inputs.
     fn run(
         &self,
-        inputs: &[MeshView<'_>],
+        inputs: &[VerifiedMeshView<'_>],
         params: &Self::Params,
         out: &mut MeshOpBuilder<'_, '_>,
     ) -> Result<(), MeshOpError>;
@@ -527,7 +649,7 @@ impl<O: MeshOp> Registered<O> {
     }
 
     /// Runs with [`RunOptions::default`].
-    pub fn run(&self, inputs: &[MeshView<'_>], params: &O::Params) -> Result<MeshOpOutput, MeshOpError> {
+    pub fn run(&self, inputs: &[VerifiedMeshView<'_>], params: &O::Params) -> Result<MeshOpOutput, MeshOpError> {
         self.run_with(inputs, params, &RunOptions::default())
     }
 
@@ -535,7 +657,7 @@ impl<O: MeshOp> Registered<O> {
     /// returned.
     pub fn run_with(
         &self,
-        inputs: &[MeshView<'_>],
+        inputs: &[VerifiedMeshView<'_>],
         params: &O::Params,
         options: &RunOptions,
     ) -> Result<MeshOpOutput, MeshOpError> {
@@ -543,9 +665,9 @@ impl<O: MeshOp> Registered<O> {
         if inputs.len() > MAX_INPUTS {
             return Err(MeshOpError::TooManyInputs);
         }
-        let frame = first.mesh.frame();
+        let frame = first.mesh().frame();
         for (i, v) in inputs.iter().enumerate() {
-            if v.mesh.frame() != frame {
+            if v.mesh().frame() != frame {
                 return Err(MeshOpError::FrameMismatch { input: i as u64 });
             }
         }
@@ -555,6 +677,11 @@ impl<O: MeshOp> Registered<O> {
             (Determinism::D0, Some(_)) => return Err(MeshOpError::UnexpectedSeed),
             _ => {}
         }
+        // The threshold is part of the record, so a run is reproducible from it.
+        let quality_threshold = match es_number(options.degenerate_area) {
+            Some(t) if options.degenerate_area > 0.0 => t,
+            _ => return Err(MeshOpError::Quality(QualityError::InvalidThreshold)),
+        };
         let mut w = ParamsWriter::new();
         params.write(&mut w)?;
         let params_json = w.finish()?;
@@ -564,15 +691,15 @@ impl<O: MeshOp> Registered<O> {
         let mut quality_before = Vec::new();
         quality_before.try_reserve_exact(inputs.len()).map_err(|_| MeshOpError::AllocationFailed)?;
         for v in inputs {
-            input_digests.push(v.digest);
-            quality_before.push(mesh_quality(v.mesh, options.degenerate_area)?);
+            input_digests.push(v.digest());
+            quality_before.push(mesh_quality(v.mesh(), options.degenerate_area)?);
         }
 
         let mut b = MeshOpBuilder::new(inputs, options.limits)?;
         self.op.run(inputs, params, &mut b)?;
 
         for (i, (v, d)) in inputs.iter().zip(&input_digests).enumerate() {
-            check_input_intact(v, d).map_err(|_| MeshOpError::InputMutated { input: i as u64 })?;
+            check_input_intact(v.view(), d).map_err(|_| MeshOpError::InputMutated { input: i as u64 })?;
         }
 
         let MeshOpBuilder { x, y, z, triangles, flags, .. } = b;
@@ -591,6 +718,7 @@ impl<O: MeshOp> Registered<O> {
             seed,
             quality_before,
             quality_after,
+            quality_threshold,
             output,
             record_json: Vec::new(),
             record_digest: Digest::TOMBSTONE,
@@ -614,6 +742,7 @@ pub struct MeshOpOutput {
     seed: Option<u64>,
     quality_before: Vec<MeshQualityReport>,
     quality_after: MeshQualityReport,
+    quality_threshold: String,
     output: Digest,
     record_json: Vec<u8>,
     record_digest: Digest,
@@ -621,7 +750,8 @@ pub struct MeshOpOutput {
 
 impl MeshOpOutput {
     /// The new mesh. Its version identity is [`output_digest`](Self::output_digest), which
-    /// covers the flags; the bare mesh must not be passed on without them.
+    /// covers the flags. Never store this bare mesh as a raw GEO.TYPES element: without its
+    /// flags it would read as fully measured. Store the derived version instead.
     pub fn mesh(&self) -> &Mesh {
         &self.mesh
     }
@@ -664,6 +794,12 @@ impl MeshOpOutput {
     /// The quality report of the output.
     pub fn quality_after(&self) -> &MeshQualityReport {
         &self.quality_after
+    }
+
+    /// The degenerate-area threshold of both quality reports (m²), in the ECMAScript number
+    /// form it has in the record.
+    pub fn quality_threshold(&self) -> &str {
+        &self.quality_threshold
     }
 
     /// The derived-mesh digest of the output (mesh and flags).
@@ -709,6 +845,7 @@ impl MeshOpOutput {
             }
             put(&mut o, &q.canonical_json()?)?;
         }
+        put(&mut o, format!("],\"quality_threshold\":\"{}\"", self.quality_threshold).as_bytes())?;
         let seed = match self.seed {
             Some(s) => format!("\"{s}\""),
             None => "null".to_string(),
@@ -716,7 +853,7 @@ impl MeshOpOutput {
         put(
             &mut o,
             format!(
-                "],\"seed\":{seed},\"synthesized\":\"{}\",\"triangles\":\"{}\"}}",
+                ",\"seed\":{seed},\"synthesized\":\"{}\",\"triangles\":\"{}\"}}",
                 self.flags.count(),
                 self.mesh.triangle_count()
             )
@@ -744,5 +881,19 @@ mod tests {
             assert_eq!(check_determinism(d).is_ok(), ok, "{d}");
         }
         assert_eq!(Determinism::ALL.len(), 5, "a new class must be classified here");
+    }
+
+    /// A flag set must have one value per triangle (crate-private constructor).
+    #[test]
+    fn flag_length_checked() {
+        let frame = fid_geo_types::FrameRef::from_bytes([2; 16]);
+        let pts = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        let mesh = Mesh::from_points(frame, &pts, &[[0, 1, 2], [0, 2, 1]]).unwrap();
+        let short = Synthesized::from_bools(&[true]).unwrap();
+        let e = MeshView::flagged(&mesh, &short).unwrap_err();
+        assert_eq!(e, MeshOpError::AttributeLength { expected: 2, found: 1 });
+        let ok = Synthesized::all_false(2).unwrap();
+        let v = MeshView::flagged(&mesh, &ok).unwrap();
+        assert_ne!(v.digest(), MeshView::unflagged(&mesh).digest());
     }
 }
