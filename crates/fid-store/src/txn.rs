@@ -292,6 +292,9 @@ pub struct Store {
     location: ProjectLocation,
     blobs: BlobStore,
     mode: OpenMode,
+    /// Opened read-only from an import root with SQLite `immutable=1` (`open_at`): the
+    /// project's `lock` must stay free of writers while it is read.
+    immutable: bool,
     #[cfg(any(test, feature = "test-probe"))]
     probe: Option<Arc<dyn CommitProbe>>,
 }
@@ -338,16 +341,29 @@ impl Store {
     /// opened. A read-only folder (import root) opens only with [`OpenMode::Read`], takes no
     /// lock and writes no file: the database is opened `immutable` and the blob store without
     /// creating anything (`read_only_unavailable` when that is not possible).
+    ///
+    /// `immutable` tells SQLite the file cannot change, so the read-only open first probes the
+    /// project's `lock` without writing (a shared `flock` on Unix, an open that denies write
+    /// sharing on Windows): a lock held by a writer is `read_only_unavailable`. The probe runs
+    /// again once the database is open. An import root is assumed to hold a snapshot that no
+    /// process writes while it is open (`CORE.STO.LAYOUT` Design, read-only open).
     pub fn open_at(folder: &dyn VerifiedFolder, mode: OpenMode) -> Result<Store, TxnError> {
         let (location, lock) = ProjectLocation::open_at(folder, mode)?;
         let store = if folder.read_only() {
+            if location.writer_present()? {
+                return Err(StoreError::ReadOnlyUnavailable.into());
+            }
             let db = schema::open_read_immutable(&location)?;
             let blobs = BlobStore::open_existing(&location.root().join(BLOBS_DIR))?;
+            if location.writer_present()? {
+                return Err(StoreError::ReadOnlyUnavailable.into());
+            }
             Store {
                 location,
                 lock: None,
                 blobs,
                 mode: OpenMode::Read,
+                immutable: true,
                 db: Mutex::new(db),
                 #[cfg(any(test, feature = "test-probe"))]
                 probe: None,
@@ -374,6 +390,7 @@ impl Store {
             lock,
             blobs,
             mode,
+            immutable: false,
             db: Mutex::new(db),
             #[cfg(any(test, feature = "test-probe"))]
             probe: None,
@@ -383,6 +400,11 @@ impl Store {
     /// Whether the store was opened for writing.
     pub fn mode(&self) -> OpenMode {
         self.mode
+    }
+
+    /// Whether the store was opened `immutable` from a read-only folder ([`Store::open_at`]).
+    pub(crate) fn is_immutable(&self) -> bool {
+        self.immutable
     }
 
     /// The project folder.

@@ -1315,6 +1315,8 @@ impl CopyTarget for FolderCopyTarget {
 }
 
 /// Whether `name` uses the store's temporary-copy prefix (ASCII case-insensitive, REQ-007).
+/// Folder resolution refuses it in every path segment, not only the last one, so no handle can
+/// reach into a copy in progress.
 fn is_copy_name(name: &str) -> bool {
     name.get(..COPY_PREFIX.len()).is_some_and(|p| p.eq_ignore_ascii_case(COPY_PREFIX))
 }
@@ -1389,7 +1391,7 @@ pub fn resolve_folder(
     let kind = principal.kind();
     let (dir, canon, root_key, rel, read_only) = if is_handle(value) {
         let handle = FileHandle::parse(value)?;
-        if is_copy_name(handle.rel.file_name()) {
+        if handle.rel.segments().iter().any(|s| is_copy_name(s)) {
             return Err(bad_handle("the name is reserved for a copy in progress"));
         }
         let root =
@@ -1426,7 +1428,11 @@ pub fn resolve_folder(
             return Err(bad_handle("a raw path must be absolute"));
         }
         let name = p.file_name().and_then(OsStr::to_str).ok_or_else(|| bad_handle("the raw path names no folder"))?;
-        if is_copy_name(name) {
+        let copy_segment = p.components().any(|c| match c {
+            Component::Normal(n) => n.to_str().is_some_and(is_copy_name),
+            _ => false,
+        });
+        if copy_segment {
             return Err(bad_handle("the name is reserved for a copy in progress"));
         }
         let parent = p.parent().ok_or_else(|| bad_handle("the raw path names no folder"))?;

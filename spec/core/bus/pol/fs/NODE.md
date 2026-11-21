@@ -105,6 +105,8 @@ The bus-side guard for file-system parameters. Agents and scripts never pass raw
   - A human's raw path is a folder below its canonical parent. It is never read-only, and the same link and copy-name rules apply.
   - `open_project` reads `format` through the opened folder with the module's checked open (`open_checked`). A link or non-regular `format` file is `precondition/false`, like a missing one.
   - The folder identity comes from the opened capability handle through `fid_store::FolderId::of`.
+  - The `.fid-copy-*` prefix (ASCII case-insensitive) is refused as `bad_handle` in every segment of a handle's relative part and of a human's raw path, not only the last one (#406 review), so no handle reaches into a copy in progress. This is stricter than REQ-007's wording, never looser.
+  - `Store::open_at` with `OpenMode::Write` on a read-only target is `invariant_violated`, as `CORE.STO.LAYOUT` Design says (the store error `ReadOnlyTarget` carries that code).
 
 ## Change log
 

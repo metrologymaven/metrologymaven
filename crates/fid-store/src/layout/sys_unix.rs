@@ -179,6 +179,25 @@ impl Dir {
         Ok(statfs_is_network(&st))
     }
 
+    /// Whether another open file description holds an exclusive `flock` on `name`, probed
+    /// without writing: `name` is opened read-only (never created) and a shared lock is tried
+    /// and dropped at once. A missing file is `false`.
+    pub(super) fn lock_held(&self, name: &str) -> io::Result<bool> {
+        let file = match open_regular(&self.fd, name, OFlags::RDONLY, Mode::empty()) {
+            Ok(f) => f,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(false),
+            Err(e) => return Err(e),
+        };
+        match rfs::flock(&file, FlockOperation::NonBlockingLockShared) {
+            Ok(()) => {
+                let _ = rfs::flock(&file, FlockOperation::Unlock);
+                Ok(false)
+            }
+            Err(e) if e == Errno::WOULDBLOCK || e == Errno::AGAIN => Ok(true),
+            Err(e) => Err(e.into()),
+        }
+    }
+
     /// Takes an exclusive `flock` on `name`. The lock only counts if the locked file is still
     /// the one at `name` afterwards (same device and inode): a sync tool or editor that
     /// replaced the file by rename would otherwise leave two processes "holding" two files.

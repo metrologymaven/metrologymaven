@@ -16,9 +16,15 @@
 //! 6. the caller's `publish` runs its commit-stage check and calls the rename at most once;
 //!    after the rename the target's identity is compared with the temporary folder's;
 //! 7. on any failure the temporary folder is removed (and, if `publish` fails after a
-//!    successful rename, the copy is renamed back to a temporary name and removed). After a
-//!    crash, the next copy into the same parent removes every `.fid-copy-*` sibling whose
-//!    `lock` no live process holds.
+//!    successful rename, the copy is renamed back to a temporary name and removed, but only
+//!    if the folder at the target is still the copy). After a crash, the next copy into the
+//!    same parent removes every `.fid-copy-<32 hex>` sibling whose `lock` no live process
+//!    holds. It first claims each one by a no-replace rename to `.fid-copy-dead-<32 hex>` and
+//!    deletes only the claimed name, so a live copier whose temporary folder was unlocked
+//!    between steps 5 and 6 sees its rename fail cleanly instead of publishing a folder that
+//!    is being deleted. On Unix the copy also takes its lock again after step 5 and holds it
+//!    through the rename, so a live copy is not claimed there at all; Windows cannot rename a
+//!    folder with an open handle inside it.
 
 use super::{
     acquire, format_text, new_uuid, sys, FolderId, HexName, OpenMode, ProjectLocation, StoreError, BLOBS_DIR, DB_FILE,
@@ -38,6 +44,8 @@ use std::path::{Path, PathBuf};
 
 /// Prefix of a temporary copy folder; `CORE.BUS.POL.FS` refuses it as a handle name.
 pub const COPY_PREFIX: &str = ".fid-copy-";
+/// Prefix of a temporary copy folder claimed for deletion (by stale cleanup or a rollback).
+const DEAD_PREFIX: &str = ".fid-copy-dead-";
 /// Largest file copied from `kernels/`.
 const MAX_KERNEL_FILE: u64 = 256 * 1024 * 1024;
 /// Deepest folder nesting copied from `kernels/`.
@@ -66,6 +74,9 @@ pub enum CopyStep {
     Renamed,
     /// The target's identity matched the temporary folder's.
     IdentityChecked,
+    /// Stale cleanup claimed a dead copier's temporary folder (renamed it to a
+    /// `.fid-copy-dead-*` name) and is about to delete it.
+    StaleClaimed,
 }
 
 type Hook = Box<dyn Fn(CopyStep)>;
@@ -95,10 +106,18 @@ fn cas(e: CasError) -> StoreError {
     }
 }
 
+fn is_hex32(h: &str) -> bool {
+    h.len() == 32 && h.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
 /// Whether `name` is a temporary copy folder name: the prefix and 32 lowercase hex digits.
 fn is_temp_name(name: &str) -> bool {
-    name.strip_prefix(COPY_PREFIX)
-        .is_some_and(|h| h.len() == 32 && h.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+    name.strip_prefix(COPY_PREFIX).is_some_and(is_hex32)
+}
+
+/// Whether `name` is a claimed temporary folder: `.fid-copy-dead-` and 32 lowercase hex digits.
+fn is_dead_name(name: &str) -> bool {
+    name.strip_prefix(DEAD_PREFIX).is_some_and(is_hex32)
 }
 
 /// One plain name in the parent folder.
@@ -114,19 +133,47 @@ fn temp_name() -> String {
     format!("{COPY_PREFIX}{}", new_uuid().replace('-', ""))
 }
 
-/// Removes every `.fid-copy-*` folder in `parent` whose lock no live process holds.
+fn dead_name() -> String {
+    format!("{DEAD_PREFIX}{}", new_uuid().replace('-', ""))
+}
+
+/// Removes every temporary copy folder in `parent` whose lock no live process holds, and
+/// every claimed (`.fid-copy-dead-*`) folder.
+///
+/// A folder whose lock is free is first claimed by a no-replace rename to a fresh
+/// `.fid-copy-dead-*` name, and only the claimed name is deleted. The lock can be free while
+/// its copier is alive (Windows, between closing the copy and the rename), so deleting the
+/// folder in place could race that copier's rename and publish a half-deleted project. With
+/// the claim, either the copier's rename happened first (the name is gone and nothing is
+/// claimed) or the claim did (the copier's rename finds no folder and fails cleanly).
 fn remove_stale(parent: &sys::Dir, parent_path: &Path) -> Result<(), StoreError> {
     for (name, is_dir) in parent.entries()? {
-        if !is_dir || !is_temp_name(&name) {
+        if !is_dir {
+            continue;
+        }
+        if is_dead_name(&name) {
+            // Claimed by a cleanup or rollback that did not finish; nothing publishes it.
+            let _ = fs::remove_dir_all(parent_path.join(&name));
+            continue;
+        }
+        if !is_temp_name(&name) {
             continue;
         }
         let Ok(dir) = parent.sub(&name, false) else { continue };
         match dir.try_lock(LOCK_FILE) {
             Ok(sys::TryLock::Acquired(h)) => {
+                // Release and close first: Windows cannot rename a folder with a handle open
+                // inside it.
                 h.release();
                 drop(dir);
+                let claimed = dead_name();
+                if parent.rename_noreplace(&name, &claimed).is_err() {
+                    // Renamed (published) or claimed by someone else in the meantime.
+                    continue;
+                }
+                step(CopyStep::StaleClaimed);
                 // `remove_dir_all` does not follow links inside the folder.
-                let _ = fs::remove_dir_all(parent_path.join(&name));
+                let _ = fs::remove_dir_all(parent_path.join(&claimed));
             }
             Ok(sys::TryLock::Busy) | Err(_) => {}
         }
@@ -279,6 +326,16 @@ impl Store {
         let temp_id: FolderId = dir.identity().map_err(StoreError::from)?;
         step(CopyStep::TempLocked);
 
+        // A source opened `immutable` from an import root is only a consistent snapshot while
+        // no writer holds its lock: probed before the backup and again after the objects.
+        let writer_free = || -> Result<(), StoreError> {
+            if self.is_immutable() && self.location().writer_present()? {
+                return Err(StoreError::ReadOnlyUnavailable);
+            }
+            Ok(())
+        };
+        writer_free()?;
+
         // 2. Database: one backup step, so the copy is one consistent snapshot.
         let db_path = temp_path.join(DB_FILE);
         {
@@ -317,6 +374,7 @@ impl Store {
             &dir.sub(KERNELS_DIR, false).map_err(StoreError::from)?,
             0,
         )?;
+        writer_free()?;
 
         // 4. format, open with every check, then the caller's finish.
         let uuid = new_uuid();
@@ -338,6 +396,18 @@ impl Store {
         // open handles in it.
         drop(copy);
         step(CopyStep::Closed);
+        // On Unix, take the temporary folder's lock again and hold it through the rename, so
+        // stale cleanup by another copier never claims this live copy. (Windows cannot rename
+        // a folder with an open handle inside it; there the claim protocol of `remove_stale`
+        // makes this copy's rename fail cleanly instead.)
+        #[cfg(unix)]
+        let relock = {
+            let d = parent.sub(&temp, false).map_err(StoreError::from)?;
+            if d.identity().map_err(StoreError::from)? != temp_id {
+                return Err(StoreError::FolderSwapped.into());
+            }
+            acquire(&d)?
+        };
         sync_tree(&temp_path, 0).map_err(StoreError::from)?;
         crate::cas::sync_dir(&parent_path).map_err(StoreError::from)?;
         step(CopyStep::Synced);
@@ -354,6 +424,12 @@ impl Store {
             match parent.rename_noreplace(&temp, &name) {
                 Ok(()) => {}
                 Err(e) if e.kind() == io::ErrorKind::AlreadyExists => return Err(StoreError::NotEmpty),
+                Err(e) if fs::symlink_metadata(&temp_path).is_err() => {
+                    return Err(StoreError::Io(io::Error::new(
+                        e.kind(),
+                        "the temporary copy was claimed by another copy's stale cleanup before it was published",
+                    )))
+                }
                 Err(e) if fs::symlink_metadata(parent_path.join(&name)).is_ok() && fs::metadata(&temp_path).is_ok() => {
                     // The target appeared (Windows reports a non-empty folder as access denied).
                     let _ = e;
@@ -379,15 +455,27 @@ impl Store {
             }
             (Err(e), false) => return Err(e),
             (Err(e), true) => {
-                // The copy was published but the caller's commit failed: take it back.
-                let back = temp_name();
-                if parent.rename_noreplace(&name, &back).is_ok() {
-                    let _ = fs::remove_dir_all(parent_path.join(&back));
+                // The rename happened but `publish` failed. Take the copy back only if the
+                // folder at the target is still the copy; anything else there is left alone.
+                if FolderId::of_path(&target_path).ok() != Some(temp_id) {
+                    return Err(e);
                 }
+                let back = dead_name();
+                if let Err(re) = parent.rename_noreplace(&name, &back) {
+                    return Err(StoreError::Io(io::Error::other(format!(
+                        "publish failed ({e}) and the published copy could not be renamed back ({re}): \
+                         the copy remains published at the target"
+                    )))
+                    .into());
+                }
+                let _ = fs::remove_dir_all(parent_path.join(&back));
                 return Err(e);
             }
         }
         guard.armed = false;
+        // Release the lock taken again after step 5 so the reopen below can take it.
+        #[cfg(unix)]
+        drop(relock);
 
         // 7. Reopen the published copy and check it is the folder that was renamed.
         let (loc, lock) = ProjectLocation::open(&target_path, OpenMode::Write)?;
@@ -410,6 +498,9 @@ mod tests {
         let n = temp_name();
         assert!(is_temp_name(&n), "{n}");
         assert!(!is_temp_name(".fid-copy-xyz") && !is_temp_name("p1"));
+        let d = dead_name();
+        assert!(is_dead_name(&d) && !is_temp_name(&d) && !is_dead_name(&n), "{d}");
+        assert!(!plain_target(&d));
         assert!(!plain_target(&n) && !plain_target("..") && !plain_target("a/b") && !plain_target(""));
         assert!(!plain_target(".FID-COPY-0123") && plain_target("p_copy"));
     }

@@ -179,6 +179,27 @@ impl Dir {
         Ok(super::is_network_windows_path(&canonical.to_string_lossy()))
     }
 
+    /// Whether a writer holds `name` (the lock file) open, probed without writing: an open for
+    /// read access that denies write sharing fails with a sharing violation while any handle
+    /// has the file open for writing, which the holder of [`Dir::try_lock`] does. Read access
+    /// suffices, so the probe works on read-only media too. A missing file is `false`.
+    pub(super) fn lock_held(&self, name: &str) -> io::Result<bool> {
+        let opened = OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ)
+            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS)
+            .open(self.path.join(name));
+        match opened {
+            Ok(file) => {
+                check_file(&file)?;
+                Ok(false)
+            }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
+            Err(e) if matches!(e.raw_os_error(), Some(ERROR_SHARING_VIOLATION | ERROR_LOCK_VIOLATION)) => Ok(true),
+            Err(e) => Err(e),
+        }
+    }
+
     pub(super) fn try_lock(&self, name: &str) -> io::Result<TryLock> {
         // No write or delete sharing: the held file can be neither opened for writing nor
         // renamed, replaced or deleted by anyone else.

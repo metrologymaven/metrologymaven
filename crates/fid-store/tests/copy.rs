@@ -244,6 +244,7 @@ fn ac8_copy_while_committing() {
 const CHILD_SRC: &str = "FID_COPY_CHILD_SRC";
 const CHILD_OUT: &str = "FID_COPY_CHILD_OUT";
 const CHILD_AT: &str = "FID_COPY_CHILD_AT";
+const ABORT_MARKER: &str = "ABORT_AT";
 
 /// The child of AC-9: copies the source and aborts at step number `FID_COPY_CHILD_AT`. Does
 /// nothing when the variables are not set.
@@ -258,9 +259,12 @@ fn copy_child() {
     let store = Store::open(Path::new(&src), OpenMode::Write).unwrap();
     let n = Rc::new(RefCell::new(0u32));
     let seen = n.clone();
-    set_copy_hook(Some(Box::new(move |_| {
+    set_copy_hook(Some(Box::new(move |s| {
         *seen.borrow_mut() += 1;
         if *seen.borrow() == at {
+            // The parent checks this marker, so a child that fails earlier (a panic, a failed
+            // open) does not pass for one killed at this step.
+            eprintln!("{ABORT_MARKER} {at} {s:?}");
             std::process::abort();
         }
     })));
@@ -311,14 +315,19 @@ fn ac9_crash_mid_copy_leaves_no_partial_project() {
         let at = 1 + ((s >> 33) % u64::from(total)) as u32;
         let out = t.0.join(format!("out{run}"));
         std::fs::create_dir(&out).unwrap();
-        let status = Command::new(&exe)
+        let child = Command::new(&exe)
             .args(["--exact", "copy_child", "--nocapture", "--test-threads=1"])
             .env(CHILD_SRC, &src_root)
             .env(CHILD_OUT, &out)
             .env(CHILD_AT, at.to_string())
-            .status()
+            .output()
             .unwrap();
-        assert!(!status.success(), "run {run}: the child was not killed at step {at}");
+        let stderr = String::from_utf8_lossy(&child.stderr);
+        assert!(
+            !child.status.success() && stderr.contains(&format!("{ABORT_MARKER} {at} ")),
+            "run {run}: the child was not killed at step {at}: {}\n{stderr}",
+            child.status
+        );
         let target = out.join("p_copy");
         let store = open_retry(&src_root);
         if target.exists() {
@@ -464,21 +473,23 @@ fn req011_read_only_open_writes_nothing() {
     let root = t.0.join("p");
     drop(source(&t.0, 3, 4, 0));
     std::fs::rename(t.0.join("src"), &root).unwrap();
-    let snapshot = |p: &Path| -> Vec<(String, Vec<u8>, std::time::SystemTime)> {
+    // The listing, and every file's bytes and modification time. Folder modification times
+    // are left out: NTFS updates them lazily, so a `DirEntry` can report a stale one.
+    let snapshot = |p: &Path| -> Vec<(String, Vec<u8>, Option<std::time::SystemTime>)> {
         let mut out = Vec::new();
         let mut stack = vec![p.to_path_buf()];
         while let Some(d) = stack.pop() {
             for e in std::fs::read_dir(&d).unwrap() {
                 let e = e.unwrap();
-                let m = e.metadata().unwrap();
+                let m = std::fs::symlink_metadata(e.path()).unwrap();
                 if m.is_dir() {
                     stack.push(e.path());
-                    out.push((e.path().to_string_lossy().into_owned(), Vec::new(), m.modified().unwrap()));
+                    out.push((e.path().to_string_lossy().into_owned(), Vec::new(), None));
                 } else {
                     out.push((
                         e.path().to_string_lossy().into_owned(),
                         std::fs::read(e.path()).unwrap(),
-                        m.modified().unwrap(),
+                        Some(m.modified().unwrap()),
                     ));
                 }
             }
@@ -494,7 +505,117 @@ fn req011_read_only_open_writes_nothing() {
         assert_eq!(entries(&store).len(), 3);
     }
     assert_eq!(snapshot(&root), before);
-    assert_eq!(Store::open_at(&ro, OpenMode::Write).unwrap_err().code(), "read_only_target");
+    assert_eq!(Store::open_at(&ro, OpenMode::Write).unwrap_err().code(), "invariant_violated");
     std::fs::write(root.join(format!("{DB_FILE}-wal")), b"").unwrap();
     assert_eq!(Store::open_at(&ro, OpenMode::Read).unwrap_err().code(), "read_only_unavailable");
+}
+
+/// REQ-011: a read-only open probes the project's `lock` without writing; a writer holding it
+/// makes the open, and a copy from an `immutable` source, `read_only_unavailable`.
+#[test]
+fn req011_read_only_open_refuses_a_live_writer() {
+    let t = TempDir::new("rolock");
+    let root = t.0.join("src");
+    drop(source(&t.0, 3, 4, 0));
+    let ro = Folder { path: root.clone(), id: FolderId::of_path(&root).unwrap(), read_only: true };
+    {
+        let writer = Store::open(&root, OpenMode::Write).unwrap();
+        assert_eq!(Store::open_at(&ro, OpenMode::Read).unwrap_err().code(), "read_only_unavailable");
+        drop(writer);
+    }
+    let out = t.0.join("out");
+    std::fs::create_dir(&out).unwrap();
+    let snapshot = Store::open_at(&ro, OpenMode::Read).unwrap();
+    // No writer: the copy from the import-root source succeeds.
+    check_copy(&snapshot.copy_to(&Target::new(&out, "ok"), |_| Ok(()), plain_publish).unwrap(), &entries(&snapshot));
+    // A writer appears while the snapshot is open: the copy is refused and leaves nothing.
+    let writer = Store::open(&root, OpenMode::Write).unwrap();
+    let e = snapshot.copy_to(&Target::new(&out, "p_copy"), |_| Ok(()), plain_publish).unwrap_err();
+    assert_eq!(code(&e), "read_only_unavailable");
+    assert!(!out.join("p_copy").exists() && temps(&out).is_empty());
+    drop(writer);
+}
+
+/// REQ-013 with two copiers into the same parent: a second copy, whose stale cleanup runs
+/// while the first is inside `publish` (its temporary folder already closed), never makes the
+/// first publish a partial project. On Unix the first copy holds its lock through the rename
+/// and is published; on Windows cleanup claims the unlocked folder and the first copy's rename
+/// fails cleanly. Leftover temporary and claimed folders are removed by the next copy.
+#[test]
+fn stale_cleanup_during_publish_never_publishes_a_partial_project() {
+    let t = TempDir::new("two");
+    let store = source(&t.0, 4, 8, 1);
+    let before = entries(&store);
+    let out = t.0.join("out");
+    std::fs::create_dir(&out).unwrap();
+    // A dead copier's folder, unlocked and half written, and an unfinished claim.
+    let dead = out.join(format!("{COPY_PREFIX}{}", "0123456789abcdef0123456789abcdef"));
+    std::fs::create_dir_all(dead.join("blobs")).unwrap();
+    std::fs::write(dead.join(DB_FILE), b"half").unwrap();
+    let claimed = out.join(format!("{COPY_PREFIX}dead-{}", "fedcba9876543210fedcba9876543210"));
+    std::fs::create_dir_all(claimed.join("tmp")).unwrap();
+
+    let log = Rc::new(RefCell::new(Vec::new()));
+    let sink = log.clone();
+    set_copy_hook(Some(Box::new(move |s| sink.borrow_mut().push(s))));
+    let first = store.copy_to(
+        &Target::new(&out, "a"),
+        |_| Ok(()),
+        |rename| {
+            // The second copier runs its stale cleanup now, while the first copy's temporary
+            // folder is closed and waiting for its rename.
+            let second = store.copy_to(&Target::new(&out, "b"), |_| Ok(()), plain_publish).unwrap();
+            check_copy(&second, &before);
+            rename().map_err(TxnError::from)
+        },
+    );
+    set_copy_hook(None);
+    let claims = log.borrow().iter().filter(|s| **s == CopyStep::StaleClaimed).count();
+    match first {
+        Ok(copy) => {
+            assert!(cfg!(unix), "the first copy should have been claimed on this platform");
+            check_copy(&copy, &before);
+            assert_eq!(claims, 1, "only the dead copier's folder is claimed");
+        }
+        Err(e) => {
+            assert!(!cfg!(unix), "the first copy failed on Unix: {e}");
+            assert_eq!(code(&e), "io", "{e}");
+            assert!(!out.join("a").exists(), "a partial project was published");
+            assert_eq!(claims, 2);
+        }
+    }
+    assert!(!dead.exists() && !claimed.exists());
+    assert!(temps(&out).is_empty(), "{:?}", temps(&out));
+    // The next copy into the same parent is unaffected.
+    check_copy(&store.copy_to(&Target::new(&out, "c"), |_| Ok(()), plain_publish).unwrap(), &before);
+    assert!(temps(&out).is_empty());
+}
+
+/// REQ-013: when `publish` fails after the rename, the copy is taken back only if the folder
+/// at the target is still the copy; another folder there is left alone.
+#[test]
+fn rollback_after_publish_failure_checks_the_target_identity() {
+    let t = TempDir::new("back");
+    let store = source(&t.0, 2, 3, 0);
+    let out = t.0.join("out");
+    std::fs::create_dir(&out).unwrap();
+    let target = out.join("p_copy");
+    let e = store
+        .copy_to(
+            &Target::new(&out, "p_copy"),
+            |_| Ok(()),
+            |rename| {
+                rename().unwrap();
+                // Someone moves the published copy away and puts their own folder there.
+                std::fs::rename(&target, out.join("moved")).unwrap();
+                std::fs::create_dir(&target).unwrap();
+                std::fs::write(target.join("keep.txt"), b"mine").unwrap();
+                Err(TxnError::Io(std::io::Error::other("source commit failed")))
+            },
+        )
+        .unwrap_err();
+    assert_eq!(code(&e), "io");
+    assert_eq!(std::fs::read(target.join("keep.txt")).unwrap(), b"mine");
+    assert!(out.join("moved").join("format").exists(), "the moved copy is not touched either");
+    assert!(temps(&out).is_empty());
 }

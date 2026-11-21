@@ -180,11 +180,21 @@ fn ac5_create_new_and_refusals() {
     assert_eq!(reason(&e), "policy/bad_handle");
     let e = resolve_folder(&agent, &write_def(), "target", "root:work/.FID-COPY-x", &roots).unwrap_err();
     assert_eq!(reason(&e), "policy/bad_handle");
+    // The copy prefix is refused in every segment, not only the last one.
+    for h in ["root:work/.fid-copy-0a1b/p1", "root:work/.Fid-Copy-dead-00/x/p1"] {
+        let e = resolve_folder(&agent, &write_def(), "target", h, &roots).unwrap_err();
+        assert_eq!(reason(&e), "policy/bad_handle", "{h}");
+        let e = resolve_folder(&agent, &open_def(), "target", h, &roots).unwrap_err();
+        assert_eq!(reason(&e), "policy/bad_handle", "{h}");
+    }
     let raw = t.p("work/p2").to_string_lossy().to_string();
     let e = resolve_folder(&agent, &write_def(), "target", &raw, &roots).unwrap_err();
     assert_eq!(reason(&e), "policy/raw_path_refused");
     // A human may pass a raw path.
     let human = principal(PrincipalKind::Human);
+    let raw_in_copy = t.p("work/.fid-copy-0a1b/p2").to_string_lossy().to_string();
+    let e = resolve_folder(&human, &write_def(), "target", &raw_in_copy, &roots).unwrap_err();
+    assert_eq!(reason(&e), "policy/bad_handle");
     resolve_folder(&human, &write_def(), "target", &raw, &roots).unwrap().create_new().unwrap();
     assert!(t.p("work/p2").is_dir());
     // A folder parameter must not declare extensions; a command without a file effect is bad_root.
@@ -268,20 +278,21 @@ fn ac8_import_root_is_read_only() {
     let roots = t.roots();
     let agent = principal(PrincipalKind::Agent);
     project(&t.p("shared/p"));
+    // The listing, and every file's bytes and modification time. Folder modification times
+    // are left out: NTFS updates them lazily, so a `DirEntry` can report a stale one.
     let list = |p: &Path| {
-        let mut v: Vec<(PathBuf, Vec<u8>, std::time::SystemTime)> = Vec::new();
+        let mut v: Vec<(PathBuf, Vec<u8>, Option<std::time::SystemTime>)> = Vec::new();
         let mut stack = vec![p.to_path_buf()];
         while let Some(d) = stack.pop() {
             for e in std::fs::read_dir(&d).unwrap() {
                 let e = e.unwrap();
-                let m = e.metadata().unwrap();
-                let body = if m.is_dir() {
+                let m = std::fs::symlink_metadata(e.path()).unwrap();
+                if m.is_dir() {
                     stack.push(e.path());
-                    Vec::new()
+                    v.push((e.path(), Vec::new(), None));
                 } else {
-                    std::fs::read(e.path()).unwrap()
-                };
-                v.push((e.path(), body, m.modified().unwrap()));
+                    v.push((e.path(), std::fs::read(e.path()).unwrap(), Some(m.modified().unwrap())));
+                }
             }
         }
         v.sort();
@@ -294,7 +305,7 @@ fn ac8_import_root_is_read_only() {
         let store = Store::open_at(&pf, OpenMode::Read).unwrap();
         assert_eq!(store.mode(), OpenMode::Read);
     }
-    assert_eq!(Store::open_at(&pf, OpenMode::Write).unwrap_err().code(), "read_only_target");
+    assert_eq!(Store::open_at(&pf, OpenMode::Write).unwrap_err().code(), "invariant_violated");
     assert_eq!(list(&t.p("shared/p")), before);
     let e = resolve_folder(&agent, &write_def(), "target", "root:shared/q", &roots).unwrap_err();
     assert_eq!(reason(&e), "policy/bad_root");

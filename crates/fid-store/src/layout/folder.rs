@@ -7,7 +7,7 @@
 //! (or for a link to one) between the bus check and the store open is never used.
 //! `fid-bus` depends on `fid-store`, so the traits live here and `fid-bus` implements them.
 
-use super::{absolute_checked, sys, Locked, OpenMode, ProjectLocation, StoreError};
+use super::{absolute_checked, sys, Locked, OpenMode, ProjectLocation, StoreError, LOCK_FILE};
 use std::fs::File;
 use std::io;
 use std::path::Path;
@@ -106,6 +106,15 @@ impl ProjectLocation {
             return Err(StoreError::FolderSwapped);
         }
         Ok((loc, lock))
+    }
+
+    /// Whether a process holds the project's write lock, probed without writing anything: a
+    /// shared, non-blocking `flock` on a read-only open of `lock` on Unix, and on Windows an
+    /// open of `lock` that denies write sharing, which fails with a sharing violation while a
+    /// writer holds it open for writing. A missing `lock` means no writer. Read-only opens use
+    /// it before trusting SQLite `immutable=1` (REQ-011).
+    pub(crate) fn writer_present(&self) -> Result<bool, StoreError> {
+        Ok(self.dir.lock_held(LOCK_FILE)?)
     }
 
     /// The identity of the folder this location holds open.

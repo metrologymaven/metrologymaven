@@ -198,7 +198,8 @@ pub enum StoreError {
     /// The folder opened is not the folder `CORE.BUS.POL.FS` verified (another folder, or a
     /// link to one, was swapped in); code `outside_root` (REQ-011).
     FolderSwapped,
-    /// A write open or a create on a folder resolved in an import root (REQ-011).
+    /// A write open or a create on a folder resolved in an import root (REQ-011); code
+    /// `invariant_violated`, because the bus never hands a read-only folder to a write.
     ReadOnlyTarget,
     /// A read-only target whose database cannot be read without creating or writing a
     /// `-wal` or `-shm` file (REQ-011).
@@ -226,7 +227,7 @@ impl StoreError {
             StoreError::NotRegularFile => "not_regular_file",
             StoreError::LockLost => "lock_lost",
             StoreError::FolderSwapped => "outside_root",
-            StoreError::ReadOnlyTarget => "read_only_target",
+            StoreError::ReadOnlyTarget => "invariant_violated",
             StoreError::ReadOnlyUnavailable => "read_only_unavailable",
             StoreError::BlobCorrupt(_) => "blob_corrupt",
             StoreError::Io(_) => "io",
@@ -255,7 +256,9 @@ impl fmt::Display for StoreError {
             StoreError::NotRegularFile => write!(f, "not_regular_file: expected a regular file"),
             StoreError::LockLost => write!(f, "lock_lost: the lock file was replaced or removed"),
             StoreError::FolderSwapped => write!(f, "outside_root: the folder is not the one that was verified"),
-            StoreError::ReadOnlyTarget => write!(f, "read_only_target: the folder was resolved in an import root"),
+            StoreError::ReadOnlyTarget => {
+                write!(f, "invariant_violated: a folder resolved in an import root was opened for writing")
+            }
             StoreError::ReadOnlyUnavailable => {
                 write!(f, "read_only_unavailable: the database cannot be read without writing")
             }
