@@ -337,7 +337,7 @@ fn register_diff_adds_the_command() {
     let diffs: Arc<dyn DiffSource> = j.clone();
     let mut set = HandlerSet::new();
     register_diff(&mut set, &branches, &diffs).unwrap();
-    assert_eq!(set.def(DIFF_BRANCH).unwrap().id, DIFF_BRANCH);
+    assert_eq!(set.def(&format!("{DIFF_BRANCH}@1")).unwrap().id, DIFF_BRANCH);
 }
 
 /// Every refusal maps to a code and reason of the frozen v3 catalogue, unchanged, and a
