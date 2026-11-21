@@ -84,16 +84,32 @@ def scan_text():
         "# GEO.DIST.BATCH fixture scan_1e6_on_mesh (AC-1, AC-4). Written by tools/fixtures/geo_dist_batch.py;",
         "# never edit by hand. CC-BY-4.0. Mesh: the GEO.INDEX sphere (fixtures/geo/index/mesh_sphere_1e5).",
         "# Points: SplitMix64 seed 51; see scan_points() for the pinned stream.",
-        "# r <i> <tri> <foot xyz> <dist> : the closest point of every 10 000th point (GEO.DIST.MESH model).",
+        "# r <i> <tri> <foot xyz> <dist> <sign> : the closest point of every 10 000th point (GEO.DIST.MESH model);",
+        "#   sign + or - for an interior foot: the exact sign of (p - a) . ((b - a) x (c - a)) (the GEO.DIST.SIGN",
+        "#   rule for an interior foot, positive outside); ? for an edge or vertex foot (not checked here).",
+        "# sample_summary <count> <min> <max> <mean>: over the +/- samples, signed distance = sign * dist;",
+        "#   mean = the exact rational mean of those floats, rounded to nearest.",
         f"triangles {len(tris)}",
         f"vertices {len(verts)}",
         f"mesh_digest {geo_dist.mesh_digest(verts, tris)}",
         f"points {N_SCAN}",
         f"point_digest {h.hexdigest()}",
     ]
+    signed = []
     for i in range(0, N_SCAN, SAMPLE_EVERY):
-        f, d2, _code, t = geo_dist.search(pts[i])
-        lines.append(f"r {i} {t} {hx(f[0])} {hx(f[1])} {hx(f[2])} {hx(math.sqrt(d2))}")
+        f, d2, code, t = geo_dist.search(pts[i])
+        dist = math.sqrt(d2)
+        sign = "?"
+        if code == 6:
+            ia, ib, ic = tris[t]
+            A, B, C, P = F3(verts[ia]), F3(verts[ib]), F3(verts[ic]), F3(pts[i])
+            side = fdot(fsub(P, A), fcross(fsub(B, A), fsub(C, A)))
+            if side != 0:
+                sign = "+" if side > 0 else "-"
+                signed.append(dist if side > 0 else -dist)
+        lines.append(f"r {i} {t} {hx(f[0])} {hx(f[1])} {hx(f[2])} {hx(dist)} {sign}")
+    mean = float(sum(Fraction(x) for x in signed) / len(signed))
+    lines.append(f"sample_summary {len(signed)} {hx(min(signed))} {hx(max(signed))} {hx(mean)}")
     return "\n".join(lines) + "\n"
 
 

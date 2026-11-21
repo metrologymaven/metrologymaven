@@ -197,8 +197,15 @@ fn scan_fixture() -> Scan {
     Scan { header, samples }
 }
 
+/// `FID_BATCH_POINTS` when set (it must parse), else 50 000 natively and 5 000 on wasm32
+/// (where the test runs single-threaded through the spawn-failure fallback).
 fn points_under_test() -> usize {
-    std::env::var("FID_BATCH_POINTS").ok().and_then(|s| s.parse().ok()).unwrap_or(50_000).min(1_000_000)
+    let default = if cfg!(target_family = "wasm") { 5_000 } else { 50_000 };
+    match std::env::var("FID_BATCH_POINTS") {
+        Ok(s) => s.parse::<usize>().unwrap_or_else(|_| panic!("FID_BATCH_POINTS={s:?} is not a count")),
+        Err(_) => default,
+    }
+    .min(1_000_000)
 }
 
 // ------------------------------------------------------------------ AC-1, AC-4
@@ -242,6 +249,36 @@ fn ac1_ac4_results_and_summaries_do_not_depend_on_threads_or_blocks() {
         checked += 1;
     }
     assert!(checked >= n / 10_000);
+
+    // Signs of record and summary values against the oracle: every sample with an interior
+    // foot carries the exact triangle-normal sign; the summary of those samples matches the
+    // oracle's counts and extremes exactly and its exact rational mean within 2^-50 relative.
+    let mut oracle_set = Vec::new();
+    for (i, want) in scan.samples.iter() {
+        let sign = want[5].as_str();
+        if sign == "?" {
+            continue;
+        }
+        let pts = if *i < n { None } else { Some(PointSet::from_points(frame(), &[all[*i]]).unwrap()) };
+        let hit = match &pts {
+            None => reference[*i],
+            Some(one) => project_batch(one, &target, &opts, &cfg(1, 64), &never()).unwrap()[0],
+        };
+        let Projection::Hit(h) = hit else { panic!("point {i}: no hit") };
+        let want_status =
+            if sign == "+" { fid_geo_dist::SignStatus::Outside } else { fid_geo_dist::SignStatus::Inside };
+        assert_eq!(h.sign, HitSign::Mesh(want_status), "point {i}: sign");
+        assert_eq!(h.distance.to_bits(), bits(&want[4]).to_bits(), "point {i}: distance");
+        oracle_set.push(hit);
+    }
+    let ss: Vec<&str> = scan.header["sample_summary"].split(' ').collect();
+    let s = summary(&oracle_set).unwrap();
+    assert_eq!(s.hits, ss[0].parse::<u64>().unwrap());
+    assert_eq!(s.sign_undefined, 0);
+    assert_eq!(s.min_signed.unwrap().to_bits(), bits(ss[1]).to_bits());
+    assert_eq!(s.max_signed.unwrap().to_bits(), bits(ss[2]).to_bits());
+    let (mean, want_mean) = (s.mean_signed.unwrap(), bits(ss[3]));
+    assert!((mean - want_mean).abs() <= want_mean.abs() * f64::from_bits((1023 - 50) << 52), "{mean} {want_mean}");
 
     for (threads, block) in [(1, 64), (3, 64), (3, 4096), (16, 64), (16, 4096), (7, 192)] {
         let r = project_batch(&points, &target, &opts, &cfg(threads, block), &never()).unwrap();
@@ -299,7 +336,7 @@ fn cube() -> (Vec<[f64; 3]>, Vec<[u64; 3]>) {
 }
 
 fn mesh_of(j: &Json) -> (Vec<[f64; 3]>, Vec<[u64; 3]>) {
-    let verts = j.get("vertices").arr().iter().map(|v| v3(v)).collect();
+    let verts = j.get("vertices").arr().iter().map(v3).collect();
     let tris = j
         .get("triangles")
         .arr()
@@ -334,6 +371,9 @@ impl<'t, 'm> Probe<'t, 'm> {
 impl ProjectionTarget for Probe<'_, '_> {
     fn frame(&self) -> FrameRef {
         self.inner.frame()
+    }
+    fn check_options(&self, opts: &ProjectionOptions<'_, '_>) -> Result<(), ProjectError> {
+        self.inner.check_options(opts)
     }
     fn project(&self, p: [f64; 3], opts: &ProjectionOptions<'_, '_>) -> Result<Projection, ProjectError> {
         let k = self.calls.fetch_add(1, Ordering::SeqCst) + 1;
@@ -448,49 +488,113 @@ fn ac3_directional_cases_match_the_exact_reference() {
     assert!(hits >= 50 && misses >= 20, "{hits} hits, {misses} misses");
 }
 
+/// The two exits of the line `p + s v` from the cube `[-1, 1]^3` for `p` strictly inside:
+/// `(s_plus > 0, s_minus < 0)` by the slab rule.
+fn cube_exits(p: [f64; 3], v: [f64; 3]) -> (f64, f64) {
+    let (mut plus, mut minus) = (f64::INFINITY, f64::NEG_INFINITY);
+    for (&pk, &vk) in p.iter().zip(&v) {
+        if vk == 0.0 {
+            continue;
+        }
+        let sg = if vk > 0.0 { 1.0 } else { -1.0 };
+        let out = (sg - pk) / vk;
+        let back = (-sg - pk) / vk;
+        if out < plus {
+            plus = out;
+        }
+        if back > minus {
+            minus = back;
+        }
+    }
+    (plus, minus)
+}
+
+fn norm(v: [f64; 3]) -> f64 {
+    sqrt((v[0] * v[0] + v[1] * v[1]) + v[2] * v[2])
+}
+
 #[test]
-fn directional_lines_from_inside_a_closed_mesh_never_slip_through() {
-    // Watertightness: every line through an interior point of a closed mesh meets it, also
-    // when it passes exactly through shared edges and vertices.
+fn directional_lines_from_inside_a_closed_mesh_hit_the_nearer_exit() {
+    // Watertightness: every line through an interior point of a closed mesh meets it at the
+    // nearer of its two exits, also when an exit is exactly on a shared edge or vertex. A
+    // leak through the nearer exit would report the far one, at the wrong side and distance.
     let (verts, tris) = cube();
     let (mesh, bvh) = target_of(&verts, &tris);
     let target = SignTarget::new(MeshTarget::new(&mesh, &bvh).unwrap()).unwrap();
     let mut g = SplitMix(7);
     let opts = ProjectionOptions::default();
-    let mut pts = Vec::new();
-    let mut dirs = Vec::new();
+    let (mut exact_aims, mut checked) = (0, 0);
     for i in 0..4000 {
-        // Dyadic points and directions aimed exactly at cube edges and vertices.
+        // Points and directions aimed exactly at cube edges and vertices (s = 1 exactly).
         let p = [g.uni(-0.875, 0.875), g.uni(-0.875, 0.875), g.uni(-0.875, 0.875)];
         let corner = [if i % 2 == 0 { 1.0 } else { -1.0 }, if i % 3 == 0 { 1.0 } else { -1.0 }, g.uni(-1.0, 1.0)];
+        let aimed = i % 4 < 2;
         let aim = match i % 4 {
             0 => corner,
             1 => [corner[0], corner[1], if i % 8 == 1 { 1.0 } else { -1.0 }],
             _ => [g.uni(-1.0, 1.0), g.uni(-1.0, 1.0), g.uni(-1.0, 1.0)],
         };
-        pts.push(p);
-        dirs.push([aim[0] - p[0], aim[1] - p[1], aim[2] - p[2]]);
-    }
-    for (p, v) in pts.iter().zip(&dirs) {
+        let v = [aim[0] - p[0], aim[1] - p[1], aim[2] - p[2]];
         if v.iter().all(|&x| x == 0.0) {
             continue;
         }
-        match target.project_along(*p, *v, &opts).unwrap() {
-            Projection::Hit(h) => assert!(h.distance <= 3.5, "{p:?} {v:?}"),
-            Projection::NoHit => panic!("line through {p:?} along {v:?} slipped through"),
+        let got = target.project_along(p, v, &opts).unwrap();
+        let brute = target.project_along_brute(p, v, &opts).unwrap();
+        assert!(encode(&[got]).unwrap() == encode(&[brute]).unwrap(), "{p:?} {v:?}: hierarchy and brute force differ");
+        let Projection::Hit(h) = got else { panic!("line through {p:?} along {v:?} slipped through") };
+        let (plus, minus) = cube_exits(p, v);
+        let vl = norm(v);
+        let (dp, dm) = (plus * vl, -minus * vl);
+        if (dp - dm).abs() <= 1e-9 {
+            continue; // the two exits are equally near: either is right
+        }
+        checked += 1;
+        let (s_want, d_want) = if dp < dm { (plus, dp) } else { (minus, dm) };
+        let foot = [p[0] + s_want * v[0], p[1] + s_want * v[1], p[2] + s_want * v[2]];
+        assert!((h.distance - d_want).abs() <= 1e-12, "{p:?} {v:?}: distance {} want {d_want}", h.distance);
+        assert_eq!(h.signed_distance > 0.0, s_want > 0.0, "{p:?} {v:?}: wrong side");
+        for (k, (a, b)) in h.foot.iter().zip(&foot).enumerate() {
+            assert!((a - b).abs() <= 1e-12, "{p:?} {v:?}: foot {k}");
+        }
+        if aimed && dp < dm {
+            // The aimed edge or vertex point itself, exactly at s = 1.
+            exact_aims += 1;
+            assert!(h.foot.iter().zip(&aim).all(|(a, b)| (a - b).abs() <= 1e-12), "{p:?} {v:?}: not the aim");
+            assert!((h.distance - vl).abs() <= 1e-12);
         }
     }
-    // The same on the sphere, through the hierarchy.
+    assert!(checked > 3500 && exact_aims > 200, "{checked} {exact_aims}");
+
+    // The sphere through the hierarchy: the hit is at the nearer root of |p + s v| = 1 to
+    // within the mesh's sag (below 1e-3), and bit-identical to brute force on a subset.
     let (sv, st) = sphere_mesh();
     let (smesh, sbvh) = target_of(&sv, &st);
     let sphere = SignTarget::new(MeshTarget::new(&smesh, &sbvh).unwrap()).unwrap();
-    for _ in 0..1000 {
+    for k in 0..1000 {
         let p = [g.uni(-0.5, 0.5), g.uni(-0.5, 0.5), g.uni(-0.5, 0.5)];
         let v = [g.uni(-1.0, 1.0), g.uni(-1.0, 1.0), g.uni(-1.0, 1.0)];
-        match sphere.project_along(p, v, &opts).unwrap() {
-            Projection::Hit(h) => assert!(h.distance > 0.1 && h.distance < 1.9, "{p:?} {v:?}: {}", h.distance),
-            Projection::NoHit => panic!("line through {p:?} along {v:?} slipped through the sphere"),
+        let got = sphere.project_along(p, v, &opts).unwrap();
+        if k < 20 {
+            let brute = sphere.project_along_brute(p, v, &opts).unwrap();
+            assert!(encode(&[got]).unwrap() == encode(&[brute]).unwrap(), "{p:?} {v:?}: sphere brute force differs");
         }
+        let Projection::Hit(h) = got else { panic!("line through {p:?} along {v:?} slipped through the sphere") };
+        // Roots of (v.v) s^2 + 2 (p.v) s + (p.p - 1) = 0.
+        let (a, b, c) = (
+            (v[0] * v[0] + v[1] * v[1]) + v[2] * v[2],
+            (p[0] * v[0] + p[1] * v[1]) + p[2] * v[2],
+            ((p[0] * p[0] + p[1] * p[1]) + p[2] * p[2]) - 1.0,
+        );
+        let disc = sqrt(b * b - a * c);
+        let (sp, sm) = ((-b + disc) / a, (-b - disc) / a);
+        let vl = sqrt(a);
+        let (dp, dm) = (sp * vl, -sm * vl);
+        if (dp - dm).abs() <= 1e-2 {
+            continue;
+        }
+        let (s_want, d_want) = if dp < dm { (sp, dp) } else { (sm, dm) };
+        assert_eq!(h.signed_distance > 0.0, s_want > 0.0, "{p:?} {v:?}: wrong side of the sphere");
+        assert!((h.distance - d_want).abs() <= 1e-3, "{p:?} {v:?}: distance {} want {d_want}", h.distance);
     }
 }
 
@@ -595,8 +699,11 @@ fn max_distance_and_subset_apply_to_closest_point_projection() {
     // A subset built for another triangle count is refused per point.
     let wrong = TriangleSubset::new(&ids, 13).unwrap();
     let o = ProjectionOptions { subset: Some(&wrong), ..ProjectionOptions::default() };
-    let e = project_batch(&points, &target, &o, &cfg(1, 64), &never()).unwrap_err();
+    let probe = Probe::new(&target);
+    let e = project_batch(&points, &probe, &o, &cfg(1, 64), &never()).unwrap_err();
     assert_eq!(e.code(), "subset_mismatch");
+    assert!(matches!(e, BatchError::InvalidOptions(_)), "{e:?}");
+    assert_eq!(probe.calls.load(Ordering::SeqCst), 0, "refused before any point");
 }
 
 #[test]

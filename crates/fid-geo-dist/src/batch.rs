@@ -26,7 +26,9 @@
 //! 2. The configuration: `1 <= threads <= MAX_THREADS`, and a block size that is a positive
 //!    multiple of 64 and at most [`MAX_BLOCK`].
 //! 3. The options: `max_distance` finite and `>= 0`; `direction` finite, within
-//!    [`COORD_LIMIT`] and not zero.
+//!    [`COORD_LIMIT`] and not zero; then the target's own check
+//!    ([`ProjectionTarget::check_options`]; for a mesh, a subset built for another triangle
+//!    count is [`BatchError::InvalidOptions`] with `subset_mismatch`).
 //! 4. Every point, in index order: finite ([`BatchError::NonFiniteQuery`]) and within
 //!    [`COORD_LIMIT`] ([`BatchError::QueryOutOfRange`]).
 //! 5. The result buffer is allocated with `try_reserve` ([`BatchError::AllocationFailed`]).
@@ -227,9 +229,18 @@ impl fmt::Display for ProjectError {
 impl std::error::Error for ProjectError {}
 
 /// A geometry points can be projected onto.
+///
+/// Implementations must not panic on any input: every refusal is a returned
+/// [`ProjectError`] (CONSTITUTION §8). [`project_batch`] calls them from worker threads, and
+/// a panicking worker is reported as [`BatchError::WorkerFailed`], not propagated.
 pub trait ProjectionTarget: Sync {
     /// The frame the target's coordinates are in.
     fn frame(&self) -> FrameRef;
+    /// Checks the options against the target once, before any point is projected (for a
+    /// mesh: a subset built for the mesh's triangle count). The default accepts everything.
+    fn check_options(&self, _opts: &ProjectionOptions<'_, '_>) -> Result<(), ProjectError> {
+        Ok(())
+    }
     /// The closest point to `p` under `opts` (its `direction` is ignored).
     fn project(&self, p: V3, opts: &ProjectionOptions<'_, '_>) -> Result<Projection, ProjectError>;
     /// The nearest intersection of the line `p + s v` with the target under `opts`.
@@ -294,6 +305,8 @@ pub enum BatchError {
         /// The error.
         error: ProjectError,
     },
+    /// The target refused the options ([`ProjectionTarget::check_options`]).
+    InvalidOptions(ProjectError),
     /// A worker thread or lock failed (never expected).
     WorkerFailed,
 }
@@ -312,6 +325,7 @@ impl BatchError {
             BatchError::InvalidThreads { .. } => "invalid_threads",
             BatchError::AllocationFailed { .. } => "allocation_failed",
             BatchError::Point { error, .. } => error.code(),
+            BatchError::InvalidOptions(e) => e.code(),
             BatchError::WorkerFailed => "worker_failed",
         }
     }
@@ -332,6 +346,7 @@ impl fmt::Display for BatchError {
             BatchError::InvalidThreads { threads } => write!(f, "thread count {threads} is not in 1..=256"),
             BatchError::AllocationFailed { bytes } => write!(f, "allocation of {bytes} bytes failed"),
             BatchError::Point { index, error } => write!(f, "point {index}: {error}"),
+            BatchError::InvalidOptions(e) => write!(f, "options: {e}"),
             BatchError::WorkerFailed => write!(f, "a worker thread failed"),
         }
     }
@@ -470,15 +485,10 @@ impl SignTarget<'_> {
         let sh = shear(&w);
         let wlen = fid_num::f::sqrt((w[0] * w[0] + w[1] * w[1]) + w[2] * w[2])
             .map_err(|_| ProjectError::Sign(SignError::Inconsistent))?;
-        let candidates: Vec<u64> = if brute {
-            (0..mesh.triangle_count()).collect()
-        } else {
-            target.bvh().ray(p, w, -COORD_LIMIT, COORD_LIMIT).map_err(DistError::Bvh)?
-        };
         let mut best: Option<(f64, f64, u64)> = None;
-        for t in candidates {
+        let mut consider = |t: u64| -> Result<(), ProjectError> {
             if opts.subset.is_some_and(|s| !s.contains(t)) {
-                continue;
+                return Ok(());
             }
             let tri = corners(mesh, t)?;
             if let Some(param) = line_triangle(&p, &sh, &tri) {
@@ -490,6 +500,16 @@ impl SignTarget<'_> {
                 if better {
                     best = Some((at, param, t));
                 }
+            }
+            Ok(())
+        };
+        if brute {
+            for t in 0..mesh.triangle_count() {
+                consider(t)?;
+            }
+        } else {
+            for t in target.bvh().ray(p, w, -COORD_LIMIT, COORD_LIMIT).map_err(DistError::Bvh)? {
+                consider(t)?;
             }
         }
         let Some((at, param, tri)) = best else {
@@ -514,6 +534,15 @@ impl SignTarget<'_> {
 impl ProjectionTarget for SignTarget<'_> {
     fn frame(&self) -> FrameRef {
         self.target().mesh().frame()
+    }
+
+    fn check_options(&self, opts: &ProjectionOptions<'_, '_>) -> Result<(), ProjectError> {
+        match opts.subset {
+            Some(s) if s.triangle_count() != self.target().mesh().triangle_count() => {
+                Err(DistError::SubsetMismatch.into())
+            }
+            _ => Ok(()),
+        }
     }
 
     fn project(&self, p: V3, opts: &ProjectionOptions<'_, '_>) -> Result<Projection, ProjectError> {
@@ -563,6 +592,7 @@ pub fn project_batch<T: ProjectionTarget + ?Sized>(
     if let Some(v) = &opts.direction {
         check_direction(v).map_err(|_| BatchError::InvalidDirection)?;
     }
+    target.check_options(opts).map_err(BatchError::InvalidOptions)?;
     let (xs, ys, zs) = (points.x(), points.y(), points.z());
     let n = xs.len();
     if ys.len() != n || zs.len() != n {
