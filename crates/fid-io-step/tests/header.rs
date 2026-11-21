@@ -6,17 +6,23 @@
 
 use fid_canon::CValue;
 use fid_io_reg::prov::{principal_commit, LengthUnit, OsSalts, PrincipalDraft, PrincipalKind};
+use fid_io_reg::ProvError;
 use fid_io_reg::{
     BoundedSource, Budget, Detection, Direction, EffectiveOptions, FormatDescriptor, FormatId, HashingSource,
-    LimitRequest, Matcher, Origin, Phase, Principal, ReaderId, ReaderInfo, Registry, ReportBuilder, Signature,
-    SourceProvenance, UnitSource, UntrustedText, VersionRange, VersionToken,
+    LimitRequest, Matcher, Origin, Phase, Principal, ProvenanceBuilder, ReaderId, ReaderInfo, Registry, ReportBuilder,
+    Signature, SourceProvenance, UnitResolution, UnitSource, UntrustedText, VersionRange, VersionToken,
 };
-use fid_io_step::header::{HeaderBound, MAX_HEADER_LIST_ITEMS, MAX_UNITS_PER_CONTEXT};
+use fid_io_step::header::{
+    HeaderBound, LEXEME_ENTRY_COST, MAX_HEADER_LIST_ITEMS, MAX_NUMBER_LEXEME_BYTES, MAX_NUMBER_TEXT_BYTES,
+    MAX_PARTS_READ, MAX_UNCERTAINTIES_PER_CONTEXT, MAX_UNITS_PER_CONTEXT, UNCERTAINTY_REEXPRESSED,
+};
 use fid_io_step::{
     parse, resolve_header, AngleUnit, HeaderError, HeaderOptions, StepHeaderInfo, StepLengthUnit, StepSchema, StepText,
+    WarningDetail,
 };
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 fn dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/io/cad/step/hdr")
@@ -54,7 +60,12 @@ fn unhex(h: &str) -> String {
 /// Renders a result in the oracle's line format. Text the crate offers only as untrusted
 /// values (the originating system, a refused identifier) is compared with the oracle's hex
 /// form by equality and written back as that hex when it matches.
-fn render(result: &Result<StepHeaderInfo, HeaderError>, want: &[String]) -> Vec<String> {
+fn render(
+    result: &Result<StepHeaderInfo, HeaderError>,
+    want: &[String],
+    bytes: &[u8],
+    o: &HeaderOptions,
+) -> Vec<String> {
     let want_hex = |tag: &str| -> Option<String> {
         want.iter().find_map(|l| l.split(tag).nth(1).map(|h| h.split(' ').next().unwrap().to_string()))
     };
@@ -87,6 +98,7 @@ fn render(result: &Result<StepHeaderInfo, HeaderError>, want: &[String]) -> Vec<
             for w in &info.warnings {
                 out.push(format!("warning {} {}", w.entity, w.code));
             }
+            out.extend(render_provenance(info, bytes, o));
         }
         Err(e) => {
             let mut line = format!("error {}", e.code());
@@ -104,6 +116,47 @@ fn render(result: &Result<StepHeaderInfo, HeaderError>, want: &[String]) -> Vec<
     out
 }
 
+/// The provenance lines of the oracle: the record's unit, source and `unit_overridden`, then
+/// its unit items in key order.
+fn render_provenance(info: &StepHeaderInfo, bytes: &[u8], o: &HeaderOptions) -> Vec<String> {
+    let unit = match info.provenance_unit(o) {
+        Ok(u) => u,
+        Err(e) => {
+            let mut line = format!("prov error {}", e.code());
+            if let Some(n) = e.entity() {
+                line.push_str(&format!(" entity {n}"));
+            }
+            return vec![line];
+        }
+    };
+    let mut out = vec![format!(
+        "prov unit {} source {} overridden {}",
+        unit.unit().symbol(),
+        unit.source().as_str(),
+        unit.overridden()
+    )];
+    let mut b = builder(bytes, unit);
+    if let Err(e) = info.record_provenance(&mut b) {
+        out.push(format!("prov record_error {}", e.code()));
+        return out;
+    }
+    let record = b.build();
+    let json = String::from_utf8(record.canonical_bytes().unwrap()).unwrap();
+    assert!(json.contains(&format!(r#""unit_overridden":{}"#, unit.overridden())), "{json}");
+    let declared = match record.to_cvalue() {
+        CValue::Obj(fields) => fields.get("declared").cloned(),
+        _ => None,
+    };
+    let Some(CValue::Obj(declared)) = declared else { panic!("no declared object") };
+    for (k, v) in &declared {
+        if k == "step.contexts" || k == "step.unitless_contexts" || k.starts_with("step.units.") {
+            let CValue::Str(v) = v else { panic!("{k}") };
+            out.push(format!("declared {k} {v}"));
+        }
+    }
+    out
+}
+
 #[test]
 fn every_oracle_case_matches() {
     let text = String::from_utf8(read("expected.txt")).unwrap();
@@ -115,13 +168,15 @@ fn every_oracle_case_matches() {
             blocks.last_mut().unwrap().1.push(line.to_string());
         }
     }
-    assert_eq!(blocks.len(), 25);
+    assert_eq!(blocks.len(), 34);
     for (head, want) in &blocks {
         let mut it = head.split(' ');
         let name = it.next().unwrap();
         let u = unit(it.next().unwrap().strip_prefix("unit=").unwrap());
         let ov = it.next().unwrap() == "override=true";
-        let got = render(&resolve(name, u, ov), want);
+        let bytes = read(name);
+        let o = opts(u, ov);
+        let got = render(&resolve_header(&parse(&bytes).unwrap(), &o), want, &bytes, &o);
         assert_eq!(&got, want, "{head}");
     }
 }
@@ -192,6 +247,12 @@ fn ac4_no_unit_needs_a_caller_unit_which_is_recorded_as_override() {
 // ------------------------------------------------------------------ REQ-004 provenance
 
 fn provenance(bytes: &[u8], info: &StepHeaderInfo, o: &HeaderOptions) -> SourceProvenance {
+    let mut b = builder(bytes, info.provenance_unit(o).unwrap());
+    info.record_provenance(&mut b).unwrap();
+    b.build()
+}
+
+fn builder(bytes: &[u8], unit: UnitResolution) -> ProvenanceBuilder {
     let budget = Budget::new(Principal::Agent, &LimitRequest::default()).unwrap();
     let src = HashingSource::new(BoundedSource::new(std::io::Cursor::new(bytes.to_vec()), budget)).unwrap();
     let (digest, _) = src.finish().unwrap();
@@ -214,16 +275,7 @@ fn provenance(bytes: &[u8], info: &StepHeaderInfo, o: &HeaderOptions) -> SourceP
     let draft =
         PrincipalDraft { kind: PrincipalKind::Agent, identity: CValue::Str("agent-7".into()), on_behalf_of: None };
     let principal = principal_commit(&draft, &mut OsSalts).unwrap();
-    let mut b = SourceProvenance::builder(
-        digest,
-        detection,
-        reader,
-        principal,
-        EffectiveOptions::empty(),
-        info.provenance_unit(o).unwrap(),
-    );
-    info.record_provenance(&mut b).unwrap();
-    b.build()
+    SourceProvenance::builder(digest, detection, reader, principal, EffectiveOptions::empty(), unit)
 }
 
 fn declared(record: &SourceProvenance, key: &str) -> UntrustedText {
@@ -247,7 +299,7 @@ fn req004_schema_units_uncertainty_and_originating_system_are_recorded() {
     assert_eq!(
         declared(&record, "step.units.group_1"),
         UntrustedText::new(
-            "length=mm factor_m=0.001 source=declared angle=radian uncertainty=1.E-06 mm geometry=true \
+            "length=mm factor_m=0.001 source=declared angle=radian uncertainty=1e-6 mm geometry=true \
              contexts=1 first=#14"
         )
     );
@@ -515,7 +567,7 @@ fn fuzz_mutations_of_every_fixture_never_panic() {
         .filter(|n| n.ends_with(".stp"))
         .collect();
     names.sort();
-    assert_eq!(names.len(), 19);
+    assert_eq!(names.len(), 24);
     let mut rng = Rng(0x9E37_79B9_7F4A_7C15);
     let mut resolved = 0;
     for name in &names {
@@ -579,4 +631,344 @@ fn random_unit_graphs_never_panic_or_loop() {
         resolved += exercise(wrap(NAME, &body).as_bytes());
     }
     assert!(resolved > 0);
+}
+
+// ------------------------------------------------------------------ review of #377
+
+/// A geometry context `#n` over the units `units`, with uncertainties `unc`, and a shape `#n+1`
+/// that refers to it.
+fn geo_ctx(n: u64, units: &str, unc: &str) -> String {
+    let unc = if unc.is_empty() { String::new() } else { format!("GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT(({unc}))") };
+    format!(
+        "#{n}=(GEOMETRIC_REPRESENTATION_CONTEXT(3){unc}GLOBAL_UNIT_ASSIGNED_CONTEXT(({units}))REPRESENTATION_CONTEXT('',''));\n\
+         #{}=SHAPE_REPRESENTATION('',(),#{n});\n",
+        n + 1
+    )
+}
+
+const IN: &str = "#11=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT($,.METRE.));\n\
+                  #12=LENGTH_MEASURE_WITH_UNIT(LENGTH_MEASURE(0.0254),#11);\n\
+                  #13=(CONVERSION_BASED_UNIT('INCH',#12)LENGTH_UNIT()NAMED_UNIT(*));";
+
+#[test]
+fn an_override_of_a_non_primary_context_marks_the_record_overridden() {
+    // multi_context.stp: #30 declares mm (primary), #31 declares um. With unit=mm and
+    // override, #31's geometry is rescaled 1000x, so the record must say so.
+    let bytes = read("multi_context.stp");
+    let o = opts(Some(LengthUnit::Mm), true);
+    let info = resolve_header(&parse(&bytes).unwrap(), &o).unwrap();
+    assert_eq!(info.primary_context().unwrap().source, UnitSource::Declared);
+    assert_eq!(info.contexts[&31].source, UnitSource::Override);
+    let unit = info.provenance_unit(&o).unwrap();
+    assert!(unit.overridden());
+    assert_eq!(unit.source(), UnitSource::Override);
+    assert_eq!(unit.unit(), LengthUnit::Mm);
+    let record = provenance(&bytes, &info, &o);
+    let json = String::from_utf8(record.canonical_bytes().unwrap()).unwrap();
+    assert!(json.contains(r#""unit_overridden":true"#), "{json}");
+    assert_eq!(declared(&record, "step.units.not_declared"), UntrustedText::new("contexts=1 override=1 caller=0"));
+    assert_eq!(declared(&record, "step.units.not_declared_1"), UntrustedText::new("#31"));
+}
+
+#[test]
+fn a_caller_filled_non_primary_context_marks_the_record_overridden() {
+    // partial_unit.stp: #30 declares mm (primary), #31 owns geometry and declares none.
+    let bytes = read("partial_unit.stp");
+    let o = opts(Some(LengthUnit::Mm), false);
+    let info = resolve_header(&parse(&bytes).unwrap(), &o).unwrap();
+    assert_eq!(info.primary_context().unwrap().context, 30);
+    assert_eq!(info.contexts[&30].source, UnitSource::Declared);
+    assert_eq!(info.contexts[&31].source, UnitSource::Caller);
+    let unit = info.provenance_unit(&o).unwrap();
+    assert!(unit.overridden());
+    assert_eq!(unit.source(), UnitSource::Caller);
+    let record = provenance(&bytes, &info, &o);
+    let json = String::from_utf8(record.canonical_bytes().unwrap()).unwrap();
+    assert!(json.contains(r#""unit_overridden":true"#), "{json}");
+    assert!(json.contains(r#""unit_source":"caller""#), "{json}");
+    assert_eq!(declared(&record, "step.units.not_declared"), UntrustedText::new("contexts=1 override=0 caller=1"));
+    assert_eq!(declared(&record, "step.units.not_declared_1"), UntrustedText::new("#31"));
+    // The same file with every unit declared as given: not overridden.
+    let ok = resolve("ap242_mm.stp", Some(LengthUnit::Mm), false).unwrap();
+    assert!(!ok.provenance_unit(&opts(Some(LengthUnit::Mm), false)).unwrap().overridden());
+    assert!(ok.not_declared().is_empty());
+}
+
+#[test]
+fn not_declared_contexts_are_written_as_runs_and_split_into_pieces() {
+    // #101, #103 mm; #105 in (declared as given); #107, #109 mm. Override to inch.
+    let mut body = format!("{MM}\n{IN}\n");
+    for (n, u) in [(101, "#10"), (103, "#10"), (105, "#13"), (107, "#10"), (109, "#10")] {
+        body.push_str(&geo_ctx(n, u, ""));
+    }
+    let o = opts(Some(LengthUnit::In), true);
+    let info = run(&wrap(NAME, &body), &o).unwrap();
+    assert_eq!(info.not_declared_runs(), vec!["#101..#103,#107..#109".to_string()]);
+
+    // 3,000 contexts alternating override and declared: 1,500 runs over several pieces.
+    let mut body = format!("{MM}\n{IN}\n");
+    for i in 0..3000u64 {
+        body.push_str(&geo_ctx(1000 + 2 * i, if i % 2 == 0 { "#10" } else { "#13" }, ""));
+    }
+    let info = run(&wrap(NAME, &body), &o).unwrap();
+    let pieces = info.not_declared_runs();
+    assert!(pieces.len() > 1, "{}", pieces.len());
+    let mut listed = Vec::new();
+    for p in &pieces {
+        assert!(p.len() <= fid_io_reg::prov::MAX_TEXT_BYTES);
+        for run in p.split(',') {
+            assert!(!run.contains(".."), "{run}");
+            listed.push(run.trim_start_matches('#').parse::<u64>().unwrap());
+        }
+    }
+    let want: Vec<u64> = (0..3000u64).filter(|i| i % 2 == 0).map(|i| 1000 + 2 * i).collect();
+    assert_eq!(listed, want);
+    let mut b = builder(b"ISO-10303-21;", info.provenance_unit(&o).unwrap());
+    info.record_provenance(&mut b).unwrap();
+}
+
+#[test]
+fn an_override_re_expresses_an_uncertainty_in_the_declared_unit() {
+    let info = resolve("ap242_mm.stp", Some(LengthUnit::In), true).unwrap();
+    let u = info.contexts[&14].uncertainty.as_ref().unwrap();
+    assert_eq!(u.value.to_bits(), 1e-6f64.to_bits(), "the number is kept, as for the geometry");
+    assert_eq!(u.unit, StepLengthUnit::In);
+    assert_eq!(u.length_factor_m, 0.0254);
+    assert_eq!(u.reexpressed_from, Some(StepLengthUnit::Mm));
+    assert_eq!(info.warnings.len(), 1);
+    let w = &info.warnings[0];
+    assert_eq!((w.entity, w.code), (14, UNCERTAINTY_REEXPRESSED));
+    assert_eq!(w.detail, WarningDetail::Reexpressed { from: StepLengthUnit::Mm, to: StepLengthUnit::In });
+    let mut report = ReportBuilder::new();
+    info.record_warnings(&mut report).unwrap();
+    assert_eq!(report.warnings_total(), 1);
+    // Without an override nothing moves.
+    let plain = resolve("ap242_mm.stp", None, false).unwrap();
+    assert_eq!(plain.contexts[&14].uncertainty.as_ref().unwrap().reexpressed_from, None);
+    // An uncertainty in a unit other than the declared one keeps it (#31's is in nm).
+    let multi = resolve("multi_context.stp", Some(LengthUnit::Mm), true).unwrap();
+    let u = multi.contexts[&31].uncertainty.as_ref().unwrap();
+    assert_eq!((u.unit, u.reexpressed_from), (StepLengthUnit::Nm, None));
+    assert!(multi.warnings.is_empty());
+}
+
+#[test]
+fn a_part_read_twice_is_malformed() {
+    let cases: Vec<(String, u64)> = vec![
+        // two GLOBAL_UNIT_ASSIGNED_CONTEXT parts
+        (
+            format!("{MM}\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNIT_ASSIGNED_CONTEXT((#10))GLOBAL_UNIT_ASSIGNED_CONTEXT((#10))REPRESENTATION_CONTEXT('',''));"),
+            14,
+        ),
+        // two GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT parts
+        (
+            format!("{MM}\n#13=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-06),#10,'','');\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#13))GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#13))GLOBAL_UNIT_ASSIGNED_CONTEXT((#10))REPRESENTATION_CONTEXT('',''));"),
+            14,
+        ),
+        // two GEOMETRIC_REPRESENTATION_CONTEXT parts
+        (
+            format!("{MM}\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GEOMETRIC_REPRESENTATION_CONTEXT(2)GLOBAL_UNIT_ASSIGNED_CONTEXT((#10))REPRESENTATION_CONTEXT('',''));"),
+            14,
+        ),
+        // two SI_UNIT parts
+        (
+            "#10=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.)SI_UNIT($,.METRE.));\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNIT_ASSIGNED_CONTEXT((#10))REPRESENTATION_CONTEXT('',''));".to_string(),
+            10,
+        ),
+        // two LENGTH_UNIT parts
+        (
+            "#10=(LENGTH_UNIT()LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.));\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNIT_ASSIGNED_CONTEXT((#10))REPRESENTATION_CONTEXT('',''));".to_string(),
+            10,
+        ),
+        // two CONVERSION_BASED_UNIT parts
+        (
+            "#11=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT($,.METRE.));\n#12=LENGTH_MEASURE_WITH_UNIT(LENGTH_MEASURE(0.0254),#11);\n#13=(CONVERSION_BASED_UNIT('INCH',#12)CONVERSION_BASED_UNIT('FOOT',#12)LENGTH_UNIT()NAMED_UNIT(*));\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNIT_ASSIGNED_CONTEXT((#13))REPRESENTATION_CONTEXT('',''));".to_string(),
+            13,
+        ),
+        // a conversion base with two SI_UNIT parts
+        (
+            "#11=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT($,.METRE.)SI_UNIT(.MILLI.,.METRE.));\n#12=LENGTH_MEASURE_WITH_UNIT(LENGTH_MEASURE(0.0254),#11);\n#13=(CONVERSION_BASED_UNIT('INCH',#12)LENGTH_UNIT()NAMED_UNIT(*));\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNIT_ASSIGNED_CONTEXT((#13))REPRESENTATION_CONTEXT('',''));".to_string(),
+            11,
+        ),
+        // a measure part name twice
+        (
+            format!("{MM}\n#13=(MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-06),#10)MEASURE_WITH_UNIT('a','b'));\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#13))GLOBAL_UNIT_ASSIGNED_CONTEXT((#10))REPRESENTATION_CONTEXT('',''));"),
+            13,
+        ),
+        // two value-carrying measure parts
+        (
+            format!("{MM}\n#13=(LENGTH_MEASURE_WITH_UNIT()MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-06),#10)UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-03),#10,'',''));\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#13))GLOBAL_UNIT_ASSIGNED_CONTEXT((#10))REPRESENTATION_CONTEXT('',''));"),
+            13,
+        ),
+    ];
+    for (body, entity) in &cases {
+        let e = run(&wrap(NAME, body), &HeaderOptions::default()).unwrap_err();
+        assert_eq!(e, HeaderError::Malformed { entity: Some(*entity), reason: "duplicate_part" }, "{body}");
+    }
+}
+
+/// `(NAMED_UNIT(*)SI_UNIT($,.STERADIAN.)SOLID_ANGLE_UNIT() + fillers)` with `parts` parts: a
+/// unit this module classifies as neither length nor angle.
+fn fat_unit(n: u64, parts: usize) -> String {
+    format!("#{n}=(NAMED_UNIT(*)SI_UNIT($,.STERADIAN.)SOLID_ANGLE_UNIT(){});", "FILLER_PART()".repeat(parts - 3))
+}
+
+#[test]
+fn a_fat_complex_instance_is_refused_not_scanned() {
+    let refs = vec!["#10"; MAX_UNITS_PER_CONTEXT].join(",");
+    let body = format!(
+        "{}\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNIT_ASSIGNED_CONTEXT(({refs}))REPRESENTATION_CONTEXT('',''));",
+        fat_unit(10, 100_000)
+    );
+    let e = run(&wrap(NAME, &body), &HeaderOptions::default()).unwrap_err();
+    assert_eq!(e, HeaderError::LimitExceeded { bound: HeaderBound::Parts, value: MAX_PARTS_READ as u64 });
+    // One part over the bound is refused, the bound itself is read.
+    let over = format!(
+        "{}\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNIT_ASSIGNED_CONTEXT((#10))REPRESENTATION_CONTEXT('',''));",
+        fat_unit(10, MAX_PARTS_READ + 1)
+    );
+    assert_eq!(run(&wrap(NAME, &over), &HeaderOptions::default()).unwrap_err().code(), "limit_exceeded");
+    let at = over.replace(&fat_unit(10, MAX_PARTS_READ + 1), &fat_unit(10, MAX_PARTS_READ));
+    assert!(run(&wrap(NAME, &at), &HeaderOptions::default()).is_ok());
+    // A fat measure and a fat context are refused the same way.
+    let measure = format!(
+        "{MM}\n#13=(MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-06),#10){});\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#13))GLOBAL_UNIT_ASSIGNED_CONTEXT((#10))REPRESENTATION_CONTEXT('',''));",
+        "FILLER_PART()".repeat(MAX_PARTS_READ)
+    );
+    let e = run(&wrap(NAME, &measure), &HeaderOptions::default()).unwrap_err();
+    assert_eq!(e, HeaderError::LimitExceeded { bound: HeaderBound::Parts, value: MAX_PARTS_READ as u64 });
+    let context = format!(
+        "{MM}\n#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNIT_ASSIGNED_CONTEXT((#10)){}REPRESENTATION_CONTEXT('',''));",
+        "FILLER_PART()".repeat(MAX_PARTS_READ)
+    );
+    let e = run(&wrap(NAME, &context), &HeaderOptions::default()).unwrap_err();
+    assert_eq!(e, HeaderError::LimitExceeded { bound: HeaderBound::Parts, value: MAX_PARTS_READ as u64 });
+}
+
+#[test]
+fn shared_units_and_measures_are_evaluated_once() {
+    // 10,000 contexts, each listing a 64-part unit 63 times (plus mm) and a 64-part
+    // uncertainty measure (over a non-length unit, so every entry is read) 64 times. Without
+    // memoisation this is ~10^9 part-name comparisons; with it, one evaluation per entity.
+    let measure =
+        format!("#12=(MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-06),#10){});", "FILLER_PART()".repeat(MAX_PARTS_READ - 1));
+    let units = std::iter::once("#11")
+        .chain(std::iter::repeat_n("#10", MAX_UNITS_PER_CONTEXT - 1))
+        .collect::<Vec<_>>()
+        .join(",");
+    let unc = vec!["#12"; MAX_UNCERTAINTIES_PER_CONTEXT].join(",");
+    let mut body = format!(
+        "{}\n#11=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.));\n{measure}\n",
+        fat_unit(10, MAX_PARTS_READ)
+    );
+    for i in 0..10_000u64 {
+        body.push_str(&format!(
+            "#{}=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT(({unc}))GLOBAL_UNIT_ASSIGNED_CONTEXT(({units}))REPRESENTATION_CONTEXT('',''));\n",
+            100 + i
+        ));
+    }
+    let file = parse(wrap(NAME, &body).as_bytes()).unwrap();
+    let started = std::time::Instant::now();
+    let info = resolve_header(&file, &HeaderOptions::default()).unwrap();
+    let took = started.elapsed();
+    assert_eq!(info.contexts.len(), 10_000);
+    assert!(info.contexts.values().all(|c| c.length_unit == StepLengthUnit::Mm && c.uncertainty.is_none()));
+    // About 0.4 s in a local debug build with memoisation, about 7 s without it.
+    assert!(took < std::time::Duration::from_secs(3), "{took:?}");
+}
+
+#[test]
+fn authored_tokens_are_shared_capped_and_budgeted() {
+    // Two contexts over one measure, and a third over another measure with the same token:
+    // one shared copy.
+    let mut body = format!(
+        "{MM}\n#12=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-06),#10,'','');\n\
+         #13=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-06),#10,'','');\n"
+    );
+    body.push_str(&geo_ctx(20, "#10", "#12"));
+    body.push_str(&geo_ctx(30, "#10", "#12"));
+    body.push_str(&geo_ctx(40, "#10", "#13"));
+    let info = run(&wrap(NAME, &body), &HeaderOptions::default()).unwrap();
+    let a = &info.contexts[&20].uncertainty.as_ref().unwrap().authored;
+    for c in [30, 40] {
+        assert!(Arc::ptr_eq(a, &info.contexts[&c].uncertainty.as_ref().unwrap().authored));
+    }
+    // A token over the cap.
+    let long = format!("1.{}E-06", "0".repeat(MAX_NUMBER_LEXEME_BYTES));
+    let body = format!(
+        "{MM}\n#12=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE({long}),#10,'','');\n{}",
+        geo_ctx(20, "#10", "#12")
+    );
+    let e = run(&wrap(NAME, &body), &HeaderOptions::default()).unwrap_err();
+    assert_eq!(
+        e,
+        HeaderError::LimitExceeded { bound: HeaderBound::NumberLexeme, value: MAX_NUMBER_LEXEME_BYTES as u64 }
+    );
+    // Many distinct tokens exhaust the budget.
+    let mut body = format!("{MM}\n");
+    let each = 100usize;
+    let count = MAX_NUMBER_TEXT_BYTES / (each + LEXEME_ENTRY_COST) + 2;
+    for i in 0..count {
+        let digits = format!("{i:0>width$}", width = each - 5);
+        body.push_str(&format!(
+            "#{}=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.{digits}E-6),#10,'','');\n",
+            100_000 + i
+        ));
+        body.push_str(&geo_ctx(200_000 + 2 * i as u64, "#10", &format!("#{}", 100_000 + i)));
+    }
+    let e = run(&wrap(NAME, &body), &HeaderOptions::default()).unwrap_err();
+    assert_eq!(e, HeaderError::LimitExceeded { bound: HeaderBound::NumberText, value: MAX_NUMBER_TEXT_BYTES as u64 });
+}
+
+#[test]
+fn lexeme_entry_cost_covers_its_allocation() {
+    assert!(LEXEME_ENTRY_COST >= 2 * std::mem::size_of::<usize>() + std::mem::size_of::<Arc<str>>());
+}
+
+#[test]
+fn provenance_groups_on_values_not_tokens() {
+    // 300 contexts whose equal uncertainties are written five ways: one group.
+    let tokens = ["1.E-06", "1.0E-06", "0.000001", "1.00E-6", "10.E-07"];
+    let mut body = format!("{MM}\n");
+    for (i, t) in tokens.iter().enumerate() {
+        body.push_str(&format!("#{}=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE({t}),#10,'','');\n", 20 + i));
+    }
+    for i in 0..300u64 {
+        body.push_str(&geo_ctx(1000 + 2 * i, "#10", &format!("#{}", 20 + i % 5)));
+    }
+    let o = HeaderOptions::default();
+    let info = run(&wrap(NAME, &body), &o).unwrap();
+    let groups = info.unit_groups();
+    assert_eq!(groups.len(), 1, "{groups:?}");
+    assert_eq!(groups[0].1, 300);
+    assert!(groups[0].0.contains("uncertainty=1e-6 mm"), "{}", groups[0].0);
+    let mut b = builder(b"ISO-10303-21;", info.provenance_unit(&o).unwrap());
+    info.record_provenance(&mut b).unwrap();
+
+    // 300 different values: more groups than IO.REG.PROV allows, a typed refusal before
+    // anything is declared.
+    let mut body = format!("{MM}\n");
+    for i in 0..300u64 {
+        body.push_str(&format!(
+            "#{}=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE({}.E-06),#10,'','');\n",
+            100_000 + i,
+            i + 1
+        ));
+        body.push_str(&geo_ctx(1000 + 2 * i, "#10", &format!("#{}", 100_000 + i)));
+    }
+    let info = run(&wrap(NAME, &body), &o).unwrap();
+    let mut b = builder(b"ISO-10303-21;", info.provenance_unit(&o).unwrap());
+    let e = info.record_provenance(&mut b).unwrap_err();
+    assert_eq!(e, ProvError::TooLarge { field: "step.units", limit: fid_io_reg::prov::MAX_DECLARED as u64 });
+    assert_eq!(e.code(), "too_large");
+    assert!(b.build().declared().is_empty());
+}
+
+#[test]
+fn a_negative_zero_uncertainty_reads_as_zero() {
+    let info = resolve("uncertainty_tokens.stp", None, false).unwrap();
+    let u = info.contexts[&32].uncertainty.as_ref().unwrap();
+    assert_eq!(&*u.authored, "-0.");
+    assert_eq!(u.value.to_bits(), 0);
+    assert_eq!(info.unit_groups().len(), 2);
 }

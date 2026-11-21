@@ -20,7 +20,18 @@ rules (spec/io/cad/step/hdr/NODE.md, including its "Pinned at build" section):
 - Uncertainty: the first GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT entry whose unit is a length
   unit; its authored lexeme and its unit's exact factor are recorded.
 - Effective unit per context: the IO.REG.PROV resolution table (declared / caller /
-  override, unit_required, unit_conflict).
+  override, unit_required, unit_conflict). Under an override, an uncertainty written in the
+  context's declared length unit moves to the effective unit (same number) and the report
+  gets a step_uncertainty_reexpressed warning.
+- A part the reader reads (SI_UNIT, CONVERSION_BASED_UNIT, LENGTH_UNIT, PLANE_ANGLE_UNIT,
+  GEOMETRIC_REPRESENTATION_CONTEXT, the two GLOBAL_*_ASSIGNED_CONTEXT parts, a
+  *MEASURE_WITH_UNIT part, or a second value-carrying measure part) appearing twice in one
+  instance is malformed (duplicate_part). A zero uncertainty of -0. reads as +0.
+- Provenance: the record's unit, its source and unit_overridden (true when any context
+  owning geometry, or the primary context, got its unit from the caller), and the unit
+  items step.contexts, step.unitless_contexts, step.units.mixed, step.units.group_<k>
+  (grouped on the parsed uncertainty value and unit, never the authored token) and
+  step.units.not_declared[_<k>].
 
 It writes the fixtures *.stp and expected.txt (one block per case).
 
@@ -228,6 +239,51 @@ FIXTURES["wrong_types.stp"] = step_file("wrong_types.stp", "SI_UNIT whose name i
     POINT, "#10=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,'METRE'));", ctx(14, [10]), shape(20, 14),
 ])
 
+FIXTURES["partial_unit.stp"] = step_file(
+    "partial_unit.stp", "Two geometry contexts: #30 declares mm, #31 declares no length unit.", one(SCHEMA_242), [
+        POINT, MM, RAD,
+        "#13=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-03),#10,'distance_accuracy_value','synthetic');",
+        ctx(30, [10, 11], [13]),
+        ctx(31, [11]),
+        shape(40, 30),
+        shape(41, 31),
+    ])
+
+FIXTURES["uncertainty_tokens.stp"] = step_file(
+    "uncertainty_tokens.stp", "Four mm contexts whose uncertainties differ only in how they are written.",
+    one(SCHEMA_242), [
+        POINT, MM,
+        "#13=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-06),#10,'distance_accuracy_value','a');",
+        "#14=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(0.0000010),#10,'distance_accuracy_value','b');",
+        "#15=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(-0.),#10,'distance_accuracy_value','c');",
+        "#16=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(0.0),#10,'distance_accuracy_value','d');",
+        ctx(30, [10], [13]),
+        ctx(31, [10], [14]),
+        ctx(32, [10], [15]),
+        ctx(33, [10], [16]),
+        shape(40, 30), shape(41, 31), shape(42, 32), shape(43, 33),
+    ])
+
+FIXTURES["dup_si_part.stp"] = step_file("dup_si_part.stp", "A length unit with two SI_UNIT parts.", one(SCHEMA_242), [
+    POINT, "#10=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.)SI_UNIT($,.METRE.));", ctx(14, [10]), shape(20, 14),
+])
+
+FIXTURES["dup_unit_context.stp"] = step_file(
+    "dup_unit_context.stp", "A context with two GLOBAL_UNIT_ASSIGNED_CONTEXT parts.", one(SCHEMA_242), [
+        POINT, MM, "#15=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MICRO.,.METRE.));",
+        "#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNIT_ASSIGNED_CONTEXT((#10))"
+        "GLOBAL_UNIT_ASSIGNED_CONTEXT((#15))REPRESENTATION_CONTEXT('ctx 14','synthetic'));",
+        shape(20, 14),
+    ])
+
+FIXTURES["dup_measure.stp"] = step_file(
+    "dup_measure.stp", "An uncertainty with two value-carrying measure parts.", one(SCHEMA_242), [
+        POINT, MM,
+        "#13=(LENGTH_MEASURE_WITH_UNIT()MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-06),#10)"
+        "UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-03),#10,'distance_accuracy_value','second value'));",
+        ctx(14, [10], [13]), shape(20, 14),
+    ])
+
 # (fixture, caller unit or None, override_unit)
 CASES = [
     ("ap242_mm.stp", None, False),
@@ -235,6 +291,7 @@ CASES = [
     ("ap242_mm.stp", "in", False),
     ("ap242_mm.stp", "in", True),
     ("ap214_inch.stp", None, False),
+    ("ap214_inch.stp", "mm", True),
     ("ap209.stp", None, False),
     ("no_unit.stp", None, False),
     ("no_unit.stp", "mm", False),
@@ -243,6 +300,14 @@ CASES = [
     ("ap203e2_foot_warn.stp", None, False),
     ("multi_context.stp", None, False),
     ("multi_context.stp", "ft", False),
+    ("multi_context.stp", "mm", True),
+    ("partial_unit.stp", None, False),
+    ("partial_unit.stp", "mm", False),
+    ("partial_unit.stp", "in", True),
+    ("uncertainty_tokens.stp", None, False),
+    ("dup_si_part.stp", None, False),
+    ("dup_unit_context.stp", None, False),
+    ("dup_measure.stp", None, False),
     ("evil_schema.stp", None, False),
     ("prefix_trap.stp", None, False),
     ("two_schemas.stp", None, False),
@@ -446,11 +511,11 @@ def header_record(header, name):
     return found[0][1]
 
 
-def part(parts, name):
-    for n, ps in parts:
-        if n == name:
-            return ps
-    return None
+def part(parts, name, entity=None):
+    found = [ps for n, ps in parts if n == name]
+    if len(found) > 1:
+        raise Bad("malformed", entity)
+    return found[0] if found else None
 
 
 def si_of(n, parts):
@@ -472,17 +537,26 @@ def si_of(n, parts):
 def measure(n, data):
     if n not in data:
         raise Bad("malformed", n)
-    for name, ps in data[n]:
-        if name.endswith("MEASURE_WITH_UNIT") and len(ps) >= 2 and ps[1][0] == "ref":
-            v = ps[0]
-            if v[0] == "typed":
-                v = v[2]
-            if v[0] == "real":
-                return v[1], v[2], ps[1][1]
-            if v[0] == "int":
-                return float(v[1]), str(v[1]), ps[1][1]
-            raise Bad("malformed", n)
-    raise Bad("malformed", n)
+    names = [name for name, _ in data[n] if name.endswith("MEASURE_WITH_UNIT")]
+    if len(set(names)) != len(names):
+        raise Bad("malformed", n)
+    carrying = [ps for name, ps in data[n]
+                if name.endswith("MEASURE_WITH_UNIT") and len(ps) >= 2 and ps[1][0] == "ref"]
+    if len(carrying) != 1:
+        raise Bad("malformed", n)
+    ps = carrying[0]
+    v = ps[0]
+    if v[0] == "typed":
+        v = v[2]
+    if v[0] == "real":
+        value, lexeme = v[1], v[2]
+    elif v[0] == "int":
+        value, lexeme = float(v[1]), str(v[1])
+    else:
+        raise Bad("malformed", n)
+    if value == 0:
+        value = 0.0  # -0. reads as +0.
+    return value, lexeme, ps[1][1]
 
 
 def classify(n, data, warnings, nested=False):
@@ -491,6 +565,9 @@ def classify(n, data, warnings, nested=False):
         raise Bad("malformed", n)
     parts = data[n]
     names = [p[0] for p in parts]
+    for read in ("SI_UNIT", "CONVERSION_BASED_UNIT", "LENGTH_UNIT", "PLANE_ANGLE_UNIT"):
+        if names.count(read) > 1:
+            raise Bad("malformed", n)
     is_len = "LENGTH_UNIT" in names
     is_ang = "PLANE_ANGLE_UNIT" in names
     if "SI_UNIT" in names:
@@ -575,7 +652,10 @@ def resolve(text, given, override):
     system = fname[5][1]
     if override and given is None:
         raise Bad("unit_required")
-    contexts = sorted(n for n, parts in data.items() if part(parts, "GEOMETRIC_REPRESENTATION_CONTEXT") is not None)
+    contexts = []
+    for n in sorted(data):
+        if part(data[n], "GEOMETRIC_REPRESENTATION_CONTEXT", n) is not None:
+            contexts.append(n)
     owned = set()
     for n, parts in data.items():
         for _, ps in parts:
@@ -588,7 +668,8 @@ def resolve(text, given, override):
     for c in contexts:
         parts = data[c]
         length = angle = None
-        gu = part(parts, "GLOBAL_UNIT_ASSIGNED_CONTEXT")
+        gu = part(parts, "GLOBAL_UNIT_ASSIGNED_CONTEXT", c)
+        gc = part(parts, "GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT", c)
         for item in (gu[0][1] if gu else []):
             k = classify(item[1], data, warnings)
             if k[0] == "length":
@@ -600,14 +681,13 @@ def resolve(text, given, override):
                     raise Bad("malformed", c)
                 angle = k[1]
         unc = None
-        gc = part(parts, "GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT")
         for item in (gc[0][1] if gc else []):
             value, lexeme, un = measure(item[1], data)
             k = classify(un, data, warnings)
             if k[0] == "length":
                 if value < 0:
                     raise Bad("malformed", item[1])
-                unc = (lexeme, k[1])
+                unc = (lexeme, value, k[1])
                 break
         geometry = c in owned
         if length is None and given is None:
@@ -623,16 +703,118 @@ def resolve(text, given, override):
             raise Bad("unit_conflict", c)
         else:
             eff, source = given, "override"
+        if source == "override" and unc is not None and unc[2] == length:
+            unc = (unc[0], unc[1], eff)
+            warnings.add((c, "step_uncertainty_reexpressed"))
         out.append((c, eff, angle, unc, source, geometry))
     lines = ["schema {}".format(schema), "system {}".format(system.encode("utf-8").hex())]
     for c, eff, angle, unc, source, geometry in out:
-        u = "none" if unc is None else "{} {}".format(unc[0], bits(float(EXACT[unc[1]])))
+        u = "none" if unc is None else "{} {}".format(unc[0], bits(float(EXACT[unc[2]])))
         lines.append("context {} unit {} factor {} angle {} uncertainty {} source {} geometry {}".format(
             c, eff, bits(float(EXACT[eff])), angle or "none", u, source, "true" if geometry else "false"))
     for c in unitless:
         lines.append("unitless {}".format(c))
     for n, code in sorted(warnings):
         lines.append("warning {} {}".format(n, code))
+    lines += provenance(out, unitless, given, override)
+    return lines
+
+
+# ---------------------------------------------------------------- provenance oracle
+
+DECIMAL = {"m": "1", "cm": "0.01", "mm": "0.001", "um": "0.000001", "nm": "0.000000001",
+           "in": "0.0254", "ft": "0.3048", "thou": "0.0000254"}
+MAX_DECLARED = 256
+MAX_TEXT_BYTES = 4096
+HEADER_ITEMS = 11  # step.schema .. step.implementation_level
+
+
+def shortest(x):
+    """The shortest round-trip decimal of a non-negative finite float, written the way the
+    leaf pins it: fixed with at least one fractional digit for 1e-4 <= x < 1e16 (and 0),
+    else '<mantissa>e<exponent>' with no '+' and no leading zeros in the exponent."""
+    r = repr(x)
+    if "e" in r:
+        mant, exp = r.split("e")
+        return "{}e{}".format(mant, int(exp))
+    return r
+
+
+def provenance(out, unitless, given, override):
+    # out rows: (context, effective, angle, (lexeme, value, unit) | None, source, geometry)
+    primary = next((r for r in out if r[5]), out[0] if out else None)
+    affected = [r for r in out if r[4] != "declared" and (r[5] or r is primary)]
+    try:
+        if affected:
+            g = affected[0][1]
+            if g == "cm":
+                raise Bad("step_unit_unsupported", affected[0][0])
+            unit, source = g, ("override" if any(r[4] == "override" for r in affected) else "caller")
+        elif primary is None:
+            if given is None:
+                raise Bad("unit_required")
+            unit, source = given, "caller"
+        else:
+            if primary[1] == "cm":
+                raise Bad("step_unit_unsupported", primary[0])
+            unit, source = primary[1], "declared"
+    except Bad as e:
+        line = "prov error {}".format(e.code)
+        if e.entity is not None:
+            line += " entity {}".format(e.entity)
+        return [line]
+    lines = ["prov unit {} source {} overridden {}".format(unit, source, "false" if source == "declared" else "true")]
+    items = {"step.contexts": str(len(out))}
+    if unitless:
+        items["step.unitless_contexts"] = str(len(unitless))
+    if len({r[1] for r in out if r[5]}) > 1:
+        items["step.units.mixed"] = "true"
+    groups = []
+    index = {}
+    for c, eff, angle, unc, src, geometry in out:
+        key = (eff, src, angle, None if unc is None else (unc[1], unc[2]), geometry)
+        if key in index:
+            groups[index[key]][1] += 1
+            continue
+        u = "none" if unc is None else "{} {}".format(shortest(unc[1]), unc[2])
+        sig = "length={} factor_m={} source={} angle={} uncertainty={} geometry={}".format(
+            eff, DECIMAL[eff], src, angle or "none", u, "true" if geometry else "false")
+        index[key] = len(groups)
+        groups.append([sig, 1, c])
+    for k, (sig, count, first) in enumerate(groups):
+        items["step.units.group_{}".format(k + 1)] = "{} contexts={} first=#{}".format(sig, count, first)
+    pieces = []
+    if affected:
+        ids = {r[0] for r in affected}
+        runs = []
+        prev_in = False
+        for r in out:
+            if r[0] in ids:
+                if prev_in:
+                    runs[-1][1] = r[0]
+                else:
+                    runs.append([r[0], r[0]])
+                prev_in = True
+            else:
+                prev_in = False
+        cur = ""
+        for a, b in runs:
+            run = "#{}".format(a) if a == b else "#{}..#{}".format(a, b)
+            if cur and len(cur) + 1 + len(run) > MAX_TEXT_BYTES:
+                pieces.append(cur)
+                cur = ""
+            cur = run if not cur else cur + "," + run
+        if cur:
+            pieces.append(cur)
+        n_over = sum(1 for r in affected if r[4] == "override")
+        items["step.units.not_declared"] = "contexts={} override={} caller={}".format(
+            len(affected), n_over, len(affected) - n_over)
+        for k, piece in enumerate(pieces):
+            items["step.units.not_declared_{}".format(k + 1)] = piece
+    if HEADER_ITEMS + len(items) > MAX_DECLARED:
+        return lines + ["prov record_error too_large"]
+    for key in sorted(items):
+        lines.append("declared {} {}".format(key, items[key]))
     return lines
 
 
@@ -640,7 +822,8 @@ def expected():
     out = ["# Expected results for the IO.CAD.STEP.HDR fixtures, written by make_cases.py.",
            "# Block: '== <fixture> unit=<symbol|none> override=<bool>', then the result lines.",
            "# factor: big-endian hex of the f64 nearest to the exact factor to metres.",
-           "# system: hex of the UTF-8 originating-system string."]
+           "# system: hex of the UTF-8 originating-system string.",
+           "# prov: the provenance record's unit, source and unit_overridden; declared: its unit items."]
     for name, given, override in CASES:
         out.append("== {} unit={} override={}".format(name, given or "none", "true" if override else "false"))
         try:

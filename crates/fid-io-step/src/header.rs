@@ -10,16 +10,21 @@
 //! interpreted. The walk is bounded: the number of contexts, units and uncertainties per
 //! context, and the total header text are limited ([`HeaderOptions`]), and unit references
 //! are followed at most two levels (a conversion-based unit, its measure, the SI base unit).
-//! There is no recursion and no panic; every refusal is a typed [`HeaderError`].
+//! Every unit and measure instance is classified once (memoised by entity number), the parts
+//! of each instance read are bounded ([`MAX_PARTS_READ`]), and authored number tokens are
+//! interned and charged to a byte budget ([`MAX_NUMBER_TEXT_BYTES`]), so the work and the
+//! memory stay linear in the file. There is no recursion and no panic; every refusal is a
+//! typed [`HeaderError`].
 
 use crate::{Instance, P21File, Param, StepText};
-use fid_io_reg::prov::LengthUnit;
+use fid_io_reg::prov::{LengthUnit, MAX_DECLARED, MAX_TEXT_BYTES};
 use fid_io_reg::{
     resolve_unit, Code, IoError, Position, ProvError, ProvenanceBuilder, ReportBuilder, ReportError, ReportPos,
     UnitResolution, UnitSource, UntrustedText,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::sync::Arc;
 
 /// Default limit on the number of geometric representation contexts.
 pub const DEFAULT_MAX_CONTEXTS: usize = 100_000;
@@ -32,6 +37,19 @@ pub const MAX_UNITS_PER_CONTEXT: usize = 64;
 pub const MAX_UNCERTAINTIES_PER_CONTEXT: usize = 64;
 /// Limit on the items of one header string list (`author`, `organization`, `description`).
 pub const MAX_HEADER_LIST_ITEMS: usize = 256;
+/// Limit on the parts of one instance this module reads (a context, a unit or a measure).
+/// Complex instances in practice have a handful; more is refused, not scanned.
+pub const MAX_PARTS_READ: usize = 64;
+/// Limit on one authored number token kept for provenance (an uncertainty or a factor).
+pub const MAX_NUMBER_LEXEME_BYTES: usize = 128;
+/// Budget for the distinct authored number tokens kept, each charged its length plus
+/// [`LEXEME_ENTRY_COST`]. Equal tokens are shared, so this counts distinct tokens only.
+pub const MAX_NUMBER_TEXT_BYTES: usize = 256 * 1024;
+/// Nominal bytes charged per distinct authored token on top of its length: the `Arc`
+/// header (two counters) and the interning set's entry.
+pub const LEXEME_ENTRY_COST: usize = 64;
+/// The import-report warning code for an uncertainty re-expressed in the override unit.
+pub const UNCERTAINTY_REEXPRESSED: &str = "step_uncertainty_reexpressed";
 /// Relative difference above which a conversion-based length unit's file factor is
 /// reported (REQ-IO.CAD.STEP.HDR-002).
 pub const LENGTH_FACTOR_TOLERANCE: f64 = 1e-12;
@@ -205,17 +223,21 @@ impl AngleUnit {
     }
 }
 
-/// A context's declared length uncertainty, in the file's units.
+/// A context's declared length uncertainty.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Uncertainty {
-    /// The value as parsed.
+    /// The value as parsed (a zero is always `+0.0`).
     pub value: f64,
-    /// The authored token (a real lexeme or an integer), for provenance.
-    pub authored: String,
-    /// The unit the value is expressed in.
+    /// The authored token (a real lexeme or an integer), shared between contexts.
+    pub authored: Arc<str>,
+    /// The unit the value is expressed in: the file's, or the override unit when
+    /// [`Uncertainty::reexpressed_from`] is set.
     pub unit: StepLengthUnit,
     /// The f64 nearest to that unit's exact factor to metres.
     pub length_factor_m: f64,
+    /// The file's unit, when an override moved the uncertainty to the effective unit
+    /// (the number is kept, as it is for the geometry).
+    pub reexpressed_from: Option<StepLengthUnit>,
 }
 
 /// The resolved units of one geometric representation context.
@@ -265,19 +287,35 @@ pub struct FileDescription {
     pub implementation_level: StepText,
 }
 
-/// A conversion-based unit whose file factor differs from the known exact one. The exact
-/// factor is used (REQ-IO.CAD.STEP.HDR-002).
+/// What a [`HeaderWarning`] reports.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum WarningDetail {
+    /// A conversion-based unit's file factor was replaced by the exact one, written as a
+    /// decimal (`0.0254`, `0.3048`) or `pi/180`.
+    ExactFactor(&'static str),
+    /// An override moved a context's uncertainty from the file's unit to the effective one.
+    Reexpressed {
+        /// The file's unit.
+        from: StepLengthUnit,
+        /// The effective (override) unit.
+        to: StepLengthUnit,
+    },
+}
+
+/// A warning for the import report: a conversion-based unit whose file factor differs from
+/// the known exact one (the exact factor is used, REQ-IO.CAD.STEP.HDR-002), or an
+/// uncertainty re-expressed in the override unit.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct HeaderWarning {
-    /// The conversion-based unit's entity number.
+    /// The conversion-based unit's entity number, or the context's for a re-expression.
     pub entity: u64,
-    /// `length_factor_mismatch` or `angle_factor_mismatch`.
+    /// `length_factor_mismatch`, `angle_factor_mismatch` or [`UNCERTAINTY_REEXPRESSED`].
     pub code: &'static str,
-    /// The authored factor token of the file.
-    pub authored: String,
-    /// The exact factor used, as a decimal (`0.0254`, `0.3048`) or `pi/180`.
-    pub exact: &'static str,
-    /// Byte offset of the unit instance.
+    /// The authored factor or uncertainty token of the file.
+    pub authored: Arc<str>,
+    /// What happened.
+    pub detail: WarningDetail,
+    /// Byte offset of the unit (or context) instance.
     pub offset: u64,
 }
 
@@ -339,6 +377,12 @@ pub enum HeaderBound {
     Units,
     /// [`MAX_UNCERTAINTIES_PER_CONTEXT`].
     Uncertainties,
+    /// [`MAX_PARTS_READ`].
+    Parts,
+    /// [`MAX_NUMBER_LEXEME_BYTES`].
+    NumberLexeme,
+    /// [`MAX_NUMBER_TEXT_BYTES`].
+    NumberText,
 }
 
 impl HeaderBound {
@@ -350,6 +394,9 @@ impl HeaderBound {
             HeaderBound::HeaderList => "header_list",
             HeaderBound::Units => "units",
             HeaderBound::Uncertainties => "uncertainties",
+            HeaderBound::Parts => "parts",
+            HeaderBound::NumberLexeme => "number_lexeme",
+            HeaderBound::NumberText => "number_text",
         }
     }
 }
@@ -510,12 +557,24 @@ fn text_list(p: &Param, budget: &mut TextBudget) -> Result<Vec<StepText>, Header
 
 // ------------------------------------------------------------------ units
 
-fn part<'i>(inst: &'i Instance, name: &str) -> Option<&'i [Param]> {
-    inst.parts.iter().find(|(n, _)| n.as_str() == name).map(|(_, p)| p.as_slice())
+/// Refuses an instance with more parts than this module reads ([`MAX_PARTS_READ`]).
+fn bounded(inst: &Instance) -> Result<(), HeaderError> {
+    if inst.parts.len() > MAX_PARTS_READ {
+        return Err(limit(HeaderBound::Parts, MAX_PARTS_READ));
+    }
+    Ok(())
 }
 
-fn has(inst: &Instance, name: &str) -> bool {
-    inst.parts.iter().any(|(n, _)| n.as_str() == name)
+/// The parameters of part `name` of instance `n`, if present. A part this module reads that
+/// appears twice is `malformed` (`duplicate_part`): there is no first-wins.
+fn part<'i>(inst: &'i Instance, n: u64, name: &str) -> Result<Option<&'i [Param]>, HeaderError> {
+    let mut found = None;
+    for (p, params) in &inst.parts {
+        if p.as_str() == name && found.replace(params.as_slice()).is_some() {
+            return Err(bad(Some(n), "duplicate_part"));
+        }
+    }
+    Ok(found)
 }
 
 fn get(file: &P21File, n: u64) -> Result<&Instance, HeaderError> {
@@ -527,6 +586,24 @@ enum Kind {
     Length(StepLengthUnit),
     Angle(AngleUnit),
     Other,
+}
+
+/// The parts of a unit instance this module reads, each checked for repeats.
+struct UnitParts<'i> {
+    si: Option<&'i [Param]>,
+    conv: Option<&'i [Param]>,
+    is_length: bool,
+    is_angle: bool,
+}
+
+fn unit_parts(inst: &Instance, n: u64) -> Result<UnitParts<'_>, HeaderError> {
+    bounded(inst)?;
+    Ok(UnitParts {
+        si: part(inst, n, "SI_UNIT")?,
+        conv: part(inst, n, "CONVERSION_BASED_UNIT")?,
+        is_length: part(inst, n, "LENGTH_UNIT")?.is_some(),
+        is_angle: part(inst, n, "PLANE_ANGLE_UNIT")?.is_some(),
+    })
 }
 
 /// The two attributes `(prefix, name)` of an `SI_UNIT` part: the complex-instance form has
@@ -547,13 +624,11 @@ fn si_attrs(n: u64, params: &[Param]) -> Result<(Option<&str>, &str), HeaderErro
     }
 }
 
-fn classify_si(n: u64, inst: &Instance, params: &[Param]) -> Result<Kind, HeaderError> {
-    let is_length = has(inst, "LENGTH_UNIT");
-    let is_angle = has(inst, "PLANE_ANGLE_UNIT");
+fn classify_si(n: u64, up: &UnitParts<'_>, params: &[Param]) -> Result<Kind, HeaderError> {
     let (prefix, name) = si_attrs(n, params)?;
     match name {
         "METRE" => {
-            if is_angle {
+            if up.is_angle {
                 return Err(bad(Some(n), "unit_kind_conflict"));
             }
             let unit = match prefix {
@@ -567,7 +642,7 @@ fn classify_si(n: u64, inst: &Instance, params: &[Param]) -> Result<Kind, Header
             Ok(Kind::Length(unit))
         }
         "RADIAN" => {
-            if is_length {
+            if up.is_length {
                 return Err(bad(Some(n), "unit_kind_conflict"));
             }
             match prefix {
@@ -575,85 +650,150 @@ fn classify_si(n: u64, inst: &Instance, params: &[Param]) -> Result<Kind, Header
                 Some(_) => Err(HeaderError::UnitUnsupported { entity: n }),
             }
         }
-        _ if is_length || is_angle => Err(bad(Some(n), "unit_kind_conflict")),
+        _ if up.is_length || up.is_angle => Err(bad(Some(n), "unit_kind_conflict")),
         _ => Ok(Kind::Other),
     }
-}
-
-/// `(value, authored token, unit reference)` of a measure-with-unit instance.
-fn measure(file: &P21File, n: u64) -> Result<(f64, String, u64), HeaderError> {
-    let inst = get(file, n)?;
-    for (name, params) in &inst.parts {
-        if !name.as_str().ends_with("MEASURE_WITH_UNIT") {
-            continue;
-        }
-        let (value, unit) = match params.as_slice() {
-            [v, Param::Ref(u), ..] => (v, *u),
-            _ => continue,
-        };
-        let inner = match value {
-            Param::Typed(t, inner) if t.as_str().ends_with("_MEASURE") => &**inner,
-            other => other,
-        };
-        let (v, authored) = match inner {
-            Param::Real(v, Some(lex)) => (*v, lex.as_str().to_owned()),
-            Param::Real(v, None) => (*v, format!("{v:?}")),
-            Param::Int(i) => (*i as f64, i.to_string()),
-            _ => return Err(bad(Some(n), "measure_value_type")),
-        };
-        if !v.is_finite() {
-            return Err(bad(Some(n), "measure_value_not_finite"));
-        }
-        return Ok((v, authored, unit));
-    }
-    Err(bad(Some(n), "measure_with_unit_expected"))
 }
 
 fn relative_difference(file_factor: f64, exact: f64) -> f64 {
     ((file_factor - exact) / exact).abs()
 }
 
+/// `(value, authored token, unit reference)` of a measure-with-unit instance.
+type Measure = (f64, Arc<str>, u64);
+
+/// The unit walk. Every unit and measure instance is evaluated once and memoised by entity
+/// number, so a unit shared by many contexts (or listed many times) costs one evaluation.
+/// Only successes are memoised: any refusal ends the resolution.
 struct Walk<'f> {
     file: &'f P21File,
     warnings: BTreeSet<HeaderWarning>,
+    kinds: BTreeMap<u64, Kind>,
+    measures: BTreeMap<u64, Measure>,
+    lexemes: BTreeSet<Arc<str>>,
+    number_left: usize,
 }
 
-impl Walk<'_> {
-    /// Classifies unit instance `n`. A conversion-based unit is followed to its measure and
-    /// that measure's unit, which must be an SI unit (two levels, no recursion).
+impl<'f> Walk<'f> {
+    fn new(file: &'f P21File) -> Walk<'f> {
+        Walk {
+            file,
+            warnings: BTreeSet::new(),
+            kinds: BTreeMap::new(),
+            measures: BTreeMap::new(),
+            lexemes: BTreeSet::new(),
+            number_left: MAX_NUMBER_TEXT_BYTES,
+        }
+    }
+
+    /// One shared copy per distinct authored token, charged to the number-text budget.
+    fn intern(&mut self, s: &str) -> Result<Arc<str>, HeaderError> {
+        if s.len() > MAX_NUMBER_LEXEME_BYTES {
+            return Err(limit(HeaderBound::NumberLexeme, MAX_NUMBER_LEXEME_BYTES));
+        }
+        if let Some(a) = self.lexemes.get(s) {
+            return Ok(Arc::clone(a));
+        }
+        let cost = s.len().saturating_add(LEXEME_ENTRY_COST);
+        self.number_left = match self.number_left.checked_sub(cost) {
+            Some(rest) => rest,
+            None => return Err(limit(HeaderBound::NumberText, MAX_NUMBER_TEXT_BYTES)),
+        };
+        let a: Arc<str> = Arc::from(s);
+        self.lexemes.insert(Arc::clone(&a));
+        Ok(a)
+    }
+
+    /// The measure-with-unit instance `n`. Exactly one of its `*MEASURE_WITH_UNIT` parts
+    /// may carry the value and unit; a repeated part name or a second value-carrying part is
+    /// `duplicate_part`.
+    fn measure(&mut self, n: u64) -> Result<Measure, HeaderError> {
+        if let Some(m) = self.measures.get(&n) {
+            return Ok(m.clone());
+        }
+        let inst = get(self.file, n)?;
+        bounded(inst)?;
+        let mut names: BTreeSet<&str> = BTreeSet::new();
+        let mut found: Option<(&Param, u64)> = None;
+        for (name, params) in &inst.parts {
+            if !name.as_str().ends_with("MEASURE_WITH_UNIT") {
+                continue;
+            }
+            if !names.insert(name.as_str()) {
+                return Err(bad(Some(n), "duplicate_part"));
+            }
+            if let [v, Param::Ref(u), ..] = params.as_slice() {
+                if found.replace((v, *u)).is_some() {
+                    return Err(bad(Some(n), "duplicate_part"));
+                }
+            }
+        }
+        let (value, unit) = found.ok_or_else(|| bad(Some(n), "measure_with_unit_expected"))?;
+        let inner = match value {
+            Param::Typed(t, inner) if t.as_str().ends_with("_MEASURE") => &**inner,
+            other => other,
+        };
+        let (v, authored) = match inner {
+            Param::Real(v, Some(lex)) => (*v, self.intern(lex.as_str())?),
+            Param::Real(v, None) => (*v, self.intern(&format!("{v:?}"))?),
+            Param::Int(i) => (*i as f64, self.intern(&i.to_string())?),
+            _ => return Err(bad(Some(n), "measure_value_type")),
+        };
+        if !v.is_finite() {
+            return Err(bad(Some(n), "measure_value_not_finite"));
+        }
+        // -0.0 is read as +0.0, so a zero has one value (and one provenance group).
+        let v = if v == 0.0 { 0.0 } else { v };
+        let m = (v, authored, unit);
+        self.measures.insert(n, m.clone());
+        Ok(m)
+    }
+
+    /// Classifies unit instance `n` (memoised).
     fn classify(&mut self, n: u64) -> Result<Kind, HeaderError> {
+        if let Some(k) = self.kinds.get(&n) {
+            return Ok(*k);
+        }
+        let k = self.classify_uncached(n)?;
+        self.kinds.insert(n, k);
+        Ok(k)
+    }
+
+    /// A conversion-based unit is followed to its measure and that measure's unit, which
+    /// must be an SI unit (two levels, no recursion).
+    fn classify_uncached(&mut self, n: u64) -> Result<Kind, HeaderError> {
         let file = self.file;
         let inst = get(file, n)?;
-        let si = part(inst, "SI_UNIT");
-        let conv = part(inst, "CONVERSION_BASED_UNIT");
-        let is_length = has(inst, "LENGTH_UNIT");
-        let is_angle = has(inst, "PLANE_ANGLE_UNIT");
-        if is_length && is_angle {
+        let up = unit_parts(inst, n)?;
+        if up.is_length && up.is_angle {
             return Err(bad(Some(n), "unit_kind_conflict"));
         }
-        match (si, conv) {
+        match (up.si, up.conv) {
             (Some(_), Some(_)) => Err(bad(Some(n), "unit_kind_conflict")),
-            (Some(params), None) => classify_si(n, inst, params),
+            (Some(params), None) => classify_si(n, &up, params),
             (None, Some(params)) => {
-                if !is_length && !is_angle {
+                if !up.is_length && !up.is_angle {
                     return Ok(Kind::Other);
                 }
                 let (name, factor) = match params {
                     [Param::Str(s), Param::Ref(r)] | [_, Param::Str(s), Param::Ref(r)] => (s, *r),
                     _ => return Err(bad(Some(n), "conversion_based_unit_attributes")),
                 };
-                let word = name.raw().to_ascii_uppercase();
-                let (value, authored, base_n) = measure(file, factor)?;
+                let word = name.raw();
+                let (value, authored, base_n) = self.measure(factor)?;
                 let base_inst = get(file, base_n)?;
-                let base = match part(base_inst, "SI_UNIT") {
-                    Some(p) if !has(base_inst, "CONVERSION_BASED_UNIT") => classify_si(base_n, base_inst, p)?,
+                let base_up = unit_parts(base_inst, base_n)?;
+                let base = match base_up.si {
+                    Some(p) if base_up.conv.is_none() => classify_si(base_n, &base_up, p)?,
                     _ => return Err(bad(Some(base_n), "conversion_base_not_si")),
                 };
-                if is_length {
-                    let unit = match word.as_str() {
-                        "INCH" => StepLengthUnit::In,
-                        "FOOT" => StepLengthUnit::Ft,
-                        _ => return Err(HeaderError::UnitUnsupported { entity: n }),
+                if up.is_length {
+                    let unit = if word.eq_ignore_ascii_case("INCH") {
+                        StepLengthUnit::In
+                    } else if word.eq_ignore_ascii_case("FOOT") {
+                        StepLengthUnit::Ft
+                    } else {
+                        return Err(HeaderError::UnitUnsupported { entity: n });
                     };
                     let base_unit = match base {
                         Kind::Length(u) => u,
@@ -668,13 +808,13 @@ impl Walk<'_> {
                             entity: n,
                             code: "length_factor_mismatch",
                             authored,
-                            exact: unit.factor_decimal(),
+                            detail: WarningDetail::ExactFactor(unit.factor_decimal()),
                             offset: inst.offset,
                         });
                     }
                     Ok(Kind::Length(unit))
                 } else {
-                    if word != "DEGREE" {
+                    if !word.eq_ignore_ascii_case("DEGREE") {
                         return Err(HeaderError::UnitUnsupported { entity: n });
                     }
                     if base != Kind::Angle(AngleUnit::Radian) {
@@ -688,14 +828,14 @@ impl Walk<'_> {
                             entity: n,
                             code: "angle_factor_mismatch",
                             authored,
-                            exact: "pi/180",
+                            detail: WarningDetail::ExactFactor("pi/180"),
                             offset: inst.offset,
                         });
                     }
                     Ok(Kind::Angle(AngleUnit::Degree))
                 }
             }
-            (None, None) if is_length || is_angle => Err(bad(Some(n), "unit_without_definition")),
+            (None, None) if up.is_length || up.is_angle => Err(bad(Some(n), "unit_without_definition")),
             (None, None) => Ok(Kind::Other),
         }
     }
@@ -792,23 +932,36 @@ pub fn resolve_header(file: &P21File, opts: &HeaderOptions) -> Result<StepHeader
 
     let mut context_ids = BTreeSet::new();
     for (n, inst) in &file.data {
-        if has(inst, "GEOMETRIC_REPRESENTATION_CONTEXT") {
-            if context_ids.len() >= opts.max_contexts {
-                return Err(limit(HeaderBound::Contexts, opts.max_contexts));
+        let mut marks = 0usize;
+        for (p, _) in &inst.parts {
+            if p.as_str() == "GEOMETRIC_REPRESENTATION_CONTEXT" {
+                marks += 1;
             }
-            context_ids.insert(*n);
+        }
+        match marks {
+            0 => {}
+            1 => {
+                bounded(inst)?;
+                if context_ids.len() >= opts.max_contexts {
+                    return Err(limit(HeaderBound::Contexts, opts.max_contexts));
+                }
+                context_ids.insert(*n);
+            }
+            _ => return Err(bad(Some(*n), "duplicate_part")),
         }
     }
     let owned = owned_contexts(file, &context_ids);
 
-    let mut walk = Walk { file, warnings: BTreeSet::new() };
+    let mut walk = Walk::new(file);
     let mut contexts = BTreeMap::new();
     let mut unitless = Vec::new();
     for &c in &context_ids {
         let inst = get(file, c)?;
+        let unit_part = part(inst, c, "GLOBAL_UNIT_ASSIGNED_CONTEXT")?;
+        let uncertainty_part = part(inst, c, "GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT")?;
         let mut length = None;
         let mut angle = None;
-        if let Some(params) = part(inst, "GLOBAL_UNIT_ASSIGNED_CONTEXT") {
+        if let Some(params) = unit_part {
             for u in ref_list(c, params, MAX_UNITS_PER_CONTEXT, HeaderBound::Units)? {
                 match walk.classify(u)? {
                     Kind::Length(l) => {
@@ -826,14 +979,20 @@ pub fn resolve_header(file: &P21File, opts: &HeaderOptions) -> Result<StepHeader
             }
         }
         let mut uncertainty = None;
-        if let Some(params) = part(inst, "GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT") {
+        if let Some(params) = uncertainty_part {
             for m in ref_list(c, params, MAX_UNCERTAINTIES_PER_CONTEXT, HeaderBound::Uncertainties)? {
-                let (value, authored, unit_n) = measure(file, m)?;
+                let (value, authored, unit_n) = walk.measure(m)?;
                 if let Kind::Length(unit) = walk.classify(unit_n)? {
                     if value < 0.0 {
                         return Err(bad(Some(m), "uncertainty_negative"));
                     }
-                    uncertainty = Some(Uncertainty { value, authored, unit, length_factor_m: unit.factor_m() });
+                    uncertainty = Some(Uncertainty {
+                        value,
+                        authored,
+                        unit,
+                        length_factor_m: unit.factor_m(),
+                        reexpressed_from: None,
+                    });
                     break;
                 }
             }
@@ -851,6 +1010,25 @@ pub fn resolve_header(file: &P21File, opts: &HeaderOptions) -> Result<StepHeader
             (Some(_), Some(_)) if !opts.override_unit => return Err(HeaderError::UnitConflict { context: c }),
             (Some(_), Some(g)) => (g, UnitSource::Override),
         };
+        // An override says the file's length unit is wrong. An uncertainty written in that
+        // same (declared) unit is wrong in the same way, so it moves with the geometry: the
+        // number is kept and its unit becomes the effective one, with a report warning.
+        if source == UnitSource::Override {
+            if let (Some(u), Some(d)) = (uncertainty.as_mut(), length) {
+                if u.unit == d {
+                    u.reexpressed_from = Some(d);
+                    u.unit = effective;
+                    u.length_factor_m = effective.factor_m();
+                    walk.warnings.insert(HeaderWarning {
+                        entity: c,
+                        code: UNCERTAINTY_REEXPRESSED,
+                        authored: Arc::clone(&u.authored),
+                        detail: WarningDetail::Reexpressed { from: d, to: effective },
+                        offset: inst.offset,
+                    });
+                }
+            }
+        }
         contexts.insert(
             c,
             UnitContext {
@@ -907,12 +1085,38 @@ fn mine(s: &str) -> UntrustedText {
     UntrustedText::new(s)
 }
 
+/// The `declared` items [`StepHeaderInfo::record_provenance`] always writes for the header
+/// records (`step.schema` .. `step.implementation_level`) plus `step.contexts`.
+const FIXED_ITEMS: usize = 12;
+
+/// What groups contexts in the provenance: the unit summary, with the uncertainty as its
+/// parsed value and unit (never the authored token, so `1.E-6` and `1.0E-6` share a group).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct GroupKey {
+    length: StepLengthUnit,
+    source: UnitSource,
+    angle: Option<AngleUnit>,
+    uncertainty: Option<(u64, StepLengthUnit)>,
+    geometry: bool,
+}
+
 impl UnitContext {
+    fn group_key(&self) -> GroupKey {
+        GroupKey {
+            length: self.length_unit,
+            source: self.source,
+            angle: self.angle,
+            uncertainty: self.uncertainty.as_ref().map(|u| (u.value.to_bits(), u.unit)),
+            geometry: self.owns_geometry,
+        }
+    }
+
     /// The provenance summary of this context's units (everything but the entity number).
-    /// Built only from enumerated names, decimal constants and validated number tokens.
+    /// Built only from enumerated names, decimal constants and the parsed uncertainty value
+    /// (Rust's shortest round-trip form of the f64, e.g. `1e-6`), never from file text.
     pub fn signature(&self) -> String {
         let uncertainty = match &self.uncertainty {
-            Some(u) => format!("{} {}", u.authored, u.unit.symbol()),
+            Some(u) => format!("{:?} {}", u.value, u.unit.symbol()),
             None => "none".to_owned(),
         };
         format!(
@@ -928,29 +1132,58 @@ impl UnitContext {
 }
 
 impl StepHeaderInfo {
-    /// The context whose unit the provenance record carries: the lowest-numbered context
-    /// that owns geometry, else the lowest-numbered context.
+    /// The context whose unit the provenance record carries when every relevant context's
+    /// unit is declared: the lowest-numbered context that owns geometry, else the
+    /// lowest-numbered context.
     pub fn primary_context(&self) -> Option<&UnitContext> {
         self.contexts.values().find(|c| c.owns_geometry).or_else(|| self.contexts.values().next())
     }
 
-    /// The import's effective unit for [`fid_io_reg::SourceProvenance`], from the primary
-    /// context (or, when there is no context, from the caller's unit alone). A centimetre
-    /// context fails `step_unit_unsupported`, because `IO.REG.PROV` has no centimetre.
+    /// The contexts whose effective length unit is not the one the file declared (source
+    /// `caller` or `override`), among those that own geometry plus the primary context, in
+    /// ascending entity number. Any such context makes the import `unit_overridden`.
+    pub fn not_declared(&self) -> Vec<&UnitContext> {
+        let primary = self.primary_context().map(|c| c.context);
+        self.contexts
+            .values()
+            .filter(|c| c.source != UnitSource::Declared && (c.owns_geometry || Some(c.context) == primary))
+            .collect()
+    }
+
+    /// The import's effective unit for [`fid_io_reg::SourceProvenance`].
+    ///
+    /// When any context of [`StepHeaderInfo::not_declared`] exists, the caller's unit
+    /// applied somewhere, and every context then has that unit as its effective unit: the
+    /// record carries it with source `override` if any of them was overridden, else
+    /// `caller`, so `unit_overridden` is true. Otherwise the unit comes from the primary
+    /// context (declared), or, when there is no context, from the caller's unit alone. A
+    /// centimetre unit fails `step_unit_unsupported`, because `IO.REG.PROV` has none.
     pub fn provenance_unit(&self, opts: &HeaderOptions) -> Result<UnitResolution, HeaderError> {
-        let to_prov = |c: &UnitContext, u: StepLengthUnit| {
-            u.to_length_unit().ok_or(HeaderError::UnitUnsupported { entity: c.context })
-        };
+        let to_prov =
+            |c: &UnitContext| c.length_unit.to_length_unit().ok_or(HeaderError::UnitUnsupported { entity: c.context });
+        let affected = self.not_declared();
+        if let Some(first) = affected.first() {
+            let g = to_prov(first)?;
+            if let Some(c) = affected.iter().find(|c| c.length_unit != first.length_unit) {
+                return Err(HeaderError::UnitConflict { context: c.context });
+            }
+            let resolved = match affected.iter().find(|c| c.source == UnitSource::Override) {
+                // The override row of the IO.REG.PROV table needs only "declared differs
+                // from given"; the record carries the effective unit, not the replaced one
+                // (which may be a centimetre, absent from IO.REG.PROV).
+                Some(c) => {
+                    let stand_in = if g == LengthUnit::M { LengthUnit::Mm } else { LengthUnit::M };
+                    let d = c.declared.and_then(|d| d.to_length_unit()).filter(|d| *d != g).unwrap_or(stand_in);
+                    resolve_unit(Some(d), Some(g), true)
+                }
+                None => resolve_unit(None, Some(g), false),
+            };
+            return resolved.map_err(|_| HeaderError::UnitConflict { context: first.context });
+        }
         let (declared, given, override_unit) = match self.primary_context() {
             None => (None, opts.unit, opts.override_unit),
-            Some(c) => match c.source {
-                UnitSource::Declared => (Some(to_prov(c, c.length_unit)?), None, false),
-                UnitSource::Caller => (None, Some(to_prov(c, c.length_unit)?), false),
-                UnitSource::Override => {
-                    let d = c.declared.ok_or(HeaderError::UnitRequired { context: Some(c.context) })?;
-                    (Some(to_prov(c, d)?), Some(to_prov(c, c.length_unit)?), true)
-                }
-            },
+            // Not in `affected`, so its unit is declared.
+            Some(c) => (Some(to_prov(c)?), None, false),
         };
         resolve_unit(declared, given, override_unit).map_err(|e| match e {
             IoError::UnitConflict => {
@@ -960,16 +1193,73 @@ impl StepHeaderInfo {
         })
     }
 
+    /// The contexts of [`StepHeaderInfo::not_declared`] as runs over the context table: a
+    /// run `#a..#b` (or `#a`) stands for every context of [`StepHeaderInfo::contexts`]
+    /// numbered from `a` to `b`. Runs are joined by `,` into pieces of at most
+    /// [`MAX_TEXT_BYTES`] bytes each.
+    pub fn not_declared_runs(&self) -> Vec<String> {
+        let affected: BTreeSet<u64> = self.not_declared().iter().map(|c| c.context).collect();
+        let mut runs: Vec<(u64, u64)> = Vec::new();
+        let mut open = false;
+        for &c in self.contexts.keys() {
+            if affected.contains(&c) {
+                match runs.last_mut() {
+                    Some(last) if open => last.1 = c,
+                    _ => runs.push((c, c)),
+                }
+                open = true;
+            } else {
+                open = false;
+            }
+        }
+        let mut pieces: Vec<String> = Vec::new();
+        let mut cur = String::new();
+        for (a, b) in runs {
+            let run = if a == b { format!("#{a}") } else { format!("#{a}..#{b}") };
+            if !cur.is_empty() && cur.len() + 1 + run.len() > MAX_TEXT_BYTES {
+                pieces.push(std::mem::take(&mut cur));
+            }
+            if !cur.is_empty() {
+                cur.push(',');
+            }
+            cur.push_str(&run);
+        }
+        if !cur.is_empty() {
+            pieces.push(cur);
+        }
+        pieces
+    }
+
     /// Records the declared schema, the header metadata, and every context's unit and
     /// uncertainty as `declared` items of the provenance (REQ-IO.CAD.STEP.HDR-004).
     ///
     /// Contexts are recorded grouped by [`UnitContext::signature`]: one item
     /// `step.units.group_<k>` per distinct signature (in order of its first context), with
     /// the count and the first context number, plus `step.contexts` (the total) and
-    /// `step.units.mixed` when geometry contexts use more than one length unit. Lists of
-    /// header strings are JSON arrays. Fails as `IO.REG.PROV` does on a value over its
-    /// size limit or on too many items; nothing is truncated.
+    /// `step.units.mixed` when geometry contexts use more than one length unit. When the
+    /// unit of any context was not declared ([`StepHeaderInfo::not_declared`]),
+    /// `step.units.not_declared` gives the counts and `step.units.not_declared_<k>` the
+    /// contexts ([`StepHeaderInfo::not_declared_runs`]). Lists of header strings are JSON
+    /// arrays.
+    ///
+    /// The items are counted first: more than `IO.REG.PROV`'s [`MAX_DECLARED`] fails
+    /// `too_large` with field `step.units`, and nothing is declared. A value over
+    /// `IO.REG.PROV`'s size limit fails as it does there; nothing is truncated.
     pub fn record_provenance(&self, b: &mut ProvenanceBuilder) -> Result<(), ProvError> {
+        let groups = self.unit_groups();
+        let affected = self.not_declared();
+        let runs = if affected.is_empty() { Vec::new() } else { self.not_declared_runs() };
+        let geometry_units: BTreeSet<StepLengthUnit> =
+            self.contexts.values().filter(|c| c.owns_geometry).map(|c| c.length_unit).collect();
+        let mixed = geometry_units.len() > 1;
+        let planned = FIXED_ITEMS
+            + usize::from(!self.unitless.is_empty())
+            + usize::from(mixed)
+            + groups.len()
+            + if affected.is_empty() { 0 } else { 1 + runs.len() };
+        if planned > MAX_DECLARED {
+            return Err(ProvError::TooLarge { field: "step.units", limit: MAX_DECLARED as u64 });
+        }
         b.declare("step.schema", mine(self.schema.as_str()))?;
         b.declare("step.schema_identifier", self.raw_schema.to_untrusted())?;
         b.declare("step.originating_system", self.originating_system.to_untrusted())?;
@@ -985,46 +1275,64 @@ impl StepHeaderInfo {
         if !self.unitless.is_empty() {
             b.declare("step.unitless_contexts", mine(&self.unitless.len().to_string()))?;
         }
-        let geometry_units: BTreeSet<StepLengthUnit> =
-            self.contexts.values().filter(|c| c.owns_geometry).map(|c| c.length_unit).collect();
-        if geometry_units.len() > 1 {
+        if mixed {
             b.declare("step.units.mixed", mine("true"))?;
         }
-        for (k, (signature, count, first)) in self.unit_groups().iter().enumerate() {
+        for (k, (signature, count, first)) in groups.iter().enumerate() {
             let value = format!("{signature} contexts={count} first=#{first}");
             b.declare(&format!("step.units.group_{}", k + 1), mine(&value))?;
+        }
+        if !affected.is_empty() {
+            let overridden = affected.iter().filter(|c| c.source == UnitSource::Override).count();
+            let summary =
+                format!("contexts={} override={} caller={}", affected.len(), overridden, affected.len() - overridden);
+            b.declare("step.units.not_declared", mine(&summary))?;
+            for (k, piece) in runs.iter().enumerate() {
+                b.declare(&format!("step.units.not_declared_{}", k + 1), mine(piece))?;
+            }
         }
         Ok(())
     }
 
     /// `(signature, context count, first context)` per distinct signature, in order of the
-    /// first context.
+    /// first context. Contexts are grouped on parsed values ([`UnitContext::signature`]).
     pub fn unit_groups(&self) -> Vec<(String, u64, u64)> {
         let mut groups: Vec<(String, u64, u64)> = Vec::new();
-        let mut index: BTreeMap<String, usize> = BTreeMap::new();
+        let mut index: BTreeMap<GroupKey, usize> = BTreeMap::new();
         for c in self.contexts.values() {
-            let sig = c.signature();
-            match index.get(&sig) {
+            let key = c.group_key();
+            match index.get(&key) {
                 Some(&i) => {
                     if let Some(g) = groups.get_mut(i) {
                         g.1 = g.1.saturating_add(1);
                     }
                 }
                 None => {
-                    index.insert(sig.clone(), groups.len());
-                    groups.push((sig, 1, c.context));
+                    index.insert(key, groups.len());
+                    groups.push((c.signature(), 1, c.context));
                 }
             }
         }
         groups
     }
 
-    /// Adds every factor warning to the import report.
+    /// Adds every warning (factor replaced, uncertainty re-expressed) to the import report.
     pub fn record_warnings(&self, report: &mut ReportBuilder) -> Result<(), ReportError> {
         for w in &self.warnings {
             let code = Code::new(w.code)?;
             let pos = ReportPos::new(Position::byte(w.offset)).ok();
-            let detail = format!("#{}: file factor {} replaced by exact {}", w.entity, w.authored, w.exact);
+            let detail = match w.detail {
+                WarningDetail::ExactFactor(exact) => {
+                    format!("#{}: file factor {} replaced by exact {}", w.entity, w.authored, exact)
+                }
+                WarningDetail::Reexpressed { from, to } => format!(
+                    "#{}: uncertainty {} re-expressed from {} to {} (unit override)",
+                    w.entity,
+                    w.authored,
+                    from.symbol(),
+                    to.symbol()
+                ),
+            };
             report.warn(&code, pos, &mine(&detail));
         }
         Ok(())

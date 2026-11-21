@@ -32,7 +32,7 @@ mod text;
 pub use error::{Bound, StepError};
 pub use header::{
     resolve_header, AngleUnit, HeaderError, HeaderOptions, HeaderWarning, StepHeaderInfo, StepLengthUnit, StepSchema,
-    UnitContext,
+    Uncertainty, UnitContext, WarningDetail,
 };
 pub use print::{print, print_with, PrintOptions, RealStyle};
 
