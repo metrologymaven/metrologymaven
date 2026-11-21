@@ -78,4 +78,11 @@ fn surface_projection_agrees_with_the_bus() {
     for k in ["fid-bus (egress)", "fid-rdl", "fid-gdt", "fid-pkg", "fid-report (bind)", "fid-io-reg"] {
         assert!(all.iter().any(|(c, _)| c == k), "{k} is missing from the walk");
     }
+    // The import commands (IO.REG.ENV.IMPORT) project: their domain `import` is a Python
+    // keyword, escaped to module `fiducial.import_` (AUTO.SURF.PROJ REQ-004).
+    for id in ["import.file@1", "import.fid_test_points@1"] {
+        let c = p.commands.iter().find(|c| c.command_id.as_str() == id).unwrap_or_else(|| panic!("{id} missing"));
+        assert_eq!(c.py_module, "fiducial.import_", "{id}");
+        assert_eq!(c.cli_path[1], "import", "{id}");
+    }
 }

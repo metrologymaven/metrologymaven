@@ -2,14 +2,17 @@
 //!
 //! [`all_defs`] is [`crate::SOURCES`] plus the crates that declare commands but are not in
 //! `SOURCES` yet: the egress command of `fid-bus`, RDL, GDT (record, status, datum), the
-//! package reader, report binding and the two export commands of `fid-io-reg` (built over a
-//! registry with one export format, so they have a parameter schema). Shared by this crate's
+//! package reader, report binding, and the two export and two import commands of `fid-io-reg`
+//! (IO.REG.ENV.EXPORT, IO.REG.ENV.IMPORT; built over a registry with one format in each
+//! direction, so they have a parameter schema). Their commands are not in `SOURCES` because
+//! they are built over the format registry, which the build step does not have. Shared by this crate's
 //! bus-validation test and by `fid-mcp`'s registry walk (AUTO.MCP.PROJ), so both see the same
 //! commands. Never enabled outside `[dev-dependencies]`.
 
 use crate::SOURCES;
 use fid_canon::CValue;
 use fid_io_reg::env::export::command::{export_file_def, format_def};
+use fid_io_reg::env::import::command::{format_def as import_format_def, import_file_def};
 use fid_io_reg::{Direction, FormatDescriptor, FormatId, Origin, Phase, Registry, VersionRange};
 use fid_registry::CommandDef;
 use std::collections::BTreeMap;
@@ -24,7 +27,21 @@ fn err(what: &str, e: impl std::fmt::Debug) -> String {
 /// A registry with one export format, so the export commands have a parameter schema.
 pub fn export_registry() -> Result<Registry, String> {
     let mut r = Registry::new();
-    let d = FormatDescriptor::new(
+    r.register(test_format(Direction::Export)?).map_err(|e| err("register", e))?;
+    Ok(r)
+}
+
+/// [`export_registry`] plus the same format for import, so the import commands have a
+/// parameter schema too.
+pub fn io_registry() -> Result<Registry, String> {
+    let mut r = export_registry()?;
+    r.register(test_format(Direction::Import)?).map_err(|e| err("register", e))?;
+    Ok(r)
+}
+
+/// The test format [`TEST_EXPORT_FORMAT`] in one direction.
+fn test_format(direction: Direction) -> Result<FormatDescriptor, String> {
+    FormatDescriptor::new(
         FormatId::new(TEST_EXPORT_FORMAT).map_err(|e| err("format id", e))?,
         VersionRange::new("1", "1").map_err(|e| err("version range", e))?,
         Vec::new(),
@@ -32,11 +49,9 @@ pub fn export_registry() -> Result<Registry, String> {
         CValue::Obj(BTreeMap::new()),
         Phase::new(0).ok_or_else(|| "phase 0 is not valid".to_string())?,
         Origin::FirstParty,
-        Direction::Export,
+        direction,
     )
-    .map_err(|e| err("format descriptor", e))?;
-    r.register(d).map_err(|e| err("register", e))?;
-    Ok(r)
+    .map_err(|e| err("format descriptor", e))
 }
 
 /// Every declared command of the workspace, with the crate that declares it.
@@ -60,13 +75,15 @@ pub fn all_defs() -> Result<Vec<(String, CommandDef)>, String> {
     );
     extra("fid-pkg", fid_pkg::reader::declarations().into_iter().map(|d| d.def).collect());
     extra("fid-report (bind)", fid_report::bind::declarations().into_iter().map(|d| d.def).collect());
-    let reg = export_registry()?;
+    let reg = io_registry()?;
     let format = FormatId::new(TEST_EXPORT_FORMAT).map_err(|e| err("format id", e))?;
     extra(
         "fid-io-reg",
         vec![
             export_file_def(&reg).map_err(|e| err("export_file", e))?,
             format_def(&reg, &format, &[]).map_err(|e| err("format_def", e))?,
+            import_file_def(&reg).map_err(|e| err("import_file", e))?,
+            import_format_def(&reg, &format, &[]).map_err(|e| err("import format_def", e))?,
         ],
     );
     Ok(defs)

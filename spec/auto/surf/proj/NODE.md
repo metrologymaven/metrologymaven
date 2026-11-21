@@ -47,7 +47,7 @@ A pure function from the registry manifest to one `SurfaceProjection` per regist
 - **REQ-AUTO.SURF.PROJ-001** The projection shall take only the manifest bytes as input and shall record the manifest's SHA-256 digest in its output.
 - **REQ-AUTO.SURF.PROJ-002** The projection shall derive the CLI path of `domain.verb_object@major` as `fid domain verb-object`, replacing underscores with hyphens in the verb-object part.
 - **REQ-AUTO.SURF.PROJ-003** The projection shall derive the MCP tool name by dropping `@major` and replacing dots with underscores, appending `_vN` when the major N is 2 or more, and shall reject any name outside `[a-z0-9_]` or longer than 64 characters.
-- **REQ-AUTO.SURF.PROJ-004** The projection shall derive the Python name of a command as module `fiducial.<domain>` and function `<verb_object>`, appending `_vN` when the major N is 2 or more.
+- **REQ-AUTO.SURF.PROJ-004** The projection shall derive the Python name of a command as module `fiducial.<domain>` and function `<verb_object>`, appending `_vN` when the major N is 2 or more; where the module segment or the function name is a Python hard keyword, the projection shall append one trailing underscore to it (`import.run` gives `fiducial.import_.run`, `x.class@1` gives function `class_`). Soft keywords are not escaped, and CLI paths and MCP tool names are never escaped.
 - **REQ-AUTO.SURF.PROJ-005** The projection shall map side-effect classes to MCP projections as R0, R1 and I1 to `exposed`; W1 and W2 to `named`; W3, X1 and D1 to `request_only`; M1, S1 and A0 to `none`.
 - **REQ-AUTO.SURF.PROJ-006** The projection of a command shall be the stricter of its declared MCP projection (`human_only` clamping `exposed` to `request_only`) and the class mapping, as the bus decides it (`CORE.BUS.POL.PROJ`); if the declared projection is looser than the class mapping, then projection shall fail with error `projection_mismatch` naming the command.
 - **REQ-AUTO.SURF.PROJ-007** If two commands derive the same CLI path, MCP tool name or Python name, then projection shall fail with error `name_collision` naming both commands.
@@ -67,7 +67,8 @@ A pure function from the registry manifest to one `SurfaceProjection` per regist
 - **Registry command(s):** none; library function `project(manifest: &[u8]) -> Result<Projection, ProjError>`.
 - **Data structures:** `Projection { manifest_digest: Sha256, commands: Vec<SurfaceProjection> }`; `SurfaceProjection { command_id, major, cli_path: Vec<String>, mcp_name, py_module, py_name, mcp_projection: Exposed|Named|RequestOnly|None, side_effect, determinism, params: Vec<ParamSpec>, result: TypeRef, long_running: bool, dry_run: bool, help: DocText }`. `ParamSpec` carries name, type, quantity kind, unit, optional default and a `path_like` flag (consumed by `AUTO.SURF.ROOTS`).
 - **Algorithm:** parse manifest with a bounded JSON reader (max 64 MiB, max depth 64); validate ID grammar; derive names; map classes; check collisions with ordered maps (`BTreeMap`); serialise with an RFC 8785 serializer.
-- **Errors:** `manifest_parse`, `bad_command_id`, `projection_mismatch`, `name_collision`, `name_too_long`, `bad_name_chars`.
+- **Errors:** `manifest_parse`, `bad_command_id`, `projection_mismatch`, `name_collision`, `name_too_long`, `bad_name_chars` (an MCP name outside `[a-z0-9_]`; a reserved word is escaped, never refused).
+- **Reserved words:** only the Python surface turns names into identifiers; CLI paths are argv strings and MCP tool names are JSON strings. The escape (keyword → `keyword_`) is injective: segments end with a letter or digit and `_vN` ends with a digit, so no unescaped Python name ends with `_`, and a real `x.import_` is refused by the name grammar (`bad_command_id`); REQ-007 still checks every derived Python name for collisions.
 - **Determinism:** D0. Pure function of the input bytes; no hashing with random state, no locale, no clock.
 - **Performance budget:** 5,000 commands projected in < 200 ms on reference hardware [unverified until measured].
 - **Crate:** `fid-surface`
@@ -83,11 +84,13 @@ Synthetic manifests written by hand under `fixtures/manifest/` (CC-BY-4.0, proje
 ## Open questions
 
 - Switch `crates/fid-registry-build/tests/surface_projection.rs` from walking `SOURCES` to the shared `all_defs()` helper once #348 merges.
+- The `import.*` commands of #359 (IO.REG.ENV.IMPORT) are now in `fid-registry-build`'s `test_support::all_defs`, so the surface and MCP walks project them. Like the export commands, they are not in `SOURCES`: they are built over the format registry, which the build step does not have.
 - `exposure` without `mcp` makes the bus treat a command as `never`; the projection does not fold that into `mcp_projection` (the MCP emitter, `AUTO.MCP.PROJ`, applies it).
 
 ## Change log
 
 - REQ-006 amended 2026-11-20 (maintainer decision, #348 review): a declaration stricter than the class mapping projects to itself (`request_only`, or `never` as `none`), matching the bus's `mcp_projection` (stricter of declared and class ceiling); only a looser one is `projection_mismatch`. Before, any difference was refused, so `request.reject_request@1` (W1, `human_only`, `never`) and `request.file_request@1` (W1, `never`) failed the whole workspace projection and no MCP tool was generated.
+- REQ-004 amended 2026-11-20 (maintainer decision, #359 follow-up): a Python module or function name that is a hard keyword is escaped with a trailing underscore (`fiducial.import_`) instead of being refused with `bad_name_chars`, which kept every `import.*` command (IO.REG.ENV.IMPORT) out of the surfaces. Golden `fixtures/projection/keywords.golden.json` covers every keyword.
 
 ## Children
 

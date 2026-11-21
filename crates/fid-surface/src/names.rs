@@ -6,13 +6,23 @@
 //! - CLI: `domain.verb_object@major` gives `["fid", domain, verb-object]`;
 //! - MCP: `domain_verb_object`, plus `_vN` when the major N is 2 or more, at most 64 characters
 //!   of `[a-z0-9_]`;
-//! - Python: module `fiducial.<domain>`, function `<verb_object>` plus `_vN` when N >= 2.
+//! - Python: module `fiducial.<domain>`, function `<verb_object>` plus `_vN` when N >= 2; a
+//!   module or function name that would be a Python keyword gets a trailing underscore
+//!   (`import.x` is module `fiducial.import_`, `x.class` is function `class_`), see
+//!   [`py_identifier`].
 //!
 //! The name grammar is that of [`fid_types::CommandName`], narrowed to what every surface can
 //! carry: exactly one dot, and each of the two segments starts with a lowercase letter and ends
 //! with a lowercase letter or digit (a leading digit is not a Python identifier, a leading
-//! underscore would become a leading hyphen, which a CLI reads as a flag). A segment that is a
-//! Python keyword is refused because it cannot be a module or function name.
+//! underscore would become a leading hyphen, which a CLI reads as a flag).
+//!
+//! Reserved words: of the surfaces, only Python turns a name into an identifier (CLI paths are
+//! argv strings and MCP tool names are JSON strings, so neither has reserved words). A Python
+//! name that is a hard keyword is escaped with one trailing underscore. The escape is
+//! injective: a segment ends with a letter or digit and a `_vN` suffix ends with a digit, so no
+//! unescaped name ends with `_`, and `x.import_` (the only spelling that could collide) is
+//! already refused by the grammar with `bad_command_id`. Two commands could still meet only in
+//! a way the REQ-007 collision check refuses.
 
 use crate::projection::ProjError;
 use fid_types::CommandName;
@@ -27,8 +37,8 @@ pub const CLI_PROGRAM: &str = "fid";
 pub const PY_PACKAGE: &str = "fiducial";
 
 /// Python 3 hard keywords that are lowercase (the only ones a command segment could spell).
-/// Soft keywords (`match`, `case`, `type`, `_`) are valid identifiers and are allowed.
-const PY_KEYWORDS: [&str; 32] = [
+/// Soft keywords (`match`, `case`, `type`, `_`) are valid identifiers and are not escaped.
+pub const PY_KEYWORDS: [&str; 32] = [
     "and", "as", "assert", "async", "await", "break", "class", "continue", "def", "del", "elif", "else", "except",
     "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise",
     "return", "try", "while", "with", "yield",
@@ -45,6 +55,16 @@ pub struct DerivedNames {
     pub py_module: String,
     /// Python function name.
     pub py_name: String,
+}
+
+/// The Python identifier for a derived module or function name: `name` itself, or `name_`
+/// when `name` is a Python hard keyword. Never applied to an already escaped name.
+pub fn py_identifier(name: &str) -> String {
+    if PY_KEYWORDS.contains(&name) {
+        format!("{name}_")
+    } else {
+        name.to_string()
+    }
 }
 
 /// Whether `s` is one surface-safe segment: `[a-z]([a-z0-9_]*[a-z0-9])?`.
@@ -95,15 +115,6 @@ pub fn split_name(command: &str, name: &str) -> Result<(String, String), ProjErr
 /// Derives every surface name of `name@major`. `command` is the full ID, used in errors.
 pub fn derive(command: &str, name: &str, major: u32) -> Result<DerivedNames, ProjError> {
     let (domain, verb) = split_name(command, name)?;
-    for seg in [&domain, &verb] {
-        if PY_KEYWORDS.contains(&seg.as_str()) {
-            return Err(ProjError::BadNameChars {
-                command: command.to_string(),
-                name: seg.clone(),
-                detail: "a Python keyword cannot be a module or function name".to_string(),
-            });
-        }
-    }
     let suffix = version_suffix(major);
     let mcp_name = format!("{domain}_{verb}{suffix}");
     if !is_mcp_chars(&mcp_name) {
@@ -119,8 +130,8 @@ pub fn derive(command: &str, name: &str, major: u32) -> Result<DerivedNames, Pro
     Ok(DerivedNames {
         cli_path: vec![CLI_PROGRAM.to_string(), domain.clone(), verb.replace('_', "-")],
         mcp_name,
-        py_module: format!("{PY_PACKAGE}.{domain}"),
-        py_name: format!("{verb}{suffix}"),
+        py_module: format!("{PY_PACKAGE}.{}", py_identifier(&domain)),
+        py_name: py_identifier(&format!("{verb}{suffix}")),
     })
 }
 
@@ -177,11 +188,32 @@ mod tests {
             assert_eq!(code(bad, 1), "bad_command_id", "{bad:?}");
         }
         assert_eq!(code("a1.b2", 1), "ok");
-        for kw in ["import.x", "x.import", "class.x", "x.lambda", "x.yield"] {
-            assert_eq!(code(kw, 1), "bad_name_chars", "{kw:?}");
+        // The escaped spelling of a keyword cannot be a real name, so the escape is injective.
+        for escaped in ["x.import_", "import_.x", "class_.x", "x.lambda_"] {
+            assert_eq!(code(escaped, 1), "bad_command_id", "{escaped:?}");
         }
-        for soft in ["x.match", "x.case", "x.type"] {
-            assert_eq!(code(soft, 1), "ok", "{soft:?}");
+    }
+
+    #[test]
+    fn python_keywords_get_a_trailing_underscore() {
+        for kw in PY_KEYWORDS {
+            let d = ok(&format!("{kw}.run"), 1);
+            assert_eq!(d.py_module, format!("fiducial.{kw}_"), "{kw}");
+            assert_eq!(d.py_name, "run");
+            // Only the Python surface escapes: CLI and MCP names are strings.
+            assert_eq!(d.cli_path, ["fid", kw, "run"]);
+            assert_eq!(d.mcp_name, format!("{kw}_run"));
+            let d = ok(&format!("x.{kw}"), 1);
+            assert_eq!((d.py_module.as_str(), d.py_name.clone()), ("fiducial.x", format!("{kw}_")), "{kw}");
+            // With a version suffix the name is no longer a keyword and is not escaped.
+            assert_eq!(ok(&format!("x.{kw}"), 2).py_name, format!("{kw}_v2"));
         }
+        assert_eq!(ok("import.x", 1).py_module, "fiducial.import_");
+        for soft in ["match", "case", "type"] {
+            assert_eq!(ok(&format!("x.{soft}"), 1).py_name, soft, "{soft:?}");
+        }
+        // Escaped names, and only they, end with '_'.
+        assert!(PY_KEYWORDS.iter().all(|k| !k.ends_with('_') && py_identifier(k).ends_with('_')));
+        assert_eq!(py_identifier("import_mesh"), "import_mesh");
     }
 }
