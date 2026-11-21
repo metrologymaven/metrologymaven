@@ -122,6 +122,9 @@ impl CommitRecord<'_> {
 ///
 /// A hook keeps its state behind its own lock. The commit lock serialises every commit of one
 /// bus, so the installed state does not change between `stage` and `install`. A hook must not
+/// change its installed state anywhere but in [`StagedFold::install`]: `stage` and
+/// `precommit` only read it and write the staged copy, because a commit can still be refused
+/// (by a later hook, the append or the journal) after they ran. A hook must not
 /// recover a poisoned lock of its own (`PoisonError::into_inner`): it returns an error
 /// instead. A panic inside a hook poisons the commit lock, and the bus then poisons itself.
 pub trait CommitHook: Send + Sync {

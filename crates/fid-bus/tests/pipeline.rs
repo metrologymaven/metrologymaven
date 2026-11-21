@@ -9,6 +9,7 @@
 use fid_bus::error::{BusError, Detail, PreconditionReason};
 use fid_bus::handler::{EntityId, EntityRef, Event, EventType, Handler, HandlerCtx, HandlerError, HandlerSet};
 use fid_bus::handler::{SettingKey, StateView, ValidParams};
+use fid_bus::pipeline::{AppendFailure, AppendOutcome};
 use fid_bus::pipeline::{
     Bus, BusEnv, BusParts, Call, CommandResult, CommitHook, CommitRecord, Invocation, OpenBranch, RecordJournal,
     Router, Stage, StageProbe, StagedFold, SystemCall, Watch,
@@ -183,14 +184,21 @@ impl StateView for View {
     }
 }
 
+/// The host inputs. `mono` is a counter every `now` and `request_id` advances (`now` returns
+/// the advanced value); with `stepped_back` set, the wall clock reads an hour early.
 struct Env {
     mono: AtomicU64,
+    stepped_back: AtomicBool,
 }
 
 impl BusEnv for Env {
     fn now(&self) -> EntryTime {
-        let since = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        EntryTime { utc: format_utc(since), mono_ns: self.mono.fetch_add(1, Ordering::SeqCst), sync: "ntp".into() }
+        let mut since = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        if self.stepped_back.load(Ordering::SeqCst) {
+            since -= std::time::Duration::from_secs(3600);
+        }
+        let mono_ns = self.mono.fetch_add(1, Ordering::SeqCst) + 1;
+        EntryTime { utc: format_utc(since), mono_ns, sync: "ntp".into() }
     }
     fn seed(&self) -> u64 {
         42
@@ -431,15 +439,16 @@ impl Router for Harnessed {
     }
 }
 
-/// A hostile router: routes everything, an agent's writes and requests included, to `main`.
-struct Hostile;
+/// A hostile router: routes everything, an agent's writes and requests included, to one
+/// fixed name of its choosing.
+struct Hostile(&'static str);
 
 impl Router for Hostile {
     fn branch(&self, _p: &Principal, _c: &dyn Channel, _d: &CommandDef) -> Result<String, BusError> {
-        Ok(MAIN.into())
+        Ok(self.0.into())
     }
     fn request_branch(&self, _p: &Principal, _c: &dyn Channel) -> Result<String, BusError> {
-        Ok(MAIN.into())
+        Ok(self.0.into())
     }
 }
 
@@ -452,26 +461,33 @@ const APPEND_UNKNOWN: u8 = 1;
 /// An append refused with a known outcome (`conflict/head_moved`).
 const APPEND_REFUSED: u8 = 2;
 
-/// A real journal with an append fault switch.
+/// A real journal with an append fault switch. `tail` records the env's monotonic counter
+/// when the commit stage reads the tail (under the commit lock).
 struct TestJournal {
     inner: Arc<Journal>,
     fail_append: AtomicU8,
+    env: Arc<Env>,
+    mono_at_tail: AtomicU64,
 }
 
 impl RecordJournal for TestJournal {
     fn tail(&self) -> Result<Option<(u64, Digest)>, BusError> {
+        self.mono_at_tail.store(self.env.mono.load(Ordering::SeqCst), Ordering::SeqCst);
         RecordJournal::tail(self.inner.as_ref())
     }
     fn branch_head(&self, branch: &str) -> Result<Option<Digest>, BusError> {
         RecordJournal::branch_head(self.inner.as_ref(), branch)
     }
-    fn append(&self, req: AppendRequest) -> Result<EntryHash, BusError> {
+    fn append(&self, req: AppendRequest) -> Result<EntryHash, AppendFailure> {
         match self.fail_append.load(Ordering::SeqCst) {
-            APPEND_UNKNOWN => Err(BusError::Internal(
-                fid_bus::error::InternalReason::JournalUnavailable,
-                Detail::new("injected append failure"),
-            )),
-            APPEND_REFUSED => Err(stale()),
+            APPEND_UNKNOWN => Err(AppendFailure {
+                error: BusError::Internal(
+                    fid_bus::error::InternalReason::JournalUnavailable,
+                    Detail::new("injected append failure"),
+                ),
+                outcome: AppendOutcome::Unknown,
+            }),
+            APPEND_REFUSED => Err(AppendFailure { error: stale(), outcome: AppendOutcome::NotAppended }),
             _ => RecordJournal::append(self.inner.as_ref(), req),
         }
     }
@@ -512,8 +528,13 @@ fn harness_with(tag: &str, router: Arc<dyn Router>) -> Harness {
     let dir = TempDir::new(tag);
     let (loc, lock) = ProjectLocation::create(&dir.p("project")).unwrap();
     let journal = Arc::new(Journal::open(loc, lock, STREAM).unwrap());
-    let tj = Arc::new(TestJournal { inner: Arc::clone(&journal), fail_append: AtomicU8::new(APPEND_OK) });
-    let env = Arc::new(Env { mono: AtomicU64::new(1) });
+    let env = Arc::new(Env { mono: AtomicU64::new(1), stepped_back: AtomicBool::new(false) });
+    let tj = Arc::new(TestJournal {
+        inner: Arc::clone(&journal),
+        fail_append: AtomicU8::new(APPEND_OK),
+        env: Arc::clone(&env),
+        mono_at_tail: AtomicU64::new(0),
+    });
     let alog = dir.p("alog");
     let recording = Arc::new(RecordingFlag::new());
     let activity = Arc::new(ActivityLog::new(&alog, ActivityLogConfig::default(), manifests()));
@@ -1098,34 +1119,19 @@ fn a_panicking_hook_poisons_the_bus() {
 
 // ------------------------------------------------------------------ entry time
 
-/// Reads the env's monotonic counter when the commit stage is entered.
-struct TimeMark {
-    env: Arc<Env>,
-    at_commit: AtomicU64,
-}
-
-impl StageProbe for TimeMark {
-    fn enter(&self, stage: Stage) -> Result<(), BusError> {
-        if stage == Stage::Commit {
-            self.at_commit.store(self.env.mono.load(Ordering::SeqCst), Ordering::SeqCst);
-        }
-        Ok(())
-    }
-}
-
-/// The entry time is taken after the commit lock is acquired, not when the draft is built
-/// before the commit stage: it is later than anything read when the commit stage starts.
-/// Holds for a command entry and for a filing.
+/// The entry time is taken after the commit lock is acquired: its monotonic stamp is later
+/// than the counter when the commit stage read the tail under the lock (the old code took it
+/// when the draft was built, before the commit stage, and fails this). Holds for a command
+/// entry and for a filing.
 #[test]
 fn the_entry_time_is_taken_under_the_commit_lock() {
     let mut h = harness("time");
     let hook = Counting::new(Watch::All);
     h.bus.register_hook(hook.clone());
-    let mark = Arc::new(TimeMark { env: Arc::clone(&h.env), at_commit: AtomicU64::new(0) });
-    h.bus.set_probe(mark.clone());
     done(h.run("gui", &write("a", 1)).unwrap());
     let first = hook.folds.lock().unwrap()[0].header.time.mono_ns;
-    assert!(first >= mark.at_commit.load(Ordering::SeqCst), "time {first} taken before the commit stage");
+    let at_tail = h.tj.mono_at_tail.load(Ordering::SeqCst);
+    assert!(first > at_tail, "entry time {first} was taken before the tail read ({at_tail})");
 
     let filed = h.run_on(
         "mcp",
@@ -1134,7 +1140,52 @@ fn the_entry_time_is_taken_under_the_commit_lock() {
     );
     assert!(matches!(filed.unwrap(), CommandResult::Pending { .. }));
     let second = hook.folds.lock().unwrap()[1].header.time.mono_ns;
-    assert!(second >= mark.at_commit.load(Ordering::SeqCst), "filing time {second} taken before the commit stage");
+    let at_tail = h.tj.mono_at_tail.load(Ordering::SeqCst);
+    assert!(second > at_tail, "filing time {second} was taken before the tail read ({at_tail})");
+}
+
+/// A clock refusal has a known outcome: the host clock stepped back behind the chain tail,
+/// the journal refuses the append (`precondition/false`, detail `clock: ...`), nothing is
+/// appended, the bus is not poisoned, and the next commit with a sane clock succeeds.
+#[test]
+fn a_clock_step_back_refuses_one_commit_and_the_next_succeeds() {
+    let mut h = harness("clock");
+    let hook = Counting::new(Watch::All);
+    h.bus.register_hook(hook.clone());
+    done(h.run("gui", &write("a", 1)).unwrap());
+    h.env.stepped_back.store(true, Ordering::SeqCst);
+    let e = assert_err(h.run("gui", &write("b", 1)), "precondition", "false");
+    assert!(e.detail().as_untrusted_str().starts_with("clock: time_regressed"), "{e}");
+    assert!(!h.bus.is_poisoned());
+    assert_eq!(h.tail().unwrap().0, 1);
+    assert_eq!(hook.folds.lock().unwrap().len(), 1, "the refused entry was not installed");
+    h.env.stepped_back.store(false, Ordering::SeqCst);
+    done(h.run("gui", &write("b", 1)).unwrap());
+    assert_eq!(h.tail().unwrap().0, 2);
+}
+
+/// A poisoned bus does not report what a commit would do: a commit-class dry run and a filing
+/// (dry or real, before its request ID is drawn) are `internal/invariant_violated`; a read
+/// still runs.
+#[test]
+fn a_poisoned_bus_refuses_dry_runs_and_filings() {
+    let h = harness("poisondry");
+    h.tj.fail_append.store(APPEND_UNKNOWN, Ordering::SeqCst);
+    assert_err(h.run("gui", &write("a", 1)), "internal", "journal_unavailable");
+    assert!(h.bus.is_poisoned());
+    let mut dry = write("a", 1);
+    dry.dry_run = true;
+    assert_err(h.run("gui", &dry), "internal", "invariant_violated");
+    let agent_view = View { head: fid_journal::GENESIS_PREV };
+    let request = Invocation::new(cid("test.request@1"), json(r#"{"target":"a","count":1}"#));
+    let mut dry_request = request.clone();
+    dry_request.dry_run = true;
+    let ids = h.env.mono.load(Ordering::SeqCst);
+    assert_err(h.run_on("mcp", &agent_view, &dry_request), "internal", "invariant_violated");
+    assert_err(h.run_on("mcp", &agent_view, &request), "internal", "invariant_violated");
+    assert_eq!(h.env.mono.load(Ordering::SeqCst), ids, "a request ID was drawn on a poisoned bus");
+    let read = Invocation::new(cid("test.noop_read@1"), json("{}"));
+    done(h.run("gui", &read).unwrap());
 }
 
 // ------------------------------------------------------------------ reason
@@ -1181,7 +1232,7 @@ fn route_gaps_fail_closed() {
 /// the check refuses that too.
 #[test]
 fn an_agent_never_writes_outside_an_agent_branch_whatever_the_router() {
-    let h = harness_with("hostile", Arc::new(Hostile));
+    let h = harness_with("hostile", Arc::new(Hostile(MAIN)));
     h.probe.clear();
     assert_err(h.run("mcp", &write("a", 1)), "policy", "agent_write_forbidden");
     assert_eq!(h.probe.names(), ["resolve", "validate", "authorise", "precondition", "route"]);
@@ -1198,4 +1249,16 @@ fn an_agent_never_writes_outside_an_agent_branch_whatever_the_router() {
     let open = harness_with("open", Arc::new(OpenBranch::new(MAIN)));
     assert_err(open.run("mcp", &request), "policy", "agent_write_forbidden");
     assert_eq!(open.tail(), None);
+
+    // Names that only look like agent branches are not valid branch names at all.
+    for name in ["agent/../main", "agent//main", "agent/Main"] {
+        let h = harness_with("hostile2", Arc::new(Hostile(name)));
+        assert_err(h.run("mcp", &write("a", 1)), "validation", "bad_branch_name");
+        assert_err(
+            h.run_on("mcp", &View { head: fid_journal::GENESIS_PREV }, &request),
+            "validation",
+            "bad_branch_name",
+        );
+        assert_eq!(h.tail(), None, "{name}");
+    }
 }

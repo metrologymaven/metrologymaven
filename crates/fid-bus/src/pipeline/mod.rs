@@ -15,8 +15,9 @@
 //!    file a pending request;
 //! 4. **precondition**: [`Resolved::check_preconditions`];
 //! 5. **route** (commit classes only): the branch from the injected [`Router`]; then the
-//!    bus's own check, independent of the router, that an `agent` principal's branch is an
-//!    `agent/` branch (`policy/agent_write_forbidden`); then the guards: an idempotency key is
+//!    bus's own check, independent of the router, that the name is a valid branch name
+//!    (`validation/bad_branch_name`) and that an `agent` principal's branch is one an agent
+//!    owns, in the `agent/` namespace (`policy/agent_write_forbidden`); then the guards: an idempotency key is
 //!    refused (`validation/schema`, until CORE.BUS.ROUTE), `expected_head`
 //!    (`conflict/expected_head_mismatch`) and the call's view, which must be at the branch
 //!    head (`conflict/head_moved`);
@@ -53,11 +54,13 @@
 //!
 //! Reading the tail before the branch head and appending only on that tail makes steps 1 to
 //! 4 a compare-and-swap: nothing can land between the check and the append. A failure in
-//! steps 1 to 3, or an append refused with a known outcome, appends nothing (REQ-002; the
-//! idempotency table is CORE.BUS.ROUTE's and is not touched here). The bus is poisoned, so
-//! every later commit is `internal/invariant_violated` until the project is reopened, when
-//! the folded state may no longer match the journal: an append that failed with
-//! `internal/journal_unavailable` (its outcome is unknown: the entry may have landed), a hash
+//! steps 1 to 3, or an append refused with a known outcome ([`AppendOutcome::NotAppended`]:
+//! a head that moved, a clock refusal, a read-only store), appends nothing and leaves the bus
+//! usable (REQ-002; the idempotency table is CORE.BUS.ROUTE's and is not touched here). The
+//! bus is poisoned, so every later commit, commit-class dry run and filing is
+//! `internal/invariant_violated` until the project is reopened, when the folded state may no
+//! longer match the journal: an append whose outcome is unknown ([`AppendOutcome::Unknown`]:
+//! a failed or interrupted COMMIT, a chain that no longer verifies), a hash
 //! mismatch, an install refusal, or a panic while the commit lock was held (a panicking hook
 //! poisons the lock). Reopening the project rebuilds every hook from the journal; a fold
 //! refusal during that rebuild refuses to open the project (the rebuild entry point is
@@ -93,14 +96,16 @@ mod hooks;
 
 pub use hooks::{CommitHook, CommitRecord, StagedFold, Watch};
 
-use crate::error::{BusError, ConflictReason, Detail, InternalReason, PolicyReason, ValidationReason};
+use crate::error::{
+    BusError, ConflictReason, Detail, InternalReason, PolicyReason, PreconditionReason, ValidationReason,
+};
 use crate::handler::{run_stage, CancelToken, CheckedEvents, Event, HandlerCtx, HandlerSet, StateView};
 use crate::policy::fs::check_raw_paths;
 use crate::policy::projection::{authorise, Decision, EntryOrigin, Filing, RecordContext, RequestId};
 use crate::principal::{Channel, ChannelKind, JournalAppend, Principal, PrincipalKind, SessionTable};
 use crate::validate::{CommandTable, Validated};
 use fid_canon::{CValue, Digest};
-use fid_journal::branch::{EntryOrigin as JournalOrigin, EventSource, AGENT_PREFIX};
+use fid_journal::branch::{BranchName, EntryOrigin as JournalOrigin, EventSource, Owner, AGENT_PREFIX};
 use fid_journal::stream::{CallOutcome, Locality, ProgramStepRef, Streams, ACTIVITY_STREAM};
 use fid_journal::{
     build, AiAssistance, AppendRequest, CommandDraft, DraftBody, Entry, EntryDraft, EntryHash, EntryTime, Journal,
@@ -317,34 +322,81 @@ pub trait RecordJournal: Send + Sync {
     /// The hash of the last entry on `branch`, `None` if it has none.
     fn branch_head(&self, branch: &str) -> Result<Option<Digest>, BusError>;
     /// Appends one entry. With `expected_prev` set, a tail that moved is `conflict/head_moved`.
-    ///
-    /// The error tells the outcome. `conflict`, `validation` and `internal/invariant_violated`
-    /// mean nothing was appended. `internal/journal_unavailable` means the outcome is unknown:
-    /// the entry may have landed (a storage failure during or after the write), so the commit
-    /// stage poisons the bus. An implementation must report any failure whose outcome it does
-    /// not know as `internal/journal_unavailable`.
-    fn append(&self, req: AppendRequest) -> Result<EntryHash, BusError>;
+    /// A failure says whether its outcome is known ([`AppendFailure`]); an implementation
+    /// reports every failure whose outcome it does not know as [`AppendOutcome::Unknown`].
+    fn append(&self, req: AppendRequest) -> Result<EntryHash, AppendFailure>;
 }
 
-/// The bus error of a journal error: `head_moved` is `conflict/head_moved`, `input_limit`
-/// `validation/input_limit`, a malformed draft `internal/invariant_violated` (a bus bug), and
-/// every storage, chain, clock or write-access failure (`read_only` included)
-/// `internal/journal_unavailable`. From an append, that last group is treated as an unknown
-/// outcome ([`RecordJournal::append`]); for `read_only` and the clock refusals nothing was
-/// written, and poisoning loses nothing since such a journal cannot commit anyway.
+/// What a failed append left behind, decided where the journal error is still in hand (the
+/// [`RecordJournal`] boundary).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AppendOutcome {
+    /// A refusal: nothing was appended. The bus stays usable.
+    NotAppended,
+    /// The entry may have landed (a failed or interrupted COMMIT, a chain that no longer
+    /// verifies). The commit stage poisons the bus.
+    Unknown,
+}
+
+/// A failed [`RecordJournal::append`]: the bus error for the caller and whether anything may
+/// have been appended.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AppendFailure {
+    pub error: BusError,
+    pub outcome: AppendOutcome,
+}
+
+impl AppendFailure {
+    /// The failure of a journal append error: [`journal_error`] for the bus error, and
+    /// [`append_outcome`] for the outcome.
+    pub fn from_journal(e: &JournalError) -> AppendFailure {
+        AppendFailure { error: journal_error(e), outcome: append_outcome(e) }
+    }
+}
+
+/// Whether nothing was appended when `Journal::append` returned `e`. Only `append_failed` (a
+/// write or COMMIT that failed, including after the COMMIT, and every append of a journal
+/// poisoned by one) and `chain_invalid` have an unknown outcome; every other error is a
+/// refusal checked before anything is written.
+pub fn append_outcome(e: &JournalError) -> AppendOutcome {
+    match e {
+        JournalError::AppendFailed(_) | JournalError::ChainInvalid(_) => AppendOutcome::Unknown,
+        JournalError::HeadMoved { .. }
+        | JournalError::InputLimit(_)
+        | JournalError::Schema(_)
+        | JournalError::MissingBlob(_)
+        | JournalError::TimeRegressed { .. }
+        | JournalError::TimeAhead { .. }
+        | JournalError::EmptyStream(_)
+        | JournalError::ReadOnly(_) => AppendOutcome::NotAppended,
+    }
+}
+
+/// The bus error of a journal error:
+///
+/// - `head_moved` is `conflict/head_moved`; `input_limit` is `validation/input_limit`; a
+///   malformed draft (`schema`) is `internal/invariant_violated` (a bus bug);
+/// - a clock refusal (`time_regressed`, `time_ahead`: the host clock stepped back behind the
+///   chain tail, or is far ahead of it) is `precondition/false`, with the journal's detail.
+///   The catalogue has no clock reason; adding one is CORE.BUS.PIPE.ERR's (a new catalogue
+///   version);
+/// - `read_only` (the store is not opened for writing or lost its project write lock) is
+///   `precondition/project_locked`;
+/// - every other storage or chain failure is `internal/journal_unavailable`.
 pub fn journal_error(e: &JournalError) -> BusError {
     let d = Detail::new(&e.to_string());
     match e {
         JournalError::HeadMoved { .. } => BusError::Conflict(ConflictReason::HeadMoved, d),
         JournalError::InputLimit(_) => BusError::Validation(ValidationReason::InputLimit, d),
         JournalError::Schema(_) => BusError::Internal(InternalReason::InvariantViolated, d),
+        JournalError::TimeRegressed { .. } | JournalError::TimeAhead { .. } => {
+            BusError::Precondition(PreconditionReason::False, Detail::new(&format!("clock: {e}")))
+        }
+        JournalError::ReadOnly(_) => BusError::Precondition(PreconditionReason::ProjectLocked, d),
         JournalError::AppendFailed(_)
         | JournalError::MissingBlob(_)
-        | JournalError::TimeRegressed { .. }
-        | JournalError::TimeAhead { .. }
         | JournalError::ChainInvalid(_)
-        | JournalError::EmptyStream(_)
-        | JournalError::ReadOnly(_) => BusError::Internal(InternalReason::JournalUnavailable, d),
+        | JournalError::EmptyStream(_) => BusError::Internal(InternalReason::JournalUnavailable, d),
     }
 }
 
@@ -357,8 +409,8 @@ impl RecordJournal for Journal {
         Journal::head(self, branch).map(|h| h.map(|h| h.hash)).map_err(|e| journal_error(&e))
     }
 
-    fn append(&self, req: AppendRequest) -> Result<EntryHash, BusError> {
-        Journal::append(self, req).map_err(|e| journal_error(&e))
+    fn append(&self, req: AppendRequest) -> Result<EntryHash, AppendFailure> {
+        Journal::append(self, req).map_err(|e| AppendFailure::from_journal(&e))
     }
 }
 
@@ -441,6 +493,12 @@ fn is_read(class: SideEffect) -> bool {
     }
 }
 
+/// The placeholder time of a commit's draft (and a filing's): the commit stage replaces it
+/// with [`BusEnv::now`] under its commit lock, so no time is read before the lock.
+fn unset_time() -> EntryTime {
+    EntryTime { utc: String::new(), mono_ns: 0, sync: String::new() }
+}
+
 /// Where a channel's principal sits, for the Activity Log router.
 fn locality(kind: ChannelKind) -> Locality {
     match kind {
@@ -456,12 +514,15 @@ fn locality(kind: ChannelKind) -> Locality {
     }
 }
 
-/// The bus's own agent-branch check, independent of the [`Router`]: an `agent` principal
-/// commits and files requests only on an `agent/` branch (CONSTITUTION §3).
+/// The bus's own branch check, independent of the [`Router`]: the routed name must be a valid
+/// branch name ([`BranchName::parse`], else `validation/bad_branch_name`), and an `agent`
+/// principal commits and files requests only on a branch it owns as an agent
+/// ([`Owner::Agent`], the `agent/` namespace; CONSTITUTION §3).
 fn agent_branch(principal: &Principal, branch: &str) -> Result<(), BusError> {
-    if principal.kind() == PrincipalKind::Agent
-        && !(branch.starts_with(AGENT_PREFIX) && branch.len() > AGENT_PREFIX.len())
-    {
+    let name = BranchName::parse(branch).map_err(|e| {
+        BusError::Validation(ValidationReason::BadBranchName, Detail::new(&format!("routed branch: {e}")))
+    })?;
+    if principal.kind() == PrincipalKind::Agent && name.owner() != Owner::Agent {
         return Err(BusError::Policy(
             PolicyReason::AgentWriteForbidden,
             Detail::new(&format!("an agent writes only to an {AGENT_PREFIX} branch; the call was routed to {branch}")),
@@ -565,6 +626,16 @@ impl Bus {
         self.poisoned.store(true, Ordering::SeqCst);
     }
 
+    /// `internal/invariant_violated` on a poisoned bus. Checked before every commit, and
+    /// before a commit-class dry run and a filing's request ID, so a poisoned bus does not
+    /// report what a commit would do.
+    fn refuse_if_poisoned(&self) -> Result<(), BusError> {
+        if self.is_poisoned() {
+            return Err(invariant("the bus is poisoned by an earlier failure after its precommit; reopen the project"));
+        }
+        Ok(())
+    }
+
     fn enter(&self, stage: Stage) -> Result<(), BusError> {
         self.probe.enter(stage)
     }
@@ -615,6 +686,9 @@ impl Bus {
         let (_, _, mut events) = checked.into_parts();
         events.extend(approval);
         if inv.dry_run {
+            if target.is_some() {
+                self.refuse_if_poisoned()?;
+            }
             return Ok(CommandResult::DryRun { events });
         }
         let Some(target) = target else {
@@ -632,6 +706,7 @@ impl Bus {
             seed,
             inv.consumed_r1.clone(),
             inv,
+            unset_time(),
         )?;
         let hash = self.commit(&target, draft, &events)?;
         Ok(CommandResult::Done { result, events, entry: Some(hash), activity: None })
@@ -691,15 +766,17 @@ impl Bus {
         let branch = self.router.request_branch(principal, call.channel)?;
         agent_branch(principal, &branch)?;
         let target = self.guard(call, inv, branch)?;
+        self.refuse_if_poisoned()?;
         if inv.dry_run {
             return Ok(CommandResult::WouldFile { command: filing.command().clone() });
         }
         self.enter(Stage::Commit)?;
+        self.refuse_if_poisoned()?;
         let id = self.env.request_id()?;
         let ctx =
             RecordContext { stream: self.stream.clone(), branch: target.branch.clone(), manifests: self.manifests };
         let mut sink = FilingSink { bus: self, target: &target, entry: None };
-        filing.commit(id, call.view, self.env.now(), &ctx, &mut sink)?;
+        filing.commit(id, call.view, unset_time(), &ctx, &mut sink)?;
         let entry = sink.entry.ok_or_else(|| invariant("the filing appended no entry"))?;
         Ok(CommandResult::Pending { request_id: id, entry })
     }
@@ -718,8 +795,18 @@ impl Bus {
         result: Option<CValue>,
     ) -> Result<CommandResult, BusError> {
         let branch = self.router.branch(principal, call.channel, def)?;
-        let draft =
-            self.command_draft(principal, def, validated, &events, &branch, ACTIVITY_STREAM, seed, Vec::new(), inv)?;
+        let draft = self.command_draft(
+            principal,
+            def,
+            validated,
+            &events,
+            &branch,
+            ACTIVITY_STREAM,
+            seed,
+            Vec::new(),
+            inv,
+            self.env.now(),
+        )?;
         let outcome = self
             .streams
             .complete_call(locality(call.channel.kind()), inv.program_step.as_ref(), &draft)
@@ -727,8 +814,9 @@ impl Bus {
         Ok(CommandResult::Done { result, events, entry: None, activity: Some(outcome) })
     }
 
-    /// The command entry draft of a call (module docs, "Entry contents"). The commit stage
-    /// sets the logical parent and, under its lock, the time.
+    /// The command entry draft of a call (module docs, "Entry contents"), at `time`. For a
+    /// commit, `time` is [`unset_time`]: the commit stage sets the logical parent and, under
+    /// its lock, the time.
     #[allow(clippy::too_many_arguments)]
     fn command_draft(
         &self,
@@ -741,6 +829,7 @@ impl Bus {
         seed: u64,
         consumed_r1: Vec<Digest>,
         inv: &Invocation,
+        time: EntryTime,
     ) -> Result<EntryDraft, BusError> {
         let args = validated.entry_params().clone();
         let reason = match self.reasons.get(inv.command.as_str()) {
@@ -763,7 +852,7 @@ impl Bus {
             stream: stream.to_string(),
             branch: branch.to_string(),
             logical_parent: None,
-            time: self.env.now(),
+            time,
             principal: principal.to_draft(),
             ai_assistance: ai_assistance(principal.kind()),
             manifests: self.manifests,
@@ -819,9 +908,7 @@ impl Bus {
                 "an earlier commit panicked while holding the commit lock; the bus is poisoned; reopen the project",
             ));
         };
-        if self.is_poisoned() {
-            return Err(invariant("the bus is poisoned by an earlier failure after its precommit; reopen the project"));
-        }
+        self.refuse_if_poisoned()?;
         // 1. tail, then branch head, then the entry time.
         let (tail_seq, tail_hash) = self.journal.tail()?.unwrap_or((0, GENESIS_PREV));
         let head = self.journal.branch_head(&target.branch)?.unwrap_or(GENESIS_PREV);
@@ -848,12 +935,12 @@ impl Bus {
         };
         let hash = match self.journal.append(req) {
             Ok(hash) => hash,
-            Err(e) => {
-                if matches!(e, BusError::Internal(InternalReason::JournalUnavailable, _)) {
-                    // Unknown outcome: the entry may have landed without being folded.
+            Err(f) => {
+                if f.outcome == AppendOutcome::Unknown {
+                    // The entry may have landed without being folded.
                     self.poison();
                 }
-                return Err(e);
+                return Err(f.error);
             }
         };
         if hash != entry.header.hash {
