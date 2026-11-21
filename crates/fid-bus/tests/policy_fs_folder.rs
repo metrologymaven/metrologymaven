@@ -101,7 +101,7 @@ impl Tree {
     }
 
     fn p(&self, rel: &str) -> PathBuf {
-        self.0.join(rel)
+        rel.split('/').fold(self.0.clone(), |p, s| p.join(s))
     }
 
     fn roots(&self) -> Roots {
