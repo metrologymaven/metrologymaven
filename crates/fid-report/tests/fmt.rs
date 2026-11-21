@@ -1,4 +1,4 @@
-//! Acceptance criteria of spec node RPT.MODEL.FMT (AC-1 .. AC-6 and AC-8 .. AC-11; AC-7 is
+//! Acceptance criteria of spec node RPT.MODEL.FMT (AC-1 .. AC-6 and AC-8 .. AC-12; AC-7 is
 //! the lint, tested in `tools/tests/test_rpt_float_lint.py`).
 //!
 //! Expected strings, digit counts, sides and tie flags come from the independent reference
@@ -10,6 +10,7 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use fid_canon::{parse, CValue};
+use fid_gdt::chars::interp::PROVISIONAL_LABEL_TEXT;
 use fid_gdt::chars::record::EvaluationBasis;
 use fid_io_res::trans::model::{load_rows, transcribe, Transcription};
 use fid_kdec::{Catalog as RuleCatalog, Decision, EvidenceBasis, NotDecidableReason, Outcome, RuleRef};
@@ -20,9 +21,11 @@ use fid_num::kdec::Decimal;
 use fid_project::{IdService, ReplaySource, Uuid};
 use fid_report::fmt::{
     fmt_outcome, fmt_requirement, fmt_value, fmt_value_with, labels, Catalog, CatalogError, Characteristic,
-    DefaultDecimals, FmtContext, FmtError, GaugeId, Label, LimitSet, LimitUnit, LocaleError, LocaleRules, Marker,
-    SiValue, Side, UnitOverride, ValueKind, ValueRecord, ValueText, WARN_DISPLAY_TIE, WARN_DISPLAY_UNDECIDABLE,
+    DefaultDecimals, FmtContext, FmtError, GaugeId, InterpretationStatus, Label, LimitSet, LimitUnit, LocaleError,
+    LocaleRules, Marker, SiValue, Side, UnitOverride, ValueKind, ValueRecord, ValueText, WARN_DISPLAY_TIE,
+    WARN_DISPLAY_UNDECIDABLE,
 };
+use fid_types::Digest;
 
 // ------------------------------------------------------------------ helpers
 
@@ -150,7 +153,89 @@ fn rec<'a>(id: &str, value: f64, d: &'a Decision, st: &'a UncertaintyStatement) 
         acceptance: None,
         transcription: None,
         gauge: None,
+        record_digest: sha256(&signed_off_record()),
+        interpretation: signed_off(),
     }
+}
+
+fn sha256(bytes: &[u8]) -> Digest {
+    Digest::from_bytes(fid_canon::digest_bytes(bytes).0)
+}
+
+/// A `fid.gdt-result/2` record (interpretation block only) as canonical bytes.
+fn record_with(interpretation: &str, statuses: &[&str]) -> Vec<u8> {
+    let rules = statuses
+        .iter()
+        .map(|st| CValue::Obj([("status".to_string(), CValue::Str((*st).to_string()))].into_iter().collect()))
+        .collect();
+    let v = CValue::Obj(
+        [
+            ("interpretation".to_string(), CValue::Str(interpretation.to_string())),
+            ("interpretation_rules".to_string(), CValue::Arr(rules)),
+            ("schema".to_string(), CValue::Str("fid.gdt-result/2".to_string())),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    fid_canon::to_canonical_bytes(&v).unwrap()
+}
+
+/// The interpretation block of a GDT.CHAR.INTERP fixture case (`fixtures/gdt/interp`): its
+/// expected block on a `fid.gdt-result/2` record.
+fn interp_case(case: &str) -> std::collections::BTreeMap<String, CValue> {
+    let cases = json("fixtures/gdt/interp/cases.json");
+    let expect = get(get(get(&cases, "cases"), case), "expect");
+    let mut o = match expect {
+        CValue::Obj(o) => o.clone(),
+        _ => panic!("expect"),
+    };
+    o.remove("verification");
+    o.insert("schema".to_string(), CValue::Str("fid.gdt-result/2".to_string()));
+    o
+}
+
+/// The record of a GDT.CHAR.INTERP fixture case as canonical bytes.
+fn interp_case_record(case: &str) -> Vec<u8> {
+    fid_canon::to_canonical_bytes(&CValue::Obj(interp_case(case))).unwrap()
+}
+
+/// `flatness_signed`'s real record with only its `interpretation` set to `interpretation`
+/// and, when `sign_profile`, its one `profile` rule signed off (status `signed_off`, reason
+/// null). Everything else (register, DMT row, digests) is the fixture's.
+fn flatness_with(interpretation: &str, sign_profile: bool) -> Vec<u8> {
+    let mut o = interp_case("flatness_signed");
+    o.insert("interpretation".to_string(), CValue::Str(interpretation.to_string()));
+    let Some(CValue::Arr(rules)) = o.get_mut("interpretation_rules") else { panic!("rules") };
+    let mut profiles = 0;
+    for r in rules.iter_mut() {
+        let CValue::Obj(m) = r else { panic!("rule") };
+        if m.get("kind") == Some(&CValue::Str("profile".to_string())) {
+            profiles += 1;
+            assert_eq!(m.get("status"), Some(&CValue::Str("provisional".to_string())));
+            if sign_profile {
+                m.insert("status".to_string(), CValue::Str("signed_off".to_string()));
+                m.insert("reason".to_string(), CValue::Null);
+            }
+        } else {
+            assert_eq!(m.get("status"), Some(&CValue::Str("signed_off".to_string())));
+        }
+    }
+    assert_eq!(profiles, 1);
+    fid_canon::to_canonical_bytes(&CValue::Obj(o)).unwrap()
+}
+
+/// The signed-off record: no fixture record on main is signed off (profiles have no
+/// sign-off path yet), so this is `flatness_signed` with its profile rule and
+/// interpretation signed off.
+fn signed_off_record() -> Vec<u8> {
+    flatness_with("signed_off", true)
+}
+
+/// The status of [`signed_off_record`].
+fn signed_off() -> InterpretationStatus {
+    let s = InterpretationStatus::test_of_record_bytes(&signed_off_record());
+    assert!(!s.is_provisional());
+    s
 }
 
 fn unformattable(r: Result<ValueText, FmtError>) -> &'static str {
@@ -682,14 +767,15 @@ fn outcome_text_and_catalog() {
     let cat = Catalog::english();
     let st = stmt("uec1_lpu.json");
     let d = decision(Some("dr:guard-band(r=1)@1"), Outcome::Nonconforms, &st);
-    let o = fmt_outcome(&d, &cat);
-    assert_eq!(o.outcome, Outcome::Nonconforms);
-    assert_eq!(o.text, "nonconforms");
-    assert_eq!(o.rule_text.as_deref(), Some("dr:guard-band(r=1)@1"));
+    let o = fmt_outcome(&rec("r-out", 0.0, &d, &st), &cat).unwrap();
+    assert!(o.text().labels.is_empty());
+    assert_eq!(o.outcome(), Outcome::Nonconforms);
+    assert_eq!(o.text().text, "nonconforms");
+    assert_eq!(o.text().rule_text, Some("dr:guard-band(r=1)@1"));
     let nd = decision(None, Outcome::NotDecidable(NotDecidableReason::RuleMissing), &st);
-    let o = fmt_outcome(&nd, &cat);
-    assert_eq!(o.text, "not decidable (rule_missing)");
-    assert!(o.rule.is_none());
+    let o = fmt_outcome(&rec("r-nd", 0.0, &nd, &st), &cat).unwrap();
+    assert_eq!(o.text().text, "not decidable (rule_missing)");
+    assert!(o.rule().is_none());
     assert!(matches!(Catalog::new(vec![("report.nope".into(), "x".into())]), Err(CatalogError::UnknownKey(_))));
     assert!(matches!(
         Catalog::new(vec![("report.label.claimed".into(), "a".into()), ("report.label.claimed".into(), "b".into())]),
@@ -717,4 +803,108 @@ fn ac11_the_only_text_accessor_carries_labels_and_markers() {
     assert!(!t.labels.is_empty());
     // The compile-fail half is the set of `compile_fail` doctests on `ValueText`
     // (crates/fid-report/src/fmt/model.rs), run by `cargo test`.
+}
+
+// ------------------------------------------------------------------ AC-12 (D-045)
+
+fn provisional_labels(labels: &[fid_report::fmt::LabelText]) -> Vec<String> {
+    labels.iter().filter(|l| l.label == Label::ProvisionalInterpretation).map(|l| l.text.clone()).collect()
+}
+
+/// A record of `bytes`: its digest and the status read from it.
+fn rec_of<'a>(id: &str, bytes: &[u8], d: &'a Decision, st: &'a UncertaintyStatement) -> ValueRecord<'a> {
+    let mut r = rec(id, 0.0125, d, st);
+    r.record_digest = sha256(bytes);
+    r.interpretation = InterpretationStatus::test_of_record_bytes(bytes);
+    assert_eq!(r.interpretation.record_digest(), r.record_digest);
+    r
+}
+
+/// AC-12: a provisional record's value and outcome both carry `ProvisionalInterpretation`
+/// with the text `interpretation: provisional`, first among the labels; a signed-off record
+/// carries neither. No catalog can remove or shorten it: a translation is added after it.
+#[test]
+fn ac12_provisional_interpretation_label() {
+    let cat = Catalog::english();
+    let st = stmt("uec1_lpu.json");
+    let d = decision(Some("dr:simple-acceptance@1"), Outcome::Conforms, &st);
+    let c = ch("c-prov", ValueKind::Length, Unit::Mm, Some(3), None);
+    // position_mmc_mixed: every DMT row signed off, the profile provisional, so the record is.
+    let prov_bytes = interp_case_record("position_mmc_mixed");
+    let r = rec_of("r-prov", &prov_bytes, &d, &st);
+    assert!(r.interpretation.is_provisional());
+    let v = fmt_value(&r, &c, &ctx(en(), &cat)).unwrap();
+    assert_eq!(provisional_labels(v.text().labels), [PROVISIONAL_LABEL_TEXT]);
+    assert_eq!(v.text().labels[0].label, Label::ProvisionalInterpretation);
+    assert_eq!(PROVISIONAL_LABEL_TEXT, "interpretation: provisional");
+    let o = fmt_outcome(&r, &cat).unwrap();
+    assert_eq!(provisional_labels(o.text().labels), [PROVISIONAL_LABEL_TEXT]);
+    // flatness_signed is provisional on main too (its profile has no sign-off path); the
+    // signed-off case is that record with its profile rule and interpretation signed off.
+    assert!(InterpretationStatus::test_of_record_bytes(&interp_case_record("flatness_signed")).is_provisional());
+    let r2 = rec_of("r-signed", &signed_off_record(), &d, &st);
+    assert!(!r2.interpretation.is_provisional());
+    let v2 = fmt_value(&r2, &c, &ctx(en(), &cat)).unwrap();
+    assert!(provisional_labels(v2.text().labels).is_empty());
+    assert!(fmt_outcome(&r2, &cat).unwrap().text().labels.is_empty());
+    // Two values in one table keep their own status.
+    assert_eq!(provisional_labels(v.text().labels).len() + provisional_labels(v2.text().labels).len(), 1);
+    // A translated catalog keeps the English text first.
+    let de = Catalog::new(vec![("gdt.interpretation.provisional".into(), "Auslegung: vorläufig".into())]).unwrap();
+    let v3 = fmt_value(&r, &c, &ctx(en(), &de)).unwrap();
+    assert_eq!(provisional_labels(v3.text().labels), ["interpretation: provisional (Auslegung: vorläufig)"]);
+    // Fail closed: unreadable, non-canonical or /1 bytes are provisional.
+    assert!(InterpretationStatus::test_of_record_bytes(b"not json").is_provisional());
+    assert!(InterpretationStatus::test_of_record_bytes(&record_with("signed_off", &["signed_off", "provisional"]))
+        .is_provisional());
+    assert!(InterpretationStatus::test_of_record_bytes(&record_with("signed_off", &[])).is_provisional());
+}
+
+/// AC-12: a record whose `interpretation` says `signed_off` while one of its rules is still
+/// provisional (`flatness_signed` with only the interpretation changed) is labelled
+/// provisional: the rules decide, not the summary field.
+#[test]
+fn ac12_signed_off_summary_with_a_provisional_rule_is_provisional() {
+    let cat = Catalog::english();
+    let st = stmt("uec1_lpu.json");
+    let d = decision(Some("dr:simple-acceptance@1"), Outcome::Conforms, &st);
+    let c = ch("c-mixed", ValueKind::Length, Unit::Mm, Some(3), None);
+    let r = rec_of("r-mixed", &flatness_with("signed_off", false), &d, &st);
+    assert!(r.interpretation.is_provisional());
+    let v = fmt_value(&r, &c, &ctx(en(), &cat)).unwrap();
+    assert_eq!(v.text().labels[0].label, Label::ProvisionalInterpretation);
+    assert_eq!(provisional_labels(v.text().labels), [PROVISIONAL_LABEL_TEXT]);
+    assert_eq!(provisional_labels(fmt_outcome(&r, &cat).unwrap().text().labels), [PROVISIONAL_LABEL_TEXT]);
+}
+
+/// D-045: a status is bound to the record it was read from. A status from record A attached
+/// to record B's value is refused by `fmt_value`, `labels` and `fmt_outcome`, both ways
+/// round (a signed-off status cannot clear a provisional record, nor the reverse).
+#[test]
+fn ac12_status_from_another_record_is_refused() {
+    let cat = Catalog::english();
+    let st = stmt("uec1_lpu.json");
+    let d = decision(Some("dr:simple-acceptance@1"), Outcome::Conforms, &st);
+    let c = ch("c-swap", ValueKind::Length, Unit::Mm, Some(3), None);
+    let a = interp_case_record("position_mmc_mixed");
+    let b = signed_off_record();
+    // B's value with the signed-off status of B is fine; with A's status it is refused.
+    let mut r = rec_of("r-b", &b, &d, &st);
+    r.interpretation = InterpretationStatus::test_of_record_bytes(&a);
+    assert_eq!(unformattable(fmt_value(&r, &c, &ctx(en(), &cat))), "interpretation_record_mismatch");
+    assert!(matches!(labels(&r), Err(FmtError::Unformattable { reason: "interpretation_record_mismatch", .. })));
+    assert!(matches!(
+        fmt_outcome(&r, &cat),
+        Err(FmtError::Unformattable { reason: "interpretation_record_mismatch", .. })
+    ));
+    // A's (provisional) value with B's signed-off status: refused, never shown as signed off.
+    let mut r = rec_of("r-a", &a, &d, &st);
+    r.interpretation = signed_off();
+    assert_eq!(unformattable(fmt_value(&r, &c, &ctx(en(), &cat))), "interpretation_record_mismatch");
+    assert!(matches!(
+        fmt_outcome(&r, &cat),
+        Err(FmtError::Unformattable { reason: "interpretation_record_mismatch", .. })
+    ));
+    // The same bytes give the same binding.
+    assert_eq!(InterpretationStatus::test_of_record_bytes(&b), signed_off());
 }

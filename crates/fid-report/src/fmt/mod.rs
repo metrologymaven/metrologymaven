@@ -17,7 +17,8 @@
 //! 1. the characteristic's type has a formatter kind (`no_formatter_kind`);
 //! 2. the value is finite (`non_finite`);
 //! 3. the decision's evidence basis, when it has one, names the stored statement
-//!    (`statement_mismatch`);
+//!    (`statement_mismatch`), and the interpretation status was read from the record whose
+//!    digest the value carries (`interpretation_record_mismatch`, D-045);
 //! 4. a `RESULTS_ONLY` value has its transcription record and only it has one
 //!    (`transcription_missing`, `transcription_unexpected`); a `DIRECT_READING` value cites
 //!    a gauge and only it does (`gauge_missing`, `gauge_unexpected`);
@@ -48,8 +49,11 @@
 //! The display string is the canonical string rendered with the pinned locale rules
 //! ([`LocaleRules::render`]): separators and minus sign only, never re-rounded.
 //!
-//! Labels ([`labels`]), in this order: the outcome, the rule (if any), the evidence class
-//! (UEC-0 as the catalog text "not evaluated", never a number), `transcribed` with source
+//! Labels ([`labels`]), in this order: `ProvisionalInterpretation` when the record's GD&T
+//! interpretation is provisional ([`InterpretationStatus`], read only from the journaled
+//! record and refused unless its record digest is the value's,
+//! `interpretation_record_mismatch`; D-045, REQ-015; also on the [`OutcomeText`]), the
+//! outcome, the rule (if any), the evidence class (UEC-0 as the catalog text "not evaluated", never a number), `transcribed` with source
 //! software and version (`RESULTS_ONLY`) or the gauge (`DIRECT_READING`), then `Claimed`,
 //! `DeclaredInput` and `UncharacterizedInput` exactly when the stored statement's
 //! `is_claimed()`, `rests_on_declared_input()` and `rests_on_uncharacterized_input()` are
@@ -66,9 +70,9 @@ mod model;
 pub use catalog::{Catalog, CatalogError, MAX_TEXT_BYTES, MESSAGES};
 pub use locale::{LocaleError, LocaleRules, MAX_LOCALE_ID_BYTES, MAX_MINUS_CHARS};
 pub use model::{
-    Characteristic, DefaultDecimals, FmtContext, FmtError, GaugeId, Label, LabelText, LimitSet, LimitUnit, Marker,
-    MarkerText, OutcomeText, Shown, SiValue, Side, UnitOverride, ValueKind, ValueRecord, ValueText, Warning,
-    WARN_DISPLAY_TIE, WARN_DISPLAY_UNDECIDABLE,
+    Characteristic, DefaultDecimals, FmtContext, FmtError, GaugeId, InterpretationStatus, Label, LabelText, LimitSet,
+    LimitUnit, Marker, MarkerText, OutcomeText, Shown, ShownOutcome, SiValue, Side, UnitOverride, ValueKind,
+    ValueRecord, ValueText, Warning, WARN_DISPLAY_TIE, WARN_DISPLAY_UNDECIDABLE,
 };
 
 use fid_gdt::chars::record::EvaluationBasis;
@@ -163,16 +167,39 @@ pub fn fmt_requirement(ch: &Characteristic, ctx: &FmtContext<'_>) -> Result<Valu
     finish(cid, rep, side, Vec::new(), Vec::new(), Vec::new(), ctx)
 }
 
-/// The decision outcome and rule ID as text (REQ-RPT.MODEL.FMT-007).
-pub fn fmt_outcome(decision: &Decision, catalog: &Catalog) -> OutcomeText {
+/// The decision outcome and rule ID of a value of record as text (REQ-RPT.MODEL.FMT-007),
+/// with the provisional label when the record's interpretation is provisional
+/// (REQ-RPT.MODEL.FMT-015). Fails with `report.unformattable`
+/// (`interpretation_record_mismatch`) when the record's interpretation status was read
+/// from another record.
+pub fn fmt_outcome(record: &ValueRecord<'_>, catalog: &Catalog) -> Result<OutcomeText, FmtError> {
+    let provisional = interpretation_of(record)?;
+    let decision: &Decision = record.decision;
     let outcome = decision.outcome();
     let rule = decision.rule().cloned();
-    OutcomeText {
+    let labels = if provisional {
+        let l = Label::ProvisionalInterpretation;
+        vec![LabelText { text: l.text(catalog), label: l }]
+    } else {
+        Vec::new()
+    };
+    Ok(OutcomeText {
         outcome,
         text: model::Label::Outcome(outcome).text(catalog),
         rule_text: rule.as_ref().map(ToString::to_string),
         rule,
+        labels,
+    })
+}
+
+/// Whether the record's interpretation is provisional, after checking that its status was
+/// read from this record (D-045): a status from another record is refused.
+fn interpretation_of(record: &ValueRecord<'_>) -> Result<bool, FmtError> {
+    let status: InterpretationStatus = record.interpretation;
+    if status.record_digest() != record.record_digest {
+        return Err(unformattable(&record.id, "interpretation_record_mismatch"));
     }
+    Ok(status.is_provisional())
 }
 
 /// The labels of a value of record, in display order (see the module documentation).
@@ -184,7 +211,12 @@ pub fn labels(record: &ValueRecord<'_>) -> Result<Vec<Label>, FmtError> {
     if record.decision.basis().is_some_and(|b| b.statement() != stmt.digest()) {
         return Err(unformattable(rid, "statement_mismatch"));
     }
-    let mut out = vec![Label::Outcome(record.decision.outcome())];
+    let provisional = interpretation_of(record)?;
+    let mut out = Vec::new();
+    if provisional {
+        out.push(Label::ProvisionalInterpretation);
+    }
+    out.push(Label::Outcome(record.decision.outcome()));
     if let Some(r) = record.decision.rule() {
         out.push(Label::Rule(r.clone()));
     }

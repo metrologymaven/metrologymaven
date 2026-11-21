@@ -1,0 +1,9 @@
+# The dependency of the MIR-layer fixture crate (see ../Cargo.toml.in).
+[package]
+name = "dep"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"

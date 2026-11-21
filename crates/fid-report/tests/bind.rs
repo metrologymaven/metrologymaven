@@ -14,7 +14,7 @@ use fid_report::doc::{
     add_block, create_report, replay_exact, AddBlock, BlockId, BlockKindId, CreateReport, KindRegistry, MemoryBackend,
     Report, ReportId, Untrusted, BIND_BLOCK,
 };
-use fid_report::fmt::SiValue;
+use fid_report::fmt::{InterpretationStatus, SiValue};
 use fid_types::Digest;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -525,6 +525,14 @@ fn both_record_schema_versions_are_read_and_others_refused() {
     let head = commit_result(&mut w, project, signed, with_block("signed_off"), 0xc3);
     let lookup = HeadLookup::new(&w.journal, project, &JournalHead::parse(&head).unwrap()).unwrap();
     assert!(!lookup.result(&signed).unwrap().evidence().is_provisional());
+    // The formatting status (RPT.MODEL.FMT, D-045) is the evidence's flag bound to the
+    // SHA-256 of the stored record bytes, so it cannot be moved to another record.
+    let sv = lookup.result(&signed).unwrap();
+    let pv = lookup.result(&prov).unwrap();
+    let (ss, ps) = (InterpretationStatus::of_result(&sv), InterpretationStatus::of_result(&pv));
+    assert!(!ss.is_provisional() && ps.is_provisional());
+    assert_eq!((ss.record_digest(), ps.record_digest()), (sv.digest(), pv.digest()));
+    assert_ne!(ss.record_digest(), ps.record_digest());
     // Any other version is refused.
     let v3 = uuid("019a9a9b-0008-7000-8000-000000000014");
     let head = commit_result(&mut w, project, v3, r1.replace("fid.gdt-result/1", "fid.gdt-result/3"), 0xc4);
