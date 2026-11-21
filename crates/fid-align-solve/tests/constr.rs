@@ -317,7 +317,7 @@ fn ac2_reduced_jacobian_column_order() {
     let mut bad = rows.clone();
     bad[5][2] = f64::NAN;
     assert_eq!(reduced_jacobian(&cs, &bad).unwrap_err(), ConstrError::NonFiniteRow { row: 5 });
-    assert!(MAX_JACOBIAN_ROWS >= 3 * 2000);
+    const { assert!(MAX_JACOBIAN_ROWS >= 3 * 2000) };
 }
 
 // ------------------------------------------------------------------ REQ-004, REQ-005 and refusals
@@ -384,6 +384,9 @@ fn gimbal_guard_and_parameter_checks() {
     assert_eq!(pose_from_params(&cs, &[f64::MAX, f64::MAX, f64::MAX, 0.0, 0.0, 0.0]).unwrap_err().code(), "non_finite");
 }
 
+/// (locks, free parameters, rotation, shift, the dof that must drift or `None`).
+type DriftCase = (DofLocks, Vec<f64>, [[f64; 3]; 3], [f64; 3], Option<Dof>);
+
 /// `base` followed by the motion `x -> rot x + shift` expressed in the lock frame.
 fn nudge(cs: &ConstraintSet, base: &Rigid, rot: [[f64; 3]; 3], shift: [f64; 3]) -> Rigid {
     let m = Transform::Rigid(Rigid::new(rot, shift).unwrap());
@@ -413,7 +416,7 @@ fn lock_drift_is_refused() {
     let y = [0.0, E, 0.0];
     let z = [0.0; 3];
     // (locks, free parameters, rotation, shift, the dof that must drift or None)
-    let cases: Vec<(DofLocks, Vec<f64>, [[f64; 3]; 3], [f64; 3], Option<Dof>)> = vec![
+    let cases: Vec<DriftCase> = vec![
         (DofLocks::NONE.with(Dof::Tx).with(Dof::Rz), vec![0.001, 0.002, 0.01, -0.02], I3, x, Some(Dof::Tx)),
         (DofLocks::NONE.with(Dof::Tx).with(Dof::Rz), vec![0.0, 0.002, 0.01, -0.02], ROT_Z, z, Some(Dof::Rz)),
         (DofLocks::NONE.with(Dof::Tx).with(Dof::Rz), vec![0.001, 0.002, 0.01, -0.02], I3, y, None),
