@@ -23,7 +23,8 @@
 //!   a note that is too long or holds control, format or other forbidden characters.
 //! - `policy/class_forbidden`: a network permit asked for a class other than X1, I1 or D1,
 //!   or an egress sent under a permit not issued for X1.
-//! - `policy/not_on_mcp`, `policy/bad_approval`, `not_found/unknown_request`: from the
+//! - `not_found/unknown_command` (a `never` command over MCP), `policy/bad_approval`,
+//!   `not_found/unknown_request`: from the
 //!   projection check (`policy::projection`), which runs first.
 //!
 //! **Destinations** ([`Destinations`]) come only from the A0 admin setting

@@ -63,6 +63,7 @@ python fixtures/gdt/dmt/check_schema.py
 python fixtures/gdt/dmt/make_fixtures.py --check
 python fixtures/gdt/dprof/make_cases.py --check
 python fixtures/gdt/drf/build/make_cases.py --check
+python fixtures/gdt/drf/cyl/make_cases.py --check
 python fixtures/gdt/drf/measured/make_cases.py --check
 python fixtures/gdt/ident/make_fixtures.py --check
 python fixtures/gdt/interp/make_cases.py --check
@@ -125,7 +126,9 @@ python fixtures/num/fmt/make_len_fixtures.py --check
 python fixtures/num/fmt/make_reg_fixtures.py --check
 python fixtures/num/la/make_la_fixtures.py --check
 python fixtures/num/la/make_qr_fixtures.py --check
+python fixtures/num/la/make_svd_fixtures.py --check
 python fixtures/num/make_red_fixtures.py --check
+python fixtures/operator/make_fixtures.py --check
 python fixtures/ors/trace/make_fixtures.py --check
 python fixtures/outr/bench/recipe/make_fixtures.py --check
 python fixtures/outr/site/import/make_fixtures.py --check
@@ -169,6 +172,7 @@ python fixtures/solv/patch/upstream-examples-v1/check_objectives.py
 python fixtures/solv/seq/ref-v1/make_cases.py --check
 python fixtures/solv/vend/make_fixtures.py --check
 python fixtures/solv/wrap/small-v1/make_fixtures.py --check
+python fixtures/troot/make_fixtures.py --check
 python fixtures/trust/profile/select/make_cases.py --check
 python fixtures/unc/class/make_table.py --check
 python fixtures/unc/dec/type/make_fixtures.py --check

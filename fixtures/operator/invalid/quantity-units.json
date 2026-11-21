@@ -1,0 +1,1 @@
+{"fields":[{"name":"a","quantity_kind":"temperature","response":"quantity","unit":"degC"},{"name":"b","quantity_kind":"temperature","response":"quantity"},{"name":"c","response":"bool","unit":"mm"},{"name":"d","quantity_kind":"pressure","response":"quantity","unit":"Pa"},{"name":"e","quantity_kind":"length","response":"quantity","unit":"°C"}],"format":"operator-v1","prompt":"p"}

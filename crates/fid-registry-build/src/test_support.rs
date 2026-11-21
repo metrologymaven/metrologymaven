@@ -2,7 +2,7 @@
 //!
 //! [`all_defs`] is [`crate::SOURCES`] plus the crates that declare commands but are not in
 //! `SOURCES` yet: the egress command of `fid-bus`, RDL, GDT (record, status, datum), the
-//! package reader, report binding, and the two export and two import commands of `fid-io-reg`
+//! package reader, the signature check of `fid-sign-core` (TRUST.SIGN.TROOT), report binding, and the two export and two import commands of `fid-io-reg`
 //! (IO.REG.ENV.EXPORT, IO.REG.ENV.IMPORT; built over a registry with one format in each
 //! direction, so they have a parameter schema). Their commands are not in `SOURCES` because
 //! they are built over the format registry, which the build step does not have. Shared by this crate's
@@ -76,6 +76,7 @@ pub fn all_defs() -> Result<Vec<(String, CommandDef)>, String> {
         ],
     );
     extra("fid-pkg", fid_pkg::reader::declarations().into_iter().map(|d| d.def).collect());
+    extra("fid-sign-core", fid_sign_core::troot::declarations().into_iter().map(|d| d.def).collect());
     extra("fid-report (bind)", fid_report::bind::declarations().into_iter().map(|d| d.def).collect());
     let reg = io_registry()?;
     let format = FormatId::new(TEST_EXPORT_FORMAT).map_err(|e| err("format id", e))?;

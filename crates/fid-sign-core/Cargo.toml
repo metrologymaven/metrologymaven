@@ -1,6 +1,6 @@
 [package]
 name = "fid-sign-core"
-description = "DSSE v1.0 envelopes, ECDSA P-256 and Ed25519 verification and key fingerprints (spec node TRUST.SIGN.DSSE)"
+description = "DSSE v1.0 envelopes, ECDSA P-256 and Ed25519 verification and key fingerprints (spec node TRUST.SIGN.DSSE); offline trust roots, revocation and verify.check_signature@1 (TRUST.SIGN.TROOT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,7 +12,7 @@ repository.workspace = true
 # shipped builds sign through an opaque keystore handle implementing `Signer`.
 test-signer = []
 
-# No OS or network dependencies; builds for wasm32.
+# No network dependencies; builds for wasm32.
 [dependencies]
 # Bounded JSON parser and RFC 8785 serialiser (same layer) for envelope (de)serialisation.
 fid-trust-canon = { path = "../fid-trust-canon" }
@@ -21,6 +21,14 @@ sha2 = { version = "0.10", default-features = false }
 p256 = { version = "0.14", default-features = false, features = ["ecdsa"] }
 # Ed25519 with verify_strict (rejects small-order keys and non-canonical encodings).
 ed25519-dalek = { version = "2", default-features = false, features = ["fast", "zeroize"] }
+# TRUST.SIGN.TROOT: the package is read only through the bounded Result Package reader
+# (TRUST.PKG.READER, same model layer), whose opener also resolves the trust-file handles.
+fid-pkg = { path = "../fid-pkg" }
+# TRUST.SIGN.TROOT: verify.check_signature@1 is declared with the registry macros
+# (CORE.REG.DEF.MACRO), and its report and the MCP parameters use the same canonical JSON as
+# fid-pkg's verify.inspect_package@1. Both model layer; both already in fid-pkg's tree.
+fid-registry = { path = "../fid-registry" }
+fid-canon = { path = "../fid-canon" }
 
 [dev-dependencies]
 # Integration tests use the software test signer.

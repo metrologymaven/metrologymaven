@@ -25,6 +25,7 @@ use fid_gdt::drf::build::{
 use fid_gdt::drf::datum::{DatumModel, DefineRequest, LabelPattern, TargetRequest};
 use fid_gdt::requires_provisional_label_bytes;
 use fid_gps::dmt::DmtTable;
+use fid_gps::drf::cyl_sim::CylinderSide;
 use fid_io_reg::Principal;
 use fid_replay::ReplayOutcome;
 use std::collections::BTreeMap;
@@ -447,17 +448,23 @@ fn ac3_parallel_pair_is_refused_and_journals_nothing() {
     assert_eq!(refused(&w, &["A", "E"]), "degenerate_datum_pair{A,E}");
 }
 
+/// A cylindrical datum needs the chain's cylinder simulator: the planar frame row names only a
+/// tangential plane, so `unsupported_simulator{none}`, typed, never a made-up axis; and points
+/// measured as the other kind of feature are refused. (AC-2 and AC-4 with the cylinder
+/// simulator: the cylindrical section below.)
 #[test]
-fn ac2_ac4_cylindrical_datums_are_refused_typed_until_their_simulator_exists() {
-    let w = world("minimax");
-    // AC-2 (plane A, axis B) and AC-4 (a single primary axis) need a cylindrical datum
-    // simulator (KRN.ENV.MCC.CYL / KRN.ENV.TAN.CYL), which is not built: a typed refusal,
-    // never a made-up axis.
-    assert_eq!(refused(&w, &["A", "K"]), "unsupported_datum_type_p1a{K}");
-    assert_eq!(refused(&w, &["K"]), "unsupported_datum_type_p1a{K}");
-    let mut store = DrfStore::new();
-    let e = w.build(&mut store, H, &["K"], false).unwrap_err();
-    assert!(matches!(e, BuildError::UnsupportedDatumType { feature_type: "cylinder", .. }));
+fn cylindrical_datums_need_their_simulator_and_cylinder_points() {
+    let mut w = world("minimax");
+    assert_eq!(refused(&w, &["A", "K"]), "measurement_missing{fk}");
+    let b = cyl_face("B");
+    w.points.insert("fk", b.0.clone(), b.1).unwrap();
+    assert_eq!(refused(&w, &["K"]), "measurement_invalid{fk:kind_mismatch}");
+    w.points.insert_cylinder("fk", b.0, b.1, CylinderSide::External).unwrap();
+    assert_eq!(refused(&w, &["A", "K"]), "unsupported_simulator{none}");
+    assert_eq!(refused(&w, &["K"]), "unsupported_simulator{none}");
+    // A planar datum measured as a cylinder.
+    w.points.insert_cylinder("fa", cyl_face("B").0, [0.0, 0.0, 1.0], CylinderSide::External).unwrap();
+    assert_eq!(refused(&w, &["A"]), "measurement_invalid{fa:kind_mismatch}");
 }
 
 #[test]
@@ -708,4 +715,333 @@ fn a_chain_that_does_not_resolve_is_refused() {
 #[test]
 fn datums_with_targets_are_refused() {
     assert_eq!(refused(&world("minimax"), &["A", "T"]), "datum_targets_unsupported{T}");
+}
+
+// ------------------------------------------------------------------ cylindrical datums (AC-2, AC-4)
+
+/// The reference cases of the cylindrical path, by name.
+fn cyl_cases() -> BTreeMap<String, CValue> {
+    let doc = fid_canon::parse(&read("drf/cyl/cases.json")).unwrap();
+    assert_eq!(st(&obj(&doc)["schema"]), "fid.test-drf-cyl/1");
+    arr(&obj(&doc)["cases"]).iter().map(|c| (st(&obj(c)["name"]).to_owned(), c.clone())).collect()
+}
+
+/// A datum of the cylindrical reference: points, nominal, and side (`None` for a plane).
+fn cyl_datum(label: &str) -> (Vec<f64>, [f64; 3], Option<CylinderSide>) {
+    for c in cyl_cases().values() {
+        for d in arr(&obj(c)["datums"]) {
+            let d = obj(d);
+            if st(&d["label"]) == label {
+                let side = d.get("side").map(|s| CylinderSide::parse(st(s)).unwrap());
+                return (arr(&d["xyz"]).iter().map(dec).collect(), dec3(&d["nominal"]), side);
+            }
+        }
+    }
+    panic!("{label}")
+}
+
+fn cyl_face(label: &str) -> (Vec<f64>, [f64; 3]) {
+    let (xyz, nominal, _) = cyl_datum(label);
+    (xyz, nominal)
+}
+
+/// The plate of the cylindrical reference: planes A (top), S (side), E (bottom, parallel to
+/// A); external bosses B and C, the oval boss O, the bore H (internal), and the cylinders L
+/// (lying along A) and K (oblique); with the frame row naming both simulators.
+fn cyl_world() -> World {
+    let (mut spec, mut dprof) = load_project(&read("spec/plan_asme.fidproj"), &test_vocab()).unwrap();
+    spec.create_characteristic(&mut dprof, H, "plan-1", CHAR, false).unwrap();
+    let mut datums = DatumModel::new("plan-1").unwrap();
+    let pat = LabelPattern::parse("[A-Z]{1,3}").unwrap();
+    let mut points = FeaturePoints::new();
+    for (i, label) in ["A", "S", "E", "B", "C", "O", "H", "L", "K"].iter().enumerate() {
+        let (xyz, nominal, side) = cyl_datum(label);
+        let face = format!("face:{}", i + 1);
+        let feature = format!("f{}", label.to_lowercase());
+        let feature_type = if side.is_some() { "cylinder" } else { "plane" };
+        datums.add_face(&face).unwrap();
+        let faces = [face.as_str()];
+        datums.add_feature(&feature, feature_type, &faces).unwrap();
+        let req = DefineRequest { label, feature: &feature, faces: &faces, feature_type, targets: &[], replace: false };
+        datums.define_datum(H, &pat, &req, false).unwrap();
+        match side {
+            Some(side) => points.insert_cylinder(&feature, xyz, nominal, side).unwrap(),
+            None => points.insert(&feature, xyz, nominal).unwrap(),
+        };
+    }
+    let journal = format!(r#"{{"entries":[],"schema":"{JOURNAL_SCHEMA}"}}"#);
+    let register = RegisterView::none(&JournalExtract::load(journal.as_bytes()).unwrap());
+    World { spec, dprof, table: table_from("drf/cyl/frame_table_minimax_mcc.json"), datums, points, register }
+}
+
+/// [`table`] with the frame row of another fixture file.
+fn table_from(path: &str) -> DmtTable {
+    let mut base = fid_canon::parse(&read("dmt/synthetic_table_v1.json")).unwrap();
+    let frame = fid_canon::parse(&read(path)).unwrap();
+    let row = arr(&obj(&frame)["rows"])[0].clone();
+    if let CValue::Obj(o) = &mut base {
+        if let Some(CValue::Arr(rows)) = o.get_mut("rows") {
+            rows.push(row);
+        }
+    }
+    DmtTable::from_value(&base).unwrap()
+}
+
+/// The frame and every datum row of a built DRF against a cylindrical reference case.
+fn assert_cyl_frame(b: &Built, case: &str) {
+    let all = cyl_cases();
+    let e = obj(&obj(&all[case])["expect"]);
+    let d = doc(b);
+    let d = obj(&d);
+    assert!(close(hex3(&d["origin"]), dec3(&e["origin"])), "{case}: origin");
+    let axes = obj(&d["axes"]);
+    for (k, name) in ["x", "y", "z"].iter().enumerate() {
+        assert!(close(hex3(&axes[*name]), dec3(&arr(&e["axes"])[k])), "{case}: axis {name}");
+    }
+    let rows = arr(&d["datums"]);
+    let want = arr(&e["dofs"]);
+    let refs = arr(&e["datums"]);
+    assert_eq!(rows.len(), want.len());
+    for ((r, w), x) in rows.iter().zip(want).zip(refs) {
+        let r = obj(r);
+        let x = obj(x);
+        assert_eq!(names(&r["constrained"]), names(w), "{case}");
+        let fit = obj(&r["fit"]);
+        assert_eq!(st(&fit["optimality"]), st(&x["optimality"]), "{case}");
+        assert_eq!(st(&fit["orientation"]), st(&x["orientation"]), "{case}");
+        assert!((unhex(&fit["objective"]) - dec(&x["objective"])).abs() <= TOL, "{case}: objective");
+        assert_eq!(fit["local_optimum_only"], CValue::Bool(false));
+        assert_eq!(st(&r["dmt_row"]), "dmt:asme/datum_frame/rmb@1");
+        if st(&x["kind"]) == "cylinder" {
+            assert_eq!(st(&r["kind"]), "axis");
+            assert_eq!(st(&r["side"]), "external");
+            assert_eq!(st(&r["simulator"]), "fit.cylinder.mc@1.0.0");
+            assert_eq!(unhex(&r["radius"]), unhex(&fit["objective"]));
+            assert!(st(&fit["certificate"]).starts_with("sha256:"));
+            let free = st(&x["orientation"]) == "free";
+            if free {
+                let x = obj(&fit["cross_check"]);
+                assert_eq!(st(&x["outcome"]), "passed");
+                for k in ["caps", "depth", "full_tests"] {
+                    assert!(matches!(x[k], CValue::Num(n) if n >= 1.0), "{case}: {k}");
+                }
+            } else {
+                assert_eq!(fit["cross_check"], CValue::Null);
+            }
+            let contacts: Vec<f64> = arr(&fit["contacts"])
+                .iter()
+                .map(|c| match c {
+                    CValue::Num(n) => *n,
+                    _ => panic!("contact"),
+                })
+                .collect();
+            let want: Vec<f64> = arr(&x["contacts"])
+                .iter()
+                .map(|c| match c {
+                    CValue::Num(n) => *n,
+                    _ => panic!("contact"),
+                })
+                .collect();
+            assert_eq!(contacts, want, "{case}: contacts");
+            let axis = obj(&r["axis"]);
+            assert!(close(hex3(&axis["direction"]), dec3(&x["direction"])), "{case}: direction");
+            assert!(close(hex3(&axis["point"]), dec3(&x["point"])), "{case}: point");
+            assert!(r.get("plane").is_none() && r.get("nominal_outward").is_none());
+        } else {
+            assert_eq!(st(&r["kind"]), "plane");
+            assert_eq!(st(&r["simulator"]), "fit.plane.tan_minimax@1.0.0");
+            assert!(fit.get("cross_check").is_none() && fit.get("seed").is_none());
+        }
+    }
+    assert_eq!(names(&d["free"]), names(&e["free"]), "{case}");
+}
+
+/// AC-2 through the CLI: plane A, then boss B perpendicular to it. A constrains {tz, rx, ry},
+/// B {tx, ty}, free {rz}; B is the global envelope held perpendicular to A.
+#[test]
+fn ac2_plate_with_a_perpendicular_axis_through_the_cli() {
+    let w = cyl_world();
+    let mut store = DrfStore::new();
+    let out =
+        invoke_cli(&mut store, &w.inputs(), H, &[BUILD_DRF_CLI, "--char", CHAR, "--datums", "A,B", "--json"]).unwrap();
+    let b = out.built().unwrap().clone();
+    assert_cyl_frame(&b, "ab");
+    let d = doc(&b);
+    let rows = arr(&obj(&d)["datums"]);
+    assert_eq!(names(&obj(&rows[0])["constrained"]), ["tz", "rx", "ry"]);
+    assert_eq!(names(&obj(&rows[1])["constrained"]), ["tx", "ty"]);
+    assert_eq!(names(&obj(&d)["free"]), ["rz"]);
+    assert_eq!(st(&obj(&d)["values"]), "measured");
+    assert_eq!(b.event().unwrap().datums(), ["A", "B"]);
+    assert_eq!(store.len(fid_gdt::chars::dprof::Branch::Working), 1);
+}
+
+/// AC-4: a single primary axis; free {tz, rz}. The free envelope is certified and its global
+/// cross-check passed.
+#[test]
+fn ac4_single_primary_axis() {
+    let w = cyl_world();
+    let b = w.build(&mut DrfStore::new(), H, &["B"], false).unwrap();
+    assert_cyl_frame(&b, "b_axis");
+    let d = doc(&b);
+    assert_eq!(names(&obj(&d)["free"]), ["tz", "rz"]);
+    let fit = obj(&obj(&arr(&obj(&d)["datums"])[0])["fit"]);
+    assert_eq!(st(&fit["optimality"]), "strict_local_cross_checked");
+    assert_eq!(st(&obj(&fit["cross_check"])["outcome"]), "passed");
+}
+
+/// Every other precedence with an axis datum matches its reference: primary axis then plane
+/// (B|A: {tz}, free {rz}), plane-axis-axis (A|B|C), axis-plane-axis (B|A|C), plane-axis-plane
+/// (A|B|S), axis then a plane parallel to it (B|S: {rz}, free {tz}).
+#[test]
+fn every_axis_precedence_matches_its_reference() {
+    let w = cyl_world();
+    let mut store = DrfStore::new();
+    for (datums, case) in [
+        (&["B", "A"][..], "ba"),
+        (&["A", "B", "C"][..], "abc"),
+        (&["B", "A", "C"][..], "bac"),
+        (&["A", "B", "S"][..], "abs"),
+        (&["B", "S"][..], "bs"),
+    ] {
+        assert_cyl_frame(&w.build(&mut store, H, datums, false).unwrap(), case);
+    }
+}
+
+/// Seeded faults, wrong datum precedence involving cylinders: A|B against B|A, and A|B|C
+/// against A|C|B; each order builds its own reference frame, and the frames differ.
+#[test]
+fn seeded_fault_wrong_precedence_with_cylinders() {
+    let w = cyl_world();
+    let mut store = DrfStore::new();
+    let ab = w.build(&mut store, H, &["A", "B"], false).unwrap();
+    let ba = w.build(&mut store, H, &["B", "A"], false).unwrap();
+    let abc = w.build(&mut store, H, &["A", "B", "C"], false).unwrap();
+    let acb = w.build(&mut store, H, &["A", "C", "B"], false).unwrap();
+    assert_cyl_frame(&ab, "ab");
+    assert_cyl_frame(&ba, "ba");
+    assert_cyl_frame(&abc, "abc");
+    assert_cyl_frame(&acb, "acb");
+    assert_ne!(ab.id(), ba.id());
+    assert_ne!(abc.id(), acb.id());
+    let z = |b: &Built| hex3(&obj(&obj(&doc(b))["axes"])["z"]);
+    assert!((0..3).any(|k| (z(&ab)[k] - z(&ba)[k]).abs() > 1e-6));
+    let x = |b: &Built| hex3(&obj(&obj(&doc(b))["axes"])["x"]);
+    assert!((0..3).any(|k| (x(&abc)[k] - x(&acb)[k]).abs() > 1e-6));
+    // A material boundary on a cylindrical datum is refused, never read as RMB.
+    assert_eq!(refused(&w, &["A", "B(M)"]), "unsupported_material_boundary{B}");
+}
+
+/// The cylindrical refusals, typed, storing and journaling nothing: a bore (its simulator,
+/// the maximum inscribed cylinder, is not built), an oval boss (the envelope fails closed), a
+/// cylinder lying along A (an orientation the envelope cannot hold), an oblique one, and a
+/// third datum parallel to the first.
+#[test]
+fn cylindrical_refusals_are_typed_and_journal_nothing() {
+    let w = cyl_world();
+    let all = cyl_cases();
+    for (datums, case) in [
+        (&["H"][..], "h_internal"),
+        (&["A", "H"][..], "a_h_internal"),
+        (&["O"][..], "o_oval"),
+        (&["A", "O"][..], "a_o_oval"),
+        (&["A", "L"][..], "a_l_lying"),
+        (&["A", "K"][..], "a_k_oblique"),
+        (&["A", "B", "E"][..], "abe_parallel"),
+    ] {
+        let e = obj(&obj(&all[case])["expect"]);
+        let want = match st(&e["error"]) {
+            "degenerate_datum_pair" => format!("degenerate_datum_pair{{{},{}}}", st(&e["first"]), st(&e["second"])),
+            "simulation_failed" => format!("simulation_failed{{{}:{}}}", st(&e["label"]), st(&e["code"])),
+            code => format!("{code}{{{}}}", st(&e["label"])),
+        };
+        assert_eq!(refused(&w, datums), want, "{case}");
+    }
+    let e = w.build(&mut DrfStore::new(), H, &["A", "H"], false).unwrap_err();
+    assert!(matches!(e, BuildError::UnsupportedDatumType { feature_type: "internal_cylinder", .. }), "{e:?}");
+}
+
+/// D-045 for a cylindrical DRF: the interpretation block and the provisional label, as for
+/// planes; and exact replay through the register the event pins (R1), after R2 is published.
+#[test]
+fn cylindrical_drfs_carry_the_label_and_replay_through_the_pinned_register() {
+    let mut w = cyl_world();
+    let r1 = read("interp/currency/register_r1.json");
+    let v1 = Regs::currency("v1");
+    w.register = RegisterView::load(&r1, &v1.sources(), Purpose::Evaluate);
+    assert!(w.register.is_verified());
+    let mut store = DrfStore::new();
+    let b = w.build(&mut store, H, &["A", "B", "C"], false).unwrap();
+    let d = doc(&b);
+    assert_eq!(st(&obj(&d)["interpretation"]), "provisional");
+    assert_eq!(st(&obj(&d)["interpretation_register"]), w.register.digest().unwrap().as_str());
+    assert!(requires_provisional_label_bytes(b.drf_bytes()));
+    assert_eq!(b.label(), PROVISIONAL_LABEL_TEXT);
+    assert_eq!(b.event().unwrap().pin().verification(), "verified");
+    let bytes = b.event().unwrap().canonical_bytes().unwrap();
+
+    let v2 = Regs::currency("v2");
+    w.register = RegisterView::none(&v2.journal);
+    let mut registers = RegisterStore::new();
+    registers.put(&r1).unwrap();
+    assert_eq!(replay_with(&w, &v2, &registers, &[(H, bytes.clone())]), ReplayOutcome::Identical);
+    assert_eq!(replay_with(&w, &v2, &RegisterStore::new(), &[(H, bytes.clone())]), ReplayOutcome::NotReplayable);
+    // The entry's principal binds the event; a changed boss measurement is not replayable.
+    assert_eq!(replay_with(&w, &v2, &registers, &[(A, bytes.clone())]), ReplayOutcome::Divergent);
+    let mut w2 = cyl_world();
+    let (mut xyz, nominal, _) = cyl_datum("B");
+    xyz[0] += 1e-9;
+    w2.points.insert_cylinder("fb", xyz, nominal, CylinderSide::External).unwrap();
+    assert_eq!(replay_with(&w2, &v2, &registers, &[(H, bytes)]), ReplayOutcome::NotReplayable);
+}
+
+/// An edit of a datum row and its `fit` object.
+type RowEdit = dyn Fn(&mut BTreeMap<String, CValue>, &mut BTreeMap<String, CValue>);
+
+/// The cylindrical documents conform to the published schemas, and the schema is not vacuous
+/// for them: an internal side or an unchecked free fit is refused.
+#[test]
+fn cylindrical_documents_conform_to_the_published_schemas() {
+    let b = build_command_def().unwrap();
+    let (br, gr) = (
+        Compiled::compile(&b.result_schema).unwrap(),
+        Compiled::compile(&get_command_def().unwrap().result_schema).unwrap(),
+    );
+    let w = cyl_world();
+    let mut store = DrfStore::new();
+    for datums in [&["B"][..], &["A", "B"][..], &["A", "B", "C"][..], &["B", "A", "C"][..], &["A", "B", "S"][..]] {
+        let built = w.build(&mut store, H, datums, false).unwrap();
+        valid(&br, &fid_canon::parse(&built.to_json_bytes().unwrap()).unwrap(), "build result");
+        valid(&gr, &fid_canon::parse(built.drf_bytes()).unwrap(), "get result");
+    }
+    let built = w.build(&mut store, H, &["B"], false).unwrap();
+    let base = fid_canon::parse(built.drf_bytes()).unwrap();
+    let edit = |f: &RowEdit| {
+        let mut d = base.clone();
+        if let CValue::Obj(o) = &mut d {
+            if let Some(CValue::Arr(rows)) = o.get_mut("datums") {
+                if let CValue::Obj(r) = &mut rows[0] {
+                    let mut fit = match r.get("fit") {
+                        Some(CValue::Obj(f)) => f.clone(),
+                        _ => panic!("fit"),
+                    };
+                    f(r, &mut fit);
+                    r.insert("fit".to_owned(), CValue::Obj(fit));
+                }
+            }
+        }
+        d
+    };
+    let internal = edit(&|r, _| {
+        r.insert("side".to_owned(), CValue::Str("internal".to_owned()));
+    });
+    assert!(gr.evaluate(&internal, &NoHooks).is_err());
+    let unchecked = edit(&|_, f| {
+        f.insert("optimality".to_owned(), CValue::Str("strict_local".to_owned()));
+    });
+    assert!(gr.evaluate(&unchecked, &NoHooks).is_err());
+    let flagged = edit(&|_, f| {
+        f.insert("local_optimum_only".to_owned(), CValue::Bool(true));
+    });
+    assert!(gr.evaluate(&flagged, &NoHooks).is_err());
 }

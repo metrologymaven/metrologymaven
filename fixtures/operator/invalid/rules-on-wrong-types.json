@@ -1,0 +1,1 @@
+{"fields":[{"name":"a","response":"text","rules":{"min":"1"}},{"name":"b","response":"choice","rules":{"choices":["x"],"max_length":2}},{"name":"c","response":"integer","rules":{"choices":["1"]}},{"name":"d","response":"ack","rules":{"max":"1"}},{"name":"e","response":"element","rules":{"max_length":9}}],"format":"operator-v1","prompt":"p"}

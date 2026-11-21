@@ -13,5 +13,5 @@ pub use layout::{
     Area, CopyTarget, FolderId, HexName, LockInfo, Locked, OpenMode, ProjectLocation, StoreError, StoreWarning,
     VerifiedFolder,
 };
-pub use schema::{Database, Migration, MigrationPlan, SchemaError, SchemaVersion};
+pub use schema::{Database, Migration, MigrationHooks, MigrationPlan, SchemaError, SchemaVersion};
 pub use txn::{Committed, RowOp, Store, Txn, TxnError, Value};
