@@ -63,6 +63,8 @@ pub const MAX_ANSWER_KEYS: usize = 256;
 pub const MAX_DOC_BYTES: usize = 1024 * 1024;
 /// Deepest nesting accepted from JSON text.
 pub const MAX_DOC_DEPTH: usize = 8;
+/// Most characters of an answer key echoed in an `unknown_field` error.
+pub const MAX_ERROR_FIELD_CHARS: usize = 64;
 
 /// Keys of a descriptor, sorted.
 pub const DESCRIPTOR_KEYS: [&str; 4] = ["fields", "format", "image", "prompt"];
@@ -291,13 +293,14 @@ pub enum AnswerValue {
     Text(UntrustedText),
     /// One of the field's authored choices.
     Choice(String),
-    /// An element reference, lexically checked only; resolving it is the caller's job.
-    Element(String),
+    /// An element reference the operator picked, lexically checked only and marked untrusted:
+    /// resolving it against the project is the caller's job.
+    Element(UntrustedText),
 }
 
 impl AnswerValue {
-    /// The wire value. A text answer is written as a plain string: whoever journals it
-    /// records it as untrusted data.
+    /// The wire value. A text or element answer is written as a plain string: whoever
+    /// journals it records it as untrusted data.
     pub fn to_value(&self) -> CValue {
         match self {
             AnswerValue::Ack => CValue::Bool(true),
@@ -310,7 +313,8 @@ impl AnswerValue {
                 CValue::Obj(m)
             }
             AnswerValue::Text(t) => CValue::Str(t.as_untrusted_str().to_string()),
-            AnswerValue::Choice(s) | AnswerValue::Element(s) => CValue::Str(s.clone()),
+            AnswerValue::Choice(s) => CValue::Str(s.clone()),
+            AnswerValue::Element(t) => CValue::Str(t.as_untrusted_str().to_string()),
         }
     }
 }
@@ -362,7 +366,10 @@ pub struct Field {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OperatorDescriptor {
     pub prompt: AuthoredText,
-    /// An image as a `root://` handle, lexically checked; resolving it is `IO.REG.ROOTS`.
+    /// An image as a `root://` handle, checked lexically only (see `is_image_handle`). It is
+    /// never a path: a consumer must resolve it through `fid_io_reg::RootHandle::parse` and the
+    /// `IO.REG.ROOTS` resolver (`RootSet`), which refuse what this check cannot see, and must
+    /// never open, join or display it as a file-system path.
     pub image: Option<String>,
     pub fields: Vec<Field>,
 }
@@ -409,8 +416,10 @@ impl ErrorCode {
 }
 
 /// One typed error. `field` is the field name (for descriptor errors, the declared name
-/// when it is a string; for `unknown_field`, the answer key); `index` is the field's
-/// position in the descriptor for descriptor errors. `detail` never echoes input.
+/// when it is a string; for `unknown_field`, the answer key, cut to its first
+/// [`MAX_ERROR_FIELD_CHARS`] characters); `index` is the field's position in the descriptor
+/// for descriptor errors. `field` is copied from the input, so it is untrusted text: show it
+/// escaped, never as instructions. `detail` never echoes input.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldError {
     pub code: ErrorCode,
@@ -471,7 +480,9 @@ fn is_display_text(s: &str, max: usize, newline: bool) -> bool {
 
 /// `root://<root-id>/<component>[/<component>...]`: root ID as `IO.REG.ROOTS` (1 to 64 of
 /// `[A-Za-z0-9_-]`, starting with a letter or digit); components of `[A-Za-z0-9._-]`, not
-/// ending in `.` (so never `.` or `..`). Stricter than `IO.REG.ROOTS`, which still resolves it.
+/// ending in `.` (so never `.` or `..`) and not a Windows device name (the `windows_device`
+/// rule of `fid_io_reg::roots`). Every handle this accepts is also accepted lexically by
+/// `RootHandle::parse`, so the check is stricter; resolution is still `IO.REG.ROOTS`.
 fn is_image_handle(s: &str) -> bool {
     let Some(rest) = s.strip_prefix("root://") else { return false };
     if s.len() > MAX_HANDLE {
@@ -490,8 +501,57 @@ fn is_image_handle(s: &str) -> bool {
         !c.is_empty()
             && !c.ends_with('.')
             && c.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
+            && !is_windows_device(c)
     });
     id_ok && comps_ok && n > 0
+}
+
+/// A Windows device name, as `fid_io_reg::roots` `windows_device` decides it: the part before
+/// the first `.`, without trailing spaces and ignoring ASCII case, is `CON`, `PRN`, `AUX`,
+/// `NUL`, `CONIN$`, `CONOUT$`, or `COM` or `LPT` followed by one digit or a superscript one
+/// to three. Image components are ASCII, so only the ASCII forms can occur here.
+fn is_windows_device(c: &str) -> bool {
+    let stem = c.split('.').next().unwrap_or(c).trim_end_matches(' ').to_ascii_uppercase();
+    match stem.as_str() {
+        "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$" => true,
+        s => match s.strip_prefix("COM").or_else(|| s.strip_prefix("LPT")) {
+            Some(t) => {
+                (t.len() == 1 && t.bytes().all(|b| b.is_ascii_digit())) || ["\u{b9}", "\u{b2}", "\u{b3}"].contains(&t)
+            }
+            None => false,
+        },
+    }
+}
+
+/// Whether every number literal in valid JSON text is an integer (`-?digits`, no fraction
+/// or exponent). `fid-canon` reads `5.0` and `5` alike as `f64`, so the lexeme is checked here.
+fn integer_literals_only(bytes: &[u8]) -> bool {
+    let (mut in_str, mut esc, mut in_num) = (false, false, false);
+    for &b in bytes {
+        if in_str {
+            if esc {
+                esc = false;
+            } else if b == b'\\' {
+                esc = true;
+            } else if b == b'"' {
+                in_str = false;
+            }
+            continue;
+        }
+        if in_num {
+            match b {
+                b'0'..=b'9' => continue,
+                b'.' | b'e' | b'E' | b'+' | b'-' => return false,
+                _ => in_num = false,
+            }
+        }
+        match b {
+            b'"' => in_str = true,
+            b'-' | b'0'..=b'9' => in_num = true,
+            _ => {}
+        }
+    }
+    true
 }
 
 /// A non-empty element reference of at most [`MAX_HANDLE`] bytes without forbidden code points.
@@ -561,7 +621,9 @@ fn check_value(f: &Field, v: &CValue) -> Result<AnswerValue, Refusal> {
                 Err((ErrorCode::NotAChoice, "not one of the field's choices"))
             }
         }
-        (ResponseType::Element, CValue::Str(s)) if is_element_ref(s) => Ok(AnswerValue::Element(s.clone())),
+        (ResponseType::Element, CValue::Str(s)) if is_element_ref(s) => {
+            Ok(AnswerValue::Element(UntrustedText(s.clone())))
+        }
         _ => Err(WRONG),
     }
 }
@@ -602,7 +664,7 @@ pub fn validate(descriptor: &OperatorDescriptor, answer: &CValue) -> Result<Vali
         if !names.contains(k.as_str()) {
             errors.push(FieldError {
                 code: ErrorCode::UnknownField,
-                field: Some(k.clone()),
+                field: Some(k.chars().take(MAX_ERROR_FIELD_CHARS).collect()),
                 index: None,
                 detail: "the descriptor has no such field",
             });
@@ -847,12 +909,18 @@ impl OperatorDescriptor {
 
     /// [`OperatorDescriptor::from_object`] on JSON text (a dialog file), bounded by
     /// [`MAX_DOC_BYTES`] and [`MAX_DOC_DEPTH`]; duplicate keys are refused by `fid-canon`.
+    /// The only number in a descriptor is `max_length`, so a number literal with a fraction or
+    /// an exponent (`5.0`, `5e0`) refuses the whole document. [`OperatorDescriptor::from_object`]
+    /// sees parsed values only; a canonical (RFC 8785) document always writes `5`.
     pub fn from_json(bytes: &[u8], cat: &dyn QuantityCatalogue) -> Result<OperatorDescriptor, Vec<FieldError>> {
         let bad = |detail| vec![FieldError::top(ErrorCode::BadDescriptor, detail)];
         if bytes.len() > MAX_DOC_BYTES {
             return Err(bad("the descriptor document is too large"));
         }
         match parse_with_limits(bytes, MAX_DOC_BYTES, MAX_DOC_DEPTH) {
+            Ok(CValue::Obj(_)) if !integer_literals_only(bytes) => {
+                Err(bad("number literals in a descriptor must be integers"))
+            }
             Ok(CValue::Obj(m)) => OperatorDescriptor::from_object(&m, cat),
             Ok(_) => Err(bad("a descriptor must be a JSON object")),
             Err(_) => Err(bad("the descriptor is not bounded JSON without duplicate keys")),
@@ -1050,8 +1118,28 @@ mod tests {
             "root://shop/C:x",
             "/etc/passwd",
             "root://shop/a.",
+            "root://shop/CON",
+            "root://shop/con.png",
+            "root://shop/img/Lpt1.txt",
+            "root://shop/com0",
+            "root://shop/NUL.tar.gz",
+            "root://shop/aux/x.png",
+            "root://shop/prn",
         ] {
             assert!(!is_image_handle(bad), "{bad}");
+        }
+        for ok in
+            ["root://shop/console.png", "root://shop/com10", "root://shop/lpt", "root://shop/nul_x", "root://CON/a"]
+        {
+            assert!(is_image_handle(ok), "{ok}");
+        }
+    }
+
+    #[test]
+    fn number_literals() {
+        assert!(integer_literals_only(br#"{"a":[1,-20,0],"b":"5.0e1","c":true,"d":"x\"1.5"}"#));
+        for bad in [&br#"{"a":5.0}"#[..], br#"{"a":5e0}"#, br#"{"a":-1E2}"#, br#"{"a":[1,2.5]}"#] {
+            assert!(!integer_literals_only(bad));
         }
     }
 

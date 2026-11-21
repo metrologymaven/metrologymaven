@@ -142,7 +142,7 @@ def check_value(f, v):
         return ({"type": "choice", "value": v}, None) if v in rules["choices"] else (None, "not_a_choice")
     if t == "element":
         ok = display_text(v, 4096)
-        return ({"type": "element", "value": v}, None) if ok else (None, "wrong_type")
+        return ({"type": "element", "value": v, "untrusted": True}, None) if ok else (None, "wrong_type")
     raise AssertionError(t)
 
 
@@ -263,6 +263,35 @@ def check_descriptor(d):
         if c:
             checked.append(c)
     return (checked if not out else None), out
+
+
+def check_raw(text):
+    """Errors for descriptor JSON text: a duplicate key, a number literal with a fraction or
+    exponent, nesting deeper than 8, or a non-object refuse the document."""
+
+    def pairs(items):
+        keys = [k for k, _ in items]
+        if len(keys) != len(set(keys)):
+            raise ValueError("duplicate key")
+        return dict(items)
+
+    def no_float(s):
+        raise ValueError("non-integer number literal " + s)
+
+    def depth(v):
+        if isinstance(v, dict):
+            return 1 + max([depth(x) for x in v.values()] or [0])
+        if isinstance(v, list):
+            return 1 + max([depth(x) for x in v] or [0])
+        return 0
+
+    try:
+        d = json.loads(text, object_pairs_hook=pairs, parse_float=no_float)
+    except ValueError:
+        return [err("bad_descriptor")]
+    if not isinstance(d, dict) or depth(d) > 8:
+        return [err("bad_descriptor")]
+    return check_descriptor(d)[1]
 
 
 def validate(fields, answer):
@@ -465,6 +494,11 @@ RAW_INVALID = {
     "not-object": "[]",
     "too-deep": '{"fields":[{"name":"a","response":"bool","rules":{"required":[[[[[[true]]]]]]}}],'
                 '"format":"operator-v1","prompt":"p"}',
+    # JSON reads 5.0 and 5e0 as numbers equal to 5; a descriptor allows integer literals only.
+    "max-length-float": '{"fields":[{"name":"a","response":"text","rules":{"max_length":5.0}}],'
+                        '"format":"operator-v1","prompt":"p"}',
+    "max-length-exponent": '{"fields":[{"name":"a","response":"text","rules":{"max_length":5e0}}],'
+                           '"format":"operator-v1","prompt":"p"}',
 }
 
 # Answers: name -> (descriptor name, answer, hand-labelled result). A result is either
@@ -535,7 +569,7 @@ ANSWERS = {
         depth=qv("4.500", "mm"),
         remark={"type": "text", "value": "été", "untrusted": True},
         side={"type": "choice", "value": "right"},
-        feature={"type": "element", "value": "elem:bore-2"},
+        feature={"type": "element", "value": "elem:bore-2", "untrusted": True},
         big={"type": "integer", "value": "1" + "0" * 38},
     )),
     "all-defaults": ("all-types", {"ready": True, "offset": "0", "depth": Q("-0.0", "mm"), "feature": "e1"}, ok(
@@ -545,7 +579,7 @@ ANSWERS = {
         offset={"type": "decimal", "value": "0"},
         depth=qv("-0.0", "mm"),
         side={"type": "choice", "value": "left"},
-        feature={"type": "element", "value": "e1"},
+        feature={"type": "element", "value": "e1", "untrusted": True},
     )),
     "all-bad": ("all-types", {
         "ready": False, "clamped": "yes", "passes": "1.0", "offset": "10.11", "depth": Q("0.001", "m"),
@@ -571,7 +605,7 @@ ANSWERS = {
         depth=qv("4.500", "mm"),
         remark={"type": "text", "value": "\U0001f600" * 3, "untrusted": True},
         side={"type": "choice", "value": "right"},
-        feature={"type": "element", "value": "elem:bore-2"},
+        feature={"type": "element", "value": "elem:bore-2", "untrusted": True},
         big={"type": "integer", "value": "1" + "0" * 38},
     )),
     "text-four-emoji": ("all-types", dict(ALL_GOOD, remark="\U0001f600" * 4), errs(err("too_long", "remark"))),
@@ -608,7 +642,10 @@ def build():
     raw = {}
     for name, text in RAW_INVALID.items():
         files[f"invalid/{name}.json"] = text.encode("utf-8")
-        raw[name] = [err("bad_descriptor")]
+        labels = [err("bad_descriptor")]
+        got = check_raw(text)
+        assert got == labels, (name, got, labels)
+        raw[name] = labels
     answers = {}
     for name, (dname, answer, labels) in ANSWERS.items():
         value, errors = validate(fields_of[dname], answer)

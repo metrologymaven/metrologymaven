@@ -129,7 +129,7 @@ fn shown(a: &ValidAnswer) -> CValue {
         let mut m = BTreeMap::new();
         m.insert("type".to_string(), CValue::Str(ty.into()));
         m.insert("value".to_string(), v.to_value());
-        if matches!(v, AnswerValue::Text(_)) {
+        if matches!(v, AnswerValue::Text(_) | AnswerValue::Element(_)) {
             m.insert("untrusted".to_string(), CValue::Bool(true));
         }
         out.insert(name.clone(), CValue::Obj(m));
@@ -256,7 +256,7 @@ fn oracle_invalid_descriptors() {
             n += 1;
         }
     }
-    assert_eq!(n, 30);
+    assert_eq!(n, 32);
 }
 
 /// Every answer case gives exactly the oracle's result.
@@ -344,6 +344,27 @@ fn bounds_fail_closed() {
     let mut m = BTreeMap::new();
     m.insert("remark".to_string(), CValue::Str("x".repeat(MAX_TEXT_ANSWER)));
     assert!(validate(&d, &CValue::Obj(m)).is_ok());
+}
+
+/// An `unknown_field` error echoes at most 64 characters of the untrusted key.
+#[test]
+fn unknown_field_is_capped() {
+    let d = descriptor("comment");
+    let mut m = BTreeMap::new();
+    m.insert("é".repeat(100), CValue::Bool(true));
+    let e = validate(&d, &CValue::Obj(m)).unwrap_err();
+    assert_eq!(e[0].code, ErrorCode::UnknownField);
+    assert_eq!(e[0].field.as_deref(), Some("é".repeat(64).as_str()));
+}
+
+/// An element answer is marked untrusted.
+#[test]
+fn element_is_untrusted() {
+    let (d, answer, _) = answer_case("all-good");
+    match validate(&d, &answer).unwrap().fields.get("feature") {
+        Some(AnswerValue::Element(t)) => assert_eq!(t.as_untrusted_str(), "elem:bore-2"),
+        other => panic!("{other:?}"),
+    }
 }
 
 /// Mutated descriptors and answers never panic (deterministic byte flips and truncations).
