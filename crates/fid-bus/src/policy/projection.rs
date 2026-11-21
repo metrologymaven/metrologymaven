@@ -72,7 +72,7 @@ use fid_canon::{CValue, Digest as CanonDigest};
 use fid_journal::{
     AiAssistance, CommandDraft, DraftBody, EntryDraft, EntryTime, Manifests, OutputDigest, TaggedDigest,
 };
-use fid_registry::{max_projection, CommandDef, DefError, Projection, Surface};
+use fid_registry::{CommandDef, DefError, Projection};
 use fid_store::settings::check::validate_value;
 use fid_types::{CommandId, Determinism, Digest, SideEffect};
 use fid_uuid::Uuid;
@@ -315,17 +315,10 @@ pub enum Projected {
 
 /// The projection MCP callers get for `def`: the stricter of the declared projection
 /// (`human_only` clamped to `request_only`) and the ceiling of its class, and `never` when
-/// `mcp` is not among its surfaces.
-pub fn mcp_projection(def: &CommandDef) -> Projection {
-    let declared = def.effective_projection();
-    let ceiling = max_projection(def.side_effect);
-    let p = if declared < ceiling { declared } else { ceiling };
-    if def.exposure.contains(&Surface::Mcp) {
-        p
-    } else {
-        Projection::Never
-    }
-}
+/// `mcp` is not among its surfaces. Defined once, in the registry
+/// (`fid_registry::mcp_projection`), and re-exported here, so the bus and the registry queries
+/// (CORE.REG.QRY) cannot disagree.
+pub use fid_registry::mcp_projection;
 
 /// The projection check (REQ-001, REQ-002). Off MCP channels it always passes. On MCP:
 /// `never` is `policy/not_on_mcp`; `request_only` or `human_only` is
