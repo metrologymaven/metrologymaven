@@ -1451,6 +1451,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-gpu-policy"
+version = "0.0.1"
+dependencies = [
+ "toml",
+]
+
+[[package]]
 name = "fid-hal-idl"
 version = "0.0.1"
 dependencies = [
@@ -1709,6 +1716,7 @@ name = "fid-platform"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-gpu-policy",
  "fid-io-reg",
  "fid-types",
  "sha2 0.10.9",
