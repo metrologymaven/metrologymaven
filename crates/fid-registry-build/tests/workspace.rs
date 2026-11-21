@@ -13,6 +13,7 @@ use fid_registry_build::{
     workspace_settings, BuildError, QuantitySource, SettingsSource, Source, QUANTITY_SOURCES, SETTINGS_SOURCES,
     SOURCES,
 };
+use std::collections::BTreeSet;
 
 fn geo() -> Catalogue {
     Catalogue::geo_frame().unwrap()
@@ -542,10 +543,57 @@ fn the_workspace_agent_view_hides_every_command_mcp_never_projects() {
     let out = invoke_mcp(&m, &mut log, MCP_SHOW, b"{\"full\":true}").unwrap();
     let CValue::Obj(o) = parse(&out).unwrap() else { panic!() };
     let Some(CValue::Str(text)) = o.get("bytes") else { panic!() };
+    // Names an agent may see: every visible ID (a hidden major of a visible name is checked as
+    // `<id>@<major>` only).
+    let visible: BTreeSet<&str> = defs.iter().filter(|d| sees(Audience::Agent, d)).map(|d| d.id.as_str()).collect();
     for d in &hidden {
-        assert!(!text.contains(&format!("\"{}\"", d.id)), "{}@{} leaked", d.id, d.major);
-        assert!(!text.contains(&format!("{}@{}", d.id, d.major)), "{}@{} named", d.id, d.major);
+        let full = format!("{}@{}", d.id, d.major);
+        assert!(!names(text, &full), "{full} named in the agent view");
+        if !visible.contains(d.id.as_str()) {
+            assert!(!names(text, &d.id), "{full}: {} named in the agent view", d.id);
+        }
     }
     assert_eq!(m.agent_view().definitions.len(), defs.len() - hidden.len());
     assert_eq!(m.export().definitions.len(), defs.len());
+}
+
+fn ident(b: u8) -> bool {
+    b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_'
+}
+
+/// Whether `text` holds `word` as a bare word, anywhere (JSON fields and prose alike): the
+/// character before is not in `[a-z0-9_.]`, and the one after is not either, except a `.`
+/// that ends a sentence (not followed by `[a-z0-9_]`), so "see cmm.move_to." still counts.
+fn names(text: &str, word: &str) -> bool {
+    let t = text.as_bytes();
+    let mut from = 0;
+    while let Some(i) = text[from..].find(word) {
+        let start = from + i;
+        let end = start + word.len();
+        let before_ok = start == 0 || !(ident(t[start - 1]) || t[start - 1] == b'.');
+        let after_ok = match t.get(end) {
+            None => true,
+            Some(&b'.') => !t.get(end + 1).is_some_and(|&c| ident(c)),
+            Some(&c) => !ident(c),
+        };
+        if before_ok && after_ok {
+            return true;
+        }
+        from = start + 1;
+    }
+    false
+}
+
+#[test]
+fn names_matches_bare_words_only() {
+    assert!(names("{\"id\":\"cmm.move_to\"}", "cmm.move_to"));
+    assert!(names("replaced by cmm.move_to@1.", "cmm.move_to@1"));
+    assert!(names("Use cmm.move_to.", "cmm.move_to"));
+    assert!(names("cmm.move_to", "cmm.move_to"));
+    assert!(!names("cmm.move_tool", "cmm.move_to"));
+    assert!(!names("xcmm.move_to", "cmm.move_to"));
+    assert!(!names("a.cmm.move_to", "cmm.move_to"));
+    assert!(!names("cmm.move_to.x", "cmm.move_to"));
+    assert!(!names("cmm.move_to@12", "cmm.move_to@1"));
+    assert!(!names("cmm.move_to_slow", "cmm.move_to"));
 }
