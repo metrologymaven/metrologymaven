@@ -212,19 +212,19 @@ fn new_digest_while_still_outdated_stays_stale() {
     assert_eq!(out.batch.updated, char_rids());
     assert_eq!(out.stale_count, 36);
     assert_eq!(g.serialise().unwrap(), fixture("stale-expect-held.txt"));
-    // Clearing the marks alone delivers nothing, so nothing leaves Stale ...
-    g.clear_outdated(&entities("stale-outdated.txt")).unwrap();
-    assert_eq!(g.stale_count(), 36);
-    // ... until the projector delivers again.
-    let out = g.reproject(&registry(), &re, &entities("stale-dirty.txt")).unwrap();
+    // Recompute then clears the marks; the cleared elements are re-delivered even with an
+    // empty dirty set, so they leave Stale in that same batch.
+    let out = g.recomputed(&registry(), &re, &[], &entities("stale-outdated.txt")).unwrap();
     assert_eq!(out.batch.updated, char_rids());
+    assert_eq!(out.stale_count, 0);
     assert_eq!(g.stale_count(), 0);
     assert_eq!(g.serialise().unwrap(), fixture("stale-expect-recomputed.txt"));
 }
 
 /// Test styles standing in for VIZ.OVERLAY.STATUS, with switches for broken variants.
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct Styles {
+    current_as_stale: Option<&'static str>,
     stale_as: Option<&'static str>,
     claimed_as_measured: bool,
     stale_ignores_evidence: bool,
@@ -238,6 +238,13 @@ impl StatusStyles for Styles {
             KernelOutcome::Indeterminate => "status.indeterminate",
             KernelOutcome::NotDecidable(_) => "status.not_decidable",
         };
+        if let (Some(s), false) =
+            (self.current_as_stale, matches!(k.outcome, KernelOutcome::Conforms | KernelOutcome::Nonconforms))
+        {
+            if s != "not_evaluated" && base.ends_with(s) {
+                return style("status.stale");
+            }
+        }
         if Evidence::of_kernel(k).any() && !self.claimed_as_measured {
             style(&format!("{base}.claimed"))
         } else {
@@ -252,6 +259,9 @@ impl StatusStyles for Styles {
         }
     }
     fn not_evaluated(&self) -> StyleToken {
+        if self.current_as_stale == Some("not_evaluated") {
+            return style("status.stale");
+        }
         style("status.not_evaluated")
     }
     fn error(&self, _code: &StatusCode) -> StyleToken {
@@ -441,4 +451,92 @@ fn node_added_for_an_outdated_element_starts_stale() {
     assert!(out.batch.updated.is_empty());
     assert!(g.get(rid(41)).unwrap().status.is_stale());
     assert_eq!(g.stale_count(), 2);
+}
+
+#[test]
+fn same_digest_cleared_but_not_dirty_leaves_stale() {
+    // Review of #384: CORE clears the marks after a recompute that changed no digest and so
+    // publishes an empty dirty set; every cleared element is still re-delivered.
+    let mut g = marked();
+    let out = g.recomputed(&registry(), &doc("doc.txt"), &[], &entities("stale-outdated.txt")).unwrap();
+    assert_eq!(out.batch.updated, char_rids());
+    assert_eq!(out.stale_count, 0);
+    assert_eq!(g.outdated().count(), 0);
+    assert_eq!(g.serialise().unwrap(), fixture("expect-full.txt"));
+}
+
+#[test]
+fn resolver_refuses_stale_styled_as_any_current_result() {
+    for (which, status) in [
+        ("indeterminate", "kernel:INDETERMINATE"),
+        ("not_decidable", "kernel:NOT_DECIDABLE("),
+        ("not_evaluated", "not_evaluated"),
+    ] {
+        let bad = Styles { current_as_stale: Some(which), ..Styles::default() };
+        match StyleResolver::new(bad).unwrap_err() {
+            StyleError::StaleLooksCurrent { status: got, .. } => assert!(got.starts_with(status), "{which}: {got}"),
+            other => panic!("{which}: {other:?}"),
+        }
+    }
+}
+
+/// Records the status each call of the characteristic projector sees.
+struct Spy(std::sync::Mutex<Vec<DisplayStatus>>);
+
+impl Projector for Spy {
+    fn kind(&self) -> ElementKind {
+        ElementKind::new("characteristic").unwrap()
+    }
+    fn project(&self, el: &ElementView, out: &mut NodeSink<'_>) -> Result<(), ProjError> {
+        self.0.lock().unwrap().push(out.element().status.clone());
+        assert_eq!(out.element().status, el.status);
+        Characteristic.project(el, out)
+    }
+}
+
+#[test]
+fn projectors_of_marked_elements_see_a_stale_view() {
+    let spy = std::sync::Arc::new(Spy(std::sync::Mutex::new(Vec::new())));
+    struct Shared(std::sync::Arc<Spy>);
+    impl Projector for Shared {
+        fn kind(&self) -> ElementKind {
+            self.0.kind()
+        }
+        fn project(&self, el: &ElementView, out: &mut NodeSink<'_>) -> Result<(), ProjError> {
+            self.0.project(el, out)
+        }
+    }
+    let mut r = ProjectorRegistry::new();
+    for k in ["part", "mesh", "point_set"] {
+        r.register(Box::new(Geom(k))).unwrap();
+    }
+    r.register(Box::new(Shared(spy.clone()))).unwrap();
+    let mut g = marked();
+    let before = g.serialise().unwrap();
+    let out = g.reproject(&r, &doc("doc.txt"), &entities("stale-dirty.txt")).unwrap();
+    // Nothing changed: the nodes still carry the kernel status underneath and stay stale.
+    assert!(out.batch.is_empty());
+    assert_eq!(g.serialise().unwrap(), before);
+    let seen = spy.0.lock().unwrap().clone();
+    assert_eq!(seen.len(), 12);
+    assert!(seen.iter().all(DisplayStatus::is_stale));
+    // c03 (claimed) keeps its evidence in the view.
+    assert_eq!(Evidence::of(&seen[2]), Evidence { claimed: true, ..Evidence::MEASURED });
+}
+
+#[test]
+fn marks_of_entities_that_left_the_document_are_pruned() {
+    let mut g = marked();
+    let c12 = uuid("00000000-0000-4000-8000-000000000016");
+    let alignment = uuid("00000000-0000-4000-8000-0000000000a1");
+    assert!(g.is_outdated(c12) && g.is_outdated(alignment));
+    let mut els = parse_doc(&fixture("doc.txt"));
+    els.retain(|e| e.entity != c12);
+    let d = Document::new(els).unwrap();
+    let out = g.reproject(&registry(), &d, &[c12, alignment]).unwrap();
+    assert_eq!(out.batch.retired, vec![rid(38), rid(39), rid(40)]);
+    assert!(!g.is_outdated(c12));
+    assert!(!g.is_outdated(alignment));
+    assert_eq!(g.outdated().count(), 11);
+    assert_eq!(g.stale_count(), 33);
 }

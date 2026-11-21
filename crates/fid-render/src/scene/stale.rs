@@ -13,9 +13,14 @@
 //!   node displays at that moment, `evidence` the claimed, declared-input and
 //!   uncharacterized-input facts of the status it replaces (all unset for `not_evaluated` and
 //!   `error`). The batch lists exactly the nodes that became stale, as `updated`. Entities
-//!   without nodes keep their mark, so a node added for them later starts stale.
-//! - **Leaving** (REQ-002). The marks are cleared with [`SceneGraph::clear_outdated`], or in the
-//!   same batch as the re-projection with [`SceneGraph::recomputed`]. A stale node leaves
+//!   without nodes keep their mark, so a node added for them later starts stale. A mark is
+//!   pruned when a re-projection finds its entity no longer in the document.
+//! - **Projector view.** While an element is marked, its projector is handed a view whose
+//!   status is already `Stale` (since the element's digest, with its evidence facts), so a
+//!   projector can never pick a style from the hidden kernel outcome.
+//! - **Leaving** (REQ-002). The marks are cleared with [`SceneGraph::recomputed`], which
+//!   re-projects the cleared elements together with the dirty set in one batch, or with
+//!   [`SceneGraph::clear_outdated`], which must be followed by a re-projection of them. A stale node leaves
 //!   `Stale` only when the projector delivers it again (re-projection of its element) **and**
 //!   its element's mark is cleared; it then shows the delivered kernel status. If the delivered
 //!   digest differs from `since_digest` while the mark is still set, the node stays stale (new
@@ -25,7 +30,9 @@
 //! - **Style guard** (REQ-003). [`StyleResolver`] wraps the [`StatusStyles`] that
 //!   `VIZ.OVERLAY.STATUS` supplies and checks `Stale` before the kernel outcome. Its
 //!   constructor refuses styles under which a stale style equals any conforming or
-//!   nonconforming style, a stale value with evidence facts looks like a stale measured one,
+//!   nonconforming style, or the style of any other current result (`INDETERMINATE`, every
+//!   `NOT_DECIDABLE(reason)`, `not_evaluated`; error codes are open-ended and not checked),
+//!   a stale value with evidence facts looks like a stale measured one,
 //!   or a conforming or nonconforming value with evidence facts looks measured (D-045). The
 //!   stale styles are read once, at construction, so the stale path cannot be changed later.
 //! - **Count** (REQ-004). [`SceneGraph::stale_count`] after every batch; [`MarkOutcome`] and
@@ -39,7 +46,7 @@
 use std::collections::BTreeSet;
 use std::fmt;
 
-use fid_kdec::Outcome as KernelOutcome;
+use fid_kdec::{NotDecidableReason, Outcome as KernelOutcome};
 use fid_types::Digest;
 
 use super::idtab::{EntityId, RenderId};
@@ -201,8 +208,10 @@ impl SceneGraph {
     }
 
     /// Clears CORE's `outdated` mark of the listed elements. Their nodes stay stale until the
-    /// projector delivers them again ([`SceneGraph::reproject`]); use
-    /// [`SceneGraph::recomputed`] to do both in one batch. Fails with
+    /// projector delivers them again, so **every call must be followed by a
+    /// [`SceneGraph::reproject`] whose dirty set includes the cleared elements**; otherwise a
+    /// node with an unchanged digest stays stale with no mark left. Prefer
+    /// [`SceneGraph::recomputed`], which clears and re-projects them in one batch. Fails with
     /// [`SceneError::TooManyElements`] for more than [`MAX_ELEMENTS`] entries.
     pub fn clear_outdated(&mut self, cleared: &[EntityId]) -> Result<(), SceneError> {
         if cleared.len() > MAX_ELEMENTS {
@@ -214,8 +223,10 @@ impl SceneGraph {
         Ok(())
     }
 
-    /// Recompute finished: clears the marks of `cleared`, then re-projects `dirty` against
-    /// `doc`, in one change batch (REQ-002). A delivered node whose element is no longer marked
+    /// Recompute finished: clears the marks of `cleared`, then re-projects `dirty ∪ cleared`
+    /// against `doc`, in one change batch (REQ-002). Every cleared element is re-delivered, so
+    /// none of its nodes can stay stale without a mark, even when CORE leaves it out of the
+    /// dirty set because its digest did not change. A delivered node whose element is no longer marked
     /// leaves `Stale` and shows its kernel status; a node of an element still marked stays
     /// stale. On error the graph and its marks are unchanged.
     pub fn recomputed(
@@ -225,9 +236,13 @@ impl SceneGraph {
         dirty: &[EntityId],
         cleared: &[EntityId],
     ) -> Result<RecomputeOutcome, SceneError> {
-        if cleared.len() > MAX_ELEMENTS {
+        if cleared.len() > MAX_ELEMENTS || dirty.len().saturating_add(cleared.len()) > MAX_ELEMENTS {
             return Err(SceneError::TooManyElements);
         }
+        let mut deliver: Vec<EntityId> = Vec::new();
+        deliver.try_reserve_exact(dirty.len() + cleared.len()).map_err(|_| SceneError::AllocationFailed)?;
+        deliver.extend_from_slice(dirty);
+        deliver.extend_from_slice(cleared);
         let mut removed: Vec<EntityId> = Vec::new();
         removed.try_reserve_exact(cleared.len()).map_err(|_| SceneError::AllocationFailed)?;
         for e in cleared {
@@ -235,7 +250,7 @@ impl SceneGraph {
                 removed.push(*e);
             }
         }
-        match self.reproject(registry, doc, dirty) {
+        match self.reproject(registry, doc, &deliver) {
             Ok(out) => {
                 Ok(RecomputeOutcome { batch: out.batch, diagnostics: out.diagnostics, stale_count: self.stale_count() })
             }
@@ -285,6 +300,15 @@ pub enum StyleError {
         /// The outcome whose style it equals.
         outcome: KernelOutcome,
     },
+    /// The stale style for these facts equals the style of a current result that is not
+    /// conforming or nonconforming (`INDETERMINATE`, any `NOT_DECIDABLE(reason)`, or
+    /// `not_evaluated`): a stale node must look stale, never like any current result.
+    StaleLooksCurrent {
+        /// The facts of the stale value.
+        evidence: Evidence,
+        /// The status it looks like: `kernel:<OUTCOME>` or `not_evaluated`.
+        status: String,
+    },
     /// A stale value with evidence facts gets the style of a stale measured value (D-045).
     StaleLooksMeasured {
         /// The facts of the stale value.
@@ -304,6 +328,7 @@ impl StyleError {
     pub const fn code(&self) -> &'static str {
         match self {
             StyleError::StaleLooksDecided { .. } => "StaleLooksDecided",
+            StyleError::StaleLooksCurrent { .. } => "StaleLooksCurrent",
             StyleError::StaleLooksMeasured { .. } => "StaleLooksMeasured",
             StyleError::ClaimedLooksMeasured { .. } => "ClaimedLooksMeasured",
         }
@@ -315,6 +340,9 @@ impl fmt::Display for StyleError {
         match self {
             StyleError::StaleLooksDecided { evidence, outcome } => {
                 write!(f, "{}: stale {evidence:?} styled as {}", self.code(), outcome.wire())
+            }
+            StyleError::StaleLooksCurrent { evidence, status } => {
+                write!(f, "{}: stale {evidence:?} styled as {status}", self.code())
             }
             StyleError::StaleLooksMeasured { evidence } => write!(f, "{}: stale {evidence:?}", self.code()),
             StyleError::ClaimedLooksMeasured { outcome, evidence } => {
@@ -361,6 +389,25 @@ impl<S: StatusStyles> StyleResolver<S> {
                     return Err(StyleError::ClaimedLooksMeasured { outcome: o, evidence: e });
                 }
             }
+        }
+        // A stale node must not look like any other current result either.
+        let mut current: Vec<KernelOutcome> = vec![KernelOutcome::Indeterminate];
+        current.extend(NotDecidableReason::ALL.iter().map(|&r| KernelOutcome::NotDecidable(r)));
+        for o in current {
+            for e in Evidence::ALL {
+                let t = kernel(o, e);
+                if let Some(s) = Evidence::ALL.into_iter().find(|s| stale[s.index()] == t) {
+                    let status = match o.reason() {
+                        Some(r) => format!("kernel:{}({})", o.wire(), r.wire()),
+                        None => format!("kernel:{}", o.wire()),
+                    };
+                    return Err(StyleError::StaleLooksCurrent { evidence: s, status });
+                }
+            }
+        }
+        let not_evaluated = styles.not_evaluated();
+        if let Some(s) = Evidence::ALL.into_iter().find(|s| stale[s.index()] == not_evaluated) {
+            return Err(StyleError::StaleLooksCurrent { evidence: s, status: "not_evaluated".to_string() });
         }
         if let Some(e) = Evidence::ALL.into_iter().find(|e| e.any() && stale[e.index()] == stale[0]) {
             return Err(StyleError::StaleLooksMeasured { evidence: e });

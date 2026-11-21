@@ -537,17 +537,21 @@ impl Planned {
 #[derive(Debug)]
 pub struct NodeSink<'a> {
     el: &'a ElementView,
+    /// The kernel-supplied status the planned nodes carry (the element's own, even when the
+    /// projector sees a stale view).
+    status: &'a DisplayStatus,
     nodes: Vec<Planned>,
 }
 
 impl<'a> NodeSink<'a> {
-    fn new(el: &'a ElementView) -> Result<NodeSink<'a>, SceneError> {
+    fn new(el: &'a ElementView, status: &'a DisplayStatus) -> Result<NodeSink<'a>, SceneError> {
         let mut nodes = Vec::new();
         nodes.try_reserve_exact(MAX_IDS_PER_ENTITY).map_err(|_| SceneError::AllocationFailed)?;
-        Ok(NodeSink { el, nodes })
+        Ok(NodeSink { el, status, nodes })
     }
 
-    /// The element being projected.
+    /// The element being projected, as the projector sees it (status `Stale` while CORE
+    /// marks the element `outdated`).
     pub fn element(&self) -> &ElementView {
         self.el
     }
@@ -588,7 +592,7 @@ impl<'a> NodeSink<'a> {
             origin_m: d.origin_m,
             bounds_m: d.bounds_m,
             style: d.style,
-            status: self.el.status.clone(),
+            status: self.status.clone(),
             proj_error: None,
             data_digest,
         });
@@ -880,6 +884,9 @@ impl SceneGraph {
             return Err(SceneError::TooManyElements);
         }
         let set: BTreeSet<EntityId> = dirty.iter().copied().collect();
+        // VIZ.RENDER.SCENE.STALE: marks of dirty entities that left the document are pruned
+        // once the batch succeeds.
+        let absent: Vec<EntityId> = set.iter().copied().filter(|e| !doc.index.contains_key(e)).collect();
         let mut present: Vec<(usize, EntityId)> = Vec::new();
         let mut gone: Vec<EntityId> = Vec::new();
         present.try_reserve_exact(set.len()).map_err(|_| SceneError::AllocationFailed)?;
@@ -898,7 +905,11 @@ impl SceneGraph {
         order.try_reserve_exact(present.len() + gone.len()).map_err(|_| SceneError::AllocationFailed)?;
         order.extend(present.iter().map(|&(_, e)| (e, doc.get(e))));
         order.extend(gone.iter().map(|&e| (e, None)));
-        self.apply(registry, &order)
+        let out = self.apply(registry, &order)?;
+        for e in &absent {
+            self.outdated.remove(e);
+        }
+        Ok(out)
     }
 
     /// Plans every listed element, then applies the plan.
@@ -913,7 +924,7 @@ impl SceneGraph {
         plans.try_reserve_exact(order.len()).map_err(|_| SceneError::AllocationFailed)?;
         for &(entity, el) in order {
             let planned = match el {
-                Some(el) => plan_element(registry, el, &mut diagnostics)?,
+                Some(el) => plan_element(registry, el, self.outdated.contains(&entity), &mut diagnostics)?,
                 None => Vec::new(),
             };
             plans.push((entity, planned));
@@ -1057,9 +1068,13 @@ fn write_line(line: &mut String, node: &SceneNode) -> Result<(), SceneError> {
 }
 
 /// Runs the projector of one element; a missing projector or a failure becomes a diagnostic.
+/// While the element is marked `outdated` (`marked`), the projector sees a view whose status
+/// is `Stale` (`VIZ.RENDER.SCENE.STALE`), so it cannot style from the hidden kernel outcome;
+/// the planned nodes still carry the element's kernel status, which the stale rule then hides.
 fn plan_element(
     registry: &ProjectorRegistry,
     el: &ElementView,
+    marked: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Result<Vec<Planned>, SceneError> {
     let Some(projector) = registry.by_kind.get(&el.kind) else {
@@ -1067,8 +1082,17 @@ fn plan_element(
         diagnostics.push(Diagnostic::NoProjector { entity: el.entity, kind: el.kind.clone() });
         return Ok(Vec::new());
     };
-    let mut sink = NodeSink::new(el)?;
-    match projector.project(el, &mut sink) {
+    let stale_view;
+    let view = if marked {
+        let mut v = el.clone();
+        v.status = DisplayStatus::Stale { since_digest: el.data_digest, evidence: Evidence::of(&el.status) };
+        stale_view = v;
+        &stale_view
+    } else {
+        el
+    };
+    let mut sink = NodeSink::new(view, &el.status)?;
+    match projector.project(view, &mut sink) {
         Ok(()) => Ok(sink.nodes),
         Err(error) => {
             diagnostics.try_reserve(1).map_err(|_| SceneError::AllocationFailed)?;
