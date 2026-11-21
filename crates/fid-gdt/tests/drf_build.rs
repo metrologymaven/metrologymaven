@@ -118,8 +118,18 @@ struct World {
     register: RegisterView,
 }
 
+/// The synthetic DMT table of `GDT.RES.SCHEMA` (whose rows the plan's defaults profile names)
+/// with the synthetic `datum_frame/rmb` row of `frame_table_<name>.json` added.
 fn table(name: &str) -> DmtTable {
-    DmtTable::load(&read(&format!("drf/measured/frame_table_{name}.json"))).unwrap()
+    let mut base = fid_canon::parse(&read("dmt/synthetic_table_v1.json")).unwrap();
+    let frame = fid_canon::parse(&read(&format!("drf/measured/frame_table_{name}.json"))).unwrap();
+    let row = arr(&obj(&frame)["rows"])[0].clone();
+    if let CValue::Obj(o) = &mut base {
+        if let Some(CValue::Arr(rows)) = o.get_mut("rows") {
+            rows.push(row);
+        }
+    }
+    DmtTable::from_value(&base).unwrap()
 }
 
 fn world(table_name: &str) -> World {
