@@ -254,7 +254,8 @@ fn the_handler_follows_the_oracle_and_validates() {
 fn the_params_schema_refuses_bad_calls() {
     let def = def();
     let s = Compiled::compile(&def.params_schema).unwrap();
-    let r = obj(get(obj(&load("two_releases.json")), "records"));
+    let records = load("two_releases.json");
+    let r = obj(get(obj(&records), "records"));
     let base = |extra: &[(&str, CValue)]| {
         let mut o: Obj = BTreeMap::from([
             ("old".to_string(), CValue::Str(st(r, "R1").into())),

@@ -252,7 +252,8 @@ fn ac1_the_original_stays_visible() {
     let case = arr(obj(&c), "folds").iter().map(obj).find(|c| st(c, "name") == "ac1_supersede").unwrap();
     let list = entries(arr(case, "entries"));
     let s = fold(&list).unwrap();
-    let r = obj(get(obj(&load("two_releases.json")), "records"));
+    let records = load("two_releases.json");
+    let r = obj(get(obj(&records), "records"));
     let (r1, r2) = (digest(st(r, "R1")), digest(st(r, "R2")));
     assert_eq!(s.released("main", &r1), Some(list[0].0.hash));
     assert_eq!(s.released("main", &r2), Some(list[1].0.hash));
