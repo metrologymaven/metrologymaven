@@ -1902,6 +1902,7 @@ dependencies = [
  "fid-registry",
  "fid-registry-build",
  "fid-report",
+ "fid-sign-core",
  "fid-store",
  "fid-surface",
  "fid-unc",
@@ -2020,6 +2021,9 @@ name = "fid-sign-core"
 version = "0.0.1"
 dependencies = [
  "ed25519-dalek",
+ "fid-canon",
+ "fid-pkg",
+ "fid-registry",
  "fid-sign-core",
  "fid-trust-canon",
  "p256",

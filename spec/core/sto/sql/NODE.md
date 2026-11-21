@@ -15,7 +15,7 @@ depends_on: [CORE.STO.LAYOUT, CORE.STO.CAS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # CORE.STO.SQL: Project database, append-only enforcement and atomic durable commits
@@ -60,6 +60,10 @@ Applied: SCHEMA, TXN, CRASH.
 
 - Power-loss testing needs a fault-injecting file-system layer [unverified which tool]; CRASH picks one available on Linux CI and documents the gap on Windows and macOS.
 - The "journal chain check" in REQ-005 cannot call `CORE.JRN.CHAIN` (CHAIN depends on `CORE.STO`, so a dependency would form a cycle). CRASH checks a synthetic chain of its own built with `CORE.JRN.CANON`; `CORE.JRN.CHAIN` runs the same harness with real entries in its own tests.
+
+## Change log
+
+- 2026-11-21 (maintainer decision on D-047, review of #401 and #405): `fid-store`'s SQLite checks are shared with the results catalog (`RPT.CATALOG.STORE.SCHEMA`, crate `fid-catalog`) instead of copied. A dependent gets a connection only through one guarded door, `open_hardened(dir, name, mode, busy)`: it requires an absolute directory and a plain file name, refuses a missing, non-regular or symlinked file and bad companions (`check_companions_of`), opens with `SQLITE_OPEN_NOFOLLOW` and without `SQLITE_OPEN_CREATE` or `SQLITE_OPEN_URI`, applies and reads back every hardening setting (checkpoint-on-close off until `allow_checkpoint` is called after the caller's checks) and sets the busy timeout. The raw open, the hardening step and the `sqlite3_db_config` setter stay private, so no dependent can obtain an unhardened connection (`CORE.BUS.LINT`); a test checks the public items and compile-fail doc tests check the private ones. Also public: `check_companions_of(dir, name)`, `check_root_pages`, `expected_objects`, `verify_schema`, `quick_check`, `set_wal`, and the migration runner `migrate_with` with a `MigrationHooks` trait (how a format checks, reads and records its version, and how it reports a failed step or a failed SQLite call such as a busy commit). `project.db` opens through the same door and uses the runner through `StoreHooks` (versions in `schema_meta`) with unchanged behaviour and unchanged tests. No REQ or AC changed.
 
 ## Children
 
