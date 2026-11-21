@@ -1,0 +1,20 @@
+{
+ "ac1_record": "{\"binding\":{\"hole_spacing\":{\"unit\":\"mm\",\"value\":\"120\"},\"scan\":\"input:scans/bracket-120.ply\"},\"branch\":null,\"inputs\":{\"scan\":{\"handle\":\"input:scans/bracket-120.ply\",\"sha256\":\"sha256:a6e83f66f967de73eae5015658bd90e3d45de0f770400eeb7250aac69414fb43\"}},\"lifecycle_state\":\"released\",\"outcome\":\"pending\",\"override_deprecated\":false,\"principal\":{\"id\":\"agent-1\",\"kind\":\"agent\"},\"program_digest\":\"sha256:71516034dcf1bd6cc90aa75e810c560cb70d18a58c950a787fde105075d50dc6\",\"program_id\":\"018f0000-0000-7000-8000-000000000100\",\"program_version\":1,\"run_id\":\"019a7afd-1e01-7101-8101-010101010101\",\"trial\":false,\"variant\":\"B-120\"}",
+ "ac2_record": "{\"binding\":{\"hole_spacing\":{\"unit\":\"mm\",\"value\":\"120\"},\"scan\":\"input:scans/bracket-120.ply\"},\"branch\":null,\"inputs\":{\"scan\":{\"handle\":\"input:scans/bracket-120.ply\",\"sha256\":\"sha256:a6e83f66f967de73eae5015658bd90e3d45de0f770400eeb7250aac69414fb43\"}},\"lifecycle_state\":\"registered\",\"outcome\":\"pending\",\"override_deprecated\":false,\"principal\":{\"id\":\"alice\",\"kind\":\"human\"},\"program_digest\":\"sha256:71516034dcf1bd6cc90aa75e810c560cb70d18a58c950a787fde105075d50dc6\",\"program_id\":\"018f0000-0000-7000-8000-000000000100\",\"program_version\":1,\"run_id\":\"019a7afd-1e01-7101-8101-010101010101\",\"trial\":true,\"variant\":\"B-120\"}",
+ "ac3_record": "{\"binding\":{\"hole_spacing\":{\"unit\":\"mm\",\"value\":\"120\"},\"scan\":\"input:scans/bracket-120.ply\"},\"branch\":null,\"inputs\":{\"scan\":{\"handle\":\"input:scans/bracket-120.ply\",\"sha256\":\"sha256:a6e83f66f967de73eae5015658bd90e3d45de0f770400eeb7250aac69414fb43\"}},\"lifecycle_state\":\"deprecated\",\"outcome\":\"pending\",\"override_deprecated\":true,\"principal\":{\"id\":\"alice\",\"kind\":\"human\"},\"program_digest\":\"sha256:71516034dcf1bd6cc90aa75e810c560cb70d18a58c950a787fde105075d50dc6\",\"program_id\":\"018f0000-0000-7000-8000-000000000100\",\"program_version\":1,\"run_id\":\"019a7afd-1e01-7101-8101-010101010101\",\"trial\":false,\"variant\":\"B-120\"}",
+ "ac4_errors": [
+  {
+   "code": "missing_parameter",
+   "param": "hole_spacing"
+  }
+ ],
+ "program_digest": "sha256:71516034dcf1bd6cc90aa75e810c560cb70d18a58c950a787fde105075d50dc6",
+ "program_id": "018f0000-0000-7000-8000-000000000100",
+ "run_ids": [
+  "019a7afd-1e01-7101-8101-010101010101",
+  "019a7afd-1e02-7202-8202-020202020202",
+  "019a7afd-1e03-7303-8303-030303030303"
+ ],
+ "scan_handle": "input:scans/bracket-120.ply",
+ "scan_sha256": "sha256:a6e83f66f967de73eae5015658bd90e3d45de0f770400eeb7250aac69414fb43"
+}

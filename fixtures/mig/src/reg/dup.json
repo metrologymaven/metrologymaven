@@ -1,0 +1,113 @@
+{
+  "schema": "mig-sources@1",
+  "version": "0.3.0",
+  "policy": "D-033-A",
+  "entries": [
+    {
+      "id": "src.demoscan-points-csv",
+      "product": "DemoScan",
+      "kind": "points",
+      "format_id": "points-csv",
+      "versions": "2..*",
+      "access_route": "PUBLIC_SPEC",
+      "status": "ADMITTED",
+      "review": {
+        "schema": "mig-review@1",
+        "entry": "src.demoscan-points-csv",
+        "basis": "The user exports the data to an open format whose public specification we implement.",
+        "reviewer": "maintainer-a",
+        "date": "2026-11-20",
+        "clean_room_statement": "No code, text or assets of the product were used; only the open format specification.",
+        "eula_note": "Reading a user-made open export needs no licence term of the product.",
+        "no_copied_text_attestation": true
+      }
+    },
+    {
+      "id": "src.democmm-program-native",
+      "product": "DemoCMM",
+      "kind": "program",
+      "format_id": "native:democmm-prog",
+      "versions": "3..5.2",
+      "access_route": "NONE",
+      "status": "NOT_ADMITTED",
+      "export_route": {
+        "format": "dmis",
+        "note": "Save the program as DMIS from the DemoCMM program editor, then import the DMIS file."
+      }
+    },
+    {
+      "id": "src.democmm-results-qif",
+      "product": "DemoCMM",
+      "kind": "results",
+      "format_id": "qif",
+      "versions": "*..*",
+      "access_route": "OPEN_EXPORT",
+      "status": "OPEN_EXPORT_ONLY",
+      "review": {
+        "schema": "mig-review@1",
+        "entry": "src.democmm-results-qif",
+        "basis": "The user exports the data to an open format whose public specification we implement.",
+        "reviewer": "maintainer-a",
+        "date": "2026-11-20",
+        "clean_room_statement": "No code, text or assets of the product were used; only the open format specification.",
+        "eula_note": "Reading a user-made open export needs no licence term of the product.",
+        "no_copied_text_attestation": true
+      }
+    },
+    {
+      "id": "src.democmm-project-native",
+      "product": "DemoCMM",
+      "kind": "project",
+      "format_id": "native:democmm-proj",
+      "versions": "*..*",
+      "access_route": "NONE",
+      "status": "PENDING_REVIEW",
+      "export_route": {
+        "format": "none",
+        "note": "No open export exists yet; keep the project in DemoCMM and bring its results over as QIF."
+      },
+      "review": {
+        "schema": "mig-review@1",
+        "entry": "src.democmm-project-native",
+        "basis": "",
+        "reviewer": "",
+        "date": "",
+        "clean_room_statement": "No code, text or assets of the product were used; only the open format specification.",
+        "eula_note": "Reading a user-made open export needs no licence term of the product.",
+        "no_copied_text_attestation": true
+      }
+    },
+    {
+      "id": "src.demoscan-form-native",
+      "product": "DemoScan",
+      "kind": "form",
+      "format_id": "native:demoscan-form",
+      "versions": "2020..2024",
+      "access_route": "NONE",
+      "status": "NOT_ADMITTED",
+      "export_route": {
+        "format": "results-csv",
+        "note": "Export the report values as CSV and rebuild the form from the project's own templates."
+      }
+    },
+    {
+      "id": "src.democmm-results-qif-2",
+      "product": "democmm",
+      "kind": "results",
+      "format_id": "qif",
+      "versions": "2..3",
+      "access_route": "OPEN_EXPORT",
+      "status": "OPEN_EXPORT_ONLY",
+      "review": {
+        "schema": "mig-review@1",
+        "entry": "src.democmm-results-qif-2",
+        "basis": "The user exports the data to an open format whose public specification we implement.",
+        "reviewer": "maintainer-a",
+        "date": "2026-11-20",
+        "clean_room_statement": "No code, text or assets of the product were used; only the open format specification.",
+        "eula_note": "Reading a user-made open export needs no licence term of the product.",
+        "no_copied_text_attestation": true
+      }
+    }
+  ]
+}

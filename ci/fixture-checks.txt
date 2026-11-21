@@ -14,6 +14,7 @@ python fixtures/agent/harness/runs/make_runs.py --check
 python fixtures/aln/bfit/make_constr_fixtures.py --check
 python fixtures/aln/qa/make_report_fixtures.py --check
 python fixtures/auto/cli/out/make_cases.py --check
+python fixtures/auto/run/bind/make_cases.py --check
 python fixtures/auto/surf/gen/make_fixtures.py --check
 python fixtures/cons/check_row_schema.py
 python fixtures/cons/make_decl_fixtures.py --check
@@ -48,6 +49,7 @@ python fixtures/fetch/make_fixtures.py --check
 python fixtures/fit/make_axis_cyl_fixtures.py --check
 python fixtures/fit/make_init_fixtures.py --check
 python fixtures/fit/make_lin_fixtures.py --check
+python fixtures/fit/make_mcc_cyl_fixtures.py --check
 python fixtures/fit/make_tan_plane_fixtures.py --check
 python fixtures/fit/make_tan_rock_fixtures.py --check
 python fixtures/fit/make_trait_fixtures.py --check
@@ -115,6 +117,7 @@ python fixtures/man/xart-calls-v1/make_fixtures.py --check
 python fixtures/manifest/make_fixtures.py --check
 python fixtures/mcp/make_fixtures.py --check
 python fixtures/mig/ladder/def/make_fixtures.py --check
+python fixtures/mig/src/reg/make_fixtures.py --check
 python fixtures/num/fmt/make_ang_fixtures.py --check
 python fixtures/num/fmt/make_len_fixtures.py --check
 python fixtures/num/fmt/make_reg_fixtures.py --check
