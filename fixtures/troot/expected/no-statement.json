@@ -1,0 +1,1 @@
+{"package_status":"SIGNED","signatures":[{"claimed_keyid":"5a7a78cca4a0f420d9bc62bb669c3c2759e39f723d3ae10dcbe0f0815a07ecd4","detail":"statement_missing","envelope":"signatures/0.dsse.json","fingerprint":"5a7a78cca4a0f420d9bc62bb669c3c2759e39f723d3ae10dcbe0f0815a07ecd4","index":0,"key_label":"Test signer A (P-256, published RFC 6979 key)","status":"INVALID"}]}
