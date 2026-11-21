@@ -43,7 +43,8 @@ pub use encode::{encode, encode_feature};
 pub use error::{FitError, NotConvergedReason};
 pub use normalise::{Centred, Normalisation};
 pub use params::{
-    Constraint, FitParams, Thresholds, Weights, DEFAULT_EIG_RATIO_MAX, DEFAULT_MIN_COVERAGE, DEFAULT_RANK_TOL, TWO_PI,
+    Constraint, FitParams, Thresholds, Weights, DEFAULT_COND_MAX, DEFAULT_EIG_RATIO_MAX, DEFAULT_MIN_COVERAGE,
+    DEFAULT_PLANARITY_RATIO_MIN, DEFAULT_RANK_TOL, TWO_PI,
 };
 pub use points::{PointsView, MAX_POINTS, UNIT_NORMAL_TOL};
 pub use primitive::{

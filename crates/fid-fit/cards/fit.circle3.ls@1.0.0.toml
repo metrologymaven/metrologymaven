@@ -1,0 +1,18 @@
+# Spec card (KRN.LSQ.RND). Cite designators and clause numbers only; never paste standards text.
+id = "fit.circle3.ls@1.0.0"
+title = "Least-squares circle in space"
+method = "Minimises the sum of squared 3D distances to the circle over centre, normal and radius jointly on centred, scaled data by Levenberg-Marquardt (fid_solv::nlls) with an analytic Jacobian; each point contributes its height over the circle's plane and its in-plane radial deviation, whose squares sum to its squared distance. The normal is two tangent-plane parameters about the start normal, the normal of the least-squares plane (fit.plane.ls); the start circle is the algebraic (Kasa) circle in that plane. Optional fixed radius. Residuals are signed 3D distances, negative inside the radius."
+applicability = "At least 3 points, not collinear, with angular coverage at least thresholds.min_coverage (30 degrees through ls_rnd::default_params [unverified]; the contract's own default is 20 degrees). The condition estimate at the solution must be at most thresholds.cond_max (1e8 [unverified]), else ill_conditioned."
+references = [
+  "Shakarji, C. M. (1998). Least-squares fitting algorithms of the NIST algorithm testing system. Journal of Research of the National Institute of Standards and Technology 103(6).",
+  "Forbes, A. B. (1989). Least-squares best-fit geometric elements. NPL Report DITC 140/89. [unverified citation]",
+  "More, J. J. (1978). The Levenberg-Marquardt algorithm: implementation and theory. Lecture Notes in Mathematics 630.",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Short arcs: the tilt of the plane about the chord, the centre and the radius are weakly determined; below the coverage threshold the fit is refused with insufficient_coverage.",
+  "The tangent-plane parameters are singular 90 degrees from the start normal; the plane fit keeps the start close, so this is not reached on valid data.",
+  "Collinear points: Collinear; a degenerate start plane or algebraic circle: IllConditioned.",
+]
+validation = "Decimal (60-digit) Gauss-Newton reference of the same least-squares problem: fixtures/fit/rnd-partial-v1 (make_rnd_fixtures.py), including centres 1 km from the origin, checked on x86-64, ARM64 and wasm32. Pending: PTB TraCIM Gaussian and NIST ATS circle sets through UNC.RDL (D-038)."
