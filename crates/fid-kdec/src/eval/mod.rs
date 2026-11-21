@@ -59,7 +59,7 @@
 //! caller cannot set or clear them, and they stay on `CONFORMS`.
 
 mod exact;
-pub(crate) mod normal;
+pub mod normal;
 
 use core::cmp::Ordering;
 use core::fmt;

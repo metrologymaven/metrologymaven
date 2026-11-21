@@ -14,15 +14,16 @@
 //! - `x < 0`: `erfc(x) = 2 - erfc(-x)`.
 //!
 //! Plain IEEE-754 binary64 operations only (no FMA), so results are bit-identical on every
-//! target. Absolute error of the tail is below `2e-15` over the whole line, checked against
-//! the 60-digit stdlib-Python reference in `fixtures/unc/dec/eval/make_cases.py`.
+//! target. Absolute error of `erfc` is below `2e-15` over the whole line, checked (in
+//! `tests/eval.rs`) against the 100-digit stdlib-Python reference values that
+//! `fixtures/unc/dec/eval/make_cases.py` writes to `erfc.csv`.
 
 use fid_num::NumError;
 
 /// Terms of the power series.
-pub(crate) const SERIES_TERMS: usize = 60;
+pub const SERIES_TERMS: usize = 60;
 /// Levels of the continued fraction.
-pub(crate) const CF_TERMS: u32 = 60;
+pub const CF_TERMS: u32 = 60;
 
 /// `1 / sqrt(pi)`, the binary64 nearest (bits `0x3fe20dd750429b6d`).
 const FRAC_1_SQRT_PI: f64 = 0.564_189_583_547_756_3;
@@ -52,7 +53,7 @@ fn erfc_nonneg(x: f64) -> Result<f64, NumError> {
 }
 
 /// `erfc(x)` for finite `x`.
-pub(crate) fn erfc(x: f64) -> Result<f64, NumError> {
+pub fn erfc(x: f64) -> Result<f64, NumError> {
     let x = fid_num::check_finite("dec.erfc", x)?;
     if x < 0.0 {
         Ok(2.0 - erfc_nonneg(-x)?)
@@ -62,7 +63,7 @@ pub(crate) fn erfc(x: f64) -> Result<f64, NumError> {
 }
 
 /// `P(Z > z)` for a standard normal `Z`; `z` may be infinite (the limit values 0 and 1).
-pub(crate) fn upper_tail(z: f64) -> Result<f64, NumError> {
+pub fn upper_tail(z: f64) -> Result<f64, NumError> {
     if z.is_nan() {
         return Err(NumError::NotANumber { op: "dec.upper_tail", index: None });
     }
@@ -83,29 +84,6 @@ mod tests {
     #[test]
     fn constant_bits() {
         assert_eq!(FRAC_1_SQRT_PI.to_bits(), 0x3fe2_0dd7_5042_9b6d);
-    }
-
-    /// Against the 100-digit reference values of `fixtures/unc/dec/eval/erfc.csv`.
-    #[test]
-    fn erfc_matches_reference() {
-        let text = include_str!("../../../../fixtures/unc/dec/eval/erfc.csv");
-        let mut lines = text.lines();
-        assert_eq!(lines.next(), Some("x,erfc"));
-        let mut n = 0;
-        for l in lines {
-            let (x, v) = l.split_once(',').unwrap();
-            let x: f64 = x.parse().unwrap();
-            let v: f64 = v.parse().unwrap();
-            let got = erfc(x).unwrap();
-            let abs = (got - v).abs();
-            assert!(abs <= 2e-15, "x={x}: {got} vs {v} (abs {abs})");
-            if v > 1e-300 {
-                let rel = abs / v;
-                assert!(rel <= 2e-13, "x={x}: {got} vs {v} (rel {rel})");
-            }
-            n += 1;
-        }
-        assert!(n > 300);
     }
 
     #[test]

@@ -357,3 +357,27 @@ fn million_samples_count() {
     let rec = evaluate(&input).unwrap();
     assert!(rec.p_conformance().unwrap() > 0.99);
 }
+
+/// erfc against the 100-digit reference values of `erfc.csv`: absolute error <= 2e-15,
+/// relative error <= 2e-13 where the value is normal.
+#[test]
+fn erfc_matches_reference() {
+    let text = String::from_utf8(read("erfc.csv")).unwrap();
+    let mut lines = text.lines();
+    assert_eq!(lines.next(), Some("x,erfc"));
+    let mut n = 0;
+    for l in lines {
+        let (x, v) = l.split_once(',').unwrap();
+        let x: f64 = x.parse().unwrap();
+        let v: f64 = v.parse().unwrap();
+        let got = fid_kdec::eval::normal::erfc(x).unwrap();
+        let abs = (got - v).abs();
+        assert!(abs <= 2e-15, "x={x}: {got} vs {v} (abs {abs})");
+        if v > 1e-300 {
+            let rel = abs / v;
+            assert!(rel <= 2e-13, "x={x}: {got} vs {v} (rel {rel})");
+        }
+        n += 1;
+    }
+    assert!(n > 300);
+}
