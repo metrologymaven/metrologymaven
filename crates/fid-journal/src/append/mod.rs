@@ -759,7 +759,7 @@ impl Core<'_> {
     /// One transaction over a prefix of `rest`: the outcomes of the requests it took and how
     /// many it took (at least one). `Err` fails every request of `rest`; nothing of them is
     /// visible unless the error says the outcome is unknown.
-    pub(crate) fn transaction(&self, rest: &[Pending]) -> Result<(Vec<(u64, Outcome)>, usize), JournalError> {
+    fn transaction(&self, rest: &[Pending]) -> Result<(Vec<(u64, Outcome)>, usize), JournalError> {
         self.check_poison()?;
         self.at(CrashPoint::BatchTaken)?;
         // The write lock is verified by `Txn::commit`, under the store's commit mutex.
