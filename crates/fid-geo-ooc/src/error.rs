@@ -131,6 +131,9 @@ pub enum OocError {
     /// The value of `channel` at point `index` has no exact `f64` form, so it cannot be
     /// carried in a `PointBlock` channel (a `timestamp_ns` beyond +-2^53).
     InexactChannel { channel: &'static str, index: u64 },
+    /// A spatial-order stream of a manifest from an untrusted source that has not passed
+    /// the original-order verification (`ChunkStream::verify`) yet. Nothing was emitted.
+    UnverifiedManifest,
 }
 
 impl OocError {
@@ -160,6 +163,7 @@ impl OocError {
             OocError::CacheExhausted { .. } => "cache_exhausted",
             OocError::Cancelled => "cancelled",
             OocError::InexactChannel { .. } => "inexact_channel",
+            OocError::UnverifiedManifest => "unverified_manifest",
         }
     }
 }
@@ -193,6 +197,7 @@ impl fmt::Display for OocError {
                 write!(f, "cache_exhausted: needs {needed} bytes, {pinned} bytes pinned")
             }
             OocError::Cancelled => write!(f, "cancelled"),
+            OocError::UnverifiedManifest => write!(f, "unverified_manifest: spatial streaming needs verification"),
             OocError::InexactChannel { channel, index } => {
                 write!(f, "inexact_channel: {channel} at point {index} has no exact f64 form")
             }

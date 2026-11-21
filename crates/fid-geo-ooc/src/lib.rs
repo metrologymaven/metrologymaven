@@ -108,8 +108,8 @@ pub use format::{
 pub use layout::{memory_needed, to_chunks, to_chunks_in, to_memory, LayoutParams, DEFAULT_MAX_CHUNK_POINTS};
 pub use store::{blob_address, ChunkStore, MemStore, STORE_CHUNK_SIZE};
 pub use stream::{
-    original_digest, to_geo_error, verify_original_digest, ChunkStream, StreamBlock, StreamConfig, StreamOrder,
-    DEFAULT_BLOCK_POINTS, DEFAULT_FAN_IN, MAX_BLOCK_POINTS, MAX_FAN_IN,
+    original_digest, to_geo_error, verify_original_digest, ChunkStream, Provenance, StreamBlock, StreamConfig,
+    StreamOrder, DEFAULT_BLOCK_POINTS, DEFAULT_FAN_IN, MAX_BLOCK_POINTS, MAX_FAN_IN,
 };
 pub use writer::{ChunkWriter, CloudHeader, PointAttrs, WriterConfig, WriterStats, DEFAULT_SPILL_BUDGET};
 

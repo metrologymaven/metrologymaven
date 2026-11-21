@@ -11,9 +11,10 @@ use common::*;
 use core::sync::atomic::{AtomicBool, Ordering};
 use fid_canon::CValue;
 use fid_geo_ooc::{
-    encode_chunk, load_cost, original_digest, to_chunks, to_chunks_in, verify_original_digest, CellCode, ChannelSet,
-    Chunk, ChunkCache, ChunkEntry, ChunkManifest, ChunkStore, ChunkStream, Fault, LayoutParams, MemStore, OocError,
-    StreamConfig, StreamOrder, MAX_BLOCK_POINTS, MAX_FAN_IN,
+    encode_chunk, get_manifest, load_cost, original_digest, put_manifest, to_chunks, to_chunks_in,
+    verify_original_digest, CellCode, ChannelSet, Chunk, ChunkCache, ChunkEntry, ChunkManifest, ChunkStore,
+    ChunkStream, Fault, LayoutParams, MemStore, OocError, Provenance, StreamConfig, StreamOrder, MAX_BLOCK_POINTS,
+    MAX_FAN_IN,
 };
 use fid_geo_types::digest::digest_point_cloud;
 use fid_geo_types::{Aabb, AttributeSet, ElementDigest, FrameRef, GeoTypeError, PointBuffer, PointSource};
@@ -123,7 +124,15 @@ fn point_source_view() {
     let store = MemStore::new();
     let m = chunked("tiny_all_channels", &store);
     let cache = ChunkCache::new(1 << 24);
-    let mut st = ChunkStream::new(&m, &store, &cache, None, cfg(StreamOrder::Spatial, 5, 8, m.channels)).unwrap();
+    let mut st = ChunkStream::new(
+        &m,
+        &store,
+        &cache,
+        None,
+        cfg(StreamOrder::Spatial, 5, 8, m.channels),
+        Provenance::TrustedWriter,
+    )
+    .unwrap();
     assert_eq!(PointSource::len(&st), 12);
     assert!(!st.is_empty());
     assert_eq!(st.frame(), m.frame);
@@ -147,8 +156,24 @@ fn point_source_view() {
     assert_eq!(names, want);
 
     // Values equal the typed columns.
-    let mut a = ChunkStream::new(&m, &store, &cache, None, cfg(StreamOrder::Original, 12, 8, m.channels)).unwrap();
-    let mut b = ChunkStream::new(&m, &store, &cache, None, cfg(StreamOrder::Original, 12, 8, m.channels)).unwrap();
+    let mut a = ChunkStream::new(
+        &m,
+        &store,
+        &cache,
+        None,
+        cfg(StreamOrder::Original, 12, 8, m.channels),
+        Provenance::TrustedWriter,
+    )
+    .unwrap();
+    let mut b = ChunkStream::new(
+        &m,
+        &store,
+        &cache,
+        None,
+        cfg(StreamOrder::Original, 12, 8, m.channels),
+        Provenance::TrustedWriter,
+    )
+    .unwrap();
     let t = a.next_stream_block().unwrap().unwrap();
     let p = b.next_block().unwrap().unwrap();
     assert_eq!(
@@ -166,8 +191,15 @@ fn point_source_view() {
     assert!(b.next_block().is_none());
 
     // Without requested channels a block carries coordinates only.
-    let mut st =
-        ChunkStream::new(&m, &store, &cache, None, cfg(StreamOrder::Spatial, 100, 8, ChannelSet::EMPTY)).unwrap();
+    let mut st = ChunkStream::new(
+        &m,
+        &store,
+        &cache,
+        None,
+        cfg(StreamOrder::Spatial, 100, 8, ChannelSet::EMPTY),
+        Provenance::TrustedWriter,
+    )
+    .unwrap();
     let blk = st.next_block().unwrap().unwrap();
     assert!(blk.channels.is_empty());
     assert_eq!(blk.original_index.len(), 12);
@@ -182,14 +214,30 @@ fn cancellation_is_sticky_and_returns_nothing_partial() {
     let cache = ChunkCache::new(1 << 26);
     for order in [StreamOrder::Spatial, StreamOrder::Original] {
         let flag = AtomicBool::new(true);
-        let mut s = ChunkStream::new(&m, &store, &cache, Some(&flag), cfg(order, 100, 4, m.channels)).unwrap();
+        let mut s = ChunkStream::new(
+            &m,
+            &store,
+            &cache,
+            Some(&flag),
+            cfg(order, 100, 4, m.channels),
+            Provenance::TrustedWriter,
+        )
+        .unwrap();
         assert_eq!(s.next_stream_block(), Some(Err(OocError::Cancelled)));
         flag.store(false, Ordering::Release);
         assert_eq!(s.next_stream_block(), Some(Err(OocError::Cancelled)), "sticky");
         assert_eq!(s.emitted(), 0);
 
         let flag = AtomicBool::new(false);
-        let mut s = ChunkStream::new(&m, &store, &cache, Some(&flag), cfg(order, 100, 4, m.channels)).unwrap();
+        let mut s = ChunkStream::new(
+            &m,
+            &store,
+            &cache,
+            Some(&flag),
+            cfg(order, 100, 4, m.channels),
+            Provenance::TrustedWriter,
+        )
+        .unwrap();
         assert_eq!(s.next_stream_block().unwrap().unwrap().len(), 100);
         flag.store(true, Ordering::Release);
         assert_eq!(s.next_stream_block(), Some(Err(OocError::Cancelled)));
@@ -207,7 +255,7 @@ fn configuration_refusals() {
     let store = MemStore::new();
     let m = chunked("boundaries", &store);
     let cache = ChunkCache::new(1 << 20);
-    let bad = |c: StreamConfig| ChunkStream::new(&m, &store, &cache, None, c).unwrap_err();
+    let bad = |c: StreamConfig| ChunkStream::new(&m, &store, &cache, None, c, Provenance::TrustedWriter).unwrap_err();
     let ok = StreamConfig::default();
     assert_eq!(bad(StreamConfig { block_points: 0, ..ok }), OocError::InvalidParams { what: "block_points" });
     assert_eq!(
@@ -222,7 +270,7 @@ fn configuration_refusals() {
     let mut forged = m.clone();
     forged.manifest_digest[0] ^= 1;
     assert_eq!(
-        ChunkStream::new(&forged, &store, &cache, None, ok).unwrap_err(),
+        ChunkStream::new(&forged, &store, &cache, None, ok, Provenance::TrustedWriter).unwrap_err(),
         OocError::CorruptManifest { fault: Fault::DigestMismatch }
     );
     assert_eq!(StreamConfig::new(StreamOrder::Original).order, StreamOrder::Original);
@@ -262,9 +310,14 @@ fn forged(store: &MemStore, n_points: u64, chunks: &[(u8, &[(u64, [f64; 3])])]) 
     m
 }
 
+/// The first error of a stream over a forged manifest. The manifest is passed as trusted on
+/// purpose, so the spatial stream's own per-point checks run (defence in depth); the
+/// untrusted path is in `untrusted_manifests_need_verification`.
 fn first_error(m: &ChunkManifest, store: &MemStore, order: StreamOrder) -> OocError {
     let cache = ChunkCache::new(1 << 20);
-    let mut s = ChunkStream::new(m, store, &cache, None, cfg(order, 1, 4, ChannelSet::EMPTY)).unwrap();
+    let mut s =
+        ChunkStream::new(m, store, &cache, None, cfg(order, 1, 4, ChannelSet::EMPTY), Provenance::TrustedWriter)
+            .unwrap();
     loop {
         match s.next_stream_block() {
             Some(Ok(_)) => {}
@@ -334,7 +387,9 @@ fn store_and_integrity_errors_propagate() {
     let victim = m.chunks[3];
     store.replace(victim.blob, vec![0u8; victim.bytes as usize]);
     for order in [StreamOrder::Spatial, StreamOrder::Original] {
-        let mut s = ChunkStream::new(&m, &store, &cache, None, cfg(order, 4096, 8, m.channels)).unwrap();
+        let mut s =
+            ChunkStream::new(&m, &store, &cache, None, cfg(order, 4096, 8, m.channels), Provenance::TrustedWriter)
+                .unwrap();
         let e = loop {
             match s.next_block() {
                 Some(Ok(_)) => {}
@@ -350,7 +405,15 @@ fn store_and_integrity_errors_propagate() {
         assert!(matches!(s.next_block(), Some(Err(GeoTypeError::Source { .. }))), "sticky");
     }
     let empty = MemStore::new();
-    let mut s = ChunkStream::new(&m, &empty, &cache, None, cfg(StreamOrder::Spatial, 10, 8, m.channels)).unwrap();
+    let mut s = ChunkStream::new(
+        &m,
+        &empty,
+        &cache,
+        None,
+        cfg(StreamOrder::Spatial, 10, 8, m.channels),
+        Provenance::TrustedWriter,
+    )
+    .unwrap();
     // Chunk 0 may still be resident from the runs above; stream until a missing one.
     let e = loop {
         match s.next_stream_block() {
@@ -389,10 +452,69 @@ fn inexact_timestamps_are_refused_by_the_point_source_view() {
     let m = chunked("seeded_2000", &store);
     let cache = ChunkCache::new(1 << 26);
     let ts = ChannelSet::EMPTY.with(fid_geo_ooc::Channel::TimestampNs);
-    let mut s = ChunkStream::new(&m, &store, &cache, None, cfg(StreamOrder::Original, 2000, 8, ts)).unwrap();
+    let mut s =
+        ChunkStream::new(&m, &store, &cache, None, cfg(StreamOrder::Original, 2000, 8, ts), Provenance::TrustedWriter)
+            .unwrap();
     let e = s.next_point_block().unwrap().unwrap_err();
     assert!(matches!(e, OocError::InexactChannel { channel: "timestamp_ns", .. }), "{e:?}");
     assert_eq!(s.next_point_block(), Some(Err(e)), "sticky");
     let (idx, _, _) = stream_all(&m, &store, &cache, cfg(StreamOrder::Original, 2000, 8, ts));
     assert_eq!(idx.len(), 2000);
+}
+
+/// Q2 decision: a manifest not from this process's trusted writer streams spatially only
+/// after an original-order verification, which the stream records as `verified`.
+#[test]
+fn untrusted_manifests_need_verification() {
+    let store = MemStore::new();
+    let built = chunked("seeded_2000", &store);
+    let (addr, size) = put_manifest(&store, &built).unwrap();
+    let m = get_manifest(&store, &addr, size).unwrap();
+    let cache = ChunkCache::new(1 << 26);
+    let spatial = cfg(StreamOrder::Spatial, 300, 4, m.channels);
+
+    let mut st = ChunkStream::new(&m, &store, &cache, None, spatial, Provenance::Untrusted).unwrap();
+    assert!(!st.verified());
+    assert_eq!(st.next_stream_block(), Some(Err(OocError::UnverifiedManifest)));
+    assert!(matches!(st.next_block(), Some(Err(GeoTypeError::Source { code: "unverified_manifest", .. }))));
+    assert_eq!(st.emitted(), 0);
+    // A cancelled verification leaves the stream unverified.
+    let flag = AtomicBool::new(true);
+    let mut cancelled = ChunkStream::new(&m, &store, &cache, Some(&flag), spatial, Provenance::Untrusted).unwrap();
+    assert_eq!(cancelled.verify(), Err(OocError::Cancelled));
+    assert!(!cancelled.verified());
+    assert_eq!(cancelled.next_stream_block(), Some(Err(OocError::UnverifiedManifest)));
+    // After verification the same stream emits the trusted sequence.
+    st.verify().unwrap();
+    assert!(st.verified());
+    st.verify().unwrap();
+    let mut idx = Vec::new();
+    while let Some(b) = st.next_stream_block() {
+        idx.extend_from_slice(&b.unwrap().original_index);
+    }
+    let (want, _, _) = stream_all(&built, &store, &cache, spatial);
+    assert_eq!(idx, want);
+
+    // An original-order stream run to its end marks itself verified; not before.
+    let orig = cfg(StreamOrder::Original, 700, 4, ChannelSet::EMPTY);
+    let mut o = ChunkStream::new(&m, &store, &cache, None, orig, Provenance::Untrusted).unwrap();
+    assert!(!o.verified());
+    o.next_stream_block().unwrap().unwrap();
+    assert!(!o.verified(), "a partial pass proves nothing");
+    while let Some(b) = o.next_stream_block() {
+        b.unwrap();
+    }
+    assert!(o.verified());
+
+    // A forged partition (index 0 in two chunks) fails verification and stays refused.
+    let forged_store = MemStore::new();
+    let f = forged(&forged_store, 2, &[(0, &[(0, LO)]), (7, &[(0, HI)])]);
+    let c = cfg(StreamOrder::Spatial, 1, 4, ChannelSet::EMPTY);
+    let mut st = ChunkStream::new(&f, &forged_store, &cache, None, c, Provenance::Untrusted).unwrap();
+    assert_eq!(st.verify(), Err(OocError::CorruptChunk { fault: Fault::DuplicateIndex { index: 0 } }));
+    assert!(!st.verified());
+    assert_eq!(st.next_stream_block(), Some(Err(OocError::UnverifiedManifest)));
+    // The trusted writer's own manifest starts verified.
+    let t = ChunkStream::new(&built, &store, &cache, None, spatial, Provenance::TrustedWriter).unwrap();
+    assert!(t.verified());
 }

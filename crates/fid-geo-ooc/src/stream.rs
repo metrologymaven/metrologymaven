@@ -39,6 +39,19 @@
 //! original-order stream (and by [`original_digest`]), because finding it in spatial order
 //! needs memory proportional to the cloud.
 //!
+//! # Provenance and verification
+//!
+//! Spatial order cannot prove exactly-once on its own, so it streams only a **verified**
+//! manifest. A stream is created with a [`Provenance`]: [`Provenance::TrustedWriter`] for a
+//! manifest this process built itself with [`crate::to_chunks`], [`crate::to_chunks_in`] or
+//! [`crate::ChunkWriter`] (not read back from a store), which starts verified; and
+//! [`Provenance::Untrusted`] for every other manifest (read with [`crate::get_manifest`],
+//! received, or edited), which starts unverified. A spatial stream of an unverified manifest
+//! refuses every block with [`OocError::UnverifiedManifest`] (nothing is emitted, and the
+//! stream is not failed) until [`ChunkStream::verify`] has run one original-order pass, the
+//! exactly-once proof, without error. An original-order stream that reaches its end
+//! without error also marks itself verified. [`ChunkStream::verified`] reports the state.
+//!
 //! # Errors, cancellation and memory
 //!
 //! The cancellation flag is read before every block (and between chunk loads while the
@@ -92,6 +105,16 @@ pub const MERGE_BYTES_PER_CHUNK: u64 = 24;
 
 /// Largest timestamp magnitude with an exact `f64` form for every smaller value (2^53).
 const EXACT_I64: i64 = 1 << 53;
+
+/// Where the manifest of a [`ChunkStream`] comes from (see the module documentation).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Provenance {
+    /// Built in this process by [`crate::to_chunks`], [`crate::to_chunks_in`] or
+    /// [`crate::ChunkWriter`], and not read back from a store: starts verified.
+    TrustedWriter,
+    /// Any other manifest: spatial streaming needs [`ChunkStream::verify`] first.
+    Untrusted,
+}
 
 /// The order of a [`ChunkStream`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -302,6 +325,8 @@ pub struct ChunkStream<'a> {
     state: State<'a>,
     emitted: u64,
     failed: Option<OocError>,
+    /// Whether the manifest's index partition is known to hold every index exactly once.
+    verified: bool,
 }
 
 impl core::fmt::Debug for ChunkStream<'_> {
@@ -311,13 +336,15 @@ impl core::fmt::Debug for ChunkStream<'_> {
             .field("n_points", &self.ctx.manifest.n_points)
             .field("emitted", &self.emitted)
             .field("failed", &self.failed)
+            .field("verified", &self.verified)
             .finish()
     }
 }
 
 impl<'a> ChunkStream<'a> {
     /// A stream over the cloud of `manifest`, loading chunks from `store` through `cache`.
-    /// Does no I/O. `cancel`, when given, is read before every block.
+    /// Does no I/O. `cancel`, when given, is read before every block. `provenance` sets the
+    /// initial [`ChunkStream::verified`] state.
     ///
     /// Errors: [`OocError::InvalidParams`] (`what` = `"block_points"`, `"fan_in"` or
     /// `"channels"` for channels the manifest does not carry); the manifest's validation
@@ -328,6 +355,7 @@ impl<'a> ChunkStream<'a> {
         cache: &'a ChunkCache,
         cancel: Option<&'a AtomicBool>,
         cfg: StreamConfig,
+        provenance: Provenance,
     ) -> Result<ChunkStream<'a>, OocError> {
         if cfg.block_points == 0 || cfg.block_points > MAX_BLOCK_POINTS {
             return Err(OocError::InvalidParams { what: "block_points" });
@@ -351,7 +379,45 @@ impl<'a> ChunkStream<'a> {
                 expected: 0,
             },
         };
-        Ok(ChunkStream { ctx: Ctx { manifest, store, cache, cancel, grid }, cfg, state, emitted: 0, failed: None })
+        Ok(ChunkStream {
+            ctx: Ctx { manifest, store, cache, cancel, grid },
+            cfg,
+            state,
+            emitted: 0,
+            failed: None,
+            verified: provenance == Provenance::TrustedWriter,
+        })
+    }
+
+    /// Whether the manifest is verified: trusted by provenance, or proven by an
+    /// original-order pass ([`ChunkStream::verify`], or this stream's own original-order
+    /// run to its end).
+    pub fn verified(&self) -> bool {
+        self.verified
+    }
+
+    /// Proves the manifest's index partition by one original-order pass without channels
+    /// (every index `0..n` exactly once, every point in its cell), with this stream's block
+    /// size, fan-in, cache and cancellation flag, and records the result. Returns at once
+    /// if already verified. On error (a forged partition, a store error, cancellation) the
+    /// stream stays unverified and the error is returned; this stream's own state is not
+    /// touched.
+    pub fn verify(&mut self) -> Result<(), OocError> {
+        if self.verified {
+            return Ok(());
+        }
+        let c = &self.ctx;
+        let cfg = StreamConfig { order: StreamOrder::Original, channels: ChannelSet::EMPTY, ..self.cfg };
+        let mut pass = ChunkStream::new(c.manifest, c.store, c.cache, c.cancel, cfg, Provenance::Untrusted)?;
+        while let Some(b) = pass.next_stream_block() {
+            b?;
+        }
+        self.verified = pass.verified;
+        if self.verified {
+            Ok(())
+        } else {
+            Err(manifest_fault(Fault::CountMismatch))
+        }
     }
 
     /// The configuration.
@@ -370,6 +436,9 @@ impl<'a> ChunkStream<'a> {
         if let Some(e) = &self.failed {
             return Some(Err(e.clone()));
         }
+        if self.cfg.order == StreamOrder::Spatial && !self.verified {
+            return Some(Err(OocError::UnverifiedManifest));
+        }
         let n = self.ctx.manifest.n_points;
         if self.emitted >= n {
             self.release();
@@ -381,6 +450,10 @@ impl<'a> ChunkStream<'a> {
                 self.emitted = self.emitted.saturating_add(b.len() as u64);
                 if self.emitted >= n {
                     self.release();
+                    if self.cfg.order == StreamOrder::Original {
+                        // The merge checked every index 0..n exactly once.
+                        self.verified = true;
+                    }
                 }
                 Some(Ok(b))
             }
@@ -759,7 +832,7 @@ pub fn original_digest(
     let pass = |h: &mut HashBuf, col: Column, channel: Option<Channel>| -> Result<(), OocError> {
         let channels = channel.map_or(ChannelSet::EMPTY, |c| ChannelSet::EMPTY.with(c));
         let c = StreamConfig { order: StreamOrder::Original, channels, ..cfg };
-        let mut s = ChunkStream::new(manifest, store, cache, cancel, c)?;
+        let mut s = ChunkStream::new(manifest, store, cache, cancel, c, Provenance::Untrusted)?;
         while let Some(b) = s.next_stream_block() {
             hash_column(h, &b?, col)?;
         }

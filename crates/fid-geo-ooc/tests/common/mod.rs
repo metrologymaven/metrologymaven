@@ -324,7 +324,8 @@ pub fn stream_all(
     cache: &fid_geo_ooc::ChunkCache,
     cfg: fid_geo_ooc::StreamConfig,
 ) -> (Vec<u64>, String, Vec<usize>) {
-    let mut s = fid_geo_ooc::ChunkStream::new(m, store, cache, None, cfg).unwrap();
+    let mut s =
+        fid_geo_ooc::ChunkStream::new(m, store, cache, None, cfg, fid_geo_ooc::Provenance::TrustedWriter).unwrap();
     let mut h = fid_kci::kci::Sha256::new();
     let (mut idx, mut lens) = (Vec::new(), Vec::new());
     while let Some(b) = s.next_stream_block() {

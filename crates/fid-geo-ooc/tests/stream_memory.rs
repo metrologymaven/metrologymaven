@@ -15,7 +15,9 @@ mod common;
 
 use cap::Cap;
 use common::*;
-use fid_geo_ooc::{load_cost, to_chunks, ChunkCache, ChunkStream, LayoutParams, MemStore, StreamConfig, StreamOrder};
+use fid_geo_ooc::{
+    load_cost, to_chunks, ChunkCache, ChunkStream, LayoutParams, MemStore, Provenance, StreamConfig, StreamOrder,
+};
 use fid_geo_types::{AttributeSet, PointBuffer, PointCloud};
 use std::alloc::System;
 
@@ -66,7 +68,7 @@ fn check(e: &fid_canon::CValue, order: StreamOrder, n: u64, max: u64) {
         let ballast: Vec<u8> = vec![0u8; ALLOC.max_allocated() - ALLOC.allocated()];
         let base = ALLOC.allocated();
         let cfg = StreamConfig { order, block_points: block, channels: m.channels, fan_in: 8 };
-        let mut s = ChunkStream::new(&m, &store, &cache, None, cfg).unwrap();
+        let mut s = ChunkStream::new(&m, &store, &cache, None, cfg, Provenance::TrustedWriter).unwrap();
         let mut count = 0u64;
         let mut xor = 0u64;
         while let Some(b) = s.next_stream_block() {
