@@ -14,9 +14,12 @@ use fid_canon::CValue;
 use fid_pkg::reader::{FileOpener, HandleTable};
 use fid_registry::decl::CommandDecl;
 use fid_sign_core::troot::{
-    check_signature, declarations, invoke_cli, invoke_mcp, CheckParams, Keyring, Revocations, SignatureStatus,
-    TrustRoot, UtcTime, DETAILS, MAX_FILE_BYTES, MCP_CHECK, TROOT_REASONS,
+    check_envelope, check_signature, declarations, invoke_cli, invoke_mcp, CheckParams, Keyring, Revocations,
+    SignatureStatus, TrustInputs, TrustRoot, TrustedKey, UtcTime, DETAILS, MAX_FILE_BYTES, MAX_KEYID_TRIALS,
+    MAX_SIGNATURES_PER_PACKAGE, MAX_SIGNATURE_STATEMENT_BYTES, MCP_CHECK, NOTES, SIGNATURE_PREDICATE_TYPE,
+    TROOT_REASONS,
 };
+use fid_sign_core::{Envelope, Sig};
 
 fn path(rel: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/troot").join(rel)
@@ -51,8 +54,9 @@ struct Case {
     trust_root: String,
     revoked: Option<String>,
     keys: Option<String>,
+    as_of: Option<String>,
     expect: Option<String>,
-    error: Option<(String, String)>,
+    error: Option<(String, Option<String>)>,
 }
 
 fn cases() -> Vec<Case> {
@@ -66,8 +70,9 @@ fn cases() -> Vec<Case> {
             trust_root: s(c, "trust_root").unwrap().to_owned(),
             revoked: s(c, "revoked").map(str::to_owned),
             keys: s(c, "keys").map(str::to_owned),
+            as_of: s(c, "as_of").map(str::to_owned),
             expect: s(c, "expect").map(str::to_owned),
-            error: obj(c).get("error").map(|e| (s(e, "code").unwrap().to_owned(), s(e, "reason").unwrap().to_owned())),
+            error: obj(c).get("error").map(|e| (s(e, "code").unwrap().to_owned(), s(e, "reason").map(str::to_owned))),
         })
         .collect()
 }
@@ -76,6 +81,9 @@ fn cli_args(c: &Case) -> Vec<String> {
     let mut a = vec!["check-signature".to_owned(), p(&c.package), "--trust-root".to_owned(), p(&c.trust_root)];
     if let Some(r) = &c.revoked {
         a.extend(["--revoked".to_owned(), p(r)]);
+    }
+    if let Some(t) = &c.as_of {
+        a.extend(["--as-of".to_owned(), t.clone()]);
     }
     if let Some(k) = &c.keys {
         a.extend(["--keys".to_owned(), p(k)]);
@@ -133,7 +141,7 @@ fn every_case_matches_the_python_reference() {
                 let v = fid_canon::parse(out.stdout.trim_ascii_end()).unwrap();
                 let e = obj(&v).get("error").unwrap();
                 assert_eq!(s(e, "code"), Some(code.as_str()), "{}", c.name);
-                assert_eq!(s(e, "reason"), Some(reason.as_str()), "{}", c.name);
+                assert_eq!(s(e, "reason"), reason.as_deref(), "{}", c.name);
                 assert!(!String::from_utf8_lossy(&out.stdout).contains("VALID_TRUSTED"), "{}", c.name);
             }
             _ => panic!("{}: a case has an expected report or an error", c.name),
@@ -222,17 +230,26 @@ fn req006_unsigned_package() {
 #[test]
 fn detail_codes_are_the_documented_ones() {
     let mut seen = std::collections::BTreeSet::new();
+    let mut notes = std::collections::BTreeSet::new();
     for c in cases().iter().filter(|c| c.expect.is_some()) {
         for sig in sigs(&report(&c.name)) {
             if let Some(d) = s(&sig, "detail") {
                 assert!(DETAILS.contains(&d), "{}: {d}", c.name);
                 seen.insert(d.to_owned());
             }
+            let Some(CValue::Arr(ns)) = obj(&sig).get("notes") else { panic!("{}: notes missing", c.name) };
+            for n in ns {
+                let CValue::Str(n) = n else { panic!("note not a string") };
+                assert!(NOTES.contains(&n.as_str()), "{}: {n}", c.name);
+                notes.insert(n.clone());
+            }
         }
     }
-    // Every documented code is exercised by the fixtures.
-    let missing: Vec<_> = DETAILS.iter().filter(|d| !seen.contains(**d)).collect();
-    assert!(missing.is_empty(), "{missing:?}");
+    // Every documented code is exercised by the fixtures, except the two bounds the
+    // fixtures cannot carry cheaply; `bounds_*` below covers those.
+    let missing: Vec<_> = DETAILS.iter().filter(|d| !seen.contains(**d)).copied().collect();
+    assert_eq!(missing, ["keyid_missing", "payload_too_large"]);
+    assert_eq!(notes.len(), NOTES.len());
 }
 
 // ------------------------------------------------------------------ AC-6 and surfaces
@@ -256,6 +273,10 @@ fn ac6_mcp_with_handles_equals_the_cli_json() {
         s(obj(&v).get("error").unwrap(), "code").unwrap().to_owned()
     };
     assert_eq!(code(invoke_mcp(&table, "verify_other", b"{}")), "mcp.unknown_tool");
+    let bad_time = br#"{"package":"pkg-1","trust_root":"root-1","as_of":"2026-06-01T00:00:00+02:00"}"#;
+    assert_eq!(code(invoke_mcp(&table, MCP_CHECK, bad_time)), "params.invalid");
+    let as_of = br#"{"package":"pkg-1","trust_root":"root-1","revoked":"rev-1","as_of":"2026-06-01T00:00:00Z"}"#;
+    assert!(invoke_mcp(&table, MCP_CHECK, as_of).is_ok());
     assert_eq!(code(invoke_mcp(&table, MCP_CHECK, b"[]")), "params.invalid");
     assert_eq!(code(invoke_mcp(&table, MCP_CHECK, br#"{"package":"pkg-1"}"#)), "params.invalid");
     assert_eq!(
@@ -327,6 +348,7 @@ fn trust_files_are_read_before_the_package() {
             trust_root: p("malformed/truncated.json"),
             revoked: None,
             keys: None,
+            as_of: None,
         },
     );
     assert_eq!(r.unwrap_err().code(), "troot.malformed");
@@ -353,4 +375,87 @@ fn declaration_validates() {
     for schema in [&d.params_schema, &d.result_schema] {
         assert_eq!(fid_registry::check_schema(schema, &catalogue), Vec::new());
     }
+}
+
+// ------------------------------------------------------------------ bounded work (review of #408)
+
+fn ed_key() -> (fid_sign_core::PublicKey, fid_sign_core::Fingerprint) {
+    let pem = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/dsse/keys/ed25519-test.pub.pem"),
+    )
+    .unwrap();
+    let key = fid_sign_core::PublicKey::from_pem(&pem).unwrap();
+    let fp = key.fingerprint();
+    (key, fp)
+}
+
+fn root_of(n: usize) -> TrustRoot {
+    let (key, fingerprint) = ed_key();
+    let t = UtcTime::parse("2026-01-01T00:00:00Z").unwrap();
+    let k = TrustedKey { label: "k".to_owned(), key, fingerprint, not_before: t, not_after: None };
+    TrustRoot { keys: vec![k; n] }
+}
+
+fn env(payload: Vec<u8>, keyid: &str) -> Envelope {
+    Envelope {
+        payload,
+        payload_type: fid_sign_core::IN_TOTO_PAYLOAD_TYPE.to_owned(),
+        signatures: vec![Sig { keyid: keyid.to_owned(), sig: vec![0; 64] }],
+    }
+}
+
+fn one(e: &Envelope, root: &TrustRoot) -> (SignatureStatus, Option<String>) {
+    let (rev, ring) = (Revocations::default(), Keyring::default());
+    let inputs = TrustInputs { trust_root: root, revocations: &rev, keyring: &ring, as_of: None };
+    let r = check_envelope(e, "signatures/x", Some(&"a".repeat(64)), &inputs, 0);
+    assert_eq!(r.len(), 1);
+    (r[0].status, r[0].detail.clone())
+}
+
+#[test]
+fn bounds_payload_over_one_mib_is_refused_before_parsing() {
+    let root = root_of(1);
+    let fp = root.keys[0].fingerprint.as_str().to_owned();
+    let big = vec![b' '; MAX_SIGNATURE_STATEMENT_BYTES + 1];
+    assert_eq!(one(&env(big, &fp), &root), (SignatureStatus::Invalid, Some("payload_too_large".to_owned())));
+    let at = vec![b' '; MAX_SIGNATURE_STATEMENT_BYTES];
+    assert_eq!(one(&env(at, &fp), &root), (SignatureStatus::Invalid, Some("payload_not_bound".to_owned())));
+}
+
+#[test]
+fn bounds_empty_keyid_is_tried_only_against_a_few_keys() {
+    // A bound payload (a valid signature statement), a garbage signature, an empty keyid.
+    let stmt = format!(
+        r#"{{"_type":"https://in-toto.io/Statement/v1","predicate":{{"signed_at":"2026-03-01T10:00:00Z"}},"predicateType":"{SIGNATURE_PREDICATE_TYPE}","subject":[{{"digest":{{"sha256":"{}"}},"name":"statement.json"}}]}}"#,
+        "a".repeat(64)
+    );
+    let e = env(stmt.into_bytes(), "");
+    let at_cap = root_of(MAX_KEYID_TRIALS);
+    assert_eq!(one(&e, &at_cap), (SignatureStatus::UnknownKey, Some("no_listed_key_verifies".to_owned())));
+    let over = root_of(MAX_KEYID_TRIALS + 1);
+    assert_eq!(one(&e, &over), (SignatureStatus::UnknownKey, Some("keyid_missing".to_owned())));
+}
+
+#[test]
+fn bounds_more_than_64_signatures_in_a_package_is_malformed() {
+    assert_eq!(MAX_SIGNATURES_PER_PACKAGE, 64);
+    let c = cases().into_iter().find(|c| c.name == "too-many-signatures").unwrap();
+    let out = run_cli(&cli_args(&c));
+    assert_eq!(out.code, 1);
+    let v = fid_canon::parse(out.stdout.trim_ascii_end()).unwrap();
+    assert_eq!(s(obj(&v).get("error").unwrap(), "code"), Some("sig.malformed"));
+}
+
+#[test]
+fn bounds_64_junk_envelopes_finish_quickly_and_verify_nothing() {
+    let c = cases().into_iter().find(|c| c.name == "junk-64").unwrap();
+    let start = std::time::Instant::now();
+    let r = report("junk-64");
+    let took = start.elapsed();
+    let list = sigs(&r);
+    assert_eq!(list.len(), 64);
+    assert!(list.iter().all(|x| s(x, "status") == Some("INVALID") && s(x, "detail") == Some("payload_not_bound")));
+    // Generous for debug builds and wasm: no signature is verified, so this is reading and
+    // hashing about 200 KiB.
+    assert!(took < std::time::Duration::from_secs(20), "{took:?} for {}", c.name);
 }

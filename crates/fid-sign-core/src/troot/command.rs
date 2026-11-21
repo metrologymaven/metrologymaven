@@ -1,7 +1,7 @@
 //! `verify.check_signature@1` (R1, D0): checks every DSSE envelope of a Result Package
 //! against its `statement.json` and the offline trust files, declared with the registry
 //! macros, with its CLI entry point
-//! (`fid verify check-signature <package> --trust-root <file> [--revoked <file>] [--keys <file>] [--json]`)
+//! (`fid verify check-signature <package> --trust-root <file> [--revoked <file>] [--keys <file>] [--as-of <time>] [--json]`)
 //! and its MCP tool (`verify_check_signature`).
 //!
 //! Both surfaces resolve the package and the three files through one
@@ -29,8 +29,8 @@ use fid_pkg::reader::{PackageOpener, PackageReader, ReadError};
 use fid_registry::{fid_command, fid_commands, FidSchema};
 
 use super::{
-    check_envelope, Keyring, Revocations, SignatureEntry, SignatureStatus, TrootError, TrustInputs, TrustRoot,
-    MAX_FILE_BYTES,
+    check_envelope, Keyring, Revocations, SignatureEntry, SignatureStatus, TrootError, TrustInputs, TrustRoot, UtcTime,
+    MAX_FILE_BYTES, MAX_SIGNATURES_PER_PACKAGE,
 };
 use crate::{Envelope, SigError, MAX_ENVELOPE_BYTES};
 
@@ -58,7 +58,7 @@ pub enum CheckError {
     Trust(TrootError),
     /// `sig.malformed`: an envelope is not a well-formed DSSE envelope, or there are too many.
     Signature { entry: String, error: SigError },
-    /// `params.invalid`: a handle is empty or too long.
+    /// `params.invalid`: a handle is empty or too long, or `as_of` is not an RFC 3339 UTC time.
     Params(&'static str),
 }
 
@@ -117,6 +117,12 @@ pub struct CheckParams {
         max_length = 4096
     )]
     pub keys: Option<String>,
+    #[fid(
+        description = "Reference time supplied by the caller (RFC 3339 UTC; the command never reads a clock). A key whose not_after is before it gets the note key_validity_ended_as_of.",
+        min_length = 20,
+        max_length = 30
+    )]
+    pub as_of: Option<String>,
 }
 
 /// Whether the package is signed at all.
@@ -176,6 +182,7 @@ impl SignatureReport {
                         o.insert(k.to_owned(), text(v));
                     }
                 }
+                o.insert("notes".to_owned(), CValue::Arr(s.notes.iter().map(|n| text(n)).collect()));
                 CValue::Obj(o)
             })
             .collect();
@@ -221,6 +228,13 @@ pub fn check_package<R: Read + Seek>(src: R, inputs: &TrustInputs<'_>) -> Result
         let bytes = reader.read_member(&name, cap).map_err(CheckError::Package)?.unwrap_or_default();
         let envelope =
             Envelope::from_json(&bytes).map_err(|error| CheckError::Signature { entry: name.clone(), error })?;
+        // The cap is on signatures over all envelopes, checked before this envelope's are.
+        if signatures.len().saturating_add(envelope.signatures.len()) > MAX_SIGNATURES_PER_PACKAGE {
+            return Err(CheckError::Signature {
+                entry: name,
+                error: SigError::Malformed("more than 64 signatures in the package"),
+            });
+        }
         let first = u32::try_from(signatures.len()).unwrap_or(u32::MAX);
         signatures.extend(check_envelope(&envelope, &name, statement.as_deref(), inputs, first));
     }
@@ -275,6 +289,10 @@ pub fn check_signature(ctx: &dyn PackageOpener, params: CheckParams) -> Result<S
     for h in [&params.revoked, &params.keys].into_iter().flatten() {
         handle(h)?;
     }
+    let as_of = match &params.as_of {
+        Some(t) => Some(UtcTime::parse(t).ok_or(CheckError::Params("as_of must be an RFC 3339 UTC time"))?),
+        None => None,
+    };
     let trust_root = TrustRoot::parse(&read_file(ctx, &params.trust_root, "trust root")?).map_err(CheckError::Trust)?;
     let revocations = match &params.revoked {
         Some(h) => Revocations::parse(&read_file(ctx, h, "revocations")?).map_err(CheckError::Trust)?,
@@ -284,7 +302,8 @@ pub fn check_signature(ctx: &dyn PackageOpener, params: CheckParams) -> Result<S
         Some(h) => Keyring::parse(&read_file(ctx, h, "keyring")?).map_err(CheckError::Trust)?,
         None => Keyring::default(),
     };
-    let inputs = TrustInputs { trust_root: &trust_root, revocations: &revocations, keyring: &keyring };
+    let inputs =
+        TrustInputs { trust_root: &trust_root, revocations: &revocations, keyring: &keyring, as_of: as_of.as_ref() };
     let src = ctx.open_package(&params.package).map_err(CheckError::Package)?;
     check_package(src, &inputs)
 }
@@ -321,7 +340,7 @@ pub struct CliOutput {
 
 fn usage(msg: &str) -> CliOutput {
     let text = format!(
-        "error: {msg}\nusage: fid verify {CLI_CHECK} <package> --trust-root <file> [--revoked <file>] [--keys <file>] [--json]\n"
+        "error: {msg}\nusage: fid verify {CLI_CHECK} <package> --trust-root <file> [--revoked <file>] [--keys <file>] [--as-of <time>] [--json]\n"
     );
     CliOutput { code: 2, stdout: Vec::new(), stderr: text.into_bytes() }
 }
@@ -334,7 +353,8 @@ pub fn invoke_cli(opener: &dyn PackageOpener, args: &[&str]) -> CliOutput {
     }
     let mut json = false;
     let mut package: Option<&str> = None;
-    let (mut trust_root, mut revoked, mut keys): (Option<&str>, Option<&str>, Option<&str>) = (None, None, None);
+    let (mut trust_root, mut revoked, mut keys, mut as_of): (Option<&str>, Option<&str>, Option<&str>, Option<&str>) =
+        (None, None, None, None);
     let mut it = rest.iter();
     while let Some(&a) = it.next() {
         let slot = match a {
@@ -345,6 +365,7 @@ pub fn invoke_cli(opener: &dyn PackageOpener, args: &[&str]) -> CliOutput {
             "--trust-root" => &mut trust_root,
             "--revoked" => &mut revoked,
             "--keys" => &mut keys,
+            "--as-of" => &mut as_of,
             _ if a.starts_with("--") => return usage("unknown or repeated option"),
             _ if package.is_none() => {
                 package = Some(a);
@@ -367,6 +388,7 @@ pub fn invoke_cli(opener: &dyn PackageOpener, args: &[&str]) -> CliOutput {
         trust_root: trust_root.to_owned(),
         revoked: revoked.map(str::to_owned),
         keys: keys.map(str::to_owned),
+        as_of: as_of.map(str::to_owned),
     };
     match check_signature(opener, params) {
         Ok(report) => {
@@ -385,6 +407,12 @@ pub fn invoke_cli(opener: &dyn PackageOpener, args: &[&str]) -> CliOutput {
                         e.envelope,
                         e.detail.as_deref().map(|d| format!(" ({d})")).unwrap_or_default(),
                     ));
+                    for n in &e.notes {
+                        s.push_str(&format!(
+                            "  note: {n}
+"
+                        ));
+                    }
                     if let Some(t) = &e.claimed_signed_at {
                         s.push_str(&format!("  signing time claimed by the signer: {t}\n"));
                     }
@@ -415,7 +443,7 @@ pub fn invoke_mcp(opener: &dyn PackageOpener, tool: &str, params: &[u8]) -> Resu
     let v = fid_canon::parse_with_limits(params, MAX_PARAMS_BYTES, MAX_PARAMS_DEPTH)
         .map_err(|e| bad(&format!("parameters are not JSON: {}", e.code())))?;
     let CValue::Obj(o) = v else { return Err(bad("parameters must be an object")) };
-    if o.keys().any(|k| !matches!(k.as_str(), "package" | "trust_root" | "revoked" | "keys")) {
+    if o.keys().any(|k| !matches!(k.as_str(), "package" | "trust_root" | "revoked" | "keys" | "as_of")) {
         return Err(bad("unknown parameter"));
     }
     let get = |k: &str| -> Result<Option<String>, Vec<u8>> {
@@ -427,6 +455,7 @@ pub fn invoke_mcp(opener: &dyn PackageOpener, tool: &str, params: &[u8]) -> Resu
     };
     let package = get("package")?.ok_or_else(|| bad("package is required"))?;
     let trust_root = get("trust_root")?.ok_or_else(|| bad("trust_root is required"))?;
-    let params = CheckParams { package, trust_root, revoked: get("revoked")?, keys: get("keys")? };
+    let params =
+        CheckParams { package, trust_root, revoked: get("revoked")?, keys: get("keys")?, as_of: get("as_of")? };
     check_signature(opener, params).map(|r| r.to_canonical_bytes()).map_err(|e| error_bytes(&e))
 }

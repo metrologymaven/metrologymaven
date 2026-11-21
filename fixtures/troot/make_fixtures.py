@@ -53,9 +53,11 @@ pkg = load("troot_pkg_ref", "pkg/make_fixtures.py")
 
 PAYLOAD_TYPE = "application/vnd.in-toto+json"
 STATEMENT_TYPE = "https://in-toto.io/Statement/v1"
-# The signature predicate type is owned by TRUST.ESIG.BIND (not built yet); the checker
-# accepts any predicate type string, so the fixtures use a test-only URI.
-SIG_PREDICATE_TYPE = "https://example.invalid/fid/signature/v0-test"
+# The signature predicate type is owned by TRUST.ESIG.BIND (not built yet), which may rename
+# it; the checker pins this working name and refuses any other type.
+SIG_PREDICATE_TYPE = "https://metrologymaven.io/signature/predicate/v1"
+MAX_SIGNATURE_STATEMENT_BYTES = 1024 * 1024
+MAX_SIGNATURES_PER_PACKAGE = 64
 
 # ------------------------------------------------------------------ canonical JSON
 
@@ -146,12 +148,12 @@ def package_with(envelopes, statement=True):
     return pkg.build_zip(entries)
 
 
-def sig_statement(subject_hex, predicate):
+def sig_statement(subject_hex, predicate, predicate_type=SIG_PREDICATE_TYPE):
     return cb(
         {
             "_type": STATEMENT_TYPE,
             "subject": [{"name": "statement.json", "digest": {"sha256": subject_hex}}],
-            "predicateType": SIG_PREDICATE_TYPE,
+            "predicateType": predicate_type,
             "predicate": predicate,
         }
     )
@@ -207,35 +209,58 @@ def build_packages():
         f.append((name, envelope(payload, [s for s, _ in sigs_infos], payload_type), [i for _, i in sigs_infos]))
 
     # 0: payload is statement.json itself: valid, but no signing time.
-    add("0.dsse.json", SBYTES, [make_sig("ed25519", SBYTES)])
+    add("00.dsse.json", SBYTES, [make_sig("ed25519", SBYTES)])
     # 1: signature bytes corrupted.
     p = sig_statement(STATEMENT_HEX, predicate(P_TIME, P_FP))
-    add("1.dsse.json", p, [make_sig("p256", p, corrupt=True)])
+    add("01.dsse.json", p, [make_sig("p256", p, corrupt=True)])
     # 2: a valid signature over a statement for some other package.
     p = sig_statement(hashlib.sha256(b"another package statement").hexdigest(), predicate(P_TIME, P_FP))
-    add("2.dsse.json", p, [make_sig("p256", p)])
+    add("02.dsse.json", p, [make_sig("p256", p)])
     # 3: the predicate names the other key's fingerprint.
     p = sig_statement(STATEMENT_HEX, predicate(P_TIME, ED_FP))
-    add("3.dsse.json", p, [make_sig("p256", p)])
+    add("03.dsse.json", p, [make_sig("p256", p)])
     # 4: no signed_at in the predicate.
     p = sig_statement(STATEMENT_HEX, {"meaning_code": "reviewed", "key_fingerprint": P_FP})
-    add("4.dsse.json", p, [make_sig("p256", p)])
+    add("04.dsse.json", p, [make_sig("p256", p)])
     # 5: empty keyid: the checker finds the key by trying the listed keys.
     p = sig_statement(STATEMENT_HEX, predicate(ED_TIME, ED_FP))
-    add("5.dsse.json", p, [make_sig("ed25519", p, keyid="")])
+    add("05.dsse.json", p, [make_sig("ed25519", p, keyid="")])
     # 6: one envelope carrying two signatures over the same statement (no key_fingerprint).
     p = sig_statement(STATEMENT_HEX, predicate(P_TIME, None, "approved"))
-    add("6.dsse.json", p, [make_sig("p256", p), make_sig("ed25519", p)])
+    add("06.dsse.json", p, [make_sig("p256", p), make_sig("ed25519", p)])
     # 7: a keyid no file lists.
     p = sig_statement(STATEMENT_HEX, predicate(P_TIME))
-    add("7.dsse.json", p, [make_sig("p256", p, keyid="0" * 64)])
+    add("07.dsse.json", p, [make_sig("p256", p, keyid="0" * 64)])
     # 8: a payload type other than in-toto.
     p = sig_statement(STATEMENT_HEX, predicate(P_TIME, P_FP))
-    add("8.dsse.json", p, [make_sig("p256", p, payload_type="text/plain")], "text/plain")
+    add("08.dsse.json", p, [make_sig("p256", p, payload_type="text/plain")], "text/plain")
     # 9: signed_at that is not RFC 3339 UTC.
     p = sig_statement(STATEMENT_HEX, predicate("2026-03-01T10:00:00+01:00", P_FP))
-    add("9.dsse.json", p, [make_sig("p256", p)])
+    add("09.dsse.json", p, [make_sig("p256", p)])
+    # 10: a signature statement with another predicate type.
+    p = sig_statement(STATEMENT_HEX, predicate(P_TIME, P_FP), "https://example.invalid/other/v1")
+    add("10.dsse.json", p, [make_sig("p256", p)])
+    # 11: an unbound payload whose signature is also corrupt: refused on the binding, unverified.
+    p = sig_statement(hashlib.sha256(b"another package statement").hexdigest(), predicate(P_TIME, P_FP))
+    add("11.dsse.json", p, [make_sig("p256", p, corrupt=True)])
     pkgs["faults"] = f
+
+    # junk-64: 64 envelopes (the per-package maximum), each an unbound non-JSON payload
+    # with a garbage signature under a listed keyid: all INVALID payload_not_bound, unverified.
+    j = []
+    for i in range(MAX_SIGNATURES_PER_PACKAGE):
+        payload = dsse.chain(b"junk-%d" % i, 2048)
+        info = {"keyid": P_FP, "signer": "p256", "valid": False, "payload": payload, "payload_type": PAYLOAD_TYPE}
+        j.append(("%02d.dsse.json" % i, envelope(payload, [(P_FP, dsse.chain(b"junk-sig-%d" % i, 72))]), [info]))
+    pkgs["junk-64"] = j
+
+    # too-many: two envelopes holding 65 signatures in all (one more than the maximum).
+    junk = sig_statement(STATEMENT_HEX, predicate(P_TIME, P_FP))
+    many = []
+    for name, n in (("0.dsse.json", 40), ("1.dsse.json", 25)):
+        sigs = [(P_FP, dsse.chain(b"%s-%d" % (name.encode(), k), 72)) for k in range(n)]
+        many.append((name, envelope(junk, sigs), []))
+    pkgs["too-many"] = many
 
     # no-statement: a valid signature statement, but the package has no statement.json.
     p = sig_statement(STATEMENT_HEX, predicate(P_TIME, P_FP))
@@ -325,11 +350,23 @@ def malformed_files():
 # ------------------------------------------------------------------ the oracle
 
 
-def classify(info, envelope_bindings, root, revoked, keyring):
+def classify(info, envelope_bindings, root, revoked, keyring, as_of=None):
     """One signature -> its report entry (without index and envelope)."""
-    out = {"claimed_keyid": info["keyid"]}
+    out = {"claimed_keyid": info["keyid"], "notes": []}
     keys = [(k, True) for k in root["keys"]] + [(k, False) for k in (keyring or {"keys": []})["keys"]]
+    binding = envelope_bindings
+    if binding.get("unbound"):
+        # Refused on the binding alone: no verification; the key is named only by keyid lookup.
+        match = [k for k, _ in keys if info["keyid"] != "" and k["fingerprint"] == info["keyid"]]
+        if match:
+            out["fingerprint"] = match[0]["fingerprint"]
+            out["key_label"] = match[0]["label"]
+        out.update(status="INVALID", detail=binding["unbound"])
+        return out
     if info["keyid"] == "":
+        if len(keys) > 16:
+            out.update(status="UNKNOWN_KEY", detail="keyid_missing")
+            return out
         # Try every listed key in order; the first that verifies is the signer.
         found = [(k, t) for k, t in keys if k["fingerprint"] == FP[info["signer"]] and info["valid"]]
         if not found:
@@ -348,17 +385,24 @@ def classify(info, envelope_bindings, root, revoked, keyring):
     if not (info["valid"] and k["fingerprint"] == FP[info["signer"]]):
         out.update(status="INVALID", detail="signature_invalid")
         return out
-    binding = envelope_bindings
-    if binding.get("unbound"):
-        out.update(status="INVALID", detail=binding["unbound"])
+    if binding.get("key_fingerprint") not in (None, k["fingerprint"]):
+        out.update(status="INVALID", detail="key_fingerprint_mismatch")
         return out
     if "meaning_code" in binding:
         out["claimed_meaning_code"] = binding["meaning_code"]
     if "signed_at" in binding:
         out["claimed_signed_at"] = binding["signed_at"]
-    if binding.get("key_fingerprint") not in (None, k["fingerprint"]):
-        out.update(status="INVALID", detail="key_fingerprint_mismatch")
-        return out
+    out.update(time_rules(k, trusted, binding, revoked))
+    if out["status"] != "REVOKED" and any(
+            e["fingerprint"] == k["fingerprint"] for e in (revoked or {"entries": []})["entries"]):
+        out["notes"].append("revoked_after_claimed_signing")
+    if trusted and "not_after" in k and as_of is not None and parse_time(k["not_after"]) < parse_time(as_of):
+        out["notes"].append("key_validity_ended_as_of")
+    return out
+
+
+def time_rules(k, trusted, binding, revoked):
+    out = {}
     t = parse_time(binding["signed_at"]) if "signed_at" in binding else None
     rv = [e for e in (revoked or {"entries": []})["entries"] if e["fingerprint"] == k["fingerprint"]]
     if rv:
@@ -392,12 +436,20 @@ def binding_of(payload, payload_type, has_statement=True):
         return {"unbound": "payload_type"}
     if hashlib.sha256(payload).hexdigest() == STATEMENT_HEX:
         return {}
+    if len(payload) > MAX_SIGNATURE_STATEMENT_BYTES:
+        return {"unbound": "payload_too_large"}
     import json
 
-    st = json.loads(payload)
+    try:
+        st = json.loads(payload)
+    except ValueError:
+        return {"unbound": "payload_not_bound"}
+    if st["_type"] != STATEMENT_TYPE:
+        return {"unbound": "payload_not_bound"}
+    if st["predicateType"] != SIG_PREDICATE_TYPE:
+        return {"unbound": "predicate_type"}
     subj = st["subject"]
-    if not (st["_type"] == STATEMENT_TYPE and len(subj) == 1 and subj[0]["name"] == "statement.json"
-            and subj[0]["digest"]["sha256"] == STATEMENT_HEX):
+    if not (len(subj) == 1 and subj[0]["name"] == "statement.json" and subj[0]["digest"]["sha256"] == STATEMENT_HEX):
         return {"unbound": "payload_not_bound"}
     pred = st["predicate"]
     b = {}
@@ -413,14 +465,14 @@ def binding_of(payload, payload_type, has_statement=True):
     return b
 
 
-def report(envelopes, root, revoked, keyring, has_statement=True):
+def report(envelopes, root, revoked, keyring, has_statement=True, as_of=None):
     if not envelopes:
         return {"package_status": "UNSIGNED", "signatures": [], "statement_sha256": STATEMENT_HEX}
     sigs = []
     for name, _, infos in envelopes:
         b = binding_of(infos[0]["payload"], infos[0]["payload_type"], has_statement)
         for info in infos:
-            entry = classify(info, b, root, revoked, keyring)
+            entry = classify(info, b, root, revoked, keyring, as_of)
             entry["index"] = len(sigs)
             entry["envelope"] = "signatures/" + name
             sigs.append(entry)
@@ -447,6 +499,13 @@ CASES = [
     ("faults-one", "faults", "one", None, None, "REQ-003, key search"),
     ("no-statement", "no-statement", "both", None, None, "REQ-001"),
     ("unsigned", "unsigned", "both", None, None, "REQ-006"),
+    ("junk-64", "junk-64", "both", None, None, "bounded work: unbound payloads are never verified"),
+]
+
+# Cases with a caller-supplied reference time (as_of): (case, package, root, revoked, as_of).
+AS_OF_CASES = [
+    ("as-of-after-p256-window", "two-signatures", "both", "revoked-after", "2027-06-01T00:00:00Z"),
+    ("as-of-inside-window", "two-signatures", "both", None, "2026-06-01T00:00:00Z"),
 ]
 
 
@@ -478,6 +537,16 @@ def build():
         if ring:
             c["keys"] = "keyring/%s.json" % ring
         cases.append(c)
+    for name, p, root, rev, as_of in AS_OF_CASES:
+        rep = report(pkgs[p], ROOTS[root], REVOKED.get(rev), None, True, as_of)
+        files["expected/%s.json" % name] = cb(rep)
+        c = {"name": name, "package": "packages/%s.zip" % p, "trust_root": "roots/%s.json" % root,
+             "as_of": as_of, "expect": "expected/%s.json" % name, "spec": "review of #408: notes"}
+        if rev:
+            c["revoked"] = "revoked/%s.json" % rev
+        cases.append(c)
+    cases.append({"name": "too-many-signatures", "package": "packages/too-many.zip", "trust_root": "roots/both.json",
+                  "error": {"code": "sig.malformed"}, "spec": "at most 64 signatures per package"})
     # Error cases: a malformed trust root, revocation file or keyring fails the command.
     for name, (_, reason) in sorted(mal.items()):
         stem = name[: -len(".json")]

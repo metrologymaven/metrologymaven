@@ -25,6 +25,10 @@
 //! never looks measured); a payload that is the bare statement has no signing time and can
 //! at most be `VALID_UNTRUSTED`.
 //!
+//! `UNKNOWN_KEY` and `INVALID` both fail closed: neither ever counts toward a passing
+//! verification (maintainer decision on #408). The work per package is bounded before any
+//! cryptography runs; see [`check_envelope`].
+//!
 //! The command `verify.check_signature@1` with its CLI and MCP surfaces is [`command`].
 //! Everything here is D0: no clock, no network, no file system (the command reads the
 //! files through the caller's opener).
@@ -60,6 +64,19 @@ pub const MAX_MEANING_BYTES: usize = 256;
 pub const STATEMENT_TYPE: &str = "https://in-toto.io/Statement/v1";
 /// The one subject name of a signature statement.
 pub const SIGNED_SUBJECT: &str = "statement.json";
+/// `predicateType` of a signature statement, under the internal working name. Owned by
+/// `TRUST.ESIG.BIND`, which may rename it (renamed globally at publication); any other
+/// predicate type is `INVALID` with detail `predicate_type`.
+pub const SIGNATURE_PREDICATE_TYPE: &str = "https://metrologymaven.io/signature/predicate/v1";
+/// Largest payload parsed as a signature statement, in bytes (the 1 MiB bound of
+/// `TRUST.ESIG.BIND`); a larger payload that is not the statement itself is
+/// `payload_too_large`, refused before parsing or verification.
+pub const MAX_SIGNATURE_STATEMENT_BYTES: usize = 1024 * 1024;
+/// Most signatures checked in one package, over all envelopes; more is `sig.malformed`.
+pub const MAX_SIGNATURES_PER_PACKAGE: usize = 64;
+/// An empty keyid is tried against the listed keys only when at most this many are listed
+/// (trust root plus keyring); otherwise it is `UNKNOWN_KEY` `keyid_missing`, untried.
+pub const MAX_KEYID_TRIALS: usize = 16;
 
 /// `troot.malformed`: a trust-root, revocation or keyring file is refused. No signature is
 /// reported when this happens (REQ-TRUST.SIGN.TROOT-005).
@@ -344,16 +361,19 @@ impl SignatureStatus {
 }
 
 /// Every `detail` code a [`SignatureEntry`] can carry, sorted.
-pub const DETAILS: [&str; 15] = [
+pub const DETAILS: [&str; 18] = [
     "after_not_after",
     "before_not_before",
     "key_fingerprint_mismatch",
     "key_not_listed",
     "key_not_trusted",
+    "keyid_missing",
     "no_listed_key_verifies",
     "no_signing_time",
     "payload_not_bound",
+    "payload_too_large",
     "payload_type",
+    "predicate_type",
     "revoked_before_signing",
     "revoked_no_signing_time",
     "signature_invalid",
@@ -361,6 +381,9 @@ pub const DETAILS: [&str; 15] = [
     "signed_at_missing",
     "statement_missing",
 ];
+
+/// Every `notes` code a [`SignatureEntry`] can carry, sorted. Notes never change the status.
+pub const NOTES: [&str; 2] = ["key_validity_ended_as_of", "revoked_after_claimed_signing"];
 
 /// One signature of the package and its status.
 #[derive(FidSchema, Debug, Clone, PartialEq, Eq)]
@@ -372,7 +395,7 @@ pub struct SignatureEntry {
     #[fid(description = "The keyid written in the envelope, as claimed by the signer; may be empty.")]
     pub claimed_keyid: String,
     #[fid(
-        description = "Fingerprint of the listed key this signature was checked against (computed from the key).",
+        description = "Fingerprint of the listed key this signature was matched to (computed from the key).",
         pattern = "^[0-9a-f]{64}$"
     )]
     pub fingerprint: Option<String>,
@@ -381,6 +404,10 @@ pub struct SignatureEntry {
     pub status: SignatureStatus,
     #[fid(description = "Why the status is not VALID_TRUSTED (one of the documented detail codes).")]
     pub detail: Option<String>,
+    #[fid(
+        description = "Facts that do not change the status (documented note codes), e.g. a revocation after the claimed signing time."
+    )]
+    pub notes: Vec<String>,
     #[fid(description = "The signing time the signed statement asserts (signer-asserted, not a trusted timestamp).")]
     pub claimed_signed_at: Option<String>,
     #[fid(description = "The meaning code the signed statement asserts.")]
@@ -420,6 +447,8 @@ fn str_member<'a>(members: &'a [(String, Value)], name: &str) -> Option<&'a str>
     }
 }
 
+/// Decides how the payload is bound before any signature is verified, so an unbound payload
+/// costs one hash (and at most a 1 MiB parse), never a verification.
 fn binding(envelope: &Envelope, statement_sha256: Option<&str>) -> Binding {
     let Some(statement) = statement_sha256 else { return Binding::Unbound("statement_missing") };
     if envelope.payload_type != IN_TOTO_PAYLOAD_TYPE {
@@ -428,10 +457,18 @@ fn binding(envelope: &Envelope, statement_sha256: Option<&str>) -> Binding {
     if hex(&Sha256::digest(&envelope.payload)) == statement {
         return Binding::Direct;
     }
+    if envelope.payload.len() > MAX_SIGNATURE_STATEMENT_BYTES {
+        return Binding::Unbound("payload_too_large");
+    }
     let unbound = Binding::Unbound("payload_not_bound");
     let Ok(Value::Object(st)) = fid_trust_canon::parse(&envelope.payload) else { return unbound };
-    if str_member(&st, "_type") != Some(STATEMENT_TYPE) || str_member(&st, "predicateType").is_none() {
+    if str_member(&st, "_type") != Some(STATEMENT_TYPE) {
         return unbound;
+    }
+    match str_member(&st, "predicateType") {
+        Some(SIGNATURE_PREDICATE_TYPE) => {}
+        Some(_) => return Binding::Unbound("predicate_type"),
+        None => return unbound,
     }
     let subject_ok = match member(&st, "subject") {
         Some(Value::Array(subjects)) => match subjects.as_slice() {
@@ -474,6 +511,9 @@ pub struct TrustInputs<'a> {
     pub trust_root: &'a TrustRoot,
     pub revocations: &'a Revocations,
     pub keyring: &'a Keyring,
+    /// A caller-supplied reference time (never the clock). When given, a signature whose key's
+    /// `not_after` lies before it gets the note `key_validity_ended_as_of`.
+    pub as_of: Option<&'a UtcTime>,
 }
 
 /// A listed key: trusted (with its window) or only known.
@@ -501,18 +541,33 @@ impl<'a> TrustInputs<'a> {
         });
         trusted.chain(known)
     }
+
+    fn listed(&self) -> usize {
+        self.trust_root.keys.len().saturating_add(self.keyring.keys.len())
+    }
 }
 
 /// Classifies every signature of `envelope` (the package entry `envelope_path`) against the
 /// package statement digest (lowercase hex, `None` when the package has no `statement.json`)
 /// and the trust inputs. `first_index` is the index of its first signature.
 ///
-/// Per signature, in order: find the key (by keyid; with an empty keyid, the first listed key
-/// that verifies), verify over PAE, check the binding, check a predicate `key_fingerprint`,
-/// then the time rules: revoked at or before the claimed signing time is `REVOKED`; outside
-/// the inclusive window `[not_before, not_after]` is `EXPIRED`; a key only in the keyring, or
-/// no signing time, is `VALID_UNTRUSTED`. Claimed values (signing time, meaning code) are
-/// echoed only for a signature that verified and is bound to the statement.
+/// The work is bounded before any cryptography runs: the binding is decided first (an
+/// unbound payload is `INVALID` with no verification; a payload that is not the statement
+/// itself is parsed only up to [`MAX_SIGNATURE_STATEMENT_BYTES`]), a signature with a keyid is
+/// verified against that one key, and an empty keyid is tried against the listed keys only
+/// when there are at most [`MAX_KEYID_TRIALS`] of them (`UNKNOWN_KEY` `keyid_missing`
+/// otherwise). The caller caps the signatures per package ([`MAX_SIGNATURES_PER_PACKAGE`]).
+///
+/// Per signature, in order: the binding; find the key; verify over PAE; the predicate
+/// `key_fingerprint`; then the time rules: revoked at or before the claimed signing time is
+/// `REVOKED`; outside the inclusive window `[not_before, not_after]` is `EXPIRED`; a key only
+/// in the keyring, or no signing time, is `VALID_UNTRUSTED`. A key revoked after the claimed
+/// time keeps its status and gets the note `revoked_after_claimed_signing`. Claimed values
+/// (signing time, meaning code) are echoed only for a signature that verified, is bound to the
+/// statement and whose predicate names its key.
+///
+/// Two envelopes may carry the same signature; each is reported. Catching a replayed signer
+/// is `TRUST.ESIG.MULTI`'s job (its `sequence_index` and `prior` chain), not this check's.
 pub fn check_envelope(
     envelope: &Envelope,
     envelope_path: &str,
@@ -520,8 +575,11 @@ pub fn check_envelope(
     inputs: &TrustInputs<'_>,
     first_index: u32,
 ) -> Vec<SignatureEntry> {
-    let message = envelope.pae();
     let bound = binding(envelope, statement_sha256);
+    let message = match bound {
+        Binding::Unbound(_) => Vec::new(),
+        _ => envelope.pae(),
+    };
     let mut out = Vec::with_capacity(envelope.signatures.len());
     for (i, sig) in envelope.signatures.iter().enumerate() {
         let mut entry = SignatureEntry {
@@ -532,6 +590,7 @@ pub fn check_envelope(
             key_label: None,
             status: SignatureStatus::UnknownKey,
             detail: None,
+            notes: Vec::new(),
             claimed_signed_at: None,
             claimed_meaning_code: None,
         };
@@ -540,7 +599,23 @@ pub fn check_envelope(
             e.detail = detail.map(str::to_owned);
             e
         };
+        let by_keyid = (!sig.keyid.is_empty())
+            .then(|| inputs.candidates().find(|c| c.fingerprint.as_str() == sig.keyid))
+            .flatten();
+        if let Binding::Unbound(detail) = &bound {
+            // No verification: name the key only when the keyid lists one (a lookup).
+            if let Some(c) = &by_keyid {
+                entry.fingerprint = Some(c.fingerprint.as_str().to_owned());
+                entry.key_label = Some(c.label.to_owned());
+            }
+            out.push(finish(entry, SignatureStatus::Invalid, Some(*detail)));
+            continue;
+        }
         let candidate = if sig.keyid.is_empty() {
+            if inputs.listed() > MAX_KEYID_TRIALS {
+                out.push(finish(entry, SignatureStatus::UnknownKey, Some("keyid_missing")));
+                continue;
+            }
             match inputs.candidates().find(|c| c.key.verify_raw(&message, &sig.sig).is_ok()) {
                 Some(c) => c,
                 None => {
@@ -549,7 +624,7 @@ pub fn check_envelope(
                 }
             }
         } else {
-            match inputs.candidates().find(|c| c.fingerprint.as_str() == sig.keyid) {
+            match by_keyid {
                 Some(c) => c,
                 None => {
                     out.push(finish(entry, SignatureStatus::UnknownKey, Some("key_not_listed")));
@@ -559,27 +634,33 @@ pub fn check_envelope(
         };
         entry.fingerprint = Some(candidate.fingerprint.as_str().to_owned());
         entry.key_label = Some(candidate.label.to_owned());
-        if candidate.key.verify_raw(&message, &sig.sig).is_err() {
+        // With an empty keyid the search above already verified this key.
+        if !sig.keyid.is_empty() && candidate.key.verify_raw(&message, &sig.sig).is_err() {
             out.push(finish(entry, SignatureStatus::Invalid, Some("signature_invalid")));
             continue;
         }
         let signed_at = match &bound {
-            Binding::Unbound(detail) => {
-                out.push(finish(entry, SignatureStatus::Invalid, Some(*detail)));
-                continue;
-            }
-            Binding::Direct => None,
             Binding::Signed { signed_at, key_fingerprint, meaning_code } => {
-                entry.claimed_signed_at = Some(signed_at.as_str().to_owned());
-                entry.claimed_meaning_code = meaning_code.clone();
                 if key_fingerprint.as_deref().is_some_and(|f| f != candidate.fingerprint.as_str()) {
                     out.push(finish(entry, SignatureStatus::Invalid, Some("key_fingerprint_mismatch")));
                     continue;
                 }
+                entry.claimed_signed_at = Some(signed_at.as_str().to_owned());
+                entry.claimed_meaning_code = meaning_code.clone();
                 Some(signed_at)
             }
+            _ => None,
         };
         let (status, detail) = classify_time(candidate.fingerprint, candidate.trusted, signed_at, inputs.revocations);
+        if status != SignatureStatus::Revoked && inputs.revocations.find(candidate.fingerprint).is_some() {
+            entry.notes.push("revoked_after_claimed_signing".to_owned());
+        }
+        let ended = candidate.trusted.and_then(|k| k.not_after.as_ref());
+        if let (Some(na), Some(now)) = (ended, inputs.as_of) {
+            if na < now {
+                entry.notes.push("key_validity_ended_as_of".to_owned());
+            }
+        }
         out.push(finish(entry, status, detail));
     }
     out
