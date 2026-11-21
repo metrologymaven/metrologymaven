@@ -1,0 +1,3282 @@
+{
+ "folds": [
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "ok": {
+     "promotions": 3,
+     "requests": [
+      "agent"
+     ]
+    }
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+        "entries": [
+         {
+          "command": "feature.set_nominal@1",
+          "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+          "outcome": "IDENTICAL",
+          "step": 1
+         },
+         {
+          "command": "feature.set_nominal@1",
+          "digest": "sha256:6bb378507639927f99989d451cc74cd9ad2cc9d1f73de7e399a45e7086657253",
+          "outcome": "IDENTICAL",
+          "step": 2
+         },
+         {
+          "command": "feature.set_nominal@1",
+          "digest": "sha256:cfd28ddf5f8968604dd5e3195faf03fcc00c99a3e8abb925985af3867301cadf",
+          "outcome": "IDENTICAL",
+          "step": 3
+         }
+        ],
+        "mode": "rebased",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W3",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "Please adopt the e1 fix.",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "trial",
+      "class": "W1",
+      "command": "journal.request_promote_branch",
+      "human_assertion": null,
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "genuine_promotions_and_request"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:49d0cf6d368d471b0813c33dd5e437f7e10d2f740ee36ceab5f485b53f347bed",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "replayed_promotion"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "replayed_promotion_same_heads"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": null
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:49d0cf6d368d471b0813c33dd5e437f7e10d2f740ee36ceab5f485b53f347bed",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "replay_with_altered_target_head"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:48168fa99cb7e014e77dbf4af79fc5b2a50caac8e820883ea7326f88bc713ac9"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:49d0cf6d368d471b0813c33dd5e437f7e10d2f740ee36ceab5f485b53f347bed",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "replay_with_made_up_target_head"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "stale_target_head"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:32a729cafd02d5c97c113cdc47b88f5fb82e53d377ca88524270712279ea25eb"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "stale_source_head"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "heads_not_given"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W3",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W3",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "replayed_protected_promotion"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "agent_principal"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "script",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "script_principal"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "bus_route"
+     }
+    }
+   ],
+   "name": "bus_route_source"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "other_command"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 2,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "other_major"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W1",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "other_class"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "trial",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "entry_on_another_branch"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "unprotected_event_into_protected"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W3",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "protected_without_header_assertion"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W3",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-2",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "protected_header_assertion_differs"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:8804a5fffd43685923da0c42fbbc6caba4fbb053e2e85b2d261e8d4b1a96a1f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:eaa59ea2a3340c178fa83fad315b5e45c244e3124dad3e2cc0be0b194b6b846d",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W3",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "protected_recomputed_pre_image"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:ccdd35168ab474fa5764a526cfb83621351e23682c5075b2e18d56bddf96aa30",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W3",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "protected_pre_image_forged"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W2",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "protected_from_w2"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:aeb22440b52c9cdc5350a74d07ef1584d74a616ea6b58d7e5eb7125d0707af06",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "protected_into_unprotected"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "protected_type_from_promote_branch"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [
+         {
+          "command": "feature.set_nominal@1",
+          "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+          "outcome": "IDENTICAL",
+          "step": 1
+         },
+         {
+          "command": "feature.set_nominal@1",
+          "digest": "sha256:6bb378507639927f99989d451cc74cd9ad2cc9d1f73de7e399a45e7086657253",
+          "outcome": "IDENTICAL",
+          "step": 2
+         },
+         {
+          "command": "feature.set_nominal@1",
+          "digest": "sha256:cfd28ddf5f8968604dd5e3195faf03fcc00c99a3e8abb925985af3867301cadf",
+          "outcome": "IDENTICAL",
+          "step": 3
+         }
+        ],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "fast_forward_with_entries"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+        "entries": [],
+        "mode": "rebased",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "rebased_without_entries"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+        "entries": [
+         {
+          "command": "feature.set_nominal@1",
+          "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+          "outcome": "DIVERGENT",
+          "step": 1
+         }
+        ],
+        "mode": "rebased",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "divergent_entry"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+        "entries": [
+         {
+          "command": "feature.set_nominal@1",
+          "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+          "outcome": "IDENTICAL",
+          "step": 2
+         },
+         {
+          "command": "feature.set_nominal@1",
+          "digest": "sha256:6bb378507639927f99989d451cc74cd9ad2cc9d1f73de7e399a45e7086657253",
+          "outcome": "IDENTICAL",
+          "step": 3
+         },
+         {
+          "command": "feature.set_nominal@1",
+          "digest": "sha256:cfd28ddf5f8968604dd5e3195faf03fcc00c99a3e8abb925985af3867301cadf",
+          "outcome": "IDENTICAL",
+          "step": 4
+         }
+        ],
+        "mode": "rebased",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "entries_misnumbered"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "squash",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "unknown_mode"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      },
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": null
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "two_promotions_in_one_entry"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "agent/claude/1",
+        "target_head": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "agent/claude/1",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "into_agent_branch"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "ghost",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "unknown_source_branch"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "requester": "human",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "extra_body_key"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "ok": {
+     "promotions": 0,
+     "requests": [
+      "human",
+      "script",
+      "agent"
+     ]
+    }
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "Please adopt the e1 fix.",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "trial",
+      "class": "W1",
+      "command": "journal.request_promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "Please adopt the e1 fix.",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "trial",
+      "class": "W1",
+      "command": "journal.request_promote_branch",
+      "human_assertion": null,
+      "kind": "script",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "Please adopt the e1 fix.",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "trial",
+      "class": "W1",
+      "command": "journal.request_promote_branch",
+      "human_assertion": null,
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "request_from_human_script_agent"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "Please adopt the e1 fix.",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "trial",
+      "class": "W2",
+      "command": "journal.request_promote_branch",
+      "human_assertion": null,
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "request_from_w2"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "Please adopt the e1 fix.",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "trial",
+      "class": "W1",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "request_from_other_command"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "Please adopt the e1 fix.",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W1",
+      "command": "journal.request_promote_branch",
+      "human_assertion": null,
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "request_on_another_branch"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "Please adopt the e1 fix.",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "agent/claude/1",
+        "target_head": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "trial",
+      "class": "W1",
+      "command": "journal.request_promote_branch",
+      "human_assertion": null,
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "request_into_agent_branch"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "Please adopt the e1 fix.",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "trial",
+      "class": "W1",
+      "command": "journal.request_promote_branch",
+      "human_assertion": null,
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "request_stale_head"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "trial",
+      "class": "W1",
+      "command": "journal.request_promote_branch",
+      "human_assertion": null,
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "request_note_too_long"
+  },
+  {
+   "assertion_check": null,
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W3",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "protected_without_assertion_check"
+  }
+ ],
+ "plans": [
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "event": {
+     "body": {
+      "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+      "entries": [],
+      "mode": "fast_forward",
+      "source": "trial",
+      "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+      "target": "main",
+      "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+     },
+     "type": "BranchPromoted"
+    }
+   },
+   "journal": "ff",
+   "name": "ac1_fast_forward",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": [
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+     "outcome": "IDENTICAL"
+    }
+   ]
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "event": {
+     "body": {
+      "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+      "entries": [],
+      "mode": "fast_forward",
+      "source": "trial",
+      "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+      "target": "main",
+      "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+     },
+     "type": "BranchPromoted"
+    }
+   },
+   "journal": "ff",
+   "name": "ac1_fast_forward_without_rebaser",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "event": {
+     "body": {
+      "diff": "sha256:7852c07c0f62bdc1b6c6cca920c983b09048078333b80230f935e1c3e1d01e93",
+      "entries": [],
+      "mode": "fast_forward",
+      "source": "agent/claude/1",
+      "source_head": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "target": "main",
+      "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+     },
+     "type": "BranchPromoted"
+    }
+   },
+   "journal": "ff",
+   "name": "fast_forward_agent_branch",
+   "params": {
+    "diff": "sha256:7852c07c0f62bdc1b6c6cca920c983b09048078333b80230f935e1c3e1d01e93",
+    "source": "agent/claude/1",
+    "source_head": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "event": {
+     "body": {
+      "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+      "entries": [
+       {
+        "command": "feature.set_nominal@1",
+        "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+        "outcome": "IDENTICAL",
+        "step": 1
+       },
+       {
+        "command": "feature.set_nominal@1",
+        "digest": "sha256:6bb378507639927f99989d451cc74cd9ad2cc9d1f73de7e399a45e7086657253",
+        "outcome": "IDENTICAL",
+        "step": 2
+       },
+       {
+        "command": "feature.set_nominal@1",
+        "digest": "sha256:cfd28ddf5f8968604dd5e3195faf03fcc00c99a3e8abb925985af3867301cadf",
+        "outcome": "IDENTICAL",
+        "step": 3
+       }
+      ],
+      "mode": "rebased",
+      "source": "trial",
+      "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+      "target": "main",
+      "target_head": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444"
+     },
+     "type": "BranchPromoted"
+    }
+   },
+   "journal": "fork",
+   "name": "ac2_rebased_identical",
+   "params": {
+    "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444"
+   },
+   "rebaser": [
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+     "outcome": "IDENTICAL"
+    },
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:6bb378507639927f99989d451cc74cd9ad2cc9d1f73de7e399a45e7086657253",
+     "outcome": "IDENTICAL"
+    },
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:cfd28ddf5f8968604dd5e3195faf03fcc00c99a3e8abb925985af3867301cadf",
+     "outcome": "IDENTICAL"
+    }
+   ]
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "event": {
+     "body": {
+      "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+      "entries": [
+       {
+        "command": "feature.set_nominal@1",
+        "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+        "outcome": "IDENTICAL",
+        "step": 1
+       },
+       {
+        "command": "feature.set_nominal@1",
+        "digest": "sha256:6bb378507639927f99989d451cc74cd9ad2cc9d1f73de7e399a45e7086657253",
+        "outcome": "EQUIVALENT",
+        "step": 2
+       }
+      ],
+      "mode": "rebased",
+      "source": "trial",
+      "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+      "target": "main",
+      "target_head": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444"
+     },
+     "type": "BranchPromoted"
+    }
+   },
+   "journal": "fork",
+   "name": "rebased_equivalent",
+   "params": {
+    "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444"
+   },
+   "rebaser": [
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+     "outcome": "IDENTICAL"
+    },
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:6bb378507639927f99989d451cc74cd9ad2cc9d1f73de7e399a45e7086657253",
+     "outcome": "EQUIVALENT"
+    }
+   ]
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "precondition",
+     "reason": "divergent_step",
+     "step": 2
+    }
+   },
+   "journal": "fork",
+   "name": "ac3_divergent_second_step",
+   "params": {
+    "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444"
+   },
+   "rebaser": [
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+     "outcome": "IDENTICAL"
+    },
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:6bb378507639927f99989d451cc74cd9ad2cc9d1f73de7e399a45e7086657253",
+     "outcome": "DIVERGENT"
+    },
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:cfd28ddf5f8968604dd5e3195faf03fcc00c99a3e8abb925985af3867301cadf",
+     "outcome": "IDENTICAL"
+    }
+   ]
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "precondition",
+     "reason": "divergent_step",
+     "step": 1
+    }
+   },
+   "journal": "fork",
+   "name": "failed_step",
+   "params": {
+    "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444"
+   },
+   "rebaser": [
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+     "outcome": "FAILED"
+    }
+   ]
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "precondition",
+     "reason": "capability_missing"
+    }
+   },
+   "journal": "fork",
+   "name": "rebaser_missing",
+   "params": {
+    "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "precondition",
+     "reason": "false"
+    }
+   },
+   "journal": "fork",
+   "name": "rebaser_no_steps",
+   "params": {
+    "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444"
+   },
+   "rebaser": []
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "policy",
+     "reason": "target_protected"
+    }
+   },
+   "journal": "ff",
+   "name": "ac4_target_protected",
+   "params": {
+    "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "prot",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": {
+    "confirms": [
+     "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+     "A-1"
+    ]
+   },
+   "command": "journal.promote_protected_branch",
+   "expect": {
+    "error": {
+     "code": "policy",
+     "reason": "no_assertion"
+    }
+   },
+   "journal": "ff",
+   "name": "ac4_no_assertion",
+   "params": {
+    "assertion": "A-2",
+    "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "prot",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": {
+    "confirms": [
+     "sha256:7a2cf78e3ef2bfb25346d29d934fc052ff3242c7fa33b00744a66fec39a66677",
+     "A-1"
+    ]
+   },
+   "command": "journal.promote_protected_branch",
+   "expect": {
+    "error": {
+     "code": "policy",
+     "reason": "no_assertion"
+    }
+   },
+   "journal": "ff",
+   "name": "assertion_over_another_pre_image",
+   "params": {
+    "assertion": "A-1",
+    "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "prot",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": {
+    "confirms": [
+     "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+     "A-1"
+    ]
+   },
+   "command": "journal.promote_protected_branch",
+   "expect": {
+    "event": {
+     "body": {
+      "assertion": "A-1",
+      "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+      "entries": [],
+      "mode": "fast_forward",
+      "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "source": "trial",
+      "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+      "target": "prot",
+      "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+     },
+     "type": "ProtectedBranchPromoted"
+    }
+   },
+   "journal": "ff",
+   "name": "protected_fast_forward",
+   "params": {
+    "assertion": "A-1",
+    "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "prot",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_protected_branch",
+   "expect": {
+    "error": {
+     "code": "precondition",
+     "reason": "capability_missing"
+    }
+   },
+   "journal": "ff",
+   "name": "assertion_check_missing",
+   "params": {
+    "assertion": "A-1",
+    "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "prot",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": {
+    "confirms": [
+     "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+     "A-1"
+    ]
+   },
+   "command": "journal.promote_protected_branch",
+   "expect": {
+    "error": {
+     "code": "precondition",
+     "reason": "false"
+    }
+   },
+   "journal": "ff",
+   "name": "protected_into_unprotected",
+   "params": {
+    "assertion": "A-1",
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": {
+    "confirms": [
+     "sha256:859c7485bbce7a8805e226c3b78810878480ecb1cfb29728ba6b11a4f89d04ca",
+     "A-9"
+    ]
+   },
+   "command": "journal.promote_protected_branch",
+   "expect": {
+    "event": {
+     "body": {
+      "assertion": "A-9",
+      "diff": "sha256:c5e1f2cbd3bd40e4a1ac4bf0cee2e4456b1221d2c0b45e5eb754bac311b6d5fb",
+      "entries": [
+       {
+        "command": "feature.set_nominal@1",
+        "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+        "outcome": "IDENTICAL",
+        "step": 1
+       }
+      ],
+      "mode": "rebased",
+      "pre_image": "sha256:859c7485bbce7a8805e226c3b78810878480ecb1cfb29728ba6b11a4f89d04ca",
+      "source": "agent/claude/1",
+      "source_head": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "target": "rel",
+      "target_head": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932"
+     },
+     "type": "ProtectedBranchPromoted"
+    }
+   },
+   "journal": "ff",
+   "name": "protected_rebased",
+   "params": {
+    "assertion": "A-9",
+    "diff": "sha256:c5e1f2cbd3bd40e4a1ac4bf0cee2e4456b1221d2c0b45e5eb754bac311b6d5fb",
+    "source": "agent/claude/1",
+    "source_head": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+    "target": "rel",
+    "target_head": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932"
+   },
+   "rebaser": [
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+     "outcome": "IDENTICAL"
+    }
+   ]
+  },
+  {
+   "actor": "agent",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "policy",
+     "reason": "human_only"
+    }
+   },
+   "journal": "ff",
+   "name": "agent_cannot_promote",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "script",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "policy",
+     "reason": "human_only"
+    }
+   },
+   "journal": "ff",
+   "name": "script_cannot_promote",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "agent",
+   "assertion_check": {
+    "confirms": [
+     "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+     "A-1"
+    ]
+   },
+   "command": "journal.promote_protected_branch",
+   "expect": {
+    "error": {
+     "code": "policy",
+     "reason": "class_forbidden"
+    }
+   },
+   "journal": "ff",
+   "name": "agent_cannot_promote_protected",
+   "params": {
+    "assertion": "A-1",
+    "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "prot",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "agent",
+   "assertion_check": null,
+   "command": "journal.request_promote_branch",
+   "expect": {
+    "event": {
+     "body": {
+      "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+      "note": "Please adopt the e1 fix.",
+      "source": "trial",
+      "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+      "target": "main",
+      "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+     },
+     "type": "PromotionRequested"
+    }
+   },
+   "journal": "ff",
+   "name": "ac5_agent_request",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "note": "Please adopt the e1 fix.",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.request_promote_branch",
+   "expect": {
+    "event": {
+     "body": {
+      "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+      "source": "trial",
+      "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+      "target": "main",
+      "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+     },
+     "type": "PromotionRequested"
+    }
+   },
+   "journal": "ff",
+   "name": "request_without_note",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "agent",
+   "assertion_check": null,
+   "command": "journal.request_promote_branch",
+   "expect": {
+    "error": {
+     "code": "validation",
+     "reason": "schema"
+    }
+   },
+   "journal": "ff",
+   "name": "request_note_too_long",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "note": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "agent",
+   "assertion_check": null,
+   "command": "journal.request_promote_branch",
+   "expect": {
+    "error": {
+     "code": "conflict",
+     "reason": "expected_head_mismatch"
+    }
+   },
+   "journal": "ff",
+   "name": "request_stale_head",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "source": "trial",
+    "source_head": "sha256:32a729cafd02d5c97c113cdc47b88f5fb82e53d377ca88524270712279ea25eb",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "conflict",
+     "reason": "expected_head_mismatch"
+    }
+   },
+   "journal": "ff",
+   "name": "source_moved",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "source": "trial",
+    "source_head": "sha256:32a729cafd02d5c97c113cdc47b88f5fb82e53d377ca88524270712279ea25eb",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "conflict",
+     "reason": "expected_head_mismatch"
+    }
+   },
+   "journal": "fork",
+   "name": "target_moved",
+   "params": {
+    "diff": "sha256:21bcdf149afb8c62a556bfd5a3a8d06ced804332cc85244fdf82f96d41a46dd2",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": [
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+     "outcome": "IDENTICAL"
+    }
+   ]
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "conflict",
+     "reason": "expected_digest_mismatch"
+    }
+   },
+   "journal": "ff",
+   "name": "diff_digest_differs",
+   "params": {
+    "diff": "sha256:c6a6a9b09208fd7968441bd881efc199d878e9cbd16b08d1ce18e065cff789ee",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "conflict",
+     "reason": "expected_head_mismatch"
+    }
+   },
+   "journal": "after_ff",
+   "name": "replayed_after_fast_forward",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": [
+    {
+     "command": "feature.set_nominal@1",
+     "digest": "sha256:36e410601387b0d10361c7e672ac098790d7f72970c57ea36b39a1427cd41e1b",
+     "outcome": "IDENTICAL"
+    }
+   ]
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "precondition",
+     "reason": "false"
+    }
+   },
+   "journal": "after_ff",
+   "name": "nothing_to_promote",
+   "params": {
+    "diff": "sha256:920a6dfc20ba341ef8afa278132982aa6c5ded18e1619c3e308106300255802c",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:49d0cf6d368d471b0813c33dd5e437f7e10d2f740ee36ceab5f485b53f347bed"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "reason": "unknown_branch"
+    }
+   },
+   "journal": "ff",
+   "name": "unknown_source",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "source": "nope",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "main",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "reason": "unknown_branch"
+    }
+   },
+   "journal": "ff",
+   "name": "unknown_target",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "nope",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "precondition",
+     "reason": "false"
+    }
+   },
+   "journal": "ff",
+   "name": "same_branch",
+   "params": {
+    "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "trial",
+    "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+   },
+   "rebaser": null
+  },
+  {
+   "actor": "human",
+   "assertion_check": null,
+   "command": "journal.promote_branch",
+   "expect": {
+    "error": {
+     "code": "precondition",
+     "reason": "false"
+    }
+   },
+   "journal": "ff",
+   "name": "into_agent_branch",
+   "params": {
+    "diff": "sha256:8cbe052e7c55a32726a45c9a591c3c168880f6b9897217ff02c044b01b9970cf",
+    "source": "trial",
+    "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+    "target": "agent/claude/1",
+    "target_head": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d"
+   },
+   "rebaser": null
+  }
+ ]
+}
