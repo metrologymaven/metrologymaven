@@ -704,6 +704,40 @@ impl InterpretationReplay {
     }
 }
 
+impl RegisterView {
+    /// The view a replay consults for `pin` (the rule of [`replay_interpretation`]): `none`
+    /// for a `none` pin; the pinned register loaded from `store` by digest otherwise
+    /// ([`REGISTER_UNAVAILABLE`] when it is missing or its bytes do not hash to the digest);
+    /// a `verified` pin's register re-checked with [`Purpose::Replay`] and required to verify
+    /// at the pinned digest ([`REGISTER_UNAVAILABLE`] otherwise); an unverified pin gives the
+    /// same unverified view. An inconsistent pin is `bad_pin`. Also used by
+    /// `GDT.DRF.BUILD`'s replay.
+    pub(crate) fn for_replay(
+        pin: &InterpretationPin,
+        store: &RegisterStore,
+        sources: &RegisterSources<'_>,
+    ) -> Result<RegisterView, &'static str> {
+        match (pin.state, pin.register) {
+            (PinState::None, None) => Ok(RegisterView::none(sources.journal)),
+            (PinState::None, Some(_)) | (_, None) => Err("bad_pin"),
+            (state, Some(d)) => {
+                let Some(bytes) = store.get(&d).filter(|b| sha(b) == d) else {
+                    return Err(REGISTER_UNAVAILABLE);
+                };
+                if let PinState::Unverified(code) = state {
+                    Ok(RegisterView { view: View::Unverified { file: d, code }, drafts: agent_drafts(sources.journal) })
+                } else {
+                    let v = RegisterView::load(bytes, sources, Purpose::Replay);
+                    if !v.is_verified() || v.digest() != Some(d) {
+                        return Err(REGISTER_UNAVAILABLE);
+                    }
+                    Ok(v)
+                }
+            }
+        }
+    }
+}
+
 /// Replays the interpretation block of a recorded ResultRecord (REQ-007, AC-8, AC-13).
 ///
 /// `recorded` is the record's canonical JSON, `pin` the [`InterpretationPin`] of its journal
@@ -735,23 +769,9 @@ pub fn replay_interpretation(
     else {
         return InterpretationReplay::not_replayable("bad_record");
     };
-    let view = match (pin.state, pin.register) {
-        (PinState::None, None) => RegisterView::none(sources.journal),
-        (PinState::None, Some(_)) | (_, None) => return InterpretationReplay::not_replayable("bad_pin"),
-        (state, Some(d)) => {
-            let Some(bytes) = store.get(&d).filter(|b| sha(b) == d) else {
-                return InterpretationReplay::not_replayable(REGISTER_UNAVAILABLE);
-            };
-            if let PinState::Unverified(code) = state {
-                RegisterView { view: View::Unverified { file: d, code }, drafts: agent_drafts(sources.journal) }
-            } else {
-                let v = RegisterView::load(bytes, sources, Purpose::Replay);
-                if !v.is_verified() || v.digest() != Some(d) {
-                    return InterpretationReplay::not_replayable(REGISTER_UNAVAILABLE);
-                }
-                v
-            }
-        }
+    let view = match RegisterView::for_replay(&pin, store, sources) {
+        Ok(v) => v,
+        Err(reason) => return InterpretationReplay::not_replayable(reason),
     };
     let again = Interpreted::compute(rows, profile, &view, Purpose::Replay);
     match again.fields() {
