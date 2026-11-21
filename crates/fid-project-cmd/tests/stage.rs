@@ -420,13 +420,20 @@ fn command_definitions() {
     let ids: Vec<String> = defs.iter().map(|d| format!("{}@{}", d.id, d.major)).collect();
     assert_eq!(
         ids,
-        ["project.add_stage@1", "project.remove_stage@1", "project.reorder_stages@1", "project.list_stages@1"]
+        [
+            "project.add_stage@1",
+            "project.remove_stage@1",
+            "project.reorder_stages@1",
+            "project.list_stages@1",
+            "project.set_active_stage@1"
+        ]
     );
     let want = [
         ("W2", "head_move", vec!["StageAdded"]),
         ("W2", "head_move", vec!["StageRemoved"]),
         ("W2", "head_move", vec!["StagesReordered"]),
         ("R0", "not_undoable", vec![]),
+        ("W2", "head_move", vec!["ActiveStageSet"]),
     ];
     let catalogue = Catalogue::geo_frame().unwrap();
     for (d, (class, undo, effects)) in defs.iter().zip(want) {
@@ -449,9 +456,9 @@ fn handlers_register_on_the_bus() {
     let source: SharedSource = Arc::new(Mutex::new(Recording::new(ReplaySource::new(Vec::new()))));
     let mut set = HandlerSet::new();
     register(&mut set, namespace(), &source).unwrap();
-    assert_eq!(set.len(), 4);
+    assert_eq!(set.len(), 5);
     fid_project_cmd::register_containers(&mut set, namespace(), &source).unwrap();
-    assert_eq!(set.len(), 8);
+    assert_eq!(set.len(), 9);
     for op in StageOp::ALL {
         let id = format!("{}@1", op.command());
         assert!(set.get(&id).is_ok());
@@ -459,7 +466,7 @@ fn handlers_register_on_the_bus() {
     }
     let err = register(&mut set, namespace(), &source).unwrap_err();
     assert_eq!(err.code(), Code::Internal);
-    assert_eq!(set.len(), 8);
+    assert_eq!(set.len(), 9);
 }
 
 // ------------------------------------------------------------------ published schemas

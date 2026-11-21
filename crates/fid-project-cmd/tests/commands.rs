@@ -243,7 +243,7 @@ fn command_definitions() {
     let defs = container_defs().unwrap();
     // The crate's full list is the container commands, then the stage commands.
     let all: Vec<String> = command_defs().unwrap().iter().map(|d| format!("{}@{}", d.id, d.major)).collect();
-    assert_eq!(all.len(), 8);
+    assert_eq!(all.len(), 9);
     assert!(all.iter().zip(&defs).all(|(a, d)| *a == format!("{}@{}", d.id, d.major)));
     let ids: Vec<String> = defs.iter().map(|d| format!("{}@{}", d.id, d.major)).collect();
     assert_eq!(
@@ -292,7 +292,7 @@ fn handlers_register_on_the_bus() {
     // `register` registers all eight handlers of the crate.
     let mut all = HandlerSet::new();
     register(&mut all, NAMESPACE, &source).unwrap();
-    assert_eq!(all.len(), 8);
+    assert_eq!(all.len(), 9);
     for d in command_defs().unwrap() {
         assert!(all.get(&format!("{}@{}", d.id, d.major)).is_ok(), "{}", d.id);
     }
