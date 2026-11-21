@@ -1,0 +1,57 @@
+[
+  {
+    "name": "entry-hash-mismatch",
+    "code": "pkg.malformed",
+    "reason": "entry_hash_mismatch"
+  },
+  {
+    "name": "non-canonical-line",
+    "code": "pkg.malformed",
+    "reason": "non_canonical"
+  },
+  {
+    "name": "empty-line",
+    "code": "pkg.malformed",
+    "reason": "empty_line"
+  },
+  {
+    "name": "duplicate-entry",
+    "code": "pkg.malformed",
+    "reason": "duplicate_entry_hash"
+  },
+  {
+    "name": "unknown-basis",
+    "code": "pkg.malformed",
+    "reason": "unknown_basis"
+  },
+  {
+    "name": "record-field-missing",
+    "code": "pkg.malformed",
+    "reason": "record_field"
+  },
+  {
+    "name": "records-duplicate-key",
+    "code": "pkg.malformed",
+    "reason": "json"
+  },
+  {
+    "name": "points-name",
+    "code": "pkg.malformed",
+    "reason": "points_name"
+  },
+  {
+    "name": "kernel-manifest-digest",
+    "code": "pkg.malformed",
+    "reason": "kernel_manifest_digest"
+  },
+  {
+    "name": "kernel-core-digest",
+    "code": "pkg.malformed",
+    "reason": "kernel_manifest"
+  },
+  {
+    "name": "records-absent",
+    "code": "pkg.malformed",
+    "reason": "records_missing"
+  }
+]

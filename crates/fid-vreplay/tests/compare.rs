@@ -175,12 +175,12 @@ fn ac5_package_aggregation() {
     let rep1 = test_table();
     let rc = ReplayContext { same_manifest: true, same_platform_class: true };
     let replayed = |name: &str| ResultInput::Replayed(Box::new(case(name).pair));
-    let nr = ResultInput::NotReplayable { record_id: "r-nr".into(), reason: "RESULTS_ONLY".into() };
+    let nr = ResultInput::NotReplayable { record_id: "r-nr".into(), reason: "BASIS_RESULTS_ONLY".into() };
     let pkg = compare_package(&rep1, &rc, &[replayed("identical_D3"), replayed("d3_half_tolerance")]);
     assert_eq!(pkg.outcome, Outcome::Equivalent);
     let pkg = compare_package(&rep1, &rc, &[replayed("d3_half_tolerance"), nr.clone()]);
     assert_eq!(pkg.outcome, Outcome::NotReplayable(NotReplayableCause::Other));
-    assert_eq!(pkg.results[1].reason.as_ref().unwrap().to_wire(), "NOT_REPLAYABLE:RESULTS_ONLY");
+    assert_eq!(pkg.results[1].reason.as_ref().unwrap().to_wire(), "NOT_REPLAYABLE:BASIS_RESULTS_ONLY");
     let pkg = compare_package(&rep1, &rc, &[nr, replayed("d0_last_bit")]);
     assert_eq!(pkg.outcome, Outcome::Divergent);
     let pkg = compare_package(&rep1, &rc, &[]);
@@ -286,7 +286,7 @@ fn duplicate_record_ids_are_divergent() {
     let b = a.clone();
     let mut c = case("identical_D0").pair;
     c.record_id = "r-2".into();
-    let nr_dup = ResultInput::NotReplayable { record_id: "r-2".into(), reason: "RESULTS_ONLY".into() };
+    let nr_dup = ResultInput::NotReplayable { record_id: "r-2".into(), reason: "BASIS_RESULTS_ONLY".into() };
     let mut d = case("identical_D1").pair;
     d.record_id = "r-3".into();
     let pkg = compare_package(

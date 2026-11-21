@@ -308,7 +308,8 @@ pub enum ResultInput {
     NotReplayable {
         /// ResultRecord ID.
         record_id: String,
-        /// Reason code from SELECT (for example `RESULTS_ONLY`).
+        /// Reason code from SELECT, [`crate::select::Reason::as_str`] (for example
+        /// `BASIS_RESULTS_ONLY`); build it with `ResultInput::from(&NotReplayable)`.
         reason: String,
     },
 }

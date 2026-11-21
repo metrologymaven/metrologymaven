@@ -154,6 +154,7 @@ python fixtures/rel/guide/make_fixtures.py --check
 python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
 python fixtures/replay/compare/make_cases.py --check
+python fixtures/replay/select/make_cases.py --check
 python fixtures/rpt/catalog/make_schema_fixtures.py --check
 python fixtures/rpt/model/bind/expand/make_fixtures.py --check
 python fixtures/rpt/model/bracket_3stage/make_fixtures.py --check

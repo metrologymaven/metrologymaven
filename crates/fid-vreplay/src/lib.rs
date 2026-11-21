@@ -2,6 +2,9 @@
 //!
 //! Modules land one spec leaf at a time:
 //! - [`compare`]: replay outcome classification and package aggregation
-//!   (`TRUST.REPLAY.COMPARE`).
+//!   (`TRUST.REPLAY.COMPARE`);
+//! - [`select`]: replayable-set selection, the replay plan and `NOT_REPLAYABLE` reasons
+//!   (`TRUST.REPLAY.SELECT`).
 
 pub mod compare;
+pub mod select;
