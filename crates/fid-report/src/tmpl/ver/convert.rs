@@ -13,19 +13,32 @@ use fid_canon::{to_canonical_bytes, CValue};
 use fid_gdt::chars::interp::{PROVISIONAL_LABEL_KEY, PROVISIONAL_LABEL_TEXT};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Object keys a template payload may never hold anywhere (D-045): a template has no say
-/// over which labels a value carries, so nothing in it may even look like a label switch.
-/// Labels are added by `RPT.MODEL.FMT` from the stored record only.
-pub const LABEL_CONTROL_KEYS: [&str; 8] = [
-    "hide_labels",
-    "interpretation",
-    "label_mode",
-    "labels",
-    "provisional",
-    "show_labels",
-    "suppress_labels",
-    "value_labels",
-];
+/// D-045 defence in depth. The guarantee itself is architectural: labels are produced by
+/// `RPT.MODEL.FMT` from the stored record a value binding names, never from template data,
+/// and a template can hold no value, value text or number (`RPT.MODEL.TMPL.FORMAT`), so no
+/// template content reaches the label code. On top of that, a template payload may hold no
+/// key that even looks like a label switch: after [`normalise_key`], a key containing
+/// `label` other than exactly `label` (a column heading), or one of these words.
+pub const LABEL_CONTROL_WORDS: [&str; 2] = ["interpretation", "provisional"];
+
+/// A key or string for the label rule: Unicode lowercase with `_`, `-` and spaces removed,
+/// so `Labels`, `hideLabels`, `hide-labels` and `Hide Labels` all read `labels`/`hidelabels`.
+pub fn normalise_key(k: &str) -> String {
+    k.chars().filter(|c| !matches!(c, '_' | '-' | ' ')).flat_map(char::to_lowercase).collect()
+}
+
+/// Whether a payload key is a label switch under the D-045 rule.
+pub fn is_label_control_key(k: &str) -> bool {
+    let n = normalise_key(k);
+    (n.contains("label") && n != "label") || LABEL_CONTROL_WORDS.contains(&n.as_str())
+}
+
+/// Whether a payload string is the provisional label's catalog key or English text (after
+/// [`normalise_key`] on both sides).
+fn is_label_text(s: &str) -> bool {
+    let n = normalise_key(s);
+    n == normalise_key(PROVISIONAL_LABEL_KEY) || n == normalise_key(PROVISIONAL_LABEL_TEXT)
+}
 
 fn pointer_push(out: &mut String, token: &str) {
     out.push('/');
@@ -38,17 +51,17 @@ fn pointer_push(out: &mut String, token: &str) {
     }
 }
 
-/// The first label-control offence in `v` (depth first, keys in order): an object key in
-/// [`LABEL_CONTROL_KEYS`], or a string equal to the provisional label's catalog key or
-/// English text. Iterative; `v` is a bounded payload.
+/// The first label-control offence in `v` (depth first, keys in order): a key for which
+/// [`is_label_control_key`] holds, or a string that is the provisional label's catalog key
+/// or English text. Iterative; `v` is a bounded payload.
 fn label_offence(v: &CValue, at: &str) -> Option<String> {
     let mut stack: Vec<(String, &CValue)> = vec![(at.to_string(), v)];
     while let Some((p, node)) = stack.pop() {
         match node {
-            CValue::Str(s) if s == PROVISIONAL_LABEL_KEY || s == PROVISIONAL_LABEL_TEXT => return Some(p),
+            CValue::Str(s) if is_label_text(s) => return Some(p),
             CValue::Obj(o) => {
                 for k in o.keys() {
-                    if LABEL_CONTROL_KEYS.contains(&k.as_str()) {
+                    if is_label_control_key(k) {
                         let mut q = p.clone();
                         pointer_push(&mut q, k);
                         return Some(q);
@@ -119,7 +132,7 @@ pub(crate) fn version_bytes<S: ObjectRead + ?Sized>(origin: &Origin<'_>, store: 
     match origin {
         Origin::Builtin(b) => Ok(b.bytes.clone()),
         Origin::Project(p) => {
-            read_object(store, &p.r.digest)?.ok_or(ReportError::StoreInvalid("template object missing"))
+            read_object(store, &p.digest)?.ok_or(ReportError::StoreInvalid("template object missing"))
         }
     }
 }

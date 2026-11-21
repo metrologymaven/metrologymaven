@@ -10,17 +10,19 @@ null; ASCII keys, so code-point key order equals UTF-16 order).
 
 Pinned rules this script encodes (stated in crates/fid-report/src/tmpl/ver/mod.rs):
 - a template ID is the document's `template_id` (UUIDv7); a version reference is
-  {"digest", "id", "version"} with the version a decimal string;
+  {"builtin", "digest", "id", "version"} with the version a decimal string; built-in
+  versions (`builtin:<id>@<v>`, numbered by the shipping crate) and project versions
+  (`<id>@<v>`) are separate number spaces;
 - save from a report: same page and block IDs, kinds, kind versions, payloads and title;
   `locked` false, `clearance` null; a block whose ID, kind and kind version match a block of
   the template the report was applied from keeps that block's slot and repeat_header_rows
   (and its continuation_block when the target is on the same page); others get null, "0",
   null;
-- version n+1 where n is the highest built-in or project version of the ID; identical bytes
-  return the latest version and journal nothing;
+- project version n+1 where n is the highest project version of the ID (built-ins never
+  count); identical bytes return the latest project version and journal nothing;
 - apply: a report with the drawn ID, the template's pages and blocks (same IDs), no retired
   IDs, schema_version "1", template_ref {digest, id, version} and the given title;
-- events: save {type, locked, source, template}, source {kind: "report", report,
+- events: save {type, source, template}, source {kind: "report", report,
   report_digest} or {kind: "file", handle: untrusted text}; apply {type, report,
   report_digest, template, title}; report events as in fixtures/rpt/model/doc.
 
@@ -117,8 +119,8 @@ def report(rid, title, pages, tref=None):
             "schema_version": "1", "template_ref": tref, "title": untrusted(title)}
 
 
-def tref(tid, version, doc):
-    return {"digest": sha(jcs(doc)), "id": tid, "version": str(version)}
+def tref(tid, version, doc, builtin=False):
+    return {"builtin": builtin, "digest": sha(jcs(doc)), "id": tid, "version": str(version)}
 
 
 ROW_SLOT = {"kind": "characteristics",
@@ -175,7 +177,7 @@ def scenario():
 
     v1 = from_report(ACME, TITLE, r_pages)
     v1_ref = tref(ACME, 1, v1)
-    events.append({"locked": False, "source": {"kind": "report", "report": rid, "report_digest": r_digest()},
+    events.append({"source": {"kind": "report", "report": rid, "report_digest": r_digest()},
                    "template": v1_ref, "type": "report.save_template@1"})
     text = v7(3)
     r_pages[0][1].append(rblock(text, "text", {"text": EDIT_TEXT}))
@@ -184,7 +186,7 @@ def scenario():
                    "type": "report.add_block@1"})
     v2 = from_report(ACME, TITLE, r_pages)
     v2_ref = tref(ACME, 2, v2)
-    events.append({"locked": False, "source": {"kind": "report", "report": rid, "report_digest": r_digest()},
+    events.append({"source": {"kind": "report", "report": rid, "report_digest": r_digest()},
                    "template": v2_ref, "type": "report.save_template@1"})
     # Third save without edits: version 2 again, nothing journaled.
 
@@ -195,7 +197,7 @@ def scenario():
     events.append({"report": a_id, "report_digest": sha(jcs(a_doc)), "template": v1_ref, "title": untrusted(a_title),
                    "type": "report.apply_template@1"})
 
-    fai_ref = tref(FAI, 1, FAI_DOC)
+    fai_ref = tref(FAI, 1, FAI_DOC, builtin=True)
     f_id, f_title = v7(5), "FAI from form3"
     f_pages = [(FAI_PAGE, [rblock(FAI_TABLE, "table", {"rows": []})])]
     f_doc = report(f_id, f_title, f_pages, fai_ref)
@@ -209,29 +211,33 @@ def scenario():
                    "type": "report.add_block@1"})
     derived = from_report(DERIVED, f_title, f_pages, FAI_DOC)
     derived_ref = tref(DERIVED, 1, derived)
-    events.append({"locked": False, "source": {"kind": "report", "report": f_id, "report_digest": sha(jcs(f_doc))},
+    events.append({"source": {"kind": "report", "report": f_id, "report_digest": sha(jcs(f_doc))},
                    "template": derived_ref, "type": "report.save_template@1"})
 
     file_ref = tref(FILE_ID, 1, FILE_DOC)
-    events.append({"locked": False, "source": {"handle": untrusted(HANDLE), "kind": "file"}, "template": file_ref,
+    events.append({"source": {"handle": untrusted(HANDLE), "kind": "file"}, "template": file_ref,
                    "type": "report.save_template@1"})
 
-    starter_v1 = tref(STARTER, 1, STARTER_DOC)
+    # Saving over the unlocked built-in starter gives project version 1: built-in versions
+    # are a number space of their own.
+    starter_v1 = tref(STARTER, 1, STARTER_DOC, builtin=True)
     starter2 = from_report(STARTER, a_title, a_pages, v1)
-    starter_v2 = tref(STARTER, 2, starter2)
-    events.append({"locked": False, "source": {"kind": "report", "report": a_id, "report_digest": sha(jcs(a_doc))},
-                   "template": starter_v2, "type": "report.save_template@1"})
+    starter_p1 = tref(STARTER, 1, starter2)
+    events.append({"source": {"kind": "report", "report": a_id, "report_digest": sha(jcs(a_doc))},
+                   "template": starter_p1, "type": "report.save_template@1"})
 
     rows = [
-        dict(starter_v1, locked=False, origin="builtin"),
-        dict(starter_v2, locked=False, origin="project"),
-        dict(v1_ref, locked=False, origin="project"),
-        dict(v2_ref, locked=False, origin="project"),
-        dict(derived_ref, locked=False, origin="project"),
-        dict(file_ref, locked=False, origin="project"),
-        dict(fai_ref, locked=True, origin="builtin"),
+        dict(starter_v1, locked=False),
+        dict(starter_p1, locked=False),
+        dict(v1_ref, locked=False),
+        dict(v2_ref, locked=False),
+        dict(derived_ref, locked=False),
+        dict(file_ref, locked=False),
+        dict(fai_ref, locked=True),
     ]
-    assert [r["id"] for r in rows] == sorted(r["id"] for r in rows)
+    # Sorted by ID, then built-in before project, then version.
+    key = [(r["id"], not r["builtin"], int(r["version"])) for r in rows]
+    assert key == sorted(key)
     assert v1_ref["digest"] != v2_ref["digest"]
     return {
         "project": PROJECT,
@@ -249,10 +255,59 @@ def scenario():
         "fai_v1": fai_ref,
         "file_v1": file_ref,
         "starter_v1": starter_v1,
-        "starter_v2": starter_v2,
+        "starter_p1": starter_p1,
         "list": {"templates": rows},
         "journal_texts": [jcs(e).decode("utf-8") for e in events],
+        "forged": forged(events, v1_ref, fai_ref),
     }
+
+
+def forged(events, v1_ref, fai_ref):
+    """Forged journals and their hand-labelled exact-replay outcome (the first event that is
+    not identical). Each starts from the scenario journal."""
+    texts = [jcs(e) for e in events]
+    save = [i for i, e in enumerate(events) if e["type"] == "report.save_template@1"]
+    apply = [i for i, e in enumerate(events) if e["type"] == "report.apply_template@1"]
+    out = []
+
+    def case(name, journal, outcome, at):
+        out.append({"name": name, "journal_texts": [t.decode("utf-8") for t in journal], "outcome": outcome,
+                    "first_mismatch": str(at)})
+
+    # Two saves that both claim version 2 (the race the compare-and-set prevents).
+    j = texts[:save[1] + 1] + [texts[save[1]]] + texts[save[1] + 1:]
+    case("duplicate_version", j, "DIVERGENT", save[1] + 1)
+    # A save whose version skips one.
+    e = json.loads(texts[save[0]])
+    e["template"]["version"] = "2"
+    case("version_gap", texts[:save[0]] + [jcs(e)] + texts[save[0] + 1:], "DIVERGENT", save[0])
+    # A save that names a built-in version: not a readable event.
+    e = json.loads(texts[save[0]])
+    e["template"]["builtin"] = True
+    case("save_names_builtin", texts[:save[0]] + [jcs(e)] + texts[save[0] + 1:], "NOT_REPLAYABLE", save[0])
+    # A save whose object is not in the store.
+    e = json.loads(texts[save[0]])
+    e["template"]["digest"] = "sha256:" + "00" * 32
+    case("object_missing", texts[:save[0]] + [jcs(e)] + texts[save[0] + 1:], "DIVERGENT", save[0])
+    # A save from a report whose recorded report digest is not the replayed one.
+    e = json.loads(texts[save[0]])
+    e["source"]["report_digest"] = "sha256:" + "11" * 32
+    case("source_digest", texts[:save[0]] + [jcs(e)] + texts[save[0] + 1:], "DIVERGENT", save[0])
+    # An apply of a project version that was never saved.
+    e = json.loads(texts[apply[0]])
+    e["template"]["version"] = "3"
+    case("apply_unsaved_version", texts[:apply[0]] + [jcs(e)] + texts[apply[0] + 1:], "DIVERGENT", apply[0])
+    # An apply that calls a project version a built-in one.
+    e = json.loads(texts[apply[0]])
+    e["template"]["builtin"] = True
+    e["template"]["id"] = fai_ref["id"]
+    case("apply_builtin_wrong_digest", texts[:apply[0]] + [jcs(e)] + texts[apply[0] + 1:], "DIVERGENT", apply[0])
+    # An apply of the FAI form recorded as a project version.
+    e = json.loads(texts[apply[1]])
+    e["template"]["builtin"] = False
+    case("apply_builtin_as_project", texts[:apply[1]] + [jcs(e)] + texts[apply[1] + 1:], "DIVERGENT", apply[1])
+    assert v1_ref["digest"] != fai_ref["digest"]
+    return out
 
 
 def outputs():

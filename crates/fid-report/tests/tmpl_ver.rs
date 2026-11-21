@@ -113,8 +113,8 @@ fn kinds() -> KindRegistry {
 
 fn builtins() -> BuiltinRegistry {
     let mut b = BuiltinRegistry::new();
-    b.register(parse_template(&read("starter.json")).unwrap()).unwrap();
-    b.register(parse_template(&read("fai_form3.json")).unwrap()).unwrap();
+    b.register(parse_template(&read("starter.json")).unwrap(), 1).unwrap();
+    b.register(parse_template(&read("fai_form3.json")).unwrap(), 1).unwrap();
     b
 }
 
@@ -185,8 +185,8 @@ impl World {
 
 /// AC-1 and the whole oracle scenario: report R, save v1, edit, save v2, a third save
 /// without edits, apply acme@1, apply the FAI form, edit and save it as a derived template,
-/// save a file through a handle, and save over the unlocked starter (version 2 after the
-/// built-in's version 1).
+/// save a file through a handle, and save over the unlocked starter (project version 1: the
+/// built-in's version 1 is another number space).
 fn scenario(w: &mut World) {
     let c = cases();
     let r = st(&c, "report_r").to_string();
@@ -234,7 +234,14 @@ fn scenario(w: &mut World) {
         .unwrap();
     assert_eq!(st(&a, "report_id"), st(&c, "report_a.id"));
     let f = w
-        .tmpl(APPLY_TEMPLATE, obj([("template", s(st(&c, "ids.fai"))), ("title", s(st(&c, "report_f.title")))]))
+        .tmpl(
+            APPLY_TEMPLATE,
+            obj([
+                ("template", s(st(&c, "ids.fai"))),
+                ("builtin", CValue::Bool(true)),
+                ("title", s(st(&c, "report_f.title"))),
+            ]),
+        )
         .unwrap();
     assert_eq!(st(&f, "template.digest"), st(&c, "fai_v1.digest"));
     let f_page = match get(&f, "pages") {
@@ -256,7 +263,7 @@ fn scenario(w: &mut World) {
         w.tmpl(SAVE_TEMPLATE, obj([("template", s(st(&c, "ids.file"))), ("file", s(st(&c, "handle")))])).unwrap();
     assert_eq!(st(&file, "template.digest"), st(&c, "file_v1.digest"));
     let starter = w.tmpl(SAVE_TEMPLATE, save(st(&c, "ids.starter"), st(&c, "report_a.id"))).unwrap();
-    assert_eq!(text(get(&starter, "template")), text(get(&c, "starter_v2")));
+    assert_eq!(text(get(&starter, "template")), text(get(&c, "starter_p1")));
 }
 
 // ------------------------------------------------------------------ AC-1, AC-2
@@ -334,23 +341,29 @@ fn ac3_locked_builtin_refuses_saves_and_applies() {
     assert_eq!(e.code(), "report.template_locked");
     assert_eq!(w.journal_len(), before);
     assert_eq!(w.backend.objects().len(), objects);
-    let ok = w.tmpl(APPLY_TEMPLATE, obj([("template", s(&fai)), ("title", s("again"))]));
+    let ok =
+        w.tmpl(APPLY_TEMPLATE, obj([("template", s(&fai)), ("builtin", CValue::Bool(true)), ("title", s("again"))]));
     assert!(ok.is_ok());
     assert_eq!(w.journal_len(), before + 1);
+    // Without `builtin`, the ID names project versions, of which there are none.
+    let e = w.tmpl(APPLY_TEMPLATE, obj([("template", s(&fai)), ("title", s("again"))])).unwrap_err();
+    assert_eq!(e.code(), "report.not_found");
 }
 
 #[test]
-fn a_project_template_saved_locked_is_locked_too() {
+fn project_level_locking_is_deferred_and_a_locked_file_is_refused() {
     let mut w = World::new();
     let c = cases();
     // The FAI form file, saved under its own ID into a project without built-ins.
     w.builtins = BuiltinRegistry::new();
     let p = obj([("template", s(st(&c, "ids.fai"))), ("file", s("root://imports/fai_form3.json"))]);
-    let first = w.tmpl(SAVE_TEMPLATE, p.clone()).unwrap();
-    assert_eq!(text(get(&first, "template")), text(get(&c, "fai_v1")));
-    let before = w.journal_len();
-    assert_eq!(w.tmpl(SAVE_TEMPLATE, p).unwrap_err().code(), "report.template_locked");
-    assert_eq!(w.journal_len(), before);
+    match w.tmpl(SAVE_TEMPLATE, p).unwrap_err() {
+        VerError::Template(t) => {
+            assert_eq!((t.pointer(), t.reason()), (Some("/locked"), Some("project_template_locked")))
+        }
+        other => panic!("{other:?}"),
+    }
+    assert_eq!(w.journal_len(), 0);
 }
 
 // ------------------------------------------------------------------ AC-4
@@ -369,6 +382,12 @@ fn ac4_list_is_sorted_with_locked_flags_and_show_hashes_to_the_digest() {
     // Latest by default.
     let latest = w.tmpl(SHOW_TEMPLATE, obj([("template", s(st(&c, "ids.acme")))])).unwrap();
     assert_eq!(text(get(&latest, "template")), text(get(&c, "acme_v2")));
+    // The starter's built-in and project versions are separate: both are version 1.
+    let starter = st(&c, "ids.starter");
+    let b = w.tmpl(SHOW_TEMPLATE, obj([("template", s(starter)), ("builtin", CValue::Bool(true))])).unwrap();
+    assert_eq!(text(get(&b, "template")), text(get(&c, "starter_v1")));
+    let p = w.tmpl(SHOW_TEMPLATE, obj([("template", s(starter))])).unwrap();
+    assert_eq!(text(get(&p, "template")), text(get(&c, "starter_p1")));
     // An unknown version or ID is report.not_found.
     let e = w.tmpl(SHOW_TEMPLATE, obj([("template", s(st(&c, "ids.acme"))), ("version", s("9"))])).unwrap_err();
     assert_eq!(e.code(), "report.not_found");
@@ -490,7 +509,7 @@ fn ac6_exact_replay_is_identical_with_the_same_digests() {
         assert_eq!(w.backend.stored(id).unwrap().digest, *d);
     }
     let c = cases();
-    let want: Vec<&str> = ["acme_v1", "acme_v2", "derived_v1", "file_v1", "starter_v2"]
+    let want: Vec<&str> = ["acme_v1", "acme_v2", "derived_v1", "file_v1", "starter_p1"]
         .iter()
         .map(|k| st(&c, &format!("{k}.digest")))
         .collect();
@@ -526,9 +545,9 @@ fn a_changed_template_never_replays_silently() {
     // 3. A built-in that changed under the same version: the apply event names the old
     //    digest for fai@1, which now resolves to another digest.
     let mut changed = BuiltinRegistry::new();
-    changed.register(parse_template(&read("starter.json")).unwrap()).unwrap();
+    changed.register(parse_template(&read("starter.json")).unwrap(), 1).unwrap();
     let fai = String::from_utf8(read("fai_form3.json")).unwrap().replace("FAI form 3", "FAI form 3 rev");
-    changed.register(parse_template(fai.as_bytes()).unwrap()).unwrap();
+    changed.register(parse_template(fai.as_bytes()).unwrap(), 1).unwrap();
     let run = replay_exact(&journal, w.backend.objects(), &w.kinds, &changed, w.backend.project());
     assert_eq!(run.outcome, ReplayOutcome::Divergent);
     let fai_apply = journal
@@ -554,6 +573,176 @@ fn a_changed_template_never_replays_silently() {
     k.register(Box::new(TableStub)).unwrap();
     let run = replay_exact(&journal, w.backend.objects(), &k, &w.builtins, w.backend.project());
     assert_eq!(run.outcome, ReplayOutcome::NotReplayable);
+}
+
+/// The forged journals of the oracle, each with its hand-labelled outcome.
+#[test]
+fn forged_journals_from_the_oracle_are_caught() {
+    let mut w = World::new();
+    scenario(&mut w);
+    let c = cases();
+    let CValue::Arr(cases_) = get(&c, "forged") else { panic!() };
+    assert!(cases_.len() >= 8);
+    for f in cases_ {
+        let journal: Vec<CValue> = match get(f, "journal_texts") {
+            CValue::Arr(a) => a
+                .iter()
+                .map(|t| match t {
+                    CValue::Str(t) => parse(t.as_bytes()).unwrap(),
+                    _ => panic!(),
+                })
+                .collect(),
+            _ => panic!(),
+        };
+        let run = replay_exact(&journal, w.backend.objects(), &w.kinds, &w.builtins, w.backend.project());
+        let name = st(f, "name");
+        assert_eq!(run.outcome.as_str(), st(f, "outcome"), "{name}");
+        assert_eq!(run.first_mismatch.map(|i| i.to_string()).as_deref(), Some(st(f, "first_mismatch")), "{name}");
+    }
+}
+
+// ------------------------------------------------------------------ concurrent saves
+
+/// A view of a project as another session read it before a concurrent save: template events
+/// stop at the snapshot, commits go to the shared project.
+struct Stale<'a> {
+    shared: &'a mut MemoryTemplateBackend,
+    events: Vec<TemplateEvent>,
+}
+
+impl ReportBackend for Stale<'_> {
+    fn project(&self) -> Uuid {
+        self.shared.project()
+    }
+    fn load(&self, id: &ReportId) -> Result<Option<StoredReport>, ReportError> {
+        self.shared.load(id)
+    }
+    fn commit(&mut self, id: &ReportId, stored: StoredReport, event: ReportEvent) -> Result<(), ReportError> {
+        self.shared.commit(id, stored, event)
+    }
+}
+
+impl ObjectRead for Stale<'_> {
+    fn object(&self, digest: &Digest) -> Result<Option<Vec<u8>>, ReportError> {
+        self.shared.object(digest)
+    }
+}
+
+impl TemplateBackend for Stale<'_> {
+    fn template_events(&self) -> Result<Vec<TemplateEvent>, ReportError> {
+        Ok(self.events.clone())
+    }
+    fn commit_save(&mut self, object: Vec<u8>, expected: Expected, event: TemplateEvent) -> Result<(), VerError> {
+        self.shared.commit_save(object, expected, event)
+    }
+    fn commit_apply(
+        &mut self,
+        object: Vec<u8>,
+        id: &ReportId,
+        stored: StoredReport,
+        event: TemplateEvent,
+    ) -> Result<(), ReportError> {
+        self.shared.commit_apply(object, id, stored, event)
+    }
+}
+
+#[test]
+fn concurrent_saves_cannot_both_become_the_next_version() {
+    let mut w = World::new();
+    scenario(&mut w);
+    let c = cases();
+    let acme = st(&c, "ids.acme");
+    // Session B read the project now (acme latest = v2) ...
+    let snapshot = w.backend.template_events().unwrap();
+    // ... session A saves the derived report as acme v3 ...
+    let a = w.tmpl(SAVE_TEMPLATE, obj([("template", s(acme)), ("from_report", s(st(&c, "report_f.id")))])).unwrap();
+    assert_eq!(text(get(&a, "template.version")), "\"3\"");
+    let before = w.journal_len();
+    let objects = w.backend.objects().len();
+    // ... and B, still seeing v2, prepares v3 from report A: the commit stage refuses it.
+    let env = Env { kinds: &w.kinds, builtins: &w.builtins, roots: &w.roots, principal: Principal::Agent };
+    let mut stale = Stale { shared: &mut w.backend, events: snapshot };
+    let p = obj([("template", s(acme)), ("from_report", s(st(&c, "report_a.id")))]);
+    let e = execute(SAVE_TEMPLATE, &p, &mut stale, &env, &mut w.ids).unwrap_err();
+    assert_eq!(e.code(), "conflict/head_moved");
+    assert_eq!(w.backend.journal().len(), before);
+    assert_eq!(w.backend.objects().len(), objects);
+    // The project stays usable: the index folds and B's retry becomes v4.
+    let list = w.tmpl(LIST_TEMPLATE, obj([])).unwrap();
+    assert!(text(&list).contains(st(&a, "template.digest")));
+    let b = w.tmpl(SAVE_TEMPLATE, p).unwrap();
+    assert_eq!(text(get(&b, "template.version")), "\"4\"");
+    let run =
+        replay_exact(&w.backend.journal_values(), w.backend.objects(), &w.kinds, &w.builtins, w.backend.project());
+    assert_eq!(run.outcome, ReplayOutcome::Identical);
+}
+
+// ------------------------------------------------------------------ built-in releases
+
+#[test]
+fn a_new_release_revising_a_builtin_keeps_projects_working() {
+    let c = cases();
+    let starter = st(&c, "ids.starter").to_string();
+    let revised = String::from_utf8(read("starter.json")).unwrap().replace("\"Starter\"", "\"Starter rev\"");
+    // Release N ships starter builtin@1; the user applies it and saves project versions 1, 2.
+    let mut w = World::new();
+    scenario(&mut w);
+    let applied = w
+        .tmpl(APPLY_TEMPLATE, obj([("template", s(&starter)), ("builtin", CValue::Bool(true)), ("title", s("N"))]))
+        .unwrap();
+    let report = st(&applied, "report_id").to_string();
+    w.doc(
+        "report.add_block@1",
+        obj([
+            ("report", s(&report)),
+            ("page", s(st(&get(&applied, "pages.0").clone(), "page_id"))),
+            ("kind", s("text")),
+            ("payload", obj([("text", s("user edit"))])),
+        ]),
+    );
+    let p2 = w.tmpl(SAVE_TEMPLATE, obj([("template", s(&starter)), ("from_report", s(&report))])).unwrap();
+    assert_eq!(text(get(&p2, "template.version")), "\"2\"");
+    // Release N+1 revises the starter as builtin@2 (keeping builtin@1), and a variant
+    // release drops builtin@1 entirely.
+    let mut next = builtins();
+    next.register(parse_template(revised.as_bytes()).unwrap(), 2).unwrap();
+    let mut dropped = BuiltinRegistry::new();
+    dropped.register(parse_template(&read("fai_form3.json")).unwrap(), 1).unwrap();
+    dropped.register(parse_template(revised.as_bytes()).unwrap(), 2).unwrap();
+    for release in [next, dropped] {
+        let journal = w.backend.journal_values();
+        let run = replay_exact(&journal, w.backend.objects(), &w.kinds, &release, w.backend.project());
+        assert_eq!(run.outcome, ReplayOutcome::Identical);
+        let mut w2 = World {
+            backend: w.backend.clone(),
+            ids: Counter { next: 100 },
+            kinds: kinds(),
+            builtins: release,
+            roots: roots(),
+        };
+        let list = w2.tmpl(LIST_TEMPLATE, obj([])).unwrap();
+        assert!(text(&list).contains(st(&p2, "template.digest")));
+        let latest_b =
+            w2.tmpl(SHOW_TEMPLATE, obj([("template", s(&starter)), ("builtin", CValue::Bool(true))])).unwrap();
+        assert_eq!(text(get(&latest_b, "template.version")), "\"2\"");
+        let latest_p = w2.tmpl(SHOW_TEMPLATE, obj([("template", s(&starter))])).unwrap();
+        assert_eq!(text(get(&latest_p, "template")), text(get(&p2, "template")));
+        w2.tmpl(APPLY_TEMPLATE, obj([("template", s(&starter)), ("version", s("2")), ("title", s("p2"))])).unwrap();
+        w2.tmpl(
+            APPLY_TEMPLATE,
+            obj([("template", s(&starter)), ("version", s("2")), ("builtin", CValue::Bool(true)), ("title", s("b2"))]),
+        )
+        .unwrap();
+        let p3 =
+            w2.tmpl(SAVE_TEMPLATE, obj([("template", s(&starter)), ("from_report", s(st(&c, "report_r")))])).unwrap();
+        assert_eq!(text(get(&p3, "template.version")), "\"3\"");
+    }
+    // A release that reuses builtin@1 with other bytes is caught on replay.
+    let mut reused = BuiltinRegistry::new();
+    reused.register(parse_template(revised.as_bytes()).unwrap(), 1).unwrap();
+    reused.register(parse_template(&read("fai_form3.json")).unwrap(), 1).unwrap();
+    let run = replay_exact(&w.backend.journal_values(), w.backend.objects(), &w.kinds, &reused, w.backend.project());
+    assert_eq!(run.outcome, ReplayOutcome::Divergent);
 }
 
 // ------------------------------------------------------------------ REQ-002
@@ -621,11 +810,11 @@ fn req002_stored_versions_are_read_only_through_their_digest() {
             id: uuid(st(&c, "ids.acme")),
             version: 3,
             digest: Digest::parse(st(&c, "acme_v1.digest")).unwrap(),
+            builtin: false,
         },
-        locked: false,
         source: SaveSource::File { handle: fid_report::doc::Untrusted::text("x").unwrap() },
     };
-    assert!(w.backend.commit_save(b"other".to_vec(), ev).is_err());
+    assert!(w.backend.commit_save(b"other".to_vec(), None, ev).is_err());
 }
 
 // ------------------------------------------------------------------ hostile params
@@ -691,40 +880,103 @@ fn events_read_back_strictly() {
 fn selectors_and_registration() {
     let c = cases();
     let acme = st(&c, "ids.acme");
-    assert_eq!(parse_selector(acme).unwrap().1, None);
-    assert_eq!(parse_selector(&format!("{acme}@2")).unwrap().1, Some(2));
-    let bad: Vec<String> =
-        vec!["acme-char@1".into(), format!("{acme}@0"), format!("{acme}@x"), format!("{acme}@01"), String::new()];
+    let one = parse_selector(acme).unwrap();
+    assert_eq!((one.version, one.builtin), (None, false));
+    let two = parse_selector(&format!("{acme}@2")).unwrap();
+    assert_eq!((two.version, two.builtin), (Some(2), false));
+    let b = parse_selector(&format!("builtin:{acme}@3")).unwrap();
+    assert_eq!((b.version, b.builtin), (Some(3), true));
+    let bad: Vec<String> = vec![
+        "acme-char@1".into(),
+        format!("{acme}@0"),
+        format!("{acme}@x"),
+        format!("{acme}@01"),
+        format!("Builtin:{acme}"),
+        format!("builtin:builtin:{acme}"),
+        String::new(),
+    ];
     for b in &bad {
         assert!(parse_selector(b).is_err(), "{b}");
     }
-    // Registering identical bytes twice returns the same version; a change adds the next.
-    let mut b = BuiltinRegistry::new();
-    let one = b.register(parse_template(&read("starter.json")).unwrap()).unwrap();
-    assert_eq!(b.register(parse_template(&read("starter.json")).unwrap()).unwrap(), one);
+    // Built-in versions are explicit and do not depend on registration order; the same
+    // bytes at the same version register once; other bytes at a taken version, or 0, fail.
     let changed = String::from_utf8(read("starter.json")).unwrap().replace("\"Starter\"", "\"Starter 2\"");
-    let two = b.register(parse_template(changed.as_bytes()).unwrap()).unwrap();
-    assert_eq!((one.version, two.version), (1, 2));
-    assert_eq!(text(&one.to_value()), text(get(&c, "starter_v1")));
+    let mut b = BuiltinRegistry::new();
+    let v2 = b.register(parse_template(changed.as_bytes()).unwrap(), 2).unwrap();
+    let v1 = b.register(parse_template(&read("starter.json")).unwrap(), 1).unwrap();
+    assert_eq!(b.register(parse_template(&read("starter.json")).unwrap(), 1).unwrap(), v1);
+    assert_eq!((v1.version, v2.version, v1.builtin), (1, 2, true));
+    assert_eq!(text(&v1.to_value()), text(get(&c, "starter_v1")));
+    assert!(b.register(parse_template(changed.as_bytes()).unwrap(), 1).is_err());
+    assert!(b.register(parse_template(changed.as_bytes()).unwrap(), 0).is_err());
 }
 
 #[test]
-fn label_control_keys_are_pinned() {
-    // D-045: the list a template payload may never hold (hand-labelled from the leaf's
-    // Design note in the PR).
-    assert_eq!(
-        LABEL_CONTROL_KEYS,
-        [
-            "hide_labels",
-            "interpretation",
-            "label_mode",
-            "labels",
-            "provisional",
-            "show_labels",
-            "suppress_labels",
-            "value_labels"
-        ]
-    );
+fn label_control_keys_are_normalised() {
+    // D-045 defence in depth, hand-labelled: a key containing "label" other than exactly
+    // "label", or "interpretation" / "provisional", after casefolding and dropping
+    // `_`, `-` and spaces.
+    for k in [
+        "labels",
+        "Labels",
+        "LABELS",
+        "hideLabels",
+        "hide_labels",
+        "hide-labels",
+        "Hide Labels",
+        "label_visibility",
+        "labelMode",
+        "show_labels",
+        "value_labels",
+        "Interpretation",
+        "PROVISIONAL",
+    ] {
+        assert!(is_label_control_key(k), "{k}");
+    }
+    for k in ["label", "Label", "LABEL", "text", "rows", "note", "columns", "key"] {
+        assert!(!is_label_control_key(k), "{k}");
+    }
+    assert_eq!(normalise_key("Hide_Labels-x y"), "hidelabelsxy");
+    assert_eq!(LABEL_CONTROL_WORDS, ["interpretation", "provisional"]);
+}
+
+#[test]
+fn label_switches_in_any_spelling_are_refused_on_save() {
+    let tmp = std::env::temp_dir().join(format!("fid-tmpl-ver-labels-{}", std::process::id()));
+    std::fs::create_dir_all(&tmp).unwrap();
+    let mut roots = RootSet::new();
+    roots.insert(RootId::new("imports").unwrap(), RootAccess::Import, &tmp);
+    let c = cases();
+    let mut w = World::new();
+    w.roots = roots;
+    let base = String::from_utf8(read("label_switch.json")).unwrap();
+    assert!(base.contains("\"labels\""));
+    for key in ["Labels", "hideLabels", "label_visibility"] {
+        std::fs::write(tmp.join("l.json"), base.replace("\"labels\"", &format!("\"{key}\""))).unwrap();
+        let e = w
+            .tmpl(SAVE_TEMPLATE, obj([("template", s(st(&c, "ids.file"))), ("file", s("root://imports/l.json"))]))
+            .unwrap_err();
+        match &e {
+            VerError::Template(t) => {
+                let want = format!("/pages/0/blocks/0/payload/value/note/{key}");
+                assert_eq!((t.pointer(), t.reason()), (Some(want.as_str()), Some("label_control")), "{key}");
+            }
+            other => panic!("{key}: {other:?}"),
+        }
+    }
+    // Plain "label" (a column heading) is not a switch.
+    std::fs::write(tmp.join("l.json"), base.replace("\"labels\"", "\"label\"")).unwrap();
+    w.tmpl(SAVE_TEMPLATE, obj([("template", s(st(&c, "ids.file"))), ("file", s("root://imports/l.json"))])).unwrap();
+    // The provisional text in another case is refused too.
+    let text_doc = String::from_utf8(read("label_text.json"))
+        .unwrap()
+        .replace("interpretation: provisional", "Interpretation: Provisional");
+    std::fs::write(tmp.join("t.json"), text_doc).unwrap();
+    let e = w
+        .tmpl(SAVE_TEMPLATE, obj([("template", s(st(&c, "ids.file"))), ("file", s("root://imports/t.json"))]))
+        .unwrap_err();
+    assert_eq!(e.code(), "report.template_invalid");
+    let _ = std::fs::remove_dir_all(&tmp);
 }
 
 /// Mutated template files (bytes flipped, truncated, duplicated keys) never panic and never

@@ -53,10 +53,22 @@ fn version_param() -> CValue {
     ])
 }
 
+fn builtin_param() -> CValue {
+    obj([
+        ("type", text("boolean")),
+        ("default", CValue::Bool(false)),
+        (
+            "description",
+            text("true: the built-in version builtin:<id>@<version>; false: the project's <id>@<version>."),
+        ),
+    ])
+}
+
 fn template_ref() -> CValue {
     object(
-        &["digest", "id", "version"],
+        &["builtin", "digest", "id", "version"],
         obj([
+            ("builtin", obj([("type", text("boolean"))])),
             ("digest", digest()),
             ("id", id("Template ID (UUIDv7).")),
             ("version", obj([("type", text("string")), ("pattern", text(VERSION_PATTERN))])),
@@ -152,8 +164,8 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             title: "Save template",
             description: "Saves a report, or a template file named by an import-root handle, as the next version of a \
                           template ID in the content-addressed store. Identical bytes return the latest version and \
-                          journal nothing; locked templates fail with report.template_locked. Give exactly one of \
-                          from_report and file.",
+                          journal nothing; locked built-ins fail with report.template_locked and a concurrent save \
+                          with conflict/head_moved. Give exactly one of from_report and file.",
             params: object(
                 &["template"],
                 obj([
@@ -195,6 +207,7 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
                 obj([
                     ("template", template()),
                     ("version", version_param()),
+                    ("builtin", builtin_param()),
                     (
                         "title",
                         obj([
@@ -214,7 +227,10 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             name: "report.show_template",
             title: "Show template",
             description: "Returns one template version's canonical document and its reference.",
-            params: object(&["template"], obj([("template", template()), ("version", version_param())])),
+            params: object(
+                &["template"],
+                obj([("template", template()), ("version", version_param()), ("builtin", builtin_param())]),
+            ),
             result: object(
                 &["document", "template"],
                 obj([
@@ -234,7 +250,7 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
         Spec {
             name: "report.list_template",
             title: "List templates",
-            description: "Lists built-in and project template versions sorted by ID then version, with locked flags.",
+            description: "Lists built-in and project template versions by ID, built-ins first, then version.",
             params: object(&[], obj([])),
             result: object(
                 &["templates"],
@@ -245,12 +261,12 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
                         (
                             "items",
                             object(
-                                &["digest", "id", "locked", "origin", "version"],
+                                &["builtin", "digest", "id", "locked", "version"],
                                 obj([
+                                    ("builtin", obj([("type", text("boolean"))])),
                                     ("digest", digest()),
                                     ("id", id("Template ID (UUIDv7).")),
                                     ("locked", obj([("type", text("boolean"))])),
-                                    ("origin", obj([("type", text("string")), ("enum", strs(&["builtin", "project"]))])),
                                     ("version", obj([("type", text("string")), ("pattern", text(VERSION_PATTERN))])),
                                 ]),
                             ),

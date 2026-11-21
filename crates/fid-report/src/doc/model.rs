@@ -9,7 +9,8 @@
 //!                "id": <uuidv7> } ],
 //!   "retired_ids": [ <uuidv7>, ... ascending ],
 //!   "schema_version": "1",
-//!   "template_ref": null | { "digest": "sha256:<64 hex>", "id": <uuidv7>, "version": "<u32 >= 1>" },
+//!   "template_ref": null | { "builtin": <bool>, "digest": "sha256:<64 hex>", "id": <uuidv7>,
+//!                            "version": "<u32 >= 1>" },
 //!   "title": { "text": <string>, "untrusted": true } }
 //! ```
 //!
@@ -183,20 +184,24 @@ fn depth_exceeds(v: &CValue, max: usize) -> bool {
 
 // ------------------------------------------------------------------ types
 
-/// The template version a report was made from: template ID (UUIDv7), version (at least 1)
-/// and the SHA-256 of its canonical bytes. Set only by `report.apply_template@1`
-/// (`RPT.MODEL.TMPL.VER`); never by this leaf's commands.
+/// The template version a report was made from: template ID (UUIDv7), version (at least 1),
+/// the SHA-256 of its canonical bytes, and whether it is a built-in version
+/// (`builtin:<id>@<version>`) or a project version (`<id>@<version>`); the two have separate
+/// version numbers. Set only by `report.apply_template@1` (`RPT.MODEL.TMPL.VER`); never by
+/// this leaf's commands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TemplateRef {
     pub id: Uuid,
     pub version: u32,
     pub digest: Digest,
+    pub builtin: bool,
 }
 
 impl TemplateRef {
-    /// `{"digest", "id", "version"}` (version a decimal string once canonical).
+    /// `{"builtin", "digest", "id", "version"}` (version a decimal string once canonical).
     pub fn to_value(&self) -> CValue {
         obj([
+            ("builtin", CValue::Bool(self.builtin)),
             ("digest", CValue::Str(self.digest.as_str().to_string())),
             ("id", CValue::Str(self.id.to_string())),
             ("version", CValue::U64(u64::from(self.version))),
@@ -207,7 +212,11 @@ impl TemplateRef {
     /// version of at least 1 and a well-formed digest; anything else is
     /// `report.store_invalid`.
     pub fn from_value(v: &CValue) -> Result<TemplateRef, ReportError> {
-        let to = exact_obj(v, &["digest", "id", "version"])?;
+        let to = exact_obj(v, &["builtin", "digest", "id", "version"])?;
+        let builtin = match field(to, "builtin")? {
+            CValue::Bool(b) => *b,
+            _ => return Err(ReportError::StoreInvalid("template builtin")),
+        };
         let id = match field(to, "id")? {
             CValue::Str(s) => parse_canonical_uuid(s).filter(is_v7).ok_or(ReportError::StoreInvalid("template id"))?,
             _ => return Err(ReportError::StoreInvalid("template id")),
@@ -220,7 +229,7 @@ impl TemplateRef {
             CValue::Str(s) => Digest::parse(s).map_err(|_| ReportError::StoreInvalid("template digest"))?,
             _ => return Err(ReportError::StoreInvalid("template digest")),
         };
-        Ok(TemplateRef { id, version, digest })
+        Ok(TemplateRef { id, version, digest, builtin })
     }
 }
 

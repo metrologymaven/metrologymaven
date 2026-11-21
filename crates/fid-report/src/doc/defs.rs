@@ -101,10 +101,11 @@ fn report_schema() -> CValue {
     let template = obj([
         ("type", strs(&["object", "null"])),
         ("additionalProperties", CValue::Bool(false)),
-        ("required", strs(&["digest", "id", "version"])),
+        ("required", strs(&["builtin", "digest", "id", "version"])),
         (
             "properties",
             obj([
+                ("builtin", obj([("type", text("boolean"))])),
                 ("digest", obj([("type", text("string")), ("pattern", text(Digest::PATTERN))])),
                 ("id", id("Template ID (UUIDv7).")),
                 ("version", decimal("Template version, at least 1.")),

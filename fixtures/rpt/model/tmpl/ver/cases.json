@@ -1,16 +1,19 @@
 {
  "acme_v1": {
+  "builtin": false,
   "digest": "sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc",
   "doc_text": "{\"clearance\":null,\"locked\":false,\"media_type\":\"application/vnd.fid.report-template+json\",\"pages\":[{\"blocks\":[{\"continuation_block\":null,\"id\":\"019a9969-3402-7000-8000-000000000003\",\"kind\":\"table\",\"kind_version\":\"1\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}},\"repeat_header_rows\":\"0\",\"slot\":null}],\"id\":\"019a9969-3401-7000-8000-000000000002\"}],\"schema_version\":\"1\",\"template_id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"title\":{\"text\":\"Bracket 3-stage FAI\",\"untrusted\":true}}",
   "id": "019a9ec0-7000-7000-8000-00000000ac3e",
   "version": "1"
  },
  "acme_v2": {
+  "builtin": false,
   "digest": "sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5",
   "id": "019a9ec0-7000-7000-8000-00000000ac3e",
   "version": "2"
  },
  "derived_v1": {
+  "builtin": false,
   "digest": "sha256:c01bc9f45ab2a2c9a701cd79b5f5c33358fb738513203b50a228b0ba0ac2e4ff",
   "doc_text": "{\"clearance\":null,\"locked\":false,\"media_type\":\"application/vnd.fid.report-template+json\",\"pages\":[{\"blocks\":[{\"continuation_block\":null,\"id\":\"019a9ec0-f003-7000-8000-000000000f11\",\"kind\":\"table\",\"kind_version\":\"1\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}},\"repeat_header_rows\":\"1\",\"slot\":{\"kind\":\"characteristics\",\"spec\":{\"untrusted\":true,\"value\":{\"repeat\":{\"kind\":\"row\"},\"rule\":{\"characteristics\":\"all\"},\"sort\":null}}}},{\"continuation_block\":null,\"id\":\"019a9969-3406-7000-8000-000000000007\",\"kind\":\"text\",\"kind_version\":\"1\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"repeat_header_rows\":\"0\",\"slot\":null}],\"id\":\"019a9ec0-f003-7000-8000-000000000f10\"}],\"schema_version\":\"1\",\"template_id\":\"019a9ec0-7100-7000-8000-0000000000de\",\"title\":{\"text\":\"FAI from form3\",\"untrusted\":true}}",
   "id": "019a9ec0-7100-7000-8000-0000000000de",
@@ -18,15 +21,164 @@
  },
  "edit_text": "Edit note",
  "fai_v1": {
+  "builtin": true,
   "digest": "sha256:1f4f7cc210b6d82de5e3e19ff2225577b646979682038c622f2969e55cdb7df3",
   "id": "019a9ec0-f003-7000-8000-000000000f03",
   "version": "1"
  },
  "file_v1": {
+  "builtin": false,
   "digest": "sha256:e1faa99df40a6a53a39875cda78d176a1870efc813368b612a991f5bd0a824ef",
   "id": "019a9ec0-7200-7000-8000-0000000000f1",
   "version": "1"
  },
+ "forged": [
+  {
+   "first_mismatch": "5",
+   "journal_texts": [
+    "{\"page\":\"019a9969-3401-7000-8000-000000000002\",\"project\":\"019a9a9a-0000-7000-8000-0000000b3a5e\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:fa1e9be1c56ffdb119d7864e0eb0dee004759633c114365f7fba2d5e699c1247\",\"title\":{\"text\":\"Bracket 3-stage FAI\",\"untrusted\":true},\"type\":\"report.create_report@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3402-7000-8000-000000000003\",\"kind\":\"table\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3403-7000-8000-000000000004\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}",
+    "{\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\",\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"title\":{\"text\":\"From acme v1\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:ba2956acb96a33c88fd8e542548308a859c49ff487754d645bca2e1917e2aa5c\",\"template\":{\"builtin\":true,\"digest\":\"sha256:1f4f7cc210b6d82de5e3e19ff2225577b646979682038c622f2969e55cdb7df3\",\"id\":\"019a9ec0-f003-7000-8000-000000000f03\",\"version\":\"1\"},\"title\":{\"text\":\"FAI from form3\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3406-7000-8000-000000000007\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9ec0-f003-7000-8000-000000000f10\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:c01bc9f45ab2a2c9a701cd79b5f5c33358fb738513203b50a228b0ba0ac2e4ff\",\"id\":\"019a9ec0-7100-7000-8000-0000000000de\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"handle\":{\"text\":\"root://imports/file_ok.json\",\"untrusted\":true},\"kind\":\"file\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:e1faa99df40a6a53a39875cda78d176a1870efc813368b612a991f5bd0a824ef\",\"id\":\"019a9ec0-7200-7000-8000-0000000000f1\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0\",\"id\":\"019a9ec0-5000-7000-8000-000000000501\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}"
+   ],
+   "name": "duplicate_version",
+   "outcome": "DIVERGENT"
+  },
+  {
+   "first_mismatch": "2",
+   "journal_texts": [
+    "{\"page\":\"019a9969-3401-7000-8000-000000000002\",\"project\":\"019a9a9a-0000-7000-8000-0000000b3a5e\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:fa1e9be1c56ffdb119d7864e0eb0dee004759633c114365f7fba2d5e699c1247\",\"title\":{\"text\":\"Bracket 3-stage FAI\",\"untrusted\":true},\"type\":\"report.create_report@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3402-7000-8000-000000000003\",\"kind\":\"table\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3403-7000-8000-000000000004\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}",
+    "{\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\",\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"title\":{\"text\":\"From acme v1\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:ba2956acb96a33c88fd8e542548308a859c49ff487754d645bca2e1917e2aa5c\",\"template\":{\"builtin\":true,\"digest\":\"sha256:1f4f7cc210b6d82de5e3e19ff2225577b646979682038c622f2969e55cdb7df3\",\"id\":\"019a9ec0-f003-7000-8000-000000000f03\",\"version\":\"1\"},\"title\":{\"text\":\"FAI from form3\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3406-7000-8000-000000000007\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9ec0-f003-7000-8000-000000000f10\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:c01bc9f45ab2a2c9a701cd79b5f5c33358fb738513203b50a228b0ba0ac2e4ff\",\"id\":\"019a9ec0-7100-7000-8000-0000000000de\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"handle\":{\"text\":\"root://imports/file_ok.json\",\"untrusted\":true},\"kind\":\"file\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:e1faa99df40a6a53a39875cda78d176a1870efc813368b612a991f5bd0a824ef\",\"id\":\"019a9ec0-7200-7000-8000-0000000000f1\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0\",\"id\":\"019a9ec0-5000-7000-8000-000000000501\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}"
+   ],
+   "name": "version_gap",
+   "outcome": "DIVERGENT"
+  },
+  {
+   "first_mismatch": "2",
+   "journal_texts": [
+    "{\"page\":\"019a9969-3401-7000-8000-000000000002\",\"project\":\"019a9a9a-0000-7000-8000-0000000b3a5e\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:fa1e9be1c56ffdb119d7864e0eb0dee004759633c114365f7fba2d5e699c1247\",\"title\":{\"text\":\"Bracket 3-stage FAI\",\"untrusted\":true},\"type\":\"report.create_report@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3402-7000-8000-000000000003\",\"kind\":\"table\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\"},\"template\":{\"builtin\":true,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3403-7000-8000-000000000004\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}",
+    "{\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\",\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"title\":{\"text\":\"From acme v1\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:ba2956acb96a33c88fd8e542548308a859c49ff487754d645bca2e1917e2aa5c\",\"template\":{\"builtin\":true,\"digest\":\"sha256:1f4f7cc210b6d82de5e3e19ff2225577b646979682038c622f2969e55cdb7df3\",\"id\":\"019a9ec0-f003-7000-8000-000000000f03\",\"version\":\"1\"},\"title\":{\"text\":\"FAI from form3\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3406-7000-8000-000000000007\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9ec0-f003-7000-8000-000000000f10\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:c01bc9f45ab2a2c9a701cd79b5f5c33358fb738513203b50a228b0ba0ac2e4ff\",\"id\":\"019a9ec0-7100-7000-8000-0000000000de\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"handle\":{\"text\":\"root://imports/file_ok.json\",\"untrusted\":true},\"kind\":\"file\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:e1faa99df40a6a53a39875cda78d176a1870efc813368b612a991f5bd0a824ef\",\"id\":\"019a9ec0-7200-7000-8000-0000000000f1\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0\",\"id\":\"019a9ec0-5000-7000-8000-000000000501\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}"
+   ],
+   "name": "save_names_builtin",
+   "outcome": "NOT_REPLAYABLE"
+  },
+  {
+   "first_mismatch": "2",
+   "journal_texts": [
+    "{\"page\":\"019a9969-3401-7000-8000-000000000002\",\"project\":\"019a9a9a-0000-7000-8000-0000000b3a5e\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:fa1e9be1c56ffdb119d7864e0eb0dee004759633c114365f7fba2d5e699c1247\",\"title\":{\"text\":\"Bracket 3-stage FAI\",\"untrusted\":true},\"type\":\"report.create_report@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3402-7000-8000-000000000003\",\"kind\":\"table\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3403-7000-8000-000000000004\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}",
+    "{\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\",\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"title\":{\"text\":\"From acme v1\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:ba2956acb96a33c88fd8e542548308a859c49ff487754d645bca2e1917e2aa5c\",\"template\":{\"builtin\":true,\"digest\":\"sha256:1f4f7cc210b6d82de5e3e19ff2225577b646979682038c622f2969e55cdb7df3\",\"id\":\"019a9ec0-f003-7000-8000-000000000f03\",\"version\":\"1\"},\"title\":{\"text\":\"FAI from form3\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3406-7000-8000-000000000007\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9ec0-f003-7000-8000-000000000f10\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:c01bc9f45ab2a2c9a701cd79b5f5c33358fb738513203b50a228b0ba0ac2e4ff\",\"id\":\"019a9ec0-7100-7000-8000-0000000000de\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"handle\":{\"text\":\"root://imports/file_ok.json\",\"untrusted\":true},\"kind\":\"file\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:e1faa99df40a6a53a39875cda78d176a1870efc813368b612a991f5bd0a824ef\",\"id\":\"019a9ec0-7200-7000-8000-0000000000f1\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0\",\"id\":\"019a9ec0-5000-7000-8000-000000000501\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}"
+   ],
+   "name": "object_missing",
+   "outcome": "DIVERGENT"
+  },
+  {
+   "first_mismatch": "2",
+   "journal_texts": [
+    "{\"page\":\"019a9969-3401-7000-8000-000000000002\",\"project\":\"019a9a9a-0000-7000-8000-0000000b3a5e\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:fa1e9be1c56ffdb119d7864e0eb0dee004759633c114365f7fba2d5e699c1247\",\"title\":{\"text\":\"Bracket 3-stage FAI\",\"untrusted\":true},\"type\":\"report.create_report@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3402-7000-8000-000000000003\",\"kind\":\"table\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3403-7000-8000-000000000004\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}",
+    "{\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\",\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"title\":{\"text\":\"From acme v1\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:ba2956acb96a33c88fd8e542548308a859c49ff487754d645bca2e1917e2aa5c\",\"template\":{\"builtin\":true,\"digest\":\"sha256:1f4f7cc210b6d82de5e3e19ff2225577b646979682038c622f2969e55cdb7df3\",\"id\":\"019a9ec0-f003-7000-8000-000000000f03\",\"version\":\"1\"},\"title\":{\"text\":\"FAI from form3\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3406-7000-8000-000000000007\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9ec0-f003-7000-8000-000000000f10\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:c01bc9f45ab2a2c9a701cd79b5f5c33358fb738513203b50a228b0ba0ac2e4ff\",\"id\":\"019a9ec0-7100-7000-8000-0000000000de\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"handle\":{\"text\":\"root://imports/file_ok.json\",\"untrusted\":true},\"kind\":\"file\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:e1faa99df40a6a53a39875cda78d176a1870efc813368b612a991f5bd0a824ef\",\"id\":\"019a9ec0-7200-7000-8000-0000000000f1\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0\",\"id\":\"019a9ec0-5000-7000-8000-000000000501\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}"
+   ],
+   "name": "source_digest",
+   "outcome": "DIVERGENT"
+  },
+  {
+   "first_mismatch": "5",
+   "journal_texts": [
+    "{\"page\":\"019a9969-3401-7000-8000-000000000002\",\"project\":\"019a9a9a-0000-7000-8000-0000000b3a5e\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:fa1e9be1c56ffdb119d7864e0eb0dee004759633c114365f7fba2d5e699c1247\",\"title\":{\"text\":\"Bracket 3-stage FAI\",\"untrusted\":true},\"type\":\"report.create_report@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3402-7000-8000-000000000003\",\"kind\":\"table\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3403-7000-8000-000000000004\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}",
+    "{\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\",\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"3\"},\"title\":{\"text\":\"From acme v1\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:ba2956acb96a33c88fd8e542548308a859c49ff487754d645bca2e1917e2aa5c\",\"template\":{\"builtin\":true,\"digest\":\"sha256:1f4f7cc210b6d82de5e3e19ff2225577b646979682038c622f2969e55cdb7df3\",\"id\":\"019a9ec0-f003-7000-8000-000000000f03\",\"version\":\"1\"},\"title\":{\"text\":\"FAI from form3\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3406-7000-8000-000000000007\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9ec0-f003-7000-8000-000000000f10\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:c01bc9f45ab2a2c9a701cd79b5f5c33358fb738513203b50a228b0ba0ac2e4ff\",\"id\":\"019a9ec0-7100-7000-8000-0000000000de\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"handle\":{\"text\":\"root://imports/file_ok.json\",\"untrusted\":true},\"kind\":\"file\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:e1faa99df40a6a53a39875cda78d176a1870efc813368b612a991f5bd0a824ef\",\"id\":\"019a9ec0-7200-7000-8000-0000000000f1\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0\",\"id\":\"019a9ec0-5000-7000-8000-000000000501\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}"
+   ],
+   "name": "apply_unsaved_version",
+   "outcome": "DIVERGENT"
+  },
+  {
+   "first_mismatch": "5",
+   "journal_texts": [
+    "{\"page\":\"019a9969-3401-7000-8000-000000000002\",\"project\":\"019a9a9a-0000-7000-8000-0000000b3a5e\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:fa1e9be1c56ffdb119d7864e0eb0dee004759633c114365f7fba2d5e699c1247\",\"title\":{\"text\":\"Bracket 3-stage FAI\",\"untrusted\":true},\"type\":\"report.create_report@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3402-7000-8000-000000000003\",\"kind\":\"table\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3403-7000-8000-000000000004\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}",
+    "{\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\",\"template\":{\"builtin\":true,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-f003-7000-8000-000000000f03\",\"version\":\"1\"},\"title\":{\"text\":\"From acme v1\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:ba2956acb96a33c88fd8e542548308a859c49ff487754d645bca2e1917e2aa5c\",\"template\":{\"builtin\":true,\"digest\":\"sha256:1f4f7cc210b6d82de5e3e19ff2225577b646979682038c622f2969e55cdb7df3\",\"id\":\"019a9ec0-f003-7000-8000-000000000f03\",\"version\":\"1\"},\"title\":{\"text\":\"FAI from form3\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3406-7000-8000-000000000007\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9ec0-f003-7000-8000-000000000f10\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:c01bc9f45ab2a2c9a701cd79b5f5c33358fb738513203b50a228b0ba0ac2e4ff\",\"id\":\"019a9ec0-7100-7000-8000-0000000000de\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"handle\":{\"text\":\"root://imports/file_ok.json\",\"untrusted\":true},\"kind\":\"file\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:e1faa99df40a6a53a39875cda78d176a1870efc813368b612a991f5bd0a824ef\",\"id\":\"019a9ec0-7200-7000-8000-0000000000f1\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0\",\"id\":\"019a9ec0-5000-7000-8000-000000000501\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}"
+   ],
+   "name": "apply_builtin_wrong_digest",
+   "outcome": "DIVERGENT"
+  },
+  {
+   "first_mismatch": "6",
+   "journal_texts": [
+    "{\"page\":\"019a9969-3401-7000-8000-000000000002\",\"project\":\"019a9a9a-0000-7000-8000-0000000b3a5e\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:fa1e9be1c56ffdb119d7864e0eb0dee004759633c114365f7fba2d5e699c1247\",\"title\":{\"text\":\"Bracket 3-stage FAI\",\"untrusted\":true},\"type\":\"report.create_report@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3402-7000-8000-000000000003\",\"kind\":\"table\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3403-7000-8000-000000000004\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}",
+    "{\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\",\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"title\":{\"text\":\"From acme v1\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:ba2956acb96a33c88fd8e542548308a859c49ff487754d645bca2e1917e2aa5c\",\"template\":{\"builtin\":false,\"digest\":\"sha256:1f4f7cc210b6d82de5e3e19ff2225577b646979682038c622f2969e55cdb7df3\",\"id\":\"019a9ec0-f003-7000-8000-000000000f03\",\"version\":\"1\"},\"title\":{\"text\":\"FAI from form3\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+    "{\"after\":null,\"block\":\"019a9969-3406-7000-8000-000000000007\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9ec0-f003-7000-8000-000000000f10\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\",\"type\":\"report.add_block@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:c01bc9f45ab2a2c9a701cd79b5f5c33358fb738513203b50a228b0ba0ac2e4ff\",\"id\":\"019a9ec0-7100-7000-8000-0000000000de\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"handle\":{\"text\":\"root://imports/file_ok.json\",\"untrusted\":true},\"kind\":\"file\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:e1faa99df40a6a53a39875cda78d176a1870efc813368b612a991f5bd0a824ef\",\"id\":\"019a9ec0-7200-7000-8000-0000000000f1\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+    "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0\",\"id\":\"019a9ec0-5000-7000-8000-000000000501\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}"
+   ],
+   "name": "apply_builtin_as_project",
+   "outcome": "DIVERGENT"
+  }
+ ],
  "handle": "root://imports/file_ok.json",
  "ids": {
   "acme": "019a9ec0-7000-7000-8000-00000000ac3e",
@@ -38,65 +190,65 @@
  "journal_texts": [
   "{\"page\":\"019a9969-3401-7000-8000-000000000002\",\"project\":\"019a9a9a-0000-7000-8000-0000000b3a5e\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:fa1e9be1c56ffdb119d7864e0eb0dee004759633c114365f7fba2d5e699c1247\",\"title\":{\"text\":\"Bracket 3-stage FAI\",\"untrusted\":true},\"type\":\"report.create_report@1\"}",
   "{\"after\":null,\"block\":\"019a9969-3402-7000-8000-000000000003\",\"kind\":\"table\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\",\"type\":\"report.add_block@1\"}",
-  "{\"locked\":false,\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\"},\"template\":{\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+  "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:2d1394371db8589433b7a9e364568a23a6bc6992b653c861488c5d71a79dceb7\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
   "{\"after\":null,\"block\":\"019a9969-3403-7000-8000-000000000004\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9969-3401-7000-8000-000000000002\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\",\"type\":\"report.add_block@1\"}",
-  "{\"locked\":false,\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\"},\"template\":{\"digest\":\"sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}",
-  "{\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:b68ec901596148c0a40eb6a589d5885913dd755431f915b655f181d184b3090d\",\"template\":{\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"title\":{\"text\":\"From acme v1\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
-  "{\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:106bb15907869cc5c6d4b7444ee8c734dc025f43126f8fec40159d1018427206\",\"template\":{\"digest\":\"sha256:1f4f7cc210b6d82de5e3e19ff2225577b646979682038c622f2969e55cdb7df3\",\"id\":\"019a9ec0-f003-7000-8000-000000000f03\",\"version\":\"1\"},\"title\":{\"text\":\"FAI from form3\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
-  "{\"after\":null,\"block\":\"019a9969-3406-7000-8000-000000000007\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9ec0-f003-7000-8000-000000000f10\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:c7ab282a15a8797b8adf3ab254c30b07801dbdd9df697d23e0c2041cb94b6e29\",\"type\":\"report.add_block@1\"}",
-  "{\"locked\":false,\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:c7ab282a15a8797b8adf3ab254c30b07801dbdd9df697d23e0c2041cb94b6e29\"},\"template\":{\"digest\":\"sha256:c01bc9f45ab2a2c9a701cd79b5f5c33358fb738513203b50a228b0ba0ac2e4ff\",\"id\":\"019a9ec0-7100-7000-8000-0000000000de\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
-  "{\"locked\":false,\"source\":{\"handle\":{\"text\":\"root://imports/file_ok.json\",\"untrusted\":true},\"kind\":\"file\"},\"template\":{\"digest\":\"sha256:e1faa99df40a6a53a39875cda78d176a1870efc813368b612a991f5bd0a824ef\",\"id\":\"019a9ec0-7200-7000-8000-0000000000f1\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
-  "{\"locked\":false,\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:b68ec901596148c0a40eb6a589d5885913dd755431f915b655f181d184b3090d\"},\"template\":{\"digest\":\"sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0\",\"id\":\"019a9ec0-5000-7000-8000-000000000501\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}"
+  "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3400-7000-8000-000000000001\",\"report_digest\":\"sha256:59f30b3b77c7f8859d641f86ea944e389025f62c7cd95c7ad3f3fee8f12854ed\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"2\"},\"type\":\"report.save_template@1\"}",
+  "{\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\",\"template\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"title\":{\"text\":\"From acme v1\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+  "{\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:ba2956acb96a33c88fd8e542548308a859c49ff487754d645bca2e1917e2aa5c\",\"template\":{\"builtin\":true,\"digest\":\"sha256:1f4f7cc210b6d82de5e3e19ff2225577b646979682038c622f2969e55cdb7df3\",\"id\":\"019a9ec0-f003-7000-8000-000000000f03\",\"version\":\"1\"},\"title\":{\"text\":\"FAI from form3\",\"untrusted\":true},\"type\":\"report.apply_template@1\"}",
+  "{\"after\":null,\"block\":\"019a9969-3406-7000-8000-000000000007\",\"kind\":\"text\",\"kind_version\":\"1\",\"page\":\"019a9ec0-f003-7000-8000-000000000f10\",\"payload\":{\"untrusted\":true,\"value\":{\"text\":\"Edit note\"}},\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\",\"type\":\"report.add_block@1\"}",
+  "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3405-7000-8000-000000000006\",\"report_digest\":\"sha256:8bf1a242315ef400a21aaf58993443047cbb6e1e674782813fe144f50a1f2211\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:c01bc9f45ab2a2c9a701cd79b5f5c33358fb738513203b50a228b0ba0ac2e4ff\",\"id\":\"019a9ec0-7100-7000-8000-0000000000de\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+  "{\"source\":{\"handle\":{\"text\":\"root://imports/file_ok.json\",\"untrusted\":true},\"kind\":\"file\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:e1faa99df40a6a53a39875cda78d176a1870efc813368b612a991f5bd0a824ef\",\"id\":\"019a9ec0-7200-7000-8000-0000000000f1\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}",
+  "{\"source\":{\"kind\":\"report\",\"report\":\"019a9969-3404-7000-8000-000000000005\",\"report_digest\":\"sha256:1e469383898cc7856183e322d3db59a49c77bb5337b4520c32d6f2f0d1017f75\"},\"template\":{\"builtin\":false,\"digest\":\"sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0\",\"id\":\"019a9ec0-5000-7000-8000-000000000501\",\"version\":\"1\"},\"type\":\"report.save_template@1\"}"
  ],
  "list": {
   "templates": [
    {
+    "builtin": true,
     "digest": "sha256:d430b19884c2845411a8860fb8d4740d0676ba12731f4e132de2edec335e1d13",
     "id": "019a9ec0-5000-7000-8000-000000000501",
     "locked": false,
-    "origin": "builtin",
     "version": "1"
    },
    {
+    "builtin": false,
     "digest": "sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0",
     "id": "019a9ec0-5000-7000-8000-000000000501",
     "locked": false,
-    "origin": "project",
-    "version": "2"
+    "version": "1"
    },
    {
+    "builtin": false,
     "digest": "sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc",
     "id": "019a9ec0-7000-7000-8000-00000000ac3e",
     "locked": false,
-    "origin": "project",
     "version": "1"
    },
    {
+    "builtin": false,
     "digest": "sha256:4f19c1d72283740e1d57cd308850ad28ca1d1904d730a38007e685fc42c0ebd5",
     "id": "019a9ec0-7000-7000-8000-00000000ac3e",
     "locked": false,
-    "origin": "project",
     "version": "2"
    },
    {
+    "builtin": false,
     "digest": "sha256:c01bc9f45ab2a2c9a701cd79b5f5c33358fb738513203b50a228b0ba0ac2e4ff",
     "id": "019a9ec0-7100-7000-8000-0000000000de",
     "locked": false,
-    "origin": "project",
     "version": "1"
    },
    {
+    "builtin": false,
     "digest": "sha256:e1faa99df40a6a53a39875cda78d176a1870efc813368b612a991f5bd0a824ef",
     "id": "019a9ec0-7200-7000-8000-0000000000f1",
     "locked": false,
-    "origin": "project",
     "version": "1"
    },
    {
+    "builtin": true,
     "digest": "sha256:1f4f7cc210b6d82de5e3e19ff2225577b646979682038c622f2969e55cdb7df3",
     "id": "019a9ec0-f003-7000-8000-000000000f03",
     "locked": true,
-    "origin": "builtin",
     "version": "1"
    }
   ]
@@ -104,7 +256,7 @@
  "page_r": "019a9969-3401-7000-8000-000000000002",
  "project": "019a9a9a-0000-7000-8000-0000000b3a5e",
  "report_a": {
-  "doc_text": "{\"id\":\"019a9969-3404-7000-8000-000000000005\",\"pages\":[{\"blocks\":[{\"id\":\"019a9969-3402-7000-8000-000000000003\",\"kind\":\"table\",\"kind_version\":\"1\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}}}],\"id\":\"019a9969-3401-7000-8000-000000000002\"}],\"retired_ids\":[],\"schema_version\":\"1\",\"template_ref\":{\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"title\":{\"text\":\"From acme v1\",\"untrusted\":true}}",
+  "doc_text": "{\"id\":\"019a9969-3404-7000-8000-000000000005\",\"pages\":[{\"blocks\":[{\"id\":\"019a9969-3402-7000-8000-000000000003\",\"kind\":\"table\",\"kind_version\":\"1\",\"payload\":{\"untrusted\":true,\"value\":{\"rows\":[]}}}],\"id\":\"019a9969-3401-7000-8000-000000000002\"}],\"retired_ids\":[],\"schema_version\":\"1\",\"template_ref\":{\"builtin\":false,\"digest\":\"sha256:bdc3559c42d687533ac56dff13918af988e16b2c0bdc218c8f82002102b8c9cc\",\"id\":\"019a9ec0-7000-7000-8000-00000000ac3e\",\"version\":\"1\"},\"title\":{\"text\":\"From acme v1\",\"untrusted\":true}}",
   "id": "019a9969-3404-7000-8000-000000000005",
   "title": "From acme v1"
  },
@@ -113,15 +265,17 @@
   "title": "FAI from form3"
  },
  "report_r": "019a9969-3400-7000-8000-000000000001",
- "starter_v1": {
-  "digest": "sha256:d430b19884c2845411a8860fb8d4740d0676ba12731f4e132de2edec335e1d13",
+ "starter_p1": {
+  "builtin": false,
+  "digest": "sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0",
   "id": "019a9ec0-5000-7000-8000-000000000501",
   "version": "1"
  },
- "starter_v2": {
-  "digest": "sha256:8ee84e17c7fcd18ab42e2468bbed556ae3e91f8db059b808fea6f051a466b9c0",
+ "starter_v1": {
+  "builtin": true,
+  "digest": "sha256:d430b19884c2845411a8860fb8d4740d0676ba12731f4e132de2edec335e1d13",
   "id": "019a9ec0-5000-7000-8000-000000000501",
-  "version": "2"
+  "version": "1"
  },
  "title": "Bracket 3-stage FAI"
 }

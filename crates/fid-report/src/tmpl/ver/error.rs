@@ -13,9 +13,8 @@ use std::fmt;
 /// and `report.list_template@1`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VerError {
-    /// `report.template_locked`: the template ID belongs to a locked template (a built-in
-    /// with `locked = true`, or a project template whose latest version is locked), which
-    /// may be applied but never saved over (REQ-003).
+    /// `report.template_locked`: the template ID belongs to a built-in with `locked = true`,
+    /// which may be applied but never saved over (REQ-003).
     Locked(TemplateId),
     /// `report.template_invalid` or `report.template_schema_unsupported`: the template failed
     /// the format check (`RPT.MODEL.TMPL.FORMAT`) or one of this leaf's own checks
@@ -23,6 +22,9 @@ pub enum VerError {
     Template(TemplateError),
     /// `report.slot_invalid`: a slot failed `RPT.MODEL.TMPL.SLOT`.
     Slot(SlotError),
+    /// `conflict/head_moved`: another save of this template ID was committed between this
+    /// save's read and its commit; nothing was stored or journaled. Retry the save.
+    HeadMoved(TemplateId),
     /// `report.not_found`: no such template, template version or report.
     NotFound { id: Uuid, version: Option<u32> },
     /// A refusal of the import-root resolver (`raw_path_forbidden`, `path_outside_root`,
@@ -40,6 +42,7 @@ impl VerError {
     pub fn code(&self) -> &'static str {
         match self {
             VerError::Locked(_) => "report.template_locked",
+            VerError::HeadMoved(_) => "conflict/head_moved",
             VerError::Template(e) => e.code(),
             VerError::Slot(e) => e.code(),
             VerError::NotFound { .. } => "report.not_found",
@@ -57,7 +60,9 @@ impl VerError {
             CValue::Obj(o)
         };
         match self {
-            VerError::Locked(id) => base(vec![("template", CValue::Str(id.uuid().to_string()))]),
+            VerError::Locked(id) | VerError::HeadMoved(id) => {
+                base(vec![("template", CValue::Str(id.uuid().to_string()))])
+            }
             VerError::Template(e) => e.to_value(),
             VerError::Slot(e) => e.to_value(),
             VerError::NotFound { id, version } => {
@@ -97,7 +102,7 @@ impl From<SlotError> for VerError {
 impl fmt::Display for VerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            VerError::Locked(id) => write!(f, "{}: {}", self.code(), id.uuid()),
+            VerError::Locked(id) | VerError::HeadMoved(id) => write!(f, "{}: {}", self.code(), id.uuid()),
             VerError::Template(e) => fmt::Display::fmt(e, f),
             VerError::Slot(e) => fmt::Display::fmt(e, f),
             VerError::NotFound { id, version: Some(n) } => write!(f, "{}: {id}@{n}", self.code()),

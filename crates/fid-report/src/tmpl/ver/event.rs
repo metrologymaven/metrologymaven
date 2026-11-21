@@ -1,10 +1,10 @@
 //! Journal events of the two W2 template commands.
 //!
 //! ```text
-//! report.save_template@1   {type, locked, template: {digest, id, version},
+//! report.save_template@1   {type, template: {builtin: false, digest, id, version},
 //!                           source: {kind: "report", report, report_digest}
 //!                                 | {kind: "file", handle: {text, untrusted: true}}}
-//! report.apply_template@1  {type, report, report_digest, template: {digest, id, version}, title}
+//! report.apply_template@1  {type, report, report_digest, template: {builtin, digest, id, version}, title}
 //! ```
 //!
 //! All keys are required; integers are decimal strings. A save event names its source so
@@ -41,7 +41,7 @@ pub enum SaveSource {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TemplateEvent {
     /// A new template version (REQ-001).
-    Save { template: TemplateRef, locked: bool, source: SaveSource },
+    Save { template: TemplateRef, source: SaveSource },
     /// A report created from a template version (REQ-004).
     Apply { report: ReportId, title: Untrusted<Text>, template: TemplateRef, report_digest: Digest },
 }
@@ -79,8 +79,7 @@ impl TemplateEvent {
         o.insert("type".to_string(), CValue::Str(self.event_type().to_string()));
         o.insert("template".to_string(), self.template().to_value());
         match self {
-            TemplateEvent::Save { locked, source, .. } => {
-                o.insert("locked".to_string(), CValue::Bool(*locked));
+            TemplateEvent::Save { source, .. } => {
                 let mut s = BTreeMap::new();
                 match source {
                     SaveSource::Report { report, report_digest } => {
@@ -122,12 +121,11 @@ impl TemplateEvent {
         };
         match ty {
             SAVE_TEMPLATE => {
-                let o = exact_obj(v, &["type", "locked", "template", "source"])?;
+                let o = exact_obj(v, &["type", "template", "source"])?;
                 let template = TemplateRef::from_value(field(o, "template")?)?;
-                let locked = match field(o, "locked")? {
-                    CValue::Bool(b) => *b,
-                    _ => return Err(ReportError::StoreInvalid("locked")),
-                };
+                if template.builtin {
+                    return Err(ReportError::StoreInvalid("a save names a built-in version"));
+                }
                 let src = field(o, "source")?;
                 let CValue::Obj(so) = src else { return Err(ReportError::StoreInvalid("source")) };
                 let source = match so.get("kind") {
@@ -144,7 +142,7 @@ impl TemplateEvent {
                     }
                     _ => return Err(ReportError::StoreInvalid("source kind")),
                 };
-                Ok(TemplateEvent::Save { template, locked, source })
+                Ok(TemplateEvent::Save { template, source })
             }
             APPLY_TEMPLATE => {
                 let o = exact_obj(v, &["type", "report", "report_digest", "template", "title"])?;

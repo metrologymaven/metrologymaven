@@ -9,7 +9,7 @@ use super::convert::{
 };
 use super::error::VerError;
 use super::event::{SaveSource, TemplateEvent, APPLY_TEMPLATE, LIST_TEMPLATE, SAVE_TEMPLATE, SHOW_TEMPLATE};
-use super::store::{digest_of, BuiltinRegistry, Origin, TemplateBackend, TemplateIndex};
+use super::store::{digest_of, BuiltinRegistry, TemplateBackend, TemplateIndex};
 use crate::doc::model::{obj, parse_canonical_uuid, u32_value};
 use crate::doc::{
     summary_value, KindRegistry, Report, ReportError, ReportId, StoredReport, TemplateRef, Text, Untrusted,
@@ -43,19 +43,24 @@ pub struct SaveTemplate {
     pub source: Source,
 }
 
-/// `report.apply_template@1` parameters: `{template, version?: "<u32>" | null, title}`.
+/// `report.apply_template@1` parameters: `{template, version?: "<u32>" | null, builtin?:
+/// bool = false, title}`. `builtin` selects `builtin:<id>@<version>` instead of the
+/// project's `<id>@<version>`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ApplyTemplate {
     pub template: TemplateId,
     pub version: Option<u32>,
+    pub builtin: bool,
     pub title: Untrusted<Text>,
 }
 
-/// `report.show_template@1` parameters: `{template, version?: "<u32>" | null}`.
+/// `report.show_template@1` parameters: `{template, version?: "<u32>" | null, builtin?:
+/// bool = false}`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ShowTemplate {
     pub template: TemplateId,
     pub version: Option<u32>,
+    pub builtin: bool,
 }
 
 fn param_obj<'a>(v: &'a CValue, allowed: &[&str]) -> Result<&'a BTreeMap<String, CValue>, VerError> {
@@ -92,6 +97,14 @@ fn version_param(o: &BTreeMap<String, CValue>) -> Result<Option<u32>, VerError> 
     }
 }
 
+fn builtin_param(o: &BTreeMap<String, CValue>) -> Result<bool, VerError> {
+    match o.get("builtin") {
+        None => Ok(false),
+        Some(CValue::Bool(b)) => Ok(*b),
+        Some(_) => Err(ReportError::BadParams("builtin is not a boolean").into()),
+    }
+}
+
 impl SaveTemplate {
     pub fn from_value(v: &CValue) -> Result<SaveTemplate, VerError> {
         let o = param_obj(v, &["template", "from_report", "file"])?;
@@ -108,26 +121,43 @@ impl SaveTemplate {
 
 impl ApplyTemplate {
     pub fn from_value(v: &CValue) -> Result<ApplyTemplate, VerError> {
-        let o = param_obj(v, &["template", "version", "title"])?;
+        let o = param_obj(v, &["template", "version", "builtin", "title"])?;
         let title = match o.get("title") {
             Some(CValue::Str(s)) => Untrusted::text(s)?,
             Some(_) => return Err(ReportError::BadParams("title is not a string").into()),
             None => return Err(ReportError::BadParams("missing title").into()),
         };
-        Ok(ApplyTemplate { template: template_param(o)?, version: version_param(o)?, title })
+        Ok(ApplyTemplate {
+            template: template_param(o)?,
+            version: version_param(o)?,
+            builtin: builtin_param(o)?,
+            title,
+        })
     }
 }
 
 impl ShowTemplate {
     pub fn from_value(v: &CValue) -> Result<ShowTemplate, VerError> {
-        let o = param_obj(v, &["template", "version"])?;
-        Ok(ShowTemplate { template: template_param(o)?, version: version_param(o)? })
+        let o = param_obj(v, &["template", "version", "builtin"])?;
+        Ok(ShowTemplate { template: template_param(o)?, version: version_param(o)?, builtin: builtin_param(o)? })
     }
 }
 
-/// Splits a CLI template selector `<uuid>` or `<uuid>@<version>` into the `template` and
-/// `version` parameters. `report.bad_params` on anything else.
-pub fn parse_selector(text: &str) -> Result<(TemplateId, Option<u32>), VerError> {
+/// A parsed CLI template selector.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Selector {
+    pub template: TemplateId,
+    pub version: Option<u32>,
+    pub builtin: bool,
+}
+
+/// Splits a CLI template selector `[builtin:]<uuid>[@<version>]` into the `template`,
+/// `version` and `builtin` parameters. `report.bad_params` on anything else.
+pub fn parse_selector(text: &str) -> Result<Selector, VerError> {
+    let (builtin, text) = match text.strip_prefix("builtin:") {
+        Some(rest) => (true, rest),
+        None => (false, text),
+    };
     let (id, version) = match text.split_once('@') {
         None => (text, None),
         Some((id, v)) => {
@@ -140,7 +170,7 @@ pub fn parse_selector(text: &str) -> Result<(TemplateId, Option<u32>), VerError>
     };
     let u = parse_canonical_uuid(id).ok_or(ReportError::BadParams("template is not a canonical uuid"))?;
     let t = TemplateId::new(u).ok_or(VerError::NotFound { id: u, version })?;
-    Ok((t, version))
+    Ok(Selector { template: t, version, builtin })
 }
 
 // ------------------------------------------------------------------ context
@@ -157,8 +187,8 @@ pub struct Env<'a> {
     pub principal: Principal,
 }
 
-fn index(backend: &dyn TemplateBackend, builtins: &BuiltinRegistry) -> Result<TemplateIndex, VerError> {
-    Ok(TemplateIndex::fold(&backend.template_events()?, builtins)?)
+fn index(backend: &dyn TemplateBackend) -> Result<TemplateIndex, VerError> {
+    Ok(TemplateIndex::fold(&backend.template_events()?)?)
 }
 
 fn not_found(id: TemplateId, version: Option<u32>) -> VerError {
@@ -196,16 +226,18 @@ pub struct Saved {
 }
 
 /// `report.save_template@1` (REQ-001, REQ-003, REQ-005, REQ-007, REQ-008). Order: params,
-/// lock, source (report or file), template ID of a file, slot / kind / payload / value /
-/// label checks, then either the existing latest version (identical bytes, nothing
-/// journaled) or version n+1 committed with one event.
+/// lock (a locked built-in of that ID), source (report or file), template ID and `locked`
+/// flag of a file, slot / kind / payload / value / label checks, then either the existing
+/// latest project version (identical bytes, nothing journaled) or project version n+1,
+/// committed with one event under a compare-and-set on the latest version
+/// (`conflict/head_moved` if another save got there first). Built-in versions are a number
+/// space of their own and never count here.
 pub fn save_template(backend: &mut dyn TemplateBackend, env: &Env<'_>, p: &SaveTemplate) -> Result<Saved, VerError> {
-    let ix = index(backend, env.builtins)?;
-    let latest = ix.latest(&p.template, env.builtins);
-    let builtin_locked = env.builtins.versions(&p.template).iter().any(|b| b.locked);
-    if builtin_locked || latest.as_ref().is_some_and(Origin::locked) {
+    if env.builtins.is_locked(&p.template) {
         return Err(VerError::Locked(p.template));
     }
+    let ix = index(backend)?;
+    let latest = ix.latest(&p.template);
     let (template, source) = match &p.source {
         Source::Report(r) => {
             let rid = ReportId::new(*r).ok_or(VerError::NotFound { id: *r, version: None })?;
@@ -223,35 +255,35 @@ pub fn save_template(backend: &mut dyn TemplateBackend, env: &Env<'_>, p: &SaveT
             (t, SaveSource::File { handle: Untrusted::text(f)? })
         }
     };
+    // Project-level locking is deferred: a project template may not claim it.
+    if template.locked() {
+        return Err(TemplateError::invalid("/locked", "project_template_locked").into());
+    }
     check_template(&template, env.kinds)?;
     let bytes = serialise(&template)?.into_vec();
     let digest = digest_of(&bytes);
-    if let Some(l) = &latest {
-        if l.r().digest == digest {
-            return Ok(Saved { template: l.r(), created: false });
+    if let Some(l) = latest {
+        if l.digest == digest {
+            return Ok(Saved { template: l, created: false });
         }
     }
-    let version = match &latest {
-        None => 1,
-        Some(l) => l.r().version.checked_add(1).ok_or(ReportError::LimitExceeded("template versions"))?,
-    };
-    let r = TemplateRef { id: p.template.uuid(), version, digest };
-    // The fold's own rules (increasing versions, bounds) are checked before the commit.
-    ix.clone().push(r, template.locked(), env.builtins)?;
-    backend.commit_save(bytes, TemplateEvent::Save { template: r, locked: template.locked(), source })?;
+    let r = TemplateRef { id: p.template.uuid(), version: ix.next_version(&p.template)?, digest, builtin: false };
+    let expected = latest.map(|l| (l.version, l.digest));
+    backend.commit_save(bytes, expected, TemplateEvent::Save { template: r, source })?;
     Ok(Saved { template: r, created: true })
 }
 
-/// Resolves `id@version` (latest for `None`) and returns its reference and parsed,
-/// verified template.
+/// Resolves `<id>@<version>` or `builtin:<id>@<version>` (latest for `None`) and returns its
+/// reference and its parsed, verified template.
 fn resolve(
     backend: &dyn TemplateBackend,
     builtins: &BuiltinRegistry,
     id: TemplateId,
     version: Option<u32>,
+    builtin: bool,
 ) -> Result<(TemplateRef, Vec<u8>, Template), VerError> {
-    let ix = index(backend, builtins)?;
-    let origin = ix.get(&id, version, builtins).ok_or_else(|| not_found(id, version))?;
+    let ix = index(backend)?;
+    let origin = ix.resolve(&id, version, builtin, builtins).ok_or_else(|| not_found(id, version))?;
     let r = origin.r();
     let bytes = version_bytes(&origin, backend)?;
     let t = open_stored(&bytes, &r)?;
@@ -268,7 +300,7 @@ pub fn apply_template(
     ids: &mut dyn ObservationSource,
     p: &ApplyTemplate,
 ) -> Result<Report, VerError> {
-    let (r, bytes, t) = resolve(backend, env.builtins, p.template, p.version)?;
+    let (r, bytes, t) = resolve(backend, env.builtins, p.template, p.version, p.builtin)?;
     check_template(&t, env.kinds)?;
     let report = ReportId::new(draw(ids)?).ok_or(ReportError::IdUnavailable("bad_id"))?;
     if backend.load(&report)?.is_some() || report.uuid() == backend.project() {
@@ -287,7 +319,7 @@ pub fn show_template(
     builtins: &BuiltinRegistry,
     p: &ShowTemplate,
 ) -> Result<(TemplateRef, CValue), VerError> {
-    let (r, bytes, _) = resolve(backend, builtins, p.template, p.version)?;
+    let (r, bytes, _) = resolve(backend, builtins, p.template, p.version, p.builtin)?;
     let v = parse_with_limits(&bytes, MAX_TEMPLATE_BYTES, fid_canon::MAX_DEPTH)
         .map_err(|_| ReportError::StoreInvalid("stored template does not parse"))?;
     Ok((r, v))
@@ -302,17 +334,21 @@ pub struct TemplateInfo {
 }
 
 /// `report.list_template@1` (REQ-006): built-in and project versions, sorted by template
-/// ID, then version, with their locked flags.
+/// ID, then built-in before project, then version, with their locked flags (locking
+/// applies to built-ins only).
 pub fn list_template(backend: &dyn TemplateBackend, builtins: &BuiltinRegistry) -> Result<Vec<TemplateInfo>, VerError> {
-    let ix = index(backend, builtins)?;
-    let mut ids: Vec<TemplateId> = builtins.iter().filter_map(|b| TemplateId::new(b.r.id)).collect();
-    ids.extend(ix.project_ids().copied());
+    let ix = index(backend)?;
+    let mut ids: Vec<TemplateId> = builtins.ids().copied().collect();
+    ids.extend(ix.ids().copied());
     ids.sort();
     ids.dedup();
     let mut out = Vec::new();
     for id in ids {
-        for o in ix.all(&id, builtins) {
-            out.push(TemplateInfo { template: o.r(), locked: o.locked(), builtin: matches!(o, Origin::Builtin(_)) });
+        for b in builtins.versions(&id) {
+            out.push(TemplateInfo { template: b.r, locked: b.locked, builtin: true });
+        }
+        for r in ix.versions(&id) {
+            out.push(TemplateInfo { template: *r, locked: false, builtin: false });
         }
     }
     Ok(out)
@@ -320,13 +356,13 @@ pub fn list_template(backend: &dyn TemplateBackend, builtins: &BuiltinRegistry) 
 
 // ------------------------------------------------------------------ results
 
-/// `{"created": bool, "template": {digest, id, version}}`.
+/// `{"created": bool, "template": {builtin, digest, id, version}}`.
 pub fn saved_value(s: &Saved) -> CValue {
     obj([("created", CValue::Bool(s.created)), ("template", s.template.to_value())])
 }
 
 /// The `report.apply_template@1` result: the report summary of `RPT.MODEL.DOC` plus
-/// `template` (`{digest, id, version}`).
+/// `template` (`{builtin, digest, id, version}`).
 pub fn applied_value(r: &Report) -> Result<CValue, VerError> {
     let mut v = summary_value(r)?;
     if let (CValue::Obj(o), Some(t)) = (&mut v, r.template_ref()) {
@@ -335,12 +371,12 @@ pub fn applied_value(r: &Report) -> Result<CValue, VerError> {
     Ok(v)
 }
 
-/// `{"template": {digest, id, version}, "document": <canonical template document>}`.
+/// `{"template": {builtin, digest, id, version}, "document": <canonical template document>}`.
 pub fn shown_value(r: &TemplateRef, doc: CValue) -> CValue {
     obj([("document", doc), ("template", r.to_value())])
 }
 
-/// `{"templates": [{"digest", "id", "locked", "origin": "builtin" | "project", "version"}]}`.
+/// `{"templates": [{"builtin", "digest", "id", "locked", "version"}]}`.
 pub fn list_value(rows: &[TemplateInfo]) -> CValue {
     let items = rows
         .iter()
@@ -350,7 +386,6 @@ pub fn list_value(rows: &[TemplateInfo]) -> CValue {
                 _ => BTreeMap::new(),
             };
             o.insert("locked".to_string(), CValue::Bool(i.locked));
-            o.insert("origin".to_string(), CValue::Str(if i.builtin { "builtin" } else { "project" }.to_string()));
             CValue::Obj(o)
         })
         .collect();
