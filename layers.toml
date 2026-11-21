@@ -110,6 +110,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-xml" = "services"
 "fid-qif" = "services"
 "fid-ctrl" = "services"
+# Windows ACL shim for the control-channel token file (AUTO.CTRL.AUTH): the named `unsafe` exception.
+"fid-ctrl-acl" = "services"
 "fid-gdt" = "services"
 "fid-mig" = "services"
 # RDL record format (UNC.RDL.FORMAT): needs fid-surface (services) and fid-replay (engine).

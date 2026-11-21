@@ -1,0 +1,530 @@
+{
+ "logs": {
+  "after_supersession": [
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "head_before": null,
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+    ],
+    "params_commitment": "sha256:a2001df333beb1e9c13efe7f078432ec88f20bc5b612cfbb4924f8e42abef43d",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+    "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+    ],
+    "params_commitment": "sha256:a2e174cab0ddae3d62ab6fa168cdd519dd887e1c6b0bf9d6537ca2f7758e22b8",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "journal.supersede_record",
+    "events": [
+     {
+      "body": {
+       "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+       "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+       "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+      },
+      "type": "RecordSuperseded"
+     }
+    ],
+    "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+    "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+    "kind": "human",
+    "major": 1,
+    "outputs": [],
+    "params_commitment": "sha256:b9b1647be52ba3e9f9708e1e3e91c8d808d44444027166b809319081122bb78f",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": "sha256:9308b67f6bcc264e22d4c0fe1bd81393f949b7e8ed1655274dbb64eeb585946e",
+    "reason_opening": {
+     "reason": "wrong part revision",
+     "salt": "11111111111111111111111111111111"
+    },
+    "source": "handler"
+   }
+  ],
+  "fast_forward": [
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "head_before": null,
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+    ],
+    "params_commitment": "sha256:a2001df333beb1e9c13efe7f078432ec88f20bc5b612cfbb4924f8e42abef43d",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+    "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+    ],
+    "params_commitment": "sha256:a2e174cab0ddae3d62ab6fa168cdd519dd887e1c6b0bf9d6537ca2f7758e22b8",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "feat",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:ac354d30b27309e36a41647104de9cd7adef92a3b485d8d660d20e8e646de494",
+    "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c"
+    ],
+    "params_commitment": "sha256:2c19754b283c85a2ca33c6f5518c63e47c7d5e7cec12d001b90ad8c2dd37179b",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "feat",
+    "class": "W3",
+    "command": "journal.supersede_record",
+    "events": [
+     {
+      "body": {
+       "head": "sha256:ac354d30b27309e36a41647104de9cd7adef92a3b485d8d660d20e8e646de494",
+       "new": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+       "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+      },
+      "type": "RecordSuperseded"
+     }
+    ],
+    "hash": "sha256:ac27a59033a31fe0ac4acac17c3b10728cbc4579c0762fd780a982430a295330",
+    "head_before": "sha256:ac354d30b27309e36a41647104de9cd7adef92a3b485d8d660d20e8e646de494",
+    "kind": "human",
+    "major": 1,
+    "outputs": [],
+    "params_commitment": "sha256:e3229cea714e5b91a3f3a3bb0be9a3de593963bdd464488411e567fa49846723",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": "sha256:9308b67f6bcc264e22d4c0fe1bd81393f949b7e8ed1655274dbb64eeb585946e",
+    "reason_opening": {
+     "reason": "wrong part revision",
+     "salt": "11111111111111111111111111111111"
+    },
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W2",
+    "command": "test.edit_record",
+    "events": [],
+    "hash": "sha256:aea3879173ef659dc08442a2196570abf21ea6b78e7c59130b0becff4547c080",
+    "head_before": "sha256:ac27a59033a31fe0ac4acac17c3b10728cbc4579c0762fd780a982430a295330",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+    ],
+    "params_commitment": "sha256:b744cc7697ba14c77feb4102fea530c0dfd61d272bec49a233fd22ceeb776817",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   }
+  ],
+  "fork_after": [
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "head_before": null,
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+    ],
+    "params_commitment": "sha256:a2001df333beb1e9c13efe7f078432ec88f20bc5b612cfbb4924f8e42abef43d",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+    "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+    ],
+    "params_commitment": "sha256:a2e174cab0ddae3d62ab6fa168cdd519dd887e1c6b0bf9d6537ca2f7758e22b8",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "journal.supersede_record",
+    "events": [
+     {
+      "body": {
+       "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+       "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+       "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+      },
+      "type": "RecordSuperseded"
+     }
+    ],
+    "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+    "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+    "kind": "human",
+    "major": 1,
+    "outputs": [],
+    "params_commitment": "sha256:b9b1647be52ba3e9f9708e1e3e91c8d808d44444027166b809319081122bb78f",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": "sha256:9308b67f6bcc264e22d4c0fe1bd81393f949b7e8ed1655274dbb64eeb585946e",
+    "reason_opening": {
+     "reason": "wrong part revision",
+     "salt": "11111111111111111111111111111111"
+    },
+    "source": "handler"
+   },
+   {
+    "branch": "fix",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:469af2350cf42d651bb8deb4c2242dcc121b873557095bfcf4a4dd413d18c965",
+    "head_before": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c"
+    ],
+    "params_commitment": "sha256:9cbf0fc571c45665c161da5a0c74b97b053d109f763f8c140611a87813e3b721",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   }
+  ],
+  "more": [
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "head_before": null,
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+    ],
+    "params_commitment": "sha256:a2001df333beb1e9c13efe7f078432ec88f20bc5b612cfbb4924f8e42abef43d",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+    "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+    ],
+    "params_commitment": "sha256:a2e174cab0ddae3d62ab6fa168cdd519dd887e1c6b0bf9d6537ca2f7758e22b8",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W2",
+    "command": "test.edit_record",
+    "events": [],
+    "hash": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+    "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+    ],
+    "params_commitment": "sha256:cd17d8f8780f8237146f0c6b7555909b1f3f09d1fd68122e3d78782f660c2b7e",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+    "head_before": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+     "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    ],
+    "params_commitment": "sha256:860f11ff9100091b8c79d87adeeaa075bf0f2878cb0f3dd7ced98065e92c78ee",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   }
+  ],
+  "on_trial": [
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "head_before": null,
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+    ],
+    "params_commitment": "sha256:a2001df333beb1e9c13efe7f078432ec88f20bc5b612cfbb4924f8e42abef43d",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+    "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+    ],
+    "params_commitment": "sha256:a2e174cab0ddae3d62ab6fa168cdd519dd887e1c6b0bf9d6537ca2f7758e22b8",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "trial",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:eda19cd0691894c73c91515d252fe118833f06a2befcc3d6a9bed20d9a0b3af7",
+    "head_before": null,
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+    ],
+    "params_commitment": "sha256:d4f02ec2ee73e924121dabcb939bfb1cfec0ee2f71a09f656547ae0e528ac60c",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "trial",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:a00789a6cb95ea69e7bbd702c261ebe3107f0ff3281f65390b53ab6ca2950b4d",
+    "head_before": "sha256:eda19cd0691894c73c91515d252fe118833f06a2befcc3d6a9bed20d9a0b3af7",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+    ],
+    "params_commitment": "sha256:566387f11a756c163cf37ece4525b87675630c7365288eb263f3ba1c6dff48e5",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   }
+  ],
+  "promoted_release": [
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "head_before": null,
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+    ],
+    "params_commitment": "sha256:a2001df333beb1e9c13efe7f078432ec88f20bc5b612cfbb4924f8e42abef43d",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+    "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+    ],
+    "params_commitment": "sha256:a2e174cab0ddae3d62ab6fa168cdd519dd887e1c6b0bf9d6537ca2f7758e22b8",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:f70f712db15cd1a1ff8d524c1fba724a597e0b14792f18316f35456c42117210",
+    "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c"
+    ],
+    "params_commitment": "sha256:a3f933b9c454e1f2be30d26f1ed7e2d79ac55903ef7ac6acbcb6212ada4514ca",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": "sha256:fc3fa6674eda397ca431c573306e255d9e042177df10035b60f0d2e6ba3bca20",
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   }
+  ],
+  "two_releases": [
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "head_before": null,
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+    ],
+    "params_commitment": "sha256:a2001df333beb1e9c13efe7f078432ec88f20bc5b612cfbb4924f8e42abef43d",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   },
+   {
+    "branch": "main",
+    "class": "W3",
+    "command": "test.release_record",
+    "events": [],
+    "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+    "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+    "kind": "human",
+    "major": 1,
+    "outputs": [
+     "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+    ],
+    "params_commitment": "sha256:a2e174cab0ddae3d62ab6fa168cdd519dd887e1c6b0bf9d6537ca2f7758e22b8",
+    "principal": "sha256:214c8f84c99ce23411870efe688f348aa1084faf908b780add159f3c026bd539",
+    "promoted_from": null,
+    "reason_commit": null,
+    "reason_opening": null,
+    "source": "handler"
+   }
+  ]
+ },
+ "records": {
+  "R1": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+  "R2": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+  "R3": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+  "R9": "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+ }
+}

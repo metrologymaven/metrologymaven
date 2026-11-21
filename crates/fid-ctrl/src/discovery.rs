@@ -122,11 +122,22 @@ pub const UNSAFE_DIR: &str = "ctrl_unsafe_runtime_dir";
 /// The current user is the owner of `probe`, a file this process just created inside
 /// it, so no platform call is needed.
 #[cfg(unix)]
-fn check_dir(dir: &Path, probe: &fs::File) -> io::Result<()> {
+pub(crate) fn check_dir(dir: &Path, probe: &fs::File) -> io::Result<()> {
     use std::os::unix::fs::MetadataExt;
     let meta = fs::symlink_metadata(dir)?;
     let me = probe.metadata()?.uid();
-    let why = if meta.file_type().is_symlink() {
+    match unsafe_dir_reason(&meta, me) {
+        Some(w) => Err(unsafe_dir(dir, w)),
+        None => Ok(()),
+    }
+}
+
+/// Why a directory with metadata `meta` is not private to the user `me`, if it is not: a
+/// symlink, not a directory, owned by another user, or accessible to group or others.
+#[cfg(unix)]
+pub(crate) fn unsafe_dir_reason(meta: &fs::Metadata, me: u32) -> Option<&'static str> {
+    use std::os::unix::fs::MetadataExt;
+    if meta.file_type().is_symlink() {
         Some("is a symlink")
     } else if !meta.is_dir() {
         Some("is not a directory")
@@ -136,15 +147,16 @@ fn check_dir(dir: &Path, probe: &fs::File) -> io::Result<()> {
         Some("is accessible to group or others")
     } else {
         None
-    };
-    match why {
-        Some(w) => Err(io::Error::new(io::ErrorKind::PermissionDenied, format!("{UNSAFE_DIR}: {} {w}", dir.display()))),
-        None => Ok(()),
     }
 }
 
+/// The `ctrl_unsafe_runtime_dir` error for `dir`.
+pub(crate) fn unsafe_dir(dir: &Path, why: &str) -> io::Error {
+    io::Error::new(io::ErrorKind::PermissionDenied, format!("{UNSAFE_DIR}: {} {why}", dir.display()))
+}
+
 #[cfg(not(unix))]
-fn check_dir(_dir: &Path, _probe: &fs::File) -> io::Result<()> {
+pub(crate) fn check_dir(_dir: &Path, _probe: &fs::File) -> io::Result<()> {
     Ok(())
 }
 

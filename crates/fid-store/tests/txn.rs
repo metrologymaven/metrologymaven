@@ -929,3 +929,47 @@ fn crash_at_varying_instants_keeps_acknowledged_commits() {
     }
     assert!(total >= 16);
 }
+
+// ---------------------------------------------------------------- journal append claim
+
+#[test]
+fn append_claim_is_exclusive_poison_sticks_and_a_reopen_clears_it() {
+    let t = TempDir::new("claim");
+    let root = t.0.join("p");
+    {
+        let store = Store::create(&root).unwrap();
+        let claim = store.claim_append().unwrap();
+        claim.verify_lock().unwrap();
+        assert_eq!(store.claim_append().unwrap_err().code(), "claimed");
+        drop(claim);
+        // Released on drop.
+        let claim = store.claim_append().unwrap();
+        claim.poison();
+        drop(claim);
+        // Poisoned: refused even with no claim alive.
+        let e = store.claim_append().unwrap_err();
+        assert!(matches!(e, TxnError::Claimed(_)), "{e}");
+        assert_eq!(e.code(), "claimed");
+    }
+    // A fresh Store of the same project starts free.
+    let store = Store::open(&root, OpenMode::Write).unwrap();
+    store.claim_append().unwrap();
+    // A read-only store is refused.
+    drop(store);
+    let ro = Store::open(&root, OpenMode::Read).unwrap();
+    assert_eq!(ro.claim_append().unwrap_err().code(), "read_only");
+}
+
+#[cfg(unix)]
+#[test]
+fn append_claim_refuses_a_store_whose_lock_file_was_renamed_over() {
+    let t = TempDir::new("claimlost");
+    let root = t.0.join("p");
+    let store = Store::create(&root).unwrap();
+    let fresh = t.0.join("fresh");
+    std::fs::write(&fresh, b"").unwrap();
+    std::fs::rename(&fresh, root.join("lock")).unwrap();
+    assert_eq!(store.claim_append().unwrap_err().code(), "lock_lost");
+    // The failed claim did not stay held: the state is still free (lock aside).
+    assert_eq!(store.claim_append().unwrap_err().code(), "lock_lost");
+}
