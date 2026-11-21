@@ -131,13 +131,23 @@ fn dir_link(link: &Path, target: &Path) -> bool {
     }
     #[cfg(windows)]
     {
-        std::process::Command::new("cmd")
-            .args(["/C", "mklink", "/J"])
-            .arg(link)
-            .arg(target)
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false)
+        match std::process::Command::new("cmd").args(["/C", "mklink", "/J"]).arg(link).arg(target).output() {
+            Ok(o) if o.status.success() => true,
+            Ok(o) => {
+                eprintln!(
+                    "mklink /J {} {} failed: {} {}",
+                    link.display(),
+                    target.display(),
+                    String::from_utf8_lossy(&o.stdout),
+                    String::from_utf8_lossy(&o.stderr)
+                );
+                false
+            }
+            Err(e) => {
+                eprintln!("mklink did not run: {e}");
+                false
+            }
+        }
     }
 }
 

@@ -11,8 +11,8 @@
 //!    byte for byte and compare hashes;
 //! 4. write `format` with a new store-instance UUID, open the copy (schema and tamper checks,
 //!    `PRAGMA integrity_check`) and run the caller's `finish`;
-//! 5. fsync every file and folder, then close the copy's connection, lock and handles (Windows
-//!    cannot rename a folder with open handles in it);
+//! 5. close the copy's connection, lock and handles (Windows cannot rename a folder with open
+//!    handles in it), then fsync every file and folder;
 //! 6. the caller's `publish` runs its commit-stage check and calls the rename at most once;
 //!    after the rename the target's identity is compared with the temporary folder's;
 //! 7. on any failure the temporary folder is removed (and, if `publish` fails after a
@@ -56,10 +56,10 @@ pub enum CopyStep {
     Opened,
     /// The caller's `finish` returned.
     Finished,
-    /// Every file and folder was flushed.
-    Synced,
     /// The copy's connection, lock and handles are closed.
     Closed,
+    /// Every file and folder was flushed.
+    Synced,
     /// Just before the no-replace rename.
     BeforeRename,
     /// The rename returned.
@@ -331,12 +331,16 @@ impl Store {
         finish(&copy)?;
         step(CopyStep::Finished);
 
-        // 5. Flush, then close everything inside the temporary folder.
+        // 5. Close everything inside the temporary folder (the connection checkpoints its WAL
+        // into project.db), then flush every file and folder. Closing first means no handle of
+        // this process holds a file open with a share mode that refuses the flush's open on
+        // Windows (the held `lock` refuses writers), and Windows cannot rename a folder with
+        // open handles in it.
+        drop(copy);
+        step(CopyStep::Closed);
         sync_tree(&temp_path, 0).map_err(StoreError::from)?;
         crate::cas::sync_dir(&parent_path).map_err(StoreError::from)?;
         step(CopyStep::Synced);
-        drop(copy);
-        step(CopyStep::Closed);
 
         // 6. Publish: the caller's check, then at most one no-replace rename.
         let calls = Cell::new(0u32);
