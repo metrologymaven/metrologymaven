@@ -36,11 +36,15 @@ internal/invariant_violated, carrying the failure's seq, kind and reason.
 
 Logical DAG. Every verified entry is a node; its parent is header.logical_parent, which must
 name an entry verified before it (else the call is refused, internal/invariant_violated). A
+head_move's parent is its head_move.to: `to` must name an entry verified before it and equal
+its logical_parent (else internal/invariant_violated), so undo and redo walk through `to`. A
 branch must be in the branch table (else not_found/unknown_branch). Its head is the verified
 entry with the highest sequence whose header.branch is the branch and whose kind is `command`
 or `head_move` (session headers and principal upgrades are not logical states); a branch with
 no such entry is at its created_from, which must name a verified entry (else
-internal/invariant_violated); `main` with neither has no head (the empty state). The ancestor
+internal/invariant_violated); a created_from naming a session header or principal upgrade
+resolves to the last state entry of that entry's branch at or before it (none: the empty
+state); `main` with neither has no head (the empty state). The ancestor
 is the first node of the source head's parent path that is also on the target head's parent
 path (null when the paths do not meet).
 
@@ -146,6 +150,8 @@ def val(entity, version):
     return sha(("%s %s" % (entity, version)).encode())
 
 
+NON_ASCII = ["zeta", "\u00c4ra", "\u00c9mile", "\u00e9mile", "e10", "\uff5e", "\U0001f600"]
+
 REGISTRY = sha(b"registry manifest v1")
 KERNEL = sha(b"kernel manifest v1")
 
@@ -168,6 +174,14 @@ PLAN = [
     (13, "orphan", "human", "command", "project.add_features", None, [("e9", val("e9", 1))]),
     (14, "agent/claude/1", "agent", "command", "feature.set_nominal", 9,
      [("e1", val("e1", "a")), ("e1", val("e1", "a2"))]),
+    # Entity IDs whose UTF-8 byte order differs from UTF-16 order (U+FF5E before U+1F600).
+    (15, "x", "human", "command", "project.add_features", 9,
+     [(e, val(e, 1)) for e in NON_ASCII]),
+    # Undo on w: back from the state at 9 to the state at 7. A head_move's logical parent is its `to`.
+    (16, "w", "human", "head_move", (9, 7), 7, []),
+    # Undo then redo on w2.
+    (17, "w2", "human", "head_move", (9, 7), 7, []),
+    (18, "w2", "human", "head_move", (7, 9), 9, []),
 ]
 
 
@@ -191,6 +205,8 @@ def build_fork():
         }
         if kind == "session_header":
             h["session"] = {"session_id": "s-%04d" % seq, "app_version": "0.1.0"}
+        elif kind == "head_move":
+            h["head_move"] = {"from": hashes[cid[0]], "to": hashes[cid[1]]}
         else:
             outs = []
             for ent, d in outputs:
@@ -232,6 +248,9 @@ def build_fork():
         {"name": "t2", "created_from": hashes[9]},
         {"name": "agent/claude/1", "created_from": hashes[9]},
         {"name": "u", "created_from": hashes[12]},
+        {"name": "x", "created_from": hashes[9]},
+        {"name": "w", "created_from": hashes[9]},
+        {"name": "w2", "created_from": hashes[9]},
     ]
     return {"stream": STREAM, "entries": entries, "branches": branches}, hashes
 
@@ -268,6 +287,9 @@ def rewrite(m, seq, edit, relink):
             h["prev"] = renamed.get(h["prev"], h["prev"])
         if h.get("logical_parent") in renamed:
             h["logical_parent"] = renamed[h["logical_parent"]]
+        if "head_move" in h:
+            for k in ("from", "to"):
+                h["head_move"][k] = renamed.get(h["head_move"][k], h["head_move"][k])
         old = h.pop("hash")
         h["hash"] = sha(cbytes(h))
         renamed[old] = h["hash"]
@@ -381,11 +403,20 @@ def diff(m, source, target, trusted=None):
             raise Refused("not_found", "unknown_branch")
     headers = verified(m, trusted)
     nodes = {}
+    state = {}
+    last_by_branch = {}
     for h in headers:
         lp = h["logical_parent"]
         if lp is not None and lp not in nodes:
             raise tampered()
+        if h["kind"] == "head_move" and (h["head_move"]["to"] not in nodes or lp != h["head_move"]["to"]):
+            raise tampered()
         nodes[h["hash"]] = h
+        if h["kind"] in STATE_KINDS:
+            last_by_branch[h["branch"]] = h["hash"]
+            state[h["hash"]] = h["hash"]
+        else:
+            state[h["hash"]] = last_by_branch.get(h["branch"])
 
     def head_of(name):
         best = None
@@ -399,7 +430,7 @@ def diff(m, source, target, trusted=None):
             return None
         if cf not in nodes:
             raise tampered()
-        return cf
+        return state[cf]
 
     def path(hd):
         out = []
@@ -497,7 +528,11 @@ DIFF_PAIRS = [
     ("main_vs_agent_branch", "main", "agent/claude/1"),
     ("disjoint", "orphan", "main"),
     ("same_branch", "s", "s"),
-    ("head_at_session_entry", "u", "main"),
+    ("created_from_session_entry", "u", "main"),
+    ("non_ascii_ids", "x", "main"),
+    ("undo", "w", "main"),
+    ("source_vs_undo", "s", "w"),
+    ("redo", "w2", "main"),
     ("ac4_unknown_source", "nope", "main"),
     ("ac4_unknown_target", "main", "nope"),
     ("ac4_malformed_name", "Bad Name", "main"),
@@ -529,10 +564,15 @@ def tamper_cases(model, hashes):
          [{"op": "rewrite_field", "seq": 9, "path": ["logical_parent"], "value": sha(b"nowhere")}], None),
         ("table_created_from_dangling", [{"op": "set_created_from", "branch": "t2", "value": sha(b"nowhere")}],
          None),
+        ("head_move_parent_mismatch",
+         [{"op": "rewrite_field", "seq": 16, "path": ["logical_parent"], "value": hashes[4]}], None),
+        ("head_move_to_dangling",
+         [{"op": "rewrite_field", "seq": 16, "path": ["head_move", "to"], "value": sha(b"nowhere")}], None),
     ]
     out = []
     for name, muts, trusted in cs:
-        pair = ("t2", "main") if name == "table_created_from_dangling" else ("s", "main")
+        pair = {"table_created_from_dangling": ("t2", "main"), "head_move_parent_mismatch": ("w", "main"),
+                "head_move_to_dangling": ("w", "main")}.get(name, ("s", "main"))
         m = apply(model, muts)
         c = {"name": name, "mutations": muts, "source": pair[0], "target": pair[1],
              "expect": outcome(m, pair[0], pair[1], trusted)}
@@ -568,6 +608,19 @@ def build():
     for n in ("ac4_unknown_source", "ac4_unknown_target", "ac4_malformed_name"):
         assert by[n] == {"error": {"code": "not_found", "reason": "unknown_branch"}}, n
     assert by["disjoint"]["result"]["ancestor"] is None
+    # A created_from naming a session entry resolves to main's last state at or before it.
+    assert by["created_from_session_entry"]["result"]["ancestor"] == hashes[9]
+    assert by["created_from_session_entry"]["result"]["changed"] == []
+    # Undo walks through head_move.to: e3's change at 9 is undone on w; redo restores it.
+    undo = by["undo"]["result"]
+    assert undo["ancestor"] == hashes[7] and [d["id"] for d in undo["changed"]] == ["e3"]
+    assert by["redo"]["result"]["ancestor"] == hashes[9] and by["redo"]["result"]["changed"] == []
+    # Byte order, not UTF-16 order.
+    ids = [d["id"] for d in by["non_ascii_ids"]["result"]["added"]]
+    assert ids == sorted(NON_ASCII, key=lambda k: k.encode("utf-8")), ids
+    assert ids != sorted(NON_ASCII, key=lambda k: k.encode("utf-16-be"))
+    for n in ("head_move_parent_mismatch", "head_move_to_dangling"):
+        assert tb[n] == {"error": {"code": "internal", "reason": "invariant_violated"}}, n
     # The documented limit of CHAIN.VERIFY: a full rewrite is caught only with a trusted head.
     rew = tb["principal_rewritten_unanchored"]["result"]
     assert any(c["principal"] == "human" and c["seq"] == "8" for d in rew["changed"] for c in d["source_commands"])

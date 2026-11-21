@@ -25,11 +25,18 @@
 //!   verified entry with the highest sequence whose header `branch` is the branch and whose
 //!   kind is `command` or `head_move` (session headers and principal upgrades are not logical
 //!   states); a branch with no such entry is at its `created_from`, which must name a verified
-//!   entry (else `internal/invariant_violated`); `main` with neither has no head (the empty
-//!   state). The table's own `head` column is not used.
+//!   entry (else `internal/invariant_violated`); a `created_from` naming a session header or
+//!   principal upgrade resolves to the last state entry of that entry's branch at or before it
+//!   (none: the empty state); `main` with neither has no head (the empty state). The table's own `head` column is not used.
 //! - **Logical DAG.** Each verified entry's parent is its header `logical_parent`, which must
 //!   name an entry verified before it (else `internal/invariant_violated`); so parents always
-//!   have lower sequences, the DAG is a forest, and every walk ends. The ancestor is the first
+//!   have lower sequences, the DAG is a forest, and every walk ends. A `head_move` (undo,
+//!   redo) is walked through its verified `head_move.to`, which must name an entry verified
+//!   before it and equal its `logical_parent` (else `internal/invariant_violated`).
+//! - **No writer yet.** No code on main sets `logical_parent` yet (`CORE.BUS.ROUTE` and
+//!   `CORE.JRN.UNDO` will); until then every entry is a root, and two branches with different
+//!   heads report `ancestor: null` with each side's own path folded. That is an obligation on
+//!   ROUTE (commits and branch creation) and UNDO (head moves), recorded in the leaf. The ancestor is the first
 //!   entry of the source head's parent path that is on the target head's parent path, or
 //!   `null` when they do not meet (REQ-001).
 //! - **Fold.** The base is the target path from the ancestor down to its root; each side is
@@ -51,7 +58,13 @@
 //!   [`DiffOptions::max_bytes`] (every stored node, output, path step, fold entry and result
 //!   item is charged at least its size), else `validation/input_limit`; one header in memory
 //!   at a time; no recursion (`fid-canon`'s parser is depth-limited); no panics, checked
-//!   arithmetic; the cancel flag is read once per row (`cancelled/requested`).
+//!   arithmetic; the cancel flag is read once per row (`cancelled/requested`). The walk covers
+//!   the whole stream from sequence 1 (verification needs the chain from genesis), so memory
+//!   and time grow with the journal, not with the entries since the ancestor, and the spec's
+//!   "10,000 entries since the ancestor in 200 ms" budget cannot hold on a long journal; with
+//!   feature `store` the whole walk also runs under the store's connection mutex. A windowed
+//!   walk anchored at a trusted head is a follow-up. Agents get lower bounds
+//!   ([`DiffOptions::for_caller`]).
 
 #[cfg(feature = "store")]
 mod store;
@@ -75,6 +88,10 @@ pub const DIFF_BRANCH: &str = "journal.diff_branch";
 pub const DEFAULT_MAX_ENTRIES: u64 = 10_000_000;
 /// Default allocation budget, in bytes.
 pub const DEFAULT_MAX_BYTES: usize = 512 * 1024 * 1024;
+/// Lower bound on rows walked for a call from an agent (MCP).
+pub const AGENT_MAX_ENTRIES: u64 = 1_000_000;
+/// Lower allocation budget for a call from an agent (MCP), in bytes.
+pub const AGENT_MAX_BYTES: usize = 64 * 1024 * 1024;
 /// Bytes charged for one entry of a `BTreeMap` or `BTreeSet` on top of its key and value
 /// (node and pointer overhead, rounded up).
 pub const MAP_ENTRY_OVERHEAD: usize = 64;
@@ -97,6 +114,20 @@ pub struct DiffOptions {
 impl Default for DiffOptions {
     fn default() -> Self {
         DiffOptions { max_entries: DEFAULT_MAX_ENTRIES, max_bytes: DEFAULT_MAX_BYTES, trusted: None, cancel: None }
+    }
+}
+
+impl DiffOptions {
+    /// The default bounds for a caller of this principal kind (as the bus derived it): an
+    /// agent, whose calls arrive over MCP, gets [`AGENT_MAX_ENTRIES`] and [`AGENT_MAX_BYTES`];
+    /// every other caller the defaults.
+    pub fn for_caller(kind: PrincipalKind) -> DiffOptions {
+        match kind {
+            PrincipalKind::Agent => {
+                DiffOptions { max_entries: AGENT_MAX_ENTRIES, max_bytes: AGENT_MAX_BYTES, ..DiffOptions::default() }
+            }
+            _ => DiffOptions::default(),
+        }
     }
 }
 
@@ -305,6 +336,9 @@ struct Node {
     hash: Digest,
     /// Index of the parent node (always lower).
     parent: Option<usize>,
+    /// The logical state this entry stands for: itself for a `command` or `head_move`, else
+    /// the last state entry of its branch at or before it.
+    state: Option<usize>,
     command: Option<Cmd>,
 }
 
@@ -327,6 +361,8 @@ const PATH_COST: usize = 2 * size_of::<usize>() + size_of::<usize>() + MAP_ENTRY
 const FOLD_COST: usize = size_of::<(String, Fold)>() + MAP_ENTRY_OVERHEAD;
 /// A command index in a fold entry (doubled for growth).
 const FOLD_REF_COST: usize = 2 * size_of::<usize>();
+/// An entry of the set of touched entities (a reference and its node).
+const TOUCHED_COST: usize = size_of::<&String>() + MAP_ENTRY_OVERHEAD;
 /// A result delta (doubled for growth, plus its entity bytes).
 const DELTA_COST: usize = 2 * size_of::<EntityDelta>();
 /// A result command reference (doubled for growth, plus its command bytes).
@@ -406,7 +442,7 @@ fn command_of(o: &Obj, budget: &mut Budget) -> Result<Cmd, DiffError> {
 
 // ------------------------------------------------------------------ the diff
 
-/// What the walk keeps: every verified node, and the last state entry of the two branches.
+/// What the walk keeps: every verified node, and the last state entry of every branch.
 struct Walk {
     nodes: Vec<Node>,
     index: BTreeMap<[u8; 32], usize>,
@@ -438,13 +474,15 @@ impl Walk {
         Ok(out)
     }
 
-    /// Folds `nodes` (any order; folded in sequence order) into entity -> last value, and
-    /// with `refs` the commands that output each entity.
+    /// Folds the path slice `nodes` (head first, so strictly decreasing; folded from its end,
+    /// in sequence order, without a copy) into entity -> last value, and with `refs` the
+    /// commands that output each entity.
     fn fold(&self, nodes: &[usize], refs: bool, budget: &mut Budget) -> Result<BTreeMap<String, Fold>, DiffError> {
-        let mut sorted = nodes.to_vec();
-        sorted.sort_unstable();
+        if nodes.windows(2).any(|w| w[0] <= w[1]) {
+            return Err(tampered("a path is not in decreasing order"));
+        }
         let mut out: BTreeMap<String, Fold> = BTreeMap::new();
-        for i in sorted {
+        for &i in nodes.iter().rev() {
             let Some(cmd) = &self.node(i)?.command else { continue };
             for (entity, d) in &cmd.outputs {
                 match out.get_mut(entity) {
@@ -486,7 +524,7 @@ fn cancelled(opts: &DiffOptions) -> bool {
 }
 
 /// Walks and verifies `rows` (stored order, from sequence 1) of `stream`, keeping the DAG.
-fn walk<R>(stream: &str, rows: R, names: [&str; 2], opts: &DiffOptions, budget: &mut Budget) -> Result<Walk, DiffError>
+fn walk<R>(stream: &str, rows: R, opts: &DiffOptions, budget: &mut Budget) -> Result<Walk, DiffError>
 where
     R: IntoIterator<Item = Result<StoredEntry, ReadError>>,
 {
@@ -525,23 +563,36 @@ where
             _ => return Err(tampered("verified logical_parent is not a digest or null")),
         };
         let kind = str_field(&o, "kind")?;
+        if kind == "head_move" {
+            // Undo and redo walk through the verified `to`, which must be the logical parent.
+            let to = parse_digest(str_field(obj_field(&o, "head_move")?, "to")?)
+                .ok_or_else(|| tampered("verified head_move.to is not a digest"))?;
+            let to = w
+                .lookup(&Digest::from_bytes(to.0))
+                .ok_or_else(|| tampered(format!("entry {p}: head_move.to {to} names no entry verified before it")))?;
+            if parent != Some(to) {
+                return Err(tampered(format!("entry {p}: head_move logical_parent disagrees with head_move.to")));
+            }
+        }
         budget.charge(NODE_COST, 0)?;
         let command = if kind == "command" { Some(command_of(&o, budget)?) } else { None };
         let i = w.nodes.len();
-        if kind == "command" || kind == "head_move" {
-            let branch = str_field(&o, "branch")?;
-            if names.contains(&branch) {
-                match w.last_state.get_mut(branch) {
-                    Some(slot) => *slot = i,
-                    None => {
-                        budget.charge(FOLD_COST, branch.len())?;
-                        w.last_state.insert(branch.to_string(), i);
-                    }
+        let branch = str_field(&o, "branch")?;
+        let is_state = kind == "command" || kind == "head_move";
+        let state = if is_state {
+            match w.last_state.get_mut(branch) {
+                Some(slot) => *slot = i,
+                None => {
+                    budget.charge(FOLD_COST, branch.len())?;
+                    w.last_state.insert(branch.to_string(), i);
                 }
             }
-        }
+            Some(i)
+        } else {
+            w.last_state.get(branch).copied()
+        };
         let hash = Digest::from_bytes(hash.0);
-        w.nodes.push(Node { seq: p, hash, parent, command });
+        w.nodes.push(Node { seq: p, hash, parent, state, command });
         w.index.insert(hash.to_bytes(), i);
         prev = fid_canon::Digest(hash.to_bytes());
         p = p.checked_add(1).ok_or_else(|| DiffError::InputLimit("sequence overflow".into()))?;
@@ -574,7 +625,7 @@ where
     let src = branches.get(source).ok_or_else(|| DiffError::UnknownBranch(truncate(source)))?;
     let tgt = branches.get(target).ok_or_else(|| DiffError::UnknownBranch(truncate(target)))?;
     let mut budget = Budget { left: opts.max_bytes };
-    let w = walk(stream, rows, [src.name.as_str(), tgt.name.as_str()], opts, &mut budget)?;
+    let w = walk(stream, rows, opts, &mut budget)?;
 
     let head_of = |b: &crate::branch::Branch| -> Result<Option<usize>, DiffError> {
         if let Some(i) = w.last_state.get(b.name.as_str()) {
@@ -582,10 +633,13 @@ where
         }
         match b.created_from {
             None => Ok(None),
-            Some(d) => w
-                .lookup(&d)
-                .map(Some)
-                .ok_or_else(|| tampered(format!("branch {} was created from {d}, which is no verified entry", b.name))),
+            Some(d) => {
+                let i = w.lookup(&d).ok_or_else(|| {
+                    tampered(format!("branch {} was created from {d}, which is no verified entry", b.name))
+                })?;
+                // A session header or principal upgrade stands for the last state of its branch.
+                Ok(w.node(i)?.state)
+            }
         }
     };
     let (sh, th) = (head_of(src)?, head_of(tgt)?);
@@ -617,7 +671,12 @@ where
     let mut added = Vec::new();
     let mut removed = Vec::new();
     let mut changed = Vec::new();
-    let touched: BTreeSet<&String> = s.keys().chain(t.keys()).collect();
+    let mut touched: BTreeSet<&String> = BTreeSet::new();
+    for k in s.keys().chain(t.keys()) {
+        if touched.insert(k) {
+            budget.charge(TOUCHED_COST, 0)?;
+        }
+    }
     for entity in touched {
         let bv = live(b.get(entity).map(|f| f.digest));
         let sf = s.get(entity);
@@ -672,6 +731,7 @@ mod tests {
             ("path", PATH_COST, 2 * size_of::<usize>()),
             ("fold", FOLD_COST, size_of::<(String, Fold)>()),
             ("fold ref", FOLD_REF_COST, size_of::<usize>()),
+            ("touched", TOUCHED_COST, size_of::<&String>()),
             ("delta", DELTA_COST, size_of::<EntityDelta>()),
             ("ref", REF_COST, size_of::<CommandRef>()),
             // A node's command part is inline in the node, so the node cost covers it.

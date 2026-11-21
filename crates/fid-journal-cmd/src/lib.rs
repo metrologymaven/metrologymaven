@@ -49,6 +49,13 @@ use std::sync::Arc;
 /// principal kind, command, class, branch and adding stage, as the entry records them), and
 /// the heads from the head cache. It covers every committed entry whatever later head moves
 /// or undo did: a branch, once created or protected, stays.
+///
+/// Every replayed event must be one of its entry's committed events: the bus wiring must check
+/// the payload's events against the verified header's `events_commit` (`CORE.JRN.ENTRY`)
+/// before folding them, and must refuse (`internal/invariant_violated`) an entry whose payload
+/// does not reproduce it. No wiring exists yet; this is a requirement on it. An entry whose payload was removed contributes no events, so after
+/// payload removal the table keeps only what the wiring can prove (`CORE.JRN.BR.DIFF` AC-3 is
+/// met for the diff's own reads, not yet for this table; follow-up with the bus wiring).
 pub trait BranchSource: Send + Sync {
     /// The current branch table.
     fn branches(&self) -> Result<Branches, String>;
@@ -223,7 +230,9 @@ pub fn register(set: &mut HandlerSet, source: &Arc<dyn BranchSource>) -> Result<
 ///
 /// Contract: [`DiffSource::diff`] is `fid_journal::diff::diff_store` (or
 /// `Journal::diff_branch`) over the project's journal stream, with `branches` and `opts`
-/// passed through unchanged: computed from verified entry headers only.
+/// passed through unchanged: computed from verified entry headers only. The `branches` it is
+/// given come from a [`BranchSource`], whose replayed events must be checked against each
+/// header's `events_commit` (see [`BranchSource`]).
 pub trait DiffSource: Send + Sync {
     fn diff(
         &self,
@@ -270,7 +279,8 @@ pub fn run_diff(
     let table = branches.branches().map_err(|e| invariant(&format!("branch table: {e}")))?;
     let token = ctx.cancel().clone();
     let cancel: CancelFlag = Arc::new(move || token.is_cancelled());
-    let opts = DiffOptions { cancel: Some(cancel), ..DiffOptions::default() };
+    // Agents (MCP) get lower bounds; the kind is the principal the bus derived for the call.
+    let opts = DiffOptions { cancel: Some(cancel), ..DiffOptions::for_caller(ctx.principal().kind()) };
     journal.diff(&table, source, target, &opts).map(|d| d.to_value()).map_err(|e| diff_bus_error(&e))
 }
 

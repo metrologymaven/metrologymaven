@@ -13,10 +13,12 @@
 use fid_canon::{digest_bytes, parse, to_canonical_bytes, CValue};
 use fid_journal::branch::{BranchEvent, BranchName, Branches, EntryOrigin, EventSource, CREATE_BRANCH, MAIN};
 use fid_journal::diff::{
-    command_defs, diff_rows, diff_store, params_schema, result_schema, BranchDiff, DiffError, DiffOptions, DIFF_BRANCH,
+    command_defs, diff_rows, diff_store, params_schema, result_schema, BranchDiff, DiffError, DiffOptions,
+    AGENT_MAX_BYTES, AGENT_MAX_ENTRIES, DEFAULT_MAX_BYTES, DEFAULT_MAX_ENTRIES, DIFF_BRANCH,
 };
 use fid_journal::verify::{FailureKind, ReadError, StoredEntry, TrustedHead};
 use fid_journal::{parse_digest, Journal, PrincipalKind};
+use fid_store::schema::open_write;
 use fid_store::{OpenMode, ProjectLocation, Store, Value};
 use fid_types::{Digest, SideEffect};
 use std::collections::{BTreeMap, BTreeSet};
@@ -204,6 +206,17 @@ fn rewrite(m: &mut Model, seq: i64, edit: impl Fn(&mut Obj)) {
         if let Some(n) = renamed_parent {
             h.insert("logical_parent".into(), CValue::Str(n));
         }
+        if let Some(CValue::Obj(hm)) = h.get_mut("head_move") {
+            for k in ["from", "to"] {
+                let new = match hm.get(k) {
+                    Some(CValue::Str(old)) => renamed.get(old).cloned(),
+                    _ => None,
+                };
+                if let Some(n) = new {
+                    hm.insert(k.into(), CValue::Str(n));
+                }
+            }
+        }
         let CValue::Str(old) = h.remove("hash").unwrap() else { panic!() };
         let new = sha(&to_canonical_bytes(&CValue::Obj(h.clone())).unwrap());
         h.insert("hash".into(), CValue::Str(new.clone()));
@@ -355,7 +368,20 @@ fn every_tamper_and_forgery_case_reaches_the_oracle_outcome() {
         check(st(t, "name"), run(&m, st(t, "source"), st(t, "target"), &opts), obj(get(t, "expect")));
         n += 1;
     }
-    assert!(n >= 13);
+    assert!(n >= 15);
+}
+
+/// Agents (MCP) get lower default bounds; everyone else the defaults.
+#[test]
+fn agent_callers_get_lower_bounds() {
+    let a = DiffOptions::for_caller(PrincipalKind::Agent);
+    assert_eq!((a.max_entries, a.max_bytes), (AGENT_MAX_ENTRIES, AGENT_MAX_BYTES));
+    let (lower_entries, lower_bytes) = (AGENT_MAX_ENTRIES, AGENT_MAX_BYTES);
+    assert!(lower_entries < DEFAULT_MAX_ENTRIES && lower_bytes < DEFAULT_MAX_BYTES);
+    for k in [PrincipalKind::Human, PrincipalKind::Script, PrincipalKind::Service] {
+        let o = DiffOptions::for_caller(k);
+        assert_eq!((o.max_entries, o.max_bytes), (DEFAULT_MAX_ENTRIES, DEFAULT_MAX_BYTES));
+    }
 }
 
 /// AC-1 as the spec states it: added [e6], removed [e2], changed [e3 (conflict), e4], with
@@ -608,4 +634,46 @@ fn a_tampered_store_row_is_refused() {
     let store = Store::open(&root, OpenMode::Read).unwrap();
     let got = diff_store(&store, STREAM, &table(&m), "s", "main", &DiffOptions::default());
     check("store branch column", got, expect_of(&c, "tampers", "branch_column_forged"));
+}
+
+/// Forged `heads` rows and forged checkpoint rows are never read: the diff is unchanged.
+#[test]
+fn forged_heads_and_checkpoints_are_not_read() {
+    let c = cases();
+    let m = fork();
+    let (_t, root) = project_of("forged", &m);
+    {
+        let (loc, lock) = ProjectLocation::open(&root, OpenMode::Write).unwrap();
+        let db = open_write(&loc, &lock.unwrap()).unwrap();
+        let conn = db.connection();
+        conn.execute_batch("PRAGMA foreign_keys=OFF").unwrap();
+        // main's head forged to the agent branch's entry, s's to an entry that does not exist.
+        let nowhere = format!("sha256:{}", "ab".repeat(32));
+        for (branch, entry_hash) in [("main", m.rows[13].hash.clone()), ("s", nowhere.clone())] {
+            conn.execute(
+                "INSERT INTO heads (branch, entry_hash) VALUES (?1, ?2)",
+                [Value::Text(branch.into()), Value::Text(entry_hash)],
+            )
+            .unwrap();
+        }
+        // A checkpoint that would fork the chain at sequence 3, and one that is not a checkpoint.
+        let fork_body = format!(
+            r#"{{"count":"3","format":"linear-v1","head":"{nowhere}","reason":"close","seq":"3","stream":"record","time":"2026-11-20T10:00:00Z"}}"#
+        );
+        for (id, body) in [(1, fork_body), (2, "not a checkpoint".to_string())] {
+            conn.execute(
+                "INSERT INTO checkpoints (id, stream, entry_hash, body) VALUES (?1, ?2, ?3, ?4)",
+                [
+                    Value::Integer(id),
+                    Value::Text(STREAM.into()),
+                    Value::Text(nowhere.clone()),
+                    Value::Blob(body.into_bytes()),
+                ],
+            )
+            .unwrap();
+        }
+    }
+    let store = Store::open(&root, OpenMode::Read).unwrap();
+    let got = diff_store(&store, STREAM, &table(&m), "s", "main", &DiffOptions::default());
+    check("forged heads and checkpoints", got, expect_of(&c, "diffs", "ac1_fork"));
 }
