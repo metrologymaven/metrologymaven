@@ -84,7 +84,8 @@ pub const ORDER_SEED: u64 = 0x9e37_79b9_7f4a_7c15;
 
 const OP: &str = "fit.mcc_cyl.global";
 
-type V2 = [f64; 2];
+/// A projected point.
+pub type V2 = [f64; 2];
 
 /// A cap waiting for its test: popped smallest `key` (the parent's witness lower bound) first,
 /// then smallest `seq` (insertion order); a total order, so the search is deterministic.
@@ -173,7 +174,7 @@ fn cross2(o: V2, a: V2, b: V2) -> f64 {
 
 /// The smallest circle enclosing three points: half the longest side for a right or obtuse
 /// triangle, else the circumradius.
-pub(crate) fn mec3(a: V2, b: V2, c: V2) -> Result<f64, FitError> {
+pub fn mec3(a: V2, b: V2, c: V2) -> Result<f64, FitError> {
     let s = [d2(a, b), d2(b, c), d2(c, a)];
     let mut k = 0;
     for i in 1..3 {
@@ -618,35 +619,6 @@ mod tests {
         assert!((r - 2.0).abs() < 1e-3, "{r}");
         let sp: Vec<V2> = sup.as_slice().iter().map(|&k| p[k]).collect();
         assert!(mec_small(&sp).unwrap() <= r * (1.0 + 1e-12));
-    }
-
-    /// Review 3 of #374: thin, nearly right triangles (two vertices `eps` apart, the third
-    /// nearly antipodal, `eps` from 1e-4 to 1e-7) against the oracle's exact rational radius.
-    /// `mec3` never exceeds it by more than `1e-14` relative (far inside `SLACK`); off the thin
-    /// threshold it matches within `1e-14`, below it it is half the longest side.
-    #[test]
-    fn mec3_thin_triangles_against_exact() {
-        const CASES: &str = include_str!("../../../../fixtures/fit/mcc-cyl-v1/mec3.txt");
-        let h = |t: &str| f64::from_bits(u64::from_str_radix(t, 16).unwrap());
-        let mut n = 0;
-        for l in CASES.lines().filter(|l| l.starts_with("tri ")) {
-            let t: Vec<&str> = l.split_whitespace().collect();
-            let v: Vec<f64> = t[1..8].iter().map(|x| h(x)).collect();
-            let (a, b, c, exact) = ([v[0], v[1]], [v[2], v[3]], [v[4], v[5]], v[6]);
-            // Every vertex order, so that the nearly antipodal vertex comes first too.
-            for (x, y, z) in [(a, b, c), (b, c, a), (c, a, b), (c, b, a)] {
-                let r = mec3(x, y, z).unwrap();
-                assert!(r <= exact * (1.0 + 1e-14), "{l}: {r:e} above {exact:e}");
-                if t[8] == "full" {
-                    assert!((r - exact).abs() <= 1e-14 * exact, "{l}: {r:e} vs {exact:e}");
-                } else {
-                    let longest = larger(larger(d2(a, b), d2(b, c)), d2(c, a)).sqrt() / 2.0;
-                    assert_eq!(r, longest, "{l}");
-                }
-            }
-            n += 1;
-        }
-        assert_eq!(n, 21);
     }
 
     /// Review 3 of #374: an empty point set is an error, not a panic.

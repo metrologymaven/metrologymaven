@@ -12,8 +12,8 @@
 
 use fid_fit::contract::{Constraint, Fit, FitError, FitParams, FittedFeature, Method, PointsView};
 use fid_fit::mcc_cyl::{
-    algorithm, fit_mcc_cylinder, fit_mcc_cylinder_from, mcc_command_row, to_fit_result, CrossOutcome, MccCylinder,
-    MccCylinderFit, Optimality, INSIDE_TOL,
+    algorithm, fit_mcc_cylinder, fit_mcc_cylinder_from, mcc_command_row, mec3, to_fit_result, CrossOutcome,
+    MccCylinder, MccCylinderFit, Optimality, INSIDE_TOL,
 };
 use fid_kci::{check, parse_card, InputArity};
 use fid_solv::mstart::StartSummary;
@@ -457,4 +457,38 @@ fn ac5_output_bits_pinned() {
         }
     }
     assert_eq!(h.finish(), OUTPUT_PIN, "output bits changed on {}", std::env::consts::ARCH);
+}
+
+fn d2(a: [f64; 2], b: [f64; 2]) -> f64 {
+    let (x, y) = (a[0] - b[0], a[1] - b[1]);
+    x * x + y * y
+}
+
+/// Review 3 of #374: thin, nearly right triangles (two vertices `eps` apart, the third
+/// nearly antipodal, `eps` from 1e-4 to 1e-7) against the oracle's exact rational radius.
+/// `mec3` never exceeds it by more than `1e-14` relative (far inside `SLACK`); off the thin
+/// threshold it matches within `1e-14`, below it it is half the longest side.
+#[test]
+fn mec3_thin_triangles_against_exact() {
+    let cases = include_str!("../../../fixtures/fit/mcc-cyl-v1/mec3.txt");
+    let h = |t: &str| f64::from_bits(u64::from_str_radix(t, 16).unwrap());
+    let mut n = 0;
+    for l in cases.lines().filter(|l| l.starts_with("tri ")) {
+        let t: Vec<&str> = l.split_whitespace().collect();
+        let v: Vec<f64> = t[1..8].iter().map(|&x| h(x)).collect();
+        let (a, b, c, exact) = ([v[0], v[1]], [v[2], v[3]], [v[4], v[5]], v[6]);
+        // Every vertex order, so that the nearly antipodal vertex comes first too.
+        for (x, y, z) in [(a, b, c), (b, c, a), (c, a, b), (c, b, a)] {
+            let r = mec3(x, y, z).unwrap();
+            assert!(r <= exact * (1.0 + 1e-14), "{l}: {r:e} above {exact:e}");
+            if t[8] == "full" {
+                assert!((r - exact).abs() <= 1e-14 * exact, "{l}: {r:e} vs {exact:e}");
+            } else {
+                let longest = [d2(a, b), d2(b, c), d2(c, a)].into_iter().fold(0.0, f64::max).sqrt() / 2.0;
+                assert_eq!(r, longest, "{l}");
+            }
+        }
+        n += 1;
+    }
+    assert_eq!(n, 21);
 }

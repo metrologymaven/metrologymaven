@@ -90,6 +90,10 @@
 mod global;
 mod problem;
 
+/// Rule 11's lower bound for three projected points (the smallest enclosing circle's radius,
+/// or half the longest side for a nearly degenerate triangle); public for the fixture test.
+pub use global::mec3;
+
 use core::cmp::Ordering;
 
 use fid_kci::AlgorithmId;
