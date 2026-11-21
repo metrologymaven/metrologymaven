@@ -243,7 +243,7 @@ impl CommandTable {
         let not_found =
             |r: NotFoundReason, what: &str| BusError::NotFound(r, Detail::new(&format!("{shown:?}@{major}: {what}")));
         if !CommandName::is_valid(id) || !self.names.contains(id) {
-            return Err(not_found(NotFoundReason::UnknownCommand, "unknown command"));
+            return Err(unknown_command(id, major));
         }
         let Some(cmd) = self.commands.get(&(id.to_string(), major)) else {
             return Err(not_found(NotFoundReason::UnknownMajor, "unknown major"));
@@ -262,6 +262,15 @@ impl CommandTable {
     pub fn resolve_id(&self, id: &CommandId, principal: &Principal) -> Result<Resolved<'_>, BusError> {
         self.resolve(id.name(), id.major(), principal)
     }
+}
+
+/// The refusal of a command `id@major` the table does not hold: `not_found/unknown_command`
+/// with detail `"<id>"@<major>: unknown command` (the ID cut to 128 characters). The MCP
+/// projection check returns exactly this for a `never`-projected command, so an agent cannot
+/// tell a hidden command from one that does not exist (D-035, CORE.BUS.POL.PROJ).
+pub fn unknown_command(id: &str, major: u32) -> BusError {
+    let shown: String = id.chars().take(128).collect();
+    BusError::NotFound(NotFoundReason::UnknownCommand, Detail::new(&format!("{shown:?}@{major}: unknown command")))
 }
 
 /// Whether `p` is the replay engine's `system` principal.

@@ -260,12 +260,12 @@
   {
    "channel": "mcp",
    "command": "test.run_never@1",
-   "expect": "policy/not_on_mcp"
+   "expect": "not_found/unknown_command"
   },
   {
    "channel": "server_mcp",
    "command": "test.run_never@1",
-   "expect": "policy/not_on_mcp"
+   "expect": "not_found/unknown_command"
   },
   {
    "channel": "gui",
@@ -370,12 +370,12 @@
   {
    "channel": "mcp",
    "command": "test.run_local@1",
-   "expect": "policy/not_on_mcp"
+   "expect": "not_found/unknown_command"
   },
   {
    "channel": "server_mcp",
    "command": "test.run_local@1",
-   "expect": "policy/not_on_mcp"
+   "expect": "not_found/unknown_command"
   },
   {
    "channel": "gui",
