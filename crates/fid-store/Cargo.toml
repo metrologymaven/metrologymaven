@@ -22,12 +22,20 @@ sha2 = "0.10"
 # platform runs the same SQLite version. Default features off: no statement cache (hashlink) and
 # no wasm32-unknown-unknown backend (sqlite-wasm-rs). 0.41.1 resolves libsqlite3-sys 0.39.1
 # (SQLite 3.54.1), which fixes RUSTSEC-2026-0459; earlier releases bundle an affected SQLite.
-rusqlite = { version = "=0.41.1", default-features = false, features = ["bundled"] }
+# `backup`: the online backup API of the atomic project copy (CORE.STO.LAYOUT REQ-012); it adds
+# no dependency, only the binding of sqlite3_backup_*.
+rusqlite = { version = "=0.41.1", default-features = false, features = ["backup", "bundled"] }
 
 [target.'cfg(unix)'.dependencies]
 # Safe wrappers for flock(2), directory-relative *at() calls (paths past macOS PATH_MAX),
 # fstatfs(2) (network file-system check) and uname(2) (host name). Keeps the crate free of `unsafe`.
 rustix = { version = "1", features = ["fs", "system"] }
+
+[target.'cfg(windows)'.dependencies]
+# Folder identities (volume serial number and file index, CORE.STO.LAYOUT REQ-011) through
+# `GetFileInformationByHandle`, which stable std does not expose; safe wrapper, no `unsafe` here.
+# Already in the lock through cap-std and fid-bus.
+winx = "0.36"
 
 [features]
 # Compiles the commit probe hook (`txn::CommitProbe`) used by the fault-injection tests. Enabled

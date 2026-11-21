@@ -152,10 +152,12 @@ impl fmt::Debug for SettingsSource {
 }
 
 /// Every crate on main that declares settings, sorted by crate name: `fid-bus` declares the
-/// approved file roots `bus.fs_roots` (CORE.BUS.POL.FS); `fid-journal` the Activity Log
+/// approved file roots `bus.fs_roots` (CORE.BUS.POL.FS); `fid-catalog` the results catalog
+/// location `stats.catalog_path` (RPT.CATALOG.STORE.SCHEMA); `fid-journal` the Activity Log
 /// rotation settings `journal.activity_log_*` (CORE.JRN.STREAM.ALOG).
-pub const SETTINGS_SOURCES: [SettingsSource; 2] = [
+pub const SETTINGS_SOURCES: [SettingsSource; 3] = [
     SettingsSource { krate: "fid-bus", settings: fid_bus::policy::fs::fs_settings },
+    SettingsSource { krate: "fid-catalog", settings: fid_catalog::catalog_settings },
     SettingsSource { krate: "fid-journal", settings: fid_journal::stream::activity_settings },
 ];
 
