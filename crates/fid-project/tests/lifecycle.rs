@@ -225,7 +225,7 @@ fn mutated_journals_fail_closed_naming_the_entry() {
     assert_eq!((err.refusal, err.seq, err.entry), (Refusal::NoGenesis, None, None));
 
     // Without the record blob the create entry has no record: one output, no record.
-    let err = read_identity(c.entries.clone(), &Blobs::new()).unwrap_err();
+    let err = read_identity(c.entries.clone(), Blobs::new()).unwrap_err();
     assert_eq!((err.refusal, err.seq), (Refusal::BadShape, Some(2)));
 }
 
