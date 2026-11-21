@@ -12,6 +12,7 @@ pub use fmt::{
 };
 
 pub use expr::syntax::{parse_expr, print_expr, Expr, ExprKind, ParseError, Span};
+pub use expr::types::{check_types, type_of, Diag, DiagCode, Dim, Kind, RecordType, Site, Type, TypeReport, Typed};
 
 pub use family::{
     binding_from_json, binding_from_value, binding_to_value, check_binding, check_decls, Binding, BindingError,
