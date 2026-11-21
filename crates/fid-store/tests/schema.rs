@@ -840,3 +840,92 @@ fn symlink_in_the_path_to_the_root_still_opens() {
     let (loc, lock) = ProjectLocation::open(&link, OpenMode::Write).unwrap();
     assert_eq!(open_write(&loc, &lock.unwrap()).unwrap().version(), SchemaVersion(1));
 }
+
+/// The signature text of every `pub fn` in `src` (up to its body), with its name.
+fn public_fns(src: &Path) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(src).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            out.extend(public_fns(&path));
+            continue;
+        }
+        if path.extension().is_none_or(|e| e != "rs") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).unwrap();
+        let mut rest = text.as_str();
+        while let Some(at) = rest.find("pub fn ") {
+            let after = &rest[at + "pub fn ".len()..];
+            let end = after.find(['{', ';']).unwrap_or(after.len());
+            let sig = after[..end].split_whitespace().collect::<Vec<_>>().join(" ");
+            let name = sig.split(['(', '<']).next().unwrap().trim().to_string();
+            out.push((name, sig));
+            rest = &after[end..];
+        }
+    }
+    out
+}
+
+/// CORE.BUS.LINT: fid-store is a lint door for SQLite, so the only public function that hands
+/// out an owned `Connection` is the guarded `open_hardened`; the raw open, the hardening step and
+/// the `sqlite3_db_config` setter are private (the module docs also hold compile-fail checks).
+#[test]
+fn public_api_cannot_produce_an_unhardened_connection() {
+    let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let fns = public_fns(&src);
+    assert!(fns.iter().any(|(n, _)| n == "open_hardened"), "open_hardened must be public");
+    let owned: Vec<&str> = fns
+        .iter()
+        .filter(|(_, sig)| {
+            let ret = sig.split("->").nth(1).unwrap_or("");
+            ret.replace("&mut Connection", "").replace("&Connection", "").contains("Connection")
+        })
+        .map(|(n, _)| n.as_str())
+        .collect();
+    assert_eq!(owned, ["open_hardened"], "public functions returning an owned Connection");
+    for private in ["open_path", "harden", "set_config"] {
+        assert!(!fns.iter().any(|(n, _)| n == private), "{private} must not be public");
+    }
+}
+
+#[test]
+fn open_hardened_returns_a_hardened_connection_and_never_creates() {
+    use fid_store::schema::{allow_checkpoint, open_hardened, BUSY_TIMEOUT};
+    use rusqlite::config::DbConfig;
+    let t = TempDir::new("door");
+    // A missing file is refused, not created.
+    let err = open_hardened(&t.0, "other.db", OpenMode::Write, BUSY_TIMEOUT).unwrap_err();
+    assert_eq!(err.code(), "io");
+    assert!(!t.0.join("other.db").exists());
+    std::fs::write(t.0.join("other.db"), b"").unwrap();
+    // Not a plain file name, or a relative directory: refused before SQLite is called.
+    for name in ["", ".", "..", "a/other.db", "a\other.db"] {
+        assert_eq!(open_hardened(&t.0, name, OpenMode::Read, BUSY_TIMEOUT).unwrap_err().code(), "path_unsupported");
+    }
+    let rel = Path::new("relative");
+    assert_eq!(open_hardened(rel, "other.db", OpenMode::Read, BUSY_TIMEOUT).unwrap_err().code(), "path_unsupported");
+    for mode in [OpenMode::Read, OpenMode::Write] {
+        let conn = open_hardened(&t.0, "other.db", mode, BUSY_TIMEOUT).unwrap();
+        assert!(conn.db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE).unwrap());
+        assert!(!conn.db_config(DbConfig::SQLITE_DBCONFIG_TRUSTED_SCHEMA).unwrap());
+        assert!(!conn.db_config(DbConfig::SQLITE_DBCONFIG_WRITABLE_SCHEMA).unwrap());
+        assert!(!conn.db_config(DbConfig::SQLITE_DBCONFIG_ENABLE_ATTACH_CREATE).unwrap());
+        assert!(!conn.db_config(DbConfig::SQLITE_DBCONFIG_ENABLE_ATTACH_WRITE).unwrap());
+        assert!(conn.db_config(DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE).unwrap());
+        let fk: i64 = conn.query_row("PRAGMA foreign_keys", [], |r| r.get(0)).unwrap();
+        assert_eq!(fk, 1);
+        allow_checkpoint(&conn).unwrap();
+        assert!(!conn.db_config(DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE).unwrap());
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn open_hardened_refuses_a_symlinked_file() {
+    use fid_store::schema::{open_hardened, BUSY_TIMEOUT};
+    let t = TempDir::new("doorlink");
+    std::fs::write(t.0.join("real.db"), b"").unwrap();
+    std::os::unix::fs::symlink(t.0.join("real.db"), t.0.join("link.db")).unwrap();
+    assert_eq!(open_hardened(&t.0, "link.db", OpenMode::Read, BUSY_TIMEOUT).unwrap_err().code(), "symlink_refused");
+}
