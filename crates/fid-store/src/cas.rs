@@ -671,17 +671,38 @@ impl BlobStore {
     /// `max_len` bounds the result: content longer than `max_len` bytes (the blob's length, or
     /// the object size the manifest states) is refused with `out_of_range` (`start` 0, `end`
     /// the content size, `size` the bound) before the result buffer is allocated or any chunk
-    /// is read. The stored blob itself is read first, which the store bounds at
-    /// [`MAX_MANIFEST_BYTES`] (no blob it writes is longer). The result is held in memory; use
-    /// [`BlobStore::stream`] with a typed [`Address`] for large objects.
+    /// is read. The stored blob itself is read first, at most `min(max_len,`
+    /// [`MAX_MANIFEST_BYTES`]`)` + 1 bytes (no blob the store writes is longer than
+    /// [`MAX_MANIFEST_BYTES`]): a blob longer than `max_len` is refused with `out_of_range`
+    /// without reading the rest, `end` being the stored blob's length (the content size of
+    /// plain data; a `put`-shaped manifest that long names a still larger object), and a blob
+    /// longer than [`MAX_MANIFEST_BYTES`] under a looser bound is `integrity`. The result is
+    /// held in memory; use [`BlobStore::stream`] with a typed [`Address`] for large objects.
     ///
     /// Names are not typed: plain data whose bytes are exactly a `put`-shaped manifest is read
     /// as the object it names (see the Open questions of CORE.STO.CAS).
     pub fn read_object(&self, digest: &Digest, max_len: u64) -> Result<Vec<u8>, CasError> {
         let too_long = |size: u64| CasError::OutOfRange { start: 0, end: size, size: max_len };
-        // Verified, and refused as `integrity` when longer than any blob the store writes.
-        let bytes = self.read_blob(digest, MAX_BLOB_READ)?;
+        // The caller's bound limits the read itself: at most `limit` + 1 bytes are read.
+        let limit = max_len.min(MAX_BLOB_READ);
+        let mut f = self.open_blob(digest)?;
+        let mut bytes = Vec::new();
+        Read::by_ref(&mut f).take(limit.saturating_add(1)).read_to_end(&mut bytes)?;
         let blob_charge = Charge::new(&self.counters, bytes.len() as u64);
+        if bytes.len() as u64 > limit {
+            // Longer than any blob the store writes: it cannot be the content of its address.
+            if limit == MAX_BLOB_READ {
+                return Err(CasError::Integrity(*digest));
+            }
+            // Longer than `max_len`: plain data that long is too long, and a `put`-shaped
+            // manifest that long names a larger object still. Nothing more is read.
+            let stored = f.metadata()?.len().max(bytes.len() as u64);
+            return Err(too_long(stored));
+        }
+        drop(f);
+        if Digest::from_bytes(Sha256::digest(&bytes).into()) != *digest {
+            return Err(CasError::Integrity(*digest));
+        }
         let manifest = match ChunkManifest::parse(&bytes) {
             Ok(m) if m.chunk_size == CHUNK_SIZE && m.size > CHUNK_SIZE => m,
             // Plain data: any other blob, a manifest of a shape `put` never writes included.
