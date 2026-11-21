@@ -148,6 +148,48 @@ impl GaugeId {
     }
 }
 
+/// Whether a result must carry the provisional interpretation label (D-045,
+/// REQ-RPT.MODEL.FMT-015). It can only be read from the stored record, never stated by a
+/// caller: [`InterpretationStatus::of_record_bytes`] (the stored canonical bytes, through
+/// `fid_gdt::requires_provisional_label_bytes`), [`InterpretationStatus::of_record`] (a
+/// parsed `fid_gdt` ResultRecord, `requires_provisional_label`) or
+/// [`InterpretationStatus::of_evidence`] (what `RPT.MODEL.BIND` read from the journaled
+/// record). There is no other constructor and no `Default`, so nothing can call a value
+/// signed off without a record that says so:
+///
+/// ```compile_fail
+/// fn forge() -> fid_report::fmt::InterpretationStatus {
+///     fid_report::fmt::InterpretationStatus { provisional: false }
+/// }
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InterpretationStatus {
+    provisional: bool,
+}
+
+impl InterpretationStatus {
+    /// From stored canonical record bytes: provisional unless they are a readable
+    /// `fid.gdt-result/2` record signed off in full (anything else fails closed).
+    pub fn of_record_bytes(bytes: &[u8]) -> InterpretationStatus {
+        InterpretationStatus { provisional: fid_gdt::requires_provisional_label_bytes(bytes) }
+    }
+
+    /// From a parsed ResultRecord.
+    pub fn of_record(record: &fid_gdt::chars::record::ResultRecord) -> InterpretationStatus {
+        InterpretationStatus { provisional: fid_gdt::requires_provisional_label(record) }
+    }
+
+    /// From the evidence `RPT.MODEL.BIND` read from the journaled record.
+    pub fn of_evidence(evidence: &crate::bind::Evidence) -> InterpretationStatus {
+        InterpretationStatus { provisional: evidence.is_provisional() }
+    }
+
+    /// Whether the label is required.
+    pub fn is_provisional(&self) -> bool {
+        self.provisional
+    }
+}
+
 /// A value of record as `RPT.MODEL.BIND` resolves it from a `value_binding@1`: the stored
 /// result's value in SI units, its evaluation basis and decision, and the stored uncertainty
 /// statement the binding names. `acceptance` holds the acceptance limits the decision used
@@ -171,6 +213,8 @@ pub struct ValueRecord<'a> {
     pub transcription: Option<&'a TranscriptionRecord>,
     /// The cited gauge (`DIRECT_READING` only).
     pub gauge: Option<GaugeId>,
+    /// Whether the record's GD&T interpretation is provisional (D-045).
+    pub interpretation: InterpretationStatus,
 }
 
 /// The report's unit override per kind (`report.generate_report@1` `units`). An override
@@ -307,6 +351,9 @@ impl Marker {
 /// A label shown with a value.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Label {
+    /// The record's GD&T interpretation is provisional (D-045, REQ-RPT.MODEL.FMT-015):
+    /// always first, rendered from `gdt.interpretation.provisional`.
+    ProvisionalInterpretation,
     /// The decision outcome.
     Outcome(Outcome),
     /// The decision rule.
@@ -334,6 +381,7 @@ impl Label {
     /// The text of the label in `catalog`'s language.
     pub fn text(&self, catalog: &Catalog) -> String {
         match self {
+            Label::ProvisionalInterpretation => provisional_text(catalog),
             Label::Outcome(o) => {
                 let key = match o {
                     Outcome::Conforms => "report.outcome.conforms",
@@ -357,6 +405,18 @@ impl Label {
             Label::DeclaredInput => catalog.text("report.label.declared_input").to_owned(),
             Label::UncharacterizedInput => catalog.text("report.label.uncharacterized_input").to_owned(),
         }
+    }
+}
+
+/// The English text of the provisional label, which no catalog can remove or shorten.
+pub const PROVISIONAL_TEXT: &str = "interpretation: provisional";
+
+/// The provisional label's text: always the English text, followed by a translation in
+/// parentheses when the catalog has one, so no locale can remove or shorten it (REQ-015).
+fn provisional_text(catalog: &Catalog) -> String {
+    match catalog.text("gdt.interpretation.provisional") {
+        t if t == PROVISIONAL_TEXT => PROVISIONAL_TEXT.to_owned(),
+        t => format!("{PROVISIONAL_TEXT} ({t})"),
     }
 }
 
@@ -522,6 +582,9 @@ pub struct OutcomeText {
     pub text: String,
     /// The rule ID text (`id@version`), if any.
     pub rule_text: Option<String>,
+    /// Labels that must be shown with the outcome: [`Label::ProvisionalInterpretation`]
+    /// when the record's interpretation is provisional (REQ-RPT.MODEL.FMT-015).
+    pub labels: Vec<LabelText>,
 }
 
 // ------------------------------------------------------------------ errors

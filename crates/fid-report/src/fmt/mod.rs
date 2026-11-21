@@ -48,7 +48,9 @@
 //! The display string is the canonical string rendered with the pinned locale rules
 //! ([`LocaleRules::render`]): separators and minus sign only, never re-rounded.
 //!
-//! Labels ([`labels`]), in this order: the outcome, the rule (if any), the evidence class
+//! Labels ([`labels`]), in this order: `ProvisionalInterpretation` when the record's GD&T
+//! interpretation is provisional ([`InterpretationStatus`], read only from the stored
+//! record; D-045, REQ-015; also on the [`OutcomeText`]), the outcome, the rule (if any), the evidence class
 //! (UEC-0 as the catalog text "not evaluated", never a number), `transcribed` with source
 //! software and version (`RESULTS_ONLY`) or the gauge (`DIRECT_READING`), then `Claimed`,
 //! `DeclaredInput` and `UncharacterizedInput` exactly when the stored statement's
@@ -66,9 +68,9 @@ mod model;
 pub use catalog::{Catalog, CatalogError, MAX_TEXT_BYTES, MESSAGES};
 pub use locale::{LocaleError, LocaleRules, MAX_LOCALE_ID_BYTES, MAX_MINUS_CHARS};
 pub use model::{
-    Characteristic, DefaultDecimals, FmtContext, FmtError, GaugeId, Label, LabelText, LimitSet, LimitUnit, Marker,
-    MarkerText, OutcomeText, Shown, SiValue, Side, UnitOverride, ValueKind, ValueRecord, ValueText, Warning,
-    WARN_DISPLAY_TIE, WARN_DISPLAY_UNDECIDABLE,
+    Characteristic, DefaultDecimals, FmtContext, FmtError, GaugeId, InterpretationStatus, Label, LabelText, LimitSet,
+    LimitUnit, Marker, MarkerText, OutcomeText, Shown, SiValue, Side, UnitOverride, ValueKind, ValueRecord, ValueText,
+    Warning, PROVISIONAL_TEXT, WARN_DISPLAY_TIE, WARN_DISPLAY_UNDECIDABLE,
 };
 
 use fid_gdt::chars::record::EvaluationBasis;
@@ -163,15 +165,23 @@ pub fn fmt_requirement(ch: &Characteristic, ctx: &FmtContext<'_>) -> Result<Valu
     finish(cid, rep, side, Vec::new(), Vec::new(), Vec::new(), ctx)
 }
 
-/// The decision outcome and rule ID as text (REQ-RPT.MODEL.FMT-007).
-pub fn fmt_outcome(decision: &Decision, catalog: &Catalog) -> OutcomeText {
+/// The decision outcome and rule ID as text (REQ-RPT.MODEL.FMT-007), with the provisional
+/// label when the record's interpretation is provisional (REQ-RPT.MODEL.FMT-015).
+pub fn fmt_outcome(decision: &Decision, interpretation: InterpretationStatus, catalog: &Catalog) -> OutcomeText {
     let outcome = decision.outcome();
     let rule = decision.rule().cloned();
+    let labels = if interpretation.is_provisional() {
+        let l = Label::ProvisionalInterpretation;
+        vec![LabelText { text: l.text(catalog), label: l }]
+    } else {
+        Vec::new()
+    };
     OutcomeText {
         outcome,
         text: model::Label::Outcome(outcome).text(catalog),
         rule_text: rule.as_ref().map(ToString::to_string),
         rule,
+        labels,
     }
 }
 
@@ -184,7 +194,11 @@ pub fn labels(record: &ValueRecord<'_>) -> Result<Vec<Label>, FmtError> {
     if record.decision.basis().is_some_and(|b| b.statement() != stmt.digest()) {
         return Err(unformattable(rid, "statement_mismatch"));
     }
-    let mut out = vec![Label::Outcome(record.decision.outcome())];
+    let mut out = Vec::new();
+    if record.interpretation.is_provisional() {
+        out.push(Label::ProvisionalInterpretation);
+    }
+    out.push(Label::Outcome(record.decision.outcome()));
     if let Some(r) = record.decision.rule() {
         out.push(Label::Rule(r.clone()));
     }

@@ -48,10 +48,23 @@ with `crates/fid-report/clippy.toml` into a temporary directory, runs
 `cargo clippy -- -D clippy::disallowed_types` on it, and requires a `disallowed_types`
 error on every line annotated `clippy` in the fixture. It fails if clippy is missing.
 
-Known limit of both layers: a float that reaches code outside `fmt` purely by type
-inference, with no float type named, no literal, no listed method and no `CValue::Num`
-binding (for example a public `f64` field of a dependency's struct, or a `Vec<f64>`), is
-not seen. That case is recorded as an open question of RPT.MODEL.FMT.
+3. Inferred types (third layer, `--mir`). The first two layers do not see a float that
+   reaches code purely by type inference, with no float type named, no literal, no listed
+   method and no `CValue::Num` binding: a public `f64` field of a dependency's struct, a
+   `Vec<f64>` or slice, a trait method, a transitive dependency's type. `--mir` closes that
+   gap with the compiler's own types: for every `crates/fid-report*` crate (all features,
+   library target) it asks stable rustc for its MIR (`cargo rustc -- --emit=mir`), where
+   every local, temporary, argument and constant carries its inferred type, and reports
+   RPT-FLOAT-MIR for each function, closure, constant or promoted body outside the allowed
+   files whose MIR names `f32` or `f64` anywhere (types, constants such as `2f64`, calls
+   such as `<impl f64>::from_bits`). A body is attributed to its source file by the
+   `<impl at FILE:...>` span rustc prints, by an explicit module path, or (rustc trims
+   unique paths to the bare name) by the files of the crate that define that name; a name
+   that resolves to no file, or to any file outside the allowed ones, is reported (fail
+   closed). Compiler shims for foreign items (`std::`, `core::`, `alloc::`) are skipped:
+   they exist only for a local type, whose own body is scanned. `--mir-selftest` proves
+   the layer on the fixture crate `fixtures/rpt/model/fmt/lint/infer` (with its dependency
+   `dep`): every function annotated `// mir` must be reported, and nothing else.
 
 Exit status: 0 when there is no finding, 1 when there is at least one (each printed as
 `path:line:col: RULE message`), 2 on a usage error.
@@ -70,6 +83,11 @@ CRATE_GLOB = "fid-report*"
 # Files (repository-relative, `/`-separated prefixes) where a float may be named.
 ALLOWED_FLOAT_FILES = ("crates/fid-report/src/fmt/", "crates/fid-report/src/json_num.rs")
 CLIPPY_FIXTURE = "fixtures/rpt/model/fmt/lint/bad"
+MIR_FIXTURE = "fixtures/rpt/model/fmt/lint/infer"
+# Crate-relative files where a float may appear in MIR, per crate directory name.
+MIR_ALLOWED = {"fid-report": ("src/fmt/", "src/json_num.rs")}
+MIR_FLOAT = re.compile(r"(?<![A-Za-z_])f(?:32|64)\b")
+FOREIGN_PREFIXES = ("std::", "core::", "alloc::")
 LINT_SWITCHES = frozenset(["warnings", "all", "style", "disallowed_types", "disallowed_methods"])
 
 FORMAT_MACROS = frozenset(
@@ -686,13 +704,200 @@ def clippy_selftest(root: Path) -> int:
     return 0
 
 
+# ------------------------------------------------------------------ layer 3: MIR
+
+
+@dataclass(frozen=True)
+class MirItem:
+    header: str
+    name: str
+    body: str
+
+
+def mir_items(text: str) -> list[MirItem]:
+    """The bodies of a `--emit=mir` file: each starts at a column-0 line that is not a
+    comment and ends at the column-0 `}` (or is one line, for a `const` without a body)."""
+    items: list[MirItem] = []
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if not line or line.startswith((" ", "//", "}")):
+            i += 1
+            continue
+        start = i
+        if line.rstrip().endswith("{"):
+            while i < len(lines) and lines[i] != "}":
+                i += 1
+        body = "\n".join(lines[start : i + 1])
+        items.append(MirItem(line, mir_name(line), body))
+        i += 1
+    return items
+
+
+def mir_name(header: str) -> str:
+    """The item path of a MIR header: `fn PATH(`, `const PATH: T`, `static PATH: T` or
+    `promoted[n] in PATH: T`."""
+    h = header
+    m = re.match(r"promoted\[\d+\] in (.*)$", h)
+    if m:
+        h = "fn " + m.group(1)
+    for kw in ("fn ", "const ", "static mut ", "static "):
+        if h.startswith(kw):
+            h = h[len(kw) :]
+            break
+    depth = 0
+    for k, c in enumerate(h):
+        if c in "<{[":
+            depth += 1
+        elif c in ">}]":
+            depth -= 1
+        elif depth == 0 and (c == "(" or c == ":" and h[k : k + 2] != "::" and h[k - 1 : k + 1] != "::"):
+            return h[:k].strip()
+    return h.strip()
+
+
+def _definers(src_files: dict[str, str], ident: str) -> list[str]:
+    pat = re.compile(r"\b(?:fn|struct|enum|union|const|static|type|trait|mod)\s+" + re.escape(ident) + r"\b")
+    variant = re.compile(r"^\s*" + re.escape(ident) + r"\s*[({,]", re.M)
+    return sorted(f for f, t in src_files.items() if pat.search(t) or variant.search(t))
+
+
+def mir_attribution(name: str, src_files: dict[str, str]) -> list[str] | None:
+    """The crate-relative files `name` may belong to (`None`: a foreign shim, skipped)."""
+    if name.startswith(FOREIGN_PREFIXES):
+        return None
+    if name.startswith("<") and not name.startswith("<impl at ") and name[1:].startswith(FOREIGN_PREFIXES):
+        return None
+    m = re.search(r"<impl at ([^:>]+(?::[A-Za-z]:)?[^:>]*):\d+:\d+", name)
+    if m:
+        return [m.group(1).replace("\\", "/")]
+    segs = [g for g in re.sub(r"<[^<>]*>", "", name).split("::") if g and not g.startswith("{")]
+    if len(segs) >= 2:
+        return ["mod:" + segs[0]]
+    return _definers(src_files, segs[0]) if segs else []
+
+
+def _allowed(where: str, crate_rel: str, allowed: tuple[str, ...]) -> bool:
+    if where.startswith("mod:"):
+        mod = where[4:]
+        return any(a.rstrip("/").removesuffix(".rs").endswith("src/" + mod) for a in allowed)
+    w = where
+    if crate_rel and (w.startswith(crate_rel + "/")):
+        w = w[len(crate_rel) + 1 :]
+    return any(w.startswith(a) for a in allowed)
+
+
+def mir_findings(text: str, crate_dir: Path, crate_rel: str, allowed: tuple[str, ...]) -> list[Finding]:
+    """RPT-FLOAT-MIR for each body outside `allowed` whose MIR names a float type."""
+    src = crate_dir / "src"
+    files = {
+        f.relative_to(crate_dir).as_posix(): f.read_text(encoding="utf-8", errors="replace")
+        for f in sorted(src.rglob("*.rs"))
+    }
+    out: list[Finding] = []
+    seen: set[str] = set()
+    for it in mir_items(text):
+        if not MIR_FLOAT.search(it.body) or it.name in seen:
+            continue
+        where = mir_attribution(it.name, files)
+        if where is None:
+            continue
+        if where and all(_allowed(w, crate_rel, allowed) for w in where):
+            continue
+        seen.add(it.name)
+        place = ", ".join(where) if where else "no source file"
+        out.append(Finding(f"{crate_rel}/src", 0, 0, "RPT-FLOAT-MIR", f"{it.name} ({place}) has a float in its MIR"))
+    return out
+
+
+def emit_mir(crate_dir: Path, cwd: Path, out: Path, package: str, target_dir: Path | None = None) -> str:
+    import os
+    import subprocess
+
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS"))}
+    if target_dir is not None:
+        env["CARGO_TARGET_DIR"] = str(target_dir)
+    cmd = ["cargo", "rustc", "--quiet", "--lib", "--all-features", "-p", package, "--", f"--emit=mir={out}"]
+    p = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=1800)
+    if p.returncode != 0 or not out.exists():
+        raise RuntimeError(f"cargo rustc --emit=mir failed for {package}:\n{p.stderr[-4000:]}")
+    return out.read_text(encoding="utf-8", errors="replace")
+
+
+def _package_name(crate_dir: Path) -> str:
+    for line in (crate_dir / "Cargo.toml").read_text(encoding="utf-8").splitlines():
+        m = re.match(r'\s*name\s*=\s*"([^"]+)"', line)
+        if m:
+            return m.group(1)
+    return crate_dir.name
+
+
+def mir_check(root: Path) -> int:
+    import tempfile
+
+    findings: list[Finding] = []
+    with tempfile.TemporaryDirectory() as d:
+        for c in crate_dirs(root):
+            rel = c.relative_to(root).as_posix()
+            try:
+                text = emit_mir(c, root, Path(d) / f"{c.name}.mir", _package_name(c))
+            except (OSError, RuntimeError) as e:
+                print(f"rpt_float_lint --mir: {e}", file=sys.stderr)
+                return 1
+            findings.extend(mir_findings(text, c, rel, MIR_ALLOWED.get(c.name, ())))
+    for f in findings:
+        print(f)
+    print(f"rpt_float_lint --mir: {len(findings)} finding(s) in {len(crate_dirs(root))} crate(s)", file=sys.stderr)
+    return 1 if findings else 0
+
+
+def mir_selftest(root: Path) -> int:
+    import shutil
+    import tempfile
+
+    fixture = root / MIR_FIXTURE
+    src = (fixture / "src" / "lib.rs").read_text(encoding="utf-8")
+    want = {m.group(1) for m in re.finditer(r"fn (\w+)[^\n]*// mir\b", src)}
+    if not want:
+        print("mir-selftest: the fixture has no `// mir` annotation", file=sys.stderr)
+        return 1
+    with tempfile.TemporaryDirectory() as d:
+        crate = Path(d) / "crate"
+        shutil.copytree(fixture, crate)
+        for m in crate.rglob("Cargo.toml.in"):
+            m.rename(m.with_name("Cargo.toml"))
+        try:
+            text = emit_mir(crate, crate, Path(d) / "infer.mir", "rpt-float-rule-infer-fixture", Path(d) / "target")
+        except (OSError, RuntimeError) as e:
+            print(f"mir-selftest: {e}", file=sys.stderr)
+            return 1
+        found = mir_findings(text, crate, "", ("src/fmt/",))
+    got = {re.split(r"::|\s", f.message, maxsplit=1)[0] for f in found}
+    missed, extra = sorted(want - got), sorted(got - want)
+    for n in missed:
+        print(f"mir-selftest: `{n}` has an inferred float and was not reported", file=sys.stderr)
+    for n in extra:
+        print(f"mir-selftest: `{n}` was reported but is not annotated", file=sys.stderr)
+    if missed or extra:
+        return 1
+    print(f"mir-selftest: the MIR layer reported all {len(want)} annotated functions and nothing else", file=sys.stderr)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument("--root", type=Path, default=ROOT, help="repository root (default: this checkout)")
     ap.add_argument("--crate", type=Path, action="append", help="scan this crate directory instead of crates/fid-report*")
     ap.add_argument("--clippy-selftest", action="store_true", help="prove the clippy layer on the bad fixture crate")
     ap.add_argument("--float-fns", type=Path, help="print the float-returning public functions of a crate directory")
+    ap.add_argument("--mir", action="store_true", help="layer 3: scan the MIR of every fid-report* crate for floats")
+    ap.add_argument("--mir-selftest", action="store_true", help="prove the MIR layer on the infer fixture crate")
     a = ap.parse_args(argv)
+    if a.mir:
+        return mir_check(a.root.resolve())
+    if a.mir_selftest:
+        return mir_selftest(a.root.resolve())
     if a.float_fns:
         for names in dependency_float_fns(a.float_fns.resolve()):
             print(" | ".join(names))

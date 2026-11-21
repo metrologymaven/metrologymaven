@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-report]
 satisfies: [REQ-RPT.MODEL-005, REQ-RPT.MODEL-006, REQ-RPT.MODEL-007, REQ-RPT.MODEL-008, REQ-RPT.MODEL-009]
 covers: []
 depends_on: [KRN.NUM.FMT.REG, KRN.NUM.FMT.LEN, KRN.NUM.FMT.ANG, KRN.NUM.KDEC, UNC.DEC.TYPE, UNC.UEC.CLASS, IO.RES.TRANS.MODEL, GDT.CHAR.RECORD, GDT.CHAR.INTERP, CORE.STO.SET]
@@ -18,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-19
+updated: 2026-11-20
 ---
 
 # RPT.MODEL.FMT: Value formatting, decision display and source labels
@@ -88,6 +89,8 @@ The single place in RPT where a value of record becomes text. It chooses the ker
 - **Determinism:** D0; integer and string operations only.
 - **Performance budget:** 100 000 values in under 500 ms on reference hardware [unverified until measured].
 - **Crate:** `fid-report` (module `fmt`); lint configuration in the workspace for all `fid-report*` crates.
+- **Pinned at build (D-045, REQ-015):** `ValueRecord` carries `interpretation: InterpretationStatus`, and `fmt_outcome(decision, interpretation, catalog)` takes one too. An `InterpretationStatus` can only be read from the stored record: `of_record_bytes` (`fid_gdt::requires_provisional_label_bytes`), `of_record` (`requires_provisional_label`) or `of_evidence` (`RPT.MODEL.BIND`'s journaled `Evidence::is_provisional`). It has no other constructor and no `Default`, so a caller cannot call a value signed off, and bytes that do not parse fail closed as provisional. `Label::ProvisionalInterpretation` is the first label of every `ValueText` and the one label of every `OutcomeText` from such a record. Its text is always the English `interpretation: provisional`; a catalog translation of `gdt.interpretation.provisional` is appended in parentheses, so no locale can remove or shorten it. No API hides labels (REQ-014).
+- **Pinned at build (REQ-002, layer 3):** `tools/rpt_float_lint.py --mir` (a line of `ci/fixture-checks.txt`) emits each `fid-report*` crate's MIR with stable rustc (`cargo rustc --lib --all-features -- --emit=mir`), in which every local, temporary, argument and constant carries its inferred type. It fails on any function, closure, constant or promoted body outside `fid_report::fmt` and `fid_report::json_num` whose MIR names `f32` or `f64`. Bodies are attributed by rustc's `<impl at FILE>` span, by module path, or (for paths rustc trims) by the crate files that define the name; a body that resolves to no file, or to a file outside the allowed ones, is a finding (fail closed). `--mir-selftest` proves the layer on `fixtures/rpt/model/fmt/lint/infer` (a dependency's public `f64` field, a `Vec<f64>`, a closure, a trait method, a foreign `f64` constant and a generic wrapper, none naming a float type): every annotated function is reported and nothing else.
 
 ## Test fixtures
 
@@ -116,7 +119,8 @@ The single place in RPT where a value of record becomes text. It chooses the ker
 - Guard-banded rules: this leaf assumes the decision record carries the acceptance limits it used [unverified against `UNC.DEC.EVAL`]; if not, UNC must add them or RPT can only pass spec limits.
 - Cross-domain: `I18N.LOCALE` owns the render transform but is an L3 runtime, so RPT re-applies the same rules from the published data file and proves equivalence with I18N's golden corpus. Moving the pure render transform into an L0 library would remove the duplication; raise at the `I18N.LOCALE` expansion.
 - The `report.default_decimals` initial values are [unverified]; a maintainer may change them as data.
-- **REQ-RPT.MODEL.FMT-002 partly met (#285).** The float rule is enforced by clippy `disallowed_types` (f32, f64) in every `fid-report*` crate, allowed only in `fid_report::fmt` and the JSON-number boundary `fid_report::json_num`; by clippy `disallowed_methods` on every public function of the crates' direct dependencies that returns a float (a source-scan guard fails when a new one is not listed); and by the token scan `tools/rpt_float_lint.py` (float literals, `CValue::Num` only as `CValue::Num(_)`, float formatting forms). A float that reaches other code purely by type inference through anything else (a public `f64` field of a dependency's struct such as `Expanded`, a `Vec<f64>` or slice, a trait method, a transitive dependency's type) is still not seen. Closing it in general needs a type-aware lint on expression types. Until then this leaf is not marked built.
+- **REQ-RPT.MODEL.FMT-002 met.** #285 enforced the rule with clippy `disallowed_types` (f32, f64) in every `fid-report*` crate (allowed only in `fid_report::fmt` and the JSON-number boundary `fid_report::json_num`), clippy `disallowed_methods` on every float-returning public function of the crates' direct dependencies, and the token scan `tools/rpt_float_lint.py`. That left floats reached purely by type inference. The MIR layer (`--mir`, see Design) closes that gap with the compiler's own inferred types; the leaf is therefore marked built. The remaining limit is that the layer sees only MIR bodies of the `fid-report*` crates themselves, which is where RPT code runs; dependency code is the dependencies' own (KNP-1) concern.
+- **AC-12 fixture (D-045):** both named fixtures are provisional on main. `flatness_signed`'s defaults profile has no sign-off path yet (GDT.RES.STATUS REQ-006), so no genuine record is signed off. AC-12's "does not carry the label" half is therefore tested on a synthetic `fid.gdt-result/2` record with its interpretation and every rule signed off, plus the assertion that `flatness_signed` itself is provisional. Replace it with a fixture record once a profile can be signed off.
 
 ## Children
 

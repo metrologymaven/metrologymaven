@@ -122,6 +122,8 @@ class Wiring(unittest.TestCase):
         lines = (ROOT / "ci" / "fixture-checks.txt").read_text(encoding="utf-8").splitlines()
         self.assertIn("python tools/rpt_float_lint.py", lines)
         self.assertIn("python tools/rpt_float_lint.py --clippy-selftest", lines)
+        self.assertIn("python tools/rpt_float_lint.py --mir", lines)
+        self.assertIn("python tools/rpt_float_lint.py --mir-selftest", lines)
         wf = (ROOT / ".github" / "workflows" / "rust.yml").read_text(encoding="utf-8")
         self.assertIn("cargo clippy --workspace --all-targets -- -D warnings", wf)
         self.assertIn("list=ci/fixture-checks.txt", wf)
@@ -216,6 +218,79 @@ class Wiring(unittest.TestCase):
 
     def test_repository_report_crates_pass(self):
         self.assertEqual([str(f) for f in lint.run(ROOT)], [])
+
+
+# A hand-written MIR file in the stable `--emit=mir` text form (rustc 1.81+): trimmed and
+# full paths, an impl span, a closure, a constant, a promoted body and a foreign shim.
+MIR = """// WARNING: This output format is intended for human consumers only
+fn val(_1: u64) -> f64 {
+    let mut _0: f64;
+}
+
+fn fmt::<impl at crates/fid-report/src/fmt/model.rs:3:1: 3:7>::g(_1: &S) -> f64 {
+    let mut _0: f64;
+}
+
+fn <impl at crates/fid-report/src/bind/model.rs:4:1: 4:7>::half(_1: &W) -> u64 {
+    let _2: f64;
+}
+
+fn infer::{closure#0}(_1: &mut {closure@crates/fid-report/src/bind/expand.rs:8:55: 8:58}, _2: &u8) -> bool {
+    _0 = Lt(copy _3, const 2f64);
+}
+
+fn clean(_1: u32) -> u32 {
+    let mut _0: u32;
+}
+
+const LIMIT: u64 = const 3_u64;
+
+promoted[0] in bind::journal::read: &[u8; 2] = {
+    let mut _0: &std::vec::Vec<f64>;
+}
+
+fn std::ptr::drop_in_place::<Vec<f64>>(_1: *mut Vec<f64>) -> () {
+}
+
+fn nowhere() -> f64 {
+}
+"""
+
+
+class Mir(unittest.TestCase):
+    """Layer 3: the MIR scan, on a hand-written MIR file (the compiler half is proven by
+    `--mir-selftest` in CI, a line of ci/fixture-checks.txt)."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        c = Path(self.dir.name) / "crates" / "fid-report"
+        (c / "src" / "fmt").mkdir(parents=True)
+        (c / "src" / "bind").mkdir()
+        (c / "src" / "fmt" / "mod.rs").write_text("pub fn val(x: u64) -> f64 { f64::from_bits(x) }\n")
+        (c / "src" / "bind" / "expand.rs").write_text("pub fn infer() {}\npub fn clean() {}\n")
+        self.crate = c
+
+    def tearDown(self):
+        self.dir.cleanup()
+
+    def test_items_and_names(self):
+        names = [i.name for i in lint.mir_items(MIR)]
+        self.assertEqual(names[:5], ["val", "fmt::<impl at crates/fid-report/src/fmt/model.rs:3:1: 3:7>::g",
+                                     "<impl at crates/fid-report/src/bind/model.rs:4:1: 4:7>::half",
+                                     "infer::{closure#0}", "clean"])
+        self.assertIn("LIMIT", names)
+        self.assertIn("bind::journal::read", names)
+
+    def test_findings_are_attributed_and_fail_closed(self):
+        found = lint.mir_findings(MIR, self.crate, "crates/fid-report", lint.MIR_ALLOWED["fid-report"])
+        got = sorted(f.message.split(" (")[0] for f in found)
+        self.assertEqual(got, ["<impl at crates/fid-report/src/bind/model.rs:4:1: 4:7>::half",
+                               "bind::journal::read", "infer::{closure#0}", "nowhere"])
+        self.assertTrue(all(f.rule == "RPT-FLOAT-MIR" for f in found))
+
+    def test_a_crate_without_allowed_files_reports_every_float(self):
+        found = lint.mir_findings(MIR, self.crate, "crates/fid-report", ())
+        self.assertIn("val", [f.message.split(" (")[0] for f in found])
 
 
 class Specs(unittest.TestCase):

@@ -1,4 +1,4 @@
-//! Acceptance criteria of spec node RPT.MODEL.FMT (AC-1 .. AC-6 and AC-8 .. AC-11; AC-7 is
+//! Acceptance criteria of spec node RPT.MODEL.FMT (AC-1 .. AC-6 and AC-8 .. AC-12; AC-7 is
 //! the lint, tested in `tools/tests/test_rpt_float_lint.py`).
 //!
 //! Expected strings, digit counts, sides and tie flags come from the independent reference
@@ -20,8 +20,9 @@ use fid_num::kdec::Decimal;
 use fid_project::{IdService, ReplaySource, Uuid};
 use fid_report::fmt::{
     fmt_outcome, fmt_requirement, fmt_value, fmt_value_with, labels, Catalog, CatalogError, Characteristic,
-    DefaultDecimals, FmtContext, FmtError, GaugeId, Label, LimitSet, LimitUnit, LocaleError, LocaleRules, Marker,
-    SiValue, Side, UnitOverride, ValueKind, ValueRecord, ValueText, WARN_DISPLAY_TIE, WARN_DISPLAY_UNDECIDABLE,
+    DefaultDecimals, FmtContext, FmtError, GaugeId, InterpretationStatus, Label, LimitSet, LimitUnit, LocaleError,
+    LocaleRules, Marker, SiValue, Side, UnitOverride, ValueKind, ValueRecord, ValueText, PROVISIONAL_TEXT,
+    WARN_DISPLAY_TIE, WARN_DISPLAY_UNDECIDABLE,
 };
 
 // ------------------------------------------------------------------ helpers
@@ -150,7 +151,34 @@ fn rec<'a>(id: &str, value: f64, d: &'a Decision, st: &'a UncertaintyStatement) 
         acceptance: None,
         transcription: None,
         gauge: None,
+        interpretation: signed_off(),
     }
+}
+
+/// A `fid.gdt-result/2` record (interpretation block only) as canonical bytes.
+fn record_with(interpretation: &str, statuses: &[&str]) -> Vec<u8> {
+    let rules = statuses
+        .iter()
+        .map(|st| CValue::Obj([("status".to_string(), CValue::Str((*st).to_string()))].into_iter().collect()))
+        .collect();
+    let v = CValue::Obj(
+        [
+            ("interpretation".to_string(), CValue::Str(interpretation.to_string())),
+            ("interpretation_rules".to_string(), CValue::Arr(rules)),
+            ("schema".to_string(), CValue::Str("fid.gdt-result/2".to_string())),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    fid_canon::to_canonical_bytes(&v).unwrap()
+}
+
+/// The status of a record whose interpretation and every rule are signed off. Synthetic:
+/// no fixture record on main is signed off (profiles have no sign-off path yet).
+fn signed_off() -> InterpretationStatus {
+    let s = InterpretationStatus::of_record_bytes(&record_with("signed_off", &["signed_off"]));
+    assert!(!s.is_provisional());
+    s
 }
 
 fn unformattable(r: Result<ValueText, FmtError>) -> &'static str {
@@ -682,12 +710,13 @@ fn outcome_text_and_catalog() {
     let cat = Catalog::english();
     let st = stmt("uec1_lpu.json");
     let d = decision(Some("dr:guard-band(r=1)@1"), Outcome::Nonconforms, &st);
-    let o = fmt_outcome(&d, &cat);
+    let o = fmt_outcome(&d, signed_off(), &cat);
+    assert!(o.labels.is_empty());
     assert_eq!(o.outcome, Outcome::Nonconforms);
     assert_eq!(o.text, "nonconforms");
     assert_eq!(o.rule_text.as_deref(), Some("dr:guard-band(r=1)@1"));
     let nd = decision(None, Outcome::NotDecidable(NotDecidableReason::RuleMissing), &st);
-    let o = fmt_outcome(&nd, &cat);
+    let o = fmt_outcome(&nd, signed_off(), &cat);
     assert_eq!(o.text, "not decidable (rule_missing)");
     assert!(o.rule.is_none());
     assert!(matches!(Catalog::new(vec![("report.nope".into(), "x".into())]), Err(CatalogError::UnknownKey(_))));
@@ -717,4 +746,66 @@ fn ac11_the_only_text_accessor_carries_labels_and_markers() {
     assert!(!t.labels.is_empty());
     // The compile-fail half is the set of `compile_fail` doctests on `ValueText`
     // (crates/fid-report/src/fmt/model.rs), run by `cargo test`.
+}
+
+// ------------------------------------------------------------------ AC-12 (D-045)
+
+/// The record of a GDT.CHAR.INTERP fixture case: its expected interpretation block on a
+/// `fid.gdt-result/2` record, as canonical bytes.
+fn interp_case_record(case: &str) -> Vec<u8> {
+    let cases = json("fixtures/gdt/interp/cases.json");
+    let expect = get(get(get(&cases, "cases"), case), "expect");
+    let mut o = match expect {
+        CValue::Obj(o) => o.clone(),
+        _ => panic!("expect"),
+    };
+    o.remove("verification");
+    o.insert("schema".to_string(), CValue::Str("fid.gdt-result/2".to_string()));
+    fid_canon::to_canonical_bytes(&CValue::Obj(o)).unwrap()
+}
+
+fn provisional_labels(labels: &[fid_report::fmt::LabelText]) -> Vec<String> {
+    labels.iter().filter(|l| l.label == Label::ProvisionalInterpretation).map(|l| l.text.clone()).collect()
+}
+
+/// AC-12: a provisional record's value and outcome both carry `ProvisionalInterpretation`
+/// with the text `interpretation: provisional`, first among the labels; a signed-off record
+/// carries neither. No catalog can remove or shorten it: a translation is added after it.
+#[test]
+fn ac12_provisional_interpretation_label() {
+    let cat = Catalog::english();
+    let st = stmt("uec1_lpu.json");
+    let d = decision(None, Outcome::Conforms, &st);
+    let c = ch("c-prov", ValueKind::Length, Unit::Mm, Some(3), None);
+    // position_mmc_mixed: every DMT row signed off, the profile provisional, so the record is.
+    let prov = InterpretationStatus::of_record_bytes(&interp_case_record("position_mmc_mixed"));
+    assert!(prov.is_provisional());
+    let mut r = rec("r-prov", 0.0125, &d, &st);
+    r.interpretation = prov;
+    let v = fmt_value(&r, &c, &ctx(en(), &cat)).unwrap();
+    assert_eq!(provisional_labels(v.text().labels), [PROVISIONAL_TEXT]);
+    assert_eq!(v.text().labels[0].label, Label::ProvisionalInterpretation);
+    assert_eq!(PROVISIONAL_TEXT, "interpretation: provisional");
+    let o = fmt_outcome(&d, prov, &cat);
+    assert_eq!(provisional_labels(&o.labels), [PROVISIONAL_TEXT]);
+    // flatness_signed is provisional on main too (its profile has no sign-off path); the
+    // signed-off case is that record with every rule and the interpretation signed off.
+    assert!(InterpretationStatus::of_record_bytes(&interp_case_record("flatness_signed")).is_provisional());
+    let signed = signed_off();
+    let mut r2 = rec("r-signed", 0.0125, &d, &st);
+    r2.interpretation = signed;
+    let v2 = fmt_value(&r2, &c, &ctx(en(), &cat)).unwrap();
+    assert!(provisional_labels(v2.text().labels).is_empty());
+    assert!(fmt_outcome(&d, signed, &cat).labels.is_empty());
+    // Two values in one table keep their own status.
+    assert_eq!(provisional_labels(v.text().labels).len() + provisional_labels(v2.text().labels).len(), 1);
+    // A translated catalog keeps the English text first.
+    let de = Catalog::new(vec![("gdt.interpretation.provisional".into(), "Auslegung: vorläufig".into())]).unwrap();
+    let v3 = fmt_value(&r, &c, &ctx(en(), &de)).unwrap();
+    assert_eq!(provisional_labels(v3.text().labels), ["interpretation: provisional (Auslegung: vorläufig)"]);
+    // Fail closed: unreadable, non-canonical or /1 bytes are provisional.
+    assert!(InterpretationStatus::of_record_bytes(b"not json").is_provisional());
+    assert!(InterpretationStatus::of_record_bytes(&record_with("signed_off", &["signed_off", "provisional"]))
+        .is_provisional());
+    assert!(InterpretationStatus::of_record_bytes(&record_with("signed_off", &[])).is_provisional());
 }
