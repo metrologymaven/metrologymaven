@@ -26,6 +26,9 @@ fid-types = { path = "../fid-types" }
 # that fid-canon and fid-xtask already use, so no new crate in the graph).
 fid-io-reg = { path = "../fid-io-reg" }
 sha2 = "0.10"
+# PLAT.GPU.POLICY and the OS, architecture and version types, moved below the tool layer for
+# PLAT.GPU.DETECT (layer model); re-exported from `gpu_policy` and `matrix`.
+fid-gpu-policy = { path = "../fid-gpu-policy" }
 
 [lints]
 workspace = true
