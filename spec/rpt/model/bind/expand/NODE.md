@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-report]
+built_pr: 367
 satisfies: [REQ-RPT.MODEL.BIND-006]
 covers: [GOM.RPT.07]
 depends_on: [RPT.MODEL.TMPL.SLOT, RPT.MODEL.BIND.RESOLVE, CORE.PRJ.STAGE]
