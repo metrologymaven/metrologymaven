@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-catalog]
+built_pr: 401
 satisfies: [REQ-RPT.CATALOG.STORE-001, REQ-RPT.CATALOG.STORE-005]
 covers: [PW.MSP.04, PCD.RPT.07]
 depends_on: [CORE.STO.LAYOUT, CORE.STO.SET]
