@@ -452,7 +452,12 @@ fn req008_unknown_kinds_are_refused_on_save_and_apply() {
     let e =
         w.tmpl(SAVE_TEMPLATE, obj([("template", s(st(&c, "ids.file"))), ("file", s(st(&c, "handle")))])).unwrap_err();
     assert_eq!(e.code(), "report.unknown_block_kind");
-    let e = w.tmpl(APPLY_TEMPLATE, obj([("template", s(st(&c, "ids.starter"))), ("title", s("x"))])).unwrap_err();
+    let e = w
+        .tmpl(
+            APPLY_TEMPLATE,
+            obj([("template", s(st(&c, "ids.starter"))), ("builtin", CValue::Bool(true)), ("title", s("x"))]),
+        )
+        .unwrap_err();
     assert_eq!(e.code(), "report.unknown_block_kind");
     assert_eq!(w.journal_len(), 0);
     assert!(w.backend.objects().is_empty());
