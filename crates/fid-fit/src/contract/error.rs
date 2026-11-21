@@ -76,6 +76,21 @@ pub enum FitError {
     InvalidParams { field: &'static str },
     /// A direction vector is zero or too small to normalise (norm below `2^-1022`).
     InvalidDirection,
+    /// A converged least-squares fit whose residual RMS `rms` is not below `bound` (by a
+    /// relative margin), the RMS of the best plane its feature family tends to as the radius
+    /// grows (both metres). The family's least-squares infimum is at most the bound's, so the fit
+    /// is not the global optimum, or none exists (`ls_cyl`, KRN.LSQ.AXIS.CYL). Code
+    /// `implausible_fit`.
+    ImplausibleFit { rms: f64, bound: f64 },
+    /// A fit that carries a warning flag, refused by the `Fit` trait so a generic caller never
+    /// receives it unflagged (fail closed): `local_optimum_only` (the starts disagree) and
+    /// `suspect_axis` (axis weakly determined or wrong, with its `rms_ratio`). The flagged fit
+    /// itself is available from the method's own entry point (`ls_cyl::fit_cylinder`). Code
+    /// `flagged_fit`.
+    FlaggedFit { local_optimum_only: bool, suspect_axis: bool, rms_ratio: f64 },
+    /// Every start of a multi-start run (`fid_solv::mstart`) failed. `starts` is the number
+    /// of starts and `first` the code of the primary start's error. Code `multi_start`.
+    MultiStartFailed { starts: u32, first: &'static str },
     /// The nonlinear least-squares driver failed (rank deficiency and the other driver
     /// errors that have no dedicated variant here).
     Solver(SolverError),
@@ -107,6 +122,9 @@ impl FitError {
             FitError::SideViolation { .. } => "side_violation",
             FitError::InvalidParams { .. } => "invalid_params",
             FitError::InvalidDirection => "invalid_direction",
+            FitError::ImplausibleFit { .. } => "implausible_fit",
+            FitError::FlaggedFit { .. } => "flagged_fit",
+            FitError::MultiStartFailed { .. } => "multi_start",
             FitError::Solver(_) => "solver",
             FitError::Num(_) => "numeric",
         }
@@ -161,6 +179,16 @@ impl fmt::Display for FitError {
             }
             FitError::InvalidParams { field } => write!(f, "fit: invalid parameter {field}"),
             FitError::InvalidDirection => write!(f, "fit: zero or too small direction vector"),
+            FitError::ImplausibleFit { rms, bound } => {
+                write!(f, "fit: residual RMS {rms:e} m is not below the bounding plane's {bound:e} m (not the global optimum, or none exists)")
+            }
+            FitError::FlaggedFit { local_optimum_only, suspect_axis, rms_ratio } => write!(
+                f,
+                "fit: flagged fit refused (local_optimum_only {local_optimum_only}, suspect_axis {suspect_axis}, rms ratio {rms_ratio:e})"
+            ),
+            FitError::MultiStartFailed { starts, first } => {
+                write!(f, "fit: all {starts} starts failed (primary start: {first})")
+            }
             FitError::Solver(e) => write!(f, "fit: {e}"),
             FitError::Num(e) => write!(f, "fit: {e}"),
         }

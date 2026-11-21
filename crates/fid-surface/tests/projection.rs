@@ -128,6 +128,25 @@ fn stricter_declarations_project_to_themselves() {
     assert_eq!(of("rpt.release_report@1"), McpProjection::None);
 }
 
+/// Every Python hard keyword as a domain and as a verb (majors 1 and 2) projects, with a
+/// trailing underscore on the Python module or function name only. Golden from the Python
+/// reference, whose keyword set is checked against Python's own `keyword.kwlist`.
+#[test]
+fn python_keywords_are_escaped_golden() {
+    let p = project(&read("fixtures/manifest/keywords.json")).unwrap();
+    let golden = read("fixtures/projection/keywords.golden.json");
+    assert_eq!(String::from_utf8(p.to_canonical_bytes().unwrap()).unwrap(), String::from_utf8(golden).unwrap());
+    // 32 keywords x 3 commands, plus three soft keywords.
+    assert_eq!(p.commands.len(), 99);
+    let of = |id: &str| p.commands.iter().find(|c| c.command_id.as_str() == id).unwrap();
+    let import = of("import.run@1");
+    assert_eq!((import.py_module.as_str(), import.py_name.as_str()), ("fiducial.import_", "run"));
+    assert_eq!((import.cli_path.join(" ").as_str(), import.mcp_name.as_str()), ("fid import run", "import_run"));
+    assert_eq!(of("kw.class@1").py_name, "class_");
+    assert_eq!(of("kw.class@2").py_name, "class_v2");
+    assert_eq!(of("kw.match@1").py_name, "match");
+}
+
 /// The rule, hand-labelled for every ceiling and declaration: at the ceiling projects to the
 /// ceiling, stricter to the declaration, looser is refused.
 #[test]

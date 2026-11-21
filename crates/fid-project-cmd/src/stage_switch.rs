@@ -3,12 +3,13 @@
 //!
 //! - [`CasValueStore`]: [`ValueStore`] over the content-addressed blob store
 //!   (`CORE.STO.CAS`): a slot digest names a single blob of at most `CHUNK_SIZE` (8 MiB).
-//!   The blob file is read once, bounded at `CHUNK_SIZE` + 1 bytes. Nothing stored is
-//!   `blob_missing`; bytes that do not hash to the digest are `blob_corrupt`; more than
-//!   `CHUNK_SIZE` bytes, or bytes that parse as a chunk manifest (the slot digest of a
-//!   chunked object names its manifest, never its content) are `storage` ("chunked object
-//!   not supported"), so a manifest is never served as a value; any other failure is
-//!   `storage`.
+//!   It is read with the store's safe object read, `BlobStore::read_object(digest,
+//!   CHUNK_SIZE)`, and the bytes it returns must also hash to the slot digest, so a manifest
+//!   is never expanded into another value. Nothing stored is `blob_missing`; bytes that do not
+//!   hash to the digest are `blob_corrupt`; content above `CHUNK_SIZE` (a chunked object,
+//!   whose slot digest names its manifest), bytes that are not the slot digest's own content,
+//!   or bytes that parse as a chunk manifest are `storage` ("chunked object not supported"),
+//!   so a manifest is never served as a value; any other failure is `storage`.
 //! - [`StoreValueCache`]: [`ValueCache`] over the evictable `fid-store` cache
 //!   (`CORE.STO.CACHE`). The cache has only memo and snapshot keys, so a value is stored under
 //!   the memo key of the pure read `project.stage_value@1` whose only input is the slot
@@ -25,10 +26,8 @@
 use fid_bus::error::{BusError, Detail, InternalReason, NotFoundReason, ValidationReason};
 use fid_project::{ValueCache, ValueError, ValueStore};
 use fid_store::cache::{Cache, CacheConfig, CacheKey, CacheMode, ITEM_HEADER_LEN};
-use fid_store::cas::{BlobStore, ChunkManifest, CHUNK_SIZE};
+use fid_store::cas::{BlobStore, CasError, ChunkManifest, CHUNK_SIZE};
 use fid_types::{CommandName, Digest};
-use std::fs::File;
-use std::io::{ErrorKind, Read};
 use std::path::Path;
 
 /// Command name of the memo key under which values are cached.
@@ -63,18 +62,18 @@ pub struct CasValueStore<'a>(pub &'a BlobStore);
 
 impl ValueStore for CasValueStore<'_> {
     fn load(&self, digest: &Digest) -> Result<Vec<u8>, ValueError> {
-        let file = match File::open(self.0.path_of(digest)) {
-            Ok(f) => f,
-            Err(e) if e.kind() == ErrorKind::NotFound => return Err(ValueError::BlobMissing(*digest)),
+        let bytes = match self.0.read_object(digest, MAX_VALUE_BYTES) {
+            Ok(b) => b,
+            Err(CasError::NotFound(d)) if d == *digest => return Err(ValueError::BlobMissing(*digest)),
+            Err(CasError::Integrity(d)) if d == *digest => return Err(ValueError::BlobCorrupt(*digest)),
+            // Content above one value: the slot digest names a chunk manifest.
+            Err(CasError::OutOfRange { .. }) => return Err(ValueError::Storage(CHUNKED.to_string())),
             Err(e) => return Err(ValueError::Storage(e.to_string())),
         };
-        let mut bytes = Vec::new();
-        file.take(MAX_VALUE_BYTES + 1).read_to_end(&mut bytes).map_err(|e| ValueError::Storage(e.to_string()))?;
-        if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > MAX_VALUE_BYTES {
-            return Err(ValueError::Storage(CHUNKED.to_string()));
-        }
+        // `read_object` may return an object a manifest names; a value is only ever the
+        // slot digest's own bytes (as for egress, #357).
         if Digest::from_bytes(fid_canon::digest_bytes(&bytes).0) != *digest {
-            return Err(ValueError::BlobCorrupt(*digest));
+            return Err(ValueError::Storage(CHUNKED.to_string()));
         }
         if ChunkManifest::parse(&bytes).is_ok() {
             return Err(ValueError::Storage(CHUNKED.to_string()));
