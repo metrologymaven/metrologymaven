@@ -244,8 +244,8 @@ fn cross(a: V3, b: V3) -> V3 {
     [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
 }
 
-/// Step 3.
-fn basis(d: V3) -> Result<(V3, V3), FitError> {
+/// Step 3. Also the frame rule of `ls_cyl` (KRN.LSQ.AXIS.CYL) when it re-anchors the axis.
+pub(crate) fn basis(d: V3) -> Result<(V3, V3), FitError> {
     let mut k = 0;
     for j in 1..3 {
         if f::total_cmp(d[j].abs(), d[k].abs())? == Ordering::Less {
@@ -457,6 +457,15 @@ fn cone_circle(c: &Centred, d: V3) -> Result<Option<Circle>, FitError> {
     }
     let centre = [-sol.x[0] / 2.0, -sol.x[1] / 2.0];
     Ok(Some(Circle { e1, e2, centre, r: 0.0, residual: r[5][5].abs() }))
+}
+
+/// Step 4's algebraic circle as `(e1, e2, centre, r)`.
+pub(crate) type Kasa = (V3, V3, [f64; 2], f64);
+
+/// Step 4's algebraic circle for the unit direction `d` as `(e1, e2, centre, r)`, `None` when
+/// degenerate: the start of `ls_cyl`'s fixed-axis-direction fit (KRN.LSQ.AXIS.CYL).
+pub(crate) fn kasa(c: &Centred, d: V3) -> Result<Option<Kasa>, FitError> {
+    Ok(circle(c, d)?.map(|k| (k.e1, k.e2, k.centre, k.r)))
 }
 
 /// Step 4 for the unit direction `d`; `None` when degenerate.

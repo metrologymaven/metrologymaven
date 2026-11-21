@@ -21,7 +21,7 @@ use fid_project_cmd::stage_switch::{
 use fid_project_cmd::tree::TreeState;
 use fid_registry::CommandDef;
 use fid_store::cache::Cache;
-use fid_store::cas::{BlobStore, PutOpts};
+use fid_store::cas::{BlobStore, ChunkManifest, PutOpts, CHUNK_SIZE};
 use fid_types::Digest;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -354,6 +354,33 @@ fn chunked_objects_are_refused() {
     let mut vc = StoreValueCache(&mut cache);
     fid_project::ValueCache::put(&mut vc, &d, &big);
     assert!(fid_project::ValueCache::get(&mut vc, &d).is_none());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A small chunk manifest planted as a value is refused as `storage` and never expanded into
+/// the content its chunks hold: the value read uses `read_object` and then requires the bytes
+/// to hash to the slot digest (and not to be a manifest). Both a manifest of another shape
+/// and one with `put`'s chunk size but a size under it are covered.
+#[test]
+fn planted_small_manifests_are_refused() {
+    let dir = scratch("planted");
+    let store = BlobStore::open(&dir.join("blobs")).unwrap();
+    let chunk = |b: &[u8]| store.put_bytes(b, PutOpts::default()).unwrap().digest();
+    let planted = [
+        ChunkManifest { size: 8, chunk_size: 4, chunks: vec![chunk(b"abcd"), chunk(b"efgh")] },
+        ChunkManifest { size: 8, chunk_size: CHUNK_SIZE, chunks: vec![chunk(b"abcdefgh")] },
+    ];
+    let cas = CasValueStore(&store);
+    for m in planted {
+        let bytes = m.to_canonical_bytes().unwrap();
+        let addr = store.put_bytes(&bytes, PutOpts::default()).unwrap();
+        assert!(matches!(addr, fid_store::cas::Address::Blob(_)), "stored as a plain blob");
+        let err = fid_project::ValueStore::load(&cas, &addr.digest()).unwrap_err();
+        assert_eq!(err.code(), "storage", "{err}");
+        assert!(err.to_string().contains("chunked object not supported"), "{err}");
+        let b = to_bus_error(&err);
+        assert_eq!((b.code(), b.reason()), (Code::Internal, "storage"));
+    }
     let _ = std::fs::remove_dir_all(&dir);
 }
 
