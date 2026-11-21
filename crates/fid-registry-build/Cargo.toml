@@ -48,6 +48,9 @@ fid-bus = { path = "../fid-bus" }
 fid-journal = { path = "../fid-journal", features = ["store"] }
 # `migrate.list_sources@1` (MIG.SRC.REG), `fid_mig::src::reg::command_defs`. Layer services.
 fid-mig = { path = "../fid-mig" }
+# `rdl.check_suite@1` (R1) and `rdl.list_suite@1` (R0) of UNC.ORS.TRACE. Layer services, the
+# same layer as this crate; adds no crate outside the lock.
+fid-ors = { path = "../fid-ors" }
 
 # `test_support::all_defs` (feature `test-support`) also lists the command definitions of
 # crates not yet in SOURCES: GDT (record, status, datum), RDL, the package reader and the

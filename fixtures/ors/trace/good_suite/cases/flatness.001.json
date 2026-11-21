@@ -1,0 +1,62 @@
+{
+ "acceptance_tolerance": {
+  "unit": "m",
+  "value_hex": "0x3e112e0be826d695"
+ },
+ "case": "ors:trace/flatness.001",
+ "citations": [
+  {
+   "clause": "99.1",
+   "designator": "asme-y14.5",
+   "edition": "2018"
+  }
+ ],
+ "dataset": {
+  "aim": "gdt.synthetic.closed_form",
+  "cross_check": [],
+  "id": "rdl:O/gdt.synthetic.closed_form/flatness/0001",
+  "inputs": [
+   {
+    "digest": "sha256:9a1bed50da8b52affcb1aa1276509dc9cd5a495ccdd3968c876fbbf654b3f93e",
+    "role": "points",
+    "unit": "mm"
+   }
+  ],
+  "licence": "CC-BY-4.0",
+  "provenance": {
+   "source": "Synthetic fixture for the UNC.ORS.TRACE checker tests; not a measurement and not an interpretation of any standard."
+  },
+  "reference": {
+   "outputs": [
+    {
+     "kind": "length",
+     "name": "value",
+     "test_uncertainty_hex": "0x3c10000000000000",
+     "value_hex": "0x3f60624dd2f1a9fc"
+    }
+   ],
+   "precision_digits": 17
+  },
+  "schema": "rdl-dataset/v1",
+  "tier": "O",
+  "visibility": "public"
+ },
+ "dialect": "ASME",
+ "dmt_row": "dmt:asme/flatness/none@1",
+ "expected": {
+  "unit": "m",
+  "value_hex": "0x3f60624dd2f1a9fc"
+ },
+ "note": "Synthetic case; the clause number is invented for checker tests.",
+ "review": {
+  "authors": [
+   "case-author-a"
+  ],
+  "reviewers": [
+   "reviewer-one",
+   "reviewer-two"
+  ],
+  "status": "reviewed"
+ },
+ "schema": "ors-case/v1"
+}
