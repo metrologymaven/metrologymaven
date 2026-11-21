@@ -12,13 +12,25 @@
 //!   the original.
 //! * AC-2: chunked in memory and through `ChunkWriter`, both manifest digests are equal
 //!   (and equal the reference).
+//!
+//! GEO.OOC.STREAM on the same cloud (`stream_ac1_ac2_ac3`, same sizes; sequence digests from
+//! the independent Python reference `fixtures/geo/ooc/make_stream_fixtures.py` ->
+//! `stream_vectors.json`):
+//!
+//! * AC-1: streamed in spatial order with block sizes 1 000 and 65 536, both sequences are
+//!   identical and hold every original index exactly once.
+//! * AC-2: streamed in original order and digested, the digest equals the manifest's
+//!   original digest (and the reference element digest).
+//! * AC-3: the spatial-order sequence digest equals the reference value, which this test
+//!   checks on every CI platform (Linux, Windows, macOS).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 mod common;
 
 use common::*;
 use fid_geo_ooc::{
-    to_chunks, to_memory, Channel, ChannelSet, ChunkWriter, CloudHeader, LayoutParams, PointAttrs, WriterConfig,
+    original_digest, to_chunks, to_memory, Channel, ChannelSet, ChunkCache, ChunkWriter, CloudHeader, LayoutParams,
+    PointAttrs, StreamConfig, StreamOrder, WriterConfig, DEFAULT_CACHE_BUDGET,
 };
 use fid_geo_types::digest::digest_point_cloud;
 use fid_geo_types::{AttributeSet, PointBuffer, PointCloud};
@@ -104,4 +116,66 @@ fn ac1_ac2_cloud_5e6() {
     assert!(stats.spilled_bytes > budget - fid_geo_ooc::writer::FIXED_OVERHEAD);
     assert_eq!(wm.manifest_digest, m.manifest_digest, "AC-2: writer and in-memory manifests");
     assert_eq!(wm, m);
+}
+
+/// GEO.OOC.STREAM AC-1, AC-2 and AC-3 (see the file header).
+#[test]
+fn stream_ac1_ac2_ac3() {
+    let e = json("cloud_5e6/expected.json");
+    let sv = json("stream_vectors.json");
+    let g = ScanGen::from_fixture(&e);
+    let full = std::env::var("FID_OOC_FULL").is_ok_and(|v| v == "1");
+    let (spec, want) = if full { (&e, get(&sv, "cloud_5e6")) } else { (get(&e, "small"), get(&sv, "cloud_5e6_small")) };
+    let n = int(get(spec, "n_points"));
+    let max = int(get(spec, "max_chunk_points"));
+    assert_eq!((int(get(want, "n_points")), int(get(want, "max_chunk_points"))), (n, max));
+
+    let un = n as usize;
+    let mut pts = Vec::with_capacity(un);
+    let (mut nx, mut ny, mut nz, mut it) =
+        (Vec::with_capacity(un), Vec::with_capacity(un), Vec::with_capacity(un), Vec::with_capacity(un));
+    for i in 0..n {
+        let (p, nrm, inten) = g.point(i);
+        pts.push(p);
+        nx.push(nrm[0]);
+        ny.push(nrm[1]);
+        nz.push(nrm[2]);
+        it.push(inten);
+    }
+    let attrs = AttributeSet { normal: Some([nx, ny, nz]), intensity: Some(it), ..AttributeSet::default() };
+    let cloud = PointCloud::new(frame(get(&e, "frame")), PointBuffer::from_points(&pts), attrs).unwrap();
+    drop(pts);
+    let ts = TestStore::new("5e6-stream");
+    let m = to_chunks(&cloud, ts.store(), &LayoutParams { max_chunk_points: max }).unwrap();
+    drop(cloud);
+    assert_eq!(hex(&m.manifest_digest), s(get(spec, "manifest_digest")), "the chunked cloud of the reference");
+    assert_eq!(m.chunks.len() as u64, int(get(want, "n_chunks")));
+    let cache = ChunkCache::new(DEFAULT_CACHE_BUDGET);
+    let cfg = |order, block_points| StreamConfig { order, block_points, channels: m.channels, fan_in: 8 };
+
+    // AC-1: two block sizes, one sequence, every index once.
+    let (a, da, la) = stream_all(&m, ts.store(), &cache, cfg(StreamOrder::Spatial, 1000));
+    let (b, db, lb) = stream_all(&m, ts.store(), &cache, cfg(StreamOrder::Spatial, 65_536));
+    assert_eq!((la.len(), lb.len()), (un.div_ceil(1000), un.div_ceil(65_536)));
+    assert!(a == b, "AC-1: the spatial sequence does not depend on the block size");
+    assert_eq!(da, db);
+    assert_eq!(a.len(), un);
+    let mut seen = vec![false; un];
+    for &i in &a {
+        assert!(!std::mem::replace(&mut seen[i as usize], true), "AC-1: index {i} twice");
+    }
+    assert!(seen.iter().all(|v| *v), "AC-1: every index");
+    drop((a, b, seen));
+
+    // AC-3: the sequence digest is the reference's, on every platform CI runs.
+    assert_eq!(da, s(get(want, "spatial_digest")), "AC-3: spatial-order sequence digest");
+
+    // AC-2: the original-order element digest is the manifest's original digest.
+    let d = original_digest(&m, ts.store(), &cache, None, cfg(StreamOrder::Original, 65_536)).unwrap();
+    assert_eq!(d, m.original_digest, "AC-2");
+    assert_eq!(d.to_string(), s(get(spec, "element_digest")), "AC-2: reference element digest");
+    let (idx, dorig, _) = stream_all(&m, ts.store(), &cache, cfg(StreamOrder::Original, 1000));
+    assert!(idx.iter().copied().eq(0..n), "original order");
+    assert_eq!(dorig, s(get(want, "original_digest")), "original-order sequence digest");
+    assert_eq!(cache.stats().pinned_chunks, 0);
 }

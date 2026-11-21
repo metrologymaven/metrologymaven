@@ -51,6 +51,9 @@ pub enum Fault {
     IndexOutOfRange { index: u64 },
     /// An original index occurs in two chunks.
     DuplicateIndex { index: u64 },
+    /// No chunk holds original index `index`, although the chunk counts add up to the
+    /// cloud's point count (found by the original-order stream).
+    MissingIndex { index: u64 },
     /// The point with original index `index` does not lie in its chunk's cell.
     PointOutsideCell { index: u64 },
     /// The manifest's bounding box is invalid (non-finite, inverted, or with an extent
@@ -122,6 +125,12 @@ pub enum OocError {
     /// A chunk load needs `needed` bytes of the cache budget, but `pinned` bytes are pinned
     /// and the budget cannot hold both (REQ-GEO.OOC.CACHE-002).
     CacheExhausted { needed: u64, pinned: u64 },
+    /// The cancellation flag was set; a stream returns no further block and a digest pass
+    /// no digest (GEO.OOC.STREAM).
+    Cancelled,
+    /// The value of `channel` at point `index` has no exact `f64` form, so it cannot be
+    /// carried in a `PointBlock` channel (a `timestamp_ns` beyond +-2^53).
+    InexactChannel { channel: &'static str, index: u64 },
 }
 
 impl OocError {
@@ -149,6 +158,8 @@ impl OocError {
             OocError::WriterFailed => "writer_failed",
             OocError::ChunkIntegrity { .. } => "chunk_integrity",
             OocError::CacheExhausted { .. } => "cache_exhausted",
+            OocError::Cancelled => "cancelled",
+            OocError::InexactChannel { .. } => "inexact_channel",
         }
     }
 }
@@ -180,6 +191,10 @@ impl fmt::Display for OocError {
             }
             OocError::CacheExhausted { needed, pinned } => {
                 write!(f, "cache_exhausted: needs {needed} bytes, {pinned} bytes pinned")
+            }
+            OocError::Cancelled => write!(f, "cancelled"),
+            OocError::InexactChannel { channel, index } => {
+                write!(f, "inexact_channel: {channel} at point {index} has no exact f64 form")
             }
         }
     }

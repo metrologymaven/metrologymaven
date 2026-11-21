@@ -279,3 +279,60 @@ impl ChunkStore for NullStore {
         Err(OocError::Store { code: "not_found", detail: String::new() })
     }
 }
+
+// ------------------------------------------------------------------ stream sequence digest
+
+/// Adds the points of `b` to a GEO.OOC.STREAM sequence digest v1 (see
+/// `fixtures/geo/ooc/make_stream_fixtures.py`): per point, index u64 | x y z raw f64 bits |
+/// the block's channels in name order (colour 3 bytes, intensity stored f32 bits, normal
+/// raw f64 x y z, quality u16, scanner_id u32, timestamp_ns i64), little-endian.
+pub fn seq_update(h: &mut fid_kci::kci::Sha256, b: &fid_geo_ooc::StreamBlock) {
+    let a = &b.attrs;
+    for i in 0..b.len() {
+        h.update(&b.original_index[i].to_le_bytes());
+        for col in [&b.x, &b.y, &b.z] {
+            h.update(&col[i].to_bits().to_le_bytes());
+        }
+        if let Some(c) = &a.colour {
+            h.update(&c[i]);
+        }
+        if let Some(v) = &a.intensity {
+            h.update(&fid_geo_ooc::intensity_bits(v[i]).to_le_bytes());
+        }
+        if let Some(n) = &a.normal {
+            for col in n {
+                h.update(&col[i].to_bits().to_le_bytes());
+            }
+        }
+        if let Some(v) = &a.quality {
+            h.update(&v[i].to_le_bytes());
+        }
+        if let Some(v) = &a.scanner_id {
+            h.update(&v[i].to_le_bytes());
+        }
+        if let Some(v) = &a.timestamp_ns {
+            h.update(&v[i].to_le_bytes());
+        }
+    }
+}
+
+/// Streams `m` with `cfg` to the end: the index sequence, the sequence digest (hex) and
+/// the block lengths.
+pub fn stream_all(
+    m: &fid_geo_ooc::ChunkManifest,
+    store: &dyn ChunkStore,
+    cache: &fid_geo_ooc::ChunkCache,
+    cfg: fid_geo_ooc::StreamConfig,
+) -> (Vec<u64>, String, Vec<usize>) {
+    let mut s = fid_geo_ooc::ChunkStream::new(m, store, cache, None, cfg).unwrap();
+    let mut h = fid_kci::kci::Sha256::new();
+    let (mut idx, mut lens) = (Vec::new(), Vec::new());
+    while let Some(b) = s.next_stream_block() {
+        let b = b.unwrap();
+        seq_update(&mut h, &b);
+        idx.extend_from_slice(&b.original_index);
+        lens.push(b.len());
+    }
+    assert!(s.next_stream_block().is_none(), "the stream stays ended");
+    (idx, hex(&h.finish()), lens)
+}

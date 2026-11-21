@@ -73,7 +73,10 @@ The only way kernel operations read a chunked cloud: a stream of full-resolution
 
 ## Open questions
 
-- None.
+- **Build status (partial, not marked built).** Crate `fid-geo-ooc` module `stream` implements and tests AC-1, AC-2 and AC-3. **AC-4 is open:** `LodPoints` is defined by `GEO.OOC.LOD`, which is not built yet, so the compile-fail test cannot be written; it lands with GEO.OOC.LOD (its AC-5 is the same test). Set `built_in` once AC-4 passes.
+- The trait in `fid-geo-types` returns `GeoTypeError`, not `OocError` as the Design says; the build added `GeoTypeError::Cancelled` and `GeoTypeError::Source { code, detail }` so stream errors reach kernel consumers with their stable code.
+- In spatial order an original index repeated in two different chunks is not detected (that needs memory proportional to the cloud); the original-order stream and the original digest detect it. Should spatial streaming require a prior original-order verification of a manifest from an untrusted source?
+- Multi-pass merging was not needed: the merge keeps 24 bytes of cursor state per chunk (bounded by the manifest) and pins at most `fan_in` chunks, re-fetching others through the chunk cache.
 
 ## Children
 

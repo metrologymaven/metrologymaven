@@ -1,0 +1,131 @@
+{
+ "cases": [
+  {
+   "n_chunks": 7,
+   "n_points": 12,
+   "name": "tiny_all_channels",
+   "original_digest": "6da8a5a931e3b40ef2984e30a98861c3c40a22b59661bb91092b21eb8c2b8404",
+   "spatial_digest": "a88691100029602070dafa67f9f6b60b049b9f98863c75e378ab7b0d570330b7",
+   "spatial_order": [
+    0,
+    3,
+    6,
+    5,
+    4,
+    8,
+    7,
+    9,
+    1,
+    2,
+    10,
+    11
+   ]
+  },
+  {
+   "n_chunks": 64,
+   "n_points": 2000,
+   "name": "seeded_2000",
+   "original_digest": "b3319b99c8a37eaeee80696f1280b62e6a8bc598716cea397f62673680b5bee5",
+   "spatial_digest": "393df8afebb439beef156d20d0e69cf4f37afd3c76d3f71b8b92bfb127435328"
+  },
+  {
+   "n_chunks": 12,
+   "n_points": 15,
+   "name": "boundaries",
+   "original_digest": "7747b6edeaf1810a4edc9315d7bf7a420ebf99dedad80e026e8a048ba85bddda",
+   "spatial_digest": "156f11456350e5647269357fd81ac6d426e103a269df049dbb718d95944ca1f8",
+   "spatial_order": [
+    0,
+    11,
+    12,
+    13,
+    14,
+    9,
+    5,
+    3,
+    7,
+    8,
+    10,
+    4,
+    2,
+    6,
+    1
+   ]
+  },
+  {
+   "n_chunks": 9,
+   "n_points": 15,
+   "name": "boundaries_bounds",
+   "original_digest": "7747b6edeaf1810a4edc9315d7bf7a420ebf99dedad80e026e8a048ba85bddda",
+   "spatial_digest": "05a0260d134b9244541c7456372e37afab3c421de4f630d1138826a7ca7771ab",
+   "spatial_order": [
+    0,
+    11,
+    12,
+    13,
+    14,
+    9,
+    5,
+    3,
+    7,
+    8,
+    4,
+    10,
+    2,
+    6,
+    1
+   ]
+  },
+  {
+   "n_chunks": 4,
+   "n_points": 5,
+   "name": "nan_intensity",
+   "original_digest": "a1b8fdd1dddd98bfdd23ae53bb0e8242ec071f9fc30eb6f217afa508743161d8",
+   "spatial_digest": "a1b8fdd1dddd98bfdd23ae53bb0e8242ec071f9fc30eb6f217afa508743161d8",
+   "spatial_order": [
+    0,
+    1,
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "n_chunks": 5,
+   "n_points": 6,
+   "name": "neg_zero_minus",
+   "original_digest": "c5e3cb3df34c810eca786c104330f349440aa0b06ec1240048984d182aad4fca",
+   "spatial_digest": "b370acd42026528d592f8f405f209a0939833859925d496570c3741cd3bd274a",
+   "spatial_order": [
+    0,
+    3,
+    2,
+    5,
+    1,
+    4
+   ]
+  },
+  {
+   "n_chunks": 16,
+   "n_points": 500,
+   "name": "flat_z",
+   "original_digest": "00fb534c353a94212fbdfc38af11b9b13f5e6c43785558b4d0e75322e84d91cd",
+   "spatial_digest": "d357431576889ff3166eecc575ea08db8b778e16fc3376959056a52a75a6f04d"
+  }
+ ],
+ "cloud_5e6": {
+  "max_chunk_points": 65536,
+  "n_chunks": 266,
+  "n_points": 5000000,
+  "original_digest": "6577d022ebac0fc58df312234c412b0421ccf33421e1860eaba63b5075ce6a21",
+  "spatial_digest": "6e7700b4d909fce0876233001a11529fa0b7002328432969dd5cffe240e37f94"
+ },
+ "cloud_5e6_small": {
+  "max_chunk_points": 4096,
+  "n_chunks": 187,
+  "n_points": 200000,
+  "original_digest": "bcae154efcc0881845831a685cd1f747f703e0c8e6ea0798b8ac7cf1cc08bd97",
+  "spatial_digest": "3f16a98a524df541cc10b14f7b078e4aa076aa9f5f0dd36398cc9c7481943656"
+ },
+ "comment": "GEO.OOC.STREAM vectors from make_stream_fixtures.py (independent Python reference). CC-BY-4.0. Clouds are those of layout_vectors.json and cloud_5e6 (same names and parameters). Sequence digest v1: SHA-256 over, per emitted point, index u64 | x y z raw f64 bits | the cloud's channels in name order (colour 3 bytes, intensity stored f32 bits, normal 3 raw f64, quality u16, scanner_id u32, timestamp_ns i64), little-endian. spatial_order lists original indexes in spatial order for clouds of at most 64 points."
+}

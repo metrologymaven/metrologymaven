@@ -8,7 +8,9 @@
 //! convert in both directions; [`ChunkWriter`] builds the same chunks from points streamed
 //! in original order with bounded memory, for files larger than memory. [`ChunkCache`]
 //! (spec node `GEO.OOC.CACHE`) loads chunks on demand under a memory budget, verifying
-//! each against its manifest digest.
+//! each against its manifest digest. [`ChunkStream`] (spec node `GEO.OOC.STREAM`) streams
+//! the full-resolution points in spatial or original order as a `PointSource`, the only way
+//! kernel code reads a chunked cloud.
 //!
 //! Everything below is pinned for format version 1 and reproduced by the independent
 //! Python reference `fixtures/geo/ooc/make_layout_fixtures.py`.
@@ -89,6 +91,7 @@ mod error;
 mod format;
 mod layout;
 mod store;
+pub mod stream;
 pub mod writer;
 
 pub use cache::{
@@ -104,6 +107,10 @@ pub use format::{
 };
 pub use layout::{memory_needed, to_chunks, to_chunks_in, to_memory, LayoutParams, DEFAULT_MAX_CHUNK_POINTS};
 pub use store::{blob_address, ChunkStore, MemStore, STORE_CHUNK_SIZE};
+pub use stream::{
+    original_digest, to_geo_error, verify_original_digest, ChunkStream, StreamBlock, StreamConfig, StreamOrder,
+    DEFAULT_BLOCK_POINTS, DEFAULT_FAN_IN, MAX_BLOCK_POINTS, MAX_FAN_IN,
+};
 pub use writer::{ChunkWriter, CloudHeader, PointAttrs, WriterConfig, WriterStats, DEFAULT_SPILL_BUDGET};
 
 /// Stores the manifest bytes as a blob and returns its address and length. For a manifest

@@ -112,24 +112,13 @@ impl ChunkStore for MemStore {
 
 #[cfg(feature = "store")]
 mod blob_store {
-    use super::{ChunkStore, STORE_CHUNK_SIZE};
+    use super::ChunkStore;
     use crate::error::OocError;
-    use fid_store::cas::{Address, BlobRef, ObjectRef};
     use fid_store::{BlobStore, CasError, PutOpts};
     use fid_types::Digest;
 
     fn store_err(e: CasError) -> OocError {
         OocError::Store { code: e.code(), detail: e.to_string() }
-    }
-
-    /// The store address of content of `size` bytes named `digest`.
-    fn cas_address(digest: [u8; 32], size: u64) -> Address {
-        let digest = Digest::from_bytes(digest);
-        if size <= STORE_CHUNK_SIZE {
-            Address::Blob(BlobRef { digest, size })
-        } else {
-            Address::Object(ObjectRef { manifest_digest: digest, size })
-        }
     }
 
     impl ChunkStore for BlobStore {
@@ -138,8 +127,12 @@ mod blob_store {
             Ok(a.digest().to_bytes())
         }
 
+        /// Reads through `BlobStore::read_object`, the store's verified content read: a blob
+        /// is returned only if it hashes to `address`, an object only after every chunk
+        /// verifies, and a chunked object's manifest blob is never returned as the content.
+        /// `size` bounds the read before anything is allocated.
         fn get_blob(&self, address: &[u8; 32], size: u64) -> Result<Vec<u8>, OocError> {
-            let bytes = self.get(&cas_address(*address, size)).map_err(store_err)?;
+            let bytes = self.read_object(&Digest::from_bytes(*address), size).map_err(store_err)?;
             if bytes.len() as u64 != size {
                 return Err(OocError::Store {
                     code: "integrity",
