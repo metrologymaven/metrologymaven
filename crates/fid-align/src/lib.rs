@@ -13,11 +13,15 @@
 //! - [`residuals`]: `align.get_residuals@1` (R0, spec node `ALN.QA.REPORT`), the paged read of
 //!   an alignment's [`ResidualReport`] (built in the kernel crate `fid-align-solve`), and the
 //!   [`ResidualStore`] that keeps reports by the ID an alignment's `report` reference names.
+//! - [`diagnostics`]: `align.get_diagnostics@1` (R0, spec node `ALN.QA.COND`), the read of the
+//!   conditioning diagnostics (computed by `fid_align_solve::diagnose`) and convergence history
+//!   stored with an alignment's residual report.
 //!
 //! Nothing here panics; every input is bounded and every refusal is a typed [`AlignError`].
 //! No floating-point arithmetic happens in this crate: values are copied bit for bit.
 
 pub mod command;
+pub mod diagnostics;
 pub mod element;
 mod error;
 pub mod model;
@@ -29,6 +33,7 @@ pub use command::{
     ActivityEntry, GetParams, ListParams, Surface, CLI_GET, CLI_LIST, GET_ALIGNMENT, LIST_ALIGNMENTS, MAX_PARAMS_BYTES,
     MAX_PARAMS_DEPTH, MCP_GET, MCP_LIST,
 };
+pub use diagnostics::{get_diagnostics, DiagnosticsParams, CLI_DIAGNOSTICS, GET_DIAGNOSTICS, MCP_DIAGNOSTICS};
 pub use element::{
     Alignment, AlignmentStatus, ElementRef, InputRef, ParamSet, ParentRef, PrincipalKind, Provenance, ProvenanceState,
     ReportRef, MAX_ELEMENT_BYTES, MAX_INPUTS, MAX_PARAMS, MAX_PARAM_NAME, MAX_PRINCIPAL_BYTES,
@@ -43,6 +48,8 @@ pub use residuals::{
 };
 pub use solver::{AlignmentSolver, SolveStatus, SolverError, SolverOutput, SolverRegistry, MAX_SOLVERS};
 
+/// The conditioning diagnostics (kernel crate `fid-align-solve`, ALN.QA.COND).
+pub use fid_align_solve::{diagnose, AlignmentDiagnostics, CondError, CondWarning, Threshold, ThresholdBasis};
 /// The residual report and its builder (kernel crate `fid-align-solve`, ALN.QA.REPORT).
 pub use fid_align_solve::{
     Disposition, Entry, EntryKind, EntryRef, RejectReason, ReportBuilder, ReportError, ResidualReport, ResidualStats,
