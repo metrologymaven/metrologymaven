@@ -17,8 +17,12 @@ path = "src/main.rs"
 fid-accept = { path = "../fid-accept" }
 # Also bounded JSON parsing for bot configs and the review export (`bots-check`).
 fid-canon = { path = "../fid-canon" }
-# `mig ladder-check` (MIG.LADDER.DEF): the ladder loader and check (services layer).
+# `mig ladder-check` (MIG.LADDER.DEF) and `mig sources-check` (MIG.SRC.REG): the ladder and
+# source-register loaders and checks (services layer).
 fid-mig = { path = "../fid-mig" }
+# `mig sources-check --vocab-rules` (MIG.SRC.REG vocabulary check): the project's one
+# vocabulary and claim lint engine (ECO.RULES.VOCAB.ENGINE, app layer).
+fid-vocab = { path = "../fid-vocab" }
 # `registry-gate` (CORE.REG.VER.GATE): the manifest reader, the compatibility classifier
 # (`compat::diff`) and the lifecycle check, the gate's only sources of truth (model layer).
 fid-registry = { path = "../fid-registry" }
@@ -32,6 +36,11 @@ sha2 = "0.10"
 # Parses Cargo.toml and repos.toml for `pins`, and bots.toml and TOML bot configs for `bots-check`
 # as untyped tables (no serde derive; same feature set as fid-knp1-lint).
 toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[dev-dependencies]
+# tests/mig_sources_check.rs builds the workspace registry manifest the production source
+# register is checked against (MIG.SRC.REG); services layer, already in the lock.
+fid-registry-build = { path = "../fid-registry-build" }
 
 [lints]
 workspace = true

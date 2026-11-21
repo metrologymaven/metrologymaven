@@ -326,7 +326,9 @@ pub fn max_projection(class: SideEffect) -> Projection {
 ///   other command (and no agent-runnable command but the request) can emit one.
 /// - `ProfileSet` of TRUST.PROFILE.SELECT belongs to `sign.set_profile@1` (A0, human only):
 ///   the active governance profile is folded from it, so no other command may emit it.
-pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 11] = [
+/// - `RunStarted` of AUTO.RUN.BIND belongs to `program.run@1` (AUTO.RUN.EXEC): run records,
+///   with their trial and override flags, are folded from it, so no other command may emit it.
+pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 12] = [
     ("BranchCreated", Some(("journal.create_branch", 1))),
     ("BranchPromoted", Some(("journal.promote_branch", 1))),
     ("BranchProtected", Some(("journal.protect_branch", 1))),
@@ -338,6 +340,7 @@ pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 11] = [
     ("RequestFiled", Some(("request.file_request", 1))),
     ("RequestRejected", Some(("request.reject_request", 1))),
     ("RequestWithdrawn", Some(("request.withdraw_request", 1))),
+    ("RunStarted", Some(("program.run", 1))),
 ];
 
 /// Validates declarations with the default limits and the `GEO.FRAME.UNITS` catalogue.

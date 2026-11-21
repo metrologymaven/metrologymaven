@@ -34,7 +34,8 @@
 //!    perpendicular from the centroid (the origin) onto the axis, `(E1', E2')` by the basis rule,
 //!    and the solve is repeated from `a = b = u = v = 0` (and the current `r`). This stops after
 //!    a round with no accepted step, or after [`REPARAM_ROUNDS`] rounds. A later round that
-//!    fails (any solver error) ends the rounds and keeps the last converged round, so a start
+//!    fails with a solver error (not a numeric one: a non-finite value or an allocation failure
+//!    passes through) ends the rounds and keeps the last converged round, so a start
 //!    that converged is never discarded by its re-anchoring. So the reported
 //!    gradient, rank and condition are those of the tangent-plane parameters about the final
 //!    axis, and the iteration count is the sum over the rounds. (The NLLS driver has no
@@ -328,6 +329,13 @@ struct Outcome {
     iterations: usize,
 }
 
+/// Rule 5: whether a round's solver error `e` keeps the converged earlier round (`have_round`)
+/// instead of failing the start. A numeric error (`Numeric`: an `eval` error, an allocation
+/// failure or an overflow; `NonFinite`) never does.
+fn keeps_earlier_round(e: &nlls::SolverError, have_round: bool) -> bool {
+    have_round && !matches!(e, nlls::SolverError::Numeric { .. } | nlls::SolverError::NonFinite { .. })
+}
+
 /// Rule 5: solve, re-anchor, repeat.
 fn solve_rounds(q: &[f64], fr0: Frame, layout: Layout, x0: Vec<f64>, cfg: &NllsConfig) -> Result<Outcome, FitError> {
     let mut fr = fr0;
@@ -338,8 +346,9 @@ fn solve_rounds(q: &[f64], fr0: Frame, layout: Layout, x0: Vec<f64>, cfg: &NllsC
         let prob = Problem { q, fr, layout };
         let res = match nlls::solve(&prob, &x, cfg) {
             Ok(res) => res,
-            // A later round's failure keeps the converged earlier round (rule 5).
-            Err(_) if done.is_some() => break,
+            // A later round's solver failure keeps the converged earlier round (rule 5); a
+            // numeric error (non-finite value, allocation failure) always passes through.
+            Err(e) if keeps_earlier_round(&e, done.is_some()) => break,
             Err(e) => return Err(FitError::from_solver(e, cfg)),
         };
         iterations = iterations.saturating_add(res.iterations);
@@ -624,5 +633,32 @@ impl Fit for CylinderLs {
             });
         }
         Ok(f.result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::keeps_earlier_round;
+    use fid_num::NumError;
+    use fid_solv::nlls::{Diagnostics, SolverError, Stage};
+
+    /// Rule 5 (review of #362): a later round's numeric error passes through; any other solver
+    /// error keeps the earlier round, and with no earlier round every error fails the start.
+    #[test]
+    fn numeric_errors_never_keep_the_earlier_round() {
+        let last = Diagnostics::default();
+        let numeric = SolverError::Numeric { error: NumError::Domain { op: "t", detail: "allocation_failed" }, last };
+        let non_finite = SolverError::NonFinite { stage: Stage::Residual, index: Some(0), last };
+        let limit = SolverError::IterationLimit { last };
+        let rank = SolverError::RankDeficient { rank: 3, cond: None, last };
+        for e in [&numeric, &non_finite] {
+            assert!(!keeps_earlier_round(e, true), "{e:?}");
+        }
+        for e in [&limit, &rank] {
+            assert!(keeps_earlier_round(e, true), "{e:?}");
+        }
+        for e in [&numeric, &non_finite, &limit, &rank] {
+            assert!(!keeps_earlier_round(e, false), "{e:?}");
+        }
     }
 }

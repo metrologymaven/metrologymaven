@@ -1,3 +1,6 @@
 # Design review records need the human maintainer (UX.SYSTEM.REVIEW). Advisory unless branch
 # protection requires code-owner review.
 /design/review/records/ @metrologymaven
+# The incumbent source register and its inline review records (MIG.SRC.REG): a record's
+# authority is the code-owner-reviewed merge, not its own fields.
+/data/mig/sources.json @metrologymaven
