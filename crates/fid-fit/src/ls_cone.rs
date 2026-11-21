@@ -44,7 +44,9 @@
 //!    (`r' = r + s tan(alpha)` with `s` the signed shift along `d`), `(E1', E2')` by the basis
 //!    rule of `KRN.LSQ.INIT` step 3, and the solve is repeated from `a = b = u = v = 0`. This
 //!    stops after a round with no accepted step, or after [`REPARAM_ROUNDS`] rounds; a later
-//!    round's solver error (not a numeric one) keeps the last converged round, as in `ls_cyl`.
+//!    round's ill-conditioned or rank-deficient solve fails the start with
+//!    [`FitError::IllPosedCone`]; any other later-round solver error (not a numeric one) keeps
+//!    the last converged round, as in `ls_cyl`.
 //!    Residuals of a round whose `alpha` was shifted by `pi` are negated so that they are the
 //!    canonical cone's.
 //! 6. **Comparable parameters.** Each start's outcome is reported to `mstart` as its
@@ -72,7 +74,15 @@
 //!    [`FitError::ImplausibleFit`]; `rms / plane_rms > SUSPECT_RATIO` sets
 //!    [`ConeFit::suspect_axis`] (the constants are `ls_cyl`'s).
 //! 10. **Trait (fail closed).** [`Fit::fit`] runs with [`ConeOptions::default`] and returns
-//!     only clean fits: `local_optimum_only` or `suspect_axis` is [`FitError::FlaggedFit`].
+//!     only clean fits: `local_optimum_only` or `suspect_axis` is [`FitError::FlaggedFit`], and
+//!     then a weak axis (rule 11) is [`FitError::IllPosedCone`] (code `ill_conditioned`).
+//! 11. **Uncertainty.** [`ConeFit::uncertainty`] holds the standard uncertainties
+//!     `sigma * sqrt(diag((J^T J)^-1))` of the axis tilts, the reference point across the axis,
+//!     the radius and the half-angle about the final cone (see `uncertainty`). The condition
+//!     limit of rule 7 is a numeric guard only; a well-conditioned fit can still have a weak
+//!     axis when the data is noisy or short, so the axis uncertainty above
+//!     [`ConeOptions::max_axis_u_rad`] sets [`ConeFit::weak_axis`] and the trait refuses it, so
+//!     a weak axis never silently becomes a datum. [`fit_cone`] returns it with the flag.
 //!
 //! # Determinism
 //!
@@ -85,13 +95,14 @@ use core::cmp::Ordering;
 use core::f64::consts::{FRAC_PI_2, PI};
 
 use fid_kci::AlgorithmId;
+use fid_num::la::{lstsq, Mat};
 use fid_num::{f, red, NumError};
 use fid_solv::mstart::{self, MultiStartError, StartError, StartOrigin, StartSpec, StartSummary};
 use fid_solv::nlls::{self, NllsConfig, NllsProblem, NllsResult};
 use fid_types::Determinism;
 
 use crate::contract::{
-    algorithm_id, check_points, command_row, data_shape, unit_direction, Centred, CommandRow, Field, Fit,
+    algorithm_id, check_points, DEFAULT_RANK_TOL, command_row, data_shape, unit_direction, Centred, CommandRow, Field, Fit,
     FitDiagnostics, FitError, FitParams, FitResult, FittedFeature, Method, PointsView, Primitive, ValueType, Weights,
     V3,
 };
@@ -122,6 +133,10 @@ pub const DEFAULT_APEX_REPORT_LIMIT_M: f64 = 1.0;
 /// 70, a 30 degree band `1e-3` radii long is about 650.
 pub const DEFAULT_COND_LIMIT: f64 = 300.0;
 
+/// Default largest accepted standard uncertainty of the axis direction through the `Fit` trait
+/// (radians, rule 11): 1 mrad [unverified].
+pub const DEFAULT_MAX_AXIS_U_RAD: f64 = 1e-3;
+
 const OP: &str = "fit.ls_cone";
 
 /// The least-squares cone `fit.cone.ls@1.0.0`.
@@ -145,6 +160,10 @@ pub struct ConeOptions {
     /// Largest accepted scaled-Jacobian condition estimate of the selected cone (finite, at
     /// least 1).
     pub cond_limit: f64,
+    /// Largest accepted standard uncertainty of the axis direction (radians, positive; `+inf`
+    /// accepts every axis). Above it [`ConeFit::weak_axis`] is set and the `Fit` trait refuses
+    /// the fit with [`FitError::IllPosedCone`] (rule 11) [unverified].
+    pub max_axis_u_rad: f64,
 }
 
 impl Default for ConeOptions {
@@ -155,6 +174,7 @@ impl Default for ConeOptions {
             near_ninety: DEFAULT_NEAR_NINETY,
             apex_report_limit_m: DEFAULT_APEX_REPORT_LIMIT_M,
             cond_limit: DEFAULT_COND_LIMIT,
+            max_axis_u_rad: DEFAULT_MAX_AXIS_U_RAD,
         }
     }
 }
@@ -166,7 +186,7 @@ impl ConeOptions {
     ///
     /// `InvalidParams` with field `cone.fixed_half_angle`, `cone.near_zero`, `cone.near_ninety`,
     /// `cone.thresholds` (their sum not below `pi/2`), `cone.apex_report_limit_m` or
-    /// `cone.cond_limit`.
+    /// `cone.cond_limit` or `cone.max_axis_u_rad`.
     pub fn validate(&self) -> Result<(), FitError> {
         let bad = |field| Err(FitError::InvalidParams { field });
         if let Some(h) = self.fixed_half_angle {
@@ -188,6 +208,9 @@ impl ConeOptions {
         }
         if !(self.cond_limit.is_finite() && self.cond_limit >= 1.0) {
             return bad("cone.cond_limit");
+        }
+        if self.max_axis_u_rad.is_nan() || self.max_axis_u_rad <= 0.0 {
+            return bad("cone.max_axis_u_rad");
         }
         Ok(())
     }
@@ -234,6 +257,33 @@ pub struct ConeFit {
     pub rms_ratio: f64,
     /// `rms_ratio > SUSPECT_RATIO`: the axis is weakly determined or wrong (rule 9).
     pub suspect_axis: bool,
+    /// Standard uncertainties of the fit (rule 11).
+    pub uncertainty: ConeUncertainty,
+    /// `uncertainty.axis_rad > options.max_axis_u_rad` (rule 11): the `Fit` trait refuses it.
+    pub weak_axis: bool,
+}
+
+/// Standard uncertainties `sigma * sqrt(diag((J^T J)^-1))` of the parameters about the final
+/// cone (rule 11), `sigma^2 = sum e_i^2 / (m - n)` the residual variance. They describe the
+/// data's noise propagated through the linearised fit, not the measurement uncertainty.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ConeUncertainty {
+    /// The unit vectors the axis tilts and the point shifts are measured along (a right-handed
+    /// frame `(e1, e2, axis)` by `KRN.LSQ.INIT`'s basis rule).
+    pub e1: V3,
+    pub e2: V3,
+    /// Residual standard deviation `sigma` (metres).
+    pub sigma_m: f64,
+    /// Axis tilt towards `e1` and towards `e2` (radians).
+    pub axis_tilt_rad: [f64; 2],
+    /// `sqrt(tilt_1^2 + tilt_2^2)`: the axis direction's standard uncertainty (radians).
+    pub axis_rad: f64,
+    /// The reference point across the axis, along `e1` and `e2` (metres).
+    pub point_m: [f64; 2],
+    /// The radius at the reference point (metres).
+    pub radius_m: f64,
+    /// The half-angle (radians); `None` when it is fixed.
+    pub half_angle_rad: Option<f64>,
 }
 
 fn alloc<T>(n: usize) -> Result<Vec<T>, FitError> {
@@ -424,6 +474,20 @@ fn keeps_earlier_round(e: &nlls::SolverError, have_round: bool) -> bool {
     have_round && !matches!(e, nlls::SolverError::Numeric { .. } | nlls::SolverError::NonFinite { .. })
 }
 
+/// Rule 5: a later round that is ill-conditioned or rank deficient fails the start with
+/// [`FitError::IllPosedCone`] (the converged earlier round's half-angle `alpha`) instead of
+/// keeping that round: the cone is ill-posed about its own optimum. `None` for any other error
+/// or in the first round (`alpha` is `None`).
+fn later_round_ill_posed(e: &nlls::SolverError, alpha: Option<f64>) -> Option<FitError> {
+    let alpha = alpha?;
+    match e {
+        nlls::SolverError::IllConditioned { cond, .. } | nlls::SolverError::RankDeficient { cond, .. } => {
+            Some(FitError::IllPosedCone { half_angle: alpha, cond: *cond })
+        }
+        _ => None,
+    }
+}
+
 /// Rule 5's canonical form of a converged `(P, d, r, alpha)`: `alpha` into `(-pi/2, pi/2]` (the
 /// returned flag says whether a shift of `pi` negated the residuals), then `alpha >= 0` by
 /// reversing `d`; `P` moved to the foot of the origin with the radius there.
@@ -464,8 +528,11 @@ fn solve_rounds(q: &[f64], fr0: Frame, layout: Layout, x0: Vec<f64>, cfg: &NllsC
         let prob = Problem { q, fr, layout };
         let mut res = match nlls::solve(&prob, &x, cfg) {
             Ok(res) => res,
-            Err(e) if keeps_earlier_round(&e, done.is_some()) => break,
-            Err(e) => return Err(FitError::from_solver(e, cfg)),
+            Err(e) => match (later_round_ill_posed(&e, done.as_ref().map(|o| o.alpha)), &done) {
+                (Some(ill), _) => return Err(ill),
+                (None, Some(_)) if keeps_earlier_round(&e, true) => break,
+                _ => return Err(FitError::from_solver(e, cfg)),
+            },
         };
         iterations = iterations.saturating_add(res.iterations);
         let full = layout.full(&res.p).ok_or(FitError::InvalidParams { field: "params" })?;
@@ -589,13 +656,17 @@ pub fn fit_cone(
 ///
 /// # Errors
 ///
-/// As [`fit_cone`].
+/// As [`fit_cone`], and [`FitError::InvalidParams`] `start.primitive` for a start that is not
+/// a cone start.
 pub fn fit_cone_from(
     pts: &PointsView<'_>,
     params: &FitParams,
     opts: &ConeOptions,
     start: &AxialStart,
 ) -> Result<ConeFit, FitError> {
+    if start.primitive != Primitive::Cone {
+        return Err(FitError::InvalidParams { field: "start.primitive" });
+    }
     run(pts, params, opts, start)
 }
 
@@ -657,6 +728,8 @@ fn run(pts: &PointsView<'_>, params: &FitParams, opts: &ConeOptions, st: &AxialS
         return Err(FitError::ImplausibleFit { rms: result.stats.rms, bound: plane });
     }
     let suspect = f::total_cmp(ratio, SUSPECT_RATIO)? == Ordering::Greater;
+    let uncertainty = uncertainty(&c, layout, best)?;
+    let weak_axis = f::total_cmp(uncertainty.axis_rad, opts.max_axis_u_rad)? == Ordering::Greater;
     Ok(ConeFit {
         result,
         point,
@@ -676,6 +749,71 @@ fn run(pts: &PointsView<'_>, params: &FitParams, opts: &ConeOptions, st: &AxialS
         plane_rms: plane,
         rms_ratio: ratio,
         suspect_axis: suspect,
+        uncertainty,
+        weak_axis,
+    })
+}
+
+/// Rule 11: the Jacobian at the canonical cone in its own frame (axis `d`, point the foot,
+/// basis of `d`, parameters `(0, 0, 0, 0, r, alpha)`, so the tilt parameters are angles to first
+/// order), `J^T J` by `red::dot` of its columns, its inverse column by column with
+/// `fid_num::la::lstsq`, and `sigma^2 = red::sum_sq(e) / (m - n)`; lengths mapped to metres.
+fn uncertainty(c: &Centred, layout: Layout, o: &Outcome) -> Result<ConeUncertainty, FitError> {
+    let (e1, e2) = init::basis(o.d)?;
+    let fr = Frame { p0: o.p, a: o.d, e1, e2 };
+    let prob = Problem { q: c.xyz(), fr, layout };
+    let (m, n) = (prob.n_resid(), prob.n_params());
+    let x = layout.free([0.0, 0.0, 0.0, 0.0, o.r, o.alpha])?;
+    let mut r = alloc(m)?;
+    r.resize(m, 0.0);
+    let mut j = alloc(m.checked_mul(n).ok_or(FitError::TooLarge { n: m, max: m })?)?;
+    j.resize(m * n, 0.0);
+    prob.eval(&x, &mut r, &mut j)?;
+    if m <= n {
+        return Err(FitError::TooFewPoints { n: m, need: n + 1 });
+    }
+    let sigma = f::sqrt(red::sum_sq(&r)? / (m - n) as f64)?;
+    let mut cols: Vec<Vec<f64>> = alloc(n)?;
+    for k in 0..n {
+        let mut col = alloc(m)?;
+        for row in j.chunks_exact(n) {
+            col.push(*row.get(k).ok_or(FitError::BadLength { len: j.len() })?);
+        }
+        cols.push(col);
+    }
+    let mut jtj = [[0.0; 6]; 6];
+    for (row, ca) in jtj.iter_mut().zip(&cols) {
+        for (v, cb) in row.iter_mut().zip(&cols) {
+            *v = red::dot(ca, cb)?;
+        }
+    }
+    let rows: Vec<&[f64]> = jtj[..n].iter().map(|row| &row[..n]).collect();
+    let mat = Mat::from_rows(&rows)?;
+    let mut var = [0.0; 6];
+    for (k, v) in var.iter_mut().enumerate().take(n) {
+        let mut e = [0.0; 6];
+        e[k] = 1.0;
+        let sol = lstsq(&mat, &e[..n], DEFAULT_RANK_TOL)?;
+        if sol.diag.rank < n {
+            return Err(FitError::IllConditioned { cond: None });
+        }
+        let x = *sol.x.get(k).ok_or(FitError::InvalidParams { field: "params" })?;
+        if x.is_nan() || x < 0.0 {
+            return Err(FitError::IllConditioned { cond: None });
+        }
+        *v = sigma * f::sqrt(x)?;
+    }
+    let map = c.map();
+    let axis_rad = f::hypot(var[0], var[1])?;
+    Ok(ConeUncertainty {
+        e1,
+        e2,
+        sigma_m: map.inverse_length(sigma)?,
+        axis_tilt_rad: [var[0], var[1]],
+        axis_rad,
+        point_m: [map.inverse_length(var[2])?, map.inverse_length(var[3])?],
+        radius_m: map.inverse_length(var[4])?,
+        half_angle_rad: if layout.alpha.is_none() { Some(var[5]) } else { None },
     })
 }
 
@@ -779,8 +917,8 @@ impl Fit for ConeLs {
         id()
     }
 
-    /// Rule 10: runs with [`ConeOptions::default`] and fails closed on a flagged fit
-    /// ([`FitError::FlaggedFit`]).
+    /// Rules 10 and 11: runs with [`ConeOptions::default`] and fails closed on a flagged fit
+    /// ([`FitError::FlaggedFit`]) and on a weak axis ([`FitError::IllPosedCone`]).
     fn fit(&self, pts: &PointsView<'_>, params: &FitParams, seed: Option<u64>) -> Result<FitResult, FitError> {
         let f = fit_cone(pts, params, &ConeOptions::default(), seed)?;
         if f.local_optimum_only || f.suspect_axis {
@@ -789,6 +927,9 @@ impl Fit for ConeLs {
                 suspect_axis: f.suspect_axis,
                 rms_ratio: f.rms_ratio,
             });
+        }
+        if f.weak_axis {
+            return Err(FitError::IllPosedCone { half_angle: f.half_angle, cond: Some(f.result.diagnostics.cond) });
         }
         Ok(f.result)
     }

@@ -462,3 +462,16 @@ fn ac4_output_bits_pinned() {
     }
     assert_eq!(h.finish(), OUTPUT_PIN, "output bits changed on {}", std::env::consts::ARCH);
 }
+
+#[test]
+fn explore_hard() {
+    for (c, r) in outcomes() {
+        match r {
+            Ok(f) => eprintln!(
+                "{}: lo {} sus {} weak {} ratio {:.3} u_axis {:e} cond {:.1}",
+                c.name, f.local_optimum_only, f.suspect_axis, f.weak_axis, f.rms_ratio, f.uncertainty.axis_rad, f.result.diagnostics.cond
+            ),
+            Err(e) => eprintln!("{}: {}", c.name, encode_err(e)),
+        }
+    }
+}

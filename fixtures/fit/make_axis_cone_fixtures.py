@@ -44,6 +44,16 @@ normal uniform in [-sqrt(3), sqrt(3)] micrometres; r0 0.01 to 0.05 m; the axial 
   threshold, AC-3): `ha-0.01` (a 0.01 degree cone: near_zero), `ha-89.99` (an 89.99 degree
   cone, the radial band 0.5 to 1.5 r0: near_ninety or cond), `short-band` (a 30 degree cone
   whose axial extent is 3e-4 radii: cond, the tilt and shift of the axis are indistinguishable).
+- Hand-labelled `expect hard` cases, data on which the starts can disagree, the axis is weak
+  or wrong, or no cone beats the plane: `hard-shortarc-<k>` (30-degree arcs of a 20-degree
+  cone 0.2 radii long, 20 to 150 micrometres of noise), `hard-noisy-<k>` (full 30-degree cones
+  0.5 radii long with 1 to 16 mm of noise), `hard-blob-<k>` (points uniform in a 40 x 40 mm
+  box 0.04 mm to 40 mm thick: no cone at all) and `hard-steep-<k>` (75 to 89.5-degree cones on
+  a radial band 0.5 to 1.5 r0, 5 micrometres of noise). The label is the rule "never
+  confidently wrong": a fit is either refused (`ill_conditioned`, `implausible_fit`,
+  `multi_start`) or returned with `local_optimum_only`, `suspect_axis` or a weak axis, which
+  the `Fit` trait refuses, or it is unflagged and its axis is within 10 of its own standard
+  uncertainties and 0.01 rad of the planted one. There is no reference for these cases.
 - Error cases: `few-5` (5 points: too_few_points n=5 need=6) and `coplanar` (a circle in
   z = 0.125: coplanar n=24 rank=2).
 
@@ -54,7 +64,7 @@ Output lines (hex = 16 lowercase hex digits of an IEEE-754 double):
   fixed_alpha <hex>                                              constraint (optional)
   ref_axis <3 hex> ref_point <3 hex> ref_r <hex> ref_alpha <hex> ref_apex <3 hex>
   ref_rms <hex> plane_rms <hex>
-  expect start | ill_posed <near_zero | near_ninety | cond | near_ninety_or_cond> | <error>
+  expect start | hard | ill_posed <near_zero | near_ninety | cond | near_ninety_or_cond> | <error>
   end
 """
 
@@ -373,6 +383,23 @@ def render():
     name = "short-band"
     pts, truth = cone(name, 30, 360, Decimal("0.3"), extent=Decimal("0.0003"))
     emit(out, name, 360, pts, truth, None, expect="ill_posed cond")
+    for k in range(SHORT_ARCS):
+        name = f"hard-shortarc-{k}"
+        noise = SHORT_ARC_NOISE_UM[k % len(SHORT_ARC_NOISE_UM)]
+        pts, truth = cone(name, 20, 30, Decimal("0.3"), extent=Decimal("0.2"), noise_um=noise)
+        emit(out, name, 30, pts, truth, None, expect="hard")
+    for k, noise in enumerate(NOISY_UM):
+        name = f"hard-noisy-{k}"
+        pts, truth = cone(name, 30, 360, Decimal("0.3"), extent=Decimal("0.5"), noise_um=noise)
+        emit(out, name, 360, pts, truth, None, expect="hard")
+    for k, thick in BLOBS:
+        name = f"hard-blob-{k}"
+        pts, truth = blob(name, Decimal(thick))
+        emit(out, name, 360, pts, truth, None, expect="hard")
+    for k, alpha in enumerate(STEEP_DEG):
+        name = f"hard-steep-{k}"
+        pts, truth = cone(name, alpha, 360, Decimal("0.3"), band=(Decimal("0.5"), Decimal("1.5")), noise_um=Decimal(5))
+        emit(out, name, 360, pts, truth, None, expect="hard")
     z = [Decimal(0), Decimal(0), Decimal(1)]
     zero3 = [Decimal(0)] * 3
     rng = random.Random("axis-cone-v1/few-5")
@@ -384,6 +411,27 @@ def render():
         cop.append([Decimal("0.02") * cc, Decimal("0.02") * s, Decimal("0.125")])
     emit(out, "coplanar", 360, cop, (z, zero3, Decimal("0.02"), deg(30)), None, expect="coplanar n=24 rank=2")
     return "\n".join(out) + "\n"
+
+
+SHORT_ARCS = 12
+SHORT_ARC_NOISE_UM = [Decimal(x) for x in (20, 40, 60, 80, 100, 150)]
+NOISY_UM = [Decimal(x) for x in (1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 8000, 10000, 12000, 16000)]
+BLOBS = [(0, "0.04"), (2, "0.01"), (3, "0.004"), (5, "0.00004"), (72, "0.012")]
+STEEP_DEG = [Decimal(x) for x in ("75", "80", "85", "88", "89.5")]
+
+
+def blob(name, thick):
+    """Points uniform in a 40 x 40 mm box of thickness `thick` 0.3 m out (no cone): the truth
+    lines are placeholders (the box's frame, a 30 degree half-angle)."""
+    rng = random.Random(f"axis-cone-v1/{name}")
+    d, e1, e2 = frame(rng)
+    p0 = offset(rng, Decimal("0.3"))
+    pts = []
+    for _ in range(N):
+        a, b, h = (u01(rng) - Decimal("0.5")) * Decimal("0.04"), (u01(rng) - Decimal("0.5")) * Decimal("0.04"), (u01(rng) - Decimal("0.5")) * thick
+        q = [p0[k] + a * e1[k] + b * e2[k] + h * d[k] for k in range(3)]
+        pts.append([dec(fl(x)) for x in q])
+    return pts, (d, p0, Decimal("0.02"), deg(30))
 
 
 def main():
