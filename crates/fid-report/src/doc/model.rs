@@ -9,7 +9,7 @@
 //!                "id": <uuidv7> } ],
 //!   "retired_ids": [ <uuidv7>, ... ascending ],
 //!   "schema_version": "1",
-//!   "template_ref": null | { "id": <uuid>, "version": "<u32>" },
+//!   "template_ref": null | { "digest": "sha256:<64 hex>", "id": <uuidv7>, "version": "<u32 >= 1>" },
 //!   "title": { "text": <string>, "untrusted": true } }
 //! ```
 //!
@@ -27,6 +27,7 @@ use super::text::{Text, Untrusted};
 use super::value::check_block_values;
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
 use fid_project::Uuid;
+use fid_types::Digest;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// The only stored schema version this leaf reads and writes.
@@ -182,12 +183,45 @@ fn depth_exceeds(v: &CValue, max: usize) -> bool {
 
 // ------------------------------------------------------------------ types
 
-/// The template a report was made from (set by `RPT.MODEL.TMPL`; never set by this leaf's
-/// commands).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The template version a report was made from: template ID (UUIDv7), version (at least 1)
+/// and the SHA-256 of its canonical bytes. Set only by `report.apply_template@1`
+/// (`RPT.MODEL.TMPL.VER`); never by this leaf's commands.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TemplateRef {
     pub id: Uuid,
     pub version: u32,
+    pub digest: Digest,
+}
+
+impl TemplateRef {
+    /// `{"digest", "id", "version"}` (version a decimal string once canonical).
+    pub fn to_value(&self) -> CValue {
+        obj([
+            ("digest", CValue::Str(self.digest.as_str().to_string())),
+            ("id", CValue::Str(self.id.to_string())),
+            ("version", CValue::U64(u64::from(self.version))),
+        ])
+    }
+
+    /// Strict reader of [`TemplateRef::to_value`]: exactly these keys, a canonical UUIDv7, a
+    /// version of at least 1 and a well-formed digest; anything else is
+    /// `report.store_invalid`.
+    pub fn from_value(v: &CValue) -> Result<TemplateRef, ReportError> {
+        let to = exact_obj(v, &["digest", "id", "version"])?;
+        let id = match field(to, "id")? {
+            CValue::Str(s) => parse_canonical_uuid(s).filter(is_v7).ok_or(ReportError::StoreInvalid("template id"))?,
+            _ => return Err(ReportError::StoreInvalid("template id")),
+        };
+        let version = u32_value(field(to, "version")?)?;
+        if version == 0 {
+            return Err(ReportError::StoreInvalid("template version is 0"));
+        }
+        let digest = match field(to, "digest")? {
+            CValue::Str(s) => Digest::parse(s).map_err(|_| ReportError::StoreInvalid("template digest"))?,
+            _ => return Err(ReportError::StoreInvalid("template digest")),
+        };
+        Ok(TemplateRef { id, version, digest })
+    }
 }
 
 /// One content block. Its payload is opaque here; the kind's registered check validates
@@ -423,10 +457,7 @@ impl Report {
     pub fn to_value(&self) -> CValue {
         let pages = self.pages.iter().map(page_value).collect();
         let retired = self.retired_ids.iter().map(|u| CValue::Str(u.to_string())).collect();
-        let template = match &self.template_ref {
-            None => CValue::Null,
-            Some(t) => obj([("id", CValue::Str(t.id.to_string())), ("version", CValue::U64(u64::from(t.version)))]),
-        };
+        let template = self.template_ref.as_ref().map_or(CValue::Null, TemplateRef::to_value);
         obj([
             ("id", self.id.to_value()),
             ("pages", CValue::Arr(pages)),
@@ -473,14 +504,7 @@ impl Report {
         let title = Untrusted::from_value(field(o, "title")?)?;
         let template_ref = match field(o, "template_ref")? {
             CValue::Null => None,
-            t => {
-                let to = exact_obj(t, &["id", "version"])?;
-                let tid = match field(to, "id")? {
-                    CValue::Str(s) => parse_canonical_uuid(s).ok_or(ReportError::StoreInvalid("template id"))?,
-                    _ => return Err(ReportError::StoreInvalid("template id")),
-                };
-                Some(TemplateRef { id: tid, version: u32_value(field(to, "version")?)? })
-            }
+            t => Some(TemplateRef::from_value(t)?),
         };
         let CValue::Arr(retired_in) = field(o, "retired_ids")? else {
             return Err(ReportError::StoreInvalid("retired_ids is not an array"));

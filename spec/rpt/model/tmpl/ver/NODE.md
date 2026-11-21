@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-report]
 satisfies: [REQ-RPT.MODEL.TMPL-005, REQ-RPT.MODEL.TMPL-006]
 covers: [GOM.RPT.02, PCD.RPT.01, PW.RPT.02, SA.RPT.01]
 depends_on: [RPT.MODEL.TMPL.FORMAT, RPT.MODEL.TMPL.SLOT, RPT.MODEL.DOC, CORE.STO.CAS, CORE.JRN]
@@ -76,6 +77,7 @@ Saving a report as a template, versioning it, and creating reports from it. Each
 ## Open questions
 
 - A user template library shared across projects (stored by digest in user settings) is assumed wanted but not specified; it needs a settings scope from `CORE.STO.SET` and is left for a later leaf.
+- **Build notes (fid-report `tmpl::ver`, 2026-11-21).** Template IDs are the template document's `template_id` (UUIDv7, `RPT.MODEL.TMPL.FORMAT`); `acme-char` and `tmpl:fai-form3` in the ACs are illustrative names, and the CLI selector is `<uuid>[@<version>]`. `RPT.MODEL.DOC`'s stored `template_ref` was widened from `{id, version}` to `{digest, id, version}` (REQ-004 needs the digest; no stored report held a non-null `template_ref` before); the DOC node's Design text still says `{id, version}` and needs a follow-up in that lane. Applied reports keep the template's page and block IDs, so a block's slot is found in the recorded template version rather than copied into the report. D-045: a template payload may not hold a label switch (`labels`, `hide_labels`, `show_labels`, `suppress_labels`, `label_mode`, `value_labels`, `provisional`, `interpretation`) or the provisional label's key or text (`report.template_invalid`, reason `label_control`). Save events carry `locked` and their source (report and its digest, or the file handle) so exact replay can rebuild saves from reports.
 
 ## Children
 

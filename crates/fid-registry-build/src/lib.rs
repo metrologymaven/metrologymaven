@@ -95,6 +95,15 @@ fn unc_defs() -> Result<Vec<CommandDef>, DefError> {
     Ok(fid_unc::model_store::declarations().into_iter().map(|d| d.def).collect())
 }
 
+/// The six document commands of RPT.MODEL.DOC and the four template commands of
+/// RPT.MODEL.TMPL.VER (`report.save_template@1`, `report.apply_template@1`,
+/// `report.show_template@1`, `report.list_template@1`).
+fn report_defs() -> Result<Vec<CommandDef>, DefError> {
+    let mut defs = fid_report::doc::command_defs()?;
+    defs.extend(fid_report::tmpl::ver::command_defs()?);
+    Ok(defs)
+}
+
 /// Every crate on main that declares commands, sorted by crate name. `fid-bus` declares the
 /// four request commands of CORE.BUS.POL.PROJ (`request.list_requests@1`,
 /// `request.withdraw_request@1`, `request.reject_request@1`, internal `request.file_request@1`).
@@ -112,7 +121,7 @@ pub const SOURCES: [Source; 13] = [
     Source { krate: "fid-program-rec", defs: program_rec_defs },
     Source { krate: "fid-project-cmd", defs: fid_project_cmd::command_defs },
     Source { krate: "fid-registry", defs: registry_defs },
-    Source { krate: "fid-report", defs: fid_report::doc::command_defs },
+    Source { krate: "fid-report", defs: report_defs },
     Source { krate: "fid-store", defs: store_defs },
     Source { krate: "fid-unc", defs: unc_defs },
 ];
