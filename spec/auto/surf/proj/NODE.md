@@ -84,7 +84,7 @@ Synthetic manifests written by hand under `fixtures/manifest/` (CC-BY-4.0, proje
 ## Open questions
 
 - Switch `crates/fid-registry-build/tests/surface_projection.rs` from walking `SOURCES` to the shared `all_defs()` helper once #348 merges.
-- Follow-up: once #359 (IO.REG.ENV.IMPORT) merges, add its `import.*` commands to `fid-registry-build` `SOURCES` and `all_defs`. They were kept out because this node refused Python keywords; this node now escapes them.
+- The `import.*` commands of #359 (IO.REG.ENV.IMPORT) are now in `fid-registry-build`'s `test_support::all_defs`, so the surface and MCP walks project them. Like the export commands, they are not in `SOURCES`: they are built over the format registry, which the build step does not have.
 - `exposure` without `mcp` makes the bus treat a command as `never`; the projection does not fold that into `mcp_projection` (the MCP emitter, `AUTO.MCP.PROJ`, applies it).
 
 ## Change log
