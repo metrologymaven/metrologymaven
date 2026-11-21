@@ -62,8 +62,9 @@ error on every line annotated `clippy` in the fixture. It fails if clippy is mis
    `<impl at FILE:...>` span rustc prints, by the self type of a `<T as Trait>::m` path,
    by an explicit module path, or (rustc trims unique paths to the bare name) by the files
    of the crate that define that name; a name that resolves to no file, or to any file
-   outside the allowed ones, is reported (fail closed). Only compiler shims (a header with
-   ` - shim`) and drop glue (`drop_in_place`) are skipped: they are generated for a local
+   outside the allowed ones, is reported (fail closed; a `<T as Trait>` part that resolves
+   to no file makes the whole path a finding). Only compiler shims (a header ending
+   ` - shim(...)`) and drop glue (`std::`/`core::ptr::drop_in_place::<`) are skipped: they are generated for a local
    type, whose own bodies are scanned. Every other path is attributed, whatever crate it
    starts with, so a local impl of a local trait for `std::vec::Vec<u8>` is still seen.
    Only the host target's `--lib` is scanned: binaries, build scripts and code under a
@@ -767,10 +768,16 @@ def _definers(src_files: dict[str, str], ident: str) -> list[str]:
     return sorted(f for f, t in src_files.items() if pat.search(t) or variant.search(t))
 
 
+MIR_DROP_GLUE = re.compile(r"^(?:fn )?(?:std|core)::ptr::drop_in_place::<")
+MIR_SHIM_SUFFIX = re.compile(r" - shim\(.*\)(?: \{)?$")
+
+
 def is_shim(header: str) -> bool:
-    """A compiler shim (` - shim(...)`) or drop glue (`drop_in_place`): generated for a
-    type whose own bodies are scanned. Nothing else is skipped."""
-    return " - shim" in header or "drop_in_place" in header
+    """Drop glue (a header starting `fn std::ptr::drop_in_place::<` or the `core::` form)
+    or a compiler shim (a header ending ` - shim(...)`): generated for a type whose own
+    bodies are scanned. Nothing else is skipped: a local `drop_in_place_all` is not."""
+    h = header.rstrip()
+    return bool(MIR_DROP_GLUE.match(h) or MIR_SHIM_SUFFIX.search(h))
 
 
 def _strip_generics(s: str) -> str:
@@ -829,9 +836,14 @@ def mir_attribution(name: str, src_files: dict[str, str], header: str = "") -> l
     if parts is not None:
         # `<T as Trait>::m` names no file: it is attributed to both the self type and the
         # trait, and reported unless both are allowed (a foreign `std::vec::Vec<u8>` never is).
+        # Fail closed: if either part resolves to no file (`f64`, an unknown name), the whole
+        # path resolves to none and is reported.
         out: list[str] = []
         for part in parts:
-            out.extend(mir_attribution(part, src_files) or [])
+            where = mir_attribution(part, src_files)
+            if not where:
+                return []
+            out.extend(where)
         return out
     segs = _path_segments(name)
     if len(segs) >= 2:

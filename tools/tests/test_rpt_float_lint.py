@@ -328,6 +328,48 @@ class Mir(unittest.TestCase):
         self.assertEqual(lint.mir_fn_name("f::{closure#0}"), "f")
         self.assertEqual(lint.mir_fn_name("<impl at src/lib.rs:1:1: 1:9>::g"), "g")
 
+    def test_a_qualified_path_with_an_unresolved_part_fails_closed(self):
+        files = {"src/fmt/mod.rs": "pub trait Tr {}\n"}
+        for name in ["<f64 as fmt::Tr>::m", "<u32 as Tr>::m"]:
+            where = lint.mir_attribution(name, files, f"fn {name}(_1: &u32) -> f64 {{")
+            self.assertEqual(where, [], name)
+        mir = "fn <f64 as fmt::Tr>::m(_1: &f64) -> f64 {\n}\n\nfn <u32 as Tr>::m(_1: &u32) -> f64 {\n}\n"
+        found = lint.mir_findings(mir, self.crate, "crates/fid-report", lint.MIR_ALLOWED["fid-report"])
+        self.assertEqual(sorted(f.message.split(" (")[0] for f in found), ["<f64 as fmt::Tr>::m", "<u32 as Tr>::m"])
+
+    def test_drop_glue_and_shims_match_exactly(self):
+        self.assertTrue(lint.is_shim("fn std::ptr::drop_in_place::<Vec<f64>>(_1: *mut Vec<f64>) -> () {"))
+        self.assertTrue(lint.is_shim("fn core::ptr::drop_in_place::<W>(_1: *mut W) -> () {"))
+        self.assertTrue(lint.is_shim("fn <W as Clone>::clone(_1: &W) -> W - shim(W) {"))
+        for h in ["fn drop_in_place_all() -> f64 {", "fn bind::drop_in_place::<W>(_1: *mut W) -> f64 {",
+                  "fn shim_maker() -> f64 {", "fn f(_1: u8) -> f64 { // - shim(x) later"]:
+            self.assertFalse(lint.is_shim(h), h)
+        mir = "fn drop_in_place_all() -> f64 {\n}\n"
+        (self.crate / "src" / "bind" / "drop.rs").write_text("pub fn drop_in_place_all() {}\n")
+        found = lint.mir_findings(mir, self.crate, "crates/fid-report", lint.MIR_ALLOWED["fid-report"])
+        self.assertEqual([f.message.split(" (")[0] for f in found], ["drop_in_place_all"])
+
+    def test_no_shipped_manifest_enables_test_interpretation(self):
+        # Only fid-report's own dev-dependency may turn on the test-only status hook.
+        hits = []
+        for m in sorted((ROOT / "crates").glob("*/Cargo.toml")):
+            data = tomllib.loads(m.read_text(encoding="utf-8"))
+            for section in ("dependencies", "build-dependencies"):
+                for name, spec in data.get(section, {}).items():
+                    if isinstance(spec, dict) and "test-interpretation" in spec.get("features", []):
+                        hits.append(f"{m.parent.name} [{section}] {name}")
+            for tgt in data.get("target", {}).values():
+                for section in ("dependencies", "build-dependencies"):
+                    for name, spec in tgt.get(section, {}).items():
+                        if isinstance(spec, dict) and "test-interpretation" in spec.get("features", []):
+                            hits.append(f"{m.parent.name} [target.{section}] {name}")
+            for feat, deps in data.get("features", {}).items():
+                if any("test-interpretation" in d for d in deps):
+                    hits.append(f"{m.parent.name} [features] {feat}")
+        self.assertEqual(hits, [])
+        dev = tomllib.loads((ROOT / "crates" / "fid-report" / "Cargo.toml").read_text(encoding="utf-8"))
+        self.assertIn("test-interpretation", dev["dev-dependencies"]["fid-report"]["features"])
+
     def test_selftest_fixture_has_trait_impls_outside_fmt(self):
         src = (ROOT / lint.MIR_FIXTURE / "src" / "lib.rs").read_text(encoding="utf-8")
         self.assertRegex(src, r"impl Measure for Count \{\n    fn measure\(&self\) -> f64 \{ // mir")
