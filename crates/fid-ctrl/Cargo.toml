@@ -1,17 +1,37 @@
 [package]
 name = "fid-ctrl"
-description = "Metrology Maven control-channel transport: loopback listener, discovery file, bounded JSON-lines framing (spec node AUTO.CTRL.WIRE)"
+description = "Metrology Maven control-channel transport: loopback listener, discovery file, bounded JSON-lines framing (spec node AUTO.CTRL.WIRE) and challenge-response authentication (AUTO.CTRL.AUTH)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
-# Only workspace crates: canonical JSON (fid-canon) and the shared envelope (fid-surface).
+# Workspace crates: canonical JSON (fid-canon) and the shared envelope (fid-surface).
 # Networking and threads are std only.
+# AUTO.CTRL.AUTH, all RustCrypto or rust-random crates already in the lock, MIT OR Apache-2.0:
+# - hmac 0.13 + sha2 0.11: HMAC-SHA256 proofs with constant-time verification (the vetted
+#   HMAC the build prompt asks for; this pair is already in the graph via p256/rfc6979);
+# - getrandom 0.2: token and nonces from the OS CSPRNG (as fid-journal and fid-project use);
+# - zeroize: wipes the token on drop and its read buffers.
 [dependencies]
 fid-canon = { path = "../fid-canon" }
 fid-surface = { path = "../fid-surface" }
+getrandom = "0.2"
+hmac = "0.13"
+sha2 = "0.11"
+zeroize = "1"
+
+# The Windows token-file ACL (protected owner-only DACL and its check) needs the Win32 security
+# API, which is `unsafe` FFI; it lives in its own shim crate so this crate keeps `forbid(unsafe_code)`.
+# Unix: rustix 1 (safe wrappers, Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT, already in
+# the lock through tempfile and others) for the directory-relative token file operations:
+# open(O_DIRECTORY|O_NOFOLLOW), openat, statat, linkat, renameat, unlinkat, and geteuid.
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["fs", "process"] }
+
+[target.'cfg(windows)'.dependencies]
+fid-ctrl-acl = { path = "../fid-ctrl-acl" }
 
 [lints]
 workspace = true

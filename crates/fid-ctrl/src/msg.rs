@@ -222,30 +222,70 @@ pub fn versions_value() -> CValue {
 /// An `error` event: `{"kind": "error", "code": ..., "message": ...}` plus `versions`
 /// for `version_unsupported`.
 pub fn error_event(code: WireError, message: &str) -> CValue {
-    let mut o = BTreeMap::new();
-    o.insert("kind".to_string(), CValue::Str("error".into()));
-    o.insert("code".to_string(), CValue::Str(code.code().into()));
-    o.insert("message".to_string(), CValue::Str(message.into()));
-    if code == WireError::VersionUnsupported {
+    let mut ev = coded_error_event(code.code(), message);
+    if let (CValue::Obj(o), WireError::VersionUnsupported) = (&mut ev, code) {
         o.insert("versions".to_string(), versions_value());
     }
+    ev
+}
+
+/// An `error` event with any stable code (AUTO.CTRL.AUTH uses `auth_failed`,
+/// `token_permissions` and `token_io`).
+pub fn coded_error_event(code: &str, message: &str) -> CValue {
+    let mut o = BTreeMap::new();
+    o.insert("kind".to_string(), CValue::Str("error".into()));
+    o.insert("code".to_string(), CValue::Str(code.into()));
+    o.insert("message".to_string(), CValue::Str(message.into()));
     CValue::Obj(o)
 }
 
-/// The successful `hello` event: `{"kind": "hello", "version": n, "versions": [...], "instance_id": ...}`.
-pub fn hello_event(version: u16, instance_id: &str) -> CValue {
+/// The successful `hello` event: `{"kind": "hello", "version": n, "versions": [...],
+/// "instance_id": ...}`, plus `"nonce"` (64 lowercase hex digits, AUTO.CTRL.AUTH) while the
+/// connection is not yet authenticated.
+pub fn hello_event(version: u16, instance_id: &str, nonce: Option<&str>) -> CValue {
     let mut o = BTreeMap::new();
     o.insert("kind".to_string(), CValue::Str("hello".into()));
     o.insert("version".to_string(), num(u64::from(version)));
     o.insert("versions".to_string(), versions_value());
     o.insert("instance_id".to_string(), CValue::Str(instance_id.into()));
+    if let Some(n) = nonce {
+        o.insert("nonce".to_string(), CValue::Str(n.into()));
+    }
     CValue::Obj(o)
+}
+
+/// The successful `auth` event: `{"kind": "auth", "proof": <64 hex digits>}` (the server proof).
+pub fn auth_event(proof_hex: &str) -> CValue {
+    let mut o = BTreeMap::new();
+    o.insert("kind".to_string(), CValue::Str("auth".into()));
+    o.insert("proof".to_string(), CValue::Str(proof_hex.into()));
+    CValue::Obj(o)
+}
+
+/// The `auth` request's `params = {"nonce": <64 hex>, "proof": <64 hex>}`: the client nonce
+/// and client proof. Any other shape is `None` (answered `auth_failed`).
+pub fn auth_params(req: &Request) -> Option<(crate::auth::Nonce, crate::auth::Proof)> {
+    let CValue::Obj(p) = &req.params else {
+        return None;
+    };
+    if p.len() != 2 {
+        return None;
+    }
+    let (Some(CValue::Str(n)), Some(CValue::Str(pr))) = (p.get("nonce"), p.get("proof")) else {
+        return None;
+    };
+    Some((crate::auth::Nonce::from_hex(n)?, crate::auth::Proof::from_hex(pr)?))
 }
 
 impl Reply {
     /// An error event reply.
     pub fn error(id: Option<u64>, code: WireError, message: &str) -> Reply {
         Reply { v: PROTOCOL_VERSIONS[0], id, body: ReplyBody::Event(error_event(code, message)) }
+    }
+
+    /// An authentication error event reply (`auth_failed`, `token_permissions`, `token_io`).
+    pub fn auth_error(id: Option<u64>, code: crate::auth::AuthError, message: &str) -> Reply {
+        Reply { v: PROTOCOL_VERSIONS[0], id, body: ReplyBody::Event(coded_error_event(code.code(), message)) }
     }
 
     /// Encodes as one canonical JSON line, newline included. Envelopes are validated.

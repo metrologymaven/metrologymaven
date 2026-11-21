@@ -1237,7 +1237,20 @@ name = "fid-ctrl"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-ctrl-acl",
  "fid-surface",
+ "getrandom 0.2.17",
+ "hmac",
+ "rustix 1.1.6",
+ "sha2 0.11.0",
+ "zeroize",
+]
+
+[[package]]
+name = "fid-ctrl-acl"
+version = "0.0.1"
+dependencies = [
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2202,6 +2215,7 @@ dependencies = [
  "fid-types",
  "fid-uuid",
  "fid-vocab",
+ "proc-macro2",
  "sha2 0.10.9",
  "toml",
 ]
