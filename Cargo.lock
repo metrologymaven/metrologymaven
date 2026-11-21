@@ -1568,6 +1568,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-journal-cmd"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-journal",
+ "fid-registry",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-kci"
 version = "0.0.1"
 dependencies = [

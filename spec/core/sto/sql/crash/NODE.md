@@ -75,7 +75,7 @@ None stored; all data is generated from the seed. CI jobs on the Tier 1 OS runne
 
 ## Change log
 
-- Harness behaviour amended 2026-11-20 (fix of a Windows flake in AC-1, maintainer decision): the run summary also reports the commits each check found beyond those acknowledged in that writer life (`unacked`, and `max_unacked` after one kill). AC-1's test now requires at most one such commit per kill (the one in flight at the kill, so no acknowledgement can be lost in the pipe drain) and `recovered == acked + unacked`, and its liveness floor is that kills landed both after acknowledged commits and between a commit taking effect and its acknowledgement, in place of a fixed `acked > kills / 10`, which assumed Linux commit times (Windows runners acknowledged 88 and 91 of a needed 101 while every check passed).
+- Harness behaviour amended 2026-11-20 (fix of a Windows flake in AC-1, maintainer decision): the run summary also reports the commits each check found beyond those acknowledged in that writer life (`unacked`, and `max_unacked` after one kill). AC-1's test now requires at most one such commit per kill (the one in flight at the kill, so no acknowledgement can be lost in the pipe drain) and `recovered == acked + unacked`, and its liveness floor is that kills landed both after acknowledged commits and between a commit taking effect and its acknowledgement, in place of the fixed floors `acked > kills / 10` and then `acked > kills / 40` (#356), which assumed a commit rate per kill (Windows runners acknowledged 82, 88 and 91 while every check passed).
 
 ## Children
 

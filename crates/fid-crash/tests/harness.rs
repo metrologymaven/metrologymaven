@@ -34,9 +34,9 @@ fn ac1_seed_1_every_check_passes() {
     assert_eq!(summary.recovered, summary.acked + summary.unacked);
     // Liveness, bounded on the work done rather than on a per-OS commit rate: the kills landed
     // both after acknowledged commits and inside the window between a commit taking effect and
-    // its acknowledgement, not only before the first commit. (A fixed floor of kills / 10
-    // acknowledgements assumed Linux commit times; Windows runners acknowledged 88 and 91 while
-    // every check passed.)
+    // its acknowledgement, not only before the first commit. (Fixed floors of kills / 10, then
+    // kills / 40, assumed a commit rate per kill; Windows runners acknowledged 82, 88 and 91
+    // while every check passed, because FlushFileBuffers can outlast the 30 ms delay range.)
     assert!(summary.acked > 0, "no commit was acknowledged before a kill");
     assert!(summary.unacked > 0, "no kill landed between a commit and its acknowledgement");
 }
