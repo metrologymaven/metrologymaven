@@ -19,7 +19,11 @@
 //! - [`Signer`]: signing through an opaque key handle. This crate holds no private keys;
 //!   a software signer exists only behind the `test-signer` feature.
 //!
-//! Everything here is D0 (deterministic) and has no OS or network dependencies.
+//! - [`troot`]: offline trust roots, revocation and the `verify.check_signature@1` command
+//!   (spec node `TRUST.SIGN.TROOT`).
+//!
+//! Everything here is D0 (deterministic) and has no network dependencies; only
+//! [`troot::command`] opens files, through the caller's opener.
 
 mod b64;
 mod der;
@@ -27,6 +31,7 @@ mod envelope;
 mod key;
 mod pae;
 mod signer;
+pub mod troot;
 mod verify;
 
 use std::fmt;

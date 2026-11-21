@@ -76,6 +76,7 @@ Composes the signature, chain and replay sections into one verification report, 
 
 ## Open questions
 
+- `TRUST.SIGN.TROOT` adds the per-signature status `UNKNOWN_KEY` (no listed key can check the signature); it is blocking like `INVALID` and never yields `PASS` (maintainer decision on #408; maintainer waiver: cross-leaf edit from the TROOT build).
 - Whether an unsigned package with a valid chain should be `PASS` with a warning for Lean users; proposed no (exit 1), revisit with `TRUST.PROFILE`.
 - D-025 / CONSTITUTION §7: in P0, `TRUST.VERIFY.CLI` ships the chain-only path and must report the signature and replay sections as `not_available`. REQ-TRUST.VERIFY.REPORT-001 lists only `not_requested` and `not_applicable` for replay; adding `not_available` (and a signature-section equivalent) needs a requirement change by review, and this P1a leaf is a dependency of the P0 CLI [unresolved].
 
