@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-journal, fid-journal-cmd]
+built_pr: 366
 satisfies: [REQ-CORE.JRN.BR-003, REQ-CORE.JRN.BR-004, REQ-CORE.JRN.BR-005, REQ-CORE.JRN.BR-006, REQ-CORE.JRN.BR-007]
 covers: []
 depends_on: [CORE.JRN.BR.NAME, CORE.JRN.BR.DIFF, CORE.JRN.CHAIN.APPEND, CORE.REG.DEF]
@@ -75,7 +77,16 @@ Moves work from a source branch onto a target branch. A fast-forward moves the t
 
 - **Revise for D-035 (accepted 2026-11-17):** in the Lean profile, the `AssertionCheck` for protected-branch promotion is satisfied by CORE.BUS.PRIN's `HumanPresence` confirmation; TRUST.ESIG is the Regulated path.
 - `CORE.RPL.RETGT` (REQ-CORE.RPL.RETGT-005) implements `Rebaser`, and `TRUST` implements `AssertionCheck`; both are wired by the app at start-up. A `depends_on` would create a cycle (`CORE.RPL` depends on `CORE.JRN`; `TRUST` is a higher layer), so none is declared.
+- **Build choices (maintainer decisions for the build, pinned in `fid_journal::promote`):** every call is bound to `source_head`, `target_head` and `diff` (SHA-256 of the canonical `journal.diff_branch@1` result it was approved against) and refused with `conflict/expected_head_mismatch` if either head moved (compare-and-swap on both heads, replacing REQ-007's "use the named source head") or `conflict/expected_digest_mismatch` if the diff differs, so a promotion cannot be replayed. Each command emits one event (`BranchPromoted`, `ProtectedBranchPromoted`, `PromotionRequested`, reserved to their commands in `fid_registry::RESERVED_EFFECTS`) instead of the Design's `HeadMoved`/`PromotedEntry`, because one registry effect has one owning command and one event lands whole. Source equal to target, a target in the `agent/` namespace, nothing to promote, or `promote_protected_branch` into an unprotected target are `precondition/false`. The fold accepts each event only from its command's handler and only with `source_head`/`target_head` equal to the logical heads before its entry (which the replay of the verified journal supplies), so a replay or a made-up or stale head is refused; promotions need a human principal on an entry of the target branch, requests an entry of the source branch, and no event may target an `agent/` branch.
+- **Assertion binding (choice):** `ProtectedBranchPromoted` records the assertion reference, which must equal the verified entry header's `human_assertion` (carried in `EntryOrigin::human_assertion`), and the fold re-checks it through the wired `AssertionCheck` over the pre-image recomputed from the event's binding (no `AssertionCheck` wired: refused, as unprovable). Binding the pre-image into what the header's assertion signs was not chosen, because ENTRY's assertion pre-image is the entry hash without `human_assertion`, owned by TRUST.
+- **Requester (REQ-005):** the requester's identity is the entry header's principal commitment; the fold keeps only its principal kind.
+- **Obligation on the bus commit stage and `CORE.BUS.ROUTE`:** AC-1 and AC-2 are met at the event level. Writing the promotion as a `head_move` entry (fast-forward) or as one entry per re-executed step with `promoted_from` (rebased), each with the `logical_parent` BR.DIFF expects, is the commit stage's job, and it is not built yet. The commit stage must also (1) verify the entry header's `human_assertion` and fill `EntryOrigin::human_assertion` from that verified header (the fold re-checks it through the wired `AssertionCheck`; there is no `asserted` flag any more), and (2) commit a `journal.request_promote_branch@1` entry on the request's source branch: the handler cannot see the branch the bus routes the entry to and builds the origin it checks with `branch` = the source (`crates/fid-journal-cmd/src/promote.rs`, the `EntryOrigin` of `run_promote`), so routing an agent's request onto its own `agent/` branch would be refused by the fold. AC-6 (exact-mode replay of the journal) needs that stage and `CORE.RPL`; here, planning and folding are tested to be deterministic.
+- `long-running` in the Design has no registry field yet; the Rebaser call takes the call's cancel token.
 - `journal.request_promote_branch@1` overlaps with the generic pending request filed when an agent calls the `human_only` `journal.promote_branch@1` over MCP; both are kept because REQ-CORE.JRN-012 names the explicit request. `VIZ.INBOX` should show both kinds.
+
+## Change log
+
+- 2026-11-21 (review of #366): the commit-stage obligation now says the stage fills `EntryOrigin::human_assertion` from the verified header (the earlier `asserted` flag no longer exists) and commits request entries on the request's source branch, because the handler cannot see the routed branch and the fold refuses a request on another branch.
 
 ## Children
 

@@ -44,7 +44,7 @@ Defines two published, machine-readable files and their validator: the backend p
 
 ## Requirements
 
-- **REQ-PLAT.GPU.POLICY-001** The crate shall define a versioned policy schema with rows `{ os, arch, backends: ordered list, min: per-backend minimum API version and optional minimum driver version }`, where a backend is one of `vulkan`, `metal`, `dx12` or `software`.
+- **REQ-PLAT.GPU.POLICY-001** The crate shall define a versioned policy schema with rows `{ os, arch, backends: ordered list, min: per-backend minimum API version and optional minimum driver version }`, where a backend is one of `vulkan`, `metal`, `dx12`, `gl`, `webgpu` or `software`.
 - **REQ-PLAT.GPU.POLICY-002** If any effective Tier 1 or Tier 2 desktop combination in the support matrix has no policy row, then validation shall fail naming the combination.
 - **REQ-PLAT.GPU.POLICY-003** If a Windows row omits `vulkan` or `dx12`, a Linux row omits `vulkan`, or a macOS row omits `metal`, then validation shall fail naming the row.
 - **REQ-PLAT.GPU.POLICY-004** If a policy row does not end with `software`, then validation shall fail, so that every platform has a last-resort fallback.
@@ -80,7 +80,7 @@ Hand-written TOML under `fixtures/plat/gpu/`; reuse `fixtures/plat/matrix/valid.
 
 > In crate `fid-platform`, add module `gpu_policy` and `xtask plat-gpu validate [--policy <file>] [--known-bad <file>] [--matrix <file>] [--phase <P>]`.
 >
-> Parse and validate two TOML files. Policy rows: `os`, `arch`, ordered `backends` (vulkan, metal, dx12, software), and `min` per backend (`api` version, optional `driver` version). Rules: every effective Tier 1/Tier 2 desktop combination in the support matrix (via `fid-platform::matrix`) has a row; Windows rows include dx12 and vulkan, Linux rows vulkan, macOS rows metal; every row ends with `software`; no duplicate backends. Known-bad entries: `id`, `os`, `backend`, `vendor_id`, `device_ids` (range or `any`), `driver` version range, `action` (`avoid_backend`, `force_software`, `workaround:<name>`), `reason`, `reference` URL; reason and reference are mandatory. Both files: 1 MiB / 10 000-entry cap, `schema_version` 1.
+> Parse and validate two TOML files. Policy rows: `os`, `arch`, ordered `backends` (vulkan, metal, dx12, gl, webgpu, software), and `min` per backend (`api` version, optional `driver` version). Rules: every effective Tier 1/Tier 2 desktop combination in the support matrix (via `fid-platform::matrix`) has a row; Windows rows include dx12 and vulkan, Linux rows vulkan, macOS rows metal; every row ends with `software`; no duplicate backends. Known-bad entries: `id`, `os`, `backend`, `vendor_id`, `device_ids` (range or `any`), `driver` version range, `action` (`avoid_backend`, `force_software`, `workaround:<name>`), `reason`, `reference` URL; reason and reference are mandatory. Both files: 1 MiB / 10 000-entry cap, `schema_version` 1.
 >
 > Ship initial `platform/gpu-policy.toml` with the proposal rows (Windows: dx12, vulkan, software; Linux: vulkan, software; macOS: metal, software) and an empty `platform/gpu-known-bad.toml`.
 >
@@ -97,6 +97,10 @@ Hand-written TOML under `fixtures/plat/gpu/`; reuse `fixtures/plat/matrix/valid.
 
 - **Precedence:** when several known-bad entries match, `force_software` > `avoid_backend` > `workaround:<name>`; ties go to the first entry in the file.
 - **Safe defaults:** a missing or invalid policy file means software rendering only; an invalid known-bad file is treated as empty, with its diagnostics reported as a warning.
+
+## Change log
+
+- 2026-11-21 (maintainer decision on the layering of `PLAT.GPU.DETECT`): `gl` and `webgpu` join the backend set of REQ-001, so the policy can name every backend the frame graph (`VIZ.RENDER.FRAME.GRAPH`) selects; the mandatory-backend rules of REQ-003 and the `software`-last rule are unchanged, and neither new backend is mandatory in any row. The schema, validators and known-bad lookup move from `fid-platform` to crate `fid-gpu-policy` (layer model, below the tool layer, re-exported by `fid-platform`; refactor PR #371), so that `PLAT.GPU.DETECT` and VIZ can read them; `fid-platform` keeps the support-matrix cross-check. The code change adding the two backends to the `Backend` enum follows in a code PR after #371.
 
 ## Children
 

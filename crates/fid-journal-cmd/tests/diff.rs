@@ -112,6 +112,7 @@ fn journal() -> Arc<Journal> {
             class: SideEffect::W2,
             branch: if agent { name.to_string() } else { MAIN.to_string() },
             source: if agent { EventSource::BusRoute } else { EventSource::Handler },
+            human_assertion: None,
         };
         let event = BranchEvent::Created {
             name: BranchName::parse(name).unwrap(),
@@ -269,6 +270,7 @@ fn a_dangling_created_from_is_refused_through_the_handler() {
             class: SideEffect::W2,
             branch: MAIN.into(),
             source: EventSource::Handler,
+            human_assertion: None,
         };
         let nowhere = Digest::parse(&format!("sha256:{}", "ab".repeat(32))).unwrap();
         t.apply(&origin, &BranchEvent::Created { name: BranchName::parse("ghost").unwrap(), from: nowhere }).unwrap();

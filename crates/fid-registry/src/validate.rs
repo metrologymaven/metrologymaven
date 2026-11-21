@@ -322,10 +322,15 @@ pub fn max_projection(class: SideEffect) -> Projection {
 ///   `main` protected on its first W3 release) are added by the bus to the entry, like
 ///   `RequestApproved`, and need no declaration; the journal's fold accepts those only with
 ///   a bus origin.
-pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 7] = [
+/// - The promotion events of CORE.JRN.BR.PROMO: each belongs to its promotion command, so no
+///   other command (and no agent-runnable command but the request) can emit one.
+pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 10] = [
     ("BranchCreated", Some(("journal.create_branch", 1))),
+    ("BranchPromoted", Some(("journal.promote_branch", 1))),
     ("BranchProtected", Some(("journal.protect_branch", 1))),
     ("CoeditingSet", Some(("journal.set_branch_coediting", 1))),
+    ("PromotionRequested", Some(("journal.request_promote_branch", 1))),
+    ("ProtectedBranchPromoted", Some(("journal.promote_protected_branch", 1))),
     ("RequestApproved", None),
     ("RequestFiled", Some(("request.file_request", 1))),
     ("RequestRejected", Some(("request.reject_request", 1))),

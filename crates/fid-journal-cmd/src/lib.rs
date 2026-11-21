@@ -22,6 +22,11 @@
 //!   result comes from the caller's principal or from an event body: principal kinds are the
 //!   verified entry headers', owners the origin-bound branch table's.
 //!
+//! - [`PromoteHandler`], [`run_promote`] and [`register_promote`] (module `promote`):
+//!   `journal.promote_branch@1`, `journal.promote_protected_branch@1` and
+//!   `journal.request_promote_branch@1` (spec node `CORE.JRN.BR.PROMO`), the person/agent
+//!   gate; [`promote_bus_error`] maps their refusals (catalogue v3).
+//!
 //! Agent branches (`agent/<client>/<n>`) are not created here: the routing module
 //! (`CORE.BUS.ROUTE`) adds them through the journal's crate-private route planner.
 
@@ -41,6 +46,10 @@ use fid_types::SideEffect;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::Arc;
+
+mod promote;
+
+pub use promote::{parse_params, promote_bus_error, register_promote, run_promote, PromoteHandler, PromoteWiring};
 
 /// Where the handlers read the branch table. The bus wiring implements it over the journal.
 ///
@@ -177,6 +186,7 @@ pub fn run(
             class,
             branch: MAIN.to_string(),
             source: EventSource::Handler,
+            human_assertion: None,
         };
         b.apply(&origin, &e).map_err(|e| to_bus_error(&e))?;
         events.push(event_of(&e)?);

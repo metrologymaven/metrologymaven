@@ -104,6 +104,7 @@ fn commit(src: &Source, ctx: &HandlerCtx, op: Op, events: &[fid_bus::handler::Ev
         class,
         branch: "main".to_string(),
         source: EventSource::Handler,
+        human_assertion: None,
     };
     for e in events {
         t.apply(&origin, &BranchEvent::from_parts(e.type_id().as_str(), e.body()).unwrap()).unwrap();
@@ -221,6 +222,7 @@ fn handlers_follow_the_oracle_with_the_bus_principal() {
                     class: SideEffect::W2,
                     branch: "agent/claude/1".into(),
                     source: EventSource::BusRoute,
+                    human_assertion: None,
                 };
                 src.table.lock().unwrap().apply(&route, &e).unwrap();
             }
