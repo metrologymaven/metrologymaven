@@ -27,7 +27,8 @@ Templates (`templates/*.json`, canonical RFC 8785, schema version 1):
 - nonconforming: rows with the outcome filter `nonconforms` (none at this head);
 - saved_query: a row slot over a saved query: AC-4 (no provider);
 - group_overlap: two page-group slots naming the same page (`page_group_overlap`);
-- group_nested: a page-group slot on a page of another group (`nested_page_group`).
+- group_nested: a page-group slot on a page of another group (`nested_page_group`);
+- column_filter: a column slot over characteristics with the outcome filter `conforms`.
 """
 
 import hashlib
@@ -115,7 +116,7 @@ def model():
 
 TEMPLATE_IDS = {name: eid(9, i, 0) for i, name in enumerate(
     ["multistage", "by_balloon", "page_group", "stage_columns", "tags", "nonconforming", "saved_query",
-     "group_overlap", "group_nested"], start=1)}
+     "group_overlap", "group_nested", "column_filter"], start=1)}
 
 
 def block(bid, kind, payload, slot=None, header="0"):
@@ -171,6 +172,13 @@ def templates():
               slot("stages", {"stages": "all"},
                    {"kind": "column", "max_columns_per_group": "2", "repeat_columns": ["char_id"]}), header="1"),
     ]}])
+    n = list(TEMPLATE_IDS).index("column_filter") + 1
+    t["column_filter"] = template("column_filter", [{"id": eid(10, n, 0), "blocks": [
+        block(eid(11, n, 1), "table", {"columns": [{"key": "char_id", "label": "Characteristic"}]},
+              slot("characteristics", {"characteristics": "all", "outcome": ["conforms"]},
+                   {"kind": "column", "max_columns_per_group": "64", "repeat_columns": None}), header="1"),
+    ]}])
+
     def group(bid, pages):
         return slot("elements", {"elements": "all"}, {"kind": "page_group", "pages": pages})
 
@@ -233,8 +241,11 @@ def expected(m, t):
             raise ValueError(kind)
         out = [item("characteristic", c) for c in ids]
         if "outcome" in rule:
-            out = []  # every result at this head is CONFORMS or NOT_DECIDABLE (hand-checked)
-            assert rule["outcome"] == ["nonconforms"]
+            # Hand-checked: every result at this head is CONFORMS (stages of runs 1 and 2) or
+            # NOT_DECIDABLE (run 3), and every characteristic has a result in each stage.
+            assert rule["outcome"] in (["nonconforms"], ["conforms"])
+            if rule["outcome"] == ["nonconforms"]:
+                out = []
         return out
 
     def order(items, sort, kind):
@@ -292,9 +303,12 @@ def expected(m, t):
                     v = s["spec"]["value"]
                     per = int(v["repeat"]["max_columns_per_group"])
                     its = order(select(v["rule"]), v["sort"], s["kind"])
+                    if not its:
+                        emit(b(base, page_id, p["id"], "column_group", pit))
                     for k in range(0, len(its), per):
                         g = its[k:k + per]
-                        emit(b(v5(base, g[0]["id"]), page_id, p["id"], "column_group", pit, cols=g))
+                        refs = [{"id": i["id"], "kind": "characteristic"} for i in g if i["kind"] == "characteristic"]
+                        emit(b(v5(base, g[0]["id"]), page_id, p["id"], "column_group", pit, cols=g, refs=refs))
                 else:
                     emit(b(base, page_id, p["id"], "copy", pit))
     return jcs({"blocks": out, "schema": "expansion@1"})

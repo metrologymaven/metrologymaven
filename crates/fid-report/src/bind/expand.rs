@@ -415,6 +415,8 @@ struct Snapshot {
     run_results: BTreeMap<Uuid, Vec<Uuid>>,
     /// Element -> its characteristics.
     element_chars: BTreeMap<Uuid, Vec<Uuid>>,
+    /// Characteristic -> (live stage, result) of each of its results.
+    char_results: BTreeMap<Uuid, Vec<(Uuid, Uuid)>>,
     /// Run -> position of its first live stage.
     run_first: BTreeMap<Uuid, i64>,
 }
@@ -460,10 +462,12 @@ impl Snapshot {
             distinct(bounded(model.results(head)?)?.into_iter().map(|r| ((r.characteristic, r.stage), r.id)))?;
         let mut stage_results: BTreeMap<Uuid, Vec<Uuid>> = BTreeMap::new();
         let mut run_results: BTreeMap<Uuid, Vec<Uuid>> = BTreeMap::new();
-        for ((_, st), r) in &results {
+        let mut char_results: BTreeMap<Uuid, Vec<(Uuid, Uuid)>> = BTreeMap::new();
+        for ((ch, st), r) in &results {
             if let Some((_, run)) = stages.get(st) {
                 stage_results.entry(*st).or_default().push(*r);
                 run_results.entry(*run).or_default().push(*r);
+                char_results.entry(*ch).or_default().push((*st, *r));
             }
         }
         let mut element_chars: BTreeMap<Uuid, Vec<Uuid>> = BTreeMap::new();
@@ -486,6 +490,7 @@ impl Snapshot {
             stage_results,
             run_results,
             element_chars,
+            char_results,
             run_first,
         })
     }
@@ -521,6 +526,8 @@ struct Expander<'a> {
     query: Option<&'a dyn QueryProvider>,
     /// The stage columns, in multi-stage order.
     columns: Vec<Uuid>,
+    /// The same stage columns, for membership tests.
+    column_set: BTreeSet<Uuid>,
     rows: usize,
     cols: usize,
     cells: usize,
@@ -631,8 +638,12 @@ impl<'a> Expander<'a> {
     fn results_of(&self, item: &ExpandItem) -> Vec<Uuid> {
         let s = &self.snap;
         let Ok(u) = Uuid::parse(&item.id) else { return Vec::new() };
+        // A characteristic's own results whose stage is a column: the filter's work is
+        // bounded by the result count, never by characteristics times columns.
         let in_columns = |c: &Uuid| -> Vec<Uuid> {
-            self.columns.iter().filter_map(|st| s.results.get(&(*c, *st)).copied()).collect()
+            s.char_results.get(c).map_or(Vec::new(), |rs| {
+                rs.iter().filter(|(st, _)| self.column_set.contains(st)).map(|(_, r)| *r).collect()
+            })
         };
         match item.kind {
             ItemKind::Characteristic => in_columns(&u),
@@ -751,23 +762,22 @@ impl<'a> Expander<'a> {
         limit: &'static str,
         per_item: usize,
     ) -> Result<Vec<ExpandItem>, ExpandError> {
-        let cached = self.cache.get(&block).map(|(n, items)| (*n, items.clone()));
-        let (selected, items) = match cached {
-            Some((n, items)) => (n, Some(items)),
-            None => (usize::MAX, None),
+        let cached = self.cache.get(&block).map(|(n, _)| *n);
+        let fresh = match cached {
+            Some(_) => None,
+            None => Some(self.select(block, slot)?),
         };
-        let fresh = if items.is_none() { Some(self.select(block, slot)?) } else { None };
-        let selected = fresh.as_ref().map_or(selected, Vec::len);
+        let selected = fresh.as_ref().map_or(cached.unwrap_or(0), Vec::len);
         self.count(block, limit, selected.saturating_mul(per_item))?;
         if limit == "rows" {
             let cols = self.columns.len();
             self.count(block, "columns", cols)?;
             self.count(block, "cells", selected.saturating_mul(cols))?;
         }
-        if let Some(items) = items {
-            return Ok(items);
-        }
-        let items = fresh.unwrap_or_default();
+        // Bounds first; only then is a cached list copied.
+        let Some(items) = fresh else {
+            return Ok(self.cache.get(&block).map(|(_, items)| items.clone()).unwrap_or_default());
+        };
         for it in &items {
             if it.kind == ItemKind::Characteristic {
                 if let Ok(u) = Uuid::parse(&it.id) {
@@ -902,8 +912,20 @@ pub fn expand(
     let lookup = HeadLookup::new(journal, ctx.project, &ctx.head)?;
     let snap = Snapshot::read(model, &ctx.head)?;
     let columns = Expander::stage_columns(&snap, ctx)?;
-    let mut ex =
-        Expander { ctx, snap, lookup, query, columns, rows: 0, cols: 0, cells: 0, pages: 0, cache: BTreeMap::new() };
+    let column_set: BTreeSet<Uuid> = columns.iter().copied().collect();
+    let mut ex = Expander {
+        ctx,
+        snap,
+        lookup,
+        query,
+        columns,
+        column_set,
+        rows: 0,
+        cols: 0,
+        cells: 0,
+        pages: 0,
+        cache: BTreeMap::new(),
+    };
 
     // Page groups: page -> its group's slot block; no page in two groups, no group slot on
     // a page of another group.

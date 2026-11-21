@@ -434,3 +434,22 @@ fn page_group_overlap_and_nesting_are_refused() {
         assert_eq!(st(&e.to_value(), "reason"), st(&want, "reason"), "{name}");
     }
 }
+
+/// The outcome filter walks each characteristic's own results, not every stage column: a
+/// column slot with a filter over 200 000 live stages (no row table, so no stage-column or
+/// cell bound applies) expands quickly and keeps the same items.
+#[test]
+fn outcome_filter_cost_is_bounded_by_results() {
+    let out = check("column_filter");
+    let groups: Vec<usize> = out.iter().filter(|b| b.role == Role::ColumnGroup).map(|b| b.columns.len()).collect();
+    assert_eq!(groups, [50]);
+    let mut m = model();
+    m.stages.extend((0..200_000).map(|i| StageItem {
+        id: uuid(&format!("019a9a9b-00fa-7000-8000-{:012x}", i + 1)),
+        run: m.runs[0].id,
+        removed: false,
+    }));
+    let out = run("column_filter", &m).unwrap();
+    let groups: Vec<usize> = out.iter().filter(|b| b.role == Role::ColumnGroup).map(|b| b.columns.len()).collect();
+    assert_eq!(groups, [50]);
+}
