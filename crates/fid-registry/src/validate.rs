@@ -310,6 +310,22 @@ pub fn max_projection(class: SideEffect) -> Projection {
     }
 }
 
+/// The projection MCP callers get for `def`, the one rule the bus enforces
+/// (`fid_bus::policy::projection` re-exports it, CORE.BUS.POL.PROJ) and the registry queries
+/// filter by (CORE.REG.QRY, D-035): the stricter of the declared projection (`human_only`
+/// clamped to `request_only`, D-031) and the ceiling of its class ([`max_projection`]), and
+/// `never` when `mcp` is not among its surfaces.
+pub fn mcp_projection(def: &CommandDef) -> Projection {
+    let declared = def.effective_projection();
+    let ceiling = max_projection(def.side_effect);
+    let p = if declared < ceiling { declared } else { ceiling };
+    if def.exposure.contains(&crate::def::Surface::Mcp) {
+        p
+    } else {
+        Projection::Never
+    }
+}
+
 /// Journal event types reserved to one owning command `(id, major)`, or (`None`) to the bus,
 /// which adds them itself and which no command may declare. Any other declaration is
 /// `reserved_effect`.

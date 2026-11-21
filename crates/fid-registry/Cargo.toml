@@ -1,6 +1,6 @@
 [package]
 name = "fid-registry"
-description = "Metrology Maven command registry: definition records, the FPL precondition language and lifecycle records, task guides, the schema keyword vocabulary and quantity-catalogue facade, declaration validation and the compatibility classifier (spec nodes CORE.REG.DEF.FIELD, CORE.REG.DEF.PRED, CORE.REG.DEF.GUIDE, CORE.REG.VER.LIFE, CORE.REG.VER.COMPAT, CORE.REG.VAL, CORE.REG.DEF.SCHEMA), the canonical manifest export with `registry.show_manifest@1` (CORE.REG.MAN), and the declaration-macro runtime (CORE.REG.DEF.MACRO)"
+description = "Metrology Maven command registry: definition records, the FPL precondition language and lifecycle records, task guides, the schema keyword vocabulary and quantity-catalogue facade, declaration validation and the compatibility classifier (spec nodes CORE.REG.DEF.FIELD, CORE.REG.DEF.PRED, CORE.REG.DEF.GUIDE, CORE.REG.VER.LIFE, CORE.REG.VER.COMPAT, CORE.REG.VAL, CORE.REG.DEF.SCHEMA), the canonical manifest export with `registry.show_manifest@1` (CORE.REG.MAN), the registry query commands (CORE.REG.QRY), and the declaration-macro runtime (CORE.REG.DEF.MACRO)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
