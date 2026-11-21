@@ -322,6 +322,14 @@
        "name": "trial/a"
       },
       "type": "BranchCreated"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      }
     }
    },
@@ -465,6 +473,14 @@
        "name": "trial/c"
       },
       "type": "BranchCreated"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "script",
+      "major": 1,
+      "source": "handler"
      }
     }
    },
@@ -483,6 +499,14 @@
        "name": "agent/claude/1"
       },
       "type": "BranchCreated"
+     },
+     "origin": {
+      "branch": "agent/claude/1",
+      "class": "W2",
+      "command": "project.set_tags",
+      "kind": "agent",
+      "major": 1,
+      "source": "bus_route"
      }
     }
    },
@@ -597,6 +621,14 @@
        "name": "main"
       },
       "type": "BranchProtected"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      }
     }
    },
@@ -626,6 +658,14 @@
        "name": "main"
       },
       "type": "CoeditingSet"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      }
     }
    },
@@ -717,6 +757,14 @@
        "name": "trial/a"
       },
       "type": "CoeditingSet"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      }
     }
    },
@@ -736,6 +784,14 @@
        "name": "trial/a"
       },
       "type": "CoeditingSet"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      }
     }
    },
@@ -767,6 +823,14 @@
        "name": "main"
       },
       "type": "CoeditingSet"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      }
     }
    }

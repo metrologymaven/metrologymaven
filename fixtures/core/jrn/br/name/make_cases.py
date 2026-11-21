@@ -264,7 +264,7 @@ def scenario():
     for op in OPS:
         res = call(t, op)
         if "event" in res:
-            ev = dict(res["event"], origin=res.pop("origin"))
+            ev = dict(res["event"], origin=res["origin"])
             t.apply(ev)
             log.append(ev)
         out.append({"call": op, "expect": res})
