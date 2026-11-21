@@ -6,8 +6,11 @@
 //! Determinism D0: pure functions over bytes; tables are `BTreeMap`-backed (the `toml`
 //! crate without `preserve_order`), and diagnostics have a fixed order (see [`validate`]).
 
-use std::cmp::Ordering;
 use std::fmt;
+
+/// OS family, CPU architecture and dotted numeric version, defined in `fid-gpu-policy` (shared
+/// with the GPU policy below the tool layer) and re-exported here unchanged.
+pub use fid_gpu_policy::{Arch, OsFamily, Version};
 
 /// Highest `schema_version` this reader supports (REQ-PLAT.MATRIX.FILE-006).
 pub const SUPPORTED_SCHEMA: u32 = 1;
@@ -49,14 +52,6 @@ macro_rules! named_enum {
 }
 
 named_enum!(
-    /// OS family (extensible by schema bump).
-    OsFamily { Windows = "windows", Ubuntu = "ubuntu", Debian = "debian", Fedora = "fedora", Rhel = "rhel", Macos = "macos" }
-);
-named_enum!(
-    /// CPU architecture.
-    Arch { X86_64 = "x86_64", Aarch64 = "aarch64" }
-);
-named_enum!(
     /// Support tier.
     Tier { Tier1 = "tier1", Tier2 = "tier2", Tier3 = "tier3" }
 );
@@ -64,64 +59,6 @@ named_enum!(
     /// CONSTITUTION §7 phase code; the derived order is the phase order.
     Phase { P0 = "P0", P1a = "P1a", P1b = "P1b", P2 = "P2", P3 = "P3", P4 = "P4", Later = "later" }
 );
-
-/// A dotted numeric version of 1 to 4 `u32` components. Missing trailing components
-/// compare as 0, so `26` == `26.0` and `22.04` == `22.4`.
-#[derive(Debug, Clone, Copy)]
-pub struct Version {
-    parts: [u32; 4],
-    len: usize,
-}
-
-impl Version {
-    /// Parses `"10.0.19041"`-style text: 1 to 4 non-empty runs of ASCII digits separated by
-    /// single dots, each fitting in a `u32`.
-    pub fn parse(s: &str) -> Option<Version> {
-        let mut parts = [0u32; 4];
-        let mut len = 0;
-        for piece in s.split('.') {
-            if len == 4 || piece.is_empty() || piece.len() > 10 || !piece.bytes().all(|b| b.is_ascii_digit()) {
-                return None;
-            }
-            parts[len] = piece.parse().ok()?;
-            len += 1;
-        }
-        Some(Version { parts, len })
-    }
-
-    /// The numeric components as written.
-    pub fn components(&self) -> &[u32] {
-        &self.parts[..self.len]
-    }
-}
-
-impl PartialEq for Version {
-    fn eq(&self, other: &Self) -> bool {
-        self.parts == other.parts
-    }
-}
-impl Eq for Version {}
-impl PartialOrd for Version {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for Version {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.parts.cmp(&other.parts)
-    }
-}
-impl fmt::Display for Version {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (i, p) in self.components().iter().enumerate() {
-            if i > 0 {
-                f.write_str(".")?;
-            }
-            write!(f, "{p}")?;
-        }
-        Ok(())
-    }
-}
 
 /// One matrix row: the half-open version range `[version_min, version_max)` of an OS
 /// family on one architecture, its tier and the phase from which the tier applies.
