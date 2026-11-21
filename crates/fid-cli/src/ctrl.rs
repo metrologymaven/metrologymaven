@@ -11,7 +11,7 @@
 //!
 //! Outcomes: an authenticated app gives `computed` (exit 0); no reachable app gives `not_run`
 //! (exit 6, "nothing ran") with `found: false`; an app that was found but could not be
-//! authenticated gives `failed` (exit 4, or 3 for `ctrl_non_loopback`) with `found`,
+//! authenticated gives `failed` (exit 4, or 3 for `ctrl_non_loopback` and `ctrl_unsafe_runtime_dir`) with `found`,
 //! `authenticated` and `ctrl_error` in the error details.
 
 use crate::{ExitCode, Output};
@@ -149,12 +149,12 @@ fn not_connected(id: &str, e: &ClientError) -> Envelope {
         },
         _ => {
             let code = match e {
-                ClientError::NonLoopback(_) => ErrorCode::PolicyRefused,
+                ClientError::NonLoopback(_) | ClientError::UnsafeRuntimeDir(_) => ErrorCode::PolicyRefused,
                 ClientError::VersionUnsupported(_) => ErrorCode::VersionMismatch,
                 ClientError::Timeout => ErrorCode::Timeout,
                 _ => ErrorCode::PreconditionFailed,
             };
-            let found = !matches!(e, ClientError::NonLoopback(_));
+            let found = !matches!(e, ClientError::NonLoopback(_) | ClientError::UnsafeRuntimeDir(_));
             let details = obj(vec![
                 ("found", CValue::Bool(found)),
                 ("authenticated", CValue::Bool(false)),

@@ -325,8 +325,8 @@ fn ac4_refused_before_acceptance_is_not_run_and_final_envelopes_pass_through() {
             Envelope { job_id: Some(job.to_string()), ..Envelope::computed("test.run_long@1", CValue::Bool(true)) };
         let r = Reply { v: 1, id: Some(reqs[0].id), body: ReplyBody::Envelope(Box::new(env)) };
         c.writer.write_all(&r.encode().unwrap()).unwrap();
-        // Second: explicitly refused before acceptance.
-        c.send(reqs[1].id, coded_error_event("raw_path_refused", "raw path"));
+        // Second: explicitly refused before dispatch (an allow-listed code).
+        c.send(reqs[1].id, coded_error_event("malformed_message", "bad params"));
         // Third: accepted, then the drop.
         let job3 = Uuid::parse("018f2b6e-0000-7000-8000-000000000003").unwrap();
         c.send(reqs[2].id, accepted(&job3));
@@ -348,7 +348,7 @@ fn ac4_refused_before_acceptance_is_not_run_and_final_envelopes_pass_through() {
     assert_eq!(progress[0].1.stage, "half");
     let r1 = t.report(ids[1]).unwrap();
     assert_eq!(r1.envelope.outcome, Outcome::NotRun);
-    assert_eq!(r1.reason, Reason::Refused("raw_path_refused".to_string()));
+    assert_eq!(r1.reason, Reason::Refused("malformed_message".to_string()));
     let r2 = t.report(ids[2]).unwrap();
     assert_eq!(r2.envelope.outcome, Outcome::NoReply);
     assert_eq!(r2.envelope.job_id.as_deref(), Some("018f2b6e-0000-7000-8000-000000000003"));
@@ -546,4 +546,178 @@ fn errors_never_carry_the_token() {
     server.join().unwrap();
     let text = format!("{err} {err:?}");
     assert!(!text.contains(&hex), "{text}");
+}
+
+// ------------------------------------------------------------------ REQ-AUTO.SURF-007: taken errors
+
+/// Error codes outside the pre-dispatch allow-list, and a final reply over its bound, leave the
+/// request "taken": it may have run, so a drop reports `no_reply`, never `not_run`.
+#[test]
+fn errors_outside_the_allow_list_and_oversized_finals_are_no_reply() {
+    let fake = Fake::new("taken");
+    let token = fake.token();
+    let instance = fake.instance.clone();
+    let server = fake.serve(move |c| {
+        c.login(&token, &instance);
+        let reqs: Vec<Request> = (0..3).map(|_| c.next().unwrap()).collect();
+        c.send(reqs[0].id, coded_error_event("message_too_large", "too large"));
+        c.send(reqs[1].id, coded_error_event("raw_path_refused", "raw path"));
+        // A final envelope line of 2 MiB: over the 1 MiB bound of an execute reply.
+        let big = "x".repeat(2 * 1024 * 1024);
+        let env = Envelope::computed("test.run_long@1", CValue::Str(big));
+        let r = Reply { v: 1, id: Some(reqs[2].id), body: ReplyBody::Envelope(Box::new(env)) };
+        c.writer.write_all(&r.encode().unwrap()).unwrap();
+        c.writer.shutdown(Shutdown::Both).unwrap();
+    });
+    let mut t = tracker(client::connect(&fake.target()).unwrap());
+    let ids: Vec<_> = (0..3).map(|_| t.submit(cmd(), empty(), T).unwrap()).collect();
+    server.join().unwrap();
+    pump_until_done(&mut t, &ids);
+    for id in &ids {
+        let r = t.report(*id).unwrap();
+        assert_eq!(r.envelope.outcome, Outcome::NoReply, "{r:?}");
+        assert_eq!(r.envelope.job_id, None);
+    }
+    assert!(t.transport().counters().malformed >= 1, "the oversized final was not dropped");
+}
+
+// ------------------------------------------------------------------ candidates and --instance
+
+/// A candidate that answers with another instance ID or a wrong server proof is skipped, and the
+/// next one is used.
+#[test]
+fn mismatching_and_bad_proof_candidates_are_skipped() {
+    let root = temp_dir("skip");
+    let ops = Arc::new(Ops::default());
+    let server = start(&root, &ops);
+    let mut fakes = Vec::new();
+    for (name, wrong_instance) in [("-0mismatch", true), ("-1badproof", false)] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let record = Discovery {
+            address: IpAddr::V4(Ipv4Addr::LOCALHOST),
+            port: listener.local_addr().unwrap().port(),
+            pid: 1,
+            instance_id: name.into(),
+            versions: vec![1],
+        };
+        discovery::write(&root.join("run"), &record).unwrap();
+        fakes.push(thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            stream.set_read_timeout(Some(T)).unwrap();
+            let mut c = Conn { reader: LineReader::new(stream.try_clone().unwrap()), writer: stream };
+            if wrong_instance {
+                c.hello("someone-else");
+            } else {
+                c.hello(name);
+                let req = c.next().unwrap();
+                assert_eq!(req.op.as_str(), "auth");
+                c.send(req.id, auth_event(&Proof([7; 32]).to_hex()));
+            }
+            c.rest()
+        }));
+    }
+    let c = client::connect(&app_target(&root)).unwrap();
+    assert_eq!(c.discovery().instance_id, server.instance_id());
+    c.close();
+    for f in fakes {
+        assert!(f.join().unwrap().is_empty());
+    }
+    server.stop().unwrap();
+}
+
+#[test]
+fn instance_option_refuses_a_record_for_another_instance() {
+    let root = temp_dir("inst");
+    let port = TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
+    let record = Discovery {
+        address: IpAddr::V4(Ipv4Addr::LOCALHOST),
+        port,
+        pid: 1,
+        instance_id: "bbbb".into(),
+        versions: vec![1],
+    };
+    let written = discovery::write(&root.join("run"), &record).unwrap();
+    std::fs::rename(&written, root.join("run").join(Discovery::file_name("aaaa"))).unwrap();
+    let target = Target {
+        runtime_dir: root.join("run"),
+        token_path: root.join("t"),
+        instance_id: Some("aaaa".into()),
+        timeout: T,
+    };
+    assert_eq!(client::connect(&target).unwrap_err(), ClientError::InstanceMismatch);
+}
+
+// ------------------------------------------------------------------ runtime directory trust (Unix)
+
+#[cfg(unix)]
+fn chmod(p: &Path, mode: u32) {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(p, std::fs::Permissions::from_mode(mode)).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn group_writable_runtime_dir_is_unsafe() {
+    let root = temp_dir("gw");
+    let ops = Arc::new(Ops::default());
+    let server = start(&root, &ops);
+    chmod(&root.join("run"), 0o770);
+    let err = client::connect(&app_target(&root)).unwrap_err();
+    assert_eq!(err.code(), "ctrl_unsafe_runtime_dir", "{err}");
+    let path = server.discovery_path().to_path_buf();
+    assert_eq!(
+        CtrlClient::connect(&path, &root.join("profile").join("ctrl.token"), T).unwrap_err().code(),
+        "ctrl_unsafe_runtime_dir"
+    );
+    let s = client::status(&app_target(&root));
+    assert!(!s.found && !s.authenticated);
+    chmod(&root.join("run"), 0o700);
+    client::connect(&app_target(&root)).unwrap().close();
+    server.stop().unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn symlinked_runtime_dir_is_unsafe() {
+    let root = temp_dir("symdir");
+    let ops = Arc::new(Ops::default());
+    let server = start(&root, &ops);
+    let link = root.join("run-link");
+    std::os::unix::fs::symlink(root.join("run"), &link).unwrap();
+    let target = Target { runtime_dir: link, ..app_target(&root) };
+    assert_eq!(client::connect(&target).unwrap_err().code(), "ctrl_unsafe_runtime_dir");
+    server.stop().unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn group_writable_or_linked_discovery_file_is_unsafe() {
+    let root = temp_dir("gwfile");
+    let ops = Arc::new(Ops::default());
+    let server = start(&root, &ops);
+    let path = server.discovery_path().to_path_buf();
+    chmod(&path, 0o620);
+    let target = Target { instance_id: Some(server.instance_id().to_string()), ..app_target(&root) };
+    assert_eq!(client::connect(&target).unwrap_err().code(), "ctrl_unsafe_runtime_dir");
+    chmod(&path, 0o600);
+    // A symlink to the real file under another instance name.
+    let link = root.join("run").join(Discovery::file_name("linked"));
+    std::os::unix::fs::symlink(&path, &link).unwrap();
+    let linked = Target { instance_id: Some("linked".into()), ..app_target(&root) };
+    assert_eq!(client::connect(&linked).unwrap_err().code(), "ctrl_unsafe_runtime_dir");
+    // Without an instance the unsafe link is skipped and the real file is used.
+    client::connect(&app_target(&root)).unwrap().close();
+    server.stop().unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn unsafe_token_dir_is_token_permissions() {
+    let root = temp_dir("tokdir");
+    let ops = Arc::new(Ops::default());
+    let server = start(&root, &ops);
+    chmod(&root.join("profile"), 0o750);
+    assert_eq!(client::connect(&app_target(&root)).unwrap_err(), ClientError::Token(AuthError::TokenPermissions));
+    chmod(&root.join("profile"), 0o700);
+    server.stop().unwrap();
 }

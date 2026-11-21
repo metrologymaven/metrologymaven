@@ -40,7 +40,7 @@
 //! [`Tracker`]: fid_surface::jobs::Tracker
 
 use crate::auth::{client_proof, verify_server_proof, AuthError, Nonce, Proof, AUTH_OP};
-use crate::discovery::{self, Discovery};
+use crate::discovery::{self, Discovery, TrustedDir};
 use crate::frame::{Frame, LineReader};
 use crate::msg::{
     reply_limit, Reply, ReplyBody, HELLO_OP, MAX_ID, MAX_MESSAGE_BYTES, MAX_SCREENSHOT_REPLY_BYTES, PROTOCOL_VERSIONS,
@@ -77,6 +77,8 @@ const MAX_LINES_PER_RECV: usize = 4096;
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
 /// Default write timeout once connected.
 const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
+/// How long a close waits for replies the reader thread is still delivering.
+const DRAIN_WAIT: Duration = Duration::from_millis(250);
 /// Longest error code taken over from the server as a refusal reason.
 const MAX_CODE_BYTES: usize = 64;
 
@@ -90,6 +92,8 @@ pub enum ClientError {
     AppNotFound(String),
     /// The discovery file names an address other than `127.0.0.1` or `::1`; nothing was opened.
     NonLoopback(String),
+    /// The runtime directory or a discovery file in it is not private to this user.
+    UnsafeRuntimeDir(String),
     /// The server's proof is wrong, missing or malformed; the connection was closed.
     ServerAuthFailed,
     /// The server supports none of the client's versions; the versions it listed.
@@ -114,6 +118,7 @@ impl ClientError {
         match self {
             ClientError::AppNotFound(_) => "app_not_found",
             ClientError::NonLoopback(_) => "ctrl_non_loopback",
+            ClientError::UnsafeRuntimeDir(_) => "ctrl_unsafe_runtime_dir",
             ClientError::ServerAuthFailed => "server_auth_failed",
             ClientError::VersionUnsupported(_) => "version_unsupported",
             ClientError::InstanceMismatch => "instance_mismatch",
@@ -130,6 +135,8 @@ impl fmt::Display for ClientError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ClientError::AppNotFound(why) | ClientError::Transport(why) => write!(f, "{}: {why}", self.code()),
+            // The io error text already starts with the code.
+            ClientError::UnsafeRuntimeDir(why) => f.write_str(why),
             ClientError::NonLoopback(a) => write!(f, "{}: {a}", self.code()),
             ClientError::VersionUnsupported(v) => write!(f, "{}: the app supports {v:?}", self.code()),
             ClientError::Protocol(why) => write!(f, "{}: {why}", self.code()),
@@ -154,6 +161,11 @@ fn known_code(code: &str) -> &'static str {
     ];
     KNOWN.iter().find(|k| **k == code).copied().unwrap_or("server_error")
 }
+
+/// Error codes that are an explicit refusal before dispatch: the server did not and will not run
+/// the request (REQ-AUTO.SURF-007). Every other error event before acceptance, including
+/// `message_too_large`, leaves the request "taken": it may have run, so it ends `no_reply`.
+pub const REFUSAL_CODES: &[&str] = &["auth_failed", "malformed_message", "version_unsupported", "unknown_op"];
 
 /// A server error code as a refusal reason: kept when it looks like a code (1 to 64 bytes of
 /// `[a-z0-9_]`), else `server_error`, so no peer text reaches a report unfiltered.
@@ -378,9 +390,13 @@ impl CtrlClient {
     /// in `token_path`, all within `timeout`.
     pub fn connect(discovery_path: &Path, token_path: &Path, timeout: Duration) -> Result<CtrlClient, ClientError> {
         let deadline = Instant::now() + timeout;
-        let record = discovery::read(discovery_path).map_err(|e| {
-            ClientError::AppNotFound(format!("discovery file {}: {:?}", discovery_path.display(), e.kind()))
-        })?;
+        let dir = match discovery_path.parent() {
+            Some(d) if !d.as_os_str().is_empty() => d,
+            _ => Path::new("."),
+        };
+        let name = discovery_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let record =
+            TrustedDir::open(dir).and_then(|d| d.read(name)).map_err(|e| discovery_error(discovery_path, &e))?;
         CtrlClient::connect_record(record, token_path, deadline)
     }
 
@@ -486,6 +502,7 @@ impl CtrlClient {
         let start = Instant::now();
         let deadline = start + timeout;
         if let Err(e) = self.writer.write_all(&line).and_then(|()| self.writer.flush()) {
+            // Queues what was received and `Disconnected` for `recv`.
             self.mark_closed();
             return Err(transport(&e));
         }
@@ -523,9 +540,7 @@ impl CtrlClient {
                     };
                 }
                 Ok(Inbound::Closed) | Err(RecvTimeoutError::Disconnected) => {
-                    if let Some(ev) = self.mark_closed() {
-                        self.ready.push_back(ev);
-                    }
+                    self.mark_closed();
                     return Err(ClientError::Transport("connection closed".into()));
                 }
                 Err(RecvTimeoutError::Timeout) => return Err(ClientError::Timeout),
@@ -557,16 +572,50 @@ impl CtrlClient {
         Some(id)
     }
 
-    /// Marks the connection closed; returns [`BusEvent::Disconnected`] the first time.
-    fn mark_closed(&mut self) -> Option<BusEvent> {
-        let _ = self.writer.shutdown(Shutdown::Both);
-        self.closed = true;
-        self.pending.clear();
-        if self.disconnect_reported {
-            return None;
+    /// Marks the connection closed. Replies the reader thread already received (or still delivers
+    /// within [`DRAIN_WAIT`]) are matched first, while `pending` still holds their requests, and
+    /// queued in `ready`; then `pending` is cleared and [`BusEvent::Disconnected`] queued once.
+    fn mark_closed(&mut self) {
+        if !self.closed {
+            self.closed = true;
+            self.drain_inbox();
+            let _ = self.writer.shutdown(Shutdown::Both);
         }
-        self.disconnect_reported = true;
-        Some(BusEvent::Disconnected)
+        self.pending.clear();
+        if !self.disconnect_reported {
+            self.disconnect_reported = true;
+            self.ready.push_back(BusEvent::Disconnected);
+        }
+    }
+
+    fn drain_inbox(&mut self) {
+        let end = Instant::now() + DRAIN_WAIT;
+        for _ in 0..MAX_LINES_PER_RECV {
+            let left = end.saturating_duration_since(Instant::now());
+            let next = match &self.inbox {
+                Some(inbox) if !left.is_zero() => inbox.recv_timeout(left),
+                _ => break,
+            };
+            match next {
+                Ok(Inbound::Line(l)) => {
+                    if let Some(ev) = self.on_line(&l) {
+                        self.ready.push_back(ev);
+                    }
+                }
+                _ => break,
+            }
+        }
+    }
+
+    /// Decodes one reply line and turns it into its event, if any.
+    fn on_line(&mut self, l: &[u8]) -> Option<BusEvent> {
+        match Reply::decode(l, SCREENSHOT_OP) {
+            Ok(reply) => self.on_reply(reply, l.len()),
+            Err(_) => {
+                bump(&mut self.counters.malformed);
+                None
+            }
+        }
     }
 
     /// Turns one decoded reply into the event it stands for, if any.
@@ -636,7 +685,7 @@ impl CtrlClient {
                         }
                     }
                 }
-                Some("error") if !p.accepted => {
+                Some("error") if !p.accepted && REFUSAL_CODES.contains(&str_field(&o, "code").unwrap_or("")) => {
                     self.pending.remove(&id);
                     let code = str_field(&o, "code").unwrap_or("");
                     Some(BusEvent::Refused { key: p.key, attempt: p.attempt, reason: safe_code(code) })
@@ -693,9 +742,7 @@ impl BusTransport for CtrlClient {
             return Ok(());
         }
         // The connection is broken. A line with no byte written certainly did not leave.
-        if let Some(ev) = self.mark_closed() {
-            self.ready.push_back(ev);
-        }
+        self.mark_closed();
         if written == 0 {
             Err(SendError::NotSent)
         } else {
@@ -713,15 +760,15 @@ impl BusTransport for CtrlClient {
                 None => Err(TryRecvError::Disconnected),
             };
             match next {
-                Ok(Inbound::Line(l)) => match Reply::decode(&l, SCREENSHOT_OP) {
-                    Ok(reply) => {
-                        if let Some(ev) = self.on_reply(reply, l.len()) {
-                            return Some(ev);
-                        }
+                Ok(Inbound::Line(l)) => {
+                    if let Some(ev) = self.on_line(&l) {
+                        return Some(ev);
                     }
-                    Err(_) => bump(&mut self.counters.malformed),
-                },
-                Ok(Inbound::Closed) | Err(TryRecvError::Disconnected) => return self.mark_closed(),
+                }
+                Ok(Inbound::Closed) | Err(TryRecvError::Disconnected) => {
+                    self.mark_closed();
+                    return self.ready.pop_front();
+                }
                 Err(TryRecvError::Empty) => return None,
             }
         }
@@ -799,7 +846,14 @@ fn handshake(
         str_field(o, "nonce").and_then(Nonce::from_hex).ok_or(ClientError::Protocol("hello without a valid nonce"))?;
     // The token is rotated at every app start: read it for this connection, with the checks.
     let token = TokenFile::open_existing(token_path)
-        .map_err(|_| ClientError::Token(AuthError::TokenIo))?
+        .map_err(|e| {
+            // A token directory that is not private is a permission problem, not an I/O one.
+            ClientError::Token(if discovery::is_unsafe_dir_error(&e) {
+                AuthError::TokenPermissions
+            } else {
+                AuthError::TokenIo
+            })
+        })?
         .read_checked()
         .map_err(ClientError::Token)?;
     let client_nonce = Nonce::random().map_err(|_| ClientError::Transport("OS random source failed".into()))?;
@@ -839,39 +893,73 @@ pub struct Target {
     pub timeout: Duration,
 }
 
+/// The client error for a discovery directory or file that could not be used.
+fn discovery_error(path: &Path, e: &io::Error) -> ClientError {
+    if discovery::is_unsafe_dir_error(e) {
+        ClientError::UnsafeRuntimeDir(e.to_string())
+    } else {
+        ClientError::AppNotFound(format!("discovery file {}: {:?}", path.display(), e.kind()))
+    }
+}
+
+/// How much an error says about why no candidate worked; the most telling one is reported.
+fn rank(e: &ClientError) -> u8 {
+    match e {
+        ClientError::AppNotFound(_) => 0,
+        ClientError::NonLoopback(_) | ClientError::UnsafeRuntimeDir(_) => 1,
+        _ => 2,
+    }
+}
+
+/// Keeps `e` in `last` when it says at least as much.
+fn keep(e: ClientError, last: &mut ClientError) {
+    if rank(&e) >= rank(last) {
+        *last = e;
+    }
+}
+
 /// Connects to the app: the discovery file of `target.instance_id`, or else the first discovery
-/// file in name order whose app is listening (stale files of apps that are gone are skipped, as
-/// are files that do not decode or name a non-loopback address). `app_not_found` when no
-/// candidate is listening; `ctrl_non_loopback` when the only candidates were refused for that.
+/// file in name order whose app is listening and authenticates. The runtime directory is opened
+/// and checked as a [`TrustedDir`] (an unsafe directory is `ctrl_unsafe_runtime_dir` at once).
+/// Candidates are skipped when they do not decode, are not private to the user, name a
+/// non-loopback address, have nothing listening (stale files of apps that are gone), or answer
+/// with another instance ID or a wrong server proof; the most telling error is reported when
+/// none works. With an instance ID, a file whose record names another instance is
+/// `instance_mismatch`.
 pub fn connect(target: &Target) -> Result<CtrlClient, ClientError> {
-    let paths = match &target.instance_id {
-        Some(id) if !discovery::valid_instance_id(id) => {
+    if let Some(id) = &target.instance_id {
+        if !discovery::valid_instance_id(id) {
             return Err(ClientError::AppNotFound("invalid instance ID".into()));
         }
-        Some(id) => vec![target.runtime_dir.join(Discovery::file_name(id))],
-        None => discovery::candidates(&target.runtime_dir)
-            .map_err(|e| ClientError::AppNotFound(format!("runtime directory: {:?}", e.kind())))?,
+    }
+    let dir = TrustedDir::open(&target.runtime_dir).map_err(|e| discovery_error(&target.runtime_dir, &e))?;
+    let names = match &target.instance_id {
+        Some(id) => vec![Discovery::file_name(id)],
+        None => dir.candidates().map_err(|e| discovery_error(&target.runtime_dir, &e))?,
     };
     let mut last = ClientError::AppNotFound(format!("no discovery file in {}", target.runtime_dir.display()));
-    for path in paths {
+    for name in names {
         let deadline = Instant::now() + target.timeout;
-        let record = match discovery::read(&path) {
+        let record = match dir.read(&name) {
             Ok(r) => r,
             Err(e) => {
-                if !matches!(last, ClientError::NonLoopback(_)) {
-                    last = ClientError::AppNotFound(format!("discovery file {}: {:?}", path.display(), e.kind()));
-                }
+                keep(discovery_error(&dir.path().join(&name), &e), &mut last);
                 continue;
             }
         };
+        if let Some(id) = &target.instance_id {
+            if record.instance_id != *id {
+                return Err(ClientError::InstanceMismatch);
+            }
+        }
         match CtrlClient::connect_record(record, &target.token_path, deadline) {
             Ok(c) => return Ok(c),
-            Err(e @ ClientError::NonLoopback(_)) => last = e,
-            Err(e @ ClientError::AppNotFound(_)) => {
-                if !matches!(last, ClientError::NonLoopback(_)) {
-                    last = e;
-                }
-            }
+            Err(
+                e @ (ClientError::NonLoopback(_)
+                | ClientError::AppNotFound(_)
+                | ClientError::InstanceMismatch
+                | ClientError::ServerAuthFailed),
+            ) => keep(e, &mut last),
             Err(e) => return Err(e),
         }
     }
@@ -910,7 +998,10 @@ pub fn status(target: &Target) -> Status {
             }
         }
         Err(e) => Status {
-            found: !matches!(e, ClientError::AppNotFound(_) | ClientError::NonLoopback(_)),
+            found: !matches!(
+                e,
+                ClientError::AppNotFound(_) | ClientError::NonLoopback(_) | ClientError::UnsafeRuntimeDir(_)
+            ),
             authenticated: false,
             version: None,
             instance_id: None,

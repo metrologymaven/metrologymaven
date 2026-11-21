@@ -186,25 +186,6 @@ fn owner_only_options() -> fs::OpenOptions {
     o
 }
 
-/// Reads and decodes one discovery file (spec node `AUTO.CTRL.CLIENT`). The read is bounded to
-/// [`MAX_DISCOVERY_BYTES`] + 1 bytes; a symbolic link, a non-regular file, a larger file or one
-/// that does not decode is `InvalidData` (or the OS error). The file holds no secret, so nothing
-/// else is checked here: the client binds what it reads to the server's `hello` and proofs.
-pub fn read(path: &Path) -> io::Result<Discovery> {
-    use std::io::Read;
-    let meta = fs::symlink_metadata(path)?;
-    if !meta.is_file() {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "discovery path is not a regular file"));
-    }
-    let mut bytes = Vec::new();
-    fs::File::open(path)?.take(MAX_DISCOVERY_BYTES as u64 + 1).read_to_end(&mut bytes)?;
-    if bytes.len() > MAX_DISCOVERY_BYTES {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "discovery file too large"));
-    }
-    Discovery::decode(&bytes)
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "discovery file does not decode"))
-}
-
 /// Longest instance ID accepted in a discovery file name.
 pub const MAX_INSTANCE_ID_BYTES: usize = 64;
 
@@ -215,28 +196,158 @@ pub fn valid_instance_id(id: &str) -> bool {
         && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
 
-/// Most discovery files [`candidates`] returns.
+/// Most discovery files [`TrustedDir::candidates`] returns.
 pub const MAX_CANDIDATES: usize = 64;
 
-/// The discovery files in `dir` (`fid-ctrl-<instance_id>.json` with a valid instance ID), sorted
-/// by name, at most [`MAX_CANDIDATES`]. A missing directory gives an empty list.
-pub fn candidates(dir: &Path) -> io::Result<Vec<PathBuf>> {
-    let entries = match fs::read_dir(dir) {
-        Ok(e) => e,
-        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(e) => return Err(e),
-    };
-    let mut out = Vec::new();
-    for entry in entries {
-        let entry = entry?;
-        let name = entry.file_name();
-        let Some(name) = name.to_str() else { continue };
-        let Some(id) = name.strip_prefix(FILE_PREFIX).and_then(|n| n.strip_suffix(".json")) else { continue };
-        if valid_instance_id(id) {
-            out.push(entry.path());
+/// True when `e` is a `ctrl_unsafe_runtime_dir` refusal.
+pub fn is_unsafe_dir_error(e: &io::Error) -> bool {
+    e.kind() == io::ErrorKind::PermissionDenied && e.to_string().starts_with(UNSAFE_DIR)
+}
+
+/// Why a discovery file with metadata `meta` is not to be trusted by the user `me`, if it is not:
+/// not a regular file, owned by another user, or writable by group or others.
+#[cfg(unix)]
+pub(crate) fn unsafe_file_reason(meta: &fs::Metadata, me: u32) -> Option<&'static str> {
+    use std::os::unix::fs::MetadataExt;
+    if !meta.is_file() {
+        Some("is not a regular file")
+    } else if meta.uid() != me {
+        Some("is owned by another user")
+    } else if meta.mode() & 0o022 != 0 {
+        Some("is writable by group or others")
+    } else {
+        None
+    }
+}
+
+/// The runtime directory as a client reads it (spec node `AUTO.CTRL.CLIENT`), checked the way the
+/// server checks the token directory. On Unix it is opened once with `O_DIRECTORY|O_NOFOLLOW`,
+/// [`unsafe_dir_reason`] runs on that descriptor, and entries are listed and opened relative to it
+/// (`O_NOFOLLOW`); each file must be a regular file owned by this user and not writable by group
+/// or others. On Windows the directory must not be a reparse point and its owner and DACL must give
+/// write access to no principal other than the user, LocalSystem and BUILTIN\Administrators; each
+/// file is opened without following reparse points and gets the same owner and DACL test (so an
+/// owner of LocalSystem or Administrators is accepted on Windows; the operations use paths). Every
+/// refusal is `ctrl_unsafe_runtime_dir` (`PermissionDenied`, see [`is_unsafe_dir_error`]).
+#[derive(Debug)]
+pub struct TrustedDir {
+    dir: crate::token::Dir,
+    path: PathBuf,
+    #[cfg(unix)]
+    uid: u32,
+}
+
+impl TrustedDir {
+    /// Opens and checks `path`. A missing directory is `NotFound`.
+    pub fn open(path: &Path) -> io::Result<TrustedDir> {
+        #[cfg(unix)]
+        {
+            let uid = rustix::process::geteuid().as_raw();
+            let dir = crate::token::Dir::open(path, uid)?;
+            Ok(TrustedDir { dir, path: path.to_path_buf(), uid })
+        }
+        #[cfg(not(unix))]
+        {
+            let dir = crate::token::Dir::open(path)?;
+            Ok(TrustedDir { dir, path: path.to_path_buf() })
         }
     }
-    out.sort();
-    out.truncate(MAX_CANDIDATES);
-    Ok(out)
+
+    /// The directory's path.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// The discovery file names (`fid-ctrl-<instance_id>.json` with a valid instance ID), sorted,
+    /// at most [`MAX_CANDIDATES`].
+    pub fn candidates(&self) -> io::Result<Vec<String>> {
+        let mut out: Vec<String> = self
+            .dir
+            .names()?
+            .into_iter()
+            .filter_map(|n| n.into_string().ok())
+            .filter(|n| {
+                n.strip_prefix(FILE_PREFIX).and_then(|r| r.strip_suffix(".json")).is_some_and(valid_instance_id)
+            })
+            .collect();
+        out.sort();
+        out.truncate(MAX_CANDIDATES);
+        Ok(out)
+    }
+
+    /// Opens `name` relative to the directory without following links, checks it on the handle,
+    /// and reads and decodes it (at most [`MAX_DISCOVERY_BYTES`]).
+    pub fn read(&self, name: &str) -> io::Result<Discovery> {
+        use std::io::Read;
+        #[cfg(unix)]
+        self.dir.check(self.uid)?;
+        #[cfg(not(unix))]
+        self.dir.check()?;
+        let shown = self.path.join(name);
+        let f = match self.dir.open_no_follow(std::ffi::OsStr::new(name)) {
+            Ok(f) => f,
+            Err(e) if crate::token::is_link_error(&e) => return Err(unsafe_dir(&shown, "is a symbolic link")),
+            Err(e) => return Err(e),
+        };
+        check_file(&self.path.join(name), &f, self)?;
+        let mut bytes = Vec::new();
+        f.take(MAX_DISCOVERY_BYTES as u64 + 1).read_to_end(&mut bytes)?;
+        if bytes.len() > MAX_DISCOVERY_BYTES {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "discovery file too large"));
+        }
+        Discovery::decode(&bytes)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "discovery file does not decode"))
+    }
+}
+
+#[cfg(unix)]
+fn check_file(shown: &Path, f: &fs::File, d: &TrustedDir) -> io::Result<()> {
+    match unsafe_file_reason(&f.metadata()?, d.uid) {
+        Some(why) => Err(unsafe_dir(shown, why)),
+        None => Ok(()),
+    }
+}
+
+#[cfg(windows)]
+fn check_file(shown: &Path, f: &fs::File, _d: &TrustedDir) -> io::Result<()> {
+    use std::os::windows::fs::MetadataExt;
+    const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
+    let m = f.metadata()?;
+    if m.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+        return Err(unsafe_dir(shown, "is a reparse point"));
+    }
+    if !m.is_file() {
+        return Err(unsafe_dir(shown, "is not a regular file"));
+    }
+    match fid_ctrl_acl::check_dir_private(f)? {
+        fid_ctrl_acl::Access::OwnerOnly => Ok(()),
+        fid_ctrl_acl::Access::Wider(why) => Err(unsafe_dir(shown, why)),
+    }
+}
+
+/// Other targets have no permission model this crate can check: fail closed.
+#[cfg(not(any(unix, windows)))]
+fn check_file(shown: &Path, _f: &fs::File, _d: &TrustedDir) -> io::Result<()> {
+    Err(unsafe_dir(shown, "cannot be checked on this platform"))
+}
+
+#[cfg(all(test, unix))]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::unsafe_file_reason;
+    use std::os::unix::fs::MetadataExt;
+
+    /// A file owned by another user is refused (the owner check, with the real metadata and a
+    /// different user ID, since tests cannot chown).
+    #[test]
+    fn foreign_owned_file_is_refused() {
+        let p = std::env::temp_dir().join(format!("fid-ctrl-foreign-{}", std::process::id()));
+        std::fs::write(&p, b"{}").unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o600)).unwrap();
+        let m = std::fs::metadata(&p).unwrap();
+        assert_eq!(unsafe_file_reason(&m, m.uid()), None);
+        assert_eq!(unsafe_file_reason(&m, m.uid().wrapping_add(1)), Some("is owned by another user"));
+        std::fs::remove_file(&p).unwrap();
+    }
 }
