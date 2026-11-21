@@ -19,7 +19,7 @@ use crate::msg::{
     auth_event, auth_params, hello_event, hello_versions, negotiate, parse_request, reply_limit, request_limit, Reply,
     ReplyBody, Request, HELLO_OP, PROTOCOL_VERSIONS,
 };
-use crate::token::TokenFile;
+use crate::token::{Permissions, TokenFile};
 use std::collections::BTreeMap;
 use std::io::{self, ErrorKind, Read, Write};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, Shutdown, SocketAddr, TcpListener, TcpStream};
@@ -166,25 +166,28 @@ pub struct Server {
 }
 
 impl Server {
-    /// Validates the address, creates the token file if it is missing, binds an ephemeral
-    /// loopback port, writes the discovery file and starts accepting. A non-loopback address
-    /// logs `ctrl_non_loopback` and returns before any socket or file exists. A token file
-    /// that is too open does not stop the start: it is replaced by a new owner-only token and
-    /// logged as `token_permissions`, so the old token is never accepted.
+    /// Validates the address, replaces the token file with a fresh owner-only token (creating
+    /// it and its directory if missing), binds an ephemeral loopback port, writes the discovery
+    /// file and starts accepting. A non-loopback address logs `ctrl_non_loopback` and returns
+    /// before any socket or file exists. The token is rotated at every start, so no token from
+    /// before the start is accepted; a file found too open is also logged as
+    /// `token_permissions`. If the rotation fails the start fails (`StartError::Token`).
     pub fn start(config: Config, handler: Arc<dyn Handler>, log: Arc<dyn Log>) -> Result<Server, StartError> {
         let Some(ip) = loopback_address(&config.address) else {
             log.log(WireError::NonLoopback.code(), &format!("refusing to listen on {:?}", config.address));
             return Err(StartError::NonLoopback(config.address));
         };
         let token = TokenFile::ensure(&config.token_path).map_err(StartError::Token)?;
-        match token.load() {
-            Ok(_) => {}
-            Err(AuthError::TokenPermissions) => log.log(
+        // A file found too open is reported; the rotation below replaces it like any other.
+        if let Ok(Permissions::Wider(_)) = token.permissions() {
+            log.log(
                 AuthError::TokenPermissions.code(),
                 "the token file was too open or not a regular file; it was replaced with a new token",
-            ),
-            Err(e) => log.log(e.code(), "the token file cannot be read; every authentication will fail"),
+            );
         }
+        // Every start rotates the token (REQ-AUTO.CTRL.AUTH-002): no token from before this
+        // start is accepted, whatever happened to the file while the app was not running.
+        token.rotate().map_err(StartError::Token)?;
         let listener = TcpListener::bind(SocketAddr::new(ip, 0))?;
         listener.set_nonblocking(true)?;
         let local_addr = listener.local_addr()?;

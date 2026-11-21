@@ -544,6 +544,44 @@ fn ac2_refused_token_stays_refused_when_narrowed_before_the_replace() {
     assert_eq!(error_code(&c.auth(&old_token, &sn).2), "auth_failed");
 }
 
+/// The token is rotated at every start: a token copied before a restart is refused after it,
+/// also when the file was widened and narrowed back while the app was down (the in-memory
+/// refused identities do not survive a restart, the rotation covers that).
+#[test]
+fn a_token_copied_before_a_restart_is_refused_after_it() {
+    let root = temp_dir("restart");
+    let token = root.join("profile").join("ctrl.token");
+    let a = start_at(&root, &token, |_| {});
+    let copied = token_bytes(&token);
+    let mut c = Client::connect(&a);
+    let sn = c.hello();
+    assert_eq!(str_field(event(&c.auth(&Token::from_bytes(copied), &sn).2), "kind"), "auth");
+    drop(c);
+    a.server.stop().unwrap();
+    // While the app is down: widened, then narrowed back, so the file looks owner-only again.
+    widen(&token);
+    narrow(&token);
+    assert_eq!(token_bytes(&token), copied);
+    let b = start_at(&root, &token, |_| {});
+    let fresh = token_bytes(&token);
+    assert_ne!(fresh, copied, "the start rotated the token");
+    assert_owner_only_by_os(&token);
+    let mut c = Client::connect(&b);
+    let sn = c.hello();
+    assert_eq!(error_code(&c.auth(&Token::from_bytes(copied), &sn).2), "auth_failed");
+    c.expect_closed();
+    assert_eq!(b.ops.seen.load(Ordering::SeqCst), 0);
+    let mut c = Client::connect(&b);
+    let sn = c.hello();
+    assert_eq!(str_field(event(&c.auth(&Token::from_bytes(fresh), &sn).2), "kind"), "auth");
+    // A plain restart with nothing touched rotates too.
+    drop(c);
+    b.server.stop().unwrap();
+    let c2 = start_at(&root, &token, |_| {});
+    assert_ne!(token_bytes(&token), fresh);
+    drop(c2);
+}
+
 /// The token directory is opened without following a symlink and checked through that handle.
 #[cfg(unix)]
 #[test]

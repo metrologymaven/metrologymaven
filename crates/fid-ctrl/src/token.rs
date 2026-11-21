@@ -26,7 +26,9 @@
 //! file index) is remembered, and it is at once replaced by a new token. Until a replacement
 //! succeeds, a file with a remembered identity is refused (`token_io`) even if its permissions
 //! were narrowed back, and every load retries the replacement. A token that may have leaked is
-//! therefore never accepted again.
+//! therefore never accepted again. In addition the app rotates the token at every start
+//! ([`TokenFile::rotate`]), so a file narrowed back while the app was not running (when the
+//! refused identities, kept in memory only, are gone) is replaced too.
 
 use crate::auth::{AuthError, Token, LEN};
 use crate::discovery::unsafe_dir;
@@ -208,6 +210,20 @@ impl TokenFile {
                 return Ok(());
             }
         }
+        self.write_new()
+    }
+
+    /// Replaces the token file with a new owner-only token unconditionally (the app does this
+    /// at every start, so no token from before the start is ever accepted again), by the same
+    /// path as [`TokenFile::replace`]: a fresh owner-only temporary file renamed over the token.
+    pub fn rotate(&self) -> io::Result<()> {
+        let _guard = lock(&self.replacing);
+        self.write_new()
+    }
+
+    /// Writes a new token to a temporary file and renames it over the token file. The caller
+    /// holds the `replacing` lock.
+    fn write_new(&self) -> io::Result<()> {
         #[cfg(unix)]
         self.dir.check(self.uid)?;
         #[cfg(not(unix))]
