@@ -94,6 +94,7 @@ impl UnitResolution {
 pub fn factor_decimal(unit: LengthUnit) -> &'static str {
     match unit {
         LengthUnit::M => "1",
+        LengthUnit::Cm => "0.01",
         LengthUnit::Mm => "0.001",
         LengthUnit::Um => "0.000001",
         LengthUnit::Nm => "0.000000001",

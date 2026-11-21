@@ -102,8 +102,7 @@ pub fn match_schema(identifier: &str) -> Option<StepSchema> {
     })
 }
 
-/// A length unit a context can resolve to. `Cm` is the one unit here that
-/// `fid_geo_frame::LengthUnit` lacks.
+/// A length unit a context can resolve to; one to one with `fid_geo_frame::LengthUnit`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum StepLengthUnit {
     /// Metre (SI, no prefix).
@@ -167,17 +166,17 @@ impl StepLengthUnit {
         }
     }
 
-    /// The `IO.REG.PROV` unit, if there is one (`Cm` has none).
-    pub fn to_length_unit(self) -> Option<LengthUnit> {
+    /// The `IO.REG.PROV` unit (every unit here has one).
+    pub fn to_length_unit(self) -> LengthUnit {
         match self {
-            StepLengthUnit::M => Some(LengthUnit::M),
-            StepLengthUnit::Cm => None,
-            StepLengthUnit::Mm => Some(LengthUnit::Mm),
-            StepLengthUnit::Um => Some(LengthUnit::Um),
-            StepLengthUnit::Nm => Some(LengthUnit::Nm),
-            StepLengthUnit::In => Some(LengthUnit::In),
-            StepLengthUnit::Ft => Some(LengthUnit::Ft),
-            StepLengthUnit::Thou => Some(LengthUnit::Thou),
+            StepLengthUnit::M => LengthUnit::M,
+            StepLengthUnit::Cm => LengthUnit::Cm,
+            StepLengthUnit::Mm => LengthUnit::Mm,
+            StepLengthUnit::Um => LengthUnit::Um,
+            StepLengthUnit::Nm => LengthUnit::Nm,
+            StepLengthUnit::In => LengthUnit::In,
+            StepLengthUnit::Ft => LengthUnit::Ft,
+            StepLengthUnit::Thou => LengthUnit::Thou,
         }
     }
 }
@@ -186,6 +185,7 @@ impl From<LengthUnit> for StepLengthUnit {
     fn from(u: LengthUnit) -> StepLengthUnit {
         match u {
             LengthUnit::M => StepLengthUnit::M,
+            LengthUnit::Cm => StepLengthUnit::Cm,
             LengthUnit::Mm => StepLengthUnit::Mm,
             LengthUnit::Um => StepLengthUnit::Um,
             LengthUnit::Nm => StepLengthUnit::Nm,
@@ -421,8 +421,8 @@ pub enum HeaderError {
         /// The context.
         context: u64,
     },
-    /// A unit this reader does not resolve (an unknown conversion-based name, an SI prefix
-    /// outside the table, or a centimetre context where `IO.REG.PROV` needs a unit).
+    /// A unit this reader does not resolve (an unknown conversion-based name or an SI
+    /// prefix outside the table).
     UnitUnsupported {
         /// The unit's (or context's) entity number.
         entity: u64,
@@ -1091,10 +1091,13 @@ const FIXED_ITEMS: usize = 12;
 
 /// What groups contexts in the provenance: the unit summary, with the uncertainty as its
 /// parsed value and unit (never the authored token, so `1.E-6` and `1.0E-6` share a group).
+/// The declared unit is part of it, so two overridden contexts that declared different units
+/// (say `um` and `in`) stay in separate groups (review N1 of #377).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct GroupKey {
     length: StepLengthUnit,
     source: UnitSource,
+    declared: Option<StepLengthUnit>,
     angle: Option<AngleUnit>,
     uncertainty: Option<(u64, StepLengthUnit)>,
     geometry: bool,
@@ -1105,6 +1108,7 @@ impl UnitContext {
         GroupKey {
             length: self.length_unit,
             source: self.source,
+            declared: self.declared,
             angle: self.angle,
             uncertainty: self.uncertainty.as_ref().map(|u| (u.value.to_bits(), u.unit)),
             geometry: self.owns_geometry,
@@ -1114,16 +1118,18 @@ impl UnitContext {
     /// The provenance summary of this context's units (everything but the entity number).
     /// Built only from enumerated names, decimal constants and the parsed uncertainty value
     /// (Rust's shortest round-trip form of the f64, e.g. `1e-6`), never from file text.
+    /// `declared` is the length unit the file declared, or `none`.
     pub fn signature(&self) -> String {
         let uncertainty = match &self.uncertainty {
             Some(u) => format!("{:?} {}", u.value, u.unit.symbol()),
             None => "none".to_owned(),
         };
         format!(
-            "length={} factor_m={} source={} angle={} uncertainty={} geometry={}",
+            "length={} factor_m={} source={} declared={} angle={} uncertainty={} geometry={}",
             self.length_unit.symbol(),
             self.length_unit.factor_decimal(),
             self.source.as_str(),
+            self.declared.map_or("none", StepLengthUnit::symbol),
             self.angle.map_or("none", AngleUnit::as_str),
             uncertainty,
             self.owns_geometry,
@@ -1156,26 +1162,24 @@ impl StepHeaderInfo {
     /// applied somewhere, and every context then has that unit as its effective unit: the
     /// record carries it with source `override` if any of them was overridden, else
     /// `caller`, so `unit_overridden` is true. Otherwise the unit comes from the primary
-    /// context (declared), or, when there is no context, from the caller's unit alone. A
-    /// centimetre unit fails `step_unit_unsupported`, because `IO.REG.PROV` has none.
+    /// context (declared), or, when there is no context, from the caller's unit alone.
     pub fn provenance_unit(&self, opts: &HeaderOptions) -> Result<UnitResolution, HeaderError> {
-        let to_prov =
-            |c: &UnitContext| c.length_unit.to_length_unit().ok_or(HeaderError::UnitUnsupported { entity: c.context });
         let affected = self.not_declared();
         if let Some(first) = affected.first() {
-            let g = to_prov(first)?;
+            let g = first.length_unit.to_length_unit();
             if let Some(c) = affected.iter().find(|c| c.length_unit != first.length_unit) {
                 return Err(HeaderError::UnitConflict { context: c.context });
             }
             let resolved = match affected.iter().find(|c| c.source == UnitSource::Override) {
-                // The override row of the IO.REG.PROV table needs only "declared differs
-                // from given"; the record carries the effective unit, not the replaced one
-                // (which may be a centimetre, absent from IO.REG.PROV).
-                Some(c) => {
-                    let stand_in = if g == LengthUnit::M { LengthUnit::Mm } else { LengthUnit::M };
-                    let d = c.declared.and_then(|d| d.to_length_unit()).filter(|d| *d != g).unwrap_or(stand_in);
-                    resolve_unit(Some(d), Some(g), true)
-                }
+                // The override row of the IO.REG.PROV table: the file's declared unit (an
+                // overridden context always has one, different from the effective unit)
+                // replaced by the caller's. The record carries the effective unit.
+                Some(c) => match c.declared.map(StepLengthUnit::to_length_unit) {
+                    Some(d) if d != g => resolve_unit(Some(d), Some(g), true),
+                    // Unreachable by construction; refused, naming the overridden context,
+                    // rather than recorded as `caller`.
+                    _ => return Err(HeaderError::UnitConflict { context: c.context }),
+                },
                 None => resolve_unit(None, Some(g), false),
             };
             return resolved.map_err(|_| HeaderError::UnitConflict { context: first.context });
@@ -1183,7 +1187,7 @@ impl StepHeaderInfo {
         let (declared, given, override_unit) = match self.primary_context() {
             None => (None, opts.unit, opts.override_unit),
             // Not in `affected`, so its unit is declared.
-            Some(c) => (Some(to_prov(c)?), None, false),
+            Some(c) => (Some(c.length_unit.to_length_unit()), None, false),
         };
         resolve_unit(declared, given, override_unit).map_err(|e| match e {
             IoError::UnitConflict => {

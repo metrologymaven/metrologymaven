@@ -43,6 +43,7 @@ def pretty(v) -> bytes:
 
 LENGTH = [  # spec/geo/frame/units/NODE.md, "Exact factors to SI"
     ("m", 1, 1, False),
+    ("cm", 1, 100, False),
     ("mm", 1, 1000, False),
     ("um", 1, 10**6, False),
     ("nm", 1, 10**9, False),

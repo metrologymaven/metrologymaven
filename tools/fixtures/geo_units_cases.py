@@ -14,7 +14,7 @@ fixed point with a rigorous error bound instead (see `pi_interval`).
 
 Rules (pinned in spec/geo/frame/units/NODE.md, Design):
 
-* factors to SI: m 1, mm 1/1000, um 1/10^6, nm 1/10^9, in 127/5000, ft 381/1250,
+* factors to SI: m 1, cm 1/100, mm 1/1000, um 1/10^6, nm 1/10^9, in 127/5000, ft 381/1250,
   thou 127/5000000; rad 1, deg PI/180, arcmin PI/10800, arcsec PI/648000, gon PI/200 with
   PI = round(pi * 2^254) / 2^254 (the 256-bit constant, written to the fixture as pi_256_hex);
 * grammar `[+-]digits[.digits][(e|E)[+-]digits]`; checks in order: > 1024 bytes
@@ -96,6 +96,7 @@ PI_Q = Fraction(PI_256, 2**254)
 
 LENGTH = {
     "m": Fraction(1),
+    "cm": Fraction(1, 100),
     "mm": Fraction(1, 1000),
     "um": Fraction(1, 10**6),
     "nm": Fraction(1, 10**9),
@@ -219,6 +220,11 @@ def hand_parse_cases():
     add("mm_25_4", "25.4", "mm")
     add("foot", "1", "ft")
     add("thou_1000", "1000", "thou")
+    add("cm_one", "1", "cm")
+    add("cm_inch", "2.54", "cm")
+    add("cm_seven_tenths", "0.7", "cm")
+    add("cm_neg_zero", "-0", "cm")
+    add("overflow_cm", "1.8e310", "cm")
     add("zero", "0", "m")
     add("neg_zero", "-0", "m")
     add("plus_zero_exp", "+0.0e5", "mm")
@@ -365,6 +371,9 @@ def hand_display_cases():
     add("min_subnormal", 1, "m", 20)
     add("min_subnormal_nm", 1, "nm", 20)
     add("metre_in_thou", 1.0, "thou", 0)
+    add("inch_in_cm", 0.0254, "cm", 2)
+    add("metre_in_cm", 1.0, "cm", 3)
+    add("max_cm", struct_bits(1.7976931348623157e308), "cm", 20)
     add("foot_20", 0.3048, "ft", 20)
     add("um_landmark", 1.5e-6, "um", 4)
     return d
