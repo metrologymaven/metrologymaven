@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-run]
+built_pr: 390
 satisfies: [REQ-AUTO.RUN-001, REQ-AUTO.RUN-002]
 covers: [PW.AUT.05]
 depends_on: [AUTO.REC.LIFE, AUTO.PROG.FAMILY, CORE.PRJ]
