@@ -43,6 +43,7 @@ Enforces each command's MCP projection at the bus, behind the generated MCP surf
 - **REQ-CORE.BUS.POL.PROJ-006** When a `human` principal invokes `request.reject_request@1` with a reason, the bus shall mark the pending request `rejected` and store the reason as an untrusted text commitment.
 - **REQ-CORE.BUS.POL.PROJ-007** When `request.list_requests@1` runs, the bus shall return the caller's own requests, or all requests for a `human` caller, sorted by filing sequence, filterable by state.
 - **REQ-CORE.BUS.POL.PROJ-008** If approval executes the command and any later pipeline stage fails, then the request shall stay `pending` and nothing shall be committed.
+- **REQ-CORE.BUS.POL.PROJ-009** For an MCP or `agent` caller, the bus shall apply the projection rule before validating the parameters or results of a command against its schemas: resolution (REQ-CORE.BUS.PIPE.VALID-009) treats a `never` command as absent, so parameter validation, preconditions and the handler (and with it result validation) never run for, and no refusal ever reveals, a hidden command (D-035). `CORE.BUS.PIPE.STAGE` shall keep this order: resolve, then validate, then `authorise`.
 
 ## Acceptance criteria
 
@@ -53,6 +54,7 @@ Enforces each command's MCP projection at the bus, behind the generated MCP surf
 - **AC-5** Given R, when the agent withdraws it, then R is `withdrawn`; when another agent withdraws it, then `policy` / `not_requester`.
 - **AC-6** Given R, when a human runs `fid request reject-request R --reason "wrong datum" --json`, then R is `rejected` and the reason is stored as untrusted text.
 - **AC-7** (replay) Given the journal from AC-1 and AC-3, when replayed in exact mode, then the outcome is `IDENTICAL`.
+- **AC-8** (error path, D-035) Given an agent and a `never` command, when it is invoked with parameters that are valid, that fail its schema, or that are not an object, then each call is refused byte for byte as the same call to a command the bus does not hold, and its schema is never evaluated against those parameters.
 
 ## Design
 
@@ -87,11 +89,13 @@ Enforces each command's MCP projection at the bus, behind the generated MCP surf
 - A rejection reason may not hold Unicode 16.0 Cc, Cf, Zl or Zp code points, noncharacters (U+FDD0..U+FDEF and every U+xFFFE/U+xFFFF) or tag characters (U+E0000..U+E007F); the table is `REASON_FORBIDDEN_RANGES`.
 - Parameters reach `authorise` as `ValidParams` from the validation stage (`CORE.BUS.PIPE.VALID`); filing re-checks them against the structural keywords of the target's `params_schema` and a 64 KiB bound as defence in depth. A non-requester's withdrawal stays `policy/not_requester`, as REQ-005 and AC-5 require, although it tells a caller that the request ID exists.
 - Pending-request records reach handlers as entities of kind `request.pending_request` through the handler `StateView`; the project's state view must include them when `CORE.BUS.PIPE.STAGE` wires the pipeline. Filing an X1 command by a `script` outside MCP is `CORE.BUS.POL.EGRESS`.
-- **Other ways a hidden command can still show (D-035), for other leaves.** (a) `CommandTable::resolve` (`CORE.BUS.PIPE.VALID`) does not know the audience: for `id@N` whose name the table holds under other majors it says `not_found/unknown_major`, so an agent asking for a missing major of a hidden name learns the name exists, and a hidden major of a name with a visible major is `unknown_command` here where a missing major of that name is `unknown_major`. (b) When `CORE.BUS.PIPE.STAGE` wires the pipeline, resolve and parameter validation run before `authorise`; a validation error against a hidden command's `params_schema` would reveal it, so for MCP and `agent` callers the projection check (or an audience-aware resolve) must come before validation.
+- **Other ways a hidden command could show (D-035): closed.** Resolution is audience-aware (REQ-CORE.BUS.PIPE.VALID-009), so neither `unknown_major` for a hidden name nor a validation error against a hidden schema reaches an agent (REQ-009). Free text of visible commands naming a hidden one is `CORE.REG.MAN`'s concern.
 
 ## Change log
 
 - 2026-11-21 (security fix for D-035, maintainer decision): a `never`-projected command over MCP was refused as `policy/not_on_mcp` with detail "`<id>@<major>` is not available over MCP", which told an agent that the hidden command exists. It is now refused exactly as an unknown command (`not_found/unknown_command`, same detail shape, built by the same function as the command table's refusal). REQ-002, AC-2, Algorithm and Errors are revised; the remaining paths are listed under Open questions. No REQ ID was renumbered.
+
+- 2026-11-21 (security fix for D-035, maintainer decision): new REQ-009 and AC-8 pin the order for MCP and `agent` callers: the projection rule, applied at resolution (CORE.BUS.PIPE.VALID REQ-009), comes before any parameter or result schema validation, so a hidden command's schema is never used and its refusals equal those of an unknown command. The open question on the remaining leak paths is closed. No REQ ID was renumbered.
 
 ## Children
 

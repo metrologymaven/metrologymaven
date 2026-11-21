@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-20
+updated: 2026-11-21
 ---
 
 # CORE.BUS.PIPE.VALID: Command resolution, parameter validation and preconditions
@@ -43,6 +43,7 @@ The resolve, validate and precondition stages. VALID looks up `id@major` in the 
 - **REQ-CORE.BUS.PIPE.VALID-006** If a precondition evaluates false, then the bus shall return `precondition` naming the predicate.
 - **REQ-CORE.BUS.PIPE.VALID-007** If a precondition evaluation exceeds its declared step bound, then the bus shall stop it and return `precondition` with reason `step_bound_exceeded`.
 - **REQ-CORE.BUS.PIPE.VALID-008** If a parameter document exceeds 16 MiB or a nesting depth of 64, then the bus shall return `validation` with reason `input_limit` without parsing further.
+- **REQ-CORE.BUS.PIPE.VALID-009** When an `agent` principal (every MCP channel derives one) invokes a command, the bus shall resolve it as if every major whose MCP projection is `never` were absent, before any lifecycle check: a name with no major the agent can see shall be `not_found` / `unknown_command`, and a hidden major of a name with a visible major `not_found` / `unknown_major`, each byte for byte the refusal of a name or major the table does not hold, so no later stage (schema, references, preconditions) runs against a hidden command for an agent (D-035).
 
 ## Acceptance criteria
 
@@ -53,6 +54,7 @@ The resolve, validate and precondition stages. VALID looks up `id@major` in the 
 - **AC-5** Given `{"value":"10.1","unit":"mm"}` for a length parameter, when validated, then the handler receives the SI value and the entry keeps the literal.
 - **AC-6** (error path) Given a precondition that is false and one that loops past its step bound, then both return `precondition`, the second with `step_bound_exceeded`, and nothing is journaled.
 - **AC-7** (error path) Given a 17 MiB parameter document, then `validation` / `input_limit`.
+- **AC-8** (error path, D-035) Given commands whose every major is hidden (declared `never`, no `mcp` surface, removed, lifecycle-hidden) and a name with one visible and two hidden majors, when an agent resolves each hidden major, a missing major and a missing name, with any parameters, then every refusal is byte for byte (RFC 8785 JSON) the one the agent gets from a table without the hidden majors; a human still resolves them as before.
 
 ## Design
 
@@ -94,6 +96,10 @@ The resolve, validate and precondition stages. VALID looks up `id@major` in the 
 - `CORE.BUS.PIPE.STAGE` should record `Validated::entry_params()`, the literals and `Validated::algorithms()` in the entry, and show `Resolved::deprecation()` on the surfaces.
 - An assignment asked for deprecated majors to be refused. This leaf keeps REQ-001: deprecated majors resolve (with a notice); only unknown, removed and (outside replay) hidden majors are refused. Refusing deprecated majors would need a requirement change here and in `CORE.REG.VER.LIFE`, and a catalogue reason.
 - Performance budget (1 KiB document under 50 µs warm) not yet measured; the step budget bounds the worst case.
+
+## Change log
+
+- 2026-11-21 (security fix for D-035, maintainer decision): `CommandTable::resolve` did not know its audience, so an agent asking for `id@N` of a hidden name got `unknown_major` (or `removed_major` / `hidden_command`) and learned the name exists. New REQ-009 and AC-8: for an `agent` principal a `never`-projected major does not exist and is checked first; the refusals equal those for a real miss, and since validation needs a resolved command, a hidden command's schema is never used for an agent. The `unknown_major` detail names only the requested major, so it lists no major at all, visible or hidden. No REQ ID was renumbered.
 
 ## Children
 

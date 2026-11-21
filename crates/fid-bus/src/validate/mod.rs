@@ -9,7 +9,11 @@
 //! 1. [`CommandTable::resolve`]: exact `(id, major)` lookup. Unknown ID
 //!    `not_found/unknown_command`, unknown major `not_found/unknown_major`, `removed`
 //!    `not_found/removed_major` (REQ-001); `hidden` gives `hidden_command/hidden_major`
-//!    unless the principal is the replay engine's `system` principal (REQ-002). `active`
+//!    unless the principal is the replay engine's `system` principal (REQ-002). For an
+//!    `agent` principal a `never`-projected major does not exist and is checked first: a name
+//!    with no visible major is `unknown_command`, a hidden major of a visible name is
+//!    `unknown_major`, each identical to a real miss, so no later stage uses a hidden
+//!    command's schema (REQ-009, D-035). `active`
 //!    and `deprecated` majors resolve; [`Resolved::deprecation`] carries the
 //!    `replaced_by` and `remove_after` of a deprecated one for the surface to show.
 //! 2. [`Resolved::validate_json`] (or [`Resolved::validate_value`] for a parsed document):
@@ -63,8 +67,8 @@ use crate::unit::{algorithm_id, normalise_value, Normalised};
 use fid_canon::{parse_with_budget, CValue, CanonError, Digest};
 use fid_kci::AlgorithmId;
 use fid_registry::{
-    compile_command, evaluate, Catalogue, CommandDef, ContextTypes, FieldPath, Lifecycle, ParamSchema, PredContext,
-    PredError, Predicate, State, Type, Value, Verdict,
+    compile_command, evaluate, mcp_projection, Catalogue, CommandDef, ContextTypes, FieldPath, Lifecycle, ParamSchema,
+    PredContext, PredError, Predicate, Projection, State, Type, Value, Verdict,
 };
 use fid_types::{CommandId, CommandName};
 use std::collections::{BTreeMap, BTreeSet};
@@ -237,7 +241,14 @@ impl CommandTable {
         out
     }
 
-    /// Resolves `id@major` for `principal` (REQ-001, REQ-002).
+    /// Resolves `id@major` for `principal` (REQ-001, REQ-002, REQ-009).
+    ///
+    /// Audience (D-035): to an `agent` principal (every MCP channel derives one) a major whose
+    /// MCP projection ([`mcp_projection`]) is `never` does not exist, and is checked before
+    /// any lifecycle state. A name with no major the agent can see is `unknown_command`, and a
+    /// hidden major of a name with a visible major is `unknown_major`, each byte for byte the
+    /// refusal of a name or major the table does not hold. So no stage after this one (schema,
+    /// references, preconditions) ever runs against a hidden command for an agent.
     pub fn resolve(&self, id: &str, major: u32, principal: &Principal) -> Result<Resolved<'_>, BusError> {
         let shown: String = id.chars().take(128).collect();
         let not_found =
@@ -245,7 +256,12 @@ impl CommandTable {
         if !CommandName::is_valid(id) || !self.names.contains(id) {
             return Err(unknown_command(id, major));
         }
-        let Some(cmd) = self.commands.get(&(id.to_string(), major)) else {
+        let agent = principal.kind() == PrincipalKind::Agent;
+        let sees = |c: &Command| !agent || mcp_projection(&c.def) != Projection::Never;
+        if agent && !self.majors(id).any(&sees) {
+            return Err(unknown_command(id, major));
+        }
+        let Some(cmd) = self.commands.get(&(id.to_string(), major)).filter(|c| sees(c)) else {
             return Err(not_found(NotFoundReason::UnknownMajor, "unknown major"));
         };
         match cmd.lifecycle.state {
@@ -256,6 +272,13 @@ impl CommandTable {
             )),
             State::Active | State::Deprecated | State::Hidden => Ok(Resolved { table: self, cmd }),
         }
+    }
+
+    /// Every major of `id` in the table.
+    fn majors<'a>(&'a self, id: &str) -> impl Iterator<Item = &'a Command> + 'a {
+        let lo = (id.to_string(), 0);
+        let hi = (id.to_string(), u32::MAX);
+        self.commands.range(lo..=hi).map(|(_, c)| c)
     }
 
     /// [`CommandTable::resolve`] for a typed command ID.

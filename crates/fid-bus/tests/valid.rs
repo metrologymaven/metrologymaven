@@ -214,6 +214,127 @@ fn ac2_hidden() {
     assert_eq!((e.pointer.to_string().as_str(), e.keyword), ("/n", "type"));
 }
 
+// ------------------------------------------------------------------ D-035 audience
+
+fn vis_def(id: &str, major: u32, projection: &str, exposure: &str, state: &str) -> CommandDef {
+    let json = format!(
+        r#"{{"id":"{id}","major":{major},"title":"T","description":"D",
+"params_schema":{{"type":"object","required":["n"],"properties":{{"n":{{"type":"integer"}}}},"additionalProperties":false}},
+"result_schema":{{"type":"object"}},"side_effect":"W2","mcp_projection":"{projection}","determinism":"D0",
+"idempotency":"none","fs_effect":"none","undo":"head_move","preconditions":[],
+"effects":["TestDone"],"algorithms":[],"exposure":{exposure},
+"lifecycle":{{"state":"{state}","since":"2026-01-01"}},"web":"available"}}"#
+    );
+    CommandDef::from_value(parse(json.as_bytes()).unwrap()).unwrap()
+}
+
+/// Commands of the audience tests: `(def, hidden from agents)`.
+fn audience_defs() -> Vec<(CommandDef, bool)> {
+    let mcp = r#"["cli","mcp"]"#;
+    let cli = r#"["cli"]"#;
+    vec![
+        // A name whose every major is hidden: declared never, and no MCP surface.
+        (vis_def("h.only", 1, "never", mcp, "active"), true),
+        (vis_def("h.only", 2, "exposed", cli, "active"), true),
+        // A name with a visible major and hidden majors (one also lifecycle-hidden).
+        (vis_def("h.mix", 1, "exposed", mcp, "active"), false),
+        (vis_def("h.mix", 2, "never", mcp, "active"), true),
+        (vis_def("h.mix", 3, "never", mcp, "hidden"), true),
+        // Lifecycle states that would otherwise answer with their own reasons.
+        (vis_def("h.gone", 1, "never", mcp, "removed"), true),
+        (vis_def("h.life", 1, "exposed", cli, "hidden"), true),
+    ]
+}
+
+/// D-035 (REQ-009): to an agent, a hidden major does not exist. Each refusal is compared
+/// byte for byte (RFC 8785 JSON of code, reason and detail) with the refusal the same agent
+/// gets from a table that does not hold the hidden majors at all; so a hidden name is
+/// `unknown_command` and a hidden major of a visible name is `unknown_major`, never
+/// `removed_major` or `hidden_command`. A person still resolves them as before.
+#[test]
+fn hidden_commands_resolve_for_an_agent_exactly_as_missing_ones() {
+    let all = audience_defs();
+    let defs: Vec<CommandDef> = all.iter().map(|(d, _)| d.clone()).collect();
+    let visible: Vec<CommandDef> = all.iter().filter(|(_, h)| !h).map(|(d, _)| d.clone()).collect();
+    let t = CommandTable::build(DIGEST, defs, catalogue(), &ContextTypes::new()).unwrap();
+    let without = CommandTable::build(DIGEST, visible, catalogue(), &ContextTypes::new()).unwrap();
+    let agent = principal("agent");
+    assert_eq!(agent.kind(), PrincipalKind::Agent);
+    let bytes = |e: BusError| e.to_json().unwrap();
+    let mut probes: Vec<(String, u32)> = all.iter().filter(|(_, h)| *h).map(|(d, _)| (d.id.clone(), d.major)).collect();
+    probes.extend([("h.only".to_string(), 9), ("h.mix".to_string(), 9), ("h.none".to_string(), 1)]);
+    for (id, major) in &probes {
+        let got = t.resolve(id, *major, &agent).map(|_| ()).unwrap_err();
+        let want = without.resolve(id, *major, &agent).map(|_| ()).unwrap_err();
+        assert_eq!(bytes(got), bytes(want), "{id}@{major}");
+    }
+    let reason = |id: &str, major: u32| match t.resolve(id, major, &agent) {
+        Err(BusError::NotFound(r, _)) => r,
+        other => panic!("{id}@{major}: {other:?}"),
+    };
+    for (id, major) in [("h.only", 1), ("h.only", 2), ("h.only", 9), ("h.gone", 1), ("h.life", 1), ("h.none", 1)] {
+        assert_eq!(reason(id, major), NotFoundReason::UnknownCommand, "{id}@{major}");
+    }
+    for major in [2, 3, 9] {
+        assert_eq!(reason("h.mix", major), NotFoundReason::UnknownMajor, "h.mix@{major}");
+    }
+    // The visible major resolves and validates as usual.
+    let r = t.resolve("h.mix", 1, &agent).unwrap();
+    assert!(r.validate_value(&obj(&[("n", CValue::Num(1.0))]), &view()).is_ok());
+    // A person is not filtered: the projection is the authorise stage's business.
+    let human = principal("human");
+    assert!(t.resolve("h.mix", 2, &human).is_ok());
+    assert!(t.resolve("h.only", 2, &human).is_ok());
+    assert!(matches!(t.resolve("h.gone", 1, &human), Err(BusError::NotFound(NotFoundReason::RemovedMajor, _))));
+    assert!(matches!(t.resolve("h.mix", 3, &human), Err(BusError::HiddenCommand(..))));
+}
+
+/// D-035 (REQ-009): for an agent, no stage after resolve can use a hidden command's
+/// schema. Whatever the parameters (valid, failing the hidden schema, not an object), the call
+/// gives the same bytes as the same call against a table without the hidden majors: the
+/// refusal comes from resolve, before validation.
+#[test]
+fn an_agent_never_reaches_the_schema_of_a_hidden_command() {
+    let all = audience_defs();
+    let defs: Vec<CommandDef> = all.iter().map(|(d, _)| d.clone()).collect();
+    let visible: Vec<CommandDef> = all.iter().filter(|(_, h)| !h).map(|(d, _)| d.clone()).collect();
+    let t = CommandTable::build(DIGEST, defs, catalogue(), &ContextTypes::new()).unwrap();
+    let without = CommandTable::build(DIGEST, visible, catalogue(), &ContextTypes::new()).unwrap();
+    let agent = principal("agent");
+    let call = |table: &CommandTable, id: &str, major: u32, params: &CValue| -> Vec<u8> {
+        match table.resolve(id, major, &agent) {
+            Ok(r) => match r.validate_value(params, &view()) {
+                Ok(_) => b"validated".to_vec(),
+                Err(e) => e.to_bus_error().to_json().unwrap(),
+            },
+            Err(e) => e.to_json().unwrap(),
+        }
+    };
+    let documents = [
+        obj(&[("n", CValue::Num(1.0))]),
+        obj(&[]),
+        obj(&[("n", text("x"))]),
+        obj(&[("extra", CValue::Bool(true))]),
+        CValue::Arr(vec![]),
+    ];
+    for params in &documents {
+        for (d, hidden) in &all {
+            if *hidden {
+                assert_eq!(
+                    call(&t, &d.id, d.major, params),
+                    call(&without, &d.id, d.major, params),
+                    "{}@{}",
+                    d.id,
+                    d.major
+                );
+            }
+        }
+    }
+    // The visible major is validated against its own schema.
+    assert_eq!(call(&t, "h.mix", 1, &documents[0]), b"validated".to_vec());
+    assert_ne!(call(&t, "h.mix", 1, &documents[2]), b"validated".to_vec());
+}
+
 /// A deprecated major resolves and tells the surface its successor.
 #[test]
 fn deprecated_major_resolves_with_notice() {
