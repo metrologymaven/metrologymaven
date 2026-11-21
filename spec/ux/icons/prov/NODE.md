@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-design]
+built_pr: 369
 satisfies: [REQ-UX.ICONS-002, REQ-UX.ICONS-007, REQ-UX.ICONS-008]
 covers: []
 depends_on: [UX.SYSTEM.PKG, UX.SYSTEM.REVIEW]
