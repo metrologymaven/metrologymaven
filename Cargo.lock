@@ -2169,6 +2169,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-vreplay"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-num",
+ "fid-rep",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-wasm-check"
 version = "0.0.1"
 dependencies = [
