@@ -76,6 +76,9 @@ pub const MAX_FULL: u32 = 1 << 12;
 pub const MAX_WITNESSES: usize = 64;
 /// Rounding allowance of every lower bound, relative to `R`.
 pub const SLACK: f64 = 1e-12;
+/// `mec3` falls back to half the longest side when twice the area is at most this times the
+/// longest side squared (a nearly degenerate triangle).
+pub const MEC3_THIN: f64 = 1e-6;
 /// Seed of the Welzl order.
 pub const ORDER_SEED: u64 = 0x9e37_79b9_7f4a_7c15;
 
@@ -130,6 +133,11 @@ fn dom(detail: &'static str) -> FitError {
     FitError::Num(NumError::Domain { op: OP, detail })
 }
 
+/// Fallible growth of a buffer to hold `n` more elements (allocation failure is an error).
+fn reserve<T>(v: &mut Vec<T>, n: usize) -> Result<(), FitError> {
+    v.try_reserve(n).map_err(|_| dom("allocation_failed"))
+}
+
 fn sqrt(x: f64) -> Result<f64, FitError> {
     Ok(f::sqrt(x)?)
 }
@@ -177,14 +185,26 @@ pub(crate) fn mec3(a: V2, b: V2, c: V2) -> Result<f64, FitError> {
     if ge(s[k], o1 + o2)? {
         return Ok(sqrt(s[k])? / 2.0);
     }
-    let area2 = cross2(a, b, c).abs();
+    // Twice the area from the vertex opposite the longest side (its two edges are the shorter
+    // ones, so the cross product has a relative rounding error of a few ulps even for thin
+    // triangles; from another vertex it can reach `u * longest / shortest`, review of #374).
+    let (o, e1, e2) = match k {
+        0 => (c, a, b),
+        1 => (a, b, c),
+        _ => (b, c, a),
+    };
+    let area2 = cross2(o, e1, e2).abs();
+    let half = sqrt(s[k])? / 2.0;
+    // A nearly degenerate triangle: half the longest side, a valid (smaller) lower bound.
+    if !gt(area2, MEC3_THIN * s[k])? {
+        return Ok(half);
+    }
     let r = sqrt(s[0])? * sqrt(s[1])? * sqrt(s[2])? / (2.0 * area2);
-    // An acute triangle's circumradius is at least half its longest side; a non-finite value
-    // (a degenerate triangle misjudged acute) falls back to that.
+    // An acute triangle's circumradius is at least half its longest side.
     if r.is_finite() {
-        Ok(f::total_max(r, sqrt(s[k])? / 2.0)?)
+        Ok(f::total_max(r, half)?)
     } else {
-        Ok(sqrt(s[k])? / 2.0)
+        Ok(half)
     }
 }
 
@@ -206,6 +226,7 @@ fn mec_small(p: &[V2]) -> Result<f64, FitError> {
 fn project(q: &[f64], c: V3, out: &mut Vec<V2>) -> Result<(), FitError> {
     let (e1, e2) = init::basis(c)?;
     out.clear();
+    reserve(out, q.len() / 3)?;
     for p in q.chunks_exact(3) {
         out.push([p[0] * e1[0] + p[1] * e1[1] + p[2] * e1[2], p[0] * e2[0] + p[1] * e2[1] + p[2] * e2[2]]);
     }
@@ -213,14 +234,16 @@ fn project(q: &[f64], c: V3, out: &mut Vec<V2>) -> Result<(), FitError> {
 }
 
 /// Convex hull (monotone chain, counter-clockwise, indices into `p`), O(n log n).
-fn hull(p: &[V2], idx: &mut Vec<usize>, out: &mut Vec<usize>) {
+fn hull(p: &[V2], idx: &mut Vec<usize>, out: &mut Vec<usize>) -> Result<(), FitError> {
     idx.clear();
+    reserve(idx, p.len())?;
     idx.extend(0..p.len());
     idx.sort_by(|&i, &j| p[i][0].total_cmp(&p[j][0]).then(p[i][1].total_cmp(&p[j][1])).then(i.cmp(&j)));
     out.clear();
+    reserve(out, p.len() + 1)?;
     if p.len() < 3 {
         out.extend_from_slice(idx);
-        return;
+        return Ok(());
     }
     for &i in idx.iter() {
         while out.len() >= 2 && cross2(p[out[out.len() - 2]], p[out[out.len() - 1]], p[i]) <= 0.0 {
@@ -236,6 +259,7 @@ fn hull(p: &[V2], idx: &mut Vec<usize>, out: &mut Vec<usize>) {
         out.push(i);
     }
     out.pop();
+    Ok(())
 }
 
 /// The larger of two finite squared distances (KNP-1: no `f64::max`).
@@ -301,10 +325,30 @@ fn circle3(a: V2, b: V2, c: V2) -> (V2, f64) {
     best
 }
 
-/// Iterative Welzl on the points `p[h[..]]` in the fixed order: the centre and the support set
-/// (one to three indices into `p`).
-fn welzl(p: &[V2], h: &[usize], order: &mut Vec<usize>) -> (V2, Vec<usize>) {
+/// A support set: up to three indices into the projected points.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Support {
+    idx: [usize; 3],
+    len: usize,
+}
+
+impl Support {
+    fn of(idx: &[usize]) -> Support {
+        let mut s = Support { idx: [0; 3], len: idx.len().min(3) };
+        s.idx[..s.len].copy_from_slice(&idx[..s.len]);
+        s
+    }
+
+    fn as_slice(&self) -> &[usize] {
+        &self.idx[..self.len]
+    }
+}
+
+/// Iterative Welzl on the points `p[h[..]]` in the fixed order: the centre and the support set.
+/// An empty `h` is an error.
+fn welzl(p: &[V2], h: &[usize], order: &mut Vec<usize>) -> Result<(V2, Support), FitError> {
     order.clear();
+    reserve(order, h.len())?;
     order.extend_from_slice(h);
     let mut s = ORDER_SEED;
     for i in (1..order.len()).rev() {
@@ -313,10 +357,11 @@ fn welzl(p: &[V2], h: &[usize], order: &mut Vec<usize>) -> (V2, Vec<usize>) {
         s ^= s << 17;
         order.swap(i, (s % (i as u64 + 1)) as usize);
     }
+    let first = *order.first().ok_or(dom("welzl_empty"))?;
     let out = |x: V2, c: V2, r2: f64| d2(x, c) > r2 * (1.0 + 1e-14);
-    let mut c = p[order[0]];
+    let mut c = *p.get(first).ok_or(dom("welzl_index"))?;
     let mut r2 = 0.0;
-    let mut sup = vec![order[0]];
+    let mut sup = Support::of(&[first]);
     for i in 1..order.len() {
         let pi = p[order[i]];
         if !out(pi, c, r2) {
@@ -324,24 +369,24 @@ fn welzl(p: &[V2], h: &[usize], order: &mut Vec<usize>) -> (V2, Vec<usize>) {
         }
         c = pi;
         r2 = 0.0;
-        sup = vec![order[i]];
+        sup = Support::of(&[order[i]]);
         for j in 0..i {
             let pj = p[order[j]];
             if !out(pj, c, r2) {
                 continue;
             }
             (c, r2) = circle2(pi, pj);
-            sup = vec![order[i], order[j]];
+            sup = Support::of(&[order[i], order[j]]);
             for k in 0..j {
                 let pk = p[order[k]];
                 if out(pk, c, r2) {
                     (c, r2) = circle3(pi, pj, pk);
-                    sup = vec![order[i], order[j], order[k]];
+                    sup = Support::of(&[order[i], order[j], order[k]]);
                 }
             }
         }
     }
-    (c, sup)
+    Ok((c, sup))
 }
 
 /// The ten kept icosahedron faces (rule 11 step 1).
@@ -400,22 +445,24 @@ fn set_bound(
 ) -> Result<(f64, f64), FitError> {
     let (e1, e2) = e;
     wp.clear();
+    reserve(wp, w.len())?;
     for &k in w {
         let p = q.get(3 * k..3 * k + 3).ok_or(dom("point"))?;
         wp.push([p[0] * e1[0] + p[1] * e1[1] + p[2] * e1[2], p[0] * e2[0] + p[1] * e2[1] + p[2] * e2[2]]);
     }
     all.clear();
+    reserve(all, wp.len())?;
     all.extend(0..wp.len());
-    let (_, sup) = welzl(wp, all, order);
+    let (_, sup) = welzl(wp, all, order)?;
     let mut ms = 0.0_f64;
-    let mut sp = Vec::with_capacity(3);
-    for &i in &sup {
+    let mut sp = [[0.0; 2]; 3];
+    for (slot, &i) in sp.iter_mut().zip(sup.as_slice()) {
         let k = *w.get(i).ok_or(dom("support"))?;
         let p = q.get(3 * k..3 * k + 3).ok_or(dom("point"))?;
         ms = f::total_max(ms, norm3([p[0], p[1], p[2]])?)?;
-        sp.push(wp[i]);
+        *slot = *wp.get(i).ok_or(dom("support"))?;
     }
-    let m = mec_small(&sp)?;
+    let m = mec_small(&sp[..sup.len])?;
     Ok((m - sqrt(r * r + ms * ms)? * h, m))
 }
 
@@ -431,7 +478,8 @@ pub(crate) fn search(q: &[f64], contacts: &[u32], r: f64, tol: f64) -> Result<Se
         let s = q.get(3 * k..3 * k + 3).ok_or(dom("point"))?;
         Ok([s[0], s[1], s[2]])
     };
-    let mut w: Vec<usize> = Vec::with_capacity(MAX_WITNESSES);
+    let mut w: Vec<usize> = Vec::new();
+    reserve(&mut w, MAX_WITNESSES)?;
     for &k in contacts {
         let k = k as usize;
         if k >= n {
@@ -445,12 +493,13 @@ pub(crate) fn search(q: &[f64], contacts: &[u32], r: f64, tol: f64) -> Result<Se
     let slack = SLACK * r;
     let mut st = Search { outcome: CrossOutcome::Passed, caps: 0, full: 0, depth: 0, better: None };
     let mut heap = BinaryHeap::new();
+    heap.try_reserve(16).map_err(|_| dom("allocation_failed"))?;
     let mut seq = 0u64;
     for t in faces()? {
         heap.push(Pending { key: f64::NEG_INFINITY, seq, tri: t, depth: 0, full_ok: true });
         seq += 1;
     }
-    let (mut proj, mut idx, mut hl, mut order) = (Vec::with_capacity(n), Vec::new(), Vec::new(), Vec::new());
+    let (mut proj, mut idx, mut hl, mut order) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
     let (mut wp, mut all) = (Vec::new(), Vec::new());
     while let Some(Pending { tri: t, depth, full_ok, .. }) = heap.pop() {
         st.caps = st.caps.saturating_add(1);
@@ -478,7 +527,7 @@ pub(crate) fn search(q: &[f64], contacts: &[u32], r: f64, tol: f64) -> Result<Se
                 return Ok(st);
             }
             project(q, c, &mut proj)?;
-            hull(&proj, &mut idx, &mut hl);
+            hull(&proj, &mut idx, &mut hl)?;
             if hl.is_empty() {
                 return Err(dom("hull"));
             }
@@ -488,14 +537,14 @@ pub(crate) fn search(q: &[f64], contacts: &[u32], r: f64, tol: f64) -> Result<Se
                 [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
             })?;
             let lb_pair = (sqrt(d2(proj[i], proj[j]))? - wn * h) / 2.0 - slack;
-            let (centre, sup) = welzl(&proj, &hl, &mut order);
+            let (centre, sup) = welzl(&proj, &hl, &mut order)?;
             let mut ms = 0.0_f64;
-            let mut sp = Vec::with_capacity(3);
-            for &k in &sup {
+            let mut sp = [[0.0; 2]; 3];
+            for (slot, &k) in sp.iter_mut().zip(sup.as_slice()) {
                 ms = f::total_max(ms, norm3(pt(k)?)?)?;
-                sp.push(proj[k]);
+                *slot = *proj.get(k).ok_or(dom("support"))?;
             }
-            let lb_set = mec_small(&sp)? - sqrt(r * r + ms * ms)? * h - slack;
+            let lb_set = mec_small(&sp[..sup.len])? - sqrt(r * r + ms * ms)? * h - slack;
             let mut ub2 = 0.0_f64;
             for p in &proj {
                 ub2 = f::total_max(ub2, d2(*p, centre))?;
@@ -507,7 +556,7 @@ pub(crate) fn search(q: &[f64], contacts: &[u32], r: f64, tol: f64) -> Result<Se
                 return Ok(st);
             }
             let mut added = false;
-            for k in sup.iter().copied().chain([i, j]) {
+            for k in sup.as_slice().iter().copied().chain([i, j]) {
                 if w.len() < MAX_WITNESSES && !w.contains(&k) {
                     w.push(k);
                     added = true;
@@ -524,6 +573,7 @@ pub(crate) fn search(q: &[f64], contacts: &[u32], r: f64, tol: f64) -> Result<Se
             continue;
         }
         let (ab, bc, ca) = (mid(t[0], t[1])?, mid(t[1], t[2])?, mid(t[2], t[0])?);
+        heap.try_reserve(4).map_err(|_| dom("allocation_failed"))?;
         for child in [[ca, bc, t[2]], [ab, t[1], bc], [t[0], ab, ca], [ab, bc, ca]] {
             heap.push(Pending { key: lb_w, seq, tri: child, depth: depth + 1, full_ok: child_ok });
             seq += 1;
@@ -558,16 +608,52 @@ mod tests {
         }
         p.push([1.0, -3.0]);
         let (mut idx, mut h, mut order) = (Vec::new(), Vec::new(), Vec::new());
-        hull(&p, &mut idx, &mut h);
+        hull(&p, &mut idx, &mut h).unwrap();
         assert!(!h.contains(&97));
         let (i, j) = farthest(&p, &h);
         let brute = p.iter().flat_map(|a| p.iter().map(move |b| d2(*a, *b))).fold(0.0, larger);
         assert_eq!(d2(p[i], p[j]), brute);
-        let (c, sup) = welzl(&p, &h, &mut order);
+        let (c, sup) = welzl(&p, &h, &mut order).unwrap();
         let r = p.iter().map(|x| d2(*x, c)).fold(0.0, larger).sqrt();
         assert!((r - 2.0).abs() < 1e-3, "{r}");
-        let sp: Vec<V2> = sup.iter().map(|&k| p[k]).collect();
+        let sp: Vec<V2> = sup.as_slice().iter().map(|&k| p[k]).collect();
         assert!(mec_small(&sp).unwrap() <= r * (1.0 + 1e-12));
+    }
+
+    /// Review 3 of #374: thin, nearly right triangles (two vertices `eps` apart, the third
+    /// nearly antipodal, `eps` from 1e-4 to 1e-7) against the oracle's exact rational radius.
+    /// `mec3` never exceeds it by more than `1e-14` relative (far inside `SLACK`); off the thin
+    /// threshold it matches within `1e-14`, below it it is half the longest side.
+    #[test]
+    fn mec3_thin_triangles_against_exact() {
+        const CASES: &str = include_str!("../../../../fixtures/fit/mcc-cyl-v1/mec3.txt");
+        let h = |t: &str| f64::from_bits(u64::from_str_radix(t, 16).unwrap());
+        let mut n = 0;
+        for l in CASES.lines().filter(|l| l.starts_with("tri ")) {
+            let t: Vec<&str> = l.split_whitespace().collect();
+            let v: Vec<f64> = t[1..8].iter().map(|x| h(x)).collect();
+            let (a, b, c, exact) = ([v[0], v[1]], [v[2], v[3]], [v[4], v[5]], v[6]);
+            // Every vertex order, so that the nearly antipodal vertex comes first too.
+            for (x, y, z) in [(a, b, c), (b, c, a), (c, a, b), (c, b, a)] {
+                let r = mec3(x, y, z).unwrap();
+                assert!(r <= exact * (1.0 + 1e-14), "{l}: {r:e} above {exact:e}");
+                if t[8] == "full" {
+                    assert!((r - exact).abs() <= 1e-14 * exact, "{l}: {r:e} vs {exact:e}");
+                } else {
+                    let longest = larger(larger(d2(a, b), d2(b, c)), d2(c, a)).sqrt() / 2.0;
+                    assert_eq!(r, longest, "{l}");
+                }
+            }
+            n += 1;
+        }
+        assert_eq!(n, 21);
+    }
+
+    /// Review 3 of #374: an empty point set is an error, not a panic.
+    #[test]
+    fn welzl_empty_is_an_error() {
+        let mut order = Vec::new();
+        assert!(welzl(&[], &[], &mut order).is_err());
     }
 
     #[test]
@@ -596,9 +682,9 @@ mod tests {
         for c in [[0.0, 0.0, 1.0], [0.6, 0.0, 0.8], [1.0, 0.0, 0.0]] {
             let t0 = std::time::Instant::now();
             project(&q, c, &mut proj).unwrap();
-            hull(&proj, &mut idx, &mut hl);
+            hull(&proj, &mut idx, &mut hl).unwrap();
             let (i, j) = farthest(&proj, &hl);
-            let (centre, _) = welzl(&proj, &hl, &mut order);
+            let (centre, _) = welzl(&proj, &hl, &mut order).unwrap();
             let ub = proj.iter().map(|p| d2(*p, centre)).fold(0.0, larger).sqrt();
             eprintln!(
                 "direction {c:?}: hull {} points, diameter {:.6}, radius {ub:.6}, {:.2?}",
