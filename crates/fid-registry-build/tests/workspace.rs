@@ -543,18 +543,31 @@ fn the_workspace_agent_view_hides_every_command_mcp_never_projects() {
     let out = invoke_mcp(&m, &mut log, MCP_SHOW, b"{\"full\":true}").unwrap();
     let CValue::Obj(o) = parse(&out).unwrap() else { panic!() };
     let Some(CValue::Str(text)) = o.get("bytes") else { panic!() };
+    // Scan the decoded strings (values and keys), not the escaped JSON text, so an ID right
+    // after an escape such as `\n` is still found.
+    let view = parse(text.as_bytes()).unwrap();
     // Names an agent may see: every visible ID (a hidden major of a visible name is checked as
     // `<id>@<major>` only).
     let visible: BTreeSet<&str> = defs.iter().filter(|d| sees(Audience::Agent, d)).map(|d| d.id.as_str()).collect();
     for d in &hidden {
         let full = format!("{}@{}", d.id, d.major);
-        assert!(!names(text, &full), "{full} named in the agent view");
+        assert!(!names_in(&view, &full), "{full} named in the agent view");
         if !visible.contains(d.id.as_str()) {
-            assert!(!names(text, &d.id), "{full}: {} named in the agent view", d.id);
+            assert!(!names_in(&view, &d.id), "{full}: {} named in the agent view", d.id);
         }
     }
     assert_eq!(m.agent_view().definitions.len(), defs.len() - hidden.len());
     assert_eq!(m.export().definitions.len(), defs.len());
+}
+
+/// Whether any decoded string of `v` (object keys included) holds `word` as a bare word.
+fn names_in(v: &CValue, word: &str) -> bool {
+    match v {
+        CValue::Str(s) => names(s, word),
+        CValue::Arr(items) => items.iter().any(|x| names_in(x, word)),
+        CValue::Obj(o) => o.iter().any(|(k, x)| names(k, word) || names_in(x, word)),
+        _ => false,
+    }
 }
 
 fn ident(b: u8) -> bool {
@@ -596,4 +609,14 @@ fn names_matches_bare_words_only() {
     assert!(!names("cmm.move_to.x", "cmm.move_to"));
     assert!(!names("cmm.move_to@12", "cmm.move_to@1"));
     assert!(!names("cmm.move_to_slow", "cmm.move_to"));
+    // Control characters are boundaries once the JSON escapes are decoded.
+    assert!(names("home.\ncmm.move_to", "cmm.move_to"));
+    assert!(names("home.\tcmm.move_to@1", "cmm.move_to@1"));
+    // In the escaped JSON text the `n` of `\n` would hide the ID; decoded, it is found.
+    let doc = parse(br#"{"a":[{"description":"home.\ncmm.move_to"}],"b":"tab\tcmm.move_to@1"}"#).unwrap();
+    assert!(!names(r#"home.\ncmm.move_to"#, "cmm.move_to"));
+    assert!(names_in(&doc, "cmm.move_to"));
+    assert!(names_in(&doc, "cmm.move_to@1"));
+    assert!(names_in(&parse(br#"{"cmm.move_to":1}"#).unwrap(), "cmm.move_to"));
+    assert!(!names_in(&parse(br#"{"x":"cmm.move_tool"}"#).unwrap(), "cmm.move_to"));
 }
