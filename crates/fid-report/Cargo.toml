@@ -1,6 +1,6 @@
 [package]
 name = "fid-report"
-description = "Metrology Maven report model: report document, pages, blocks, block-kind registry, report commands and value formatting (spec nodes RPT.MODEL.DOC, RPT.MODEL.FMT, RPT.MODEL.BIND.RESOLVE)"
+description = "Metrology Maven report model: report document, pages, blocks, block-kind registry, report commands and value formatting (spec nodes RPT.MODEL.DOC, RPT.MODEL.FMT, RPT.MODEL.BIND.RESOLVE, RPT.MODEL.BIND.EXPAND)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
