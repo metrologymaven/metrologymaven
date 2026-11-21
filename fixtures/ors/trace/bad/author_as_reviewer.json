@@ -1,0 +1,380 @@
+{
+ "cases": [
+  {
+   "acceptance_tolerance": {
+    "unit": "m",
+    "value_hex": "0x3e112e0be826d695"
+   },
+   "basis": "closed_form_math",
+   "case": "ors:trace/circle_area.001",
+   "citations": "none",
+   "dataset": {
+    "aim": "gdt.synthetic.closed_form",
+    "cross_check": [],
+    "id": "rdl:O/gdt.synthetic.closed_form/circle-area/0001",
+    "inputs": [
+     {
+      "digest": "sha256:552f8e66116d4e202c97a30f15be2424b3a77a6ceec084cb105eebcdfb008ef7",
+      "role": "points",
+      "unit": "mm"
+     }
+    ],
+    "licence": "CC-BY-4.0",
+    "provenance": {
+     "source": "Synthetic fixture for the UNC.ORS.TRACE checker tests; not a measurement and not an interpretation of any standard."
+    },
+    "reference": {
+     "outputs": [
+      {
+       "kind": "length",
+       "name": "value",
+       "test_uncertainty_hex": "0x3be0000000000000",
+       "value_hex": "0x3f34940bbb1f255f"
+      }
+     ],
+     "precision_digits": 17
+    },
+    "schema": "rdl-dataset/v1",
+    "tier": "O",
+    "visibility": "public"
+   },
+   "dialect": "none",
+   "expected": {
+    "unit": "m",
+    "value_hex": "0x3f34940bbb1f255f"
+   },
+   "note": "Synthetic case; the clause number is invented for checker tests.",
+   "review": {
+    "authors": [
+     "case-author-a"
+    ],
+    "reviewers": [],
+    "status": "draft"
+   },
+   "schema": "ors-case/v1"
+  },
+  {
+   "acceptance_tolerance": {
+    "unit": "m",
+    "value_hex": "0x3e112e0be826d695"
+   },
+   "case": "ors:trace/cylindricity.001",
+   "citations": [
+    {
+     "clause": "99.1",
+     "designator": "asme-y14.5",
+     "edition": "2018"
+    }
+   ],
+   "dataset": {
+    "aim": "gdt.synthetic.closed_form",
+    "cross_check": [],
+    "id": "rdl:O/gdt.synthetic.closed_form/cylindricity/0001",
+    "inputs": [
+     {
+      "digest": "sha256:b9fcefdb0d7a9cbb616ce25f6e91dc51d0599d05883e8547951c96d35ded3d29",
+      "role": "points",
+      "unit": "mm"
+     }
+    ],
+    "licence": "CC-BY-4.0",
+    "provenance": {
+     "source": "Synthetic fixture for the UNC.ORS.TRACE checker tests; not a measurement and not an interpretation of any standard."
+    },
+    "reference": {
+     "outputs": [
+      {
+       "kind": "length",
+       "name": "value",
+       "test_uncertainty_hex": "0x3c20000000000000",
+       "value_hex": "0x3f70624dd2f1a9fc"
+      }
+     ],
+     "precision_digits": 17
+    },
+    "schema": "rdl-dataset/v1",
+    "tier": "O",
+    "visibility": "public"
+   },
+   "dialect": "ASME",
+   "dmt_row": "dmt:asme/cylindricity/none@1",
+   "expected": {
+    "unit": "m",
+    "value_hex": "0x3f70624dd2f1a9fc"
+   },
+   "note": "Synthetic case; the clause number is invented for checker tests.",
+   "review": {
+    "authors": [
+     "case-author-a"
+    ],
+    "reviewers": [
+     "reviewer-one",
+     "reviewer-two"
+    ],
+    "status": "reviewed"
+   },
+   "schema": "ors-case/v1"
+  },
+  {
+   "acceptance_tolerance": {
+    "unit": "m",
+    "value_hex": "0x3e112e0be826d695"
+   },
+   "case": "ors:trace/flatness.001",
+   "citations": [
+    {
+     "clause": "99.1",
+     "designator": "asme-y14.5",
+     "edition": "2018"
+    }
+   ],
+   "dataset": {
+    "aim": "gdt.synthetic.closed_form",
+    "cross_check": [],
+    "id": "rdl:O/gdt.synthetic.closed_form/flatness/0001",
+    "inputs": [
+     {
+      "digest": "sha256:9a1bed50da8b52affcb1aa1276509dc9cd5a495ccdd3968c876fbbf654b3f93e",
+      "role": "points",
+      "unit": "mm"
+     }
+    ],
+    "licence": "CC-BY-4.0",
+    "provenance": {
+     "source": "Synthetic fixture for the UNC.ORS.TRACE checker tests; not a measurement and not an interpretation of any standard."
+    },
+    "reference": {
+     "outputs": [
+      {
+       "kind": "length",
+       "name": "value",
+       "test_uncertainty_hex": "0x3c10000000000000",
+       "value_hex": "0x3f60624dd2f1a9fc"
+      }
+     ],
+     "precision_digits": 17
+    },
+    "schema": "rdl-dataset/v1",
+    "tier": "O",
+    "visibility": "public"
+   },
+   "dialect": "ASME",
+   "dmt_row": "dmt:asme/flatness/none@1",
+   "expected": {
+    "unit": "m",
+    "value_hex": "0x3f60624dd2f1a9fc"
+   },
+   "note": "Synthetic case; the clause number is invented for checker tests.",
+   "review": {
+    "authors": [
+     "case-author-a"
+    ],
+    "reviewers": [
+     "reviewer-one",
+     "reviewer-two"
+    ],
+    "status": "reviewed"
+   },
+   "schema": "ors-case/v1"
+  },
+  {
+   "acceptance_tolerance": {
+    "unit": "m",
+    "value_hex": "0x3e112e0be826d695"
+   },
+   "case": "ors:trace/flatness.002",
+   "citations": [
+    {
+     "clause": "99.1",
+     "designator": "asme-y14.5",
+     "edition": "2018"
+    }
+   ],
+   "dataset": {
+    "aim": "gdt.synthetic.closed_form",
+    "cross_check": [],
+    "id": "rdl:O/gdt.synthetic.closed_form/flatness/0002",
+    "inputs": [
+     {
+      "digest": "sha256:9a1bed50da8b52affcb1aa1276509dc9cd5a495ccdd3968c876fbbf654b3f93e",
+      "role": "points",
+      "unit": "mm"
+     }
+    ],
+    "licence": "CC-BY-4.0",
+    "provenance": {
+     "source": "Synthetic fixture for the UNC.ORS.TRACE checker tests; not a measurement and not an interpretation of any standard."
+    },
+    "reference": {
+     "outputs": [
+      {
+       "kind": "length",
+       "name": "value",
+       "test_uncertainty_hex": "0x3c00000000000000",
+       "value_hex": "0x3f589374bc6a7efa"
+      }
+     ],
+     "precision_digits": 17
+    },
+    "schema": "rdl-dataset/v1",
+    "tier": "O",
+    "visibility": "public"
+   },
+   "dialect": "ASME",
+   "dmt_row": "dmt:asme/flatness/none@1",
+   "expected": {
+    "unit": "m",
+    "value_hex": "0x3f589374bc6a7efa"
+   },
+   "note": "Synthetic case; the clause number is invented for checker tests.",
+   "review": {
+    "authors": [
+     "case-author-a"
+    ],
+    "reviewers": [
+     "reviewer-one",
+     "reviewer-two"
+    ],
+    "status": "reviewed"
+   },
+   "schema": "ors-case/v1"
+  },
+  {
+   "acceptance_tolerance": {
+    "unit": "m",
+    "value_hex": "0x3e112e0be826d695"
+   },
+   "case": "ors:trace/position.001",
+   "citations": [
+    {
+     "clause": "99.1",
+     "designator": "asme-y14.5",
+     "edition": "2018"
+    }
+   ],
+   "dataset": {
+    "aim": "gdt.synthetic.closed_form",
+    "cross_check": [],
+    "id": "rdl:O/gdt.synthetic.closed_form/position/0001",
+    "inputs": [
+     {
+      "digest": "sha256:1ccc96d4c08d27575487708d3b060dc5801bdf467e07203f41f7e4301202fda3",
+      "role": "points",
+      "unit": "mm"
+     }
+    ],
+    "licence": "CC-BY-4.0",
+    "provenance": {
+     "source": "Synthetic fixture for the UNC.ORS.TRACE checker tests; not a measurement and not an interpretation of any standard."
+    },
+    "reference": {
+     "outputs": [
+      {
+       "kind": "length",
+       "name": "value",
+       "test_uncertainty_hex": "0x3c30000000000000",
+       "value_hex": "0x3f8999999999999a"
+      }
+     ],
+     "precision_digits": 17
+    },
+    "schema": "rdl-dataset/v1",
+    "tier": "O",
+    "visibility": "public"
+   },
+   "dialect": "ASME",
+   "dmt_row": "dmt:asme/position/none@1",
+   "expected": {
+    "unit": "m",
+    "value_hex": "0x3f8999999999999a"
+   },
+   "note": "Synthetic case; the clause number is invented for checker tests.",
+   "review": {
+    "authors": [
+     "case-author-a"
+    ],
+    "reviewers": [
+     "case-author-a",
+     "reviewer-two"
+    ],
+    "status": "reviewed"
+   },
+   "schema": "ors-case/v1"
+  },
+  {
+   "acceptance_tolerance": {
+    "unit": "m",
+    "value_hex": "0x3e112e0be826d695"
+   },
+   "basis": "closed_form_math",
+   "case": "ors:trace/sphere_radius.001",
+   "citations": "none",
+   "dataset": {
+    "aim": "gdt.synthetic.closed_form",
+    "cross_check": [],
+    "id": "rdl:O/gdt.synthetic.closed_form/sphere-radius/0001",
+    "inputs": [
+     {
+      "digest": "sha256:aade7fac29967471a855f761a4826684dbeac79f43337c3b3017f5ebd8572cb3",
+      "role": "points",
+      "unit": "mm"
+     }
+    ],
+    "licence": "CC-BY-4.0",
+    "provenance": {
+     "source": "Synthetic fixture for the UNC.ORS.TRACE checker tests; not a measurement and not an interpretation of any standard."
+    },
+    "reference": {
+     "outputs": [
+      {
+       "kind": "length",
+       "name": "value",
+       "test_uncertainty_hex": "0x3c40000000000000",
+       "value_hex": "0x3f9999999999999a"
+      }
+     ],
+     "precision_digits": 17
+    },
+    "schema": "rdl-dataset/v1",
+    "tier": "O",
+    "visibility": "public"
+   },
+   "dialect": "none",
+   "expected": {
+    "unit": "m",
+    "value_hex": "0x3f9999999999999a"
+   },
+   "note": "Synthetic case; the clause number is invented for checker tests.",
+   "review": {
+    "authors": [
+     "case-author-a"
+    ],
+    "reviewers": [],
+    "status": "draft"
+   },
+   "schema": "ors-case/v1"
+  }
+ ],
+ "manifest": {
+  "cases": [
+   "ors:trace/circle_area.001",
+   "ors:trace/cylindricity.001",
+   "ors:trace/flatness.001",
+   "ors:trace/flatness.002",
+   "ors:trace/position.001",
+   "ors:trace/sphere_radius.001"
+  ],
+  "changelog": [
+   {
+    "cases": [],
+    "reason": "First release of the synthetic checker suite.",
+    "version": "1.0.0"
+   }
+  ],
+  "dmt_digest": "sha256:8b1559ad1ccdf3072720cd10553b056c83eabaa1f95482f1ddb66995439992e2",
+  "licence": "CC-BY-4.0",
+  "name": "ors-trace-good",
+  "schema": "ors-suite/v1",
+  "version": "1.0.0"
+ }
+}

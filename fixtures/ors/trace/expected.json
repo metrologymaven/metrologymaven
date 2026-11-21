@@ -1,0 +1,195 @@
+{
+ "bad": {
+  "author_as_reviewer": {
+   "cases": 6,
+   "coverage": {
+    "closed_form_math": 2,
+    "dmt_row": 4,
+    "neither": 0
+   },
+   "findings": [
+    {
+     "case": "ors:trace/position.001",
+     "code": "review_missing",
+     "field": "review.reviewers"
+    }
+   ],
+   "passed": false
+  },
+  "licence_proprietary": {
+   "cases": 6,
+   "coverage": {
+    "closed_form_math": 2,
+    "dmt_row": 4,
+    "neither": 0
+   },
+   "findings": [
+    {
+     "case": null,
+     "code": "licence_not_open",
+     "field": "licence"
+    }
+   ],
+   "passed": false
+  },
+  "long_note": {
+   "cases": 6,
+   "coverage": {
+    "closed_form_math": 2,
+    "dmt_row": 4,
+    "neither": 0
+   },
+   "findings": [
+    {
+     "case": "ors:trace/circle_area.001",
+     "code": "text_too_long",
+     "field": "note"
+    }
+   ],
+   "passed": false
+  },
+  "missing_tolerance": {
+   "cases": 6,
+   "coverage": {
+    "closed_form_math": 2,
+    "dmt_row": 4,
+    "neither": 0
+   },
+   "findings": [
+    {
+     "case": "ors:trace/position.001",
+     "code": "case_incomplete",
+     "field": "acceptance_tolerance"
+    }
+   ],
+   "passed": false
+  },
+  "no_citation": {
+   "cases": 6,
+   "coverage": {
+    "closed_form_math": 2,
+    "dmt_row": 3,
+    "neither": 1
+   },
+   "findings": [
+    {
+     "case": "ors:trace/flatness.001",
+     "code": "citation_missing",
+     "field": "citations"
+    }
+   ],
+   "passed": false
+  },
+  "one_reviewer": {
+   "cases": 6,
+   "coverage": {
+    "closed_form_math": 2,
+    "dmt_row": 4,
+    "neither": 0
+   },
+   "findings": [
+    {
+     "case": "ors:trace/cylindricity.001",
+     "code": "review_missing",
+     "field": "review.reviewers"
+    }
+   ],
+   "passed": false
+  },
+  "unknown_dmt_row": {
+   "cases": 6,
+   "coverage": {
+    "closed_form_math": 2,
+    "dmt_row": 3,
+    "neither": 1
+   },
+   "findings": [
+    {
+     "case": "ors:trace/flatness.002",
+     "code": "dmt_row_unknown",
+     "field": "dmt_row"
+    }
+   ],
+   "passed": false
+  }
+ },
+ "good_suite": {
+  "cases": 6,
+  "coverage": {
+   "closed_form_math": 2,
+   "dmt_row": 4,
+   "neither": 0
+  },
+  "findings": [],
+  "passed": true
+ },
+ "list_suite": [
+  {
+   "cases": 6,
+   "dmt_digest": "sha256:8b1559ad1ccdf3072720cd10553b056c83eabaa1f95482f1ddb66995439992e2",
+   "licence": "CC-BY-4.0",
+   "name": "ors-trace-good",
+   "version": "1.0.0"
+  }
+ ],
+ "versioning": {
+  "bumped_with_changelog": {
+   "cases": 6,
+   "coverage": {
+    "closed_form_math": 2,
+    "dmt_row": 4,
+    "neither": 0
+   },
+   "findings": [],
+   "passed": true
+  },
+  "bumped_without_changelog": {
+   "cases": 6,
+   "coverage": {
+    "closed_form_math": 2,
+    "dmt_row": 4,
+    "neither": 0
+   },
+   "findings": [
+    {
+     "case": "ors:trace/flatness.001",
+     "code": "version_not_bumped",
+     "field": "changelog"
+    }
+   ],
+   "passed": false
+  },
+  "changed_same_version": {
+   "cases": 6,
+   "coverage": {
+    "closed_form_math": 2,
+    "dmt_row": 4,
+    "neither": 0
+   },
+   "findings": [
+    {
+     "case": "ors:trace/flatness.001",
+     "code": "version_not_bumped",
+     "field": "version"
+    }
+   ],
+   "passed": false
+  },
+  "tolerance_same_version": {
+   "cases": 6,
+   "coverage": {
+    "closed_form_math": 2,
+    "dmt_row": 4,
+    "neither": 0
+   },
+   "findings": [
+    {
+     "case": "ors:trace/position.001",
+     "code": "version_not_bumped",
+     "field": "version"
+    }
+   ],
+   "passed": false
+  }
+ }
+}

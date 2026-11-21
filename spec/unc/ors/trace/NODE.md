@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-ors]
 satisfies: [REQ-UNC.ORS-002, REQ-UNC.ORS-003, REQ-UNC.ORS-006, REQ-UNC.ORS-007]
 covers: []
 depends_on: [UNC.RDL.FORMAT, GDT.RES]
@@ -17,7 +18,7 @@ determinism: D0
 cli: [fid rdl list-suite, fid rdl check-suite]
 mcp: [rdl_list_suite, rdl_check_suite]
 journal: [rdl.list_suite@1, rdl.check_suite@1]
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # UNC.ORS.TRACE: Suite case format, citation checks and suite versioning
@@ -68,6 +69,25 @@ Defines what an ORS case is (an RDL tier O record extended with standards citati
 - **Performance budget:** check 5,000 cases in under 2 s [unverified until measured].
 - **Crate:** `fid-ors`.
 
+### Pinned at build (crate `fid-ors`)
+
+These pins were made when the leaf was built. Where one differs from the text above, the pin wins, and the reason is given.
+
+- **Case document `ors-case/v1`.** A JSON object with `schema` (`"ors-case/v1"`), `case` (the ORS case ID `ors:<suite>/<name>`, at most 96 bytes, within the DMT's `ors_cases` grammar), `dataset` (an `rdl-dataset/v1` record of tier O, validated by `fid-rdl`), `citations` (an array of 1 to 16 `{designator, edition, clause}`, or the string `"none"` with `basis: "closed_form_math"`), optional `dmt_row` (a DMT key), `dialect` (`ASME`, `ISO_GPS` or `none`), `expected` and `acceptance_tolerance` (`{value_hex, unit}`, a binary64 hex float as in RDL, where the tolerance's sign bit must be clear; unit one of `m`, `mm`, `µm`, `rad`, `deg`, `1`), `review {authors, reviewers, status}` and optional `note`. The design's "extends `RdlDataset`" is met by composition, because `rdl-dataset/v1` refuses unknown keys. The citation grammar is the DMT's: designator and edition are labels `[a-z0-9.-]` of at most 64 and 32 bytes, and the clause is dot-separated lower-case alphanumerics of at most 32 bytes. So no prose fits in a citation.
+- **Suite manifest `ors-suite/v1`.** `{schema, name, version, licence?, dmt_digest, cases, changelog}`. The name is `ors-[a-z0-9][a-z0-9-]*`, the version `x.y.z`, and the handle `<name>@<version>`. A missing licence is CC-BY-4.0. `cases` is 1 to 5,000 IDs, strictly ascending. `changelog` is `[{version, cases, reason}]`.
+- **Findings and command errors.** Loading checks only readability: bounded JSON (case 4 MiB + 64 KiB, depth 33), no duplicate keys, a well-formed manifest, and exactly one case document per listed ID. Any departure is the command error `suite_invalid`. Everything a case says is a finding `{case, code, field}`, where the field is a schema path such as `review.reviewers`, and never input text. A suite with findings is still a `computed` result with `passed: false`.
+- **Codes.** `citation_missing` (REQ-001: no citations, an empty list, or `none` without `basis: closed_form_math`), `dmt_row_unknown`, `case_incomplete{field}`, `text_too_long`, `review_missing`, `licence_not_open` and `version_not_bumped`, plus one added code, **`case_invalid{field}`**. `case_invalid` covers a present field that is malformed (wrong type, bad grammar, unknown key, an invalid embedded dataset, a citation item that is not well formed, or control or format characters in the note). The leaf's codes say nothing about malformed values, and calling them "incomplete" would misreport them.
+- **Order (pinned).** Manifest findings come first: the licence, then changelog reasons over 280 characters. Then each case in manifest order, in this sequence: `schema` (a wrong schema stops that case), dataset (RDL validation, tier O, open licence, provenance source and method of at most 280 characters), citations and basis, DMT row, dialect, expected, tolerance, review, note, unknown keys. Then, with `previous`, the version rule in case order.
+- **Free text** is counted in Unicode scalar values: at most 280. The fields are `note`, changelog `reason`, and the dataset's provenance `source` and `method`, which RDL allows up to 512 and ORS caps at 280. Every other text field has a strict grammar.
+- **DMT rows** resolve in the DMT table whose digest equals the manifest's `dmt_digest`. If no table with that digest is available, every case with a `dmt_row` is `dmt_row_unknown`, which fails closed.
+- **Review (REQ-005).** It applies to every case with a `dmt_row`, in every checked suite: a suite under check is treated as a release candidate. Authors and reviewers are reviewer IDs in the DMT roster grammar `[a-z0-9][a-z0-9._-]{0,63}`, which is lower case, so two IDs never differ only in case. A repeated ID is `case_invalid`. The status must be `reviewed`, no reviewer may be an author, and there must be at least two distinct reviewers. Otherwise the result is `review_missing`. **The checker reads declared review fields only and never reports anything as signed off.** Sign-off of record is GDT.RES.ROWFLOW and the GDT.RES.STATUS register (D-009, D-045).
+- **Licences (REQ-006).** The open list is the RDL redistributable list (CC0-1.0, CC-BY-4.0, CC-BY-SA-4.0, MIT, Apache-2.0, BSD-3-Clause, ODbL-1.0, PDDL-1.0). It applies to the manifest licence (field `licence`) and to each case's dataset licence (`dataset.licence`).
+- **Versioning (REQ-007).** With `previous` (an installed release of the same suite name; another name is `suite_invalid{previous}`), every case present in both whose `expected` or `acceptance_tolerance` differs in canonical bytes needs two things. The version must be higher, else `version_not_bumped{version}`. And a changelog entry for the current version must name the case with a non-empty reason, else `version_not_bumped{changelog}`.
+- **Coverage (AC-H2).** Each result reports `coverage {closed_form_math, dmt_row, neither}`. `dmt_row` means valid citations plus a row present in the pinned DMT.
+- **Commands.** `rdl.check_suite@1` (R1) takes `{suite, previous?, staged?}`. With `staged: true` it checks a candidate held beside the installed releases under the same handle, which AC-3 needs. `rdl.list_suite@1` (R0) takes `{}` and returns `[{cases, dmt_digest, licence, name, version}]`. The CLI forms are `fid rdl check-suite --suite <h> [--previous <h>] [--staged] [--json]` and `fid rdl list-suite [--json]`. The MCP tools are `rdl_check_suite` and `rdl_list_suite`. Both forms run one handler and print the same canonical envelope. Both commands are local R0/R1 calls, so they go to the Activity Log (REQ-CORE.JRN-016) as `{command, params, result_sha256, surface}`, and exact replay compares the envelope digest (AC-5). The definitions are registered in `fid-registry-build` `SOURCES`. Installing a suite (the `SuiteStore` contents) is a library call here, and its command is out of scope.
+- **No uncertainty is created.** The checker compares and reports declared values only. Fixture test uncertainties are the binary64 representation bound (half an ulp) of synthetic closed-form values, and are labelled as not measured.
+- **Fixtures.** `fixtures/ors/trace/make_fixtures.py` (stdlib only) writes the 4-row DMT stub, copied from the synthetic `fixtures/gdt/dmt` table with its digest recomputed, plus the 6-case good suite, the 7 AC-2 variants, 4 versioning variants and 100 seeded mutants. Their expected findings come from the script's own checker. The mutants include benign changes (for example a 280-character note) to catch false findings, and cover every code. CI runs the script with `--check`.
+
 ## Test fixtures
 
 `fixtures/ors/trace/`: a stub DMT with 4 rows, a good suite of 6 synthetic cases, and bad variants (project-authored, CC-BY-4.0). No standards text appears in any fixture.
@@ -82,6 +102,10 @@ Defines what an ORS case is (an RDL tier O record extended with standards citati
 
 - The 280-character limit should match whatever threshold `GDT.RES` sets for DMT free text (REQ-GDT.RES-005 says it is still to be set) [unverified].
 - How reviewer credentials are recorded and verified (D-009's community DMT-reviewer role) is for ECO or TRUST to define; this leaf checks only that two distinct named reviewers signed.
+
+## Change log
+
+- 2026-11-21: built in `fid-ors`; the pins above record the format, the order of findings, the added `case_invalid` code and the staged-candidate parameter.
 
 ## Children
 

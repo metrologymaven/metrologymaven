@@ -1681,6 +1681,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-ors"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-gps",
+ "fid-rdl",
+ "fid-registry",
+ "fid-replay",
+ "fid-surface",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-outreach"
 version = "0.0.1"
 dependencies = [
@@ -1836,6 +1850,7 @@ dependencies = [
  "fid-io-reg",
  "fid-jobs",
  "fid-journal",
+ "fid-ors",
  "fid-pkg",
  "fid-program-rec",
  "fid-project",
