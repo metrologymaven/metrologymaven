@@ -9,7 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
-built_in: [fid-platform]
+built_in: [fid-gpu-policy, fid-platform]
 built_pr: 151
 satisfies: [REQ-PLAT.GPU-001, REQ-PLAT.GPU-002, REQ-PLAT.GPU-006]
 covers: []
@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-21
 ---
 
 # PLAT.GPU.POLICY: Backend policy and known-bad driver list
@@ -88,6 +88,7 @@ Hand-written TOML under `fixtures/plat/gpu/`; reuse `fixtures/plat/matrix/valid.
 
 ## Open questions
 
+- `webgpu` is the browser backend (`wgpu::Backends::BROWSER_WEBGPU`), which a desktop build does not expose: a desktop row that lists `webgpu` validates but is always rejected at probe time (`PLAT.GPU.DETECT` records it as a probe failure and moves on). The schema has no browser OS yet; a validation warning for `webgpu` on a desktop row, or a browser row, is left for when the browser build is specified.
 - Minimum API versions are placeholders until `PLAT.GPU.CI` measures them on the minimum hardware profile.
 - Where researched, referenced real known-bad entries come from (public bug trackers or vendor release notes, contributed through reviewed PRs). The shipped list is empty and the fixtures use invented IDs only.
 - How vendor driver strings and the packed Vulkan `driverVersion` map to the dotted numeric `Version` used for matching; owned by `PLAT.GPU.DETECT`.
