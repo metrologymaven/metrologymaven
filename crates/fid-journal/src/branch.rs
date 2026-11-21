@@ -18,8 +18,14 @@
 //! Names ([`BranchName`]): `[a-z0-9][a-z0-9/_.-]{0,99}` (REQ-002), ASCII only, so a name is
 //! its own canonical bytes and has no Unicode look-alike; in addition no empty, `.` or `..`
 //! path segment and no trailing `/`. Ownership follows from the name alone: a name in the
-//! `agent/` namespace is an agent branch, every other name a human branch, and the name
-//! `agent` itself is refused. `journal.create_branch@1` never creates an agent branch, and an
+//! `agent/` namespace is an agent branch, every other name a human branch, and a name that
+//! starts with `agent` outside that namespace (`agent`, `agents/x`, `agent.x`, `agent-x`) is
+//! refused, so nothing human-owned reads as an agent branch.
+//!
+//! The fold never trusts an event body for who produced it: [`Branches::apply`] takes the
+//! entry's [`EntryOrigin`] (real principal kind, command, class, branch, and which stage
+//! added the event) and refuses an event that origin could not have produced. The event
+//! types are reserved in the registry (`fid_registry::RESERVED_EFFECTS`) to their commands. `journal.create_branch@1` never creates an agent branch, and an
 //! agent caller cannot create any branch through it: agent branches `agent/<client>/<n>` come
 //! only from [`plan_agent_branch`], which the bus's routing module calls. There is no rename
 //! and no delete, so a name is never reused, and nothing clears a protection (REQ-005).
@@ -171,8 +177,10 @@ impl BranchName {
         if s.ends_with('/') || s.split('/').any(|seg| seg.is_empty() || seg == "." || seg == "..") {
             return Err(bad(format!("{s:?} has an empty, \".\" or \"..\" path segment or ends with /")));
         }
-        if s == "agent" {
-            return Err(bad("\"agent\" is reserved: it reads as the agent branch namespace"));
+        if s.starts_with("agent") && !s.starts_with(AGENT_PREFIX) {
+            return Err(bad(format!(
+                "{s:?} starts with \"agent\" outside the agent/ namespace and would read as an agent branch"
+            )));
         }
         Ok(BranchName(s.to_string()))
     }
@@ -363,6 +371,40 @@ impl BranchEvent {
     }
 }
 
+/// Who added an event to its entry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EventSource {
+    /// The handler of the entry's command returned it.
+    Handler,
+    /// The bus routing module (`CORE.BUS.ROUTE`) added it: the only source of agent
+    /// branches. Reserved to the bus; no handler can produce it, because the journal reader
+    /// takes it from the entry's record of which stage added the event, never from the event.
+    BusRoute,
+    /// The bus commit stage added it to a W3 entry on `main` (REQ-006). Reserved to the bus
+    /// in the same way.
+    BusRelease,
+}
+
+/// Where a committed branch event came from, as its entry records it: the entry's real
+/// principal kind, command `id@major`, side-effect class and branch, and which stage added
+/// the event. [`Branches::apply`] checks every event against it and never trusts the event
+/// body for any of these.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntryOrigin {
+    pub kind: PrincipalKind,
+    pub command: String,
+    pub major: u32,
+    pub class: SideEffect,
+    pub branch: String,
+    pub source: EventSource,
+}
+
+impl EntryOrigin {
+    fn is(&self, command: &str) -> bool {
+        self.source == EventSource::Handler && self.command == command && self.major == 1
+    }
+}
+
 /// The branch table, keyed (and so sorted) by name bytes.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Branches {
@@ -383,20 +425,33 @@ impl Branches {
         Branches { table: BTreeMap::from([(name, main)]) }
     }
 
-    /// Rebuilds the table from `main`'s first head and the branch events in commit order.
+    /// Rebuilds the table from `main`'s first head and the branch events of every committed
+    /// entry in append order, each with its entry's origin. The fold covers every committed
+    /// entry, whatever later head moves or undo did: a branch, once created or protected, stays.
     pub fn replay<'a>(
         main_head: Digest,
-        events: impl IntoIterator<Item = &'a BranchEvent>,
+        events: impl IntoIterator<Item = (&'a EntryOrigin, &'a BranchEvent)>,
     ) -> Result<Branches, BranchError> {
         let mut b = Branches::genesis(main_head);
-        for e in events {
-            b.apply(e)?;
+        for (origin, e) in events {
+            b.apply(origin, e)?;
         }
         Ok(b)
     }
 
-    /// Folds one committed event. Refuses an event the planners would not emit.
-    pub fn apply(&mut self, event: &BranchEvent) -> Result<(), BranchError> {
+    /// Folds one committed event of an entry with this origin. Refuses, as
+    /// `internal/invariant_violated`, an event its origin could not have produced:
+    ///
+    /// - `BranchCreated` of a human name: only from `journal.create_branch@1`'s handler, on an
+    ///   entry of a non-agent principal; of an `agent/` name: only [`EventSource::BusRoute`];
+    /// - `BranchProtected{manual}`: only from `journal.protect_branch@1`'s handler, human;
+    /// - `BranchProtected{release}`: only [`EventSource::BusRelease`] on a W3 entry on `main`
+    ///   whose command is not `journal.protect_branch@1`;
+    /// - `CoeditingSet`: only from `journal.set_branch_coediting@1`'s handler, human;
+    ///
+    /// and any event the planners would not emit against the current table.
+    pub fn apply(&mut self, origin: &EntryOrigin, event: &BranchEvent) -> Result<(), BranchError> {
+        check_origin(origin, event)?;
         match event {
             BranchEvent::Created { name, from } => {
                 if self.table.contains_key(name) {
@@ -483,6 +538,40 @@ impl Branches {
 
 // ------------------------------------------------------------------ planners
 
+/// The origin rules of [`Branches::apply`].
+fn check_origin(o: &EntryOrigin, event: &BranchEvent) -> Result<(), BranchError> {
+    let ok = match event {
+        BranchEvent::Created { name, .. } => match name.owner() {
+            Owner::Human => o.is(CREATE_BRANCH) && o.kind != PrincipalKind::Agent,
+            Owner::Agent => o.source == EventSource::BusRoute,
+        },
+        BranchEvent::Protected { cause: ProtectCause::Manual, .. } => {
+            o.is(PROTECT_BRANCH) && o.kind == PrincipalKind::Human
+        }
+        BranchEvent::Protected { cause: ProtectCause::Release, .. } => {
+            o.source == EventSource::BusRelease
+                && o.class == SideEffect::W3
+                && o.branch == MAIN
+                && o.command != PROTECT_BRANCH
+        }
+        BranchEvent::Coediting { .. } => o.is(SET_BRANCH_COEDITING) && o.kind == PrincipalKind::Human,
+    };
+    if ok {
+        Ok(())
+    } else {
+        Err(tampered(format!(
+            "{} from {}@{} ({:?}, principal {}, {:?} on {}) is not an origin that can produce it",
+            event.type_id(),
+            truncate(&o.command),
+            o.major,
+            o.source,
+            o.kind.as_str(),
+            o.class,
+            truncate(&o.branch)
+        )))
+    }
+}
+
 /// The caller, as the bus derives it from the call's principal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Actor {
@@ -534,8 +623,17 @@ pub fn plan_create(
 }
 
 /// The agent branch `agent/<client>/<n>` at `from`, for the bus routing module
-/// (`CORE.BUS.ROUTE`); the name is built here, never taken from a caller.
-pub fn plan_agent_branch(b: &Branches, client: &str, n: u64, from: Digest) -> Result<BranchEvent, BranchError> {
+/// (`CORE.BUS.ROUTE`); the name is built here, never taken from a caller. Crate-private until
+/// ROUTE lands and fixes how the bus reaches it; its event folds only with an
+/// [`EventSource::BusRoute`] origin.
+#[allow(dead_code)]
+pub(crate) fn plan_agent_branch(
+    b: &Branches,
+    client: &str,
+    n: u64,
+    from: Digest,
+    is_head: &dyn Fn(&Digest) -> bool,
+) -> Result<BranchEvent, BranchError> {
     let ok = matches_ascii(
         client,
         63,
@@ -548,6 +646,9 @@ pub fn plan_agent_branch(b: &Branches, client: &str, n: u64, from: Digest) -> Re
     let name = BranchName::parse(&format!("{AGENT_PREFIX}{client}/{n}"))?;
     if b.table.contains_key(&name) {
         return Err(bad(format!("{name} exists already; branch names are never reused")));
+    }
+    if !(b.knows_head(&from) || is_head(&from)) {
+        return Err(BranchError::UnknownHead(from));
     }
     Ok(BranchEvent::Created { name, from })
 }
@@ -586,10 +687,13 @@ pub fn plan_coediting(
     Ok(Some(BranchEvent::Coediting { name: br.name.clone(), session, allow }))
 }
 
-/// REQ-006: the event that protects `main` in the same commit as the first W3 record on it,
-/// or `None` (another branch, another class, or `main` already protected).
-pub fn release_protection(b: &Branches, branch: &str, class: SideEffect) -> Option<BranchEvent> {
-    if branch != MAIN || class != SideEffect::W3 {
+/// REQ-006: the event the commit stage adds to protect `main` in the same commit as the
+/// first W3 record on it (`command` is that entry's command), or `None`: another branch,
+/// another class, `main` already protected, or the command is `journal.protect_branch@1`
+/// itself (which protects `main` with its own event, so a human `protect-branch main` gives
+/// exactly one event).
+pub fn release_protection(b: &Branches, branch: &str, class: SideEffect, command: &str) -> Option<BranchEvent> {
+    if branch != MAIN || class != SideEffect::W3 || command == PROTECT_BRANCH {
         return None;
     }
     let main = b.get(MAIN)?;
@@ -601,3 +705,39 @@ pub use defs::command_defs;
 
 #[cfg(feature = "store")]
 mod defs;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn head() -> Digest {
+        Digest::from_bytes([1; 32])
+    }
+
+    /// The routing module's planner: the oracle's three agent_branch calls
+    /// (`fixtures/core/jrn/br/name/cases.json`), plus an unknown head.
+    #[test]
+    fn agent_branches_come_only_from_the_route_planner() {
+        let b = Branches::genesis(head());
+        let known = |d: &Digest| *d == head();
+        let e = plan_agent_branch(&b, "claude", 1, head(), &known).unwrap();
+        assert_eq!(e.body(), BranchEvent::Created { name: BranchName("agent/claude/1".into()), from: head() }.body());
+        let route = EntryOrigin {
+            kind: PrincipalKind::Agent,
+            command: "project.set_tags".into(),
+            major: 1,
+            class: SideEffect::W2,
+            branch: "agent/claude/1".into(),
+            source: EventSource::BusRoute,
+        };
+        let mut t = b.clone();
+        t.apply(&route, &e).unwrap();
+        assert_eq!(plan_agent_branch(&t, "claude", 1, head(), &known).unwrap_err().reason(), "bad_branch_name");
+        assert_eq!(plan_agent_branch(&t, "Claude", 2, head(), &known).unwrap_err().reason(), "bad_branch_name");
+        let other = Digest::from_bytes([2; 32]);
+        assert_eq!(plan_agent_branch(&t, "claude", 2, other, &known).unwrap_err().reason(), "unknown_entity");
+        // The same event from a handler is refused.
+        let forged = EntryOrigin { source: EventSource::Handler, command: CREATE_BRANCH.into(), ..route };
+        assert_eq!(b.clone().apply(&forged, &e).unwrap_err().reason(), "invariant_violated");
+    }
+}

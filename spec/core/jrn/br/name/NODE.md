@@ -17,7 +17,7 @@ depends_on: [CORE.JRN.CHAIN.APPEND, CORE.JRN.CHAIN.CKPT, CORE.REG.DEF]
 side_effect: [W2, R0, W3, W2]
 determinism: D0
 cli: [fid journal create-branch, fid journal list-branches, fid journal protect-branch, fid journal set-branch-coediting]
-mcp: [journal_create_branch, journal_list_branches]
+mcp: [journal_create_branch, journal_list_branches, journal_protect_branch]
 journal: [journal.create_branch@1, journal.list_branches@1, journal.protect_branch@1, journal.set_branch_coediting@1]
 updated: 2026-11-17
 ---
@@ -78,8 +78,11 @@ Named branches over the logical state DAG: create a branch at a head, list branc
 
 - Which commands count as "release" for REQ-006 is read from the W3 class of the committed command; confirm with `TRUST` that every release command is W3.
 - Built: the branch table, name rules, events, planners and definitions in `fid_journal::branch`; the bus handlers in the new crate `fid-journal-cmd` (engine), because `fid-journal` (model) may not depend on `fid-bus`. Independent oracle: `fixtures/core/jrn/br/name/make_cases.py` writes `cases.json`, which holds the synthetic 5-entry project in place of a `project/` folder.
-- Name rules are stricter than the REQ-002 pattern alone: also no empty, `.` or `..` path segment, no trailing `/`, and the name `agent` is refused, so no human branch can read as the agent namespace. An `agent` principal cannot create any branch through `journal.create_branch@1` (`validation/bad_branch_name`); agent branches come only from `plan_agent_branch`, called by `CORE.BUS.ROUTE`. There is no rename or delete, so names are never reused.
-- `journal.protect_branch@1` is declared on MCP as `request_only` (AC-3 needs an agent's MCP call to become a pending request); the `mcp:` list above names only create and list.
+- Name rules are stricter than the REQ-002 pattern alone: also no empty, `.` or `..` path segment, no trailing `/`, and no name that starts with `agent` outside the `agent/` namespace (`agent`, `agents/x`, `agent.x`, `agent-x`), so nothing human-owned reads as an agent branch. An `agent` principal cannot create any branch through `journal.create_branch@1` (`validation/bad_branch_name`); agent branches come only from `plan_agent_branch`, called by `CORE.BUS.ROUTE`. There is no rename or delete, so names are never reused.
+- `journal.protect_branch@1` is on MCP as `request_only` (`journal_protect_branch`; AC-3: an agent's MCP call becomes a pending request). `journal.set_branch_coediting@1` is CLI only.
+- The fold (`Branches::apply`, `Branches::replay`) never trusts event bodies for their origin: it takes each entry's `EntryOrigin` (real principal kind, command `id@major`, class, branch, and the stage that added the event: handler, bus route, bus release). `BranchCreated` of a human name only from `journal.create_branch@1`'s handler and a non-agent principal; of an `agent/` name only from the bus route origin (reserved to the bus for `CORE.BUS.ROUTE`); `BranchProtected{manual}` only from `journal.protect_branch@1`'s handler and a human; `BranchProtected{release}` only bus-added on a W3 entry on `main` that is not `journal.protect_branch@1`; `CoeditingSet` only from `journal.set_branch_coediting@1`'s handler and a human. Anything else is `internal/invariant_violated`. The three event types are reserved to their commands in `fid_registry::RESERVED_EFFECTS`.
+- The branch table covers every committed entry in append order, whatever later head moves or undo do: a branch, once created or protected, stays (the `BranchSource` contract in `fid-journal-cmd` says the same).
+- `release_protection` never fires for `journal.protect_branch@1` itself, so a human `protect-branch main` gives exactly one event. The route planner `plan_agent_branch` is crate-private until `CORE.BUS.ROUTE` lands, and checks that `from` is a known head.
 - Deferred to unbuilt leaves: AC-1 end to end through `fid journal create-branch` and the "nothing is journaled" half of AC-2 need the commit stage (`CORE.BUS.PIPE.STAGE`) and the CLI wiring; AC-4's "in the same entry" needs the commit stage to call `release_protection`; AC-6's exact-mode replay needs `CORE.RPL.EXEC.LOOP`. The table-level halves of each are built and tested.
 
 ## Children

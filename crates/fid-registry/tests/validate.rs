@@ -905,3 +905,31 @@ fn field_pointer_segments_are_cut_after_escaping() {
     let unknown = errors.iter().find(|e| e.rule == RuleCode::UnknownField).unwrap();
     assert_eq!(unknown.field.as_deref(), Some(format!("/{}", r"\u{200b}".repeat(16)).as_str()));
 }
+
+/// The branch events of CORE.JRN.BR.NAME are reserved to their commands: any other command
+/// (another id, or the right id at another major) declaring one is `reserved_effect`, and
+/// the owning command may declare it.
+#[test]
+fn branch_events_are_reserved_to_their_commands() {
+    let owners = [
+        ("BranchCreated", "journal.create_branch"),
+        ("BranchProtected", "journal.protect_branch"),
+        ("CoeditingSet", "journal.set_branch_coediting"),
+    ];
+    for (effect, owner) in owners {
+        assert!(fid_registry::RESERVED_EFFECTS.contains(&(effect, Some((owner, 1)))), "{effect}");
+        let mut d = base();
+        d.insert("effects".into(), CValue::Arr(vec![s(effect)]));
+        assert_eq!(one(d.clone()), at("reserved_effect", "/effects/0"), "{effect} on {}", "align.run_bestfit");
+        let mut wrong_major = d.clone();
+        wrong_major.insert("id".into(), s(owner));
+        wrong_major.insert("major".into(), n(2.0));
+        assert!(
+            codes(&run(vec![wrong_major])).contains(&("reserved_effect", Some("/effects/0".to_string()))),
+            "{effect}@2"
+        );
+        let mut right = d;
+        right.insert("id".into(), s(owner));
+        assert!(!codes(&run(vec![right])).iter().any(|(c, _)| *c == "reserved_effect"), "{effect} on its owner");
+    }
+}

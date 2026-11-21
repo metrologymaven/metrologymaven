@@ -190,6 +190,36 @@
    "name": "a b",
    "ok": false,
    "owner": null
+  },
+  {
+   "name": "agents/x",
+   "ok": false,
+   "owner": null
+  },
+  {
+   "name": "agent.x",
+   "ok": false,
+   "owner": null
+  },
+  {
+   "name": "agent-x",
+   "ok": false,
+   "owner": null
+  },
+  {
+   "name": "agentx",
+   "ok": false,
+   "owner": null
+  },
+  {
+   "name": "agent_1",
+   "ok": false,
+   "owner": null
+  },
+  {
+   "name": "xagent/1",
+   "ok": true,
+   "owner": "human"
   }
  ],
  "project": {
@@ -207,24 +237,35 @@
    "adds": true,
    "branch": "main",
    "class": "W3",
+   "command": "release.sign_record",
    "protected_before": false
   },
   {
    "adds": false,
    "branch": "main",
    "class": "W3",
+   "command": "release.sign_record",
    "protected_before": true
   },
   {
    "adds": false,
    "branch": "main",
    "class": "W2",
+   "command": "release.sign_record",
    "protected_before": false
   },
   {
    "adds": false,
    "branch": "trial/a",
    "class": "W3",
+   "command": "release.sign_record",
+   "protected_before": false
+  },
+  {
+   "adds": false,
+   "branch": "main",
+   "class": "W3",
+   "command": "journal.protect_branch",
    "protected_before": false
   }
  ],
@@ -477,6 +518,35 @@
    },
    {
     "call": {
+     "actor": "routing",
+     "client": "claude",
+     "from": "sha256:3158c60cc673a5ea979bf13049908637fa11882ace804c233292a005cfd9cc4b",
+     "n": 3,
+     "op": "agent_branch"
+    },
+    "expect": {
+     "error": {
+      "code": "not_found",
+      "reason": "unknown_entity"
+     }
+    }
+   },
+   {
+    "call": {
+     "actor": "human",
+     "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
+     "name": "agents/x",
+     "op": "create"
+    },
+    "expect": {
+     "error": {
+      "code": "validation",
+      "reason": "bad_branch_name"
+     }
+    }
+   },
+   {
+    "call": {
      "actor": "agent",
      "branch": "main",
      "op": "protect"
@@ -707,12 +777,28 @@
      "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
      "name": "trial/a"
     },
+    "origin": {
+     "branch": "main",
+     "class": "W2",
+     "command": "journal.create_branch",
+     "kind": "human",
+     "major": 1,
+     "source": "handler"
+    },
     "type": "BranchCreated"
    },
    {
     "body": {
      "from": "sha256:20892338b32bab360dd400add9c05a717ac833706d4391de6a505f3d474468bc",
      "name": "trial/c"
+    },
+    "origin": {
+     "branch": "main",
+     "class": "W2",
+     "command": "journal.create_branch",
+     "kind": "script",
+     "major": 1,
+     "source": "handler"
     },
     "type": "BranchCreated"
    },
@@ -721,12 +807,28 @@
      "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
      "name": "agent/claude/1"
     },
+    "origin": {
+     "branch": "agent/claude/1",
+     "class": "W2",
+     "command": "project.set_tags",
+     "kind": "agent",
+     "major": 1,
+     "source": "bus_route"
+    },
     "type": "BranchCreated"
    },
    {
     "body": {
      "cause": "manual",
      "name": "main"
+    },
+    "origin": {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.protect_branch",
+     "kind": "human",
+     "major": 1,
+     "source": "handler"
     },
     "type": "BranchProtected"
    },
@@ -736,6 +838,14 @@
      "allow": true,
      "name": "main"
     },
+    "origin": {
+     "branch": "main",
+     "class": "W2",
+     "command": "journal.set_branch_coediting",
+     "kind": "human",
+     "major": 1,
+     "source": "handler"
+    },
     "type": "CoeditingSet"
    },
    {
@@ -743,6 +853,14 @@
      "agent_session": "S2",
      "allow": true,
      "name": "trial/a"
+    },
+    "origin": {
+     "branch": "main",
+     "class": "W2",
+     "command": "journal.set_branch_coediting",
+     "kind": "human",
+     "major": 1,
+     "source": "handler"
     },
     "type": "CoeditingSet"
    },
@@ -752,6 +870,14 @@
      "allow": false,
      "name": "trial/a"
     },
+    "origin": {
+     "branch": "main",
+     "class": "W2",
+     "command": "journal.set_branch_coediting",
+     "kind": "human",
+     "major": 1,
+     "source": "handler"
+    },
     "type": "CoeditingSet"
    },
    {
@@ -759,6 +885,14 @@
      "agent_session": "S3",
      "allow": true,
      "name": "main"
+    },
+    "origin": {
+     "branch": "main",
+     "class": "W2",
+     "command": "journal.set_branch_coediting",
+     "kind": "human",
+     "major": 1,
+     "source": "handler"
     },
     "type": "CoeditingSet"
    }
@@ -773,12 +907,28 @@
       "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
       "name": "trial/a"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "BranchCreated"
     },
     {
      "body": {
       "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
       "name": "trial/a"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      },
      "type": "BranchCreated"
     }
@@ -793,6 +943,14 @@
       "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
       "name": "main"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "BranchCreated"
     }
    ],
@@ -806,12 +964,28 @@
       "cause": "manual",
       "name": "main"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "BranchProtected"
     },
     {
      "body": {
       "cause": "manual",
       "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      },
      "type": "BranchProtected"
     }
@@ -826,6 +1000,14 @@
       "cause": "manual",
       "name": "nope"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "BranchProtected"
     }
    ],
@@ -839,12 +1021,28 @@
       "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
       "name": "trial/a"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "BranchCreated"
     },
     {
      "body": {
       "cause": "release",
       "name": "trial/a"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "release.sign_record",
+      "kind": "human",
+      "major": 1,
+      "source": "bus_release"
      },
      "type": "BranchProtected"
     }
@@ -858,6 +1056,14 @@
      "body": {
       "cause": "admin",
       "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      },
      "type": "BranchProtected"
     }
@@ -873,6 +1079,14 @@
       "allow": false,
       "name": "main"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "CoeditingSet"
     }
    ],
@@ -887,6 +1101,14 @@
       "allow": true,
       "name": "main"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "CoeditingSet"
     },
     {
@@ -894,6 +1116,14 @@
       "agent_session": "S",
       "allow": true,
       "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      },
      "type": "CoeditingSet"
     }
@@ -908,6 +1138,14 @@
       "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
       "name": "agent/claude/1"
      },
+     "origin": {
+      "branch": "agent/claude/1",
+      "class": "W2",
+      "command": "project.set_tags",
+      "kind": "agent",
+      "major": 1,
+      "source": "bus_route"
+     },
      "type": "BranchCreated"
     },
     {
@@ -915,6 +1153,14 @@
       "agent_session": "S",
       "allow": true,
       "name": "agent/claude/1"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      },
      "type": "CoeditingSet"
     }
@@ -930,6 +1176,14 @@
       "allow": true,
       "name": "nope"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "CoeditingSet"
     }
    ],
@@ -942,6 +1196,14 @@
      "body": {
       "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
       "name": "Trial A"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      },
      "type": "BranchCreated"
     }
@@ -956,6 +1218,14 @@
       "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
       "name": "tri\u0430l"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "BranchCreated"
     }
    ],
@@ -968,6 +1238,14 @@
      "body": {
       "from": "sha256:XYZ",
       "name": "trial/a"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      },
      "type": "BranchCreated"
     }
@@ -983,6 +1261,14 @@
       "name": "x",
       "owner": "human"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "BranchCreated"
     }
    ],
@@ -995,6 +1281,14 @@
      "body": {
       "name": "main"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "BranchProtected"
     }
    ],
@@ -1006,6 +1300,14 @@
     {
      "body": {
       "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      },
      "type": "BranchDeleted"
     }
@@ -1020,11 +1322,27 @@
       "cause": "manual",
       "name": "main"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "BranchProtected"
     },
     {
      "body": {
       "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
      },
      "type": "BranchUnprotected"
     }
@@ -1040,6 +1358,14 @@
       "allow": "true",
       "name": "main"
      },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "CoeditingSet"
     }
    ],
@@ -1053,10 +1379,421 @@
       "cause": "manual",
       "name": 7
      },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
      "type": "BranchProtected"
     }
    ],
    "why": "name not string"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
+      "name": "agents/x"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
+     "type": "BranchCreated"
+    }
+   ],
+   "why": "agents/ name"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
+      "name": "trial/a"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     },
+     "type": "BranchCreated"
+    }
+   ],
+   "why": "create by an agent principal"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
+      "name": "trial/a"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "project.set_tags",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
+     "type": "BranchCreated"
+    }
+   ],
+   "why": "create from another command"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
+      "name": "trial/a"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 2,
+      "source": "handler"
+     },
+     "type": "BranchCreated"
+    }
+   ],
+   "why": "create from create_branch@2"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
+      "name": "trial/a"
+     },
+     "origin": {
+      "branch": "agent/claude/1",
+      "class": "W2",
+      "command": "project.set_tags",
+      "kind": "agent",
+      "major": 1,
+      "source": "bus_route"
+     },
+     "type": "BranchCreated"
+    }
+   ],
+   "why": "human name from the route"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
+      "name": "agent/x/1"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
+     "type": "BranchCreated"
+    }
+   ],
+   "why": "agent/ name from create_branch"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "from": "sha256:dac98d5ba0a75f79a843db1cdb038dccda25dae50a0d130d2b13e21002cb28c0",
+      "name": "agent/x/1"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "script",
+      "major": 1,
+      "source": "handler"
+     },
+     "type": "BranchCreated"
+    }
+   ],
+   "why": "agent/ name from a script handler"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "cause": "manual",
+      "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "script",
+      "major": 1,
+      "source": "handler"
+     },
+     "type": "BranchProtected"
+    }
+   ],
+   "why": "manual protect by a script"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "cause": "manual",
+      "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     },
+     "type": "BranchProtected"
+    }
+   ],
+   "why": "manual protect by an agent"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "cause": "manual",
+      "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.create_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
+     "type": "BranchProtected"
+    }
+   ],
+   "why": "manual protect from another command"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "cause": "manual",
+      "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "bus_release"
+     },
+     "type": "BranchProtected"
+    }
+   ],
+   "why": "manual protect added by the bus"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "cause": "release",
+      "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "release.sign_record",
+      "kind": "human",
+      "major": 1,
+      "source": "bus_release"
+     },
+     "type": "BranchProtected"
+    }
+   ],
+   "why": "release from a W2 entry"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "cause": "release",
+      "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "release.sign_record",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
+     "type": "BranchProtected"
+    }
+   ],
+   "why": "release from a handler"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "cause": "release",
+      "name": "main"
+     },
+     "origin": {
+      "branch": "trial/a",
+      "class": "W3",
+      "command": "release.sign_record",
+      "kind": "human",
+      "major": 1,
+      "source": "bus_release"
+     },
+     "type": "BranchProtected"
+    }
+   ],
+   "why": "release on another branch's entry"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "cause": "release",
+      "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "bus_release"
+     },
+     "type": "BranchProtected"
+    }
+   ],
+   "why": "release on protect_branch itself"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "agent_session": "S",
+      "allow": true,
+      "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "script",
+      "major": 1,
+      "source": "handler"
+     },
+     "type": "CoeditingSet"
+    }
+   ],
+   "why": "coediting by a script"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "agent_session": "S",
+      "allow": true,
+      "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     },
+     "type": "CoeditingSet"
+    }
+   ],
+   "why": "coediting by an agent"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "agent_session": "S",
+      "allow": true,
+      "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.protect_branch",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     },
+     "type": "CoeditingSet"
+    }
+   ],
+   "why": "coediting from another command"
+  },
+  {
+   "at": 0,
+   "log": [
+    {
+     "body": {
+      "agent_session": "S",
+      "allow": true,
+      "name": "main"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.set_branch_coediting",
+      "kind": "human",
+      "major": 1,
+      "source": "bus_route"
+     },
+     "type": "CoeditingSet"
+    }
+   ],
+   "why": "coediting added by the route"
   }
  ]
 }

@@ -15,10 +15,12 @@ use fid_bus::principal::{Channel, ChannelKind, Identity, PrincipalId, SessionId,
 use fid_bus::unit::Normalised;
 use fid_bus::validate::{Compiled, Hooks, RefLookup};
 use fid_canon::{parse, CValue};
-use fid_journal::branch::{command_defs, Actor, BranchError, BranchEvent, Branches};
+use fid_journal::branch::{command_defs, BranchError, BranchEvent, Branches, EntryOrigin, EventSource};
+use fid_journal::PrincipalKind;
 use fid_journal_cmd::{run, to_bus_error, BranchHandler, BranchSource, Op};
 use fid_registry::CommandDef;
 use fid_types::Digest;
+use fid_types::SideEffect;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
@@ -90,10 +92,21 @@ fn source() -> Arc<Source> {
 }
 
 /// Commits the events a handler returned to the source (what the bus's commit stage does).
-fn commit(src: &Source, events: &[fid_bus::handler::Event]) {
+/// Commits the events a handler returned to the source (what the bus's commit stage does),
+/// each with the origin its entry records: the call's principal kind and the command.
+fn commit(src: &Source, ctx: &HandlerCtx, op: Op, events: &[fid_bus::handler::Event]) {
     let mut t = src.table.lock().unwrap();
+    let class = if op == Op::Protect { SideEffect::W3 } else { SideEffect::W2 };
+    let origin = EntryOrigin {
+        kind: ctx.principal().kind(),
+        command: op.command().to_string(),
+        major: 1,
+        class,
+        branch: "main".to_string(),
+        source: EventSource::Handler,
+    };
     for e in events {
-        t.apply(&BranchEvent::from_parts(e.type_id().as_str(), e.body()).unwrap()).unwrap();
+        t.apply(&origin, &BranchEvent::from_parts(e.type_id().as_str(), e.body()).unwrap()).unwrap();
     }
 }
 
@@ -197,19 +210,19 @@ fn handlers_follow_the_oracle_with_the_bus_principal() {
         let call_v = get(call, "call");
         let want = get(call, "expect");
         if s(get(call_v, "op")) == "agent_branch" {
-            // The routing module's path (CORE.BUS.ROUTE), not a command.
-            let n = match get(call_v, "n") {
-                CValue::Num(n) => *n as u64,
-                other => panic!("{other:?}"),
-            };
-            let from = Digest::parse(s(get(call_v, "from"))).unwrap();
-            let t = src.branches().unwrap();
-            match fid_journal::branch::plan_agent_branch(&t, s(get(call_v, "client")), n, from) {
-                Ok(e) => {
-                    assert!(opt(want, "event").is_some(), "call {i}");
-                    src.table.lock().unwrap().apply(&e).unwrap();
-                }
-                Err(e) => assert_eq!(e.reason(), s(get(get(want, "error"), "reason")), "call {i}"),
+            // The routing module's path (CORE.BUS.ROUTE), not a command: its event is committed
+            // with the bus_route origin, which no handler can give.
+            if let Some(w) = opt(want, "event") {
+                let e = BranchEvent::from_parts(s(get(w, "type")), get(w, "body")).unwrap();
+                let route = EntryOrigin {
+                    kind: PrincipalKind::Agent,
+                    command: "project.set_tags".into(),
+                    major: 1,
+                    class: SideEffect::W2,
+                    branch: "agent/claude/1".into(),
+                    source: EventSource::BusRoute,
+                };
+                src.table.lock().unwrap().apply(&route, &e).unwrap();
             }
             continue;
         }
@@ -227,9 +240,9 @@ fn handlers_follow_the_oracle_with_the_bus_principal() {
                 assert_eq!(events[0].body(), get(w, "body"), "call {i}");
                 effects_check(def, &events).unwrap();
                 // The result the bus returns, valid against the result schema.
-                let (_, result) = run(op, src.as_ref(), &params, Actor::of(ctx.principal().kind())).unwrap();
+                let (_, result) = run(op, src.as_ref(), &params, &ctx).unwrap();
                 assert_valid(&Compiled::compile(&def.result_schema).unwrap(), &result, &format!("call {i} result"));
-                commit(&src, &events);
+                commit(&src, &ctx, op, &events);
             }
             (Ok(events), None, None) => assert!(events.is_empty() && opt(want, "noop").is_some(), "call {i}"),
             (Err(e), None, Some(w)) => {
@@ -243,7 +256,7 @@ fn handlers_follow_the_oracle_with_the_bus_principal() {
     }
     assert!(done >= 20);
     // List: no events, result valid and equal to the oracle's list.
-    let (events, list) = run(Op::List, src.as_ref(), &obj(&[]), Actor::Human).unwrap();
+    let (events, list) = run(Op::List, src.as_ref(), &obj(&[]), &ctx(ChannelKind::Gui)).unwrap();
     assert!(events.is_empty());
     assert_valid(&Compiled::compile(&defs[fid_journal::branch::LIST_BRANCHES].result_schema).unwrap(), &list, "list");
     let want = get(get(&c, "scenario"), "branches");
@@ -305,13 +318,15 @@ fn schemas_check_real_values() {
     // Results: a fresh main (created_from null), a protected branch with opt-ins.
     let src = source();
     let one = compile(&defs[fid_journal::branch::PROTECT_BRANCH].result_schema);
-    let (_, r) = run(Op::Protect, src.as_ref(), &obj(&[("branch", str_v("main"))]), Actor::Human).unwrap();
+    let (_, r) = run(Op::Protect, src.as_ref(), &obj(&[("branch", str_v("main"))]), &ctx(ChannelKind::Gui)).unwrap();
     assert_valid(&one, &r, "protect result");
     let (ev, _) =
-        run(Op::Create, src.as_ref(), &obj(&[("name", str_v("x")), ("from", str_v(head))]), Actor::Human).unwrap();
-    commit(&src, &ev);
+        run(Op::Create, src.as_ref(), &obj(&[("name", str_v("x")), ("from", str_v(head))]), &ctx(ChannelKind::Gui))
+            .unwrap();
+    commit(&src, &ctx(ChannelKind::Gui), Op::Create, &ev);
     let (_, r) =
-        run(Op::Create, src.as_ref(), &obj(&[("name", str_v("y")), ("from", str_v(head))]), Actor::Human).unwrap();
+        run(Op::Create, src.as_ref(), &obj(&[("name", str_v("y")), ("from", str_v(head))]), &ctx(ChannelKind::Gui))
+            .unwrap();
     assert_valid(&one, &r, "create result");
 }
 
@@ -359,10 +374,10 @@ fn ac3_ac5_projection_and_class() {
         Op::Coediting,
         s2.as_ref(),
         &obj(&[("branch", str_v("main")), ("agent_session", str_v("S")), ("allow", CValue::Bool(true))]),
-        Actor::Human,
+        &ctx(ChannelKind::Gui),
     )
     .unwrap();
-    commit(&s2, &ev);
+    commit(&s2, &ctx(ChannelKind::Gui), Op::Coediting, &ev);
     let t = s2.branches().unwrap();
     assert!(t.coediting("main").unwrap().iter().any(|x| x.as_str() == "S"));
 }

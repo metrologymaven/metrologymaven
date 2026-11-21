@@ -7,7 +7,7 @@
 //!   takes the caller from the call's principal ([`HandlerCtx::principal`], derived by the bus
 //!   from the channel and nothing else), runs the planner, and returns the event to commit
 //!   (none for a no-op and for the R0 list).
-//! - [`run`] does the same without the handler wrapper and also returns the command's result
+//! - [`run`] does the same for a call's [`HandlerCtx`] and also returns the command's result
 //!   value (`{branch}` or `{branches}`) as its `result_schema` declares it.
 //! - [`to_bus_error`]: every planner refusal becomes the bus error of the same code and
 //!   reason (catalogue v3): `validation/bad_branch_name`, `validation/schema`,
@@ -15,22 +15,28 @@
 //!   `policy/human_only`, `internal/invariant_violated`.
 //!
 //! Agent branches (`agent/<client>/<n>`) are not created here: the routing module
-//! (`CORE.BUS.ROUTE`) calls `fid_journal::branch::plan_agent_branch` itself.
+//! (`CORE.BUS.ROUTE`) adds them through the journal's crate-private route planner.
 
 use fid_bus::error::{BusError, Detail, InternalReason, NotFoundReason, PolicyReason, ValidationReason};
 use fid_bus::handler::{Event, EventType, Handler, HandlerCtx, HandlerError, HandlerSet, StateView, ValidParams};
 use fid_canon::CValue;
 use fid_journal::branch::{
-    command_defs, plan_coediting, plan_create, plan_protect, Actor, BranchError, BranchEvent, Branches, CREATE_BRANCH,
-    LIST_BRANCHES, PROTECT_BRANCH, SET_BRANCH_COEDITING,
+    command_defs, plan_coediting, plan_create, plan_protect, Actor, BranchError, BranchEvent, Branches, EntryOrigin,
+    EventSource, CREATE_BRANCH, LIST_BRANCHES, MAIN, PROTECT_BRANCH, SET_BRANCH_COEDITING,
 };
 use fid_types::Digest;
+use fid_types::SideEffect;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::Arc;
 
-/// Where the handlers read the branch table. The bus wiring implements it over the journal
-/// (the projection of the committed branch events and the head cache).
+/// Where the handlers read the branch table. The bus wiring implements it over the journal.
+///
+/// Contract: [`BranchSource::branches`] is `Branches::replay` over the branch events of every
+/// committed entry, in append order, each with its entry's origin (`EntryOrigin`: the entry's
+/// principal kind, command, class, branch and adding stage, as the entry records them), and
+/// the heads from the head cache. It covers every committed entry whatever later head moves
+/// or undo did: a branch, once created or protected, stays.
 pub trait BranchSource: Send + Sync {
     /// The current branch table.
     fn branches(&self) -> Result<Branches, String>;
@@ -105,9 +111,17 @@ fn one(b: &Branches, name: &str) -> Result<CValue, BusError> {
     Ok(CValue::Obj(BTreeMap::from([("branch".to_string(), branch.to_value())])))
 }
 
-/// Runs one command for `actor` against `source`: the events to commit and the result value.
-/// The result reflects the table after the events.
-pub fn run(op: Op, source: &dyn BranchSource, params: &CValue, actor: Actor) -> Result<(Vec<Event>, CValue), BusError> {
+/// Runs one command for the call `ctx` against `source`: the events to commit and the result
+/// value. The caller is the principal the bus derived for the call; the result reflects the
+/// table after the events.
+pub fn run(
+    op: Op,
+    source: &dyn BranchSource,
+    params: &CValue,
+    ctx: &HandlerCtx,
+) -> Result<(Vec<Event>, CValue), BusError> {
+    let kind = ctx.principal().kind();
+    let actor = Actor::of(kind);
     let mut b = source.branches().map_err(|e| invariant(&format!("branch table: {e}")))?;
     let is_head = |d: &Digest| source.is_head(d);
     let (event, name) = match op {
@@ -132,7 +146,20 @@ pub fn run(op: Op, source: &dyn BranchSource, params: &CValue, actor: Actor) -> 
     };
     let mut events = Vec::new();
     if let Some(e) = event {
-        b.apply(&e).map_err(|e| to_bus_error(&e))?;
+        // The origin this entry will record; the fold checks the event against it.
+        let class = match op {
+            Op::Protect => SideEffect::W3,
+            Op::Create | Op::Coediting | Op::List => SideEffect::W2,
+        };
+        let origin = EntryOrigin {
+            kind,
+            command: op.command().to_string(),
+            major: 1,
+            class,
+            branch: MAIN.to_string(),
+            source: EventSource::Handler,
+        };
+        b.apply(&origin, &e).map_err(|e| to_bus_error(&e))?;
         events.push(event_of(&e)?);
     }
     Ok((events, one(&b, name)?))
@@ -161,8 +188,7 @@ impl Handler for BranchHandler {
         if ctx.cancel().is_cancelled() {
             return Err(HandlerError::Cancelled);
         }
-        let actor = Actor::of(ctx.principal().kind());
-        Ok(run(self.op, self.source.as_ref(), params.value(), actor)?.0)
+        Ok(run(self.op, self.source.as_ref(), params.value(), ctx)?.0)
     }
 }
 

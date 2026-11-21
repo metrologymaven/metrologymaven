@@ -1,15 +1,17 @@
 //! CORE.JRN.BR.NAME against the independent oracle `fixtures/core/jrn/br/name/cases.json`
 //! (written by make_cases.py from the spec rules): name verdicts, the scripted calls of
-//! AC-1, AC-2, AC-3, AC-5 and the agent-branch rules with their exact events or v3 errors,
-//! the resulting branch list, replay of the event log (AC-6, table level), tampered logs, and
-//! the release protection of REQ-006 (AC-4, table level).
+//! AC-1, AC-2, AC-3, AC-5 with their exact events or v3 errors, the resulting branch list,
+//! replay of the event log with entry origins (AC-6, table level), tampered and forged logs,
+//! and the release protection of REQ-006 (AC-4, table level).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::{to_canonical_bytes, CValue};
 use fid_journal::branch::{
-    plan_agent_branch, plan_coediting, plan_create, plan_protect, release_protection, Actor, BranchError, BranchEvent,
-    BranchName, Branches, Owner, CREATE_BRANCH, LIST_BRANCHES, MAIN, PROTECT_BRANCH, SET_BRANCH_COEDITING,
+    plan_coediting, plan_create, plan_protect, release_protection, Actor, BranchError, BranchEvent, BranchName,
+    Branches, EntryOrigin, EventSource, Owner, CREATE_BRANCH, LIST_BRANCHES, MAIN, PROTECT_BRANCH,
+    SET_BRANCH_COEDITING,
 };
+use fid_journal::PrincipalKind;
 use fid_types::{Digest, SideEffect};
 
 const CASES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/core/jrn/br/name/cases.json");
@@ -46,6 +48,13 @@ fn s(v: &CValue) -> &str {
     }
 }
 
+fn num(v: &CValue) -> u64 {
+    match v {
+        CValue::Num(n) => *n as u64,
+        _ => panic!("not a number: {v:?}"),
+    }
+}
+
 fn digest(v: &CValue) -> Digest {
     Digest::parse(s(v)).unwrap()
 }
@@ -56,6 +65,48 @@ fn actor(v: &CValue) -> Actor {
         "agent" => Actor::Agent,
         _ => Actor::Other,
     }
+}
+
+fn class(v: &str) -> SideEffect {
+    match v {
+        "R0" => SideEffect::R0,
+        "W2" => SideEffect::W2,
+        "W3" => SideEffect::W3,
+        other => panic!("class {other}"),
+    }
+}
+
+/// An entry origin as the oracle writes it.
+fn origin(v: &CValue) -> EntryOrigin {
+    EntryOrigin {
+        kind: PrincipalKind::parse(s(get(v, "kind"))).unwrap(),
+        command: s(get(v, "command")).to_string(),
+        major: num(get(v, "major")) as u32,
+        class: class(s(get(v, "class"))),
+        branch: s(get(v, "branch")).to_string(),
+        source: match s(get(v, "source")) {
+            "handler" => EventSource::Handler,
+            "bus_route" => EventSource::BusRoute,
+            "bus_release" => EventSource::BusRelease,
+            other => panic!("source {other}"),
+        },
+    }
+}
+
+/// The origin of a handler event for a call by `kind`.
+fn handler_origin(kind: PrincipalKind, command: &str, cls: SideEffect) -> EntryOrigin {
+    EntryOrigin {
+        kind,
+        command: command.to_string(),
+        major: 1,
+        class: cls,
+        branch: MAIN.to_string(),
+        source: EventSource::Handler,
+    }
+}
+
+fn human(command: &str, cls: SideEffect) -> EntryOrigin {
+    handler_origin(PrincipalKind::Human, command, cls)
 }
 
 struct Project {
@@ -79,11 +130,16 @@ fn parse_event(v: &CValue) -> Result<BranchEvent, BranchError> {
     BranchEvent::from_parts(s(get(v, "type")), get(v, "body"))
 }
 
+/// The oracle's log: (origin, event) per committed event.
+fn oracle_log(sc: &CValue) -> Vec<(EntryOrigin, BranchEvent)> {
+    arr(get(sc, "log")).iter().map(|v| (origin(get(v, "origin")), parse_event(v).unwrap())).collect()
+}
+
 #[test]
 fn names_match_the_oracle() {
     let c = cases();
     let names = arr(get(&c, "names"));
-    assert!(names.len() >= 30);
+    assert!(names.len() >= 40);
     for n in names {
         let name = s(get(n, "name"));
         let ok = get(n, "ok") == &CValue::Bool(true);
@@ -102,32 +158,45 @@ fn names_match_the_oracle() {
     }
 }
 
-fn run_call(b: &Branches, p: &Project, call: &CValue) -> Result<Option<BranchEvent>, BranchError> {
+/// The event and origin of one oracle call, or its refusal. The routing module's planner is
+/// crate-private (unit-tested in `fid_journal::branch`); here its oracle events are taken as
+/// committed with their bus_route origin.
+fn run_call(
+    b: &Branches,
+    p: &Project,
+    call: &CValue,
+    want: &CValue,
+) -> Result<Option<(EntryOrigin, BranchEvent)>, BranchError> {
     let is_head = |d: &Digest| p.entries.contains(d);
     let a = actor(get(call, "actor"));
+    let kind = match a {
+        Actor::Human => PrincipalKind::Human,
+        Actor::Agent => PrincipalKind::Agent,
+        Actor::Other => PrincipalKind::Script,
+    };
+    let with = |cmd: &str, cls, e: Option<BranchEvent>| e.map(|e| (handler_origin(kind, cmd, cls), e));
     match s(get(call, "op")) {
-        "create" => plan_create(b, a, s(get(call, "name")), s(get(call, "from")), &is_head).map(Some),
-        "protect" => plan_protect(b, a, s(get(call, "branch"))),
+        "create" => plan_create(b, a, s(get(call, "name")), s(get(call, "from")), &is_head)
+            .map(|e| with(CREATE_BRANCH, SideEffect::W2, Some(e))),
+        "protect" => plan_protect(b, a, s(get(call, "branch"))).map(|e| with(PROTECT_BRANCH, SideEffect::W3, e)),
         "coediting" => plan_coediting(
             b,
             a,
             s(get(call, "branch")),
             s(get(call, "agent_session")),
             get(call, "allow") == &CValue::Bool(true),
-        ),
-        "agent_branch" => {
-            let n = match get(call, "n") {
-                CValue::Num(n) => *n as u64,
-                other => panic!("n: {other:?}"),
-            };
-            plan_agent_branch(b, s(get(call, "client")), n, digest(get(call, "from"))).map(Some)
-        }
+        )
+        .map(|e| with(SET_BRANCH_COEDITING, SideEffect::W2, e)),
+        "agent_branch" => match opt(want, "event") {
+            Some(e) => Ok(Some((origin(get(want, "origin")), parse_event(e).unwrap()))),
+            None => Err(BranchError::BadName("routing refusal (unit-tested)".into())),
+        },
         other => panic!("op {other}"),
     }
 }
 
-/// AC-1, AC-2, AC-3 (table half), AC-5 and the agent rules: every call gives exactly the
-/// oracle's event, no-op or v3 error, and the list equals the oracle's.
+/// AC-1, AC-2, AC-3 (table half), AC-5: every call gives exactly the oracle's event, no-op or
+/// v3 error, and the list equals the oracle's.
 #[test]
 fn scenario_matches_the_oracle() {
     let c = cases();
@@ -137,14 +206,17 @@ fn scenario_matches_the_oracle() {
     let mut log = Vec::new();
     for (i, call) in arr(get(sc, "calls")).iter().enumerate() {
         let want = get(call, "expect");
-        let got = run_call(&b, &p, get(call, "call"));
+        let routing = s(get(get(call, "call"), "op")) == "agent_branch";
+        let got = run_call(&b, &p, get(call, "call"), want);
         match (got, opt(want, "event"), opt(want, "error")) {
-            (Ok(Some(e)), Some(w), None) => {
+            (Ok(Some((o, e))), Some(w), None) => {
                 assert_eq!(&event_value(&e), w, "call {i}");
-                b.apply(&e).unwrap();
-                log.push(e);
+                assert_eq!(o, origin(get(want, "origin")), "call {i}");
+                b.apply(&o, &e).unwrap();
+                log.push((o, e));
             }
             (Ok(None), None, None) => assert!(opt(want, "noop").is_some(), "call {i}"),
+            (Err(_), None, Some(_)) if routing => {}
             (Err(e), None, Some(w)) => {
                 assert_eq!(e.code(), s(get(w, "code")), "call {i}: {e}");
                 assert_eq!(e.reason(), s(get(w, "reason")), "call {i}: {e}");
@@ -158,49 +230,52 @@ fn scenario_matches_the_oracle() {
     assert_eq!(b.get("trial/a").unwrap().created_from, Some(p.head));
     assert!(b.coediting(MAIN).unwrap().iter().any(|s| s.as_str() == "S"));
     assert_eq!(b.is_protected(MAIN), Some(true));
-    // The oracle's log is the log the planners produced.
-    let oracle_log: Vec<BranchEvent> = arr(get(sc, "log")).iter().map(|v| parse_event(v).unwrap()).collect();
-    assert_eq!(oracle_log, log);
+    assert_eq!(oracle_log(sc), log);
 }
 
-/// AC-6 at table level: the committed events replay to the same table, byte for byte, every
-/// time; and the events round-trip through their stored form.
+/// AC-6 at table level: the committed events of every entry, in append order with their
+/// origins, replay to the same table, byte for byte, every time.
 #[test]
 fn replay_of_the_log_is_identical() {
     let c = cases();
     let p = project(&c);
     let sc = get(&c, "scenario");
-    let log: Vec<BranchEvent> = arr(get(sc, "log")).iter().map(|v| parse_event(v).unwrap()).collect();
-    let once = Branches::replay(p.head, &log).unwrap();
-    let twice = Branches::replay(p.head, &log).unwrap();
+    let log = oracle_log(sc);
+    let pairs = || log.iter().map(|(o, e)| (o, e));
+    let once = Branches::replay(p.head, pairs()).unwrap();
+    let twice = Branches::replay(p.head, pairs()).unwrap();
     assert_eq!(once, twice);
     assert_eq!(to_canonical_bytes(&once.to_value()).unwrap(), to_canonical_bytes(&twice.to_value()).unwrap());
     assert_eq!(get(&once.to_value(), "branches"), get(sc, "branches"));
-    for e in &log {
+    for (_, e) in &log {
         assert_eq!(&BranchEvent::from_parts(e.type_id(), &e.body()).unwrap(), e);
     }
-    // A replay in another order is refused, not silently different: protecting before the
-    // branch exists, or a duplicate.
+    // A replayed (duplicated) entry is refused, not folded twice.
     let mut dup = log.clone();
     dup.push(log[0].clone());
-    assert_eq!(Branches::replay(p.head, &dup).unwrap_err().reason(), "invariant_violated");
+    let r = Branches::replay(p.head, dup.iter().map(|(o, e)| (o, e)));
+    assert_eq!(r.unwrap_err().reason(), "invariant_violated");
 }
 
-/// Tampered event logs fail closed at the oracle's position with internal/invariant_violated.
+/// Tampered and forged logs fail closed at the oracle's position with
+/// internal/invariant_violated: malformed or contradictory events, and well-formed events
+/// whose entry origin (principal, command, class, branch, adding stage) could not produce them.
 #[test]
-fn tampered_logs_are_refused() {
+fn tampered_and_forged_logs_are_refused() {
     let c = cases();
     let p = project(&c);
-    for t in arr(get(&c, "tamper")) {
+    let tamper = arr(get(&c, "tamper"));
+    assert!(
+        tamper.iter().filter(|t| s(get(t, "why")).contains("by a") || s(get(t, "why")).contains("from")).count() >= 10
+    );
+    for t in tamper {
         let why = s(get(t, "why"));
-        let at = match get(t, "at") {
-            CValue::Num(n) => *n as usize,
-            other => panic!("{other:?}"),
-        };
+        let at = num(get(t, "at")) as usize;
         let mut b = Branches::genesis(p.head);
         let mut failed_at = None;
         for (i, v) in arr(get(t, "log")).iter().enumerate() {
-            match parse_event(v).and_then(|e| b.apply(&e)) {
+            let o = origin(get(v, "origin"));
+            match parse_event(v).and_then(|e| b.apply(&o, &e)) {
                 Ok(()) => {}
                 Err(e) => {
                     assert_eq!((e.code(), e.reason()), ("internal", "invariant_violated"), "{why}: {e}");
@@ -213,7 +288,9 @@ fn tampered_logs_are_refused() {
     }
 }
 
-/// REQ-006 at table level: only the first W3 record on main adds BranchProtected{release}.
+/// REQ-006 at table level: only the first W3 record on main adds BranchProtected{release},
+/// never `journal.protect_branch@1` itself; the bus-added event folds only with its
+/// bus_release origin.
 #[test]
 fn release_protects_main_once() {
     let c = cases();
@@ -223,16 +300,15 @@ fn release_protects_main_once() {
         let branch = s(get(r, "branch"));
         if branch != MAIN {
             let e = plan_create(&b, Actor::Human, branch, p.head.as_str(), &|_: &Digest| true).unwrap();
-            b.apply(&e).unwrap();
+            b.apply(&human(CREATE_BRANCH, SideEffect::W2), &e).unwrap();
         }
         if get(r, "protected_before") == &CValue::Bool(true) {
-            b.apply(&plan_protect(&b, Actor::Human, MAIN).unwrap().unwrap()).unwrap();
+            let e = plan_protect(&b, Actor::Human, MAIN).unwrap().unwrap();
+            b.apply(&human(PROTECT_BRANCH, SideEffect::W3), &e).unwrap();
         }
-        let class = match s(get(r, "class")) {
-            "W3" => SideEffect::W3,
-            _ => SideEffect::W2,
-        };
-        let got = release_protection(&b, branch, class);
+        let command = s(get(r, "command"));
+        let cls = class(s(get(r, "class")));
+        let got = release_protection(&b, branch, cls, command);
         assert_eq!(got.is_some(), get(r, "adds") == &CValue::Bool(true), "{r:?}");
         if let Some(e) = got {
             let want = BranchEvent::from_parts(
@@ -241,11 +317,34 @@ fn release_protects_main_once() {
             )
             .unwrap();
             assert_eq!(e, want);
-            b.apply(&e).unwrap();
+            let bus = EntryOrigin {
+                kind: PrincipalKind::Human,
+                command: command.to_string(),
+                major: 1,
+                class: cls,
+                branch: branch.to_string(),
+                source: EventSource::BusRelease,
+            };
+            b.apply(&bus, &e).unwrap();
             assert_eq!(b.is_protected(MAIN), Some(true));
-            assert!(release_protection(&b, MAIN, SideEffect::W3).is_none());
+            assert!(release_protection(&b, MAIN, SideEffect::W3, command).is_none());
         }
     }
+}
+
+/// Decision on #356: a human `protect-branch main` gives exactly one event, the manual one;
+/// the commit stage adds no release protection for it.
+#[test]
+fn protect_branch_main_gives_exactly_one_event() {
+    let p = project(&cases());
+    let mut b = Branches::genesis(p.head);
+    let mut events = Vec::new();
+    events.extend(plan_protect(&b, Actor::Human, MAIN).unwrap());
+    events.extend(release_protection(&b, MAIN, SideEffect::W3, PROTECT_BRANCH));
+    assert_eq!(events.len(), 1);
+    b.apply(&human(PROTECT_BRANCH, SideEffect::W3), &events[0]).unwrap();
+    assert!(release_protection(&b, MAIN, SideEffect::W3, PROTECT_BRANCH).is_none());
+    assert_eq!(b.is_protected(MAIN), Some(true));
 }
 
 /// REQ-005: no API clears a protection; a protected branch stays protected under any
@@ -254,10 +353,10 @@ fn release_protects_main_once() {
 fn protection_is_permanent() {
     let p = project(&cases());
     let mut b = Branches::genesis(p.head);
-    b.apply(&plan_protect(&b, Actor::Human, MAIN).unwrap().unwrap()).unwrap();
+    b.apply(&human(PROTECT_BRANCH, SideEffect::W3), &plan_protect(&b, Actor::Human, MAIN).unwrap().unwrap()).unwrap();
     assert_eq!(plan_protect(&b, Actor::Human, MAIN).unwrap(), None);
     let e = plan_coediting(&b, Actor::Human, MAIN, "S", true).unwrap().unwrap();
-    b.apply(&e).unwrap();
+    b.apply(&human(SET_BRANCH_COEDITING, SideEffect::W2), &e).unwrap();
     b.set_head(&BranchName::parse(MAIN).unwrap(), p.entries[0]).unwrap();
     assert_eq!(b.is_protected(MAIN), Some(true));
 }
@@ -273,9 +372,10 @@ fn command_definitions() {
     assert_eq!(class, [SideEffect::W2, SideEffect::R0, SideEffect::W3, SideEffect::W2]);
     assert!(defs[3].human_only);
     assert!(!defs[0].human_only && !defs[2].human_only);
-    let decls: Vec<_> = defs.iter().map(|d| d.to_value()).collect();
-    let bytes = to_canonical_bytes(&CValue::Arr(decls)).unwrap();
-    assert!(bytes.len() < 64 * 1024);
+    // The registry's checks accept them (reserved effects included: each command declares
+    // exactly the event its entry may carry).
+    let decls: Vec<fid_registry::CommandDecl> = defs.iter().map(|d| fid_registry::CommandDecl(d.to_value())).collect();
+    assert_eq!(fid_registry::validate(&decls), vec![]);
 }
 
 /// Listing is sorted by name bytes and stays fast for 10,000 branches (budget < 20 ms in
@@ -284,9 +384,10 @@ fn command_definitions() {
 fn list_ten_thousand_branches() {
     let p = project(&cases());
     let mut b = Branches::genesis(p.head);
+    let o = human(CREATE_BRANCH, SideEffect::W2);
     for i in (0..10_000).rev() {
         let e = plan_create(&b, Actor::Human, &format!("load/{i:05}"), p.head.as_str(), &|_: &Digest| true).unwrap();
-        b.apply(&e).unwrap();
+        b.apply(&o, &e).unwrap();
     }
     let start = std::time::Instant::now();
     let v = b.to_value();

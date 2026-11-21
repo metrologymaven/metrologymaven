@@ -310,11 +310,22 @@ pub fn max_projection(class: SideEffect) -> Projection {
     }
 }
 
-/// Journal event types reserved for the pending-request commands of CORE.BUS.POL.PROJ, each
-/// with the one command `(id, major)` that may declare it. `RequestApproved` is added by the
-/// bus to an approved command's commit, so no command may declare it. Any other declaration
-/// is `reserved_effect`, so no command an agent can run can emit a request event.
-pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 4] = [
+/// Journal event types reserved to one owning command `(id, major)`, or (`None`) to the bus,
+/// which adds them itself and which no command may declare. Any other declaration is
+/// `reserved_effect`.
+///
+/// - The pending-request events of CORE.BUS.POL.PROJ: `RequestApproved` is added by the bus
+///   to an approved command's commit; the other three belong to their request commands, so
+///   no command an agent can run can emit a request event.
+/// - The branch events of CORE.JRN.BR.NAME: each belongs to its branch command. Their
+///   bus-emitted forms (an `agent/` branch created by the routing module, `CORE.BUS.ROUTE`;
+///   `main` protected on its first W3 release) are added by the bus to the entry, like
+///   `RequestApproved`, and need no declaration; the journal's fold accepts those only with
+///   a bus origin.
+pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 7] = [
+    ("BranchCreated", Some(("journal.create_branch", 1))),
+    ("BranchProtected", Some(("journal.protect_branch", 1))),
+    ("CoeditingSet", Some(("journal.set_branch_coediting", 1))),
     ("RequestApproved", None),
     ("RequestFiled", Some(("request.file_request", 1))),
     ("RequestRejected", Some(("request.reject_request", 1))),
@@ -724,7 +735,10 @@ fn check_decl(v: &CValue, limits: &Limits, kinds: &dyn QuantityKinds, sink: &mut
                 _ => false,
             };
             if !allowed {
-                let msg = format!("effect {} is reserved for the bus's request commands", quote(e));
+                let msg = match owner {
+                    Some((oid, om)) => format!("effect {} is reserved for {oid}@{om}", quote(e)),
+                    None => format!("effect {} is reserved for the bus", quote(e)),
+                };
                 ctx.push(RuleCode::ReservedEffect, Some(pointer(&[Seg::Key("effects"), Seg::Idx(i)])), msg);
             }
         }
