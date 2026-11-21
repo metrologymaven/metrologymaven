@@ -1117,6 +1117,7 @@ name = "fid-align"
 version = "0.0.1"
 dependencies = [
  "fid-align-solve",
+ "fid-bus",
  "fid-canon",
  "fid-dep",
  "fid-geo-frame",

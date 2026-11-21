@@ -1,5 +1,6 @@
 //! `align.list_alignments@1` and `align.get_alignment@1` (R0, D0; ALN.MODEL.ELEM REQ-008)
-//! and `align.get_residuals@1` (R0, D0; ALN.QA.REPORT REQ-005, in [`crate::residuals`]):
+//! and `align.get_residuals@1` (R0, D0; ALN.QA.REPORT REQ-005, in [`crate::residuals`]) and
+//! `align.get_diagnostics@1` (R0, D0; ALN.QA.COND REQ-005, in [`crate::diagnostics`]):
 //! parameters, results, registry definitions, and the CLI and MCP entry points.
 //!
 //! Both surfaces build the same typed parameters and call the same handler, which returns
@@ -7,6 +8,7 @@
 //! `align_list_alignments` return identical bytes (and likewise for every command). Every call is recorded in the caller's
 //! Activity Log; R0 calls never reach the Record Journal (REQ-CORE.JRN-016).
 
+use crate::diagnostics::{self, DiagnosticsParams, CLI_DIAGNOSTICS, GET_DIAGNOSTICS, MCP_DIAGNOSTICS};
 use crate::element::{obj, parse_id, AlignmentStatus};
 use crate::error::{kept, AlignError};
 use crate::model::AlignmentModel;
@@ -129,6 +131,8 @@ fn run(
         list_alignments(model, &ListParams::from_value(params)?)
     } else if command == GET_RESIDUALS {
         residuals::get_residuals(model, reports, &ResidualsParams::from_value(params)?)?
+    } else if command == GET_DIAGNOSTICS {
+        diagnostics::get_diagnostics(model, reports, &DiagnosticsParams::from_value(params)?)?
     } else {
         get_alignment(model, &GetParams::from_value(params)?)?
     };
@@ -146,8 +150,8 @@ pub fn invoke_mcp(
     invoke_mcp_with(model, &ResidualStore::new(), log, tool, params)
 }
 
-/// Runs an MCP tool call (`align_list_alignments`, `align_get_alignment` or
-/// `align_get_residuals`) on raw JSON parameters (at most [`MAX_PARAMS_BYTES`] bytes and
+/// Runs an MCP tool call (`align_list_alignments`, `align_get_alignment`,
+/// `align_get_residuals` or `align_get_diagnostics`) on raw JSON parameters (at most [`MAX_PARAMS_BYTES`] bytes and
 /// [`MAX_PARAMS_DEPTH`] levels; duplicate keys refused) and returns the canonical result
 /// bytes. The call is logged to `log`.
 pub fn invoke_mcp_with(
@@ -161,6 +165,7 @@ pub fn invoke_mcp_with(
         MCP_LIST => LIST_ALIGNMENTS,
         MCP_GET => GET_ALIGNMENT,
         MCP_RESIDUALS => GET_RESIDUALS,
+        MCP_DIAGNOSTICS => GET_DIAGNOSTICS,
         other => return Err(AlignError::UnknownKind(kept(other))),
     };
     log.push(ActivityEntry { command, surface: Surface::Mcp });
@@ -179,7 +184,8 @@ pub fn invoke_cli(model: &AlignmentModel, log: &mut Vec<ActivityEntry>, args: &[
 
 /// Runs `fid align <args>`: `list-alignments [--parent <id>] [--status <status>] [--json]`,
 /// `get-alignment <id> [--json]` or `get-residuals <alignment> [--summary-only]
-/// [--offset N] [--limit M] [--digest D] [--json]`. Output is canonical JSON either way.
+/// [--offset N] [--limit M] [--digest D] [--json]` or `get-diagnostics <alignment> [--json]`.
+/// Output is canonical JSON either way.
 /// Unknown or repeated options are refused. The call is logged to `log`.
 pub fn invoke_cli_with(
     model: &AlignmentModel,
@@ -195,11 +201,15 @@ pub fn invoke_cli_with(
         CLI_LIST => LIST_ALIGNMENTS,
         CLI_GET => GET_ALIGNMENT,
         CLI_RESIDUALS => GET_RESIDUALS,
+        CLI_DIAGNOSTICS => GET_DIAGNOSTICS,
         other => return Err(AlignError::UnknownKind(kept(other))),
     };
     log.push(ActivityEntry { command, surface: Surface::Cli });
     if command == GET_RESIDUALS {
         return run(model, reports, command, &residuals::cli_params(rest)?);
+    }
+    if command == GET_DIAGNOSTICS {
+        return run(model, reports, command, &diagnostics::cli_params(rest)?);
     }
     let mut params = std::collections::BTreeMap::new();
     let mut json = false;
@@ -299,8 +309,8 @@ fn def(
     ]))
 }
 
-/// The registry definitions of `align.get_alignment@1`, `align.get_residuals@1` and
-/// `align.list_alignments@1`, in that (ascending) order, built through
+/// The registry definitions of `align.get_alignment@1`, `align.get_diagnostics@1`,
+/// `align.get_residuals@1` and `align.list_alignments@1`, in that (ascending) order, built through
 /// [`CommandDef::from_value`].
 pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
     let get_params = obj([
@@ -364,6 +374,12 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             ]),
         ),
     ]);
+    let diagnostics_params = obj([
+        ("type", text("object")),
+        ("additionalProperties", CValue::Bool(false)),
+        ("required", strs(&["alignment"])),
+        ("properties", obj([("alignment", id_schema("The alignment whose diagnostics to read."))])),
+    ]);
     let list_result = obj([("type", text("array")), ("items", summary_schema())]);
     let get_result = obj([("type", text("object"))]);
     Ok(vec![
@@ -373,6 +389,15 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             "Returns one alignment element with every stored field and its content digest.",
             get_params,
             get_result,
+        )?,
+        def(
+            "align.get_diagnostics",
+            "Get diagnostics",
+            "Returns an alignment's conditioning diagnostics (length-scaled singular values, condition number, \
+             weakest degree of freedom, ill_conditioned and unobservable_dof warnings with the threshold and its \
+             basis) and the convergence history of an iterative method (null for closed-form methods).",
+            diagnostics_params,
+            diagnostics::result_schema(),
         )?,
         def(
             "align.get_residuals",
