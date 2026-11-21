@@ -884,9 +884,6 @@ impl SceneGraph {
             return Err(SceneError::TooManyElements);
         }
         let set: BTreeSet<EntityId> = dirty.iter().copied().collect();
-        // VIZ.RENDER.SCENE.STALE: marks of dirty entities that left the document are pruned
-        // once the batch succeeds.
-        let absent: Vec<EntityId> = set.iter().copied().filter(|e| !doc.index.contains_key(e)).collect();
         let mut present: Vec<(usize, EntityId)> = Vec::new();
         let mut gone: Vec<EntityId> = Vec::new();
         present.try_reserve_exact(set.len()).map_err(|_| SceneError::AllocationFailed)?;
@@ -905,11 +902,7 @@ impl SceneGraph {
         order.try_reserve_exact(present.len() + gone.len()).map_err(|_| SceneError::AllocationFailed)?;
         order.extend(present.iter().map(|&(_, e)| (e, doc.get(e))));
         order.extend(gone.iter().map(|&e| (e, None)));
-        let out = self.apply(registry, &order)?;
-        for e in &absent {
-            self.outdated.remove(e);
-        }
-        Ok(out)
+        self.apply(registry, &order)
     }
 
     /// Plans every listed element, then applies the plan.

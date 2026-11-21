@@ -13,8 +13,10 @@
 //!   node displays at that moment, `evidence` the claimed, declared-input and
 //!   uncharacterized-input facts of the status it replaces (all unset for `not_evaluated` and
 //!   `error`). The batch lists exactly the nodes that became stale, as `updated`. Entities
-//!   without nodes keep their mark, so a node added for them later starts stale. A mark is
-//!   pruned when a re-projection finds its entity no longer in the document.
+//!   without nodes, or no longer in the document, keep their mark, so a node added for them
+//!   later (an undone delete, a host that shows the element again) starts stale. Marks are
+//!   removed only by [`SceneGraph::clear_outdated`] and [`SceneGraph::recomputed`]; the set is
+//!   bounded by [`MAX_ELEMENTS`] and marking beyond it fails closed.
 //! - **Projector view.** While an element is marked, its projector is handed a view whose
 //!   status is already `Stale` (since the element's digest, with its evidence facts), so a
 //!   projector can never pick a style from the hidden kernel outcome.

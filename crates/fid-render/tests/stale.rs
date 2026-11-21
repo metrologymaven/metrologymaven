@@ -525,18 +525,31 @@ fn projectors_of_marked_elements_see_a_stale_view() {
 }
 
 #[test]
-fn marks_of_entities_that_left_the_document_are_pruned() {
+fn deleted_then_undone_element_comes_back_stale() {
+    // Review of #384: c12 is outdated, the user deletes it, then undoes the delete. CORE
+    // restores it still outdated and publishes no new ElementsMarked. Its mark must survive
+    // the delete, so the restored nodes come back Stale, never CONFORMS or NONCONFORMS.
     let mut g = marked();
     let c12 = uuid("00000000-0000-4000-8000-000000000016");
-    let alignment = uuid("00000000-0000-4000-8000-0000000000a1");
-    assert!(g.is_outdated(c12) && g.is_outdated(alignment));
     let mut els = parse_doc(&fixture("doc.txt"));
     els.retain(|e| e.entity != c12);
-    let d = Document::new(els).unwrap();
-    let out = g.reproject(&registry(), &d, &[c12, alignment]).unwrap();
+    let deleted = Document::new(els).unwrap();
+    let out = g.reproject(&registry(), &deleted, &[c12]).unwrap();
     assert_eq!(out.batch.retired, vec![rid(38), rid(39), rid(40)]);
-    assert!(!g.is_outdated(c12));
-    assert!(!g.is_outdated(alignment));
-    assert_eq!(g.outdated().count(), 11);
     assert_eq!(g.stale_count(), 33);
+    assert!(g.is_outdated(c12));
+    // Undo: the element is back in the document; only the dirty set names it.
+    let out = g.reproject(&registry(), &doc("doc.txt"), &[c12]).unwrap();
+    assert_eq!(out.batch.added, vec![rid(41), rid(42), rid(43)]);
+    // c12's kernel status is INDETERMINATE with the uncharacterized-input flag (doc.txt).
+    let ev = Evidence { uncharacterized_input: true, ..Evidence::MEASURED };
+    for id in [41, 42, 43] {
+        let n = g.get(rid(id)).unwrap();
+        assert_eq!(n.status, DisplayStatus::Stale { since_digest: n.data_digest, evidence: ev });
+    }
+    assert_eq!(g.stale_count(), 36);
+    // An outdated element the host leaves out of the scene keeps its mark too.
+    let alignment = uuid("00000000-0000-4000-8000-0000000000a1");
+    g.reproject(&registry(), &doc("doc.txt"), &[alignment]).unwrap();
+    assert!(g.is_outdated(alignment));
 }
