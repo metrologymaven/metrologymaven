@@ -28,12 +28,17 @@ fn ac1_seed_1_every_check_passes() {
     eprintln!("{log}took {:?}", started.elapsed());
     let summary = result.unwrap_or_else(|f| panic!("harness failed: {f}\n{log}"));
     assert_eq!(summary.kills, kills());
-    // Some kills landed while commits were running, not only before the first one. Loose on
-    // purpose: every fourth kill is timed from the spawn, and on Windows runners a commit
-    // (FlushFileBuffers) can take longer than the 30 ms delay range, so many kills land in
-    // start-up or the first commit (82 of 1,000 acknowledged on one run of #356).
-    assert!(summary.acked > summary.kills / 40, "only {} commits acknowledged", summary.acked);
-    assert!(summary.recovered >= summary.acked);
+    // No acknowledgement was lost on the way to the harness: every row a check found is either
+    // acknowledged or the one commit that was in flight when its writer was killed.
+    assert!(summary.max_unacked <= 1, "{} unacknowledged commits after one kill", summary.max_unacked);
+    assert_eq!(summary.recovered, summary.acked + summary.unacked);
+    // Liveness, bounded on the work done rather than on a per-OS commit rate: the kills landed
+    // both after acknowledged commits and inside the window between a commit taking effect and
+    // its acknowledgement, not only before the first commit. (Fixed floors of kills / 10, then
+    // kills / 40, assumed a commit rate per kill; Windows runners acknowledged 82, 88 and 91
+    // while every check passed, because FlushFileBuffers can outlast the 30 ms delay range.)
+    assert!(summary.acked > 0, "no commit was acknowledged before a kill");
+    assert!(summary.unacked > 0, "no kill landed between a commit and its acknowledgement");
 }
 
 /// AC-2 and AC-4 through the command line: the broken writer is caught with seed 1 within
