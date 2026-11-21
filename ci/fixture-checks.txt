@@ -126,6 +126,7 @@ python fixtures/num/fmt/make_len_fixtures.py --check
 python fixtures/num/fmt/make_reg_fixtures.py --check
 python fixtures/num/la/make_la_fixtures.py --check
 python fixtures/num/la/make_qr_fixtures.py --check
+python fixtures/num/la/make_svd_fixtures.py --check
 python fixtures/num/make_red_fixtures.py --check
 python fixtures/operator/make_fixtures.py --check
 python fixtures/ors/trace/make_fixtures.py --check

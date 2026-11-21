@@ -1,7 +1,9 @@
 //! Dense linear algebra. Spec nodes `KRN.NUM.LA.MAT` (this base) and `KRN.NUM.LA.QR`
 //! (Householder QR, column pivoting and least squares: [`qr`], [`qr_pivoted`], [`lstsq`]; the
 //! pinned rules are in the `qr` module source), plus the pivoted Cholesky factor
-//! [`chol_pivoted`] used by `UNC.MODEL.DIST` (rules pinned in the `chol` module source).
+//! [`chol_pivoted`] used by `UNC.MODEL.DIST` (rules pinned in the `chol` module source), and
+//! `KRN.NUM.LA.SVD` (one-sided Jacobi SVD: [`svd`], [`svd_with_sweep_limit`]; rules pinned in
+//! the `svd` module source).
 //!
 //! Row-major `f64` matrices with checked construction ([`Mat`]), products routed through
 //! [`crate::red::dot`] ([`mat_vec`], [`mat_t_vec`], [`mat_mul`]), triangular solves
@@ -50,12 +52,14 @@ mod chol;
 mod cond;
 mod mat;
 mod qr;
+mod svd;
 mod tri;
 
 pub use chol::{chol_pivoted, CholPivoted};
 pub use cond::{cond_triangular, ITERATIONS as COND_ITERATIONS};
 pub use mat::{mat_mul, mat_t_vec, mat_vec, Mat, MAX_DIM, MAX_MAT_BYTES};
 pub use qr::{lstsq, qr, qr_pivoted, LstsqResult, Qr};
+pub use svd::{svd, svd_with_sweep_limit, Svd, MAX_SWEEPS};
 pub use tri::{rank_by_rule, solve_lower, solve_upper};
 
 use crate::err::NumError;
@@ -78,7 +82,9 @@ pub struct Factorization {
 
 /// Why a linear-algebra call failed, decoded from a [`NumError`] by [`LaError::of`].
 /// Carried in [`NumError::Domain`] as `detail`, except [`LaError::Singular`], which is a
-/// [`NumError::Singular`] whose `rank` field is the index.
+/// [`NumError::Singular`] whose `rank` field is the index, [`LaError::RankDeficient`] (a
+/// [`NumError::Singular`] of `la.lstsq`) and [`LaError::NoConvergence`] (a
+/// [`NumError::NoConvergence`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LaError {
     /// A zero dimension, a ragged row list, a data length that is not `rows * cols`, a
@@ -109,6 +115,12 @@ pub enum LaError {
         /// The numerical rank.
         rank: usize,
     },
+    /// An iterative factorization (`svd`) did not meet its convergence test within its sweep
+    /// limit. Carried as [`NumError::NoConvergence`].
+    NoConvergence {
+        /// The sweep limit that was reached.
+        sweeps: usize,
+    },
 }
 
 const SINGULAR_OPS: [&str; 3] = ["la.solve_upper", "la.solve_lower", "la.cond_triangular"];
@@ -129,6 +141,7 @@ impl LaError {
             LaError::Singular { .. } => "singular",
             LaError::Subnormal => "subnormal_input",
             LaError::RankDeficient { .. } => "rank_deficient",
+            LaError::NoConvergence { .. } => "no_convergence",
         }
     }
 
@@ -138,6 +151,9 @@ impl LaError {
         match e {
             NumError::Singular { op, rank } if SINGULAR_OPS.contains(op) => Some(LaError::Singular { index: *rank }),
             NumError::Singular { op, rank } if *op == RANK_DEFICIENT_OP => Some(LaError::RankDeficient { rank: *rank }),
+            NumError::NoConvergence { op, sweeps } if op.starts_with("la.") => {
+                Some(LaError::NoConvergence { sweeps: *sweeps })
+            }
             NumError::Domain { op, detail } if op.starts_with("la.") => [
                 LaError::BadShape,
                 LaError::TooLarge,
@@ -156,6 +172,7 @@ impl LaError {
         match self {
             LaError::Singular { index } => NumError::Singular { op, rank: index },
             LaError::RankDeficient { rank } => NumError::Singular { op, rank },
+            LaError::NoConvergence { sweeps } => NumError::NoConvergence { op, sweeps },
             k => NumError::Domain { op, detail: k.detail() },
         }
     }
