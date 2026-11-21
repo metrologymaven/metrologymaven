@@ -349,7 +349,7 @@ impl fmt::Debug for CancelRead<'_> {
 impl Read for CancelRead<'_> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         if is_set(self.cancel) {
-            return Err(io::Error::new(io::ErrorKind::Other, "import cancelled"));
+            return Err(io::Error::other("import cancelled"));
         }
         self.inner.read(buf)
     }
@@ -1295,7 +1295,7 @@ fn prepare_with<R: Reader + ?Sized>(
         Err(e @ (IoError::LimitExceeded { .. } | IoError::Io { .. })) => return Err(e.into()),
         Err(e) => return Err(ImportError::Reader(e)),
     }
-    let StageSink { src, mut blobs, entities, declared_unit, format_version, declared, .. } = sink;
+    let StageSink { src, blobs, entities, declared_unit, format_version, declared, .. } = sink;
     let (digest, mut budget) = finished(env, src.finish())?;
     // The checked copy of the tree, before it is made.
     finished(env, budget.charge_alloc(tree_copy_cost(env.tree), Position::byte(digest.bytes())))?;
@@ -1326,7 +1326,7 @@ fn prepare_with<R: Reader + ?Sized>(
     if len64(manifest.len()) > MAX_PAYLOAD_BYTES {
         return Err(ImportError::Internal("blob manifest above one blob"));
     }
-    let blob_manifest = match blobs.as_deref_mut() {
+    let blob_manifest = match blobs {
         Some(b) => b.put(&manifest)?,
         None => sha256_of(&manifest),
     };

@@ -839,7 +839,7 @@ fn every_record_is_readable_at_its_bounds() {
     let text = CValue::Str(worst_text(MAX_TEXT_BYTES));
     let mut declared = Obj::new();
     for i in 0..MAX_DECLARED {
-        declared.insert(format!("{:064}", i), text.clone());
+        declared.insert(format!("{i:064}"), text.clone());
     }
     let base = case("ok_s1");
     let mut p = obj(get(obj(get(&base, "record")), "provenance")).clone();
