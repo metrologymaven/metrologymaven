@@ -2,7 +2,7 @@
 """Independent reference for UNC.RDL.REP (CC-BY-4.0 project data).
 
 Writes:
-- crates/fid-rep/table/rep-1@1.0.0.json: the canonical JSON of table rep-1@1.0.0, built
+- crates/fid-rep/src/table/rep-1@1.0.0.json: the canonical JSON of table rep-1@1.0.0, built
   here from the bounds in REQ-UNC.RDL.REP-001 (not from the Rust code);
 - fixtures/rdl/rep/rep-1@1.0.0.sha256: `sha256:<hex>` of that file;
 - fixtures/rdl/rep/cases.csv: classification cases (AC-1 .. AC-5).
@@ -25,7 +25,7 @@ from fractions import Fraction
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-TABLE_PATH = ROOT / "crates" / "fid-rep" / "table" / "rep-1@1.0.0.json"
+TABLE_PATH = ROOT / "crates" / "fid-rep" / "src" / "table" / "rep-1@1.0.0.json"
 DIGEST_PATH = ROOT / "fixtures" / "rdl" / "rep" / "rep-1@1.0.0.sha256"
 CASES_PATH = ROOT / "fixtures" / "rdl" / "rep" / "cases.csv"
 

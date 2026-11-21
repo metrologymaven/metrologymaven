@@ -41,7 +41,7 @@ pub const TABLE_VERSION: &str = "rep-1@1.0.0";
 /// Schema ID of the table document.
 pub const TABLE_SCHEMA: &str = "rep-table@1";
 /// Canonical JSON (RFC 8785) of table `rep-1@1.0.0`.
-pub const TABLE_JSON: &str = include_str!("../table/rep-1@1.0.0.json");
+pub const TABLE_JSON: &str = include_str!("table/rep-1@1.0.0.json");
 /// SHA-256 of [`TABLE_JSON`], computed by `fixtures/rdl/rep/make_cases.py`.
 pub const TABLE_DIGEST: &str = "sha256:4f79a3e5fb148c4f545d27ea974cc8cf21490bac35d933a7272191a72c00f40c";
 
