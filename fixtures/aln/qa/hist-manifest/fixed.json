@@ -1,0 +1,39 @@
+{
+  "format": 1,
+  "quantity_catalogue_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "commands": [
+    {
+      "id": "align.fit_points",
+      "major": 1,
+      "iterative": true,
+      "convergence": [
+        {"name": "increment", "unit": "m", "default": "1e-9", "meaning": "Stop when the translation step is below this length and the rotation step below increment_rotation."},
+        {"name": "increment_rotation", "unit": "rad", "default": "1e-10", "meaning": "Rotation-step threshold used together with increment."},
+        {"name": "max_iterations", "unit": "1", "default": "200", "meaning": "Stop with limit(max_iterations) after this many iterations."}
+      ]
+    },
+    {
+      "id": "align.rps",
+      "major": 1,
+      "iterative": false
+    },
+    {
+      "id": "align.fit_features",
+      "major": 1,
+      "iterative": true,
+      "convergence": [
+        {"name": "objective", "unit": "m^2", "default": "1e-14", "meaning": "Stop when the objective changes by less than this between iterations | relative to none."},
+        {"name": "max_iterations", "unit": "1", "default": "50", "meaning": "Stop with limit(max_iterations) after this many iterations."}
+      ]
+    },
+    {
+      "id": "align.fit_icp",
+      "major": 2,
+      "iterative": true,
+      "convergence": [
+        {"name": "increment", "unit": "m", "default": "5e-9", "meaning": "Stop when the translation step is below this length."},
+        {"name": "max_iterations", "unit": "1", "default": "100", "meaning": "Stop with limit(max_iterations) after this many iterations."}
+      ]
+    }
+  ]
+}
