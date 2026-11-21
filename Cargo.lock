@@ -1947,8 +1947,10 @@ dependencies = [
 name = "fid-report"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
  "fid-canon",
  "fid-gdt",
+ "fid-io-reg",
  "fid-io-res",
  "fid-kdec",
  "fid-kunc",
@@ -1999,8 +2001,10 @@ name = "fid-scan-mesh"
 version = "0.0.1"
 dependencies = [
  "fid-geo-types",
+ "fid-kci",
  "fid-num",
  "fid-testkit",
+ "fid-types",
 ]
 
 [[package]]

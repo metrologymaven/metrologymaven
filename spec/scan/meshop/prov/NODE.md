@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-scan-mesh]
+built_pr: 393
 satisfies: [REQ-SCAN.MESHOP-001, REQ-SCAN.MESHOP-005, REQ-SCAN.MESHOP-009]
 covers: []
 depends_on: [GEO.TYPES, SCAN.POLY.QUAL]
@@ -76,6 +78,8 @@ The shared contract every mesh operation in SCAN.MESHOP implements: produce a ne
 ## Open questions
 
 - Whether vertices moved by smoothing beyond a fraction of the bound should also mark triangles synthesized; currently only spike relocation does (see `SCAN.MESHOP.SMOOTH`).
+- **Real fix for flag storage (proposed, not done here):** a GEO.TYPES.MESH `triangle_synthesized` channel in the element digest layout. The Design places `synthesized` in GEO.TYPES, but GEO.TYPES.MESH has no such channel and this leaf may not edit it. So `fid-scan-mesh` carries the flags beside the mesh (`Synthesized`, constructible only inside the crate) and binds them into a derived-mesh digest (`"FIDMOP"` layout, `op` module docs) distinct from the GEO.TYPES element digest. Once the channel exists, the derived digest should become the element digest.
+- **Trust boundary (as built):** a `MeshOpOutput` record is trustworthy only if every `inputs[]` digest resolves to a stored version; `Registered::run` accepts only `VerifiedMeshView`s, checked against the digest the caller fetched them by. The bare `MeshOpOutput::mesh()` must never be stored as a raw GEO.TYPES element (it would read as fully measured). Operations are trusted code: `derive_triangle` is only for children of the cited source triangles, and a dishonest operation is out of scope of the contract.
 
 ## Children
 

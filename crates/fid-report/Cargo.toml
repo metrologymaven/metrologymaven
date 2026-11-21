@@ -1,6 +1,6 @@
 [package]
 name = "fid-report"
-description = "Metrology Maven report model: report document, pages, blocks, block-kind registry, report commands and value formatting (spec nodes RPT.MODEL.DOC, RPT.MODEL.FMT, RPT.MODEL.BIND.RESOLVE, RPT.MODEL.BIND.EXPAND)"
+description = "Metrology Maven report model: report document, pages, blocks, block-kind registry, report commands and value formatting (spec nodes RPT.MODEL.DOC, RPT.MODEL.FMT, RPT.MODEL.BIND.RESOLVE, RPT.MODEL.BIND.EXPAND, RPT.MODEL.TMPL.VER)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -33,6 +33,11 @@ fid-registry = { path = "../fid-registry" }
 fid-replay = { path = "../fid-replay" }
 # Shared `sha256:` digest type (AGENTS.md rule 14). Layer num.
 fid-types = { path = "../fid-types" }
+# Approved import roots (IO.REG.ROOTS): template files reach `report.save_template@1` only
+# through `RootSet::resolve_import`, so an agent's raw path is `raw_path_forbidden`
+# (RPT.MODEL.TMPL.VER REQ-007). Layer services; already in this crate's tree through
+# fid-gdt and fid-io-res, so no new crate in the lock.
+fid-io-reg = { path = "../fid-io-reg" }
 
 [features]
 # Test-only block kinds `text` and `image` (module `doc::stub`), and `table` with its resolver
@@ -50,6 +55,10 @@ test-interpretation = []
 
 [dev-dependencies]
 fid-report = { path = ".", features = ["test-kinds", "test-formatter", "test-interpretation"] }
+# `fid_bus::validate::Compiled`: the template commands' params and results are checked
+# against their registered schemas in tests (tmpl_ver.rs). Engine layer, below services;
+# already in this crate's tree through fid-gdt.
+fid-bus = { path = "../fid-bus" }
 
 [lints]
 workspace = true
