@@ -39,12 +39,28 @@ Cases (seeded random.Random on the case name; SI metres; 200 points; noise unifo
   30-degree default, `ls_rnd::default_params`).
 - Error cases: `sp-few-2` (2 points: too_few_points n=2 need=4) and `c3-line` (10 collinear
   points: collinear n=10 rank=1).
+- Review of #417, hand-labelled:
+  - `sp-ring-<deg>`: 200 points on one circle of a sphere (polar angle 30, 45 and 60 degrees
+    about a random axis, full azimuth, radial noise as above). A ring does not determine a
+    sphere (every sphere through the circle fits it), so each must be refused: `expect refused`,
+    any of insufficient_coverage, coplanar or ill_conditioned, never a fit.
+  - `sp-coplanar`: 50 points in the plane z = 0.125 (coplanar n=50 rank=2).
+  - `c2-collinear`: 20 points on a line of the default projection plane (collinear n=20 rank=1).
+  - `c2-cond`: a noise-free arc of 0.02 degrees (radius 0.02 m) fitted with `min_coverage 0`.
+    The script computes the exact 2-norm condition number of the column-scaled Jacobian at the
+    planted circle in Decimal and requires it above 2e8, twice the 1e8 fit-level limit:
+    ill_conditioned.
+  - `c3-maxiter`: a 90-degree arc fitted with `max_iter 1` (not_converged).
+  - `sp-fixed-r-zero`: fixed radius 0 (invalid_params constraints.fixed_radius).
+  - `sp-fixed-r-tiny`: a 90-degree cap fitted with a fixed radius of 1/100 of the planted one:
+    no sphere of that radius is near the data, `expect refused`.
 
 Output lines (hex = 16 lowercase hex digits of an IEEE-754 double):
   case <name> kind <circle2 | circle3 | sphere> coverage <degrees>
   points <x y z per point>
   plane <p 3 hex> <n 3 hex>                 circle2 projection plane (optional: default z = 0)
   fixed_r <hex>                             constraint (optional)
+  min_coverage <hex> / max_iter <decimal>   parameter overrides (optional)
   truth_c <3 hex> / truth_n <3 hex> / truth_r <hex>     planted geometry (truth_n: circles)
   ref_c <3 hex> ref_n <3 hex> ref_r <hex> ref_rms <hex>  reference (ref_n: circle3)
   expect start | <error code fields>
@@ -377,6 +393,98 @@ def sphere_case(out, name, cov, dist, fixed=False, expect="start"):
     emit(out, name, "sphere", cov, pts, (c, None, r), ref, extra, expect)
 
 
+def sym_eig_min_max(a):
+    """Extreme eigenvalues of a small symmetric Decimal matrix by cyclic Jacobi."""
+    n = len(a)
+    a = [row[:] for row in a]
+    for _ in range(200):
+        off = sum(a[i][j] ** 2 for i in range(n) for j in range(n) if i != j)
+        if off < Decimal(10) ** -110:
+            break
+        for p_ in range(n):
+            for q_ in range(p_ + 1, n):
+                if a[p_][q_] == 0:
+                    continue
+                theta = (a[q_][q_] - a[p_][p_]) / (2 * a[p_][q_])
+                t = (1 if theta >= 0 else -1) / (abs(theta) + (theta * theta + 1).sqrt())
+                cs = 1 / (t * t + 1).sqrt()
+                sn = t * cs
+                for k in range(n):
+                    akp, akq = a[k][p_], a[k][q_]
+                    a[k][p_], a[k][q_] = cs * akp - sn * akq, sn * akp + cs * akq
+                for k in range(n):
+                    apk, aqk = a[p_][k], a[q_][k]
+                    a[p_][k], a[q_][k] = cs * apk - sn * aqk, sn * apk + cs * aqk
+    d = [a[i][i] for i in range(n)]
+    return min(d), max(d)
+
+
+def circle_cond(uv, c, r):
+    """2-norm condition number of the column-scaled Jacobian [-g_u, -g_v, -1] at (c, r)."""
+    rows = []
+    for q in uv:
+        w = [q[0] - c[0], q[1] - c[1]]
+        rho = norm(w)
+        rows.append([-w[0] / rho, -w[1] / rho, Decimal(-1)])
+    scale = [sum(rw[j] ** 2 for rw in rows).sqrt() for j in range(3)]
+    rows = [[rw[j] / scale[j] for j in range(3)] for rw in rows]
+    jtj = [[sum(rw[i] * rw[j] for rw in rows) for j in range(3)] for i in range(3)]
+    lo, hi = sym_eig_min_max(jtj)
+    return (hi / lo).sqrt()
+
+
+def review_cases(out):
+    # Rings on a sphere: refused.
+    for deg in (30, 45, 60):
+        name = f"sp-ring-{deg}"
+        rng = random.Random(f"rnd-partial-v1/{name}")
+        r = radius(rng)
+        c = offset(rng, Decimal("0.3"))
+        axis = rand_dir(rng)
+        e1, e2 = basis(axis)
+        st, ct = sin_cos(dec(deg) * PI / 180)
+        pts = []
+        for _ in range(N):
+            s, co = sin_cos(2 * PI * u01(rng))
+            rr = r + noise(rng)
+            d = [ct * axis[k] + st * (co * e1[k] + s * e2[k]) for k in range(3)]
+            pts.append(rounded([c[k] + rr * d[k] for k in range(3)]))
+        emit(out, name, "sphere", 0, pts, (c, None, r), expect="refused")
+    rng = random.Random("rnd-partial-v1/sp-coplanar")
+    cop = [rounded([Decimal("0.02") * u01(rng), Decimal("0.02") * u01(rng), Decimal("0.125")]) for _ in range(50)]
+    emit(out, "sp-coplanar", "sphere", 0, cop, ([Decimal(0)] * 3, None, Decimal(1)), expect="coplanar n=50 rank=2")
+    col = [[Decimal(i) / 16, Decimal(i) / 8, Decimal(i % 3) / 4] for i in range(20)]
+    emit(out, "c2-collinear", "circle2", 0, col, ([Decimal(0)] * 3, Z, Decimal(1)), expect="collinear n=20 rank=1")
+    # A noise-free arc of 0.02 degrees: the condition number exceeds the 1e8 fit-level limit.
+    r = Decimal("0.02")
+    c = [Decimal("0.3"), Decimal("0.1"), Decimal(0)]
+    arc = Decimal("0.02") * PI / 180
+    pts = []
+    for i in range(50):
+        s, co = sin_cos(arc * i / 49)
+        pts.append(rounded([c[0] + r * co, c[1] + r * s, Decimal(0)]))
+    cond = circle_cond([[q[0], q[1]] for q in pts], c[:2], r)
+    if cond <= Decimal("2e8"):
+        raise SystemExit(f"c2-cond: condition {float(cond):e} is not above 2e8")
+    emit(out, "c2-cond", "circle2", 0, pts, (c, Z, r), extra=["min_coverage " + hx(0.0)], expect="ill_conditioned")
+    name = "c3-maxiter"
+    rng = random.Random(f"rnd-partial-v1/{name}")
+    r = radius(rng)
+    n = rand_dir(rng)
+    c = offset(rng, Decimal("0.3"))
+    pts = circle_points(rng, c, n, r, 90, noise)
+    emit(out, name, "circle3", 90, pts, (c, n, r), extra=["max_iter 1"], expect="not_converged")
+    for name, factor, expect in (
+        ("sp-fixed-r-zero", Decimal(0), "invalid_params constraints.fixed_radius"),
+        ("sp-fixed-r-tiny", Decimal("0.01"), "refused"),
+    ):
+        rng = random.Random(f"rnd-partial-v1/{name}")
+        r = radius(rng)
+        c = offset(rng, Decimal("0.3"))
+        pts = sphere_points(rng, c, r, 90)
+        emit(out, name, "sphere", 90, pts, (c, None, r), extra=["fixed_r " + hx(fl(r * factor))], expect=expect)
+
+
 def render():
     out = [
         "# KRN.LSQ.RND fixture rnd-partial-v1 (CC-BY-4.0). Generated by fixtures/fit/make_rnd_fixtures.py; do not edit.",
@@ -402,6 +510,7 @@ def render():
     emit(out, "sp-few-2", "sphere", 0, few, ([Decimal(0)] * 3, None, Decimal(1)), expect="too_few_points n=2 need=4")
     line = [[Decimal(i) / 16, Decimal(i) / 8, Decimal("0.25")] for i in range(10)]
     emit(out, "c3-line", "circle3", 0, line, ([Decimal(0)] * 3, Z, Decimal(1)), expect="collinear n=10 rank=1")
+    review_cases(out)
     return "\n".join(out) + "\n"
 
 

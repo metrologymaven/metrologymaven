@@ -89,6 +89,12 @@ fn params(c: &Case) -> FitParams {
     if let Some(v) = c.get("plane") {
         p.constraints.push(Constraint::ProjectionPlane { p: [v[0], v[1], v[2]], n: [v[3], v[4], v[5]] });
     }
+    if let Some(v) = c.get("min_coverage") {
+        p.thresholds.min_coverage = v[0];
+    }
+    if let Some(t) = c.text("max_iter") {
+        p.nlls.max_iter = t.parse().unwrap();
+    }
     p
 }
 
@@ -205,6 +211,10 @@ fn encode_err(e: &FitError) -> String {
         FitError::TooFewPoints { n, need } => format!("too_few_points n={n} need={need}"),
         FitError::Collinear { n, rank, .. } => format!("collinear n={n} rank={rank}"),
         FitError::InsufficientCoverage { n, .. } => format!("insufficient_coverage n={n}"),
+        FitError::Coplanar { n, rank, .. } => format!("coplanar n={n} rank={rank}"),
+        FitError::IllConditioned { .. } => "ill_conditioned".to_string(),
+        FitError::NotConverged { .. } => "not_converged".to_string(),
+        FitError::InvalidParams { field } => format!("invalid_params {field}"),
         e => format!("{e:?}"),
     }
 }
@@ -219,15 +229,38 @@ fn ac3_ac5_error_paths() {
     let mut n = 0;
     for (c, r) in outcomes().iter().filter(|(c, _)| c.text("expect") != Some("start")) {
         let e = r.as_ref().map(|_| ()).unwrap_err();
-        assert_eq!(encode_err(e), c.text("expect").unwrap(), "{}", c.name);
-        if let FitError::InsufficientCoverage { coverage, need, .. } = e {
+        let code = encode_err(e);
+        if c.text("expect") == Some("refused") {
+            // Hand-labelled "must be refused": any of the refusals of a weakly determined fit.
+            let ok = matches!(
+                e,
+                FitError::InsufficientCoverage { .. } | FitError::Coplanar { .. } | FitError::IllConditioned { .. }
+            );
+            assert!(ok, "{}: {code}", c.name);
+            println!("{}: {code}", c.name);
+        } else {
+            assert_eq!(code, c.text("expect").unwrap(), "{}", c.name);
+        }
+        if let (FitError::InsufficientCoverage { coverage, need, .. }, true) = (e, c.name.ends_with("-20")) {
             assert_eq!(*need, DEFAULT_MIN_COVERAGE);
             let deg = coverage.to_degrees();
             assert!(deg > 15.0 && deg < 25.0, "{}: coverage {deg}", c.name);
         }
         n += 1;
     }
-    assert_eq!(n, 5);
+    assert_eq!(n, 14);
+}
+
+/// Review of #417: the fit-level condition limit is `thresholds.cond_max` (default 1e8); the
+/// 0.02-degree arc of `c2-cond` is fitted when it is raised to the solver's own limit.
+#[test]
+fn cond_limit_is_a_parameter() {
+    let (c, r) = outcomes().iter().find(|(c, _)| c.name == "c2-cond").unwrap();
+    assert!(matches!(r, Err(FitError::IllConditioned { cond: Some(k) }) if *k > 1e8), "{r:?}");
+    let mut p = params(c);
+    p.thresholds.cond_max = 1e12;
+    let f = run_with(c, &p).unwrap();
+    assert!(f.diagnostics.cond > 1e8);
 }
 
 /// REQ-005: the coverage threshold is the caller's; lowered to 10 degrees, the 20-degree cases
@@ -314,8 +347,10 @@ fn put(h: &mut Sha256Hasher, xs: &[f64]) {
 
 /// AC-4: output-bit pin of every case (feature, residuals, statistics, diagnostics and every
 /// error), recorded from a local x86-64 run and checked by CI on x86-64 Linux and Windows,
-/// ARM64 macOS and wasm32 under wasmtime.
-const OUTPUT_PIN: &str = "sha256:214dded4e3be8427ac46c38a4ac1ae4597a9e61a23b19de3c5628c19e0ac99fd";
+/// ARM64 macOS and wasm32 under wasmtime. Re-recorded for the review of #417 (first value
+/// `sha256:214dded4e3be8427ac46c38a4ac1ae4597a9e61a23b19de3c5628c19e0ac99fd`): sphere coverage
+/// about the fitted centre, the planarity and condition checks, and the new error cases.
+const OUTPUT_PIN: &str = "sha256:5721864dd9314081515f6459c4a0e20dbc7bd7977bec103c2fe06250b564a62e";
 
 #[test]
 fn ac4_output_bits_pinned() {

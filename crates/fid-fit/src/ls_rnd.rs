@@ -22,8 +22,7 @@
 //! 2. **Checks.** `contract::check_points` for the primitive: count (circle 3, sphere 4 points,
 //!    also with a fixed radius), rank, and for the circles the contract's angular coverage under
 //!    `thresholds.min_coverage` (REQ-005). For the sphere, which the contract does not cover,
-//!    the coverage is [`sphere_coverage`] about the algebraic centre of rule 3, refused the same
-//!    way ([`FitError::InsufficientCoverage`]). [`DEFAULT_MIN_COVERAGE`] (30 degrees, the
+//!    the coverage is checked after the solve (rule 7). [`DEFAULT_MIN_COVERAGE`] (30 degrees, the
 //!    leaf's default) is set by [`default_params`]; the fits use whatever `params` holds.
 //! 3. **Algebraic starts** (Kasa). Circle: rows `[u, v, 1, -(u u + v v)]` folded by the
 //!    contract's blocked QR to a `4 x 4` factor, its leading `3 x 3` block and column 3 to
@@ -31,8 +30,9 @@
 //!    radius `sqrt((D D + E E) / 4 - F)`. Sphere: rows `[x, y, z, 1, -(x x + y y + z z)]`, a
 //!    `5 x 5` factor, `4 x 4` solve, centre `-(D, E, F) / 2`, radius
 //!    `sqrt((D D + E E + F F) / 4 - G)`. The 3D circle starts from the normal `N0` of
-//!    `ls_lin::PlaneLs` on the same points (REQ-002) and `init`'s algebraic circle in the plane
-//!    of `N0` (its basis `E1`, `E2` of `N0`; the start centre `C0 = u_c E1 + v_c E2`). A rank
+//!    `ls_lin::PlaneLs` on the same points (REQ-002) and the algebraic circle above of the
+//!    projections on `init`'s basis `E1`, `E2` of `N0` (the start centre `C0 = u_c E1 + v_c E2`;
+//!    `rel_tol = thresholds.rank_tol` here too). A rank
 //!    below full, a non-positive or non-finite squared radius, or a failed plane fit is
 //!    [`FitError::IllConditioned`] (`cond: None`).
 //! 4. **Models.** circle2 `(u_c, v_c, r)`: `rho = red::norm2(q_uv - c)`, residual `rho - r`,
@@ -56,6 +56,20 @@
 //!    by `FitResult::assemble`. Residuals in metres: `rho - r` (circle2, sphere; positive
 //!    outside), and for circle3 the signed 3D distance `hypot(h, rho - r)`, negative when
 //!    `rho < r`. Diagnostics are the solver's (`FitDiagnostics::from_nlls`).
+//!
+//! 7. **Result checks**, in this order. (b) Sphere only: [`sphere_coverage`] about the *fitted*
+//!    centre, below `thresholds.min_coverage` is [`FitError::InsufficientCoverage`] (a ring of
+//!    points on one circle of a sphere has coverage near 0, review of #417). (a) Sphere only:
+//!    with `plane_rms` the RMS distance of the points from their least-squares plane (smallest
+//!    singular value of the centred data over `sqrt(n)`) and `rms` the fit's residual RMS,
+//!    `plane_rms / rms` not above `thresholds.planarity_ratio_min` (default 10 [unverified])
+//!    is [`FitError::Coplanar`] (rank 2, the data's condition `s_0 / s_2`): the data is no
+//!    further from a plane than from the sphere, so it does not determine the sphere (for
+//!    example a fixed radius far below the data's). A ring is refused by (b), not by (a): with
+//!    noise along the sphere's radius the sphere tangent to the cone of the ring absorbs the
+//!    noise to first order, so its residual RMS stays far below the ring's out-of-plane spread. (c) All
+//!    three: the solver's condition estimate at the solution above `thresholds.cond_max`
+//!    (default `1e8` [unverified]) is [`FitError::IllConditioned`] with that estimate.
 //!
 //! The fits are deterministic (D0), ignore the seed and never set `local_optimum_only`: a
 //! single start from a closed-form estimate, no multi-start.
@@ -183,12 +197,13 @@ fn solve_factor<const K: usize>(r: &[[f64; K]; K], rank_tol: f64) -> Result<Opti
     }
 }
 
-/// Rule 3, circle: the algebraic circle of the first two coordinates of the scaled data.
-fn kasa_circle(c: &Centred, rank_tol: f64) -> Result<([f64; 2], f64), FitError> {
+/// Rule 3, circle: the algebraic circle of the scaled data projected on `(e1, e2)`
+/// (`u = red::dot(q, e1)`, `v = red::dot(q, e2)`), centre in those coordinates.
+fn kasa_circle(c: &Centred, e1: V3, e2: V3, rank_tol: f64) -> Result<([f64; 2], f64), FitError> {
     let xyz = c.xyz();
     let r = tsqr::<4, _>(c.len(), |i, out| {
-        let q = xyz.get(3 * i..3 * i + 2).ok_or(FitError::BadLength { len: xyz.len() })?;
-        let (u, v) = (q[0], q[1]);
+        let q = xyz.get(3 * i..3 * i + 3).ok_or(FitError::BadLength { len: xyz.len() })?;
+        let (u, v) = (red::dot(q, &e1)?, red::dot(q, &e2)?);
         *out = [u, v, 1.0, -(u * u + v * v)];
         Ok(())
     })?;
@@ -223,14 +238,15 @@ fn cross(a: V3, b: V3) -> V3 {
     [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
 }
 
-/// Angular coverage of sphere data about `centre` (scaled coordinates), radians: the apex
-/// angle of the smallest cone about the mean direction that holds every point, so a spherical
-/// cap of apex angle `2 alpha` has coverage `2 alpha` (a circle arc of the same angle has the
-/// same circle coverage) and a full sphere `2 pi`.
+/// Two-dimensional coverage of sphere data about the fitted `centre` (scaled coordinates),
+/// radians: twice the spread of the points' polar angles about their mean direction, so a
+/// spherical cap of apex angle `A` has coverage `A`, a full sphere `2 pi`, and a ring (points on
+/// one circle of the sphere, whatever its azimuthal extent) about 0.
 ///
 /// With `u_i = (q_i - centre) / red::norm2(q_i - centre)` (points at the centre skipped), `m`
-/// the component-wise `red::sum` of the `u_i` and `m' = m / red::norm2(m)`: coverage =
-/// `total_min(2 pi, 2 max_i atan2(red::norm2(u_i x m'), red::dot(u_i, m')))`, and `2 pi` when
+/// the component-wise `red::sum` of the `u_i` and `m' = m / red::norm2(m)`, the polar angles are
+/// `theta_i = atan2(red::norm2(u_i x m'), red::dot(u_i, m'))` and the coverage is
+/// `total_min(2 pi, 2 (max_i theta_i - min_i theta_i))` in total order; `2 pi` when
 /// `red::norm2(m)` is zero or no point remains.
 pub fn sphere_coverage(c: &Centred, centre: V3) -> Result<f64, FitError> {
     let n = c.len();
@@ -250,13 +266,33 @@ pub fn sphere_coverage(c: &Centred, centre: V3) -> Result<f64, FitError> {
         return Ok(TWO_PI);
     }
     let mh = [m[0] / mn, m[1] / mn, m[2] / mn];
-    let mut widest = 0.0;
+    let mut lo = f64::INFINITY;
+    let mut hi = 0.0;
     for i in 0..cols[0].len() {
         let u = [cols[0][i], cols[1][i], cols[2][i]];
-        let ang = f::atan2(red::norm2(&cross(u, mh))?, red::dot(&u, &mh)?)?;
-        widest = f::total_max(widest, ang)?;
+        let theta = f::atan2(red::norm2(&cross(u, mh))?, red::dot(&u, &mh)?)?;
+        lo = f::total_min(lo, theta)?;
+        hi = f::total_max(hi, theta)?;
     }
-    Ok(f::total_min(TWO_PI, 2.0 * widest)?)
+    Ok(f::total_min(TWO_PI, 2.0 * (hi - lo))?)
+}
+
+/// Rule 7 (a): `plane_rms / rms` of a sphere fit, with `plane_rms` the smallest singular value
+/// of the centred, scaled data over `sqrt(n)` (its RMS distance from the least-squares plane)
+/// and `rms = red::norm2(residuals) / sqrt(n)` (scaled); `+inf` when `rms` is 0.
+fn planarity_ratio(smallest_sv: f64, scaled_res: &[f64]) -> Result<f64, FitError> {
+    let rn = f::sqrt(scaled_res.len() as f64)?;
+    let plane = smallest_sv / rn;
+    let rms = red::norm2(scaled_res)? / rn;
+    Ok(if rms > 0.0 { plane / rms } else { f64::INFINITY })
+}
+
+/// Rule 7 (c): the fit-level condition limit.
+fn check_cond(res: &nlls::NllsResult, params: &FitParams) -> Result<(), FitError> {
+    if f::total_cmp(res.cond, params.thresholds.cond_max)? == Ordering::Greater {
+        return Err(FitError::IllConditioned { cond: Some(res.cond) });
+    }
+    Ok(())
 }
 
 /// The free parameters of a round model, the fixed radius (scaled) left out.
@@ -479,10 +515,11 @@ impl Fit for Circle2Ls {
         }
         let view = PointsView::new(&buf, None)?;
         let (c, _) = check_points(Primitive::Circle2, &view, &params.thresholds)?;
-        let (cen, r0) = kasa_circle(&c, params.thresholds.rank_tol)?;
+        let (cen, r0) = kasa_circle(&c, [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], params.thresholds.rank_tol)?;
         let lay = layout(&c, 2, fixed)?;
         let x0 = lay.start(&cen, r0)?;
         let res = solve(&Round::<2> { q: c.xyz(), layout: lay }, &x0, params)?;
+        check_cond(&res, params)?;
         let rad = lay.radius(&res.p)?;
         let feature = FittedFeature::Circle2 { c: [res.p[0], res.p[1]], r: rad };
         finish(Primitive::Circle2, &c, feature, &res.residuals, &res)
@@ -496,9 +533,14 @@ impl Fit for SphereLs {
 
     fn fit(&self, pts: &PointsView<'_>, params: &FitParams, _seed: Option<u64>) -> Result<FitResult, FitError> {
         let fixed = params_for(Primitive::Sphere, pts, params)?;
-        let (c, _) = check_points(Primitive::Sphere, pts, &params.thresholds)?;
+        let (c, deg) = check_points(Primitive::Sphere, pts, &params.thresholds)?;
         let (cen, r0) = kasa_sphere(&c, params.thresholds.rank_tol)?;
-        let cov = sphere_coverage(&c, cen)?;
+        let lay = layout(&c, 3, fixed)?;
+        let x0 = lay.start(&cen, r0)?;
+        let res = solve(&Round::<3> { q: c.xyz(), layout: lay }, &x0, params)?;
+        let fitted = [res.p[0], res.p[1], res.p[2]];
+        // Rule 7 (b): coverage about the fitted centre.
+        let cov = sphere_coverage(&c, fitted)?;
         if f::total_cmp(cov, params.thresholds.min_coverage)? == Ordering::Less {
             return Err(FitError::InsufficientCoverage {
                 n: c.len(),
@@ -506,11 +548,14 @@ impl Fit for SphereLs {
                 need: params.thresholds.min_coverage,
             });
         }
-        let lay = layout(&c, 3, fixed)?;
-        let x0 = lay.start(&cen, r0)?;
-        let res = solve(&Round::<3> { q: c.xyz(), layout: lay }, &x0, params)?;
+        // Rule 7 (a): the data must be further from a plane than from the sphere.
+        let ratio = planarity_ratio(deg.shape.singular_values[2], &res.residuals)?;
+        if f::total_cmp(ratio, params.thresholds.planarity_ratio_min)? != Ordering::Greater {
+            return Err(FitError::Coplanar { n: c.len(), rank: 2, cond: deg.cond });
+        }
+        check_cond(&res, params)?;
         let rad = lay.radius(&res.p)?;
-        let feature = FittedFeature::Sphere { c: [res.p[0], res.p[1], res.p[2]], r: rad };
+        let feature = FittedFeature::Sphere { c: fitted, r: rad };
         finish(Primitive::Sphere, &c, feature, &res.residuals, &res)
     }
 }
@@ -531,12 +576,14 @@ impl Fit for Circle3Ls {
             Ok(_) | Err(FitError::IllConditioned { .. } | FitError::Collinear { .. }) => return Err(ill()),
             Err(e) => return Err(e),
         };
-        let (e1, e2, cen, r0) = init::kasa(&c, n0)?.ok_or_else(ill)?;
+        let (e1, e2) = init::basis(n0)?;
+        let (cen, r0) = kasa_circle(&c, e1, e2, params.thresholds.rank_tol)?;
         let c0 = [cen[0] * e1[0] + cen[1] * e2[0], cen[0] * e1[1] + cen[1] * e2[1], cen[0] * e1[2] + cen[1] * e2[2]];
         let fr = Frame { c0, n0, e1, e2 };
         let lay = layout(&c, 5, fixed)?;
         let x0 = lay.start(&[0.0; 5], r0)?;
         let res = solve(&Circle3Problem { q: c.xyz(), fr, layout: lay }, &x0, params)?;
+        check_cond(&res, params)?;
         let (cc, n, _) = fr.circle(&res.p)?;
         let rad = lay.radius(&res.p)?;
         let mut signed = alloc(c.len())?;

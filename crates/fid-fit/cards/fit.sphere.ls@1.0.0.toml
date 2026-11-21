@@ -2,7 +2,7 @@
 id = "fit.sphere.ls@1.0.0"
 title = "Least-squares sphere"
 method = "Minimises the sum of squared distances |q_i - c| - r on centred, scaled data by Levenberg-Marquardt (fid_solv::nlls) with an analytic Jacobian, from the algebraic (Kasa) sphere solved by blocked Householder QR. Optional fixed radius. Residuals are signed distances, positive outside."
-applicability = "At least 4 points, not coplanar, with coverage at least thresholds.min_coverage: the apex angle of the smallest cone about the mean direction from the algebraic centre that holds every point (a full sphere is 360 degrees; 30 degrees through ls_rnd::default_params [unverified])."
+applicability = "At least 4 points, not coplanar. Checked on the result: coverage at least thresholds.min_coverage, measured about the fitted centre (not the algebraic start; changed in the review of #417) as twice the spread of the points' polar angles about their mean direction, so a cap of apex angle A has coverage A, a full sphere 360 degrees and a ring about 0 (30 degrees through ls_rnd::default_params [unverified]); the RMS distance of the points from their least-squares plane above thresholds.planarity_ratio_min (10 [unverified]) times the residual RMS, else coplanar; the condition estimate at the solution at most thresholds.cond_max (1e8 [unverified]), else ill_conditioned."
 references = [
   "Shakarji, C. M. (1998). Least-squares fitting algorithms of the NIST algorithm testing system. Journal of Research of the National Institute of Standards and Technology 103(6).",
   "Forbes, A. B. (1989). Least-squares best-fit geometric elements. NPL Report DITC 140/89. [unverified citation]",
@@ -12,6 +12,8 @@ determinism = "D0"
 input_arity = "1"
 failure_modes = [
   "Small caps: the centre along the cap axis and the radius are strongly correlated; below the coverage threshold the fit is refused with insufficient_coverage.",
+  "A ring (points on one circle of the sphere) fits a whole family of spheres; before the review of #417 it returned a wrong centre. Its coverage about the fitted centre is about 0, so it is refused with insufficient_coverage; the planarity rule alone does not catch it when the noise is along the sphere's radius.",
+  "A fixed radius far below the data's leaves the data no further from a plane than from the sphere: coplanar.",
   "Coplanar points: Coplanar; fewer than 4 points: TooFewPoints; a degenerate algebraic start: IllConditioned.",
 ]
 validation = "Decimal (60-digit) Gauss-Newton reference of the same least-squares problem: fixtures/fit/rnd-partial-v1 (make_rnd_fixtures.py), including centres 1 km from the origin, checked on x86-64, ARM64 and wasm32. Pending: PTB TraCIM Gaussian and NIST ATS sphere sets through UNC.RDL (D-038)."

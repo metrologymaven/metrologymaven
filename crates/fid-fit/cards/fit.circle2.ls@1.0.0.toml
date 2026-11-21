@@ -2,7 +2,7 @@
 id = "fit.circle2.ls@1.0.0"
 title = "Least-squares circle in a projection plane"
 method = "Projects the points orthogonally onto the projection plane (default z = 0; in-plane frame as fit.line2.ls) and minimises the sum of squared in-plane distances rho_i - r on centred, scaled data by Levenberg-Marquardt (fid_solv::nlls) with an analytic Jacobian, from the algebraic (Kasa) circle solved by blocked Householder QR. Optional fixed radius. The centre is reported in the plane's coordinates."
-applicability = "At least 3 projected points, not collinear, with angular coverage at least thresholds.min_coverage (30 degrees through ls_rnd::default_params [unverified]; the contract's own default is 20 degrees)."
+applicability = "At least 3 projected points, not collinear, with angular coverage at least thresholds.min_coverage (30 degrees through ls_rnd::default_params [unverified]; the contract's own default is 20 degrees). The condition estimate at the solution must be at most thresholds.cond_max (1e8 [unverified]), else ill_conditioned."
 references = [
   "Shakarji, C. M. (1998). Least-squares fitting algorithms of the NIST algorithm testing system. Journal of Research of the National Institute of Standards and Technology 103(6).",
   "Kasa, I. (1976). A circle fitting procedure and its error analysis. IEEE Transactions on Instrumentation and Measurement 25(1). [unverified citation]",
