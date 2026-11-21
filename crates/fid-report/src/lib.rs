@@ -7,7 +7,8 @@
 //! - [`fmt`]: value formatting, decision display and source labels (`RPT.MODEL.FMT`); the
 //!   only place where a value of record becomes text.
 //! - [`tmpl`]: report templates; the template file format (`RPT.MODEL.TMPL.FORMAT`) and
-//!   the slot language (`RPT.MODEL.TMPL.SLOT`).
+//!   the slot language (`RPT.MODEL.TMPL.SLOT`), and template versions and commands
+//!   (`RPT.MODEL.TMPL.VER`).
 
 pub mod bind;
 pub mod doc;

@@ -4,6 +4,9 @@
 //!   migration (`RPT.MODEL.TMPL.FORMAT`).
 //! - [`slot`]: the binding-rule, sort-key and repetition-rule language of slots and the
 //!   ordering contract (`RPT.MODEL.TMPL.SLOT`).
+//! - [`ver`]: template versions, immutability and the save, apply, show and list commands
+//!   (`RPT.MODEL.TMPL.VER`).
 
 pub mod format;
 pub mod slot;
+pub mod ver;
