@@ -331,6 +331,30 @@ fn previous_is_resolved_so_a_revert_cannot_be_hidden_by_picking_an_older_release
 }
 
 #[test]
+fn a_candidate_below_every_installed_release_is_version_not_bumped() {
+    // Hand-labelled from the rule: installed 1.0.0 and 1.1.0, candidate 0.9.0 (good content).
+    let text = String::from_utf8(read("bad/licence_proprietary.json"))
+        .unwrap()
+        .replace("\"proprietary\"", "\"CC-BY-4.0\"")
+        .replace("\"1.0.0\"", "\"0.9.0\"");
+    let mut s = store();
+    s.install(bundle("versioning/release_1_1_0.json")).unwrap();
+    s.stage(Suite::from_bundle(text.as_bytes()).unwrap()).unwrap();
+    let r = check_result(&s, &["check-suite", "--suite", "ors-trace-good@0.9.0", "--staged", "--json"]);
+    assert_eq!(get(&r, "passed"), &CValue::Bool(false));
+    assert_eq!(get(&r, "previous"), &CValue::Null);
+    let f = arr(get(&r, "findings"));
+    assert_eq!(f.len(), 1);
+    assert_eq!(get(&f[0], "case"), &CValue::Null);
+    assert_eq!((st(get(&f[0], "code")), st(get(&f[0], "field"))), ("version_not_bumped", "version"));
+    // The lowest installed release is not below itself, and a first release has no others.
+    let low = check_result(&s, &["check-suite", "--suite", "ors-trace-good@1.0.0", "--json"]);
+    assert_eq!(get(&low, "passed"), &CValue::Bool(true));
+    let first = check_result(&store(), &["check-suite", "--suite", "ors-trace-good@1.0.0", "--json"]);
+    assert_eq!(get(&first, "passed"), &CValue::Bool(true));
+}
+
+#[test]
 fn surfaces_refuse_bad_parameters_without_logging_unparsed_calls() {
     let s = store();
     let mut log = Vec::new();

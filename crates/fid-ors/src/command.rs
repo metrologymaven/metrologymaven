@@ -9,7 +9,7 @@
 //! and compares that digest (`IDENTICAL` or `DIVERGENT`). Neither command changes state, so
 //! no fold rebuilds anything from these records.
 
-use crate::check::check_suite;
+use crate::check::{check_suite, Finding};
 use crate::suite::{bad_params, parse_handle, OrsError, Suite};
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
 use fid_gps::dmt::DmtTable;
@@ -218,7 +218,19 @@ pub fn check(store: &SuiteStore, p: &CheckParams) -> Result<CValue, OrsError> {
     let dmt = store.dmts.get(suite.manifest().dmt_digest.as_str());
     let mut report = check_suite(suite, dmt, previous)?;
     report.staged = p.staged;
+    if below_every_release(store, suite) {
+        report.findings.push(Finding { case_id: None, code: "version_not_bumped", field: "version".to_string() });
+    }
     Ok(report.to_value())
+}
+
+/// Whether installed releases of `suite`'s name exist and every one has a higher version, so
+/// no previous release resolves and the version rule could otherwise be skipped by checking
+/// a candidate numbered below them (REQ-007; a manifest-level `version_not_bumped{version}`).
+fn below_every_release(store: &SuiteStore, suite: &Suite) -> bool {
+    let m = suite.manifest();
+    let mut same = store.installed.values().filter(|s| s.manifest().name == m.name).peekable();
+    same.peek().is_some() && same.all(|s| s.manifest().version > m.version)
 }
 
 /// The installed suites: `[{cases, dmt_digest, licence, name, version}]`, ascending by handle.
