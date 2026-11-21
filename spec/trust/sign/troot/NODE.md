@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-sign-core]
+built_pr: 408
 satisfies: [REQ-TRUST.SIGN-007, REQ-TRUST.SIGN-009]
 covers: []
 depends_on: [TRUST.SIGN.DSSE, TRUST.PKG.READER]
