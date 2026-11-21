@@ -459,9 +459,12 @@ fn cone_circle(c: &Centred, d: V3) -> Result<Option<Circle>, FitError> {
     Ok(Some(Circle { e1, e2, centre, r: 0.0, residual: r[5][5].abs() }))
 }
 
+/// Step 4's algebraic circle as `(e1, e2, centre, r)`.
+pub(crate) type Kasa = (V3, V3, [f64; 2], f64);
+
 /// Step 4's algebraic circle for the unit direction `d` as `(e1, e2, centre, r)`, `None` when
 /// degenerate: the start of `ls_cyl`'s fixed-axis-direction fit (KRN.LSQ.AXIS.CYL).
-pub(crate) fn kasa(c: &Centred, d: V3) -> Result<Option<(V3, V3, [f64; 2], f64)>, FitError> {
+pub(crate) fn kasa(c: &Centred, d: V3) -> Result<Option<Kasa>, FitError> {
     Ok(circle(c, d)?.map(|k| (k.e1, k.e2, k.centre, k.r)))
 }
 

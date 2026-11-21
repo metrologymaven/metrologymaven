@@ -211,10 +211,10 @@ fn matches_reference() {
         // The wrong local minimum of `wrong-start` is less well conditioned than the others.
         let k = if c.name == "wrong-start" { WRONG_START_FACTOR } else { 1.0 };
         let tols = [k * TOL_AXIS, k * TOL_LEN_REL, k * TOL_LEN_REL, TOL_RMS_REL];
-        for k in 0..4 {
-            assert!(errs[k] <= tols[k], "{}: error {k} = {:e} above {:e}", c.name, errs[k], tols[k]);
-            if errs[k] > worst[k] && c.name != "wrong-start" {
-                worst[k] = errs[k];
+        for (k, ((&e, &t), w)) in errs.iter().zip(&tols).zip(worst.iter_mut()).enumerate() {
+            assert!(e <= t, "{}: error {k} = {e:e} above {t:e}", c.name);
+            if e > *w && c.name != "wrong-start" {
+                *w = e;
             }
         }
         let pr = c.one("plane_rms");
