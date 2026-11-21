@@ -29,13 +29,18 @@
 //!    least-squares residual); centre `(-D / 2, -E / 2)`, `r^2 = (D^2 + E^2) / 4 - F`. A
 //!    candidate whose solve is rank deficient, or whose `r^2` is not positive and finite, is
 //!    degenerate (`residual = None`).
-//! 5. **Primary** (cylinder): the candidate with the lowest residual in total order, ties to the
-//!    lower candidate index. No non-degenerate candidate is
-//!    [`FitError::IllConditioned`] `{ cond: None }`. The selected direction is then refined by
-//!    a pinned pattern search on the same residual (see `refine`): steps [`REFINE_STEPS`], at
-//!    most [`REFINE_MOVES`] moves each. The 16 fixed candidates alone can be 15 degrees off when
-//!    the principal axes are mixed (a cylinder whose length is near `sqrt(6)` radii).
-//! 6. **Cone**: the candidates of step 2 are scored, selected and refined as in steps 4 and 5
+//! 5. **Primary** (cylinder): the non-degenerate candidates are ranked by residual in total
+//!    order (a stable sort, so ties keep the candidate order). No non-degenerate candidate is
+//!    [`FitError::IllConditioned`] `{ cond: None }`. Each of the [`REFINED`] best-ranked is
+//!    refined by a pinned pattern search on the same residual (see `refine`): steps
+//!    [`REFINE_STEPS`], at most [`REFINE_MOVES`] moves each. The lowest refined residual wins
+//!    (total order, ties to the better-ranked candidate); `selected` is the index of the
+//!    candidate it was refined from. The 16 fixed candidates alone can be 15 degrees off when
+//!    the principal axes are mixed (a cylinder whose length is near `sqrt(6)` radii), and
+//!    refining only the best one can converge about 90 degrees off: on a half cylinder of
+//!    length near 1.066 radii (where `L^2 / 12` equals the transverse variance of a half
+//!    circle) the best fixed candidate can lie in the basin of a perpendicular direction.
+//! 6. **Cone**: the candidates of step 2 are scored, ranked and refined as in steps 4 and 5
 //!    but with the algebraic cone of `cone_circle` (a circle whose radius varies linearly with
 //!    the axial coordinate) instead of the circle, which a cone's projections do not fit at
 //!    its true axis; that gives the axis and the centre `P`. Then, per point
@@ -48,10 +53,10 @@
 //! 7. **Torus**: candidates are the principal axes, the plane-fit normal (smallest singular
 //!    value) first, then the other two, then the [`LATTICE`] directions. Each is scored by a
 //!    fixed-axis torus fit (see `tube`: Gauss-Newton on the algebraic tube residuals from
-//!    [`TORUS_START_SCALES`] starts); the [`TORUS_REFINED`] lowest scores (stable order) are each
-//!    refined by the pattern search of step 5 on that score, and the lowest refined score wins
-//!    (ties to the better-ranked candidate). Centre, major radius `R`, the tube-centre plane
-//!    height `h0` and `r = f::sqrt(s)` come from the fixed-axis fit at the final axis. The plane
+//!    [`TORUS_START_SCALES`] starts on both sides of the data); the candidates are ranked and
+//!    the [`REFINED`] best refined and selected as in step 5 on that score. Centre, major radius
+//!    `R`, the tube-centre plane height `h0` and `r = f::sqrt(s)` come from the fixed-axis fit
+//!    at the final axis. The plane
 //!    fit alone is about 30 degrees off on a fat quarter torus, and the algebraic circle of a
 //!    thick partial annulus is far from the tube-centre circle, which is why the score is a fit.
 //! 8. **Anchor.** The frame point is the circle centre `P = u_c e1 + v_c e2` in the plane
@@ -115,8 +120,11 @@ pub const TORUS_START_SCALES: [f64; 3] = [1.0, 2.0, 4.0];
 /// Relative decrease of `red::norm2(f)` at or below which the fixed-axis torus fit stops.
 pub const TORUS_GN_RTOL: f64 = 1e-6;
 
-/// Torus candidates refined (the lowest-scoring ones).
-pub const TORUS_REFINED: usize = 3;
+/// Candidates refined (the lowest-scoring ones), for every primitive (REQ-001, -003, -004).
+pub const REFINED: usize = 3;
+
+/// Torus candidates refined: [`REFINED`] (kept for callers of the first version).
+pub const TORUS_REFINED: usize = REFINED;
 
 /// Gauss-Newton steps of the fixed-axis torus fit that scores a torus axis candidate.
 pub const TORUS_GN_STEPS: usize = 30;
@@ -162,7 +170,9 @@ pub struct Candidate {
     pub source: CandidateSource,
     /// Unit direction (the same in SI and in the centred frame).
     pub direction: V3,
-    /// Algebraic circle residual on the centred, scaled data; `None` when degenerate.
+    /// The candidate's score on the centred, scaled data, before refinement: the algebraic
+    /// circle residual (cylinder), the algebraic cone residual (cone) or the final
+    /// `red::norm2` of the fixed-axis torus fit (torus); `None` when degenerate.
     pub residual: Option<f64>,
 }
 
@@ -206,10 +216,13 @@ pub struct AxialStart {
     pub frame: AxisFrame,
     /// The multi-start specification for `fid_solv::mstart`.
     pub spec: StartSpec,
-    /// Every evaluated candidate direction, in evaluation order (cylinder and cone; the torus
-    /// has its one plane-normal candidate).
+    /// Every evaluated candidate direction, in evaluation order: for the cylinder and cone the
+    /// normals' direction (when normals are given), the three principal axes and the 13
+    /// [`LATTICE`] directions; for the torus the three principal axes (plane-fit normal first)
+    /// and the 13 [`LATTICE`] directions.
     pub candidates: Vec<Candidate>,
-    /// Index into `candidates` of the primary direction.
+    /// Index into `candidates` of the candidate whose refinement gave the primary direction
+    /// (the primary is the refined direction, not `candidates[selected].direction`).
     pub selected: usize,
     /// RMS distance of the points to the start axis (metres).
     pub rms_radius: f64,
@@ -277,13 +290,17 @@ fn fit(c: &Centred, d: V3, model: Model) -> Result<Option<Circle>, FitError> {
 /// after the step is taken, ends the iteration); each step solves the blocked QR
 /// fold of rows `[J_i, -f_i]` (`J_i` the analytic gradient of `f_i`) with `lstsq`.
 ///
-/// The fit is run from [`TORUS_START_SCALES`] starts and the lowest final `red::norm2(f)` wins
-/// (ties to the earlier start). Start `m`: the algebraic circle of step 4 (centre `c`, radius
-/// `R_a`) gives `R = m R_a` and the centre `c + g (R - R_a)` with `g` the unit vector from the
-/// projected centroid (the origin) to `c` (for `m > 1` only when `c` is not the origin); `h0` is
-/// `red::mean(h)` and `s` the mean of `(rho_i - R)^2 + (h_i - h0)^2`. The algebraic circle of a
-/// thick partial annulus underestimates `R` and pulls the centre towards the data, so the
-/// larger starts reach the true basin of a quarter torus.
+/// The fit is run from up to `2 * TORUS_START_SCALES.len()` starts and the lowest final
+/// `red::norm2(f)` wins (ties to the earlier start). The algebraic circle of step 4 (centre `c`,
+/// radius `R_a`) and `g`, the unit vector from the projected centroid (the origin) to `c`, give
+/// first, for each `m` of [`TORUS_START_SCALES`], `R = m R_a` and the centre `c + g (R - R_a)`
+/// (for `m > 1` only when `c` is not the origin), then, when `c` is not the origin, for each `m`
+/// the mirrored start `R = m R_a` with the centre `-g R` (on the other side of the data). `h0`
+/// is `red::mean(h)` and `s` the mean of `(rho_i - R)^2 + (h_i - h0)^2`. The algebraic circle
+/// of a thick partial annulus underestimates `R` and pulls the centre towards the data, so the
+/// larger starts reach the true basin of a quarter torus; on a fat quarter torus (minor radius
+/// 0.45 major radii and more) it can even curve the wrong way, with `c` on the far side of the
+/// data from the true centre, which the mirrored starts cover.
 ///
 /// A start is discarded when a solve is rank deficient, a value is not finite, `R` or `s` is not
 /// positive, or `R` exceeds [`TORUS_MAX_MAJOR`] (a near-straight tube fits any direction along
@@ -364,14 +381,24 @@ fn tube(c: &Centred, d: V3) -> Result<Option<Tube>, FitError> {
         }
     };
     let cn = f::hypot(k0.centre[0], k0.centre[1])?;
-    let mut best: Option<([f64; 5], f64)> = None;
+    let mut starts: Vec<[f64; 5]> = Vec::with_capacity(2 * TORUS_START_SCALES.len());
     for &m in &TORUS_START_SCALES {
         if m != 1.0 && cn <= 0.0 {
             continue;
         }
         let big = m * k0.r;
         let shift = if m == 1.0 { 0.0 } else { (big - k0.r) / cn };
-        let mut x0 = [k0.centre[0] + shift * k0.centre[0], k0.centre[1] + shift * k0.centre[1], big, h_mean, 0.0];
+        starts.push([k0.centre[0] + shift * k0.centre[0], k0.centre[1] + shift * k0.centre[1], big, h_mean, 0.0]);
+    }
+    if cn > 0.0 {
+        let g = [k0.centre[0] / cn, k0.centre[1] / cn];
+        for &m in &TORUS_START_SCALES {
+            let big = m * k0.r;
+            starts.push([-(g[0] * big), -(g[1] * big), big, h_mean, 0.0]);
+        }
+    }
+    let mut best: Option<([f64; 5], f64)> = None;
+    for mut x0 in starts {
         x0[4] = red::mean(&residuals(&x0)?.0)?;
         if let Some(x) = gn(x0)? {
             let v = red::norm2(&residuals(&x)?.0)?;
@@ -497,7 +524,7 @@ fn refine(c: &Centred, mut d: V3, mut k: Circle, model: Model) -> Result<(V3, Ci
     Ok((d, k))
 }
 
-/// Steps 2 and 5: the candidates and the primary circle.
+/// Steps 2 and 5: the candidates, the index the primary was refined from and the primary.
 fn axis_candidates(
     pts: &PointsView<'_>,
     c: &Centred,
@@ -515,23 +542,47 @@ fn axis_candidates(
         dirs.push((CandidateSource::Lattice(k as u8), unit_direction(*l)?));
     }
     let mut cands = Vec::with_capacity(dirs.len());
-    let mut best: Option<(usize, V3, Circle)> = None;
+    let mut scored_dirs: Vec<(usize, V3, Circle)> = Vec::with_capacity(dirs.len());
     for (idx, (source, d)) in dirs.into_iter().enumerate() {
         let scored = fit(c, d, model)?;
         cands.push(Candidate { source, direction: d, residual: scored.map(|k| k.residual) });
         if let Some(k) = scored {
-            let better = match &best {
-                None => true,
-                Some((_, _, b)) => f::total_cmp(k.residual, b.residual)? == Ordering::Less,
-            };
-            if better {
-                best = Some((idx, d, k));
-            }
+            scored_dirs.push((idx, d, k));
         }
     }
-    let (sel, d, k) = best.ok_or(FitError::IllConditioned { cond: None })?;
-    let (d, k) = refine(c, d, k, model)?;
+    let (sel, d, k) = refine_best(c, scored_dirs, model)?;
     Ok((cands, sel, d, k))
+}
+
+/// Steps 5 and 7: ranks the scored candidates `(index, direction, score)` by score (a stable
+/// insertion sort in total order, so ties keep the candidate order), refines each of the
+/// [`REFINED`] best-ranked and returns the lowest refined score (ties to the better-ranked
+/// candidate) with the index of the candidate it was refined from. None scored is
+/// [`FitError::IllConditioned`] `{ cond: None }`.
+fn refine_best(
+    c: &Centred,
+    mut scored_dirs: Vec<(usize, V3, Circle)>,
+    model: Model,
+) -> Result<(usize, V3, Circle), FitError> {
+    for k in 1..scored_dirs.len() {
+        let mut p = k;
+        while p > 0 && f::total_cmp(scored_dirs[p].2.residual, scored_dirs[p - 1].2.residual)? == Ordering::Less {
+            scored_dirs.swap(p, p - 1);
+            p -= 1;
+        }
+    }
+    let mut best: Option<(usize, V3, Circle)> = None;
+    for &(idx, d, k) in scored_dirs.iter().take(REFINED) {
+        let (rd, rk) = refine(c, d, k, model)?;
+        let better = match &best {
+            None => true,
+            Some((_, _, b)) => f::total_cmp(rk.residual, b.residual)? == Ordering::Less,
+        };
+        if better {
+            best = Some((idx, rd, rk));
+        }
+    }
+    best.ok_or(FitError::IllConditioned { cond: None })
 }
 
 /// The circle centre `u_c e1 + v_c e2` in the centred frame (step 8).
@@ -591,8 +642,8 @@ fn spec(primary: Vec<f64>, rms: f64, seed: u64, stream: u64, angle_params: &[usi
 /// # Errors
 ///
 /// [`FitError::TooFewPoints`] below 5 points, [`FitError::Collinear`] / [`FitError::Coplanar`]
-/// for degenerate data, [`FitError::IllConditioned`] when every candidate is degenerate, and
-/// numeric errors.
+/// for degenerate data, [`FitError::IllConditioned`] `{ cond: None }` when every candidate is
+/// degenerate (REQ-006), and numeric errors.
 pub fn cylinder_start(pts: &PointsView<'_>, seed: u64) -> Result<AxialStart, FitError> {
     let (c, _) = check_points(Primitive::Cylinder, pts, &Thresholds::default())?;
     let (candidates, selected, d, k) = axis_candidates(pts, &c, Model::Circle)?;
@@ -655,8 +706,9 @@ pub fn cone_start(pts: &PointsView<'_>, seed: u64) -> Result<AxialStart, FitErro
 ///
 /// # Errors
 ///
-/// As [`cylinder_start`] (below 7 points), and [`FitError::IllConditioned`] when the circle in
-/// the fitted plane is degenerate.
+/// As [`cylinder_start`] (below 7 points): [`FitError::IllConditioned`] `{ cond: None }` when
+/// the fixed-axis torus fit is degenerate for every candidate direction (or, which the refinement
+/// rules out in practice, at the refined axis).
 pub fn torus_start(pts: &PointsView<'_>, seed: u64) -> Result<AxialStart, FitError> {
     let (c, deg) = check_points(Primitive::Torus, pts, &Thresholds::default())?;
     let mut candidates = Vec::with_capacity(16);
@@ -675,27 +727,7 @@ pub fn torus_start(pts: &PointsView<'_>, seed: u64) -> Result<AxialStart, FitErr
             scored_dirs.push((idx, d, t));
         }
     }
-    // The TORUS_REFINED lowest-scoring candidates (stable: ties keep the candidate order) are
-    // each refined; the lowest refined score wins (ties to the better-ranked candidate).
-    for k in 1..scored_dirs.len() {
-        let mut p = k;
-        while p > 0 && f::total_cmp(scored_dirs[p].2.residual, scored_dirs[p - 1].2.residual)? == Ordering::Less {
-            scored_dirs.swap(p, p - 1);
-            p -= 1;
-        }
-    }
-    let mut best: Option<(usize, V3, Circle)> = None;
-    for &(idx, d, t) in scored_dirs.iter().take(TORUS_REFINED) {
-        let (rd, rk) = refine(&c, d, t, Model::Torus)?;
-        let better = match &best {
-            None => true,
-            Some((_, _, b)) => f::total_cmp(rk.residual, b.residual)? == Ordering::Less,
-        };
-        if better {
-            best = Some((idx, rd, rk));
-        }
-    }
-    let (selected, d, _) = best.ok_or(FitError::IllConditioned { cond: None })?;
+    let (selected, d, _) = refine_best(&c, scored_dirs, Model::Torus)?;
     let t = tube(&c, d)?.ok_or(FitError::IllConditioned { cond: None })?;
     let k = t.k;
     let minor_c = f::sqrt(t.s)?;
@@ -726,6 +758,19 @@ mod tests {
                 let neg = [-b[0], -b[1], -b[2]];
                 assert!(a != b && *a != neg);
             }
+        }
+    }
+
+    /// REQ-006: every candidate degenerate is `IllConditioned { cond: None }`, for every model.
+    /// From valid input this is unreachable for the circle score (rank-3 data has a candidate
+    /// whose projections have rank 3, and the Kasa `r^2` of rank-3 projections is a mean of
+    /// squares), so the selection rule is tested with no scored candidate.
+    #[test]
+    fn all_degenerate_is_ill_conditioned() {
+        let xyz = [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0];
+        let c = Centred::new(&PointsView::new(&xyz, None).unwrap()).unwrap();
+        for model in [Model::Circle, Model::Cone, Model::Torus] {
+            assert_eq!(refine_best(&c, Vec::new(), model).unwrap_err(), FitError::IllConditioned { cond: None });
         }
     }
 

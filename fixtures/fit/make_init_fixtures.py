@@ -7,8 +7,9 @@ geometry is generated in Decimal at 60 significant digits (sin and cos by Taylor
 Machin's formula, square roots by the decimal module), never with the platform libm, and every
 coordinate is rounded to the nearest binary64 once (float(Fraction) of the Decimal, correctly
 rounded). The expected values are the planted geometry itself: the true axis direction (unit)
-and a true point on the axis, so the Rust test measures the angle between the start axis and the
-truth.
+and a true point on the axis (the torus centre for a torus), the radius, and the cone's
+half-angle and the torus's minor radius, so the Rust test measures the start's axis, position and
+size against the truth.
 
 Cases (seeded with random.Random on the case name; units are SI metres):
 
@@ -27,6 +28,11 @@ Cases (seeded with random.Random on the case name; units are SI metres):
   radial direction, rounded to binary64), for AC-3.
 - cyl-ring: a near-degenerate short cylinder (height 0.01 radius, full coverage), 0.3 m from the
   origin: nearly a planar ring; the axis is still determined.
+- cyl-half-1066-<seed> and cyl-half-sweep-<ratio>: half cylinders (180 degrees) of length
+  1.066 radii (9 seeds) and a sweep of lengths 1.00 to 1.12 radii (offset 0.3 m), where the
+  axial and transverse variances are equal and the principal axes mix.
+- torus-fat-<ratio>-<seed>: quarter tori (90 degrees) with minor radius 0.45, 0.5 and 0.8
+  major radii, offsets 0.01 m and 0.3 m.
 - Error cases (`expect` code and fields): `few-4` (4 points: TooFewPoints n 4 need 5, AC-4),
   `coplanar` (points of a circle in the plane z = 0.125 exactly: rank 2, Coplanar), `collinear`
   (points on the x axis exactly: rank 1, Collinear).
@@ -38,6 +44,8 @@ Output lines (hex = 16 lowercase hex digits of an IEEE-754 double):
   axis <hex hex hex>                       the true unit axis direction
   point <hex hex hex>                      a true point on the axis
   size <hex>                               radius (cyl), radius at `point` (cone), major radius (torus)
+  half_angle <hex>                         the true half-angle in radians (cone cases only)
+  minor <hex>                              the true minor radius (torus cases only)
   expect start | <error code> <field=value ...>
   end
 """
@@ -52,6 +60,9 @@ from pathlib import Path
 OUT = Path(__file__).with_name("init-axial-v1") / "cases.txt"
 getcontext().prec = 60
 N = 200
+# Length ratios (radii) of the half-cylinder sweep around 1.066, and the fat torus ratios.
+HALF_SWEEP = ("1.00", "1.02", "1.04", "1.05", "1.06", "1.07", "1.08", "1.09", "1.10", "1.12")
+FAT_TORI = ("0.45", "0.5", "0.8")
 
 
 def dec(x):
@@ -154,8 +165,11 @@ def at(p, d, e1, e2, t, a, b):
     return [p[k] + t * d[k] + a * e1[k] + b * e2[k] for k in range(3)]
 
 
-def make(kind, cov, seed):
-    name = f"{kind}-{cov}-{seed}"
+def make(kind, cov, seed, name=None, ratio=None):
+    """One planted partial feature. `ratio` (a Decimal) overrides the random cylinder length
+    in radii or the random torus minor radius in major radii; the random draw is still made,
+    so the seeded stream of every other quantity is unchanged."""
+    name = name or f"{kind}-{cov}-{seed}"
     rng = random.Random(f"init-axial-v1/{name}")
     d, e1, e2 = frame(rng)
     p0 = offset(rng, seed)
@@ -165,8 +179,11 @@ def make(kind, cov, seed):
     if kind == "cyl":
         r = Decimal("0.01") + Decimal("0.04") * u01(rng)
         length = r * (Decimal("0.5") + Decimal("2.5") * u01(rng))
+        if ratio is not None:
+            length = r * ratio
         t0 = r * (2 * u01(rng) - 1)
         size = r
+        extra = []
         for _ in range(N):
             s, c = sin_cos(phase + arc * u01(rng))
             t = t0 + length * u01(rng)
@@ -181,6 +198,7 @@ def make(kind, cov, seed):
         lo = -(r0 * Decimal("0.75")) / ta
         t0 = lo + (-lo) * u01(rng) * Decimal("0.5")
         size = r0
+        extra = [("half_angle", alpha)]
         sa, ca = sin_cos(alpha)
         for _ in range(N):
             s, c = sin_cos(phase + arc * u01(rng))
@@ -192,14 +210,17 @@ def make(kind, cov, seed):
     else:
         big = Decimal("0.03") + Decimal("0.03") * u01(rng)
         small = Decimal("0.005") + Decimal("0.01") * u01(rng)
+        if ratio is not None:
+            small = big * ratio
         size = big
+        extra = [("minor", small)]
         for _ in range(N):
             s, c = sin_cos(phase + arc * u01(rng))
             ps, pc = sin_cos(2 * PI * u01(rng))
             rr = small + noise(rng)
             rad = big + rr * pc
             pts.append(at(p0, d, e1, e2, rr * ps, rad * c, rad * s))
-    return name, kind, cov, pts, None, d, p0, size
+    return name, kind, cov, pts, None, d, p0, size, extra
 
 
 def make_normals(seed):
@@ -216,7 +237,7 @@ def make_normals(seed):
         rr = r + noise(rng)
         pts.append(at(p0, d, e1, e2, t, rr * c, rr * s))
         nrm.append([c * e1[k] + s * e2[k] for k in range(3)])
-    return name, "cyl", 360, pts, nrm, d, p0, r
+    return name, "cyl", 360, pts, nrm, d, p0, r, []
 
 
 def make_ring():
@@ -231,10 +252,10 @@ def make_ring():
         t = r * Decimal("0.01") * u01(rng)
         rr = r + noise(rng)
         pts.append(at(p0, d, e1, e2, t, rr * c, rr * s))
-    return name, "cyl", 360, pts, None, d, p0, r
+    return name, "cyl", 360, pts, None, d, p0, r, []
 
 
-def emit(out, name, kind, cov, pts, nrm, d, p0, size, expect="start"):
+def emit(out, name, kind, cov, pts, nrm, d, p0, size, extra=(), expect="start"):
     out.append(f"case {name} kind {kind} coverage {cov}")
     out.append("points " + " ".join(hx(fl(x)) for p in pts for x in p))
     if nrm is not None:
@@ -246,6 +267,8 @@ def emit(out, name, kind, cov, pts, nrm, d, p0, size, expect="start"):
     out.append("axis " + " ".join(hx(fl(x)) for x in d))
     out.append("point " + " ".join(hx(fl(x)) for x in p0))
     out.append(f"size {hx(fl(size))}")
+    for key, value in extra:
+        out.append(f"{key} {hx(fl(value))}")
     out.append(f"expect {expect}")
     out.append("end")
 
@@ -262,21 +285,35 @@ def render():
     for seed in range(3):
         emit(out, *make_normals(seed))
     emit(out, *make_ring())
+    # Half cylinders whose length is near sqrt(12 (1/2 - 4/pi^2)) = 1.066 radii, where the
+    # axial variance L^2/12 equals the transverse variance of a half circle (r^2 (1/2 - 4/pi^2))
+    # and the principal axes mix; the best fixed candidate alone then refined to about 90
+    # degrees off (review of #358). Nine seeds at 1.066 (offsets 0.01, 0.3 and 1 m in turn),
+    # then a sweep at offset 0.3 m.
+    for seed in range(9):
+        emit(out, *make("cyl", 180, seed % 3, name=f"cyl-half-1066-{seed}", ratio=Decimal("1.066")))
+    for ratio in HALF_SWEEP:
+        emit(out, *make("cyl", 180, 1, name=f"cyl-half-sweep-{ratio}", ratio=Decimal(ratio)))
+    # Fat quarter tori (minor radius 0.45, 0.5 and 0.8 major radii, 90 degrees of the major
+    # angle), two offsets each (review of #358).
+    for ratio in FAT_TORI:
+        for seed in range(2):
+            emit(out, *make("torus", 90, seed, name=f"torus-fat-{ratio}-{seed}", ratio=Decimal(ratio)))
     zero3 = [Decimal(0)] * 3
     z = [Decimal(0), Decimal(0), Decimal(1)]
     # few-4: four points of a cylinder
     rng = random.Random("init-axial-v1/few-4")
     few = [[Decimal(i) / 8, u01(rng), u01(rng)] for i in range(4)]
-    emit(out, "few-4", "cyl", 360, few, None, z, zero3, Decimal(1), "too_few_points n=4 need=5")
+    emit(out, "few-4", "cyl", 360, few, None, z, zero3, Decimal(1), expect="too_few_points n=4 need=5")
     # coplanar: a circle in z = 0.125
     cop = []
     for i in range(24):
         s, c = sin_cos(2 * PI * i / 24)
         cop.append([Decimal("0.02") * c, Decimal("0.02") * s, Decimal("0.125")])
-    emit(out, "coplanar", "cyl", 360, cop, None, z, zero3, Decimal("0.02"), "coplanar n=24 rank=2")
+    emit(out, "coplanar", "cyl", 360, cop, None, z, zero3, Decimal("0.02"), expect="coplanar n=24 rank=2")
     col = [[Decimal(i) / 64, Decimal(0), Decimal(0)] for i in range(24)]
     emit(out, "collinear", "cyl", 360, col, None, [Decimal(1), Decimal(0), Decimal(0)], zero3, Decimal(1),
-         "collinear n=24 rank=1")
+         expect="collinear n=24 rank=1")
     return "\n".join(out) + "\n"
 
 
