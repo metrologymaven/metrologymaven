@@ -35,7 +35,9 @@ impl TempDir {
         static N: AtomicU32 = AtomicU32::new(0);
         let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().subsec_nanos();
         let name = format!("fid-jrnb-{tag}-{}-{nanos}-{}", std::process::id(), N.fetch_add(1, Ordering::SeqCst));
-        let p = std::path::absolute(std::env::temp_dir().join(name)).unwrap();
+        // Canonical: on macOS the temp dir is under the /var symlink, and the copy opens its
+        // database without following links (as fid-store's own copy tests do).
+        let p = std::fs::canonicalize(std::env::temp_dir()).unwrap().join(name);
         std::fs::create_dir_all(&p).unwrap();
         TempDir(p)
     }
