@@ -15,11 +15,10 @@ use fid_bus::handler::{Event, EventType, Handler, HandlerCtx, HandlerError, Hand
 use fid_canon::CValue;
 use fid_journal::branch::{EntryOrigin, EventSource};
 use fid_journal::supersede::{
-    command_defs, plan, SupersedeEntry, SupersedeError, SupersedeParams, Supersessions, RECORD_SUPERSEDED,
+    command_defs, plan, tombstone, SupersedeEntry, SupersedeError, SupersedeParams, Supersessions, RECORD_SUPERSEDED,
     SUPERSEDE_RECORD,
 };
 use fid_journal::PrincipalKind;
-use fid_journal::TOMBSTONE;
 use fid_types::{Digest, SideEffect};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -93,9 +92,9 @@ pub fn entry_for_call(kind: PrincipalKind, branch: &str, head: Option<Digest>) -
             source: EventSource::Handler,
             human_assertion: None,
         },
-        hash: TOMBSTONE,
+        hash: tombstone(),
         promoted_from: None,
-        reason_commit: Some(TOMBSTONE),
+        reason_commit: Some(tombstone()),
         outputs: Vec::new(),
         head_before: head,
     }

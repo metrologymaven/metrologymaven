@@ -138,6 +138,11 @@ fn tampered(why: impl Into<String>) -> SupersedeError {
     SupersedeError::Tampered(why.into())
 }
 
+/// The tombstone digest (`CORE.JRN.ENTRY` REQ-012) as a `fid_types` digest.
+pub fn tombstone() -> Digest {
+    Digest::from_bytes(TOMBSTONE.0)
+}
+
 fn truncate(s: &str) -> String {
     s.chars().take(120).collect()
 }
@@ -304,7 +309,7 @@ impl Supersessions {
         let branch = e.origin.branch.as_str();
         if ours.is_empty() {
             if e.origin.class == SideEffect::W3 && e.origin.command != SUPERSEDE_RECORD {
-                for d in e.outputs.iter().filter(|d| **d != TOMBSTONE) {
+                for d in e.outputs.iter().filter(|d| **d != tombstone()) {
                     self.released.entry((branch.to_string(), *d)).or_insert(e.hash);
                 }
             }
