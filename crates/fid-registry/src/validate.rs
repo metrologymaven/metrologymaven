@@ -340,11 +340,13 @@ pub fn mcp_projection(def: &CommandDef) -> Projection {
 ///   a bus origin.
 /// - The promotion events of CORE.JRN.BR.PROMO: each belongs to its promotion command, so no
 ///   other command (and no agent-runnable command but the request) can emit one.
+/// - `RecordSuperseded` of CORE.JRN.UNDO.SUPER belongs to `journal.supersede_record@1` (W3):
+///   the `superseded_by` index is folded from it, so no other command may emit it.
 /// - `ProfileSet` of TRUST.PROFILE.SELECT belongs to `sign.set_profile@1` (A0, human only):
 ///   the active governance profile is folded from it, so no other command may emit it.
 /// - `RunStarted` of AUTO.RUN.BIND belongs to `program.run@1` (AUTO.RUN.EXEC): run records,
 ///   with their trial and override flags, are folded from it, so no other command may emit it.
-pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 12] = [
+pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 13] = [
     ("BranchCreated", Some(("journal.create_branch", 1))),
     ("BranchPromoted", Some(("journal.promote_branch", 1))),
     ("BranchProtected", Some(("journal.protect_branch", 1))),
@@ -352,6 +354,7 @@ pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 12] = [
     ("ProfileSet", Some(("sign.set_profile", 1))),
     ("PromotionRequested", Some(("journal.request_promote_branch", 1))),
     ("ProtectedBranchPromoted", Some(("journal.promote_protected_branch", 1))),
+    ("RecordSuperseded", Some(("journal.supersede_record", 1))),
     ("RequestApproved", None),
     ("RequestFiled", Some(("request.file_request", 1))),
     ("RequestRejected", Some(("request.reject_request", 1))),

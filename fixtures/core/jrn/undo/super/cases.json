@@ -1,0 +1,3247 @@
+{
+ "folds": [
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "outcome": "ok",
+    "released": [
+     {
+      "branch": "main",
+      "entry": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+      "record": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     },
+     {
+      "branch": "main",
+      "entry": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+      "record": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     }
+    ],
+    "superseded": []
+   },
+   "name": "two_releases",
+   "rule": "AC-1 journal: R1 and R2 released, nothing superseded"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "outcome": "ok",
+    "released": [
+     {
+      "branch": "main",
+      "entry": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+      "record": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     },
+     {
+      "branch": "main",
+      "entry": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+      "record": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     }
+    ],
+    "superseded": [
+     {
+      "branch": "main",
+      "entry": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+      "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+      "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+      "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0"
+     }
+    ]
+   },
+   "name": "ac1_supersede",
+   "rule": "AC-1: superseded_by(R1) is R2 and R1's entry stays released"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W2",
+     "command": "test.edit_record",
+     "events": [],
+     "hash": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "head_before": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "outcome": "ok",
+    "released": [
+     {
+      "branch": "main",
+      "entry": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+      "record": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c"
+     },
+     {
+      "branch": "main",
+      "entry": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+      "record": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     },
+     {
+      "branch": "main",
+      "entry": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+      "record": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     }
+    ],
+    "superseded": []
+   },
+   "name": "more_releases",
+   "rule": "a W2 output and the tombstone are not releases"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W2",
+     "command": "test.edit_record",
+     "events": [],
+     "hash": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "head_before": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+        "new": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+        "old": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:5a7ca4c23674f89ec9396df6e36a2d5066b8908584f8873b99e3dff11c1d8b4d",
+     "head_before": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "outcome": "ok",
+    "released": [
+     {
+      "branch": "main",
+      "entry": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+      "record": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c"
+     },
+     {
+      "branch": "main",
+      "entry": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+      "record": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     },
+     {
+      "branch": "main",
+      "entry": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+      "record": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     }
+    ],
+    "superseded": [
+     {
+      "branch": "main",
+      "entry": "sha256:5a7ca4c23674f89ec9396df6e36a2d5066b8908584f8873b99e3dff11c1d8b4d",
+      "new": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+      "old": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+      "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0"
+     },
+     {
+      "branch": "main",
+      "entry": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+      "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+      "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+      "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0"
+     }
+    ]
+   },
+   "name": "chain",
+   "rule": "R2 may itself be superseded later"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W2",
+     "command": "test.edit_record",
+     "events": [],
+     "hash": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "head_before": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+        "new": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+        "new": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+        "old": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:5a7ca4c23674f89ec9396df6e36a2d5066b8908584f8873b99e3dff11c1d8b4d",
+     "head_before": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "outcome": "ok",
+    "released": [
+     {
+      "branch": "main",
+      "entry": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+      "record": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c"
+     },
+     {
+      "branch": "main",
+      "entry": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+      "record": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     },
+     {
+      "branch": "main",
+      "entry": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+      "record": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     }
+    ],
+    "superseded": [
+     {
+      "branch": "main",
+      "entry": "sha256:5a7ca4c23674f89ec9396df6e36a2d5066b8908584f8873b99e3dff11c1d8b4d",
+      "new": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+      "old": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+      "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0"
+     },
+     {
+      "branch": "main",
+      "entry": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+      "new": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+      "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+      "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0"
+     }
+    ]
+   },
+   "name": "two_old_one_new",
+   "rule": "one new record may replace two old ones"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "trial",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:eda19cd0691894c73c91515d252fe118833f06a2befcc3d6a9bed20d9a0b3af7",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "trial",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:a00789a6cb95ea69e7bbd702c261ebe3107f0ff3281f65390b53ab6ca2950b4d",
+     "head_before": "sha256:eda19cd0691894c73c91515d252fe118833f06a2befcc3d6a9bed20d9a0b3af7",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "trial",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:a00789a6cb95ea69e7bbd702c261ebe3107f0ff3281f65390b53ab6ca2950b4d",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:a00789a6cb95ea69e7bbd702c261ebe3107f0ff3281f65390b53ab6ca2950b4d",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "outcome": "ok",
+    "released": [
+     {
+      "branch": "main",
+      "entry": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+      "record": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     },
+     {
+      "branch": "main",
+      "entry": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+      "record": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     },
+     {
+      "branch": "trial",
+      "entry": "sha256:a00789a6cb95ea69e7bbd702c261ebe3107f0ff3281f65390b53ab6ca2950b4d",
+      "record": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     },
+     {
+      "branch": "trial",
+      "entry": "sha256:eda19cd0691894c73c91515d252fe118833f06a2befcc3d6a9bed20d9a0b3af7",
+      "record": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     }
+    ],
+    "superseded": [
+     {
+      "branch": "trial",
+      "entry": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+      "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+      "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+      "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0"
+     }
+    ]
+   },
+   "name": "on_trial",
+   "rule": "(e) a supersession counts on its own branch"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "agent",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "forged_agent",
+   "rule": "(a) the principal is human"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "script",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "forged_script",
+   "rule": "(a) the principal is human"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "bus_route"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "forged_bus_route",
+   "rule": "(a) the handler added the event"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W2",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "forged_class_w2",
+   "rule": "(a) the entry is W3"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 2,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "forged_major_2",
+   "rule": "(a) the command is major 1"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "forged_other_command",
+   "rule": "(b) RecordSuperseded only from journal.supersede_record@1"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      },
+      {
+       "body": {},
+       "type": "RequestFiled"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "forged_with_request_filed",
+   "rule": "(c) no Request* event next to it"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {},
+       "type": "RequestApproved"
+      },
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "forged_with_request_approved",
+   "rule": "(c) an approved request does not carry a supersession"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W2",
+     "command": "test.edit_record",
+     "events": [],
+     "hash": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "head_before": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 4,
+    "outcome": "refused"
+   },
+   "name": "forged_stale_head",
+   "rule": "(d) head is the branch head before the entry"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:20aeff0494e828d188c704e1f488a589b15ae01d11f6cb129f62129caa6cc543",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "forged_made_up_head",
+   "rule": "(d) head is the branch head before the entry"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W2",
+     "command": "test.edit_record",
+     "events": [],
+     "hash": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "head_before": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:5a7ca4c23674f89ec9396df6e36a2d5066b8908584f8873b99e3dff11c1d8b4d",
+     "head_before": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 5,
+    "outcome": "refused"
+   },
+   "name": "replayed_event",
+   "rule": "(d) the same event replayed later is refused"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W2",
+     "command": "test.edit_record",
+     "events": [],
+     "hash": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "head_before": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+        "new": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:5a7ca4c23674f89ec9396df6e36a2d5066b8908584f8873b99e3dff11c1d8b4d",
+     "head_before": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 5,
+    "outcome": "refused"
+   },
+   "name": "concurrent_pair",
+   "rule": "(d) two supersessions decided against the same head"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "trial",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:eda19cd0691894c73c91515d252fe118833f06a2befcc3d6a9bed20d9a0b3af7",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:eda19cd0691894c73c91515d252fe118833f06a2befcc3d6a9bed20d9a0b3af7",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "forged_other_branch",
+   "rule": "(e) R1 and R2 are not released on trial"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": "sha256:d5bbccb5537b02de82c3adae3ddfd4e1f5a15d31d9886d04792c2dc2d09416f3",
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "forged_promoted_copy",
+   "rule": "(e) a promoted copy never carries a supersession"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      },
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "two_events",
+   "rule": "one RecordSuperseded per entry"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+        "reason": "x"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "extra_key",
+   "rule": "exactly the keys head, new, old"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "missing_key",
+   "rule": "exactly the keys head, new, old"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "R2",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "not_a_digest",
+   "rule": "every value a digest"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605F7EE7B354FBF317AC05A7373F680AAC798E7A0B9F83C1CE9444FD90995FD3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "uppercase_digest",
+   "rule": "lowercase digests"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": [
+        "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+        "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+       ],
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "body_not_object",
+   "rule": "the body is an object"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "no_reason_commit",
+   "rule": "the header records a reason commitment"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "self_supersession",
+   "rule": "old and new differ"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W2",
+     "command": "test.edit_record",
+     "events": [],
+     "hash": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "head_before": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 4,
+    "outcome": "refused"
+   },
+   "name": "old_not_released",
+   "rule": "a W2 output is not a released record"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:ddb68ab71a5e54a6eb561ed2fe6395571c6b7a298354d77d839e4cd0ce59cb6c",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "new_not_released",
+   "rule": "new is a released record"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W2",
+     "command": "test.edit_record",
+     "events": [],
+     "hash": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "head_before": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+        "new": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 4,
+    "outcome": "refused"
+   },
+   "name": "tombstone_not_released",
+   "rule": "the tombstone is not a record"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:5a7ca4c23674f89ec9396df6e36a2d5066b8908584f8873b99e3dff11c1d8b4d",
+     "head_before": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 3,
+    "outcome": "refused"
+   },
+   "name": "old_already_superseded",
+   "rule": "old not yet superseded"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W2",
+     "command": "test.edit_record",
+     "events": [],
+     "hash": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "head_before": "sha256:3d895b5db649d564cf1cd7144aea91190ecc4a8f63110b9483e93fce20ee19c4",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+        "new": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+        "old": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:5a7ca4c23674f89ec9396df6e36a2d5066b8908584f8873b99e3dff11c1d8b4d",
+     "head_before": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 5,
+    "outcome": "refused"
+   },
+   "name": "new_already_superseded",
+   "rule": "new must not be superseded"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c"
+     ],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+        "new": "sha256:3cd1dd76b42d83a03730640562333bf89ef3172a569de0637f749c50b624b85c",
+        "old": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:5a7ca4c23674f89ec9396df6e36a2d5066b8908584f8873b99e3dff11c1d8b4d",
+     "head_before": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 3,
+    "outcome": "refused"
+   },
+   "name": "supersede_outputs_are_not_releases",
+   "rule": "a supersession entry's outputs release nothing"
+  },
+  {
+   "entries": [
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "head_before": null,
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "test.release_record",
+     "events": [],
+     "hash": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "head_before": "sha256:52910005611cf0766075de4196e08c0e86490916118b4679e66982553c4244cb",
+     "kind": "human",
+     "major": 1,
+     "outputs": [
+      "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3"
+     ],
+     "promoted_from": null,
+     "reason_commit": null,
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "head_before": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+     "kind": "agent",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    },
+    {
+     "branch": "main",
+     "class": "W3",
+     "command": "journal.supersede_record",
+     "events": [
+      {
+       "body": {
+        "head": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+        "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+        "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+       },
+       "type": "RecordSuperseded"
+      }
+     ],
+     "hash": "sha256:5a7ca4c23674f89ec9396df6e36a2d5066b8908584f8873b99e3dff11c1d8b4d",
+     "head_before": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+     "kind": "human",
+     "major": 1,
+     "outputs": [],
+     "promoted_from": null,
+     "reason_commit": "sha256:a2e205c369010848beef8af330b3c9c6a03c09f8eeac7c17c3bff941e471bfa0",
+     "source": "handler"
+    }
+   ],
+   "expect": {
+    "entry": 2,
+    "outcome": "refused"
+   },
+   "name": "refusal_is_fatal",
+   "rule": "(f) the fold stops at the first refused entry"
+  }
+ ],
+ "plans": [
+  {
+   "actor": "human",
+   "branch": "main",
+   "expect": {
+    "event": {
+     "body": {
+      "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+      "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+      "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     },
+     "type": "RecordSuperseded"
+    }
+   },
+   "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+   "log": "two_releases",
+   "name": "ac1_human",
+   "params": {
+    "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": "wrong part revision"
+   },
+   "rule": "AC-1: a human supersedes R1 by R2"
+  },
+  {
+   "actor": "agent",
+   "branch": "main",
+   "expect": {
+    "error": [
+     "policy",
+     "class_forbidden"
+    ]
+   },
+   "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+   "log": "two_releases",
+   "name": "agent",
+   "params": {
+    "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": "wrong part revision"
+   },
+   "rule": "AC-2: W3 is human only"
+  },
+  {
+   "actor": "script",
+   "branch": "main",
+   "expect": {
+    "error": [
+     "policy",
+     "class_forbidden"
+    ]
+   },
+   "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+   "log": "two_releases",
+   "name": "script",
+   "params": {
+    "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": "wrong part revision"
+   },
+   "rule": "W3 is human only"
+  },
+  {
+   "actor": "agent",
+   "branch": "main",
+   "expect": {
+    "error": [
+     "policy",
+     "class_forbidden"
+    ]
+   },
+   "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+   "log": "two_releases",
+   "name": "agent_before_reason",
+   "params": {
+    "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": ""
+   },
+   "rule": "the caller is checked first"
+  },
+  {
+   "actor": "human",
+   "branch": "main",
+   "expect": {
+    "error": [
+     "validation",
+     "schema"
+    ]
+   },
+   "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+   "log": "two_releases",
+   "name": "reason_empty",
+   "params": {
+    "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": ""
+   },
+   "rule": "reason 1..2000"
+  },
+  {
+   "actor": "human",
+   "branch": "main",
+   "expect": {
+    "event": {
+     "body": {
+      "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+      "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+      "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     },
+     "type": "RecordSuperseded"
+    }
+   },
+   "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+   "log": "two_releases",
+   "name": "reason_2000",
+   "params": {
+    "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   },
+   "rule": "reason 1..2000 characters"
+  },
+  {
+   "actor": "human",
+   "branch": "main",
+   "expect": {
+    "event": {
+     "body": {
+      "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+      "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+      "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     },
+     "type": "RecordSuperseded"
+    }
+   },
+   "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+   "log": "two_releases",
+   "name": "reason_2000_multibyte",
+   "params": {
+    "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
+   },
+   "rule": "characters, not bytes"
+  },
+  {
+   "actor": "human",
+   "branch": "main",
+   "expect": {
+    "error": [
+     "validation",
+     "schema"
+    ]
+   },
+   "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+   "log": "two_releases",
+   "name": "reason_2001",
+   "params": {
+    "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   },
+   "rule": "reason 1..2000"
+  },
+  {
+   "actor": "human",
+   "branch": "main",
+   "expect": {
+    "error": [
+     "validation",
+     "schema"
+    ]
+   },
+   "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+   "log": "two_releases",
+   "name": "reason_before_pair",
+   "params": {
+    "new": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": ""
+   },
+   "rule": "the reason is checked before the records"
+  },
+  {
+   "actor": "human",
+   "branch": "main",
+   "expect": {
+    "error": [
+     "precondition",
+     "not_supersedable"
+    ]
+   },
+   "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+   "log": "two_releases",
+   "name": "self",
+   "params": {
+    "new": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": "wrong part revision"
+   },
+   "rule": "AC-3: old and new differ"
+  },
+  {
+   "actor": "human",
+   "branch": "main",
+   "expect": {
+    "error": [
+     "precondition",
+     "not_supersedable"
+    ]
+   },
+   "head": "sha256:02f5fe0762b96f35bb5bce85ebd7e1f61b55651409d3f6b5a5efef37d933dddc",
+   "log": "more",
+   "name": "old_not_released",
+   "params": {
+    "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "old": "sha256:053f852a233df4b4ba450df250d2bbc9e361ded01cd6d55fc5e66144d69296a6",
+    "reason": "wrong part revision"
+   },
+   "rule": "AC-3: old is not a released record"
+  },
+  {
+   "actor": "human",
+   "branch": "main",
+   "expect": {
+    "error": [
+     "precondition",
+     "not_supersedable"
+    ]
+   },
+   "head": "sha256:c0205324b826839e50cf428f7c19dffba6297a6ebe06a26fd5e987970223c3d6",
+   "log": "two_releases",
+   "name": "new_not_released",
+   "params": {
+    "new": "sha256:ddb68ab71a5e54a6eb561ed2fe6395571c6b7a298354d77d839e4cd0ce59cb6c",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": "wrong part revision"
+   },
+   "rule": "new is a released record"
+  },
+  {
+   "actor": "human",
+   "branch": "main",
+   "expect": {
+    "error": [
+     "precondition",
+     "not_supersedable"
+    ]
+   },
+   "head": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+   "log": "after_supersession",
+   "name": "old_already_superseded",
+   "params": {
+    "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": "wrong part revision"
+   },
+   "rule": "AC-3: old already superseded"
+  },
+  {
+   "actor": "human",
+   "branch": "main",
+   "expect": {
+    "error": [
+     "precondition",
+     "not_supersedable"
+    ]
+   },
+   "head": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+   "log": "after_supersession",
+   "name": "new_already_superseded",
+   "params": {
+    "new": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "old": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "reason": "wrong part revision"
+   },
+   "rule": "new must not be superseded"
+  },
+  {
+   "actor": "human",
+   "branch": "trial",
+   "expect": {
+    "error": [
+     "precondition",
+     "not_supersedable"
+    ]
+   },
+   "head": null,
+   "log": "two_releases",
+   "name": "other_branch",
+   "params": {
+    "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": "wrong part revision"
+   },
+   "rule": "records are looked up on the call's branch"
+  },
+  {
+   "actor": "human",
+   "branch": "trial",
+   "expect": {
+    "event": {
+     "body": {
+      "head": "sha256:a00789a6cb95ea69e7bbd702c261ebe3107f0ff3281f65390b53ab6ca2950b4d",
+      "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+      "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34"
+     },
+     "type": "RecordSuperseded"
+    }
+   },
+   "head": "sha256:a00789a6cb95ea69e7bbd702c261ebe3107f0ff3281f65390b53ab6ca2950b4d",
+   "log": "on_trial",
+   "name": "on_trial",
+   "params": {
+    "new": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "old": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "reason": "wrong part revision"
+   },
+   "rule": "a supersession on a human branch with its own releases"
+  },
+  {
+   "actor": "human",
+   "branch": "main",
+   "expect": {
+    "error": [
+     "precondition",
+     "not_supersedable"
+    ]
+   },
+   "head": "sha256:80b1ae88f48ae585fef78afc689e0d0d820a97ccd8c0adda5a238633a2efa9fe",
+   "log": "after_supersession",
+   "name": "chain_after",
+   "params": {
+    "new": "sha256:e301d7540774a18df2c810ce4148159112ae951f1336c2b4f3b9d8276e274a34",
+    "old": "sha256:605f7ee7b354fbf317ac05a7373f680aac798e7a0b9f83c1ce9444fd90995fd3",
+    "reason": "wrong part revision"
+   },
+   "rule": "R1 is superseded; it cannot replace R2"
+  }
+ ]
+}

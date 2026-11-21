@@ -27,6 +27,10 @@
 //!   `journal.request_promote_branch@1` (spec node `CORE.JRN.BR.PROMO`), the person/agent
 //!   gate; [`promote_bus_error`] maps their refusals (catalogue v3).
 //!
+//! - [`SupersedeHandler`], [`run_supersede`] and [`register_supersede`] (module `supersede`):
+//!   `journal.supersede_record@1` (spec node `CORE.JRN.UNDO.SUPER`, W3), reading the folded
+//!   journal from a [`SupersedeSource`]; [`supersede_bus_error`] maps its refusals (catalogue v3).
+//!
 //! Agent branches (`agent/<client>/<n>`) are not created here: the routing module
 //! (`CORE.BUS.ROUTE`) adds them through the journal's crate-private route planner.
 
@@ -48,8 +52,13 @@ use std::fmt;
 use std::sync::Arc;
 
 mod promote;
+mod supersede;
 
 pub use promote::{parse_params, promote_bus_error, register_promote, run_promote, PromoteHandler, PromoteWiring};
+pub use supersede::{
+    entry_for_call, parse_supersede, register_supersede, run_supersede, supersede_bus_error, SupersedeHandler,
+    SupersedeSource,
+};
 
 /// Where the handlers read the branch table. The bus wiring implements it over the journal.
 ///

@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-journal, fid-journal-cmd]
 satisfies: [REQ-CORE.JRN.UNDO-006]
 covers: []
 depends_on: [CORE.JRN.CHAIN.APPEND, CORE.JRN.ENTRY, CORE.REG.DEF]
@@ -17,7 +18,7 @@ determinism: D0
 cli: [fid journal supersede-record]
 mcp: [journal_supersede_record]
 journal: [journal.supersede_record@1]
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # CORE.JRN.UNDO.SUPER: Supersession of released records
@@ -64,6 +65,9 @@ A released record is never undone; it is superseded. `journal.supersede_record@1
 
 ## Open questions
 
+- Built (2026-11-22): planner, origin-bound fold and definition in `fid_journal::supersede`; bus handler in `fid_journal_cmd::supersede`. The fold follows REQ-CORE.RPL.RECON.FOLD-008: (a) `RecordSuperseded` only from the handler of `journal.supersede_record@1`, W3, human; (b) the event is reserved to that command in `fid_registry::RESERVED_EFFECTS`; (c) refused next to any `Request*` event, so an approved agent request never carries a supersession (the human runs the command); (d) the event carries `head`, the branch's logical head it was decided against, and the fold requires it to be the head before the entry (the commit stage commits only if the head is unchanged, `conflict/head_moved`); (e) a supersession counts on its own branch only, and a promoted copy carrying one is refused; (f) refusals are fatal. Forged cases come from `fixtures/core/jrn/undo/super/make_fixtures.py`.
+- Built, deviations: the event is `RecordSuperseded {head, new, old}`. The reason commitment is the entry header's salted `reason_commit` (CORE.JRN.ENTRY), which the fold keeps in the index, not a field of the event: a salted commitment cannot be computed before the entry is built. The result is `{supersession}` (the event body), not `{entry}`: the entry hash is the commit stage's. "Released record" is an output digest of a W3 command entry on the same branch (not the tombstone, not a supersession entry); records reached through a fork are not looked up. A new record that is already superseded is refused too.
+- Built, obligations on the bus commit stage (not built): record the `reason` parameter as the entry's `reason`; commit only if the branch head is still the event's `head`; fold the entry with `Supersessions::apply_entry` before commit. AC-1 and AC-4 are met at event and fold level (planning and folding are deterministic); writing the W3 entry and exact-mode replay of the journal need that stage and `CORE.RPL`, as for `CORE.JRN.BR.PROMO`.
 - Whether supersession needs a human assertion like protected promotion is for `TRUST` to say; this leaf relies on the W3 class rules only.
 
 ## Children

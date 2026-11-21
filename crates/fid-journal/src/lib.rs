@@ -25,6 +25,11 @@
 //! `journal.request_promote_branch@1`, the `Rebaser` and `AssertionCheck` traits, and with
 //! feature `store` the three definitions. The bus handlers are in `fid-journal-cmd`.
 //!
+//! Module `supersede` (`CORE.JRN.UNDO.SUPER`) is the supersession of released records: the
+//! planner and the origin-bound fold of `journal.supersede_record@1` (the released-record and
+//! `superseded_by` indexes), and with feature `store` its definition. The bus handler is in
+//! `fid-journal-cmd`.
+//!
 //! Module `stream` (`CORE.JRN.STREAM.ALOG`) routes completed calls to their stream and writes
 //! the P0 Activity Log; with feature `store` it also declares the Activity Log settings.
 
@@ -36,6 +41,7 @@ pub mod diff;
 pub mod entry;
 pub mod promote;
 pub mod stream;
+pub mod supersede;
 pub mod verify;
 
 #[cfg(feature = "store")]
