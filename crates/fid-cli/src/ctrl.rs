@@ -69,11 +69,11 @@ impl Verb {
     }
 }
 
-fn usage(id: &str, msg: &str) -> Envelope {
-    Envelope::failed(id, ErrorCode::UsageError, msg, None)
+fn usage(id: &str, msg: &str) -> Box<Envelope> {
+    Box::new(Envelope::failed(id, ErrorCode::UsageError, msg, None))
 }
 
-fn parse(args: &[String], env: &dyn Fn(&str) -> Option<String>) -> Result<Args, Envelope> {
+fn parse(args: &[String], env: &dyn Fn(&str) -> Option<String>) -> Result<Args, Box<Envelope>> {
     let verb = match args.first().map(String::as_str) {
         Some("status") => Verb::Status,
         Some("ping") => Verb::Ping,
@@ -240,7 +240,7 @@ pub fn run(
             Verb::Status => status(&a.target),
             Verb::Ping => ping(&a.target, a.count),
         },
-        Err(e) => e,
+        Err(e) => *e,
     };
     out.finish(&env)
 }
