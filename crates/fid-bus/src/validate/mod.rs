@@ -394,7 +394,7 @@ impl<'a> Resolved<'a> {
                     .get(&(r.name().to_string(), r.major()))
                     .is_some_and(|c| mcp_projection(&c.def) != Projection::Never)
         });
-        (l.state == State::Deprecated).then(|| Deprecation { replaced_by, remove_after: l.remove_after })
+        (l.state == State::Deprecated).then_some(Deprecation { replaced_by, remove_after: l.remove_after })
     }
 
     /// Validates a parameter document given as JSON text (REQ-003..005, REQ-008).
