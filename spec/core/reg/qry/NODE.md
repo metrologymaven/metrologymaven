@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-registry, fid-registry-build]
+built_pr: 394
 satisfies: [REQ-CORE.REG-011, REQ-CORE.REG-012]
 covers: []
 depends_on: [CORE.REG.MAN, CORE.REG.VER]
@@ -73,8 +75,10 @@ The read-only commands through which people, scripts and agents discover what th
 
 ## Open questions
 
-- **Revise for D-035 (accepted 2026-11-17):** filter `registry.list_commands@1` and `describe_command@1` by the caller's projection; MCP callers never see `never`-projected (M1, S1, A0) commands.
-- None.
+- **D-035 (accepted 2026-11-17), built.** `registry.list_commands@1` and `describe_command@1` filter by the caller's audience: an MCP channel or `agent` principal sees only commands whose MCP projection (the bus's `mcp_projection`: declared projection, `human_only` clamped to `request_only`, class ceiling, `never` without the `mcp` surface) is not `never`. To such a caller every other command does not exist: never listed (also with `include_hidden`), `not_found` when described, never suggested.
+- **Built in `fid-registry` (module `query`), registered in `fid-registry-build`.** AC-1 to AC-5 are tested with `fixtures/core/reg/qry/` (independent oracle `make_cases.py`); AC-6 is tested against the bus's `check_raw_paths` and projection check; resolving a handle below an import root is `CORE.BUS.POL.FS`, and the `fid registry ...` binary is `AUTO.CLI.TREE`. Pinned choices: `domain` is the ID's text before the first dot; `describe_command` without `major` takes the highest `active` major (none is `not_found`); suggestions use Levenshtein over Unicode scalar values; a diff entry per (ID, major) is `added` (additive), `removed` (breaking), `lifecycle` (breaking only when the new state is `removed`) or `changed`; a supplied manifest's quantity-catalogue digest is not compared with the catalogue in force, since an older release may carry another one. The performance budget is not measured.
+- **#394 review, built.** For an agent, `describe_command` drops `lifecycle.replaced_by` when its target is not visible to the agent (`definition_digest` stays the digest of the full definition), and `diff_manifests` lists a change only when the command is not `never` on MCP in every manifest that holds it. The diff result carries `a_manifest_digest` and `b_manifest_digest`. The MCP projection rule lives once, in `fid-registry` (`mcp_projection`), and `fid-bus` re-exports it.
+- **D-035 gap in CORE.REG.MAN (not this leaf).** `registry.show_manifest@1` is MCP-exposed and with `full: true` returns the whole manifest, every `never`-projected command included, to an agent. Its filtering belongs to CORE.REG.MAN; a follow-up is to be opened there.
 
 ## Children
 

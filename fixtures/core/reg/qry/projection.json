@@ -1,0 +1,928 @@
+{
+ "rows": [
+  {
+   "side_effect": "A0",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "A0",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "A0",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "A0",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "A0",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "A0",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "A0",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "A0",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "A0",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "A0",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "A0",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "A0",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "D1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "D1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "D1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "D1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "D1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "D1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "D1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "D1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "D1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "D1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "D1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "D1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "I1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "I1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "I1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "I1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "I1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "I1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "I1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "I1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "I1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "I1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "exposed"
+  },
+  {
+   "side_effect": "I1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "I1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "M1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "M1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "M1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "M1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "M1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "M1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "M1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "M1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "M1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "M1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "M1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "M1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R0",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R0",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R0",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R0",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R0",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R0",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "R0",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R0",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "R0",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R0",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "exposed"
+  },
+  {
+   "side_effect": "R0",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R0",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "R1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "R1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "R1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "exposed"
+  },
+  {
+   "side_effect": "R1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "R1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "S1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "S1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "S1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "S1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "S1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "S1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "S1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "S1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "S1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "S1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "S1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "S1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "W1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "W1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "exposed"
+  },
+  {
+   "side_effect": "W1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "W2",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W2",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W2",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W2",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W2",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W2",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "W2",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W2",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "W2",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W2",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "exposed"
+  },
+  {
+   "side_effect": "W2",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W2",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "W3",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W3",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W3",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W3",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W3",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W3",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "W3",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W3",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "W3",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W3",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "W3",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "W3",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "X1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "X1",
+   "declared": "never",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "X1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "X1",
+   "declared": "never",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "never"
+  },
+  {
+   "side_effect": "X1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "X1",
+   "declared": "request_only",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "X1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "X1",
+   "declared": "request_only",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "X1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "X1",
+   "declared": "exposed",
+   "human_only": false,
+   "on_mcp": true,
+   "expect": "request_only"
+  },
+  {
+   "side_effect": "X1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": false,
+   "expect": "never"
+  },
+  {
+   "side_effect": "X1",
+   "declared": "exposed",
+   "human_only": true,
+   "on_mcp": true,
+   "expect": "request_only"
+  }
+ ]
+}
