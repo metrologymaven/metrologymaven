@@ -1,0 +1,9 @@
+{
+  "artefact": "icons/thirdp.svg",
+  "format": "icon-provenance@1",
+  "licence": "CC-BY-4.0",
+  "third_party": {
+    "licence": "MIT",
+    "source": "Example Glyph Set"
+  }
+}
