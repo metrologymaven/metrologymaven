@@ -1,6 +1,6 @@
 [package]
 name = "fid-scan-mesh"
-description = "Metrology Maven mesh quality report: topological counts, degenerate triangles and minimum-angle statistics of an indexed triangle mesh (spec node SCAN.POLY.QUAL)"
+description = "Metrology Maven mesh quality report (SCAN.POLY.QUAL) and the mesh-operation contract with synthesized-triangle flags and provenance records (SCAN.MESHOP.PROV)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,10 +8,15 @@ license.workspace = true
 repository.workspace = true
 
 # Kernel crate (KNP-1): no third-party dependencies. Only fid-geo-types (the GEO.TYPES Mesh
-# it measures) and fid-num (the KNP-1 `sqrt` and vendored `acos`, KRN.NUM.FN).
+# it measures and its element digest), fid-num (the KNP-1 `sqrt` and vendored `acos`,
+# KRN.NUM.FN), fid-types (determinism class, `sha256:` digest and command ID shared types)
+# and fid-kci (its portable FIPS 180-4 SHA-256 for the derived-mesh and record digests,
+# SCAN.MESHOP.PROV).
 [dependencies]
 fid-geo-types = { path = "../fid-geo-types" }
+fid-kci = { path = "../fid-kci" }
 fid-num = { path = "../fid-num" }
+fid-types = { path = "../fid-types" }
 
 [dev-dependencies]
 # Test-support only (never in the kernel graph): the workspace root for fixture paths.

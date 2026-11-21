@@ -1,0 +1,64 @@
+{
+ "person": {
+  "a_manifest_digest": "sha256:f9a3ece96761abfa989de9b0d2d8fd8b2702197c0450f3408ecefc65fa537a3b",
+  "b_manifest_digest": "sha256:e3e0c42d6f8a01770a9fd14a9f4ba0bf903979b8da3c51c9a2dbfbac02261e6f",
+  "changes": [
+   {
+    "id": "align.set_datum",
+    "major": 1,
+    "kind": "changed",
+    "compat": "additive",
+    "fields": [
+     "/title"
+    ]
+   },
+   {
+    "id": "cmm.move_home",
+    "major": 1,
+    "kind": "added",
+    "compat": "additive",
+    "fields": []
+   },
+   {
+    "id": "cmm.move_to",
+    "major": 1,
+    "kind": "removed",
+    "compat": "breaking",
+    "fields": []
+   },
+   {
+    "id": "sim.read_prob",
+    "major": 1,
+    "kind": "changed",
+    "compat": "breaking",
+    "fields": [
+     "/exposure"
+    ]
+   },
+   {
+    "id": "sim.read_probe",
+    "major": 1,
+    "kind": "changed",
+    "compat": "additive",
+    "fields": [
+     "/title"
+    ]
+   }
+  ]
+ },
+ "agent": {
+  "a_manifest_digest": "sha256:f9a3ece96761abfa989de9b0d2d8fd8b2702197c0450f3408ecefc65fa537a3b",
+  "b_manifest_digest": "sha256:e3e0c42d6f8a01770a9fd14a9f4ba0bf903979b8da3c51c9a2dbfbac02261e6f",
+  "changes": [
+   {
+    "id": "sim.read_probe",
+    "major": 1,
+    "kind": "changed",
+    "compat": "additive",
+    "fields": [
+     "/title"
+    ]
+   }
+  ]
+ }
+}
