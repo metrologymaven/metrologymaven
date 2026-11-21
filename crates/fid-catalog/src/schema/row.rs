@@ -6,7 +6,8 @@
 //! (`claimed`, `declared_input`, `uncharacterized_input`, `interpretation`) have no default:
 //! a writer states each one, so a claimed value or a provisional interpretation cannot enter
 //! the catalog looking measured or settled (D-045, `UNC.UEC.CLASS`). The table checks back
-//! this up for any connection: a claimed value must be UEC-1, a UEC-0 entry has no value.
+//! this up for any connection: a claimed value must be UEC-1, a UEC-1 entry is claimed or rests
+//! on an uncharacterized contributor (exactly one of the two), a UEC-0 entry has no value.
 
 use fid_types::text::is_forbidden_char;
 use fid_types::Digest;

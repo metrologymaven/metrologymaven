@@ -769,7 +769,6 @@ fn a_changed_check_constraint_is_refused() {
 
 #[test]
 fn rows_that_bypass_the_checks_are_refused_on_read() {
-    let (_t, p) = new_catalog("bypass");
     // Each edit breaks one table rule; the row is refused when read, whatever the file says.
     let edits = [
         "claimed = 1, uec_class = 'UEC-3'",
@@ -780,6 +779,8 @@ fn rows_that_bypass_the_checks_are_refused_on_read() {
         "timestamp = '2026-11-01T08:00:00+01:00'",
         "value_literal = '1.0mm'",
         "rule_id = NULL",
+        "uec_class = 'UEC-1', declared_input = 1",
+        "uec_class = 'UEC-1', claimed = 1, uncharacterized_input = 1",
     ];
     for edit in edits {
         let (_t, p) = new_catalog("bypass");
@@ -817,6 +818,15 @@ fn uec_labels_must_agree_with_the_class() {
             r.labels.declared_input = true;
         }),
         next(&|r| r.labels.claimed = true),
+        next(&|r| {
+            r.uec_class = UecClass::Uec1;
+            r.labels.declared_input = true;
+        }),
+        next(&|r| r.uec_class = UecClass::Uec1),
+        next(&|r| {
+            r.uec_class = UecClass::Uec1;
+            r.labels = EvidenceLabels { claimed: true, declared_input: true, uncharacterized_input: true };
+        }),
     ];
     for r in &refused {
         assert_eq!(cat.insert_entry(r).unwrap_err().code(), "stats.catalog_constraint", "{r:?}");
@@ -828,7 +838,11 @@ fn uec_labels_must_agree_with_the_class() {
         }),
         next(&|r| {
             r.uec_class = UecClass::Uec1;
-            r.labels = EvidenceLabels { claimed: true, declared_input: true, uncharacterized_input: true };
+            r.labels = EvidenceLabels { claimed: false, declared_input: true, uncharacterized_input: true };
+        }),
+        next(&|r| {
+            r.uec_class = UecClass::Uec1;
+            r.labels = EvidenceLabels { claimed: true, declared_input: true, uncharacterized_input: false };
         }),
     ];
     for r in &accepted {

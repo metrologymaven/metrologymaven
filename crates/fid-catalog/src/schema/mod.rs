@@ -13,12 +13,16 @@
 //! exactly the table the v1 DDL defines before it is queried; then the file's `sqlite_master`
 //! must equal, object for object (type, name, table, SQL text), what this build's DDL produces
 //! for the stored version. Anything else is `stats.catalog_corrupt` and nothing is written.
-//! Connections are hardened first (defensive mode, `trusted_schema` off, no `ATTACH` that
-//! creates or writes, cell size checks, foreign keys on, no checkpoint on close until the
-//! checks pass) with `fid-store`'s own hardening, companion-file, root-page, schema-object,
-//! `quick_check` and migration-runner code (`fid_store::schema`), so the catalog and `project.db`
-//! get exactly the same checks. A write open also runs `PRAGMA quick_check` before it sets WAL
-//! mode or migrates; a read-only open relies on SQLite's corruption errors, which are
+//! Connections come only from `fid-store`'s single guarded door, `fid_store::schema::open_hardened`
+//! (file and companion checks, `SQLITE_OPEN_NOFOLLOW`, no `SQLITE_OPEN_CREATE` or
+//! `SQLITE_OPEN_URI`; defensive mode, `trusted_schema` off, no `ATTACH` that creates or writes,
+//! cell size checks, foreign keys on, no checkpoint on close until the checks pass and
+//! `allow_checkpoint` is called), and the catalog uses `fid-store`'s own companion-file,
+//! root-page, schema-object, `quick_check` and migration-runner code (`fid_store::schema`), so
+//! the catalog and `project.db` get exactly the same checks. A write open also runs
+//! `PRAGMA quick_check` before it sets WAL mode, and again under the migration's write
+//! transaction before rows of an existing catalog are carried forward; a busy commit is
+//! `stats.catalog_locked`. A read-only open relies on SQLite's corruption errors, which are
 //! `stats.catalog_corrupt`. Tables are `STRICT` and every text
 //! column from project content is bounded in bytes by a `CHECK`, so the bounds hold for any
 //! connection; rows read back are checked again and wrapped as [`CatalogText`].
@@ -51,13 +55,12 @@ use fid_uuid::Uuid;
 use row::escaped;
 
 use fid_store::schema::{
-    check_companions_of, check_root_pages, harden, migrate_with, open_path, quick_check, set_config, set_wal,
+    allow_checkpoint, check_companions_of, check_root_pages, migrate_with, open_hardened, quick_check, set_wal,
     verify_schema, MigrationHooks,
 };
-use fid_store::{SchemaError, SchemaVersion, StoreError};
-use rusqlite::config::DbConfig;
+use fid_store::{OpenMode, SchemaError, SchemaVersion, StoreError};
 use rusqlite::types::Value;
-use rusqlite::{params, Connection, ErrorCode, OpenFlags};
+use rusqlite::{params, Connection, ErrorCode};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -284,11 +287,17 @@ impl Catalog {
             }
         }
         let file = locate(path, mode)?;
-        let mut conn = connect(&file, mode, busy_timeout)?;
-        // Nothing is written before the file has passed these checks.
-        let found = checked_version(&conn, &plan)?;
         let dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
         let name = file_name(&file)?;
+        let access = match mode {
+            Mode::ReadWrite => OpenMode::Write,
+            Mode::ReadOnly => OpenMode::Read,
+        };
+        // fid-store's single guarded door: file and companion checks, NOFOLLOW (no CREATE: locate
+        // creates the file; no URI), every hardening setting, the busy timeout.
+        let mut conn = open_hardened(&dir, &name, access, busy_timeout)?;
+        // Nothing is written before the file has passed these checks.
+        let found = checked_version(&conn, &plan)?;
         // SQLite has now opened any -wal/-shm; check them again.
         check_companions_of(&dir, &name)?;
         let version = match mode {
@@ -315,7 +324,7 @@ impl Catalog {
                     found
                 };
                 // Checked: a normal close may now checkpoint the WAL into the catalog file.
-                set_config(&conn, DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, false, "no_ckpt_on_close")?;
+                allow_checkpoint(&conn)?;
                 v
             }
         };
@@ -706,6 +715,11 @@ fn decode_entry(r: &rusqlite::Row<'_>) -> Result<CatalogEntryRow, CatalogError> 
     if row.labels.claimed && row.uec_class != UecClass::Uec1 {
         return Err(corrupt_value("claimed"));
     }
+    // UNC.UEC.CLASS: a UEC-1 entry is UEC-1 for exactly one reason, a claimed value or an
+    // uncharacterized contributor (a declared input alone does not make it UEC-1).
+    if row.uec_class == UecClass::Uec1 && row.labels.claimed == row.labels.uncharacterized_input {
+        return Err(corrupt_value("uec_class"));
+    }
     if row.decision_outcome != DecisionOutcome::NotDecidable && row.rule_id.is_none() {
         return Err(corrupt_value("rule_id"));
     }
@@ -772,19 +786,6 @@ fn locate(path: &Path, mode: Mode) -> Result<PathBuf, CatalogError> {
     }
     check_companions_of(&dir, &name)?;
     Ok(file)
-}
-
-fn connect(file: &Path, mode: Mode, busy: Duration) -> Result<Connection, CatalogError> {
-    let access = match mode {
-        Mode::ReadWrite => OpenFlags::SQLITE_OPEN_READ_WRITE,
-        Mode::ReadOnly => OpenFlags::SQLITE_OPEN_READ_ONLY,
-    };
-    // No SQLITE_OPEN_CREATE (locate creates the file) and no SQLITE_OPEN_URI (a path is a path).
-    let flags = access | OpenFlags::SQLITE_OPEN_NO_MUTEX | OpenFlags::SQLITE_OPEN_NOFOLLOW;
-    let conn = open_path(file, flags)?;
-    harden(&conn)?;
-    conn.busy_timeout(busy)?;
-    Ok(conn)
 }
 
 // ------------------------------------------------------------------ schema checks
@@ -864,7 +865,13 @@ impl MigrationHooks for CatalogHooks<'_> {
     const VERSION_TABLE: &'static str = "catalog_meta";
 
     fn checked_version(&mut self, conn: &Connection, plan: &MigrationPlan) -> Result<SchemaVersion, CatalogError> {
-        checked_version(conn, plan).map(SchemaVersion)
+        let current = checked_version(conn, plan)?;
+        if current > 0 {
+            // Existing rows are about to be carried forward: the file must be sound now, under
+            // the write transaction, not only at the quick_check the open ran before it.
+            quick_check(conn)?;
+        }
+        Ok(SchemaVersion(current))
     }
 
     fn read_version(&mut self, conn: &Connection) -> Result<SchemaVersion, CatalogError> {
@@ -893,5 +900,13 @@ impl MigrationHooks for CatalogHooks<'_> {
 
     fn failed(&self, from: u32, to: u32, detail: String) -> CatalogError {
         CatalogError::MigrationFailed { from, to, detail: escaped(&detail) }
+    }
+
+    /// A busy or locked commit stays `stats.catalog_locked`; anything else is the failed step.
+    fn sqlite_failed(&self, from: u32, to: u32, what: &str, e: rusqlite::Error) -> CatalogError {
+        match CatalogError::from(e) {
+            CatalogError::Locked => CatalogError::Locked,
+            other => self.failed(from, to, format!("{what}: {other}")),
+        }
     }
 }

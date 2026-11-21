@@ -36,7 +36,9 @@ Rules (spec/rpt/catalog/store/schema/NODE.md, D-045, UNC.UEC.CLASS, GDT.CHAR.REC
   - a claimed value (declared or specification-derived basis) is UEC-1, so it never carries a
     measured class (D-045: claimed values never look measured); UEC-2 and UEC-3 rest on no
     declared and no uncharacterized input (UNC.UEC.CLASS: either one downgrades to UEC-1);
-    a UEC-0 entry has no value and sets no label at all; a decided outcome names its rule;
+    a UEC-0 entry has no value and sets no label at all; a UEC-1 entry has exactly one of
+    claimed and uncharacterized_input (UNC.UEC.CLASS: it is UEC-1 for exactly one reason; a
+    declared input alone does not make it UEC-1); a decided outcome names its rule;
   - journal_entry_hash is "sha256:" + 64 lowercase hex digits; journal_seq >= 1;
   - timestamp is an RFC 3339 UTC instant ending in Z, 20..40 characters;
   - columns are typed (STRICT): text is never a blob, a real is never non-numeric text.
@@ -319,6 +321,8 @@ def py_rules(row, existing):
         return "refuse"
     if get("uec_class") == "UEC-0" and any(v == 1 for v in labels):
         return "refuse"
+    if get("uec_class") == "UEC-1" and labels[0] + labels[2] != 1:
+        return "refuse"
     if get("decision_outcome") != "NOT_DECIDABLE" and get("rule_id") is None:
         return "refuse"
     if (get("project_id"), get("record_id")) in existing:
@@ -359,8 +363,16 @@ CASES = [
      "an uncharacterized contributor downgrades to UEC-1"),
     ("uec3_uncharacterized_input", with_(uec_class=T("UEC-3"), uncharacterized_input=I(1)), [], "refuse",
      "an uncharacterized contributor downgrades to UEC-1"),
-    ("uec1_declared_input", with_(uec_class=T("UEC-1"), declared_input=I(1)), [], "accept",
-     "UEC-1 may rest on a declared input"),
+    ("uec1_declared_input", with_(uec_class=T("UEC-1"), declared_input=I(1)), [], "refuse",
+     "UNC.UEC.CLASS: a declared input alone does not make a value UEC-1"),
+    ("uec1_no_label", with_(uec_class=T("UEC-1")), [], "refuse",
+     "UNC.UEC.CLASS: a UEC-1 entry is claimed or rests on an uncharacterized contributor"),
+    ("uec1_uncharacterized_and_declared",
+     with_(uec_class=T("UEC-1"), uncharacterized_input=I(1), declared_input=I(1)), [], "accept",
+     "UEC-1 on an uncharacterized contributor may also rest on a declared input"),
+    ("uec1_claimed_and_uncharacterized",
+     with_(uec_class=T("UEC-1"), claimed=I(1), uncharacterized_input=I(1)), [], "refuse",
+     "UNC.UEC.CLASS: exactly one of claimed and uncharacterized_input"),
     ("uec1_uncharacterized_input", with_(uec_class=T("UEC-1"), uncharacterized_input=I(1)), [], "accept",
      "UEC-1 may rest on an uncharacterized contributor"),
     ("uec0_claimed", with_(uec_class=T("UEC-0"), claimed=I(1), value_literal=NULL, unit=NULL, si_value=NULL), [], "refuse",
