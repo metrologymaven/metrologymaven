@@ -1,6 +1,6 @@
 //! Point-to-geometry distance for Metrology Maven (spec node GEO.DIST). Pure Rust, `f64`,
 //! no I/O, no `unsafe`, no third-party dependencies: only the kernel-layer workspace crates
-//! `fid-geo-types`, `fid-geo-index` and `fid-num` (KNP-1, CONSTITUTION §4).
+//! `fid-geo-types`, `fid-geo-index`, `fid-geo-frame` and `fid-num` (KNP-1, CONSTITUTION §4).
 //!
 //! Modules land one spec leaf at a time; see `spec/geo/dist/`.
 //!
@@ -10,6 +10,10 @@
 //! - [`sign`] (GEO.DIST.SIGN): angle-weighted pseudo-normals, topology statuses and the certified
 //!   sign of a mesh projection (outside, inside, on the surface, undecidable, or undefined at
 //!   boundary, non-manifold, misoriented or degenerate features), and the same rule for CAD feet.
+//! - [`batch`] (GEO.DIST.BATCH): the [`ProjectionTarget`] trait (implemented for meshes by
+//!   [`SignTarget`]), projection options (maximum distance, subset, direction), deterministic
+//!   multi-threaded [`project_batch`] with cancellation, and fixed-order [`summary`]
+//!   statistics.
 //!
 //! The crate also holds the reference fixtures for trimmed-face projection
 //! (GEO.DIST.FACE.REF): the data lives in
@@ -18,8 +22,14 @@
 //! `tests/face_ref_compare.rs`. GEO.DIST.FACE.ONE and GEO.DIST.FACE.BODY plug their
 //! projectors into that comparison.
 
+pub mod batch;
 pub mod mesh;
 pub mod sign;
+
+pub use batch::{
+    encode, project_batch, summary, BatchConfig, BatchError, BatchSummary, HitSign, ProjectError, Projection,
+    ProjectionHit, ProjectionOptions, ProjectionTarget,
+};
 
 pub use mesh::{
     closest_on_mesh, closest_on_triangle, DistError, Feature, MeshHit, MeshProjection, MeshQuery, MeshTarget,

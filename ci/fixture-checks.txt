@@ -190,6 +190,7 @@ python tools/check_registry_keywords.py
 python tools/fixtures/geo_apply_cases.py --check
 python tools/fixtures/geo_digest_vectors.py --check
 python tools/fixtures/geo_dist.py --check
+python tools/fixtures/geo_dist_batch.py --check
 python tools/fixtures/geo_dist_sign.py --check
 python tools/fixtures/geo_index.py --check
 python tools/fixtures/geo_sel_sets.py --check

@@ -8,6 +8,7 @@ fid-construct
 fid-fit
 fid-geo-cad
 fid-geo-cmd
+fid-geo-dist --test batch
 fid-geo-dist --test mesh
 fid-geo-dist --test sign
 fid-geo-frame
