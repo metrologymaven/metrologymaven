@@ -9,7 +9,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::CValue;
-use fid_catalog::schema::{expected_objects, read_version, TABLES, V1_SQL, V2_SQL};
+use fid_catalog::schema::{read_version, validate_plan, TABLES, V1_SQL, V2_SQL};
 use fid_catalog::{
     catalog_location, catalog_settings, configured_catalog_path, default_catalog_path, Availability, Catalog,
     CatalogEntryRow, CatalogError, CatalogText, DecisionOutcome, EntryStatus, EntryValue, EvaluationBasis,
@@ -17,7 +17,9 @@ use fid_catalog::{
     CATALOG_PATH_KEY, LATEST, MIGRATIONS, PLAN,
 };
 use fid_project::{Bits, IdError, ObservationSource};
+use fid_store::schema::expected_objects;
 use fid_store::settings::{FileStore, Scope, Sources};
+use fid_store::SchemaVersion;
 use fid_types::Digest;
 use fid_uuid::Uuid;
 use rusqlite::types::Value;
@@ -207,6 +209,14 @@ fn row(record: &str) -> CatalogEntryRow {
     }
 }
 
+/// A raw connection to a catalog file, bypassing the crate (foreign keys on, as the crate has).
+/// `Catalog::connection()` is crate-private, so the tests read and write the file this way.
+fn raw_conn(p: &Path) -> Connection {
+    let c = Connection::open(p).unwrap();
+    c.execute_batch("PRAGMA foreign_keys=ON").unwrap();
+    c
+}
+
 fn table_names(conn: &Connection) -> Vec<String> {
     let mut st = conn.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").unwrap();
     let rows = st.query_map([], |r| r.get::<_, String>(0)).unwrap();
@@ -247,14 +257,16 @@ fn ac1_missing_catalog_is_created_at_the_configured_location() {
     assert_eq!(cat.owner(), Some(&CatalogText::new("lab")));
     assert_eq!(cat.count_entries().unwrap(), 0);
     assert!(cat.projects().unwrap().is_empty());
-    assert_eq!(table_names(cat.connection()), {
+    drop(cat);
+    let conn = raw_conn(&path);
+    assert_eq!(table_names(&conn), {
         let mut v: Vec<String> = TABLES.iter().map(|s| s.to_string()).collect();
         v.sort();
         v
     });
-    let mode: String = cat.connection().query_row("PRAGMA journal_mode", [], |r| r.get(0)).unwrap();
+    let mode: String = conn.query_row("PRAGMA journal_mode", [], |r| r.get(0)).unwrap();
     assert_eq!(mode, "wal");
-    drop(cat);
+    drop(conn);
     assert!(target.is_file());
 
     // Reopened: the same ID, no new draw (the source would fail), read-only works too.
@@ -383,11 +395,12 @@ fn ac2_v1_fixture_migrates_once_and_keeps_every_row() {
     assert_eq!(cat.catalog_id().to_string(), s(&want["catalog_id"]));
     assert_eq!(cat.owner(), Some(&CatalogText::new(s(&want["owner"]))));
 
+    let conn = raw_conn(&p);
     let columns = strings(&want["columns"]);
     let expected: Vec<Vec<Value>> =
         arr(&want["entries"]).iter().map(|r| arr(r).iter().map(sql_value).collect()).collect();
     let got = rows_of(
-        cat.connection(),
+        &conn,
         &format!("SELECT {} FROM entry ORDER BY project_id, record_id", columns.join(", ")),
         columns.len(),
     );
@@ -403,7 +416,7 @@ fn ac2_v1_fixture_migrates_once_and_keeps_every_row() {
         })
         .collect();
     let got = rows_of(
-        cat.connection(),
+        &conn,
         "SELECT project_id, handle, last_seq, head_hash, availability FROM project ORDER BY project_id",
         5,
     );
@@ -416,14 +429,14 @@ fn ac2_v1_fixture_migrates_once_and_keeps_every_row() {
     let claimed: Vec<bool> = typed.iter().map(CatalogEntryRow::is_claimed).collect();
     assert_eq!(claimed.iter().filter(|c| **c).count(), 1);
     // The v2 objects now exist.
-    assert!(table_names(cat.connection()).contains(&"entry_tag".to_string()));
-    let n: i64 = cat
-        .connection()
+    assert!(table_names(&conn).contains(&"entry_tag".to_string()));
+    let n: i64 = conn
         .query_row("SELECT count(*) FROM sqlite_master WHERE name = 'entry_by_project_position'", [], |r| r.get(0))
         .unwrap();
     assert_eq!(n, 1);
-    let n: i64 = cat.connection().query_row("SELECT count(*) FROM entry_tag", [], |r| r.get(0)).unwrap();
+    let n: i64 = conn.query_row("SELECT count(*) FROM entry_tag", [], |r| r.get(0)).unwrap();
     assert_eq!(n, 0);
+    drop(conn);
     drop(cat);
 
     // Once: a second write open finds version 2 and changes no row and no schema object.
@@ -431,9 +444,10 @@ fn ac2_v1_fixture_migrates_once_and_keeps_every_row() {
         rows_of(&Connection::open(&p).unwrap(), "SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY name", 4);
     let again = open_existing(&p, Mode::ReadWrite, PLAN).unwrap();
     assert_eq!(again.schema_version(), 2);
-    let after = rows_of(again.connection(), "SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY name", 4);
+    let conn = raw_conn(&p);
+    let after = rows_of(&conn, "SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY name", 4);
     assert_eq!(before, after);
-    let v: i64 = again.connection().query_row("SELECT schema_version FROM catalog_meta", [], |r| r.get(0)).unwrap();
+    let v: i64 = conn.query_row("SELECT schema_version FROM catalog_meta", [], |r| r.get(0)).unwrap();
     assert_eq!(v, 2);
 }
 
@@ -485,18 +499,22 @@ fn a_migration_waits_for_and_then_reports_a_held_lock() {
 
 #[test]
 fn the_plan_is_contiguous_and_starts_with_v1() {
-    PLAN.validate().unwrap();
+    validate_plan(&PLAN).unwrap();
     assert_eq!(MIGRATIONS.len() as u32, LATEST);
     static GAP: [Migration; 2] = [Migration { from: 0, to: 1, sql: V1_SQL }, Migration { from: 2, to: 3, sql: V2_SQL }];
     assert_eq!(
-        MigrationPlan { latest: 3, migrations: &GAP }.validate().unwrap_err().code(),
+        validate_plan(&MigrationPlan { latest: 3, migrations: &GAP }).unwrap_err().code(),
         "stats.catalog_migration_failed"
     );
     static NOT_V1: [Migration; 1] = [Migration { from: 0, to: 1, sql: V2_SQL }];
-    assert!(MigrationPlan { latest: 1, migrations: &NOT_V1 }.validate().is_err());
-    assert!(MigrationPlan { latest: 3, migrations: &MIGRATIONS }.validate().is_err());
+    assert!(validate_plan(&MigrationPlan { latest: 1, migrations: &NOT_V1 }).is_err());
+    assert!(validate_plan(&MigrationPlan { latest: 3, migrations: &MIGRATIONS }).is_err());
+    assert!(validate_plan(&MigrationPlan { latest: 0, migrations: &[] }).is_err());
     // The expected objects of each version are what the DDL builds.
-    assert!(expected_objects(&PLAN, 1).unwrap().len() < expected_objects(&PLAN, 2).unwrap().len());
+    assert!(
+        expected_objects(&PLAN, SchemaVersion(1)).unwrap().len()
+            < expected_objects(&PLAN, SchemaVersion(2)).unwrap().len()
+    );
 }
 
 // ---------------------------------------------------------------- AC-3
@@ -669,8 +687,9 @@ fn hand_labelled_row_cases() {
         .unwrap();
     }
     let cases = arr(&doc["cases"]);
-    assert!(cases.len() >= 40, "{}", cases.len());
-    let conn = cat.connection_mut();
+    assert!(cases.len() >= 50, "{}", cases.len());
+    drop(cat);
+    let mut conn = raw_conn(&p);
     for case in cases {
         let c = obj(case);
         let name = s(&c["name"]);
@@ -751,13 +770,71 @@ fn a_changed_check_constraint_is_refused() {
 #[test]
 fn rows_that_bypass_the_checks_are_refused_on_read() {
     let (_t, p) = new_catalog("bypass");
-    let raw = Connection::open(&p).unwrap();
-    raw.execute_batch("PRAGMA ignore_check_constraints = ON").unwrap();
-    raw.execute("UPDATE entry SET claimed = 1, uec_class = 'UEC-3'", []).unwrap();
-    drop(raw);
-    let cat = open_existing(&p, Mode::ReadOnly, PLAN).unwrap();
-    let e = cat.entries_after(None, 10).unwrap_err();
-    assert_eq!(e.code(), "stats.catalog_corrupt");
+    // Each edit breaks one table rule; the row is refused when read, whatever the file says.
+    let edits = [
+        "claimed = 1, uec_class = 'UEC-3'",
+        "declared_input = 1",
+        "uncharacterized_input = 1, uec_class = 'UEC-3'",
+        "uec_class = 'UEC-0', value_literal = NULL, unit = NULL, si_value = NULL, uncharacterized_input = 1",
+        "timestamp = '2026-11-01 08:00:00Z'",
+        "timestamp = '2026-11-01T08:00:00+01:00'",
+        "value_literal = '1.0mm'",
+        "rule_id = NULL",
+    ];
+    for edit in edits {
+        let (_t, p) = new_catalog("bypass");
+        let raw = Connection::open(&p).unwrap();
+        raw.execute_batch("PRAGMA ignore_check_constraints = ON").unwrap();
+        assert_eq!(raw.execute(&format!("UPDATE entry SET {edit}"), []).unwrap(), 1, "{edit}");
+        drop(raw);
+        let cat = open_existing(&p, Mode::ReadOnly, PLAN).unwrap();
+        let e = cat.entries_after(None, 10).unwrap_err();
+        assert_eq!(e.code(), "stats.catalog_corrupt", "{edit}");
+    }
+}
+
+/// The UEC label rules (D-045, UNC.UEC.CLASS) through the typed API.
+#[test]
+fn uec_labels_must_agree_with_the_class() {
+    let (_t, p) = new_catalog("labels");
+    let mut cat = open_existing(&p, Mode::ReadWrite, PLAN).unwrap();
+    let mut n = 0;
+    let mut next = |f: &dyn Fn(&mut CatalogEntryRow)| {
+        n += 1;
+        let mut r = row(&format!("l-{n}"));
+        f(&mut r);
+        r
+    };
+    let refused = [
+        next(&|r| r.labels.declared_input = true),
+        next(&|r| {
+            r.uec_class = UecClass::Uec3;
+            r.labels.uncharacterized_input = true;
+        }),
+        next(&|r| {
+            r.uec_class = UecClass::Uec0;
+            r.value = None;
+            r.labels.declared_input = true;
+        }),
+        next(&|r| r.labels.claimed = true),
+    ];
+    for r in &refused {
+        assert_eq!(cat.insert_entry(r).unwrap_err().code(), "stats.catalog_constraint", "{r:?}");
+    }
+    let accepted = [
+        next(&|r| {
+            r.uec_class = UecClass::Uec1;
+            r.labels.uncharacterized_input = true;
+        }),
+        next(&|r| {
+            r.uec_class = UecClass::Uec1;
+            r.labels = EvidenceLabels { claimed: true, declared_input: true, uncharacterized_input: true };
+        }),
+    ];
+    for r in &accepted {
+        cat.insert_entry(r).unwrap();
+        assert_eq!(cat.entry(&r.project_id, &r.record_id).unwrap().as_ref(), Some(r));
+    }
 }
 
 #[test]

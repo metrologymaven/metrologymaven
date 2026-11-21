@@ -15,7 +15,11 @@
 //! for the stored version. Anything else is `stats.catalog_corrupt` and nothing is written.
 //! Connections are hardened first (defensive mode, `trusted_schema` off, no `ATTACH` that
 //! creates or writes, cell size checks, foreign keys on, no checkpoint on close until the
-//! checks pass), as `fid-store` does for `project.db`. Tables are `STRICT` and every text
+//! checks pass) with `fid-store`'s own hardening, companion-file, root-page, schema-object,
+//! `quick_check` and migration-runner code (`fid_store::schema`), so the catalog and `project.db`
+//! get exactly the same checks. A write open also runs `PRAGMA quick_check` before it sets WAL
+//! mode or migrates; a read-only open relies on SQLite's corruption errors, which are
+//! `stats.catalog_corrupt`. Tables are `STRICT` and every text
 //! column from project content is bounded in bytes by a `CHECK`, so the bounds hold for any
 //! connection; rows read back are checked again and wrapped as [`CatalogText`].
 //!
@@ -41,12 +45,19 @@ pub use row::{
 };
 
 use fid_project::{uuid_v7, ObservationSource, SystemSource};
+pub use fid_store::schema::{Migration, MigrationPlan, SchemaObject};
 use fid_types::Digest;
 use fid_uuid::Uuid;
 use row::escaped;
+
+use fid_store::schema::{
+    check_companions_of, check_root_pages, harden, migrate_with, open_path, quick_check, set_config, set_wal,
+    verify_schema, MigrationHooks,
+};
+use fid_store::{SchemaError, SchemaVersion, StoreError};
 use rusqlite::config::DbConfig;
 use rusqlite::types::Value;
-use rusqlite::{params, Connection, ErrorCode, OpenFlags, TransactionBehavior};
+use rusqlite::{params, Connection, ErrorCode, OpenFlags};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -62,13 +73,6 @@ pub const LATEST: u32 = 2;
 /// The tables of the latest schema, in DDL order.
 pub const TABLES: [&str; 4] = ["catalog_meta", "project", "entry", "entry_tag"];
 
-/// Companion files SQLite keeps next to the catalog file.
-pub const COMPANIONS: [&str; 3] = ["-wal", "-shm", "-journal"];
-
-/// Longest catalog path, in bytes, given to SQLite's Unix VFS [unverified: SQLite's
-/// `MAX_PATHNAME` is 512 including the terminating NUL].
-pub const UNIX_MAX_DB_PATH_BYTES: usize = 511;
-
 /// Longest owner label, in bytes (as the `catalog_meta` check).
 pub const MAX_OWNER_BYTES: usize = 256;
 
@@ -78,61 +82,26 @@ pub const MAX_PAGE: usize = 10_000;
 /// How long a connection waits for a lock held by another connection, by default.
 pub const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// One forward migration: the SQL that takes the schema from `from` to `to = from + 1`. It
-/// must not contain transaction control; the runner owns the transaction.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Migration {
-    pub from: u32,
-    pub to: u32,
-    pub sql: &'static str,
-}
-
 /// The migrations compiled into this build: migration `i` goes from version `i` to `i + 1`.
 pub static MIGRATIONS: [Migration; 2] =
     [Migration { from: 0, to: 1, sql: V1_SQL }, Migration { from: 1, to: 2, sql: V2_SQL }];
 
-/// The migration list an open checks against and a write open applies, ending at `latest`.
-#[derive(Clone, Copy, Debug)]
-pub struct MigrationPlan {
-    pub latest: u32,
-    pub migrations: &'static [Migration],
-}
-
 /// This build's plan: [`MIGRATIONS`] up to [`LATEST`].
 pub const PLAN: MigrationPlan = MigrationPlan { latest: LATEST, migrations: &MIGRATIONS };
 
-impl MigrationPlan {
-    /// Checks that the list is contiguous from version 0 and ends at `latest`, and that
-    /// migration 0 -> 1 is this crate's v1 DDL (it defines `catalog_meta`, which every
-    /// version reads the same way).
-    pub fn validate(&self) -> Result<(), CatalogError> {
-        let mut expected = 0u32;
-        for m in self.migrations {
-            if m.from != expected || Some(m.to) != expected.checked_add(1) {
-                return Err(CatalogError::MigrationFailed {
-                    from: m.from,
-                    to: m.to,
-                    detail: format!("plan is not contiguous: expected a migration from {expected}"),
-                });
-            }
-            expected = m.to;
-        }
-        if expected != self.latest || self.latest == 0 {
-            return Err(CatalogError::MigrationFailed {
-                from: expected,
-                to: self.latest,
-                detail: format!("plan ends at version {expected}, not {}", self.latest),
-            });
-        }
-        if self.migrations.first().map(|m| m.sql) != Some(V1_SQL) {
-            return Err(CatalogError::MigrationFailed {
-                from: 0,
-                to: 1,
-                detail: "migration 0 -> 1 is not the v1 DDL".into(),
-            });
-        }
-        Ok(())
+/// Checks a plan for the catalog: contiguous from version 0 to a `latest` of at least 1
+/// (`MigrationPlan::validate`), and migration 0 -> 1 is this crate's v1 DDL (it defines
+/// `catalog_meta`, which every version reads the same way).
+pub fn validate_plan(plan: &MigrationPlan) -> Result<(), CatalogError> {
+    plan.validate()?;
+    if plan.latest == 0 || plan.migrations.first().map(|m| m.sql) != Some(V1_SQL) {
+        return Err(CatalogError::MigrationFailed {
+            from: 0,
+            to: 1,
+            detail: "migration 0 -> 1 is not the v1 DDL".into(),
+        });
     }
+    Ok(())
 }
 
 /// How the catalog is opened.
@@ -220,6 +189,34 @@ impl From<rusqlite::Error> for CatalogError {
     }
 }
 
+impl From<SchemaError> for CatalogError {
+    fn from(e: SchemaError) -> CatalogError {
+        match e {
+            SchemaError::SchemaTooNew { found, supported } => CatalogError::TooNew { found, supported },
+            SchemaError::SchemaInvalid(d) => CatalogError::Corrupt(escaped(&d)),
+            SchemaError::MigrationFailed { from, to, detail } => {
+                CatalogError::MigrationFailed { from, to, detail: escaped(&detail) }
+            }
+            SchemaError::Sqlite(e) => CatalogError::from(e),
+            SchemaError::AppendOnly => CatalogError::Constraint("append_only".into()),
+            SchemaError::PathUnsupported(_) => {
+                CatalogError::PathInvalid("the catalog path is not valid Unicode".into())
+            }
+            SchemaError::Store(e) => match e {
+                StoreError::SymlinkRefused => {
+                    CatalogError::PathInvalid("the catalog file or a companion file is a symbolic link".into())
+                }
+                StoreError::NotRegularFile => {
+                    CatalogError::PathInvalid("the catalog file or a companion file is not a regular file".into())
+                }
+                StoreError::PathTooLong { .. } => CatalogError::PathInvalid("the catalog path is too long".into()),
+                other => CatalogError::Io(escaped(&other.to_string())),
+            },
+            other => CatalogError::Io(escaped(&other.to_string())),
+        }
+    }
+}
+
 fn io_err(what: &str, e: std::io::Error) -> CatalogError {
     CatalogError::Io(format!("{what}: {e}"))
 }
@@ -280,7 +277,7 @@ impl Catalog {
     /// [`Catalog::open`] with explicit options.
     pub fn open_with(path: &Path, mode: Mode, opts: OpenOptions<'_>) -> Result<Catalog, CatalogError> {
         let OpenOptions { source, owner, plan, busy_timeout } = opts;
-        plan.validate()?;
+        validate_plan(&plan)?;
         if let Some(o) = owner {
             if o.is_empty() || o.len() > MAX_OWNER_BYTES {
                 return Err(CatalogError::Constraint(format!("owner label must be 1 to {MAX_OWNER_BYTES} bytes")));
@@ -293,7 +290,7 @@ impl Catalog {
         let dir = file.parent().map(Path::to_path_buf).unwrap_or_default();
         let name = file_name(&file)?;
         // SQLite has now opened any -wal/-shm; check them again.
-        check_companions(&dir, &name)?;
+        check_companions_of(&dir, &name)?;
         let version = match mode {
             Mode::ReadOnly => {
                 if found == 0 {
@@ -308,8 +305,15 @@ impl Catalog {
                 found
             }
             Mode::ReadWrite => {
+                // The whole file must be sound before WAL is set or a row is carried forward.
+                quick_check(&conn)?;
                 set_wal(&conn)?;
-                let v = if found < plan.latest { migrate(&mut conn, &plan, source, owner)? } else { found };
+                let v = if found < plan.latest {
+                    let mut hooks = CatalogHooks { source, owner };
+                    migrate_with(&mut conn, &plan, &mut hooks)?.0
+                } else {
+                    found
+                };
                 // Checked: a normal close may now checkpoint the WAL into the catalog file.
                 set_config(&conn, DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, false, "no_ckpt_on_close")?;
                 v
@@ -350,14 +354,16 @@ impl Catalog {
         self.mode
     }
 
-    /// The connection, for the sibling leaves (registration, indexing, query, check). Raw
-    /// statements still meet the table constraints.
-    pub fn connection(&self) -> &Connection {
+    /// The connection, for the sibling leaves of this crate (registration, indexing, query,
+    /// check). Raw statements still meet the table constraints.
+    #[allow(dead_code)]
+    pub(crate) fn connection(&self) -> &Connection {
         &self.conn
     }
 
     /// Mutable access to the connection (transactions need it).
-    pub fn connection_mut(&mut self) -> &mut Connection {
+    #[allow(dead_code)]
+    pub(crate) fn connection_mut(&mut self) -> &mut Connection {
         &mut self.conn
     }
 
@@ -599,6 +605,28 @@ fn parse_enum<T>(s: &str, parse: fn(&str) -> Option<T>, name: &str) -> Result<T,
     parse(s).ok_or_else(|| corrupt_value(name))
 }
 
+/// The `timestamp` shape of the table check: `YYYY-MM-DDTHH:MM:SS`, then digits, `T`, `Z`,
+/// `:`, `.` or `-`, ending in `Z`; 20 to 40 bytes.
+fn is_timestamp(s: &str) -> bool {
+    let b = s.as_bytes();
+    let digit = |i: usize| b.get(i).is_some_and(u8::is_ascii_digit);
+    let at = |i: usize, c: u8| b.get(i) == Some(&c);
+    (20..=40).contains(&b.len())
+        && [0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18].iter().all(|i| digit(*i))
+        && at(4, b'-')
+        && at(7, b'-')
+        && at(10, b'T')
+        && at(13, b':')
+        && at(16, b':')
+        && b.last() == Some(&b'Z')
+        && b.iter().all(|c| c.is_ascii_digit() || b"TZ:.-".contains(c))
+}
+
+/// The `value_literal` shape of the table check: 1 to 64 of `0-9 . e E + -`.
+fn is_value_literal(s: &str) -> bool {
+    (1..=64).contains(&s.len()) && s.bytes().all(|c| c.is_ascii_digit() || b".eE+-".contains(&c))
+}
+
 fn decode_project(r: &rusqlite::Row<'_>) -> Result<ProjectRow, CatalogError> {
     let project_id = uuid(&text(r, 0)?, "project_id")?;
     let handle = bounded(text(r, 1)?, 256, "handle")?;
@@ -660,7 +688,19 @@ fn decode_entry(r: &rusqlite::Row<'_>) -> Result<CatalogEntryRow, CatalogError> 
         entry_status: parse_enum(&text(r, 23)?, EntryStatus::parse, "entry_status")?,
     };
     // The row-level rules of the table, checked again on read (a file may bypass checks).
-    if row.uec_class == UecClass::Uec0 && row.value.is_some() {
+    if !is_timestamp(row.timestamp.raw()) {
+        return Err(corrupt_value("timestamp"));
+    }
+    if row.value.as_ref().is_some_and(|v| !is_value_literal(v.literal.raw())) {
+        return Err(corrupt_value("value_literal"));
+    }
+    let any_label = row.labels.claimed || row.labels.declared_input || row.labels.uncharacterized_input;
+    if row.uec_class == UecClass::Uec0 && (row.value.is_some() || any_label) {
+        return Err(corrupt_value("uec_class"));
+    }
+    if matches!(row.uec_class, UecClass::Uec2 | UecClass::Uec3)
+        && (row.labels.declared_input || row.labels.uncharacterized_input)
+    {
         return Err(corrupt_value("uec_class"));
     }
     if row.labels.claimed && row.uec_class != UecClass::Uec1 {
@@ -719,7 +759,7 @@ fn locate(path: &Path, mode: Mode) -> Result<PathBuf, CatalogError> {
             if mode == Mode::ReadOnly {
                 return Err(CatalogError::Missing("no catalog file at the configured location".into()));
             }
-            check_companions(&dir, &name)?;
+            check_companions_of(&dir, &name)?;
             // Exclusive create: never follows a link planted at the path. A file that appeared
             // in between is opened and checked like any other.
             match std::fs::OpenOptions::new().write(true).create_new(true).open(&file) {
@@ -730,31 +770,8 @@ fn locate(path: &Path, mode: Mode) -> Result<PathBuf, CatalogError> {
         }
         Err(e) => return Err(io_err("reading the catalog file", e)),
     }
-    check_companions(&dir, &name)?;
+    check_companions_of(&dir, &name)?;
     Ok(file)
-}
-
-/// Refuses companion files that are links or not regular files, and a non-empty rollback
-/// journal (SQLite would roll it back into the catalog on the first read).
-fn check_companions(dir: &Path, name: &str) -> Result<(), CatalogError> {
-    for suffix in COMPANIONS {
-        let p = dir.join(format!("{name}{suffix}"));
-        let meta = match std::fs::symlink_metadata(&p) {
-            Ok(m) => m,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
-            Err(e) => return Err(io_err("reading a catalog companion file", e)),
-        };
-        if meta.file_type().is_symlink() {
-            return Err(CatalogError::PathInvalid(format!("catalog companion file {suffix} is a symbolic link")));
-        }
-        if !meta.is_file() {
-            return Err(CatalogError::PathInvalid(format!("catalog companion file {suffix} is not a regular file")));
-        }
-        if suffix == "-journal" && meta.len() > 0 {
-            return Err(CatalogError::Corrupt("leftover rollback journal next to the catalog".into()));
-        }
-    }
-    Ok(())
 }
 
 fn connect(file: &Path, mode: Mode, busy: Duration) -> Result<Connection, CatalogError> {
@@ -770,78 +787,7 @@ fn connect(file: &Path, mode: Mode, busy: Duration) -> Result<Connection, Catalo
     Ok(conn)
 }
 
-#[cfg(windows)]
-fn open_path(path: &Path, flags: OpenFlags) -> Result<Connection, CatalogError> {
-    let Some(s) = path.to_str() else {
-        return Err(CatalogError::PathInvalid("the catalog path is not valid Unicode".into()));
-    };
-    let verbatim = fid_store::layout::windows_verbatim(s);
-    Ok(Connection::open_with_flags_and_vfs(verbatim, flags, "win32-longpath")?)
-}
-
-#[cfg(not(windows))]
-fn open_path(path: &Path, flags: OpenFlags) -> Result<Connection, CatalogError> {
-    if path.as_os_str().len() > UNIX_MAX_DB_PATH_BYTES {
-        return Err(CatalogError::PathInvalid(format!(
-            "the catalog path is longer than {UNIX_MAX_DB_PATH_BYTES} bytes"
-        )));
-    }
-    Ok(Connection::open_with_flags(path, flags)?)
-}
-
-/// A hardening failure: a file SQLite reports as corrupt stays `stats.catalog_corrupt`.
-fn harden_err(name: &str, e: rusqlite::Error) -> CatalogError {
-    match CatalogError::from(e) {
-        c @ CatalogError::Corrupt(_) => c,
-        other => CatalogError::Io(format!("hardening {name}: {other}")),
-    }
-}
-
-fn set_config(conn: &Connection, what: DbConfig, on: bool, name: &str) -> Result<(), CatalogError> {
-    let fail = |e: rusqlite::Error| harden_err(name, e);
-    let now = conn.set_db_config(what, on).map_err(fail)?;
-    if now != on || conn.db_config(what).map_err(fail)? != on {
-        return Err(CatalogError::Io(format!("hardening: {name} did not become {on}")));
-    }
-    Ok(())
-}
-
-/// Connection safety settings, applied before the connection reads the file and read back.
-fn harden(conn: &Connection) -> Result<(), CatalogError> {
-    set_config(conn, DbConfig::SQLITE_DBCONFIG_DEFENSIVE, true, "defensive")?;
-    set_config(conn, DbConfig::SQLITE_DBCONFIG_TRUSTED_SCHEMA, false, "trusted_schema")?;
-    set_config(conn, DbConfig::SQLITE_DBCONFIG_WRITABLE_SCHEMA, false, "writable_schema")?;
-    set_config(conn, DbConfig::SQLITE_DBCONFIG_ENABLE_ATTACH_CREATE, false, "attach_create")?;
-    set_config(conn, DbConfig::SQLITE_DBCONFIG_ENABLE_ATTACH_WRITE, false, "attach_write")?;
-    set_config(conn, DbConfig::SQLITE_DBCONFIG_ENABLE_TRIGGER, true, "enable_trigger")?;
-    set_config(conn, DbConfig::SQLITE_DBCONFIG_ENABLE_FKEY, true, "enable_fkey")?;
-    // A refused file must not be checkpointed; a write open turns this off after the checks.
-    set_config(conn, DbConfig::SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE, true, "no_ckpt_on_close")?;
-    conn.execute_batch("PRAGMA foreign_keys=ON; PRAGMA trusted_schema=OFF; PRAGMA cell_size_check=ON;")
-        .map_err(|e| harden_err("pragmas", e))?;
-    for (pragma, want) in [("foreign_keys", 1i64), ("trusted_schema", 0), ("cell_size_check", 1)] {
-        let got: i64 =
-            conn.query_row(&format!("PRAGMA {pragma}"), [], |r| r.get(0)).map_err(|e| harden_err(pragma, e))?;
-        if got != want {
-            return Err(CatalogError::Io(format!("hardening: {pragma} is {got}, expected {want}")));
-        }
-    }
-    Ok(())
-}
-
-fn set_wal(conn: &Connection) -> Result<(), CatalogError> {
-    let answer: String = conn.query_row("PRAGMA journal_mode=WAL", [], |r| r.get(0))?;
-    if answer.eq_ignore_ascii_case("wal") {
-        Ok(())
-    } else {
-        Err(CatalogError::Io(format!("journal mode stayed {}", escaped(&answer))))
-    }
-}
-
 // ------------------------------------------------------------------ schema checks
-
-/// One `sqlite_master` row: type, name, table, SQL text.
-pub type SchemaObject = (String, String, String, Option<String>);
 
 fn schema_objects(conn: &Connection, filter: &str) -> Result<Vec<SchemaObject>, rusqlite::Error> {
     let sql = format!("SELECT type, name, tbl_name, sql FROM sqlite_master {filter} ORDER BY type, name, tbl_name");
@@ -852,20 +798,6 @@ fn schema_objects(conn: &Connection, filter: &str) -> Result<Vec<SchemaObject>, 
 
 const META_FILTER: &str = "WHERE name = 'catalog_meta' OR tbl_name = 'catalog_meta'";
 
-/// The schema objects the plan's DDL produces at `version`, built in a private in-memory
-/// database.
-pub fn expected_objects(plan: &MigrationPlan, version: u32) -> Result<Vec<SchemaObject>, CatalogError> {
-    let mem = Connection::open_in_memory()?;
-    for m in plan.migrations.iter().filter(|m| m.to <= version) {
-        mem.execute_batch(m.sql).map_err(|e| CatalogError::MigrationFailed {
-            from: m.from,
-            to: m.to,
-            detail: format!("building the expected schema: {e}"),
-        })?;
-    }
-    Ok(schema_objects(&mem, "")?)
-}
-
 /// The checks every open runs before anything is written: root pages, the version (read
 /// only after `catalog_meta` is known to be the v1 table), a newer version refused, then the
 /// full object comparison. A file SQLite reports as corrupt is `stats.catalog_corrupt`.
@@ -875,21 +807,8 @@ fn checked_version(conn: &Connection, plan: &MigrationPlan) -> Result<u32, Catal
     if found > plan.latest {
         return Err(CatalogError::TooNew { found, supported: plan.latest });
     }
-    verify_schema(conn, plan, found)?;
+    verify_schema(conn, plan, SchemaVersion(found))?;
     Ok(found)
-}
-
-fn check_root_pages(conn: &Connection) -> Result<(), CatalogError> {
-    let mut st = conn.prepare("SELECT type, name, rootpage FROM sqlite_master WHERE type IN ('table', 'index')")?;
-    let rows =
-        st.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, Option<i64>>(2)?)))?;
-    for row in rows {
-        let (kind, name, root) = row?;
-        if !matches!(root, Some(n) if n > 0) {
-            return Err(CatalogError::Corrupt(format!("{kind} {} has no root page", escaped(&name))));
-        }
-    }
-    Ok(())
 }
 
 /// Reads the schema version: 0 for a file without any schema object, else the version in
@@ -933,96 +852,46 @@ fn read_meta(conn: &Connection) -> Result<Meta, CatalogError> {
     Ok(Meta { version, catalog_id, owner })
 }
 
-/// Checks that the file's schema objects are exactly those of `version` under `plan`.
-pub fn verify_schema(conn: &Connection, plan: &MigrationPlan, version: u32) -> Result<(), CatalogError> {
-    let want = expected_objects(plan, version)?;
-    let got = schema_objects(conn, "")?;
-    if got == want {
-        return Ok(());
-    }
-    let describe = |o: &SchemaObject| format!("{} {} on {}", escaped(&o.0), escaped(&o.1), escaped(&o.2));
-    let detail = if let Some(o) = want.iter().find(|o| !got.iter().any(|g| g.0 == o.0 && g.1 == o.1)) {
-        format!("missing {}", describe(o))
-    } else if let Some(o) = got.iter().find(|o| !want.iter().any(|w| w.0 == o.0 && w.1 == o.1)) {
-        format!("unexpected {}", describe(o))
-    } else if let Some(o) = got.iter().find(|o| !want.contains(o)) {
-        format!("changed {}", describe(o))
-    } else {
-        "schema objects differ".to_string()
-    };
-    Err(CatalogError::Corrupt(format!("{detail} (expected the schema of version {version})")))
+/// The migration hooks of the catalog: the version lives in the single `catalog_meta` row,
+/// which migration 0 -> 1 writes with a new UUIDv7 catalog ID.
+struct CatalogHooks<'a> {
+    source: &'a mut dyn ObservationSource,
+    owner: Option<&'a str>,
 }
 
-fn quick_check(conn: &Connection) -> Result<(), CatalogError> {
-    let mut st = conn.prepare("PRAGMA quick_check")?;
-    let rows = st.query_map([], |r| r.get::<_, String>(0))?;
-    let answers = rows.collect::<Result<Vec<String>, _>>()?;
-    if answers != ["ok"] {
-        let first = answers.first().map(|s| escaped(s)).unwrap_or_default();
-        return Err(CatalogError::Corrupt(format!("quick_check: {first}")));
-    }
-    Ok(())
-}
+impl MigrationHooks for CatalogHooks<'_> {
+    type Error = CatalogError;
+    const VERSION_TABLE: &'static str = "catalog_meta";
 
-/// Applies every migration after the current version in one `BEGIN IMMEDIATE` transaction
-/// and records the version reached; any failure rolls the whole transaction back.
-fn migrate(
-    conn: &mut Connection,
-    plan: &MigrationPlan,
-    source: &mut dyn ObservationSource,
-    owner: Option<&str>,
-) -> Result<u32, CatalogError> {
-    let fail = |from: u32, to: u32, detail: String| CatalogError::MigrationFailed { from, to, detail };
-    let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-    // Re-read under the write transaction: this is the version the migrations start from.
-    let current = checked_version(&tx, plan)?;
-    if current > 0 {
-        // Existing rows are about to be carried forward: the file must be sound.
-        quick_check(&tx)?;
+    fn checked_version(&mut self, conn: &Connection, plan: &MigrationPlan) -> Result<SchemaVersion, CatalogError> {
+        checked_version(conn, plan).map(SchemaVersion)
     }
-    for m in plan.migrations.iter().filter(|m| m.from >= current) {
-        tx.execute_batch(m.sql).map_err(|e| fail(m.from, m.to, escaped(&e.to_string())))?;
-        if tx.is_autocommit() {
-            return Err(fail(m.from, m.to, "migration SQL ended the transaction".into()));
-        }
+
+    fn read_version(&mut self, conn: &Connection) -> Result<SchemaVersion, CatalogError> {
+        read_version(conn).map(SchemaVersion)
+    }
+
+    fn record(&mut self, conn: &Connection, m: &Migration) -> Result<(), CatalogError> {
         if m.from == 0 {
-            let (ms, bits) = source.draw_v7().map_err(|e| fail(0, 1, format!("catalog ID: {e}")))?;
-            let id = uuid_v7(ms, &bits).map_err(|e| fail(0, 1, format!("catalog ID: {e}")))?;
-            tx.execute(
+            let (ms, bits) = self.source.draw_v7().map_err(|e| self.failed(0, 1, format!("catalog ID: {e}")))?;
+            let id = uuid_v7(ms, &bits).map_err(|e| self.failed(0, 1, format!("catalog ID: {e}")))?;
+            conn.execute(
                 "INSERT INTO catalog_meta (singleton, schema_version, catalog_id, owner) VALUES (1, ?1, ?2, ?3)",
-                params![m.to, id.to_string(), owner],
+                params![m.to, id.to_string(), self.owner],
             )
-            .map_err(|e| fail(0, 1, format!("writing catalog_meta: {e}")))?;
-        } else {
-            let n = tx
-                .execute("UPDATE catalog_meta SET schema_version = ?1 WHERE singleton = 1", params![m.to])
-                .map_err(|e| fail(m.from, m.to, format!("recording version {}: {e}", m.to)))?;
-            if n != 1 {
-                return Err(fail(m.from, m.to, format!("recording version {}: {n} rows changed", m.to)));
-            }
+            .map_err(|e| self.failed(0, 1, format!("writing catalog_meta: {e}")))?;
+            return Ok(());
         }
-    }
-    let violations: i64 = {
-        let mut st = tx.prepare("PRAGMA foreign_key_check")?;
-        let mut rows = st.query([])?;
-        let mut n = 0i64;
-        while rows.next()?.is_some() {
-            n = n.saturating_add(1);
+        let n = conn
+            .execute("UPDATE catalog_meta SET schema_version = ?1 WHERE singleton = 1", params![m.to])
+            .map_err(|e| self.failed(m.from, m.to, format!("recording version {}: {e}", m.to)))?;
+        if n != 1 {
+            return Err(self.failed(m.from, m.to, format!("recording version {}: {n} rows changed", m.to)));
         }
-        n
-    };
-    if violations != 0 {
-        return Err(fail(current, plan.latest, format!("{violations} foreign key violations")));
+        Ok(())
     }
-    // The result must be exactly the schema of the new version.
-    let reached = read_version(&tx).map_err(|e| fail(current, plan.latest, e.to_string()))?;
-    if reached != plan.latest {
-        return Err(fail(current, plan.latest, format!("catalog_meta reached {reached}")));
+
+    fn failed(&self, from: u32, to: u32, detail: String) -> CatalogError {
+        CatalogError::MigrationFailed { from, to, detail: escaped(&detail) }
     }
-    verify_schema(&tx, plan, reached).map_err(|e| fail(current, plan.latest, e.to_string()))?;
-    tx.commit().map_err(|e| match CatalogError::from(e) {
-        CatalogError::Locked => CatalogError::Locked,
-        other => fail(current, plan.latest, format!("commit: {other}")),
-    })?;
-    Ok(plan.latest)
 }

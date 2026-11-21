@@ -49,6 +49,8 @@ CREATE TABLE entry (
     CHECK ((value_literal IS NULL) = (unit IS NULL) AND (value_literal IS NULL) = (si_value IS NULL)),
     CHECK (uec_class <> 'UEC-0' OR value_literal IS NULL),
     CHECK (claimed = 0 OR uec_class = 'UEC-1'),
+    CHECK (uec_class NOT IN ('UEC-2', 'UEC-3') OR (declared_input = 0 AND uncharacterized_input = 0)),
+    CHECK (uec_class <> 'UEC-0' OR (claimed = 0 AND declared_input = 0 AND uncharacterized_input = 0)),
     CHECK (decision_outcome = 'NOT_DECIDABLE' OR rule_id IS NOT NULL)
 ) STRICT;
 

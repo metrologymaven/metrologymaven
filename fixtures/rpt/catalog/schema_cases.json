@@ -1133,6 +1133,933 @@
   },
   {
    "expect": "refuse",
+   "name": "uec2_declared_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "a declared input downgrades to UEC-1",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec3_declared_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-3"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "a declared input downgrades to UEC-1",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec2_uncharacterized_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "an uncharacterized contributor downgrades to UEC-1",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec3_uncharacterized_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-3"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "an uncharacterized contributor downgrades to UEC-1",
+   "setup": []
+  },
+  {
+   "expect": "accept",
+   "name": "uec1_declared_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UEC-1 may rest on a declared input",
+   "setup": []
+  },
+  {
+   "expect": "accept",
+   "name": "uec1_uncharacterized_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UEC-1 may rest on an uncharacterized contributor",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec0_claimed",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UEC-0 sets no labels",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec0_declared_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UEC-0 sets no labels",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec0_uncharacterized_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UEC-0 sets no labels",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
    "name": "claimed_missing",
    "row": [
     {

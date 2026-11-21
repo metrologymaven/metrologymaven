@@ -66,7 +66,7 @@ The catalog is a local SQLite file, separate from every project database, that i
 - **Errors:** `stats.catalog_too_new`, `stats.catalog_corrupt`, `stats.catalog_locked`.
 - **Determinism:** D0; schema and migrations are fixed text.
 - **Performance budget:** open and version check under 20 ms [unverified until measured].
-- **Crate:** `fid-catalog` (module `schema`, location setting in module `location`), using `rusqlite` with the pin and features of D-043 (D-047, proposed).
+- **Crate:** `fid-catalog` (module `schema`, location setting in module `location`), using `rusqlite` with the pin and features of D-043 (D-047) and `fid-store`'s shared SQLite hardening and migration runner (#405).
 
 ## Test fixtures
 
@@ -79,7 +79,7 @@ The catalog is a local SQLite file, separate from every project database, that i
 ## Open questions
 
 - Resolved from the parent: the catalog stores values with digests, not only references.
-- Built (2026-11-21): schema v1 is `catalog_meta`, `project`, `entry` and the (part, characteristic, timestamp, record ID) index; v2 adds `entry_tag` and the (project, journal position) index, so AC-2 has a real migration. `entry` also stores `journal_seq` (the journal position the second index needs) and the D-045 evidence labels `claimed`, `declared_input`, `uncharacterized_input` and `interpretation`, with no defaults; table checks refuse a claimed value that is not UEC-1 and a UEC-0 entry with a value.
+- Built (2026-11-21): schema v1 is `catalog_meta`, `project`, `entry` and the (part, characteristic, timestamp, record ID) index; v2 adds `entry_tag` and the (project, journal position) index, so AC-2 has a real migration. `entry` also stores `journal_seq` (the journal position the second index needs) and the D-045 evidence labels `claimed`, `declared_input`, `uncharacterized_input` and `interpretation`, with no defaults; table checks (re-checked on read) refuse a claimed value that is not UEC-1, a UEC-2 or UEC-3 entry with a declared or uncharacterized input, and a UEC-0 entry with a value or any label. A write open runs `PRAGMA quick_check` before it sets WAL mode or migrates.
 - Built: extra error codes `stats.catalog_read_only` (a read-only open of an older schema, or a write on a read-only open), `stats.catalog_missing`, `stats.catalog_path_invalid`, `stats.catalog_migration_failed`, `stats.catalog_constraint` and `stats.catalog_io`. `stats.catalog_path` holds an absolute path, or `""` for `<per-user data directory>/fiducial/catalog/catalog.sqlite`.
 - Built: the `catalog_meta` owner is an optional label given at creation; who the owner is (a principal, a machine) is for `RPT.CATALOG.SHARE` to settle.
 

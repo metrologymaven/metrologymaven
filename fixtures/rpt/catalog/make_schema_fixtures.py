@@ -34,8 +34,9 @@ Rules (spec/rpt/catalog/store/schema/NODE.md, D-045, UNC.UEC.CLASS, GDT.CHAR.REC
     entry_status ok|unverified|stale|unavailable; claimed, declared_input,
     uncharacterized_input are 0 or 1, never defaulted;
   - a claimed value (declared or specification-derived basis) is UEC-1, so it never carries a
-    measured class (D-045: claimed values never look measured); a UEC-0 entry has no value;
-    a decided outcome names its rule;
+    measured class (D-045: claimed values never look measured); UEC-2 and UEC-3 rest on no
+    declared and no uncharacterized input (UNC.UEC.CLASS: either one downgrades to UEC-1);
+    a UEC-0 entry has no value and sets no label at all; a decided outcome names its rule;
   - journal_entry_hash is "sha256:" + 64 lowercase hex digits; journal_seq >= 1;
   - timestamp is an RFC 3339 UTC instant ending in Z, 20..40 characters;
   - columns are typed (STRICT): text is never a blob, a real is never non-numeric text.
@@ -313,6 +314,11 @@ def py_rules(row, existing):
         return "refuse"
     if get("claimed") == 1 and get("uec_class") != "UEC-1":
         return "refuse"
+    labels = (get("claimed"), get("declared_input"), get("uncharacterized_input"))
+    if get("uec_class") in ("UEC-2", "UEC-3") and (labels[1] == 1 or labels[2] == 1):
+        return "refuse"
+    if get("uec_class") == "UEC-0" and any(v == 1 for v in labels):
+        return "refuse"
     if get("decision_outcome") != "NOT_DECIDABLE" and get("rule_id") is None:
         return "refuse"
     if (get("project_id"), get("record_id")) in existing:
@@ -345,6 +351,24 @@ CASES = [
     ("uec0_without_value", with_(uec_class=T("UEC-0"), value_literal=NULL, unit=NULL, si_value=NULL), [],
      "accept", "UEC-0 carries no value"),
     ("uec0_with_value", with_(uec_class=T("UEC-0")), [], "refuse", "UEC-0 carries no value"),
+    ("uec2_declared_input", with_(declared_input=I(1)), [], "refuse",
+     "a declared input downgrades to UEC-1"),
+    ("uec3_declared_input", with_(uec_class=T("UEC-3"), declared_input=I(1)), [], "refuse",
+     "a declared input downgrades to UEC-1"),
+    ("uec2_uncharacterized_input", with_(uncharacterized_input=I(1)), [], "refuse",
+     "an uncharacterized contributor downgrades to UEC-1"),
+    ("uec3_uncharacterized_input", with_(uec_class=T("UEC-3"), uncharacterized_input=I(1)), [], "refuse",
+     "an uncharacterized contributor downgrades to UEC-1"),
+    ("uec1_declared_input", with_(uec_class=T("UEC-1"), declared_input=I(1)), [], "accept",
+     "UEC-1 may rest on a declared input"),
+    ("uec1_uncharacterized_input", with_(uec_class=T("UEC-1"), uncharacterized_input=I(1)), [], "accept",
+     "UEC-1 may rest on an uncharacterized contributor"),
+    ("uec0_claimed", with_(uec_class=T("UEC-0"), claimed=I(1), value_literal=NULL, unit=NULL, si_value=NULL), [], "refuse",
+     "UEC-0 sets no labels"),
+    ("uec0_declared_input", with_(uec_class=T("UEC-0"), declared_input=I(1), value_literal=NULL, unit=NULL, si_value=NULL), [], "refuse",
+     "UEC-0 sets no labels"),
+    ("uec0_uncharacterized_input", with_(uec_class=T("UEC-0"), uncharacterized_input=I(1), value_literal=NULL, unit=NULL, si_value=NULL), [],
+     "refuse", "UEC-0 sets no labels"),
     ("claimed_missing", with_(claimed=NULL), [], "refuse", "labels are never defaulted"),
     ("claimed_two", with_(claimed=I(2)), [], "refuse", "labels are 0 or 1"),
     ("claimed_text", with_(claimed=T("yes")), [], "refuse", "STRICT integer column"),
