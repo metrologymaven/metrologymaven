@@ -2,6 +2,7 @@
 
 use core::fmt;
 
+use fid_gdt::chars::interp::{PROVISIONAL_LABEL_KEY, PROVISIONAL_LABEL_TEXT};
 use fid_gdt::chars::record::EvaluationBasis;
 use fid_io_res::trans::model::TranscriptionRecord;
 use fid_kdec::{Decision, Outcome, RuleRef};
@@ -9,6 +10,7 @@ use fid_kunc::{EvidenceClass, UncertaintyStatement};
 use fid_num::err::NumError;
 use fid_num::fmt::{Conversion, FormatterId, Unit};
 use fid_num::kdec::Decimal;
+use fid_types::Digest;
 
 use super::catalog::Catalog;
 use super::locale::LocaleRules;
@@ -149,44 +151,76 @@ impl GaugeId {
 }
 
 /// Whether a result must carry the provisional interpretation label (D-045,
-/// REQ-RPT.MODEL.FMT-015). It can only be read from the stored record, never stated by a
-/// caller: [`InterpretationStatus::of_record_bytes`] (the stored canonical bytes, through
-/// `fid_gdt::requires_provisional_label_bytes`), [`InterpretationStatus::of_record`] (a
-/// parsed `fid_gdt` ResultRecord, `requires_provisional_label`) or
-/// [`InterpretationStatus::of_evidence`] (what `RPT.MODEL.BIND` read from the journaled
-/// record). There is no other constructor and no `Default`, so nothing can call a value
-/// signed off without a record that says so:
+/// REQ-RPT.MODEL.FMT-015), bound to the record it was read from. It can only be read from a
+/// record `RPT.MODEL.BIND` read from the journal, never stated by a caller:
+/// [`InterpretationStatus::of_resolved`] (a resolved `value_binding@1`) or
+/// [`InterpretationStatus::of_result`] (a ResultRecord as of a head). Both take the flag from
+/// BIND's [`Evidence::is_provisional`](crate::bind::Evidence::is_provisional), which reads the
+/// stored bytes with `fid_gdt::requires_provisional_label_bytes`, and carry the SHA-256 of
+/// those stored bytes. [`labels`](super::labels) and [`fmt_outcome`](super::fmt_outcome)
+/// refuse a status whose record digest is not the value's
+/// ([`ValueRecord::record_digest`]), so a status read from one record never labels another.
+/// There is no other constructor and no `Default`:
 ///
 /// ```compile_fail
 /// fn forge() -> fid_report::fmt::InterpretationStatus {
-///     fid_report::fmt::InterpretationStatus { provisional: false }
+///     fid_report::fmt::InterpretationStatus { provisional: false, record: todo!() }
+/// }
+/// ```
+///
+/// Stored bytes alone are not enough either: the bytes reader is private to the crate, so a
+/// hand-made blob such as `{"interpretation":"signed_off",...}` cannot become a status.
+///
+/// ```compile_fail
+/// fn forge(blob: &[u8]) -> fid_report::fmt::InterpretationStatus {
+///     fid_report::fmt::InterpretationStatus::of_record_bytes(blob)
 /// }
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct InterpretationStatus {
     provisional: bool,
+    record: Digest,
 }
 
 impl InterpretationStatus {
     /// From stored canonical record bytes: provisional unless they are a readable
-    /// `fid.gdt-result/2` record signed off in full (anything else fails closed).
-    pub fn of_record_bytes(bytes: &[u8]) -> InterpretationStatus {
-        InterpretationStatus { provisional: fid_gdt::requires_provisional_label_bytes(bytes) }
+    /// `fid.gdt-result/2` record signed off in full (anything else fails closed), bound to
+    /// their SHA-256. Crate-private: outside callers go through BIND's journal reads.
+    #[cfg_attr(not(feature = "test-interpretation"), allow(dead_code))]
+    pub(crate) fn of_record_bytes(bytes: &[u8]) -> InterpretationStatus {
+        InterpretationStatus {
+            provisional: fid_gdt::requires_provisional_label_bytes(bytes),
+            record: Digest::from_bytes(fid_canon::digest_bytes(bytes).0),
+        }
     }
 
-    /// From a parsed ResultRecord.
-    pub fn of_record(record: &fid_gdt::chars::record::ResultRecord) -> InterpretationStatus {
-        InterpretationStatus { provisional: fid_gdt::requires_provisional_label(record) }
+    /// Test hook: [`InterpretationStatus::of_record_bytes`] on hand-made record bytes. Only in
+    /// builds with the `test-interpretation` feature, which shipped builds never enable.
+    #[cfg(feature = "test-interpretation")]
+    #[doc(hidden)]
+    pub fn test_of_record_bytes(bytes: &[u8]) -> InterpretationStatus {
+        InterpretationStatus::of_record_bytes(bytes)
     }
 
-    /// From the evidence `RPT.MODEL.BIND` read from the journaled record.
-    pub fn of_evidence(evidence: &crate::bind::Evidence) -> InterpretationStatus {
-        InterpretationStatus { provisional: evidence.is_provisional() }
+    /// From a resolved value field: the evidence of the record stored at the head, bound to
+    /// the binding's `record_digest` (which resolution checked against the stored bytes).
+    pub fn of_resolved(value: &crate::bind::ResolvedValue) -> InterpretationStatus {
+        InterpretationStatus { provisional: value.evidence().is_provisional(), record: value.binding().record_digest }
+    }
+
+    /// From a ResultRecord as of a journal head, bound to the SHA-256 of its stored bytes.
+    pub fn of_result(view: &crate::bind::ResultView) -> InterpretationStatus {
+        InterpretationStatus { provisional: view.evidence().is_provisional(), record: view.digest() }
     }
 
     /// Whether the label is required.
     pub fn is_provisional(&self) -> bool {
         self.provisional
+    }
+
+    /// The SHA-256 of the stored record this status was read from.
+    pub fn record_digest(&self) -> Digest {
+        self.record
     }
 }
 
@@ -213,7 +247,11 @@ pub struct ValueRecord<'a> {
     pub transcription: Option<&'a TranscriptionRecord>,
     /// The cited gauge (`DIRECT_READING` only).
     pub gauge: Option<GaugeId>,
-    /// Whether the record's GD&T interpretation is provisional (D-045).
+    /// The SHA-256 of the stored record bytes (the `value_binding@1` `record_digest`).
+    pub record_digest: Digest,
+    /// Whether the record's GD&T interpretation is provisional (D-045). Read from the
+    /// record whose digest it carries; formatting refuses it unless that is
+    /// [`ValueRecord::record_digest`] (`interpretation_record_mismatch`).
     pub interpretation: InterpretationStatus,
 }
 
@@ -408,15 +446,13 @@ impl Label {
     }
 }
 
-/// The English text of the provisional label, which no catalog can remove or shorten.
-pub const PROVISIONAL_TEXT: &str = "interpretation: provisional";
-
-/// The provisional label's text: always the English text, followed by a translation in
+/// The provisional label's text: always the English `fid_gdt` text
+/// ([`PROVISIONAL_LABEL_TEXT`]), followed by a translation in
 /// parentheses when the catalog has one, so no locale can remove or shorten it (REQ-015).
 fn provisional_text(catalog: &Catalog) -> String {
-    match catalog.text("gdt.interpretation.provisional") {
-        t if t == PROVISIONAL_TEXT => PROVISIONAL_TEXT.to_owned(),
-        t => format!("{PROVISIONAL_TEXT} ({t})"),
+    match catalog.text(PROVISIONAL_LABEL_KEY) {
+        t if t == PROVISIONAL_LABEL_TEXT => PROVISIONAL_LABEL_TEXT.to_owned(),
+        t => format!("{PROVISIONAL_LABEL_TEXT} ({t})"),
     }
 }
 
@@ -571,20 +607,66 @@ impl ValueText {
     }
 }
 
-/// A decision outcome as text (REQ-RPT.MODEL.FMT-007).
+/// A decision outcome as text (REQ-RPT.MODEL.FMT-007). Fields are private: the only text
+/// accessor is [`OutcomeText::text`], which returns the outcome and rule texts together with
+/// the labels that must be shown with them (REQ-RPT.MODEL.FMT-014, -015). It cannot be built
+/// outside [`fmt_outcome`](super::fmt_outcome), so no outcome text exists without its labels:
+///
+/// ```compile_fail
+/// fn unlabelled(o: fid_report::fmt::OutcomeText) -> fid_report::fmt::OutcomeText {
+///     fid_report::fmt::OutcomeText { labels: Vec::new(), ..o }
+/// }
+/// ```
+///
+/// ```compile_fail
+/// fn bare(o: &fid_report::fmt::OutcomeText) -> &str {
+///     &o.text
+/// }
+/// ```
+///
+/// Control (the one accessor, which compiles):
+///
+/// ```
+/// fn shown(o: &fid_report::fmt::OutcomeText) -> fid_report::fmt::ShownOutcome<'_> {
+///     o.text()
+/// }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct OutcomeText {
-    /// The outcome.
-    pub outcome: Outcome,
-    /// The rule, if any.
-    pub rule: Option<RuleRef>,
+    pub(crate) outcome: Outcome,
+    pub(crate) rule: Option<RuleRef>,
+    pub(crate) text: String,
+    pub(crate) rule_text: Option<String>,
+    pub(crate) labels: Vec<LabelText>,
+}
+
+/// The text of an outcome with the labels that must be shown with it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct ShownOutcome<'a> {
     /// The outcome text (with the `NOT_DECIDABLE` reason).
-    pub text: String,
+    pub text: &'a str,
     /// The rule ID text (`id@version`), if any.
-    pub rule_text: Option<String>,
-    /// Labels that must be shown with the outcome: [`Label::ProvisionalInterpretation`]
-    /// when the record's interpretation is provisional (REQ-RPT.MODEL.FMT-015).
-    pub labels: Vec<LabelText>,
+    pub rule_text: Option<&'a str>,
+    /// The labels, in order: [`Label::ProvisionalInterpretation`] when the record's
+    /// interpretation is provisional (REQ-RPT.MODEL.FMT-015).
+    pub labels: &'a [LabelText],
+}
+
+impl OutcomeText {
+    /// The outcome and rule texts with their labels: the only way to the strings.
+    pub fn text(&self) -> ShownOutcome<'_> {
+        ShownOutcome { text: &self.text, rule_text: self.rule_text.as_deref(), labels: &self.labels }
+    }
+    /// The outcome.
+    pub fn outcome(&self) -> Outcome {
+        self.outcome
+    }
+    /// The rule, if any.
+    pub fn rule(&self) -> Option<&RuleRef> {
+        self.rule.as_ref()
+    }
 }
 
 // ------------------------------------------------------------------ errors

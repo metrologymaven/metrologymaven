@@ -1,7 +1,11 @@
 //! MIR-layer fixture (REQ-RPT.MODEL.FMT-002): floats that reach code outside `fmt` only by
 //! type inference, which neither clippy `disallowed_types` nor the token scan sees. Every
 //! function annotated `// mir` must be reported by `rpt_float_lint.py --mir-selftest`, and
-//! no other. No line names a float type or holds a float literal.
+//! no other. No line names a float type or holds a float literal, except the signature of
+//! `dep::Measure::measure`, which the trait dictates. The last two cases are trait impls,
+//! one of a dependency's trait for a local type and one of a local trait for a foreign type
+//! (`Vec<u8>`): rustc may print the latter as `<std::vec::Vec<u8> as LocalTrait>::...`,
+//! which the MIR layer must attribute and report rather than skip as a `std::` shim.
 
 pub mod fmt;
 
@@ -47,5 +51,21 @@ pub struct Count(pub u32);
 impl Count {
     pub fn next(&self) -> u32 {
         self.0.wrapping_add(1)
+    }
+}
+
+impl Measure for Count {
+    fn measure(&self) -> f64 { // mir
+        dep::LIMIT
+    }
+}
+
+pub trait LocalTrait {
+    fn local_trait_on_foreign_type(&self) -> u64;
+}
+
+impl LocalTrait for Vec<u8> {
+    fn local_trait_on_foreign_type(&self) -> u64 { // mir
+        dep::LIMIT.to_bits() ^ self.len() as u64
     }
 }

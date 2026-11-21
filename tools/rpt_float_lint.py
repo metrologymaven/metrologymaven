@@ -53,16 +53,21 @@ error on every line annotated `clippy` in the fixture. It fails if clippy is mis
    method and no `CValue::Num` binding: a public `f64` field of a dependency's struct, a
    `Vec<f64>` or slice, a trait method, a transitive dependency's type. `--mir` closes that
    gap with the compiler's own types: for every `crates/fid-report*` crate (all features,
-   library target) it asks stable rustc for its MIR (`cargo rustc -- --emit=mir`), where
+   library target of the host, `--profile dev`) it asks stable rustc for its MIR
+   (`cargo rustc --lib --profile dev -- --emit=mir`), where
    every local, temporary, argument and constant carries its inferred type, and reports
    RPT-FLOAT-MIR for each function, closure, constant or promoted body outside the allowed
    files whose MIR names `f32` or `f64` anywhere (types, constants such as `2f64`, calls
    such as `<impl f64>::from_bits`). A body is attributed to its source file by the
-   `<impl at FILE:...>` span rustc prints, by an explicit module path, or (rustc trims
-   unique paths to the bare name) by the files of the crate that define that name; a name
-   that resolves to no file, or to any file outside the allowed ones, is reported (fail
-   closed). Compiler shims for foreign items (`std::`, `core::`, `alloc::`) are skipped:
-   they exist only for a local type, whose own body is scanned. `--mir-selftest` proves
+   `<impl at FILE:...>` span rustc prints, by the self type of a `<T as Trait>::m` path,
+   by an explicit module path, or (rustc trims unique paths to the bare name) by the files
+   of the crate that define that name; a name that resolves to no file, or to any file
+   outside the allowed ones, is reported (fail closed). Only compiler shims (a header with
+   ` - shim`) and drop glue (`drop_in_place`) are skipped: they are generated for a local
+   type, whose own bodies are scanned. Every other path is attributed, whatever crate it
+   starts with, so a local impl of a local trait for `std::vec::Vec<u8>` is still seen.
+   Only the host target's `--lib` is scanned: binaries, build scripts and code under a
+   `cfg(target_arch)` of another target are not. `--mir-selftest` proves
    the layer on the fixture crate `fixtures/rpt/model/fmt/lint/infer` (with its dependency
    `dep`): every function annotated `// mir` must be reported, and nothing else.
 
@@ -87,7 +92,6 @@ MIR_FIXTURE = "fixtures/rpt/model/fmt/lint/infer"
 # Crate-relative files where a float may appear in MIR, per crate directory name.
 MIR_ALLOWED = {"fid-report": ("src/fmt/", "src/json_num.rs")}
 MIR_FLOAT = re.compile(r"(?<![A-Za-z_])f(?:32|64)\b")
-FOREIGN_PREFIXES = ("std::", "core::", "alloc::")
 LINT_SWITCHES = frozenset(["warnings", "all", "style", "disallowed_types", "disallowed_methods"])
 
 FORMAT_MACROS = frozenset(
@@ -763,16 +767,62 @@ def _definers(src_files: dict[str, str], ident: str) -> list[str]:
     return sorted(f for f, t in src_files.items() if pat.search(t) or variant.search(t))
 
 
-def mir_attribution(name: str, src_files: dict[str, str]) -> list[str] | None:
-    """The crate-relative files `name` may belong to (`None`: a foreign shim, skipped)."""
-    if name.startswith(FOREIGN_PREFIXES):
+def is_shim(header: str) -> bool:
+    """A compiler shim (` - shim(...)`) or drop glue (`drop_in_place`): generated for a
+    type whose own bodies are scanned. Nothing else is skipped."""
+    return " - shim" in header or "drop_in_place" in header
+
+
+def _strip_generics(s: str) -> str:
+    """`s` without its balanced `<...>` groups (`std::vec::Vec<u8>` -> `std::vec::Vec`)."""
+    out, depth = [], 0
+    for c in s:
+        if c == "<":
+            depth += 1
+        elif c == ">" and depth:
+            depth -= 1
+        elif not depth:
+            out.append(c)
+    return "".join(out)
+
+
+def _qualified(name: str) -> list[str] | None:
+    """The self type and trait of a `<T as Trait>::rest` path (just `[T]` for `<T>::rest`;
+    `None` for any other name)."""
+    if not name.startswith("<") or name.startswith("<impl at "):
         return None
-    if name.startswith("<") and not name.startswith("<impl at ") and name[1:].startswith(FOREIGN_PREFIXES):
+    depth, split = 0, None
+    for k, c in enumerate(name):
+        if c == "<":
+            depth += 1
+        elif c == ">":
+            depth -= 1
+            if depth == 0:
+                inner = name[1:k]
+                if split is None:
+                    return [inner]
+                return [inner[: split - 1], inner[split - 1 + len(" as ") :]]
+        elif depth == 1 and split is None and name.startswith(" as ", k):
+            split = k
+    return None
+
+
+def mir_attribution(name: str, src_files: dict[str, str], header: str = "") -> list[str] | None:
+    """The crate-relative files `name` may belong to (`None`: a shim, skipped)."""
+    if is_shim(header or name):
         return None
     m = re.search(r"<impl at ([^:>]+(?::[A-Za-z]:)?[^:>]*):\d+:\d+", name)
     if m:
         return [m.group(1).replace("\\", "/")]
-    segs = [g for g in re.sub(r"<[^<>]*>", "", name).split("::") if g and not g.startswith("{")]
+    parts = _qualified(name)
+    if parts is not None:
+        # `<T as Trait>::m` names no file: it is attributed to both the self type and the
+        # trait, and reported unless both are allowed (a foreign `std::vec::Vec<u8>` never is).
+        out: list[str] = []
+        for part in parts:
+            out.extend(mir_attribution(part, src_files) or [])
+        return out
+    segs = [g for g in _strip_generics(name).split("::") if g and not g.startswith("{")]
     if len(segs) >= 2:
         return ["mod:" + segs[0]]
     return _definers(src_files, segs[0]) if segs else []
@@ -800,7 +850,7 @@ def mir_findings(text: str, crate_dir: Path, crate_rel: str, allowed: tuple[str,
     for it in mir_items(text):
         if not MIR_FLOAT.search(it.body) or it.name in seen:
             continue
-        where = mir_attribution(it.name, files)
+        where = mir_attribution(it.name, files, it.header)
         if where is None:
             continue
         if where and all(_allowed(w, crate_rel, allowed) for w in where):
@@ -818,7 +868,8 @@ def emit_mir(crate_dir: Path, cwd: Path, out: Path, package: str, target_dir: Pa
     env = {k: v for k, v in os.environ.items() if not k.startswith(("RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS"))}
     if target_dir is not None:
         env["CARGO_TARGET_DIR"] = str(target_dir)
-    cmd = ["cargo", "rustc", "--quiet", "--lib", "--all-features", "-p", package, "--", f"--emit=mir={out}"]
+    cmd = ["cargo", "rustc", "--quiet", "--lib", "--profile", "dev", "--all-features", "-p", package, "--",
+           f"--emit=mir={out}"]
     p = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=1800)
     if p.returncode != 0 or not out.exists():
         raise RuntimeError(f"cargo rustc --emit=mir failed for {package}:\n{p.stderr[-4000:]}")
@@ -852,6 +903,14 @@ def mir_check(root: Path) -> int:
     return 1 if findings else 0
 
 
+def mir_fn_name(name: str) -> str:
+    """The source function a MIR body name stands for: its last path segment that is not a
+    closure or constant (`f::{closure#0}` -> `f`, `<impl at src/lib.rs:1:1: 1:9>::m` -> `m`,
+    `<Vec<u8> as Tr>::m` -> `m`)."""
+    segs = [g for g in _strip_generics(name).split("::") if g and not g.startswith("{")]
+    return segs[-1] if segs else name
+
+
 def mir_selftest(root: Path) -> int:
     import shutil
     import tempfile
@@ -873,7 +932,7 @@ def mir_selftest(root: Path) -> int:
             print(f"mir-selftest: {e}", file=sys.stderr)
             return 1
         found = mir_findings(text, crate, "", ("src/fmt/",))
-    got = {re.split(r"::|\s", f.message, maxsplit=1)[0] for f in found}
+    got = {mir_fn_name(f.message.split(" (", 1)[0]) for f in found}
     missed, extra = sorted(want - got), sorted(got - want)
     for n in missed:
         print(f"mir-selftest: `{n}` has an inferred float and was not reported", file=sys.stderr)
