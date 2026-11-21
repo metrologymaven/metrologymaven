@@ -117,6 +117,7 @@ fn ac1_good_suite_passes_with_zero_findings() {
     assert!(r.passed(), "{:?}", r.findings);
     assert_eq!(r.cases, 6);
     assert_eq!(coverage(&r), want_coverage(get(&exp, "good_suite")));
+    assert_eq!(r.suite_digest.as_str(), st(get(get(&exp, "good_suite"), "suite_digest")), "oracle's digest");
     // Through the CLI, as the AC states.
     let s = store();
     let mut log = Vec::new();
@@ -126,6 +127,9 @@ fn ac1_good_suite_passes_with_zero_findings() {
     let result = get(&env, "result");
     assert_eq!(get(result, "passed"), &CValue::Bool(true));
     assert!(arr(get(result, "findings")).is_empty());
+    assert_eq!(get(result, "staged"), &CValue::Bool(false));
+    assert_eq!(get(result, "suite_digest"), get(get(&exp, "good_suite"), "suite_digest"));
+    assert_eq!(get(result, "cases"), &CValue::Num(6.0));
     assert_eq!(log.len(), 1);
 }
 
@@ -139,6 +143,7 @@ fn ac2_each_bad_variant_reports_its_code() {
         let r = check_suite(&bundle(&format!("bad/{name}.json")), Some(&table), None).unwrap();
         assert_eq!(rows(&r), want_rows(get(want, "findings")), "{name}");
         assert_eq!(coverage(&r), want_coverage(want), "{name}");
+        assert_eq!(r.suite_digest.as_str(), st(get(want, "suite_digest")), "{name}");
         assert!(!r.passed());
     }
 }
@@ -155,18 +160,25 @@ fn ac3_a_changed_expected_value_needs_a_bump_and_a_changelog_entry() {
     let r = check_suite(&bundle("versioning/changed_same_version.json"), Some(&table), Some(&prev)).unwrap();
     assert_eq!(r.findings[0].code, "version_not_bumped");
     assert!(check_suite(&bundle("versioning/bumped_with_changelog.json"), Some(&table), Some(&prev)).unwrap().passed());
-    // Through the command: the candidate is staged under the released handle.
+    // Through the command. A changed candidate cannot be staged under the released handle
+    // (the handle would name two suites); at 1.1.0 the previous release resolves to 1.0.0.
     let mut s = store();
-    s.stage(bundle("versioning/changed_same_version.json")).unwrap();
+    let e = s.stage(bundle("versioning/changed_same_version.json")).unwrap_err();
+    assert_eq!(e.code(), "handle_conflict");
+    s.stage(bundle("versioning/bumped_without_changelog.json")).unwrap();
     let mut log = Vec::new();
-    let out = invoke_cli(
-        &s,
-        &mut log,
-        &["check-suite", "--suite", "ors-trace-good@1.0.0", "--staged", "--previous", "ors-trace-good@1.0.0", "--json"],
-    );
-    let env = parse_with_limits(&out.stdout, 1 << 20, 16).unwrap();
-    let f = &arr(get(get(&env, "result"), "findings"))[0];
-    assert_eq!(st(get(f, "code")), "version_not_bumped");
+    for args in [
+        &["check-suite", "--suite", "ors-trace-good@1.1.0", "--staged", "--json"][..],
+        &["check-suite", "--suite", "ors-trace-good@1.1.0", "--staged", "--previous", "ors-trace-good@1.0.0", "--json"],
+    ] {
+        let out = invoke_cli(&s, &mut log, args);
+        let env = parse_with_limits(&out.stdout, 1 << 20, 16).unwrap();
+        let result = get(&env, "result");
+        assert_eq!(st(get(result, "previous")), "ors-trace-good@1.0.0", "{args:?}");
+        assert_eq!(get(result, "staged"), &CValue::Bool(true));
+        let f = &arr(get(result, "findings"))[0];
+        assert_eq!((st(get(f, "code")), st(get(f, "field"))), ("version_not_bumped", "changelog"));
+    }
     // A previous release of another suite is unreadable input, not a finding.
     let other = Suite::from_bundle(
         &String::from_utf8(read("bad/licence_proprietary.json"))
@@ -205,7 +217,8 @@ fn ac4_list_suite_returns_name_version_count_licence_and_dmt_digest() {
         for k in ["dmt_digest", "licence", "name", "version"] {
             assert_eq!(get(g, k), get(w, k), "{k}");
         }
-        assert_eq!(st(get(g, "cases")), "6");
+        assert_eq!(get(g, "cases"), get(w, "cases"));
+        assert_eq!(get(g, "cases"), &CValue::Num(6.0), "a JSON integer, as the result schema says");
     }
     let mcp = invoke_mcp(&s, &mut log, "rdl_list_suite", b"{}");
     assert_eq!(mcp.encode().unwrap(), out.stdout, "the MCP and CLI forms print the same bytes");
@@ -228,6 +241,93 @@ fn ac5_exact_replay_of_ac1_and_ac4_is_identical() {
     let mut changed = SuiteStore::new();
     changed.install(good()).unwrap();
     assert_eq!(replay(&log[0], &changed).unwrap(), ReplayOutcome::Divergent);
+}
+
+fn check_result(s: &SuiteStore, args: &[&str]) -> CValue {
+    let out = invoke_cli(s, &mut Vec::new(), args);
+    let env = parse_with_limits(&out.stdout, 1 << 20, 16).unwrap();
+    assert_eq!(st(get(&env, "outcome")), "computed", "{}", String::from_utf8_lossy(&out.stdout));
+    get(&env, "result").clone()
+}
+
+#[test]
+fn a_staged_check_and_a_later_install_under_the_same_handle_are_distinguishable() {
+    let exp = json("expected.json");
+    let (c, b) = (bundle("versioning/bumped_with_changelog.json"), bundle("versioning/bumped_without_changelog.json"));
+    assert_eq!(c.handle(), b.handle());
+    let mut s = store();
+    // C is staged and passes.
+    s.stage(c.clone()).unwrap();
+    let rc = check_result(&s, &["check-suite", "--suite", "ors-trace-good@1.1.0", "--staged", "--json"]);
+    assert_eq!(get(&rc, "passed"), &CValue::Bool(true));
+    assert_eq!(get(&rc, "staged"), &CValue::Bool(true));
+    let want_c = get(get(get(&exp, "versioning"), "bumped_with_changelog"), "suite_digest");
+    assert_eq!(get(&rc, "suite_digest"), want_c);
+    // A different B cannot be installed while C is staged under the handle.
+    assert_eq!(s.install(b.clone()).unwrap_err().code(), "handle_conflict");
+    // Once C is withdrawn, B installs; a candidate can no longer be staged under the handle.
+    s.unstage("ors-trace-good@1.1.0").unwrap();
+    s.install(b.clone()).unwrap();
+    assert_eq!(s.stage(c.clone()).unwrap_err().code(), "handle_conflict");
+    let rb = check_result(&s, &["check-suite", "--suite", "ors-trace-good@1.1.0", "--json"]);
+    assert_eq!(get(&rb, "staged"), &CValue::Bool(false));
+    let want_b = get(get(get(&exp, "versioning"), "bumped_without_changelog"), "suite_digest");
+    assert_eq!(get(&rb, "suite_digest"), want_b);
+    assert_ne!(get(&rb, "suite_digest"), get(&rc, "suite_digest"));
+    assert_eq!(get(&rb, "suite"), get(&rc, "suite"), "same handle, so only digest and staged tell them apart");
+    // Promotion: installing the staged content itself is allowed and checks identically.
+    let mut p = store();
+    p.stage(c.clone()).unwrap();
+    p.install(c).unwrap();
+    let staged = check_result(&p, &["check-suite", "--suite", "ors-trace-good@1.1.0", "--staged", "--json"]);
+    let installed = check_result(&p, &["check-suite", "--suite", "ors-trace-good@1.1.0", "--json"]);
+    assert_eq!(get(&staged, "suite_digest"), get(&installed, "suite_digest"));
+}
+
+#[test]
+fn previous_is_resolved_so_a_revert_cannot_be_hidden_by_picking_an_older_release() {
+    let exp = json("expected.json");
+    let want = get(&exp, "revert");
+    let mut s = store();
+    s.install(bundle("versioning/release_1_1_0.json")).unwrap();
+    s.stage(bundle("versioning/revert_1_2_0.json")).unwrap();
+    // Resolved automatically to 1.1.0: the revert of flatness.001 is caught.
+    let r = check_result(&s, &["check-suite", "--suite", "ors-trace-good@1.2.0", "--staged", "--json"]);
+    assert_eq!(get(&r, "previous"), get(want, "previous"));
+    let got: Vec<Row> = arr(get(&r, "findings"))
+        .iter()
+        .map(|f| {
+            (Some(st(get(f, "case")).to_string()), st(get(f, "code")).to_string(), st(get(f, "field")).to_string())
+        })
+        .collect();
+    assert_eq!(got, want_rows(get(want, "findings")));
+    assert_eq!(got[0].1, "version_not_bumped");
+    // Passing the resolved release is accepted; passing the older 1.0.0 is refused.
+    let same = check_result(
+        &s,
+        &["check-suite", "--suite", "ors-trace-good@1.2.0", "--staged", "--previous", "ors-trace-good@1.1.0", "--json"],
+    );
+    assert_eq!(same, r);
+    let mut log = Vec::new();
+    let env = invoke_mcp(
+        &s,
+        &mut log,
+        "rdl_check_suite",
+        br#"{"suite":"ors-trace-good@1.2.0","staged":true,"previous":"ors-trace-good@1.0.0"}"#,
+    );
+    let details = env.error.unwrap().details.unwrap();
+    assert_eq!(st(get(&details, "ors_error")), "previous_mismatch");
+    assert_eq!(st(get(&details, "field")), "previous");
+    // The oracle shows why: against 1.0.0 the revert would give no finding.
+    assert!(arr(get(want, "findings_against_1_0_0")).is_empty());
+    // With no lower release (the first release), any `previous` is refused.
+    let env = invoke_mcp(
+        &s,
+        &mut log,
+        "rdl_check_suite",
+        br#"{"suite":"ors-trace-good@1.0.0","previous":"ors-trace-good@1.1.0"}"#,
+    );
+    assert_eq!(st(get(&env.error.unwrap().details.unwrap(), "ors_error")), "previous_mismatch");
 }
 
 #[test]
@@ -285,6 +385,19 @@ fn ach1_every_seeded_mutant_is_reported_exactly() {
         assert_eq!(rows(&r), want, "{name}");
         let benign = matches!(get(mu, "benign"), CValue::Bool(true));
         assert_eq!(r.findings.is_empty(), benign, "{name}: a seeded fault must be found, a benign change must not");
+        // Against the seeded fault itself, not only the oracle's output: each mutant seeds one
+        // fault and the checker reports exactly that finding.
+        match get(mu, "seeded") {
+            CValue::Null => assert!(benign, "{name}"),
+            seeded => {
+                let sc = match get(mu, "seeded_case") {
+                    CValue::Null => None,
+                    c => Some(st(c).to_string()),
+                };
+                let sd = arr(seeded);
+                assert_eq!(rows(&r), vec![(sc, st(&sd[0]).to_string(), st(&sd[1]).to_string())], "{name}");
+            }
+        }
         codes.extend(r.findings.iter().map(|f| f.code));
     }
     // All seven finding codes of the leaf (plus case_invalid) are exercised.
@@ -310,7 +423,8 @@ fn unreadable_suites_are_suite_invalid() {
         (g.replace("ors-suite/v1", "ors-suite/v2"), "schema"),
         (g.replace("\"ors-trace-good\"", "\"trace-good\""), "name"),
         (g.replace("\"1.0.0\"", "\"1.0\""), "version"),
-        (g.replace("\"licence\": \"CC-BY-4.0\"", "\"licence\": \"MIT OR Apache-2.0\""), "licence"),
+        (g.replace("\"licence\": \"CC-BY-4.0\"", &format!("\"licence\": \"{}\"", "x".repeat(129))), "licence"),
+        (g.replace("\"licence\": \"CC-BY-4.0\"", "\"licence\": 1"), "licence type"),
         (g.replacen("{", "{\"extra\": 1, ", 1), "unknown"),
     ] {
         let e = Suite::from_json(m.as_bytes(), &[&case]).unwrap_err();
@@ -323,4 +437,12 @@ fn unreadable_suites_are_suite_invalid() {
     assert!(Suite::from_json(dup, &[]).is_err());
     let errors = Suite::from_json(b"x", &[]).unwrap_err().to_string();
     assert!(errors.starts_with("suite_invalid: manifest:"), "{errors}");
+}
+
+#[test]
+fn a_licence_outside_the_spdx_grammar_is_licence_not_open() {
+    let mut b = String::from_utf8(read("bad/licence_proprietary.json")).unwrap();
+    b = b.replace("\"proprietary\"", "\"MIT OR Apache-2.0\"");
+    let r = check_suite(&Suite::from_bundle(b.as_bytes()).unwrap(), Some(&dmt()), None).unwrap();
+    assert_eq!(rows(&r), vec![(None, "licence_not_open".to_string(), "licence".to_string())]);
 }

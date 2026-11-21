@@ -31,6 +31,7 @@ fn store() -> SuiteStore {
     let good =
         String::from_utf8(read("bad/licence_proprietary.json")).unwrap().replace("\"proprietary\"", "\"CC-BY-4.0\"");
     s.install(Suite::from_bundle(good.as_bytes()).unwrap()).unwrap();
+    s.stage(bundle("versioning/bumped_without_changelog.json")).unwrap();
     s
 }
 
@@ -63,13 +64,23 @@ fn registry_definitions_and_schemas_validate_real_values() {
     let mut log = Vec::new();
     for p in [
         r#"{"suite":"ors-trace-good@1.0.0"}"#,
-        r#"{"suite":"ors-trace-good@1.0.0","previous":"ors-trace-good@1.0.0","staged":false}"#,
+        r#"{"suite":"ors-trace-good@1.0.0","staged":false}"#,
+        r#"{"suite":"ors-trace-good@1.1.0","previous":"ors-trace-good@1.0.0","staged":true}"#,
     ] {
         let v = parse_with_limits(p.as_bytes(), 4096, 4).unwrap();
         ok(&check_p, &v, p);
         let env = invoke_mcp(&s, &mut log, "rdl_check_suite", p.as_bytes());
-        ok(&check_r, env.result.as_ref().unwrap(), p);
+        let result = env.result.as_ref().unwrap_or_else(|| panic!("{p}: {:?}", env.error));
+        ok(&check_r, result, p);
     }
+    // A result whose counts were strings, or with no digest, is refused by the schema.
+    let env = invoke_mcp(&s, &mut log, "rdl_check_suite", br#"{"suite":"ors-trace-good@1.0.0"}"#);
+    let CValue::Obj(mut bad) = env.result.unwrap() else { panic!("not an object") };
+    bad.insert("cases".to_string(), CValue::Str("6".to_string()));
+    assert!(check_r.evaluate(&CValue::Obj(bad.clone()), &NoHooks).is_err(), "string count");
+    bad.insert("cases".to_string(), CValue::Num(6.0));
+    bad.remove("suite_digest");
+    assert!(check_r.evaluate(&CValue::Obj(bad), &NoHooks).is_err(), "no suite_digest");
     // A failing result validates too (findings with null and non-null case).
     let table = dmt();
     for name in ["licence_proprietary", "long_note"] {

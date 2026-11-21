@@ -5,7 +5,7 @@
 //! case document per listed case ID. Everything a case says is checked later, as findings
 //! ([`crate::check_suite`]). A refusal here is the command error `suite_invalid`.
 
-use fid_canon::{parse_with_limits, CValue};
+use fid_canon::{digest_bytes, parse_with_limits, to_canonical_bytes, CValue};
 use fid_gps::dmt::SemVer;
 use fid_types::Digest;
 use std::collections::BTreeMap;
@@ -35,6 +35,10 @@ pub const MAX_BUNDLE_BYTES: usize = 64 * 1024 * 1024;
 pub const DEFAULT_LICENCE: &str = "CC-BY-4.0";
 /// Longest case ID or suite name, in bytes.
 pub const MAX_ID: usize = 96;
+/// Longest manifest licence string, in bytes. A longer one, or one holding control or format
+/// characters, is unreadable input; any other string loads and an unopen one is the finding
+/// `licence_not_open` (REQ-006).
+pub const MAX_LICENCE: usize = 128;
 
 /// Every error of the commands. Fields are schema names and indexes only; reasons are
 /// static. No input text appears in an error.
@@ -59,6 +63,17 @@ pub enum OrsError {
         /// Static reason.
         reason: &'static str,
     },
+    /// A suite with this handle is already held with other content, or is already installed
+    /// (staging), so the handle would no longer name one suite.
+    HandleConflict {
+        /// `suite`.
+        field: &'static str,
+        /// Static reason.
+        reason: &'static str,
+    },
+    /// `previous` is not the release the version rule compares against (the highest installed
+    /// release of the same suite below the checked version).
+    PreviousMismatch,
     /// A value this crate built could not be encoded (never expected).
     Internal {
         /// Static reason.
@@ -73,6 +88,8 @@ impl OrsError {
             OrsError::SuiteInvalid { .. } => "suite_invalid",
             OrsError::SuiteNotFound { .. } => "suite_not_found",
             OrsError::BadParams { .. } => "bad_params",
+            OrsError::HandleConflict { .. } => "handle_conflict",
+            OrsError::PreviousMismatch => "previous_mismatch",
             OrsError::Internal { .. } => "internal_error",
         }
     }
@@ -81,7 +98,8 @@ impl OrsError {
     pub fn field(&self) -> &str {
         match self {
             OrsError::SuiteInvalid { field, .. } | OrsError::BadParams { field, .. } => field,
-            OrsError::SuiteNotFound { field } => field,
+            OrsError::SuiteNotFound { field } | OrsError::HandleConflict { field, .. } => field,
+            OrsError::PreviousMismatch => "previous",
             OrsError::Internal { .. } => "result",
         }
     }
@@ -90,6 +108,8 @@ impl OrsError {
         match self {
             OrsError::SuiteInvalid { reason, .. } | OrsError::BadParams { reason, .. } => reason,
             OrsError::SuiteNotFound { .. } => "no suite with this handle",
+            OrsError::HandleConflict { reason, .. } => reason,
+            OrsError::PreviousMismatch => "not the highest installed release below this version",
             OrsError::Internal { reason } => reason,
         }
     }
@@ -165,7 +185,8 @@ pub struct SuiteManifest {
     pub name: String,
     /// The suite version.
     pub version: SemVer,
-    /// The suite licence (an SPDX ID; [`DEFAULT_LICENCE`] when absent).
+    /// The suite licence as declared ([`DEFAULT_LICENCE`] when absent). It need not be an SPDX
+    /// ID: anything outside the open list is the finding `licence_not_open`.
     pub licence: String,
     /// The digest of the DMT table the suite pins.
     pub dmt_digest: Digest,
@@ -229,8 +250,11 @@ impl SuiteManifest {
         let version = SemVer::parse(string(o, "version", "version")?).ok_or_else(|| invalid("version", "not x.y.z"))?;
         let licence = match o.get("licence") {
             None => DEFAULT_LICENCE.to_string(),
-            Some(CValue::Str(s)) if fid_rdl::licence_ok(s) => s.clone(),
-            Some(_) => return Err(invalid("licence", "not a single SPDX ID or LicenseRef")),
+            Some(CValue::Str(s)) if s.len() <= MAX_LICENCE && !s.chars().any(fid_rdl::is_control_or_format) => {
+                s.clone()
+            }
+            Some(CValue::Str(_)) => return Err(invalid("licence", "too long or holds control characters")),
+            Some(_) => return Err(invalid("licence", "not a string")),
         };
         let dmt_digest =
             Digest::parse(string(o, "dmt_digest", "dmt_digest")?).map_err(|_| invalid("dmt_digest", "not a digest"))?;
@@ -276,6 +300,7 @@ impl SuiteManifest {
 pub struct Suite {
     manifest: SuiteManifest,
     cases: BTreeMap<String, CValue>,
+    digest: Digest,
 }
 
 fn case_key(v: &CValue, field: &str) -> Result<String, OrsError> {
@@ -291,8 +316,8 @@ fn case_key(v: &CValue, field: &str) -> Result<String, OrsError> {
 impl Suite {
     /// A suite from a manifest value and case values: every listed ID has exactly one case
     /// document and every document is listed.
-    pub fn from_values(manifest: &CValue, cases: &[CValue]) -> Result<Suite, OrsError> {
-        let manifest = SuiteManifest::from_value(manifest)?;
+    pub fn from_values(manifest_value: &CValue, cases: &[CValue]) -> Result<Suite, OrsError> {
+        let manifest = SuiteManifest::from_value(manifest_value)?;
         if cases.len() != manifest.cases.len() {
             return Err(invalid("cases", "case documents do not match the manifest"));
         }
@@ -306,7 +331,8 @@ impl Suite {
                 return Err(invalid(format!("cases.{i}.case"), "duplicate case document"));
             }
         }
-        Ok(Suite { manifest, cases: map })
+        let digest = suite_digest(manifest_value, &manifest, &map)?;
+        Ok(Suite { manifest, cases: map, digest })
     }
 
     /// A suite from manifest and case file bytes (bounded, duplicate keys refused).
@@ -356,4 +382,27 @@ impl Suite {
     pub fn handle(&self) -> String {
         self.manifest.handle()
     }
+
+    /// The suite digest: SHA-256 of the canonical (RFC 8785) bytes of
+    /// `{"cases": [case documents in manifest order], "manifest": <manifest as given>}`.
+    /// Two suites under one handle with any difference in content have different digests.
+    pub fn digest(&self) -> Digest {
+        self.digest
+    }
+}
+
+fn suite_digest(
+    manifest_value: &CValue,
+    manifest: &SuiteManifest,
+    cases: &BTreeMap<String, CValue>,
+) -> Result<Digest, OrsError> {
+    let mut ordered = Vec::with_capacity(manifest.cases.len());
+    for id in &manifest.cases {
+        ordered.push(cases.get(id).cloned().ok_or_else(|| invalid("cases", "case document missing"))?);
+    }
+    let mut m = BTreeMap::new();
+    m.insert("cases".to_string(), CValue::Arr(ordered));
+    m.insert("manifest".to_string(), manifest_value.clone());
+    let bytes = to_canonical_bytes(&CValue::Obj(m)).map_err(|_| invalid("manifest", "no canonical form"))?;
+    Ok(Digest::from_bytes(digest_bytes(&bytes).0))
 }

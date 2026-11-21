@@ -14,7 +14,8 @@
      "field": "review.reviewers"
     }
    ],
-   "passed": false
+   "passed": false,
+   "suite_digest": "sha256:02aa2a510d033081515c60d8b2949a5d7719585112df75be222236259a7c4972"
   },
   "licence_proprietary": {
    "cases": 6,
@@ -30,7 +31,8 @@
      "field": "licence"
     }
    ],
-   "passed": false
+   "passed": false,
+   "suite_digest": "sha256:b2c8f3ab5cd981f365bf0bf5e4b651e3334eb8087ec4b77fb7a56eac8be37099"
   },
   "long_note": {
    "cases": 6,
@@ -46,7 +48,8 @@
      "field": "note"
     }
    ],
-   "passed": false
+   "passed": false,
+   "suite_digest": "sha256:6eee42c7e74f5c98e4e823b0503a88257ded13348313843a22c1acbfddc93f51"
   },
   "missing_tolerance": {
    "cases": 6,
@@ -62,7 +65,8 @@
      "field": "acceptance_tolerance"
     }
    ],
-   "passed": false
+   "passed": false,
+   "suite_digest": "sha256:990e019df5017e41993f9cfcb1a9fa73bbe36b28fc6d561cd5acbccb023a7bd3"
   },
   "no_citation": {
    "cases": 6,
@@ -78,7 +82,8 @@
      "field": "citations"
     }
    ],
-   "passed": false
+   "passed": false,
+   "suite_digest": "sha256:e2ed518e7818b14a4aa0c3773d259ba93e3e3753cda6578fcf844064603dcccf"
   },
   "one_reviewer": {
    "cases": 6,
@@ -94,7 +99,8 @@
      "field": "review.reviewers"
     }
    ],
-   "passed": false
+   "passed": false,
+   "suite_digest": "sha256:a35eeea9290cb763efc3e1a233ec8ee3e1f53ecf472a980d63e97afbdc986492"
   },
   "unknown_dmt_row": {
    "cases": 6,
@@ -110,7 +116,8 @@
      "field": "dmt_row"
     }
    ],
-   "passed": false
+   "passed": false,
+   "suite_digest": "sha256:74a08f4ebe50e775c6843a86a527d8d8c2626cf48f23385a2a6f3e2c061a4a9a"
   }
  },
  "good_suite": {
@@ -121,7 +128,8 @@
    "neither": 0
   },
   "findings": [],
-  "passed": true
+  "passed": true,
+  "suite_digest": "sha256:a233efa15d3e468adb3f4e4ae6586ec00556e5809ba6853dea1e9b34dc30abd1"
  },
  "list_suite": [
   {
@@ -132,6 +140,25 @@
    "version": "1.0.0"
   }
  ],
+ "revert": {
+  "cases": 6,
+  "coverage": {
+   "closed_form_math": 2,
+   "dmt_row": 4,
+   "neither": 0
+  },
+  "findings": [
+   {
+    "case": "ors:trace/flatness.001",
+    "code": "version_not_bumped",
+    "field": "changelog"
+   }
+  ],
+  "findings_against_1_0_0": [],
+  "passed": false,
+  "previous": "ors-trace-good@1.1.0",
+  "suite_digest": "sha256:a12189dad99eb8d865f6b4d9636eded68088b8d9cce8544e0f920b2bd14105ba"
+ },
  "versioning": {
   "bumped_with_changelog": {
    "cases": 6,
@@ -141,7 +168,8 @@
     "neither": 0
    },
    "findings": [],
-   "passed": true
+   "passed": true,
+   "suite_digest": "sha256:12662e2069fa1912a80657464cebd25e7990eb657f84ea227392085ba704c10d"
   },
   "bumped_without_changelog": {
    "cases": 6,
@@ -157,7 +185,8 @@
      "field": "changelog"
     }
    ],
-   "passed": false
+   "passed": false,
+   "suite_digest": "sha256:163a5a3878e52b6ee66e06e181c73ee2da6768dd578fd6238a82b7a1b9a55053"
   },
   "changed_same_version": {
    "cases": 6,
@@ -173,7 +202,8 @@
      "field": "version"
     }
    ],
-   "passed": false
+   "passed": false,
+   "suite_digest": "sha256:55b0c32e952c446843fd0dcdf7968262c3016e593252ed2b29dd0f5b48b03278"
   },
   "tolerance_same_version": {
    "cases": 6,
@@ -189,7 +219,8 @@
      "field": "version"
     }
    ],
-   "passed": false
+   "passed": false,
+   "suite_digest": "sha256:815bc6cd510c0ab5157e87663d89a7ca595bfec75ff1fd90b2c9b857c4ca9608"
   }
  }
 }

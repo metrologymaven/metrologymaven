@@ -12,8 +12,12 @@ Writes (or, with --check, regenerates and compares byte for byte):
                                    computed here
   good_suite/suite.json, good_suite/cases/*.json   AC-1: 6 cases, zero findings
   bad/<name>.json                  AC-2: one fault each (bundle: {manifest, cases})
-  versioning/<name>.json           AC-3: changed expected value, with and without a bump
-  mutants.json                     AC-H1: 100 seeded mutants of the good suite
+  versioning/<name>.json           AC-3: changed expected value, with and without a bump;
+                                   release_1_1_0 and revert_1_2_0 for the REQ-007 previous-
+                                   release rule (1.0.0=a, 1.1.0=b, 1.2.0 reverts to a)
+  mutants.json                     AC-H1: 100 seeded mutants of the good suite, each with the
+                                   finding it seeds ([code, field] and its case), asserted
+                                   here to be among the oracle's findings
   expected.json                    every bundle's findings and coverage, and the AC-4 listing,
                                    all computed by the oracle below from the leaf's rules
 
@@ -319,6 +323,24 @@ def semver(s):
     return tuple(int(x) for x in s.split("."))
 
 
+def suite_digest(bundle):
+    """SHA-256 of the RFC 8785 form of {cases (in manifest order), manifest}."""
+    by_id = {c["case"]: c for c in bundle["cases"]}
+    return sha(jcs({"cases": [by_id[i] for i in bundle["manifest"]["cases"]], "manifest": bundle["manifest"]}))
+
+
+def resolve_previous(installed, bundle):
+    """The highest installed release of the same suite name below the candidate's version."""
+    m = bundle["manifest"]
+    lower = [b for b in installed
+             if b["manifest"]["name"] == m["name"] and semver(b["manifest"]["version"]) < semver(m["version"])]
+    return max(lower, key=lambda b: semver(b["manifest"]["version"])) if lower else None
+
+
+def handle(bundle):
+    return bundle["manifest"]["name"] + "@" + bundle["manifest"]["version"]
+
+
 def check_suite(bundle, table, previous=None):
     rows = None
     m = bundle["manifest"]
@@ -350,7 +372,8 @@ def check_suite(bundle, table, previous=None):
                 findings.append({"case": cid, "code": "version_not_bumped", "field": "version"})
             elif not any(e["version"] == m["version"] and cid in e["cases"] and e["reason"] for e in m["changelog"]):
                 findings.append({"case": cid, "code": "version_not_bumped", "field": "changelog"})
-    return {"cases": len(m["cases"]), "coverage": cov, "findings": findings, "passed": not findings}
+    return {"cases": len(m["cases"]), "coverage": cov, "findings": findings, "passed": not findings,
+            "suite_digest": suite_digest(bundle)}
 
 
 # ------------------------------------------------------------------ variants
@@ -392,6 +415,15 @@ def versioning(good):
             "tolerance_same_version": tol}
 
 
+def revert(good, release_1_1_0):
+    """Candidate 1.2.0: the 1.0.0 content again (flatness.001 reverted), with the 1.1.0
+    changelog and no 1.2.0 entry. Against 1.1.0 the revert is a change; against 1.0.0 it is not."""
+    r = copy.deepcopy(good)
+    r["manifest"]["version"] = "1.2.0"
+    r["manifest"]["changelog"] = copy.deepcopy(release_1_1_0["manifest"]["changelog"])
+    return r
+
+
 class SplitMix:
     def __init__(self, seed):
         self.s = seed
@@ -409,7 +441,8 @@ class SplitMix:
 
 
 def mutations():
-    """(name, applies to a case with a DMT row?, fn(case, manifest)). None: any case."""
+    """(name, applies to a case with a DMT row? (None: any case), fn(case, manifest),
+    seeded finding (code, field, manifest-level?) or None for a benign change)."""
     def drop(*path):
         def f(c, m):
             t = c
@@ -430,35 +463,57 @@ def mutations():
         c["dataset"]["licence"] = "LicenseRef-closed"
         c["dataset"]["visibility"] = "reference_only"
 
+    def bump_no_entry(c, m):
+        c["expected"]["value_hex"] = hx(0.5)
+        m["version"] = "1.1.0"
+
+    case_f = lambda code, field: (code, field, False)
+    man_f = lambda code, field: (code, field, True)
     return [
-        ("drop_citations", None, drop("citations")),
-        ("empty_citations", True, put([], "citations")),
-        ("bad_clause", True, lambda c, m: c["citations"][0].__setitem__("clause", "Clause 5")),
-        ("none_without_basis", False, drop("basis")),
-        ("wrong_basis", False, put("expert_opinion", "basis")),
-        ("unknown_row", True, put("dmt:asme/straightness/none@1", "dmt_row")),
-        ("bad_row_grammar", True, put("DMT:asme", "dmt_row")),
-        ("drop_expected", None, drop("expected")),
-        ("drop_expected_unit", None, drop("expected", "unit")),
-        ("drop_tolerance_value", None, drop("acceptance_tolerance", "value_hex")),
-        ("negative_tolerance", None, put(hx(-1e-9), "acceptance_tolerance", "value_hex")),
-        ("drop_dialect", None, drop("dialect")),
-        ("bad_dialect", None, put("DIN", "dialect")),
-        ("note_281", None, put("x" * 281, "note")),
-        ("note_280_benign", None, put("x" * 280, "note")),
-        ("long_provenance", None, put("p" * 281, "dataset", "provenance", "source")),
-        ("in_review", True, put("in_review", "review", "status")),
-        ("in_review_benign", False, put("in_review", "review", "status")),
-        ("one_reviewer", True, put(["reviewer-one"], "review", "reviewers")),
-        ("author_reviews", True, put(["reviewer-one", "case-author-a"], "review", "reviewers")),
-        ("duplicate_reviewer", True, put(["reviewer-one", "reviewer-one"], "review", "reviewers")),
-        ("uppercase_reviewer", True, put(["Reviewer-One", "reviewer-two"], "review", "reviewers")),
-        ("drop_authors", None, drop("review", "authors")),
-        ("dataset_licence", None, licence_ref),
-        ("manifest_licence", None, lambda c, m: m.__setitem__("licence", "LicenseRef-closed")),
-        ("long_changelog", None, lambda c, m: m["changelog"][0].__setitem__("reason", "r" * 300)),
-        ("extra_key", None, put("x", "comment")),
-        ("changed_expected_vs_previous", None, put(hx(0.5), "expected", "value_hex")),
+        ("drop_citations", None, drop("citations"), case_f("citation_missing", "citations")),
+        ("empty_citations", True, put([], "citations"), case_f("citation_missing", "citations")),
+        ("bad_clause", True, lambda c, m: c["citations"][0].__setitem__("clause", "Clause 5"),
+         case_f("case_invalid", "citations.0")),
+        ("none_without_basis", False, drop("basis"), case_f("citation_missing", "basis")),
+        ("wrong_basis", False, put("expert_opinion", "basis"), case_f("citation_missing", "basis")),
+        ("unknown_row", True, put("dmt:asme/straightness/none@1", "dmt_row"), case_f("dmt_row_unknown", "dmt_row")),
+        ("bad_row_grammar", True, put("DMT:asme", "dmt_row"), case_f("case_invalid", "dmt_row")),
+        ("drop_expected", None, drop("expected"), case_f("case_incomplete", "expected")),
+        ("drop_expected_unit", None, drop("expected", "unit"), case_f("case_incomplete", "expected.unit")),
+        ("drop_tolerance_value", None, drop("acceptance_tolerance", "value_hex"),
+         case_f("case_incomplete", "acceptance_tolerance.value_hex")),
+        ("negative_tolerance", None, put(hx(-1e-9), "acceptance_tolerance", "value_hex"),
+         case_f("case_invalid", "acceptance_tolerance.value_hex")),
+        ("drop_dialect", None, drop("dialect"), case_f("case_incomplete", "dialect")),
+        ("bad_dialect", None, put("DIN", "dialect"), case_f("case_invalid", "dialect")),
+        ("note_281", None, put("x" * 281, "note"), case_f("text_too_long", "note")),
+        ("note_280_benign", None, put("x" * 280, "note"), None),
+        ("long_provenance", None, put("p" * 281, "dataset", "provenance", "source"),
+         case_f("text_too_long", "dataset.provenance.source")),
+        ("in_review", True, put("in_review", "review", "status"), case_f("review_missing", "review.status")),
+        ("in_review_benign", False, put("in_review", "review", "status"), None),
+        ("one_reviewer", True, put(["reviewer-one"], "review", "reviewers"),
+         case_f("review_missing", "review.reviewers")),
+        ("author_reviews", True, put(["reviewer-one", "case-author-a"], "review", "reviewers"),
+         case_f("review_missing", "review.reviewers")),
+        ("duplicate_reviewer", True, put(["reviewer-one", "reviewer-one"], "review", "reviewers"),
+         case_f("case_invalid", "review.reviewers")),
+        ("uppercase_reviewer", True, put(["Reviewer-One", "reviewer-two"], "review", "reviewers"),
+         case_f("case_invalid", "review.reviewers")),
+        ("drop_authors", None, drop("review", "authors"), case_f("case_incomplete", "review.authors")),
+        ("dataset_licence", None, licence_ref, case_f("licence_not_open", "dataset.licence")),
+        ("manifest_licence", None, lambda c, m: m.__setitem__("licence", "LicenseRef-closed"),
+         man_f("licence_not_open", "licence")),
+        ("manifest_licence_expression", None, lambda c, m: m.__setitem__("licence", "MIT OR Apache-2.0"),
+         man_f("licence_not_open", "licence")),
+        ("long_changelog", None, lambda c, m: m["changelog"][0].__setitem__("reason", "r" * 300),
+         man_f("text_too_long", "changelog.0.reason")),
+        ("extra_key", None, put("x", "comment"), case_f("case_invalid", "case")),
+        ("changed_expected_vs_previous", None, put(hx(0.5), "expected", "value_hex"),
+         case_f("version_not_bumped", "version")),
+        ("changed_tolerance_vs_previous", None, put(hx(3e-9), "acceptance_tolerance", "value_hex"),
+         case_f("version_not_bumped", "version")),
+        ("bumped_no_changelog_vs_previous", None, bump_no_entry, case_f("version_not_bumped", "changelog")),
     ]
 
 
@@ -467,15 +522,24 @@ def mutants(good, table):
     muts = mutations()
     out = []
     for i in range(100):
-        name, wants_row, fn = muts[i] if i < len(muts) else muts[g.below(len(muts))]
+        name, wants_row, fn, seeded = muts[i] if i < len(muts) else muts[g.below(len(muts))]
         pool = [c for c in good["cases"] if wants_row is None or ("dmt_row" in c) == wants_row]
         target = pool[g.below(len(pool))]["case"]
         b = copy.deepcopy(good)
         fn(next(c for c in b["cases"] if c["case"] == target), b["manifest"])
         against_previous = name.endswith("_vs_previous")
         res = check_suite(b, table, previous=good if against_previous else None)
-        out.append({"name": f"{i:03d}-{name}", "target": target, "benign": name.endswith("_benign"),
-                    "previous": against_previous, "suite": b, "findings": res["findings"]})
+        benign = seeded is None
+        assert benign == name.endswith("_benign"), name
+        seeded_case = None if benign or seeded[2] else target
+        if benign:
+            assert not res["findings"], f"{name}: a benign change gives a finding"
+        else:
+            want = {"case": seeded_case, "code": seeded[0], "field": seeded[1]}
+            assert want in res["findings"], f"{name}: the oracle does not report the seeded {want}"
+        out.append({"name": f"{i:03d}-{name}", "target": target, "benign": benign,
+                    "previous": against_previous, "suite": b, "findings": res["findings"],
+                    "seeded": None if benign else [seeded[0], seeded[1]], "seeded_case": seeded_case})
     return out
 
 
@@ -497,14 +561,30 @@ def files():
     for name, b in bad_variants(good).items():
         out[f"bad/{name}.json"] = dumps(b)
         expected["bad"][name] = check_suite(b, tab)
-    for name, b in versioning(good).items():
+    vs = versioning(good)
+    for name, b in vs.items():
         out[f"versioning/{name}.json"] = dumps(b)
         expected["versioning"][name] = check_suite(b, tab, previous=good)
+    # REQ-007 previous-release rule: installed 1.0.0 (good) and 1.1.0; candidate 1.2.0 reverts.
+    release = vs["bumped_with_changelog"]
+    rev = revert(good, release)
+    out["versioning/release_1_1_0.json"] = dumps(release)
+    out["versioning/revert_1_2_0.json"] = dumps(rev)
+    prev = resolve_previous([good, release], rev)
+    assert prev is release
+    res = check_suite(rev, tab, previous=prev)
+    res["previous"] = handle(prev)
+    res["findings_against_1_0_0"] = check_suite(rev, tab, previous=good)["findings"]
+    assert res["findings"] == [{"case": "ors:trace/flatness.001", "code": "version_not_bumped", "field": "changelog"}]
+    assert res["findings_against_1_0_0"] == [], "the revert is invisible against 1.0.0, so previous must be resolved"
+    assert suite_digest(release) != suite_digest(vs["bumped_without_changelog"])
+    expected["revert"] = res
     expected["list_suite"] = [{"cases": len(good["cases"]), "dmt_digest": digest, "licence": "CC-BY-4.0",
                                "name": SUITE, "version": "1.0.0"}]
     ms = mutants(good, tab)
     assert expected["good_suite"]["passed"]
     assert all(m["findings"] or m["benign"] for m in ms), "a mutant seeds no fault"
+    assert {m["name"][4:] for m in ms} >= {n for n, *_ in mutations()}, "a mutation is never used"
     assert {f["code"] for m in ms for f in m["findings"]} >= {
         "citation_missing", "dmt_row_unknown", "case_incomplete", "text_too_long", "review_missing",
         "licence_not_open", "case_invalid", "version_not_bumped"}

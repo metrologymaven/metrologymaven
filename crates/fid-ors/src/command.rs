@@ -56,6 +56,10 @@ fn internal(reason: &'static str) -> OrsError {
 
 /// The suites and DMT tables the commands see. Installed suites are released ones (listed,
 /// usable as `previous`); staged suites are candidates (checked with `staged: true`).
+///
+/// A handle names one suite: a candidate cannot be staged under an installed handle, and a
+/// suite cannot be installed under a handle staged with other content (its digest differs).
+/// Installing the staged content itself (promotion) is allowed.
 #[derive(Debug, Clone, Default)]
 pub struct SuiteStore {
     installed: BTreeMap<String, Suite>,
@@ -76,7 +80,10 @@ impl SuiteStore {
     fn add(map: &mut BTreeMap<String, Suite>, full: bool, suite: Suite) -> Result<(), OrsError> {
         let h = suite.handle();
         if map.contains_key(&h) {
-            return Err(crate::suite::invalid("manifest", "a suite with this handle is already present"));
+            return Err(OrsError::HandleConflict {
+                field: "suite",
+                reason: "a suite with this handle is already present",
+            });
         }
         if full {
             return Err(crate::suite::invalid("manifest", "store is full"));
@@ -85,16 +92,42 @@ impl SuiteStore {
         Ok(())
     }
 
-    /// Adds a released suite.
+    /// Adds a released suite. Refused (`handle_conflict`) if the handle is installed, or is
+    /// staged with other content.
     pub fn install(&mut self, suite: Suite) -> Result<(), OrsError> {
+        if self.staged.get(&suite.handle()).is_some_and(|s| s.digest() != suite.digest()) {
+            return Err(OrsError::HandleConflict {
+                field: "suite",
+                reason: "a suite with other content is staged under this handle",
+            });
+        }
         let full = self.full();
         SuiteStore::add(&mut self.installed, full, suite)
     }
 
-    /// Adds a candidate suite.
+    /// Adds a candidate suite. Refused (`handle_conflict`) if the handle is already installed
+    /// or already staged.
     pub fn stage(&mut self, suite: Suite) -> Result<(), OrsError> {
+        if self.installed.contains_key(&suite.handle()) {
+            return Err(OrsError::HandleConflict { field: "suite", reason: "a suite with this handle is installed" });
+        }
         let full = self.full();
         SuiteStore::add(&mut self.staged, full, suite)
+    }
+
+    /// Withdraws a staged candidate, returning it.
+    pub fn unstage(&mut self, handle: &str) -> Option<Suite> {
+        self.staged.remove(handle)
+    }
+
+    /// The release the version rule compares `suite` against: the highest installed release
+    /// of the same suite name with a lower version, if any (REQ-007).
+    pub fn previous_of(&self, suite: &Suite) -> Option<&Suite> {
+        let m = suite.manifest();
+        self.installed
+            .values()
+            .filter(|s| s.manifest().name == m.name && s.manifest().version < m.version)
+            .max_by_key(|s| s.manifest().version)
     }
 
     /// Adds a DMT table, found by its digest.
@@ -123,7 +156,8 @@ fn handle_param(v: Option<&CValue>, field: &'static str) -> Result<Option<String
 }
 
 /// Parameters of `rdl.check_suite@1`: `suite` (handle), optional `previous` (handle of an
-/// installed release) and `staged` (check the staged candidate; default false).
+/// installed release; when given it must be the release [`SuiteStore::previous_of`]
+/// resolves) and `staged` (check the staged candidate; default false).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CheckParams {
     pub suite: String,
@@ -165,16 +199,26 @@ impl CheckParams {
 // ------------------------------------------------------------------ handlers
 
 /// The check report of one suite (findings are data: a suite with findings is still a
-/// `computed` result).
+/// `computed` result). The previous release is always resolved by the store
+/// ([`SuiteStore::previous_of`]), so a caller cannot pick an older release to compare
+/// against: a `previous` that is not installed is `suite_not_found{previous}`, and one that
+/// is installed but is not the resolved release is `previous_mismatch`.
 pub fn check(store: &SuiteStore, p: &CheckParams) -> Result<CValue, OrsError> {
     let map = if p.staged { &store.staged } else { &store.installed };
     let suite = map.get(&p.suite).ok_or(OrsError::SuiteNotFound { field: "suite" })?;
-    let previous = match &p.previous {
-        None => None,
-        Some(h) => Some(store.installed.get(h).ok_or(OrsError::SuiteNotFound { field: "previous" })?),
-    };
+    let previous = store.previous_of(suite);
+    if let Some(h) = &p.previous {
+        if !store.installed.contains_key(h) {
+            return Err(OrsError::SuiteNotFound { field: "previous" });
+        }
+        if previous.map(Suite::handle).as_ref() != Some(h) {
+            return Err(OrsError::PreviousMismatch);
+        }
+    }
     let dmt = store.dmts.get(suite.manifest().dmt_digest.as_str());
-    Ok(check_suite(suite, dmt, previous)?.to_value())
+    let mut report = check_suite(suite, dmt, previous)?;
+    report.staged = p.staged;
+    Ok(report.to_value())
 }
 
 /// The installed suites: `[{cases, dmt_digest, licence, name, version}]`, ascending by handle.
@@ -185,7 +229,7 @@ pub fn list(store: &SuiteStore) -> CValue {
             .map(|s| {
                 let m = s.manifest();
                 obj([
-                    ("cases", CValue::U64(m.cases.len() as u64)),
+                    ("cases", CValue::Num(m.cases.len() as f64)),
                     ("dmt_digest", CValue::Str(m.dmt_digest.as_str().to_string())),
                     ("licence", CValue::Str(m.licence.clone())),
                     ("name", CValue::Str(m.name.clone())),
@@ -202,6 +246,8 @@ fn error_code(e: &OrsError) -> ErrorCode {
         OrsError::BadParams { .. } => ErrorCode::UsageError,
         OrsError::Internal { .. } => ErrorCode::InternalError,
         OrsError::SuiteInvalid { .. } => ErrorCode::ValidationError,
+        OrsError::HandleConflict { .. } => ErrorCode::Conflict,
+        OrsError::PreviousMismatch => ErrorCode::PreconditionFailed,
     }
 }
 
@@ -523,7 +569,14 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
         (
             "properties",
             obj([
-                ("previous", prop("string", "Handle of the installed previous release, ors-<suite>@<x.y.z>.")),
+                (
+                    "previous",
+                    prop(
+                        "string",
+                        "Optional check: the handle of the highest installed release of this suite below its \
+                         version, ors-<suite>@<x.y.z>. That release is always used; any other value is refused.",
+                    ),
+                ),
                 (
                     "staged",
                     prop("boolean", "Check the staged candidate with this handle instead of the installed suite."),
@@ -545,11 +598,11 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             ]),
         ),
     ]);
-    let count = || obj([("type", text("string")), ("pattern", text("^(0|[1-9][0-9]*)$"))]);
+    let count = || obj([("type", text("integer")), ("minimum", CValue::Num(0.0))]);
     let check_result = obj([
         ("type", text("object")),
         ("additionalProperties", CValue::Bool(false)),
-        ("required", strs(&["cases", "coverage", "findings", "passed", "previous", "suite"])),
+        ("required", strs(&["cases", "coverage", "findings", "passed", "previous", "staged", "suite", "suite_digest"])),
         (
             "properties",
             obj([
@@ -569,7 +622,9 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
                 ("findings", obj([("type", text("array")), ("items", finding)])),
                 ("passed", obj([("type", text("boolean"))])),
                 ("previous", obj([("type", strs(&["string", "null"]))])),
+                ("staged", obj([("type", text("boolean"))])),
                 ("suite", obj([("type", text("string"))])),
+                ("suite_digest", obj([("type", text("string")), ("pattern", text(Digest::PATTERN))])),
             ]),
         ),
     ]);

@@ -15,6 +15,7 @@ use fid_gps::dmt::ident::is_label;
 use fid_gps::dmt::row::is_reviewer_id;
 use fid_gps::dmt::{DmtKey, DmtTable};
 use fid_rdl::{is_control_or_format, licence_redistributable, RdlDataset, Tier};
+use fid_types::Digest;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Finding codes, in the order the leaf lists them.
@@ -90,6 +91,12 @@ pub struct Coverage {
 pub struct CheckReport {
     /// The checked suite's handle.
     pub suite: String,
+    /// The checked suite's content digest ([`Suite::digest`]): which suite under that handle
+    /// was checked.
+    pub suite_digest: Digest,
+    /// Whether the checked suite was the staged candidate (set by the command; false from
+    /// [`check_suite`]).
+    pub staged: bool,
     /// The previous release's handle, if one was given.
     pub previous: Option<String>,
     /// Number of cases.
@@ -106,19 +113,23 @@ impl CheckReport {
         self.findings.is_empty()
     }
 
-    /// `{cases, coverage, findings, passed, previous, suite}`.
+    /// `{cases, coverage, findings, passed, previous, staged, suite, suite_digest}`. Counts
+    /// are JSON integers (at most [`crate::suite::MAX_CASES`], so exact in binary64).
     pub fn to_value(&self) -> CValue {
+        let n = |x: u64| CValue::Num(x as f64);
         let mut cov = BTreeMap::new();
-        cov.insert("closed_form_math".to_string(), CValue::U64(self.coverage.closed_form_math));
-        cov.insert("dmt_row".to_string(), CValue::U64(self.coverage.dmt_row));
-        cov.insert("neither".to_string(), CValue::U64(self.coverage.neither));
+        cov.insert("closed_form_math".to_string(), n(self.coverage.closed_form_math));
+        cov.insert("dmt_row".to_string(), n(self.coverage.dmt_row));
+        cov.insert("neither".to_string(), n(self.coverage.neither));
         let mut m = BTreeMap::new();
-        m.insert("cases".to_string(), CValue::U64(self.cases));
+        m.insert("cases".to_string(), n(self.cases));
         m.insert("coverage".to_string(), CValue::Obj(cov));
         m.insert("findings".to_string(), CValue::Arr(self.findings.iter().map(Finding::to_value).collect()));
         m.insert("passed".to_string(), CValue::Bool(self.passed()));
         m.insert("previous".to_string(), self.previous.clone().map_or(CValue::Null, CValue::Str));
+        m.insert("staged".to_string(), CValue::Bool(self.staged));
         m.insert("suite".to_string(), CValue::Str(self.suite.clone()));
+        m.insert("suite_digest".to_string(), CValue::Str(self.suite_digest.as_str().to_string()));
         CValue::Obj(m)
     }
 }
@@ -464,6 +475,8 @@ pub fn check_suite(
     }
     Ok(CheckReport {
         suite: m.handle(),
+        suite_digest: suite.digest(),
+        staged: false,
         previous: previous.map(Suite::handle),
         cases: m.cases.len() as u64,
         coverage,
