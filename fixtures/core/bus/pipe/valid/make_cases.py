@@ -1028,6 +1028,10 @@ SHOW_CHECK = (
     "The text of a manifest to verify instead of showing the one in force; at most 67108864 characters "
     "(maxLength), and refused as manifest_invalid above 67108864 bytes of UTF-8."
 )
+SHOW_VIEW = (
+    "Present, as agent, when the result shows the agent view: the manifest of the commands an agent can see, "
+    "whose digest is the digest of that view, not of the full manifest."
+)
 REAL = {
     "request.list_requests@1": {
         "params_schema": obj_schema([], {"state": STATES}),
@@ -1060,7 +1064,11 @@ REAL = {
             "type": "object",
             "additionalProperties": False,
             "required": ["digest"],
-            "properties": {"digest": {"type": "string", "pattern": DIGEST}, "bytes": {"type": "string"}},
+            "properties": {
+                "digest": {"type": "string", "pattern": DIGEST},
+                "bytes": {"type": "string"},
+                "view": {"type": "string", "pattern": "^agent$", "description": SHOW_VIEW},
+            },
         },
     },
 }
@@ -1133,6 +1141,8 @@ REAL_CASES = [
     ("show_result", "registry.show_manifest@1", "result", {"digest": SHA, "bytes": "{}"}),
     ("show_result_digest", "registry.show_manifest@1", "result", {"digest": SHA.upper().replace("SHA256", "sha256")}),
     ("show_result_missing", "registry.show_manifest@1", "result", {"bytes": "{}"}),
+    ("show_result_agent_view", "registry.show_manifest@1", "result", {"digest": SHA, "bytes": "{}", "view": "agent"}),
+    ("show_result_view_other", "registry.show_manifest@1", "result", {"digest": SHA, "view": "person"}),
 ]
 
 
