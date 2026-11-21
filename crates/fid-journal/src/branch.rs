@@ -397,6 +397,10 @@ pub struct EntryOrigin {
     pub class: SideEffect,
     pub branch: String,
     pub source: EventSource,
+    /// The entry header's `human_assertion` (`CORE.JRN.ENTRY`), as the verified header records
+    /// it. The branch fold does not use it; the promotion fold (`CORE.JRN.BR.PROMO`) binds a
+    /// protected promotion to it.
+    pub human_assertion: Option<String>,
 }
 
 impl EntryOrigin {
@@ -730,6 +734,7 @@ mod tests {
             class: SideEffect::W2,
             branch: "agent/claude/1".into(),
             source: EventSource::BusRoute,
+            human_assertion: None,
         };
         let mut t = b.clone();
         t.apply(&route, &e).unwrap();

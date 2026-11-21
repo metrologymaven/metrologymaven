@@ -226,11 +226,18 @@ fn max_len_is_enforced_before_allocation() {
     let size = 20 * MIB;
     let addr = store.put(stream(5, size), PutOpts::default()).unwrap();
     store.reset_probe();
-    for max in [0, 1000, size - 1] {
+    for max in [1000, size - 1] {
         match store.read_object(&addr.digest(), max) {
             Err(CasError::OutOfRange { start: 0, end, size: limit }) => assert_eq!((end, limit), (size, max)),
             other => panic!("{max}: {other:?}"),
         }
+    }
+    // A bound below the manifest's own length stops the read there: `end` is the stored
+    // manifest's length (the object it names is larger still).
+    let manifest_len = std::fs::metadata(store.path_of(&addr.digest())).unwrap().len();
+    match store.read_object(&addr.digest(), 0) {
+        Err(CasError::OutOfRange { start: 0, end, size: 0 }) => assert_eq!(end, manifest_len),
+        other => panic!("{other:?}"),
     }
     let p = store.probe();
     assert_eq!(p.chunks_verified, 0, "no chunk is read for an object over max_len");
@@ -280,7 +287,8 @@ fn put_shaped_manifests_are_never_returned() {
 }
 
 /// A `put`-shaped manifest over the object cap: `out_of_range` naming the object's size (not
-/// the manifest's length) when that is over `max_len`, else `manifest_invalid`.
+/// the manifest's length) when that is over `max_len`, else `manifest_invalid`. A bound below
+/// the manifest's own length stops the read there and names the manifest's length.
 #[test]
 fn over_cap_manifest_reports_the_content_size() {
     let t = TempDir::new("overcap");
@@ -289,9 +297,40 @@ fn over_cap_manifest_reports_the_content_size() {
     let chunks: Vec<String> = (0..n).map(|i| format!("sha256:{i:064x}")).collect();
     let text = manifest_text(n * CHUNK_SIZE, CHUNK_SIZE, &chunks);
     let d = plant(&store, &text);
+    let len = text.len() as u64;
+    match store.read_object(&d, len) {
+        Err(CasError::OutOfRange { start: 0, end, size }) => assert_eq!((end, size), (n * CHUNK_SIZE, len)),
+        other => panic!("{other:?}"),
+    }
     match store.read_object(&d, 10) {
-        Err(CasError::OutOfRange { start: 0, end, size: 10 }) => assert_eq!(end, n * CHUNK_SIZE),
+        Err(CasError::OutOfRange { start: 0, end, size: 10 }) => assert_eq!(end, len),
         other => panic!("{other:?}"),
     }
     assert_eq!(code(store.read_object(&d, u64::MAX)), "manifest_invalid");
+}
+
+/// `max_len` bounds the read itself, not only the result: a 12 MiB blob (longer than any
+/// blob `put` writes, shorter than the 16 MiB read limit) read with a 1 KiB bound is refused
+/// with `out_of_range` naming its stored length after at most 1 KiB + 1 bytes were read.
+/// Read with a loose bound, the same blob is plain data and returned whole.
+#[test]
+fn max_len_bounds_the_blob_read() {
+    let t = TempDir::new("boundread");
+    let store = t.store();
+    let size = 12 * MIB;
+    let data: Vec<u8> = {
+        let mut v = Vec::new();
+        stream(77, size).read_to_end(&mut v).unwrap();
+        v
+    };
+    let d = plant(&store, &data);
+    store.reset_probe();
+    match store.read_object(&d, 1024) {
+        Err(CasError::OutOfRange { start: 0, end, size: 1024 }) => assert_eq!(end, size),
+        other => panic!("{other:?}"),
+    }
+    let p = store.probe();
+    assert!(p.peak_buffer_bytes <= 1024 + 1, "read at most max_len + 1 bytes: {}", p.peak_buffer_bytes);
+    assert_eq!(p.chunks_verified, 0);
+    assert_eq!(store.read_object(&d, u64::MAX).unwrap().len() as u64, size);
 }

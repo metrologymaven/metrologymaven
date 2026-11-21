@@ -11,7 +11,7 @@ owners: []
 claimed_by:
 satisfies: [REQ-PLAT.GPU-003, REQ-PLAT.GPU-006, REQ-PLAT.GPU-008]
 covers: []
-depends_on: [PLAT.GPU.POLICY, VIZ]
+depends_on: [PLAT.GPU.POLICY]
 side_effect: R0
 determinism: D0
 cli: []
@@ -68,7 +68,7 @@ Decides which GPU backend and adapter the app uses, or that it must fall back. A
 - **Errors:** probe errors become `Rejection`s, never returned errors; only an invalid policy file is an error (`PolicyError`).
 - **Determinism:** D0 for `select` given its inputs; the probe itself is observed (`N`) and its output is recorded in the result so selection can be replayed.
 - **Performance budget:** selection < 1 ms; probing < 2 s on the minimum profile [unverified until measured].
-- **Crate:** `fid-gpu-select` (depends on `fid-platform` and `wgpu`; outside the kernel graph).
+- **Crate:** `fid-gpu-select`, layer viewer (depends on `fid-gpu-policy` and `wgpu`, never on the tool-layer `fid-platform`; outside the kernel graph). VIZ consumes the result as plain data: `VIZ.RENDER.FRAME.GRAPH` takes an `AdapterChoice` (backend, vendor ID, device ID, name), so neither node depends on the other.
 
 ## Test fixtures
 
@@ -76,7 +76,7 @@ JSON adapter lists under `fixtures/plat/gpu/` (`adapters-win-discrete.json`, `ad
 
 ## Build prompt
 
-> Create crate `fid-gpu-select` (depends on `fid-platform`, `wgpu`, `serde`). Provide `probe(policy_row, timeout) -> Vec<ProbeOutcome>` that enumerates adapters through wgpu for each backend in the row, each on a worker thread with a deadline, without creating a surface; and a pure `select(adapters, policy_row, known_bad, override) -> GpuSelection`.
+> Create crate `fid-gpu-select` (layer viewer; depends on `fid-gpu-policy` and `wgpu`). Provide `probe(policy_row, timeout) -> Vec<ProbeOutcome>` that enumerates adapters through wgpu for each backend in the row, each on a worker thread with a deadline, without creating a surface; and a pure `select(adapters, policy_row, known_bad, override) -> GpuSelection`.
 >
 > Selection: candidates ordered by policy backend order, then device type (discrete, integrated, virtual, other, cpu), then original index, stable. Override (if allowed by the row) moves its backend first. Reject adapters below the row's minimum API or driver version; apply known-bad entries (`avoid_backend` skips, `force_software` selects software, `workaround:<name>` keeps the adapter and lists the workaround). No survivor gives `software` with `fallback = true` and a reason listing every rejection. Record applied known-bad IDs. Serialise `GpuSelection` to JSON (backend, adapter name, vendor ID, device ID, driver version, fallback, reason, known_bad IDs, workarounds).
 >
@@ -85,6 +85,10 @@ JSON adapter lists under `fixtures/plat/gpu/` (`adapters-win-discrete.json`, `ad
 ## Open questions
 
 - Whether the probe can run without a window on every platform (notably macOS) needs a spike [unverified].
+
+## Change log
+
+- 2026-11-21 (maintainer decision on the layering of this node): `depends_on` drops `VIZ`, which made a cycle with `VIZ.RENDER.FRAME.GRAPH` (that leaf takes this node's result as an injected `AdapterChoice`, plain data, with no code edge either way); the real dependency is `PLAT.GPU.POLICY` only. The crate depends on `fid-gpu-policy` (the policy schema and known-bad lookup moved below the tool layer, refactor PR #371) instead of `fid-platform`, a tool-layer crate nothing may depend on, and sits in the viewer layer. `gl` and `webgpu` are policy backends (`PLAT.GPU.POLICY` change log).
 
 ## Children
 
