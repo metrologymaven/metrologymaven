@@ -57,7 +57,8 @@ const WORKSPACE_CATALOGUE: &str = concat!(
     r#"{"den":"648000","num":"1","pi":true,"symbol":"arcsec"},{"den":"180","num":"1","pi":true,"symbol":"deg"},"#,
     r#"{"den":"200","num":"1","pi":true,"symbol":"gon"},{"den":"1","num":"1","pi":false,"symbol":"rad"}]},"#,
     r#"{"canonical":"1","kind":"dimensionless","units":[{"den":"1","num":"1","pi":false,"symbol":"1"}]},"#,
-    r#"{"canonical":"m","kind":"length","units":[{"den":"1250","num":"381","pi":false,"symbol":"ft"},"#,
+    r#"{"canonical":"m","kind":"length","units":[{"den":"100","num":"1","pi":false,"symbol":"cm"},"#,
+    r#"{"den":"1250","num":"381","pi":false,"symbol":"ft"},"#,
     r#"{"den":"5000","num":"127","pi":false,"symbol":"in"},{"den":"1","num":"1","pi":false,"symbol":"m"},"#,
     r#"{"den":"1000","num":"1","pi":false,"symbol":"mm"},{"den":"1000000000","num":"1","pi":false,"symbol":"nm"},"#,
     r#"{"den":"5000000","num":"127","pi":false,"symbol":"thou"},"#,
@@ -111,7 +112,7 @@ fn temperature() -> &'static str {
 }
 
 fn length_again() -> &'static str {
-    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"m","kind":"length","units":[{"den":"1250","num":"381","pi":false,"symbol":"ft"},{"den":"5000","num":"127","pi":false,"symbol":"in"},{"den":"1","num":"1","pi":false,"symbol":"m"},{"den":"1000","num":"1","pi":false,"symbol":"mm"},{"den":"1000000000","num":"1","pi":false,"symbol":"nm"},{"den":"5000000","num":"127","pi":false,"symbol":"thou"},{"den":"1000000","num":"1","pi":false,"symbol":"um"}]}]}"#
+    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"m","kind":"length","units":[{"den":"100","num":"1","pi":false,"symbol":"cm"},{"den":"1250","num":"381","pi":false,"symbol":"ft"},{"den":"5000","num":"127","pi":false,"symbol":"in"},{"den":"1","num":"1","pi":false,"symbol":"m"},{"den":"1000","num":"1","pi":false,"symbol":"mm"},{"den":"1000000000","num":"1","pi":false,"symbol":"nm"},{"den":"5000000","num":"127","pi":false,"symbol":"thou"},{"den":"1000000","num":"1","pi":false,"symbol":"um"}]}]}"#
 }
 
 fn angle_turn() -> &'static str {

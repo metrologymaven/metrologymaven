@@ -45,6 +45,7 @@ fn unit(sym: &str) -> Option<LengthUnit> {
     match sym {
         "none" => None,
         "mm" => Some(LengthUnit::Mm),
+        "um" => Some(LengthUnit::Um),
         "in" => Some(LengthUnit::In),
         "ft" => Some(LengthUnit::Ft),
         "m" => Some(LengthUnit::M),
@@ -168,7 +169,7 @@ fn every_oracle_case_matches() {
             blocks.last_mut().unwrap().1.push(line.to_string());
         }
     }
-    assert_eq!(blocks.len(), 34);
+    assert_eq!(blocks.len(), 37);
     for (head, want) in &blocks {
         let mut it = head.split(' ');
         let name = it.next().unwrap();
@@ -299,7 +300,7 @@ fn req004_schema_units_uncertainty_and_originating_system_are_recorded() {
     assert_eq!(
         declared(&record, "step.units.group_1"),
         UntrustedText::new(
-            "length=mm factor_m=0.001 source=declared angle=radian uncertainty=1e-6 mm geometry=true \
+            "length=mm factor_m=0.001 source=declared declared=mm angle=radian uncertainty=1e-6 mm geometry=true \
              contexts=1 first=#14"
         )
     );
@@ -330,11 +331,75 @@ fn override_is_recorded_as_override() {
 }
 
 #[test]
-fn centimetre_resolves_but_has_no_provenance_unit() {
-    let info = resolve("ap203_cm_deg.stp", None, false).unwrap();
+fn centimetre_is_recorded_in_provenance() {
+    // GEO.FRAME.UNITS now has `cm`, so a centimetre file carries its own unit.
+    let bytes = read("ap203_cm_deg.stp");
+    let o = HeaderOptions::default();
+    let info = resolve_header(&parse(&bytes).unwrap(), &o).unwrap();
     assert_eq!(info.contexts[&14].length_factor_m, 0.01);
-    let e = info.provenance_unit(&HeaderOptions::default()).unwrap_err();
-    assert_eq!(e, HeaderError::UnitUnsupported { entity: 14 });
+    assert_eq!(StepLengthUnit::Cm.to_length_unit(), LengthUnit::Cm);
+    assert_eq!(StepLengthUnit::from(LengthUnit::Cm), StepLengthUnit::Cm);
+    let unit = info.provenance_unit(&o).unwrap();
+    assert_eq!((unit.unit(), unit.source()), (LengthUnit::Cm, UnitSource::Declared));
+    assert!(!unit.overridden());
+    let record = provenance(&bytes, &info, &o);
+    let json = String::from_utf8(record.canonical_bytes().unwrap()).unwrap();
+    assert!(json.contains(r#""unit":"cm""#), "{json}");
+    assert!(json.contains(r#""unit_factor":"0.01""#), "{json}");
+    assert!(json.contains(r#""unit_source":"declared""#), "{json}");
+    assert_eq!(
+        declared(&record, "step.units.group_1"),
+        UntrustedText::new(
+            "length=cm factor_m=0.01 source=declared declared=cm angle=radian uncertainty=5.0 cm geometry=true \
+             contexts=1 first=#14"
+        )
+    );
+    // Overridden to mm: the record carries mm, and the group keeps `declared=cm`.
+    let o = opts(Some(LengthUnit::Mm), true);
+    let info = resolve_header(&parse(&bytes).unwrap(), &o).unwrap();
+    let unit = info.provenance_unit(&o).unwrap();
+    assert_eq!((unit.unit(), unit.source()), (LengthUnit::Mm, UnitSource::Override));
+    let record = provenance(&bytes, &info, &o);
+    assert_eq!(
+        declared(&record, "step.units.group_1"),
+        UntrustedText::new(
+            "length=mm factor_m=0.001 source=override declared=cm angle=radian uncertainty=5.0 mm geometry=true \
+             contexts=1 first=#14"
+        )
+    );
+}
+
+/// Review N1 of #377: two contexts overridden to the same unit from different declared
+/// units (um and in) are two groups, so the record does not hide that the rescale differed.
+#[test]
+fn overridden_contexts_with_different_declared_units_are_separate_groups() {
+    let bytes = read("override_um_inch.stp");
+    let o = opts(Some(LengthUnit::Mm), true);
+    let info = resolve_header(&parse(&bytes).unwrap(), &o).unwrap();
+    assert_eq!(info.contexts[&30].declared, Some(StepLengthUnit::Um));
+    assert_eq!(info.contexts[&31].declared, Some(StepLengthUnit::In));
+    for c in [30, 31] {
+        let ctx = &info.contexts[&c];
+        assert_eq!((ctx.length_unit, ctx.source), (StepLengthUnit::Mm, UnitSource::Override));
+    }
+    let groups = info.unit_groups();
+    let sig = |d: &str| {
+        format!("length=mm factor_m=0.001 source=override declared={d} angle=radian uncertainty=none geometry=true")
+    };
+    assert_eq!(groups, vec![(sig("um"), 1, 30), (sig("in"), 1, 31)]);
+    let record = provenance(&bytes, &info, &o);
+    assert!(record.declared().contains_key("step.units.group_2"));
+    assert!(!record.declared().contains_key("step.units.group_3"));
+
+    // Same declared unit, same override: still one group (300 um contexts).
+    let um = "#15=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MICRO.,.METRE.));";
+    let mut body = format!("{um}\n");
+    for i in 0..300u64 {
+        body.push_str(&geo_ctx(1000 + 2 * i, "#15", ""));
+    }
+    let info = run(&wrap(NAME, &body), &o).unwrap();
+    let groups = info.unit_groups();
+    assert_eq!(groups, vec![(sig("um").replace("angle=radian", "angle=none"), 300, 1000)]);
 }
 
 #[test]
@@ -567,7 +632,7 @@ fn fuzz_mutations_of_every_fixture_never_panic() {
         .filter(|n| n.ends_with(".stp"))
         .collect();
     names.sort();
-    assert_eq!(names.len(), 24);
+    assert_eq!(names.len(), 25);
     let mut rng = Rng(0x9E37_79B9_7F4A_7C15);
     let mut resolved = 0;
     for name in &names {

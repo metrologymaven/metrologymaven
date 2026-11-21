@@ -184,7 +184,8 @@ fn ac3_length_units_one_for_one() {
     let length = cat.kind("length").unwrap();
     assert_eq!(length.canonical, "m");
     // Hand-labelled from spec/geo/frame/units/NODE.md (as written there, before reduction).
-    let table: [(&str, u64, u64); 7] = [
+    let table: [(&str, u64, u64); 8] = [
+        ("cm", 1, 100),
         ("ft", 381, 1250),
         ("in", 254, 10000),
         ("m", 1, 1),
