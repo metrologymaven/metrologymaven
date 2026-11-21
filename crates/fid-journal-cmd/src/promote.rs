@@ -17,7 +17,7 @@ use fid_bus::error::{
 use fid_bus::handler::{Event, EventType, Handler, HandlerCtx, HandlerError, HandlerSet, StateView, ValidParams};
 use fid_canon::CValue;
 use fid_journal::branch::{Actor, EntryOrigin, EventSource};
-use fid_journal::diff::{CancelFlag, DiffOptions};
+use fid_journal::diff::{BranchDiff, CancelFlag, DiffError, DiffOptions};
 use fid_journal::promote::{
     command_defs, plan, AssertionCheck, PromoEvent, PromoteError, PromoteOp, PromoteParams, Promotions, Rebaser,
 };
@@ -125,7 +125,14 @@ pub fn run_promote(
         move || f()
     };
     let opts = DiffOptions { cancel: Some(cancel_flag), ..DiffOptions::for_caller(kind) };
-    let mut diff_of = || journal.diff(&table, &p.source, &p.target, &opts);
+    // The heads the planner bound the call to, for the fold check below.
+    let mut heads: BTreeMap<String, Option<Digest>> = BTreeMap::new();
+    let mut diff_of = || -> Result<BranchDiff, DiffError> {
+        let d = journal.diff(&table, &p.source, &p.target, &opts)?;
+        heads.insert(d.source.branch.clone(), d.source.head);
+        heads.insert(d.target.branch.clone(), d.target.head);
+        Ok(d)
+    };
     let event = plan(
         op,
         Actor::of(kind),
@@ -149,9 +156,11 @@ pub fn run_promote(
         class: op.class(),
         branch: if op == PromoteOp::Request { p.source.clone() } else { target },
         source: EventSource::Handler,
+        // The header's human_assertion the commit stage records for a W3 promotion.
+        human_assertion: if op == PromoteOp::Protected { p.assertion.clone() } else { None },
     };
     Promotions::default()
-        .apply_entry(&table, &origin, op == PromoteOp::Protected, std::slice::from_ref(&event))
+        .apply_entry(&table, &heads, wiring.assertion.as_deref(), &origin, std::slice::from_ref(&event))
         .map_err(|e| invariant(&e.detail()))?;
     let key = if op == PromoteOp::Request { "request" } else { "promotion" };
     let result = CValue::Obj(BTreeMap::from([(key.to_string(), event.body())]));

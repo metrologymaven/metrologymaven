@@ -59,6 +59,16 @@ fn name(description: &str) -> CValue {
     string(NAME_PATTERN, 100.0, description)
 }
 
+fn assertion(description: &str) -> CValue {
+    obj([
+        ("type", text("string")),
+        ("pattern", text(ASSERTION_PATTERN)),
+        ("maxLength", CValue::Num(MAX_ASSERTION_BYTES as f64)),
+        ("x-untrusted", CValue::Bool(true)),
+        ("description", text(description)),
+    ])
+}
+
 fn note() -> CValue {
     obj([
         ("type", text("string")),
@@ -131,7 +141,8 @@ fn promotion(protected: bool) -> CValue {
     required.extend(["entries", "mode"]);
     if protected {
         props.push(("pre_image", digest("Digest the human assertion confirms.")));
-        required.push("pre_image");
+        props.push(("assertion", assertion("The entry's human assertion reference, confirmed over pre_image.")));
+        required.extend(["assertion", "pre_image"]);
     }
     required.sort_unstable();
     object(&required, props)
@@ -148,16 +159,7 @@ pub fn params_schema(command: &str) -> CValue {
     let mut props = binding();
     let mut required: Vec<&str> = BINDING.to_vec();
     if command == PROMOTE_PROTECTED_BRANCH {
-        props.push((
-            "assertion",
-            obj([
-                ("type", text("string")),
-                ("pattern", text(ASSERTION_PATTERN)),
-                ("maxLength", CValue::Num(MAX_ASSERTION_BYTES as f64)),
-                ("x-untrusted", CValue::Bool(true)),
-                ("description", text("Reference to the human assertion over the promotion's pre-image.")),
-            ]),
-        ));
+        props.push(("assertion", assertion("Reference to the human assertion over the promotion's pre-image.")));
         required.push("assertion");
         required.sort_unstable();
     }

@@ -51,7 +51,14 @@ Plan rules, checked in this order (the first refusal wins):
     {diff, entries, mode, source, source_head, target, target_head}: one event, so the
     promotion lands whole or not at all.
 
-Fold rules: an entry holds at most one promotion event. BranchPromoted only from
+Fold rules: each entry comes with its origin (principal kind, command, major, class, branch,
+adding stage, and the verified header's human_assertion) and the logical heads of the branches
+before it, as the replay of the verified journal gives them; the wired AssertionCheck is given
+too. Every event's source_head and target_head must equal those heads (so a replay, or a
+promotion bound to made-up or stale heads, is refused), and a ProtectedBranchPromoted must name
+the header's human_assertion as `assertion` and be confirmed by the AssertionCheck over its
+recomputed pre_image (none wired: refused). PromotionRequested must be on an entry of the
+source branch, into a human branch. An entry holds at most one promotion event. BranchPromoted only from
 journal.promote_branch@1's handler, a human principal, class W2, on an entry of the target
 branch, into a human-owned unprotected target; ProtectedBranchPromoted only from
 journal.promote_protected_branch@1's handler, a human principal, class W3, an entry carrying
@@ -211,6 +218,7 @@ def plan(js, case):
         if case["assertion_check"]["confirms"] != [pre_image(p), p["assertion"]]:
             raise Refused("policy", "no_assertion")
         body["pre_image"] = pre_image(p)
+        body["assertion"] = p["assertion"]
     if d["ancestor"] == p["target_head"]:
         body["mode"] = "fast_forward"
         body["entries"] = []
@@ -247,63 +255,72 @@ PROMO_KEYS = ["diff", "entries", "mode", "source", "source_head", "target", "tar
 REQUEST_KEYS = ["diff", "source", "source_head", "target", "target_head"]
 
 
-def fold(js, log):
+def fold(js, log, confirms):
+    """`confirms`: the (pre_image, assertion) pairs the wired AssertionCheck confirms, or None
+    when none is wired."""
     table = {b["name"]: b for b in js["branches"]}
     seen = set()
     promotions = 0
     requests = []
+    bad = {"error": "invariant_violated"}
     for entry in log:
-        o, asserted, events = entry["origin"], entry["asserted"], entry["events"]
+        o, heads, events = entry["origin"], entry["heads"], entry["events"]
         handler = o["source"] == "handler" and o["major"] == 1
         promos = [e for e in events if e["type"] in ("BranchPromoted", "ProtectedBranchPromoted")]
         if len(promos) > 1:
-            return {"error": "invariant_violated"}
+            return bad
         for e in events:
             t, b = e["type"], e["body"]
             if t == "PromotionRequested":
                 keys = sorted(b)
                 if keys not in (REQUEST_KEYS, sorted(REQUEST_KEYS + ["note"])):
-                    return {"error": "invariant_violated"}
-                if not (handler and o["command"] == REQUEST and o["class"] == "W1"):
-                    return {"error": "invariant_violated"}
-                if b["source"] not in table or b["target"] not in table or b["source"] == b["target"]:
-                    return {"error": "invariant_violated"}
+                    return bad
+            else:
+                want = PROMO_KEYS + (["assertion", "pre_image"] if t == "ProtectedBranchPromoted" else [])
+                if sorted(b) != sorted(want):
+                    return bad
+            if b["source"] not in table or b["target"] not in table or b["source"] == b["target"]:
+                return bad
+            if b["target"].startswith("agent/"):
+                return bad
+            # The heads before this entry, as the replay of the verified journal gives them.
+            if b["source"] not in heads or b["target"] not in heads:
+                return bad
+            if heads[b["source"]] != b["source_head"] or heads[b["target"]] != b["target_head"]:
+                return bad
+            if t == "PromotionRequested":
+                if not (handler and o["command"] == REQUEST and o["class"] == "W1" and o["branch"] == b["source"]):
+                    return bad
                 if len(b.get("note", "")) > MAX_NOTE:
-                    return {"error": "invariant_violated"}
+                    return bad
                 requests.append(o["kind"])
                 continue
-            want = PROMO_KEYS + (["pre_image"] if t == "ProtectedBranchPromoted" else [])
-            if sorted(b) != sorted(want):
-                return {"error": "invariant_violated"}
             if t == "BranchPromoted":
                 ok = handler and o["command"] == PROMOTE and o["kind"] == "human" and o["class"] == "W2"
             else:
                 ok = (handler and o["command"] == PROTECTED and o["kind"] == "human" and o["class"] == "W3"
-                      and asserted and b["pre_image"] == pre_image(b))
+                      and o["human_assertion"] == b["assertion"] and b["pre_image"] == pre_image(b)
+                      and confirms is not None and [b["pre_image"], b["assertion"]] in confirms)
             if not ok or o["branch"] != b["target"]:
-                return {"error": "invariant_violated"}
-            if b["source"] not in table or b["target"] not in table or b["source"] == b["target"]:
-                return {"error": "invariant_violated"}
-            if b["target"].startswith("agent/"):
-                return {"error": "invariant_violated"}
+                return bad
             if table[b["target"]]["protected"] != (t == "ProtectedBranchPromoted"):
-                return {"error": "invariant_violated"}
+                return bad
             ents = b["entries"]
             if b["mode"] == "fast_forward":
                 if ents:
-                    return {"error": "invariant_violated"}
+                    return bad
             elif b["mode"] == "rebased":
                 if not 1 <= len(ents) <= MAX_STEPS:
-                    return {"error": "invariant_violated"}
+                    return bad
                 for i, en in enumerate(ents, start=1):
                     if sorted(en) != ["command", "digest", "outcome", "step"] or en["step"] != i \
                             or en["outcome"] not in OK_OUTCOMES:
-                        return {"error": "invariant_violated"}
+                        return bad
             else:
-                return {"error": "invariant_violated"}
+                return bad
             key = (b["target"], b["target_head"], b["source_head"])
             if key in seen:
-                return {"error": "invariant_violated"}
+                return bad
             seen.add(key)
             promotions += 1
     return {"ok": {"promotions": promotions, "requests": requests}}
@@ -375,60 +392,101 @@ def plan_cases(js, hashes):
     return out
 
 
-def handler(command, cls, kind="human", branch="main", major=1, source="handler"):
-    return {"kind": kind, "command": command, "major": major, "class": cls, "branch": branch, "source": source}
+def handler(command, cls, kind="human", branch="main", major=1, source="handler", human_assertion=None):
+    return {"kind": kind, "command": command, "major": major, "class": cls, "branch": branch, "source": source,
+            "human_assertion": human_assertion}
 
 
-def fold_cases(js, plans):
+def heads_of(js, journal, *branches):
+    """The logical heads of `branches` in `journal` (BR.DIFF's rule), as a replay gives them."""
+    m = model(js, journal)
+    out = {}
+    for b in branches:
+        out[b] = bd.outcome(m, b, b)["result"]["source"]["head"]
+    return out
+
+
+def fold_cases(js, plans, hashes):
     ev = {c["name"]: c["expect"]["event"] for c in plans if "event" in c["expect"]}
     ff, reb, prot, req = (ev["ac1_fast_forward"], ev["ac2_rebased_identical"], ev["protected_fast_forward"],
                           ev["ac5_agent_request"])
     promote = handler(PROMOTE, "W2")
-    protected = handler(PROTECTED, "W3", branch="prot")
+    protected = handler(PROTECTED, "W3", branch="prot", human_assertion="A-1")
     request = handler(REQUEST, "W1", kind="agent", branch="trial")
+    all_branches = [b["name"] for b in js["branches"]]
+    at_ff = heads_of(js, "ff", *all_branches)
+    at_fork = heads_of(js, "fork", *all_branches)
+    after = heads_of(js, "after_ff", *all_branches)
+    confirms = [[ev["protected_fast_forward"]["body"]["pre_image"], "A-1"]]
 
-    def e(origin, events, asserted=False):
-        return {"origin": origin, "asserted": asserted, "events": events}
+    def e(origin, events, heads):
+        return {"origin": origin, "heads": heads, "events": events}
 
     def edit(event, **kw):
         x = copy.deepcopy(event)
         x["body"].update(kw)
         return x
 
+    def reimage(event, **kw):
+        x = edit(event, **kw)
+        x["body"]["pre_image"] = pre_image(x["body"])
+        return x
+
     cases = [
-        ("genuine_promotions_and_request", [e(promote, [ff]), e(promote, [reb]), e(protected, [prot], True),
-                                            e(request, [req])]),
-        ("replayed_promotion", [e(promote, [ff]), e(promote, [ff])]),
-        ("replayed_protected_promotion", [e(protected, [prot], True), e(protected, [prot], True)]),
-        ("agent_principal", [e(dict(promote, kind="agent"), [ff])]),
-        ("script_principal", [e(dict(promote, kind="script"), [ff])]),
-        ("bus_route_source", [e(dict(promote, source="bus_route"), [ff])]),
-        ("other_command", [e(handler("journal.create_branch", "W2"), [ff])]),
-        ("other_major", [e(dict(promote, major=2), [ff])]),
-        ("other_class", [e(dict(promote, **{"class": "W1"}), [ff])]),
-        ("entry_on_another_branch", [e(dict(promote, branch="trial"), [ff])]),
-        ("unprotected_event_into_protected", [e(dict(promote, branch="prot"), [edit(ff, target="prot")])]),
-        ("protected_without_assertion", [e(protected, [prot], False)]),
-        ("protected_from_w2", [e(dict(protected, **{"class": "W2"}), [prot], True)]),
-        ("protected_into_unprotected", [e(dict(protected, branch="main"), [edit(prot, target="main")], True)]),
-        ("protected_pre_image_forged", [e(protected, [edit(prot, pre_image=sha(b"forged"))], True)]),
-        ("protected_type_from_promote_branch", [e(dict(promote, branch="prot"), [prot], True)]),
-        ("fast_forward_with_entries", [e(promote, [edit(ff, entries=reb["body"]["entries"])])]),
-        ("rebased_without_entries", [e(promote, [edit(reb, entries=[])])]),
-        ("divergent_entry", [e(promote, [edit(reb, entries=[dict(reb["body"]["entries"][0], outcome="DIVERGENT")])])]),
+        ("genuine_promotions_and_request", [e(promote, [ff], at_ff), e(promote, [reb], at_fork),
+                                            e(protected, [prot], at_ff), e(request, [req], at_ff)]),
+        ("replayed_promotion", [e(promote, [ff], at_ff), e(promote, [ff], after)]),
+        ("replayed_promotion_same_heads", [e(promote, [ff], at_ff), e(promote, [ff], at_ff)]),
+        ("replay_with_altered_target_head", [e(promote, [ff], at_ff), e(promote, [edit(ff, target_head=None)], after)]),
+        ("replay_with_made_up_target_head",
+         [e(promote, [ff], at_ff), e(promote, [edit(ff, target_head=sha(b"made up"))], after)]),
+        ("stale_target_head", [e(promote, [ff], at_fork)]),
+        ("stale_source_head", [e(promote, [ff], dict(at_ff, trial=hashes[3]))]),
+        ("heads_not_given", [e(promote, [ff], {"main": at_ff["main"]})]),
+        ("replayed_protected_promotion", [e(protected, [prot], at_ff), e(protected, [prot], at_ff)]),
+        ("agent_principal", [e(dict(promote, kind="agent"), [ff], at_ff)]),
+        ("script_principal", [e(dict(promote, kind="script"), [ff], at_ff)]),
+        ("bus_route_source", [e(dict(promote, source="bus_route"), [ff], at_ff)]),
+        ("other_command", [e(handler("journal.create_branch", "W2"), [ff], at_ff)]),
+        ("other_major", [e(dict(promote, major=2), [ff], at_ff)]),
+        ("other_class", [e(dict(promote, **{"class": "W1"}), [ff], at_ff)]),
+        ("entry_on_another_branch", [e(dict(promote, branch="trial"), [ff], at_ff)]),
+        ("unprotected_event_into_protected", [e(dict(promote, branch="prot"), [edit(ff, target="prot")], at_ff)]),
+        ("protected_without_header_assertion", [e(dict(protected, human_assertion=None), [prot], at_ff)]),
+        ("protected_header_assertion_differs", [e(dict(protected, human_assertion="A-2"), [prot], at_ff)]),
+        ("protected_recomputed_pre_image",
+         [e(protected, [reimage(prot, diff=sha(b"another approved diff"))], at_ff)]),
+        ("protected_pre_image_forged", [e(protected, [edit(prot, pre_image=sha(b"forged"))], at_ff)]),
+        ("protected_from_w2", [e(dict(protected, **{"class": "W2"}), [prot], at_ff)]),
+        ("protected_into_unprotected",
+         [e(dict(protected, branch="main"), [reimage(prot, target="main", target_head=at_ff["main"])], at_ff)]),
+        ("protected_type_from_promote_branch", [e(dict(promote, branch="prot", human_assertion="A-1"), [prot], at_ff)]),
+        ("fast_forward_with_entries", [e(promote, [edit(ff, entries=reb["body"]["entries"])], at_ff)]),
+        ("rebased_without_entries", [e(promote, [edit(reb, entries=[])], at_fork)]),
+        ("divergent_entry",
+         [e(promote, [edit(reb, entries=[dict(reb["body"]["entries"][0], outcome="DIVERGENT")])], at_fork)]),
         ("entries_misnumbered", [e(promote, [edit(reb, entries=[dict(x, step=x["step"] + 1)
-                                                                for x in reb["body"]["entries"]])])]),
-        ("unknown_mode", [e(promote, [edit(ff, mode="squash")])]),
-        ("two_promotions_in_one_entry", [e(promote, [ff, edit(ff, target_head=None)])]),
-        ("into_agent_branch", [e(dict(promote, branch="agent/claude/1"), [edit(ff, target="agent/claude/1")])]),
-        ("unknown_source_branch", [e(promote, [edit(ff, source="ghost")])]),
-        ("extra_body_key", [e(promote, [edit(ff, requester="human")])]),
-        ("request_from_human_script_agent", [e(dict(request, kind=k), [req]) for k in ("human", "script", "agent")]),
-        ("request_from_w2", [e(dict(request, **{"class": "W2"}), [req])]),
-        ("request_from_other_command", [e(dict(request, command=PROMOTE), [req])]),
-        ("request_note_too_long", [e(request, [edit(req, note="x" * (MAX_NOTE + 1))])]),
+                                                                for x in reb["body"]["entries"]])], at_fork)]),
+        ("unknown_mode", [e(promote, [edit(ff, mode="squash")], at_ff)]),
+        ("two_promotions_in_one_entry", [e(promote, [ff, edit(ff, target_head=None)], at_ff)]),
+        ("into_agent_branch", [e(dict(promote, branch="agent/claude/1"),
+                                 [edit(ff, target="agent/claude/1", target_head=at_ff["agent/claude/1"])], at_ff)]),
+        ("unknown_source_branch", [e(promote, [edit(ff, source="ghost")], at_ff)]),
+        ("extra_body_key", [e(promote, [edit(ff, requester="human")], at_ff)]),
+        ("request_from_human_script_agent", [e(dict(request, kind=k), [req], at_ff) for k in ("human", "script", "agent")]),
+        ("request_from_w2", [e(dict(request, **{"class": "W2"}), [req], at_ff)]),
+        ("request_from_other_command", [e(dict(request, command=PROMOTE), [req], at_ff)]),
+        ("request_on_another_branch", [e(dict(request, branch="main"), [req], at_ff)]),
+        ("request_into_agent_branch",
+         [e(request, [edit(req, target="agent/claude/1", target_head=at_ff["agent/claude/1"])], at_ff)]),
+        ("request_stale_head", [e(request, [req], at_fork)]),
+        ("request_note_too_long", [e(request, [edit(req, note="x" * (MAX_NOTE + 1))], at_ff)]),
     ]
-    return [{"name": n, "log": log, "expect": fold(js, log)} for n, log in cases]
+    out = [{"name": n, "log": log, "assertion_check": {"confirms": confirms}, "expect": fold(js, log, confirms)}
+           for n, log in cases]
+    out.append({"name": "protected_without_assertion_check", "log": [e(protected, [prot], at_ff)],
+                "assertion_check": None, "expect": fold(js, [e(protected, [prot], at_ff)], None)})
+    return out
 
 
 def dump(v):
@@ -438,7 +496,7 @@ def dump(v):
 def build():
     js, hashes = journals()
     plans = plan_cases(js, hashes)
-    folds = fold_cases(js, plans)
+    folds = fold_cases(js, plans, hashes)
     by = {c["name"]: c["expect"] for c in plans}
     fb = {c["name"]: c["expect"] for c in folds}
     names = [c["name"] for c in plans]
@@ -462,6 +520,7 @@ def build():
     for n in ("replayed_after_fast_forward", "source_moved", "target_moved", "request_stale_head"):
         assert by[n]["error"]["reason"] == "expected_head_mismatch", n
     assert fb["genuine_promotions_and_request"] == {"ok": {"promotions": 3, "requests": ["agent"]}}
+    assert by["protected_fast_forward"]["event"]["body"]["assertion"] == "A-1"
     for n, v in fb.items():
         if n not in ("genuine_promotions_and_request", "request_from_human_script_agent"):
             assert v == {"error": "invariant_violated"}, n

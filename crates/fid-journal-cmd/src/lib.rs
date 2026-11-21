@@ -186,6 +186,7 @@ pub fn run(
             class,
             branch: MAIN.to_string(),
             source: EventSource::Handler,
+            human_assertion: None,
         };
         b.apply(&origin, &e).map_err(|e| to_bus_error(&e))?;
         events.push(event_of(&e)?);

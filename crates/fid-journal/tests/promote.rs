@@ -114,6 +114,7 @@ fn fixture() -> Fixture {
         class,
         branch: MAIN.into(),
         source: EventSource::Handler,
+        human_assertion: None,
     };
     for b in arr(f, "branches") {
         let b = obj(b);
@@ -128,6 +129,7 @@ fn fixture() -> Fixture {
                     class: SideEffect::W2,
                     branch: name.as_str().into(),
                     source: EventSource::BusRoute,
+                    human_assertion: None,
                 }
             } else {
                 human(CREATE_BRANCH, SideEffect::W2)
@@ -357,6 +359,54 @@ fn origin_of(o: &Obj) -> EntryOrigin {
             "bus_release" => EventSource::BusRelease,
             other => panic!("{other}"),
         },
+        human_assertion: match get(o, "human_assertion") {
+            CValue::Null => None,
+            CValue::Str(s) => Some(s.clone()),
+            other => panic!("{other:?}"),
+        },
+    }
+}
+
+fn heads_of(entry: &Obj) -> BTreeMap<String, Option<Digest>> {
+    obj(get(entry, "heads"))
+        .iter()
+        .map(|(k, v)| {
+            let h = match v {
+                CValue::Null => None,
+                CValue::Str(s) => Some(digest(s)),
+                other => panic!("{other:?}"),
+            };
+            (k.clone(), h)
+        })
+        .collect()
+}
+
+/// The fold case's AssertionCheck: confirms exactly the listed pairs.
+struct PairsCheck(Vec<(Digest, String)>);
+
+impl AssertionCheck for PairsCheck {
+    fn confirm(&self, pre_image: &Digest, assertion: &str) -> bool {
+        self.0.iter().any(|(p, a)| p == pre_image && a == assertion)
+    }
+}
+
+fn check_for(case: &Obj) -> Option<PairsCheck> {
+    match get(case, "assertion_check") {
+        CValue::Null => None,
+        CValue::Obj(o) => {
+            let CValue::Arr(pairs) = get(o, "confirms") else { panic!() };
+            Some(PairsCheck(
+                pairs
+                    .iter()
+                    .map(|p| {
+                        let CValue::Arr(p) = p else { panic!() };
+                        let (CValue::Str(d), CValue::Str(a)) = (&p[0], &p[1]) else { panic!() };
+                        (digest(d), a.clone())
+                    })
+                    .collect(),
+            ))
+        }
+        other => panic!("{other:?}"),
     }
 }
 
@@ -372,9 +422,15 @@ fn fold(fx: &Fixture, case: &Obj) -> Result<Promotions, String> {
             })
             .collect();
         let events = events.map_err(|e| e.reason().to_string())?;
-        let asserted = matches!(get(entry, "asserted"), CValue::Bool(true));
-        p.apply_entry(&fx.table, &origin_of(obj(get(entry, "origin"))), asserted, &events)
-            .map_err(|e| e.reason().to_string())?;
+        let check = check_for(case);
+        p.apply_entry(
+            &fx.table,
+            &heads_of(entry),
+            check.as_ref().map(|c| c as &dyn AssertionCheck),
+            &origin_of(obj(get(entry, "origin"))),
+            &events,
+        )
+        .map_err(|e| e.reason().to_string())?;
     }
     Ok(p)
 }
@@ -419,7 +475,8 @@ fn a_refused_entry_leaves_the_fold_unchanged() {
     let ev = obj(&arr(first, "events")[0]);
     let e = PromoEvent::from_parts(st(ev, "type"), get(ev, "body")).unwrap();
     let origin = origin_of(obj(get(first, "origin")));
-    assert!(p.apply_entry(&fx.table, &origin, false, &[e]).is_err());
+    // The same promotion again, with the heads before the first: a replay.
+    assert!(p.apply_entry(&fx.table, &heads_of(first), None, &origin, &[e]).is_err());
     assert_eq!(p, before);
 }
 

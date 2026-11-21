@@ -148,6 +148,7 @@ fn table(m: &Model) -> Branches {
             class: SideEffect::W2,
             branch: if agent { name.as_str().to_string() } else { MAIN.to_string() },
             source: if agent { EventSource::BusRoute } else { EventSource::Handler },
+            human_assertion: None,
         };
         b.apply(&origin, &BranchEvent::Created { name, from }).unwrap();
     }

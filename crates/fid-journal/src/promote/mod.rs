@@ -53,10 +53,15 @@
 //! - **Fold** ([`Promotions::apply_entry`]): an entry holds at most one promotion event;
 //!   `BranchPromoted` only from `journal.promote_branch@1`'s handler, human, W2;
 //!   `ProtectedBranchPromoted` only from `journal.promote_protected_branch@1`'s handler, human,
-//!   W3, asserted, its pre-image recomputed; either only on an entry of the target branch, into
-//!   a known human-owned target other than the source; `PromotionRequested` only from
-//!   `journal.request_promote_branch@1`'s handler, W1, any principal (the requester is the
-//!   entry's principal, never the body). Bodies have exactly their keys; `fast_forward` has no
+//!   W3, naming as `assertion` the verified entry header's `human_assertion`
+//!   ([`EntryOrigin::human_assertion`]), with its pre-image recomputed from its binding and
+//!   confirmed again by the wired [`AssertionCheck`] (none wired: refused, since it cannot be
+//!   proved); either only on an entry of the target branch; `PromotionRequested` only from
+//!   `journal.request_promote_branch@1`'s handler, W1, any principal, on an entry of the source
+//!   branch (the requester is the entry's principal; its identity is the header's principal
+//!   commitment, REQ-005, and [`FoldedRequest`] keeps only its kind). Every event: a known
+//!   human-owned target other than the source, and `source_head`/`target_head` equal to the
+//!   logical heads before its entry, which the caller gives from the verified journal. Bodies have exactly their keys; `fast_forward` has no
 //!   entries, `rebased` 1 to [`MAX_STEPS`] numbered from 1, each `IDENTICAL` or `EQUIVALENT`.
 //!   A second promotion of the same `(target, target_head, source_head)` is a replay. Anything
 //!   else is `internal/invariant_violated`. The three event types are reserved in the
@@ -382,6 +387,9 @@ pub struct Promotion {
     pub entries: Vec<RebaseStep>,
     /// Protected promotions only.
     pub pre_image: Option<Digest>,
+    /// Protected promotions only: the assertion reference, which must be the entry header's
+    /// `human_assertion`.
+    pub assertion: Option<String>,
 }
 
 /// A promotion request's content.
@@ -429,6 +437,9 @@ impl PromoEvent {
                 if let Some(pi) = p.pre_image {
                     o.insert("pre_image".into(), text(pi.as_str()));
                 }
+                if let Some(a) = &p.assertion {
+                    o.insert("assertion".into(), text(a));
+                }
                 CValue::Obj(o)
             }
             PromoEvent::Requested(r) => {
@@ -449,7 +460,7 @@ impl PromoEvent {
         let want: &[&str] = match type_id {
             BRANCH_PROMOTED => &["diff", "entries", "mode", "source", "source_head", "target", "target_head"],
             PROTECTED_BRANCH_PROMOTED => {
-                &["diff", "entries", "mode", "pre_image", "source", "source_head", "target", "target_head"]
+                &["assertion", "diff", "entries", "mode", "pre_image", "source", "source_head", "target", "target_head"]
             }
             PROMOTION_REQUESTED if o.contains_key("note") => {
                 &["diff", "note", "source", "source_head", "target", "target_head"]
@@ -520,12 +531,22 @@ impl PromoEvent {
             });
         }
         let pre_image = if type_id == PROTECTED_BRANCH_PROMOTED { Some(digest("pre_image")?) } else { None };
+        let assertion = if type_id == PROTECTED_BRANCH_PROMOTED {
+            let a = s("assertion")?;
+            if a.is_empty() || a.len() > MAX_ASSERTION_BYTES {
+                return Err(tampered("ProtectedBranchPromoted.assertion is empty or too long"));
+            }
+            Some(a.to_string())
+        } else {
+            None
+        };
         Ok(PromoEvent::Promoted(Promotion {
             protected: type_id == PROTECTED_BRANCH_PROMOTED,
             binding,
             mode,
             entries,
             pre_image,
+            assertion,
         }))
     }
 }
@@ -622,16 +643,19 @@ pub fn plan(
     if op == PromoteOp::Request {
         return Ok(PromoEvent::Requested(Request { binding, note: p.note.clone() }));
     }
-    let pre_image = if op == PromoteOp::Protected {
+    let (pre_image, assertion) = if op == PromoteOp::Protected {
         let check = check.ok_or(PromoteError::CapabilityMissing("AssertionCheck"))?;
         let assertion = p.assertion.as_deref().ok_or_else(|| PromoteError::Schema("missing assertion".into()))?;
+        if assertion.is_empty() || assertion.len() > MAX_ASSERTION_BYTES {
+            return Err(PromoteError::Schema(format!("assertion has 1 to {MAX_ASSERTION_BYTES} bytes")));
+        }
         let pi = binding.pre_image();
         if !check.confirm(&pi, assertion) {
             return Err(PromoteError::NoAssertion);
         }
-        Some(pi)
+        (Some(pi), Some(assertion.to_string()))
     } else {
-        None
+        (None, None)
     };
     let protected = op == PromoteOp::Protected;
     if d.ancestor == p.target_head {
@@ -641,6 +665,7 @@ pub fn plan(
             mode: Mode::FastForward,
             entries: Vec::new(),
             pre_image,
+            assertion,
         }));
     }
     let rebaser = rebaser.ok_or(PromoteError::CapabilityMissing("Rebaser"))?;
@@ -665,7 +690,14 @@ pub fn plan(
             return Err(PromoteError::Rebase(format!("step {} names no command id@major", i.saturating_add(1))));
         }
     }
-    Ok(PromoEvent::Promoted(Promotion { protected, binding, mode: Mode::Rebased, entries: steps, pre_image }))
+    Ok(PromoEvent::Promoted(Promotion {
+        protected,
+        binding,
+        mode: Mode::Rebased,
+        entries: steps,
+        pre_image,
+        assertion,
+    }))
 }
 
 // ------------------------------------------------------------------ the fold
@@ -690,15 +722,18 @@ impl Promotions {
         origin.source == EventSource::Handler && origin.command == command && origin.major == 1 && origin.class == class
     }
 
-    /// Folds the promotion events of one committed entry with this origin; `asserted` is
-    /// whether the entry carries a human assertion the commit stage verified. Refuses, as
-    /// `internal/invariant_violated`, anything its origin could not have produced (module
-    /// documentation, Fold), and folds nothing of the entry then.
+    /// Folds the promotion events of one committed entry with this origin. `heads` are the
+    /// logical heads (`CORE.JRN.BR.DIFF`'s rule; `None` for the empty state) of the branches
+    /// before this entry, as the replay of the verified journal gives them; `check` is the
+    /// wired AssertionCheck. Refuses, as `internal/invariant_violated`, anything its origin
+    /// could not have produced (module documentation, Fold), and folds nothing of the entry
+    /// then.
     pub fn apply_entry(
         &mut self,
         table: &Branches,
+        heads: &BTreeMap<String, Option<Digest>>,
+        check: Option<&dyn AssertionCheck>,
         origin: &EntryOrigin,
-        asserted: bool,
         events: &[PromoEvent],
     ) -> Result<(), BranchError> {
         let n = events.iter().filter(|e| matches!(e, PromoEvent::Promoted(_))).count();
@@ -707,12 +742,22 @@ impl Promotions {
         }
         let mut next = self.clone();
         for e in events {
+            let binding = match e {
+                PromoEvent::Requested(r) => &r.binding,
+                PromoEvent::Promoted(p) => &p.binding,
+            };
+            let target = check_pair(table, binding)?;
+            if target.owner() == Owner::Agent {
+                return Err(tampered(format!("{} into agent branch {}", e.type_id(), target.name)));
+            }
+            check_heads(heads, binding)?;
             match e {
                 PromoEvent::Requested(r) => {
-                    if !Self::handler(origin, REQUEST_PROMOTE_BRANCH, SideEffect::W1) {
+                    if !Self::handler(origin, REQUEST_PROMOTE_BRANCH, SideEffect::W1)
+                        || origin.branch != r.binding.source.as_str()
+                    {
                         return Err(tampered(format!("PromotionRequested from {}", describe(origin))));
                     }
-                    check_pair(table, &r.binding)?;
                     if r.note.as_ref().is_some_and(|n| n.chars().count() > MAX_NOTE_CHARS) {
                         return Err(tampered("PromotionRequested.note is too long"));
                     }
@@ -722,17 +767,12 @@ impl Promotions {
                     let ok = if p.protected {
                         Self::handler(origin, PROMOTE_PROTECTED_BRANCH, SideEffect::W3)
                             && origin.kind == PrincipalKind::Human
-                            && asserted
-                            && p.pre_image == Some(p.binding.pre_image())
+                            && asserted_by(origin, p, check)
                     } else {
                         Self::handler(origin, PROMOTE_BRANCH, SideEffect::W2) && origin.kind == PrincipalKind::Human
                     };
                     if !ok || origin.branch != p.binding.target.as_str() {
                         return Err(tampered(format!("{} from {}", e.type_id(), describe(origin))));
-                    }
-                    let target = check_pair(table, &p.binding)?;
-                    if target.owner() == Owner::Agent {
-                        return Err(tampered(format!("promotion into agent branch {}", target.name)));
                     }
                     if target.protected != p.protected {
                         return Err(tampered(format!(
@@ -765,6 +805,29 @@ impl Promotions {
         *self = next;
         Ok(())
     }
+}
+
+/// A protected promotion is bound to its entry: the event names the verified header's
+/// `human_assertion`, its pre-image is the one its binding gives, and the wired
+/// AssertionCheck confirms that assertion over it again (none wired: not provable).
+fn asserted_by(origin: &EntryOrigin, p: &Promotion, check: Option<&dyn AssertionCheck>) -> bool {
+    let pre = p.binding.pre_image();
+    match (&origin.human_assertion, &p.assertion, p.pre_image, check) {
+        (Some(header), Some(body), Some(pi), Some(check)) => header == body && pi == pre && check.confirm(&pi, body),
+        _ => false,
+    }
+}
+
+/// The event's heads are the heads before its entry: a replay, or a made-up or stale head,
+/// is refused.
+fn check_heads(heads: &BTreeMap<String, Option<Digest>>, b: &Binding) -> Result<(), BranchError> {
+    let at = |name: &BranchName| {
+        heads.get(name.as_str()).copied().ok_or_else(|| tampered(format!("no head given for {name}")))
+    };
+    if at(&b.source)? != Some(b.source_head) || at(&b.target)? != b.target_head {
+        return Err(tampered(format!("promotion bound to heads of {} and {} that are not theirs", b.source, b.target)));
+    }
+    Ok(())
 }
 
 /// Source and target are known, distinct branches; returns the target.

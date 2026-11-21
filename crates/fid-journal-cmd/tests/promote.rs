@@ -135,6 +135,7 @@ fn build_table(f: &Obj, first: Digest) -> Branches {
         class,
         branch: MAIN.into(),
         source: EventSource::Handler,
+        human_assertion: None,
     };
     for b in arr(f, "branches") {
         let b = obj(b);
@@ -149,6 +150,7 @@ fn build_table(f: &Obj, first: Digest) -> Branches {
                     class: SideEffect::W2,
                     branch: name.as_str().into(),
                     source: EventSource::BusRoute,
+                    human_assertion: None,
                 }
             } else {
                 human(CREATE_BRANCH, SideEffect::W2)

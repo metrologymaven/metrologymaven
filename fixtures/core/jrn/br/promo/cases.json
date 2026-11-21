@@ -1,6 +1,14 @@
 {
  "folds": [
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "ok": {
      "promotions": 3,
@@ -11,7 +19,6 @@
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -26,17 +33,24 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
      }
     },
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -70,20 +84,28 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
      }
     },
     {
-     "asserted": true,
      "events": [
       {
        "body": {
+        "assertion": "A-1",
         "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
         "entries": [],
         "mode": "fast_forward",
@@ -96,17 +118,24 @@
        "type": "ProtectedBranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "prot",
       "class": "W3",
       "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
       "kind": "human",
       "major": 1,
       "source": "handler"
      }
     },
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -120,10 +149,18 @@
        "type": "PromotionRequested"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "trial",
       "class": "W1",
       "command": "journal.request_promote_branch",
+      "human_assertion": null,
       "kind": "agent",
       "major": 1,
       "source": "handler"
@@ -133,12 +170,19 @@
    "name": "genuine_promotions_and_request"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -153,17 +197,24 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
      }
     },
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -178,10 +229,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:49d0cf6d368d471b0813c33dd5e437f7e10d2f740ee36ceab5f485b53f347bed",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -191,41 +250,403 @@
    "name": "replayed_promotion"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": true,
      "events": [
       {
        "body": {
-        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
         "entries": [],
         "mode": "fast_forward",
-        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
         "source": "trial",
         "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
-        "target": "prot",
+        "target": "main",
         "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
        },
-       "type": "ProtectedBranchPromoted"
+       "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
-      "branch": "prot",
-      "class": "W3",
-      "command": "journal.promote_protected_branch",
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
      }
     },
     {
-     "asserted": true,
      "events": [
       {
        "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "replayed_promotion_same_heads"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": null
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:49d0cf6d368d471b0813c33dd5e437f7e10d2f740ee36ceab5f485b53f347bed",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "replay_with_altered_target_head"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:48168fa99cb7e014e77dbf4af79fc5b2a50caac8e820883ea7326f88bc713ac9"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:49d0cf6d368d471b0813c33dd5e437f7e10d2f740ee36ceab5f485b53f347bed",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "replay_with_made_up_target_head"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "stale_target_head"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:32a729cafd02d5c97c113cdc47b88f5fb82e53d377ca88524270712279ea25eb"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "stale_source_head"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "entries": [],
+        "mode": "fast_forward",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "BranchPromoted"
+      }
+     ],
+     "heads": {
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.promote_branch",
+      "human_assertion": null,
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "heads_not_given"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
         "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
         "entries": [],
         "mode": "fast_forward",
@@ -238,10 +659,52 @@
        "type": "ProtectedBranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "prot",
       "class": "W3",
       "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    },
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W3",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -251,12 +714,19 @@
    "name": "replayed_protected_promotion"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -271,10 +741,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "agent",
       "major": 1,
       "source": "handler"
@@ -284,12 +762,19 @@
    "name": "agent_principal"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -304,10 +789,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "script",
       "major": 1,
       "source": "handler"
@@ -317,12 +810,19 @@
    "name": "script_principal"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -337,10 +837,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "bus_route"
@@ -350,12 +858,19 @@
    "name": "bus_route_source"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -370,10 +885,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.create_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -383,12 +906,19 @@
    "name": "other_command"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -403,10 +933,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 2,
       "source": "handler"
@@ -416,12 +954,19 @@
    "name": "other_major"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -436,10 +981,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W1",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -449,12 +1002,19 @@
    "name": "other_class"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -469,10 +1029,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "trial",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -482,12 +1050,19 @@
    "name": "entry_on_another_branch"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -502,10 +1077,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "prot",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -515,15 +1098,23 @@
    "name": "unprotected_event_into_protected"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
+        "assertion": "A-1",
         "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
         "entries": [],
         "mode": "fast_forward",
@@ -536,28 +1127,44 @@
        "type": "ProtectedBranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "prot",
       "class": "W3",
       "command": "journal.promote_protected_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
      }
     }
    ],
-   "name": "protected_without_assertion"
+   "name": "protected_without_header_assertion"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": true,
      "events": [
       {
        "body": {
+        "assertion": "A-1",
         "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
         "entries": [],
         "mode": "fast_forward",
@@ -570,62 +1177,94 @@
        "type": "ProtectedBranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "prot",
-      "class": "W2",
+      "class": "W3",
       "command": "journal.promote_protected_branch",
+      "human_assertion": "A-2",
       "kind": "human",
       "major": 1,
       "source": "handler"
      }
     }
    ],
-   "name": "protected_from_w2"
+   "name": "protected_header_assertion_differs"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": true,
      "events": [
       {
        "body": {
-        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "assertion": "A-1",
+        "diff": "sha256:8804a5fffd43685923da0c42fbbc6caba4fbb053e2e85b2d261e8d4b1a96a1f3",
         "entries": [],
         "mode": "fast_forward",
-        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+        "pre_image": "sha256:eaa59ea2a3340c178fa83fad315b5e45c244e3124dad3e2cc0be0b194b6b846d",
         "source": "trial",
         "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
-        "target": "main",
+        "target": "prot",
         "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
        },
        "type": "ProtectedBranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
-      "branch": "main",
+      "branch": "prot",
       "class": "W3",
       "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
       "kind": "human",
       "major": 1,
       "source": "handler"
      }
     }
    ],
-   "name": "protected_into_unprotected"
+   "name": "protected_recomputed_pre_image"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": true,
      "events": [
       {
        "body": {
+        "assertion": "A-1",
         "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
         "entries": [],
         "mode": "fast_forward",
@@ -638,10 +1277,18 @@
        "type": "ProtectedBranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "prot",
       "class": "W3",
       "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -651,15 +1298,23 @@
    "name": "protected_pre_image_forged"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": true,
      "events": [
       {
        "body": {
+        "assertion": "A-1",
         "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
         "entries": [],
         "mode": "fast_forward",
@@ -672,10 +1327,118 @@
        "type": "ProtectedBranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W2",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "protected_from_w2"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:aeb22440b52c9cdc5350a74d07ef1584d74a616ea6b58d7e5eb7125d0707af06",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W3",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "protected_into_unprotected"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "prot",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": "A-1",
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -685,12 +1448,19 @@
    "name": "protected_type_from_promote_branch"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -724,10 +1494,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -737,12 +1515,19 @@
    "name": "fast_forward_with_entries"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -757,10 +1542,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -770,12 +1563,19 @@
    "name": "rebased_without_entries"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -797,10 +1597,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -810,12 +1618,19 @@
    "name": "divergent_entry"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -849,10 +1664,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -862,12 +1685,19 @@
    "name": "entries_misnumbered"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -882,10 +1712,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -895,12 +1733,19 @@
    "name": "unknown_mode"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -927,10 +1772,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -940,12 +1793,19 @@
    "name": "two_promotions_in_one_entry"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -955,15 +1815,23 @@
         "source": "trial",
         "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
         "target": "agent/claude/1",
-        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+        "target_head": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d"
        },
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "agent/claude/1",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -973,12 +1841,19 @@
    "name": "into_agent_branch"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -993,10 +1868,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -1006,12 +1889,19 @@
    "name": "unknown_source_branch"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -1027,10 +1917,18 @@
        "type": "BranchPromoted"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "main",
       "class": "W2",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
@@ -1040,6 +1938,14 @@
    "name": "extra_body_key"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "ok": {
      "promotions": 0,
@@ -1052,7 +1958,6 @@
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -1066,17 +1971,24 @@
        "type": "PromotionRequested"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "trial",
       "class": "W1",
       "command": "journal.request_promote_branch",
+      "human_assertion": null,
       "kind": "human",
       "major": 1,
       "source": "handler"
      }
     },
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -1090,17 +2002,24 @@
        "type": "PromotionRequested"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "trial",
       "class": "W1",
       "command": "journal.request_promote_branch",
+      "human_assertion": null,
       "kind": "script",
       "major": 1,
       "source": "handler"
      }
     },
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -1114,10 +2033,18 @@
        "type": "PromotionRequested"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "trial",
       "class": "W1",
       "command": "journal.request_promote_branch",
+      "human_assertion": null,
       "kind": "agent",
       "major": 1,
       "source": "handler"
@@ -1127,12 +2054,19 @@
    "name": "request_from_human_script_agent"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -1146,10 +2080,18 @@
        "type": "PromotionRequested"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "trial",
       "class": "W2",
       "command": "journal.request_promote_branch",
+      "human_assertion": null,
       "kind": "agent",
       "major": 1,
       "source": "handler"
@@ -1159,12 +2101,19 @@
    "name": "request_from_w2"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
      "events": [
       {
        "body": {
@@ -1178,10 +2127,18 @@
        "type": "PromotionRequested"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "trial",
       "class": "W1",
       "command": "journal.promote_branch",
+      "human_assertion": null,
       "kind": "agent",
       "major": 1,
       "source": "handler"
@@ -1191,12 +2148,160 @@
    "name": "request_from_other_command"
   },
   {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
    "expect": {
     "error": "invariant_violated"
    },
    "log": [
     {
-     "asserted": false,
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "Please adopt the e1 fix.",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "main",
+      "class": "W1",
+      "command": "journal.request_promote_branch",
+      "human_assertion": null,
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "request_on_another_branch"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "Please adopt the e1 fix.",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "agent/claude/1",
+        "target_head": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "trial",
+      "class": "W1",
+      "command": "journal.request_promote_branch",
+      "human_assertion": null,
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "request_into_agent_branch"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "diff": "sha256:6e1dba2a90a4c7de378f03a285ce82e43bdb3f33c77d92697cd1ae54a4df5090",
+        "note": "Please adopt the e1 fix.",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "main",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "PromotionRequested"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:f7fe937c7ee5abdb88589cd4a6d7d371f6122c2833364b570c882d7823591444",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "trial",
+      "class": "W1",
+      "command": "journal.request_promote_branch",
+      "human_assertion": null,
+      "kind": "agent",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "request_stale_head"
+  },
+  {
+   "assertion_check": {
+    "confirms": [
+     [
+      "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+      "A-1"
+     ]
+    ]
+   },
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
      "events": [
       {
        "body": {
@@ -1210,10 +2315,18 @@
        "type": "PromotionRequested"
       }
      ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
      "origin": {
       "branch": "trial",
       "class": "W1",
       "command": "journal.request_promote_branch",
+      "human_assertion": null,
       "kind": "agent",
       "major": 1,
       "source": "handler"
@@ -1221,6 +2334,49 @@
     }
    ],
    "name": "request_note_too_long"
+  },
+  {
+   "assertion_check": null,
+   "expect": {
+    "error": "invariant_violated"
+   },
+   "log": [
+    {
+     "events": [
+      {
+       "body": {
+        "assertion": "A-1",
+        "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
+        "entries": [],
+        "mode": "fast_forward",
+        "pre_image": "sha256:718f0724ee8012d7b01db507eca4e88c8068123c4a379c93eac6c3d68f3d776d",
+        "source": "trial",
+        "source_head": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250",
+        "target": "prot",
+        "target_head": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb"
+       },
+       "type": "ProtectedBranchPromoted"
+      }
+     ],
+     "heads": {
+      "agent/claude/1": "sha256:0ea1ed51d10d03d1e8ca310e0cfa821411b9436870479ae81127fce080945a6d",
+      "main": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "prot": "sha256:392a06eba586a101cbe73614de5555e0b797bb1579ef26f60a13c071285637bb",
+      "rel": "sha256:ce2b0f4bfeb011da5fed3a03280087806b0f16411a9dcc71978d9c62f3da5932",
+      "trial": "sha256:317e1bf388b50280aa2cb5c217c780c92cf1cd91f5d338043d2d210e679c8250"
+     },
+     "origin": {
+      "branch": "prot",
+      "class": "W3",
+      "command": "journal.promote_protected_branch",
+      "human_assertion": "A-1",
+      "kind": "human",
+      "major": 1,
+      "source": "handler"
+     }
+    }
+   ],
+   "name": "protected_without_assertion_check"
   }
  ],
  "plans": [
@@ -1629,6 +2785,7 @@
    "expect": {
     "event": {
      "body": {
+      "assertion": "A-1",
       "diff": "sha256:3a0458995513b478f9b23da87b71b4110b06d3688a22576a844eb1ff7f62e2f3",
       "entries": [],
       "mode": "fast_forward",
@@ -1714,6 +2871,7 @@
    "expect": {
     "event": {
      "body": {
+      "assertion": "A-9",
       "diff": "sha256:c5e1f2cbd3bd40e4a1ac4bf0cee2e4456b1221d2c0b45e5eb754bac311b6d5fb",
       "entries": [
        {
