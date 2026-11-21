@@ -1563,9 +1563,21 @@ dependencies = [
  "fid-canon",
  "fid-journal",
  "fid-kci",
+ "fid-registry",
  "fid-store",
  "fid-types",
  "getrandom 0.2.17",
+]
+
+[[package]]
+name = "fid-journal-cmd"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-journal",
+ "fid-registry",
+ "fid-types",
 ]
 
 [[package]]
@@ -1667,6 +1679,16 @@ dependencies = [
  "fid-types",
  "sha2 0.10.9",
  "toml",
+]
+
+[[package]]
+name = "fid-overlay"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-gdt",
+ "fid-kdec",
+ "fid-render",
 ]
 
 [[package]]

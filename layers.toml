@@ -58,6 +58,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # Project commands on the bus (CORE.PRJ.CONT.HIER): the handlers and registry definitions of
 # the fid-project (model) container rules; engine because they implement fid-bus handlers.
 "fid-project-cmd" = "engine"
+# Journal branch commands on the bus (CORE.JRN.BR.NAME, bus half): handlers over fid-journal (model) and fid-bus.
+"fid-journal-cmd" = "engine"
 "fid-dep" = "engine"
 # Alignment element (ALN.MODEL.ELEM): needs fid-dep (engine), so engine, not model.
 "fid-align" = "engine"
@@ -127,6 +129,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-eval-board" = "tool"
 "fid-shlint" = "tool"
 "fid-render" = "viewer"
+# Status markers, palette guard, provenance badges (VIZ.OVERLAY.STATUS).
+"fid-overlay" = "viewer"
 # View state model (VIZ.VIEW.STATE): ViewState, its canonical form and digest.
 "fid-view" = "viewer"
 "fid-eval-harness" = "tool"

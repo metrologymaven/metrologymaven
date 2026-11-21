@@ -20,8 +20,10 @@ python fixtures/core/bus/pol/class/make_matrix.py --check
 python fixtures/core/bus/pol/egress/make_fixtures.py --check
 python fixtures/core/bus/pol/proj/make_cases.py --check
 python fixtures/core/bus/unit/make_literals.py --check
+python fixtures/core/jrn/br/name/make_cases.py --check
 python fixtures/core/jrn/chain/append/make_fixtures.py --check
 python fixtures/core/jrn/chain/ckpt/make_fixtures.py --check
+python fixtures/core/jrn/chain/verify/make_fixtures.py --check
 python fixtures/core/jrn/stream/alog/make_fixtures.py --check
 python fixtures/core/prj/cont/hier/make_fixtures.py --check
 python fixtures/core/prj/stage/model/make_fixtures.py --check
@@ -167,6 +169,7 @@ python fixtures/ux/tokens/color/make_tokens.py --check
 python fixtures/ux/tokens/datapal/make_fixtures.py --check
 python fixtures/ux/tokens/datapal/make_palettes.py --check
 python fixtures/ux/tokens/status/make_fixtures.py --check
+python fixtures/viz/status-matrix/make_fixtures.py --check
 python fixtures/viz/viewstate-samples/make_fixtures.py --check
 python tools/check_bench_schema.py
 python tools/check_command_defs.py

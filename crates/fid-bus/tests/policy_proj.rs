@@ -1239,7 +1239,8 @@ fn request_events_are_reserved_effects() {
         let rules: Vec<(&str, Option<&str>)> = errs.iter().map(|e| (e.rule.as_str(), e.field.as_deref())).collect();
         assert_eq!(rules, [("reserved_effect", Some("/effects/1"))], "{effect}");
     }
-    assert_eq!(fid_registry::RESERVED_EFFECTS.len(), 4);
+    // The four request events; the branch events of CORE.JRN.BR.NAME are reserved too.
+    assert_eq!(fid_registry::RESERVED_EFFECTS.iter().filter(|(n, _)| n.starts_with("Request")).count(), 4);
 }
 
 /// Races: two approvals of one request decided at the same head are both produced; each

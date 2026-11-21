@@ -7,18 +7,36 @@
 //! (`CORE.JRN.CHAIN.CKPT`); without it the crate is the storage-free entry model plus the
 //! checkpoint record and its verifier.
 //!
+//! Module `branch` (`CORE.JRN.BR.NAME`) is the branch table: name rules, the branch events and
+//! their projection, and the planners of `journal.create_branch@1`, `journal.list_branches@1`,
+//! `journal.protect_branch@1` and `journal.set_branch_coediting@1`; with feature `store` it
+//! also declares those commands. The bus handlers are in `fid-journal-cmd`.
+//!
+//! Module `verify` (`CORE.JRN.CHAIN.VERIFY`) verifies the hash chain, blobs and checkpoints of
+//! stored rows and lists entry headers; with feature `store` it reads them from the project
+//! database and declares `journal.verify_chain@1` and `journal.list_entries@1`.
+//!
 //! Module `stream` (`CORE.JRN.STREAM.ALOG`) routes completed calls to their stream and writes
 //! the P0 Activity Log; with feature `store` it also declares the Activity Log settings.
 
 #[cfg(feature = "store")]
 pub mod append;
+pub mod branch;
 pub mod checkpoint;
 pub mod entry;
 pub mod stream;
+pub mod verify;
 
 #[cfg(feature = "store")]
 pub use checkpoint::{BranchHead, HeadsRebuilt, StoredCheckpoint};
 pub use checkpoint::{Checkpoint, CheckpointError, Coverage, LedgerHead, Link, Verified};
+pub use verify::{
+    check_heads, list_rows, plan_list, resolve_start, verify_rows, Anchor, BlobSource, BlobState, Checked,
+    CheckpointRow, Failure, FailureKind, ListPage, ListPlan, ListQuery, ListedEntry, ReadError, Start, StoredEntry,
+    TrustedHead, VerifyOptions, VerifyReport,
+};
+#[cfg(feature = "store")]
+pub use verify::{command_defs, list_store, verify_store};
 
 #[cfg(feature = "test-hooks")]
 pub use append::FaultHook;

@@ -1,0 +1,29 @@
+[package]
+name = "fid-journal-cmd"
+description = "Metrology Maven journal commands on the bus: handlers of journal.create_branch@1, journal.list_branches@1, journal.protect_branch@1 and journal.set_branch_coediting@1 (spec node CORE.JRN.BR.NAME, bus half)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Handler contract, events, typed bus errors and principals (CORE.BUS). Layer engine, the same
+# layer as this crate; fid-journal (model) may not depend on it, which is why the handlers live
+# here, as fid-project-cmd does for fid-project.
+fid-bus = { path = "../fid-bus" }
+# Canonical JSON values (CORE.JRN.CANON). Layer model.
+fid-canon = { path = "../fid-canon" }
+# The branch table, its planners and the four registry definitions (CORE.JRN.BR.NAME). Layer model.
+fid-journal = { path = "../fid-journal", features = ["store"] }
+# Registry definitions (CORE.REG.DEF). Layer model.
+fid-registry = { path = "../fid-registry" }
+# The sha256: digest type. Layer num.
+fid-types = { path = "../fid-types" }
+
+[dev-dependencies]
+# ValidParams::for_tests (handler tests outside fid-bus).
+fid-bus = { path = "../fid-bus", features = ["test-support"] }
+
+[lints]
+workspace = true

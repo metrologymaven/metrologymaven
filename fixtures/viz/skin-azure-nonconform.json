@@ -1,0 +1,8 @@
+{
+  "format": "status-skin@1",
+  "themes": {
+    "light": {
+      "nonconforms": "#00637e"
+    }
+  }
+}

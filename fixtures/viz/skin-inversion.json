@@ -1,0 +1,9 @@
+{
+  "format": "status-skin@1",
+  "themes": {
+    "light": {
+      "conforms": "#c72d2e",
+      "nonconforms": "#00637e"
+    }
+  }
+}

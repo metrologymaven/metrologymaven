@@ -1,0 +1,8 @@
+{
+  "format": "status-skin@1",
+  "themes": {
+    "dark": {
+      "over-tolerance": "#1fa8cc"
+    }
+  }
+}
