@@ -78,6 +78,7 @@ python fixtures/geo/nurbs/invert/make_invert_fixtures.py --check
 python fixtures/geo/nurbs/invert/make_invert_fixtures.py --fuzz --check
 python fixtures/geo/ooc/make_cache_fixtures.py --check
 python fixtures/geo/ooc/make_layout_fixtures.py --check
+python fixtures/geo/ooc/make_stream_fixtures.py --check
 python fixtures/geo/types/make_mesh_fixtures.py --check
 python fixtures/geo/types/reg/make_reg_fixtures.py --check
 python fixtures/hal/idl/base/cfg/make_fixtures.py --check
