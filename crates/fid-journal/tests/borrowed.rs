@@ -10,8 +10,8 @@
 use fid_canon::{parse, CValue, Digest};
 use fid_journal::checkpoint::Reason;
 use fid_journal::{
-    parse_digest, AppendRequest, Clock, Coverage, EntryDraft, Field, Journal, JournalError, RecordedSalts, Salt,
-    VerifyOptions, GENESIS_PREV,
+    parse_digest, AppendRequest, Clock, Coverage, CrashPoint, EntryDraft, Field, Journal, JournalError, RecordedSalts,
+    Salt, VerifyOptions, GENESIS_PREV,
 };
 use fid_store::cas::PutOpts;
 use fid_store::{CopyTarget, FolderId, OpenMode, ProjectLocation, Store, StoreError, TxnError};
@@ -393,4 +393,94 @@ fn rows_are_byte_identical_to_the_owned_path() {
             b.refs.iter().filter(|(h, role, _)| h == &row.1 && role == "payload").map(|(_, _, d)| d.as_str()).collect();
         assert_eq!(payload, [st(e, "payload_digest")], "{}", st(e, "name"));
     }
+}
+
+// ------------------------------------------------------------------ poison and a lost lock
+
+#[test]
+fn an_unknown_commit_outcome_poisons_the_ref_and_the_store_claim() {
+    let c = chain();
+    let t = TempDir::new("poison");
+    let root = t.0.join("p");
+    {
+        let store = Store::create(&root).unwrap();
+        let jr = Journal::on_store_with_clock(&store, STREAM, clock()).unwrap();
+        put_blobs(jr.blobs(), &c[0]);
+        put_blobs(jr.blobs(), &c[1]);
+        // A refusal at `committed` simulates a COMMIT that wrote its frame and then failed.
+        jr.set_fault_hook(Some(Arc::new(|p: CrashPoint| p != CrashPoint::Committed)));
+        let e = jr.append(request(&c[0])).unwrap_err();
+        assert_eq!(e.code(), "append_failed");
+        assert!(e.to_string().contains("outcome unknown"), "{e}");
+        assert!(jr.is_poisoned());
+        jr.set_fault_hook(None);
+        assert_eq!(jr.append(request(&c[1])).unwrap_err().code(), "append_failed");
+        assert_eq!(jr.tail().unwrap_err().code(), "append_failed");
+        assert!(jr.verify(&VerifyOptions::default()).is_err());
+        drop(jr);
+        // The store's claim stays poisoned after the ref is gone.
+        let e = Journal::on_store_with_clock(&store, STREAM, clock()).unwrap_err();
+        assert_eq!(e.code(), "append_failed");
+        assert!(e.to_string().contains("unknown outcome"), "{e}");
+    }
+    // Reopening clears it, and the durable tail decides: here the entry did land.
+    let store = Store::open(&root, OpenMode::Write).unwrap();
+    let jr = Journal::on_store_with_clock(&store, STREAM, clock()).unwrap();
+    assert_eq!(jr.tail().unwrap().unwrap().hash, digest(st(&c[0], "hash")));
+    assert_eq!(jr.append(request(&c[1])).unwrap(), digest(st(&c[1], "hash")));
+}
+
+#[test]
+fn a_fault_before_commit_appends_nothing_and_does_not_poison() {
+    let c = chain();
+    let t = TempDir::new("fault");
+    let store = Store::create(&t.0.join("p")).unwrap();
+    let jr = Journal::on_store_with_clock(&store, STREAM, clock()).unwrap();
+    put_blobs(jr.blobs(), &c[0]);
+    jr.set_fault_hook(Some(Arc::new(|p: CrashPoint| p != CrashPoint::BeforeCommit)));
+    assert_eq!(jr.append(request(&c[0])).unwrap_err().code(), "append_failed");
+    assert!(!jr.is_poisoned());
+    assert!(jr.tail().unwrap().is_none());
+    jr.set_fault_hook(None);
+    assert_eq!(jr.append(request(&c[0])).unwrap(), digest(st(&c[0], "hash")));
+}
+
+/// Replaces the project's `lock` file by renaming a new file over it (the held lock then
+/// guards a file that is no longer at `lock`), as `fid-store`'s layout test does.
+#[cfg(unix)]
+fn rename_over_lock(t: &TempDir, root: &Path) {
+    let fresh = t.0.join("fresh");
+    std::fs::write(&fresh, b"").unwrap();
+    std::fs::rename(&fresh, root.join("lock")).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn on_store_is_refused_once_the_lock_is_lost() {
+    let t = TempDir::new("lost1");
+    let root = t.0.join("p");
+    let store = Store::create(&root).unwrap();
+    rename_over_lock(&t, &root);
+    let e = Journal::on_store_with_clock(&store, STREAM, clock()).unwrap_err();
+    assert_eq!(e.code(), "read_only", "{e}");
+    assert!(matches!(e, JournalError::ReadOnly(_)));
+}
+
+#[cfg(unix)]
+#[test]
+fn append_is_refused_once_the_lock_is_lost() {
+    let c = chain();
+    let t = TempDir::new("lost2");
+    let root = t.0.join("p");
+    let store = Store::create(&root).unwrap();
+    let jr = Journal::on_store_with_clock(&store, STREAM, clock()).unwrap();
+    put_blobs(jr.blobs(), &c[0]);
+    put_blobs(jr.blobs(), &c[1]);
+    assert_eq!(jr.append(request(&c[0])).unwrap(), digest(st(&c[0], "hash")));
+    rename_over_lock(&t, &root);
+    let e = jr.append(request(&c[1])).unwrap_err();
+    assert_eq!(e.code(), "read_only", "{e}");
+    assert!(!jr.is_poisoned());
+    let tail = jr.tail().unwrap().unwrap();
+    assert_eq!((tail.seq, tail.hash), (1, digest(st(&c[0], "hash"))));
 }

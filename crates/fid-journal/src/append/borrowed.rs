@@ -27,12 +27,20 @@
 //!   append claim ([`fid_store::AppendClaim::poison`]): every later call, and every later
 //!   [`Journal::on_store`] on the same store, fails until the project is reopened. Inside
 //!   `copy_to`'s `finish`, return the error so the temporary copy is removed.
+//! - **The lender writes no entries.** While a [`JournalRef`] lives, the lender must not
+//!   write the `entries` or `entry_blobs` tables through any other path (a raw
+//!   [`Store::transaction`] on the lent store): the [`JournalRef`] is then the only appender.
+//!   This is not enforced (the lender holds the same `&Store`); a row written past it is
+//!   caught by the tail verification before the next append (`chain_invalid`) or refused by
+//!   the database's `seq` key at COMMIT, so the chain never forks, but the append fails.
 //! - **Head cache and checkpoints (`CORE.JRN.CHAIN.CKPT`).** [`JournalRef::head`] and
 //!   [`JournalRef::heads`] run the owned path's cache rules (journal wins, rebuild on a missing
 //!   or stale row). A [`JournalRef`] writes no checkpoint: checkpoints are taken for a
 //!   signature, an export or a close by the owner of the project. Appends only extend the
 //!   chain, so checkpoints already stored (in a copy, the source's) still verify as a prefix.
 
+#[cfg(feature = "test-hooks")]
+use super::FaultHook;
 use super::{
     check_chain, check_stream_name, failed, guard, Append, AppendRequest, Clock, Core, EntryHash, JournalError,
     Pending, SystemClock, Tail,
@@ -57,6 +65,8 @@ pub struct JournalRef<'s> {
     /// The store lock: held by an append from its tail read to its COMMIT, by `tail`, and by
     /// the head-cache rebuild.
     gate: Mutex<()>,
+    #[cfg(feature = "test-hooks")]
+    hook: Mutex<Option<FaultHook>>,
 }
 
 impl fmt::Debug for JournalRef<'_> {
@@ -104,6 +114,8 @@ impl Journal {
             clock,
             poisoned: AtomicBool::new(false),
             gate: Mutex::new(()),
+            #[cfg(feature = "test-hooks")]
+            hook: Mutex::new(None),
         })
     }
 }
@@ -117,7 +129,7 @@ impl<'s> JournalRef<'s> {
             poisoned: &self.poisoned,
             gate: &self.gate,
             #[cfg(feature = "test-hooks")]
-            hook: None,
+            hook: Some(&self.hook),
         }
     }
 
@@ -134,6 +146,14 @@ impl<'s> JournalRef<'s> {
     /// The store's blob store (callers put referenced blobs here before appending).
     pub fn blobs(&self) -> &'s BlobStore {
         self.claim.store().blobs()
+    }
+
+    /// Installs (or removes) the fault hook called at the [`super::CrashPoint`]s inside the
+    /// transaction (as [`Journal::set_fault_hook`]; the queue points 1, 19 and 20 do not exist
+    /// on this path).
+    #[cfg(feature = "test-hooks")]
+    pub fn set_fault_hook(&self, hook: Option<FaultHook>) {
+        *guard(&self.hook) = hook;
     }
 
     /// True once a COMMIT's outcome is unknown; only reopening the project clears it.

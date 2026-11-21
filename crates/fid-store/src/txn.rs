@@ -438,7 +438,9 @@ impl Store {
     /// `read_only`; a store whose write lock is gone or no longer the file at `lock` with
     /// `lock_lost`; and, with `claimed`, a store whose append path another [`AppendClaim`] of
     /// this process holds, or that a claim poisoned ([`AppendClaim::poison`]) and only a
-    /// reopen clears. Dropping the claim releases it.
+    /// reopen clears. Dropping the claim releases it. `fid-journal` (`Journal::on_store`)
+    /// reports `read_only` and `lock_lost` both as its `read_only`, and `claimed` as
+    /// `append_failed`.
     pub fn claim_append(&self) -> Result<AppendClaim<'_>, TxnError> {
         if self.mode != OpenMode::Write || self.immutable {
             return Err(TxnError::ReadOnly);
