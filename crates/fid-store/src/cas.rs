@@ -15,6 +15,15 @@
 //! and no bytes of that blob are returned. Streaming and range reads work one chunk at a time,
 //! so their buffer memory is one chunk plus the chunk list (71 bytes per chunk), whatever the
 //! object size; [`BlobStore::probe`] reports the peak.
+//!
+//! **Reading by digest.** A chunked object's name is the digest of its manifest, and the
+//! manifest is stored as an ordinary blob under that digest. A consumer that holds only a
+//! digest must read it with [`BlobStore::read_object`], which returns the object's own bytes
+//! (one blob, or the chunks reassembled and verified against the manifest) and never a
+//! manifest of the shape `put` writes; the decision is taken on the verified blob bytes.
+//! [`BlobStore::get`] with [`Address::Blob`] is the low-level read of one stored blob: given a
+//! manifest digest it returns the manifest bytes. A consumer that must send exactly the bytes
+//! of a digest (egress) also checks that the result hashes to it.
 
 use crate::layout::{ProjectLocation, BLOBS_DIR};
 use fid_canon::CValue;
@@ -528,6 +537,10 @@ impl BlobStore {
 
     /// The whole content, verified. For an object this holds the whole object in memory;
     /// use [`BlobStore::stream`] for bounded memory.
+    ///
+    /// Low-level: with [`Address::Blob`] this returns the one blob stored under the digest,
+    /// whatever it is, so the digest of a chunked object gives its **manifest** bytes. A
+    /// caller that holds only a digest and wants the content uses [`BlobStore::read_object`].
     pub fn get(&self, addr: &Address) -> Result<Vec<u8>, CasError> {
         match addr {
             Address::Blob(b) => {
@@ -639,9 +652,93 @@ impl BlobStore {
         Ok(manifest)
     }
 
+    /// The content named by `digest`, verified, and never a chunk manifest that `put` writes
+    /// (REQ-CORE.STO.CAS-010).
+    ///
+    /// The blob under `digest` is read and verified first; what it is is decided from those
+    /// verified bytes only. If they are a `fid-chunks@1` manifest of the shape `put` writes
+    /// (`chunk_size` equal to [`CHUNK_SIZE`] and `size` above it), the result is the object it
+    /// names: every chunk is checked to be stored with its listed length, then read straight
+    /// into the result and checked against its digest. Any other blob, including a manifest of
+    /// another shape, is plain data and is returned as itself. A `put`-shaped manifest listing
+    /// more than [`MAX_OBJECT_CHUNKS`] chunks is refused with `manifest_invalid` (or
+    /// `out_of_range` when its size is over `max_len`), never returned.
+    ///
+    /// Anything that cannot be fully verified is refused and no bytes are returned: a blob or
+    /// chunk that does not hash to its address is `integrity`, a missing blob or chunk
+    /// `not_found`, a chunk of the wrong length `manifest_invalid`.
+    ///
+    /// `max_len` bounds the result: content longer than `max_len` bytes (the blob's length, or
+    /// the object size the manifest states) is refused with `out_of_range` (`start` 0, `end`
+    /// the content size, `size` the bound) before the result buffer is allocated or any chunk
+    /// is read. The stored blob itself is read first, which the store bounds at
+    /// [`MAX_MANIFEST_BYTES`] (no blob it writes is longer). The result is held in memory; use
+    /// [`BlobStore::stream`] with a typed [`Address`] for large objects.
+    ///
+    /// Names are not typed: plain data whose bytes are exactly a `put`-shaped manifest is read
+    /// as the object it names (see the Open questions of CORE.STO.CAS).
+    pub fn read_object(&self, digest: &Digest, max_len: u64) -> Result<Vec<u8>, CasError> {
+        let too_long = |size: u64| CasError::OutOfRange { start: 0, end: size, size: max_len };
+        // Verified, and refused as `integrity` when longer than any blob the store writes.
+        let bytes = self.read_blob(digest, MAX_BLOB_READ)?;
+        let blob_charge = Charge::new(&self.counters, bytes.len() as u64);
+        let manifest = match ChunkManifest::parse(&bytes) {
+            Ok(m) if m.chunk_size == CHUNK_SIZE && m.size > CHUNK_SIZE => m,
+            // Plain data: any other blob, a manifest of a shape `put` never writes included.
+            _ => {
+                if bytes.len() as u64 > max_len {
+                    return Err(too_long(bytes.len() as u64));
+                }
+                drop(blob_charge);
+                return Ok(bytes);
+            }
+        };
+        drop(bytes);
+        drop(blob_charge);
+        if manifest.size > max_len {
+            return Err(too_long(manifest.size));
+        }
+        if manifest.chunks.len() > MAX_OBJECT_CHUNKS {
+            return Err(invalid(format!("{digest} is a chunk manifest listing more than {MAX_OBJECT_CHUNKS} chunks")));
+        }
+        let _list_charge = Charge::new(&self.counters, manifest.chunks.len() as u64 * DIGEST_COST);
+        // Every chunk stored with its listed length before the result is allocated.
+        for (i, d) in manifest.chunks.iter().enumerate() {
+            match fs::symlink_metadata(self.path_of(d)) {
+                Ok(m) if m.is_file() && m.len() == manifest.chunk_len(i) => {}
+                Ok(m) if m.is_file() => {
+                    return Err(invalid(format!("chunk {d} is not of the length the manifest lists")));
+                }
+                Ok(_) => return Err(not_regular()),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => return Err(CasError::NotFound(*d)),
+                Err(e) => return Err(e.into()),
+            }
+        }
+        let total = usize::try_from(manifest.size).map_err(|_| too_long(manifest.size))?;
+        let mut out = Vec::new();
+        out.try_reserve_exact(total)
+            .map_err(|_| CasError::Io(io::Error::new(io::ErrorKind::OutOfMemory, "object buffer")))?;
+        out.resize(total, 0);
+        let _out_charge = Charge::new(&self.counters, manifest.size);
+        let mut at = 0usize;
+        for (i, d) in manifest.chunks.iter().enumerate() {
+            let len = usize::try_from(manifest.chunk_len(i)).map_err(|_| invalid("chunk length"))?;
+            let end = at.checked_add(len).ok_or_else(|| invalid("chunk offsets overflow"))?;
+            let target = out.get_mut(at..end).ok_or_else(|| invalid("chunks longer than the object"))?;
+            // Verifies length and digest again: the precheck above only bounds the work.
+            self.read_chunk(d, len as u64, target)?;
+            at = end;
+        }
+        if at != total {
+            return Err(invalid(format!("{digest}: chunks hold {at} bytes, the manifest says {total}")));
+        }
+        Ok(out)
+    }
+
     // -------------------------------------------------------------- internals
 
-    /// Reads and verifies one blob of at most `limit` bytes.
+    /// Reads and verifies one blob of at most `limit` bytes. Low-level: the digest of a
+    /// chunked object gives its manifest; see [`BlobStore::read_object`].
     fn read_blob(&self, digest: &Digest, limit: u64) -> Result<Vec<u8>, CasError> {
         let mut f = self.open_blob(digest)?;
         let mut buf = Vec::new();
