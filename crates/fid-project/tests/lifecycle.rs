@@ -329,3 +329,16 @@ fn unreadable_blob_store_fails_closed() {
     let err = read_identity(c.entries, Broken).unwrap_err();
     assert_eq!((err.refusal, err.seq), (Refusal::Storage, Some(2)));
 }
+
+/// Review of #414, item 5: bytes another command stores under its own entity that read as a
+/// record (of another project, or malformed) are not markers, so they cannot lock the project
+/// out; the same record under an entity equal to its project, from a non-owner, is a forgery.
+#[test]
+fn user_bytes_never_lock_the_project_out() {
+    let c = case("user_bytes_look_like_records");
+    let id = read_identity(c.entries.clone(), &c.blobs).unwrap();
+    assert_eq!(id.project(), uuid(P1));
+    let forged = case("create_wrong_major");
+    let err = read_identity(forged.entries, &forged.blobs).unwrap_err();
+    assert_eq!((err.refusal, err.seq), (Refusal::ForeignCommand, Some(2)));
+}

@@ -32,13 +32,17 @@
 //! An entry is an *identity entry* if its command is `project.create_project@1` or
 //! `project.save_project_as@1`, if its stored payload holds one of the identity effects
 //! (`ProjectIdentified`, `ProjectCopiedFrom`, `ProjectSavedAs`), or if one of its header outputs
-//! (with an entity, not the tombstone) names a stored blob that is a record. Every other entry
+//! (with an entity, not the tombstone) names a stored blob that is a record whose `project` is
+//! that entity (bytes another command stores under its own entity never count; a malformed
+//! record is ignored except under an owning command). Every other entry
 //! is passed over; its payload is not read beyond the events commitment check. Per identity
 //! entry, in this order (the first failing rule is the refusal):
 //!
 //! 1. the command is one of the two owners (`foreign_command`; FOLD-008 (a), (b));
 //! 2. the entry is on branch `main` (`off_main`) and is not a promoted copy (`promoted`) (e);
-//! 3. its payload is stored (`payload_missing`; without it (c) cannot be checked);
+//! 3. its payload is stored (`payload_missing`; without it (c) cannot be checked), and its
+//!    `args` reproduce the header's `args_commit` and are the command's parameters (create
+//!    `{label, target}`, save-as `{target, label?}`, strings) (`params_mismatch`) (a);
 //! 4. no event is a `Request*` event (`request`) (c);
 //! 5. exactly one output, one record and one event (`bad_shape`); the class is the command's
 //!    (W2 for create, W1 for save-as), the determinism D0, and the output's entity the record's
@@ -51,13 +55,16 @@
 //! 7. the event body equals the record (`body_mismatch`): bodies are checked, never read;
 //! 8. a genesis (create or copy): its previous entry is a `session_header` on `main`
 //!    (`not_after_session`); no earlier genesis followed a session header with the same
-//!    `session_id` (`second_genesis`); its principal kind and commitment equal the session
-//!    header's (`principal_mismatch`) (a);
+//!    `session_id` (`second_genesis`); its whole principal (kind, identity commitment and
+//!    on-behalf-of commitment) equals the session header's (`principal_mismatch`) (a). The
+//!    writer reuses the session header's identity and on-behalf-of salts for the genesis, so
+//!    the genesis payload, which is never removed, also reveals the session header's principal;
 //! 9. a create genesis: the session header is at sequence 1 and the genesis at sequence 2
 //!    (`create_position`), decided against the empty journal (d);
 //! 10. a copy genesis: an identity exists; `source.project` is it, `source.head` is the
 //!     session header's `prev`, the namespace is unchanged and the new project ID was never
-//!     this journal's (`source_mismatch`) (d);
+//!     this journal's, neither as an identity nor as a copy a save-as entry named
+//!     (`source_mismatch`) (d);
 //! 11. a source-side save-as: an identity exists and is the record's `project`
 //!     (`wrong_project`); the record's `head` is the entry's own `prev`, the head it was decided
 //!     against under the commit lock (`stale_head`, which also refuses a replayed
@@ -425,6 +432,9 @@ pub enum Refusal {
     Promoted,
     /// An identity entry whose payload was removed.
     PayloadMissing,
+    /// An identity entry whose args do not reproduce `args_commit` or are not the command's
+    /// parameters.
+    ParamsMismatch,
     /// An identity entry that also carries a `Request*` event.
     Request,
     /// Not exactly one output, record and event, or the wrong class, determinism or entity.
@@ -466,6 +476,7 @@ impl Refusal {
             Refusal::OffMain => "off_main",
             Refusal::Promoted => "promoted",
             Refusal::PayloadMissing => "payload_missing",
+            Refusal::ParamsMismatch => "params_mismatch",
             Refusal::Request => "request",
             Refusal::BadShape => "bad_shape",
             Refusal::RecordKind => "record_kind",
@@ -583,8 +594,11 @@ struct Prev {
     prev: Digest,
     session: Option<String>,
     branch: String,
-    principal: (String, String),
+    principal: Principal,
 }
+
+/// The header's principal: kind, identity commitment and on-behalf-of commitment.
+type Principal = (String, String, Option<String>);
 
 /// What one header says, as far as the identity read needs it.
 struct Header {
@@ -593,7 +607,7 @@ struct Header {
     prev: Digest,
     kind: String,
     branch: String,
-    principal: (String, String),
+    principal: Principal,
     session: Option<String>,
     command: Option<Command>,
 }
@@ -603,6 +617,7 @@ struct Command {
     major: f64,
     class: String,
     determinism: String,
+    args_commit: Digest,
     events_commit: Digest,
     /// `(entity, digest)` of every output.
     outputs: Vec<(Option<String>, Digest)>,
@@ -649,6 +664,7 @@ fn parse_header(v: &CValue) -> Result<Header, String> {
     let principal = (
         text(p, "kind").ok_or("principal kind")?.to_string(),
         text(p, "commit").ok_or("principal commit")?.to_string(),
+        text(p, "on_behalf_of_commit").map(str::to_string),
     );
     let session = match field(o, "session") {
         Some(CValue::Obj(si)) => Some(text(si, "session_id").ok_or("session_id")?.to_string()),
@@ -672,6 +688,7 @@ fn parse_header(v: &CValue) -> Result<Header, String> {
                 major,
                 class: text(c, "class").ok_or("command class")?.to_string(),
                 determinism: text(c, "determinism").ok_or("command determinism")?.to_string(),
+                args_commit: digest_of(field(c, "args_commit")).ok_or("args_commit")?,
                 events_commit: digest_of(field(c, "events_commit")).ok_or("events_commit")?,
                 outputs,
             })
@@ -704,6 +721,37 @@ fn payload_events(payload: &CValue, events_commit: &Digest) -> Result<Vec<(Strin
         out.push((ty.to_string(), body.clone()));
     }
     Ok(out)
+}
+
+/// The parameters of an identity entry, checked against the header's `args_commit` and the
+/// owning command's parameters: create `{label, target}`, save-as `{target, label?}`, each a
+/// string (FOLD-008 (a): the parameters commitment is part of the origin).
+fn check_params(payload: &CValue, args_commit: &Digest, create: bool) -> Result<(), String> {
+    let CValue::Obj(p) = payload else { return Err("payload is not an object".into()) };
+    let Some(CValue::Obj(salts)) = field(p, "salts") else { return Err("payload has no salts".into()) };
+    let salt = text(salts, "args").ok_or("payload has no args salt")?;
+    let salt = Salt::from_hex(salt).map_err(|e| e.to_string())?;
+    let value = field(p, "args").ok_or("payload has no args")?;
+    if commitment(&salt, value).map_err(|e| e.to_string())? != *args_commit {
+        return Err("the payload's args do not reproduce args_commit".into());
+    }
+    let CValue::Obj(args) = value else { return Err("args is not an object".into()) };
+    let (required, optional): (&[&str], &[&str]) =
+        if create { (&["label", "target"], &[]) } else { (&["target"], &["label"]) };
+    for k in args.keys() {
+        if !required.contains(&k.as_str()) && !optional.contains(&k.as_str()) {
+            return Err(format!("args member {k:?} is not a parameter of the command"));
+        }
+    }
+    for k in required {
+        if !args.contains_key(*k) {
+            return Err(format!("args lack the parameter {k:?}"));
+        }
+    }
+    if args.values().any(|v| !matches!(v, CValue::Str(_))) {
+        return Err("every parameter is a string".into());
+    }
+    Ok(())
 }
 
 /// The current identity while reading.
@@ -821,9 +869,11 @@ impl<B: RecordBlobs> IdentityReader<B> {
             Some(p) => Some(payload_events(p, &c.events_commit).map_err(|d| refuse(Refusal::PayloadMismatch, &d))?),
             None => None,
         };
+        let owner = c.major == 1.0 && (c.id == CREATE_PROJECT || c.id == SAVE_PROJECT_AS);
         let mut records = Vec::new();
         for (entity, digest) in &c.outputs {
-            if entity.is_none() || *digest == TOMBSTONE {
+            let Some(entity) = entity else { continue };
+            if *digest == TOMBSTONE {
                 continue;
             }
             let bytes = self
@@ -834,16 +884,19 @@ impl<B: RecordBlobs> IdentityReader<B> {
             if digest_bytes(&bytes) != *digest {
                 return Err(refuse(Refusal::RecordCorrupt, &format!("blob {digest} does not hash to its digest")));
             }
+            // Only a record whose project is the output's entity is a marker, so bytes another
+            // command stores under its own entity never count; a malformed record is fatal only
+            // under an owning command.
             match read_record(&bytes) {
-                Ok(Some(r)) => records.push((entity.clone(), r)),
-                Ok(None) => {}
-                Err(e) => return Err(refuse(Refusal::RecordMalformed, &e.0)),
+                Ok(Some(r)) if r.project().to_string() == *entity => records.push((Some(entity.clone()), r)),
+                Ok(_) => {}
+                Err(e) if owner => return Err(refuse(Refusal::RecordMalformed, &e.0)),
+                Err(_) => {}
             }
         }
         let has_effect = events
             .as_ref()
             .is_some_and(|ev| ev.iter().any(|(t, _)| IDENTITY_EFFECTS.iter().any(|(name, _)| name == t)));
-        let owner = c.major == 1.0 && (c.id == CREATE_PROJECT || c.id == SAVE_PROJECT_AS);
         if !owner && !has_effect && records.is_empty() {
             return Ok(());
         }
@@ -862,12 +915,15 @@ impl<B: RecordBlobs> IdentityReader<B> {
         let Some(events) = events else {
             return Err(refuse(Refusal::PayloadMissing, "an identity entry whose payload was removed"));
         };
+        let create = c.id == CREATE_PROJECT;
+        if let Some(p) = &entry.payload {
+            check_params(p, &c.args_commit, create).map_err(|d| refuse(Refusal::ParamsMismatch, &d))?;
+        }
         // 4. Requests.
         if events.iter().any(|(t, _)| t.starts_with(REQUEST_PREFIX)) {
             return Err(refuse(Refusal::Request, "an identity entry that also carries a Request* event"));
         }
         // 5. Shape.
-        let create = c.id == CREATE_PROJECT;
         if c.outputs.len() != 1 || records.len() != 1 || events.len() != 1 {
             return Err(refuse(Refusal::BadShape, "an identity entry holds exactly one output, record and event"));
         }
@@ -945,7 +1001,7 @@ impl<B: RecordBlobs> IdentityReader<B> {
                 if r.namespace != cur.namespace {
                     return Err(refuse(Refusal::SourceMismatch, "a copy keeps its source's namespace"));
                 }
-                if self.projects.contains(r.project.as_bytes()) {
+                if self.projects.contains(r.project.as_bytes()) || self.copies.contains(r.project.as_bytes()) {
                     return Err(refuse(Refusal::SourceMismatch, "the copy's project ID is not new"));
                 }
             }

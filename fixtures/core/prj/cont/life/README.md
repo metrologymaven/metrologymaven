@@ -5,10 +5,9 @@ library only, independent of the Rust code); `python fixtures/core/prj/cont/life
 fails if a committed file is stale.
 
 - `identity_cases.json`: journals of stream `record` (headers, payloads, record blobs) for the
-  identity read of AC-6 and AC-7, each with its hand-labelled outcome: four valid journals
-  (create, source after save-as, copy, copy after an earlier save-as), the ten forged cases of
-  AC-7 and two more (promoted copy, corrupt record blob). See the generator's docstring for
-  the pinned rules.
+  identity read of AC-6 and AC-7, each with its hand-labelled outcome: six valid journals
+  and 28 forged ones (the ten of AC-7, two more, and sixteen from the review of #414). See
+  the generator's docstring for the pinned rules.
 
 The `p_small` project of AC-2 and AC-3 belongs to the command half (`fid-project-cmd`) and is
 not here yet.

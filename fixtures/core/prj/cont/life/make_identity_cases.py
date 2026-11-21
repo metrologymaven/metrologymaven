@@ -22,16 +22,20 @@ File written next to this script (CC-BY-4.0): identity_cases.json, with
 The rules the labels follow (the verifier's contract, module docs of fid_project::lifecycle):
 an identity entry is one whose command is project.create_project@1 or
 project.save_project_as@1, or whose payload holds ProjectIdentified, ProjectCopiedFrom or
-ProjectSavedAs, or whose header output names a stored record blob. In order: 1 the command
-owns it (foreign_command); 2 branch main (off_main), not a promoted copy (promoted); 3 payload
-stored (payload_missing); 4 no Request* event (request); 5 exactly one output, record and
+ProjectSavedAs, or whose header output names a stored record blob whose project is that
+output's entity (other bytes never count; a malformed record counts only under an owning
+command, as record_malformed). In order: 1 the command (id and major 1) owns it
+(foreign_command); 2 branch main (off_main), not a promoted copy (promoted); 3 payload stored
+(payload_missing), its args reproducing args_commit and being the command's parameters,
+create {label, target}, save-as {target, label?}, strings (params_mismatch); 4 no Request* event (request); 5 exactly one output, record and
 event, class W2 (create) or W1 (save-as), D0, output entity the record's project (bad_shape);
 6 command, record and event belong together (record_kind); 7 the event body is the record
 (body_mismatch); 8 a genesis directly follows a session header on main (not_after_session),
-is the only genesis of that session_id (second_genesis) and has its principal
-(principal_mismatch); 9 a create genesis is at sequence 2 after the session header at 1
+is the only genesis of that session_id (second_genesis) and has its whole principal: kind,
+identity commitment and on-behalf-of commitment (principal_mismatch); 9 a create genesis is at sequence 2 after the session header at 1
 (create_position); 10 a copy genesis names the current identity and its session header's prev
-as source, keeps the namespace and has a new project ID (source_mismatch); 11 a source-side
+as source, keeps the namespace and has a project ID never seen in the journal, as an identity
+or as a copy named by a save-as (source_mismatch); 11 a source-side
 save-as names the current identity (wrong_project), has head == its own prev (stale_head) and
 a new copy ID (duplicate_copy). Every refusal is fatal and names the entry's sequence.
 
@@ -61,7 +65,9 @@ P9 = "018f3a10-0000-7000-8000-000000000009"
 NS = "6f1c2a4e-5b3d-4c2a-9e1f-00000000000a"
 
 HUMAN = {"name": "ada"}
+BOB = {"name": "bob"}
 AGENT = {"client": "claude", "id": "agent-1"}
+PRINCIPALS = {"human": ("human", HUMAN), "bob": ("human", BOB), "agent": ("agent", AGENT)}
 
 
 # ------------------------------------------------------------------ RFC 8785 (own writer)
@@ -74,8 +80,16 @@ def esc(s):
             out.append('\\"')
         elif ch == "\\":
             out.append("\\\\")
+        elif ch == "\b":
+            out.append("\\b")
+        elif ch == "\t":
+            out.append("\\t")
         elif ch == "\n":
             out.append("\\n")
+        elif ch == "\f":
+            out.append("\\f")
+        elif ch == "\r":
+            out.append("\\r")
         elif o < 0x20:
             out.append("\\u%04x" % o)
         else:
@@ -144,10 +158,11 @@ class Journal:
     def commit(salt_hex, value):
         return sha(bytes.fromhex(salt_hex) + cbytes(value))
 
-    def base(self, seq, kind, branch, who):
-        identity = HUMAN if who == "human" else AGENT
-        # One identity salt per principal and journal: a genesis commits its principal with
-        # its session header's salt, so equal principals have equal commitments (rule 8).
+    def base(self, seq, kind, branch, who, obo=None):
+        pkind, identity = PRINCIPALS[who]
+        # One identity and one on-behalf-of salt per principal and journal: a genesis commits
+        # its principal with its session header's salts, so equal principals have equal
+        # commitments (rule 8).
         s_id = self.salt(0, "identity/" + who)
         h = {
             "schema_version": 1,
@@ -158,11 +173,16 @@ class Journal:
             "branch": branch,
             "logical_parent": None,
             "time": {"utc": "2026-11-21T10:%02d:00Z" % seq, "mono_ns": str(1_000_000_000 * seq), "sync": "synced"},
-            "principal": {"kind": who, "commit": self.commit(s_id, identity)},
-            "ai_assistance": "authored" if who == "agent" else "none",
+            "principal": {"kind": pkind, "commit": self.commit(s_id, identity)},
+            "ai_assistance": "authored" if pkind == "agent" else "none",
             "manifests": {"registry": REGISTRY, "kernel": KERNEL},
         }
         payload = {"salts": {"identity": s_id}, "identity": identity}
+        if obo is not None:
+            s_obo = self.salt(0, "on_behalf_of/" + who)
+            h["principal"]["on_behalf_of_commit"] = self.commit(s_obo, obo)
+            payload["salts"]["on_behalf_of"] = s_obo
+            payload["on_behalf_of"] = obo
         return h, payload
 
     def push(self, h, payload, promoted_from=None, drop_payload=False):
@@ -180,17 +200,18 @@ class Journal:
     def seq(self):
         return len(self.entries) + 1
 
-    def session(self, session_id, who="human", branch="main"):
+    def session(self, session_id, who="human", branch="main", obo=None):
         seq = self.seq()
-        h, p = self.base(seq, "session_header", branch, who)
+        h, p = self.base(seq, "session_header", branch, who, obo)
         h["session"] = {"session_id": session_id, "app_version": "0.1.0"}
         return self.push(h, p)
 
     def command(self, cid, events, outputs, cls="W2", who="human", branch="main", args=None,
-                promoted_from=None, drop_payload=False):
-        """events: list of (type, body); outputs: list of (entity or None, digest)."""
+                promoted_from=None, drop_payload=False, major=1, obo=None, payload_args=None):
+        """events: list of (type, body); outputs: list of (entity or None, digest).
+        payload_args: args written to the payload instead of the committed ones (forgery)."""
         seq = self.seq()
-        h, p = self.base(seq, "command", branch, who)
+        h, p = self.base(seq, "command", branch, who, obo)
         args = {} if args is None else args
         evs = [{"body": b, "type": t} for t, b in events]
         s_args, s_events = self.salt(seq, "args"), self.salt(seq, "events")
@@ -202,7 +223,7 @@ class Journal:
             outs.append(o)
         h["command"] = {
             "id": cid,
-            "major": 1,
+            "major": major,
             "class": cls,
             "determinism": "D0",
             "seed": "0",
@@ -214,7 +235,7 @@ class Journal:
         }
         p["salts"]["args"] = s_args
         p["salts"]["events"] = s_events
-        p["args"] = args
+        p["args"] = args if payload_args is None else payload_args
         p["events"] = evs
         return self.push(h, p, promoted_from, drop_payload)
 
@@ -226,11 +247,14 @@ class Journal:
 
     # --- the lifecycle entries, as the commands write them
 
-    def create(self, record, event_body=None, who="human", extra_events=()):
+    def create(self, record, event_body=None, who="human", extra_events=(), branch="main", promoted_from=None,
+               major=1, obo=None, args=None, payload_args=None):
         d = self.blob(record)
         body = record if event_body is None else event_body
+        args = {"label": "P1", "target": "root:work/p1"} if args is None else args
         return self.command(CREATE, [("ProjectIdentified", body)] + list(extra_events),
-                            [(record["project"], d)], cls="W2", who=who, args={"label": "P1", "target": "root:work/p1"})
+                            [(record["project"], d)], cls="W2", who=who, args=args, branch=branch,
+                            promoted_from=promoted_from, major=major, obo=obo, payload_args=payload_args)
 
     def copy_genesis(self, record, who="human"):
         d = self.blob(record)
@@ -282,6 +306,23 @@ def build_cases():
         cases.append({"name": name, "rule": rule, "entries": j.entries, "blobs": j.blobs, "expect": expect})
 
     # --- valid journals (AC-6)
+
+    j = Journal("create_on_behalf_valid")
+    j.session("s-obo-1", who="agent", obo=HUMAN)
+    j.create(identity_record(P1, NS), who="agent", obo=HUMAN)
+    add("create_on_behalf_valid", "an agent acting for a person: the whole principal equals the session's", j, ok(P1))
+
+    j = Journal("user_bytes_look_like_records")
+    j.session("s-user-bytes-1")
+    j.create(identity_record(P1, NS))
+    # Another command stores bytes that read as records, under its own entities: a valid
+    # record of another project, and a malformed one. Neither is a marker.
+    j.command("project.create_part", [("ContainerCreated", {"id": "e-3"})],
+              [("e-3", j.blob(identity_record(P9, NS)))])
+    j.command("project.create_part", [("ContainerCreated", {"id": P9})],
+              [(P9, j.blob({"format": IDENTITY_FORMAT, "project": P9}))])
+    add("user_bytes_look_like_records", "record detection counts only a record whose project is the entity", j,
+        ok(P1))
 
     j = Journal("create_valid")
     j.session("s-create-1")
@@ -389,15 +430,114 @@ def build_cases():
     add("corrupt_record_blob", "a record blob that does not hash to its output digest", j,
         refused("record_corrupt", 4))
 
+    # --- forged journals asked for by the review of #414
+
+    j = created("two_create_geneses")
+    j.session("s-two-create-2")
+    j.create(identity_record(P2, NS))
+    add("two_create_geneses", "(d) a second create genesis", j, refused("create_position", 5))
+
+    j = Journal("create_not_first")
+    j.session("s-not-first-1")
+    j.work(2)
+    j.session("s-not-first-2")
+    j.create(identity_record(P1, NS))
+    add("create_not_first", "(d) a create genesis that is not the entry at sequence 2", j,
+        refused("create_position", 4))
+
+    j = created("copy_loop")
+    j.session("s-loop-2")
+    j.copy_genesis(identity_record(P2, NS, (P1, j.hashes[3])))
+    j.work(6)
+    j.session("s-loop-3")
+    j.copy_genesis(identity_record(P1, NS, (P2, j.hashes[6])))
+    add("copy_loop", "(d) a copy-from loop A to B to A", j, refused("source_mismatch", 8))
+
+    j = created("copy_points_at_itself")
+    j.session("s-self-2")
+    rec = identity_record(P1, NS, (P1, j.hashes[3]))
+    j.copy_genesis(rec)
+    add("copy_points_at_itself", "a copy whose source is itself", j, refused("record_malformed", 5))
+
+    j = created("copy_changes_namespace")
+    j.session("s-ns-2")
+    j.copy_genesis(identity_record(P2, "6f1c2a4e-5b3d-4c2a-9e1f-00000000000b", (P1, j.hashes[3])))
+    add("copy_changes_namespace", "(d) a copy with another namespace", j, refused("source_mismatch", 5))
+
+    j = Journal("copy_without_identity")
+    j.session("s-noid-1")
+    j.copy_genesis(identity_record(P2, NS, (P1, ZERO)))
+    add("copy_without_identity", "(d) a copy genesis with no prior identity", j, refused("source_mismatch", 2))
+
+    j = created("copy_reuses_saved_as_id")
+    j.saved_as(saved_as_record(P1, P2, j.hashes[3]))
+    j.work(5)
+    j.session("s-reuse-2")
+    j.copy_genesis(identity_record(P2, NS, (P1, j.hashes[5])))
+    add("copy_reuses_saved_as_id", "(d) a copy genesis claiming the ID an earlier save-as gave a copy", j,
+        refused("source_mismatch", 7))
+
+    j = created("saved_as_wrong_project")
+    j.saved_as(saved_as_record(P9, P2, j.hashes[3]))
+    add("saved_as_wrong_project", "(a) a save-as entry for another project", j, refused("wrong_project", 4))
+
+    j = created("saved_as_duplicate_copy")
+    j.saved_as(saved_as_record(P1, P2, j.hashes[3]))
+    j.work(5)
+    j.saved_as(saved_as_record(P1, P2, j.hashes[5]))
+    add("saved_as_duplicate_copy", "(d) a second save-as naming the same copy", j, refused("duplicate_copy", 6))
+
+    j = Journal("genesis_off_main")
+    j.session("s-offmain-1")
+    j.create(identity_record(P1, NS), branch="side")
+    add("genesis_off_main", "(e) a genesis on another branch than main", j, refused("off_main", 2))
+
+    j = Journal("genesis_promoted")
+    j.session("s-promoted-1")
+    j.create(identity_record(P1, NS), promoted_from=j.hashes[1])
+    add("genesis_promoted", "(e) a genesis in a promoted copy", j, refused("promoted", 2))
+
+    j = Journal("create_wrong_major")
+    j.session("s-major-1")
+    j.create(identity_record(P1, NS), major=2)
+    add("create_wrong_major", "(a)(b) project.create_project@2 emitting ProjectIdentified", j,
+        refused("foreign_command", 2))
+
+    j = Journal("genesis_same_kind_other_commitment")
+    j.session("s-bob-1", who="human")
+    j.create(identity_record(P1, NS), who="bob")
+    add("genesis_same_kind_other_commitment", "(a) same principal kind, another identity commitment", j,
+        refused("principal_mismatch", 2))
+
+    j = Journal("genesis_other_on_behalf_of")
+    j.session("s-obo-other-1", who="agent", obo=HUMAN)
+    j.create(identity_record(P1, NS), who="agent", obo=BOB)
+    add("genesis_other_on_behalf_of", "(a) the genesis acts on behalf of another person than its session", j,
+        refused("principal_mismatch", 2))
+
+    j = Journal("args_not_committed")
+    j.session("s-args-1")
+    j.create(identity_record(P1, NS), payload_args={"label": "P1", "target": "root:work/other"})
+    add("args_not_committed", "(a) payload args that do not reproduce args_commit", j,
+        refused("params_mismatch", 2))
+
+    j = Journal("args_not_the_commands")
+    j.session("s-args-2")
+    j.create(identity_record(P1, NS), args={"label": "P1", "project": P9, "target": "root:work/p1"})
+    add("args_not_the_commands", "(a) committed args that are not create_project's parameters", j,
+        refused("params_mismatch", 2))
+
     return cases
 
 
 def build():
+    # RFC 8785 string escapes: two-character forms for \b \t \n \f \r " \\, \u00xx for other controls.
+    assert canon("\b\t\n\f\r\x01\"\\") == r'"\b\t\n\f\r\u0001\"\\"'
     cases = build_cases()
     names = [c["name"] for c in cases]
     assert len(names) == len(set(names))
     forged = [c for c in cases if "refused" in c["expect"]]
-    assert len(forged) == 12
+    assert len(forged) == 28
     doc = {
         "license": "CC-BY-4.0",
         "generator": "fixtures/core/prj/cont/life/make_identity_cases.py",
