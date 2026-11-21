@@ -1,0 +1,164 @@
+{
+  "fixtures": {
+    "density-differs": {
+      "exit": 1,
+      "findings": [
+        "SPACE-DENSITY comfortable sem.space.gap.md"
+      ]
+    },
+    "density-missing": {
+      "exit": 1,
+      "findings": [
+        "SPACE-DENSITY compact sem.space.gap.md"
+      ]
+    },
+    "density-not-alias": {
+      "exit": 1,
+      "findings": [
+        "SPACE-DENSITY compact sem.space.gap.md"
+      ]
+    },
+    "density-unknown-name": {
+      "exit": 1,
+      "findings": [
+        "SPACE-DENSITY compact sem.space.gap.xl"
+      ]
+    },
+    "density-wrong-format": {
+      "exit": 1,
+      "findings": [
+        "SPACE-SCHEMA tokens/density/compact.json"
+      ]
+    },
+    "duplicate-key": {
+      "exit": 1,
+      "findings": [
+        "SIZE-TARGET default",
+        "SPACE-SCHEMA tokens/size.tokens.json"
+      ]
+    },
+    "elev-border-as-surface": {
+      "exit": 1,
+      "findings": [
+        "ELEV-NOSHADOW-CUE elev.1"
+      ]
+    },
+    "elev-gap": {
+      "exit": 1,
+      "findings": [
+        "ELEV-LEVELS elev"
+      ]
+    },
+    "elev-no-cue": {
+      "exit": 1,
+      "findings": [
+        "ELEV-NOSHADOW-CUE elev.2"
+      ]
+    },
+    "elev-same-cue": {
+      "exit": 1,
+      "findings": [
+        "ELEV-NOSHADOW-CUE elev.2"
+      ]
+    },
+    "elev-six": {
+      "exit": 1,
+      "findings": [
+        "ELEV-LEVELS elev"
+      ]
+    },
+    "elev-unknown-cue": {
+      "exit": 1,
+      "findings": [
+        "ELEV-NOSHADOW-CUE elev.1"
+      ]
+    },
+    "fraction-space": {
+      "exit": 1,
+      "findings": [
+        "SPACE-GRID prim.space.2"
+      ]
+    },
+    "missing-file": {
+      "exit": 1,
+      "findings": [
+        "SPACE-SCHEMA tokens/motion.tokens.json"
+      ]
+    },
+    "motion-bad-easing": {
+      "exit": 1,
+      "findings": [
+        "MOTION-REDUCED motion.feedback.press"
+      ]
+    },
+    "motion-long": {
+      "exit": 1,
+      "findings": [
+        "MOTION-LONG motion.panel.open"
+      ]
+    },
+    "motion-long-fraction": {
+      "exit": 1,
+      "findings": [
+        "MOTION-LONG motion.panel.close"
+      ]
+    },
+    "motion-no-reduced": {
+      "exit": 1,
+      "findings": [
+        "MOTION-REDUCED motion.panel.open"
+      ]
+    },
+    "motion-reduced-nonzero": {
+      "exit": 1,
+      "findings": [
+        "MOTION-REDUCED motion.feedback.press"
+      ]
+    },
+    "odd-space": {
+      "exit": 1,
+      "findings": [
+        "SPACE-GRID prim.space.1"
+      ]
+    },
+    "ok": {
+      "exit": 0,
+      "findings": []
+    },
+    "sem-literal-off-grid": {
+      "exit": 1,
+      "findings": [
+        "SPACE-DENSITY comfortable sem.space.gap.sm",
+        "SPACE-GRID sem.space.gap.sm"
+      ]
+    },
+    "small-target": {
+      "exit": 1,
+      "findings": [
+        "SIZE-TARGET floor comfortable"
+      ]
+    },
+    "target-default": {
+      "exit": 1,
+      "findings": [
+        "SIZE-TARGET default"
+      ]
+    },
+    "target-hc-low": {
+      "exit": 1,
+      "findings": [
+        "SIZE-TARGET hc compact"
+      ]
+    },
+    "target-missing-theme": {
+      "exit": 1,
+      "findings": [
+        "SIZE-TARGET dark compact"
+      ]
+    }
+  },
+  "shipped": {
+    "exit": 0,
+    "findings": []
+  }
+}
