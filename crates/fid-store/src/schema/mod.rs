@@ -673,6 +673,12 @@ pub trait MigrationHooks {
     fn record(&mut self, conn: &Connection, m: &Migration) -> Result<(), Self::Error>;
     /// The error of a failed step (`from` -> `to`).
     fn failed(&self, from: u32, to: u32, detail: String) -> Self::Error;
+    /// The error of the failed SQLite call `what` of the run (`from` -> `to`), such as the
+    /// commit. The default is [`MigrationHooks::failed`] with `"{what}: {e}"`; a format may map
+    /// a busy or locked database to its own lock error instead.
+    fn sqlite_failed(&self, from: u32, to: u32, what: &str, e: rusqlite::Error) -> Self::Error {
+        self.failed(from, to, format!("{what}: {e}"))
+    }
 }
 
 /// The hooks of `project.db`: versions in `schema_meta`, one row per version reached.
@@ -743,7 +749,7 @@ pub fn migrate_with<H: MigrationHooks>(
         return Err(hooks.failed(current.0, plan.latest, format!("{} reached {}", H::VERSION_TABLE, reached.0)));
     }
     verify_schema(&tx, plan, reached).map_err(|e| hooks.failed(current.0, plan.latest, e.to_string()))?;
-    tx.commit().map_err(|e| hooks.failed(current.0, plan.latest, format!("commit: {e}")))?;
+    tx.commit().map_err(|e| hooks.sqlite_failed(current.0, plan.latest, "commit", e))?;
     Ok(SchemaVersion(plan.latest))
 }
 
