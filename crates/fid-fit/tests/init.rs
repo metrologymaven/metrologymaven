@@ -5,7 +5,7 @@
 //! crate), including axes 0.3 m and 1 m from the origin, a near-planar ring and exact error
 //! cases. `OUTPUT_PIN` is a regression pin of this crate's own output (not an oracle); CI
 //! checks it on x86-64 Linux and Windows, ARM64 macOS and wasm32.
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::result_large_err)]
 
 use fid_fit::contract::{FitError, PointsView, Primitive};
 use fid_fit::init::{cone_start, cylinder_start, torus_start, AxialStart, CandidateSource, DEFAULT_COUNT};
