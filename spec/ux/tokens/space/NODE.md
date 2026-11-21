@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-design]
+built_pr: 395
 satisfies: [REQ-UX.TOKENS-001, REQ-UX.TOKENS-012, REQ-UX.TOKENS-013]
 covers: []
 depends_on: [UX.SYSTEM.PKG]
