@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-report]
+built_pr: 391
 satisfies: [REQ-RPT.MODEL.TMPL-005, REQ-RPT.MODEL.TMPL-006]
 covers: [GOM.RPT.02, PCD.RPT.01, PW.RPT.02, SA.RPT.01]
 depends_on: [RPT.MODEL.TMPL.FORMAT, RPT.MODEL.TMPL.SLOT, RPT.MODEL.DOC, CORE.STO.CAS, CORE.JRN]
