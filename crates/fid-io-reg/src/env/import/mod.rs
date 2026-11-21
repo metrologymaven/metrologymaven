@@ -2,60 +2,72 @@
 //! `import.<format>@1` command is built from (spec node `IO.REG.ENV.IMPORT`,
 //! REQ-IO.REG.ENV-001 to -005 and -007).
 //!
-//! A format reader implements [`Reader`]: the bytes of an untrusted file (a [`HashingSource`]
-//! under the `IO.REG.LIMITS` budget) and options in, entities out to a [`StageSink`],
-//! warnings and dropped items to a [`ReportBuilder`]. The skeleton runs every import the same
-//! way, whichever command started it, in two phases (the EXPORT pattern, #329).
+//! A format reader implements [`Reader`]: it reads the untrusted file through
+//! [`StageSink::source`] (a [`HashingSource`] over a [`BoundedSource`] under the
+//! `IO.REG.LIMITS` budget) and stages entities, the declared unit and the format version in
+//! the [`StageSink`]; warnings go to a [`ReportBuilder`]. The skeleton runs every import the
+//! same way, whichever command started it, in two phases (the EXPORT pattern, #329).
 //!
 //! **Prepare** ([`prepare_import`]); nothing in the project changes:
 //!
 //! 1. the target stage is resolved **before the source is opened** (REQ-004): `stage` is a
 //!    stage ID or a stage label (untrusted text); [`fid_project::Tree::target_stage`] or
 //!    [`fid_project::Tree::stage_by_label`]; none is `stage_not_found`, several labels
-//!    `stage_ambiguous`; no `stage` is the active stage;
+//!    `stage_ambiguous`; no `stage` is the active stage. The limit request is checked here
+//!    too (an agent raising a limit is `limit_raise_forbidden`), before any file is opened;
 //! 2. the source is resolved through [`RootSet::resolve_import`] (`IO.REG.ROOTS`): agents and
 //!    scripts pass `root://` handles only (`raw_path_forbidden`), inside the root, links
 //!    included (`path_outside_root`). A component holding `~` and a digit (a Windows 8.3
 //!    short-name alias), and a human raw path's file name that is not a plain name (trailing
-//!    dot or space, `:` as in `a.ftp::$DATA`, a device name) fail `path_outside_root` too;
+//!    dot or space, `:` as in `a.ftp::$DATA`, a device name) fail `path_outside_root` too.
+//!    A [`crate::RootWarning`] (a hard-linked file) becomes a report warning;
 //! 3. every `IO.REG.LIMITS` bound is set up before anything is allocated for the content:
 //!    the file's size is checked against the byte limit first, the detection prefix is read
 //!    bounded at [`DETECT_PREFIX_LEN`], and the reader reads through a [`HashingSource`] over a
-//!    [`BoundedSource`], so every byte, element, nesting level and tracked allocation is
-//!    charged as it happens, and each staged entity is charged ([`STAGED_ENTITY_COST`] plus
-//!    its name and payload) before it is kept;
+//!    [`BoundedSource`] whose every read first checks the cancel flag ([`CancelRead`]);
 //! 4. the format is detected or checked, consistently: with no `format`, the
 //!    `IO.REG.DETECT` rule (content signature, then the extension cross-check); with a
 //!    `format` (or a per-format command), the content signatures and the extension must not
-//!    name another format (`format_mismatch`): content that matches no signature is accepted
-//!    for the named format, a tie must include it, an extension some reader declares must be
-//!    one of the named format's;
-//! 5. the reader reads; a cancel (checked before reading, on every staged entity, after the
-//!    reader returns) or any error ends the import with nothing to commit;
+//!    name another format (`format_mismatch`);
+//! 5. the reader reads. **One budget pays for everything**: the reader's own charges, and,
+//!    per staged entity, [`STAGED_ENTITY_COST`] plus [`COMMIT_ENTITY_COST`] (the commit's two
+//!    events, the tree element in the checked copy and in the project, the record's entity ID
+//!    and manifest entry; measured, see `tests/import_alloc.rs`), its texts and its payload
+//!    bytes, all charged before the entity is kept; after the read, the copy of the existing
+//!    tree is charged before it is made. At most [`MAX_IMPORT_ENTITIES`] entities are staged
+//!    (`limit_exceeded{elements}`). A cancel (checked before reading, on every read of the
+//!    file, on every staged entity, after the reader returns) or any error ends the import
+//!    with nothing to commit;
 //! 6. payloads go to the content-addressed store through a [`BlobSink`] (`CORE.STO.CAS`;
-//!    a dry run hashes them and stores nothing). A blob written by a failed or cancelled
-//!    import is referenced by nothing (REQ-007);
-//! 7. the [`SourceProvenance`] (`IO.REG.PROV`), the [`ImportReport`] and the commit's events
-//!    are built: one `ElementCreated` and one `ElementSlotSet` (state `current`, the payload's
-//!    digest) **in the target stage only** per entity (REQ-003; other stages keep empty slots,
-//!    so their per-stage digests do not change), then the one [`ImportEvent`] record holding
-//!    the provenance and the report digest (REQ-002). IDs are UUIDv5s of the project
-//!    namespace over the source digest, the stage and the entity's index, so replay
-//!    reproduces them. The events are applied to a copy of the tree, so a commit cannot fail
-//!    on the tree's rules.
+//!    a dry run hashes them and stores nothing), and so does the blob manifest, the canonical
+//!    JSON array of the payload addresses. A blob written by a failed or cancelled import is
+//!    referenced by nothing (REQ-007);
+//! 7. the [`SourceProvenance`] (`IO.REG.PROV`, with the reader's format version), the
+//!    [`ImportReport`] and the commit's events are built: one `ElementCreated` (its `meta`
+//!    holds the [`PROVENANCE_META_KEY`] marker: the value is claimed, never measured) and one
+//!    `ElementSlotSet` (state `current`, the payload's digest) **in the target stage only** per
+//!    entity (REQ-003), then the one [`ImportEvent`] record holding the provenance, the report
+//!    digest, the entity IDs and the manifest's digest and count (REQ-002). The record is
+//!    read back through [`ImportEvent::from_json`] before anything is returned, so a committed
+//!    record is always readable. The events are applied to a copy of the tree, so a commit
+//!    cannot fail on the tree's rules.
 //!
 //! **Commit** ([`PreparedImport::commit`]): the events go to the tree as one all-or-nothing
 //! commit; for a dry run nothing happens (REQ-005). The bus adapter
 //! (`CORE.BUS.PIPE.STAGE`, REQ-011, not built yet) commits the same events as one journal
 //! entry.
 //!
-//! File content is untrusted: names are kept verbatim as untrusted text (`ElementName`, no
-//! control or bidi characters; an entity whose name breaks the rule is dropped with reason
-//! `bad_name`), nothing in the content is interpreted as a command, path or option, and the
-//! only events an import yields are the three kinds above. Every failure maps to a
-//! `code/reason` pair of the bus error catalogue v3 ([`ImportError::bus_code`]).
+//! File content is untrusted: names are kept verbatim as untrusted text (`ElementName`). A
+//! name holding a [`fid_types::text::FORBIDDEN_RANGES`] character, longer than
+//! [`fid_project::MAX_NAME_CHARS`] or not NFC never loses its entity: the entity is kept as
+//! `unnamed-<index>` and the report warns (`name_forbidden_character`, `name_too_long`,
+//! `name_not_nfc`) with the position and the original text. Nothing in the content is
+//! interpreted as a command, path or option, and the only events an import yields are the
+//! three kinds above. Every failure maps to a `code/reason` pair of the bus error catalogue
+//! v3 ([`ImportError::bus_code`]).
 
 pub mod command;
+#[cfg(any(test, feature = "test-hooks"))]
 pub mod conformance;
 
 use crate::budget::Budget;
@@ -64,13 +76,14 @@ use crate::error::{IoError, Position};
 use crate::limits::{LimitKind, LimitRequest, Principal};
 use crate::prov::{
     Detection, EffectiveOptions, HashingSource, LengthUnit, PrincipalCommit, ProvError, ReaderInfo, SourceProvenance,
+    VersionToken,
 };
 use crate::report::{Code, FormatId, ImportReport, Location, ReportBuilder, ReportError, ReportPos, TypeName};
-use crate::roots::{plain_name, Direction, RootHandle, RootSet};
+use crate::roots::{plain_name, Direction, RootHandle, RootSet, RootWarning};
 use crate::source::BoundedSource;
 use crate::untrusted::UntrustedText;
 use fid_canon::CValue;
-use fid_project::{ElementName, ElementTypeRegistry, Tree, TreeError, TreeEvent, Uuid};
+use fid_project::{ElementName, ElementTypeRegistry, Tree, TreeError, TreeEvent, Uuid, MAX_NAME_CHARS};
 use fid_replay::ReplayOutcome;
 use fid_types::{CommandId, Digest};
 use sha2::{Digest as _, Sha256};
@@ -84,11 +97,28 @@ pub const IMPORT_FILE: &str = "import.file@1";
 /// Import command names no format command may take.
 pub const RESERVED_IMPORT_NAMES: &[&str] = &["import.file", "import.list_formats"];
 /// Largest payload of one entity, in bytes: one content-addressed blob (`CORE.STO.CAS`
-/// `CHUNK_SIZE`), the most a value read (`CORE.PRJ.STAGE.SWITCH`) resolves.
+/// `CHUNK_SIZE`), the most a value read (`CORE.PRJ.STAGE.SWITCH`) resolves. The blob manifest
+/// of an import is bounded by the same size.
 pub const MAX_PAYLOAD_BYTES: u64 = 8 * 1024 * 1024;
-/// Tracked allocation charged per staged entity besides its name and payload; at least the
+/// Most entities one import stages: an `IO.REG.LIMITS` element bound of this command (it
+/// fails `limit_exceeded{elements}` with this value), below the caller's element limit and
+/// not raisable. It keeps the record's entity ID list and the blob manifest (one blob, at
+/// most [`MAX_PAYLOAD_BYTES`]) readable; both bounds are tested.
+pub const MAX_IMPORT_ENTITIES: u64 = 100_000;
+/// Tracked allocation charged per staged entity for the staged entry itself: at least the
 /// size of a [`StagedEntity`] plus a Vec slot (tested).
 pub const STAGED_ENTITY_COST: u64 = 256;
+/// Tracked allocation charged per staged entity for building and checking the commit: its
+/// two events, its element in the checked copy of the tree and in the project, its ID in the
+/// record and its manifest entry (texts and payload are charged on top). Measured by
+/// `tests/import_alloc.rs`, which fails if the real peak exceeds what was charged.
+pub const COMMIT_ENTITY_COST: u64 = 24 * 1024;
+/// How many copies of an entity's name and type text the import holds at once (staged entry,
+/// event, checked copy, project), charged per byte.
+pub const TEXT_COPIES: u64 = 4;
+/// Tracked allocation charged once per import for the copy of the tree's fixed parts and the
+/// record (besides [`COMMIT_ENTITY_COST`] per element already in the tree).
+pub const TREE_BASE_COST: u64 = 64 * 1024;
 /// Longest `source` text, in bytes.
 pub const MAX_SOURCE_BYTES: usize = 4096;
 /// Longest stage label given as `stage`, in bytes.
@@ -100,6 +130,20 @@ pub const MAX_JSON_BYTES: usize = 16 * 1024 * 1024;
 pub const MAX_JSON_DEPTH: usize = 64;
 /// Kind tag of the entity ID derivation.
 pub const ENTITY_ID_KIND: &str = "io.reg.import.entity";
+/// Key of the provenance marker in an imported element's `meta`:
+/// `{"claimed": true, "evidence": <IO.REG.PROV evidence>, "provenance_sha256": <digest>}`.
+/// An imported value is claimed, never measured (VIZ.OVERLAY.STATUS REQ-007).
+pub const PROVENANCE_META_KEY: &str = "provenance";
+/// Prefix of the placeholder name of an entity whose name is refused.
+pub const PLACEHOLDER_PREFIX: &str = "unnamed-";
+/// Warning code: a name holding a forbidden character.
+pub const NAME_FORBIDDEN: &str = "name_forbidden_character";
+/// Warning code: a name longer than [`MAX_NAME_CHARS`].
+pub const NAME_TOO_LONG: &str = "name_too_long";
+/// Warning code: a name not in NFC.
+pub const NAME_NOT_NFC: &str = "name_not_nfc";
+/// Warning code of a hard-linked source file (`IO.REG.ROOTS`).
+pub const HARD_LINKED: &str = "hard_linked";
 
 // ---------------------------------------------------------------------------------------
 // Errors
@@ -211,7 +255,9 @@ fn tree_bus_code(e: &TreeError) -> (&'static str, &'static str) {
     match e {
         TreeError::UnregisteredType(_) => ("validation", "unregistered_type"),
         TreeError::Name => ("validation", "name"),
-        TreeError::BadStage(_) | TreeError::StageNotFound(_) => ("validation", "bad_stage"),
+        TreeError::BadStage(_) | TreeError::StageNotFound(_) | TreeError::AmbiguousStage(_) => {
+            ("validation", "bad_stage")
+        }
         TreeError::IdCollision(_) => ("conflict", "id_collision"),
         _ => ("internal", "invariant_violated"),
     }
@@ -236,7 +282,7 @@ impl fmt::Display for ImportError {
 impl std::error::Error for ImportError {}
 
 // ---------------------------------------------------------------------------------------
-// Blobs and the stage sink
+// Blobs, the cancellable source and the stage sink
 
 /// Where payloads are stored: the content-addressed store. `put` returns the content
 /// address (SHA-256 of the bytes).
@@ -283,19 +329,50 @@ fn sha256_of(bytes: &[u8]) -> Digest {
     Digest::from_bytes(Sha256::digest(bytes).into())
 }
 
+fn len64(n: usize) -> u64 {
+    u64::try_from(n).unwrap_or(u64::MAX)
+}
+
+/// The file under the bounded source: every read first checks the cancel flag, so a long
+/// read is cancellable between any two reads, whatever the reader does.
+pub struct CancelRead<'s> {
+    inner: &'s mut dyn Read,
+    cancel: Option<&'s AtomicBool>,
+}
+
+impl fmt::Debug for CancelRead<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CancelRead").field("cancel", &self.cancel.is_some()).finish_non_exhaustive()
+    }
+}
+
+impl Read for CancelRead<'_> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if is_set(self.cancel) {
+            return Err(io::Error::new(io::ErrorKind::Other, "import cancelled"));
+        }
+        self.inner.read(buf)
+    }
+}
+
+/// The source a reader reads: the untrusted file through the cancellable, hashing, bounded
+/// source.
+pub type ImportSource<'s> = HashingSource<CancelRead<'s>>;
+
 /// One entity a reader staged.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StagedEntity {
     /// Registered element type ID.
     pub type_id: String,
-    /// The untrusted name, checked.
+    /// The checked name (a placeholder if the file's name was refused).
     pub name: ElementName,
     /// Content address of the payload.
     pub payload: Digest,
 }
 
-/// A fault injected for the conformance kit and tests: the real command path runs, only
-/// the sink misbehaves.
+/// A fault injected for the conformance kit and tests (feature `test-hooks`): the real
+/// command path runs, only the sink misbehaves.
+#[cfg(any(test, feature = "test-hooks"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Fault {
     /// The sink takes `n` entities, then fails with `io{Other}` (a failing store).
@@ -304,19 +381,70 @@ pub enum Fault {
     CancelAfter(u64),
 }
 
-/// Where a reader puts what it read: entities with their payloads, the length unit the file
-/// declares, untrusted metadata. Every entity is charged to the budget before it is kept.
-pub struct StageSink<'a, 'c> {
-    blobs: Option<&'a mut dyn BlobSink>,
+/// The test seams of an import; empty unless the `test-hooks` feature is on.
+#[derive(Debug, Clone, Copy, Default)]
+struct Hooks {
+    #[cfg(any(test, feature = "test-hooks"))]
+    fault: Option<Fault>,
+}
+
+#[cfg(any(test, feature = "test-hooks"))]
+impl Hooks {
+    fn fail_at(&self, staged: u64) -> bool {
+        matches!(self.fault, Some(Fault::FailAfter(k)) if staged >= k)
+    }
+
+    fn cancel_after(&self, staged: u64) -> bool {
+        matches!(self.fault, Some(Fault::CancelAfter(k)) if staged >= k)
+    }
+}
+
+#[cfg(not(any(test, feature = "test-hooks")))]
+impl Hooks {
+    fn fail_at(&self, _staged: u64) -> bool {
+        false
+    }
+
+    fn cancel_after(&self, _staged: u64) -> bool {
+        false
+    }
+}
+
+/// Tracked allocation of one staged entity with `text` bytes of name and type and a payload
+/// of `payload` bytes (see [`COMMIT_ENTITY_COST`]).
+pub fn entity_cost(text: u64, payload: u64) -> u64 {
+    STAGED_ENTITY_COST
+        .saturating_add(COMMIT_ENTITY_COST)
+        .saturating_add(text.saturating_mul(TEXT_COPIES))
+        .saturating_add(payload)
+}
+
+/// Why a name from the file cannot be an element name, if it cannot.
+fn name_problem(raw: &str) -> Option<&'static str> {
+    if raw.chars().any(fid_types::text::is_forbidden_char) {
+        Some(NAME_FORBIDDEN)
+    } else if raw.chars().nth(MAX_NAME_CHARS).is_some() {
+        Some(NAME_TOO_LONG)
+    } else if ElementName::new(raw).is_err() {
+        Some(NAME_NOT_NFC)
+    } else {
+        None
+    }
+}
+
+/// Where a reader reads from and puts what it read: the source, entities with their
+/// payloads, the length unit and format version the file declares, untrusted metadata.
+/// Every entity is charged to the source's budget before it is kept.
+pub struct StageSink<'s, 'b> {
+    src: ImportSource<'s>,
+    blobs: Option<&'b mut dyn BlobSink>,
     entities: Vec<StagedEntity>,
     declared_unit: Option<LengthUnit>,
+    format_version: Option<VersionToken>,
     declared: BTreeMap<String, UntrustedText>,
-    cancel: Option<&'c AtomicBool>,
-    fault: Option<Fault>,
+    cancel: Option<&'s AtomicBool>,
+    hooks: Hooks,
     cancelled: bool,
-    alloc_limit: u64,
-    alloc_used: u64,
-    elements_limit: u64,
 }
 
 impl fmt::Debug for StageSink<'_, '_> {
@@ -325,10 +453,18 @@ impl fmt::Debug for StageSink<'_, '_> {
     }
 }
 
-impl StageSink<'_, '_> {
+impl<'s> StageSink<'s, '_> {
+    /// The file, through the cancellable, hashing, bounded source. Its budget
+    /// ([`HashingSource::budget_mut`]) is the one budget of the import.
+    pub fn source(&mut self) -> &mut ImportSource<'s> {
+        &mut self.src
+    }
+
     /// Stages one entity of a registered element type with a name and its payload bytes.
-    /// The payload goes to the store (hashed only on a dry run). A name that breaks the
-    /// element name rules is not staged: the entity is dropped with reason `bad_name`.
+    /// The payload goes to the store (hashed only on a dry run). The entity and its texts and
+    /// payload are charged to the budget first ([`entity_cost`], one element). A name that
+    /// cannot be an element name keeps the entity under `unnamed-<index>`, with a report
+    /// warning holding the position, the reason and the original text.
     pub fn add_entity(
         &mut self,
         type_id: &str,
@@ -337,54 +473,46 @@ impl StageSink<'_, '_> {
         at: Position,
         report: &mut ReportBuilder,
     ) -> Result<(), IoError> {
-        if self.cancelled || self.cancel.is_some_and(|c| c.load(Ordering::SeqCst)) {
+        if self.cancelled || is_set(self.cancel) {
             self.cancelled = true;
             return Err(IoError::Io { kind: io::ErrorKind::Interrupted, at });
         }
-        let n = self.entities.len() as u64;
-        if let Some(Fault::FailAfter(k)) = self.fault {
-            if n >= k {
-                return Err(IoError::Io { kind: io::ErrorKind::Other, at });
-            }
+        let n = len64(self.entities.len());
+        if self.hooks.fail_at(n) {
+            return Err(IoError::Io { kind: io::ErrorKind::Other, at });
         }
-        if n.saturating_add(1) > self.elements_limit {
-            return Err(IoError::LimitExceeded { limit: LimitKind::Elements, value: self.elements_limit, at });
+        if n >= MAX_IMPORT_ENTITIES {
+            return Err(IoError::LimitExceeded { limit: LimitKind::Elements, value: MAX_IMPORT_ENTITIES, at });
         }
-        let size = u64::try_from(payload.len()).unwrap_or(u64::MAX);
+        let size = len64(payload.len());
         if size > MAX_PAYLOAD_BYTES {
             return Err(IoError::LimitExceeded { limit: LimitKind::Alloc, value: MAX_PAYLOAD_BYTES, at });
         }
-        let cost = STAGED_ENTITY_COST
-            .saturating_add(u64::try_from(name.raw().len()).unwrap_or(u64::MAX))
-            .saturating_add(u64::try_from(type_id.len()).unwrap_or(u64::MAX));
-        let after = self.alloc_used.saturating_add(cost);
-        if after > self.alloc_limit {
-            return Err(IoError::LimitExceeded { limit: LimitKind::Alloc, value: self.alloc_limit, at });
-        }
         let kind =
             TypeName::new(type_id).map_err(|_| IoError::Malformed { at, reason: "entity type is not a type name" })?;
-        let Ok(element_name) = ElementName::new(name.raw()) else {
-            let pos = ReportPos::new(at).map_err(|_| IoError::Malformed { at, reason: "bad position" })?;
-            let reason = Code::new("bad_name").map_err(|_| IoError::Malformed { at, reason: "bad code" })?;
-            report.drop_item(&kind, pos, &reason, name);
-            return Ok(());
+        let placeholder = format!("{PLACEHOLDER_PREFIX}{n}");
+        let text = len64(name.raw().len().max(placeholder.len())).saturating_add(len64(type_id.len()));
+        let budget = self.src.budget_mut();
+        budget.charge_elements(1, at)?;
+        budget.charge_alloc(entity_cost(text, size), at)?;
+        let element_name = match name_problem(name.raw()) {
+            None => ElementName::new(name.raw()).map_err(|_| IoError::Malformed { at, reason: "name" })?,
+            Some(reason) => {
+                let pos = ReportPos::new(at).map_err(|_| IoError::Malformed { at, reason: "bad position" })?;
+                let code = Code::new(reason).map_err(|_| IoError::Malformed { at, reason: "bad code" })?;
+                report.warn(&code, Some(pos), &UntrustedText::new(&format!("{placeholder}: {}", name.raw())));
+                ElementName::new(&placeholder).map_err(|_| IoError::Malformed { at, reason: "placeholder" })?
+            }
         };
         let payload = match self.blobs.as_deref_mut() {
             Some(b) => b.put(payload)?,
             None => sha256_of(payload),
         };
-        self.alloc_used = after;
-        self.entities.try_reserve(1).map_err(|_| IoError::LimitExceeded {
-            limit: LimitKind::Alloc,
-            value: self.alloc_limit,
-            at,
-        })?;
+        self.entities.try_reserve(1).map_err(|_| IoError::Io { kind: io::ErrorKind::OutOfMemory, at })?;
         self.entities.push(StagedEntity { type_id: type_id.to_string(), name: element_name, payload });
         report.count(&kind, 1);
-        if let Some(Fault::CancelAfter(k)) = self.fault {
-            if self.entities.len() as u64 >= k {
-                self.cancelled = true;
-            }
+        if self.hooks.cancel_after(len64(self.entities.len())) {
+            self.cancelled = true;
         }
         Ok(())
     }
@@ -392,6 +520,11 @@ impl StageSink<'_, '_> {
     /// The length unit the file declares.
     pub fn declare_unit(&mut self, unit: LengthUnit) {
         self.declared_unit = Some(unit);
+    }
+
+    /// The format version the reader identified (recorded in the provenance, PROV-001).
+    pub fn declare_format_version(&mut self, version: VersionToken) {
+        self.format_version = Some(version);
     }
 
     /// Untrusted metadata the file declares, kept in the provenance record.
@@ -412,9 +545,6 @@ impl StageSink<'_, '_> {
 // ---------------------------------------------------------------------------------------
 // Readers
 
-/// The source a reader reads: the untrusted file through the hashing, bounded source.
-pub type ImportSource<'a> = HashingSource<&'a mut dyn Read>;
-
 /// One format reader.
 pub trait Reader {
     /// The format it reads; must be registered for import.
@@ -431,16 +561,10 @@ pub trait Reader {
         }
     }
 
-    /// Reads `src` with the effective options into `sink`, reporting to `report`. Must be
-    /// deterministic for the same bytes and options, must treat every byte as untrusted data,
-    /// and must charge what it allocates to `src.budget_mut()`.
-    fn read(
-        &self,
-        src: &mut ImportSource<'_>,
-        opts: &CValue,
-        sink: &mut StageSink<'_, '_>,
-        report: &mut ReportBuilder,
-    ) -> Result<(), IoError>;
+    /// Reads [`StageSink::source`] with the effective options into `sink`, reporting to
+    /// `report`. Must be deterministic for the same bytes and options, must treat every byte
+    /// as untrusted data, and must charge what it allocates to the source's budget.
+    fn read(&self, opts: &CValue, sink: &mut StageSink<'_, '_>, report: &mut ReportBuilder) -> Result<(), IoError>;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -558,20 +682,26 @@ pub struct ImportEvent {
     pub stage: Uuid,
     /// The effective options.
     pub options: CValue,
-    /// The provenance record (`IO.REG.PROV` canonical value).
+    /// The provenance record (`IO.REG.PROV` canonical value, with the format version).
     pub provenance: CValue,
     /// SHA-256 of the provenance record's canonical bytes.
     pub provenance_sha256: Digest,
     /// SHA-256 of the canonical [`ImportReport`] without its `dry_run` flag.
     pub report_sha256: Digest,
-    /// The staged entities' payload addresses, in entity order (the blobs the commit makes
-    /// reachable).
-    pub blobs: Vec<Digest>,
+    /// The created elements, in entity order (at most [`MAX_IMPORT_ENTITIES`]).
+    pub entities: Vec<Uuid>,
+    /// Content address of the blob manifest: the canonical JSON array of the entities'
+    /// payload addresses, in entity order (the blobs the commit makes reachable).
+    pub blob_manifest: Digest,
+    /// Number of addresses in the manifest (one per entity).
+    pub blob_count: u64,
 }
 
-const EVENT_KEYS: [&str; 12] = [
-    "blobs",
+const EVENT_KEYS: [&str; 14] = [
+    "blob_count",
+    "blob_manifest",
     "command",
+    "entities",
     "format",
     "format_named",
     "options",
@@ -599,13 +729,34 @@ fn principal_from_wire(s: &str) -> Option<Principal> {
     [Principal::Human, Principal::Agent, Principal::Script].into_iter().find(|p| p.as_str() == s)
 }
 
+fn canonical_uuid(s: &str) -> Option<Uuid> {
+    Uuid::parse(s).ok().filter(|u| u.to_string() == s)
+}
+
+/// A `u64` field: the value, or its canonical decimal text (the read-back form).
+fn u64_field(v: Option<&CValue>) -> Option<u64> {
+    match v {
+        Some(CValue::U64(n)) => Some(*n),
+        Some(CValue::Str(s)) => s.parse::<u64>().ok().filter(|n| n.to_string() == *s),
+        _ => None,
+    }
+}
+
+/// The blob manifest of `payloads`: canonical JSON array of the addresses.
+pub fn blob_manifest(payloads: &[Digest]) -> Result<Vec<u8>, ImportError> {
+    let v = CValue::Arr(payloads.iter().map(|d| CValue::Str(d.as_str().to_string())).collect());
+    fid_canon::to_canonical_bytes(&v).map_err(|_| ImportError::Internal("manifest is not canonical"))
+}
+
 impl ImportEvent {
     /// The record as JSON.
     pub fn to_value(&self) -> CValue {
         let s = |v: &str| CValue::Str(v.to_string());
         let mut o = BTreeMap::new();
-        o.insert("blobs".to_string(), CValue::Arr(self.blobs.iter().map(|d| s(d.as_str())).collect()));
+        o.insert("blob_count".to_string(), CValue::U64(self.blob_count));
+        o.insert("blob_manifest".to_string(), s(self.blob_manifest.as_str()));
         o.insert("command".to_string(), s(self.command.as_str()));
+        o.insert("entities".to_string(), CValue::Arr(self.entities.iter().map(|u| s(&u.to_string())).collect()));
         o.insert("format".to_string(), s(self.format.as_str()));
         o.insert("format_named".to_string(), CValue::Bool(self.format_named));
         o.insert("options".to_string(), self.options.clone());
@@ -660,8 +811,7 @@ impl ImportEvent {
             Some(CValue::Str(s)) => Some(unit_of(s).ok_or(bad_event("invalid unit"))?),
             _ => return Err(bad_event("unit must be a string or null")),
         };
-        let stage_text = str_field(o, "stage")?;
-        let stage = Uuid::parse(stage_text).ok().filter(|u| u.to_string() == stage_text).ok_or(bad_event("stage"))?;
+        let stage = canonical_uuid(str_field(o, "stage")?).ok_or(bad_event("stage"))?;
         let options = match o.get("options") {
             Some(v @ CValue::Obj(_)) => v.clone(),
             _ => return Err(bad_event("options must be an object")),
@@ -678,14 +828,23 @@ impl ImportEvent {
         }
         let report_sha256 =
             Digest::parse(str_field(o, "report_sha256")?).map_err(|_| bad_event("invalid report_sha256"))?;
-        let Some(CValue::Arr(items)) = o.get("blobs") else { return Err(bad_event("blobs must be an array")) };
-        let blobs = items
+        let Some(CValue::Arr(items)) = o.get("entities") else { return Err(bad_event("entities must be an array")) };
+        if len64(items.len()) > MAX_IMPORT_ENTITIES {
+            return Err(bad_event("too many entities"));
+        }
+        let entities = items
             .iter()
             .map(|i| match i {
-                CValue::Str(s) => Digest::parse(s).map_err(|_| bad_event("invalid blob digest")),
-                _ => Err(bad_event("blob digest must be a string")),
+                CValue::Str(s) => canonical_uuid(s).ok_or(bad_event("invalid entity ID")),
+                _ => Err(bad_event("entity ID must be a string")),
             })
             .collect::<Result<Vec<_>, _>>()?;
+        let blob_manifest =
+            Digest::parse(str_field(o, "blob_manifest")?).map_err(|_| bad_event("invalid blob_manifest"))?;
+        let blob_count = u64_field(o.get("blob_count")).ok_or(bad_event("blob_count must be a u64"))?;
+        if blob_count != len64(entities.len()) {
+            return Err(bad_event("blob_count is not the entity count"));
+        }
         Ok(ImportEvent {
             command,
             principal,
@@ -698,7 +857,9 @@ impl ImportEvent {
             provenance,
             provenance_sha256,
             report_sha256,
-            blobs,
+            entities,
+            blob_manifest,
+            blob_count,
         })
     }
 }
@@ -717,7 +878,8 @@ pub fn register_import_events(reg: &mut ElementTypeRegistry, commands: &[&Comman
 // ---------------------------------------------------------------------------------------
 // The skeleton
 
-/// What an import runs against.
+/// What an import runs against. Built with [`ImportEnv::new`]; the public fields may then be
+/// changed.
 pub struct ImportEnv<'a> {
     /// The format registry (import descriptors decide detection).
     pub registry: &'a Registry,
@@ -733,15 +895,47 @@ pub struct ImportEnv<'a> {
     pub tree: &'a Tree,
     /// The project namespace (entity ID derivation).
     pub namespace: Uuid,
-    /// Set to cancel; checked before reading, on every staged entity and after the reader.
+    /// Set to cancel; checked before reading, on every read of the file, on every staged
+    /// entity and after the reader. Stands in for the `CORE.JOB` cancel token until the bus
+    /// adapter passes the job's flag.
     pub cancel: Option<&'a AtomicBool>,
-    /// An injected sink fault (conformance kit and tests); `None` in production.
-    pub fault: Option<Fault>,
+    hooks: Hooks,
 }
 
 impl fmt::Debug for ImportEnv<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ImportEnv").field("principal", &self.principal).finish_non_exhaustive()
+    }
+}
+
+impl<'a> ImportEnv<'a> {
+    /// An environment with the default limits and no cancel flag.
+    pub fn new(
+        registry: &'a Registry,
+        roots: &'a RootSet,
+        principal: Principal,
+        principal_commit: PrincipalCommit,
+        tree: &'a Tree,
+        namespace: Uuid,
+    ) -> ImportEnv<'a> {
+        ImportEnv {
+            registry,
+            roots,
+            principal,
+            principal_commit,
+            limits: LimitRequest::default(),
+            tree,
+            namespace,
+            cancel: None,
+            hooks: Hooks::default(),
+        }
+    }
+
+    /// Test seam: injects a sink fault. Exists only with the `test-hooks` feature.
+    #[cfg(any(test, feature = "test-hooks"))]
+    #[doc(hidden)]
+    pub fn set_fault(&mut self, fault: Option<Fault>) {
+        self.hooks.fault = fault;
     }
 }
 
@@ -760,6 +954,8 @@ pub struct ImportOutput {
 pub struct PreparedImport {
     events: Vec<TreeEvent>,
     out: ImportOutput,
+    manifest: Vec<u8>,
+    alloc_charged: u64,
 }
 
 impl PreparedImport {
@@ -776,6 +972,16 @@ impl PreparedImport {
     /// Every event of the commit, the record last; empty for a dry run.
     pub fn events(&self) -> &[TreeEvent] {
         &self.events
+    }
+
+    /// The bytes of the blob manifest (stored unless a dry run).
+    pub fn manifest(&self) -> &[u8] {
+        &self.manifest
+    }
+
+    /// The tracked allocation the import charged to its budget, in bytes.
+    pub fn alloc_charged(&self) -> u64 {
+        self.alloc_charged
     }
 
     /// Applies the commit to `tree`, all or nothing (nothing for a dry run).
@@ -802,9 +1008,13 @@ fn requested_components(source: &str) -> Vec<String> {
     }
 }
 
-/// Step 2's lexical checks, before anything is resolved: no component with a short-name
-/// alias, and a human raw path's file name must be a plain name.
-fn confine(source: &str) -> Result<(), ImportError> {
+/// Step 2's lexical checks, before anything is resolved: agents and scripts pass handles
+/// only, no component with a short-name alias, and a human raw path's file name must be a
+/// plain name.
+fn confine(principal: Principal, source: &str) -> Result<(), ImportError> {
+    if principal != Principal::Human && !source.starts_with(crate::roots::SCHEME) {
+        return Err(IoError::RawPathForbidden.into());
+    }
     if requested_components(source).iter().any(|c| short_name_alias(c)) {
         return Err(IoError::PathOutsideRoot.into());
     }
@@ -830,11 +1040,11 @@ fn location_of(source: &str) -> Result<Location, ImportError> {
 /// The target stage (step 1).
 fn target_stage(tree: &Tree, stage: Option<&str>) -> Result<Uuid, ImportError> {
     let Some(text) = stage else { return Ok(tree.active_stage()) };
-    if let Some(id) = Uuid::parse(text).ok().filter(|u| u.to_string() == text) {
+    if let Some(id) = canonical_uuid(text) {
         return tree.target_stage(Some(&id)).map_err(|_| ImportError::StageNotFound);
     }
-    tree.stage_by_label(text).map_err(|e| match e.code() {
-        "ambiguous_stage" => ImportError::StageAmbiguous,
+    tree.stage_by_label(text).map_err(|e| match e {
+        TreeError::AmbiguousStage(_) => ImportError::StageAmbiguous,
         _ => ImportError::StageNotFound,
     })
 }
@@ -893,9 +1103,14 @@ fn report_digest(report: &ImportReport) -> Result<Digest, ImportError> {
     Ok(sha256_of(&bytes))
 }
 
+/// The effective options in read-back form, within the `IO.REG.PROV` option bounds (so the
+/// record, which nests them twice, stays within [`MAX_JSON_DEPTH`]).
 fn normalise(v: &CValue) -> Result<CValue, ImportError> {
     let bytes = fid_canon::to_canonical_bytes(v).map_err(|_| ImportError::BadOptions("options are not canonical"))?;
-    fid_canon::parse_with_limits(&bytes, MAX_JSON_BYTES, MAX_JSON_DEPTH)
+    if bytes.len() > crate::prov::MAX_OPTIONS_BYTES {
+        return Err(ImportError::BadOptions("options are too large"));
+    }
+    fid_canon::parse_with_limits(&bytes, crate::prov::MAX_OPTIONS_BYTES, crate::prov::MAX_OPTIONS_DEPTH)
         .map_err(|_| ImportError::BadOptions("options are too large or too deep"))
 }
 
@@ -914,22 +1129,34 @@ pub fn entity_id(namespace: Uuid, source: &Digest, stage: &Uuid, index: u64) -> 
     Ok(fid_project::uuid_v5(&namespace, &bytes))
 }
 
+/// The provenance marker of an imported element's `meta` (see [`PROVENANCE_META_KEY`]).
+pub fn provenance_meta(evidence: &str, provenance_sha256: &Digest) -> CValue {
+    let mut marker = BTreeMap::new();
+    marker.insert("claimed".to_string(), CValue::Bool(true));
+    marker.insert("evidence".to_string(), CValue::Str(evidence.to_string()));
+    marker.insert("provenance_sha256".to_string(), CValue::Str(provenance_sha256.as_str().to_string()));
+    let mut meta = BTreeMap::new();
+    meta.insert(PROVENANCE_META_KEY.to_string(), CValue::Obj(marker));
+    CValue::Obj(meta)
+}
+
 fn entity_events(
-    env: &ImportEnv<'_>,
-    source: &Digest,
+    root: &Uuid,
     stage: &Uuid,
+    ids: &[Uuid],
     staged: &[StagedEntity],
+    meta: &CValue,
 ) -> Result<Vec<TreeEvent>, ImportError> {
     let s = |v: String| CValue::Str(v);
-    let root = env.tree.root().to_string();
+    let root = root.to_string();
     let mut out = Vec::new();
     out.try_reserve(staged.len().saturating_mul(2).saturating_add(1))
         .map_err(|_| ImportError::Internal("cannot reserve the commit"))?;
-    for (i, e) in staged.iter().enumerate() {
-        let id = entity_id(env.namespace, source, stage, i as u64)?.to_string();
+    for (id, e) in ids.iter().zip(staged) {
+        let id = id.to_string();
         let mut created = BTreeMap::new();
         created.insert("id".to_string(), s(id.clone()));
-        created.insert("meta".to_string(), CValue::Obj(BTreeMap::new()));
+        created.insert("meta".to_string(), meta.clone());
         created.insert("name".to_string(), s(e.name.as_untrusted_str().to_string()));
         created.insert("parent".to_string(), s(root.clone()));
         created.insert("type".to_string(), s(e.type_id.clone()));
@@ -945,10 +1172,44 @@ fn entity_events(
     Ok(out)
 }
 
+/// A rough upper bound of the heap a value holds (BTreeMap nodes counted at twice the entry
+/// size for their slack).
+fn value_heap(v: &CValue) -> u64 {
+    let slot = len64(std::mem::size_of::<CValue>());
+    let key = len64(std::mem::size_of::<String>());
+    match v {
+        CValue::Str(s) => len64(s.len()),
+        CValue::Arr(a) => {
+            a.iter().fold(len64(a.len()).saturating_mul(slot), |acc, x| acc.saturating_add(value_heap(x)))
+        }
+        CValue::Obj(o) => o.iter().fold(len64(o.len()).saturating_mul(2 * (slot + key)), |acc, (k, x)| {
+            acc.saturating_add(len64(k.len())).saturating_add(value_heap(x))
+        }),
+        _ => 0,
+    }
+}
+
+/// Tracked allocation of the copy of `tree` the commit is checked on.
+fn tree_copy_cost(tree: &Tree) -> u64 {
+    tree.elements().fold(TREE_BASE_COST, |acc, e| {
+        acc.saturating_add(COMMIT_ENTITY_COST)
+            .saturating_add(len64(e.name().as_untrusted_str().len()).saturating_mul(TEXT_COPIES))
+            .saturating_add(value_heap(e.meta()))
+    })
+}
+
 /// How a run records: normally the caller; on replay the recorded principal and commitment.
 struct Authority {
     record_as: Principal,
     commit: PrincipalCommit,
+}
+
+fn finished<T>(env: &ImportEnv<'_>, r: Result<T, IoError>) -> Result<T, ImportError> {
+    match r {
+        _ if is_set(env.cancel) => Err(ImportError::Cancelled),
+        Ok(v) => Ok(v),
+        Err(e) => Err(e.into()),
+    }
 }
 
 fn prepare_with<R: Reader + ?Sized>(
@@ -959,8 +1220,9 @@ fn prepare_with<R: Reader + ?Sized>(
     params: &ImportParams,
     blobs: Option<&mut dyn BlobSink>,
 ) -> Result<PreparedImport, ImportError> {
-    // 1. The stage, before anything touches the source.
+    // 1. The stage and the limit request, before anything touches the source.
     let stage = target_stage(env.tree, params.stage.as_deref())?;
+    let budget = Budget::new(env.principal, &env.limits)?;
     let format = reader.format().clone();
     if params.format.as_ref().is_some_and(|f| *f != format) {
         return Err(ImportError::Internal("the reader does not read the requested format"));
@@ -969,21 +1231,23 @@ fn prepare_with<R: Reader + ?Sized>(
         return Err(IoError::FormatUnknown.into());
     }
     let options = normalise(&reader.options(&params.options).map_err(ImportError::BadOptions)?)?;
-    let budget = Budget::new(env.principal, &env.limits)?;
     if is_set(env.cancel) {
         return Err(ImportError::Cancelled);
     }
 
     // 2. The source, confined.
-    if env.principal != Principal::Human && !params.source.starts_with(crate::roots::SCHEME) {
-        return Err(IoError::RawPathForbidden.into());
-    }
-    confine(&params.source)?;
+    confine(env.principal, &params.source)?;
     let mut file = env.roots.resolve_import(env.principal, &params.source)?;
     let location = location_of(&params.source)?;
     let name = file.path.file_name().and_then(|n| n.to_str()).map(str::to_string);
     if file.root.is_none() && !name.as_deref().is_some_and(plain_name) {
         return Err(IoError::PathOutsideRoot.into());
+    }
+    let mut report = ReportBuilder::new();
+    for w in &file.warnings {
+        let code = Code::new(HARD_LINKED).map_err(|_| ImportError::Internal("warning code"))?;
+        let RootWarning::HardLinked { links } = w;
+        report.warn(&code, None, &UntrustedText::new(&format!("{links} links")));
     }
 
     // 3. Limits before allocation: the size first, then a bounded prefix.
@@ -1008,24 +1272,21 @@ fn prepare_with<R: Reader + ?Sized>(
     }
     drop(prefix);
 
-    // 5. Read.
-    let limits = *budget.limits();
-    let inner: &mut dyn Read = &mut file.file;
-    let mut src = HashingSource::new(BoundedSource::new(inner, budget))?;
-    let mut report = ReportBuilder::new();
+    // 5. Read, under the one budget.
+    let inner = CancelRead { inner: &mut file.file, cancel: env.cancel };
+    let src = HashingSource::new(BoundedSource::new(inner, budget))?;
     let mut sink = StageSink {
+        src,
         blobs: if params.dry_run { None } else { blobs },
         entities: Vec::new(),
         declared_unit: None,
+        format_version: None,
         declared: BTreeMap::new(),
         cancel: env.cancel,
-        fault: env.fault,
+        hooks: env.hooks,
         cancelled: false,
-        alloc_limit: limits.alloc(),
-        alloc_used: 0,
-        elements_limit: limits.elements(),
     };
-    let r = reader.read(&mut src, &options, &mut sink, &mut report);
+    let r = reader.read(&options, &mut sink, &mut report);
     if sink.cancelled || is_set(env.cancel) {
         return Err(ImportError::Cancelled);
     }
@@ -1034,16 +1295,22 @@ fn prepare_with<R: Reader + ?Sized>(
         Err(e @ (IoError::LimitExceeded { .. } | IoError::Io { .. })) => return Err(e.into()),
         Err(e) => return Err(ImportError::Reader(e)),
     }
-    let (digest, _budget) = src.finish()?;
+    let StageSink { src, mut blobs, entities, declared_unit, format_version, declared, .. } = sink;
+    let (digest, mut budget) = finished(env, src.finish())?;
+    // The checked copy of the tree, before it is made.
+    finished(env, budget.charge_alloc(tree_copy_cost(env.tree), Position::byte(digest.bytes())))?;
 
-    // 6./7. Provenance, report, events.
-    let unit = crate::prov::resolve_unit(sink.declared_unit, params.unit, false)?;
+    // 6./7. Provenance, report, manifest, events, record.
+    let unit = crate::prov::resolve_unit(declared_unit, params.unit, false)?;
     let effective = EffectiveOptions::new(options.clone())?;
     let mut b = SourceProvenance::builder(digest, detection, reader.info().clone(), auth.commit, effective, unit);
     if let Some(n) = &name {
         b.source_name(UntrustedText::new(n))?;
     }
-    for (k, v) in &sink.declared {
+    if let Some(v) = format_version {
+        b.format_version(v);
+    }
+    for (k, v) in &declared {
         b.declare(k, v.clone())?;
     }
     let provenance = b.build();
@@ -1054,6 +1321,18 @@ fn prepare_with<R: Reader + ?Sized>(
     let provenance_sha256 = provenance.digest()?;
     let report = report.finish_import(format.clone(), location.clone(), params.dry_run);
     let report_sha256 = report_digest(&report)?;
+    let payloads: Vec<Digest> = entities.iter().map(|e| e.payload).collect();
+    let manifest = blob_manifest(&payloads)?;
+    if len64(manifest.len()) > MAX_PAYLOAD_BYTES {
+        return Err(ImportError::Internal("blob manifest above one blob"));
+    }
+    let blob_manifest = match blobs.as_deref_mut() {
+        Some(b) => b.put(&manifest)?,
+        None => sha256_of(&manifest),
+    };
+    let ids = (0..entities.len())
+        .map(|i| entity_id(env.namespace, &digest.sha256(), &stage, len64(i)))
+        .collect::<Result<Vec<_>, _>>()?;
     let event = ImportEvent {
         command: command.clone(),
         principal: auth.record_as,
@@ -1066,16 +1345,33 @@ fn prepare_with<R: Reader + ?Sized>(
         provenance: provenance_value,
         provenance_sha256,
         report_sha256,
-        blobs: sink.entities.iter().map(|e| e.payload).collect(),
+        entities: ids,
+        blob_manifest,
+        blob_count: len64(payloads.len()),
     };
-    let mut events = entity_events(env, &digest.sha256(), &stage, &sink.entities)?;
+    // Every committed record must read back: check it now, on the bytes the journal keeps.
+    let json = event.to_json()?;
+    finished(env, budget.charge_alloc(len64(json.len()).saturating_mul(4), Position::byte(digest.bytes())))?;
+    match ImportEvent::from_json(&json) {
+        Ok(back) if back == event => {}
+        _ => return Err(ImportError::Internal("the record does not read back")),
+    }
+    drop(json);
+    let meta = provenance_meta(provenance.evidence().as_str(), &provenance_sha256);
+    let mut events = entity_events(&env.tree.root(), &stage, &event.entities, &entities, &meta)?;
+    drop(entities);
     events.push(event.tree_event());
     // The commit must succeed on the tree's rules: try it on a copy.
     env.tree.clone().apply_commit(&events).map_err(ImportError::Tree)?;
     if is_set(env.cancel) {
         return Err(ImportError::Cancelled);
     }
-    Ok(PreparedImport { events: if params.dry_run { Vec::new() } else { events }, out: ImportOutput { report, event } })
+    Ok(PreparedImport {
+        events: if params.dry_run { Vec::new() } else { events },
+        out: ImportOutput { report, event },
+        manifest,
+        alloc_charged: budget.alloc_used(),
+    })
 }
 
 fn caller(env: &ImportEnv<'_>) -> Authority {
@@ -1098,9 +1394,9 @@ pub fn prepare_import<R: Reader + ?Sized>(
 ///
 /// **Trust:** `event` must come from the verified journal, never from a caller.
 /// `env.tree` is the state before the recorded commit and `env.principal_commit` the
-/// recorded entry header's commitment (the bus reads both from the journal). `IDENTICAL` when the new record and events equal the
-/// recorded ones, `DIVERGENT` otherwise; `NOT_REPLAYABLE` for another command or format, or a
-/// human's raw path.
+/// recorded entry header's commitment (the bus reads both from the journal). `IDENTICAL`
+/// when the new record and events equal the recorded ones, `DIVERGENT` otherwise;
+/// `NOT_REPLAYABLE` for another command or format, or a human's raw path.
 pub fn replay_import<R: Reader + ?Sized>(
     env: &ImportEnv<'_>,
     command: &CommandId,
@@ -1145,6 +1441,8 @@ pub trait ImportRun {
     fn command_id(&self) -> Result<CommandId, ImportError>;
     /// Whether its params take `format` (`import.file@1`).
     fn takes_format(&self) -> bool;
+    /// The format a per-format command reads (`None` for `import.file@1`).
+    fn fixed_format(&self) -> Option<&FormatId>;
     /// Phase one ([`prepare_import`]).
     fn prepare(
         &self,
@@ -1188,20 +1486,18 @@ impl<'r> ImportFile<'r> {
         Ok(())
     }
 
-    /// The reader for `params`: the named format's, or the one detection picks (the stage
-    /// is checked first, and detection runs again inside the skeleton).
+    /// The reader for `params`: the named format's, or the one detection picks. The stage
+    /// and the limit request are checked first, before the source is opened, and detection
+    /// runs again inside the skeleton.
     fn reader_for(&self, env: &ImportEnv<'_>, params: &ImportParams) -> Result<&(dyn Reader + 'r), ImportError> {
         target_stage(env.tree, params.stage.as_deref())?;
+        let budget = Budget::new(env.principal, &env.limits)?;
         let format = match &params.format {
             Some(f) => f.clone(),
             None => {
-                if env.principal != Principal::Human && !params.source.starts_with(crate::roots::SCHEME) {
-                    return Err(IoError::RawPathForbidden.into());
-                }
-                confine(&params.source)?;
+                confine(env.principal, &params.source)?;
                 let mut f = env.roots.resolve_import(env.principal, &params.source)?;
                 let len = f.file.metadata().map_err(|e| IoError::Io { kind: e.kind(), at: Position::byte(0) })?.len();
-                let budget = Budget::new(env.principal, &env.limits)?;
                 if len > budget.limits().bytes() {
                     return Err(IoError::LimitExceeded {
                         limit: LimitKind::Bytes,
@@ -1227,6 +1523,10 @@ impl ImportRun for ImportFile<'_> {
 
     fn takes_format(&self) -> bool {
         true
+    }
+
+    fn fixed_format(&self) -> Option<&FormatId> {
+        None
     }
 
     fn prepare(
@@ -1284,6 +1584,10 @@ impl<R: Reader> ImportRun for ImportCommand<R> {
         false
     }
 
+    fn fixed_format(&self) -> Option<&FormatId> {
+        Some(self.reader.format())
+    }
+
     fn prepare(
         &self,
         env: &ImportEnv<'_>,
@@ -1315,5 +1619,23 @@ mod tests {
         let size = std::mem::size_of::<StagedEntity>() as u64;
         // The struct, plus Vec growth (at most doubling: one more struct's worth).
         assert!(STAGED_ENTITY_COST >= 2 * size, "{} < 2 * {size}", STAGED_ENTITY_COST);
+        // The commit cost holds at least two events and the two element copies.
+        let event = std::mem::size_of::<TreeEvent>() as u64;
+        assert!(COMMIT_ENTITY_COST >= 4 * event, "{} < 4 * {event}", COMMIT_ENTITY_COST);
+    }
+
+    #[test]
+    fn the_manifest_of_the_entity_cap_is_one_blob() {
+        let d = sha256_of(b"x");
+        let n = usize::try_from(MAX_IMPORT_ENTITIES).unwrap_or(usize::MAX);
+        let manifest = blob_manifest(&vec![d; n]).unwrap_or_default();
+        assert!(!manifest.is_empty());
+        assert!(len64(manifest.len()) <= MAX_PAYLOAD_BYTES, "{}", manifest.len());
+    }
+
+    #[test]
+    fn hooks_are_off_by_default() {
+        let h = Hooks::default();
+        assert!(!h.fail_at(u64::MAX) && !h.cancel_after(u64::MAX));
     }
 }

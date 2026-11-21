@@ -38,15 +38,24 @@ fn num(n: usize) -> CValue {
     CValue::Num(n as f64)
 }
 
-fn import_extensions(reg: &Registry) -> Vec<String> {
-    let set: BTreeSet<&String> =
-        reg.list(Direction::Import, OriginFilter::Any).into_iter().flat_map(|d| d.extensions().iter()).collect();
+/// The extensions the bus's root guard accepts for `source`: every import format's for
+/// `import.file@1` (`format` = `None`), only that format's for `import.<format>@1`.
+fn import_extensions(reg: &Registry, format: Option<&FormatId>) -> Vec<String> {
+    let set: BTreeSet<&String> = reg
+        .list(Direction::Import, OriginFilter::Any)
+        .into_iter()
+        .filter(|d| format.map_or(true, |f| d.id() == f))
+        .flat_map(|d| d.extensions().iter())
+        .collect();
     set.into_iter().cloned().collect()
 }
 
-/// The params schema; `format` is present (optional) for `import.file@1` only.
-pub fn params_schema(reg: &Registry, with_format: bool) -> Result<CValue, ImportError> {
-    let exts = import_extensions(reg);
+/// The params schema of `import.file@1` (`format` = `None`: the optional `format` property and
+/// every import extension) or of `import.<format>@1` (no `format` property, that format's
+/// extensions only).
+pub fn params_schema(reg: &Registry, format: Option<&FormatId>) -> Result<CValue, ImportError> {
+    let with_format = format.is_none();
+    let exts = import_extensions(reg, format);
     if exts.is_empty() {
         return Err(ImportError::BadParams("no import format declares an extension"));
     }
@@ -243,7 +252,7 @@ pub fn import_file_def_value(reg: &Registry) -> Result<CValue, ImportError> {
         "Import a file",
         "Reads an untrusted file from an approved import root with the detected (or named) format's reader, \
          under the read limits, and adds its entities to one stage in one commit, or adds nothing.",
-        params_schema(reg, true)?,
+        params_schema(reg, None)?,
     ))
 }
 
@@ -263,7 +272,7 @@ pub fn format_def_value(reg: &Registry, format: &FormatId, taken: &[&str]) -> Re
              entities to one stage in one commit, or adds nothing.",
             format.as_str()
         ),
-        params_schema(reg, false)?,
+        params_schema(reg, Some(format))?,
     ))
 }
 

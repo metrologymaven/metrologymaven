@@ -90,6 +90,7 @@ fn import_schemas_validate_real_params_and_results() {
     let CValue::Obj(top) = &expected else { panic!() };
     let Some(CValue::Obj(cases)) = top.get("cases") else { panic!() };
     let mut n = 0;
+    let mut with_warnings = 0;
     for (name, c) in cases {
         let CValue::Obj(c) = c else { panic!() };
         for key in ["report", "report_dry"] {
@@ -97,10 +98,26 @@ fn import_schemas_validate_real_params_and_results() {
                 assert!(passes(&generic.result_schema, r), "{name} {key}");
                 assert!(passes(&per.result_schema, r), "{name} {key}");
                 n += 1;
+                let CValue::Obj(ro) = r else { panic!() };
+                if matches!(ro.get("warnings"), Some(CValue::Arr(w)) if !w.is_empty()) {
+                    with_warnings += 1;
+                }
             }
         }
     }
     assert!(n >= 6, "{n}");
+    // The warnings branch: the reference's renamed-entity warnings (with positions) ...
+    assert!(with_warnings >= 2, "{with_warnings}");
+    // ... and a hard-linked source's warning (no position), hand-labelled.
+    let hard_linked = j(r#"{"dropped":[],"dropped_total":"0","dry_run":false,"entity_counts":{"test.point_set":"1"},
+        "format":"fid-test-points","source":"root://in/linked.ftp","warnings":[{"code":"hard_linked",
+        "detail":{"text":"2 links","truncated":false},"pos":null}],"warnings_total":"1"}"#);
+    assert!(passes(&generic.result_schema, &hard_linked));
+    assert!(passes(&per.result_schema, &hard_linked));
+    let bad_warning = j(r#"{"dropped":[],"dropped_total":"0","dry_run":false,"entity_counts":{},
+        "format":"fid-test-points","source":"root://in/linked.ftp","warnings":[{"code":"Hard-Linked",
+        "detail":{"text":"2 links","truncated":false},"pos":null}],"warnings_total":"1"}"#);
+    assert!(!passes(&generic.result_schema, &bad_warning));
     assert!(!passes(&generic.result_schema, &j(r#"{"dry_run":false}"#)));
 
     let decls: Vec<CommandDecl> = [&generic, &per].iter().map(|d| CommandDecl::from_def(d)).collect();

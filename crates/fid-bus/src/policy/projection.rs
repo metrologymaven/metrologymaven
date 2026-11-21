@@ -1221,41 +1221,14 @@ impl Handler for WithdrawHandler {
 /// Code point ranges a rejection reason may not hold (Unicode 16.0), with what each range
 /// is: general categories Cc, Cf, Zl and Zp, the noncharacters U+FDD0..U+FDEF, and the whole
 /// tag block U+E0000..U+E007F. The plane-end noncharacters U+xFFFE and U+xFFFF of every
-/// plane are refused by [`forbidden_in_reason`] as well.
-#[rustfmt::skip]
-pub const REASON_FORBIDDEN_RANGES: &[(u32, u32, &str)] = &[
-    (0x0000, 0x001F, "Cc: C0 controls"),
-    (0x007F, 0x009F, "Cc: DEL and C1 controls"),
-    (0x00AD, 0x00AD, "Cf: soft hyphen"),
-    (0x0600, 0x0605, "Cf: Arabic number signs"),
-    (0x061C, 0x061C, "Cf: Arabic letter mark"),
-    (0x06DD, 0x06DD, "Cf: Arabic end of ayah"),
-    (0x070F, 0x070F, "Cf: Syriac abbreviation mark"),
-    (0x0890, 0x0891, "Cf: Arabic pound and piastre marks above"),
-    (0x08E2, 0x08E2, "Cf: Arabic disputed end of ayah"),
-    (0x180E, 0x180E, "Cf: Mongolian vowel separator"),
-    (0x200B, 0x200F, "Cf: zero width space, joiners, LRM, RLM"),
-    (0x2028, 0x2028, "Zl: line separator"),
-    (0x2029, 0x2029, "Zp: paragraph separator"),
-    (0x202A, 0x202E, "Cf: bidi embeddings and overrides"),
-    (0x2060, 0x2064, "Cf: word joiner and invisible operators"),
-    (0x2066, 0x206F, "Cf: bidi isolates and deprecated format controls"),
-    (0xFDD0, 0xFDEF, "noncharacters"),
-    (0xFEFF, 0xFEFF, "Cf: byte order mark"),
-    (0xFFF9, 0xFFFB, "Cf: interlinear annotation controls"),
-    (0x110BD, 0x110BD, "Cf: Kaithi number sign"),
-    (0x110CD, 0x110CD, "Cf: Kaithi number sign above"),
-    (0x13430, 0x1343F, "Cf: Egyptian hieroglyph format controls"),
-    (0x1BCA0, 0x1BCA3, "Cf: shorthand format controls"),
-    (0x1D173, 0x1D17A, "Cf: musical symbol format controls"),
-    (0xE0000, 0xE007F, "Cf and reserved: tag characters"),
-];
+/// plane are refused by [`forbidden_in_reason`] as well. The table lives in
+/// [`fid_types::text::FORBIDDEN_RANGES`], shared with the importers (IO.REG.ENV.IMPORT).
+pub use fid_types::text::FORBIDDEN_RANGES as REASON_FORBIDDEN_RANGES;
 
 /// Whether a rejection reason may not hold `c`: any [`REASON_FORBIDDEN_RANGES`] code point
 /// or a plane-end noncharacter (U+xFFFE, U+xFFFF).
 pub fn forbidden_in_reason(c: char) -> bool {
-    let u = u32::from(c);
-    (u & 0xFFFE) == 0xFFFE || REASON_FORBIDDEN_RANGES.iter().any(|(lo, hi, _)| (*lo..=*hi).contains(&u))
+    fid_types::text::is_forbidden_char(c)
 }
 
 /// The handler of `request.reject_request@1` (REQ-006): parameters `{request, reason}`, the
