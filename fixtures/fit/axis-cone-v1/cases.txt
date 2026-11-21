@@ -13,6 +13,10 @@ ref_alpha 3fb6564c6cb28567
 ref_apex 3fba9e598ef72a8c 3fd35862dce7c29e 3fa5ff595e9fb027
 ref_rms 3eb168e6f36f094b
 plane_rms 3f7e3b5559ddcef1
+ref_u_axis 3ef5371533b824a1
+ref_u_point 3e854701982d1af9
+ref_u_r 3e742c1aa2dbe66b
+ref_u_alpha 3ee5188cda4e1d7a
 expect start
 end
 case cone-5-360-1 coverage 360
@@ -28,6 +32,10 @@ ref_alpha 3fb656933d855330
 ref_apex 3f7a0f07b380932f 3fd0e670d1030566 3fd659a6e7a2d4c7
 ref_rms 3eaf7d053ceb9975
 plane_rms 3f7ed68ded996e4f
+ref_u_axis 3ef2d1c14578e339
+ref_u_point 3e82d58562f5e7a5
+ref_u_r 3e7280dd004f13fd
+ref_u_alpha 3ee2c7f3aeff7291
 expect start
 end
 case cone-5-360-km coverage 360
@@ -43,6 +51,10 @@ ref_alpha 3fb656ed6f43980b
 ref_apex c07ddb7842df3403 4085f93dc5a1ed37 4080b5e15847717b
 ref_rms 3eb0473366189393
 plane_rms 3f71ed07c8ec467e
+ref_u_axis 3f00ae64dd1350ad
+ref_u_point 3e84779613a49e69
+ref_u_r 3e730edea0f3bd74
+ref_u_alpha 3ef0a910b762dd57
 expect start
 end
 case cone-5-120-0 coverage 120
@@ -58,6 +70,10 @@ ref_alpha 3fb65596d8ed45e0
 ref_apex 3fd8a93168493b11 3fc3aa9e75cd3924 3fc1a78e3fec1dc3
 ref_rms 3eb0e0e079f0d978
 plane_rms 3f788e6d0dc7ce3b
+ref_u_axis 3f0aa0990b1b28b8
+ref_u_point 3ea0de5689a7e2ad
+ref_u_r 3e9a175f66b3316b
+ref_u_alpha 3f04afcec54c8379
 expect start
 end
 case cone-5-120-1 coverage 120
@@ -73,6 +89,10 @@ ref_alpha 3fb65cb971908d8c
 ref_apex bfc8253052b15526 bfce4a8bd1a3e66b bf710bce31542e52
 ref_rms 3eb056557339a162
 plane_rms 3f6e86d35f8392f2
+ref_u_axis 3f1d7920cc7ad397
+ref_u_point 3ea2bab32836378f
+ref_u_r 3e9a7941a0890b73
+ref_u_alpha 3f17ef4bd75d8de6
 expect start
 end
 case cone-5-120-km coverage 120
@@ -88,6 +108,10 @@ ref_alpha 3fb658f0166d051a
 ref_apex 407bd8ceb87ed1f6 c08534084c30c2b4 408169d4f988dc80
 ref_rms 3eb03454b84ef655
 plane_rms 3f73dbf74f37d4ba
+ref_u_axis 3f0bcc71db4f54a5
+ref_u_point 3e9fad7e2687b360
+ref_u_r 3e98148d36561aeb
+ref_u_alpha 3f0653d6b4a5cdc6
 expect start
 end
 case cone-20-360-0 coverage 360
@@ -103,6 +127,10 @@ ref_alpha 3fd6569170bff5ff
 ref_apex 3f5b2b6b77453107 bf6b9d7db4591c1a bf9b7d20f75d4ab5
 ref_rms 3eb122893cb6d002
 plane_rms 3f6a521edbf7fb9c
+ref_u_axis 3f06b7ef39be262e
+ref_u_point 3e900bd4cb78dc2e
+ref_u_r 3e75050e050515f0
+ref_u_alpha 3ef6d082f45bb7c6
 expect start
 end
 case cone-20-360-1 coverage 360
@@ -118,6 +146,10 @@ ref_alpha 3fd656bbaeb64d24
 ref_apex 3fa04f7a1931137e 3fc344ce6edd9ef8 3fcaecb786f61dcb
 ref_rms 3eafc84c63ba0c68
 plane_rms 3f71517c6eca858f
+ref_u_axis 3effd88ab1ca0b0b
+ref_u_point 3e932ec4b6c2a291
+ref_u_r 3e7385cc5b5191dd
+ref_u_alpha 3eefd7cd53e5fc68
 expect start
 end
 case cone-20-360-km coverage 360
@@ -133,6 +165,10 @@ ref_alpha 3fd6572a41cb28cc
 ref_apex c075633b7b6f517b c0838e897ac74c2a c0834f0b4afae2a6
 ref_rms 3eaf12c8f4c983f1
 plane_rms 3f91a23a24b49f28
+ref_u_axis 3ede283d316476ad
+ref_u_point 3e89899cd8110dcd
+ref_u_r 3e7376a84cf9ecc0
+ref_u_alpha 3ece2dc8c45980b3
 expect start
 end
 case cone-20-120-0 coverage 120
@@ -148,6 +184,10 @@ ref_alpha 3fd6573aa5a4d1d0
 ref_apex bf9f01d572c6e54e bf9eea2c57bbf73f bf9f3cd179be617b
 ref_rms 3eb0dba02e3d069b
 plane_rms 3f6653bd505a1d9c
+ref_u_axis 3f1147d98c727afb
+ref_u_point 3ea8f5c7c36eedee
+ref_u_r 3e9ed827e37119f3
+ref_u_alpha 3f0c8f15621e1176
 expect start
 end
 case cone-20-120-1 coverage 120
@@ -163,6 +203,10 @@ ref_alpha 3fd6578ee1f102d4
 ref_apex bfbf110be3c7e39b bfce5b7559504bef bfc0ee4a394b583d
 ref_rms 3eb025b4d51b93b3
 plane_rms 3f7238e472ead3fa
+ref_u_axis 3f154e69319c8b0b
+ref_u_point 3eb282f527f51c57
+ref_u_r 3e9b675d6bcda613
+ref_u_alpha 3f1142d527c2a949
 expect start
 end
 case cone-20-120-km coverage 120
@@ -178,6 +222,10 @@ ref_alpha 3fd65717b745cc83
 ref_apex c084a47170ce2fd3 407d3569d517f052 c0818a815b9b1f10
 ref_rms 3eb0eb353481fd06
 plane_rms 3f76c89bd50f730a
+ref_u_axis 3f04d854022867fd
+ref_u_point 3eaa0aeb82f78923
+ref_u_r 3e9cf82935b9be5e
+ref_u_alpha 3f00900db69f1ac5
 expect start
 end
 case cone-45-360-0 coverage 360
@@ -193,6 +241,10 @@ ref_alpha 3fe921fe37970ad8
 ref_apex bf92e92d42b87cf4 3f92d35e2f9b474c 3f9e3b04fe95675c
 ref_rms 3eb0e4a2b9764e7d
 plane_rms 3f8fb7f5c1979098
+ref_u_axis 3edc160c1bed3a4d
+ref_u_point 3e99e7dd1943a994
+ref_u_r 3e7bc38108fdf2af
+ref_u_alpha 3ecbbf3425493666
 expect start
 end
 case cone-45-360-1 coverage 360
@@ -208,6 +260,10 @@ ref_alpha 3fe921e0d3e701c2
 ref_apex bfd2e01879f9d7d0 bfc21e8e98e11aba 3f98d83fca110ca0
 ref_rms 3eb03bc9bc936ce3
 plane_rms 3f777a2e459ec3ab
+ref_u_axis 3ef223b8e25bc39d
+ref_u_point 3e9fb54a0848e355
+ref_u_r 3e7a90d6175cb0c8
+ref_u_alpha 3ee243fcc4ea6410
 expect start
 end
 case cone-45-360-km coverage 360
@@ -223,6 +279,10 @@ ref_alpha 3fe921f8d1658de3
 ref_apex c081f077fdbcf4e8 40602ed4ff016f2f 408bc489cb1b3cbb
 ref_rms 3eb0d14c0ba59131
 plane_rms 3f76eba954f77c6d
+ref_u_axis 3ef31ac1013bcedc
+ref_u_point 3e9b31e842ac1a3d
+ref_u_r 3e7bc046725cb206
+ref_u_alpha 3ee331fb4682a807
 expect start
 end
 case cone-45-120-0 coverage 120
@@ -238,6 +298,10 @@ ref_alpha 3fe921dc491be67d
 ref_apex 3fa289a7d0d1758a 3f8dfc3b47fdaec7 3f6d3531836bacb0
 ref_rms 3eb022c9176acd03
 plane_rms 3f76258f5e937bed
+ref_u_axis 3efa2cd81520159b
+ref_u_point 3eb598e3d020c2ec
+ref_u_r 3ea17ab14a4bad82
+ref_u_alpha 3ef4f063f08f196c
 expect start
 end
 case cone-45-120-1 coverage 120
@@ -253,6 +317,10 @@ ref_alpha 3fe9214270343f71
 ref_apex bfc759062f3f4588 3f975f5d457ae827 3fcc368eb17dfd76
 ref_rms 3eb0a14cf6efed6b
 plane_rms 3f680486e2be7f3b
+ref_u_axis 3f117b6691309101
+ref_u_point 3ec099e508ad5603
+ref_u_r 3ea346402ebcb2c4
+ref_u_alpha 3f0cbd938f3444c7
 expect start
 end
 case cone-45-120-km coverage 120
@@ -268,6 +336,10 @@ ref_alpha 3fe921b6b7cac682
 ref_apex c065f0ab32516633 c05e23073007b7dd 408f98537505b998
 ref_rms 3eb166e336c1270d
 plane_rms 3f68411a876944d5
+ref_u_axis 3f112ca2a96a9ec3
+ref_u_point 3ec05efeac9ee1cc
+ref_u_r 3ea3d76eba91cceb
+ref_u_alpha 3f0c5c7f61d3adbf
 expect start
 end
 case cone-70-360-0 coverage 360
@@ -283,6 +355,10 @@ ref_alpha 3ff38c34dcebd1b2
 ref_apex bf74bbcc4dfbfeb0 3f89594781beabb1 bf617650259634e5
 ref_rms 3eb0bc69c1a423af
 plane_rms 3f74515c41c2497d
+ref_u_axis 3ee4ef937898079e
+ref_u_point 3eb1ed319db46997
+ref_u_r 3e8c5e3e49e02741
+ref_u_alpha 3ed4d745f6795151
 expect start
 end
 case cone-70-360-1 coverage 360
@@ -298,6 +374,10 @@ ref_alpha 3ff38c30b36345d0
 ref_apex 3fccbcc41e3fdc7b bfc7e366ee2457c5 3fb24363b0e07d68
 ref_rms 3eaf5025ba9eb3b3
 plane_rms 3f7cdadaba19ab37
+ref_u_axis 3edbd94a520f636c
+ref_u_point 3eb0c35c899a7a21
+ref_u_r 3e8acafbc91dfb4e
+ref_u_alpha 3ecc686ce9abf847
 expect start
 end
 case cone-70-360-km coverage 360
@@ -313,6 +393,10 @@ ref_alpha 3ff38c34b16998f4
 ref_apex 40885f54e27ccc61 c0020533e122e226 4084eefe202cac51
 ref_rms 3eb16b2a6c81ed3b
 plane_rms 3f755bd71e639d33
+ref_u_axis 3ee47c7216a2379c
+ref_u_point 3eb0eba588473d0d
+ref_u_r 3e8d844aa12fcd76
+ref_u_alpha 3ed485cd9dbd9aa3
 expect start
 end
 case cone-70-120-0 coverage 120
@@ -328,6 +412,10 @@ ref_alpha 3ff38c582c2a1b82
 ref_apex 3f80d8c3a5969906 bf8bf4167f1bc8d1 3f8311160518b982
 ref_rms 3eae65dd60778bd1
 plane_rms 3f584cbd13843275
+ref_u_axis 3f061bd9a5b9ca6e
+ref_u_point 3eca02a28a3d97ce
+ref_u_r 3eb212496a6ea6eb
+ref_u_alpha 3f01d8ed5926267a
 expect start
 end
 case cone-70-120-1 coverage 120
@@ -343,6 +431,10 @@ ref_alpha 3ff38c5b0544ccf3
 ref_apex bfc0c49774e4ae1f 3fc437fd858100f0 bfcc80df43e264b1
 ref_rms 3eb07b299d683735
 plane_rms 3f616040b3117f20
+ref_u_axis 3efff9a97c4c816a
+ref_u_point 3eccd4d3c1a5e375
+ref_u_r 3eb4abda6fc13a6e
+ref_u_alpha 3efa5823be1721c5
 expect start
 end
 case cone-70-120-km coverage 120
@@ -358,6 +450,10 @@ ref_alpha 3ff38c93161c33eb
 ref_apex c03ed068f500b8cd 4089899d8a13f38c 4079615f602c05c9
 ref_rms 3eb16a2b68e8fda0
 plane_rms 3f46092801c4c6e4
+ref_u_axis 3f1dc3a2c45085ee
+ref_u_point 3ed0f4f68b44b6e1
+ref_u_r 3eb5812c20831951
+ref_u_alpha 3f18bf59c4919d71
 expect start
 end
 case cone-30-90-0 coverage 90
@@ -373,6 +469,10 @@ ref_alpha 3fe0c0c69f7bef83
 ref_apex 3f88989b7e861dc4 bfa81abfd40fd596 3fa2f448dcc4772a
 ref_rms 3eb0a303e24150f2
 plane_rms 3f62a806052bd17f
+ref_u_axis 3f18c8827e398487
+ref_u_point 3ebfc24f64c81f8a
+ref_u_r 3eacf1fd37918bb5
+ref_u_alpha 3f15e1e73561ecbe
 expect start
 end
 case cone-30-90-1 coverage 90
@@ -388,6 +488,10 @@ ref_alpha 3fe0c19fd1ee85a3
 ref_apex 3fcf600fd555f1d8 3fb0c66ce2dafa59 3fbfc65bcdf8ed71
 ref_rms 3eaea55e4093411c
 plane_rms 3f707ee5b8c83ddf
+ref_u_axis 3f0a100c991f1880
+ref_u_point 3eba7e01a3d71b8a
+ref_u_r 3ea849e476adc79b
+ref_u_alpha 3f067bfd959ff9fa
 expect start
 end
 case cone-30-90-km coverage 90
@@ -403,6 +507,10 @@ ref_alpha 3fe0c0cc30135f03
 ref_apex c084839768414cf0 407362c73d66293a 4088b0170bb372fd
 ref_rms 3eb12e9710a79d6b
 plane_rms 3f55f1b084a50a3c
+ref_u_axis 3f2c714f97fda9c4
+ref_u_point 3ec4a57d9b3035a0
+ref_u_r 3eae6437869ad83c
+ref_u_alpha 3f299f273c4e5ac6
 expect start
 end
 case fixed-ha-0 coverage 360
@@ -419,6 +527,9 @@ ref_alpha 3fe0c152382d7366
 ref_apex bfc8e8ca6cd16346 3fc4edc611efe7aa 3fc09d210cfedb04
 ref_rms 3eb04c0b1da8e2dc
 plane_rms 3f6da07d39ef2fa6
+ref_u_axis 3f014cb0057420d4
+ref_u_point 3ea002203c20257b
+ref_u_r 3e7639684c2be03c
 expect start
 end
 case fixed-ha-1 coverage 180
@@ -435,6 +546,9 @@ ref_alpha 3ff0c152382d7366
 ref_apex 3fd0c8aed09d43da bfc91698d644dff2 3f9f4dadee491ad5
 ref_rms 3eb0b4439387a883
 plane_rms 3f71a1635310084a
+ref_u_axis 3eea3658a62e7067
+ref_u_point 3eaa0cb6fd3f9f26
+ref_u_r 3e9646de7e62ae0a
 expect start
 end
 case ha-0.01 coverage 360

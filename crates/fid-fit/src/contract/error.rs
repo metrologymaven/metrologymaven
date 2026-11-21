@@ -79,7 +79,9 @@ pub enum FitError {
     /// An ill-posed cone (`ls_cone`, KRN.LSQ.AXIS.CONE): its fitted `half_angle` (radians) is
     /// within the configured threshold of 0 (near-cylinder) or of `pi / 2` (near-plane), or the
     /// condition estimate `cond` of the scaled Jacobian at the fit is above the cone's limit
-    /// (for example a short axial extent). `cond` is `None` beyond the `f64` range. Code
+    /// (for example a short axial extent), or a later solve round about the fit is
+    /// ill-conditioned or rank deficient; through the `Fit` trait also an axis whose standard
+    /// uncertainty is above the cone's limit. `cond` is `None` beyond the `f64` range. Code
     /// `ill_conditioned`, like [`FitError::IllConditioned`].
     IllPosedCone { half_angle: f64, cond: Option<f64> },
     /// A converged least-squares fit whose residual RMS `rms` is not below `bound` (by a

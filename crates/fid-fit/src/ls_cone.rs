@@ -59,7 +59,8 @@
 //!    `local_optimum_only` are `mstart`'s rules with INIT's tolerances.
 //! 7. **Ill-posedness (REQ-003).** For the selected cone, with `cond` its scaled-Jacobian
 //!    condition estimate: `alpha <= near_zero` (near-cylinder), `alpha >= pi/2 - near_ninety`
-//!    (near-plane) or `cond > cond_limit` (a short axial extent or a narrow band: tilting and
+//!    (near-plane) or `cond` above `cond_limit` or the contract's shared
+//!    `params.thresholds.cond_max`, whichever is lower (a short axial extent or a narrow band: tilting and
 //!    shifting the axis become indistinguishable) is [`FitError::IllPosedCone`] with `alpha` and
 //!    `cond`. No ill-posed cone is ever returned.
 //! 8. **Result.** The canonical cone: reference point `p` (the foot of the centroid), `d`, `r`
@@ -102,9 +103,9 @@ use fid_solv::nlls::{self, NllsConfig, NllsProblem, NllsResult};
 use fid_types::Determinism;
 
 use crate::contract::{
-    algorithm_id, check_points, DEFAULT_RANK_TOL, command_row, data_shape, unit_direction, Centred, CommandRow, Field, Fit,
+    algorithm_id, check_points, command_row, data_shape, unit_direction, Centred, CommandRow, Field, Fit,
     FitDiagnostics, FitError, FitParams, FitResult, FittedFeature, Method, PointsView, Primitive, ValueType, Weights,
-    V3,
+    DEFAULT_RANK_TOL, V3,
 };
 use crate::init::{self, AxialStart, AxisFrame};
 use crate::ls_cyl::{CERT_MARGIN, SUSPECT_RATIO};
@@ -318,12 +319,18 @@ pub fn cone_command_row() -> Result<CommandRow, FitError> {
         Field { name: "cone.near_ninety", ty: ValueType::Number, quantity: A, required: false },
         Field { name: "cone.apex_report_limit_m", ty: ValueType::Number, quantity: L, required: false },
         Field { name: "cone.cond_limit", ty: ValueType::Number, quantity: D, required: false },
+        Field { name: "cone.max_axis_u_rad", ty: ValueType::Number, quantity: A, required: false },
     ];
     let extra = [
         Field { name: "cone.point", ty: ValueType::NumberArray, quantity: L, required: false },
         Field { name: "cone.radius", ty: ValueType::Number, quantity: L, required: false },
         Field { name: "cone.apex_distance", ty: ValueType::Number, quantity: L, required: false },
         Field { name: "cone.apex_reported", ty: ValueType::Boolean, quantity: None, required: false },
+        Field { name: "cone.u_axis", ty: ValueType::Number, quantity: A, required: false },
+        Field { name: "cone.u_point", ty: ValueType::NumberArray, quantity: L, required: false },
+        Field { name: "cone.u_radius", ty: ValueType::Number, quantity: L, required: false },
+        Field { name: "cone.u_half_angle", ty: ValueType::Number, quantity: A, required: false },
+        Field { name: "cone.weak_axis", ty: ValueType::Boolean, quantity: None, required: false },
         Field { name: "multistart.best_index", ty: ValueType::Integer, quantity: C, required: false },
         Field { name: "multistart.start_count", ty: ValueType::Integer, quantity: C, required: false },
         Field { name: "multistart.local_optimum_only", ty: ValueType::Boolean, quantity: None, required: false },
@@ -683,7 +690,7 @@ fn run(pts: &PointsView<'_>, params: &FitParams, opts: &ConeOptions, st: &AxialS
         Err(MultiStartError::AllFailed(errs)) => {
             // Rule 7's probe: say why when the data is a near-plane cone.
             if let Some((alpha, cond)) = plane_probe(&c, layout, &params.nlls)? {
-                if ill_posed(alpha, cond, opts)? {
+                if ill_posed(alpha, cond, opts, params.thresholds.cond_max)? {
                     return Err(ill_posed_error(alpha, cond));
                 }
             }
@@ -695,7 +702,7 @@ fn run(pts: &PointsView<'_>, params: &FitParams, opts: &ConeOptions, st: &AxialS
     let alpha = best.alpha;
     let cond = best.last.cond;
     // Rule 7: never return an ill-posed cone.
-    if ill_posed(alpha, cond, opts)? {
+    if ill_posed(alpha, cond, opts, params.thresholds.cond_max)? {
         return Err(ill_posed_error(alpha, cond));
     }
     // Rule 8.
@@ -818,11 +825,12 @@ fn uncertainty(c: &Centred, layout: Layout, o: &Outcome) -> Result<ConeUncertain
 }
 
 /// Rule 7's test.
-fn ill_posed(alpha: f64, cond: f64, opts: &ConeOptions) -> Result<bool, FitError> {
+fn ill_posed(alpha: f64, cond: f64, opts: &ConeOptions, cond_max: f64) -> Result<bool, FitError> {
     Ok(f::total_cmp(alpha, opts.near_zero)? != Ordering::Greater
         || f::total_cmp(alpha, FRAC_PI_2 - opts.near_ninety)? != Ordering::Less
         || !cond.is_finite()
-        || f::total_cmp(cond, opts.cond_limit)? == Ordering::Greater)
+        || f::total_cmp(cond, opts.cond_limit)? == Ordering::Greater
+        || f::total_cmp(cond, cond_max)? == Ordering::Greater)
 }
 
 fn ill_posed_error(alpha: f64, cond: f64) -> FitError {
@@ -938,7 +946,8 @@ impl Fit for ConeLs {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
-    use super::{canonical, keeps_earlier_round, ConeOptions};
+    use super::{canonical, keeps_earlier_round, later_round_ill_posed, ConeOptions};
+    use crate::contract::FitError;
     use fid_num::NumError;
     use fid_solv::nlls::{Diagnostics, SolverError, Stage};
 
@@ -955,6 +964,27 @@ mod tests {
         }
         assert!(keeps_earlier_round(&limit, true));
         assert!(!keeps_earlier_round(&limit, false));
+    }
+
+    /// Rule 5 (review of #420): a later round that is ill-conditioned or rank deficient fails
+    /// the start with `IllPosedCone` (the earlier round's half-angle); other errors and first
+    /// rounds do not map.
+    #[test]
+    fn later_round_ill_conditioning_is_ill_posed() {
+        let last = Diagnostics::default();
+        let ill = SolverError::IllConditioned { cond: Some(1e13), last };
+        let rank = SolverError::RankDeficient { rank: 5, cond: None, last };
+        let limit = SolverError::IterationLimit { last };
+        assert_eq!(
+            later_round_ill_posed(&ill, Some(0.5)),
+            Some(FitError::IllPosedCone { half_angle: 0.5, cond: Some(1e13) })
+        );
+        assert_eq!(
+            later_round_ill_posed(&rank, Some(0.5)),
+            Some(FitError::IllPosedCone { half_angle: 0.5, cond: None })
+        );
+        assert_eq!(later_round_ill_posed(&ill, None), None);
+        assert_eq!(later_round_ill_posed(&limit, Some(0.5)), None);
     }
 
     /// Rule 5's canonical form: a negative half-angle reverses the axis; a half-angle beyond
@@ -982,6 +1012,8 @@ mod tests {
             ConeOptions { near_zero: 0.8, near_ninety: 0.8, ..ConeOptions::default() },
             ConeOptions { apex_report_limit_m: -1.0, ..ConeOptions::default() },
             ConeOptions { cond_limit: 0.5, ..ConeOptions::default() },
+            ConeOptions { max_axis_u_rad: 0.0, ..ConeOptions::default() },
+            ConeOptions { max_axis_u_rad: f64::NAN, ..ConeOptions::default() },
         ];
         for o in bad {
             assert_eq!(o.validate().unwrap_err().code(), "invalid_params", "{o:?}");

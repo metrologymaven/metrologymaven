@@ -8,8 +8,10 @@
 //! own output (not an oracle); CI checks it on x86-64 Linux and Windows, ARM64 macOS and wasm32.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::result_large_err)]
 
+use fid_fit::contract::Primitive;
 use fid_fit::contract::{Fit, FitError, FitParams, FittedFeature, Method, PointsView};
-use fid_fit::ls_cone::{cone_command_row, fit_cone, ConeFit, ConeLs, ConeOptions};
+use fid_fit::init::{cone_start, cylinder_start};
+use fid_fit::ls_cone::{cone_command_row, fit_cone, fit_cone_from, ConeFit, ConeLs, ConeOptions};
 use fid_kci::{check, parse_card, InputArity};
 use fid_solv::mstart::StartSummary;
 use fid_testkit::Sha256Hasher;
@@ -25,15 +27,21 @@ const THRESHOLD: f64 = 0.1 * std::f64::consts::PI / 180.0;
 
 /// Tolerances against the Decimal reference (the same minimum computed two ways), each about
 /// 10 times the worst difference on the fixture (printed by `matches_reference`).
-/// Axis angle, radians.
-const TOL_AXIS: f64 = 1e-9;
+/// Axis angle, radians (worst 6.0e-12).
+const TOL_AXIS: f64 = 1e-10;
 /// Distance of the reference foot point from the fitted axis and the radius difference at the
-/// reference point, relative to the reference radius.
-const TOL_LEN_REL: f64 = 1e-8;
-/// Half-angle, radians.
-const TOL_ALPHA: f64 = 1e-9;
-/// Residual RMS, relative; the plane RMS uses the same.
-const TOL_RMS_REL: f64 = 1e-10;
+/// reference point, relative to the reference radius (worst 1.8e-11 and 2.8e-12).
+const TOL_LEN_REL: f64 = 2e-10;
+/// Half-angle, radians (worst 5.1e-12).
+const TOL_ALPHA: f64 = 1e-10;
+/// Apex position relative to the apex distance (worst 5.8e-11; the apex is the point minus
+/// `r / tan(alpha)` along the axis, which amplifies the half-angle's error).
+const TOL_APEX_REL: f64 = 6e-10;
+/// Residual RMS, relative (worst 4.7e-13); the plane RMS uses the same.
+const TOL_RMS_REL: f64 = 1e-11;
+/// Standard uncertainties against the Decimal ones at the reference cone, relative (worst
+/// 5.1e-11).
+const TOL_U_REL: f64 = 1e-9;
 
 fn hexes(s: &str) -> Vec<f64> {
     s.split_whitespace().map(|t| f64::from_bits(u64::from_str_radix(t, 16).unwrap())).collect()
@@ -161,7 +169,7 @@ fn matches_reference() {
             norm(sub(apex, c.v3("ref_apex"))) / (ref_r / c.one("ref_alpha").tan()),
             (f.result.stats.rms - c.one("ref_rms")).abs() / c.one("ref_rms"),
         ];
-        let tols = [TOL_AXIS, TOL_LEN_REL, TOL_LEN_REL, TOL_ALPHA, TOL_LEN_REL, TOL_RMS_REL];
+        let tols = [TOL_AXIS, TOL_LEN_REL, TOL_LEN_REL, TOL_ALPHA, TOL_APEX_REL, TOL_RMS_REL];
         for (k, ((&e, &t), w)) in errs.iter().zip(&tols).zip(worst.iter_mut()).enumerate() {
             assert!(e <= t, "{}: error {k} = {e:e} above {t:e}", c.name);
             if e > *w {
@@ -263,7 +271,7 @@ fn error_paths() {
     let mut n = 0;
     for (c, r) in outcomes().iter().filter(|(c, _)| {
         let e = c.text("expect").unwrap();
-        e != "start" && !e.starts_with("ill_posed")
+        e != "start" && e != "hard" && !e.starts_with("ill_posed")
     }) {
         let e = r.as_ref().map(|_| ()).unwrap_err();
         assert_eq!(encode_err(e), c.text("expect").unwrap(), "{}", c.name);
@@ -292,6 +300,124 @@ fn invalid_params_are_refused() {
     );
     let o = ConeOptions { cond_limit: f64::NAN, ..ConeOptions::default() };
     assert_eq!(fit_cone(&pts, &params(), &o, Some(SEED)), Err(FitError::InvalidParams { field: "cone.cond_limit" }));
+    let o = ConeOptions { max_axis_u_rad: 0.0, ..ConeOptions::default() };
+    assert_eq!(
+        fit_cone(&pts, &params(), &o, Some(SEED)),
+        Err(FitError::InvalidParams { field: "cone.max_axis_u_rad" })
+    );
+    // A start that is not a cone start is refused by `fit_cone_from`.
+    let mut st = cone_start(&pts, SEED).unwrap();
+    assert!(fit_cone_from(&pts, &params(), &ConeOptions::default(), &st).is_ok());
+    st.primitive = Primitive::Cylinder;
+    assert_eq!(
+        fit_cone_from(&pts, &params(), &ConeOptions::default(), &st),
+        Err(FitError::InvalidParams { field: "start.primitive" })
+    );
+    let cyl = cylinder_start(&pts, SEED).unwrap();
+    assert_eq!(
+        fit_cone_from(&pts, &params(), &ConeOptions::default(), &cyl),
+        Err(FitError::InvalidParams { field: "start.primitive" })
+    );
+}
+
+/// The contract's shared `thresholds.cond_max` applies alongside the cone's own limit: below
+/// a fit's condition estimate it refuses the fit with `IllPosedCone`.
+#[test]
+fn shared_cond_max_applies() {
+    let (c, r) = outcomes().iter().find(|(c, _)| c.name == "cone-30-90-1").unwrap();
+    let f = r.as_ref().unwrap();
+    let cond = f.result.diagnostics.cond;
+    let pts_v = c.get("points").unwrap();
+    let pts = PointsView::new(&pts_v, None).unwrap();
+    let mut p = params();
+    p.thresholds.cond_max = cond / 2.0;
+    assert_eq!(
+        fit_cone(&pts, &p, &options(c), Some(SEED)),
+        Err(FitError::IllPosedCone { half_angle: f.half_angle, cond: Some(cond) })
+    );
+}
+
+/// Rule 11: the standard uncertainties of the axis, the point across the axis, the radius and
+/// the half-angle match the Decimal ones at the reference cone; every well-posed fixture cone
+/// has an axis uncertainty well below the default `max_axis_u_rad` (1 mrad) and is not weak;
+/// the planted axis lies within 5 standard uncertainties of the fitted one.
+#[test]
+fn uncertainties_match_reference() {
+    let mut worst = 0.0f64;
+    let mut n = 0;
+    for (c, r) in outcomes().iter().filter(|(c, _)| c.get("ref_axis").is_some()) {
+        let f = r.as_ref().unwrap();
+        let u = &f.uncertainty;
+        let got = [u.axis_rad, u.point_m[0].hypot(u.point_m[1]), u.radius_m];
+        let want = [c.one("ref_u_axis"), c.one("ref_u_point"), c.one("ref_u_r")];
+        for (g, w) in got.iter().zip(&want) {
+            let e = (g - w).abs() / w;
+            worst = worst.max(e);
+            assert!(e <= TOL_U_REL, "{}: {g:e} vs {w:e}", c.name);
+        }
+        match (u.half_angle_rad, c.get("ref_u_alpha")) {
+            (Some(g), Some(w)) => assert!((g - w[0]).abs() <= TOL_U_REL * w[0], "{}: {g:e} vs {:e}", c.name, w[0]),
+            (None, None) => assert!(c.get("fixed_alpha").is_some()),
+            other => panic!("{}: {other:?}", c.name),
+        }
+        assert!((u.axis_rad - u.axis_tilt_rad[0].hypot(u.axis_tilt_rad[1])).abs() <= 1e-15);
+        assert!(dot(u.e1, f.axis).abs() < 1e-15 && dot(u.e2, f.axis).abs() < 1e-15);
+        assert!(u.axis_rad < ConeOptions::default().max_axis_u_rad / 4.0, "{}: {:e}", c.name, u.axis_rad);
+        assert!(!f.weak_axis, "{}", c.name);
+        assert!(angle(f.axis, c.v3("truth_axis")) <= 5.0 * u.axis_rad, "{}", c.name);
+        assert!(u.sigma_m > 0.0 && u.sigma_m < 2e-6, "{}: sigma {:e}", c.name, u.sigma_m);
+        n += 1;
+    }
+    eprintln!("worst uncertainty difference {worst:e} (relative)");
+    assert_eq!(n, 29);
+}
+
+/// Fail closed on the hand-labelled `hard` cases ("never confidently wrong"): every case is
+/// refused (`ill_conditioned`, `implausible_fit`, `multi_start`), or returned by `fit_cone`
+/// with `local_optimum_only`, `suspect_axis` or `weak_axis`, which the `Fit` trait refuses
+/// (`flagged_fit`, `ill_conditioned`), or returned unflagged with its axis within 10 standard
+/// uncertainties and 0.01 rad of the planted one. At least one case ends in each of
+/// `local_optimum_only`, `suspect_axis`, `ImplausibleFit` and a weak axis, and for each the
+/// trait's error is asserted.
+#[test]
+fn hard_cases_fail_closed() {
+    let mut seen = [0usize; 4];
+    for (c, r) in outcomes().iter().filter(|(c, _)| c.text("expect") == Some("hard")) {
+        let pts_v = c.get("points").unwrap();
+        let pts = PointsView::new(&pts_v, None).unwrap();
+        let t = ConeLs.fit(&pts, &params(), Some(SEED));
+        let code = t.as_ref().map(|_| "ok").unwrap_or_else(|e| e.code());
+        match r {
+            Ok(f) if f.local_optimum_only || f.suspect_axis => {
+                seen[0] += usize::from(f.local_optimum_only);
+                seen[1] += usize::from(f.suspect_axis);
+                assert_eq!(code, "flagged_fit", "{}", c.name);
+            }
+            Ok(f) if f.weak_axis => {
+                seen[3] += 1;
+                assert_eq!(code, "ill_conditioned", "{}", c.name);
+            }
+            Ok(f) => {
+                let a = angle(f.axis, c.v3("truth_axis"));
+                assert!(a <= 10.0 * f.uncertainty.axis_rad && a <= 0.01, "{}: {a:e} rad", c.name);
+                assert_eq!(t.as_ref(), Ok(&f.result), "{}", c.name);
+            }
+            Err(FitError::ImplausibleFit { rms, bound }) => {
+                assert!(rms >= bound);
+                seen[2] += 1;
+                assert_eq!(code, "implausible_fit", "{}", c.name);
+            }
+            Err(e @ (FitError::IllPosedCone { .. } | FitError::MultiStartFailed { .. })) => {
+                assert_eq!(t.as_ref().map(|_| ()), Err(e), "{}", c.name);
+            }
+            Err(e) => panic!("{}: {e:?}", c.name),
+        }
+    }
+    eprintln!(
+        "local_optimum_only {}, suspect_axis {}, implausible {}, weak axis {}",
+        seen[0], seen[1], seen[2], seen[3]
+    );
+    assert!(seen.iter().all(|&k| k >= 1), "{seen:?}");
 }
 
 /// REQ-005: the apex is reported only when its distance from the reference point is at most
@@ -359,6 +485,10 @@ fn trait_matches_fit_cone() {
             Ok(f) if f.local_optimum_only || f.suspect_axis => {
                 assert_eq!(t.unwrap_err().code(), "flagged_fit", "{}", c.name)
             }
+            Ok(f) if f.weak_axis => {
+                let want = FitError::IllPosedCone { half_angle: f.half_angle, cond: Some(f.result.diagnostics.cond) };
+                assert_eq!(t, Err(want), "{}", c.name)
+            }
             Ok(f) => assert_eq!(t.as_ref(), Ok(&f.result), "{}", c.name),
             Err(e) => assert_eq!(t.as_ref(), Err(e), "{}", c.name),
         }
@@ -417,7 +547,7 @@ fn put(h: &mut Sha256Hasher, xs: &[f64]) {
 /// statistics, diagnostics, starts, per-start outcomes, flags and every error), the cones 1 km
 /// from the origin included, recorded from a local x86-64 run and checked by CI on x86-64
 /// Linux and Windows, ARM64 macOS and wasm32 under wasmtime.
-const OUTPUT_PIN: &str = "sha256:8435745da39c0b423cc8825f59f337c04fa18a9facb0d8b617457faea2259200";
+const OUTPUT_PIN: &str = "sha256:4149e8eff01d461365260e64f80fe863fef6e9119cf434bba4733674e3ed90a2";
 
 #[test]
 fn ac4_output_bits_pinned() {
@@ -456,22 +586,15 @@ fn ac4_output_bits_pinned() {
                 h.update(&f.best_index.to_le_bytes());
                 h.update(&[u8::from(f.local_optimum_only), u8::from(f.suspect_axis)]);
                 put(&mut h, &[f.plane_rms, f.rms_ratio]);
+                let u = &f.uncertainty;
+                put(&mut h, &u.e1);
+                put(&mut h, &u.e2);
+                put(&mut h, &[u.sigma_m, u.axis_tilt_rad[0], u.axis_tilt_rad[1], u.axis_rad]);
+                put(&mut h, &[u.point_m[0], u.point_m[1], u.radius_m, u.half_angle_rad.unwrap_or(-1.0)]);
+                h.update(&[u8::from(f.weak_axis)]);
             }
             Err(e) => h.update(encode_err(e).as_bytes()),
         }
     }
     assert_eq!(h.finish(), OUTPUT_PIN, "output bits changed on {}", std::env::consts::ARCH);
-}
-
-#[test]
-fn explore_hard() {
-    for (c, r) in outcomes() {
-        match r {
-            Ok(f) => eprintln!(
-                "{}: lo {} sus {} weak {} ratio {:.3} u_axis {:e} cond {:.1}",
-                c.name, f.local_optimum_only, f.suspect_axis, f.weak_axis, f.rms_ratio, f.uncertainty.axis_rad, f.result.diagnostics.cond
-            ),
-            Err(e) => eprintln!("{}: {}", c.name, encode_err(e)),
-        }
-    }
 }

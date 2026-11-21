@@ -24,7 +24,11 @@ Machin's formula, square roots by the decimal module), never with the platform l
    alpha <- alpha + dalpha, and P is moved along the new axis to the centroid's foot with the
    radius there (r + shift tan(alpha)). It stops when the step norm is below 1e-40 (at most
    400 iterations, else the script fails). A fixed half-angle drops the dalpha column.
-3. The expected values are the reference cone (axis direction, the foot point, the radius
+3. The standard uncertainties at the reference cone, sigma * sqrt(diag((J^T J)^-1)) with the
+   Jacobian of step 2 about it and sigma^2 = sum e^2 / (m - n), in Decimal, as the frame-free
+   combinations sqrt(u_a^2 + u_b^2) (axis, radians), sqrt(u_u^2 + u_v^2) (point across the
+   axis, metres), u_r and u_alpha.
+4. The expected values are the reference cone (axis direction, the foot point, the radius
    there, the half-angle, the apex P - (r / tan(alpha)) d), its residual RMS and the RMS of the
    least-squares plane (the exact smallest principal moment of the centred points, by Jacobi in
    Decimal), all rounded to binary64 once. The Rust test compares its result with the reference
@@ -64,6 +68,7 @@ Output lines (hex = 16 lowercase hex digits of an IEEE-754 double):
   fixed_alpha <hex>                                              constraint (optional)
   ref_axis <3 hex> ref_point <3 hex> ref_r <hex> ref_alpha <hex> ref_apex <3 hex>
   ref_rms <hex> plane_rms <hex>
+  ref_u_axis <hex> ref_u_point <hex> ref_u_r <hex> ref_u_alpha <hex>  (no ref_u_alpha when fixed)
   expect start | hard | ill_posed <near_zero | near_ninety | cond | near_ninety_or_cond> | <error>
   end
 """
@@ -305,6 +310,32 @@ def gauss_newton(pts, p, d, r, alpha, free_alpha=True):
     raise SystemExit(f"reference Gauss-Newton did not converge (last step {float(sum(xi * xi for xi in x).sqrt()):e})")
 
 
+def uncertainty(pts, ref, free_alpha=True):
+    """Standard uncertainties sigma * sqrt(diag((J^T J)^-1)) at the reference cone, with the
+    Jacobian of the Gauss-Newton step above about it (axis tilt, axis shift, radius, half-angle)
+    and sigma^2 = sum e^2 / (m - n); the inverse by Gaussian elimination against unit vectors.
+    Returned as the frame-free combinations: axis sqrt(u_a^2 + u_b^2) (radians), point
+    sqrt(u_u^2 + u_v^2) (metres), radius (metres), half-angle (radians, None when fixed)."""
+    p, d, r, alpha = ref[0], ref[1], ref[2], ref[3]
+    e1, e2 = basis(d)
+    out, s, c = residuals(pts, p, d, r, alpha)
+    rows, res = [], []
+    for ei, t, perp, rho in out:
+        g1, g2 = dot(perp, e1) / rho, dot(perp, e2) / rho
+        tilt = t * c + rho * s
+        row = [-g1 * tilt, -g2 * tilt, -g1 * c, -g2 * c, -c]
+        if free_alpha:
+            row.append(-(rho - r) * s - t * c)
+        rows.append(row)
+        res.append(ei)
+    n = len(rows[0])
+    jtj = [[sum(rw[i] * rw[j] for rw in rows) for j in range(n)] for i in range(n)]
+    var = [solve(jtj, [Decimal(int(i == k)) for i in range(n)])[k] for k in range(n)]
+    s2 = sum(e * e for e in res) / (len(pts) - n)
+    u = [(s2 * v).sqrt() for v in var]
+    return ((u[0] ** 2 + u[1] ** 2).sqrt(), (u[2] ** 2 + u[3] ** 2).sqrt(), u[4], u[5] if free_alpha else None)
+
+
 def plane_rms(pts):
     """RMS distance to the least-squares plane: sqrt(smallest eigenvalue of the scatter / n),
     by cyclic Jacobi in Decimal."""
@@ -331,7 +362,7 @@ def plane_rms(pts):
     return (lam / len(pts)).sqrt()
 
 
-def emit(out, name, cov, pts, truth, ref, extra=(), expect="start"):
+def emit(out, name, cov, pts, truth, ref, extra=(), expect="start", free_alpha=True):
     d, p0, r0, alpha = truth
     out.append(f"case {name} coverage {cov}")
     out.append("points " + " ".join(hx(fl(x)) for p in pts for x in p))
@@ -350,6 +381,12 @@ def emit(out, name, cov, pts, truth, ref, extra=(), expect="start"):
         out.append("ref_apex " + hxs(rapex))
         out.append("ref_rms " + hx(fl(rms)))
         out.append("plane_rms " + hx(fl(plane_rms(pts))))
+        ua, up, ur, uh = uncertainty(pts, ref, free_alpha)
+        out.append("ref_u_axis " + hx(fl(ua)))
+        out.append("ref_u_point " + hx(fl(up)))
+        out.append("ref_u_r " + hx(fl(ur)))
+        if uh is not None:
+            out.append("ref_u_alpha " + hx(fl(uh)))
     out.append(f"expect {expect}")
     out.append("end")
 
@@ -373,7 +410,7 @@ def render():
         d, p0, r0, a = truth
         afix = dec(fl(a))
         ref = gauss_newton(pts, p0, d, r0, afix, free_alpha=False)
-        emit(out, name, cov, pts, truth, ref, extra=[f"fixed_alpha {hx(fl(afix))}"])
+        emit(out, name, cov, pts, truth, ref, extra=[f"fixed_alpha {hx(fl(afix))}"], free_alpha=False)
     name = "ha-0.01"
     pts, truth = cone(name, Decimal("0.01"), 360, Decimal("0.3"), extent=Decimal(2))
     emit(out, name, 360, pts, truth, None, expect="ill_posed near_zero")
