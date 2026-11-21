@@ -1,0 +1,20 @@
+[package]
+name = "fid-rep"
+description = "Metrology Maven replay equivalence policy: table rep-1@1.0.0 keyed by field kind, and the classifier rdl.rep.classify@1.0.0 (spec node UNC.RDL.REP)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate (KNP-1): no third-party dependencies, only fid-num (exact decimals), so that
+# CORE (below UNC) and the WASM verifier can both use it.
+[dependencies]
+fid-num = { path = "../fid-num" }
+
+# Test-only: SHA-256 of the embedded table (layer test-support).
+[dev-dependencies]
+fid-testkit = { path = "../fid-testkit" }
+
+[lints]
+workspace = true

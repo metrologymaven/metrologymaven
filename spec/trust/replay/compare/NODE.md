@@ -18,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # TRUST.REPLAY.COMPARE: Replay outcome classification and aggregation
@@ -82,7 +82,12 @@ Compares each recomputed result with its packaged ResultRecord and classifies it
 
 ## Open questions
 
-- UNC.RDL has not yet published the REP-1 schema; the test table follows the shape described here and must be aligned when UNC.RDL is expanded.
+- Resolved 2026-11-21 (maintainer decision): UNC.RDL.REP publishes the REP-1 table keyed by field kind, with determinism class as a context rule (schema `rep-table@1`, crate `fid-rep`). This leaf consumes that table and classifier; the wording "by determinism class and quantity kind" in REQ-002, REQ-005 and the Design means: the determinism class decides whether a tolerance applies, the quantity (field) kind selects the row.
+- Open: REQ-004 here (D0 never gets a tolerance) is stricter than REQ-UNC.RDL.REP-004 (different manifest digests use the table even for D0). The comparator must either pass a context that forces bit identity for D0 or check D0 itself before calling `fid-rep`; to settle when this leaf is built.
+
+## Change log
+
+- 2026-11-21 (maintainer decision): **Table keying (maintainer decision, 2026-11-21):** the REP-1 table is keyed by **field kind** only (`length`, `angle`, `dimensionless`, `expanded_uncertainty`, `p_conformance`, `exact`). Determinism class, kernel-manifest identity and platform class are **context rules** applied by the classifier (REQ-003/004), not table keys. Rationale: the bound is a property of the quantity (1 nm is 1 nm whatever produced it), the determinism class only decides *whether* a bound may be used at all, and one key avoids a kind x class matrix whose cells would mostly repeat or be `none`. TRUST.REPLAY.COMPARE consumes this table and classifier.
 
 ## Children
 

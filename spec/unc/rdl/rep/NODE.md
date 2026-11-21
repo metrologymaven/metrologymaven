@@ -9,15 +9,16 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-rep]
 satisfies: [REQ-UNC.RDL-010]
 covers: []
-depends_on: [KRN]
+depends_on: [KRN.NUM.KDEC]
 side_effect: R1
 determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-21
 ---
 
 # UNC.RDL.REP: Replay equivalence tolerance table (REP-1) and classifier
@@ -65,7 +66,9 @@ Owns the normative Replay Equivalence Policy: a versioned table of tolerances pe
 
 - **Registry command(s):** none; library crate consumed by `CORE.RPL` and `TRUST.REPLAY`. Algorithm ID `rdl.rep.classify@1.0.0`.
 - **Data structures:** `FieldKind`, `Ctx { same_manifest: bool, determinism: D0|D1|D2|D3|N, same_platform_class: bool, limit: Option<Decimal> }`, `FieldOutcome { outcome, annotations }`, `Table { version, bounds: ordered list of (FieldKind, Bound{abs|rel, Decimal}) }` embedded as canonical JSON with digest.
-- **Algorithm:** bit equality first; context rule (REQ-003/004); exact difference via TwoSum (no FMA) giving a double-double; compare with the decimal bound (scaled by max(|a|, |b|) for relative bounds) using `fid-num` `kdec`; `MARGINAL` when the exact distance to the caller-supplied limit is within the bound. Class-N fields are not classified (the replayer substitutes them).
+- **Table keying:** by field kind only; determinism class, manifest identity and platform class are context rules (see Change log).
+- **Table document (`rep-table@1`):** canonical JSON (RFC 8785) `{"algorithm", "bounds": [{"bound": <kdec canonical decimal>, "kind", "mode": "abs"|"rel", "unit"}..., {"kind": "exact", "mode": "exact"}], "schema": "rep-table@1", "version"}`, rows in field-kind order; a relative bound has unit `1`. Embedded as `crates/fid-rep/table/rep-1@1.0.0.json`; its SHA-256 is `fid_rep::TABLE_DIGEST`. `Table::new` builds and checks other tables (for example a test table), error `table_invalid`; a kind with no row gives `DIVERGENT` with annotation `NO_TOLERANCE`.
+- **Algorithm:** bit equality first; context rule (REQ-003/004); exact difference (built: an exact integer difference of the two dyadic values, equal to TwoSum's double-double but without its overflow case); compare with the decimal bound (scaled by max(|a|, |b|) for relative bounds) using `fid-num` `kdec`; `MARGINAL` when the exact distance to the caller-supplied limit is within the bound. Class-N fields are not classified (the replayer substitutes them).
 - **Errors:** `kind_unknown`, `nan_input` (NaN is never a valid recorded value).
 - **Determinism:** D0.
 - **Performance budget:** 10^6 field classifications in under 200 ms [unverified until measured].
@@ -85,7 +88,14 @@ Owns the normative Replay Equivalence Policy: a versioned table of tolerances pe
 
 - **Gap from research hypotheses (2026-11-17):** the rep-1 tolerance values need ratification by an uncertainty expert before the replay hypotheses can be evaluated against them.
 - The table values come from concept doc 05 §2.9 and have not been ratified in the constitution; CONSTITUTION §4 names the outcomes but not the bounds. Reviewers should confirm whether a decision record is wanted to adopt `rep-1@1.0.0` as normative.
-- `TRUST.REPLAY` currently expects tolerances keyed by determinism class and says KRN publishes them; this leaf keys bounds by quantity kind and applies determinism class as a context rule. TRUST.REPLAY should reference this node.
+- Resolved 2026-11-21 (maintainer decision): the table is keyed by field kind and determinism class is a context rule (see Change log); TRUST.REPLAY.COMPARE records the same decision. TRUST.REPLAY's own text still says tolerances are keyed by determinism class; a TRUST.REPLAY maintainer should align it.
+- `fid-rep` defines its own `Determinism` enum with the `fid_types::Determinism` wire names because the crate may depend only on `fid-num`. A follow-up may switch to `fid-types` (also num layer, zero dependencies).
+
+## Change log
+
+- 2026-11-21 (maintainer decision): `depends_on` narrowed from the KRN split node to the leaf fid-rep uses, `KRN.NUM.KDEC` (fid-rep imports only `fid_num::kdec`; KRN.NUM.ERR and KRN.NUM.RED are not imported). Built in `fid-rep`.
+- 2026-11-21 (maintainer decision): **Table keying (maintainer decision, 2026-11-21):** the REP-1 table is keyed by **field kind** only (`length`, `angle`, `dimensionless`, `expanded_uncertainty`, `p_conformance`, `exact`). Determinism class, kernel-manifest identity and platform class are **context rules** applied by the classifier (REQ-003/004), not table keys. Rationale: the bound is a property of the quantity (1 nm is 1 nm whatever produced it), the determinism class only decides *whether* a bound may be used at all, and one key avoids a kind x class matrix whose cells would mostly repeat or be `none`. TRUST.REPLAY.COMPARE consumes this table and classifier.
+- 2026-11-21 (build): the exact |Δ| is an integer difference rather than TwoSum (same value, no overflow case); `MARGINAL` tests each present finite value against the limit with the field's bound (relative bounds scaled by the larger present magnitude); same-manifest D1/D2 on a different platform class and class N (when called) use the table; an infinite value that is not bit-equal is `DIVERGENT`; `combine([])` is `NOT_REPLAYABLE`.
 
 ## Children
 

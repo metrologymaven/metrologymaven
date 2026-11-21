@@ -141,6 +141,7 @@ python fixtures/plat/matrix/make_page.py --check
 python fixtures/profile/make_fixtures.py --check
 python fixtures/program/expr/make_cases.py --check
 python fixtures/rdl/format/make_fixtures.py --check
+python fixtures/rdl/rep/make_cases.py --check
 python fixtures/rec/adopt/make_fixtures.py --check
 python fixtures/rec/life/make_fixtures.py --check
 python fixtures/rel/guide/make_fixtures.py --check
