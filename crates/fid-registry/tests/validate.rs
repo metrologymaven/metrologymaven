@@ -911,12 +911,26 @@ fn field_pointer_segments_are_cut_after_escaping() {
 /// the owning command may declare it.
 #[test]
 fn branch_events_are_reserved_to_their_commands() {
-    let owners = [
+    reserved_to_owners(&[
         ("BranchCreated", "journal.create_branch"),
         ("BranchProtected", "journal.protect_branch"),
         ("CoeditingSet", "journal.set_branch_coediting"),
-    ];
-    for (effect, owner) in owners {
+    ]);
+}
+
+/// The project identity events of CORE.PRJ.CONT.LIFE (REQ-010) are reserved to their
+/// commands, by the same rule.
+#[test]
+fn project_identity_events_are_reserved_to_their_commands() {
+    reserved_to_owners(&[
+        ("ProjectCopiedFrom", "project.save_project_as"),
+        ("ProjectIdentified", "project.create_project"),
+        ("ProjectSavedAs", "project.save_project_as"),
+    ]);
+}
+
+fn reserved_to_owners(owners: &[(&str, &str)]) {
+    for &(effect, owner) in owners {
         assert!(fid_registry::RESERVED_EFFECTS.contains(&(effect, Some((owner, 1)))), "{effect}");
         let mut d = base();
         d.insert("effects".into(), CValue::Arr(vec![s(effect)]));
