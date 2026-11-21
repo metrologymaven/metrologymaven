@@ -13,6 +13,12 @@ allowed = ["fid-bus", "fid-store"]
 
 # [storage_writers] allowed = [...] may be listed here; it is merged with storage-writers.toml.
 
+[storage_writers]
+# SQLite doors outside the project storage writers (lint only; storage-writers.toml stays the
+# list of crates that write project files). fid-catalog opens its own catalog file, never a
+# project database (RPT.CATALOG.STORE.SCHEMA, decision D-047).
+allowed = ["fid-catalog"]
+
 [sqlite]
 drivers = ["libsqlite3-sys", "rusqlite"]
 

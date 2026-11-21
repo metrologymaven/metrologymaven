@@ -1183,6 +1183,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-catalog"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-project",
+ "fid-store",
+ "fid-types",
+ "fid-uuid",
+ "rusqlite",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "fid-clarabel"
 version = "0.11.1"
 dependencies = [
@@ -1884,6 +1897,7 @@ dependencies = [
  "fid-align",
  "fid-bus",
  "fid-canon",
+ "fid-catalog",
  "fid-dep",
  "fid-gdt",
  "fid-geo-cmd",
@@ -1931,6 +1945,15 @@ dependencies = [
  "pollster",
  "toml",
  "wgpu",
+]
+
+[[package]]
+name = "fid-rep"
+version = "0.0.1"
+dependencies = [
+ "fid-num",
+ "fid-testkit",
+ "fid-types",
 ]
 
 [[package]]
@@ -2065,6 +2088,7 @@ dependencies = [
  "rusqlite",
  "rustix 1.1.6",
  "sha2 0.10.9",
+ "winx",
 ]
 
 [[package]]
