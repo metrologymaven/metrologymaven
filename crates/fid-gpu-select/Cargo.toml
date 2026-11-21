@@ -1,0 +1,22 @@
+[package]
+name = "fid-gpu-select"
+description = "Metrology Maven GPU adapter probing and backend selection (spec node PLAT.GPU.DETECT): a bounded wgpu probe and a pure selection over the policy row, minimums and known-bad list, with a canonical JSON result and the plain-data adapter choice for the frame graph"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Layer viewer (layers.toml): never a dependency of a kernel crate (REQ-006, C2).
+[dependencies]
+# The policy row, minimums and known-bad list (PLAT.GPU.POLICY), below the tool layer.
+fid-gpu-policy = { path = "../fid-gpu-policy" }
+# RFC 8785 canonical JSON of the selection (REQ-007, AC-7) and the adapter-list fixtures.
+fid-canon = { path = "../fid-canon" }
+# Adapter enumeration without a surface. The same wgpu 27 and features as fid-render and the
+# VIZ.SHELL.SPKTREE spike (already in Cargo.lock, passing deny.toml).
+wgpu = { version = "27", default-features = false, features = ["dx12", "vulkan", "wgsl", "std", "parking_lot"] }
+
+[lints]
+workspace = true
