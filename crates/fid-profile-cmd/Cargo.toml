@@ -1,0 +1,30 @@
+[package]
+name = "fid-profile-cmd"
+description = "Metrology Maven governance-profile commands on the bus: sign.set_profile@1 (A0, human only, never on MCP) and sign.show_profile@1 (R0), the ProfileSet event and the origin-bound fold of the active profile (spec node TRUST.PROFILE.SELECT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Handler contract, events, typed bus errors, principals, the entry origin and parameters
+# commitment of CORE.BUS.POL.PROJ, and the file policy of CORE.BUS.POL.FS. Layer engine, the same
+# layer as this crate; fid-profile (model) may not link any CORE crate, which is why the commands
+# live here, as fid-journal-cmd does for fid-journal.
+fid-bus = { path = "../fid-bus" }
+# Canonical JSON values (CORE.JRN.CANON). Layer model.
+fid-canon = { path = "../fid-canon" }
+# Profile definitions, instantiation and the canonical document (TRUST.PROFILE.DEFS). Layer model.
+fid-profile = { path = "../fid-profile" }
+# Registry definitions (CORE.REG.DEF). Layer model.
+fid-registry = { path = "../fid-registry" }
+# `sha256:` digests and command IDs (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+
+[dev-dependencies]
+# ValidParams::for_tests (handler tests outside fid-bus).
+fid-bus = { path = "../fid-bus", features = ["test-support"] }
+
+[lints]
+workspace = true

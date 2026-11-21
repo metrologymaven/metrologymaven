@@ -1726,6 +1726,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-profile-cmd"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-profile",
+ "fid-registry",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-program"
 version = "0.0.1"
 dependencies = [
@@ -1829,6 +1840,7 @@ dependencies = [
  "fid-jobs",
  "fid-journal",
  "fid-pkg",
+ "fid-profile-cmd",
  "fid-program-rec",
  "fid-project",
  "fid-project-cmd",

@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-profile-cmd]
 satisfies: [REQ-TRUST.PROFILE-002]
 covers: []
 depends_on: [TRUST.PROFILE.DEFS, CORE.REG.DEF, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.STO.SET]
