@@ -256,6 +256,14 @@ fn std::ptr::drop_in_place::<Vec<f64>>(_1: *mut Vec<f64>) -> () {
 fn nowhere() -> f64 {
 }
 
+const prom_in_fmt::promoted[0]: &f64 = {
+    let mut _0: &f64;
+}
+
+const prom_elsewhere::promoted[0]: &f64 = {
+    let mut _0: &f64;
+}
+
 fn <std::vec::Vec<u8> as bind::Tr>::m(_1: &Vec<u8>) -> u64 {
     let _2: f64;
 }
@@ -280,8 +288,8 @@ class Mir(unittest.TestCase):
         c = Path(self.dir.name) / "crates" / "fid-report"
         (c / "src" / "fmt").mkdir(parents=True)
         (c / "src" / "bind").mkdir()
-        (c / "src" / "fmt" / "mod.rs").write_text("pub fn val(x: u64) -> f64 { f64::from_bits(x) }\n")
-        (c / "src" / "bind" / "expand.rs").write_text("pub fn infer() {}\npub fn clean() {}\n")
+        (c / "src" / "fmt" / "mod.rs").write_text("pub fn val(x: u64) -> f64 { f64::from_bits(x) }\npub fn prom_in_fmt() {}\n")
+        (c / "src" / "bind" / "expand.rs").write_text("pub fn infer() {}\npub fn clean() {}\npub fn prom_elsewhere() {}\n")
         self.crate = c
 
     def tearDown(self):
@@ -300,7 +308,7 @@ class Mir(unittest.TestCase):
         got = sorted(f.message.split(" (")[0] for f in found)
         self.assertEqual(got, ["<Count as dep::Measure>::measure", "<impl at crates/fid-report/src/bind/model.rs:4:1: 4:7>::half",
                                "<std::vec::Vec<u8> as bind::Tr>::m", "bind::journal::read", "infer::{closure#0}",
-                               "nowhere", "std::fmt::float::write"])
+                               "nowhere", "prom_elsewhere::promoted[0]", "std::fmt::float::write"])
         self.assertTrue(all(f.rule == "RPT-FLOAT-MIR" for f in found))
 
     def test_only_shims_and_drop_glue_are_skipped(self):

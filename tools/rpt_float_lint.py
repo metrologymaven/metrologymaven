@@ -786,6 +786,17 @@ def _strip_generics(s: str) -> str:
     return "".join(out)
 
 
+def _path_segments(name: str) -> list[str]:
+    """The path segments of a MIR body name without generics, closures or constants
+    (`{closure#0}`, `{constant#0}`) and promoted constants (`promoted[0]`): those bodies
+    belong to the item they are part of (`fmt_value::promoted[0]` is `fmt_value`'s)."""
+    return [
+        g
+        for g in _strip_generics(name).split("::")
+        if g and not g.startswith("{") and not re.fullmatch(r"promoted\[\d+\]", g)
+    ]
+
+
 def _qualified(name: str) -> list[str] | None:
     """The self type and trait of a `<T as Trait>::rest` path (just `[T]` for `<T>::rest`;
     `None` for any other name)."""
@@ -822,7 +833,7 @@ def mir_attribution(name: str, src_files: dict[str, str], header: str = "") -> l
         for part in parts:
             out.extend(mir_attribution(part, src_files) or [])
         return out
-    segs = [g for g in _strip_generics(name).split("::") if g and not g.startswith("{")]
+    segs = _path_segments(name)
     if len(segs) >= 2:
         return ["mod:" + segs[0]]
     return _definers(src_files, segs[0]) if segs else []
@@ -907,7 +918,7 @@ def mir_fn_name(name: str) -> str:
     """The source function a MIR body name stands for: its last path segment that is not a
     closure or constant (`f::{closure#0}` -> `f`, `<impl at src/lib.rs:1:1: 1:9>::m` -> `m`,
     `<Vec<u8> as Tr>::m` -> `m`)."""
-    segs = [g for g in _strip_generics(name).split("::") if g and not g.startswith("{")]
+    segs = _path_segments(name)
     return segs[-1] if segs else name
 
 
