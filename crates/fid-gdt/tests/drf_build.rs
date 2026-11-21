@@ -987,6 +987,9 @@ fn cylindrical_drfs_carry_the_label_and_replay_through_the_pinned_register() {
     assert_eq!(replay_with(&w2, &v2, &registers, &[(H, bytes)]), ReplayOutcome::NotReplayable);
 }
 
+/// An edit of a datum row and its `fit` object.
+type RowEdit = dyn Fn(&mut BTreeMap<String, CValue>, &mut BTreeMap<String, CValue>);
+
 /// The cylindrical documents conform to the published schemas, and the schema is not vacuous
 /// for them: an internal side or an unchecked free fit is refused.
 #[test]
@@ -1005,7 +1008,7 @@ fn cylindrical_documents_conform_to_the_published_schemas() {
     }
     let built = w.build(&mut store, H, &["B"], false).unwrap();
     let base = fid_canon::parse(built.drf_bytes()).unwrap();
-    let edit = |f: &dyn Fn(&mut BTreeMap<String, CValue>, &mut BTreeMap<String, CValue>)| {
+    let edit = |f: &RowEdit| {
         let mut d = base.clone();
         if let CValue::Obj(o) = &mut d {
             if let Some(CValue::Arr(rows)) = o.get_mut("datums") {
