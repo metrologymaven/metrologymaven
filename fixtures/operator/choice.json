@@ -1,0 +1,1 @@
+{"fields":[{"name":"grade","response":"choice","rules":{"choices":["A","B"]}}],"format":"operator-v1","prompt":"Which grade?"}

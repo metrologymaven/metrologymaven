@@ -9,6 +9,8 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-align-solve, fid-xtask]
+built_pr: 396
 satisfies: [REQ-ALN.QA-003, REQ-ALN.QA-004]
 covers: []
 depends_on: [CORE.REG, KRN.NUM]
@@ -78,6 +80,8 @@ Two things every iterative alignment method must provide: a per-iteration conver
 ## Open questions
 
 - None blocking.
+- **As built:** the history is `fid_align_solve::hist` (`ConvergenceHistory`, `HistoryRecorder`); `finish(stopped_by, cs, pose)` takes the run's `ConstraintSet` and the final pose as an ALN.BFIT.CONSTR `CertifiedPose`, never a bare `Rigid`, and refuses with `history_pose_mismatch` when the pose is not certified for `cs` or a row's `n_used` exceeds `cs.n_points()`; the history digest folds in the locks and weights digests and the pose bits. Until the manifest block is reachable from the kernel, the stopping criterion's name is validated syntactically only. Iteration numbers must run 1, 2, 3, ... (`history_bad_iteration`), values must be finite (`history_non_finite`) and increments non-negative (`history_negative_increment`), beyond the spec's `history_overflow`. The check and fragment are `cargo xtask convergence-check` / `convergence-doc` (`fid-xtask`, module `convergence`); a malformed block value is `manifest_field_invalid`, a repeated command `manifest_duplicate_command`.
+- **Wiring obligation (depends on CORE.REG.DEF):** today `convergence-check` and `convergence-doc` run only on the fixtures in `fixtures/aln/qa/hist-manifest`, because `CommandDef` has no `iterative` marking and no `convergence` block, so REQ-003/-004/-005 are not yet enforced on the real registry. When CORE.REG.DEF adds both fields to the definition and its manifest form, CI must run `convergence-check` on the exported workspace manifest and `convergence-doc --check` on the committed docs fragment. Until then the check prints a warning, never a silent pass, when no command is marked iterative. No iterative command exists on main yet.
 
 ## Children
 
