@@ -18,7 +18,7 @@ determinism: D0
 cli: [fid fit ls-cylinder]
 mcp: [fit_ls_cylinder]
 journal: [fit.ls_cylinder@1]
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # KRN.LSQ.AXIS.CYL: Least-squares cylinder
@@ -53,14 +53,15 @@ The orthogonal-distance least-squares cylinder, the most measured axial feature 
 
 - **Registry command(s):** `fit.ls_cylinder@1`, W2 (dry-run R1). Params: point-set handle (`PointsView`), seed, optional fixed radius (m), optional fixed axis direction, `NllsConfig`, `StartSpec` overrides. Result: `FittedFeature::Cylinder`, residual statistics (m), diagnostics, multi-start summary.
 - **Algorithm:** centred and scaled input (TRAIT); analytic Jacobian of distance-to-axis; `fid_solv::nlls` (Levenberg-Marquardt); `fid_solv::mstart`. References: Forbes 1989, "Least-squares best-fit geometric elements" (NPL report) [unverified citation]; Shakarji 1998 (NIST ATS fits).
-- **Errors:** `TooFewPoints`, `Coplanar`, `IllConditioned`, `NotConverged`, `Solver`, `MultiStart`.
+- **Wrong-axis check (as built).** Multi-start agreement is not proof of correctness: every start can converge to the same wrong axis (review of #358). The reference is `plane_rms`, the RMS distance of the points to their least-squares plane. With `ratio = rms / plane_rms`: `ratio >= 1` on an unconstrained fit is `ImplausibleFit`, because a cylinder of growing radius tends to any plane, so the global least-squares cylinder is never worse than the least-squares plane and such a fit is provably a wrong local optimum; `ratio > 0.1` sets `suspect_axis` (the cylinder explains less than 99 % of the out-of-plane variance) [unverified threshold]. With a fixed radius or direction the family no longer contains every plane, so only the flag applies.
+- **Errors:** `TooFewPoints`, `Coplanar`, `IllConditioned`, `NotConverged`, `Solver`, `MultiStartFailed` (code `multi_start`, every start failed), `ImplausibleFit` (code `implausible_fit`).
 - **Determinism:** D0 for a given seed.
 - **Performance budget:** 1 M points, 8 starts < 1.5 s [unverified until measured].
 - **Crate:** `fid-fit` (module `ls_cyl`).
 
 ## Test fixtures
 
-TraCIM Gaussian and NIST ATS cylinder datasets from the RDL release (`UNC.RDL.FREEZE`; licence and redistribution terms [unverified]; fetched at CI time, not committed). `fixtures/fit/axis-cyl-v1`: seeded generator, CC-BY-4.0.
+TraCIM Gaussian and NIST ATS cylinder datasets from the RDL release (`UNC.RDL.FREEZE`; licence and redistribution terms [unverified]; fetched at CI time, not committed). `fixtures/fit/axis-cyl-v1`: seeded generator, CC-BY-4.0. As built: `fixtures/fit/make_axis_cyl_fixtures.py` (stdlib, 60-digit Decimal, no libm) computes each case's least-squares cylinder by Gauss-Newton in Decimal on the rounded input. It covers coverage 360/180/90/60/30 degrees with axes 0.01 m, 0.3 m and 1 km from the origin, half cylinders 1.066 radii long (and a sweep 1.03 to 1.11) where the principal axes mix, fixed-radius and fixed-direction cases, 12 short noisy 30-degree arcs, a one-start wrong-axis case, 4 points and a coplanar circle.
 
 ## Build prompt
 
@@ -69,6 +70,10 @@ TraCIM Gaussian and NIST ATS cylinder datasets from the RDL release (`UNC.RDL.FR
 ## Open questions
 
 - None beyond the parent's.
+- **Partial build (#PR, `fid-fit` module `ls_cyl`, not marked built).** Done: `fit.cylinder.ls@1.0.0` with fixed radius and fixed axis direction, INIT starts through `fid_solv::mstart`, `local_optimum_only`, the wrong-axis check, diagnostics and the multi-start record (`CylinderFit`), the spec card `crates/fid-fit/cards/fit.cylinder.ls@1.0.0.toml`, the command data row `fit.ls_cylinder@1` with optional multi-start and check fields, and AC-3 and AC-4 in `crates/fid-fit/tests/ls_cyl.rs`. Remaining: (1) the registry, CLI and MCP layer and the journal event (REQ-006, AC-5), which, as for `KRN.LSQ.LIN`, waits for `CORE.REG` to read the kernel's fit data rows; (2) AC-1 and AC-2, which need the TraCIM and NIST ATS sets in the RDL (`UNC.RDL.FREEZE`); (3) REQ-004's bit-identity of the fixed-direction fit with `fit.circle2d.ls`, which waits for `KRN.LSQ.RND`. The fixed-direction fit is a three-parameter circle fit of the projections from INIT's algebraic circle and must be made to share that leaf's rules when it is built.
+- **Choices made at build time (confirm in review).** (a) REQ-001 says the axis is re-parameterised after every accepted step; the NLLS driver has no per-step hook, so the axis is re-anchored (foot of the centroid, new tangent-plane frame) after each converged solve and the solve repeated, at most 8 rounds; the reported diagnostics are those about the final axis. (b) AC-4's coplanar circle returns the contract's typed `Coplanar` (with the condition number), as the Errors list allows, not `IllConditioned`. (c) Outcomes are compared by `mstart` as parameters in INIT's start frame (tangents, metres) with INIT's tolerances. (d) `seed: None` uses seed 0.
+- **AC-3's "two plausible axes" as found.** On 30-degree arcs 0.2 radii long with 40 to 100 micrometres of noise, `KRN.LSQ.INIT` often starts nearly perpendicular to the true axis (85 to 90 degrees off), and the starts end on several minima. Of the 12 fixture cases, 7 are flagged `local_optimum_only` with distinct minima, 1 is flagged `suspect_axis`, 1 matches the reference unflagged and 3 are refused (`implausible_fit` or every start not converged); none is a confidently wrong fit. INIT's start on such arcs is a question for `KRN.LSQ.INIT` (not changed here).
+- **Unsupported input.** INIT states a supported range only for the torus (at least 90 degrees of the major angle for fat tori); refusing input outside it belongs to `KRN.LSQ.AXIS.TORUS`. For the cylinder the wrong-axis check is the guard.
 
 ## Children
 

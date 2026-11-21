@@ -8,7 +8,8 @@
 //! `KRN.ENV.TAN.ROCK`) holds the tangential variant table and the rocking report shared by the
 //! tangential fits; [`tan_plane`] (spec node `KRN.ENV.TAN.PLANE`) is the tangential plane in
 //! its three variants. [`init`] (spec node `KRN.LSQ.INIT`) builds the deterministic starts of the
-//! axial fits (cylinder, cone, torus).
+//! axial fits (cylinder, cone, torus), and [`ls_cyl`] (spec node `KRN.LSQ.AXIS.CYL`) is the
+//! least-squares cylinder run from those starts.
 
 // `FitError` wraps `fid_solv::nlls::SolverError` by value (about 150 bytes, see the note in
 // `fid-solv`). It is returned at most once per fit, never in a loop, and boxing it would add an
@@ -17,6 +18,7 @@
 
 pub mod contract;
 pub mod init;
+pub mod ls_cyl;
 pub mod ls_lin;
 pub mod tan_plane;
 pub mod tan_rock;

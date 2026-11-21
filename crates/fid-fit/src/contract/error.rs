@@ -76,6 +76,15 @@ pub enum FitError {
     InvalidParams { field: &'static str },
     /// A direction vector is zero or too small to normalise (norm below `2^-1022`).
     InvalidDirection,
+    /// A converged least-squares fit whose residual RMS `rms` is at least `bound`, the RMS of
+    /// the least-squares plane of the same data (both metres). For a fit whose feature family
+    /// contains every plane as a limit (a free cylinder: radius to infinity), the global
+    /// least-squares optimum is never worse than the plane, so such a fit is provably a wrong
+    /// local optimum (`ls_cyl`, KRN.LSQ.AXIS.CYL). Code `implausible_fit`.
+    ImplausibleFit { rms: f64, bound: f64 },
+    /// Every start of a multi-start run (`fid_solv::mstart`) failed. `starts` is the number
+    /// of starts and `first` the code of the primary start's error. Code `multi_start`.
+    MultiStartFailed { starts: u32, first: &'static str },
     /// The nonlinear least-squares driver failed (rank deficiency and the other driver
     /// errors that have no dedicated variant here).
     Solver(SolverError),
@@ -107,6 +116,8 @@ impl FitError {
             FitError::SideViolation { .. } => "side_violation",
             FitError::InvalidParams { .. } => "invalid_params",
             FitError::InvalidDirection => "invalid_direction",
+            FitError::ImplausibleFit { .. } => "implausible_fit",
+            FitError::MultiStartFailed { .. } => "multi_start",
             FitError::Solver(_) => "solver",
             FitError::Num(_) => "numeric",
         }
@@ -161,6 +172,12 @@ impl fmt::Display for FitError {
             }
             FitError::InvalidParams { field } => write!(f, "fit: invalid parameter {field}"),
             FitError::InvalidDirection => write!(f, "fit: zero or too small direction vector"),
+            FitError::ImplausibleFit { rms, bound } => {
+                write!(f, "fit: residual RMS {rms:e} m is not below the least-squares plane's {bound:e} m (wrong local optimum)")
+            }
+            FitError::MultiStartFailed { starts, first } => {
+                write!(f, "fit: all {starts} starts failed (primary start: {first})")
+            }
             FitError::Solver(e) => write!(f, "fit: {e}"),
             FitError::Num(e) => write!(f, "fit: {e}"),
         }

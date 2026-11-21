@@ -41,6 +41,7 @@ python fixtures/core/sto/sql/crash/make_chain.py --check
 python fixtures/core/sto/sql/schema/make_fixture.py --check
 python fixtures/dsse/make_fixtures.py --check
 python fixtures/fetch/make_fixtures.py --check
+python fixtures/fit/make_axis_cyl_fixtures.py --check
 python fixtures/fit/make_init_fixtures.py --check
 python fixtures/fit/make_lin_fixtures.py --check
 python fixtures/fit/make_tan_plane_fixtures.py --check
