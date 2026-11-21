@@ -707,6 +707,7 @@ pub use defs::command_defs;
 mod defs;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
 
