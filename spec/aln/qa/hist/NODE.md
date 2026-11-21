@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-align-solve, fid-xtask]
+built_pr: 396
 satisfies: [REQ-ALN.QA-003, REQ-ALN.QA-004]
 covers: []
 depends_on: [CORE.REG, KRN.NUM]
