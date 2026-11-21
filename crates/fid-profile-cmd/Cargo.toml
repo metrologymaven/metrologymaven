@@ -15,6 +15,9 @@ repository.workspace = true
 fid-bus = { path = "../fid-bus" }
 # Canonical JSON values (CORE.JRN.CANON). Layer model.
 fid-canon = { path = "../fid-canon" }
+# The journal's entry origin (principal kind, command, class, branch, adding stage) the fold
+# binds ProfileSet events to (CORE.JRN.BR.NAME). Layer model; already linked through fid-bus.
+fid-journal = { path = "../fid-journal" }
 # Profile definitions, instantiation and the canonical document (TRUST.PROFILE.DEFS). Layer model.
 fid-profile = { path = "../fid-profile" }
 # Registry definitions (CORE.REG.DEF). Layer model.

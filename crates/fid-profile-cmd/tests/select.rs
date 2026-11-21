@@ -18,12 +18,13 @@ use fid_bus::principal::{
 use fid_bus::unit::Normalised;
 use fid_bus::validate::{Compiled, Hooks, RefLookup};
 use fid_canon::{parse, to_canonical_bytes, CValue};
+use fid_journal::branch::{EntryOrigin as JournalOrigin, EventSource};
 use fid_profile_cmd::{
-    command_defs, run_set, run_show, Op, ProfileHandler, ProfileSource, ProfileState, RootFiles, TenantFiles,
-    CONFIG_KEY, PROFILE_SET, SET_PROFILE, SHOW_PROFILE,
+    command_defs, run_set, run_show, Op, ProfileEntry, ProfileHandler, ProfileSource, ProfileState, RootFiles,
+    TenantFiles, CONFIG_KEY, GENESIS, PROFILE_SET, SET_PROFILE, SHOW_PROFILE,
 };
 use fid_registry::{CommandDef, Projection, Surface};
-use fid_types::{CommandId, SideEffect};
+use fid_types::{CommandId, Digest, SideEffect};
 use std::sync::{Arc, Mutex};
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
@@ -134,8 +135,9 @@ fn defs() -> (CommandDef, CommandDef) {
 
 // ------------------------------------------------------------------ journal and files
 
-fn set_command() -> CommandId {
-    CommandId::parse("sign.set_profile@1").unwrap()
+/// The synthetic hash the test journal gives its n-th committed entry (as the oracle).
+fn entry_hash(n: usize) -> Digest {
+    Digest::from_bytes(fid_canon::digest_bytes(format!("entry-{n}").as_bytes()).0)
 }
 
 /// The tenant's journal as the bus wiring would keep it: committed entries folded in order.
@@ -143,21 +145,31 @@ fn set_command() -> CommandId {
 struct Journal {
     state: Mutex<ProfileState>,
     entries: Mutex<Vec<(CValue, Vec<Event>)>>,
+    /// The branch calls commit to; `None` is `main`.
+    branch: Option<String>,
 }
 
 impl ProfileSource for Journal {
     fn state(&self) -> Result<ProfileState, String> {
         Ok(self.state.lock().unwrap().clone())
     }
+    fn call_branch(&self, _: &HandlerCtx) -> Result<String, String> {
+        Ok(self.branch.clone().unwrap_or_else(|| "main".to_string()))
+    }
 }
 
 impl Journal {
-    /// What the commit stage does for a set call that returned events: one entry with the
-    /// call's principal, command and parameters commitment.
+    /// What the commit stage does for a set call that returned events: the compare-and-swap
+    /// check, then one entry on main with the call's principal, command and parameters
+    /// commitment, folded.
     fn commit(&self, ctx: &HandlerCtx, params: &CValue, events: &[Event]) {
-        let origin = EntryOrigin::new(ctx.principal().reference(), set_command(), params_commitment(params).unwrap());
-        self.state.lock().unwrap().apply_entry(&origin, events).unwrap();
-        self.entries.lock().unwrap().push((params.clone(), events.to_vec()));
+        let mut entries = self.entries.lock().unwrap();
+        let hash = entry_hash(entries.len() + 1);
+        let entry = ProfileEntry::for_call(ctx.principal(), params_commitment(params).unwrap(), hash).unwrap();
+        let mut state = self.state.lock().unwrap();
+        state.precommit(&entry, events).unwrap();
+        state.apply_entry(&entry, events).unwrap();
+        entries.push((params.clone(), events.to_vec()));
     }
 }
 
@@ -334,20 +346,48 @@ fn kind_of(k: &str) -> PrincipalKind {
     }
 }
 
-fn origin_of(o: &CValue) -> EntryOrigin {
-    EntryOrigin::new(
-        PrincipalRef { kind: kind_of(s(get(o, "kind"))), id: PrincipalId::new(s(get(o, "id"))).unwrap() },
-        CommandId::parse(s(get(o, "command"))).unwrap(),
-        fid_types::Digest::parse(s(get(o, "params_commitment"))).unwrap(),
-    )
+fn entry_of(o: &CValue) -> ProfileEntry {
+    let source = match s(get(o, "source")) {
+        "handler" => EventSource::Handler,
+        "bus_route" => EventSource::BusRoute,
+        "bus_release" => EventSource::BusRelease,
+        other => panic!("source {other}"),
+    };
+    let j_major = match get(o, "j_major") {
+        CValue::Num(n) => *n as u32,
+        _ => panic!("j_major"),
+    };
+    ProfileEntry {
+        origin: EntryOrigin::new(
+            PrincipalRef { kind: kind_of(s(get(o, "kind"))), id: PrincipalId::new(s(get(o, "id"))).unwrap() },
+            CommandId::parse(s(get(o, "command"))).unwrap(),
+            Digest::parse(s(get(o, "params_commitment"))).unwrap(),
+        ),
+        journal: JournalOrigin {
+            kind: kind_of(s(get(o, "j_kind"))),
+            command: s(get(o, "j_command")).to_string(),
+            major: j_major,
+            class: SideEffect::parse(s(get(o, "class"))).unwrap(),
+            branch: s(get(o, "branch")).to_string(),
+            source,
+            human_assertion: None,
+        },
+        promoted_from: match get(o, "promoted_from") {
+            CValue::Null => None,
+            v => Some(Digest::parse(s(v)).unwrap()),
+        },
+        hash: Digest::parse(s(get(o, "hash"))).unwrap(),
+    }
 }
 
 fn events_of(v: &CValue) -> Vec<Event> {
     arr(v).iter().map(|e| Event::new(EventType::new(s(get(e, "type"))).unwrap(), get(e, "body").clone())).collect()
 }
 
-/// Every forged or spliced ProfileSet event is refused with the state unchanged; a genuine one
-/// is accepted. The origin is the entry's, never the event body's.
+/// Every forged, spliced, replayed or raced ProfileSet event is refused with the state
+/// unchanged; a genuine one is accepted; one off `main` is ignored. The record is the entry's,
+/// never the event body's. Where the oracle gives one, the commit stage's precommit check
+/// returns the expected error first (the compare-and-swap of a concurrent set).
 #[test]
 fn forged_events_are_refused_by_the_fold() {
     let c = cases();
@@ -358,15 +398,24 @@ fn forged_events_are_refused_by_the_fold() {
         let mut state = ProfileState::new();
         for prior in arr(get(case, "prior")) {
             let p = arr(prior);
-            state.apply_entry(&origin_of(&p[0]), &events_of(&p[1])).unwrap();
+            state.apply_entry(&entry_of(&p[0]), &events_of(&p[1])).unwrap();
         }
         let before = state.clone();
-        let got = state.apply_entry(&origin_of(get(case, "origin")), &events_of(get(case, "events")));
+        let entry = entry_of(get(case, "entry"));
+        let events = events_of(get(case, "events"));
+        if let Some(w) = opt(case, "precommit") {
+            let e = state.precommit(&entry, &events).unwrap_err();
+            assert_eq!((e.code().as_str(), e.reason()), (s(&arr(w)[0]), s(&arr(w)[1])), "{name}");
+        }
+        let got = state.apply_entry(&entry, &events);
         match s(get(case, "expect")) {
             "accepted" => got.unwrap_or_else(|e| panic!("{name}: {e}")),
             "refused" => {
                 let e = got.expect_err(name);
                 assert_eq!((e.code(), e.reason()), (Code::Internal, "invariant_violated"), "{name}");
+                if let Some(d) = opt(case, "detail") {
+                    assert!(e.detail().as_untrusted_str().contains(s(d)), "{name}: {e}");
+                }
                 assert_eq!(state, before, "{name}: a refused entry changed the state");
             }
             other => panic!("{other}"),
@@ -377,8 +426,9 @@ fn forged_events_are_refused_by_the_fold() {
     }
 }
 
-/// The handler's own event passes the fold only from the origin its entry records: the same
-/// event committed under another principal kind or command is refused.
+/// The handler's own event passes the fold only from the record its entry has: the same event
+/// committed under another principal kind, another command, off `main` (ignored), as a
+/// promoted copy, or with a request event beside it is not applied.
 #[test]
 fn handler_events_bind_to_their_entry() {
     let (set_def, _) = defs();
@@ -388,19 +438,43 @@ fn handler_events_bind_to_their_entry() {
     let (events, _) = run_set(&set_def, &Journal::default(), &FixtureFiles, &params, &human).unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0].type_id().as_str(), PROFILE_SET);
+    assert_eq!(get(events[0].body(), "decided_at"), &CValue::Str(GENESIS.to_string()));
     let commitment = params_commitment(&params).unwrap();
-    let alice = PrincipalId::new("alice").unwrap();
-    let ok =
-        EntryOrigin::new(PrincipalRef { kind: PrincipalKind::Human, id: alice.clone() }, set_command(), commitment);
-    ProfileState::new().apply_entry(&ok, &events).unwrap();
-    let agent = EntryOrigin::new(PrincipalRef { kind: PrincipalKind::Agent, id: alice }, set_command(), commitment);
-    assert!(ProfileState::new().apply_entry(&agent, &events).is_err());
-    let show = EntryOrigin::new(
+    let ok = ProfileEntry::for_call(human.principal(), commitment, entry_hash(1)).unwrap();
+    let mut applied = ProfileState::new();
+    applied.apply_entry(&ok, &events).unwrap();
+    assert_eq!(applied.decided_at(), entry_hash(1).as_str());
+    let agent = ctx(ChannelKind::Mcp);
+    let as_agent = ProfileEntry::for_call(agent.principal(), commitment, entry_hash(1)).unwrap();
+    assert!(ProfileState::new().apply_entry(&as_agent, &events).is_err());
+    let mut show = ok.clone();
+    show.origin = EntryOrigin::new(
         human.principal().reference(),
         CommandId::parse(&format!("{SHOW_PROFILE}@1")).unwrap(),
         commitment,
     );
     assert!(ProfileState::new().apply_entry(&show, &events).is_err());
+    let mut side = ok.clone();
+    side.journal.branch = "feature/qa".to_string();
+    let mut st = ProfileState::new();
+    st.apply_entry(&side, &events).unwrap();
+    assert_eq!(st, ProfileState::new(), "an entry off main does not count");
+    let mut promoted = ok.clone();
+    promoted.promoted_from = Some(entry_hash(9));
+    assert!(ProfileState::new().apply_entry(&promoted, &events).is_err());
+    let mut with_request = events.clone();
+    with_request.push(Event::new(EventType::new("RequestApproved").unwrap(), CValue::Obj(Default::default())));
+    assert!(ProfileState::new().apply_entry(&ok, &with_request).is_err());
+}
+
+/// A set whose call would commit off `main` is refused before anything is read.
+#[test]
+fn set_runs_only_on_main() {
+    let (set_def, _) = defs();
+    let human = ctx(ChannelKind::Gui);
+    let side = Journal { branch: Some("feature/qa".to_string()), ..Journal::default() };
+    let e = run_set(&set_def, &side, &FixtureFiles, &name_only("regulated"), &human).unwrap_err();
+    assert_eq!((e.code(), e.reason()), (Code::Precondition, "false"));
 }
 
 // ------------------------------------------------------------------ definitions and files

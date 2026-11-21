@@ -10,33 +10,48 @@
 //! | `sign.set_profile@1` | A0, `human_only` | never | CLI `fid sign set-profile`, GUI |
 //! | `sign.show_profile@1` | R0 | exposed (`sign_show_profile`) | CLI `fid sign show-profile`, MCP, GUI |
 //!
-//! # The active profile is a fold of the journal
+//! # The active profile is a fold of `main`
 //!
 //! A successful set returns one `ProfileSet` event
-//! `{document, name, new_digest, old_digest, params_commitment}`: the instantiated canonical
-//! document (RFC 8785 text, exactly `fid_profile::CanonicalProfile::bytes`), its built-in name,
-//! the new and the previously active digest, and the commitment of the call's parameters. The
-//! bus commits it in the command's entry, so the configuration change and its journal record
-//! are one atomic commit: [`ProfileState`] (configuration key [`CONFIG_KEY`]) is rebuilt by
-//! folding the committed entries, and nothing else writes it.
+//! `{decided_at, document, name, new_digest, old_digest, params_commitment}`: the profile
+//! decision it builds on (`decided_at`: the entry hash of the last applied `ProfileSet` entry,
+//! or `genesis`), the instantiated canonical document (RFC 8785 text, exactly
+//! `fid_profile::CanonicalProfile::bytes`), its built-in name, the new and the previously active
+//! digest, and the commitment of the call's parameters. The bus commits it in the command's
+//! entry, so the configuration change and its journal record are one atomic commit:
+//! [`ProfileState`] (configuration key [`CONFIG_KEY`]) is rebuilt by folding the committed
+//! entries, and nothing else writes it. `trust.profile` must never be declared as a
+//! `CORE.STO.SET` setting.
 //!
-//! The fold ([`ProfileState::apply_entry`]) takes each entry's own principal, command and
-//! parameters commitment ([`EntryOrigin`], from the entry header, never from an event body)
-//! and accepts a `ProfileSet` event only if all of these hold, else it refuses the entry with
-//! `internal/invariant_violated` and leaves the state unchanged:
+//! The fold ([`ProfileState::apply_entry`]) takes each entry's own record ([`ProfileEntry`]:
+//! the bus [`EntryOrigin`] with principal, command and parameters commitment; the journal's
+//! `fid_journal::branch::EntryOrigin` with kind, command, class, branch and the stage that
+//! added the events; the header's `promoted_from`; the entry hash), never an event body. Only
+//! entries on `main` count: an entry on any other branch is ignored, whatever it holds. For an
+//! entry on `main` that holds a `ProfileSet` event, all of these must hold, else the fold
+//! refuses the entry with `internal/invariant_violated` and leaves the state unchanged:
 //!
-//! 1. at most one `ProfileSet` event in the entry;
-//! 2. the entry's command is `sign.set_profile@1` and its principal is `human`;
-//! 3. the body has exactly the five members, all strings;
-//! 4. the body's `params_commitment` equals the entry's (an event cannot be spliced into an
+//! 1. at most one `ProfileSet` event and no `Request*` event in the entry (a profile change
+//!    is a direct human action, never an approved agent request);
+//! 2. the entry is not a promoted copy (`promoted_from` absent): `sign.set_profile@1` runs
+//!    directly on `main`;
+//! 3. the entry's command is `sign.set_profile@1`, class A0, its events added by the handler,
+//!    and its principal `human` in both records;
+//! 4. the body has exactly the six members, all strings;
+//! 5. the body's `params_commitment` equals the entry's (an event cannot be spliced into an
 //!    entry with other parameters);
-//! 5. the document reads back with `CanonicalProfile::read` (canonical bytes of a document
-//!    `fid-profile` could have produced), its digest is `new_digest` and its name is `name`;
-//! 6. `old_digest` is the active digest (so an old event replayed later is refused) and
-//!    differs from `new_digest` (an unchanged set is never journaled).
+//! 6. `decided_at` is the hash of the last applied `ProfileSet` entry (or `genesis`): two sets
+//!    decided on the same state cannot both apply, and an old payload replayed later is
+//!    refused even when its digests happen to match again;
+//! 7. the document reads back with `CanonicalProfile::read`, its digest is `new_digest` and its
+//!    name is `name`;
+//! 8. `old_digest` is the active digest and differs from `new_digest`.
 //!
-//! Events of other types are ignored. `ProfileSet` is reserved in `fid_registry::RESERVED_EFFECTS`
+//! Other event types are ignored. `ProfileSet` is reserved in `fid_registry::RESERVED_EFFECTS`
 //! to `sign.set_profile@1`, so no other command can declare it.
+//!
+//! A committed entry the fold refuses means the commit stage let through what it must not
+//! (see [`ProfileSource`]): it is fail-closed, the folded state is not trusted past it.
 //!
 //! # Set ([`run_set`])
 //!
@@ -45,15 +60,16 @@
 //! 1. the caller is the principal the bus derived from the channel; anything but `human` is
 //!    `policy/human_only` (REQ-001; the bus's class and projection checks refuse it earlier,
 //!    this is defence in depth);
-//! 2. the parameters: `name` one of the built-in names, `params` an optional string, nothing
+//! 2. the call commits to `main` ([`ProfileSource::call_branch`]), else `precondition/false`;
+//! 3. the parameters: `name` one of the built-in names, `params` an optional string, nothing
 //!    else (`validation/schema`);
-//! 3. the tenant parameter file through [`TenantFiles`] (the bus's file policy, at most
+//! 4. the tenant parameter file through [`TenantFiles`] (the bus's file policy, at most
 //!    `fid_profile::defs::MAX_INPUT_BYTES` bytes);
-//! 4. `fid_profile::instantiate`; its `profile.*` refusals become `validation/schema` whose
+//! 5. `fid_profile::instantiate`; its `profile.*` refusals become `validation/schema` whose
 //!    detail starts with the profile code (the bus catalogue has no profile reasons);
-//! 5. the active profile from [`ProfileSource`]; the same digest is `unchanged` with no event
-//!    (REQ-003); otherwise the event is checked against the fold with the origin its entry
-//!    will record, and returned (REQ-002).
+//! 6. the active profile from [`ProfileSource`]; the same digest is `unchanged` with no event
+//!    (REQ-003); otherwise the event, with `decided_at` from the state read, is checked
+//!    against the fold with the record its entry will have, and returned (REQ-002).
 //!
 //! # Show ([`run_show`])
 //!
@@ -63,16 +79,18 @@
 //! Determinism D0: the result and the event depend only on the parameters, the file bytes and
 //! the folded journal.
 
-use fid_bus::error::{BusError, Detail, InternalReason, PolicyReason, ValidationReason};
+use fid_bus::error::ValidationReason;
+use fid_bus::error::{BusError, ConflictReason, Detail, InternalReason, PolicyReason, PreconditionReason};
 use fid_bus::handler::{Event, EventType, Handler, HandlerCtx, HandlerError, HandlerSet, StateView, ValidParams};
 use fid_bus::policy::fs::{resolve, Roots};
 use fid_bus::policy::projection::{params_commitment, EntryOrigin};
 use fid_bus::principal::{Principal, PrincipalKind};
 use fid_canon::CValue;
+use fid_journal::branch::{EntryOrigin as JournalOrigin, EventSource, MAIN};
 use fid_profile::defs::MAX_INPUT_BYTES;
 use fid_profile::{instantiate, CanonicalProfile, ProfileError, ProfileName};
 use fid_registry::{CommandDef, DefError};
-use fid_types::{CommandId, Digest};
+use fid_types::{CommandId, Digest, SideEffect};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::io::Read;
@@ -84,13 +102,18 @@ pub const SET_PROFILE: &str = "sign.set_profile";
 pub const SHOW_PROFILE: &str = "sign.show_profile";
 /// The event a successful set commits; reserved to `sign.set_profile@1`.
 pub const PROFILE_SET: &str = "ProfileSet";
-/// The tenant configuration key the folded state stands for.
+/// The tenant configuration key the folded state stands for. Never a `CORE.STO.SET` setting.
 pub const CONFIG_KEY: &str = "trust.profile";
 /// The `path_like` parameter that names the tenant parameter file.
 pub const PARAMS_FILE: &str = "params";
+/// `decided_at` of the first profile decision.
+pub const GENESIS: &str = "genesis";
+/// Event types of the pending-request flow (CORE.BUS.POL.PROJ); none may share an entry with
+/// a `ProfileSet` event.
+pub const REQUEST_EVENT_PREFIX: &str = "Request";
 
 const LIFECYCLE_SINCE: &str = "2026-11-21";
-const BODY_KEYS: [&str; 5] = ["document", "name", "new_digest", "old_digest", "params_commitment"];
+const BODY_KEYS: [&str; 6] = ["decided_at", "document", "name", "new_digest", "old_digest", "params_commitment"];
 
 fn invariant(what: &str) -> BusError {
     BusError::Internal(InternalReason::InvariantViolated, Detail::new(what))
@@ -131,10 +154,47 @@ impl Origin {
     }
 }
 
-/// The active profile, folded from committed entries in journal order (module docs).
+/// One committed entry as its verified header records it (module docs). Never built from an
+/// event body.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProfileEntry {
+    /// Principal, command `id@major` and parameters commitment (`EntryOrigin::from_draft`).
+    pub origin: EntryOrigin,
+    /// Principal kind, command, class, branch and the stage that added the events.
+    pub journal: JournalOrigin,
+    /// The header's `promoted_from`: the entry this one is a promoted copy of, if any.
+    pub promoted_from: Option<Digest>,
+    /// This entry's hash.
+    pub hash: Digest,
+}
+
+impl ProfileEntry {
+    /// The record the commit stage gives the entry of a `sign.set_profile@1` call by
+    /// `principal` with parameters commitment `commitment`, committed directly on `main`.
+    pub fn for_call(principal: &Principal, commitment: Digest, hash: Digest) -> Result<ProfileEntry, BusError> {
+        Ok(ProfileEntry {
+            origin: EntryOrigin::new(principal.reference(), set_id()?, commitment),
+            journal: JournalOrigin {
+                kind: principal.kind(),
+                command: SET_PROFILE.to_string(),
+                major: 1,
+                class: SideEffect::A0,
+                branch: MAIN.to_string(),
+                source: EventSource::Handler,
+                human_assertion: None,
+            },
+            promoted_from: None,
+            hash,
+        })
+    }
+}
+
+/// The active profile, folded from committed `main` entries in journal order (module docs).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ProfileState {
     active: Option<CanonicalProfile>,
+    /// Hash of the last applied `ProfileSet` entry.
+    decided: Option<Digest>,
 }
 
 fn str_member<'a>(o: &'a BTreeMap<String, CValue>, key: &str) -> Result<&'a str, BusError> {
@@ -146,6 +206,14 @@ fn str_member<'a>(o: &'a BTreeMap<String, CValue>, key: &str) -> Result<&'a str,
 
 fn digest_member(o: &BTreeMap<String, CValue>, key: &str) -> Result<Digest, BusError> {
     Digest::parse(str_member(o, key)?).map_err(|_| invariant(&format!("ProfileSet {key} is not a sha256: digest")))
+}
+
+/// What the fold would do with an entry.
+enum Verdict {
+    /// Nothing for the profile (no `ProfileSet` event, or not on `main`).
+    Ignore,
+    /// Apply this document.
+    Apply(CanonicalProfile),
 }
 
 impl ProfileState {
@@ -169,26 +237,63 @@ impl ProfileState {
         Ok(self.active()?.0.digest())
     }
 
+    /// The `decided_at` a new `ProfileSet` event must carry: the hash of the last applied
+    /// `ProfileSet` entry, or [`GENESIS`].
+    pub fn decided_at(&self) -> String {
+        match &self.decided {
+            Some(d) => d.as_str().to_string(),
+            None => GENESIS.to_string(),
+        }
+    }
+
     /// The value of [`CONFIG_KEY`]: the active document's canonical bytes, `None` when nothing
     /// is set (the default applies).
     pub fn config_value(&self) -> Option<&[u8]> {
         self.active.as_ref().map(CanonicalProfile::bytes)
     }
 
-    fn check(&self, origin: &EntryOrigin, body: &CValue) -> Result<CanonicalProfile, BusError> {
-        let cmd = origin.command();
-        if cmd.name() != SET_PROFILE || cmd.major() != 1 {
+    /// The verdict on one entry. `decided_at` mismatches are reported with `stale`, so the
+    /// commit stage can map them to `conflict` while the fold keeps them an invariant.
+    fn verdict(
+        &self,
+        entry: &ProfileEntry,
+        events: &[Event],
+        stale: &dyn Fn() -> BusError,
+    ) -> Result<Verdict, BusError> {
+        let mut mine = events.iter().filter(|e| e.type_id().as_str() == PROFILE_SET);
+        let Some(event) = mine.next() else { return Ok(Verdict::Ignore) };
+        if entry.journal.branch != MAIN {
+            return Ok(Verdict::Ignore);
+        }
+        if mine.next().is_some() {
+            return Err(invariant("one entry holds two ProfileSet events"));
+        }
+        if events.iter().any(|e| e.type_id().as_str().starts_with(REQUEST_EVENT_PREFIX)) {
+            return Err(invariant("ProfileSet in an entry that carries a request event"));
+        }
+        if entry.promoted_from.is_some() {
+            return Err(invariant("ProfileSet in a promoted copy; sign.set_profile@1 runs directly on main"));
+        }
+        let cmd = entry.origin.command();
+        let j = &entry.journal;
+        if cmd.name() != SET_PROFILE || cmd.major() != 1 || j.command != SET_PROFILE || j.major != 1 {
             return Err(invariant("ProfileSet outside a sign.set_profile@1 entry"));
         }
-        if origin.principal().kind != PrincipalKind::Human {
+        if j.class != SideEffect::A0 || j.source != EventSource::Handler {
+            return Err(invariant("ProfileSet not added by the sign.set_profile@1 handler in an A0 entry"));
+        }
+        if entry.origin.principal().kind != PrincipalKind::Human || j.kind != PrincipalKind::Human {
             return Err(invariant("ProfileSet in an entry of a non-human principal"));
         }
-        let CValue::Obj(o) = body else { return Err(invariant("ProfileSet body is not an object")) };
+        let CValue::Obj(o) = event.body() else { return Err(invariant("ProfileSet body is not an object")) };
         if o.len() != BODY_KEYS.len() || !BODY_KEYS.iter().all(|k| o.contains_key(*k)) {
-            return Err(invariant("ProfileSet body does not have exactly its five members"));
+            return Err(invariant("ProfileSet body does not have exactly its six members"));
         }
-        if digest_member(o, "params_commitment")? != origin.params_commitment() {
+        if digest_member(o, "params_commitment")? != entry.origin.params_commitment() {
             return Err(invariant("ProfileSet in an entry whose parameters are not the event's"));
+        }
+        if str_member(o, "decided_at")? != self.decided_at() {
+            return Err(stale());
         }
         let doc = CanonicalProfile::read(str_member(o, "document")?.as_bytes())
             .map_err(|e| invariant(&format!("ProfileSet document refused: {}", e.code())))?;
@@ -206,33 +311,57 @@ impl ProfileState {
         if old == new {
             return Err(invariant("ProfileSet does not change the profile"));
         }
-        Ok(doc)
+        Ok(Verdict::Apply(doc))
     }
 
-    /// Folds the events of one committed entry (module docs). `origin` is the entry's own
-    /// principal, command and parameters commitment. On refusal the state is unchanged.
-    pub fn apply_entry(&mut self, origin: &EntryOrigin, events: &[Event]) -> Result<(), BusError> {
-        let mut mine = events.iter().filter(|e| e.type_id().as_str() == PROFILE_SET);
-        let Some(event) = mine.next() else { return Ok(()) };
-        if mine.next().is_some() {
-            return Err(invariant("one entry holds two ProfileSet events"));
+    /// The commit stage's check, run under its compare-and-swap of the profile decision
+    /// (see [`ProfileSource`]): the same rules as the fold, except that a `ProfileSet` whose
+    /// `decided_at` is not the current decision is `conflict/head_moved` (another set
+    /// committed first); the caller then commits nothing.
+    pub fn precommit(&self, entry: &ProfileEntry, events: &[Event]) -> Result<(), BusError> {
+        let stale = || {
+            BusError::Conflict(
+                ConflictReason::HeadMoved,
+                Detail::new("the governance profile changed since this call read it"),
+            )
+        };
+        self.verdict(entry, events, &stale).map(|_| ())
+    }
+
+    /// Folds the events of one committed entry (module docs). On refusal
+    /// (`internal/invariant_violated`, a `decided_at` mismatch included) the state is unchanged.
+    pub fn apply_entry(&mut self, entry: &ProfileEntry, events: &[Event]) -> Result<(), BusError> {
+        let stale = || invariant("ProfileSet decided_at is not the last applied profile decision");
+        if let Verdict::Apply(doc) = self.verdict(entry, events, &stale)? {
+            self.active = Some(doc);
+            self.decided = Some(entry.hash);
         }
-        let doc = self.check(origin, event.body())?;
-        self.active = Some(doc);
         Ok(())
     }
 }
 
 /// Where the handlers read the active profile. The bus wiring implements it over the journal.
 ///
-/// Contract: [`ProfileSource::state`] is [`ProfileState::apply_entry`] over the events of every
-/// committed entry of the tenant's journal, in append order, each with the [`EntryOrigin`] its
-/// verified header records (`EntryOrigin::from_draft`). The wiring must check the payload's
-/// events against the header's `events_commit` before folding and refuse an entry whose
-/// payload does not reproduce it, as `fid_journal_cmd::BranchSource` requires.
+/// Contract:
+///
+/// - [`ProfileSource::state`] is [`ProfileState::apply_entry`] over the events of every
+///   committed entry of the tenant's journal, in append order, each with the [`ProfileEntry`]
+///   its verified header records (`EntryOrigin::from_draft`, the journal's origin with its
+///   branch and adding stage, `promoted_from`, the entry hash). The wiring checks the payload's
+///   events against the header's `events_commit` before folding, as
+///   `fid_journal_cmd::BranchSource` requires.
+/// - The commit stage, before it commits an entry that holds a `ProfileSet` event, runs
+///   [`ProfileState::precommit`] on the state as of its commit, atomically with the commit (a
+///   compare-and-swap on [`ProfileState::decided_at`]), and commits nothing on refusal
+///   (`conflict/head_moved` for a concurrent set). A committed entry the fold refuses is then
+///   a commit-stage bug, and the state fails closed.
+/// - [`ProfileSource::call_branch`] is the branch the commit stage would commit the call's
+///   entry to.
 pub trait ProfileSource: Send + Sync {
     /// The folded state.
     fn state(&self) -> Result<ProfileState, String>;
+    /// The branch the entry of the call `ctx` would commit to.
+    fn call_branch(&self, ctx: &HandlerCtx) -> Result<String, String>;
 }
 
 /// Reads the tenant parameter file a call names.
@@ -330,6 +459,13 @@ pub fn run_set(
     if def.id != SET_PROFILE || def.major != 1 {
         return Err(invariant("run_set needs the sign.set_profile@1 definition"));
     }
+    let branch = source.call_branch(ctx).map_err(|e| invariant(&format!("call branch: {e}")))?;
+    if branch != MAIN {
+        return Err(BusError::Precondition(
+            PreconditionReason::False,
+            Detail::new("sign.set_profile@1 runs only directly on main"),
+        ));
+    }
     let p = SetParams::from_value(params)?;
     let file = match &p.params {
         Some(v) => Some(files.read(principal, def, v, MAX_INPUT_BYTES)?),
@@ -351,6 +487,7 @@ pub fn run_set(
     let document = std::str::from_utf8(new.bytes()).map_err(|_| invariant("canonical document is not UTF-8"))?;
     let commitment = params_commitment(params)?;
     let body = obj(vec![
+        ("decided_at", text(&state.decided_at())),
         ("document", text(document)),
         ("name", text(p.name.as_str())),
         ("new_digest", text(new.digest().as_str())),
@@ -358,9 +495,10 @@ pub fn run_set(
         ("params_commitment", text(commitment.as_str())),
     ]);
     let event = Event::new(EventType::new(PROFILE_SET)?, body);
-    // The origin its entry will record: the fold must accept the event from it.
-    let origin = EntryOrigin::new(principal.reference(), set_id()?, commitment);
-    state.clone().apply_entry(&origin, std::slice::from_ref(&event))?;
+    // The record its entry will have (the hash is not known yet and not checked): the fold
+    // must accept the event from it.
+    let entry = ProfileEntry::for_call(principal, commitment, Digest::TOMBSTONE)?;
+    state.precommit(&entry, std::slice::from_ref(&event))?;
     Ok((vec![event], result("changed")))
 }
 

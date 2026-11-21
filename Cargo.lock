@@ -1739,6 +1739,7 @@ version = "0.0.1"
 dependencies = [
  "fid-bus",
  "fid-canon",
+ "fid-journal",
  "fid-profile",
  "fid-registry",
  "fid-types",

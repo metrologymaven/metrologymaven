@@ -75,6 +75,14 @@ The two commands that choose and display the tenant's active profile: `sign.set_
 
 > In crate `fid-profile`, add module `select` with registry commands `sign.set_profile@1` (A0; CLI `fid sign set-profile <name> [--params F]`; never projected to MCP) and `sign.show_profile@1` (R0; CLI `fid sign show-profile`; MCP `sign_show_profile`). Set: instantiate with `fid-profile::defs`, refuse non-human principals (bus policy error), store under tenant config key `trust.profile` atomically with one journal event `{old_digest, new_digest, name}`; same digest gives `unchanged` with no event. Show: return name, origin (`default` when unset, Lean), document and digest. Tests: the five acceptance criteria. Constraints: CONSTITUTION §3 (A0 never on MCP, agents never perform A0), §8, D0.
 
+## As built (fid-profile-cmd, #378; maintainer decisions on review)
+
+- **Deviation: only `main` counts.** The active profile is folded from entries on `main` only; a `sign.set_profile@1` entry on any other branch is ignored, and a promoted copy (`promoted_from` set) is refused. `set_profile` must run directly on `main`: the handler refuses a call that would commit elsewhere with `precondition/false`. The fold takes the branch and adding stage from the journal's entry origin (`fid_journal::branch::EntryOrigin`), never from the event.
+- **Direct human action only.** A `ProfileSet` event in an entry that also carries any `Request*` event (an approved agent request) is refused.
+- **Decision binding.** `ProfileSet` carries `decided_at`: the entry hash of the last applied `ProfileSet` entry, or `genesis`. The handler takes it from the state it read; the fold refuses a mismatch. The commit stage must compare-and-swap on that value atomically with the commit and refuse a stale set with `conflict/head_moved`, so two concurrent sets cannot both commit and an old payload replayed later is refused.
+- **Fail closed.** A committed entry that the fold refuses means the commit stage has a bug (it let through what the compare-and-swap and the checks must stop); the fold returns `internal/invariant_violated` and the folded state is not trusted past it.
+- **`trust.profile` is not a setting.** The configuration key is the folded state of the journal; it must never be declared as a `CORE.STO.SET` setting (no reserved-keys list exists in CORE.STO.SET today to record it in).
+
 ## Open questions
 
 - REQ-TRUST.PROFILE.SELECT-001 needs a human principal; with D-012 open, a CLI caller is `script` today, so `set-profile` works only from the GUI admin screen until D-012 is decided.

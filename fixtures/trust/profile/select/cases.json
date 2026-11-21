@@ -2,9 +2,24 @@
   "forged": [
     {
       "active": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -16,20 +31,29 @@
       ],
       "expect": "accepted",
       "name": "valid",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "set",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "settings.set_admin_value@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -41,20 +65,29 @@
       ],
       "expect": "refused",
       "name": "other_command",
-      "origin": {
-        "command": "settings.set_admin_value@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@2",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -66,20 +99,29 @@
       ],
       "expect": "refused",
       "name": "other_major",
-      "origin": {
-        "command": "sign.set_profile@2",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.show_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -91,20 +133,63 @@
       ],
       "expect": "refused",
       "name": "show_command",
-      "origin": {
-        "command": "sign.show_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "settings.set_admin_value",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
+            "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
+            "name": "regulated",
+            "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+            "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
+          },
+          "type": "ProfileSet"
+        }
+      ],
+      "expect": "refused",
+      "name": "journal_other_command",
+      "origin_after": "default",
+      "prior": []
+    },
+    {
+      "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "agent",
+        "j_major": 1,
+        "kind": "agent",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
+      "events": [
+        {
+          "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -116,20 +201,63 @@
       ],
       "expect": "refused",
       "name": "agent_origin",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "agent",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "agent",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
+            "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
+            "name": "regulated",
+            "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+            "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
+          },
+          "type": "ProfileSet"
+        }
+      ],
+      "expect": "refused",
+      "name": "journal_kind_agent",
+      "origin_after": "default",
+      "prior": []
+    },
+    {
+      "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "script",
+        "j_major": 1,
+        "kind": "script",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
+      "events": [
+        {
+          "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -141,20 +269,29 @@
       ],
       "expect": "refused",
       "name": "script_origin",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "script",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "system",
+        "j_major": 1,
+        "kind": "system",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -166,20 +303,219 @@
       ],
       "expect": "refused",
       "name": "system_origin",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "system",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "W2",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
+            "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
+            "name": "regulated",
+            "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+            "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
+          },
+          "type": "ProfileSet"
+        }
+      ],
+      "expect": "refused",
+      "name": "not_a0",
+      "origin_after": "default",
+      "prior": []
+    },
+    {
+      "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "bus_route"
+      },
+      "events": [
+        {
+          "body": {
+            "decided_at": "genesis",
+            "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
+            "name": "regulated",
+            "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+            "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
+          },
+          "type": "ProfileSet"
+        }
+      ],
+      "expect": "refused",
+      "name": "bus_added",
+      "origin_after": "default",
+      "prior": []
+    },
+    {
+      "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "detail": "request",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
+      "events": [
+        {
+          "body": {
+            "decided_at": "genesis",
+            "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
+            "name": "regulated",
+            "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+            "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
+          },
+          "type": "ProfileSet"
+        },
+        {
+          "body": {
+            "approved_by": {
+              "id": "alice",
+              "kind": "human"
+            },
+            "command": "sign.set_profile@1",
+            "decided_at_head": "sha256:f12f4ca1e8e6c6e3605fc3d380966849c0ea48d6fb9e0b8b136069814c73dc32",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+            "record_digest": "sha256:70ce871f8a3d3fb449bc3c3ace6547cef02dfc74ffe48d912532a724bfdbe5b9",
+            "request": "0190f5c2-0000-7000-8000-000000000001",
+            "requested_by": {
+              "id": "bot",
+              "kind": "agent"
+            }
+          },
+          "type": "RequestApproved"
+        }
+      ],
+      "expect": "refused",
+      "name": "approved_agent_request",
+      "origin_after": "default",
+      "prior": []
+    },
+    {
+      "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "feature/qa",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
+      "events": [
+        {
+          "body": {
+            "decided_at": "genesis",
+            "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
+            "name": "regulated",
+            "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+            "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
+          },
+          "type": "ProfileSet"
+        }
+      ],
+      "expect": "accepted",
+      "name": "side_branch_ignored",
+      "origin_after": "default",
+      "prior": []
+    },
+    {
+      "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "detail": "promoted",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": "sha256:7e7768dc6b4b94a8c5df48261195015567ef500557c66a62a9f57e373a98df09",
+        "source": "handler"
+      },
+      "events": [
+        {
+          "body": {
+            "decided_at": "genesis",
+            "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
+            "name": "regulated",
+            "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+            "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
+          },
+          "type": "ProfileSet"
+        }
+      ],
+      "expect": "refused",
+      "name": "promoted_copy",
+      "origin_after": "default",
+      "prior": []
+    },
+    {
+      "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:0a84d99a280854743328fe246dd2d3a7ed24feeab7f43bb511fad7505a45e2a7",
+        "promoted_from": null,
+        "source": "handler"
+      },
+      "events": [
+        {
+          "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -191,20 +527,29 @@
       ],
       "expect": "refused",
       "name": "spliced_into_other_parameters",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:0a84d99a280854743328fe246dd2d3a7ed24feeab7f43bb511fad7505a45e2a7"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:d1f753f214e1c68041437150ccbcdef4eb6011a2a9634108f1d1b56de89abb79",
@@ -216,20 +561,29 @@
       ],
       "expect": "refused",
       "name": "digest_mismatch",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{ \"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -241,20 +595,29 @@
       ],
       "expect": "refused",
       "name": "not_canonical",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"lean\",\"params\":{\"agent_writes\":\"proposals_only\",\"allow_software_keys\":true,\"program_release_by_other\":\"agent_authored\",\"release_requires_signatures\":false,\"required_meanings\":[],\"tenant_meanings\":[]},\"version\":1}",
             "name": "lean",
             "new_digest": "sha256:6f943c6b1c85f4e81d517a194082f412d819384f76b32db468690857895d40bb",
@@ -266,20 +629,29 @@
       ],
       "expect": "refused",
       "name": "forbidden_parameter",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "lean",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -291,20 +663,29 @@
       ],
       "expect": "refused",
       "name": "name_mismatch",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -316,20 +697,64 @@
       ],
       "expect": "refused",
       "name": "stale_old_digest",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "detail": "decided_at",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "sha256:29fd7f922bf17266ec390af322024daf75fa91133b8fb25049b4dc66723a6308",
+            "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
+            "name": "regulated",
+            "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+            "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
+          },
+          "type": "ProfileSet"
+        }
+      ],
+      "expect": "refused",
+      "name": "decided_at_unknown",
+      "origin_after": "default",
+      "prior": []
+    },
+    {
+      "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
+      "events": [
+        {
+          "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"lean\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":true,\"program_release_by_other\":\"agent_authored\",\"release_requires_signatures\":false,\"required_meanings\":[],\"tenant_meanings\":[]},\"version\":1}",
             "name": "lean",
             "new_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
@@ -341,20 +766,29 @@
       ],
       "expect": "refused",
       "name": "unchanged_event",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -365,6 +799,7 @@
         },
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -376,20 +811,29 @@
       ],
       "expect": "refused",
       "name": "two_events",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -402,44 +846,62 @@
       ],
       "expect": "refused",
       "name": "extra_field",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
-            "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621"
+            "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
           },
           "type": "ProfileSet"
         }
       ],
       "expect": "refused",
       "name": "missing_field",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": 1,
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -451,17 +913,25 @@
       ],
       "expect": "refused",
       "name": "non_string_field",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "entry": {
+        "branch": "main",
+        "class": "W2",
+        "command": "journal.create_branch@1",
+        "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+        "id": "alice",
+        "j_command": "journal.create_branch",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
@@ -472,20 +942,29 @@
       ],
       "expect": "accepted",
       "name": "other_events_ignored",
-      "origin": {
-        "command": "journal.create_branch@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "default",
       "prior": []
     },
     {
       "active": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:edda7b47233f9790fcc6d116d0a0c0eac38a5d6e44b7cf0c002c6d30bfa61e74",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
       "events": [
         {
           "body": {
+            "decided_at": "genesis",
             "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
             "name": "regulated",
             "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -497,24 +976,27 @@
       ],
       "expect": "refused",
       "name": "replayed_event",
-      "origin": {
-        "command": "sign.set_profile@1",
-        "id": "alice",
-        "kind": "human",
-        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
-      },
       "origin_after": "set",
       "prior": [
         [
           {
+            "branch": "main",
+            "class": "A0",
             "command": "sign.set_profile@1",
+            "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
             "id": "alice",
+            "j_command": "sign.set_profile",
+            "j_kind": "human",
+            "j_major": 1,
             "kind": "human",
-            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+            "promoted_from": null,
+            "source": "handler"
           },
           [
             {
               "body": {
+                "decided_at": "genesis",
                 "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
                 "name": "regulated",
                 "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -526,9 +1008,177 @@
           ]
         ]
       ]
+    },
+    {
+      "active": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+      "detail": "decided_at",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:edda7b47233f9790fcc6d116d0a0c0eac38a5d6e44b7cf0c002c6d30bfa61e74",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:0bb4c86145b5a1b1d4a2647096b974e2d8b2770f41e33a13747290f7eeb5dabc",
+        "promoted_from": null,
+        "source": "handler"
+      },
+      "events": [
+        {
+          "body": {
+            "decided_at": "genesis",
+            "document": "{\"name\":\"assistive_only\",\"params\":{\"agent_writes\":\"proposals_only\",\"allow_software_keys\":true,\"program_release_by_other\":\"agent_authored\",\"release_requires_signatures\":false,\"required_meanings\":[],\"tenant_meanings\":[]},\"version\":1}",
+            "name": "assistive_only",
+            "new_digest": "sha256:d1f753f214e1c68041437150ccbcdef4eb6011a2a9634108f1d1b56de89abb79",
+            "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+            "params_commitment": "sha256:0bb4c86145b5a1b1d4a2647096b974e2d8b2770f41e33a13747290f7eeb5dabc"
+          },
+          "type": "ProfileSet"
+        }
+      ],
+      "expect": "refused",
+      "name": "concurrent_pair",
+      "origin_after": "set",
+      "precommit": [
+        "conflict",
+        "head_moved"
+      ],
+      "prior": [
+        [
+          {
+            "branch": "main",
+            "class": "A0",
+            "command": "sign.set_profile@1",
+            "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+            "id": "alice",
+            "j_command": "sign.set_profile",
+            "j_kind": "human",
+            "j_major": 1,
+            "kind": "human",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+            "promoted_from": null,
+            "source": "handler"
+          },
+          [
+            {
+              "body": {
+                "decided_at": "genesis",
+                "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
+                "name": "regulated",
+                "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+                "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+                "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
+              },
+              "type": "ProfileSet"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "active": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+      "detail": "decided_at",
+      "entry": {
+        "branch": "main",
+        "class": "A0",
+        "command": "sign.set_profile@1",
+        "hash": "sha256:6e18ec763c0751ffab6eddca795cf9a03b16c59b30cc266b9281a23a55897359",
+        "id": "alice",
+        "j_command": "sign.set_profile",
+        "j_kind": "human",
+        "j_major": 1,
+        "kind": "human",
+        "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+        "promoted_from": null,
+        "source": "handler"
+      },
+      "events": [
+        {
+          "body": {
+            "decided_at": "genesis",
+            "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
+            "name": "regulated",
+            "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+            "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
+          },
+          "type": "ProfileSet"
+        }
+      ],
+      "expect": "refused",
+      "name": "replay_after_return",
+      "origin_after": "set",
+      "precommit": [
+        "conflict",
+        "head_moved"
+      ],
+      "prior": [
+        [
+          {
+            "branch": "main",
+            "class": "A0",
+            "command": "sign.set_profile@1",
+            "hash": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+            "id": "alice",
+            "j_command": "sign.set_profile",
+            "j_kind": "human",
+            "j_major": 1,
+            "kind": "human",
+            "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce",
+            "promoted_from": null,
+            "source": "handler"
+          },
+          [
+            {
+              "body": {
+                "decided_at": "genesis",
+                "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
+                "name": "regulated",
+                "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+                "old_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+                "params_commitment": "sha256:63ded1faed1b9e199789d50c72eb284583751a056930b5864549b4b733c926ce"
+              },
+              "type": "ProfileSet"
+            }
+          ]
+        ],
+        [
+          {
+            "branch": "main",
+            "class": "A0",
+            "command": "sign.set_profile@1",
+            "hash": "sha256:edda7b47233f9790fcc6d116d0a0c0eac38a5d6e44b7cf0c002c6d30bfa61e74",
+            "id": "alice",
+            "j_command": "sign.set_profile",
+            "j_kind": "human",
+            "j_major": 1,
+            "kind": "human",
+            "params_commitment": "sha256:0a84d99a280854743328fe246dd2d3a7ed24feeab7f43bb511fad7505a45e2a7",
+            "promoted_from": null,
+            "source": "handler"
+          },
+          [
+            {
+              "body": {
+                "decided_at": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
+                "document": "{\"name\":\"lean\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":true,\"program_release_by_other\":\"agent_authored\",\"release_requires_signatures\":false,\"required_meanings\":[],\"tenant_meanings\":[]},\"version\":1}",
+                "name": "lean",
+                "new_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
+                "old_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
+                "params_commitment": "sha256:0a84d99a280854743328fe246dd2d3a7ed24feeab7f43bb511fad7505a45e2a7"
+              },
+              "type": "ProfileSet"
+            }
+          ]
+        ]
+      ]
     }
   ],
-  "format": 1,
+  "format": 2,
+  "genesis": "genesis",
   "lean": {
     "digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
     "document": "{\"name\":\"lean\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":true,\"program_release_by_other\":\"agent_authored\",\"release_requires_signatures\":false,\"required_meanings\":[],\"tenant_meanings\":[]},\"version\":1}"
@@ -620,6 +1270,7 @@
         "events": [
           {
             "body": {
+              "decided_at": "genesis",
               "document": "{\"name\":\"regulated\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":false,\"program_release_by_other\":\"always\",\"release_requires_signatures\":true,\"required_meanings\":[\"AUTHORED\",\"X_QA_RELEASE\",\"APPROVED\"],\"tenant_meanings\":[{\"code\":\"X_QA_RELEASE\",\"description\":\"The site quality team has released the record for use.\",\"label\":\"QA release\"}]},\"version\":1}",
               "name": "regulated",
               "new_digest": "sha256:7042006b7c3a534070143d5b0e0742d045eba47c5f4f0e96d54ddafbc084a73c",
@@ -712,6 +1363,7 @@
         "events": [
           {
             "body": {
+              "decided_at": "sha256:5e2d5d1e58e94d7607e0745cd3e612c4a358fc93f37fc5ab1fed8d04bbf7ce77",
               "document": "{\"name\":\"lean\",\"params\":{\"agent_writes\":\"branch\",\"allow_software_keys\":true,\"program_release_by_other\":\"agent_authored\",\"release_requires_signatures\":false,\"required_meanings\":[],\"tenant_meanings\":[]},\"version\":1}",
               "name": "lean",
               "new_digest": "sha256:77e2aa846c93db01248c2f54179c809926f80c15dc508a6c55208e43be9c9621",
