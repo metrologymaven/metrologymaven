@@ -176,11 +176,27 @@ fn invalid_manifests() {
     assert_eq!(code, 2);
 }
 
-/// No iterative command: the check passes and the fragment says so.
+/// No iterative command: the check passes with a visible warning, and the fragment says so.
 #[test]
 fn no_iterative_commands() {
     let c = check(&parse(br#"{"commands":[{"id":"a","major":1}]}"#).unwrap()).unwrap();
-    assert_eq!(report(&c), "convergence-check: ok (0 iterative commands)\n");
+    let want = "convergence-check: warning: no command is marked iterative; no convergence block was checked
+convergence-check: ok (0 iterative commands)
+";
+    assert_eq!(report(&c), want);
     let f = render_fragment(&c).unwrap();
-    assert!(f.ends_with("\n_No iterative commands._\n"));
+    assert!(f.contains("> **Warning:** this manifest marks no command `iterative`"), "{f}");
+}
+
+/// Manifest text cannot inject HTML or Markdown structure into the fragment.
+#[test]
+fn meaning_is_escaped() {
+    let doc = one(
+        r#","iterative":true,"convergence":[{"name":"a","unit":"m<b>","default":"1","meaning":"x <!-- hidden --> & y | z"}]"#,
+    );
+    let f = render_fragment(&check(&parse(doc.as_bytes()).unwrap()).unwrap()).unwrap();
+    let row = r"| `a` | m&lt;b&gt; | 1 | x &lt;!-- hidden --&gt; &amp; y \| z |";
+    assert!(f.contains(row), "{f}");
+    assert!(!f.contains("<!-- hidden"));
+    assert_eq!(f.matches("<!--").count(), 1, "only the generator's own header comment");
 }

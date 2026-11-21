@@ -3,9 +3,12 @@
 //!
 //! An iterative solver feeds one [`IterationRow`] per iteration to a [`HistoryRecorder`] and
 //! closes it with [`HistoryRecorder::finish`], naming the stopping criterion that fired
-//! ([`StoppedBy`]) and handing over the final pose as a [`CertifiedPose`] (ALN.BFIT.CONSTR):
-//! a history can only be finished for a pose on which the lock check ran and passed, never
-//! for a bare `Rigid`. The result is a [`ConvergenceHistory`], stored with the alignment and
+//! ([`StoppedBy`]), the [`ConstraintSet`] the run solved and the final pose as a
+//! [`CertifiedPose`] (ALN.BFIT.CONSTR): a history can only be finished for a pose on which the
+//! lock check ran and passed, never for a bare `Rigid`, and only for the constraint set that
+//! pose was certified against. `finish` refuses with `history_pose_mismatch` when
+//! `!pose.is_for(cs)`, or when any row's `n_used` exceeds `cs.n_points()` (a run cannot use
+//! more inputs than its set has). The result is a [`ConvergenceHistory`], stored with the alignment and
 //! read through `align.get_diagnostics@1` (ALN.QA.COND).
 //!
 //! # Rows (columnar)
@@ -27,9 +30,11 @@
 //! # Stopping criterion
 //!
 //! [`StoppedBy`] is an [`Outcome`] (`converged`, `limit` or `diverged`) and the name of the
-//! criterion, which is one of the names the command declares in its registry-manifest
-//! `convergence` block (`[a-z0-9_]`, 1 to 64 bytes, else `history_bad_criterion`). Its text
-//! form is `outcome(name)`, for example `converged(increment)`.
+//! criterion, meant to be one of the names the command declares in its registry-manifest
+//! `convergence` block. Until that manifest block is reachable from here (CORE.REG.DEF, see
+//! the leaf's Open questions), the name is validated syntactically only (`[a-z0-9_]`, 1 to 64
+//! bytes, else `history_bad_criterion`), not against the declared criteria. Its text form is
+//! `outcome(name)`, for example `converged(increment)`.
 //!
 //! # Digest (D0)
 //!
@@ -38,19 +43,21 @@
 //! ```text
 //! "FIDHST" | 0x01 | n_rows u64 | per row: iteration u64 | objective f64 | d_translation f64
 //!          | d_rotation f64 | n_used u64 | outcome u8 | name_len u8 | name (ASCII)
+//!          | locks digest [32] | weights digest [32] | pose rotation 9 f64 (row-major)
+//!          | pose translation 3 f64
 //! ```
 //!
-//! little-endian, `f64` as IEEE 754 bits, outcome codes 1 `converged`, 2 `limit`, 3
-//! `diverged`. The final pose is not in this digest: the history holds the [`CertifiedPose`]
-//! itself ([`ConvergenceHistory::final_pose`]), and the alignment record that stores both
-//! binds them. Integer and bit copies only; no float arithmetic, no hash containers.
+//! little-endian, `f64` as IEEE 754 bits (`-0.0` written as `+0.0`), outcome codes 1
+//! `converged`, 2 `limit`, 3 `diverged`; the digests and pose are those of the final
+//! [`CertifiedPose`] (equal to the set's digests, checked by `finish`). Integer and bit copies
+//! only; no float arithmetic, no hash containers.
 
 use core::fmt;
 
 use fid_kci::kci::Sha256;
 use fid_types::Digest;
 
-use crate::constr::CertifiedPose;
+use crate::constr::{CertifiedPose, ConstraintSet};
 
 /// The most iterations a history keeps (REQ-ALN.QA.HIST-002).
 pub const MAX_ITERATIONS: usize = 100_000;
@@ -158,6 +165,9 @@ pub enum HistError {
     NegativeIncrement { iteration: u64 },
     /// A criterion name outside `[a-z0-9_]{1,64}`. Code `history_bad_criterion`.
     BadCriterion,
+    /// The final pose was not certified against the run's constraint set, or a row used
+    /// more inputs than the set has. Code `history_pose_mismatch`.
+    PoseMismatch,
     /// A working allocation failed. Code `history_allocation_failed`.
     AllocationFailed,
 }
@@ -171,6 +181,7 @@ impl HistError {
             HistError::NonFinite { .. } => "history_non_finite",
             HistError::NegativeIncrement { .. } => "history_negative_increment",
             HistError::BadCriterion => "history_bad_criterion",
+            HistError::PoseMismatch => "history_pose_mismatch",
             HistError::AllocationFailed => "history_allocation_failed",
         }
     }
@@ -268,9 +279,23 @@ impl HistoryRecorder {
         Ok(())
     }
 
-    /// Closes the history with the criterion that fired and the certified final pose.
-    pub fn finish(self, stopped_by: StoppedBy, final_pose: &CertifiedPose) -> ConvergenceHistory {
-        ConvergenceHistory { cols: self.cols, stopped_by, final_pose: final_pose.clone() }
+    /// Closes the history with the criterion that fired, the constraint set the run solved
+    /// and the certified final pose. Refuses with `history_pose_mismatch` when the pose was
+    /// not certified for `cs` or a row's `n_used` exceeds `cs.n_points()`.
+    pub fn finish(
+        self,
+        stopped_by: StoppedBy,
+        cs: &ConstraintSet,
+        final_pose: &CertifiedPose,
+    ) -> Result<ConvergenceHistory, HistError> {
+        if !final_pose.is_for(cs) {
+            return Err(HistError::PoseMismatch);
+        }
+        let n_points = cs.n_points() as u64;
+        if self.cols.n_used.iter().any(|&n| n > n_points) {
+            return Err(HistError::PoseMismatch);
+        }
+        Ok(ConvergenceHistory { cols: self.cols, stopped_by, final_pose: final_pose.clone() })
     }
 }
 
@@ -363,6 +388,17 @@ impl ConvergenceHistory {
         // At most MAX_CRITERION_BYTES (64), so it fits a byte.
         h.update(&[self.stopped_by.criterion.len() as u8]);
         h.update(self.stopped_by.criterion.as_bytes());
+        h.update(&self.final_pose.locks_digest().to_bytes());
+        h.update(&self.final_pose.weights_digest().to_bytes());
+        let pose = self.final_pose.pose();
+        for row in pose.r() {
+            for x in row {
+                h.update(&plus_zero(x).to_bits().to_le_bytes());
+            }
+        }
+        for x in pose.t() {
+            h.update(&plus_zero(x).to_bits().to_le_bytes());
+        }
         Digest::from_bytes(h.finish())
     }
 }
