@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-gpu-select]
+built_pr: 382
 satisfies: [REQ-PLAT.GPU-003, REQ-PLAT.GPU-006, REQ-PLAT.GPU-008]
 covers: []
 depends_on: [PLAT.GPU.POLICY]
