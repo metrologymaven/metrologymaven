@@ -573,12 +573,16 @@ fn stale_cleanup_during_publish_never_publishes_a_partial_project() {
     let claims = log.borrow().iter().filter(|s| **s == CopyStep::StaleClaimed).count();
     match first {
         Ok(copy) => {
-            assert!(cfg!(unix), "the first copy should have been claimed on this platform");
+            if !cfg!(unix) {
+                panic!("the first copy should have been claimed on this platform");
+            }
             check_copy(&copy, &before);
             assert_eq!(claims, 1, "only the dead copier's folder is claimed");
         }
         Err(e) => {
-            assert!(!cfg!(unix), "the first copy failed on Unix: {e}");
+            if cfg!(unix) {
+                panic!("the first copy failed on Unix: {e}");
+            }
             assert_eq!(code(&e), "io", "{e}");
             assert!(!out.join("a").exists(), "a partial project was published");
             assert_eq!(claims, 2);
