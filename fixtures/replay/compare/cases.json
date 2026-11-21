@@ -1,0 +1,1693 @@
+{
+ "cases": [
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D0",
+   "expect": {
+    "first_diff": null,
+    "marginal": false,
+    "outcome": "IDENTICAL",
+    "reason": null
+   },
+   "name": "identical_D0",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3f8999999999999a"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3f8999999999999a"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D1",
+   "expect": {
+    "first_diff": null,
+    "marginal": false,
+    "outcome": "IDENTICAL",
+    "reason": null
+   },
+   "name": "identical_D1",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3f8999999999999a"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3f8999999999999a"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D2",
+   "expect": {
+    "first_diff": null,
+    "marginal": false,
+    "outcome": "IDENTICAL",
+    "reason": null
+   },
+   "name": "identical_D2",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3f8999999999999a"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3f8999999999999a"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": null,
+    "marginal": false,
+    "outcome": "IDENTICAL",
+    "reason": null
+   },
+   "name": "identical_D3",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3f8999999999999a"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3f8999999999999a"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": null,
+    "marginal": false,
+    "outcome": "IDENTICAL",
+    "reason": null
+   },
+   "name": "identical_no_decision",
+   "packaged": {
+    "decision": null,
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3ff0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": null,
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3ff0000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D0",
+   "expect": {
+    "first_diff": null,
+    "marginal": false,
+    "outcome": "IDENTICAL",
+    "reason": null
+   },
+   "name": "identical_uec0",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3ff0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3ff0000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "EQUIVALENT",
+    "reason": null
+   },
+   "name": "d3_half_tolerance",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847b24638c9753"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "OUTSIDE_TOLERANCE"
+   },
+   "name": "d3_twice_tolerance",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847bedb7281fda"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "EQUIVALENT",
+    "reason": null
+   },
+   "name": "d3_half_tolerance_negative",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "bfe0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "bfe000010c6f7a0b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "EQUIVALENT",
+    "reason": null
+   },
+   "name": "d3_dimensionless_within",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "408f400000000000"
+   },
+   "quantity_kind": "dimensionless",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "408f40010624dd2f"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "OUTSIDE_TOLERANCE"
+   },
+   "name": "d3_dimensionless_beyond",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "408f400000000000"
+   },
+   "quantity_kind": "dimensionless",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "408f4004189374bc"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "EQUIVALENT",
+    "reason": null
+   },
+   "name": "d3_p_within",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3fee666666666666"
+   },
+   "quantity_kind": "p_conformance",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3fee66cf41f212d7"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "uncertainty.value",
+    "marginal": false,
+    "outcome": "EQUIVALENT",
+    "reason": null
+   },
+   "name": "d3_u_within",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3ff0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c91d6232f268",
+    "uec": 2,
+    "value": "3ff0000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "uncertainty.value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "OUTSIDE_TOLERANCE"
+   },
+   "name": "d3_u_beyond",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3ff0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0dc712f981e19",
+    "uec": 2,
+    "value": "3ff0000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "EQUIVALENT",
+    "reason": null
+   },
+   "name": "d3_value_and_u_within",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3ff0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c91d6232f268",
+    "uec": 2,
+    "value": "3ff00000431bde83"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": false
+   },
+   "determinism": "D1",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "EQUIVALENT",
+    "reason": null
+   },
+   "name": "d1_other_platform_within",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3fc999999999999a"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3fc9999dcb5781c7"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": false,
+    "same_platform_class": true
+   },
+   "determinism": "D2",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "EQUIVALENT",
+    "reason": null
+   },
+   "name": "d2_other_manifest_within",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3fc999999999999a"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3fc9999dcb5781c7"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D1",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "BIT_EXACT"
+   },
+   "name": "d1_same_manifest_platform_ulp",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3fc999999999999a"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3fc999999999999b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "decision.outcome",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "FIELD_CHANGED"
+   },
+   "name": "d3_within_decision_changed",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "INDETERMINATE",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847b24638c9753"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "decision.outcome",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "FIELD_CHANGED"
+   },
+   "name": "d3_identical_decision_changed",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "NONCONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "decision.rule_id",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "FIELD_CHANGED"
+   },
+   "name": "d3_rule_changed",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.guard@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "status",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "FIELD_CHANGED"
+   },
+   "name": "d3_status_changed",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "NOT_MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "decision.outcome",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "FIELD_CHANGED"
+   },
+   "name": "d3_decision_dropped",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": null,
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "uncertainty.status",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "FIELD_CHANGED"
+   },
+   "name": "d3_uec_changed",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 3,
+    "value": "3f847ae147ae147b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "OUTSIDE_TOLERANCE"
+   },
+   "name": "d3_beyond_and_decision_changed",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "NONCONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f947ae147ae147b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D0",
+   "expect": {
+    "first_diff": "status",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "FIELD_CHANGED"
+   },
+   "name": "d0_identical_value_status_changed",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "4008000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "FAILED",
+    "u": null,
+    "uec": 0,
+    "value": "4008000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "uncertainty.status",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "FIELD_CHANGED"
+   },
+   "name": "uec0_vs_evaluated",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3f847ae147ae147b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "uncertainty.value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "FIELD_CHANGED"
+   },
+   "name": "u_absent_one_side_same_uec",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 1,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 1,
+    "value": "3f847ae147ae147b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D0",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "BIT_EXACT"
+   },
+   "name": "d0_last_bit",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f8999999999999a"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f8999999999999b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": false,
+    "same_platform_class": false
+   },
+   "determinism": "D0",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "BIT_EXACT"
+   },
+   "name": "d0_last_bit_other_manifest",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f8999999999999a"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f8999999999999b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D0",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "BIT_EXACT"
+   },
+   "name": "d0_half_tolerance",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847b24638c9753"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D0",
+   "expect": {
+    "first_diff": "uncertainty.value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "BIT_EXACT"
+   },
+   "name": "d0_u_last_bit",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3ff0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8e",
+    "uec": 2,
+    "value": "3ff0000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "NO_TOLERANCE"
+   },
+   "name": "missing_kind_angle",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3fe0000000000000"
+   },
+   "quantity_kind": "angle",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3fe000000000232f"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": null,
+    "marginal": false,
+    "outcome": "IDENTICAL",
+    "reason": null
+   },
+   "name": "missing_kind_angle_identical",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3fe0000000000000"
+   },
+   "quantity_kind": "angle",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3fe0000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "NO_TOLERANCE"
+   },
+   "name": "unknown_kind_temperature",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "4072526666666666"
+   },
+   "quantity_kind": "temperature",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "4072526666813e59"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": null,
+    "marginal": false,
+    "outcome": "IDENTICAL",
+    "reason": null
+   },
+   "name": "unknown_kind_identical",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "4072526666666666"
+   },
+   "quantity_kind": "temperature",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "4072526666666666"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D0",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "BIT_EXACT"
+   },
+   "name": "unknown_kind_d0",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "4072526666666666"
+   },
+   "quantity_kind": "temperature",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "4072526666666667"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "FIELD_CHANGED"
+   },
+   "name": "exact_kind_count",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "4028000000000000"
+   },
+   "quantity_kind": "exact",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "402a000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "NAN_INPUT"
+   },
+   "name": "nan_recomputed",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3ff0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "7ff8000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "uncertainty.value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "NAN_INPUT"
+   },
+   "name": "nan_packaged_u",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "3ec0c6f7a0b5ed8d",
+    "uec": 2,
+    "value": "3ff0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": "7ff8000000000000",
+    "uec": 2,
+    "value": "3ff0000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "FIELD_CHANGED"
+   },
+   "name": "value_absent_recomputed",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3ff0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": null
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "OUTSIDE_TOLERANCE"
+   },
+   "name": "inf_recomputed",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3ff0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "7ff0000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "N",
+   "expect": {
+    "first_diff": "value",
+    "marginal": false,
+    "outcome": "NOT_REPLAYABLE",
+    "reason": "CLASS_N"
+   },
+   "name": "class_n",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3ff0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "4000000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "N",
+   "expect": {
+    "first_diff": "decision.outcome",
+    "marginal": false,
+    "outcome": "DIVERGENT",
+    "reason": "FIELD_CHANGED"
+   },
+   "name": "class_n_decision_changed",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3ff0000000000000"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "NONCONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3ff0000000000000"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": null,
+    "marginal": true,
+    "outcome": "IDENTICAL",
+    "reason": null
+   },
+   "limit": "0.0100005",
+   "name": "marginal_identical",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": null,
+    "marginal": false,
+    "outcome": "IDENTICAL",
+    "reason": null
+   },
+   "limit": "0.0101",
+   "name": "marginal_not_near",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   }
+  },
+  {
+   "context": {
+    "same_manifest": true,
+    "same_platform_class": true
+   },
+   "determinism": "D3",
+   "expect": {
+    "first_diff": "value",
+    "marginal": true,
+    "outcome": "EQUIVALENT",
+    "reason": null
+   },
+   "limit": "0.01",
+   "name": "marginal_equivalent",
+   "packaged": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847ae147ae147b"
+   },
+   "quantity_kind": "length",
+   "recomputed": {
+    "decision": {
+     "outcome": "CONFORMS",
+     "rule_id": "dr.simple@1"
+    },
+    "status": "MEASURED",
+    "u": null,
+    "uec": 0,
+    "value": "3f847b24638c9753"
+   }
+  }
+ ],
+ "note": "Synthetic TRUST.REPLAY.COMPARE cases for the TEST-ONLY table rep1-test.json; not production data.",
+ "packages": [
+  {
+   "expect": "EQUIVALENT",
+   "name": "identical_equivalent",
+   "outcomes": [
+    "IDENTICAL",
+    "EQUIVALENT"
+   ]
+  },
+  {
+   "expect": "NOT_REPLAYABLE",
+   "name": "equivalent_not_replayable",
+   "outcomes": [
+    "EQUIVALENT",
+    "NOT_REPLAYABLE"
+   ]
+  },
+  {
+   "expect": "DIVERGENT",
+   "name": "not_replayable_divergent",
+   "outcomes": [
+    "NOT_REPLAYABLE",
+    "DIVERGENT"
+   ]
+  },
+  {
+   "expect": "NOT_REPLAYABLE",
+   "name": "empty",
+   "outcomes": []
+  },
+  {
+   "expect": "IDENTICAL",
+   "name": "all_identical",
+   "outcomes": [
+    "IDENTICAL",
+    "IDENTICAL"
+   ]
+  },
+  {
+   "expect": "DIVERGENT",
+   "name": "divergent_first",
+   "outcomes": [
+    "DIVERGENT",
+    "IDENTICAL",
+    "NOT_REPLAYABLE"
+   ]
+  }
+ ],
+ "table": "rep1-test.json"
+}

@@ -9,10 +9,11 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-vreplay]
 satisfies: [REQ-TRUST.REPLAY-002, REQ-TRUST.REPLAY-003, REQ-TRUST.REPLAY-004, REQ-TRUST.REPLAY-006]
 covers: []
-depends_on: [TRUST.PKG.READER]
-uses_artifacts: [UNC.RDL.REP, CORE.RPL.CLASS]
+depends_on: [TRUST.PKG.READER, UNC.RDL.REP]
+uses_artifacts: [CORE.RPL.CLASS]
 side_effect: R1
 determinism: D0
 cli: []
@@ -65,12 +66,12 @@ Compares each recomputed result with its packaged ResultRecord and classifies it
 ## Design
 
 - **Registry command(s):** none.
-- **Data structures:** `Rep1Table` (schema published by UNC.RDL: rows keyed by determinism class and quantity kind with absolute and relative tolerances and unit); `ResultOutcome { record_id, outcome, first_diff: Option<FieldPath>, reason }`; `PackageOutcome`.
+- **Data structures (built):** `Rep1 { table: fid_rep::Table, digest }` loaded from a `rep-table@1` file (UNC.RDL.REP: rows keyed by field kind; determinism class is a context rule); `ResultFields { value, uec, expanded_uncertainty, decision: Option<Decision { rule_id, outcome }>, status }` per side; `ResultPair { record_id, determinism: fid_types::Determinism, quantity_kind, limit, packaged, recomputed }`; `ResultInput = Replayed(pair) | NotReplayable { record_id, reason }` (from SELECT); `ResultOutcome { record_id, outcome, first_diff: Option<FieldPath>, reason: Option<Reason>, marginal }`; `PackageOutcome { outcome, results, rep1_version, rep1_digest }` with `canonical_json()`. Field order: `value`, `uncertainty.status`, `uncertainty.value`, `decision.outcome`, `decision.rule_id`, `status`; `first_diff` is the first field whose outcome equals the result outcome. Reasons: `NO_TOLERANCE`, `BIT_EXACT`, `OUTSIDE_TOLERANCE`, `FIELD_CHANGED`, `NAN_INPUT`, `CLASS_N`, `NOT_REPLAYABLE:<SELECT code>`. Every field is classified by `fid-rep` (`rdl.rep.classify@1.0.0`); this module holds no classifier.
 - **Algorithm:** compare f64 by bit pattern first; for D1/D2/D3 apply `|a-b| <= abs_tol + rel_tol*|b|` with values in SI units; decisions compared as enums; aggregation by rank.
-- **Errors:** `rep1.malformed` when the table fails its schema.
+- **Errors:** `rep1.malformed` when the table fails its schema (exact key sets, duplicate keys, schema and algorithm IDs, one `exact` row, `fid_rep::Table::new` rules, and bytes equal to the table's canonical JSON so the digest names the table). A NaN in package data is not an error: the result is `DIVERGENT` with `NAN_INPUT`.
 - **Determinism:** D0.
 - **Performance budget:** trivial.
-- **Crate:** `fid-vreplay` (module `compare`).
+- **Crate:** `fid-vreplay` (module `compare`), layer model; depends on `fid-rep`, `fid-canon`, `fid-num`, `fid-types`.
 
 ## Test fixtures
 
@@ -84,11 +85,15 @@ Compares each recomputed result with its packaged ResultRecord and classifies it
 
 - Resolved 2026-11-21 (maintainer decision): UNC.RDL.REP publishes the REP-1 table keyed by field kind, with determinism class as a context rule (schema `rep-table@1`, crate `fid-rep`). This leaf consumes that table and classifier; the wording "by determinism class and quantity kind" in REQ-002, REQ-005 and the Design means: the determinism class decides whether a tolerance applies, the quantity (field) kind selects the row.
 - Resolved 2026-11-21 (maintainer decision, review of #407): D0 is always bit-exact. REQ-UNC.RDL.REP-004 now applies the tolerance only to D1/D2/D3, so this leaf's REQ-004 and `fid-rep` agree and the comparator needs no D0 check of its own.
+- Open: TRUST.REPLAY's Open questions say `fid-vreplay` links no KRN, UNC or CORE crate, and REQ-TRUST.VERIFY.REPRO-002's allowlist does not name `fid-rep` or `fid-types`. This build links `fid-rep` (UNC.RDL.REP, kernel layer, only `fid-num` and `fid-types`) because REQ-UNC.RDL-010 makes it the one classifier TRUST.REPLAY uses (maintainer instruction: no second classifier). TRUST.VERIFY.REPRO's allowlist should add `fid-rep` and `fid-types` (and `fid-canon`, already reached through `fid-pkg`) when it is built.
+- Open: AC-H1 (corpus half) and AC-H3 need the frozen replay corpus of TRUST.REPLAY.CORPUS, which is not built. `PackageOutcome::canonical_json` gives the bytes AC-H3 will compare.
+- Open: there is no ResultRecord schema crate yet (CONSTITUTION §2 L0); `ResultFields` is the projection of the compared fields that TRUST.REPLAY.RUN fills from the package.
 
 ## Change log
 
 - 2026-11-21 (maintainer decision): **Table keying (maintainer decision, 2026-11-21):** the REP-1 table is keyed by **field kind** only (`length`, `angle`, `dimensionless`, `expanded_uncertainty`, `p_conformance`, `exact`). Determinism class, kernel-manifest identity and platform class are **context rules** applied by the classifier (REQ-003/004), not table keys. Rationale: the bound is a property of the quantity (1 nm is 1 nm whatever produced it), the determinism class only decides *whether* a bound may be used at all, and one key avoids a kind x class matrix whose cells would mostly repeat or be `none`. TRUST.REPLAY.COMPARE consumes this table and classifier.
 - 2026-11-21 (maintainer decision): **D0 is always bit-exact (maintainer decision, review of #407):** a D0 field is `IDENTICAL` only when bit-identical and `DIVERGENT` otherwise, whatever the kernel-manifest digests; the REP-1 tolerance applies only to D1/D2 (manifests or platform classes differ) and D3. A cross-version tolerance mode for D0, if ever wanted, comes later as an explicit opt-in. Closes the D0 open question.
+- 2026-11-21 (build): built in `fid-vreplay` on `fid-rep`. `depends_on` gains UNC.RDL.REP (the crate is linked, no longer only read), which moves out of `uses_artifacts`. D0 is bit-exact whatever the manifests, as settled in #407. Additions to the Design: reasons beyond `NO_TOLERANCE`, an informative `marginal` flag (from `fid-rep`), class N fails closed as `NOT_REPLAYABLE` with `CLASS_N` (a decision or status change still makes it `DIVERGENT`), and the table file must be canonical JSON.
 
 ## Children
 

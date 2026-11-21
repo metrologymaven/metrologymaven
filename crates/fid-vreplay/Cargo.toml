@@ -1,0 +1,23 @@
+[package]
+name = "fid-vreplay"
+description = "Metrology Maven standalone verifier replay: outcome classification and package aggregation over the REP-1 table (spec node TRUST.REPLAY.COMPARE)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Layer model, beside fid-pkg. No third-party dependencies; only workspace crates:
+# - fid-rep (UNC.RDL.REP): the REP-1 table type and the one classifier rdl.rep.classify@1.0.0,
+#   so the verifier and the journal replayer never disagree (REQ-UNC.RDL-010);
+# - fid-num: exact decimals for REP-1 bounds and decision limits;
+# - fid-types: Determinism and the `sha256:` digest of the table (AGENTS.md rule 14);
+# - fid-canon: duplicate-key-rejecting JSON parser and SHA-256 for the table file.
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-num = { path = "../fid-num" }
+fid-rep = { path = "../fid-rep" }
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true

@@ -54,6 +54,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-profile" = "model"
 "fid-project" = "model"
 "fid-pkg" = "model"
+# Standalone verifier replay (TRUST.REPLAY.COMPARE first): over fid-rep (kernel), fid-canon, fid-num and
+# fid-types; model, beside fid-pkg, so fid-verify can link it.
+"fid-vreplay" = "model"
 "fid-uuid" = "model"
 "fid-hal-idl" = "model"
 "fid-replay" = "engine"
