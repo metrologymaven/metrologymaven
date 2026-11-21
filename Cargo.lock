@@ -1228,7 +1228,7 @@ dependencies = [
  "fid-surface",
  "getrandom 0.2.17",
  "hmac",
- "libc",
+ "rustix 1.1.6",
  "sha2 0.11.0",
  "zeroize",
 ]
@@ -2191,6 +2191,7 @@ dependencies = [
  "fid-types",
  "fid-uuid",
  "fid-vocab",
+ "proc-macro2",
  "sha2 0.10.9",
  "toml",
 ]

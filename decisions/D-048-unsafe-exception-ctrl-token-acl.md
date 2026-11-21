@@ -44,21 +44,36 @@ owner-only DACL on Windows (REQ-AUTO.CTRL.AUTH-001, -002)? If so, within which b
 
 Option A, bounded as follows.
 
-1. **Scope.** Only the Windows token-file DACL: creation with an owner-only protected DACL,
-   the owner/DACL check, and reading the process user's SID. It lives in the crate
-   `fid-ctrl-acl`, module `ffi`, and nowhere else. The crate is empty on every other target.
+1. **Scope.** Only the Windows token-file security: creation with an owner-only protected
+   DACL, reading back a handle's owner and DACL (for the token file and for its directory),
+   reading the process user's SID, and reading a file's identity (volume serial number and
+   file index). It lives in the crate `fid-ctrl-acl`, module `ffi`, and nowhere else; `ffi`
+   only copies data out of the OS, and every decision is made in safe code. The crate is empty
+   on every other target.
 2. **Reason.** std has no ACL API, and windows-rs exposes these calls only as `unsafe fn`.
-3. **Lints.** `fid-ctrl-acl` is the one crate without `[lints] workspace = true`. Its own
-   table sets `unsafe_code = "deny"` at crate level and allows it only on `mod ffi`. It also
-   denies `clippy::undocumented_unsafe_blocks`, and its `[lints.clippy]` is a superset of the
-   workspace's.
+3. **Lints.** `fid-ctrl-acl` is the one workspace member without `[lints] workspace = true`.
+   Its own `[lints]` are the workspace's with exactly two changes: `rust.unsafe_code` is
+   `deny` (instead of `forbid`), lifted only on `mod ffi`, and `clippy` adds
+   `undocumented_unsafe_blocks = "deny"`. No other lint may be added, dropped or changed, and
+   the crate has no build script.
 4. **Rule.** No other crate may follow this precedent without its own decision record. A new
    `unsafe` site in `fid-ctrl-acl` outside `mod ffi` also needs one.
-5. **Gate.** `cargo test -p fid-xtask --test unsafe_exception` fails in three cases. A
-   `crates/*/Cargo.toml` other than `fid-ctrl-acl` lacks `[lints] workspace = true`. The
-   exception crate's clippy table does not include every workspace clippy lint at the same
-   level. Or `allow(unsafe_code)` (or `expect(unsafe_code)`) appears anywhere other than on
-   `mod ffi` in `crates/fid-ctrl-acl/src/lib.rs`.
+5. **Gate.** `cargo test -p fid-xtask --test unsafe_exception` fails when:
+   - a workspace member (every `workspace.members` entry, globs expanded, so
+     `vendor/fid-clarabel/crate` too) other than `fid-ctrl-acl` lacks
+     `[lints] workspace = true`;
+   - the exception crate's lint tables differ from rule 3, or it has a build script;
+   - any `.rs` file in the repository has an attribute naming `unsafe_code` that is not a
+     plain `deny`/`forbid`, other than one `#[allow(unsafe_code)]` directly on the top-level
+     `mod ffi { .. }` of `crates/fid-ctrl-acl/src/lib.rs`. Files are tokenised (proc-macro2,
+     the lexer under syn), so attributes over several lines, behind `cfg_attr`, nested in
+     items or built by macros are caught, and comments and strings are not. The ident
+     `unsafe_code` outside an attribute also fails. A short, named list of fixtures that are
+     deliberately not Rust tokens gets a text check instead;
+   - in `fid-ctrl-acl`, an attribute lifts `clippy::undocumented_unsafe_blocks` or the
+     `restriction` group, or a `#[path]` attribute or `include!` pulls in another file.
+
+   The gate tests itself on each of these bypasses.
 
 ## Consequences
 

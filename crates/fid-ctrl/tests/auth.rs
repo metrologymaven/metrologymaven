@@ -454,6 +454,145 @@ fn ac2_other_and_group_write_bits_are_refused_too() {
     }
 }
 
+/// Makes every replacement of the token file fail while it lives. On Unix the token directory
+/// becomes read-only (0500), so no temporary file can be created in it. On Windows the token
+/// file is held open without delete sharing, so nothing can be renamed over it. `None` where
+/// that blocks nothing (running as root).
+struct ReplaceBlocker {
+    #[cfg(unix)]
+    dir: PathBuf,
+    #[cfg(windows)]
+    _held: std::fs::File,
+}
+
+impl ReplaceBlocker {
+    fn new(token: &Path) -> Option<ReplaceBlocker> {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let dir = token.parent().unwrap().to_path_buf();
+            std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o500)).unwrap();
+            let probe = dir.join("blocker-probe");
+            if std::fs::write(&probe, b"").is_ok() {
+                let _ = std::fs::remove_file(&probe);
+                std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700)).unwrap();
+                return None;
+            }
+            Some(ReplaceBlocker { dir })
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            const FILE_SHARE_READ: u32 = 1;
+            let held = std::fs::OpenOptions::new().read(true).share_mode(FILE_SHARE_READ).open(token).unwrap();
+            Some(ReplaceBlocker { _held: held })
+        }
+    }
+}
+
+#[cfg(unix)]
+impl Drop for ReplaceBlocker {
+    fn drop(&mut self) {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&self.dir, std::fs::Permissions::from_mode(0o700));
+    }
+}
+
+/// The review's race: a refused file whose replacement fails, then is narrowed back to
+/// owner-only before any replacement succeeds. It looks owner-only, but it is the refused file
+/// (same identity), so the old token is never accepted again.
+#[test]
+fn ac2_refused_token_stays_refused_when_narrowed_before_the_replace() {
+    let a = app("ac2-narrow");
+    let old = token_bytes(&a.token);
+    let old_token = Token::from_bytes(old);
+    widen(&a.token);
+    let Some(blocker) = ReplaceBlocker::new(&a.token) else {
+        eprintln!("skipped: the replacement cannot be blocked here (root)");
+        return;
+    };
+    // Refused, and the failed replacement is reported (`token_io`), never ignored.
+    let mut c = Client::connect(&a);
+    let sn = c.hello();
+    assert_eq!(error_code(&c.auth(&old_token, &sn).2), "token_io");
+    c.expect_closed();
+    assert_eq!(token_bytes(&a.token), old, "the replacement was blocked");
+    // Narrowed back between the refusal and the replacement: the file looks owner-only now.
+    narrow(&a.token);
+    assert_eq!(TokenFile::ensure(&a.token).unwrap().permissions().unwrap(), Permissions::OwnerOnly);
+    // It is still the refused file, so the old token is still refused.
+    let mut c = Client::connect(&a);
+    let sn = c.hello();
+    assert_eq!(error_code(&c.auth(&old_token, &sn).2), "token_io");
+    c.expect_closed();
+    assert_eq!(a.ops.seen.load(Ordering::SeqCst), 0);
+    // Once a replacement can succeed it happens, and the old token gets `auth_failed`.
+    drop(blocker);
+    let mut c = Client::connect(&a);
+    let sn = c.hello();
+    assert_eq!(error_code(&c.auth(&old_token, &sn).2), "auth_failed");
+    c.expect_closed();
+    let new = token_bytes(&a.token);
+    assert_ne!(new, old);
+    assert_owner_only_by_os(&a.token);
+    let mut c = Client::connect(&a);
+    let sn = c.hello();
+    assert_eq!(str_field(event(&c.auth(&Token::from_bytes(new), &sn).2), "kind"), "auth");
+    // Narrowing alone never made the old token valid again.
+    let mut c = Client::connect(&a);
+    let sn = c.hello();
+    assert_eq!(error_code(&c.auth(&old_token, &sn).2), "auth_failed");
+}
+
+/// The token directory is opened without following a symlink and checked through that handle.
+#[cfg(unix)]
+#[test]
+fn token_directory_that_is_a_symlink_is_refused() {
+    use std::os::unix::fs::PermissionsExt;
+    let root = temp_dir("dir-link");
+    let real = root.join("real");
+    std::fs::create_dir_all(&real).unwrap();
+    std::fs::set_permissions(&real, std::fs::Permissions::from_mode(0o700)).unwrap();
+    std::os::unix::fs::symlink(&real, root.join("profile")).unwrap();
+    let err = TokenFile::ensure(&root.join("profile").join("ctrl.token")).unwrap_err();
+    assert!(err.to_string().contains("ctrl_unsafe_runtime_dir"), "{err}");
+    assert_eq!(std::fs::read_dir(&real).unwrap().count(), 0, "nothing written through the link");
+}
+
+/// Windows: a token directory whose DACL lets another principal write, or that is a junction,
+/// is refused before anything is written; a read-only grant to another principal is accepted.
+#[cfg(windows)]
+#[test]
+fn token_directory_writable_by_others_or_a_junction_is_refused() {
+    let icacls = |p: &Path, args: &[&str]| {
+        let out = std::process::Command::new("icacls").arg(p).args(args).output().unwrap();
+        assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stdout));
+    };
+    let root = temp_dir("dir-acl");
+    let dir = root.join("profile");
+    std::fs::create_dir_all(&dir).unwrap();
+    let token = dir.join("ctrl.token");
+    TokenFile::ensure(&token).unwrap();
+    std::fs::remove_file(&token).unwrap();
+    icacls(&dir, &["/grant", "*S-1-1-0:(RX)"]);
+    TokenFile::ensure(&token).unwrap();
+    std::fs::remove_file(&token).unwrap();
+    icacls(&dir, &["/grant", "*S-1-1-0:(W)"]);
+    let err = TokenFile::ensure(&token).unwrap_err();
+    assert!(err.to_string().contains("ctrl_unsafe_runtime_dir"), "{err}");
+    assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0, "nothing left behind");
+    // A junction to a private directory.
+    let real = root.join("real");
+    std::fs::create_dir_all(&real).unwrap();
+    let link = root.join("link");
+    let out =
+        std::process::Command::new("cmd").arg("/C").arg("mklink").arg("/J").arg(&link).arg(&real).output().unwrap();
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stdout));
+    let err = TokenFile::ensure(&link.join("ctrl.token")).unwrap_err();
+    assert!(err.to_string().contains("ctrl_unsafe_runtime_dir"), "{err}");
+    assert_eq!(std::fs::read_dir(&real).unwrap().count(), 0, "nothing written through the junction");
+}
+
 #[test]
 fn ac3_correct_client_verifies_both_proofs_and_lists_commands() {
     let a = app("ac3");

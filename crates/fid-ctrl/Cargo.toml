@@ -24,10 +24,11 @@ zeroize = "1"
 
 # The Windows token-file ACL (protected owner-only DACL and its check) needs the Win32 security
 # API, which is `unsafe` FFI; it lives in its own shim crate so this crate keeps `forbid(unsafe_code)`.
-# Unix: the O_NOFOLLOW, O_NONBLOCK and ELOOP constants for opening the token file without
-# following links (no calls). Already in the lock (fid-bus, getrandom).
+# Unix: rustix 1 (safe wrappers, Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT, already in
+# the lock through tempfile and others) for the directory-relative token file operations:
+# open(O_DIRECTORY|O_NOFOLLOW), openat, statat, linkat, renameat, unlinkat, and geteuid.
 [target.'cfg(unix)'.dependencies]
-libc = "0.2"
+rustix = { version = "1", features = ["fs", "process"] }
 
 [target.'cfg(windows)'.dependencies]
 fid-ctrl-acl = { path = "../fid-ctrl-acl" }
