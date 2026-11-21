@@ -1,0 +1,15 @@
+# Recorded backend policy sample for VIZ.RENDER.FRAME.GRAPH AC-2 (CC-BY-4.0 project data). The
+# shipped file is platform/gpu-policy.toml; this one lists [vulkan, gl] for every host row the
+# tests use (ending in "software", as REQ-PLAT.GPU.POLICY-004 requires). Note: PLAT.GPU.POLICY's validator does not accept "gl" yet (see the leaf's open
+# questions); the frame graph's reader does.
+schema_version = 1
+
+[[row]]
+os = "linux"
+arch = "x86_64"
+backends = ["vulkan", "gl", "software"]
+
+[[row]]
+os = "windows"
+arch = "x86_64"
+backends = ["dx12", "vulkan", "gl", "software"]

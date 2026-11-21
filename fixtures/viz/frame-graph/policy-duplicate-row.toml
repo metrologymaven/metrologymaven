@@ -1,0 +1,12 @@
+# Two rows for linux/x86_64: ambiguous, refused (VIZ.RENDER.FRAME.GRAPH).
+schema_version = 1
+
+[[row]]
+os = "linux"
+arch = "x86_64"
+backends = ["vulkan", "software"]
+
+[[row]]
+os = "linux"
+arch = "x86_64"
+backends = ["gl", "software"]
