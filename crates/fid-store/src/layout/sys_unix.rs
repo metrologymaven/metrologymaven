@@ -124,6 +124,26 @@ impl Dir {
         Ok(Dir { fd: self.fd.try_clone()? })
     }
 
+    /// Device and inode of this directory (`CORE.STO.LAYOUT` REQ-011).
+    pub(super) fn identity(&self) -> io::Result<super::FolderId> {
+        stat_id(&self.fd)
+    }
+
+    /// Renames `from` to `to`, both entries of this directory, never replacing an existing
+    /// `to` (`RENAME_NOREPLACE` on Linux, `RENAME_EXCL` on macOS). An existing target is
+    /// `AlreadyExists`; a file system without the flag fails (`EINVAL`), never falling back
+    /// to a replacing rename.
+    #[cfg(any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "ios"))]
+    pub(super) fn rename_noreplace(&self, from: &str, to: &str) -> io::Result<()> {
+        rfs::renameat_with(&self.fd, from, &self.fd, to, rfs::RenameFlags::NOREPLACE).map_err(io::Error::from)
+    }
+
+    /// No no-replace rename on this platform: fail closed.
+    #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "macos", target_os = "ios")))]
+    pub(super) fn rename_noreplace(&self, _from: &str, _to: &str) -> io::Result<()> {
+        Err(io::Error::new(io::ErrorKind::Unsupported, "no no-replace rename on this platform"))
+    }
+
     /// Names in this directory (without `.` and `..`) and whether each is a directory
     /// (symbolic links count as files).
     pub(super) fn entries(&self) -> io::Result<Vec<(String, bool)>> {
@@ -157,6 +177,25 @@ impl Dir {
     pub(super) fn is_network(&self) -> io::Result<bool> {
         let st = rfs::fstatfs(&self.fd)?;
         Ok(statfs_is_network(&st))
+    }
+
+    /// Whether another open file description holds an exclusive `flock` on `name`, probed
+    /// without writing: `name` is opened read-only (never created) and a shared lock is tried
+    /// and dropped at once. A missing file is `false`.
+    pub(super) fn lock_held(&self, name: &str) -> io::Result<bool> {
+        let file = match open_regular(&self.fd, name, OFlags::RDONLY, Mode::empty()) {
+            Ok(f) => f,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(false),
+            Err(e) => return Err(e),
+        };
+        match rfs::flock(&file, FlockOperation::NonBlockingLockShared) {
+            Ok(()) => {
+                let _ = rfs::flock(&file, FlockOperation::Unlock);
+                Ok(false)
+            }
+            Err(e) if e == Errno::WOULDBLOCK || e == Errno::AGAIN => Ok(true),
+            Err(e) => Err(e.into()),
+        }
     }
 
     /// Takes an exclusive `flock` on `name`. The lock only counts if the locked file is still
@@ -220,6 +259,13 @@ impl LockHandle {
         // Closing the descriptor releases the lock as well; unlock explicitly first anyway.
         let _ = rfs::flock(&self.file, FlockOperation::Unlock);
     }
+}
+
+/// Device and inode of an open file or directory.
+#[allow(clippy::unnecessary_cast)]
+pub(super) fn stat_id(fd: impl std::os::fd::AsFd) -> io::Result<super::FolderId> {
+    let st = rfs::fstat(fd)?;
+    Ok(super::FolderId::from_parts(st.st_dev as u64, st.st_ino as u64))
 }
 
 pub(super) fn host_name() -> String {

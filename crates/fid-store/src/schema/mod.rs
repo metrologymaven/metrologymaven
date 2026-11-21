@@ -334,6 +334,66 @@ pub fn open_read_with(loc: &ProjectLocation, plan: &MigrationPlan) -> Result<Dat
     Ok(Database { conn, version, mode: OpenMode::Read })
 }
 
+/// Opens `project.db` of a read-only project folder (`CORE.STO.LAYOUT` REQ-011, a folder
+/// resolved in an import root) so that no file is created or written: SQLite's `immutable=1`
+/// with `mode=ro`, which takes no lock and never touches a `-wal` or `-shm` file. Such a file
+/// already present means the database cannot be read without the WAL, so the open fails with
+/// `read_only_unavailable`. The same schema and integrity checks as [`open_read`] run.
+pub fn open_read_immutable(loc: &ProjectLocation) -> Result<Database, SchemaError> {
+    PLAN.validate()?;
+    let root = std::fs::canonicalize(loc.root()).map_err(StoreError::Io)?;
+    for suffix in ["-wal", "-shm", "-journal"] {
+        match std::fs::symlink_metadata(root.join(format!("{DB_FILE}{suffix}"))) {
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(StoreError::Io(e).into()),
+            Ok(_) => return Err(StoreError::ReadOnlyUnavailable.into()),
+        }
+    }
+    let path = root.join(DB_FILE);
+    let meta = std::fs::symlink_metadata(&path).map_err(StoreError::Io)?;
+    if meta.file_type().is_symlink() {
+        return Err(StoreError::SymlinkRefused.into());
+    }
+    if !meta.is_file() {
+        return Err(StoreError::NotRegularFile.into());
+    }
+    let uri = immutable_uri(&path).ok_or(StoreError::ReadOnlyUnavailable)?;
+    let flags = OpenFlags::SQLITE_OPEN_READ_ONLY
+        | OpenFlags::SQLITE_OPEN_NO_MUTEX
+        | OpenFlags::SQLITE_OPEN_NOFOLLOW
+        | OpenFlags::SQLITE_OPEN_URI;
+    let conn = Connection::open_with_flags(uri, flags)?;
+    harden(&conn)?;
+    let version = checked_version(&conn, &PLAN, true)?;
+    Ok(Database { conn, version, mode: OpenMode::Read })
+}
+
+/// `file:` URI of a canonical absolute path with `mode=ro&immutable=1`. Every byte but
+/// unreserved characters and `/` (and the drive colon on Windows) is percent-encoded, so no
+/// path text becomes a URI parameter. `None` for a path that is not UTF-8 or a Windows UNC path.
+fn immutable_uri(path: &Path) -> Option<String> {
+    let s = path.to_str()?;
+    #[cfg(windows)]
+    let owned = {
+        if s.starts_with(r"\\?\UNC\") || (s.starts_with(r"\\") && !s.starts_with(r"\\?\")) {
+            return None;
+        }
+        format!("/{}", s.strip_prefix(r"\\?\").unwrap_or(s).replace('\\', "/"))
+    };
+    #[cfg(windows)]
+    let s = owned.as_str();
+    let mut out = String::from("file://");
+    for b in s.bytes() {
+        if b.is_ascii_alphanumeric() || matches!(b, b'/' | b'-' | b'.' | b'_' | b'~') || (cfg!(windows) && b == b':') {
+            out.push(char::from(b));
+        } else {
+            out.push_str(&format!("%{b:02X}"));
+        }
+    }
+    out.push_str("?mode=ro&immutable=1");
+    Some(out)
+}
+
 /// The checks every open runs before anything is written, reading only `sqlite_master` until
 /// `schema_meta` is known to be the v1 table: root pages, then the version (whose
 /// `schema_meta` definition [`read_version`] checks first), a newer version refused, then the
