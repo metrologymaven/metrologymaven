@@ -17,10 +17,14 @@ use fid_bus::validate::{Compiled, Hooks, RefLookup};
 use fid_canon::{parse, CValue};
 use fid_journal::branch::{EntryOrigin, EventSource};
 use fid_journal::supersede::{
-    command_defs, SupersedeEntry, SupersedeError, Supersessions, RECORD_SUPERSEDED, SUPERSEDE_RECORD,
+    command_defs, params_commitment as model_params_commitment, ReasonOpening, SupersedeEntry, SupersedeError,
+    Supersessions, RECORD_SUPERSEDED, SUPERSEDE_RECORD,
 };
-use fid_journal::PrincipalKind;
-use fid_journal_cmd::{register_supersede, run_supersede, supersede_bus_error, SupersedeHandler, SupersedeSource};
+use fid_journal::{PrincipalKind, Salt};
+use fid_journal_cmd::{
+    entry_for_call, parse_supersede, register_supersede, run_supersede, supersede_bus_error, SupersedeHandler,
+    SupersedeSource,
+};
 use fid_registry::CommandDef;
 use fid_types::{Digest, SideEffect};
 use std::collections::BTreeMap;
@@ -85,12 +89,27 @@ fn fold(list: &[CValue]) -> Supersessions {
                 major: *major as u32,
                 class: SideEffect::parse(st(o, "class")).unwrap(),
                 branch: st(o, "branch").to_string(),
-                source: EventSource::Handler,
+                source: match st(o, "source") {
+                    "handler" => EventSource::Handler,
+                    "bus_route" => EventSource::BusRoute,
+                    "bus_release" => EventSource::BusRelease,
+                    other => panic!("{other}"),
+                },
                 human_assertion: None,
             },
+            principal: digest(st(o, "principal")),
+            params_commitment: opt_digest(o, "params_commitment"),
             hash: digest(st(o, "hash")),
             promoted_from: opt_digest(o, "promoted_from"),
             reason_commit: opt_digest(o, "reason_commit"),
+            reason_opening: match get(o, "reason_opening") {
+                CValue::Null => None,
+                CValue::Obj(r) => Some(ReasonOpening {
+                    salt: Salt::from_hex(st(r, "salt")).unwrap(),
+                    reason: st(r, "reason").to_string(),
+                }),
+                other => panic!("{other:?}"),
+            },
             outputs: arr(o, "outputs")
                 .iter()
                 .map(|d| if let CValue::Str(s) = d { digest(s) } else { panic!() })
@@ -333,6 +352,7 @@ fn refusals_map_to_v3() {
         SupersedeError::ClassForbidden,
         SupersedeError::Schema("x".into()),
         SupersedeError::NotSupersedable("x".into()),
+        SupersedeError::HeadMoved("x".into()),
         SupersedeError::Tampered("x".into()),
     ];
     for e in all {
@@ -342,4 +362,21 @@ fn refusals_map_to_v3() {
         assert_eq!(HandlerError::Refused(b.clone()).into_bus_error(), b);
     }
     assert_eq!(RECORD_SUPERSEDED, "RecordSuperseded");
+}
+
+/// The parameters commitment the bus computes from the raw call is the one the fold recomputes
+/// from the event and the reason, and the handler's entry record carries it.
+#[test]
+fn the_bus_params_commitment_is_the_folds() {
+    let c = load("cases.json");
+    for case in arr(obj(&c), "plans") {
+        let case = obj(case);
+        let raw = get(case, "params");
+        let p = parse_supersede(raw).unwrap();
+        let bus = fid_bus::policy::projection::params_commitment(raw).unwrap();
+        assert_eq!(bus, model_params_commitment(&p).unwrap(), "{}", st(case, "name"));
+        let e = entry_for_call(PrincipalKind::Human, "main", None, raw, &p.reason).unwrap();
+        assert_eq!(e.params_commitment, Some(bus));
+        assert_eq!(e.reason_opening.unwrap().reason, p.reason);
+    }
 }
