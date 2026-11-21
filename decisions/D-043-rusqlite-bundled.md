@@ -5,7 +5,7 @@ status: proposed
 raised_by: build of CORE.STO.SQL.SCHEMA
 blocks: [CORE.STO.SQL.SCHEMA, CORE.STO.SQL.TXN, CORE.STO.SQL.CRASH]
 decide_by: before the CORE.STO.SQL.SCHEMA pull request merges
-updated: 2026-11-18
+updated: 2026-11-21
 ---
 
 # D-043: rusqlite with bundled SQLite for the project database
@@ -88,3 +88,11 @@ through C FFI (`unsafe` Rust plus compiled C)?
   Tier 1 OS families).
 - Security advisories against SQLite reach us through `libsqlite3-sys` releases; `cargo deny`
   continues to gate licences and advisories for the transitive set.
+
+## Notes
+
+- 2026-11-21 (rule 4, maintainer decision): PR #406 (`CORE.STO.LAYOUT` atomic project copy)
+  enables the `rusqlite` `backup` feature next to `bundled`, for the SQLite online backup API
+  that `Store::copy_to` uses. It adds no crate to the transitive set (it only compiles
+  `rusqlite::backup` over the already bundled `libsqlite3-sys`); the pin stays `=0.41.1` and
+  `load_extension` stays off.

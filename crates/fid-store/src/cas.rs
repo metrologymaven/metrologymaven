@@ -373,6 +373,19 @@ impl BlobStore {
         Ok(BlobStore { root, counters: Counters::default() })
     }
 
+    /// Opens an existing store without creating anything (read-only projects,
+    /// `CORE.STO.LAYOUT` REQ-011): `blob_dir` must be a directory and not a link; a missing
+    /// `sha256/` simply holds no blob.
+    pub fn open_existing(blob_dir: &Path) -> Result<BlobStore, CasError> {
+        let root = std::path::absolute(blob_dir)?;
+        match fs::symlink_metadata(&root) {
+            Ok(m) if m.is_dir() && !m.file_type().is_symlink() => {}
+            Ok(_) => return Err(not_regular()),
+            Err(e) => return Err(e.into()),
+        }
+        Ok(BlobStore { root, counters: Counters::default() })
+    }
+
     /// The store in the `blobs/` directory of a project (`CORE.STO.LAYOUT`).
     pub fn for_project(project: &ProjectLocation) -> Result<BlobStore, CasError> {
         BlobStore::open(&project.root().join(BLOBS_DIR))
@@ -968,7 +981,7 @@ pub(crate) fn temp_name() -> String {
 
 /// Flushes a directory's entries to stable storage.
 #[cfg(unix)]
-fn sync_dir(path: &Path) -> io::Result<()> {
+pub(crate) fn sync_dir(path: &Path) -> io::Result<()> {
     // `sync_all` is `fsync` on Linux and `fcntl(F_FULLFSYNC)` on macOS.
     File::open(path)?.sync_all()
 }
@@ -978,7 +991,7 @@ fn sync_dir(path: &Path) -> io::Result<()> {
 /// support flushing a directory handle refuse with access denied or invalid function; NTFS
 /// journals the rename itself, so those refusals are tolerated [unverified for every file system].
 #[cfg(windows)]
-fn sync_dir(path: &Path) -> io::Result<()> {
+pub(crate) fn sync_dir(path: &Path) -> io::Result<()> {
     use std::os::windows::fs::OpenOptionsExt;
     const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
     const ERROR_ACCESS_DENIED: i32 = 5;
@@ -992,6 +1005,6 @@ fn sync_dir(path: &Path) -> io::Result<()> {
 }
 
 #[cfg(not(any(unix, windows)))]
-fn sync_dir(_path: &Path) -> io::Result<()> {
+pub(crate) fn sync_dir(_path: &Path) -> io::Result<()> {
     Ok(())
 }

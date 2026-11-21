@@ -89,6 +89,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-report-pdf" = "services"
 # Report model (RPT.MODEL): document, pages, blocks and report commands.
 "fid-report" = "services"
+# Results catalog (RPT.CATALOG.STORE.SCHEMA first): local SQLite index across projects; over
+# fid-store and fid-project (model). Services, below the registry build step that collects its setting.
+"fid-catalog" = "services"
 # Registry build step (CORE.REG.MAN): collects every crate's declarations, so it sits above
 # the engine and services crates that declare commands.
 "fid-registry-build" = "services"

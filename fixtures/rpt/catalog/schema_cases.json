@@ -1,0 +1,5847 @@
+{
+ "cases": [
+  {
+   "expect": "accept",
+   "name": "valid_base",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "a complete row",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "duplicate_key",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "unique (project_id, record_id) (AC-4)",
+   "setup": [
+    [
+     {
+      "t": "text",
+      "v": "01936b2e-7a00-7000-8000-000000000001"
+     },
+     {
+      "t": "text",
+      "v": "case-base"
+     },
+     {
+      "t": "text",
+      "v": "CASE-1"
+     },
+     {
+      "t": "text",
+      "v": "B"
+     },
+     {
+      "t": "text",
+      "v": "plan-1"
+     },
+     {
+      "t": "text",
+      "v": "run-1"
+     },
+     {
+      "t": "text",
+      "v": "released"
+     },
+     {
+      "t": "text",
+      "v": "flatness"
+     },
+     {
+      "t": "text",
+      "v": "2026-11-01T08:00:00Z"
+     },
+     {
+      "t": "text",
+      "v": "0.010"
+     },
+     {
+      "t": "text",
+      "v": "mm"
+     },
+     {
+      "t": "real",
+      "v": "1e-05"
+     },
+     {
+      "t": "text",
+      "v": "CONFORMS"
+     },
+     {
+      "t": "text",
+      "v": "unc.dec.simple@1"
+     },
+     {
+      "t": "text",
+      "v": "FEATURES"
+     },
+     {
+      "t": "text",
+      "v": "UEC-2"
+     },
+     {
+      "t": "int",
+      "v": "0"
+     },
+     {
+      "t": "int",
+      "v": "0"
+     },
+     {
+      "t": "int",
+      "v": "0"
+     },
+     {
+      "t": "text",
+      "v": "signed_off"
+     },
+     {
+      "t": "text",
+      "v": "active"
+     },
+     {
+      "t": "int",
+      "v": "1"
+     },
+     {
+      "t": "text",
+      "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+     },
+     {
+      "t": "text",
+      "v": "ok"
+     }
+    ]
+   ]
+  },
+  {
+   "expect": "accept",
+   "name": "same_record_other_project",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000002"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "the key is the pair",
+   "setup": [
+    [
+     {
+      "t": "text",
+      "v": "01936b2e-7a00-7000-8000-000000000001"
+     },
+     {
+      "t": "text",
+      "v": "case-base"
+     },
+     {
+      "t": "text",
+      "v": "CASE-1"
+     },
+     {
+      "t": "text",
+      "v": "B"
+     },
+     {
+      "t": "text",
+      "v": "plan-1"
+     },
+     {
+      "t": "text",
+      "v": "run-1"
+     },
+     {
+      "t": "text",
+      "v": "released"
+     },
+     {
+      "t": "text",
+      "v": "flatness"
+     },
+     {
+      "t": "text",
+      "v": "2026-11-01T08:00:00Z"
+     },
+     {
+      "t": "text",
+      "v": "0.010"
+     },
+     {
+      "t": "text",
+      "v": "mm"
+     },
+     {
+      "t": "real",
+      "v": "1e-05"
+     },
+     {
+      "t": "text",
+      "v": "CONFORMS"
+     },
+     {
+      "t": "text",
+      "v": "unc.dec.simple@1"
+     },
+     {
+      "t": "text",
+      "v": "FEATURES"
+     },
+     {
+      "t": "text",
+      "v": "UEC-2"
+     },
+     {
+      "t": "int",
+      "v": "0"
+     },
+     {
+      "t": "int",
+      "v": "0"
+     },
+     {
+      "t": "int",
+      "v": "0"
+     },
+     {
+      "t": "text",
+      "v": "signed_off"
+     },
+     {
+      "t": "text",
+      "v": "active"
+     },
+     {
+      "t": "int",
+      "v": "1"
+     },
+     {
+      "t": "text",
+      "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+     },
+     {
+      "t": "text",
+      "v": "ok"
+     }
+    ]
+   ]
+  },
+  {
+   "expect": "refuse",
+   "name": "unregistered_project",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-0000000000ff"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "project must be registered",
+   "setup": []
+  },
+  {
+   "expect": "accept",
+   "name": "claimed_uec1",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-1"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "a claimed value is UEC-1",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "claimed_uec2",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "D-045: a claimed value never carries a measured class",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "claimed_uec3",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-3"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "D-045: a claimed value never carries a measured class",
+   "setup": []
+  },
+  {
+   "expect": "accept",
+   "name": "uec0_without_value",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UEC-0 carries no value",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec0_with_value",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UEC-0 carries no value",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec2_declared_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "a declared input downgrades to UEC-1",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec3_declared_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-3"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "a declared input downgrades to UEC-1",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec2_uncharacterized_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "an uncharacterized contributor downgrades to UEC-1",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec3_uncharacterized_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-3"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "an uncharacterized contributor downgrades to UEC-1",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec1_declared_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UNC.UEC.CLASS: a declared input alone does not make a value UEC-1",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec1_no_label",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UNC.UEC.CLASS: a UEC-1 entry is claimed or rests on an uncharacterized contributor",
+   "setup": []
+  },
+  {
+   "expect": "accept",
+   "name": "uec1_uncharacterized_and_declared",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UEC-1 on an uncharacterized contributor may also rest on a declared input",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec1_claimed_and_uncharacterized",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-1"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UNC.UEC.CLASS: exactly one of claimed and uncharacterized_input",
+   "setup": []
+  },
+  {
+   "expect": "accept",
+   "name": "uec1_uncharacterized_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UEC-1 may rest on an uncharacterized contributor",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec0_claimed",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UEC-0 sets no labels",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec0_declared_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UEC-0 sets no labels",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "uec0_uncharacterized_input",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UEC-0 sets no labels",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "claimed_missing",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "labels are never defaulted",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "claimed_two",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "labels are 0 or 1",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "claimed_text",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "text",
+     "v": "yes"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "STRICT integer column",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "interpretation_missing",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "D-045 label is never defaulted",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "interpretation_settled",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "settled"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "fixed strings only",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "value_without_unit",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "value, unit and SI value go together",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "si_without_literal",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "value, unit and SI value go together",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "literal_with_letters",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "1.0mm"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "decimal literal charset",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "literal_65_chars",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "11111111111111111111111111111111111111111111111111111111111111111"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "literal at most 64",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "si_text",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "text",
+     "v": "one"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "STRICT real column",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "basis_measured",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "MEASURED"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "fixed strings only",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "entry_status_upper",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "OK"
+    }
+   ],
+   "rule": "fixed strings, exact case",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "record_status_deleted",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "deleted"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "fixed strings only",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "outcome_pass",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "PASS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "fixed strings only",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "decided_without_rule",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "a decided outcome names its rule",
+   "setup": []
+  },
+  {
+   "expect": "accept",
+   "name": "not_decidable_without_rule",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "NOT_DECIDABLE"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "NOT_DECIDABLE may have no rule",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "hash_upper_hex",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "lowercase digest",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "hash_sha1",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha1:0000000000000000000000000000000000000000"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "sha256 digest",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "hash_short",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "64 hex digits",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "seq_zero",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "journal positions start at 1",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "timestamp_offset",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00+01:00"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "UTC, ends in Z",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "timestamp_date_only",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "full instant",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "record_id_empty",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": ""
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "record ID 1..256 bytes",
+   "setup": []
+  },
+  {
+   "expect": "accept",
+   "name": "record_id_256_bytes",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "record ID 1..256 bytes",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "record_id_257_bytes",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "record ID 1..256 bytes",
+   "setup": []
+  },
+  {
+   "expect": "accept",
+   "name": "part_1024_bytes",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "part 1..1024 bytes",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "part_342_euro_signs",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "bounds are UTF-8 bytes (1026), not characters (342)",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "part_blob",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "blob",
+     "v": "41"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "STRICT text column",
+   "setup": []
+  },
+  {
+   "expect": "accept",
+   "name": "part_sql_text",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "x'); DELETE FROM entry; --"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "text is data",
+   "setup": []
+  },
+  {
+   "expect": "accept",
+   "name": "characteristic_bidi",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "\u202eevil\u202c"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "text is data",
+   "setup": []
+  },
+  {
+   "expect": "accept",
+   "name": "revision_null",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "null"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "revision is optional",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "revision_empty",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": ""
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "mm"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "present text is never empty",
+   "setup": []
+  },
+  {
+   "expect": "refuse",
+   "name": "unit_65_bytes",
+   "row": [
+    {
+     "t": "text",
+     "v": "01936b2e-7a00-7000-8000-000000000001"
+    },
+    {
+     "t": "text",
+     "v": "case-base"
+    },
+    {
+     "t": "text",
+     "v": "CASE-1"
+    },
+    {
+     "t": "text",
+     "v": "B"
+    },
+    {
+     "t": "text",
+     "v": "plan-1"
+    },
+    {
+     "t": "text",
+     "v": "run-1"
+    },
+    {
+     "t": "text",
+     "v": "released"
+    },
+    {
+     "t": "text",
+     "v": "flatness"
+    },
+    {
+     "t": "text",
+     "v": "2026-11-01T08:00:00Z"
+    },
+    {
+     "t": "text",
+     "v": "0.010"
+    },
+    {
+     "t": "text",
+     "v": "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu"
+    },
+    {
+     "t": "real",
+     "v": "1e-05"
+    },
+    {
+     "t": "text",
+     "v": "CONFORMS"
+    },
+    {
+     "t": "text",
+     "v": "unc.dec.simple@1"
+    },
+    {
+     "t": "text",
+     "v": "FEATURES"
+    },
+    {
+     "t": "text",
+     "v": "UEC-2"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "int",
+     "v": "0"
+    },
+    {
+     "t": "text",
+     "v": "signed_off"
+    },
+    {
+     "t": "text",
+     "v": "active"
+    },
+    {
+     "t": "int",
+     "v": "1"
+    },
+    {
+     "t": "text",
+     "v": "sha256:176e6b7101bdc2cc1280b63dcdc6e2a9924e63a134c4ed34198f46b04d0a5a2c"
+    },
+    {
+     "t": "text",
+     "v": "ok"
+    }
+   ],
+   "rule": "unit 1..64 bytes",
+   "setup": []
+  }
+ ],
+ "columns": [
+  "project_id",
+  "record_id",
+  "part",
+  "revision",
+  "plan",
+  "run",
+  "stage",
+  "characteristic",
+  "timestamp",
+  "value_literal",
+  "unit",
+  "si_value",
+  "decision_outcome",
+  "rule_id",
+  "evaluation_basis",
+  "uec_class",
+  "claimed",
+  "declared_input",
+  "uncharacterized_input",
+  "interpretation",
+  "record_status",
+  "journal_seq",
+  "journal_entry_hash",
+  "entry_status"
+ ],
+ "projects": [
+  [
+   "01936b2e-7a00-7000-8000-000000000001",
+   "bracket-line",
+   12,
+   "sha256:2a9a24ba5f598bb074a47c6e764f7645988f2a8dcba368c2ce738e0ad03adc5a",
+   "available"
+  ],
+  [
+   "01936b2e-7a00-7000-8000-000000000002",
+   "Housing",
+   7,
+   "sha256:d1052ffab72e43e803d5cc4288cf054d5c9e5734030aca25c227f3e83dbcfb65",
+   "available"
+  ],
+  [
+   "01936b2e-7a00-7000-8000-000000000003",
+   "fixture-test",
+   null,
+   null,
+   "unavailable"
+  ]
+ ]
+}

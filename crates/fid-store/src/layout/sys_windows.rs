@@ -119,6 +119,27 @@ impl Dir {
         Ok(Dir { path: self.path.clone(), held: self.held.clone() })
     }
 
+    /// Volume serial number and file index of this directory (`CORE.STO.LAYOUT` REQ-011).
+    pub(super) fn identity(&self) -> io::Result<super::FolderId> {
+        let h = self.held.last().ok_or_else(|| io::Error::other("directory handle missing"))?;
+        file_id(h)
+    }
+
+    /// Renames `from` to `to`, both entries of this directory. `winx` has no no-replace move
+    /// and FFI would need `unsafe`, so the target is checked to be absent and then moved with
+    /// `std::fs::rename`, which cannot replace a non-empty folder. An empty folder created at
+    /// `to` in between may be replaced; that race is accepted (maintainer decision, spec
+    /// `CORE.STO.LAYOUT` Design). The caller checks the target's identity afterwards.
+    pub(super) fn rename_noreplace(&self, from: &str, to: &str) -> io::Result<()> {
+        let target = self.path.join(to);
+        match fs::symlink_metadata(&target) {
+            Ok(_) => return Err(io::Error::new(io::ErrorKind::AlreadyExists, "the target exists")),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e),
+        }
+        fs::rename(self.path.join(from), target)
+    }
+
     pub(super) fn entries(&self) -> io::Result<Vec<(String, bool)>> {
         let mut out = Vec::new();
         for ent in fs::read_dir(&self.path)? {
@@ -156,6 +177,27 @@ impl Dir {
     pub(super) fn is_network(&self) -> io::Result<bool> {
         let canonical = fs::canonicalize(&self.path).unwrap_or_else(|_| self.path.clone());
         Ok(super::is_network_windows_path(&canonical.to_string_lossy()))
+    }
+
+    /// Whether a writer holds `name` (the lock file) open, probed without writing: an open for
+    /// read access that denies write sharing fails with a sharing violation while any handle
+    /// has the file open for writing, which the holder of [`Dir::try_lock`] does. Read access
+    /// suffices, so the probe works on read-only media too. A missing file is `false`.
+    pub(super) fn lock_held(&self, name: &str) -> io::Result<bool> {
+        let opened = OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ)
+            .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS)
+            .open(self.path.join(name));
+        match opened {
+            Ok(file) => {
+                check_file(&file)?;
+                Ok(false)
+            }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
+            Err(e) if matches!(e.raw_os_error(), Some(ERROR_SHARING_VIOLATION | ERROR_LOCK_VIOLATION)) => Ok(true),
+            Err(e) => Err(e),
+        }
     }
 
     pub(super) fn try_lock(&self, name: &str) -> io::Result<TryLock> {
@@ -204,6 +246,12 @@ impl LockHandle {
     pub(super) fn release(self) {
         drop(self.file);
     }
+}
+
+/// Volume serial number and file index of an open file or directory.
+pub(super) fn file_id(f: &File) -> io::Result<super::FolderId> {
+    let i = winx::winapi_util::file::information(f)?;
+    Ok(super::FolderId::from_parts(i.volume_serial_number(), i.file_index()))
 }
 
 pub(super) fn host_name() -> String {

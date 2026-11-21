@@ -47,6 +47,11 @@ mod sys_windows;
 #[cfg(windows)]
 use sys_windows as sys;
 
+mod folder;
+pub use folder::{CopyTarget, FolderId, VerifiedFolder};
+mod copy;
+pub use copy::{set_copy_hook, CopyStep, COPY_PREFIX};
+
 /// Layout version this build writes and the newest it can open.
 pub const LAYOUT_VERSION: u32 = 1;
 /// Prefix of the first line of the `format` file.
@@ -190,6 +195,18 @@ pub enum StoreError {
     /// The held lock file is no longer the file at `lock` (replaced by rename or deleted), so
     /// the lock no longer excludes other writers; writes stop.
     LockLost,
+    /// The folder opened is not the folder `CORE.BUS.POL.FS` verified (another folder, or a
+    /// link to one, was swapped in); code `outside_root` (REQ-011).
+    FolderSwapped,
+    /// A write open or a create on a folder resolved in an import root (REQ-011); code
+    /// `invariant_violated`, because the bus never hands a read-only folder to a write.
+    ReadOnlyTarget,
+    /// A read-only target whose database cannot be read without creating or writing a
+    /// `-wal` or `-shm` file (REQ-011).
+    ReadOnlyUnavailable,
+    /// A copied object does not match its digest, or the source lacks an object its database
+    /// references (REQ-012).
+    BlobCorrupt(String),
     Io(io::Error),
 }
 
@@ -209,6 +226,10 @@ impl StoreError {
             StoreError::LockMismatch(_) => "lock_mismatch",
             StoreError::NotRegularFile => "not_regular_file",
             StoreError::LockLost => "lock_lost",
+            StoreError::FolderSwapped => "outside_root",
+            StoreError::ReadOnlyTarget => "invariant_violated",
+            StoreError::ReadOnlyUnavailable => "read_only_unavailable",
+            StoreError::BlobCorrupt(_) => "blob_corrupt",
             StoreError::Io(_) => "io",
         }
     }
@@ -234,6 +255,14 @@ impl fmt::Display for StoreError {
             StoreError::LockMismatch(_) => write!(f, "lock_mismatch: the lock file names a different holder"),
             StoreError::NotRegularFile => write!(f, "not_regular_file: expected a regular file"),
             StoreError::LockLost => write!(f, "lock_lost: the lock file was replaced or removed"),
+            StoreError::FolderSwapped => write!(f, "outside_root: the folder is not the one that was verified"),
+            StoreError::ReadOnlyTarget => {
+                write!(f, "invariant_violated: a folder resolved in an import root was opened for writing")
+            }
+            StoreError::ReadOnlyUnavailable => {
+                write!(f, "read_only_unavailable: the database cannot be read without writing")
+            }
+            StoreError::BlobCorrupt(why) => write!(f, "blob_corrupt: {why}"),
             StoreError::Io(e) => write!(f, "io: {e}"),
         }
     }
@@ -308,6 +337,11 @@ impl ProjectLocation {
     pub fn create(path: &Path) -> Result<(ProjectLocation, Locked), StoreError> {
         let root = absolute_checked(path)?;
         let dir = sys::Dir::open(&root, true)?;
+        ProjectLocation::create_in(root, dir)
+    }
+
+    /// The body of [`ProjectLocation::create`] once the folder is open.
+    fn create_in(root: PathBuf, dir: sys::Dir) -> Result<(ProjectLocation, Locked), StoreError> {
         if !dir.entries()?.is_empty() {
             return Err(StoreError::NotEmpty);
         }
