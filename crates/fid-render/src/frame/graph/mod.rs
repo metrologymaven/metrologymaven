@@ -26,8 +26,9 @@ pub mod backend;
 pub mod passes;
 
 pub use backend::{
-    order_or_software, policy_order, policy_order_from_file, resolve_order, select, AdapterChoice, AdapterSource,
-    Attempt, Backend, Host, PolicyError, Selected, BACKEND_SETTING,
+    instance_backends, order_or_software, policy_order, policy_order_from_file, resolve_order, select,
+    select_excluding, AdapterChoice, AdapterSource, Attempt, Backend, Host, PolicyError, ProbeExclusions, Selected,
+    BACKEND_SETTING, REASON_PROBE_FAILED, REASON_PROBE_TIMEOUT,
 };
 pub use passes::{Pass, PassContext, PassDecl, PassId, PassList, TargetId, COLOUR, DEPTH, FRAME_TARGETS, ID};
 
@@ -117,21 +118,45 @@ pub struct GpuAdapter {
     pub queue: wgpu::Queue,
 }
 
-/// Adapters of a real wgpu instance over every backend compiled into this build.
+/// Adapters of a real wgpu instance over the backends it was created with.
 #[derive(Debug)]
 pub struct WgpuSource {
     instance: Option<wgpu::Instance>,
+    /// The wgpu backends of `instance` (empty when there is none).
+    backends: wgpu::Backends,
+    excluded: ProbeExclusions,
 }
 
 impl WgpuSource {
-    /// An instance over every compiled backend. With none compiled for this target, every
-    /// request fails with that reason (wgpu would panic on creating the instance).
+    /// An instance over every compiled backend, with nothing excluded. A caller that has a
+    /// `PLAT.GPU.DETECT` selection uses [`WgpuSource::for_choice`] instead, so a backend whose
+    /// probe hung is not entered again. With no backend compiled for this target, every request
+    /// fails with that reason (wgpu would panic on creating the instance).
     pub fn new() -> WgpuSource {
-        if wgpu::Instance::enabled_backend_features().is_empty() {
-            return WgpuSource { instance: None };
+        WgpuSource::for_choice(None, &ProbeExclusions::none())
+    }
+
+    /// An instance over only the backends [`instance_backends`] gives (the choice's backend
+    /// when a choice is given, never an excluded one), on this thread. When none of them is
+    /// compiled in, no instance is created. [`FrameGraph::create`] and [`FrameGraph::start`]
+    /// with this source never request an excluded backend. Pass the same `choice` to them.
+    pub fn for_choice(choice: Option<&AdapterChoice>, excluded: &ProbeExclusions) -> WgpuSource {
+        let backends = instance_backends(choice, excluded) & wgpu::Instance::enabled_backend_features();
+        if backends.is_empty() {
+            return WgpuSource { instance: None, backends, excluded: excluded.clone() };
         }
-        let desc = wgpu::InstanceDescriptor { backends: wgpu::Backends::all(), ..Default::default() };
-        WgpuSource { instance: Some(wgpu::Instance::new(&desc)) }
+        let desc = wgpu::InstanceDescriptor { backends, ..Default::default() };
+        WgpuSource { instance: Some(wgpu::Instance::new(&desc)), backends, excluded: excluded.clone() }
+    }
+
+    /// The wgpu backends the instance was created with (empty: no instance).
+    pub fn backends(&self) -> wgpu::Backends {
+        self.backends
+    }
+
+    /// The backends this source never requests.
+    pub fn excluded(&self) -> &ProbeExclusions {
+        &self.excluded
     }
 }
 
@@ -151,6 +176,9 @@ pub const REASON_NO_ADAPTER: &str = "no adapter";
 pub const REASON_NO_CPU_ADAPTER: &str = "no CPU adapter";
 /// Reason (hardware backend): only CPU adapters, which are tried as `software`.
 pub const REASON_ONLY_CPU: &str = "only CPU adapters (software is tried as its own backend)";
+/// Reason: the backend is compiled in but not part of this source's instance (it was created
+/// for another chosen backend, or every backend it could search is excluded).
+pub const REASON_NOT_IN_INSTANCE: &str = "backend not enabled on this instance (created for the chosen backend only)";
 /// Reason: an injected adapter choice matches no adapter of its backend.
 pub const REASON_CHOICE_ABSENT: &str = "the chosen adapter is not present";
 
@@ -206,13 +234,22 @@ impl AdapterSource for WgpuSource {
     type Adapter = GpuAdapter;
 
     fn request(&self, backend: Backend, choice: Option<&AdapterChoice>) -> Result<GpuAdapter, String> {
-        let Some(instance) = &self.instance else {
+        let compiled = wgpu::Instance::enabled_backend_features();
+        if compiled.is_empty() {
             return Err(REASON_NO_BACKEND_FOR_TARGET.into());
-        };
+        }
         let wanted = backend.wgpu_backends();
-        if !wgpu::Instance::enabled_backend_features().intersects(wanted) {
+        if !compiled.intersects(wanted) {
             return Err(REASON_NOT_COMPILED.into());
         }
+        if let Some(reason) = self.excluded.reason(backend) {
+            return Err(reason.into());
+        }
+        // Only the instance's backends (for `software`: every one not excluded).
+        let wanted = wanted & self.backends;
+        let Some(instance) = self.instance.as_ref().filter(|_| !wanted.is_empty()) else {
+            return Err(REASON_NOT_IN_INSTANCE.into());
+        };
         let adapters = instance.enumerate_adapters(wanted);
         if adapters.is_empty() {
             return Err(REASON_NO_ADAPTER.into());
@@ -383,13 +420,13 @@ pub struct FrameGraph {
 
 impl FrameGraph {
     /// Selects a backend from `source` in `order` (see [`resolve_order`]) and creates its
-    /// device.
+    /// device. The source's excluded backends are skipped ([`select_excluding`]).
     pub fn create(
         source: &WgpuSource,
         order: &[Backend],
         choice: Option<&AdapterChoice>,
     ) -> Result<FrameGraph, GraphError> {
-        let s = select(source, order, choice)?;
+        let s = select_excluding(source, order, choice, source.excluded())?;
         Ok(FrameGraph::from_selected(s))
     }
 
