@@ -13,7 +13,8 @@ use fid_pkg::reader::PackageReader;
 use fid_types::Digest;
 use fid_vreplay::compare::ResultInput;
 use fid_vreplay::select::{
-    plan, plan_with, ArtifactSource, Limits, MemberInfo, PackageError, PackageView, Reason, Selected, Selection,
+    plan, plan_with, ArtifactSource, InputSource, Limits, MemberInfo, PackageError, PackageView, Reason, Selected,
+    Selection,
 };
 
 const FIX: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/replay/select");
@@ -256,4 +257,43 @@ fn reader_errors_pass_through() {
     assert_eq!(err.reason(), Some("evidence_tier"));
     let err = plan(&mut Tier("points"), &Available(true)).unwrap_err();
     assert_eq!(err.reason(), Some("records_missing"));
+}
+
+#[test]
+fn a_non_kernel_re_emit_never_hides_the_kernel_step() {
+    // Review probe of #421: kernel fit at 2, a non-kernel step re-emitting its output C at 4
+    // (C also packaged), the distance at 5. The fit is planned and C comes from it.
+    let sel = select("shadow");
+    check("shadow", None, &sel);
+    assert_eq!(entry_indices(&sel, "distance"), [2, 5]);
+    let dist = &sel.plan.calls[1];
+    assert_eq!(dist.sources[0], InputSource::Call { call: 0, output: 0 });
+    assert_eq!(dist.sources[1], InputSource::Packaged(dist.inputs[1]));
+    assert_eq!(sel.plan.calls[0].outputs, vec![dist.inputs[0]]);
+    let Some(Selected::Replayable { substituted, .. }) = sel.results.iter().find(|r| r.record_id() == "distance")
+    else {
+        panic!("distance not replayable")
+    };
+    // The point sets stand in for their import steps and are disclosed; C is not among them.
+    assert_eq!(substituted.len(), 2);
+    assert!(substituted.iter().all(|(d, _)| *d != dist.inputs[0]));
+}
+
+#[test]
+fn every_kernel_input_has_a_planned_or_packaged_source() {
+    for case in ["points", "constructed", "reasons", "shadow", "missing-points"] {
+        let sel = select(case);
+        for (k, c) in sel.plan.calls.iter().enumerate() {
+            assert_eq!(c.sources.len(), c.inputs.len());
+            for (d, src) in c.inputs.iter().zip(&c.sources) {
+                match *src {
+                    InputSource::Call { call, output } => {
+                        assert!(call < k, "{case}: call {k} reads a later call");
+                        assert_eq!(sel.plan.calls[call].outputs[output], *d);
+                    }
+                    InputSource::Packaged(p) => assert_eq!(p, *d),
+                }
+            }
+        }
+    }
 }

@@ -25,8 +25,10 @@
 //! # Rules
 //!
 //! A *kernel call* is a `command` entry that names exactly one algorithm. The producer of a
-//! digest for a call at index `e` is the latest `command` entry before `e` that lists the digest
-//! among its outputs. For one record:
+//! digest for a call at index `e` is the latest kernel call before `e` that lists the digest
+//! among its outputs; only when no earlier kernel call outputs it is it the latest earlier
+//! non-kernel `command` entry. So a non-kernel step that re-emits a kernel output can never
+//! hide the kernel step. For one record:
 //!
 //! 1. basis `RESULTS_ONLY` → `BASIS_RESULTS_ONLY`; `DIRECT_READING` → `BASIS_DIRECT_READING`;
 //!    otherwise, in a package of evidence tier `results` → `BASIS_RESULTS_ONLY`;
@@ -36,16 +38,24 @@
 //!    kernel manifest (`ALGORITHM_UNKNOWN`), it must have been recorded under the packaged
 //!    kernel manifest (`KERNEL_UNAVAILABLE`), and its payload must carry `args` reproducing
 //!    `args_commit` (`ENTRY_MISSING`). For each input digest: a kernel-call producer joins the
-//!    closure (kernel outputs are always recomputed, even when also packaged); otherwise a
-//!    packaged `points/` member supplies the recorded output (REQ-003); otherwise the input is
-//!    missing: `POINTS_MISSING` when there is no producer or the producer is recorded as class
-//!    N, else `NON_KERNEL_STEP`;
+//!    closure and the input is sourced from that call's output ([`InputSource::Call`]): kernel
+//!    outputs are always recomputed, never taken from the package; otherwise a packaged
+//!    `points/` member supplies the recorded output (REQ-003, [`InputSource::Packaged`]), and if
+//!    a non-kernel step produced it the stand-in is disclosed in
+//!    [`Selected::Replayable::substituted`]; otherwise the input is missing: `POINTS_MISSING`
+//!    when there is no producer or the producer is recorded as class N, else `NON_KERNEL_STEP`;
 //! 4. a closure of more than [`MAX_PLAN_CALLS`] calls → `PLAN_TOO_LARGE` (REQ-005);
 //! 5. the kernel artifact must be obtainable ([`ArtifactSource`]) → `KERNEL_UNAVAILABLE`.
 //!
-//! When several reasons apply, the primary one is the first in [`Reason::ALL`] (the order
-//! REQ-001 lists them, then `PLAN_TOO_LARGE`), and the detail is the smallest detail string of
+//! Rules 1 and 2 decide before any walk, and rule 4 aborts the walk: so a result whose own entry
+//! is `ENTRY_MISSING` or `NON_KERNEL_STEP` (`not_found`, `not_a_command`, `algorithm_mismatch`,
+//! `root_not_kernel`), or whose closure is `PLAN_TOO_LARGE`, gets that reason even if its
+//! closure would also have shown an earlier-listed one. Otherwise the walk visits the whole
+//! closure and, when several reasons apply, the primary one is the first in [`Reason::ALL`]
+//! (the order REQ-001 lists them, then `PLAN_TOO_LARGE`), with the smallest detail string of
 //! that reason, so the choice never depends on walk order.
+//!
+//! Record IDs must be unique: a repeated ID is `pkg.malformed` `duplicate_record_id`.
 //!
 //! # What is trusted
 //!
@@ -293,6 +303,20 @@ impl From<&NotReplayable> for ResultInput {
 /// Index into [`ReplayPlan::calls`].
 pub type CallIndex = usize;
 
+/// Where a kernel call's input comes from during replay.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum InputSource {
+    /// Output number `output` of an earlier call of the plan (its recomputed value).
+    Call {
+        /// The producing call.
+        call: CallIndex,
+        /// Index into that call's [`KernelCall::outputs`].
+        output: usize,
+    },
+    /// The verified bytes of the packaged member `points/<hex>.<ext>` with this digest.
+    Packaged(Digest),
+}
+
 /// One kernel call to replay.
 #[derive(Debug, Clone, PartialEq)]
 pub struct KernelCall {
@@ -308,6 +332,10 @@ pub struct KernelCall {
     pub seed: Option<u64>,
     /// Input digests, in recorded order.
     pub inputs: Vec<Digest>,
+    /// Source of each input, parallel to [`KernelCall::inputs`].
+    pub sources: Vec<InputSource>,
+    /// Output digests as recorded, in recorded order.
+    pub outputs: Vec<Digest>,
 }
 
 impl KernelCall {
@@ -339,6 +367,10 @@ pub enum Selected {
         algorithm_id: String,
         /// The calls of its closure, ascending; the last one is its own call.
         calls: Vec<CallIndex>,
+        /// Every recorded intermediate that stands in for a step the verifier does not
+        /// recompute: (packaged digest, hash of the non-kernel entry that produced it), sorted.
+        /// Non-empty means the confirmation rests on recorded intermediates.
+        substituted: Vec<(Digest, Digest)>,
     },
     /// Not replayable.
     NotReplayable(NotReplayable),
@@ -389,6 +421,25 @@ impl Selection {
                 m.insert("params".to_string(), c.params.clone());
                 m.insert("seed".to_string(), c.seed.map_or(CValue::Null, |x| s(&x.to_string())));
                 m.insert("inputs".to_string(), CValue::Arr(c.inputs.iter().map(|d| s(d.as_str())).collect()));
+                m.insert("outputs".to_string(), CValue::Arr(c.outputs.iter().map(|d| s(d.as_str())).collect()));
+                let sources = c
+                    .sources
+                    .iter()
+                    .map(|src| {
+                        let mut o = BTreeMap::new();
+                        match src {
+                            InputSource::Call { call, output } => {
+                                o.insert("call".to_string(), s(&call.to_string()));
+                                o.insert("output".to_string(), s(&output.to_string()));
+                            }
+                            InputSource::Packaged(d) => {
+                                o.insert("packaged".to_string(), s(d.as_str()));
+                            }
+                        }
+                        CValue::Obj(o)
+                    })
+                    .collect();
+                m.insert("sources".to_string(), CValue::Arr(sources));
                 CValue::Obj(m)
             })
             .collect();
@@ -399,7 +450,17 @@ impl Selection {
                 let mut m = BTreeMap::new();
                 m.insert("record_id".to_string(), s(r.record_id()));
                 match r {
-                    Selected::Replayable { algorithm_id, calls, .. } => {
+                    Selected::Replayable { algorithm_id, calls, substituted, .. } => {
+                        let subst = substituted
+                            .iter()
+                            .map(|(d, h)| {
+                                let mut o = BTreeMap::new();
+                                o.insert("digest".to_string(), s(d.as_str()));
+                                o.insert("producer".to_string(), s(h.as_str()));
+                                CValue::Obj(o)
+                            })
+                            .collect();
+                        m.insert("substituted".to_string(), CValue::Arr(subst));
                         m.insert("replayable".to_string(), CValue::Bool(true));
                         m.insert("algorithm_id".to_string(), s(algorithm_id));
                         m.insert("calls".to_string(), CValue::Arr(calls.iter().map(|i| s(&i.to_string())).collect()));
@@ -881,12 +942,15 @@ pub fn plan_with(
     };
 
     let mut by_hash: BTreeMap<Digest, usize> = BTreeMap::new();
-    let mut producers: BTreeMap<Digest, Vec<usize>> = BTreeMap::new();
+    // Producers by output digest, kernel calls and other commands apart (ascending indices).
+    let mut kernel_producers: BTreeMap<Digest, Vec<usize>> = BTreeMap::new();
+    let mut other_producers: BTreeMap<Digest, Vec<usize>> = BTreeMap::new();
     for (i, e) in entries.iter().enumerate() {
         if by_hash.insert(e.hash, i).is_some() {
             return Err(bad(SEGMENT_PATH, "duplicate_entry_hash", format!("line {i}: {}", e.hash)));
         }
         if let Some(c) = &e.command {
+            let producers = if e.kernel_algorithm().is_some() { &mut kernel_producers } else { &mut other_producers };
             for o in &c.outputs {
                 let list = producers.entry(*o).or_default();
                 if list.last() != Some(&i) {
@@ -898,7 +962,8 @@ pub fn plan_with(
 
     let mut w = Walker {
         entries: &entries,
-        producers: &producers,
+        kernel_producers: &kernel_producers,
+        other_producers: &other_producers,
         points: &points,
         algorithms: algorithms.as_ref(),
         kernel_digest,
@@ -911,7 +976,11 @@ pub fn plan_with(
 
     let mut results = Vec::with_capacity(records.len());
     let mut closures: Vec<(usize, BTreeSet<usize>)> = Vec::new();
+    let mut seen_ids: BTreeSet<&str> = BTreeSet::new();
     for r in &records {
+        if !seen_ids.insert(&r.id) {
+            return Err(bad(RECORDS_PATH, "duplicate_record_id", format!("{:?}", r.id)));
+        }
         let nr = |reason: Reason, detail: String| {
             Selected::NotReplayable(NotReplayable { record_id: r.id.clone(), reason, detail })
         };
@@ -920,12 +989,13 @@ pub fn plan_with(
             (Basis::DirectReading, _) => nr(Reason::BasisDirectReading, "evaluation_basis=DIRECT_READING".into()),
             (_, Tier::Results) => nr(Reason::BasisResultsOnly, "evidence_tier=results".into()),
             (Basis::Points | Basis::Features, Tier::Points | Tier::Features) => match w.record(r, &by_hash) {
-                Ok(closure) => {
+                Ok((closure, substituted)) => {
                     closures.push((results.len(), closure));
                     Selected::Replayable {
                         record_id: r.id.clone(),
                         algorithm_id: r.algorithm.clone(),
                         calls: Vec::new(),
+                        substituted: substituted.into_iter().collect(),
                     }
                 }
                 Err((reason, detail)) => nr(reason, detail),
@@ -941,6 +1011,26 @@ pub fn plan_with(
         let Some(entry) = entries.get(e) else { continue };
         let (Some(c), Some(alg)) = (&entry.command, entry.kernel_algorithm()) else { continue };
         let Some(Ok(params)) = &c.args else { continue };
+        let mut sources = Vec::with_capacity(c.inputs.len());
+        for d in &c.inputs {
+            let (kernel, _) = w.producer(d, e);
+            let source = match kernel {
+                Some(p) => {
+                    let call = position.get(&p).copied();
+                    let output = entries
+                        .get(p)
+                        .and_then(|pe| pe.command.as_ref())
+                        .and_then(|pc| pc.outputs.iter().position(|o| o == d));
+                    match (call, output) {
+                        (Some(call), Some(output)) => InputSource::Call { call, output },
+                        _ => return Err(bad(SEGMENT_PATH, "plan", format!("line {e}: producer of {d} not planned"))),
+                    }
+                }
+                None if points.contains(d) => InputSource::Packaged(*d),
+                None => return Err(bad(SEGMENT_PATH, "plan", format!("line {e}: input {d} has no source"))),
+            };
+            sources.push(source);
+        }
         calls.push(KernelCall {
             entry_index: e,
             entry_hash: entry.hash,
@@ -948,6 +1038,8 @@ pub fn plan_with(
             params: params.clone(),
             seed: Some(c.seed),
             inputs: c.inputs.clone(),
+            sources,
+            outputs: c.outputs.clone(),
         });
     }
     let mut plan_results = Vec::with_capacity(closures.len());
@@ -962,10 +1054,13 @@ pub fn plan_with(
 }
 
 type Fail = (Reason, String);
+/// (packaged digest, producing non-kernel entry hash).
+type Stand = (Digest, Digest);
 
 struct Walker<'a> {
     entries: &'a [Entry],
-    producers: &'a BTreeMap<Digest, Vec<usize>>,
+    kernel_producers: &'a BTreeMap<Digest, Vec<usize>>,
+    other_producers: &'a BTreeMap<Digest, Vec<usize>>,
     points: &'a BTreeSet<Digest>,
     algorithms: Option<&'a BTreeSet<String>>,
     kernel_digest: Digest,
@@ -986,14 +1081,23 @@ impl<'a> Walker<'a> {
         !self.exhausted
     }
 
-    fn producer(&self, d: &Digest, before: usize) -> Option<usize> {
-        let list = self.producers.get(d)?;
-        let n = list.partition_point(|&i| i < before);
-        n.checked_sub(1).and_then(|k| list.get(k).copied())
+    /// (latest earlier kernel-call producer, latest earlier non-kernel producer) of `d`. A
+    /// kernel producer, when there is one, is always the producer.
+    fn producer(&self, d: &Digest, before: usize) -> (Option<usize>, Option<usize>) {
+        let latest = |map: &BTreeMap<Digest, Vec<usize>>| {
+            let list = map.get(d)?;
+            let n = list.partition_point(|&i| i < before);
+            n.checked_sub(1).and_then(|k| list.get(k).copied())
+        };
+        (latest(self.kernel_producers), latest(self.other_producers))
     }
 
     /// The closure of a record's call, or its primary reason.
-    fn record(&mut self, r: &Record, by_hash: &BTreeMap<Digest, usize>) -> Result<BTreeSet<usize>, Fail> {
+    fn record(
+        &mut self,
+        r: &Record,
+        by_hash: &BTreeMap<Digest, usize>,
+    ) -> Result<(BTreeSet<usize>, BTreeSet<Stand>), Fail> {
         let entries: &'a [Entry] = self.entries;
         let budget_fail = || (Reason::PlanTooLarge, "work_budget".to_string());
         if self.exhausted {
@@ -1020,6 +1124,7 @@ impl<'a> Walker<'a> {
             fails.entry(reason).or_default().insert(detail);
         };
         let mut visited: BTreeSet<usize> = BTreeSet::new();
+        let mut substituted: BTreeSet<Stand> = BTreeSet::new();
         let mut stack = vec![root];
         while let Some(e) = stack.pop() {
             if !visited.insert(e) {
@@ -1048,13 +1153,20 @@ impl<'a> Walker<'a> {
                 if !self.spend() {
                     return Err(budget_fail());
                 }
-                let prod = self.producer(d, e);
-                let prod_entry = prod.and_then(|p| entries.get(p));
-                match (prod, prod_entry) {
-                    (Some(p), Some(pe)) if pe.kernel_algorithm().is_some() => stack.push(p),
-                    _ if self.points.contains(d) => {}
-                    (_, None) => add(Reason::PointsMissing, d.to_string()),
-                    (_, Some(pe)) => match &pe.command {
+                let (kernel, other) = self.producer(d, e);
+                if let Some(p) = kernel {
+                    stack.push(p);
+                    continue;
+                }
+                let prod_entry = other.and_then(|p| entries.get(p));
+                match prod_entry {
+                    _ if self.points.contains(d) => {
+                        if let Some(pe) = prod_entry {
+                            substituted.insert((*d, pe.hash));
+                        }
+                    }
+                    None => add(Reason::PointsMissing, d.to_string()),
+                    Some(pe) => match &pe.command {
                         Some(pc) if !pc.determinism_n => {
                             add(Reason::NonKernelStep, format!("not_recomputable:{}", pe.hash));
                         }
@@ -1071,7 +1183,7 @@ impl<'a> Walker<'a> {
                 return Err((reason, detail.clone()));
             }
         }
-        Ok(visited)
+        Ok((visited, substituted))
     }
 
     fn artifact_available(&mut self) -> bool {

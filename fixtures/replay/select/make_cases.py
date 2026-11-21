@@ -258,6 +258,14 @@ def select(case, available=True, max_calls=MAX_PLAN_CALLS, work_budget=WORK_BUDG
         h = entries[i]["header"]
         return h["kind"] == "command" and len(h["command"]["algorithms"]) == 1
 
+    def producer(d, e):
+        """(latest earlier kernel producer, latest earlier non-kernel producer); a kernel
+        producer always wins, so a non-kernel re-emit can never hide a kernel step."""
+        earlier = [i for i in producers.get(d, []) if i < e]
+        kernel = [i for i in earlier if is_kernel(i)]
+        other = [i for i in earlier if not is_kernel(i)]
+        return (kernel[-1] if kernel else None), (other[-1] if other else None)
+
     budget = [work_budget]
     exhausted = [False]
 
@@ -305,6 +313,7 @@ def select(case, available=True, max_calls=MAX_PLAN_CALLS, work_budget=WORK_BUDG
         fails = {}
         too_large = None
         visited = set()
+        substituted = set()
         stack = [root]
         while stack:
             e = stack.pop()
@@ -334,12 +343,13 @@ def select(case, available=True, max_calls=MAX_PLAN_CALLS, work_budget=WORK_BUDG
                 if not spend():
                     too_large = "work_budget"
                     break
-                earlier = [i for i in producers.get(d, []) if i < e]
-                prod = earlier[-1] if earlier else None
-                if prod is not None and is_kernel(prod):
-                    stack.append(prod)
+                kprod, prod = producer(d, e)
+                if kprod is not None:
+                    stack.append(kprod)
                 elif d in points:
-                    pass  # recorded output substituted (REQ-003)
+                    # Recorded output stands in (REQ-003); disclosed when a step produced it.
+                    if prod is not None:
+                        substituted.add((d, entries[prod]["header"]["hash"]))
                 elif prod is None or entries[prod]["header"]["command"]["determinism"] == "N":
                     fails.setdefault("POINTS_MISSING", set()).add(d)
                 else:
@@ -357,7 +367,8 @@ def select(case, available=True, max_calls=MAX_PLAN_CALLS, work_budget=WORK_BUDG
             nr(primary, min(fails[primary]))
             continue
         closures[len(results)] = visited
-        results.append({"record_id": rid, "replayable": True, "algorithm_id": rec["algorithm"], "calls": None})
+        results.append({"record_id": rid, "replayable": True, "algorithm_id": rec["algorithm"], "calls": None,
+                        "substituted": [{"digest": d, "producer": h} for d, h in sorted(substituted)]})
 
     used = sorted(set().union(*closures.values())) if closures else []
     pos = {e: k for k, e in enumerate(used)}
@@ -365,6 +376,15 @@ def select(case, available=True, max_calls=MAX_PLAN_CALLS, work_budget=WORK_BUDG
     for e in used:
         h = entries[e]["header"]
         c = h["command"]
+        sources = []
+        for i in c["inputs"]:
+            kprod, _ = producer(i["digest"], e)
+            if kprod is not None:
+                outs = [o["digest"] for o in entries[kprod]["header"]["command"]["outputs"]]
+                sources.append({"call": str(pos[kprod]), "output": str(outs.index(i["digest"]))})
+            else:
+                assert i["digest"] in points
+                sources.append({"packaged": i["digest"]})
         calls.append({
             "entry_index": str(e),
             "entry_hash": h["hash"],
@@ -372,6 +392,8 @@ def select(case, available=True, max_calls=MAX_PLAN_CALLS, work_budget=WORK_BUDG
             "params": entries[e]["payload"]["args"],
             "seed": c["seed"],
             "inputs": [i["digest"] for i in c["inputs"]],
+            "outputs": [o["digest"] for o in c["outputs"]],
+            "sources": sources,
         })
     for k, visited in closures.items():
         results[k]["calls"] = [str(pos[e]) for e in sorted(visited)]
@@ -524,6 +546,22 @@ def case_reasons():
     return c
 
 
+def case_shadow():
+    """Review probe: a kernel fit at 2, a non-kernel step re-emitting its output C at 4 (C
+    packaged), the distance at 5. The fit is planned and C comes from it, not the package."""
+    c = base_case()
+    p = add_points(c, "probe")
+    body = points_body("re-emitted circle")
+    fc = digest_of(body)
+    c["points"][fc] = body
+    hfit = c["journal"].command("gdt.fit_circle", [FIT], [p], [fc], FIT_ARGS)
+    q = add_points(c, "probe second")
+    c["journal"].command("feature.export", [], [fc], [fc], {"format": "copy"}, determinism="D0")
+    hd = c["journal"].command("gdt.distance", [DIST], [fc, q], [label_digest("distance probe")], DIST_ARGS)
+    c["records"] = [record("distance", "POINTS", DIST, hd, [p, q]), record("circle", "POINTS", FIT, hfit, [p])]
+    return c
+
+
 CASES = {
     "points": case_points,
     "results": case_results,
@@ -531,6 +569,7 @@ CASES = {
     "constructed": case_constructed,
     "unknown-algo": case_unknown_algo,
     "reasons": case_reasons,
+    "shadow": case_shadow,
 }
 
 # Variants: (case, variant name, select() keyword arguments).
@@ -570,6 +609,7 @@ LABELS = {
         "dependency-fails": "KERNEL_UNAVAILABLE",
         "algorithm-unknown": "ALGORITHM_UNKNOWN",
     },
+    "shadow": {"distance": ("ok", [2, 5]), "circle": ("ok", [2])},
     "points.unavailable": {"hole-1": "KERNEL_UNAVAILABLE", "hole-2": "KERNEL_UNAVAILABLE",
                            "hole-3": "KERNEL_UNAVAILABLE"},
     "points.budget0": {"hole-1": "PLAN_TOO_LARGE", "hole-2": "PLAN_TOO_LARGE", "hole-3": "PLAN_TOO_LARGE"},
@@ -692,6 +732,10 @@ def malformed_cases():
     c["kernel_body"] = canon(doc)
     c["kernel_digest"] = sha(c["kernel_body"].encode("utf-8"))
     out.append(("kernel-core-digest", package_bytes(c), "pkg.malformed", "kernel_manifest"))
+
+    c = case_points()
+    c["records"][1]["id"] = c["records"][0]["id"]
+    out.append(("duplicate-record-id", package_bytes(c), "pkg.malformed", "duplicate_record_id"))
 
     c = case_points()
     c["records"] = None

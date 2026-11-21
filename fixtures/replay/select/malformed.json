@@ -50,6 +50,11 @@
     "reason": "kernel_manifest"
   },
   {
+    "name": "duplicate-record-id",
+    "code": "pkg.malformed",
+    "reason": "duplicate_record_id"
+  },
+  {
     "name": "records-absent",
     "code": "pkg.malformed",
     "reason": "records_missing"
