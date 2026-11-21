@@ -19,7 +19,7 @@ determinism: D2
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # CORE.STO.SQL.CRASH: Crash and power-loss harness
@@ -72,6 +72,10 @@ None stored; all data is generated from the seed. CI jobs on the Tier 1 OS runne
 - Which fault-injecting layer to use on Linux CI (a device-mapper log-writes target or a FUSE layer) is [unverified]; Windows and macOS have no power-loss mode, and the gap must be stated in the platform matrix.
 - Built (fid-crash): the Linux power-loss mode uses the kernel's dm-flakey target with `drop_writes` (switched with `dmsetup suspend --nolockfs`, then unmount and remount), in `.github/workflows/crash-power-loss.yml`. That job is the only evidence for REQ-004 and AC-3; it runs nightly, on demand and on path-filtered PRs, and is not a required check. The harness lives in its own `test-support` crate `fid-crash` (with `cargo xtask crash-harness` running it) rather than inside `fid-xtask`, because it links `fid-store` and therefore builds SQLite, which `fid-xtask` must not need. Its default features reach only model-layer crates (`fid-store`, `fid-canon`, `fid-types`), so `CORE.JRN.CHAIN` (`fid-journal`, model) can use it as a dev-dependency for REQ-006; the mapping to bus errors (`fid-bus`, engine) is behind its optional `bus-errors` feature.
 - **Follow-up for PLAT.MATRIX:** Windows and macOS have no power-loss mode (no dm-flakey equivalent on those CI runners); only kill-based crash testing runs there. The platform matrix (`platform/support-matrix.toml`, owned by `PLAT.MATRIX`) should state this gap for `CORE.STO.SQL.CRASH`; not done here (lane rule).
+
+## Change log
+
+- Harness behaviour amended 2026-11-20 (fix of a Windows flake in AC-1, maintainer decision): the run summary also reports the commits each check found beyond those acknowledged in that writer life (`unacked`, and `max_unacked` after one kill). AC-1's test now requires at most one such commit per kill (the one in flight at the kill, so no acknowledgement can be lost in the pipe drain) and `recovered == acked + unacked`, and its liveness floor is that kills landed both after acknowledged commits and between a commit taking effect and its acknowledgement, in place of a fixed `acked > kills / 10`, which assumed Linux commit times (Windows runners acknowledged 88 and 91 of a needed 101 while every check passed).
 
 ## Children
 

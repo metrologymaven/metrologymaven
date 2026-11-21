@@ -137,6 +137,11 @@ impl Writer {
         // An error here means the process already exited; reaping below tells.
         let _ = self.child.kill();
         self.child.wait().map_err(|e| format!("reap writer: {e}"))?;
+        // Reaping first loses nothing on any OS: each `ACK` was a completed write into the
+        // pipe before the kill, and the pipe keeps it after the writer's end is closed (on
+        // Windows a read returns the buffered bytes, then ERROR_BROKEN_PIPE, which std reads
+        // as end of file). Reading until the reader thread disconnects drains all of it;
+        // `Summary::max_unacked` checks that no acknowledgement went missing.
         loop {
             match self.lines.recv_timeout(WATCHDOG) {
                 Ok(line) => self.note(&line),
@@ -223,6 +228,15 @@ pub struct Summary {
     pub acked: u64,
     /// Rows found by the last check of each store, summed.
     pub recovered: u64,
+    /// Commits found by the check after a kill beyond those the writer acknowledged in that
+    /// life (the kill landed after the commit took effect and before its `ACK` was written),
+    /// summed over all kills. With [`StoreAdapter`](crate::adapter::StoreAdapter),
+    /// `recovered == acked + unacked`.
+    pub unacked: u64,
+    /// The most such commits after one kill. A writer acknowledges each commit before it
+    /// starts the next, so at most one commit per life can be unacknowledged; more means
+    /// acknowledgements were lost between the writer and the harness.
+    pub max_unacked: u64,
 }
 
 fn refused(detail: String) -> CrashFailure {
@@ -256,6 +270,7 @@ pub fn run(config: &Config, adapter: &dyn CrashAdapter, log: &mut dyn Write) -> 
         };
         if i as u64 % rotate == 0 {
             summary.recovered += last_n;
+            last_n = 0;
             if !root.as_os_str().is_empty() {
                 let _ = std::fs::remove_dir_all(&root);
             }
@@ -279,14 +294,21 @@ pub fn run(config: &Config, adapter: &dyn CrashAdapter, log: &mut dyn Write) -> 
         if let Some(p) = &config.power {
             p.cut().map_err(|e| fail(refused(format!("power cut: {e}")), log))?;
         }
-        summary.acked += acks.len() as u64;
+        let acks_now = acks.len() as u64;
+        summary.acked += acks_now;
         acked.extend(acks);
         // The check opens the store for writing (WAL recovery, checkpoint, lock takeover), so
         // the post-crash database files are copied first and kept if the check fails.
         let image = config.work_dir.join("post-crash");
         let saved = snapshot(&root, &image);
         match adapter.check(&root, &acked) {
-            Ok(n) => last_n = n,
+            Ok(n) => {
+                // Rows this writer life added beyond the ones it acknowledged.
+                let extra = n.saturating_sub(last_n).saturating_sub(acks_now);
+                summary.unacked += extra;
+                summary.max_unacked = summary.max_unacked.max(extra);
+                last_n = n;
+            }
             Err(f) => {
                 let f = fail(f, log);
                 match saved {
@@ -310,8 +332,15 @@ pub fn run(config: &Config, adapter: &dyn CrashAdapter, log: &mut dyn Write) -> 
     summary.recovered += last_n;
     let _ = writeln!(
         log,
-        "ok: seed {}, {} kills on {} stores, {} acknowledged commits, {} rows recovered",
-        config.seed, summary.kills, summary.stores, summary.acked, summary.recovered
+        "ok: seed {}, {} kills on {} stores, {} acknowledged commits, {} rows recovered, \
+         {} commits unacknowledged at the kill (at most {} after one kill)",
+        config.seed,
+        summary.kills,
+        summary.stores,
+        summary.acked,
+        summary.recovered,
+        summary.unacked,
+        summary.max_unacked
     );
     Ok(summary)
 }
