@@ -5,12 +5,14 @@
 # baseline): a token, status or palette change that breaks a contrast, colour-vision, immutability
 # or structure rule fails this step.
 cargo run -q -p fid-design -- color-check --root design --baseline fixtures/ux/tokens/check/palette-baseline.json
+cargo xtask convergence-doc --manifest fixtures/aln/qa/hist-manifest/fixed.json --check fixtures/aln/qa/hist-manifest/expected-fragment.md
 python -m unittest discover -s tools/house_rules/tests -v
 python -m unittest discover -s tools/repo_template/tests -v
 python -m unittest discover -s tools/tests -v
 python crates/fid-report-pdf/fontgen/make_fonts.py --check
 python fixtures/agent/harness/runs/make_runs.py --check
 python fixtures/aln/bfit/make_constr_fixtures.py --check
+python fixtures/aln/qa/hist-manifest/make_expected.py --check
 python fixtures/aln/qa/make_report_fixtures.py --check
 python fixtures/auto/cli/out/make_cases.py --check
 python fixtures/auto/surf/gen/make_fixtures.py --check

@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-align-solve, fid-xtask]
 satisfies: [REQ-ALN.QA-003, REQ-ALN.QA-004]
 covers: []
 depends_on: [CORE.REG, KRN.NUM]
@@ -78,6 +79,8 @@ Two things every iterative alignment method must provide: a per-iteration conver
 ## Open questions
 
 - None blocking.
+- **As built:** the history is `fid_align_solve::hist` (`ConvergenceHistory`, `HistoryRecorder`); `finish` takes the final pose as an ALN.BFIT.CONSTR `CertifiedPose`, never a bare `Rigid`. Iteration numbers must run 1, 2, 3, ... (`history_bad_iteration`), values must be finite (`history_non_finite`) and increments non-negative (`history_negative_increment`), beyond the spec's `history_overflow`. The check and fragment are `cargo xtask convergence-check` / `convergence-doc` (`fid-xtask`, module `convergence`); a malformed block value is `manifest_field_invalid`, a repeated command `manifest_duplicate_command`.
+- **Needs CORE.REG.DEF:** `CommandDef` has no `iterative` marking and no `convergence` block yet, so the check reads them from a manifest-shaped file (as `registry-gate` reads its current declarations). Proposed: CORE.REG.DEF adds both fields to the definition and its manifest form, and CI then runs `convergence-check` on the exported workspace manifest and `convergence-doc --check` on the committed docs fragment. No iterative command exists on main yet.
 
 ## Children
 
