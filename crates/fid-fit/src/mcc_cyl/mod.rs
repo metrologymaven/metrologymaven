@@ -68,29 +68,26 @@
 //!     `local_optimum_only` or `suspect_axis`, and a [`Optimality::StrictLocal`] fit whose
 //!     global cross-check (rule 11) did not pass, as [`FitError::FlaggedFit`];
 //!     [`fit_mcc_cylinder`] returns flagged fits with their flags.
-//! 11. **Global cross-check** (free direction only; review of #374). Every start lies in a
+//! 11. **Global cross-check** (free direction only; reviews of #374). Every start lies in a
 //!     small box about the least-squares axis, so a certified strict local minimum can be far
 //!     from the global one (a short pilot diameter with ovality: the near-axis minimum is
-//!     beaten by a cylinder lying across the pilot). With the fixed direction the problem is
-//!     convex, so for a direction `D` its minimum `R_D` is global along `D` and an upper bound
-//!     on the global minimum. Directions: the three principal axes of [`data_shape`] (the
-//!     smallest is the least-squares plane normal) and the frame axis of rule 4. For each,
-//!     bounds `lower <= R_D <= upper` in metres: first half the largest distance between two
-//!     projected points (`lower`) and the largest distance from their midpoint (`upper`, a
-//!     feasible cylinder); when these decide nothing, the certified fixed-direction fit of
-//!     rules 5 to 9 (one start), whose radius is both bounds. With `R` the certified radius and
-//!     `tol = CROSS_TOL * R +` the value bounds of both certificates (metres), the direction is
-//!     `better` when `upper < R - tol` (the fit is not the global minimum), `passed` when
-//!     `lower >= R - tol`, else `inconclusive` (the fixed-direction fit did not certify). The
-//!     cross-check passes when every direction passed; otherwise the fit is
-//!     `local_optimum_only` (and so refused by the trait). The better cylinder is not returned:
-//!     it is global for its direction only, not a certified minimum of the free problem.
+//!     beaten by a tilted or crosswise cylinder), and a check along a few fixed directions
+//!     can miss the better one. `global` runs a branch and bound over a cap cover of every
+//!     axis direction (icosahedral faces split into four), with lower bounds over a cap from
+//!     a farthest pair and from a support set (Lipschitz in the direction) and upper bounds
+//!     from feasible cylinders at cap centres; its documentation has the bounds and their
+//!     proofs. With `R` the certified radius and `tol = CROSS_TOL * R +` the certificate's
+//!     value bound, the outcome is `passed` (no cylinder smaller than `R - tol`), `better` (a
+//!     feasible cylinder smaller than that) or `inconclusive` (the depth or work limit ran
+//!     out). Anything but `passed` makes the fit `local_optimum_only` (so refused by the
+//!     trait). The better cylinder is not returned (it is feasible, not a certified minimum).
 //!
 //! # Determinism
 //!
 //! D0 for a given seed: single thread, no FMA, no `f64::min`/`max`, every sum, dot product and
 //! norm through `fid_num::red`, the KNP-1 conic solver of `fid-solv`, no hash containers.
 
+mod global;
 mod problem;
 
 use core::cmp::Ordering;
@@ -159,14 +156,14 @@ impl Optimality {
     }
 }
 
-/// The outcome of one direction of the global cross-check (rule 11).
+/// The outcome of the global cross-check (rule 11).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CrossOutcome {
-    /// The minimum along the direction is not below the fit's radius (within `tol`).
+    /// No cylinder, in any direction, is smaller than the fit's radius less `tol`.
     Passed,
-    /// A cylinder along the direction is smaller: the fit is not the global minimum.
+    /// A feasible cylinder is smaller: the fit is not the global minimum.
     Better,
-    /// The bounds decide nothing and the fixed-direction fit did not certify.
+    /// The work limits ran out before every cap was decided.
     Inconclusive,
 }
 
@@ -181,17 +178,17 @@ impl CrossOutcome {
     }
 }
 
-/// One direction of the global cross-check (rule 11), metres.
+/// The global cross-check of a free-direction fit (rule 11).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CrossCheck {
-    /// The direction (unit).
-    pub direction: V3,
-    /// Bounds on the smallest enclosing cylinder along `direction`.
-    pub lower: f64,
-    pub upper: f64,
-    /// The bounds are the certified fixed-direction fit's radius (else the pair bounds).
-    pub certified: bool,
     pub outcome: CrossOutcome,
+    /// Cap tests and full (all-point) tests run, and the deepest cap level reached.
+    pub caps: u32,
+    pub full_tests: u32,
+    pub depth: u32,
+    /// `better`: a direction (unit) and the radius of a feasible cylinder along it (metres),
+    /// smaller than the fit's.
+    pub better: Option<(V3, f64)>,
 }
 
 /// A minimum circumscribed cylinder with its record (REQ-002).
@@ -216,10 +213,9 @@ pub struct MccCylinder {
     /// Starts disagree, a start converged but did not certify, the least-squares start was
     /// flagged, or the global cross-check did not pass.
     pub local_optimum_only: bool,
-    /// The global cross-check (rule 11): one record per direction (empty for a fixed
-    /// direction) and whether every direction passed (true for a fixed direction, whose
-    /// certified minimum is global).
-    pub cross_check: Vec<CrossCheck>,
+    /// The global cross-check (rule 11; `None` for a fixed direction) and whether it passed
+    /// (true for a fixed direction, whose certified minimum is global).
+    pub cross_check: Option<CrossCheck>,
     pub cross_check_passed: bool,
     /// Axis weakly determined or wrong (rule 9).
     pub suspect_axis: bool,
@@ -343,7 +339,7 @@ pub fn fit_mcc_cylinder(pts: &PointsView<'_>, params: &FitParams, seed: Option<u
     };
     let mut m = run(&c, fr, fixed.is_none(), ls_flagged, seed)?;
     if fixed.is_none() {
-        cross_check(&c, &mut m, fr.a, seed)?;
+        cross_check(&c, &mut m)?;
     }
     Ok(m)
 }
@@ -371,94 +367,27 @@ pub fn fit_mcc_cylinder_from(
     let fr = Frame { p0: c.map().forward(point)?, a, e1, e2 };
     let seed = seed.unwrap_or(DEFAULT_SEED);
     let mut m = run(&c, fr, true, false, seed)?;
-    cross_check(&c, &mut m, a, seed)?;
+    cross_check(&c, &mut m)?;
     Ok(m)
 }
 
-/// Rule 11's pair bounds along the unit direction `a` (scaled units): half the largest distance
-/// between two projected points, and the largest distance from their midpoint.
-fn pair_bounds(c: &Centred, a: V3) -> Result<(f64, f64), FitError> {
-    let (e1, e2) = init::basis(a)?;
-    let mut uv: Vec<[f64; 2]> = alloc(c.len())?;
-    for q in c.xyz().chunks_exact(3) {
-        uv.push([red::dot(q, &e1)?, red::dot(q, &e2)?]);
-    }
-    let mut best = (0usize, 0usize, f64::NEG_INFINITY);
-    for (i, p) in uv.iter().enumerate() {
-        for (j, s) in uv.iter().enumerate().skip(i + 1) {
-            let du = p[0] - s[0];
-            let dv = p[1] - s[1];
-            let d2 = du * du + dv * dv;
-            if f::total_cmp(d2, best.2)? == Ordering::Greater {
-                best = (i, j, d2);
-            }
-        }
-    }
-    let (p, s) = match (uv.get(best.0), uv.get(best.1)) {
-        (Some(p), Some(s)) if best.2.is_finite() => (*p, *s),
-        _ => return Err(FitError::InvalidParams { field: "cross_check" }),
-    };
-    let lower = red::norm2(&[p[0] - s[0], p[1] - s[1]])? / 2.0;
-    let mid = [(p[0] + s[0]) / 2.0, (p[1] + s[1]) / 2.0];
-    let mut upper = 0.0_f64;
-    for w in &uv {
-        upper = f::total_max(upper, red::norm2(&[w[0] - mid[0], w[1] - mid[1]])?)?;
-    }
-    Ok((lower, upper))
-}
-
-/// Rule 11: the global cross-check of a free-direction fit `m`, `axis` the frame axis (scaled
-/// frame). Sets `m.cross_check`, `m.cross_check_passed` and, when it did not pass,
-/// `local_optimum_only` (on the record and the certificate).
-fn cross_check(c: &Centred, m: &mut MccCylinder, axis: V3, seed: u64) -> Result<(), FitError> {
+/// Rule 11: the global cross-check of a free-direction fit `m`. Sets `m.cross_check`,
+/// `m.cross_check_passed` and, when it did not pass, `local_optimum_only` (on the record and
+/// the certificate).
+fn cross_check(c: &Centred, m: &mut MccCylinder) -> Result<(), FitError> {
     let map = *c.map();
     let r = match m.feature {
-        FittedFeature::Cylinder { r, .. } => r,
+        FittedFeature::Cylinder { r, .. } => map.forward_length(r)?,
         _ => return Err(FitError::InvalidParams { field: "feature" }),
     };
-    let own_bound = map.inverse_length(m.certificate.value_bound())?;
-    let shape = data_shape(c)?;
-    let mut out = alloc(4)?;
-    for d in [shape.axes[0], shape.axes[1], shape.axes[2], axis] {
-        let a = normalize_direction(d)?;
-        let (lo, hi) = pair_bounds(c, a)?;
-        let (mut lower, mut upper) = (map.inverse_length(lo)?, map.inverse_length(hi)?);
-        let mut tol = CROSS_TOL * r + own_bound;
-        let mut certified = false;
-        let decided = |lower: f64, upper: f64, tol: f64| -> Result<Option<CrossOutcome>, FitError> {
-            Ok(if f::total_cmp(upper, r - tol)? == Ordering::Less {
-                Some(CrossOutcome::Better)
-            } else if f::total_cmp(lower, r - tol)? != Ordering::Less {
-                Some(CrossOutcome::Passed)
-            } else {
-                None
-            })
-        };
-        let outcome = match decided(lower, upper, tol)? {
-            Some(o) => o,
-            None => {
-                let (e1, e2) = init::basis(a)?;
-                // Any failure of the fixed-direction fit leaves the direction undecided (fail
-                // closed: the cross-check does not pass).
-                match run(c, Frame { p0: [0.0; 3], a, e1, e2 }, false, false, seed) {
-                    Ok(f) => match f.feature {
-                        FittedFeature::Cylinder { r: rd, .. } => {
-                            certified = true;
-                            lower = rd;
-                            upper = rd;
-                            tol += map.inverse_length(f.certificate.value_bound())?;
-                            decided(lower, upper, tol)?.unwrap_or(CrossOutcome::Inconclusive)
-                        }
-                        _ => CrossOutcome::Inconclusive,
-                    },
-                    Err(_) => CrossOutcome::Inconclusive,
-                }
-            }
-        };
-        out.push(CrossCheck { direction: a, lower, upper, certified, outcome });
-    }
-    let passed = out.iter().all(|x| x.outcome == CrossOutcome::Passed);
-    m.cross_check = out;
+    let tol = CROSS_TOL * r + m.certificate.value_bound();
+    let s = global::search(c.xyz(), &m.contacts, r, tol)?;
+    let better = match s.better {
+        Some((d, ub)) => Some((normalize_direction(d)?, map.inverse_length(ub)?)),
+        None => None,
+    };
+    let passed = s.outcome == CrossOutcome::Passed;
+    m.cross_check = Some(CrossCheck { outcome: s.outcome, caps: s.caps, full_tests: s.full, depth: s.depth, better });
     m.cross_check_passed = passed;
     if !passed {
         m.local_optimum_only = true;
@@ -593,7 +522,7 @@ fn run(c: &Centred, fr: Frame, dir: bool, ls_flagged: bool, seed: u64) -> Result
         optimality: if dir { Optimality::StrictLocal } else { Optimality::Global },
         agreement: out.agreement,
         local_optimum_only,
-        cross_check: Vec::new(),
+        cross_check: None,
         // A fixed direction is global (rule 8); a free one is set by rule 11.
         cross_check_passed: !dir,
         suspect_axis: suspect,

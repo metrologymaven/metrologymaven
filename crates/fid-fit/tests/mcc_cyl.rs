@@ -108,7 +108,7 @@ fn outcomes() -> &'static [(Case, Result<MccCylinder, FitError>)] {
                             m.zone_ratio,
                             m.agreement,
                             m.cross_check_passed,
-                            m.cross_check.iter().map(|x| (x.outcome.as_str(), x.lower, x.upper)).collect::<Vec<_>>(),
+                            m.cross_check,
                             cyl(m).2
                         ))
                         .map_err(|e| e.code()),
@@ -172,8 +172,8 @@ fn ac1_planted_envelopes() {
         assert_eq!(m.optimality, Optimality::StrictLocal);
         assert!(!m.certificate.flags().local_optimum_only);
         // Rule 11: every direction of the global cross-check passed.
-        assert!(m.cross_check_passed && m.cross_check.len() == 4, "{}: {:?}", c.name, m.cross_check);
-        assert!(m.cross_check.iter().all(|x| x.outcome == CrossOutcome::Passed && x.lower >= rad * (1.0 - 1e-9)));
+        let x = m.cross_check.unwrap();
+        assert!(m.cross_check_passed && x.outcome == CrossOutcome::Passed && x.better.is_none(), "{}: {x:?}", c.name);
         n += 1;
     }
     eprintln!("worst radius {:e} m, axis {:e} rad, position {:e} m", worst[0], worst[1], worst[2]);
@@ -195,38 +195,45 @@ fn ac3_fixed_direction_is_global() {
     assert!(!m.local_optimum_only);
     assert_eq!(m.starts.len(), 1);
     assert_eq!(m.certificate.params().len(), 3);
-    assert!(m.cross_check.is_empty() && m.cross_check_passed);
+    assert!(m.cross_check.is_none() && m.cross_check_passed);
 }
 
-/// Review of #374 (rule 11): the short oval pilot diameter has a certified near-axis local
-/// minimum that a cylinder across the pilot beats (`better_r`, the fixture's exact feasible
-/// radius along the ovality's major axis). The fit either returns a radius at most `better_r`
-/// or is refused or flagged `local_optimum_only`; through the trait it returns such a radius or
-/// is refused. Never a confidently wrong cylinder.
+/// Reviews of #374 (rule 11): the short oval pilot diameters (`pilot`, 2.5 mm, and `pilot-5mm`,
+/// where four fixed check directions, as in the first round, would all pass) have a near-axis local minimum that a tilted or
+/// crosswise cylinder beats (`better_r`, the fixture's exact feasible radius). The fit either
+/// returns a radius at most `better_r`, or is flagged `local_optimum_only` by a cross-check
+/// that did not pass (a `better` cylinder smaller than the fit's, or inconclusive), or is
+/// refused; through the trait it returns such a radius or is refused. Never confidently wrong.
 #[test]
 fn pilot_never_confidently_wrong() {
-    let (c, r) = outcomes().iter().find(|(c, _)| flag(c) == Some("pilot_not_global")).unwrap();
-    let better = c.get("better_r").unwrap()[0];
-    let small = |m: &MccCylinder| cyl(m).2 <= better * (1.0 + 1e-12);
-    match r {
-        Ok(m) if small(m) => {}
-        Ok(m) => {
-            assert!(m.local_optimum_only && !m.cross_check_passed, "{m:?}");
-            // The cross-check found a direction at least as good as the fixture's feasible one.
-            let better_dirs: Vec<_> = m.cross_check.iter().filter(|x| x.outcome == CrossOutcome::Better).collect();
-            assert!(better_dirs.iter().any(|x| x.upper <= better * (1.0 + 1e-9)), "{:?}", m.cross_check);
-            assert!(m.certificate.flags().local_optimum_only);
+    let mut n = 0;
+    for (c, r) in outcomes().iter().filter(|(c, _)| flag(c) == Some("pilot_not_global")) {
+        let better = c.get("better_r").unwrap()[0];
+        let small = |m: &MccCylinder| cyl(m).2 <= better * (1.0 + 1e-12);
+        match r {
+            Ok(m) if small(m) => {}
+            Ok(m) => {
+                assert!(m.local_optimum_only && !m.cross_check_passed, "{}: {m:?}", c.name);
+                let x = m.cross_check.unwrap();
+                match x.outcome {
+                    CrossOutcome::Better => assert!(x.better.unwrap().1 < cyl(m).2, "{x:?}"),
+                    o => assert_eq!(o, CrossOutcome::Inconclusive),
+                }
+                assert!(m.certificate.flags().local_optimum_only);
+            }
+            Err(e) => eprintln!("{}: refused {}", c.name, e.code()),
         }
-        Err(e) => eprintln!("pilot: refused {}", e.code()),
+        let v = c.get("points").unwrap();
+        match MccCylinderFit.fit(&PointsView::new(&v, None).unwrap(), &params(c), Some(SEED)) {
+            Ok(f) => match f.feature {
+                FittedFeature::Cylinder { r, .. } => assert!(r <= better * (1.0 + 1e-12), "{}: {r}", c.name),
+                ref o => panic!("{o:?}"),
+            },
+            Err(e) => assert!(matches!(e.code(), "flagged_fit" | "solver" | "implausible_fit"), "{}: {e:?}", c.name),
+        }
+        n += 1;
     }
-    let v = c.get("points").unwrap();
-    match MccCylinderFit.fit(&PointsView::new(&v, None).unwrap(), &params(c), Some(SEED)) {
-        Ok(f) => match f.feature {
-            FittedFeature::Cylinder { r, .. } => assert!(r <= better * (1.0 + 1e-12), "{r}"),
-            ref o => panic!("{o:?}"),
-        },
-        Err(e) => assert!(matches!(e.code(), "flagged_fit" | "solver" | "implausible_fit"), "{e:?}"),
-    }
+    assert_eq!(n, 2);
 }
 
 /// Oval cross-sections (should-fix of the #374 review, kept failing closed): four active rows
@@ -404,7 +411,7 @@ fn put(h: &mut Sha256Hasher, xs: &[f64]) {
 
 /// AC-5 (digests): output-bit pin of every case: feature, residuals, contacts, flags,
 /// certificate digest, certified per-start values, and every error code.
-const OUTPUT_PIN: &str = "sha256:3c8f5957cb9db8e90d2cec61dc441fb06fc265b084d41923be76ec1c3c11cd48";
+const OUTPUT_PIN: &str = "sha256:f02df53983bf1fa2f8ac37623b3aadda08194282ded486742082873c685b0aad";
 
 #[test]
 fn ac5_output_bits_pinned() {
@@ -435,11 +442,15 @@ fn ac5_output_bits_pinned() {
                 }
                 h.update(&m.best_index.to_le_bytes());
                 h.update(&[u8::from(m.cross_check_passed)]);
-                for x in &m.cross_check {
-                    put(&mut h, &x.direction);
-                    put(&mut h, &[x.lower, x.upper]);
-                    h.update(&[u8::from(x.certified)]);
+                if let Some(x) = &m.cross_check {
                     h.update(x.outcome.as_str().as_bytes());
+                    for k in [x.caps, x.full_tests, x.depth] {
+                        h.update(&k.to_le_bytes());
+                    }
+                    if let Some((d, ub)) = x.better {
+                        put(&mut h, &d);
+                        put(&mut h, &[ub]);
+                    }
                 }
             }
             Err(e) => h.update(e.code().as_bytes()),

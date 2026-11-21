@@ -36,6 +36,10 @@ Other cases:
   not the global one: `better_axis` (the ovality's major axis) and `better_r`, the radius of a
   feasible cylinder along it (exact in Decimal), which is below r + 10 um. Hand-labelled `flag
   pilot_not_global`: a fit must be refused or flagged unless its radius is at most `better_r`.
+- `pilot-5mm` (second review of #374): the same pilot 5 mm long with theta and height uniform.
+  Four fixed directions all pass from their pair bounds here, yet a cylinder tilted towards the
+  major axis is smaller: `better_axis` and `better_r` from a search over tilts (exact feasible
+  radius). Same flag and rule as `pilot`.
 - `oval-free` and `oval-fixed`: an oval long cylinder with four exact contacts at the major-axis
   ends of both end faces, free direction and fixed at the planted axis. Four active rows for
   five parameters, two for three: a degenerate active set. Hand-labelled `flag
@@ -371,6 +375,83 @@ def pilot(name):
     return pts, e1, better
 
 
+def welzl_centre(pts2, rng):
+    """Centre of the smallest circle enclosing 2D float points (iterative Welzl, shuffled by
+    `rng`). Only a centre is taken from it: the radius claimed is recomputed exactly."""
+    p = pts2[:]
+    rng.shuffle(p)
+
+    def d2(a, b):
+        return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2
+
+    def c2(a, b):
+        c = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+        return c, d2(a, c)
+
+    def c3(a, b, c):
+        bx, by, cx, cy = b[0] - a[0], b[1] - a[1], c[0] - a[0], c[1] - a[1]
+        d = 2 * (bx * cy - by * cx)
+        if d == 0:
+            return max((c2(a, b), c2(b, c), c2(a, c)), key=lambda t: t[1])
+        b2, cc2 = bx * bx + by * by, cx * cx + cy * cy
+        o = (a[0] + (cy * b2 - by * cc2) / d, a[1] + (bx * cc2 - cx * b2) / d)
+        return o, d2(a, o)
+
+    out = lambda x, c, r2: d2(x, c) > r2 * (1 + 1e-12)
+    c, r2 = p[0], 0.0
+    for i in range(1, len(p)):
+        if out(p[i], c, r2):
+            c, r2 = p[i], 0.0
+            for j in range(i):
+                if out(p[j], c, r2):
+                    c, r2 = c2(p[i], p[j])
+                    for k in range(j):
+                        if out(p[k], c, r2):
+                            c, r2 = c3(p[i], p[j], p[k])
+    return c
+
+
+def pilot_tilted(name, length):
+    """The construction of the second review of #374: radius 50 mm, two-lobe ovality r + 20 um
+    cos(2 theta), noise uniform in +-0.3 um, length `length`, 600 points, theta and height
+    uniform (this script's own generator). The near-axis local minimum is about r + 20 um, and
+    a cylinder tilted towards the major axis is smaller (the review found 49.99765 mm at 75
+    degrees for its own sample). Tilts phi from 60 to 89.5 degrees in steps of 0.5 degrees: the
+    direction cos(phi) d + sin(phi) e1, a centre from a float Welzl circle of the projections,
+    and the radius from that centre recomputed exactly in Decimal (a feasible cylinder). Returns
+    the points, the best direction and its radius, which must be below r + 10 um."""
+    rng = random.Random(f"mcc-cyl-v1/{name}")
+    d, e1, e2 = frame(rng)
+    p0 = offset(rng, Decimal("0.3"))
+    r, amp, noise = Decimal("0.05"), 20 * UM, Decimal("0.3") * UM
+    pts = []
+    for _ in range(600):
+        th = 2 * PI * u01(rng)
+        s, c = sin_cos(th)
+        _, c2 = sin_cos(2 * th)
+        t = length * (u01(rng) - Decimal("0.5"))
+        rr = r + amp * c2 + (2 * u01(rng) - 1) * noise
+        pts.append(rounded(at(p0, d, e1, e2, t, rr * c, rr * s)))
+    best = None
+    for k in range(60):
+        phi = (Decimal(60) + Decimal(k) / 2) * PI / 180
+        sp, cp = sin_cos(phi)
+        u1 = [-sp * d[i] + cp * e1[i] for i in range(3)]
+        axis = [cp * d[i] + sp * e1[i] for i in range(3)]
+        proj = []
+        for q in pts:
+            w = [q[i] - p0[i] for i in range(3)]
+            proj.append((dot(w, u1), dot(w, e2)))
+        cy, cz = welzl_centre([(float(y), float(z)) for y, z in proj], random.Random(f"{name}/{k}"))
+        cy, cz = dec(cy), dec(cz)
+        rad = max(((y - cy) ** 2 + (z - cz) ** 2).sqrt() for y, z in proj)
+        if best is None or rad < best[1]:
+            best = (axis, rad)
+    if not best[1] < r + 10 * UM:
+        raise SystemExit(f"{name}: no tilted cylinder beats the near-axis radius ({best[1]})")
+    return pts, best[0], best[1]
+
+
 def oval(name):
     """An oval long cylinder (radius 20 mm, length 40 mm, r(theta) = r + 20 um cos(2 theta)) with
     four exact contacts at the major-axis ends of both end faces; the other 596 points are inside
@@ -449,6 +530,9 @@ def render():
         emit(out, f"shortarc-{k}", 30, pts, flag="never_confidently_wrong")
     pts, axis, better = pilot("pilot")
     emit(out, "pilot", 360, pts, extra=["better_axis " + hxs(axis), "better_r " + hx(fl(better))],
+         flag="pilot_not_global")
+    pts, axis, better = pilot_tilted("pilot-5mm", Decimal("0.005"))
+    emit(out, "pilot-5mm", 360, pts, extra=["better_axis " + hxs(axis), "better_r " + hx(fl(better))],
          flag="pilot_not_global")
     pts, axis = oval("oval-free")
     emit(out, "oval-free", 360, pts, flag="degenerate_active_set")
