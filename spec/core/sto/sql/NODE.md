@@ -15,7 +15,7 @@ depends_on: [CORE.STO.LAYOUT, CORE.STO.CAS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # CORE.STO.SQL: Project database, append-only enforcement and atomic durable commits
@@ -60,6 +60,10 @@ Applied: SCHEMA, TXN, CRASH.
 
 - Power-loss testing needs a fault-injecting file-system layer [unverified which tool]; CRASH picks one available on Linux CI and documents the gap on Windows and macOS.
 - The "journal chain check" in REQ-005 cannot call `CORE.JRN.CHAIN` (CHAIN depends on `CORE.STO`, so a dependency would form a cycle). CRASH checks a synthetic chain of its own built with `CORE.JRN.CANON`; `CORE.JRN.CHAIN` runs the same harness with real entries in its own tests.
+
+## Change log
+
+- 2026-11-21 (maintainer decision on D-047, review of #401): `fid-store`'s SQLite hardening is public and generic over the file, so the results catalog (`RPT.CATALOG.STORE.SCHEMA`, crate `fid-catalog`) reuses it instead of copies: `harden`, `set_config`, `set_wal`, `open_path`, `check_companions_of(dir, name)`, `check_root_pages`, `expected_objects`, `verify_schema`, `quick_check`, and the migration runner `migrate_with` with a `MigrationHooks` trait (how a format checks, reads and records its version). `project.db` uses the runner through `StoreHooks` (versions in `schema_meta`) with unchanged behaviour and unchanged tests. No REQ or AC changed.
 
 ## Children
 
