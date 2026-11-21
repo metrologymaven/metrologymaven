@@ -13,14 +13,20 @@
 //!   `{id, product, kind, format_id, versions, access_route, status, export_route?, review?}`;
 //!   `export_route` is `{format, note}` with `format` an open (registered) format ID or `none`;
 //!   `review` is the entry's `mig-review@1` record, inline, so a reference cannot dangle.
+//!   The loader checks format IDs for syntax only; [`check`] then requires every non-native
+//!   `format_id` and export-route format to be registered in the format catalogue of a
+//!   registry manifest ([`parse_manifest`]). The workspace manifest carries no format
+//!   catalogue yet, so today every non-native format is refused (fail closed).
 //!   Unknown keys, wrong types and malformed values are `SRC-SCHEMA`; duplicate JSON keys are
 //!   refused by the parser.
-//! - **Text is untrusted.** Every free-text field is NFC-agnostic printable text without
-//!   control or bidirectional-override characters and without the Markdown and HTML
-//!   metacharacters `| < > \` * _ [ ] # \\ ~ { } $`, so the page can be rendered without
-//!   escaping and never carries markup from the register.
+//! - **Text is untrusted.** Every free-text field is printable text without control, line or
+//!   paragraph separator, invisible-operator, bidi-mark or bidi-override characters, without
+//!   the Markdown and HTML metacharacters `| < > \` * _ [ ] # \\ ~ { } $`, and without `://`,
+//!   `www.` or `@`, so the page can be rendered without escaping and never carries markup or a
+//!   link from the register.
 //! - **Versions.** `<lo>..<hi>`, each end `*` (open) or a dotted numeric version of 1 to 4
-//!   components; both ends inclusive, missing components count as 0; `lo <= hi`.
+//!   components; both ends inclusive, missing components count as 0; `lo <= hi`. So `3..5.2`
+//!   holds 5.2 (= 5.2.0.0) but not 5.2.1: write `3..5.3` or `3..*` to include later patches.
 //! - **Check order** (the leaf's algorithm): schema, then `SRC-DUP` (same product compared
 //!   ASCII-case-insensitively, same kind and format ID, overlapping versions), then
 //!   `SRC-REVIEW` and `SRC-ATTEST` per entry in ID order, then `SRC-POLICY`. A register that
@@ -179,16 +185,14 @@ struct Version([u32; 4]);
 impl Version {
     fn parse(s: &str) -> Option<Version> {
         let mut parts = [0u32; 4];
-        let mut n = 0;
-        for p in s.split('.') {
-            if n == 4 || p.is_empty() || p.len() > 9 || !p.bytes().all(|b| b.is_ascii_digit()) {
+        for (n, p) in s.split('.').enumerate() {
+            if n >= 4 || p.is_empty() || p.len() > 9 || !p.bytes().all(|b| b.is_ascii_digit()) {
                 return None;
             }
             if p.len() > 1 && p.starts_with('0') {
                 return None;
             }
-            parts[n] = p.parse().ok()?;
-            n += 1;
+            *parts.get_mut(n)? = p.parse().ok()?;
         }
         Some(Version(parts))
     }
@@ -380,9 +384,16 @@ fn is_entry_id(s: &str) -> bool {
     s.len() <= MAX_NAME && s.strip_prefix("src.").is_some_and(is_slug)
 }
 
+/// Whether the text could carry a link or an address: `://`, `www.` (any case) or `@`. The
+/// page is public, so the register can never place one on it.
+fn has_link(s: &str) -> bool {
+    s.contains("://") || s.contains('@') || s.to_ascii_lowercase().contains("www.")
+}
+
 fn is_product(s: &str) -> bool {
     let b = s.as_bytes();
-    !b.is_empty()
+    !has_link(s)
+        && !b.is_empty()
         && b.len() <= MAX_NAME
         && b[0].is_ascii_alphanumeric()
         && !s.ends_with(' ')
@@ -390,18 +401,31 @@ fn is_product(s: &str) -> bool {
         && b.iter().all(|c| c.is_ascii_alphanumeric() || matches!(c, b' ' | b'.' | b'-' | b'+' | b'&' | b'(' | b')'))
 }
 
-/// Free text from the register: printable, no control, bidi-override or Markdown/HTML
-/// metacharacters, no surrounding whitespace, at most `max` characters. Empty is allowed
+/// Free text from the register: printable, no control, line or paragraph separator,
+/// invisible-operator, bidi-mark or bidi-override characters, no Markdown/HTML metacharacters,
+/// nothing that could carry a link or an address ([`has_link`]), no surrounding whitespace, at
+/// most `max` characters. Empty is allowed
 /// only when `may_be_empty`.
 fn is_text(s: &str, max: usize, may_be_empty: bool) -> bool {
     if s.is_empty() {
         return may_be_empty;
     }
-    s.chars().count() <= max && s.trim() == s && s.chars().all(|c| {
-        !c.is_control()
-            && !FORBIDDEN.contains(&c)
-            && !matches!(c, '\u{200b}'..='\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}' | '\u{feff}')
-    })
+    s.chars().count() <= max
+        && s.trim() == s
+        && !has_link(s)
+        && s.chars().all(|c| {
+            !c.is_control()
+                && !FORBIDDEN.contains(&c)
+                && !matches!(
+                    c,
+                    '\u{061c}'
+                        | '\u{200b}'..='\u{200f}'
+                        | '\u{2028}'..='\u{202e}'
+                        | '\u{2060}'..='\u{2064}'
+                        | '\u{2066}'..='\u{2069}'
+                        | '\u{feff}'
+                )
+        })
 }
 
 /// A real calendar date `YYYY-MM-DD` (proleptic Gregorian, years 1900 to 9999).
@@ -488,7 +512,9 @@ fn export_route(v: &CValue, at: &str, out: &mut Vec<Finding>) -> Option<ExportRo
     };
     let note = string(o, "note", at, out)?;
     if !is_text(note, MAX_TEXT, false) {
-        out.push(schema(format!("{at}.note: must be 1 to {MAX_TEXT} characters of plain text")));
+        out.push(schema(format!(
+            "{at}.note: must be 1 to {MAX_TEXT} characters of plain text (no markup, links or invisible characters)"
+        )));
         return None;
     }
     Some(ExportRoute { format, note: note.to_string() })
@@ -510,7 +536,7 @@ fn review(v: &CValue, at: &str, out: &mut Vec<Finding>) -> Option<ReviewRecord> 
         match string(o, key, at, out) {
             Some(s) if is_text(s, max, true) => s.to_string(),
             Some(_) => {
-                out.push(schema(format!("{at}.{key}: must be at most {max} characters of plain text")));
+                out.push(schema(format!("{at}.{key}: must be at most {max} characters of plain text (no markup, links or invisible characters)")));
                 String::new()
             }
             None => String::new(),
@@ -773,13 +799,103 @@ pub fn check_policy(reg: &SourceRegister) -> Vec<Finding> {
         .collect()
 }
 
+/// The format catalogue of a registry manifest: the IDs of its top-level `formats` array of
+/// `{"id": <format ID>, ...}` objects (other fields and keys ignored). The workspace manifest
+/// (`CORE.REG.MAN`) carries no format catalogue yet, so for it the set is empty and every
+/// non-native format is refused until IO.REG.DETECT publishes one (fail closed).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FormatCatalogue {
+    ids: BTreeSet<FormatId>,
+}
+
+impl FormatCatalogue {
+    /// Whether the format is registered.
+    pub fn contains(&self, id: &FormatId) -> bool {
+        self.ids.contains(id)
+    }
+
+    /// Number of registered formats.
+    pub fn len(&self) -> usize {
+        self.ids.len()
+    }
+
+    /// Whether no format is registered.
+    pub fn is_empty(&self) -> bool {
+        self.ids.is_empty()
+    }
+}
+
+/// Largest accepted registry manifest, in bytes (the `fid-canon` input limit).
+pub const MAX_MANIFEST_BYTES: usize = fid_canon::MAX_INPUT_BYTES;
+
+/// Reads the format catalogue of a registry manifest (bounded parse). `SRC-SCHEMA` when the
+/// manifest is not an object or `formats` is malformed.
+pub fn parse_manifest(bytes: &[u8]) -> Result<FormatCatalogue, Finding> {
+    let value = fid_canon::parse_with_limits(bytes, MAX_MANIFEST_BYTES, fid_canon::MAX_DEPTH)
+        .map_err(|e| schema(format!("manifest: not valid JSON within limits ({e})")))?;
+    let CValue::Obj(top) = &value else { return Err(schema("manifest: must be an object")) };
+    let mut ids = BTreeSet::new();
+    match top.get("formats") {
+        None => {}
+        Some(CValue::Arr(items)) => {
+            for (i, item) in items.iter().enumerate() {
+                let id = match item {
+                    CValue::Obj(o) => match o.get("id") {
+                        Some(CValue::Str(s)) => FormatId::new(s).ok(),
+                        _ => None,
+                    },
+                    _ => None,
+                };
+                match id {
+                    Some(id) => {
+                        ids.insert(id);
+                    }
+                    None => return Err(schema(format!("manifest.formats[{i}]: needs an id that is a format ID"))),
+                }
+            }
+        }
+        Some(_) => return Err(schema("manifest.formats: must be an array")),
+    }
+    Ok(FormatCatalogue { ids })
+}
+
+/// "Open format" is checked against the format registry: every non-native `format_id` and
+/// every export-route format must be registered in the manifest's format catalogue, else
+/// `SRC-SCHEMA <entry>.<field>`.
+pub fn check_registered(reg: &SourceRegister, formats: &FormatCatalogue) -> Vec<Finding> {
+    let mut out = Vec::new();
+    for e in reg.entries() {
+        if let FormatRef::Registered(id) = &e.format {
+            if !formats.contains(id) {
+                out.push(schema(format!("{}.format_id: {id} is not a registered format", e.id)));
+            }
+        }
+        if let Some(ExportRoute { format: Some(id), .. }) = &e.export_route {
+            if !formats.contains(id) {
+                out.push(schema(format!("{}.export_route.format: {id} is not a registered format", e.id)));
+            }
+        }
+    }
+    out
+}
+
 /// The whole sources check (`cargo xtask mig sources-check`, without the vocabulary lint):
-/// schema, duplicates, reviews and attestations, policy, in that order.
-pub fn check(bytes: &[u8]) -> CheckReport {
+/// schema, registered formats (against `manifest`), duplicates, reviews and attestations,
+/// policy, in that order. A register that fails the schema or names an unregistered format
+/// is not checked further.
+pub fn check(bytes: &[u8], manifest: &[u8]) -> CheckReport {
     let reg = match load(bytes) {
         Ok(r) => r,
         Err(findings) => return CheckReport { register: None, findings },
     };
+    let formats = match parse_manifest(manifest) {
+        Ok(f) => f,
+        Err(f) => return CheckReport { register: None, findings: vec![f] },
+    };
+    let unregistered = check_registered(&reg, &formats);
+    if !unregistered.is_empty() {
+        return CheckReport { register: None, findings: unregistered };
+    }
     let mut findings = check_duplicates(&reg);
     findings.extend(check_reviews(&reg));
     findings.extend(check_policy(&reg));
@@ -1220,6 +1336,24 @@ mod tests {
         for bad in ["", "1", "1...2", "2..1", "01..2", "1..2.3.4.5", "a..b", "1.-1..2", "1..", "..2", "1. ..2"] {
             assert!(VersionRange::parse(bad).is_none(), "{bad}");
         }
+    }
+
+    #[test]
+    fn links_and_invisible_characters() {
+        for bad in [
+            "See https://example.org for details.",
+            "Ask a@b",
+            "Visit WWW.example.org",
+            "a\u{061c}b",
+            "a\u{2028}b",
+            "a\u{2029}b",
+            "a\u{2060}b",
+            "a\u{2064}b",
+        ] {
+            assert!(!is_text(bad, 100, false), "{bad:?}");
+        }
+        assert!(is_text("Mail someone at example dot org.", 100, false));
+        assert!(!is_product("www.DemoCMM") && !is_product("Www.Demo"));
     }
 
     #[test]

@@ -198,7 +198,9 @@ fn list_sources(args: &[String]) -> ExitCode {
             return sources_error(json, ErrorCode::UsageError, &format!("{a} needs a value"));
         };
         if key == "register" {
-            register = Some(v.clone());
+            if register.replace(v.clone()).is_some() {
+                return sources_error(json, ErrorCode::UsageError, "--register given twice");
+            }
         } else if params.insert(key.to_string(), CValue::Str(v.clone())).is_some() {
             return sources_error(json, ErrorCode::UsageError, &format!("{a} given twice"));
         }

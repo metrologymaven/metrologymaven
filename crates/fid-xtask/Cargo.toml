@@ -37,5 +37,10 @@ sha2 = "0.10"
 # as untyped tables (no serde derive; same feature set as fid-knp1-lint).
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 
+[dev-dependencies]
+# tests/mig_sources_check.rs builds the workspace registry manifest the production source
+# register is checked against (MIG.SRC.REG); services layer, already in the lock.
+fid-registry-build = { path = "../fid-registry-build" }
+
 [lints]
 workspace = true

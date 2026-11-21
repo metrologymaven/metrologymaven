@@ -81,17 +81,20 @@ The source register as data (`mig-sources@1`): one entry per incumbent artefact 
 
 ## Open questions
 
+- The registry manifest needs a format catalogue (the IO.REG.DETECT descriptor IDs, for example a top-level `formats` array of `{id}` objects) before any open format can be named here; until then `sources-check` refuses every non-native format. To be settled with CORE.REG.MAN and IO.REG.DETECT.
+
 - The production register's initial content (which incumbent products and export routes to list) needs a human reviewer and, per D-033's condition, counsel review before release [unverified export routes].
 
 ## As built
 
 - `fid-mig` module `src::reg`: loader, `check`, `list_sources`, `render_md`, `run_list_sources` and the registry definition of `migrate.list_sources@1` (registered in `fid-registry-build` `SOURCES`). `cargo xtask mig sources-check --register <json> [--vocab-rules <toml>]` in `fid-xtask`; `fid migrate list-sources [--kind] [--status] [--format json|md] [--register FILE] [--json]` in `fid-cli`.
-- The review record is inline in its entry (`review`), and its `entry` field must name the entry, so a reference cannot dangle. An export route is `{format, note}`, where `format` is an open format ID or `none`.
-- Version ranges are `<lo>..<hi>`. Each end is `*` or a dotted numeric version of 1 to 4 components, and both ends are inclusive.
-- Every free-text field is refused (`SRC-SCHEMA`) if it holds control or bidirectional-override characters or Markdown/HTML metacharacters. The page is then rendered without escaping.
+- The review record is inline in its entry (`review`), and its `entry` field must name the entry, so a reference cannot dangle. A review record is self-asserted data: its authority comes from the code-owner-reviewed merge of `data/mig/sources.json` (`.github/CODEOWNERS`), not from its own fields. An export route is `{format, note}`, where `format` is an open format ID or `none`.
+- Version ranges are `<lo>..<hi>`. Each end is `*` or a dotted numeric version of 1 to 4 components, both ends are inclusive and missing components count as 0, so `3..5.2` holds 5.2 but not 5.2.1.
+- Every free-text field and product name is refused (`SRC-SCHEMA`) if it holds control, line or paragraph separator (U+2028/2029), invisible-operator (U+2060 to U+2064), bidi-mark (U+061C, U+200E/F) or bidi-override characters, Markdown/HTML metacharacters, or a link or address marker (`://`, `www.`, `@`). The page is then rendered without escaping and carries no link from the register.
+- "Open format" is checked against the format registry: `sources-check --manifest <registry manifest>` requires every non-`native:` `format_id` and every export-route format to be in the manifest's format catalogue (a top-level `formats` array of `{id}` objects), else `SRC-SCHEMA <entry>.<field>`. **Deviation:** the workspace manifest (CORE.REG.MAN) has no format catalogue yet, so today every non-native format is refused (fail closed); the empty production register passes, and CI checks it against the workspace manifest.
 - `counsel_ref` is required (`SRC-REVIEW`) for an `ADMITTED` native format under policy `D-033-B`.
 - The vocabulary check runs the shared engine `fid-vocab` with a given rule file (for example the outreach claim rules) over product names, export notes and review texts. Each error is reported as `SRC-VOCAB <id> <rule> <message>`, a code beyond the leaf's error list.
-- The embedded production register `data/mig/sources.json` has no entries yet (see Open questions).
+- The embedded production register `data/mig/sources.json` has no entries yet (see Open questions). Without `--vocab-rules`, `sources-check` prints that the vocabulary check was skipped.
 
 ## Children
 

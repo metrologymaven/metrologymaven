@@ -19,8 +19,12 @@ fn fixture(name: &str) -> Vec<u8> {
     std::fs::read(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()))
 }
 
+fn manifest() -> Vec<u8> {
+    fixture("manifest-formats.json")
+}
+
 fn lines(name: &str) -> Vec<String> {
-    check(&fixture(name)).findings.iter().map(ToString::to_string).collect()
+    check(&fixture(name), &manifest()).findings.iter().map(ToString::to_string).collect()
 }
 
 fn params(text: &str) -> CValue {
@@ -46,7 +50,7 @@ fn assert_valid(schema: &Compiled, v: &CValue, what: &str) {
 
 #[test]
 fn ac1_register_ok_passes() {
-    let r = check(&fixture("register-ok.json"));
+    let r = check(&fixture("register-ok.json"), &manifest());
     assert!(r.is_ok(), "{:?}", r.findings);
     let reg = r.register.unwrap();
     assert_eq!(reg.version().to_string(), "0.3.0");
@@ -87,16 +91,49 @@ fn schema_refuses_markup_in_text() {
 }
 
 #[test]
+fn open_formats_must_be_registered() {
+    assert_eq!(
+        lines("unregistered.json"),
+        ["SRC-SCHEMA src.democmm-program-native.format_id: democmm-prog is not a registered format"]
+    );
+    // A manifest without a format catalogue registers nothing: every non-native format and
+    // export format of register-ok.json is refused, in ID order.
+    let r = check(&fixture("register-ok.json"), br#"{"commands":[]}"#);
+    assert!(r.register.is_none());
+    assert_eq!(
+        r.findings.iter().map(ToString::to_string).collect::<Vec<_>>(),
+        [
+            "SRC-SCHEMA src.democmm-program-native.export_route.format: dmis is not a registered format",
+            "SRC-SCHEMA src.democmm-results-qif.format_id: qif is not a registered format",
+            "SRC-SCHEMA src.demoscan-form-native.export_route.format: results-csv is not a registered format",
+            "SRC-SCHEMA src.demoscan-points-csv.format_id: points-csv is not a registered format",
+        ]
+    );
+    for bad in [&b"[]"[..], br#"{"formats":{}}"#, br#"{"formats":[{"id":"Bad Id"}]}"#, br#"{"formats":["qif"]}"#] {
+        let r = check(&fixture("register-ok.json"), bad);
+        assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
+        assert!(r.findings[0].to_string().starts_with("SRC-SCHEMA manifest"), "{:?}", r.findings);
+    }
+}
+
+#[test]
+fn links_are_refused() {
+    let f = lines("link-note.json");
+    assert_eq!(f.len(), 1, "{f:?}");
+    assert!(f[0].starts_with("SRC-SCHEMA entries[1].export_route.note"), "{f:?}");
+}
+
+#[test]
 fn review_needs_every_field_and_a_real_date() {
     let text = String::from_utf8(fixture("register-ok.json")).unwrap();
     let broken = text.replacen("\"date\": \"2026-11-20\"", "\"date\": \"2026-02-30\"", 1);
-    let r = check(broken.as_bytes());
+    let r = check(broken.as_bytes(), &manifest());
     assert_eq!(
         r.findings.iter().map(ToString::to_string).collect::<Vec<_>>(),
         ["SRC-REVIEW src.demoscan-points-csv missing or invalid date"]
     );
     let broken = text.replacen("\"reviewer\": \"maintainer-a\"", "\"reviewer\": \"\"", 1);
-    assert_eq!(check(broken.as_bytes()).findings[0].code(), "SRC-REVIEW");
+    assert_eq!(check(broken.as_bytes(), &manifest()).findings[0].code(), "SRC-REVIEW");
 }
 
 #[test]
@@ -108,7 +145,7 @@ fn hostile_input_is_refused() {
         b"{\"schema\":\"mig-sources@1\",\"version\":\"1.0.0\",\"policy\":\"D-033-C\",\"entries\":[]}",
         b"\xff",
     ] {
-        let r = check(bad);
+        let r = check(bad, &manifest());
         assert!(r.register.is_none());
         assert!(r.findings.iter().all(|f| f.code() == "SRC-SCHEMA"), "{:?}", r.findings);
     }
@@ -155,7 +192,8 @@ fn params_fail_closed() {
 #[test]
 fn embedded_register_passes_the_check() {
     let reg = embedded().unwrap();
-    assert!(check(fid_mig::src::reg::EMBEDDED).is_ok());
+    // The workspace manifest has no format catalogue yet; the empty register needs none.
+    assert!(check(fid_mig::src::reg::EMBEDDED, br#"{"commands":[]}"#).is_ok());
     assert_eq!(reg.policy().as_str(), "D-033-A");
 }
 

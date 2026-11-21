@@ -16,6 +16,11 @@ Writes, next to itself:
   overlaps the first (SRC-DUP).
 - attest-missing.json: one review record has no_copied_text_attestation false (SRC-ATTEST).
 - schema-bad.json: a product name holding a Markdown table bar (SRC-SCHEMA).
+- unregistered.json: the DemoCMM program entry names "democmm-prog" without the native:
+  prefix, a format ID the manifest does not register (SRC-SCHEMA).
+- link-note.json: an export note carrying a web address (SRC-SCHEMA).
+- manifest-formats.json: a synthetic registry manifest whose format catalogue registers
+  qif, dmis, points-csv and results-csv (the open formats register-ok.json names).
 - vocab-claim.json: an export note with an unsupported conformance claim (SRC-VOCAB under
   the outreach claim rules).
 - expected/list-not-admitted.json: RFC 8785 canonical JSON of the migrate.list_sources@1
@@ -159,6 +164,16 @@ def variants():
     r = register_ok()
     by_id(r, "src.democmm-program-native")["export_route"]["note"] = "The DMIS export is certified for every program."
     out["vocab-claim.json"] = r
+    r = register_ok()
+    by_id(r, "src.democmm-program-native")["format_id"] = "democmm-prog"
+    out["unregistered.json"] = r
+    r = register_ok()
+    by_id(r, "src.democmm-program-native")["export_route"]["note"] = "Download the DMIS exporter from www.example.org first."
+    out["link-note.json"] = r
+    out["manifest-formats.json"] = {
+        "commands": [],
+        "formats": [{"id": "dmis"}, {"id": "points-csv"}, {"id": "qif"}, {"id": "results-csv"}],
+    }
     return out
 
 

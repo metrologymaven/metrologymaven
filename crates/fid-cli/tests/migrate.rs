@@ -60,6 +60,8 @@ fn embedded_and_errors() {
     assert_eq!(code, 0);
     assert!(String::from_utf8(out).unwrap().contains("\"policy\":\"D-033-A\""));
     assert_eq!(fid(&["migrate", "list-sources", "--bogus"]).0, 2);
+    assert_eq!(fid(&["migrate", "list-sources", "--register", REGISTER, "--register", REGISTER]).0, 2);
+    assert_eq!(fid(&["migrate", "list-sources", "--status", "ADMITTED", "--status", "ADMITTED"]).0, 2);
     assert_ne!(fid(&["migrate", "list-sources", "--status", "admitted"]).0, 0);
     assert_ne!(fid(&["migrate", "list-sources", "--register", "no-such-file.json"]).0, 0);
 }

@@ -2138,6 +2138,7 @@ dependencies = [
  "fid-canon",
  "fid-mig",
  "fid-registry",
+ "fid-registry-build",
  "fid-types",
  "fid-uuid",
  "fid-vocab",
