@@ -191,7 +191,7 @@ impl QuantityCatalogue for DupCatalogue {
         self.kinds.iter().flat_map(|k| &k.units).find(|u| u.symbol == unit).map(|u| u.factor)
     }
     fn digest(&self) -> fid_types::Digest {
-        self.digest.clone()
+        self.digest
     }
 }
 
