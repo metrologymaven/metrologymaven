@@ -92,6 +92,8 @@ fn main() -> ExitCode {
         Some("mig") if args.get(1).map(String::as_str) == Some("sources-check") => mig_sources_check(&args[2..]),
         Some("conic-audit") => fid_xtask::conic_audit::cli(&args[1..]),
         Some("registry-gate") => fid_xtask::registry_gate::cli(&args[1..]),
+        Some("convergence-check") => fid_xtask::convergence::check_cli(&args[1..]),
+        Some("convergence-doc") => fid_xtask::convergence::doc_cli(&args[1..]),
         Some("gen-surfaces") => gen_surfaces(&args[1..]),
         Some("crash-harness") => crash_harness(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
@@ -114,6 +116,8 @@ fn main() -> ExitCode {
             eprintln!("{MIG_SOURCES_USAGE}");
             eprintln!("{}", fid_xtask::conic_audit::USAGE);
             eprintln!("{}", fid_xtask::registry_gate::USAGE);
+            eprintln!("{}", fid_xtask::convergence::CHECK_USAGE);
+            eprintln!("{}", fid_xtask::convergence::DOC_USAGE);
             eprintln!("{GEN_SURFACES_USAGE}");
             eprintln!("{}", fid_xtask::rel::notes::USAGE);
             ExitCode::from(2)
