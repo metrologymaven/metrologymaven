@@ -38,7 +38,7 @@
 use crate::element::{id_value, obj, parse_id};
 use crate::error::AlignError;
 use crate::model::{AlignmentModel, MAX_ALIGNMENTS};
-use fid_align_solve::{EntryView, Length, ResidualReport};
+use fid_align_solve::{AlignmentDiagnostics, EntryView, Length, ResidualReport};
 use fid_canon::CValue;
 use fid_types::Digest;
 use fid_uuid::Uuid;
@@ -61,9 +61,12 @@ const MAX_SAFE: u64 = (1 << 53) - 1;
 
 /// The residual reports of a project, keyed by report ID (the `report.id` an alignment
 /// records). Reports are immutable; an alignment's `report.digest` pins which one it means.
+/// The conditioning diagnostics a solver computes at the end of its run (ALN.QA.COND) are
+/// stored with the report, under the same ID ([`ResidualStore::insert_diagnostics`]).
 #[derive(Debug, Clone, Default)]
 pub struct ResidualStore {
     reports: BTreeMap<Uuid, ResidualReport>,
+    diagnostics: BTreeMap<Uuid, AlignmentDiagnostics>,
 }
 
 impl ResidualStore {
@@ -87,6 +90,26 @@ impl ResidualStore {
 
     pub fn get(&self, id: &Uuid) -> Option<&ResidualReport> {
         self.reports.get(id)
+    }
+
+    /// Stores the diagnostics of the run that wrote report `id`, next to that report. The
+    /// report must be stored first (`not_found`); storing equal diagnostics again is a no-op
+    /// and different ones under the same report give `id_collision`, so the diagnostics of a
+    /// report never change (a report under an ID never changes either).
+    pub fn insert_diagnostics(&mut self, id: Uuid, diagnostics: AlignmentDiagnostics) -> Result<(), AlignError> {
+        if !self.reports.contains_key(&id) {
+            return Err(AlignError::NotFound(id));
+        }
+        if let Some(old) = self.diagnostics.get(&id) {
+            return if *old == diagnostics { Ok(()) } else { Err(AlignError::IdCollision(id)) };
+        }
+        self.diagnostics.insert(id, diagnostics);
+        Ok(())
+    }
+
+    /// The diagnostics stored with report `id`.
+    pub fn diagnostics(&self, id: &Uuid) -> Option<&AlignmentDiagnostics> {
+        self.diagnostics.get(id)
     }
 
     pub fn len(&self) -> usize {
