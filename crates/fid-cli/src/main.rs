@@ -1,7 +1,8 @@
 //! `fid`: the Metrology Maven command line.
 //!
 //! First slice: `fid canon` exposes the canonical-JSON crate (CORE.JRN.CANON) so
-//! people, agents and CI can hash journal-style JSON exactly the way the kernel will.
+//! people, agents and CI can hash journal-style JSON exactly the way the kernel will;
+//! `fid migrate list-sources` lists the incumbent source register (MIG.SRC.REG).
 //! The registry-driven command surface (AUTO.SURF) replaces this hand-written parser later.
 //! Exit codes and `--json` output follow AUTO.CLI.OUT (`fid_cli::ExitCode`, `fid_cli::Output`):
 //! under `--json` every result, including usage and input errors, is one envelope on stdout.
@@ -21,6 +22,10 @@ USAGE:
                                   with --digest print only its sha256 digest
     fid canon [FILE] --json       Print a result envelope (schema/envelope-v1.json)
                                   with the canonical value and its digest
+    fid migrate list-sources [--kind K] [--status S] [--format json|md] [--register FILE]
+                                  List the incumbent source register (migrate.list_sources@1);
+                                  --format md prints the public sources page; --register reads
+                                  a register file instead of the embedded one
     fid --version                 Print the version
     fid --help                    Print this help
 
@@ -43,6 +48,7 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Some("canon") => canon(&args[1..]),
+        Some("migrate") if args.get(1).map(String::as_str) == Some("list-sources") => list_sources(&args[2..]),
         Some(other) => {
             let msg = format!("unknown command `{other}`");
             if !json {
@@ -156,4 +162,91 @@ fn canon_json(input: &[u8]) -> ExitCode {
         }
     };
     emit(true, &env)
+}
+
+const LIST_SOURCES: &str = fid_mig::src::reg::LIST_SOURCES;
+
+/// A `fid migrate list-sources` error: a failed envelope under `--json`, a stderr line otherwise.
+fn sources_error(json: bool, code: ErrorCode, msg: &str) -> ExitCode {
+    let env = Envelope::failed(LIST_SOURCES, code, msg, None);
+    if json {
+        return emit(true, &env);
+    }
+    eprintln!("error: {msg}");
+    Fx::from_envelope(&env).into()
+}
+
+/// `fid migrate list-sources` (MIG.SRC.REG, `migrate.list_sources@1`, R0): the listing as
+/// canonical JSON, the sources page under `--format md`, or a result envelope under `--json`.
+/// Reads the embedded register unless `--register FILE` names another (bounded read).
+fn list_sources(args: &[String]) -> ExitCode {
+    use fid_mig::src::reg;
+    let json = args.iter().any(|a| a == "--json");
+    let mut params = BTreeMap::new();
+    let mut register = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        let key = match a.as_str() {
+            "--json" => continue,
+            "--kind" => "kind",
+            "--status" => "status",
+            "--format" => "format",
+            "--register" => "register",
+            s => return sources_error(json, ErrorCode::UsageError, &format!("unknown argument `{s}`")),
+        };
+        let Some(v) = it.next() else {
+            return sources_error(json, ErrorCode::UsageError, &format!("{a} needs a value"));
+        };
+        if key == "register" {
+            register = Some(v.clone());
+        } else if params.insert(key.to_string(), CValue::Str(v.clone())).is_some() {
+            return sources_error(json, ErrorCode::UsageError, &format!("{a} given twice"));
+        }
+    }
+    let bytes = match &register {
+        None => reg::EMBEDDED.to_vec(),
+        Some(path) => {
+            let read = std::fs::File::open(path).and_then(|f| {
+                let mut b = Vec::new();
+                f.take(reg::MAX_REGISTER_BYTES as u64 + 1).read_to_end(&mut b).map(|_| b)
+            });
+            match read {
+                Ok(b) => b,
+                Err(e) => {
+                    let code = if e.kind() == std::io::ErrorKind::NotFound {
+                        ErrorCode::NotFound
+                    } else {
+                        ErrorCode::PreconditionFailed
+                    };
+                    return sources_error(json, code, &format!("reading {path}: {e}"));
+                }
+            }
+        }
+    };
+    let md = params.get("format") == Some(&CValue::Str("md".to_string()));
+    let result = match reg::run_list_sources(&bytes, &CValue::Obj(params)) {
+        Ok(v) => v,
+        Err(e) => return sources_error(json, ErrorCode::ValidationError, &e.to_string()),
+    };
+    if json {
+        return emit(true, &Envelope::computed(LIST_SOURCES, result));
+    }
+    let mut out = std::io::stdout().lock();
+    let written = match (&result, md) {
+        (CValue::Obj(o), true) => match o.get("page") {
+            Some(CValue::Str(page)) => out.write_all(page.as_bytes()),
+            _ => return sources_error(false, ErrorCode::InternalError, "no page in the result"),
+        },
+        _ => match fid_canon::to_canonical_bytes(&result) {
+            Ok(b) => out.write_all(&b).and_then(|()| writeln!(out)),
+            Err(e) => return sources_error(false, ErrorCode::InternalError, &e.to_string()),
+        },
+    };
+    match written {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("error: writing output: {e}");
+            Fx::Internal.into()
+        }
+    }
 }

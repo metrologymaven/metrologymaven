@@ -17,8 +17,12 @@ path = "src/main.rs"
 fid-accept = { path = "../fid-accept" }
 # Also bounded JSON parsing for bot configs and the review export (`bots-check`).
 fid-canon = { path = "../fid-canon" }
-# `mig ladder-check` (MIG.LADDER.DEF): the ladder loader and check (services layer).
+# `mig ladder-check` (MIG.LADDER.DEF) and `mig sources-check` (MIG.SRC.REG): the ladder and
+# source-register loaders and checks (services layer).
 fid-mig = { path = "../fid-mig" }
+# `mig sources-check --vocab-rules` (MIG.SRC.REG vocabulary check): the project's one
+# vocabulary and claim lint engine (ECO.RULES.VOCAB.ENGINE, app layer).
+fid-vocab = { path = "../fid-vocab" }
 # `registry-gate` (CORE.REG.VER.GATE): the manifest reader, the compatibility classifier
 # (`compat::diff`) and the lifecycle check, the gate's only sources of truth (model layer).
 fid-registry = { path = "../fid-registry" }

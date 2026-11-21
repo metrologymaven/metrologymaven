@@ -46,6 +46,8 @@ fid-bus = { path = "../fid-bus" }
 # (CORE.JRN.BR.NAME) and the branch diff `fid_journal::diff::command_defs` (CORE.JRN.BR.DIFF). Feature `store` because the declaration uses fid-store's macro. Layer
 # model; already in the lock.
 fid-journal = { path = "../fid-journal", features = ["store"] }
+# `migrate.list_sources@1` (MIG.SRC.REG), `fid_mig::src::reg::command_defs`. Layer services.
+fid-mig = { path = "../fid-mig" }
 
 # `test_support::all_defs` (feature `test-support`) also lists the command definitions of
 # crates not yet in SOURCES: GDT (record, status, datum), RDL, the package reader and the

@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-mig, fid-xtask, fid-cli]
 satisfies: [REQ-MIG.SRC-001, REQ-MIG.SRC-002, REQ-MIG.SRC-005, REQ-MIG.SRC-006]
 covers: []
 depends_on: [IO.REG.DETECT, CORE.JRN.CANON]
@@ -18,7 +19,7 @@ determinism: D0
 cli: [fid migrate list-sources]
 mcp: [migrate_list_sources]
 journal: [migrate.list_sources@1]
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # MIG.SRC.REG: Source register, review records, listing and sources page
@@ -80,6 +81,16 @@ The source register as data (`mig-sources@1`): one entry per incumbent artefact 
 ## Open questions
 
 - The production register's initial content (which incumbent products and export routes to list) needs a human reviewer and, per D-033's condition, counsel review before release [unverified export routes].
+
+## As built
+
+- `fid-mig` module `src::reg`: loader, `check`, `list_sources`, `render_md`, `run_list_sources` and the registry definition of `migrate.list_sources@1` (registered in `fid-registry-build` `SOURCES`). `cargo xtask mig sources-check --register <json> [--vocab-rules <toml>]` in `fid-xtask`; `fid migrate list-sources [--kind] [--status] [--format json|md] [--register FILE] [--json]` in `fid-cli`.
+- The review record is inline in its entry (`review`), and its `entry` field must name the entry, so a reference cannot dangle. An export route is `{format, note}`, where `format` is an open format ID or `none`.
+- Version ranges are `<lo>..<hi>`. Each end is `*` or a dotted numeric version of 1 to 4 components, and both ends are inclusive.
+- Every free-text field is refused (`SRC-SCHEMA`) if it holds control or bidirectional-override characters or Markdown/HTML metacharacters. The page is then rendered without escaping.
+- `counsel_ref` is required (`SRC-REVIEW`) for an `ADMITTED` native format under policy `D-033-B`.
+- The vocabulary check runs the shared engine `fid-vocab` with a given rule file (for example the outreach claim rules) over product names, export notes and review texts. Each error is reported as `SRC-VOCAB <id> <rule> <message>`, a code beyond the leaf's error list.
+- The embedded production register `data/mig/sources.json` has no entries yet (see Open questions).
 
 ## Children
 
