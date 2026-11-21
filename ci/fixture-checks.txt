@@ -13,6 +13,7 @@ python -m unittest discover -s tools/tests -v
 python crates/fid-report-pdf/fontgen/make_fonts.py --check
 python fixtures/agent/harness/runs/make_runs.py --check
 python fixtures/aln/bfit/make_constr_fixtures.py --check
+python fixtures/aln/qa/cond-cases/make_cond_cases.py --check
 python fixtures/aln/qa/hist-manifest/make_expected.py --check
 python fixtures/aln/qa/make_report_fixtures.py --check
 python fixtures/auto/cli/out/make_cases.py --check
@@ -34,6 +35,7 @@ python fixtures/core/jrn/chain/verify/make_fixtures.py --check
 python fixtures/core/jrn/stream/alog/make_fixtures.py --check
 python fixtures/core/jrn/undo/super/make_fixtures.py --check
 python fixtures/core/prj/cont/hier/make_fixtures.py --check
+python fixtures/core/prj/cont/life/make_identity_cases.py --check
 python fixtures/core/prj/stage/model/make_fixtures.py --check
 python fixtures/core/prj/stage/switch/make_fixtures.py --check
 python fixtures/core/prj/tree/model/make_fixtures.py --check

@@ -2,6 +2,7 @@
 
 pub mod container;
 pub mod id;
+pub mod lifecycle;
 pub mod stage;
 pub mod stage_switch;
 pub mod tree;
