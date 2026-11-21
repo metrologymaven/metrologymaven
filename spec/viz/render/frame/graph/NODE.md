@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-render]
+built_pr: 368
 satisfies: [REQ-VIZ.RENDER.FRAME-001, REQ-VIZ.RENDER.FRAME-004]
 covers: []
 depends_on: [VIZ.RENDER.SCENE.IDTAB, VIZ.RENDER.SCENE.PROJ]
