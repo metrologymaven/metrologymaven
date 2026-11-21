@@ -324,11 +324,14 @@ pub fn max_projection(class: SideEffect) -> Projection {
 ///   a bus origin.
 /// - The promotion events of CORE.JRN.BR.PROMO: each belongs to its promotion command, so no
 ///   other command (and no agent-runnable command but the request) can emit one.
-pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 10] = [
+/// - `ProfileSet` of TRUST.PROFILE.SELECT belongs to `sign.set_profile@1` (A0, human only):
+///   the active governance profile is folded from it, so no other command may emit it.
+pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 11] = [
     ("BranchCreated", Some(("journal.create_branch", 1))),
     ("BranchPromoted", Some(("journal.promote_branch", 1))),
     ("BranchProtected", Some(("journal.protect_branch", 1))),
     ("CoeditingSet", Some(("journal.set_branch_coediting", 1))),
+    ("ProfileSet", Some(("sign.set_profile", 1))),
     ("PromotionRequested", Some(("journal.request_promote_branch", 1))),
     ("ProtectedBranchPromoted", Some(("journal.promote_protected_branch", 1))),
     ("RequestApproved", None),

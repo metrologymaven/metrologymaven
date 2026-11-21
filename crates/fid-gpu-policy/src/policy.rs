@@ -106,8 +106,11 @@ named_enum!(
     GpuOs { Windows = "windows", Linux = "linux", Macos = "macos" }
 );
 named_enum!(
-    /// A GPU backend (REQ-PLAT.GPU.POLICY-001).
-    Backend { Vulkan = "vulkan", Metal = "metal", Dx12 = "dx12", Software = "software" }
+    /// A GPU backend (REQ-PLAT.GPU.POLICY-001). `gl` and `webgpu` were added after `software`
+    /// (PLAT.GPU.POLICY change log, 2026-11-21), so the order of the original four is
+    /// unchanged. Neither is mandatory on any OS; like every backend but `software`, a row that
+    /// lists one needs its `min` entry.
+    Backend { Vulkan = "vulkan", Metal = "metal", Dx12 = "dx12", Software = "software", Gl = "gl", WebGpu = "webgpu" }
 );
 
 impl GpuOs {
@@ -580,7 +583,7 @@ fn named<T>(
 
 const OSES: &str = "one of windows, linux, macos";
 const ARCHES: &str = "one of x86_64, aarch64";
-const BACKENDS: &str = "one of vulkan, metal, dx12, software";
+const BACKENDS: &str = "one of vulkan, metal, dx12, gl, webgpu, software";
 const VERSIONS: &str = "a dotted numeric version of 1 to 4 u32 components";
 const IDS: &str = "an id of 1 to 64 characters from A-Z a-z 0-9 . _ -";
 const ACTIONS: &str = "avoid_backend, force_software or workaround:<name> with name [a-z][a-z0-9_]*";

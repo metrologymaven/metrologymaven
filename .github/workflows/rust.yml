@@ -63,6 +63,10 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+      - name: Frame graph adapter report (VIZ.RENDER.FRAME.GRAPH AC-1)
+        # Re-runs the already-built test with output shown, so the adapter AC-1 used (WARP on
+        # Windows) or its early-return reason is in the log on a pass too.
+        run: cargo test -p fid-render --test frame_graph -- --show-output
       - name: Template format fuzz, full 1 000 000 iterations in release (RPT.MODEL.TMPL.FORMAT AC-4)
         # Plain `cargo test` runs a 20 000-iteration prefix of the same streams on every OS.
         if: runner.os == 'Linux'
@@ -75,6 +79,12 @@ jobs:
         env:
           FID_OOC_FULL: "1"
         run: cargo test --release -p fid-geo-ooc --test cloud_5e6 -- --nocapture
+      - name: Batch projection on the full 1 000 000-point scan in release (GEO.DIST.BATCH AC-1, AC-4)
+        # Plain `cargo test` runs the first 50 000 points of the same seeded scan on every OS.
+        if: runner.os == 'Linux'
+        env:
+          FID_BATCH_POINTS: "1000000"
+        run: cargo test --release -p fid-geo-dist --test batch -- --nocapture
       - name: Kernel WASM shim with its stand-in test algorithms, natively (KRN.MAN.WASM AC-2)
         run: |
           cargo clippy -p fid-kernel-wasm --all-targets --features test-algorithms -- -D warnings

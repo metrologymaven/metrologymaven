@@ -1131,6 +1131,7 @@ dependencies = [
 name = "fid-align-solve"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-frame",
  "fid-kci",
  "fid-num",
  "fid-testkit",
@@ -1374,6 +1375,7 @@ dependencies = [
 name = "fid-geo-dist"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-frame",
  "fid-geo-index",
  "fid-geo-types",
  "fid-kci",
@@ -1445,6 +1447,7 @@ name = "fid-gps"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-fit",
  "fid-geo-frame",
  "fid-num",
  "fid-types",
@@ -1550,6 +1553,7 @@ dependencies = [
 name = "fid-io-step"
 version = "0.0.1"
 dependencies = [
+ "fid-canon",
  "fid-io-reg",
 ]
 
@@ -1748,6 +1752,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-profile-cmd"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-journal",
+ "fid-profile",
+ "fid-registry",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-program"
 version = "0.0.1"
 dependencies = [
@@ -1852,6 +1868,7 @@ dependencies = [
  "fid-journal",
  "fid-ors",
  "fid-pkg",
+ "fid-profile-cmd",
  "fid-program-rec",
  "fid-project",
  "fid-project-cmd",
@@ -1884,6 +1901,9 @@ dependencies = [
  "fid-kdec",
  "fid-types",
  "fid-uuid",
+ "pollster",
+ "toml",
+ "wgpu",
 ]
 
 [[package]]

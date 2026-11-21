@@ -1,0 +1,170 @@
+# Expected results for the IO.CAD.STEP.HDR fixtures, written by make_cases.py.
+# Block: '== <fixture> unit=<symbol|none> override=<bool>', then the result lines.
+# factor: big-endian hex of the f64 nearest to the exact factor to metres.
+# system: hex of the UTF-8 originating-system string.
+# prov: the provenance record's unit, source and unit_overridden; declared: its unit items.
+== ap242_mm.stp unit=none override=false
+schema ap242
+system 6669642073796e7468657469632067656e657261746f72
+context 14 unit mm factor 3f50624dd2f1a9fc angle radian uncertainty 1.E-06 3f50624dd2f1a9fc source declared geometry true
+prov unit mm source declared overridden false
+declared step.contexts 1
+declared step.units.group_1 length=mm factor_m=0.001 source=declared angle=radian uncertainty=1e-6 mm geometry=true contexts=1 first=#14
+== ap242_mm.stp unit=mm override=false
+schema ap242
+system 6669642073796e7468657469632067656e657261746f72
+context 14 unit mm factor 3f50624dd2f1a9fc angle radian uncertainty 1.E-06 3f50624dd2f1a9fc source declared geometry true
+prov unit mm source declared overridden false
+declared step.contexts 1
+declared step.units.group_1 length=mm factor_m=0.001 source=declared angle=radian uncertainty=1e-6 mm geometry=true contexts=1 first=#14
+== ap242_mm.stp unit=in override=false
+error unit_conflict entity 14
+== ap242_mm.stp unit=in override=true
+schema ap242
+system 6669642073796e7468657469632067656e657261746f72
+context 14 unit in factor 3f9a027525460aa6 angle radian uncertainty 1.E-06 3f9a027525460aa6 source override geometry true
+warning 14 step_uncertainty_reexpressed
+prov unit in source override overridden true
+declared step.contexts 1
+declared step.units.group_1 length=in factor_m=0.0254 source=override angle=radian uncertainty=1e-6 in geometry=true contexts=1 first=#14
+declared step.units.not_declared contexts=1 override=1 caller=0
+declared step.units.not_declared_1 #14
+== ap214_inch.stp unit=none override=false
+schema ap214
+system 6669642073796e7468657469632067656e657261746f72
+context 30 unit in factor 3f9a027525460aa6 angle degree uncertainty 0.0001 3f9a027525460aa6 source declared geometry true
+prov unit in source declared overridden false
+declared step.contexts 1
+declared step.units.group_1 length=in factor_m=0.0254 source=declared angle=degree uncertainty=0.0001 in geometry=true contexts=1 first=#30
+== ap214_inch.stp unit=mm override=true
+schema ap214
+system 6669642073796e7468657469632067656e657261746f72
+context 30 unit mm factor 3f50624dd2f1a9fc angle degree uncertainty 0.0001 3f50624dd2f1a9fc source override geometry true
+warning 30 step_uncertainty_reexpressed
+prov unit mm source override overridden true
+declared step.contexts 1
+declared step.units.group_1 length=mm factor_m=0.001 source=override angle=degree uncertainty=0.0001 mm geometry=true contexts=1 first=#30
+declared step.units.not_declared contexts=1 override=1 caller=0
+declared step.units.not_declared_1 #30
+== ap209.stp unit=none override=false
+error step_schema_unsupported raw 41503230395f4d554c54494449534349504c494e4152595f414e414c595349535f414e445f44455349474e5f4d494d5f4c46
+== no_unit.stp unit=none override=false
+error unit_required entity 14
+== no_unit.stp unit=mm override=false
+schema ap242
+system 6669642073796e7468657469632067656e657261746f72
+context 14 unit mm factor 3f50624dd2f1a9fc angle radian uncertainty none source caller geometry true
+prov unit mm source caller overridden true
+declared step.contexts 1
+declared step.units.group_1 length=mm factor_m=0.001 source=caller angle=radian uncertainty=none geometry=true contexts=1 first=#14
+declared step.units.not_declared contexts=1 override=0 caller=1
+declared step.units.not_declared_1 #14
+== no_unit.stp unit=none override=true
+error unit_required
+== ap203_cm_deg.stp unit=none override=false
+schema ap203
+system 6669642073796e7468657469632067656e657261746f72
+context 14 unit cm factor 3f847ae147ae147b angle radian uncertainty 5 3f847ae147ae147b source declared geometry true
+prov error step_unit_unsupported entity 14
+== ap203e2_foot_warn.stp unit=none override=false
+schema ap203
+system 6669642073796e7468657469632067656e657261746f72
+context 30 unit ft factor 3fd381d7dbf487fd angle degree uncertainty 1.E-05 3fd381d7dbf487fd source declared geometry true
+warning 23 length_factor_mismatch
+warning 25 angle_factor_mismatch
+prov unit ft source declared overridden false
+declared step.contexts 1
+declared step.units.group_1 length=ft factor_m=0.3048 source=declared angle=degree uncertainty=1e-5 ft geometry=true contexts=1 first=#30
+== multi_context.stp unit=none override=false
+schema ap242
+system 6669642073796e7468657469632067656e657261746f72
+context 30 unit mm factor 3f50624dd2f1a9fc angle radian uncertainty none source declared geometry true
+context 31 unit um factor 3eb0c6f7a0b5ed8d angle radian uncertainty 2.5E-02 3e112e0be826d695 source declared geometry true
+unitless 32
+prov unit mm source declared overridden false
+declared step.contexts 2
+declared step.unitless_contexts 1
+declared step.units.group_1 length=mm factor_m=0.001 source=declared angle=radian uncertainty=none geometry=true contexts=1 first=#30
+declared step.units.group_2 length=um factor_m=0.000001 source=declared angle=radian uncertainty=0.025 nm geometry=true contexts=1 first=#31
+declared step.units.mixed true
+== multi_context.stp unit=ft override=false
+error unit_conflict entity 30
+== multi_context.stp unit=mm override=true
+schema ap242
+system 6669642073796e7468657469632067656e657261746f72
+context 30 unit mm factor 3f50624dd2f1a9fc angle radian uncertainty none source declared geometry true
+context 31 unit mm factor 3f50624dd2f1a9fc angle radian uncertainty 2.5E-02 3e112e0be826d695 source override geometry true
+context 32 unit mm factor 3f50624dd2f1a9fc angle none uncertainty none source caller geometry false
+prov unit mm source override overridden true
+declared step.contexts 3
+declared step.units.group_1 length=mm factor_m=0.001 source=declared angle=radian uncertainty=none geometry=true contexts=1 first=#30
+declared step.units.group_2 length=mm factor_m=0.001 source=override angle=radian uncertainty=0.025 nm geometry=true contexts=1 first=#31
+declared step.units.group_3 length=mm factor_m=0.001 source=caller angle=none uncertainty=none geometry=false contexts=1 first=#32
+declared step.units.not_declared contexts=1 override=1 caller=0
+declared step.units.not_declared_1 #31
+== partial_unit.stp unit=none override=false
+error unit_required entity 31
+== partial_unit.stp unit=mm override=false
+schema ap242
+system 6669642073796e7468657469632067656e657261746f72
+context 30 unit mm factor 3f50624dd2f1a9fc angle radian uncertainty 1.E-03 3f50624dd2f1a9fc source declared geometry true
+context 31 unit mm factor 3f50624dd2f1a9fc angle radian uncertainty none source caller geometry true
+prov unit mm source caller overridden true
+declared step.contexts 2
+declared step.units.group_1 length=mm factor_m=0.001 source=declared angle=radian uncertainty=0.001 mm geometry=true contexts=1 first=#30
+declared step.units.group_2 length=mm factor_m=0.001 source=caller angle=radian uncertainty=none geometry=true contexts=1 first=#31
+declared step.units.not_declared contexts=1 override=0 caller=1
+declared step.units.not_declared_1 #31
+== partial_unit.stp unit=in override=true
+schema ap242
+system 6669642073796e7468657469632067656e657261746f72
+context 30 unit in factor 3f9a027525460aa6 angle radian uncertainty 1.E-03 3f9a027525460aa6 source override geometry true
+context 31 unit in factor 3f9a027525460aa6 angle radian uncertainty none source caller geometry true
+warning 30 step_uncertainty_reexpressed
+prov unit in source override overridden true
+declared step.contexts 2
+declared step.units.group_1 length=in factor_m=0.0254 source=override angle=radian uncertainty=0.001 in geometry=true contexts=1 first=#30
+declared step.units.group_2 length=in factor_m=0.0254 source=caller angle=radian uncertainty=none geometry=true contexts=1 first=#31
+declared step.units.not_declared contexts=2 override=1 caller=1
+declared step.units.not_declared_1 #30..#31
+== uncertainty_tokens.stp unit=none override=false
+schema ap242
+system 6669642073796e7468657469632067656e657261746f72
+context 30 unit mm factor 3f50624dd2f1a9fc angle none uncertainty 1.E-06 3f50624dd2f1a9fc source declared geometry true
+context 31 unit mm factor 3f50624dd2f1a9fc angle none uncertainty 0.0000010 3f50624dd2f1a9fc source declared geometry true
+context 32 unit mm factor 3f50624dd2f1a9fc angle none uncertainty -0. 3f50624dd2f1a9fc source declared geometry true
+context 33 unit mm factor 3f50624dd2f1a9fc angle none uncertainty 0.0 3f50624dd2f1a9fc source declared geometry true
+prov unit mm source declared overridden false
+declared step.contexts 4
+declared step.units.group_1 length=mm factor_m=0.001 source=declared angle=none uncertainty=1e-6 mm geometry=true contexts=2 first=#30
+declared step.units.group_2 length=mm factor_m=0.001 source=declared angle=none uncertainty=0.0 mm geometry=true contexts=2 first=#32
+== dup_si_part.stp unit=none override=false
+error malformed entity 10
+== dup_unit_context.stp unit=none override=false
+error malformed entity 14
+== dup_measure.stp unit=none override=false
+error malformed entity 13
+== evil_schema.stp unit=none override=false
+error step_schema_unsupported raw 4150323432e280ae4556494c07
+== prefix_trap.stp unit=none override=false
+error step_schema_unsupported raw 4155544f4d4f544956455f44455349474e45525f534348454d41
+== two_schemas.stp unit=none override=false
+error malformed
+== no_schema.stp unit=none override=false
+error malformed
+== no_file_name.stp unit=none override=false
+error malformed
+== yard.stp unit=none override=false
+error step_unit_unsupported entity 23
+== kilo.stp unit=none override=false
+error step_unit_unsupported entity 10
+== nested_conversion.stp unit=none override=false
+error malformed entity 23
+== dangling_unit.stp unit=none override=false
+error malformed entity 99
+== two_lengths.stp unit=none override=false
+error malformed entity 14
+== negative_factor.stp unit=none override=false
+error malformed entity 21
+== wrong_types.stp unit=none override=false
+error malformed entity 10

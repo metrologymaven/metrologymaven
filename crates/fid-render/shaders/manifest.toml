@@ -1,3 +1,14 @@
 # Shader manifest of fid-render (VIZ.RENDER.FRAME.SHLINT, REQ-001), checked by fid-shlint.
-# The crate has no WGSL module yet: VIZ.RENDER.SCENE.IDTAB is CPU-side bookkeeping only.
+# The crate has no WGSL module yet: VIZ.RENDER.SCENE.IDTAB is CPU-side bookkeeping only, and the
+# frame graph (VIZ.RENDER.FRAME.GRAPH) only clears its targets; draw passes bring their shaders.
 schema = 1
+
+# The staging buffers the frame graph copies its ID and depth attachments into for picking
+# readback (FrameGraph::read_id, FrameGraph::read_depth): the only GPU reads in the crate.
+[[target]]
+name = "id_readback"
+class = "id"
+
+[[target]]
+name = "depth_readback"
+class = "depth"
