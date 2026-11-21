@@ -178,18 +178,23 @@ fn wait_for_log(a: &App, code: &str) {
     }
 }
 
-/// Owner-only, read with PowerShell's `Get-Acl` (.NET security API), independently of the
-/// crate's own check: a protected DACL whose only rules allow the current user's SID.
+/// Owner-only, read with PowerShell through the .NET `FileSecurity` API, independently of
+/// the crate's own check: a protected DACL whose only rules allow the current user's SID.
 #[cfg(windows)]
 fn assert_owner_only_by_os(path: &Path) {
     let script = format!(
-        "$a = Get-Acl -LiteralPath '{}'; 'protected=' + $a.AreAccessRulesProtected; \
+        "$ErrorActionPreference = 'Stop'; \
+         $a = New-Object System.Security.AccessControl.FileSecurity -ArgumentList '{}', 'Access,Owner'; \
+         'protected=' + $a.AreAccessRulesProtected; \
          foreach ($r in $a.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])) \
          {{ 'rule=' + $r.AccessControlType + ' ' + $r.IdentityReference.Value }}; \
          'user=' + [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value",
         path.display()
     );
+    // Windows PowerShell 5.1 (.NET Framework). PSModulePath is cleared so a parent pwsh 7, as
+    // on CI runners, cannot point it at incompatible modules (Get-Acl then returned nothing).
     let out = std::process::Command::new("powershell")
+        .env_remove("PSModulePath")
         .args(["-NoProfile", "-NonInteractive", "-Command", &script])
         .output()
         .unwrap();
