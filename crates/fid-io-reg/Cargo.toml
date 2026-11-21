@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-reg"
-description = "Metrology Maven reader harness: limits, bounded source, IoError taxonomy, untrusted text, root handles, import and export reports, atomic export writes (spec nodes IO.REG.LIMITS, IO.REG.ROOTS, IO.REG.ENV.REPORT, IO.REG.WRITE), format registry and detection (IO.REG.DETECT), export command and skeleton (IO.REG.ENV.EXPORT)"
+description = "Metrology Maven reader harness: limits, bounded source, IoError taxonomy, untrusted text, root handles, import and export reports, atomic export writes (spec nodes IO.REG.LIMITS, IO.REG.ROOTS, IO.REG.ENV.REPORT, IO.REG.WRITE), format registry and detection (IO.REG.DETECT), export command and skeleton (IO.REG.ENV.EXPORT), import command and skeleton (IO.REG.ENV.IMPORT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,12 +8,23 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-# Test seams `RootSet::set_race_hook` (IO.REG.ROOTS REQ-005 race tests) and
-# `AtomicWriter::fail_after` (IO.REG.WRITE AC-3 fault injection). Off by default;
-# enabled only through the dev-dependency below, never in shipped builds.
+# Test seams `RootSet::set_race_hook` (IO.REG.ROOTS REQ-005 race tests),
+# `AtomicWriter::fail_after` (IO.REG.WRITE AC-3 fault injection), and IO.REG.ENV.IMPORT's
+# sink faults (`env::import::Fault`, `ImportEnv::set_fault`) with the import conformance kit
+# that injects them (`env::import::conformance`; a format crate enables the feature from its
+# dev-dependencies). Off by default; never in shipped builds.
 test-hooks = []
+# IO.REG.ENV.IMPORT: the `CasBlobs` adapter over the project blob store (CORE.STO.CAS).
+# Off by default, so the harness stays free of the store (and its bundled SQLite) for its
+# pure users; the tests enable it through the dev-dependency below.
+cas = ["dep:fid-store"]
 
 [dependencies]
+# IO.REG.ENV.IMPORT: the element tree, stages and IDs an import commits into
+# (CORE.PRJ.TREE.MODEL, CORE.PRJ.STAGE.MODEL). Layer model, no store.
+fid-project = { path = "../fid-project" }
+# IO.REG.ENV.IMPORT `cas` feature only. Layer model.
+fid-store = { path = "../fid-store", optional = true }
 fid-types = { path = "../fid-types" }
 # RFC 8785 canonical JSON for report digests (IO.REG.ENV.REPORT REQ-003).
 fid-canon = { path = "../fid-canon" }
@@ -43,10 +54,18 @@ libc = "0.2"
 
 [dev-dependencies]
 # Integration tests use the race hook.
-fid-io-reg = { path = ".", features = ["test-hooks"] }
+fid-io-reg = { path = ".", features = ["test-hooks", "cas"] }
+# IO.REG.ENV.IMPORT: the CAS adapter test opens a real blob store.
+fid-store = { path = "../fid-store" }
 # IO.REG.ENV.EXPORT tests evaluate the published schema patterns with a real regex engine.
 # Already in the lock (fid-vocab), same features.
 regex = { version = "1", default-features = false, features = ["std", "unicode"] }
+# IO.REG.ENV.IMPORT tests: every import error's bus pair must decode with the bus's own
+# `BusError::from_wire` (catalogue v3). Engine layer, below this crate; already in the lock.
+fid-bus = { path = "../fid-bus" }
+# IO.REG.ENV.IMPORT `tests/import_alloc.rs`: counting global allocator that measures the
+# per-entity commit cost (as fid-program and fid-geo-ooc do). Already in the lock.
+cap = { version = "0.1.2", features = ["stats"] }
 
 [lints]
 workspace = true

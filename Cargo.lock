@@ -1509,13 +1509,17 @@ dependencies = [
 name = "fid-io-reg"
 version = "0.0.1"
 dependencies = [
+ "cap",
  "cap-std",
+ "fid-bus",
  "fid-canon",
  "fid-geo-frame",
  "fid-io-reg",
  "fid-journal",
+ "fid-project",
  "fid-registry",
  "fid-replay",
+ "fid-store",
  "fid-surface",
  "fid-types",
  "libc",

@@ -1,6 +1,6 @@
 [package]
 name = "fid-types"
-description = "Metrology Maven shared vocabulary: determinism and side-effect classes, sha256 digests, command IDs"
+description = "Metrology Maven shared vocabulary: determinism and side-effect classes, sha256 digests, command IDs, forbidden display-text code points"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

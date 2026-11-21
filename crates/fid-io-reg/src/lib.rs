@@ -7,7 +7,9 @@
 //! detector ([`detect`], [`Registry`]), and `IO.REG.PROV`, source provenance with unit
 //! and frame capture ([`prov`], [`SourceProvenance`], [`HashingSource`], [`resolve_unit`]),
 //! and `IO.REG.ENV.EXPORT`, the generic export command `export.file@1` and the export
-//! skeleton with its conformance kit ([`env::export`]).
+//! skeleton with its conformance kit ([`env::export`]), and `IO.REG.ENV.IMPORT`, the generic
+//! import command `import.file@1` and the import skeleton with its conformance kit
+//! ([`env::import`]).
 //!
 //! - [`Limits`] with documented defaults; [`LimitRequest`] overrides may only lower a
 //!   limit unless the [`Principal`] is a human (`limit_raise_forbidden` otherwise);
