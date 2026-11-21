@@ -188,13 +188,16 @@ fn unset(t: &mut toml::Table, keys: &[&str]) {
     cur.remove(*last);
 }
 
+/// A named change to a manifest.
+type Edit = (&'static str, fn(&mut toml::Table));
+
 #[test]
 fn the_lint_table_check_catches_every_change() {
     let ws = table(&root().join("Cargo.toml"));
     let good = table(&exception_dir(&root()).join("Cargo.toml"));
     assert_eq!(lint_violations(&ws, &good, false), Vec::<String>::new());
     assert!(!lint_violations(&ws, &good, true).is_empty(), "not caught: build.rs");
-    let edits: [(&str, fn(&mut toml::Table)); 9] = [
+    let edits: [Edit; 9] = [
         ("extra clippy allow", |t| set(t, &["lints", "clippy", "missing_safety_doc"], "allow")),
         ("undocumented_unsafe_blocks warn", |t| set(t, &["lints", "clippy", "undocumented_unsafe_blocks"], "warn")),
         ("undocumented_unsafe_blocks missing", |t| unset(t, &["lints", "clippy", "undocumented_unsafe_blocks"])),
