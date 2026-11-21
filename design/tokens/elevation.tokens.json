@@ -1,7 +1,7 @@
 {
   "elev": {
     "$type": "shadow",
-    "$description": "Elevation levels (UX.TOKENS.SPACE), at most five. Every level is also shown by its surface and border cue ($extensions org.metrologymaven.elevation, names of sem.surface.* and sem.border.* tokens), so the high-contrast theme can show elevation without shadows. No two levels share a cue.",
+    "$description": "Elevation levels (UX.TOKENS.SPACE), at most five. Every level is also shown by its surface and border cue ($extensions org.metrologymaven.elevation, names of sem.surface.* and sem.border.* tokens), so the high-contrast theme can show elevation without shadows. In every theme, no two levels resolve to the same surface and border colours.",
     "0": {
       "$description": "Flat: the page itself.",
       "$extensions": {
@@ -18,9 +18,10 @@
       }
     },
     "1": {
-      "$description": "Raised: cards and panels.",
+      "$description": "Raised: cards and panels, outlined by the subtle border.",
       "$extensions": {
         "org.metrologymaven.elevation": {
+          "border": "sem.border.subtle",
           "surface": "sem.surface.raised"
         }
       },
@@ -33,23 +34,7 @@
       }
     },
     "2": {
-      "$description": "Floating: menus and popovers.",
-      "$extensions": {
-        "org.metrologymaven.elevation": {
-          "border": "sem.border.subtle",
-          "surface": "sem.surface.raised"
-        }
-      },
-      "$value": {
-        "blur": "8px",
-        "color": "#00000029",
-        "offsetX": "0px",
-        "offsetY": "4px",
-        "spread": "0px"
-      }
-    },
-    "3": {
-      "$description": "Modal: dialogs above a scrim.",
+      "$description": "Overlay: menus, popovers and dialogs (a dialog also sits above a scrim), outlined by the strong border.",
       "$extensions": {
         "org.metrologymaven.elevation": {
           "border": "sem.border.strong",
@@ -57,10 +42,10 @@
         }
       },
       "$value": {
-        "blur": "24px",
+        "blur": "16px",
         "color": "#00000033",
         "offsetX": "0px",
-        "offsetY": "8px",
+        "offsetY": "4px",
         "spread": "0px"
       }
     }

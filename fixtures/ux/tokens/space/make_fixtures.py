@@ -24,13 +24,23 @@ Rules, as pinned in crates/fid-design/src/space.rs:
                                 reduced-duration other than 0 ms
   MOTION-LONG <group>           a motion.panel.* duration above 250 ms
   ELEV-LEVELS elev              more than 5 levels, levels not 0..n-1, or none
-  ELEV-NOSHADOW-CUE elev.<k>    no cue, bad cue, or the same cue as a lower level
-  SPACE-SCHEMA <file or name>   missing or invalid file, wrong format, wrong shape
+  ELEV-NOSHADOW-CUE elev.<k>    no cue, bad cue, the same cue names as a lower level, a cue that
+                                does not resolve to a colour in some theme, or in some theme the
+                                same resolved (surface, border) colours as a lower level; at most
+                                one per level
+  SPACE-SCHEMA <file or name>   missing or invalid file, wrong format, wrong shape, a motion file
+                                with no motion token, an elevation level name that is not a
+                                decimal integer below 2^64 without leading zeros
+
+The oracle resolves elevation cues on its own: every `tokens/**/*.tokens.json` token, the
+`tokens/themes/<theme>.json` bindings for `sem.*` names, `{alias}` hops (at most 16), ending at
+a literal `#rrggbb[aa]` of a `prim.*` token.
 """
 
 import copy
 import json
 import pathlib
+import re
 import shutil
 import sys
 from decimal import Decimal, InvalidOperation
@@ -86,11 +96,32 @@ def base():
                      "0": level("0px", "sem.surface.base"),
                      "1": level("2px", "sem.surface.raised"),
                      "2": level("8px", "sem.surface.raised", "sem.border.strong")}}
+    greys = {"0": "#ffffff", "50": "#f5f5f5", "100": "#eeeeee", "200": "#cccccc", "600": "#555555",
+             "1000": "#000000"}
+    primitive = {"prim": {"color": {"$type": "color", "neutral": {k: {"$value": v} for k, v in greys.items()}}}}
+    # Each theme binds the five roles to five different greys, so no two cue sets look alike.
+    binds = {
+        "light": {"base": "0", "raised": "50", "sunken": "100", "subtle": "200", "strong": "600"},
+        "dark": {"base": "1000", "raised": "600", "sunken": "200", "subtle": "100", "strong": "50"},
+        "hc": {"base": "0", "raised": "50", "sunken": "100", "subtle": "600", "strong": "1000"},
+        "floor": {"base": "0", "raised": "50", "sunken": "100", "subtle": "200", "strong": "600"},
+    }
+    role = {"base": "sem.surface.base", "raised": "sem.surface.raised", "sunken": "sem.surface.sunken",
+            "subtle": "sem.border.subtle", "strong": "sem.border.strong"}
+
+    def grey(step):
+        return "{prim.color.neutral.%s}" % step
+
+    light = binds["light"]
     colours = {"sem": {"$type": "color",
-                       "border": {"strong": {"$value": "#555555"}, "subtle": {"$value": "#cccccc"}},
-                       "surface": {"base": {"$value": "#ffffff"}, "raised": {"$value": "#f5f5f5"},
-                                   "sunken": {"$value": "#eeeeee"}}}}
+                       "border": {r: {"$value": grey(light[r])} for r in ["strong", "subtle"]},
+                       "surface": {r: {"$value": grey(light[r])} for r in ["base", "raised", "sunken"]}}}
+    themes = {f"tokens/themes/{t}.json": {"bindings": {role[r]: grey(s) for r, s in b.items()},
+                                         "format": "fid-design-theme@1", "theme": t}
+              for t, b in binds.items()}
     return {
+        **themes,
+        "tokens/primitive/color.tokens.json": primitive,
         "tokens/space.tokens.json": {"prim": {"space": prim}, "sem": {"space": sem}},
         "tokens/size.tokens.json": {"size": {"$type": "dimension", "target": {"min": {"$value": "32px"}}}},
         "tokens/motion.tokens.json": motion,
@@ -153,6 +184,7 @@ COMP = "tokens/density/compact.json"
 MOTION = "tokens/motion.tokens.json"
 ELEV = "tokens/elevation.tokens.json"
 SIZE = "tokens/size.tokens.json"
+HC = "tokens/themes/hc.json"
 
 CASES = {
     "ok": (lambda t: None, []),
@@ -195,6 +227,16 @@ CASES = {
                                "sem.surface.missing"), ["ELEV-NOSHADOW-CUE elev.1"]),
     "elev-border-as-surface": (m_set(ELEV, ["elev", "1", "$extensions", "org.metrologymaven.elevation", "surface"],
                                      "sem.border.subtle"), ["ELEV-NOSHADOW-CUE elev.1"]),
+    # REQ-004 in high contrast: hc binds the raised surface to the page colour, so elev.1 (a
+    # surface cue only) looks like elev.0 without shadows; elev.2 keeps its border and passes.
+    "elev-hc-collision": (m_set(HC, ["bindings", "sem.surface.raised"], "{prim.color.neutral.0}"),
+                          ["ELEV-NOSHADOW-CUE elev.1"]),
+    "elev-cue-unresolved": (m_del(HC, ["bindings", "sem.border.strong"]), ["ELEV-NOSHADOW-CUE elev.2"]),
+    "elev-huge-level": (m_set(ELEV, ["elev", "18446744073709551616"],
+                              {"$value": {"blur": "0px", "color": "#00000029", "offsetX": "0px", "offsetY": "1px",
+                                          "spread": "0px"}}),
+                        ["SPACE-SCHEMA elev.18446744073709551616"]),
+    "motion-empty": (m_raw(MOTION, "{}\n"), ["SPACE-SCHEMA tokens/motion.tokens.json"]),
     "missing-file": (m_drop_file(MOTION), ["SPACE-SCHEMA tokens/motion.tokens.json"]),
     "duplicate-key": (m_raw(SIZE, '{"size": {"$type": "dimension", "target": {"min": {"$value": "32px"}}}, '
                                   '"size": {}}\n'),
@@ -334,6 +376,8 @@ def oracle(tree):
     for n, tv in motion.items():
         g, _, part = n.rpartition(".")
         groups.setdefault(g, {})[part] = tv
+    if rawm is not None and not groups:
+        out.append(f"SPACE-SCHEMA {MOTION}")
     for g, parts in groups.items():
         dur = parts.get("duration")
         red = parts.get("reduced-duration")
@@ -350,13 +394,51 @@ def oracle(tree):
     rawe = load(tree, ELEV, out)
     rawc = load(tree, "tokens/semantic/color.tokens.json", out)
     colours = walk(rawc) if rawc is not None else {}
-    levels = {k: v for k, v in (rawe or {}).get("elev", {}).items() if not k.startswith("$")}
-    keys = sorted(int(k) for k in levels)
+    levels = {}
+    for k, v in (rawe or {}).get("elev", {}).items():
+        if k.startswith("$"):
+            continue
+        if re.fullmatch(r"0|[1-9][0-9]*", k) and int(k) < 2 ** 64:
+            levels[int(k)] = v
+        else:
+            out.append(f"SPACE-SCHEMA elev.{k}")
+    keys = sorted(levels)
     if len(keys) > 5 or keys != list(range(len(keys))) or not keys:
         out.append("ELEV-LEVELS elev")
+    every = {}
+    for rel, text in tree.items():
+        if rel.startswith("tokens/") and rel.endswith(".tokens.json"):
+            try:
+                every.update(walk(json.loads(text, object_pairs_hook=no_dups)))
+            except (ValueError, Dup):
+                pass
+    bindings = {}
+    for theme in THEMES:
+        try:
+            bindings[theme] = json.loads(tree.get(f"tokens/themes/{theme}.json", "{}")).get("bindings", {})
+        except ValueError:
+            bindings[theme] = {}
+
+    def resolve(name, theme):
+        for _ in range(17):
+            if name.startswith("sem."):
+                v = bindings[theme].get(name)
+            else:
+                v = every.get(name, (None, None))[1]
+            a = alias(v)
+            if a is not None:
+                name = a
+            elif name.startswith("prim.") and isinstance(v, str) and re.fullmatch(r"#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})", v):
+                v = v.lower()
+                return v if len(v) == 9 else v + "ff"
+            else:
+                return None
+        return None
+
     seen = set()
+    looks = {theme: [] for theme in THEMES}
     for k in keys:
-        cue = levels[str(k)].get("$extensions", {}).get("org.metrologymaven.elevation")
+        cue = levels[k].get("$extensions", {}).get("org.metrologymaven.elevation")
         s = cue.get("surface") if isinstance(cue, dict) else None
         b = cue.get("border") if isinstance(cue, dict) else None
         good = (isinstance(cue, dict) and set(cue) <= {"surface", "border"} and (s or b)
@@ -364,7 +446,19 @@ def oracle(tree):
                 and (b is None or (b.startswith("sem.border.") and b in colours)))
         if not good or (s, b) in seen:
             out.append(f"ELEV-NOSHADOW-CUE elev.{k}")
+            continue
         seen.add((s, b))
+        mine = {}
+        for theme in THEMES:
+            rs = resolve(s, theme) if s else "none"
+            rb = resolve(b, theme) if b else "none"
+            if rs is None or rb is None or (rs, rb) in looks[theme]:
+                out.append(f"ELEV-NOSHADOW-CUE elev.{k}")
+                break
+            mine[theme] = (rs, rb)
+        else:
+            for theme, look in mine.items():
+                looks[theme].append(look)
     return sorted(out)
 
 
