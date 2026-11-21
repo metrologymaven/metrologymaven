@@ -59,8 +59,12 @@ fn dep_defs() -> Result<Vec<CommandDef>, DefError> {
     Ok(vec![fid_dep::command_def()?, fid_dep::set_command_def()?])
 }
 
+/// `registry.show_manifest@1` (CORE.REG.MAN) and the three query commands of CORE.REG.QRY
+/// (`registry.list_commands@1`, `registry.describe_command@1`, `registry.diff_manifests@1`).
 fn registry_defs() -> Result<Vec<CommandDef>, DefError> {
-    Ok(vec![fid_registry::manifest::command_def()?])
+    let mut defs = vec![fid_registry::manifest::command_def()?];
+    defs.extend(fid_registry::query::command_defs()?);
+    Ok(defs)
 }
 
 /// The four settings commands of `CORE.STO.SET`, declared with the registry macros (whose

@@ -1,0 +1,2046 @@
+{
+ "cases": [
+  {
+   "name": "ac1_valid_all",
+   "source": "valid",
+   "audience": "person",
+   "tool": "list",
+   "params": {},
+   "expect": {
+    "ok": {
+     "commands": [
+      {
+       "id": "align.run_bestfit",
+       "major": 1,
+       "title": "Fixture align.run_bestfit@1",
+       "lifecycle": "active",
+       "side_effect": "W2",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "cmm.move_to",
+       "major": 1,
+       "title": "Fixture cmm.move_to@1",
+       "lifecycle": "active",
+       "side_effect": "M1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "egress.send",
+       "major": 1,
+       "title": "Fixture egress.send@1",
+       "lifecycle": "active",
+       "side_effect": "X1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "gdt.evaluate_flatness",
+       "major": 1,
+       "title": "Fixture gdt.evaluate_flatness@1",
+       "lifecycle": "active",
+       "side_effect": "R0",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "hal.connect_device",
+       "major": 1,
+       "title": "Fixture hal.connect_device@1",
+       "lifecycle": "active",
+       "side_effect": "D1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "project.list_features",
+       "major": 1,
+       "title": "Fixture project.list_features@1",
+       "lifecycle": "active",
+       "side_effect": "R1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "project.list_features",
+       "major": 2,
+       "title": "Fixture project.list_features@2",
+       "lifecycle": "active",
+       "side_effect": "R1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "record.release_fai",
+       "major": 1,
+       "title": "Fixture record.release_fai@1",
+       "lifecycle": "active",
+       "side_effect": "W3",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "report.set_title",
+       "major": 1,
+       "title": "Fixture report.set_title@1",
+       "lifecycle": "active",
+       "side_effect": "W1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "settings.set_admin_value",
+       "major": 1,
+       "title": "Fixture settings.set_admin_value@1",
+       "lifecycle": "active",
+       "side_effect": "A0",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "sim.read_probe",
+       "major": 1,
+       "title": "Fixture sim.read_probe@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "trust.sign_record",
+       "major": 1,
+       "title": "Fixture trust.sign_record@1",
+       "lifecycle": "active",
+       "side_effect": "S1",
+       "mcp_projection": "never"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "ac2_valid_w2",
+   "source": "valid",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "side_effect": "W2"
+   },
+   "expect": {
+    "ok": {
+     "commands": [
+      {
+       "id": "align.run_bestfit",
+       "major": 1,
+       "title": "Fixture align.run_bestfit@1",
+       "lifecycle": "active",
+       "side_effect": "W2",
+       "mcp_projection": "never"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "valid_agent_sees_nothing",
+   "source": "valid",
+   "audience": "agent",
+   "tool": "list",
+   "params": {},
+   "expect": {
+    "ok": {
+     "commands": []
+    }
+   }
+  },
+  {
+   "name": "ac4_valid_bestfi",
+   "source": "valid",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "align.run_bestfi",
+    "major": 1
+   },
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "suggestions": [
+      "align.run_bestfit",
+      "cmm.move_to",
+      "egress.send",
+      "hal.connect_device",
+      "sim.read_probe"
+     ]
+    }
+   }
+  },
+  {
+   "name": "qry_person_all",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {},
+   "expect": {
+    "ok": {
+     "commands": [
+      {
+       "id": "align.run_bestfit",
+       "major": 1,
+       "title": "Fixture align.run_bestfit@1",
+       "lifecycle": "active",
+       "side_effect": "W2",
+       "mcp_projection": "request_only"
+      },
+      {
+       "id": "align.set_datum",
+       "major": 1,
+       "title": "Query fixture align.set_datum@1",
+       "lifecycle": "active",
+       "side_effect": "W1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "cmm.move_to",
+       "major": 1,
+       "title": "Fixture cmm.move_to@1",
+       "lifecycle": "active",
+       "side_effect": "M1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "gdt.evaluate_flatness",
+       "major": 1,
+       "title": "Query fixture gdt.evaluate_flatness@1",
+       "lifecycle": "deprecated",
+       "side_effect": "R0",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "gdt.evaluate_flatness",
+       "major": 2,
+       "title": "Query fixture gdt.evaluate_flatness@2",
+       "lifecycle": "active",
+       "side_effect": "R0",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "project.list_features",
+       "major": 1,
+       "title": "Query fixture project.list_features@1",
+       "lifecycle": "removed",
+       "side_effect": "R1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "record.release_fai",
+       "major": 1,
+       "title": "Fixture record.release_fai@1",
+       "lifecycle": "active",
+       "side_effect": "W3",
+       "mcp_projection": "request_only"
+      },
+      {
+       "id": "sign.set_profile",
+       "major": 1,
+       "title": "Query fixture sign.set_profile@1",
+       "lifecycle": "active",
+       "side_effect": "A0",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "sim.read_prob",
+       "major": 1,
+       "title": "Query fixture sim.read_prob@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "sim.read_probe",
+       "major": 1,
+       "title": "Fixture sim.read_probe@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "sim.read_probes",
+       "major": 1,
+       "title": "Query fixture sim.read_probes@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 1,
+       "title": "Query fixture x.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "y.tool",
+       "major": 1,
+       "title": "Query fixture y.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "qry_person_hidden",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "include_hidden": true
+   },
+   "expect": {
+    "ok": {
+     "commands": [
+      {
+       "id": "align.run_bestfit",
+       "major": 1,
+       "title": "Fixture align.run_bestfit@1",
+       "lifecycle": "active",
+       "side_effect": "W2",
+       "mcp_projection": "request_only"
+      },
+      {
+       "id": "align.run_bestfit",
+       "major": 2,
+       "title": "Query fixture align.run_bestfit@2",
+       "lifecycle": "hidden",
+       "side_effect": "W2",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "align.set_datum",
+       "major": 1,
+       "title": "Query fixture align.set_datum@1",
+       "lifecycle": "active",
+       "side_effect": "W1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "cmm.move_to",
+       "major": 1,
+       "title": "Fixture cmm.move_to@1",
+       "lifecycle": "active",
+       "side_effect": "M1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "gdt.evaluate_flatness",
+       "major": 1,
+       "title": "Query fixture gdt.evaluate_flatness@1",
+       "lifecycle": "deprecated",
+       "side_effect": "R0",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "gdt.evaluate_flatness",
+       "major": 2,
+       "title": "Query fixture gdt.evaluate_flatness@2",
+       "lifecycle": "active",
+       "side_effect": "R0",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "project.list_features",
+       "major": 1,
+       "title": "Query fixture project.list_features@1",
+       "lifecycle": "removed",
+       "side_effect": "R1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "record.release_fai",
+       "major": 1,
+       "title": "Fixture record.release_fai@1",
+       "lifecycle": "active",
+       "side_effect": "W3",
+       "mcp_projection": "request_only"
+      },
+      {
+       "id": "sign.set_profile",
+       "major": 1,
+       "title": "Query fixture sign.set_profile@1",
+       "lifecycle": "active",
+       "side_effect": "A0",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "sim.read_prob",
+       "major": 1,
+       "title": "Query fixture sim.read_prob@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "sim.read_probe",
+       "major": 1,
+       "title": "Fixture sim.read_probe@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "sim.read_probes",
+       "major": 1,
+       "title": "Query fixture sim.read_probes@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 1,
+       "title": "Query fixture x.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 2,
+       "title": "Query fixture x.tool@2",
+       "lifecycle": "hidden",
+       "side_effect": "I1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "y.tool",
+       "major": 1,
+       "title": "Query fixture y.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "y.tool",
+       "major": 2,
+       "title": "Query fixture y.tool@2",
+       "lifecycle": "hidden",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "qry_agent_all",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "list",
+   "params": {},
+   "expect": {
+    "ok": {
+     "commands": [
+      {
+       "id": "align.run_bestfit",
+       "major": 1,
+       "title": "Fixture align.run_bestfit@1",
+       "lifecycle": "active",
+       "side_effect": "W2",
+       "mcp_projection": "request_only"
+      },
+      {
+       "id": "gdt.evaluate_flatness",
+       "major": 1,
+       "title": "Query fixture gdt.evaluate_flatness@1",
+       "lifecycle": "deprecated",
+       "side_effect": "R0",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "gdt.evaluate_flatness",
+       "major": 2,
+       "title": "Query fixture gdt.evaluate_flatness@2",
+       "lifecycle": "active",
+       "side_effect": "R0",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "project.list_features",
+       "major": 1,
+       "title": "Query fixture project.list_features@1",
+       "lifecycle": "removed",
+       "side_effect": "R1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "record.release_fai",
+       "major": 1,
+       "title": "Fixture record.release_fai@1",
+       "lifecycle": "active",
+       "side_effect": "W3",
+       "mcp_projection": "request_only"
+      },
+      {
+       "id": "sim.read_prob",
+       "major": 1,
+       "title": "Query fixture sim.read_prob@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "sim.read_probe",
+       "major": 1,
+       "title": "Fixture sim.read_probe@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "sim.read_probes",
+       "major": 1,
+       "title": "Query fixture sim.read_probes@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 1,
+       "title": "Query fixture x.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "y.tool",
+       "major": 1,
+       "title": "Query fixture y.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "qry_agent_hidden",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "list",
+   "params": {
+    "include_hidden": true
+   },
+   "expect": {
+    "ok": {
+     "commands": [
+      {
+       "id": "align.run_bestfit",
+       "major": 1,
+       "title": "Fixture align.run_bestfit@1",
+       "lifecycle": "active",
+       "side_effect": "W2",
+       "mcp_projection": "request_only"
+      },
+      {
+       "id": "align.run_bestfit",
+       "major": 2,
+       "title": "Query fixture align.run_bestfit@2",
+       "lifecycle": "hidden",
+       "side_effect": "W2",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "gdt.evaluate_flatness",
+       "major": 1,
+       "title": "Query fixture gdt.evaluate_flatness@1",
+       "lifecycle": "deprecated",
+       "side_effect": "R0",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "gdt.evaluate_flatness",
+       "major": 2,
+       "title": "Query fixture gdt.evaluate_flatness@2",
+       "lifecycle": "active",
+       "side_effect": "R0",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "project.list_features",
+       "major": 1,
+       "title": "Query fixture project.list_features@1",
+       "lifecycle": "removed",
+       "side_effect": "R1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "record.release_fai",
+       "major": 1,
+       "title": "Fixture record.release_fai@1",
+       "lifecycle": "active",
+       "side_effect": "W3",
+       "mcp_projection": "request_only"
+      },
+      {
+       "id": "sim.read_prob",
+       "major": 1,
+       "title": "Query fixture sim.read_prob@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "sim.read_probe",
+       "major": 1,
+       "title": "Fixture sim.read_probe@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "sim.read_probes",
+       "major": 1,
+       "title": "Query fixture sim.read_probes@1",
+       "lifecycle": "active",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 1,
+       "title": "Query fixture x.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "y.tool",
+       "major": 1,
+       "title": "Query fixture y.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "y.tool",
+       "major": 2,
+       "title": "Query fixture y.tool@2",
+       "lifecycle": "hidden",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "qry_domain_align",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "domain": "align"
+   },
+   "expect": {
+    "ok": {
+     "commands": [
+      {
+       "id": "align.run_bestfit",
+       "major": 1,
+       "title": "Fixture align.run_bestfit@1",
+       "lifecycle": "active",
+       "side_effect": "W2",
+       "mcp_projection": "request_only"
+      },
+      {
+       "id": "align.set_datum",
+       "major": 1,
+       "title": "Query fixture align.set_datum@1",
+       "lifecycle": "active",
+       "side_effect": "W1",
+       "mcp_projection": "never"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "qry_domain_align_w2_hidden",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "domain": "align",
+    "side_effect": "W2",
+    "include_hidden": true
+   },
+   "expect": {
+    "ok": {
+     "commands": [
+      {
+       "id": "align.run_bestfit",
+       "major": 1,
+       "title": "Fixture align.run_bestfit@1",
+       "lifecycle": "active",
+       "side_effect": "W2",
+       "mcp_projection": "request_only"
+      },
+      {
+       "id": "align.run_bestfit",
+       "major": 2,
+       "title": "Query fixture align.run_bestfit@2",
+       "lifecycle": "hidden",
+       "side_effect": "W2",
+       "mcp_projection": "exposed"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "qry_deprecated",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "lifecycle": "deprecated"
+   },
+   "expect": {
+    "ok": {
+     "commands": [
+      {
+       "id": "gdt.evaluate_flatness",
+       "major": 1,
+       "title": "Query fixture gdt.evaluate_flatness@1",
+       "lifecycle": "deprecated",
+       "side_effect": "R0",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 1,
+       "title": "Query fixture x.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "y.tool",
+       "major": 1,
+       "title": "Query fixture y.tool@1",
+       "lifecycle": "deprecated",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "qry_hidden_without_flag",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "lifecycle": "hidden"
+   },
+   "expect": {
+    "ok": {
+     "commands": []
+    }
+   }
+  },
+  {
+   "name": "qry_hidden_flag_false",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "lifecycle": "hidden",
+    "include_hidden": false
+   },
+   "expect": {
+    "ok": {
+     "commands": []
+    }
+   }
+  },
+  {
+   "name": "qry_hidden_with_flag_true",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "lifecycle": "hidden",
+    "include_hidden": true
+   },
+   "expect": {
+    "ok": {
+     "commands": [
+      {
+       "id": "align.run_bestfit",
+       "major": 2,
+       "title": "Query fixture align.run_bestfit@2",
+       "lifecycle": "hidden",
+       "side_effect": "W2",
+       "mcp_projection": "exposed"
+      },
+      {
+       "id": "x.tool",
+       "major": 2,
+       "title": "Query fixture x.tool@2",
+       "lifecycle": "hidden",
+       "side_effect": "I1",
+       "mcp_projection": "never"
+      },
+      {
+       "id": "y.tool",
+       "major": 2,
+       "title": "Query fixture y.tool@2",
+       "lifecycle": "hidden",
+       "side_effect": "I1",
+       "mcp_projection": "exposed"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "qry_agent_never_domain",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "list",
+   "params": {
+    "domain": "sign"
+   },
+   "expect": {
+    "ok": {
+     "commands": []
+    }
+   }
+  },
+  {
+   "name": "qry_agent_a0_filter",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "list",
+   "params": {
+    "side_effect": "A0",
+    "include_hidden": true
+   },
+   "expect": {
+    "ok": {
+     "commands": []
+    }
+   }
+  },
+  {
+   "name": "qry_person_a0_filter",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "side_effect": "A0"
+   },
+   "expect": {
+    "ok": {
+     "commands": [
+      {
+       "id": "sign.set_profile",
+       "major": 1,
+       "title": "Query fixture sign.set_profile@1",
+       "lifecycle": "active",
+       "side_effect": "A0",
+       "mcp_projection": "never"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "qry_no_match",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "domain": "zzz"
+   },
+   "expect": {
+    "ok": {
+     "commands": []
+    }
+   }
+  },
+  {
+   "name": "describe_major",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "align.run_bestfit",
+    "major": 1
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "align.run_bestfit",
+      "major": 1,
+      "title": "Fixture align.run_bestfit@1",
+      "description": "Fixture declaration for side-effect class W2.",
+      "params_schema": {
+       "type": "object",
+       "properties": {
+        "tolerance": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "required": [
+        "tolerance"
+       ],
+       "additionalProperties": false
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "W2",
+      "mcp_projection": "exposed",
+      "determinism": "D3",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli",
+       "mcp"
+      ],
+      "lifecycle": {
+       "state": "active",
+       "since": "2026-01-01"
+      },
+      "web": "available",
+      "human_only": true,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:44520fbd4165b270866ee11c2bc967c5ef099d0a1c0df30116f547bb17d94a6d"
+    }
+   }
+  },
+  {
+   "name": "describe_latest_active",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "gdt.evaluate_flatness"
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "gdt.evaluate_flatness",
+      "major": 2,
+      "title": "Query fixture gdt.evaluate_flatness@2",
+      "description": "Fixture declaration for side-effect class R0.",
+      "params_schema": {
+       "type": "object",
+       "$defs": {
+        "len": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "properties": {
+        "nominal": {
+         "$ref": "#/$defs/len"
+        },
+        "offsets": {
+         "type": "array",
+         "items": {
+          "type": "number",
+          "x-quantity": "length",
+          "x-unit": "mm"
+         },
+         "minItems": 1,
+         "maxItems": 8
+        },
+        "pair": {
+         "type": "array",
+         "prefixItems": [
+          {
+           "type": "number",
+           "x-quantity": "length",
+           "x-unit": "mm"
+          },
+          {
+           "type": "number",
+           "x-quantity": "angle",
+           "x-unit": "deg"
+          }
+         ]
+        },
+        "limit": {
+         "anyOf": [
+          {
+           "type": "null"
+          },
+          {
+           "type": [
+            "number",
+            "null"
+           ],
+           "x-quantity": "length",
+           "minimum": 0,
+           "maximum": 1
+          }
+         ]
+        },
+        "count": {
+         "type": "integer",
+         "minimum": 1
+        },
+        "label": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 64
+        }
+       },
+       "patternProperties": {
+        "^[a-z]+$": {
+         "type": "string"
+        },
+        "^[A-Z]+$": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "nominal"
+       ]
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "R0",
+      "mcp_projection": "exposed",
+      "determinism": "D0",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli",
+       "mcp",
+       "python"
+      ],
+      "lifecycle": {
+       "state": "active",
+       "since": "2026-01-01"
+      },
+      "web": "available",
+      "human_only": false,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:ed84322c18ab5f999da6ffce492b212719a26b240d8bee68863650df7aa03a8c"
+    }
+   }
+  },
+  {
+   "name": "describe_skips_hidden_major",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "align.run_bestfit"
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "align.run_bestfit",
+      "major": 1,
+      "title": "Fixture align.run_bestfit@1",
+      "description": "Fixture declaration for side-effect class W2.",
+      "params_schema": {
+       "type": "object",
+       "properties": {
+        "tolerance": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "required": [
+        "tolerance"
+       ],
+       "additionalProperties": false
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "W2",
+      "mcp_projection": "exposed",
+      "determinism": "D3",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli",
+       "mcp"
+      ],
+      "lifecycle": {
+       "state": "active",
+       "since": "2026-01-01"
+      },
+      "web": "available",
+      "human_only": true,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:44520fbd4165b270866ee11c2bc967c5ef099d0a1c0df30116f547bb17d94a6d"
+    }
+   }
+  },
+  {
+   "name": "describe_hidden_by_major",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "align.run_bestfit",
+    "major": 2
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "align.run_bestfit",
+      "major": 2,
+      "title": "Query fixture align.run_bestfit@2",
+      "description": "Fixture declaration for side-effect class W2.",
+      "params_schema": {
+       "type": "object",
+       "properties": {
+        "tolerance": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "required": [
+        "tolerance"
+       ],
+       "additionalProperties": false
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "W2",
+      "mcp_projection": "exposed",
+      "determinism": "D3",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli",
+       "mcp"
+      ],
+      "lifecycle": {
+       "state": "hidden",
+       "since": "2026-06-01"
+      },
+      "web": "available",
+      "human_only": false,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:b618cf9060835065625d5d720d648652b12f5a8b3faa82accff657a28225db2a"
+    }
+   }
+  },
+  {
+   "name": "describe_deprecated_by_major",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "gdt.evaluate_flatness",
+    "major": 1
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "gdt.evaluate_flatness",
+      "major": 1,
+      "title": "Query fixture gdt.evaluate_flatness@1",
+      "description": "Fixture declaration for side-effect class R0.",
+      "params_schema": {
+       "type": "object",
+       "$defs": {
+        "len": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "properties": {
+        "nominal": {
+         "$ref": "#/$defs/len"
+        },
+        "offsets": {
+         "type": "array",
+         "items": {
+          "type": "number",
+          "x-quantity": "length",
+          "x-unit": "mm"
+         },
+         "minItems": 1,
+         "maxItems": 8
+        },
+        "pair": {
+         "type": "array",
+         "prefixItems": [
+          {
+           "type": "number",
+           "x-quantity": "length",
+           "x-unit": "mm"
+          },
+          {
+           "type": "number",
+           "x-quantity": "angle",
+           "x-unit": "deg"
+          }
+         ]
+        },
+        "limit": {
+         "anyOf": [
+          {
+           "type": "null"
+          },
+          {
+           "type": [
+            "number",
+            "null"
+           ],
+           "x-quantity": "length",
+           "minimum": 0,
+           "maximum": 1
+          }
+         ]
+        },
+        "count": {
+         "type": "integer",
+         "minimum": 1
+        },
+        "label": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 64
+        }
+       },
+       "patternProperties": {
+        "^[a-z]+$": {
+         "type": "string"
+        },
+        "^[A-Z]+$": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "nominal"
+       ]
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "R0",
+      "mcp_projection": "exposed",
+      "determinism": "D0",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli",
+       "mcp"
+      ],
+      "lifecycle": {
+       "state": "deprecated",
+       "since": "2026-09-01",
+       "replaced_by": "gdt.evaluate_flatness@2"
+      },
+      "web": "available",
+      "human_only": false,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:e3a7620d1f268040e866c671ea67768181399ebc86f42bc6787b77234921180a"
+    }
+   }
+  },
+  {
+   "name": "describe_removed_only",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "project.list_features"
+   },
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "suggestions": [
+      "project.list_features",
+      "gdt.evaluate_flatness",
+      "align.set_datum",
+      "align.run_bestfit",
+      "record.release_fai"
+     ]
+    }
+   }
+  },
+  {
+   "name": "describe_unknown_major",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "align.run_bestfit",
+    "major": 3
+   },
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "suggestions": [
+      "align.run_bestfit",
+      "align.set_datum",
+      "sign.set_profile",
+      "cmm.move_to",
+      "sim.read_prob"
+     ]
+    }
+   }
+  },
+  {
+   "name": "describe_ties",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "sim.read_proba"
+   },
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "suggestions": [
+      "sim.read_prob",
+      "sim.read_probe",
+      "sim.read_probes",
+      "sign.set_profile",
+      "cmm.move_to"
+     ]
+    }
+   }
+  },
+  {
+   "name": "agent_describe_human_only_request_only",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "describe",
+   "params": {
+    "id": "align.run_bestfit"
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "align.run_bestfit",
+      "major": 1,
+      "title": "Fixture align.run_bestfit@1",
+      "description": "Fixture declaration for side-effect class W2.",
+      "params_schema": {
+       "type": "object",
+       "properties": {
+        "tolerance": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "required": [
+        "tolerance"
+       ],
+       "additionalProperties": false
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "W2",
+      "mcp_projection": "exposed",
+      "determinism": "D3",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli",
+       "mcp"
+      ],
+      "lifecycle": {
+       "state": "active",
+       "since": "2026-01-01"
+      },
+      "web": "available",
+      "human_only": true,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:44520fbd4165b270866ee11c2bc967c5ef099d0a1c0df30116f547bb17d94a6d"
+    }
+   }
+  },
+  {
+   "name": "agent_describe_never_a0",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "describe",
+   "params": {
+    "id": "sign.set_profile",
+    "major": 1
+   },
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "suggestions": [
+      "sim.read_probe",
+      "sim.read_prob",
+      "sim.read_probes",
+      "align.run_bestfit",
+      "x.tool"
+     ]
+    }
+   }
+  },
+  {
+   "name": "agent_describe_never_no_mcp",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "describe",
+   "params": {
+    "id": "align.set_datum"
+   },
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "suggestions": [
+      "align.run_bestfit",
+      "sim.read_prob",
+      "sim.read_probe",
+      "sim.read_probes",
+      "x.tool"
+     ]
+    }
+   }
+  },
+  {
+   "name": "agent_describe_never_m1",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "describe",
+   "params": {
+    "id": "cmm.move_to"
+   },
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "suggestions": [
+      "sim.read_prob",
+      "x.tool",
+      "y.tool",
+      "sim.read_probe",
+      "sim.read_probes"
+     ]
+    }
+   }
+  },
+  {
+   "name": "person_describe_no_mcp",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "align.set_datum"
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "align.set_datum",
+      "major": 1,
+      "title": "Query fixture align.set_datum@1",
+      "description": "Fixture declaration for side-effect class W1.",
+      "params_schema": {
+       "type": "object",
+       "properties": {
+        "tolerance": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "required": [
+        "tolerance"
+       ],
+       "additionalProperties": false
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "W1",
+      "mcp_projection": "exposed",
+      "determinism": "D0",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli"
+      ],
+      "lifecycle": {
+       "state": "active",
+       "since": "2026-01-01"
+      },
+      "web": "available",
+      "human_only": false,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:61954590d05e0b2a63ad8d55568fb1568dd6667a198e9aa1031e4c70b6a5451b"
+    }
+   }
+  },
+  {
+   "name": "agent_describe_typo_near_never",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "describe",
+   "params": {
+    "id": "sign.set_profil"
+   },
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "suggestions": [
+      "sim.read_prob",
+      "sim.read_probe",
+      "sim.read_probes",
+      "align.run_bestfit",
+      "x.tool"
+     ]
+    }
+   }
+  },
+  {
+   "name": "agent_describe_drops_invisible_successor",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "describe",
+   "params": {
+    "id": "x.tool",
+    "major": 1
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "x.tool",
+      "major": 1,
+      "title": "Query fixture x.tool@1",
+      "description": "Fixture declaration for side-effect class I1.",
+      "params_schema": {
+       "type": "object",
+       "properties": {
+        "tolerance": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "required": [
+        "tolerance"
+       ],
+       "additionalProperties": false
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "I1",
+      "mcp_projection": "exposed",
+      "determinism": "N",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli",
+       "mcp"
+      ],
+      "lifecycle": {
+       "state": "deprecated",
+       "since": "2026-09-01"
+      },
+      "web": "available",
+      "human_only": false,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:2900024541358bcc47900d987cec6f5387da8fe5359551c9ba446ca3b5b442a5"
+    }
+   }
+  },
+  {
+   "name": "person_describe_keeps_successor",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "x.tool",
+    "major": 1
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "x.tool",
+      "major": 1,
+      "title": "Query fixture x.tool@1",
+      "description": "Fixture declaration for side-effect class I1.",
+      "params_schema": {
+       "type": "object",
+       "properties": {
+        "tolerance": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "required": [
+        "tolerance"
+       ],
+       "additionalProperties": false
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "I1",
+      "mcp_projection": "exposed",
+      "determinism": "N",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli",
+       "mcp"
+      ],
+      "lifecycle": {
+       "state": "deprecated",
+       "since": "2026-09-01",
+       "replaced_by": "x.tool@2"
+      },
+      "web": "available",
+      "human_only": false,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:2900024541358bcc47900d987cec6f5387da8fe5359551c9ba446ca3b5b442a5"
+    }
+   }
+  },
+  {
+   "name": "agent_describe_keeps_visible_successor",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "describe",
+   "params": {
+    "id": "y.tool",
+    "major": 1
+   },
+   "expect": {
+    "ok": {
+     "definition": {
+      "id": "y.tool",
+      "major": 1,
+      "title": "Query fixture y.tool@1",
+      "description": "Fixture declaration for side-effect class I1.",
+      "params_schema": {
+       "type": "object",
+       "properties": {
+        "tolerance": {
+         "type": "number",
+         "x-quantity": "length",
+         "x-unit": "mm"
+        }
+       },
+       "required": [
+        "tolerance"
+       ],
+       "additionalProperties": false
+      },
+      "result_schema": {
+       "type": "object",
+       "properties": {
+        "angle": {
+         "type": "number",
+         "x-quantity": "angle",
+         "x-unit": "deg"
+        }
+       }
+      },
+      "side_effect": "I1",
+      "mcp_projection": "exposed",
+      "determinism": "N",
+      "idempotency": "natural",
+      "fs_effect": "none",
+      "undo": "not_undoable",
+      "preconditions": [],
+      "effects": [],
+      "algorithms": [],
+      "exposure": [
+       "cli",
+       "mcp"
+      ],
+      "lifecycle": {
+       "state": "deprecated",
+       "since": "2026-09-01",
+       "replaced_by": "y.tool@2"
+      },
+      "web": "available",
+      "human_only": false,
+      "network": "none",
+      "cli_bare": false
+     },
+     "definition_digest": "sha256:b24995655c16fc0148f423b90aaf9e7a75380c3c582410fe9a21c75b20e1ada5"
+    }
+   }
+  },
+  {
+   "name": "agent_describe_invisible_successor_itself",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "describe",
+   "params": {
+    "id": "x.tool",
+    "major": 2
+   },
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "suggestions": [
+      "x.tool",
+      "y.tool",
+      "sim.read_prob",
+      "sim.read_probe",
+      "sim.read_probes"
+     ]
+    }
+   }
+  },
+  {
+   "name": "describe_non_ascii",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "sim.réad_probe"
+   },
+   "expect": {
+    "error": {
+     "code": "not_found",
+     "suggestions": [
+      "sim.read_probe",
+      "sim.read_prob",
+      "sim.read_probes",
+      "sign.set_profile",
+      "cmm.move_to"
+     ]
+    }
+   }
+  },
+  {
+   "name": "list_unknown_key",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "domains": "align"
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "list_domain_type",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "domain": 5
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "list_domain_empty",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "domain": ""
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "list_domain_long",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "domain": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "list_bad_class",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "side_effect": "W9"
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "list_bad_lifecycle",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": {
+    "lifecycle": "gone"
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "list_hidden_type",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "list",
+   "params": {
+    "include_hidden": "yes"
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "list_not_object",
+   "source": "qry",
+   "audience": "person",
+   "tool": "list",
+   "params": [
+    "domain"
+   ],
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "describe_missing_id",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "major": 1
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "describe_id_type",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": 7
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "describe_id_long",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "describe_major_negative",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "cmm.move_to",
+    "major": -1
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "describe_major_big",
+   "source": "qry",
+   "audience": "person",
+   "tool": "describe",
+   "params": {
+    "id": "cmm.move_to",
+    "major": 4294967296
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  },
+  {
+   "name": "describe_unknown_key",
+   "source": "qry",
+   "audience": "agent",
+   "tool": "describe",
+   "params": {
+    "id": "cmm.move_to",
+    "verbose": true
+   },
+   "expect": {
+    "error": {
+     "code": "bad_params"
+    }
+   }
+  }
+ ]
+}
