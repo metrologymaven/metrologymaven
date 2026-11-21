@@ -122,6 +122,8 @@ class Wiring(unittest.TestCase):
         lines = (ROOT / "ci" / "fixture-checks.txt").read_text(encoding="utf-8").splitlines()
         self.assertIn("python tools/rpt_float_lint.py", lines)
         self.assertIn("python tools/rpt_float_lint.py --clippy-selftest", lines)
+        self.assertIn("python tools/rpt_float_lint.py --mir", lines)
+        self.assertIn("python tools/rpt_float_lint.py --mir-selftest", lines)
         wf = (ROOT / ".github" / "workflows" / "rust.yml").read_text(encoding="utf-8")
         self.assertIn("cargo clippy --workspace --all-targets -- -D warnings", wf)
         self.assertIn("list=ci/fixture-checks.txt", wf)
@@ -216,6 +218,170 @@ class Wiring(unittest.TestCase):
 
     def test_repository_report_crates_pass(self):
         self.assertEqual([str(f) for f in lint.run(ROOT)], [])
+
+
+# A hand-written MIR file in the stable `--emit=mir` text form (rustc 1.81+): trimmed and
+# full paths, an impl span, a closure, a constant, a promoted body, drop glue, a shim and
+# trait impls printed as `<T as Trait>::m` (a foreign self type, a dependency's trait).
+MIR = """// WARNING: This output format is intended for human consumers only
+fn val(_1: u64) -> f64 {
+    let mut _0: f64;
+}
+
+fn fmt::<impl at crates/fid-report/src/fmt/model.rs:3:1: 3:7>::g(_1: &S) -> f64 {
+    let mut _0: f64;
+}
+
+fn <impl at crates/fid-report/src/bind/model.rs:4:1: 4:7>::half(_1: &W) -> u64 {
+    let _2: f64;
+}
+
+fn infer::{closure#0}(_1: &mut {closure@crates/fid-report/src/bind/expand.rs:8:55: 8:58}, _2: &u8) -> bool {
+    _0 = Lt(copy _3, const 2f64);
+}
+
+fn clean(_1: u32) -> u32 {
+    let mut _0: u32;
+}
+
+const LIMIT: u64 = const 3_u64;
+
+promoted[0] in bind::journal::read: &[u8; 2] = {
+    let mut _0: &std::vec::Vec<f64>;
+}
+
+fn std::ptr::drop_in_place::<Vec<f64>>(_1: *mut Vec<f64>) -> () {
+}
+
+fn nowhere() -> f64 {
+}
+
+const prom_in_fmt::promoted[0]: &f64 = {
+    let mut _0: &f64;
+}
+
+const prom_elsewhere::promoted[0]: &f64 = {
+    let mut _0: &f64;
+}
+
+fn <std::vec::Vec<u8> as bind::Tr>::m(_1: &Vec<u8>) -> u64 {
+    let _2: f64;
+}
+
+fn <Count as dep::Measure>::measure(_1: &Count) -> f64 {
+}
+
+fn <Vec<f64> as std::clone::Clone>::clone(_1: &Vec<f64>) -> Vec<f64> - shim(Vec<f64>) {
+}
+
+fn std::fmt::float::write(_1: f64) -> () {
+}
+"""
+
+
+class Mir(unittest.TestCase):
+    """Layer 3: the MIR scan, on a hand-written MIR file (the compiler half is proven by
+    `--mir-selftest` in CI, a line of ci/fixture-checks.txt)."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        c = Path(self.dir.name) / "crates" / "fid-report"
+        (c / "src" / "fmt").mkdir(parents=True)
+        (c / "src" / "bind").mkdir()
+        (c / "src" / "fmt" / "mod.rs").write_text("pub fn val(x: u64) -> f64 { f64::from_bits(x) }\npub fn prom_in_fmt() {}\n")
+        (c / "src" / "bind" / "expand.rs").write_text("pub fn infer() {}\npub fn clean() {}\npub fn prom_elsewhere() {}\n")
+        self.crate = c
+
+    def tearDown(self):
+        self.dir.cleanup()
+
+    def test_items_and_names(self):
+        names = [i.name for i in lint.mir_items(MIR)]
+        self.assertEqual(names[:5], ["val", "fmt::<impl at crates/fid-report/src/fmt/model.rs:3:1: 3:7>::g",
+                                     "<impl at crates/fid-report/src/bind/model.rs:4:1: 4:7>::half",
+                                     "infer::{closure#0}", "clean"])
+        self.assertIn("LIMIT", names)
+        self.assertIn("bind::journal::read", names)
+
+    def test_findings_are_attributed_and_fail_closed(self):
+        found = lint.mir_findings(MIR, self.crate, "crates/fid-report", lint.MIR_ALLOWED["fid-report"])
+        got = sorted(f.message.split(" (")[0] for f in found)
+        self.assertEqual(got, ["<Count as dep::Measure>::measure", "<impl at crates/fid-report/src/bind/model.rs:4:1: 4:7>::half",
+                               "<std::vec::Vec<u8> as bind::Tr>::m", "bind::journal::read", "infer::{closure#0}",
+                               "nowhere", "prom_elsewhere::promoted[0]", "std::fmt::float::write"])
+        self.assertTrue(all(f.rule == "RPT-FLOAT-MIR" for f in found))
+
+    def test_only_shims_and_drop_glue_are_skipped(self):
+        files = {"src/fmt/mod.rs": "pub struct S;\n"}
+        self.assertIsNone(lint.mir_attribution("std::ptr::drop_in_place::<Vec<f64>>", files))
+        self.assertIsNone(lint.mir_attribution("<Vec<f64> as std::clone::Clone>::clone", files,
+                                               "fn <Vec<f64> as std::clone::Clone>::clone(_1: &Vec<f64>) -> Vec<f64> - shim(Vec<f64>) {"))
+        # A `std::`/`core::`/`alloc::` prefix alone is no longer a reason to skip.
+        for name in ["<std::vec::Vec<u8> as bind::Tr>::m", "<core::option::Option<u8> as fmt::T>::m",
+                     "<alloc::string::String as Tr>::m", "std::fmt::float::write"]:
+            where = lint.mir_attribution(name, files, f"fn {name}() -> f64 {{")
+            self.assertIsNotNone(where, name)
+            self.assertFalse(where and all(lint._allowed(w, "", ("src/fmt/",)) for w in where), name)
+        # A qualified path is allowed only when both its self type and its trait are.
+        self.assertEqual(lint.mir_attribution("<fmt::S as fmt::T>::m", files), ["mod:fmt", "mod:fmt"])
+        self.assertEqual(lint.mir_fn_name("<std::vec::Vec<u8> as bind::Tr>::m"), "m")
+        self.assertEqual(lint.mir_fn_name("f::{closure#0}"), "f")
+        self.assertEqual(lint.mir_fn_name("<impl at src/lib.rs:1:1: 1:9>::g"), "g")
+
+    def test_a_qualified_path_with_an_unresolved_part_fails_closed(self):
+        files = {"src/fmt/mod.rs": "pub trait Tr {}\n"}
+        for name in ["<f64 as fmt::Tr>::m", "<u32 as Tr>::m"]:
+            where = lint.mir_attribution(name, files, f"fn {name}(_1: &u32) -> f64 {{")
+            self.assertEqual(where, [], name)
+        mir = "fn <f64 as fmt::Tr>::m(_1: &f64) -> f64 {\n}\n\nfn <u32 as Tr>::m(_1: &u32) -> f64 {\n}\n"
+        found = lint.mir_findings(mir, self.crate, "crates/fid-report", lint.MIR_ALLOWED["fid-report"])
+        self.assertEqual(sorted(f.message.split(" (")[0] for f in found), ["<f64 as fmt::Tr>::m", "<u32 as Tr>::m"])
+
+    def test_drop_glue_and_shims_match_exactly(self):
+        self.assertTrue(lint.is_shim("fn std::ptr::drop_in_place::<Vec<f64>>(_1: *mut Vec<f64>) -> () {"))
+        self.assertTrue(lint.is_shim("fn core::ptr::drop_in_place::<W>(_1: *mut W) -> () {"))
+        self.assertTrue(lint.is_shim("fn <W as Clone>::clone(_1: &W) -> W - shim(W) {"))
+        for h in ["fn drop_in_place_all() -> f64 {", "fn bind::drop_in_place::<W>(_1: *mut W) -> f64 {",
+                  "fn shim_maker() -> f64 {", "fn f(_1: u8) -> f64 { // - shim(x) later"]:
+            self.assertFalse(lint.is_shim(h), h)
+        mir = "fn drop_in_place_all() -> f64 {\n}\n"
+        (self.crate / "src" / "bind" / "drop.rs").write_text("pub fn drop_in_place_all() {}\n")
+        found = lint.mir_findings(mir, self.crate, "crates/fid-report", lint.MIR_ALLOWED["fid-report"])
+        self.assertEqual([f.message.split(" (")[0] for f in found], ["drop_in_place_all"])
+
+    def test_no_shipped_manifest_enables_test_interpretation(self):
+        # Only fid-report's own dev-dependency may turn on the test-only status hook.
+        hits = []
+        for m in sorted((ROOT / "crates").glob("*/Cargo.toml")):
+            data = tomllib.loads(m.read_text(encoding="utf-8"))
+            for section in ("dependencies", "build-dependencies"):
+                for name, spec in data.get(section, {}).items():
+                    if isinstance(spec, dict) and "test-interpretation" in spec.get("features", []):
+                        hits.append(f"{m.parent.name} [{section}] {name}")
+            for tgt in data.get("target", {}).values():
+                for section in ("dependencies", "build-dependencies"):
+                    for name, spec in tgt.get(section, {}).items():
+                        if isinstance(spec, dict) and "test-interpretation" in spec.get("features", []):
+                            hits.append(f"{m.parent.name} [target.{section}] {name}")
+            for feat, deps in data.get("features", {}).items():
+                if any("test-interpretation" in d for d in deps):
+                    hits.append(f"{m.parent.name} [features] {feat}")
+        self.assertEqual(hits, [])
+        dev = tomllib.loads((ROOT / "crates" / "fid-report" / "Cargo.toml").read_text(encoding="utf-8"))
+        self.assertIn("test-interpretation", dev["dev-dependencies"]["fid-report"]["features"])
+
+    def test_selftest_fixture_has_trait_impls_outside_fmt(self):
+        src = (ROOT / lint.MIR_FIXTURE / "src" / "lib.rs").read_text(encoding="utf-8")
+        self.assertRegex(src, r"impl Measure for Count \{\n    fn measure\(&self\) -> f64 \{ // mir")
+        self.assertRegex(src, r"impl LocalTrait for Vec<u8> \{\n    fn local_trait_on_foreign_type\([^\n]*// mir")
+
+    def test_mir_emission_is_pinned_to_the_dev_profile(self):
+        text = (ROOT / "tools" / "rpt_float_lint.py").read_text(encoding="utf-8")
+        self.assertIn('"--lib", "--profile", "dev", "--all-features"', text)
+
+    def test_a_crate_without_allowed_files_reports_every_float(self):
+        found = lint.mir_findings(MIR, self.crate, "crates/fid-report", ())
+        self.assertIn("val", [f.message.split(" (")[0] for f in found])
 
 
 class Specs(unittest.TestCase):

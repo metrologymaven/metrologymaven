@@ -409,7 +409,7 @@ fn req005_quantity_kind_and_unit() {
     let mut d = base();
     set_param(&mut d, "t", schema(vec![("type", s("number")), ("x-quantity", n(1.0))]));
     assert_eq!(one(d), at("bad_schema", "/params_schema/properties/t/x-quantity"));
-    for u in ["m", "mm", "um", "nm", "in", "ft", "thou"] {
+    for u in ["m", "cm", "mm", "um", "nm", "in", "ft", "thou"] {
         let mut d = base();
         set_param(&mut d, "t", schema(vec![("type", s("number")), ("x-quantity", s("length")), ("x-unit", s(u))]));
         assert_eq!(one(d), vec![], "{u}");

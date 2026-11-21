@@ -645,8 +645,9 @@ impl Evidence {
 }
 
 /// The display state of a scene node's status (VIZ.RENDER.SCENE.PROJ) and its evidence facts,
-/// all kept. A kernel evaluation error has no display state ([`StatusError::KernelError`]); the
-/// stale state comes from VIZ.RENDER.SCENE.STALE, which adds it to `DisplayStatus`.
+/// all kept. A kernel evaluation error has no display state ([`StatusError::KernelError`]). A
+/// stale node (VIZ.RENDER.SCENE.STALE) maps to [`DisplayState::Stale`] with the evidence facts
+/// of the status it replaced, never to its kernel outcome (AC-12).
 pub fn from_display_status(s: &DisplayStatus) -> Result<(DisplayState, Evidence), StatusError> {
     match s {
         DisplayStatus::Kernel(k) => {
@@ -663,6 +664,14 @@ pub fn from_display_status(s: &DisplayStatus) -> Result<(DisplayState, Evidence)
             };
             Ok((state, evidence))
         }
+        DisplayStatus::Stale { evidence, .. } => Ok((
+            DisplayState::Stale,
+            Evidence {
+                claimed: evidence.claimed,
+                declared_input: evidence.declared_input,
+                uncharacterized_input: evidence.uncharacterized_input,
+            },
+        )),
         DisplayStatus::NotEvaluated => Ok((DisplayState::NotEvaluated, Evidence::default())),
         DisplayStatus::Error(code) => Err(StatusError::KernelError(code.as_str().to_string())),
     }

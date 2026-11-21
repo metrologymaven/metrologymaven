@@ -6,11 +6,12 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_render::frame::graph::{
-    crop_rows, order_or_software, padded_bytes_per_row, pick_adapter, policy_order, policy_order_from_file,
-    resolve_order, select, AdapterChoice, AdapterSource, Attempt, Backend, FrameGraph, FrameTargets, GraphError, Host,
-    Pass, PassContext, PassDecl, PassId, PassList, PolicyError, Rect, TargetId, WgpuSource, BACKEND_SETTING, COLOUR,
-    DEPTH, ID, ID_FORMAT, REASON_CHOICE_ABSENT, REASON_NOT_COMPILED, REASON_NO_ADAPTER, REASON_NO_BACKEND_FOR_TARGET,
-    REASON_NO_CPU_ADAPTER, REASON_ONLY_CPU,
+    crop_rows, instance_backends, order_or_software, padded_bytes_per_row, pick_adapter, policy_order,
+    policy_order_from_file, resolve_order, select, select_excluding, AdapterChoice, AdapterSource, Attempt, Backend,
+    FrameGraph, FrameTargets, GraphError, Host, Pass, PassContext, PassDecl, PassId, PassList, PolicyError,
+    ProbeExclusions, Rect, TargetId, WgpuSource, BACKEND_SETTING, COLOUR, DEPTH, ID, ID_FORMAT, REASON_CHOICE_ABSENT,
+    REASON_NOT_COMPILED, REASON_NOT_IN_INSTANCE, REASON_NO_ADAPTER, REASON_NO_BACKEND_FOR_TARGET,
+    REASON_NO_CPU_ADAPTER, REASON_ONLY_CPU, REASON_PROBE_FAILED, REASON_PROBE_TIMEOUT,
 };
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -209,6 +210,116 @@ fn ac5_setting_and_choice_override_the_policy() {
     let s = select(&fake, &order, Some(&choice)).unwrap();
     assert_eq!(s.backend, Backend::Vulkan);
     assert!(fake.calls.borrow().iter().filter(|(b, _)| *b != Backend::Dx12).all(|(_, c)| c.is_none()));
+}
+
+/// DETECT follow-up: a backend whose `PLAT.GPU.DETECT` probe timed out or failed is never
+/// requested from the source, whatever the order or the choice says, and is recorded as an
+/// attempt with its reason; the next backend is tried.
+#[test]
+fn excluded_backends_are_never_requested() {
+    let fake = Fake::new(&[(Backend::Dx12, Ok("dx0")), (Backend::Vulkan, Ok("vk0")), (Backend::Software, Ok("warp"))]);
+    let excluded = ProbeExclusions { timed_out: vec![Backend::Vulkan], failed: vec![Backend::Dx12] };
+    let s = select_excluding(&fake, &[Backend::Dx12, Backend::Vulkan, Backend::Software], None, &excluded).unwrap();
+    assert_eq!((s.backend, s.adapter), (Backend::Software, "warp"));
+    assert_eq!(
+        s.tried,
+        [
+            Attempt { backend: Backend::Dx12, reason: REASON_PROBE_FAILED.into() },
+            Attempt { backend: Backend::Vulkan, reason: REASON_PROBE_TIMEOUT.into() },
+        ]
+    );
+    assert_eq!(fake.calls.borrow().iter().map(|(b, _)| *b).collect::<Vec<_>>(), [Backend::Software]);
+    // The choice's own backend timed out: not requested, even with the choice first.
+    let fake = Fake::new(&[(Backend::Vulkan, Ok("vk0")), (Backend::Dx12, Ok("dx0"))]);
+    let choice = AdapterChoice { backend: Backend::Vulkan, vendor: Some(0x10de), device: Some(0x2684), name: None };
+    let order = resolve_order(&[Backend::Dx12, Backend::Vulkan, Backend::Software], None, Some(&choice)).unwrap();
+    let hung = ProbeExclusions { timed_out: vec![Backend::Vulkan], failed: vec![] };
+    let s = select_excluding(&fake, &order, Some(&choice), &hung).unwrap();
+    assert_eq!(s.backend, Backend::Dx12);
+    assert_eq!(s.tried, [Attempt { backend: Backend::Vulkan, reason: REASON_PROBE_TIMEOUT.into() }]);
+    assert!(fake.calls.borrow().iter().all(|(b, _)| *b != Backend::Vulkan), "{:?}", fake.calls.borrow());
+    // Everything excluded: `NoAdapter` names each backend with its exclusion; nothing requested.
+    let fake = Fake::new(&[(Backend::Vulkan, Ok("vk0"))]);
+    let all = ProbeExclusions { timed_out: vec![Backend::Vulkan], failed: vec![Backend::Software] };
+    let e = select_excluding(&fake, &[Backend::Vulkan, Backend::Software], None, &all).unwrap_err();
+    assert_eq!(
+        e,
+        GraphError::NoAdapter {
+            tried: vec![
+                Attempt { backend: Backend::Vulkan, reason: REASON_PROBE_TIMEOUT.into() },
+                Attempt { backend: Backend::Software, reason: REASON_PROBE_FAILED.into() },
+            ]
+        }
+    );
+    assert!(fake.calls.borrow().is_empty());
+    // No exclusions: the same as `select`.
+    let fake = Fake::new(&[(Backend::Vulkan, Ok("vk0"))]);
+    let order = [Backend::Dx12, Backend::Vulkan];
+    let a = select_excluding(&fake, &order, None, &ProbeExclusions::none()).unwrap();
+    let b = select(&fake, &order, None).unwrap();
+    assert_eq!((a.backend, a.adapter, a.tried), (b.backend, b.adapter, b.tried));
+}
+
+/// The exclusions arrive as plain data (DETECT's backend names); an unknown name is refused, a
+/// timeout wins over a failure, and `Software` removes no wgpu backend.
+#[test]
+fn probe_exclusions_from_detect_names() {
+    let e = ProbeExclusions::from_names(&["vulkan", "vulkan"], &["dx12", "vulkan"]).unwrap();
+    assert_eq!(e, ProbeExclusions { timed_out: vec![Backend::Vulkan], failed: vec![Backend::Dx12, Backend::Vulkan] });
+    assert_eq!(e.reason(Backend::Vulkan), Some(REASON_PROBE_TIMEOUT));
+    assert_eq!(e.reason(Backend::Dx12), Some(REASON_PROBE_FAILED));
+    assert_eq!(e.reason(Backend::Software), None);
+    assert_eq!(e.wgpu_mask(), wgpu::Backends::VULKAN | wgpu::Backends::DX12);
+    assert_eq!(ProbeExclusions::from_names(&["Vulkan"], &[]).unwrap_err(), "Vulkan");
+    assert_eq!(ProbeExclusions::from_names(&[], &["dx13"]).unwrap_err(), "dx13");
+    assert!(ProbeExclusions::from_names(&[], &[]).unwrap().is_empty());
+    let sw = ProbeExclusions { timed_out: vec![], failed: vec![Backend::Software] };
+    assert_eq!(sw.wgpu_mask(), wgpu::Backends::empty());
+}
+
+/// The real source's instance: only the choice's backend when a choice is given, never an
+/// excluded backend; `software` (or no choice) searches every backend not excluded.
+#[test]
+fn instance_has_only_the_chosen_backend() {
+    let none = ProbeExclusions::none();
+    let dx = AdapterChoice { backend: Backend::Dx12, vendor: Some(0x10de), device: Some(0x2684), name: None };
+    let vk = AdapterChoice { backend: Backend::Vulkan, vendor: None, device: None, name: None };
+    let sw = AdapterChoice { backend: Backend::Software, vendor: None, device: None, name: None };
+    assert_eq!(instance_backends(Some(&dx), &none), wgpu::Backends::DX12);
+    assert_eq!(instance_backends(Some(&vk), &none), wgpu::Backends::VULKAN);
+    assert_eq!(instance_backends(None, &none), wgpu::Backends::all());
+    assert_eq!(instance_backends(Some(&sw), &none), wgpu::Backends::all());
+    let hung = ProbeExclusions { timed_out: vec![Backend::Vulkan], failed: vec![] };
+    assert_eq!(instance_backends(Some(&sw), &hung), wgpu::Backends::all().difference(wgpu::Backends::VULKAN));
+    assert_eq!(instance_backends(None, &hung), wgpu::Backends::all().difference(wgpu::Backends::VULKAN));
+    assert_eq!(instance_backends(Some(&dx), &hung), wgpu::Backends::DX12);
+    assert_eq!(instance_backends(Some(&vk), &hung), wgpu::Backends::empty(), "the chosen backend hung");
+    // The real source: only compiled backends of that mask, and an excluded or foreign backend
+    // is refused without touching the driver.
+    let compiled = wgpu::Instance::enabled_backend_features();
+    let src = WgpuSource::for_choice(Some(&vk), &hung);
+    assert_eq!(src.backends(), wgpu::Backends::empty(), "no instance at all");
+    assert_eq!(src.excluded(), &hung);
+    if compiled.contains(wgpu::Backends::VULKAN) {
+        assert_eq!(src.request(Backend::Vulkan, Some(&vk)).unwrap_err(), REASON_PROBE_TIMEOUT);
+        assert_eq!(src.request(Backend::Software, None).unwrap_err(), REASON_NOT_IN_INSTANCE);
+        let e = FrameGraph::create(&src, &[Backend::Vulkan, Backend::Software], Some(&vk)).unwrap_err();
+        assert_eq!(
+            e,
+            GraphError::NoAdapter {
+                tried: vec![
+                    Attempt { backend: Backend::Vulkan, reason: REASON_PROBE_TIMEOUT.into() },
+                    Attempt { backend: Backend::Software, reason: REASON_NOT_IN_INSTANCE.into() },
+                ]
+            }
+        );
+    }
+    let src = WgpuSource::for_choice(Some(&dx), &none);
+    assert_eq!(src.backends(), wgpu::Backends::DX12 & compiled);
+    if compiled.contains(wgpu::Backends::VULKAN) {
+        assert_eq!(src.request(Backend::Vulkan, None).unwrap_err(), REASON_NOT_IN_INSTANCE, "vulkan is not touched");
+    }
+    assert_eq!(WgpuSource::new().backends(), compiled);
 }
 
 #[test]

@@ -1,0 +1,27 @@
+# PLAT.GPU.DETECT AC-4 (hand-written). INVENTED TEST DATA, NOT REAL DRIVER CLAIMS (vendor ID above
+# the PCI range, .invalid reference). The discrete adapter of adapters-win-discrete.json on
+# Vulkan, driver below 32, must fall back to software, whatever the user override; a second
+# entry on DX12 is a workaround, to show precedence and the workaround list.
+schema_version = 1
+
+[[entry]]
+id = "detect-force-vulkan"
+os = "windows"
+backend = "vulkan"
+vendor_id = 0x7E570010
+device_ids = "any"
+driver = { max = "32" }
+action = "force_software"
+reason = "Fixture: an invented driver range that must fall back to software on Vulkan."
+reference = "https://example.invalid/gpu-known-bad/detect-force-vulkan"
+
+[[entry]]
+id = "detect-workaround-dx12"
+os = "windows"
+backend = "dx12"
+vendor_id = 0x7E570010
+device_ids = "any"
+driver = "any"
+action = "workaround:no_msaa"
+reason = "Fixture: an invented device that needs the no_msaa workaround on DX12."
+reference = "https://example.invalid/gpu-known-bad/detect-workaround-dx12"

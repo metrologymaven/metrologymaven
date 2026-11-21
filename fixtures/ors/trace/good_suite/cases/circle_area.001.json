@@ -1,0 +1,53 @@
+{
+ "acceptance_tolerance": {
+  "unit": "m",
+  "value_hex": "0x3e112e0be826d695"
+ },
+ "basis": "closed_form_math",
+ "case": "ors:trace/circle_area.001",
+ "citations": "none",
+ "dataset": {
+  "aim": "gdt.synthetic.closed_form",
+  "cross_check": [],
+  "id": "rdl:O/gdt.synthetic.closed_form/circle-area/0001",
+  "inputs": [
+   {
+    "digest": "sha256:552f8e66116d4e202c97a30f15be2424b3a77a6ceec084cb105eebcdfb008ef7",
+    "role": "points",
+    "unit": "mm"
+   }
+  ],
+  "licence": "CC-BY-4.0",
+  "provenance": {
+   "source": "Synthetic fixture for the UNC.ORS.TRACE checker tests; not a measurement and not an interpretation of any standard."
+  },
+  "reference": {
+   "outputs": [
+    {
+     "kind": "length",
+     "name": "value",
+     "test_uncertainty_hex": "0x3be0000000000000",
+     "value_hex": "0x3f34940bbb1f255f"
+    }
+   ],
+   "precision_digits": 17
+  },
+  "schema": "rdl-dataset/v1",
+  "tier": "O",
+  "visibility": "public"
+ },
+ "dialect": "none",
+ "expected": {
+  "unit": "m",
+  "value_hex": "0x3f34940bbb1f255f"
+ },
+ "note": "Synthetic case; the clause number is invented for checker tests.",
+ "review": {
+  "authors": [
+   "case-author-a"
+  ],
+  "reviewers": [],
+  "status": "draft"
+ },
+ "schema": "ors-case/v1"
+}

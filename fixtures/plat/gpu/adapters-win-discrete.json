@@ -1,0 +1,5 @@
+[
+  {"api_version": "12.1", "backend": "dx12", "device_id": "0x00000200", "device_type": "discrete", "driver_version": "31.0.1", "name": "Fixture Discrete GPU", "vendor_id": "0x7e570010"},
+  {"api_version": "1.3", "backend": "vulkan", "device_id": "0x00000200", "device_type": "discrete", "driver_version": "31.0.1", "name": "Fixture Discrete GPU", "vendor_id": "0x7e570010"},
+  {"api_version": "1.3", "backend": "vulkan", "device_id": "0x00000300", "device_type": "integrated", "driver_version": "30.0.5", "name": "Fixture Integrated GPU", "vendor_id": "0x7e570011"}
+]

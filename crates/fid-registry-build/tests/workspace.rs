@@ -57,7 +57,8 @@ const WORKSPACE_CATALOGUE: &str = concat!(
     r#"{"den":"648000","num":"1","pi":true,"symbol":"arcsec"},{"den":"180","num":"1","pi":true,"symbol":"deg"},"#,
     r#"{"den":"200","num":"1","pi":true,"symbol":"gon"},{"den":"1","num":"1","pi":false,"symbol":"rad"}]},"#,
     r#"{"canonical":"1","kind":"dimensionless","units":[{"den":"1","num":"1","pi":false,"symbol":"1"}]},"#,
-    r#"{"canonical":"m","kind":"length","units":[{"den":"1250","num":"381","pi":false,"symbol":"ft"},"#,
+    r#"{"canonical":"m","kind":"length","units":[{"den":"100","num":"1","pi":false,"symbol":"cm"},"#,
+    r#"{"den":"1250","num":"381","pi":false,"symbol":"ft"},"#,
     r#"{"den":"5000","num":"127","pi":false,"symbol":"in"},{"den":"1","num":"1","pi":false,"symbol":"m"},"#,
     r#"{"den":"1000","num":"1","pi":false,"symbol":"mm"},{"den":"1000000000","num":"1","pi":false,"symbol":"nm"},"#,
     r#"{"den":"5000000","num":"127","pi":false,"symbol":"thou"},"#,
@@ -111,7 +112,7 @@ fn temperature() -> &'static str {
 }
 
 fn length_again() -> &'static str {
-    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"m","kind":"length","units":[{"den":"1250","num":"381","pi":false,"symbol":"ft"},{"den":"5000","num":"127","pi":false,"symbol":"in"},{"den":"1","num":"1","pi":false,"symbol":"m"},{"den":"1000","num":"1","pi":false,"symbol":"mm"},{"den":"1000000000","num":"1","pi":false,"symbol":"nm"},{"den":"5000000","num":"127","pi":false,"symbol":"thou"},{"den":"1000000","num":"1","pi":false,"symbol":"um"}]}]}"#
+    r#"{"format":"fid-quantity-kinds/1","kinds":[{"canonical":"m","kind":"length","units":[{"den":"100","num":"1","pi":false,"symbol":"cm"},{"den":"1250","num":"381","pi":false,"symbol":"ft"},{"den":"5000","num":"127","pi":false,"symbol":"in"},{"den":"1","num":"1","pi":false,"symbol":"m"},{"den":"1000","num":"1","pi":false,"symbol":"mm"},{"den":"1000000000","num":"1","pi":false,"symbol":"nm"},{"den":"5000000","num":"127","pi":false,"symbol":"thou"},{"den":"1000000","num":"1","pi":false,"symbol":"um"}]}]}"#
 }
 
 fn angle_turn() -> &'static str {
@@ -214,7 +215,7 @@ fn a_fragment_carrying_pi_hex_is_refused() {
 fn the_workspace_catalogue_digest_is_pinned() {
     assert_eq!(
         workspace_catalogue().unwrap().digest().to_string(),
-        "sha256:8c5b179d22187a8f7a85b7ad1acce2babe6a7cbd41ff7da18e9b9761a13a5ad4"
+        "sha256:a84ae1aec18503359642ab70fb1fbf8a4d88f9670a73e4fcca759e316973923f"
     );
 }
 

@@ -176,6 +176,20 @@ FIXTURES["multi_context.stp"] = step_file(
         shape(41, 31),
     ])
 
+FIXTURES["override_um_inch.stp"] = step_file(
+    "override_um_inch.stp", "Two geometry contexts: #30 declares micrometre, #31 a conversion-based inch.",
+    one(SCHEMA_242), [
+        POINT, MM, RAD,
+        "#15=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MICRO.,.METRE.));",
+        "#21=LENGTH_MEASURE_WITH_UNIT(LENGTH_MEASURE(25.4),#10);",
+        DIMS,
+        "#23=(CONVERSION_BASED_UNIT('INCH',#21)LENGTH_UNIT()NAMED_UNIT(#22));",
+        ctx(30, [15, 11]),
+        ctx(31, [23, 11]),
+        shape(40, 30),
+        shape(41, 31),
+    ])
+
 # ----- error fixtures
 
 FIXTURES["evil_schema.stp"] = step_file(
@@ -297,10 +311,13 @@ CASES = [
     ("no_unit.stp", "mm", False),
     ("no_unit.stp", None, True),
     ("ap203_cm_deg.stp", None, False),
+    ("ap203_cm_deg.stp", "mm", True),
     ("ap203e2_foot_warn.stp", None, False),
     ("multi_context.stp", None, False),
     ("multi_context.stp", "ft", False),
     ("multi_context.stp", "mm", True),
+    ("override_um_inch.stp", "mm", True),
+    ("override_um_inch.stp", "um", True),
     ("partial_unit.stp", None, False),
     ("partial_unit.stp", "mm", False),
     ("partial_unit.stp", "in", True),
@@ -706,9 +723,9 @@ def resolve(text, given, override):
         if source == "override" and unc is not None and unc[2] == length:
             unc = (unc[0], unc[1], eff)
             warnings.add((c, "step_uncertainty_reexpressed"))
-        out.append((c, eff, angle, unc, source, geometry))
+        out.append((c, eff, angle, unc, source, geometry, length))
     lines = ["schema {}".format(schema), "system {}".format(system.encode("utf-8").hex())]
-    for c, eff, angle, unc, source, geometry in out:
+    for c, eff, angle, unc, source, geometry, _declared in out:
         u = "none" if unc is None else "{} {}".format(unc[0], bits(float(EXACT[unc[2]])))
         lines.append("context {} unit {} factor {} angle {} uncertainty {} source {} geometry {}".format(
             c, eff, bits(float(EXACT[eff])), angle or "none", u, source, "true" if geometry else "false"))
@@ -741,22 +758,19 @@ def shortest(x):
 
 
 def provenance(out, unitless, given, override):
-    # out rows: (context, effective, angle, (lexeme, value, unit) | None, source, geometry)
+    # out rows: (context, effective, angle, (lexeme, value, unit) | None, source, geometry,
+    # declared length unit | None)
     primary = next((r for r in out if r[5]), out[0] if out else None)
     affected = [r for r in out if r[4] != "declared" and (r[5] or r is primary)]
     try:
         if affected:
             g = affected[0][1]
-            if g == "cm":
-                raise Bad("step_unit_unsupported", affected[0][0])
             unit, source = g, ("override" if any(r[4] == "override" for r in affected) else "caller")
         elif primary is None:
             if given is None:
                 raise Bad("unit_required")
             unit, source = given, "caller"
         else:
-            if primary[1] == "cm":
-                raise Bad("step_unit_unsupported", primary[0])
             unit, source = primary[1], "declared"
     except Bad as e:
         line = "prov error {}".format(e.code)
@@ -771,14 +785,16 @@ def provenance(out, unitless, given, override):
         items["step.units.mixed"] = "true"
     groups = []
     index = {}
-    for c, eff, angle, unc, src, geometry in out:
-        key = (eff, src, angle, None if unc is None else (unc[1], unc[2]), geometry)
+    for c, eff, angle, unc, src, geometry, declared in out:
+        # The declared unit is part of the group (review N1 of #377): overridden contexts
+        # that declared um and in are two groups, though both are now mm.
+        key = (eff, src, declared, angle, None if unc is None else (unc[1], unc[2]), geometry)
         if key in index:
             groups[index[key]][1] += 1
             continue
         u = "none" if unc is None else "{} {}".format(shortest(unc[1]), unc[2])
-        sig = "length={} factor_m={} source={} angle={} uncertainty={} geometry={}".format(
-            eff, DECIMAL[eff], src, angle or "none", u, "true" if geometry else "false")
+        sig = "length={} factor_m={} source={} declared={} angle={} uncertainty={} geometry={}".format(
+            eff, DECIMAL[eff], src, declared or "none", angle or "none", u, "true" if geometry else "false")
         index[key] = len(groups)
         groups.append([sig, 1, c])
     for k, (sig, count, first) in enumerate(groups):

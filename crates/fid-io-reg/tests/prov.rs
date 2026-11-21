@@ -290,7 +290,7 @@ fn conversion_matches_the_exact_rational_reference() {
         *by_unit.entry(c[0].clone()).or_insert(0) += 1;
     }
     let units: Vec<&str> = by_unit.keys().map(String::as_str).collect();
-    assert_eq!(units, ["ft", "in", "m", "mm", "nm", "thou", "um"]);
+    assert_eq!(units, ["cm", "ft", "in", "m", "mm", "nm", "thou", "um"]);
 }
 
 #[test]

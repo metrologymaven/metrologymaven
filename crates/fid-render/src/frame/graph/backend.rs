@@ -9,6 +9,12 @@
 //! setting [`BACKEND_SETTING`], then the policy order (each backend once). Every backend that
 //! yields no adapter is recorded as an [`Attempt`] with its reason; if none yields one, the
 //! result is [`GraphError::NoAdapter`] listing every attempt in order.
+//!
+//! Containment of a hung driver: `PLAT.GPU.DETECT`'s probe reports the backends that timed out
+//! or failed. They reach the frame graph as plain data, [`ProbeExclusions`] (no code edge to
+//! `fid-gpu-select`). An excluded backend is never requested ([`select_excluding`]), and the real
+//! source never creates a wgpu instance on it ([`instance_backends`]). With an [`AdapterChoice`]
+//! the instance has only the choice's backend.
 
 use super::GraphError;
 use std::fmt;
@@ -224,6 +230,82 @@ impl AdapterChoice {
     }
 }
 
+/// Attempt reason: `PLAT.GPU.DETECT`'s probe of the backend timed out (its driver may still be
+/// hung), so the frame graph does not touch it.
+pub const REASON_PROBE_TIMEOUT: &str = "excluded: the PLAT.GPU.DETECT probe of this backend timed out";
+/// Attempt reason: `PLAT.GPU.DETECT`'s probe of the backend failed.
+pub const REASON_PROBE_FAILED: &str = "excluded: the PLAT.GPU.DETECT probe of this backend failed";
+
+/// The backends `PLAT.GPU.DETECT`'s probe found timed out (`probe_timeout`) or failed
+/// (`probe_failed`), passed as plain data: the caller copies the two lists of its
+/// `GpuSelection` (by name, [`ProbeExclusions::from_names`]). The frame graph never requests an
+/// excluded backend and never creates a wgpu instance on one. `Software` in a list excludes the
+/// `software` attempt itself; it does not remove any wgpu backend from the instance.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ProbeExclusions {
+    pub timed_out: Vec<Backend>,
+    pub failed: Vec<Backend>,
+}
+
+impl ProbeExclusions {
+    /// Nothing excluded.
+    pub fn none() -> ProbeExclusions {
+        ProbeExclusions::default()
+    }
+
+    /// From backend names as `PLAT.GPU.DETECT` writes them (`vulkan`, `dx12`, ...). An unknown
+    /// name is refused (returned as the error), never dropped, so nothing is silently re-entered.
+    pub fn from_names(timed_out: &[&str], failed: &[&str]) -> Result<ProbeExclusions, String> {
+        let parse = |names: &[&str]| -> Result<Vec<Backend>, String> {
+            let mut out = Vec::new();
+            for n in names {
+                let b = Backend::parse(n).ok_or_else(|| (*n).to_string())?;
+                if !out.contains(&b) {
+                    out.push(b);
+                }
+            }
+            Ok(out)
+        };
+        Ok(ProbeExclusions { timed_out: parse(timed_out)?, failed: parse(failed)? })
+    }
+
+    /// True when nothing is excluded.
+    pub fn is_empty(&self) -> bool {
+        self.timed_out.is_empty() && self.failed.is_empty()
+    }
+
+    /// Why `backend` is excluded (a timeout wins over a failure), or `None`.
+    pub fn reason(&self, backend: Backend) -> Option<&'static str> {
+        if self.timed_out.contains(&backend) {
+            Some(REASON_PROBE_TIMEOUT)
+        } else if self.failed.contains(&backend) {
+            Some(REASON_PROBE_FAILED)
+        } else {
+            None
+        }
+    }
+
+    /// The wgpu backends of every excluded hardware backend (`Software` names no wgpu backend
+    /// of its own).
+    pub fn wgpu_mask(&self) -> wgpu::Backends {
+        let mut m = wgpu::Backends::empty();
+        for b in self.timed_out.iter().chain(&self.failed) {
+            if *b != Backend::Software {
+                m |= b.wgpu_backends();
+            }
+        }
+        m
+    }
+}
+
+/// The wgpu backends the real source's instance is created with: only the choice's backend
+/// when a choice is given (every backend for a `software` choice or none), never an excluded
+/// one. Empty means no instance is created.
+pub fn instance_backends(choice: Option<&AdapterChoice>, excluded: &ProbeExclusions) -> wgpu::Backends {
+    let base = choice.map_or(wgpu::Backends::all(), |c| c.backend.wgpu_backends());
+    base.difference(excluded.wgpu_mask())
+}
+
 /// The order to try: the choice's backend, then the setting's, then the policy order, each
 /// backend once. A setting that is not `auto` or a backend name is [`GraphError::BadSetting`].
 pub fn resolve_order(
@@ -283,8 +365,24 @@ pub fn select<S: AdapterSource>(
     order: &[Backend],
     choice: Option<&AdapterChoice>,
 ) -> Result<Selected<S::Adapter>, GraphError> {
+    select_excluding(source, order, choice, &ProbeExclusions::none())
+}
+
+/// [`select`], except that a backend in `excluded` is never requested from `source`: it is
+/// recorded as an [`Attempt`] with [`REASON_PROBE_TIMEOUT`] or [`REASON_PROBE_FAILED`] and the
+/// next backend is tried. This holds for the choice's own backend too.
+pub fn select_excluding<S: AdapterSource>(
+    source: &S,
+    order: &[Backend],
+    choice: Option<&AdapterChoice>,
+    excluded: &ProbeExclusions,
+) -> Result<Selected<S::Adapter>, GraphError> {
     let mut tried = Vec::new();
     for &backend in order {
+        if let Some(reason) = excluded.reason(backend) {
+            tried.push(Attempt { backend, reason: reason.to_string() });
+            continue;
+        }
         let c = choice.filter(|c| c.backend == backend);
         match source.request(backend, c) {
             Ok(adapter) => return Ok(Selected { backend, adapter, tried }),
