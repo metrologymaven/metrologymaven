@@ -90,6 +90,7 @@ fn origin(v: &CValue) -> EntryOrigin {
             "bus_release" => EventSource::BusRelease,
             other => panic!("source {other}"),
         },
+        human_assertion: None,
     }
 }
 
@@ -102,6 +103,7 @@ fn handler_origin(kind: PrincipalKind, command: &str, cls: SideEffect) -> EntryO
         class: cls,
         branch: MAIN.to_string(),
         source: EventSource::Handler,
+        human_assertion: None,
     }
 }
 
@@ -324,6 +326,7 @@ fn release_protects_main_once() {
                 class: cls,
                 branch: branch.to_string(),
                 source: EventSource::BusRelease,
+                human_assertion: None,
             };
             b.apply(&bus, &e).unwrap();
             assert_eq!(b.is_protected(MAIN), Some(true));

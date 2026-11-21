@@ -79,11 +79,13 @@ fn program_rec_defs() -> Result<Vec<CommandDef>, DefError> {
     Ok(adopt.chain(life).collect())
 }
 
-/// The four branch commands of `CORE.JRN.BR.NAME` and `journal.diff_branch@1` of
-/// `CORE.JRN.BR.DIFF` (handlers in `fid-journal-cmd`).
+/// The four branch commands of `CORE.JRN.BR.NAME`, `journal.diff_branch@1` of
+/// `CORE.JRN.BR.DIFF` and the three promotion commands of `CORE.JRN.BR.PROMO` (handlers in
+/// `fid-journal-cmd`).
 fn journal_defs() -> Result<Vec<CommandDef>, DefError> {
     let mut defs = fid_journal::branch::command_defs()?;
     defs.extend(fid_journal::diff::command_defs()?);
+    defs.extend(fid_journal::promote::command_defs()?);
     Ok(defs)
 }
 

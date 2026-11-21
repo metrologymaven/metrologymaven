@@ -1,6 +1,6 @@
 [package]
 name = "fid-journal"
-description = "Metrology Maven semantic journal: entry model and salted commitments, atomic durable append, branch heads and checkpoints, chain verification and entry listing, named branches, branch diff, stream routing and the P0 Activity Log (spec nodes CORE.JRN.ENTRY, CORE.JRN.CHAIN.APPEND, CORE.JRN.CHAIN.CKPT, CORE.JRN.CHAIN.VERIFY, CORE.JRN.BR.NAME, CORE.JRN.BR.DIFF, CORE.JRN.STREAM.ALOG)"
+description = "Metrology Maven semantic journal: entry model and salted commitments, atomic durable append, branch heads and checkpoints, chain verification and entry listing, named branches, branch diff, branch promotion, stream routing and the P0 Activity Log (spec nodes CORE.JRN.ENTRY, CORE.JRN.CHAIN.APPEND, CORE.JRN.CHAIN.CKPT, CORE.JRN.CHAIN.VERIFY, CORE.JRN.BR.NAME, CORE.JRN.BR.DIFF, CORE.JRN.BR.PROMO, CORE.JRN.STREAM.ALOG)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
