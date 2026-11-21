@@ -43,7 +43,7 @@ impl VerError {
             VerError::Template(e) => e.code(),
             VerError::Slot(e) => e.code(),
             VerError::NotFound { .. } => "report.not_found",
-            VerError::File(code) => *code,
+            VerError::File(code) => code,
             VerError::Report(e) => e.code(),
         }
     }
