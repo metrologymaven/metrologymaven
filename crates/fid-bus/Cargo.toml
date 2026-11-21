@@ -63,6 +63,10 @@ permit-test-hooks = []
 # Integration tests build handler parameters through the test-support constructor and use the
 # egress test hooks.
 fid-bus = { path = ".", features = ["test-support", "permit-test-hooks"] }
+# CORE.JRN.CHAIN.VERIFY: `tests/journal_verify_schema.rs` validates real verify and list results
+# and parameters against the published schemas with this crate's validator. The journal's
+# command definitions come with its `store` feature (already built for this crate via fid-store).
+fid-journal = { path = "../fid-journal", features = ["store"] }
 
 [lints]
 workspace = true
