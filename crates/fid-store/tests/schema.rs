@@ -905,8 +905,11 @@ fn open_hardened_returns_a_hardened_connection_and_never_creates() {
     }
     let rel = Path::new("relative");
     assert_eq!(open_hardened(rel, "other.db", OpenMode::Read, BUSY_TIMEOUT).unwrap_err().code(), "path_unsupported");
+    // NOFOLLOW refuses a link anywhere in the path (macOS's temp dir is below the /var link), so
+    // callers pass a canonical directory.
+    let dir = std::fs::canonicalize(&t.0).unwrap();
     for mode in [OpenMode::Read, OpenMode::Write] {
-        let conn = open_hardened(&t.0, "other.db", mode, BUSY_TIMEOUT).unwrap();
+        let conn = open_hardened(&dir, "other.db", mode, BUSY_TIMEOUT).unwrap();
         assert!(conn.db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE).unwrap());
         assert!(!conn.db_config(DbConfig::SQLITE_DBCONFIG_TRUSTED_SCHEMA).unwrap());
         assert!(!conn.db_config(DbConfig::SQLITE_DBCONFIG_WRITABLE_SCHEMA).unwrap());

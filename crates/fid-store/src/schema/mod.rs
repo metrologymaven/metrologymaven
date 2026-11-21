@@ -461,7 +461,8 @@ fn connect(loc: &ProjectLocation, mode: OpenMode) -> Result<(Connection, PathBuf
 
 /// The single guarded door to a SQLite file: opens the existing database file `name` in the
 /// absolute directory `dir` and returns a hardened connection. `name` must be a plain file
-/// name. The file must be a regular file, not a symbolic link, and its companions must pass
+/// name. Pass `dir` canonicalised: `SQLITE_OPEN_NOFOLLOW` refuses a symbolic link anywhere in
+/// the path on Unix. The file must be a regular file, not a symbolic link, and its companions must pass
 /// [`check_companions_of`]; it is opened with `SQLITE_OPEN_NOFOLLOW` and without
 /// `SQLITE_OPEN_CREATE` or `SQLITE_OPEN_URI` (the caller creates the file; a path is a path),
 /// read-write for [`OpenMode::Write`] and read-only for [`OpenMode::Read`]. Every hardening
