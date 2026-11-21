@@ -31,6 +31,19 @@
 //! not know) gives `DIVERGENT` with `NO_TOLERANCE` for a value that is not bit-equal
 //! (REQ-005); D0/D1/D2 bit-exact rules still come first. A NaN on either side is `DIVERGENT`
 //! with `NAN_INPUT`: a package never makes the comparison fail open.
+//!
+//! # The production table is pinned
+//!
+//! A table file whose `version` is the production version `rep-1@1.0.0`
+//! ([`fid_rep::TABLE_VERSION`]) must hash to [`fid_rep::TABLE_DIGEST`], or it is refused as
+//! `rep1.malformed`: a file cannot claim to be REP-1 with loosened bounds. Any other version is
+//! a test or future table; it loads, and [`PackageOutcome::rep1_production`] is `false`.
+//!
+//! # Record IDs
+//!
+//! Record IDs within one package must be unique. Every result whose ID occurs more than once
+//! is `DIVERGENT` with `DUPLICATE_RECORD_ID` (fail closed: the verifier cannot tell which
+//! record a package claims).
 
 use std::collections::BTreeMap;
 
@@ -106,7 +119,8 @@ impl Rep1 {
     /// holds one `{bound, kind, mode, unit}` row per numeric kind and exactly one
     /// `{"kind": "exact", "mode": "exact"}` row; the rows must pass [`Table::new`]; and the bytes
     /// must be the table's canonical JSON (RFC 8785), so that the recorded digest names the
-    /// table and nothing else. Any failure is `rep1.malformed`.
+    /// table and nothing else. A table whose version is [`fid_rep::TABLE_VERSION`] must hash to
+    /// [`fid_rep::TABLE_DIGEST`] (`production_digest`). Any failure is `rep1.malformed`.
     pub fn load(bytes: &[u8]) -> Result<Rep1, CompareError> {
         if bytes.len() > MAX_TABLE_BYTES {
             return Err(malformed("too_large"));
@@ -156,7 +170,11 @@ impl Rep1 {
         if table.canonical_json().as_bytes() != bytes {
             return Err(malformed("not_canonical"));
         }
-        Ok(Rep1 { table, digest: Digest::from_bytes(fid_canon::digest_bytes(bytes).0) })
+        let digest = Digest::from_bytes(fid_canon::digest_bytes(bytes).0);
+        if table.version() == fid_rep::TABLE_VERSION && digest.as_str() != fid_rep::TABLE_DIGEST {
+            return Err(malformed("production_digest"));
+        }
+        Ok(Rep1 { table, digest })
     }
 
     /// The production table `rep-1@1.0.0` embedded in `fid-rep`.
@@ -177,6 +195,12 @@ impl Rep1 {
     /// SHA-256 of the table file, for the report (REQ-007).
     pub fn digest(&self) -> Digest {
         self.digest
+    }
+
+    /// The table is the production `rep-1@1.0.0` (its version is [`fid_rep::TABLE_VERSION`];
+    /// [`Rep1::load`] has then checked its digest against [`fid_rep::TABLE_DIGEST`]).
+    pub fn is_production(&self) -> bool {
+        self.table.version() == fid_rep::TABLE_VERSION && self.digest.as_str() == fid_rep::TABLE_DIGEST
     }
 }
 
@@ -243,6 +267,13 @@ pub struct ResultFields {
 }
 
 /// One replayed result: the packaged record and the recomputed one.
+///
+/// **Trust boundary.** `determinism` and `quantity_kind` choose whether a tolerance applies and
+/// which REP-1 row it is, so they must not come from the package under test: a tampered package
+/// could otherwise claim D3 or a looser kind and turn a divergence into `EQUIVALENT`.
+/// TRUST.REPLAY.RUN must take both from the pinned kernel manifest or the algorithm catalogue
+/// for the record's algorithm ID, never from the packaged ResultRecord. This module trusts its
+/// caller on both.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResultPair {
     /// ResultRecord ID.
@@ -327,6 +358,8 @@ pub enum Reason {
     FieldChanged,
     /// A NaN value.
     NanInput,
+    /// The record ID occurs more than once in the package.
+    DuplicateRecordId,
     /// Class N is not classified.
     ClassN,
     /// Not replayable, with SELECT's reason code.
@@ -342,6 +375,7 @@ impl Reason {
             Reason::OutsideTolerance => "OUTSIDE_TOLERANCE".to_string(),
             Reason::FieldChanged => "FIELD_CHANGED".to_string(),
             Reason::NanInput => "NAN_INPUT".to_string(),
+            Reason::DuplicateRecordId => "DUPLICATE_RECORD_ID".to_string(),
             Reason::ClassN => "CLASS_N".to_string(),
             Reason::NotReplayable(code) => format!("NOT_REPLAYABLE:{code}"),
         }
@@ -355,8 +389,11 @@ pub struct ResultOutcome {
     pub record_id: String,
     /// The outcome.
     pub outcome: Outcome,
-    /// First differing field (see the module documentation); `None` when `IDENTICAL` or not
-    /// replayed.
+    /// The first field, in field order, whose outcome equals the result outcome (see the module
+    /// documentation): for `EQUIVALENT` the first non-identical field, for `DIVERGENT` the first
+    /// divergent one, and for a class-N `NOT_REPLAYABLE` result the first field class N leaves
+    /// unclassified (always `value`). `None` when `IDENTICAL`, when SELECT marked the result not
+    /// replayable, or for `DUPLICATE_RECORD_ID`.
     pub first_diff: Option<FieldPath>,
     /// Reason, for an outcome other than `IDENTICAL` and `EQUIVALENT`.
     pub reason: Option<Reason>,
@@ -375,6 +412,8 @@ pub struct PackageOutcome {
     pub rep1_version: String,
     /// SHA-256 of the REP-1 table file used (REQ-007).
     pub rep1_digest: Digest,
+    /// The table used is the pinned production `rep-1@1.0.0`; `false` for a test table.
+    pub rep1_production: bool,
 }
 
 struct Field {
@@ -489,11 +528,30 @@ pub fn aggregate(outcomes: &[Outcome]) -> Outcome {
     combine(outcomes)
 }
 
-/// Compares every result of a package and aggregates them (REQ-006, REQ-007).
+fn record_id(i: &ResultInput) -> &str {
+    match i {
+        ResultInput::Replayed(pair) => &pair.record_id,
+        ResultInput::NotReplayable { record_id, .. } => record_id,
+    }
+}
+
+/// Compares every result of a package and aggregates them (REQ-006, REQ-007). Every result
+/// whose record ID occurs more than once is `DIVERGENT` with `DUPLICATE_RECORD_ID`.
 pub fn compare_package(rep1: &Rep1, rc: &ReplayContext, inputs: &[ResultInput]) -> PackageOutcome {
+    let mut seen: BTreeMap<&str, usize> = BTreeMap::new();
+    for i in inputs {
+        *seen.entry(record_id(i)).or_insert(0) += 1;
+    }
     let results: Vec<ResultOutcome> = inputs
         .iter()
         .map(|i| match i {
+            _ if seen.get(record_id(i)).is_some_and(|&n| n > 1) => ResultOutcome {
+                record_id: record_id(i).to_string(),
+                outcome: Outcome::Divergent,
+                first_diff: None,
+                reason: Some(Reason::DuplicateRecordId),
+                marginal: false,
+            },
             ResultInput::Replayed(pair) => compare_result(rep1, rc, pair),
             ResultInput::NotReplayable { record_id, reason } => ResultOutcome {
                 record_id: record_id.clone(),
@@ -510,6 +568,7 @@ pub fn compare_package(rep1: &Rep1, rc: &ReplayContext, inputs: &[ResultInput]) 
         results,
         rep1_version: rep1.version().to_string(),
         rep1_digest: rep1.digest(),
+        rep1_production: rep1.is_production(),
     }
 }
 
@@ -535,6 +594,7 @@ impl PackageOutcome {
         top.insert("algorithm".to_string(), s(fid_rep::ALGORITHM_ID));
         top.insert("outcome".to_string(), s(self.outcome.as_str()));
         top.insert("rep1_digest".to_string(), s(self.rep1_digest.as_str()));
+        top.insert("rep1_production".to_string(), CValue::Bool(self.rep1_production));
         top.insert("rep1_version".to_string(), s(&self.rep1_version));
         top.insert("results".to_string(), CValue::Arr(results));
         fid_canon::to_canonical_bytes(&CValue::Obj(top))

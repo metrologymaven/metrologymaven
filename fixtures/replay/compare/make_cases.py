@@ -7,7 +7,11 @@ Writes:
   the comparator reads the file, and it has no `angle` row so NO_TOLERANCE can be exercised;
 - fixtures/replay/compare/rep1-test.sha256: `sha256:<hex>` of that file;
 - fixtures/replay/compare/cases.json: packaged vs recomputed result pairs and package outcome
-  lists, each with a hand-stated expected outcome, first differing field and reason.
+  lists, each with a hand-stated expected outcome, first differing field and reason;
+- fixtures/replay/compare/package.sha256: `sha256:<hex>` of the canonical JSON (RFC 8785) of the
+  package outcome for one package holding every case whose context is the default
+  (same_manifest and same_platform_class true), in cases.json order, record ID = case name,
+  compared with rep1-test.json. It is built here from the hand labels, not by the Rust code.
 
 Each hand label is cross-checked before anything is written against a second statement of the
 rules below (exact rationals via fractions.Fraction), independent of the Rust code.
@@ -28,6 +32,7 @@ HERE = Path(__file__).resolve().parent
 TABLE_PATH = HERE / "rep1-test.json"
 DIGEST_PATH = HERE / "rep1-test.sha256"
 CASES_PATH = HERE / "cases.json"
+PACKAGE_DIGEST_PATH = HERE / "package.sha256"
 
 # kind -> (mode, bound text, unit). No `angle` row on purpose.
 BOUNDS = {
@@ -255,7 +260,26 @@ DOC = {"note": "Synthetic TRUST.REPLAY.COMPARE cases for the TEST-ONLY table rep
        "table": "rep1-test.json", "cases": cases, "packages": packages}
 CASES_TEXT = json.dumps(DOC, indent=1, sort_keys=True) + "\n"
 DIGEST_TEXT = "sha256:" + hashlib.sha256(TABLE_TEXT.encode("ascii")).hexdigest() + "\n"
-OUTPUTS = [(TABLE_PATH, TABLE_TEXT), (DIGEST_PATH, DIGEST_TEXT), (CASES_PATH, CASES_TEXT)]
+
+# One package of every default-context case. Canonical JSON here has only strings, booleans,
+# null, arrays and objects, so sorted keys, no whitespace and ASCII escapes are RFC 8785.
+DEFAULT_CTX = {"same_manifest": True, "same_platform_class": True}
+pkg_results = [{"first_diff": c["expect"]["first_diff"], "marginal": c["expect"]["marginal"],
+                "outcome": c["expect"]["outcome"], "reason": c["expect"]["reason"], "record_id": c["name"]}
+               for c in cases if c["context"] == DEFAULT_CTX]
+assert len(pkg_results) >= 40, len(pkg_results)
+PACKAGE = {
+    "algorithm": "rdl.rep.classify@1.0.0",
+    "outcome": max((r["outcome"] for r in pkg_results), key=RANK.get),
+    "rep1_digest": DIGEST_TEXT.strip(),
+    "rep1_production": False,
+    "rep1_version": TABLE["version"],
+    "results": pkg_results,
+}
+PACKAGE_TEXT = json.dumps(PACKAGE, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+PACKAGE_DIGEST_TEXT = "sha256:" + hashlib.sha256(PACKAGE_TEXT.encode("ascii")).hexdigest() + "\n"
+OUTPUTS = [(TABLE_PATH, TABLE_TEXT), (DIGEST_PATH, DIGEST_TEXT), (CASES_PATH, CASES_TEXT),
+           (PACKAGE_DIGEST_PATH, PACKAGE_DIGEST_TEXT)]
 
 
 def main():

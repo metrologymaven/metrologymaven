@@ -236,3 +236,101 @@ fn rep1_malformed() {
     let big = vec![b' '; fid_vreplay::compare::MAX_TABLE_BYTES + 1];
     assert_eq!(Rep1::load(&big).unwrap_err(), CompareError::Rep1Malformed("too_large"));
 }
+
+const PACKAGE_DIGEST: &str = include_str!("../../../fixtures/replay/compare/package.sha256");
+
+/// A file that claims the production version must be the pinned production table.
+#[test]
+fn production_version_is_pinned() {
+    let prod = fid_rep::TABLE_JSON;
+    // Loosen the length bound from 1e-9 m to 1e-6 m but keep `rep-1@1.0.0`: canonical, schema-valid,
+    // and refused.
+    let loosened = prod.replace("\"bound\":\"1e-9\",\"kind\":\"length\"", "\"bound\":\"1e-6\",\"kind\":\"length\"");
+    assert_ne!(loosened, prod);
+    let e = Rep1::load(loosened.as_bytes()).unwrap_err();
+    assert_eq!(e, CompareError::Rep1Malformed("production_digest"));
+    assert_eq!(e.code(), "rep1.malformed");
+    // The same loosened bounds under another version load, but are not production.
+    let renamed = loosened.replace("\"version\":\"rep-1@1.0.0\"", "\"version\":\"rep-1@9.9.9-test\"");
+    let t = Rep1::load(renamed.as_bytes()).unwrap();
+    assert!(!t.is_production());
+
+    let embedded = Rep1::embedded().unwrap();
+    assert!(embedded.is_production());
+    let rc = ReplayContext { same_manifest: true, same_platform_class: true };
+    let pkg = compare_package(&embedded, &rc, &[]);
+    assert!(pkg.rep1_production);
+    let json = String::from_utf8(pkg.canonical_json().unwrap()).unwrap();
+    assert!(json.contains("\"rep1_production\":true"), "{json}");
+}
+
+/// A differently versioned test table loads, and the output says it is not production.
+#[test]
+fn test_table_is_not_production() {
+    let rep1 = test_table();
+    assert!(!rep1.is_production());
+    let rc = ReplayContext { same_manifest: true, same_platform_class: true };
+    let pkg = compare_package(&rep1, &rc, &[ResultInput::Replayed(Box::new(case("identical_D3").pair))]);
+    assert!(!pkg.rep1_production);
+    let json = String::from_utf8(pkg.canonical_json().unwrap()).unwrap();
+    assert!(json.contains("\"rep1_production\":false"), "{json}");
+}
+
+/// Duplicate record IDs fail closed: every result carrying a duplicated ID is DIVERGENT.
+#[test]
+fn duplicate_record_ids_are_divergent() {
+    let rep1 = test_table();
+    let rc = ReplayContext { same_manifest: true, same_platform_class: true };
+    let mut a = case("identical_D3").pair;
+    a.record_id = "r-1".into();
+    let b = a.clone();
+    let mut c = case("identical_D0").pair;
+    c.record_id = "r-2".into();
+    let nr_dup = ResultInput::NotReplayable { record_id: "r-2".into(), reason: "RESULTS_ONLY".into() };
+    let mut d = case("identical_D1").pair;
+    d.record_id = "r-3".into();
+    let pkg = compare_package(
+        &rep1,
+        &rc,
+        &[
+            ResultInput::Replayed(Box::new(a)),
+            ResultInput::Replayed(Box::new(b)),
+            ResultInput::Replayed(Box::new(c)),
+            nr_dup,
+            ResultInput::Replayed(Box::new(d)),
+        ],
+    );
+    assert_eq!(pkg.outcome, Outcome::Divergent);
+    let got: Vec<(&str, &str, Option<String>, bool)> = pkg
+        .results
+        .iter()
+        .map(|r| {
+            (r.record_id.as_str(), r.outcome.as_str(), r.reason.as_ref().map(|x| x.to_wire()), r.first_diff.is_none())
+        })
+        .collect();
+    let dup = Some("DUPLICATE_RECORD_ID".to_string());
+    assert_eq!(
+        got,
+        vec![
+            ("r-1", "DIVERGENT", dup.clone(), true),
+            ("r-1", "DIVERGENT", dup.clone(), true),
+            ("r-2", "DIVERGENT", dup.clone(), true),
+            ("r-2", "DIVERGENT", dup, true),
+            ("r-3", "IDENTICAL", None, true),
+        ]
+    );
+}
+
+/// Pins the SHA-256 of `canonical_json` for one package of every default-context case of
+/// `cases.json` (the expected digest is computed by `make_cases.py` from the hand labels).
+#[test]
+fn canonical_json_digest_pinned() {
+    let rep1 = test_table();
+    let rc = ReplayContext { same_manifest: true, same_platform_class: true };
+    let inputs: Vec<ResultInput> =
+        cases().into_iter().filter(|c| c.ctx == rc).map(|c| ResultInput::Replayed(Box::new(c.pair))).collect();
+    assert!(inputs.len() >= 40, "{}", inputs.len());
+    let bytes = compare_package(&rep1, &rc, &inputs).canonical_json().unwrap();
+    let digest = fid_types::Digest::from_bytes(fid_canon::digest_bytes(&bytes).0);
+    assert_eq!(digest.as_str(), PACKAGE_DIGEST.trim_end());
+}
