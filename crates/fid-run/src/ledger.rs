@@ -41,7 +41,8 @@
 //!    program, binding, inputs, variant and both flags are the ones the principal asked for;
 //! 7. the record's branch and the entry's branch are both exactly `run/<run_id>` (a, e);
 //! 8. the outcome is `pending`, and the principal rules of `prepare_run` hold for the
-//!    recorded principal kind, lifecycle state and flags (REQ-AUTO.RUN.BIND-001/002);
+//!    recorded principal kind, lifecycle state and flags (REQ-AUTO.RUN.BIND-001/002), the
+//!    override included: only a person's, only on a deprecated program;
 //! 9. **decided-against state** (d): the program's (version, state) in the lifecycle store is
 //!    the record's, and the run ID is not already in the ledger (a replayed entry).
 //!

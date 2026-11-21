@@ -176,7 +176,8 @@ def commitment(params):
 #   (d) a run whose decided-against (version, state) no longer holds, or a replay of a run
 #       already admitted, is refused by the fold and `conflict` at the commit stage;
 #   (e) a promoted copy is skipped (leaf's stated rule); a run starts only on run/<run_id>;
-#   policy: draft/registered need a person's trial, deprecated a person's override.
+#   policy: draft/registered need a person's trial, deprecated a person's override; the override
+#       flag anywhere else (any principal, a program that is not deprecated) is refused.
 # Verdicts: apply in {admitted, refused, skipped, ignored}; precommit in {ok, conflict,
 # refused, skipped, ignored}. A refused-by-(a)/(b)/(c)/(e)/policy case is refused in both.
 #
@@ -238,7 +239,10 @@ CASES = [
     ("p_human_registered_without_trial", "policy", "human_trial", {}, {"trial": False}, {}, None, "as_prepared", False, R),
     ("p_agent_override_deprecated", "policy", "human_override", {"origin_principal": AGENT, "journal_kind": "agent"}, {"principal": AGENT}, {}, None, "as_prepared", False, R),
     ("p_human_deprecated_without_override", "policy", "human_override", {}, {"override_deprecated": False}, {}, None, "as_prepared", False, R),
-    ("p_override_on_released", "policy", "agent_released", {}, {"override_deprecated": True}, {}, None, "as_prepared", False, OK),
+    ("p_agent_override_on_released", "policy", "agent_released", {}, {"override_deprecated": True}, {}, None, "as_prepared", False, R),
+    ("p_human_override_on_released", "policy", "agent_released", {"origin_principal": HUMAN, "journal_kind": "human"}, {"principal": HUMAN, "override_deprecated": True}, {}, None, "as_prepared", False, R),
+    ("p_human_released_no_override", "policy", "agent_released", {"origin_principal": HUMAN, "journal_kind": "human"}, {"principal": HUMAN}, {}, None, "as_prepared", False, OK),
+    ("p_human_trial_and_override_registered", "policy", "human_trial", {}, {"override_deprecated": True}, {}, None, "as_prepared", False, R),
     ("p_agent_trial_released", "policy", "agent_released", {}, {"trial": True}, {}, None, "as_prepared", False, OK),
     ("p_outcome_not_pending", "policy", "agent_released", {}, {"outcome": "succeeded"}, {}, None, "as_prepared", False, R),
     ("p_unknown_record_field", "policy", "agent_released", {}, {"approved_by": "alice"}, {}, None, "as_prepared", False, R),
@@ -261,12 +265,14 @@ BASE_STATE = {
 def policy_ok(r):
     human = r["principal"]["kind"] == "human"
     state = r["lifecycle_state"]
+    if state == "deprecated":
+        return human and r["override_deprecated"] is True
+    if r["override_deprecated"]:
+        return False
     if state == "released":
         return True
     if state in ("draft", "registered"):
         return human and r["trial"] is True
-    if state == "deprecated":
-        return human and r["override_deprecated"] is True
     return False
 
 

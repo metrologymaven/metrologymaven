@@ -2,8 +2,10 @@
 //!
 //! Check order, the first failure returned before anything later runs:
 //!
-//! 1. **Lifecycle query.** The program's state comes from the lifecycle store of the branch
-//!    the run is prepared on ([`LifeStore::run_gate`], `AUTO.REC.LIFE`), never from the caller.
+//! 1. **Lifecycle query.** The program's state comes from the project's lifecycle store, that
+//!    of `main` ([`LifeStore::run_gate`], `AUTO.REC.LIFE`), never from the caller: the same
+//!    store, as of the commit, that the commit stage and the run ledger judge the run against
+//!    ([`crate::ledger`]).
 //!    An identified program ([`ProgramRef::Identified`]) is read from that store's frozen
 //!    bytes; a draft ([`ProgramRef::Draft`]) is the caller's in-memory program, and if its
 //!    digest identifies a registered, released or deprecated version, that version's state
@@ -11,11 +13,13 @@
 //! 2. **Principal rules**, on the bus-derived [`Principal`] (no parameter names or changes
 //!    its kind): released → any principal; draft or registered → only a `human` with
 //!    [`RunFlags::trial`] (`not_released` otherwise); deprecated → only a `human` with
-//!    [`RunFlags::override_deprecated`] (`deprecated` otherwise). The trial flag only lowers
-//!    a run's standing, so any principal may set it on a released program. Both flags are
-//!    recorded as requested (they are part of the `program.run@1` parameters the ledger
-//!    checks, [`crate::record::run_params`]); the override lifts a refusal only on a
-//!    deprecated program.
+//!    [`RunFlags::override_deprecated`] (`deprecated` otherwise). The override flag on a
+//!    program that is not deprecated, or from anyone but a person, is refused
+//!    (`override_refused`, or `deprecated` on a deprecated program), so no record carries an
+//!    override that was not a person's decision on a deprecated program. The trial flag only
+//!    lowers a run's standing, so any principal may set it on a released program. Both flags
+//!    are recorded as requested (they are part of the `program.run@1` parameters the ledger
+//!    checks, [`crate::record::run_params`]).
 //! 3. **Binding check**: the program's family (`AUTO.PROG.FAMILY`), the variant's binding or
 //!    the caller's binding, then `check_binding`; any error is `binding_invalid` with the full
 //!    list.
@@ -89,7 +93,7 @@ pub trait RunIds {
 
 /// What `prepare_run` reads.
 pub struct BindCtx<'a> {
-    /// The lifecycle state of the branch the run is prepared on.
+    /// The project's lifecycle state (that of `main`), the store the ledger also judges by.
     pub lifecycle: &'a LifeStore,
     /// The registry's quantity catalogue (for the binding check).
     pub catalogue: &'a dyn QuantityCatalogue,
@@ -133,6 +137,11 @@ pub enum RunError {
         /// Display-safe reason.
         reason: String,
     },
+    /// `override_refused{state}`: the override flag on a program that is not deprecated.
+    OverrideRefused {
+        /// The program's state.
+        state: LifeState,
+    },
     /// `program_not_found`: no version of the program has this digest.
     ProgramNotFound,
     /// `internal{reason}`.
@@ -150,6 +159,7 @@ impl RunError {
             RunError::Deprecated { .. } => "deprecated",
             RunError::BindingInvalid { .. } => "binding_invalid",
             RunError::InputUnreadable { .. } => "input_unreadable",
+            RunError::OverrideRefused { .. } => "override_refused",
             RunError::ProgramNotFound => "program_not_found",
             RunError::Internal { .. } => "internal",
         }
@@ -167,6 +177,9 @@ impl fmt::Display for RunError {
                 write!(f, "binding_invalid: {}", codes.join(", "))
             }
             RunError::InputUnreadable { param, reason } => write!(f, "input_unreadable: {param}: {reason}"),
+            RunError::OverrideRefused { state } => {
+                write!(f, "override_refused: the program is {}, not deprecated", state.as_str())
+            }
             RunError::ProgramNotFound => f.write_str("program_not_found"),
             RunError::Internal { reason } => write!(f, "internal: {reason}"),
         }
@@ -198,11 +211,14 @@ pub(crate) fn principal_rule(
 ) -> Result<(), RunError> {
     let person = kind == PrincipalKind::Human;
     match state {
+        LifeState::Deprecated if person && flags.override_deprecated => Ok(()),
+        LifeState::Deprecated => Err(RunError::Deprecated { version: version.unwrap_or(0) }),
+        // The override exists only for a person, on a deprecated program: anywhere else it is
+        // refused, so no record ever carries an override that a later preparation could apply.
+        _ if flags.override_deprecated => Err(RunError::OverrideRefused { state }),
         LifeState::Released => Ok(()),
         LifeState::Draft | LifeState::Registered if person && flags.trial => Ok(()),
         LifeState::Draft | LifeState::Registered => Err(RunError::NotReleased { state }),
-        LifeState::Deprecated if person && flags.override_deprecated => Ok(()),
-        LifeState::Deprecated => Err(RunError::Deprecated { version: version.unwrap_or(0) }),
     }
 }
 

@@ -60,11 +60,11 @@ fn ac1_released_program_by_binding_and_for_a_person() {
     // A trial of a released program only marks the run; anyone may ask for it.
     let t = prepare(&w, identified(), b120(), &w.agent, TRIAL).unwrap().record;
     assert!(t.trial());
-    // Flags are recorded as requested (they are part of the run's parameters); an override
-    // has no effect on a program that is not deprecated.
-    let o = prepare(&w, identified(), b120(), &w.alice, OVERRIDE).unwrap().record;
-    assert!(o.override_deprecated());
-    assert_eq!(o.lifecycle_state(), LifeState::Released);
+    // The override is refused on a program that is not deprecated, for a person and an agent.
+    for p in [&w.alice, &w.agent] {
+        let e = prepare(&w, identified(), b120(), p, OVERRIDE).unwrap_err();
+        assert_eq!(e, RunError::OverrideRefused { state: LifeState::Released });
+    }
 }
 
 // ------------------------------------------------------------------ AC-2
@@ -78,6 +78,8 @@ fn ac2_registered_program_needs_a_persons_trial() {
         assert_eq!(e, RunError::NotReleased { state: LifeState::Registered });
     }
     assert_eq!(prepare(&w, identified(), b120(), &w.alice, RunFlags::default()).unwrap_err().code(), "not_released");
+    let both = RunFlags { trial: true, override_deprecated: true };
+    assert_eq!(prepare(&w, identified(), b120(), &w.alice, both).unwrap_err().code(), "override_refused");
     let r = prepare(&w, identified(), b120(), &w.alice, TRIAL).unwrap().record;
     assert!(r.trial());
     assert_eq!(canonical(&r), ex.s("ac2_record"));

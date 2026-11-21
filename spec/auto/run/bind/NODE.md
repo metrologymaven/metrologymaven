@@ -61,7 +61,7 @@ Everything that must be true before a run starts, and the record that says what 
 - **Registry command(s):** none; library used by `program.run@1` and `program.run_batch@1`.
 - **Data structures:** `RunPlan { record: RunRecord, steps_retargetable: Vec<(StepId, bool)> }`; `RunRecord` as in REQ-AUTO.RUN.BIND-004, canonical JSON.
 - **Algorithm:** lifecycle query → principal rules → binding check → stream SHA-256 of each input through root handles.
-- **Errors:** `not_released`, `deprecated`, `binding_invalid`, `input_unreadable`, `program_not_found` (an identified program reference whose digest names no version).
+- **Errors:** `not_released`, `deprecated`, `binding_invalid`, `input_unreadable`, `program_not_found` (an identified program reference whose digest names no version), `override_refused` (the override flag on a program that is not deprecated; maintainer decision: the override is honoured, recorded and admitted only for a human principal on a deprecated program, in `prepare_run`, the commit stage and the fold alike).
 - **Determinism:** D0 (apart from the run ID).
 - **Performance budget:** dominated by hashing inputs; ≥ 500 MB/s on reference hardware [unverified until measured].
 - **Crate:** `fid-run`
@@ -83,6 +83,7 @@ Everything that must be true before a run starts, and the record that says what 
 - A→B→A: lifecycle states move forward except `unregister` (registered → draft). That is harmless here: an unregistered version is retired, its number is never reused, and the same bytes come back only under a new version number, so a (version, state) a run was decided against never recurs once left.
 - Fold domain (maintainer decision): the ledger folds all branches in commit order, and the lifecycle store it judges against is the project's lifecycle state (that of `main`) as of the entry, for both `precommit` and the fold, so they cannot disagree.
 - Run branch (maintainer decision): a run starts on exactly `run/<run_id>`, and every other branch is refused. Obligation on `AUTO.RUN.EXEC.BRANCH` and `AUTO.RUN.EXEC.CMD` (not edited from here): `program.run@1` commits `RunStarted` on `run/<run_id>` after the fork, with parameters exactly `run_params(record)`; a front end resolves a variant's binding into those parameters, and the handler re-checks it.
+- Lifecycle store (obligation on `AUTO.RUN.EXEC.CMD`, not edited from here): `prepare_run` is given the project's lifecycle store, that of `main`, the same store `RunLedger::precommit` reads at commit and the fold reads as of the entry; the run's own branch never supplies it.
 - Single owner (maintainer decision): `RunStarted` is reserved to `program.run@1` alone. `AUTO.RUN.BATCH` must start each of its runs through `program.run@1`.
 - `AUTO.PROG.FMT` has no per-step `retargetable` field yet (see `AUTO.REC.LIFT`), so `steps_retargetable` marks every step `true`.
 - REQ-005's trial mark on results is carried by the record's `trial` flag; marking each result is `AUTO.RUN.EXEC`'s job.

@@ -1282,7 +1282,7 @@
   "replay": false
  },
  {
-  "apply": "admitted",
+  "apply": "refused",
   "base": "agent_released",
   "entry": {
    "branch": "run/019a7afd-1e01-7101-8101-010101010101",
@@ -1304,8 +1304,105 @@
   ],
   "item": "policy",
   "lifecycle": "as_prepared",
-  "name": "p_override_on_released",
+  "name": "p_agent_override_on_released",
+  "precommit": "refused",
+  "record": {
+   "override_deprecated": true
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:5449002150900dc0908a394746a23912fd327d89dfb69e5a4d92d885d8e84b90",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "policy",
+  "lifecycle": "as_prepared",
+  "name": "p_human_override_on_released",
+  "precommit": "refused",
+  "record": {
+   "override_deprecated": true,
+   "principal": {
+    "id": "alice",
+    "kind": "human"
+   }
+  },
+  "replay": false
+ },
+ {
+  "apply": "admitted",
+  "base": "agent_released",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:fbe0dc817aed406beeda976f5c49244031d8a717f606f0b5cac74dc17f9a463b",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "policy",
+  "lifecycle": "as_prepared",
+  "name": "p_human_released_no_override",
   "precommit": "ok",
+  "record": {
+   "principal": {
+    "id": "alice",
+    "kind": "human"
+   }
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "human_trial",
+  "entry": {
+   "branch": "run/019a7afd-1e01-7101-8101-010101010101",
+   "class": "W2",
+   "journal_command": "program.run",
+   "journal_kind": "human",
+   "journal_major": 1,
+   "origin_command": "program.run@1",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   },
+   "params_commitment": "sha256:2080666d1eda8ee6675978fe4661b19807b52663391631bdcad1bf1562872c02",
+   "promoted_from": null,
+   "source": "handler"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "policy",
+  "lifecycle": "as_prepared",
+  "name": "p_human_trial_and_override_registered",
+  "precommit": "refused",
   "record": {
    "override_deprecated": true
   },
