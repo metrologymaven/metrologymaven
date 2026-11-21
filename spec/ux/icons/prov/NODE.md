@@ -9,6 +9,8 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-design]
+built_pr: 369
 satisfies: [REQ-UX.ICONS-002, REQ-UX.ICONS-007, REQ-UX.ICONS-008]
 covers: []
 depends_on: [UX.SYSTEM.PKG, UX.SYSTEM.REVIEW]
@@ -65,6 +67,13 @@ The provenance trail for every icon and GD&T drawing (author, date, licence, ori
 > Constraints: no panic, no `unsafe`; deny `unwrap`, `expect`, `panic`, `todo`, `unimplemented`, `unreachable`; manifest at most 32 MiB, bounded JSON; no network.
 
 ## Open questions
+
+- Build: the provenance record of an icon is two files. Its `originality@1` declaration (`<svg>.origin.json` beside it or under `review/origin/`, exactly one, checked with `fid_design::review::check_decl`) carries author, date and the originality statement; that format allows no extra keys. A provenance file `<svg>.prov.json` (`icon-provenance@1`: exactly `format`, `artefact`, `licence`, `third_party`) carries the SPDX licence expression and `third_party` (`false` or `{source, licence}`). SPDX expressions are accepted as identifiers or `LicenseRef-*` joined by `AND`, `OR` or `WITH`, without parentheses. A provenance file whose SVG is gone is `PROV-SCHEMA`.
+- Build (review of #369): a third-party `source` must be a `### <source>` entry of the attribution file (as `ATTRIBUTION.md` lists assets; `#` and `##` headings are titles, never entries) whose `**Files:**` bullet names the icon path (below the design root, or ending in `/<path>` when written from the repository root) and whose `**Licence:**` bullet gives `third_party.licence`, else `PROV-ATTRIBUTION`.
+- Maintainer decision (review of #369): a third-party record is `PROV-SCHEMA` unless its top-level `licence` equals `third_party.licence` (a third-party glyph is not relicensed) and one of its originality declaration's `references` names the third-party source (the declaration cannot say "drawn here, no other source" for a taken glyph).
+- Build: `icons/index.json` belongs to `UX.ICONS.CORESET`, which is not built. This check reads only `name` (unique), `labelless` and `a11y_id` from an `icons` array and ignores other keys, and an absent index means no entries. CORESET should keep those three keys with these types. `gdt/index.json` is not read: GD&T drawings have no labelless use in `UX.ICONS.GDT`.
+- Build: the package ships no icon yet, so AC-1 passes over an empty set (the report lists 0 icons). A malformed manifest or index makes `icons-registry` exit 2 rather than report a partial result. A manifest `major` must be a whole number from 1.
+- D-045 (claimed, provisional and measured values told apart without colour) does not apply to this leaf: it checks the icon files' own provenance trail and adds no colour or value display. The provenance badges are drawn in `UX.ICONS.CLASS`.
 
 - CORE.REG.MAN's manifest has no per-command `icon` field today; REQ-UX.ICONS-008 needs CORE.REG to add one (cross-domain, not editable from here).
 
