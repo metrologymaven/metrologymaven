@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-mig, fid-xtask, fid-cli]
+built_pr: 387
 satisfies: [REQ-MIG.SRC-001, REQ-MIG.SRC-002, REQ-MIG.SRC-005, REQ-MIG.SRC-006]
 covers: []
 depends_on: [IO.REG.DETECT, CORE.JRN.CANON]
