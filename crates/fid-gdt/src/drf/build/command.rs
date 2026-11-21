@@ -245,72 +245,106 @@ fn closed(required: &[&str], properties: CValue) -> CValue {
     ])
 }
 
+/// The `fit` object of a datum row: a plane's, or a cylinder's with `cross_check` and `seed`.
+fn fit_schema(cylinder: bool) -> CValue {
+    let digest = pattern(fid_types::Digest::PATTERN);
+    let mut required = vec![
+        "candidates",
+        "certificate",
+        "contacts",
+        "local_optimum_only",
+        "max_violation",
+        "objective",
+        "optimality",
+        "orientation",
+        "output_digest",
+    ];
+    let (optimality, orientation): (&[&str], &[&str]) = if cylinder {
+        (&["global", "strict_local_cross_checked"], &["fixed", "free"])
+    } else {
+        (&["closed_form", "closed_form_enumerated", "strict_local"], &["about_z", "fixed", "free"])
+    };
+    let mut props = vec![
+        ("candidates", typed("integer")),
+        (
+            "certificate",
+            if cylinder { digest.clone() } else { obj([("anyOf", CValue::Arr(vec![digest.clone(), typed("null")]))]) },
+        ),
+        ("contacts", obj([("type", text("array")), ("items", typed("integer"))])),
+        ("local_optimum_only", obj([("type", text("boolean")), ("enum", CValue::Arr(vec![CValue::Bool(false)]))])),
+        ("max_violation", hex_pattern()),
+        ("objective", hex_pattern()),
+        ("optimality", obj([("type", text("string")), ("enum", strs(optimality))])),
+        ("orientation", obj([("type", text("string")), ("enum", strs(orientation))])),
+        ("output_digest", digest),
+    ];
+    if cylinder {
+        required.extend(["cross_check", "seed"]);
+        required.sort_unstable();
+        let check = closed(
+            &["caps", "depth", "full_tests", "outcome"],
+            obj([
+                ("caps", typed("integer")),
+                ("depth", typed("integer")),
+                ("full_tests", typed("integer")),
+                ("outcome", obj([("type", text("string")), ("enum", strs(&["passed"]))])),
+            ]),
+        );
+        props.push(("cross_check", obj([("anyOf", CValue::Arr(vec![check, typed("null")]))])));
+        props.push(("seed", typed("integer")));
+    }
+    let props = CValue::Obj(props.into_iter().map(|(k, v)| (k.to_owned(), v)).collect());
+    closed(&required, props)
+}
+
+/// One datum row: a simulated plane, or a simulated axis of an external cylinder.
+fn datum_schema(cylinder: bool) -> CValue {
+    let digest = pattern(fid_types::Digest::PATTERN);
+    let mut required = vec![
+        "boundary",
+        "constrained",
+        "dmt_row",
+        "feature",
+        "fit",
+        "kind",
+        "label",
+        "measurement",
+        "precedence",
+        "simulator",
+    ];
+    let mut props = vec![
+        ("boundary", obj([("type", text("string")), ("enum", strs(&["rmb"]))])),
+        ("constrained", dof_list()),
+        ("dmt_row", typed("string")),
+        ("feature", pattern(ID_PATTERN)),
+        ("fit", fit_schema(cylinder)),
+        ("label", pattern("^[A-Z]{1,3}$")),
+        ("measurement", closed(&["digest", "points"], obj([("digest", digest), ("points", typed("integer"))]))),
+        ("precedence", obj([("type", text("string")), ("enum", strs(&["primary", "secondary", "tertiary"]))])),
+        ("simulator", typed("string")),
+    ];
+    if cylinder {
+        required.extend(["axis", "nominal_axis", "radius", "side"]);
+        props.push(("axis", closed(&["direction", "point"], obj([("direction", vec3()), ("point", vec3())]))));
+        props.push(("kind", obj([("type", text("string")), ("enum", strs(&["axis"]))])));
+        props.push(("nominal_axis", vec3()));
+        props.push(("radius", hex_pattern()));
+        props.push(("side", obj([("type", text("string")), ("enum", strs(&["external"]))])));
+    } else {
+        required.extend(["nominal_outward", "plane"]);
+        props.push(("kind", obj([("type", text("string")), ("enum", strs(&["plane"]))])));
+        props.push(("nominal_outward", vec3()));
+        props.push(("plane", closed(&["normal", "point"], obj([("normal", vec3()), ("point", vec3())]))));
+    }
+    required.sort_unstable();
+    let props = CValue::Obj(props.into_iter().map(|(k, v)| (k.to_owned(), v)).collect());
+    closed(&required, props)
+}
+
 /// The `fid.gdt-drf/1` document schema (closed at every level the command writes).
 pub fn drf_schema() -> CValue {
     let digest = pattern(fid_types::Digest::PATTERN);
-    let fit = closed(
-        &[
-            "candidates",
-            "certificate",
-            "contacts",
-            "local_optimum_only",
-            "max_violation",
-            "objective",
-            "optimality",
-            "orientation",
-            "output_digest",
-        ],
-        obj([
-            ("candidates", typed("integer")),
-            ("certificate", obj([("anyOf", CValue::Arr(vec![digest.clone(), typed("null")]))])),
-            ("contacts", obj([("type", text("array")), ("items", typed("integer"))])),
-            ("local_optimum_only", typed("boolean")),
-            ("max_violation", hex_pattern()),
-            ("objective", hex_pattern()),
-            (
-                "optimality",
-                obj([
-                    ("type", text("string")),
-                    ("enum", strs(&["closed_form", "closed_form_enumerated", "strict_local"])),
-                ]),
-            ),
-            ("orientation", obj([("type", text("string")), ("enum", strs(&["about_z", "fixed", "free"]))])),
-            ("output_digest", digest.clone()),
-        ]),
-    );
-    let datum = closed(
-        &[
-            "boundary",
-            "constrained",
-            "dmt_row",
-            "feature",
-            "fit",
-            "kind",
-            "label",
-            "measurement",
-            "nominal_outward",
-            "plane",
-            "precedence",
-            "simulator",
-        ],
-        obj([
-            ("boundary", obj([("type", text("string")), ("enum", strs(&["rmb"]))])),
-            ("constrained", dof_list()),
-            ("dmt_row", typed("string")),
-            ("feature", pattern(ID_PATTERN)),
-            ("fit", fit),
-            ("kind", obj([("type", text("string")), ("enum", strs(&["plane"]))])),
-            ("label", pattern("^[A-Z]{1,3}$")),
-            (
-                "measurement",
-                closed(&["digest", "points"], obj([("digest", digest.clone()), ("points", typed("integer"))])),
-            ),
-            ("nominal_outward", vec3()),
-            ("plane", closed(&["normal", "point"], obj([("normal", vec3()), ("point", vec3())]))),
-            ("precedence", obj([("type", text("string")), ("enum", strs(&["primary", "secondary", "tertiary"]))])),
-            ("simulator", typed("string")),
-        ]),
-    );
+    let datum = obj([("anyOf", CValue::Arr(vec![datum_schema(false), datum_schema(true)]))]);
     let rule = closed(
         &["content_digest", "kind", "reason", "revision", "rule", "status"],
         obj([
@@ -415,9 +449,10 @@ pub fn build_command_def() -> Result<CommandDef, DefError> {
         (
             "description",
             text(
-                "Builds a datum reference frame from one to three declared planar datums at RMB, in precedence \
-                 order: each datum is simulated from its measured points by a certified tangential plane fit, and the \
-                 frame records the DoFs each datum constrains, the free DoFs and the interpretation label.",
+                "Builds a datum reference frame from one to three declared planar or external cylindrical datums \
+                 at RMB, in precedence order: each datum is simulated from its measured points by a certified \
+                 tangential plane fit or a certified minimum circumscribed cylinder, and the frame records the DoFs \
+                 each datum constrains, the free DoFs and the interpretation label.",
             ),
         ),
         (

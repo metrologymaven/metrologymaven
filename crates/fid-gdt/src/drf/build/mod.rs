@@ -3,12 +3,14 @@
 //! `gdt.get_drf@1` (R0; CLI `fid gdt get-drf`, MCP `gdt_get_drf`), the canonical DRF document,
 //! its journal event and exact replay.
 //!
-//! **P1a scope, as built.** Planar datum features at RMB. A datum reference with a material
-//! boundary modifier (`A(M)`, `A(L)`) is refused (`unsupported_material_boundary{label}`, the
-//! D-045 first-review subset is RMB only), never read as RMB. A cylindrical datum feature is
-//! refused with `unsupported_datum_type_p1a{label}`: its simulator (`KRN.ENV.MCC.CYL` /
-//! `KRN.ENV.TAN.CYL`) is not built, and no axis is ever made up. Datums with datum targets are
-//! refused (`datum_targets_unsupported{label}`, owned by `GDT.DRF.COMMON`).
+//! **P1a scope, as built.** Planar and external cylindrical datum features at RMB. A datum
+//! reference with a material boundary modifier (`A(M)`, `A(L)`) is refused
+//! (`unsupported_material_boundary{label}`, the D-045 first-review subset is RMB only), never
+//! read as RMB. An internal cylindrical datum feature (a bore) is refused with
+//! `unsupported_datum_type_p1a{label}` (`feature_type` `internal_cylinder`): its simulator, the
+//! maximum inscribed cylinder (`KRN.ENV.MIC.CYL`), is not built, and no axis is ever made up.
+//! Other feature types are refused the same way. Datums with datum targets are refused
+//! (`datum_targets_unsupported{label}`, owned by `GDT.DRF.COMMON`).
 //!
 //! **Pipeline of [`build_drf`]** (every check runs before any change; a refusal and a dry run
 //! change nothing and journal nothing):
@@ -18,29 +20,36 @@
 //!    `duplicate_datum_label`);
 //! 2. every reference at RMB (`unsupported_material_boundary{label}`);
 //! 3. every label declared on the principal's branch (`GDT.DRF.DATUM`; `datum_undefined{label}`),
-//!    planar (`unsupported_datum_type_p1a{label}`) and without targets;
+//!    planar or cylindrical (`unsupported_datum_type_p1a{label}`) and without targets;
 //! 4. the interpretation chain: `gdt.resolve_chain@1`'s resolver for the characteristic type
 //!    [`FRAME_CHARACTERISTIC`] with the modifier `rmb`, behind the governing-spec gate (errors
 //!    pass through); an outcome other than `RESOLVED` is `chain_not_resolved{outcome}`; the row
 //!    must be a `datum_frame` row whose only modifier is `rmb`
-//!    (`material_boundary_mismatch{row}`); its chain must hold exactly one association step,
-//!    whose algorithm is the simulator (`unsupported_simulator{alg}`);
+//!    (`material_boundary_mismatch{row}`); its chain's association steps are the simulators: at
+//!    most one tangential plane (`fit.plane.tan_*@1.0.0`) and at most one minimum circumscribed
+//!    cylinder (`fit.cylinder.mc@1.0.0`), anything else `unsupported_simulator{alg}`, none at
+//!    all `unsupported_simulator{none}` (as is a datum whose kind has no simulator in the chain);
 //! 5. the interpretation block (D-045, `GDT.CHAR.INTERP`): the row and the characteristic's
 //!    defaults profile with recomputed digests and their statuses from the given
 //!    [`RegisterView`]; a draft rule is `rule_not_admitted{rule}` and a missing rule
 //!    `incomplete_result{interpretation_rules}`. There is no way to build a DRF without it;
 //! 6. the measured points of each datum's bound feature ([`FeaturePoints`];
-//!    `measurement_missing{feature}`), simulated in precedence order by
-//!    `fid_gps::drf::plane_sim` (certified tangential planes of `fid-fit` only; its refusals
-//!    and the builder's, such as `degenerate_datum_pair{A,B}`, pass through);
+//!    `measurement_missing{feature}`; points measured as the other kind of feature are
+//!    `measurement_invalid{feature:kind_mismatch}`), simulated in precedence order by
+//!    `fid_gps::drf::cyl_sim` (certified tangential planes, and minimum circumscribed cylinders
+//!    through the `Fit` trait's fail-closed gate, of `fid-fit` only; their refusals and the
+//!    builder's, such as `degenerate_datum_pair{A,B}`, `flagged_fit{B}` or, for an oval
+//!    cross-section, `simulation_failed{B:solver}`, pass through);
 //! 7. the document ([`DRF_SCHEMA`]), its ID (the `sha256:` digest of its canonical bytes),
 //!    the store on the principal's branch and the event.
 //!
 //! **Values.** Every value in a DRF comes from measured points through a certified (free
-//! normal) or closed-form (constrained normal) fit; there is no input for claimed or nominal
-//! datum geometry, and the document says `"values": "measured"`. The nominal outward normals
-//! that pick the material side and the basic relationship are recorded as
-//! `nominal_outward`, never as datum geometry.
+//! normal or free axis direction, the latter globally cross-checked), closed-form (constrained
+//! normal) or certified global (fixed axis direction) fit; there is no input for claimed or
+//! nominal datum geometry, and the document says `"values": "measured"`. The nominal outward
+//! normals that pick the material side and the basic relationship are recorded as
+//! `nominal_outward`, and a cylinder's nominal axis direction and side as `nominal_axis` and
+//! `side`, never as datum geometry.
 //!
 //! **Label.** The document carries `interpretation` (`provisional` unless every rule is
 //! signed off) with its rules and register; every surface shows the line [`drf_label`]
@@ -74,7 +83,8 @@ use crate::resolve::{resolve_chain, CharacteristicRef, CommandError, CHAR_SCHEMA
 use fid_canon::CValue;
 use fid_gps::dmt::{AlgId, DmtRow, DmtTable, OperatorKind};
 use fid_gps::drf::build::{Dof, DofSet, Precedence, SimGeometry};
-use fid_gps::drf::plane_sim::{build_measured_planar_drf, MeasuredPlane, PlaneEvidence, SimError};
+use fid_gps::drf::cyl_sim::{build_measured_drf, CylinderSide, MeasuredFeature, MeasuredKind, Simulators};
+use fid_gps::drf::plane_sim::{DatumEvidence, SimError};
 use fid_gps::resolve::Resolution;
 use fid_io_reg::Principal;
 use fid_types::Digest;
@@ -146,12 +156,12 @@ pub enum BuildError {
         /// The label.
         label: String,
     },
-    /// `unsupported_datum_type_p1a{label}`: the datum feature is not planar (cylindrical
-    /// simulators are not built).
+    /// `unsupported_datum_type_p1a{label}`: the datum feature is neither planar nor an external
+    /// cylinder (an internal cylinder's simulator, `KRN.ENV.MIC.CYL`, is not built).
     UnsupportedDatumType {
         /// The label.
         label: String,
-        /// The feature type.
+        /// The feature type (`internal_cylinder` for a bore).
         feature_type: &'static str,
     },
     /// `datum_targets_unsupported{label}`.
@@ -184,8 +194,8 @@ pub enum BuildError {
         /// The row key.
         row: String,
     },
-    /// `unsupported_simulator{alg}`: the chain's association step is missing, repeated or not
-    /// a tangential plane fit.
+    /// `unsupported_simulator{alg}`: a chain association step that is not a tangential plane or
+    /// the minimum circumscribed cylinder, or repeats one (`none`: no step for a datum's kind).
     UnsupportedSimulator {
         /// The algorithm ID, or `none`.
         alg: String,
@@ -193,7 +203,7 @@ pub enum BuildError {
     /// An error of the interpretation block (`rule_not_admitted{rule}`,
     /// `incomplete_result{interpretation_rules}`), passed through.
     Interpretation(RecordError),
-    /// An error of the measured planar path or the builder, passed through.
+    /// An error of the measured path or the builder, passed through.
     Simulation(SimError),
     /// `drf_store_full{branch}`.
     StoreFull {
@@ -358,22 +368,33 @@ pub struct BuildRequest<'a> {
 struct Measured {
     xyz: Vec<f64>,
     nominal: [f64; 3],
+    kind: MeasuredKind,
     digest: Digest,
 }
 
-/// The measured points of the plan's features, with the nominal outward normal of each
-/// feature's datum face (from the CAD model), content-addressed by [`FeaturePoints::digest`].
-/// This is the narrow input the build reads measurements from; it never holds datum geometry.
+/// The measured points of the plan's features, with the nominal outward normal of each planar
+/// datum face, or the nominal axis direction and the side (external or internal) of each
+/// cylindrical datum feature (from the CAD model), content-addressed by
+/// [`FeaturePoints::digest`]. This is the narrow input the build reads measurements from; it
+/// never holds datum geometry.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct FeaturePoints {
     map: BTreeMap<RefId, Measured>,
 }
 
-/// SHA-256 of `fid.gdt-feature-points/1\n`, then the nominal and the coordinates as
-/// little-endian `f64` bits.
-fn points_digest(xyz: &[f64], nominal: [f64; 3]) -> Digest {
-    let mut b = Vec::with_capacity(32 + 8 * (3 + xyz.len()));
-    b.extend_from_slice(b"fid.gdt-feature-points/1\n");
+/// SHA-256 of `fid.gdt-feature-points/1\n` (a plane) or
+/// `fid.gdt-feature-points-cylinder/1\n` followed by `external\n` or `internal\n` (a
+/// cylinder), then the nominal and the coordinates as little-endian `f64` bits.
+fn points_digest(xyz: &[f64], nominal: [f64; 3], kind: MeasuredKind) -> Digest {
+    let mut b = Vec::with_capacity(64 + 8 * (3 + xyz.len()));
+    match kind {
+        MeasuredKind::Plane => b.extend_from_slice(b"fid.gdt-feature-points/1\n"),
+        MeasuredKind::Cylinder(side) => {
+            b.extend_from_slice(b"fid.gdt-feature-points-cylinder/1\n");
+            b.extend_from_slice(side.as_str().as_bytes());
+            b.push(b'\n');
+        }
+    }
     for x in nominal.iter().chain(xyz) {
         b.extend_from_slice(&x.to_bits().to_le_bytes());
     }
@@ -386,10 +407,34 @@ impl FeaturePoints {
         FeaturePoints::default()
     }
 
-    /// Stores (or replaces) the points of `feature` and returns their digest. Refused with
-    /// `measurement_invalid{feature:reason}`: `bad_id`, `bad_length` (not whole triples),
-    /// `too_many_points`, `non_finite` (a coordinate or nominal component), `too_many_features`.
+    /// Stores (or replaces) the points of planar `feature` with its nominal outward normal and
+    /// returns their digest. Refused with `measurement_invalid{feature:reason}`: `bad_id`,
+    /// `bad_length` (not whole triples), `too_many_points`, `non_finite` (a coordinate or
+    /// nominal component), `too_many_features`.
     pub fn insert(&mut self, feature: &str, xyz: Vec<f64>, nominal_outward: [f64; 3]) -> Result<Digest, BuildError> {
+        self.put(feature, xyz, nominal_outward, MeasuredKind::Plane)
+    }
+
+    /// Stores (or replaces) the points of cylindrical `feature` with its nominal axis direction
+    /// (unit; its sign is the datum axis's sense) and its side, and returns their digest.
+    /// Refused as [`FeaturePoints::insert`].
+    pub fn insert_cylinder(
+        &mut self,
+        feature: &str,
+        xyz: Vec<f64>,
+        nominal_axis: [f64; 3],
+        side: CylinderSide,
+    ) -> Result<Digest, BuildError> {
+        self.put(feature, xyz, nominal_axis, MeasuredKind::Cylinder(side))
+    }
+
+    fn put(
+        &mut self,
+        feature: &str,
+        xyz: Vec<f64>,
+        nominal: [f64; 3],
+        kind: MeasuredKind,
+    ) -> Result<Digest, BuildError> {
         let bad = |reason| BuildError::MeasurementInvalid { feature: echo(feature), reason };
         let id = RefId::parse(feature).ok_or_else(|| bad("bad_id"))?;
         if xyz.len() % 3 != 0 {
@@ -398,14 +443,14 @@ impl FeaturePoints {
         if xyz.len() / 3 > MAX_FEATURE_POINTS {
             return Err(bad("too_many_points"));
         }
-        if !xyz.iter().chain(nominal_outward.iter()).all(|x| x.is_finite()) {
+        if !xyz.iter().chain(nominal.iter()).all(|x| x.is_finite()) {
             return Err(bad("non_finite"));
         }
         if !self.map.contains_key(&id) && self.map.len() >= MAX_FEATURES {
             return Err(bad("too_many_features"));
         }
-        let digest = points_digest(&xyz, nominal_outward);
-        self.map.insert(id, Measured { xyz, nominal: nominal_outward, digest });
+        let digest = points_digest(&xyz, nominal, kind);
+        self.map.insert(id, Measured { xyz, nominal, kind, digest });
         Ok(digest)
     }
 
@@ -587,8 +632,12 @@ fn digest_or_null(d: Option<Digest>) -> CValue {
     d.map_or(CValue::Null, |d| s(d.as_str()))
 }
 
-fn evidence(e: &PlaneEvidence) -> CValue {
-    obj([
+/// The `fit` object of a datum row. A cylinder's also holds `cross_check` (for a free
+/// direction `{outcome: passed, caps, full_tests, depth}`, the global cross-check and its
+/// work; `null` for a fixed one) and `seed`; a plane's has neither key, so planar documents
+/// are unchanged.
+fn evidence(e: &DatumEvidence, cylinder: bool) -> CValue {
+    let mut v = obj([
         ("candidates", CValue::Num(f64::from(e.candidates))),
         ("certificate", digest_or_null(e.certificate)),
         ("contacts", CValue::Arr(e.contacts.iter().map(|c| CValue::Num(f64::from(*c))).collect())),
@@ -598,7 +647,24 @@ fn evidence(e: &PlaneEvidence) -> CValue {
         ("optimality", s(e.optimality)),
         ("orientation", s(e.orientation.as_str())),
         ("output_digest", s(e.fit_digest.as_str())),
-    ])
+    ]);
+    if cylinder {
+        if let CValue::Obj(m) = &mut v {
+            let check = match (e.cross_check, e.cross_check_work) {
+                (Some(outcome), Some([caps, full, depth])) => obj([
+                    ("caps", CValue::Num(f64::from(caps))),
+                    ("depth", CValue::Num(f64::from(depth))),
+                    ("full_tests", CValue::Num(f64::from(full))),
+                    ("outcome", s(outcome)),
+                ]),
+                _ => CValue::Null,
+            };
+            m.insert("cross_check".to_owned(), check);
+            // Seeds are small integers (0 today), exact as JSON numbers.
+            m.insert("seed".to_owned(), e.seed.map_or(CValue::Null, |x| CValue::Num(x as f64)));
+        }
+    }
+    v
 }
 
 fn parse_request(req: &BuildRequest<'_>) -> Result<(CharId, Vec<DatumRef>), BuildError> {
@@ -632,14 +698,14 @@ fn frame_characteristic(char: &CharId) -> Result<CharacteristicRef, BuildError> 
     CharacteristicRef::parse(&bytes).map_err(BuildError::Chain)
 }
 
-fn simulator(chain: &fid_gps::dmt::OperatorChain) -> Result<AlgId, BuildError> {
+/// The simulators the chain's association steps name (module documentation, step 4).
+fn simulators(chain: &fid_gps::dmt::OperatorChain) -> Result<Simulators, BuildError> {
     let assoc: Vec<&AlgId> =
         chain.steps().iter().filter(|st| st.kind() == OperatorKind::Association).map(|st| st.alg()).collect();
-    match assoc[..] {
-        [alg] => Ok(alg.clone()),
-        [] => Err(BuildError::UnsupportedSimulator { alg: "none".to_owned() }),
-        [first, ..] => Err(BuildError::UnsupportedSimulator { alg: first.as_str().to_owned() }),
-    }
+    Simulators::from_association(&assoc).map_err(|e| match e {
+        SimError::UnsupportedSimulator { alg } => BuildError::UnsupportedSimulator { alg },
+        other => BuildError::Simulation(other),
+    })
 }
 
 /// `gdt.build_drf@1` (W2; dry run R1): the pipeline of the module documentation. Returns the
@@ -703,7 +769,7 @@ pub(crate) fn build_for(
         let label = r.label.as_str();
         let def =
             inp.datums.datum(principal, label).ok_or_else(|| BuildError::DatumUndefined { label: label.to_owned() })?;
-        if def.feature_type() != FeatureType::Plane {
+        if def.feature_type() != FeatureType::Plane && def.feature_type() != FeatureType::Cylinder {
             return Err(BuildError::UnsupportedDatumType {
                 label: label.to_owned(),
                 feature_type: def.feature_type().as_str(),
@@ -725,7 +791,7 @@ pub(crate) fn build_for(
     let table = inp.table.ok_or(BuildError::Chain(CommandError::DmtNotLoaded))?;
     let row = table.get(res.row().as_str()).ok_or(BuildError::ChainNotResolved { outcome: "UNRESOLVED" })?;
     check_frame_row(row)?;
-    let alg = simulator(res.chain())?;
+    let sims = simulators(res.chain())?;
 
     // The interpretation block (D-045): no DRF without it.
     let spec_err = |e: SpecError| BuildError::Chain(CommandError::Spec(e));
@@ -737,20 +803,28 @@ pub(crate) fn build_for(
     // The measured points, simulated in precedence order.
     let mut measured = Vec::with_capacity(defs.len());
     for def in &defs {
+        let feature = def.feature_ref().as_str();
         let m = inp
             .points
             .map
             .get(def.feature_ref())
-            .ok_or_else(|| BuildError::MeasurementMissing { feature: def.feature_ref().as_str().to_owned() })?;
+            .ok_or_else(|| BuildError::MeasurementMissing { feature: feature.to_owned() })?;
+        let planar = def.feature_type() == FeatureType::Plane;
+        if planar != (m.kind == MeasuredKind::Plane) {
+            return Err(BuildError::MeasurementInvalid { feature: echo(feature), reason: "kind_mismatch" });
+        }
         measured.push(m);
     }
-    let planes: Vec<MeasuredPlane<'_>> = refs
+    let features: Vec<MeasuredFeature<'_>> = refs
         .iter()
         .zip(&measured)
-        .map(|(r, m)| MeasuredPlane { label: r.label.as_str(), xyz: &m.xyz, nominal_outward: m.nominal })
+        .map(|(r, m)| MeasuredFeature { label: r.label.as_str(), xyz: &m.xyz, nominal: m.nominal, kind: m.kind })
         .collect();
-    let built = build_measured_planar_drf(&planes, &alg, row.key()).map_err(|e| match e {
+    let built = build_measured_drf(&features, &sims, row.key()).map_err(|e| match e {
         SimError::UnsupportedSimulator { alg } => BuildError::UnsupportedSimulator { alg },
+        SimError::UnsupportedDatumType { label } => {
+            BuildError::UnsupportedDatumType { label, feature_type: "internal_cylinder" }
+        }
         other => BuildError::Simulation(other),
     })?;
 
@@ -760,24 +834,40 @@ pub(crate) fn build_for(
     for (((r, def), m), (dd, (sim, ev))) in
         refs.iter().zip(&defs).zip(&measured).zip(drf.datums().iter().zip(built.datums().iter().zip(built.evidence())))
     {
-        let (point, normal) = match sim.geometry {
-            SimGeometry::Plane { point, normal } => (point, normal),
-            SimGeometry::Axis { .. } => return Err(BuildError::Encode),
-        };
-        rows.push(obj([
+        let measurement = obj([("digest", s(m.digest.as_str())), ("points", CValue::Num((m.xyz.len() / 3) as f64))]);
+        let common = [
             ("boundary", s(r.boundary.as_str())),
             ("constrained", dofs(dd.constrained)),
             ("dmt_row", s(dd.dmt_row.as_str())),
             ("feature", s(def.feature_ref().as_str())),
-            ("fit", evidence(ev)),
             ("kind", s(dd.kind.name())),
             ("label", s(&dd.label)),
-            ("measurement", obj([("digest", s(m.digest.as_str())), ("points", CValue::Num((m.xyz.len() / 3) as f64))])),
-            ("nominal_outward", hex3(m.nominal)),
-            ("plane", obj([("normal", hex3(normal)), ("point", hex3(point))])),
+            ("measurement", measurement),
             ("precedence", s(precedence(dd.precedence))),
             ("simulator", s(dd.alg.as_str())),
-        ]));
+        ];
+        let mut row = CValue::Obj(common.into_iter().map(|(k, v)| (k.to_owned(), v)).collect());
+        let extra = match (sim.geometry, m.kind) {
+            (SimGeometry::Plane { point, normal }, MeasuredKind::Plane) => vec![
+                ("fit", evidence(ev, false)),
+                ("nominal_outward", hex3(m.nominal)),
+                ("plane", obj([("normal", hex3(normal)), ("point", hex3(point))])),
+            ],
+            (SimGeometry::Axis { point, direction }, MeasuredKind::Cylinder(side)) => vec![
+                ("axis", obj([("direction", hex3(direction)), ("point", hex3(point))])),
+                ("fit", evidence(ev, true)),
+                ("nominal_axis", hex3(m.nominal)),
+                ("radius", s(&hex(ev.objective))),
+                ("side", s(side.as_str())),
+            ],
+            _ => return Err(BuildError::Encode),
+        };
+        if let CValue::Obj(o) = &mut row {
+            for (k, v) in extra {
+                o.insert(k.to_owned(), v);
+            }
+        }
+        rows.push(row);
     }
     let [x, y, z] = drf.axes();
     let doc = obj([
