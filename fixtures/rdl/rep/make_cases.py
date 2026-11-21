@@ -88,6 +88,8 @@ def ref_classify(kind, rec, rep, same_manifest, det, same_platform, limit):
         return "ERR:kind_unknown", ""
     if any(v is not None and math.isnan(v) for v in (rec, rep)):
         return "ERR:nan_input", ""
+    if det == "N":
+        return "NOT_REPLAYABLE", ""  # class N is not classified: fail closed
     ann = "MARGINAL" if ref_marginal(kind, rec, rep, limit) else ""
     if rec is None and rep is None:
         return "IDENTICAL", ann
@@ -97,7 +99,7 @@ def ref_classify(kind, rec, rep, same_manifest, det, same_platform, limit):
         return "IDENTICAL", ann
     if kind == "exact":
         return "DIVERGENT", ann
-    if same_manifest and (det == "D0" or (det in ("D1", "D2") and same_platform)):
+    if det == "D0" or (det in ("D1", "D2") and same_manifest and same_platform):
         return "DIVERGENT", ann
     if not (math.isfinite(rec) and math.isfinite(rep)):
         return "DIVERGENT", ann
@@ -146,7 +148,8 @@ CLASSES = ["D0", "D1", "D2", "D3", "N"]
 for k in KINDS:
     case(f"identical_{k}", k, 0.125, 0.125, "IDENTICAL")
 for c in CLASSES:
-    case(f"identical_same_manifest_{c}", "length", 12.5, 12.5, "IDENTICAL", same_manifest=True, det=c)
+    case(f"identical_same_manifest_{c}", "length", 12.5, 12.5, "NOT_REPLAYABLE" if c == "N" else "IDENTICAL",
+         same_manifest=True, det=c)
 case("identical_negative", "length", -3.75, -3.75, "IDENTICAL")
 case("identical_subnormal", "length", 5e-324, 5e-324, "IDENTICAL")
 case("identical_inf", "length", math.inf, math.inf, "IDENTICAL")
@@ -160,10 +163,16 @@ for c in ["D1", "D2"]:
     case(f"ulp_same_manifest_{c}_other_platform", "length", 7.25, up(7.25), "EQUIVALENT", same_manifest=True, det=c,
          same_platform=False)
 case("ulp_same_manifest_D3", "length", 7.25, up(7.25), "EQUIVALENT", same_manifest=True, det="D3")
-case("ulp_same_manifest_N", "length", 7.25, up(7.25), "EQUIVALENT", same_manifest=True, det="N")
-# Manifests differ: the table applies to every class (REQ-004).
+# Class N is not classified: NOT_REPLAYABLE, fail closed.
+case("ulp_same_manifest_N", "length", 7.25, up(7.25), "NOT_REPLAYABLE", same_manifest=True, det="N")
+case("n_far_apart", "length", 1.0, 2.0, "NOT_REPLAYABLE", det="N")
+case("n_marginal_not_reported", "length", 0.5, 0.5, "NOT_REPLAYABLE", det="N", limit="0.5")
+# D0 is bit-exact whatever the manifests; D1/D2/D3 use the table when manifests differ (REQ-003, REQ-004).
 for c in CLASSES:
-    case(f"ulp_other_manifest_{c}", "length", 7.25, up(7.25), "EQUIVALENT", det=c)
+    want = {"D0": "DIVERGENT", "N": "NOT_REPLAYABLE"}.get(c, "EQUIVALENT")
+    case(f"ulp_other_manifest_{c}", "length", 7.25, up(7.25), want, det=c)
+case("ulp_other_manifest_D0_other_platform", "length", 7.25, up(7.25), "DIVERGENT", det="D0", same_platform=False)
+case("identical_other_manifest_D0", "length", 7.25, 7.25, "IDENTICAL", det="D0")
 case("ulp_same_manifest_D0_angle", "angle", 0.5, up(0.5), "DIVERGENT", same_manifest=True, det="D0")
 case("ulp_same_manifest_D0_p", "p_conformance", 0.5, up(0.5), "DIVERGENT", same_manifest=True, det="D0")
 
@@ -215,7 +224,7 @@ case("len_max_vs_neg_max", "length", 1.7976931348623157e308, -1.7976931348623157
 
 # D. Exact kinds: any difference is DIVERGENT, whatever the context (REQ-005, AC-4).
 for c in CLASSES:
-    case(f"exact_ulp_{c}", "exact", 3.0, up(3.0), "DIVERGENT", det=c)
+    case(f"exact_ulp_{c}", "exact", 3.0, up(3.0), "NOT_REPLAYABLE" if c == "N" else "DIVERGENT", det=c)
 case("exact_count_differs", "exact", 4.0, 5.0, "DIVERGENT")
 case("exact_signed_zero", "exact", 0.0, -0.0, "DIVERGENT")
 case("exact_identical_count", "exact", 17.0, 17.0, "IDENTICAL", same_manifest=True, det="D0")

@@ -23,6 +23,8 @@ fn rep1_bounds_match_req001() {
         assert_eq!((b.kind, b.mode, b.value, b.unit.as_str()), (kind, mode, Decimal::parse(value).unwrap(), unit));
     }
     assert!(t.bound(FieldKind::Exact).is_none());
+    // Built once and shared.
+    assert!(std::ptr::eq(Table::rep1(), Table::rep1()));
 }
 
 #[test]
@@ -57,6 +59,44 @@ fn table_rules() {
         err(Table::new("x@1", vec![b(FieldKind::Dimensionless, BoundMode::Rel, "1e-9", "m")])),
         RepError::TableInvalid("bad_unit")
     );
+    // Canonical units only: `mm` is refused, and so is `1` on an absolute length.
+    for (kind, mode, unit) in [
+        (FieldKind::Length, BoundMode::Abs, "mm"),
+        (FieldKind::Length, BoundMode::Abs, "1"),
+        (FieldKind::Angle, BoundMode::Abs, "deg"),
+        (FieldKind::Angle, BoundMode::Abs, "1"),
+        (FieldKind::PConformance, BoundMode::Abs, "m"),
+        (FieldKind::Length, BoundMode::Rel, "m"),
+        (FieldKind::ExpandedUncertainty, BoundMode::Abs, "m"),
+        (FieldKind::ExpandedUncertainty, BoundMode::Abs, "1"),
+        (FieldKind::Length, BoundMode::Abs, ""),
+    ] {
+        assert_eq!(
+            err(Table::new("x@1", vec![b(kind, mode, "1e-9", unit)])),
+            RepError::TableInvalid("bad_unit"),
+            "{kind:?} {mode:?} {unit:?}"
+        );
+    }
+    for (kind, mode, unit) in [
+        (FieldKind::Length, BoundMode::Abs, "m"),
+        (FieldKind::Angle, BoundMode::Abs, "rad"),
+        (FieldKind::Dimensionless, BoundMode::Abs, "1"),
+        (FieldKind::PConformance, BoundMode::Abs, "1"),
+        (FieldKind::Length, BoundMode::Rel, "1"),
+        (FieldKind::ExpandedUncertainty, BoundMode::Rel, "1"),
+    ] {
+        assert!(Table::new("x@1", vec![b(kind, mode, "1e-9", unit)]).is_ok(), "{kind:?} {mode:?} {unit:?}");
+    }
+    // Text limits keep canonical_json free of escapes (RFC 8785 as written).
+    for v in ["x\"@1", "x\\@1", "x\u{e9}@1", "x\n@1", "x\u{7f}@1", "x\u{0}@1"] {
+        assert_eq!(err(Table::new(v, vec![])), RepError::TableInvalid("bad_text"), "{v:?}");
+    }
+    assert_eq!(
+        err(Table::new("x@1", vec![b(FieldKind::Length, BoundMode::Abs, "1e-9", "m\"")])),
+        RepError::TableInvalid("bad_text")
+    );
+    let t = Table::new("a b~!@1", vec![]).unwrap();
+    assert!(t.canonical_json().ends_with(",\"version\":\"a b~!@1\"}"));
     // Rows are put in kind order, so canonical JSON does not depend on input order.
     let t = Table::new(
         "x@1",

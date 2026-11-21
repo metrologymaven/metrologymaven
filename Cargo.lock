@@ -1925,6 +1925,7 @@ version = "0.0.1"
 dependencies = [
  "fid-num",
  "fid-testkit",
+ "fid-types",
 ]
 
 [[package]]

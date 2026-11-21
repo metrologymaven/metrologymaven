@@ -3,7 +3,8 @@
 //!
 //! One table and one classifier, used by the journal replayer (`CORE.RPL`) and the
 //! standalone verifier (`TRUST.REPLAY`), so the two never disagree on what `EQUIVALENT`
-//! means. Pure Rust, no I/O, no `unsafe`, only `fid-num` (KNP-1), usable on wasm32.
+//! means. Pure Rust, no I/O, no `unsafe`, only `fid-num` and `fid-types` (KNP-1), usable on
+//! wasm32.
 //!
 //! # Keying
 //!
@@ -14,13 +15,15 @@
 //! # Classification order (`rdl.rep.classify@1.0.0`)
 //!
 //! 1. A NaN on either side is the error `nan_input` (NaN is never a valid recorded value).
-//! 2. `MARGINAL` is computed (REQ-UNC.RDL.REP-007); it never changes the outcome.
-//! 3. Both values absent: `IDENTICAL`; exactly one absent: `DIVERGENT` (REQ-002, UEC-0).
-//! 4. Bit-equal values: `IDENTICAL`.
-//! 5. Kind `exact`: `DIVERGENT` (REQ-005).
-//! 6. Same manifest digest and (D0, or D1/D2 on the same platform class): `DIVERGENT`,
-//!    no table (REQ-003).
-//! 7. Otherwise the table applies (REQ-004): no bound for the kind gives `DIVERGENT` with
+//! 2. Class N: `NOT_REPLAYABLE`, fail closed (class-N fields are not classified; the
+//!    replayer substitutes them).
+//! 3. `MARGINAL` is computed (REQ-UNC.RDL.REP-007); it never changes the outcome.
+//! 4. Both values absent: `IDENTICAL`; exactly one absent: `DIVERGENT` (REQ-002, UEC-0).
+//! 5. Bit-equal values: `IDENTICAL`.
+//! 6. Kind `exact`: `DIVERGENT` (REQ-005).
+//! 7. D0 (whatever the manifests), or D1/D2 with the same manifest digest on the same
+//!    platform class: `DIVERGENT`, no table (REQ-003).
+//! 8. Otherwise (D1/D2/D3) the table applies (REQ-004): no bound for the kind gives `DIVERGENT` with
 //!    annotation `NO_TOLERANCE`; an infinite value gives `DIVERGENT`; else `EQUIVALENT`
 //!    when `|recorded - replayed| <= bound`, decided exactly (REQ-006), and `DIVERGENT`
 //!    beyond it. A relative bound is scaled by `max(|recorded|, |replayed|)`.
@@ -29,8 +32,10 @@ mod exact;
 
 use core::cmp::Ordering;
 use core::fmt;
+use std::sync::OnceLock;
 
 use fid_num::kdec::Decimal;
+pub use fid_types::Determinism;
 
 use crate::exact::{abs_diff_le, Term};
 
@@ -126,44 +131,6 @@ impl FieldKind {
     }
 }
 
-/// Determinism class of the step that produced the field (CONSTITUTION §4). The wire
-/// names are those of `fid_types::Determinism`; this crate depends only on `fid-num`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Determinism {
-    /// Bit-identical everywhere.
-    D0,
-    /// Bit-identical on one platform class.
-    D1,
-    /// Bit-identical on one platform class and configuration.
-    D2,
-    /// Reproducible within tolerance.
-    D3,
-    /// Non-deterministic; the replayer substitutes recorded values.
-    N,
-}
-
-impl Determinism {
-    /// Every class.
-    pub const ALL: [Determinism; 5] =
-        [Determinism::D0, Determinism::D1, Determinism::D2, Determinism::D3, Determinism::N];
-
-    /// Wire name.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Determinism::D0 => "D0",
-            Determinism::D1 => "D1",
-            Determinism::D2 => "D2",
-            Determinism::D3 => "D3",
-            Determinism::N => "N",
-        }
-    }
-
-    /// Parses a wire name; `None` for anything else.
-    pub fn parse(s: &str) -> Option<Determinism> {
-        Determinism::ALL.into_iter().find(|d| d.as_str() == s)
-    }
-}
-
 /// Comparison context: the context rules, not table keys.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Ctx {
@@ -178,14 +145,15 @@ pub struct Ctx {
 }
 
 impl Ctx {
-    /// True when only bit identity is accepted (REQ-UNC.RDL.REP-003).
+    /// True when only bit identity is accepted (REQ-UNC.RDL.REP-003): always for D0,
+    /// whatever the manifests; for D1/D2 with the same manifest digest on the same platform
+    /// class. Class N is never classified (see [`classify_with`]).
     pub fn bit_exact_required(&self) -> bool {
-        self.same_manifest
-            && match self.determinism {
-                Determinism::D0 => true,
-                Determinism::D1 | Determinism::D2 => self.same_platform_class,
-                Determinism::D3 | Determinism::N => false,
-            }
+        match self.determinism {
+            Determinism::D0 => true,
+            Determinism::D1 | Determinism::D2 => self.same_manifest && self.same_platform_class,
+            Determinism::D3 | Determinism::N => false,
+        }
     }
 }
 
@@ -308,12 +276,16 @@ pub struct Table {
 }
 
 impl Table {
-    /// Builds a table, checking the `rep-table@1` rules: a non-empty version; bounds for
-    /// numeric kinds only, at most one per kind, non-negative, with a non-empty unit, `1`
-    /// for a relative bound. Rows are kept in [`FieldKind`] order.
+    /// Builds a table, checking the `rep-table@1` rules: a non-empty version of printable
+    /// ASCII without `"` or `\` (so [`Table::canonical_json`] is RFC 8785 without escapes);
+    /// bounds for numeric kinds only, at most one per kind, non-negative, each with the
+    /// canonical unit of [`canonical_unit`]. Rows are kept in [`FieldKind`] order.
     pub fn new(version: &str, mut bounds: Vec<Bound>) -> Result<Table, RepError> {
         if version.is_empty() {
             return Err(RepError::TableInvalid("empty_version"));
+        }
+        if !plain_text(version) {
+            return Err(RepError::TableInvalid("bad_text"));
         }
         bounds.sort_by_key(|b| b.kind);
         for (i, b) in bounds.iter().enumerate() {
@@ -326,15 +298,23 @@ impl Table {
             if b.value.is_negative() {
                 return Err(RepError::TableInvalid("negative_bound"));
             }
-            if b.unit.is_empty() || (b.mode == BoundMode::Rel && b.unit != "1") {
+            if !plain_text(&b.unit) {
+                return Err(RepError::TableInvalid("bad_text"));
+            }
+            if canonical_unit(b.kind, b.mode) != Some(b.unit.as_str()) {
                 return Err(RepError::TableInvalid("bad_unit"));
             }
         }
         Ok(Table { version: version.to_string(), bounds })
     }
 
-    /// The embedded table `rep-1@1.0.0` (REQ-UNC.RDL.REP-001).
-    pub fn rep1() -> Table {
+    /// The embedded table `rep-1@1.0.0` (REQ-UNC.RDL.REP-001), built once.
+    pub fn rep1() -> &'static Table {
+        static REP1: OnceLock<Table> = OnceLock::new();
+        REP1.get_or_init(Table::build_rep1)
+    }
+
+    fn build_rep1() -> Table {
         let row = |kind, mode, exp10: i32, unit: &str| Bound {
             kind,
             mode,
@@ -370,8 +350,9 @@ impl Table {
     }
 
     /// Canonical JSON (RFC 8785) of the table; the caller hashes it for the report.
-    /// Strings are written as-is: versions and units are expected to be plain ASCII
-    /// without `"` or `\`; any other character is escaped as `\uXXXX`.
+    /// [`Table::new`] admits only printable ASCII without `"` or `\` in the version and the
+    /// units, so every string is written as-is, which is its RFC 8785 form. (`push_json_str`
+    /// still escapes anything else as defence in depth.)
     pub fn canonical_json(&self) -> String {
         let mut s = String::new();
         s.push_str("{\"algorithm\":");
@@ -395,6 +376,25 @@ impl Table {
         s.push('}');
         s
     }
+}
+
+/// The canonical unit of a bound (SI): every relative bound is `1`; an absolute bound is
+/// `m` for length, `rad` for angle and `1` for dimensionless and p_conformance. An absolute
+/// expanded-uncertainty bound has no canonical unit (its quantity is not fixed) and is refused.
+pub fn canonical_unit(kind: FieldKind, mode: BoundMode) -> Option<&'static str> {
+    match (mode, kind) {
+        (_, FieldKind::Exact) => None,
+        (BoundMode::Rel, _) => Some("1"),
+        (BoundMode::Abs, FieldKind::Length) => Some("m"),
+        (BoundMode::Abs, FieldKind::Angle) => Some("rad"),
+        (BoundMode::Abs, FieldKind::Dimensionless | FieldKind::PConformance) => Some("1"),
+        (BoundMode::Abs, FieldKind::ExpandedUncertainty) => None,
+    }
+}
+
+/// Printable ASCII (U+0020..=U+007E) without `"` and `\`.
+fn plain_text(s: &str) -> bool {
+    s.bytes().all(|c| (0x20..=0x7e).contains(&c) && c != b'"' && c != b'\\')
 }
 
 fn push_json_str(s: &mut String, v: &str) {
@@ -447,7 +447,7 @@ pub fn classify(
     replayed: Option<f64>,
     ctx: &Ctx,
 ) -> Result<FieldOutcome, RepError> {
-    classify_with(&Table::rep1(), kind, recorded, replayed, ctx)
+    classify_with(Table::rep1(), kind, recorded, replayed, ctx)
 }
 
 /// Classifies one field against `table` (see the crate documentation for the order).
@@ -460,6 +460,13 @@ pub fn classify_with(
 ) -> Result<FieldOutcome, RepError> {
     if recorded.is_some_and(f64::is_nan) || replayed.is_some_and(f64::is_nan) {
         return Err(RepError::NanInput);
+    }
+    if ctx.determinism == Determinism::N {
+        // Class-N fields are not classified (the replayer substitutes them): fail closed.
+        return Ok(FieldOutcome {
+            outcome: Outcome::NotReplayable(NotReplayableCause::Other),
+            annotations: Vec::new(),
+        });
     }
     let mut annotations = Vec::new();
     if kind != FieldKind::Exact && is_marginal(table, kind, recorded, replayed, ctx) {

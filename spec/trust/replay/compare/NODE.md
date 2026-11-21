@@ -83,11 +83,12 @@ Compares each recomputed result with its packaged ResultRecord and classifies it
 ## Open questions
 
 - Resolved 2026-11-21 (maintainer decision): UNC.RDL.REP publishes the REP-1 table keyed by field kind, with determinism class as a context rule (schema `rep-table@1`, crate `fid-rep`). This leaf consumes that table and classifier; the wording "by determinism class and quantity kind" in REQ-002, REQ-005 and the Design means: the determinism class decides whether a tolerance applies, the quantity (field) kind selects the row.
-- Open: REQ-004 here (D0 never gets a tolerance) is stricter than REQ-UNC.RDL.REP-004 (different manifest digests use the table even for D0). The comparator must either pass a context that forces bit identity for D0 or check D0 itself before calling `fid-rep`; to settle when this leaf is built.
+- Resolved 2026-11-21 (maintainer decision, review of #407): D0 is always bit-exact. REQ-UNC.RDL.REP-004 now applies the tolerance only to D1/D2/D3, so this leaf's REQ-004 and `fid-rep` agree and the comparator needs no D0 check of its own.
 
 ## Change log
 
 - 2026-11-21 (maintainer decision): **Table keying (maintainer decision, 2026-11-21):** the REP-1 table is keyed by **field kind** only (`length`, `angle`, `dimensionless`, `expanded_uncertainty`, `p_conformance`, `exact`). Determinism class, kernel-manifest identity and platform class are **context rules** applied by the classifier (REQ-003/004), not table keys. Rationale: the bound is a property of the quantity (1 nm is 1 nm whatever produced it), the determinism class only decides *whether* a bound may be used at all, and one key avoids a kind x class matrix whose cells would mostly repeat or be `none`. TRUST.REPLAY.COMPARE consumes this table and classifier.
+- 2026-11-21 (maintainer decision): **D0 is always bit-exact (maintainer decision, review of #407):** a D0 field is `IDENTICAL` only when bit-identical and `DIVERGENT` otherwise, whatever the kernel-manifest digests; the REP-1 tolerance applies only to D1/D2 (manifests or platform classes differ) and D3. A cross-version tolerance mode for D0, if ever wanted, comes later as an explicit opt-in. Closes the D0 open question.
 
 ## Children
 
