@@ -146,6 +146,10 @@ pub struct DatumEvidence {
     /// A free-direction cylinder's global cross-check outcome (always `passed`: any other is
     /// refused); `None` for planes and fixed-direction cylinders.
     pub cross_check: Option<&'static str>,
+    /// The work of that cross-check: cap tests, full (all-point) tests and the deepest cap
+    /// level reached; `None` where `cross_check` is. Recorded (and digested) so that a change
+    /// in how the cross-check passes is visible on replay.
+    pub cross_check_work: Option<[u32; 3]>,
     /// The multi-start seed of a cylinder fit; `None` for planes.
     pub seed: Option<u64>,
 }
@@ -399,6 +403,7 @@ impl Ctx<'_> {
             max_violation: r.max_violation,
             contacts: r.contacts.clone(),
             cross_check: None,
+            cross_check_work: None,
             seed: None,
         })
     }

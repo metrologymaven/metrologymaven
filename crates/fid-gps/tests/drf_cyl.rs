@@ -11,12 +11,15 @@
 
 use fid_canon::CValue;
 use fid_fit::contract::{Centred, Constraint, FitParams, Method, PointsView};
+use fid_fit::contract::{Fit, FittedFeature};
+use fid_fit::mcc_cyl::MccCylinderFit;
 use fid_fit::mcc_cyl::{fit_mcc_cylinder, CrossOutcome, MccCylinder};
 use fid_gps::dmt::{AlgId, DmtKey};
+use fid_gps::drf::build::build_drf;
 use fid_gps::drf::build::{DatumKind, Dof, DofSet, DrfError, SimGeometry};
 use fid_gps::drf::cyl_sim::{
-    accept_cylinder, build_measured_drf, mcc_algorithm_id, CylinderSide, MeasuredFeature, MeasuredKind, Simulators,
-    MCC_SEED,
+    accept_cylinder, build_measured_drf, cylinder_params, mcc_algorithm_id, simulate_cylinder, CylinderSide,
+    MeasuredFeature, MeasuredKind, Simulators, MCC_SEED,
 };
 use fid_gps::drf::plane_sim::{MeasuredDrf, SimError};
 use std::collections::BTreeMap;
@@ -183,6 +186,7 @@ fn check_ok(c: &Case, m: &MeasuredDrf) {
                 assert!(ev.max_violation <= fid_fit::mcc_cyl::INSIDE_TOL);
                 let free = ev.orientation.as_str() == "free";
                 assert_eq!(ev.cross_check, free.then_some("passed"), "{}", c.name);
+                assert_eq!(ev.cross_check_work.is_some(), free, "{}", c.name);
                 let SimGeometry::Axis { point, direction } = sim.geometry else { panic!("{}: axis", c.name) };
                 assert!(close(direction, v3(&r["direction"]), TOL), "{}: direction {k} {direction:?}", c.name);
                 assert!(close(point, v3(&r["point"]), TOL), "{}: point {k} {point:?}", c.name);
@@ -365,4 +369,39 @@ fn a_flagged_or_unchecked_envelope_is_never_a_datum() {
         }
         assert_eq!(refused(&m, !is_fixed), "flagged_fit{B}");
     }
+}
+
+/// The copied sequence cannot drift from the trait: for every cylinder of every built case,
+/// `MccCylinderFit.fit` on the same points, parameters (free, or the direction the frame held)
+/// and seed equals the accepted contract result, and that result is the datum's axis.
+#[test]
+fn the_accepted_envelope_is_the_fit_traits_result() {
+    let mut n = 0;
+    for c in cases().iter().filter(|c| !obj(&c.expect).contains_key("error")) {
+        let m = run(c).unwrap();
+        for (k, d) in c.datums.iter().enumerate() {
+            let MeasuredKind::Cylinder(_) = d.kind else { continue };
+            let fixed = if k == 0 {
+                None
+            } else {
+                // Every cylinder after the primary in these cases is held at the prefix's z,
+                // signed by its nominal.
+                let z = build_drf(&m.datums()[..k]).unwrap().axes()[2];
+                let s = if (0..3).map(|i| z[i] * d.nominal[i]).sum::<f64>() < 0.0 { -1.0 } else { 1.0 };
+                Some([s * z[0], s * z[1], s * z[2]])
+            };
+            assert_eq!(m.evidence()[k].orientation.as_str(), if fixed.is_some() { "fixed" } else { "free" });
+            let pts = PointsView::new(&d.xyz, None).unwrap();
+            let via_trait = MccCylinderFit.fit(&pts, &cylinder_params(fixed), Some(MCC_SEED)).unwrap();
+            let (accepted, ev) = simulate_cylinder(&d.label, &d.xyz, fixed).unwrap();
+            assert_eq!(accepted, via_trait, "{}: {}", c.name, d.label);
+            assert_eq!(ev, m.evidence()[k], "{}: {}", c.name, d.label);
+            let FittedFeature::Cylinder { p, d: dir, .. } = via_trait.feature else { panic!("cylinder") };
+            let SimGeometry::Axis { point, direction } = m.datums()[k].geometry else { panic!("axis") };
+            assert_eq!(point, p, "{}", c.name);
+            assert!(direction == dir || direction == [-dir[0], -dir[1], -dir[2]], "{}", c.name);
+            n += 1;
+        }
+    }
+    assert!(n >= 10, "{n}");
 }

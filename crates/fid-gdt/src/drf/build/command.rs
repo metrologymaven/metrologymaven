@@ -281,7 +281,16 @@ fn fit_schema(cylinder: bool) -> CValue {
     if cylinder {
         required.extend(["cross_check", "seed"]);
         required.sort_unstable();
-        props.push(("cross_check", obj([("enum", CValue::Arr(vec![text("passed"), CValue::Null]))])));
+        let check = closed(
+            &["caps", "depth", "full_tests", "outcome"],
+            obj([
+                ("caps", typed("integer")),
+                ("depth", typed("integer")),
+                ("full_tests", typed("integer")),
+                ("outcome", obj([("type", text("string")), ("enum", strs(&["passed"]))])),
+            ]),
+        );
+        props.push(("cross_check", obj([("anyOf", CValue::Arr(vec![check, typed("null")]))])));
         props.push(("seed", typed("integer")));
     }
     let props = CValue::Obj(props.into_iter().map(|(k, v)| (k.to_owned(), v)).collect());

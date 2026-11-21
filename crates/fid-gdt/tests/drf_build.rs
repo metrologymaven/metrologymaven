@@ -819,7 +819,15 @@ fn assert_cyl_frame(b: &Built, case: &str) {
             assert_eq!(unhex(&r["radius"]), unhex(&fit["objective"]));
             assert!(st(&fit["certificate"]).starts_with("sha256:"));
             let free = st(&x["orientation"]) == "free";
-            assert_eq!(fit["cross_check"], if free { CValue::Str("passed".to_owned()) } else { CValue::Null });
+            if free {
+                let x = obj(&fit["cross_check"]);
+                assert_eq!(st(&x["outcome"]), "passed");
+                for k in ["caps", "depth", "full_tests"] {
+                    assert!(matches!(x[k], CValue::Num(n) if n >= 1.0), "{case}: {k}");
+                }
+            } else {
+                assert_eq!(fit["cross_check"], CValue::Null);
+            }
             let contacts: Vec<f64> = arr(&fit["contacts"])
                 .iter()
                 .map(|c| match c {
@@ -879,7 +887,7 @@ fn ac4_single_primary_axis() {
     assert_eq!(names(&obj(&d)["free"]), ["tz", "rz"]);
     let fit = obj(&obj(&arr(&obj(&d)["datums"])[0])["fit"]);
     assert_eq!(st(&fit["optimality"]), "strict_local_cross_checked");
-    assert_eq!(st(&fit["cross_check"]), "passed");
+    assert_eq!(st(&obj(&fit["cross_check"])["outcome"]), "passed");
 }
 
 /// Every other precedence with an axis datum matches its reference: primary axis then plane

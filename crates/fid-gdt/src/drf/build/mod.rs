@@ -632,9 +632,10 @@ fn digest_or_null(d: Option<Digest>) -> CValue {
     d.map_or(CValue::Null, |d| s(d.as_str()))
 }
 
-/// The `fit` object of a datum row. A cylinder's also holds `cross_check` (`passed` for a free
-/// direction, `null` for a fixed one) and `seed`; a plane's has neither key, so planar
-/// documents are unchanged.
+/// The `fit` object of a datum row. A cylinder's also holds `cross_check` (for a free
+/// direction `{outcome: passed, caps, full_tests, depth}`, the global cross-check and its
+/// work; `null` for a fixed one) and `seed`; a plane's has neither key, so planar documents
+/// are unchanged.
 fn evidence(e: &DatumEvidence, cylinder: bool) -> CValue {
     let mut v = obj([
         ("candidates", CValue::Num(f64::from(e.candidates))),
@@ -649,7 +650,16 @@ fn evidence(e: &DatumEvidence, cylinder: bool) -> CValue {
     ]);
     if cylinder {
         if let CValue::Obj(m) = &mut v {
-            m.insert("cross_check".to_owned(), e.cross_check.map_or(CValue::Null, s));
+            let check = match (e.cross_check, e.cross_check_work) {
+                (Some(outcome), Some([caps, full, depth])) => obj([
+                    ("caps", CValue::Num(f64::from(caps))),
+                    ("depth", CValue::Num(f64::from(depth))),
+                    ("full_tests", CValue::Num(f64::from(full))),
+                    ("outcome", s(outcome)),
+                ]),
+                _ => CValue::Null,
+            };
+            m.insert("cross_check".to_owned(), check);
             // Seeds are small integers (0 today), exact as JSON numbers.
             m.insert("seed".to_owned(), e.seed.map_or(CValue::Null, |x| CValue::Num(x as f64)));
         }

@@ -34,6 +34,7 @@
 //! | `rz` only | parallel to `nz` | normal fixed at `+-z` | direction fixed at `+-z` (global) |
 //! | `rz` only | perpendicular to `nz` | normal perpendicular to `z`, free about it | refused, `orientation_constraint_unsupported{label}` |
 //! | none | parallel to `nz`, or (secondary a plane) to its `y` or `x` | normal fixed at that measured axis | direction fixed at that measured axis (global) |
+//! | none, after two parallel axes | not parallel to `nz` | refused, `orientation_constraint_unsupported{label}` | same |
 //! | any | any other angle | refused, `oblique_datum_unsupported{label}` | same |
 //!
 //! "Fixed" directions are signed by the nominal. A cylinder whose axis would have to stay
@@ -199,14 +200,13 @@ pub fn accept_cylinder(
     if m.local_optimum_only || m.suspect_axis || m.certificate.flags().local_optimum_only {
         return Err(flagged());
     }
-    let (orientation, optimality, cross_check) = match (fixed, m.optimality) {
-        (false, MccOptimality::StrictLocal) => {
-            let passed = m.cross_check_passed && m.cross_check.is_some_and(|c| c.outcome == CrossOutcome::Passed);
-            if !passed {
-                return Err(flagged());
+    let (orientation, optimality, check) = match (fixed, m.optimality) {
+        (false, MccOptimality::StrictLocal) => match m.cross_check {
+            Some(c) if m.cross_check_passed && c.outcome == CrossOutcome::Passed => {
+                (Orientation::Free, "strict_local_cross_checked", Some(c))
             }
-            (Orientation::Free, "strict_local_cross_checked", Some(CrossOutcome::Passed.as_str()))
-        }
+            _ => return Err(flagged()),
+        },
         (true, MccOptimality::Global) => (Orientation::Fixed, "global", None),
         _ => return Err(flagged()),
     };
@@ -215,32 +215,70 @@ pub fn accept_cylinder(
         _ => return Err(SimError::Fit { label: label.to_owned(), code: "not_a_cylinder" }),
     };
     let cert = *m.certificate.digest();
+    let cross_check_work = check.map(|c| [c.caps, c.full_tests, c.depth]);
+    let alg = m.algorithm.to_string();
+    let identity = Identity {
+        alg: &alg,
+        seed: MCC_SEED,
+        optimality,
+        orientation: orientation.as_str(),
+        max_violation: m.max_violation,
+        cross_check: check.map(|c| (c.outcome.as_str(), [c.caps, c.full_tests, c.depth])),
+    };
     let ev = DatumEvidence {
         orientation,
         optimality,
         certificate: Some(cert),
         local_optimum_only: false,
-        fit_digest: cylinder_digest(p, d, r, &m.contacts, &cert),
+        fit_digest: cylinder_digest(p, d, r, &m.contacts, &cert, &identity),
         points: m.residuals.len() as u32,
         candidates: 1,
         objective: r,
         max_violation: m.max_violation,
         contacts: m.contacts.clone(),
-        cross_check,
+        cross_check: check.map(|c| c.outcome.as_str()),
+        cross_check_work,
         seed: Some(MCC_SEED),
     };
     Ok((accepted, ev))
 }
 
-/// SHA-256 of `fid.gdt-drf-cylinder-fit/1\n`, the axis point, direction and radius as
-/// little-endian `f64` bits, the contacts as little-endian `u32` and the certificate digest
-/// text: the selected envelope's identity (`fid-fit` has no output digest for it yet).
-fn cylinder_digest(p: V3, d: V3, r: f64, contacts: &[u32], cert: &Digest) -> Digest {
-    let mut b = Vec::with_capacity(64 + 56 + 4 * contacts.len() + 80);
-    b.extend_from_slice(b"fid.gdt-drf-cylinder-fit/1\n");
-    for x in p.iter().chain(d.iter()).chain(core::iter::once(&r)) {
+/// How an envelope was obtained and accepted, beyond its geometry (hashed by
+/// [`cylinder_digest`]).
+struct Identity<'a> {
+    alg: &'a str,
+    seed: u64,
+    optimality: &'a str,
+    orientation: &'a str,
+    max_violation: f64,
+    /// The cross-check outcome and its work: cap tests, full tests, deepest level.
+    cross_check: Option<(&'a str, [u32; 3])>,
+}
+
+/// SHA-256 of `fid.gdt-drf-cylinder-fit/2\n`, then, each text followed by `\n`: the algorithm
+/// ID, the seed (decimal), the optimality, the orientation, the cross-check outcome (`none` for
+/// a fixed direction); then as little-endian bits: the axis point, direction and radius and the
+/// largest violation (`f64`), the cross-check's cap tests, full tests and depth (`u32`, zeros
+/// for none), the contact count and contacts (`u32`); then the certificate digest text. The
+/// selected envelope's identity (`fid-fit` has no output digest for it yet): a change in the
+/// algorithm, seed, acceptance or the way the cross-check passed changes it, so replay sees it.
+fn cylinder_digest(p: V3, d: V3, r: f64, contacts: &[u32], cert: &Digest, id: &Identity<'_>) -> Digest {
+    let mut b = Vec::with_capacity(160 + 4 * contacts.len() + 80);
+    b.extend_from_slice(b"fid.gdt-drf-cylinder-fit/2\n");
+    let seed = id.seed.to_string();
+    let outcome = id.cross_check.map_or("none", |(o, _)| o);
+    for t in [id.alg, seed.as_str(), id.optimality, id.orientation, outcome] {
+        b.extend_from_slice(t.as_bytes());
+        b.push(b'\n');
+    }
+    for x in p.iter().chain(d.iter()).chain([r, id.max_violation].iter()) {
         b.extend_from_slice(&x.to_bits().to_le_bytes());
     }
+    let work = id.cross_check.map_or([0; 3], |(_, w)| w);
+    for w in work {
+        b.extend_from_slice(&w.to_le_bytes());
+    }
+    b.extend_from_slice(&(contacts.len() as u32).to_le_bytes());
     for c in contacts {
         b.extend_from_slice(&c.to_le_bytes());
     }
@@ -248,16 +286,28 @@ fn cylinder_digest(p: V3, d: V3, r: f64, contacts: &[u32], cert: &Digest) -> Dig
     Digest::from_bytes(fid_canon::digest_bytes(&b).0)
 }
 
-/// The envelope of one external cylinder, free (`fixed` `None`) or along a fixed direction.
-fn fit_cylinder(label: &str, xyz: &[f64], fixed: Option<V3>) -> Result<(V3, V3, DatumEvidence), SimError> {
-    let pts = PointsView::new(xyz, None).map_err(|e| fit_error(label, e))?;
+/// The fit parameters of an envelope: free, or along the fixed direction `fixed`.
+pub fn cylinder_params(fixed: Option<V3>) -> FitParams {
     let mut fp = FitParams::new(Method::MinimumCircumscribed);
     if let Some(d) = fixed {
         fp.constraints.push(Constraint::FixedAxisDirection(d));
     }
-    let m = fit_mcc_cylinder(&pts, &fp, Some(MCC_SEED)).map_err(|e| fit_error(label, e))?;
+    fp
+}
+
+/// The envelope of one external cylinder, free (`fixed` `None`) or along a fixed direction:
+/// [`fit_mcc_cylinder`] with [`cylinder_params`] and [`MCC_SEED`], then [`accept_cylinder`].
+/// Its contract result is the `Fit` trait's (`MccCylinderFit::fit` on the same points,
+/// parameters and seed; pinned by a test).
+pub fn simulate_cylinder(label: &str, xyz: &[f64], fixed: Option<V3>) -> Result<(FitResult, DatumEvidence), SimError> {
+    let pts = PointsView::new(xyz, None).map_err(|e| fit_error(label, e))?;
+    let m = fit_mcc_cylinder(&pts, &cylinder_params(fixed), Some(MCC_SEED)).map_err(|e| fit_error(label, e))?;
     let scale = Centred::new(&pts).map_err(|e| fit_error(label, e))?.map().scale();
-    let (accepted, ev) = accept_cylinder(label, &m, scale, fixed.is_some())?;
+    accept_cylinder(label, &m, scale, fixed.is_some())
+}
+
+fn fit_cylinder(label: &str, xyz: &[f64], fixed: Option<V3>) -> Result<(V3, V3, DatumEvidence), SimError> {
+    let (accepted, ev) = simulate_cylinder(label, xyz, fixed)?;
     match accepted.feature {
         FittedFeature::Cylinder { p, d, .. } => Ok((p, d, ev)),
         _ => Err(SimError::Fit { label: label.to_owned(), code: "not_a_cylinder" }),
@@ -322,9 +372,10 @@ pub fn build_measured_drf(
                 Hold::Fixed(z)
             } else {
                 // Only a secondary plane gives the nominal y (its normal made perpendicular to
-                // the primary's nominal); after two parallel axes, nothing else is nominal.
+                // the primary's nominal); after two parallel axes nothing else is nominal, so no
+                // orientation can be held for a datum not parallel to them.
                 if datums.get(1).map(|d| d.geometry.kind()) != Some(DatumKind::Plane) {
-                    return Err(oblique());
+                    return Err(SimError::OrientationUnsupported { label: f.label.to_owned() });
                 }
                 let ny = unit(reject(nominals[1], nz)).ok_or_else(oblique)?;
                 let nx = cross(ny, nz);
