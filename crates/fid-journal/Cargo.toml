@@ -1,6 +1,6 @@
 [package]
 name = "fid-journal"
-description = "Metrology Maven semantic journal: entry model and salted commitments, atomic durable append, branch heads and checkpoints, chain verification and entry listing, named branches, stream routing and the P0 Activity Log (spec nodes CORE.JRN.ENTRY, CORE.JRN.CHAIN.APPEND, CORE.JRN.CHAIN.CKPT, CORE.JRN.CHAIN.VERIFY, CORE.JRN.BR.NAME, CORE.JRN.STREAM.ALOG)"
+description = "Metrology Maven semantic journal: entry model and salted commitments, atomic durable append, branch heads and checkpoints, chain verification and entry listing, named branches, branch diff, stream routing and the P0 Activity Log (spec nodes CORE.JRN.ENTRY, CORE.JRN.CHAIN.APPEND, CORE.JRN.CHAIN.CKPT, CORE.JRN.CHAIN.VERIFY, CORE.JRN.BR.NAME, CORE.JRN.BR.DIFF, CORE.JRN.STREAM.ALOG)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -25,8 +25,8 @@ getrandom = "0.2"
 # is the only storage writer (storage-writers.toml); this crate reaches SQLite only through it.
 fid-store = { path = "../fid-store", optional = true }
 # CORE.JRN.CHAIN.VERIFY declares `journal.verify_chain@1` and `journal.list_entries@1`, and
-# CORE.JRN.BR.NAME the four branch commands, as registry definitions (CORE.REG.DEF), with the
-# store feature. Layer model, the same as this crate; already in the graph of every store user
+# CORE.JRN.BR.NAME the four branch commands and CORE.JRN.BR.DIFF `journal.diff_branch@1`, as
+# registry definitions (CORE.REG.DEF), with the store feature. Layer model, the same as this crate; already in the graph of every store user
 # (fid-bus).
 fid-registry = { path = "../fid-registry", optional = true }
 

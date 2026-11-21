@@ -16,6 +16,10 @@
 //! stored rows and lists entry headers; with feature `store` it reads them from the project
 //! database and declares `journal.verify_chain@1` and `journal.list_entries@1`.
 //!
+//! Module `diff` (`CORE.JRN.BR.DIFF`) diffs two branches entity by entity from verified entry
+//! headers (`journal.diff_branch@1`); with feature `store` it reads them from the project
+//! database and declares the command. The bus handler is in `fid-journal-cmd`.
+//!
 //! Module `stream` (`CORE.JRN.STREAM.ALOG`) routes completed calls to their stream and writes
 //! the P0 Activity Log; with feature `store` it also declares the Activity Log settings.
 
@@ -23,6 +27,7 @@
 pub mod append;
 pub mod branch;
 pub mod checkpoint;
+pub mod diff;
 pub mod entry;
 pub mod stream;
 pub mod verify;

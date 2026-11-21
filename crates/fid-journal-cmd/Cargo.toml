@@ -1,6 +1,6 @@
 [package]
 name = "fid-journal-cmd"
-description = "Metrology Maven journal commands on the bus: handlers of journal.create_branch@1, journal.list_branches@1, journal.protect_branch@1 and journal.set_branch_coediting@1 (spec node CORE.JRN.BR.NAME, bus half)"
+description = "Metrology Maven journal commands on the bus: handlers of journal.create_branch@1, journal.list_branches@1, journal.protect_branch@1, journal.set_branch_coediting@1 and journal.diff_branch@1 (spec nodes CORE.JRN.BR.NAME and CORE.JRN.BR.DIFF, bus half)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,7 +14,8 @@ repository.workspace = true
 fid-bus = { path = "../fid-bus" }
 # Canonical JSON values (CORE.JRN.CANON). Layer model.
 fid-canon = { path = "../fid-canon" }
-# The branch table, its planners and the four registry definitions (CORE.JRN.BR.NAME). Layer model.
+# The branch table, its planners and the four registry definitions (CORE.JRN.BR.NAME); the branch
+# diff and its definition (CORE.JRN.BR.DIFF). Layer model.
 fid-journal = { path = "../fid-journal", features = ["store"] }
 # Registry definitions (CORE.REG.DEF). Layer model.
 fid-registry = { path = "../fid-registry" }

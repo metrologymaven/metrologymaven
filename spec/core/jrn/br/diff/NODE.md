@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-journal, fid-journal-cmd]
+built_pr: 361
 satisfies: [REQ-CORE.JRN.BR-002]
 covers: []
 depends_on: [CORE.JRN.BR.NAME, CORE.JRN.CHAIN.APPEND, CORE.JRN.ENTRY, CORE.REG.DEF]
@@ -68,6 +70,12 @@ Answers "what would promoting this branch change?" without re-executing anything
 
 - Value-level deltas for the Proposal Inbox result layer would come from replay comparison; confirm the split with `VIZ.INBOX`.
 - This leaf relies on entity-tagged output digests in the entry header (`CORE.JRN.ENTRY`).
+- Build choices (module docs of `fid_journal::diff` pin them): the diff reads verified headers only (CHAIN.VERIFY steps 1 to 14, no blobs, no head cache, no checkpoints); a branch's head is its last `command` or `head_move` entry, else its `created_from`; a `created_from` naming a session header or principal upgrade resolves to the last state entry of that entry's branch at or before it; session headers and principal upgrades are not logical states; a `logical_parent` must name an earlier verified entry; a `head_move` is walked through its verified `head_move.to`, which must equal its `logical_parent` (else `invariant_violated`).
+- **Obligation on `CORE.BUS.ROUTE` and `CORE.JRN.UNDO`: no writer sets `logical_parent` yet.** Until ROUTE sets it on every commit (the branch's previous state; a new branch's first entry its `created_from`) and UNDO sets it on every `head_move` (equal to `head_move.to`), every entry is a root and two branches with different heads report `ancestor: null`: real forks are not yet diffed against their common ancestor.
+- **AC-3 is only partly met.** The diff itself reads headers only and is unchanged with payloads removed. Branch existence, `created_from` and owner come from `CORE.JRN.BR.NAME`'s origin-bound table, which is folded from event bodies in payloads; the `BranchSource`/`DiffSource` contract (`fid-journal-cmd`) now requires the bus wiring to check replayed events against each header's `events_commit`, but no wiring exists yet, and with payloads removed the table loses what it can no longer prove. Follow-up with the bus wiring and BR.NAME.
+- **Cost.** The walk covers the whole stream from sequence 1 (verification needs the chain from genesis), under the store's connection mutex, so cost grows with the journal, not with the entries since the ancestor; the performance budget above cannot hold on a long journal. Follow-up: a windowed walk anchored at a trusted head. Agent (MCP) calls get lower default bounds.
+- Without a trusted head a journal rewritten from some entry on, or cut at its tail, cannot be detected (CHAIN.VERIFY's limit); the diff takes an optional trusted head. Until TRUST.VERIFY, the bus passes none.
+- The result also names each side (`branch`, `head`, `owner`) and each command reference carries the verified header's principal kind; `VIZ.INBOX` may rely on both.
 
 ## Children
 
