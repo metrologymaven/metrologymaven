@@ -1,6 +1,6 @@
 //! The measured planar path of a DRF (spec node `GDT.DRF.BUILD`, P1a: planar datum features at
 //! RMB): from the measured points of one to three planar datum features, in precedence order,
-//! to certified simulated datum planes and the DRF [`build_drf`] assembles from them.
+//! to certified simulated datum planes and the DRF [`build_drf`](super::build::build_drf) assembles from them.
 //!
 //! Each datum plane is the tangential plane of `fid-fit` (`KRN.ENV.TAN.PLANE`) in the variant
 //! the DMT row's association step names ([`variant_of`]; constrained L2 is refused because
@@ -11,7 +11,7 @@
 //! # Orientation constraint per datum (pinned)
 //!
 //! The constraint a datum's simulator must respect follows from the DoFs its predecessors left
-//! free, as the DoF table of [`build_drf`] on the predecessors states it, and from the datum's
+//! free, as the DoF table of [`build_drf`](super::build::build_drf) on the predecessors states it, and from the datum's
 //! **nominal** outward normal compared with its predecessors' nominal outward normals (the
 //! basic relationship comes from the nominal, never from the measured planes):
 //!
@@ -19,7 +19,7 @@
 //! |---|---|---|
 //! | all (primary) | any | free normal: `fit_tan_plane` without constraint; must be certified (`strict_local`, with its `fid.cert@1` certificate) |
 //! | `rz` only (after a primary plane) | perpendicular to the primary nominal | normal held perpendicular to the DRF `z`, free about it (below) |
-//! | `rz` only | parallel to the primary nominal | normal fixed at `+-z` (then refused by [`build_drf`] as a degenerate pair) |
+//! | `rz` only | parallel to the primary nominal | normal fixed at `+-z` (then refused by [`build_drf`](super::build::build_drf) as a degenerate pair) |
 //! | none (after two planes) | parallel to the nominal `z`, `y` or `x` (`x = y x z` of the nominals) | normal fixed at the measured DRF axis, signed by the nominal |
 //! | any | any other angle | refused, `oblique_datum_unsupported{label}` |
 //!
@@ -59,7 +59,8 @@
 //! fixed candidate order, square roots through `fid_num::f::sqrt`, no FMA, no `f64::min` or
 //! `f64::max`, every NaN refused.
 
-use super::build::{build_drf, Dof, Drf, DrfError, SimGeometry, SimulatedDatum, ANGLE_TOL, MAX_DATUMS, UNIT_TOL};
+use super::build::{Drf, DrfError, SimGeometry, SimulatedDatum, ANGLE_TOL, MAX_DATUMS};
+use super::cyl_sim::{build_measured_drf, MeasuredFeature, MeasuredKind, Simulators};
 use crate::dmt::{AlgId, DmtKey};
 use fid_fit::contract::{Constraint, FitParams, FittedFeature, Method, PointsView};
 use fid_fit::tan_plane::{algorithm_id, fit_tan_plane, output_digest, Optimality, TanPlaneParams, TanPlaneResult};
@@ -114,15 +115,18 @@ impl Orientation {
     }
 }
 
-/// The evidence behind one simulated plane: what was fitted and how its optimality is known.
+/// The evidence behind one simulated datum (plane or, from [`super::cyl_sim`], axis): what was
+/// fitted and how its optimality is known.
 #[derive(Debug, Clone, PartialEq)]
-pub struct PlaneEvidence {
+pub struct DatumEvidence {
     /// The orientation constraint.
     pub orientation: Orientation,
-    /// `strict_local` (free normal, certified), `closed_form` (fixed normal) or
+    /// Planes: `strict_local` (free normal, certified), `closed_form` (fixed normal) or
     /// `closed_form_enumerated` (perpendicular to `z`, best of the hull-edge candidates).
+    /// Cylinders: `strict_local_cross_checked` (free direction, certified, global cross-check
+    /// passed) or `global` (fixed direction, a convex problem).
     pub optimality: &'static str,
-    /// The `fid.cert@1` certificate digest (free normal only).
+    /// The `fid.cert@1` certificate digest (free plane normal, and every cylinder).
     pub certificate: Option<Digest>,
     /// The certificate's `local_optimum_only` flag: always false, since a flagged fit is
     /// refused (`flagged_fit{label}`); kept so the document states it.
@@ -133,21 +137,29 @@ pub struct PlaneEvidence {
     pub points: u32,
     /// Candidates evaluated (1 unless enumerated).
     pub candidates: u32,
-    /// The variant's objective (m).
+    /// The variant's objective (m); a cylinder's is its radius.
     pub objective: f64,
     /// The largest violation (m), at most [`SIDE_TOL`].
     pub max_violation: f64,
     /// The contact points, ascending.
     pub contacts: Vec<u32>,
+    /// A free-direction cylinder's global cross-check outcome (always `passed`: any other is
+    /// refused); `None` for planes and fixed-direction cylinders.
+    pub cross_check: Option<&'static str>,
+    /// The multi-start seed of a cylinder fit; `None` for planes.
+    pub seed: Option<u64>,
 }
+
+/// The evidence of a simulated plane (the name before cylinders were added).
+pub type PlaneEvidence = DatumEvidence;
 
 /// A DRF built from measured planes: the frame, the simulated datums and their evidence, in
 /// precedence order.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeasuredDrf {
-    drf: Drf,
-    datums: Vec<SimulatedDatum>,
-    evidence: Vec<PlaneEvidence>,
+    pub(super) drf: Drf,
+    pub(super) datums: Vec<SimulatedDatum>,
+    pub(super) evidence: Vec<DatumEvidence>,
 }
 
 impl MeasuredDrf {
@@ -160,7 +172,7 @@ impl MeasuredDrf {
         &self.datums
     }
     /// The evidence of each simulated datum.
-    pub fn evidence(&self) -> &[PlaneEvidence] {
+    pub fn evidence(&self) -> &[DatumEvidence] {
         &self.evidence
     }
 }
@@ -177,7 +189,7 @@ pub enum SimError {
         alg: String,
     },
     /// `nominal_invalid{label}`: the nominal outward normal is not finite and unit within
-    /// [`UNIT_TOL`].
+    /// [`UNIT_TOL`](super::build::UNIT_TOL).
     NominalInvalid {
         /// The datum.
         label: String,
@@ -212,6 +224,21 @@ pub enum SimError {
         /// The datum.
         label: String,
     },
+    /// `unsupported_datum_type_p1a{label}`: an internal cylindrical datum feature (a bore). Its
+    /// simulator, the maximum inscribed cylinder (`KRN.ENV.MIC.CYL`), is not built, so no axis
+    /// is made up for it.
+    UnsupportedDatumType {
+        /// The datum.
+        label: String,
+    },
+    /// `orientation_constraint_unsupported{label}`: the datum's simulator would have to hold an
+    /// orientation the fit cannot take: a cylinder whose nominal axis lies perpendicular to the
+    /// frame's `z` while `rz` is free (its axis free about `z` only; `KRN.ENV.MCC.CYL` takes a
+    /// free or a fixed direction).
+    OrientationUnsupported {
+        /// The datum.
+        label: String,
+    },
 }
 
 impl SimError {
@@ -226,6 +253,8 @@ impl SimError {
             SimError::NotCertified { .. } => "not_certified",
             SimError::FlaggedFit { .. } => "flagged_fit",
             SimError::OffNominal { .. } => "off_nominal",
+            SimError::UnsupportedDatumType { .. } => "unsupported_datum_type_p1a",
+            SimError::OrientationUnsupported { .. } => "orientation_constraint_unsupported",
         }
     }
 }
@@ -239,7 +268,9 @@ impl fmt::Display for SimError {
             | SimError::ObliqueDatum { label: s }
             | SimError::NotCertified { label: s }
             | SimError::FlaggedFit { label: s }
-            | SimError::OffNominal { label: s } => write!(f, "{}{{{}}}", self.code(), s.escape_debug()),
+            | SimError::OffNominal { label: s }
+            | SimError::UnsupportedDatumType { label: s }
+            | SimError::OrientationUnsupported { label: s } => write!(f, "{}{{{}}}", self.code(), s.escape_debug()),
             SimError::Fit { label, code } => write!(f, "{}{{{}:{code}}}", self.code(), label.escape_debug()),
         }
     }
@@ -260,44 +291,44 @@ pub fn variant_of(alg: &AlgId) -> Option<TanVariant> {
     TanVariant::ALL.iter().copied().find(|v| algorithm_id(*v).to_string() == alg.as_str())
 }
 
-type V3 = [f64; 3];
+pub(super) type V3 = [f64; 3];
 
-fn dot(a: V3, b: V3) -> f64 {
+pub(super) fn dot(a: V3, b: V3) -> f64 {
     (a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]
 }
 
-fn cross(a: V3, b: V3) -> V3 {
+pub(super) fn cross(a: V3, b: V3) -> V3 {
     [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
 }
 
-fn scale(a: V3, s: f64) -> V3 {
+pub(super) fn scale(a: V3, s: f64) -> V3 {
     [a[0] * s, a[1] * s, a[2] * s]
 }
 
-fn reject(a: V3, u: V3) -> V3 {
+pub(super) fn reject(a: V3, u: V3) -> V3 {
     let d = dot(a, u);
     [a[0] - d * u[0], a[1] - d * u[1], a[2] - d * u[2]]
 }
 
-fn norm(a: V3) -> Option<f64> {
+pub(super) fn norm(a: V3) -> Option<f64> {
     fid_num::f::sqrt(dot(a, a)).ok().filter(|n| n.is_finite())
 }
 
-fn unit(a: V3) -> Option<V3> {
+pub(super) fn unit(a: V3) -> Option<V3> {
     let n = norm(a)?;
     let v = [a[0] / n, a[1] / n, a[2] / n];
     v.iter().all(|c| c.is_finite()).then_some(v)
 }
 
-fn parallel(a: V3, b: V3) -> bool {
+pub(super) fn parallel(a: V3, b: V3) -> bool {
     norm(cross(a, b)).is_some_and(|s| s < ANGLE_TOL)
 }
 
-fn perpendicular(a: V3, b: V3) -> bool {
+pub(super) fn perpendicular(a: V3, b: V3) -> bool {
     dot(a, b).abs() < ANGLE_TOL
 }
 
-fn sign_toward(axis: V3, nominal: V3) -> V3 {
+pub(super) fn sign_toward(axis: V3, nominal: V3) -> V3 {
     if dot(axis, nominal) < 0.0 {
         scale(axis, -1.0)
     } else {
@@ -305,13 +336,13 @@ fn sign_toward(axis: V3, nominal: V3) -> V3 {
     }
 }
 
-struct Ctx<'a> {
-    label: &'a str,
-    variant: TanVariant,
+pub(super) struct Ctx<'a> {
+    pub(super) label: &'a str,
+    pub(super) variant: TanVariant,
 }
 
 impl Ctx<'_> {
-    fn fit_err(&self, code: &'static str) -> SimError {
+    pub(super) fn fit_err(&self, code: &'static str) -> SimError {
         SimError::Fit { label: self.label.to_owned(), code }
     }
 
@@ -326,7 +357,7 @@ impl Ctx<'_> {
         })
     }
 
-    fn fit(&self, pts: &PointsView<'_>, fixed: Option<V3>, side: V3) -> Result<TanPlaneResult, SimError> {
+    pub(super) fn fit(&self, pts: &PointsView<'_>, fixed: Option<V3>, side: V3) -> Result<TanPlaneResult, SimError> {
         let mut fp = FitParams::new(Method::Tangential);
         if let Some(n) = fixed {
             fp.constraints.push(Constraint::FixedAxisDirection(n));
@@ -334,13 +365,13 @@ impl Ctx<'_> {
         fit_tan_plane(pts, &fp, &self.params(side)?, None).map_err(|e| self.fit_err(e.code()))
     }
 
-    fn evidence(
+    pub(super) fn evidence(
         &self,
         r: &TanPlaneResult,
         orientation: Orientation,
         optimality: &'static str,
         candidates: u32,
-    ) -> Result<PlaneEvidence, SimError> {
+    ) -> Result<DatumEvidence, SimError> {
         let (certificate, local_optimum_only) = match (&r.certificate, r.optimality) {
             (Some(c), Optimality::StrictLocal) => (Some(*c.digest()), c.flags().local_optimum_only),
             (None, Optimality::ClosedForm) => (None, false),
@@ -356,7 +387,7 @@ impl Ctx<'_> {
         if local_optimum_only {
             return Err(SimError::FlaggedFit { label: self.label.to_owned() });
         }
-        Ok(PlaneEvidence {
+        Ok(DatumEvidence {
             orientation,
             optimality,
             certificate,
@@ -367,6 +398,8 @@ impl Ctx<'_> {
             objective: r.objective,
             max_violation: r.max_violation,
             contacts: r.contacts.clone(),
+            cross_check: None,
+            seed: None,
         })
     }
 }
@@ -425,7 +458,7 @@ fn end_value(variant: TanVariant, v: &[f64]) -> f64 {
 }
 
 /// A plane held perpendicular to `z` and free about it (module documentation).
-fn about_z(
+pub(super) fn about_z(
     ctx: &Ctx<'_>,
     pts: &PointsView<'_>,
     xyz: &[f64],
@@ -494,7 +527,7 @@ fn about_z(
     Ok((best, tried))
 }
 
-fn plane_of(label: &str, r: &TanPlaneResult) -> Result<SimGeometry, SimError> {
+pub(super) fn plane_of(label: &str, r: &TanPlaneResult) -> Result<SimGeometry, SimError> {
     match r.feature {
         FittedFeature::Plane { p, n } => Ok(SimGeometry::Plane { point: p, normal: n }),
         _ => Err(SimError::Fit { label: label.to_owned(), code: "not_a_plane" }),
@@ -504,6 +537,7 @@ fn plane_of(label: &str, r: &TanPlaneResult) -> Result<SimGeometry, SimError> {
 /// Simulates every datum plane in precedence order and builds the DRF (module documentation).
 /// `alg` and `row` are the association algorithm of the resolved DMT row and its key; they are
 /// recorded on every datum. Pure and deterministic; every outcome is a returned `Result`.
+/// Planes only: [`super::cyl_sim::build_measured_drf`] takes planes and cylinders.
 pub fn build_measured_planar_drf(
     planes: &[MeasuredPlane<'_>],
     alg: &AlgId,
@@ -515,68 +549,15 @@ pub fn build_measured_planar_drf(
     if planes.len() > MAX_DATUMS {
         return Err(DrfError::TooManyDatums { count: planes.len() }.into());
     }
-    let variant = variant_of(alg).ok_or_else(|| SimError::UnsupportedSimulator { alg: alg.as_str().to_owned() })?;
-    let mut datums: Vec<SimulatedDatum> = Vec::new();
-    let mut evidence = Vec::new();
-    let mut nominals: Vec<V3> = Vec::new();
-    for p in planes {
-        let ctx = Ctx { label: p.label, variant };
-        let invalid = || SimError::NominalInvalid { label: p.label.to_owned() };
-        let nn = norm(p.nominal_outward).ok_or_else(invalid)?;
-        if (nn - 1.0).abs() > UNIT_TOL {
-            return Err(invalid());
-        }
-        let nominal = unit(p.nominal_outward).ok_or_else(invalid)?;
-        let pts = PointsView::new(p.xyz, None).map_err(|e| ctx.fit_err(e.code()))?;
-        let oblique = || SimError::ObliqueDatum { label: p.label.to_owned() };
-        let (r, ev) = if datums.is_empty() {
-            let r = ctx.fit(&pts, None, nominal)?;
-            let ev = ctx.evidence(&r, Orientation::Free, "strict_local", 1)?;
-            (r, ev)
-        } else {
-            let prefix = build_drf(&datums)?;
-            let [x, y, z] = prefix.axes();
-            let nz = nominals[0];
-            if prefix.free().contains(Dof::Rz) {
-                if parallel(nominal, nz) {
-                    let r = ctx.fit(&pts, Some(sign_toward(z, nominal)), nominal)?;
-                    let ev = ctx.evidence(&r, Orientation::Fixed, "closed_form", 1)?;
-                    (r, ev)
-                } else if perpendicular(nominal, nz) {
-                    let (r, tried) = about_z(&ctx, &pts, p.xyz, z, nominal)?;
-                    let ev = ctx.evidence(&r, Orientation::AboutZ, "closed_form_enumerated", tried)?;
-                    (r, ev)
-                } else {
-                    return Err(oblique());
-                }
-            } else {
-                let ny = unit(reject(nominals[1], nz)).ok_or_else(oblique)?;
-                let nx = cross(ny, nz);
-                let axis = if parallel(nominal, nz) {
-                    z
-                } else if parallel(nominal, ny) {
-                    y
-                } else if parallel(nominal, nx) {
-                    x
-                } else {
-                    return Err(oblique());
-                };
-                let r = ctx.fit(&pts, Some(sign_toward(axis, nominal)), nominal)?;
-                let ev = ctx.evidence(&r, Orientation::Fixed, "closed_form", 1)?;
-                (r, ev)
-            }
-        };
-        datums.push(SimulatedDatum {
-            label: p.label.to_owned(),
-            geometry: plane_of(p.label, &r)?,
-            alg: alg.clone(),
-            dmt_row: row.clone(),
-        });
-        evidence.push(ev);
-        nominals.push(nominal);
+    if variant_of(alg).is_none() {
+        return Err(SimError::UnsupportedSimulator { alg: alg.as_str().to_owned() });
     }
-    let drf = build_drf(&datums)?;
-    Ok(MeasuredDrf { drf, datums, evidence })
+    let sims = Simulators::from_association(&[alg])?;
+    let features: Vec<MeasuredFeature<'_>> = planes
+        .iter()
+        .map(|p| MeasuredFeature { label: p.label, xyz: p.xyz, nominal: p.nominal_outward, kind: MeasuredKind::Plane })
+        .collect();
+    build_measured_drf(&features, &sims, row)
 }
 
 #[cfg(test)]
