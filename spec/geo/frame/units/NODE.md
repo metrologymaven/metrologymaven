@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-21
 ---
 
 # GEO.FRAME.UNITS: Authored quantities and unit conversion
@@ -31,7 +31,7 @@ How lengths and angles cross the kernel boundary: an authored decimal keeps its 
 ## Scope
 
 **In:**
-- `LengthUnit`: m, mm, µm, nm, in, ft, thou (0.001 in)
+- `LengthUnit`: m, cm, mm, µm, nm, in, ft, thou (0.001 in)
 - `AngleUnit`: rad, deg, arcmin, arcsec, gon
 - `AuthoredQuantity { text, unit, si }` with parsing of plain decimals and exponents
 - Correctly rounded conversion of an exact decimal times an exact rational factor (lengths)
@@ -69,8 +69,8 @@ How lengths and angles cross the kernel boundary: an authored decimal keeps its 
 - **Performance budget:** 1 µs per conversion [unverified].
 - **Crate:** `fid-geo-frame` (kernel graph, KNP-1 applies; no float parsing from std is used for authored values).
 - **Pinned choices (build, value-affecting):**
-  - Symbols, ASCII and case-sensitive: `m`, `mm`, `um`, `nm`, `in`, `ft`, `thou`, `rad`, `deg`, `arcmin`, `arcsec`, `gon` (`um` as in `fid-num`'s formatters).
-  - Exact factors to SI: m 1, mm 1/1000, um 1/10^6, nm 1/10^9, in 127/5000, ft 381/1250, thou 127/5000000; rad 1, deg Π/180, arcmin Π/10800, arcsec Π/648000, gon Π/200, with Π = P / 2^254 and P the integer nearest π·2^254 (`0xc90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b139b22`, in [2^255, 2^256)).
+  - Symbols, ASCII and case-sensitive: `m`, `cm`, `mm`, `um`, `nm`, `in`, `ft`, `thou`, `rad`, `deg`, `arcmin`, `arcsec`, `gon` (`um` as in `fid-num`'s formatters).
+  - Exact factors to SI: m 1, cm 1/100, mm 1/1000, um 1/10^6, nm 1/10^9, in 127/5000, ft 381/1250, thou 127/5000000; rad 1, deg Π/180, arcmin Π/10800, arcsec Π/648000, gon Π/200, with Π = P / 2^254 and P the integer nearest π·2^254 (`0xc90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b139b22`, in [2^255, 2^256)).
   - Grammar `[+-] digits [ "." digits ] [ (e|E) [+-] digits ]`, ASCII, no whitespace or grouping (same as `fid-num` KDEC). Checks in order: more than 1024 bytes `TooManyDigits`; `nan`/`inf`/`infinity` in any case after an optional sign `NonFinite`; any other grammar failure `NotDecimal`; more than 40 significant digits, counted from the first non-zero digit to the last digit written, `TooManyDigits`; exact value at least 2^1024 − 2^970 `Overflow`. No exponent limit beyond that (written exponents saturate at ±10^9); results below half the smallest subnormal round to zero like any other value.
   - One rounding to nearest, ties to even, subnormals included. The sign of the result, zero included, is the sign written (`-0` and `-1e-400` give −0.0).
   - Display: `q = round_half_even(|x| / factor · 10^n)` on the exact binary value `x`, printed with exactly `n` digits after the point (none when `n = 0`), `-` only when `x` is negative and `q ≠ 0`; `n` ≤ 20 (`fid-num` `MAX_DECIMALS`), else `DigitsOutOfRange`; non-finite `x` is `NonFinite`. `format` therefore returns `Result<String, UnitsError>`.
@@ -85,11 +85,15 @@ How lengths and angles cross the kernel boundary: an authored decimal keeps its 
 
 ## Build prompt
 
-> In crate `fid-geo-frame` (pure Rust, no I/O, KNP-1), add module `units`: `LengthUnit { M, Mm, Um, Nm, In, Ft, Thou }`, `AngleUnit { Rad, Deg, Arcmin, Arcsec, Gon }`, `AuthoredQuantity { text, unit, si }` with `parse(text, unit) -> Result<AuthoredQuantity, UnitsError>` and `format(si, unit, digits) -> String`. Parse the decimal exactly (≤ 40 significant digits) into mantissa and exponent, multiply by the unit's exact rational factor, and round once to the nearest f64 (ties to even) with a fixed-width big-integer routine; never use `str::parse::<f64>` followed by a multiply. Angles: multiply by a 256-bit π constant and round once. Formatting: exact binary value times factor, rounded once half-to-even to `digits` places. Serialise as `{text, unit, si_hex}`. Acceptance: AC-1 2 000 fixture cases bit-exact; AC-2 inch and 0.1 mm cases; AC-3 typed errors for overflow, NaN, comma decimal, 41 digits; AC-4 display cases exact. Constraints: CONSTITUTION §4 (single journaled rounding), KNP-1, §8 (no panic, no `unsafe`). Files: `crates/fid-geo-frame/src/units.rs`, `src/bigint.rs`, `tests/units.rs`, `fixtures/geo/frame/units_cases.json`, `tools/fixtures/geo_units_cases.py`.
+> In crate `fid-geo-frame` (pure Rust, no I/O, KNP-1), add module `units`: `LengthUnit { M, Cm, Mm, Um, Nm, In, Ft, Thou }`, `AngleUnit { Rad, Deg, Arcmin, Arcsec, Gon }`, `AuthoredQuantity { text, unit, si }` with `parse(text, unit) -> Result<AuthoredQuantity, UnitsError>` and `format(si, unit, digits) -> String`. Parse the decimal exactly (≤ 40 significant digits) into mantissa and exponent, multiply by the unit's exact rational factor, and round once to the nearest f64 (ties to even) with a fixed-width big-integer routine; never use `str::parse::<f64>` followed by a multiply. Angles: multiply by a 256-bit π constant and round once. Formatting: exact binary value times factor, rounded once half-to-even to `digits` places. Serialise as `{text, unit, si_hex}`. Acceptance: AC-1 2 000 fixture cases bit-exact; AC-2 inch and 0.1 mm cases; AC-3 typed errors for overflow, NaN, comma decimal, 41 digits; AC-4 display cases exact. Constraints: CONSTITUTION §4 (single journaled rounding), KNP-1, §8 (no panic, no `unsafe`). Files: `crates/fid-geo-frame/src/units.rs`, `src/bigint.rs`, `tests/units.rs`, `fixtures/geo/frame/units_cases.json`, `tools/fixtures/geo_units_cases.py`.
 
 ## Open questions
 
 - Whether other domains (UNC, RPT) should reuse this module for non-length quantities, which would move it to a shared crate; kept in GEO.FRAME for now as the parent scoped it.
+
+## Change log
+
+- 2026-11-21, maintainer decision: add cm, needed by IO.CAD.STEP.HDR. `LengthUnit::Cm`, symbol `cm`, exact factor 1/100 (0.01 m), parsed, displayed and converted like every other length unit (one rounding). STEP files declare centimetre contexts, and without `cm` here such a file could not carry its unit in the `IO.REG.PROV` record. The variant sits after `M` in the enum and in `LengthUnit::ALL`; the relative order of the other units is unchanged. Catalogue consumers see one more length unit: the `CORE.REG.DEF.SCHEMA` catalogue fixture, its digest and the manifest fixtures that carry it were regenerated by their Python scripts.
 
 ## Children
 

@@ -52,6 +52,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # Exact factors to metres (GEO.FRAME.UNITS table) and their decimal text (pinned in NODE.md).
 UNITS = {
     "m": (Fraction(1), "1"),
+    "cm": (Fraction(1, 100), "0.01"),
     "mm": (Fraction(1, 1000), "0.001"),
     "um": (Fraction(1, 10**6), "0.000001"),
     "nm": (Fraction(1, 10**9), "0.000000001"),

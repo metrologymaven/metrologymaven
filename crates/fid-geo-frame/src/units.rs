@@ -15,10 +15,11 @@
 //! | symbol | factor | | symbol | factor |
 //! |---|---|---|---|---|
 //! | `m` | 1 | | `rad` | 1 |
-//! | `mm` | 1/1000 | | `deg` | Π/180 |
-//! | `um` | 1/10^6 | | `arcmin` | Π/10800 |
-//! | `nm` | 1/10^9 | | `arcsec` | Π/648000 |
-//! | `in` | 127/5000 (0.0254) | | `gon` | Π/200 |
+//! | `cm` | 1/100 | | `deg` | Π/180 |
+//! | `mm` | 1/1000 | | `arcmin` | Π/10800 |
+//! | `um` | 1/10^6 | | `arcsec` | Π/648000 |
+//! | `nm` | 1/10^9 | | `gon` | Π/200 |
+//! | `in` | 127/5000 (0.0254) | | | |
 //! | `ft` | 381/1250 (0.3048) | | | |
 //! | `thou` | 127/5000000 (0.0000254) | | | |
 //!
@@ -135,6 +136,8 @@ impl std::error::Error for UnitsError {}
 pub enum LengthUnit {
     /// Metre.
     M,
+    /// Centimetre, exactly 0.01 m.
+    Cm,
     /// Millimetre.
     Mm,
     /// Micrometre (written `um`).
@@ -151,8 +154,9 @@ pub enum LengthUnit {
 
 impl LengthUnit {
     /// Every length unit.
-    pub const ALL: [LengthUnit; 7] = [
+    pub const ALL: [LengthUnit; 8] = [
         LengthUnit::M,
+        LengthUnit::Cm,
         LengthUnit::Mm,
         LengthUnit::Um,
         LengthUnit::Nm,
@@ -165,6 +169,7 @@ impl LengthUnit {
     pub const fn symbol(self) -> &'static str {
         match self {
             LengthUnit::M => "m",
+            LengthUnit::Cm => "cm",
             LengthUnit::Mm => "mm",
             LengthUnit::Um => "um",
             LengthUnit::Nm => "nm",
@@ -178,6 +183,7 @@ impl LengthUnit {
     pub const fn ratio(self) -> (u32, u32) {
         match self {
             LengthUnit::M => (1, 1),
+            LengthUnit::Cm => (1, 100),
             LengthUnit::Mm => (1, 1_000),
             LengthUnit::Um => (1, 1_000_000),
             LengthUnit::Nm => (1, 1_000_000_000),
