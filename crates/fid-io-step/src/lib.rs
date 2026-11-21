@@ -17,14 +17,23 @@
 //! What any entity means is out of scope (other `IO.CAD.STEP` leaves). Edition-3 anchor,
 //! reference and signature sections are rejected with `step_feature_unsupported`.
 //! Every outcome is a returned `Result`; nothing here panics on any input.
+//!
+//! The [`header`] module (spec node `IO.CAD.STEP.HDR`) reads the header of a parsed file:
+//! schema acceptance, `FILE_NAME`/`FILE_DESCRIPTION` as untrusted text, and the length
+//! unit, plane-angle unit and uncertainty of every geometric representation context.
 
 mod error;
+pub mod header;
 mod parse;
 mod print;
 mod real;
 mod text;
 
 pub use error::{Bound, StepError};
+pub use header::{
+    resolve_header, AngleUnit, HeaderError, HeaderOptions, HeaderWarning, StepHeaderInfo, StepLengthUnit, StepSchema,
+    UnitContext,
+};
 pub use print::{print, print_with, PrintOptions, RealStyle};
 
 use fid_io_reg::{BoundedSource, Budget, LimitRequest, Principal, UntrustedText};

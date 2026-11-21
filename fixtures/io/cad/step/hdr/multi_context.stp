@@ -1,0 +1,22 @@
+ISO-10303-21;
+HEADER;
+/* Synthetic fixture for spec node IO.CAD.STEP.HDR (Metrology Maven), CC-BY-4.0. Three contexts: mm, micrometre, and an unreferenced one without units. */
+FILE_DESCRIPTION(('synthetic header fixture'),'2;1');
+FILE_NAME('multi_context.stp','2026-11-20T00:00:00',('Fixture Author','Second Author'),('Metrology Maven'),'make_cases.py','fid synthetic generator','');
+FILE_SCHEMA(('ap242_managed_model_based_3d_engineering_mim_lf'));
+ENDSEC;
+DATA;
+#1=CARTESIAN_POINT('origin',(0.,0.,0.));
+#10=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.));
+#11=(NAMED_UNIT(*)PLANE_ANGLE_UNIT()SI_UNIT($,.RADIAN.));
+#15=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MICRO.,.METRE.));
+#16=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.NANO.,.METRE.));
+#17=UNCERTAINTY_MEASURE_WITH_UNIT(PLANE_ANGLE_MEASURE(1.E-03),#11,'angle','not a length');
+#18=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(2.5E-02),#16,'distance_accuracy_value','in nm');
+#30=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNIT_ASSIGNED_CONTEXT((#10,#11))REPRESENTATION_CONTEXT('ctx 30','synthetic'));
+#31=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#17,#18))GLOBAL_UNIT_ASSIGNED_CONTEXT((#15,#11))REPRESENTATION_CONTEXT('ctx 31','synthetic'));
+#32=GEOMETRIC_REPRESENTATION_CONTEXT('unused','no units',3);
+#40=SHAPE_REPRESENTATION('shape',(#1),#30);
+#41=SHAPE_REPRESENTATION('shape',(#1),#31);
+ENDSEC;
+END-ISO-10303-21;

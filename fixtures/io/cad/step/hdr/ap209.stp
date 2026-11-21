@@ -1,0 +1,15 @@
+ISO-10303-21;
+HEADER;
+/* Synthetic fixture for spec node IO.CAD.STEP.HDR (Metrology Maven), CC-BY-4.0. AC-3: schema outside the accepted list. */
+FILE_DESCRIPTION(('synthetic header fixture'),'2;1');
+FILE_NAME('ap209.stp','2026-11-20T00:00:00',('Fixture Author','Second Author'),('Metrology Maven'),'make_cases.py','fid synthetic generator','');
+FILE_SCHEMA(('AP209_MULTIDISCIPLINARY_ANALYSIS_AND_DESIGN_MIM_LF'));
+ENDSEC;
+DATA;
+#1=CARTESIAN_POINT('origin',(0.,0.,0.));
+#10=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.));
+#11=(NAMED_UNIT(*)PLANE_ANGLE_UNIT()SI_UNIT($,.RADIAN.));
+#14=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNIT_ASSIGNED_CONTEXT((#10,#11))REPRESENTATION_CONTEXT('ctx 14','synthetic'));
+#20=SHAPE_REPRESENTATION('shape',(#1),#14);
+ENDSEC;
+END-ISO-10303-21;
