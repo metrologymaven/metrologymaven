@@ -14,4 +14,4 @@ pub use layout::{
     VerifiedFolder,
 };
 pub use schema::{Database, Migration, MigrationHooks, MigrationPlan, SchemaError, SchemaVersion};
-pub use txn::{Committed, RowOp, Store, Txn, TxnError, Value};
+pub use txn::{AppendClaim, Committed, RowOp, Store, Txn, TxnError, Value};
