@@ -14,9 +14,6 @@ path = "src/main.rs"
 [dependencies]
 fid-canon = { path = "../fid-canon" }
 fid-surface = { path = "../fid-surface" }
-# `fid migrate list-sources` (MIG.SRC.REG): the source register and `migrate.list_sources@1`
-# (services layer, below this app crate).
-fid-mig = { path = "../fid-mig" }
 
 [lints]
 workspace = true

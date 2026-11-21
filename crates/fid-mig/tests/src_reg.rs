@@ -195,6 +195,10 @@ fn embedded_register_passes_the_check() {
     // The workspace manifest has no format catalogue yet; the empty register needs none.
     assert!(check(fid_mig::src::reg::EMBEDDED, br#"{"commands":[]}"#).is_ok());
     assert_eq!(reg.policy().as_str(), "D-033-A");
+    // The command over the embedded register lists it (moved from the removed `fid` CLI test).
+    let v = run_list_sources(fid_mig::src::reg::EMBEDDED, &params("{}")).unwrap();
+    let text = String::from_utf8(fid_canon::to_canonical_bytes(&v).unwrap()).unwrap();
+    assert!(text.contains("\"policy\":\"D-033-A\""), "{text}");
 }
 
 #[test]

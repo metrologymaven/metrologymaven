@@ -9,8 +9,6 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
-built_in: [fid-mig, fid-xtask, fid-cli]
-built_pr: 387
 satisfies: [REQ-MIG.SRC-001, REQ-MIG.SRC-002, REQ-MIG.SRC-005, REQ-MIG.SRC-006]
 covers: []
 depends_on: [IO.REG.DETECT, CORE.JRN.CANON]
@@ -83,11 +81,13 @@ The source register as data (`mig-sources@1`): one entry per incumbent artefact 
 
 - The registry manifest needs a format catalogue (the IO.REG.DETECT descriptor IDs, for example a top-level `formats` array of `{id}` objects) before any open format can be named here; until then `sources-check` refuses every non-native format. To be settled with CORE.REG.MAN and IO.REG.DETECT.
 
+- `fid migrate list-sources` is not built yet. `fid-cli` has no dispatch path to registry commands: it has no bus client and no registry-built command table (AUTO.SURF), and linking `fid-mig` directly is a surface side door (`lint_crate_graph`, `surface_dep fid-cli -> fid-mig -> fid-registry`). Until AUTO.SURF gives `fid` a bus dispatch, `migrate.list_sources@1` is reachable through the bus and MCP (`migrate_list_sources`) only. AC-5 and AC-6 are tested at the command (`run_list_sources`) in `crates/fid-mig/tests/src_reg.rs`; their CLI form stays open, so this leaf is not marked built.
+
 - The production register's initial content (which incumbent products and export routes to list) needs a human reviewer and, per D-033's condition, counsel review before release [unverified export routes].
 
 ## As built
 
-- `fid-mig` module `src::reg`: loader, `check`, `list_sources`, `render_md`, `run_list_sources` and the registry definition of `migrate.list_sources@1` (registered in `fid-registry-build` `SOURCES`). `cargo xtask mig sources-check --register <json> [--vocab-rules <toml>]` in `fid-xtask`; `fid migrate list-sources [--kind] [--status] [--format json|md] [--register FILE] [--json]` in `fid-cli`.
+- `fid-mig` module `src::reg`: loader, `check`, `list_sources`, `render_md`, `run_list_sources` and the registry definition of `migrate.list_sources@1` (registered in `fid-registry-build` `SOURCES`). `cargo xtask mig sources-check --register <json> [--vocab-rules <toml>]` in `fid-xtask`. The CLI form `fid migrate list-sources` is not built (see Open questions).
 - The review record is inline in its entry (`review`), and its `entry` field must name the entry, so a reference cannot dangle. A review record is self-asserted data: its authority comes from the code-owner-reviewed merge of `data/mig/sources.json` (`.github/CODEOWNERS`), not from its own fields. An export route is `{format, note}`, where `format` is an open format ID or `none`.
 - Version ranges are `<lo>..<hi>`. Each end is `*` or a dotted numeric version of 1 to 4 components, both ends are inclusive and missing components count as 0, so `3..5.2` holds 5.2 but not 5.2.1.
 - Every free-text field and product name is refused (`SRC-SCHEMA`) if it holds control, line or paragraph separator (U+2028/2029), invisible-operator (U+2060 to U+2064), bidi-mark (U+061C, U+200E/F) or bidi-override characters, Markdown/HTML metacharacters, or a link or address marker (`://`, `www.`, `@`). The page is then rendered without escaping and carries no link from the register.
