@@ -1,0 +1,8 @@
+{
+  "format": "status-skin@1",
+  "themes": {
+    "hc": {
+      "stale": "#a90617"
+    }
+  }
+}

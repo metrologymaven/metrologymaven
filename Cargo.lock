@@ -1561,6 +1561,7 @@ dependencies = [
  "fid-canon",
  "fid-journal",
  "fid-kci",
+ "fid-registry",
  "fid-store",
  "fid-types",
  "getrandom 0.2.17",
@@ -1620,6 +1621,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-mcp"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-journal",
+ "fid-registry",
+ "fid-registry-build",
+ "fid-surface",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-mig"
 version = "0.0.1"
 dependencies = [
@@ -1652,6 +1666,16 @@ dependencies = [
  "fid-types",
  "sha2 0.10.9",
  "toml",
+]
+
+[[package]]
+name = "fid-overlay"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-gdt",
+ "fid-kdec",
+ "fid-render",
 ]
 
 [[package]]
@@ -1729,6 +1753,8 @@ dependencies = [
  "fid-canon",
  "fid-project",
  "fid-registry",
+ "fid-store",
+ "fid-types",
 ]
 
 [[package]]
@@ -1793,6 +1819,7 @@ dependencies = [
  "fid-project-cmd",
  "fid-rdl",
  "fid-registry",
+ "fid-registry-build",
  "fid-report",
  "fid-store",
  "fid-surface",
@@ -1951,6 +1978,7 @@ name = "fid-surface-gen"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-mcp",
  "fid-surface",
  "fid-types",
 ]

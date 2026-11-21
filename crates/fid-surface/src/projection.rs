@@ -195,6 +195,10 @@ pub struct SurfaceProjection {
     /// Declared `effects` (journal event types), in manifest order. Registry metadata read by
     /// [`crate::roots::is_root_config`] (AUTO.SURF.ROOTS); not part of [`Self::to_value`].
     pub effects: Vec<String>,
+    /// Declared `exposure` (the surfaces the command is offered on), in manifest order. Registry
+    /// metadata read by the MCP emitter (AUTO.MCP.PROJ), which lists no tool for a command
+    /// without `mcp` here, as the bus refuses it on MCP; not part of [`Self::to_value`].
+    pub exposure: Vec<String>,
     /// The parameter schema declares `"path_like": true` somewhere other than on a top-level
     /// property. Such a file parameter cannot be checked, so every surface refuses the command
     /// ([`crate::roots::gate_raw_paths`]); not part of [`Self::to_value`].
@@ -467,6 +471,7 @@ struct Def {
     determinism: Determinism,
     human_only: bool,
     effects: Vec<String>,
+    exposure: Vec<String>,
 }
 
 impl Def {
@@ -527,20 +532,24 @@ fn read_def(index: usize, mut o: BTreeMap<String, CValue>) -> Result<Entry, Proj
     let (Some(params_schema), Some(result_schema)) = (o.remove("params_schema"), o.remove("result_schema")) else {
         return Err(at("missing schema"));
     };
-    let effects = match o.remove("effects") {
-        Some(CValue::Arr(items)) => {
-            let mut out = Vec::new();
-            out.try_reserve_exact(items.len()).map_err(|_| ProjError::AllocFailed)?;
-            for item in items {
-                match item {
-                    CValue::Str(s) => out.push(s),
-                    _ => return Err(at("effects must be an array of strings")),
+    let mut strings = |k: &str| -> Result<Vec<String>, ProjError> {
+        match o.remove(k) {
+            Some(CValue::Arr(items)) => {
+                let mut out = Vec::new();
+                out.try_reserve_exact(items.len()).map_err(|_| ProjError::AllocFailed)?;
+                for item in items {
+                    match item {
+                        CValue::Str(s) => out.push(s),
+                        _ => return Err(at(&format!("{k} must be an array of strings"))),
+                    }
                 }
+                Ok(out)
             }
-            out
+            _ => Err(at(&format!("{k} must be an array of strings"))),
         }
-        _ => return Err(at("effects must be an array of strings")),
     };
+    let effects = strings("effects")?;
+    let exposure = strings("exposure")?;
     let def = Def {
         title,
         description,
@@ -551,6 +560,7 @@ fn read_def(index: usize, mut o: BTreeMap<String, CValue>) -> Result<Entry, Proj
         determinism,
         human_only,
         effects,
+        exposure,
     };
     Ok(Entry { id, def })
 }
@@ -687,6 +697,7 @@ pub fn project(manifest: &[u8]) -> Result<Projection, ProjError> {
             dry_run: false,
             help: DocText { title: def.title, description: def.description },
             effects: def.effects,
+            exposure: def.exposure,
             nested_path_like,
             command_id: id,
         });

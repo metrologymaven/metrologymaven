@@ -69,6 +69,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # fid-kunc kernel types; needs fid-bus and fid-replay (engine), so engine, outside the kernel graph.
 "fid-unc" = "engine"
 "fid-surface" = "services"
+# MCP surface (AUTO.MCP.PROJ): tool projection over fid-surface (services) and the tool-call adapter;
+# a [surfaces] crate in lint-allowlist.toml, so it never links the bus.
+"fid-mcp" = "services"
 "fid-report-pdf" = "services"
 # Report model (RPT.MODEL): document, pages, blocks and report commands.
 "fid-report" = "services"
@@ -124,6 +127,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-eval-board" = "tool"
 "fid-shlint" = "tool"
 "fid-render" = "viewer"
+# Status markers, palette guard, provenance badges (VIZ.OVERLAY.STATUS).
+"fid-overlay" = "viewer"
 # View state model (VIZ.VIEW.STATE): ViewState, its canonical form and digest.
 "fid-view" = "viewer"
 "fid-eval-harness" = "tool"

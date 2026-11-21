@@ -1,0 +1,8 @@
+{
+  "format": "status-skin@1",
+  "themes": {
+    "floor": {
+      "not-evaluated": "#8c4200"
+    }
+  }
+}
