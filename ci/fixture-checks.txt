@@ -4,6 +4,7 @@
 # The color-check line is the design-token release gate (UX.TOKENS.CHECK, with the frozen palette
 # baseline): a token, status or palette change that breaks a contrast, colour-vision, immutability
 # or structure rule fails this step.
+bash crates/fid-catalog/tests/offline.sh
 cargo run -q -p fid-design -- color-check --root design --baseline fixtures/ux/tokens/check/palette-baseline.json
 cargo xtask convergence-doc --manifest fixtures/aln/qa/hist-manifest/fixed.json --check fixtures/aln/qa/hist-manifest/expected-fragment.md
 python -m unittest discover -s tools/house_rules/tests -v
@@ -148,6 +149,7 @@ python fixtures/rec/life/make_fixtures.py --check
 python fixtures/rel/guide/make_fixtures.py --check
 python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
+python fixtures/rpt/catalog/make_schema_fixtures.py --check
 python fixtures/rpt/model/bind/expand/make_fixtures.py --check
 python fixtures/rpt/model/bracket_3stage/make_fixtures.py --check
 python fixtures/rpt/model/fmt/make_cases.py --check
