@@ -16,11 +16,22 @@
 //!   `history_overflow`), the stopping criterion that fired and the certified final pose. The
 //!   registry-manifest `convergence` block check and its documentation fragment live in
 //!   `fid-xtask` (`convergence-check`, `convergence-doc`).
+//! - `ALN.QA.COND`: [`cond`], [`diagnose`] of a free-parameter Jacobian: length-scaled
+//!   singular values (fid-num QR and one-sided Jacobi SVD), the condition number, the weakest
+//!   DoF and the `ill_conditioned` / `unobservable_dof` warnings, as [`AlignmentDiagnostics`]
+//!   with the convergence history attached. The read command `align.get_diagnostics@1` lives
+//!   in `fid-align`.
 
+pub mod cond;
 pub mod constr;
 pub mod hist;
 pub mod report;
 
+pub use cond::{
+    diagnose, diagnose_reduced, AlignmentDiagnostics, Axis, CondError, CondWarning, MotionKind, PivotKind, Threshold,
+    ThresholdBasis, WeakestDof, AXIS_COMPONENT, DEFAULT_ILL_THRESHOLD, MAX_COND_ROWS, MAX_SCALE_POINTS,
+    UNOBSERVABLE_FLOOR, UNOBSERVABLE_GUARD,
+};
 pub use constr::{
     combined_weights, linearise, pose_from_params, reduced_jacobian, validate, verify_locks, CertifiedPose,
     ConstrError, ConstraintSet, Dof, DofLocks, FrameContext, Jacobian, Linearisation, LockFrameRef, RegionWeight,

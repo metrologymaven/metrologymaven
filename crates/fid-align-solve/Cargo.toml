@@ -1,6 +1,6 @@
 [package]
 name = "fid-align-solve"
-description = "Metrology Maven alignment kernel: the ResidualReport every alignment solver writes, its builder, fixed-order statistics and digest (ALN.QA.REPORT); degree-of-freedom locks, pose parameterisation, reduced Jacobian and weights for best-fit (ALN.BFIT.CONSTR)"
+description = "Metrology Maven alignment kernel: the ResidualReport every alignment solver writes, its builder, fixed-order statistics and digest (ALN.QA.REPORT); degree-of-freedom locks, pose parameterisation, reduced Jacobian and weights for best-fit (ALN.BFIT.CONSTR); conditioning and weak-DoF diagnostics (ALN.QA.COND)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,7 +12,8 @@ repository.workspace = true
 # comparison), fid-kci (portable SHA-256 and the kernel canonical JSON writer) and fid-types
 # (the shared `sha256:` digest type, AGENTS.md rule 14), and the kernel-layer fid-geo-frame
 # (rigid transforms, their pinned composition and the frame tree that names the lock frame,
-# ALN.BFIT.CONSTR).
+# ALN.BFIT.CONSTR). ALN.QA.COND uses fid-num's Householder QR and one-sided Jacobi SVD
+# (KRN.NUM.LA.QR, KRN.NUM.LA.SVD).
 [dependencies]
 fid-geo-frame = { path = "../fid-geo-frame" }
 fid-num = { path = "../fid-num" }
