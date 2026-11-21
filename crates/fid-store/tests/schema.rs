@@ -900,7 +900,7 @@ fn open_hardened_returns_a_hardened_connection_and_never_creates() {
     assert!(!t.0.join("other.db").exists());
     std::fs::write(t.0.join("other.db"), b"").unwrap();
     // Not a plain file name, or a relative directory: refused before SQLite is called.
-    for name in ["", ".", "..", "a/other.db", "a\other.db"] {
+    for name in ["", ".", "..", "a/other.db", r"a\other.db"] {
         assert_eq!(open_hardened(&t.0, name, OpenMode::Read, BUSY_TIMEOUT).unwrap_err().code(), "path_unsupported");
     }
     let rel = Path::new("relative");
