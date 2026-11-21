@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-pkg]
+built_pr: 423
 satisfies: [REQ-TRUST.PKG-001, REQ-TRUST.PKG-007, REQ-TRUST.PKG-008]
 covers: []
 depends_on: [TRUST.PKG.MANIFEST, TRUST.SIGN.DSSE]
