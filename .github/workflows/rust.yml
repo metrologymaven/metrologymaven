@@ -75,6 +75,12 @@ jobs:
         env:
           FID_OOC_FULL: "1"
         run: cargo test --release -p fid-geo-ooc --test cloud_5e6 -- --nocapture
+      - name: Batch projection on the full 1 000 000-point scan in release (GEO.DIST.BATCH AC-1, AC-4)
+        # Plain `cargo test` runs the first 50 000 points of the same seeded scan on every OS.
+        if: runner.os == 'Linux'
+        env:
+          FID_BATCH_POINTS: "1000000"
+        run: cargo test --release -p fid-geo-dist --test batch -- --nocapture
       - name: Kernel WASM shim with its stand-in test algorithms, natively (KRN.MAN.WASM AC-2)
         run: |
           cargo clippy -p fid-kernel-wasm --all-targets --features test-algorithms -- -D warnings
