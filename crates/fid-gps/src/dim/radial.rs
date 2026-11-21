@@ -266,6 +266,9 @@ fn available(primitive: Primitive) -> Option<(u32, u32, u32)> {
     }
 }
 
+// `FitError` is `fid-fit`'s own error (about 136 bytes, see the note in `fid-fit`); it is
+// returned at most once per evaluation and mapped at once, so it is not boxed.
+#[allow(clippy::result_large_err)]
 fn run_fit(primitive: Primitive, pts: &PointsView<'_>) -> Result<FitResult, FitError> {
     match primitive {
         Primitive::Circle2 => ls_rnd::Circle2Ls.fit(pts, &ls_rnd::default_params(), None),
