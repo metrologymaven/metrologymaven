@@ -195,8 +195,9 @@ fn malformed_packages_fail_closed() {
             other => panic!("{k}: {other:?}"),
         };
         let name = s("name");
-        let err = plan(&mut open(&format!("malformed/{name}.zip")), &Available(true))
-            .expect_err(&format!("{name}: accepted"));
+        let Err(err) = plan(&mut open(&format!("malformed/{name}.zip")), &Available(true)) else {
+            panic!("{name}: accepted")
+        };
         assert_eq!(err.code(), s("code"), "{name}: {err}");
         assert_eq!(err.reason(), Some(s("reason").as_str()), "{name}: {err}");
     }
