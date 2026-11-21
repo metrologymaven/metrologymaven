@@ -1,30 +1,31 @@
 //! Acceptance criteria of spec node CORE.BUS.PIPE.STAGE (AC-1 to AC-3 and AC-6 to AC-10),
-//! plus the commit-stage compare-and-swap, commit hooks, leading entries and the reason
-//! parameter, against `fixtures/core/bus/pipe/stage/probes/registry.json` and `cases.json`,
-//! written by the independent reference `fixtures/core/bus/pipe/stage/make_fixtures.py`
-//! (outcomes hand-labelled from the spec). Commits go to a real `fid_journal::Journal`.
+//! plus the commit-stage compare-and-swap, commit hooks, poisoning, the bus's agent-branch
+//! check and the reason parameter, against `fixtures/core/bus/pipe/stage/probes/registry.json`
+//! and `cases.json`, written by the independent reference
+//! `fixtures/core/bus/pipe/stage/make_fixtures.py` (outcomes hand-labelled from the spec).
+//! Commits go to a real `fid_journal::Journal`.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_bus::error::{BusError, Detail, PreconditionReason};
 use fid_bus::handler::{EntityId, EntityRef, Event, EventType, Handler, HandlerCtx, HandlerError, HandlerSet};
 use fid_bus::handler::{SettingKey, StateView, ValidParams};
 use fid_bus::pipeline::{
-    Bus, BusEnv, BusParts, Call, CommandResult, CommitHook, CommitRecord, Invocation, LeadingEntries, OpenBranch,
-    RecordJournal, Stage, StageProbe, SystemCall, Watch,
+    Bus, BusEnv, BusParts, Call, CommandResult, CommitHook, CommitRecord, Invocation, OpenBranch, RecordJournal,
+    Router, Stage, StageProbe, StagedFold, SystemCall, Watch,
 };
 use fid_bus::policy::projection::{
     EntryOrigin, RequestBook, RequestId, RequestState, REQUEST_APPROVED, REQUEST_FILED, REQUEST_REJECTED,
     REQUEST_WITHDRAWN,
 };
+use fid_bus::principal::Principal;
 use fid_bus::principal::{Channel, ChannelKind, Identity, OsUser, PrincipalId, PrincipalKind, PrincipalRef};
 use fid_bus::principal::{SessionId, SessionKey, SessionTable};
 use fid_bus::validate::{CommandTable, NoRoots};
 use fid_canon::{parse, CValue, Digest};
 use fid_journal::stream::{format_utc, ActivityLog, ActivityLogConfig, RecordingFlag, Streams, CURRENT_FILE};
 use fid_journal::{
-    session_start, AiAssistance, AppendRequest, CommandDraft, DraftBody, EntryDraft, EntryHash, EntryHeader,
-    EntryPayload, EntryTime, Field, HeaderBody, Journal, Manifests, PrincipalDraft, SessionInfo, TaggedDigest,
-    R1_RESULT_TAG,
+    AiAssistance, AppendRequest, CommandDraft, DraftBody, EntryDraft, EntryHash, EntryHeader, EntryPayload, EntryTime,
+    Field, HeaderBody, Journal, Manifests, PrincipalDraft, TaggedDigest, R1_RESULT_TAG,
 };
 use fid_registry::{Catalogue, CommandDef, ContextTypes};
 use fid_store::ProjectLocation;
@@ -32,7 +33,7 @@ use fid_types::{CommandId, Determinism, SideEffect};
 use fid_uuid::Uuid;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
@@ -310,6 +311,11 @@ fn stale() -> BusError {
     BusError::Conflict(fid_bus::error::ConflictReason::HeadMoved, Detail::new("hook: decided-against state moved"))
 }
 
+struct CountingStage<'a> {
+    hook: &'a Counting,
+    staged: Vec<Seen>,
+}
+
 impl CommitHook for Counting {
     fn name(&self) -> &str {
         "counting"
@@ -317,27 +323,39 @@ impl CommitHook for Counting {
     fn watch(&self) -> Watch {
         self.watch.clone()
     }
-    fn precommit(&self, r: &CommitRecord<'_>, events: &[Event]) -> Result<(), BusError> {
+    fn stage(&self) -> Result<Box<dyn StagedFold + '_>, BusError> {
+        Ok(Box::new(CountingStage { hook: self, staged: Vec::new() }))
+    }
+}
+
+impl StagedFold for CountingStage<'_> {
+    fn precommit(&mut self, r: &CommitRecord<'_>, events: &[Event]) -> Result<(), BusError> {
         assert_eq!(r.hash(), r.header().hash);
         assert_eq!(r.promoted_from(), None);
-        self.precommits.lock().unwrap().push(seen(r, events));
-        if self.refuse_precommit.load(Ordering::SeqCst) {
+        self.hook.precommits.lock().unwrap().push(seen(r, events));
+        if self.hook.refuse_precommit.load(Ordering::SeqCst) {
             return Err(stale());
         }
+        self.staged.push(seen(r, events));
         Ok(())
     }
-    fn fold(&self, r: &CommitRecord<'_>, events: &[Event]) -> Result<(), BusError> {
-        self.folds.lock().unwrap().push(seen(r, events));
-        if self.refuse_fold.load(Ordering::SeqCst) {
+    fn install(self: Box<Self>) -> Result<(), BusError> {
+        self.hook.folds.lock().unwrap().extend(self.staged);
+        if self.hook.refuse_fold.load(Ordering::SeqCst) {
             return Err(stale());
         }
         Ok(())
     }
 }
 
-/// The request book as an origin-bound commit hook: precommit folds a copy.
+/// The request book as an origin-bound commit hook: the staged state is a copy of the book.
 struct BookHook {
     book: Mutex<RequestBook>,
+}
+
+struct BookStage<'a> {
+    hook: &'a BookHook,
+    copy: RequestBook,
 }
 
 impl CommitHook for BookHook {
@@ -352,21 +370,92 @@ impl CommitHook for BookHook {
                 .collect(),
         )
     }
-    fn precommit(&self, r: &CommitRecord<'_>, events: &[Event]) -> Result<(), BusError> {
-        let mut copy = self.book.lock().unwrap().clone();
-        copy.apply_entry(r.origin().unwrap(), events)
+    fn stage(&self) -> Result<Box<dyn StagedFold + '_>, BusError> {
+        Ok(Box::new(BookStage { hook: self, copy: self.book.lock().unwrap().clone() }))
     }
-    fn fold(&self, r: &CommitRecord<'_>, events: &[Event]) -> Result<(), BusError> {
-        self.book.lock().unwrap().apply_entry(r.origin().unwrap(), events)
+}
+
+impl StagedFold for BookStage<'_> {
+    fn precommit(&mut self, r: &CommitRecord<'_>, events: &[Event]) -> Result<(), BusError> {
+        self.copy.apply_entry(r.origin().unwrap(), events)
+    }
+    fn install(self: Box<Self>) -> Result<(), BusError> {
+        *self.hook.book.lock().unwrap() = self.copy;
+        Ok(())
+    }
+}
+
+/// A hook whose install panics (a bug inside a hook, after the append).
+struct Panicking;
+
+struct PanickingStage;
+
+impl CommitHook for Panicking {
+    fn name(&self) -> &str {
+        "panicking"
+    }
+    fn watch(&self) -> Watch {
+        Watch::All
+    }
+    fn stage(&self) -> Result<Box<dyn StagedFold + '_>, BusError> {
+        Ok(Box::new(PanickingStage))
+    }
+}
+
+impl StagedFold for PanickingStage {
+    fn precommit(&mut self, _r: &CommitRecord<'_>, _events: &[Event]) -> Result<(), BusError> {
+        Ok(())
+    }
+    fn install(self: Box<Self>) -> Result<(), BusError> {
+        panic!("hook bug during install")
+    }
+}
+
+// ------------------------------------------------------------------ routers
+
+/// The harness router: commits as [`OpenBranch`] (agent commits refused); requests to the
+/// open branch, except an agent's, which go to `agent/<id>` (the request's source branch).
+struct Harnessed {
+    open: OpenBranch,
+}
+
+impl Router for Harnessed {
+    fn branch(&self, principal: &Principal, channel: &dyn Channel, def: &CommandDef) -> Result<String, BusError> {
+        self.open.branch(principal, channel, def)
+    }
+    fn request_branch(&self, principal: &Principal, channel: &dyn Channel) -> Result<String, BusError> {
+        if principal.kind() == PrincipalKind::Agent {
+            return Ok(format!("agent/{}", principal.id().as_str()));
+        }
+        self.open.request_branch(principal, channel)
+    }
+}
+
+/// A hostile router: routes everything, an agent's writes and requests included, to `main`.
+struct Hostile;
+
+impl Router for Hostile {
+    fn branch(&self, _p: &Principal, _c: &dyn Channel, _d: &CommandDef) -> Result<String, BusError> {
+        Ok(MAIN.into())
+    }
+    fn request_branch(&self, _p: &Principal, _c: &dyn Channel) -> Result<String, BusError> {
+        Ok(MAIN.into())
     }
 }
 
 // ------------------------------------------------------------------ journal
 
+/// `TestJournal::fail_append` values.
+const APPEND_OK: u8 = 0;
+/// An append failure with an unknown outcome (`internal/journal_unavailable`).
+const APPEND_UNKNOWN: u8 = 1;
+/// An append refused with a known outcome (`conflict/head_moved`).
+const APPEND_REFUSED: u8 = 2;
+
 /// A real journal with an append fault switch.
 struct TestJournal {
     inner: Arc<Journal>,
-    fail_append: AtomicBool,
+    fail_append: AtomicU8,
 }
 
 impl RecordJournal for TestJournal {
@@ -377,13 +466,14 @@ impl RecordJournal for TestJournal {
         RecordJournal::branch_head(self.inner.as_ref(), branch)
     }
     fn append(&self, req: AppendRequest) -> Result<EntryHash, BusError> {
-        if self.fail_append.load(Ordering::SeqCst) {
-            return Err(BusError::Internal(
+        match self.fail_append.load(Ordering::SeqCst) {
+            APPEND_UNKNOWN => Err(BusError::Internal(
                 fid_bus::error::InternalReason::JournalUnavailable,
                 Detail::new("injected append failure"),
-            ));
+            )),
+            APPEND_REFUSED => Err(stale()),
+            _ => RecordJournal::append(self.inner.as_ref(), req),
         }
-        RecordJournal::append(self.inner.as_ref(), req)
     }
 }
 
@@ -397,6 +487,7 @@ struct Harness {
     recording: Arc<RecordingFlag>,
     calls: Arc<AtomicUsize>,
     probe: Arc<Recorder>,
+    env: Arc<Env>,
     bus: Bus,
     sessions: SessionTable,
     gui: TestChannel,
@@ -414,10 +505,15 @@ fn table() -> Arc<CommandTable> {
 }
 
 fn harness(tag: &str) -> Harness {
+    harness_with(tag, Arc::new(Harnessed { open: OpenBranch::new(MAIN) }))
+}
+
+fn harness_with(tag: &str, router: Arc<dyn Router>) -> Harness {
     let dir = TempDir::new(tag);
     let (loc, lock) = ProjectLocation::create(&dir.p("project")).unwrap();
     let journal = Arc::new(Journal::open(loc, lock, STREAM).unwrap());
-    let tj = Arc::new(TestJournal { inner: Arc::clone(&journal), fail_append: AtomicBool::new(false) });
+    let tj = Arc::new(TestJournal { inner: Arc::clone(&journal), fail_append: AtomicU8::new(APPEND_OK) });
+    let env = Arc::new(Env { mono: AtomicU64::new(1) });
     let alog = dir.p("alog");
     let recording = Arc::new(RecordingFlag::new());
     let activity = Arc::new(ActivityLog::new(&alog, ActivityLogConfig::default(), manifests()));
@@ -431,10 +527,10 @@ fn harness(tag: &str) -> Harness {
     let mut bus = Bus::new(BusParts {
         table: table(),
         handlers,
-        router: Arc::new(OpenBranch::new(MAIN)),
+        router,
         journal: Arc::clone(&tj) as Arc<dyn RecordJournal>,
         streams: Streams::with_flag(activity, Arc::clone(&recording)),
-        env: Arc::new(Env { mono: AtomicU64::new(1) }),
+        env: Arc::clone(&env) as Arc<dyn BusEnv>,
         stream: STREAM.to_string(),
         manifests: manifests(),
     });
@@ -444,7 +540,7 @@ fn harness(tag: &str) -> Harness {
     let cli = channel(&mut sessions, "cli", "bob");
     let mcp = channel(&mut sessions, "mcp", "claude");
     let internal = channel(&mut sessions, "internal", "replay");
-    Harness { _dir: dir, alog, journal, tj, recording, calls, probe, bus, sessions, gui, cli, mcp, internal }
+    Harness { _dir: dir, alog, journal, tj, recording, calls, probe, env, bus, sessions, gui, cli, mcp, internal }
 }
 
 impl Harness {
@@ -564,21 +660,38 @@ fn ac2_real_failure_at_each_stage() {
     }
 }
 
-/// AC-2: a failing append at the commit stage commits nothing, and the hooks fold nothing.
+/// AC-2: an append refused with a known outcome commits nothing, the hooks install nothing,
+/// and the bus stays usable.
 #[test]
 fn ac2_failed_append_commits_nothing() {
     let mut h = harness("ac2a");
     let hook = Counting::new(Watch::All);
     h.bus.register_hook(hook.clone());
-    h.tj.fail_append.store(true, Ordering::SeqCst);
-    assert_err(h.run("gui", &write("a", 1)), "internal", "journal_unavailable");
+    h.tj.fail_append.store(APPEND_REFUSED, Ordering::SeqCst);
+    assert_err(h.run("gui", &write("a", 1)), "conflict", "head_moved");
     assert_eq!(h.tail(), None);
     assert_eq!(hook.precommits.lock().unwrap().len(), 1);
     assert!(hook.folds.lock().unwrap().is_empty());
     assert!(!h.bus.is_poisoned());
-    h.tj.fail_append.store(false, Ordering::SeqCst);
+    h.tj.fail_append.store(APPEND_OK, Ordering::SeqCst);
     done(h.run("gui", &write("a", 1)).unwrap());
     assert_eq!(h.tail().unwrap().0, 1);
+}
+
+/// An append that fails with `internal/journal_unavailable` has an unknown outcome (the entry
+/// may have landed unfolded): the bus is poisoned and refuses every later commit.
+#[test]
+fn an_unknown_append_outcome_poisons_the_bus() {
+    let mut h = harness("unknown");
+    let hook = Counting::new(Watch::All);
+    h.bus.register_hook(hook.clone());
+    h.tj.fail_append.store(APPEND_UNKNOWN, Ordering::SeqCst);
+    assert_err(h.run("gui", &write("a", 1)), "internal", "journal_unavailable");
+    assert!(h.bus.is_poisoned());
+    assert!(hook.folds.lock().unwrap().is_empty());
+    h.tj.fail_append.store(APPEND_OK, Ordering::SeqCst);
+    assert_err(h.run("gui", &write("a", 1)), "internal", "invariant_violated");
+    assert_eq!(h.tail(), None);
 }
 
 // ------------------------------------------------------------------ AC-3
@@ -623,12 +736,15 @@ fn approval_commits_once_through_the_request_hook() {
     let filed = h.run("mcp", &Invocation::new(cid("test.request@1"), params.clone())).unwrap();
     let CommandResult::Pending { request_id, entry } = filed else { panic!("{filed:?}") };
     assert_eq!(book.book.lock().unwrap().get(&request_id).unwrap().state(), RequestState::Pending);
+    // The agent's request is on its own branch; main has not moved.
+    assert_eq!(RecordJournal::branch_head(h.journal.as_ref(), "agent/claude").unwrap(), Some(entry));
+    assert_eq!(h.head(), fid_journal::GENESIS_PREV);
 
     let mut inv = Invocation::new(cid("test.request@1"), params.clone());
     inv.approval_of = Some(request_id);
     let result = {
         let b = book.book.lock().unwrap().clone();
-        h.run_on("gui", &b.view(entry), &inv)
+        h.run_on("gui", &b.view(h.head()), &inv)
     };
     let (events, _) = done(result.unwrap());
     let types: Vec<&str> = events.iter().map(|e| e.type_id().as_str()).collect();
@@ -722,12 +838,60 @@ fn ac8_dry_run_returns_the_events_and_commits_nothing() {
     assert_eq!(dry, real);
     assert_eq!(h.tail().unwrap().0, 1);
 
-    // A dry run of a call that would file a request files nothing.
+    // A dry run of a call that would file a request files nothing. The agent's request goes
+    // to its own agent branch, which is still empty.
+    let agent_view = View { head: fid_journal::GENESIS_PREV };
     let mut req = Invocation::new(cid("test.request@1"), json(r#"{"target":"a","count":1}"#));
     req.dry_run = true;
-    let out = h.run("mcp", &req).unwrap();
+    let out = h.run_on("mcp", &agent_view, &req).unwrap();
     assert_eq!(out, CommandResult::WouldFile { command: cid("test.request@1") });
     assert_eq!(h.tail().unwrap().0, 1);
+}
+
+/// REQ-008: a dry-run filing runs the route guards, so it reports the same refusal a real
+/// filing would: a wrong `expected_head`, a stale view, an idempotency key.
+#[test]
+fn a_dry_run_filing_reports_the_route_conflicts_of_a_real_one() {
+    let h = harness("dryfile");
+    let agent_view = View { head: fid_journal::GENESIS_PREV };
+    let stale_view = View { head: Digest([3; 32]) };
+    let base = Invocation::new(cid("test.request@1"), json(r#"{"target":"a","count":1}"#));
+    let mut wrong_head = base.clone();
+    wrong_head.expected_head = Some(Digest([9; 32]));
+    let mut keyed = base.clone();
+    keyed.idempotency_key = Some("k1".into());
+    let cases: [(&Invocation, &View, &str, &str); 3] = [
+        (&wrong_head, &agent_view, "conflict", "expected_head_mismatch"),
+        (&base, &stale_view, "conflict", "head_moved"),
+        (&keyed, &agent_view, "validation", "schema"),
+    ];
+    for (inv, view, code, reason) in cases {
+        let mut dry = inv.clone();
+        dry.dry_run = true;
+        assert_err(h.run_on("mcp", view, &dry), code, reason);
+        assert_err(h.run_on("mcp", view, inv), code, reason);
+    }
+    assert_eq!(h.tail(), None);
+}
+
+/// A read carrying an envelope field only a commit can honour is refused, not ignored.
+#[test]
+fn a_read_refuses_commit_only_envelope_fields() {
+    let h = harness("readenv");
+    let read = Invocation::new(cid("test.noop_read@1"), json("{}"));
+    let mut with_head = read.clone();
+    with_head.expected_head = Some(h.head());
+    let mut keyed = read.clone();
+    keyed.idempotency_key = Some("k1".into());
+    let mut consumed = read.clone();
+    consumed.consumed_r1 = vec![Digest([0x5a; 32])];
+    for inv in [&with_head, &keyed, &consumed] {
+        h.probe.clear();
+        assert_err(h.run("gui", inv), "validation", "schema");
+        assert_eq!(h.probe.names(), ["resolve", "validate"]);
+    }
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+    done(h.run("gui", &read).unwrap());
 }
 
 // ------------------------------------------------------------------ AC-9
@@ -918,57 +1082,62 @@ fn a_fold_refusal_poisons_the_bus() {
     assert_eq!(h.tail().unwrap().0, 1);
 }
 
-// ------------------------------------------------------------------ leading entries, reason
-
-struct SessionHeaderFirst {
-    kind: &'static str,
+/// A panic inside a hook while the commit lock is held poisons the bus: the entry landed but
+/// no hook state was installed, so every later commit is refused.
+#[test]
+fn a_panicking_hook_poisons_the_bus() {
+    let mut h = harness("panic");
+    h.bus.register_hook(Arc::new(Panicking));
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| h.run("gui", &write("a", 1))));
+    assert!(r.is_err(), "the hook's panic propagates");
+    assert!(h.bus.is_poisoned());
+    assert_eq!(h.tail().unwrap().0, 1, "the entry landed before the install");
+    assert_err(h.run("gui", &write("a", 1)), "internal", "invariant_violated");
+    assert_eq!(h.tail().unwrap().0, 1);
 }
 
-impl LeadingEntries for SessionHeaderFirst {
-    fn leading(&self, draft: &EntryDraft, time: &EntryTime) -> Result<Vec<EntryDraft>, BusError> {
-        let mut s = session_start(
-            &draft.stream,
-            &draft.branch,
-            time.clone(),
-            draft.principal.clone(),
-            draft.ai_assistance,
-            draft.manifests,
-            SessionInfo { session_id: "s-1".into(), app_version: "0.0.1".into() },
-        );
-        if self.kind == "command" {
-            s.body = draft.body.clone();
+// ------------------------------------------------------------------ entry time
+
+/// Reads the env's monotonic counter when the commit stage is entered.
+struct TimeMark {
+    env: Arc<Env>,
+    at_commit: AtomicU64,
+}
+
+impl StageProbe for TimeMark {
+    fn enter(&self, stage: Stage) -> Result<(), BusError> {
+        if stage == Stage::Commit {
+            self.at_commit.store(self.env.mono.load(Ordering::SeqCst), Ordering::SeqCst);
         }
-        Ok(vec![s])
+        Ok(())
     }
 }
 
-/// CORE.PRJ.CONT.LIFE's need: a session header appended right before the command's entry,
-/// in the same commit; anything but a session header is refused and nothing is appended.
+/// The entry time is taken after the commit lock is acquired, not when the draft is built
+/// before the commit stage: it is later than anything read when the commit stage starts.
+/// Holds for a command entry and for a filing.
 #[test]
-fn leading_session_header_is_appended_first() {
-    let mut h = harness("leading");
+fn the_entry_time_is_taken_under_the_commit_lock() {
+    let mut h = harness("time");
     let hook = Counting::new(Watch::All);
     h.bus.register_hook(hook.clone());
-    h.bus.register_leading(&cid("test.write@1"), Arc::new(SessionHeaderFirst { kind: "session" })).unwrap();
-    assert_err(
-        h.bus.register_leading(&cid("test.write@1"), Arc::new(SessionHeaderFirst { kind: "session" })),
-        "internal",
-        "invariant_violated",
-    );
-    let (_, entry) = done(h.run("gui", &write("a", 1)).unwrap());
-    let (seq, tail) = h.tail().unwrap();
-    assert_eq!((seq, Some(tail)), (2, entry));
-    let folds = hook.folds.lock().unwrap();
-    assert_eq!(folds.len(), 2);
-    assert!(folds[0].origin.is_none());
-    assert!(matches!(folds[0].header.body, HeaderBody::SessionHeader(_)));
-    assert_eq!(folds[1].header.prev, folds[0].header.hash);
+    let mark = Arc::new(TimeMark { env: Arc::clone(&h.env), at_commit: AtomicU64::new(0) });
+    h.bus.set_probe(mark.clone());
+    done(h.run("gui", &write("a", 1)).unwrap());
+    let first = hook.folds.lock().unwrap()[0].header.time.mono_ns;
+    assert!(first >= mark.at_commit.load(Ordering::SeqCst), "time {first} taken before the commit stage");
 
-    let mut h = harness("leading2");
-    h.bus.register_leading(&cid("test.write@1"), Arc::new(SessionHeaderFirst { kind: "command" })).unwrap();
-    assert_err(h.run("gui", &write("a", 1)), "internal", "invariant_violated");
-    assert_eq!(h.tail(), None);
+    let filed = h.run_on(
+        "mcp",
+        &View { head: fid_journal::GENESIS_PREV },
+        &Invocation::new(cid("test.request@1"), json(r#"{"target":"a","count":1}"#)),
+    );
+    assert!(matches!(filed.unwrap(), CommandResult::Pending { .. }));
+    let second = hook.folds.lock().unwrap()[1].header.time.mono_ns;
+    assert!(second >= mark.at_commit.load(Ordering::SeqCst), "filing time {second} taken before the commit stage");
 }
+
+// ------------------------------------------------------------------ reason
 
 /// CORE.JRN.UNDO.SUPER's need: a registered reason parameter becomes the entry's reason
 /// (committed in the header, opened in the payload).
@@ -1003,4 +1172,30 @@ fn route_gaps_fail_closed() {
     assert_err(h.run("gui", &inv), "validation", "schema");
     assert_eq!(h.tail(), None);
     assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+}
+
+/// The bus's own agent-branch check holds whatever the router says: a hostile router that
+/// sends an agent's commit or request to `main` gets `policy/agent_write_forbidden` at the
+/// route stage, the handler is not called and nothing is appended; a person's commit still
+/// goes through. The shipped `OpenBranch` routes an agent's request to the open branch, and
+/// the check refuses that too.
+#[test]
+fn an_agent_never_writes_outside_an_agent_branch_whatever_the_router() {
+    let h = harness_with("hostile", Arc::new(Hostile));
+    h.probe.clear();
+    assert_err(h.run("mcp", &write("a", 1)), "policy", "agent_write_forbidden");
+    assert_eq!(h.probe.names(), ["resolve", "validate", "authorise", "precondition", "route"]);
+    let request = Invocation::new(cid("test.request@1"), json(r#"{"target":"a","count":1}"#));
+    assert_err(h.run("mcp", &request), "policy", "agent_write_forbidden");
+    let mut dry = request.clone();
+    dry.dry_run = true;
+    assert_err(h.run("mcp", &dry), "policy", "agent_write_forbidden");
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0);
+    assert_eq!(h.tail(), None);
+    done(h.run("gui", &write("a", 1)).unwrap());
+    assert_eq!(h.tail().unwrap().0, 1);
+
+    let open = harness_with("open", Arc::new(OpenBranch::new(MAIN)));
+    assert_err(open.run("mcp", &request), "policy", "agent_write_forbidden");
+    assert_eq!(open.tail(), None);
 }

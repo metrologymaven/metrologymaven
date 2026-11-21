@@ -6,55 +6,71 @@
 //!
 //! 1. **resolve**: the principal is derived from the channel (never from the parameters),
 //!    then [`CommandTable::resolve_id`];
-//! 2. **validate**: [`Resolved::validate_value`] against the call's [`StateView`];
+//! 2. **validate**: [`Resolved::validate_value`] against the call's [`StateView`]; a read
+//!    (R0, R1) that carries `expected_head`, `idempotency_key` or `consumed_r1` is
+//!    `validation/schema`, since a read has no branch head to guard and no entry to carry
+//!    them;
 //! 3. **authorise**: [`check_raw_paths`] (CORE.BUS.POL.FS REQ-001), then
 //!    [`authorise`] (projection, approval and class checks): run, run as an approval, or
 //!    file a pending request;
 //! 4. **precondition**: [`Resolved::check_preconditions`];
-//! 5. **route** (commit classes only): the branch from the injected [`Router`], then the
-//!    guards: `expected_head` (`conflict/expected_head_mismatch`) and the call's view, which
-//!    must be at the branch head (`conflict/head_moved`);
+//! 5. **route** (commit classes only): the branch from the injected [`Router`]; then the
+//!    bus's own check, independent of the router, that an `agent` principal's branch is an
+//!    `agent/` branch (`policy/agent_write_forbidden`); then the guards: an idempotency key is
+//!    refused (`validation/schema`, until CORE.BUS.ROUTE), `expected_head`
+//!    (`conflict/expected_head_mismatch`) and the call's view, which must be at the branch
+//!    head (`conflict/head_moved`);
 //! 6. **handler** and 7. **effects**: the handler of the command and the effects check
 //!    against its definition (CORE.BUS.PIPE.HANDLER), as two stages;
 //! 8. **commit** (commit classes only): one entry, all or nothing (below).
 //!
 //! A filed pending request (REQ-003) runs resolve, validate, authorise, route and commit: the
+//! route stage applies the same agent-branch check and guards to the request branch, the
 //! commit holds only the `request.file_request@1` entry of [`Filing::commit`], and the handler
 //! is never called. An R0 or R1 command (REQ-006) skips route and commit: its call record is
 //! handed to the Activity Log writer ([`Streams::complete_call`], CORE.JRN.STREAM.ALOG), which
 //! stores it only while a recording session is active or for a Command Program step, and
 //! nothing is written to the Record Journal. With `dry_run` (REQ-008) the call stops after the
 //! effects check and returns the events it would commit; a call that would file a request
-//! returns [`CommandResult::WouldFile`] after authorise.
+//! returns [`CommandResult::WouldFile`] after the route stage, so a dry run reports the same
+//! route refusal or conflict a real filing would.
 //!
 //! **Commit (REQ-002, REQ-CORE.RPL.RECON.FOLD-008 (d)).** Every commit of one [`Bus`] runs
 //! under its commit lock:
 //!
 //! 1. read the stream tail, then the branch head; the head must still be the one the call
-//!    was decided against (the view's head), else `conflict/head_moved`;
-//! 2. build the entry (and any [`LeadingEntries`]) with fresh salts at the next sequence
-//!    numbers, so its hash is known before it is appended;
-//! 3. run every watching [`CommitHook::precommit`] on the built entry; a refusal aborts;
+//!    was decided against (the view's head), else `conflict/head_moved`; then take the entry
+//!    time ([`BusEnv::now`]), so entry times follow commit order;
+//! 2. build the entry with fresh salts at the next sequence number, so its hash is known
+//!    before it is appended;
+//! 3. stage every watching hook and run its precommit on the built entry
+//!    ([`CommitHook::stage`], [`StagedFold::precommit`]); a refusal aborts;
 //! 4. append with `expected_prev` set to the tail read in step 1 and the salts of step 2, so
 //!    the appended entry is byte-identical to the one the hooks judged, and an append that
 //!    landed meanwhile (from anywhere) makes it fail with `conflict/head_moved`; the returned
 //!    hash must equal the built one;
-//! 5. fold the entry into every watching hook ([`CommitHook::fold`]).
+//! 5. install every staged hook state ([`StagedFold::install`]).
 //!
 //! Reading the tail before the branch head and appending only on that tail makes steps 1 to
 //! 4 a compare-and-swap: nothing can land between the check and the append. A failure in
-//! steps 1 to 4 appends nothing (REQ-002; the idempotency table is CORE.BUS.ROUTE's and is not
-//! touched here). A failure after the append (hash mismatch, fold refusal) poisons the bus:
-//! every later commit is `internal/invariant_violated`, since the folded state no longer
-//! matches the journal.
+//! steps 1 to 3, or an append refused with a known outcome, appends nothing (REQ-002; the
+//! idempotency table is CORE.BUS.ROUTE's and is not touched here). The bus is poisoned, so
+//! every later commit is `internal/invariant_violated` until the project is reopened, when
+//! the folded state may no longer match the journal: an append that failed with
+//! `internal/journal_unavailable` (its outcome is unknown: the entry may have landed), a hash
+//! mismatch, an install refusal, or a panic while the commit lock was held (a panicking hook
+//! poisons the lock). Reopening the project rebuilds every hook from the journal; a fold
+//! refusal during that rebuild refuses to open the project (the rebuild entry point is
+//! deferred, NODE.md).
 //!
 //! **Entry contents.** Command `id@major`, class, determinism, the seed of the call
 //! ([`BusEnv::seed`]), the arguments as entered ([`Validated::entry_params`]), the events
 //! (the handler's, then the `RequestApproved` of an approval), the algorithm IDs of literal
 //! normalisation, the `consumed_r1` digests (REQ-007; the journal tags them `r1_result`), the
 //! principal as derived, `ai_assistance` `executed` for an agent, the logical parent (the
-//! branch head, none on an empty branch) and, for a command registered with
-//! [`Bus::set_reason_param`], that parameter as the entry's `reason`.
+//! branch head, none on an empty branch), the entry time taken under the commit lock and,
+//! for a command registered with [`Bus::set_reason_param`], that parameter as the entry's
+//! `reason`. The stage writes no `human_assertion` and no `promoted_from`.
 //!
 //! [`Bus::run_handlers_as_system`] (REQ-009) runs resolve, validate, precondition, handler and
 //! effects for each listed command against one view and commits nothing; only a `system`
@@ -63,8 +79,11 @@
 //! **Not built here** (see the leaf's NODE.md): long-running commands and the job hand-off
 //! (REQ-004, REQ-005: the registry has no long-running field, and `fid-jobs` depends on this
 //! crate), the prepared-file protocol of REQ-011, idempotency keys (CORE.BUS.ROUTE; a call
-//! that carries one is refused, fail closed), agent branches (CORE.BUS.ROUTE; [`OpenBranch`]
-//! refuses agent commits) and the network permit of X1, I1 and D1 handlers.
+//! that carries one is refused, fail closed), agent branch routing (CORE.BUS.ROUTE;
+//! [`OpenBranch`] refuses agent commits, and the bus refuses an agent request on a branch
+//! that is not an `agent/` branch), the network permit of X1, I1 and D1 handlers, and
+//! rebuilding hooks from the journal on reopen. Appends made outside the bus (not through
+//! [`Bus::execute`]) are not seen by the hooks.
 //!
 //! Every error is from the bus error catalogue; this module adds no code or reason.
 //! Determinism D0: no clock or randomness of its own (time, seed and request IDs come from
@@ -72,7 +91,7 @@
 
 mod hooks;
 
-pub use hooks::{CommitHook, CommitRecord, LeadingEntries, Watch};
+pub use hooks::{CommitHook, CommitRecord, StagedFold, Watch};
 
 use crate::error::{BusError, ConflictReason, Detail, InternalReason, PolicyReason, ValidationReason};
 use crate::handler::{run_stage, CancelToken, CheckedEvents, Event, HandlerCtx, HandlerSet, StateView};
@@ -81,11 +100,11 @@ use crate::policy::projection::{authorise, Decision, EntryOrigin, Filing, Record
 use crate::principal::{Channel, ChannelKind, JournalAppend, Principal, PrincipalKind, SessionTable};
 use crate::validate::{CommandTable, Validated};
 use fid_canon::{CValue, Digest};
-use fid_journal::branch::{EntryOrigin as JournalOrigin, EventSource};
+use fid_journal::branch::{EntryOrigin as JournalOrigin, EventSource, AGENT_PREFIX};
 use fid_journal::stream::{CallOutcome, Locality, ProgramStepRef, Streams, ACTIVITY_STREAM};
 use fid_journal::{
-    build, AiAssistance, AppendRequest, CommandDraft, DraftBody, Entry, EntryDraft, EntryHash, EntryKind, EntryTime,
-    Journal, JournalError, Manifests, OsSalts, RecordedSalts, GENESIS_PREV,
+    build, AiAssistance, AppendRequest, CommandDraft, DraftBody, Entry, EntryDraft, EntryHash, EntryTime, Journal,
+    JournalError, Manifests, OsSalts, RecordedSalts, GENESIS_PREV,
 };
 use fid_registry::{CommandDef, PredContext};
 use fid_types::{CommandId, SideEffect};
@@ -93,7 +112,7 @@ use hooks::Hooks;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, Mutex};
 
 // ------------------------------------------------------------------ stages
 
@@ -171,15 +190,20 @@ pub struct Invocation {
     pub command: CommandId,
     /// The parameter document as entered.
     pub params: CValue,
-    /// Commit only if the branch head is this (`conflict/expected_head_mismatch`).
+    /// Commit only if the branch head is this (`conflict/expected_head_mismatch`). Checked at
+    /// the route stage, also for a filing and a dry run; a read carrying it is
+    /// `validation/schema`.
     pub expected_head: Option<Digest>,
-    /// Idempotency key (CORE.BUS.ROUTE; refused until that leaf is built).
+    /// Idempotency key (CORE.BUS.ROUTE; refused with `validation/schema` until that leaf is
+    /// built, on every call).
     pub idempotency_key: Option<String>,
     /// Stop after the effects check and return the events (REQ-008).
     pub dry_run: bool,
     /// The pending request a person approves with this call (CORE.BUS.POL.PROJ).
     pub approval_of: Option<RequestId>,
-    /// Digests of R1 results this W-class call consumed (REQ-007).
+    /// Digests of R1 results this W-class call consumed (REQ-007); a read carrying any is
+    /// `validation/schema`. A filing does not carry them: the approved call that runs the
+    /// command does.
     pub consumed_r1: Vec<Digest>,
     /// The Command Program step this call is part of (D-031).
     pub program_step: Option<ProgramStepRef>,
@@ -241,7 +265,9 @@ pub struct SystemCall {
 // ------------------------------------------------------------------ injected parts
 
 /// The route stage's branch choice (CORE.BUS.ROUTE implements the full rules; until then
-/// [`OpenBranch`]).
+/// [`OpenBranch`]). The bus does not trust it on agent writes: whatever a router returns, an
+/// `agent` principal's commit or request branch must start with `agent/`, else
+/// `policy/agent_write_forbidden`.
 pub trait Router: Send + Sync {
     /// The branch a call of `def` by `principal` on `channel` commits to (for a read: the
     /// branch its call record names).
@@ -253,7 +279,9 @@ pub trait Router: Send + Sync {
 /// A [`Router`] for one session's open branch: every commit and request goes to it, except
 /// that an `agent` principal's commit classes are refused with `policy/agent_write_forbidden`
 /// (agents commit only to their own `agent/` branches, CONSTITUTION §3; that routing is
-/// CORE.BUS.ROUTE's). Fail closed until CORE.BUS.ROUTE is built.
+/// CORE.BUS.ROUTE's). An agent's request is routed to the open branch too, which the bus's
+/// agent-branch check then refuses unless the open branch is an `agent/` branch. Fail closed
+/// until CORE.BUS.ROUTE is built.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OpenBranch {
     branch: String,
@@ -282,20 +310,28 @@ impl Router for OpenBranch {
     }
 }
 
-/// The Record Journal as the commit stage uses it. [`Journal`] implements it; any error means
-/// nothing was appended.
+/// The Record Journal as the commit stage uses it. [`Journal`] implements it.
 pub trait RecordJournal: Send + Sync {
     /// The stream tail `(seq, hash)`, `None` for an empty stream.
     fn tail(&self) -> Result<Option<(u64, Digest)>, BusError>;
     /// The hash of the last entry on `branch`, `None` if it has none.
     fn branch_head(&self, branch: &str) -> Result<Option<Digest>, BusError>;
     /// Appends one entry. With `expected_prev` set, a tail that moved is `conflict/head_moved`.
+    ///
+    /// The error tells the outcome. `conflict`, `validation` and `internal/invariant_violated`
+    /// mean nothing was appended. `internal/journal_unavailable` means the outcome is unknown:
+    /// the entry may have landed (a storage failure during or after the write), so the commit
+    /// stage poisons the bus. An implementation must report any failure whose outcome it does
+    /// not know as `internal/journal_unavailable`.
     fn append(&self, req: AppendRequest) -> Result<EntryHash, BusError>;
 }
 
 /// The bus error of a journal error: `head_moved` is `conflict/head_moved`, `input_limit`
 /// `validation/input_limit`, a malformed draft `internal/invariant_violated` (a bus bug), and
-/// every storage, chain or clock failure `internal/journal_unavailable`.
+/// every storage, chain, clock or write-access failure (`read_only` included)
+/// `internal/journal_unavailable`. From an append, that last group is treated as an unknown
+/// outcome ([`RecordJournal::append`]); for `read_only` and the clock refusals nothing was
+/// written, and poisoning loses nothing since such a journal cannot commit anyway.
 pub fn journal_error(e: &JournalError) -> BusError {
     let d = Detail::new(&e.to_string());
     match e {
@@ -307,7 +343,8 @@ pub fn journal_error(e: &JournalError) -> BusError {
         | JournalError::TimeRegressed { .. }
         | JournalError::TimeAhead { .. }
         | JournalError::ChainInvalid(_)
-        | JournalError::EmptyStream(_) => BusError::Internal(InternalReason::JournalUnavailable, d),
+        | JournalError::EmptyStream(_)
+        | JournalError::ReadOnly(_) => BusError::Internal(InternalReason::JournalUnavailable, d),
     }
 }
 
@@ -328,7 +365,8 @@ impl RecordJournal for Journal {
 /// The host inputs of a call: time, seed and request IDs (CONSTITUTION §4: recorded, never
 /// drawn by the bus itself).
 pub trait BusEnv: Send + Sync {
-    /// The call's entry time.
+    /// The call's entry time. For a commit it is read under the commit lock, so entry times
+    /// follow commit order.
     fn now(&self) -> EntryTime;
     /// The call's seed, recorded in its entry.
     fn seed(&self) -> u64;
@@ -366,7 +404,6 @@ pub struct Bus {
     stream: String,
     manifests: Manifests,
     hooks: Hooks,
-    leading: BTreeMap<String, Arc<dyn LeadingEntries>>,
     reasons: BTreeMap<String, String>,
     probe: Arc<dyn StageProbe>,
     commit_lock: Mutex<()>,
@@ -419,6 +456,38 @@ fn locality(kind: ChannelKind) -> Locality {
     }
 }
 
+/// The bus's own agent-branch check, independent of the [`Router`]: an `agent` principal
+/// commits and files requests only on an `agent/` branch (CONSTITUTION §3).
+fn agent_branch(principal: &Principal, branch: &str) -> Result<(), BusError> {
+    if principal.kind() == PrincipalKind::Agent
+        && !(branch.starts_with(AGENT_PREFIX) && branch.len() > AGENT_PREFIX.len())
+    {
+        return Err(BusError::Policy(
+            PolicyReason::AgentWriteForbidden,
+            Detail::new(&format!("an agent writes only to an {AGENT_PREFIX} branch; the call was routed to {branch}")),
+        ));
+    }
+    Ok(())
+}
+
+/// A read (R0, R1) has no branch head to guard and no entry: an envelope field that only a
+/// commit can honour is refused rather than ignored.
+fn read_envelope(inv: &Invocation) -> Result<(), BusError> {
+    let field = if inv.expected_head.is_some() {
+        "expected_head"
+    } else if inv.idempotency_key.is_some() {
+        "idempotency_key"
+    } else if !inv.consumed_r1.is_empty() {
+        "consumed_r1"
+    } else {
+        return Ok(());
+    };
+    Err(BusError::Validation(
+        ValidationReason::Schema,
+        Detail::new(&format!("{field} applies to commits only; {} is a read", inv.command)),
+    ))
+}
+
 fn ai_assistance(kind: PrincipalKind) -> AiAssistance {
     match kind {
         PrincipalKind::Agent => AiAssistance::Executed,
@@ -443,7 +512,7 @@ struct Built {
 }
 
 impl Bus {
-    /// A bus over `parts`, with no hooks, leading entries or reason parameters, and no probe.
+    /// A bus over `parts`, with no hooks or reason parameters, and no probe.
     pub fn new(parts: BusParts) -> Bus {
         Bus {
             table: parts.table,
@@ -455,7 +524,6 @@ impl Bus {
             stream: parts.stream,
             manifests: parts.manifests,
             hooks: Hooks::default(),
-            leading: BTreeMap::new(),
             reasons: BTreeMap::new(),
             probe: Arc::new(NoProbe),
             commit_lock: Mutex::new(()),
@@ -463,19 +531,11 @@ impl Bus {
         }
     }
 
-    /// Registers a commit hook; hooks run in registration order.
+    /// Registers a commit hook; hooks run in registration order. A hook registered on a bus
+    /// that already committed has not seen those entries: register every hook before the first
+    /// call (rebuilding hooks from the journal on reopen is deferred, NODE.md).
     pub fn register_hook(&mut self, hook: Arc<dyn CommitHook>) {
         self.hooks.list.push(hook);
-    }
-
-    /// Registers the leading entries of `command`. A second registration for the same command
-    /// is `internal/invariant_violated` and changes nothing.
-    pub fn register_leading(&mut self, command: &CommandId, leading: Arc<dyn LeadingEntries>) -> Result<(), BusError> {
-        if self.leading.contains_key(command.as_str()) {
-            return Err(invariant(&format!("leading entries of {command} are already registered")));
-        }
-        self.leading.insert(command.as_str().to_string(), leading);
-        Ok(())
     }
 
     /// Records the top-level string parameter `field` of `command` as its entries' `reason`
@@ -495,9 +555,14 @@ impl Bus {
         self.probe = probe;
     }
 
-    /// Whether a failure after an append left the bus poisoned (module docs).
+    /// Whether the bus is poisoned (module docs): a failure with an unknown or inconsistent
+    /// outcome after the precommit, or a panic while the commit lock was held.
     pub fn is_poisoned(&self) -> bool {
-        self.poisoned.load(Ordering::SeqCst)
+        self.poisoned.load(Ordering::SeqCst) || self.commit_lock.is_poisoned()
+    }
+
+    fn poison(&self) {
+        self.poisoned.store(true, Ordering::SeqCst);
     }
 
     fn enter(&self, stage: Stage) -> Result<(), BusError> {
@@ -514,6 +579,10 @@ impl Bus {
         // 2. validate
         self.enter(Stage::Validate)?;
         let validated = resolved.validate_value(&inv.params, call.view).map_err(BusError::from)?;
+        let read = is_read(def.side_effect);
+        if read {
+            read_envelope(inv)?;
+        }
         // 3. authorise
         self.enter(Stage::Authorise)?;
         check_raw_paths(&derived, def, &inv.params)?;
@@ -529,7 +598,6 @@ impl Bus {
         self.enter(Stage::Precondition)?;
         resolved.check_preconditions(validated.params(), call.roots)?;
         // 5. route
-        let read = is_read(def.side_effect);
         let target = if read {
             None
         } else {
@@ -565,11 +633,7 @@ impl Bus {
             inv.consumed_r1.clone(),
             inv,
         )?;
-        let leading = match self.leading.get(inv.command.as_str()) {
-            Some(l) => l.leading(&draft, &draft.time)?,
-            None => Vec::new(),
-        };
-        let hash = self.commit(&target, draft, &events, leading)?;
+        let hash = self.commit(&target, draft, &events)?;
         Ok(CommandResult::Done { result, events, entry: Some(hash), activity: None })
     }
 
@@ -582,6 +646,7 @@ impl Bus {
         def: &CommandDef,
     ) -> Result<Target, BusError> {
         let branch = self.router.branch(principal, call.channel, def)?;
+        agent_branch(principal, &branch)?;
         self.guard(call, inv, branch)
     }
 
@@ -613,7 +678,8 @@ impl Bus {
         Ok(Target { branch, head })
     }
 
-    /// REQ-003: a pending request instead of the command.
+    /// REQ-003: a pending request instead of the command. A dry run stops after the route
+    /// stage, so it reports the same route refusal or conflict a real filing would.
     fn file(
         &self,
         call: &Call<'_>,
@@ -621,12 +687,13 @@ impl Bus {
         principal: &Principal,
         filing: &Filing,
     ) -> Result<CommandResult, BusError> {
+        self.enter(Stage::Route)?;
+        let branch = self.router.request_branch(principal, call.channel)?;
+        agent_branch(principal, &branch)?;
+        let target = self.guard(call, inv, branch)?;
         if inv.dry_run {
             return Ok(CommandResult::WouldFile { command: filing.command().clone() });
         }
-        self.enter(Stage::Route)?;
-        let branch = self.router.request_branch(principal, call.channel)?;
-        let target = self.guard(call, inv, branch)?;
         self.enter(Stage::Commit)?;
         let id = self.env.request_id()?;
         let ctx =
@@ -661,7 +728,7 @@ impl Bus {
     }
 
     /// The command entry draft of a call (module docs, "Entry contents"). The commit stage
-    /// sets the logical parent.
+    /// sets the logical parent and, under its lock, the time.
     #[allow(clippy::too_many_arguments)]
     fn command_draft(
         &self,
@@ -718,51 +785,44 @@ impl Bus {
         })
     }
 
-    /// The record a hook sees of `built`.
+    /// The record a hook sees of `built`, a command entry.
     fn record<'b>(&self, built: &'b Built, decided_at: Digest) -> Result<CommitRecord<'b>, BusError> {
         let d = &built.draft;
-        let (origin, journal, args) = match &d.body {
-            DraftBody::Command(c) => (
-                Some(EntryOrigin::from_draft(d)?),
-                Some(JournalOrigin {
-                    kind: d.principal.kind,
-                    command: c.id.clone(),
-                    major: c.major,
-                    class: c.class,
-                    branch: d.branch.clone(),
-                    source: EventSource::Handler,
-                    human_assertion: built.entry.header.human_assertion.clone(),
-                }),
-                Some(&c.args),
-            ),
-            DraftBody::SessionHeader(_) => (None, None, None),
-            DraftBody::PrincipalUpgrade(_) | DraftBody::HeadMove(_) => {
-                return Err(invariant(&format!("the commit stage does not commit {} entries", d.kind())))
-            }
+        let DraftBody::Command(c) = &d.body else {
+            return Err(invariant(&format!("the commit stage commits command entries only, not {}", d.kind())));
         };
         Ok(CommitRecord {
-            origin,
-            journal,
+            origin: Some(EntryOrigin::from_draft(d)?),
+            journal: Some(JournalOrigin {
+                kind: d.principal.kind,
+                command: c.id.clone(),
+                major: c.major,
+                class: c.class,
+                branch: d.branch.clone(),
+                source: EventSource::Handler,
+                human_assertion: built.entry.header.human_assertion.clone(),
+            }),
             decided_at,
             header: &built.entry.header,
             payload: &built.entry.payload,
-            args,
+            args: Some(&c.args),
         })
     }
 
     /// The commit (module docs, steps 1 to 5).
-    fn commit(
-        &self,
-        target: &Target,
-        mut draft: EntryDraft,
-        events: &[Event],
-        leading: Vec<EntryDraft>,
-    ) -> Result<EntryHash, BusError> {
-        let _lock = self.commit_lock.lock().unwrap_or_else(PoisonError::into_inner);
+    fn commit(&self, target: &Target, mut draft: EntryDraft, events: &[Event]) -> Result<EntryHash, BusError> {
+        let Ok(_lock) = self.commit_lock.lock() else {
+            // A panic while the lock was held (a hook, the journal): the folded state may no
+            // longer match the journal.
+            self.poison();
+            return Err(invariant(
+                "an earlier commit panicked while holding the commit lock; the bus is poisoned; reopen the project",
+            ));
+        };
         if self.is_poisoned() {
-            return Err(invariant("the bus is poisoned by an earlier failure after an append; reopen the project"));
+            return Err(invariant("the bus is poisoned by an earlier failure after its precommit; reopen the project"));
         }
-        // 1. tail, then branch head.
+        // 1. tail, then branch head, then the entry time.
         let (tail_seq, tail_hash) = self.journal.tail()?.unwrap_or((0, GENESIS_PREV));
         let head = self.journal.branch_head(&target.branch)?.unwrap_or(GENESIS_PREV);
         if head != target.head {
@@ -773,63 +833,52 @@ impl Bus {
         }
         draft.branch = target.branch.clone();
         draft.logical_parent = (head != GENESIS_PREV).then_some(head);
+        draft.time = self.env.now();
         // 2. build.
-        let mut seq = tail_seq;
-        let mut prev = tail_hash;
-        let mut built = Vec::with_capacity(leading.len() + 1);
-        for d in leading {
-            if d.kind() != EntryKind::SessionHeader || d.stream != self.stream {
-                return Err(invariant("leading entries must be session headers of the record stream"));
-            }
-            built.push(self.build(d, &mut seq, &mut prev)?);
-        }
-        built.push(self.build(draft, &mut seq, &mut prev)?);
-        let last = built.len() - 1;
-        let records = built.iter().map(|b| self.record(b, target.head)).collect::<Result<Vec<_>, BusError>>()?;
-        let none: &[Event] = &[];
-        let events_of = |i: usize| if i == last { events } else { none };
-        // 3. precommit.
-        for (i, r) in records.iter().enumerate() {
-            self.hooks.precommit(r, events_of(i))?;
-        }
+        let built = self.build(draft, tail_seq, tail_hash)?;
+        // 3. stage and precommit.
+        let staged = self.hooks.stage(&[(self.record(&built, target.head)?, events)])?;
         // 4. append on the tail of step 1.
-        let mut expected = tail_hash;
-        for b in &built {
-            let req = AppendRequest {
-                draft: b.draft.clone(),
-                blobs: Vec::new(),
-                expected_prev: Some(expected),
-                salts: Some(RecordedSalts(b.entry.payload.salts.clone())),
-            };
-            let hash = self.journal.append(req)?;
-            if hash != b.entry.header.hash {
-                self.poisoned.store(true, Ordering::SeqCst);
-                return Err(invariant(&format!(
-                    "the journal appended {hash}, not the entry {} the hooks judged",
-                    b.entry.header.hash
-                )));
-            }
-            expected = hash;
-        }
-        // 5. fold.
-        for (i, r) in records.iter().enumerate() {
-            if let Err(e) = self.hooks.fold(r, events_of(i)) {
-                self.poisoned.store(true, Ordering::SeqCst);
+        let Built { draft, entry } = built;
+        let req = AppendRequest {
+            draft,
+            blobs: Vec::new(),
+            expected_prev: Some(tail_hash),
+            salts: Some(RecordedSalts(entry.payload.salts)),
+        };
+        let hash = match self.journal.append(req) {
+            Ok(hash) => hash,
+            Err(e) => {
+                if matches!(e, BusError::Internal(InternalReason::JournalUnavailable, _)) {
+                    // Unknown outcome: the entry may have landed without being folded.
+                    self.poison();
+                }
                 return Err(e);
             }
+        };
+        if hash != entry.header.hash {
+            self.poison();
+            return Err(invariant(&format!(
+                "the journal appended {hash}, not the entry {} the hooks judged",
+                entry.header.hash
+            )));
         }
-        Ok(expected)
+        // 5. install the staged hook states.
+        if let Err(e) = staged.install() {
+            self.poison();
+            return Err(e);
+        }
+        Ok(hash)
     }
 
-    fn build(&self, draft: EntryDraft, seq: &mut u64, prev: &mut Digest) -> Result<Built, BusError> {
-        *seq = seq.checked_add(1).ok_or_else(|| invariant("sequence overflow"))?;
-        let entry = build(&draft, *seq, *prev, &mut OsSalts).map_err(|e| match e {
+    fn build(&self, draft: EntryDraft, tail_seq: u64, prev: Digest) -> Result<Built, BusError> {
+        let seq = tail_seq.checked_add(1).ok_or_else(|| invariant("sequence overflow"))?;
+        let entry = build(&draft, seq, prev, &mut OsSalts).map_err(|e| match e {
             fid_journal::EntryError::RngUnavailable => {
                 BusError::Internal(InternalReason::JournalUnavailable, Detail::new(&e.to_string()))
             }
             other => invariant(&format!("entry does not build: {other}")),
         })?;
-        *prev = entry.header.hash;
         Ok(Built { draft, entry })
     }
 
@@ -881,7 +930,7 @@ impl JournalAppend for FilingSink<'_> {
         }
         let DraftBody::Command(c) = &draft.body else { return Err(invariant("a filing is a command entry")) };
         let events = c.events.iter().map(|v| Event::from_value(v.clone())).collect::<Result<Vec<_>, BusError>>()?;
-        let hash = self.bus.commit(self.target, draft.clone(), &events, Vec::new())?;
+        let hash = self.bus.commit(self.target, draft.clone(), &events)?;
         self.entry = Some(hash);
         Ok(())
     }

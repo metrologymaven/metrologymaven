@@ -24,8 +24,8 @@ pub use handler::{
     MAX_EVENT_BODY_BYTES,
 };
 pub use pipeline::{
-    journal_error, Bus, BusEnv, BusParts, Call, CommandResult, CommitHook, CommitRecord, Invocation, LeadingEntries,
-    OpenBranch, RecordJournal, Router, Stage, StageProbe, SystemCall, Watch,
+    journal_error, Bus, BusEnv, BusParts, Call, CommandResult, CommitHook, CommitRecord, Invocation, OpenBranch,
+    RecordJournal, Router, Stage, StageProbe, StagedFold, SystemCall, Watch,
 };
 pub use policy::class::{
     authorise_cancel, authorise_class, class_rule, policy_matrix_json, policy_matrix_value, ClassRule,
