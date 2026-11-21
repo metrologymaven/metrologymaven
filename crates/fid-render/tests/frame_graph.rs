@@ -6,11 +6,11 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_render::frame::graph::{
-    order_or_software, pick_adapter, policy_order, policy_order_from_file, resolve_order, select, AdapterChoice,
-    AdapterSource, Attempt, Backend, FrameGraph, FrameTargets, GraphError, Host, Pass, PassContext, PassDecl, PassId,
-    PassList, PolicyError, Rect, TargetId, WgpuSource, BACKEND_SETTING, COLOUR, DEPTH, ID, ID_FORMAT,
-    REASON_CHOICE_ABSENT, REASON_NOT_COMPILED, REASON_NO_ADAPTER, REASON_NO_BACKEND_FOR_TARGET, REASON_NO_CPU_ADAPTER,
-    REASON_ONLY_CPU,
+    crop_rows, order_or_software, padded_bytes_per_row, pick_adapter, policy_order, policy_order_from_file,
+    resolve_order, select, AdapterChoice, AdapterSource, Attempt, Backend, FrameGraph, FrameTargets, GraphError, Host,
+    Pass, PassContext, PassDecl, PassId, PassList, PolicyError, Rect, TargetId, WgpuSource, BACKEND_SETTING, COLOUR,
+    DEPTH, ID, ID_FORMAT, REASON_CHOICE_ABSENT, REASON_NOT_COMPILED, REASON_NO_ADAPTER, REASON_NO_BACKEND_FOR_TARGET,
+    REASON_NO_CPU_ADAPTER, REASON_ONLY_CPU,
 };
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -602,4 +602,37 @@ fn pick_adapter_rules() {
     assert_eq!(pick_adapter(Backend::Software, None, &gpus), Err(REASON_NO_CPU_ADAPTER.into()));
     let twins = [info("A", 1, 1, T::DiscreteGpu, B::Vulkan), info("B", 1, 2, T::DiscreteGpu, B::Vulkan)];
     assert_eq!(pick_adapter(Backend::Vulkan, None, &twins), Ok(0), "ties keep enumeration order");
+}
+
+/// The CPU crop behind `read_depth` (WebGPU copies depth textures whole only): edges, a 1x1
+/// rectangle and the full frame, over a padded 5 x 3 image of 4-byte texels whose bytes name
+/// their pixel; padding bytes are 0xEE and never returned.
+#[test]
+fn depth_crop_maths() {
+    let (w, h, t) = (5u32, 3u32, 4u32);
+    let bpr = padded_bytes_per_row(w, t).unwrap();
+    assert_eq!(bpr, 256);
+    assert_eq!(padded_bytes_per_row(64, 4), Some(256));
+    assert_eq!(padded_bytes_per_row(65, 4), Some(512));
+    assert_eq!(padded_bytes_per_row(u32::MAX, 4), None);
+    let mut img = vec![0xEEu8; (bpr * h) as usize];
+    for y in 0..h {
+        for x in 0..w {
+            let at = (y * bpr + x * t) as usize;
+            img[at..at + 4].copy_from_slice(&[x as u8, y as u8, 0, 0]);
+        }
+    }
+    let px = |r: Rect| -> Vec<(u8, u8)> { crop_rows(&img, bpr, r, t).unwrap().iter().map(|p| (p[0], p[1])).collect() };
+    let r = |x, y, width, height| Rect { x, y, width, height };
+    assert_eq!(px(r(0, 0, 1, 1)), [(0, 0)]);
+    assert_eq!(px(r(4, 2, 1, 1)), [(4, 2)], "bottom-right corner");
+    assert_eq!(px(r(3, 1, 2, 2)), [(3, 1), (4, 1), (3, 2), (4, 2)], "right and bottom edges");
+    assert_eq!(px(r(0, 1, 5, 1)), (0..5).map(|x| (x, 1)).collect::<Vec<_>>(), "a full row");
+    let full = px(r(0, 0, w, h));
+    assert_eq!(full.len(), 15);
+    assert_eq!(full, (0..3).flat_map(|y| (0..5).map(move |x| (x, y))).collect::<Vec<_>>(), "row by row");
+    assert!(crop_rows(&img, bpr, r(0, 0, 0, 1), t).is_none(), "empty");
+    assert!(crop_rows(&img, bpr, r(0, 3, 1, 1), t).is_none(), "past the rows");
+    assert!(crop_rows(&img, bpr, r(64, 0, 1, 1), t).is_none(), "past a row");
+    assert!(crop_rows(&img, bpr, r(u32::MAX, 0, 1, 1), t).is_none(), "overflow");
 }

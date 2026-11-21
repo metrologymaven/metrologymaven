@@ -71,6 +71,8 @@ pub enum GraphError {
     BadTarget(String),
     /// A readback rectangle is empty, too large or outside the target.
     BadRect { x: u32, y: u32, width: u32, height: u32 },
+    /// A readback would need a staging buffer larger than the device allows.
+    ReadbackTooLarge { bytes: u64, max: u64 },
 }
 
 impl fmt::Display for GraphError {
@@ -95,6 +97,9 @@ impl fmt::Display for GraphError {
             GraphError::Gpu(m) => write!(f, "gpu: {m}"),
             GraphError::PassFailed { pass, reason } => write!(f, "pass_failed: {pass}: {reason}"),
             GraphError::BadTarget(m) => write!(f, "bad_target: {m}"),
+            GraphError::ReadbackTooLarge { bytes, max } => {
+                write!(f, "readback_too_large: {bytes} bytes of staging, the device allows {max}")
+            }
             GraphError::BadRect { x, y, width, height } => {
                 write!(f, "bad_rect: {width}x{height} at ({x}, {y}) is empty, too large or outside the target")
             }
@@ -590,18 +595,37 @@ impl FrameGraph {
     }
 
     /// The depth target over `rect`, row by row (reversed Z: 0.0 is the far plane or no
-    /// drawable).
+    /// drawable). WebGPU allows only whole-subresource copies of depth textures, so the whole
+    /// depth target is copied to a staging buffer and `rect` is cropped on the CPU
+    /// ([`crop_rows`]); a target whose staging buffer would exceed the device's
+    /// `max_buffer_size` is [`GraphError::ReadbackTooLarge`].
     pub fn read_depth(&self, targets: &FrameTargets, rect: Rect) -> Result<Vec<f32>, GraphError> {
         self.scoped(|| {
-            let (layout, size) = readback_layout(targets, rect, 4)?;
+            // Checks `rect` against the target (the layout itself is not used).
+            readback_layout(targets, rect, 4)?;
+            let full = Rect { x: 0, y: 0, width: targets.width(), height: targets.height() };
+            let bad = GraphError::BadRect { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+            let bytes_per_row = padded_bytes_per_row(full.width, 4).ok_or_else(|| bad.clone())?;
+            let size = u64::from(bytes_per_row) * u64::from(full.height);
+            let max = self.device.limits().max_buffer_size;
+            if size > max {
+                return Err(GraphError::ReadbackTooLarge { bytes: size, max });
+            }
             let depth_readback = self.staging(size, "depth readback");
-            self.copy_out(targets.depth(), wgpu::TextureAspect::DepthOnly, rect, &depth_readback, layout);
+            self.copy_out(
+                targets.depth(),
+                wgpu::TextureAspect::DepthOnly,
+                full,
+                &depth_readback,
+                Layout { bytes_per_row },
+            );
             let (tx, rx) = mpsc::channel();
             depth_readback.map_async(wgpu::MapMode::Read, .., move |r| {
                 let _ = tx.send(r);
             });
             let bytes = self.finish_map(&depth_readback, rx)?;
-            Ok(rows(&bytes, rect, layout, 4).map(|px| f32::from_le_bytes([px[0], px[1], px[2], px[3]])).collect())
+            let px = crop_rows(&bytes, bytes_per_row, rect, 4).ok_or(bad)?;
+            Ok(px.iter().map(|p| f32::from_le_bytes([p[0], p[1], p[2], p[3]])).collect())
         })
     }
 
@@ -679,10 +703,38 @@ fn readback_layout(targets: &FrameTargets, rect: Rect, texel: u32) -> Result<(La
     if u64::from(rect.width) * u64::from(rect.height) > MAX_READBACK_PIXELS {
         return Err(bad);
     }
-    let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-    let unpadded = rect.width.checked_mul(texel).ok_or_else(|| bad.clone())?;
-    let bytes_per_row = unpadded.div_ceil(align).checked_mul(align).ok_or(bad)?;
+    let bytes_per_row = padded_bytes_per_row(rect.width, texel).ok_or(bad)?;
     Ok((Layout { bytes_per_row }, u64::from(bytes_per_row) * u64::from(rect.height)))
+}
+
+/// Bytes per row of a `width`-texel row of `texel` bytes, padded to wgpu's copy alignment
+/// (`COPY_BYTES_PER_ROW_ALIGNMENT`, 256); `None` on overflow.
+pub fn padded_bytes_per_row(width: u32, texel: u32) -> Option<u32> {
+    let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+    width.checked_mul(texel)?.div_ceil(align).checked_mul(align)
+}
+
+/// The texels of `rect`, row by row, cut from `bytes`: a whole image copied with rows of
+/// `bytes_per_row` bytes (padding included) and texels of `texel` bytes. `None` when `rect`
+/// is empty, or reaches past a row's bytes or past the copied rows (padding is never told
+/// apart from texels here: the caller checks `rect` against the image first).
+pub fn crop_rows(bytes: &[u8], bytes_per_row: u32, rect: Rect, texel: u32) -> Option<Vec<&[u8]>> {
+    let (bpr, t) = (bytes_per_row as usize, texel as usize);
+    if rect.width == 0 || rect.height == 0 || t == 0 || bpr == 0 {
+        return None;
+    }
+    let x0 = (rect.x as usize).checked_mul(t)?;
+    let x1 = (rect.x as usize).checked_add(rect.width as usize)?.checked_mul(t)?;
+    if x1 > bpr {
+        return None;
+    }
+    let mut out = Vec::with_capacity(rect.width as usize * rect.height as usize);
+    for row in rect.y as usize..(rect.y as usize).checked_add(rect.height as usize)? {
+        let start = row.checked_mul(bpr)?;
+        let line = bytes.get(start.checked_add(x0)?..start.checked_add(x1)?)?;
+        out.extend(line.chunks_exact(t));
+    }
+    Some(out)
 }
 
 /// The texels of `rect` in `bytes` (rows padded to `layout.bytes_per_row`), row by row.
