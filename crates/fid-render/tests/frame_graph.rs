@@ -8,7 +8,8 @@
 use fid_render::frame::graph::{
     order_or_software, policy_order, policy_order_from_file, resolve_order, select, AdapterChoice, AdapterSource,
     Attempt, Backend, FrameGraph, FrameTargets, GraphError, Host, Pass, PassContext, PassDecl, PassId, PassList,
-    PolicyError, Rect, TargetId, WgpuSource, BACKEND_SETTING, COLOUR, DEPTH, ID, ID_FORMAT,
+    PolicyError, Rect, TargetId, WgpuSource, BACKEND_SETTING, COLOUR, DEPTH, ID, ID_FORMAT, REASON_CHOICE_ABSENT,
+    REASON_NOT_COMPILED, REASON_NO_ADAPTER, REASON_NO_BACKEND_FOR_TARGET, REASON_NO_CPU_ADAPTER,
 };
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -70,16 +71,61 @@ fn shipped_policy_gives_each_host_its_row() {
 /// A malformed policy text and the check its error must pass.
 type PolicyCase = (&'static str, fn(&PolicyError) -> bool);
 
+/// Review of #368: every row is checked; a backend listed twice and a row not ending in
+/// `software` are schema errors (REQ-PLAT.GPU.POLICY-004), so `order_or_software` falls back.
+const MORE_CASES: &[PolicyCase] = &[
+    (
+        "schema_version = 1
+[[row]]
+os='linux'
+arch='x86_64'
+backends=['vulkan','vulkan','software']",
+        |e| matches!(e, PolicyError::Schema(_)),
+    ),
+    (
+        "schema_version = 1
+[[row]]
+os='linux'
+arch='x86_64'
+backends=['vulkan','gl']",
+        |e| matches!(e, PolicyError::Schema(_)),
+    ),
+    (
+        "schema_version = 1
+[[row]]
+os='linux'
+arch='x86_64'
+backends=['vulkan','software']
+[[row]]
+os='windows'
+arch='x86_64'
+backends=['dx13','software']",
+        |e| *e == PolicyError::UnknownBackend("dx13".into()),
+    ),
+    (
+        "schema_version = 1
+[[row]]
+os='linux'
+arch='x86_64'
+backends=['vulkan','software']
+[[row]]
+os='windows'
+arch='x86_64'
+backends=['dx12']",
+        |e| matches!(e, PolicyError::Schema(_)),
+    ),
+];
+
 #[test]
 fn malformed_policies_are_refused() {
     let h = host("linux", "x86_64");
-    let cases: [PolicyCase; 7] = [
+    let cases: &[PolicyCase] = &[
         ("schema_version = 2\n[[row]]\nos='linux'\narch='x86_64'\nbackends=['vulkan']", |e| {
             matches!(e, PolicyError::Schema(_))
         }),
         ("[[row]]\nos='linux'\narch='x86_64'\nbackends=['vulkan']", |e| matches!(e, PolicyError::Schema(_))),
         ("schema_version = 1\nschema_version = 1", |e| matches!(e, PolicyError::Parse(_))),
-        ("schema_version = 1\n[[row]]\nos='linux'\narch='x86_64'\nbackends=['vulcan']", |e| {
+        ("schema_version = 1\n[[row]]\nos='linux'\narch='x86_64'\nbackends=['vulcan','software']", |e| {
             *e == PolicyError::UnknownBackend("vulcan".into())
         }),
         ("schema_version = 1\n[[row]]\nos='linux'\narch='x86_64'\nbackends=[]", |e| {
@@ -90,7 +136,7 @@ fn malformed_policies_are_refused() {
             matches!(e, PolicyError::Schema(_))
         }),
     ];
-    for (text, ok) in cases {
+    for (text, ok) in cases.iter().chain(MORE_CASES) {
         let e = policy_order(text.as_bytes(), &h).unwrap_err();
         assert!(ok(&e), "{text}: {e:?}");
     }
@@ -107,7 +153,7 @@ fn malformed_policies_are_refused() {
 fn ac2_falls_back_to_gl_and_records_the_vulkan_reason() {
     let policy =
         policy_order(&fixture("fixtures/viz/frame-graph/policy-vulkan-gl.toml"), &host("linux", "x86_64")).unwrap();
-    assert_eq!(policy, [Backend::Vulkan, Backend::Gl]);
+    assert_eq!(policy, [Backend::Vulkan, Backend::Gl, Backend::Software]);
     let fake = Fake::new(&[(Backend::Vulkan, Err("vkEnumeratePhysicalDevices: 0 devices")), (Backend::Gl, Ok("gl0"))]);
     let order = resolve_order(&policy, None, None).unwrap();
     let s = select(&fake, &order, None).unwrap();
@@ -377,19 +423,25 @@ fn vertex_bytes(c: &Cube) -> Vec<u8> {
 /// AC-1: one frame of the golden cube on the software adapter. Each visible face's centre
 /// pixel holds its render ID and one of its two primitive indices, with the reversed-Z depth
 /// of the reference; the background pixel holds 0 and depth 0.0. Runs wherever a CPU adapter
-/// exists (WARP on Windows); it must exist on Windows, elsewhere its absence is reported and
-/// the test returns.
+/// exists (WARP on Windows); it must exist on Windows. Elsewhere it returns early only on
+/// `NoAdapter` whose every reason says no adapter exists or nothing is compiled in; any other
+/// error fails the test (review of #368).
 #[test]
 fn ac1_golden_cube_ids_and_depth() {
     let source = WgpuSource::new();
-    let mut graph = match FrameGraph::create(&source, &[Backend::Software], None) {
+    // Start-up through the policy path: a policy with no row for the host keeps its error as
+    // the warning and falls back to `[software]`.
+    let no_row = Err(PolicyError::NoRow { os: "plan9".into(), arch: "mips".into() });
+    let mut graph = match FrameGraph::start(&source, no_row.clone(), None, None) {
         Ok(g) => g,
-        Err(e) if !cfg!(windows) => {
-            eprintln!("AC-1 not run on this host (no software adapter): {e}");
+        Err(GraphError::NoAdapter { tried }) if !cfg!(windows) && tried.iter().all(|a| absent(&a.reason)) => {
+            eprintln!("AC-1 not run on this host (no software adapter): {tried:?}");
             return;
         }
-        Err(e) => panic!("Windows must offer the WARP software adapter: {e}"),
+        Err(e) => panic!("AC-1 needs the software adapter (WARP on Windows): {e}"),
     };
+    assert_eq!(graph.policy_warning(), no_row.as_ref().err());
+    eprintln!("AC-1 adapter: {:?}", graph.adapter_info());
     assert_eq!(graph.backend(), Backend::Software);
     assert_eq!(graph.adapter_info().device_type, wgpu::DeviceType::Cpu);
     let c = cube();
@@ -461,4 +513,50 @@ fn ac1_golden_cube_ids_and_depth() {
         view_formats: &[],
     });
     assert!(matches!(FrameTargets::with_colour(&graph, plain), Err(GraphError::BadTarget(_))));
+    // A wgpu validation error inside a pass is a `Gpu` result, never wgpu's panicking default
+    // handler (review of #368); the graph keeps working afterwards.
+    struct Invalid;
+    impl Pass for Invalid {
+        fn record(&mut self, ctx: &mut PassContext<'_>) -> Result<(), String> {
+            let _ = ctx.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("invalid on purpose"),
+                size: 16,
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::MAP_WRITE,
+                mapped_at_creation: false,
+            });
+            Ok(())
+        }
+    }
+    let mut g2 = FrameGraph::create(&source, &[Backend::Software], None).unwrap();
+    g2.register(PassDecl { id: PassId("invalid"), order: 1, inputs: vec![], outputs: vec![], run: Box::new(Invalid) })
+        .unwrap();
+    let t2 = FrameTargets::new(&g2, 8, 8).unwrap();
+    assert!(matches!(g2.render(&t2, wgpu::Color::BLACK), Err(GraphError::Gpu(_))));
+    assert_eq!(g2.read_id(&t2, Rect { x: 0, y: 0, width: 1, height: 1 }).unwrap(), [[0, 0]]);
+    // An injected choice of the software adapter on its own backend is honoured although it is
+    // a CPU adapter (review of #368): without the choice that backend skips CPU adapters.
+    let info = graph.adapter_info().clone();
+    let own = match info.backend {
+        wgpu::Backend::Dx12 => Backend::Dx12,
+        wgpu::Backend::Vulkan => Backend::Vulkan,
+        other => panic!("software adapter on unexpected backend {other:?}"),
+    };
+    let choice = AdapterChoice { backend: own, vendor: Some(info.vendor), device: Some(info.device), name: None };
+    let chosen = FrameGraph::create(&source, &[own], Some(&choice)).unwrap();
+    assert_eq!(chosen.backend(), own);
+    assert_eq!(chosen.adapter_info().device_type, wgpu::DeviceType::Cpu);
+    assert_eq!((chosen.adapter_info().vendor, chosen.adapter_info().device), (info.vendor, info.device));
+    let wrong = AdapterChoice {
+        backend: own,
+        vendor: Some(info.vendor),
+        device: Some(info.device),
+        name: Some("no such adapter".into()),
+    };
+    let e = FrameGraph::create(&source, &[own], Some(&wrong)).unwrap_err();
+    assert_eq!(e, GraphError::NoAdapter { tried: vec![Attempt { backend: own, reason: REASON_CHOICE_ABSENT.into() }] });
+}
+
+/// Reasons that mean no adapter exists on this host or build (the only ones AC-1 may skip on).
+fn absent(reason: &str) -> bool {
+    [REASON_NO_ADAPTER, REASON_NO_CPU_ADAPTER, REASON_NOT_COMPILED, REASON_NO_BACKEND_FOR_TARGET].contains(&reason)
 }

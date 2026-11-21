@@ -9,4 +9,4 @@ backends = ["vulkan", "software"]
 [[row]]
 os = "linux"
 arch = "x86_64"
-backends = ["gl"]
+backends = ["gl", "software"]

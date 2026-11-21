@@ -134,6 +134,19 @@ impl Default for WgpuSource {
     }
 }
 
+/// Reason: this target has no wgpu backend compiled in at all.
+pub const REASON_NO_BACKEND_FOR_TARGET: &str = "no wgpu backend is compiled in for this target";
+/// Reason: the backend is not compiled into this build.
+pub const REASON_NOT_COMPILED: &str = "backend not compiled into this build";
+/// Reason: the backend enumerates no adapter.
+pub const REASON_NO_ADAPTER: &str = "no adapter";
+/// Reason (`software`): no CPU adapter on any compiled backend.
+pub const REASON_NO_CPU_ADAPTER: &str = "no CPU adapter";
+/// Reason (hardware backend): only CPU adapters, which are tried as `software`.
+pub const REASON_ONLY_CPU: &str = "only CPU adapters (software is tried as its own backend)";
+/// Reason: an injected adapter choice matches no adapter of its backend.
+pub const REASON_CHOICE_ABSENT: &str = "the chosen adapter is not present";
+
 /// Rank of an adapter type for a hardware backend (lower is preferred); CPU adapters are
 /// only taken for [`Backend::Software`].
 fn hardware_rank(t: wgpu::DeviceType) -> Option<u8> {
@@ -151,15 +164,15 @@ impl AdapterSource for WgpuSource {
 
     fn request(&self, backend: Backend, choice: Option<&AdapterChoice>) -> Result<GpuAdapter, String> {
         let Some(instance) = &self.instance else {
-            return Err("no wgpu backend is compiled in for this target".into());
+            return Err(REASON_NO_BACKEND_FOR_TARGET.into());
         };
         let wanted = backend.wgpu_backends();
         if !wgpu::Instance::enabled_backend_features().intersects(wanted) {
-            return Err("backend not compiled into this build".into());
+            return Err(REASON_NOT_COMPILED.into());
         }
         let adapters = instance.enumerate_adapters(wanted);
         if adapters.is_empty() {
-            return Err("no adapter".into());
+            return Err(REASON_NO_ADAPTER.into());
         }
         let mut best: Option<(u8, wgpu::Adapter)> = None;
         for a in adapters {
@@ -167,8 +180,11 @@ impl AdapterSource for WgpuSource {
             if choice.is_some_and(|c| !c.matches(&info)) {
                 continue;
             }
-            let rank = match backend {
-                Backend::Software => (info.device_type == wgpu::DeviceType::Cpu).then_some(0),
+            // An injected choice is honoured whatever the adapter type (a WARP choice on dx12
+            // included); without one, CPU adapters are only taken as `software`.
+            let rank = match (backend, choice) {
+                (_, Some(_)) => Some(hardware_rank(info.device_type).unwrap_or(4)),
+                (Backend::Software, None) => (info.device_type == wgpu::DeviceType::Cpu).then_some(0),
                 _ => hardware_rank(info.device_type),
             };
             if let Some(r) = rank {
@@ -179,9 +195,9 @@ impl AdapterSource for WgpuSource {
         }
         let Some((_, adapter)) = best else {
             return Err(match (backend, choice) {
-                (_, Some(_)) => "the chosen adapter is not present".into(),
-                (Backend::Software, None) => "no CPU adapter".into(),
-                _ => "only CPU adapters (software is tried as its own backend)".into(),
+                (_, Some(_)) => REASON_CHOICE_ABSENT.into(),
+                (Backend::Software, None) => REASON_NO_CPU_ADAPTER.into(),
+                _ => REASON_ONLY_CPU.into(),
             });
         };
         let desc = wgpu::DeviceDescriptor {
@@ -230,8 +246,11 @@ impl FrameTargets {
     /// Targets of `width` x `height` with a new colour texture of [`COLOUR_FORMAT`].
     pub fn new(graph: &FrameGraph, width: u32, height: u32) -> Result<FrameTargets, GraphError> {
         check_size(graph, width, height)?;
+        graph.begin_scopes()?;
         let colour = target(&graph.device, "frame colour", width, height, COLOUR_FORMAT);
-        Ok(FrameTargets::around(graph, colour))
+        let t = FrameTargets::around(graph, colour);
+        graph.end_scopes()?;
+        Ok(t)
     }
 
     /// Targets around a colour texture the caller owns. It must be a single-sample 2D texture
@@ -247,7 +266,10 @@ impl FrameTargets {
             return Err(GraphError::BadTarget("the colour texture has layers or mip levels".into()));
         }
         check_size(graph, colour.width(), colour.height())?;
-        Ok(FrameTargets::around(graph, colour))
+        graph.begin_scopes()?;
+        let t = FrameTargets::around(graph, colour);
+        graph.end_scopes()?;
+        Ok(t)
     }
 
     fn around(graph: &FrameGraph, colour: wgpu::Texture) -> FrameTargets {
@@ -333,6 +355,8 @@ pub struct FrameGraph {
     passes: PassList,
     lost: Arc<Mutex<Option<String>>>,
     lost_flag: Arc<AtomicBool>,
+    uncaptured: Arc<Mutex<Option<String>>>,
+    policy_warning: Option<PolicyError>,
 }
 
 impl FrameGraph {
@@ -347,6 +371,28 @@ impl FrameGraph {
         Ok(FrameGraph::from_selected(s))
     }
 
+    /// Start-up as the spec describes it: the policy order (or `[software]` when the policy gave
+    /// none, keeping its error as [`FrameGraph::policy_warning`]), overridden by the setting
+    /// `viz.render.backend` and an injected choice ([`resolve_order`]), then [`select`].
+    pub fn start(
+        source: &WgpuSource,
+        policy: Result<Vec<Backend>, PolicyError>,
+        setting: Option<&str>,
+        choice: Option<&AdapterChoice>,
+    ) -> Result<FrameGraph, GraphError> {
+        let (order, warning) = order_or_software(policy);
+        let order = resolve_order(&order, setting, choice)?;
+        let mut g = FrameGraph::create(source, &order, choice)?;
+        g.policy_warning = warning;
+        Ok(g)
+    }
+
+    /// Why the policy gave no order, when [`FrameGraph::start`] fell back to `[software]`; to
+    /// be reported as a warning.
+    pub fn policy_warning(&self) -> Option<&PolicyError> {
+        self.policy_warning.as_ref()
+    }
+
     fn from_selected(s: Selected<GpuAdapter>) -> FrameGraph {
         let lost = Arc::new(Mutex::new(None));
         let lost_flag = Arc::new(AtomicBool::new(false));
@@ -357,6 +403,17 @@ impl FrameGraph {
             }
             f.store(true, Ordering::SeqCst);
         });
+        // wgpu's default handler panics on an error no scope catches; keep it as a result
+        // instead (CONSTITUTION §8), returned as `Gpu` by the next call.
+        let uncaptured = Arc::new(Mutex::new(None));
+        let u = Arc::clone(&uncaptured);
+        s.adapter.device.on_uncaptured_error(Arc::new(move |e: wgpu::Error| {
+            if let Ok(mut g) = u.lock() {
+                if g.is_none() {
+                    *g = Some(e.to_string());
+                }
+            }
+        }));
         FrameGraph {
             device: s.adapter.device,
             queue: s.adapter.queue,
@@ -366,6 +423,8 @@ impl FrameGraph {
             passes: PassList::new(),
             lost,
             lost_flag,
+            uncaptured,
+            policy_warning: None,
         }
     }
 
@@ -410,31 +469,43 @@ impl FrameGraph {
         Ok(())
     }
 
-    fn scoped<T>(&self, f: impl FnOnce() -> Result<T, GraphError>) -> Result<T, GraphError> {
+    /// Opens the validation and out-of-memory error scopes around a GPU operation.
+    fn begin_scopes(&self) -> Result<(), GraphError> {
         self.check_lost()?;
         self.device.push_error_scope(wgpu::ErrorFilter::Validation);
         self.device.push_error_scope(wgpu::ErrorFilter::OutOfMemory);
-        let r = f();
+        Ok(())
+    }
+
+    /// Closes the scopes of [`FrameGraph::begin_scopes`]: a caught error, a stored uncaptured
+    /// error or a lost device is the result.
+    fn end_scopes(&self) -> Result<(), GraphError> {
         let oom = pollster::block_on(self.device.pop_error_scope());
         let validation = pollster::block_on(self.device.pop_error_scope());
         self.check_lost()?;
         if let Some(e) = validation.or(oom) {
             return Err(GraphError::Gpu(e.to_string()));
         }
+        let stored = self.uncaptured.lock().ok().and_then(|mut g| g.take());
+        match stored {
+            Some(e) => Err(GraphError::Gpu(e)),
+            None => Ok(()),
+        }
+    }
+
+    fn scoped<T>(&self, f: impl FnOnce() -> Result<T, GraphError>) -> Result<T, GraphError> {
+        self.begin_scopes()?;
+        let r = f();
+        self.end_scopes()?;
         r
     }
 
     /// Renders one frame into `targets`: clears colour to `clear`, depth to [`DEPTH_CLEAR`]
     /// and ID to 0, then runs every pass in ascending order key and submits.
     pub fn render(&mut self, targets: &FrameTargets, clear: wgpu::Color) -> Result<(), GraphError> {
-        self.check_lost()?;
-        self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+        self.begin_scopes()?;
         let r = self.encode_frame(targets, clear);
-        let validation = pollster::block_on(self.device.pop_error_scope());
-        self.check_lost()?;
-        if let Some(e) = validation {
-            return Err(GraphError::Gpu(e.to_string()));
-        }
+        self.end_scopes()?;
         r
     }
 

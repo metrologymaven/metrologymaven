@@ -144,7 +144,9 @@ pub fn policy_order(bytes: &[u8], host: &Host) -> Result<Vec<Backend>, PolicyErr
     if rows.len() > MAX_POLICY_ROWS {
         return Err(PolicyError::TooLarge);
     }
-    let mut found: Option<&Vec<toml::Value>> = None;
+    // Every row is checked (names known, each backend once, `software` last, as
+    // REQ-PLAT.GPU.POLICY-004 requires), so a broken row elsewhere is not silently accepted.
+    let mut found: Option<Vec<Backend>> = None;
     for (i, row) in rows.iter().enumerate() {
         let toml::Value::Table(row) = row else {
             return Err(PolicyError::Schema(format!("row {} is not a table", i + 1)));
@@ -157,29 +159,30 @@ pub fn policy_order(bytes: &[u8], host: &Host) -> Result<Vec<Backend>, PolicyErr
         let Some(toml::Value::Array(list)) = row.get("backends") else {
             return Err(PolicyError::Schema(format!("row {}: `backends` missing or not an array", i + 1)));
         };
+        let mut order = Vec::new();
+        for v in list {
+            let toml::Value::String(s) = v else {
+                return Err(PolicyError::Schema(format!("row {}: a backend is not a string", i + 1)));
+            };
+            let b = Backend::parse(s).ok_or_else(|| PolicyError::UnknownBackend(s.clone()))?;
+            if order.contains(&b) {
+                return Err(PolicyError::Schema(format!("row {}: backend `{b}` is listed twice", i + 1)));
+            }
+            order.push(b);
+        }
+        if order.last() != Some(&Backend::Software) {
+            return Err(PolicyError::Schema(format!("row {}: `backends` must end with `software`", i + 1)));
+        }
         if os == host.os && arch == host.arch {
             if found.is_some() {
                 return Err(PolicyError::DuplicateRow { os: host.os.clone(), arch: host.arch.clone() });
             }
-            found = Some(list);
+            found = Some(order);
         }
     }
-    let Some(list) = found else {
+    let Some(order) = found else {
         return Err(PolicyError::NoRow { os: host.os.clone(), arch: host.arch.clone() });
     };
-    let mut order = Vec::new();
-    for v in list {
-        let toml::Value::String(s) = v else {
-            return Err(PolicyError::Schema("a backend is not a string".into()));
-        };
-        let b = Backend::parse(s).ok_or_else(|| PolicyError::UnknownBackend(s.clone()))?;
-        if !order.contains(&b) {
-            order.push(b);
-        }
-    }
-    if order.is_empty() {
-        return Err(PolicyError::Schema("the host row lists no backend".into()));
-    }
     Ok(order)
 }
 
