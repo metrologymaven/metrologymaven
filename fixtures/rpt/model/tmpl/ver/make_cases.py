@@ -258,11 +258,11 @@ def scenario():
         "starter_p1": starter_p1,
         "list": {"templates": rows},
         "journal_texts": [jcs(e).decode("utf-8") for e in events],
-        "forged": forged(events, v1_ref, fai_ref),
+        "forged": forged(events, v1_ref, fai_ref, a_doc),
     }
 
 
-def forged(events, v1_ref, fai_ref):
+def forged(events, v1_ref, fai_ref, a_doc):
     """Forged journals and their hand-labelled exact-replay outcome (the first event that is
     not identical). Each starts from the scenario journal."""
     texts = [jcs(e) for e in events]
@@ -272,7 +272,7 @@ def forged(events, v1_ref, fai_ref):
 
     def case(name, journal, outcome, at):
         out.append({"name": name, "journal_texts": [t.decode("utf-8") for t in journal], "outcome": outcome,
-                    "first_mismatch": str(at)})
+                    "first_mismatch": at if isinstance(at, str) else str(at)})
 
     # Two saves that both claim version 2 (the race the compare-and-set prevents).
     j = texts[:save[1] + 1] + [texts[save[1]]] + texts[save[1] + 1:]
@@ -306,6 +306,15 @@ def forged(events, v1_ref, fai_ref):
     e = json.loads(texts[apply[1]])
     e["template"]["builtin"] = False
     case("apply_builtin_as_project", texts[:apply[1]] + [jcs(e)] + texts[apply[1] + 1:], "DIVERGENT", apply[1])
+    # Documented limit (NODE.md): an apply that relabels a project version (acme@1) as a
+    # built-in version the replaying release does not ship, with the report digest
+    # recomputed to match, replays from the stored bytes after the digest check, so the
+    # forged provenance label is accepted. It grants no authority. The journal ends there.
+    e = json.loads(texts[apply[0]])
+    e["template"]["builtin"] = True
+    forged_a = dict(a_doc, template_ref=e["template"])
+    e["report_digest"] = sha(jcs(forged_a))
+    case("apply_relabelled_unshipped_builtin", texts[:apply[0]] + [jcs(e)], "IDENTICAL", "none")
     assert v1_ref["digest"] != fai_ref["digest"]
     return out
 

@@ -582,7 +582,7 @@ fn forged_journals_from_the_oracle_are_caught() {
     scenario(&mut w);
     let c = cases();
     let CValue::Arr(cases_) = get(&c, "forged") else { panic!() };
-    assert!(cases_.len() >= 8);
+    assert!(cases_.len() >= 9);
     for f in cases_ {
         let journal: Vec<CValue> = match get(f, "journal_texts") {
             CValue::Arr(a) => a
@@ -597,7 +597,8 @@ fn forged_journals_from_the_oracle_are_caught() {
         let run = replay_exact(&journal, w.backend.objects(), &w.kinds, &w.builtins, w.backend.project());
         let name = st(f, "name");
         assert_eq!(run.outcome.as_str(), st(f, "outcome"), "{name}");
-        assert_eq!(run.first_mismatch.map(|i| i.to_string()).as_deref(), Some(st(f, "first_mismatch")), "{name}");
+        let at = run.first_mismatch.map_or_else(|| "none".to_string(), |i| i.to_string());
+        assert_eq!(at, st(f, "first_mismatch"), "{name}");
     }
 }
 
@@ -913,9 +914,8 @@ fn selectors_and_registration() {
 
 #[test]
 fn label_control_keys_are_normalised() {
-    // D-045 defence in depth, hand-labelled: a key containing "label" other than exactly
-    // "label", or "interpretation" / "provisional", after casefolding and dropping
-    // `_`, `-` and spaces.
+    // D-045 defence in depth, hand-labelled: after casefolding and dropping `_`, `-` and
+    // spaces, exactly one of the denylisted words.
     for k in [
         "labels",
         "Labels",
@@ -928,16 +928,46 @@ fn label_control_keys_are_normalised() {
         "labelMode",
         "show_labels",
         "value_labels",
+        "suppress_labels",
         "Interpretation",
         "PROVISIONAL",
     ] {
         assert!(is_label_control_key(k), "{k}");
     }
-    for k in ["label", "Label", "LABEL", "text", "rows", "note", "columns", "key"] {
+    // Specced payload keys stay allowed: chart blocks' x_label / y_label
+    // (spec/rpt/model/blocks/chart/NODE.md), form fields' show_label
+    // (spec/rpt/forms/layout/map/NODE.md), and label_key.
+    for k in [
+        "label",
+        "Label",
+        "LABEL",
+        "x_label",
+        "y_label",
+        "show_label",
+        "label_key",
+        "text",
+        "rows",
+        "note",
+        "columns",
+        "key",
+    ] {
         assert!(!is_label_control_key(k), "{k}");
     }
     assert_eq!(normalise_key("Hide_Labels-x y"), "hidelabelsxy");
-    assert_eq!(LABEL_CONTROL_WORDS, ["interpretation", "provisional"]);
+    assert_eq!(
+        LABEL_CONTROL_WORDS,
+        [
+            "labels",
+            "hidelabels",
+            "showlabels",
+            "suppresslabels",
+            "labelmode",
+            "valuelabels",
+            "labelvisibility",
+            "interpretation",
+            "provisional"
+        ]
+    );
 }
 
 #[test]
@@ -964,9 +994,12 @@ fn label_switches_in_any_spelling_are_refused_on_save() {
             other => panic!("{key}: {other:?}"),
         }
     }
-    // Plain "label" (a column heading) is not a switch.
-    std::fs::write(tmp.join("l.json"), base.replace("\"labels\"", "\"label\"")).unwrap();
-    w.tmpl(SAVE_TEMPLATE, obj([("template", s(st(&c, "ids.file"))), ("file", s("root://imports/l.json"))])).unwrap();
+    // Plain "label" and specced keys such as "x_label" are not switches.
+    for key in ["label", "x_label"] {
+        std::fs::write(tmp.join("l.json"), base.replace("\"labels\"", &format!("\"{key}\""))).unwrap();
+        w.tmpl(SAVE_TEMPLATE, obj([("template", s(st(&c, "ids.file"))), ("file", s("root://imports/l.json"))]))
+            .unwrap();
+    }
     // The provisional text in another case is refused too.
     let text_doc = String::from_utf8(read("label_text.json"))
         .unwrap()

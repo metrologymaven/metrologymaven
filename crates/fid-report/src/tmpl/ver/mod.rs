@@ -31,7 +31,7 @@
 //!   included, are produced by `RPT.MODEL.FMT` from the stored record a value binding names;
 //!   a template holds no value, value text or number (format rule), so nothing in it reaches
 //!   the label code and it cannot hide a label. As defence in depth this leaf also refuses
-//!   any payload key that looks like a label switch ([`is_label_control_key`], keys
+//!   any payload key that is a label switch ([`is_label_control_key`], keys
 //!   normalised by [`normalise_key`]) and the provisional label's key or text
 //!   (`report.template_invalid`, reason `label_control`).
 //! - **Replay** ([`replay_exact`], AC-6): saves and applies replay from the store by digest;

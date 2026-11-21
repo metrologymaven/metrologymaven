@@ -17,9 +17,20 @@ use std::collections::{BTreeMap, BTreeSet};
 /// `RPT.MODEL.FMT` from the stored record a value binding names, never from template data,
 /// and a template can hold no value, value text or number (`RPT.MODEL.TMPL.FORMAT`), so no
 /// template content reaches the label code. On top of that, a template payload may hold no
-/// key that even looks like a label switch: after [`normalise_key`], a key containing
-/// `label` other than exactly `label` (a column heading), or one of these words.
-pub const LABEL_CONTROL_WORDS: [&str; 2] = ["interpretation", "provisional"];
+/// key that, after [`normalise_key`], is exactly one of these label switches. The match is
+/// exact so specced payload keys such as `x_label`, `y_label` (chart blocks) and
+/// `show_label` (form fields) stay allowed.
+pub const LABEL_CONTROL_WORDS: [&str; 9] = [
+    "labels",
+    "hidelabels",
+    "showlabels",
+    "suppresslabels",
+    "labelmode",
+    "valuelabels",
+    "labelvisibility",
+    "interpretation",
+    "provisional",
+];
 
 /// A key or string for the label rule: Unicode lowercase with `_`, `-` and spaces removed,
 /// so `Labels`, `hideLabels`, `hide-labels` and `Hide Labels` all read `labels`/`hidelabels`.
@@ -30,7 +41,7 @@ pub fn normalise_key(k: &str) -> String {
 /// Whether a payload key is a label switch under the D-045 rule.
 pub fn is_label_control_key(k: &str) -> bool {
     let n = normalise_key(k);
-    (n.contains("label") && n != "label") || LABEL_CONTROL_WORDS.contains(&n.as_str())
+    LABEL_CONTROL_WORDS.contains(&n.as_str())
 }
 
 /// Whether a payload string is the provisional label's catalog key or English text (after
