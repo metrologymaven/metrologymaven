@@ -12,8 +12,8 @@
 
 use fid_fit::contract::{Constraint, Fit, FitError, FitParams, FittedFeature, Method, PointsView};
 use fid_fit::mcc_cyl::{
-    algorithm, fit_mcc_cylinder, fit_mcc_cylinder_from, mcc_command_row, to_fit_result, MccCylinder, MccCylinderFit,
-    Optimality, INSIDE_TOL,
+    algorithm, fit_mcc_cylinder, fit_mcc_cylinder_from, mcc_command_row, to_fit_result, CrossOutcome, MccCylinder,
+    MccCylinderFit, Optimality, INSIDE_TOL,
 };
 use fid_kci::{check, parse_card, InputArity};
 use fid_solv::mstart::StartSummary;
@@ -102,7 +102,15 @@ fn outcomes() -> &'static [(Case, Result<MccCylinder, FitError>)] {
                     "{}: {:?} in {:.2?}",
                     c.name,
                     r.as_ref()
-                        .map(|m| (m.local_optimum_only, m.suspect_axis, m.zone_ratio, m.agreement))
+                        .map(|m| (
+                            m.local_optimum_only,
+                            m.suspect_axis,
+                            m.zone_ratio,
+                            m.agreement,
+                            m.cross_check_passed,
+                            m.cross_check.iter().map(|x| (x.outcome.as_str(), x.lower, x.upper)).collect::<Vec<_>>(),
+                            cyl(m).2
+                        ))
                         .map_err(|e| e.code()),
                     t.elapsed()
                 );
@@ -163,6 +171,9 @@ fn ac1_planted_envelopes() {
         assert!(m.agreement && !m.local_optimum_only && !m.suspect_axis, "{}", c.name);
         assert_eq!(m.optimality, Optimality::StrictLocal);
         assert!(!m.certificate.flags().local_optimum_only);
+        // Rule 11: every direction of the global cross-check passed.
+        assert!(m.cross_check_passed && m.cross_check.len() == 4, "{}: {:?}", c.name, m.cross_check);
+        assert!(m.cross_check.iter().all(|x| x.outcome == CrossOutcome::Passed && x.lower >= rad * (1.0 - 1e-9)));
         n += 1;
     }
     eprintln!("worst radius {:e} m, axis {:e} rad, position {:e} m", worst[0], worst[1], worst[2]);
@@ -184,6 +195,56 @@ fn ac3_fixed_direction_is_global() {
     assert!(!m.local_optimum_only);
     assert_eq!(m.starts.len(), 1);
     assert_eq!(m.certificate.params().len(), 3);
+    assert!(m.cross_check.is_empty() && m.cross_check_passed);
+}
+
+/// Review of #374 (rule 11): the short oval pilot diameter has a certified near-axis local
+/// minimum that a cylinder across the pilot beats (`better_r`, the fixture's exact feasible
+/// radius along the ovality's major axis). The fit either returns a radius at most `better_r`
+/// or is refused or flagged `local_optimum_only`; through the trait it returns such a radius or
+/// is refused. Never a confidently wrong cylinder.
+#[test]
+fn pilot_never_confidently_wrong() {
+    let (c, r) = outcomes().iter().find(|(c, _)| flag(c) == Some("pilot_not_global")).unwrap();
+    let better = c.get("better_r").unwrap()[0];
+    let small = |m: &MccCylinder| cyl(m).2 <= better * (1.0 + 1e-12);
+    match r {
+        Ok(m) if small(m) => {}
+        Ok(m) => {
+            assert!(m.local_optimum_only && !m.cross_check_passed, "{m:?}");
+            // The cross-check found a direction at least as good as the fixture's feasible one.
+            let better_dirs: Vec<_> = m.cross_check.iter().filter(|x| x.outcome == CrossOutcome::Better).collect();
+            assert!(better_dirs.iter().any(|x| x.upper <= better * (1.0 + 1e-9)), "{:?}", m.cross_check);
+            assert!(m.certificate.flags().local_optimum_only);
+        }
+        Err(e) => eprintln!("pilot: refused {}", e.code()),
+    }
+    let v = c.get("points").unwrap();
+    match MccCylinderFit.fit(&PointsView::new(&v, None).unwrap(), &params(c), Some(SEED)) {
+        Ok(f) => match f.feature {
+            FittedFeature::Cylinder { r, .. } => assert!(r <= better * (1.0 + 1e-12), "{r}"),
+            ref o => panic!("{o:?}"),
+        },
+        Err(e) => assert!(matches!(e.code(), "flagged_fit" | "solver" | "implausible_fit"), "{e:?}"),
+    }
+}
+
+/// Oval cross-sections (should-fix of the #374 review, kept failing closed): four active rows
+/// for five parameters (free direction) and two for three (fixed direction) are a degenerate
+/// active set, which the certificate does not support. The fit is refused with code `solver`,
+/// directly and through the trait.
+#[test]
+fn degenerate_active_set_is_refused() {
+    let mut n = 0;
+    for (c, r) in outcomes().iter().filter(|(c, _)| flag(c) == Some("degenerate_active_set")) {
+        let e = r.as_ref().map(|m| cyl(m)).unwrap_err();
+        assert!(matches!(e, FitError::SeqFailed { .. }), "{}: {e:?}", c.name);
+        let v = c.get("points").unwrap();
+        let t = MccCylinderFit.fit(&PointsView::new(&v, None).unwrap(), &params(c), Some(SEED));
+        assert_eq!(t.as_ref().unwrap_err(), e, "{}", c.name);
+        n += 1;
+    }
+    assert_eq!(n, 2);
 }
 
 /// AC-2 (as built, see the leaf's Open questions): the slab's two near-equal envelope axes lie
@@ -199,28 +260,24 @@ fn ac2_two_axes_never_unflagged() {
     }
 }
 
-/// Ties: a sixth point on the planted surface at a zero-multiplier position. The fit either
-/// certifies a five-point subset of the six tied points with the reference radius, or fails
-/// closed; it never returns an uncertified point.
+/// Ties: a sixth point on the planted surface at a zero-multiplier position. The fit certifies
+/// a five-point subset of the six tied points with the reference radius, unflagged.
 #[test]
 fn tied_contacts() {
     let (c, r) = outcomes().iter().find(|(c, _)| c.name == "tie").unwrap();
     let tie: u32 = c.text("tie_point").unwrap().parse().unwrap();
     let mut six = c.ints("contacts").unwrap();
     six.push(tie);
-    match r {
-        Ok(m) => {
-            assert_eq!(m.contacts.len(), 5);
-            assert!(m.contacts.iter().all(|k| six.contains(k)), "{:?}", m.contacts);
-            assert!((cyl(m).2 - c.get("ref_r").unwrap()[0]).abs() <= TOL_R);
-        }
-        Err(e) => assert_eq!(e.code(), "solver", "{e:?}"),
-    }
+    let m = r.as_ref().unwrap_or_else(|e| panic!("tie: {e:?}"));
+    assert_eq!(m.contacts.len(), 5);
+    assert!(m.contacts.iter().all(|k| six.contains(k)), "{:?}", m.contacts);
+    assert!((cyl(m).2 - c.get("ref_r").unwrap()[0]).abs() <= TOL_R);
+    assert!(!m.local_optimum_only && !m.suspect_axis && m.cross_check_passed);
 }
 
 /// Half cylinders 1.066 radii long and short noisy 30-degree arcs: the enclosing cylinder of
-/// such data need not be the measured surface's. No fit is confidently wrong: each is refused,
-/// or flagged, or (unflagged) has its axis within 1e-3 rad of the planted axis.
+/// such data need not be the measured surface's, and the fixture has no reference for it. No
+/// fit is confidently wrong: each is refused or flagged; an unflagged fit fails the test.
 #[test]
 fn partial_arcs_never_confidently_wrong() {
     for (c, r) in outcomes().iter().filter(|(c, _)| flag(c) == Some("never_confidently_wrong")) {
@@ -279,9 +336,9 @@ fn wrong_start_is_refused_or_flagged() {
 #[test]
 fn trait_fails_closed() {
     let mut flagged = 0;
-    // One clean case of each kind and the failing ones (the full fits are slow in debug
-    // builds); flagged results are covered by `flagged_fits_fail_closed`.
-    let names = ["env-360-0", "fixed-dir", "twoaxes", "disc", "few-4"];
+    // One clean case of each kind, the flagged pilot (rule 11) and the failing ones (the full
+    // fits are slow in debug builds).
+    let names = ["env-360-0", "fixed-dir", "pilot", "twoaxes", "disc", "few-4"];
     for (c, r) in outcomes().iter().filter(|(c, _)| names.contains(&c.name.as_str())) {
         let v = c.get("points").unwrap();
         let t = MccCylinderFit.fit(&PointsView::new(&v, None).unwrap(), &params(c), Some(SEED));
@@ -298,7 +355,7 @@ fn trait_fails_closed() {
             Err(e) => assert_eq!(t.as_ref().unwrap_err(), e, "{}", c.name),
         }
     }
-    let _ = flagged;
+    assert!(flagged >= 1, "no flagged case reached the trait");
 }
 
 /// Rule 10 on flagged fits: a clean result with either flag set is refused by the trait's
@@ -317,6 +374,12 @@ fn flagged_fits_fail_closed() {
         let e = to_fit_result(f, scale).unwrap_err();
         assert_eq!(e, FitError::FlaggedFit { local_optimum_only: lo, suspect_axis: sus, rms_ratio: m.zone_ratio });
     }
+    // Rule 10: a strict local minimum without a passed cross-check is refused even when the
+    // flag itself is clear.
+    let mut f = m.clone();
+    f.cross_check_passed = false;
+    let e = to_fit_result(f, scale).unwrap_err();
+    assert_eq!(e, FitError::FlaggedFit { local_optimum_only: true, suspect_axis: false, rms_ratio: m.zone_ratio });
 }
 
 /// Spec card and command data row (W2, dry run R1, D0).
@@ -341,7 +404,7 @@ fn put(h: &mut Sha256Hasher, xs: &[f64]) {
 
 /// AC-5 (digests): output-bit pin of every case: feature, residuals, contacts, flags,
 /// certificate digest, certified per-start values, and every error code.
-const OUTPUT_PIN: &str = "sha256:13b9988892c5d6a7b0b04d8487420e8cf6b589aae2c006a23fb349b621d828d1";
+const OUTPUT_PIN: &str = "sha256:3c8f5957cb9db8e90d2cec61dc441fb06fc265b084d41923be76ec1c3c11cd48";
 
 #[test]
 fn ac5_output_bits_pinned() {
@@ -371,6 +434,13 @@ fn ac5_output_bits_pinned() {
                     }
                 }
                 h.update(&m.best_index.to_le_bytes());
+                h.update(&[u8::from(m.cross_check_passed)]);
+                for x in &m.cross_check {
+                    put(&mut h, &x.direction);
+                    put(&mut h, &[x.lower, x.upper]);
+                    h.update(&[u8::from(x.certified)]);
+                    h.update(x.outcome.as_str().as_bytes());
+                }
             }
             Err(e) => h.update(e.code().as_bytes()),
         }

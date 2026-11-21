@@ -215,6 +215,30 @@ impl Mcc<'_> {
     }
 }
 
+/// `start_from_set`'s outcome: the solve's parameters, the frame start `x0` when the solve
+/// stopped without converging, a numeric error passed through.
+fn start_or_error(
+    r: Result<fid_solv::nlls::NllsResult, fid_solv::nlls::SolverError>,
+    x0: Vec<f64>,
+) -> Result<Vec<f64>, CertError> {
+    use fid_solv::nlls::{SolverError, Stage};
+    match r {
+        Ok(r) => Ok(r.p),
+        Err(SolverError::Numeric { error, .. }) => Err(CertError::Numeric(error)),
+        Err(SolverError::NonFinite { stage, index, .. }) => {
+            let op = match stage {
+                Stage::Start => "fit.mcc_cyl.start.start",
+                Stage::Residual => "fit.mcc_cyl.start.residual",
+                Stage::Jacobian => "fit.mcc_cyl.start.jacobian",
+                Stage::Cost => "fit.mcc_cyl.start.cost",
+                Stage::Step => "fit.mcc_cyl.start.step",
+            };
+            Err(CertError::Numeric(fid_num::NumError::Infinite { op, index }))
+        }
+        Err(_) => Ok(x0),
+    }
+}
+
 /// The set's equations as a least-squares system for `start_from_set`.
 struct SetSystem<'a, 'b> {
     mcc: &'a Mcc<'b>,
@@ -264,14 +288,14 @@ impl ActiveSetProblem for Mcc<'_> {
     /// The cylinder through the set's points nearest the frame axis: Levenberg-Marquardt
     /// (`fid_solv::nlls`, default configuration) on the set's equations `rho_k - R = 0` from the
     /// frame axis with the radius `R0`. It reads only the set and the problem data (the frame and
-    /// `R0` come from the data), never a solver iterate.
+    /// `R0` come from the data), never a solver iterate. When the solve stops without
+    /// converging (iteration limit, rank deficiency, ill conditioning, configuration) the frame
+    /// start is used; a numeric error (an `eval` error, a non-finite value, an allocation
+    /// failure) passes through.
     fn start_from_set(&self, set: &[RowLabel]) -> Result<Vec<f64>, CertError> {
         let x0 = if self.dir { vec![0.0, 0.0, 0.0, 0.0, self.r0] } else { vec![0.0, 0.0, self.r0] };
         let sys = SetSystem { mcc: self, set };
-        match fid_solv::nlls::solve(&sys, &x0, &fid_solv::nlls::NllsConfig::default()) {
-            Ok(r) => Ok(r.p),
-            Err(_) => Ok(x0),
-        }
+        start_or_error(fid_solv::nlls::solve(&sys, &x0, &fid_solv::nlls::NllsConfig::default()), x0)
     }
 
     fn residuals_and_jacobian(&self, set: &[RowLabel], p: &[f64]) -> Result<(Vec<f64>, Mat), CertError> {
@@ -417,5 +441,48 @@ impl LinearisableProblem for Mcc<'_> {
         let r = self.full(p)?[4];
         let viol = total_max(0.0, hi - r).map_err(num)?;
         fid_num::check_finite("fit.mcc_cyl.merit", r + PENALTY * viol).map_err(num)
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use fid_solv::nlls::{Diagnostics, SolverError, Stage};
+
+    fn mcc(q: &[f64]) -> Mcc<'_> {
+        let fr = Frame { p0: [0.0; 3], a: [0.0, 0.0, 1.0], e1: [1.0, 0.0, 0.0], e2: [0.0, 1.0, 0.0] };
+        Mcc { q, fr, dir: true, len_scale: 1.0, data_scale: 1.0, r0: 1.0 }
+    }
+
+    /// Review of #374: `start_from_set` passes the solve's numeric errors through (here the
+    /// set's point 0 lies on the frame axis, so `eval` fails) instead of keeping the frame start.
+    #[test]
+    fn start_from_set_passes_numeric_errors() {
+        let q = [0.0, 0.0, 0.0, 1.0, 0.0, 0.1, 0.0, 1.0, 0.2, -1.0, 0.0, 0.3, 0.0, -1.0, 0.4];
+        let p = mcc(&q);
+        let set: Vec<RowLabel> = (0..5).map(|point| RowLabel { point, side: 0 }).collect();
+        assert!(matches!(p.start_from_set(&set), Err(CertError::Numeric(_))));
+        // Without the point on the axis the start is the solve's.
+        let q2 = [0.5, 0.0, 0.0, 1.0, 0.0, 0.1, 0.0, 1.0, 0.2, -1.0, 0.0, 0.3, 0.0, -1.0, 0.4];
+        assert!(mcc(&q2).start_from_set(&set).is_ok());
+    }
+
+    /// `start_or_error`: numeric and non-finite errors pass through; the solver's other stops
+    /// keep the frame start.
+    #[test]
+    fn start_or_error_cases() {
+        let last = Diagnostics::default();
+        let x0 = vec![0.0, 0.0, 1.0];
+        let numeric = SolverError::Numeric { error: fid_num::NumError::Domain { op: "t", detail: "d" }, last };
+        let non_finite = SolverError::NonFinite { stage: Stage::Jacobian, index: Some(2), last };
+        assert!(matches!(start_or_error(Err(numeric), x0.clone()), Err(CertError::Numeric(_))));
+        assert!(matches!(
+            start_or_error(Err(non_finite), x0.clone()),
+            Err(CertError::Numeric(fid_num::NumError::Infinite { index: Some(2), .. }))
+        ));
+        for e in [SolverError::IterationLimit { last }, SolverError::RankDeficient { rank: 1, cond: None, last }] {
+            assert_eq!(start_or_error(Err(e), x0.clone()).unwrap(), x0);
+        }
     }
 }

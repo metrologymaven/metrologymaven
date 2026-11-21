@@ -329,6 +329,13 @@ struct Outcome {
     iterations: usize,
 }
 
+/// Rule 5: whether a round's solver error `e` keeps the converged earlier round (`have_round`)
+/// instead of failing the start. A numeric error (`Numeric`: an `eval` error, an allocation
+/// failure or an overflow; `NonFinite`) never does.
+fn keeps_earlier_round(e: &nlls::SolverError, have_round: bool) -> bool {
+    have_round && !matches!(e, nlls::SolverError::Numeric { .. } | nlls::SolverError::NonFinite { .. })
+}
+
 /// Rule 5: solve, re-anchor, repeat.
 fn solve_rounds(q: &[f64], fr0: Frame, layout: Layout, x0: Vec<f64>, cfg: &NllsConfig) -> Result<Outcome, FitError> {
     let mut fr = fr0;
@@ -341,12 +348,7 @@ fn solve_rounds(q: &[f64], fr0: Frame, layout: Layout, x0: Vec<f64>, cfg: &NllsC
             Ok(res) => res,
             // A later round's solver failure keeps the converged earlier round (rule 5); a
             // numeric error (non-finite value, allocation failure) always passes through.
-            Err(e)
-                if done.is_some()
-                    && !matches!(e, nlls::SolverError::Numeric { .. } | nlls::SolverError::NonFinite { .. }) =>
-            {
-                break
-            }
+            Err(e) if keeps_earlier_round(&e, done.is_some()) => break,
             Err(e) => return Err(FitError::from_solver(e, cfg)),
         };
         iterations = iterations.saturating_add(res.iterations);
@@ -631,5 +633,32 @@ impl Fit for CylinderLs {
             });
         }
         Ok(f.result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::keeps_earlier_round;
+    use fid_num::NumError;
+    use fid_solv::nlls::{Diagnostics, SolverError, Stage};
+
+    /// Rule 5 (review of #362): a later round's numeric error passes through; any other solver
+    /// error keeps the earlier round, and with no earlier round every error fails the start.
+    #[test]
+    fn numeric_errors_never_keep_the_earlier_round() {
+        let last = Diagnostics::default();
+        let numeric = SolverError::Numeric { error: NumError::Domain { op: "t", detail: "allocation_failed" }, last };
+        let non_finite = SolverError::NonFinite { stage: Stage::Residual, index: Some(0), last };
+        let limit = SolverError::IterationLimit { last };
+        let rank = SolverError::RankDeficient { rank: 3, cond: None, last };
+        for e in [&numeric, &non_finite] {
+            assert!(!keeps_earlier_round(e, true), "{e:?}");
+        }
+        for e in [&limit, &rank] {
+            assert!(keeps_earlier_round(e, true), "{e:?}");
+        }
+        for e in [&numeric, &non_finite, &limit, &rank] {
+            assert!(!keeps_earlier_round(e, false), "{e:?}");
+        }
     }
 }

@@ -30,8 +30,17 @@ Other cases:
 - `half-1066-<k>` and `shortarc-<k>`: half cylinders 1.066 radii long and 30-degree arcs 0.2 radii
   long (150 points; axes 0.01 m and 1 km from the origin for the half cylinders), hand-labelled
   `flag never_confidently_wrong` (the enclosing cylinder of such data is not
-  the measured surface's; a fit must be refused or flagged unless it is the reference-free
-  certified local minimum with no flag).
+  the measured surface's, and there is no reference: a fit must be refused or flagged).
+- `pilot` (review of #374): a short pilot diameter, radius 50 mm, length 2.5 mm, 20 um two-lobe
+  ovality, +-0.3 um noise, 600 points. Its near-axis local minimum (radius about r + 20 um) is
+  not the global one: `better_axis` (the ovality's major axis) and `better_r`, the radius of a
+  feasible cylinder along it (exact in Decimal), which is below r + 10 um. Hand-labelled `flag
+  pilot_not_global`: a fit must be refused or flagged unless its radius is at most `better_r`.
+- `oval-free` and `oval-fixed`: an oval long cylinder with four exact contacts at the major-axis
+  ends of both end faces, free direction and fixed at the planted axis. Four active rows for
+  five parameters, two for three: a degenerate active set. Hand-labelled `flag
+  degenerate_active_set`: refused with code `solver` (fail closed; the certifier does not
+  support a degenerate active set).
 - `disc`: a ring of points 0.1 mm thick and 20 mm in radius (AC-4): `expect ill_conditioned`.
 - `few-4`: four points: `expect too_few_points n=4 need=5`.
 
@@ -42,6 +51,7 @@ Output lines (hex = 16 lowercase hex digits of an IEEE-754 double):
   contacts <indices>                               expected active set, ascending
   tie_point <index>                                (tie case)
   fixed_dir <3 hex>                                (fixed-direction cases)
+  better_axis <3 hex> better_r <hex>               (pilot: a feasible cylinder that beats near-axis fits)
   flag <...>                                       (hand-labelled cases)
   expect start | <error code fields>
   end
@@ -326,6 +336,68 @@ def surface_points(name, n, cov, ratio, dist_off, noise_um=Decimal(1)):
     return pts, d
 
 
+def pilot(name):
+    """A short pilot diameter (review of #374): radius 50 mm, length 2.5 mm, two-lobe ovality
+    r(theta) = r + 20 um cos(2 theta), radial noise uniform in +-0.3 um, 600 points.
+
+    Returns the points, the major-axis direction e1 and the radius of a feasible cylinder along
+    e1 (centre: the middle of the bounding box of the points projected on the plane normal to
+    e1; radius: the largest distance from it, exact in Decimal). That radius bounds the minimum
+    circumscribed cylinder from above, and it is below r + 10 um, while a cylinder whose axis is
+    near the pilot's own must reach the major-axis ends, about r + 20 um from that axis; so a
+    near-axis result is not the global minimum.
+    """
+    rng = random.Random(f"mcc-cyl-v1/{name}")
+    d, e1, e2 = frame(rng)
+    p0 = offset(rng, Decimal("0.3"))
+    r, length, amp, noise = Decimal("0.05"), Decimal("0.0025"), 20 * UM, Decimal("0.3") * UM
+    pts = []
+    for _ in range(600):
+        th = 2 * PI * u01(rng)
+        s, c = sin_cos(th)
+        _, c2 = sin_cos(2 * th)
+        t = length * (u01(rng) - Decimal("0.5"))
+        rr = r + amp * c2 + (2 * u01(rng) - 1) * noise
+        pts.append(rounded(at(p0, d, e1, e2, t, rr * c, rr * s)))
+    proj = []
+    for q in pts:
+        w = [q[k] - p0[k] for k in range(3)]
+        proj.append((dot(w, e2), dot(w, d)))
+    cy = (min(y for y, _ in proj) + max(y for y, _ in proj)) / 2
+    cz = (min(z for _, z in proj) + max(z for _, z in proj)) / 2
+    better = max(((y - cy) ** 2 + (z - cz) ** 2).sqrt() for y, z in proj)
+    if not better < r + 10 * UM:
+        raise SystemExit(f"{name}: the sideways cylinder ({better}) does not beat the near-axis radius")
+    return pts, e1, better
+
+
+def oval(name):
+    """An oval long cylinder (radius 20 mm, length 40 mm, r(theta) = r + 20 um cos(2 theta)) with
+    four exact contacts at the major-axis ends of both end faces; the other 596 points are inside
+    by 0.5 to 2 um. Its near-axis envelope has four active rows (free direction, five
+    parameters) and two contacts in projection (fixed direction, three parameters): a
+    degenerate active set, which the certificate does not support (fail closed, `solver`)."""
+    rng = random.Random(f"mcc-cyl-v1/{name}")
+    d, e1, e2 = frame(rng)
+    p0 = offset(rng, Decimal("0.3"))
+    r, amp = Decimal("0.02"), 20 * UM
+    length = 2 * r
+    pts = [at(p0, d, e1, e2, t, sg * (r + amp), Decimal(0)) for t in (-length / 2, length / 2) for sg in (1, -1)]
+    for _ in range(596):
+        th = 2 * PI * u01(rng)
+        s, c = sin_cos(th)
+        _, c2 = sin_cos(2 * th)
+        t = length * (u01(rng) - Decimal("0.5"))
+        rr = r + amp * c2 - (Decimal("0.5") + Decimal("1.5") * u01(rng)) * UM
+        pts.append(at(p0, d, e1, e2, t, rr * c, rr * s))
+    order = list(range(600))
+    rng.shuffle(order)
+    out = [None] * 600
+    for k, q in enumerate(pts):
+        out[order[k]] = rounded(q)
+    return out, d
+
+
 def emit(out, name, cov, pts, ref=None, contacts=None, extra=(), flag=None, expect="start"):
     out.append(f"case {name} coverage {cov}")
     out.append("points " + " ".join(hx(fl(x)) for p in pts for x in p))
@@ -375,6 +447,13 @@ def render():
     for k in range(2):
         pts, _ = surface_points(f"shortarc-{k}", 150, 30, Decimal("0.2"), Decimal("0.3"), noise_um=Decimal(20))
         emit(out, f"shortarc-{k}", 30, pts, flag="never_confidently_wrong")
+    pts, axis, better = pilot("pilot")
+    emit(out, "pilot", 360, pts, extra=["better_axis " + hxs(axis), "better_r " + hx(fl(better))],
+         flag="pilot_not_global")
+    pts, axis = oval("oval-free")
+    emit(out, "oval-free", 360, pts, flag="degenerate_active_set")
+    pts, axis = oval("oval-fixed")
+    emit(out, "oval-fixed", 360, pts, extra=["fixed_dir " + hxs(axis)], flag="degenerate_active_set")
     rng = random.Random("mcc-cyl-v1/disc")
     disc = []
     for _ in range(400):
