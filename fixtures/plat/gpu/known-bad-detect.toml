@@ -1,0 +1,16 @@
+# PLAT.GPU.DETECT AC-3 (hand-written). INVENTED TEST DATA, NOT REAL DRIVER CLAIMS: the vendor ID
+# 0x7E570010 is above the 16-bit PCI range and outside the Khronos vendor-ID block; the
+# reference uses the reserved .invalid domain. Matches the discrete adapter of
+# adapters-win-discrete.json on dx12 only.
+schema_version = 1
+
+[[entry]]
+id = "detect-avoid-dx12"
+os = "windows"
+backend = "dx12"
+vendor_id = 0x7E570010
+device_ids = { min = 0x0200, max = 0x0200 }
+driver = "any"
+action = "avoid_backend"
+reason = "Fixture: an invented discrete device that must skip DX12 and use Vulkan."
+reference = "https://example.invalid/gpu-known-bad/detect-avoid-dx12"
