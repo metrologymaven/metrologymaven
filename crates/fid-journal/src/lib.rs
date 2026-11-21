@@ -3,7 +3,8 @@
 //! time; see `spec/core/jrn/`.
 //!
 //! Feature `store` adds module `append` (`CORE.JRN.CHAIN.APPEND`), which writes through
-//! `fid-store`, and the head cache and checkpoint table of module `checkpoint`
+//! `fid-store` (on an owned project with `Journal::open`, or on a lent `fid_store::Store` with
+//! `Journal::on_store`, which returns a `JournalRef`), and the head cache and checkpoint table of module `checkpoint`
 //! (`CORE.JRN.CHAIN.CKPT`); without it the crate is the storage-free entry model plus the
 //! checkpoint record and its verifier.
 //!
@@ -25,6 +26,11 @@
 //! `journal.request_promote_branch@1`, the `Rebaser` and `AssertionCheck` traits, and with
 //! feature `store` the three definitions. The bus handlers are in `fid-journal-cmd`.
 //!
+//! Module `supersede` (`CORE.JRN.UNDO.SUPER`) is the supersession of released records: the
+//! planner and the origin-bound fold of `journal.supersede_record@1` (the released-record and
+//! `superseded_by` indexes), and with feature `store` its definition. The bus handler is in
+//! `fid-journal-cmd`.
+//!
 //! Module `stream` (`CORE.JRN.STREAM.ALOG`) routes completed calls to their stream and writes
 //! the P0 Activity Log; with feature `store` it also declares the Activity Log settings.
 
@@ -36,6 +42,7 @@ pub mod diff;
 pub mod entry;
 pub mod promote;
 pub mod stream;
+pub mod supersede;
 pub mod verify;
 
 #[cfg(feature = "store")]
@@ -54,7 +61,7 @@ pub use append::FaultHook;
 #[cfg(feature = "store")]
 pub use append::{
     utc_instant, utc_order, Append, AppendRequest, Clock, CrashPoint, Durability, EntryHash, Journal, JournalError,
-    SystemClock, Tail, MAX_AHEAD_SECS, MAX_BATCH, MAX_BATCH_BYTES, MAX_BLOBS, MAX_HEADER_BYTES, MAX_QUEUE,
+    JournalRef, SystemClock, Tail, MAX_AHEAD_SECS, MAX_BATCH, MAX_BATCH_BYTES, MAX_BLOBS, MAX_HEADER_BYTES, MAX_QUEUE,
     ROLE_PAYLOAD, ROLE_REF, SYNCHRONOUS_FULL,
 };
 

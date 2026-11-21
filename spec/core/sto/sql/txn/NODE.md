@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # CORE.STO.SQL.TXN: Transaction API, blob-before-row ordering and durability
@@ -60,6 +60,7 @@ The one way to commit: `Store::transaction()`. A transaction collects blob puts 
 - **Determinism:** D0 for row content; commit order follows call order under the mutex.
 - **Performance budget:** a commit of one 1 KiB row and no blob in < 5 ms on reference SSD [unverified until measured].
 - **Crate:** `fid-store` (module `txn`).
+- **Journal append claim (added 2026-11-21 for `CORE.JRN.CHAIN.APPEND` REQ-008).** `Store::claim_append(&self) -> Result<AppendClaim<'_>, TxnError>` is the proof a lender of `&Store` gives that the borrower (`Journal::on_store`) may append. It refuses a store not opened for writing or opened `immutable` (`read_only`), a store without its write lock or whose lock file is no longer the file at `lock` (`lock_lost`), and a store whose append path another live claim of the process holds or a poisoned claim left (`claimed`, new `TxnError::Claimed`). `AppendClaim` borrows the store and offers `store()`, `verify_lock()` (the `lock_lost` check again) and `poison()`, which makes every later claim on that `Store` `claimed` until the project is reopened as a new `Store`; dropping an unpoisoned claim releases it. The claim is in-process state of one `Store` (an atomic), not a file; the OS write lock still excludes other processes. `fid-journal` reports `read_only` and `lock_lost` both as its `read_only`, and `claimed` as `append_failed`. `Txn::commit` is unchanged: it still checks `read_only` and the lock itself, with or without a claim.
 
 ## Test fixtures
 
@@ -73,6 +74,10 @@ Probe and fault-injecting file-system shim in `fid-store` tests (test-only code)
 
 - Whether `synchronous=NORMAL` in WAL mode is durable enough across power loss is [unverified]; FULL is chosen until `CORE.STO.SQL.CRASH` measures both.
 - Unreferenced blobs left by aborted commits need garbage collection (see `CORE.STO.CAS` open questions).
+
+## Change log
+
+- 2026-11-21 (maintainer waiver: cross-leaf, edited with CORE.JRN.CHAIN.APPEND): Design records `Store::claim_append`, `AppendClaim` and the `claimed` error code, added for appending on a borrowed store (`CORE.JRN.CHAIN.APPEND` REQ-008). No REQ ID was added or renumbered.
 
 ## Children
 
