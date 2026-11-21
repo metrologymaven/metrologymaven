@@ -1,6 +1,7 @@
 # cargo-fuzz harness for fid-io-step (IO.CAD.STEP.P21 AC-6). Not a workspace member: it
 # needs nightly and libFuzzer. Run from crates/fid-io-step:
 #   cargo +nightly fuzz run p21_parse -- -max_total_time=300
+#   cargo +nightly fuzz run step_header -- -max_total_time=300   (IO.CAD.STEP.HDR)
 [package]
 name = "fid-io-step-fuzz"
 version = "0.0.0"
@@ -18,6 +19,13 @@ fid-io-step = { path = ".." }
 [[bin]]
 name = "p21_parse"
 path = "fuzz_targets/p21_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "step_header"
+path = "fuzz_targets/step_header.rs"
 test = false
 doc = false
 bench = false
