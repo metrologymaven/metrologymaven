@@ -3,7 +3,8 @@
 //! time; see `spec/core/jrn/`.
 //!
 //! Feature `store` adds module `append` (`CORE.JRN.CHAIN.APPEND`), which writes through
-//! `fid-store`, and the head cache and checkpoint table of module `checkpoint`
+//! `fid-store` (on an owned project with `Journal::open`, or on a lent `fid_store::Store` with
+//! `Journal::on_store`, which returns a `JournalRef`), and the head cache and checkpoint table of module `checkpoint`
 //! (`CORE.JRN.CHAIN.CKPT`); without it the crate is the storage-free entry model plus the
 //! checkpoint record and its verifier.
 //!
@@ -54,7 +55,7 @@ pub use append::FaultHook;
 #[cfg(feature = "store")]
 pub use append::{
     utc_instant, utc_order, Append, AppendRequest, Clock, CrashPoint, Durability, EntryHash, Journal, JournalError,
-    SystemClock, Tail, MAX_AHEAD_SECS, MAX_BATCH, MAX_BATCH_BYTES, MAX_BLOBS, MAX_HEADER_BYTES, MAX_QUEUE,
+    JournalRef, SystemClock, Tail, MAX_AHEAD_SECS, MAX_BATCH, MAX_BATCH_BYTES, MAX_BLOBS, MAX_HEADER_BYTES, MAX_QUEUE,
     ROLE_PAYLOAD, ROLE_REF, SYNCHRONOUS_FULL,
 };
 
