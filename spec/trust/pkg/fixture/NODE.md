@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-pkg]
 satisfies: [REQ-TRUST.PKG-001, REQ-TRUST.PKG-007, REQ-TRUST.PKG-008]
 covers: []
 depends_on: [TRUST.PKG.MANIFEST, TRUST.SIGN.DSSE]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-21
 ---
 
 # TRUST.PKG.FIXTURE: Published package spec and conformance fixtures
@@ -76,7 +77,32 @@ All fixtures are synthetic and generated (CC-BY-4.0); no third-party data.
 
 ## Open questions
 
-- Test signing keys for the two-signature golden must be generated deterministically and published; confirm with `TRUST.SIGN.DSSE` that deterministic Ed25519 test keys are acceptable.
+- Test signing keys (settled 2026-11-21): the two-signature golden is signed with the keys `TRUST.SIGN.DSSE` already publishes in `fixtures/dsse/keys` (the RFC 8032 section 7.1 TEST 1 Ed25519 seed and the RFC 6979 A.2.5 P-256 key). No new key is generated or committed.
+
+## Build notes (2026-11-21)
+
+Built as stdlib Python generators and checks in `fixtures/pkg/`, the spec text `docs/result-package/v1.md`, the schema `schema/statement-1.json`, and in crate `fid-pkg` the reference reader binary `fid-pkg-conformance` with `tests/golden.rs`; `crates/fid-sign-core/tests/golden_packages.rs` checks the two signatures with the real checker.
+
+**Package content decision.** `TRUST.PKG.CONTENT.*` is not built, so the goldens follow the content model `TRUST.REPLAY.SELECT` (PR #421) assumed, so that its expected plans hold for the goldens unchanged (checked: #421's reference `select()` on `golden/points.zip` and `golden/results.zip` gives its `points.plan.json` and `results.plan.json` byte for byte):
+
+- `results/records.json`: RFC 8785 array of ResultRecords sorted by `id` bytes. The golden records are a superset of the fields #421 reads (`id`, `evaluation_basis`, `algorithm`, `journal_entry`): every CONSTITUTION section 5 minimum field, with `uncertainty` `{class, method, expanded{U,k}, unit}` (UEC-2) or exactly `{"class":"UEC-0","status":"not_evaluated"}` (REQ-TRUST.PKG.CONTENT.SELECT-003), `decision {rule, outcome}`, `spec {standards, defaults_profile}`.
+- `journal/segment.jsonl`: one RFC 8785 line `{"header", "payload"?}` per entry, header hash-chained, starting at the session header (no checkpoint, so no `journal/checkpoints/` member). Journal, points and kernel manifest of `points.zip` are byte-identical to #421's stand-in `fixtures/replay/select/points.zip`.
+- `points/<sha256 hex>.pts`, media type `text/plain`, named by the digest of the bytes. `TRUST.PKG.CONTENT.EVID`'s design names `.fpts` [unverified]; the golden keeps #421's `.pts` until the point-set format is fixed.
+- `results/results.qif` is a labelled placeholder (`<QIFDocument/>` with a comment) until `IO.RES.QIFR.ROUT` defines it.
+- Difference from #421's stand-ins: `golden/results.zip` (and `features.zip`) also carry the journal segment that produced the records (REQ-TRUST.PKG-005), and every golden carries `results/results.qif`. Neither changes #421's plans.
+
+If the CONTENT leaves choose other shapes, `make_golden.py` follows them and the goldens are re-pinned in that PR.
+
+**Deviations from the Design, stated openly:**
+
+- The generator is not a `fid-pkg` xtask built on `fid-pkg::manifest`: the goldens must come from an independent reference, so `fixtures/pkg/make_golden.py` builds them with the TRUST.PKG.MANIFEST stdlib reference writer `make_fixtures.py`, and `fixtures/pkg/generate` is the one entry point (`--check`, `--self-test`) over `make_fixtures.py`, `make_reader_fixtures.py` and `make_golden.py`. The error it reports is `fixture.mismatch <path>`.
+- No `fixtures/pkg/seeds.toml`: nothing is random; all content is fixed in the generators.
+- The malformed corpus is the one `TRUST.PKG.READER` built (`make_reader_fixtures.py`, each mutation documented in its `expect.json` `note`), assembled byte by byte rather than as mutations of these goldens; this leaf adds the missing `cd_signature` case (106 cases). It covers every reader code except `pkg.io` and every reason except `source_changed`, `package_size` (16 GiB), `index_budget` and `buffer_cap`, which cannot be a static file and are covered by the reader's own tests.
+- Two signatures are two envelopes, `signatures/0.dsse.json` (P-256) and `signatures/1.dsse.json` (Ed25519), each over a signature statement whose single subject is `statement.json` (the multi-signer form `TRUST.SIGN.TROOT` checks), not one envelope with two signatures.
+- The predicate schema is `schema/statement-1.json` (the whole statement with its predicate).
+- The run-conformance protocol: the reader is called as `READER ARG ... <package>` and prints `{"result":"accepted"}` or `{"result":"rejected","error_code":...,"reason":...}`.
+- The drift check (`fixtures/pkg/check_spec_drift.py`) also compares reason tags and manifest/statement fields, not only error codes.
+- Performance: full regeneration and check take about 3 s locally.
 
 ## Children
 

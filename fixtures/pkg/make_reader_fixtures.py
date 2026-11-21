@@ -720,6 +720,13 @@ def malformed_cases():
         "pkg.malformed", "stored_size", "a stored entry whose compressed and uncompressed sizes differ")
     add("local_signature", build(replace(base, rec, local_sig=0x08074B50)), "pkg.malformed", "local_signature",
         "a data-descriptor signature where the local header belongs")
+    # TRUST.PKG.FIXTURE: the one malformed reason a static file can show that had no case yet.
+    cd_sig = bytearray(golden)
+    at = cd_sig.index(struct.pack("<I", SIG_CENTRAL))
+    assert cd_sig.count(struct.pack("<I", SIG_CENTRAL)) == 5 and at > 0
+    cd_sig[at + 3] = 0x03
+    add("cd_signature", bytes(cd_sig), "pkg.malformed", "cd_signature",
+        "the first central directory header's signature is PK\\x01\\x03 instead of PK\\x01\\x02")
     add("local_name_mismatch", build(replace(base, rec, local_name=b"results/evilrecords.json"[:len(rec)])),
         "pkg.malformed", "local_mismatch", "the local header names a different file than the directory")
     add("local_method_mismatch", build(replace(base, rec, local_method=0)), "pkg.malformed", "local_mismatch",

@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""Runs any Result Package reader over the conformance set (TRUST.PKG.FIXTURE AC-2).
+
+    python fixtures/pkg/run-conformance [--reasons] [--fixtures DIR] -- READER [ARG ...]
+
+For every package of the set the runner calls `READER ARG ... <package path>` once, with a 120 s
+timeout, and reads one JSON object from the reader's standard output:
+
+    {"result": "accepted"}
+    {"result": "rejected", "error_code": "pkg.<code>", "reason": "<reason tag>"}
+
+`accepted` means the package opened and every member verified against the manifest (signatures
+are not part of this check). `reason` is optional; with `--reasons` it must also match. The exit
+status of the reader is not used, so a reader may exit non-zero on rejection; a reader that
+prints no such object, crashes or times out fails the case.
+
+The set:
+- malformed/<case>/package.zip   must be rejected with the `error_code` of malformed/<case>/expect.json
+                                 (and its `reason` with --reasons);
+- golden/*.zip listed in golden/index.json, golden/minimal.zip and reader/valid/*.zip
+                                 must be accepted.
+
+Prints one line per case (`ok` or `FAIL`) and exits 0 only if every case passes. The reference
+reader is crates/fid-pkg's `fid-pkg-conformance` binary:
+
+    cargo build -p fid-pkg --bin fid-pkg-conformance
+    python fixtures/pkg/run-conformance -- target/debug/fid-pkg-conformance
+
+Stdlib only. CC-BY-4.0 project data.
+"""
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+TIMEOUT_S = 120
+
+
+def cases(root):
+    out = []
+    for d in sorted(p for p in (root / "malformed").iterdir() if p.is_dir()):
+        expect = json.loads((d / "expect.json").read_text(encoding="utf-8"))
+        out.append((f"malformed/{d.name}", d / "package.zip", expect))
+    index = json.loads((root / "golden/index.json").read_text(encoding="utf-8"))
+    accepted = [root / "golden" / g["file"] for g in index] + [root / "golden/minimal.zip"]
+    accepted += sorted((root / "reader/valid").glob("*.zip"))
+    for p in accepted:
+        out.append((p.relative_to(root).as_posix(), p, None))
+    return out
+
+
+def run_one(cmd, pkg):
+    try:
+        proc = subprocess.run(cmd + [str(pkg)], capture_output=True, timeout=TIMEOUT_S, check=False)
+    except subprocess.TimeoutExpired:
+        return None, f"timed out after {TIMEOUT_S} s"
+    except OSError as e:
+        return None, f"could not run the reader: {e}"
+    for line in proc.stdout.decode("utf-8", "replace").splitlines():
+        line = line.strip()
+        if line.startswith("{"):
+            try:
+                obj = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(obj, dict) and obj.get("result") in ("accepted", "rejected"):
+                return obj, None
+    return None, f"no result object on stdout (exit {proc.returncode})"
+
+
+def judge(obj, expect, reasons):
+    if expect is None:
+        if obj["result"] == "accepted":
+            return None
+        return f"expected accepted, got {obj.get('error_code')} {obj.get('reason')}"
+    if obj["result"] != "rejected":
+        return f"expected {expect['error_code']}, got accepted"
+    if obj.get("error_code") != expect["error_code"]:
+        return f"expected {expect['error_code']}, got {obj.get('error_code')}"
+    if reasons and obj.get("reason") != expect.get("reason"):
+        return f"expected reason {expect.get('reason')}, got {obj.get('reason')}"
+    return None
+
+
+def main(argv):
+    if "--" not in argv or argv.index("--") == len(argv) - 1:
+        print(__doc__.strip().splitlines()[2].strip())
+        return 2
+    split = argv.index("--")
+    opts, cmd = argv[:split], argv[split + 1:]
+    reasons = "--reasons" in opts
+    root = HERE
+    if "--fixtures" in opts:
+        root = Path(opts[opts.index("--fixtures") + 1]).resolve()
+    failed = 0
+    all_cases = cases(root)
+    for name, pkg, expect in all_cases:
+        obj, err = run_one(cmd, pkg)
+        if err is None:
+            err = judge(obj, expect, reasons)
+        if err is None:
+            print(f"ok   {name}")
+        else:
+            failed += 1
+            print(f"FAIL {name}: {err}")
+    print(f"{len(all_cases) - failed}/{len(all_cases)} conformance cases passed")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
