@@ -38,6 +38,10 @@
 //! `conic-audit`: the vendored conic solver's audit check (spec node `KRN.SOLV.CONIC.VEND`), in
 //! [`conic_audit`].
 //!
+//! `convergence-check` and `convergence-doc`: the registry-manifest `convergence` block of
+//! iterative alignment methods and its documentation fragment (spec node `ALN.QA.HIST`), in
+//! [`convergence`].
+//!
 //! `registry-gate`: the build gate against the released baseline manifest (spec node
 //! `CORE.REG.VER.GATE`), in [`registry_gate`].
 //!
@@ -48,6 +52,7 @@
 pub mod apps_policy;
 pub mod bots;
 pub mod conic_audit;
+pub mod convergence;
 pub mod crate_graph;
 pub mod deny_scope;
 pub mod kernel_allow;
