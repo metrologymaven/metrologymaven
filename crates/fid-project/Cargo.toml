@@ -1,6 +1,6 @@
 [package]
 name = "fid-project"
-description = "Metrology Maven project model: entity ID service, container hierarchy rules and element tree and stages (spec nodes CORE.PRJ.CONT.ID, CORE.PRJ.CONT.HIER, CORE.PRJ.TREE.MODEL, CORE.PRJ.STAGE.MODEL, CORE.PRJ.STAGE.SWITCH)"
+description = "Metrology Maven project model: entity ID service, container hierarchy rules, project identity, element tree and stages (spec nodes CORE.PRJ.CONT.ID, CORE.PRJ.CONT.HIER, CORE.PRJ.CONT.LIFE, CORE.PRJ.TREE.MODEL, CORE.PRJ.STAGE.MODEL, CORE.PRJ.STAGE.SWITCH)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -15,6 +15,9 @@ fid-uuid = { path = "../fid-uuid" }
 fid-types = { path = "../fid-types" }
 # Operating-system CSPRNG for the random bits of live UUIDv7s.
 getrandom = "0.2"
+# CORE.PRJ.CONT.LIFE: entry header verification and commitments for the identity read. Layer
+# model; without feature `store` it links no storage (fid-canon, fid-kci, fid-types, getrandom).
+fid-journal = { path = "../fid-journal" }
 # CORE.PRJ.CONT.HIER: container labels must be NFC (journaled for good; text rules of #290).
 # MIT OR Apache-2.0; already in the tree (fid-bus, fid-pkg, fid-profile, fid-vocab).
 unicode-normalization = "0.1.24"

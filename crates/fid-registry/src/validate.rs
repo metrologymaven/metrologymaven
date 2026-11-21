@@ -344,12 +344,19 @@ pub fn mcp_projection(def: &CommandDef) -> Projection {
 ///   the active governance profile is folded from it, so no other command may emit it.
 /// - `RunStarted` of AUTO.RUN.BIND belongs to `program.run@1` (AUTO.RUN.EXEC): run records,
 ///   with their trial and override flags, are folded from it, so no other command may emit it.
-pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 12] = [
+/// - The project identity events of CORE.PRJ.CONT.LIFE (REQ-010): `ProjectIdentified` belongs
+///   to `project.create_project@1`, `ProjectCopiedFrom` and `ProjectSavedAs` to
+///   `project.save_project_as@1`. A project's identity is read from them (with the records
+///   their entries commit to), so no other command may emit them.
+pub const RESERVED_EFFECTS: [(&str, Option<(&str, u32)>); 15] = [
     ("BranchCreated", Some(("journal.create_branch", 1))),
     ("BranchPromoted", Some(("journal.promote_branch", 1))),
     ("BranchProtected", Some(("journal.protect_branch", 1))),
     ("CoeditingSet", Some(("journal.set_branch_coediting", 1))),
     ("ProfileSet", Some(("sign.set_profile", 1))),
+    ("ProjectCopiedFrom", Some(("project.save_project_as", 1))),
+    ("ProjectIdentified", Some(("project.create_project", 1))),
+    ("ProjectSavedAs", Some(("project.save_project_as", 1))),
     ("PromotionRequested", Some(("journal.request_promote_branch", 1))),
     ("ProtectedBranchPromoted", Some(("journal.promote_protected_branch", 1))),
     ("RequestApproved", None),
