@@ -137,9 +137,33 @@ fn reconstruction(a: &Mat, s: &Svd) -> (f64, f64) {
     (red::norm2(&diff).unwrap(), red::norm2(a.data()).unwrap())
 }
 
+/// `max |F^T F - I|` over all entries, in floating point (products by `red::dot`).
+fn orth_err(f: &Mat) -> f64 {
+    let g = mat_mul(&f.transpose().unwrap(), f).unwrap();
+    let k = f.cols();
+    let mut worst = 0.0_f64;
+    for i in 0..k {
+        for j in 0..k {
+            let d = (g.data()[i * k + j] - if i == j { 1.0 } else { 0.0 }).abs();
+            if d > worst {
+                worst = d;
+            }
+        }
+    }
+    worst
+}
+
+/// Orthonormal columns of U and V within 10 n u (plus 2 u for the check's own rounding).
+fn assert_orth(s: &Svd, n: usize, what: &str) {
+    let bound = (10.0 * n as f64 + 2.0) * U;
+    assert!(orth_err(s.u()) <= bound, "{what}: U^T U - I = {:e}", orth_err(s.u()));
+    assert!(orth_err(s.v()) <= bound, "{what}: V^T V - I = {:e}", orth_err(s.v()));
+}
+
 /// AC-1, AC-5: 300 seeded matrices up to 200 x 200. Every factorization hashes to the Python
 /// model's value and the whole run to the golden digest; each singular value is within
-/// 10 n u sigma_max of the oracle and the reconstruction within 10 n u ||A||_F (checked here
+/// 10 n u sigma_max of the oracle, the reconstruction within 10 n u ||A||_F and U, V
+/// orthonormal within 10 n u (checked here
 /// in floating point with an allowance of 2 u for the check's own rounding; the generator
 /// checked both exactly).
 #[test]
@@ -177,6 +201,7 @@ fn ac1_ac5_svd_fixture() {
         }
         let (rec, norm_a) = reconstruction(&a, &s);
         assert!(rec <= (10.0 * nf + 2.0) * U * norm_a, "case {}: reconstruction {rec:e}", t[1]);
+        assert_orth(&s, n, &format!("case {}", t[1]));
         cases += 1;
     }
     assert_eq!(cases, 300);
@@ -215,7 +240,8 @@ fn show(s: &Svd) -> String {
     )
 }
 
-/// Signed zeros, zero rows and columns, ties, tolerance edges, the scaling extremes, overflow,
+/// Signed zeros, zero rows and columns (completed to an orthonormal basis), columns whose
+/// squares underflow, ties, tolerance edges, the scaling extremes, overflow,
 /// subnormal-scale input, infinite condition, error order and the sweep limit.
 #[test]
 fn edge_fixture() {
@@ -241,7 +267,10 @@ fn edge_fixture() {
         let tol = hexf(get("tol").unwrap()[0]);
         let limit: u16 = get("limit").unwrap()[0].parse().unwrap();
         let shown = match svd_with_sweep_limit(&a, tol, limit) {
-            Ok(s) => show(&s),
+            Ok(s) => {
+                assert_orth(&s, a.cols(), name);
+                show(&s)
+            }
             Err(e) => show_err(e),
         };
         assert_eq!(shown, get("expect").unwrap().join(" "), "{name}");

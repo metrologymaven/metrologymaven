@@ -11,7 +11,7 @@ Writes
 Two independent parts, neither of which runs the Rust code (stdlib only):
 
 1. An oracle that knows nothing of the binary64 operation order:
-   - singular values by one-sided Jacobi in 240-bit fixed point (exact integer dot products,
+   - singular values by one-sided Jacobi in 400-bit fixed point (exact integer dot products,
      rotation parameters in 70-digit `decimal`) on A Q, where Q is the model's V
      re-orthonormalised (modified Gram-Schmidt) in the same fixed point; the absolute
      error of every value is below 1e-40 sigma_max (the relative error of values well above
@@ -53,6 +53,7 @@ INF = math.inf
 U = 2.0 ** -53
 MAX_SWEEPS = 60
 Z_BIG = 2.0 ** 256
+DEFLATE = 2.0 ** -600
 bits, hx, finite, Gen = la.bits, la.hx, la.finite, la.Gen
 Fail = qrf.Fail
 
@@ -96,28 +97,37 @@ def fdot(a, b):
 
 def jacobi(r, c, w, v, max_sweeps):
     tol = c * U
-    # sq[j] caches dot(w_j, w_j) while column j is unchanged (the value is a function of the
+    # nh[j] caches (norm2(w_j), w_j / norm2(w_j)) while column j is unchanged (a function of the
     # column only, so the cache cannot change a result).
-    sq = [None] * c
+    nh = [None] * c
+
+    # Deflation floor: 2^-600 ||W||_F, fixed before the first sweep.
+    floor = la.norm2([x for col in w for x in col]) * DEFLATE
+
+    def get(j):
+        if nh[j] is None:
+            nj = la.norm2(w[j])
+            if nj != 0 and nj <= floor:
+                w[j] = [0.0] * r
+                nj = 0.0
+            nh[j] = (nj, [x / nj for x in w[j]] if nj != 0 else None)
+        return nh[j]
+
     for sweep in range(1, max_sweeps + 1):
         rotated = False
         for p in range(c):
             for q in range(p + 1, c):
-                ap, aq = w[p], w[q]
-                if sq[p] is None:
-                    sq[p] = fdot(ap, ap)
-                if sq[q] is None:
-                    sq[q] = fdot(aq, aq)
-                alpha, beta, gamma = sq[p], sq[q], fdot(ap, aq)
-                if alpha == 0 or beta == 0:
+                np_, hp = get(p)
+                nq, hq = get(q)
+                if np_ == 0 or nq == 0:
                     continue
-                thr = tol * (math.sqrt(alpha) * math.sqrt(beta))
-                if abs(gamma) <= thr:
+                g = fdot(hp, hq)
+                if abs(g) <= tol:
                     continue
-                zeta = (beta - alpha) / (2.0 * gamma)
+                zeta = ((nq / np_) - (np_ / nq)) / (2.0 * g)
                 if not finite(zeta):
-                    continue
-                if abs(zeta) >= Z_BIG:
+                    t = -(g * (nq / np_)) if np_ >= nq else g * (np_ / nq)
+                elif abs(zeta) >= Z_BIG:
                     t = 0.5 / zeta
                 else:
                     sg = -1.0 if zeta < 0 else 1.0
@@ -126,11 +136,50 @@ def jacobi(r, c, w, v, max_sweeps):
                 sn = cs * t
                 rotate(w, p, q, cs, sn)
                 rotate(v, p, q, cs, sn)
-                sq[p] = sq[q] = None
+                nh[p] = nh[q] = None
                 rotated = True
         if not rotated:
             return sweep
     raise Fail("NoConvergence", max_sweeps)
+
+
+def largest(x):
+    best = 0
+    for i, v in enumerate(x):
+        if abs(v) > abs(x[best]):
+            best = i
+    return best
+
+
+def complete(cols, length, zero):
+    """Basis completion of the zero columns of a factor (list of columns), in place."""
+    done = [not z for z in zero]
+    for pos in range(len(cols)):
+        if done[pos]:
+            continue
+        best, best_res, accepted = None, -1.0, False
+        for cand in range(length):
+            x = [1.0 if i == cand else 0.0 for i in range(length)]
+            for _ in range(2):
+                for b in range(len(cols)):
+                    if not done[b]:
+                        continue
+                    col = cols[b]
+                    d = la.dot(col, x)
+                    x = [xi - d * bi for xi, bi in zip(x, col)]
+            res = la.norm2(x)
+            if res > 0.5:
+                best, best_res, accepted = x, res, True
+                break
+            if res > best_res:
+                best, best_res = x, res
+        if not accepted and best_res <= 0:
+            raise Fail("Domain", "basis_completion")
+        col = [xi / best_res for xi in best]
+        if col[largest(col)] < 0:
+            col = [-xi for xi in col]
+        cols[pos] = col
+        done[pos] = True
 
 
 class Svd:
@@ -173,25 +222,26 @@ def svd(m, n, a, tol, max_sweeps=MAX_SWEEPS):
         sig.append(s)
     order = sorted(range(c), key=lambda j: (-sig[j], j))
     k = c
-    ud = [0.0] * (m * k)
-    vd = [0.0] * (n * k)
-    sigma = []
-    for pos, j in enumerate(order):
+    lf, rf, zero, sigma = [], [], [], []
+    for j in order:
         sigma.append(sig[j])
-        zero = nrm[j] == 0
-        left = [0.0] * r if zero else [x / nrm[j] for x in w[j]]
-        right = v[j]
-        ucol, vcol = (right, left) if wide else (left, right)
-        uzero, vzero = (False, zero) if wide else (zero, False)
-        best = 0
-        for i, x in enumerate(vcol):
-            if abs(x) > abs(vcol[best]):
-                best = i
-        flip = vcol[best] < 0
-        for i, x in enumerate(ucol):
-            ud[i * k + pos] = -x if flip and not uzero else x
-        for i, x in enumerate(vcol):
-            vd[i * k + pos] = -x if flip and not vzero else x
+        z = nrm[j] == 0
+        zero.append(z)
+        lcol = [0.0] * r if z else [x / nrm[j] for x in w[j]]
+        rcol = list(v[j])
+        if wide:
+            flip = (not z) and lcol[largest(lcol)] < 0
+        else:
+            flip = rcol[largest(rcol)] < 0
+        if flip:
+            lcol = [-x for x in lcol]
+            rcol = [-x for x in rcol]
+        lf.append(lcol)
+        rf.append(rcol)
+    complete(lf, r, zero)
+    ucols, vcols = (rf, lf) if wide else (lf, rf)
+    ud = [ucols[j][i] for i in range(m) for j in range(k)]
+    vd = [vcols[j][i] for i in range(n) for j in range(k)]
     rank = la.m_rank(sigma, tol)[1]
     smin = sigma[-1]
     if smin == 0:
@@ -315,6 +365,22 @@ def check_sigma(m, n, model, ref, tag):
             if bound:
                 worst = max(worst, err / bound)
         return float(worst)
+
+
+def check_orth(rows, k, d, n, tag):
+    """Exact max |F^T F - I| <= 10 n u for a row-major rows x k factor; returns max / bound."""
+    fi, e = qrf.to_ints(d)
+    assert e < 0, (tag, "unexpected factor exponent")
+    one = 1 << (-2 * e)
+    cols = [fi[j::k] for j in range(k)]
+    worst = 0
+    for i in range(k):
+        for j in range(i, k):
+            g = sum(map(int.__mul__, cols[i], cols[j])) - (one if i == j else 0)
+            worst = max(worst, abs(g))
+    # |g| / one <= 10 n u  <=>  |g| * 2^53 <= 10 n one
+    assert worst << 53 <= 10 * n * one, (tag, "orthonormality")
+    return (worst / one) / (10 * n * U)
 
 
 def check_recon(m, n, a, model, tag):
@@ -464,11 +530,12 @@ def make_svd():
         "# singular values (50 significant digits, descending; fixed-point one-sided Jacobi, absolute error",
         "# below 1e-40 sigma_max, values below that written as 0).",
         "# The script checks every case: |sigma_k - ref_k| <= 10 n u sigma_max (decimal) and",
-        "# ||A - U diag(sigma) V^T||_F <= 10 n u ||A||_F (exact integers), u = 2^-53, n = columns of A.",
+        "# ||A - U diag(sigma) V^T||_F <= 10 n u ||A||_F and max |U^T U - I|, max |V^T V - I| <= 10 n u",
+        "# (exact integers), u = 2^-53, n = columns of A.",
     ]
     body = []
     h = hashlib.sha256()
-    worst = [0.0, 0.0]
+    worst = [0.0, 0.0, 0.0]
     for idx, (m, n, kind) in enumerate(svd_sizes()):
         seed = SEED0 + idx
         tol = tol_for(idx)
@@ -483,14 +550,16 @@ def make_svd():
                 ref = exact
         ws = check_sigma(m, n, s, ref, idx)
         wr = check_recon(m, n, a, s, idx)
-        worst = [max(worst[0], ws), max(worst[1], wr)]
+        wo = max(check_orth(m, s.k, s.u, n, (idx, "U")), check_orth(n, s.k, s.v, n, (idx, "V")))
+        worst = [max(worst[0], ws), max(worst[1], wr), max(worst[2], wo)]
         svd_words(h, s)
         hc = hashlib.sha256()
         svd_words(hc, s)
         body.append(f"case {idx} seed {seed:016x} kind {kind} m {m} n {n} tol {hx(tol)} sweeps {s.sweeps} "
                     f"rank {s.rank} svd {hc.hexdigest()[:16]}")
         body.append("ref " + " ".join(sci(x, ref[0]) for x in ref))
-    out.append(f"# worst error / bound: sigma {worst[0]:.4f}, reconstruction {worst[1]:.4f}")
+    out.append(f"# worst error / bound: sigma {worst[0]:.4f}, reconstruction {worst[1]:.4f}, "
+               f"orthonormality {worst[2]:.4f}")
     out.append(f"digest sha256:{h.hexdigest()}")
     return "\n".join(out + body) + "\n"
 
@@ -553,6 +622,23 @@ def edge_cases():
     add("tol-neg-zero", (2, 1, [3.0, 4.0]), -0.0)
     add("tol-before-subnormal", (1, 1, [1e-310]), nan)
     add("wide-1x2", (1, 2, [0.0, -2.0]))
+    # Columns whose squares underflow after scaling (review of #409): they must still be
+    # orthogonalised, never returned unconverged.
+    add("underflow-2x2", (2, 2, [1.0, 1e-170, 0.0, 1e-170]))
+    add("underflow-3x3", (3, 3, [1.0, 0.0, 0.0, 0.0, 1e-155, 2e-155, 0.0, 3e-155, 4e-155]))
+    gu = Gen(0x4C41_5356_5546_4C57)
+    raw = [gu.general() for _ in range(24)]
+    add("cols-1e-158-1e-160", (6, 4, [raw[i * 4 + j] * (1e-158 if j < 2 else 1e-160)
+                                      for i in range(6) for j in range(4)]))
+    add("cols-1-1e-158-1e-160", (6, 4, [raw[i * 4 + j] * (1.0, 1.0, 1e-158, 1e-160)[j]
+                                        for i in range(6) for j in range(4)]))
+    # Zero columns completed to an orthonormal basis (tall: in U; wide: in V).
+    add("complete-tall", (4, 2, [1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0]))
+    add("complete-wide", (2, 4, [1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]))
+    # Columns e_j - e_(j+1) span the complement of (1, .., 1): every candidate's residual is
+    # 1/sqrt(6) < 0.5, so the largest-residual fallback is taken.
+    add("complete-fallback", (6, 6, [(1.0 if i == j else -1.0 if i == j + 1 else 0.0) if j < 5 else 0.0
+                                     for i in range(6) for j in range(6)]))
     add("tall-neg-first", (3, 2, [-5.0, 1.0, 0.0, 2.0, 0.0, -3.0]))
     return c
 
@@ -572,7 +658,10 @@ def make_edge():
     ]
     for name, a, tol, limit in edge_cases():
         try:
-            s = expect_str(svd(a[0], a[1], a[2], tol, limit))
+            r = svd(a[0], a[1], a[2], tol, limit)
+            check_orth(a[0], r.k, r.u, a[1], (name, "U"))
+            check_orth(a[1], r.k, r.v, a[1], (name, "V"))
+            s = expect_str(r)
         except Fail as f:
             s = f"err {f.kind} {'none' if f.info is None else f.info}"
         out.append(f"case {name}")
@@ -605,9 +694,10 @@ def self_test():
     # 1 x 1 [-3]: sigma 3, V = [1] (positive), U = [-1].
     s = svd(1, 1, [-3.0], 0.0)
     assert (s.u, s.sigma, s.v) == ([-1.0], [3.0], [1.0])
-    # Zero matrix: sigma 0, U zero, V identity, rank 0, cond infinite, singular.
+    # Zero matrix: sigma 0, U completed to e0, e1 (first candidates), V identity, rank 0,
+    # cond infinite, singular.
     s = svd(2, 2, [0.0] * 4, 1e-12)
-    assert s.sigma == [0.0, 0.0] and s.u == [0.0] * 4 and s.v == [1.0, 0.0, 0.0, 1.0]
+    assert s.sigma == [0.0, 0.0] and s.u == [1.0, 0.0, 0.0, 1.0] and s.v == [1.0, 0.0, 0.0, 1.0]
     assert s.rank == 0 and s.cond == INF and s.singular()
     # Decimal oracle against a closed form: [[3, 0], [4, 5]] has A^T A = [[25, 20], [20, 25]]: sigma = sqrt(45), sqrt(5).
     m = svd(2, 2, [3.0, 0.0, 4.0, 5.0], 0.0)
