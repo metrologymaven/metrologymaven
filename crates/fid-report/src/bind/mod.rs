@@ -48,7 +48,7 @@ pub use command::{
 pub use error::BindError;
 pub use expand::{
     expand, CharacteristicItem, ExpandError, ExpandItem, ExpandedBlock, ItemKind, MemoryModel, ProjectModel,
-    QueryProvider, ResultItem, Role, RunItem, StageItem, EXPANSION_SCHEMA, MAX_COLUMNS, MAX_PAGES, MAX_ROWS,
+    QueryProvider, ResultItem, Role, RunItem, StageItem, EXPANSION_SCHEMA, MAX_CELLS, MAX_COLUMNS, MAX_PAGES, MAX_ROWS,
 };
 pub use journal::{
     AtHead, EntityKind, EntityView, Evidence, EvidenceClass, HeadLookup, JournalReads, Journaled, Lookup, LookupFault,

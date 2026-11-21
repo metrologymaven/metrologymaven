@@ -5,7 +5,7 @@
 
 use fid_canon::{parse, CValue};
 use fid_project::Uuid;
-use fid_report::bind::expand::{to_canonical_bytes, MAX_PAGES};
+use fid_report::bind::expand::{to_canonical_bytes, MAX_CELLS, MAX_COLUMNS, MAX_PAGES};
 use fid_report::bind::*;
 use fid_report::tmpl::format::{parse_template, Template};
 use fid_report::tmpl::slot::SavedQueryId;
@@ -344,4 +344,93 @@ fn repeated_model_ids_are_refused() {
     let dup = m.characteristics[0].clone();
     m.characteristics.push(dup);
     assert_eq!(run("multistage", &m).unwrap_err().code(), "report.store_invalid");
+}
+
+fn limit_of(e: &ExpandError) -> String {
+    st(&e.to_value(), "limit").to_string()
+}
+
+/// Stage columns count against the column bound, and rows times stage columns against the
+/// cell bound, both before any row is built or any decision read.
+#[test]
+fn stage_columns_and_cells_are_bounded() {
+    let base = model();
+    let stages = |n: usize| -> Vec<StageItem> {
+        (0..n)
+            .map(|i| StageItem {
+                id: uuid(&format!("019a9a9b-00fc-7000-8000-{:012x}", i + 1)),
+                run: base.runs[0].id,
+                removed: false,
+            })
+            .collect()
+    };
+    let mut m = base.clone();
+    m.stages = stages(MAX_COLUMNS + 1);
+    let e = run("multistage", &m).unwrap_err();
+    assert_eq!((e.code(), limit_of(&e)), ("report.expansion_too_large", "columns".to_string()));
+    // 50 rows times 20 001 columns is past the cell bound while the columns are within theirs.
+    m.stages = stages(MAX_CELLS / 50 + 1);
+    let e = run("multistage", &m).unwrap_err();
+    assert_eq!((e.code(), limit_of(&e)), ("report.expansion_too_large", "cells".to_string()));
+    // The same with an outcome filter: refused before any decision is read.
+    let e = run("nonconforming", &m).unwrap_err();
+    assert_eq!(limit_of(&e), "cells");
+    // At the cell bound it expands.
+    m.stages = stages(MAX_CELLS / 50);
+    m.results.clear();
+    let out = run("multistage", &m).unwrap();
+    assert_eq!(out.iter().find(|b| b.role == Role::Table).unwrap().columns.len(), MAX_CELLS / 50);
+}
+
+/// A template of `n` plain pages, one text block each.
+fn plain_pages(n: usize) -> Template {
+    let s = |x: &str| CValue::Str(x.to_string());
+    let o = |pairs: Vec<(&str, CValue)>| CValue::Obj(pairs.into_iter().map(|(k, v)| (k.to_string(), v)).collect());
+    let pages = (0..n)
+        .map(|i| {
+            let block = o(vec![
+                ("continuation_block", CValue::Null),
+                ("id", s(&format!("019a9a9b-00fb-7001-8000-{:012x}", i + 1))),
+                ("kind", s("text")),
+                ("kind_version", s("1")),
+                ("payload", o(vec![("untrusted", CValue::Bool(true)), ("value", o(vec![("text", s("p"))]))])),
+                ("repeat_header_rows", s("0")),
+                ("slot", CValue::Null),
+            ]);
+            o(vec![("blocks", CValue::Arr(vec![block])), ("id", s(&format!("019a9a9b-00fb-7000-8000-{:012x}", i + 1)))])
+        })
+        .collect();
+    let t = o(vec![
+        ("clearance", CValue::Null),
+        ("locked", CValue::Bool(false)),
+        ("media_type", s("application/vnd.fid.report-template+json")),
+        ("pages", CValue::Arr(pages)),
+        ("schema_version", s("1")),
+        ("template_id", s("019a9a9b-00fb-7002-8000-000000000001")),
+        ("title", o(vec![("text", s("plain pages")), ("untrusted", CValue::Bool(true))])),
+    ]);
+    parse_template(&fid_canon::to_canonical_bytes(&t).unwrap()).unwrap()
+}
+
+/// Plain pages (no page group) are bounded too, naming the first page's block.
+#[test]
+fn plain_pages_are_bounded() {
+    let m = model();
+    let e = expand(&plain_pages(MAX_PAGES + 1), &ctx(&m), &m, &journal(), None).unwrap_err();
+    assert_eq!((e.code(), limit_of(&e)), ("report.expansion_too_large", "pages".to_string()));
+    assert_eq!(e.block().unwrap().uuid().to_string(), "019a9a9b-00fb-7001-8000-000000000001");
+    assert_eq!(expand(&plain_pages(MAX_PAGES), &ctx(&m), &m, &journal(), None).unwrap().len(), MAX_PAGES);
+}
+
+/// The two page-group refusals (hand-labelled block and reason).
+#[test]
+fn page_group_overlap_and_nesting_are_refused() {
+    let m = model();
+    for name in ["group_overlap", "group_nested"] {
+        let want = get(&fixture("bind/expand/expected.json"), name).clone();
+        let e = run(name, &m).unwrap_err();
+        assert_eq!(e.code(), st(&want, "error"), "{name}");
+        assert_eq!(e.block().unwrap().uuid().to_string(), st(&want, "block"), "{name}");
+        assert_eq!(st(&e.to_value(), "reason"), st(&want, "reason"), "{name}");
+    }
 }

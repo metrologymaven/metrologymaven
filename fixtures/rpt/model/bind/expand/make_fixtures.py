@@ -25,7 +25,9 @@ Templates (`templates/*.json`, canonical RFC 8785, schema version 1):
 - stage_columns: a column slot over stages (default sort, 2 per group): REQ-003 order;
 - tags: rows of characteristics tagged `critical`;
 - nonconforming: rows with the outcome filter `nonconforms` (none at this head);
-- saved_query: a row slot over a saved query: AC-4 (no provider).
+- saved_query: a row slot over a saved query: AC-4 (no provider);
+- group_overlap: two page-group slots naming the same page (`page_group_overlap`);
+- group_nested: a page-group slot on a page of another group (`nested_page_group`).
 """
 
 import hashlib
@@ -112,7 +114,8 @@ def model():
 # ------------------------------------------------------------------ templates
 
 TEMPLATE_IDS = {name: eid(9, i, 0) for i, name in enumerate(
-    ["multistage", "by_balloon", "page_group", "stage_columns", "tags", "nonconforming", "saved_query"], start=1)}
+    ["multistage", "by_balloon", "page_group", "stage_columns", "tags", "nonconforming", "saved_query",
+     "group_overlap", "group_nested"], start=1)}
 
 
 def block(bid, kind, payload, slot=None, header="0"):
@@ -168,6 +171,23 @@ def templates():
               slot("stages", {"stages": "all"},
                    {"kind": "column", "max_columns_per_group": "2", "repeat_columns": ["char_id"]}), header="1"),
     ]}])
+    def group(bid, pages):
+        return slot("elements", {"elements": "all"}, {"kind": "page_group", "pages": pages})
+
+    n = list(TEMPLATE_IDS).index("group_overlap") + 1
+    p1, p2 = eid(10, n, 1), eid(10, n, 2)
+    t["group_overlap"] = template("group_overlap", [
+        {"id": p1, "blocks": [block(eid(11, n, 1), "text", {"text": "a"}, group(None, [p2])),
+                              block(eid(11, n, 2), "text", {"text": "b"}, group(None, [p2]))]},
+        {"id": p2, "blocks": [block(eid(11, n, 3), "text", {"text": "c"})]},
+    ])
+    n = list(TEMPLATE_IDS).index("group_nested") + 1
+    p1, p2, p3 = eid(10, n, 1), eid(10, n, 2), eid(10, n, 3)
+    t["group_nested"] = template("group_nested", [
+        {"id": p1, "blocks": [block(eid(11, n, 1), "text", {"text": "a"}, group(None, [p2]))]},
+        {"id": p2, "blocks": [block(eid(11, n, 2), "text", {"text": "b"}, group(None, [p3]))]},
+        {"id": p3, "blocks": [block(eid(11, n, 3), "text", {"text": "c"})]},
+    ])
     return t
 
 
@@ -287,12 +307,18 @@ def outputs():
     exp = {}
     for name, t in ts.items():
         files[TEMPLATES / f"{name}.json"] = jcs(t)
-        if name != "saved_query":
+        if name not in ("saved_query", "group_overlap", "group_nested"):
             exp[name] = {"canonical": expected(m, t).decode("utf-8"),
                          "sha256": "sha256:" + hashlib.sha256(expected(m, t)).hexdigest()}
     # Hand-labelled error cases.
     n = list(TEMPLATE_IDS).index("saved_query") + 1
     exp["saved_query"] = {"error": "report.query_unavailable", "block": eid(11, n, 2), "query": SAVED_QUERY}
+    # Hand-labelled: the second slot naming the page is refused; the nested slot is the one
+    # on the grouped page.
+    n = list(TEMPLATE_IDS).index("group_overlap") + 1
+    exp["group_overlap"] = {"error": "report.slot_invalid", "block": eid(11, n, 2), "reason": "page_group_overlap"}
+    n = list(TEMPLATE_IDS).index("group_nested") + 1
+    exp["group_nested"] = {"error": "report.slot_invalid", "block": eid(11, n, 2), "reason": "nested_page_group"}
     files[HERE / "expected.json"] = json.dumps(exp, indent=1, sort_keys=True, ensure_ascii=False).encode() + b"\n"
     return files
 

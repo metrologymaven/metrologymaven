@@ -54,9 +54,15 @@
 //!   name: a page copy is `v5(template page ID, item)`; on a copy, a block's base ID is
 //!   `v5(template block ID, page item)`, else the template block ID; a row is `v5(base,
 //!   row item)` and a column group `v5(base, its first item)`.
-//! - **Bounds (REQ-006).** At most [`MAX_ROWS`] rows, [`MAX_COLUMNS`] columns and
-//!   [`MAX_PAGES`] pages per report, counted before any item is looked up or sorted;
-//!   crossing one is `report.expansion_too_large` naming the block whose slot crossed it.
+//! - **Bounds (REQ-006).** Per report at most [`MAX_ROWS`] rows, [`MAX_COLUMNS`] columns
+//!   (repeated columns, plus each row table's stage columns), [`MAX_CELLS`] cells (rows
+//!   times stage columns) and [`MAX_PAGES`] pages (pages outside groups count once each and
+//!   are checked first). A slot's selected items are counted before any of them is looked
+//!   up, filtered or sorted; crossing a bound is `report.expansion_too_large` naming the
+//!   block whose slot crossed it (for plain pages, the template's first block). The one
+//!   exception is a `saved_query` provider, which is called to learn the count (its
+//!   answer is capped at [`MAX_MODEL_ITEMS`]). Each slot is evaluated once; page copies
+//!   reuse its items and count them again.
 //! - **Canonical form.** [`to_canonical_bytes`] is the RFC 8785 form `{"blocks": [...],
 //!   "schema": "expansion@1"}`.
 
@@ -81,6 +87,9 @@ pub const MAX_ROWS: usize = 100_000;
 pub const MAX_PAGES: usize = 5_000;
 /// Most repeated columns one report expands to (pinned at build, as for rows).
 pub const MAX_COLUMNS: usize = 100_000;
+/// Most cells (rows times stage columns) one report expands to (pinned at build) [unverified
+/// limit].
+pub const MAX_CELLS: usize = 1_000_000;
 /// Most entries in one [`ProjectModel`] list.
 pub const MAX_MODEL_ITEMS: usize = 1_000_000;
 /// Most tags on one characteristic.
@@ -320,9 +329,11 @@ pub enum ExpandError {
     /// `report.query_result_invalid`: the provider answered with a non-characteristic
     /// reference.
     QueryResultInvalid { block: BlockId },
-    /// `report.expansion_too_large`: past [`MAX_ROWS`], [`MAX_COLUMNS`] or [`MAX_PAGES`]
-    /// (`limit` is `rows`, `columns` or `pages`; REQ-006).
-    ExpansionTooLarge { block: BlockId, limit: &'static str },
+    /// `report.expansion_too_large`: past [`MAX_ROWS`], [`MAX_COLUMNS`], [`MAX_CELLS`] or
+    /// [`MAX_PAGES`] (`limit` is `rows`, `columns`, `cells` or `pages`; REQ-006).
+    /// `block` is the slot's block, or for plain pages the first block of the template
+    /// (`None` only for a template without blocks).
+    ExpansionTooLarge { block: Option<BlockId>, limit: &'static str },
 }
 
 impl From<BindError> for ExpandError {
@@ -347,9 +358,8 @@ impl ExpandError {
         match self {
             ExpandError::Bind(_) => None,
             ExpandError::Slot(e) => Some(e.block()),
-            ExpandError::QueryUnavailable { block }
-            | ExpandError::QueryResultInvalid { block }
-            | ExpandError::ExpansionTooLarge { block, .. } => Some(*block),
+            ExpandError::QueryUnavailable { block } | ExpandError::QueryResultInvalid { block } => Some(*block),
+            ExpandError::ExpansionTooLarge { block, .. } => *block,
         }
     }
 
@@ -362,7 +372,7 @@ impl ExpandError {
                 obj([("block", CValue::Str(block.uuid().to_string())), ("code", CValue::Str(self.code().to_string()))])
             }
             ExpandError::ExpansionTooLarge { block, limit } => obj([
-                ("block", CValue::Str(block.uuid().to_string())),
+                ("block", block.map_or(CValue::Null, |b| CValue::Str(b.uuid().to_string()))),
                 ("code", CValue::Str(self.code().to_string())),
                 ("limit", CValue::Str((*limit).to_string())),
             ]),
@@ -378,9 +388,10 @@ impl fmt::Display for ExpandError {
             ExpandError::QueryUnavailable { block } | ExpandError::QueryResultInvalid { block } => {
                 write!(f, "{}: block {}", self.code(), block.uuid())
             }
-            ExpandError::ExpansionTooLarge { block, limit } => {
+            ExpandError::ExpansionTooLarge { block: Some(block), limit } => {
                 write!(f, "{}: block {} ({limit})", self.code(), block.uuid())
             }
+            ExpandError::ExpansionTooLarge { block: None, limit } => write!(f, "{}: ({limit})", self.code()),
         }
     }
 }
@@ -398,6 +409,14 @@ struct Snapshot {
     runs: BTreeMap<Uuid, i64>,
     /// (characteristic, stage) -> result.
     results: BTreeMap<(Uuid, Uuid), Uuid>,
+    /// Live stage -> its results.
+    stage_results: BTreeMap<Uuid, Vec<Uuid>>,
+    /// Run -> the results of its live stages.
+    run_results: BTreeMap<Uuid, Vec<Uuid>>,
+    /// Element -> its characteristics.
+    element_chars: BTreeMap<Uuid, Vec<Uuid>>,
+    /// Run -> position of its first live stage.
+    run_first: BTreeMap<Uuid, i64>,
 }
 
 fn bounded<T>(v: Vec<T>) -> Result<Vec<T>, BindError> {
@@ -439,7 +458,36 @@ impl Snapshot {
         }
         let results =
             distinct(bounded(model.results(head)?)?.into_iter().map(|r| ((r.characteristic, r.stage), r.id)))?;
-        Ok(Snapshot { chars, elements: elements.into_keys().collect(), stages, runs, results })
+        let mut stage_results: BTreeMap<Uuid, Vec<Uuid>> = BTreeMap::new();
+        let mut run_results: BTreeMap<Uuid, Vec<Uuid>> = BTreeMap::new();
+        for ((_, st), r) in &results {
+            if let Some((_, run)) = stages.get(st) {
+                stage_results.entry(*st).or_default().push(*r);
+                run_results.entry(*run).or_default().push(*r);
+            }
+        }
+        let mut element_chars: BTreeMap<Uuid, Vec<Uuid>> = BTreeMap::new();
+        for c in chars.values() {
+            if let Some(e) = c.element {
+                element_chars.entry(e).or_default().push(c.id);
+            }
+        }
+        let mut run_first: BTreeMap<Uuid, i64> = BTreeMap::new();
+        for (pos, run) in stages.values() {
+            let first = run_first.entry(*run).or_insert(*pos);
+            *first = (*first).min(*pos);
+        }
+        Ok(Snapshot {
+            chars,
+            elements: elements.into_keys().collect(),
+            stages,
+            runs,
+            results,
+            stage_results,
+            run_results,
+            element_chars,
+            run_first,
+        })
     }
 
     /// The multi-stage order key of a stage: position, run start, run ID.
@@ -450,8 +498,7 @@ impl Snapshot {
 
     /// The multi-stage order key of a run: first live stage's position, start time.
     fn run_key(&self, id: &Uuid) -> (Option<i64>, Option<i64>) {
-        let first = self.stages.values().filter(|(_, r)| r == id).map(|(p, _)| *p).min();
-        (first, self.runs.get(id).copied())
+        (self.run_first.get(id).copied(), self.runs.get(id).copied())
     }
 }
 
@@ -476,7 +523,11 @@ struct Expander<'a> {
     columns: Vec<Uuid>,
     rows: usize,
     cols: usize,
+    cells: usize,
     pages: usize,
+    /// Per slot block: how many items it selected and its final items. A slot is evaluated
+    /// once; a copy reuses the items but still counts towards the bounds.
+    cache: BTreeMap<BlockId, (usize, Vec<ExpandItem>)>,
 }
 
 fn uuid_of(s: &StableId) -> Option<Uuid> {
@@ -586,15 +637,10 @@ impl<'a> Expander<'a> {
         match item.kind {
             ItemKind::Characteristic => in_columns(&u),
             ItemKind::Element => {
-                s.chars.values().filter(|c| c.element == Some(u)).flat_map(|c| in_columns(&c.id)).collect()
+                s.element_chars.get(&u).map_or(Vec::new(), |cs| cs.iter().flat_map(in_columns).collect())
             }
-            ItemKind::Stage => s.results.iter().filter(|((_, st), _)| *st == u).map(|(_, r)| *r).collect(),
-            ItemKind::Run => s
-                .results
-                .iter()
-                .filter(|((_, st), _)| s.stages.get(st).is_some_and(|(_, run)| *run == u))
-                .map(|(_, r)| *r)
-                .collect(),
+            ItemKind::Stage => s.stage_results.get(&u).cloned().unwrap_or_default(),
+            ItemKind::Run => s.run_results.get(&u).cloned().unwrap_or_default(),
             ItemKind::FieldRow => Vec::new(),
         }
     }
@@ -677,8 +723,27 @@ impl<'a> Expander<'a> {
         Ok(order(keyed, key).into_iter().filter_map(|i| by_id.remove(i.id.untrusted_str())).collect())
     }
 
+    /// Adds `n` to the bound `limit` and refuses crossing it.
+    fn count(&mut self, block: BlockId, limit: &'static str, n: usize) -> Result<(), ExpandError> {
+        let (used, max) = match limit {
+            "rows" => (&mut self.rows, MAX_ROWS),
+            "columns" => (&mut self.cols, MAX_COLUMNS),
+            "cells" => (&mut self.cells, MAX_CELLS),
+            _ => (&mut self.pages, MAX_PAGES),
+        };
+        *used = used.saturating_add(n);
+        if *used > max {
+            return Err(ExpandError::ExpansionTooLarge { block: Some(block), limit });
+        }
+        Ok(())
+    }
+
     /// Selected, bounded, verified, filtered and ordered items of a slot. `limit` names the
-    /// bound the items count towards; `per_item` is how many units each item adds.
+    /// bound the items count towards and `per_item` how many units each adds; a `rows` slot
+    /// also counts its table's stage columns and its cells (rows times columns). Every bound
+    /// is checked on the selected count, before any lookup, filter or sort. The selection
+    /// itself runs first: a `saved_query` provider is called before the bounds apply to its
+    /// answer (which is capped at [`MAX_MODEL_ITEMS`]).
     fn items(
         &mut self,
         block: BlockId,
@@ -686,17 +751,23 @@ impl<'a> Expander<'a> {
         limit: &'static str,
         per_item: usize,
     ) -> Result<Vec<ExpandItem>, ExpandError> {
-        let items = self.select(block, slot)?;
-        let add = items.len().saturating_mul(per_item);
-        let (used, max) = match limit {
-            "rows" => (&mut self.rows, MAX_ROWS),
-            "columns" => (&mut self.cols, MAX_COLUMNS),
-            _ => (&mut self.pages, MAX_PAGES),
+        let cached = self.cache.get(&block).map(|(n, items)| (*n, items.clone()));
+        let (selected, items) = match cached {
+            Some((n, items)) => (n, Some(items)),
+            None => (usize::MAX, None),
         };
-        *used = used.saturating_add(add);
-        if *used > max {
-            return Err(ExpandError::ExpansionTooLarge { block, limit });
+        let fresh = if items.is_none() { Some(self.select(block, slot)?) } else { None };
+        let selected = fresh.as_ref().map_or(selected, Vec::len);
+        self.count(block, limit, selected.saturating_mul(per_item))?;
+        if limit == "rows" {
+            let cols = self.columns.len();
+            self.count(block, "columns", cols)?;
+            self.count(block, "cells", selected.saturating_mul(cols))?;
         }
+        if let Some(items) = items {
+            return Ok(items);
+        }
+        let items = fresh.unwrap_or_default();
         for it in &items {
             if it.kind == ItemKind::Characteristic {
                 if let Ok(u) = Uuid::parse(&it.id) {
@@ -705,7 +776,9 @@ impl<'a> Expander<'a> {
             }
         }
         let items = self.filter(block, slot, items)?;
-        self.sort(slot, items)
+        let items = self.sort(slot, items)?;
+        self.cache.insert(block, (selected, items.clone()));
+        Ok(items)
     }
 
     /// The stage columns (REQ-003).
@@ -829,7 +902,8 @@ pub fn expand(
     let lookup = HeadLookup::new(journal, ctx.project, &ctx.head)?;
     let snap = Snapshot::read(model, &ctx.head)?;
     let columns = Expander::stage_columns(&snap, ctx)?;
-    let mut ex = Expander { ctx, snap, lookup, query, columns, rows: 0, cols: 0, pages: 0 };
+    let mut ex =
+        Expander { ctx, snap, lookup, query, columns, rows: 0, cols: 0, cells: 0, pages: 0, cache: BTreeMap::new() };
 
     // Page groups: page -> its group's slot block; no page in two groups, no group slot on
     // a page of another group.
@@ -858,6 +932,10 @@ pub fn expand(
 
     // Pages outside every group count once each, before any group is evaluated.
     ex.pages = template.pages().iter().filter(|p| !group_of.contains_key(&p.id())).count();
+    if ex.pages > MAX_PAGES {
+        let first = template.pages().iter().flat_map(|p| p.blocks()).next().map(TemplateBlock::id);
+        return Err(ExpandError::ExpansionTooLarge { block: first, limit: "pages" });
+    }
     let mut out = Vec::new();
     let mut done: BTreeSet<BlockId> = BTreeSet::new();
     for page in template.pages() {
