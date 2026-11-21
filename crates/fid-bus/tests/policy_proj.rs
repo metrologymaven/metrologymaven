@@ -1459,6 +1459,10 @@ fn a_never_command_over_mcp_is_refused_byte_for_byte_as_an_unknown_command() {
         let vp = ValidParams::for_tests(json("{}"));
         let e = authorise(&w.table, &agent, d, &vp, None, &view).unwrap_err();
         assert_eq!(e.to_json().unwrap(), unknown, "{} via authorise", d.id);
+        // With approval_of the agent still gets the unknown refusal, not bad_approval: the
+        // projection comes before the approval check.
+        let e = authorise(&w.table, &agent, d, &vp, Some(&rid(1)), &view).unwrap_err();
+        assert_eq!(e.to_json().unwrap(), unknown, "{} via authorise with approval_of", d.id);
         // Nothing in the refusal names MCP or the projection.
         let text = String::from_utf8(unknown).unwrap();
         assert!(text.contains("unknown_command") && !text.contains("MCP") && !text.contains("not_on_mcp"), "{text}");
