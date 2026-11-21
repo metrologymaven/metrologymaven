@@ -2,7 +2,7 @@
 id = "fit.cylinder.ls@1.0.0"
 title = "Least-squares cylinder"
 method = "Minimises the sum of squared orthogonal distances r_i = dist(p_i, axis) - R on centred, scaled data by Levenberg-Marquardt (fid_solv::nlls) with an analytic Jacobian. The axis is two tangent-plane parameters about the current axis plus the axis point in the normal plane; after each converged solve the axis is re-anchored at the foot of the perpendicular from the centroid and the solve repeated (at most 8 rounds). Every start of the KRN.LSQ.INIT StartSpec (8 seeded starts in a 15 degree, 10 percent box) runs through fid_solv::mstart; the lowest objective wins and local_optimum_only is set when the converged starts disagree. Optional fixed radius (R is not a parameter) and fixed axis direction (a circle fit of the projected points)."
-applicability = "At least 5 points, not coplanar. Without constraints the fit is refused with implausible_fit when its residual RMS is not below that of the least-squares plane (the global least-squares cylinder never is, since cylinders of growing radius tend to any plane), and suspect_axis is set when the RMS exceeds 0.1 times the plane's (less than 99 percent of the out-of-plane variance explained). Short arcs (30 degrees and below) can be ambiguous; they are flagged, not refused."
+applicability = "At least 5 points, not coplanar. A converged fit whose residual RMS is not below (1 + 1e-9) times that of the best plane its family tends to as the radius grows (the least-squares plane; with a fixed axis direction the best plane containing it; none with a fixed radius) is refused with implausible_fit: it is not the global optimum, or none exists. suspect_axis (axis weakly determined or wrong) is set when the RMS exceeds 0.3 times the least-squares plane's [unverified]; the review of #362 found no wrong minimum below 0.44. The Fit trait refuses flagged fits (flagged_fit); fit_cylinder returns them with their flags. Short noisy arcs can be ambiguous; they are flagged or refused, not returned unflagged through the trait."
 references = [
   "Forbes, A. B. (1989). Least-squares best-fit geometric elements. NPL Report DITC 140/89. [unverified citation]",
   "Shakarji, C. M. (1998). Least-squares fitting algorithms of the NIST algorithm testing system. Journal of Research of the National Institute of Standards and Technology 103(6).",
@@ -11,7 +11,9 @@ references = [
 determinism = "D0"
 input_arity = "1"
 failure_modes = [
-  "Every start converging to the same wrong axis (half cylinders near 1.07 radii long, review of #358): agreement holds, so the plane-RMS rule refuses or flags it.",
+  "Every start converging to the same wrong axis (half cylinders near 1.07 radii long, review of #358): agreement holds, so the plane-RMS rules refuse or flag it.",
+  "Starts cannot reach an axis about 90 degrees from INIT's frame (the tangent-plane parameters are singular there): such fits end refused or flagged.",
+  "With a fixed radius, suspect_axis mostly measures the mismatch between the fixed and the data's radius.",
   "Short arcs with little curvature against the noise have a flat valley of near-equal cylinders: local_optimum_only.",
   "Coplanar points (a circle) are Coplanar with the condition number; fewer than 5 points are TooFewPoints.",
 ]

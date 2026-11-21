@@ -308,6 +308,7 @@ truth_axis bfdac490a040cf21 bfe3b081caf87edd bfe561d2c412950f
 truth_point 3fb21f716b21ac1d 3f909db0e24ac54b 3fd36268bb538b6f
 truth_r 3f9636a336cabfc8
 fixed_dir bfdac490a040cf21 bfe3b081caf87edd bfe561d2c412950f
+bound_rms 3f8e8f9c42a123f6
 ref_axis 3fdac490a040cf21 3fe3b081caf87edd 3fe561d2c412950f
 ref_point 3fb0500b3a6752f7 3f77db3df188950a 3fd2a95543d5a328
 ref_r 3f96369e42bc9ae2
@@ -321,6 +322,7 @@ truth_axis 3fe0c0191ba90982 bfd6e7d03672ff69 3fe8be6e0e05117b
 truth_point bfd0327d1f6b5fb6 bf60266c1e522c66 3fc65391be45fdd8
 truth_r 3fa8512ba94a52d7
 fixed_dir 3fe0c0191ba90982 bfd6e7d03672ff69 3fe8be6e0e05117b
+bound_rms 3f60dce4fa3b1978
 ref_axis 3fe0c0191ba90982 bfd6e7d03672ff69 3fe8be6e0e05117b
 ref_point bfcf73bfc7fc1718 bf7cb3dd6b07188e 3fc7b7eef7c34179
 ref_r 3fa85171fa4d3591

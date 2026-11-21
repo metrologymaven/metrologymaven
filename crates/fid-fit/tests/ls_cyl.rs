@@ -236,6 +236,7 @@ fn matches_reference() {
 /// fixed axis direction keeps the direction (normalised) and leaves `u, v, r`.
 #[test]
 fn constraints_hold() {
+    let mut n_dir = 0;
     for (c, r) in outcomes() {
         let f = match r {
             Ok(f) => f,
@@ -246,14 +247,54 @@ fn constraints_hold() {
             assert_eq!(rad.to_bits(), fr[0].to_bits(), "{}", c.name);
             assert_eq!(f.param_names, ["a", "b", "u", "v"]);
             assert_eq!(f.result.diagnostics.rank, 4);
+            // No plane limit with a fixed radius: no certificate.
+            assert_eq!(f.bound_rms, None, "{}", c.name);
         } else if c.get("fixed_dir").is_some() {
             let fd = c.v3("fixed_dir");
             assert!(angle(d, fd) <= 1e-15, "{}", c.name);
             assert_eq!(f.param_names, ["u", "v", "r"]);
             assert_eq!(f.starts.len(), 1);
             assert_eq!(f.result.diagnostics.rank, 3);
+            // The certificate's bound is the best plane containing the fixed direction.
+            let b = f.bound_rms.unwrap();
+            let want = c.one("bound_rms");
+            assert!((b - want).abs() <= TOL_RMS_REL * want, "{}: bound {b} vs {want}", c.name);
+            assert!(f.result.stats.rms < b, "{}", c.name);
+            n_dir += 1;
+        } else {
+            assert_eq!(f.bound_rms, Some(f.plane_rms), "{}", c.name);
         }
     }
+    assert_eq!(n_dir, 2);
+}
+
+/// Rule 9 (fail closed): through the `Fit` trait a flagged fit is never returned. Every case
+/// whose `fit_cylinder` result carries `local_optimum_only` or `suspect_axis` is
+/// `FlaggedFit` with the same flags through `CylinderLs::fit`; every clean result is returned
+/// unchanged; every error is the same error.
+#[test]
+fn trait_refuses_flagged_fits() {
+    let mut flagged = 0;
+    for (c, r) in outcomes().iter().filter(|(c, _)| c.get("start_axis").is_none()) {
+        let pts_v = c.get("points").unwrap();
+        let pts = PointsView::new(&pts_v, None).unwrap();
+        let t = CylinderLs.fit(&pts, &params(c), Some(SEED));
+        match r {
+            Ok(f) if f.local_optimum_only || f.suspect_axis => {
+                let want = FitError::FlaggedFit {
+                    local_optimum_only: f.local_optimum_only,
+                    suspect_axis: f.suspect_axis,
+                    rms_ratio: f.rms_ratio,
+                };
+                assert_eq!(t, Err(want), "{}", c.name);
+                assert_eq!(t.unwrap_err().code(), "flagged_fit");
+                flagged += 1;
+            }
+            Ok(f) => assert_eq!(t.as_ref(), Ok(&f.result), "{}", c.name),
+            Err(e) => assert_eq!(t.as_ref(), Err(e), "{}", c.name),
+        }
+    }
+    assert!(flagged >= 1);
 }
 
 /// AC-3 and rule 8 on short, noisy 30-degree arcs (0.2 radii long, 40 to 100 micrometres of
@@ -266,7 +307,21 @@ fn constraints_hold() {
 #[test]
 fn ac3_short_arcs_never_confidently_wrong() {
     let mut counts = [0usize; 4];
+    // False positives of `suspect_axis`: fits whose axis matches the reference (within 1e-6
+    // rad) but are flagged suspect, out of all fits that match the reference.
+    let (mut matching, mut suspect_matching) = (0, 0);
     for (c, r) in outcomes().iter().filter(|(c, _)| flag(c) == Some("never_confidently_wrong")) {
+        if let Ok(f) = r {
+            let ok = angle(cyl(f).1, c.v3("ref_axis")) <= 1e-6;
+            eprintln!(
+                "{}: ratio {:.3} local_optimum_only {} suspect {} matches reference {ok}",
+                c.name, f.rms_ratio, f.local_optimum_only, f.suspect_axis
+            );
+            if ok {
+                matching += 1;
+                suspect_matching += usize::from(f.suspect_axis);
+            }
+        }
         match r {
             Err(FitError::ImplausibleFit { rms, bound }) => {
                 assert!(rms >= bound);
@@ -305,6 +360,7 @@ fn ac3_short_arcs_never_confidently_wrong() {
         "short arcs: flagged with distinct minima {}, suspect {}, matching {}, refused {}",
         counts[0], counts[1], counts[2], counts[3]
     );
+    eprintln!("suspect_axis false positives: {suspect_matching} of {matching} fits that match the reference");
     assert!(counts[0] >= 1, "AC-3: no short arc flagged local_optimum_only with distinct minima");
 }
 
@@ -319,7 +375,7 @@ fn wrong_axis_is_flagged() {
     assert!(angle(d, c.v3("truth_axis")) > 1.0, "converged near the true axis");
     assert!(!f.local_optimum_only);
     assert!(f.suspect_axis, "ratio {:e}", f.rms_ratio);
-    assert!(f.rms_ratio > 0.1 && f.rms_ratio < 1.0, "ratio {:e}", f.rms_ratio);
+    assert!(f.rms_ratio > fid_fit::ls_cyl::SUSPECT_RATIO && f.rms_ratio < 1.0, "ratio {:e}", f.rms_ratio);
     // The free fit of the same data finds the true axis and is not flagged.
     let pts_v = c.get("points").unwrap();
     let g = fit_cylinder(&PointsView::new(&pts_v, None).unwrap(), &params(c), Some(SEED)).unwrap();
@@ -367,8 +423,6 @@ fn multistart_record_and_diagnostics() {
     assert_eq!(f.result.algorithm.to_string(), "fit.cylinder.ls@1.0.0");
     let pts_v = c.get("points").unwrap();
     let pts = PointsView::new(&pts_v, None).unwrap();
-    let t = CylinderLs.fit(&pts, &params(c), Some(SEED)).unwrap();
-    assert_eq!(t, f.result);
     // Same seed: bit-identical; another seed changes the random starts only.
     assert_eq!(&fit_cylinder(&pts, &params(c), Some(SEED)).unwrap(), f);
     let other = fit_cylinder(&pts, &params(c), Some(7)).unwrap();
@@ -401,7 +455,13 @@ fn put(h: &mut Sha256Hasher, xs: &[f64]) {
 /// AC-3: output-bit pin of every case (feature, residuals, statistics, diagnostics, starts,
 /// per-start outcomes, flags and every error code), recorded from a local x86-64 run and
 /// checked by CI on x86-64 Linux and Windows, ARM64 macOS and wasm32 under wasmtime.
-const OUTPUT_PIN: &str = "sha256:698a2056078c1fea0d8eff000d7fccea3c4ac07135f6081d2706494b20487422";
+///
+/// Re-recorded for the review of #362 (first value
+/// `sha256:698a2056078c1fea0d8eff000d7fccea3c4ac07135f6081d2706494b20487422`): `SUSPECT_RATIO`
+/// went from 0.1 to 0.3 (the pinned flag), a failing later re-anchoring round now keeps the
+/// converged earlier round instead of failing the start, and the fixture gained the
+/// fixed-direction `bound_rms` lines.
+const OUTPUT_PIN: &str = "sha256:b66aa0f23702e86130852175435674054e55760b66da1fedfcec1485da6fffc2";
 
 #[test]
 fn ac3_output_bits_pinned() {

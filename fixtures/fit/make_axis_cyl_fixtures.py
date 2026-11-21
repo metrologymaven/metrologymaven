@@ -49,6 +49,7 @@ Output lines (hex = 16 lowercase hex digits of an IEEE-754 double):
   points <x y z per point>
   truth_axis <3 hex> / truth_point <3 hex> / truth_r <hex>     planted geometry
   fixed_r <hex> | fixed_dir <3 hex>                            constraint (optional)
+  bound_rms <hex>              fixed_dir cases: RMS of the best plane containing that direction
   start_axis <3 hex> start_point <3 hex> start_r <hex>          one-start override (optional)
   ref_axis <3 hex> ref_point <3 hex> ref_r <hex>               reference cylinder
   ref_rms <hex> plane_rms <hex>
@@ -294,6 +295,21 @@ def plane_rms(pts):
     return (lam / len(pts)).sqrt()
 
 
+def plane_rms_containing(pts, d):
+    """RMS distance to the best plane that contains direction d: the least-squares line of the
+    centred points projected onto an orthonormal (e1, e2) of d, i.e. the square root of the
+    smaller eigenvalue of the 2 x 2 scatter over n (closed form in Decimal)."""
+    c = centroid(pts)
+    e1, e2 = basis(unit(d))
+    u = [dot([q[k] - c[k] for k in range(3)], e1) for q in pts]
+    v = [dot([q[k] - c[k] for k in range(3)], e2) for q in pts]
+    suu = sum(x * x for x in u)
+    svv = sum(x * x for x in v)
+    suv = sum(x * y for x, y in zip(u, v))
+    lam = (suu + svv) / 2 - (((suu - svv) / 2) ** 2 + suv * suv).sqrt()
+    return (lam / len(pts)).sqrt()
+
+
 def emit(out, name, cov, pts, truth, ref, extra=(), flag=None, expect="start"):
     d, p0, r = truth
     out.append(f"case {name} coverage {cov}")
@@ -350,7 +366,8 @@ def render():
         pts, truth, _ = fitted(name, cov, Decimal("0.3"))
         dfix = [dec(fl(x)) for x in truth[0]]
         ref = gauss_newton(pts, truth[1], dfix, truth[2], free_dir=False)
-        emit(out, name, cov, pts, truth, ref, extra=["fixed_dir " + hxs(dfix)])
+        extra = ["fixed_dir " + hxs(dfix), "bound_rms " + hx(fl(plane_rms_containing(pts, dfix)))]
+        emit(out, name, cov, pts, truth, ref, extra=extra)
     for k in range(SHORT_ARCS):
         name = f"shortarc-{k}"
         noise = SHORT_ARC_NOISE_UM[k % len(SHORT_ARC_NOISE_UM)]

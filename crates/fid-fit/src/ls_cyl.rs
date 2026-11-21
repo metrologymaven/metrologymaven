@@ -33,7 +33,9 @@
 //!    start. The converged axis then becomes the new frame: `A' = d`, `P0'` the foot of the
 //!    perpendicular from the centroid (the origin) onto the axis, `(E1', E2')` by the basis rule,
 //!    and the solve is repeated from `a = b = u = v = 0` (and the current `r`). This stops after
-//!    a round with no accepted step, or after [`REPARAM_ROUNDS`] rounds. So the reported
+//!    a round with no accepted step, or after [`REPARAM_ROUNDS`] rounds. A later round that
+//!    fails (any solver error) ends the rounds and keeps the last converged round, so a start
+//!    that converged is never discarded by its re-anchoring. So the reported
 //!    gradient, rank and condition are those of the tangent-plane parameters about the final
 //!    axis, and the iteration count is the sum over the rounds. (The NLLS driver has no
 //!    per-step hook, so the axis is re-parameterised after each converged solve, not after each
@@ -49,23 +51,34 @@
 //!    `d`, `r`, mapped back to metres and canonicalised by [`FitResult::assemble`]; residuals
 //!    in metres.
 //! 8. **Wrong-axis check.** Multi-start agreement is not proof of correctness: every start
-//!    can converge to the same wrong axis (the review of #358). The reference is
-//!    `plane_rms`, the RMS distance of the points to their least-squares plane (the plane
-//!    through the centroid normal to the smallest principal axis of [`data_shape`]), the
-//!    data's spread out of its best plane. With `ratio = rms / plane_rms`:
-//!    - `ratio >= 1` with free radius and free direction is [`FitError::ImplausibleFit`]: a
-//!      cylinder of growing radius tends to any plane, so the global least-squares cylinder is
-//!      never worse than the least-squares plane and such a fit is provably a wrong local
-//!      optimum (a certificate, not a heuristic). With a constraint the family no longer
-//!      contains every plane, so this case is only flagged.
-//!    - `ratio > SUSPECT_RATIO` (0.1) sets [`CylinderFit::suspect_axis`]: the cylinder then
-//!      explains less than `1 - 0.1^2 = 99 %` of the data's out-of-plane variance (a
-//!      coefficient of determination against the plane model). A correct fit of measured
-//!      cylinder data explains nearly all of it (noise and form error are small against the
-//!      curvature's sagitta); a converged wrong axis on a half cylinder explains about 78 %
-//!      (`ratio` about 0.47). A very shallow arc whose sagitta is comparable to the noise is
-//!      also flagged, rightly: the data then does not determine the cylinder. The value 0.1
-//!      is [unverified] against ORS cases.
+//!    can converge to the same wrong axis (the review of #358). Two references, with `rms` the
+//!    fit's residual RMS:
+//!    - **Certificate.** `bound_rms` is the RMS of the best plane the constrained cylinder
+//!      family tends to as its radius grows: without constraints the least-squares plane of
+//!      the data (all planes are limits), with a fixed axis direction `d` the best plane that
+//!      contains `d` (the least-squares line of the projections onto `(E1, E2)`: square root of
+//!      the smaller eigenvalue of their `2 x 2` scatter over `n`). The infimum of the
+//!      least-squares objective over the family is then at most the bound's, so a converged fit
+//!      with `rms >= (1 + 1e-9) bound_rms` is not the global optimum, or none exists (the
+//!      infimum is approached only as the radius grows without limit): [`FitError::ImplausibleFit`].
+//!      The `1e-9` keeps a fit that equals the bound to rounding from being refused. A fixed
+//!      radius has no plane limit, so it has no certificate (`bound_rms` is `None`).
+//!    - **Flag.** `plane_rms` is the RMS distance of the points to their least-squares plane
+//!      (normal: the smallest principal axis of [`data_shape`]), the data's spread out of its
+//!      best plane, and `ratio = rms / plane_rms`. `ratio > SUSPECT_RATIO` (0.3) sets
+//!      [`CylinderFit::suspect_axis`]: the axis is weakly determined or wrong (the cylinder
+//!      explains less than `1 - 0.3^2 = 91 %` of the out-of-plane variance). The review of
+//!      #362 searched the minima of the fixture and found no wrong minimum below a ratio of
+//!      0.44 (a converged wrong axis on a half cylinder is about 0.47), and correct fits of
+//!      well-determined data stay below 0.01; 0.3 leaves a margin below the 0.44 floor. On short
+//!      noisy arcs whose sagitta is comparable to the noise a correct axis can also exceed 0.3:
+//!      the flag then means weakly determined, not wrong. With a fixed radius the ratio mostly
+//!      measures the mismatch between the fixed and the data's radius, not the axis. The value
+//!      0.3 is [unverified] against ORS cases.
+//! 9. **Trait (fail closed).** [`Fit::fit`] returns only clean fits: a fit with
+//!    `local_optimum_only` or `suspect_axis` is [`FitError::FlaggedFit`], so a generic caller
+//!    can never receive a flagged fit unflagged. Callers that accept flagged fits use
+//!    [`fit_cylinder`], which returns them with their flags.
 //!
 //! # Determinism
 //!
@@ -99,7 +112,10 @@ pub const DEFAULT_SEED: u64 = 0;
 pub const REPARAM_ROUNDS: usize = 8;
 
 /// `rms / plane_rms` above which [`CylinderFit::suspect_axis`] is set (rule 8) [unverified].
-pub const SUSPECT_RATIO: f64 = 0.1;
+pub const SUSPECT_RATIO: f64 = 0.3;
+
+/// Relative margin of the certificate: refuse when `rms >= (1 + CERT_MARGIN) bound_rms`.
+pub const CERT_MARGIN: f64 = 1e-9;
 
 const OP: &str = "fit.ls_cyl";
 
@@ -129,9 +145,12 @@ pub struct CylinderFit {
     pub origin: StartOrigin,
     /// RMS distance of the points to their least-squares plane (metres, rule 8).
     pub plane_rms: f64,
+    /// The certificate's bound (metres, rule 8): `plane_rms` without constraints, the best
+    /// plane containing the fixed direction, `None` with a fixed radius.
+    pub bound_rms: Option<f64>,
     /// `result.stats.rms / plane_rms` (`+inf` when `plane_rms` is 0).
     pub rms_ratio: f64,
-    /// `rms_ratio > SUSPECT_RATIO`: the axis may be a wrong local optimum (rule 8).
+    /// `rms_ratio > SUSPECT_RATIO`: the axis is weakly determined or wrong (rule 8).
     pub suspect_axis: bool,
 }
 
@@ -164,6 +183,7 @@ pub fn cylinder_command_row() -> Result<CommandRow, FitError> {
         Field { name: "multistart.start_count", ty: ValueType::Integer, quantity: C, required: false },
         Field { name: "multistart.local_optimum_only", ty: ValueType::Boolean, quantity: None, required: false },
         Field { name: "check.plane_rms", ty: ValueType::Number, quantity: L, required: false },
+        Field { name: "check.bound_rms", ty: ValueType::Number, quantity: L, required: false },
         Field { name: "check.rms_ratio", ty: ValueType::Number, quantity: D, required: false },
         Field { name: "check.suspect_axis", ty: ValueType::Boolean, quantity: None, required: false },
     ];
@@ -316,7 +336,12 @@ fn solve_rounds(q: &[f64], fr0: Frame, layout: Layout, x0: Vec<f64>, cfg: &NllsC
     let mut done: Option<Outcome> = None;
     for _ in 0..REPARAM_ROUNDS {
         let prob = Problem { q, fr, layout };
-        let res = nlls::solve(&prob, &x, cfg).map_err(|e| FitError::from_solver(e, cfg))?;
+        let res = match nlls::solve(&prob, &x, cfg) {
+            Ok(res) => res,
+            // A later round's failure keeps the converged earlier round (rule 5).
+            Err(_) if done.is_some() => break,
+            Err(e) => return Err(FitError::from_solver(e, cfg)),
+        };
         iterations = iterations.saturating_add(res.iterations);
         let full = layout.full(&res.p).ok_or(FitError::InvalidParams { field: "params" })?;
         let (pp, d, _, r) = axis_of(&fr, &full)?;
@@ -389,6 +414,21 @@ fn plane_rms(c: &Centred) -> Result<f64, FitError> {
     Ok(red::norm2(&r)? / f::sqrt(c.len() as f64)?)
 }
 
+/// Rule 8's bound with a fixed direction: RMS of the best plane containing the axis direction
+/// of frame `fr` (scaled), from the `2 x 2` scatter of the projections onto `(e1, e2)`.
+fn bound_with_direction(c: &Centred, e1: V3, e2: V3) -> Result<f64, FitError> {
+    let n = c.len();
+    let (mut u, mut v) = (alloc(n)?, alloc(n)?);
+    for q in c.xyz().chunks_exact(3) {
+        u.push(red::dot(q, &e1)?);
+        v.push(red::dot(q, &e2)?);
+    }
+    let (suu, svv, suv) = (red::dot(&u, &u)?, red::dot(&v, &v)?, red::dot(&u, &v)?);
+    let lam = (suu + svv) / 2.0 - f::hypot((suu - svv) / 2.0, suv)?;
+    let lam = if f::total_cmp(lam, 0.0)? == Ordering::Less { 0.0 } else { lam };
+    Ok(f::sqrt(lam / n as f64)?)
+}
+
 fn to_frame(c: &Centred, fr: &AxisFrame) -> Result<Frame, FitError> {
     Ok(Frame { p0: c.map().forward(fr.point)?, a: fr.axis, e1: fr.e1, e2: fr.e2 })
 }
@@ -416,7 +456,8 @@ fn ms_error(e: MultiStartError<FitError>) -> FitError {
 ///
 /// `InvalidParams` (rule 1), the checks' `TooFewPoints` / `Collinear` / `Coplanar`, INIT's
 /// `IllConditioned`, [`FitError::MultiStartFailed`] when every start fails, and
-/// [`FitError::ImplausibleFit`] (rule 8).
+/// [`FitError::ImplausibleFit`] (rule 8). Flagged fits are returned with their flags (the
+/// trait refuses them, rule 9).
 pub fn fit_cylinder(pts: &PointsView<'_>, params: &FitParams, seed: Option<u64>) -> Result<CylinderFit, FitError> {
     let (_, dir) = constraints(pts, params)?;
     if dir.is_some() {
@@ -456,7 +497,7 @@ fn run(pts: &PointsView<'_>, params: &FitParams, start: Option<&AxialStart>) -> 
     };
     let names = layout.names()?;
     // The start frame (scaled) and the multi-start run.
-    let (frame_si, outcome) = match (dir, start) {
+    let (frame_si, outcome, bound_c) = match (dir, start) {
         (Some(fd), _) => {
             let a = normalize_direction(fd)?;
             // INIT's algebraic circle of the projections, in the basis of `a` (rule 3).
@@ -478,13 +519,15 @@ fn run(pts: &PointsView<'_>, params: &FitParams, start: Option<&AxialStart>) -> 
             let frame_si = AxisFrame { point: map.inverse([0.0; 3])?, axis: a, e1, e2 };
             let o = mstart::run_listed(&[s0], &tol, |s: &[f64]| solve_start(&c, fr, layout, s, &params.nlls))
                 .map_err(ms_error)?;
-            (frame_si, o)
+            let bound = if layout.radius.is_none() { Some(bound_with_direction(&c, e1, e2)?) } else { None };
+            (frame_si, o, bound)
         }
         (None, Some(st)) => {
             let fr = to_frame(&c, &st.frame)?;
             let spec = spec_for(&st.spec, layout)?;
             let o = mstart::run(&spec, |s: &[f64]| solve_start(&c, fr, layout, s, &params.nlls)).map_err(ms_error)?;
-            (st.frame, o)
+            let bound = if layout.radius.is_none() { Some(plane_rms(&c)?) } else { None };
+            (st.frame, o, bound)
         }
         (None, None) => return Err(FitError::InvalidParams { field: "start" }),
     };
@@ -500,8 +543,15 @@ fn run(pts: &PointsView<'_>, params: &FitParams, start: Option<&AxialStart>) -> 
     let result = FitResult::assemble(&feature, res, diag, None, id())?;
     let plane = map.inverse_length(plane_rms(&c)?)?;
     let ratio = if plane > 0.0 { result.stats.rms / plane } else { f64::INFINITY };
-    if layout.dir && layout.radius.is_none() && f::total_cmp(ratio, 1.0)? != Ordering::Less {
-        return Err(FitError::ImplausibleFit { rms: result.stats.rms, bound: plane });
+    let bound = match bound_c {
+        Some(b) => Some(map.inverse_length(b)?),
+        None => None,
+    };
+    if let Some(b) = bound {
+        let limit = (1.0 + CERT_MARGIN) * b;
+        if f::total_cmp(result.stats.rms, limit)? != Ordering::Less {
+            return Err(FitError::ImplausibleFit { rms: result.stats.rms, bound: b });
+        }
     }
     let suspect = f::total_cmp(ratio, SUSPECT_RATIO)? == Ordering::Greater;
     let per_start = outcome.per_start;
@@ -515,6 +565,7 @@ fn run(pts: &PointsView<'_>, params: &FitParams, start: Option<&AxialStart>) -> 
         local_optimum_only: outcome.local_optimum_only,
         origin: outcome.origin,
         plane_rms: plane,
+        bound_rms: bound,
         rms_ratio: ratio,
         suspect_axis: suspect,
     })
@@ -562,7 +613,16 @@ impl Fit for CylinderLs {
         id()
     }
 
+    /// Rule 9: fails closed on a flagged fit ([`FitError::FlaggedFit`]).
     fn fit(&self, pts: &PointsView<'_>, params: &FitParams, seed: Option<u64>) -> Result<FitResult, FitError> {
-        fit_cylinder(pts, params, seed).map(|f| f.result)
+        let f = fit_cylinder(pts, params, seed)?;
+        if f.local_optimum_only || f.suspect_axis {
+            return Err(FitError::FlaggedFit {
+                local_optimum_only: f.local_optimum_only,
+                suspect_axis: f.suspect_axis,
+                rms_ratio: f.rms_ratio,
+            });
+        }
+        Ok(f.result)
     }
 }
