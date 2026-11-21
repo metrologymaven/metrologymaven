@@ -33,12 +33,16 @@
 //!   feature type, datum targets) and the command `gdt.define_datum@1`;
 //! - [`drf::build`] (`GDT.DRF.BUILD`): DRF construction from declared planar datums at RMB,
 //!   simulated from measured points by certified tangential planes, with the commands
-//!   `gdt.build_drf@1` and `gdt.get_drf@1`, the provisional label of D-045 and exact replay.
+//!   `gdt.build_drf@1` and `gdt.get_drf@1`, the provisional label of D-045 and exact replay;
+//! - [`dim::radial`] (`GDT.DIM.RADIAL`): the diameter and radius checks `check.eval_diameter@1`
+//!   and `check.eval_radius@1` over `fid-gps`'s pure evaluation, their ResultRecord, journal
+//!   event and exact replay.
 //!
 //! Nothing here panics on any input: every outcome is a returned `Result`.
 
 pub mod chars;
 pub use chars::interp::{requires_provisional_label, requires_provisional_label_bytes};
+pub mod dim;
 pub mod dmt_flow;
 pub mod drf;
 pub mod resolve;

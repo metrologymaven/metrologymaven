@@ -11,13 +11,17 @@
 //! - [`zone`] (`GDT.ZONE.ZTYPE`): the tolerance-zone shapes and their fixed-pose usage and
 //!   driving point, in closed form.
 //! - [`drf`] (`GDT.DRF.BUILD`): DRF construction from simulated datums and DoF bookkeeping.
+//! - [`dim`] (`GDT.DIM.RADIAL`): diameter and radius of a feature fitted by `fid-fit`'s
+//!   least-squares circle, cylinder or sphere, checked against the chain's association.
 //!
 //! Pure: no I/O (callers pass bytes), no `HashMap`/`HashSet`, and nothing here panics on any
 //! input: every outcome is a returned `Result`. The only floating-point arithmetic is in
-//! [`zone`] and [`drf`], written in KNP-1 style (pinned evaluation order, no fused multiply-add, no
-//! `f64::min`/`f64::max`, square root through `fid-num`, NaN rejected), so its results are
-//! bit-identical on every platform including wasm32.
+//! [`zone`], [`drf`] and [`dim`] (outside the fits of `fid-fit`), written in KNP-1 style
+//! (pinned evaluation order, no fused multiply-add, no `f64::min`/`f64::max`, square root
+//! through `fid-num`, NaN rejected), so its results are bit-identical on every platform
+//! including wasm32.
 
+pub mod dim;
 pub mod dmt;
 pub mod drf;
 pub mod resolve;

@@ -1,0 +1,428 @@
+{
+ "rows": [
+  {
+   "actual_value": "av.synthetic.diameter@1",
+   "characteristic": "diameter",
+   "clauses": [
+    {
+     "clause": "0",
+     "designator": "asme-y14.5",
+     "edition": "2018"
+    }
+   ],
+   "decision_rule_hint": "dr.synthetic.default@1",
+   "default_variant": "ls_circle3",
+   "dialect": "asme",
+   "editions": [
+    "y14.5-2018"
+   ],
+   "key": "dmt:asme/diameter/none@1",
+   "limitations": [],
+   "modifiers": [],
+   "notes": "Synthetic diameter row for GDT.DIM.RADIAL tests; not an interpretation of any standard.",
+   "ors_cases": [
+    "ors:synthetic/diameter.001"
+   ],
+   "review": {
+    "state": "under_review"
+   },
+   "status": "supported",
+   "synthetic": true,
+   "variants": [
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.circle2.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "ls_circle2"
+    },
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.circle3.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "ls_circle3"
+    },
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.cone.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "ls_cone"
+    },
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.cylinder.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "ls_cylinder"
+    },
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.sphere.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "ls_sphere"
+    },
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.circle3.mi@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "mi_circle3"
+    },
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.circle3.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "fit.sphere.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "two_assoc"
+    }
+   ]
+  },
+  {
+   "actual_value": "av.synthetic.radius@1",
+   "characteristic": "radius",
+   "clauses": [
+    {
+     "clause": "0",
+     "designator": "asme-y14.5",
+     "edition": "2018"
+    }
+   ],
+   "decision_rule_hint": "dr.synthetic.default@1",
+   "default_variant": "ls_circle3",
+   "dialect": "asme",
+   "editions": [
+    "y14.5-2018"
+   ],
+   "key": "dmt:asme/radius/none@1",
+   "limitations": [],
+   "modifiers": [],
+   "notes": "Synthetic radius row for GDT.DIM.RADIAL tests; not an interpretation of any standard.",
+   "ors_cases": [
+    "ors:synthetic/radius.001"
+   ],
+   "review": {
+    "state": "under_review"
+   },
+   "status": "supported",
+   "synthetic": true,
+   "variants": [
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.circle2.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "ls_circle2"
+    },
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.circle3.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "ls_circle3"
+    },
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.cone.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "ls_cone"
+    },
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.cylinder.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "ls_cylinder"
+    },
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.sphere.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "ls_sphere"
+    },
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.circle3.mi@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "mi_circle3"
+    },
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {}
+      },
+      {
+       "alg": "fit.circle3.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "fit.sphere.ls@1.0.0",
+       "kind": "association",
+       "params": {}
+      },
+      {
+       "alg": "syn.eval.feature_size@0.1.0",
+       "kind": "evaluation",
+       "params": {}
+      }
+     ],
+     "variant": "two_assoc"
+    }
+   ]
+  }
+ ],
+ "schema": "fid.dmt-table/1",
+ "version": "1.0.0"
+}
