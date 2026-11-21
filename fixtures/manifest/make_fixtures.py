@@ -13,7 +13,7 @@ Pinned choices (mirrored by crates/fid-surface, stated in the PR):
   command a CORE.REG.DEF.FIELD definition plus definition_digest = SHA-256 of the RFC 8785
   form of the definition without that field; the manifest bytes must be canonical;
 - commands are sorted by name bytes, then numeric major; errors are checked per command in that
-  order: name grammar, Python keyword, MCP length, projection, collisions (cli, mcp, python);
+  order: name grammar, MCP length, projection, collisions (cli, mcp, python);
   definition-level errors (invalid command name, major > 99999) come first, in manifest order;
 - a W1/W2 command declares `exposed` in the registry and projects to `named`; `human_only`
   tightens the expected projection to `request_only` (D-031);
@@ -21,11 +21,15 @@ Pinned choices (mirrored by crates/fid-surface, stated in the PR):
   CORE.BUS.POL.PROJ): a declaration looser than the ceiling is `projection_mismatch`, a
   stricter one projects to itself (`request_only`, or `never` as `none`);
 - majors of one command share a CLI path, so CLI paths collide only across command names;
+- a Python module or function name that is a hard keyword gets one trailing underscore
+  (`fiducial.import_`, function `class_`); `_vN` names are never keywords; soft keywords are
+  not escaped. The keyword set is checked against this Python's `keyword.kwlist`;
 - the fuzz PRNG is splitmix64 with the seed below.
 """
 
 import hashlib
 import json
+import keyword
 import sys
 from pathlib import Path
 
@@ -52,6 +56,14 @@ PY_KEYWORDS = {
     "except", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "nonlocal", "not",
     "or", "pass", "raise", "return", "try", "while", "with", "yield",
 }
+# Independent of the list above: the running Python's own hard keywords that a lowercase
+# command segment can spell.
+assert {k for k in keyword.kwlist if k.islower()} == PY_KEYWORDS, sorted(
+    {k for k in keyword.kwlist if k.islower()} ^ PY_KEYWORDS)
+
+
+def py_identifier(name):
+    return name + "_" if keyword.iskeyword(name) else name
 
 
 def canon(v):
@@ -153,8 +165,6 @@ def reference_project(manifest_bytes):
         if len(parts) != 2 or not is_segment(parts[0]) or not is_segment(parts[1]):
             raise Refused("bad_command_id", [cid])
         domain, verb = parts
-        if domain in PY_KEYWORDS or verb in PY_KEYWORDS:
-            raise Refused("bad_name_chars", [cid])
         suffix = f"_v{major}" if major >= 2 else ""
         mcp_name = f"{domain}_{verb}{suffix}"
         if len(mcp_name) > 64:
@@ -179,7 +189,8 @@ def reference_project(manifest_bytes):
         if key in cli and cli[key][0] != name:
             raise Refused("name_collision", [cli[key][1], cid])
         cli.setdefault(key, (name, cid))
-        for table, k in ((mcp, mcp_name), (py, f"fiducial.{domain}.{verb}{suffix}")):
+        py_module, py_name = f"fiducial.{py_identifier(domain)}", py_identifier(f"{verb}{suffix}")
+        for table, k in ((mcp, mcp_name), (py, f"{py_module}.{py_name}")):
             if k in table:
                 raise Refused("name_collision", [table[k], cid])
             table[k] = cid
@@ -204,8 +215,8 @@ def reference_project(manifest_bytes):
             "major": major,
             "cli_path": cli_path,
             "mcp_name": mcp_name,
-            "py_module": f"fiducial.{domain}",
-            "py_name": f"{verb}{suffix}",
+            "py_module": py_module,
+            "py_name": py_name,
             "mcp_projection": expected,
             "side_effect": d["side_effect"],
             "determinism": d["determinism"],
@@ -278,6 +289,20 @@ def collision():
         definition("demo.run_fit", 2, "R1", "exposed"),
         definition("demo.run_fit_v2", 1, "R1", "exposed"),
     ])
+
+
+def keywords():
+    """Every Python hard keyword as a domain and as a verb (at majors 1 and 2), plus the soft
+    keywords, which are not escaped."""
+    defs = []
+    for kw in sorted(PY_KEYWORDS):
+        defs.append(definition(f"{kw}.run", 1, "R0", "exposed"))
+        defs.append(definition(f"kw.{kw}", 1, "R0", "exposed"))
+        defs.append(definition(f"kw.{kw}", 2, "R0", "exposed"))
+    for soft in ("case", "match", "type"):
+        defs.append(definition(f"kw.{soft}", 1, "R0", "exposed"))
+    defs.sort(key=lambda d: (d["id"].encode(), d["major"]))
+    return manifest(defs)
 
 
 def long_name():
@@ -442,12 +467,14 @@ def outputs():
         MAN / "collision.json": collision(),
         MAN / "stricter.json": stricter(),
         MAN / "long-name.json": long_name(),
+        MAN / "keywords.json": keywords(),
         MAN / "roots-config.json": roots_config(),
     }
     reference_project(files[MAN / "roots-config.json"])  # must project cleanly
     files[PROJ / "roots-config.visible.json"] = roots_visibility(files[MAN / "roots-config.json"])
     files[PROJ / "min-classes.golden.json"] = reference_project(files[MAN / "min-classes.json"])
     files[PROJ / "stricter.golden.json"] = reference_project(files[MAN / "stricter.json"])
+    files[PROJ / "keywords.golden.json"] = reference_project(files[MAN / "keywords.json"])
     expected = {}
     for p in (MAN / "bad-projection.json", MAN / "collision.json", MAN / "long-name.json"):
         expected[p.name] = expectation(files[p])
