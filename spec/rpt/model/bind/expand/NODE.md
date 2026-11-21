@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-report]
 satisfies: [REQ-RPT.MODEL.BIND-006]
 covers: [GOM.RPT.07]
 depends_on: [RPT.MODEL.TMPL.SLOT, RPT.MODEL.BIND.RESOLVE, CORE.PRJ.STAGE]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-20
 ---
 
 # RPT.MODEL.BIND.EXPAND: Slot, repetition and multi-stage expansion
@@ -58,6 +59,16 @@ Turns the slots of a template or report into concrete bindings at a journal head
 - **Determinism:** D0; ordered collections, no clock, derived IDs.
 - **Performance budget:** expand 500 characteristics by 3 stages in under 50 ms [unverified until measured].
 - **Crate:** `fid-report`.
+- **Pinned at build** (module `bind::expand`; each rule has a test in `crates/fid-report/tests/bind_expand.rs`; the model, templates and expected expansions come from the independent reference `fixtures/rpt/model/bind/expand/make_fixtures.py`, checked in CI with `--check`):
+  - *API.* `expand(template, ctx: &ResolveContext, model: &dyn ProjectModel, journal: &dyn JournalReads, query: Option<&dyn QueryProvider>) -> Result<Vec<ExpandedBlock>, ExpandError>`. It reads only and journals nothing. It takes a `Template` (slots checked by `RPT.MODEL.TMPL.SLOT`'s `validate_template`); reports carry bindings, not slots, so there is nothing to expand in a report. Two parameters are added to the Design's signature. `ProjectModel` is the project as of `ctx.head`: characteristics (name, QIF type token, balloon, element, tags), elements, stages in project order (removed ones included), runs with start time, and which result sits in which stage. Like `JournalReads`, it is implemented by the bus's store adapter, with `MemoryModel` in memory. `journal` checks every selected characteristic at the head (`report.cross_project_binding`, `report.unjournaled_record`, `report.not_found`) and supplies the decisions the outcome filter reads. The filter never takes an outcome from the model.
+  - *Output.* `ExpandedBlock { id, source_block, page, source_page, page_item, role, item, columns, binding, cells }`, with `role` one of `copy`, `table`, `row` or `column_group`. It holds stable-ID references only (`binding@1`), never a value. Its canonical form is `{"blocks": [...], "schema": "expansion@1"}` (RFC 8785).
+  - *Selectors.* A listed ID the model does not hold is `report.not_found`. `stages` selects live stages only. `tags` selects characteristics, matched by bytes. `saved_query` answers may hold only characteristic references (`report.query_result_invalid` otherwise, an error added at build). `field_table` takes the rows of the first source that has any; row `i` has the stable ID `<table>/<i as ten digits>`. A characteristic type is compared as a token; membership in the QIF type list waits for `GDT.CHAR.MODEL.TYPES`.
+  - *Outcome filter.* An item is kept when one of its results in the stage columns (for a stage, its own results; for a run, its stages' results; for an element, its characteristics' results) has an outcome in the filter. Field rows have no outcome.
+  - *Order.* `tmpl::slot::order`, with these sort values: characteristic ID, name and element ID as text; balloon, stage position and run start time as integers; `Missing` otherwise. A `stages` or `runs` slot whose sort is `null` uses the REQ-003 order: stages by project position, then run start time, then run ID; runs by their first live stage's position, then start time, then ID.
+  - *Stage columns (REQ-003).* `ctx.stages` if given (each must be live, else `report.not_found`), otherwise every live stage. If `ctx.runs` is given, only stages of those runs are kept. The result is in REQ-003 order. A `row` slot emits a `table` block carrying the columns, then one `row` per item. A characteristic row's binding is the characteristic followed by its result in each column; `cells` is aligned with the columns and holds null where a stage has no result. A `column` slot emits one `column_group` per run of at most `max_columns_per_group` items (one empty group when there are none).
+  - *Page groups.* The group's pages, in document order, are emitted once per item at the place of the group's first page. A page in two groups is `report.slot_invalid` (`page_group_overlap`). So is a `page_group` slot on a page of another group (`nested_page_group`). No template recursion is possible. Slots on copied pages are evaluated unscoped (see Open questions).
+  - *IDs.* UUIDv5, with the UTF-8 of the item's stable ID as the name. A page copy is `v5(template page, item)`. A block on a copy has base `v5(template block, page item)`; elsewhere its base is the template block ID. A row is `v5(base, item)`; a column group is `v5(base, first item)`.
+  - *Bounds.* Per report: 100 000 rows, 100 000 columns (added at build, like rows) and 5 000 pages (pages outside groups count once). Items are counted before any lookup or sort; crossing a bound is `report.expansion_too_large { block, limit: rows | columns | pages }`. Each model list is capped at 1 000 000 distinct IDs and each characteristic at 256 tags (`report.store_invalid`).
 
 ## Test fixtures
 
@@ -76,6 +87,9 @@ Turns the slots of a template or report into concrete bindings at a journal head
 ## Open questions
 
 - The expansion limits are placeholders [unverified]; confirm with the PDF render budget.
+- **AC-1 and the starter template:** `RPT.MODEL.TMPL.STARTER` is not built. AC-1 runs against the fixture template `fixtures/rpt/model/bind/expand/templates/multistage.json`, shaped as STARTER's Design describes (row slot over characteristics, stage columns). Re-run it against `tmpl:multistage-table` once STARTER lands. STARTER's Design names "a column slot over stages" for that table, but a block has one slot. Here the stage columns of a row table come from the context's stage selection (REQ-003), and a separate `column` slot repeats columns over stages or runs. STARTER should use the row form.
+- **Scoping inside page groups:** a slot on a page inside a page group is evaluated over the whole project, not restricted to the page's item (for example, one element's characteristics). Scoping needs a rule in `RPT.MODEL.TMPL.SLOT`.
+- **ProjectModel adapter:** the bus's store adapter must implement `ProjectModel` from the project state (`CORE.PRJ.TREE`, `CORE.PRJ.STAGE`) and the Record Journal. Only `MemoryModel` exists today.
 
 ## Children
 

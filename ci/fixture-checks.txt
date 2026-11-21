@@ -131,6 +131,7 @@ python fixtures/rec/life/make_fixtures.py --check
 python fixtures/rel/guide/make_fixtures.py --check
 python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
+python fixtures/rpt/model/bind/expand/make_fixtures.py --check
 python fixtures/rpt/model/bracket_3stage/make_fixtures.py --check
 python fixtures/rpt/model/fmt/make_cases.py --check
 python fixtures/rpt/model/tmpl/check_schema.py
