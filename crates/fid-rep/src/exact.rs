@@ -105,7 +105,7 @@ impl Nat {
         }
     }
 
-    fn cmp(&self, other: &Nat) -> Ordering {
+    fn cmp_mag(&self, other: &Nat) -> Ordering {
         match self.0.len().cmp(&other.0.len()) {
             Ordering::Equal => {}
             o => return o,
@@ -179,7 +179,7 @@ impl Term {
         Term { neg: d.is_negative(), n: Nat::from_u128(d.coeff()), p2: 0, p10: d.exp10() }
     }
 
-    pub(crate) fn neg(mut self) -> Term {
+    pub(crate) fn negated(mut self) -> Term {
         self.neg = !self.neg;
         self
     }
@@ -212,7 +212,7 @@ pub(crate) fn sign_of_sum(terms: &[Term]) -> Ordering {
             acc = n;
         } else if neg == t.neg {
             acc.add(&n);
-        } else if acc.cmp(&n) != Ordering::Less {
+        } else if acc.cmp_mag(&n) != Ordering::Less {
             acc.sub(&n);
         } else {
             n.sub(&acc);
@@ -229,10 +229,10 @@ pub(crate) fn sign_of_sum(terms: &[Term]) -> Ordering {
 
 /// `|x - y| <= bound`, exactly. `bound` is non-negative.
 pub(crate) fn abs_diff_le(x: &Term, y: &Term, bound: &Term) -> bool {
-    let d = sign_of_sum(&[x.clone(), y.clone().neg()]);
+    let d = sign_of_sum(&[x.clone(), y.clone().negated()]);
     let terms = match d {
-        Ordering::Less => [y.clone(), x.clone().neg(), bound.clone().neg()],
-        _ => [x.clone(), y.clone().neg(), bound.clone().neg()],
+        Ordering::Less => [y.clone(), x.clone().negated(), bound.clone().negated()],
+        _ => [x.clone(), y.clone().negated(), bound.clone().negated()],
     };
     sign_of_sum(&terms) != Ordering::Greater
 }
@@ -253,11 +253,11 @@ mod tests {
     #[test]
     fn signs() {
         assert_eq!(sign_of_sum(&[f(1.0), f(-1.0)]), Ordering::Equal);
-        assert_eq!(sign_of_sum(&[f(0.1), d("0.1").neg()]), Ordering::Greater); // fl(0.1) > 0.1
-        assert_eq!(sign_of_sum(&[f(0.3), d("0.3").neg()]), Ordering::Less); // fl(0.3) < 0.3
+        assert_eq!(sign_of_sum(&[f(0.1), d("0.1").negated()]), Ordering::Greater); // fl(0.1) > 0.1
+        assert_eq!(sign_of_sum(&[f(0.3), d("0.3").negated()]), Ordering::Less); // fl(0.3) < 0.3
         assert_eq!(sign_of_sum(&[]), Ordering::Equal);
-        assert_eq!(sign_of_sum(&[f(5e-324), f(1.7976931348623157e308).neg()]), Ordering::Less);
-        assert_eq!(sign_of_sum(&[d("1e400"), f(1.7976931348623157e308).neg()]), Ordering::Greater);
+        assert_eq!(sign_of_sum(&[f(5e-324), f(1.7976931348623157e308).negated()]), Ordering::Less);
+        assert_eq!(sign_of_sum(&[d("1e400"), f(1.7976931348623157e308).negated()]), Ordering::Greater);
     }
 
     #[test]

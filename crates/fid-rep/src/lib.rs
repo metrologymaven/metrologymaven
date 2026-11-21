@@ -315,7 +315,7 @@ impl Table {
         if version.is_empty() {
             return Err(RepError::TableInvalid("empty_version"));
         }
-        bounds.sort_by(|a, b| a.kind.cmp(&b.kind));
+        bounds.sort_by_key(|b| b.kind);
         for (i, b) in bounds.iter().enumerate() {
             if b.kind == FieldKind::Exact {
                 return Err(RepError::TableInvalid("bound_for_exact"));
