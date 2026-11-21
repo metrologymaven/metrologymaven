@@ -1,0 +1,61 @@
+{
+ "rows": [
+  {
+   "actual_value": "av.synthetic.datum_frame@1",
+   "characteristic": "datum_frame",
+   "clauses": [
+    {
+     "clause": "0",
+     "designator": "asme-y14.5",
+     "edition": "2018"
+    }
+   ],
+   "decision_rule_hint": "dr.synthetic.default@1",
+   "default_variant": "planar",
+   "dialect": "asme",
+   "editions": [
+    "y14.5-2018"
+   ],
+   "key": "dmt:asme/datum_frame/rmb@1",
+   "limitations": [],
+   "modifiers": [
+    "rmb"
+   ],
+   "notes": "Synthetic planar datum frame row for GDT.DRF.BUILD tests; not an interpretation of any standard.",
+   "ors_cases": [
+    "ors:synthetic/datum_frame.001"
+   ],
+   "review": {
+    "state": "draft"
+   },
+   "status": "supported",
+   "synthetic": true,
+   "variants": [
+    {
+     "steps": [
+      {
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "kind": "partition",
+       "params": {}
+      },
+      {
+       "alg": "syn.extract.all_points@0.1.0",
+       "kind": "extraction",
+       "params": {
+        "min_points": "3"
+       }
+      },
+      {
+       "alg": "fit.plane.tan_l2@1.0.0",
+       "kind": "association",
+       "params": {}
+      }
+     ],
+     "variant": "planar"
+    }
+   ]
+  }
+ ],
+ "schema": "fid.dmt-table/1",
+ "version": "1.0.0"
+}
