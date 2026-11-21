@@ -969,8 +969,13 @@ fn hard_linked_source_is_reported() {
     let p = cmd
         .prepare(&env(&reg, &roots, &tree, Principal::Agent), &ImportParams::new("root://in/linked.ftp"), None)
         .unwrap();
-    let w = &p.report().warnings()[0];
-    assert_eq!((w.code.as_str(), w.pos.is_none(), w.detail.text().raw()), ("hard_linked", true, "2 links"));
+    let report = p.report().to_cvalue();
+    let warnings = arr(obj(&report), "warnings");
+    assert_eq!(warnings.len(), 1);
+    let w = obj(&warnings[0]);
+    assert_eq!(st(w, "code"), "hard_linked");
+    assert_eq!(get(w, "pos"), &CValue::Null);
+    assert_eq!(st(obj(get(w, "detail")), "text"), "2 links");
     assert_eq!(p.report().warnings_total(), 1);
 }
 
