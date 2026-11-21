@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-19
+updated: 2026-11-21
 ---
 
 # IO.REG.PROV: Source provenance, unit and frame capture
@@ -73,7 +73,7 @@ Builds the `SourceProvenance` record that every import journals (digest, size, f
 These pins were made when the leaf was built. Where one differs from the text above, the pin wins, and the reason is given.
 
 - **Single rounding, done exactly (supersedes "one f64 multiplication").** `0.001`, `0.000001` and `0.0254` are not `f64` values, so `x * fl(0.001)` rounds twice: once for the factor and once for the product. A reference set of 100,000 random values showed this differs from the correctly rounded result in about 14 % of `mm` cases and 26 % of `in` cases. CONSTITUTION §4 requires a single rounding. `to_metres(x, unit)` therefore returns the `f64` nearest to the exact product of the `f64` `x` and the unit's exact rational factor (`LengthUnit::ratio` of `fid-geo-frame`, `GEO.FRAME.UNITS`), ties to even, subnormals included. It uses `u128` integer arithmetic (`m * p * 2^64 / q`, with a sticky remainder), and no float multiply, divide or FMA touches the value. A zero result keeps the sign of `x`. Metres are returned unchanged. NaN and infinity are refused (`NonFiniteLength`). AC-1 and AC-4 hold unchanged: 25.4 mm and 1 in both give `0x3F9A027525460AA6`.
-- **Units.** The `LengthUnit` of `fid-geo-frame` is reused: `m`, `mm`, `um`, `nm`, `in`, `ft` and `thou`, with exact ratios 1, 1/10^3, 1/10^6, 1/10^9, 127/5000, 381/1250 and 127/5000000. The record writes the factor as an exact decimal string: `1`, `0.001`, `0.000001`, `0.000000001`, `0.0254`, `0.3048`, `0.0000254`. Format readers map their own unit words (3MF `millimeter`, STEP contexts) to these units.
+- **Units.** The `LengthUnit` of `fid-geo-frame` is reused: `m`, `cm`, `mm`, `um`, `nm`, `in`, `ft` and `thou` (eight units; `cm` was added by `GEO.FRAME.UNITS` in #386), with exact ratios 1, 1/10^2, 1/10^3, 1/10^6, 1/10^9, 127/5000, 381/1250 and 127/5000000. The record writes the factor as an exact decimal string: `1`, `0.01`, `0.001`, `0.000001`, `0.000000001`, `0.0254`, `0.3048`, `0.0000254`. Format readers map their own unit words (3MF `millimeter`, STEP contexts) to these units.
 - **Resolution table.** `resolve_unit(declared, given, override_unit)`:
   - no declared unit, no given unit: `unit_required`, whatever `override_unit` is;
   - no declared unit, given G: G, source `caller`;
@@ -93,7 +93,7 @@ These pins were made when the leaf was built. Where one differs from the text ab
 - **Frame.** When the format carries a frame, the record holds its ID and label (`frame_origin: declared`). Otherwise the frame ID is the first 16 bytes of SHA-256(`fid.io.reg.prov.source_frame@1` || 0x00 || the 32 digest bytes). Its name is `source:` plus the first 12 hex digits of the digest (`frame_origin: synthesized`). `source_frame()` returns that `Frame` with kind `User` and parent `FrameId::WORLD` at `Transform::IDENTITY`, for `IO.REG.ENV` to insert. The ID is deterministic (D0), so re-importing the same file gives the same frame.
 - **Canonical record (`source_provenance@1`).** An RFC 8785 object whose keys are always all present: `schema`, `sha256` (`sha256:` + 64 hex), `bytes` (decimal string), `source_name` (string or null), `format`, `format_version` (string or null), `format_selected_by`, `reader`, `reader_version`, `principal` (object: `kind`, `commit`, `on_behalf_of_commit` as `sha256:` strings or null), `options` (object), `unit` (symbol), `unit_factor` (decimal string), `unit_source`, `unit_overridden` (bool), `frame` (32 hex), `frame_name` (string or null), `frame_origin`, `evidence`, `origin_claim` (string or null) and `declared` (object of strings). The record has no floats.
 - **Errors.** `ProvError` codes: `duplicate_key`, `case_duplicate_key`, `invalid`, `too_large`, `source_already_read`, `principal_mismatch` and `principal_commit`. Options nested deeper than `fid-canon`'s parser cap (128) report that cap as the `too_large` limit. Options within the parser cap but deeper than 32 report 32. Unit errors are `IoError::UnitRequired` and `IoError::UnitConflict`.
-- **Fixtures.** `fixtures/io/reg/prov/make_cases.py` (stdlib only: `hashlib`, `fractions`, `json`, `random` with a fixed seed) writes `cube_mm.xyz` and `expected.txt`: the digest and size, the converted cube corners, 1,400 conversion cases over all seven units (fixed edge values, random bit patterns and a realistic range), the synthesized frame, and the AC-5 canonical record. CI runs it with `--check`. All data is synthetic.
+- **Fixtures.** `fixtures/io/reg/prov/make_cases.py` (stdlib only: `hashlib`, `fractions`, `json`, `random` with a fixed seed) writes `cube_mm.xyz` and `expected.txt`: the digest and size, the converted cube corners, 1,592 conversion cases over all eight units (199 per unit) (fixed edge values, random bit patterns and a realistic range), the synthesized frame, and the AC-5 canonical record. CI runs it with `--check`. All data is synthetic.
 - **AC-3 without a 3MF file.** `IO.MESH.TMF` is not built yet, so there is no 3MF reader or test helper. AC-3 is tested at the boundary this leaf owns: declared `mm` (what a 3MF `unit="millimeter"` maps to) and given `in` give `unit_conflict`. No 3MF fixture is committed.
 
 ## Test fixtures
@@ -107,6 +107,10 @@ These pins were made when the leaf was built. Where one differs from the text ab
 ## Open questions
 
 - Should a caller-given unit on a format that declares one be an error (as here) or a warning? Chosen as error to fail closed.
+
+## Change log
+
+- 2026-11-21 (follow-up to #386): the Units pin and the Fixtures pin now list eight units, adding `cm` (ratio 1/10^2, factor `0.01`) as `GEO.FRAME.UNITS` does, and the fixture count is 1,592 `conv` rows (199 per unit), matching `fixtures/io/reg/prov/make_cases.py` and `expected.txt` on main. No requirement changed.
 
 ## Children
 
