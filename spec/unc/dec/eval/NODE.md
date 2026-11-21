@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-kdec]
 satisfies: [REQ-UNC.DEC-002, REQ-UNC.DEC-003, REQ-UNC.DEC-006, REQ-UNC.DEC-007, REQ-UNC.DEC-010]
 covers: []
 depends_on: [UNC.DEC.TYPE, UNC.UEC.STMT, UNC.RDL.REP, KRN]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-21
 ---
 
 # UNC.DEC.EVAL: Rule evaluation and conformance probability
@@ -72,6 +73,18 @@ The kernel function that turns (value, uncertainty statement, tolerance, rule) i
 - **Determinism:** D0.
 - **Performance budget:** 10^6 samples counted in under 50 ms [unverified until measured].
 - **Crate:** `fid-kdec`.
+- **Pinned choices (build, value-affecting):**
+  - **API:** `fid_kdec::eval::evaluate(&EvalInput) -> Result<DecisionRecord, EvalError>`. `EvalInput { value, statement: &UncertaintyStatement, samples: Option<Samples { set: &SampleSet, output }>, tolerance: &Tolerance { lsl, usl: Option<Decimal>, unit }, rule: &DecisionRule, warn_ratio: Decimal }`. The tolerance carries the unit string instead of a `QuantityKind`; `unit_mismatch` compares it with the statement's unit. `DecisionRecord { decision: Decision, p_conformance, p_source (samples | normal), expanded_u, flags }`: the rule reference, outcome and evidence basis live in the `UNC.DEC.TYPE` `Decision`, so its checks apply to every record.
+  - **Pinned order:** errors first (`invalid_number{value}`, `invalid_tolerance`, `invalid_parameter{warn_ratio}`, `unit_mismatch`, the basis's `invalid_number{field}`, `invalid_rule{r}` for the unbound guard-band template, then `samples_unbound` / `samples_output` / `samples_invalid`), then `label_only`, then UEC-0, then `p`, the capability check and the kind's rule (crate documentation of `fid_kdec::eval`).
+  - **Zero-width tolerance:** `LSL = USL` is `invalid_tolerance` as well as `LSL > USL` (`U/T` is undefined on it).
+  - **Normal approximation permitted** when the rule's `pdf_source` is `mc_or_validated_normal`, `u_std` exists and either `lpu_validated_by_mc = true` or (method `LPU`, `selection_rule = unc-select@1`, nonlinearity verdict `linear_adequate`). Claimed methods (`DECLARED`, `SPEC_DERIVED`) and ISO 15530 methods therefore have no normal `p`; under a conformance-probability rule they are `NOT_DECIDABLE(pdf_unavailable)`.
+  - **Samples** are accepted only for an `MCM` statement whose model digest equals the sample set's (`samples_unbound` otherwise; the statement carries no sample-set digest), from a named output column. Each sample is compared exactly with the decimal limits, through the binary64 brackets "smallest f64 >= LSL" and "largest f64 <= USL" found once by exact comparison (`kdec::cmp`), which gives the same answer as comparing each sample exactly and costs one f64 comparison per limit. **Failed trials:** `p` is reported over the successful trials (flag `failed_trials`), but `CONFORMS` needs `k / T >= p_min` and `NONCONFORMS` needs `(k + F) / T <= 1 - p_min`, so an unknown trial never helps either side. Sample counts compare with `p_min` as exact rationals.
+  - **Exact arithmetic:** guard band (`y - LSL - rU >= 0`, `USL - rU - y >= 0`, empty iff `USL - LSL - 2rU <= 0`), capability (`U - warn (USL - LSL) > 0`) and `p` against `p_min` and `1 - p_min` are decided as signs of sums of products of binary64 values, decimals and integers with a bounded big integer (no rounding). An empty zone also covers the single-point zone `U = T / (2r)`, matching AC-5 (`U >= T/2`).
+  - **Normal CDF:** `P(Y > USL) + P(Y < LSL)` from `erfc` built on `fid_num::f::exp`: the positive-term series `erf(x) = 2/sqrt(pi) exp(-x^2) sum 2^n x^(2n+1)/(2n+1)!!` (60 terms, summed with `fid_num::red::sum`) for `x < 2`, the Laplace continued fraction (60 levels, bottom-up) for `2 <= x <= 40`, 0 beyond. Measured against the 100-digit reference: absolute error <= 2e-15, relative <= 2e-13 (the relative bound of 1e-15 in Algorithm is not met just below `x = 2`, where `1 - erf` cancels; only the absolute error enters `p`). Limits enter the CDF argument as correctly rounded binary64 (`Decimal::to_f64`); this is the only binary64 use of a limit, and it never decides containment.
+  - **Capability:** checked only with `U` and both limits; otherwise flag `capability_unchecked` (one-sided tolerance, or a statement with a coverage interval and no `U`). The threshold is a caller `Decimal`, default `0.25`; a negative one is refused, zero is allowed.
+  - **Guard band without `U`** (a statement with only a coverage interval) is the error `uncertainty_missing{expanded.U}`.
+  - **Labels (D-045 principle "claimed values never look measured"):** flags `provisional_uncertainty` (UEC-1, or any of the next three), `claimed_uncertainty`, `declared_input`, `uncharacterized_input` are copied from the `EvidenceBasis` that `EvidenceBasis::of` builds from the stored statement; they stay on `CONFORMS`.
+  - **Replay:** `OUTCOME_REPLAY_KIND = "exact"` and the spec card `crates/fid-kdec/cards/dec.rule.evaluate@1.0.0.toml` (its `validation` names the outcome field's class `exact`; the card schema has no dedicated field).
 
 ## Test fixtures
 
@@ -85,6 +98,11 @@ The kernel function that turns (value, uncertainty statement, tolerance, rule) i
 
 ## Open questions
 
+- **Deviation from AC-3 (build, 2026-11-21):** AC-3 says a UEC-0 statement under `dr:simple-acceptance@1` is decided with `p` absent. `UNC.DEC.TYPE` (`Decision::new`, check `basis`) refuses a decided outcome without a UEC-1..3 basis, REQ-UNC.DEC-007 requires U to be reported under simple acceptance, and a decision with no uncertainty at all must not look measured. The build returns `NOT_DECIDABLE(u_missing)` for UEC-0 under every non-label rule kind. AC-3 should be amended to match, or `UNC.DEC.TYPE` changed, by a maintainer decision.
+- `lpu_validated_by_mc` is only allowed on `LPU` statements (`UNC.UEC.STMT`), so the AC-4 statement (MCM, `lpu_validated_by_mc = false`) is built as MCM without the flag; the outcome is the same.
+- The AC-2 value is in metres (`si:m`, the only length unit of `UNC.UEC.STMT`): `y = 0.0100500004`, `USL = 0.01005`.
+- Sample files of `fixtures/unc/dec/eval/samples/` are deterministic constructions of the Python reference (integer grids, single IEEE additions), not `UNC.MODEL.DIST` draws with seed `0xDEC0001`; the seed is written in their headers. The expected values come from stdlib `decimal` at 100 digits, not mpmath (stdlib only).
+- The performance budget (10^6 samples in 50 ms) is not measured in CI; the test only counts 10^6 samples.
 - Guard-band variants other than binary guarded acceptance (guarded rejection, three-zone) are left to future rule versions [unverified: common contractual usage].
 
 ## Children

@@ -1645,6 +1645,7 @@ dependencies = [
  "fid-kci",
  "fid-kunc",
  "fid-num",
+ "fid-rep",
  "fid-types",
 ]
 
