@@ -1,0 +1,17 @@
+{
+  "commands": [],
+  "formats": [
+    {
+      "id": "dmis"
+    },
+    {
+      "id": "points-csv"
+    },
+    {
+      "id": "qif"
+    },
+    {
+      "id": "results-csv"
+    }
+  ]
+}

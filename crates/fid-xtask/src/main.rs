@@ -57,6 +57,8 @@ const KERNEL_ALLOW_USAGE: &str =
     "usage: cargo xtask kernel-allow [--workspace <dir>] [--map <layers.toml>] [--allowlist <kernel-allowlist.toml>]";
 const MIG_LADDER_USAGE: &str =
     "usage: cargo xtask mig ladder-check --ladder <json> --manifest <registry manifest json>";
+const MIG_SOURCES_USAGE: &str =
+    "usage: cargo xtask mig sources-check --register <json> --manifest <registry manifest json> [--vocab-rules <toml>]";
 const GEN_SURFACES_USAGE: &str =
     "usage: cargo xtask gen-surfaces --manifest <registry manifest json> --out <dir> [--test-emitter echo]...";
 const LINT_USAGE: &str =
@@ -87,6 +89,7 @@ fn main() -> ExitCode {
         }
         Some("pins") => pins::cli(&args[1..]),
         Some("mig") if args.get(1).map(String::as_str) == Some("ladder-check") => mig_ladder_check(&args[2..]),
+        Some("mig") if args.get(1).map(String::as_str) == Some("sources-check") => mig_sources_check(&args[2..]),
         Some("conic-audit") => fid_xtask::conic_audit::cli(&args[1..]),
         Some("registry-gate") => fid_xtask::registry_gate::cli(&args[1..]),
         Some("convergence-check") => fid_xtask::convergence::check_cli(&args[1..]),
@@ -110,6 +113,7 @@ fn main() -> ExitCode {
             eprintln!("{KERNEL_ALLOW_USAGE}");
             eprintln!("{APPS_POLICY_USAGE}");
             eprintln!("{MIG_LADDER_USAGE}");
+            eprintln!("{MIG_SOURCES_USAGE}");
             eprintln!("{}", fid_xtask::conic_audit::USAGE);
             eprintln!("{}", fid_xtask::registry_gate::USAGE);
             eprintln!("{}", fid_xtask::convergence::CHECK_USAGE);
@@ -170,6 +174,95 @@ fn mig_ladder_check(args: &[String]) -> ExitCode {
         }
         _ => {
             println!("ladder-check: {} findings", report.findings.len());
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// MIG.SRC.REG: `mig sources-check`. Checks a `mig-sources@1` register: schema, every open
+/// format registered in the manifest's format catalogue (`SRC-SCHEMA`), `SRC-DUP`,
+/// `SRC-REVIEW`, `SRC-ATTEST`, `SRC-POLICY`, then, with `--vocab-rules`, the vocabulary lint
+/// of every entry text (`SRC-VOCAB` for each error-severity finding). Prints one line per
+/// finding, or the register's schema, version, digest and entry count when it passes; without
+/// `--vocab-rules` it says that the vocabulary check was skipped. Exit 0: pass; 1: findings;
+/// 2: usage error or an unreadable file. Offline; reads only.
+fn mig_sources_check(args: &[String]) -> ExitCode {
+    use fid_mig::src::reg;
+    let (mut register, mut manifest, mut vocab) = (None, None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--register", Some(v)) if register.is_none() => register = Some(PathBuf::from(v)),
+            ("--manifest", Some(v)) if manifest.is_none() => manifest = Some(PathBuf::from(v)),
+            ("--vocab-rules", Some(v)) if vocab.is_none() => vocab = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{MIG_SOURCES_USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(register), Some(manifest)) = (register, manifest) else {
+        eprintln!("mig sources-check: --register and --manifest are required");
+        eprintln!("{MIG_SOURCES_USAGE}");
+        return ExitCode::from(2);
+    };
+    let read = |p: &Path, limit: usize| -> Result<Vec<u8>, String> {
+        let f = std::fs::File::open(p).map_err(|e| format!("{}: {e}", p.display()))?;
+        let mut b = Vec::new();
+        // One byte over the limit is enough for the parser to report the input as too large.
+        let cap = u64::try_from(limit).unwrap_or(u64::MAX).saturating_add(1);
+        f.take(cap).read_to_end(&mut b).map_err(|e| format!("{}: {e}", p.display()))?;
+        Ok(b)
+    };
+    let inputs =
+        read(&register, reg::MAX_REGISTER_BYTES).and_then(|r| read(&manifest, reg::MAX_MANIFEST_BYTES).map(|m| (r, m)));
+    let (bytes, manifest_bytes) = match inputs {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("mig sources-check: cannot read {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let report = reg::check(&bytes, &manifest_bytes);
+    let mut findings = report.findings.clone();
+    if let (Some(r), Some(rules_path)) = (&report.register, &vocab) {
+        let rules = match fid_vocab::RuleSet::load(rules_path) {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("mig sources-check: cannot load {}: {e}", rules_path.display());
+                return ExitCode::from(2);
+            }
+        };
+        let units: Vec<fid_vocab::Unit> = reg::texts(r)
+            .into_iter()
+            .map(|(id, field, text)| fid_vocab::Unit::new(format!("{id}#{field}"), text))
+            .collect();
+        for f in fid_vocab::lint(&rules, &units).findings {
+            if f.severity == fid_vocab::Severity::Error {
+                let id = f.unit.split('#').next().unwrap_or_default().to_string();
+                findings.push(reg::Finding::Vocab { id, rule: f.rule, message: f.message });
+            }
+        }
+    }
+    for f in &findings {
+        println!("{f}");
+    }
+    if vocab.is_none() {
+        println!("sources-check: vocabulary check skipped (no --vocab-rules)");
+    }
+    match &report.register {
+        Some(r) if findings.is_empty() => {
+            println!(
+                "sources-check: ok {} version {} digest {} entries {}",
+                reg::SCHEMA,
+                r.version(),
+                r.digest(),
+                r.entries().len()
+            );
+            ExitCode::SUCCESS
+        }
+        _ => {
+            println!("sources-check: {} findings", findings.len());
             ExitCode::from(1)
         }
     }

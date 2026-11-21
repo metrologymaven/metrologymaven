@@ -46,6 +46,8 @@ fid-bus = { path = "../fid-bus" }
 # (CORE.JRN.BR.NAME) and the branch diff `fid_journal::diff::command_defs` (CORE.JRN.BR.DIFF). Feature `store` because the declaration uses fid-store's macro. Layer
 # model; already in the lock.
 fid-journal = { path = "../fid-journal", features = ["store"] }
+# `migrate.list_sources@1` (MIG.SRC.REG), `fid_mig::src::reg::command_defs`. Layer services.
+fid-mig = { path = "../fid-mig" }
 # `rdl.check_suite@1` (R1) and `rdl.list_suite@1` (R0) of UNC.ORS.TRACE. Layer services, the
 # same layer as this crate; adds no crate outside the lock.
 fid-ors = { path = "../fid-ors" }
