@@ -38,3 +38,4 @@ fid-solv
 fid-surface
 fid-types
 fid-view
+fid-vreplay

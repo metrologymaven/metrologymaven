@@ -11,12 +11,12 @@ owners: []
 claimed_by:
 satisfies: [REQ-TRUST-003]
 covers: []
-depends_on: [TRUST.PKG.READER]
-uses_artifacts: [KRN.MAN.WASM, KRN.MAN.KCI, KRN.MAN.MANI.SCHEMA, UNC.RDL.REP, CORE.RPL.CLASS]
+depends_on: [TRUST.PKG.READER, UNC.RDL.REP]
+uses_artifacts: [KRN.MAN.WASM, KRN.MAN.KCI, KRN.MAN.MANI.SCHEMA, CORE.RPL.CLASS]
 cli: [fid verify replay]
 mcp: [verify_replay]
 journal: []
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # TRUST.REPLAY: Verifier replay with the reference kernel
@@ -61,7 +61,7 @@ Research risk (D-036 rule 4): a third party holding only a Result Package and th
 
 - **H-1 (portable bit-exact replay).** Verifier replay of every D0 result gives `IDENTICAL` on 100 % of D0 results in the frozen replay conformance corpus `fixtures/replay/corpus/<kernel-version>/` (TRUST.REPLAY.CORPUS) for the first released kernel version, including packages built from the frozen PTB TraCIM and NIST reference point sets at the versions pinned by KRN.MAN.VAL, on the six CI host targets (Windows, Linux, macOS × x86-64, arm64). Falsified by any non-`IDENTICAL` D0 result on any target. Testable in TRUST.REPLAY.CORPUS, TRUST.REPLAY.SANDBOX.
 - **H-2 (classification is sound).** False-`DIVERGENT` rate 0 on corpus cases planned `IDENTICAL` or `EQUIVALENT`, and false-acceptance rate (a planned `DIVERGENT` or tampered case reported other than `DIVERGENT`) 0, against the corpus `expect.json` labels and the REP-1 table `rep-1@1.0.0`. Testable in TRUST.REPLAY.COMPARE, TRUST.REPLAY.CORPUS.
-- **H-3 (independence of the verifier).** The standalone verifier, linking no KRN, UNC or CORE crate, reaches the same outcome as `CORE.RPL.EXEC.VERIFY` on 100 % of corpus results. Testable in TRUST.REPLAY.CORPUS, TRUST.REPLAY.RUN.
+- **H-3 (independence of the verifier).** The standalone verifier, linking from outside TRUST only `fid-rep`, `fid-types`, `fid-num` and `fid-canon` (no KRN or CORE crate), reaches the same outcome as `CORE.RPL.EXEC.VERIFY` on 100 % of corpus results. Both share the classifier `fid-rep` (REQ-UNC.RDL-010), so this parity does not check the classifier; the independent check of the classifier rests on the Python reference (`fixtures/rdl/rep/`, `fixtures/replay/compare/make_cases.py`). Testable in TRUST.REPLAY.CORPUS, TRUST.REPLAY.RUN.
 - **H-4 (third-party kernel provenance).** For 100 % of kernel versions in the corpus, the verifier finds offline, or a third party fetches or rebuilds (KRN.MAN.REPRO), an artifact whose SHA-256 equals the package's kernel manifest entry, and replay with it gives the same outcomes as with the bundled artifact. Testable in TRUST.REPLAY.KART.LOOKUP, TRUST.REPLAY.KART.FETCH.
 - **H-5 (replayable share).** At least 95 % [unverified] of points-tier results in the corpus, excluding cases built to be `NOT_REPLAYABLE`, are selected as replayable, and every `NOT_REPLAYABLE` result carries its planned reason. Testable in TRUST.REPLAY.SELECT.
 - **H-6 (containment).** Running untrusted kernel bytes causes 0 host-resource accesses and 0 verifier-process aborts on the project's hostile-module set, with every resource exhaustion reported within the caller's budget. Testable in TRUST.REPLAY.SANDBOX.
@@ -86,10 +86,14 @@ Alternatives considered:
 ## Open questions
 
 - How the verifier obtains kernel artifacts for older versions offline: opened as D-020; `TRUST.REPLAY.KART` is blocked, the rest builds against the `ArtifactSource` trait.
-- Tolerances for `EQUIVALENT` come from the REP-1 replay equivalence-tolerance table owned by `UNC.RDL` (accepted level-2 review); `TRUST.REPLAY.COMPARE` consumes it and records its digest. UNC.RDL has not yet published the table schema.
+- Tolerances for `EQUIVALENT` come from the REP-1 replay equivalence-tolerance table owned by `UNC.RDL` (accepted level-2 review); `TRUST.REPLAY.COMPARE` consumes it and records its digest. UNC.RDL.REP publishes it as schema `rep-table@1` (crate `fid-rep`, production table `rep-1@1.0.0`, keyed by field kind).
 - CORE owns the replay engine for all in-app modes; this subsystem is the standalone verifier-mode replayer. Boundary to be confirmed with CORE.RPL.
-- Boundary with CORE.RPL (2026-11-17): `CORE.RPL.EXEC` (incl. `CORE.RPL.EXEC.VERIFY`) is the product replay engine for every in-app mode, running against a project store. `TRUST.REPLAY.RUN` is the standalone verifier replayer that sees only a Result Package. They share no code; they share the outcome vocabulary and decision-invariance rule of `CORE.RPL.CLASS`, the REP-1 table of `UNC.RDL.REP` and the WASM artifact of `KRN.MAN.WASM`, all as `uses_artifacts`. A parity test on the replay conformance corpus (`TRUST.REPLAY.CORPUS`) is the agreement check.
-- Dependencies narrowed (2026-11-17, D-034): kernel manifest, call encoding and WASM artifact (`KRN.MAN.*`), REP-1 (`UNC.RDL.REP`) and outcome definitions (`CORE.RPL.CLASS`) are artifacts; `fid-vreplay` links no KRN, UNC or CORE crate, matching the `TRUST.VERIFY.REPRO` allowlist.
+- Boundary with CORE.RPL (2026-11-17): `CORE.RPL.EXEC` (incl. `CORE.RPL.EXEC.VERIFY`) is the product replay engine for every in-app mode, running against a project store. `TRUST.REPLAY.RUN` is the standalone verifier replayer that sees only a Result Package. They share one piece of code, the classifier `fid-rep` of `UNC.RDL.REP` with its REP-1 table (REQ-UNC.RDL-010, `depends_on`); they share the outcome vocabulary and decision-invariance rule of `CORE.RPL.CLASS` and the WASM artifact of `KRN.MAN.WASM` as `uses_artifacts`. A parity test on the replay conformance corpus (`TRUST.REPLAY.CORPUS`) is the agreement check.
+- Dependencies narrowed (2026-11-17, D-034): kernel manifest, call encoding and WASM artifact (`KRN.MAN.*`) and outcome definitions (`CORE.RPL.CLASS`) are artifacts. Amended 2026-11-21 (maintainer waiver, see Change log): `fid-vreplay` links no KRN or CORE crate and, from UNC, only `fid-rep` for the single classifier; `TRUST.VERIFY.REPRO`'s allowlist is to add `fid-rep` and `fid-types`.
+
+## Change log
+
+- 2026-11-21 (maintainer waiver: cross-leaf, single classifier; review of #412): accepted linking `fid-rep` (UNC.RDL.REP) into `fid-vreplay` for the one replay classifier, per REQ-UNC.RDL-010. UNC.RDL.REP moves from `uses_artifacts` to `depends_on`; the "links no UNC crate" and "share no code" notes, the table-schema note and H-3 are updated. Edited from the TRUST.REPLAY.COMPARE build PR under a lane waiver.
 
 ## Children
 

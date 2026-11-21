@@ -34,6 +34,7 @@ python fixtures/core/jrn/chain/append/make_fixtures.py --check
 python fixtures/core/jrn/chain/ckpt/make_fixtures.py --check
 python fixtures/core/jrn/chain/verify/make_fixtures.py --check
 python fixtures/core/jrn/stream/alog/make_fixtures.py --check
+python fixtures/core/jrn/undo/super/make_fixtures.py --check
 python fixtures/core/prj/cont/hier/make_fixtures.py --check
 python fixtures/core/prj/cont/life/make_identity_cases.py --check
 python fixtures/core/prj/stage/model/make_fixtures.py --check
@@ -50,6 +51,7 @@ python fixtures/core/sto/cas/make_fixtures.py --check
 python fixtures/core/sto/set/make_fixtures.py --check
 python fixtures/core/sto/sql/crash/make_chain.py --check
 python fixtures/core/sto/sql/schema/make_fixture.py --check
+python fixtures/ctrl/make_auth_vectors.py --check
 python fixtures/dsse/make_fixtures.py --check
 python fixtures/fetch/make_fixtures.py --check
 python fixtures/fit/make_axis_cyl_fixtures.py --check
@@ -152,6 +154,7 @@ python fixtures/rec/life/make_fixtures.py --check
 python fixtures/rel/guide/make_fixtures.py --check
 python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
+python fixtures/replay/compare/make_cases.py --check
 python fixtures/rpt/catalog/make_schema_fixtures.py --check
 python fixtures/rpt/model/bind/expand/make_fixtures.py --check
 python fixtures/rpt/model/bracket_3stage/make_fixtures.py --check

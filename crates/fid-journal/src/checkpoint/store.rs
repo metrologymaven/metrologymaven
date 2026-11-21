@@ -32,7 +32,7 @@
 //!   head, checkpoint and verify calls refuse, like `tail`.
 
 use super::{format_time, verify, Checkpoint, CheckpointError, Coverage, Format, LedgerHead, Link, Reason, Verified};
-use crate::append::{failed, guard, read_tail, Journal, JournalError};
+use crate::append::{failed, guard, read_tail, Core, Journal, JournalError};
 use crate::entry::parse_digest;
 use fid_canon::Digest;
 use fid_store::Value;
@@ -83,11 +83,11 @@ fn branch_head(branch: String, seq: i64, hash: &str) -> Result<BranchHead, Journ
     Ok(BranchHead { branch, seq, hash })
 }
 
-impl Journal {
+impl Core<'_> {
     /// The head of `branch` (module documentation): from the journal, after checking the
     /// cache row and rebuilding the cache if the row is missing or names another entry.
     /// `None` if the branch has no entry.
-    pub fn head(&self, branch: &str) -> Result<Option<BranchHead>, JournalError> {
+    pub(crate) fn head(&self, branch: &str) -> Result<Option<BranchHead>, JournalError> {
         self.check_poison()?;
         let (journal, cached) = self
             .store
@@ -110,8 +110,8 @@ impl Journal {
     }
 
     /// The head of every branch, in branch order, checked against the cache as
-    /// [`Journal::head`] does (one rebuild if any row is missing or stale).
-    pub fn heads(&self) -> Result<Vec<BranchHead>, JournalError> {
+    /// `head` does (one rebuild if any row is missing or stale).
+    pub(crate) fn heads(&self) -> Result<Vec<BranchHead>, JournalError> {
         self.check_poison()?;
         let rows = self.read_heads()?;
         let stale = rows.iter().any(|(_, _, hash, cached)| cached.as_deref() != Some(hash.as_str()));
@@ -138,9 +138,9 @@ impl Journal {
     }
 
     /// Rebuilds the head cache from the entries: one row per branch, in one transaction.
-    pub fn rebuild_heads(&self) -> Result<HeadsRebuilt, JournalError> {
+    pub(crate) fn rebuild_heads(&self) -> Result<HeadsRebuilt, JournalError> {
         self.check_poison()?;
-        let _gate = guard(&self.gate);
+        let _gate = guard(self.gate);
         self.check_poison()?;
         let rows = self.read_heads()?;
         let mut txn = self.store.transaction();
@@ -159,6 +159,26 @@ impl Journal {
             txn.commit().map_err(|e| failed("write head cache", e))?;
         }
         Ok(HeadsRebuilt { branches: rows.len() })
+    }
+}
+
+impl Journal {
+    /// The head of `branch` (module documentation): from the journal, after checking the
+    /// cache row and rebuilding the cache if the row is missing or names another entry.
+    /// `None` if the branch has no entry.
+    pub fn head(&self, branch: &str) -> Result<Option<BranchHead>, JournalError> {
+        self.core().head(branch)
+    }
+
+    /// The head of every branch, in branch order, checked against the cache as
+    /// [`Journal::head`] does (one rebuild if any row is missing or stale).
+    pub fn heads(&self) -> Result<Vec<BranchHead>, JournalError> {
+        self.core().heads()
+    }
+
+    /// Rebuilds the head cache from the entries: one row per branch, in one transaction.
+    pub fn rebuild_heads(&self) -> Result<HeadsRebuilt, JournalError> {
+        self.core().rebuild_heads()
     }
 
     /// Makes, stores and returns a checkpoint of this journal's stream (REQ-001).

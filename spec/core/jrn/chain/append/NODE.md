@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-19
+updated: 2026-11-21
 ---
 
 # CORE.JRN.CHAIN.APPEND: Atomic durable append, sequence and immutability
@@ -42,6 +42,7 @@ The single write path into the chained streams (Record Journal, and in P1b the A
 - **REQ-CORE.JRN.CHAIN.APPEND-005** The journal API shall offer no operation that modifies or deletes an appended entry, and an update or delete issued directly to the entry tables shall be refused by the database.
 - **REQ-CORE.JRN.CHAIN.APPEND-006** If a referenced blob digest is not present in the blob store at append time, then `append` shall return `missing_blob` and append nothing.
 - **REQ-CORE.JRN.CHAIN.APPEND-007** The journal shall append at least 1,000 entries per second with durable commit on reference hardware, using group commit of concurrent appends where needed [unverified until measured].
+- **REQ-CORE.JRN.CHAIN.APPEND-008** When a caller appends through a project store it lends to the journal (`Journal::on_store`), the journal shall refuse the store unless it is open for writing and still holds the project write lock, and shall otherwise apply every rule of the owned append path unchanged.
 
 ## Acceptance criteria
 
@@ -50,6 +51,7 @@ The single write path into the chained streams (Record Journal, and in P1b the A
 - **AC-3** (error path) Given a direct `UPDATE` and `DELETE` on the entries table through a raw connection, then both are refused.
 - **AC-4** (error path) Given a draft referencing an absent blob, then `missing_blob` and the head is unchanged.
 - **AC-5** Given benchmark `bench_append` (10,000 W2 entries of 2 KiB, 4 concurrent writers on different branches), when run on reference hardware, then throughput is at least 1,000 entries/s [unverified until measured].
+- **AC-6** (REQ-008) Given a store lent by `Store::copy_to` to its `finish`, when entries are appended through `Journal::on_store`, then the published copy's chain verifies, its head is the last appended entry, and a checkpoint copied from the source still verifies as a prefix; given a read-only store, a store already claimed, or a request whose `expected_prev` is stale, then `read_only`, `append_failed` and `head_moved` respectively and nothing is appended; and the stored rows and blobs are byte-identical to the owned path's for the same drafts and salts.
 
 ## Design
 
@@ -76,6 +78,13 @@ The single write path into the chained streams (Record Journal, and in P1b the A
   - **Errors.** `append_failed`, `missing_blob`, `schema`, plus `head_moved`, `time_regressed`, `time_ahead`, `chain_invalid` (stored chain does not verify at its tail, is forked at any depth, or holds another stream) and `input_limit` (header over 1 MiB, payload over 8 MiB, more than 4096 referenced blobs).
   - **Bounds.** At most 1024 queued requests (later callers wait), 256 per batch, 64 MiB of staged payloads and headers per transaction (plus at most one request); no panics (lock poisoning is recovered, sequence overflow is `append_failed`).
   - **Crash harness (AC-2).** 20 numbered points in `CrashPoint`, listed with their hand-labelled outcomes in `fixtures/core/jrn/chain/append/crash/points.json`. The test re-runs its own binary as a child that exits the process (no destructors, no SQLite close) at each point, then reopens and verifies the whole chain and every blob reference. The same points inject in-process failures (`append_failed`, chain at the old head); a refusal at `committed` simulates a COMMIT error after the write and must poison the journal. Point 1, `prechecked`, fires after the request checks and before the request is queued. The hook exists only with feature `test-hooks`.
+  - **Borrowed store (REQ-008, AC-6; added 2026-11-21, maintainer decision: unblocks CONT.LIFE save-as).** `Journal::on_store(&Store, stream) -> Result<JournalRef<'_>, JournalError>` (and `on_store_with_clock`) appends on a `fid_store::Store` the caller lends, such as the temporary copy `Store::copy_to` hands its `finish`. `JournalRef` offers `append`, `tail`, `head(branch)`, `heads`, `verify(&VerifyOptions)` and implements `Append` (with feature `test-hooks`, `set_fault_hook` as on `Journal`). Guarantees:
+    - *Single writer.* `on_store` takes `Store::claim_append()`, which refuses a store not opened for writing or opened `immutable` (`read_only`), a store without its write lock or whose lock file is no longer the file at `lock` (`read_only`), and a store whose append path another claim of the process holds or a poisoned claim left (`append_failed`). The claim lives as long as the `JournalRef`. The lock is proved again before every append, and `Txn::commit` checks it once more under the commit mutex. An owned `Journal` never lends its store, and the OS lock keeps other processes and other `Store`s of the project out.
+    - *No second connection.* Every read and write uses the lent store's one connection (`Store::read`, `Store::transaction`), which only the hardened `open_write` creates.
+    - *Same rules, same bytes.* `on_store` runs `Journal::open`'s chain checks (sequences 1..n, one stream, full link walk, verified tail). `append` runs the owned path's transaction code (one shared engine), so the tail check, `expected_prev` (`head_moved`), time rules, blob checks, payload blob, rows and `Txn::commit` ordering (blobs durable, then `BEGIN IMMEDIATE`, inserts, COMMIT under `synchronous=FULL`) are the same, and the same draft and salts store byte-identical rows. Appends through one `JournalRef` are serialised, one transaction each (no group commit; grouping never changes an entry's bytes).
+    - *Poison.* A COMMIT with an unknown outcome poisons the `JournalRef` and the store's claim: every later call and every later `on_store` on that store fail until the project is reopened. Inside `finish`, return the error so `copy_to` removes the temporary copy.
+    - *The lender writes no entries.* While a `JournalRef` lives, the lender must not write `entries` or `entry_blobs` through another path (a raw `Store::transaction`). Not enforced; a row written past it is caught by the tail check (`chain_invalid`) or refused by the `seq` key at COMMIT, so the chain never forks.
+    - *Head cache and checkpoints.* `head` and `heads` follow `CORE.JRN.CHAIN.CKPT`'s cache rules. A `JournalRef` writes no checkpoint (signature, export and close checkpoints belong to the project's owner); appends only extend the chain, so a checkpoint already stored still verifies as a prefix.
   - **Benchmark (AC-5).** `bench_append` is an ignored test (10,000 W2 entries of about 2 KiB, 4 writers on different branches); the 1,000 entries/s budget stays [unverified until measured].
 
 ## Test fixtures
@@ -88,8 +97,14 @@ The single write path into the chained streams (Record Journal, and in P1b the A
 
 ## Open questions
 
+- **Save-as from an open journal.** An owned `Journal` does not expose its `Store`, so `CORE.PRJ.CONT.LIFE` cannot call `copy_to` on a source it holds as a `Journal`. It needs a `Journal::copy_to` (under the journal's store lock, so the backup head is the tail it reads) or a source opened as a plain `Store`. Not settled here.
+
 - From `CORE.JRN.ENTRY` (PR #54): the entry schema accepts any digest as `prev`, so append must refuse a zero `prev` at sequence > 1 and a non-zero `prev` at sequence 1. *Settled by the build: append computes `prev`, and the tail check refuses both cases.*
 - **Recovery from a past bad stamp.** The time-ahead rule stops new far-future stamps, but a chain may already hold one: written before this rule, under a host clock that was itself wrong, or by another build. Its tail then refuses every honest later entry as `time_regressed`, and the chain cannot be edited. The way out is not settled. Options include a signed `head_move`-like "clock correction" entry that a person confirms and that resets the order baseline, refusing to open such a project until a person acknowledges it, or comparing only within a session. This needs a maintainer decision (and probably `CORE.JRN.ENTRY` and `TRUST` input) before P1.
+
+## Change log
+
+- 2026-11-21 (maintainer decision: unblocks CONT.LIFE save-as): new REQ-008 and AC-6, appending on a borrowed store (`Journal::on_store`, `JournalRef`), with the pinned build choice "Borrowed store". `CORE.PRJ.CONT.LIFE` save-as appends its session header and genesis entry inside `Store::copy_to`'s `finish`, which lends a `&Store`; the owned `Journal::open` needs the location and lock by value. The `fid-store` side (`Store::claim_append`, `AppendClaim`, error code `claimed`) is recorded in `CORE.STO.SQL.TXN`'s Design and Change log, edited in the same PR (maintainer waiver: cross-leaf). No REQ ID was renumbered.
 
 ## Children
 
