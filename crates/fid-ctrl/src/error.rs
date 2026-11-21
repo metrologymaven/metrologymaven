@@ -49,6 +49,9 @@ pub enum StartError {
     NonLoopback(String),
     /// Binding or writing the discovery file failed.
     Io(std::io::Error),
+    /// The token file could not be created (AUTO.CTRL.AUTH `token_io`). The message never
+    /// holds token bytes: it is the OS error for the path.
+    Token(std::io::Error),
 }
 
 impl StartError {
@@ -57,6 +60,7 @@ impl StartError {
         match self {
             StartError::NonLoopback(_) => WireError::NonLoopback.code(),
             StartError::Io(_) => "ctrl_io",
+            StartError::Token(_) => "token_io",
         }
     }
 }
@@ -66,6 +70,7 @@ impl fmt::Display for StartError {
         match self {
             StartError::NonLoopback(a) => write!(f, "ctrl_non_loopback: {a:?}"),
             StartError::Io(e) => write!(f, "ctrl_io: {e}"),
+            StartError::Token(e) => write!(f, "token_io: {e}"),
         }
     }
 }

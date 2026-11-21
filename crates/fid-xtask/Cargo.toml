@@ -41,6 +41,10 @@ toml = { version = "0.8", default-features = false, features = ["parse"] }
 # tests/mig_sources_check.rs builds the workspace registry manifest the production source
 # register is checked against (MIG.SRC.REG); services layer, already in the lock.
 fid-registry-build = { path = "../fid-registry-build" }
+# tests/unsafe_exception.rs (D-048 gate) tokenises every .rs file with the lexer under syn, so
+# attributes are matched as token trees, across lines, never inside comments or strings.
+# MIT OR Apache-2.0, already in the lock (fid-registry-macros); span-locations gives line numbers.
+proc-macro2 = { version = "1", features = ["span-locations"] }
 
 [lints]
 workspace = true
