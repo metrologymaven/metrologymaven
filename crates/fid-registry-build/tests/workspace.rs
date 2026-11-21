@@ -6,7 +6,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_canon::{parse, CValue};
-use fid_registry::manifest::{check_manifest, ManifestError, SHOW_MANIFEST};
+use fid_registry::manifest::{check_manifest, invoke_mcp, sees, Audience, ManifestError, MCP_SHOW, SHOW_MANIFEST};
 use fid_registry::{Catalogue, CommandDef, DefError, QuantityCatalogue, RuleCode};
 use fid_registry_build::{
     build, build_workspace, declarations, manifest_in_force, merge_catalogues, settings, workspace_catalogue,
@@ -526,4 +526,26 @@ fn the_request_commands_are_in_the_manifest() {
         assert_eq!(on_mcp(&c), mcp, "{id}");
     }
     assert!(strs(get("request.file_request@1").get("exposure")).is_empty());
+}
+
+/// D-035: over MCP, the workspace manifest names no command an agent cannot see, and a
+/// person's manifest still holds them all.
+#[test]
+fn the_workspace_agent_view_hides_every_command_mcp_never_projects() {
+    let m = manifest_in_force(workspace_catalogue().unwrap()).unwrap();
+    let decls = declarations(&SOURCES).unwrap();
+    let defs: Vec<CommandDef> = decls.iter().map(|d| CommandDef::from_value(d.0.clone()).unwrap()).collect();
+    let hidden: Vec<&CommandDef> = defs.iter().filter(|d| !sees(Audience::Agent, d)).collect();
+    assert!(!hidden.is_empty());
+    assert!(hidden.iter().any(|d| d.human_only));
+    let mut log = Vec::new();
+    let out = invoke_mcp(&m, &mut log, MCP_SHOW, b"{\"full\":true}").unwrap();
+    let CValue::Obj(o) = parse(&out).unwrap() else { panic!() };
+    let Some(CValue::Str(text)) = o.get("bytes") else { panic!() };
+    for d in &hidden {
+        assert!(!text.contains(&format!("\"{}\"", d.id)), "{}@{} leaked", d.id, d.major);
+        assert!(!text.contains(&format!("{}@{}", d.id, d.major)), "{}@{} named", d.id, d.major);
+    }
+    assert_eq!(m.agent_view().definitions.len(), defs.len() - hidden.len());
+    assert_eq!(m.export().definitions.len(), defs.len());
 }

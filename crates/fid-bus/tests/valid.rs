@@ -18,7 +18,7 @@ use fid_bus::validate::{
     MAX_PARAMS_BYTES, MAX_PARAMS_ELEMENTS,
 };
 use fid_canon::{parse, to_canonical_bytes, CValue, Digest};
-use fid_registry::manifest::{command_def as show_manifest_def, show_manifest, ShowParams};
+use fid_registry::manifest::{command_def as show_manifest_def, show_manifest, Audience, ShowParams};
 use fid_registry::{check_schema, Catalogue, CommandDecl, CommandDef, ContextTypes, ManifestInForce};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -667,8 +667,13 @@ fn real_command_schemas() {
 fn real_results_validate() {
     let def = show_manifest_def().unwrap();
     let m = ManifestInForce::new(&[CommandDecl::from_def(&def)], Catalogue::geo_frame().unwrap()).unwrap();
-    let result = show_manifest(&m, &ShowParams { full: true, check: None }).unwrap();
-    assert!(Compiled::compile(&def.result_schema).unwrap().evaluate(&result, &NoHooks).is_ok());
+    let schema = Compiled::compile(&def.result_schema).unwrap();
+    for audience in [Audience::Person, Audience::Agent] {
+        for full in [false, true] {
+            let result = show_manifest(&m, audience, &ShowParams { full, check: None }).unwrap();
+            assert!(schema.evaluate(&result, &NoHooks).is_ok(), "{audience:?} {full}");
+        }
+    }
 
     let list = live_defs().remove("request.list_requests@1").unwrap();
     let params = obj(&[("state", text("pending"))]);

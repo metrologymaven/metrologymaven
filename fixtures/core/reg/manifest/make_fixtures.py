@@ -12,6 +12,15 @@ Rust exporter.
   algorithm), in shuffled order.
 - tampered.json: valid.manifest.json with one title changed and its definition_digest kept
   (AC-4: `manifest_invalid`).
+- visibility.json / visibility.manifest.json / visibility.digest / visibility.agent.json /
+  visibility.agent.manifest.json / visibility.agent.digest: registry visibility (D-035,
+  CONSTITUTION section 8). visibility.json holds declarations of every side-effect class,
+  with and without `mcp` among their surfaces, with `human_only`, and deprecated majors whose
+  `replaced_by` names a visible command, a hidden command and an absent command.
+  visibility.manifest.json is the full manifest (what a person gets); visibility.agent.json
+  lists the (id, major) pairs an agent sees, and visibility.agent.manifest.json is the agent
+  view: the manifest of those declarations only, each `replaced_by` that names a command
+  outside the view removed. Its digest is the digest of the agent view's bytes.
 
 Rules (NODE.md Design, pinned choices):
 - each declaration in normal form: `human_only` false, `network` "none", `cli_bare` false
@@ -22,6 +31,11 @@ Rules (NODE.md Design, pinned choices):
 - manifest = {"commands", "format": 1, "quantity_catalogue_digest"} in RFC 8785 form, where
   the catalogue digest is the `GEO.FRAME.UNITS` catalogue digest of
   ../def/schema/catalogue/geo_frame_units.sha256 (itself computed with hashlib).
+- MCP projection (CORE.BUS.POL.PROJ, written out again here from the spec): `never` when
+  `mcp` is not among the surfaces; otherwise the stricter of the declared projection
+  (`human_only` lowers `exposed` to `request_only`) and the class ceiling (R0 R1 I1 W1 W2
+  exposed; W3 X1 D1 request_only; M1 S1 A0 never). An agent sees a command exactly when that
+  projection is not `never`.
 
 Run:  python fixtures/core/reg/manifest/make_fixtures.py [--check]
 """
@@ -84,6 +98,66 @@ def manifest(decls, catalogue_digest):
     return jcs({"format": 1, "quantity_catalogue_digest": catalogue_digest, "commands": commands})
 
 
+PROJECTIONS = ["never", "request_only", "exposed"]
+CEILING = {
+    "R0": "exposed", "R1": "exposed", "I1": "exposed", "W1": "exposed", "W2": "exposed",
+    "W3": "request_only", "X1": "request_only", "D1": "request_only",
+    "M1": "never", "S1": "never", "A0": "never",
+}
+
+
+def mcp_projection(decl):
+    if "mcp" not in decl["exposure"]:
+        return "never"
+    declared = decl["mcp_projection"]
+    if decl.get("human_only", False) and declared == "exposed":
+        declared = "request_only"
+    ceiling = CEILING[decl["side_effect"]]
+    return min(declared, ceiling, key=PROJECTIONS.index)
+
+
+def agent_view(decls):
+    seen = [copy.deepcopy(d) for d in decls if mcp_projection(d) != "never"]
+    visible = {f"{d['id']}@{d['major']}" for d in seen}
+    for d in seen:
+        target = d["lifecycle"].get("replaced_by")
+        if target is not None and target not in visible:
+            del d["lifecycle"]["replaced_by"]
+    return seen
+
+
+def visibility_decls(decls):
+    """valid.json's twelve declarations (one per class), all on cli and mcp, plus variants."""
+    out = []
+    for d in decls:
+        d = copy.deepcopy(d)
+        d["exposure"] = ["mcp", "cli"]
+        out.append(d)
+    by = {(d["id"], d["major"]): d for d in out}
+    # human_only: an exposed W2 becomes request_only (still visible); an S1 stays never.
+    by[("align.run_bestfit", 1)]["human_only"] = True
+    by[("trust.sign_record", 1)]["human_only"] = True
+    # Deprecated majors whose replaced_by names a visible, a hidden and an absent command.
+    life = {"state": "deprecated", "since": "2026-06-01"}
+    by[("project.list_features", 1)]["lifecycle"] = dict(life, replaced_by="project.list_features@2")
+    by[("sim.read_probe", 1)]["lifecycle"] = dict(life, replaced_by="cmm.move_to@1")
+    by[("report.set_title", 1)]["lifecycle"] = dict(life, replaced_by="report.set_heading@1", remove_after="2027-06-01")
+    # Exposed R0 commands that are not on mcp, or declared never: hidden.
+    cli_only = copy.deepcopy(by[("gdt.evaluate_flatness", 1)])
+    cli_only.update(id="gdt.evaluate_cli_only", title="Fixture gdt.evaluate_cli_only@1", exposure=["cli", "gui"])
+    never = copy.deepcopy(by[("gdt.evaluate_flatness", 1)])
+    never.update(id="gdt.evaluate_never", title="Fixture gdt.evaluate_never@1", mcp_projection="never")
+    # A deprecated visible major replaced by a declared-never command.
+    to_never = copy.deepcopy(by[("gdt.evaluate_flatness", 1)])
+    to_never.update(
+        id="gdt.evaluate_old",
+        title="Fixture gdt.evaluate_old@1",
+        lifecycle=dict(life, replaced_by="gdt.evaluate_never@1"),
+    )
+    out += [cli_only, never, to_never]
+    return list(reversed(out))
+
+
 def order_decls(base):
     """Three declarations built from valid.json's R0 declaration, in shuffled order."""
     a = copy.deepcopy(base)
@@ -113,6 +187,11 @@ def outputs():
     valid = manifest(decls, catalogue_digest)
     order = order_decls(decls[0])
     order_manifest = manifest(order, catalogue_digest)
+    vis = visibility_decls(decls)
+    vis_manifest = manifest(vis, catalogue_digest)
+    agent = agent_view(vis)
+    agent_manifest = manifest(agent, catalogue_digest)
+    agent_ids = sorted(([d["id"], d["major"]] for d in agent), key=lambda p: (p[0].encode("utf-8"), p[1]))
     doc = json.loads(valid)
     doc["commands"][0]["title"] = doc["commands"][0]["title"] + " (tampered)"
     return {
@@ -122,6 +201,12 @@ def outputs():
         "order.manifest.json": order_manifest,
         "order.digest": sha(order_manifest) + "\n",
         "tampered.json": jcs(doc),
+        "visibility.json": json.dumps({"decls": vis}, indent=1, ensure_ascii=False) + "\n",
+        "visibility.manifest.json": vis_manifest,
+        "visibility.digest": sha(vis_manifest) + "\n",
+        "visibility.agent.json": json.dumps({"visible": agent_ids}, indent=1) + "\n",
+        "visibility.agent.manifest.json": agent_manifest,
+        "visibility.agent.digest": sha(agent_manifest) + "\n",
     }
 
 
