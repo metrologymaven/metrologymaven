@@ -1,0 +1,88 @@
+# SCAN.MESHOP.PROV expected results. CC-BY-4.0.
+# Written by make_prov_cases.py (independent of the Rust crate). Input mesh_open_cube.txt.
+open_cube_digest sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b
+case fill
+input_digest sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b
+output_digest sha256:dba1589dfe45bb9faee5280d9faa00b3aeb1aab82cec57909e7fda53bcb7fb38
+output_element_digest sha256:0f7984a14b0f24b79bad0fd6e3499eb3fe193750ba38296bdd3682ace381e270
+vertices 8
+triangles 12
+synthesized 2
+flags 000000000011
+flag_bytes 000c
+record {"determinism":"D0","inputs":["sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b"],"kind":"scan.mesh_op_record@1","op":"mesh.test_fill@1","output":"sha256:dba1589dfe45bb9faee5280d9faa00b3aeb1aab82cec57909e7fda53bcb7fb38","params":{"face":"z0"},"quality_after":{"boundary_edges":"0","boundary_loops":"0","components":"1","degenerate":"0","edges":"18","min_angle":{"count":"12","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"12","vertices":"8"},"quality_before":[{"boundary_edges":"4","boundary_loops":"1","components":"1","degenerate":"0","edges":"17","min_angle":{"count":"10","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"10","vertices":"8"}],"quality_threshold":"1e-18","seed":null,"synthesized":"2","triangles":"12"}
+record_digest sha256:9278c72c06dae2609c7d10c07b7b9163415d0f417d799083c5a1a94bbb06f3df
+end
+case mark
+input_digest sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b
+output_digest sha256:6dd9ba814760524501a4c4b9cc59f557939e7087131d32ce2785a0e411c9a6ae
+output_element_digest sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b
+vertices 8
+triangles 10
+synthesized 1
+flags 1000000000
+flag_bytes 0100
+record {"determinism":"D0","inputs":["sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b"],"kind":"scan.mesh_op_record@1","op":"mesh.test_mark@1","output":"sha256:6dd9ba814760524501a4c4b9cc59f557939e7087131d32ce2785a0e411c9a6ae","params":{},"quality_after":{"boundary_edges":"4","boundary_loops":"1","components":"1","degenerate":"0","edges":"17","min_angle":{"count":"10","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"10","vertices":"8"},"quality_before":[{"boundary_edges":"4","boundary_loops":"1","components":"1","degenerate":"0","edges":"17","min_angle":{"count":"10","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"10","vertices":"8"}],"quality_threshold":"1e-18","seed":null,"synthesized":"1","triangles":"10"}
+record_digest sha256:26dd402830725e446d32565444aeba645e8990c97ca49fff0eda7f68c1f28eaf
+end
+case split
+input_digest sha256:6dd9ba814760524501a4c4b9cc59f557939e7087131d32ce2785a0e411c9a6ae
+output_digest sha256:6ee3958eb669353201608d5684fddc95ff57440056d42396bf52a3e5252b9d3d
+output_element_digest sha256:e8b17b458bae8bb8bd15fb9bc72d7b81710f15adbe96600db4d53109f58d4ff4
+vertices 14
+triangles 16
+synthesized 4
+flags 1111000000000000
+flag_bytes 0f00
+input_flags 1000000000
+end
+case shuffle_42
+input_digest sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b
+output_digest sha256:c5780519f67c38494c4e13f3b7aa108a9262d6ab90ee5a8eaa2f9180522dbbc6
+output_element_digest sha256:ce5beebe6cf21fb7b70ebdf237eabaaf7def8f8bb9f2ed03197c6ab7995088f4
+vertices 8
+triangles 10
+synthesized 0
+flags 0000000000
+flag_bytes 0000
+order 0 9 5 8 6 4 7 2 1 3
+record {"determinism":"D2","inputs":["sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b"],"kind":"scan.mesh_op_record@1","op":"mesh.test_shuffle@1","output":"sha256:c5780519f67c38494c4e13f3b7aa108a9262d6ab90ee5a8eaa2f9180522dbbc6","params":{},"quality_after":{"boundary_edges":"4","boundary_loops":"1","components":"1","degenerate":"0","edges":"17","min_angle":{"count":"10","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"10","vertices":"8"},"quality_before":[{"boundary_edges":"4","boundary_loops":"1","components":"1","degenerate":"0","edges":"17","min_angle":{"count":"10","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"10","vertices":"8"}],"quality_threshold":"1e-18","seed":"42","synthesized":"0","triangles":"10"}
+record_digest sha256:35ab7e1853b74f652a16bf6ac866beccbad2747dd62c50ec26f3bea9f64f880a
+end
+case shuffle_7
+input_digest sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b
+output_digest sha256:f6853ccbce4a565dfb164a8947b50032d65c84281c4eaa65edeb6b17cd0c324c
+output_element_digest sha256:547f3a45c180060999f0956541a3e7af8deb9c56b5b4fd4e92bd74c60424d3db
+vertices 8
+triangles 10
+synthesized 0
+flags 0000000000
+flag_bytes 0000
+order 8 1 5 9 0 4 3 2 6 7
+record {"determinism":"D2","inputs":["sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b"],"kind":"scan.mesh_op_record@1","op":"mesh.test_shuffle@1","output":"sha256:f6853ccbce4a565dfb164a8947b50032d65c84281c4eaa65edeb6b17cd0c324c","params":{},"quality_after":{"boundary_edges":"4","boundary_loops":"1","components":"1","degenerate":"0","edges":"17","min_angle":{"count":"10","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"10","vertices":"8"},"quality_before":[{"boundary_edges":"4","boundary_loops":"1","components":"1","degenerate":"0","edges":"17","min_angle":{"count":"10","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"10","vertices":"8"}],"quality_threshold":"1e-18","seed":"7","synthesized":"0","triangles":"10"}
+record_digest sha256:34cf8e6f79e6a11b56c4357ac13a1bc011ea9c126b75a8507c656433b7216388
+end
+case identity
+input_digest sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b
+output_digest sha256:d8004d60c748f3300fda9d876bd5265c6546ef1eb3f50836d82f26a781ae294c
+output_element_digest sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b
+vertices 8
+triangles 10
+synthesized 0
+flags 0000000000
+flag_bytes 0000
+record {"determinism":"D0","inputs":["sha256:338fa59e02e616d02c01ead770c337d4b0c776c48dc7de07264d79ca6a5e777b"],"kind":"scan.mesh_op_record@1","op":"mesh.test_identity@1","output":"sha256:d8004d60c748f3300fda9d876bd5265c6546ef1eb3f50836d82f26a781ae294c","params":{},"quality_after":{"boundary_edges":"4","boundary_loops":"1","components":"1","degenerate":"0","edges":"17","min_angle":{"count":"10","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"10","vertices":"8"},"quality_before":[{"boundary_edges":"4","boundary_loops":"1","components":"1","degenerate":"0","edges":"17","min_angle":{"count":"10","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"10","vertices":"8"}],"quality_threshold":"1e-18","seed":null,"synthesized":"0","triangles":"10"}
+record_digest sha256:926524e18b868b731fbe1cfe468c9beb532e79aa4559d9abd70b47f2aa5c0ee4
+end
+case chain
+input_digest sha256:dba1589dfe45bb9faee5280d9faa00b3aeb1aab82cec57909e7fda53bcb7fb38
+output_digest sha256:dba1589dfe45bb9faee5280d9faa00b3aeb1aab82cec57909e7fda53bcb7fb38
+output_element_digest sha256:0f7984a14b0f24b79bad0fd6e3499eb3fe193750ba38296bdd3682ace381e270
+vertices 8
+triangles 12
+synthesized 2
+flags 000000000011
+flag_bytes 000c
+record {"determinism":"D0","inputs":["sha256:dba1589dfe45bb9faee5280d9faa00b3aeb1aab82cec57909e7fda53bcb7fb38"],"kind":"scan.mesh_op_record@1","op":"mesh.test_identity@1","output":"sha256:dba1589dfe45bb9faee5280d9faa00b3aeb1aab82cec57909e7fda53bcb7fb38","params":{},"quality_after":{"boundary_edges":"0","boundary_loops":"0","components":"1","degenerate":"0","edges":"18","min_angle":{"count":"12","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"12","vertices":"8"},"quality_before":[{"boundary_edges":"0","boundary_loops":"0","components":"1","degenerate":"0","edges":"18","min_angle":{"count":"12","median":"0.7853981633974484","min":"0.7853981633974484","p1":"0.7853981633974484","p5":"0.7853981633974484"},"nonmanifold_edges":"0","nonmanifold_vertices":"0","triangles":"12","vertices":"8"}],"quality_threshold":"1e-18","seed":null,"synthesized":"2","triangles":"12"}
+record_digest sha256:f9e83af73e1de133a4f32ab85b95fb1cee2df231883802bd98833233206d8a9c
+end
