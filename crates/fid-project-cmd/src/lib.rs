@@ -15,9 +15,10 @@
 //!   state becomes `internal/invariant_violated`.
 //! - [`tree`]: the element tree on the bus (spec node `CORE.PRJ.TREE.MODEL`, bus half): the
 //!   [`StateView`] over `fid_project::Tree` and the mapping of tree refusals to bus errors.
-//! - [`stage`]: the four stage commands (spec node `CORE.PRJ.STAGE.MODEL`, bus half).
-//! - [`command_defs`] lists all eight commands of this crate (container, then stage) and
-//!   [`register`] registers all eight handlers.
+//! - [`stage`]: the five stage commands (spec nodes `CORE.PRJ.STAGE.MODEL` and
+//!   `CORE.PRJ.STAGE.SWITCH`, bus half); [`stage_switch`]: the store adapters of the value reads.
+//! - [`command_defs`] lists all nine commands of this crate (container, then stage) and
+//!   [`register`] registers all nine handlers.
 //!
 //! [`container_defs`] and [`register_containers`] cover the four container commands only.
 
@@ -37,6 +38,7 @@ use std::fmt;
 use std::sync::{Arc, Mutex};
 
 pub mod stage;
+pub mod stage_switch;
 pub mod tree;
 
 const LIFECYCLE_SINCE: &str = "2026-11-19";
@@ -149,8 +151,8 @@ impl Handler for CreateHandler {
     }
 }
 
-/// Registers all eight handlers of this crate: the four container commands
-/// ([`register_containers`]), then the four stage commands ([`stage::register`]), each with
+/// Registers all nine handlers of this crate: the four container commands
+/// ([`register_containers`]), then the five stage commands ([`stage::register`]), each with
 /// its definition from [`command_defs`]. A handler already in `set` is
 /// `internal/invariant_violated`.
 pub fn register(set: &mut HandlerSet, namespace: Uuid, source: &SharedSource) -> Result<(), BusError> {
@@ -207,7 +209,7 @@ fn object(required: &[&str], properties: CValue) -> CValue {
 const IMPORTED: &str = "Imported ID, kept unchanged; omit it to get a new UUIDv7.";
 
 /// Every command definition of this crate: the four container commands in
-/// [`ContainerKind::ALL`] order, then the four stage commands ([`stage::command_defs`]).
+/// [`ContainerKind::ALL`] order, then the five stage commands ([`stage::command_defs`]).
 pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
     let mut defs = container_defs()?;
     defs.extend(stage::command_defs()?);

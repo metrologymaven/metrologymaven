@@ -3,9 +3,11 @@
 //!
 //! - [`command_defs`]: `project.add_stage@1`, `project.remove_stage@1`,
 //!   `project.reorder_stages@1` (W2, D0, undo `head_move`, effects `StageAdded`,
-//!   `StageRemoved`, `StagesReordered`) and `project.list_stages@1` (R0, D0), on the CLI
-//!   (`fid project add-stage`, ...) and MCP (`project_add_stage`, ...) (REQ-007).
-//! - [`StageHandler`] and [`register`]: the four bus handlers. Each reads the immutable
+//!   `StageRemoved`, `StagesReordered`), `project.list_stages@1` (R0, D0) and, for spec node
+//!   `CORE.PRJ.STAGE.SWITCH`, `project.set_active_stage@1` (W2, D0, undo `head_move`, effect
+//!   `ActiveStageSet`), on the CLI (`fid project add-stage`, ...) and MCP
+//!   (`project_add_stage`, ...) (REQ-007).
+//! - [`StageHandler`] and [`register`]: the five bus handlers. Each reads the immutable
 //!   [`StateView`] through [`BusView`] and runs the `fid_project` command function; the W2
 //!   handlers return their one event, the R0 list handler returns none (its result is
 //!   [`list_result`]).
@@ -22,8 +24,9 @@ use fid_bus::handler::{Event, EventType, Handler, HandlerCtx, HandlerError, Hand
 use fid_canon::CValue;
 use fid_project::container::ID_PATTERN;
 use fid_project::{
-    add_stage, list_stages, remove_stage, reorder_stages, ObservationSource, TreeEvent, Uuid, ADD_STAGE, LIST_STAGES,
-    REMOVE_STAGE, REORDER_STAGES, STAGES_REORDERED, STAGE_ADDED, STAGE_REMOVED,
+    add_stage, list_stages, remove_stage, reorder_stages, set_active_stage, ObservationSource, TreeEvent, Uuid,
+    ACTIVE_STAGE_SET, ADD_STAGE, LIST_STAGES, REMOVE_STAGE, REORDER_STAGES, SET_ACTIVE_STAGE, STAGES_REORDERED,
+    STAGE_ADDED, STAGE_REMOVED,
 };
 use fid_registry::{CommandDef, DefError};
 use std::fmt;
@@ -31,18 +34,20 @@ use std::sync::Arc;
 
 const LIFECYCLE_SINCE: &str = "2026-11-20";
 
-/// The four stage commands.
+/// The five stage commands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum StageOp {
     Add,
     Remove,
     Reorder,
     List,
+    /// `project.set_active_stage@1` (spec node `CORE.PRJ.STAGE.SWITCH`).
+    SetActive,
 }
 
 impl StageOp {
     /// Every command, in [`command_defs`] order.
-    pub const ALL: [StageOp; 4] = [StageOp::Add, StageOp::Remove, StageOp::Reorder, StageOp::List];
+    pub const ALL: [StageOp; 5] = [StageOp::Add, StageOp::Remove, StageOp::Reorder, StageOp::List, StageOp::SetActive];
 
     /// The command name, without major.
     pub fn command(self) -> &'static str {
@@ -51,6 +56,7 @@ impl StageOp {
             StageOp::Remove => REMOVE_STAGE,
             StageOp::Reorder => REORDER_STAGES,
             StageOp::List => LIST_STAGES,
+            StageOp::SetActive => SET_ACTIVE_STAGE,
         }
     }
 }
@@ -73,6 +79,7 @@ pub fn run_stage(
         StageOp::Add => add_stage(&v, params, namespace, source),
         StageOp::Remove => remove_stage(&v, params, namespace),
         StageOp::Reorder => reorder_stages(&v, params, namespace),
+        StageOp::SetActive => set_active_stage(&v, params, namespace),
         StageOp::List => return list_stages(&v, params, namespace).map(|_| Vec::new()).map_err(|e| to_bus_error(&e)),
     }
     .map_err(|e| to_bus_error(&e))?;
@@ -95,6 +102,7 @@ pub fn result_of(e: &Event) -> Result<CValue, BusError> {
         STAGE_ADDED => ("stage", "id"),
         STAGE_REMOVED => ("stage", "stage"),
         STAGES_REORDERED => ("order", "order"),
+        ACTIVE_STAGE_SET => ("stage", "stage"),
         _ => return Err(bad()),
     };
     let v = b.get(field).cloned().ok_or_else(bad)?;
@@ -138,7 +146,7 @@ impl Handler for StageHandler {
     }
 }
 
-/// Registers the four stage handlers, each with its definition from [`command_defs`].
+/// Registers the five stage handlers, each with its definition from [`command_defs`].
 pub fn register(set: &mut HandlerSet, namespace: Uuid, source: &SharedSource) -> Result<(), BusError> {
     let defs = command_defs().map_err(|e| {
         BusError::Internal(InternalReason::InvariantViolated, Detail::new(&format!("stage definitions: {e}")))
@@ -233,7 +241,7 @@ fn spec(
     Spec { op, title, description, params, result, class, effects }
 }
 
-/// The four command definitions, in [`StageOp::ALL`] order. Built through
+/// The five command definitions, in [`StageOp::ALL`] order. Built through
 /// [`CommandDef::from_value`], so every field rule of the registry applies.
 pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
     let untrusted =
@@ -246,7 +254,7 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             text("The run's live stages in their new order: exactly a permutation (else validation/bad_stage)."),
         ),
     ]);
-    let specs: [Spec; 4] = [
+    let specs: [Spec; 5] = [
         spec(
             StageOp::Add,
             "Add stage",
@@ -301,6 +309,16 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             object(&["stages"], obj([("stages", obj([("type", text("array")), ("items", stage_item())]))])),
             "R0",
             &[],
+        ),
+        spec(
+            StageOp::SetActive,
+            "Set active stage",
+            "Makes a live stage the active stage; only the active-stage pointer changes, no data moves. Fails with \
+             validation/bad_stage for a removed or unknown stage.",
+            object(&["stage"], obj([("stage", id_schema("The stage to activate."))])),
+            object(&["stage"], obj([("stage", id_schema("The active stage."))])),
+            "W2",
+            &[ACTIVE_STAGE_SET],
         ),
     ];
     specs

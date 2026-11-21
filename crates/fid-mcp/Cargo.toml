@@ -1,0 +1,34 @@
+[package]
+name = "fid-mcp"
+description = "Metrology Maven MCP surface: class-based tool projection, request-only tools, the D-008 motion check and the tool-call adapter onto the bus (spec node AUTO.MCP.PROJ)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# A surface crate (lint-allowlist.toml `[surfaces]`): it never links the bus or any other CORE
+# crate. The tool-call adapter reaches the bus through the `McpBus` trait, which the session
+# layer (AUTO.MCP.SESS) implements.
+[dependencies]
+# RFC 8785 values and bytes of `mcp-tools.json`. Layer model.
+fid-canon = { path = "../fid-canon" }
+# The command-surface projection (AUTO.SURF.PROJ) and the result envelope (AUTO.SURF.ENV).
+# Layer services, as this crate.
+fid-surface = { path = "../fid-surface" }
+# Shared command ID and side-effect class types. Layer num.
+fid-types = { path = "../fid-types" }
+
+# Dev-only (ignored by the crate-graph lint): the tests check that the projection agrees with
+# the bus's own decision (CORE.BUS.POL.PROJ) for every command of the workspace registry and
+# every class, and file a real pending request through it. fid-bus builds SQLite, so these
+# tests are left out of any wasm32 run.
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+fid-bus = { path = "../fid-bus", features = ["test-support"] }
+fid-journal = { path = "../fid-journal" }
+fid-registry = { path = "../fid-registry" }
+# `test_support::all_defs`: every declared command of the workspace.
+fid-registry-build = { path = "../fid-registry-build", features = ["test-support"] }
+
+[lints]
+workspace = true

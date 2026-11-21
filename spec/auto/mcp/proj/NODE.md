@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-mcp]
+built_pr: 348
 satisfies: [REQ-AUTO.MCP-001, REQ-AUTO.MCP-002, REQ-AUTO.MCP-003, REQ-AUTO.MCP-004, REQ-AUTO.MCP-010]
 covers: []
 depends_on: [AUTO.SURF.PROJ, AUTO.SURF.GEN, CORE.BUS]
@@ -62,7 +64,7 @@ The MCP emitter and the invocation rule behind every MCP tool. It turns each pro
 - **Registry command(s):** none of its own.
 - **Data structures:** `McpTool { name, title, description, input_schema, output_schema, annotations: { read_only_hint, destructive_hint, request_only }, command: CommandRef }`. Annotations: `read_only_hint` true for R0 and R1.
 - **Algorithm:** filter projection by class; JSON Schema from parameter specs (quantities as `{value: string, unit: string}`); motion check by declared effects (`run_ticket.create|approve|release`) against the allowlist `{cmm.request_hold@1}` plus R0 commands.
-- **Errors:** `motion_tool_forbidden`, `schema_unrepresentable`.
+- **Errors:** `motion_tool_forbidden`, `schema_unrepresentable`; the build adds `forbidden_character` (a tool text holds a `REASON_FORBIDDEN_RANGES` code point) and `serialise_failed` (the tool list has no canonical JSON form).
 - **Determinism:** D0 for emitted files.
 - **Performance budget:** generation for 5,000 commands < 2 s [unverified until measured].
 - **Crate:** `fid-mcp`
@@ -79,6 +81,13 @@ The MCP emitter and the invocation rule behind every MCP tool. It turns each pro
 
 - **Revise for D-036/D-037 (accepted 2026-11-17):** project `cmm.request_run@1` to agents as a named tool that the bus accepts only for H1-approved programs within envelope (D-008 as amended by D-037).
 - The run-ticket effect names depend on `CMM.EXEC` declarations; the allowlist is keyed on declared effects so it follows whatever CMM declares.
+- **Built in `fid-mcp`; what is left.** AC-1, AC-2, AC-3 and AC-5 are built and tested; the emitter is registered in `fid-surface-gen` and writes `mcp/mcp-tools.json` (header as its `_header` member) and `mcp/surface-index.json`. AC-4 (the W2 commit lands on the agent branch, main unchanged) needs `CORE.BUS.PIPE.STAGE` and `CORE.BUS.ROUTE`, not built: the adapter side is built (the call reaches the real authorise stage on channel `mcp` as the session's agent and is let through). The fixture commands `demo.release_plan@1` and `demo.set_offset@1` live in `fixtures/mcp/calls.json`, not in `min-classes.json`, whose bytes `AUTO.SURF.PROJ` and `AUTO.SURF.GEN` goldens pin.
+- **Agreement with the bus.** Which tool is listed is the bus's own rule (`CORE.BUS.POL.PROJ` `mcp_projection`): the stricter of the declared projection and the class ceiling, and none without `mcp` in `exposure`. `fid-surface` now carries `exposure` for this. Tests compare the two for every command of the workspace registry and for every class, declared projection, `human_only` and exposure.
+- **Stricter declarations (resolved).** `AUTO.SURF.PROJ` used to refuse a declaration stricter than the class table (`request.reject_request@1`, W1, `human_only`, `never`) with `projection_mismatch`, so `gen-surfaces` on the workspace manifest emitted no MCP tools. #353 fixed that in `AUTO.SURF.PROJ`; the projection now takes the stricter one, as the bus does.
+- **Registry text is trusted today.** Tool titles and descriptions come from registry help text, which is project-authored now. Before plugin-declared commands arrive, registry descriptions need `Untrusted` handling (C6) on their way into tool definitions.
+- **Variation selectors.** The shared `REASON_FORBIDDEN_RANGES` table (#328) does not cover variation selectors (general category Mn, U+FE00..U+FE0F, U+E0100..U+E01EF); joint follow-up with `CORE.BUS.POL.PROJ`, so the two tables stay one.
+- **The bus is the only gate.** The adapter's post-call check for request-only tools detects a bus that ran one; it cannot prevent it. It reports a `Violation` at error severity to an `AuditSink` (for `AUTO.MCP.SESS` to log and keep) and answers `internal/invariant_violated`.
+- Tool descriptions carry no parameter descriptions: the surface projection does not keep them. Tool texts holding a control, bidi or other `REASON_FORBIDDEN_RANGES` character fail generation (`forbidden_character`); nothing is stripped.
 
 ## Children
 

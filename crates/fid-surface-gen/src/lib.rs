@@ -81,6 +81,11 @@ pub enum CommentSyntax {
     /// (`#!`) and/or a coding line (a `#` comment line containing `coding:` or `coding=`, on
     /// line 1, or on line 2 after a shebang), which interpreters honour only at the top.
     LineAfterPrologue(&'static str),
+    /// A JSON object file (JSON has no comments): the header goes in as the object's first
+    /// member, `_header`, holding the header lines joined with `; `, as in [`INDEX_FILE`].
+    /// The body must be one JSON object starting with `{` and without a top-level `_header`
+    /// member, else `emit_failed`.
+    JsonMember,
 }
 
 impl CommentSyntax {
@@ -100,6 +105,7 @@ impl CommentSyntax {
         let good = match self {
             CommentSyntax::Line(p) | CommentSyntax::LineAfterPrologue(p) => ok(p),
             CommentSyntax::Block(o, c) => ok(o) && ok(c),
+            CommentSyntax::JsonMember => true,
         };
         if good {
             Ok(())
@@ -112,6 +118,7 @@ impl CommentSyntax {
         match self {
             CommentSyntax::Line(p) | CommentSyntax::LineAfterPrologue(p) => format!("{p} {text}\n"),
             CommentSyntax::Block(o, c) => format!("{o} {text} {c}\n"),
+            CommentSyntax::JsonMember => format!("{text}\n"),
         }
     }
 
@@ -137,6 +144,14 @@ impl CommentSyntax {
 
     /// `body` (normalised) with `header` placed per this syntax.
     pub fn stamp(self, header: &str, body: &str) -> String {
+        if self == CommentSyntax::JsonMember {
+            // `header` is `{"_header":"...",`; it replaces the body's opening brace.
+            return match body.strip_prefix('{') {
+                Some(rest) if rest.trim_start().starts_with('}') => format!("{}{rest}", header.trim_end_matches(',')),
+                Some(rest) => format!("{header}{rest}"),
+                None => format!("{header}{body}"),
+            };
+        }
         let (prologue, rest) = body.split_at(self.prologue_len(body));
         let mut text = String::with_capacity(prologue.len() + header.len() + rest.len());
         text.push_str(prologue);
@@ -247,9 +262,43 @@ pub fn header_lines(p: &Projection) -> [String; 3] {
     ]
 }
 
-/// The header block for one file in `syntax`.
+/// The header block for one file in `syntax`. For [`CommentSyntax::JsonMember`] it is the
+/// opening of a JSON object with its `_header` member: `{"_header":"...",`.
 pub fn header(p: &Projection, syntax: CommentSyntax) -> String {
+    if syntax == CommentSyntax::JsonMember {
+        return format!("{{\"_header\":{},", json_string(&header_lines(p).join("; ")));
+    }
     header_lines(p).iter().map(|l| syntax.line(l)).collect()
+}
+
+/// `s` as a JSON string literal (the RFC 8785 escapes).
+fn json_string(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '\u{8}' => out.push_str("\\b"),
+            '\u{c}' => out.push_str("\\f"),
+            c if u32::from(c) < 0x20 => out.push_str(&format!("\\u{:04x}", u32::from(c))),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
+/// Checks that a [`CommentSyntax::JsonMember`] body is one JSON object without `_header`.
+fn check_json_body(body: &str) -> Result<(), &'static str> {
+    match fid_canon::parse(body.as_bytes()) {
+        Ok(CValue::Obj(o)) if o.contains_key("_header") => Err("already has a top-level _header member"),
+        Ok(CValue::Obj(_)) if body.starts_with('{') => Ok(()),
+        _ => Err("is not one JSON object"),
+    }
 }
 
 /// Checks a relative output path (REQ-006). Returns the reason it is refused.
@@ -409,6 +458,10 @@ pub fn render(p: &Projection, emitters: &[&dyn SurfaceEmitter]) -> Result<Vec<Su
             syntax.check().map_err(|detail| GenError::EmitFailed { surface: sname(), detail })?;
             let body = normalise(&f.bytes)
                 .map_err(|d| GenError::EmitFailed { surface: sname(), detail: format!("{}: {d}", f.rel_path) })?;
+            if syntax == CommentSyntax::JsonMember {
+                check_json_body(&body)
+                    .map_err(|d| GenError::EmitFailed { surface: sname(), detail: format!("{}: {d}", f.rel_path) })?;
+            }
             for c in f.covers {
                 if !known.contains(c.as_str()) {
                     return Err(GenError::EmitFailed {
@@ -627,9 +680,30 @@ pub fn generate(manifest: &[u8], emitters: &[&dyn SurfaceEmitter], out: &Path) -
 }
 
 /// The emitter list, in its fixed run order. Each surface node adds its emitter here when it
-/// is built; none is built yet.
+/// is built: [`McpEmitter`] (AUTO.MCP.PROJ).
 pub fn registered() -> Vec<Box<dyn SurfaceEmitter>> {
-    Vec::new()
+    vec![Box::new(McpEmitter)]
+}
+
+/// The MCP surface (spec node AUTO.MCP.PROJ): `mcp/mcp-tools.json` from [`fid_mcp::emit`],
+/// with the header as its `_header` member. Generation fails with `emit_failed` whose detail
+/// starts with the MCP code (for example `motion_tool_forbidden`) when the MCP emitter refuses.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct McpEmitter;
+
+impl SurfaceEmitter for McpEmitter {
+    fn surface(&self) -> &'static str {
+        fid_mcp::SURFACE
+    }
+
+    fn emit(&self, p: &Projection) -> Result<Vec<GeneratedFile>, EmitError> {
+        let out = fid_mcp::emit(p).map_err(|e| EmitError { detail: e.to_string() })?;
+        Ok(vec![GeneratedFile { rel_path: fid_mcp::TOOLS_FILE.to_string(), bytes: out.bytes, covers: out.commands }])
+    }
+
+    fn comment_syntax(&self, _path: &str) -> CommentSyntax {
+        CommentSyntax::JsonMember
+    }
 }
 
 /// Test emitters selectable with `--test-emitter`, appended after the registered ones.
