@@ -43,6 +43,13 @@
 //! [`crate::layout::MAX_PATH_CHARS`] characters work. SQLite's Unix VFS limits a path to
 //! [`UNIX_MAX_DB_PATH_BYTES`] bytes [unverified: SQLite `MAX_PATHNAME`]; a longer database path
 //! fails with `path_too_long` before SQLite is called.
+//!
+//! Shared hardening: [`harden`], [`set_config`], [`set_wal`], [`open_path`],
+//! [`check_companions_of`], [`check_root_pages`], [`expected_objects`], [`verify_schema`],
+//! [`quick_check`] and the migration runner [`migrate_with`] (with [`MigrationHooks`]) are public
+//! so other crates that open a hostile SQLite file of their own (the results catalog,
+//! `RPT.CATALOG.STORE.SCHEMA`) apply exactly the same checks instead of copies. `project.db`
+//! uses them through [`StoreHooks`] with unchanged behaviour.
 
 use crate::layout::{OpenMode, ProjectLocation, StoreError, DB_FILE};
 use crate::Locked;
@@ -335,7 +342,7 @@ fn checked_version(conn: &Connection, plan: &MigrationPlan, integrity: bool) -> 
 }
 
 /// Every table and index must have a root page (virtual tables and damaged rows have none).
-fn check_root_pages(conn: &Connection) -> Result<(), SchemaError> {
+pub fn check_root_pages(conn: &Connection) -> Result<(), SchemaError> {
     let mut st = conn.prepare("SELECT type, name, rootpage FROM sqlite_master WHERE type IN ('table', 'index')")?;
     let rows =
         st.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, Option<i64>>(2)?)))?;
@@ -349,7 +356,7 @@ fn check_root_pages(conn: &Connection) -> Result<(), SchemaError> {
 }
 
 /// `PRAGMA quick_check` must answer exactly `ok`.
-fn quick_check(conn: &Connection) -> Result<(), SchemaError> {
+pub fn quick_check(conn: &Connection) -> Result<(), SchemaError> {
     let mut st = conn.prepare("PRAGMA quick_check")?;
     let rows = st.query_map([], |r| r.get::<_, String>(0))?;
     let answers = rows.collect::<Result<Vec<String>, _>>()?;
@@ -369,7 +376,8 @@ pub fn check_journal_mode(answer: &str) -> Result<(), SchemaError> {
     }
 }
 
-fn set_wal(conn: &Connection) -> Result<(), SchemaError> {
+/// Sets WAL journal mode and checks SQLite's answer ([`check_journal_mode`]).
+pub fn set_wal(conn: &Connection) -> Result<(), SchemaError> {
     let answer: String = conn
         .query_row("PRAGMA journal_mode=WAL", [], |r| r.get(0))
         .map_err(|e| SchemaError::WalUnavailable(e.to_string()))?;
@@ -382,8 +390,14 @@ fn set_wal(conn: &Connection) -> Result<(), SchemaError> {
 /// and -shm it found). A local process that swaps a file in between is not stopped (see the
 /// leaf's Open questions); the write lock keeps other Metrology Maven writers out.
 fn check_companions(dir: &Path) -> Result<(), SchemaError> {
+    check_companions_of(dir, DB_FILE)
+}
+
+/// [`check_companions`] for the database file `name` in `dir` (shared with other SQLite files
+/// that are hostile input, such as the results catalog of `RPT.CATALOG.STORE.SCHEMA`).
+pub fn check_companions_of(dir: &Path, name: &str) -> Result<(), SchemaError> {
     for suffix in COMPANIONS {
-        let p = dir.join(format!("{DB_FILE}{suffix}"));
+        let p = dir.join(format!("{name}{suffix}"));
         let meta = match std::fs::symlink_metadata(&p) {
             Ok(m) => m,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
@@ -396,7 +410,7 @@ fn check_companions(dir: &Path) -> Result<(), SchemaError> {
             return Err(StoreError::NotRegularFile.into());
         }
         if suffix == "-journal" && meta.len() > 0 {
-            return Err(SchemaError::SchemaInvalid(format!("leftover rollback journal {DB_FILE}{suffix}")));
+            return Err(SchemaError::SchemaInvalid(format!("leftover rollback journal {name}{suffix}")));
         }
     }
     Ok(())
@@ -433,7 +447,8 @@ fn connect(loc: &ProjectLocation, mode: OpenMode) -> Result<(Connection, PathBuf
     Ok((conn, root))
 }
 
-fn set_config(conn: &Connection, what: DbConfig, on: bool, name: &str) -> Result<(), SchemaError> {
+/// Sets one `sqlite3_db_config` flag and reads it back; `hardening_failed` if it did not take.
+pub fn set_config(conn: &Connection, what: DbConfig, on: bool, name: &str) -> Result<(), SchemaError> {
     let now = conn.set_db_config(what, on).map_err(|e| SchemaError::HardeningFailed(format!("{name}: {e}")))?;
     if now != on || conn.db_config(what).map_err(|e| SchemaError::HardeningFailed(format!("{name}: {e}")))? != on {
         return Err(SchemaError::HardeningFailed(format!("{name} did not become {on}")));
@@ -442,7 +457,9 @@ fn set_config(conn: &Connection, what: DbConfig, on: bool, name: &str) -> Result
 }
 
 /// Connection safety settings, applied before the connection reads the file and read back.
-fn harden(conn: &Connection) -> Result<(), SchemaError> {
+/// Leaves `SQLITE_DBCONFIG_NO_CKPT_ON_CLOSE` on: the caller turns it off with [`set_config`]
+/// once its checks have passed.
+pub fn harden(conn: &Connection) -> Result<(), SchemaError> {
     set_config(conn, DbConfig::SQLITE_DBCONFIG_DEFENSIVE, true, "defensive")?;
     set_config(conn, DbConfig::SQLITE_DBCONFIG_TRUSTED_SCHEMA, false, "trusted_schema")?;
     set_config(conn, DbConfig::SQLITE_DBCONFIG_WRITABLE_SCHEMA, false, "writable_schema")?;
@@ -466,15 +483,19 @@ fn harden(conn: &Connection) -> Result<(), SchemaError> {
     Ok(())
 }
 
+/// Opens the database file at `path` (absolute) with `flags`: on Windows through the
+/// `win32-longpath` VFS with a `\\?\` path; elsewhere refusing paths over
+/// [`UNIX_MAX_DB_PATH_BYTES`] with `path_too_long` before SQLite is called.
 #[cfg(windows)]
-fn open_path(path: &Path, flags: OpenFlags) -> Result<Connection, SchemaError> {
+pub fn open_path(path: &Path, flags: OpenFlags) -> Result<Connection, SchemaError> {
     let Some(s) = path.to_str() else { return Err(SchemaError::PathUnsupported(path.to_path_buf())) };
     let verbatim = crate::layout::windows_verbatim(s);
     Ok(Connection::open_with_flags_and_vfs(verbatim, flags, "win32-longpath")?)
 }
 
+/// See the Windows variant.
 #[cfg(not(windows))]
-fn open_path(path: &Path, flags: OpenFlags) -> Result<Connection, SchemaError> {
+pub fn open_path(path: &Path, flags: OpenFlags) -> Result<Connection, SchemaError> {
     let bytes = path.as_os_str().len();
     if bytes > UNIX_MAX_DB_PATH_BYTES {
         let chars = crate::layout::path_chars(&path.to_string_lossy());
@@ -576,34 +597,93 @@ pub fn verify_schema(conn: &Connection, plan: &MigrationPlan, version: SchemaVer
     Err(SchemaError::SchemaInvalid(format!("{detail} (expected the schema of version {})", version.0)))
 }
 
+/// What a database format supplies to [`migrate_with`]: how its version is checked, read and
+/// recorded, and how a failed step is reported. `project.db` records versions in `schema_meta`
+/// ([`StoreHooks`]); other formats (the results catalog) keep them elsewhere.
+pub trait MigrationHooks {
+    /// The error type of the format.
+    type Error: From<rusqlite::Error> + From<SchemaError> + fmt::Display;
+    /// Where the version is recorded, for error details (`schema_meta` for `project.db`).
+    const VERSION_TABLE: &'static str;
+    /// The checks an open runs, under the write transaction: the version migrations start from.
+    fn checked_version(&mut self, conn: &Connection, plan: &MigrationPlan) -> Result<SchemaVersion, Self::Error>;
+    /// The version recorded after the migrations.
+    fn read_version(&mut self, conn: &Connection) -> Result<SchemaVersion, Self::Error>;
+    /// Records, inside the transaction, that `m` was applied.
+    fn record(&mut self, conn: &Connection, m: &Migration) -> Result<(), Self::Error>;
+    /// The error of a failed step (`from` -> `to`).
+    fn failed(&self, from: u32, to: u32, detail: String) -> Self::Error;
+}
+
+/// The hooks of `project.db`: versions in `schema_meta`, one row per version reached.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct StoreHooks;
+
+impl MigrationHooks for StoreHooks {
+    type Error = SchemaError;
+    const VERSION_TABLE: &'static str = "schema_meta";
+
+    fn checked_version(&mut self, conn: &Connection, plan: &MigrationPlan) -> Result<SchemaVersion, SchemaError> {
+        checked_version(conn, plan, false)
+    }
+
+    fn read_version(&mut self, conn: &Connection) -> Result<SchemaVersion, SchemaError> {
+        read_version(conn)
+    }
+
+    fn record(&mut self, conn: &Connection, m: &Migration) -> Result<(), SchemaError> {
+        conn.execute("INSERT INTO schema_meta (version) VALUES (?1)", [m.to])
+            .map(|_| ())
+            .map_err(|e| self.failed(m.from, m.to, format!("recording version {}: {e}", m.to)))
+    }
+
+    fn failed(&self, from: u32, to: u32, detail: String) -> SchemaError {
+        SchemaError::MigrationFailed { from, to, detail }
+    }
+}
+
 /// Applies every migration after the current version in one `BEGIN IMMEDIATE` transaction,
 /// recording each version reached; any failure rolls the whole transaction back.
 fn migrate(conn: &mut Connection, plan: &MigrationPlan) -> Result<SchemaVersion, SchemaError> {
-    let fail = |from: u32, to: u32, detail: String| SchemaError::MigrationFailed { from, to, detail };
+    migrate_with(conn, plan, &mut StoreHooks)
+}
+
+/// The migration runner shared by every SQLite format: in one `BEGIN IMMEDIATE` transaction,
+/// re-checks the version ([`MigrationHooks::checked_version`]), applies each pending migration
+/// and records it, checks foreign keys, then requires the recorded version to be
+/// `plan.latest` and the schema objects to be exactly that version's ([`verify_schema`]).
+/// Any failure rolls the whole transaction back.
+pub fn migrate_with<H: MigrationHooks>(
+    conn: &mut Connection,
+    plan: &MigrationPlan,
+    hooks: &mut H,
+) -> Result<SchemaVersion, H::Error> {
     // Starting the write transaction is not a migration step; its failure is SQLite's.
-    let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate).map_err(SchemaError::Sqlite)?;
+    let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate).map_err(H::Error::from)?;
     // Re-read under the write transaction: this is the version the migrations start from.
-    let current = checked_version(&tx, plan, false)?;
+    let current = hooks.checked_version(&tx, plan)?;
     for m in plan.migrations.iter().filter(|m| m.from >= current.0) {
-        tx.execute_batch(m.sql).map_err(|e| fail(m.from, m.to, e.to_string()))?;
+        tx.execute_batch(m.sql).map_err(|e| hooks.failed(m.from, m.to, e.to_string()))?;
         if tx.is_autocommit() {
-            return Err(fail(m.from, m.to, "migration SQL ended the transaction".to_string()));
+            return Err(hooks.failed(m.from, m.to, "migration SQL ended the transaction".to_string()));
         }
-        tx.execute("INSERT INTO schema_meta (version) VALUES (?1)", [m.to])
-            .map_err(|e| fail(m.from, m.to, format!("recording version {}: {e}", m.to)))?;
+        hooks.record(&tx, m)?;
     }
     let violations = count_rows(&tx, "PRAGMA foreign_key_check")
-        .map_err(|e| fail(current.0, plan.latest, format!("foreign key check: {e}")))?;
+        .map_err(|e| hooks.failed(current.0, plan.latest, format!("foreign key check: {e}")))?;
     if violations != 0 {
-        return Err(fail(current.0, plan.latest, format!("{violations} foreign key violations")));
+        return Err(hooks.failed(current.0, plan.latest, format!("{violations} foreign key violations")));
     }
     // The result must be exactly the schema of the new version.
-    let reached = read_version(&tx).map_err(|e| fail(current.0, plan.latest, e.to_string()))?;
+    let reached = match hooks.read_version(&tx) {
+        Ok(v) => v,
+        Err(e) => return Err(hooks.failed(current.0, plan.latest, e.to_string())),
+    };
     if reached.0 != plan.latest {
-        return Err(fail(current.0, plan.latest, format!("schema_meta reached {}", reached.0)));
+        return Err(hooks.failed(current.0, plan.latest, format!("{} reached {}", H::VERSION_TABLE, reached.0)));
     }
-    verify_schema(&tx, plan, reached).map_err(|e| fail(current.0, plan.latest, e.to_string()))?;
-    tx.commit().map_err(|e| fail(current.0, plan.latest, format!("commit: {e}")))?;
+    verify_schema(&tx, plan, reached).map_err(|e| hooks.failed(current.0, plan.latest, e.to_string()))?;
+    tx.commit().map_err(|e| hooks.failed(current.0, plan.latest, format!("commit: {e}")))?;
     Ok(SchemaVersion(plan.latest))
 }
 
