@@ -71,6 +71,8 @@ pub fn all_defs() -> Result<Vec<(String, CommandDef)>, String> {
             fid_gdt::chars::record::command_def().map_err(|e| err("fid-gdt record", e))?,
             fid_gdt::dmt_flow::status::command_def().map_err(|e| err("fid-gdt status", e))?,
             fid_gdt::drf::datum::command_def().map_err(|e| err("fid-gdt datum", e))?,
+            fid_gdt::drf::build::build_command_def().map_err(|e| err("fid-gdt build_drf", e))?,
+            fid_gdt::drf::build::get_command_def().map_err(|e| err("fid-gdt get_drf", e))?,
         ],
     );
     extra("fid-pkg", fid_pkg::reader::declarations().into_iter().map(|d| d.def).collect());

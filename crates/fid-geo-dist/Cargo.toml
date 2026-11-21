@@ -9,8 +9,11 @@ repository.workspace = true
 
 # Kernel crate (KNP-1): no third-party dependencies. Only kernel-layer workspace crates:
 # fid-geo-types (Mesh), fid-geo-index (PrimitiveBvh ordered visitor) and fid-num (sqrt).
+# GEO.DIST.BATCH adds fid-geo-frame (kernel layer, zero third-party dependencies) for the
+# frame-mismatch guard `require_same_frame_ref` and its `GeoError::FrameMismatch`.
 [dependencies]
 fid-geo-types = { path = "../fid-geo-types" }
+fid-geo-frame = { path = "../fid-geo-frame" }
 fid-geo-index = { path = "../fid-geo-index" }
 fid-num = { path = "../fid-num" }
 
@@ -19,6 +22,11 @@ fid-num = { path = "../fid-num" }
 fid-testkit = { path = "../fid-testkit" }
 # SHA-256 of the mesh-projection result digests (GEO.DIST.MESH AC-1, AC-6).
 fid-kci = { path = "../fid-kci" }
+
+# GEO.DIST.BATCH AC-6 timing (advisory): `cargo bench -p fid-geo-dist --bench project`.
+[[bench]]
+name = "project"
+harness = false
 
 [lints]
 workspace = true

@@ -1,0 +1,20 @@
+{
+  "format": "icon-index@1",
+  "icons": [
+    {
+      "a11y_id": "icon.save",
+      "labelless": true,
+      "name": "save"
+    },
+    {
+      "a11y_id": "icon.thirdp",
+      "labelless": false,
+      "name": "thirdp"
+    },
+    {
+      "a11y_id": "icon.align.fit",
+      "labelless": true,
+      "name": "align.fit"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-step"
-description = "Metrology Maven bounded ISO 10303-21 (clear-text STEP) exchange-structure parser and printer (spec node IO.CAD.STEP.P21)"
+description = "Metrology Maven bounded ISO 10303-21 (clear-text STEP) exchange-structure parser and printer, and STEP header and unit-context resolution (spec nodes IO.CAD.STEP.P21, IO.CAD.STEP.HDR)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,6 +10,11 @@ repository.workspace = true
 [dependencies]
 # The reader harness: Budget, BoundedSource, IoError, UntrustedText (IO.REG.LIMITS).
 fid-io-reg = { path = "../fid-io-reg" }
+
+[dev-dependencies]
+# IO.CAD.STEP.HDR tests build a real SourceProvenance, whose principal draft holds a CValue.
+# Already in the tree through fid-io-reg.
+fid-canon = { path = "../fid-canon" }
 
 [lints]
 workspace = true

@@ -210,8 +210,13 @@ impl<'a> TriangleSubset<'a> {
         self.ids
     }
 
-    fn contains(&self, t: u64) -> bool {
+    pub(crate) fn contains(&self, t: u64) -> bool {
         self.ids.binary_search(&t).is_ok()
+    }
+
+    /// The triangle count the subset was validated against.
+    pub fn triangle_count(&self) -> u64 {
+        self.triangle_count
     }
 }
 
@@ -336,7 +341,7 @@ fn in_range(p: &V3) -> bool {
     p.iter().all(|&x| (-COORD_LIMIT..=COORD_LIMIT).contains(&x))
 }
 
-fn check_query(p: &V3) -> Result<(), DistError> {
+pub(crate) fn check_query(p: &V3) -> Result<(), DistError> {
     if !p.iter().all(|x| x.is_finite()) {
         return Err(DistError::NonFiniteQuery);
     }
@@ -625,7 +630,7 @@ pub fn closest_on_mesh(
     MeshTarget::new(mesh, bvh)?.closest(p, q)
 }
 
-fn corners(mesh: &Mesh, t: u64) -> Result<[V3; 3], DistError> {
+pub(crate) fn corners(mesh: &Mesh, t: u64) -> Result<[V3; 3], DistError> {
     let tri = mesh.triangle(t).ok_or(DistError::Inconsistent)?;
     let mut c = [[0.0; 3]; 3];
     for (slot, &v) in c.iter_mut().zip(tri.iter()) {
