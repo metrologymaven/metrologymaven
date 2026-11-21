@@ -276,9 +276,12 @@ fn configuration_refusals() {
     assert_eq!(StreamConfig::new(StreamOrder::Original).order, StreamOrder::Original);
 }
 
+/// One forged chunk: its depth-1 octant and its (index, point) pairs.
+type ForgedChunk<'a> = (u8, &'a [(u64, [f64; 3])]);
+
 /// A hand-built chunked cloud over [0, 1]^3 with `max_chunk_points = 2`: chunks at the
 /// depth-1 octants given, each with (index, point) pairs.
-fn forged(store: &MemStore, n_points: u64, chunks: &[(u8, &[(u64, [f64; 3])])]) -> ChunkManifest {
+fn forged(store: &MemStore, n_points: u64, chunks: &[ForgedChunk<'_>]) -> ChunkManifest {
     let mut entries = Vec::new();
     for (octant, pts) in chunks {
         let cell = CellCode::ROOT.child(*octant).unwrap();
@@ -517,4 +520,32 @@ fn untrusted_manifests_need_verification() {
     // The trusted writer's own manifest starts verified.
     let t = ChunkStream::new(&built, &store, &cache, None, spatial, Provenance::TrustedWriter).unwrap();
     assert!(t.verified());
+}
+
+/// A manifest of no points verifies (nothing to prove) and streams nothing in either order.
+#[test]
+fn empty_manifest_verifies() {
+    let store = MemStore::new();
+    let m = forged(&store, 0, &[]);
+    let cache = ChunkCache::new(1 << 20);
+    for order in [StreamOrder::Spatial, StreamOrder::Original] {
+        let mut st =
+            ChunkStream::new(&m, &store, &cache, None, cfg(order, 10, 4, ChannelSet::EMPTY), Provenance::Untrusted)
+                .unwrap();
+        assert!(!st.verified());
+        assert_eq!(st.verify(), Ok(()));
+        assert!(st.verified());
+        assert!(st.next_stream_block().is_none());
+    }
+    let mut o = ChunkStream::new(
+        &m,
+        &store,
+        &cache,
+        None,
+        cfg(StreamOrder::Original, 10, 4, ChannelSet::EMPTY),
+        Provenance::Untrusted,
+    )
+    .unwrap();
+    assert!(o.next_stream_block().is_none());
+    assert!(o.verified(), "an original-order run to its end verifies, also with no points");
 }

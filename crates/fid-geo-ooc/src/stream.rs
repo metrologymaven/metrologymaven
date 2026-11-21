@@ -406,6 +406,11 @@ impl<'a> ChunkStream<'a> {
         if self.verified {
             return Ok(());
         }
+        if self.ctx.manifest.n_points == 0 {
+            // A validated manifest of no points has no chunks: nothing to prove.
+            self.verified = true;
+            return Ok(());
+        }
         let c = &self.ctx;
         let cfg = StreamConfig { order: StreamOrder::Original, channels: ChannelSet::EMPTY, ..self.cfg };
         let mut pass = ChunkStream::new(c.manifest, c.store, c.cache, c.cancel, cfg, Provenance::Untrusted)?;
@@ -442,6 +447,10 @@ impl<'a> ChunkStream<'a> {
         let n = self.ctx.manifest.n_points;
         if self.emitted >= n {
             self.release();
+            if self.cfg.order == StreamOrder::Original {
+                // Reached the end without error (also for a cloud of no points).
+                self.verified = true;
+            }
             return None;
         }
         let r = if self.ctx.cancelled() { Err(OocError::Cancelled) } else { self.fill() };

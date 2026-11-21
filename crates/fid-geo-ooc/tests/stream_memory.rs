@@ -5,7 +5,9 @@
 //! small cache re-fetches often; the shorter prefix keeps the debug run short. The counting
 //! allocator's peak while streaming must stay within the cache budget plus one block, the
 //! merge state (24 bytes per chunk) and a fixed slack, so memory does not grow with the
-//! cloud.
+//! cloud. The spatial run is repeated through the `PointSource` view (`next_block`), whose
+//! conversion to `f64` channel columns may hold a second block-sized copy, so its bound adds
+//! one more block.
 //!
 //! Own test binary with one test function, because it installs a counting global allocator
 //! (see `cache_budget.rs` for the ballast technique).
@@ -18,7 +20,7 @@ use common::*;
 use fid_geo_ooc::{
     load_cost, to_chunks, ChunkCache, ChunkStream, LayoutParams, MemStore, Provenance, StreamConfig, StreamOrder,
 };
-use fid_geo_types::{AttributeSet, PointBuffer, PointCloud};
+use fid_geo_types::{AttributeSet, PointBuffer, PointCloud, PointSource};
 use std::alloc::System;
 
 #[global_allocator]
@@ -84,5 +86,24 @@ fn check(e: &fid_canon::CValue, order: StreamOrder, n: u64, max: u64) {
         let bound = budget + block_bytes + merge + SLACK;
         assert!(peak <= bound, "{order:?}: peak {peak} bytes, bound {bound}");
         assert!(cache.stats().peak_bytes <= budget);
+    }
+    if order == StreamOrder::Spatial {
+        let cache = ChunkCache::new(budget);
+        let ballast: Vec<u8> = vec![0u8; ALLOC.max_allocated() - ALLOC.allocated()];
+        let base = ALLOC.allocated();
+        let cfg = StreamConfig { order, block_points: block, channels: m.channels, fan_in: 8 };
+        let mut s = ChunkStream::new(&m, &store, &cache, None, cfg, Provenance::TrustedWriter).unwrap();
+        let mut count = 0u64;
+        while let Some(b) = PointSource::next_block(&mut s) {
+            let b = b.unwrap();
+            assert_eq!(b.channels.len(), 4, "intensity and three normal columns");
+            count += b.x.len() as u64;
+        }
+        drop(s);
+        let peak = (ALLOC.max_allocated() - base) as u64;
+        drop(ballast);
+        assert_eq!(count, n);
+        let bound = budget + 2 * block_bytes + merge + SLACK;
+        assert!(peak <= bound, "PointSource view: peak {peak} bytes, bound {bound}");
     }
 }
