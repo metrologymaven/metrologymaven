@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-align-solve]
+built_pr: 376
 satisfies: [REQ-ALN.BFIT-003, REQ-ALN.BFIT-004]
 covers: [GOM.ALN.10, PW.ALN.07, SA.XFM.04]
 depends_on: [GEO.FRAME, KRN.NUM]
