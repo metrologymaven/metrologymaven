@@ -1,0 +1,32 @@
+[package]
+name = "fid-run"
+description = "Metrology Maven runs of Command Programs: run binding validation, run records and the origin-bound run ledger (AUTO.RUN.BIND)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Bus-derived principals, the entry origin (CORE.BUS.POL.PROJ), events and typed bus errors.
+# Layer engine, below this crate (services).
+fid-bus = { path = "../fid-bus" }
+# Canonical JSON of records and events (CORE.JRN.CANON). Layer model.
+fid-canon = { path = "../fid-canon" }
+# The journal's entry origin (kind, command, class, branch, adding stage) and `main`
+# (CORE.JRN.BR.NAME). Layer model; default features only (no storage).
+fid-journal = { path = "../fid-journal" }
+# Program documents, step IDs and part-family binding checks (AUTO.PROG.FMT, AUTO.PROG.FAMILY).
+# Layer services.
+fid-program = { path = "../fid-program" }
+# Lifecycle states and the run gate (AUTO.REC.LIFE). Layer services.
+fid-program-rec = { path = "../fid-program-rec" }
+# The quantity catalogue trait of the binding check (CORE.REG.DEF.SCHEMA). Layer model.
+fid-registry = { path = "../fid-registry" }
+# `sha256:` digests, command IDs, side-effect classes (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+# Streaming SHA-256 of input datasets; the sha2 0.10 already in the lock (fid-canon, fid-io-reg).
+sha2 = "0.10"
+
+[lints]
+workspace = true

@@ -1,0 +1,620 @@
+[
+ {
+  "apply": "admitted",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "base",
+  "lifecycle": "as_prepared",
+  "name": "base_agent_released",
+  "precommit": "ok",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "admitted",
+  "base": "human_trial",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "base",
+  "lifecycle": "as_prepared",
+  "name": "base_human_trial_registered",
+  "precommit": "ok",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "admitted",
+  "base": "human_override",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "base",
+  "lifecycle": "as_prepared",
+  "name": "base_human_override_deprecated",
+  "precommit": "ok",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "origin_principal": {
+    "id": "mallory",
+    "kind": "agent"
+   }
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_other_principal_id",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_record_claims_human",
+  "precommit": "refused",
+  "record": {
+   "principal": {
+    "id": "alice",
+    "kind": "human"
+   }
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "journal_kind": "human",
+   "origin_principal": {
+    "id": "alice",
+    "kind": "human"
+   }
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_origin_human_record_agent",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "journal_kind": "script"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_journal_kind_differs",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "human_trial",
+  "entry": {
+   "journal_kind": "agent",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   }
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_agent_forges_trial_of_human",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "journal_command": "program.run_batch",
+   "origin_command": "program.run_batch@1"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_other_command",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "journal_major": 2,
+   "origin_command": "program.run@2"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_other_major",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "journal_command": "program.register"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_journal_command_differs",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "class": "W3"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_other_class",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "source": "bus_route"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_added_by_bus",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "params_commitment": "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_other_params_commitment",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "branch": "run/2"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_other_branch",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "a",
+  "lifecycle": "as_prepared",
+  "name": "a_record_branch_null",
+  "precommit": "refused",
+  "record": {
+   "branch": null
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "journal_command": "project.create_run",
+   "origin_command": "project.create_run@1"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "b",
+  "lifecycle": "as_prepared",
+  "name": "b_reserved_effect_other_command",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "human_trial",
+  "entry": {},
+  "events": [
+   "RunStarted",
+   "RequestApproved"
+  ],
+  "item": "c",
+  "lifecycle": "as_prepared",
+  "name": "c_request_approved",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RequestFiled",
+   "RunStarted"
+  ],
+  "item": "c",
+  "lifecycle": "as_prepared",
+  "name": "c_request_filed",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RunStarted",
+   "RunStarted"
+  ],
+  "item": "c",
+  "lifecycle": "as_prepared",
+  "name": "c_two_run_started",
+  "precommit": "refused",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "ignored",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "StageAdded"
+  ],
+  "item": "c",
+  "lifecycle": "as_prepared",
+  "name": "c_no_run_started",
+  "precommit": "ignored",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "d",
+  "lifecycle": "deprecated",
+  "name": "d_deprecated_since_prepared",
+  "precommit": "conflict",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "d",
+  "lifecycle": "as_prepared",
+  "name": "d_other_version",
+  "precommit": "conflict",
+  "record": {
+   "program_version": 2
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "d",
+  "lifecycle": "as_prepared",
+  "name": "d_other_digest",
+  "precommit": "conflict",
+  "record": {
+   "program_digest": "sha256:1212121212121212121212121212121212121212121212121212121212121212"
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "human_trial",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "d",
+  "lifecycle": "as_prepared",
+  "name": "d_claims_released_while_registered",
+  "precommit": "conflict",
+  "record": {
+   "lifecycle_state": "released",
+   "trial": false
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "d",
+  "lifecycle": "as_prepared",
+  "name": "d_replayed_entry",
+  "precommit": "conflict",
+  "record": {},
+  "replay": true
+ },
+ {
+  "apply": "skipped",
+  "base": "agent_released",
+  "entry": {
+   "branch": "main",
+   "promoted_from": "sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "e",
+  "lifecycle": "as_prepared",
+  "name": "e_promoted_copy",
+  "precommit": "skipped",
+  "record": {},
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {
+   "branch": "main"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "e",
+  "lifecycle": "as_prepared",
+  "name": "e_run_on_main",
+  "precommit": "refused",
+  "record": {
+   "branch": "main"
+  },
+  "replay": false
+ },
+ {
+  "apply": "admitted",
+  "base": "agent_released",
+  "entry": {
+   "branch": "agent/claude-client/1"
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "e",
+  "lifecycle": "as_prepared",
+  "name": "e_run_on_agent_branch",
+  "precommit": "ok",
+  "record": {
+   "branch": "agent/claude-client/1"
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "human_trial",
+  "entry": {
+   "journal_kind": "agent",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   }
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "policy",
+  "lifecycle": "as_prepared",
+  "name": "p_agent_trial_registered",
+  "precommit": "refused",
+  "record": {
+   "principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   }
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "human_trial",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "policy",
+  "lifecycle": "as_prepared",
+  "name": "p_human_registered_without_trial",
+  "precommit": "refused",
+  "record": {
+   "trial": false
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "human_override",
+  "entry": {
+   "journal_kind": "agent",
+   "origin_principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   }
+  },
+  "events": [
+   "RunStarted"
+  ],
+  "item": "policy",
+  "lifecycle": "as_prepared",
+  "name": "p_agent_override_deprecated",
+  "precommit": "refused",
+  "record": {
+   "principal": {
+    "id": "agent-1",
+    "kind": "agent"
+   }
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "human_override",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "policy",
+  "lifecycle": "as_prepared",
+  "name": "p_human_deprecated_without_override",
+  "precommit": "refused",
+  "record": {
+   "override_deprecated": false
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "policy",
+  "lifecycle": "as_prepared",
+  "name": "p_override_on_released",
+  "precommit": "refused",
+  "record": {
+   "override_deprecated": true
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "policy",
+  "lifecycle": "as_prepared",
+  "name": "p_outcome_not_pending",
+  "precommit": "refused",
+  "record": {
+   "outcome": "succeeded"
+  },
+  "replay": false
+ },
+ {
+  "apply": "refused",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "policy",
+  "lifecycle": "as_prepared",
+  "name": "p_unknown_record_field",
+  "precommit": "refused",
+  "record": {
+   "approved_by": "alice"
+  },
+  "replay": false
+ },
+ {
+  "apply": "admitted",
+  "base": "agent_released",
+  "entry": {},
+  "events": [
+   "RunStarted"
+  ],
+  "item": "policy",
+  "lifecycle": "as_prepared",
+  "name": "p_agent_trial_released",
+  "precommit": "ok",
+  "record": {
+   "trial": true
+  },
+  "replay": false
+ }
+]

@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-run]
 satisfies: [REQ-AUTO.RUN-001, REQ-AUTO.RUN-002]
 covers: [PW.AUT.05]
 depends_on: [AUTO.REC.LIFE, AUTO.PROG.FAMILY, CORE.PRJ]
@@ -74,7 +75,10 @@ Everything that must be true before a run starts, and the record that says what 
 
 ## Open questions
 
-- None.
+- Build notes (fid-run): `prepare_run` takes the bus-derived `Principal`; the input datasets are opened through a host-wired `InputSource` (the bus file policy and root handles) and the run ID comes from a host-wired `RunIds`. A `ProgramRef::Identified` program is read from the lifecycle store's frozen bytes; an unknown digest is `program_not_found` (a code not in the Errors list above).
+- Authority (REQ-CORE.RPL.RECON.FOLD-008): the crate also defines the `RunStarted` event `{params_commitment, record}` that `AUTO.RUN.EXEC` commits and the origin-bound `RunLedger` fold with its commit-stage `precommit`. `RunStarted` is reserved to `program.run@1`; `AUTO.RUN.BATCH` must start each run through that command, or a later change adds a second owner. Rules, branch rule (every branch counts, a run never starts on `main`, promoted copies are skipped) and refusal policy (fatal) are in `crates/fid-run/src/ledger.rs`.
+- `AUTO.PROG.FMT` has no per-step `retargetable` field yet (see `AUTO.REC.LIFT`), so `steps_retargetable` marks every step `true`.
+- REQ-005's trial mark on results is carried by the record's `trial` flag; marking each result is `AUTO.RUN.EXEC`'s job.
 
 ## Children
 
