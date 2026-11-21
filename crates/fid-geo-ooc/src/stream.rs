@@ -195,7 +195,7 @@ fn new_block(cap: usize, ch: ChannelSet) -> Result<StreamBlock, OocError> {
 /// Appends `src[r]` to `dst` (capacity reserved fallibly; a no-op on a reserved block).
 fn ext<T: Copy>(dst: &mut Vec<T>, src: &[T], r: Range<usize>, column: &'static str) -> Result<(), OocError> {
     let s = src.get(r).ok_or(chunk_fault(Fault::ColumnLength { column }))?;
-    dst.try_reserve(s.len()).map_err(|_| OocError::AllocationFailed { needed: (s.len() * size_of::<T>()) as u64 })?;
+    dst.try_reserve(s.len()).map_err(|_| OocError::AllocationFailed { needed: core::mem::size_of_val(s) as u64 })?;
     dst.extend_from_slice(s);
     Ok(())
 }
