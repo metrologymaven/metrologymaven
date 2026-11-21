@@ -270,7 +270,7 @@ impl CommandTable {
                 HiddenCommandReason::HiddenMajor,
                 Detail::new(&format!("{shown}@{major}: hidden major; only replay may invoke it")),
             )),
-            State::Active | State::Deprecated | State::Hidden => Ok(Resolved { table: self, cmd }),
+            State::Active | State::Deprecated | State::Hidden => Ok(Resolved { table: self, cmd, agent }),
         }
     }
 
@@ -348,6 +348,8 @@ impl TableCache {
 pub struct Resolved<'a> {
     table: &'a CommandTable,
     cmd: &'a Command,
+    /// Resolved for an `agent` principal: hidden successors are not named (D-035).
+    agent: bool,
 }
 
 impl fmt::Debug for Resolved<'_> {
@@ -379,11 +381,20 @@ impl<'a> Resolved<'a> {
         format!("{}@{}", self.cmd.def.id, self.cmd.def.major)
     }
 
-    /// For a deprecated major, its successor and removal date, if declared.
+    /// For a deprecated major, its successor and removal date, if declared. Resolved for an
+    /// agent, the successor is left out unless it is a command of this table the agent can see
+    /// (MCP projection not `never`), as `registry.describe_command@1` does (D-035, REQ-009).
     pub fn deprecation(&self) -> Option<Deprecation> {
         let l = &self.cmd.lifecycle;
-        (l.state == State::Deprecated)
-            .then(|| Deprecation { replaced_by: l.replaced_by.clone(), remove_after: l.remove_after })
+        let replaced_by = l.replaced_by.clone().filter(|r| {
+            !self.agent
+                || self
+                    .table
+                    .commands
+                    .get(&(r.name().to_string(), r.major()))
+                    .is_some_and(|c| mcp_projection(&c.def) != Projection::Never)
+        });
+        (l.state == State::Deprecated).then(|| Deprecation { replaced_by, remove_after: l.remove_after })
     }
 
     /// Validates a parameter document given as JSON text (REQ-003..005, REQ-008).

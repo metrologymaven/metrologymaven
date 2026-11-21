@@ -289,6 +289,27 @@ fn hidden_commands_resolve_for_an_agent_exactly_as_missing_ones() {
     assert!(matches!(t.resolve("h.mix", 3, &human), Err(BusError::HiddenCommand(..))));
 }
 
+/// D-035 (REQ-009): a deprecated major whose successor is hidden from agents does not name it
+/// to an agent; a visible successor is named; a person sees both.
+#[test]
+fn a_deprecation_notice_never_names_a_hidden_successor_to_an_agent() {
+    let mut defs = Vec::new();
+    for (id, successor_projection) in [("h.mix", "never"), ("h.ok", "exposed")] {
+        let mut old = vis_def(id, 1, "exposed", r#"["cli","mcp"]"#, "deprecated");
+        old.lifecycle.insert("replaced_by".to_string(), text(&format!("{id}@2")));
+        defs.push(old);
+        defs.push(vis_def(id, 2, successor_projection, r#"["cli","mcp"]"#, "active"));
+    }
+    let t = CommandTable::build(DIGEST, defs, catalogue(), &ContextTypes::new()).unwrap();
+    let successor = |id: &str, tag: &str| {
+        t.resolve(id, 1, &principal(tag)).unwrap().deprecation().unwrap().replaced_by.map(|r| r.to_string())
+    };
+    assert_eq!(successor("h.mix", "agent"), None);
+    assert_eq!(successor("h.ok", "agent"), Some("h.ok@2".to_string()));
+    assert_eq!(successor("h.mix", "human"), Some("h.mix@2".to_string()));
+    assert_eq!(successor("h.ok", "human"), Some("h.ok@2".to_string()));
+}
+
 /// D-035 (REQ-009): for an agent, no stage after resolve can use a hidden command's
 /// schema. Whatever the parameters (valid, failing the hidden schema, not an object), the call
 /// gives the same bytes as the same call against a table without the hidden majors: the

@@ -36,7 +36,7 @@ Enforces each command's MCP projection at the bus, behind the generated MCP surf
 ## Requirements
 
 - **REQ-CORE.BUS.POL.PROJ-001** If a command whose projection is `request_only`, or whose definition has `human_only: true`, is invoked through an MCP channel, then the bus shall return `PendingRequest`, and the pipeline shall append one W1 `request.file_request@1` entry holding the command ID and major, the parameters commitment, the requester principal and the branch head at filing, and return the request ID.
-- **REQ-CORE.BUS.POL.PROJ-002** If a command whose projection is `never` is invoked through an MCP channel, then the bus shall refuse it exactly as a command it does not hold: `not_found` with reason `unknown_command` and the same detail (`"<id>"@<major>: unknown command`), byte for byte, so the caller cannot tell that the command exists (D-035), and commit nothing.
+- **REQ-CORE.BUS.POL.PROJ-002** If a command whose projection is `never` is invoked through an MCP channel, then the bus shall refuse it exactly as a command it does not hold: `not_found` with reason `unknown_command` and the same detail (`"<id>"@<major>: unknown command`), byte for byte, so the caller cannot tell that the command exists (D-035), and commit nothing. This refusal comes before every other check of the call, `approval_of` included. Identical means identical in content (the same code, reason and detail bytes); the refusals are not claimed to take the same time.
 - **REQ-CORE.BUS.POL.PROJ-003** When a `human` principal invokes a command with `approval_of` naming a pending request whose command and parameters digest match the invocation, the bus shall allow it, mark the request `approved` in the same commit, and record the requester and request ID in the entry.
 - **REQ-CORE.BUS.POL.PROJ-004** If `approval_of` names a request that is not pending, whose parameters digest differs, or the approver is not `human`, then the bus shall return `policy` with reason `bad_approval` and commit nothing.
 - **REQ-CORE.BUS.POL.PROJ-005** When `request.withdraw_request@1` is invoked by the requester of a pending request, the bus shall mark it `withdrawn`; any other principal shall get `policy` with reason `not_requester`.
@@ -54,7 +54,7 @@ Enforces each command's MCP projection at the bus, behind the generated MCP surf
 - **AC-5** Given R, when the agent withdraws it, then R is `withdrawn`; when another agent withdraws it, then `policy` / `not_requester`.
 - **AC-6** Given R, when a human runs `fid request reject-request R --reason "wrong datum" --json`, then R is `rejected` and the reason is stored as untrusted text.
 - **AC-7** (replay) Given the journal from AC-1 and AC-3, when replayed in exact mode, then the outcome is `IDENTICAL`.
-- **AC-8** (error path, D-035) Given an agent and a `never` command, when it is invoked with parameters that are valid, that fail its schema, or that are not an object, then each call is refused byte for byte as the same call to a command the bus does not hold, and its schema is never evaluated against those parameters.
+- **AC-8** (error path, D-035) Given an agent and a `never` command, when it is invoked with parameters that are valid, that fail its schema, or that are not an object, then each call is refused byte for byte as the same call to a command the bus does not hold, and its schema is never evaluated against those parameters. The same holds with `approval_of` set: the refusal is the unknown-command one, not `bad_approval`.
 
 ## Design
 
@@ -96,6 +96,8 @@ Enforces each command's MCP projection at the bus, behind the generated MCP surf
 - 2026-11-21 (security fix for D-035, maintainer decision): a `never`-projected command over MCP was refused as `policy/not_on_mcp` with detail "`<id>@<major>` is not available over MCP", which told an agent that the hidden command exists. It is now refused exactly as an unknown command (`not_found/unknown_command`, same detail shape, built by the same function as the command table's refusal). REQ-002, AC-2, Algorithm and Errors are revised; the remaining paths are listed under Open questions. No REQ ID was renumbered.
 
 - 2026-11-21 (security fix for D-035, maintainer decision): new REQ-009 and AC-8 pin the order for MCP and `agent` callers: the projection rule, applied at resolution (CORE.BUS.PIPE.VALID REQ-009), comes before any parameter or result schema validation, so a hidden command's schema is never used and its refusals equal those of an unknown command. The open question on the remaining leak paths is closed. No REQ ID was renumbered.
+
+- 2026-11-21 (review of #404, D-035 security fix; maintainer waiver: cross-leaf D-035 fix, this PR also edits CORE.BUS.PIPE.VALID): `authorise` refuses a `never` command to an MCP or agent caller as unknown before the approval check (an `approval_of` used to answer `policy/bad_approval`); REQ-002 and AC-8 say so, and that the refusals are identical in content, not in timing.
 
 ## Children
 
