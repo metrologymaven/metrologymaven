@@ -393,7 +393,9 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
         def(
             "align.get_diagnostics",
             "Get diagnostics",
-            "Returns an alignment's conditioning diagnostics (length-scaled singular values, condition number,              weakest degree of freedom, ill_conditioned and unobservable_dof warnings with the threshold and its              basis) and the convergence history of an iterative method (null for closed-form methods).",
+            "Returns an alignment's conditioning diagnostics (length-scaled singular values, condition number, \
+             weakest degree of freedom, ill_conditioned and unobservable_dof warnings with the threshold and its \
+             basis) and the convergence history of an iterative method (null for closed-form methods).",
             diagnostics_params,
             diagnostics::result_schema(),
         )?,

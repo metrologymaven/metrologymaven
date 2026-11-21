@@ -18,7 +18,8 @@ Inputs (the Rust test rebuilds them from the same rules and checks the `inputs` 
 - `uni()` = `(next() >> 11) * 2^-53` and `sym()` = `2 * uni() - 1` on a splitmix64 stream.
 - Seed 14, one stream for the five geometries in this order, 10,000 points each:
   `full_cylinder`, `half_cylinder`, `long_plane`, `sphere`, `freeform`. Seed 15: `freeform_small`
-  (50 points), used twice with other parameter sets.
+  (50 points), used twice with other parameter sets. Seed 16: `offset_cylinder` then
+  `far_sphere`, 4,000 points each (few enough for the direct-SVD cross-check below).
 - `unit2()`: draw `u = sym(), v = sym()`, `s2 = u*u + v*v`, reject `s2 > 1` or `s2 < 2^-10`,
   return `(u / s, v / s)` with `s = sqrt(s2)`. `unit3()` likewise with `s2 = (u*u + v*v) + w*w`.
 - Cylinder (radius 2^-4 m, axis z through the origin): `(nx, ny) = unit2()`, `z = 0.1 * sym()`,
@@ -28,6 +29,10 @@ Inputs (the Rust test rebuilds them from the same rules and checks the `inputs` 
   `a = E1 * sym()`, `b = E2 * sym()`, normal `(a, b, 1) / sqrt((a*a + b*b) + 1)` (a form error
   that leaves the in-plane slide only weakly observable).
 - Sphere (radius 2^-3 m, centre at the origin): `n = unit3()`, point `R n`, normal `n`.
+- Offset cylinder: the cylinder with its axis through `(0.05, 0, 0)` (50 mm off the origin):
+  point `(0.05 + R nx, R ny, z)`, `tz` locked.
+- Far sphere: the sphere with its centre at `(2, 0, 0)` (2 m from the origin): point
+  `(2 + R n0, R n1, R n2)`.
 - Freeform patch: `x = 0.1 * sym()`, `y = 0.1 * sym()`,
   `z = ((2xx - 3yy) + 5xy) + 8xxx`, `fx = (4x + 5y) + 24xx`, `fy = 5x - 6y`,
   normal `(-fx, -fy, 1) / sqrt((fx*fx + fy*fy) + 1)`.
@@ -35,6 +40,10 @@ Inputs (the Rust test rebuilds them from the same rules and checks the `inputs` 
   `[nx, ny, nz, y*nz - z*ny, z*nx - x*nz, x*ny - y*nx]`, then the case's columns are kept.
 - `inputs` digest: SHA-256 of every point (3 little-endian binary64) then every kept Jacobian
   row (little-endian binary64), in order.
+
+Cross-check: for every case with at most 4,096 (padded) rows, the singular values of the scaled
+rows are also computed by the SVD model directly, without the QR reduction, and must agree with
+the QR route within `64 n u sigma_max`.
 """
 
 import hashlib
@@ -56,7 +65,9 @@ OUT = HERE / "expected.txt"
 OUT_READ = HERE / "get-diagnostics-a2.json"
 
 MAX_DIM = 4096
-RATIO = 1e-15
+FLOOR = 1e-15
+GUARD = 8.0
+U = 2.0 ** -53
 AXIS = 0.9
 DEFAULT_THRESHOLD = 1e8
 DOFS = ["tx", "ty", "tz", "rx", "ry", "rz"]
@@ -124,8 +135,18 @@ def diagnose(jac, params, points, threshold):
     has_rot = any(d >= 3 for d in idx)
     if has_rot and big_l == 0:
         raise CondFail("degenerate_scale")
-    centroid_pivot = all(t in idx for t in (0, 1, 2))
-    pivot = list(cent) if centroid_pivot else [0.0, 0.0, 0.0]
+    # Each rotation pivots on the centroid when the two translations perpendicular to its axis
+    # are free (rx: ty, tz; ry: tx, tz; rz: tx, ty).
+    perp = {3: (1, 2), 4: (0, 2), 5: (0, 1)}
+    moved = {d: all(t in idx for t in perp[d]) for d in (3, 4, 5)}
+    pivots = []
+    for d in (3, 4, 5):
+        pivots.append(("centroid" if moved[d] else "frame_origin") if d in idx else "-")
+    q = la.norm2(cent) / big_l if has_rot else 0.0
+    guard = ((GUARD * U) * float(n)) * (1.0 + q)
+    if not la.finite(guard):
+        raise CondFail("non_finite")
+    ratio = FLOOR if guard < FLOOR else guard
     col = {d: j for j, d in enumerate(idx)}
     cx, cy, cz = cent
 
@@ -134,14 +155,13 @@ def diagnose(jac, params, points, threshold):
         for j, d in enumerate(idx):
             x = row[j]
             if d >= 3:
-                if centroid_pivot:
-                    tx, ty, tz = row[col[0]], row[col[1]], row[col[2]]
+                if moved[d]:
                     if d == 3:
-                        x = (x + cz * ty) - cy * tz
+                        x = (x + cz * row[col[1]]) - cy * row[col[2]]
                     elif d == 4:
-                        x = (x - cz * tx) + cx * tz
+                        x = (x - cz * row[col[0]]) + cx * row[col[2]]
                     else:
-                        x = (x + cy * tx) - cx * ty
+                        x = (x + cy * row[col[0]]) - cx * row[col[1]]
                 x = x / big_l
                 if not la.finite(x):
                     raise CondFail("non_finite")
@@ -163,21 +183,29 @@ def diagnose(jac, params, points, threshold):
     except qrf.Fail:
         raise CondFail("numeric")
     sigma = s.sigma
+    if total <= MAX_DIM:
+        direct = svdf.svd(total, n, [x for row in rows for x in row], 0.0).sigma
+        tol = 64 * n * U * sigma[0]
+        for a, b in zip(direct, sigma):
+            assert abs(a - b) <= tol, ("direct SVD disagrees", a, b, tol)
     v = [s.v[j * n + (n - 1)] for j in range(n)]
     smax = sigma[0]
     cond = s.cond
     if smax == 0:
         nu = n
     else:
-        lim = RATIO * smax
+        lim = ratio * smax
         nu = sum(1 for x in sigma if x < lim)
     best = 0
     for j in range(1, n):
         if abs(v[j]) > abs(v[best]):
             best = j
+    weak_pivot = "-"
     if abs(v[best]) > AXIS:
         kind = "translation" if idx[best] < 3 else "rotation"
         axis = "xyz"[idx[best] % 3]
+        if idx[best] >= 3:
+            weak_pivot = pivots[idx[best] - 3]
     else:
         kind, axis = "twist", "-"
     angular, linear = [0.0] * 3, [0.0] * 3
@@ -195,7 +223,9 @@ def diagnose(jac, params, points, threshold):
     return {
         "length_scale": [big_l],
         "centroid": cent,
-        "pivot": ["centroid" if centroid_pivot else "frame_origin"] + pivot,
+        "pivots": pivots,
+        "ratio": ratio,
+        "weak_pivot": weak_pivot,
         "sigma": sigma,
         "cond": cond,
         "n_unobservable": nu,
@@ -255,6 +285,16 @@ def long_plane(st):
     b = E2 * st.sym()
     s = math.sqrt((a * a + b * b) + 1.0)
     return (x, y, 0.0), (a / s, b / s, 1.0 / s)
+
+
+def offset_cylinder(st):
+    (x, y, z), nrm = cylinder(st, False)
+    return (0.05 + x, y, z), nrm
+
+
+def far_sphere(st):
+    (x, y, z), nrm = sphere(st)
+    return (2.0 + x, y, z), nrm
 
 
 def sphere(st):
@@ -317,6 +357,9 @@ def cases():
     geo["freeform"] = build(lambda: freeform(st), N_POINTS)
     small = Stream(15)
     geo["freeform_small"] = build(lambda: freeform(small), 50)
+    far = Stream(16)
+    geo["offset_cylinder"] = build(lambda: offset_cylinder(far), 4000)
+    geo["far_sphere"] = build(lambda: far_sphere(far), 4000)
     out = []
     for name, src, params, thr in [
         ("full_cylinder", "full_cylinder", CYL, DEFAULT_THRESHOLD),
@@ -327,6 +370,8 @@ def cases():
         ("freeform", "freeform", ALL6, DEFAULT_THRESHOLD),
         ("small_translations", "freeform_small", ["tx", "ty", "tz"], DEFAULT_THRESHOLD),
         ("small_tilt", "freeform_small", ["tz", "rx", "ry"], DEFAULT_THRESHOLD),
+        ("offset_cylinder", "offset_cylinder", CYL, DEFAULT_THRESHOLD),
+        ("far_sphere", "far_sphere", ALL6, DEFAULT_THRESHOLD),
     ]:
         pts, rows = geo[src]
         out.append((name, params, thr, pts, keep(rows, params)))
@@ -359,11 +404,12 @@ def render():
         put("threshold", hx(thr))
         put("length_scale", hx(d["length_scale"][0]))
         put("centroid", *[hx(x) for x in d["centroid"]])
-        put("pivot", d["pivot"][0], *[hx(x) for x in d["pivot"][1:]])
+        put("pivots", *d["pivots"])
+        put("ratio", hx(d["ratio"]))
         put("sigma", *[hx(x) for x in d["sigma"]])
         put("cond", "inf" if d["cond"] == math.inf else hx(d["cond"]))
         put("n_unobservable", d["n_unobservable"])
-        put("weakest", *d["weakest"])
+        put("weakest", *d["weakest"], d["weak_pivot"])
         put("vector", *[hx(x) for x in d["vector"]])
         put("angular", *[hx(x) for x in d["angular"]])
         put("linear", *[hx(x) for x in d["linear"]])
@@ -394,8 +440,7 @@ def read_payload():
     name, params, thr, pts, jac = next(c for c in cases() if c[0] == "wide")
     d = diagnose(jac, params, pts, thr)
     kind, axis = d["weakest"]
-    pivot_kind = d["pivot"][0]
-    wname = name_of(kind, axis, pivot_kind)
+    wname = name_of(kind, axis, d["weak_pivot"])
     threshold = {"basis": "default_unverified", "value": hx(thr)}
 
     def m(xs):
@@ -409,10 +454,10 @@ def read_payload():
         "n_rows": len(jac),
         "n_unobservable": d["n_unobservable"],
         "params": params,
-        "pivot": {"kind": pivot_kind, "point": m(d["pivot"][1:])},
+        "pivots": {k: (None if v == "-" else v) for k, v in zip(["rx", "ry", "rz"], d["pivots"])},
         "singular_values": [hx(x) for x in d["sigma"]],
         "threshold": threshold,
-        "unobservable_ratio": hx(RATIO),
+        "unobservable_ratio": {"basis": "default_unverified", "value": hx(d["ratio"])},
         "weakest_dof": {
             "angular": {"unit": "rad", "value": d["angular"]},
             "axis": None if axis == "-" else axis,

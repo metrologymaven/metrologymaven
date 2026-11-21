@@ -30,7 +30,7 @@ pub mod report;
 pub use cond::{
     diagnose, diagnose_reduced, AlignmentDiagnostics, Axis, CondError, CondWarning, MotionKind, PivotKind, Threshold,
     ThresholdBasis, WeakestDof, AXIS_COMPONENT, DEFAULT_ILL_THRESHOLD, MAX_COND_ROWS, MAX_SCALE_POINTS,
-    UNOBSERVABLE_RATIO,
+    UNOBSERVABLE_FLOOR, UNOBSERVABLE_GUARD,
 };
 pub use constr::{
     combined_weights, linearise, pose_from_params, reduced_jacobian, validate, verify_locks, CertifiedPose,

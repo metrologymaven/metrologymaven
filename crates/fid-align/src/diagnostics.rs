@@ -18,15 +18,18 @@
 //!
 //! - `report`: `{"digest", "id"}` of the residual report the diagnostics belong to.
 //! - `conditioning`: `{"centroid", "condition_number", "length_scale", "n_points", "n_rows",
-//!   "n_unobservable", "params", "pivot", "singular_values", "threshold", "unobservable_ratio",
+//!   "n_unobservable", "params", "pivots", "singular_values", "threshold", "unobservable_ratio",
 //!   "weakest_dof"}`. Lengths are `{"unit": "m", "value": ..}` and angles
 //!   `{"unit": "rad", "value": ..}`; dimensionless values (singular values, the condition
 //!   number, the threshold, the ratio and the singular vector) are bit-exact `"0x"` + 16 hex
 //!   digits, as residual weights are, because the registry's quantity catalogue has no
-//!   dimensionless kind. `condition_number` is `null` when infinite. `pivot` is
-//!   `{"kind": "centroid" | "frame_origin", "point": length vector}`. `threshold` is
+//!   dimensionless kind. `condition_number` is `null` when infinite. `pivots` is
+//!   `{"rx", "ry", "rz"}`, each `"centroid"`, `"frame_origin"` or `null` (rotation not free).
+//!   `threshold` is
 //!   `{"basis": "default_unverified" | "caller", "value"}`: the default threshold is a claimed,
-//!   uncalibrated value and says so (D-045). `weakest_dof` is `{"angular", "axis", "kind",
+//!   uncalibrated value and says so (D-045);
+//!   `unobservable_ratio` is `{"basis": "default_unverified", "value"}` for the same reason (its
+//!   guard constant 8 is not calibrated). `weakest_dof` is `{"angular", "axis", "kind",
 //!   "linear", "name", "vector"}`.
 //! - `warnings`: at most one, `{"code": "unobservable_dof", "count", "weakest_dof"}` or
 //!   `{"code": "ill_conditioned", "condition_number", "threshold", "weakest_dof"}`, with
@@ -40,7 +43,7 @@ use crate::element::{id_value, obj, parse_id};
 use crate::error::AlignError;
 use crate::model::AlignmentModel;
 use crate::residuals::ResidualStore;
-use fid_align_solve::{AlignmentDiagnostics, CondWarning, ConvergenceHistory, Threshold, UNOBSERVABLE_RATIO};
+use fid_align_solve::{AlignmentDiagnostics, Axis, CondWarning, ConvergenceHistory, Threshold};
 use fid_canon::CValue;
 use fid_uuid::Uuid;
 use std::collections::BTreeMap;
@@ -128,6 +131,8 @@ fn threshold_value(t: &Threshold) -> CValue {
 
 /// The `conditioning` object of stored diagnostics.
 pub fn conditioning_value(d: &AlignmentDiagnostics) -> CValue {
+    let pivot = |a: Axis| d.pivot(a).map_or(CValue::Null, |p| text(p.as_str()));
+    let pivots = obj([("rx", pivot(Axis::X)), ("ry", pivot(Axis::Y)), ("rz", pivot(Axis::Z))]);
     let w = d.weakest_dof();
     let weakest = obj([
         ("angular", quantity("rad", numbers(&w.angular()))),
@@ -145,10 +150,13 @@ pub fn conditioning_value(d: &AlignmentDiagnostics) -> CValue {
         ("n_rows", num(d.n_rows() as u64)),
         ("n_unobservable", num(d.n_unobservable() as u64)),
         ("params", CValue::Arr(d.params().iter().map(|p| text(p.name())).collect())),
-        ("pivot", obj([("kind", text(d.pivot().as_str())), ("point", quantity("m", numbers(&d.pivot_point())))])),
+        ("pivots", pivots),
         ("singular_values", bit_list(d.singular_values())),
         ("threshold", threshold_value(&d.threshold())),
-        ("unobservable_ratio", CValue::F64Bits(UNOBSERVABLE_RATIO)),
+        (
+            "unobservable_ratio",
+            obj([("basis", text("default_unverified")), ("value", CValue::F64Bits(d.unobservable_ratio()))]),
+        ),
         ("weakest_dof", weakest),
     ])
 }
@@ -281,6 +289,10 @@ fn enum_of(items: &[&str]) -> CValue {
     obj([("enum", texts(items))])
 }
 
+fn pivot_schema() -> CValue {
+    obj([("enum", CValue::Arr(vec![text("centroid"), text("frame_origin"), CValue::Null]))])
+}
+
 fn threshold_schema() -> CValue {
     object(vec![("basis", enum_of(&["caller", "default_unverified"])), ("value", bits_schema(false))])
 }
@@ -314,16 +326,13 @@ pub fn result_schema() -> CValue {
                 ("items", enum_of(&["rx", "ry", "rz", "tx", "ty", "tz"])),
             ]),
         ),
-        (
-            "pivot",
-            object(vec![
-                ("kind", enum_of(&["centroid", "frame_origin"])),
-                ("point", quantity_schema("length", "m", Some(3))),
-            ]),
-        ),
+        ("pivots", object(vec![("rx", pivot_schema()), ("ry", pivot_schema()), ("rz", pivot_schema())])),
         ("singular_values", bits_array(1)),
         ("threshold", threshold_schema()),
-        ("unobservable_ratio", bits_schema(false)),
+        (
+            "unobservable_ratio",
+            object(vec![("basis", enum_of(&["default_unverified"])), ("value", bits_schema(false))]),
+        ),
         ("weakest_dof", weakest),
     ]);
     let unobservable = object(vec![

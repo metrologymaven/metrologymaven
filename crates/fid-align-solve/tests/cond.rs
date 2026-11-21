@@ -9,7 +9,7 @@
 use std::collections::BTreeMap;
 
 use fid_align_solve::{
-    diagnose, diagnose_reduced, reduced_jacobian, validate, AlignmentDiagnostics, CondError, CondWarning, Dof,
+    diagnose, diagnose_reduced, reduced_jacobian, validate, AlignmentDiagnostics, Axis, CondError, CondWarning, Dof,
     DofLocks, FrameContext, LockFrameRef, MotionKind, PivotKind, Threshold, ThresholdBasis, WeightSpec,
     DEFAULT_ILL_THRESHOLD,
 };
@@ -110,6 +110,16 @@ fn long_plane(st: &mut Stream) -> Sample {
     ([x, y, 0.0], [a / s, b / s, 1.0 / s])
 }
 
+fn offset_cylinder(st: &mut Stream) -> Sample {
+    let ([x, y, z], n) = cylinder(st, false);
+    ([0.05 + x, y, z], n)
+}
+
+fn far_sphere(st: &mut Stream) -> Sample {
+    let ([x, y, z], n) = sphere(st);
+    ([2.0 + x, y, z], n)
+}
+
 fn sphere(st: &mut Stream) -> Sample {
     let r = 0.125;
     let n = st.unit3();
@@ -157,6 +167,9 @@ fn geometries() -> BTreeMap<&'static str, Geometry> {
     g.insert("freeform", build(10_000, || freeform(&mut st)));
     let mut small = Stream(15);
     g.insert("freeform_small", build(50, || freeform(&mut small)));
+    let mut far = Stream(16);
+    g.insert("offset_cylinder", build(4000, || offset_cylinder(&mut far)));
+    g.insert("far_sphere", build(4000, || far_sphere(&mut far)));
     g
 }
 
@@ -219,15 +232,23 @@ fn check(name: &str, d: &AlignmentDiagnostics, exp: &BTreeMap<(String, String), 
     let get = |k: &str| exp[&(name.to_string(), k.to_string())].clone();
     assert_eq!(vec![bits(d.length_scale())], get("length_scale"), "{name} length_scale");
     assert_eq!(all(&d.centroid()), get("centroid"), "{name} centroid");
-    let mut pivot = vec![d.pivot().as_str().to_string()];
-    pivot.extend(all(&d.pivot_point()));
-    assert_eq!(pivot, get("pivot"), "{name} pivot");
+    let pivots: Vec<String> = d.pivots().iter().map(|p| p.map_or("-", |p| p.as_str()).to_string()).collect();
+    assert_eq!(pivots, get("pivots"), "{name} pivots");
+    assert_eq!(vec![bits(d.unobservable_ratio())], get("ratio"), "{name} unobservable ratio");
     assert_eq!(all(d.singular_values()), get("sigma"), "{name} singular values");
     assert_eq!(vec![opt(d.condition_number())], get("cond"), "{name} condition number");
     assert_eq!(vec![d.n_unobservable().to_string()], get("n_unobservable"), "{name} n_unobservable");
     let w = d.weakest_dof();
     let axis = w.kind().axis().map_or("-", |a| a.as_str());
-    assert_eq!(vec![w.kind().kind_str().to_string(), axis.to_string()], get("weakest"), "{name} weakest");
+    let weak_pivot = match w.kind() {
+        MotionKind::Rotation(a) => d.pivot(a).map_or("-", |p| p.as_str()),
+        _ => "-",
+    };
+    assert_eq!(
+        vec![w.kind().kind_str().to_string(), axis.to_string(), weak_pivot.to_string()],
+        get("weakest"),
+        "{name} weakest"
+    );
     assert_eq!(all(w.vector()), get("vector"), "{name} vector");
     assert_eq!(all(&w.angular()), get("angular"), "{name} angular");
     assert_eq!(all(&w.linear()), get("linear"), "{name} linear");
@@ -253,7 +274,7 @@ fn ac1_every_reference_case_matches_bit_for_bit() {
     let exp = expected();
     let geo = geometries();
     let names: std::collections::BTreeSet<&String> = exp.keys().map(|(c, _)| c).collect();
-    assert_eq!(names.len(), 9);
+    assert_eq!(names.len(), 11);
     for name in names {
         let c = case(name, &exp, &geo);
         let d = diagnose(&c.jacobian, &c.params, &c.points, c.threshold).unwrap();
@@ -262,15 +283,27 @@ fn ac1_every_reference_case_matches_bit_for_bit() {
 }
 
 #[test]
-fn ac1_full_and_half_cylinder_name_the_rotation_about_the_axis_as_unobservable() {
-    for name in ["full_cylinder", "half_cylinder"] {
+fn ac1_full_cylinder_names_the_rotation_about_the_axis_as_unobservable() {
+    // Axis z through the frame origin, tz locked; rz pivots on the centroid (tx, ty free).
+    for name in ["full_cylinder", "offset_cylinder"] {
         let d = run(name);
         assert_eq!(d.warnings(), &[CondWarning::UnobservableDof { count: 1 }][..], "{name}");
-        assert_eq!(d.weakest_dof().kind(), MotionKind::Rotation(fid_align_solve::Axis::Z));
-        assert_eq!(d.pivot(), PivotKind::FrameOrigin, "tz is locked");
-        assert_eq!(d.weakest_dof().name(), "rotation about z through the frame origin");
-        assert_eq!(d.condition_number(), None, "the smallest singular value is exactly 0");
+        assert_eq!(d.weakest_dof().kind(), MotionKind::Rotation(Axis::Z), "{name}");
+        assert_eq!(d.pivots(), [Some(PivotKind::FrameOrigin), Some(PivotKind::FrameOrigin), Some(PivotKind::Centroid)]);
+        assert_eq!(d.weakest_dof().name(), "rotation about z through the centroid");
     }
+    // The half cylinder is unobservable about the same axis too; its centroid is off the
+    // axis, so the null motion about the centroid is a twist.
+    let d = run("half_cylinder");
+    assert_eq!(d.warnings(), &[CondWarning::UnobservableDof { count: 1 }][..]);
+}
+
+#[test]
+fn a_sphere_2_m_from_the_origin_still_has_three_unobservable_rotations() {
+    let d = run("far_sphere");
+    assert_eq!(d.warnings(), &[CondWarning::UnobservableDof { count: 3 }][..]);
+    // The guard term lifts the ratio above the 1e-15 floor there.
+    assert!(d.unobservable_ratio() > fid_align_solve::UNOBSERVABLE_FLOOR);
 }
 
 #[test]
@@ -280,7 +313,8 @@ fn ac1_sphere_reports_three_unobservable_rotations_as_the_weakest_plus_the_count
     // The weakest motion is a rotation: its linear part is negligible.
     let w = d.weakest_dof();
     assert!(w.linear().iter().all(|x| x.abs() < 1e-2), "{:?}", w.linear());
-    assert_eq!(d.pivot(), PivotKind::Centroid);
+    assert_eq!(d.pivots(), [Some(PivotKind::Centroid); 3]);
+    assert_eq!(d.weakest_dof().name(), "generic twist");
 }
 
 #[test]

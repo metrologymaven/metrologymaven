@@ -30,9 +30,10 @@
 //! # Scaled Jacobian
 //!
 //! The rotation columns are taken as small rotations about the axes of the alignment (lock)
-//! frame through its origin, which is what [`crate::linearise`] gives at zero angles. When all
-//! three translations are free, each rotation column is first moved to the axis through the
-//! centroid (the **pivot**; otherwise the pivot is the frame origin and nothing is moved):
+//! frame through its origin, which is what [`crate::linearise`] gives at zero angles. Each
+//! rotation has its own **pivot**: when the two translations perpendicular to its axis are free
+//! (`rx`: `ty` and `tz`; `ry`: `tx` and `tz`; `rz`: `tx` and `ty`), its column is first moved to
+//! the parallel axis through the centroid, using only those two translations:
 //!
 //! ```text
 //! rx' = (rx + cz * ty) - cy * tz
@@ -40,7 +41,8 @@
 //! rz' = (rz + cy * tx) - cx * ty
 //! ```
 //!
-//! (the translation entries of the same row), then divided by `L` (one division). The scaled
+//! (the translation entries of the same row); otherwise its pivot is the frame origin and the
+//! column is not moved. Every rotation column is then divided by `L` (one division). The scaled
 //! rotation parameter is the arc length `L * angle`, so every scaled column has the unit of the
 //! residual per metre and the singular values are dimensionless. A non-finite scaled entry is
 //! `non_finite`. Translation columns are copied bit for bit.
@@ -57,8 +59,14 @@
 //!
 //! # Warnings (REQ-002, REQ-003)
 //!
-//! With `smax = sigma[0]`: the count of unobservable DoFs is the number of singular values
-//! below `1e-15 * smax` (one product), or `n` when `smax == 0`. If it is positive the one
+//! The unobservable ratio is `rho = total_max(1e-15, ((8 * u) * n) * (1 + q))` with
+//! `u = 2^-53`, `n` the parameter count and `q = |c| / L` (`|c| = red::norm2(centroid)`, the
+//! centroid's distance from the frame origin) when a rotation is free, else `q = 0`. The
+//! `8 * u * n * (1 + |c| / L)` term bounds the rounding of the scaled columns of a part far from
+//! the frame origin, where the floor `1e-15` alone would call an exact null direction weak; the
+//! constant 8 is `[unverified]` (not calibrated) and the result records `rho` as
+//! `default_unverified` (D-045). With `smax = sigma[0]`: the count of unobservable DoFs is the
+//! number of singular values below `rho * smax` (one product), or `n` when `smax == 0`. If it is positive the one
 //! warning is `unobservable_dof` (with the count). Otherwise, if the condition number
 //! `sigma[0] / sigma[n-1]` (from the SVD; infinite when the smallest is 0 or the quotient
 //! overflows) is above the threshold, the warning is `ill_conditioned`. Else there is none.
@@ -68,7 +76,7 @@
 //! `v` is the right singular vector of the smallest singular value (the last column of the
 //! SVD's `V`, signed by its rule). `j` is the first index of the largest `|v_j|`. If
 //! `|v_j| > 0.9` the motion is named a translation along, or a rotation about, the frame axis of
-//! parameter `j` (a rotation through the pivot); otherwise it is a generic twist. The motion is
+//! parameter `j` (a rotation through that rotation's pivot); otherwise it is a generic twist. The motion is
 //! also given converted back to angular (`v_r / L`, rad) and linear (`v_t`, m) parts per frame
 //! axis, `+0.0` for a parameter that is not free.
 //!
@@ -93,8 +101,13 @@ use crate::hist::ConvergenceHistory;
 /// The default ill-conditioning threshold (REQ-ALN.QA.COND-002), `[unverified]`: not yet
 /// calibrated on `ALN.BFIT.BENCH` / `ALN.PRE.CORPUS` cases.
 pub const DEFAULT_ILL_THRESHOLD: f64 = 1e8;
-/// A singular value below this times the largest is unobservable (REQ-ALN.QA.COND-003).
-pub const UNOBSERVABLE_RATIO: f64 = 1e-15;
+/// The floor of the unobservable ratio (REQ-ALN.QA.COND-003): a singular value below the ratio
+/// times the largest is unobservable.
+pub const UNOBSERVABLE_FLOOR: f64 = 1e-15;
+/// The rounding-guard factor of the unobservable ratio, `[unverified]`: not yet calibrated.
+pub const UNOBSERVABLE_GUARD: f64 = 8.0;
+/// Unit roundoff `2^-53`.
+const U: f64 = 1.0 / 9_007_199_254_740_992.0;
 /// The normalised component above which the weakest DoF is named after one axis
 /// (REQ-ALN.QA.COND-004).
 pub const AXIS_COMPONENT: f64 = 0.9;
@@ -201,7 +214,7 @@ impl Axis {
 pub enum MotionKind {
     /// A translation along a frame axis.
     Translation(Axis),
-    /// A rotation about a frame axis through the pivot.
+    /// A rotation about a frame axis through that rotation's pivot.
     Rotation(Axis),
     /// Neither: no normalised component above [`AXIS_COMPONENT`].
     Twist,
@@ -231,7 +244,8 @@ impl MotionKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct WeakestDof {
     kind: MotionKind,
-    pivot: PivotKind,
+    /// The pivot of the rotation the motion is named after.
+    pivot: Option<PivotKind>,
     vector: Vec<f64>,
     angular: [f64; 3],
     linear: [f64; 3],
@@ -247,7 +261,8 @@ impl WeakestDof {
         &self.vector
     }
 
-    /// Angular part, rad per unit of the scaled vector, about the frame axes through the pivot.
+    /// Angular part, rad per unit of the scaled vector, about the frame axes through each
+    /// rotation's pivot.
     pub fn angular(&self) -> [f64; 3] {
         self.angular
     }
@@ -261,8 +276,8 @@ impl WeakestDof {
     /// `rotation about z through the frame origin` or `generic twist`.
     pub fn name(&self) -> String {
         let through = match self.pivot {
-            PivotKind::Centroid => "the centroid",
-            PivotKind::FrameOrigin => "the frame origin",
+            Some(PivotKind::Centroid) => "the centroid",
+            _ => "the frame origin",
         };
         match self.kind {
             MotionKind::Translation(a) => format!("translation along {}", a.as_str()),
@@ -278,7 +293,7 @@ pub enum CondWarning {
     /// The condition number exceeds the threshold (REQ-ALN.QA.COND-002); the weakest DoF is
     /// in [`AlignmentDiagnostics::weakest_dof`].
     IllConditioned { condition_number: Option<f64>, threshold: Threshold },
-    /// `count` singular values are below [`UNOBSERVABLE_RATIO`] times the largest
+    /// `count` singular values are below the unobservable ratio times the largest
     /// (REQ-ALN.QA.COND-003); the weakest of them is [`AlignmentDiagnostics::weakest_dof`].
     UnobservableDof { count: usize },
 }
@@ -302,8 +317,9 @@ pub struct AlignmentDiagnostics {
     n_points: usize,
     length_scale: f64,
     centroid: [f64; 3],
-    pivot: PivotKind,
+    pivots: [Option<PivotKind>; 3],
     singular_values: Vec<f64>,
+    unobservable_ratio: f64,
     condition_number: Option<f64>,
     n_unobservable: usize,
     weakest: WeakestDof,
@@ -338,16 +354,20 @@ impl AlignmentDiagnostics {
         self.centroid
     }
 
-    pub fn pivot(&self) -> PivotKind {
-        self.pivot
+    /// The pivot of the rotation about each frame axis (`x`, `y`, `z`); `None` when that
+    /// rotation is not free.
+    pub fn pivots(&self) -> [Option<PivotKind>; 3] {
+        self.pivots
     }
 
-    /// The pivot point, metres: the centroid or the frame origin.
-    pub fn pivot_point(&self) -> [f64; 3] {
-        match self.pivot {
-            PivotKind::Centroid => self.centroid,
-            PivotKind::FrameOrigin => [0.0; 3],
-        }
+    /// The pivot of the rotation about `axis`.
+    pub fn pivot(&self, axis: Axis) -> Option<PivotKind> {
+        self.pivots[axis as usize]
+    }
+
+    /// The unobservable ratio `rho` used (REQ-ALN.QA.COND-003), with the uncalibrated guard.
+    pub fn unobservable_ratio(&self) -> f64 {
+        self.unobservable_ratio
     }
 
     /// Singular values of the scaled Jacobian, descending (dimensionless).
@@ -360,7 +380,7 @@ impl AlignmentDiagnostics {
         self.condition_number
     }
 
-    /// Singular values below [`UNOBSERVABLE_RATIO`] times the largest.
+    /// Singular values below [`AlignmentDiagnostics::unobservable_ratio`] times the largest.
     pub fn n_unobservable(&self) -> usize {
         self.n_unobservable
     }
@@ -485,7 +505,8 @@ struct Scaling {
     n: usize,
     /// Column of each translation, if free.
     col: [Option<usize>; 3],
-    centroid_pivot: bool,
+    /// Per rotation axis: moved to the centroid.
+    moved: [bool; 3],
     centroid: [f64; 3],
     length: f64,
 }
@@ -500,7 +521,7 @@ impl Scaling {
                 out.push(x);
                 continue;
             }
-            let moved = if self.centroid_pivot {
+            let moved = if self.moved[d - 3] {
                 match d {
                     3 => (x + cz * t(1)) - cy * t(2),
                     4 => (x - cz * t(0)) + cx * t(2),
@@ -607,8 +628,24 @@ pub fn diagnose(
             col[d.index()] = Some(j);
         }
     }
-    let centroid_pivot = col.iter().all(Option::is_some);
-    let scaling = Scaling { idx, n, col, centroid_pivot, centroid, length };
+    // Per rotation: the two perpendicular translations must be free.
+    let moved = [
+        col[1].is_some() && col[2].is_some(),
+        col[0].is_some() && col[2].is_some(),
+        col[0].is_some() && col[1].is_some(),
+    ];
+    let mut pivots = [None; 3];
+    for d in params.iter().map(|d| d.index()).filter(|&d| d >= 3) {
+        pivots[d - 3] = Some(if moved[d - 3] { PivotKind::Centroid } else { PivotKind::FrameOrigin });
+    }
+    let q = if has_rotation { red::norm2(&centroid).map_err(non_finite("ratio"))? / length } else { 0.0 };
+    // n <= 6: the conversion is exact.
+    let guard = ((UNOBSERVABLE_GUARD * U) * n as f64) * (1.0 + q);
+    if !guard.is_finite() {
+        return Err(CondError::NonFinite { op: "ratio" });
+    }
+    let ratio = f::total_max(UNOBSERVABLE_FLOOR, guard).map_err(non_finite("ratio"))?;
+    let scaling = Scaling { idx, n, col, moved, centroid, length };
 
     // Fixed-block QR reduction to an n x n triangle, then the SVD.
     let total = if m < n { n } else { m };
@@ -646,7 +683,7 @@ pub fn diagnose(
     let n_unobservable = if smax == 0.0 {
         n
     } else {
-        let lim = UNOBSERVABLE_RATIO * smax;
+        let lim = ratio * smax;
         sigma.iter().filter(|&&x| x < lim).count()
     };
 
@@ -661,12 +698,14 @@ pub fn diagnose(
             best = j;
         }
     }
+    let mut weak_pivot = None;
     let kind = if vector[best].abs() > AXIS_COMPONENT {
         let d = idx[best];
         let axis = Axis::ALL[d % 3];
         if d < 3 {
             MotionKind::Translation(axis)
         } else {
+            weak_pivot = pivots[d - 3];
             MotionKind::Rotation(axis)
         }
     } else {
@@ -682,7 +721,6 @@ pub fn diagnose(
             angular[d - 3] = x / length;
         }
     }
-    let pivot = if centroid_pivot { PivotKind::Centroid } else { PivotKind::FrameOrigin };
     let condition_number = if cond.is_finite() { Some(cond) } else { None };
 
     let mut warnings = Vec::new();
@@ -698,11 +736,12 @@ pub fn diagnose(
         n_points: np,
         length_scale: length,
         centroid,
-        pivot,
+        pivots,
         singular_values: sigma,
+        unobservable_ratio: ratio,
         condition_number,
         n_unobservable,
-        weakest: WeakestDof { kind, pivot, vector, angular, linear },
+        weakest: WeakestDof { kind, pivot: weak_pivot, vector, angular, linear },
         warnings,
         threshold,
         history: None,
