@@ -32,6 +32,7 @@ python fixtures/core/jrn/chain/append/make_fixtures.py --check
 python fixtures/core/jrn/chain/ckpt/make_fixtures.py --check
 python fixtures/core/jrn/chain/verify/make_fixtures.py --check
 python fixtures/core/jrn/stream/alog/make_fixtures.py --check
+python fixtures/core/jrn/undo/super/make_fixtures.py --check
 python fixtures/core/prj/cont/hier/make_fixtures.py --check
 python fixtures/core/prj/stage/model/make_fixtures.py --check
 python fixtures/core/prj/stage/switch/make_fixtures.py --check
