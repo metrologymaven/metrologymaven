@@ -1,0 +1,1 @@
+{"fields":[{"label":"Part temperature","name":"temp","quantity_kind":"temperature","response":"quantity","rules":{"max":"22","min":"18"},"unit":"°C"}],"format":"operator-v1","prompt":"Read the part temperature at the probe datum and enter it."}

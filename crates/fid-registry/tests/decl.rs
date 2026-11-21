@@ -147,13 +147,18 @@ pub struct ShowManifestResult {
     #[fid(pattern = "^sha256:[0-9a-f]{64}$")]
     pub digest: String,
     pub bytes: Option<String>,
+    #[fid(
+        pattern = "^agent$",
+        description = "Present, as agent, when the result shows the agent view: the manifest of the commands an agent can see, whose digest is the digest of that view, not of the full manifest."
+    )]
+    pub view: Option<String>,
 }
 
 #[fid_command(
     id = "registry.show_manifest",
     major = 1,
     title = "Show manifest",
-    description = "Returns the digest of the registry manifest in force and, with full, its canonical bytes; with check, verifies a supplied manifest instead.",
+    description = "Returns the digest of the registry manifest in force and, with full, its canonical bytes; with check, verifies a supplied manifest instead. An agent gets the agent view: only the commands it can see.",
     side_effect = R0,
     mcp_projection = Exposed,
     determinism = D0,

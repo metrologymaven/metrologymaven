@@ -1,0 +1,1 @@
+{"fields":[{"name":"remark","response":"text","rules":{"required":false}}],"format":"operator-v1","prompt":"Any remarks?"}

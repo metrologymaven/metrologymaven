@@ -296,7 +296,7 @@ fn ac3_set_is_a0_human_only_and_never_on_mcp() {
     assert_eq!(show_def.side_effect, SideEffect::R0);
     for kind in [ChannelKind::Mcp, ChannelKind::ServerMcp] {
         let e = authorise_projection(kind, &set_def).unwrap_err();
-        assert_eq!((e.code(), e.reason()), (Code::Policy, "not_on_mcp"));
+        assert_eq!((e.code(), e.reason()), (Code::NotFound, "unknown_command"));
         assert_eq!(authorise_projection(kind, &show_def).unwrap(), Projected::Run);
     }
     // The class check refuses every principal but a human, wherever it arrives.

@@ -1,0 +1,1 @@
+{"fields":[{"name":"a","response":"integer","rules":{"max":"4","min":"5"}},{"name":"b","response":"integer","rules":{"min":"1.5"}},{"name":"c","response":"decimal","rules":{"max":3}},{"name":"d","response":"decimal","rules":{"min":"1e3"}},{"name":"e","response":"decimal","rules":{"max":"10.1","min":"10.10"}}],"format":"operator-v1","prompt":"p"}

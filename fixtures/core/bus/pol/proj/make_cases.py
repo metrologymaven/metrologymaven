@@ -75,13 +75,14 @@ REGISTRY = {
 
 # Expected projection outcome per channel, by hand from REQ-001/REQ-002: off MCP every
 # command passes this check; on MCP exposed runs, request_only and human_only file a
-# pending request, never (or no mcp surface) is policy/not_on_mcp.
+# pending request, never (or no mcp surface) is not_found/unknown_command,
+# exactly as a command that does not exist (D-035).
 ON_MCP = {
     "test.run_exposed": "run",
     "test.run_request": "pending",
-    "test.run_never": "policy/not_on_mcp",
+    "test.run_never": "not_found/unknown_command",
     "test.adopt_human": "pending",
-    "test.run_local": "policy/not_on_mcp",
+    "test.run_local": "not_found/unknown_command",
 }
 MCP_CHANNELS = ["mcp", "server_mcp"]
 OTHER_CHANNELS = ["gui", "cli", "python", "control", "server_session", "server_service", "service", "device",

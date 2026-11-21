@@ -30,7 +30,7 @@ fn bus_word(r: Result<Projected, BusError>) -> &'static str {
         Ok(Projected::Run) => "direct",
         Ok(Projected::PendingRequest) => "request_only",
         Err(e) => {
-            assert_eq!((e.code(), e.reason()), (Code::Policy, "not_on_mcp"), "{e}");
+            assert_eq!((e.code(), e.reason()), (Code::NotFound, "unknown_command"), "{e}");
             "none"
         }
     }
@@ -100,7 +100,7 @@ fn authorise_word(table: &SessionTable, ch: &TestChannel, def: &CommandDef) -> &
             }
         }
         Err(e) => {
-            assert_eq!((e.code(), e.reason()), (Code::Policy, "not_on_mcp"), "{e}");
+            assert_eq!((e.code(), e.reason()), (Code::NotFound, "unknown_command"), "{e}");
             "none"
         }
     }
