@@ -84,7 +84,7 @@ impl Kinds {
 
     /// `decimal` for the empty dimension, the one catalogue kind with this dimension, or a
     /// derived kind.
-    fn from_dim(&self, d: Dim) -> Type {
+    fn type_of_dim(&self, d: Dim) -> Type {
         if d.is_none() {
             return Type::Decimal;
         }
@@ -327,7 +327,7 @@ impl Typer<'_> {
             return self.diag(DiagCode::TypeUnknown, sp, vec![b.to_string()]);
         };
         match da.combine(db, sign) {
-            Some(d) => Some(self.kinds.from_dim(d)),
+            Some(d) => Some(self.kinds.type_of_dim(d)),
             None => self.diag(DiagCode::TypeUnknown, sp, vec!["dimension_overflow".into()]),
         }
     }
@@ -369,7 +369,7 @@ impl Typer<'_> {
             ("sqrt", [q @ Type::Quantity(k)]) => match self.kinds.dim_of(k) {
                 None => self.diag(DiagCode::TypeUnknown, sp, vec![k.to_string()]),
                 Some(d) => match d.half() {
-                    Some(h) => Some(self.kinds.from_dim(h)),
+                    Some(h) => Some(self.kinds.type_of_dim(h)),
                     None => self.mismatch(sp, "quantity with even exponents", q),
                 },
             },
@@ -384,7 +384,7 @@ impl Typer<'_> {
             ("sin" | "cos" | "tan", [x]) => self.mismatch(sp, "angle", x),
             ("atan2", [y, x]) => {
                 self.compare(sp, y, x)?;
-                Some(self.kinds.from_dim(Dim::ANGLE))
+                Some(self.kinds.type_of_dim(Dim::ANGLE))
             }
             ("len", [Type::List(_) | Type::Str]) => Some(Type::Int),
             ("len", [x]) => self.mismatch(sp, "list", x),
