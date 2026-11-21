@@ -14,6 +14,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-geo-index" = "kernel"
 "fid-kunc" = "kernel"
 "fid-kdec" = "kernel"
+# Replay equivalence policy (UNC.RDL.REP): table rep-1@1.0.0 and classifier; KNP-1, only fid-num
+# and fid-types, below CORE so fid-replay (engine) and the WASM verifier can use it.
+"fid-rep" = "kernel"
 "fid-solv" = "kernel"
 # Vendored conic solver (KRN.SOLV.CONIC.PATCH): Clarabel 0.11.1 patched to KNP-1, only fid-num;
 # lives in vendor/fid-clarabel/crate and is audited by `cargo xtask conic-audit`.
