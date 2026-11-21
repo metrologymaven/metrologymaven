@@ -140,7 +140,7 @@ const fn fld(
 }
 
 /// Parameters every fit command takes, in row order.
-const PARAMS: [Field; 19] = [
+const PARAMS: [Field; 21] = [
     fld("points", ValueType::Points, L, true),
     fld("normals", ValueType::Points, D, false),
     fld("weights", ValueType::NumberArray, D, false),
@@ -160,6 +160,9 @@ const PARAMS: [Field; 19] = [
     fld("nlls.cond_limit", ValueType::Number, D, true),
     fld("nlls.rank_tol", ValueType::Number, D, true),
     fld("nlls.lm_tau", ValueType::Number, D, true),
+    // Appended after the NLLS fields (review of #417, KRN.LSQ.RND) so earlier indices stay.
+    fld("thresholds.planarity_ratio_min", ValueType::Number, D, true),
+    fld("thresholds.cond_max", ValueType::Number, D, true),
 ];
 
 /// Result fields every fit command returns after the feature fields, in row order.
