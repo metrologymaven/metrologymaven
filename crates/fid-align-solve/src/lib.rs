@@ -8,9 +8,18 @@
 //!   residual, used and rejected counts, all with units) and the report digest. The read
 //!   command `align.get_residuals@1` lives in `fid-align` (engine layer), which stores
 //!   reports next to the alignments that reference them.
+//! - `ALN.BFIT.CONSTR`: [`constr`], degree-of-freedom locks in a named lock frame, the pose
+//!   parameterisation and its reduced Jacobian, the lock certificate, and the per-point and
+//!   per-region weight model, with the locks and weights digests.
 
+pub mod constr;
 pub mod report;
 
+pub use constr::{
+    combined_weights, linearise, pose_from_params, reduced_jacobian, validate, verify_locks, ConstrError,
+    ConstraintSet, Dof, DofLocks, FrameContext, Jacobian, Linearisation, LockFrameRef, RegionWeight, WeightInput,
+    WeightSpec, B_MAX, LOCK_TOL,
+};
 pub use report::{
     Disposition, Entry, EntryKind, EntryRef, EntryView, Length, LengthVec, RejectReason, ReportBuilder, ReportError,
     ResidualReport, ResidualStats, Unit, LAYOUT_TAG, LAYOUT_VERSION, MAX_ENTRIES, MAX_ITEM, MAX_REASONS,

@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-align-solve]
 satisfies: [REQ-ALN.BFIT-003, REQ-ALN.BFIT-004]
 covers: [GOM.ALN.10, PW.ALN.07, SA.XFM.04]
 depends_on: [GEO.FRAME, KRN.NUM]
