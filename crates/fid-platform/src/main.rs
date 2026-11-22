@@ -53,7 +53,7 @@
 //! `platform/install-manifest.schema.json` (exit 0, or 2 if it cannot).
 
 use fid_platform::{
-    bench_schema, gpu_policy, hw_profile, install_manifest, kiosk_display, matrix, page, peruser_layout,
+    bench_schema, gpu_policy, hw_profile, install_manifest, kiosk_display, matrix, os_eol, page, peruser_layout,
 };
 use std::io::{Read, Write};
 use std::path::Path;
@@ -61,6 +61,7 @@ use std::process::ExitCode;
 
 const USAGE: &str = "usage: fid-platform plat-matrix validate <file>\n       \
                      fid-platform plat-matrix page [--check] [--matrix <file>] --out <file>\n       \
+                     fid-platform plat-matrix eol-check --today <YYYY-MM-DD> [--matrix <file>] [--eol <file>]\n       \
                      fid-platform plat-hw validate [--file <path>]\n       \
                      fid-platform plat-hw validate-suite [--file <path>]\n       \
                      fid-platform plat-hw result-schema\n       \
@@ -79,6 +80,7 @@ fn main() -> ExitCode {
     match args.as_slice() {
         [group, cmd, file] if group == "plat-matrix" && cmd == "validate" => validate(file),
         [group, cmd, rest @ ..] if group == "plat-matrix" && cmd == "page" => page_cmd(rest),
+        [group, cmd, rest @ ..] if group == "plat-matrix" && cmd == "eol-check" => eol_check_cmd(rest),
         [group, cmd] if group == "plat-hw" && cmd == "validate" => validate_hw(hw_profile::DEFAULT_PATH),
         [group, cmd, flag, file] if group == "plat-hw" && cmd == "validate" && flag == "--file" => validate_hw(file),
         [group, cmd] if group == "plat-hw" && cmd == "validate-suite" => {
@@ -577,4 +579,81 @@ fn check_bundles(args: &[String]) -> ExitCode {
         println!("{f}");
     }
     ExitCode::from(1)
+}
+
+/// `plat-matrix eol-check --today <YYYY-MM-DD> [--matrix <file>] [--eol <file>]`
+/// (spec node `PLAT.MATRIX.POLICY.EOL`). Exit 0 on ok/warnings, 1 on errors, 2 on bad usage or
+/// unreadable inputs.
+fn eol_check_cmd(args: &[String]) -> ExitCode {
+    let cmd = "plat-matrix eol-check";
+    let mut today_s: Option<&str> = None;
+    let mut matrix_path: Option<&str> = None;
+    let mut eol_path: Option<&str> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--today" => {
+                let Some(v) = it.next() else {
+                    eprintln!("{cmd}: missing value for --today\n{USAGE}");
+                    return ExitCode::from(2);
+                };
+                if today_s.replace(v.as_str()).is_some() {
+                    eprintln!("{cmd}: duplicate --today\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+            }
+            "--matrix" => {
+                let Some(v) = it.next() else {
+                    eprintln!("{cmd}: missing value for --matrix\n{USAGE}");
+                    return ExitCode::from(2);
+                };
+                if matrix_path.replace(v.as_str()).is_some() {
+                    eprintln!("{cmd}: duplicate --matrix\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+            }
+            "--eol" => {
+                let Some(v) = it.next() else {
+                    eprintln!("{cmd}: missing value for --eol\n{USAGE}");
+                    return ExitCode::from(2);
+                };
+                if eol_path.replace(v.as_str()).is_some() {
+                    eprintln!("{cmd}: duplicate --eol\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+            }
+            _ => {
+                eprintln!("{cmd}: unknown argument {a:?}\n{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let Some(today_s) = today_s else {
+        eprintln!("{cmd}: --today <YYYY-MM-DD> is required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let Some(today) = os_eol::Date::parse(today_s) else {
+        eprintln!("{cmd}: invalid --today date {today_s:?} (expected YYYY-MM-DD)");
+        return ExitCode::from(2);
+    };
+    let matrix_path = matrix_path.unwrap_or(os_eol::DEFAULT_MATRIX_PATH);
+    let eol_path = eol_path.unwrap_or(os_eol::DEFAULT_EOL_PATH);
+    let Some(matrix_bytes) = read_capped(matrix_path, matrix::MAX_BYTES, cmd) else {
+        return ExitCode::from(2);
+    };
+    let Some(eol_bytes) = read_capped(eol_path, os_eol::MAX_BYTES, cmd) else {
+        return ExitCode::from(2);
+    };
+    match os_eol::check_bytes(&matrix_bytes, &eol_bytes, today, None) {
+        Ok(outcome) => {
+            print!("{}", outcome.render());
+            ExitCode::from(outcome.exit_code())
+        }
+        Err(errs) => {
+            for e in errs {
+                println!("{e}");
+            }
+            ExitCode::from(1)
+        }
+    }
 }

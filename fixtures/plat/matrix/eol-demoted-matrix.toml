@@ -1,0 +1,56 @@
+# Test fixture for PLAT.MATRIX.FILE AC-1 and AC-4. Illustrative rows only: this is NOT the
+# project's support matrix (that is platform/support-matrix.toml). MIT OR Apache-2.0 (D-001).
+schema_version = 1
+
+[[row]]
+os = "windows"
+version_min = "10.0.19041"
+version_max = "10.0.22000"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "fixture: Windows 10 build range"
+
+[[row]]
+os = "windows"
+version_min = "10.0.22000"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "fixture: Windows 11 and later (open-ended)"
+
+[[row]]
+os = "ubuntu"
+version_min = "24.04"
+version_max = "24.10"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P0"
+notes = "fixture"
+
+[[row]]
+os = "ubuntu"
+version_min = "24.04"
+version_max = "24.10"
+arch = "aarch64"
+tier = "tier2"
+since_phase = "P1b"
+notes = "fixture"
+
+[[row]]
+os = "macos"
+version_min = "15"
+version_max = "16"
+arch = "aarch64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "fixture; demoted: 2026-03-02 eol"
+
+[[row]]
+os = "macos"
+version_min = "15"
+version_max = "16"
+arch = "x86_64"
+tier = "tier3"
+since_phase = "later"
+notes = "fixture"

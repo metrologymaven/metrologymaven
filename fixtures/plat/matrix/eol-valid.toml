@@ -1,0 +1,28 @@
+# Synthetic EOL fixture for PLAT.MATRIX.POLICY.EOL AC-1 and AC-4 (invented dates).
+# MIT OR Apache-2.0 (D-001).
+schema_version = 1
+
+[[entry]]
+os = "windows"
+version = "10.0.19041"
+eol = "2025-10-14"
+extended_until = "2028-10-10"
+source = "https://example.invalid/windows-10-esu"
+
+[[entry]]
+os = "windows"
+version = "10.0.22000"
+eol = "2029-10-09"
+source = "https://example.invalid/windows-11"
+
+[[entry]]
+os = "ubuntu"
+version = "24.04"
+eol = "2029-05-31"
+source = "https://example.invalid/ubuntu-2404"
+
+[[entry]]
+os = "macos"
+version = "15"
+eol = "2027-09-30"
+source = "https://example.invalid/macos-15"
