@@ -203,6 +203,9 @@ pub struct SurfaceProjection {
     /// property. Such a file parameter cannot be checked, so every surface refuses the command
     /// ([`crate::roots::gate_raw_paths`]); not part of [`Self::to_value`].
     pub nested_path_like: bool,
+    /// Verified SHA-256 `definition_digest` of this command definition from the manifest
+    /// (read by `AUTO.SURF.DOCS`; not part of [`Self::to_value`]).
+    pub command_digest: Digest,
 }
 
 /// The projection of one manifest (REQ-001).
@@ -488,11 +491,12 @@ impl Def {
 /// One parsed manifest entry, before projection.
 struct Entry {
     id: CommandId,
+    definition_digest: Digest,
     def: Def,
 }
 
 /// Reads one definition (without `definition_digest`) into its command ID and [`Def`].
-fn read_def(index: usize, mut o: BTreeMap<String, CValue>) -> Result<Entry, ProjError> {
+fn read_def(index: usize, mut o: BTreeMap<String, CValue>, definition_digest: Digest) -> Result<Entry, ProjError> {
     let at = |m: &str| parse_err(format!("commands[{index}]: {m}"));
     if let Some(k) = o.keys().find(|k| !DEF_FIELDS.contains(&k.as_str())) {
         return Err(at(&format!("unknown field {k:?}")));
@@ -562,7 +566,7 @@ fn read_def(index: usize, mut o: BTreeMap<String, CValue>) -> Result<Entry, Proj
         effects,
         exposure,
     };
-    Ok(Entry { id, def })
+    Ok(Entry { id, definition_digest, def })
 }
 
 /// Parses and checks the manifest envelope and every definition.
@@ -618,7 +622,7 @@ fn read_manifest(manifest: &[u8]) -> Result<Vec<Entry>, ProjError> {
         let CValue::Obj(obj) = rest else {
             return Err(parse_err(format!("commands[{index}] must be an object")));
         };
-        out.push(read_def(index, obj)?);
+        out.push(read_def(index, obj, stated)?);
     }
     // Byte order of the name, then numeric major (REQ-008).
     out.sort_by(|a, b| a.id.name().as_bytes().cmp(b.id.name().as_bytes()).then(a.id.major().cmp(&b.id.major())));
@@ -646,7 +650,7 @@ pub fn project(manifest: &[u8]) -> Result<Projection, ProjError> {
     let mut cli: BTreeMap<Vec<String>, (String, String)> = BTreeMap::new();
     let mut mcp = BTreeMap::new();
     let mut py = BTreeMap::new();
-    for Entry { id, def } in entries {
+    for Entry { id, definition_digest, def } in entries {
         let command = id.as_str();
         let DerivedNames { cli_path, mcp_name, py_module, py_name } = derive(command, id.name(), id.major())?;
         let ceiling = McpProjection::for_command(def.side_effect, def.human_only);
@@ -699,6 +703,7 @@ pub fn project(manifest: &[u8]) -> Result<Projection, ProjError> {
             effects: def.effects,
             exposure: def.exposure,
             nested_path_like,
+            command_digest: definition_digest,
             command_id: id,
         });
     }

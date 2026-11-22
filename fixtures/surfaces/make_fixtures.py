@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 MANIFEST = ROOT / "fixtures" / "manifest" / "min-classes.json"
 MCP_TOOLS = ROOT / "fixtures" / "mcp" / "min-classes.tools.json"
+DOCS_FIXTURES = ROOT / "fixtures" / "docs"
 
 NON_MCP_CLASSES = {"M1", "S1", "A0"}
 
@@ -41,11 +42,23 @@ def index_bytes(manifest_digest: str, surface: str, commands: list[tuple[str, in
     return canonical_bytes(doc)
 
 
+def docs_generated_files() -> dict[Path, bytes]:
+    out: dict[Path, bytes] = {}
+    classes = DOCS_FIXTURES / "classes.json"
+    out[Path("classes.json")] = classes.read_bytes()
+    for sub in ("ref", "index"):
+        d = DOCS_FIXTURES / sub
+        for p in sorted(d.glob("*.json")):
+            out[Path(sub) / p.name] = p.read_bytes()
+    return out
+
+
 def build_trees() -> dict[Path, bytes]:
     manifest_raw = MANIFEST.read_bytes()
     manifest_digest = "sha256:" + hashlib.sha256(manifest_raw).hexdigest()
     manifest = json.loads(manifest_raw.decode("utf-8"))
     mcp_tools_raw = MCP_TOOLS.read_bytes()
+    docs_files = docs_generated_files()
 
     all_cmds: list[tuple[str, int]] = []
     mcp_cmds: list[tuple[str, int]] = []
@@ -68,13 +81,16 @@ def build_trees() -> dict[Path, bytes]:
         tree_mcp_cmds: list[tuple[str, int]],
     ) -> dict[Path, bytes]:
         base = HERE / name
-        return {
+        tree = {
             base / "cli" / "surface-index.json": index_bytes(manifest_digest, "cli", cli_cmds),
             base / "py" / "surface-index.json": index_bytes(manifest_digest, "py", py_cmds),
             base / "docs" / "surface-index.json": index_bytes(manifest_digest, "docs", docs_cmds),
             base / "mcp" / "surface-index.json": index_bytes(manifest_digest, "mcp", tree_mcp_cmds),
             base / "mcp" / "mcp-tools.json": mcp_tools_raw,
         }
+        for rel, data in docs_files.items():
+            tree[base / "docs" / rel] = data
+        return tree
 
     files: dict[Path, bytes] = {}
     files.update(make_tree("complete", all_cmds, all_cmds, all_cmds, mcp_cmds))

@@ -185,7 +185,15 @@ fn path_rules_refuse_every_escape() {
     }
     let long = "a".repeat(201);
     assert_eq!(check_rel_path(&long), Err("path longer than 200 bytes"));
-    for ok in ["a.txt", "dir/sub/file.md", ".gitignore", "con-fig.txt", "com10.txt", "x_y-z.v1.txt"] {
+    for ok in [
+        "a.txt",
+        "dir/sub/file.md",
+        ".gitignore",
+        "con-fig.txt",
+        "com10.txt",
+        "x_y-z.v1.txt",
+        "ref/align.run_bestfit@1.json",
+    ] {
         assert_eq!(check_rel_path(ok), Ok(()), "{ok:?}");
     }
 }
