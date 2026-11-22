@@ -72,7 +72,7 @@ python tools/scope.py stats          # counts by level and status
 - a user-facing feature leaf lacks its CLI command, MCP tool or journal event;
 - IDs, levels, parents or folder names disagree.
 
-The generated reports are in [`generated/`](generated/): `INDEX.md` (the tree), `COVERAGE.md` (each reference workflow feature mapped to our nodes) and `DECISIONS.md`.
+The generated reports are in [`generated/`](generated/): `INDEX.md` (the tree), `BUILT.md` (leaves built in code), `COVERAGE.md` (each reference workflow feature mapped to our nodes), `DECISIONS.md`, `EXPERT-QUEUE.md` and `milestones/launch-1.md`. Per [D-042](decisions/D-042-generated-reports-refreshed-on-main.md), they are refreshed on `main` in dedicated regeneration PRs rather than on every feature PR.
 
 ## Map
 

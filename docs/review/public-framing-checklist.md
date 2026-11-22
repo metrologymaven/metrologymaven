@@ -34,9 +34,9 @@ and D-036 (open/paid boundary and honest research framing).
 5. **Preserve the open/commercial boundary (D-036 rule 3).**
    - All four open apps, the deterministic math kernel, QIF/DMIS/I++ support, CLI/MCP surfaces,
      and `fid-verify` stay free forever.
-   - Commercial offerings stay strictly in regulated dossiers, support/LTS, hosted verification,
-     instrument integration testing, and on-premises enterprise add-ons (such as private
-     machine-adapter fine-tuning and fleet drift monitoring).
+   - Commercial offerings stay strictly in regulated dossiers, support/LTS, hosted verification
+     and evidence archive, and instrument-maker integration testing (add new commercial services
+     to public copy only after their decision record is accepted).
 6. **Keep clean-room discipline.**
    - Never paste standards text (ISO, ASME, VDA) or vendor manuals (`AGENTS.md` rule 5, D-013).
    - Do not promote the project on vendor-owned support forums.
