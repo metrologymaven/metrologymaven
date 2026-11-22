@@ -17,7 +17,8 @@ determinism: N
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [fid-geo-index]
+updated: 2026-11-22
 ---
 
 # GEO.INDEX.BENCH: Index performance and memory benchmarks
