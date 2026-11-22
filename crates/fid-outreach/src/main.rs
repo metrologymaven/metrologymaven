@@ -92,6 +92,12 @@
 //! navigation tree from `nav.toml`. Exits 0 after writing, 1 (writing nothing) on missing nav
 //! source, non-empty edition directory, or non-static asset, and 2 on unreadable or unparsable
 //! input, bad release tag, unwritable output, or bad usage.
+//!
+//! `link-check --edition <dir> [--external [--out <dir>]] [--json]` (spec node `OUTR.DOCS.QA`):
+//! internal mode verifies every relative `href`/`src` and `#fragment` resolves inside the edition
+//! (no network, D0); `--external` probes distinct `http(s)` URLs (HEAD with GET fallback, 10 s
+//! timeout, max 4 concurrent) and writes `external.json` and `issue.md` into `--out` (default `.`).
+//! Exits 0 with no findings, 1 with any, and 2 on unreadable edition, unwritable output, or bad usage.
 
 use fid_outreach::asset_check;
 use fid_outreach::bench::recipe;
@@ -102,6 +108,7 @@ use fid_outreach::dress;
 use fid_outreach::guide_check;
 use fid_outreach::launch_gate;
 use fid_outreach::launch_plan;
+use fid_outreach::link_check;
 use fid_outreach::metrics::{def, snap};
 use fid_outreach::moderation;
 use fid_outreach::qa::a11y::{self, Options};
@@ -135,6 +142,7 @@ commands:
   site import verify --site <dir> --stage <dir> --revision <sha> --revision-date <YYYY-MM-DD>
   site import fetch --site <dir> --release <tag> --base-url <url>
   search-index --edition <dir> --budget <file> [--json]
+  link-check --edition <dir> [--external [--out <dir>]] [--json]
   bench-recipe check --catalogue <file> [--allowlist <file>] [--json] <paths>...";
 
 fn main() -> ExitCode {
@@ -156,6 +164,7 @@ fn main() -> ExitCode {
         (Some(cmd @ ("ref-render" | "ref-check")), _) => ref_pages_cmd(cmd, args.get(1..).unwrap_or(&[])),
         (Some("site"), Some("import")) => site_import_cmd(args.get(2..).unwrap_or(&[])),
         (Some("search-index"), _) => search_index_cmd(args.get(1..).unwrap_or(&[])),
+        (Some("link-check"), _) => link_check_cmd(args.get(1..).unwrap_or(&[])),
         (Some("bench-recipe"), Some("check")) => bench_recipe_check(args.get(2..).unwrap_or(&[])),
         _ => usage(),
     }
@@ -1015,6 +1024,82 @@ fn docs_build_cmd(args: &[String]) -> ExitCode {
         Err(e) => {
             eprintln!("docs-build: {e}");
             ExitCode::from(e.exit_code())
+        }
+    }
+}
+
+fn link_check_cmd(args: &[String]) -> ExitCode {
+    let mut edition: Option<PathBuf> = None;
+    let mut out_dir: Option<PathBuf> = None;
+    let mut external = false;
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--external" => {
+                if external {
+                    return usage();
+                }
+                external = true;
+            }
+            "--json" => json = true,
+            "--edition" => {
+                let Some(v) = it.next() else { return usage() };
+                if edition.replace(PathBuf::from(v)).is_some() {
+                    return usage();
+                }
+            }
+            "--out" => {
+                let Some(v) = it.next() else { return usage() };
+                if out_dir.replace(PathBuf::from(v)).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let Some(edition) = edition else { return usage() };
+    if out_dir.is_some() && !external {
+        return usage();
+    }
+    if external {
+        let dest = out_dir.unwrap_or_else(|| PathBuf::from("."));
+        let opts = link_check::ExternalOptions::default();
+        return match link_check::check_external(&edition, &opts)
+            .and_then(|r| link_check::write_external_outputs(&r, &dest).map(|()| r))
+        {
+            Ok(report) => {
+                if json {
+                    emit(&report.to_json());
+                } else {
+                    print!("{}", report.render());
+                }
+                ExitCode::from(report.exit_code())
+            }
+            Err(e) => {
+                if json {
+                    emit(&e.to_json());
+                }
+                eprintln!("link-check: {e}");
+                ExitCode::from(2)
+            }
+        };
+    }
+    match link_check::check_internal(&edition) {
+        Ok(report) => {
+            if json {
+                emit(&report.to_json());
+            } else {
+                print!("{}", report.render());
+            }
+            ExitCode::from(report.exit_code())
+        }
+        Err(e) => {
+            if json {
+                emit(&e.to_json());
+            }
+            eprintln!("link-check: {e}");
+            ExitCode::from(2)
         }
     }
 }

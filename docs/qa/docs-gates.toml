@@ -1,0 +1,17 @@
+# Docs portal configuration for the reusable OUTR.SITE.QA quality gates
+# (spec node OUTR.DOCS.QA).
+#
+# Hand-written sources under book/, contributor/ and guides/ are passed to the
+# OUTR.BRAND claim lint; generated command reference pages under ref/ are
+# excluded (REQ-OUTR.DOCS.QA-006).
+
+origin = "https://docs.metrologymaven.io"
+root = "site/latest"
+pages = ["**/*.html"]
+a11y_level = "WCAG22AA"
+size_budget_kb = 500
+lint_sources = [
+  "book/**/*.md",
+  "contributor/**/*.md",
+  "guides/**/*.md",
+]
