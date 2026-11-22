@@ -15,8 +15,9 @@
 //! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`,
 //! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`,
 //! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`,
-//! `fid-design icons-lint --root <icons dir> [--json]`, and
-//! `fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]`.
+//! `fid-design icons-lint --root <icons dir> [--json]`,
+//! `fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]`, and
+//! `fid-design sources-check --root <design dir> [--spec <spec dir>] [--json]`.
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage (`icons-lint` also
 //! exits 2 for a root holding no SVG).
 
@@ -43,7 +44,8 @@ const USAGE: &str =
        fid-design fonts-check --root <design dir> --allowlist <file> [--json]
        fid-design page-check (--root <design dir> | --file <pages.json>) [--json]
        fid-design icons-lint --root <icons dir> [--json]
-       fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]";
+       fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]
+       fid-design sources-check --root <design dir> [--spec <spec dir>] [--json]";
 
 #[derive(Default)]
 struct Args {
@@ -51,6 +53,7 @@ struct Args {
     rules: Option<PathBuf>,
     package: Option<PathBuf>,
     allowlist: Option<PathBuf>,
+    spec: Option<PathBuf>,
     from: Option<PathBuf>,
     to: Option<PathBuf>,
     file: Option<PathBuf>,
@@ -65,7 +68,6 @@ struct Args {
     manifest: Option<PathBuf>,
     journeys: Option<PathBuf>,
     ga: Option<String>,
-    spec: Option<PathBuf>,
     pr: Option<u64>,
     all: bool,
     json: bool,
@@ -81,6 +83,7 @@ fn parse_args(args: &[String]) -> Option<Args> {
             "--rules" => out.rules = Some(PathBuf::from(it.next()?)),
             "--package" => out.package = Some(PathBuf::from(it.next()?)),
             "--allowlist" => out.allowlist = Some(PathBuf::from(it.next()?)),
+            "--spec" => out.spec = Some(PathBuf::from(it.next()?)),
             "--from" => out.from = Some(PathBuf::from(it.next()?)),
             "--to" => out.to = Some(PathBuf::from(it.next()?)),
             "--file" => out.file = Some(PathBuf::from(it.next()?)),
@@ -95,7 +98,6 @@ fn parse_args(args: &[String]) -> Option<Args> {
             "--manifest" => out.manifest = Some(PathBuf::from(it.next()?)),
             "--journeys" => out.journeys = Some(PathBuf::from(it.next()?)),
             "--ga" => out.ga = Some(it.next()?.clone()),
-            "--spec" => out.spec = Some(PathBuf::from(it.next()?)),
             "--pr" => {
                 let n: u64 = it.next()?.parse().ok()?;
                 if n == 0 {
@@ -208,6 +210,35 @@ fn main() -> ExitCode {
             allowlist: args.allowlist.as_deref(),
         };
         return match fid_design::lint::check(&o) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        };
+    }
+    if cmd == "sources-check" {
+        let others = princ_flags
+            || args.journeys.is_some()
+            || args.ga.is_some()
+            || args.rules.is_some()
+            || args.package.is_some()
+            || args.allowlist.is_some()
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.pr.is_some()
+            || args.all
+            || args.attribution.is_some()
+            || args.manifest.is_some();
+        let Some(root) = args.root.clone() else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        return match fid_design::sources::check(&root, args.spec.as_deref()) {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
             Err(e) => fail(e),
         };

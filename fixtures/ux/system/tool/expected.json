@@ -1,0 +1,70 @@
+{
+  "ok": {
+    "root": "ok",
+    "exit": 0,
+    "tools": 3,
+    "sources": 2,
+    "exports_checked": 3,
+    "findings": []
+  },
+  "no-export": {
+    "root": "no-export",
+    "exit": 1,
+    "tools": 3,
+    "sources": 1,
+    "exports_checked": 0,
+    "findings": [
+      "SOURCE-EXPORT-MISSING screen-inspect-v1"
+    ]
+  },
+  "missing-file": {
+    "root": "missing-file",
+    "exit": 1,
+    "tools": 3,
+    "sources": 1,
+    "exports_checked": 0,
+    "findings": [
+      "SOURCE-EXPORT-MISSING icon-missing-v1"
+    ]
+  },
+  "stale-export": {
+    "root": "stale-export",
+    "exit": 1,
+    "tools": 3,
+    "sources": 1,
+    "exports_checked": 1,
+    "findings": [
+      "SOURCE-EXPORT-DIGEST icon-stale-v1"
+    ]
+  },
+  "paid-tool": {
+    "root": "paid-tool",
+    "exit": 1,
+    "tools": 3,
+    "sources": 1,
+    "exports_checked": 1,
+    "findings": [
+      "SOURCE-PAID-TOOL mockup-paid-v1"
+    ]
+  },
+  "unknown-node": {
+    "root": "unknown-node",
+    "exit": 1,
+    "tools": 3,
+    "sources": 1,
+    "exports_checked": 1,
+    "findings": [
+      "SOURCE-NODE-UNKNOWN orphan-source-v1"
+    ]
+  },
+  "bad-format": {
+    "root": "bad-format",
+    "exit": 1,
+    "tools": 3,
+    "sources": 1,
+    "exports_checked": 1,
+    "findings": [
+      "SOURCES-SCHEMA mockup-fig-v1"
+    ]
+  }
+}

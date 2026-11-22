@@ -1,0 +1,43 @@
+{
+  "format": "design-sources@1",
+  "tools": [
+    {
+      "id": "penpot",
+      "name": "Penpot",
+      "open_source": true,
+      "requires_paid_account": false,
+      "export_extensions": [
+        "penpot"
+      ]
+    },
+    {
+      "id": "inkscape",
+      "name": "Inkscape",
+      "open_source": true,
+      "requires_paid_account": false,
+      "export_extensions": [
+        "svg"
+      ]
+    },
+    {
+      "id": "paid-suite",
+      "name": "Proprietary Paid Suite (synthetic)",
+      "open_source": false,
+      "requires_paid_account": true
+    }
+  ],
+  "sources": [
+    {
+      "id": "mockup-paid-v1",
+      "node": "UX.REPORT.MOCK",
+      "tool": "paid-suite",
+      "location": "https://example.invalid/paid-suite/mockup",
+      "exports": [
+        {
+          "path": "exports/mockup.pdf",
+          "sha256": "sha256:36fe5a745ca5f0183f88ea92df34dcd2197e4e22ba5f8d2e6044ae85cd7ca510"
+        }
+      ]
+    }
+  ]
+}
