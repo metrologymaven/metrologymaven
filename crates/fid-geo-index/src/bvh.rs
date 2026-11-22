@@ -336,6 +336,30 @@ pub struct PrimitiveBvh {
     boxes: Vec<Aabb>,
 }
 
+/// Exact upper bound on the bytes allocated to build a [`PrimitiveBvh`] over `n` triangles:
+/// the struct itself, the retained node, order, payload and triangle-box buffers, plus the
+/// temporary centroid-key and range-queue working buffers held during construction.
+/// Returns `None` if `n > MAX_TRIANGLES` or arithmetic overflows.
+pub fn bvh_build_bytes(n: u64) -> Option<u64> {
+    if n > MAX_TRIANGLES {
+        return None;
+    }
+    let inline = u64::try_from(core::mem::size_of::<PrimitiveBvh>()).ok()?;
+    if n == 0 {
+        return Some(inline);
+    }
+    let cap = (n / 4).checked_mul(2)?.checked_add(1)?;
+    let per_tri = u64::try_from(
+        core::mem::size_of::<Aabb>()
+            + core::mem::size_of::<[f64; 3]>()
+            + core::mem::size_of::<u32>()
+            + core::mem::size_of::<u64>(),
+    )
+    .ok()?;
+    let per_node = u64::try_from(core::mem::size_of::<BvhNode>() + core::mem::size_of::<(usize, usize)>()).ok()?;
+    inline.checked_add(n.checked_mul(per_tri)?)?.checked_add(cap.checked_mul(per_node)?)
+}
+
 // ------------------------------------------------------------------ helpers
 
 fn total_min(a: f64, b: f64) -> f64 {
@@ -370,7 +394,7 @@ fn bytes_of<T>(n: usize) -> u64 {
 }
 
 fn reserve<T>(v: &mut Vec<T>, n: usize) -> Result<(), BvhError> {
-    v.try_reserve(n).map_err(|_| BvhError::AllocationFailed { bytes: bytes_of::<T>(n) })
+    v.try_reserve_exact(n).map_err(|_| BvhError::AllocationFailed { bytes: bytes_of::<T>(n) })
 }
 
 fn push<T>(v: &mut Vec<T>, x: T) -> Result<(), BvhError> {
@@ -669,6 +693,16 @@ impl PrimitiveBvh {
     /// The root box (all triangles).
     pub fn bounds(&self) -> Result<Aabb, BvhError> {
         self.nodes.first().map(|n| n.aabb).ok_or(BvhError::Inconsistent)
+    }
+
+    /// Bytes held by the hierarchy: the struct itself plus the exact capacity of its node,
+    /// triangle-order, payload-ID and triangle-box buffers.
+    pub fn memory_bytes(&self) -> u64 {
+        bytes_of::<PrimitiveBvh>(1)
+            .saturating_add(bytes_of::<BvhNode>(self.nodes.capacity()))
+            .saturating_add(bytes_of::<u32>(self.prim_order.capacity()))
+            .saturating_add(bytes_of::<u64>(self.prim_ids.capacity()))
+            .saturating_add(bytes_of::<Aabb>(self.boxes.capacity()))
     }
 
     /// The pinned serialisation (REQ-GEO.INDEX.BVH-004): `FIDBVH01`, triangle count and node

@@ -14,9 +14,10 @@ repository.workspace = true
 fid-geo-types = { path = "../fid-geo-types" }
 fid-geo-frame = { path = "../fid-geo-frame" }
 
-# Test-only: SHA-256 for the fixture digests (fid-kci) and the KNP-1 sqrt that regenerates
-# the pinned sphere mesh (fid-num).
+# Test-only: SHA-256 for the fixture digests (fid-kci), the KNP-1 sqrt that regenerates the
+# pinned sphere mesh (fid-num), and the counting allocator for AC-1 (cap).
 [dev-dependencies]
+cap = { version = "0.1.2", features = ["stats"] }
 fid-kci = { path = "../fid-kci" }
 fid-num = { path = "../fid-num" }
 
