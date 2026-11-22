@@ -68,6 +68,7 @@ fn draft(seq: u64) -> EntryDraft {
         manifests: Manifests { registry: m, kernel: m },
         reason: None,
         human_assertion: None,
+        agent_coedited: false,
         body: DraftBody::Command(CommandDraft {
             id: "project.set_tags".into(),
             major: 1,
@@ -80,6 +81,7 @@ fn draft(seq: u64) -> EntryDraft {
             consumed_r1: Vec::new(),
             outputs: Vec::new(),
             algorithms: Vec::new(),
+            event_sources: Vec::new(),
         }),
     }
 }

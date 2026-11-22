@@ -670,7 +670,13 @@ impl Bus {
         self.enter(Stage::Effects)?;
         let (checked, result) = ran.check(&ctx)?;
         let (_, _, mut events) = checked.into_parts();
-        events.extend(approval);
+        // The stage that added each event, recorded in the entry header (CORE.JRN.ENTRY
+        // REQ-013): the handler's events, then the authorisation stage's `RequestApproved`.
+        let mut sources = vec![EventSource::Handler; events.len()];
+        if let Some(a) = approval {
+            events.push(a);
+            sources.push(EventSource::BusApproval);
+        }
         if inv.dry_run {
             if target.is_some() {
                 self.refuse_if_poisoned()?;
@@ -678,7 +684,7 @@ impl Bus {
             return Ok(CommandResult::DryRun { events });
         }
         let Some(target) = target else {
-            return self.hand_off_read(call, inv, &principal, def, &validated, seed, events, result);
+            return self.hand_off_read(call, inv, &principal, def, &validated, seed, events, &sources, result);
         };
         // 8. commit
         self.enter(Stage::Commit)?;
@@ -687,6 +693,7 @@ impl Bus {
             def,
             &validated,
             &events,
+            &sources,
             &target.branch,
             &self.stream,
             seed,
@@ -775,6 +782,7 @@ impl Bus {
         validated: &Validated,
         seed: u64,
         events: Vec<Event>,
+        sources: &[EventSource],
         result: Option<CValue>,
     ) -> Result<CommandResult, BusError> {
         let branch = self.router.branch(principal, call.channel, def)?;
@@ -783,6 +791,7 @@ impl Bus {
             def,
             validated,
             &events,
+            sources,
             &branch,
             ACTIVITY_STREAM,
             seed,
@@ -807,6 +816,7 @@ impl Bus {
         def: &CommandDef,
         validated: &Validated,
         events: &[Event],
+        sources: &[EventSource],
         branch: &str,
         stream: &str,
         seed: u64,
@@ -841,6 +851,8 @@ impl Bus {
             manifests: self.manifests,
             reason,
             human_assertion: None,
+            // Set by the route stage once CORE.BUS.ROUTE routes co-edited agent commits.
+            agent_coedited: false,
             body: DraftBody::Command(CommandDraft {
                 id: def.id.clone(),
                 major: def.major,
@@ -853,6 +865,7 @@ impl Bus {
                 consumed_r1,
                 outputs: Vec::new(),
                 algorithms: validated.algorithms(),
+                event_sources: sources.to_vec(),
             }),
         })
     }

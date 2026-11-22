@@ -16,7 +16,14 @@ Rules implemented here (from spec/core/jrn/entry/NODE.md):
 - signatures are detached and not part of the header;
 - the human-assertion pre-image is the entry hash with `human_assertion` also omitted;
 - consumed R1 result digests are appended to the inputs tagged `r1_result`;
-- a deleted entity's output digest is the tombstone `sha256:` + 64 zeros.
+- a deleted entity's output digest is the tombstone `sha256:` + 64 zeros;
+- schema version 2 (REQ-013..REQ-015, maintainer decision): a header records
+  `agent_coedited` (boolean) and, on a command, `command.event_sources` (one of `handler`,
+  `bus_route`, `bus_release`, `bus_approval` per event, in event order) exactly when it holds
+  something version 1 cannot: `agent_coedited: true` or a source other than `handler`. A
+  draft's `event_sources` is either absent (every event from the handler) or one per event;
+  when the header is version 2 and the draft gave none, every event is `handler`. Anything
+  else is written as version 1 without either field, byte for byte as before.
 
 Values hold no non-integer floats and no object keys outside the BMP, so
 json.dumps(sort_keys=True, separators=(",", ":"), ensure_ascii=False) equals RFC 8785.
@@ -69,8 +76,14 @@ def build(name, draft, seq, prev):
     principal = {"kind": p["kind"], "commit": c("identity", p["identity"])}
     if "on_behalf_of" in p:
         principal["on_behalf_of_commit"] = c("on_behalf_of", p["on_behalf_of"])
+    k = draft["kind"]
+    coedited = draft.get("agent_coedited", False)
+    sources = draft["command"].get("event_sources", []) if k == "command" else []
+    if sources and len(sources) != len(draft["command"]["events"]):
+        raise ValueError(f"{name}: one event source per event")
+    v2 = coedited is True or any(x != "handler" for x in sources)
     h = {
-        "schema_version": 1,
+        "schema_version": 2 if v2 else 1,
         "kind": draft["kind"],
         "stream": draft["stream"],
         "seq": str(seq),
@@ -86,7 +99,8 @@ def build(name, draft, seq, prev):
         h["reason_commit"] = c("reason", draft["reason"])
     if "human_assertion" in draft:
         h["human_assertion"] = draft["human_assertion"]
-    k = draft["kind"]
+    if v2:
+        h["agent_coedited"] = coedited
     if k == "command":
         cd = draft["command"]
         inputs = [dict(i) for i in cd["inputs"]] + [{"tag": "r1_result", "digest": x} for x in cd.get("consumed_r1", [])]
@@ -102,6 +116,8 @@ def build(name, draft, seq, prev):
             "seed": cd["seed"], "args_commit": c("args", cd["args"]), "events_commit": c("events", cd["events"]),
             "inputs": inputs, "outputs": outputs, "algorithms": list(cd["algorithms"]),
         }
+        if v2:
+            h["command"]["event_sources"] = list(sources) or ["handler"] * len(cd["events"])
     elif k == "session_header":
         h["session"] = dict(draft["session"])
     elif k == "principal_upgrade":
@@ -211,16 +227,65 @@ def head_move_draft(i):
     return dr
 
 
+def v2_draft(i):
+    """Schema version 2 cases (REQ-013..REQ-015), appended after the version 1 vectors."""
+    j = i - 36
+    agent_branch = {"type": "BranchCreated", "body": {"name": "agent/claude-code/9", "from": d(f"head-{i}")}}
+    if j == 6:
+        dr = session_draft(i)
+        dr["agent_coedited"] = True
+        return dr
+    if j == 7:
+        dr = head_move_draft(i)
+        dr["agent_coedited"] = True
+        return dr
+    dr = command_draft(i)
+    c = dr["command"]
+    if j == 0:  # the route stage adds an agent branch after the handler's event
+        c["events"] = [{"type": "feature.nominal_set@1", "n": i}, agent_branch]
+        c["event_sources"] = ["handler", "bus_route"]
+    elif j == 1:  # an agent commit co-edited onto a human branch; no sources given: all handler
+        dr["agent_coedited"] = True
+        c["events"] = [{"type": "feature.nominal_set@1", "n": i}, {"type": "feature.tol_set@1", "n": i}]
+    elif j == 2:  # release protection added by the commit stage on a W3 entry on main
+        dr["branch"] = "main"
+        c.update({"id": "report.release", "class": "W3"})
+        c["events"] = [{"type": "report.released@1", "n": i},
+                       {"type": "BranchProtected", "body": {"name": "main", "cause": "release"}}]
+        c["event_sources"] = ["handler", "bus_release"]
+    elif j == 3:  # the RequestApproved of an approval
+        c["events"] = [{"type": "feature.nominal_set@1", "n": i}, {"type": "RequestApproved", "n": i}]
+        c["event_sources"] = ["handler", "bus_approval"]
+    elif j == 4:  # co-edited and routed, every source given
+        dr["agent_coedited"] = True
+        c["events"] = [agent_branch]
+        c["event_sources"] = ["bus_route"]
+    elif j == 5:  # co-edited with no events at all
+        dr["agent_coedited"] = True
+        c["events"] = []
+    elif j == 8:  # every source given and all handler: still version 1, byte for byte
+        c["events"] = [{"type": "feature.nominal_set@1", "n": i}]
+        c["event_sources"] = ["handler"]
+        dr["agent_coedited"] = False
+    else:
+        raise ValueError(j)
+    return dr
+
+
+V2_CASES = 9
+
+
 def main():
     vectors = []
     # One chain per stream: (next seq, prev hash).
     chains = {}
     plan = [("session_header", session_draft)] + [("command", command_draft)] * 16 + \
         [("session_header", session_draft)] * 5 + [("principal_upgrade", upgrade_draft)] * 7 + \
-        [("head_move", head_move_draft)] * 7
+        [("head_move", head_move_draft)] * 7 + [("v2", v2_draft)] * V2_CASES
     for i, (kind, mk) in enumerate(plan):
-        name = f"{i:02d}_{kind}"
         draft = mk(i)
+        name = f"{i:02d}_{kind}" if kind != "v2" else f"{i:02d}_v2_{draft['kind']}"
+
         seq, prev = chains.get(draft["stream"], (1, ZERO))
         h, payload, commitments, pre = build(name, draft, seq, prev)
         vectors.append({"name": name, "seq": str(seq), "prev": prev, "draft": draft, "salts": payload["salts"],
@@ -235,6 +300,9 @@ def main():
     for v in vectors:
         by_kind.setdefault(v["header"]["kind"], v["header"])
     cmd, ses, upg, hm = (by_kind[k] for k in ("command", "session_header", "principal_upgrade", "head_move"))
+    v2s = [v["header"] for v in vectors if v["header"]["schema_version"] == 2]
+    cmd2 = next(h for h in v2s if h["kind"] == "command" and h["agent_coedited"] is False)
+    ses2 = next(h for h in v2s if h["kind"] == "session_header")
     bad = []
 
     def mut(name, h, fn):
@@ -307,6 +375,19 @@ def main():
     mut("stream_uppercase", cmd, lambda h: h.__setitem__("stream", "Record"))
     mut("branch_leading_slash", cmd, lambda h: h.__setitem__("branch", "/main"))
     mut("reason_commit_not_digest", hm, lambda h: h.__setitem__("reason_commit", "because"))
+    # Schema version 2 (REQ-013..REQ-015).
+    mut("schema_version_3", cmd, lambda h: h.__setitem__("schema_version", 3))
+    mut("v1_with_agent_coedited", cmd, lambda h: h.__setitem__("agent_coedited", False))
+    mut("v1_with_event_sources", cmd, lambda h: h["command"].__setitem__("event_sources", ["handler"]))
+    mut("v2_missing_agent_coedited", cmd2, lambda h: h.pop("agent_coedited"))
+    mut("v2_command_missing_event_sources", cmd2, lambda h: (h.__setitem__("agent_coedited", True),
+                                                             h["command"].pop("event_sources")))
+    mut("v2_only_defaults", cmd2, lambda h: h["command"].__setitem__(
+        "event_sources", ["handler"] * len(h["command"]["event_sources"])))
+    mut("v2_session_only_defaults", ses2, lambda h: h.__setitem__("agent_coedited", False))
+    mut("event_source_unknown", cmd2, lambda h: h["command"]["event_sources"].__setitem__(0, "plugin"))
+    mut("event_sources_not_array", cmd2, lambda h: h["command"].__setitem__("event_sources", "bus_route"))
+    mut("agent_coedited_not_boolean", cmd2, lambda h: h.__setitem__("agent_coedited", "yes"))
     (HERE / "invalid_headers.json").write_text(json.dumps(bad, indent=1, ensure_ascii=False) + "\n", encoding="utf-8",
                                                newline="\n")
     kinds = sorted({v["header"]["kind"] for v in vectors})

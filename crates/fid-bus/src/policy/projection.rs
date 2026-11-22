@@ -651,6 +651,7 @@ impl Filing {
             manifests: ctx.manifests,
             reason: None,
             human_assertion: None,
+            agent_coedited: false,
             body: DraftBody::Command(CommandDraft {
                 id: FILE_REQUEST.to_string(),
                 major: 1,
@@ -669,6 +670,7 @@ impl Filing {
                     digest: CanonDigest(record_digest.to_bytes()),
                 }],
                 algorithms: Vec::new(),
+                event_sources: Vec::new(),
             }),
         };
         journal.append(&draft)?;

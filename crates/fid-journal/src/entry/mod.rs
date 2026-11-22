@@ -10,6 +10,16 @@
 //!
 //! Salt generation is class N; the salts are recorded in the payload, and replay passes
 //! them back through [`RecordedSalts`], which makes building D0 given the salts.
+//!
+//! **Schema versions (maintainer decision, REQ-013..REQ-015).** Version 2 adds two hashed
+//! fields: `agent_coedited` (a boolean at the top of the header) and, in a `command` body,
+//! `event_sources`, one [`EventSource`] per committed event in event order. Version 1 has
+//! neither, and a version 1 entry means "every event from the handler, not co-edited". A
+//! header is written as version 2 exactly when it records something version 1 cannot: some
+//! event not from the handler, or `agent_coedited: true`. Otherwise it is written as version
+//! 1, byte for byte as before, so each content has one encoding and old entries are never
+//! rewritten. Readers accept both versions; a version 2 header holding only the defaults is
+//! a `schema` error.
 
 use fid_canon::{digest_bytes, to_canonical_bytes, CValue, CanonError, Digest};
 use fid_kci::AlgorithmId;
@@ -29,8 +39,12 @@ pub use shape::{
     PRINCIPAL_SHAPE, SESSION_SHAPE, SHAPES, TIME_SHAPE, UPGRADE_SHAPE,
 };
 
-/// Header schema version written by this module.
-pub const SCHEMA_VERSION: u32 = 1;
+/// The highest header schema version this module reads and writes (module docs).
+pub const SCHEMA_VERSION: u32 = 2;
+/// Schema version 1: no `agent_coedited`, no `event_sources` (every event from the handler).
+pub const SCHEMA_V1: u32 = 1;
+/// Schema version 2: `agent_coedited` and, on a `command` entry, `event_sources`.
+pub const SCHEMA_V2: u32 = 2;
 /// Reserved output digest of a deleted entity: `sha256:` followed by 64 zeros (REQ-012).
 /// Only an output that names its entity may carry it.
 pub const TOMBSTONE: Digest = Digest([0; 32]);
@@ -187,6 +201,23 @@ wire_enum!(
 wire_enum!(
     /// How a person confirmed a session upgrade (REQ-007).
     ConfirmMethod, "upgrade.method" { GuiPrompt => "gui_prompt", OsPresence => "os_presence" }
+);
+wire_enum!(
+    /// Which pipeline stage added an event to its entry, recorded per event in the hashed
+    /// header (`command.event_sources`, schema version 2; absent in version 1, which means
+    /// `handler` for every event). Readers take it from the verified header, never from the
+    /// event body.
+    ///
+    /// - `handler`: the handler of the entry's command returned it.
+    /// - `bus_route`: the bus routing module (`CORE.BUS.ROUTE`) added it; the only source of
+    ///   agent branches.
+    /// - `bus_release`: the bus commit stage added it to a W3 entry on `main`
+    ///   (`CORE.JRN.BR.NAME` REQ-006).
+    /// - `bus_approval`: the bus authorisation stage added it to the command entry of an
+    ///   approved request (the `RequestApproved` event, `CORE.BUS.POL.PROJ`).
+    EventSource, "command.event_sources" {
+        Handler => "handler", BusRoute => "bus_route", BusRelease => "bus_release", BusApproval => "bus_approval",
+    }
 );
 wire_enum!(
     /// A detachable field. Its name keys the salt and the value in the payload.
@@ -357,6 +388,9 @@ pub struct CommandDraft {
     pub consumed_r1: Vec<Digest>,
     pub outputs: Vec<OutputDigest>,
     pub algorithms: Vec<AlgorithmId>,
+    /// The stage that added each event, in event order. Empty means every event came from
+    /// the handler; otherwise it has exactly one source per event (else `schema`).
+    pub event_sources: Vec<EventSource>,
 }
 
 /// The `principal_upgrade` part of a draft (REQ-007, D-012).
@@ -391,6 +425,9 @@ pub struct EntryDraft {
     pub manifests: Manifests,
     pub reason: Option<String>,
     pub human_assertion: Option<String>,
+    /// An agent commit the bus routed to a non-agent branch under a human opt-in
+    /// (`CORE.BUS.ROUTE` REQ-002).
+    pub agent_coedited: bool,
     pub body: DraftBody,
 }
 
@@ -432,6 +469,7 @@ pub fn session_start(
         manifests,
         reason: None,
         human_assertion: None,
+        agent_coedited: false,
         body: DraftBody::SessionHeader(session),
     }
 }
@@ -459,6 +497,9 @@ pub struct CommandHeader {
     pub inputs: Vec<TaggedDigest>,
     pub outputs: Vec<OutputDigest>,
     pub algorithms: Vec<AlgorithmId>,
+    /// `event_sources` of a version 2 header, one per event; `None` in version 1 (every
+    /// event from the handler).
+    pub event_sources: Option<Vec<EventSource>>,
 }
 
 /// The `principal_upgrade` part of a header (REQ-007).
@@ -494,6 +535,8 @@ pub struct EntryHeader {
     pub manifests: Manifests,
     pub reason_commit: Option<Digest>,
     pub human_assertion: Option<String>,
+    /// `agent_coedited` (version 2; `false` in version 1).
+    pub agent_coedited: bool,
     pub body: HeaderBody,
     pub hash: Digest,
 }
@@ -525,14 +568,63 @@ impl EntryHeader {
         }
     }
 
+    /// The schema version this header is written in: 2 when it records a non-handler event
+    /// source or `agent_coedited: true` (or holds `event_sources` at all), else 1.
+    pub fn schema_version(&self) -> u32 {
+        let sources = matches!(&self.body, HeaderBody::Command(c) if c.event_sources.is_some());
+        if self.agent_coedited || sources {
+            SCHEMA_V2
+        } else {
+            SCHEMA_V1
+        }
+    }
+
+    /// The recorded source of event `index` (0-based, in event order) of a `command` entry:
+    /// [`EventSource::Handler`] for every event of a version 1 entry. `schema` for an entry
+    /// that is not a command entry, or an index outside a version 2 `event_sources`.
+    pub fn event_source(&self, index: usize) -> Result<EventSource, EntryError> {
+        let HeaderBody::Command(c) = &self.body else {
+            return Err(EntryError::Schema(format!("{} entries carry no events", self.kind())));
+        };
+        match &c.event_sources {
+            None => Ok(EventSource::Handler),
+            Some(v) => v.get(index).copied().ok_or_else(|| {
+                EntryError::Schema(format!("command.event_sources has {} sources, no event {index}", v.len()))
+            }),
+        }
+    }
+
+    /// The recorded source of every event of a `command` entry with `events` events (the
+    /// count of the opened payload). `schema` if a version 2 header records a different
+    /// number of sources.
+    pub fn event_sources(&self, events: usize) -> Result<Vec<EventSource>, EntryError> {
+        let HeaderBody::Command(c) = &self.body else {
+            return Err(EntryError::Schema(format!("{} entries carry no events", self.kind())));
+        };
+        match &c.event_sources {
+            None => Ok(vec![EventSource::Handler; events]),
+            Some(v) if v.len() == events => Ok(v.clone()),
+            Some(v) => {
+                Err(EntryError::Schema(format!("command.event_sources has {} sources for {events} events", v.len())))
+            }
+        }
+    }
+
+    /// Reads a recorded header: the schema rules of either version, the entry hash, then the
+    /// fields. `to_value` of the result gives back the same value.
+    pub fn from_value(v: &CValue) -> Result<EntryHeader, EntryError> {
+        json::header_from_value(v)
+    }
+
     /// The header as JSON without the `hash` field: the entry-hash pre-image.
     pub fn unhashed_value(&self) -> CValue {
         let mut principal = obj([("kind", s(self.principal.kind.as_str())), ("commit", dg(&self.principal.commit))]);
         if let Some(c) = &self.principal.on_behalf_of_commit {
             principal.insert("on_behalf_of_commit".into(), dg(c));
         }
+        let version = self.schema_version();
         let mut o = obj([
-            ("schema_version", CValue::Num(f64::from(SCHEMA_VERSION))),
+            ("schema_version", CValue::Num(f64::from(version))),
             ("kind", s(self.kind().as_str())),
             ("stream", s(&self.stream)),
             ("seq", CValue::U64(self.seq)),
@@ -559,6 +651,9 @@ impl EntryHeader {
         }
         if let Some(a) = &self.human_assertion {
             o.insert("human_assertion".into(), s(a));
+        }
+        if version == SCHEMA_V2 {
+            o.insert("agent_coedited".into(), CValue::Bool(self.agent_coedited));
         }
         let (key, body) = match &self.body {
             HeaderBody::Command(c) => ("command", command_value(c)),
@@ -641,7 +736,7 @@ fn command_value(c: &CommandHeader) -> BTreeMap<String, CValue> {
             CValue::Obj(o)
         })
         .collect();
-    obj([
+    let mut o = obj([
         ("id", s(&c.id)),
         ("major", CValue::Num(f64::from(c.major))),
         ("class", s(c.class.as_str())),
@@ -652,7 +747,11 @@ fn command_value(c: &CommandHeader) -> BTreeMap<String, CValue> {
         ("inputs", CValue::Arr(inputs)),
         ("outputs", CValue::Arr(outputs)),
         ("algorithms", CValue::Arr(c.algorithms.iter().map(|a| CValue::Str(a.to_string())).collect())),
-    ])
+    ]);
+    if let Some(sources) = &c.event_sources {
+        o.insert("event_sources".into(), CValue::Arr(sources.iter().map(|e| s(e.as_str())).collect()));
+    }
+    o
 }
 
 /// The detachable payload: each committed value with its salt.
@@ -716,6 +815,22 @@ pub fn build(draft: &EntryDraft, seq: u64, prev: Digest, salts: &mut dyn SaltSou
                     "draft.command.inputs: tag {R1_RESULT_TAG} comes only from consumed_r1"
                 )));
             }
+            if !c.event_sources.is_empty() && c.event_sources.len() != c.events.len() {
+                return Err(EntryError::Schema(format!(
+                    "draft.command.event_sources: {} sources for {} events",
+                    c.event_sources.len(),
+                    c.events.len()
+                )));
+            }
+            // Version 2 only when it records something version 1 cannot (module docs).
+            let bus_added = c.event_sources.iter().any(|e| *e != EventSource::Handler);
+            let event_sources = (bus_added || draft.agent_coedited).then(|| {
+                if c.event_sources.is_empty() {
+                    vec![EventSource::Handler; c.events.len()]
+                } else {
+                    c.event_sources.clone()
+                }
+            });
             let mut inputs = c.inputs.clone();
             inputs.extend(c.consumed_r1.iter().map(|d| TaggedDigest { tag: R1_RESULT_TAG.to_string(), digest: *d }));
             HeaderBody::Command(CommandHeader {
@@ -729,6 +844,7 @@ pub fn build(draft: &EntryDraft, seq: u64, prev: Digest, salts: &mut dyn SaltSou
                 inputs,
                 outputs: c.outputs.clone(),
                 algorithms: c.algorithms.clone(),
+                event_sources,
             })
         }
         DraftBody::SessionHeader(si) => HeaderBody::SessionHeader(si.clone()),
@@ -752,6 +868,7 @@ pub fn build(draft: &EntryDraft, seq: u64, prev: Digest, salts: &mut dyn SaltSou
         manifests: draft.manifests,
         reason_commit,
         human_assertion: draft.human_assertion.clone(),
+        agent_coedited: draft.agent_coedited,
         body,
         hash: TOMBSTONE,
     };

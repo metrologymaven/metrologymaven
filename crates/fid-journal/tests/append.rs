@@ -290,6 +290,36 @@ fn ac1_hundred_w2_entries_chain_from_one() {
     assert_eq!(st(obj(fx[101].get("draft").unwrap()), "kind"), "principal_upgrade");
 }
 
+/// CORE.JRN.ENTRY REQ-013..REQ-015: entries of schema version 2 (`agent_coedited`,
+/// `command.event_sources`) continue a chain of version 1 entries; every stored header,
+/// old and new, equals the Python reference byte for byte, verifies, and reads back.
+#[test]
+fn schema_v2_entries_continue_a_v1_chain() {
+    use fid_journal::{EntryHeader, EventSource};
+    let (_t, root, j) = new_journal("v2");
+    let fx = chain_fixture();
+    let v = load("chain.json");
+    let v2: Vec<Obj> = arr(obj(&v), "v2_entries").iter().map(|e| obj(e).clone()).collect();
+    assert_eq!(v2.len(), 4);
+    for e in fx.iter().chain(&v2) {
+        append_fixture(&j, e);
+    }
+    let stored = verify_chain(&root);
+    assert_eq!(stored.len(), fx.len() + v2.len());
+    for (r, e) in stored[fx.len()..].iter().zip(&v2) {
+        assert_eq!(r.header, to_canonical_bytes(e.get("header").unwrap()).unwrap(), "{}", st(e, "name"));
+    }
+    let read = |r: &Row| EntryHeader::from_value(&parse(&r.header).unwrap()).unwrap();
+    let versions: Vec<u32> = stored.iter().map(|r| read(r).schema_version()).collect();
+    assert!(versions[..fx.len()].iter().all(|v| *v == 1), "old entries stay version 1");
+    assert_eq!(&versions[fx.len()..], &[2, 2, 2, 1]);
+    let routed = read(&stored[fx.len()]);
+    assert_eq!(routed.event_sources(2).unwrap(), vec![EventSource::Handler, EventSource::BusRoute]);
+    assert!(read(&stored[fx.len() + 1]).agent_coedited);
+    drop(j);
+    assert_eq!(reopen(&root).tail().unwrap().unwrap().seq, (fx.len() + v2.len()) as u64);
+}
+
 #[test]
 fn durability_pragmas_are_full() {
     let (_t, _root, j) = new_journal("pragmas");

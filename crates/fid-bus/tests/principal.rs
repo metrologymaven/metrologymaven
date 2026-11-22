@@ -311,6 +311,7 @@ fn invoke_w2(table: &SessionTable, ch: &dyn Channel, journal: &mut MemJournal) -
         manifests: manifests(),
         reason: None,
         human_assertion: None,
+        agent_coedited: false,
         body: DraftBody::Command(CommandDraft {
             id: "test.touch_value".into(),
             major: 1,
@@ -323,6 +324,7 @@ fn invoke_w2(table: &SessionTable, ch: &dyn Channel, journal: &mut MemJournal) -
             consumed_r1: vec![],
             outputs: vec![],
             algorithms: vec![],
+            event_sources: Vec::new(),
         }),
     };
     journal.append(&draft)

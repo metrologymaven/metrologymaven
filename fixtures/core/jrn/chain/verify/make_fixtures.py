@@ -45,7 +45,8 @@ Then the entries in sequence order, position p = 1, 2, ... For each row:
  4. header bytes not canonical: `hash`/`non_canonical`.
  5. not an object, or `hash` missing or not a digest: `hash`/`schema`.
  6. SHA-256 of the canonical header without `hash` != header.hash: `hash`/`hash_mismatch`.
- 7. schema_version is not the number 1: `hash`/`unknown_version`.
+ 7. schema_version is not the number 1 or 2: `hash`/`unknown_version` (version 2, CORE.JRN.ENTRY
+    REQ-013..015, adds `agent_coedited` and `command.event_sources`).
  8. header fails the entry schema: `hash`/`schema`.
  9. hash column != header.hash: `hash`/`column_mismatch`.
 10. header.seq != column seq: `sequence`/`header_seq`.
@@ -533,8 +534,21 @@ def schema_ok(h):
     kind = h.get("kind")
     if kind not in body_of:
         return False
-    allowed = required | {"reason_commit", "human_assertion", body_of[kind]}
+    allowed = required | {"reason_commit", "human_assertion", "agent_coedited", body_of[kind]}
     if not required.issubset(h) or body_of[kind] not in h or any(k not in allowed for k in h):
+        return False
+    # Version 2 (CORE.JRN.ENTRY REQ-013..015): agent_coedited required, and on a command the
+    # event sources; version 1 has neither. A version 2 header records a non-default value.
+    v2 = h["schema_version"] == 2
+    if ("agent_coedited" in h) != v2:
+        return False
+    if v2:
+        sources = h["command"].get("event_sources") if kind == "command" and isinstance(h["command"], dict) else None
+        if kind == "command" and not isinstance(sources, list):
+            return False
+        if not (h["agent_coedited"] is True or any(x != "handler" for x in sources or [])):
+            return False
+    elif kind == "command" and isinstance(h["command"], dict) and "event_sources" in h["command"]:
         return False
     t = h["time"]
     return (isinstance(h["stream"], str) and IDENT_RE.match(h["stream"]) and parse_seq(h["seq"]) is not None
@@ -659,7 +673,7 @@ def check_row(r, p, stream):
     if sha(cbytes(bare)) != h["hash"]:
         raise Fail(p, "hash", "hash_mismatch")
     sv = h.get("schema_version")
-    if not (type(sv) in (int, float) and sv == 1):
+    if not (type(sv) in (int, float) and sv in (1, 2)):
         raise Fail(p, "hash", "unknown_version")
     if not schema_ok(h):
         raise Fail(p, "hash", "schema")
@@ -882,7 +896,8 @@ def cases(good):
 
     # Header variants with a valid hash.
     for name, edit in [
-        ("unknown_version", lambda h: h.__setitem__("schema_version", 2)),
+        ("unknown_version", lambda h: h.__setitem__("schema_version", 3)),
+        ("schema_v2_without_new_fields", lambda h: h.__setitem__("schema_version", 2)),
         ("schema_missing_branch", lambda h: h.pop("branch")),
         ("schema_unknown_field", lambda h: h.__setitem__("extra", "x")),
     ]:

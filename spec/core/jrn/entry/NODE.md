@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # CORE.JRN.ENTRY: Entry model, salted commitments and session entries
@@ -30,7 +30,7 @@ Defines what one journal entry contains and how it is hashed: the header fields,
 
 ## Scope
 
-**In:** header fields; entry kinds `command`, `session_header`, `principal_upgrade`, `head_move`; header/payload separation; salted commitments (128-bit salt, SHA-256 over salt then canonical bytes); the human-assertion pre-image rule; consumed R1 result digests among input digests (D-031); `entry.schema.json` (schema version 1).
+**In:** header fields; entry kinds `command`, `session_header`, `principal_upgrade`, `head_move`; header/payload separation; salted commitments (128-bit salt, SHA-256 over salt then canonical bytes); the human-assertion pre-image rule; consumed R1 result digests among input digests (D-031); the recorded source stage of every event and the `agent_coedited` flag (schema version 2); `entry.schema.json` (schema versions 1 and 2).
 **Out:** canonical bytes and digests (`CORE.JRN.CANON`); appending and chaining (`CORE.JRN.CHAIN.APPEND`); producing human assertions and signatures (`TRUST`); Access Ledger extensions (`CORE.JRN.STREAM.LEDGER`); deciding when an upgrade happens (`CORE.BUS.PRIN`).
 
 ## Requirements
@@ -47,6 +47,9 @@ Defines what one journal entry contains and how it is hashed: the header fields,
 - **REQ-CORE.JRN.ENTRY-009** A human assertion shall be computed over the entry hash obtained with the `human_assertion` field empty.
 - **REQ-CORE.JRN.ENTRY-010** When an entry's payload is removed, the entry's header hash and every header commitment shall still verify.
 - **REQ-CORE.JRN.ENTRY-011** The entry model shall be published as `entry.schema.json`, and if a header does not validate against it, then building the entry shall fail with a typed `schema` error.
+- **REQ-CORE.JRN.ENTRY-013** (maintainer decision, 2026-11-21) A `command` entry header of schema version 2 shall record, in `command.event_sources`, the pipeline stage that added each committed event (`handler`, `bus_route`, `bus_release` or `bus_approval`), one per event in event order, and readers shall take an event's source only from this record, never from the event body.
+- **REQ-CORE.JRN.ENTRY-014** (maintainer decision, 2026-11-21) An entry header of schema version 2 shall record `agent_coedited` (a boolean): `true` for an agent commit the bus routed to a non-agent branch under a human opt-in (`CORE.BUS.ROUTE` REQ-002).
+- **REQ-CORE.JRN.ENTRY-015** (maintainer decision, 2026-11-21) A header shall be written as schema version 2 exactly when it records `agent_coedited: true` or an event source other than `handler`, and as schema version 1, without either field, otherwise; readers shall accept both versions, read an absent field as `handler` and `false`, and refuse with `schema` a version 2 header that records only those defaults.
 
 ## Acceptance criteria
 
@@ -57,21 +60,26 @@ Defines what one journal entry contains and how it is hashed: the header fields,
 - **AC-5** Given a session start with known manifest digests, then the first entry is a `session_header` with those digests and the app version.
 - **AC-6** Given a W2 draft with `consumed_r1: ["sha256:ab..."]`, then the header's input digests contain that digest tagged `r1_result`.
 - **AC-7** (replay) Given a recorded entry, when rebuilt from its draft and recorded salts, then the hash is identical.
+- **AC-8** (compatibility) Given the version 1 vectors of AC-1 and the 103 version 1 entries of `fixtures/core/jrn/chain/append/chain.json`, then each still verifies byte for byte, reads back as version 1 and records every event as `handler`, not co-edited.
+- **AC-9** Given the version 2 vectors (`fixtures/core/jrn/entry/vectors.json` from `36_v2_command` on) and the `v2_entries` of `chain.json` appended after the version 1 entries, then every header equals the reference byte for byte, `EntryHeader::from_value` reads it back to the same header, and `event_sources` and `agent_coedited` are as drafted; a draft whose sources are all `handler` and not co-edited is written as version 1.
+- **AC-10** (error path) Given a version 1 header with `agent_coedited` or `event_sources`, a version 2 header without them, with an unknown source, or with only default values, or schema version 3, then validation fails with `schema`; a source list that is not one per event fails to build with `schema`; a recorded source rewritten without rehashing fails with `hash_mismatch`.
+- **AC-11** (forged source) Given an entry whose header records an agent `BranchCreated` as the handler's (a handler claiming to be the route stage), when its events are folded with `EntryOrigin::of_event`, then `Branches::apply` refuses it (`internal/invariant_violated`); recorded as `bus_route` it folds; `BranchProtected{release}` folds only when recorded as `bus_release`.
 
 ## Design
 
 - **Registry command(s):** none; library types.
-- **Data structures:** `EntryHeader { schema_version, kind, stream, seq: U64, prev, branch, logical_parent, time: { utc, mono_ns: U64, sync }, principal: { kind, commit, on_behalf_of_commit? }, ai_assistance, command?: { id, major, class, determinism, seed, inputs: [TaggedDigest], outputs: [{ entity?: EntityId, digest }], algorithms: [AlgorithmId] }, manifests: { registry, kernel }, reason_commit?, human_assertion?, hash }` (signatures are detached and not part of the hashed header; they belong to `TRUST`); `EntryPayload { salts, args, events, reason, identity }`; `EntryDraft` (what the bus supplies, without seq, prev and hash); `Commitment::new(value, rng) -> (commit, salt)`.
+- **Data structures:** `EntryHeader { schema_version (1 or 2, derived), kind, stream, seq: U64, prev, branch, logical_parent, time: { utc, mono_ns: U64, sync }, principal: { kind, commit, on_behalf_of_commit? }, ai_assistance, command?: { id, major, class, determinism, seed, inputs: [TaggedDigest], outputs: [{ entity?: EntityId, digest }], algorithms: [AlgorithmId] }, manifests: { registry, kernel }, reason_commit?, human_assertion?, agent_coedited (v2), hash }` with `command.event_sources: [EventSource]` (v2) (signatures are detached and not part of the hashed header; they belong to `TRUST`); `EntryPayload { salts, args, events, reason, identity }`; `EntryDraft` (what the bus supplies, without seq, prev and hash); `Commitment::new(value, rng) -> (commit, salt)`.
 - **Algorithm:** build the header from the draft, compute commitments with a CSPRNG salt, validate against the schema, hash with `fid-canon`. Replay passes recorded salts instead of drawing new ones.
 - **Errors:** `schema`, `non_finite_number` (from canon).
 - **Determinism:** D0 given salts; salt generation is class N and the salts are recorded in the payload.
 - **Performance budget:** build and hash a 4 KiB header in < 50 µs [unverified until measured].
 - **Crate:** `fid-journal` (module `entry`).
+- **Schema version 2 (maintainer decision, REQ-013..REQ-015).** Encoding: `agent_coedited` is a top-level boolean; `command.event_sources` is a parallel array of wire strings, one per element of the committed `events` array, in the same order. Both are hashed with the header (RFC 8785, like every other field); the payload and its commitments are unchanged, so detaching the payload leaves the sources verifiable. Because the header holds no event count, the count is checked when the payload is opened: `EntryHeader::event_sources(n)` returns the sources of `n` events or `schema`. Versioning: a header is version 2 only when it records something version 1 cannot (a non-`handler` source or `agent_coedited: true`); otherwise it is written as version 1 byte for byte, so the 1:1 content-to-bytes rule of CONSTITUTION §6 holds and no old entry is rewritten or re-hashed. Readers (`validate_header_value`, `verify_header_value`, `EntryHeader::from_value`, `CORE.JRN.CHAIN.VERIFY`) accept versions 1 and 2. `EventSource` lives in module `entry` and is re-exported as `fid_journal::branch::EventSource`. Fold: `EntryOrigin::of_event(header, i)` / `EntryOrigin::of_entry(header, n)` build each event's origin from a header read with `EntryHeader::from_value` (which checks the hash), so `Branches::apply` and release protection see the recorded source. Drafts: `CommandDraft.event_sources` (empty = every event from the handler, else one per event) and `EntryDraft.agent_coedited`.
 - **Unchained streams:** the schema's `prev` is required on every entry, but only chained streams link it. Stream `activity` (the P0 Activity Log, `CORE.JRN.STREAM.ALOG`) is unchained: every `activity` entry carries `prev` = `sha256:` followed by 64 zeros and its `seq` only counts lines. Chaining of the Activity Log is P1b (`CORE.JRN.STREAM.COMPACT`).
 
 ## Test fixtures
 
-`fixtures/core/jrn/entry/vectors.json`, produced by an independent reference script committed beside it; CC-BY-4.0.
+`fixtures/core/jrn/entry/vectors.json`, produced by an independent reference script committed beside it (`make_vectors.py`, which writes the version 1 vectors unchanged and appends the version 2 cases); `fixtures/core/jrn/chain/append/chain.json` (`v2_entries`, from `make_fixtures.py` there); CC-BY-4.0.
 
 ## Build prompt
 
@@ -82,6 +90,10 @@ Defines what one journal entry contains and how it is hashed: the header fields,
 - **Resolved with `CORE.RPL.EXEC`'s expectations:** salts are class N and replay substitutes the recorded salts.
 - `TRUST.CHAIN` consumes `entry.schema.json`; it should declare `uses_artifacts: [CORE.JRN.ENTRY]` when next changed.
 - **Follow-up: a `job_lifecycle` entry kind.** The Activity Log writes job lifecycle changes as `command` entries with the reserved command ID `job.lifecycle` (R0, determinism N, principal kind `system`), because the schema has no kind for them (`CORE.JRN.STREAM.ALOG`, PR #307). A dedicated kind `job_lifecycle` with a readable body (job ID, command, from, to, error) would remove the reserved ID and show the transition in the header; it needs a schema change here. Until then `fid-registry-build` tests that no registry command takes the ID `job.lifecycle`.
+
+## Change log
+
+- 2026-11-21 (maintainer decision): schema version 2 adds `command.event_sources` and `agent_coedited` to the hashed header (REQ-013, REQ-014, REQ-015; AC-8 to AC-11), unblocking release protection (`CORE.JRN.BR.NAME` REQ-006) and the `agent_coedited` flag of `CORE.BUS.ROUTE` REQ-002. Version 1 entries are unchanged and still verify; `entry.schema.json` accepts both versions. Source `bus_approval` records the `RequestApproved` event the bus adds to an approval (`CORE.BUS.PIPE.STAGE` "Deferred"). `CORE.JRN.CHAIN.VERIFY`'s `hash/unknown_version` now means a version other than 1 or 2. No REQ ID was renumbered.
 
 ## Children
 

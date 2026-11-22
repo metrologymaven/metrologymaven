@@ -3,9 +3,10 @@
 //! for one; `tools/check_entries.py` runs the same fixtures through the schema itself.
 
 use super::{
-    parse_digest, AiAssistance, CommandDraft, ConfirmMethod, DraftBody, EntryDraft, EntryError, EntryKind, EntryTime,
-    HeadMove, Manifests, OutputDigest, PrincipalDraft, PrincipalKind, SessionInfo, TaggedDigest, UpgradeDraft,
-    R1_RESULT_TAG, SCHEMA_VERSION, TOMBSTONE,
+    parse_digest, AiAssistance, CommandDraft, CommandHeader, ConfirmMethod, DraftBody, EntryDraft, EntryError,
+    EntryHeader, EntryKind, EntryTime, EventSource, HeadMove, HeaderBody, Manifests, OutputDigest, PrincipalCommit,
+    PrincipalDraft, PrincipalKind, SessionInfo, TaggedDigest, UpgradeDraft, UpgradeHeader, R1_RESULT_TAG, SCHEMA_V1,
+    SCHEMA_V2, TOMBSTONE,
 };
 use fid_canon::{digest_bytes, to_canonical_bytes, CValue, Digest};
 use fid_kci::AlgorithmId;
@@ -211,6 +212,36 @@ fn determinism(o: &Obj, at: &str) -> Result<Determinism, EntryError> {
         .map_err(|_| err(&format!("{at}.determinism"), "unknown determinism class"))
 }
 
+/// `command.event_sources`: an array of [`EventSource`] wire strings.
+fn event_sources(c: &Obj, at: &str) -> Result<Vec<EventSource>, EntryError> {
+    let mut out = Vec::new();
+    for (i, v) in array(c, "event_sources", at)?.iter().enumerate() {
+        let here = format!("{at}.event_sources[{i}]");
+        out.push(EventSource::parse(as_str(v, &here)?).map_err(|_| err(&here, "unknown event source"))?);
+    }
+    Ok(out)
+}
+
+/// The schema version of a header: 1 or 2.
+fn version(o: &Obj, at: &str) -> Result<u32, EntryError> {
+    match get(o, "schema_version", at)? {
+        CValue::Num(f) if *f == f64::from(SCHEMA_V1) => Ok(SCHEMA_V1),
+        CValue::Num(f) if *f == f64::from(SCHEMA_V2) => Ok(SCHEMA_V2),
+        _ => Err(err(at, "schema_version must be 1 or 2")),
+    }
+}
+
+/// A field that exists only from schema version 2 on: absent in version 1, required in
+/// version 2.
+fn v2_field<'a>(o: &'a Obj, k: &str, version: u32, at: &str) -> Result<Option<&'a CValue>, EntryError> {
+    match (o.get(k), version) {
+        (None, SCHEMA_V1) => Ok(None),
+        (None, _) => Err(err(at, &format!("missing field {k} (schema version 2)"))),
+        (Some(_), SCHEMA_V1) => Err(err(&format!("{at}.{k}"), "not a field of schema version 1")),
+        (Some(v), _) => Ok(Some(v)),
+    }
+}
+
 fn tagged_inputs(o: &Obj, at: &str) -> Result<Vec<TaggedDigest>, EntryError> {
     let mut out = Vec::new();
     for (i, v) in array(o, "inputs", at)?.iter().enumerate() {
@@ -317,10 +348,14 @@ pub fn validate_header_value(v: &CValue) -> Result<(), EntryError> {
     required.push(body);
     let optional: Vec<&str> = HEADER_SHAPE.optional.iter().copied().filter(|k| !BODY_KEYS.contains(k)).collect();
     fields(o, at, &required, &optional)?;
-    match get(o, "schema_version", at)? {
-        CValue::Num(f) if *f == f64::from(SCHEMA_VERSION) => {}
-        _ => return Err(err(at, "schema_version must be 1")),
-    }
+    let version = version(o, at)?;
+    let coedited = match v2_field(o, "agent_coedited", version, at)? {
+        None | Some(CValue::Bool(false)) => false,
+        Some(CValue::Bool(true)) => true,
+        Some(_) => return Err(err("header.agent_coedited", "expected a boolean")),
+    };
+    // Whether some event was added by a bus stage, not by the handler (version 2 only).
+    let mut bus_added = false;
     ident(o, "stream", at)?;
     seq(o, at)?;
     digest(o, "prev", at)?;
@@ -363,6 +398,9 @@ pub fn validate_header_value(v: &CValue) -> Result<(), EntryError> {
                 }
             }
             algorithms(c, &here)?;
+            if v2_field(c, "event_sources", version, &here)?.is_some() {
+                bus_added = event_sources(c, &here)?.iter().any(|e| *e != EventSource::Handler);
+            }
         }
         EntryKind::SessionHeader => {
             session(o, at)?;
@@ -378,6 +416,13 @@ pub fn validate_header_value(v: &CValue) -> Result<(), EntryError> {
         EntryKind::HeadMove => {
             head_move(o, at)?;
         }
+    }
+    // One encoding per content: a version 2 header records something version 1 cannot.
+    if version == SCHEMA_V2 && !coedited && !bus_added {
+        return Err(err(
+            at,
+            "schema version 2 with agent_coedited false and every event from the handler; write version 1",
+        ));
     }
     Ok(())
 }
@@ -398,6 +443,82 @@ pub fn verify_header_value(v: &CValue) -> Result<Digest, EntryError> {
     }
 }
 
+/// [`EntryHeader::from_value`]: [`verify_header_value`], then the typed fields, then a check
+/// that the typed header writes back exactly the bytes it was read from.
+pub(super) fn header_from_value(v: &CValue) -> Result<EntryHeader, EntryError> {
+    let hash = verify_header_value(v)?;
+    let at = "header";
+    let o = obj(v, at)?;
+    let kind = EntryKind::parse(string(o, "kind", at)?)?;
+    let pat = "header.principal";
+    let p = obj(get(o, "principal", at)?, pat)?;
+    let principal = PrincipalCommit {
+        kind: PrincipalKind::parse(string(p, "kind", pat)?)?,
+        commit: digest(p, "commit", pat)?,
+        on_behalf_of_commit: opt_digest(p, "on_behalf_of_commit", pat)?,
+    };
+    let here = format!("{at}.{}", body_key(kind));
+    let body = match kind {
+        EntryKind::Command => {
+            let c = obj(get(o, "command", at)?, &here)?;
+            let mut outputs = Vec::new();
+            for (i, v) in array(c, "outputs", &here)?.iter().enumerate() {
+                let oat = format!("{here}.outputs[{i}]");
+                let out = obj(v, &oat)?;
+                outputs.push(OutputDigest {
+                    entity: opt_text(out, "entity", &oat)?,
+                    digest: digest(out, "digest", &oat)?,
+                });
+            }
+            let sources = if c.contains_key("event_sources") { Some(event_sources(c, &here)?) } else { None };
+            HeaderBody::Command(CommandHeader {
+                id: command_id(c, &here)?,
+                major: u32_field(c, "major", &here)?,
+                class: class(c, &here)?,
+                determinism: determinism(c, &here)?,
+                seed: u64_field(c, "seed", &here)?,
+                args_commit: digest(c, "args_commit", &here)?,
+                events_commit: digest(c, "events_commit", &here)?,
+                inputs: tagged_inputs(c, &here)?,
+                outputs,
+                algorithms: algorithms(c, &here)?,
+                event_sources: sources,
+            })
+        }
+        EntryKind::SessionHeader => HeaderBody::SessionHeader(session(o, at)?),
+        EntryKind::PrincipalUpgrade => {
+            let u = obj(get(o, "upgrade", at)?, &here)?;
+            HeaderBody::PrincipalUpgrade(UpgradeHeader {
+                session_id: text(u, "session_id", &here)?,
+                method: ConfirmMethod::parse(string(u, "method", &here)?)?,
+                identity_commit: digest(u, "identity_commit", &here)?,
+                confirmed_at: utc(u, "confirmed_at", &here)?,
+            })
+        }
+        EntryKind::HeadMove => HeaderBody::HeadMove(head_move(o, at)?),
+    };
+    let header = EntryHeader {
+        stream: string(o, "stream", at)?.to_string(),
+        seq: seq(o, at)?,
+        prev: digest(o, "prev", at)?,
+        branch: string(o, "branch", at)?.to_string(),
+        logical_parent: logical_parent(o, at)?,
+        time: time(o, at)?,
+        principal,
+        ai_assistance: AiAssistance::parse(string(o, "ai_assistance", at)?)?,
+        manifests: manifests(o, at)?,
+        reason_commit: opt_digest(o, "reason_commit", at)?,
+        human_assertion: opt_text(o, "human_assertion", at)?,
+        agent_coedited: matches!(o.get("agent_coedited"), Some(CValue::Bool(true))),
+        body,
+        hash,
+    };
+    if to_canonical_bytes(&header.to_value())? != to_canonical_bytes(v)? {
+        return Err(err(at, "the header does not read back to the same bytes"));
+    }
+    Ok(header)
+}
+
 // ------------------------------------------------------------------ drafts
 
 pub(super) fn draft_from_value(v: &CValue) -> Result<EntryDraft, EntryError> {
@@ -407,7 +528,12 @@ pub(super) fn draft_from_value(v: &CValue) -> Result<EntryDraft, EntryError> {
     let key = body_key(kind);
     let required =
         ["kind", "stream", "branch", "logical_parent", "time", "principal", "ai_assistance", "manifests", key];
-    fields(o, at, &required, &["reason", "human_assertion"])?;
+    fields(o, at, &required, &["reason", "human_assertion", "agent_coedited"])?;
+    let agent_coedited = match o.get("agent_coedited") {
+        None | Some(CValue::Bool(false)) => false,
+        Some(CValue::Bool(true)) => true,
+        Some(_) => return Err(err("draft.agent_coedited", "expected a boolean")),
+    };
 
     let pat = "draft.principal";
     let p = obj(get(o, "principal", at)?, pat)?;
@@ -426,7 +552,7 @@ pub(super) fn draft_from_value(v: &CValue) -> Result<EntryDraft, EntryError> {
                 c,
                 &here,
                 &["id", "major", "class", "determinism", "seed", "args", "events", "inputs", "outputs", "algorithms"],
-                &["consumed_r1"],
+                &["consumed_r1", "event_sources"],
             )?;
             let inputs = tagged_inputs(c, &here)?;
             if inputs.iter().any(|t| t.tag == R1_RESULT_TAG) {
@@ -470,6 +596,7 @@ pub(super) fn draft_from_value(v: &CValue) -> Result<EntryDraft, EntryError> {
                 consumed_r1,
                 outputs,
                 algorithms: algorithms(c, &here)?,
+                event_sources: if c.contains_key("event_sources") { event_sources(c, &here)? } else { Vec::new() },
             })
         }
         EntryKind::SessionHeader => DraftBody::SessionHeader(session(o, at)?),
@@ -497,6 +624,7 @@ pub(super) fn draft_from_value(v: &CValue) -> Result<EntryDraft, EntryError> {
         manifests: manifests(o, at)?,
         reason: o.get("reason").map(|r| as_str(r, "draft.reason").map(str::to_string)).transpose()?,
         human_assertion: opt_text(o, "human_assertion", at)?,
+        agent_coedited,
         body,
     })
 }

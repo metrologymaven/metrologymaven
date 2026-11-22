@@ -706,6 +706,7 @@ fn draft(seq: u64, command: &str) -> EntryDraft {
         manifests: Manifests { registry: zero, kernel: zero },
         reason: None,
         human_assertion: None,
+        agent_coedited: false,
         body: DraftBody::Command(CommandDraft {
             id: command.into(),
             major: 1,
@@ -718,6 +719,7 @@ fn draft(seq: u64, command: &str) -> EntryDraft {
             consumed_r1: Vec::new(),
             outputs: Vec::new(),
             algorithms: Vec::new(),
+            event_sources: Vec::new(),
         }),
     }
 }
