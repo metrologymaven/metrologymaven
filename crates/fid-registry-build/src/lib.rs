@@ -67,10 +67,14 @@ fn registry_defs() -> Result<Vec<CommandDef>, DefError> {
     Ok(defs)
 }
 
-/// The four settings commands of `CORE.STO.SET`, declared with the registry macros (whose
-/// definitions are built at compile time and cannot fail); VAL still checks them at export.
+/// The four settings commands of `CORE.STO.SET` and the two privacy commands of `CORE.STO.PRIV`
+/// (`settings.set_telemetry_consent@1` W3 human-only never on MCP, `settings.show_privacy@1` R0),
+/// declared with the registry macros (whose definitions are built at compile time and cannot
+/// fail); VAL still checks them at export.
 fn store_defs() -> Result<Vec<CommandDef>, DefError> {
-    Ok(fid_store::settings::declarations().into_iter().map(|d| d.def).collect())
+    let settings = fid_store::settings::declarations().into_iter().map(|d| d.def);
+    let privacy = fid_store::privacy::declarations().into_iter().map(|d| d.def);
+    Ok(settings.chain(privacy).collect())
 }
 
 /// The two adoption commands of `AUTO.REC.ADOPT` (`human_only`, request-only on MCP) and the
@@ -155,11 +159,13 @@ impl fmt::Debug for SettingsSource {
 /// Every crate on main that declares settings, sorted by crate name: `fid-bus` declares the
 /// approved file roots `bus.fs_roots` (CORE.BUS.POL.FS); `fid-catalog` the results catalog
 /// location `stats.catalog_path` (RPT.CATALOG.STORE.SCHEMA); `fid-journal` the Activity Log
-/// rotation settings `journal.activity_log_*` (CORE.JRN.STREAM.ALOG).
-pub const SETTINGS_SOURCES: [SettingsSource; 3] = [
+/// rotation settings `journal.activity_log_*` (CORE.JRN.STREAM.ALOG); `fid-store` the telemetry
+/// consent record `privacy.telemetry_consent` (CORE.STO.PRIV).
+pub const SETTINGS_SOURCES: [SettingsSource; 4] = [
     SettingsSource { krate: "fid-bus", settings: fid_bus::policy::fs::fs_settings },
     SettingsSource { krate: "fid-catalog", settings: fid_catalog::catalog_settings },
     SettingsSource { krate: "fid-journal", settings: fid_journal::stream::activity_settings },
+    SettingsSource { krate: "fid-store", settings: fid_store::privacy::privacy_settings },
 ];
 
 /// A crate's quantity-catalogue fragment function.

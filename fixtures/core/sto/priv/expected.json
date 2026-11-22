@@ -1,0 +1,11 @@
+{
+  "edit_blob_digest": "sha256:27a66ff864c623d1d03bf52982a3323a42cdcf2ff3fd847a438de2a350859c08",
+  "format": "fid-privacy-expected/1",
+  "import_blob_digest": "sha256:240250ca908ae48192d8e8b2a5dfafc4a1e3d389d9a38d68746d1843e7e68dbb",
+  "license": "CC-BY-4.0",
+  "offline_blobs": 2,
+  "offline_entries": 2,
+  "offline_steps": 7,
+  "v1_digest": "sha256:cdce2389d1dfba3c1469c50edd642ecc7796f42b839badc2029241b7d58470e6",
+  "v2_digest": "sha256:99082f195436c81ab43f1c0d8d1017c4f8469b679b588a167f5d0443cfe6ff7d"
+}

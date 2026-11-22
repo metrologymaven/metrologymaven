@@ -1,0 +1,35 @@
+{
+  "format": "fid-offline-session/1",
+  "project_name": "offline_gauge_block",
+  "steps": [
+    {
+      "expect_consent": false,
+      "op": "show_privacy"
+    },
+    {
+      "op": "create_project"
+    },
+    {
+      "element_id": "elem-gauge-001",
+      "kind": "test_kit.plane_points",
+      "op": "import_element",
+      "payload": "{\"element_id\":\"elem-gauge-001\",\"points\":[[0,0,0],[10,0,0],[0,10,0],[10,10,0]],\"units\":\"mm\"}"
+    },
+    {
+      "element_id": "elem-gauge-001",
+      "kind": "test_kit.plane_points",
+      "op": "edit_element",
+      "payload": "{\"element_id\":\"elem-gauge-001\",\"note\":\"trimmed_edge\",\"points\":[[0,0,0],[10,0,0],[0,10,0],[10,10,0]],\"units\":\"mm\"}"
+    },
+    {
+      "op": "save_project"
+    },
+    {
+      "op": "close_project"
+    },
+    {
+      "expect_entries": 2,
+      "op": "reopen_project"
+    }
+  ]
+}
