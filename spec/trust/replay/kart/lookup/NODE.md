@@ -19,6 +19,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-vreplay]
+built_pr: 527
 updated: 2026-11-22
 ---
 
