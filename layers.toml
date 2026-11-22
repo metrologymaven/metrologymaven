@@ -74,6 +74,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-journal-cmd" = "engine"
 # Governance-profile commands on the bus (TRUST.PROFILE.SELECT): handlers over fid-profile (model) and fid-bus.
 "fid-profile-cmd" = "engine"
+# Electronic signature catalogue and ceremony (TRUST.ESIG.MEANING): over fid-profile (model) and fid-bus (engine).
+"fid-esig" = "engine"
 "fid-dep" = "engine"
 # Alignment element (ALN.MODEL.ELEM): needs fid-dep (engine), so engine, not model.
 "fid-align" = "engine"

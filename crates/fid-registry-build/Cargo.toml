@@ -17,6 +17,8 @@ fid-registry = { path = "../fid-registry" }
 # functions. Layers engine (fid-align, fid-dep, fid-jobs, fid-project-cmd) and services (fid-report).
 fid-align = { path = "../fid-align" }
 fid-dep = { path = "../fid-dep" }
+# `sign.list_meanings@1` (TRUST.ESIG.MEANING), read through `fid_esig::command_defs()`. Layer engine.
+fid-esig = { path = "../fid-esig" }
 # `geo.describe_element@1` (GEO.TYPES.REG), read through `fid_geo_cmd::command_defs()`.
 # Layer engine.
 fid-geo-cmd = { path = "../fid-geo-cmd" }

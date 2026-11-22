@@ -1,0 +1,9 @@
+{
+  "tenant_meanings": [
+    {
+      "code": "x_lower",
+      "description": "Uses lowercase characters forbidden by the meaning code grammar.",
+      "label": "Lowercase code"
+    }
+  ]
+}

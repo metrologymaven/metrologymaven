@@ -1,0 +1,24 @@
+[package]
+name = "fid-esig"
+description = "Metrology Maven electronic signature catalogue and ceremony (spec node TRUST.ESIG; today TRUST.ESIG.MEANING with built-in and tenant signature meanings and sign.list_meanings@1)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# Bus-derived principals and D-031 class check (CORE.BUS.PRIN, CORE.BUS.POL.CLASS). Layer engine.
+fid-bus = { path = "../fid-bus" }
+# Canonical RFC 8785 JSON parsing and serialization (CORE.JRN.CANON). Layer model.
+fid-canon = { path = "../fid-canon" }
+# Governance profile definitions and tenant meaning types (TRUST.PROFILE.DEFS). Layer model.
+fid-profile = { path = "../fid-profile" }
+# Command declarations through the registry macros (CORE.REG.DEF.MACRO). Layer model.
+fid-registry = { path = "../fid-registry" }
+# Shared determinism and side-effect types (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true

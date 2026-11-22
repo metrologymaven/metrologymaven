@@ -1309,6 +1309,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-esig"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-profile",
+ "fid-registry",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-eval-board"
 version = "0.0.1"
 dependencies = [
@@ -1970,6 +1981,7 @@ dependencies = [
  "fid-canon",
  "fid-catalog",
  "fid-dep",
+ "fid-esig",
  "fid-gdt",
  "fid-geo-cmd",
  "fid-geo-types",

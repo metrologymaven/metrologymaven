@@ -128,6 +128,7 @@ pub const SOURCES: [Source; 16] = [
     Source { krate: "fid-align", defs: fid_align::command_defs },
     Source { krate: "fid-bus", defs: fid_bus::policy::projection::command_defs },
     Source { krate: "fid-dep", defs: dep_defs },
+    Source { krate: "fid-esig", defs: fid_esig::command_defs },
     Source { krate: "fid-geo-cmd", defs: fid_geo_cmd::command_defs },
     Source { krate: "fid-jobs", defs: fid_jobs::command_defs },
     Source { krate: "fid-journal", defs: journal_defs },
