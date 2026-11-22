@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-io-plugin]
+updated: 2026-11-22
 ---
 
 # IO.REG.PLUGIN.ABI: Versioned format-plugin contract and descriptor

@@ -1,0 +1,439 @@
+{
+  "exports": [
+    {
+      "doc": "Return the plugin descriptor declaring formats, signatures, options schemas and requested caps.",
+      "name": "descriptor",
+      "params": [],
+      "result": "plugin-descriptor"
+    },
+    {
+      "doc": "Read untrusted bytes from a bounded stream with validated options and return neutral records.",
+      "name": "read",
+      "params": [
+        {
+          "name": "req",
+          "type": "read-request"
+        }
+      ],
+      "result": "result<list<plugin-record>, plugin-error>"
+    },
+    {
+      "doc": "Write neutral entities with validated options and return output bytes.",
+      "name": "write",
+      "params": [
+        {
+          "name": "req",
+          "type": "write-request"
+        }
+      ],
+      "result": "result<list<u8>, plugin-error>"
+    }
+  ],
+  "format": "format-plugin-idl@1",
+  "framing": {
+    "encoding": "u32-le-length-prefixed",
+    "max_frame_bytes": 16777216
+  },
+  "imports": [],
+  "package": "metrologymaven:format-plugin",
+  "types": [
+    {
+      "fields": [
+        {
+          "name": "major",
+          "type": "u32"
+        },
+        {
+          "name": "minor",
+          "type": "u32"
+        }
+      ],
+      "kind": "record",
+      "name": "contract-version"
+    },
+    {
+      "fields": [
+        {
+          "name": "max-memory-bytes",
+          "type": "u64"
+        },
+        {
+          "name": "max-wall-ms",
+          "type": "u64"
+        }
+      ],
+      "kind": "record",
+      "name": "requested-caps"
+    },
+    {
+      "fields": [
+        {
+          "name": "offset",
+          "type": "u32"
+        },
+        {
+          "name": "bytes",
+          "type": "list<u8>"
+        }
+      ],
+      "kind": "record",
+      "name": "byte-signature"
+    },
+    {
+      "fields": [
+        {
+          "name": "format-id",
+          "type": "string"
+        },
+        {
+          "name": "direction",
+          "type": "string"
+        },
+        {
+          "name": "version-min",
+          "type": "string"
+        },
+        {
+          "name": "version-max",
+          "type": "string"
+        },
+        {
+          "name": "signatures",
+          "type": "list<byte-signature>"
+        },
+        {
+          "name": "extensions",
+          "type": "list<string>"
+        },
+        {
+          "name": "options-schema-json",
+          "type": "string"
+        },
+        {
+          "name": "phase",
+          "type": "string"
+        }
+      ],
+      "kind": "record",
+      "name": "format-spec"
+    },
+    {
+      "fields": [
+        {
+          "name": "plugin-id",
+          "type": "string"
+        },
+        {
+          "name": "version",
+          "type": "string"
+        },
+        {
+          "name": "contract",
+          "type": "contract-version"
+        },
+        {
+          "name": "formats",
+          "type": "list<format-spec>"
+        },
+        {
+          "name": "requested-caps",
+          "type": "requested-caps"
+        }
+      ],
+      "kind": "record",
+      "name": "plugin-descriptor"
+    },
+    {
+      "fields": [
+        {
+          "name": "format-id",
+          "type": "string"
+        },
+        {
+          "name": "options-json",
+          "type": "string"
+        },
+        {
+          "name": "stream-bytes",
+          "type": "list<u8>"
+        }
+      ],
+      "kind": "record",
+      "name": "read-request"
+    },
+    {
+      "fields": [
+        {
+          "name": "type-id",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "payload",
+          "type": "list<u8>"
+        }
+      ],
+      "kind": "record",
+      "name": "write-entity"
+    },
+    {
+      "fields": [
+        {
+          "name": "format-id",
+          "type": "string"
+        },
+        {
+          "name": "options-json",
+          "type": "string"
+        },
+        {
+          "name": "entities",
+          "type": "list<write-entity>"
+        }
+      ],
+      "kind": "record",
+      "name": "write-request"
+    },
+    {
+      "fields": [
+        {
+          "name": "x",
+          "type": "f64"
+        },
+        {
+          "name": "y",
+          "type": "f64"
+        },
+        {
+          "name": "z",
+          "type": "f64"
+        }
+      ],
+      "kind": "record",
+      "name": "point3"
+    },
+    {
+      "fields": [
+        {
+          "name": "a",
+          "type": "u32"
+        },
+        {
+          "name": "b",
+          "type": "u32"
+        },
+        {
+          "name": "c",
+          "type": "u32"
+        }
+      ],
+      "kind": "record",
+      "name": "tri-indices"
+    },
+    {
+      "fields": [
+        {
+          "name": "key",
+          "type": "string"
+        },
+        {
+          "name": "value",
+          "type": "string"
+        }
+      ],
+      "kind": "record",
+      "name": "kv-entry"
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "points",
+          "type": "list<point3>"
+        },
+        {
+          "name": "unit",
+          "type": "option<string>"
+        },
+        {
+          "name": "attributes",
+          "type": "list<kv-entry>"
+        }
+      ],
+      "kind": "record",
+      "name": "points-record"
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "vertices",
+          "type": "list<point3>"
+        },
+        {
+          "name": "triangles",
+          "type": "list<tri-indices>"
+        },
+        {
+          "name": "unit",
+          "type": "option<string>"
+        },
+        {
+          "name": "attributes",
+          "type": "list<kv-entry>"
+        }
+      ],
+      "kind": "record",
+      "name": "mesh-record"
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "fragment-json",
+          "type": "string"
+        }
+      ],
+      "kind": "record",
+      "name": "qif-json-record"
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "page-index",
+          "type": "u32"
+        },
+        {
+          "name": "width-mm",
+          "type": "f64"
+        },
+        {
+          "name": "height-mm",
+          "type": "f64"
+        },
+        {
+          "name": "dpi",
+          "type": "u32"
+        },
+        {
+          "name": "media-type",
+          "type": "string"
+        },
+        {
+          "name": "image-bytes",
+          "type": "list<u8>"
+        },
+        {
+          "name": "metadata",
+          "type": "list<kv-entry>"
+        }
+      ],
+      "kind": "record",
+      "name": "drawing-page-record"
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "columns",
+          "type": "list<string>"
+        },
+        {
+          "name": "rows",
+          "type": "list<list<string>>"
+        }
+      ],
+      "kind": "record",
+      "name": "table-record"
+    },
+    {
+      "fields": [
+        {
+          "name": "code",
+          "type": "string"
+        },
+        {
+          "name": "detail",
+          "type": "string"
+        },
+        {
+          "name": "byte-offset",
+          "type": "option<u64>"
+        }
+      ],
+      "kind": "record",
+      "name": "warning-record"
+    },
+    {
+      "cases": [
+        {
+          "name": "points",
+          "payload": "points-record"
+        },
+        {
+          "name": "mesh",
+          "payload": "mesh-record"
+        },
+        {
+          "name": "qif-json",
+          "payload": "qif-json-record"
+        },
+        {
+          "name": "drawing-page",
+          "payload": "drawing-page-record"
+        },
+        {
+          "name": "table",
+          "payload": "table-record"
+        },
+        {
+          "name": "warning",
+          "payload": "warning-record"
+        }
+      ],
+      "kind": "variant",
+      "name": "plugin-record"
+    },
+    {
+      "fields": [
+        {
+          "name": "code",
+          "type": "string"
+        },
+        {
+          "name": "detail",
+          "type": "string"
+        },
+        {
+          "name": "byte-offset",
+          "type": "option<u64>"
+        }
+      ],
+      "kind": "record",
+      "name": "plugin-error"
+    }
+  ],
+  "version": {
+    "major": 1,
+    "minor": 0
+  }
+}

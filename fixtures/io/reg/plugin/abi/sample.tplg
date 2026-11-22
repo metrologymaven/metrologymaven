@@ -1,0 +1,5 @@
+TOYPLG
+UNIT mm
+POINTS datum_plane 0 0 0;10 0 0;0 10 0
+TABLE inspection_notes col_a,col_b|hello,world
+WARN sample_note trailing comment ignored

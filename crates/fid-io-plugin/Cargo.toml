@@ -1,0 +1,21 @@
+[package]
+name = "fid-io-plugin"
+description = "Metrology Maven format-plugin contract, version negotiation, IDL/WIT/message generators and fid-io-reg adapters (spec node IO.REG.PLUGIN.ABI)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Services layer (same layer as fid-io-reg). Zero third-party dependencies beyond workspace crates.
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-io-reg = { path = "../fid-io-reg" }
+fid-types = { path = "../fid-types" }
+
+[dev-dependencies]
+fid-project = { path = "../fid-project" }
+
+[lints]
+workspace = true
