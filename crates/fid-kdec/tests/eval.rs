@@ -6,7 +6,7 @@
 use fid_kdec::eval::{ALGORITHM_ID, DEFAULT_WARN_RATIO, OUTCOME_REPLAY_KIND};
 use fid_kdec::{
     evaluate, Catalog, DecisionRecord, DecisionRule, EvalError, EvalInput, Flag, Outcome, ParamDecimal, PdfSource,
-    RiskReporting, RuleParams, RuleParts, RuleRef, Samples, Tolerance,
+    RiskReporting, RuleParams, RuleParts, RuleRef, SampleBytes, Tolerance,
 };
 use fid_kunc::prop::mcm::samples::{decode, SampleSet, DEFAULT_CAP};
 use fid_kunc::{
@@ -22,7 +22,7 @@ fn read(name: &str) -> Vec<u8> {
 }
 
 const HEADER: &str = "id,rule,lsl,usl,unit,value,class,method,src,u_std,U,lpu_validated,nlin,selection,samples,\
-output,warn,outcome,reason,p,U_out,flags,error";
+samples_digest,output,warn,outcome,reason,p,p_lo,p_hi,U_out,flags,error";
 
 struct Row {
     cols: Vec<String>,
@@ -150,17 +150,23 @@ fn run(r: &Row) -> Result<DecisionRecord, EvalError> {
     let stmt = statement(r);
     let rule = rule(r.get("rule"));
     let tol = Tolerance { lsl: r.dec("lsl"), usl: r.dec("usl"), unit: r.get("unit").to_owned() };
-    let set = if r.get("samples").is_empty() { None } else { Some(sample_set(r.get("samples"))) };
+    let bytes =
+        if r.get("samples").is_empty() { None } else { Some(read(&format!("samples/{}.bin", r.get("samples")))) };
     let warn = Decimal::parse(if r.get("warn").is_empty() { DEFAULT_WARN_RATIO } else { r.get("warn") }).unwrap();
-    let input = EvalInput {
-        value: r.f64("value").unwrap(),
-        statement: &stmt,
-        samples: set.as_ref().map(|set| Samples { set, output: r.get("output") }),
-        tolerance: &tol,
-        rule: &rule,
-        warn_ratio: warn,
-    };
-    evaluate(&input)
+    let input =
+        EvalInput { value: r.f64("value").unwrap(), statement: &stmt, tolerance: &tol, rule: &rule, warn_ratio: warn };
+    match &bytes {
+        None => evaluate(&input),
+        Some(b) => {
+            let digest = match r.get("samples_digest") {
+                "" => fid_kci::kci::sha256_digest(b),
+                "wrong" => fid_kci::kci::sha256_digest(b"not the sample set"),
+                other => panic!("{other}"),
+            };
+            let s = SampleBytes { encoded: b, expected_digest: &digest, output: r.get("output") };
+            fid_kdec::evaluate_with_samples(&input, &s)
+        }
+    }
 }
 
 fn flags_text(rec: &DecisionRecord) -> String {
@@ -188,6 +194,19 @@ fn ac1_cases() {
             (None, None) => {}
             (Some(a), Some(b)) => assert!((a - b).abs() <= 1e-12, "{id}: p {a} vs {b}"),
             (a, b) => panic!("{id}: p {a:?} vs {b:?}"),
+        }
+        // Conservative bounds: close to the reference bounds, and they contain the exact p.
+        match (rec.p_bounds(), r.f64("p_lo"), r.f64("p_hi")) {
+            (None, None, None) => {}
+            (Some((lo, hi)), Some(rlo), Some(rhi)) => {
+                assert!((lo - rlo).abs() <= 1e-12 && (hi - rhi).abs() <= 1e-12, "{id}: [{lo}, {hi}] vs [{rlo}, {rhi}]");
+                assert!(lo <= hi, "{id}");
+                if rec.p_source() == Some(fid_kdec::PSource::NormalApproximation) {
+                    let p = r.f64("p").unwrap();
+                    assert!(lo <= p && p <= hi, "{id}: {p} not in [{lo}, {hi}]");
+                }
+            }
+            (a, b, c) => panic!("{id}: bounds {a:?} vs {b:?} {c:?}"),
         }
         assert_eq!(rec.expanded_u().map(f64::to_bits), r.f64("U_out").map(f64::to_bits), "{id}");
         assert_eq!(flags_text(&rec), r.get("flags"), "{id}");
@@ -349,13 +368,16 @@ fn million_samples_count() {
     let input = EvalInput {
         value: 0.01,
         statement: &stmt,
-        samples: Some(Samples { set: &set, output: "y" }),
         tolerance: &tol,
         rule: &rule,
         warn_ratio: Decimal::parse(DEFAULT_WARN_RATIO).unwrap(),
     };
-    let rec = evaluate(&input).unwrap();
+    let enc = set.encode(DEFAULT_CAP).unwrap();
+    let s = SampleBytes { encoded: &enc.bytes, expected_digest: &enc.digest, output: "y" };
+    let rec = fid_kdec::evaluate_with_samples(&input, &s).unwrap();
     assert!(rec.p_conformance().unwrap() > 0.99);
+    // Without the digest-checked path the samples are unavailable (maintainer decision).
+    assert_eq!(evaluate(&input).unwrap().outcome().to_string(), "NOT_DECIDABLE(pdf_unavailable)");
 }
 
 /// erfc against the 100-digit reference values of `erfc.csv`: absolute error <= 2e-15,
@@ -380,4 +402,21 @@ fn erfc_matches_reference() {
         n += 1;
     }
     assert!(n > 300);
+}
+
+/// Review of #422: with USL = 1.7985560436 m, u = 8e-10 m and y = 1.7985560422841171 m, the
+/// nominal p from the nearest binary64 limit is >= 0.95, but the exact p is below it: the
+/// conservative bounds make the outcome INDETERMINATE, never CONFORMS.
+#[test]
+fn reviewer_case_is_not_conforms() {
+    let r = row("cons_reviewer");
+    let (y, u) = (r.f64("value").unwrap(), r.f64("u_std").unwrap());
+    let usl = Decimal::parse("1.7985560436").unwrap().to_f64().unwrap();
+    let naive = 1.0 - fid_kdec::eval::normal::upper_tail((usl - y) / u).unwrap();
+    assert!(naive >= 0.95, "{naive}");
+    let rec = run(&r).unwrap();
+    assert_eq!(rec.outcome(), Outcome::Indeterminate);
+    let (lo, hi) = rec.p_bounds().unwrap();
+    assert!(lo < 0.95 && hi < 0.95, "[{lo}, {hi}]");
+    assert!(rec.p_conformance().unwrap() < 0.95);
 }

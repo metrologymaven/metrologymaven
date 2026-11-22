@@ -19,6 +19,7 @@ disallowed-methods = [
     { path = "fid_io_reg::prov::UnitResolution::to_metres", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_io_reg::prov::to_metres", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_kdec::eval::DecisionRecord::expanded_u", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_kdec::eval::DecisionRecord::p_bounds", reason = "returns floats (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_kdec::eval::DecisionRecord::p_conformance", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_kdec::eval::normal::erfc", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_kdec::eval::normal::upper_tail", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },

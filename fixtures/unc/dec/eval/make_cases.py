@@ -4,13 +4,30 @@
 Writes, from the rules of spec/unc/dec/eval/NODE.md (Design, pinned order) and never by
 running the Rust code:
 
-cases.csv        evaluation cases (AC-1 .. AC-6): inputs, expected outcome, reason, p, U,
-                 flags or error code
+cases.csv        evaluation cases (AC-1 .. AC-6): inputs, expected outcome, reason, p, the
+                 conservative bounds p_lo and p_hi, U, flags or error code
 samples/*.bin    Monte Carlo sample sets in format mcm-samples@1 (UNC.PROP.MCM.SAMP), built
                  from integer arithmetic and single IEEE additions only, so they are the
                  same bytes on every host
 erfc.csv         x and erfc(x) (correctly rounded to binary64) for the unit test of the
                  kernel's complementary error function
+
+Conservative normal p (review of #422). The kernel decides a conformance-probability rule
+from bounds p_lo <= p <= p_hi, not from the nominal p. This script builds the same bounds by
+the pinned construction (each limit's binary64 floor and ceiling brackets; z bounds by
+each limit split exactly as f + delta with f its binary64 floor and delta between two adjacent
+binary64 values (found here by exact rational arithmetic, in the kernel by bisection with
+exact comparisons); z bounds by binary64 subtraction, addition and division, each then moved
+one ulp outward, which Python floats do exactly as the kernel; tails widened by TAIL_ERR, the bounds by ARITH_ERR), but evaluates
+the tails at 100 digits and combines them exactly. It checks that the exact p lies inside
+the bounds and that no bound is within 1e-13 of a decision threshold, so the kernel's own
+erfc error (at most 2e-15) cannot change an expected outcome.
+
+Samples (maintainer decision 2026-11-21). Rows with a sample file are run through the
+kernel's digest-checked entry point (evaluate_with_samples); `samples_digest` is empty for
+the file's own SHA-256 or `wrong`. A decision needs T >= max(100, 20 / (1 - p_min))
+[unverified]; with fewer trials a conformance-probability rule is INDETERMINATE with flag
+samples_too_few.
 
 Exactness. Every comparison of a value with a limit, the guard band, the capability ratio
 and p against p_min is done here with fractions.Fraction (each binary64 value is an exact
@@ -158,7 +175,11 @@ def sample_sets():
     edge = [down(lo), lo, up(lo), down(hi), hi, up(hi), 0.01, 0.01, 0.01, 0.01]
     s["boundary"] = ([edge], ["y"], 10, [])
     # Two outputs: column "a" all outside, column "y" all inside.
-    s["two"] = ([[0.02] * 100, grid(100, 0.00999, 0.01001)], ["a", "y"], 100, [])
+    s["two"] = ([[0.02] * 400, grid(400, 0.00999, 0.01001)], ["a", "y"], 400, [])
+    # Trial-count edges under p_min = 0.95: 400 is the minimum, 399 one short; 99 < 100.
+    s["min400"] = ([grid(400, 0.00999, 0.01001)], ["y"], 400, [])
+    s["min399"] = ([grid(399, 0.00999, 0.01001)], ["y"], 399, [])
+    s["t99"] = ([grid(99, 0.00999, 0.01001)], ["y"], 99, [])
     s["other_model"] = ([grid(100, 0.00999, 0.01001)], ["y"], 100, [])
     # Every trial failed: no kept value, so no p.
     s["all_failed"] = ([[]], ["y"], 20, list(range(20)))
@@ -202,6 +223,7 @@ FLAG_ORDER = [
     "capability_unchecked",
     "empty_acceptance_zone",
     "failed_trials",
+    "samples_too_few",
     "provisional_uncertainty",
     "claimed_uncertainty",
     "declared_input",
@@ -222,13 +244,14 @@ def gb(r):
 
 COLUMNS = [
     "id", "rule", "lsl", "usl", "unit", "value", "class", "method", "src", "u_std", "U",
-    "lpu_validated", "nlin", "selection", "samples", "output", "warn",
-    "outcome", "reason", "p", "U_out", "flags", "error",
+    "lpu_validated", "nlin", "selection", "samples", "samples_digest", "output", "warn",
+    "outcome", "reason", "p", "p_lo", "p_hi", "U_out", "flags", "error",
 ]  # fmt: skip
 
 
 def case(id, rule, value, lsl=LSL_S, usl=USL_S, cls="UEC-1", method="LPU", src=None, u=2e-6, U=4e-6,
-         lpu="", nlin=None, sel="unc-select@1", samples="", output="y", warn="", unit="si:m", hand=None):  # fmt: skip
+         lpu="", nlin=None, sel="unc-select@1", samples="", output="y", warn="", unit="si:m", hand=None,
+         digest=""):  # fmt: skip
     if cls == "UEC-0":
         method, src, u, U, lpu, nlin, sel = "", "", None, None, "", "", ""
     if src is None:
@@ -238,7 +261,8 @@ def case(id, rule, value, lsl=LSL_S, usl=USL_S, cls="UEC-1", method="LPU", src=N
     return {
         "id": id, "rule": rule, "lsl": lsl or "", "usl": usl or "", "unit": unit, "value": value,
         "class": cls, "method": method, "src": src, "u_std": u, "U": U, "lpu_validated": lpu,
-        "nlin": nlin, "selection": sel, "samples": samples, "output": output, "warn": warn,
+        "nlin": nlin, "selection": sel, "samples": samples, "samples_digest": digest, "output": output,
+        "warn": warn,
         "hand": hand,
     }  # fmt: skip
 
@@ -264,6 +288,26 @@ def rep_flip_values():
         return lo
 
     return solve(Decimal("0.95") + Decimal("5e-8")), solve(Decimal("0.95") - Decimal("5e-8"))
+
+
+def solve_y(usl, u, target, lo, hi):
+    """The largest binary64 y in [lo, hi] with exact p(y) >= target, for a one-sided USL."""
+    usl, u = Fraction(usl), Fraction(u)
+
+    def p_of(y):
+        with localcontext() as c:
+            c.prec = PREC
+            return 1 - upper_tail((usl - Fraction(y)) / u)
+
+    for _ in range(200):
+        mid = lo + (hi - lo) / 2
+        if mid in (lo, hi):
+            break
+        if p_of(mid) >= target:
+            lo = mid
+        else:
+            hi = mid
+    return lo
 
 
 def all_cases():
@@ -295,7 +339,15 @@ def all_cases():
     ya, yb = rep_flip_values()
     a(case("rep_flip_a", ISO, ya, lsl="", usl="0.01", u=1e-6, U=2e-6, hand="CONFORMS"))
     a(case("rep_flip_b", ISO, yb, lsl="", usl="0.01", u=1e-6, U=2e-6, hand="INDETERMINATE"))
-    # --- conformance probability from samples (MCM)
+    # --- conservative normal p near the thresholds (review of #422). USL = 1.7985560436 m
+    # and u = 8e-10 m: one ulp of the limit moves p by about 3e-8.
+    rv = dict(lsl="", usl="1.7985560436", u=8e-10, U=1.6e-9)
+    a(case("cons_reviewer", ISO, 1.7985560422841171, **rv, hand="INDETERMINATE"))
+    for name, target, hand in [("cons_pmin_plus_1e-6", "0.950001", "CONFORMS"),
+                               ("cons_low_minus_1e-6", "0.049999", "NONCONFORMS")]:
+        y = solve_y("1.7985560436", 8e-10, Decimal(target), 1.79855604, 1.79855605)
+        a(case(name, ISO, y, **rv, hand=hand))
+    # --- conformance probability from samples (MCM), digest-checked path
     m = dict(method="MCM", U=None)
     a(case("cp_mc_center", ISO, 0.01, samples="center", **m, hand="CONFORMS"))
     a(case("cp_mc_edge", ISO, 0.01, samples="edge", **m, hand="INDETERMINATE"))
@@ -310,6 +362,10 @@ def all_cases():
     a(case("cp_mc_two_outputs_a", ISO, 0.01, samples="two", output="a", **m, hand="NONCONFORMS"))
     a(case("cp_mc_with_U", ISO, 0.01, samples="center", method="MCM", U=4e-6, hand="CONFORMS"))
     a(case("cp_mcm_no_samples", ISO, 0.01, method="MCM", U=None, hand="NOT_DECIDABLE"))  # AC-4
+    a(case("cp_mc_min400", ISO, 0.01, samples="min400", **m, hand="CONFORMS"))
+    a(case("cp_mc_min399", ISO, 0.01, samples="min399", **m, hand="INDETERMINATE"))
+    a(case("cp_mc_t99", ISO, 0.01, samples="t99", **m, hand="INDETERMINATE"))
+    a(case("sa_mc_t99", SA, 0.01, samples="t99", **m, hand="CONFORMS"))
     a(case("sa_mc_boundary", SA, 0.01, samples="boundary", **m, hand="CONFORMS"))
     # --- simple acceptance
     a(case("simple_just_over", SA, 0.0100500004, lsl="0.00995", usl="0.01005", hand="NONCONFORMS"))  # AC-2
@@ -376,6 +432,7 @@ def all_cases():
     a(case("err_samples_model", ISO, 0.01, samples="other_model", method="MCM", U=None, hand="error"))
     a(case("err_samples_output", ISO, 0.01, samples="two", output="b", method="MCM", U=None, hand="error"))
     a(case("err_samples_before_label", LABEL, 0.01, samples="center", hand="error"))
+    a(case("err_samples_digest", ISO, 0.01, samples="center", digest="wrong", method="MCM", U=None, hand="error"))
     return c
 
 
@@ -408,6 +465,8 @@ def evaluate(row, samples):
         return err("invalid_rule")
     counts = None
     if row["samples"]:
+        if row["samples_digest"] == "wrong":
+            return err("samples_unbound")
         if row["method"] != "MCM":
             return err("samples_unbound")
         cols, outputs, trials, failed = sample_sets()[row["samples"]]
@@ -434,19 +493,25 @@ def evaluate(row, samples):
         flags.append("uncharacterized_input")
 
     if kind == "label":
-        return ("NOT_DECIDABLE", "label_only", None, None, flags, "")
+        return ("NOT_DECIDABLE", "label_only", None, None, flags, "", None)
     if cls == "UEC-0":
-        return ("NOT_DECIDABLE", "u_missing", None, None, flags, "")
+        return ("NOT_DECIDABLE", "u_missing", None, None, flags, "", None)
 
     U = row["U"]
     u = row["u_std"]
     p = None
+    bounds = None
     p_exact_counts = None
+    too_few = False
     if counts is not None:
         k, n, f, t = counts
         if f > 0:
             flags.append("failed_trials")
+        if t < 100 or (kind == "cp" and t * (1 - param) < 20):
+            too_few = True
+            flags.append("samples_too_few")
         p = Fraction(k, n) if n > 0 else None
+        bounds = (Fraction(k, t), Fraction(k + f, t))
         p_exact_counts = counts
     else:
         permitted = pdf == "mc_or_validated_normal" and u is not None and (
@@ -462,6 +527,8 @@ def evaluate(row, samples):
                 pd = 1 - above - below
             pd = min(max(pd, Decimal(0)), Decimal(1))
             p = pd
+            bounds = normal_bounds(y, u, row["lsl"], row["usl"])
+            assert bounds[0] <= Fraction(pd) <= bounds[1], row["id"]
 
     if U is not None and lsl is not None and usl is not None:
         if Fraction(U) > warn * (usl - lsl):
@@ -472,16 +539,19 @@ def evaluate(row, samples):
     if kind == "cp":
         if p is None and p_exact_counts is None:
             outcome = ("NOT_DECIDABLE", "pdf_unavailable")
+        elif too_few:
+            outcome = ("INDETERMINATE", "")
         elif p_exact_counts is not None:
             k, n, f, t = p_exact_counts
             conforms = Fraction(k, t) >= param
             nonconforms = Fraction(k + f, t) <= 1 - param
             outcome = (pick(conforms, nonconforms), "")
         else:
-            pf = Fraction(p)
-            # The kernel's binary64 p differs from this by far less than the margin below.
-            assert abs(pf - param) > Fraction(1, 10**9) and abs(pf - (1 - param)) > Fraction(1, 10**9), row["id"]
-            outcome = (pick(pf >= param, pf <= 1 - param), "")
+            lo, hi = bounds
+            # The kernel's bounds differ from these by its erfc error (<= 2e-15) only.
+            sep = Fraction(1, 10**13)
+            assert abs(lo - param) > sep and abs(hi - (1 - param)) > sep, row["id"]
+            outcome = (pick(lo >= param, hi <= 1 - param), "")
     elif kind == "sa":
         outcome = ("CONFORMS" if inside(Fraction(y), lsl, usl) else "NONCONFORMS", "")
     elif kind == "gb":
@@ -498,7 +568,7 @@ def evaluate(row, samples):
     else:
         raise AssertionError(kind)
     flags = sorted(set(flags), key=FLAG_ORDER.index)
-    return (outcome[0], outcome[1], p, U, flags, "")
+    return (outcome[0], outcome[1], p, U, flags, "", bounds)
 
 
 def inside(x, lsl, usl):
@@ -510,8 +580,79 @@ def pick(conforms, nonconforms):
 
 
 def err(code):
-    return ("", "", None, None, [], code)
+    return ("", "", None, None, [], code, None)
 
+
+TAIL_ERR = Fraction(4e-15)
+ARITH_ERR = Fraction(1e-15)
+
+
+MAX = 1.7976931348623157e308
+
+
+def floor_f(d):
+    """Largest finite binary64 <= the rational d, or None when there is none."""
+    if d > Fraction(MAX):
+        return MAX
+    if d < -Fraction(MAX):
+        return None
+    x = float(d)
+    return x if Fraction(x) <= d else down(x)
+
+
+def ceil_f(d):
+    """Smallest finite binary64 >= the rational d, or None when there is none."""
+    if d < -Fraction(MAX):
+        return -MAX
+    if d > Fraction(MAX):
+        return None
+    x = float(d)
+    return x if Fraction(x) >= d else up(x)
+
+
+def split(d):
+    """(f, dlo, dhi): f the largest finite binary64 <= d, dlo <= d - f <= dhi adjacent
+    binary64 values (equal when exact); None when no finite binary64 is <= d."""
+    f = floor_f(d)
+    if f is None:
+        return None
+    delta = d - Fraction(f)
+    if delta >= Fraction(MAX):
+        return f, MAX, math.inf
+    dlo = floor_f(delta)
+    dhi = dlo if Fraction(dlo) == delta else up(dlo)
+    return f, dlo, dhi
+
+
+def normal_bounds(y, u, lsl_text, usl_text):
+    """(p_lo, p_hi) by the pinned construction, tails at 100 digits, combined exactly."""
+
+    def q(z):
+        if math.isinf(z):
+            return Fraction(0) if z > 0 else Fraction(1)
+        return Fraction(upper_tail(Fraction(z)))
+
+    a_max = a_min = b_max = b_min = Fraction(0)
+    if usl_text:
+        sp = split(Fraction(usl_text))
+        if sp is None:
+            a_max = a_min = Fraction(1)
+        else:
+            f, dlo, dhi = sp
+            a = f - y
+            z_lo = down(down(down(a) + dlo) / u)
+            z_hi = up(up(up(a) + dhi) / u)
+            a_max, a_min = q(z_lo) + TAIL_ERR, q(z_hi) - TAIL_ERR
+    if lsl_text:
+        sp = split(Fraction(lsl_text))
+        if sp is not None:
+            f, dlo, dhi = sp
+            a = y - f
+            z_lo = down(down(down(a) - dhi) / u)
+            z_hi = up(up(up(a) - dlo) / u)
+            b_max, b_min = q(z_lo) + TAIL_ERR, q(z_hi) - TAIL_ERR
+    clamp = lambda v: min(max(v, Fraction(0)), Fraction(1))
+    return clamp(1 - a_max - b_max - ARITH_ERR), clamp(1 - a_min - b_min + ARITH_ERR)
 
 def fmt_float(x):
     return "" if x is None else repr(x)
@@ -532,7 +673,8 @@ def cases_text():
     for row in all_cases():
         assert row["id"] not in seen, row["id"]
         seen.add(row["id"])
-        outcome, reason, p, U, flags, error = evaluate(row, samples)
+        outcome, reason, p, U, flags, error, bounds = evaluate(row, samples)
+        lo, hi = bounds if bounds is not None else (None, None)
         hand = row["hand"]
         if hand is not None:
             got = "error" if error else outcome
@@ -540,8 +682,8 @@ def cases_text():
         fields = [
             row["id"], row["rule"], row["lsl"], row["usl"], row["unit"], fmt_float(row["value"]), row["class"],
             row["method"], row["src"], fmt_float(row["u_std"]), fmt_float(row["U"]), row["lpu_validated"],
-            row["nlin"], row["selection"], row["samples"], row["output"], row["warn"],
-            outcome, reason, fmt_p(p), fmt_float(U), ";".join(flags), error,
+            row["nlin"], row["selection"], row["samples"], row["samples_digest"], row["output"], row["warn"],
+            outcome, reason, fmt_p(p), fmt_p(lo), fmt_p(hi), fmt_float(U), ";".join(flags), error,
         ]  # fmt: skip
         assert all("," not in f for f in fields), row["id"]
         lines.append(",".join(fields))
@@ -551,6 +693,9 @@ def cases_text():
 
 def erfc_text():
     xs = [Fraction(i, 20) for i in range(-120, 121)] + [Fraction(i, 4) for i in range(25, 121)]
+    # A denser grid on [-8, 8] (step 2^-7, plus an irrational-looking offset) for the TAIL_ERR bound.
+    xs += [Fraction(i, 128) for i in range(-1024, 1025)]
+    xs += [Fraction(i * 0.0037 + 0.001) for i in range(-2000, 2001)]
     xs += [Fraction(1.9999999999999998), Fraction(2), Fraction(2.0000000000000004), Fraction(0.1), Fraction(1e-9)]
     lines = ["x,erfc"]
     for x in sorted(set(xs)):

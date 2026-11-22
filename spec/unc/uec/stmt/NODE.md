@@ -104,6 +104,7 @@ Hand-written JSON statements under `fixtures/unc/stmt/` (CC-BY-4.0, authored in 
 
 ## Open questions
 
+- **`samples_digest` (from `UNC.DEC.EVAL`, maintainer decision 2026-11-21):** an MCM statement whose samples are retained must carry `samples_digest`, the SHA-256 (`sha256:<hex>`) of the encoded `mcm-samples@1` set (`UNC.PROP.MCM.SAMP`), so that a decision can bind the samples it counts to the statement. Until this field exists, `UNC.DEC.EVAL` `evaluate` treats Monte Carlo samples as unavailable (`NOT_DECIDABLE(pdf_unavailable)`); once it exists, `evaluate` must require the samples' digest to equal it.
 - Whether `kind` of coverage interval needs a third value for one-sided intervals is left to `UNC.PROP.MCM` [unverified].
 
 ## Children

@@ -1,10 +1,20 @@
 //! Rule evaluation and conformance probability, algorithm [`ALGORITHM_ID`]
 //! (`dec.rule.evaluate@1.0.0`). Spec node `UNC.DEC.EVAL`.
 //!
-//! [`evaluate`] turns (value, uncertainty statement, optional Monte Carlo samples,
-//! tolerance, rule) into one [`DecisionRecord`]: a checked [`Decision`] (outcome, rule
-//! reference, evidence basis), the conformance probability `p` and the expanded
-//! uncertainty `U` when they exist, and flags.
+//! [`evaluate`] turns (value, uncertainty statement, tolerance, rule) into one
+//! [`DecisionRecord`]: a checked [`Decision`] (outcome, rule reference, evidence basis), the
+//! conformance probability `p` with conservative bounds and the expanded uncertainty `U`
+//! when they exist, and flags.
+//!
+//! # Monte Carlo samples (maintainer decision 2026-11-21)
+//!
+//! [`evaluate`] never uses samples: until `UNC.UEC.STMT` carries a `samples_digest`, Monte
+//! Carlo samples count as unavailable, so a conformance-probability rule on an MCM
+//! statement is `NOT_DECIDABLE(pdf_unavailable)`. [`evaluate_with_samples`] is the
+//! digest-checked path for when the statement carries that field: it takes the encoded
+//! `mcm-samples@1` bytes and the digest they must have (the statement's, once it exists)
+//! and refuses any other bytes. Callers must not pass a digest computed from the bytes
+//! themselves; `UNC.DEC.DEFAULT` must not call it before the statement field exists.
 //!
 //! # Fail closed
 //!
@@ -24,10 +34,11 @@
 //! 5. The evidence basis of the statement (`EvidenceBasis::of`, `invalid_number{field}`).
 //! 6. `invalid_rule{r}`: the unbound guard-band template `dr:guard-band@v` (only a resolved
 //!    instance names its guard band).
-//! 7. Samples, when given: `samples_unbound` (the statement's method is not `MCM`, or the
-//!    sample set's model digest is not the statement's), `samples_output` (the named output
-//!    is not in the set), `samples_invalid` (columns or failed indices disagree with the
-//!    header, or a value is not finite).
+//! 7. Samples ([`evaluate_with_samples`] only): `samples_unbound` (the SHA-256 of the
+//!    encoded bytes is not the expected digest, the statement's method is not `MCM`, or the
+//!    sample set's model digest is not the statement's), `samples_invalid{decode}` (the bytes
+//!    are not a valid `mcm-samples@1` set), `samples_output` (the named output is not in the
+//!    set).
 //!
 //! Outcomes:
 //! 8. A `label_only` rule: `NOT_DECIDABLE(label_only)` (REQ-UNC.DEC.EVAL-009).
@@ -42,11 +53,20 @@
 //!     `capability_warning`, or `capability_unchecked` when `U` is absent or the tolerance
 //!     is one-sided.
 //! 12. By kind. `conformance_probability`: no `p` gives `NOT_DECIDABLE(pdf_unavailable)`;
-//!     else `CONFORMS` if `p >= p_min`, `NONCONFORMS` if `p <= 1 - p_min`, else
-//!     `INDETERMINATE`. With samples that have failed trials (`failed_trials`), `p` is
-//!     reported over the successful trials, but the decision uses the bounds
-//!     `k / T` (for `CONFORMS`) and `(k + F) / T` (for `NONCONFORMS`), so an unknown trial
-//!     never helps either side. `simple_acceptance`: `LSL <= y <= USL` exactly. `guard_band`:
+//!     else, with conservative bounds `p_lo <= p <= p_hi`, `CONFORMS` if `p_lo >= p_min`,
+//!     `NONCONFORMS` if `p_hi <= 1 - p_min`, else `INDETERMINATE`.
+//!     - Normal approximation: each limit is split exactly as `f + delta` (`f` its binary64
+//!       floor bracket, `delta` bracketed by two adjacent binary64 values), every
+//!       subtraction, addition and division of the `z` bounds is moved one ulp outward,
+//!       each tail is widened by [`TAIL_ERR`] (the erfc bound) and `p_lo`, `p_hi` by
+//!       [`ARITH_ERR`] (the rounding of `1 - a - b`). `p` itself uses `f + dlo`, so it is
+//!       within the bounds; it is reported, never decided on.
+//!     - Samples: `p` is reported over the successful trials (`failed_trials` when some
+//!       failed), but the decision uses the exact bounds `k / T` and `(k + F) / T`, so an
+//!       unknown trial never helps either side. With fewer than [`MIN_TRIALS`] trials, or
+//!       fewer than `20 / (1 - p_min)` [unverified], the outcome is `INDETERMINATE` with flag
+//!       `samples_too_few` (the `samples_invalid{too_few}` case).
+//!     Other kinds. `simple_acceptance`: `LSL <= y <= USL` exactly. `guard_band`:
 //!     needs `U` (else `uncertainty_missing{expanded.U}`); `w = r U`; two-sided with
 //!     `USL - LSL - 2w <= 0`: `NONCONFORMS` with `empty_acceptance_zone`; else `CONFORMS`
 //!     iff `LSL + w <= y <= USL - w`, exactly.
@@ -64,10 +84,11 @@ pub mod normal;
 use core::cmp::Ordering;
 use core::fmt;
 
-use fid_kunc::prop::mcm::samples::SampleSet;
+use fid_kunc::prop::mcm::samples::{decode, SampleSet, DEFAULT_CAP};
 use fid_kunc::{EvidenceClass, Method, NlinVerdict, UncertaintyStatement};
 use fid_num::kdec::{self, Decimal};
 use fid_num::NumError;
+use fid_types::Digest;
 
 use crate::decision::{Decision, EvidenceBasis};
 use crate::rule::{DecError, DecisionRule, NotDecidableReason, Outcome, PdfSource, RuleKind, RuleParams};
@@ -95,14 +116,27 @@ pub struct Tolerance {
     pub unit: String,
 }
 
-/// Monte Carlo samples and the output column to use.
+/// Encoded Monte Carlo samples, the digest they must have and the output column to use
+/// (see [`evaluate_with_samples`]).
 #[derive(Debug, Clone, Copy)]
-pub struct Samples<'a> {
-    /// The decoded sample set.
-    pub set: &'a SampleSet,
+pub struct SampleBytes<'a> {
+    /// The encoded `mcm-samples@1` set.
+    pub encoded: &'a [u8],
+    /// The SHA-256 digest the bytes must have (the statement's `samples_digest`, once
+    /// `UNC.UEC.STMT` carries it).
+    pub expected_digest: &'a Digest,
     /// Output node ID of the column.
     pub output: &'a str,
 }
+
+/// Fewest Monte Carlo trials a decision may rest on [unverified]; a conformance-probability
+/// rule also needs `T (1 - p_min) >= 20` [unverified].
+pub const MIN_TRIALS: u64 = 100;
+/// Absolute error bound used for each normal tail `P(Z > z)` [unverified beyond the
+/// reference grid of `erfc.csv`, where the measured erfc error is at most 2e-15].
+pub const TAIL_ERR: f64 = 4e-15;
+/// Bound on the rounding of `1 - a - b - c` in the probability bounds.
+pub const ARITH_ERR: f64 = 1e-15;
 
 /// Everything an evaluation reads.
 #[derive(Debug, Clone, Copy)]
@@ -111,8 +145,6 @@ pub struct EvalInput<'a> {
     pub value: f64,
     /// The uncertainty statement of the value.
     pub statement: &'a UncertaintyStatement,
-    /// Monte Carlo samples of the value, if retained.
-    pub samples: Option<Samples<'a>>,
     /// The tolerance.
     pub tolerance: &'a Tolerance,
     /// The rule (validated by construction).
@@ -151,6 +183,9 @@ pub enum Flag {
     EmptyAcceptanceZone,
     /// The sample set has failed trials.
     FailedTrials,
+    /// Too few trials for a decision (`samples_invalid{too_few}`): the outcome is
+    /// `INDETERMINATE`.
+    SamplesTooFew,
     /// The uncertainty is UEC-1 or rests on a claim, a declared or an uncharacterized
     /// input: the decision is not a fully measured one and must be labelled.
     ProvisionalUncertainty,
@@ -164,11 +199,12 @@ pub enum Flag {
 
 impl Flag {
     /// Every flag, in declaration order.
-    pub const ALL: [Flag; 8] = [
+    pub const ALL: [Flag; 9] = [
         Flag::CapabilityWarning,
         Flag::CapabilityUnchecked,
         Flag::EmptyAcceptanceZone,
         Flag::FailedTrials,
+        Flag::SamplesTooFew,
         Flag::ProvisionalUncertainty,
         Flag::ClaimedUncertainty,
         Flag::DeclaredInput,
@@ -182,6 +218,7 @@ impl Flag {
             Flag::CapabilityUnchecked => "capability_unchecked",
             Flag::EmptyAcceptanceZone => "empty_acceptance_zone",
             Flag::FailedTrials => "failed_trials",
+            Flag::SamplesTooFew => "samples_too_few",
             Flag::ProvisionalUncertainty => "provisional_uncertainty",
             Flag::ClaimedUncertainty => "claimed_uncertainty",
             Flag::DeclaredInput => "declared_input",
@@ -200,6 +237,7 @@ impl Flag {
 pub struct DecisionRecord {
     decision: Decision,
     p_conformance: Option<f64>,
+    p_bounds: Option<(f64, f64)>,
     p_source: Option<PSource>,
     expanded_u: Option<f64>,
     flags: Vec<Flag>,
@@ -217,6 +255,12 @@ impl DecisionRecord {
     /// The conformance probability (over the successful trials when samples were used).
     pub fn p_conformance(&self) -> Option<f64> {
         self.p_conformance
+    }
+    /// Conservative bounds `(p_lo, p_hi)` on the conformance probability; the outcome of a
+    /// conformance-probability rule is decided from them. For samples they are `k / T` and
+    /// `(k + F) / T`, rounded outward (the decision itself uses the exact rationals).
+    pub fn p_bounds(&self) -> Option<(f64, f64)> {
+        self.p_bounds
     }
     /// Where `p` came from.
     pub fn p_source(&self) -> Option<PSource> {
@@ -431,23 +475,22 @@ struct Counts {
     trials: u64,
 }
 
-fn count_samples(s: &Samples<'_>, stmt: &UncertaintyStatement, t: &Tolerance) -> Result<Counts, EvalError> {
+fn count_samples(s: &SampleBytes<'_>, stmt: &UncertaintyStatement, t: &Tolerance) -> Result<Counts, EvalError> {
+    if fid_kci::kci::sha256_digest(s.encoded) != *s.expected_digest {
+        return Err(EvalError::SamplesUnbound);
+    }
     if stmt.method() != Some(Method::Mcm) {
         return Err(EvalError::SamplesUnbound);
     }
-    let h = &s.set.header;
+    let set: SampleSet = decode(s.encoded, DEFAULT_CAP).map_err(|_| EvalError::SamplesInvalid { detail: "decode" })?;
+    let h = &set.header;
     if stmt.model().map(|m| m.digest) != Some(h.model_digest) {
         return Err(EvalError::SamplesUnbound);
     }
     let col = h.outputs.iter().position(|o| o == s.output).ok_or(EvalError::SamplesOutput)?;
+    // `decode` has checked the counts, the column lengths and that every value is finite.
     let kept = h.trials.checked_sub(h.failed).ok_or(EvalError::SamplesInvalid { detail: "counts" })?;
-    if h.trials == 0 || s.set.outputs.len() != h.outputs.len() {
-        return Err(EvalError::SamplesInvalid { detail: "counts" });
-    }
-    if u64::try_from(s.set.failed.len()).ok() != Some(h.failed) {
-        return Err(EvalError::SamplesInvalid { detail: "failed" });
-    }
-    let values = s.set.outputs.get(col).ok_or(EvalError::SamplesOutput)?;
+    let values = set.outputs.get(col).ok_or(EvalError::SamplesOutput)?;
     if u64::try_from(values.len()).ok() != Some(kept) {
         return Err(EvalError::SamplesInvalid { detail: "length" });
     }
@@ -464,6 +507,22 @@ fn count_samples(s: &Samples<'_>, stmt: &UncertaintyStatement, t: &Tolerance) ->
     Ok(Counts { inside, kept, failed: h.failed, trials: h.trials })
 }
 
+/// `T >= MIN_TRIALS` and, under a conformance-probability rule, `T (1 - p_min) >= 20`.
+fn enough_trials(trials: u64, p_min: Option<Decimal>) -> Result<bool, EvalError> {
+    if trials < MIN_TRIALS {
+        return Ok(false);
+    }
+    match p_min {
+        // T - p_min T - 20 >= 0
+        Some(pm) => nonneg(&[
+            (false, &[Factor::I(trials)]),
+            (true, &[Factor::D(pm), Factor::I(trials)]),
+            (true, &[Factor::I(20)]),
+        ]),
+        None => Ok(true),
+    }
+}
+
 fn normal_permitted(rule: &DecisionRule, stmt: &UncertaintyStatement) -> bool {
     if rule.pdf_source() != PdfSource::McOrValidatedNormal || stmt.u_std().is_none() {
         return false;
@@ -476,40 +535,106 @@ fn normal_permitted(rule: &DecisionRule, stmt: &UncertaintyStatement) -> bool {
         && stmt.nonlinearity().is_some_and(|n| n.verdict == NlinVerdict::LinearAdequate)
 }
 
-/// `(limit - y) / u`, saturated to an infinity when it overflows.
-fn z_score(limit: &Decimal, y: f64, u: f64) -> Result<f64, EvalError> {
-    let l = match limit.to_f64() {
-        Ok(l) => l,
-        Err(NumError::Infinite { .. }) => {
-            return Ok(if limit.is_negative() { f64::NEG_INFINITY } else { f64::INFINITY });
-        }
-        Err(e) => return Err(e.into()),
-    };
-    let z = (l - y) / u;
-    if z.is_nan() {
-        return Err(EvalError::InvalidNumber { field: "z" });
-    }
-    Ok(z)
+/// `x` moved one ulp down (an infinity stays put, `+inf` becomes `f64::MAX`).
+fn down(x: f64) -> f64 {
+    x.next_down()
 }
 
-/// Normal approximation `P(LSL <= Y <= USL)` for `Y ~ N(y, u)`.
-fn normal_p(y: f64, u: f64, t: &Tolerance) -> Result<f64, EvalError> {
-    let above = match &t.usl {
-        Some(us) => normal::upper_tail(z_score(us, y, u)?)?,
-        None => 0.0,
+/// `x` moved one ulp up.
+fn up(x: f64) -> f64 {
+    x.next_up()
+}
+
+fn clamp01(x: f64) -> Result<f64, EvalError> {
+    Ok(fid_num::f::total_clamp(x, 0.0, 1.0)?)
+}
+
+/// A decimal limit `L` as `f + delta`: `f` the largest finite `f64 <= L`, and
+/// `dlo <= delta <= dhi` adjacent (or equal) non-negative `f64` values, found by bisection on
+/// the bit patterns with exact comparisons. `None` when no finite `f64` is `<= L`.
+struct Split {
+    f: f64,
+    dlo: f64,
+    dhi: f64,
+}
+
+fn split(l: &Decimal) -> Result<Option<Split>, EvalError> {
+    let Some(f) = floor_f64(l)? else { return Ok(None) };
+    // sign(L - f - t)
+    let rest = |t: f64| sign_of_sum(&[(false, &[Factor::D(*l)]), (true, &[Factor::F(f)]), (true, &[Factor::F(t)])]);
+    if rest(f64::MAX)? != Ordering::Less {
+        return Ok(Some(Split { f, dlo: f64::MAX, dhi: f64::INFINITY }));
+    }
+    // Invariant: rest(lo) >= 0 (t = 0, since f <= L), rest(hi) < 0.
+    let (mut lo, mut hi) = (0u64, f64::MAX.to_bits());
+    while hi - lo > 1 {
+        let mid = lo + (hi - lo) / 2;
+        if rest(f64::from_bits(mid))? == Ordering::Less {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+    }
+    let dlo = f64::from_bits(lo);
+    let dhi = if rest(dlo)? == Ordering::Equal { dlo } else { f64::from_bits(hi) };
+    Ok(Some(Split { f, dlo, dhi }))
+}
+
+/// Normal approximation `P(LSL <= Y <= USL)` for `Y ~ N(y, u)`: the nominal value and
+/// conservative bounds `(p, p_lo, p_hi)`.
+///
+/// Each limit is `f + delta` ([`split`]); `(L - y) / u` is bounded by binary64 operations
+/// each moved one ulp outward, so the bounds hold whatever the rounding of the
+/// subtraction, the addition of `delta` and the division. Each tail is widened by
+/// [`TAIL_ERR`] and the result by [`ARITH_ERR`].
+fn normal_p(y: f64, u: f64, t: &Tolerance) -> Result<(f64, f64, f64), EvalError> {
+    let tail = |z: f64| -> Result<f64, EvalError> { Ok(normal::upper_tail(z)?) };
+    // (nominal, max, min) of P(Y > USL) = P(Z > (USL - y) / u).
+    let (above, above_max, above_min) = match &t.usl {
+        None => (0.0, 0.0, 0.0),
+        Some(us) => match split(us)? {
+            // USL below every finite value: P(Y > USL) = 1.
+            None => (1.0, 1.0, 1.0),
+            Some(sp) => {
+                let a = sp.f - y;
+                let z = (a + sp.dlo) / u;
+                let z_lo = down(down(down(a) + sp.dlo) / u);
+                let z_hi = up(up(up(a) + sp.dhi) / u);
+                (tail(z)?, tail(z_lo)? + TAIL_ERR, tail(z_hi)? - TAIL_ERR)
+            }
+        },
     };
-    let below = match &t.lsl {
-        // P(Y < LSL) = P(Z > -(LSL - y) / u).
-        Some(ls) => normal::upper_tail(-z_score(ls, y, u)?)?,
-        None => 0.0,
+    // P(Y < LSL) = P(Z > (y - LSL) / u).
+    let (below, below_max, below_min) = match &t.lsl {
+        None => (0.0, 0.0, 0.0),
+        Some(ls) => match split(ls)? {
+            // LSL below every finite value: P(Y < LSL) = 0.
+            None => (0.0, 0.0, 0.0),
+            Some(sp) => {
+                let a = y - sp.f;
+                let z = (a - sp.dlo) / u;
+                let z_lo = down(down(down(a) - sp.dhi) / u);
+                let z_hi = up(up(up(a) - sp.dlo) / u);
+                (tail(z)?, tail(z_lo)? + TAIL_ERR, tail(z_hi)? - TAIL_ERR)
+            }
+        },
     };
-    let p = 1.0 - above - below;
-    Ok(fid_num::f::total_clamp(p, 0.0, 1.0)?)
+    let p = clamp01(1.0 - above - below)?;
+    let p_lo = clamp01(1.0 - above_max - below_max - ARITH_ERR)?;
+    let p_hi = clamp01(1.0 - above_min - below_min + ARITH_ERR)?;
+    Ok((p, p_lo, p_hi))
+}
+
+/// `[x / n]` rounded outward by one ulp and clamped to [0, 1].
+fn ratio_bounds(lo: u64, hi: u64, n: u64) -> Result<(f64, f64), EvalError> {
+    let n = n as f64;
+    Ok((clamp01((lo as f64 / n).next_down())?, clamp01((hi as f64 / n).next_up())?))
 }
 
 enum PBasis {
     Samples(Counts),
-    Normal(f64),
+    /// Nominal, lower bound, upper bound.
+    Normal(f64, f64, f64),
 }
 
 fn basis_flags(basis: &EvidenceBasis, flags: &mut Vec<Flag>) {
@@ -530,8 +655,20 @@ fn basis_flags(basis: &EvidenceBasis, flags: &mut Vec<Flag>) {
     }
 }
 
-/// Evaluates a rule (see the module documentation for the pinned order).
+/// Evaluates a rule without Monte Carlo samples (see the module documentation for the
+/// pinned order).
 pub fn evaluate(input: &EvalInput<'_>) -> Result<DecisionRecord, EvalError> {
+    run(input, None)
+}
+
+/// Evaluates a rule with encoded Monte Carlo samples whose SHA-256 must equal
+/// `samples.expected_digest` (see the module documentation: not for values of record until
+/// `UNC.UEC.STMT` carries `samples_digest`).
+pub fn evaluate_with_samples(input: &EvalInput<'_>, samples: &SampleBytes<'_>) -> Result<DecisionRecord, EvalError> {
+    run(input, Some(samples))
+}
+
+fn run(input: &EvalInput<'_>, samples: Option<&SampleBytes<'_>>) -> Result<DecisionRecord, EvalError> {
     let y = input.value;
     if !y.is_finite() {
         return Err(EvalError::InvalidNumber { field: "value" });
@@ -552,7 +689,7 @@ pub fn evaluate(input: &EvalInput<'_>) -> Result<DecisionRecord, EvalError> {
         RuleParams::GuardBand { r: Some(r) } => Some(r.value()),
         _ => None,
     };
-    let counts = match &input.samples {
+    let counts = match samples {
         Some(s) => Some(count_samples(s, stmt, tol)?),
         None => None,
     };
@@ -569,21 +706,33 @@ pub fn evaluate(input: &EvalInput<'_>) -> Result<DecisionRecord, EvalError> {
     let pb = match counts {
         Some(c) => Some(PBasis::Samples(c)),
         None => match stmt.u_std() {
-            Some(u) if normal_permitted(rule, stmt) => Some(PBasis::Normal(normal_p(y, u, tol)?)),
+            Some(u) if normal_permitted(rule, stmt) => {
+                let (p, lo, hi) = normal_p(y, u, tol)?;
+                Some(PBasis::Normal(p, lo, hi))
+            }
             _ => None,
         },
     };
-    let (p, p_source) = match &pb {
+    let p_min = match rule.params() {
+        RuleParams::ConformanceProbability { p_min } => Some(p_min.value()),
+        _ => None,
+    };
+    let mut too_few = false;
+    let (p, p_bounds, p_source) = match &pb {
         Some(PBasis::Samples(c)) => {
             if c.failed > 0 {
                 flags.push(Flag::FailedTrials);
             }
+            if !enough_trials(c.trials, p_min)? {
+                too_few = true;
+                flags.push(Flag::SamplesTooFew);
+            }
             // Exact integers below 2^53 in practice; one rounding of the quotient.
             let p = if c.kept > 0 { Some(c.inside as f64 / c.kept as f64) } else { None };
-            (p, Some(PSource::Samples))
+            (p, Some(ratio_bounds(c.inside, c.inside + c.failed, c.trials)?), Some(PSource::Samples))
         }
-        Some(PBasis::Normal(p)) => (Some(*p), Some(PSource::NormalApproximation)),
-        None => (None, None),
+        Some(PBasis::Normal(p, lo, hi)) => (Some(*p), Some((*lo, *hi)), Some(PSource::NormalApproximation)),
+        None => (None, None, None),
     };
 
     let u_exp = stmt.expanded().map(|e| e.value);
@@ -607,6 +756,7 @@ pub fn evaluate(input: &EvalInput<'_>) -> Result<DecisionRecord, EvalError> {
             let pm = p_min.value();
             match &pb {
                 None => Outcome::NotDecidable(NotDecidableReason::PdfUnavailable),
+                Some(PBasis::Samples(_)) if too_few => Outcome::Indeterminate,
                 Some(PBasis::Samples(c)) => {
                     let t = c.trials;
                     let hi = c.inside + c.failed;
@@ -620,11 +770,11 @@ pub fn evaluate(input: &EvalInput<'_>) -> Result<DecisionRecord, EvalError> {
                     ])?;
                     pick(conforms, nonconforms)
                 }
-                Some(PBasis::Normal(p)) => {
-                    let conforms = kdec::cmp(*p, &pm)? != Ordering::Less;
-                    // 1 - p_min - p >= 0
+                Some(PBasis::Normal(_, lo, hi)) => {
+                    let conforms = kdec::cmp(*lo, &pm)? != Ordering::Less;
+                    // 1 - p_min - p_hi >= 0
                     let nonconforms =
-                        nonneg(&[(false, &[Factor::I(1)]), (true, &[Factor::D(pm)]), (true, &[Factor::F(*p)])])?;
+                        nonneg(&[(false, &[Factor::I(1)]), (true, &[Factor::D(pm)]), (true, &[Factor::F(*hi)])])?;
                     pick(conforms, nonconforms)
                 }
             }
@@ -646,7 +796,7 @@ pub fn evaluate(input: &EvalInput<'_>) -> Result<DecisionRecord, EvalError> {
     flags.sort();
     flags.dedup();
     let decision = Decision::new(Some(rule), outcome, Some(basis))?;
-    Ok(DecisionRecord { decision, p_conformance: p, p_source, expanded_u: u_exp, flags })
+    Ok(DecisionRecord { decision, p_conformance: p, p_bounds, p_source, expanded_u: u_exp, flags })
 }
 
 fn undecided(
@@ -656,7 +806,7 @@ fn undecided(
     basis: EvidenceBasis,
 ) -> Result<DecisionRecord, EvalError> {
     let decision = Decision::new(Some(rule), Outcome::NotDecidable(reason), Some(basis))?;
-    Ok(DecisionRecord { decision, p_conformance: None, p_source: None, expanded_u: None, flags })
+    Ok(DecisionRecord { decision, p_conformance: None, p_bounds: None, p_source: None, expanded_u: None, flags })
 }
 
 fn pick(conforms: bool, nonconforms: bool) -> Outcome {
@@ -731,6 +881,23 @@ mod tests {
         assert_eq!(floor_f64(&d("-1e400")).unwrap(), None);
         assert_eq!(ceil_f64(&d("1e400")).unwrap(), None);
         assert_eq!(floor_f64(&d("1e400")).unwrap(), Some(f64::MAX));
+    }
+
+    #[test]
+    fn split_brackets_the_remainder_exactly() {
+        for s in ["1.7985560436", "0.01005", "0.5", "0", "-0.00999", "1e-400", "-1e-400", "1e400", "123456.789"] {
+            let l = d(s);
+            let sp = split(&l).unwrap().unwrap();
+            let lo = sign_of_sum(&[(false, &[Factor::D(l)]), (true, &[Factor::F(sp.f)]), (true, &[Factor::F(sp.dlo)])]);
+            assert_ne!(lo.unwrap(), Ordering::Less, "{s}");
+            if sp.dhi.is_finite() {
+                let hi =
+                    sign_of_sum(&[(false, &[Factor::D(l)]), (true, &[Factor::F(sp.f)]), (true, &[Factor::F(sp.dhi)])]);
+                assert_ne!(hi.unwrap(), Ordering::Greater, "{s}");
+                assert!(sp.dhi == sp.dlo || sp.dhi == sp.dlo.next_up(), "{s}");
+            }
+        }
+        assert!(split(&d("-1e400")).unwrap().is_none());
     }
 
     #[test]

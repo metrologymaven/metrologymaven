@@ -16,7 +16,9 @@ pub mod eval;
 pub mod rule;
 
 pub use decision::{Decision, EvidenceBasis};
-pub use eval::{evaluate, DecisionRecord, EvalError, EvalInput, Flag, PSource, Samples, Tolerance};
+pub use eval::{
+    evaluate, evaluate_with_samples, DecisionRecord, EvalError, EvalInput, Flag, PSource, SampleBytes, Tolerance,
+};
 pub use rule::{
     Catalog, DecError, DecisionRule, NotDecidableReason, Outcome, ParamDecimal, PdfSource, RiskReporting, RuleId,
     RuleKind, RuleParams, RuleParts, RuleRef, StandardsRef,
