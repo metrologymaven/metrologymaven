@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:q="urn:fid:test:dangling"
+           targetNamespace="urn:fid:test:dangling"
+           elementFormDefault="qualified">
+  <xs:element name="Broken" type="q:Missing"/>
+</xs:schema>

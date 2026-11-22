@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:t="urn:fid:test:constructs"
+           targetNamespace="urn:fid:test:constructs"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           version="1.0"
+           xml:lang="en">
+  <xs:annotation>
+    <xs:documentation>Synthetic fixture covering every supported XSD construct.</xs:documentation>
+    <xs:appinfo>generator-test</xs:appinfo>
+  </xs:annotation>
+
+  <xs:simpleType name="ColorEnum">
+    <xs:annotation>
+      <xs:documentation>Enumerated colour token.</xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:token">
+      <xs:enumeration value="red"/>
+      <xs:enumeration value="green"/>
+      <xs:enumeration value="blue"/>
+      <xs:whiteSpace value="collapse" fixed="true"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="CodeString">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[A-Z]{2}-[0-9]{4}"/>
+      <xs:minLength value="7"/>
+      <xs:maxLength value="7"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="FixedTag">
+    <xs:restriction base="xs:string">
+      <xs:length value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="BoundedDecimal">
+    <xs:restriction base="xs:decimal">
+      <xs:minInclusive value="-100.0"/>
+      <xs:maxInclusive value="100.0"/>
+      <xs:totalDigits value="8"/>
+      <xs:fractionDigits value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="StrictPositiveDouble">
+    <xs:restriction base="xs:double">
+      <xs:minExclusive value="0.0"/>
+      <xs:maxExclusive value="1000.0"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="DoubleList">
+    <xs:list itemType="xs:double"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="InlineList">
+    <xs:list>
+      <xs:simpleType>
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:list>
+  </xs:simpleType>
+
+  <xs:simpleType name="CodeOrInt">
+    <xs:union memberTypes="t:CodeString xs:integer">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="AUTO"/>
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:union>
+  </xs:simpleType>
+
+  <xs:simpleType name="InlineBaseRestricted">
+    <xs:restriction>
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:minLength value="1"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:maxLength value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:attribute name="GlobalTag" type="t:FixedTag" default="NONE"/>
+
+  <xs:attributeGroup name="AuditAttrs">
+    <xs:annotation>
+      <xs:documentation>Shared audit attributes.</xs:documentation>
+    </xs:annotation>
+    <xs:attribute name="version" type="xs:string" fixed="1"/>
+    <xs:attribute ref="t:GlobalTag" use="optional"/>
+  </xs:attributeGroup>
+
+  <xs:group name="MetaGroup">
+    <xs:annotation>
+      <xs:documentation>Shared metadata sequence.</xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="Label" type="xs:string" minOccurs="0" maxOccurs="1" default="untitled"/>
+      <xs:element name="Note" type="xs:string" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
+    </xs:sequence>
+  </xs:group>
+
+  <xs:complexType name="MeasuredValue">
+    <xs:simpleContent>
+      <xs:extension base="t:BoundedDecimal">
+        <xs:attribute name="unit" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="TightMeasuredValue">
+    <xs:simpleContent>
+      <xs:restriction base="t:MeasuredValue">
+        <xs:maxInclusive value="50.0"/>
+        <xs:attribute name="unit" type="xs:string" use="required" fixed="mm"/>
+      </xs:restriction>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="BaseItem" abstract="true">
+    <xs:sequence>
+      <xs:group ref="t:MetaGroup" minOccurs="0" maxOccurs="1"/>
+      <xs:choice minOccurs="1" maxOccurs="1">
+        <xs:element name="Scalar" type="t:MeasuredValue"/>
+        <xs:element name="Vector" type="t:DoubleList"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="id" type="xs:ID" use="required"/>
+    <xs:attributeGroup ref="t:AuditAttrs"/>
+  </xs:complexType>
+
+  <xs:complexType name="ExtendedItem">
+    <xs:complexContent mixed="true">
+      <xs:extension base="t:BaseItem">
+        <xs:sequence>
+          <xs:element ref="t:StatusFlag" minOccurs="0"/>
+          <xs:element name="TagRef" type="xs:IDREF" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attribute name="inlineAttr" use="optional">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:maxLength value="8"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="RestrictedItem">
+    <xs:complexContent>
+      <xs:restriction base="t:BaseItem">
+        <xs:sequence>
+          <xs:choice>
+            <xs:element name="Scalar" type="t:TightMeasuredValue"/>
+          </xs:choice>
+        </xs:sequence>
+        <xs:attribute name="id" type="xs:ID" use="required"/>
+      </xs:restriction>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="UnorderedHeader">
+    <xs:all minOccurs="0" maxOccurs="1">
+      <xs:element name="Author" type="xs:string" minOccurs="0"/>
+      <xs:element name="SchemaRev" type="xs:string" fixed="3.0"/>
+    </xs:all>
+  </xs:complexType>
+
+  <xs:element name="StatusFlag">
+    <xs:simpleType>
+      <xs:restriction base="xs:boolean"/>
+    </xs:simpleType>
+  </xs:element>
+
+  <xs:element name="ItemHead" type="t:BaseItem" abstract="true"/>
+  <xs:element name="ConcreteItem" type="t:ExtendedItem" substitutionGroup="t:ItemHead"/>
+
+  <xs:element name="Document">
+    <xs:annotation>
+      <xs:documentation>Root document with identity constraints.</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="t:UnorderedHeader" minOccurs="0"/>
+        <xs:element ref="t:ItemHead" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+    <xs:key name="ItemIdKey">
+      <xs:selector xpath="t:ConcreteItem"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+    <xs:keyref name="ItemIdRef" refer="t:ItemIdKey">
+      <xs:selector xpath="t:ConcreteItem"/>
+      <xs:field xpath="t:TagRef"/>
+    </xs:keyref>
+    <xs:unique name="UniqueLabel">
+      <xs:selector xpath="t:ConcreteItem"/>
+      <xs:field xpath="t:Label"/>
+    </xs:unique>
+  </xs:element>
+</xs:schema>

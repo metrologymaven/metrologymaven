@@ -1,0 +1,38 @@
+# Synthetic test manifest (IO.QIF.GEN.PARSE fixtures); written by make_fixtures.py.
+manifest_version = 1
+licence_path = "LICENSE.txt"
+licence_sha256 = "sha256:f9f4bc24863019dadc33f799b0ba16efff95a08999c461e00d1f3a5f8f9a0a62"
+
+[source]
+url = "https://example.org/fid-test/parse-fixtures.git"
+rev = "1111111111111111111111111111111111111111"
+
+[[file]]
+path = "QIFDocument.xsd"
+bytes = 1578
+sha256 = "sha256:7f0d8d309e7f06c995a7228eac1ee6cfecdc7f7b87336ae03ec4c3bbbd4b0421"
+role = "xsd"
+
+[[file]]
+path = "QIFLibrary/Characteristics.xsd"
+bytes = 1291
+sha256 = "sha256:084d7cd3a13f0253038708069b2ed4981c7747d49465aac653088658a1a00d5c"
+role = "xsd"
+
+[[file]]
+path = "QIFLibrary/Features.xsd"
+bytes = 1661
+sha256 = "sha256:df27e321ab75666671164a2fb2251ea569a89c11498a85b5e68dbb27f5926fc1"
+role = "xsd"
+
+[[file]]
+path = "QIFLibrary/Primitives.xsd"
+bytes = 1428
+sha256 = "sha256:4525f6648f8bc408604b872df67654ab2f1207a413adf898b16b689f06878a20"
+role = "xsd"
+
+[[file]]
+path = "QIFLibrary/Units.xsd"
+bytes = 964
+sha256 = "sha256:b8a79a733c61458ce24d274fe90b75c6796e739080f402927787c81b05c464bb"
+role = "xsd"

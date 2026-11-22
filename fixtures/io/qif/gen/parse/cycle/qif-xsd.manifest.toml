@@ -1,0 +1,20 @@
+# Synthetic test manifest (IO.QIF.GEN.PARSE fixtures); written by make_fixtures.py.
+manifest_version = 1
+licence_path = "LICENSE.txt"
+licence_sha256 = "sha256:f9f4bc24863019dadc33f799b0ba16efff95a08999c461e00d1f3a5f8f9a0a62"
+
+[source]
+url = "https://example.org/fid-test/parse-fixtures.git"
+rev = "1111111111111111111111111111111111111111"
+
+[[file]]
+path = "a.xsd"
+bytes = 468
+sha256 = "sha256:5ef67b6282b1dfa7a4337dddbdaf3f8e35de9861ce0171f9ac3468918092d8df"
+role = "xsd"
+
+[[file]]
+path = "b.xsd"
+bytes = 424
+sha256 = "sha256:7c2b9d88b5b9816beaa0fe9083e1f7d353ccb9a12798ca4d6d62ebaefc0ec106"
+role = "xsd"

@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-qif-gen]
+updated: 2026-11-22
 ---
 
 # IO.QIF.GEN.PARSE: XSD parser into the Schema IR
@@ -77,6 +78,7 @@ Hand-written XSDs under `fixtures/io/qif/gen/parse/` (CC-BY-4.0); the pinned DMS
 ## Open questions
 
 - The exact construct list the DMSC set uses is to be confirmed by running AC-6 [unverified]; any construct found missing is added here, not handled ad hoc in an emitter.
+- The upstream DMSC QIF 3.0 XSDs are not yet pinned in `xsd/qif3/` (licence unverified; see `xsd/qif3/README.md`). Until they are committed, AC-6 is exercised against the synthetic 5-file QIF-style bundle `fixtures/io/qif/gen/parse/qif3_bundle/` with `count_decls.py` and `qif3-counts.json`, and `ac6_real_qif3_set_parses` is marked `#[ignore]` to mirror `IO.QIF.GEN.PIN`'s `ac5_real_qif3_set_verifies`.
 
 ## Children
 

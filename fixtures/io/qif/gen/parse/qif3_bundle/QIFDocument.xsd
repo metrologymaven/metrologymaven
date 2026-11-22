@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:q="urn:fid:test:qif3"
+           targetNamespace="urn:fid:test:qif3"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           version="3.0.0">
+  <xs:include schemaLocation="QIFLibrary/Primitives.xsd"/>
+  <xs:include schemaLocation="QIFLibrary/Units.xsd"/>
+  <xs:include schemaLocation="QIFLibrary/Features.xsd"/>
+  <xs:include schemaLocation="QIFLibrary/Characteristics.xsd"/>
+
+  <xs:group name="DocumentHeaderGroup">
+    <xs:sequence>
+      <xs:element name="QPId" type="q:QPIdType"/>
+      <xs:element name="PrimaryUnits" type="q:PrimaryUnitsType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:group>
+
+  <xs:complexType name="QIFDocumentType">
+    <xs:sequence>
+      <xs:group ref="q:DocumentHeaderGroup"/>
+      <xs:element ref="q:FeatureNominal" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element ref="q:CharacteristicNominal" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="versionQIF" type="xs:string" fixed="3.0.0"/>
+  </xs:complexType>
+
+  <xs:element name="QIFDocument" type="q:QIFDocumentType">
+    <xs:key name="FeatureNominalKey">
+      <xs:selector xpath="q:CylinderFeatureNominal|q:PlaneFeatureNominal"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+    <xs:keyref name="CharacteristicFeatureRef" refer="q:FeatureNominalKey">
+      <xs:selector xpath="q:DiameterCharacteristicNominal"/>
+      <xs:field xpath="q:FeatureNominalId"/>
+    </xs:keyref>
+  </xs:element>
+</xs:schema>

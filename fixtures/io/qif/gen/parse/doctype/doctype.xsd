@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xs:schema [
+  <!ENTITY evil "boom">
+]>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:fid:test:doctype">
+  <xs:element name="X" type="xs:string"/>
+</xs:schema>

@@ -3,7 +3,10 @@
 //! Implemented so far:
 //! - [`pin`]: the pinned XSD manifest and digest check (IO.QIF.GEN.PIN). Nothing downstream
 //!   reads a schema file that [`pin::PinnedSet::verify`] has not checked.
+//! - [`parse`]: streaming XSD 1.0 parser and Raw Schema IR (IO.QIF.GEN.PARSE), built on
+//!   `fid-xml` under `fid-io-reg` limits.
 //!
 //! The real DMSC QIF 3.0 manifest is not committed yet: see `xsd/qif3/README.md`.
 
+pub mod parse;
 pub mod pin;
