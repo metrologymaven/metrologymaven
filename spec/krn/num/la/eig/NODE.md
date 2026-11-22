@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-num]
+built_pr: 428
 satisfies: [REQ-KRN.NUM.LA-002, REQ-KRN.NUM.LA-003, REQ-KRN.NUM.LA-004, REQ-KRN.NUM.LA-005]
 covers: []
 depends_on: [KRN.NUM.LA.MAT, KRN.NUM.RED, KRN.NUM.FN, KRN.NUM.ERR]
