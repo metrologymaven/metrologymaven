@@ -1,0 +1,10 @@
+{
+  "artefact": "tokens/fonts.json",
+  "author": "Antigravity (Google DeepMind), agent author of UX.TOKENS.TYPE",
+  "date": "2026-11-22",
+  "references": [
+    "The UX.TOKENS.TYPE and UX.TOKENS spec nodes in this repository",
+    "The open-licence IBM Plex and Inter font families under OFL-1.1"
+  ],
+  "statement_version": "originality-statement@1"
+}
