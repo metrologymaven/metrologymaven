@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-qif-gen]
+built_pr: 457
 updated: 2026-11-22
 ---
 
