@@ -1,0 +1,22 @@
+[package]
+name = "fid-slice"
+description = "Metrology Maven Vertical Slice 0: runnable end-to-end Inspect + Report + Verify pipeline wired over real kernel, GD&T, journal, formatter and Result Package crates."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-fit = { path = "../fid-fit" }
+fid-gps = { path = "../fid-gps" }
+fid-kdec = { path = "../fid-kdec" }
+fid-num = { path = "../fid-num" }
+fid-pkg = { path = "../fid-pkg" }
+fid-surface = { path = "../fid-surface" }
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
