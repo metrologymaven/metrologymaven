@@ -73,8 +73,12 @@ pub struct RouteTarget {
 #[derive(Debug)]
 pub struct SessionRouter {
     working: BranchName,
-    open: Mutex<BTreeMap<(u64, u64), BranchName>>,
+    open: Mutex<OpenBranches>,
 }
+
+/// Each session's open branch, by (session table, session number); absent means the working
+/// branch.
+type OpenBranches = BTreeMap<(u64, u64), BranchName>;
 
 fn session_id(session: &SessionKey) -> (u64, u64) {
     (session.table_id(), session.number())
@@ -86,7 +90,7 @@ impl SessionRouter {
         SessionRouter { working, open: Mutex::new(BTreeMap::new()) }
     }
 
-    fn map(&self) -> Result<MutexGuard<'_, BTreeMap<(u64, u64), BranchName>>, BusError> {
+    fn map(&self) -> Result<MutexGuard<'_, OpenBranches>, BusError> {
         self.open.lock().map_err(|_| invariant("the session router's lock is poisoned"))
     }
 
