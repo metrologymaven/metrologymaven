@@ -2,14 +2,16 @@
 
 Subcommands:
 - ``check``: house-rules check (ECO.RULES.CHECK), see :mod:`house_rules.check`.
+- ``sync``: house-rules sync (ECO.RULES.SYNC), see :mod:`house_rules.sync`.
 """
 
 import sys
 
-from . import check
+from . import check, sync
 
 SUBCOMMANDS = {
     "check": check.main,
+    "sync": sync.main,
 }
 
 

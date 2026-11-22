@@ -1,0 +1,20 @@
+source_repo = "metrologymaven"
+
+[budgets]
+core_bytes = 3072
+agents_md_bytes = 10240
+
+[[block]]
+id = "core"
+file = "core.md"
+repos = ["repo-rust", "repo-py"]
+
+[[block]]
+id = "rust"
+file = "rust.md"
+repos = ["repo-rust"]
+
+[[block]]
+id = "python"
+file = "python.md"
+repos = ["repo-py"]
