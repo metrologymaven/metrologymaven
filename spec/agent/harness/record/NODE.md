@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-eval-harness]
+built_pr: 505
 satisfies: [REQ-AGENT.HARNESS-005, REQ-AGENT.HARNESS-008, REQ-AGENT.HARNESS-009]
 covers: []
 depends_on: [AGENT.HARNESS.SCORE, AGENT.HARNESS.SAFETY, AGENT.HARNESS.ADAPT]
