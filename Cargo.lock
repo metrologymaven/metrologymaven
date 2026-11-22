@@ -1208,6 +1208,7 @@ name = "fid-cli"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-ctrl",
  "fid-surface",
 ]
 
@@ -1240,6 +1241,8 @@ dependencies = [
  "fid-canon",
  "fid-ctrl-acl",
  "fid-surface",
+ "fid-types",
+ "fid-uuid",
  "getrandom 0.2.17",
  "hmac",
  "rustix 1.1.6",
@@ -2190,6 +2193,7 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-num",
+ "fid-pkg",
  "fid-rep",
  "fid-types",
 ]

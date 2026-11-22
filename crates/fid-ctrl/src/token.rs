@@ -125,6 +125,51 @@ impl TokenFile {
         }
     }
 
+    /// Opens an existing token file for a client (spec node `AUTO.CTRL.CLIENT`): nothing is
+    /// created, written, replaced or remembered. The directory gets the same privacy check as in
+    /// [`TokenFile::ensure`] (Unix: opened once with `O_DIRECTORY|O_NOFOLLOW` and checked on that
+    /// descriptor; Windows: not a reparse point and a private DACL); a missing directory is an
+    /// error. Read the token with [`TokenFile::read_checked`]. On Windows a file owned by
+    /// BUILTIN\Administrators is refused: the app creates every token file with the user as owner.
+    pub fn open_existing(path: &Path) -> io::Result<TokenFile> {
+        let dir_path = match path.parent() {
+            Some(d) if !d.as_os_str().is_empty() => d.to_path_buf(),
+            _ => PathBuf::from("."),
+        };
+        let Some(name) = path.file_name().map(OsStr::to_os_string) else {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "token path has no file name"));
+        };
+        #[cfg(unix)]
+        let uid = rustix::process::geteuid().as_raw();
+        #[cfg(unix)]
+        let dir = Dir::open(&dir_path, uid)?;
+        #[cfg(not(unix))]
+        let dir = Dir::open(&dir_path)?;
+        Ok(TokenFile {
+            path: path.to_path_buf(),
+            name,
+            dir,
+            #[cfg(unix)]
+            uid,
+            preexisting: AtomicBool::new(false),
+            refused: Mutex::new(Vec::new()),
+            replacing: Mutex::new(()),
+        })
+    }
+
+    /// The client-side read: the same no-follow open and checks on the handle as
+    /// [`TokenFile::load`] (a regular file, owner-only), but a refused file is never replaced,
+    /// since the file belongs to the app. `token_permissions` for a file that is too open, a link,
+    /// a reparse point or not a regular file; `token_io` if it cannot be opened or read or does not
+    /// hold exactly 32 bytes.
+    pub fn read_checked(&self) -> Result<Token, AuthError> {
+        match self.open_checked() {
+            Ok((Some(f), Permissions::OwnerOnly)) => read_token(f),
+            Ok((_, Permissions::Wider(_))) => Err(AuthError::TokenPermissions),
+            Ok((None, Permissions::OwnerOnly)) | Err(_) => Err(AuthError::TokenIo),
+        }
+    }
+
     /// The token file's path.
     pub fn path(&self) -> &Path {
         &self.path
@@ -295,14 +340,14 @@ fn file_id(_f: &File) -> io::Result<FileId> {
 /// The token directory, opened once and checked through its descriptor.
 #[cfg(unix)]
 #[derive(Debug)]
-struct Dir {
+pub(crate) struct Dir {
     fd: File,
     path: PathBuf,
 }
 
 #[cfg(unix)]
 impl Dir {
-    fn open(path: &Path, uid: u32) -> io::Result<Dir> {
+    pub(crate) fn open(path: &Path, uid: u32) -> io::Result<Dir> {
         use rustix::fs::{Mode, OFlags};
         use rustix::io::Errno;
         let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC;
@@ -319,7 +364,7 @@ impl Dir {
     }
 
     /// Checks the opened directory itself (not whatever its path names now).
-    fn check(&self, uid: u32) -> io::Result<()> {
+    pub(crate) fn check(&self, uid: u32) -> io::Result<()> {
         match crate::discovery::unsafe_dir_reason(&self.fd.metadata()?, uid) {
             Some(why) => Err(unsafe_dir(&self.path, why)),
             None => Ok(()),
@@ -345,7 +390,7 @@ impl Dir {
         Ok(f)
     }
 
-    fn open_no_follow(&self, name: &OsStr) -> io::Result<File> {
+    pub(crate) fn open_no_follow(&self, name: &OsStr) -> io::Result<File> {
         use rustix::fs::{Mode, OFlags};
         let flags = OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC;
         rustix::fs::openat(&self.fd, name, flags, Mode::empty()).map(File::from).map_err(io::Error::from)
@@ -362,23 +407,36 @@ impl Dir {
     fn remove(&self, name: &OsStr) -> io::Result<()> {
         rustix::fs::unlinkat(&self.fd, name, rustix::fs::AtFlags::empty()).map_err(io::Error::from)
     }
+    /// The entry names, read through the directory descriptor (not its path).
+    pub(crate) fn names(&self) -> io::Result<Vec<OsString>> {
+        use std::os::unix::ffi::OsStrExt;
+        let mut out = Vec::new();
+        for entry in rustix::fs::Dir::read_from(&self.fd).map_err(io::Error::from)? {
+            let entry = entry.map_err(io::Error::from)?;
+            let name = OsStr::from_bytes(entry.file_name().to_bytes());
+            if name != "." && name != ".." {
+                out.push(name.to_os_string());
+            }
+        }
+        Ok(out)
+    }
 }
 
 #[cfg(unix)]
-fn is_link_error(e: &io::Error) -> bool {
+pub(crate) fn is_link_error(e: &io::Error) -> bool {
     e.raw_os_error() == Some(rustix::io::Errno::LOOP.raw_os_error())
 }
 
 /// The token directory, by path; checked at open and again before every create.
 #[cfg(not(unix))]
 #[derive(Debug)]
-struct Dir {
+pub(crate) struct Dir {
     path: PathBuf,
 }
 
 #[cfg(not(unix))]
 impl Dir {
-    fn open(path: &Path) -> io::Result<Dir> {
+    pub(crate) fn open(path: &Path) -> io::Result<Dir> {
         let d = Dir { path: path.to_path_buf() };
         d.check()?;
         Ok(d)
@@ -386,7 +444,7 @@ impl Dir {
 
     /// Windows: not a reparse point, and no write right for any other principal.
     #[cfg(windows)]
-    fn check(&self) -> io::Result<()> {
+    pub(crate) fn check(&self) -> io::Result<()> {
         use std::os::windows::fs::MetadataExt;
         const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
         let d = open_no_follow(&self.path)?;
@@ -404,7 +462,7 @@ impl Dir {
     }
 
     #[cfg(not(windows))]
-    fn check(&self) -> io::Result<()> {
+    pub(crate) fn check(&self) -> io::Result<()> {
         Ok(())
     }
 
@@ -420,7 +478,7 @@ impl Dir {
         owner_only_new(&self.path.join(name))
     }
 
-    fn open_no_follow(&self, name: &OsStr) -> io::Result<File> {
+    pub(crate) fn open_no_follow(&self, name: &OsStr) -> io::Result<File> {
         open_no_follow(&self.path.join(name))
     }
 
@@ -435,6 +493,14 @@ impl Dir {
     fn remove(&self, name: &OsStr) -> io::Result<()> {
         fs::remove_file(self.path.join(name))
     }
+    /// The entry names (by path on this target).
+    pub(crate) fn names(&self) -> io::Result<Vec<OsString>> {
+        let mut out = Vec::new();
+        for entry in fs::read_dir(&self.path)? {
+            out.push(entry?.file_name());
+        }
+        Ok(out)
+    }
 }
 
 #[cfg(windows)]
@@ -446,7 +512,7 @@ fn open_no_follow(path: &Path) -> io::Result<File> {
 }
 
 #[cfg(windows)]
-fn is_link_error(_e: &io::Error) -> bool {
+pub(crate) fn is_link_error(_e: &io::Error) -> bool {
     false
 }
 
@@ -461,7 +527,7 @@ fn open_no_follow(path: &Path) -> io::Result<File> {
 }
 
 #[cfg(not(any(unix, windows)))]
-fn is_link_error(_e: &io::Error) -> bool {
+pub(crate) fn is_link_error(_e: &io::Error) -> bool {
     false
 }
 

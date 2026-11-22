@@ -329,5 +329,11 @@ fn check_thresholds(t: &Thresholds) -> Result<(), FitError> {
     if !((0.0..1.0).contains(&t.eig_ratio_max)) {
         return Err(FitError::InvalidParams { field: "thresholds.eig_ratio_max" });
     }
+    if !(t.planarity_ratio_min.is_finite() && t.planarity_ratio_min >= 1.0) {
+        return Err(FitError::InvalidParams { field: "thresholds.planarity_ratio_min" });
+    }
+    if !(t.cond_max.is_finite() && t.cond_max >= 1.0) {
+        return Err(FitError::InvalidParams { field: "thresholds.cond_max" });
+    }
     Ok(())
 }

@@ -437,6 +437,8 @@ def make_row():
         field("nlls.cond_limit", "number", D),
         field("nlls.rank_tol", "number", D),
         field("nlls.lm_tau", "number", D),
+        field("thresholds.planarity_ratio_min", "number", D),
+        field("thresholds.cond_max", "number", D),
     ]
     result = [
         field("algorithm", "string"),

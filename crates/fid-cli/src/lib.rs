@@ -7,6 +7,7 @@
 //! acceptance tests drive until the generated command tree (AUTO.CLI.TREE) and the bus
 //! API crate land.
 
+pub mod ctrl;
 pub mod exit;
 pub mod output;
 
