@@ -17,7 +17,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # VIZ.KIOSK.STATUS: Large live status display
@@ -37,6 +37,7 @@ The big conformance indicator an operator reads from a distance with gloves on: 
 - **REQ-VIZ.KIOSK.STATUS-002** The display shall use the shared status mapping, so every state has icon, pattern and text in addition to colour.
 - **REQ-VIZ.KIOSK.STATUS-003** While any characteristic of the cycle is stale or not evaluated, the overall display shall not show CONFORMS.
 - **REQ-VIZ.KIOSK.STATUS-004** When a new kernel result for the cycle arrives, the display shall update within 500 ms [unverified].
+- **REQ-VIZ.KIOSK.STATUS-005** While a live scanning or probing cycle is active, the kiosk status host shall optionally render a display-only 3D coverage overlay (scanned vs unscanned nominal faces) and next-probe-point approach arrows driven by kernel-supplied step geometry, without overriding the ≥ 20 mm status banner.
 
 ## Acceptance criteria
 
@@ -44,12 +45,13 @@ The big conformance indicator an operator reads from a distance with gloves on: 
 - **AC-2** Given the same cycle with one characteristic stale, then the overall display shows the stale state, not CONFORMS.
 - **AC-3** Given each of the six display states, then the widget uses the icon, pattern and text from the shared mapping (snapshot test).
 - **AC-4** Given a result event, then the widget updates within 500 ms in the test harness.
+- **AC-5** Given an active live-acquisition step with coverage metadata and a next probe target, then the 3D coverage overlay and approach arrow render without reducing the ≥ 20 mm status glyph height.
 
 ## Design
 
 - **Registry command(s):** none.
-- **Data structures:** `CycleOutcome` derived from kernel ResultRecords by the rule "worst state wins" in the order NONCONFORMS, NOT_DECIDABLE, INDETERMINATE, stale, not evaluated, CONFORMS.
-- **Algorithm:** subscribe to cycle results; compute the overall display state by the fixed precedence (a display rule, not a value of record: the per-characteristic decisions are the kernel's); size glyphs as `mm × dpi / 25.4` pixels.
+- **Data structures:** `CycleOutcome` derived from kernel ResultRecords by the rule "worst state wins" in the order NONCONFORMS, NOT_DECIDABLE, INDETERMINATE, stale, not evaluated, CONFORMS; `LiveGuidanceOverlay { scanned_face_mask, next_probe_approach?: (Point64, Dir64) }` (display-only).
+- **Algorithm:** subscribe to cycle results; compute the overall display state by the fixed precedence (a display rule, not a value of record: the per-characteristic decisions are the kernel's); size glyphs as `mm × dpi / 25.4` pixels; forward optional `LiveGuidanceOverlay` to the viewport pass (`research/viz-ux-sota/UX-INTERACTION-SPEC.md`).
 - **Errors:** `UnknownDpi` falls back to the largest glyph size that fits.
 - **Determinism:** D0.
 - **Performance budget:** see REQ-004.
@@ -61,7 +63,7 @@ The big conformance indicator an operator reads from a distance with gloves on: 
 
 ## Build prompt
 
-> In crate `fid-kiosk`, add module `status`: a large status widget showing the cycle's overall display state with icon, pattern and text from `fid-overlay`'s status mapping, glyph height at least 20 mm computed from the display DPI, updated within 500 ms of new kernel results. Overall state uses fixed precedence NONCONFORMS > NOT_DECIDABLE > INDETERMINATE > stale > not evaluated > CONFORMS, so a stale or unevaluated characteristic can never show CONFORMS. Tests: physical size on the reference profile; stale precedence; six-state snapshot; update latency. Rules: no panics or `unsafe`; deny unwrap/expect/panic/todo/unimplemented/unreachable; status never by colour alone.
+> In crate `fid-kiosk`, add module `status`: a large status widget showing the cycle's overall display state with icon, pattern and text from `fid-overlay`'s status mapping, glyph height at least 20 mm computed from the display DPI, updated within 500 ms of new kernel results, plus an optional display-only 3D live scan-coverage and next-probe-point approach overlay during active acquisition steps (`research/viz-ux-sota/UX-INTERACTION-SPEC.md`) that never encroaches on the ≥ 20 mm status banner. Overall state uses fixed precedence NONCONFORMS > NOT_DECIDABLE > INDETERMINATE > stale > not evaluated > CONFORMS, so a stale or unevaluated characteristic can never show CONFORMS. Tests: physical size on the reference profile; stale precedence; six-state snapshot; update latency; live guidance layout preservation. Rules: no panics or `unsafe`; deny unwrap/expect/panic/todo/unimplemented/unreachable; status never by colour alone.
 
 ## Open questions
 

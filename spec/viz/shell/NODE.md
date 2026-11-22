@@ -15,7 +15,7 @@ depends_on: [CORE, AUTO, VIZ.RENDER]
 cli: [fid view save-layout, fid view apply-layout, fid view list-layouts, fid view describe-view]
 mcp: [view_save_layout, view_apply_layout, view_list_layouts, view_describe_view]
 journal: [view.save_layout@*, view.apply_layout@*]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # VIZ.SHELL: Workspace shell, palette and accessibility
@@ -85,7 +85,7 @@ Alternatives considered:
 
 ## Open questions
 
-- D-005 is now accepted provisionally (egui + winit + wgpu); confirmation depends on the three spike children. If a spike fails, the maintainers reopen D-005 (option B) for the affected screens; the production children's requirements stay toolkit-neutral.
+- D-005 is now accepted provisionally (egui + winit + wgpu); confirmation depends on the three egui spike children plus the comparative Vello + Parley GPU-2D spike (`VIZ.SHELL.SPKVELLO`, proposed in D-050). If a spike fails, the maintainers confirm D-050 Option C (hybrid) or reopen D-005 Option B for the affected screens; the production children's requirements stay toolkit-neutral.
 - Whether accessibility should become its own level-2 node if the baseline grows (for example EN 301 549 conformance for EU procurement) [unverified].
 
 ## Children
@@ -95,6 +95,7 @@ Alternatives considered:
 | VIZ.SHELL.SPKTREE | Toolkit spike - element tree with 10k items (leaf) | 009 | none |
 | VIZ.SHELL.SPKTABLE | Toolkit spike - characteristic table (leaf) | 003 004 | none |
 | VIZ.SHELL.SPKRPT | Toolkit spike - report designer canvas (leaf) | 003 004 | none |
+| VIZ.SHELL.SPKVELLO | Toolkit spike - Vello and Parley GPU-2D canvas and hybrid benchmark (leaf) | 003 004 009 | none |
 | VIZ.SHELL.DOCK | Workspace frame, docking, status bar and role layouts | 001 008 | none |
 | VIZ.SHELL.TREE | Element tree, inspector and results panels | 001 009 | none |
 | VIZ.SHELL.PALETTE | Command palette, generated forms, menus and keymap | 001 002 003 | none |

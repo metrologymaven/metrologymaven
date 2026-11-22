@@ -17,7 +17,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # VIZ.VIEW.CAMERA.NAV: Transient navigation, standard orientations and fit
@@ -39,20 +39,22 @@ The camera controller of a live viewport: orbit, pan, zoom and roll from pointer
 - **REQ-VIZ.VIEW.CAMERA.NAV-004** While reduced-motion mode is on, orientation changes and fits shall jump to the end camera with no intermediate frames; otherwise they shall animate for at most 250 ms.
 - **REQ-VIZ.VIEW.CAMERA.NAV-005** Every navigation action shall have a keyboard equivalent registered with the shell's keymap.
 - **REQ-VIZ.VIEW.CAMERA.NAV-006** The end camera of every orientation and fit shall be computed in f64 deterministically from bounds, frame and current view direction.
+- **REQ-VIZ.VIEW.CAMERA.NAV-007** When an orbit gesture begins over geometry, the controller shall automatically set the orbit pivot to the 3D surface point under the cursor (falling back to scene or selection centroid when over background), and the viewport shall display an interactive DRF-aligned orientation cube with a one-click Orthographic/Perspective toggle (defaulting to Orthographic for dimensional inspection).
 
 ## Acceptance criteria
 
-- **AC-1** Given fixture `fixtures/viz/golden-cube` with a rotated active frame, when "top" is applied, then the camera direction equals the frame's −Z axis within 1e-12 and up equals +Y of the frame.
+- **AC-1** Given fixture `fixtures/viz/golden-cube` with a rotated active frame, when "top" is applied (by key or orientation-cube face click), then the camera direction equals the frame's −Z axis within 1e-12 and up equals +Y of the frame.
 - **AC-2** Given a scripted 5 s orbit, then the journal head and the Activity Log are unchanged.
 - **AC-3** Given reduced-motion on, when "isometric" is applied, then exactly one frame later the camera equals the end camera.
 - **AC-4** Given a selection of two features, when zoom-to-selection runs twice from the same start, then both end cameras are bit-identical.
-- **AC-5** Given the keymap export, then every navigation action has a binding.
+- **AC-5** Given the keymap export, then every navigation action (including Ortho/Perspective toggle) has a binding.
+- **AC-6** Given an orbit started over a vertex of `golden-cube`, then the pivot equals that surface point rather than the world origin, and starting an orbit over empty background falls back to the scene centroid.
 
 ## Design
 
 - **Registry command(s):** none (transient presentation; deliberate camera commands are in `VIZ.VIEW.CAMERA.SET`).
-- **Data structures:** `CameraController { live: Camera, pivot_m, anim: Option<Anim> }`; `StdView` enum.
-- **Algorithm:** arcball orbit about pivot; pan in view plane scaled by depth at cursor; zoom toward cursor; end cameras from bounds sphere; easing cubic, disabled under reduced motion (setting read from `VIZ.SHELL.THEME.SCALE`, passed as data).
+- **Data structures:** `CameraController { live: Camera, pivot_m, anim: Option<Anim>, projection_default }`; `StdView` enum; `OrientationCubeState { active_frame_axes, hovered_face, projection }`.
+- **Algorithm:** arcball orbit about cursor-picked f64 pivot (supplied from async depth/ID sample on pointer down, fallback to bounds centroid); pan in view plane scaled by depth at cursor; zoom toward cursor; interactive corner orientation cube reflecting active kernel DRF axes with clickable faces/edges/corners and Ortho/Persp toggle (`research/viz-ux-sota/UX-INTERACTION-SPEC.md`); end cameras from bounds sphere; easing cubic, disabled under reduced motion (setting read from `VIZ.SHELL.THEME.SCALE`, passed as data).
 - **Errors:** `NoActiveFrame` (falls back to world frame with a diagnostic).
 - **Determinism:** D0 for end cameras; gestures are user input.
 - **Performance budget:** controller update under 0.1 ms.
@@ -64,7 +66,7 @@ The camera controller of a live viewport: orbit, pan, zoom and roll from pointer
 
 ## Build prompt
 
-> In crate `fid-view`, add module `nav` with a `CameraController` for live viewports: arcball orbit about a pivot, pan, zoom toward cursor, roll; standard orientations from the active kernel frame's axes; fit-to-view and zoom-to-selection framing the f64 bounding sphere at 90 % of the shorter side; animations ≤ 250 ms, jumps when reduced motion is on (flag passed in as data). Nothing here journals or logs. Register keyboard equivalents as palette actions. End cameras are deterministic f64. Tests AC-1..AC-5 with `fixtures/viz/golden-cube`. Rules: CONSTITUTION §8; REQ-VIZ.VIEW-006 (transient motion only on the view track).
+> In crate `fid-view`, add module `nav` with a `CameraController` for live viewports: arcball orbit automatically pivoting on the 3D surface point under the cursor (fallback to scene/selection centroid), pan, zoom toward cursor, roll; standard orientations from the active kernel frame's axes exposed both via keys and an interactive DRF-aligned corner orientation cube with one-click Orthographic/Perspective toggle (default Orthographic for inspection, per `research/viz-ux-sota/UX-INTERACTION-SPEC.md`); fit-to-view and zoom-to-selection framing the f64 bounding sphere at 90 % of the shorter side; animations ≤ 250 ms, jumps when reduced motion is on (flag passed in as data). Nothing here journals or logs. Register keyboard equivalents as palette actions. End cameras are deterministic f64. Tests AC-1..AC-6 with `fixtures/viz/golden-cube`. Rules: CONSTITUTION §8; REQ-VIZ.VIEW-006 (transient motion only on the view track).
 
 ## Open questions
 
