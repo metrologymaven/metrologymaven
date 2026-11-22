@@ -50,6 +50,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-geo-ooc" = "model"
 "fid-trust-canon" = "model"
 "fid-sign-core" = "model"
+# Verifier-side chain checks (TRUST.CHAIN.CKPT): CORE-free over fid-trust-canon and fid-sign-core.
+"fid-chain" = "model"
 # Governance profile definitions (TRUST.PROFILE.DEFS): CORE-free (fid-types, fid-trust-canon) so the verifier can read it.
 "fid-profile" = "model"
 "fid-project" = "model"

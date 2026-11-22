@@ -1197,6 +1197,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-chain"
+version = "0.0.1"
+dependencies = [
+ "fid-journal",
+ "fid-pkg",
+ "fid-sign-core",
+ "fid-trust-canon",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-clarabel"
 version = "0.11.1"
 dependencies = [
