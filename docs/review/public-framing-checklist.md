@@ -27,16 +27,16 @@ and D-036 (open/paid boundary and honest research framing).
    - Do not use compliance/certification words (`certified`, `compliant`, `validated`, `traceable`)
      without both a standard designator + edition year and a benchmark/evidence link
      (`OUTR.BRAND.LINT` rule CL001).
-4. **Honest pre-alpha and hiring status.**
-   - Never list future roles as active open job vacancies or post them to external job boards
-     when hiring is not open within 30-90 days. Frame planned roles transparently as a
-     **Future Roles & Talent Network** roadmap with a lightweight contact/notify path.
-5. **Preserve the open/commercial boundary (D-036 rule 3).**
-   - All four open apps, the deterministic math kernel, QIF/DMIS/I++ support, CLI/MCP surfaces,
-     and `fid-verify` stay free forever.
+4. **Honest pre-alpha status and zero outreach bottlenecks (D-052).**
+   - Do not add hiring boards, talent-network email forms, expert-recruitment queues, or external
+     legal/standards-body outreach calls to public pages.
+   - Keep all site numbers generated from `spec/`, `seeds/`, and `decisions/` (`site/build.py`).
+5. **Preserve the open/commercial boundary (D-036 rule 3, D-049).**
+   - All four open apps, the deterministic math kernel, QIF/STEP/DMIS/I++ support, CLI/MCP
+     surfaces, and `fid-verify` stay free forever.
    - Commercial offerings stay strictly in regulated dossiers, support/LTS, hosted verification
-     and evidence archive, and instrument-maker integration testing (add new commercial services
-     to public copy only after their decision record is accepted).
+     and evidence archive, on-premises private machine-adapter fine-tuning and fleet drift
+     monitoring (`D-049`), and instrument-maker integration testing.
 6. **Keep clean-room discipline.**
    - Never paste standards text (ISO, ASME, VDA) or vendor manuals (`AGENTS.md` rule 5, D-013).
    - Do not promote the project on vendor-owned support forums.

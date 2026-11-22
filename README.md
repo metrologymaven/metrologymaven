@@ -14,9 +14,9 @@ This one repository holds everything:
 | [`crates/`](crates/) | The Rust workspace (`fid` CLI, `fid-*` crates) |
 | [`site/`](site/) | The website, generated from the spec tree (`python site/build.py`) |
 | [`fixtures/`](fixtures/) | Test data and conformance vectors |
-| [`generated/`](generated/) | Reports generated from the tree, including the [expert queue](generated/EXPERT-QUEUE.md) |
+| [`generated/`](generated/) | Reports generated from the tree (`INDEX.md`, `BUILT.md`, `COVERAGE.md`, `DECISIONS.md`) |
 
-**Want to help?** If you know GD&T, measurement uncertainty or CMM control, see the [expert queue](generated/EXPERT-QUEUE.md) and comment `/claim` on an `expert-queue` issue. Machine shops and university labs interested in non-proprietary benchmark parts or everyone else: [CONTRIBUTING.md](CONTRIBUTING.md).
+**Automated build pipeline ([D-052](decisions/D-052-autonomous-zero-human-bottlenecks.md)):** coding agents specify, independently review, and build the platform in parallel waves against clean-room mathematical oracles and CI gates. Unreviewed GD&T rules stay visibly labelled `interpretation: provisional` ([D-045](decisions/D-045-provisional-gdt-interpretation.md)). Self-service contributor instructions: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The internal command and crate prefix `fid` comes from *fiducial*, a reference mark in metrology ([D-039](decisions/D-039-metrology-maven-name-and-public-home.md)).
 
