@@ -1,0 +1,17 @@
+{
+  "branch": "agent/proposal-2",
+  "result_records": [
+    {
+      "id": "rr-1",
+      "characteristic": "C1",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": 0.025,
+        "unit": "m"
+      },
+      "branch": "agent/proposal-2",
+      "entry": 2
+    }
+  ]
+}

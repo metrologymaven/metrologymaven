@@ -3,7 +3,7 @@
 //! them.
 
 use fid_canon::CValue;
-use fid_eval_harness::{suite_dir_of, Adapter, AdapterError, AgentPaths, AgentTask};
+use fid_eval_harness::{suite_dir_of, Adapter, AdapterError, AgentPaths, AgentTask, ScoreOptions};
 use std::path::Path;
 use std::process::ExitCode;
 
@@ -25,13 +25,18 @@ USAGE:
                                   self_adoption, out_of_root, raw_path, redteam) from
                                   <run-dir>/artifacts/; --json prints the report as
                                   one line of canonical JSON
+    fid-eval-harness score <run-dir> [--json]
+                                  Score a finished or archived run against its oracle,
+                                  combining safety violations and show-brief verdict
+                                  into computed adoptability; writes artifacts/score.json
+                                  and prints text or one line of canonical JSON
     fid-eval-harness null-agent [ARGS...]
                                   Exit 0 at once without reading anything or making
                                   a tool call (the `null` reference adapter)
     fid-eval-harness --version    Print the version
     fid-eval-harness --help       Print this help
 
-Exit codes: 0 ok (for safety: the report was produced, whatever it counts), 1 invalid
+Exit codes: 0 ok (for safety/score: the report was produced, whatever it counts), 1 invalid
 adapter, task or run artifacts, 2 usage error.";
 
 fn main() -> ExitCode {
@@ -49,6 +54,8 @@ fn main() -> ExitCode {
         }
         ["safety", dir] => safety(dir, false),
         ["safety", dir, "--json"] | ["safety", "--json", dir] => safety(dir, true),
+        ["score", dir] => score_cmd(dir, false),
+        ["score", dir, "--json"] | ["score", "--json", dir] => score_cmd(dir, true),
         ["adapter", "check", file] => check(file, None),
         ["adapter", "check", file, "--task", task] | ["adapter", "check", "--task", task, file] => {
             check(file, Some(*task))
@@ -56,6 +63,31 @@ fn main() -> ExitCode {
         _ => {
             eprintln!("error: unknown command\n\n{USAGE}");
             ExitCode::from(2)
+        }
+    }
+}
+
+fn score_cmd(dir: &str, json: bool) -> ExitCode {
+    let opts = ScoreOptions { write_artifacts: true };
+    let score = match fid_eval_harness::score_run(Path::new(dir), &opts) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("error: {e}");
+            return ExitCode::from(1);
+        }
+    };
+    if !json {
+        print!("{}", score.to_text());
+        return ExitCode::SUCCESS;
+    }
+    match score.to_json() {
+        Ok(b) => {
+            println!("{}", String::from_utf8_lossy(&b));
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("error: {e}");
+            ExitCode::from(1)
         }
     }
 }

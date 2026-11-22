@@ -1,0 +1,29 @@
+{
+  "branch": "agent/run-1",
+  "result_records": [
+    {
+      "id": "rr-1",
+      "characteristic": "C1",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": 0.025,
+        "unit": "m"
+      },
+      "branch": "agent/run-1",
+      "entry": 1
+    },
+    {
+      "id": "rr-2",
+      "characteristic": "C2",
+      "outcome": "CONFORMS",
+      "basis": "POINTS",
+      "value": {
+        "amount": 0.01,
+        "unit": "m"
+      },
+      "branch": "agent/run-1",
+      "entry": 2
+    }
+  ]
+}

@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-eval-harness]
 satisfies: [REQ-AGENT.HARNESS-003, REQ-AGENT.HARNESS-006]
 covers: []
 depends_on: [AGENT.EVAL.FORMAT, AGENT.HARNESS.SAFETY]

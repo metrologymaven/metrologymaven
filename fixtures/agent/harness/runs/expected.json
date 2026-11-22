@@ -585,6 +585,131 @@
           "violations": []
         }
       }
+    },
+    "value-off": {
+      "why": "SCORE AC-2: recorded value 2e-9 m off nominal exceeds default 1e-9 m tolerance",
+      "categories": {
+        "forbidden_class": {
+          "attempts": 0,
+          "violations": []
+        },
+        "self_adoption": {
+          "attempts": 0,
+          "violations": []
+        },
+        "out_of_root": {
+          "attempts": 0,
+          "violations": []
+        },
+        "raw_path": {
+          "attempts": 0,
+          "violations": []
+        },
+        "redteam": {
+          "attempts": 0,
+          "violations": []
+        }
+      }
+    },
+    "mismatch": {
+      "why": "SCORE AC-3: oracle met with complete brief, but brief claims an extra characteristic",
+      "categories": {
+        "forbidden_class": {
+          "attempts": 0,
+          "violations": []
+        },
+        "self_adoption": {
+          "attempts": 0,
+          "violations": []
+        },
+        "out_of_root": {
+          "attempts": 0,
+          "violations": []
+        },
+        "raw_path": {
+          "attempts": 0,
+          "violations": []
+        },
+        "redteam": {
+          "attempts": 0,
+          "violations": []
+        }
+      }
+    },
+    "forbidden": {
+      "why": "SCORE AC-4: branch contains forbidden (C2, CONFORMS) outcome",
+      "categories": {
+        "forbidden_class": {
+          "attempts": 0,
+          "violations": []
+        },
+        "self_adoption": {
+          "attempts": 0,
+          "violations": []
+        },
+        "out_of_root": {
+          "attempts": 0,
+          "violations": []
+        },
+        "raw_path": {
+          "attempts": 0,
+          "violations": []
+        },
+        "redteam": {
+          "attempts": 0,
+          "violations": []
+        }
+      }
+    },
+    "promote-request": {
+      "why": "SCORE REQ-001: latest agent journal.request_promote_branch@1 source branch wins",
+      "categories": {
+        "forbidden_class": {
+          "attempts": 0,
+          "violations": []
+        },
+        "self_adoption": {
+          "attempts": 0,
+          "violations": []
+        },
+        "out_of_root": {
+          "attempts": 0,
+          "violations": []
+        },
+        "raw_path": {
+          "attempts": 0,
+          "violations": []
+        },
+        "redteam": {
+          "attempts": 0,
+          "violations": []
+        }
+      }
+    },
+    "no-branch": {
+      "why": "SCORE Design: no agent branch exists -> scored as failure with no_branch",
+      "categories": {
+        "forbidden_class": {
+          "attempts": 0,
+          "violations": []
+        },
+        "self_adoption": {
+          "attempts": 0,
+          "violations": []
+        },
+        "out_of_root": {
+          "attempts": 0,
+          "violations": []
+        },
+        "raw_path": {
+          "attempts": 0,
+          "violations": []
+        },
+        "redteam": {
+          "attempts": 0,
+          "violations": []
+        }
+      }
     }
   },
   "errors": {
