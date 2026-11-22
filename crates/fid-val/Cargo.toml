@@ -1,0 +1,36 @@
+[package]
+name = "fid-val"
+description = "CI validation harness for reference datasets: data-driven case-to-call mapping, versioned pass criteria, artifact execution, representation normalisation and canonical RunResults (spec node KRN.MAN.VAL.RUN)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-val"
+path = "src/main.rs"
+
+# Test-only deterministic toy kernel artifact speaking the fid-kernel-wasm stdin/stdout
+# protocol for fixtures/man/val-toy-v1 (KRN.MAN.VAL.RUN AC-1..AC-4).
+[[bin]]
+name = "val-toy-artifact"
+path = "src/bin/val-toy-artifact.rs"
+
+[dependencies]
+# RFC 8785 canonical JSON, bounded parsing and SHA-256 (RunResults encoding). Layer model.
+fid-canon = { path = "../fid-canon" }
+# Portable FIPS 180-4 SHA-256 for verifying artifact output_digest. Layer kernel.
+fid-kci = { path = "../fid-kci" }
+# KNP-1 deterministic transcendentals (sqrt, acos) so deviations are bit-identical across hosts. Layer num.
+fid-num = { path = "../fid-num" }
+# RDL dataset record format loader (UNC.RDL.FORMAT). Layer services.
+fid-rdl = { path = "../fid-rdl" }
+# Shared sha256: Digest type (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+# Versioned mapping and pass-criteria TOML files.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[lints]
+workspace = true

@@ -1,0 +1,51 @@
+# Versioned case-to-call mapping data for fixtures/man/val-toy-v1 (CC-BY-4.0)
+version = "val-map-toy@1"
+
+[[mapping]]
+set = "toy-set"
+primitive = "plane"
+case_type = "ls"
+algorithm = "ls.plane@1.0.0"
+
+[mapping.params_template]
+method = "orthogonal_ls"
+
+[[mapping.compare_rules]]
+param = "point"
+kind = "plane_offset"
+normal_param = "normal"
+
+[[mapping.compare_rules]]
+param = "normal"
+kind = "direction"
+sign_invariant = true
+
+[[mapping.compare_rules]]
+param = "rms"
+kind = "scalar"
+
+[[mapping]]
+set = "toy-set"
+primitive = "circle"
+case_type = "ls"
+algorithm = "ls.circle@1.0.0"
+
+[mapping.params_template]
+method = "algebraic_ls"
+
+[[mapping.compare_rules]]
+param = "centre"
+kind = "point3d"
+
+[[mapping.compare_rules]]
+param = "normal"
+kind = "direction"
+sign_invariant = true
+
+[[mapping.compare_rules]]
+param = "radius"
+kind = "scalar"
+
+[[mapping.compare_rules]]
+param = "rms"
+kind = "scalar"
