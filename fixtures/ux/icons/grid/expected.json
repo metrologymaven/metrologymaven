@@ -1,0 +1,81 @@
+{
+  "ok": {
+    "root": "ok",
+    "exit": 0,
+    "files": [
+      "svg/target.16.svg",
+      "svg/target.24.svg"
+    ],
+    "findings": []
+  },
+  "has-text": {
+    "root": "has-text.svg",
+    "exit": 1,
+    "files": [
+      "has-text.svg"
+    ],
+    "findings": [
+      "ICON-ELEMENT text"
+    ]
+  },
+  "literal-fill": {
+    "root": "literal-fill.svg",
+    "exit": 1,
+    "files": [
+      "literal-fill.svg"
+    ],
+    "findings": [
+      "ICON-COLOR-LITERAL literal-fill.svg"
+    ]
+  },
+  "off-grid": {
+    "root": "off-grid.svg",
+    "exit": 1,
+    "files": [
+      "off-grid.svg"
+    ],
+    "findings": [
+      "ICON-OFF-GRID off-grid.svg"
+    ]
+  },
+  "missing-16": {
+    "root": "missing-16",
+    "exit": 1,
+    "files": [
+      "svg/target.24.svg"
+    ],
+    "findings": [
+      "ICON-MASTER-MISSING 16"
+    ]
+  },
+  "bad-viewbox": {
+    "root": "bad-viewbox.svg",
+    "exit": 1,
+    "files": [
+      "bad-viewbox.svg"
+    ],
+    "findings": [
+      "ICON-VIEWBOX bad-viewbox.svg"
+    ]
+  },
+  "bad-attr": {
+    "root": "bad-attr.svg",
+    "exit": 1,
+    "files": [
+      "bad-attr.svg"
+    ],
+    "findings": [
+      "ICON-ATTR bad-attr.svg"
+    ]
+  },
+  "external-ref": {
+    "root": "external-ref.svg",
+    "exit": 1,
+    "files": [
+      "external-ref.svg"
+    ],
+    "findings": [
+      "ICON-EXTERNAL-REF external-ref.svg"
+    ]
+  }
+}

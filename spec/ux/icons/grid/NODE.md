@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-design]
 satisfies: [REQ-UX.ICONS-001]
 covers: []
 depends_on: [UX.SYSTEM.PKG]

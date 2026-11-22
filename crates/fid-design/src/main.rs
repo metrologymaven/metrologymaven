@@ -13,8 +13,9 @@
 //! `fid-design icons-registry --manifest <file> --root <design dir> [--json]`,
 //! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]`,
 //! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`,
-//! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`, and
-//! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`.
+//! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`,
+//! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`, and
+//! `fid-design icons-lint --root <icons dir> [--json]`.
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage.
 
 use std::io::Write;
@@ -38,7 +39,8 @@ const USAGE: &str =
        fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]
        fid-design screens-gate --spec <spec dir> --root <design dir> [--json]
        fid-design fonts-check --root <design dir> --allowlist <file> [--json]
-       fid-design page-check (--root <design dir> | --file <pages.json>) [--json]";
+       fid-design page-check (--root <design dir> | --file <pages.json>) [--json]
+       fid-design icons-lint --root <icons dir> [--json]";
 
 #[derive(Default)]
 struct Args {
@@ -351,6 +353,10 @@ fn main() -> ExitCode {
         },
         ("palettes-check", Some(root), None, None) => match fid_design::palettes::check(root, args.baseline.as_deref())
         {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        },
+        ("icons-lint", Some(root), None, None) => match fid_design::icons_lint::check(root) {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
             Err(e) => fail(e),
         },
