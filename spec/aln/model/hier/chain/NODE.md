@@ -18,6 +18,7 @@ cli: [fid align set-parent]
 mcp: [align_set_parent]
 journal: [align.set_parent@1]
 built_in: [fid-align]
+built_pr: 508
 updated: 2026-11-22
 ---
 
