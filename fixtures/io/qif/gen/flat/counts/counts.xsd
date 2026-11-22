@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://example.org/qif-flat" xmlns:t="http://example.org/qif-flat" elementFormDefault="qualified">
+  <xs:complexType name="PointListType">
+    <xs:sequence>
+      <xs:element name="Point" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="n" type="xs:unsignedInt" use="required"/>
+  </xs:complexType>
+</xs:schema>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://example.org/qif-flat" xmlns:t="http://example.org/qif-flat" elementFormDefault="qualified">
+  <xs:complexType name="DocType">
+    <xs:sequence>
+      <xs:element name="Item" type="xs:string" maxOccurs="unbounded"/>
+      <xs:element name="Ref" type="xs:string" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="Doc" type="t:DocType">
+    <xs:key name="ItemKey">
+      <xs:selector xpath="t:Item"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+    <xs:keyref name="ItemRef" refer="t:ItemKey">
+      <xs:selector xpath="t:Ref"/>
+      <xs:field xpath="@target"/>
+    </xs:keyref>
+    <xs:unique name="ItemNameUnique">
+      <xs:selector xpath="t:Item"/>
+      <xs:field xpath="@name"/>
+    </xs:unique>
+  </xs:element>
+</xs:schema>

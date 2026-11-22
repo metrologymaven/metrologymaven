@@ -1909,10 +1909,19 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-io-reg",
+ "fid-qif-ir",
  "fid-types",
  "fid-xml",
  "sha2 0.10.9",
  "toml",
+]
+
+[[package]]
+name = "fid-qif-ir"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
 ]
 
 [[package]]

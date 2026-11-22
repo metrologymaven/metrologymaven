@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://example.org/qif-flat" xmlns:t="http://example.org/qif-flat" elementFormDefault="qualified">
+  <xs:complexType name="X">
+    <xs:complexContent>
+      <xs:extension base="t:Y"/>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Y">
+    <xs:complexContent>
+      <xs:extension base="t:X"/>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>
