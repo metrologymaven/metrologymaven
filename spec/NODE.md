@@ -95,8 +95,7 @@ Alternatives considered:
 
 ## Open questions
 
-- D-001 (licence), D-002/D-039 (name and monorepo), D-003 (governance), D-004 (app family) and D-005 (provisional UI toolkit) are accepted; D-005 awaits completion of its prototype spikes.
-- D-038 (reference-data licences, external test terms and agent evaluation budget) remains open.
+- None (`D-001` through `D-052` are accepted; architectural and specification decisions proceed autonomously under `D-052`).
 
 ## Children
 

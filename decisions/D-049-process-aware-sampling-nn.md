@@ -1,12 +1,12 @@
 ---
 id: D-049
 title: Process-conditioned geometric neural network for CMM sampling strategy proposals
-status: open
+status: accepted
 raised_by: founder
 blocks: [CMM.STRAT.PROC]
 amends: [D-036]
 decide_by: before expanding CMM.STRAT.PROC
-updated: 2026-11-21
+updated: 2026-11-22
 ---
 
 # D-049: Process-conditioned geometric neural network for CMM sampling strategy proposals
@@ -50,4 +50,4 @@ Full technical architecture, surrogate physics equations and real-part validatio
 
 ## Decision
 
-_Open._ Pending founder review and acceptance in a pull request (D-037 P1). When accepted: update `CMM.STRAT.PROC` from `status: decision` to `status: open` and add `CMM.STRAT.PROC` to the research-risk list in `AGENTS.md` rule 10.
+**Accepted (option C), 2026-11-22, founder (via D-052).** `CMM.STRAT.PROC` moves from `status: decision` to `status: open` and is added to the `AGENTS.md` rule 10 research-risk list.

@@ -9,7 +9,6 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
-needs_expert: gdt
 satisfies: [REQ-GDT.DRF.COMMON-002, REQ-GDT.DRF.COMMON-004]
 covers: []
 depends_on: [GDT.DRF.DATUM, GDT.DRF.COMMON.COVER, GDT.RES.RESOLVE, KRN.ENV]
@@ -17,7 +16,7 @@ uses_artifacts: [GDT.RES.ROWASME, GDT.RES.ROWISO, UNC.ORS.DRF]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # GDT.DRF.COMMON.TARGET: Datums established from datum targets

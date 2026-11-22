@@ -1,11 +1,11 @@
 ---
 id: D-038
 title: Reference-data licences, external test terms and the evaluation budget
-status: open
+status: accepted
 raised_by: research-hypothesis review
 blocks: [UNC.RDL.EXT.NIST, UNC.RDL.EXT.PTBSG, UNC.RDL.TRACIM.PROTO, UNC.RDL.EXT.FILT, TRUST.REPLAY.CORPUS, AGENT.BOARD]
 decide_by: before the first NSF full proposal
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # D-038: Reference-data licences, external test terms and the evaluation budget
@@ -42,4 +42,7 @@ The research hypotheses (generated/reviews/RESEARCH-HYPOTHESES.md) depend on out
 
 ## Decision
 
-_Open._ This is a people decision. Agents must not contact external organisations.
+**Accepted (self-contained Option A — zero external outreach), 2026-11-22, founder (via D-052).**
+- Do **not** contact external data owners (NIST, PTB, NPL, BIPM) or wait on third-party redistribution terms.
+- All published verification, replay, and ORS suites use 100% project-authored clean-room mathematical generators and independent arbitrary-precision oracles (`UNC.RDL.GEN.*`, `UNC.ORS.*`). Any external dataset adapter (`UNC.RDL.EXT.*`, `UNC.RDL.TRACIM.*`) stores schema and digest checks only for optional user-supplied local files and is excluded from `launch-1`.
+- `AGENT.REDTEAM` and `AGENT.BOARD` run against deterministic scripted adversaries and local open-weight reference agents (`AGENT.LOCAL`), with zero external paid-model budget gate.

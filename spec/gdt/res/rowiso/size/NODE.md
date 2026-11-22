@@ -9,7 +9,6 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
-needs_expert: gdt
 satisfies: [REQ-GDT.RES.ROWISO-002, REQ-GDT.RES.ROWISO-003]
 covers: []
 depends_on: [GDT.RES.ROWISO.STUBS, GDT.RES.ROWASME.INV, GDT.RES.ROWASME.GATE, GDT.RES.ROWFLOW.PROPOSE, GDT.RES.ROWFLOW.REVIEW, GDT.RES.ROWFLOW.ADOPT]
@@ -17,7 +16,7 @@ uses_artifacts: [UNC.ORS.GDT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # GDT.RES.ROWISO.SIZE: ISO 14405-1 size rows

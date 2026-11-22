@@ -9,14 +9,13 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
-needs_expert: uncertainty
 satisfies: [REQ-UNC.MODEL.CONTRIB-005]
 covers: []
 depends_on: [UNC.MODEL.CONTRIB.CONTRACT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # UNC.MODEL.CONTRIB.REG: Scan registration contributor

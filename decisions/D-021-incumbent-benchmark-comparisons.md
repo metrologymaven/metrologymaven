@@ -5,7 +5,7 @@ status: accepted
 raised_by: OUTR.BENCH split
 blocks: [OUTR.BENCH.CMP]
 decide_by: before the first comparison is published
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # D-021: Publishing benchmark comparisons with incumbent products
@@ -37,3 +37,5 @@ A for the first releases, then B once there are users willing to publish. Counse
 A for the first releases, then B once there are users willing to publish. Counsel review is needed before any option B or C publication. [unverified: actual licence terms]
 
 **Condition:** the counsel review named in the recommendation must happen before the affected node is published or released.
+
+**Amended 2026-11-22 by D-052:** Option A is permanent (publish benchmarks only against open mathematical oracles and project reference suites; no named-incumbent comparisons and no counsel condition).

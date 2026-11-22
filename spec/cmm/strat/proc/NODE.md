@@ -4,8 +4,7 @@ title: Process-conditioned sampling strategy proposals
 level: 3
 parent: CMM.STRAT
 kind: module
-status: decision
-decision: D-049
+status: open
 phase: P3
 size: XL
 owners: []
@@ -16,7 +15,7 @@ depends_on: [GEO.CAD, GDT.CHAR, CMM.STRAT.CHECK, CMM.STRAT.FEAT, CMM.STRAT.SCAN,
 cli: [fid cmm propose-process-strategy, fid cmm inspect-risk-map]
 mcp: [cmm_propose_process_strategy, cmm_inspect_risk_map]
 journal: [cmm.propose_process_strategy@1]
-updated: 2026-11-21
+updated: 2026-11-22
 ---
 
 # CMM.STRAT.PROC: Process-conditioned sampling strategy proposals

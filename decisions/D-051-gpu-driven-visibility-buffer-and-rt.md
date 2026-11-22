@@ -1,7 +1,7 @@
 ---
 id: D-051
 title: GPU-driven visibility buffer, linear HDR pipeline and optional T0_RT tier
-status: open
+status: accepted
 raised_by: founder
 blocks: [VIZ.RENDER.SHADE.RT]
 decide_by: before P1b mesh/CAD/preview leaves are claimed
@@ -49,4 +49,4 @@ Accept **Option B**, phased cleanly so P1a is never blocked:
 
 ## Decision
 
-_Open._ Requires maintainer approval (D-037 P1). All rendering outputs remain strictly display-only (CONSTITUTION C2) and verified against `VIZ.RENDER.ORACLE` and `fid-shlint`.
+**Accepted (option B, phased), 2026-11-22, founder (via D-052).** All rendering outputs remain strictly display-only (CONSTITUTION C2) and verified against `VIZ.RENDER.ORACLE` and `fid-shlint`.

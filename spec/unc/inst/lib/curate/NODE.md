@@ -9,14 +9,13 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
-needs_expert: uncertainty
 satisfies: [REQ-UNC.INST.LIB-001, REQ-UNC.INST.LIB-002]
 covers: [SA.UNC.01]
 depends_on: [UNC.INST.LIB.FORMAT, UNC.INST.MPE.DERIVE, UNC.INST.MPE.CMM, UNC.INST.MPE.ARM, UNC.INST.MPE.TRK, UNC.INST.MPE.OPT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # UNC.INST.LIB.CURATE: First curated profile set

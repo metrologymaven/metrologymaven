@@ -9,14 +9,13 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
-needs_expert: uncertainty
 satisfies: [REQ-UNC.ORS.FLT-001, REQ-UNC.ORS.FLT-003]
 covers: []
 depends_on: [UNC.ORS.TRACE, UNC.RDL.GEN]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # UNC.ORS.FLT.FILTER: Profile and areal filter transmission cases

@@ -5,7 +5,7 @@ status: accepted
 raised_by: RPT.FORMS split
 blocks: [RPT.FORMS.LAYOUT]
 decide_by: before RPT.FORMS.LAYOUT is expanded
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # D-015: How closely AS9102 and PPAP form layouts may follow the published forms
@@ -40,3 +40,5 @@ The data model, form 3 row mapping, PPAP rows and finalisation (RPT.FORMS.HDR, R
 **C**, with a counsel check of whether A's field order may follow the standards' clause order [unverified]. It keeps the shipped project clean and lets licensed users reproduce exact forms with the general designer. Revisit D if a standards body offers terms compatible with D-001.
 
 **Condition:** the counsel review named in the recommendation must happen before the affected node is published or released.
+
+**Amended 2026-11-22 by D-052:** Clean-room Option A/C is permanent (original report layouts and open data exports citing clause IDs only; counsel field-order review condition removed).
