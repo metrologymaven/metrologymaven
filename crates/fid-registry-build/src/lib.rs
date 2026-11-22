@@ -99,9 +99,13 @@ fn journal_defs() -> Result<Vec<CommandDef>, DefError> {
 }
 
 /// The three model commands of `UNC.MODEL.GRAPH.STORE` (`unc.create_model@1` W2,
-/// `unc.validate_model@1` R1, `unc.show_model@1` R0), declared with the registry macros.
+/// `unc.validate_model@1` R1, `unc.show_model@1` R0) and the two contributor read commands
+/// of `UNC.MODEL.CONTRIB.CONTRACT` (`unc.list_contributor@1` R0, `unc.show_contributor@1` R0),
+/// declared with the registry macros.
 fn unc_defs() -> Result<Vec<CommandDef>, DefError> {
-    Ok(fid_unc::model_store::declarations().into_iter().map(|d| d.def).collect())
+    let model = fid_unc::model_store::declarations().into_iter().map(|d| d.def);
+    let contrib = fid_unc::contrib::declarations().into_iter().map(|d| d.def);
+    Ok(model.chain(contrib).collect())
 }
 
 /// The six document commands of RPT.MODEL.DOC and the four template commands of

@@ -17,7 +17,9 @@ determinism: D0
 cli: [fid unc list-contributor, fid unc show-contributor]
 mcp: [unc_list_contributor, unc_show_contributor]
 journal: [unc.list_contributor@1, unc.show_contributor@1]
-updated: 2026-11-17
+built_in: [fid-unc]
+built_pr: 481
+updated: 2026-11-22
 ---
 
 # UNC.MODEL.CONTRIB.CONTRACT: Contributor contract, expansion and read commands

@@ -1,0 +1,103 @@
+{
+  "applicability": [
+    "cmm",
+    "thermal"
+  ],
+  "digest": "sha256:524a8ad1c52a5445f3b185212fdc273f83f73a708ed0bb1f46acd4fee0464920",
+  "id": "uc:alpha-offset@1.0.0",
+  "params": [
+    {
+      "max": "3f847ae147ae147b",
+      "min": "bf847ae147ae147b",
+      "name": "offset",
+      "source_kinds": [
+        "certificate",
+        "dcc"
+      ],
+      "unit": "si:m"
+    }
+  ],
+  "references": [
+    {
+      "clause": "Clause 4",
+      "designator": "ISO 1:2022"
+    }
+  ],
+  "schema": "contributor/v1",
+  "semver": "1.0.0",
+  "template": {
+    "correlations": [],
+    "edges": [
+      {
+        "from": {
+          "node": "pass_op",
+          "port": "y"
+        },
+        "to": {
+          "node": "out_len",
+          "port": "value"
+        }
+      },
+      {
+        "from": {
+          "node": "offset",
+          "port": "value"
+        },
+        "to": {
+          "node": "pass_op",
+          "port": "x"
+        }
+      }
+    ],
+    "inputs": [
+      {
+        "distribution": {
+          "kind": "normal",
+          "params": {
+            "mu": "0000000000000000",
+            "sigma": "3ec0c6f7a0b5ed8d"
+          }
+        },
+        "id": "offset",
+        "quantity_kind": "length",
+        "unit": "si:m"
+      }
+    ],
+    "name": "alpha-offset",
+    "operators": [
+      {
+        "algorithm_id": "unc.op.scale",
+        "algorithm_version": "1.0.0",
+        "id": "pass_op",
+        "params": {
+          "factor": "3ff0000000000000"
+        },
+        "params_digest": "sha256:2b3cbf3d3bc761894e2b0ca4341e49b0563894077a15cc0220681366bfa526e7",
+        "ports_in": [
+          {
+            "arity": "1",
+            "name": "x",
+            "quantity_kind": "length",
+            "unit": "si:m"
+          }
+        ],
+        "ports_out": [
+          {
+            "name": "y",
+            "quantity_kind": "length",
+            "unit": "si:m"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "id": "out_len",
+        "quantity_kind": "length",
+        "unit": "si:m"
+      }
+    ],
+    "schema": "uncertainty-model/v1",
+    "semver": "1.0.0"
+  }
+}

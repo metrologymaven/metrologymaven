@@ -1,0 +1,75 @@
+{
+  "all": {
+    "contributors": [
+      {
+        "applicability": [
+          "cmm",
+          "thermal"
+        ],
+        "digest": "sha256:524a8ad1c52a5445f3b185212fdc273f83f73a708ed0bb1f46acd4fee0464920",
+        "id": "uc:alpha-offset@1.0.0",
+        "params": [
+          "offset"
+        ],
+        "semver": "1.0.0"
+      },
+      {
+        "applicability": [
+          "drift",
+          "optical"
+        ],
+        "digest": "sha256:7e3494b7079c9aa2f87fdb31f6712f921b9bf01cad2afe4f4c0949a3b4888998",
+        "id": "uc:beta-drift@1.1.0",
+        "params": [
+          "drift_rate",
+          "elapsed_ratio"
+        ],
+        "semver": "1.1.0"
+      },
+      {
+        "applicability": [
+          "cmm",
+          "example",
+          "length"
+        ],
+        "digest": "sha256:63635040584229f43b518f1f482e9d748381131a59cba91eb0c9d0d2d2820d10",
+        "id": "uc:example-gain@1.0.0",
+        "params": [
+          "gain",
+          "length_in"
+        ],
+        "semver": "1.0.0"
+      }
+    ]
+  },
+  "cmm": {
+    "contributors": [
+      {
+        "applicability": [
+          "cmm",
+          "thermal"
+        ],
+        "digest": "sha256:524a8ad1c52a5445f3b185212fdc273f83f73a708ed0bb1f46acd4fee0464920",
+        "id": "uc:alpha-offset@1.0.0",
+        "params": [
+          "offset"
+        ],
+        "semver": "1.0.0"
+      },
+      {
+        "applicability": [
+          "cmm",
+          "example",
+          "length"
+        ],
+        "digest": "sha256:63635040584229f43b518f1f482e9d748381131a59cba91eb0c9d0d2d2820d10",
+        "id": "uc:example-gain@1.0.0",
+        "params": [
+          "gain",
+          "length_in"
+        ],
+        "semver": "1.0.0"
+      }
+    ]
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "applicability": [
+    "example"
+  ],
+  "digest": "sha256:a68fd053c3d08e43cea12495afb55258cf729a6d8fcaddb956ef5cae9c71f478",
+  "id": "uc:example-unknown-op@1.0.0",
+  "params": [
+    {
+      "max": "4000000000000000",
+      "min": "3fe0000000000000",
+      "name": "gain",
+      "source_kinds": [
+        "certificate",
+        "dcc"
+      ],
+      "unit": "si:1"
+    },
+    {
+      "max": "3ff0000000000000",
+      "min": "3f50624dd2f1a9fc",
+      "name": "length_in",
+      "source_kinds": [
+        "certificate",
+        "dcc",
+        "type_a_dataset"
+      ],
+      "unit": "si:m"
+    }
+  ],
+  "references": [
+    {
+      "clause": "Clause 4.1",
+      "designator": "JCGM 100:2008"
+    }
+  ],
+  "schema": "contributor/v1",
+  "semver": "1.0.0",
+  "template": {
+    "correlations": [],
+    "edges": [
+      {
+        "from": {
+          "node": "gain",
+          "port": "value"
+        },
+        "to": {
+          "node": "scale_op",
+          "port": "k"
+        }
+      },
+      {
+        "from": {
+          "node": "length_in",
+          "port": "value"
+        },
+        "to": {
+          "node": "scale_op",
+          "port": "x"
+        }
+      },
+      {
+        "from": {
+          "node": "scale_op",
+          "port": "y"
+        },
+        "to": {
+          "node": "scaled_length",
+          "port": "value"
+        }
+      }
+    ],
+    "inputs": [
+      {
+        "distribution": {
+          "kind": "normal",
+          "params": {
+            "mu": "3ff0000000000000",
+            "sigma": "3f1a36e2eb1c432d"
+          }
+        },
+        "id": "gain",
+        "quantity_kind": "ratio",
+        "unit": "si:1"
+      },
+      {
+        "distribution": {
+          "kind": "normal",
+          "params": {
+            "mu": "3fb999999999999a",
+            "sigma": "3ee4f8b588e368f1"
+          }
+        },
+        "id": "length_in",
+        "quantity_kind": "length",
+        "unit": "si:m"
+      }
+    ],
+    "name": "example-gain",
+    "operators": [
+      {
+        "algorithm_id": "unc.op.nonexistent",
+        "algorithm_version": "9.9.9",
+        "id": "scale_op",
+        "params": {
+          "factor": "$param:gain"
+        },
+        "params_digest": "sha256:d25ead7761fb576c5445d251bb9b78110f9b8d1791e108f72045f5f366e7a0b2",
+        "ports_in": [
+          {
+            "arity": "1",
+            "name": "x",
+            "quantity_kind": "length",
+            "unit": "si:m"
+          },
+          {
+            "arity": "1",
+            "name": "k",
+            "quantity_kind": "ratio",
+            "unit": "si:1"
+          }
+        ],
+        "ports_out": [
+          {
+            "name": "y",
+            "quantity_kind": "length",
+            "unit": "si:m"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "id": "scaled_length",
+        "quantity_kind": "length",
+        "unit": "si:m"
+      }
+    ],
+    "schema": "uncertainty-model/v1",
+    "semver": "1.0.0"
+  }
+}
