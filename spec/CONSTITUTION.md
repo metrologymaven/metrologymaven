@@ -193,7 +193,7 @@ A phase means **when work starts** (D-006). A parent's phase is the earliest pha
 
 - **Never crash.** No panic and no `unsafe` in non-test code (kernel: no exceptions; other crates: named exceptions only). Deny `unwrap`, `expect`, `panic`, `todo`, `unimplemented` and `unreachable`. All input is hostile; parsers are bounded and fail closed.
 - **Clean room.** Public specs and observed behaviour only. No copied code, strings, icons or assets. `ATTRIBUTION.md` lists every third-party asset.
-- **Licence allowlist** of SPDX IDs for dependencies (to be set by D-001).
+- **Licence allowlist** of SPDX IDs for dependencies (set under D-001 and enforced via `house-rules/spdx-allowlist.toml` and `deny.toml`, `ECO.RULES.SPDX`).
 - **Corpora.** Format readers and fits are tested against real-file and reference datasets, and their fidelity is published as numbers.
 - **Honest status.** Docs state gaps plainly. Coverage and parity reports are generated, never hand-edited.
 - **Repository hygiene.** `main` is PR-only, CI changes go in their own PRs, and agent rules follow AGENTS.md.
