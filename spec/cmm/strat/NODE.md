@@ -11,11 +11,11 @@ owners: []
 claimed_by:
 satisfies: [REQ-CMM-002]
 covers: [PCD.FEA.*, PCD.SCN.*]
-depends_on: [KRN, GEO, CMM.PROBE]
+depends_on: [KRN, GEO, GDT, CMM.PROBE]
 cli: [fid cmm *-strategy*, fid cmm *-feature*, fid cmm *-scan*]
 mcp: [cmm_*_strategy*, cmm_*_feature*, cmm_*_scan*]
 journal: [cmm.*_strategy*@*, cmm.*_feature*@*, cmm.*_scan*@*]
-updated: 2026-11-16
+updated: 2026-11-21
 ---
 
 # CMM.STRAT: Feature and scan measurement strategies
@@ -35,6 +35,7 @@ Decides **where and how to touch** a nominal feature: the number and layout of h
 - Feature sets: grouping features to be measured as one set with shared strategy settings
 - Validation of each strategy against the minimum-point and distribution needs of its fit method
 - Strategy defaults and named strategy libraries
+- Optional process-aware strategy proposals conditioned on CAD geometry, tolerances and manufacturing process metadata (pending D-049)
 
 **Out** (and which node owns it instead):
 - Moves between features, clearance and approach motion (owned by `CMM.PATH`)
@@ -55,29 +56,32 @@ Decides **where and how to touch** a nominal feature: the number and layout of h
 - **REQ-CMM.STRAT-007** When a user supplies manual hits for an unknown feature, the system shall propose a feature type and nominal from those hits and create a strategy that reproduces the hit layout, as a draft the user must accept.
 - **REQ-CMM.STRAT-008** The system shall support feature sets whose members share strategy settings, and shall apply a change to the set's settings to every member in one journaled command.
 - **REQ-CMM.STRAT-009** The system shall support named, versioned strategy libraries, and every feature shall record the library entry and version its strategy came from.
+- **REQ-CMM.STRAT-010** When manufacturing process metadata and nominal CAD geometry are supplied, the system shall support proposing draft, provenance-tagged measurement strategies conditioned on predicted process-induced deviation risk, validated through `CMM.STRAT.CHECK` and falling back to conservative uniform sampling when predictive uncertainty exceeds the configured bound (D-049).
 
 ## Interfaces
 
-- **Offers:** commands such as `cmm.set_strategy@1`, `cmm.learn_feature@1`, `cmm.create_feature_set@1` (W2), `cmm.preview_strategy@1` (R1); data types MeasurementStrategy, ScanStrategy, HitTarget, FeatureSet.
-- **Consumes:** `KRN` fit method point requirements and filters; `GEO` nominal feature geometry and normals; `CMM.PROBE` tip types.
+- **Offers:** commands such as `cmm.set_strategy@1`, `cmm.learn_feature@1`, `cmm.create_feature_set@1` (W2), `cmm.preview_strategy@1`, `cmm.propose_process_strategy@1` (R1); data types MeasurementStrategy, ScanStrategy, HitTarget, FeatureSet, ProcessRiskMap.
+- **Consumes:** `KRN` fit method point requirements and filters; `GEO` nominal feature geometry and normals; `GDT` tolerance bands for strategy sizing; `CMM.PROBE` tip types and accuracy profiles.
 - **Journal:** `cmm.*_strategy*`, `cmm.*_feature*`, `cmm.*_scan*`.
 
 ## Decomposition hints
 
-FEAT (auto-feature strategies per type), SCAN (scan strategy types), FILT (scan filter settings), LEARN (manually learned features), SET (feature sets), LIB (strategy libraries and defaults), CHECK (minimum-point validation).
+FEAT (auto-feature strategies per type), SCAN (scan strategy types), FILT (scan filter settings), LEARN (manually learned features), SET (feature sets), LIB (strategy libraries and defaults), CHECK (minimum-point validation), PROC (process-conditioned strategy proposals, D-049).
 
 ## Open questions
 
 - Edge point and slot strategies may need GDT input on which points define the measurand; confirm with `GDT` when that domain splits.
 - Default sampling counts per feature type are a domain-expert choice; incumbents' defaults are not copied [unverified].
+- Process-conditioned neural strategy proposals (`CMM.STRAT.PROC`) are blocked on D-049.
 
 ## Split rationale
 
-The split separates **what a strategy is** from **the checks and groupings around it**. FEAT and SCAN own the two families of target generators (discrete hits and continuous scans), which differ in parameters, geometry and sensor needs. CHECK is a shared gate that both families and the program generators call, and it owns the HitTarget type so the dependency points one way. FILT is cut from SCAN because filter provenance is a result-record concern with its own small command. LEARN, SET and LIB are workflows on top of strategies (teach from hits, group, reuse) with their own commands and no shared state with each other.
+The split separates **what a strategy is** from **the checks and groupings around it**. FEAT and SCAN own the two families of target generators (discrete hits and continuous scans), which differ in parameters, geometry and sensor needs. CHECK is a shared gate that both families and the program generators call, and it owns the HitTarget type so the dependency points one way. FILT is cut from SCAN because filter provenance is a result-record concern with its own small command. LEARN, SET and LIB are workflows on top of strategies (teach from hits, group, reuse) with their own commands and no shared state with each other. PROC is isolated as a P3 research-risk proposer (D-049) so optional ML inference and synthetic-to-real benchmarks never contaminate the deterministic core strategy generators or block P2 delivery.
 
 Alternatives considered:
 - **One child per feature type.** Rejected: eleven near-identical children that would duplicate the command surface and the check.
 - **CHECK inside FEAT.** Rejected: scan strategies and `CMM.GEN` also need it.
+- **Folding PROC into LIB.** Rejected: LIB stores static, versioned entries while PROC runs a learned spatial risk model with research-risk hypotheses and an optional ONNX runtime.
 
 ## Children
 
@@ -90,3 +94,4 @@ Alternatives considered:
 | [CMM.STRAT.LEARN](learn/NODE.md) | Manually learned features | 007 | PCD.FEA.03 |
 | [CMM.STRAT.SET](set/NODE.md) | Feature sets with shared strategy settings | 008 | PCD.FEA.04 |
 | [CMM.STRAT.LIB](lib/NODE.md) | Strategy libraries and defaults | 009 | |
+| [CMM.STRAT.PROC](proc/NODE.md) | Process-conditioned sampling strategy proposals (decision D-049) | 010 | |
