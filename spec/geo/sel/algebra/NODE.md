@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-sel]
 satisfies: [REQ-GEO.SEL-007]
 covers: []
 depends_on: [GEO.SEL.MODEL, GEO.TYPES.MESH, GEO.INDEX.KDTREE]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-21
 ---
 
 # GEO.SEL.ALGEBRA: Selection set algebra and grow or shrink
