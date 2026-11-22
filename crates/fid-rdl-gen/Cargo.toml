@@ -13,7 +13,7 @@ publish = false
 fid-canon = { path = "../fid-canon" }
 # Kernel counter-based Philox4x32-10 RNG only (KRN.NUM.RNG, layer num); no fit or solver crates.
 fid-num = { path = "../fid-num" }
-# RDL record types (HexF64, Reference, Tier; layer services).
+# RDL generator metadata block (`fid_rdl::GeneratorRecord`, layer services).
 fid-rdl = { path = "../fid-rdl" }
 # Shared sha256: digest type (AGENTS.md rule 14, layer num).
 fid-types = { path = "../fid-types" }

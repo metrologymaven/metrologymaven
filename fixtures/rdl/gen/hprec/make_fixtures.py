@@ -15,7 +15,6 @@ Licence: CC-BY-4.0.
 """
 
 import decimal
-import math
 import struct
 import sys
 from decimal import Decimal, localcontext
@@ -23,6 +22,44 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 HERE = Path(__file__).resolve().parent
+
+
+def dec_pi() -> Decimal:
+    """100-digit pi via Machin's formula in pure Decimal (zero platform libm)."""
+    def atan_recip(n: int) -> Decimal:
+        n2 = n * n
+        term = Decimal(1) / Decimal(n)
+        total = term
+        k = 1
+        while term != 0:
+            term = term / Decimal(n2)
+            add = term / Decimal(2 * k + 1)
+            if add == 0:
+                break
+            total = total - add if (k % 2 == 1) else total + add
+            k += 1
+        return total
+
+    return Decimal(4) * (Decimal(4) * atan_recip(5) - atan_recip(239))
+
+
+def dec_sin_cos(x: Decimal) -> tuple[Decimal, Decimal]:
+    """Pure-Decimal Taylor series for (sin(x), cos(x)) for |x| <= 10 (zero platform libm)."""
+    x2 = x * x
+    s_term = x
+    s_sum = x
+    c_term = Decimal(1)
+    c_sum = Decimal(1)
+    k = 1
+    while k < 120:
+        s_term = -s_term * x2 / Decimal((2 * k) * (2 * k + 1))
+        c_term = -c_term * x2 / Decimal((2 * k - 1) * (2 * k))
+        if s_term == 0 and c_term == 0:
+            break
+        s_sum += s_term
+        c_sum += c_term
+        k += 1
+    return s_sum, c_sum
 
 
 def round16_dec(d: Decimal) -> tuple[str, str]:
@@ -54,52 +91,8 @@ def round16_dec(d: Decimal) -> tuple[str, str]:
 
 
 def build_round16_csv() -> bytes:
+    """500 exact-binary and general decimal test inputs covering ties-to-even and wide exponents."""
     cases: list[str] = [
-        "0",
-        "1",
-        "-1",
-        "1.0000000000000005",  # exact tie -> even (0 stays 0)
-        "1.0000000000000015",  # exact tie -> even (1 rounds to 2)
-        "1.0000000000000025",  # exact tie -> even (2 stays 2)
-        "1.0000000000000035",  # exact tie -> even (3 rounds to 4)
-        "-1.0000000000000005",
-        "-1.0000000000000015",
-        "9.9999999999999995",  # exact tie with carry -> 1.000000000000000e+01
-        "-9.9999999999999995",
-        "9.9999999999999985",  # exact tie -> even (8 stays 8)
-        "9.999999999999999499999999999999",
-        "9.999999999999999500000000000001",
-        "0.5",
-        "0.25",
-        "0.125",
-        "0.1",
-        "0.3",
-        "3.14159265358979323846264338327950288419716939937510",
-        "2.71828182845904523536028747135266249775724709369995",
-        "1.41421356237309504880168872420969807856967187537694",
-        "1.2345678901234565e-100",
-        "1.2345678901234575e-100",
-        "1.2345678901234565e+100",
-        "1.2345678901234575e+100",
-        "1e-200",
-        "1e+200",
-        "1.7976931348623157e+308",
-        "2.2250738585072014e-308",
-    ]
-    # Add deterministic synthetic ties & non-ties across scales up to exactly 500 rows.
-    # Use exact binary-representable values (k / 2^p) and exact decimal strings so that
-    # Hp::parse_decimal(input) -> round16 agrees with Python Decimal on all 500 inputs!
-    # Wait: for exact decimal ties like 1.0000000000000005, its binary 256-bit approximation
-    # might sit slightly above or below the exact decimal halfway! So for exact tie tests
-    # we use exact dyadic decimals (k * 5^m * 2^n where the decimal terminates AND is exact
-    # in 256-bit binary!) plus general decimal strings whose 17th digit is not an exact
-    # non-dyadic tie. Let's check: a 16-digit decimal ending in ...5 (exact tie at 10^-16)
-    # is exact in binary ONLY when denominator is a power of 2 — wait: 1/2^k has exact
-    # decimal expansion with k digits! For k=17..25, m / 2^16 = m * 5^16 / 10^16 is EXACT
-    # in both binary AND decimal! Even better: let's generate exact dyadic ties (e.g.
-    # integers ending in 5 at the 17th digit: 10000000000000005, 10000000000000015, etc.
-    # multiplied by powers of 2, which are 100% EXACT in 256-bit binary!).
-    cases = [
         "0",
         "1",
         "-1",
@@ -130,18 +123,18 @@ def build_round16_csv() -> bytes:
         "1.7976931348623157e+308",
         "2.2250738585072014e-308",
     ]
-    # Exact dyadic halfway ties across multiple scales (exact in 256-bit binary AND decimal!)
+    # Exact integer halfway ties (p=0) and exact binary-scaled multiples across powers of 2.
     for d in range(10):
         for p in (0, 1, 2, 3, 4, 8, 16, 32):
             base = (1234567890123450 + d) * 10 + 5
             val = Decimal(base) * (Decimal(2) ** p)
             cases.append(str(val))
             cases.append(str(-val))
-    # Exact dyadic fractions k / 2^p across negative exponents
+    # Exact dyadic fractions k / 2^p across negative exponents.
     for p in range(1, 65):
         val = Decimal(3 * p + 1) / (Decimal(2) ** p)
         cases.append(f"{val:.60g}")
-    # General non-tie high-precision decimals across wide exponent range until 500 total
+    # General non-tie high-precision decimals across wide exponent range until 500 total.
     x = 123456789
     while len(cases) < 500:
         x = (x * 6364136223846793005 + 1442695040888963407) & ((1 << 64) - 1)
@@ -185,6 +178,7 @@ def build_circle_mp() -> bytes:
     """20 rounded points near a circle + independent 100-digit Gauss-Newton reference."""
     with localcontext() as ctx:
         ctx.prec = 100
+        pi = dec_pi()
         cx0 = Decimal("12.345678901234567")
         cy0 = Decimal("-4.567890123456789")
         r0 = Decimal("7.890123456789012")
@@ -192,11 +186,13 @@ def build_circle_mp() -> bytes:
         pts: list[tuple[str, str]] = []
         pts_d: list[tuple[Decimal, Decimal]] = []
         for i in range(20):
-            # Deterministic angle + small radial perturbation (exact decimal perturbations)
-            theta = 2.0 * math.pi * i / 20.0 + 0.03 * math.sin(i * 1.7)
-            dr = Decimal(str((i % 5 - 2) * 0.0004))
-            px_raw = cx0 + (r0 + dr) * Decimal(repr(math.cos(theta)))
-            py_raw = cy0 + (r0 + dr) * Decimal(repr(math.sin(theta)))
+            # Pure-Decimal deterministic angle + small radial perturbation (OS-independent).
+            s_pert, _ = dec_sin_cos(Decimal(i) * Decimal("1.7"))
+            theta = Decimal(2) * pi * Decimal(i) / Decimal(20) + Decimal("0.03") * s_pert
+            sin_t, cos_t = dec_sin_cos(theta)
+            dr = Decimal(i % 5 - 2) * Decimal("0.0004")
+            px_raw = cx0 + (r0 + dr) * cos_t
+            py_raw = cy0 + (r0 + dr) * sin_t
             px_s, _ = round16_dec(px_raw)
             py_s, _ = round16_dec(py_raw)
             pts.append((px_s, py_s))

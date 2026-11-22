@@ -12,6 +12,10 @@ use super::{Hp, HpError};
 /// Minimum significant digits written for reference outputs (REQ-UNC.RDL.GEN.HPREC-003).
 pub const MIN_REFERENCE_DIGITS: usize = 50;
 
+/// Maximum binary exponent accepted by decimal formatting and [`round16`] (`±16,384`, covering
+/// ~±4,932 decimal orders of magnitude while bounding `BigUint` work to < 1 ms and a few KiB).
+pub const MAX_DECIMAL_EXP: i32 = 16_384;
+
 /// Result of [`round16`]: exact 16-significant-digit decimal (ties to even) and its nearest `f64`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Decimal16 {
@@ -34,6 +38,7 @@ pub struct ReferenceValue {
 impl ReferenceValue {
     /// Formats `x` with `digits` significant decimal digits (`digits >= 50`) and its IEEE-754 hex.
     pub fn from_hp(x: &Hp, digits: usize) -> Result<Self, HpError> {
+        x.checked_finite()?;
         if digits < MIN_REFERENCE_DIGITS {
             return Err(HpError::Domain("reference value requires at least 50 significant digits"));
         }
@@ -45,17 +50,21 @@ impl ReferenceValue {
 
 /// Rounds `x` to the nearest 16-significant-digit decimal (ties to even), plus the `f64`
 /// nearest to that decimal (REQ-UNC.RDL.GEN.HPREC-001, AC-1).
-pub fn round16(x: &Hp) -> Decimal16 {
-    let decimal = format_decimal_sig(x, 16).unwrap_or_else(|_| "0.000000000000000e+00".to_string());
-    let parsed = decimal.parse::<f64>().unwrap_or(0.0);
+///
+/// Fails closed with [`HpError::Domain`] if `x` is non-finite or its binary exponent exceeds
+/// `±MAX_DECIMAL_EXP`.
+pub fn round16(x: &Hp) -> Result<Decimal16, HpError> {
+    let decimal = format_decimal_sig(x, 16)?;
+    let parsed = decimal.parse::<f64>().map_err(|_| HpError::Domain("cannot parse rounded decimal as f64"))?;
     let value = if parsed == 0.0 { 0.0 } else { parsed };
     let hex = format!("0x{:016x}", value.to_bits());
-    Decimal16 { decimal, value, hex }
+    Ok(Decimal16 { decimal, value, hex })
 }
 
 /// Formats `x` to `digits` (`>= 1`) significant decimal digits, exact ties-to-even, in
 /// canonical scientific notation `[-]d.ddd...e[+-]dd`.
 pub fn format_decimal_sig(x: &Hp, digits: usize) -> Result<String, HpError> {
+    x.checked_finite()?;
     if digits == 0 || digits > 1000 {
         return Err(HpError::Domain("decimal digits must be in 1..=1000"));
     }
@@ -71,9 +80,12 @@ pub fn format_decimal_sig(x: &Hp, digits: usize) -> Result<String, HpError> {
         s.push_str("e+00");
         return Ok(s);
     }
+    if x.exp < -MAX_DECIMAL_EXP || x.exp > MAX_DECIMAL_EXP {
+        return Err(HpError::Domain("exponent out of decimal formatting range"));
+    }
 
     // Exact dyadic value: |x| = sig * 2^(exp - 255).
-    let bin_exp = (x.exp as i64) - 255;
+    let bin_exp = i64::from(x.exp) - 255;
     let sig_big = BigUint::from_u256(x.sig);
 
     // Estimate e10 = floor(log10(|x|)) using log10(2) ≈ 0.3010299956639812.
@@ -215,7 +227,7 @@ pub fn parse_decimal_hp(input: &str) -> Result<Hp, HpError> {
         exp10 = exp_str.parse::<i64>().map_err(|_| HpError::Parse("invalid decimal exponent"))?;
     }
     let total_exp10 = exp10.saturating_sub(frac_digits);
-    if !(-10_000..=10_000).contains(&total_exp10) {
+    if !(-4_000..=4_000).contains(&total_exp10) {
         return Err(HpError::Parse("decimal exponent out of supported range"));
     }
 
@@ -273,14 +285,17 @@ pub fn parse_decimal_hp(input: &str) -> Result<Hp, HpError> {
         q.add_u64(1);
     }
 
-    let mut final_exp = exp as i32;
+    let mut final_exp = exp;
     let sig = if q.bit_len() > 256 {
-        final_exp = final_exp.saturating_add(1);
+        final_exp += 1;
         [0, 0, 0, 1u64 << 63]
     } else {
         q.to_u256()
     };
-    Ok(Hp { neg, exp: final_exp, sig })
+    if final_exp < i64::from(super::MIN_EXP) || final_exp > i64::from(super::MAX_EXP) {
+        return Err(HpError::Domain("exponent overflow"));
+    }
+    Ok(Hp { neg, exp: final_exp as i32, sig })
 }
 
 impl Hp {

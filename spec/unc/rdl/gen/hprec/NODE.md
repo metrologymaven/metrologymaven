@@ -76,7 +76,8 @@ The shared foundation of every tier G generator: a high-precision real type (at 
 
 ## Open questions
 
-- Library choice and licence [unverified].
+- Library choice and licence [unverified] — resolved in `fid-rdl-gen` by implementing a pure-Rust 256-bit `Hp` type with zero third-party precision crate dependencies.
+- **Independent oracle:** `fixtures/rdl/gen/hprec/make_fixtures.py` uses Python's stdlib `decimal` module at 100-digit precision (`ROUND_HALF_EVEN`, pure-Decimal trig without `math` libm) in place of third-party `mpmath`, keeping CI zero-external-Python-dependency while remaining independent of `fid-rdl-gen`.
 
 ## Children
 

@@ -84,6 +84,9 @@ where
     if k == 0 {
         return Err(HpError::Singular);
     }
+    for &v in p0 {
+        v.checked_finite()?;
+    }
     let tol = tol_1e_50()?;
     let mut p = p0.to_vec();
 
@@ -92,6 +95,9 @@ where
         let m = r.len();
         if m < k || j.len() != m || j.iter().any(|row| row.len() != k) {
             return Err(HpError::Singular);
+        }
+        if r.iter().any(|v| !v.is_finite()) || j.iter().any(|row| row.iter().any(|v| !v.is_finite())) {
+            return Err(HpError::Domain("non-finite residual or Jacobian entry"));
         }
 
         let rel_grad = relative_grad_norm(&j, &r)?;
@@ -106,7 +112,7 @@ where
         let neg_r: Vec<Hp> = r.into_iter().map(|v| -v).collect();
         let dp = qr_least_squares(j, neg_r)?;
         for (pi, dpi) in p.iter_mut().zip(dp.iter()) {
-            *pi = *pi + *dpi;
+            *pi = (*pi + *dpi).checked_finite()?;
         }
     }
 

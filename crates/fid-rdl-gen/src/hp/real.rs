@@ -10,15 +10,27 @@
 
 use std::cmp::Ordering;
 use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::sync::OnceLock;
 
 use super::HpError;
 
 /// Significand precision in bits (~77.06 decimal digits, exceeding the 200-bit / 60-digit floor).
 pub const PRECISION_BITS: u32 = 256;
 
+/// Maximum binary exponent allowed for a finite [`Hp`] (`±2^20`, ~±315,652 decimal orders).
+pub const MAX_EXP: i32 = 1 << 20;
+/// Minimum binary exponent allowed for a finite [`Hp`] (`-2^20`).
+pub const MIN_EXP: i32 = -(1 << 20);
+/// Maximum binary exponent accepted for trigonometric argument reduction (`|x| < 2^65`).
+pub const MAX_TRIG_EXP: i32 = 64;
+
 const MSB: u64 = 1u64 << 63;
 
-/// 256-bit normalized binary floating-point real number.
+/// 256-bit normalized binary floating-point real number with bounded exponent (`MIN_EXP..=MAX_EXP`).
+///
+/// Operations that exceed the exponent bound produce [`Hp::OVERFLOW`] (`!x.is_finite()`), which
+/// propagates poison to arithmetic operators and returns `Err(HpError::Domain(...))` from checked
+/// and formatting/refinement operations (CONSTITUTION §8).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Hp {
     pub(crate) neg: bool,
@@ -31,20 +43,38 @@ impl Hp {
     pub const ONE: Hp = Hp { neg: false, exp: 0, sig: [0, 0, 0, MSB] };
     pub const TWO: Hp = Hp { neg: false, exp: 1, sig: [0, 0, 0, MSB] };
     pub const HALF: Hp = Hp { neg: false, exp: -1, sig: [0, 0, 0, MSB] };
+    /// Explicit non-finite overflow sentinel (`exp == i32::MAX`, never produced by finite values).
+    pub const OVERFLOW: Hp = Hp { neg: false, exp: i32::MAX, sig: [0, 0, 0, 1] };
+
+    #[inline]
+    pub fn is_finite(&self) -> bool {
+        self.exp != i32::MAX && (self.sig == [0, 0, 0, 0] || (self.exp >= MIN_EXP && self.exp <= MAX_EXP))
+    }
+
+    #[inline]
+    pub fn checked_finite(self) -> Result<Hp, HpError> {
+        if self.is_finite() {
+            Ok(self)
+        } else {
+            Err(HpError::Domain("exponent overflow"))
+        }
+    }
 
     #[inline]
     pub fn is_zero(&self) -> bool {
-        self.sig == [0, 0, 0, 0]
+        self.is_finite() && self.sig == [0, 0, 0, 0]
     }
 
     #[inline]
     pub fn is_negative(&self) -> bool {
-        !self.is_zero() && self.neg
+        self.is_finite() && !self.is_zero() && self.neg
     }
 
     #[inline]
     pub fn abs(self) -> Hp {
-        if self.is_zero() {
+        if !self.is_finite() {
+            Hp::OVERFLOW
+        } else if self.is_zero() {
             Hp::ZERO
         } else {
             Hp { neg: false, exp: self.exp, sig: self.sig }
@@ -53,20 +83,48 @@ impl Hp {
 
     #[inline]
     pub fn negate(self) -> Hp {
-        if self.is_zero() {
+        if !self.is_finite() {
+            Hp::OVERFLOW
+        } else if self.is_zero() {
             Hp::ZERO
         } else {
             Hp { neg: !self.neg, exp: self.exp, sig: self.sig }
         }
     }
 
-    /// Exact multiplication by `2^k`.
-    pub fn scale_pow2(self, k: i32) -> Hp {
+    /// Checked multiplication by `2^k`, failing with `HpError::Domain("exponent overflow")`
+    /// if the result leaves `MIN_EXP..=MAX_EXP` or if `self` is non-finite.
+    pub fn try_scale_pow2(self, k: i32) -> Result<Hp, HpError> {
+        self.checked_finite()?;
         if self.is_zero() {
-            Hp::ZERO
-        } else {
-            Hp { neg: self.neg, exp: self.exp.saturating_add(k), sig: self.sig }
+            return Ok(Hp::ZERO);
         }
+        let exp = i64::from(self.exp) + i64::from(k);
+        if exp < i64::from(MIN_EXP) || exp > i64::from(MAX_EXP) {
+            return Err(HpError::Domain("exponent overflow"));
+        }
+        Ok(Hp { neg: self.neg, exp: exp as i32, sig: self.sig })
+    }
+
+    /// Exact multiplication by `2^k`, returning [`Hp::OVERFLOW`] if the exponent leaves
+    /// `MIN_EXP..=MAX_EXP`.
+    pub fn scale_pow2(self, k: i32) -> Hp {
+        self.try_scale_pow2(k).unwrap_or(Hp::OVERFLOW)
+    }
+
+    /// Checked addition, failing if either operand or the result overflows `MIN_EXP..=MAX_EXP`.
+    pub fn try_add(self, rhs: Hp) -> Result<Hp, HpError> {
+        self.add_hp(rhs).checked_finite()
+    }
+
+    /// Checked subtraction, failing if either operand or the result overflows `MIN_EXP..=MAX_EXP`.
+    pub fn try_sub(self, rhs: Hp) -> Result<Hp, HpError> {
+        self.add_hp(rhs.negate()).checked_finite()
+    }
+
+    /// Checked multiplication, failing if either operand or the result overflows `MIN_EXP..=MAX_EXP`.
+    pub fn try_mul(self, rhs: Hp) -> Result<Hp, HpError> {
+        self.mul_hp(rhs).checked_finite()
     }
 
     /// Exact conversion from `u64`.
@@ -113,8 +171,11 @@ impl Hp {
         }
     }
 
-    /// Exact round-to-nearest-even conversion to IEEE-754 `f64`.
+    /// Exact round-to-nearest-even conversion to IEEE-754 `f64` (`NaN` if non-finite).
     pub fn to_f64(self) -> f64 {
+        if !self.is_finite() {
+            return f64::NAN;
+        }
         if self.is_zero() {
             return 0.0;
         }
@@ -179,15 +240,21 @@ impl Hp {
         format!("0x{bits:016x}")
     }
 
-    /// Exact 256-bit `pi`, computed via Machin's formula `4 * (4 * atan(1/5) - atan(1/239))`.
+    /// 256-bit `pi` computed once via Machin's formula `4 * (4 * atan(1/5) - atan(1/239))` and
+    /// cached for subsequent calls.
     pub fn pi() -> Hp {
-        let a = atan_recip(5);
-        let b = atan_recip(239);
-        (a.scale_pow2(2) - b).scale_pow2(2)
+        static PI: OnceLock<Hp> = OnceLock::new();
+        *PI.get_or_init(|| {
+            let a = atan_recip(5);
+            let b = atan_recip(239);
+            (a.scale_pow2(2) - b).scale_pow2(2)
+        })
     }
 
-    /// 256-bit square root via Newton-Raphson seeded from `f64::sqrt`.
+    /// 256-bit square root via Newton-Raphson seeded from `f64::sqrt` (accurate to ~1 ulp at
+    /// 256-bit precision, >76 decimal digits).
     pub fn sqrt(self) -> Result<Hp, HpError> {
+        self.checked_finite()?;
         if self.is_zero() {
             return Ok(Hp::ZERO);
         }
@@ -200,51 +267,67 @@ impl Hp {
         let a = Hp { neg: false, exp: rem, sig: self.sig };
         let seed = a.to_f64().sqrt();
         let mut x = Hp::from_f64(seed)?;
-        // 53 -> 106 -> 212 -> 256 -> 256 exact.
+        // Quadratic convergence: 53 -> 106 -> 212 -> 256 bits (~1 ulp).
         for _ in 0..4 {
-            x = (x + (a / x)?).scale_pow2(-1);
+            x = (x + (a / x)?).try_scale_pow2(-1)?;
         }
-        Ok(x.scale_pow2(k))
+        x.try_scale_pow2(k)
     }
 
-    /// 256-bit sine via `pi/2` quadrant reduction + Taylor series.
+    /// 256-bit sine via `pi/2` quadrant reduction + Taylor series (returns [`Hp::OVERFLOW`] for
+    /// non-finite arguments or `|x| >= 2^(MAX_TRIG_EXP + 1)`).
     pub fn sin(self) -> Hp {
         let (s, _) = self.sin_cos();
         s
     }
 
-    /// 256-bit cosine via `pi/2` quadrant reduction + Taylor series.
+    /// 256-bit cosine via `pi/2` quadrant reduction + Taylor series (returns [`Hp::OVERFLOW`] for
+    /// non-finite arguments or `|x| >= 2^(MAX_TRIG_EXP + 1)`).
     pub fn cos(self) -> Hp {
         let (_, c) = self.sin_cos();
         c
     }
 
-    /// Simultaneous 256-bit `(sin(x), cos(x))`.
-    pub fn sin_cos(self) -> (Hp, Hp) {
+    /// Checked simultaneous 256-bit `(sin(x), cos(x))`, rejecting non-finite arguments and
+    /// arguments with `exp > MAX_TRIG_EXP` (`|x| >= 2^65`) where 256-bit range reduction would
+    /// lose significant digits.
+    pub fn try_sin_cos(self) -> Result<(Hp, Hp), HpError> {
+        self.checked_finite()?;
         if self.is_zero() {
-            return (Hp::ZERO, Hp::ONE);
+            return Ok((Hp::ZERO, Hp::ONE));
+        }
+        if self.exp > MAX_TRIG_EXP {
+            return Err(HpError::Domain("trig argument exceeds range reduction bound"));
         }
         let pi = Hp::pi();
-        let half_pi = pi.scale_pow2(-1);
-        // k = round(self / (pi/2))
-        let q = self / half_pi;
-        let Ok(q) = q else {
-            return (Hp::ZERO, Hp::ONE);
-        };
+        let half_pi = pi.try_scale_pow2(-1)?;
+        let q = (self / half_pi)?;
         let k_int = q.round_to_i64_mod4();
         let k_hp = q.round_to_integer();
         let r = self - k_hp * half_pi;
         let (sr, cr) = sin_cos_reduced(r);
-        match k_int {
+        let res = match k_int {
             0 => (sr, cr),
             1 => (cr, sr.neg()),
             2 => (sr.neg(), cr.neg()),
             _ => (cr.neg(), sr),
-        }
+        };
+        res.0.checked_finite()?;
+        res.1.checked_finite()?;
+        Ok(res)
     }
 
-    /// 256-bit arctangent `atan(x)` in `[-pi/2, pi/2]`.
+    /// Simultaneous 256-bit `(sin(x), cos(x))` (returns `(Hp::OVERFLOW, Hp::OVERFLOW)` if out of
+    /// domain; prefer [`Self::try_sin_cos`] when handling untrusted inputs).
+    pub fn sin_cos(self) -> (Hp, Hp) {
+        self.try_sin_cos().unwrap_or((Hp::OVERFLOW, Hp::OVERFLOW))
+    }
+
+    /// 256-bit arctangent `atan(x)` in `[-pi/2, pi/2]` (propagates [`Hp::OVERFLOW`]).
     pub fn atan(self) -> Hp {
+        if !self.is_finite() {
+            return Hp::OVERFLOW;
+        }
         if self.is_zero() {
             return Hp::ZERO;
         }
@@ -262,11 +345,12 @@ impl Hp {
         for _ in 0..5 {
             let denom = match (Hp::ONE + x * x).sqrt() {
                 Ok(s) => Hp::ONE + s,
-                Err(_) => Hp::TWO,
+                Err(_) => return Hp::OVERFLOW,
             };
-            if let Ok(next) = x / denom {
-                x = next;
-            }
+            let Ok(next) = x / denom else {
+                return Hp::OVERFLOW;
+            };
+            x = next;
         }
         let mut acc = atan_taylor(x).scale_pow2(5);
         if invert {
@@ -281,15 +365,17 @@ impl Hp {
 
     /// 256-bit `atan2(y, x)` in `(-pi, pi]`.
     pub fn atan2(y: Hp, x: Hp) -> Result<Hp, HpError> {
+        y.checked_finite()?;
+        x.checked_finite()?;
         let pi = Hp::pi();
-        let half_pi = pi.scale_pow2(-1);
+        let half_pi = pi.try_scale_pow2(-1)?;
         if x.is_zero() {
             if y.is_zero() {
                 return Ok(Hp::ZERO);
             }
             return Ok(if y.neg { half_pi.neg() } else { half_pi });
         }
-        let base = (y.abs() / x.abs())?.atan();
+        let base = (y.abs() / x.abs())?.atan().checked_finite()?;
         let res = if !x.neg {
             if y.neg {
                 base.neg()
@@ -301,7 +387,7 @@ impl Hp {
         } else {
             pi - base
         };
-        Ok(res)
+        res.checked_finite()
     }
 
     /// Rounds `self` to the nearest integer represented as `Hp` (ties away from zero for reduction).
@@ -363,6 +449,9 @@ impl Hp {
     }
 
     pub(crate) fn add_hp(self, rhs: Hp) -> Hp {
+        if !self.is_finite() || !rhs.is_finite() {
+            return Hp::OVERFLOW;
+        }
         if self.is_zero() {
             return rhs;
         }
@@ -377,6 +466,9 @@ impl Hp {
     }
 
     pub(crate) fn mul_hp(self, rhs: Hp) -> Hp {
+        if !self.is_finite() || !rhs.is_finite() {
+            return Hp::OVERFLOW;
+        }
         if self.is_zero() || rhs.is_zero() {
             return Hp::ZERO;
         }
@@ -389,7 +481,7 @@ impl Hp {
             let s = [prod[4], prod[5], prod[6], prod[7]];
             let g = prod[3] >> 63;
             let st = ((prod[3] & (MSB - 1)) | prod[2] | prod[1] | prod[0]) != 0;
-            (s, g, st, self.exp.saturating_add(rhs.exp).saturating_add(1))
+            (s, g, st, i64::from(self.exp) + i64::from(rhs.exp) + 1)
         } else {
             // Shift right by 255: bit 510 becomes bit 255.
             let s = [
@@ -400,21 +492,23 @@ impl Hp {
             ];
             let g = (prod[3] >> 62) & 1;
             let st = ((prod[3] & ((1u64 << 62) - 1)) | prod[2] | prod[1] | prod[0]) != 0;
-            (s, g, st, self.exp.saturating_add(rhs.exp))
+            (s, g, st, i64::from(self.exp) + i64::from(rhs.exp))
         };
         if guard == 1 && (sticky || (sig[0] & 1) == 1) {
             let (inc, carry) = add256(sig, [1, 0, 0, 0]);
             if carry {
                 sig = [0, 0, 0, MSB];
-                exp = exp.saturating_add(1);
+                exp += 1;
             } else {
                 sig = inc;
             }
         }
-        Hp { neg, exp, sig }
+        make_bounded_hp(neg, exp, sig)
     }
 
     pub(crate) fn div_hp(self, rhs: Hp) -> Result<Hp, HpError> {
+        self.checked_finite()?;
+        rhs.checked_finite()?;
         if rhs.is_zero() {
             return Err(HpError::Domain("division by zero"));
         }
@@ -422,14 +516,14 @@ impl Hp {
             return Ok(Hp::ZERO);
         }
         let neg = self.neg ^ rhs.neg;
-        let mut exp = self.exp.saturating_sub(rhs.exp);
+        let mut exp = i64::from(self.exp) - i64::from(rhs.exp);
         let mut rem = [self.sig[0], self.sig[1], self.sig[2], self.sig[3], 0u64];
         let den = [rhs.sig[0], rhs.sig[1], rhs.sig[2], rhs.sig[3], 0u64];
 
         // If self.sig < rhs.sig, shift rem left by 1 and decrement exp so quotient bit 255 is 1.
         if cmp320(rem, den) == Ordering::Less {
             rem = shl320_1(rem);
-            exp = exp.saturating_sub(1);
+            exp -= 1;
         }
 
         // Produce 256 quotient bits + 1 guard bit via restoring binary long division.
@@ -453,12 +547,12 @@ impl Hp {
             let (inc, carry) = add256(sig, [1, 0, 0, 0]);
             if carry {
                 sig = [0, 0, 0, MSB];
-                exp = exp.saturating_add(1);
+                exp += 1;
             } else {
                 sig = inc;
             }
         }
-        Ok(Hp { neg, exp, sig })
+        make_bounded_hp(neg, exp, sig).checked_finite()
     }
 }
 
@@ -626,21 +720,31 @@ fn sin_cos_reduced(r: Hp) -> (Hp, Hp) {
 // Low-level 256-bit / 320-bit / 512-bit integer arithmetic
 // ============================================================================
 
+fn make_bounded_hp(neg: bool, exp: i64, sig: [u64; 4]) -> Hp {
+    if sig == [0; 4] {
+        return Hp::ZERO;
+    }
+    if exp < i64::from(MIN_EXP) || exp > i64::from(MAX_EXP) {
+        return Hp::OVERFLOW;
+    }
+    Hp { neg, exp: exp as i32, sig }
+}
+
 fn add_same_sign(a: Hp, b: Hp) -> Hp {
     let (hi, lo) = if a.cmp_abs(&b) != Ordering::Less { (a, b) } else { (b, a) };
-    let diff = (hi.exp as i64) - (lo.exp as i64);
+    let diff = i64::from(hi.exp) - i64::from(lo.exp);
     if diff >= 258 {
         return hi;
     }
     let shift = diff as u32;
     let (lo_shifted, guard, round, sticky) = shr256_grs(lo.sig, shift);
     let (mut sig, carry) = add256(hi.sig, lo_shifted);
-    let mut exp = hi.exp;
+    let mut exp = i64::from(hi.exp);
     let (final_g, final_s) = if carry {
         let new_g = sig[0] & 1;
         let new_s = guard != 0 || round != 0 || sticky;
         sig = shr256_1_with_msb(sig);
-        exp = exp.saturating_add(1);
+        exp += 1;
         (new_g, new_s)
     } else {
         (guard, round != 0 || sticky)
@@ -649,12 +753,12 @@ fn add_same_sign(a: Hp, b: Hp) -> Hp {
         let (inc, c) = add256(sig, [1, 0, 0, 0]);
         if c {
             sig = [0, 0, 0, MSB];
-            exp = exp.saturating_add(1);
+            exp += 1;
         } else {
             sig = inc;
         }
     }
-    Hp { neg: hi.neg, exp, sig }
+    make_bounded_hp(hi.neg, exp, sig)
 }
 
 fn sub_diff_sign(a: Hp, b: Hp) -> Hp {
@@ -663,7 +767,7 @@ fn sub_diff_sign(a: Hp, b: Hp) -> Hp {
         return Hp::ZERO;
     }
     let (hi, lo) = if cmp == Ordering::Greater { (a, b) } else { (b, a) };
-    let diff = (hi.exp as i64) - (lo.exp as i64);
+    let diff = i64::from(hi.exp) - i64::from(lo.exp);
     if diff >= 259 {
         return hi;
     }
@@ -674,7 +778,7 @@ fn sub_diff_sign(a: Hp, b: Hp) -> Hp {
     let (tail_res, borrow) = if lo_tail == 0 { (0u64, false) } else { (8 - lo_tail, true) };
     let (mut sig, _) = sub256_borrow(hi.sig, lo_shifted, borrow);
     let mut tail = tail_res;
-    let mut exp = hi.exp;
+    let mut exp = i64::from(hi.exp);
 
     if sig == [0; 4] && tail == 0 {
         return Hp::ZERO;
@@ -684,7 +788,7 @@ fn sub_diff_sign(a: Hp, b: Hp) -> Hp {
         let top_tail = (tail >> 2) & 1;
         sig = shl256_1_with_lsb(sig, top_tail);
         tail = (tail << 1) & 7;
-        exp = exp.saturating_sub(1);
+        exp -= 1;
     }
     let guard = (tail >> 2) & 1;
     let sticky = (tail & 3) != 0;
@@ -692,12 +796,12 @@ fn sub_diff_sign(a: Hp, b: Hp) -> Hp {
         let (inc, c) = add256(sig, [1, 0, 0, 0]);
         if c {
             sig = [0, 0, 0, MSB];
-            exp = exp.saturating_add(1);
+            exp += 1;
         } else {
             sig = inc;
         }
     }
-    Hp { neg: hi.neg, exp, sig }
+    make_bounded_hp(hi.neg, exp, sig)
 }
 
 pub(crate) fn cmp256(a: [u64; 4], b: [u64; 4]) -> Ordering {

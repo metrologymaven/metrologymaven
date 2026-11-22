@@ -11,8 +11,10 @@ use fid_canon::{digest as canon_digest, to_canonical_bytes, CValue};
 use fid_num::rng::{Address, Cursor};
 use fid_types::Digest;
 
-pub use decimal::{format_decimal_sig, parse_decimal_hp, round16, Decimal16, ReferenceValue, MIN_REFERENCE_DIGITS};
-pub use real::{Hp, PRECISION_BITS};
+pub use decimal::{
+    format_decimal_sig, parse_decimal_hp, round16, Decimal16, ReferenceValue, MAX_DECIMAL_EXP, MIN_REFERENCE_DIGITS,
+};
+pub use real::{Hp, MAX_EXP, MAX_TRIG_EXP, MIN_EXP, PRECISION_BITS};
 pub use refine::{hp_refine, tol_1e_50, HpCert, HpError, MAX_REFINE_ITERATIONS};
 
 /// Metadata written into every tier-G generated dataset (REQ-UNC.RDL.GEN.HPREC-003).
@@ -27,6 +29,21 @@ pub struct GeneratorRecord {
 }
 
 impl GeneratorRecord {
+    /// Validates REQ-UNC.RDL.GEN.HPREC-003 invariants (`precision_bits >= 200`, `digits >= 50`,
+    /// non-empty family/method/tool_version).
+    pub fn validate(&self) -> Result<(), HpError> {
+        if self.family.trim().is_empty() || self.method.trim().is_empty() || self.tool_version.trim().is_empty() {
+            return Err(HpError::Domain("GeneratorRecord requires non-empty family, method, and tool_version"));
+        }
+        if self.precision_bits < 200 {
+            return Err(HpError::Domain("GeneratorRecord precision_bits must be >= 200"));
+        }
+        if (self.digits as usize) < MIN_REFERENCE_DIGITS {
+            return Err(HpError::Domain("GeneratorRecord digits must be >= 50"));
+        }
+        Ok(())
+    }
+
     /// Canonical RFC 8785 JSON value (`seed` written as decimal string so u64 survives JSON
     /// losslessly across every target, matching `fid_rdl::GeneratorRecord`).
     pub fn to_value(&self) -> CValue {
@@ -42,22 +59,26 @@ impl GeneratorRecord {
 
     /// Canonical UTF-8 RFC 8785 JSON bytes (byte-identical across x86-64, ARM64 and wasm32).
     pub fn to_canonical_bytes(&self) -> Result<Vec<u8>, HpError> {
+        self.validate()?;
         to_canonical_bytes(&self.to_value()).map_err(|_| HpError::Domain("cannot canonicalise GeneratorRecord"))
     }
 
     /// SHA-256 digest of [`Self::to_canonical_bytes`].
     pub fn digest(&self) -> Result<Digest, HpError> {
+        self.validate()?;
         let d = canon_digest(&self.to_value()).map_err(|_| HpError::Domain("cannot hash GeneratorRecord"))?;
         Ok(Digest::from_bytes(d.0))
     }
 
-    /// Converts into the `rdl-dataset/v1` [`fid_rdl::GeneratorRecord`] metadata block.
-    pub fn to_rdl_record(&self) -> fid_rdl::GeneratorRecord {
-        fid_rdl::GeneratorRecord {
-            id: format!("{}:{}", self.family, self.method),
+    /// Converts into the `rdl-dataset/v1` [`fid_rdl::GeneratorRecord`] metadata block, preserving
+    /// `precision_bits` and `digits` in the generator identifier (`<family>:<method>@p<bits>d<digits>`).
+    pub fn to_rdl_record(&self) -> Result<fid_rdl::GeneratorRecord, HpError> {
+        self.validate()?;
+        Ok(fid_rdl::GeneratorRecord {
+            id: format!("{}:{}@p{}d{}", self.family, self.method, self.precision_bits, self.digits),
             version: self.tool_version.clone(),
             seed: self.seed.to_string(),
-        }
+        })
     }
 }
 
