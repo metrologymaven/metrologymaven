@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [tools/]
+built_pr: 463
+updated: 2026-11-22
 ---
 
 # ECO.COMM.SCOPE: Spec-tree validator, open-node listing and generated reports
