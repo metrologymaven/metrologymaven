@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-knp1-lint]
+built_pr: 432
 updated: 2026-11-21
 ---
 
