@@ -1853,7 +1853,12 @@ dependencies = [
  "fid-canon",
  "fid-gdt",
  "fid-kdec",
+ "fid-project",
+ "fid-registry",
  "fid-render",
+ "fid-replay",
+ "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]

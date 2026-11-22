@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid view add-label, fid view edit-label, fid view remove-label]
 mcp: [view_add_label, view_edit_label, view_remove_label]
 journal: [view.add_label@1, view.edit_label@1, view.remove_label@1]
-updated: 2026-11-17
+built_in: [fid-overlay]
+updated: 2026-11-22
 ---
 
 # VIZ.OVERLAY.LABEL.MODEL: LabelSet entity, templates and label commands
