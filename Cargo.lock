@@ -1427,6 +1427,7 @@ dependencies = [
 name = "fid-geo-index"
 version = "0.0.1"
 dependencies = [
+ "cap",
  "fid-geo-frame",
  "fid-geo-types",
  "fid-kci",

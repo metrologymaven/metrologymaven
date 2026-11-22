@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [fid-geo-index]
+built_pr: 430
+updated: 2026-11-21
 ---
 
 # GEO.INDEX.BUDGET: Index memory budgets and digest-keyed cache

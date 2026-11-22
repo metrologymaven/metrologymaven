@@ -333,20 +333,21 @@ fn bound(g: &[f64; 3]) -> f64 {
     (g[0] * g[0] + g[1] * g[1]) + g[2] * g[2]
 }
 
-/// An implicit k-d tree over a borrowed point buffer (`GEO.INDEX.KDTREE`).
+/// Owned implicit k-d tree structure (permutation, splits and split axes) without borrowing the
+/// source [`PointBuffer`], so it can be held in [`crate::budget::IndexCache`] without cloning
+/// coordinate columns.
 #[derive(Debug, Clone, PartialEq)]
-pub struct PointIndex<'a> {
-    points: &'a PointBuffer,
+pub struct PointTree {
     depth: u32,
     perm: Vec<u32>,
     splits: Vec<f64>,
     axes: Vec<u8>,
 }
 
-impl<'a> PointIndex<'a> {
-    /// Builds the index over `points`. `threads` must be at least 1; the build is sequential
-    /// and its result does not depend on it.
-    pub fn build(points: &'a PointBuffer, threads: usize) -> Result<PointIndex<'a>, PointIndexError> {
+impl PointTree {
+    /// Builds the tree over `points`. `threads` must be at least 1; the build is sequential and
+    /// its result does not depend on it.
+    pub fn build(points: &PointBuffer, threads: usize) -> Result<PointTree, PointIndexError> {
         if threads == 0 {
             return Err(PointIndexError::ZeroThreads);
         }
@@ -426,22 +427,15 @@ impl<'a> PointIndex<'a> {
             let (s, c) = node_range(n, depth, j);
             perm.get_mut(s..s + c).ok_or(PointIndexError::Inconsistent)?.sort_unstable();
         }
-        Ok(PointIndex { points, depth, perm, splits, axes })
+        Ok(PointTree { depth, perm, splits, axes })
     }
 
-    // ------------------------------------------------------------------ accessors
-
-    /// The indexed point buffer.
-    pub fn points(&self) -> &'a PointBuffer {
-        self.points
-    }
-
-    /// The number of points.
+    /// The number of indexed points.
     pub fn len(&self) -> u64 {
         u64::try_from(self.perm.len()).unwrap_or(u64::MAX)
     }
 
-    /// Whether the index has no points.
+    /// Whether the tree has no points.
     pub fn is_empty(&self) -> bool {
         self.perm.is_empty()
     }
@@ -471,14 +465,17 @@ impl<'a> PointIndex<'a> {
         &self.axes
     }
 
-    /// Bytes held by the index beyond the coordinate buffer: the struct itself plus the exact
-    /// capacity of the permutation, split and axis allocations (REQ-GEO.INDEX.KDTREE-005).
-    pub fn memory_bytes(&self) -> u64 {
-        let inline = bytes_of::<PointIndex<'static>>(1);
-        inline
-            .saturating_add(bytes_of::<u32>(self.perm.capacity()))
+    /// Heap bytes allocated for the permutation, split and axis buffers.
+    pub(crate) fn heap_bytes(&self) -> u64 {
+        bytes_of::<u32>(self.perm.capacity())
             .saturating_add(bytes_of::<f64>(self.splits.capacity()))
             .saturating_add(bytes_of::<u8>(self.axes.capacity()))
+    }
+
+    /// Bytes held by this tree: the struct itself plus the exact capacity of its permutation,
+    /// split and axis buffers.
+    pub fn memory_bytes(&self) -> u64 {
+        bytes_of::<PointTree>(1).saturating_add(self.heap_bytes())
     }
 
     /// The pinned serialisation (AC-3): `FIDKDT01`; point count (u64 LE); leaf depth and
@@ -507,10 +504,16 @@ impl<'a> PointIndex<'a> {
         Ok(out)
     }
 
-    // ------------------------------------------------------------------ queries
+    fn check_points(&self, points: &PointBuffer) -> Result<(), PointIndexError> {
+        let n = self.perm.len();
+        if points.x.len() != n || points.y.len() != n || points.z.len() != n {
+            return Err(PointIndexError::Inconsistent);
+        }
+        Ok(())
+    }
 
-    fn point(&self, p: u32) -> Result<[f64; 3], PointIndexError> {
-        self.points.point(u64::from(p)).ok_or(PointIndexError::Inconsistent)
+    fn point(points: &PointBuffer, p: u32) -> Result<[f64; 3], PointIndexError> {
+        points.point(u64::from(p)).ok_or(PointIndexError::Inconsistent)
     }
 
     fn node(&self, i: usize) -> Result<(f64, usize), PointIndexError> {
@@ -587,9 +590,10 @@ impl<'a> PointIndex<'a> {
         Ok(())
     }
 
-    /// The `min(k, n)` points nearest to `q` by `(dist2, index)`, ascending
-    /// (REQ-GEO.INDEX.KDTREE-001, -002). `k` must be in `1..=1024`.
-    pub fn knn(&self, q: [f64; 3], k: usize) -> Result<Vec<Neighbour>, PointIndexError> {
+    /// The `min(k, n)` points in `points` nearest to `q` by `(dist2, index)`, ascending
+    /// (REQ-GEO.INDEX.KDTREE-001, -002). `points` must be the buffer this tree was built from.
+    pub fn knn(&self, points: &PointBuffer, q: [f64; 3], k: usize) -> Result<Vec<Neighbour>, PointIndexError> {
+        self.check_points(points)?;
         check_query(&q)?;
         if k == 0 || k > MAX_K {
             return Err(PointIndexError::BadK { k: u64::try_from(k).unwrap_or(u64::MAX) });
@@ -602,7 +606,7 @@ impl<'a> PointIndex<'a> {
         let prune = |lb: f64| worst.get().is_some_and(|w| lb > w);
         let mut leaf = |pts: &[u32]| -> Result<(), PointIndexError> {
             for &p in pts {
-                let key = Key(dist2(self.point(p)?, q), p);
+                let key = Key(dist2(Self::point(points, p)?, q), p);
                 if heap.len() < k {
                     heap.push(key);
                 } else if heap.peek().is_some_and(|top| key < *top) {
@@ -622,9 +626,9 @@ impl<'a> PointIndex<'a> {
         Ok(out)
     }
 
-    /// Every point with `dist2(p, q) <= r*r`, sorted by `(dist2, index)`. `r` must be finite,
-    /// `>= 0` and at most `COORD_LIMIT`.
-    pub fn radius(&self, q: [f64; 3], r: f64) -> Result<Vec<Neighbour>, PointIndexError> {
+    /// Every point in `points` with `dist2(p, q) <= r*r`, sorted by `(dist2, index)`.
+    pub fn radius(&self, points: &PointBuffer, q: [f64; 3], r: f64) -> Result<Vec<Neighbour>, PointIndexError> {
+        self.check_points(points)?;
         check_query(&q)?;
         if !r.is_finite() || r < 0.0 || r > COORD_LIMIT {
             return Err(PointIndexError::BadRadius);
@@ -634,7 +638,7 @@ impl<'a> PointIndex<'a> {
         let prune = |lb: f64| lb > r2;
         let mut leaf = |pts: &[u32]| -> Result<(), PointIndexError> {
             for &p in pts {
-                let d = dist2(self.point(p)?, q);
+                let d = dist2(Self::point(points, p)?, q);
                 if d <= r2 {
                     push(&mut out, Neighbour { index: u64::from(p), dist2: d })?;
                 }
@@ -646,13 +650,15 @@ impl<'a> PointIndex<'a> {
         Ok(out)
     }
 
-    /// Every point inside `b` (boundaries included, numeric comparisons), ascending by index.
-    pub fn in_box(&self, b: &Aabb) -> Result<Vec<u64>, PointIndexError> {
+    /// Every point in `points` inside `b` (boundaries included, numeric comparisons), ascending by
+    /// index.
+    pub fn in_box(&self, points: &PointBuffer, b: &Aabb) -> Result<Vec<u64>, PointIndexError> {
+        self.check_points(points)?;
         let (lo, hi) = (b.min(), b.max());
         let mut out: Vec<u64> = Vec::new();
         let mut leaf = |pts: &[u32]| -> Result<(), PointIndexError> {
             for &p in pts {
-                let x = self.point(p)?;
+                let x = Self::point(points, p)?;
                 if (0..3).all(|k| lo[k] <= x[k] && x[k] <= hi[k]) {
                     push(&mut out, u64::from(p))?;
                 }
@@ -662,5 +668,105 @@ impl<'a> PointIndex<'a> {
         self.traverse(&[0.0; 3], Some((&lo, &hi)), &|_| false, &mut leaf)?;
         out.sort_unstable();
         Ok(out)
+    }
+}
+
+/// An implicit k-d tree over a borrowed point buffer (`GEO.INDEX.KDTREE`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct PointIndex<'a> {
+    points: &'a PointBuffer,
+    tree: PointTree,
+}
+
+impl<'a> PointIndex<'a> {
+    /// Builds the index over `points`. `threads` must be at least 1; the build is sequential
+    /// and its result does not depend on it.
+    pub fn build(points: &'a PointBuffer, threads: usize) -> Result<PointIndex<'a>, PointIndexError> {
+        let tree = PointTree::build(points, threads)?;
+        Ok(PointIndex { points, tree })
+    }
+
+    // ------------------------------------------------------------------ accessors
+
+    /// The indexed point buffer.
+    pub fn points(&self) -> &'a PointBuffer {
+        self.points
+    }
+
+    /// The underlying owned tree structure.
+    pub fn tree(&self) -> &PointTree {
+        &self.tree
+    }
+
+    /// Consumes the borrowed wrapper and returns the owned [`PointTree`] without reallocating.
+    pub fn into_tree(self) -> PointTree {
+        self.tree
+    }
+
+    /// The number of points.
+    pub fn len(&self) -> u64 {
+        self.tree.len()
+    }
+
+    /// Whether the index has no points.
+    pub fn is_empty(&self) -> bool {
+        self.tree.is_empty()
+    }
+
+    /// The leaf depth `L` (every leaf is at this depth; 0 when the root is the only leaf).
+    pub fn depth(&self) -> u32 {
+        self.tree.depth()
+    }
+
+    /// The largest leaf size, [`BUCKET`].
+    pub fn bucket(&self) -> usize {
+        self.tree.bucket()
+    }
+
+    /// Point indexes in leaf order (each leaf's range ascending).
+    pub fn perm(&self) -> &[u32] {
+        self.tree.perm()
+    }
+
+    /// The split value of each internal node, in node order.
+    pub fn splits(&self) -> &[f64] {
+        self.tree.splits()
+    }
+
+    /// The split axis (0 = x, 1 = y, 2 = z) of each internal node, in node order.
+    pub fn axes(&self) -> &[u8] {
+        self.tree.axes()
+    }
+
+    /// Bytes held by the index beyond the coordinate buffer: the struct itself plus the exact
+    /// capacity of the permutation, split and axis allocations (REQ-GEO.INDEX.KDTREE-005).
+    pub fn memory_bytes(&self) -> u64 {
+        bytes_of::<PointIndex<'static>>(1).saturating_add(self.tree.heap_bytes())
+    }
+
+    /// The pinned serialisation (AC-3): `FIDKDT01`; point count (u64 LE); leaf depth and
+    /// bucket size (u32 LE each); the split values (f64 bits, u64 LE each); the axis bytes; the
+    /// permutation (u32 LE each).
+    pub fn to_bytes(&self) -> Result<Vec<u8>, PointIndexError> {
+        self.tree.to_bytes()
+    }
+
+    // ------------------------------------------------------------------ queries
+
+    /// The `min(k, n)` points nearest to `q` by `(dist2, index)`, ascending
+    /// (REQ-GEO.INDEX.KDTREE-001, -002). `k` must be in `1..=1024`.
+    pub fn knn(&self, q: [f64; 3], k: usize) -> Result<Vec<Neighbour>, PointIndexError> {
+        self.tree.knn(self.points, q, k)
+    }
+
+    /// Every point with `dist2(p, q) <= r*r`, sorted by `(dist2, index)`. `r` must be finite,
+    /// `>= 0` and at most `COORD_LIMIT`.
+    pub fn radius(&self, q: [f64; 3], r: f64) -> Result<Vec<Neighbour>, PointIndexError> {
+        self.tree.radius(self.points, q, r)
+    }
+
+    /// Every point inside `b` (boundaries included, numeric comparisons), ascending by index.
+    pub fn in_box(&self, b: &Aabb) -> Result<Vec<u64>, PointIndexError> {
+        self.tree.in_box(self.points, b)
     }
 }
