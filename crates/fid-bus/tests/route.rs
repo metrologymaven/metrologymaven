@@ -479,7 +479,7 @@ fn ac5_eight_writers_on_one_branch() {
         joins.into_iter().map(|j| j.join().unwrap()).collect()
     });
     let total = WRITERS * PER_WRITER;
-    let distinct: BTreeSet<EntryHash> = hashes.iter().flatten().copied().collect();
+    let distinct: BTreeSet<[u8; 32]> = hashes.iter().flatten().map(|h| h.0).collect();
     assert_eq!(distinct.len(), total);
     assert_eq!(h.calls.load(Ordering::SeqCst), total);
     let tail = RecordJournal::tail(h.journal.as_ref()).unwrap().unwrap();
@@ -503,9 +503,9 @@ fn branch_tickets_are_served_in_arrival_order() {
     let order = Arc::new(Mutex::new(Vec::new()));
     let mut joins = Vec::new();
     for i in 1..=6u64 {
-        let (locks, main, order) = (locks.clone(), main.clone(), Arc::clone(&order));
+        let (mine, main, order) = (locks.clone(), main.clone(), Arc::clone(&order));
         joins.push(std::thread::spawn(move || {
-            let t = locks.acquire(&main).unwrap();
+            let t = mine.acquire(&main).unwrap();
             order.lock().unwrap().push(i);
             drop(t);
         }));
