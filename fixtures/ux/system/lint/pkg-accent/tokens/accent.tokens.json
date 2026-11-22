@@ -1,0 +1,10 @@
+{
+  "sem": {
+    "brand": {
+      "accent": {
+        "$type": "color",
+        "$value": "#1f6feb"
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+# Synthetic fixture (CC-BY-4.0): token names only, no literals.
+[panel]
+accent = "sem.focus.ring"
+ok = "sem.status.ok"
+gap = "space.2"
+duration = "motion.fast"

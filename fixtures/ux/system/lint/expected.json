@@ -1,0 +1,114 @@
+{
+  "allowed_empty": {
+    "exit": 1,
+    "findings": [
+      {
+        "code": "LIT-COLOR-HEX",
+        "file": "empty-reason.css",
+        "line": 3,
+        "literal": "#1f6feb",
+        "suggestions": [
+          "sem.brand.accent"
+        ]
+      },
+      {
+        "code": "LIT-ALLOW-NOREASON",
+        "file": "empty-reason.css",
+        "line": 3,
+        "literal": null,
+        "suggestions": []
+      }
+    ],
+    "package": "pkg-accent",
+    "root": "allowed/empty-reason.css"
+  },
+  "allowed_legacy": {
+    "exit": 0,
+    "findings": [],
+    "package": "pkg-accent",
+    "root": "allowed/legacy.css"
+  },
+  "clean": {
+    "exit": 0,
+    "findings": [],
+    "package": "../pkg/v1.0.0",
+    "root": "clean"
+  },
+  "dirty_ac2": {
+    "exit": 1,
+    "findings": [
+      {
+        "code": "LIT-COLOR-RUST",
+        "file": "theme.rs",
+        "line": 12,
+        "literal": "from_rgb(0x1f, 0x6f, 0xeb)",
+        "suggestions": [
+          "sem.brand.accent"
+        ]
+      }
+    ],
+    "package": "pkg-accent",
+    "root": "dirty/theme.rs"
+  },
+  "dirty_multi": {
+    "exit": 1,
+    "findings": [
+      {
+        "code": "LIT-DURATION-RUST",
+        "file": "anim.rs",
+        "line": 5,
+        "literal": "from_millis(120)",
+        "suggestions": [
+          "motion.fast"
+        ]
+      },
+      {
+        "code": "LIT-COLOR-HEX",
+        "file": "panel.css",
+        "line": 3,
+        "literal": "#1f5fbf",
+        "suggestions": [
+          "prim.color.blue.500",
+          "sem.focus.ring"
+        ]
+      },
+      {
+        "code": "LIT-COLOR-FUNC",
+        "file": "panel.css",
+        "line": 4,
+        "literal": "rgb(46, 133, 64)",
+        "suggestions": [
+          "prim.color.green.500",
+          "sem.status.ok"
+        ]
+      },
+      {
+        "code": "LIT-FONT-SIZE",
+        "file": "panel.css",
+        "line": 5,
+        "literal": "12pt",
+        "suggestions": []
+      },
+      {
+        "code": "LIT-SPACE-STYLE",
+        "file": "panel.css",
+        "line": 6,
+        "literal": "8px",
+        "suggestions": [
+          "space.2"
+        ]
+      },
+      {
+        "code": "LIT-DURATION-STYLE",
+        "file": "panel.css",
+        "line": 7,
+        "literal": "0.12s",
+        "suggestions": [
+          "motion.fast"
+        ]
+      }
+    ],
+    "package": "../pkg/v1.0.0",
+    "root": "dirty-multi"
+  }
+}

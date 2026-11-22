@@ -1308,6 +1308,7 @@ dependencies = [
  "fid-canon",
  "fid-design-pkg",
  "fid-types",
+ "regex",
  "toml",
  "unicode-normalization",
 ]
