@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-replay]
+updated: 2026-11-21
 ---
 
 # CORE.RPL.RECON.SNAP: Snapshot policy, validation and fallback selection

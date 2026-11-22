@@ -7,15 +7,26 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+# CORE.RPL.RECON.SNAP: SQLite snapshot table and fid-store cache integration. Off by default so
+# fid-replay stays wasm32-wasip1 compatible when built with default features.
+store = ["dep:fid-store", "fid-journal/store"]
+
 [dependencies]
 fid-types = { path = "../fid-types" }
-# Canonical JSON for the bisect report fragment; fid-canon sits below fid-replay in layers.toml.
+# Canonical JSON for the bisect report fragment and snapshot digests; fid-canon sits below
+# fid-replay in layers.toml.
 fid-canon = { path = "../fid-canon" }
-# CORE.RPL.EXEC.SUBST: commitment salts are served through fid-journal's SaltSource (REQ-004),
-# and command reachability reuses fid-registry's lifecycle and migrator checks (REQ-005).
-# Both sit below fid-replay in layers.toml (model < engine).
+# CORE.RPL.EXEC.SUBST & CORE.RPL.RECON.SNAP: commitment salts, Activity Log, and command
+# reachability. Both sit below fid-replay in layers.toml (model < engine).
 fid-journal = { path = "../fid-journal" }
 fid-registry = { path = "../fid-registry" }
+# CORE.RPL.RECON.SNAP: optional project database and evictable cache store (layer model < engine).
+fid-store = { path = "../fid-store", optional = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+fid-replay = { path = ".", features = ["store"] }
+fid-store = { path = "../fid-store" }
 
 [lints]
 workspace = true
