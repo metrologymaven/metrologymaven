@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [tools/rdl]
 satisfies: [REQ-UNC.RDL.TRACIM-001]
 covers: []
 depends_on: []

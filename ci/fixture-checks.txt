@@ -180,6 +180,7 @@ python fixtures/rdl/format/make_fixtures.py --check
 python fixtures/rdl/gen/hprec/make_fixtures.py --check
 python fixtures/rdl/rep/make_cases.py --check
 python fixtures/rdl/tracim/arch/make_fixtures.py --check
+python fixtures/rdl/tracim/mock/make_fixtures.py --check
 python fixtures/rec/adopt/make_fixtures.py --check
 python fixtures/rec/life/make_fixtures.py --check
 python fixtures/rel/guide/make_fixtures.py --check

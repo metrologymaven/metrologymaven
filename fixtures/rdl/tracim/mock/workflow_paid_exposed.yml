@@ -1,0 +1,14 @@
+name: tracim-public-bad
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  nightly-public-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Bad step exposing paid-order key secret
+        env:
+          TRACIM_PUBLIC_KEY: ${{ secrets.TRACIM_PUBLIC_KEY }}
+          TRACIM_PAID_ORDER_KEY: ${{ secrets.TRACIM_PAID_ORDER_KEY }}
+        run: fid rdl submit-tracim --test-kind public --key-ci-secret --json
