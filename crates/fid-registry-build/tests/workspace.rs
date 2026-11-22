@@ -373,8 +373,8 @@ fn geo_cmd_errors_map_onto_the_bus_catalogue() {
     assert_eq!(E::IdCollision(id).bus_error(), (bus.code().as_str(), bus.reason()));
 }
 
-/// CORE.STO.SET's four commands are collected into the workspace manifest (hand-labelled
-/// from spec/core/sto/set/NODE.md, Design).
+/// CORE.STO.SET's four commands and CORE.STO.PRIV's two privacy commands are collected into the
+/// workspace manifest (hand-labelled from spec/core/sto/set/NODE.md and spec/core/sto/priv/NODE.md).
 #[test]
 fn the_settings_commands_are_in_the_workspace_manifest() {
     let commands = workspace_commands();
@@ -391,16 +391,19 @@ fn the_settings_commands_are_in_the_workspace_manifest() {
         ("settings.list_values@1", "R0"),
         ("settings.reset_value@1", "W2"),
         ("settings.set_admin_value@1", "A0"),
+        ("settings.set_telemetry_consent@1", "W3"),
         ("settings.set_value@1", "W2"),
+        ("settings.show_privacy@1", "R0"),
     ];
     let expected: Vec<(String, String)> = expected.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect();
     assert_eq!(settings, expected);
 }
 
-/// REQ-CORE.STO.SET-006 / AC-5, read from the exported manifest itself: the admin command has
-/// no MCP exposure (surfaces cli and gui only, projection `never`, `human_only`), the only
-/// settings tools an MCP client can see are the three ordinary ones, and no A0 command of the
-/// workspace is projected to MCP.
+/// REQ-CORE.STO.SET-006 / AC-5 and REQ-CORE.STO.PRIV-004 / AC-3, read from the exported manifest
+/// itself: both `settings.set_admin_value@1` (A0) and `settings.set_telemetry_consent@1` (W3)
+/// have no MCP exposure (surfaces cli and gui only, projection `never`, `human_only`), the
+/// settings tools an MCP client can see are the three ordinary ones plus `settings.show_privacy@1`,
+/// and no A0 command of the workspace is projected to MCP.
 #[test]
 fn set_admin_value_has_no_mcp_exposure_in_the_exported_manifest() {
     let commands = workspace_commands();
@@ -410,9 +413,18 @@ fn set_admin_value_has_no_mcp_exposure_in_the_exported_manifest() {
     assert_eq!(admin.get("human_only"), Some(&CValue::Bool(true)));
     assert_eq!(admin.get("side_effect"), Some(&CValue::Str("A0".into())));
     assert!(!on_mcp(admin));
+    let (_, consent) = commands.iter().find(|(id, _)| id == "settings.set_telemetry_consent@1").expect("collected");
+    assert_eq!(strs(consent.get("exposure")), ["cli", "gui"]);
+    assert_eq!(consent.get("mcp_projection"), Some(&CValue::Str("never".into())));
+    assert_eq!(consent.get("human_only"), Some(&CValue::Bool(true)));
+    assert_eq!(consent.get("side_effect"), Some(&CValue::Str("W3".into())));
+    assert!(!on_mcp(consent));
     let settings_on_mcp: Vec<&str> =
         commands.iter().filter(|(id, o)| id.starts_with("settings.") && on_mcp(o)).map(|(id, _)| id.as_str()).collect();
-    assert_eq!(settings_on_mcp, ["settings.list_values@1", "settings.reset_value@1", "settings.set_value@1"]);
+    assert_eq!(
+        settings_on_mcp,
+        ["settings.list_values@1", "settings.reset_value@1", "settings.set_value@1", "settings.show_privacy@1"]
+    );
     let a0_on_mcp: Vec<&str> = commands
         .iter()
         .filter(|(_, o)| on_mcp(o) && matches!(o.get("side_effect"), Some(CValue::Str(c)) if c == "A0"))

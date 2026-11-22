@@ -1,0 +1,1 @@
+{"collected":["app_version","command_counts_by_domain","crash_signal_name","os_family"],"excluded":["file_paths","geometry_and_measurements","host_and_user_names","project_contents","serial_numbers"],"format":"fid-telemetry-description/1","purpose":"Aggregate reliability and feature-usage counts to guide open-source maintenance.","retention_days":90,"version":1}

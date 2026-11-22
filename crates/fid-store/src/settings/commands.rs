@@ -371,6 +371,18 @@ pub struct ChangeEntry {
 }
 
 impl ChangeEntry {
+    pub(crate) fn new(
+        command: &'static str,
+        key: String,
+        scope: Scope,
+        value: Option<CValue>,
+        previous: Option<CValue>,
+        principal: PrincipalKind,
+        branch: Option<String>,
+    ) -> ChangeEntry {
+        ChangeEntry { command, key, scope, value, previous, principal, branch }
+    }
+
     /// The command ID, e.g. `settings.set_value@1` (also the journal event type).
     pub fn command(&self) -> &'static str {
         self.command
@@ -520,6 +532,14 @@ fn change(
 ) -> Result<(Option<CValue>, Option<CValue>), SettingsError> {
     // 1. Declared key.
     let decl = ctx.registry.get(key).ok_or_else(|| SettingsError::UnknownKey(format!("no setting {key}")))?;
+    // Dedicated-command guard (CORE.STO.PRIV): telemetry consent is written only through
+    // `settings.set_telemetry_consent@1`.
+    if key == crate::privacy::TELEMETRY_CONSENT_KEY {
+        return Err(SettingsError::Policy(format!(
+            "{key} changes only through {}",
+            crate::privacy::SET_TELEMETRY_CONSENT
+        )));
+    }
     // 2. Admin flag (REQ-005, REQ-006).
     let admin_command = command == SET_ADMIN_VALUE;
     if decl.admin() && !admin_command {

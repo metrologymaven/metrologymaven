@@ -17,7 +17,9 @@ determinism: D0
 cli: [fid settings set-telemetry-consent, fid settings show-privacy]
 mcp: [settings_show_privacy]
 journal: [settings.set_telemetry_consent@1, settings.show_privacy@1]
-updated: 2026-11-16
+built_in: [fid-store]
+built_pr: 477
+updated: 2026-11-22
 ---
 
 # CORE.STO.PRIV: Offline operation and telemetry consent
