@@ -18,7 +18,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-outreach]
+updated: 2026-11-22
 ---
 
 # OUTR.BRAND.GUIDE.DRESS: Trade-dress distinctness list
