@@ -18,7 +18,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-mig, fid-xtask]
+built_pr: 482
+updated: 2026-11-22
 ---
 
 # MIG.COVER.TAXO: Per-format construct taxonomies
