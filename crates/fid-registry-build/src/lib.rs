@@ -116,10 +116,11 @@ fn report_defs() -> Result<Vec<CommandDef>, DefError> {
 /// CORE.JRN.BR.DIFF (handlers in `fid-journal-cmd`). `fid-profile-cmd` declares
 /// `sign.set_profile@1` and `sign.show_profile@1` of TRUST.PROFILE.SELECT. `fid-mig` declares
 /// `migrate.list_sources@1` of MIG.SRC.REG.
-pub const SOURCES: [Source; 15] = [
+pub const SOURCES: [Source; 16] = [
     Source { krate: "fid-align", defs: fid_align::command_defs },
     Source { krate: "fid-bus", defs: fid_bus::policy::projection::command_defs },
     Source { krate: "fid-dep", defs: dep_defs },
+    Source { krate: "fid-esig", defs: fid_esig::command_defs },
     Source { krate: "fid-geo-cmd", defs: fid_geo_cmd::command_defs },
     Source { krate: "fid-jobs", defs: fid_jobs::command_defs },
     Source { krate: "fid-journal", defs: journal_defs },

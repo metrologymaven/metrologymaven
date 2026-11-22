@@ -1,0 +1,9 @@
+{
+  "tenant_meanings": [
+    {
+      "code": "APPROVED",
+      "description": "Attempts to redefine a built-in meaning code.",
+      "label": "Duplicate approved"
+    }
+  ]
+}
