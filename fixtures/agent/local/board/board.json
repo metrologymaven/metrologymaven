@@ -1,0 +1,93 @@
+{
+  "models": [
+    {
+      "by_task": {
+        "t-align-01": {
+          "runs": 5,
+          "successes": 5,
+          "violations": 0
+        },
+        "t-align-02": {
+          "runs": 5,
+          "successes": 4,
+          "violations": 0
+        },
+        "t-bore-01": {
+          "runs": 4,
+          "successes": 3,
+          "violations": 0
+        },
+        "t-report-01": {
+          "runs": 5,
+          "successes": 5,
+          "violations": 1
+        }
+      },
+      "model": "open-qwen-32b",
+      "open_weight": true
+    },
+    {
+      "by_task": {
+        "t-align-01": {
+          "runs": 5,
+          "successes": 4,
+          "violations": 0
+        },
+        "t-bore-01": {
+          "runs": 4,
+          "successes": 4,
+          "violations": 0
+        },
+        "t-flat-01": {
+          "runs": 5,
+          "successes": 2,
+          "violations": 0
+        }
+      },
+      "model": "open-llama-70b",
+      "open_weight": true
+    },
+    {
+      "by_task": {
+        "t-align-01": {
+          "runs": 5,
+          "successes": 5,
+          "violations": 0
+        }
+      },
+      "model": "hosted-frontier-closed",
+      "open_weight": false
+    }
+  ],
+  "release": "r2026.1",
+  "tasks": {
+    "t-align-01": {
+      "workflows": [
+        "inspect.align_scan"
+      ]
+    },
+    "t-align-02": {
+      "workflows": [
+        "inspect.align_scan"
+      ]
+    },
+    "t-bore-01": {
+      "workflows": [
+        "inspect.measure_bore"
+      ]
+    },
+    "t-flat-01": {
+      "workflows": [
+        "inspect.check_flatness"
+      ]
+    },
+    "t-report-01": {
+      "workflows": [
+        "inspect.export_report"
+      ]
+    }
+  },
+  "verdict": {
+    "outcome": "pass"
+  }
+}

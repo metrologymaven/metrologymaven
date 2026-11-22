@@ -1,0 +1,21 @@
+{
+  "manifest_digest": "sha256:fdbaa85f02ce296739f44b7b52b176322a46edcb8d9d8cec8fae16dc631fe732",
+  "rows": [
+    {
+      "catalog_version": "sha256:3a255f48f2b0e2d4b8b7111d74e07d0f2f9d48b3e94ede26842b17d67297eaa0",
+      "workflow_id": "inspect.align_scan"
+    },
+    {
+      "catalog_version": "sha256:fc3e8087a5f86b74934dab733d150a1bc161a83a84ffa3efc1897dcd9b64a306",
+      "workflow_id": "inspect.check_flatness"
+    },
+    {
+      "catalog_version": "sha256:a7d3faa8af70db178e3425c96b668ff26538144226959d8a3e267a46327cf748",
+      "workflow_id": "inspect.export_report"
+    },
+    {
+      "catalog_version": "sha256:75590c4c260c66dbfe2f2309000f2406d417429b9804f2df6b64a3a7ad102931",
+      "workflow_id": "inspect.measure_bore"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 [package]
 name = "fid-eval-board"
-description = "Metrology Maven published scoreboard tooling: claim register and claim check (spec node AGENT.BOARD.CLAIMS)"
+description = "Metrology Maven published scoreboard tooling: claim register and claim check (AGENT.BOARD.CLAIMS) and generated open-weight local model guidance page (AGENT.LOCAL.GUIDE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
