@@ -14,13 +14,15 @@
 //!    [`authorise`] (projection, approval and class checks): run, run as an approval, or
 //!    file a pending request;
 //! 4. **precondition**: [`Resolved::check_preconditions`];
-//! 5. **route** (commit classes only): the branch from the injected [`Router`]; then the
-//!    bus's own check, independent of the router, that the name is a valid branch name
-//!    (`validation/bad_branch_name`) and that an `agent` principal's branch is one an agent
-//!    owns, in the `agent/` namespace (`policy/agent_write_forbidden`); then the guards: an idempotency key is
-//!    refused (`validation/schema`, until CORE.BUS.ROUTE), `expected_head`
-//!    (`conflict/expected_head_mismatch`) and the call's view, which must be at the branch
-//!    head (`conflict/head_moved`);
+//! 5. **route** (commit classes only): the branch from the injected [`Router`]
+//!    ([`crate::route::SessionRouter`] in production); then the bus's own check, independent
+//!    of the router, that the name is a valid branch name (`validation/bad_branch_name`) and
+//!    that an `agent` principal's branch is one an agent owns, in the `agent/` namespace
+//!    (`policy/agent_write_forbidden`); then the branch's FIFO writer ticket
+//!    ([`BranchLocks`], CORE.BUS.ROUTE REQ-005), held until the call returns; then, under it,
+//!    the guards: an idempotency key is refused (`validation/schema`, until CORE.BUS.ROUTE
+//!    part 2), `expected_head` (`conflict/expected_head_mismatch`, naming the current head)
+//!    and the call's view, which must be at the branch head (`conflict/head_moved`);
 //! 6. **handler** and 7. **effects**: the handler of the command and the effects check
 //!    against its definition (CORE.BUS.PIPE.HANDLER), as two stages;
 //! 8. **commit** (commit classes only): one entry, all or nothing (below).
@@ -35,6 +37,13 @@
 //! effects check and returns the events it would commit; a call that would file a request
 //! returns [`CommandResult::WouldFile`] after the route stage, so a dry run reports the same
 //! route refusal or conflict a real filing would.
+//!
+//! **Locks (CORE.BUS.ROUTE).** A commit-class call holds its branch's ticket from the route
+//! stage to its return, so one branch has one writer at a time, served in arrival order, and
+//! the view a call was decided against cannot be overtaken by another bus commit to the same
+//! branch. Inside that, every commit of one [`Bus`] (any branch) runs under the bus-wide
+//! commit lock, because the hooks are bus-wide. Order: branch ticket, then commit lock, never
+//! the reverse; one ticket per call (`crate::route` module docs).
 //!
 //! **Commit (REQ-002, REQ-CORE.RPL.RECON.FOLD-008 (d)).** Every commit of one [`Bus`] runs
 //! under its commit lock:
@@ -81,10 +90,10 @@
 //!
 //! **Not built here** (see the leaf's NODE.md): long-running commands and the job hand-off
 //! (REQ-004, REQ-005: the registry has no long-running field, and `fid-jobs` depends on this
-//! crate), the prepared-file protocol of REQ-011, idempotency keys (CORE.BUS.ROUTE; a call
-//! that carries one is refused, fail closed), agent branch routing (CORE.BUS.ROUTE;
-//! [`OpenBranch`] refuses agent commits, and the bus refuses an agent request on a branch
-//! that is not an `agent/` branch), the network permit of X1, I1 and D1 handlers, and
+//! crate), the prepared-file protocol of REQ-011, idempotency keys (CORE.BUS.ROUTE part 2; a
+//! call that carries one is refused, fail closed), agent branch routing (CORE.BUS.ROUTE part
+//! 2; [`crate::route::SessionRouter`] refuses agent commits, and the bus refuses an agent
+//! request on a branch that is not an `agent/` branch), the network permit of X1, I1 and D1 handlers, and
 //! rebuilding hooks from the journal on reopen. Appends made outside the bus (not through
 //! [`Bus::execute`]) are not seen by the hooks.
 //!
@@ -103,6 +112,7 @@ use crate::handler::{run_stage, CancelToken, CheckedEvents, Event, HandlerCtx, H
 use crate::policy::fs::check_raw_paths;
 use crate::policy::projection::{authorise, Decision, EntryOrigin, Filing, RecordContext, RequestId};
 use crate::principal::{Channel, ChannelKind, JournalAppend, Principal, PrincipalKind, SessionTable};
+use crate::route::{check_expected_head, BranchLocks, BranchTicket};
 use crate::validate::{CommandTable, Validated};
 use fid_canon::{CValue, Digest};
 use fid_journal::branch::{BranchName, EntryOrigin as JournalOrigin, EventSource, Owner, AGENT_PREFIX};
@@ -269,9 +279,9 @@ pub struct SystemCall {
 
 // ------------------------------------------------------------------ injected parts
 
-/// The route stage's branch choice (CORE.BUS.ROUTE implements the full rules; until then
-/// [`OpenBranch`]). The bus does not trust it on agent writes: whatever a router returns, an
-/// `agent` principal's commit or request branch must start with `agent/`, else
+/// The route stage's branch choice; [`crate::route::SessionRouter`] implements CORE.BUS.ROUTE's
+/// rules. The bus does not trust it on agent writes: whatever a router returns, an `agent`
+/// principal's commit or request branch must start with `agent/`, else
 /// `policy/agent_write_forbidden`.
 pub trait Router: Send + Sync {
     /// The branch a call of `def` by `principal` on `channel` commits to (for a read: the
@@ -279,40 +289,6 @@ pub trait Router: Send + Sync {
     fn branch(&self, principal: &Principal, channel: &dyn Channel, def: &CommandDef) -> Result<String, BusError>;
     /// The branch a pending request filed by `principal` is committed to.
     fn request_branch(&self, principal: &Principal, channel: &dyn Channel) -> Result<String, BusError>;
-}
-
-/// A [`Router`] for one session's open branch: every commit and request goes to it, except
-/// that an `agent` principal's commit classes are refused with `policy/agent_write_forbidden`
-/// (agents commit only to their own `agent/` branches, CONSTITUTION §3; that routing is
-/// CORE.BUS.ROUTE's). An agent's request is routed to the open branch too, which the bus's
-/// agent-branch check then refuses unless the open branch is an `agent/` branch. Fail closed
-/// until CORE.BUS.ROUTE is built.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OpenBranch {
-    branch: String,
-}
-
-impl OpenBranch {
-    /// The router of a session whose open branch is `branch`.
-    pub fn new(branch: &str) -> OpenBranch {
-        OpenBranch { branch: branch.to_string() }
-    }
-}
-
-impl Router for OpenBranch {
-    fn branch(&self, principal: &Principal, _channel: &dyn Channel, def: &CommandDef) -> Result<String, BusError> {
-        if !is_read(def.side_effect) && principal.kind() == PrincipalKind::Agent {
-            return Err(BusError::Policy(
-                PolicyReason::AgentWriteForbidden,
-                Detail::new("agent commits go to an agent branch; agent branch routing (CORE.BUS.ROUTE) is not built"),
-            ));
-        }
-        Ok(self.branch.clone())
-    }
-
-    fn request_branch(&self, _principal: &Principal, _channel: &dyn Channel) -> Result<String, BusError> {
-        Ok(self.branch.clone())
-    }
 }
 
 /// The Record Journal as the commit stage uses it. [`Journal`] implements it.
@@ -458,6 +434,7 @@ pub struct Bus {
     hooks: Hooks,
     reasons: BTreeMap<String, String>,
     probe: Arc<dyn StageProbe>,
+    branch_locks: BranchLocks,
     commit_lock: Mutex<()>,
     poisoned: AtomicBool,
 }
@@ -478,7 +455,7 @@ fn invariant(detail: &str) -> BusError {
 }
 
 /// Whether `class` is a read (R0, R1): never committed to the Record Journal (D-031).
-fn is_read(class: SideEffect) -> bool {
+pub(crate) fn is_read(class: SideEffect) -> bool {
     match class {
         SideEffect::R0 | SideEffect::R1 => true,
         SideEffect::W1
@@ -517,8 +494,8 @@ fn locality(kind: ChannelKind) -> Locality {
 /// The bus's own branch check, independent of the [`Router`]: the routed name must be a valid
 /// branch name ([`BranchName::parse`], else `validation/bad_branch_name`), and an `agent`
 /// principal commits and files requests only on a branch it owns as an agent
-/// ([`Owner::Agent`], the `agent/` namespace; CONSTITUTION §3).
-fn agent_branch(principal: &Principal, branch: &str) -> Result<(), BusError> {
+/// ([`Owner::Agent`], the `agent/` namespace; CONSTITUTION §3). Returns the checked name.
+fn agent_branch(principal: &Principal, branch: &str) -> Result<BranchName, BusError> {
     let name = BranchName::parse(branch).map_err(|e| {
         BusError::Validation(ValidationReason::BadBranchName, Detail::new(&format!("routed branch: {e}")))
     })?;
@@ -528,7 +505,7 @@ fn agent_branch(principal: &Principal, branch: &str) -> Result<(), BusError> {
             Detail::new(&format!("an agent writes only to an {AGENT_PREFIX} branch; the call was routed to {branch}")),
         ));
     }
-    Ok(())
+    Ok(name)
 }
 
 /// A read (R0, R1) has no branch head to guard and no entry: an envelope field that only a
@@ -560,10 +537,12 @@ fn ai_assistance(kind: PrincipalKind) -> AiAssistance {
     }
 }
 
-/// The routed branch and the head the call is decided against.
+/// The routed branch, the head the call is decided against, and the branch's writer ticket,
+/// held until the target is dropped at the end of the call (CORE.BUS.ROUTE REQ-005).
 struct Target {
     branch: String,
     head: Digest,
+    _ticket: BranchTicket,
 }
 
 /// One built entry, ready to append.
@@ -587,6 +566,7 @@ impl Bus {
             hooks: Hooks::default(),
             reasons: BTreeMap::new(),
             probe: Arc::new(NoProbe),
+            branch_locks: BranchLocks::new(),
             commit_lock: Mutex::new(()),
             poisoned: AtomicBool::new(false),
         }
@@ -620,6 +600,12 @@ impl Bus {
     /// outcome after the precommit, or a panic while the commit lock was held.
     pub fn is_poisoned(&self) -> bool {
         self.poisoned.load(Ordering::SeqCst) || self.commit_lock.is_poisoned()
+    }
+
+    /// How many calls hold or wait for `branch`'s writer ticket (CORE.BUS.ROUTE REQ-005);
+    /// 0 when no call is writing it.
+    pub fn branch_writers(&self, branch: &str) -> u64 {
+        self.branch_locks.queued(branch)
     }
 
     fn poison(&self) {
@@ -721,28 +707,25 @@ impl Bus {
         def: &CommandDef,
     ) -> Result<Target, BusError> {
         let branch = self.router.branch(principal, call.channel, def)?;
-        agent_branch(principal, &branch)?;
-        self.guard(call, inv, branch)
+        let name = agent_branch(principal, &branch)?;
+        self.guard(call, inv, &name)
     }
 
-    /// The guards of the route stage: idempotency keys refused (CORE.BUS.ROUTE), then
-    /// `expected_head`, then the view's head against the branch head.
-    fn guard(&self, call: &Call<'_>, inv: &Invocation, branch: String) -> Result<Target, BusError> {
+    /// The branch's writer ticket (CORE.BUS.ROUTE REQ-005; taken while the call holds no
+    /// other bus lock), then, under it, the guards of the route stage: idempotency keys
+    /// refused (CORE.BUS.ROUTE part 2), then `expected_head` (the conflict names the current
+    /// head, REQ-004), then the view's head against the branch head.
+    fn guard(&self, call: &Call<'_>, inv: &Invocation, name: &BranchName) -> Result<Target, BusError> {
         if inv.idempotency_key.is_some() {
             return Err(BusError::Validation(
                 ValidationReason::Schema,
-                Detail::new("idempotency_key needs the idempotency table of CORE.BUS.ROUTE, which is not built"),
+                Detail::new("idempotency_key needs the idempotency table of CORE.BUS.ROUTE part 2, which is not built"),
             ));
         }
+        let ticket = self.branch_locks.acquire(name)?;
+        let branch = name.as_str().to_string();
         let head = self.journal.branch_head(&branch)?.unwrap_or(GENESIS_PREV);
-        if let Some(expected) = inv.expected_head {
-            if expected != head {
-                return Err(BusError::Conflict(
-                    ConflictReason::ExpectedHeadMismatch,
-                    Detail::new(&format!("expected head {expected}, branch {branch} is at {head}")),
-                ));
-            }
-        }
+        check_expected_head(&branch, inv.expected_head, head)?;
         let seen = call.view.head();
         if seen != head {
             return Err(BusError::Conflict(
@@ -750,7 +733,7 @@ impl Bus {
                 Detail::new(&format!("the call's state is at {seen}, branch {branch} is at {head}")),
             ));
         }
-        Ok(Target { branch, head })
+        Ok(Target { branch, head, _ticket: ticket })
     }
 
     /// REQ-003: a pending request instead of the command. A dry run stops after the route
@@ -764,8 +747,8 @@ impl Bus {
     ) -> Result<CommandResult, BusError> {
         self.enter(Stage::Route)?;
         let branch = self.router.request_branch(principal, call.channel)?;
-        agent_branch(principal, &branch)?;
-        let target = self.guard(call, inv, branch)?;
+        let name = agent_branch(principal, &branch)?;
+        let target = self.guard(call, inv, &name)?;
         self.refuse_if_poisoned()?;
         if inv.dry_run {
             return Ok(CommandResult::WouldFile { command: filing.command().clone() });

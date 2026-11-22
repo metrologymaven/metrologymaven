@@ -6,6 +6,7 @@ pub mod handler;
 pub mod pipeline;
 pub mod policy;
 pub mod principal;
+pub mod route;
 mod unicode16;
 pub mod unit;
 pub mod validate;
@@ -25,8 +26,7 @@ pub use handler::{
 };
 pub use pipeline::{
     append_outcome, journal_error, AppendFailure, AppendOutcome, Bus, BusEnv, BusParts, Call, CommandResult,
-    CommitHook, CommitRecord, Invocation, OpenBranch, RecordJournal, Router, Stage, StageProbe, StagedFold, SystemCall,
-    Watch,
+    CommitHook, CommitRecord, Invocation, RecordJournal, Router, Stage, StageProbe, StagedFold, SystemCall, Watch,
 };
 pub use policy::class::{
     authorise_cancel, authorise_class, class_rule, policy_matrix_json, policy_matrix_value, ClassRule,
@@ -47,6 +47,7 @@ pub use principal::{
     DEFAULT_IGNORABLE_RANGES, FORMAT_RANGES, MAX_ID_BYTES, MAX_SELF_ASSERTED_CHARS, MAX_UPGRADED_SESSIONS,
     PRIVATE_USE_RANGES, UNASSIGNED_RANGES, UPGRADE_DEADLINE,
 };
+pub use route::{check_expected_head, BranchLocks, BranchTicket, HeadConflict, RouteTarget, SessionRouter};
 pub use unit::{
     algorithm_id, normalise, normalise_value, AuthoredLiteral, DecimalString, Normalised, UnitSymbol, ALGORITHM,
     MAX_EXPONENT, MAX_LITERAL_BYTES, MAX_SIG_DIGITS, MIN_EXPONENT,
