@@ -1,0 +1,103 @@
+name: io-fuzz
+# IO.CORP.FUZZ (REQ-001..REQ-004): coverage check, per-merge (10 CPU-min) and weekly (8 CPU-hour)
+# fuzzing of every registered first-party reader under IO.REG.LIMITS (16 MiB bytes, depth 64),
+# with per-input 10 s timeout, 2 GiB memory cap, crash minimisation and artefact upload.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 4 * * 0"
+  workflow_dispatch:
+    inputs:
+      budget_secs:
+        description: "Per-target CPU budget in seconds (default: 600 merge / 28800 weekly)"
+        required: false
+        default: ""
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+jobs:
+  coverage-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - name: Check every registered first-party reader has a fuzz target (REQ-001)
+        run: |
+          cargo run --locked -p fid-io-corp --bin corpus-fuzz -- check \
+            --formats fixtures/io/corp/manif/registry_ok.json \
+            --targets crates/fid-io-corp/fuzz/fuzz_targets
+
+  fuzz-readers:
+    needs: coverage-check
+    runs-on: ubuntu-latest
+    # Weekly budget is 8 CPU-hours (28 800 s = 480 min) + overhead; merge budget is 10 CPU-min (600 s).
+    timeout-minutes: 540
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: nightly
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+      - name: Stage manifest seeds (accepted + hostile)
+        run: |
+          mkdir -p "$RUNNER_TEMP/fuzz-seeds" "$RUNNER_TEMP/fuzz-artifacts"
+          cargo run --locked -p fid-io-corp --bin corpus-fuzz -- seed \
+            --corpus fixtures/io/corp/manif/ok \
+            --formats fixtures/io/corp/manif/registry_ok.json \
+            --out "$RUNNER_TEMP/fuzz-seeds"
+      - name: Run cargo-fuzz targets with fixed budget, 10 s timeout and 2 GiB RSS cap (REQ-002, REQ-003)
+        shell: bash
+        env:
+          INPUT_BUDGET: ${{ github.event.inputs.budget_secs }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_BUDGET" ]; then
+            BUDGET="$INPUT_BUDGET"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            BUDGET=28800
+          else
+            BUDGET=600
+          fi
+          FAILED=0
+          for src in crates/fid-io-corp/fuzz/fuzz_targets/*.rs; do
+            target="$(basename "$src" .rs)"
+            seed_dir="$RUNNER_TEMP/fuzz-seeds/$target"
+            art_dir="$RUNNER_TEMP/fuzz-artifacts/$target"
+            mkdir -p "$seed_dir" "$art_dir"
+            set +e
+            cargo +nightly fuzz run --fuzz-dir crates/fid-io-corp/fuzz "$target" "$seed_dir" -- \
+              -max_total_time="$BUDGET" \
+              -timeout=10 \
+              -rss_limit_mb=2048 \
+              -artifact_prefix="$art_dir/"
+            status=$?
+            set -e
+            if [ "$status" -ne 0 ]; then
+              FAILED=1
+              # Minimise any crash artifact before upload (REQ-003).
+              for crash in "$art_dir"/crash-* "$art_dir"/oom-*; do
+                [ -f "$crash" ] || continue
+                cargo +nightly fuzz tmin --fuzz-dir crates/fid-io-corp/fuzz "$target" "$crash" \
+                  -- -timeout=10 -rss_limit_mb=2048 || true
+              done
+            fi
+          done
+          exit "$FAILED"
+      - name: Upload minimised crash/timeout artefacts on failure (REQ-003)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: io-fuzz-findings-${{ github.run_id }}
+          path: ${{ runner.temp }}/fuzz-artifacts
+          retention-days: 30
