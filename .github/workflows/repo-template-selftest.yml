@@ -1,0 +1,49 @@
+# Repository template self-test workflow (spec node ECO.REPO.TPL.SELFTEST).
+name: repo-template-selftest
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - "templates/repo/**"
+      - "tools/repo_template/**"
+      - "required-checks.toml"
+      - "fixtures/repo/tpl/selftest/required-checks.toml"
+      - "house-rules/**"
+      - ".github/workflows/repo-template-selftest.yml"
+  push:
+    branches: [main]
+    paths:
+      - "templates/repo/**"
+      - "tools/repo_template/**"
+      - "required-checks.toml"
+      - "fixtures/repo/tpl/selftest/required-checks.toml"
+      - "house-rules/**"
+      - ".github/workflows/repo-template-selftest.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  repo-template-selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run template self-test across all variants
+        env:
+          PYTHONPATH: tools
+        run: |
+          CHECKS="fixtures/repo/tpl/selftest/required-checks.toml"
+          if [ -f required-checks.toml ]; then
+            CHECKS="required-checks.toml"
+          fi
+          python -m repo_template selftest --checks "$CHECKS"
+      - name: Run repo_template unit tests
+        run: python -m unittest discover -s tools/repo_template/tests -v

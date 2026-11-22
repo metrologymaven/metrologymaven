@@ -1,0 +1,7 @@
+# Fixture required-check set for ECO.REPO.TPL.SELFTEST AC-3: `layers` has no `local` command. CC-BY-4.0.
+[[check]]
+id = "format"
+local = ["{python}", "-c", "import sys; sys.exit(0)"]
+
+[[check]]
+id = "layers"

@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [tools/repo_template]
 satisfies: [REQ-ECO.REPO.TPL-001, REQ-ECO.REPO.TPL-003]
 covers: []
 depends_on: [ECO.REPO.TPL.FILES]
