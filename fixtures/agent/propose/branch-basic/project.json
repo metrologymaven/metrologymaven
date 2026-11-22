@@ -1,0 +1,32 @@
+{
+  "branches": {
+    "agent/s1": {
+      "commands": [
+        {
+          "command": "align.fit_datum@1",
+          "head": "sha256:3e4c67b42b69ca9fc786dc7be5aff5fa54755584482356d7391e8e3a4a953391",
+          "seq": 1
+        },
+        {
+          "command": "gdt.eval_flatness@1",
+          "head": "sha256:3b512ec52cbc88292c01cd25c58cddf7402b8aec8869e27176183188400ef48d",
+          "seq": 2
+        },
+        {
+          "command": "gdt.eval_position@1",
+          "head": "sha256:83861372841c432753e8ca045481b50f00a6c806cdadac88ab31bdcba5335c27",
+          "seq": 3
+        }
+      ],
+      "created_from": "sha256:6097ac7f73a1dc1ade4e3fdea3c2be6d5179fce2297da6f44b66bf04cc28473a",
+      "head": "sha256:83861372841c432753e8ca045481b50f00a6c806cdadac88ab31bdcba5335c27",
+      "owner": "agent"
+    },
+    "main": {
+      "head": "sha256:6097ac7f73a1dc1ade4e3fdea3c2be6d5179fce2297da6f44b66bf04cc28473a",
+      "owner": "human"
+    }
+  },
+  "license": "CC0-1.0",
+  "schema": "agent-propose-branch-basic/v1"
+}

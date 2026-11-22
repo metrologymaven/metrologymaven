@@ -1,0 +1,22 @@
+{
+  "assumptions": [
+    "Thermal compensation remains nominal at 20 C."
+  ],
+  "claimed_characteristics": [
+    "00000000-0000-7000-8000-000000000101"
+  ],
+  "client": "antigravity-cli",
+  "confidence": "high",
+  "confidence_reasons": [
+    "All datum residuals below 0.003 mm with full 270-degree dowel coverage."
+  ],
+  "goal": "Revised brief after re-checking datum B dowel coverage and updating rationale.",
+  "model": "gemini-reference",
+  "rationale": [
+    "Re-checked dowel B cylinder fit after removing chamfer fringe points.",
+    "Updated flatness and position evaluations on agent/s1."
+  ],
+  "skills_used": [
+    "skill.align.datum_abc@1"
+  ]
+}
