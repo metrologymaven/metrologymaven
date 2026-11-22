@@ -436,6 +436,13 @@ impl SessionKey {
         self.number
     }
 
+    /// The number of the [`SessionTable`] that issued this key; with [`SessionKey::number`]
+    /// it names the session uniquely within the process (CORE.BUS.ROUTE keys open branches
+    /// by both).
+    pub(crate) fn table_id(&self) -> u64 {
+        self.table
+    }
+
     /// The surface's label, for display.
     pub fn label(&self) -> &SessionId {
         &self.label

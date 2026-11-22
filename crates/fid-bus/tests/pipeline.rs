@@ -11,8 +11,8 @@ use fid_bus::handler::{EntityId, EntityRef, Event, EventType, Handler, HandlerCt
 use fid_bus::handler::{SettingKey, StateView, ValidParams};
 use fid_bus::pipeline::{AppendFailure, AppendOutcome};
 use fid_bus::pipeline::{
-    Bus, BusEnv, BusParts, Call, CommandResult, CommitHook, CommitRecord, Invocation, OpenBranch, RecordJournal,
-    Router, Stage, StageProbe, StagedFold, SystemCall, Watch,
+    Bus, BusEnv, BusParts, Call, CommandResult, CommitHook, CommitRecord, Invocation, RecordJournal, Router, Stage,
+    StageProbe, StagedFold, SystemCall, Watch,
 };
 use fid_bus::policy::projection::{
     EntryOrigin, RequestBook, RequestId, RequestState, REQUEST_APPROVED, REQUEST_FILED, REQUEST_REJECTED,
@@ -21,8 +21,10 @@ use fid_bus::policy::projection::{
 use fid_bus::principal::Principal;
 use fid_bus::principal::{Channel, ChannelKind, Identity, OsUser, PrincipalId, PrincipalKind, PrincipalRef};
 use fid_bus::principal::{SessionId, SessionKey, SessionTable};
+use fid_bus::route::SessionRouter;
 use fid_bus::validate::{CommandTable, NoRoots};
 use fid_canon::{parse, CValue, Digest};
+use fid_journal::branch::BranchName;
 use fid_journal::stream::{format_utc, ActivityLog, ActivityLogConfig, RecordingFlag, Streams, CURRENT_FILE};
 use fid_journal::{
     AiAssistance, AppendRequest, CommandDraft, DraftBody, EntryDraft, EntryHash, EntryHeader, EntryPayload, EntryTime,
@@ -421,10 +423,10 @@ impl StagedFold for PanickingStage {
 
 // ------------------------------------------------------------------ routers
 
-/// The harness router: commits as [`OpenBranch`] (agent commits refused); requests to the
+/// The harness router: commits as [`SessionRouter`] (agent commits refused); requests to the
 /// open branch, except an agent's, which go to `agent/<id>` (the request's source branch).
 struct Harnessed {
-    open: OpenBranch,
+    open: SessionRouter,
 }
 
 impl Router for Harnessed {
@@ -520,8 +522,12 @@ fn table() -> Arc<CommandTable> {
     Arc::new(t)
 }
 
+fn router(working: &str) -> SessionRouter {
+    SessionRouter::new(BranchName::parse(working).unwrap())
+}
+
 fn harness(tag: &str) -> Harness {
-    harness_with(tag, Arc::new(Harnessed { open: OpenBranch::new(MAIN) }))
+    harness_with(tag, Arc::new(Harnessed { open: router(MAIN) }))
 }
 
 fn harness_with(tag: &str, router: Arc<dyn Router>) -> Harness {
@@ -1212,7 +1218,7 @@ fn reason_parameter_is_recorded_as_the_entry_reason() {
 
 // ------------------------------------------------------------------ fail-closed gaps
 
-/// Until CORE.BUS.ROUTE: an agent's commit is refused at route, and an idempotency key is
+/// Until CORE.BUS.ROUTE part 2: an agent's commit is refused at route, and an idempotency key is
 /// refused rather than ignored.
 #[test]
 fn route_gaps_fail_closed() {
@@ -1228,7 +1234,7 @@ fn route_gaps_fail_closed() {
 /// The bus's own agent-branch check holds whatever the router says: a hostile router that
 /// sends an agent's commit or request to `main` gets `policy/agent_write_forbidden` at the
 /// route stage, the handler is not called and nothing is appended; a person's commit still
-/// goes through. The shipped `OpenBranch` routes an agent's request to the open branch, and
+/// goes through. The shipped `SessionRouter` routes an agent's request to the open branch, and
 /// the check refuses that too.
 #[test]
 fn an_agent_never_writes_outside_an_agent_branch_whatever_the_router() {
@@ -1246,7 +1252,7 @@ fn an_agent_never_writes_outside_an_agent_branch_whatever_the_router() {
     done(h.run("gui", &write("a", 1)).unwrap());
     assert_eq!(h.tail().unwrap().0, 1);
 
-    let open = harness_with("open", Arc::new(OpenBranch::new(MAIN)));
+    let open = harness_with("open", Arc::new(router(MAIN)));
     assert_err(open.run("mcp", &request), "policy", "agent_write_forbidden");
     assert_eq!(open.tail(), None);
 

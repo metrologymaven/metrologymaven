@@ -1,6 +1,6 @@
 [package]
 name = "fid-bus"
-description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles, MCP projection with pending requests, authored literal normalisation, the egress primitive, command resolution, parameter validation and preconditions, and the pipeline with its all-or-nothing commit (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.UNIT, CORE.BUS.POL.EGRESS, CORE.BUS.PIPE.VALID, CORE.BUS.PIPE.STAGE)"
+description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles, MCP projection with pending requests, authored literal normalisation, the egress primitive, command resolution, parameter validation and preconditions, and the pipeline with its all-or-nothing commit, and branch routing with per-branch writer locks (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.UNIT, CORE.BUS.POL.EGRESS, CORE.BUS.PIPE.VALID, CORE.BUS.PIPE.STAGE, CORE.BUS.ROUTE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
