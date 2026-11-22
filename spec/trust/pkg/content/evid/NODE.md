@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-pkg]
+built_pr: 521
 updated: 2026-11-22
 ---
 
