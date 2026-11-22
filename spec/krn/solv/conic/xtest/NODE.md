@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-solv]
+built_pr: 485
 updated: 2026-11-22
 ---
 
