@@ -6,3 +6,4 @@
 //! (operations, element builders, derived elements, relationships) implements.
 
 pub mod contract;
+pub mod ops_mid;
