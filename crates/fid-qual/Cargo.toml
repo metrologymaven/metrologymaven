@@ -1,6 +1,6 @@
 [package]
 name = "fid-qual"
-description = "Metrology Maven installation and operational qualification records, status computation and validate.show_record@1 command (spec node QUAL.IQOQ.RECORD)"
+description = "Metrology Maven installation and operational qualification records, status computation, validate.show_record@1 (QUAL.IQOQ.RECORD) and golden-journal registration validate.register_golden@1 (QUAL.IQOQ.GOLDEN)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -18,6 +18,8 @@ fid-registry = { path = "../fid-registry" }
 fid-surface = { path = "../fid-surface" }
 # Shared `sha256:` digest, side-effect and determinism types. Layer num.
 fid-types = { path = "../fid-types" }
+# Shared 128-bit UUID value type for golden IDs (UUIDv7). Layer model.
+fid-uuid = { path = "../fid-uuid" }
 
 [dev-dependencies]
 # Command-schema tests validate real parameters and results with the bus's own compiled
