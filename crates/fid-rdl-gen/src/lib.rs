@@ -9,8 +9,13 @@
 //! Intentionally depends on **no** kernel fit or solver crate (REQ-UNC.RDL.GEN.HPREC-004).
 
 pub mod hp;
+pub mod xcheck;
 
 pub use hp::{
     geometry_rng, hp_refine, hp_uniform, round16, Decimal16, GeneratorRecord, Hp, HpCert, HpError, ReferenceValue,
     MAX_REFINE_ITERATIONS, MIN_REFERENCE_DIGITS, PRECISION_BITS,
+};
+pub use xcheck::{
+    finalize, finalize_from_json, finalize_rdl_datasets, CrossCheck, CrossCheckStatus, OracleResultFile, RecordOutput,
+    XCheckError, XCheckRecord, GENERATOR_TOOL_ID, MAX_ORACLE_FILE_BYTES, ORACLE_RESULT_SCHEMA,
 };

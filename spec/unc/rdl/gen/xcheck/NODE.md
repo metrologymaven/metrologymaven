@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-rdl-gen]
 satisfies: [REQ-UNC.RDL.GEN-003]
 covers: []
 depends_on: [UNC.RDL.FORMAT, UNC.RDL.GEN.HPREC]
