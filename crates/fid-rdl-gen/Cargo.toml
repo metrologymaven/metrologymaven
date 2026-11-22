@@ -1,0 +1,22 @@
+[package]
+name = "fid-rdl-gen"
+description = "Metrology Maven tier-G Reference Data Library generator foundation: 256-bit Hp arithmetic, round16, Gauss-Newton hp_refine, seeded RNG and GeneratorRecord (spec node UNC.RDL.GEN.HPREC)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# RFC 8785 canonical JSON and SHA-256 for GeneratorRecord and reference outputs (layer model).
+fid-canon = { path = "../fid-canon" }
+# Kernel counter-based Philox4x32-10 RNG only (KRN.NUM.RNG, layer num); no fit or solver crates.
+fid-num = { path = "../fid-num" }
+# RDL record types (HexF64, Reference, Tier; layer services).
+fid-rdl = { path = "../fid-rdl" }
+# Shared sha256: digest type (AGENTS.md rule 14, layer num).
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true

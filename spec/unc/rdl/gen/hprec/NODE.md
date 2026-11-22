@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-rdl-gen]
+updated: 2026-11-22
 ---
 
 # UNC.RDL.GEN.HPREC: High-precision arithmetic, rounding and generator record

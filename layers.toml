@@ -133,6 +133,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-io-corp" = "tool"
 "fid-eval-suite" = "tool"
 "fid-qif-gen" = "tool"
+# Tier-G RDL generator foundation (UNC.RDL.GEN.HPREC): pure-Rust 256-bit Hp, round16, hp_refine.
+"fid-rdl-gen" = "tool"
 # Surface generator (AUTO.SURF.GEN): build-time xtask library over fid-surface (services).
 "fid-surface-gen" = "tool"
 "fid-agent" = "tool"

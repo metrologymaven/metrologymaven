@@ -28,6 +28,7 @@ fid-num
 fid-profile
 fid-project
 fid-rdl
+fid-rdl-gen
 fid-rep
 fid-replay
 fid-report-pdf
