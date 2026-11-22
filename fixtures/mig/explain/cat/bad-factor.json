@@ -1,0 +1,13 @@
+{
+  "candidates": [
+    {
+      "factor": "PROBE_RADIUS",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "radius_mm": 2.0
+      },
+      "source": "UserSelected"
+    }
+  ]
+}

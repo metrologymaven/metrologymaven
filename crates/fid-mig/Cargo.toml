@@ -9,6 +9,9 @@ repository.workspace = true
 publish = false
 
 [dependencies]
+# MIG.EXPLAIN.CAT: principal identification (CORE.BUS.PRIN) and factor setting schema validation
+# (`fid_bus::validate::Compiled`), engine layer, below this crate.
+fid-bus = { path = "../fid-bus" }
 # Bounded JSON parsing and the RFC 8785 canonical form behind the ladder digest (CORE.JRN.CANON).
 fid-canon = { path = "../fid-canon" }
 # Shared command IDs and the `sha256:` digest type (AGENTS.md rule 14).
@@ -18,11 +21,6 @@ fid-types = { path = "../fid-types" }
 fid-io-reg = { path = "../fid-io-reg" }
 # MIG.SRC.REG: the registry definition of `migrate.list_sources@1` (CORE.REG.DEF, model layer).
 fid-registry = { path = "../fid-registry" }
-
-[dev-dependencies]
-# MIG.SRC.REG: parameters and results are validated with the bus's own schema evaluator
-# (`fid_bus::validate::Compiled`), engine layer, below this crate.
-fid-bus = { path = "../fid-bus" }
 
 [lints]
 workspace = true

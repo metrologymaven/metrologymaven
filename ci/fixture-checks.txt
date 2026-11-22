@@ -145,6 +145,7 @@ python fixtures/man/xart-calls-v1/make_fixtures.py --check
 python fixtures/manifest/make_fixtures.py --check
 python fixtures/mcp/make_fixtures.py --check
 python fixtures/mig/cover/taxo/make_fixtures.py --check
+python fixtures/mig/explain/cat/make_fixtures.py --check
 python fixtures/mig/ladder/def/make_fixtures.py --check
 python fixtures/mig/src/reg/make_fixtures.py --check
 python fixtures/num/fmt/make_ang_fixtures.py --check
