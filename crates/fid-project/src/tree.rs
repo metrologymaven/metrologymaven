@@ -89,6 +89,8 @@ pub const MAX_EVENT_TYPE_BYTES: usize = 128;
 pub const MAX_GROUP_DEPTH: usize = 64;
 /// Entity kind of a group in the state view.
 pub const GROUP_KIND: &str = "project.group";
+/// Entity kind of the group child-index entity in the state view.
+pub const GROUP_LIST_KIND: &str = "project.group_list";
 /// Core event: a group was created.
 pub const GROUP_CREATED: &str = "GroupCreated";
 /// Core event: an element was created.
@@ -577,12 +579,9 @@ pub struct Group {
 
 impl Group {
     fn new(id: Uuid, parent: Option<Uuid>, name: ElementName) -> Group {
-        let body = obj([
-            ("id", uuid_value(&id)),
-            ("name", text(name.as_untrusted_str())),
-            ("parent", parent.as_ref().map_or(CValue::Null, uuid_value)),
-        ]);
-        Group { id, parent, name, body }
+        let mut g = Group { id, parent, name, body: CValue::Null };
+        g.rebuild_body();
+        g
     }
 
     pub fn id(&self) -> Uuid {
@@ -665,6 +664,8 @@ pub struct Tree {
     /// True once an `ElementsMoved` event has been applied; controls whether `child_order`
     /// is emitted in [`Tree::to_value`] so pre-move trees keep their exact legacy digest.
     has_moved: bool,
+    group_list: Uuid,
+    group_list_body: CValue,
     stage_list: Uuid,
     records: BTreeMap<Uuid, Stage>,
     list_body: CValue,
@@ -683,6 +684,11 @@ pub(crate) fn reserved_id(namespace: Uuid, kind: &str) -> Result<Uuid, TreeError
     Ok(ids.derive_v5(&obj([("kind", text(kind))]))?)
 }
 
+/// The reserved ID of the group child-index entity in `namespace`.
+pub fn group_list_id(namespace: Uuid) -> Result<Uuid, TreeError> {
+    reserved_id(namespace, GROUP_LIST_KIND)
+}
+
 impl Tree {
     /// An empty tree: the root group and the implicit default stage, which is also the
     /// active stage. Both IDs are reserved UUIDv5s of `namespace` (see the module docs).
@@ -690,6 +696,7 @@ impl Tree {
         let root = reserved_id(namespace, "project.tree_root")?;
         let stage = reserved_id(namespace, "project.default_stage")?;
         let stage_list = stage_list_id(namespace)?;
+        let group_list = group_list_id(namespace)?;
         let mut groups = BTreeMap::new();
         groups.insert(root, Group::new(root, None, ElementName::default()));
         let mut child_order = BTreeMap::new();
@@ -703,6 +710,8 @@ impl Tree {
             groups,
             child_order,
             has_moved: false,
+            group_list,
+            group_list_body: CValue::Null,
             stage_list,
             records: BTreeMap::new(),
             list_body: CValue::Null,
@@ -710,6 +719,7 @@ impl Tree {
             default_data: 0,
         };
         tree.rebuild_list();
+        tree.rebuild_group_list();
         Ok(tree)
     }
 
@@ -815,6 +825,11 @@ impl Tree {
         self.stage_list
     }
 
+    /// The ID of the group child-index entity (`GROUP_LIST_KIND`).
+    pub fn group_list_id(&self) -> Uuid {
+        self.group_list
+    }
+
     /// One stage's data: `{"elements": {<id>: {"digest", "state"}}, "stage": <id>}` over
     /// every element whose slot for the stage holds data (empty `not_computed` slots with no
     /// digest are left out, so creating an element, or giving it data in another stage, does
@@ -881,7 +896,25 @@ impl Tree {
         if *id == self.stage_list {
             return Some((STAGE_LIST_KIND, &self.list_body));
         }
+        if *id == self.group_list {
+            return Some((GROUP_LIST_KIND, &self.group_list_body));
+        }
         self.groups.get(id).map(|g| (GROUP_KIND, &g.body))
+    }
+
+    fn group_list_value(&self) -> CValue {
+        let mut children: BTreeMap<String, Vec<CValue>> = BTreeMap::new();
+        for g in self.groups.values() {
+            if let Some(p) = g.parent {
+                children.entry(p.to_string()).or_default().push(uuid_value(&g.id));
+            }
+        }
+        let map = children.into_iter().map(|(k, v)| (k, CValue::Arr(v))).collect();
+        obj([("children", CValue::Obj(map))])
+    }
+
+    fn rebuild_group_list(&mut self) {
+        self.group_list_body = self.group_list_value();
     }
 
     fn list_value(&self) -> CValue {
@@ -1027,6 +1060,7 @@ impl Tree {
                     }
                 }
                 self.rebuild_list();
+                self.rebuild_group_list();
                 Err(e)
             }
         }
@@ -1083,6 +1117,7 @@ impl Tree {
                 }
                 self.child_order.insert(id, Vec::new());
                 self.groups.insert(id, g);
+                self.rebuild_group_list();
                 created.push(id);
             }
             ELEMENT_CREATED => {
@@ -1135,6 +1170,7 @@ impl Tree {
                         kids.retain(|k| !moving_set.contains(k));
                     }
                 }
+                let mut moved_group = false;
                 for id in &ids {
                     if let Some(e) = self.elements.get_mut(id) {
                         undo.push(Undo::Element(*id, Some(e.clone())));
@@ -1144,10 +1180,14 @@ impl Tree {
                         undo.push(Undo::Group(*id, Some(g.clone())));
                         g.parent = Some(to);
                         g.rebuild_body();
+                        moved_group = true;
                     }
                 }
                 self.child_order.entry(to).or_default().extend(ids);
                 self.has_moved = true;
+                if moved_group {
+                    self.rebuild_group_list();
+                }
             }
             RENAMED => {
                 let (id, name) = self.check_renamed(body)?;
@@ -1591,6 +1631,9 @@ impl Tree {
                 return Err(invariant(format!("group {gid} child_order disagrees with parent links")));
             }
         }
+        if self.group_list_value() != self.group_list_body {
+            return Err(invariant("group list is stale".to_string()));
+        }
         Ok(())
     }
 
@@ -1602,7 +1645,7 @@ impl Tree {
 }
 
 impl IdIndex for Tree {
-    /// Elements, groups (the root included), stages and the stage list hold IDs.
+    /// Elements, groups (the root included), stages, the stage list and the group list hold IDs.
     /// The reserved default-stage ID stays held after the first explicit stage replaces it.
     fn contains_id(&self, id: &Uuid) -> bool {
         self.elements.contains_key(id)
@@ -1610,6 +1653,7 @@ impl IdIndex for Tree {
             || self.records.contains_key(id)
             || *id == self.default_stage
             || *id == self.stage_list
+            || *id == self.group_list
     }
 }
 
@@ -1654,7 +1698,7 @@ fn uuid_field(o: &BTreeMap<String, CValue>, key: &str) -> Result<Uuid, TreeError
     }
 }
 
-fn uuid_batch_field(o: &BTreeMap<String, CValue>, key: &str) -> Result<Vec<Uuid>, TreeError> {
+pub(crate) fn uuid_batch_field(o: &BTreeMap<String, CValue>, key: &str) -> Result<Vec<Uuid>, TreeError> {
     let Some(CValue::Arr(arr)) = o.get(key) else {
         return Err(TreeError::Schema(format!("{key} must be an array of UUIDs")));
     };
@@ -1757,5 +1801,47 @@ mod tests {
         let e = misfiled.elements.remove(&id).unwrap();
         misfiled.elements.insert(a, e);
         assert!(misfiled.verify().unwrap_err().to_string().contains("filed under"));
+    }
+
+    #[test]
+    fn failing_commit_rolls_back_move_rename_and_visibility() {
+        let (mut tree, eid) = tree_with_element();
+        let root = tree.root();
+        let g1 = Uuid::from_u128(0x0190_0000_0000_7000_8000_0000_0000_0010);
+        let g2 = Uuid::from_u128(0x0190_0000_0000_7000_8000_0000_0000_0020);
+        let missing = Uuid::from_u128(0x0190_0000_0000_7000_8000_0000_0000_00ff);
+        tree.apply(GROUP_CREATED, &obj([("id", uuid_value(&g1)), ("name", text("G1")), ("parent", uuid_value(&root))]))
+            .unwrap();
+        let before_digest = tree.state_digest().unwrap();
+        let before_root_children = tree.children_of(&root).to_vec();
+        assert!(!tree.has_moved);
+
+        // Commit creates g2, moves eid and g2 into g1, renames eid, hides eid, then fails on missing entity.
+        let failing_commit = vec![
+            TreeEvent::new(
+                GROUP_CREATED,
+                obj([("id", uuid_value(&g2)), ("name", text("G2")), ("parent", uuid_value(&root))]),
+            ),
+            TreeEvent::new(
+                ELEMENTS_MOVED,
+                obj([("ids", CValue::Arr(vec![uuid_value(&eid), uuid_value(&g2)])), ("to", uuid_value(&g1))]),
+            ),
+            TreeEvent::new(RENAMED, obj([("id", uuid_value(&eid)), ("name", text("Renamed"))])),
+            TreeEvent::new(
+                VISIBILITY_SET,
+                obj([("ids", CValue::Arr(vec![uuid_value(&eid)])), ("visible", CValue::Bool(false))]),
+            ),
+            TreeEvent::new(RENAMED, obj([("id", uuid_value(&missing)), ("name", text("Boom"))])),
+        ];
+        assert_eq!(tree.apply_commit(&failing_commit).unwrap_err().code(), "not_found");
+        tree.verify().unwrap();
+        assert_eq!(tree.state_digest().unwrap(), before_digest);
+        assert_eq!(tree.children_of(&root), before_root_children.as_slice());
+        assert!(tree.children_of(&g1).is_empty());
+        assert!(tree.group(&g2).is_none());
+        assert!(!tree.has_moved);
+        assert_eq!(tree.element(&eid).unwrap().parent(), root);
+        assert_eq!(tree.element(&eid).unwrap().name().as_untrusted_str(), "e");
+        assert!(tree.element(&eid).unwrap().visible());
     }
 }

@@ -10,10 +10,11 @@ use fid_bus::error::{BusError, Code, Detail, ValidationReason};
 use fid_bus::handler::{effects_check, Event, HandlerSet};
 use fid_bus::unit::Normalised;
 use fid_bus::validate::{Compiled, Hooks, RefLookup};
-use fid_canon::{parse, CValue, Digest as CanonDigest};
+use fid_canon::{parse, to_canonical_bytes, CValue, Digest as CanonDigest};
 use fid_project::{
-    Bits, ElementTypeDef, ElementTypeRegistry, Observation, Recording, ReplaySource, Tree, TreeEvent, Uuid,
-    ELEMENTS_MOVED, ELEMENT_CREATED, GROUP_CREATED, RENAMED, V7_RANDOM_BITS, VISIBILITY_SET,
+    Bits, ElementTypeDef, ElementTypeRegistry, Observation, ObservationSource, Recording, ReplaySource, Tree,
+    TreeEvent, Uuid, ELEMENTS_MOVED, ELEMENT_CREATED, GROUP_CREATED, MAX_GROUP_DEPTH, RENAMED, V7_RANDOM_BITS,
+    VISIBILITY_SET,
 };
 use fid_project_cmd::tree::TreeState;
 use fid_project_cmd::tree_cmds::{command_defs, register, result_of, run_tree, TreeOp};
@@ -145,14 +146,23 @@ fn dispatch(
     Ok(events)
 }
 
-/// AC-1, AC-2, AC-3, AC-4, AC-5:
+fn group_id_from_event(ev: &Event) -> Uuid {
+    match result_of(ev).unwrap() {
+        CValue::Obj(o) => match o.get("group") {
+            Some(CValue::Str(s)) => Uuid::parse(s).unwrap(),
+            _ => panic!("missing group"),
+        },
+        _ => panic!("result must be object"),
+    }
+}
+
+/// AC-1, AC-2, AC-3, AC-4:
 /// - AC-1: create-group "Datums", move e1,e2,e3 into it preserving order; 2 W2 commits recorded.
 /// - AC-2: groups A ⊃ B; moving A into B fails validation/hierarchy and commits nothing.
 /// - AC-3: rename-element e1 and e2 both to "Plane 1" succeeds (non-unique untrusted names).
-/// - AC-4: set-visibility e4,e5 false hides both; undo by head move restores them.
-/// - AC-5: replaying the journal from clean p30 produces IDENTICAL state digest.
+/// - AC-4: set-visibility e4,e5 false hides both; head-move undo (prefix refold) restores them.
 #[test]
-fn ac1_through_ac5_full_workflow_undo_and_exact_replay() {
+fn ac1_through_ac4_full_workflow_and_undo() {
     let mut p30 = load_p30();
     let source = make_source(16);
     let mut set = HandlerSet::new();
@@ -173,14 +183,7 @@ fn ac1_through_ac5_full_workflow_undo_and_exact_replay() {
     .expect("create Datums");
     assert_eq!(evs1.len(), 1);
     assert_eq!(evs1[0].type_id().as_str(), GROUP_CREATED);
-    let res1 = result_of(&evs1[0]).unwrap();
-    let datums_id = match res1 {
-        CValue::Obj(ref o) => match o.get("group") {
-            Some(CValue::Str(s)) => Uuid::parse(s).unwrap(),
-            _ => panic!("missing group"),
-        },
-        _ => panic!("result must be object"),
-    };
+    let datums_id = group_id_from_event(&evs1[0]);
     assert_eq!(p30.state.tree().group(&datums_id).unwrap().parent(), Some(p30.root));
     assert_eq!(p30.state.tree().group(&datums_id).unwrap().name().as_untrusted_str(), "Datums");
 
@@ -219,13 +222,7 @@ fn ac1_through_ac5_full_workflow_undo_and_exact_replay() {
         &mut journal,
     )
     .unwrap();
-    let group_a = match result_of(&evs_a[0]).unwrap() {
-        CValue::Obj(o) => match o.get("group") {
-            Some(CValue::Str(s)) => Uuid::parse(s).unwrap(),
-            _ => panic!(),
-        },
-        _ => panic!(),
-    };
+    let group_a = group_id_from_event(&evs_a[0]);
 
     let evs_b = dispatch(
         &set,
@@ -237,13 +234,7 @@ fn ac1_through_ac5_full_workflow_undo_and_exact_replay() {
         &mut journal,
     )
     .unwrap();
-    let group_b = match result_of(&evs_b[0]).unwrap() {
-        CValue::Obj(o) => match o.get("group") {
-            Some(CValue::Str(s)) => Uuid::parse(s).unwrap(),
-            _ => panic!(),
-        },
-        _ => panic!(),
-    };
+    let group_b = group_id_from_event(&evs_b[0]);
 
     let before_cycle_digest = p30.state.tree().state_digest().unwrap();
     let before_cycle_len = journal.len();
@@ -330,15 +321,133 @@ fn ac1_through_ac5_full_workflow_undo_and_exact_replay() {
     assert!(undone.tree().element(&e4).unwrap().visible());
     assert!(undone.tree().element(&e5).unwrap().visible());
     assert_eq!(undone.tree().state_digest().unwrap(), pre_vis_digest);
+}
 
-    // AC-5: exact-mode replay of the entire journal produces IDENTICAL digest.
-    let mut replayed = load_p30().state;
-    for (_, evs) in &journal {
-        replayed.replay_commit(evs).unwrap();
+/// AC-5 (matching stage.rs `ac5_replay_is_identical`):
+/// Run the full sequence of tree commands live with a `Recording` observation source (drawing
+/// UUIDv7 IDs for `create_group`), then re-run the handlers from clean `p30` against a
+/// `ReplaySource` seeded with the recorded observations: identical canonical events and
+/// identical final state digest.
+#[test]
+fn ac5_replay_is_identical() {
+    let run = |source: &mut dyn ObservationSource| {
+        let mut p30 = load_p30();
+        let mut journal: Vec<Vec<u8>> = Vec::new();
+        let mut exec = |op: TreeOp, params: &CValue| -> Vec<Event> {
+            let evs = run_tree(op, &p30.state, params, p30.namespace, source).unwrap();
+            for e in &evs {
+                journal.push(to_canonical_bytes(&e.to_value()).unwrap());
+            }
+            p30.state.apply_commit(&evs).unwrap();
+            p30.state.tree().verify().unwrap();
+            evs
+        };
+
+        let evs1 = exec(TreeOp::CreateGroup, &obj([("name", text("Datums"))]));
+        let datums_id = group_id_from_event(&evs1[0]);
+        let evs2 = exec(TreeOp::CreateGroup, &obj([("name", text("Sub")), ("parent", text(&datums_id.to_string()))]));
+        let sub_id = group_id_from_event(&evs2[0]);
+
+        let e1 = p30.element_ids[0];
+        let e2 = p30.element_ids[1];
+        let e3 = p30.element_ids[2];
+        let e4 = p30.element_ids[3];
+        let e5 = p30.element_ids[4];
+
+        exec(
+            TreeOp::MoveElement,
+            &obj([
+                ("ids", CValue::Arr(vec![text(&e1.to_string()), text(&e2.to_string()), text(&e3.to_string())])),
+                ("to", text(&sub_id.to_string())),
+            ]),
+        );
+        exec(TreeOp::RenameElement, &obj([("id", text(&e1.to_string())), ("name", text("Plane 1"))]));
+        exec(TreeOp::RenameElement, &obj([("id", text(&e2.to_string())), ("name", text("Plane 1"))]));
+        exec(
+            TreeOp::SetVisibility,
+            &obj([
+                ("ids", CValue::Arr(vec![text(&e4.to_string()), text(&e5.to_string())])),
+                ("visible", CValue::Bool(false)),
+            ]),
+        );
+        (journal, p30.state.tree().state_digest().unwrap())
+    };
+
+    let mut live = Recording::new(ReplaySource::new(make_observations(4)));
+    let (j1, d1) = run(&mut live);
+    let recorded = live.observations().to_vec();
+    assert_eq!(recorded.len(), 4, "two UUIDv7 draws record 4 observations (NowMs + RandomBits each)");
+    let mut replay = ReplaySource::new(recorded);
+    let (j2, d2) = run(&mut replay);
+    assert_eq!(j1, j2);
+    assert_eq!(d1, d2);
+}
+
+/// Handler and apply enforce the exact same subtree-aware depth limit (`to_depth + 1 + h <= MAX_GROUP_DEPTH`).
+#[test]
+fn move_group_with_subtree_under_deep_target_rejected_by_handler() {
+    let mut p30 = load_p30();
+    let mut src = ReplaySource::new(make_observations(80));
+
+    // Build a chain of depth MAX_GROUP_DEPTH - 1 (so a leaf group fits at depth MAX_GROUP_DEPTH,
+    // but a group with a child group of height 1 would reach MAX_GROUP_DEPTH + 1).
+    let mut deep_parent = p30.root;
+    for i in 1..MAX_GROUP_DEPTH {
+        let evs = run_tree(
+            TreeOp::CreateGroup,
+            &p30.state,
+            &obj([("name", text(&format!("D{i}"))), ("parent", text(&deep_parent.to_string()))]),
+            p30.namespace,
+            &mut src,
+        )
+        .unwrap();
+        deep_parent = group_id_from_event(&evs[0]);
+        p30.state.apply_commit(&evs).unwrap();
     }
-    replayed.tree().verify().unwrap();
-    assert_eq!(replayed.tree().state_digest().unwrap(), p30.state.tree().state_digest().unwrap());
-    assert_eq!(replayed.tree().children_of(&datums_id), &[e1, e2, e3]);
+
+    // Create group A (depth 1) with child group B (subtree height of A is 1), and leaf group C (height 0).
+    let ev_a = run_tree(TreeOp::CreateGroup, &p30.state, &obj([("name", text("A"))]), p30.namespace, &mut src).unwrap();
+    let group_a = group_id_from_event(&ev_a[0]);
+    p30.state.apply_commit(&ev_a).unwrap();
+
+    let ev_b = run_tree(
+        TreeOp::CreateGroup,
+        &p30.state,
+        &obj([("name", text("B")), ("parent", text(&group_a.to_string()))]),
+        p30.namespace,
+        &mut src,
+    )
+    .unwrap();
+    let _group_b = group_id_from_event(&ev_b[0]);
+    p30.state.apply_commit(&ev_b).unwrap();
+
+    let ev_c = run_tree(TreeOp::CreateGroup, &p30.state, &obj([("name", text("C"))]), p30.namespace, &mut src).unwrap();
+    let group_c = group_id_from_event(&ev_c[0]);
+    p30.state.apply_commit(&ev_c).unwrap();
+
+    // Moving A (subtree height 1) under deep_parent (depth MAX_GROUP_DEPTH - 1) must be refused by
+    // the handler itself before emit, with Validation(Hierarchy).
+    let err = run_tree(
+        TreeOp::MoveElement,
+        &p30.state,
+        &obj([("ids", CValue::Arr(vec![text(&group_a.to_string())])), ("to", text(&deep_parent.to_string()))]),
+        p30.namespace,
+        &mut src,
+    )
+    .expect_err("handler must reject subtree exceeding MAX_GROUP_DEPTH");
+    assert!(matches!(err, BusError::Validation(ValidationReason::Hierarchy, _)), "got: {err:?}");
+
+    // Moving leaf group C (height 0) under deep_parent reaches exactly MAX_GROUP_DEPTH and succeeds.
+    let ev_ok = run_tree(
+        TreeOp::MoveElement,
+        &p30.state,
+        &obj([("ids", CValue::Arr(vec![text(&group_c.to_string())])), ("to", text(&deep_parent.to_string()))]),
+        p30.namespace,
+        &mut src,
+    )
+    .expect("leaf group at depth MAX_GROUP_DEPTH must succeed");
+    p30.state.apply_commit(&ev_ok).unwrap();
+    p30.state.tree().verify().unwrap();
 }
 
 /// Registry definitions pass schema keyword check and registry validator, and all 4 commands
@@ -371,8 +480,9 @@ fn registry_definitions_and_bus_registration() {
     }
 }
 
-/// Error paths: unknown entity -> not_found, bad name -> validation/name, group in set_visibility
-/// -> validation/bad_reference, moving root -> validation/hierarchy.
+/// Error paths: unknown entity -> not_found, bad/overlong name -> validation/name, group in
+/// set_visibility -> validation/bad_reference, moving root -> validation/hierarchy, 10_001 IDs /
+/// duplicate IDs / non-canonical uppercase UUID -> validation/schema.
 #[test]
 fn error_paths_are_typed_and_commit_nothing() {
     let p30 = load_p30();
@@ -401,6 +511,18 @@ fn error_paths_are_typed_and_commit_nothing() {
     .unwrap_err();
     assert!(matches!(err, BusError::Validation(ValidationReason::Name, _)));
 
+    // 257-character name -> Validation/Name
+    let long_name = "a".repeat(257);
+    let err = run_tree(
+        TreeOp::RenameElement,
+        &p30.state,
+        &obj([("id", text(&p30.element_ids[0].to_string())), ("name", text(&long_name))]),
+        p30.namespace,
+        &mut src,
+    )
+    .unwrap_err();
+    assert!(matches!(err, BusError::Validation(ValidationReason::Name, _)));
+
     // Group passed to set_visibility -> Validation/BadReference
     let err = run_tree(
         TreeOp::SetVisibility,
@@ -423,6 +545,44 @@ fn error_paths_are_typed_and_commit_nothing() {
     .unwrap_err();
     assert!(matches!(err, BusError::Validation(ValidationReason::Hierarchy, _)));
 
+    // Duplicate IDs -> Validation/Schema
+    let e0 = p30.element_ids[0].to_string();
+    let err = run_tree(
+        TreeOp::MoveElement,
+        &p30.state,
+        &obj([("ids", CValue::Arr(vec![text(&e0), text(&e0)])), ("to", text(&p30.root.to_string()))]),
+        p30.namespace,
+        &mut src,
+    )
+    .unwrap_err();
+    assert!(matches!(err, BusError::Validation(ValidationReason::Schema, _)));
+
+    // Non-canonical (uppercase) UUID -> Validation/Schema
+    let upper = "01930000-0001-7001-8000-00000000100A";
+    let err = run_tree(
+        TreeOp::RenameElement,
+        &p30.state,
+        &obj([("id", text(upper)), ("name", text("ok"))]),
+        p30.namespace,
+        &mut src,
+    )
+    .unwrap_err();
+    assert!(matches!(err, BusError::Validation(ValidationReason::Schema, _)));
+
+    // 10,001 IDs -> Validation/Schema
+    let too_many: Vec<CValue> = (1u128..=10_001)
+        .map(|i| text(&Uuid::from_u128(0x0193_0000_0003_7000_8000_0000_0000_0000 | i).to_string()))
+        .collect();
+    let err = run_tree(
+        TreeOp::MoveElement,
+        &p30.state,
+        &obj([("ids", CValue::Arr(too_many)), ("to", text(&p30.root.to_string()))]),
+        p30.namespace,
+        &mut src,
+    )
+    .unwrap_err();
+    assert!(matches!(err, BusError::Validation(ValidationReason::Schema, _)));
+
     // Empty name is allowed (0..=256 chars, REQ-004).
     let evs = run_tree(
         TreeOp::RenameElement,
@@ -435,7 +595,8 @@ fn error_paths_are_typed_and_commit_nothing() {
     assert_eq!(evs.len(), 1);
 }
 
-/// REQ-CORE.PRJ.TREE.GROUP-002: moving 10,000 elements in one commit preserves exact relative order.
+/// REQ-CORE.PRJ.TREE.GROUP-002: moving 10,000 elements in one commit through the bus handler
+/// preserves exact relative order.
 #[test]
 fn move_10000_elements_in_one_commit_preserves_order() {
     let ns = Uuid::from_u128(0x2222_3333_4444_4555_8666_7777_8888_9999);
@@ -469,15 +630,20 @@ fn move_10000_elements_in_one_commit_preserves_order() {
         ));
     }
     tree.apply_commit(&events).unwrap();
+    let mut state = TreeState::new(tree, CanonDigest([0u8; 32])).unwrap();
 
-    // Reverse order move of all 10,000 elements in one single event.
+    // Reverse order move of all 10,000 elements in one single commit via the bus handler.
     let reversed: Vec<Uuid> = ids.iter().rev().copied().collect();
-    let move_body = obj([
+    let params = obj([
         ("ids", CValue::Arr(reversed.iter().map(|id| text(&id.to_string())).collect())),
         ("to", text(&target_gid.to_string())),
     ]);
-    tree.apply(ELEMENTS_MOVED, &move_body).unwrap();
-    assert_eq!(tree.children_of(&target_gid), reversed.as_slice());
-    assert_eq!(tree.children_of(&root), &[target_gid]);
-    tree.verify().unwrap();
+    let mut src = ReplaySource::new(Vec::new());
+    let move_events = run_tree(TreeOp::MoveElement, &state, &params, ns, &mut src).unwrap();
+    assert_eq!(move_events.len(), 1);
+    assert_eq!(move_events[0].type_id().as_str(), ELEMENTS_MOVED);
+    state.apply_commit(&move_events).unwrap();
+    assert_eq!(state.tree().children_of(&target_gid), reversed.as_slice());
+    assert_eq!(state.tree().children_of(&root), &[target_gid]);
+    state.tree().verify().unwrap();
 }

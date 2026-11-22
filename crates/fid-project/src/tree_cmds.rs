@@ -16,12 +16,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use fid_canon::CValue;
 
-use crate::container::ContainerView;
+use crate::container::{ContainerKind, ContainerView};
 use crate::id::{IdIndex, IdService, ObservationSource, Uuid};
 use crate::stage::{STAGE_KIND, STAGE_LIST_KIND};
 use crate::tree::{
-    reserved_id, ElementName, TreeError, TreeEvent, ELEMENTS_MOVED, GROUP_CREATED, GROUP_KIND, MAX_BATCH_IDS,
-    MAX_GROUP_DEPTH, RENAMED, VISIBILITY_SET,
+    group_list_id, reserved_id, uuid_batch_field, ElementName, TreeError, TreeEvent, ELEMENTS_MOVED, GROUP_CREATED,
+    GROUP_KIND, GROUP_LIST_KIND, MAX_GROUP_DEPTH, RENAMED, VISIBILITY_SET,
 };
 
 /// Command name without major: `project.create_group`.
@@ -90,15 +90,17 @@ pub fn create_group(
 /// `project.move_element@1` (REQ-CORE.PRJ.TREE.GROUP-002, REQ-CORE.PRJ.TREE.GROUP-003).
 ///
 /// Params: `{"ids": [uuid] (1..=10_000), "to": uuid}`.
-/// Rejects any move that would make a group its own ancestor (`hierarchy`) or move the root.
-pub fn move_element(view: &dyn ContainerView, params: &CValue) -> Result<TreeEvent, TreeError> {
+/// Rejects any move that would make a group its own ancestor (`hierarchy`), exceed
+/// [`MAX_GROUP_DEPTH`] including moved group subtrees, or move the root.
+pub fn move_element(view: &dyn ContainerView, params: &CValue, namespace: Uuid) -> Result<TreeEvent, TreeError> {
     let o = params_obj(params, &["ids", "to"])?;
-    let ids = req_uuid_batch(o, "ids")?;
+    let ids = uuid_batch_field(o, "ids")?;
     let to = req_uuid(o, "to")?;
 
     ensure_group(view, to, "to")?;
     let ancestors = group_ancestors(view, to)?;
     let to_depth = ancestors.len().saturating_sub(1);
+    let mut group_children: Option<BTreeMap<Uuid, Vec<Uuid>>> = None;
 
     for id in &ids {
         let Some((kind, body)) = view.entity(id) else {
@@ -114,7 +116,15 @@ pub fn move_element(view: &dyn ContainerView, params: &CValue) -> Result<TreeEve
                     "moving group {id} into {to} would make it its own ancestor"
                 )));
             }
-            if to_depth + 1 > MAX_GROUP_DEPTH {
+            let children_map = match group_children.as_ref() {
+                Some(m) => m,
+                None => {
+                    let loaded = load_group_children(view, namespace)?;
+                    group_children.insert(loaded)
+                }
+            };
+            let h = subtree_height(children_map, *id)?;
+            if to_depth + 1 + h > MAX_GROUP_DEPTH {
                 return Err(TreeError::Hierarchy(format!(
                     "moving group {id} under {to} would exceed depth {MAX_GROUP_DEPTH}"
                 )));
@@ -161,7 +171,7 @@ pub fn rename_element(view: &dyn ContainerView, params: &CValue) -> Result<TreeE
 /// Params: `{"ids": [uuid] (1..=10_000), "visible": bool}`.
 pub fn set_visibility(view: &dyn ContainerView, params: &CValue) -> Result<TreeEvent, TreeError> {
     let o = params_obj(params, &["ids", "visible"])?;
-    let ids = req_uuid_batch(o, "ids")?;
+    let ids = uuid_batch_field(o, "ids")?;
     let visible = match o.get("visible") {
         Some(CValue::Bool(b)) => *b,
         _ => return Err(TreeError::Schema("visible must be a boolean".to_string())),
@@ -188,7 +198,66 @@ pub fn set_visibility(view: &dyn ContainerView, params: &CValue) -> Result<TreeE
 // ------------------------------------------------------------------ helpers
 
 fn is_element_kind(kind: &str) -> bool {
-    kind != GROUP_KIND && kind != STAGE_KIND && kind != STAGE_LIST_KIND
+    kind != GROUP_KIND
+        && kind != GROUP_LIST_KIND
+        && kind != STAGE_KIND
+        && kind != STAGE_LIST_KIND
+        && ContainerKind::parse(kind).is_none()
+}
+
+fn load_group_children(view: &dyn ContainerView, namespace: Uuid) -> Result<BTreeMap<Uuid, Vec<Uuid>>, TreeError> {
+    let list_id = group_list_id(namespace)?;
+    let Some((kind, body)) = view.entity(&list_id) else {
+        return Ok(BTreeMap::new());
+    };
+    if kind != GROUP_LIST_KIND {
+        return Err(TreeError::Invariant(format!("group list {list_id} has unexpected kind {kind}")));
+    }
+    let CValue::Obj(o) = body else {
+        return Err(TreeError::Invariant("group list body is not an object".to_string()));
+    };
+    let Some(CValue::Obj(map)) = o.get("children") else {
+        return Err(TreeError::Invariant("group list body missing children map".to_string()));
+    };
+    let mut out = BTreeMap::new();
+    for (k, v) in map {
+        let parent = parse_uuid(k, "group_list key")
+            .map_err(|_| TreeError::Invariant(format!("group list has malformed key {k}")))?;
+        let CValue::Arr(arr) = v else {
+            return Err(TreeError::Invariant(format!("group list children for {parent} is not an array")));
+        };
+        let mut kids = Vec::with_capacity(arr.len());
+        for item in arr {
+            let CValue::Str(s) = item else {
+                return Err(TreeError::Invariant(format!("group list child for {parent} is not a string")));
+            };
+            let kid = parse_uuid(s, "group_list child")
+                .map_err(|_| TreeError::Invariant(format!("group list has malformed child {s}")))?;
+            kids.push(kid);
+        }
+        out.insert(parent, kids);
+    }
+    Ok(out)
+}
+
+fn subtree_height(children: &BTreeMap<Uuid, Vec<Uuid>>, group: Uuid) -> Result<usize, TreeError> {
+    let mut max_h = 0usize;
+    let mut visited = BTreeSet::new();
+    let mut stack: Vec<(Uuid, usize)> = vec![(group, 0)];
+    while let Some((cur, h)) = stack.pop() {
+        if !visited.insert(cur) {
+            return Err(TreeError::Invariant(format!("cycle in group hierarchy at {cur}")));
+        }
+        if h > max_h {
+            max_h = h;
+        }
+        if let Some(kids) = children.get(&cur) {
+            for kid in kids {
+                stack.push((*kid, h + 1));
+            }
+        }
+    }
+    Ok(max_h)
 }
 
 fn ensure_group(view: &dyn ContainerView, id: Uuid, field: &str) -> Result<(), TreeError> {
@@ -277,28 +346,6 @@ fn opt_uuid(o: &BTreeMap<String, CValue>, key: &str) -> Result<Option<Uuid>, Tre
         Some(CValue::Str(s)) => Ok(Some(parse_uuid(s, key)?)),
         _ => Err(TreeError::Schema(format!("{key} must be a canonical lowercase UUID"))),
     }
-}
-
-fn req_uuid_batch(o: &BTreeMap<String, CValue>, key: &str) -> Result<Vec<Uuid>, TreeError> {
-    let Some(CValue::Arr(arr)) = o.get(key) else {
-        return Err(TreeError::Schema(format!("{key} must be an array of UUIDs")));
-    };
-    if arr.is_empty() || arr.len() > MAX_BATCH_IDS {
-        return Err(TreeError::Schema(format!("{key} must contain 1..={MAX_BATCH_IDS} IDs")));
-    }
-    let mut out = Vec::with_capacity(arr.len());
-    let mut seen = BTreeSet::new();
-    for (i, item) in arr.iter().enumerate() {
-        let CValue::Str(s) = item else {
-            return Err(TreeError::Schema(format!("{key}[{i}] must be a string")));
-        };
-        let id = parse_uuid(s, key)?;
-        if !seen.insert(id) {
-            return Err(TreeError::Schema(format!("duplicate ID {id} in {key}")));
-        }
-        out.push(id);
-    }
-    Ok(out)
 }
 
 fn obj<const N: usize>(fields: [(&str, CValue); N]) -> CValue {

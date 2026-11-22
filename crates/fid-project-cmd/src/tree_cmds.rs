@@ -69,7 +69,7 @@ pub fn run_tree(
     let v = BusView(view);
     let e = match op {
         TreeOp::CreateGroup => create_group(&v, params, namespace, source),
-        TreeOp::MoveElement => move_element(&v, params),
+        TreeOp::MoveElement => move_element(&v, params, namespace),
         TreeOp::RenameElement => rename_element(&v, params),
         TreeOp::SetVisibility => set_visibility(&v, params),
     }
