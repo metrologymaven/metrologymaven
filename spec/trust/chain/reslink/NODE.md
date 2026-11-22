@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-chain]
 satisfies: [REQ-TRUST.CHAIN-005]
 covers: []
 depends_on: [TRUST.PKG.READER]
