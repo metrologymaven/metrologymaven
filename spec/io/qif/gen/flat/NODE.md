@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-qif-gen, fid-qif-ir]
+built_pr: 502
 satisfies: [REQ-IO.QIF.GEN-004, REQ-IO.QIF.GEN-005]
 covers: []
 depends_on: [IO.QIF.GEN.PARSE]
