@@ -1,0 +1,17 @@
+{
+  "format": "journey-map@1",
+  "map_id": "per-01",
+  "persona": "Quality Engineer",
+  "steps": [
+    {
+      "action": "Open AS9102 Form 3, import PDF and verify tolerance bands",
+      "n": 1,
+      "screen": "SCR.RPT.FAIFORM"
+    },
+    {
+      "action": "Assign balloon numbers to characteristics",
+      "n": 2,
+      "screen": "SCR.RPT.BALLOON"
+    }
+  ]
+}

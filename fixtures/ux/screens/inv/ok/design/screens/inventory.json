@@ -1,0 +1,73 @@
+{
+  "format": "screen-inventory@1",
+  "screens": [
+    {
+      "app": "report",
+      "id": "SCR.RPT.FAIFORM",
+      "keyboard_path": "Tab to form grid, Enter to edit cell, Ctrl+S to save",
+      "mockup": "MK.RPT.FAIFORM@1",
+      "phase": "P1a",
+      "role_layout": "two-pane table and drawing preview",
+      "title": "AS9102 FAI Form Editor",
+      "traces": [
+        {
+          "map": "per-01",
+          "step": 1
+        }
+      ],
+      "wireframe": "WF.RPT.FAIFORM@2"
+    },
+    {
+      "app": "report",
+      "id": "SCR.RPT.BALLOON",
+      "keyboard_path": "B to place balloon, Enter to confirm number",
+      "mockup": "none",
+      "phase": "P1a",
+      "role_layout": "canvas plus characteristic rail",
+      "title": "Drawing Ballooning",
+      "traces": [
+        {
+          "map": "per-01",
+          "step": 2
+        }
+      ],
+      "wireframe": "WF.RPT.BALLOON@1"
+    },
+    {
+      "app": "inspect",
+      "id": "SCR.INSP.ALIGN",
+      "keyboard_path": "Alt+A to run alignment, Tab to inspect residuals",
+      "mockup": "MK.INSP.ALIGN@1",
+      "phase": "P1a",
+      "role_layout": "3D viewport plus inspector rail",
+      "title": "Datum Alignment Workbench",
+      "traces": [
+        {
+          "map": "per-02",
+          "step": 1
+        }
+      ],
+      "wireframe": "WF.INSP.ALIGN@1"
+    },
+    {
+      "app": "shell",
+      "id": "SCR.SHELL.START",
+      "keyboard_path": "Tab through recent projects, Enter to open",
+      "mockup": "none",
+      "phase": "P1a",
+      "role_layout": "centered launcher with recent jobs",
+      "title": "Workspace Home",
+      "traces": [
+        {
+          "map": "per-01",
+          "step": 1
+        },
+        {
+          "map": "per-02",
+          "step": 1
+        }
+      ],
+      "wireframe": "WF.SHELL.START@1"
+    }
+  ]
+}

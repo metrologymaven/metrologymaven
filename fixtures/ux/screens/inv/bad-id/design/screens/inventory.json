@@ -1,0 +1,21 @@
+{
+  "format": "screen-inventory@1",
+  "screens": [
+    {
+      "app": "report",
+      "id": "SCR.rpt.form",
+      "keyboard_path": "Tab to edit",
+      "mockup": "none",
+      "phase": "P1a",
+      "role_layout": "single pane",
+      "title": "Malformed ID Screen",
+      "traces": [
+        {
+          "map": "per-01",
+          "step": 1
+        }
+      ],
+      "wireframe": "none"
+    }
+  ]
+}

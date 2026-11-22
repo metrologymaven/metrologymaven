@@ -18,7 +18,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-design]
+built_pr: 456
+updated: 2026-11-22
 ---
 
 # UX.SCREENS.INV: Screen inventory, wireframe-ID convention and approval records

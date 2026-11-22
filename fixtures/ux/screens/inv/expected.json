@@ -1,0 +1,45 @@
+{
+  "cases": {
+    "ac1_ok": {
+      "codes": [],
+      "exit": 0
+    },
+    "ac2_untraced": {
+      "codes": [
+        "SCREEN-UNTRACED"
+      ],
+      "exit": 1,
+      "subject": "SCR.RPT.FAIFORM"
+    },
+    "ac3_stale": {
+      "codes": [
+        "SCREEN-APPROVAL-STALE"
+      ],
+      "exit": 1,
+      "subject": "SCR.RPT.FAIFORM WF.RPT.FAIFORM@1"
+    },
+    "ac4_gate_unapproved": {
+      "codes": [
+        "SCREEN-GATE-UNAPPROVED"
+      ],
+      "exit": 1,
+      "subject": "RPT.FAIFORM WF.RPT.FAIFORM@3"
+    },
+    "ac5_ga_report": {
+      "codes": [
+        "SCREEN-GA-MOCKUP-MISSING"
+      ],
+      "exit": 1,
+      "subject": "SCR.RPT.BALLOON"
+    },
+    "ac6_bad_id": {
+      "codes": [
+        "SCREEN-ID-SYNTAX"
+      ],
+      "exit": 1,
+      "subject": "SCR.rpt.form"
+    }
+  },
+  "format": "ux-screens-inv-expected@1",
+  "license": "CC-BY-4.0"
+}

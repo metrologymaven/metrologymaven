@@ -1,0 +1,14 @@
+{
+  "approver": {
+    "name": "Design Reviewer",
+    "principal": "human"
+  },
+  "artefact": "WF.INSP.ALIGN@1",
+  "date": "2026-11-17",
+  "format": "screen-approval@1",
+  "journey_digests": {
+    "per-02": "sha256:445a4813e874379f127cdcb9eb457297d90832f288e137ba1b9a5b6fa5d6b3d2"
+  },
+  "pr": 104,
+  "screen": "SCR.INSP.ALIGN"
+}
