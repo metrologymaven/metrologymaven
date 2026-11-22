@@ -2,6 +2,7 @@
 
 pub mod bisect;
 pub mod classify;
+pub mod snapshot;
 pub mod subst;
 
 pub use bisect::{
@@ -11,6 +12,14 @@ pub use bisect::{
 pub use classify::{
     aggregate, classify, Annotation, ClassifyError, Decision, Determinism, DeterminismExt, Limit, Output,
     ReplayOutcome, StepComparison, StepResult, Tolerance, ToleranceTable,
+};
+#[cfg(feature = "store")]
+pub use snapshot::store_adapter::{ActivityWarningSink, StoreLogicalAncestors, StoreSnapshotCache, StoreSnapshotTable};
+pub use snapshot::{
+    content_digest, select_valid, take, CacheRead, DocState, EventBody, FoldError, LogicalAncestors,
+    MemLogicalAncestors, MemSnapshotCache, MemSnapshotTable, SnapshotCache, SnapshotError, SnapshotPolicy,
+    SnapshotRecord, SnapshotTable, SnapshotWarning, VecWarningSink, WarningSink, ACTIVITY_WARNING_COMMAND,
+    MAX_ANCESTOR_WALK, SNAPSHOT_INTERVAL,
 };
 pub use subst::{
     preflight, BlobSource, CommandCatalog, KernelSource, MissingItem, MissingKind, Observation, ObservationKind,

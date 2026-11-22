@@ -1970,6 +1970,8 @@ dependencies = [
  "fid-canon",
  "fid-journal",
  "fid-registry",
+ "fid-replay",
+ "fid-store",
  "fid-types",
 ]
 
