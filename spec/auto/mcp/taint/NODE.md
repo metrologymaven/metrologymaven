@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [fid-mcp]
+built_pr: 431
+updated: 2026-11-21
 ---
 
 # AUTO.MCP.TAINT: Untrusted-content marking in tool results
@@ -71,7 +73,10 @@ Fixture command `demo.describe_element@1` in `fixtures/manifest/min-classes.json
 
 ## Open questions
 
-- None.
+- **Object keys under `additionalProperties`:** JSON object keys cannot carry a structured `{"untrusted": true, "text": ...}` wrapper without changing the JSON type from object to an array of entries. `render_text_with_schema` (used by `taint_and_render`, `taint_envelope`, and `call_tool_tainted`) encloses undeclared / `additionalProperties` / schema-mismatch keys in `DELIM_OPEN`..`DELIM_CLOSE` in the text rendering; if structured wrapping of map keys is desired, a future decision should define the structured shape.
+- **Emitted `outputSchema` vs. wrapped results:** `AUTO.MCP.PROJ` currently projects raw `fid-surface` result types into `output_schema`. MCP clients that validate structured tool content strictly against `outputSchema` may reject wrapped `{"untrusted": true, "text": ...}` objects unless `outputSchema` is also projected to the wrapped schema (`AUTO.MCP.SRV` / follow-up).
+- **`x-ref` trust boundary:** `x-ref` string fields are exempted as IDs only when matching safe ID token syntax; imported document IDs under `x-ref` may still originate from document files. Consider whether `x-ref` should require `format: "uuid"` / digest pattern or explicit `x-untrusted: false`.
+- **Fixture path:** `demo.describe_element@1` is stored in `fixtures/mcp/demo-describe-element.json` rather than `fixtures/manifest/min-classes.json` (which is kept minimal for `AUTO.SURF.PROJ` side-effect class tests).
 
 ## Children
 

@@ -1,0 +1,43 @@
+{
+  "id": "demo.describe_element",
+  "major": 1,
+  "title": "Describe demo element",
+  "description": "Fixture command for AUTO.MCP.TAINT acceptance tests.",
+  "side_effect": "R0",
+  "determinism": "D0",
+  "mcp_projection": "exposed",
+  "exposure": ["cli", "mcp"],
+  "result_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "kind", "name", "note", "point_count"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "kind": {
+        "type": "string",
+        "enum": ["PointSet", "PointCloud", "Mesh", "CadBodyRef"]
+      },
+      "name": {
+        "type": "string",
+        "x-untrusted": true
+      },
+      "note": {
+        "type": "string"
+      },
+      "point_count": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "x-untrusted": true
+        }
+      }
+    }
+  }
+}
