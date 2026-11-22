@@ -19,6 +19,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-val]
+built_pr: 513
 updated: 2026-11-22
 ---
 
