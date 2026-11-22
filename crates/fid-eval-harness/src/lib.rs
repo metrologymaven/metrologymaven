@@ -38,6 +38,7 @@
 
 mod adapt;
 mod path;
+pub mod record;
 mod safety;
 mod sandbox;
 mod score;

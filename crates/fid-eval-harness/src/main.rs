@@ -56,6 +56,7 @@ fn main() -> ExitCode {
         ["safety", dir, "--json"] | ["safety", "--json", dir] => safety(dir, true),
         ["score", dir] => score_cmd(dir, false),
         ["score", dir, "--json"] | ["score", "--json", dir] => score_cmd(dir, true),
+        ["report", rest @ ..] => report_cmd(rest),
         ["adapter", "check", file] => check(file, None),
         ["adapter", "check", file, "--task", task] | ["adapter", "check", "--task", task, file] => {
             check(file, Some(*task))
@@ -90,6 +91,85 @@ fn score_cmd(dir: &str, json: bool) -> ExitCode {
             ExitCode::from(1)
         }
     }
+}
+
+fn report_cmd(args: &[&str]) -> ExitCode {
+    let mut runs_dir: Option<&str> = None;
+    let mut out_file: Option<&str> = None;
+    let mut json = false;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i] {
+            "--out" => {
+                let Some(val) = args.get(i + 1) else {
+                    eprintln!("error: missing value for --out\n\n{USAGE}");
+                    return ExitCode::from(2);
+                };
+                if out_file.replace(*val).is_some() {
+                    eprintln!("error: duplicate --out\n\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+                i += 2;
+            }
+            "--json" => {
+                json = true;
+                i += 1;
+            }
+            other if other.starts_with('-') => {
+                eprintln!("error: unknown option `{other}`\n\n{USAGE}");
+                return ExitCode::from(2);
+            }
+            dir => {
+                if runs_dir.replace(dir).is_some() {
+                    eprintln!("error: unexpected positional argument `{dir}`\n\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+                i += 1;
+            }
+        }
+    }
+    let Some(runs_dir) = runs_dir else {
+        eprintln!("error: report requires <runs-dir>\n\n{USAGE}");
+        return ExitCode::from(2);
+    };
+
+    let report = match fid_eval_harness::record::report_dir(Path::new(runs_dir)) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("error: {e}");
+            return ExitCode::from(1);
+        }
+    };
+    let bytes = match report.to_canonical_json() {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("error: {e}");
+            return ExitCode::from(1);
+        }
+    };
+
+    if let Some(out) = out_file {
+        let out_path = Path::new(out);
+        if let Some(parent) = out_path.parent() {
+            if !parent.as_os_str().is_empty() {
+                if let Err(e) = std::fs::create_dir_all(parent) {
+                    eprintln!("error: cannot create {}: {e}", parent.display());
+                    return ExitCode::from(1);
+                }
+            }
+        }
+        if let Err(e) = std::fs::write(out_path, &bytes) {
+            eprintln!("error: cannot write {}: {e}", out_path.display());
+            return ExitCode::from(1);
+        }
+    }
+
+    if json || out_file.is_none() {
+        println!("{}", String::from_utf8_lossy(&bytes));
+    } else {
+        print!("{}", report.to_text());
+    }
+    ExitCode::SUCCESS
 }
 
 fn safety(dir: &str, json: bool) -> ExitCode {
