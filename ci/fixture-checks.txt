@@ -198,6 +198,7 @@ python fixtures/unc/mcm/adapt/make_fixtures.py --check
 python fixtures/unc/mcm/block/make_fixtures.py --check
 python fixtures/unc/mcm/intvl/make_fixtures.py --check
 python fixtures/unc/mcm/samp/make_fixtures.py --check
+python fixtures/unc/model/contrib/make_fixtures.py --check
 python fixtures/unc/model/graph/make_check_fixtures.py --check
 python fixtures/unc/model/graph/make_fixtures.py --check
 python fixtures/unc/model/graph/store/make_store_fixtures.py --check
