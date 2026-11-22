@@ -578,6 +578,42 @@ impl Alignment {
         Ok(Alignment { status, failure, ..self.clone() })
     }
 
+    /// The same element with a new parent reference and status, recomputing its content digest.
+    pub(crate) fn with_parent(
+        &self,
+        parent: Option<ParentRef>,
+        status: AlignmentStatus,
+    ) -> Result<Alignment, AlignError> {
+        Alignment::assemble(
+            self.id,
+            self.algorithm.clone(),
+            self.inputs.clone(),
+            self.params.clone(),
+            self.transform,
+            parent,
+            self.report,
+            self.provenance.clone(),
+            status,
+            None,
+        )
+    }
+
+    /// The same element with a new transform, recomputing its canonical form and content digest.
+    pub(crate) fn with_transform(&self, transform: Transform) -> Result<Alignment, AlignError> {
+        Alignment::assemble(
+            self.id,
+            self.algorithm.clone(),
+            self.inputs.clone(),
+            self.params.clone(),
+            transform,
+            self.parent,
+            self.report,
+            self.provenance.clone(),
+            self.status,
+            self.failure.clone(),
+        )
+    }
+
     pub fn id(&self) -> Uuid {
         self.id
     }
