@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-surface-gen]
+built_pr: 447
+updated: 2026-11-22
 ---
 
 # AUTO.SURF.DOCS: Generated command reference records
