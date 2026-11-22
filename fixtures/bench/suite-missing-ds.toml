@@ -1,0 +1,13 @@
+schema_version = 1
+suite_version = "0.0.0-bench-fixture"
+
+[[workloads]]
+id = "bench.missing"
+dataset = { id = "bench-ds-missing", sha256 = "sha256:d7915596f54fed98e261dc0b709cf25de964e4d78fc016e978a76594d22120fb" }
+repetitions = 3
+timeout_s = 60
+
+[[workloads.metrics]]
+name = "elapsed_ms"
+unit = "ms"
+better = "lower"

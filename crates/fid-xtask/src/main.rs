@@ -75,6 +75,7 @@ fn main() -> ExitCode {
         Some("lint-crate-graph") => lint_crate_graph(&args[1..]),
         Some("kernel-allow") => kernel_allow(&args[1..]),
         Some("datasets-check" | "data") => datasets_check(&args),
+        Some("bench") => fid_xtask::bench::cli(&args[1..]),
         Some("bots-check") => bots_check(&args[1..]),
         Some("bot-blocking") => bot_blocking(&args[1..]),
         Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),

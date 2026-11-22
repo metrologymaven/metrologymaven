@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+"""Fake `fid` benchmark runner for ECO.DATA.BENCH.RUN tests (AC-1..AC-4).
+
+Accepts: `doctor run-benchmark --workload <id> --dataset <path> --json`
+Emits fixed PLAT.HW.SCHEMA v1 result documents cycling through [100, 102, 98] per workload.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import sys
+from pathlib import Path
+
+VALUES = [100, 102, 98]
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) < 3 or argv[1] != "doctor" or argv[2] != "run-benchmark":
+        sys.stderr.write("expected: doctor run-benchmark ...\n")
+        return 2
+    parser = argparse.ArgumentParser(prog="fake-fid")
+    parser.add_argument("--workload", required=True)
+    parser.add_argument("--dataset", required=True)
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args(argv[3:])
+
+    log_path = os.environ.get("FAKE_FID_CALL_LOG")
+    if log_path:
+        with open(log_path, "a", encoding="utf-8") as fh:
+            fh.write(f"{args.workload}\n")
+
+    state_dir = Path(os.environ.get("FAKE_FID_STATE_DIR", "/tmp"))
+    state_dir.mkdir(parents=True, exist_ok=True)
+    counter_file = state_dir / f"count-{args.workload}.txt"
+    idx = 0
+    if counter_file.exists():
+        try:
+            idx = int(counter_file.read_text(encoding="utf-8").strip())
+        except ValueError:
+            idx = 0
+    counter_file.write_text(str(idx + 1), encoding="utf-8")
+
+    val = VALUES[idx % len(VALUES)]
+    ds_bytes = Path(args.dataset).read_bytes()
+    ds_sha = "sha256:" + hashlib.sha256(ds_bytes).hexdigest()
+
+    doc = {
+        "context": {
+            "adapter_name": "synthetic fixture adapter",
+            "app_version": "0.0.1",
+            "arch": "x86_64",
+            "cpu_model": "synthetic fixture CPU",
+            "gpu_backend": "vulkan",
+            "gpu_driver_version": "0.0.0-fixture",
+            "machine": "local",
+            "os": "ubuntu",
+            "os_version": "24.04",
+            "ram_mib": 16384,
+            "suite_version": "0.0.0-bench-fixture",
+        },
+        "schema_version": 1,
+        "workloads": [
+            {
+                "id": args.workload,
+                "metrics": [
+                    {
+                        "dataset_sha256": ds_sha,
+                        "max": val,
+                        "median": val,
+                        "min": val,
+                        "name": "elapsed_ms",
+                        "repetitions": 1,
+                        "status": "ok",
+                        "unit": "ms",
+                    }
+                ],
+            }
+        ],
+    }
+    print(json.dumps(doc, sort_keys=True, separators=(",", ":")))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

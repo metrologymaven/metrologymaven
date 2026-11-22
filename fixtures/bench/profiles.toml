@@ -1,0 +1,28 @@
+schema_version = 1
+
+[profiles.minimum]
+cores = 4
+ram_gib = 16
+gpu_class = "integrated"
+vram_gib = 2
+storage_free_gib = 20
+display = [1920, 1080]
+cpu_level = { x86_64 = "x86-64-v2", aarch64 = "armv8.0" }
+
+[profiles.min-2026]
+cores = 4
+ram_gib = 16
+gpu_class = "integrated"
+vram_gib = 2
+storage_free_gib = 20
+display = [1920, 1080]
+cpu_level = { x86_64 = "x86-64-v2", aarch64 = "armv8.0" }
+
+[profiles.recommended]
+cores = 8
+ram_gib = 32
+gpu_class = "discrete_mid"
+vram_gib = 8
+storage_free_gib = 100
+display = [2560, 1440]
+cpu_level = { x86_64 = "x86-64-v3", aarch64 = "armv8.2" }

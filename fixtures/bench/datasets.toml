@@ -1,0 +1,26 @@
+[policy]
+redistributable = ["CC0-1.0", "CC-BY-4.0", "MIT", "Apache-2.0"]
+
+[[dataset]]
+id = "bench-ds-a"
+title = "Synthetic benchmark dataset A (ECO.DATA.BENCH.RUN)"
+source = "https://example.invalid/bench-ds-a.dat"
+licence = "CC-BY-4.0"
+size_bytes = 45
+sha256 = "31a63ed1910c8ee917233d6a290542a854aed19dcd3d7e8e20d95ee39d4d1b37"
+owner = "ECO"
+redistribution = "mirror"
+urls = ["https://example.invalid/bench-ds-a.dat"]
+notes = "Synthetic benchmark fixture A."
+
+[[dataset]]
+id = "bench-ds-b"
+title = "Synthetic benchmark dataset B (ECO.DATA.BENCH.RUN)"
+source = "https://example.invalid/bench-ds-b.dat"
+licence = "CC-BY-4.0"
+size_bytes = 45
+sha256 = "c4fc1a9cf78bcafed3406d1ea3a7a6ec86ddb5d1b8659a1b448eab0ba3fc47e6"
+owner = "ECO"
+redistribution = "mirror"
+urls = ["https://example.invalid/bench-ds-b.dat"]
+notes = "Synthetic benchmark fixture B."

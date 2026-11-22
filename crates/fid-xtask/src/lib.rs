@@ -50,6 +50,7 @@
 //! built here.
 
 pub mod apps_policy;
+pub mod bench;
 pub mod bots;
 pub mod conic_audit;
 pub mod convergence;
