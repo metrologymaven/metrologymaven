@@ -1,0 +1,24 @@
+{
+  "packages": [
+    {
+      "id": "fid-demo 0.1.0 (path+file:///ws)",
+      "license": "MIT OR Apache-2.0",
+      "license_file": null,
+      "name": "fid-demo",
+      "source": null,
+      "version": "0.1.0"
+    },
+    {
+      "id": "unlabelled 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "license": null,
+      "license_file": "license-mit.txt",
+      "name": "unlabelled",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.2.0"
+    }
+  ],
+  "version": 1,
+  "workspace_members": [
+    "fid-demo 0.1.0 (path+file:///ws)"
+  ]
+}

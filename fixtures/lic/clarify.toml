@@ -1,0 +1,5 @@
+[[clarify]]
+package = "unlabelled"
+version = "0.2.0"
+expression = "MIT"
+licence_file_sha256 = "sha256:faa4ff59c4889553845de3a8d4d6cc993ed439ee5b591b23caa7721ea0a039ab"

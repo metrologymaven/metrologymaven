@@ -1,0 +1,17 @@
+# Synthetic allowlist with LLVM-exception enabled.
+licences = [
+    "MIT",
+    "Apache-2.0",
+]
+
+exceptions = [
+    "LLVM-exception",
+]
+
+asset_licences = [
+    "CC-BY-4.0",
+]
+
+asset_paths = [
+    "assets/**",
+]
