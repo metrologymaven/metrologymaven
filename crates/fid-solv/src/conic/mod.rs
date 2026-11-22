@@ -12,6 +12,7 @@
 
 mod limits;
 mod problem;
+pub mod xtest;
 
 pub use limits::{limits_descriptor, ConicLimits, LimitValue, LimitsDescriptor, LIMITS_NAME};
 pub use problem::{Cone, ConicProblem, ConicProblemBuilder, Csc, ProblemClass};
