@@ -3,7 +3,8 @@
 //! pinned rules are in the `qr` module source), plus the pivoted Cholesky factor
 //! [`chol_pivoted`] used by `UNC.MODEL.DIST` (rules pinned in the `chol` module source), and
 //! `KRN.NUM.LA.SVD` (one-sided Jacobi SVD: [`svd`], [`svd_with_sweep_limit`]; rules pinned in
-//! the `svd` module source).
+//! the `svd` module source), and `KRN.NUM.LA.EIG` (cyclic Jacobi symmetric eigendecomposition:
+//! [`sym_eig`], [`sym_eig_with_sweep_limit`]; rules pinned in the `eig` module source).
 //!
 //! Row-major `f64` matrices with checked construction ([`Mat`]), products routed through
 //! [`crate::red::dot`] ([`mat_vec`], [`mat_t_vec`], [`mat_mul`]), triangular solves
@@ -50,6 +51,7 @@
 
 mod chol;
 mod cond;
+mod eig;
 mod mat;
 mod qr;
 mod svd;
@@ -57,6 +59,7 @@ mod tri;
 
 pub use chol::{chol_pivoted, CholPivoted};
 pub use cond::{cond_triangular, ITERATIONS as COND_ITERATIONS};
+pub use eig::{sym_eig, sym_eig_with_sweep_limit, SymEig, EIG_MAX_SWEEPS};
 pub use mat::{mat_mul, mat_t_vec, mat_vec, Mat, MAX_DIM, MAX_MAT_BYTES};
 pub use qr::{lstsq, qr, qr_pivoted, LstsqResult, Qr};
 pub use svd::{svd, svd_with_sweep_limit, Svd, MAX_SWEEPS};
@@ -83,8 +86,8 @@ pub struct Factorization {
 /// Why a linear-algebra call failed, decoded from a [`NumError`] by [`LaError::of`].
 /// Carried in [`NumError::Domain`] as `detail`, except [`LaError::Singular`], which is a
 /// [`NumError::Singular`] whose `rank` field is the index, [`LaError::RankDeficient`] (a
-/// [`NumError::Singular`] of `la.lstsq`) and [`LaError::NoConvergence`] (a
-/// [`NumError::NoConvergence`]).
+/// [`NumError::Singular`] of `la.lstsq`), [`LaError::NoConvergence`] (a
+/// [`NumError::NoConvergence`]) and [`LaError::NotSymmetric`] (a [`NumError::NotSymmetric`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LaError {
     /// A zero dimension, a ragged row list, a data length that is not `rows * cols`, a
@@ -115,11 +118,19 @@ pub enum LaError {
         /// The numerical rank.
         rank: usize,
     },
-    /// An iterative factorization (`svd`) did not meet its convergence test within its sweep
-    /// limit. Carried as [`NumError::NoConvergence`].
+    /// An iterative factorization (`svd`, `sym_eig`) did not meet its convergence test within its
+    /// sweep limit. Carried as [`NumError::NoConvergence`].
     NoConvergence {
         /// The sweep limit that was reached.
         sweeps: usize,
+    },
+    /// `sym_eig`: the first pair `(i, j)` (`i < j`, row-major) with
+    /// `|a_ij - a_ji| > n u max|a|`. Carried as [`NumError::NotSymmetric`].
+    NotSymmetric {
+        /// Zero-based row index (`i < j`).
+        i: usize,
+        /// Zero-based column index (`i < j`).
+        j: usize,
     },
 }
 
@@ -129,8 +140,9 @@ const SINGULAR_OPS: [&str; 3] = ["la.solve_upper", "la.solve_lower", "la.cond_tr
 const RANK_DEFICIENT_OP: &str = "la.lstsq";
 
 impl LaError {
-    /// The `detail` string used in [`NumError::Domain`] (`singular` and `rank_deficient` for
-    /// the two kinds carried as [`NumError::Singular`], never as a detail).
+    /// The `detail` string used in [`NumError::Domain`] (`singular`, `rank_deficient`,
+    /// `no_convergence` and `not_symmetric` for the kinds carried as their own [`NumError`]
+    /// variants, never as a detail).
     pub const fn detail(self) -> &'static str {
         match self {
             LaError::BadShape => "bad_shape",
@@ -142,6 +154,7 @@ impl LaError {
             LaError::Subnormal => "subnormal_input",
             LaError::RankDeficient { .. } => "rank_deficient",
             LaError::NoConvergence { .. } => "no_convergence",
+            LaError::NotSymmetric { .. } => "not_symmetric",
         }
     }
 
@@ -153,6 +166,9 @@ impl LaError {
             NumError::Singular { op, rank } if *op == RANK_DEFICIENT_OP => Some(LaError::RankDeficient { rank: *rank }),
             NumError::NoConvergence { op, sweeps } if op.starts_with("la.") => {
                 Some(LaError::NoConvergence { sweeps: *sweeps })
+            }
+            NumError::NotSymmetric { op, i, j } if op.starts_with("la.") => {
+                Some(LaError::NotSymmetric { i: *i, j: *j })
             }
             NumError::Domain { op, detail } if op.starts_with("la.") => [
                 LaError::BadShape,
@@ -173,6 +189,7 @@ impl LaError {
             LaError::Singular { index } => NumError::Singular { op, rank: index },
             LaError::RankDeficient { rank } => NumError::Singular { op, rank },
             LaError::NoConvergence { sweeps } => NumError::NoConvergence { op, sweeps },
+            LaError::NotSymmetric { i, j } => NumError::NotSymmetric { op, i, j },
             k => NumError::Domain { op, detail: k.detail() },
         }
     }
