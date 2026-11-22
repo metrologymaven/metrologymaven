@@ -25,6 +25,7 @@
 //! Every refusal is a code and reason of the bus error catalogue (`bus-errors.json`, v3):
 //! [`Refusal::code`] and [`Refusal::reason`].
 
+use crate::taint::{taint_envelope, TaintedEnvelope};
 use crate::tools::{tools, McpError, ToolKind};
 use fid_canon::CValue;
 use fid_surface::{Envelope, ErrorCode, Outcome, Projection};
@@ -81,17 +82,68 @@ pub trait McpBus {
     fn invoke(&mut self, call: &BusCall<'_>) -> Envelope;
 }
 
-/// The callable tools: tool name to command and kind.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// The callable tools: tool name to command, kind, and optional full `result_schema` used to
+/// mark untrusted content on tool results (`AUTO.MCP.TAINT`).
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct ToolTable {
     by_name: BTreeMap<String, (CommandId, ToolKind)>,
+    result_schemas: BTreeMap<String, CValue>,
+}
+
+fn manifest_major(v: &CValue) -> Option<u32> {
+    match v {
+        CValue::U64(n) => u32::try_from(*n).ok(),
+        CValue::I64(n) => u32::try_from(*n).ok(),
+        CValue::Num(n) if n.is_finite() && *n >= 0.0 && n.fract() == 0.0 && *n <= f64::from(u32::MAX) => {
+            Some(*n as u32)
+        }
+        _ => None,
+    }
 }
 
 impl ToolTable {
-    /// The tools of `p`, exactly as [`crate::tools::emit`] lists them.
+    /// The tools of `p`, exactly as [`crate::tools::emit`] lists them. Without a manifest's
+    /// full result schemas, tool results fail safe (all strings wrapped as untrusted).
     pub fn from_projection(p: &Projection) -> Result<ToolTable, McpError> {
         let by_name = tools(p)?.into_iter().map(|t| (t.name, (t.command, t.kind))).collect();
-        Ok(ToolTable { by_name })
+        Ok(ToolTable { by_name, result_schemas: BTreeMap::new() })
+    }
+
+    /// Builds a [`ToolTable`] from `p` and binds each listed tool's full `result_schema` from
+    /// the parsed manifest JSON (`commands[].result_schema`) so [`call_tool`] and
+    /// [`call_tool_tainted`] mark untrusted content accurately (`AUTO.MCP.TAINT`).
+    pub fn from_projection_and_manifest(p: &Projection, manifest: &CValue) -> Result<ToolTable, McpError> {
+        let mut table = Self::from_projection(p)?;
+        let mut by_cmd: BTreeMap<String, CValue> = BTreeMap::new();
+        if let CValue::Obj(root) = manifest {
+            if let Some(CValue::Arr(cmds)) = root.get("commands") {
+                for cmd in cmds {
+                    let CValue::Obj(obj) = cmd else { continue };
+                    let Some(CValue::Str(id)) = obj.get("id") else { continue };
+                    let Some(major) = obj.get("major").and_then(manifest_major) else { continue };
+                    let Some(schema @ CValue::Obj(_)) = obj.get("result_schema") else { continue };
+                    by_cmd.insert(format!("{id}@{major}"), schema.clone());
+                }
+            }
+        }
+        for (tool_name, (cmd_id, _)) in &table.by_name {
+            if let Some(schema) = by_cmd.get(cmd_id.as_str()) {
+                table.result_schemas.insert(tool_name.clone(), schema.clone());
+            }
+        }
+        Ok(table)
+    }
+
+    /// Registers or replaces the full `result_schema` for `name` (if `name` is in the table).
+    pub fn with_result_schema(&mut self, name: &str, result_schema: CValue) {
+        if self.by_name.contains_key(name) {
+            self.result_schemas.insert(name.to_string(), result_schema);
+        }
+    }
+
+    /// The full `result_schema` bound to `name`, if any.
+    pub fn result_schema(&self, name: &str) -> Option<&CValue> {
+        self.result_schemas.get(name)
     }
 
     /// The command and kind of a tool.
@@ -235,18 +287,18 @@ fn nothing_ran(outcome: &Outcome) -> bool {
     }
 }
 
-/// Calls tool `name` with `args` for `session` through `bus` (REQ-005) and returns the bus
-/// envelope. Refused before the bus when the tool is unknown or the arguments are not an
-/// object. When the envelope breaks an invariant (see the module docs) the call is reported to
-/// `audit` and refused as `internal/invariant_violated`.
-pub fn call_tool(
+/// Calls tool `name` with `args` for `session` through `bus` (REQ-005), applies untrusted-content
+/// marking (`AUTO.MCP.TAINT`) to `envelope.result` using the tool's registered `result_schema`
+/// (failing safe if no schema was registered), and returns both the tainted [`Envelope`] and its
+/// delimited text rendering.
+pub fn call_tool_tainted(
     table: &ToolTable,
     session: &AgentSession,
     bus: &mut dyn McpBus,
     audit: &mut dyn AuditSink,
     name: &str,
     args: &CValue,
-) -> Result<Envelope, Refusal> {
+) -> Result<TaintedEnvelope, Refusal> {
     let Some((command, kind)) = table.get(name) else {
         return Err(Refusal::UnknownTool { detail: echo_name(name) });
     };
@@ -264,7 +316,11 @@ pub fn call_tool(
         None
     };
     match broken {
-        None => Ok(env),
+        None => {
+            let empty = CValue::Obj(BTreeMap::new());
+            let schema = table.result_schema(name).unwrap_or(&empty);
+            Ok(taint_envelope(&env, schema))
+        }
         Some(detail) => {
             audit.violation(Violation {
                 severity: Severity::Error,
@@ -277,4 +333,20 @@ pub fn call_tool(
             Err(Refusal::InvariantViolated { detail })
         }
     }
+}
+
+/// Calls tool `name` with `args` for `session` through `bus` (REQ-005) and returns the bus
+/// envelope with `result` marked for untrusted content (`AUTO.MCP.TAINT`). Refused before the
+/// bus when the tool is unknown or the arguments are not an object. When the envelope breaks an
+/// invariant (see the module docs) the call is reported to `audit` and refused as
+/// `internal/invariant_violated`.
+pub fn call_tool(
+    table: &ToolTable,
+    session: &AgentSession,
+    bus: &mut dyn McpBus,
+    audit: &mut dyn AuditSink,
+    name: &str,
+    args: &CValue,
+) -> Result<Envelope, Refusal> {
+    call_tool_tainted(table, session, bus, audit, name, args).map(|t| t.envelope)
 }

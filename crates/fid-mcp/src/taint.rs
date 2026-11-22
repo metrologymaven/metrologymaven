@@ -219,10 +219,10 @@ pub fn taint_value(value: &CValue, schema: &CValue) -> CValue {
 }
 
 /// Taints `value` against `schema` and produces both the structured result and its delimited
-/// text rendering.
+/// text rendering (enclosing undeclared / `additionalProperties` object keys in delimiters too).
 pub fn taint_and_render(value: &CValue, schema: &CValue) -> TaintedResult {
     let structured = taint_value(value, schema);
-    let text = render_text(&structured);
+    let text = render_text_with_schema(&structured, schema);
     TaintedResult { structured, text }
 }
 
@@ -242,13 +242,37 @@ pub fn taint_envelope(env: &Envelope, result_schema: &CValue) -> TaintedEnvelope
 
 // ------------------------------------------------------------------ schema walker
 
+/// Collapses any compound subtree into a single `{"untrusted": true, "text": <canonical JSON>}`
+/// wrapper so reaching [`MAX_WALK_DEPTH`] never leaves nested strings unwrapped (fail safe).
+fn collapse_untrusted(value: &CValue) -> CValue {
+    match value {
+        CValue::Null | CValue::Bool(_) | CValue::Num(_) | CValue::I64(_) | CValue::U64(_) | CValue::F64Bits(_) => {
+            value.clone()
+        }
+        CValue::Str(s) => Untrusted::new(s.as_str()).to_value(),
+        CValue::Obj(_) => {
+            if let Some(s) = Untrusted::from_value(value) {
+                return Untrusted::new(s).to_value();
+            }
+            let text = to_canonical_bytes(value)
+                .ok()
+                .and_then(|b| String::from_utf8(b).ok())
+                .unwrap_or_else(|| "[depth limit exceeded]".to_string());
+            Untrusted::new(text).to_value()
+        }
+        CValue::Arr(_) => {
+            let text = to_canonical_bytes(value)
+                .ok()
+                .and_then(|b| String::from_utf8(b).ok())
+                .unwrap_or_else(|| "[depth limit exceeded]".to_string());
+            Untrusted::new(text).to_value()
+        }
+    }
+}
+
 fn wrap_all_untrusted(value: &CValue, depth: usize) -> CValue {
     if depth >= MAX_WALK_DEPTH {
-        // Bounded fallback: convert any deep string or leave non-strings untouched.
-        return match value {
-            CValue::Str(s) => Untrusted::new(s.as_str()).to_value(),
-            other => other.clone(),
-        };
+        return collapse_untrusted(value);
     }
     match value {
         CValue::Str(s) => Untrusted::new(s.as_str()).to_value(),
@@ -291,7 +315,7 @@ fn resolve_ref<'a>(root: &'a CValue, pointer: &str) -> Option<&'a CValue> {
 }
 
 fn schema_marked_untrusted(s: &BTreeMap<String, CValue>) -> Option<bool> {
-    match s.get("x-untrusted").or_else(|| s.get("untrusted")) {
+    match s.get("x-untrusted") {
         Some(CValue::Bool(b)) => Some(*b),
         _ => None,
     }
@@ -408,7 +432,7 @@ fn is_digest_pattern(pat: &str) -> bool {
 
 /// Decides whether string `val` is trusted under schema object `s` (REQ-AUTO.MCP.TAINT-001, -004).
 fn string_is_trusted(val: &str, s: &BTreeMap<String, CValue>) -> bool {
-    // Explicit schema marking takes precedence.
+    // Explicit `x-untrusted` schema marking takes precedence.
     if let Some(marked_untrusted) = schema_marked_untrusted(s) {
         return !marked_untrusted;
     }
@@ -428,21 +452,15 @@ fn string_is_trusted(val: &str, s: &BTreeMap<String, CValue>) -> bool {
         return c == val;
     }
 
-    // 3. Explicit ID schema markings (`format: "uuid"|"id"`, `x-id: true`, `x-ref: ...`,
-    //    `x-type: "id"`, or pinned UUID/digest patterns). Also verify the runtime string matches
-    //    safe ID syntax so a schema mismatch fails safe.
+    // 3. Explicit ID schema markings (`format: "uuid"`, `x-ref: ...`, or pinned UUID/digest
+    //    patterns). Also verify the runtime string matches safe ID syntax so a schema mismatch
+    //    fails safe.
     if let Some(CValue::Str(fmt)) = s.get("format") {
         if fmt == "uuid" {
             return is_uuid_str(val);
         }
-        if fmt == "id" {
-            return is_safe_id_token(val);
-        }
     }
-    if s.get("x-id") == Some(&CValue::Bool(true))
-        || matches!(s.get("x-ref"), Some(CValue::Str(r)) if !r.is_empty())
-        || matches!(s.get("x-type"), Some(CValue::Str(t)) if t == "id")
-    {
+    if matches!(s.get("x-ref"), Some(CValue::Str(r)) if !r.is_empty()) {
         return is_safe_id_token(val);
     }
     if let Some(CValue::Str(pat)) = s.get("pattern") {
@@ -639,9 +657,21 @@ fn walk_union(value: &CValue, branches: &[CValue], root: &CValue, depth: usize) 
 /// Renders a tainted structured JSON value to deterministic text in which every
 /// `{"untrusted": true, "text": ...}` object is enclosed in [`DELIM_OPEN`] / [`DELIM_CLOSE`]
 /// with internal delimiters escaped (REQ-AUTO.MCP.TAINT-002, -003).
+///
+/// Prefer [`render_text_with_schema`] (used by [`taint_and_render`]) when the result schema is
+/// available so undeclared / `additionalProperties` object keys are also delimited as untrusted.
 pub fn render_text(value: &CValue) -> String {
     let mut out = String::new();
-    render_into(value, 0, &mut out);
+    render_into(value, None, None, false, 0, &mut out);
+    out
+}
+
+/// Renders a tainted structured JSON value alongside its `schema`, enclosing every untrusted
+/// string AND every undeclared / `additionalProperties` / schema-mismatch object key in
+/// [`DELIM_OPEN`] / [`DELIM_CLOSE`] (REQ-AUTO.MCP.TAINT-002, -003).
+pub fn render_text_with_schema(value: &CValue, schema: &CValue) -> String {
+    let mut out = String::new();
+    render_into(value, Some(schema), Some(schema), true, 0, &mut out);
     out
 }
 
@@ -651,13 +681,60 @@ fn push_indent(out: &mut String, indent: usize) {
     }
 }
 
-fn render_into(value: &CValue, indent: usize, out: &mut String) {
-    if indent >= MAX_WALK_DEPTH {
-        out.push_str("...");
-        return;
+fn resolve_render_schema<'a>(
+    value: &CValue,
+    schema: &'a CValue,
+    root: &'a CValue,
+    depth: usize,
+) -> Option<&'a BTreeMap<String, CValue>> {
+    if depth >= MAX_WALK_DEPTH {
+        return None;
     }
+    let CValue::Obj(s) = schema else { return None };
+    if let Some(CValue::Str(r)) = s.get("$ref") {
+        return resolve_ref(root, r).and_then(|t| resolve_render_schema(value, t, root, depth + 1));
+    }
+    if schema_marked_untrusted(s) == Some(true) {
+        return None;
+    }
+    if let Some(CValue::Arr(branches)) = s.get("oneOf").or_else(|| s.get("anyOf")) {
+        let mut matching = branches.iter().filter(|b| branch_matches_type(value, b, root, depth + 1));
+        let first = matching.next()?;
+        if matching.next().is_some() {
+            return None;
+        }
+        return resolve_render_schema(value, first, root, depth + 1);
+    }
+    Some(s)
+}
+
+fn render_key_trusted(k: &str, out: &mut String) {
+    if k.contains("<<<") || k.contains(">>>") {
+        out.push_str(&escape_delimiters(k));
+    } else {
+        out.push_str(k);
+    }
+}
+
+fn render_into(
+    value: &CValue,
+    schema: Option<&CValue>,
+    root: Option<&CValue>,
+    schema_guided: bool,
+    indent: usize,
+    out: &mut String,
+) {
     if let Some(text) = Untrusted::from_value(value) {
         out.push_str(&render_untrusted_text(text));
+        return;
+    }
+    if indent >= MAX_WALK_DEPTH {
+        let collapsed = collapse_untrusted(value);
+        if let Some(text) = Untrusted::from_value(&collapsed) {
+            out.push_str(&render_untrusted_text(text));
+        } else {
+            render_into(&collapsed, None, None, schema_guided, 0, out);
+        }
         return;
     }
     match value {
@@ -690,22 +767,32 @@ fn render_into(value: &CValue, indent: usize, out: &mut String) {
                 out.push_str("[]");
                 return;
             }
+            let resolved = match (schema, root) {
+                (Some(sc), Some(rt)) => resolve_render_schema(value, sc, rt, indent),
+                _ => None,
+            };
+            let prefix = resolved.and_then(|s| match s.get("prefixItems") {
+                Some(CValue::Arr(p)) => Some(p.as_slice()),
+                _ => None,
+            });
+            let item_schema = resolved.and_then(|s| s.get("items"));
             for (idx, item) in items.iter().enumerate() {
                 if idx > 0 {
                     out.push('\n');
                 }
                 push_indent(out, indent);
                 out.push_str("- ");
+                let sub_sc = prefix.and_then(|p| p.get(idx)).or(item_schema);
                 match item {
                     CValue::Obj(o) if Untrusted::from_value(item).is_none() && !o.is_empty() => {
                         out.push('\n');
-                        render_into(item, indent + 1, out);
+                        render_into(item, sub_sc, root, schema_guided, indent + 1, out);
                     }
                     CValue::Arr(a) if !a.is_empty() => {
                         out.push('\n');
-                        render_into(item, indent + 1, out);
+                        render_into(item, sub_sc, root, schema_guided, indent + 1, out);
                     }
-                    _ => render_into(item, indent + 1, out),
+                    _ => render_into(item, sub_sc, root, schema_guided, indent + 1, out),
                 }
             }
         }
@@ -714,30 +801,61 @@ fn render_into(value: &CValue, indent: usize, out: &mut String) {
                 out.push_str("{}");
                 return;
             }
+            let obj_schema = match (schema, root) {
+                (Some(sc), Some(rt)) => resolve_render_schema(value, sc, rt, indent).filter(|s| {
+                    if !schema_allows_type(s, "object") {
+                        return false;
+                    }
+                    if let Some(CValue::Arr(req)) = s.get("required") {
+                        for r in req {
+                            match r {
+                                CValue::Str(k) if map.contains_key(k) => {}
+                                _ => return false,
+                            }
+                        }
+                    }
+                    true
+                }),
+                _ => None,
+            };
+            let props = obj_schema.and_then(|s| match s.get("properties") {
+                Some(CValue::Obj(p)) => Some(p),
+                _ => None,
+            });
+            let add_props = obj_schema.and_then(|s| s.get("additionalProperties"));
+
             for (idx, (k, v)) in map.iter().enumerate() {
                 if idx > 0 {
                     out.push('\n');
                 }
                 push_indent(out, indent);
-                // Escape keys defensively if they contain delimiter brackets.
-                if k.contains("<<<") || k.contains(">>>") {
-                    out.push_str(&escape_delimiters(k));
+                let (key_is_trusted, val_schema) = if let Some(prop_sc) = props.and_then(|p| p.get(k)) {
+                    (true, Some(prop_sc))
                 } else {
-                    out.push_str(k);
+                    let sub_sc = match add_props {
+                        Some(sc @ CValue::Obj(_)) => Some(sc),
+                        _ => None,
+                    };
+                    (!schema_guided, sub_sc)
+                };
+                if key_is_trusted {
+                    render_key_trusted(k, out);
+                } else {
+                    out.push_str(&render_untrusted_text(k));
                 }
                 out.push(':');
                 match v {
                     CValue::Obj(o) if Untrusted::from_value(v).is_none() && !o.is_empty() => {
                         out.push('\n');
-                        render_into(v, indent + 1, out);
+                        render_into(v, val_schema, root, schema_guided, indent + 1, out);
                     }
                     CValue::Arr(a) if !a.is_empty() => {
                         out.push('\n');
-                        render_into(v, indent + 1, out);
+                        render_into(v, val_schema, root, schema_guided, indent + 1, out);
                     }
                     _ => {
                         out.push(' ');
-                        render_into(v, indent + 1, out);
+                        render_into(v, val_schema, root, schema_guided, indent + 1, out);
                     }
                 }
             }

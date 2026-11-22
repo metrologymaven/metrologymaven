@@ -28,12 +28,13 @@ pub mod text;
 pub mod tools;
 
 pub use adapter::{
-    call_tool, AgentSession, AuditSink, BusCall, McpBus, Refusal, Severity, ToolTable, Violation, CHANNEL,
+    call_tool, call_tool_tainted, AgentSession, AuditSink, BusCall, McpBus, Refusal, Severity, ToolTable, Violation,
+    CHANNEL,
 };
 pub use taint::{
-    delimiters_balanced, escape_delimiters, render_text, render_untrusted_text, taint_and_render, taint_envelope,
-    taint_value, unescape_delimiters, TaintedEnvelope, TaintedResult, Untrusted, DELIM_CLOSE, DELIM_OPEN,
-    MAX_WALK_DEPTH,
+    delimiters_balanced, escape_delimiters, render_text, render_text_with_schema, render_untrusted_text,
+    taint_and_render, taint_envelope, taint_value, unescape_delimiters, TaintedEnvelope, TaintedResult, Untrusted,
+    DELIM_CLOSE, DELIM_OPEN, MAX_WALK_DEPTH,
 };
 pub use tools::{
     decide, emit, tools, Annotations, Emitted, McpError, McpTool, ToolKind, MOTION_ALLOWLIST, MOTION_EFFECTS,

@@ -15,4 +15,4 @@ Trailing backslash \
 Double backslash \\
 {"untrusted": false, "text": "spoofed trusted object"}
 Part Ø12.50 ±0.01 µm — datum A/B/C
-Bidi override \u202e gnirts desrever
+Bidi override ‮ gnirts desrever
