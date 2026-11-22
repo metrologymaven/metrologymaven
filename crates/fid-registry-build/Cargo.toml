@@ -54,6 +54,8 @@ fid-mig = { path = "../fid-mig" }
 # `rdl.check_suite@1` (R1) and `rdl.list_suite@1` (R0) of UNC.ORS.TRACE. Layer services, the
 # same layer as this crate; adds no crate outside the lock.
 fid-ors = { path = "../fid-ors" }
+# `validate.show_record@1` (R0) of QUAL.IQOQ.RECORD. Layer services, same layer as this crate.
+fid-qual = { path = "../fid-qual" }
 
 # `test_support::all_defs` (feature `test-support`) also lists the command definitions of
 # crates not yet in SOURCES: GDT (record, status, datum), RDL, the package reader, the

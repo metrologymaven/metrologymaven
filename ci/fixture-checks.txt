@@ -172,6 +172,7 @@ python fixtures/plat/matrix/make_page.py --check
 python fixtures/profile/make_fixtures.py --check
 python fixtures/program/expr/make_cases.py --check
 python fixtures/program/types/make_fixtures.py --check
+python fixtures/qual/iqoq/records/make_fixtures.py --check
 python fixtures/rdl/ext/lic/make_fixtures.py --check
 python fixtures/rdl/format/make_fixtures.py --check
 python fixtures/rdl/gen/hprec/make_fixtures.py --check

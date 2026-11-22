@@ -1915,6 +1915,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-qual"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-journal",
+ "fid-registry",
+ "fid-surface",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-rdl"
 version = "0.0.1"
 dependencies = [
@@ -1970,6 +1982,7 @@ dependencies = [
  "fid-program-rec",
  "fid-project",
  "fid-project-cmd",
+ "fid-qual",
  "fid-rdl",
  "fid-registry",
  "fid-registry-build",
