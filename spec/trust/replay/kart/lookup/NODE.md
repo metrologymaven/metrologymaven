@@ -18,7 +18,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-vreplay]
+updated: 2026-11-22
 ---
 
 # TRUST.REPLAY.KART.LOOKUP: Offline kernel artifact lookup chain

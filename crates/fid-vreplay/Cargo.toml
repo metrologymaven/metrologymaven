@@ -1,6 +1,6 @@
 [package]
 name = "fid-vreplay"
-description = "Metrology Maven standalone verifier replay: outcome classification and package aggregation over the REP-1 table (TRUST.REPLAY.COMPARE) and replayable-set selection with the replay plan (TRUST.REPLAY.SELECT)"
+description = "Metrology Maven standalone verifier replay: outcome classification over REP-1 (TRUST.REPLAY.COMPARE), replayable-set selection (TRUST.REPLAY.SELECT), and offline kernel artifact lookup chain (TRUST.REPLAY.KART.LOOKUP)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
