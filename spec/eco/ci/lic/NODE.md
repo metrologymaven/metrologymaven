@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-xtask]
+built_pr: 435
 updated: 2026-11-22
 ---
 
