@@ -1,0 +1,59 @@
+{
+  "schema": "fid.aln-datum-gate-fixture/1",
+  "dmt_table": "test_dmt_supported.json",
+  "dmt_table_secondary_unsupported": "test_dmt_secondary_unsupported.json",
+  "context": {
+    "dialect": "asme",
+    "edition": "y14.5-2018",
+    "defaults_profile": "asme-y14.5-2018-default",
+    "profile_choices": {}
+  },
+  "datums": [
+    {
+      "label": "A",
+      "feature_type": "plane",
+      "modifiers": [
+        "rmb"
+      ]
+    },
+    {
+      "label": "B",
+      "feature_type": "plane",
+      "modifiers": [
+        "rmb"
+      ]
+    },
+    {
+      "label": "C",
+      "feature_type": "plane",
+      "modifiers": [
+        "rmb"
+      ]
+    }
+  ],
+  "expected": {
+    "dmt_digest": "sha256:0ce30bef6f4dbbf371cadd4f5567ee33e36beb7b8c56c5d47fedb56321105243",
+    "secondary_unsupported_dmt_digest": "sha256:d18ff39067a9a045a9612f860b7eabd55a2f02b4c09b849437c445e4dc1e4d6b",
+    "row_ids": [
+      "dmt:asme/datum_plane_primary/rmb@1",
+      "dmt:asme/datum_plane_secondary/rmb@1",
+      "dmt:asme/datum_plane_tertiary/rmb@1"
+    ],
+    "variants": [
+      "tangent_plane",
+      "tangent_plane",
+      "tangent_plane"
+    ],
+    "variant_sources": [
+      "row_default",
+      "row_default",
+      "row_default"
+    ],
+    "chain_digests": [
+      "sha256:3fcefe3dac702329a3c37ea8d9ab31dbd2c023bc9567e41140f4dc84297abd93",
+      "sha256:38c509ebe1732c7ac55e9474beaeec80a429a0d13212630aeffa8bf89cae12db",
+      "sha256:4e57caca64bcceea8b4a9afebc65676934614f8752f051e19bdf57ba11e976bf"
+    ],
+    "combined_digest": "sha256:366505392ffaea7e8ec781013bf2df9df9dd0f2a2d7e52ed1256d0f2075cf118"
+  }
+}

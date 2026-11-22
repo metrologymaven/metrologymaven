@@ -1,0 +1,216 @@
+{
+  "schema": "fid.dmt-table/1",
+  "version": "1.0.0",
+  "rows": [
+    {
+      "key": "dmt:asme/datum_plane_primary/rmb@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "datum_plane_primary",
+      "modifiers": [
+        "rmb"
+      ],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "91.1"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "lsq_plane",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.lsq_plane_primary@0.1.0",
+              "params": {
+                "constrained": true
+              }
+            }
+          ]
+        },
+        {
+          "variant": "tangent_plane",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.datum_plane_primary@0.1.0",
+              "params": {
+                "constrained": true
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.datum_plane@0.1.0",
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "default_variant": "tangent_plane",
+      "actual_value": "av.synthetic.datum_plane_primary@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Test-only synthetic datum-gate row (test_only); not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/datum_plane_secondary/rmb@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "datum_plane_secondary",
+      "modifiers": [
+        "rmb"
+      ],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "91.2"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "lsq_plane",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.lsq_plane_secondary@0.1.0",
+              "params": {
+                "constrained": true
+              }
+            }
+          ]
+        },
+        {
+          "variant": "tangent_plane",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.datum_plane_secondary@0.1.0",
+              "params": {
+                "constrained": true
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.datum_plane@0.1.0",
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "default_variant": "tangent_plane",
+      "actual_value": "av.synthetic.datum_plane_secondary@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Test-only synthetic datum-gate row (test_only); not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/datum_plane_tertiary/rmb@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "datum_plane_tertiary",
+      "modifiers": [
+        "rmb"
+      ],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "91.3"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "lsq_plane",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.lsq_plane_tertiary@0.1.0",
+              "params": {
+                "constrained": true
+              }
+            }
+          ]
+        },
+        {
+          "variant": "tangent_plane",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.datum_plane_tertiary@0.1.0",
+              "params": {
+                "constrained": true
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.datum_plane@0.1.0",
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "default_variant": "tangent_plane",
+      "actual_value": "av.synthetic.datum_plane_tertiary@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Test-only synthetic datum-gate row (test_only); not an interpretation of any standard.",
+      "synthetic": true
+    }
+  ]
+}

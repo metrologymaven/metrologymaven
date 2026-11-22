@@ -20,6 +20,9 @@ fid-dep = { path = "../fid-dep" }
 # Rigid and similarity transforms and authored quantities with one-rounding SI conversion
 # (GEO.FRAME.XFORM, GEO.FRAME.UNITS). Layer kernel.
 fid-geo-frame = { path = "../fid-geo-frame" }
+# Pure GD&T Dialect Mapping Table schema and interpretation resolver (GDT.RES.SCHEMA,
+# GDT.RES.RESOLVE), called by ALN.DATUM.SYS.GATE. Layer model, below engine (D-035).
+fid-gps = { path = "../fid-gps" }
 # The kernel's algorithm ID `module.feature.method@major.minor.patch` (KRN.MAN.CARD). Layer kernel.
 fid-kci = { path = "../fid-kci" }
 # UUIDv7 assignment through the recorded observation source (CORE.PRJ.CONT). Layer model.
