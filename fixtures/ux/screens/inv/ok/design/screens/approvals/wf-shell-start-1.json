@@ -1,0 +1,15 @@
+{
+  "approver": {
+    "name": "Design Reviewer",
+    "principal": "human"
+  },
+  "artefact": "WF.SHELL.START@1",
+  "date": "2026-11-17",
+  "format": "screen-approval@1",
+  "journey_digests": {
+    "per-01": "sha256:c18908ccd063786d5168fa03efec401a5b1da6758ac22b70c234e3847e1e9149",
+    "per-02": "sha256:445a4813e874379f127cdcb9eb457297d90832f288e137ba1b9a5b6fa5d6b3d2"
+  },
+  "pr": 106,
+  "screen": "SCR.SHELL.START"
+}

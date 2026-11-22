@@ -1,0 +1,345 @@
+{
+  "format": "screen-inventory@1",
+  "screens": [
+    {
+      "app": "shell",
+      "id": "SCR.SHELL.START",
+      "keyboard_path": "Tab across recent projects and app launchers -> Enter to open or Ctrl+N for new project",
+      "mockup": "none",
+      "phase": "P1a",
+      "role_layout": "top command bar, centre recent-project list and app launcher cards, right status rail",
+      "title": "Start and project launcher",
+      "traces": [
+        {
+          "map": "per-01",
+          "step": 1
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "shell",
+      "id": "SCR.SHELL.WORKSPACE",
+      "keyboard_path": "Ctrl+K command palette -> F6 cycle tree, viewport, table and Why? inspector",
+      "mockup": "none",
+      "phase": "P1a",
+      "role_layout": "top workflow rail, left project tree, centre primary canvas, bottom status strip, right Why? panel",
+      "title": "Shared application workspace shell",
+      "traces": [
+        {
+          "map": "per-01",
+          "step": 2
+        },
+        {
+          "map": "per-02",
+          "step": 1
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "setup",
+      "id": "SCR.SETUP.WIZARD",
+      "keyboard_path": "Tab through governance profile and unit presets -> Enter to apply step",
+      "mockup": "none",
+      "phase": "P1a",
+      "role_layout": "left step checklist, centre configuration form, bottom Back/Next action bar",
+      "title": "Shop Setup governance and defaults wizard",
+      "traces": [
+        {
+          "map": "per-05",
+          "step": 1
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "report",
+      "id": "SCR.RPT.BALLOON",
+      "keyboard_path": "B place balloon -> Tab to characteristic row -> Enter to edit tolerance or reading",
+      "mockup": "none",
+      "phase": "P1a",
+      "role_layout": "centre pan/zoom drawing sheet with numbered balloons, right characteristic entry table",
+      "title": "Ballooned drawing and manual reading sheet",
+      "traces": [
+        {
+          "map": "per-01",
+          "step": 3
+        },
+        {
+          "map": "per-01",
+          "step": 6
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "report",
+      "id": "SCR.RPT.FAIFORM",
+      "keyboard_path": "Tab across Form 1/2/3 tabs -> Arrow keys through characteristic rows -> Ctrl+Enter run completeness check",
+      "mockup": "none",
+      "phase": "P1a",
+      "role_layout": "top form selector, centre AS9102 characteristic table, right completeness findings and Why? panel",
+      "title": "AS9102 first-article form review",
+      "traces": [
+        {
+          "map": "per-01",
+          "step": 7
+        },
+        {
+          "map": "per-01",
+          "step": 9
+        },
+        {
+          "map": "per-05",
+          "step": 3
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "report",
+      "id": "SCR.RPT.INTAKE",
+      "keyboard_path": "Ctrl+O open supplier package -> Tab through verification checks -> Enter record disposition",
+      "mockup": "none",
+      "phase": "P1a",
+      "role_layout": "top package verification banner, left characteristic diff table, right disposition panel",
+      "title": "Supplier package intake and disposition",
+      "traces": [
+        {
+          "map": "per-07",
+          "step": 3
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "report",
+      "id": "SCR.RPT.SPC",
+      "keyboard_path": "Tab across characteristic selector and chart panels -> Ctrl+S save frozen limits",
+      "mockup": "none",
+      "phase": "P1a",
+      "role_layout": "left characteristic filter, centre control chart and capability summary, right limit metadata",
+      "title": "SPC control chart and capability dashboard",
+      "traces": [
+        {
+          "map": "per-05",
+          "step": 10
+        },
+        {
+          "map": "per-05",
+          "step": 11
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "inspect",
+      "id": "SCR.INSP.ALIGN",
+      "keyboard_path": "Ctrl+K Run Alignment -> Tab through datum constraints -> Enter adopt alignment",
+      "mockup": "none",
+      "phase": "P1b",
+      "role_layout": "left alignment feature tree, centre 3D CAD/scan viewport, right residual diagnostics panel",
+      "title": "Scan-to-CAD alignment workspace",
+      "traces": [
+        {
+          "map": "per-02",
+          "step": 5
+        },
+        {
+          "map": "per-02",
+          "step": 6
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "inspect",
+      "id": "SCR.INSP.EVAL",
+      "keyboard_path": "Arrow keys through proposed characteristics -> Space toggle adopt -> Enter open Why? panel",
+      "mockup": "none",
+      "phase": "P1b",
+      "role_layout": "left feature tree, centre 3D viewport with callouts, bottom GD&T characteristic table, right Why? panel",
+      "title": "PMI characteristic proposal and GD&T evaluation",
+      "traces": [
+        {
+          "map": "per-02",
+          "step": 7
+        },
+        {
+          "map": "per-02",
+          "step": 8
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "inspect",
+      "id": "SCR.INSP.COMPARE",
+      "keyboard_path": "Tab to colour-map legend -> Arrow keys select palette or section cut -> Enter export view",
+      "mockup": "none",
+      "phase": "P1b",
+      "role_layout": "centre 3D colour-map viewport with vertical tolerance legend, bottom deviation histogram and section strip",
+      "title": "Surface deviation colour map and section inspection",
+      "traces": [
+        {
+          "map": "per-02",
+          "step": 9
+        },
+        {
+          "map": "per-02",
+          "step": 10
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "kiosk",
+      "id": "SCR.KIOSK.LOGIN",
+      "keyboard_path": "Scan badge or type operator ID -> Enter to start kiosk session",
+      "mockup": "none",
+      "phase": "P1b",
+      "role_layout": "full-screen centred high-contrast login card with large shop-floor typography",
+      "title": "Shop-floor kiosk operator sign-in",
+      "traces": [
+        {
+          "map": "per-03",
+          "step": 2
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "kiosk",
+      "id": "SCR.KIOSK.RUN",
+      "keyboard_path": "Arrow keys select released program -> Enter start -> numeric keys enter reading -> Enter confirm",
+      "mockup": "none",
+      "phase": "P1b",
+      "role_layout": "top step progress banner, centre part graphic and prompt card, bottom large numeric entry bar",
+      "title": "Shop-floor kiosk guided operator run",
+      "traces": [
+        {
+          "map": "per-03",
+          "step": 4
+        },
+        {
+          "map": "per-03",
+          "step": 5
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "kiosk",
+      "id": "SCR.KIOSK.RESULT",
+      "keyboard_path": "Enter acknowledge part disposition -> N start next serial",
+      "mockup": "none",
+      "phase": "P1b",
+      "role_layout": "full-screen conformance banner with shape and text cue, summary deviation list, Next Part button",
+      "title": "Shop-floor kiosk pass/fail result summary",
+      "traces": [
+        {
+          "map": "per-03",
+          "step": 6
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "station",
+      "id": "SCR.STN.APPROVE",
+      "keyboard_path": "Tab across pending package/ticket queue -> Enter inspect diff -> Ctrl+Shift+Enter human sign-off",
+      "mockup": "none",
+      "phase": "P1a",
+      "role_layout": "left pending approval queue, centre package/ticket summary and digest view, right human sign-off ceremony",
+      "title": "Approval Station review and electronic signature",
+      "traces": [
+        {
+          "map": "per-05",
+          "step": 6
+        },
+        {
+          "map": "per-04",
+          "step": 15
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "probe",
+      "id": "SCR.PROBE.SIM",
+      "keyboard_path": "Space play/pause path simulation -> Left/Right step move -> F8 inspect collision check",
+      "mockup": "none",
+      "phase": "P2",
+      "role_layout": "left probe program tree, centre 3D CMM kinematic viewport, bottom clearance timeline",
+      "title": "CMM program authoring and collision simulation",
+      "traces": [
+        {
+          "map": "per-04",
+          "step": 12
+        },
+        {
+          "map": "per-04",
+          "step": 13
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "probe",
+      "id": "SCR.PROBE.RUN",
+      "keyboard_path": "Tab through pre-run setup checklist -> explicit human Arm confirmation -> Esc halt",
+      "mockup": "none",
+      "phase": "P2",
+      "role_layout": "top machine safety state banner, centre live probe position view, right setup checklist and ticket scope",
+      "title": "CMM live execution and setup confirmation",
+      "traces": [
+        {
+          "map": "per-04",
+          "step": 17
+        },
+        {
+          "map": "per-04",
+          "step": 18
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "network",
+      "id": "SCR.NET.ADJUST",
+      "keyboard_path": "Tab between stations and scale bars -> Ctrl+Enter run bundle adjustment -> F6 inspect residuals",
+      "mockup": "none",
+      "phase": "P3",
+      "role_layout": "left station/target tree, centre 3D network geometry view, bottom residual and uncertainty table",
+      "title": "Laser-tracker network station adjustment",
+      "traces": [
+        {
+          "map": "per-09",
+          "step": 8
+        }
+      ],
+      "wireframe": "none"
+    },
+    {
+      "app": "network",
+      "id": "SCR.NET.GUIDE",
+      "keyboard_path": "Arrow keys step target -> Space confirm set -> Esc stop guidance",
+      "mockup": "none",
+      "phase": "P3",
+      "role_layout": "high-contrast live dX/dY/dZ bullseye readout, target tolerance bar, target sequence rail",
+      "title": "Live build and fixture guidance",
+      "traces": [
+        {
+          "map": "per-09",
+          "step": 11
+        },
+        {
+          "map": "per-09",
+          "step": 13
+        }
+      ],
+      "wireframe": "none"
+    }
+  ]
+}

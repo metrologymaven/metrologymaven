@@ -1,0 +1,12 @@
+{
+  "format": "journey-map@1",
+  "map_id": "per-02",
+  "persona": "CMM Inspector",
+  "steps": [
+    {
+      "action": "Run datum alignment and review residuals",
+      "n": 1,
+      "screen": "SCR.INSP.ALIGN"
+    }
+  ]
+}

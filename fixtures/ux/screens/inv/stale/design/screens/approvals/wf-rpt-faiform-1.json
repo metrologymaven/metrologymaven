@@ -1,0 +1,14 @@
+{
+  "approver": {
+    "name": "Design Reviewer",
+    "principal": "human"
+  },
+  "artefact": "WF.RPT.FAIFORM@1",
+  "date": "2026-11-17",
+  "format": "screen-approval@1",
+  "journey_digests": {
+    "per-01": "sha256:c18908ccd063786d5168fa03efec401a5b1da6758ac22b70c234e3847e1e9149"
+  },
+  "pr": 90,
+  "screen": "SCR.RPT.FAIFORM"
+}

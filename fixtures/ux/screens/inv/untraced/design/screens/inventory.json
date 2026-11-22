@@ -1,0 +1,16 @@
+{
+  "format": "screen-inventory@1",
+  "screens": [
+    {
+      "app": "report",
+      "id": "SCR.RPT.FAIFORM",
+      "keyboard_path": "Tab to form grid, Enter to edit cell",
+      "mockup": "none",
+      "phase": "P1a",
+      "role_layout": "two-pane table and drawing preview",
+      "title": "AS9102 FAI Form Editor",
+      "traces": [],
+      "wireframe": "none"
+    }
+  ]
+}

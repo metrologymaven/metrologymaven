@@ -1,0 +1,10 @@
+{
+  "artefact": "screens/inventory.json",
+  "author": "Antigravity (Google DeepMind), agent author of UX.SCREENS.INV",
+  "date": "2026-11-22",
+  "references": [
+    "The UX.SCREENS.INV and UX.SCREENS spec nodes in this repository",
+    "The shipped persona journey maps in acceptance/journeys/persona/ in this repository"
+  ],
+  "statement_version": "originality-statement@1"
+}
