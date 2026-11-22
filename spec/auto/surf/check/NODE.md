@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-surface-gen]
+built_pr: 434
 updated: 2026-11-22
 ---
 
