@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-corp"
-description = "Metrology Maven format corpora: manifests, licence checks and fetching and the hostile corpus generator (spec nodes IO.CORP.MANIF, IO.CORP.HOSTILE)"
+description = "Metrology Maven format corpora: manifests, licence checks and fetching, hostile corpus generator, and reader fuzz layer (spec nodes IO.CORP.MANIF, IO.CORP.HOSTILE, IO.CORP.FUZZ)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -15,12 +15,18 @@ path = "src/bin/corpus-check.rs"
 name = "corpus-hostile"
 path = "src/bin/corpus-hostile.rs"
 
+[[bin]]
+name = "corpus-fuzz"
+path = "src/bin/corpus-fuzz.rs"
+
 [dependencies]
 fid-types = { path = "../fid-types" }
-# Counter-based Philox RNG (KRN.NUM.RNG) for seeded bit flips (IO.CORP.HOSTILE); zero dependencies.
+# Counter-based Philox RNG (KRN.NUM.RNG) for seeded bit flips (IO.CORP.HOSTILE) and fuzz mutations (IO.CORP.FUZZ).
 fid-num = { path = "../fid-num" }
 # Reads the registry listing (`import.list_formats@1` JSON) with the project's bounded JSON parser.
 fid-canon = { path = "../fid-canon" }
+# Bounded reader harness and limits (`IO.REG.LIMITS`) for driving fuzz targets (`IO.CORP.FUZZ`).
+fid-io-reg = { path = "../fid-io-reg" }
 # Reads corpus manifests as an untyped table (no serde derive), as fid-knp1-lint does.
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 # Streaming SHA-256 of corpus files and fetched bytes; already in the graph through fid-canon.
@@ -31,7 +37,6 @@ sha2 = "0.10"
 # (E57 physical layer and the hardened XML reader, with the IO.REG.LIMITS budget it takes).
 fid-io-e57 = { path = "../fid-io-e57" }
 fid-xml = { path = "../fid-xml" }
-fid-io-reg = { path = "../fid-io-reg" }
 
 [lints]
 workspace = true

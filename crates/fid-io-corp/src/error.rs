@@ -22,6 +22,8 @@ pub enum CorpError {
     FetchFailed { format: String, entry: String, detail: String },
     /// `corpus-hostile` would write more than its output cap (IO.CORP.HOSTILE).
     LimitExceeded { detail: String },
+    /// A registered first-party reader has no fuzz target (REQ-IO.CORP.FUZZ-001).
+    FuzzTargetMissing { format: String },
 }
 
 impl CorpError {
@@ -35,6 +37,7 @@ impl CorpError {
             CorpError::Io { .. } => "io",
             CorpError::FetchFailed { .. } => "fetch_failed",
             CorpError::LimitExceeded { .. } => "limit_exceeded",
+            CorpError::FuzzTargetMissing { .. } => "fuzz_target_missing",
         }
     }
 
@@ -59,6 +62,9 @@ impl fmt::Display for CorpError {
             }
             CorpError::Malformed { at, detail } => write!(f, "{code}{{{at}}}: {detail}"),
             CorpError::LimitExceeded { detail } => write!(f, "{code}: {detail}"),
+            CorpError::FuzzTargetMissing { format } => {
+                write!(f, "{code}{{{format}}}: no fuzz target for registered reader {format}")
+            }
             CorpError::Io { format, entry, detail } | CorpError::FetchFailed { format, entry, detail } => {
                 write!(f, "{code}{{{format}: {entry}}}: {detail}")
             }

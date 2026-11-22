@@ -25,6 +25,7 @@
 mod check;
 mod error;
 mod fetch;
+pub mod fuzz;
 mod hostile;
 mod manifest;
 
@@ -35,6 +36,14 @@ pub use check::{
 pub use error::CorpError;
 pub use fetch::{
     cache_path, fetch_to_cache, hash_file, hash_reader, is_fetchable_url, FetchError, Fetcher, SystemFetcher,
+};
+pub use fuzz::{
+    builtin_readers, check_coverage, drive_reader, fuzz_budget, fuzz_limit_request, fuzz_limits, generate_targets,
+    load_seeds_dir, minimize_panic_input, render_fuzz_cargo_toml, render_target_source, run_fuzz_suite,
+    run_fuzz_target, stage_seeds, target_name, CoverageReport, FuzzConfig, FuzzFinding, FuzzFindingKind, FuzzReader,
+    FuzzRunReport, FuzzTarget, PlyFuzzReader, SeedReport, StlFuzzReader, TargetOutcome, FUZZ_LIMIT_ALLOC,
+    FUZZ_LIMIT_BYTES, FUZZ_LIMIT_DEPTH, FUZZ_LIMIT_ELEMENTS, FUZZ_LIMIT_WALL_MS, FUZZ_MERGE_BUDGET_SECS,
+    FUZZ_PER_INPUT_TIMEOUT_SECS, FUZZ_RSS_LIMIT_MIB, FUZZ_WEEKLY_BUDGET_SECS, MAX_SEEDS_PER_TARGET, MAX_SEED_BYTES,
 };
 pub use hostile::{
     find_xml_root, generate, mutators_for_tags, parse_plans, render_manifest, rng_stream, run_hostile,
