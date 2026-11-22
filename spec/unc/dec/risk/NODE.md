@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-kdec]
+built_pr: 520
 updated: 2026-11-22
 ---
 
