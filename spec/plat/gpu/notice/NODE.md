@@ -19,6 +19,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-gpu-select]
+built_pr: 526
 updated: 2026-11-22
 ---
 
