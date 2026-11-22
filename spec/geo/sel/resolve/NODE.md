@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-sel]
+built_pr: 466
 satisfies: [REQ-GEO.SEL-002, REQ-GEO.SEL-003]
 covers: [GOM.CAD.01]
 depends_on: [GEO.SEL.MODEL, GEO.INDEX.BVH, GEO.FRAME.XFORM]
