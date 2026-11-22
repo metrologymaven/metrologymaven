@@ -10,9 +10,14 @@
 pub mod ctrl;
 pub mod exit;
 pub mod output;
+pub mod tree;
 
 pub use exit::{exit_codes_markdown, ExitCode, EXIT_CODES_DOC};
 pub use output::{render_human, Output, CLI_COMMAND_ID};
+pub use tree::{
+    embedded_tree, emit, levenshtein, nearest_match, parse_tree, resolve_args, CliCommand, CliEmitOutput, CliMajor,
+    CliParam, CliTree, CliTreeError, ResolveOutcome, RESERVED_HOST_SUBCOMMANDS, SURFACE, TREE_FILE, TREE_SCHEMA,
+};
 
 use fid_surface::{Envelope, ErrorCode};
 use std::io::Write;
@@ -29,7 +34,7 @@ pub trait Bus {
 /// Runs `fid <domain> <verb-object> [--json]` against `bus` and returns the exit code.
 pub fn invoke(args: &[String], bus: &mut dyn Bus, stdout: &mut dyn Write, stderr: &mut dyn Write) -> ExitCode {
     let json = args.iter().any(|a| a == "--json");
-    let mut out = Output::new(json, stdout, stderr);
+    let out = Output::new(json, stdout, stderr);
     let mut pos = Vec::new();
     for a in args {
         match a.as_str() {
@@ -45,11 +50,94 @@ pub fn invoke(args: &[String], bus: &mut dyn Bus, stdout: &mut dyn Write, stderr
     let Some(id) = bus.resolve(domain, verb) else {
         return out.finish(&usage(&format!("unknown command `{domain} {verb}`")));
     };
+    call_bus(bus, &id, out)
+}
+
+/// Resolves `args` against a generated [`CliTree`] (handling `--version`, `--help`, `--major`,
+/// and nearest-match `usage_error` suggestions) and dispatches registered commands to `bus`
+/// (REQ-AUTO.CLI.TREE-002..005).
+pub fn invoke_with_tree(
+    tree: &CliTree,
+    version: &str,
+    args: &[String],
+    bus: &mut dyn Bus,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> ExitCode {
+    match resolve_args(tree, args) {
+        ResolveOutcome::Version => {
+            if writeln!(stdout, "{}", tree.render_version(version)).is_err() {
+                return ExitCode::Internal;
+            }
+            ExitCode::Success
+        }
+        ResolveOutcome::RootHelp { json: true } => match tree.help_json(version) {
+            Ok(bytes) => {
+                if stdout.write_all(&bytes).is_err() {
+                    return ExitCode::Internal;
+                }
+                ExitCode::Success
+            }
+            Err(e) => {
+                let _ = writeln!(stderr, "error: {e}");
+                ExitCode::Internal
+            }
+        },
+        ResolveOutcome::RootHelp { json: false } => {
+            if stdout.write_all(tree.render_root_help(version).as_bytes()).is_err() {
+                return ExitCode::Internal;
+            }
+            ExitCode::Success
+        }
+        ResolveOutcome::DomainHelp { domain } => {
+            if let Some(text) = tree.render_domain_help(&domain) {
+                if stdout.write_all(text.as_bytes()).is_err() {
+                    return ExitCode::Internal;
+                }
+                ExitCode::Success
+            } else {
+                let _ = writeln!(stderr, "error: unknown domain `{domain}`");
+                ExitCode::Usage
+            }
+        }
+        ResolveOutcome::CommandHelp { domain, verb, major } => {
+            if let Some(cmd) = tree.find(&domain, &verb) {
+                if let Some(maj) = cmd.major(major) {
+                    if stdout.write_all(tree.render_command_help(cmd, maj).as_bytes()).is_err() {
+                        return ExitCode::Internal;
+                    }
+                    return ExitCode::Success;
+                }
+            }
+            let _ = writeln!(stderr, "error: unknown command `{domain} {verb}`");
+            ExitCode::Usage
+        }
+        ResolveOutcome::HostSubcommand { name, .. } => {
+            let _ = writeln!(stderr, "error: host subcommand `{name}` is handled by the binary");
+            ExitCode::Usage
+        }
+        ResolveOutcome::Invoke { command_id, json, .. } => {
+            let out = Output::new(json, stdout, stderr);
+            call_bus(bus, command_id.as_str(), out)
+        }
+        ResolveOutcome::UsageError { message, json, .. } => {
+            if json {
+                let out = Output::new(true, stdout, stderr);
+                out.finish(&usage(&message))
+            } else {
+                let _ = writeln!(stderr, "error: {message}");
+                ExitCode::Usage
+            }
+        }
+    }
+}
+
+fn call_bus(bus: &mut dyn Bus, id: &str, mut out: Output<'_>) -> ExitCode {
     // A panic in the bus would exit 101, outside the table: report it as internal (exit 1).
-    let called = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| bus.call(&id, &mut out)));
+    let called = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| bus.call(id, &mut out)));
     let env = match called {
         Ok(env) => env,
-        Err(_) => Envelope::failed(&id, ErrorCode::InternalError, "the command panicked", None),
+        Err(_) => Envelope::failed(id, ErrorCode::InternalError, "the command panicked", None),
     };
     out.finish(&env)
 }

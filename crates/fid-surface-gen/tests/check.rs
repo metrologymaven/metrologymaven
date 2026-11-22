@@ -106,12 +106,14 @@ fn ac2_missing_py_reports_exact_missing_surface() {
 }
 
 /// AC-3: `fixtures/surfaces/orphan/` whose CLI index names `demo.ghost_cmd@1`
-/// reports `orphan_entry` for it.
+/// reports `orphan_entry` for it (and `stale_file` because `cli/surface-index.json` differs
+/// from the registered `CliEmitter` output).
 #[test]
 fn ac3_orphan_reports_orphan_entry() {
     let report = check_surfaces(&manifest_bytes(), &surfaces_dir("orphan")).expect("check orphan");
-    assert_eq!(report.findings.len(), 1, "unexpected findings: {:?}", report.findings);
-    let f = &report.findings[0];
+    let orphans: Vec<&Finding> = report.findings.iter().filter(|f| f.kind == FindingKind::OrphanEntry).collect();
+    assert_eq!(orphans.len(), 1, "expected 1 orphan_entry, got: {:?}", report.findings);
+    let f = orphans[0];
     assert_eq!(f.kind, FindingKind::OrphanEntry);
     assert_eq!(f.surface, "cli");
     assert_eq!(f.command, Some(CommandRef { command_id: "demo.ghost_cmd@1".to_string(), major: 1 }));

@@ -24,6 +24,8 @@ fid-surface = { path = "../fid-surface" }
 fid-types = { path = "../fid-types" }
 # The MCP emitter (AUTO.MCP.PROJ, services layer), registered in `registered()`.
 fid-mcp = { path = "../fid-mcp" }
+# The CLI tree emitter (AUTO.CLI.TREE, app layer), registered in `registered()`.
+fid-cli = { path = "../fid-cli" }
 
 [lints]
 workspace = true

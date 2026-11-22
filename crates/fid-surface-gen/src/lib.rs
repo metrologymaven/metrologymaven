@@ -692,9 +692,29 @@ pub fn generate(manifest: &[u8], emitters: &[&dyn SurfaceEmitter], out: &Path) -
 }
 
 /// The emitter list, in its fixed run order. Each surface node adds its emitter here when it
-/// is built: [`McpEmitter`] (`AUTO.MCP.PROJ`), [`DocsEmitter`] (`AUTO.SURF.DOCS`).
+/// is built: [`McpEmitter`] (`AUTO.MCP.PROJ`), [`DocsEmitter`] (`AUTO.SURF.DOCS`), [`CliEmitter`] (`AUTO.CLI.TREE`).
 pub fn registered() -> Vec<Box<dyn SurfaceEmitter>> {
-    vec![Box::new(McpEmitter), Box::new(DocsEmitter)]
+    vec![Box::new(McpEmitter), Box::new(DocsEmitter), Box::new(CliEmitter)]
+}
+
+/// The CLI surface (spec node `AUTO.CLI.TREE`): `cli/cli-tree.json` from [`fid_cli::tree::emit`],
+/// with the header as its `_header` member.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CliEmitter;
+
+impl SurfaceEmitter for CliEmitter {
+    fn surface(&self) -> &'static str {
+        fid_cli::SURFACE
+    }
+
+    fn emit(&self, p: &Projection) -> Result<Vec<GeneratedFile>, EmitError> {
+        let out = fid_cli::tree::emit(p).map_err(|e| EmitError { detail: e.to_string() })?;
+        Ok(vec![GeneratedFile { rel_path: fid_cli::TREE_FILE.to_string(), bytes: out.bytes, covers: out.commands }])
+    }
+
+    fn comment_syntax(&self, _path: &str) -> CommentSyntax {
+        CommentSyntax::JsonMember
+    }
 }
 
 /// The MCP surface (spec node AUTO.MCP.PROJ): `mcp/mcp-tools.json` from [`fid_mcp::emit`],
