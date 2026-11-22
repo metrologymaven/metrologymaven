@@ -63,6 +63,7 @@ python fixtures/fit/make_rnd_fixtures.py --check
 python fixtures/fit/make_tan_plane_fixtures.py --check
 python fixtures/fit/make_tan_rock_fixtures.py --check
 python fixtures/fit/make_trait_fixtures.py --check
+python fixtures/fit/make_vor_fixtures.py --check
 python fixtures/flow/fixes/make_fixtures.py --check
 python fixtures/flow/journey/make_fixtures.py --check
 python fixtures/flow/pkg/make_fixtures.py --check

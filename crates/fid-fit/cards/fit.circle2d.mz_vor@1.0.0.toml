@@ -1,0 +1,17 @@
+# Spec card (KRN.MZ.VOR). Cite designators and clause numbers only; never paste standards text.
+id = "fit.circle2d.mz_vor@1.0.0"
+title = "Exact Voronoi-based minimum-zone 2D circle"
+method = "Builds the nearest-point Voronoi diagram (dual of deterministic incremental Bowyer-Watson Delaunay triangulation after lexicographic total-order sort) and the farthest-point Voronoi diagram of the convex hull (Andrew's monotone chain and farthest-point Delaunay triangulation) using adaptive-precision exact-sign orient2d and incircle predicates without FMA (Shewchuk 1997). Evaluates radial zone width at every nearest-diagram vertex, every farthest-diagram vertex, and every nearest-edge by farthest-edge intersection (Roy and Zhang 1992), returning the global minimum with total-order tie-break on centre coordinates and the critical boundary contacts."
+applicability = "At least 4 distinct planar points in SI metres, not all collinear. Coordinates finite and not subnormal; deterministic (D0) with no solver iterations."
+references = [
+  "Roy, U. and Zhang, X. (1992). Establishment of a pair of concentric circles with the minimum radial separation for assessing roundness error. Computer-Aided Design 24(3), 161-168 [unverified citation details].",
+  "Shewchuk, J. R. (1997). Adaptive precision floating-point arithmetic and fast robust geometric predicates. Discrete & Computational Geometry 18(3), 305-363.",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Fewer than 4 distinct points: TooFewPoints.",
+  "All points collinear (fewer than 3 strict convex-hull vertices): Collinear.",
+  "Non-finite or subnormal coordinates: NonFinite or Subnormal.",
+]
+validation = "Seeded 500-case brute-force oracle suite fixtures/fit/vor-small-v1 (make_vor_fixtures.py) agreeing within 1e-12 m with identical critical sets, 2000-point latency check (< 200 ms), and deterministic cross-target output-bit digest pin."
