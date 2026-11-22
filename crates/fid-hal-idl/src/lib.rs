@@ -9,8 +9,12 @@
 //! - [`base`]: the `Device@1` base package; so far [`base::config`], typed configuration and
 //!   the configuration digest (`HAL.IDL.BASE.CFG`), and [`base::error`], the closed device
 //!   error model (`HAL.IDL.BASE.ERR`).
+//! - [`package`]: the `capability-package/v1` language-neutral capability-package description
+//!   format, [`CapabilityPackage`] trait, validator and RFC 8785 canonical digest
+//!   (`HAL.IDL.GEN.FMT`).
 
 pub mod base;
+pub mod package;
 pub mod stamp;
 pub mod units;
 
@@ -31,4 +35,11 @@ pub use base::config::{
 
 pub use base::error::{
     Behaviour, DeviceError, DeviceErrorParseError, DeviceText, ErrorCode, OperatorHintId, ParseErrorKind, Severity,
+};
+
+pub use package::{
+    is_semver, validate_and_digest_json, validate_package, BatchColumnDesc, BatchSchemaDesc, CapabilityPackage,
+    ConformanceItemDesc, ConformanceProfileDesc, OperationDesc, PackageDescription, PackageError, PackageManifest,
+    SemanticsNote, ALLOWED_SCHEMA_KEYWORDS, ALLOWED_SCHEMA_TYPES, MAX_PACKAGE_BYTES, MAX_PACKAGE_DEPTH,
+    MAX_SEMANTICS_BYTES, PACKAGE_SCHEMA_TAG,
 };

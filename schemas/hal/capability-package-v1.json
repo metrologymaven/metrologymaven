@@ -1,0 +1,374 @@
+{
+  "$defs": {
+    "batchColumn": {
+      "additionalProperties": false,
+      "properties": {
+        "encoding": {
+          "$ref": "#/$defs/encodingDescriptor"
+        },
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/$defs/siUnit"
+        }
+      },
+      "required": [
+        "encoding",
+        "name",
+        "unit"
+      ],
+      "type": "object"
+    },
+    "batchSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "items": {
+            "$ref": "#/$defs/batchColumn"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9._-]{0,63}$",
+          "type": "string"
+        },
+        "seq_range": {
+          "type": "boolean"
+        },
+        "validity_mask": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "columns",
+        "id",
+        "seq_range",
+        "validity_mask"
+      ],
+      "type": "object"
+    },
+    "conformanceItem": {
+      "additionalProperties": false,
+      "properties": {
+        "fixture_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "summary"
+      ],
+      "type": "object"
+    },
+    "encodingDescriptor": {
+      "additionalProperties": false,
+      "properties": {
+        "numeric": {
+          "enum": [
+            "i16",
+            "i32",
+            "i64",
+            "u16",
+            "u32",
+            "f32",
+            "f64"
+          ]
+        },
+        "offset": {
+          "pattern": "^0x[0-9a-f]{16}$",
+          "type": "string"
+        },
+        "scale": {
+          "pattern": "^0x[0-9a-f]{16}$",
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/$defs/siUnit"
+        }
+      },
+      "required": [
+        "numeric",
+        "offset",
+        "scale",
+        "unit"
+      ],
+      "type": "object"
+    },
+    "errorCode": {
+      "enum": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "CONFIG_INVALID",
+        "OUT_OF_RANGE",
+        "NOT_QUALIFIED",
+        "CALIBRATION_EXPIRED",
+        "LIMIT",
+        "SAFETY_STOP_OBSERVED",
+        "VENDOR_LICENSE",
+        "UNSUPPORTED",
+        "INTERNAL"
+      ]
+    },
+    "operation": {
+      "additionalProperties": false,
+      "properties": {
+        "class": {
+          "$ref": "#/$defs/sideEffect"
+        },
+        "errors": {
+          "items": {
+            "$ref": "#/$defs/errorCode"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "live_settings": {
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9._-]{0,63}$",
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+          "type": "string"
+        },
+        "request": {
+          "$ref": "#/$defs/schemaFragment"
+        },
+        "response": {
+          "$ref": "#/$defs/schemaFragment"
+        }
+      },
+      "required": [
+        "class",
+        "errors",
+        "name",
+        "request",
+        "response"
+      ],
+      "type": "object"
+    },
+    "schemaFragment": {
+      "additionalProperties": false,
+      "description": "JSON Schema 2020-12 fragment restricted to the HAL.IDL.GEN.FMT keyword allowlist (REQ-004).",
+      "properties": {
+        "$ref": {
+          "pattern": "^#/\\$defs/[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "type": "string"
+        },
+        "additionalProperties": {
+          "const": false
+        },
+        "enum": {
+          "items": {
+            "type": [
+              "string",
+              "number",
+              "integer",
+              "boolean",
+              "null"
+            ]
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "items": {
+          "$ref": "#/$defs/schemaFragment"
+        },
+        "maxLength": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "minimum": {
+          "type": "number"
+        },
+        "properties": {
+          "additionalProperties": {
+            "$ref": "#/$defs/schemaFragment"
+          },
+          "type": "object"
+        },
+        "required": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "type": {
+          "enum": [
+            "array",
+            "boolean",
+            "integer",
+            "null",
+            "number",
+            "object",
+            "string"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "siUnit": {
+      "enum": [
+        "m",
+        "rad",
+        "s",
+        "K",
+        "Pa",
+        "1"
+      ]
+    },
+    "sideEffect": {
+      "enum": [
+        "R0",
+        "R1",
+        "W1",
+        "W2",
+        "W3",
+        "X1",
+        "I1",
+        "D1",
+        "M1",
+        "S1",
+        "A0"
+      ]
+    }
+  },
+  "$id": "https://metrologymaven.io/schemas/hal/capability-package-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Language-neutral capability-package description format capability-package/v1 (spec node HAL.IDL.GEN.FMT).",
+  "properties": {
+    "$defs": {
+      "additionalProperties": {
+        "$ref": "#/$defs/schemaFragment"
+      },
+      "type": "object"
+    },
+    "batch_schemas": {
+      "items": {
+        "$ref": "#/$defs/batchSchema"
+      },
+      "type": "array"
+    },
+    "manifest": {
+      "additionalProperties": false,
+      "properties": {
+        "deprecated": {
+          "type": "boolean"
+        },
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,63}$",
+          "type": "string"
+        },
+        "tier3_usable": {
+          "type": "boolean"
+        },
+        "version": {
+          "maxLength": 128,
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "deprecated",
+        "name",
+        "tier3_usable",
+        "version"
+      ],
+      "type": "object"
+    },
+    "operations": {
+      "items": {
+        "$ref": "#/$defs/operation"
+      },
+      "type": "array"
+    },
+    "profile": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/conformanceItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "items"
+      ],
+      "type": "object"
+    },
+    "schema": {
+      "const": "capability-package/v1"
+    },
+    "semantics": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 262144,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "digest",
+        "text"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "batch_schemas",
+    "manifest",
+    "operations",
+    "profile",
+    "schema",
+    "semantics"
+  ],
+  "title": "capability-package/v1",
+  "type": "object"
+}
