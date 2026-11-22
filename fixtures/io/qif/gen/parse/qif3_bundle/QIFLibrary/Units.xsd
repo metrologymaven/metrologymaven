@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:q="urn:fid:test:qif3"
+           targetNamespace="urn:fid:test:qif3"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+  <xs:include schemaLocation="Primitives.xsd"/>
+
+  <xs:simpleType name="LinearUnitNameType">
+    <xs:restriction base="xs:token">
+      <xs:enumeration value="mm"/>
+      <xs:enumeration value="m"/>
+      <xs:enumeration value="in"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="LinearValueType">
+    <xs:simpleContent>
+      <xs:extension base="xs:double">
+        <xs:attribute name="linearUnit" type="q:LinearUnitNameType"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="PrimaryUnitsType">
+    <xs:sequence>
+      <xs:element name="LinearUnit" type="q:LinearUnitNameType"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

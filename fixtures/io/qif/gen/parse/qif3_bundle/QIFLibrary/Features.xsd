@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:q="urn:fid:test:qif3"
+           targetNamespace="urn:fid:test:qif3"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+  <xs:include schemaLocation="Primitives.xsd"/>
+  <xs:include schemaLocation="Units.xsd"/>
+
+  <xs:complexType name="FeatureBaseType" abstract="true">
+    <xs:sequence>
+      <xs:element name="Name" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attributeGroup ref="q:IdentifiableAttrs"/>
+  </xs:complexType>
+
+  <xs:complexType name="CylinderFeatureType">
+    <xs:complexContent>
+      <xs:extension base="q:FeatureBaseType">
+        <xs:sequence>
+          <xs:element name="Location" type="q:PointType"/>
+          <xs:element name="Axis" type="q:UnitVectorType"/>
+          <xs:element name="Diameter" type="q:LinearValueType"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="PlaneFeatureType">
+    <xs:complexContent>
+      <xs:extension base="q:FeatureBaseType">
+        <xs:sequence>
+          <xs:element name="Location" type="q:PointType"/>
+          <xs:element name="Normal" type="q:UnitVectorType"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:element name="FeatureNominal" type="q:FeatureBaseType" abstract="true"/>
+  <xs:element name="CylinderFeatureNominal" type="q:CylinderFeatureType" substitutionGroup="q:FeatureNominal"/>
+  <xs:element name="PlaneFeatureNominal" type="q:PlaneFeatureType" substitutionGroup="q:FeatureNominal"/>
+</xs:schema>

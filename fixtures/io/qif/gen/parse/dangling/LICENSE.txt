@@ -1,0 +1,1 @@
+Synthetic licence text for the IO.QIF.GEN.PARSE test fixtures (CC-BY-4.0).

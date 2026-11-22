@@ -1870,7 +1870,10 @@ dependencies = [
 name = "fid-qif-gen"
 version = "0.0.1"
 dependencies = [
+ "fid-canon",
+ "fid-io-reg",
  "fid-types",
+ "fid-xml",
  "sha2 0.10.9",
  "toml",
 ]

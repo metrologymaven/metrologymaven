@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:c="urn:fid:test:cycle"
+           targetNamespace="urn:fid:test:cycle"
+           elementFormDefault="qualified">
+  <xs:include schemaLocation="b.xsd"/>
+  <xs:complexType name="TypeA">
+    <xs:sequence>
+      <xs:element name="B" type="c:TypeB" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="RootA" type="c:TypeA"/>
+</xs:schema>

@@ -1,6 +1,6 @@
 [package]
 name = "fid-qif-gen"
-description = "Build-time QIF 3.0 generator: pinned XSD manifest and digest check (spec node IO.QIF.GEN.PIN)"
+description = "Build-time QIF 3.0 generator: pinned XSD manifest and digest check (IO.QIF.GEN.PIN) and XSD parser into the Schema IR (IO.QIF.GEN.PARSE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,8 +9,14 @@ repository.workspace = true
 publish = false
 
 [dependencies]
+# RFC 8785 canonical JSON for golden RawIr output (IO.QIF.GEN.PARSE AC-1).
+fid-canon = { path = "../fid-canon" }
+# Safe-read limit harness (IO.REG.LIMITS, REQ-IO.QIF.GEN.PARSE-005).
+fid-io-reg = { path = "../fid-io-reg" }
 # Shared `sha256:` digest type (AGENTS.md rule 14).
 fid-types = { path = "../fid-types" }
+# Hardened streaming XML pull reader (IO.QIF.XML.PARSE, REQ-IO.QIF.GEN.PARSE-005).
+fid-xml = { path = "../fid-xml" }
 # SHA-256 of the pinned files; same crate and version as fid-canon and fid-testkit.
 sha2 = "0.10"
 # Reads qif-xsd.manifest.toml as an untyped table (no serde derive), as fid-knp1-lint does.
