@@ -12,10 +12,10 @@ claimed_by:
 satisfies: [REQ-RPT-006, REQ-RPT-002]
 covers: []
 depends_on: [RPT.MODEL, CORE, IO, VIZ]
-cli: [fid report *-balloon, fid report *-reading, fid report *-gauge]
-mcp: [report_*_balloon, report_*_reading, report_*_gauge]
-journal: [report.*_balloon, report.*_reading, report.*_gauge]
-updated: 2026-11-16
+cli: [fid report *-balloon, fid report *-balloons, fid report *-balloon-pack, fid report extract-drawing-text, fid report *-reading, fid report *-gauge]
+mcp: [report_*_balloon, report_*_balloons, report_*_balloon_pack, report_extract_drawing_text, report_*_reading, report_*_gauge]
+journal: [report.*_balloon, report.*_balloons, report.*_balloon_pack, report.extract_drawing_text, report.*_reading, report.*_gauge]
+updated: 2026-11-22
 ---
 
 # RPT.BALLOON: Drawing ballooning and manual readings
@@ -54,20 +54,21 @@ Lets a user load a 2D drawing (PDF or raster), place numbered balloons on its ca
 - **REQ-RPT.BALLOON-008** A manual reading shall carry uncertainty status UEC-0 unless the gauge register provides an uncertainty model accepted by UNC.
 - **REQ-RPT.BALLOON-009** Balloon positions shall be stored in sheet coordinates so that they stay attached to the callout when the sheet is zoomed, panned or exported.
 - **REQ-RPT.BALLOON-010** Typed reading values and drawing text shall be treated as untrusted content (CONSTITUTION C6).
+- **REQ-RPT.BALLOON-011** The system shall support automated extraction of callout text and bounding boxes from 2D PDF drawings and batched balloon/characteristic proposals on a draft or agent branch for human H2 adoption, plus one-command export of a ballooned PDF and AS9102 Form 3 starter pack.
 
 ## Interfaces
 
-- **Offers:** `report.add_balloon@1`, `report.move_balloon@1`, `report.renumber_balloon@1`, `report.enter_reading@1`, `report.void_reading@1`, gauge register commands; types `DrawingSheet`, `Balloon`, `Gauge`, `ManualReading`; a ballooned-drawing block for `RPT.MODEL`.
+- **Offers:** `report.add_balloon@1`, `report.move_balloon@1`, `report.renumber_balloon@1`, `report.enter_reading@1`, `report.void_reading@1`, `report.extract_drawing_text@1`, `report.propose_balloons@1`, `report.export_balloon_pack@1`, gauge register commands; types `DrawingSheet`, `Balloon`, `Gauge`, `ManualReading`, `BalloonProposal`; a ballooned-drawing block for `RPT.MODEL`.
 - **Consumes:** PDF and image import (IO), characteristics and tolerance evaluation (GDT), decision rules (UNC), sheet viewer (VIZ), journal (CORE).
-- **Side effects:** W2. Agents may propose balloons on an agent branch; a human adopts them (CONSTITUTION C5). Agents shall not enter readings on behalf of an operator.
+- **Side effects:** W2 (working document), W1 (auto-proposals on draft/agent branch and local export root). Agents may propose balloons on an agent branch; a human adopts them (CONSTITUTION C5). Agents shall not enter readings on behalf of an operator.
 
 ## Decomposition hints
 
-SHEET (drawing documents), REG (balloon register and renumbering), CHAR (characteristic from balloon), GAUGE (gauge register), ENTRY (manual reading entry), BLOCK (ballooned-drawing report block).
+SHEET (drawing documents), REG (balloon register and renumbering), CHAR (characteristic from balloon), GAUGE (gauge register), ENTRY (manual reading entry), BLOCK (ballooned-drawing report block), AUTO (automated 2D PDF extraction, balloon proposals and quick pack export).
 
 ## Split rationale
 
-The split follows the **objects an operator handles**: drawings (SHEET), balloons on them (REG), characteristics created from balloons when there is no CAD (CHAR), the gauges readings cite (GAUGE), the readings themselves (ENTRY), and the report block that shows the result (BLOCK). Each owns its own commands, and the order matches the workflow: load drawing, balloon, define, register gauges, enter readings, report.
+The split follows the **objects an operator handles**: drawings (SHEET), balloons on them (REG), characteristics created from balloons when there is no CAD (CHAR), the gauges readings cite (GAUGE), the readings themselves (ENTRY), the report block that shows the result (BLOCK), and automated 2D PDF callout extraction/proposal plus quick pack export (AUTO). Each owns its own commands, and the order matches the workflow: load drawing, auto-propose or manually place balloons, define, register gauges, enter readings, report.
 
 - REG is finished as a leaf: its numbering rules are exact and FAI and PPAP row order depends on them.
 - GAUGE is separate from ENTRY because the register outlives any one reading and may later be shared with `HAL.DRV` (see Open questions).
@@ -79,9 +80,9 @@ Alternatives considered:
 
 ## Open questions
 
-- Automatic balloon proposal from PDF callouts or 3D PMI is a common incumbent-adjacent feature [unverified]. Not assigned to any node yet; candidate for a later child or for IND.
+- Resolved: automatic 2D PDF callout extraction, balloon proposals (with optional local/MCP vision-OCR candidates for scanned drawings) and quick ballooned-PDF + Form 3 export are now owned by `RPT.BALLOON.AUTO` (P1a, `research/pdf-ballooning/DESIGN.md`).
 - The constraint "agents shall not enter readings" is a proposed reading of C5 and REQ-FID-021; confirm with maintainers (carried into `RPT.BALLOON.ENTRY`).
-- No IO node names a PDF or raster page reader for drawings (raised in `RPT.BALLOON.SHEET`).
+- No IO node names a PDF or raster page reader for drawings (resolved as `IO.REG.PLUGIN.DRAW`; PDF text and display tiles are owned by `RPT.BALLOON.AUTO.TEXT`).
 - Gauge register overlap with `HAL.DRV` (raised in `RPT.BALLOON.GAUGE`).
 
 ## Children
@@ -94,3 +95,4 @@ Alternatives considered:
 | RPT.BALLOON.GAUGE | Gauge register | 006 007 008 | none |
 | RPT.BALLOON.ENTRY | Manual reading entry | 004 005 006 007 008 010 | none |
 | RPT.BALLOON.BLOCK | Ballooned-drawing report block | 009 | none |
+| RPT.BALLOON.AUTO | Automated 2D PDF callout extraction, balloon proposals and quick pack export | 001 002 009 010 011 | none |
