@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid mcp --server *]
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-mcp]
+updated: 2026-11-22
 ---
 
 # AUTO.MCP.SRV: Server partitioning and front-door tool sets

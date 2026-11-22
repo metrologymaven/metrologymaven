@@ -1,0 +1,24 @@
+# Fixture core profile for AUTO.MCP.SRV (AC-1).
+format = "fid.mcp-profile"
+version = 1
+name = "core"
+title = "Metrology Maven Core"
+domains = [
+  "tools",
+  "project",
+  "program",
+  "egress",
+  "rpt",
+  "motion",
+  "plugin",
+  "trust",
+]
+commands = []
+front_door = [
+  "tools.search_tools@1",
+  "tools.describe_tool@1",
+  "tools.list_domains@1",
+  "tools.get_workflow@1",
+  "project.list_features@1",
+  "program.save_draft@1",
+]
