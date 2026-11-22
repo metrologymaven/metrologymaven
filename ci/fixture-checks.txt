@@ -184,6 +184,7 @@ python fixtures/solv/patch/upstream-examples-v1/check_objectives.py
 python fixtures/solv/seq/ref-v1/make_cases.py --check
 python fixtures/solv/vend/make_fixtures.py --check
 python fixtures/solv/wrap/small-v1/make_fixtures.py --check
+python fixtures/surfaces/make_fixtures.py --check
 python fixtures/troot/make_fixtures.py --check
 python fixtures/trust/profile/select/make_cases.py --check
 python fixtures/unc/class/make_table.py --check
