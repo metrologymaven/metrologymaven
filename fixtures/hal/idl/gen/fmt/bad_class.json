@@ -1,0 +1,144 @@
+{
+  "schema": "capability-package/v1",
+  "manifest": {
+    "name": "Demo",
+    "version": "1.0.0",
+    "deprecated": false,
+    "tier3_usable": true
+  },
+  "$defs": {
+    "GainValue": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    }
+  },
+  "operations": [
+    {
+      "name": "set_gain",
+      "class": "Z9",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "gain": {
+            "$ref": "#/$defs/GainValue"
+          },
+          "channel": {
+            "type": "string",
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "gain"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "applied": {
+            "$ref": "#/$defs/GainValue"
+          }
+        },
+        "required": [
+          "applied"
+        ]
+      },
+      "errors": [
+        "OUT_OF_RANGE",
+        "CONFIG_INVALID"
+      ],
+      "live_settings": [
+        "sensor.gain"
+      ]
+    },
+    {
+      "name": "read_sample",
+      "class": "R0",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "single",
+              "average"
+            ]
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "samples": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "samples"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST"
+      ],
+      "live_settings": []
+    }
+  ],
+  "batch_schemas": [
+    {
+      "id": "demo.points",
+      "columns": [
+        {
+          "name": "x_pos",
+          "unit": "m",
+          "encoding": {
+            "numeric": "i32",
+            "scale": "0x3eb0c6f7a0b5ed8d",
+            "offset": "0x0000000000000000",
+            "unit": "m"
+          }
+        },
+        {
+          "name": "temp_k",
+          "unit": "K",
+          "encoding": {
+            "numeric": "f32",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x4071126666666666",
+            "unit": "K"
+          }
+        }
+      ],
+      "validity_mask": true,
+      "seq_range": true
+    }
+  ],
+  "semantics": {
+    "text": "# Demo@1 semantics\n\nTwo-operation demonstration capability package for `HAL.IDL.GEN.FMT`.\n- `read_sample` reads one calibrated point without energising motion.\n- `set_gain` updates the live gain setting.\n",
+    "digest": "sha256:2a1c3cbfe271d871191c4c89028729424311453fbde47229199ec146a965ac06"
+  },
+  "profile": {
+    "id": "hal.demo.v1",
+    "items": [
+      {
+        "id": "DEMO-002",
+        "summary": "Live gain update stays within [0, 100]."
+      },
+      {
+        "id": "DEMO-001",
+        "summary": "read_sample returns calibrated positions in metres.",
+        "fixture_digest": "sha256:96a2789e5acb45ba8e5640c760770c31f62d39cc5dab072397f4aaf9e04ff819"
+      }
+    ]
+  }
+}
