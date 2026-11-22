@@ -7,7 +7,9 @@
 //! determinism class D0: no I/O, no
 //! clock, no randomness, `BTreeMap` only; and the GPU frame graph ([`frame::graph`], spec leaf
 //! `VIZ.RENDER.FRAME.GRAPH`): backend selection, pass registration, colour, reversed-Z depth
-//! and ID targets with readback (determinism class N for pixels). The crate has no windowing or
+//! and ID targets with readback (determinism class N for pixels), and capability-tier
+//! classification with render-info snapshots ([`frame::tier`], spec leaf `VIZ.RENDER.FRAME.TIER`,
+//! determinism class D1). The crate has no windowing or
 //! UI-toolkit dependency (constitution C2; `fid-shlint` checks it). Nothing here panics
 //! (CONSTITUTION §8).
 

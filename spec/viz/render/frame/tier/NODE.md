@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-render, fid-view-cmd]
 satisfies: [REQ-VIZ.RENDER.FRAME-002, REQ-VIZ.RENDER.FRAME-003]
 covers: []
 depends_on: [VIZ.RENDER.FRAME.GRAPH, CORE.REG.DEF, CORE.JRN.CANON]

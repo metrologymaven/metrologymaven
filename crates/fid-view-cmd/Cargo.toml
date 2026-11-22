@@ -1,0 +1,26 @@
+[package]
+name = "fid-view-cmd"
+description = "View and render registry commands (spec node VIZ.RENDER.FRAME.TIER: view.get_render_info@1)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Viewer layer: declares view.* commands (fid-registry, model) and bus handlers (fid-bus, engine)
+# over fid-render (viewer). No windowing or UI-toolkit dependency (C2).
+[dependencies]
+fid-bus = { path = "../fid-bus" }
+fid-canon = { path = "../fid-canon" }
+fid-registry = { path = "../fid-registry" }
+fid-render = { path = "../fid-render" }
+fid-types = { path = "../fid-types" }
+
+[dev-dependencies]
+fid-bus = { path = "../fid-bus", features = ["test-support"] }
+fid-journal = { path = "../fid-journal" }
+wgpu = { version = "27", default-features = false, features = ["dx12", "vulkan", "wgsl", "std", "parking_lot"] }
+
+[lints]
+workspace = true

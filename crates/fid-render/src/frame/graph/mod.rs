@@ -32,6 +32,10 @@ pub use backend::{
 };
 pub use passes::{Pass, PassContext, PassDecl, PassId, PassList, TargetId, COLOUR, DEPTH, FRAME_TARGETS, ID};
 
+use crate::frame::tier::{
+    AdapterCapabilities, CapabilityTier, FrameStats, PointRasterPath, RenderBudgets, RenderInfo, RenderProfile,
+    TransparencyPath,
+};
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
@@ -114,6 +118,9 @@ impl std::error::Error for GraphError {}
 #[derive(Debug)]
 pub struct GpuAdapter {
     pub info: wgpu::AdapterInfo,
+    pub features: wgpu::Features,
+    pub downlevel: wgpu::DownlevelFlags,
+    pub limits: wgpu::Limits,
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
 }
@@ -259,17 +266,20 @@ impl AdapterSource for WgpuSource {
         let Some(adapter) = adapters.into_iter().nth(pick) else {
             return Err(REASON_NO_ADAPTER.into());
         };
+        let features = adapter.features();
+        let downlevel = adapter.get_downlevel_capabilities().flags;
+        let limits = adapter.limits();
         let desc = wgpu::DeviceDescriptor {
             label: Some("fid-render frame graph"),
             required_features: wgpu::Features::empty(),
-            required_limits: adapter.limits(),
+            required_limits: limits.clone(),
             experimental_features: wgpu::ExperimentalFeatures::disabled(),
             memory_hints: wgpu::MemoryHints::Performance,
             trace: wgpu::Trace::Off,
         };
         let (device, queue) =
             pollster::block_on(adapter.request_device(&desc)).map_err(|e| format!("device creation failed: {e}"))?;
-        Ok(GpuAdapter { info: adapter.get_info(), device, queue })
+        Ok(GpuAdapter { info: adapter.get_info(), features, downlevel, limits, device, queue })
     }
 }
 
@@ -410,6 +420,10 @@ pub struct FrameGraph {
     queue: wgpu::Queue,
     backend: Backend,
     info: wgpu::AdapterInfo,
+    capabilities: AdapterCapabilities,
+    profile: RenderProfile,
+    budgets: RenderBudgets,
+    last_frame_stats: FrameStats,
     tried: Vec<Attempt>,
     passes: PassList,
     lost: Arc<Mutex<Option<String>>>,
@@ -427,7 +441,18 @@ impl FrameGraph {
         choice: Option<&AdapterChoice>,
     ) -> Result<FrameGraph, GraphError> {
         let s = select_excluding(source, order, choice, source.excluded())?;
-        Ok(FrameGraph::from_selected(s))
+        Ok(FrameGraph::from_selected(s, false))
+    }
+
+    /// Selects a backend from `source` in `order` and creates a headless server-stills device
+    /// classified as capability tier `T3` (REQ-VIZ.RENDER.FRAME.TIER-001).
+    pub fn create_headless(
+        source: &WgpuSource,
+        order: &[Backend],
+        choice: Option<&AdapterChoice>,
+    ) -> Result<FrameGraph, GraphError> {
+        let s = select_excluding(source, order, choice, source.excluded())?;
+        Ok(FrameGraph::from_selected(s, true))
     }
 
     /// Start-up as the spec describes it: the policy order (or `[software]` when the policy gave
@@ -452,7 +477,7 @@ impl FrameGraph {
         self.policy_warning.as_ref()
     }
 
-    fn from_selected(s: Selected<GpuAdapter>) -> FrameGraph {
+    fn from_selected(s: Selected<GpuAdapter>, headless_server: bool) -> FrameGraph {
         let lost = Arc::new(Mutex::new(None));
         let lost_flag = Arc::new(AtomicBool::new(false));
         let (l, f) = (Arc::clone(&lost), Arc::clone(&lost_flag));
@@ -473,11 +498,25 @@ impl FrameGraph {
                 }
             }
         }));
+        let capabilities = AdapterCapabilities::from_wgpu(
+            s.backend,
+            &s.adapter.info,
+            s.adapter.features,
+            s.adapter.downlevel,
+            &s.adapter.limits,
+            headless_server,
+        );
+        let profile = RenderProfile::from_capabilities(&capabilities);
+        let budgets = RenderBudgets::for_tier(profile.tier, capabilities.max_buffer_size);
         FrameGraph {
             device: s.adapter.device,
             queue: s.adapter.queue,
             backend: s.backend,
             info: s.adapter.info,
+            capabilities,
+            profile,
+            budgets,
+            last_frame_stats: FrameStats::default(),
             tried: s.tried,
             passes: PassList::new(),
             lost,
@@ -495,6 +534,59 @@ impl FrameGraph {
     /// The adapter in use.
     pub fn adapter_info(&self) -> &wgpu::AdapterInfo {
         &self.info
+    }
+
+    /// The adapter capability summary captured at device creation.
+    pub fn adapter_capabilities(&self) -> &AdapterCapabilities {
+        &self.capabilities
+    }
+
+    /// Capability tier classified at device creation (REQ-VIZ.RENDER.FRAME.TIER-001).
+    pub fn capability_tier(&self) -> CapabilityTier {
+        self.profile.tier
+    }
+
+    /// Classified backend, adapter, driver, point-raster and transparency paths.
+    pub fn render_profile(&self) -> &RenderProfile {
+        &self.profile
+    }
+
+    /// Primitive counts recorded by the last successfully presented frame.
+    pub fn last_frame_stats(&self) -> FrameStats {
+        self.last_frame_stats
+    }
+
+    /// Active frame-time and GPU memory budgets.
+    pub fn budgets(&self) -> RenderBudgets {
+        self.budgets
+    }
+
+    /// Pure snapshot for `view.get_render_info@1` (REQ-VIZ.RENDER.FRAME.TIER-003, -004).
+    /// Changes no document, view or render state.
+    pub fn render_info(&self) -> RenderInfo {
+        RenderInfo::new(&self.profile, self.budgets, self.last_frame_stats)
+    }
+
+    /// Overrides the frame-time and GPU memory budgets.
+    pub fn set_budgets(&mut self, budgets: RenderBudgets) {
+        self.budgets = budgets;
+    }
+
+    /// Overrides the active point-raster path (e.g. `viz.render.point_path` testing override).
+    pub fn set_point_raster(&mut self, path: PointRasterPath) {
+        self.profile.point_raster = path;
+    }
+
+    /// Overrides the active transparency path.
+    pub fn set_transparency(&mut self, path: TransparencyPath) {
+        self.profile.transparency = path;
+    }
+
+    /// Switches headless server-stills mode on or off and re-classifies tier and defaults.
+    pub fn set_headless_server(&mut self, headless: bool) {
+        self.capabilities.headless_server = headless;
+        self.profile = RenderProfile::from_capabilities(&self.capabilities);
+        self.budgets = RenderBudgets::for_tier(self.profile.tier, self.capabilities.max_buffer_size);
     }
 
     /// The backends tried before the one in use, with their reasons.
@@ -560,15 +652,25 @@ impl FrameGraph {
     }
 
     /// Renders one frame into `targets`: clears colour to `clear`, depth to [`DEPTH_CLEAR`]
-    /// and ID to 0, then runs every pass in ascending order key and submits.
+    /// and ID to 0, then runs every pass in ascending order key and submits. On success,
+    /// publishes the frame's accumulated [`FrameStats`] as [`FrameGraph::last_frame_stats`].
     pub fn render(&mut self, targets: &FrameTargets, clear: wgpu::Color) -> Result<(), GraphError> {
         self.begin_scopes()?;
-        let r = self.encode_frame(targets, clear);
+        let mut stats = FrameStats::default();
+        let r = self.encode_frame(targets, clear, &mut stats);
         self.end_scopes()?;
+        if r.is_ok() {
+            self.last_frame_stats = stats;
+        }
         r
     }
 
-    fn encode_frame(&mut self, targets: &FrameTargets, clear: wgpu::Color) -> Result<(), GraphError> {
+    fn encode_frame(
+        &mut self,
+        targets: &FrameTargets,
+        clear: wgpu::Color,
+        stats: &mut FrameStats,
+    ) -> Result<(), GraphError> {
         let mut encoder =
             self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("frame graph") });
         {
@@ -604,7 +706,8 @@ impl FrameGraph {
             });
         }
         for p in self.passes.iter_mut() {
-            let mut ctx = PassContext { device: &self.device, queue: &self.queue, encoder: &mut encoder, targets };
+            let mut ctx =
+                PassContext { device: &self.device, queue: &self.queue, encoder: &mut encoder, targets, stats };
             p.run.record(&mut ctx).map_err(|reason| GraphError::PassFailed { pass: p.id, reason })?;
         }
         self.queue.submit([encoder.finish()]);
