@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [fid-kdec]
+updated: 2026-11-22
 ---
 
 # UNC.DEC.RISK: Specific and global conformity risk
