@@ -18,6 +18,7 @@ cli: [fid import dmis-list-dialects]
 mcp: [import_dmis_list_dialects]
 journal: [import.dmis_list_dialects@1]
 built_in: [fid-io-dmis]
+built_pr: 529
 updated: 2026-11-22
 ---
 
