@@ -18,6 +18,7 @@ cli: [fid export results-report]
 mcp: [export_results_report]
 journal: [export.results_report@1]
 built_in: [fid-io-res]
+built_pr: 518
 updated: 2026-11-22
 ---
 
