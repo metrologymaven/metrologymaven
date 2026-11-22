@@ -231,6 +231,20 @@ pub enum SelError {
     BadRadius,
     /// The point buffer or point index does not match or failed a coordinate check.
     InvalidPointIndex { reason: &'static str },
+    /// The camera is degenerate (non-finite, zero viewport, near >= far, bad fov/height/aspect)
+    /// (REQ-GEO.SEL.RESOLVE-005).
+    BadCamera { reason: &'static str },
+    /// The lasso polygon has fewer than 3 or more than 4 096 vertices, or a non-finite / out-of-range vertex
+    /// (REQ-GEO.SEL.RESOLVE-005).
+    BadPolygon { reason: &'static str },
+    /// The target element has zero entries in the requested domain.
+    EmptyTarget,
+    /// A pick pixel coordinate, pixel tolerance or depth tolerance is non-finite or negative.
+    BadTolerance { reason: &'static str },
+    /// The per-triangle face ID slice length does not match the mesh's triangle count.
+    FaceIdsMismatch { expected: u64, found: u64 },
+    /// The BVH does not match the mesh or failed a ray query.
+    BvhMismatch { reason: &'static str },
 }
 
 impl SelError {
@@ -250,6 +264,12 @@ impl SelError {
             SelError::ElementMismatch { .. } => "element_mismatch",
             SelError::BadRadius => "bad_radius",
             SelError::InvalidPointIndex { .. } => "invalid_point_index",
+            SelError::BadCamera { .. } => "bad_camera",
+            SelError::BadPolygon { .. } => "bad_polygon",
+            SelError::EmptyTarget => "empty_target",
+            SelError::BadTolerance { .. } => "bad_tolerance",
+            SelError::FaceIdsMismatch { .. } => "face_ids_mismatch",
+            SelError::BvhMismatch { .. } => "bvh_mismatch",
         }
     }
 }
@@ -281,6 +301,14 @@ impl fmt::Display for SelError {
             }
             SelError::BadRadius => f.write_str("radius must be finite, non-negative and within COORD_LIMIT"),
             SelError::InvalidPointIndex { reason } => write!(f, "invalid point index: {reason}"),
+            SelError::BadCamera { reason } => write!(f, "bad camera: {reason}"),
+            SelError::BadPolygon { reason } => write!(f, "bad polygon: {reason}"),
+            SelError::EmptyTarget => f.write_str("target element has no entries in the requested domain"),
+            SelError::BadTolerance { reason } => write!(f, "bad tolerance: {reason}"),
+            SelError::FaceIdsMismatch { expected, found } => {
+                write!(f, "face IDs length mismatch: expected {expected} triangles, found {found}")
+            }
+            SelError::BvhMismatch { reason } => write!(f, "BVH mismatch: {reason}"),
         }
     }
 }

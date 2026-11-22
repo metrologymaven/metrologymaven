@@ -12,11 +12,16 @@
 //!   [`Selection`] counterparts), triangle [`grow`]/[`shrink`] by `n` rings of edge or vertex
 //!   adjacency, and point [`grow`]/[`shrink`] by radius through `fid-geo-index`.
 //!
-//! Query language and evaluation (`GEO.SEL.QUERY`), pick and lasso resolution
-//! (`GEO.SEL.RESOLVE`) and commands (`GEO.SEL.CMD`) are other leaves.
+//! - `GEO.SEL.RESOLVE` (see [`resolve`] and [`raster`]): deterministic CPU resolution of
+//!   pixel picks and lasso polygons given explicit [`Camera`] parameters, in `Through` and
+//!   `Visible` (CPU scanline depth buffer) modes, across point, triangle and face domains.
+//!
+//! Query language and evaluation (`GEO.SEL.QUERY`) and commands (`GEO.SEL.CMD`) are other leaves.
 
 pub mod algebra;
 pub mod model;
+pub mod raster;
+pub mod resolve;
 
 pub use algebra::{
     difference, difference_selections, grow, grow_points, grow_selection, grow_triangles, intersection,
@@ -26,4 +31,10 @@ pub use algebra::{
 pub use model::{
     apply, apply_with_count, domain_count, Domain, EntityId, IndexSet, IndexSetBuilder, SelError, Selection,
     SelectionBody, SelectionDigest, SelectionQuery,
+};
+pub use raster::{clip_triangle_depth, DepthBuffer, MAX_VIEWPORT_PIXELS};
+pub use resolve::{
+    point_in_polygon, project_point, ray_triangle_intersect, resolve_lasso, resolve_lasso_faces, resolve_pick,
+    resolve_pick_faces, resolve_pick_hit, Camera, Lasso, PickHit, ProjectedPoint, Projection, ResolveMode,
+    TriangleRule, DEFAULT_DEPTH_TOL_FRACTION, MAX_PIXEL_COORD, MAX_POLYGON_VERTICES, MIN_POLYGON_VERTICES,
 };
