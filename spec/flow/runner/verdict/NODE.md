@@ -19,6 +19,7 @@ cli: [fid accept show-report]
 mcp: [accept_show_report]
 journal: [accept.show_report@1]
 built_in: [fid-accept]
+built_pr: 440
 updated: 2026-11-22
 ---
 
