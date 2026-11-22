@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-20
+built_in: [fid-replay]
+built_pr: 458
+updated: 2026-11-22
 ---
 
 # CORE.RPL.RECON.FOLD: Reconstruction, head moves, fold invariant and crash resume

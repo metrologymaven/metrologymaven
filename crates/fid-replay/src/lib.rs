@@ -2,6 +2,7 @@
 
 pub mod bisect;
 pub mod classify;
+pub mod fold;
 pub mod snapshot;
 pub mod subst;
 
@@ -12,6 +13,13 @@ pub use bisect::{
 pub use classify::{
     aggregate, classify, Annotation, ClassifyError, Decision, Determinism, DeterminismExt, Limit, Output,
     ReplayOutcome, StepComparison, StepResult, Tolerance, ToleranceTable,
+};
+#[cfg(feature = "store")]
+pub use fold::store_adapter::{ActivityIncidentSink, StoreJournalReader, ROLE_PAYLOAD};
+pub use fold::{
+    check_fold_invariant, reconstruct, CloseSampler, DurableEntry, FoldInvariantMismatch, FoldInvariantOutcome,
+    IncidentSink, JournalReader, JournalReconstructor, LiveState, MemJournalReader, Reconstructed, Reconstructor,
+    VecIncidentSink, ACTIVITY_INCIDENT_COMMAND, CLOSE_CHECK_INTERVAL,
 };
 #[cfg(feature = "store")]
 pub use snapshot::store_adapter::{ActivityWarningSink, StoreLogicalAncestors, StoreSnapshotCache, StoreSnapshotTable};
