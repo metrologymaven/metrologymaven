@@ -7,6 +7,11 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+# UNC.RDL.TRACIM.ARCH: optional fid-store BlobStore adapter. Off by default so fid-rdl stays
+# wasm32-unknown-unknown compatible with default features.
+store = ["dep:fid-store"]
+
 [dependencies]
 # RFC 8785 canonical JSON, bounded parsing and SHA-256 (CORE.JRN.CANON). Layer model.
 fid-canon = { path = "../fid-canon" }
@@ -20,6 +25,12 @@ fid-registry = { path = "../fid-registry" }
 fid-surface = { path = "../fid-surface" }
 # The replay outcome class for exact replay of the activity records (CORE.RPL.CLASS). Layer engine.
 fid-replay = { path = "../fid-replay" }
+# Optional content-addressed store adapter for TraCIM archival (CORE.STO.CAS). Layer model.
+fid-store = { path = "../fid-store", optional = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+fid-rdl = { path = ".", features = ["store"] }
+fid-store = { path = "../fid-store" }
 
 [lints]
 workspace = true

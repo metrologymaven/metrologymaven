@@ -177,6 +177,12 @@ impl Visibility {
 pub struct HexF64(u64);
 
 impl HexF64 {
+    /// Constructs a [`HexF64`] from a finite `f64`, rejecting NaN and infinities.
+    pub fn from_f64(v: f64) -> Option<HexF64> {
+        let h = HexF64(v.to_bits());
+        h.is_finite().then_some(h)
+    }
+
     /// The raw bits.
     pub fn bits(self) -> u64 {
         self.0

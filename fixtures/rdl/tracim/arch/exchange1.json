@@ -1,0 +1,39 @@
+{
+  "leaked_request": {
+    "destination": "https://tracim.example.invalid/v1/orders/submit",
+    "direction": "request",
+    "payload": "POST /v1/orders/submit HTTP/1.1\r\nHost: tracim.example.invalid\r\nX-TraCIM-Order-Key: TRACIM-SYNTH-ORDER-KEY-0001-EXAMPLE\r\nContent-Type: application/json\r\n\r\n{\"suite\":\"gaussian-line\",\"debug_echo\":\"TRACIM-SYNTH-ORDER-KEY-0001-EXAMPLE\"}\n",
+    "secret_spans": [
+      [
+        83,
+        118
+      ]
+    ],
+    "timestamp": "2026-11-22T06:00:00Z"
+  },
+  "licence": "CC-BY-4.0",
+  "order_key": "TRACIM-SYNTH-ORDER-KEY-0001-EXAMPLE",
+  "report": {
+    "destination": "https://tracim.example.invalid/v1/orders/submit",
+    "direction": "report",
+    "expected_digest": "sha256:459fad0ec7563d26744ead56778777726b807dcede2a50344934a1ae5f532e2f",
+    "payload": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<TraCIMReport suite=\"gaussian-line\" orderRef=\"ORD-42\" status=\"PASS\">\n  <TestCase id=\"line3-0001\" maxDeviationUm=\"0.012\"/>\n</TraCIMReport>\n",
+    "secret_spans": [],
+    "timestamp": "2026-11-22T06:00:05Z"
+  },
+  "request": {
+    "destination": "https://tracim.example.invalid/v1/orders/submit",
+    "direction": "request",
+    "expected_digest": "sha256:bda39ea76314c62735276578672ab38883f100661fd681b08b5cc3adcd344264",
+    "expected_redacted": "POST /v1/orders/submit HTTP/1.1\r\nHost: tracim.example.invalid\r\nX-TraCIM-Order-Key: [REDACTED]\r\nContent-Type: application/json\r\n\r\n{\"suite\":\"gaussian-line\",\"order_ref\":\"ORD-42\"}\n",
+    "payload": "POST /v1/orders/submit HTTP/1.1\r\nHost: tracim.example.invalid\r\nX-TraCIM-Order-Key: TRACIM-SYNTH-ORDER-KEY-0001-EXAMPLE\r\nContent-Type: application/json\r\n\r\n{\"suite\":\"gaussian-line\",\"order_ref\":\"ORD-42\"}\n",
+    "secret_spans": [
+      [
+        83,
+        118
+      ]
+    ],
+    "timestamp": "2026-11-22T06:00:00Z"
+  },
+  "schema": "tracim-archive-fixture/v1"
+}
