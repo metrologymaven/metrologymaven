@@ -1,0 +1,7 @@
+# Fixture repository map for ECO.REPO.TPL.PROMOTE AC-2.
+
+[[repo]]
+id = "fid-b"
+url = "https://example.invalid/fid-b"
+purpose = "Promoted fixture library fid-b"
+protected_tags = true
