@@ -34,25 +34,25 @@ PHASES = [
     ("P1a", "First usable product", "Transcription reports, a prismatic GD&T subset (ASME), a minimal GUI and 3D viewer."),
     ("P1b", "Scan-to-CAD inspection", "Mesh and point-cloud inspection, ISO GPS dialect, CAD + PMI, SPC, Python scripting, report designer."),
     ("P2", "CMMs and live devices", "CMM programming and execution: I++ DME client, simulator, approval station, DMIS import."),
-    ("P3", "Large volume and form", "Laser-tracker networks, live portable arms, form and texture, automatic path planning."),
-    ("P4", "Ecosystem", "OPC UA, MTConnect, a plugin marketplace, program conversion from incumbent software."),
+    ("P3", "Large volume and form", "Laser-tracker networks, live portable arms, form and texture, automatic path planning and process-aware sampling research."),
+    ("P4", "Ecosystem", "OPC UA, MTConnect, a plugin marketplace, and open-format workflow migration."),
 ]
 
 APPS = [
     {"slug": "report", "name": "Report", "phase": "P1a", "order": 1,
-     "replaces": "FAI and PPAP spreadsheets, PiWeb and Q-DAS style reporting",
+     "workflow": "Signed FAI, PPAP and SPC reporting from any instrument",
      "pitch": "Turn measurement results from any CMM, scanner or hand gauge into signed, verifiable first-article, PPAP and SPC reports.",
      "domains": ["RPT", "TRUST", "QUAL", "MIG"], "seeds": []},
     {"slug": "inspect", "name": "Inspect", "phase": "P1b", "order": 2,
-     "replaces": "GOM Inspect / ZEISS INSPECT and PolyWorks Inspector",
+     "workflow": "Scan-to-CAD comparison, GD&T evaluation and replayable colour maps",
      "pitch": "Compare scans and point clouds to CAD, evaluate GD&T and produce colour maps and reports, with every step recorded and replayable.",
      "domains": ["SCAN", "ALN", "GDT", "IO", "VIZ", "UNC"], "seeds": ["gom-inspect.md", "polyworks.md"]},
     {"slug": "probe", "name": "Probe", "phase": "P2", "order": 3,
-     "replaces": "PC-DMIS and CALYPSO CMM programming",
-     "pitch": "Program, simulate and run coordinate measuring machines through an open protocol, with a human approval gate before any motion.",
+     "workflow": "Open-standard CMM programming, simulation and execution (I++ DME & DMIS)",
+     "pitch": "Program, simulate and run coordinate measuring machines through open protocols, with deterministic collision checks and a human approval gate before any motion.",
      "domains": ["CMM", "HAL"], "seeds": ["pc-dmis.md"]},
     {"slug": "network", "name": "Network", "phase": "P3", "order": 4,
-     "replaces": "SpatialAnalyzer",
+     "workflow": "Multi-instrument laser-tracker and portable metrology networks with uncertainty",
      "pitch": "Bundle laser trackers and other large-volume instruments into one measurement network with uncertainty you can defend.",
      "domains": ["LVM"], "seeds": ["spatialanalyzer.md"]},
 ]
@@ -170,7 +170,7 @@ NOTICE = ('<p class="notice"><b>Honest status:</b> nothing here is usable yet. T
 
 def app_card(a) -> str:
     return (f'<a class="card" href="/apps/{a["slug"]}/"><span class="tag">App {a["order"]} · starts {a["phase"]}</span>'
-            f'<h3>Metrology Maven {e(a["name"])}</h3><p>Replaces {e(a["replaces"])}</p>'
+            f'<h3>Metrology Maven {e(a["name"])}</h3><p>{e(a["workflow"])}</p>'
             f'<span class="pill spec">specification</span></a>')
 
 
@@ -182,7 +182,7 @@ def home(d):
 <section class="hero">
 {fcf("⌖", "OPEN SOURCE", "DIMENSIONAL METROLOGY")}
 <h1>Open-source inspection software for scanners, CMMs and laser trackers</h1>
-<p class="lead">Metrology Maven is building one open platform to do the work of GOM Inspect, PolyWorks, PC-DMIS, CALYPSO and SpatialAnalyzer. It will be free to use, and its results can be checked by anyone. People and AI agents will drive it through the same commands.</p>
+<p class="lead">Metrology Maven is an open-source, QIF-native dimensional metrology platform for independent machine shops, quality labs and engineers. It is free to use, local-first, and every result can be re-checked by anyone. People and AI agents drive it through the same typed commands.</p>
 <div class="btns"><a class="btn primary" href="{REPO}">See it on GitHub</a><a class="btn" href="/contribute/">Help build it</a><a class="btn" href="/how-it-works/">How it works</a></div>
 {NOTICE}
 </section>
@@ -198,7 +198,7 @@ def home(d):
 <div class="grid">
 <div class="card"><h3>Free and open</h3><p>Code under MIT OR Apache-2.0. No locked features, no dongles, no per-seat fees.</p></div>
 <div class="card"><h3>Every number can be checked</h3><p>A free, independent verifier re-checks results from the recorded journal, bit for bit.</p></div>
-<div class="card"><h3>Agents first</h3><p>Every action is a command available from the CLI and MCP, so AI agents can do the routine work. People approve at a few fixed gates.</p></div>
+<div class="card"><h3>Agents first</h3><p>Every action is a typed command available from the CLI and MCP, designed so automation handles routine steps while people approve at a few fixed gates.</p></div>
 <div class="card"><h3>Records everything</h3><p>Every step is journaled, screenshotted and replayable, which makes audits a matter of reading the record.</p></div>
 </div>
 </section>
@@ -211,7 +211,7 @@ def home(d):
 <div class="stat"><b>{len(s['nodes']):,}</b><small>spec nodes</small></div>
 <div class="stat"><b>{s['leaves']:,}</b><small>ready-to-build work orders</small></div>
 <div class="stat"><b>{s['built']:,}</b><small>work orders built in code</small></div>
-<div class="stat"><b>{len(s['seeds'])}</b><small>competitor features tracked</small></div>
+<div class="stat"><b>{len(s['seeds'])}</b><small>industry workflow features tracked</small></div>
 <div class="stat"><b>{sum(len(v) for v in s['queue'].values())}</b><small>tasks waiting for experts</small></div>
 </div>
 <p><a href="/status/">See the full status, generated from the repository →</a></p>
@@ -247,9 +247,9 @@ def app_page(a, d):
             tot = sum(c.values()) or 1
             srows.append(f'<tr><td>{e(f.removesuffix(".md"))}</td><td class="n">{c["covered"]}</td><td class="n">{c["out of scope"]}</td>'
                          f'<td class="n">{c["uncovered"]}</td><td><div class="bar"><i style="width:{100 * c["covered"] / tot:.0f}%"></i></div></td></tr>')
-        seeds = f"""<h3>Competitor features mapped into the spec</h3>
-<p class="muted">Each feature of the incumbent product is listed in the repository and traced to the spec nodes that will cover it. "Covered" means specified, not built.</p>
-<div class="tbl"><table><thead><tr><th>Product inventory</th><th>Specified</th><th>Out of scope</th><th>Not yet</th><th>Share specified</th></tr></thead><tbody>{"".join(srows)}</tbody></table></div>"""
+        seeds = f"""<h3>Industry workflow coverage mapped into the spec</h3>
+<p class="muted">Reference workflow inventories in <code>seeds/</code> are traced to the spec nodes that will cover them. "Specified" means written down as a work order, not built.</p>
+<div class="tbl"><table><thead><tr><th>Workflow inventory</th><th>Specified</th><th>Out of scope</th><th>Not yet</th><th>Share specified</th></tr></thead><tbody>{"".join(srows)}</tbody></table></div>"""
     gap_list = "".join(f'<li><span class="mono">{e(x.id)}</span> {e(x.meta.get("title", ""))}'
                        f'{" <span class=\"pill red\">needs expert</span>" if x.meta.get("needs_expert") else ""}</li>'
                        for x in sorted(gaps, key=lambda x: x.id)[:60])
@@ -258,7 +258,7 @@ def app_page(a, d):
 <section class="hero">{fcf(str(a["order"]), "APP", a["name"].upper(), "STARTS " + a["phase"])}
 <h1>Metrology Maven {e(a["name"])}</h1>
 <p class="lead">{e(a["pitch"])}</p>
-<p>Replaces: <b>{e(a["replaces"])}</b></p>
+<p>Workflow focus: <b>{e(a["workflow"])}</b></p>
 <p><span class="pill spec">Status: specification (pre-alpha)</span> <span class="pill p">Work starts in {a["phase"]}</span></p>
 </section>
 <section class="sheet">{fcf("S", "STATUS", "GENERATED")}
@@ -281,7 +281,7 @@ def how(d):
 <h2>A plan you can run</h2>
 <p>The product is described as a tree: 1 product, {len(d['domains'])} domains, then subsystems, modules and features, down to <b>{d['leaves']:,} leaves</b>. A leaf is one pull request of work. It contains testable requirements, acceptance tests with named data, a design, and a build prompt that a coding agent can follow on its own.</p>
 <ol class="steps"><li><b>Pick</b>an open node</li><li><b>Expand</b>split it, or finish it as a leaf</li><li><b>Validate</b><code>tools/scope.py check</code> enforces every rule</li><li><b>Review</b>humans for big splits, an independent agent for small ones</li><li><b>Build</b>leaves are built in dependency order, in parallel waves</li></ol>
-<p class="muted">The validator fails a change that drops a requirement or a competitor feature, creates a dependency loop, or adds a feature without its CLI command, MCP tool and journal entry.</p>
+<p class="muted">The validator fails a change that drops a requirement or a tracked workflow feature, creates a dependency loop, or adds a feature without its CLI command, MCP tool and journal entry.</p>
 </section>
 <section class="sheet">{fcf("2", "ARCHITECTURE")}
 <h2>Five layers, each using only the ones below</h2>
@@ -301,7 +301,7 @@ def how(d):
 <div class="card"><span class="tag">H3</span><h3>Conformance</h3><p>Accept/reject decisions where a customer's quality system requires a named person.</p></div>
 <div class="card"><span class="tag">H4</span><h3>Interpretation</h3><p>GD&T interpretation rules are signed off by credentialed experts.</p></div>
 </div>
-<p class="muted">Agents can never act as a person: anything an agent does is recorded under the agent's own identity.</p>
+<p class="muted">An agent never acts as a person: every action is recorded under its own principal identity.</p>
 </section>"""
     return page("/how-it-works/", "How it works", "How Metrology Maven is specified, built by agents and governed by human gates.", body, d)
 
@@ -328,8 +328,8 @@ def status(d):
 <div class="tbl"><table><thead><tr><th>ID</th><th>Domain</th><th>Starts</th><th>Nodes</th><th>Leaves</th><th>Built</th><th>Open</th><th>Expert</th><th>Leaves</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>
 <p class="muted">Full tree: <a href="{REPO}/blob/main/generated/INDEX.md">generated/INDEX.md</a>.</p>
 </section>
-<section class="sheet">{fcf("2", "COMPETITOR COVERAGE")}
-<p class="muted">Feature and device inventories of incumbent products, and how many rows the spec covers. Specified is not built. Full mapping: <a href="{REPO}/blob/main/generated/COVERAGE.md">generated/COVERAGE.md</a>.</p>
+<section class="sheet">{fcf("2", "WORKFLOW COVERAGE")}
+<p class="muted">Reference feature and device inventories tracked in <code>seeds/</code>, and how many rows the spec covers. Specified is not built. Full mapping: <a href="{REPO}/blob/main/generated/COVERAGE.md">generated/COVERAGE.md</a>.</p>
 <div class="tbl"><table><thead><tr><th>Inventory</th><th>Specified</th><th>Out of scope</th><th>Not yet</th></tr></thead><tbody>{srows}</tbody></table></div>
 </section>
 <section class="sheet">{fcf("3", "OPEN DECISIONS")}<ul class="clean">{dec}</ul>
@@ -365,31 +365,41 @@ def contribute(d):
 <div class="btns"><a class="btn primary" href="{REPO}/issues?q=is%3Aissue+is%3Aopen+label%3Aexpert-queue">Expert tasks</a><a class="btn" href="{REPO}/issues/new?template=expert-offer.yml">Offer your expertise</a><a class="btn" href="{REPO}/blob/main/CONTRIBUTING.md">Contributing guide</a></div></section>
 <section class="sheet">{fcf("1", "METROLOGY EXPERTS")}
 <h2>We need people who know GD&T, uncertainty and CMMs</h2>
-<p>Agents can write most of the specification, but some parts must not be guessed: how a standard is interpreted, how uncertainty is budgeted, how a controller moves. Those tasks are marked for experts and listed below. You can write the piece yourself, or just review an agent's draft in plain words and approve the result.</p>
+<p>Automated workflows draft most of the specification, but some parts must not be guessed: how a standard is interpreted, how uncertainty is budgeted, how a controller moves. Those tasks are marked for experts and listed below. You can write the piece yourself, or review a draft in plain words and approve the result.</p>
 {"".join(blocks)}
 <p class="muted">You'll be credited by name in the spec, in CONTRIBUTORS.md and in release notes. Never paste text from a standard: cite the clause and explain it in your own words.</p>
 </section>
 <section class="sheet">{fcf("2", "OTHER WAYS")}
 <div class="grid">
-<div class="card"><h3>Used GOM, PolyWorks, PC-DMIS or SpatialAnalyzer?</h3><p>Check the competitor feature lists in <code>seeds/</code> and fix what's wrong. No coding needed.</p></div>
+<div class="card"><h3>Work in a machine shop or quality lab?</h3><p>Review workflow checklists in <code>seeds/</code> or partner with us on non-proprietary test parts for real-world CMM and scan benchmarks. No coding needed.</p></div>
 <div class="card"><h3>Run a coding agent?</h3><p>Pick an open node with <code>python tools/scope.py open</code> and follow <code>prompts/expand-node.md</code>. Name your agent tool in the PR.</p></div>
 <div class="card"><h3>Write Rust?</h3><p>Build leaves from the first waves in <code>generated/milestones/launch-1.md</code>. Each leaf's build prompt is self-contained.</p></div>
-<div class="card"><h3>Make instruments?</h3><p>Talk to us about driver integration and the "works with" certification: <a href="mailto:{CONTACT}">{CONTACT}</a>.</p></div>
+<div class="card"><h3>Make instruments or run a university lab?</h3><p>Talk to us about open-protocol driver integration (I++ DME, QIF) or joint research benchmarks: <a href="mailto:{CONTACT}">{CONTACT}</a>.</p></div>
 </div></section>"""
-    return page("/contribute/", "Contribute", "Contribute to Metrology Maven: expert tasks in GD&T, uncertainty and CMM control, plus seed verification and coding.", body, d)
+    return page("/contribute/", "Contribute", "Contribute to Metrology Maven: expert tasks in GD&T, uncertainty and CMM control, workflow verification and Rust engineering.", body, d)
 
 
 def company(d):
     body = f"""
 <section class="hero">{fcf("M", "COMPANY")}
 <h1>Metrology Maven, the company</h1>
-<p class="lead">Metrology Maven stewards the open-source project and pays for its infrastructure. The software is free. The company earns from what regulated manufacturers have to buy anyway: validation, support and evidence.</p></section>
-<section class="sheet"><div class="two">
-<div class="col free"><h3>Free forever</h3><ul class="clean"><li>All four apps, the math kernel and file formats</li><li>The CLI and MCP servers for agents</li><li>The independent verifier</li><li>Validation templates and the test runner</li></ul></div>
-<div class="col"><h3>Commercial services (planned)</h3><ul class="clean"><li>Certified builds with a completed validation dossier for aerospace, medical and accredited labs</li><li>Support agreements and long-term-support releases</li><li>Hosted verification and evidence archive</li><li>Instrument-maker integration certification</li></ul></div>
+<p class="lead">Metrology Maven stewards the open-source project and funds its infrastructure. The open-source software is free. The company earns from enterprise services and regulated evidence packages.</p></section>
+<section class="sheet">{fcf("1", "OPEN BOUNDARY")}<div class="two">
+<div class="col free"><h3>Free forever</h3><ul class="clean"><li>All four apps, the deterministic math kernel and QIF-native formats</li><li>The CLI and MCP servers</li><li>The independent verifier (<code>fid-verify</code>)</li><li>Evidence templates and open test runners</li></ul></div>
+<div class="col"><h3>Commercial services (planned)</h3><ul class="clean"><li>Pre-built regulated release dossiers for aerospace, medical and accredited labs</li><li>Support agreements and long-term-support releases</li><li>Hosted verification and evidence archive</li><li>On-premises private machine-adapter fine-tuning and fleet drift monitoring</li><li>Instrument-maker integration testing</li></ul></div>
 </div>
-<p>No feature of the open apps will ever be moved behind a paid service. Interested in early access, a pilot or a partnership? <a href="mailto:{CONTACT}">{CONTACT}</a></p></section>"""
-    return page("/company/", "Company", "Metrology Maven stewards the open-source metrology platform and offers certified builds and support.", body, d)
+<p>No feature of the open apps will ever be moved behind a paid service (D-036). Interested in early access, a shop-floor pilot or a research partnership? <a href="mailto:{CONTACT}">{CONTACT}</a></p></section>
+<section class="sheet">{fcf("2", "FUTURE ROLES", "NOT ACTIVELY HIRING")}
+<h2>Future roles &amp; talent network</h2>
+<p class="notice"><b>Transparent status:</b> Metrology Maven is pre-alpha and is <b>not actively hiring full-time yet</b>. We share our planned team structure early so interested engineers, metrologists and technicians can follow the project and be notified when roles open.</p>
+<div class="grid">
+<div class="card"><h3>Core &amp; Geometry Engineering</h3><p>Deterministic Rust kernel, computational geometry (B-rep/NURBS), <code>wgpu</code>/WASM graphics, QIF/STEP/DMIS interoperability, and process-aware ML research.</p></div>
+<div class="card"><h3>Metrology &amp; Verification</h3><p>Dimensional metrologists (ASME Y14.5 &amp; ISO GPS), measurement uncertainty &amp; SPC engineers, and independent verification engineers.</p></div>
+<div class="card"><h3>CMM Lab &amp; Shop-Floor Technicians</h3><p>CMM programmers, CMM operators, 3D scanning technicians, portable/LVM technicians, calibration technicians, and field deployment specialists.</p></div>
+<div class="card"><h3>Product, Design &amp; Community</h3><p>Technical CAD/inspection UX designers, metrology documentation writers, and open-source developer relations.</p></div>
+</div>
+<p class="muted">Want to be notified when full-time or paid part-time benchmark roles open? Email <a href="mailto:{CONTACT}?subject=Talent%20Network">{CONTACT}</a> with your background and role area, or start by collaborating on an open <a href="/contribute/">spec or benchmark task</a>.</p></section>"""
+    return page("/company/", "Company", "Metrology Maven stewards the open-source metrology platform, planned commercial services, and future team roadmap.", body, d)
 
 
 def not_found(d):

@@ -6,8 +6,8 @@ Every unit of work in this project is a node in the spec tree, which makes it ea
 
 | # | Contribution | Where | Skill needed |
 |---|---|---|---|
-| 1 | **Verify a competitor feature row**: confirm it exists and fix the wording | `seeds/*.md` | Have used the software |
-| 2 | **Add a competitor inventory** (CALYPSO, Verisurf, Control X, Metrolog, CAMIO, MCOSMOS, ...) | `seeds/` | Have used the software |
+| 1 | **Verify a workflow coverage row**: confirm the workflow exists and fix the wording | `seeds/*.md` | Practical metrology or shop-floor experience |
+| 2 | **Contribute non-proprietary benchmark parts or workflow inventories** | `seeds/`, `fixtures/` | Machine-shop, lab or metrology experience |
 | 3 | **Answer an open decision** with evidence | `decisions/` | Domain knowledge |
 | 4 | **Review a split**: does it overlap, leave gaps or have the wrong boundaries? | PRs labelled `split` | Metrology or software design |
 | 5 | **Expand an open node** (split it or finish it as a leaf) | `spec/**/NODE.md` with `status: open` | Follow `prompts/expand-node.md` |

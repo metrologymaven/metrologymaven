@@ -4,19 +4,19 @@
 
 > **Stage:** pre-alpha. The whole product is specified as a tree of small, testable work orders, and the first code (`crates/`) is being built from it. Nothing is usable for measurement yet.
 
-Metrology Maven aims to replace GOM/ZEISS INSPECT, PolyWorks, CMM programming suites (PC-DMIS, CALYPSO) and SpatialAnalyzer with four focused apps on one shared core: **Report**, **Inspect**, **Probe** and **Network**. It is MCP and CLI first, records everything, renders on the GPU (wgpu), and is written in Rust (including the web, via WASM), with Python for user scripting. Results can be re-checked by anyone with the free verifier.
+Metrology Maven is an open-source, QIF-native dimensional metrology platform for independent machine shops, quality labs and engineers. It brings four focused apps onto one shared core: **Metrology Maven Report** (FAI/PPAP/SPC reporting), **Metrology Maven Inspect** (scan-to-CAD inspection), **Metrology Maven Probe** (open-standard CMM programming and execution over I++ DME and DMIS) and **Metrology Maven Network** (multi-instrument laser-tracker and portable networks). It is MCP and CLI first, records every step, renders on the GPU (`wgpu`), and is written in Rust (including the web, via WASM), with Python for user scripting. Results can be re-checked by anyone with the free verifier (`fid-verify`).
 
 This one repository holds everything:
 
 | Path | What |
 |---|---|
-| [`spec/`](spec/), [`seeds/`](seeds/), [`decisions/`](decisions/) | The specification tree, competitor inventories and decision records |
+| [`spec/`](spec/), [`seeds/`](seeds/), [`decisions/`](decisions/) | The specification tree, reference workflow inventories and decision records |
 | [`crates/`](crates/) | The Rust workspace (`fid` CLI, `fid-*` crates) |
 | [`site/`](site/) | The website, generated from the spec tree (`python site/build.py`) |
 | [`fixtures/`](fixtures/) | Test data and conformance vectors |
 | [`generated/`](generated/) | Reports generated from the tree, including the [expert queue](generated/EXPERT-QUEUE.md) |
 
-**Want to help?** If you know GD&T, measurement uncertainty or CMM control, see the [expert queue](generated/EXPERT-QUEUE.md) and comment `/claim` on an `expert-queue` issue. Everyone else: [CONTRIBUTING.md](CONTRIBUTING.md).
+**Want to help?** If you know GD&T, measurement uncertainty or CMM control, see the [expert queue](generated/EXPERT-QUEUE.md) and comment `/claim` on an `expert-queue` issue. Machine shops and university labs interested in non-proprietary benchmark parts or everyone else: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The internal command and crate prefix `fid` comes from *fiducial*, a reference mark in metrology ([D-039](decisions/D-039-metrology-maven-name-and-public-home.md)).
 
@@ -67,12 +67,12 @@ python tools/scope.py stats          # counts by level and status
 `tools/scope.py check` runs in CI on every PR and fails if:
 
 - a parent's requirement is not allocated to any child (`satisfies:`);
-- a competitor feature from [`seeds/`](seeds/) is neither covered by a node nor listed as out of scope, or a split parent's covered feature is dropped by all of its children;
+- a reference workflow feature from [`seeds/`](seeds/) is neither covered by a node nor listed as out of scope, or a split parent's covered feature is dropped by all of its children;
 - a leaf lacks acceptance criteria, a design or a build prompt, or is too large (larger than size M);
 - a user-facing feature leaf lacks its CLI command, MCP tool or journal event;
 - IDs, levels, parents or folder names disagree.
 
-The generated reports are in [`generated/`](generated/): `INDEX.md` (the tree), `COVERAGE.md` (each competitor feature mapped to our nodes) and `DECISIONS.md`.
+The generated reports are in [`generated/`](generated/): `INDEX.md` (the tree), `COVERAGE.md` (each reference workflow feature mapped to our nodes) and `DECISIONS.md`.
 
 ## Map
 
@@ -83,7 +83,7 @@ The generated reports are in [`generated/`](generated/): `INDEX.md` (the tree), 
 | [GOVERNANCE.md](GOVERNANCE.md) | Maintainers, decisions, how to become a maintainer |
 | [spec/CONSTITUTION.md](spec/CONSTITUTION.md) | Cross-cutting rules every node obeys |
 | [spec/](spec/) | The tree |
-| [seeds/](seeds/) | Competitor feature inventories: the coverage checklist |
+| [seeds/](seeds/) | Reference workflow inventories: the coverage checklist |
 | [templates/](templates/) | Node, leaf and decision templates |
 | [prompts/](prompts/) | The recursive expand prompt and the level check |
 | [tools/](tools/) | `scope.py` (validator and reports) and `grow.ps1` (agent driver) |
