@@ -362,6 +362,23 @@ impl Tolerance {
             }
         }
     }
+
+    /// Whether `d <= delta`, compared exactly with the exact decimal `delta = 10^l / 2`
+    /// (JCGM 101:2008 validation check, `UNC.PROP.VALID`). A NaN, infinite or negative `d`
+    /// is never within `delta` (`-0.0` counts as zero).
+    pub fn within_delta(&self, d: f64) -> bool {
+        if !d.is_finite() || d < 0.0 {
+            return false;
+        }
+        match self.exp10 {
+            None => d == 0.0,
+            Some(l) => {
+                // d <= 10^l / 2  <=>  2 d <= 10^l.
+                let (mant, e2) = decompose(d);
+                cmp_dec(mant, e2 + 1, 1, l) != Ordering::Greater
+            }
+        }
+    }
 }
 
 /// The tolerance from `u(y)` at `n_dig` significant digits (rule 3). `u` must be finite

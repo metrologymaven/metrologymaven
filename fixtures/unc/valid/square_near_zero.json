@@ -1,0 +1,35 @@
+{
+  "title": "UNC.PROP.VALID AC-2: strongly nonlinear model Y = X^2 near zero (X ~ N(0.1, 1.0), seed 0xA11CE)",
+  "license": "CC-BY-4.0",
+  "model": "Y = X^2; X ~ N(0.1, 1.0) (near zero so first-order LPU has positive U_p while failing validation)",
+  "seed": "0xA11CE",
+  "trials": 200000,
+  "input": {
+    "y": 0.010000000000000002,
+    "y_hex": "3f847ae147ae147c",
+    "u_p": 0.39199279690801075,
+    "u_p_hex": "3fd91668f4bf32cf",
+    "p_lpu": 0.95,
+    "p_lpu_hex": "3fee666666666666",
+    "y_low": 0.0009800764715615167,
+    "y_low_hex": "3f500ebd1925dc26",
+    "y_high": 5.025426360924804,
+    "y_high_hex": "40141a095e328368",
+    "p_mcm": 0.95,
+    "p_mcm_hex": "3fee666666666666",
+    "u_mcm": 1.4262738036907903,
+    "u_mcm_hex": "3ff6d2047adfe53f",
+    "y_mcm_mean": 1.005328209870441,
+    "n_dig": 2
+  },
+  "expected": {
+    "validated": false,
+    "d_low": 0.38297287337957225,
+    "d_low_hex": "3fd882a0a79ae807",
+    "d_high": 4.623433564016794,
+    "d_high_hex": "40127e655e42b931",
+    "delta": 0.05,
+    "delta_hex": "3fa999999999999a",
+    "exp10": -1
+  }
+}
