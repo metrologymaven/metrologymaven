@@ -1,6 +1,6 @@
 [package]
 name = "fid-unc"
-description = "Metrology Maven uncertainty commands: the Uncertainty Model store with unc.create_model@1, unc.validate_model@1 and unc.show_model@1, version immutability, release-manifest provenance and resolve(ModelRef) for engines (spec node UNC.MODEL.GRAPH.STORE)"
+description = "Metrology Maven uncertainty commands: Uncertainty Model store (UNC.MODEL.GRAPH.STORE), contributor contracts (UNC.MODEL.CONTRIB.CONTRACT), and ISO 15530-3 substitution inputs, procedure profiles and condition checks (UNC.MODEL.SUBST.INPUT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

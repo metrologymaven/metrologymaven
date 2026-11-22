@@ -1,0 +1,231 @@
+{
+  "calibrated_runs": {
+    "conditions": {
+      "characteristic_kind": "diameter",
+      "feature_ref": "housing-bore-a",
+      "machine_id": "cmm-shop-02",
+      "probe_config_digest": "sha256:21cea5e4947431153188d5a9f140e5a2c90117e59300d7b95e2b01b6331822ff",
+      "program_digest": "sha256:3c7506704461a7a809e10faddb8ae469f5fd5f5e3d4fed578304878c84144186",
+      "strategy_digest": "sha256:2aa82db67985e810e4a0ed9dd4fe8bb507bdf352fe0eab589101fe1138622813"
+    },
+    "runs": [
+      {
+        "run_id": "run-01",
+        "values": [
+          0.025001382,
+          0.025000648,
+          0.025001104
+        ]
+      },
+      {
+        "run_id": "run-02",
+        "values": [
+          0.025000678,
+          0.025000851,
+          0.025000164
+        ]
+      },
+      {
+        "run_id": "run-03",
+        "values": [
+          0.025001641,
+          0.025000618,
+          0.025000391
+        ]
+      },
+      {
+        "run_id": "run-04",
+        "values": [
+          0.025001237,
+          0.025001155,
+          0.025000484
+        ]
+      },
+      {
+        "run_id": "run-05",
+        "values": [
+          0.025000818,
+          0.025000409,
+          0.025000423
+        ]
+      },
+      {
+        "run_id": "run-06",
+        "values": [
+          0.025000882,
+          0.025000518,
+          0.025000767
+        ]
+      },
+      {
+        "run_id": "run-07",
+        "values": [
+          0.025000564,
+          0.025000514,
+          0.025000603
+        ]
+      },
+      {
+        "run_id": "run-08",
+        "values": [
+          0.025000327,
+          0.025000539,
+          0.025000353
+        ]
+      },
+      {
+        "run_id": "run-09",
+        "values": [
+          0.025000437,
+          0.025001368,
+          0.025000443
+        ]
+      },
+      {
+        "run_id": "run-10",
+        "values": [
+          0.02500089,
+          0.02500111,
+          0.025000614
+        ]
+      },
+      {
+        "run_id": "run-11",
+        "values": [
+          0.02500013,
+          0.025000319,
+          0.025000923
+        ]
+      },
+      {
+        "run_id": "run-12",
+        "values": [
+          0.025000596,
+          0.025000256,
+          0.025000339
+        ]
+      },
+      {
+        "run_id": "run-13",
+        "values": [
+          0.025000664,
+          0.025000793,
+          0.025000685
+        ]
+      },
+      {
+        "run_id": "run-14",
+        "values": [
+          0.025000887,
+          0.025000452,
+          0.025000954
+        ]
+      },
+      {
+        "run_id": "run-15",
+        "values": [
+          0.024999649,
+          0.025000653,
+          0.025000423
+        ]
+      },
+      {
+        "run_id": "run-16",
+        "values": [
+          0.025001422,
+          0.025000126,
+          0.025000703
+        ]
+      },
+      {
+        "run_id": "run-17",
+        "values": [
+          0.025001119,
+          0.02500174,
+          0.025000263
+        ]
+      },
+      {
+        "run_id": "run-18",
+        "values": [
+          0.025000583,
+          0.025000433,
+          0.025001349
+        ]
+      },
+      {
+        "run_id": "run-19",
+        "values": [
+          0.025001267,
+          0.025000347,
+          0.025000878
+        ]
+      },
+      {
+        "run_id": "run-20",
+        "values": [
+          0.025000048,
+          0.025000743,
+          0.025000499
+        ]
+      }
+    ],
+    "unit": "si:m"
+  },
+  "license": "CC-BY-4.0",
+  "production_runs": {
+    "conditions": {
+      "characteristic_kind": "diameter",
+      "feature_ref": "housing-bore-a",
+      "machine_id": "cmm-shop-02",
+      "probe_config_digest": "sha256:21cea5e4947431153188d5a9f140e5a2c90117e59300d7b95e2b01b6331822ff",
+      "program_digest": "sha256:3c7506704461a7a809e10faddb8ae469f5fd5f5e3d4fed578304878c84144186",
+      "strategy_digest": "sha256:2aa82db67985e810e4a0ed9dd4fe8bb507bdf352fe0eab589101fe1138622813"
+    },
+    "runs": [
+      {
+        "run_id": "run-01",
+        "values": [
+          0.025001315,
+          0.025001561,
+          0.025001119
+        ]
+      },
+      {
+        "run_id": "run-02",
+        "values": [
+          0.025001256,
+          0.025000385,
+          0.025000908
+        ]
+      },
+      {
+        "run_id": "run-03",
+        "values": [
+          0.025001558,
+          0.025001313,
+          0.025001767
+        ]
+      },
+      {
+        "run_id": "run-04",
+        "values": [
+          0.025001849,
+          0.025002086,
+          0.02500214
+        ]
+      }
+    ],
+    "unit": "si:m"
+  },
+  "reference": {
+    "k": 2.0,
+    "source_digest": "sha256:7fd545cea1f380aefbb4851df73b42b8d493aacae54d2de29b843470a5113860",
+    "source_kind": "certificate",
+    "u": 8e-07,
+    "unit": "si:m",
+    "value": 0.0250005
+  },
+  "schema": "subst-input/1",
+  "title": "UNC.MODEL.SUBST.INPUT: calibrated 25.0005 mm bore workpiece, U=0.8 um, k=2, certificate source"
+}

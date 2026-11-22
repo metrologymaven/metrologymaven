@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-unc]
+updated: 2026-11-22
 ---
 
 # UNC.MODEL.SUBST.INPUT: Substitution inputs, procedure profiles and condition checks

@@ -1,0 +1,119 @@
+{
+  "calibrated_runs": {
+    "conditions": {
+      "characteristic_kind": "diameter",
+      "feature_ref": "ring-50mm-master",
+      "machine_id": "cmm-lab-01",
+      "probe_config_digest": "sha256:06a977db2518bc4ac55c2b634b8e4d193722bb8019befd382b902af6e201679d",
+      "program_digest": "sha256:b82bd321cbc2db0d212ac11d2bc8a12d329b8bf43ffa1f35277c0074ad3f7fba",
+      "strategy_digest": "sha256:09aa5f742ed3291e5d5c562e7f14fdd1b4cde269f3d6552442998bfcf812dbfb"
+    },
+    "runs": [
+      {
+        "run_id": "run-01",
+        "values": [
+          0.050001556,
+          0.050001797,
+          0.050001839
+        ]
+      },
+      {
+        "run_id": "run-02",
+        "values": [
+          0.050001654,
+          0.050001932,
+          0.050001694
+        ]
+      },
+      {
+        "run_id": "run-03",
+        "values": [
+          0.050000812,
+          0.050001268,
+          0.050001231
+        ]
+      },
+      {
+        "run_id": "run-04",
+        "values": [
+          0.050000779,
+          0.050001506,
+          0.050001375
+        ]
+      },
+      {
+        "run_id": "run-05",
+        "values": [
+          0.050001896,
+          0.050001456,
+          0.050001806
+        ]
+      }
+    ],
+    "unit": "si:m"
+  },
+  "license": "CC-BY-4.0",
+  "production_runs": {
+    "conditions": {
+      "characteristic_kind": "diameter",
+      "feature_ref": "ring-50mm-master",
+      "machine_id": "cmm-lab-01",
+      "probe_config_digest": "sha256:06a977db2518bc4ac55c2b634b8e4d193722bb8019befd382b902af6e201679d",
+      "program_digest": "sha256:b82bd321cbc2db0d212ac11d2bc8a12d329b8bf43ffa1f35277c0074ad3f7fba",
+      "strategy_digest": "sha256:09aa5f742ed3291e5d5c562e7f14fdd1b4cde269f3d6552442998bfcf812dbfb"
+    },
+    "runs": [
+      {
+        "run_id": "run-01",
+        "values": [
+          0.05000249,
+          0.050001905,
+          0.050002621
+        ]
+      },
+      {
+        "run_id": "run-02",
+        "values": [
+          0.050002581,
+          0.050002513,
+          0.05000228
+        ]
+      },
+      {
+        "run_id": "run-03",
+        "values": [
+          0.0500031,
+          0.050002715,
+          0.050002149
+        ]
+      },
+      {
+        "run_id": "run-04",
+        "values": [
+          0.050002156,
+          0.050001935,
+          0.050001662
+        ]
+      },
+      {
+        "run_id": "run-05",
+        "values": [
+          0.05000163,
+          0.050002532,
+          0.050001819
+        ]
+      }
+    ],
+    "unit": "si:m"
+  },
+  "reference": {
+    "k": 2.0,
+    "source_digest": "sha256:114bca627b9a28971caf7fe7db6dd7a5ff599c5686eca4751cbadf13ab5ef18a",
+    "source_kind": "dcc",
+    "u": 6e-07,
+    "unit": "si:m",
+    "value": 0.0500012
+  },
+  "schema": "subst-input/1",
+  "title": "UNC.MODEL.SUBST.INPUT AC-2: 5 calibrated runs where default profile requires 20"
+}
