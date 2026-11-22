@@ -18,6 +18,7 @@ cli: [fid sign list-meanings]
 mcp: [sign_list_meanings]
 journal: [sign.list_meanings@1]
 built_in: [fid-esig]
+built_pr: 487
 updated: 2026-11-22
 ---
 
