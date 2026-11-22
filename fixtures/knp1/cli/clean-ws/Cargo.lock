@@ -1,0 +1,6 @@
+# Fixture lockfile for KRN.NUM.LINT.CLI AC-1.
+version = 4
+
+[[package]]
+name = "clean-kernel"
+version = "0.1.0"

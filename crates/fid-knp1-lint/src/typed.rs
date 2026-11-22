@@ -1112,7 +1112,7 @@ fn driver_command(
         .arg("clippy")
         .arg("--manifest-path")
         .arg(workspace.join("Cargo.toml"))
-        .args(["--locked", "--keep-going", "--message-format=json", "--target", target])
+        .args(["--locked", "--offline", "--keep-going", "--message-format=json", "--target", target])
         .arg("--target-dir")
         .arg(target_dir);
     if all_features {

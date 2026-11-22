@@ -34,6 +34,10 @@
         }
       }
     },
+    "typed": {
+      "description": "Optional, added by KRN.NUM.LINT.CLI (REQ-KRN.NUM.LINT.CLI-003): whether the type-aware check ran or was skipped with --skip-typed.",
+      "enum": ["ran", "skipped"]
+    },
     "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
     "waived": {
       "type": "array",
