@@ -75,7 +75,7 @@ use fid_canon::CValue;
 use fid_types::Digest;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 /// Longest element or group name, in Unicode scalar values (REQ-006).
 pub const MAX_NAME_CHARS: usize = 256;
@@ -91,6 +91,8 @@ pub const MAX_GROUP_DEPTH: usize = 64;
 pub const GROUP_KIND: &str = "project.group";
 /// Entity kind of the group child-index entity in the state view.
 pub const GROUP_LIST_KIND: &str = "project.group_list";
+/// Entity kind of the pre-order tree index entity in the state view (`CORE.PRJ.TREE.QUERY`).
+pub const TREE_INDEX_KIND: &str = "project.tree_index";
 /// Core event: a group was created.
 pub const GROUP_CREATED: &str = "GroupCreated";
 /// Core event: an element was created.
@@ -154,6 +156,10 @@ pub enum TreeError {
     StageActive(Uuid),
     /// A reorder list is not a permutation of the run's live stages (`bad_order`).
     BadOrder(String),
+    /// A query continuation token is malformed (`bad_token`, `CORE.PRJ.TREE.QUERY`).
+    BadToken(String),
+    /// A query continuation token was issued for an older branch head (`stale_token`, `CORE.PRJ.TREE.QUERY`).
+    StaleToken(String),
 }
 
 impl TreeError {
@@ -179,6 +185,8 @@ impl TreeError {
             TreeError::AmbiguousStage(_) => "ambiguous_stage",
             TreeError::StageActive(_) => "stage_active",
             TreeError::BadOrder(_) => "bad_order",
+            TreeError::BadToken(_) => "bad_token",
+            TreeError::StaleToken(_) => "stale_token",
         }
     }
 }
@@ -197,7 +205,9 @@ impl fmt::Display for TreeError {
             | TreeError::Invariant(m)
             | TreeError::BadOrder(m)
             | TreeError::StageNotFound(m)
-            | TreeError::AmbiguousStage(m) => write!(f, "{}: {m}", self.code()),
+            | TreeError::AmbiguousStage(m)
+            | TreeError::BadToken(m)
+            | TreeError::StaleToken(m) => write!(f, "{}: {m}", self.code()),
             TreeError::Label => write!(f, "label: must be 1..=256 characters, NFC, no control"),
             TreeError::StageActive(s) => write!(f, "stage_active: {s} is the active stage"),
             TreeError::Name => write!(f, "name: must be 0..={MAX_NAME_CHARS} characters, NFC, no control"),
@@ -469,7 +479,7 @@ impl Slot {
     /// The slot of a new element: `not_computed`, no digest.
     pub const NEW: Slot = Slot { digest: None, state: ElementState::NotComputed };
 
-    fn to_value(self) -> CValue {
+    pub(crate) fn to_value(self) -> CValue {
         obj([
             ("digest", self.digest.map_or(CValue::Null, |d| CValue::Str(d.as_str().to_string()))),
             ("state", text(self.state.as_str())),
@@ -666,6 +676,9 @@ pub struct Tree {
     has_moved: bool,
     group_list: Uuid,
     group_list_body: CValue,
+    tree_index: Uuid,
+    tree_order_cache: OnceLock<Vec<Uuid>>,
+    tree_index_body_cache: OnceLock<CValue>,
     stage_list: Uuid,
     records: BTreeMap<Uuid, Stage>,
     list_body: CValue,
@@ -689,6 +702,11 @@ pub fn group_list_id(namespace: Uuid) -> Result<Uuid, TreeError> {
     reserved_id(namespace, GROUP_LIST_KIND)
 }
 
+/// The reserved ID of the pre-order tree index entity in `namespace` (`CORE.PRJ.TREE.QUERY`).
+pub fn tree_index_id(namespace: Uuid) -> Result<Uuid, TreeError> {
+    reserved_id(namespace, TREE_INDEX_KIND)
+}
+
 impl Tree {
     /// An empty tree: the root group and the implicit default stage, which is also the
     /// active stage. Both IDs are reserved UUIDv5s of `namespace` (see the module docs).
@@ -697,6 +715,7 @@ impl Tree {
         let stage = reserved_id(namespace, "project.default_stage")?;
         let stage_list = stage_list_id(namespace)?;
         let group_list = group_list_id(namespace)?;
+        let tree_index = tree_index_id(namespace)?;
         let mut groups = BTreeMap::new();
         groups.insert(root, Group::new(root, None, ElementName::default()));
         let mut child_order = BTreeMap::new();
@@ -712,6 +731,9 @@ impl Tree {
             has_moved: false,
             group_list,
             group_list_body: CValue::Null,
+            tree_index,
+            tree_order_cache: OnceLock::new(),
+            tree_index_body_cache: OnceLock::new(),
             stage_list,
             records: BTreeMap::new(),
             list_body: CValue::Null,
@@ -830,6 +852,81 @@ impl Tree {
         self.group_list
     }
 
+    /// The ID of the pre-order tree index entity (`TREE_INDEX_KIND`).
+    pub fn tree_index_id(&self) -> Uuid {
+        self.tree_index
+    }
+
+    /// Every element ID in pre-order tree order (groups walked iteratively in `child_order`
+    /// starting at `root`, tie-broken by element position/ID). Lazily built and cached across
+    /// queries; invalidated on any mutation in `finish`.
+    pub fn tree_order(&self) -> &[Uuid] {
+        self.tree_order_cache.get_or_init(|| self.compute_tree_order()).as_slice()
+    }
+
+    /// Names of ancestor groups from root's child down to `group` (empty when `group == root`).
+    pub fn group_path(&self, group: Uuid) -> Vec<&ElementName> {
+        let mut rev = Vec::new();
+        let mut cur = group;
+        for _ in 0..=MAX_GROUP_DEPTH {
+            let Some(g) = self.groups.get(&cur) else {
+                break;
+            };
+            let Some(parent) = g.parent else {
+                break;
+            };
+            rev.push(&g.name);
+            cur = parent;
+        }
+        rev.reverse();
+        rev
+    }
+
+    /// True if `group` is `target` or an ancestor-chain descendant of `target`.
+    pub fn is_in_group_subtree(&self, group: Uuid, target: Uuid) -> bool {
+        let mut cur = group;
+        for _ in 0..=MAX_GROUP_DEPTH {
+            if cur == target {
+                return true;
+            }
+            let Some(g) = self.groups.get(&cur) else {
+                return false;
+            };
+            match g.parent {
+                Some(p) => cur = p,
+                None => return false,
+            }
+        }
+        false
+    }
+
+    fn compute_tree_order(&self) -> Vec<Uuid> {
+        let mut out = Vec::with_capacity(self.elements.len());
+        // Explicit stack of (group_id, next_child_index) to avoid recursion (CONSTITUTION §8).
+        let mut stack: Vec<(Uuid, usize)> = Vec::with_capacity(MAX_GROUP_DEPTH + 2);
+        stack.push((self.root, 0));
+        while let Some((gid, idx)) = stack.last_mut() {
+            let children = self.child_order.get(gid).map_or(&[][..], Vec::as_slice);
+            if *idx >= children.len() {
+                stack.pop();
+                continue;
+            }
+            let cid = children[*idx];
+            *idx += 1;
+            if self.elements.contains_key(&cid) {
+                out.push(cid);
+            } else if self.groups.contains_key(&cid) && stack.len() <= MAX_GROUP_DEPTH + 1 {
+                stack.push((cid, 0));
+            }
+        }
+        out
+    }
+
+    fn invalidate_order_cache(&mut self) {
+        self.tree_order_cache = OnceLock::new();
+        self.tree_index_body_cache = OnceLock::new();
+    }
+
     /// One stage's data: `{"elements": {<id>: {"digest", "state"}}, "stage": <id>}` over
     /// every element whose slot for the stage holds data (empty `not_computed` slots with no
     /// digest are left out, so creating an element, or giving it data in another stage, does
@@ -898,6 +995,19 @@ impl Tree {
         }
         if *id == self.group_list {
             return Some((GROUP_LIST_KIND, &self.group_list_body));
+        }
+        if *id == self.tree_index {
+            let body = self.tree_index_body_cache.get_or_init(|| {
+                let order = self.tree_order().iter().map(uuid_value).collect();
+                let stages = self.stages.iter().map(uuid_value).collect();
+                obj([
+                    ("active_stage", uuid_value(&self.active_stage)),
+                    ("order", CValue::Arr(order)),
+                    ("root", uuid_value(&self.root)),
+                    ("stages", CValue::Arr(stages)),
+                ])
+            });
+            return Some((TREE_INDEX_KIND, body));
         }
         self.groups.get(id).map(|g| (GROUP_KIND, &g.body))
     }
@@ -1004,8 +1114,14 @@ impl Tree {
         undo: Vec<Undo>,
         created: Vec<Uuid>,
     ) -> Result<Vec<Uuid>, TreeError> {
+        let changed = !undo.is_empty();
         match r {
-            Ok(()) => Ok(created),
+            Ok(()) => {
+                if changed {
+                    self.invalidate_order_cache();
+                }
+                Ok(created)
+            }
             Err(e) => {
                 for u in undo.into_iter().rev() {
                     match u {
@@ -1061,6 +1177,9 @@ impl Tree {
                 }
                 self.rebuild_list();
                 self.rebuild_group_list();
+                if changed {
+                    self.invalidate_order_cache();
+                }
                 Err(e)
             }
         }
@@ -1654,6 +1773,7 @@ impl IdIndex for Tree {
             || *id == self.default_stage
             || *id == self.stage_list
             || *id == self.group_list
+            || *id == self.tree_index
     }
 }
 

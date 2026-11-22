@@ -3,6 +3,7 @@
 pub mod container;
 pub mod id;
 pub mod lifecycle;
+pub mod query;
 pub mod stage;
 pub mod stage_switch;
 pub mod tree;
@@ -16,6 +17,10 @@ pub use id::{
     live_source, uuid_v5, uuid_v7, Bits, IdError, IdIndex, IdService, Observation, ObservationSource, Recording,
     ReplaySource, SystemSource, Uuid, V7_RANDOM_BITS,
 };
+pub use query::{
+    describe_element, describe_element_tree, list_elements, list_elements_tree, ListParams, PageToken,
+    DESCRIBE_ELEMENT, LIST_ELEMENTS, MAX_PAGE_SIZE, MAX_TOKEN_BYTES,
+};
 pub use stage::{
     add_stage, list_stages, remove_stage, reorder_stages, stage_list_id, Stage, StageListing, ADD_STAGE,
     DEFAULT_STAGE_LABEL, LIST_STAGES, REMOVE_STAGE, REORDER_STAGES, STAGES_REORDERED, STAGE_ADDED, STAGE_KIND,
@@ -26,9 +31,10 @@ pub use stage_switch::{
     ACTIVE_STAGE_SET, SET_ACTIVE_STAGE,
 };
 pub use tree::{
-    group_list_id, DomainTranslate, Element, ElementName, ElementState, ElementTypeDef, ElementTypeRegistry, Group,
-    Slot, Tree, TreeError, TreeEvent, ELEMENTS_MOVED, ELEMENT_CREATED, ELEMENT_SLOT_SET, GROUP_CREATED, GROUP_KIND,
-    GROUP_LIST_KIND, MAX_BATCH_IDS, MAX_GROUP_DEPTH, MAX_NAME_CHARS, RENAMED, VISIBILITY_SET,
+    group_list_id, tree_index_id, DomainTranslate, Element, ElementName, ElementState, ElementTypeDef,
+    ElementTypeRegistry, Group, Slot, Tree, TreeError, TreeEvent, ELEMENTS_MOVED, ELEMENT_CREATED, ELEMENT_SLOT_SET,
+    GROUP_CREATED, GROUP_KIND, GROUP_LIST_KIND, MAX_BATCH_IDS, MAX_GROUP_DEPTH, MAX_NAME_CHARS, RENAMED,
+    TREE_INDEX_KIND, VISIBILITY_SET,
 };
 pub use tree_cmds::{
     create_group, move_element, rename_element, set_visibility, tree_root_id, CREATE_GROUP, MOVE_ELEMENT,

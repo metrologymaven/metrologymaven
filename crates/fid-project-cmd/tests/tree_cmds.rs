@@ -467,14 +467,14 @@ fn registry_definitions_and_bus_registration() {
         assert_eq!(o.get("exposure"), Some(&CValue::Arr(vec![text("cli"), text("mcp")])));
     }
     let all = fid_project_cmd::command_defs().unwrap();
-    assert_eq!(all.len(), 13);
+    assert_eq!(all.len(), 15);
     let decls: Vec<CommandDecl> = all.iter().map(CommandDecl::from_def).collect();
     assert_eq!(validate(&decls), vec![]);
 
     let source = make_source(4);
     let mut set = HandlerSet::new();
     fid_project_cmd::register(&mut set, Uuid::from_u128(1), &source).unwrap();
-    assert_eq!(set.len(), 13);
+    assert_eq!(set.len(), 15);
     for op in TreeOp::ALL {
         assert!(set.get(&format!("{}@1", op.command())).is_ok());
     }
