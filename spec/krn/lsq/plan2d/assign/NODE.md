@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-fit]
+built_pr: 528
 updated: 2026-11-22
 ---
 
