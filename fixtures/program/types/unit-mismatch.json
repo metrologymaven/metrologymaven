@@ -1,0 +1,1 @@
+{"format":"fid-program","format_version":1,"main":[{"expr":"d1 + 5[deg]","kind":"assign","step_id":"018f0000-0000-7000-8000-000000000302","var":"x"}],"meta":{"title":"AUTO.PROG.EXPR.TYPES fixture"},"params":[],"program_id":"018f0000-0000-7000-8000-000000000301","subroutines":[],"variables":[{"name":"d1","type":"quantity<length>"},{"name":"x","type":"quantity<length>"}]}

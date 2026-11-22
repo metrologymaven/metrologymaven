@@ -21,6 +21,7 @@ python fixtures/auto/run/bind/make_cases.py --check
 python fixtures/auto/surf/gen/make_fixtures.py --check
 python fixtures/cons/check_row_schema.py
 python fixtures/cons/make_decl_fixtures.py --check
+python fixtures/core/bus/pipe/stage/make_fixtures.py --check
 python fixtures/core/bus/pipe/valid/make_cases.py --check
 python fixtures/core/bus/pol/class/make_matrix.py --check
 python fixtures/core/bus/pol/egress/make_fixtures.py --check
@@ -151,6 +152,7 @@ python fixtures/plat/deploy/make_expected.py --check
 python fixtures/plat/matrix/make_page.py --check
 python fixtures/profile/make_fixtures.py --check
 python fixtures/program/expr/make_cases.py --check
+python fixtures/program/types/make_fixtures.py --check
 python fixtures/rdl/format/make_fixtures.py --check
 python fixtures/rdl/rep/make_cases.py --check
 python fixtures/rec/adopt/make_fixtures.py --check
@@ -159,6 +161,7 @@ python fixtures/rel/guide/make_fixtures.py --check
 python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
 python fixtures/replay/compare/make_cases.py --check
+python fixtures/replay/select/make_cases.py --check
 python fixtures/rpt/catalog/make_schema_fixtures.py --check
 python fixtures/rpt/model/bind/expand/make_fixtures.py --check
 python fixtures/rpt/model/bracket_3stage/make_fixtures.py --check

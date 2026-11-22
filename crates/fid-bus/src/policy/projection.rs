@@ -874,6 +874,7 @@ impl EntryOrigin {
     }
 }
 
+#[derive(Clone)]
 struct Stored {
     entity: EntityId,
     record: RequestRecord,
@@ -881,8 +882,9 @@ struct Stored {
 }
 
 /// The pending-request records, folded from committed entries in journal order. Changed
-/// only by [`RequestBook::apply_entry`].
-#[derive(Default)]
+/// only by [`RequestBook::apply_entry`]. `Clone`, so a commit hook can run the fold on a copy
+/// as its precommit check (`CORE.BUS.PIPE.STAGE`).
+#[derive(Default, Clone)]
 pub struct RequestBook {
     map: BTreeMap<RequestId, Stored>,
     filed: u64,

@@ -18,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # TRUST.REPLAY.SELECT: Replayable-set selection and NOT_REPLAYABLE reasons
@@ -80,6 +80,10 @@ Decides, for each result in a package, whether the verifier can recompute it, an
 ## Open questions
 
 - `KERNEL_UNAVAILABLE` semantics depend on D-020 (artifact sourcing); the trait boundary keeps this leaf buildable.
+- Build status (2026-11-21, module `fid-vreplay::select`): not marked `built_in`. Open: AC-1 and AC-2 name `fixtures/pkg/golden/points.zip` and `results.zip`, which `TRUST.PKG.FIXTURE` has not produced yet; the module passes both against stand-in packages `fixtures/replay/select/points.zip` and `results.zip` from the independent reference `fixtures/replay/select/make_cases.py`, and the tests must be re-pointed once the golden packages exist. AC-H1 and AC-H2 wait for `TRUST.REPLAY.CORPUS`. AC-3, AC-4 and AC-5 are covered.
+- Package content model assumed by the build, since `TRUST.PKG.CONTENT.SELECT` and `.JSEG` are unbuilt: `results/records.json` is a JSON array of ResultRecords carrying `id`, `evaluation_basis`, `algorithm` (`<id>@<semver>`) and `journal_entry`; each line of `journal/segment.jsonl` is `{"header": <entry.schema.json header>, "payload": <EntryPayload JSON>}` with the payload optional; kernel-call parameters are the payload's `args`, checked against `args_commit`. If those leaves choose otherwise, this module follows them.
+- Rules the build fixed where the Design is silent: a kernel call is a `command` entry naming exactly one algorithm; the producer of an input is the latest earlier kernel call that outputs its digest, and only when none exists the latest earlier non-kernel `command` entry (maintainer decision, review of #421: a non-kernel re-emit never hides a kernel step); a kernel-produced input is always recomputed and sourced from that call's output (`InputSource::Call`), a non-kernel producer's output is substituted when that digest is packaged under `points/` (`InputSource::Packaged`) and disclosed in `Selected::Replayable::substituted`, and a missing one is `POINTS_MISSING` (no producer, or a producer recorded as class N) or `NON_KERNEL_STEP` (any other non-kernel producer); a record whose entry is absent, not a command, or names another algorithm is `ENTRY_MISSING`, a non-kernel root is `NON_KERNEL_STEP`; a kernel call recorded under another kernel manifest is `KERNEL_UNAVAILABLE`. The record's own entry (`ENTRY_MISSING`, `NON_KERNEL_STEP` `root_not_kernel`) is decided before any walk and `PLAN_TOO_LARGE` aborts the walk; otherwise, when several reasons apply, the primary one is the first in the REQ-001 list (then `PLAN_TOO_LARGE`), with the smallest detail string. Duplicate record IDs are `pkg.malformed` `duplicate_record_id`. A record basis `RESULTS_ONLY`/`DIRECT_READING` comes first, then a `results` evidence tier (`BASIS_RESULTS_ONLY` for every result).
+- Trust boundary (as for TRUST.REPLAY.RUN): replayability never rests on a determinism or side-effect class the package declares; the recorded class only picks between two `NOT_REPLAYABLE` labels. RUN must take determinism and quantity kind from the algorithm catalogue by the replayable result's `algorithm_id`, which SELECT takes from the journal entry and checks against the kernel manifest.
 
 ## Children
 

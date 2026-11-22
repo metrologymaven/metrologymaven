@@ -216,5 +216,7 @@ fixtures/profile/** -text
 fixtures/gdt/ident/** -text
 # CORE.BUS.POL.EGRESS artifact: random bytes from a fixed seed, digested by make_fixtures.py --check.
 fixtures/core/bus/pol/egress/artifact.bin binary
+# TRUST.REPLAY.SELECT packages and expected plans: compared byte for byte by make_cases.py --check.
+fixtures/replay/select/** -text
 # TRUST.PKG.FIXTURE golden packages, pinned digests and index: compared byte for byte by fixtures/pkg/generate --check.
 fixtures/pkg/golden/** -text

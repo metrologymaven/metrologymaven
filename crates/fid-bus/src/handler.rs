@@ -478,6 +478,19 @@ impl From<BusError> for HandlerError {
 pub trait Handler: Send + Sync {
     /// Runs the command against `view` and returns its events in order.
     fn run(&self, view: &dyn StateView, params: &ValidParams, ctx: &HandlerCtx) -> Result<Vec<Event>, HandlerError>;
+
+    /// [`Handler::run`] plus the command's result value as its `result_schema` declares it,
+    /// for the caller (`CORE.BUS.PIPE.STAGE` returns it in `CommandResult::Done`). The
+    /// default returns [`Handler::run`]'s events and no result; a handler whose command has
+    /// a result overrides this. Only the events are journaled and effects-checked.
+    fn run_with_result(
+        &self,
+        view: &dyn StateView,
+        params: &ValidParams,
+        ctx: &HandlerCtx,
+    ) -> Result<(Vec<Event>, Option<CValue>), HandlerError> {
+        self.run(view, params, ctx).map(|events| (events, None))
+    }
 }
 
 // ------------------------------------------------------------------ canonical length
@@ -626,13 +639,48 @@ pub fn run_handler(
     params: &ValidParams,
     ctx: &HandlerCtx,
 ) -> Result<CheckedEvents, BusError> {
+    run_stage(set, id, view, params, ctx)?.check(ctx).map(|(checked, _)| checked)
+}
+
+/// What one handler call returned, before the effects check. The pipeline
+/// (`CORE.BUS.PIPE.STAGE`) runs the handler and the effects check as two stages; crate-private,
+/// so the only way out of it is [`Ran::check`].
+pub(crate) struct Ran<'s> {
+    entry: &'s Entry,
+    events: Vec<Event>,
+    result: Option<CValue>,
+}
+
+/// The handler stage of [`run_handler`]: lookup, the handler call
+/// ([`Handler::run_with_result`]) and the cancel check, same errors.
+pub(crate) fn run_stage<'s>(
+    set: &'s HandlerSet,
+    id: &str,
+    view: &dyn StateView,
+    params: &ValidParams,
+    ctx: &HandlerCtx,
+) -> Result<Ran<'s>, BusError> {
     let entry = set.entry(id)?;
-    let events = entry.handler.run(view, params, ctx).map_err(HandlerError::into_bus_error)?;
+    let (events, result) = entry.handler.run_with_result(view, params, ctx).map_err(HandlerError::into_bus_error)?;
     if ctx.cancel.is_cancelled() {
         return Err(BusError::Cancelled(CancelledReason::Requested, Detail::new("cancel requested during handler")));
     }
-    let body_bytes = check(&entry.def, &events)?;
-    Ok(CheckedEvents { command: entry.id.clone(), principal: ctx.principal.clone(), events, body_bytes })
+    Ok(Ran { entry, events, result })
+}
+
+impl Ran<'_> {
+    /// The effects-check stage of [`run_handler`]: checks the events against the command's own
+    /// definition and binds them to its ID and `ctx`'s principal.
+    pub(crate) fn check(self, ctx: &HandlerCtx) -> Result<(CheckedEvents, Option<CValue>), BusError> {
+        let body_bytes = check(&self.entry.def, &self.events)?;
+        let checked = CheckedEvents {
+            command: self.entry.id.clone(),
+            principal: ctx.principal.clone(),
+            events: self.events,
+            body_bytes,
+        };
+        Ok((checked, self.result))
+    }
 }
 
 // ------------------------------------------------------------------ handler set

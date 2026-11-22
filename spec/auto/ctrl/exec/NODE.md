@@ -78,6 +78,7 @@ In-process test app with `fixtures/manifest/min-classes.json`, fake bus, fake jo
 
 ## Open questions
 
+- **Client refusal contract (from AUTO.CTRL.CLIENT, PR #419).** The client counts an `error` event sent before the acceptance event as an explicit pre-dispatch refusal (`not_run`, safe to resend) only for the codes `auth_failed`, `malformed_message`, `version_unsupported` and `unknown_op`. Every other error before acceptance (for example `raw_path_refused`, `policy_refused`, `message_too_large`) is treated as possibly run (`no_reply`), per REQ-AUTO.SURF-007. EXEC should send refusals it can guarantee are pre-dispatch with an allow-listed code (or extend the list in both nodes), and use `unknown_op` for an operation it does not know. The request and reply shapes the client uses are in AUTO.CTRL.CLIENT, Open questions.
 - **Revise for D-035 (accepted 2026-11-17):** commands triggered through the control channel (including injected UI input) carry the channel's principal; see CONSTITUTION §3 injected-input rule.
 - Binding control-channel clients as `agent` means their W2 commits go to an agent branch (REQ-CORE.BUS-006). That is the parent's intent (same limits as MCP agents) but may surprise SDK users scripting a running app; humans who want working-branch commits use the CLI or Python (see D-012).
 
