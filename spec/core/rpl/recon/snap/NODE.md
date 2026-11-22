@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-replay]
+built_pr: 433
 updated: 2026-11-21
 ---
 
