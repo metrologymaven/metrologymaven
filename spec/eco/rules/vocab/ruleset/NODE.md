@@ -19,6 +19,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-vocab]
+built_pr: 515
 updated: 2026-11-22
 ---
 
