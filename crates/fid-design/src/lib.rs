@@ -13,11 +13,13 @@
 //! - [`color`]: `color-check`, the release gate over all of them (`UX.TOKENS.CHECK`).
 //! - [`space`]: `space-check` (`UX.TOKENS.SPACE`).
 //! - [`icons_prov`]: `icons-prov` and `icons-registry` (`UX.ICONS.PROV`).
+//! - [`page`]: `page-check` (`UX.REPORT.PAGE`).
 
 pub mod color;
 pub mod finding;
 pub mod fonts;
 pub mod icons_prov;
+pub mod page;
 pub mod palettes;
 pub mod pkg;
 pub mod princ;

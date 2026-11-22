@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-design]
+updated: 2026-11-22
 ---
 
 # UX.REPORT.PAGE: Report page grids and margins
