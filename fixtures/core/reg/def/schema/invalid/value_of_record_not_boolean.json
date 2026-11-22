@@ -1,0 +1,16 @@
+{
+  "expect": {
+    "code": "bad_keyword_value",
+    "pointer": "/properties/a/value_of_record"
+  },
+  "schema": {
+    "type": "object",
+    "properties": {
+      "a": {
+        "type": "number",
+        "x-quantity": "length",
+        "value_of_record": "true"
+      }
+    }
+  }
+}

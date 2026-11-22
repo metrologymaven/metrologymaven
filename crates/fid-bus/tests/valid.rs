@@ -526,6 +526,20 @@ fn quantity_with_own_bounds_compiles() {
     }
 }
 
+/// `value_of_record` (CORE.REG.DEF.SCHEMA REQ-011) is an annotation: it compiles on any
+/// schema object and never changes validation.
+#[test]
+fn value_of_record_is_an_annotation() {
+    let schema = r#"{"type":"object","properties":{"n":{"type":"integer","value_of_record":true},"l":{"type":"array","items":{"type":"integer","value_of_record":true},"value_of_record":false}}}"#;
+    let v = parse(schema.as_bytes()).unwrap();
+    assert_eq!(check_schema(&v, &Catalogue::geo_frame().unwrap()), vec![]);
+    let c = Compiled::compile(&v).unwrap();
+    let doc = |s: &str| parse(s.as_bytes()).unwrap();
+    assert!(c.evaluate(&doc(r#"{"n":3,"l":[1,2]}"#), &NoHooks).is_ok());
+    assert!(c.evaluate(&doc(r#"{"n":"3"}"#), &NoHooks).is_err());
+    assert!(c.evaluate(&doc(r#"{"l":[1.5]}"#), &NoHooks).is_err());
+}
+
 /// A precondition reading a context root the caller does not supply fails closed.
 #[test]
 fn precondition_with_missing_root_is_false() {

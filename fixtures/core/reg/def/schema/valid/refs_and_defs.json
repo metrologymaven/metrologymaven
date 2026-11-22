@@ -47,6 +47,14 @@
       "x-ui": {
         "group": "advanced"
       }
+    },
+    "readings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/distance",
+        "value_of_record": true
+      },
+      "value_of_record": false
     }
   },
   "patternProperties": {

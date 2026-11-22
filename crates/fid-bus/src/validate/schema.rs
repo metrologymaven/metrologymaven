@@ -7,10 +7,11 @@
 //! `description`, `default`, `examples`, `deprecated`, `readOnly`, `writeOnly`, `$comment`,
 //! `$anchor`, `$dynamicAnchor`, `$vocabulary`, `contentEncoding`, `contentMediaType`,
 //! `contentSchema`, and the project annotations `x-unit`, `x-ui`, `x-untrusted`,
-//! `x-standards-ref`, `path_like`, `x-extensions`, which later stages read). Anything else
-//! (an unknown keyword, an unasserted `format`, `$dynamicRef`, a `$ref` that does not land
-//! on a schema position, a pattern outside the ECMA-262 subset) fails compilation, so the
-//! command refuses every call rather than skip a keyword (fail closed).
+//! `x-standards-ref`, `path_like`, `x-extensions`, `value_of_record`, which later stages
+//! read). Anything else (an unknown keyword, an unasserted `format`, `$dynamicRef`, a
+//! `$ref` that does not land on a schema position, a pattern outside the ECMA-262 subset)
+//! fails compilation, so the command refuses every call rather than skip a keyword (fail
+//! closed).
 //!
 //! A literal is normalised for the keywords of the schema object holding `x-quantity` only, so
 //! compilation also refuses a numeric keyword in a schema object with neither its own
@@ -548,7 +549,8 @@ impl Builder {
             },
             "$comment" | "$anchor" | "$dynamicAnchor" | "$vocabulary" | "title" | "description" | "default"
             | "examples" | "deprecated" | "readOnly" | "writeOnly" | "contentEncoding" | "contentMediaType"
-            | "x-unit" | "x-ui" | "x-untrusted" | "x-standards-ref" | "path_like" | "x-extensions" => {}
+            | "x-unit" | "x-ui" | "x-untrusted" | "x-standards-ref" | "path_like" | "x-extensions"
+            | "value_of_record" => {}
             "contentSchema" => {
                 // An annotation: compiled so a `$ref` may land on it, never applied.
                 self.child(v, &mut base, &[k], depth)?;

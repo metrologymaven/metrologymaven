@@ -42,6 +42,12 @@
       "x-unit": "deg",
       "default": 0
     },
+    "nominal": {
+      "type": "number",
+      "x-quantity": "length",
+      "x-unit": "mm",
+      "value_of_record": true
+    },
     "label": {
       "type": "string",
       "maxLength": 128,

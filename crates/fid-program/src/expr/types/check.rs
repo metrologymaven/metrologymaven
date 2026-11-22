@@ -428,7 +428,7 @@ struct Value {
 }
 
 /// Whether a parameter schema holds a value of record anywhere inside it: a schema with
-/// `"value_of_record": true` or `"x-ref": "result"`, found through `items`, `prefixItems`,
+/// `"value_of_record": true` (CORE.REG.DEF.SCHEMA REQ-011), found through `items`, `prefixItems`,
 /// `allOf`, `anyOf`, `oneOf`, `properties` and local `$ref`s (`#/$defs/<name>` of the
 /// command's `params_schema`). Fails closed: a `$ref` that does not resolve, or nesting
 /// deeper than [`MAX_TYPE_DEPTH`], counts as a value of record.
@@ -437,7 +437,7 @@ pub fn value_of_record(s: &CValue, root: &CValue, depth: usize) -> bool {
         return true;
     }
     let Some(m) = obj(s) else { return false };
-    if m.get("value_of_record") == Some(&CValue::Bool(true)) || m.get("x-ref") == Some(&CValue::Str("result".into())) {
+    if m.get("value_of_record") == Some(&CValue::Bool(true)) {
         return true;
     }
     let next = depth.saturating_add(1);
