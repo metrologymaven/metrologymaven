@@ -10,10 +10,12 @@
 //! - [`status`]: `status-check` (`UX.TOKENS.STATUS`).
 //! - [`palettes`]: `palettes-check` (`UX.TOKENS.DATAPAL`).
 //! - [`color`]: `color-check`, the release gate over all of them (`UX.TOKENS.CHECK`).
+//! - [`icons_lint`]: `icons-lint` (`UX.ICONS.GRID`).
 //! - [`icons_prov`]: `icons-prov` and `icons-registry` (`UX.ICONS.PROV`).
 
 pub mod color;
 pub mod finding;
+pub mod icons_lint;
 pub mod icons_prov;
 pub mod palettes;
 pub mod pkg;

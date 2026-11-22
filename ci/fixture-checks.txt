@@ -272,6 +272,7 @@ python fixtures/unc/model/subst/make_fixtures.py --check
 python fixtures/unc/qif/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/unc/valid/make_fixtures.py --check
+python fixtures/ux/icons/grid/make_fixtures.py --check
 python fixtures/ux/screens/inv/make_fixtures.py --check
 python fixtures/ux/system/princ/make_fixtures.py --check
 python fixtures/ux/system/review/make_fixtures.py --check

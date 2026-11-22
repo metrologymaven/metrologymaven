@@ -12,6 +12,9 @@
 //! `fid-design icons-registry --manifest <file> --root <design dir> [--json]`,
 //! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]` and
 //! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`.
+//! `fid-design icons-lint --root <icons dir> [--json]`,
+//! `fid-design icons-prov --root <design dir> --attribution <file> [--json]` and
+//! `fid-design icons-registry --manifest <file> --root <design dir> [--json]`.
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage.
 
 use std::io::Write;
@@ -19,11 +22,21 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 const USAGE: &str =
-    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]
+    "usage: fid-design pkg-check --root <dir> [--json]
+       fid-design pkg-diff --from <dir> --to <dir> [--json]
+       fid-design tokens-check --root <design dir> [--json]
+       fid-design status-check --root <design dir> [--json]
+       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]
+       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]
+       fid-design princ-check [--file <md>] [--json]
+       fid-design words-check --copy <jsonl> [--words <json>] [--json]
+       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]
+       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]
        fid-design icons-prov --root <design dir> --attribution <file> [--json]
        fid-design icons-registry --manifest <file> --root <design dir> [--json]
        fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]
-       fid-design screens-gate --spec <spec dir> --root <design dir> [--json]";
+       fid-design screens-gate --spec <spec dir> --root <design dir> [--json]
+       fid-design icons-lint --root <icons dir> [--json]";
 
 #[derive(Default)]
 struct Args {
@@ -289,6 +302,10 @@ fn main() -> ExitCode {
         },
         ("palettes-check", Some(root), None, None) => match fid_design::palettes::check(root, args.baseline.as_deref())
         {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        },
+        ("icons-lint", Some(root), None, None) => match fid_design::icons_lint::check(root) {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
             Err(e) => fail(e),
         },
