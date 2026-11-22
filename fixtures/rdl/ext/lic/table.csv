@@ -1,0 +1,13 @@
+licence,evidence_present,expected_visibility
+CC-BY-4.0,true,public
+CC-BY-4.0,false,reference_only
+CC0-1.0,true,public
+CC0-1.0,false,reference_only
+MIT,true,public
+Apache-2.0,true,public
+BSD-3-Clause,false,reference_only
+CC-BY-NC-4.0,true,reference_only
+CC-BY-NC-4.0,false,reference_only
+GPL-3.0-only,true,reference_only
+LicenseRef-Proprietary,true,reference_only
+LicenseRef-Unconfirmed-PD,false,reference_only
