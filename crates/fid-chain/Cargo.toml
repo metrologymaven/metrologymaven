@@ -1,0 +1,22 @@
+[package]
+name = "fid-chain"
+description = "Verifier-side journal chain checks: checkpoint verification (TRUST.CHAIN.CKPT) and chain/result-linkage modules"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Verifier-side model crate: zero dependency on any CORE crate (fid-canon, fid-journal, etc.)
+# outside dev-dependencies, so the verifier stays independent of the writer (TRUST.CHAIN.CANON).
+[dependencies]
+fid-sign-core = { path = "../fid-sign-core" }
+fid-trust-canon = { path = "../fid-trust-canon" }
+fid-types = { path = "../fid-types" }
+
+[dev-dependencies]
+fid-journal = { path = "../fid-journal" }
+fid-pkg = { path = "../fid-pkg" }
+
+[lints]
+workspace = true
