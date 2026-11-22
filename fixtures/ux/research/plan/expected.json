@@ -1,0 +1,56 @@
+{
+  "clean": {
+    "exit": 0,
+    "findings": [],
+    "key": "key.csv",
+    "root": "clean"
+  },
+  "has-email": {
+    "exit": 1,
+    "findings": [
+      "RESEARCH-PII email"
+    ],
+    "key": "key.csv",
+    "root": "has-email"
+  },
+  "has-name": {
+    "exit": 1,
+    "findings": [
+      "RESEARCH-PII name"
+    ],
+    "key": "key.csv",
+    "root": "has-name"
+  },
+  "has-phone": {
+    "exit": 1,
+    "findings": [
+      "RESEARCH-PII phone"
+    ],
+    "key": "key.csv",
+    "root": "has-phone"
+  },
+  "incumbent": {
+    "exit": 1,
+    "findings": [
+      "RESEARCH-INCUMBENT flagged.md"
+    ],
+    "key": "key.csv",
+    "root": "incumbent"
+  },
+  "missing-consent": {
+    "exit": 1,
+    "findings": [
+      "RESEARCH-CONSENT-REF session.json"
+    ],
+    "key": "key.csv",
+    "root": "missing-consent"
+  },
+  "screenshot": {
+    "exit": 1,
+    "findings": [
+      "RESEARCH-IMAGE-PROVENANCE shot.png"
+    ],
+    "key": "key.csv",
+    "root": "screenshot"
+  }
+}

@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-design]
 satisfies: [REQ-UX.RESEARCH-007, REQ-UX.RESEARCH-008, REQ-UX.RESEARCH-009, REQ-UX.RESEARCH-010]
 covers: []
 depends_on: []
