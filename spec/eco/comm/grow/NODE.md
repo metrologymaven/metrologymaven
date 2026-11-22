@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [tools/]
+built_pr: 517
 updated: 2026-11-22
 ---
 
