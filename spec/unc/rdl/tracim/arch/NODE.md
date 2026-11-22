@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-rdl]
+built_pr: 473
+updated: 2026-11-22
 ---
 
 # UNC.RDL.TRACIM.ARCH: Verbatim archive of exchanges and reports

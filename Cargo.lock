@@ -1909,8 +1909,10 @@ name = "fid-rdl"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-rdl",
  "fid-registry",
  "fid-replay",
+ "fid-store",
  "fid-surface",
  "fid-types",
 ]

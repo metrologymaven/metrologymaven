@@ -17,6 +17,7 @@ pub mod command;
 mod error;
 pub mod ext;
 pub mod record;
+pub mod tracim;
 pub mod view;
 
 pub use command::{
