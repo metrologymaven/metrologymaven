@@ -200,6 +200,7 @@ python fixtures/plat/gpu/make_notice_fixtures.py --check
 python fixtures/plat/matrix/make_eol_fixtures.py --check
 python fixtures/plat/matrix/make_page.py --check
 python fixtures/plat/matrix/make_policy_rows_fixtures.py --check
+python fixtures/profile/gates/make_fixtures.py --check
 python fixtures/profile/make_fixtures.py --check
 python fixtures/program/expr/make_cases.py --check
 python fixtures/program/types/make_fixtures.py --check
