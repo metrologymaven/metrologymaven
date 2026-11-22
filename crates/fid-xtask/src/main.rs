@@ -21,6 +21,7 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
                      cargo xtask bot-blocking --threads <json> --register <bots.toml> --maintainers <txt>\n       \
                      cargo xtask plat-matrix validate <file>\n       \
                      cargo xtask plat-matrix page [--check] [--matrix <file>] --out <file>\n       \
+                     cargo xtask plat-matrix eol-check --today <YYYY-MM-DD> [--matrix <file>] [--eol <file>]\n       \
                      cargo xtask plat-matrix lint-tiers [<file>]\n       \
                      cargo xtask plat-hw validate [--file <path>]\n       \
                      cargo xtask plat-hw validate-suite [--file <path>]\n       \

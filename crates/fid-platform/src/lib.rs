@@ -16,6 +16,8 @@
 //!   (`PLAT.DEPLOY.OFFLINE.BUNDLE`).
 //! - [`page`]: the generated support matrix page and its `--check` comparison
 //!   (`PLAT.MATRIX.PAGE`).
+//! - [`os_eol`]: OS end-of-support list, 90-day warning and demotion check
+//!   (`PLAT.MATRIX.POLICY.EOL`).
 
 pub mod bench_schema;
 pub mod gpu_policy;
@@ -23,5 +25,6 @@ pub mod hw_profile;
 pub mod install_manifest;
 pub mod kiosk_display;
 pub mod matrix;
+pub mod os_eol;
 pub mod page;
 pub mod peruser_layout;

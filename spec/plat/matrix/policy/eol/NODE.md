@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-platform, fid-xtask]
+updated: 2026-11-22
 ---
 
 # PLAT.MATRIX.POLICY.EOL: End-of-support tracking
