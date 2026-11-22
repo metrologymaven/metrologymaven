@@ -12,11 +12,14 @@ publish = false
 # dependency is added:
 # - fid-canon: the RFC 8785 canonicaliser and SHA-256 the journal uses (CORE.JRN.CANON), so a
 #   ViewState hashes exactly as journal entries do;
+# - fid-geo-frame: L0 kernel frame tree and rigid transforms (`GEO.FRAME.TREE`) for active-frame
+#   standard orientations (`VIZ.VIEW.CAMERA.NAV`);
 # - fid-types: the shared `sha256:` digest type (ColorMapSpec and legend-layout references, the
 #   ViewState digest itself);
 # - fid-uuid: the workspace UUID value type for entity and LabelSet IDs (CONSTITUTION §5).
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+fid-geo-frame = { path = "../fid-geo-frame" }
 fid-types = { path = "../fid-types" }
 fid-uuid = { path = "../fid-uuid" }
 
