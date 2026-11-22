@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [fid-xtask]
+built_pr: 435
+updated: 2026-11-22
 ---
 
 # ECO.CI.LIC: Dependency licence and attribution check

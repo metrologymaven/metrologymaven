@@ -1,0 +1,40 @@
+{
+  "packages": [
+    {
+      "id": "fid-demo 0.1.0 (path+file:///ws)",
+      "license": "MIT OR Apache-2.0",
+      "license_file": null,
+      "name": "fid-demo",
+      "source": null,
+      "version": "0.1.0"
+    },
+    {
+      "id": "dep-mit 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "license": "MIT",
+      "license_file": null,
+      "name": "dep-mit",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "1.0.0"
+    },
+    {
+      "id": "dep-apache 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "license": "Apache-2.0",
+      "license_file": null,
+      "name": "dep-apache",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "2.1.0"
+    },
+    {
+      "id": "dep-dual 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "license": "MIT OR Apache-2.0",
+      "license_file": null,
+      "name": "dep-dual",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "version": "0.5.0"
+    }
+  ],
+  "version": 1,
+  "workspace_members": [
+    "fid-demo 0.1.0 (path+file:///ws)"
+  ]
+}

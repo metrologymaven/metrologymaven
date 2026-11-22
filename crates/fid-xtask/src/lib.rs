@@ -56,6 +56,7 @@ pub mod convergence;
 pub mod crate_graph;
 pub mod deny_scope;
 pub mod kernel_allow;
+pub mod licence_check;
 pub mod plat_deploy_netlist;
 pub mod plat_gpu_invar;
 pub mod plat_matrix_tiers;

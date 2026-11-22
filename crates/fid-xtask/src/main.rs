@@ -68,6 +68,7 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("layers") => layers(&args[1..]),
+        Some("licence-check") => fid_xtask::licence_check::cli(&args[1..]),
         Some("lint-crate-graph") => lint_crate_graph(&args[1..]),
         Some("kernel-allow") => kernel_allow(&args[1..]),
         Some("datasets-check" | "data") => datasets_check(&args),
@@ -116,6 +117,7 @@ fn main() -> ExitCode {
             eprintln!("{MIG_LADDER_USAGE}");
             eprintln!("{MIG_SOURCES_USAGE}");
             eprintln!("{}", fid_xtask::conic_audit::USAGE);
+            eprintln!("{}", fid_xtask::licence_check::USAGE);
             eprintln!("{}", fid_xtask::registry_gate::USAGE);
             eprintln!("{}", fid_xtask::convergence::CHECK_USAGE);
             eprintln!("{}", fid_xtask::convergence::DOC_USAGE);
