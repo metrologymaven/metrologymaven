@@ -1,0 +1,31 @@
+# Synthetic metric definitions for OUTR.COMM.METRIC.SNAP fixtures (CC-BY-4.0).
+
+[[metric]]
+id = "stars"
+title = "Repository stars"
+source = "repo-api"
+method = "http_json"
+selector = "/stargazers_count"
+unit = "stars"
+aggregation = "last"
+biases = ["Stars are bookmarks, not evidence of active use."]
+
+[[metric]]
+id = "downloads"
+title = "Release downloads per period"
+source = "releases-api"
+method = "http_json"
+selector = "/downloads"
+unit = "downloads"
+aggregation = "sum"
+biases = ["Automated CI downloads are not excluded."]
+
+[[metric]]
+id = "forks"
+title = "Repository forks"
+source = "repo-api"
+method = "http_json"
+selector = "/forks_count"
+unit = "forks"
+aggregation = "last"
+biases = ["Forks created for one pull request are counted."]

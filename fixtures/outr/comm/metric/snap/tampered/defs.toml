@@ -1,0 +1,11 @@
+# Synthetic metric definitions for OUTR.COMM.METRIC.SNAP fixtures (CC-BY-4.0).
+
+[[metric]]
+id = "stars"
+title = "Repository stars"
+source = "repo-api"
+method = "http_json"
+selector = "/stargazers_count"
+unit = "stars"
+aggregation = "last"
+biases = ["Stars are bookmarks, not evidence of active use."]
