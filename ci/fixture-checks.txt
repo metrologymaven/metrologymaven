@@ -62,6 +62,7 @@ python fixtures/ctrl/make_auth_vectors.py --check
 python fixtures/docs/make_fixtures.py --check
 python fixtures/dsse/make_fixtures.py --check
 python fixtures/fetch/make_fixtures.py --check
+python fixtures/fit/make_assign_fixtures.py --check
 python fixtures/fit/make_axis_cone_fixtures.py --check
 python fixtures/fit/make_axis_cyl_fixtures.py --check
 python fixtures/fit/make_init_fixtures.py --check

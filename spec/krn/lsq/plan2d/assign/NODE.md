@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-fit]
+updated: 2026-11-22
 ---
 
 # KRN.LSQ.PLAN2D.ASSIGN: Deterministic segment assignment for compound planar profiles

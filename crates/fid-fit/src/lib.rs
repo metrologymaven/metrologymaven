@@ -12,7 +12,9 @@
 //! least-squares cylinder run from those starts. [`mcc_cyl`] (spec node `KRN.ENV.MCC.CYL`) is the
 //! certified minimum circumscribed cylinder. [`ls_rnd`] (spec node `KRN.LSQ.RND`) holds the
 //! least-squares 2D circle, 3D circle and sphere. [`ls_cone`] (spec node `KRN.LSQ.AXIS.CONE`)
-//! is the least-squares cone, run from INIT's cone starts.
+//! is the least-squares cone, run from INIT's cone starts. [`plan2d_assign`] (spec node
+//! `KRN.LSQ.PLAN2D.ASSIGN`) provides deterministic segment assignment and per-segment
+//! residual statistics for compound planar profiles (slots, rounded rectangles).
 
 // `FitError` wraps `fid_solv::nlls::SolverError` by value (about 150 bytes, see the note in
 // `fid-solv`). It is returned at most once per fit, never in a loop, and boxing it would add an
@@ -26,6 +28,7 @@ pub mod ls_cyl;
 pub mod ls_lin;
 pub mod ls_rnd;
 pub mod mcc_cyl;
+pub mod plan2d_assign;
 pub mod tan_plane;
 pub mod tan_rock;
 pub mod vor;
