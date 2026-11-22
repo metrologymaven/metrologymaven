@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-sel]
+built_pr: 429
 satisfies: [REQ-GEO.SEL-007]
 covers: []
 depends_on: [GEO.SEL.MODEL, GEO.TYPES.MESH, GEO.INDEX.KDTREE]
