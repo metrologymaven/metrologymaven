@@ -1,0 +1,4 @@
+[[suppress]]
+id = "report.footer.note"
+rule = "VC001"
+reason = ""

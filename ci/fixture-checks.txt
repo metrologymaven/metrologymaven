@@ -218,6 +218,7 @@ python fixtures/viz/golden-cube/make_fixtures.py --check
 python fixtures/viz/scene-doc-small/make_stale.py --check
 python fixtures/viz/status-matrix/make_fixtures.py --check
 python fixtures/viz/viewstate-samples/make_fixtures.py --check
+python fixtures/vocab/catalog/make_fixtures.py --check
 python tools/check_bench_schema.py
 python tools/check_command_defs.py
 python tools/check_entries.py

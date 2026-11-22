@@ -1,0 +1,5 @@
+{"col":0,"file":"cli/align.ftl","id":"cli.align.done","line":27,"links":[],"suppress":[],"text":"Alignment completed for {arg} with {{literal}} braces."}
+{"col":0,"file":"ui/dialog.ftl","id":"dialog.confirm.title","line":8,"links":[],"suppress":[],"text":"Confirm release batch {arg}"}
+{"col":0,"file":"report/footer.ftl","id":"report.footer.note","line":4,"links":[],"suppress":[],"text":"Certified results"}
+{"col":0,"file":"ui/part.ftl","id":"ui.part.summary#one","line":12,"links":[],"suppress":[],"text":"Loaded {arg} feature from {arg}."}
+{"col":0,"file":"ui/part.ftl","id":"ui.part.summary#other","line":12,"links":[],"suppress":[],"text":"Loaded {arg} features from {arg}."}

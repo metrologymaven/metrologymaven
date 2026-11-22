@@ -1,0 +1,9 @@
+# Reviewed per-message suppressions for the product vocabulary lint
+# (spec node ECO.RULES.VOCAB.CATALOG).
+#
+# Each entry suppresses one rule on all variants of one English catalogue message:
+#
+# [[suppress]]
+# id = "example.message.id"
+# rule = "VC001"
+# reason = "Reviewed justification explaining why this wording is intentional."

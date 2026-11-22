@@ -1,0 +1,40 @@
+{
+  "locale": "en",
+  "messages": [
+    {
+      "id": "ui.part.summary",
+      "source": {
+        "file": "ui/part.ftl",
+        "line": 12
+      },
+      "variants": {
+        "one": "Loaded {certified_count} feature from {file_name}.",
+        "other": "Loaded {certified_count} features from {file_name}."
+      }
+    },
+    {
+      "id": "report.footer.note",
+      "source": {
+        "file": "report/footer.ftl",
+        "line": 4
+      },
+      "text": "Certified results"
+    },
+    {
+      "id": "cli.align.done",
+      "source": {
+        "file": "cli/align.ftl",
+        "line": 27
+      },
+      "text": "Alignment completed for {part_id} with {{literal}} braces."
+    },
+    {
+      "id": "dialog.confirm.title",
+      "source": {
+        "file": "ui/dialog.ftl",
+        "line": 8
+      },
+      "text": "Confirm release batch {batch_id}"
+    }
+  ]
+}

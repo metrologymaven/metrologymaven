@@ -1,0 +1,9 @@
+[[suppress]]
+id = "report.footer.note"
+rule = "VC001"
+reason = "Fixture-reviewed suppression for AC test."
+
+[[suppress]]
+id = "ui.part.summary"
+rule = "VC001"
+reason = "Plural suppression applies to all variants."
