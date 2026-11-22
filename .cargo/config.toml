@@ -21,6 +21,7 @@
 # cargo xtask conic-audit [--dir <dir>] [--audit <toml>] [--report <json>] [--allowlist <toml>] [--previous <toml>]  (KRN.SOLV.CONIC.VEND)
 # cargo xtask registry-gate --current <declarations.json> [--baseline <json>] [--release-date <date>]  (CORE.REG.VER.GATE)
 # cargo xtask gen-surfaces --manifest <json> --out <dir> [--test-emitter echo]  (AUTO.SURF.GEN)
+# cargo xtask surface-check --manifest <json> --generated <dir>  (AUTO.SURF.CHECK)
 # cargo xtask crash-harness [--seed N] [--kills N] [--instant K:D] [--power-loss ...]  (CORE.STO.SQL.CRASH)
 xtask = "run -q -p fid-xtask --"
 

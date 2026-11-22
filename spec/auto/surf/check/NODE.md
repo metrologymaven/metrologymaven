@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [fid-surface-gen]
+built_pr: 434
+updated: 2026-11-22
 ---
 
 # AUTO.SURF.CHECK: CI surface-completeness and staleness check

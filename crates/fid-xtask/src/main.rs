@@ -95,6 +95,7 @@ fn main() -> ExitCode {
         Some("convergence-check") => fid_xtask::convergence::check_cli(&args[1..]),
         Some("convergence-doc") => fid_xtask::convergence::doc_cli(&args[1..]),
         Some("gen-surfaces") => gen_surfaces(&args[1..]),
+        Some("surface-check") => surface_check(&args[1..]),
         Some("crash-harness") => crash_harness(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
         Some("apps-policy") => apps_policy_check(&args[1..]),
@@ -417,6 +418,22 @@ fn gen_surfaces(args: &[String]) -> ExitCode {
         Ok(s) => ExitCode::from(s.code().and_then(|c| u8::try_from(c).ok()).unwrap_or(2)),
         Err(e) => {
             eprintln!("gen-surfaces: cannot run cargo: {e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+fn surface_check(args: &[String]) -> ExitCode {
+    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
+    let manifest = concat!(env!("CARGO_MANIFEST_DIR"), "/../../Cargo.toml");
+    let status = Command::new(cargo)
+        .args(["run", "-q", "--manifest-path", manifest, "-p", "fid-surface-gen", "--bin", "fid-surface-check", "--"])
+        .args(args)
+        .status();
+    match status {
+        Ok(s) => ExitCode::from(s.code().and_then(|c| u8::try_from(c).ok()).unwrap_or(2)),
+        Err(e) => {
+            eprintln!("surface-check: cannot run cargo: {e}");
             ExitCode::from(2)
         }
     }

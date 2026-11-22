@@ -48,6 +48,12 @@ use std::io::{ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+pub mod check;
+pub use check::{
+    check_cli, check_surfaces, check_surfaces_with_emitters, CheckError, CheckReport, CommandRef, Finding, FindingKind,
+    CHECKED_SURFACES, CHECK_USAGE, MAX_GENERATED_FILE_BYTES, MAX_INDEX_BYTES,
+};
+
 /// Name of the generator, as written in every header.
 pub const GENERATOR: &str = "fid-surface-gen";
 /// Version of the generator's output layout (header, index, normalisation). Bumped whenever
