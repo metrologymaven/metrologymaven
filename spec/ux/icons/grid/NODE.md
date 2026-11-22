@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-design]
+built_pr: 443
 satisfies: [REQ-UX.ICONS-001]
 covers: []
 depends_on: [UX.SYSTEM.PKG]
