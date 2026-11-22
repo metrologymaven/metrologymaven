@@ -59,6 +59,8 @@ const MIG_LADDER_USAGE: &str =
     "usage: cargo xtask mig ladder-check --ladder <json> --manifest <registry manifest json>";
 const MIG_SOURCES_USAGE: &str =
     "usage: cargo xtask mig sources-check --register <json> --manifest <registry manifest json> [--vocab-rules <toml>]";
+const MIG_TAXONOMY_USAGE: &str =
+    "usage: cargo xtask mig taxonomy-check --dir <dir> [--dmis-conf <json>] [--reports <dir>] [--previous <dir>]";
 const GEN_SURFACES_USAGE: &str =
     "usage: cargo xtask gen-surfaces --manifest <registry manifest json> --out <dir> [--test-emitter echo]...";
 const LINT_USAGE: &str =
@@ -91,6 +93,7 @@ fn main() -> ExitCode {
         Some("pins") => pins::cli(&args[1..]),
         Some("mig") if args.get(1).map(String::as_str) == Some("ladder-check") => mig_ladder_check(&args[2..]),
         Some("mig") if args.get(1).map(String::as_str) == Some("sources-check") => mig_sources_check(&args[2..]),
+        Some("mig") if args.get(1).map(String::as_str) == Some("taxonomy-check") => mig_taxonomy_check(&args[2..]),
         Some("conic-audit") => fid_xtask::conic_audit::cli(&args[1..]),
         Some("registry-gate") => fid_xtask::registry_gate::cli(&args[1..]),
         Some("convergence-check") => fid_xtask::convergence::check_cli(&args[1..]),
@@ -116,6 +119,7 @@ fn main() -> ExitCode {
             eprintln!("{APPS_POLICY_USAGE}");
             eprintln!("{MIG_LADDER_USAGE}");
             eprintln!("{MIG_SOURCES_USAGE}");
+            eprintln!("{MIG_TAXONOMY_USAGE}");
             eprintln!("{}", fid_xtask::conic_audit::USAGE);
             eprintln!("{}", fid_xtask::licence_check::USAGE);
             eprintln!("{}", fid_xtask::registry_gate::USAGE);
@@ -268,6 +272,56 @@ fn mig_sources_check(args: &[String]) -> ExitCode {
             println!("sources-check: {} findings", findings.len());
             ExitCode::from(1)
         }
+    }
+}
+
+/// MIG.COVER.TAXO: `mig taxonomy-check`. Validates every `mig-taxonomy@1` file in `--dir`,
+/// plus optional DMIS conformance completeness (`--dmis-conf`), producer report closure
+/// (`--reports`), and breaking-change major-bump enforcement (`--previous`). Exit 0: pass;
+/// 1: findings; 2: usage error or unreadable input.
+fn mig_taxonomy_check(args: &[String]) -> ExitCode {
+    use fid_mig::cover::taxo;
+    let (mut dir, mut dmis_conf, mut reports, mut previous) = (None, None, None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--dir", Some(v)) if dir.is_none() => dir = Some(PathBuf::from(v)),
+            ("--dmis-conf", Some(v)) if dmis_conf.is_none() => dmis_conf = Some(PathBuf::from(v)),
+            ("--reports", Some(v)) if reports.is_none() => reports = Some(PathBuf::from(v)),
+            ("--previous", Some(v)) if previous.is_none() => previous = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{MIG_TAXONOMY_USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let Some(dir) = dir else {
+        eprintln!("mig taxonomy-check: --dir is required");
+        eprintln!("{MIG_TAXONOMY_USAGE}");
+        return ExitCode::from(2);
+    };
+    let report = match taxo::check_paths(&dir, dmis_conf.as_deref(), reports.as_deref(), previous.as_deref()) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("mig taxonomy-check: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    for f in &report.findings {
+        println!("{f}");
+    }
+    if report.is_ok() {
+        let total_constructs: usize = report.taxonomies.values().map(|t| t.constructs.len()).sum();
+        println!(
+            "taxonomy-check: ok {} formats={} constructs={}",
+            taxo::SCHEMA,
+            report.taxonomies.len(),
+            total_constructs
+        );
+        ExitCode::SUCCESS
+    } else {
+        println!("taxonomy-check: {} findings", report.findings.len());
+        ExitCode::from(1)
     }
 }
 
