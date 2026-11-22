@@ -19,6 +19,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-inbox]
+built_pr: 459
 updated: 2026-11-22
 ---
 
