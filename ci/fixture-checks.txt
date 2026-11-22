@@ -230,6 +230,7 @@ python fixtures/unc/model/contrib/make_fixtures.py --check
 python fixtures/unc/model/graph/make_check_fixtures.py --check
 python fixtures/unc/model/graph/make_fixtures.py --check
 python fixtures/unc/model/graph/store/make_store_fixtures.py --check
+python fixtures/unc/qif/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/ux/screens/inv/make_fixtures.py --check
 python fixtures/ux/system/princ/make_fixtures.py --check

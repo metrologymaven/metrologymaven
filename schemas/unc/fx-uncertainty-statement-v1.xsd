@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Metrology Maven QIF 3.0 extension fragment for UncertaintyStatement (unc-qif-stmt@1).
+  Spec node: UNC.UEC.QIF (published for inclusion in CORE.PRJ.QIF's fx extension catalogue).
+  Placed inside QIF 3.0's sanctioned Attributes/AttributeUserData/UserDataXML hook.
+  Project-authored; CC-BY-4.0 / MIT OR Apache-2.0.
+-->
+<xs:schema
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:fx="https://metrologymaven.org/ns/qif-ext/v1"
+    targetNamespace="https://metrologymaven.org/ns/qif-ext/v1"
+    elementFormDefault="qualified"
+    attributeFormDefault="unqualified"
+    version="1.0">
+
+  <xs:simpleType name="Hex64Type">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9a-f]{16}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Sha256DigestType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="sha256:[0-9a-f]{64}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="EvidenceClassType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="UEC-0"/>
+      <xs:enumeration value="UEC-1"/>
+      <xs:enumeration value="UEC-2"/>
+      <xs:enumeration value="UEC-3"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Uec0ReasonType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="u_missing"/>
+      <xs:enumeration value="model_missing"/>
+      <xs:enumeration value="instrument_missing"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="MethodType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="LPU"/>
+      <xs:enumeration value="MCM"/>
+      <xs:enumeration value="ISO15530-3"/>
+      <xs:enumeration value="ISO15530-4"/>
+      <xs:enumeration value="DECLARED"/>
+      <xs:enumeration value="SPEC_DERIVED"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="BoolStringType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="true"/>
+      <xs:enumeration value="false"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="UncertaintyStatement" type="fx:UncertaintyStatementType"/>
+
+  <xs:complexType name="UncertaintyStatementType">
+    <xs:sequence>
+      <xs:element name="Class" type="fx:EvidenceClassType"/>
+      <xs:element name="Uec0Reason" type="fx:Uec0ReasonType" minOccurs="0"/>
+      <xs:element name="Method" type="fx:MethodType" minOccurs="0"/>
+      <xs:element name="Unit" type="xs:string" minOccurs="0"/>
+      <xs:element name="UStd" type="fx:Hex64Type" minOccurs="0"/>
+      <xs:element name="Expanded" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="U" type="fx:Hex64Type"/>
+            <xs:element name="K" type="fx:Hex64Type"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="Interval" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Low" type="fx:Hex64Type"/>
+            <xs:element name="High" type="fx:Hex64Type"/>
+            <xs:element name="P" type="fx:Hex64Type"/>
+            <xs:element name="Kind" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="Model" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Id" type="xs:string"/>
+            <xs:element name="Semver" type="xs:string"/>
+            <xs:element name="Digest" type="fx:Sha256DigestType"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="Sources" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Source" minOccurs="0" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="Kind" type="xs:string"/>
+                  <xs:element name="Id" type="xs:string"/>
+                  <xs:element name="Digest" type="fx:Sha256DigestType"/>
+                  <xs:element name="Unverified" type="fx:BoolStringType" minOccurs="0"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="Contributors" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Contributor" minOccurs="0" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="InputId" type="xs:string"/>
+                  <xs:element name="Sensitivity" type="fx:Hex64Type" minOccurs="0"/>
+                  <xs:element name="UContrib" type="fx:Hex64Type"/>
+                  <xs:element name="VarianceShare" type="fx:Hex64Type"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="LpuValidatedByMc" type="fx:BoolStringType" minOccurs="0"/>
+      <xs:element name="Nonlinearity" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Version" type="xs:string"/>
+            <xs:element name="Outcome" type="xs:string"/>
+            <xs:element name="V1" type="fx:Hex64Type"/>
+            <xs:element name="V2" type="fx:Hex64Type"/>
+            <xs:element name="Ratio" type="fx:Hex64Type" minOccurs="0"/>
+            <xs:element name="ProbedInputs" type="xs:unsignedInt"/>
+            <xs:element name="ProbedPairs" type="xs:unsignedInt"/>
+            <xs:element name="CrossTermsTruncated" type="fx:BoolStringType"/>
+            <xs:element name="Reason" type="xs:string" minOccurs="0"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="SelectionRule" type="xs:string" minOccurs="0"/>
+      <xs:element name="EstimateConvention" type="xs:string" minOccurs="0"/>
+      <xs:element name="Provenance">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="RuleSets" minOccurs="0">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="RuleSet" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="Principal" type="xs:string" minOccurs="0"/>
+            <xs:element name="PrincipalKind" type="xs:string" minOccurs="0"/>
+            <xs:element name="Proposal" type="fx:BoolStringType"/>
+            <xs:element name="AdoptedBy" type="xs:string" minOccurs="0"/>
+            <xs:element name="Supersedes" type="fx:Sha256DigestType" minOccurs="0"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="version" type="xs:string" use="required" fixed="unc-qif-stmt@1"/>
+  </xs:complexType>
+</xs:schema>
