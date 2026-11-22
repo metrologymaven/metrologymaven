@@ -1,0 +1,7 @@
+$$ Project-authored fixture for IO.DMIS.PARSE.PRINT (CC-BY-4.0).
+DMISMN/'print fixture',05.3
+UNITS/MM,ANGDEC
+f(c1)=feat/circle,inner,cart,3.000,+0.250,-1.50,0,0,1,12.500
+F(P1)=FEAT/POINT,CART,10.000,20.000,3.000,0,0,1
+T(D1)=TOL/DIAM,-0.010,0.010,MMC
+ENDFIL
