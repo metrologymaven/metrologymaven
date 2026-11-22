@@ -249,6 +249,12 @@ impl BuiltinRegistry {
         BuiltinRegistry::default()
     }
 
+    /// A built-in registry pre-populated with the three unlocked starter templates at version 1
+    /// (`RPT.MODEL.TMPL.STARTER`).
+    pub fn with_starters() -> Result<BuiltinRegistry, VerError> {
+        crate::tmpl::starter::starter_registry()
+    }
+
     /// Registers `template` as `builtin:<its id>@<version>` and returns its reference.
     /// Registering the same bytes at the same version again returns the same reference;
     /// other bytes at a registered version, or version 0, are `report.bad_params`. Bounded

@@ -1,0 +1,19 @@
+{
+  "rpt.starter.char_table.heading": "Characteristic Table",
+  "rpt.starter.char_table.title": "Characteristic Table",
+  "rpt.starter.col.count": "Count",
+  "rpt.starter.col.decision": "Decision",
+  "rpt.starter.col.deviation": "Deviation",
+  "rpt.starter.col.id": "Characteristic ID",
+  "rpt.starter.col.limits": "Limits",
+  "rpt.starter.col.measured": "Measured",
+  "rpt.starter.col.nominal": "Nominal",
+  "rpt.starter.col.outcome": "Outcome",
+  "rpt.starter.col.stage_measured": "Stage Measured",
+  "rpt.starter.deviation_summary.heading": "Deviation Summary",
+  "rpt.starter.deviation_summary.nonconforming_heading": "Nonconforming Characteristics",
+  "rpt.starter.deviation_summary.outcomes_heading": "Outcome Counts",
+  "rpt.starter.deviation_summary.title": "Deviation Summary",
+  "rpt.starter.multistage_table.heading": "Multi-Stage Comparison",
+  "rpt.starter.multistage_table.title": "Multi-Stage Comparison Table"
+}
