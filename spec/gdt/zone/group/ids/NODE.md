@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-gps]
+built_pr: 519
 updated: 2026-11-22
 ---
 
