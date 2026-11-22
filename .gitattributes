@@ -218,3 +218,5 @@ fixtures/gdt/ident/** -text
 fixtures/core/bus/pol/egress/artifact.bin binary
 # TRUST.REPLAY.SELECT packages and expected plans: compared byte for byte by make_cases.py --check.
 fixtures/replay/select/** -text
+# TRUST.PKG.FIXTURE golden packages, pinned digests and index: compared byte for byte by fixtures/pkg/generate --check.
+fixtures/pkg/golden/** -text

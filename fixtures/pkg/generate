@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""Rebuilds, or checks, every Result Package conformance fixture (TRUST.PKG.FIXTURE).
+
+One entry point over the three independent stdlib generators of fixtures/pkg/:
+
+- make_fixtures.py         TRUST.PKG.MANIFEST: contents, minimal golden, pinned digests, paths,
+                           versions;
+- make_reader_fixtures.py  TRUST.PKG.READER: the malformed corpus (one case per reader error
+                           code and reason) and the valid reader packages;
+- make_golden.py           TRUST.PKG.FIXTURE: the golden packages per evidence tier, with two
+                           signatures and with a UEC-0 result, and golden/index.json.
+
+None of them runs Rust code. Every fixture is byte-reproducible: fixed 1980-01-01 ZIP
+timestamps, members sorted by path bytes, compression chosen by media type only (stored, or
+deflate made of stored blocks), RFC 8785 JSON, deterministic RFC 8032 / RFC 6979 signatures.
+
+Run:  python fixtures/pkg/generate              write every fixture
+      python fixtures/pkg/generate --check      exit 0 and list every fixture as reproduced, or
+                                                exit 1 with one `fixture.mismatch <path>` line
+                                                per committed file that differs, is missing or
+                                                is not generated
+      python fixtures/pkg/generate --self-test  edit a copy of a golden and of a malformed case
+                                                and check that --check names exactly those
+
+Stdlib only. CC-BY-4.0 project data.
+"""
+
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+
+import make_fixtures  # noqa: E402
+import make_golden  # noqa: E402
+import make_reader_fixtures  # noqa: E402
+
+# Folders whose every file must come from a generator (anything else there is a mismatch).
+OWNED = ("contents", "golden", "malformed", "paths", "reader/valid", "versions")
+
+
+def expected():
+    """{relative path: bytes} of every generated fixture; refuses two generators writing one file."""
+    files = {}
+    errors = []
+    sources = [
+        ("make_fixtures.py", make_fixtures.write_all()),
+        ("make_reader_fixtures.py", make_reader_fixtures.write_all(True, errors)),
+        ("make_golden.py", make_golden.write_all()),
+    ]
+    for name, out in sources:
+        for rel, data in out.items():
+            if rel in files:
+                errors.append(f"{rel}: written by two generators (second: {name})")
+            files[rel] = data
+    return files, errors
+
+
+def compare(root, files):
+    """Mismatched relative paths under `root`, sorted."""
+    bad = set()
+    for rel, data in files.items():
+        p = root / rel
+        if not p.is_file() or p.read_bytes() != data:
+            bad.add(rel)
+    for folder in OWNED:
+        base = root / folder
+        if not base.is_dir():
+            continue
+        for p in base.rglob("*"):
+            rel = p.relative_to(root).as_posix()
+            if p.is_file() and rel not in files:
+                bad.add(rel)
+    return sorted(bad)
+
+
+def report(files, bad):
+    for rel in bad:
+        print(f"fixture.mismatch {rel}")
+    if bad:
+        print(f"{len(bad)} fixture(s) differ from their regenerated form")
+        return 1
+    golden = sorted(r for r in files if r.startswith("golden/"))
+    malformed = sorted({r.split("/")[1] for r in files if r.startswith("malformed/")})
+    for rel in golden:
+        print(f"reproduced {rel}")
+    for case in malformed:
+        print(f"reproduced malformed/{case}/")
+    print(f"all {len(files)} fixtures reproduced ({len(golden)} golden files, {len(malformed)} malformed cases)")
+    return 0
+
+
+def self_test(files):
+    """AC-3: a deliberately edited golden (and malformed case) is named by --check."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for rel, data in files.items():
+            p = root / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(data)
+        assert compare(root, files) == [], "a fresh copy must compare clean"
+        edits = ["golden/points.zip", "malformed/crc_mismatch/expect.json"]
+        for rel in edits:
+            p = root / rel
+            b = bytearray(p.read_bytes())
+            b[len(b) // 2] ^= 0x01
+            p.write_bytes(bytes(b))
+        (root / "golden/stray.zip").write_bytes(b"not generated")
+        (root / "golden/uec0.zip.sha256").unlink()
+        got = compare(root, files)
+        want = sorted(edits + ["golden/stray.zip", "golden/uec0.zip.sha256"])
+        assert got == want, f"--check named {got}, expected {want}"
+        shutil.rmtree(root / "golden")
+        assert all(r in compare(root, files) for r in files if r.startswith("golden/"))
+    print("self-test: edited, stray and missing fixtures are each named")
+    return 0
+
+
+def main():
+    args = sys.argv[1:]
+    files, errors = expected()
+    if errors:
+        for e in errors:
+            print(e)
+        return 1
+    if "--self-test" in args:
+        return self_test(files)
+    if "--check" in args:
+        return report(files, compare(HERE, files))
+    for rel, data in sorted(files.items()):
+        p = HERE / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(data)
+    print(f"{len(files)} fixtures written")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

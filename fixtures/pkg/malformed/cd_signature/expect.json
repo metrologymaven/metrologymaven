@@ -1,0 +1,1 @@
+{"error_code":"pkg.malformed","note":"the first central directory header's signature is PK\\x01\\x03 instead of PK\\x01\\x02","reason":"cd_signature"}

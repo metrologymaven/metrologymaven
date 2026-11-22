@@ -5,14 +5,17 @@ For each container, this script:
 
 - AC-2: lists it with Info-ZIP `unzip -Z1` and with Python `zipfile`, and checks
   that both give exactly the manifest members plus statement.json, in that order,
-  with manifest.json first; `unzip -t` must report no errors;
-- AC-3: validates manifest.json against schema/manifest-1.json with `jsonschema`
-  and hashes every member with `sha256sum` and `hashlib`, comparing with the manifest.
+  with manifest.json first, then any `signatures/*` entries; `unzip -t` must report
+  no errors;
+- AC-3: validates manifest.json against schema/manifest-1.json and statement.json
+  against schema/statement-1.json with `jsonschema`, and hashes every member with
+  `sha256sum` and `hashlib`, comparing with the manifest and the statement subjects.
 
 With no package arguments it checks the golden packages: the committed
-`golden/minimal.zip`, plus the `mixed` contents and the forced-zip64 variants
-rebuilt by the independent reference `make_fixtures.py`; each rebuilt container
-must also match its pinned digest in `golden/*.sha256`.
+`golden/minimal.zip` and every golden listed in `golden/index.json`
+(TRUST.PKG.FIXTURE), plus the `mixed` contents and the forced-zip64 variants
+rebuilt by the independent reference `make_fixtures.py`; each container must
+also match its pinned digest in `golden/*.sha256`.
 
 `--strict` (used in CI) turns a missing `unzip`, `sha256sum` or `jsonschema` into
 a failure instead of a skipped check. It never runs any Rust code.
@@ -51,9 +54,9 @@ def check(pkg, strict):
     z = zipfile.ZipFile(pkg)
     manifest = json.loads(z.read("manifest.json"))
     member_paths = [m["path"] for m in manifest["members"]]
-    expected = ["manifest.json"] + member_paths + ["statement.json"]
-
     names = z.namelist()
+    signatures = [n for n in names if n.startswith("signatures/")]
+    expected = ["manifest.json"] + member_paths + ["statement.json"] + signatures
     assert names == expected, f"zipfile listing {names} != {expected}"
     assert z.testzip() is None
     print(f"zipfile: {len(names)} entries in manifest order")
@@ -74,7 +77,17 @@ def check(pkg, strict):
         schema = json.loads((ROOT / "schema/manifest-1.json").read_text(encoding="utf-8"))
         jsonschema.Draft202012Validator.check_schema(schema)
         jsonschema.Draft202012Validator(schema).validate(manifest)
-        print("schema: manifest.json is valid against schema/manifest-1.json")
+        schema = json.loads((ROOT / "schema/statement-1.json").read_text(encoding="utf-8"))
+        jsonschema.Draft202012Validator.check_schema(schema)
+        jsonschema.Draft202012Validator(schema).validate(json.loads(z.read("statement.json")))
+        print("schema: manifest.json and statement.json are valid against schema/manifest-1.json, statement-1.json")
+
+    mbytes = z.read("manifest.json")
+    statement = json.loads(z.read("statement.json"))
+    subjects = [(s["name"], s["digest"]["sha256"]) for s in statement["subject"]]
+    want = [("manifest.json", hashlib.sha256(mbytes).hexdigest())] + [(m["path"], m["sha256"]) for m in manifest["members"]]
+    assert subjects == want, "statement subjects differ from manifest.json and its members"
+    assert statement["predicate"]["manifest_sha256"] == want[0][1]
 
     use_sha256sum = need("sha256sum", strict)
     with tempfile.TemporaryDirectory() as tmp:
@@ -96,6 +109,11 @@ def golden_packages(tmp):
     import make_fixtures as ref  # noqa: PLC0415
 
     pkgs = [HERE / "golden/minimal.zip"]
+    for g in json.loads((HERE / "golden/index.json").read_text(encoding="utf-8")):
+        path = HERE / "golden" / g["file"]
+        pinned = (HERE / f"golden/{g['file']}.sha256").read_text(encoding="ascii").split()[0]
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == pinned == g["sha256"], f"{g['file']} pin"
+        pkgs.append(path)
     for name, contents in (("minimal", ref.MINIMAL), ("mixed", ref.MIXED)):
         for force, suffix in ((False, ".zip"), (True, ".zip64.zip")):
             if name == "minimal" and not force:
