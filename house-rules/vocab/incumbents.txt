@@ -1,0 +1,17 @@
+# Product and company names compiled from seeds/*.md competitor inventory titles
+# (spec node ECO.RULES.VOCAB.RULESET; nominative use only, CC-BY-4.0).
+# Every competitor product named on a seed inventory title line must appear here.
+GOM Inspect
+ZEISS INSPECT Optical 3D
+ZEISS INSPECT
+ZEISS
+GOM
+PC-DMIS
+Hexagon
+PolyWorks
+PolyWorks Inspector
+PolyWorks Modeler
+PolyWorks DataLoop
+InnovMetric
+SpatialAnalyzer
+New River Kinematics
