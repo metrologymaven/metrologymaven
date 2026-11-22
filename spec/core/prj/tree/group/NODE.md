@@ -18,6 +18,7 @@ cli: [fid project create-group, fid project move-element, fid project rename-ele
 mcp: [project_create_group, project_move_element, project_rename_element, project_set_visibility]
 journal: [project.create_group@1, project.move_element@1, project.rename_element@1, project.set_visibility@1]
 built_in: [fid-project, fid-project-cmd]
+built_pr: 436
 updated: 2026-11-22
 ---
 
