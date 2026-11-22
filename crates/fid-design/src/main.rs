@@ -142,8 +142,35 @@ fn main() -> ExitCode {
     let pkg_flags = args.root.is_some() || args.from.is_some() || args.to.is_some();
     let princ_flags = args.file.is_some() || args.copy.is_some() || args.words.is_some();
     let screen_flags = args.journeys.is_some() || args.ga.is_some() || args.spec.is_some();
-    if cmd == "screens-check" || cmd == "screens-gate" {
     if cmd == "fonts-check" {
+        let others = princ_flags
+            || screen_flags
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.pr.is_some()
+            || args.all
+            || args.attribution.is_some()
+            || args.manifest.is_some();
+        let (Some(root), Some(allowlist)) = (&args.root, &args.allowlist) else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        return match fid_design::fonts::check(root, allowlist) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        };
+    }
+    if args.allowlist.is_some() {
+        return usage();
+    }
+    if cmd == "screens-check" || cmd == "screens-gate" {
         let others = princ_flags
             || args.from.is_some()
             || args.to.is_some()
@@ -157,7 +184,6 @@ fn main() -> ExitCode {
             || args.attribution.is_some()
             || args.manifest.is_some();
         let Some(root) = args.root.clone() else {
-        let (Some(root), Some(allowlist)) = (&args.root, &args.allowlist) else {
             return usage();
         };
         if others {
@@ -178,12 +204,6 @@ fn main() -> ExitCode {
         };
     }
     if screen_flags {
-        return match fid_design::fonts::check(root, allowlist) {
-            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
-            Err(e) => fail(e),
-        };
-    }
-    if args.allowlist.is_some() {
         return usage();
     }
     if cmd == "icons-prov" || cmd == "icons-registry" {
