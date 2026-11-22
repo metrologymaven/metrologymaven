@@ -46,6 +46,7 @@ pub fn to_bus_error(e: &TreeError) -> BusError {
         TreeError::Name => BusError::Validation(ValidationReason::Name, d),
         TreeError::UnregisteredType(_) => BusError::Validation(ValidationReason::UnregisteredType, d),
         TreeError::BadReference(_) => BusError::Validation(ValidationReason::BadReference, d),
+        TreeError::NotFound(_) => BusError::NotFound(NotFoundReason::UnknownEntity, d),
         TreeError::BadStage(_) => BusError::Validation(ValidationReason::BadStage, d),
         TreeError::Hierarchy(_) => BusError::Validation(ValidationReason::Hierarchy, d),
         TreeError::IdCollision(_) => BusError::Conflict(ConflictReason::IdCollision, d),
@@ -68,6 +69,7 @@ pub fn to_bus_error(e: &TreeError) -> BusError {
 pub fn to_replay_error(e: &TreeError) -> BusError {
     match e {
         TreeError::InvalidTransition { .. }
+        | TreeError::NotFound(_)
         | TreeError::StageNotFound(_)
         | TreeError::StageActive(_)
         | TreeError::BadOrder(_) => BusError::Internal(InternalReason::InvariantViolated, Detail::new(&e.to_string())),

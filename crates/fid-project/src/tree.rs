@@ -73,7 +73,7 @@ use crate::stage::{
 use crate::stage_switch::{active_set, ACTIVE_STAGE_SET};
 use fid_canon::CValue;
 use fid_types::Digest;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::sync::Arc;
 
@@ -95,8 +95,17 @@ pub const GROUP_CREATED: &str = "GroupCreated";
 pub const ELEMENT_CREATED: &str = "ElementCreated";
 /// Core event: one slot of an element changed state.
 pub const ELEMENT_SLOT_SET: &str = "ElementSlotSet";
+/// Core event: elements and/or groups moved under a target group (`CORE.PRJ.TREE.GROUP`).
+pub const ELEMENTS_MOVED: &str = "ElementsMoved";
+/// Core event: an element or group was renamed (`CORE.PRJ.TREE.GROUP`).
+pub const RENAMED: &str = "Renamed";
+/// Core event: saved visibility set on elements (`CORE.PRJ.TREE.GROUP`).
+pub const VISIBILITY_SET: &str = "VisibilitySet";
+/// Maximum number of entity IDs in one batch move or visibility command (`CORE.PRJ.TREE.GROUP`).
+pub const MAX_BATCH_IDS: usize = 10_000;
 /// The core event types, sorted.
-pub const CORE_EVENTS: [&str; 3] = [ELEMENT_CREATED, ELEMENT_SLOT_SET, GROUP_CREATED];
+pub const CORE_EVENTS: [&str; 6] =
+    [ELEMENT_CREATED, ELEMENT_SLOT_SET, ELEMENTS_MOVED, GROUP_CREATED, RENAMED, VISIBILITY_SET];
 /// Type IDs under this prefix are reserved for core entities.
 pub const RESERVED_TYPE_PREFIX: &str = "project.";
 
@@ -117,11 +126,13 @@ pub enum TreeError {
     DuplicateEvent(String),
     /// The event type is neither core nor registered (`unknown_event`).
     UnknownEvent(String),
-    /// A named parent group or element does not exist (`bad_reference`).
+    /// A named parent group or element does not exist or has the wrong entity kind (`bad_reference`).
     BadReference(String),
+    /// A named entity does not exist (`not_found`).
+    NotFound(String),
     /// A named stage is not a stage of the project (`bad_stage`).
     BadStage(Uuid),
-    /// A group would be deeper than [`MAX_GROUP_DEPTH`] (`hierarchy`).
+    /// A group would be deeper than [`MAX_GROUP_DEPTH`] or become its own ancestor (`hierarchy`).
     Hierarchy(String),
     /// The requested state change is not an allowed transition (`invalid_transition`).
     InvalidTransition { from: ElementState, to: ElementState },
@@ -154,6 +165,7 @@ impl TreeError {
             TreeError::DuplicateEvent(_) => "duplicate_event",
             TreeError::UnknownEvent(_) => "unknown_event",
             TreeError::BadReference(_) => "bad_reference",
+            TreeError::NotFound(_) => "not_found",
             TreeError::BadStage(_) => "bad_stage",
             TreeError::Hierarchy(_) => "hierarchy",
             TreeError::InvalidTransition { .. } => "invalid_transition",
@@ -178,6 +190,7 @@ impl fmt::Display for TreeError {
             | TreeError::DuplicateEvent(m)
             | TreeError::UnknownEvent(m)
             | TreeError::BadReference(m)
+            | TreeError::NotFound(m)
             | TreeError::Hierarchy(m)
             | TreeError::Invariant(m)
             | TreeError::BadOrder(m)
@@ -589,6 +602,14 @@ impl Group {
     pub fn body(&self) -> &CValue {
         &self.body
     }
+
+    fn rebuild_body(&mut self) {
+        self.body = obj([
+            ("id", uuid_value(&self.id)),
+            ("name", text(self.name.as_untrusted_str())),
+            ("parent", self.parent.as_ref().map_or(CValue::Null, uuid_value)),
+        ]);
+    }
 }
 
 // ------------------------------------------------------------------ tree
@@ -618,6 +639,16 @@ enum Undo {
     DefaultData(usize),
     /// The active stage before an `ActiveStageSet`.
     Active(Uuid),
+    /// One group's child-order vector before a move, plus the previous `has_moved` flag.
+    ChildOrder {
+        group: Uuid,
+        prev: Option<Vec<Uuid>>,
+        has_moved: bool,
+    },
+    /// O(1) undo for pushing one child onto `group`'s `child_order` during create.
+    ChildOrderPush(Uuid),
+    /// O(1) undo for inserting a new empty `child_order` entry for a newly created group.
+    ChildOrderNew(Uuid),
 }
 
 /// The in-memory element tree of one project.
@@ -629,6 +660,11 @@ pub struct Tree {
     active_stage: Uuid,
     elements: BTreeMap<Uuid, Element>,
     groups: BTreeMap<Uuid, Group>,
+    /// Ordered child IDs (groups and elements) per parent group (`CORE.PRJ.TREE.GROUP`).
+    child_order: BTreeMap<Uuid, Vec<Uuid>>,
+    /// True once an `ElementsMoved` event has been applied; controls whether `child_order`
+    /// is emitted in [`Tree::to_value`] so pre-move trees keep their exact legacy digest.
+    has_moved: bool,
     stage_list: Uuid,
     records: BTreeMap<Uuid, Stage>,
     list_body: CValue,
@@ -656,6 +692,8 @@ impl Tree {
         let stage_list = stage_list_id(namespace)?;
         let mut groups = BTreeMap::new();
         groups.insert(root, Group::new(root, None, ElementName::default()));
+        let mut child_order = BTreeMap::new();
+        child_order.insert(root, Vec::new());
         let mut tree = Tree {
             registry,
             root,
@@ -663,6 +701,8 @@ impl Tree {
             active_stage: stage,
             elements: BTreeMap::new(),
             groups,
+            child_order,
+            has_moved: false,
             stage_list,
             records: BTreeMap::new(),
             list_body: CValue::Null,
@@ -671,6 +711,11 @@ impl Tree {
         };
         tree.rebuild_list();
         Ok(tree)
+    }
+
+    /// Direct children (elements and child groups) of `group`, in tree order.
+    pub fn children_of(&self, group: &Uuid) -> &[Uuid] {
+        self.child_order.get(group).map_or(&[], Vec::as_slice)
     }
 
     pub fn registry(&self) -> &ElementTypeRegistry {
@@ -863,12 +908,21 @@ impl Tree {
 
     /// The ordered tree: `{"active_stage", "elements": {<id>: <element body>}, "groups":
     /// {<id>: <group body>}, "root", "stages": [<id>, ...]}`, plus `"stage_records": {<id>:
-    /// <stage body>}` when the project has explicit stages.
+    /// <stage body>}` when the project has explicit stages, and `"child_order": {<group>:
+    /// [<id>, ...]}` once an `ElementsMoved` event has been applied.
     pub fn to_value(&self) -> CValue {
         let elements = self.elements.iter().map(|(id, e)| (id.to_string(), e.body.clone())).collect();
         let groups = self.groups.iter().map(|(id, g)| (id.to_string(), g.body.clone())).collect();
         let mut v = BTreeMap::new();
         v.insert("active_stage".to_string(), uuid_value(&self.active_stage));
+        if self.has_moved {
+            let order = self
+                .child_order
+                .iter()
+                .map(|(gid, kids)| (gid.to_string(), CValue::Arr(kids.iter().map(uuid_value).collect())))
+                .collect();
+            v.insert("child_order".to_string(), CValue::Obj(order));
+        }
         v.insert("elements".to_string(), CValue::Obj(elements));
         v.insert("groups".to_string(), CValue::Obj(groups));
         v.insert("root".to_string(), uuid_value(&self.root));
@@ -951,6 +1005,25 @@ impl Tree {
                         }
                         Undo::DefaultData(n) => self.default_data = n,
                         Undo::Active(old) => self.active_stage = old,
+                        Undo::ChildOrder { group, prev, has_moved } => {
+                            self.has_moved = has_moved;
+                            match prev {
+                                Some(kids) => {
+                                    self.child_order.insert(group, kids);
+                                }
+                                None => {
+                                    self.child_order.remove(&group);
+                                }
+                            }
+                        }
+                        Undo::ChildOrderPush(group) => {
+                            if let Some(kids) = self.child_order.get_mut(&group) {
+                                kids.pop();
+                            }
+                        }
+                        Undo::ChildOrderNew(group) => {
+                            self.child_order.remove(&group);
+                        }
                     }
                 }
                 self.rebuild_list();
@@ -1001,14 +1074,24 @@ impl Tree {
             GROUP_CREATED => {
                 let g = self.check_group_created(body)?;
                 let id = g.id;
+                let parent = g.parent;
                 undo.push(Undo::Group(id, None));
+                undo.push(Undo::ChildOrderNew(id));
+                if let Some(p) = parent {
+                    undo.push(Undo::ChildOrderPush(p));
+                    self.child_order.entry(p).or_default().push(id);
+                }
+                self.child_order.insert(id, Vec::new());
                 self.groups.insert(id, g);
                 created.push(id);
             }
             ELEMENT_CREATED => {
                 let e = self.check_element_created(body)?;
                 let id = e.id;
+                let parent = e.parent;
+                undo.push(Undo::ChildOrderPush(parent));
                 undo.push(Undo::Element(id, None));
+                self.child_order.entry(parent).or_default().push(id);
                 self.elements.insert(id, e);
                 created.push(id);
             }
@@ -1028,6 +1111,68 @@ impl Tree {
                 undo.push(Undo::Element(id, Some(e.clone())));
                 e.slots.insert(stage, slot);
                 e.rebuild_body();
+            }
+            ELEMENTS_MOVED => {
+                let (ids, to) = self.check_elements_moved(body)?;
+                let moving_set: BTreeSet<Uuid> = ids.iter().copied().collect();
+                let mut touched_parents: BTreeSet<Uuid> = BTreeSet::new();
+                touched_parents.insert(to);
+                for id in &ids {
+                    if let Some(e) = self.elements.get(id) {
+                        touched_parents.insert(e.parent);
+                    } else if let Some(g) = self.groups.get(id) {
+                        if let Some(p) = g.parent {
+                            touched_parents.insert(p);
+                        }
+                    }
+                }
+                for p in &touched_parents {
+                    let prev = self.child_order.get(p).cloned();
+                    undo.push(Undo::ChildOrder { group: *p, prev, has_moved: self.has_moved });
+                }
+                for p in &touched_parents {
+                    if let Some(kids) = self.child_order.get_mut(p) {
+                        kids.retain(|k| !moving_set.contains(k));
+                    }
+                }
+                for id in &ids {
+                    if let Some(e) = self.elements.get_mut(id) {
+                        undo.push(Undo::Element(*id, Some(e.clone())));
+                        e.parent = to;
+                        e.rebuild_body();
+                    } else if let Some(g) = self.groups.get_mut(id) {
+                        undo.push(Undo::Group(*id, Some(g.clone())));
+                        g.parent = Some(to);
+                        g.rebuild_body();
+                    }
+                }
+                self.child_order.entry(to).or_default().extend(ids);
+                self.has_moved = true;
+            }
+            RENAMED => {
+                let (id, name) = self.check_renamed(body)?;
+                if let Some(e) = self.elements.get_mut(&id) {
+                    undo.push(Undo::Element(id, Some(e.clone())));
+                    e.name = name;
+                    e.rebuild_body();
+                } else if let Some(g) = self.groups.get_mut(&id) {
+                    undo.push(Undo::Group(id, Some(g.clone())));
+                    g.name = name;
+                    g.rebuild_body();
+                } else {
+                    return Err(invariant(format!("entity {id} vanished")));
+                }
+            }
+            VISIBILITY_SET => {
+                let (ids, visible) = self.check_visibility_set(body)?;
+                for id in ids {
+                    let Some(e) = self.elements.get_mut(&id) else {
+                        return Err(invariant(format!("element {id} vanished")));
+                    };
+                    undo.push(Undo::Element(id, Some(e.clone())));
+                    e.visible = visible;
+                    e.rebuild_body();
+                }
             }
             other => return Err(TreeError::UnknownEvent(other.to_string())),
         }
@@ -1235,6 +1380,113 @@ impl Tree {
         Ok((id, stage, Slot { digest, state }))
     }
 
+    fn group_ancestors(&self, group: &Uuid) -> Result<BTreeSet<Uuid>, TreeError> {
+        let mut ancestors = BTreeSet::new();
+        let mut at = *group;
+        let mut depth = 0usize;
+        loop {
+            if !ancestors.insert(at) {
+                return Err(invariant(format!("cycle in group hierarchy at {at}")));
+            }
+            let Some(g) = self.groups.get(&at) else {
+                return Err(invariant(format!("group {at} is an orphan")));
+            };
+            match g.parent {
+                None if at == self.root => return Ok(ancestors),
+                None => return Err(invariant(format!("group {at} has no parent"))),
+                Some(p) => {
+                    depth += 1;
+                    if depth > MAX_GROUP_DEPTH {
+                        return Err(TreeError::Hierarchy(format!("group {group} is deeper than {MAX_GROUP_DEPTH}")));
+                    }
+                    at = p;
+                }
+            }
+        }
+    }
+
+    /// Maximum depth of descendant groups below `group` (0 if `group` has no child groups).
+    fn group_subtree_height(&self, group: Uuid) -> usize {
+        let mut max_h = 0usize;
+        let mut stack: Vec<(Uuid, usize)> = vec![(group, 0)];
+        while let Some((cur, h)) = stack.pop() {
+            if h > max_h {
+                max_h = h;
+            }
+            if let Some(kids) = self.child_order.get(&cur) {
+                for kid in kids {
+                    if self.groups.contains_key(kid) {
+                        stack.push((*kid, h + 1));
+                    }
+                }
+            }
+        }
+        max_h
+    }
+
+    fn check_elements_moved(&self, body: &CValue) -> Result<(Vec<Uuid>, Uuid), TreeError> {
+        let o = exact_keys(body, &["ids", "to"])?;
+        let ids = uuid_batch_field(o, "ids")?;
+        let to = uuid_field(o, "to")?;
+        if !self.groups.contains_key(&to) {
+            return Err(TreeError::BadReference(format!("target {to} is not a group of this project")));
+        }
+        let ancestors = self.group_ancestors(&to)?;
+        let to_depth = ancestors.len().saturating_sub(1);
+        for id in &ids {
+            if self.elements.contains_key(id) {
+                continue;
+            }
+            let Some(g) = self.groups.get(id) else {
+                return Err(TreeError::NotFound(format!("entity {id} not found")));
+            };
+            if g.parent.is_none() {
+                return Err(TreeError::Hierarchy(format!("root group {id} cannot be moved")));
+            }
+            if ancestors.contains(id) {
+                return Err(TreeError::Hierarchy(format!(
+                    "moving group {id} into {to} would make it its own ancestor"
+                )));
+            }
+            let h = self.group_subtree_height(*id);
+            if to_depth + 1 + h > MAX_GROUP_DEPTH {
+                return Err(TreeError::Hierarchy(format!(
+                    "moving group {id} under {to} would exceed depth {MAX_GROUP_DEPTH}"
+                )));
+            }
+        }
+        Ok((ids, to))
+    }
+
+    fn check_renamed(&self, body: &CValue) -> Result<(Uuid, ElementName), TreeError> {
+        let o = exact_keys(body, &["id", "name"])?;
+        let id = uuid_field(o, "id")?;
+        let name = ElementName::new(str_field(o, "name")?)?;
+        if !self.elements.contains_key(&id) && !self.groups.contains_key(&id) {
+            return Err(TreeError::NotFound(format!("entity {id} not found")));
+        }
+        Ok((id, name))
+    }
+
+    fn check_visibility_set(&self, body: &CValue) -> Result<(Vec<Uuid>, bool), TreeError> {
+        let o = exact_keys(body, &["ids", "visible"])?;
+        let ids = uuid_batch_field(o, "ids")?;
+        let visible = match o.get("visible") {
+            Some(CValue::Bool(b)) => *b,
+            _ => return Err(schema("visible must be a boolean")),
+        };
+        for id in &ids {
+            if self.elements.contains_key(id) {
+                continue;
+            }
+            if self.groups.contains_key(id) {
+                return Err(TreeError::BadReference(format!("entity {id} is a group, not an element")));
+            }
+            return Err(TreeError::NotFound(format!("element {id} not found")));
+        }
+        Ok((ids, visible))
+    }
+
     /// Checks every invariant of the module docs; `invariant_violated` on the first breach.
     /// Fails closed: a tree that passes has no cycle, no orphan and no unregistered type.
     pub fn verify(&self) -> Result<(), TreeError> {
@@ -1317,6 +1569,28 @@ impl Tree {
                 return Err(invariant("default stage data count is stale".to_string()));
             }
         }
+        let mut expected_children: BTreeMap<Uuid, BTreeSet<Uuid>> =
+            self.groups.keys().map(|g| (*g, BTreeSet::new())).collect();
+        for g in self.groups.values() {
+            if let Some(p) = g.parent {
+                expected_children.entry(p).or_default().insert(g.id);
+            }
+        }
+        for e in self.elements.values() {
+            expected_children.entry(e.parent).or_default().insert(e.id);
+        }
+        if !self.child_order.keys().eq(self.groups.keys()) {
+            return Err(invariant("child_order keys do not match groups".to_string()));
+        }
+        for (gid, kids) in &self.child_order {
+            let set: BTreeSet<Uuid> = kids.iter().copied().collect();
+            if set.len() != kids.len() {
+                return Err(invariant(format!("group {gid} has duplicate children in child_order")));
+            }
+            if expected_children.get(gid) != Some(&set) {
+                return Err(invariant(format!("group {gid} child_order disagrees with parent links")));
+            }
+        }
         Ok(())
     }
 
@@ -1378,6 +1652,31 @@ fn uuid_field(o: &BTreeMap<String, CValue>, key: &str) -> Result<Uuid, TreeError
         Ok(id) if id.to_string() == s => Ok(id),
         _ => Err(TreeError::Schema(format!("{key} must be a canonical lowercase UUID"))),
     }
+}
+
+fn uuid_batch_field(o: &BTreeMap<String, CValue>, key: &str) -> Result<Vec<Uuid>, TreeError> {
+    let Some(CValue::Arr(arr)) = o.get(key) else {
+        return Err(TreeError::Schema(format!("{key} must be an array of UUIDs")));
+    };
+    if arr.is_empty() || arr.len() > MAX_BATCH_IDS {
+        return Err(TreeError::Schema(format!("{key} must contain 1..={MAX_BATCH_IDS} IDs")));
+    }
+    let mut out = Vec::with_capacity(arr.len());
+    let mut seen = BTreeSet::new();
+    for (i, item) in arr.iter().enumerate() {
+        let CValue::Str(s) = item else {
+            return Err(TreeError::Schema(format!("{key}[{i}] must be a string")));
+        };
+        let id = match Uuid::parse(s) {
+            Ok(id) if id.to_string() == *s => id,
+            _ => return Err(TreeError::Schema(format!("{key}[{i}] must be a canonical lowercase UUID"))),
+        };
+        if !seen.insert(id) {
+            return Err(TreeError::Schema(format!("duplicate ID {id} in {key}")));
+        }
+        out.push(id);
+    }
+    Ok(out)
 }
 
 #[cfg(test)]

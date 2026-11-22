@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid project create-group, fid project move-element, fid project rename-element, fid project set-visibility]
 mcp: [project_create_group, project_move_element, project_rename_element, project_set_visibility]
 journal: [project.create_group@1, project.move_element@1, project.rename_element@1, project.set_visibility@1]
-updated: 2026-11-17
+built_in: [fid-project, fid-project-cmd]
+updated: 2026-11-22
 ---
 
 # CORE.PRJ.TREE.GROUP: Groups, move, rename and visibility commands
