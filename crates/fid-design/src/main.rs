@@ -24,7 +24,7 @@ const USAGE: &str =
     "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]
        fid-design icons-prov --root <design dir> --attribution <file> [--json]
        fid-design icons-registry --manifest <file> --root <design dir> [--json]
-    "usage: fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]
+       fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]
        fid-design screens-gate --spec <spec dir> --root <design dir> [--json]
        fid-design page-check (--root <design dir> | --file <pages.json>) [--json]";
 
