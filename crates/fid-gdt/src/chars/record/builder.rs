@@ -516,7 +516,21 @@ impl ResultRecordBuilder<Uninterpreted> {
         profile: Option<&ProfileDoc>,
         register: &RegisterView,
     ) -> ResultRecordBuilder<Interpreted> {
-        let interp = Interpreted::compute(rows, profile, register, Purpose::Evaluate);
+        self.interpretation_for(rows, profile, register, Purpose::Evaluate)
+    }
+
+    /// [`ResultRecordBuilder::interpretation`] for an evaluation needing a register verified
+    /// for `purpose`: replay passes [`Purpose::Replay`] with the view of the pinned register
+    /// (`GDT.DIM.RADIAL`'s exact replay, as `GDT.DRF.BUILD`'s), so a record built against a
+    /// register that was the latest when it was evaluated replays to the same bytes.
+    pub(crate) fn interpretation_for(
+        self,
+        rows: &[&DmtRow],
+        profile: Option<&ProfileDoc>,
+        register: &RegisterView,
+        purpose: Purpose,
+    ) -> ResultRecordBuilder<Interpreted> {
+        let interp = Interpreted::compute(rows, profile, register, purpose);
         ResultRecordBuilder {
             run: self.run,
             characteristic: self.characteristic,

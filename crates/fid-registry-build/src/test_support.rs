@@ -1,7 +1,7 @@
 //! Every command definition declared in the workspace, for tests (feature `test-support`).
 //!
 //! [`all_defs`] is [`crate::SOURCES`] plus the crates that declare commands but are not in
-//! `SOURCES` yet: the egress command of `fid-bus`, RDL, GDT (record, status, datum), the
+//! `SOURCES` yet: the egress command of `fid-bus`, RDL, GDT (record, status, datum, DRF, diameter and radius checks), the
 //! package reader, the signature check of `fid-sign-core` (TRUST.SIGN.TROOT), report binding, and the two export and two import commands of `fid-io-reg`
 //! (IO.REG.ENV.EXPORT, IO.REG.ENV.IMPORT; built over a registry with one format in each
 //! direction, so they have a parameter schema). Their commands are not in `SOURCES` because
@@ -73,6 +73,8 @@ pub fn all_defs() -> Result<Vec<(String, CommandDef)>, String> {
             fid_gdt::drf::datum::command_def().map_err(|e| err("fid-gdt datum", e))?,
             fid_gdt::drf::build::build_command_def().map_err(|e| err("fid-gdt build_drf", e))?,
             fid_gdt::drf::build::get_command_def().map_err(|e| err("fid-gdt get_drf", e))?,
+            fid_gdt::dim::radial::diameter_command_def().map_err(|e| err("fid-gdt eval_diameter", e))?,
+            fid_gdt::dim::radial::radius_command_def().map_err(|e| err("fid-gdt eval_radius", e))?,
         ],
     );
     extra("fid-pkg", fid_pkg::reader::declarations().into_iter().map(|d| d.def).collect());
