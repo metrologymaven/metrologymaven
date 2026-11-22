@@ -1,0 +1,17 @@
+# Spec card (UNC.DEC.EVAL). Cite designators and clause numbers only; never paste standards text.
+id = "dec.rule.evaluate@1.0.0"
+title = "Conformance decision rule evaluation with conformance probability"
+method = "Refuses invalid input first (non-finite value, missing or inverted limits, negative capability threshold, unit mismatch, unusable statement numbers, unbound guard-band template; on the sample path, bytes whose SHA-256 is not the expected digest or samples not bound to the statement). A label-only rule gives NOT_DECIDABLE(label_only) and a UEC-0 statement NOT_DECIDABLE(u_missing). Without the digest-checked sample path, Monte Carlo samples are unavailable. The conformance probability is bounded conservatively: from samples by k/T and (k+F)/T exactly (failed trials count against the side being proven; fewer than max(100, 20/(1-p_min)) trials give INDETERMINATE), or from the normal approximation N(y, u), when the statement records LPU validated by MC or selected by unc-select@1 with a linear_adequate verdict, with each limit split exactly into a binary64 part and a bracketed remainder, z bounds rounded outward and erfc and rounding errors added. Conformance probability: CONFORMS if p_lo >= p_min, NONCONFORMS if p_hi <= 1 - p_min, else INDETERMINATE. Simple acceptance: LSL <= y <= USL exactly. Guard band: CONFORMS inside [LSL + rU, USL - rU] exactly, NONCONFORMS with empty_acceptance_zone when USL - LSL - 2rU <= 0. The capability warning compares U / (USL - LSL) with the threshold exactly. Labels about claimed, declared and uncharacterized inputs are copied from the statement."
+applicability = "A value with its validated uncertainty statement, an exact decimal tolerance in the statement's unit, a validated decision rule from dr-catalog@1 or a customer rule, and optionally a decoded mcm-samples@1 set whose model digest is the statement's. Specific and global risk are out of scope (UNC.DEC.RISK)."
+references = [
+  "JCGM 106:2012, clauses 7 and 8 (conformance probability, acceptance zones and guard bands) [unverified: clause numbering]",
+  "ISO 14253-1:2017, clause 5 (default decision rule) [unverified: clause numbering]",
+]
+determinism = "D0"
+input_arity = "5..=6"
+failure_modes = [
+  "The erfc error bound used for the normal bounds (4e-15 per tail) is twice the error measured on the reference grid and is not proved for every argument.",
+  "The statement does not yet carry the sample set's digest, so the plain entry point never uses samples; the digest-checked entry point needs the expected digest from the caller.",
+  "A UEC-0 statement is NOT_DECIDABLE(u_missing) under simple acceptance too, so a decision without any uncertainty never looks measured.",
+]
+validation = "Outcomes, reasons, flags, errors and p within 1e-12 absolute against an independent stdlib-Python oracle (fixtures/unc/dec/eval/make_cases.py: exact rationals, 100-digit normal CDF); erfc within 2e-15 absolute against the same oracle; per-target bit pins of every output (x86-64, ARM64, wasm32). Replay: outcome field: replay equivalence class exact (rep-1 kind exact), p_conformance kind p_conformance, U kind expanded_uncertainty."

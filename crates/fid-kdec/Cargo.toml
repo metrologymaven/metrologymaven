@@ -1,6 +1,6 @@
 [package]
 name = "fid-kdec"
-description = "Metrology Maven kernel decision rules: the DecisionRule type, rule-ID grammar, four-valued Outcome, built-in catalog dr-catalog@1 and decisions that carry their evidence basis (spec node UNC.DEC.TYPE)"
+description = "Metrology Maven kernel decision rules: the DecisionRule type, rule-ID grammar, four-valued Outcome, built-in catalog dr-catalog@1 and decisions that carry their evidence basis and rule evaluation with conformance probability (spec nodes UNC.DEC.TYPE, UNC.DEC.EVAL)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -17,6 +17,11 @@ fid-kci = { path = "../fid-kci" }
 fid-kunc = { path = "../fid-kunc" }
 fid-num = { path = "../fid-num" }
 fid-types = { path = "../fid-types" }
+
+# Test-only: the REP-1 replay classifier (kernel layer) for the outcome-flip replay case
+# (UNC.DEC.EVAL AC-6).
+[dev-dependencies]
+fid-rep = { path = "../fid-rep" }
 
 [lints]
 workspace = true
