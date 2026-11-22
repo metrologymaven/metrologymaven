@@ -2128,6 +2128,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-slice"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-fit",
+ "fid-gps",
+ "fid-kdec",
+ "fid-num",
+ "fid-pkg",
+ "fid-surface",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-solv"
 version = "0.0.1"
 dependencies = [

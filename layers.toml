@@ -125,6 +125,7 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # Installation and operational qualification records and commands (QUAL.IQOQ.RECORD): L3 services.
 "fid-qual" = "services"
 "fid-cli" = "app"
+"fid-slice" = "app"
 "fid-kernel-wasm" = "app"
 "fid-xtask" = "tool"
 "fid-wasm-check" = "tool"
