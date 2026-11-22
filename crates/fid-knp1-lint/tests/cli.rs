@@ -111,7 +111,7 @@ fn ac2_dirty_workspace_exits_1_with_powi_and_hashmap_findings() {
 
     let rep = parse_report(&out);
     let Some(CValue::Arr(findings)) = rep.get("findings") else { panic!("missing findings") };
-    let rules: Vec<String> = findings
+    let mut rules: Vec<String> = findings
         .iter()
         .filter_map(|f| match f {
             CValue::Obj(o) => match o.get("rule") {
@@ -121,8 +121,12 @@ fn ac2_dirty_workspace_exits_1_with_powi_and_hashmap_findings() {
             _ => None,
         })
         .collect();
-    assert!(rules.iter().any(|r| r == "KNP1-POW"), "missing KNP1-POW in {rules:?}");
-    assert!(rules.iter().any(|r| r == "KNP1-HASH"), "missing KNP1-HASH in {rules:?}");
+    rules.sort();
+    assert_eq!(
+        rules,
+        vec!["KNP1-HASH".to_string(), "KNP1-HASH".to_string(), "KNP1-POW".to_string()],
+        "unexpected dirty-ws findings"
+    );
 
     let _ = std::fs::remove_dir_all(&tmp);
 }
@@ -133,13 +137,16 @@ fn ac3_missing_config_exits_2_and_writes_no_report() {
     let out = tmp.join("should-not-exist.json");
     let missing = tmp.join("no-such-config.toml");
 
+    // Pre-populate stale --out to confirm exit 2 deletes it.
+    std::fs::write(&out, b"{\"stale\":true}\n").unwrap();
+
     let output = Command::new(BIN)
         .args(["check", "--config", missing.to_str().unwrap(), "--skip-typed", "--out", out.to_str().unwrap()])
         .output()
         .unwrap();
 
     assert_eq!(output.status.code(), Some(2), "missing config must exit 2");
-    assert!(!out.exists(), "exit 2 must write no success report");
+    assert!(!out.exists(), "exit 2 must remove any stale report and write none");
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("input_missing"), "expected input_missing in stderr: {stderr}");
 
@@ -153,14 +160,19 @@ fn ac3_missing_config_exits_2_and_writes_no_report() {
 
 #[test]
 fn ac4_selftest_passes_complete_and_fails_naming_missing_rule() {
-    // Complete fixtures/knp1/seeded/ -> exit 0.
+    // Complete fixtures/knp1/ -> exit 0 and verifies every concrete catalogue rule (38).
     let ok = Command::new(BIN).current_dir(repo_root()).args(["selftest"]).output().unwrap();
+    let ok_stdout = String::from_utf8_lossy(&ok.stdout);
     assert_eq!(
         ok.status.code(),
         Some(0),
-        "selftest must pass on complete fixtures; stdout={} stderr={}",
-        String::from_utf8_lossy(&ok.stdout),
+        "selftest must pass on complete fixtures; stdout={ok_stdout} stderr={}",
         String::from_utf8_lossy(&ok.stderr)
+    );
+    let expected_count = fid_knp1_lint::concrete_rules().len();
+    assert!(
+        ok_stdout.contains(&format!("({expected_count} rules verified)")),
+        "expected {expected_count} rules verified in stdout: {ok_stdout}"
     );
 
     // Delete KNP1-POW from a temp copy of seeded/ -> fails naming KNP1-POW.
@@ -182,6 +194,23 @@ fn ac4_selftest_passes_complete_and_fails_naming_missing_rule() {
     assert_ne!(fail.status.code(), Some(0), "selftest must fail when KNP1-POW is deleted");
     let stderr = String::from_utf8_lossy(&fail.stderr);
     assert!(stderr.contains("KNP1-POW"), "failure must name KNP1-POW; stderr={stderr}");
+
+    // Delete expected-findings.txt -> selftest must fail (never silently skip expected check).
+    let seeded_no_exp = tmp.join("seeded-no-exp");
+    copy_dir_recursive(&fix("seeded"), &seeded_no_exp);
+    std::fs::remove_file(seeded_no_exp.join("expected-findings.txt")).unwrap();
+    let fail_exp = Command::new(BIN)
+        .args([
+            "selftest",
+            "--seeded",
+            seeded_no_exp.to_str().unwrap(),
+            "--data-ws",
+            fix("data/ws/knp1-lint.toml").to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(fail_exp.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&fail_exp.stderr).contains("expected-findings.txt"));
 
     let _ = std::fs::remove_dir_all(&tmp);
 }
@@ -273,6 +302,178 @@ lines_sha256 = "{hash_digest}"
     assert_eq!(rep.get("findings"), Some(&CValue::Arr(Vec::new())));
     let Some(CValue::Arr(waived)) = rep.get("waived") else { panic!("missing waived") };
     assert!(!waived.is_empty(), "expected waived findings in report");
+
+    let _ = std::fs::remove_dir_all(&tmp);
+}
+
+#[test]
+fn missing_flags_or_data_tables_fail_closed_with_exit_2() {
+    let tmp = temp_dir("fail-closed");
+
+    // Copy clean-ws into tmp and strip [flags].
+    let no_flags_ws = tmp.join("no-flags");
+    copy_dir_recursive(&fix("cli/clean-ws"), &no_flags_ws);
+    let no_flags_cfg = no_flags_ws.join("knp1-lint.toml");
+    let dl = fix("data/denylist.json");
+    std::fs::write(
+        &no_flags_cfg,
+        format!(
+            "[graph]\nworkspace = \".\"\nroots = [\"clean-kernel\"]\nallowlist = \"kernel-allowlist.toml\"\nspdx_allowlist = \"spdx-allowlist.toml\"\n\n[data]\ndenylist = \"{}\"\n",
+            dl.to_string_lossy().replace('\\', "/")
+        ),
+    )
+    .unwrap();
+    let out1 = tmp.join("no-flags.json");
+    std::fs::write(&out1, b"stale").unwrap();
+    let r1 = Command::new(BIN)
+        .args(["check", "--config", no_flags_cfg.to_str().unwrap(), "--skip-typed", "--out", out1.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(r1.status.code(), Some(2), "missing [flags] must exit 2");
+    assert!(!out1.exists(), "exit 2 must remove stale --out");
+    assert!(String::from_utf8_lossy(&r1.stderr).contains("config_invalid"));
+
+    // Strip [data] and pass no --denylist -> exit 2.
+    let no_data_ws = tmp.join("no-data");
+    copy_dir_recursive(&fix("cli/clean-ws"), &no_data_ws);
+    let no_data_cfg = no_data_ws.join("knp1-lint.toml");
+    std::fs::write(
+        &no_data_cfg,
+        "[graph]\nworkspace = \".\"\nroots = [\"clean-kernel\"]\nallowlist = \"kernel-allowlist.toml\"\nspdx_allowlist = \"spdx-allowlist.toml\"\n\n[flags]\nprofiles = [\"kernel\", \"release\"]\n",
+    )
+    .unwrap();
+    let out2 = tmp.join("no-data.json");
+    let r2 = Command::new(BIN)
+        .args(["check", "--config", no_data_cfg.to_str().unwrap(), "--skip-typed", "--out", out2.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(r2.status.code(), Some(2), "missing [data] without --denylist must exit 2");
+    assert!(!out2.exists());
+    assert!(String::from_utf8_lossy(&r2.stderr).contains("config_invalid"));
+
+    // Unknown key in [data] must still fail closed even when --denylist is given on the CLI.
+    let bad_data_cfg = no_data_ws.join("knp1-lint-bad-data.toml");
+    std::fs::write(
+        &bad_data_cfg,
+        format!(
+            "[graph]\nworkspace = \".\"\nroots = [\"clean-kernel\"]\nallowlist = \"kernel-allowlist.toml\"\nspdx_allowlist = \"spdx-allowlist.toml\"\n\n[flags]\nprofiles = [\"kernel\", \"release\"]\n\n[data]\ndenylist = \"{}\"\nextra_key = true\n",
+            dl.to_string_lossy().replace('\\', "/")
+        ),
+    )
+    .unwrap();
+    let out3 = tmp.join("bad-data.json");
+    let r3 = Command::new(BIN)
+        .args([
+            "check",
+            "--config",
+            bad_data_cfg.to_str().unwrap(),
+            "--denylist",
+            dl.to_str().unwrap(),
+            "--skip-typed",
+            "--out",
+            out3.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(r3.status.code(), Some(2), "unknown [data] key must exit 2 even with --denylist");
+    assert!(!out3.exists());
+    assert!(String::from_utf8_lossy(&r3.stderr).contains("unknown key data.extra_key"));
+
+    let _ = std::fs::remove_dir_all(&tmp);
+}
+
+#[test]
+fn stale_waiver_exits_1_and_writes_no_report() {
+    let tmp = temp_dir("stale-waiver");
+    let waivers_path = tmp.join("stale.toml");
+    let bad_digest = format!("sha256:{}", "0".repeat(64));
+    std::fs::write(
+        &waivers_path,
+        format!(
+            r#"[[waiver]]
+crate = "dirty-kernel"
+file = "src/lib.rs"
+lines = [4, 4]
+rule = "KNP1-POW"
+justification = "stale digest test"
+reviewer = "reviewer-a"
+date = "2026-11-21"
+lines_sha256 = "{bad_digest}"
+"#
+        ),
+    )
+    .unwrap();
+
+    let out = tmp.join("stale-report.json");
+    std::fs::write(&out, b"previous").unwrap();
+    let output = Command::new(BIN)
+        .args([
+            "check",
+            "--config",
+            fix("cli/dirty-ws/knp1-lint.toml").to_str().unwrap(),
+            "--waivers",
+            waivers_path.to_str().unwrap(),
+            "--skip-typed",
+            "--out",
+            out.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1), "stale waiver must exit 1");
+    assert!(!out.exists(), "stale waiver must not leave a report behind");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("KNP1-WAIVER-STALE"), "expected KNP1-WAIVER-STALE in stderr: {stderr}");
+
+    let _ = std::fs::remove_dir_all(&tmp);
+}
+
+#[test]
+fn typed_stage_runs_end_to_end_via_cli_and_records_typed_ran() {
+    let cargo = std::env::var_os("CARGO").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("cargo"));
+    let clippy_v = Command::new(&cargo).args(["clippy", "--version"]).output().unwrap();
+    assert!(clippy_v.status.success(), "cargo clippy --version failed");
+    let clippy_line = String::from_utf8(clippy_v.stdout).unwrap();
+    let clippy_ver = clippy_line.split_whitespace().nth(1).unwrap().to_string();
+
+    let rustc_v = Command::new("rustc").arg("-vV").output().unwrap();
+    assert!(rustc_v.status.success(), "rustc -vV failed");
+    let host = String::from_utf8(rustc_v.stdout)
+        .unwrap()
+        .lines()
+        .find_map(|l| l.strip_prefix("host: "))
+        .unwrap()
+        .trim()
+        .to_string();
+
+    let tmp = temp_dir("typed-cli");
+    let ws = tmp.join("ws");
+    copy_dir_recursive(&fix("cli/clean-ws"), &ws);
+    let dl = fix("data/denylist.json");
+    let cfg = ws.join("knp1-lint.toml");
+    std::fs::write(
+        &cfg,
+        format!(
+            "[graph]\nworkspace = \".\"\nroots = [\"clean-kernel\"]\nallowlist = \"kernel-allowlist.toml\"\nspdx_allowlist = \"spdx-allowlist.toml\"\n\n[flags]\nprofiles = [\"kernel\", \"release\"]\n\n[data]\ndenylist = \"{}\"\n\n[typed]\nclippy_version = \"{clippy_ver}\"\ntargets = [\"{host}\"]\n",
+            dl.to_string_lossy().replace('\\', "/")
+        ),
+    )
+    .unwrap();
+
+    let out = tmp.join("typed-report.json");
+    let output = Command::new(BIN)
+        .args(["check", "--config", cfg.to_str().unwrap(), "--out", out.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "typed CLI run on clean-ws must exit 0; stdout={} stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let rep = parse_report(&out);
+    assert_eq!(rep.get("typed"), Some(&CValue::Str("ran".to_string())));
+    assert_eq!(rep.get("findings"), Some(&CValue::Arr(Vec::new())));
 
     let _ = std::fs::remove_dir_all(&tmp);
 }

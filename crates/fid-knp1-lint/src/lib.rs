@@ -23,7 +23,7 @@ pub mod typed;
 pub use findings as find;
 
 pub use findings::{
-    apply_waivers, catalogue, input_digest, lines_digest, load_waivers, parse_waivers, sort_findings, Applied,
-    CrateRoots, ErrorCode, FindError, Finding, InputDigests, Report, Rule, SourceTree, TypedStatus, Waiver, Warning,
-    REPORT_SCHEMA, TOOL_NAME, WAIVER_UNUSED,
+    apply_waivers, catalogue, concrete_family_rules, concrete_rules, input_digest, lines_digest, load_waivers,
+    parse_waivers, sort_findings, Applied, CrateRoots, ErrorCode, FindError, Finding, InputDigests, Report, Rule,
+    SourceTree, TypedStatus, Waiver, Warning, REPORT_SCHEMA, TOOL_NAME, WAIVER_UNUSED,
 };

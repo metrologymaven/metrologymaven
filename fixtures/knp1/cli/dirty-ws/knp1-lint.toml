@@ -7,3 +7,6 @@ spdx_allowlist = "spdx-allowlist.toml"
 
 [flags]
 profiles = ["kernel", "release"]
+
+[data]
+denylist = "../../data/denylist.json"

@@ -196,10 +196,57 @@ fn valid_suffix(s: &str) -> bool {
 }
 
 /// The rule catalogue: `(id or family pattern, description)`, fixed rules first, then
-/// the families `KNP1-FLAG-*`, `KNP1-ALLOW-*`, `KNP1-DATA-*`.
+/// the families `KNP1-FLAG-*`, `KNP1-ALLOW-*`, `KNP1-DATA-*`, `KNP1-TYPED-*`.
 pub fn catalogue() -> Vec<(String, &'static str)> {
     let mut out: Vec<(String, &'static str)> = FIXED.iter().map(|(id, d)| ((*id).to_string(), *d)).collect();
     out.extend(FAMILIES.iter().map(|(p, d)| (format!("{p}*"), *d)));
+    out
+}
+
+const FLAG_CONCRETE_RULES: &[&str] = &[
+    "KNP1-FLAG-NATIVE",
+    "KNP1-FLAG-CPU",
+    "KNP1-FLAG-FMA",
+    "KNP1-FLAG-CGU",
+    "KNP1-FLAG-LTO",
+    "KNP1-FLAG-TOOLCHAIN",
+    "KNP1-FLAG-KEYWORD",
+    "KNP1-FLAG-AMBIGUOUS",
+    "KNP1-FLAG-WASMFMA",
+    "KNP1-FLAG-WASMSIMD",
+    "KNP1-FLAG-WASMPARSE",
+    "KNP1-FLAG-WRAPPER",
+    "KNP1-FLAG-OPTOUT",
+];
+
+const ALLOW_CONCRETE_RULES: &[&str] = &["KNP1-ALLOW-UNLISTED", "KNP1-ALLOW-VERSION", "KNP1-ALLOW-LICENCE"];
+
+const DATA_CONCRETE_RULES: &[&str] = &["KNP1-DATA-VALUE", "KNP1-DATA-ID", "KNP1-DATA-FILE", "KNP1-DATA-HEX"];
+
+const TYPED_CONCRETE_RULES: &[&str] = &["KNP1-TYPED-BUILD", "KNP1-TYPED-NOSPAN"];
+
+/// Expands a family pattern from [`catalogue`] (e.g. `"KNP1-FLAG-*"`) into every concrete rule ID
+/// emitted by that family, or `None` for an unknown pattern.
+pub fn concrete_family_rules(pattern: &str) -> Option<&'static [&'static str]> {
+    match pattern {
+        "KNP1-FLAG-*" => Some(FLAG_CONCRETE_RULES),
+        "KNP1-ALLOW-*" => Some(ALLOW_CONCRETE_RULES),
+        "KNP1-DATA-*" => Some(DATA_CONCRETE_RULES),
+        "KNP1-TYPED-*" => Some(TYPED_CONCRETE_RULES),
+        _ => None,
+    }
+}
+
+/// Every concrete rule ID in the linter, derived directly from [`catalogue`].
+pub fn concrete_rules() -> Vec<String> {
+    let mut out = Vec::new();
+    for (id, _) in catalogue() {
+        if let Some(expanded) = concrete_family_rules(&id) {
+            out.extend(expanded.iter().map(|r| (*r).to_string()));
+        } else {
+            out.push(id);
+        }
+    }
     out
 }
 
