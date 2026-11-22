@@ -104,6 +104,7 @@ python fixtures/io/cad/worker/proto/make_digests.py --check
 python fixtures/io/cloud/las/hdr/make_fixtures.py --check
 python fixtures/io/dmis/conf/make_expected.py --check
 python fixtures/io/dmis/parse/gdef/make_expected.py --check
+python fixtures/io/dmis/parse/print/make_fixtures.py --check
 python fixtures/io/dmis/parse/tree/make_expected.py --check
 python fixtures/io/e57/phys/make_fixtures.py --check
 python fixtures/io/qif/xml/parse/make_fixtures.py --check

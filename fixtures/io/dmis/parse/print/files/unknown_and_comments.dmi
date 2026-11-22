@@ -1,0 +1,12 @@
+$$ Project-authored unknown/comment/TEXT fixture for IO.DMIS.PARSE.PRINT AC-4 (CC-BY-4.0).
+DMISMN/'unknown and text',05.3
+UNITS/MM,ANGDEC
+T(DIAM_1)=TOL/DIAM,-0.01,0.01,$
+  $$ comment inside a continuation chain
+  MMC
+TEXT/OPER,Clamp part A, then press start
+TEXT/OUTFIL,'report ''alpha'''
+OUTPUT/FA(C1),TA(DIAM_1)
+V(X)=CUSTOM_OP/'raw',3.000,(1,2)
+5,6
+ENDFIL
