@@ -1121,6 +1121,7 @@ dependencies = [
  "fid-canon",
  "fid-dep",
  "fid-geo-frame",
+ "fid-gps",
  "fid-kci",
  "fid-project",
  "fid-registry",

@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-align]
+updated: 2026-11-22
 ---
 
 # ALN.DATUM.SYS.GATE: Dialect gate and per-datum resolver calls

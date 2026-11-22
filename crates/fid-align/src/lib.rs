@@ -21,6 +21,7 @@
 //! No floating-point arithmetic happens in this crate: values are copied bit for bit.
 
 pub mod command;
+pub mod datum_gate;
 pub mod diagnostics;
 pub mod element;
 mod error;
@@ -32,6 +33,10 @@ pub use command::{
     command_defs, get_alignment, invoke_cli, invoke_cli_with, invoke_mcp, invoke_mcp_with, list_alignments,
     ActivityEntry, GetParams, ListParams, Surface, CLI_GET, CLI_LIST, GET_ALIGNMENT, LIST_ALIGNMENTS, MAX_PARAMS_BYTES,
     MAX_PARAMS_DEPTH, MCP_GET, MCP_LIST,
+};
+pub use datum_gate::{
+    resolve_datum_chain, DatumFeatureType, DatumModifier, DatumPrecedence, DatumRef, DialectContext, GateError,
+    ResolvedDatum, ResolvedDatumChain,
 };
 pub use diagnostics::{get_diagnostics, DiagnosticsParams, CLI_DIAGNOSTICS, GET_DIAGNOSTICS, MCP_DIAGNOSTICS};
 pub use element::{
