@@ -17,7 +17,9 @@ determinism: D0
 cli: [fid *]
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [fid-cli, fid-surface-gen]
+built_pr: 454
+updated: 2026-11-22
 ---
 
 # AUTO.CLI.TREE: Generated command tree and help
