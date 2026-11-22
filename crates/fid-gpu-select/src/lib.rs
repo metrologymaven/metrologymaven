@@ -40,8 +40,14 @@
 //!   An unknown driver version is handled the same way. A known-bad entry with a driver range
 //!   applies to an adapter whose driver version is unknown (the safe side), also listed there.
 
+pub mod notice;
 mod probe;
 
+pub use notice::{
+    build_notice, build_notice_for_tier, parse_gpu_fallback, sanitize_untrusted, EffectKind, FallbackFloor,
+    FallbackParseError, FallbackTier, FeatureEffect, GpuFallback, NoticeId, NoticeText, RenderNotice, TierName,
+    MAX_FALLBACK_BYTES, NOTICE_LINK,
+};
 pub use probe::{driver_version_of, Probe, ProbeReport, Prober, WgpuProber, DEFAULT_PROBE_TIMEOUT};
 
 use fid_canon::CValue;
