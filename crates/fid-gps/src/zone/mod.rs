@@ -3,5 +3,8 @@
 //!
 //! - [`shape`] (`GDT.ZONE.ZTYPE`): the zone shapes and their fixed-pose usage, the closed-form
 //!   vocabulary the pose optimizer (`GDT.ZONE.POSE`) and the tolerance families build on.
+//! - [`group`] (`GDT.ZONE.GROUP.IDS`): shared-pose group identity (UUIDv5), canonical pose
+//!   digest, `GroupRef` and the all-or-nothing rule for incomplete groups.
 
+pub mod group;
 pub mod shape;

@@ -1,6 +1,6 @@
 [package]
 name = "fid-gps"
-description = "Metrology Maven GD&T evaluation library; today the Dialect Mapping Table schema (GDT.RES.SCHEMA), the pure interpretation resolver (GDT.RES.RESOLVE) and the tolerance-zone shapes with fixed-pose usage (GDT.ZONE.ZTYPE), DRF construction with its measured planar and cylindrical paths (GDT.DRF.BUILD) and the diameter and radius checks (GDT.DIM.RADIAL)"
+description = "Metrology Maven GD&T evaluation library; today the Dialect Mapping Table schema (GDT.RES.SCHEMA), the pure interpretation resolver (GDT.RES.RESOLVE), the tolerance-zone shapes with fixed-pose usage (GDT.ZONE.ZTYPE), shared-pose group identity and pose digests (GDT.ZONE.GROUP.IDS), DRF construction with its measured planar and cylindrical paths (GDT.DRF.BUILD) and the diameter and radius checks (GDT.DIM.RADIAL)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,6 +14,8 @@ publish = false
 fid-canon = { path = "../fid-canon" }
 # Shared `sha256:` digest type (AGENTS.md rule 14).
 fid-types = { path = "../fid-types" }
+# UUIDv5 derivation for shared-pose group identities (GDT.ZONE.GROUP.IDS; same layer: model).
+fid-uuid = { path = "../fid-uuid" }
 # Correctly rounded square root (KRN.NUM.FN) for the zone-shape distances (GDT.ZONE.ZTYPE)
 # and the DRF axes (GDT.DRF.BUILD), with NaN as an error.
 fid-num = { path = "../fid-num" }

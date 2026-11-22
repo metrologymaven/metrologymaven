@@ -1497,6 +1497,7 @@ dependencies = [
  "fid-geo-frame",
  "fid-num",
  "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]
