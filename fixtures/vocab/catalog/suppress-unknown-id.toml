@@ -1,0 +1,4 @@
+[[suppress]]
+id = "ui.ghost.message"
+rule = "VC001"
+reason = "Names a message ID absent from messages.en.json."

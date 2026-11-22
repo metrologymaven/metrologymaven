@@ -1,15 +1,21 @@
 //! `fid-vocab`: the project's one vocabulary and claim lint engine (spec node
-//! `ECO.RULES.VOCAB.ENGINE`). Repository tooling, not a product or registry crate; reads only
-//! (R0) and is deterministic (D0: BTreeMap only, no clock).
+//! `ECO.RULES.VOCAB.ENGINE`) and product string catalogue adapter (`ECO.RULES.VOCAB.CATALOG`).
+//! Repository tooling, not a product or registry crate; reads only (R0) and is deterministic
+//! (D0: BTreeMap only, no clock).
 //!
 //! A versioned rule file ([`RuleSet`], format `fid-vocab-rules/1`) is applied to text units
-//! ([`Unit`]) that adapters (product catalogue, outreach Markdown and HTML) supply. [`lint`]
+//! ([`Unit`]) that adapters ([`catalog`], outreach Markdown and HTML) supply. [`lint`]
 //! returns a sorted [`Report`]; [`test_rules`] checks that every rule's examples behave.
 
+pub mod catalog;
 pub mod rules;
 pub mod text;
 pub mod units;
 
+pub use catalog::{
+    build_units, format_units_jsonl, load_catalog_units, parse_export, parse_suppressions, replace_placeholders,
+    CatalogError, CatalogMessage, CatalogSuppression, MessageText, SourceLocation,
+};
 pub use rules::{
     Example, Kind, Qualifier, Rule, RuleSet, Scope, Severity, DEFAULT_DESIGNATOR_PATTERN, MAX_REGEX_BYTES,
     MAX_REGEX_NEST,

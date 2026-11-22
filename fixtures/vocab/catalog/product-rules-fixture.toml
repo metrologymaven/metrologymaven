@@ -1,0 +1,18 @@
+# Fixture product rule file for ECO.RULES.VOCAB.CATALOG AC-2 (CC-BY-4.0).
+format = "fid-vocab-rules/1"
+version = "catalog-fixture-1"
+
+[[rule]]
+id = "VC001"
+kind = "claim"
+severity = "error"
+message = "Certification or conformance wording needs a standard designator in the same sentence."
+words = ["certified", "compliant", "conformant", "validated", "traceable"]
+qualifiers = ["designator"]
+scope = "sentence"
+examples.pass = [
+    "Evaluated per ISO 1101:2017 and validated against the public reference set.",
+]
+examples.fail = [
+    "Certified results",
+]
