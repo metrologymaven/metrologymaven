@@ -1,0 +1,8 @@
+{
+  "licence_declared": "Apache-2.0",
+  "name": "open-qwen-32b",
+  "publisher": "Example Open Weights Lab",
+  "quantisation": "Q4_K_M",
+  "version": "2026.1",
+  "weights_sha256": "sha256:31c9ef65fbe2d7f27d9158cdf40541e49f3c20ca76832884f3bb3c6ceb8e2ec3"
+}
