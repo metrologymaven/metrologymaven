@@ -1,5 +1,6 @@
 //! The error type of this crate.
 
+use fid_types::Digest;
 use std::fmt;
 
 /// Longest input kept in an error, in bytes; longer inputs are cut at a char boundary.
@@ -18,6 +19,15 @@ pub enum PkgError {
     SchemaInvalid(String),
     /// Reading member bytes failed.
     Io(String),
+    /// One or more point-set digests referenced by included results are absent from the CAS
+    /// (`TRUST.PKG.CONTENT.EVID` REQ-001).
+    PointsMissing(Vec<Digest>),
+    /// A point-set blob read from the CAS did not hash to its requested digest
+    /// (`TRUST.PKG.CONTENT.EVID` REQ-004).
+    PointsCorrupt(Digest),
+    /// An interpretation register or its named roster blob is absent from the CAS, malformed,
+    /// or did not hash to its expected digest (`TRUST.PKG.CONTENT.EVID` REQ-006, D-045).
+    RegisterMissing(Digest),
 }
 
 impl PkgError {
@@ -29,6 +39,9 @@ impl PkgError {
             PkgError::UnsupportedVersion(_) => "pkg.unsupported_version",
             PkgError::SchemaInvalid(_) => "pkg.schema_invalid",
             PkgError::Io(_) => "pkg.io",
+            PkgError::PointsMissing(_) => "pkg.points_missing",
+            PkgError::PointsCorrupt(_) => "pkg.points_corrupt",
+            PkgError::RegisterMissing(_) => "pkg.register_missing",
         }
     }
 
@@ -63,6 +76,19 @@ impl fmt::Display for PkgError {
             PkgError::BadPath { path, reason } => write!(f, "{}: {reason}: {path:?}", self.code()),
             PkgError::DuplicatePath(s) | PkgError::UnsupportedVersion(s) => write!(f, "{}: {s:?}", self.code()),
             PkgError::SchemaInvalid(s) | PkgError::Io(s) => write!(f, "{}: {s}", self.code()),
+            PkgError::PointsMissing(ds) => {
+                write!(f, "{}: ", self.code())?;
+                for (i, d) in ds.iter().enumerate() {
+                    if i > 0 {
+                        f.write_str(", ")?;
+                    }
+                    f.write_str(d.as_str())?;
+                }
+                Ok(())
+            }
+            PkgError::PointsCorrupt(d) | PkgError::RegisterMissing(d) => {
+                write!(f, "{}: {}", self.code(), d.as_str())
+            }
         }
     }
 }
@@ -76,12 +102,16 @@ mod tests {
 
     #[test]
     fn codes_are_stable() {
+        let d = Digest::from_bytes([0x11; 32]);
         let all = [
             (PkgError::bad_path("x", "absolute"), "pkg.bad_path"),
             (PkgError::duplicate("x"), "pkg.duplicate_path"),
             (PkgError::UnsupportedVersion("2.0.0".into()), "pkg.unsupported_version"),
             (PkgError::schema("x"), "pkg.schema_invalid"),
             (PkgError::Io("x".into()), "pkg.io"),
+            (PkgError::PointsMissing(vec![d]), "pkg.points_missing"),
+            (PkgError::PointsCorrupt(d), "pkg.points_corrupt"),
+            (PkgError::RegisterMissing(d), "pkg.register_missing"),
         ];
         for (e, code) in all {
             assert_eq!(e.code(), code);
