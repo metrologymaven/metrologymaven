@@ -1,6 +1,6 @@
 [package]
 name = "fid-geo-sel"
-description = "Metrology Maven selection model: index sets over one geometric element bound to its digest, canonical index-set digests and the stale-selection check (spec node GEO.SEL.MODEL)"
+description = "Metrology Maven selection model and algebra: index sets, canonical digests, stale checks, range set operations and mesh/point grow or shrink (spec nodes GEO.SEL.MODEL, GEO.SEL.ALGEBRA)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,9 +9,11 @@ repository.workspace = true
 
 # Kernel crate (KNP-1): no third-party dependencies. Only workspace crates of the num and
 # kernel layers: fid-geo-types (elements, ElementDigest and the GEO.TYPES.DIGEST element
-# digest), fid-kci (its portable FIPS 180-4 SHA-256, the same one the element digest uses)
-# and fid-types (the shared `sha256:` Digest wire form).
+# digest), fid-geo-index (PointIndex::radius for GEO.SEL.ALGEBRA), fid-kci (its portable
+# FIPS 180-4 SHA-256, the same one the element digest uses) and fid-types (the shared
+# `sha256:` Digest wire form).
 [dependencies]
+fid-geo-index = { path = "../fid-geo-index" }
 fid-geo-types = { path = "../fid-geo-types" }
 fid-kci = { path = "../fid-kci" }
 fid-types = { path = "../fid-types" }

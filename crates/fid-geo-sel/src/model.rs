@@ -223,6 +223,14 @@ pub enum SelError {
     AllocationFailed,
     /// A serialised selection is malformed at byte `offset`.
     Malformed { offset: u64, reason: &'static str },
+    /// Two selection operands refer to different target elements (REQ-GEO.SEL.ALGEBRA-002).
+    ElementMismatch { left: ElementDigest, right: ElementDigest },
+    /// Two index-set operands refer to different domains (REQ-GEO.SEL.ALGEBRA-002).
+    SetDomainMismatch { left: Domain, right: Domain },
+    /// A point grow/shrink radius is NaN, infinite, negative or above `COORD_LIMIT`.
+    BadRadius,
+    /// The point buffer or point index does not match or failed a coordinate check.
+    InvalidPointIndex { reason: &'static str },
 }
 
 impl SelError {
@@ -231,7 +239,7 @@ impl SelError {
         match self {
             SelError::StaleSelection { .. } => "stale_selection",
             SelError::IndexOutOfRange { .. } => "index_out_of_range",
-            SelError::DomainMismatch { .. } => "domain_mismatch",
+            SelError::DomainMismatch { .. } | SelError::SetDomainMismatch { .. } => "domain_mismatch",
             SelError::InvalidRange { .. } => "invalid_range",
             SelError::TooManyIndices { .. } => "too_many_indices",
             SelError::QueryTooLarge { .. } => "query_too_large",
@@ -239,6 +247,9 @@ impl SelError {
             SelError::TopologyCountRequired { .. } => "topology_count_required",
             SelError::AllocationFailed => "allocation_failed",
             SelError::Malformed { .. } => "malformed",
+            SelError::ElementMismatch { .. } => "element_mismatch",
+            SelError::BadRadius => "bad_radius",
+            SelError::InvalidPointIndex { .. } => "invalid_point_index",
         }
     }
 }
@@ -262,6 +273,14 @@ impl fmt::Display for SelError {
             }
             SelError::AllocationFailed => f.write_str("allocation failed"),
             SelError::Malformed { offset, reason } => write!(f, "malformed selection at byte {offset}: {reason}"),
+            SelError::ElementMismatch { left, right } => {
+                write!(f, "element mismatch: left selection is on {left}, right is on {right}")
+            }
+            SelError::SetDomainMismatch { left, right } => {
+                write!(f, "domain mismatch: left selection is {left}, right is {right}")
+            }
+            SelError::BadRadius => f.write_str("radius must be finite, non-negative and within COORD_LIMIT"),
+            SelError::InvalidPointIndex { reason } => write!(f, "invalid point index: {reason}"),
         }
     }
 }
@@ -334,6 +353,13 @@ impl IndexSet {
         }
         normalise(&mut out);
         Ok(IndexSet { domain, ranges: out })
+    }
+
+    /// Constructs an [`IndexSet`] directly from ranges that are already non-empty,
+    /// strictly ascending and non-touching. Used by linear-time algebra merge walks.
+    pub(crate) fn from_canonical_ranges(domain: Domain, mut ranges: Vec<(u64, u64)>) -> IndexSet {
+        ranges.shrink_to_fit();
+        IndexSet { domain, ranges }
     }
 
     /// The domain the indexes refer to.
