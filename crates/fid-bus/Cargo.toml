@@ -1,6 +1,6 @@
 [package]
 name = "fid-bus"
-description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles, MCP projection with pending requests, authored literal normalisation, the egress primitive, and command resolution, parameter validation and preconditions (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.UNIT, CORE.BUS.POL.EGRESS, CORE.BUS.PIPE.VALID)"
+description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles, MCP projection with pending requests, authored literal normalisation, the egress primitive, command resolution, parameter validation and preconditions, and the pipeline with its all-or-nothing commit (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.UNIT, CORE.BUS.POL.EGRESS, CORE.BUS.PIPE.VALID, CORE.BUS.PIPE.STAGE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,7 +10,9 @@ repository.workspace = true
 [dependencies]
 fid-canon = { path = "../fid-canon" }
 # CORE.BUS.PRIN builds the `principal_upgrade` entry draft from the journal's entry model.
-fid-journal = { path = "../fid-journal" }
+# CORE.BUS.PIPE.STAGE commits through `Journal::append` and hands reads to the Activity Log
+# (`stream`); feature `store` adds the append module. fid-store is already a dependency here.
+fid-journal = { path = "../fid-journal", features = ["store"] }
 # CORE.BUS.PRIN refuses identifiers that are not NFC; already in the lock (fid-pkg, fid-vocab).
 unicode-normalization = "0.1.24"
 # CORE.BUS.PIPE.HANDLER checks events against a command definition's declared effects.

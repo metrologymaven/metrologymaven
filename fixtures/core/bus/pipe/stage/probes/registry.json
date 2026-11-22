@@ -1,0 +1,244 @@
+{
+ "commands": [
+  {
+   "algorithms": [],
+   "cli_bare": false,
+   "description": "Synthetic command of the CORE.BUS.PIPE.STAGE probe registry.",
+   "determinism": "D0",
+   "effects": [
+    "TestWritten"
+   ],
+   "exposure": [
+    "cli",
+    "gui",
+    "mcp"
+   ],
+   "fs_effect": "none",
+   "human_only": false,
+   "id": "test.write",
+   "idempotency": "none",
+   "lifecycle": {
+    "since": "2026-11-21",
+    "state": "active"
+   },
+   "major": 1,
+   "mcp_projection": "exposed",
+   "network": "none",
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "count": {
+      "type": "integer"
+     },
+     "target": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "target",
+     "count"
+    ],
+    "type": "object"
+   },
+   "preconditions": [
+    {
+     "bound": 100,
+     "expr": "params.count > 0",
+     "message_key": "test.count_positive"
+    }
+   ],
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "title": "Probe write",
+   "undo": "head_move",
+   "web": "available"
+  },
+  {
+   "algorithms": [],
+   "cli_bare": false,
+   "description": "Synthetic command of the CORE.BUS.PIPE.STAGE probe registry.",
+   "determinism": "D0",
+   "effects": [],
+   "exposure": [
+    "cli",
+    "gui",
+    "mcp"
+   ],
+   "fs_effect": "none",
+   "human_only": false,
+   "id": "test.noop_read",
+   "idempotency": "none",
+   "lifecycle": {
+    "since": "2026-11-21",
+    "state": "active"
+   },
+   "major": 1,
+   "mcp_projection": "exposed",
+   "network": "none",
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "type": "object"
+   },
+   "preconditions": [],
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "R0",
+   "title": "Probe no-op read",
+   "undo": "not_undoable",
+   "web": "available"
+  },
+  {
+   "algorithms": [],
+   "cli_bare": false,
+   "description": "Synthetic command of the CORE.BUS.PIPE.STAGE probe registry.",
+   "determinism": "D0",
+   "effects": [],
+   "exposure": [
+    "cli",
+    "gui",
+    "mcp"
+   ],
+   "fs_effect": "none",
+   "human_only": false,
+   "id": "test.read_r1",
+   "idempotency": "none",
+   "lifecycle": {
+    "since": "2026-11-21",
+    "state": "active"
+   },
+   "major": 1,
+   "mcp_projection": "exposed",
+   "network": "none",
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "count": {
+      "type": "integer"
+     },
+     "target": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "target",
+     "count"
+    ],
+    "type": "object"
+   },
+   "preconditions": [],
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "R1",
+   "title": "Probe R1 read",
+   "undo": "not_undoable",
+   "web": "available"
+  },
+  {
+   "algorithms": [],
+   "cli_bare": false,
+   "description": "Synthetic command of the CORE.BUS.PIPE.STAGE probe registry.",
+   "determinism": "D0",
+   "effects": [
+    "TestWritten"
+   ],
+   "exposure": [
+    "cli",
+    "gui",
+    "mcp"
+   ],
+   "fs_effect": "none",
+   "human_only": false,
+   "id": "test.request",
+   "idempotency": "none",
+   "lifecycle": {
+    "since": "2026-11-21",
+    "state": "active"
+   },
+   "major": 1,
+   "mcp_projection": "request_only",
+   "network": "none",
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "count": {
+      "type": "integer"
+     },
+     "target": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "target",
+     "count"
+    ],
+    "type": "object"
+   },
+   "preconditions": [],
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W2",
+   "title": "Probe request-only write",
+   "undo": "head_move",
+   "web": "available"
+  },
+  {
+   "algorithms": [],
+   "cli_bare": false,
+   "description": "Synthetic command of the CORE.BUS.PIPE.STAGE probe registry.",
+   "determinism": "D0",
+   "effects": [
+    "TestWritten"
+   ],
+   "exposure": [
+    "cli",
+    "gui",
+    "mcp"
+   ],
+   "fs_effect": "none",
+   "human_only": false,
+   "id": "test.release",
+   "idempotency": "none",
+   "lifecycle": {
+    "since": "2026-11-21",
+    "state": "active"
+   },
+   "major": 1,
+   "mcp_projection": "request_only",
+   "network": "none",
+   "params_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "count": {
+      "type": "integer"
+     },
+     "reason": {
+      "type": "string"
+     },
+     "target": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "target",
+     "count",
+     "reason"
+    ],
+    "type": "object"
+   },
+   "preconditions": [],
+   "result_schema": {
+    "type": "object"
+   },
+   "side_effect": "W3",
+   "title": "Probe release with a reason",
+   "undo": "head_move",
+   "web": "available"
+  }
+ ]
+}
