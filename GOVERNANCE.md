@@ -6,6 +6,8 @@ Status: **accepted** in [D-003](decisions/D-003-governance-model.md) on 2026-11-
 
 Until a foundation is chosen under [D-003](decisions/D-003-governance-model.md), the project is stewarded by **Metrology Maven** (the founder's company), which holds the trademark ([D-001](decisions/D-001-license.md), [D-039](decisions/D-039-metrology-maven-name-and-public-home.md)) and receives grants and contracts on the project's behalf ([D-036](decisions/D-036-funding-alignment.md) rule 1).
 
+Under [D-052](decisions/D-052-autonomous-zero-human-bottlenecks.md), architecture, specification, and implementation decisions proceed autonomously via independent agent review and required CI gates, with no build step blocked on external expert or legal outreach.
+
 ## RFC timings
 
 - A maintainer opens the comment period on a decision record or constitution change.

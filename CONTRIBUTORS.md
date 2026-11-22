@@ -10,8 +10,8 @@ Metrology Maven is built in the open by people and coding agents under the Devel
 
 ## Maintainers and stewards
 
-- **Founder & initial steward:** Metrology Maven (`@metrologymaven`) — see [GOVERNANCE.md](GOVERNANCE.md) for the path to domain maintainership.
+- **Founder & initial steward:** Metrology Maven (`@metrologymaven`) — see [GOVERNANCE.md](GOVERNANCE.md) for governance and [D-052](decisions/D-052-autonomous-zero-human-bottlenecks.md) for autonomous build mode.
 
-## Domain expert reviewers
+## Optional domain reviewers
 
-_Open for first reviewers — see the [expert queue](generated/EXPERT-QUEUE.md) or comment `/claim` on an `expert-queue` issue._
+_Reviewers who optionally sign off provisional interpretation rules (`D-045`) are credited here with recorded consent (`REQ-OUTR.GDTC-006`)._
