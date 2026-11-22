@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-io-res]
+built_pr: 478
+updated: 2026-11-22
 ---
 
 # IO.RES.TRANS.VIEW: Transcribed-status marking for views and exports
