@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [fid-mcp]
+updated: 2026-11-21
 ---
 
 # AUTO.MCP.TAINT: Untrusted-content marking in tool results
