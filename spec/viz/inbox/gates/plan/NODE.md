@@ -18,7 +18,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-inbox]
+built_pr: 459
+updated: 2026-11-22
 ---
 
 # VIZ.INBOX.GATES.PLAN: Gate plan selection from profile, protection and principal

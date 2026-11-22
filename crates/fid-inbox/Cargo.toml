@@ -1,0 +1,30 @@
+[package]
+name = "fid-inbox"
+description = "Metrology Maven Proposal Inbox: governance-profile gate plan selection, optional CeremonyProvider hook and all-or-nothing GateRunner (spec node VIZ.INBOX.GATES.PLAN)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Viewer layer. No signing crate, no GPU, windowing or UI-toolkit crate: Lean works with no
+# signing component linked, and gate plan selection is a pure D0 function.
+[dependencies]
+# Active governance profile definitions and canonical profile document (TRUST.PROFILE.DEFS, model).
+fid-profile = { path = "../fid-profile" }
+# Canonical principal kind enum (CORE.JRN.ENTRY, model, storage-free without `store` feature).
+fid-journal = { path = "../fid-journal", default-features = false }
+# Shared `sha256:` Digest type for promotion pre-image hashes (num).
+fid-types = { path = "../fid-types" }
+# RFC 8785 canonical JSON CValue decoding of `sign.show_profile@1` results (CORE.JRN.CANON, model).
+fid-canon = { path = "../fid-canon" }
+
+[dev-dependencies]
+# Integration tests feed real `sign.show_profile@1` results (`fid_profile_cmd::run_show`) into
+# `profile_from_show_result`. Test-only, keeping runtime dependencies minimal.
+fid-profile-cmd = { path = "../fid-profile-cmd" }
+fid-bus = { path = "../fid-bus" }
+
+[lints]
+workspace = true

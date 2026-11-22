@@ -156,6 +156,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-gpu-select" = "viewer"
 # Status markers, palette guard, provenance badges (VIZ.OVERLAY.STATUS).
 "fid-overlay" = "viewer"
+# Proposal Inbox governance gates (VIZ.INBOX.GATES.PLAN): pure over fid-profile, fid-journal, fid-canon, fid-types.
+"fid-inbox" = "viewer"
 # View state model (VIZ.VIEW.STATE): ViewState, its canonical form and digest.
 "fid-view" = "viewer"
 "fid-eval-harness" = "tool"
