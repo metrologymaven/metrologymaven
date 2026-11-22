@@ -137,11 +137,14 @@ class SyncTest(unittest.TestCase):
 
     def test_ac6_preserves_crlf_outside_blocks(self) -> None:
         target = self.copy_tree(FIX / "target-crlf")
+        # Ensure CRLF input bytes regardless of git checkout line-ending normalization.
+        agents_path = target / "AGENTS.md"
+        agents_path.write_bytes(agents_path.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
         code, out, err = run_cli(
             "--source", str(SRC), "--source-rev", REV, "--repo-id", "repo-rust", "--target", str(target)
         )
         self.assertEqual(code, 0, out + err)
-        raw = (target / "AGENTS.md").read_bytes()
+        raw = agents_path.read_bytes()
         self.assertTrue(raw.startswith(b"# CRLF repo\r\n<!-- house-rules:begin block=core "))
         self.assertTrue(raw.endswith(b"\r\nKeep CRLF outside blocks.\r\nSecond line.\r\n"))
         # Running again is idempotent.
