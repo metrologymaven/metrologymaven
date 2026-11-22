@@ -1,0 +1,52 @@
+name: Propose a design artefact
+description: Propose a token, icon, component, pattern, screen or report style for the design system
+title: "design(<kind>): <short description>"
+labels: [design]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Artefact kind
+      options:
+        - token
+        - icon
+        - component
+        - pattern
+        - screen
+        - report style
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: UX spec node ID
+      placeholder: UX.ICONS.CORESET
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal and rationale
+      description: Describe the design change, which principles in design/principles.md it serves, and how it works without colour alone and from the keyboard.
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Files to add or change
+      description: List repository paths under design/ (text/SVG files and any committed open-format exports registered in design/sources.json). No design-tool account is required.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Design workflow checks (design/CONTRIBUTING.md)
+      options:
+        - label: This work is original; no incumbent code, text, icon, screenshot or layout was copied (I will include an originality@1 declaration)
+          required: true
+        - label: Any design source uses an open tool with requires_paid_account = false and has committed open-format exports listed in design/sources.json
+          required: true
+        - label: The artefact uses {{FAMILY_NAME}} as the product name and no candidate product names
+          required: true
+        - label: I understand a human reviewer must add a design-review@1 record in design/review/records/ before merge
+          required: true

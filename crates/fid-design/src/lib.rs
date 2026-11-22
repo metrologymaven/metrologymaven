@@ -6,6 +6,7 @@
 //! - [`words`]: `words-check` (`UX.SYSTEM.PRINC`).
 //! - [`review`]: `review-check` (`UX.SYSTEM.REVIEW`).
 //! - [`screens`]: `screens-check` and `screens-gate` (`UX.SCREENS.INV`).
+//! - [`sources`]: `sources-check` (`UX.SYSTEM.TOOL`).
 //! - [`tokens`]: `tokens-check` (`UX.TOKENS.COLOR`).
 //! - [`status`]: `status-check` (`UX.TOKENS.STATUS`).
 //! - [`palettes`]: `palettes-check` (`UX.TOKENS.DATAPAL`).
@@ -20,6 +21,7 @@ pub mod pkg;
 pub mod princ;
 pub mod review;
 pub mod screens;
+pub mod sources;
 pub mod status;
 pub mod tokens;
 pub mod words;
