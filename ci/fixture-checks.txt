@@ -53,6 +53,7 @@ python fixtures/core/sto/set/make_fixtures.py --check
 python fixtures/core/sto/sql/crash/make_chain.py --check
 python fixtures/core/sto/sql/schema/make_fixture.py --check
 python fixtures/ctrl/make_auth_vectors.py --check
+python fixtures/docs/make_fixtures.py --check
 python fixtures/dsse/make_fixtures.py --check
 python fixtures/fetch/make_fixtures.py --check
 python fixtures/fit/make_axis_cyl_fixtures.py --check

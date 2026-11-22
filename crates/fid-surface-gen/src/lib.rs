@@ -24,7 +24,7 @@
 //!   into place, and only then is the old one deleted. A run interrupted between the two
 //!   renames is repaired at the start of the next run (the old tree is restored first).
 //! - **Paths.** Emitted paths are relative, `/`-separated, and limited to the portable
-//!   characters `A-Z a-z 0-9 . _ -` per segment, so the same tree is written on Windows, Linux
+//!   characters `A-Z a-z 0-9 . _ - @` per segment, so the same tree is written on Windows, Linux
 //!   and macOS; duplicates are detected ASCII case-insensitively for the same reason.
 //! - **Links and case.** A work directory that is a symbolic link is removed as a link, never
 //!   followed; an owned directory that is a link or a file is refused (`io_error`); an entry
@@ -49,9 +49,15 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 pub mod check;
+pub mod docs;
 pub use check::{
     check_cli, check_surfaces, check_surfaces_with_emitters, CheckError, CheckReport, CommandRef, Finding, FindingKind,
     CHECKED_SURFACES, CHECK_USAGE, MAX_GENERATED_FILE_BYTES, MAX_INDEX_BYTES,
+};
+pub use docs::{
+    build_class_legend, build_domain_indexes, build_ref_record, docs_ref_v1_schema, docs_ref_v1_schema_bytes,
+    ClassLegend, ClassLegendEntry, CommandRefEntry, DocsEmitter, DocsError, DomainIndex, ParamDoc, ReasonCode,
+    RefRecord, SurfaceDoc, CLASSES_FILE, DOCS_SCHEMA, DOCS_SURFACE, INDEX_DIR, REF_DIR,
 };
 
 /// Name of the generator, as written in every header.
@@ -331,7 +337,7 @@ pub fn check_rel_path(p: &str) -> Result<(), &'static str> {
         if seg == "." || seg == ".." {
             return Err("dot segment");
         }
-        if !seg.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-')) {
+        if !seg.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-' | b'@')) {
             return Err("non-portable character");
         }
         if seg.ends_with('.') {
@@ -686,9 +692,9 @@ pub fn generate(manifest: &[u8], emitters: &[&dyn SurfaceEmitter], out: &Path) -
 }
 
 /// The emitter list, in its fixed run order. Each surface node adds its emitter here when it
-/// is built: [`McpEmitter`] (AUTO.MCP.PROJ).
+/// is built: [`McpEmitter`] (`AUTO.MCP.PROJ`), [`DocsEmitter`] (`AUTO.SURF.DOCS`).
 pub fn registered() -> Vec<Box<dyn SurfaceEmitter>> {
-    vec![Box::new(McpEmitter)]
+    vec![Box::new(McpEmitter), Box::new(DocsEmitter)]
 }
 
 /// The MCP surface (spec node AUTO.MCP.PROJ): `mcp/mcp-tools.json` from [`fid_mcp::emit`],

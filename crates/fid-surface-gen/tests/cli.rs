@@ -58,25 +58,31 @@ fn gen_surfaces_twice_gives_the_reference_tree() {
             run(&["--manifest", "fixtures/manifest/min-classes.json", "--out", &out_s, "--test-emitter", "echo"]);
         assert_eq!(code, 0, "{stdout}");
         assert!(stdout.contains("echo: 14 files, 13 commands"), "{stdout}");
-        // The registered MCP emitter (AUTO.MCP.PROJ) runs too.
+        // The registered MCP (AUTO.MCP.PROJ) and docs (AUTO.SURF.DOCS) emitters run too.
         assert!(stdout.contains("mcp: 2 files, 10 commands"), "{stdout}");
+        assert!(stdout.contains("docs: 25 files, 13 commands"), "{stdout}");
         trees.push(tree(&out));
     }
     assert_eq!(trees[0], trees[1]);
     let (echo, rest): (BTreeMap<_, _>, BTreeMap<_, _>) =
         trees[0].clone().into_iter().partition(|(k, _)| k.starts_with("echo/"));
     assert_eq!(echo, expected());
+    let (mcp, docs): (BTreeMap<_, _>, BTreeMap<_, _>) = rest.into_iter().partition(|(k, _)| k.starts_with("mcp/"));
     // AUTO.MCP.PROJ AC-1: the MCP tool list equals the golden of `fixtures/mcp/make_fixtures.py`.
     let golden = fs::read(repo_root().join("fixtures/mcp/min-classes.tools.json")).unwrap();
-    assert_eq!(rest.get("mcp/mcp-tools.json"), Some(&golden), "mcp/mcp-tools.json differs from the golden");
-    let index = String::from_utf8(rest.get("mcp/surface-index.json").unwrap().clone()).unwrap();
+    assert_eq!(mcp.get("mcp/mcp-tools.json"), Some(&golden), "mcp/mcp-tools.json differs from the golden");
+    let index = String::from_utf8(mcp.get("mcp/surface-index.json").unwrap().clone()).unwrap();
     assert!(index.starts_with("{\"_header\":\"generated, do not edit; manifest sha256:"), "{index}");
     assert!(
         !index.contains("motion.move_axis")
             && !index.contains("trust.sign_record")
             && !index.contains("plugin.install_pack")
     );
-    assert_eq!(rest.len(), 2, "{:?}", rest.keys().collect::<Vec<_>>());
+    assert_eq!(mcp.len(), 2, "{:?}", mcp.keys().collect::<Vec<_>>());
+    // AUTO.SURF.DOCS: docs/ surface emits 13 ref records + 10 domain indexes + classes.json + surface-index.json.
+    assert_eq!(docs.len(), 25, "{:?}", docs.keys().collect::<Vec<_>>());
+    assert!(docs.contains_key("docs/classes.json"));
+    assert!(docs.contains_key("docs/surface-index.json"));
     for (path, bytes) in &trees[0] {
         assert!(!bytes.contains(&b'\r'), "{path} has a CR byte");
     }
