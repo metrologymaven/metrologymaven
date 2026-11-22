@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [tools/repo_template]
+built_pr: 467
+updated: 2026-11-22
 ---
 
 # ECO.REPO.TPL.PROMOTE: Library promotion procedure and tool
