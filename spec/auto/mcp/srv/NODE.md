@@ -19,6 +19,7 @@ cli: [fid mcp --server *]
 mcp: []
 journal: []
 built_in: [fid-mcp]
+built_pr: 460
 updated: 2026-11-22
 ---
 
