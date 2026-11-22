@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-kunc]
+built_pr: 522
 updated: 2026-11-22
 ---
 
