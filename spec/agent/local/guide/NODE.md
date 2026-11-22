@@ -19,6 +19,7 @@ cli: [fid-eval local guide]
 mcp: []
 journal: []
 built_in: [fid-eval-board]
+built_pr: 525
 updated: 2026-11-22
 ---
 
