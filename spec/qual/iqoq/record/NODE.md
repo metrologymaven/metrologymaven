@@ -19,6 +19,7 @@ cli: [fid validate show-record]
 mcp: [validate_show_record]
 journal: [validate.show_record@1]
 built_in: [fid-qual]
+built_pr: 479
 updated: 2026-11-22
 ---
 
