@@ -244,6 +244,7 @@ python tools/fixtures/geo_dist_batch.py --check
 python tools/fixtures/geo_dist_sign.py --check
 python tools/fixtures/geo_index.py --check
 python tools/fixtures/geo_sel_algebra.py --check
+python tools/fixtures/geo_sel_resolve.py --check
 python tools/fixtures/geo_sel_sets.py --check
 python tools/fixtures/geo_tree_cases.py --check
 python tools/fixtures/geo_units_cases.py --check
