@@ -97,8 +97,8 @@ fn gen_matrix(seed: u64, kind: &str, n: usize) -> Vec<f64> {
             }
             let steps = 3 * n;
             for s in 0..steps {
-                let mut p = (g.next() as usize) % n;
-                let mut q = (g.next() as usize) % (n - 1);
+                let mut p = (g.next() % (n as u64)) as usize;
+                let mut q = (g.next() % ((n - 1) as u64)) as usize;
                 if q >= p {
                     q += 1;
                 }
