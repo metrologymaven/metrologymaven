@@ -4,27 +4,23 @@ This file applies to every coding agent working in this repository (Claude Code,
 
 ## What this repository is
 
-A **specification tree** for an open-source dimensional metrology platform. **Do not write implementation code here.** The output is requirements, interfaces, design notes, acceptance criteria and build prompts. Implementation happens later, in a separate repository, from the leaf build prompts.
+The **Metrology Maven public monorepo** ([D-039](decisions/D-039-metrology-maven-name-and-public-home.md)): the specification tree (`spec/`, `seeds/`, `decisions/`), the Rust workspace (`crates/`, `fixtures/`, `tools/`), and the static website (`site/`).
 
-## The one job
+## The two jobs
 
-You are usually given **one target node** (`spec/.../NODE.md`). Follow [prompts/expand-node.md](prompts/expand-node.md) exactly. In short: read the context, then do exactly one of these:
+Never mix a spec expansion and a code implementation in the same PR.
 
-1. **Split** the node into 2–9 children (3–7 is typical);
-2. **Finish** it as a leaf; or
-3. **Block** it on a decision.
-
-Then run `python tools/scope.py check` and fix any error in files you touched.
+- **Spec expansion** (given an `open` node `spec/.../NODE.md`): follow [prompts/expand-node.md](prompts/expand-node.md) exactly and write **no implementation code**. Do exactly one of:
+  1. **Split** the node into 2–9 children (3–7 is typical);
+  2. **Finish** it as a leaf; or
+  3. **Block** it on a decision.
+- **Leaf implementation** (given a `leaf` node's Build prompt): implement it in its named crate (`crates/`) or tool path (`tools/`), obey [CONSTITUTION §8](spec/CONSTITUTION.md#8-engineering-rules-binding-on-implementation-specs-must-not-contradict-them) (no panics, no `unsafe` outside named exceptions, layer rules in `layers.toml`), add `built_in:` and `built_pr:` to the leaf's frontmatter, and run `cargo test`, `cargo clippy -- -D warnings`, `cargo fmt --check`, and `python tools/scope.py check` (do not commit regenerated `generated/` files; see D-042).
 
 ## Hard rules
 
-1. **Stay in your lane.** Write only:
-   - the target node;
-   - its new child folders;
-   - the `## Children` section of the target;
-   - new files under `decisions/`.
-
-   Never edit sibling, ancestor or unrelated nodes. If a sibling or ancestor is wrong, write the problem in the target's `## Open questions` or open a decision.
+1. **Stay in your lane.**
+   - In a **spec expansion**, write only the target node, its new child folders, the target's `## Children` section, and new files under `decisions/`. Never edit sibling, ancestor or unrelated nodes; record problems in the target's `## Open questions` or open a decision.
+   - In a **leaf implementation**, change only the crates/tools/fixtures needed for that leaf plus the leaf's `built_in:`/`built_pr:` frontmatter (and `layers.toml`/`Cargo.lock` if adding a crate).
 2. **The constitution wins.** [spec/CONSTITUTION.md](spec/CONSTITUTION.md) defines naming, side-effect classes, determinism, units and the data model. Never contradict it. If it blocks you, open a decision.
 3. **Requirements are testable.** One `shall` per requirement, in EARS style ("When <trigger>, the system shall <response>"). No implementation detail above the leaf level unless the constitution mandates it.
 4. **Trace everything.**
