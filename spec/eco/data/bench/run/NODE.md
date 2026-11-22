@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-xtask]
+built_pr: 504
 satisfies: [REQ-ECO.DATA.BENCH-001, REQ-ECO.DATA.BENCH-002, REQ-ECO.DATA.BENCH-003]
 covers: []
 depends_on: [ECO.DATA.FETCH]
