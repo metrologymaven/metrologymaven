@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Metrology Maven environment snapshot, schema_version 1 (PLAT.DOCTOR.PROBE)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "os",
+    "arch",
+    "cpu",
+    "ram",
+    "storage",
+    "display",
+    "gpu"
+  ],
+  "$defs": {
+    "unknown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason", "detail"],
+      "properties": {
+        "status": { "const": "unknown" },
+        "reason": {
+          "enum": ["error", "timeout", "unsupported", "no_display", "not_built"]
+        },
+        "detail": { "type": "string", "maxLength": 200 }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": { "const": 1 },
+    "os": {
+      "oneOf": [
+        { "$ref": "#/$defs/unknown" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value"],
+          "properties": {
+            "status": { "const": "known" },
+            "value": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["family", "version"],
+              "properties": {
+                "family": { "type": "string", "minLength": 1 },
+                "version": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "arch": {
+      "oneOf": [
+        { "$ref": "#/$defs/unknown" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value"],
+          "properties": {
+            "status": { "const": "known" },
+            "value": { "type": "string", "minLength": 1, "maxLength": 64 }
+          }
+        }
+      ]
+    },
+    "cpu": {
+      "oneOf": [
+        { "$ref": "#/$defs/unknown" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value"],
+          "properties": {
+            "status": { "const": "known" },
+            "value": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["model", "physical_cores", "instruction_set_level"],
+              "properties": {
+                "model": { "type": "string", "minLength": 1 },
+                "physical_cores": { "type": "integer", "minimum": 1 },
+                "instruction_set_level": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ram": {
+      "oneOf": [
+        { "$ref": "#/$defs/unknown" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value"],
+          "properties": {
+            "status": { "const": "known" },
+            "value": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["total_gib", "available_gib"],
+              "properties": {
+                "total_gib": { "type": "number", "minimum": 0 },
+                "available_gib": { "type": "number", "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "storage": {
+      "oneOf": [
+        { "$ref": "#/$defs/unknown" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value"],
+          "properties": {
+            "status": { "const": "known" },
+            "value": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["role", "free_gib", "total_gib"],
+                "properties": {
+                  "role": { "enum": ["install", "data"] },
+                  "free_gib": { "type": "number", "minimum": 0 },
+                  "total_gib": { "type": "number", "minimum": 0 }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "display": {
+      "oneOf": [
+        { "$ref": "#/$defs/unknown" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value"],
+          "properties": {
+            "status": { "const": "known" },
+            "value": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      ]
+    },
+    "gpu": {
+      "oneOf": [
+        { "$ref": "#/$defs/unknown" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "value"],
+          "properties": {
+            "status": { "const": "known" },
+            "value": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "backend",
+                "adapter",
+                "driver_version",
+                "device_type",
+                "vram_gib",
+                "fallback",
+                "fallback_cause",
+                "reason"
+              ],
+              "properties": {
+                "backend": { "type": "string", "minLength": 1 },
+                "adapter": { "type": ["string", "null"] },
+                "driver_version": { "type": ["string", "null"] },
+                "device_type": { "type": ["string", "null"] },
+                "vram_gib": { "type": ["number", "null"], "minimum": 0 },
+                "fallback": { "type": "boolean" },
+                "fallback_cause": { "type": "string", "minLength": 1 },
+                "reason": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

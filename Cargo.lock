@@ -1324,6 +1324,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-doctor"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-gpu-policy",
+ "fid-gpu-select",
+]
+
+[[package]]
 name = "fid-esig"
 version = "0.0.1"
 dependencies = [
