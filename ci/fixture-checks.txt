@@ -131,6 +131,7 @@ python fixtures/mig/src/reg/make_fixtures.py --check
 python fixtures/num/fmt/make_ang_fixtures.py --check
 python fixtures/num/fmt/make_len_fixtures.py --check
 python fixtures/num/fmt/make_reg_fixtures.py --check
+python fixtures/num/la/make_eig_fixtures.py --check
 python fixtures/num/la/make_la_fixtures.py --check
 python fixtures/num/la/make_qr_fixtures.py --check
 python fixtures/num/la/make_svd_fixtures.py --check

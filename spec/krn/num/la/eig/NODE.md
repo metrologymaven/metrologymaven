@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-num]
+built_pr: 428
 satisfies: [REQ-KRN.NUM.LA-002, REQ-KRN.NUM.LA-003, REQ-KRN.NUM.LA-004, REQ-KRN.NUM.LA-005]
 covers: []
 depends_on: [KRN.NUM.LA.MAT, KRN.NUM.RED, KRN.NUM.FN, KRN.NUM.ERR]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-21
 ---
 
 # KRN.NUM.LA.EIG: Cyclic Jacobi symmetric eigendecomposition

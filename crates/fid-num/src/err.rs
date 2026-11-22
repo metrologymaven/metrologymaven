@@ -26,8 +26,11 @@ pub enum NumError {
     /// refused ID, displayed `fmt.<kind>@<major>` (REQ-KRN.NUM.FMT.REG-002).
     UnknownFormatter { id: FormatterId },
     /// An iterative method did not converge within its sweep limit; `sweeps` is the limit
-    /// (`KRN.NUM.LA.SVD`, REQ-002).
+    /// (`KRN.NUM.LA.SVD`, `KRN.NUM.LA.EIG`).
     NoConvergence { op: &'static str, sweeps: usize },
+    /// A matrix required to be symmetric failed the symmetry check at pair `(i, j)` with
+    /// `i < j` (`KRN.NUM.LA.EIG`, REQ-001).
+    NotSymmetric { op: &'static str, i: usize, j: usize },
 }
 
 impl fmt::Display for NumError {
@@ -43,6 +46,7 @@ impl fmt::Display for NumError {
             NumError::FpEnvironment { probe } => write!(f, "floating-point environment check failed: {probe}"),
             NumError::UnknownFormatter { id } => write!(f, "fmt: unknown_formatter: {id}"),
             NumError::NoConvergence { op, sweeps } => write!(f, "{op}: no convergence after {sweeps} sweeps"),
+            NumError::NotSymmetric { op, i, j } => write!(f, "{op}: not symmetric at ({i}, {j})"),
         }
     }
 }
