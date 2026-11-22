@@ -78,7 +78,7 @@ pub enum Gauge {
 }
 
 /// Errors of [`evaluate`]. [`RadialError::code`] is the stable code.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RadialError {
     /// `not_radial_feature{alg}`: the feature's fit is not a `fid-fit` circle, cylinder,
     /// sphere or cone fit.
