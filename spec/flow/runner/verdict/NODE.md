@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid accept show-report]
 mcp: [accept_show_report]
 journal: [accept.show_report@1]
-updated: 2026-11-17
+built_in: [fid-accept]
+updated: 2026-11-22
 ---
 
 # FLOW.RUNNER.VERDICT: Nightly acceptance report, show command and trend history
