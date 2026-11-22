@@ -18,6 +18,7 @@ cli: []
 mcp: []
 journal: []
 built_in: [fid-geo-index]
+built_pr: 483
 updated: 2026-11-22
 ---
 
