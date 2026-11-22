@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-doctor]
 satisfies: [REQ-PLAT.DOCTOR-001, REQ-PLAT.DOCTOR-006]
 covers: []
 depends_on: [PLAT.GPU.DETECT]

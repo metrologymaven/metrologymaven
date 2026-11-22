@@ -196,6 +196,7 @@ python fixtures/pkg/make_golden.py --check
 python fixtures/pkg/make_reader_fixtures.py --check
 python fixtures/plat/bench/make_expected.py --check
 python fixtures/plat/deploy/make_expected.py --check
+python fixtures/plat/doctor/make_fixtures.py --check
 python fixtures/plat/gpu/make_notice_fixtures.py --check
 python fixtures/plat/matrix/make_eol_fixtures.py --check
 python fixtures/plat/matrix/make_page.py --check
