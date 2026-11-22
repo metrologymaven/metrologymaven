@@ -1,0 +1,40 @@
+{
+  "dialect": "asme",
+  "editions": [
+    "y14.5-2018"
+  ],
+  "entries": [
+    {
+      "family": "SIZE",
+      "key": "dmt:asme/caliper/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "POS",
+      "key": "dmt:asme/concentricity/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "DRF",
+      "key": "dmt:asme/drf_planar/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "FORM",
+      "key": "dmt:asme/flatness/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "ORIENT",
+      "key": "dmt:asme/perpendicularity/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "POS",
+      "key": "dmt:asme/position/mmc@1",
+      "required_status": "supported_or_partial"
+    }
+  ],
+  "phase": "P1a",
+  "schema": "dmt-inventory/v1"
+}

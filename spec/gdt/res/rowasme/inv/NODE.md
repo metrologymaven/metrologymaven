@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-gdt]
+updated: 2026-11-22
 ---
 
 # GDT.RES.ROWASME.INV: DMT inventory file and coverage check
