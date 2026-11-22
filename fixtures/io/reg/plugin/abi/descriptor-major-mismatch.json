@@ -1,0 +1,76 @@
+{
+  "contract": {
+    "major": 2,
+    "minor": 0
+  },
+  "formats": [
+    {
+      "direction": "import",
+      "extensions": [
+        "tplg"
+      ],
+      "format_id": "toy-plugin",
+      "options_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "scale": {
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "phase": 1,
+      "signatures": [
+        {
+          "bytes": [
+            84,
+            79,
+            89,
+            80,
+            76,
+            71,
+            10
+          ],
+          "offset": 0
+        }
+      ],
+      "version_max": "1",
+      "version_min": "1"
+    },
+    {
+      "direction": "export",
+      "extensions": [
+        "tplg"
+      ],
+      "format_id": "toy-plugin",
+      "options_schema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "phase": 1,
+      "signatures": [
+        {
+          "bytes": [
+            84,
+            79,
+            89,
+            80,
+            76,
+            71,
+            10
+          ],
+          "offset": 0
+        }
+      ],
+      "version_max": "1",
+      "version_min": "1"
+    }
+  ],
+  "plugin_id": "toy-plugin-reader",
+  "requested_caps": {
+    "max_memory_bytes": 67108864,
+    "max_wall_ms": 5000
+  },
+  "version": "1.0.0"
+}

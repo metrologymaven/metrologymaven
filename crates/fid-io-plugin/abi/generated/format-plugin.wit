@@ -1,0 +1,145 @@
+// Generated from format-plugin.idl.json (sha256:926a71c04143efc615804dee89af586086ef359eb03f4c9df6242a8ef3be9185). Do not edit by hand.
+// Spec node IO.REG.PLUGIN.ABI (contract 1.0).
+package metrologymaven:format-plugin@1.0.0;
+
+interface types {
+    record contract-version {
+        major: u32,
+        minor: u32,
+    }
+
+    record requested-caps {
+        max-memory-bytes: u64,
+        max-wall-ms: u64,
+    }
+
+    record byte-signature {
+        offset: u32,
+        bytes: list<u8>,
+    }
+
+    record format-spec {
+        format-id: string,
+        direction: string,
+        version-min: string,
+        version-max: string,
+        signatures: list<byte-signature>,
+        extensions: list<string>,
+        options-schema-json: string,
+        phase: string,
+    }
+
+    record plugin-descriptor {
+        plugin-id: string,
+        version: string,
+        contract: contract-version,
+        formats: list<format-spec>,
+        requested-caps: requested-caps,
+    }
+
+    record read-request {
+        format-id: string,
+        options-json: string,
+        stream-bytes: list<u8>,
+    }
+
+    record write-entity {
+        type-id: string,
+        name: string,
+        payload: list<u8>,
+    }
+
+    record write-request {
+        format-id: string,
+        options-json: string,
+        entities: list<write-entity>,
+    }
+
+    record point3 {
+        x: f64,
+        y: f64,
+        z: f64,
+    }
+
+    record tri-indices {
+        a: u32,
+        b: u32,
+        c: u32,
+    }
+
+    record kv-entry {
+        key: string,
+        value: string,
+    }
+
+    record points-record {
+        name: string,
+        points: list<point3>,
+        unit: option<string>,
+        attributes: list<kv-entry>,
+    }
+
+    record mesh-record {
+        name: string,
+        vertices: list<point3>,
+        triangles: list<tri-indices>,
+        unit: option<string>,
+        attributes: list<kv-entry>,
+    }
+
+    record qif-json-record {
+        name: string,
+        fragment-json: string,
+    }
+
+    record drawing-page-record {
+        name: string,
+        page-index: u32,
+        width-mm: f64,
+        height-mm: f64,
+        dpi: u32,
+        media-type: string,
+        image-bytes: list<u8>,
+        metadata: list<kv-entry>,
+    }
+
+    record table-record {
+        name: string,
+        columns: list<string>,
+        rows: list<list<string>>,
+    }
+
+    record warning-record {
+        code: string,
+        detail: string,
+        byte-offset: option<u64>,
+    }
+
+    variant plugin-record {
+        points(points-record),
+        mesh(mesh-record),
+        qif-json(qif-json-record),
+        drawing-page(drawing-page-record),
+        table(table-record),
+        warning(warning-record),
+    }
+
+    record plugin-error {
+        code: string,
+        detail: string,
+        byte-offset: option<u64>,
+    }
+}
+
+interface plugin {
+    use types.{contract-version, requested-caps, byte-signature, format-spec, plugin-descriptor, read-request, write-entity, write-request, point3, tri-indices, kv-entry, points-record, mesh-record, qif-json-record, drawing-page-record, table-record, warning-record, plugin-record, plugin-error};
+
+    descriptor: func() -> plugin-descriptor;
+    read: func(req: read-request) -> result<list<plugin-record>, plugin-error>;
+    write: func(req: write-request) -> result<list<u8>, plugin-error>;
+}
+
+world format-plugin {
+    export types;
+    export plugin;
+}

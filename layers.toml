@@ -103,6 +103,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # Run binding and run records (AUTO.RUN.BIND): needs fid-program-rec (services) and fid-bus (engine).
 "fid-run" = "services"
 "fid-io-reg" = "services"
+# Format-plugin contract, version negotiation and fid-io-reg adapters (IO.REG.PLUGIN.ABI).
+"fid-io-plugin" = "services"
 "fid-io-dmis" = "services"
 "fid-io-e57" = "services"
 "fid-io-las" = "services"
