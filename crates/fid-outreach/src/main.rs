@@ -86,10 +86,18 @@
 //! canonical JSON report with `--json`. Exits 0 when every recipe is valid, 1 on any finding, and
 //! 2 on unreadable or unparsable input or bad usage.
 
+//! `docs-build --src <dir> --ref <dir> --release <tag> --out <dir> [--guides <file>]` (spec node
+//! `OUTR.DOCS.FRAME.NAV`): renders the Markdown sources and wraps them and `--ref` fragments in
+//! the shared page frame under `<out>/<release>/`, with the release banner, notice placeholder and
+//! navigation tree from `nav.toml`. Exits 0 after writing, 1 (writing nothing) on missing nav
+//! source, non-empty edition directory, or non-static asset, and 2 on unreadable or unparsable
+//! input, bad release tag, unwritable output, or bad usage.
+
 use fid_outreach::asset_check;
 use fid_outreach::bench::recipe;
 use fid_outreach::copy_guard;
 use fid_outreach::doc_run;
+use fid_outreach::docs_build;
 use fid_outreach::guide_check;
 use fid_outreach::launch_gate;
 use fid_outreach::launch_plan;
@@ -115,6 +123,7 @@ commands:
   gate-check --milestone <id> --release <tag> --author <handle> --criteria <file> --tree <dir> --trace <file> --status <file> --tests <file> --signoffs <dir> --roster <file> --out <dir> [--json]
   qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]
   doc-run --guide <file> --repo <dir> [--json]
+  docs-build --src <dir> --ref <dir> --release <tag> --out <dir> [--guides <file>]
   guide-check --root <dir> --name <file> [--publish --out <dir>] [--json]
   asset-check --root <dir> --allow <file> --origin <url> [--exclude <glob>]... [--json]
   mod-check --log <file> --roster <file> --today <YYYY-MM-DD> [--repo-root <dir>] [--json]
@@ -137,6 +146,7 @@ fn main() -> ExitCode {
         (Some("gate-check"), _) => gate_check(args.get(1..).unwrap_or(&[])),
         (Some("qa"), Some("a11y")) => qa_a11y(args.get(2..).unwrap_or(&[])),
         (Some("doc-run"), _) => doc_run_cmd(args.get(1..).unwrap_or(&[])),
+        (Some("docs-build"), _) => docs_build_cmd(args.get(1..).unwrap_or(&[])),
         (Some("guide-check"), _) => guide_check_cmd(args.get(1..).unwrap_or(&[])),
         (Some("asset-check"), _) => asset_check_cmd(args.get(1..).unwrap_or(&[])),
         (Some(cmd @ ("mod-check" | "mod-stats")), _) => moderation_cmd(cmd, args.get(1..).unwrap_or(&[])),
@@ -959,6 +969,49 @@ fn bench_recipe_check(args: &[String]) -> ExitCode {
             }
             eprintln!("bench-recipe check: {e}");
             ExitCode::from(2)
+        }
+    }
+}
+
+fn docs_build_cmd(args: &[String]) -> ExitCode {
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            flag @ ("--src" | "--ref" | "--release" | "--out" | "--guides") => {
+                let Some(v) = it.next() else { return usage() };
+                if opts.insert(flag, v.as_str()).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let (Some(src), Some(ref_dir), Some(release), Some(out)) =
+        (opts.get("--src"), opts.get("--ref"), opts.get("--release"), opts.get("--out"))
+    else {
+        return usage();
+    };
+    let options = docs_build::Options {
+        src: PathBuf::from(src),
+        ref_dir: PathBuf::from(ref_dir),
+        release: (*release).to_string(),
+        out: PathBuf::from(out),
+        guides: opts.get("--guides").map(PathBuf::from),
+    };
+    match docs_build::build(&options) {
+        Ok(report) => {
+            println!(
+                "docs-build: wrote {} page(s) and {} asset(s) under {}",
+                report.pages_written,
+                report.assets_written,
+                report.edition_dir.display()
+            );
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("docs-build: {e}");
+            ExitCode::from(e.exit_code())
         }
     }
 }
