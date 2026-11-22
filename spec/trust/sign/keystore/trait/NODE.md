@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-keystore]
+built_pr: 444
 satisfies: [REQ-TRUST.SIGN.KEYSTORE-001, REQ-TRUST.SIGN.KEYSTORE-006, REQ-TRUST.SIGN.KEYSTORE-007]
 covers: []
 depends_on: [TRUST.SIGN.DSSE]
