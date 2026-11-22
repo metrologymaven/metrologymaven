@@ -956,6 +956,7 @@ impl SessionTable {
             manifests: ctx.manifests,
             reason: None,
             human_assertion: None,
+            agent_coedited: false,
             body: DraftBody::PrincipalUpgrade(UpgradeDraft {
                 session_id: pending.journal_id,
                 method,

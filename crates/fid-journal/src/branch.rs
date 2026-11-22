@@ -30,7 +30,7 @@
 //! only from [`plan_agent_branch`], which the bus's routing module calls. There is no rename
 //! and no delete, so a name is never reused, and nothing clears a protection (REQ-005).
 
-use crate::entry::PrincipalKind;
+use crate::entry::{EntryError, EntryHeader, HeaderBody, PrincipalKind};
 use fid_canon::CValue;
 use fid_types::{Digest, SideEffect};
 use std::collections::{BTreeMap, BTreeSet};
@@ -371,19 +371,12 @@ impl BranchEvent {
     }
 }
 
-/// Who added an event to its entry.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EventSource {
-    /// The handler of the entry's command returned it.
-    Handler,
-    /// The bus routing module (`CORE.BUS.ROUTE`) added it: the only source of agent
-    /// branches. Reserved to the bus; no handler can produce it, because the journal reader
-    /// takes it from the entry's record of which stage added the event, never from the event.
-    BusRoute,
-    /// The bus commit stage added it to a W3 entry on `main` (REQ-006). Reserved to the bus
-    /// in the same way.
-    BusRelease,
-}
+/// Who added an event to its entry: the stage the entry header records for it
+/// (`CORE.JRN.ENTRY`, schema version 2 `command.event_sources`; [`EventSource::Handler`] for
+/// every event of a version 1 entry). [`EventSource::BusRoute`] and
+/// [`EventSource::BusRelease`] are reserved to the bus: no handler can produce them, because
+/// the reader takes the source from the verified header, never from the event.
+pub use crate::entry::EventSource;
 
 /// Where a committed branch event came from, as its entry records it: the entry's real
 /// principal kind, command `id@major`, side-effect class and branch, and which stage added
@@ -404,6 +397,33 @@ pub struct EntryOrigin {
 }
 
 impl EntryOrigin {
+    /// The origin of event `index` (0-based, in event order) of a verified `command` entry:
+    /// principal kind, command `id@major`, class, branch and `human_assertion` from the
+    /// header, and the source the header records for that event (`CORE.JRN.ENTRY`
+    /// REQ-013; [`EventSource::Handler`] in a version 1 entry). Read the header with
+    /// [`EntryHeader::from_value`], which checks its hash, before folding its events.
+    pub fn of_event(header: &EntryHeader, index: usize) -> Result<EntryOrigin, EntryError> {
+        let HeaderBody::Command(c) = &header.body else {
+            return Err(EntryError::Schema(format!("{} entries carry no events", header.kind())));
+        };
+        Ok(EntryOrigin {
+            kind: header.principal.kind,
+            command: c.id.clone(),
+            major: c.major,
+            class: c.class,
+            branch: header.branch.clone(),
+            source: header.event_source(index)?,
+            human_assertion: header.human_assertion.clone(),
+        })
+    }
+
+    /// [`EntryOrigin::of_event`] for every event of an entry whose opened payload holds
+    /// `events` events; `schema` when a version 2 header records another number of sources.
+    pub fn of_entry(header: &EntryHeader, events: usize) -> Result<Vec<EntryOrigin>, EntryError> {
+        header.event_sources(events)?;
+        (0..events).map(|i| EntryOrigin::of_event(header, i)).collect()
+    }
+
     fn is(&self, command: &str) -> bool {
         self.source == EventSource::Handler && self.command == command && self.major == 1
     }

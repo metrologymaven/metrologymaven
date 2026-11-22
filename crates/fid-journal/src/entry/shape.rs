@@ -34,9 +34,9 @@ pub const HEADER_SHAPE: ObjectShape = ObjectShape {
         "manifests",
         "hash",
     ],
-    optional: &["reason_commit", "human_assertion", "command", "session", "upgrade", "head_move"],
+    optional: &["reason_commit", "human_assertion", "agent_coedited", "command", "session", "upgrade", "head_move"],
     props: &[
-        ("schema_version", r##"{"const":1}"##),
+        ("schema_version", r##"{"enum":[1,2]}"##),
         ("kind", r##"{"enum":["command","session_header","principal_upgrade","head_move"]}"##),
         ("stream", r##"{"$ref":"#/$defs/ident"}"##),
         ("seq", r##"{"$ref":"#/$defs/seq"}"##),
@@ -52,6 +52,7 @@ pub const HEADER_SHAPE: ObjectShape = ObjectShape {
         ("manifests", r##"object"##),
         ("reason_commit", r##"{"$ref":"#/$defs/digest"}"##),
         ("human_assertion", r##"{"$ref":"#/$defs/text"}"##),
+        ("agent_coedited", r##"{"type":"boolean"}"##),
         ("command", r##"object"##),
         ("session", r##"object"##),
         ("upgrade", r##"object"##),
@@ -111,7 +112,7 @@ pub const COMMAND_SHAPE: ObjectShape = ObjectShape {
         "outputs",
         "algorithms",
     ],
-    optional: &[],
+    optional: &["event_sources"],
     props: &[
         ("id", r##"{"$ref":"#/$defs/command_id"}"##),
         ("major", r##"{"maximum":4294967295,"minimum":0,"type":"integer"}"##),
@@ -123,6 +124,10 @@ pub const COMMAND_SHAPE: ObjectShape = ObjectShape {
         ("inputs", r##"{"items":"object","type":"array"}"##),
         ("outputs", r##"{"items":"object","type":"array"}"##),
         ("algorithms", r##"{"items":{"$ref":"#/$defs/algorithm"},"type":"array"}"##),
+        (
+            "event_sources",
+            r##"{"items":{"enum":["handler","bus_route","bus_release","bus_approval"]},"type":"array"}"##,
+        ),
     ],
     extra: r##"{}"##,
 };

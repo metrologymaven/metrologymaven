@@ -6,7 +6,7 @@ use crate::error::{BusError, Detail, InternalReason};
 use crate::handler::Event;
 use crate::policy::projection::EntryOrigin;
 use fid_canon::{CValue, Digest};
-use fid_journal::branch::EntryOrigin as JournalOrigin;
+use fid_journal::branch::{EntryOrigin as JournalOrigin, EventSource};
 use fid_journal::{EntryHeader, EntryPayload};
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -56,11 +56,19 @@ impl CommitRecord<'_> {
     /// the stage that added the events and the header's `human_assertion`; `None` for an entry
     /// that is not a command entry.
     ///
-    /// Two fields are fixed until other leaves are built (NODE.md, "Deferred"): the source is
-    /// always `handler`, also for the `RequestApproved` event the bus adds to an approval, and
-    /// `human_assertion` is always `None`, because the stage writes none.
+    /// Its source is `handler`: it is the origin of the handler's events. The stage that added
+    /// each event is recorded in the header (CORE.JRN.ENTRY REQ-013); read it per event with
+    /// [`CommitRecord::event_source`] (the `RequestApproved` the bus adds to an approval is
+    /// `bus_approval`). `human_assertion` is always `None`, because the stage writes none.
     pub fn journal(&self) -> Option<&JournalOrigin> {
         self.journal.as_ref()
+    }
+
+    /// The stage the header records for event `index` (0-based, in commit order) of a
+    /// command entry (`handler` for every event of a schema version 1 header); `None` for an
+    /// entry that is not a command entry or an index outside a version 2 header's sources.
+    pub fn event_source(&self, index: usize) -> Option<EventSource> {
+        self.header.event_source(index).ok()
     }
 
     /// The header's `promoted_from`: always `None`, because the commit stage writes no
@@ -231,6 +239,7 @@ mod tests {
             manifests: Manifests { registry: Digest([7; 32]), kernel: Digest([2; 32]) },
             reason: None,
             human_assertion: None,
+            agent_coedited: false,
             body: DraftBody::Command(CommandDraft {
                 id: "test.write".into(),
                 major: 1,
@@ -243,6 +252,7 @@ mod tests {
                 consumed_r1: Vec::new(),
                 outputs: Vec::new(),
                 algorithms: Vec::new(),
+                event_sources: Vec::new(),
             }),
         };
         build(&draft, seq, prev, &mut OsSalts).unwrap()

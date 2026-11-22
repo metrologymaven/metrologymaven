@@ -33,7 +33,7 @@
 //!   4. header bytes not exactly their RFC 8785 form: `hash/non_canonical`;
 //!   5. not an object, or `hash` missing or not a digest: `hash/schema`;
 //!   6. SHA-256 of the canonical header without `hash` != `hash`: `hash/hash_mismatch`;
-//!   7. `schema_version` is not the number 1: `hash/unknown_version`;
+//!   7. `schema_version` is not the number 1 or 2: `hash/unknown_version`;
 //!   8. the entry schema ([`crate::validate_header_value`]) fails: `hash/schema`;
 //!   9. `hash` column != header hash: `hash/column_mismatch`;
 //!   10. header `seq` != column `seq`: `sequence/header_seq`;
@@ -100,7 +100,9 @@ pub(crate) mod store;
 pub use store::{command_defs, list_store, verify_store, LIST_ENTRIES, VERIFY_CHAIN};
 
 use crate::checkpoint::{Checkpoint, CheckpointError};
-use crate::entry::{commitment, parse_digest, validate_header_value, Salt, FIRST_SEQ, GENESIS_PREV};
+use crate::entry::{
+    commitment, parse_digest, validate_header_value, Salt, FIRST_SEQ, GENESIS_PREV, SCHEMA_V1, SCHEMA_V2,
+};
 use fid_canon::{digest_bytes, parse_with_limits, to_canonical_bytes, CValue, Digest, MAX_DEPTH};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -657,8 +659,8 @@ fn check_header(bytes: &[u8], len: u64) -> Result<(Obj, Digest), Found> {
         return Err(found(FailureKind::Hash, "schema", "header is not an object"));
     };
     match o.get("schema_version") {
-        Some(CValue::Num(v)) if *v == 1.0 => {}
-        _ => return Err(found(FailureKind::Hash, "unknown_version", "schema_version is not 1")),
+        Some(CValue::Num(v)) if *v == f64::from(SCHEMA_V1) || *v == f64::from(SCHEMA_V2) => {}
+        _ => return Err(found(FailureKind::Hash, "unknown_version", "schema_version is not 1 or 2")),
     }
     o.insert("hash".to_string(), CValue::Str(recorded.to_string()));
     let full = CValue::Obj(o);

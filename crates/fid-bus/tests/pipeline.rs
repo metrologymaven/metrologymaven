@@ -986,6 +986,7 @@ impl StageProbe for Intruder {
                 manifests: manifests(),
                 reason: None,
                 human_assertion: None,
+                agent_coedited: false,
                 body: DraftBody::Command(CommandDraft {
                     id: "test.write".into(),
                     major: 1,
@@ -998,6 +999,7 @@ impl StageProbe for Intruder {
                     consumed_r1: Vec::new(),
                     outputs: Vec::new(),
                     algorithms: Vec::new(),
+                    event_sources: Vec::new(),
                 }),
             };
             self.journal.append(AppendRequest::new(draft)).unwrap();

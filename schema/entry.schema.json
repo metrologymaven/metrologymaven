@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://metrologymaven.io/schema/entry.schema.json",
-  "title": "Metrology Maven journal entry header (schema version 1, spec node CORE.JRN.ENTRY)",
-  "description": "The hashed header of one journal entry. Detachable fields (arguments, event bodies, reason, identities) appear only as salted SHA-256 commitments; their salts and values live in the detachable payload. The entry hash is SHA-256 over the RFC 8785 form of this object with `hash` omitted. The human-assertion pre-image is the same hash computed with `human_assertion` also omitted. Sequences start at 1 per stream and the first entry's `prev` is `sha256:` followed by 64 zeros. Signatures are detached and are not part of the header. Every pattern also refuses any newline, because `$` in ECMA-262 and Python regexes can match before a trailing newline.",
+  "title": "Metrology Maven journal entry header (schema versions 1 and 2, spec node CORE.JRN.ENTRY)",
+  "description": "The hashed header of one journal entry. Detachable fields (arguments, event bodies, reason, identities) appear only as salted SHA-256 commitments; their salts and values live in the detachable payload. The entry hash is SHA-256 over the RFC 8785 form of this object with `hash` omitted. The human-assertion pre-image is the same hash computed with `human_assertion` also omitted. Sequences start at 1 per stream and the first entry's `prev` is `sha256:` followed by 64 zeros. Signatures are detached and are not part of the header. Every pattern also refuses any newline, because `$` in ECMA-262 and Python regexes can match before a trailing newline. Schema version 2 adds `agent_coedited` (required) and, on a command entry, `command.event_sources` (required): the pipeline stage that added each committed event, in event order. Version 1 has neither and means every event came from the handler and the entry is not co-edited. A header is written as version 2 only when it records `agent_coedited: true` or some event source other than `handler`; a version 2 header holding only those defaults is invalid, so each content has one encoding.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -21,7 +21,10 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "enum": [
+        1,
+        2
+      ]
     },
     "kind": {
       "enum": [
@@ -131,6 +134,9 @@
     },
     "human_assertion": {
       "$ref": "#/$defs/text"
+    },
+    "agent_coedited": {
+      "type": "boolean"
     },
     "command": {
       "type": "object",
@@ -246,6 +252,17 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/algorithm"
+          }
+        },
+        "event_sources": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "handler",
+              "bus_route",
+              "bus_release",
+              "bus_approval"
+            ]
           }
         }
       }
@@ -387,6 +404,91 @@
           "command": false,
           "session": false,
           "upgrade": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": 1
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "agent_coedited": false,
+          "command": {
+            "properties": {
+              "event_sources": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": 2
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "agent_coedited"
+        ],
+        "anyOf": [
+          {
+            "properties": {
+              "agent_coedited": {
+                "const": true
+              }
+            }
+          },
+          {
+            "required": [
+              "command"
+            ],
+            "properties": {
+              "command": {
+                "properties": {
+                  "event_sources": {
+                    "contains": {
+                      "not": {
+                        "const": "handler"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "schema_version",
+          "kind"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 2
+          },
+          "kind": {
+            "const": "command"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "command": {
+            "required": [
+              "event_sources"
+            ]
+          }
         }
       }
     }

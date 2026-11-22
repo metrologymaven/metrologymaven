@@ -2625,6 +2625,34 @@
    },
    "mutations": [
     {
+     "header": "{\"ai_assistance\":\"suggested\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:22c108f1be3d8ae26d295a3508f9d1607a5d16ec018c7d5921c7b72fe331da07\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:c71cfdb37655c0595fed2edabd4d09da845e24c47c1edbac22212b91ff3b1cce\",\"id\":\"program.add_step\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:f6aed0dc74197e71ee7adeb46ab2781d9eaa3470a00c5cd6fbadb0141efdc1dc\",\"entity\":\"F-0077\"}],\"seed\":\"77\"},\"hash\":\"sha256:56d0eaf96433d1a5e362670ecb39b6ef632b1acbc45059c857fa0ca3bc215168\",\"kind\":\"command\",\"logical_parent\":\"sha256:43d784dd0e54fe40daded0946966e37da2298185c9a1fb8c6ee7762018f959b0\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:43d784dd0e54fe40daded0946966e37da2298185c9a1fb8c6ee7762018f959b0\",\"principal\":{\"commit\":\"sha256:da4e2f93301da80f8738820018d8f1ef9ec69236c408d3c6bc50fa80849652da\",\"kind\":\"agent\",\"on_behalf_of_commit\":\"sha256:d23e21364b65be1cadd9a39cc11cf3fa5710e30e02ab0ea65c4d98a41569c0bf\"},\"reason_commit\":\"sha256:f65693e25afe37176808ee84f75dad096e19ef407cdc47d01f8a955fb5d4fc1c\",\"schema_version\":3,\"seq\":\"77\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"540000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:08:59Z\"}}",
+     "op": "set_header",
+     "seq": 77
+    },
+    {
+     "column": "hash",
+     "op": "set_column",
+     "seq": 77,
+     "value": "sha256:56d0eaf96433d1a5e362670ecb39b6ef632b1acbc45059c857fa0ca3bc215168"
+    }
+   ],
+   "name": "unknown_version"
+  },
+  {
+   "expect": {
+    "anchor": {
+     "kind": "genesis"
+    },
+    "failure": {
+     "kind": "hash",
+     "reason": "schema",
+     "seq": 77
+    },
+    "from_seq": "1",
+    "ok": false
+   },
+   "mutations": [
+    {
      "header": "{\"ai_assistance\":\"suggested\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:22c108f1be3d8ae26d295a3508f9d1607a5d16ec018c7d5921c7b72fe331da07\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:c71cfdb37655c0595fed2edabd4d09da845e24c47c1edbac22212b91ff3b1cce\",\"id\":\"program.add_step\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:f6aed0dc74197e71ee7adeb46ab2781d9eaa3470a00c5cd6fbadb0141efdc1dc\",\"entity\":\"F-0077\"}],\"seed\":\"77\"},\"hash\":\"sha256:83704b6bb85292e1c091647cd9878f2c15b922e661c2e5da157c311fc3d7ce37\",\"kind\":\"command\",\"logical_parent\":\"sha256:43d784dd0e54fe40daded0946966e37da2298185c9a1fb8c6ee7762018f959b0\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:43d784dd0e54fe40daded0946966e37da2298185c9a1fb8c6ee7762018f959b0\",\"principal\":{\"commit\":\"sha256:da4e2f93301da80f8738820018d8f1ef9ec69236c408d3c6bc50fa80849652da\",\"kind\":\"agent\",\"on_behalf_of_commit\":\"sha256:d23e21364b65be1cadd9a39cc11cf3fa5710e30e02ab0ea65c4d98a41569c0bf\"},\"reason_commit\":\"sha256:f65693e25afe37176808ee84f75dad096e19ef407cdc47d01f8a955fb5d4fc1c\",\"schema_version\":2,\"seq\":\"77\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"540000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-01T08:08:59Z\"}}",
      "op": "set_header",
      "seq": 77
@@ -2636,7 +2664,7 @@
      "value": "sha256:83704b6bb85292e1c091647cd9878f2c15b922e661c2e5da157c311fc3d7ce37"
     }
    ],
-   "name": "unknown_version"
+   "name": "schema_v2_without_new_fields"
   },
   {
    "expect": {

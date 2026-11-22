@@ -341,6 +341,7 @@ impl ActivityLog {
             manifests: self.manifests,
             reason: None,
             human_assertion: None,
+            agent_coedited: false,
             body: DraftBody::Command(CommandDraft {
                 id: LIFECYCLE_COMMAND.to_string(),
                 major: 1,
@@ -353,6 +354,7 @@ impl ActivityLog {
                 consumed_r1: Vec::new(),
                 outputs: vec![OutputDigest { entity: Some(change.job.to_string()), digest }],
                 algorithms: Vec::new(),
+                event_sources: Vec::new(),
             }),
         })
     }

@@ -73,6 +73,7 @@ The route stage of the pipeline. ROUTE decides which branch a commit lands on (a
 ## Open questions
 
 - **Resolved here:** `<client>` comes from the agent name bound by `AUTO.MCP.SESS` (REQ-AUTO.MCP.SESS-001), not from self-asserted client data, and `<n>` is per client. Confirm with `AUTO.MCP.SESS`.
+- **Part 2 unblocked (2026-11-21, `CORE.JRN.ENTRY` REQ-013/REQ-014, maintainer decision).** The entry header now records `agent_coedited` (REQ-002, AC-2) and the stage that added each event (`command.event_sources`, so a `BranchCreated` the route stage adds is recorded `bus_route` and folds through `Branches::apply`). The pipeline passes the real source of every event (`handler`, and `bus_approval` for an approval's `RequestApproved`) through `CommandDraft.event_sources`; the route stage sets `EntryDraft.agent_coedited` and appends `bus_route` for the events it adds. Both are written only as schema version 2, so ordinary entries stay version 1.
 - Whether an agent's undo on its own branch should be W1 rather than W2 (raised by `CORE.JRN.UNDO`) does not change routing: both classes go to the agent branch.
 
 ## Children
