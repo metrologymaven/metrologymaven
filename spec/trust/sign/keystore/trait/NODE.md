@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-keystore]
 satisfies: [REQ-TRUST.SIGN.KEYSTORE-001, REQ-TRUST.SIGN.KEYSTORE-006, REQ-TRUST.SIGN.KEYSTORE-007]
 covers: []
 depends_on: [TRUST.SIGN.DSSE]

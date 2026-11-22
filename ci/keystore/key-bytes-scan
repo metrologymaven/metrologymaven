@@ -1,0 +1,393 @@
+#!/usr/bin/env python3
+"""Static key-bytes scan for keystore crates (spec node TRUST.SIGN.KEYSTORE.TRAIT, REQ-004).
+
+Scans every Rust source file under `crates/fid-keystore*/src/` (or `--root <path>`) and fails
+non-zero if:
+  1. Any private-key type derives `Debug`, `Display` or `Serialize` (AC-2).
+  2. Any private-key type (or `KeyHandle`) implements `Serialize`, `Display`, or a
+     content-bearing `Debug` (referencing secret/byte fields or lacking redaction).
+  3. Any non-test code path passes private-key-typed values or secret key bytes to file,
+     log, journal, or package writers.
+  4. Any non-test code calls private-key export APIs (`NCryptExportKey`,
+     `SecKeyCopyExternalRepresentation`, `to_pkcs8_pem`, `to_pkcs8_der`, `to_sec1_der`,
+     `to_sec1_pem`) or returns a private-key type from a `pub fn`.
+
+Stdlib only; runs cleanly on Linux, macOS and Windows.
+"""
+
+import os
+import re
+import sys
+
+PRIVATE_TYPE_NAME_RE = re.compile(
+    r"(?i)^(?:(?:private|secret|signing)[a-z0-9_]*key[a-z0-9_]*|key[a-z0-9_]*(?:material|seed|bytes|secret|scalar)[a-z0-9_]*|secretscalar|rawkey|softwaresigner)$"
+)
+
+KNOWN_PRIVATE_TYPES = {
+    "PrivateKeyMaterial",
+    "PrivateKey",
+    "SecretKey",
+    "SigningKey",
+    "SoftwareSigner",
+    "KeyMaterial",
+    "SecretScalar",
+    "KeySeed",
+}
+
+ALWAYS_REDACTED_TYPES = {"KeyHandle", "ReleasedSigner"}
+
+FORBIDDEN_DERIVES = {"Debug", "Display", "Serialize"}
+
+SECRET_FIELD_ACCESS_RE = re.compile(
+    r"\.(?:bytes|key|seed|scalar|secret|raw|material|to_bytes|as_bytes|as_slice|0)\b"
+)
+
+REDACTION_RE = re.compile(r"(?i)redacted|\.\.\.")
+
+WRITER_SINKS = [
+    ("file writer", re.compile(r"\b(?:std::)?fs::write\b|\bFile::create\b|\bOpenOptions\b|\bwrite_all\s*\(|\bwrite_fmt\s*\(|\bwriteln!\s*\(|\bwrite_sidecar\s*\(")),
+    ("log writer", re.compile(r"\b(?:e?println|e?print|dbg)!\s*\(|\b(?:log|tracing)::(?:error|warn|info|debug|trace)!\s*\(")),
+    ("journal writer", re.compile(r"\b(?:append_event|JournalWriter|EventWriter|journal_write)\b")),
+    ("package writer", re.compile(r"\b(?:PackageWriter|ZipWriter|write_entry|fid_pkg::[a-zA-Z0-9_:]*write)\b")),
+]
+
+EXPORT_API_DENYLIST = [
+    ("NCryptExportKey", re.compile(r"\bNCryptExportKey\b")),
+    ("SecKeyCopyExternalRepresentation", re.compile(r"\bSecKeyCopyExternalRepresentation\b")),
+    ("to_pkcs8_pem", re.compile(r"\bto_pkcs8_pem\b")),
+    ("to_pkcs8_der", re.compile(r"\bto_pkcs8_der\b")),
+    ("to_sec1_der", re.compile(r"\bto_sec1_der\b")),
+    ("to_sec1_pem", re.compile(r"\bto_sec1_pem\b")),
+]
+
+SECRET_EXPR_RE = re.compile(
+    r"\b(?:private_key|secret_key|key_bytes|secret_bytes|raw_private|pkcs8_private)\b|\.\s*(?:material\s*\.\s*bytes|private_key|secret_key)\b"
+)
+
+
+def is_private_type_name(name: str) -> bool:
+    return name in KNOWN_PRIVATE_TYPES or bool(PRIVATE_TYPE_NAME_RE.match(name))
+
+
+def strip_comments_preserve_lines(source: str) -> str:
+    """Replaces // and /* ... */ comments with spaces while keeping newlines intact."""
+    out = []
+    i = 0
+    n = len(source)
+    in_str = False
+    in_char = False
+    block_depth = 0
+    while i < n:
+        ch = source[i]
+        nxt = source[i + 1] if i + 1 < n else ""
+        if block_depth > 0:
+            if ch == "/" and nxt == "*":
+                block_depth += 1
+                out.append("  ")
+                i += 2
+            elif ch == "*" and nxt == "/":
+                block_depth -= 1
+                out.append("  ")
+                i += 2
+            elif ch == "\n":
+                out.append("\n")
+                i += 1
+            else:
+                out.append(" ")
+                i += 1
+            continue
+        if in_str:
+            out.append(ch)
+            if ch == "\\" and i + 1 < n:
+                out.append(source[i + 1])
+                i += 2
+                continue
+            if ch == '"':
+                in_str = False
+            i += 1
+            continue
+        if in_char:
+            out.append(ch)
+            if ch == "\\" and i + 1 < n:
+                out.append(source[i + 1])
+                i += 2
+                continue
+            if ch == "'":
+                in_char = False
+            i += 1
+            continue
+        if ch == "/" and nxt == "/":
+            while i < n and source[i] != "\n":
+                out.append(" ")
+                i += 1
+            continue
+        if ch == "/" and nxt == "*":
+            block_depth = 1
+            out.append("  ")
+            i += 2
+            continue
+        if ch == '"':
+            in_str = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "'" and i + 2 < n and (source[i + 1] == "\\" or source[i + 2] == "'"):
+            in_char = True
+            out.append(ch)
+            i += 1
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def mask_cfg_test_blocks(code: str) -> str:
+    """Replaces #[cfg(test)] item blocks with blank lines to preserve line numbers."""
+    chars = list(code)
+    pattern = re.compile(r"#\s*\[\s*cfg\s*\(\s*test\s*\)\s*\]")
+    pos = 0
+    n = len(code)
+    while True:
+        m = pattern.search(code, pos)
+        if not m:
+            break
+        start = m.start()
+        # Find the opening brace of the following item (`mod tests { ... }` or `fn ... { ... }`).
+        brace = code.find("{", m.end())
+        semi = code.find(";", m.end())
+        if semi != -1 and (brace == -1 or semi < brace):
+            end = semi + 1
+        elif brace != -1:
+            depth = 0
+            i = brace
+            while i < n:
+                if code[i] == "{":
+                    depth += 1
+                elif code[i] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        i += 1
+                        break
+                i += 1
+            end = i
+        else:
+            break
+        for k in range(start, end):
+            if chars[k] != "\n":
+                chars[k] = " "
+        pos = end
+    return "".join(chars)
+
+
+def line_of(text: str, offset: int) -> int:
+    return text.count("\n", 0, offset) + 1
+
+
+def find_matching_brace(text: str, open_idx: int) -> int:
+    depth = 0
+    for i in range(open_idx, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return i
+    return len(text) - 1
+
+
+def extract_derive_traits(attr_block: str):
+    traits = []
+    for m in re.finditer(r"#\s*\[\s*derive\s*\(([^)]*)\)\s*\]", attr_block, re.DOTALL):
+        for raw in m.group(1).split(","):
+            item = raw.strip()
+            if not item:
+                continue
+            leaf = item.split("::")[-1].strip()
+            traits.append((leaf, m.start()))
+    return traits
+
+
+def scan_file(path: str) -> list[str]:
+    with open(path, "r", encoding="utf-8") as f:
+        raw_source = f.read()
+    stripped = strip_comments_preserve_lines(raw_source)
+    code = mask_cfg_test_blocks(stripped)
+    findings: list[str] = []
+
+    # 1. Discover struct/enum declarations and inspect preceding attributes for forbidden derives.
+    discovered_private: set[str] = set()
+    type_decl_re = re.compile(
+        r"(?P<attrs>(?:\s*#\[[^\]]*\])*)\s*(?:pub(?:\([^)]*\))?\s+)?(?P<kind>struct|enum)\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)",
+        re.DOTALL,
+    )
+    for m in type_decl_re.finditer(code):
+        name = m.group("name")
+        if is_private_type_name(name):
+            discovered_private.add(name)
+        if is_private_type_name(name) or name in ALWAYS_REDACTED_TYPES:
+            attrs = m.group("attrs") or ""
+            for trait_name, rel_off in extract_derive_traits(attrs):
+                if trait_name in FORBIDDEN_DERIVES:
+                    ln = line_of(code, m.start() + rel_off)
+                    findings.append(
+                        f"{path}:{ln}: forbidden derive({trait_name}) on private-key type {name}"
+                    )
+
+    all_private_types = KNOWN_PRIVATE_TYPES | discovered_private
+
+    # 2. Check trait impls (Serialize, Display, Debug) on private-key and redacted types.
+    impl_re = re.compile(
+        r"\bimpl(?:\s*<[^>]*>)?\s+(?P<trait>[A-Za-z0-9_:]+)\s+for\s+(?P<ty>[A-Za-z_][A-Za-z0-9_]*)(?:\s*<[^>]*>)?[^{;]*\{",
+        re.DOTALL,
+    )
+    for m in impl_re.finditer(code):
+        trait_leaf = m.group("trait").split("::")[-1]
+        ty = m.group("ty")
+        if ty not in all_private_types and ty not in ALWAYS_REDACTED_TYPES:
+            continue
+        open_idx = m.end() - 1
+        close_idx = find_matching_brace(code, open_idx)
+        body = code[open_idx : close_idx + 1]
+        ln = line_of(code, m.start())
+        if trait_leaf == "Serialize":
+            findings.append(f"{path}:{ln}: forbidden impl Serialize for private-key type {ty}")
+        elif trait_leaf == "Display":
+            findings.append(f"{path}:{ln}: forbidden impl Display for private-key type {ty}")
+        elif trait_leaf == "Debug":
+            if SECRET_FIELD_ACCESS_RE.search(body) or not REDACTION_RE.search(body):
+                findings.append(
+                    f"{path}:{ln}: content-bearing Debug impl on private-key type {ty} "
+                    "(must redact and must not reference key/byte fields)"
+                )
+
+    # 3. Check public functions returning a private-key type.
+    pub_fn_re = re.compile(
+        r"\bpub\s+(?:async\s+)?fn\s+(?P<fn>[A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^>]*>)?\s*\([^)]*\)\s*->\s*(?P<ret>[^{;]+)",
+        re.DOTALL,
+    )
+    for m in pub_fn_re.finditer(code):
+        ret = m.group("ret")
+        for pty in sorted(all_private_types):
+            if re.search(rf"\b{re.escape(pty)}\b", ret):
+                ln = line_of(code, m.start())
+                findings.append(
+                    f"{path}:{ln}: pub fn `{m.group('fn')}` returns private-key type {pty}"
+                )
+
+    # 4. Track local variables / parameters typed as private-key types.
+    tracked_vars: dict[str, str] = {}
+    type_alt = "|".join(re.escape(t) for t in sorted(all_private_types))
+    if type_alt:
+        # Parameter or typed let: `name: &PrivateKeyMaterial`, `let name: SigningKey = ...`
+        typed_var_re = re.compile(
+            rf"\b(?P<var>[a-z_][a-z0-9_]*)\s*:\s*(?:&\s*(?:mut\s+)?)?(?:[A-Za-z0-9_:]+::)?(?P<ty>{type_alt})\b"
+        )
+        for m in typed_var_re.finditer(code):
+            tracked_vars[m.group("var")] = m.group("ty")
+        # Constructor let: `let name = PrivateKeyMaterial { ... }` or `SoftwareSigner::...`
+        ctor_var_re = re.compile(
+            rf"\blet\s+(?:mut\s+)?(?P<var>[a-z_][a-z0-9_]*)\s*=\s*(?:[A-Za-z0-9_:]+::)?(?P<ty>{type_alt})\b"
+        )
+        for m in ctor_var_re.finditer(code):
+            tracked_vars[m.group("var")] = m.group("ty")
+
+    # 5. Check export API denylist and writer sinks statement by statement.
+    for api_name, api_re in EXPORT_API_DENYLIST:
+        for m in api_re.finditer(code):
+            ln = line_of(code, m.start())
+            findings.append(f"{path}:{ln}: forbidden private-key export API `{api_name}`")
+
+    # Inspect each semicolon-terminated statement (and lines) for writer sinks receiving private keys.
+    offset = 0
+    for stmt in code.split(";"):
+        stmt_start = offset
+        offset += len(stmt) + 1
+        for sink_kind, sink_re in WRITER_SINKS:
+            sm = sink_re.search(stmt)
+            if not sm:
+                continue
+            call_tail = stmt[sm.start() :]
+            ln = line_of(code, stmt_start + sm.start())
+            if SECRET_EXPR_RE.search(call_tail):
+                findings.append(
+                    f"{path}:{ln}: private-key expression passed to {sink_kind}"
+                )
+                continue
+            for var, pty in sorted(tracked_vars.items()):
+                if re.search(rf"\b{re.escape(var)}\b", call_tail):
+                    findings.append(
+                        f"{path}:{ln}: private-key-typed value `{var}` ({pty}) passed to {sink_kind}"
+                    )
+                    break
+            else:
+                for pty in sorted(all_private_types):
+                    if re.search(rf"\b{re.escape(pty)}\b", call_tail):
+                        findings.append(
+                            f"{path}:{ln}: private-key type {pty} passed to {sink_kind}"
+                        )
+                        break
+
+    return findings
+
+
+def collect_targets(roots: list[str]) -> list[str]:
+    files = []
+    for root in roots:
+        if os.path.isfile(root):
+            if root.endswith(".rs"):
+                files.append(root)
+            continue
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames.sort()
+            for fname in sorted(filenames):
+                if fname.endswith(".rs"):
+                    files.append(os.path.join(dirpath, fname))
+    return files
+
+
+def default_roots() -> list[str]:
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    crates_dir = os.path.join(repo_root, "crates")
+    roots = []
+    if os.path.isdir(crates_dir):
+        for entry in sorted(os.listdir(crates_dir)):
+            if entry == "fid-keystore" or entry.startswith("fid-keystore-"):
+                src = os.path.join(crates_dir, entry, "src")
+                if os.path.isdir(src):
+                    roots.append(src)
+    return roots
+
+
+def main(argv: list[str]) -> int:
+    roots: list[str] = []
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--root":
+            if i + 1 >= len(argv):
+                print("usage: key-bytes-scan [--root <path>]", file=sys.stderr)
+                return 2
+            roots.append(argv[i + 1])
+            i += 2
+        else:
+            print(f"unknown argument: {argv[i]}", file=sys.stderr)
+            return 2
+    if not roots:
+        roots = default_roots()
+    targets = collect_targets(roots)
+    if not targets:
+        print("key-bytes-scan: no Rust source files found to scan", file=sys.stderr)
+        return 2
+    all_findings: list[str] = []
+    for path in targets:
+        all_findings.extend(scan_file(path))
+    if all_findings:
+        for finding in all_findings:
+            print(finding, file=sys.stderr)
+        print(f"key-bytes-scan: {len(all_findings)} violation(s) in {len(targets)} file(s)", file=sys.stderr)
+        return 1
+    print(f"key-bytes-scan: ok ({len(targets)} file(s) scanned, 0 violations)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
