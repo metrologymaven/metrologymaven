@@ -2192,6 +2192,7 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-num",
+ "fid-pkg",
  "fid-rep",
  "fid-types",
 ]

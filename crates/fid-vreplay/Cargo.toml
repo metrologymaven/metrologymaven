@@ -1,6 +1,6 @@
 [package]
 name = "fid-vreplay"
-description = "Metrology Maven standalone verifier replay: outcome classification and package aggregation over the REP-1 table (spec node TRUST.REPLAY.COMPARE)"
+description = "Metrology Maven standalone verifier replay: outcome classification and package aggregation over the REP-1 table (TRUST.REPLAY.COMPARE) and replayable-set selection with the replay plan (TRUST.REPLAY.SELECT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -18,6 +18,12 @@ fid-canon = { path = "../fid-canon" }
 fid-num = { path = "../fid-num" }
 fid-rep = { path = "../fid-rep" }
 fid-types = { path = "../fid-types" }
+
+# Tests only: the SELECT acceptance tests open the fixture packages with the real package
+# reader (TRUST.PKG.READER). The library reads a package through its own `PackageView` trait,
+# so the verifier's link graph gains nothing from fid-pkg here (H-3).
+[dev-dependencies]
+fid-pkg = { path = "../fid-pkg" }
 
 [lints]
 workspace = true
