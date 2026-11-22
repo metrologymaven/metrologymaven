@@ -287,25 +287,7 @@ impl Report {
 
     /// Canonical JSON report (`status`, `metrics`, `sources`, `findings`).
     pub fn to_json(&self) -> Vec<u8> {
-        let metrics = self
-            .metrics
-            .iter()
-            .map(|m| {
-                let mut o = obj(vec![
-                    ("id", s(&m.id)),
-                    ("title", s(&m.title)),
-                    ("source", s(&m.source)),
-                    ("method", s(m.method.as_str())),
-                    ("unit", s(&m.unit)),
-                    ("aggregation", s(m.aggregation.as_str())),
-                    ("biases", CValue::Arr(m.biases.iter().map(|b| s(b)).collect())),
-                ]);
-                if let (CValue::Obj(map), Some(sel)) = (&mut o, &m.selector) {
-                    map.insert("selector".to_string(), s(sel));
-                }
-                o
-            })
-            .collect();
+        let metrics = self.metrics.iter().map(metric_to_cvalue).collect();
         let sources = self
             .sources
             .iter()
@@ -350,6 +332,22 @@ fn s(v: &str) -> CValue {
 
 fn obj(fields: Vec<(&str, CValue)>) -> CValue {
     CValue::Obj(fields.into_iter().map(|(k, v)| (k.to_string(), v)).collect::<BTreeMap<_, _>>())
+}
+
+pub(crate) fn metric_to_cvalue(m: &Metric) -> CValue {
+    let mut o = obj(vec![
+        ("id", s(&m.id)),
+        ("title", s(&m.title)),
+        ("source", s(&m.source)),
+        ("method", s(m.method.as_str())),
+        ("unit", s(&m.unit)),
+        ("aggregation", s(m.aggregation.as_str())),
+        ("biases", CValue::Arr(m.biases.iter().map(|b| s(b)).collect())),
+    ]);
+    if let (CValue::Obj(map), Some(sel)) = (&mut o, &m.selector) {
+        map.insert("selector".to_string(), s(sel));
+    }
+    o
 }
 
 fn canonical(v: &CValue) -> Vec<u8> {
@@ -436,7 +434,36 @@ pub fn check_files(defs: &Path, sources: &Path) -> Result<Report, DefError> {
     check(&d, &defs.display().to_string(), &s, &sources.display().to_string())
 }
 
-fn read_text(path: &Path) -> Result<String, DefError> {
+/// Reads a definitions file (at most [`MAX_BYTES`]) and validates every `[[metric]]` entry
+/// without requiring a companion sources file. Returns the valid metrics in file order together
+/// with the raw file bytes.
+pub fn load_definitions_file(defs: &Path) -> Result<(Vec<Metric>, Vec<u8>), DefError> {
+    let bytes = read_bytes(defs)?;
+    let file = defs.display().to_string();
+    let text = String::from_utf8(bytes.clone())
+        .map_err(|_| DefError::Parse { file: file.clone(), message: "not valid UTF-8".to_string() })?;
+    let metrics = parse_definitions(&text, &file)?;
+    Ok((metrics, bytes))
+}
+
+/// Validates the `[[metric]]` entries of a definitions text without checking external source
+/// references. Returns `Err(DefError::Parse)` on TOML errors or any metric-level finding.
+pub fn parse_definitions(defs: &str, defs_name: &str) -> Result<Vec<Metric>, DefError> {
+    let defs_t = parse_table(defs, defs_name)?;
+    let mut report = Report::default();
+    let mut metric_ids: BTreeSet<String> = BTreeSet::new();
+    for (i, t) in entries(&defs_t, "metric", Kind::DefsFile, &mut report.findings) {
+        if let Some(id) = check_metric(i, t, &metric_ids, None, &mut report) {
+            metric_ids.insert(id);
+        }
+    }
+    if let Some(first) = report.findings.first() {
+        return Err(DefError::Parse { file: defs_name.to_string(), message: first.to_string() });
+    }
+    Ok(report.metrics)
+}
+
+fn read_bytes(path: &Path) -> Result<Vec<u8>, DefError> {
     let file = path.display().to_string();
     let mut bytes = Vec::new();
     std::fs::File::open(path)
@@ -445,6 +472,12 @@ fn read_text(path: &Path) -> Result<String, DefError> {
     if bytes.len() > MAX_BYTES {
         return Err(DefError::Io { file, message: format!("larger than {MAX_BYTES} bytes") });
     }
+    Ok(bytes)
+}
+
+fn read_text(path: &Path) -> Result<String, DefError> {
+    let file = path.display().to_string();
+    let bytes = read_bytes(path)?;
     String::from_utf8(bytes).map_err(|_| DefError::Parse { file, message: "not valid UTF-8".to_string() })
 }
 
@@ -474,7 +507,7 @@ pub fn check(defs: &str, defs_name: &str, sources: &str, sources_name: &str) -> 
 
     let mut metric_ids: BTreeSet<String> = BTreeSet::new();
     for (i, t) in entries(&defs_t, "metric", Kind::DefsFile, &mut report.findings) {
-        if let Some(id) = check_metric(i, t, &metric_ids, &source_ids, &mut report) {
+        if let Some(id) = check_metric(i, t, &metric_ids, Some(&source_ids), &mut report) {
             metric_ids.insert(id);
         }
     }
@@ -533,7 +566,7 @@ fn req_str(t: &toml::Table, key: &str) -> Result<String, Code> {
 }
 
 /// IDs are lowercase ASCII letters, digits, `_` and `-`, starting with a letter.
-fn valid_id(id: &str) -> bool {
+pub fn valid_id(id: &str) -> bool {
     let mut chars = id.chars();
     matches!(chars.next(), Some(c) if c.is_ascii_lowercase())
         && chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
@@ -628,7 +661,7 @@ fn check_metric(
     index: usize,
     t: &toml::Table,
     seen: &BTreeSet<String>,
-    sources: &BTreeMap<String, Option<String>>,
+    sources: Option<&BTreeMap<String, Option<String>>>,
     report: &mut Report,
 ) -> Option<String> {
     let id = req_str(t, "id");
@@ -711,7 +744,7 @@ fn check_metric(
             }
         }
     }
-    if let Some(src) = &source {
+    if let (Some(src), Some(sources)) = (&source, sources) {
         match sources.get(src) {
             None => cx.push(Code::SourceUnknown, Some(src)),
             Some(Some(url)) => {

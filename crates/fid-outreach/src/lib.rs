@@ -6,6 +6,8 @@
 //!   `OUTR.BRAND.ASSET.ATTR`).
 //! - [`metrics::def`]: adoption metric definitions, source list and no-telemetry guard (spec node
 //!   `OUTR.COMM.METRIC.DEF`).
+//! - [`metrics::snap`]: append-only metric snapshot store and quarterly values (spec node
+//!   `OUTR.COMM.METRIC.SNAP`).
 //! - [`copy_guard`]: copied-text policy guard, D-013 option C (spec node `OUTR.BRAND.COPY`).
 //! - [`review_gate`]: human trade-dress review gate; its checklist and record parsers are shared
 //!   with [`copy_guard`] (spec node `OUTR.BRAND.REVIEW`).

@@ -1,0 +1,1 @@
+{"collected_at":"2027-03-15T00:00:00Z","definition_sha256":"sha256:1a97076ac300a3660649ff8589f955cf343c1bb03a943d478d2ebc94ec618363","metric_id":"downloads","raw_file":"2027-03-15T00-00-00Z.raw","raw_sha256":"sha256:ee43b3548dbf8ebebd919a085fb09ec466cac8f7980f2f8241d164bcffeca00b","source_url":"https://api.example.org/releases/latest","unit":"downloads","value":60}

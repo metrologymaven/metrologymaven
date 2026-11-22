@@ -17,6 +17,12 @@
 //! summary; `--json` prints the canonical JSON report instead. Exits 0 with no findings, 1 with
 //! any, and 2 on unreadable or unparsable input or bad usage.
 //!
+//! `metric-quarter --store <dir> --defs <file> --quarter <YYYYQn> --out <dir> [--json]` (spec
+//! node `OUTR.COMM.METRIC.SNAP`): verifies and re-extracts a quarter's snapshots from the store,
+//! aggregates per metric, and writes `<out>/<YYYY>Q<n>.json` and `.md`. Exits 0 on success
+//! (including with `definition_changed` warnings), 1 on `snapshot_mismatch` or `sum_overflow`
+//! (writing nothing), and 2 on `quarter_invalid`, unreadable/unparsable input, or bad usage.
+//!
 //! `plan-check --criteria <file> --apps <apps.toml> --plan <file> --reviews <dir> [--base <file>]
 //! [--json]` (spec node `OUTR.LAUNCH.PLAN.FMT`): validates the milestone criteria file, the D-017
 //! rule, plan-document dates and announced criteria. Exits 0 with no findings, 1 with any, and 2
@@ -87,7 +93,7 @@ use fid_outreach::doc_run;
 use fid_outreach::guide_check;
 use fid_outreach::launch_gate;
 use fid_outreach::launch_plan;
-use fid_outreach::metrics::def;
+use fid_outreach::metrics::{def, snap};
 use fid_outreach::moderation;
 use fid_outreach::qa::a11y::{self, Options};
 use fid_outreach::ref_pages;
@@ -104,6 +110,7 @@ commands:
   copy-guard --policy <file> --checklist <file> --records <dir> --root <dir> [--json]
   review-gate --record <file> --release <id> --author <id>... --roster <file> --checklist <file> [--bots <file>] [--json]
   metric-def check --defs <file> --sources <file> [--json]
+  metric-quarter --store <dir> --defs <file> --quarter <YYYYQn> --out <dir> [--json]
   plan-check --criteria <file> --apps <apps.toml> --plan <file> --reviews <dir> [--base <file>] [--json]
   gate-check --milestone <id> --release <tag> --author <handle> --criteria <file> --tree <dir> --trace <file> --status <file> --tests <file> --signoffs <dir> --roster <file> --out <dir> [--json]
   qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]
@@ -125,6 +132,7 @@ fn main() -> ExitCode {
         (Some("copy-guard"), _) => copy_guard_cmd(args.get(1..).unwrap_or(&[])),
         (Some("review-gate"), _) => review_gate_cmd(args.get(1..).unwrap_or(&[])),
         (Some("metric-def"), Some("check")) => metric_def_check(args.get(2..).unwrap_or(&[])),
+        (Some("metric-quarter"), _) => metric_quarter_cmd(args.get(1..).unwrap_or(&[])),
         (Some("plan-check"), _) => plan_check(args.get(1..).unwrap_or(&[])),
         (Some("gate-check"), _) => gate_check(args.get(1..).unwrap_or(&[])),
         (Some("qa"), Some("a11y")) => qa_a11y(args.get(2..).unwrap_or(&[])),
@@ -304,6 +312,47 @@ fn metric_def_check(args: &[String]) -> ExitCode {
             }
             eprintln!("{e}");
             ExitCode::from(2)
+        }
+    }
+}
+
+fn metric_quarter_cmd(args: &[String]) -> ExitCode {
+    let mut opts = BTreeMap::<&str, &str>::new();
+    let mut json = false;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--json" => json = true,
+            flag @ ("--store" | "--defs" | "--quarter" | "--out") => {
+                let Some(v) = it.next() else { return usage() };
+                if opts.insert(flag, v.as_str()).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let (Some(store), Some(defs), Some(quarter), Some(out)) =
+        (opts.get("--store"), opts.get("--defs"), opts.get("--quarter"), opts.get("--out"))
+    else {
+        return usage();
+    };
+    let inputs = snap::QuarterInputs { store: Path::new(store), defs: Path::new(defs), quarter, out: Path::new(out) };
+    match snap::run_quarter(&inputs) {
+        Ok((report, json_path, md_path)) => {
+            if json {
+                emit(&report.to_json());
+            } else {
+                print!("{}", report.render_text(&json_path, &md_path));
+            }
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            if json {
+                emit(&e.to_json());
+            }
+            eprintln!("metric-quarter: {e}");
+            ExitCode::from(e.exit_code())
         }
     }
 }
