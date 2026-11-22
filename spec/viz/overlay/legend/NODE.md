@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid view set-legend]
 mcp: [view_set_legend]
 journal: [view.set_legend@1]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # VIZ.OVERLAY.LEGEND: Kernel legend display and placement
@@ -38,6 +38,7 @@ Draw the legend object the kernel emits (bin edges, counts, percentages, statist
 - **REQ-VIZ.OVERLAY.LEGEND-003** `view.set_legend@1` shall set legend visibility, anchor corner, orientation and size for a viewport and shall be journaled.
 - **REQ-VIZ.OVERLAY.LEGEND-004** If the kernel legend digest does not match the active ColorMapSpec and field digests, then the legend shall show an "updating" badge and shall not show counts from the stale legend.
 - **REQ-VIZ.OVERLAY.LEGEND-005** The legend shall show the colour-map palette ID, the display unit and the formatter ID.
+- **REQ-VIZ.OVERLAY.LEGEND-006** The legend shall optionally render an embedded deviation distribution histogram alongside each bin scaled directly from the kernel legend's bin percentages, and hovering or focusing a bin row shall emit a display-only bin-isolation mask to `VIZ.RENDER.LOD.ATTR` without mutating document state.
 
 ## Acceptance criteria
 
@@ -46,12 +47,13 @@ Draw the legend object the kernel emits (bin edges, counts, percentages, statist
 - **AC-3** (replay) Given the journal from AC-2, when replayed in exact mode, then the outcome is `IDENTICAL`.
 - **AC-4** (staleness) Given a ColorMapSpec change whose kernel legend has not arrived, when the frame is drawn, then the legend shows the "updating" badge and no counts.
 - **AC-5** (error path) Given `--anchor middle`, when the command runs, then it fails with error `InvalidAnchor` and journals nothing.
+- **AC-6** Given bin 1 hovered or focused in the legend with histogram display enabled, then bar widths are proportional to the kernel legend percentages and the emitted isolation mask equals `{ bin: 1 }` with zero journal writes.
 
 ## Design
 
-- **Registry command(s):** `view.set_legend@1`, W2. Parameters: `viewport: ViewportId`, `visible: bool?`, `anchor: TopLeft|TopRight|BottomLeft|BottomRight?`, `orientation: Vertical|Horizontal?`, `size_px: u32 (80..=800)?`. Result: `LegendLayout`.
-- **Data structures:** `LegendLayout`; `LegendDisplayModel` (a view over the kernel `Legend`, never a copy with new numbers).
-- **Algorithm:** check legend digests against active spec and field; if matched, lay out kernel strings into rows; if not, render updating state.
+- **Registry command(s):** `view.set_legend@1`, W2. Parameters: `viewport: ViewportId`, `visible: bool?`, `anchor: TopLeft|TopRight|BottomLeft|BottomRight?`, `orientation: Vertical|Horizontal?`, `size_px: u32 (80..=800)?`, `show_histogram: bool?`. Result: `LegendLayout`.
+- **Data structures:** `LegendLayout`; `LegendDisplayModel` (a view over the kernel `Legend`, never a copy with new numbers); `BinHoverMask(Option<u8>)` (transient display-only state).
+- **Algorithm:** check legend digests against active spec and field; if matched, lay out kernel strings and embedded histogram bars proportional to kernel bin percentages (`research/viz-ux-sota/UX-INTERACTION-SPEC.md`); emit `BinHoverMask` on pointer hover or keyboard focus of a bin row; if mismatched, render updating state.
 - **Errors:** `InvalidAnchor`, `SizeOutOfRange`, `UnknownViewport`.
 - **Determinism:** D0 (layout state is pure data; display text is kernel text).
 - **Performance budget:** legend layout under 1 ms per frame [unverified].
@@ -63,7 +65,7 @@ Draw the legend object the kernel emits (bin edges, counts, percentages, statist
 
 ## Build prompt
 
-> In crate `fid-overlay`, implement the viewport legend. Its display model is a view over the kernel-emitted `Legend` (bin edges, counts, percentages, stats, formatter ID, palette ID, display unit, digests); never recompute or re-round any number. If the legend's digests do not match the active ColorMapSpec and deviation field, draw an "updating" badge and no counts. Add registry command `view.set_legend@1` (W2; CLI `fid view set-legend`, MCP `view_set_legend`) with optional `visible`, `anchor` (four corners), `orientation`, `size_px` 80–800, per viewport; journal it. Tests: canonical-JSON byte equality of the display model with fixture legend `legend-5bin.json`; command result and single journal entry; exact replay `IDENTICAL`; updating state; `InvalidAnchor` error with nothing journaled. Rules: no panics or `unsafe`; deny unwrap/expect/panic/todo/unimplemented/unreachable; no value of record computed on the GPU or in the UI (CONSTITUTION C1, C2).
+> In crate `fid-overlay`, implement the viewport legend. Its display model is a view over the kernel-emitted `Legend` (bin edges, counts, percentages, stats, formatter ID, palette ID, display unit, digests); never recompute or re-round any number. Render optional embedded deviation histogram bars directly from the kernel legend's bin percentages and emit a transient display-only bin-isolation mask on bin hover/focus (`research/viz-ux-sota/UX-INTERACTION-SPEC.md`). If the legend's digests do not match the active ColorMapSpec and deviation field, draw an "updating" badge and no counts. Add registry command `view.set_legend@1` (W2; CLI `fid view set-legend`, MCP `view_set_legend`) with optional `visible`, `anchor` (four corners), `orientation`, `size_px` 80–800 and `show_histogram`, per viewport; journal it. Tests: canonical-JSON byte equality of the display model with fixture legend `legend-5bin.json`; command result and single journal entry; exact replay `IDENTICAL`; updating state; `InvalidAnchor` error with nothing journaled; histogram scaling and hover isolation. Rules: no panics or `unsafe`; deny unwrap/expect/panic/todo/unimplemented/unreachable; no value of record computed on the GPU or in the UI (CONSTITUTION C1, C2).
 
 ## Open questions
 

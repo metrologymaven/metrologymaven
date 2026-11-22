@@ -16,7 +16,7 @@ uses_artifacts: [FLOW.INSPECT.J1, FLOW.INSPECT.J7, FLOW.PERSONA.MAPS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # UX.SCREENS.INSPECT: Inspect app screens
@@ -47,6 +47,7 @@ The primary screens of the Inspect app (scan inspection): CAD and mesh import, P
 - **REQ-UX.SCREENS.INSPECT-003** Each wireframe and mockup shall use only package tokens, icons, components and patterns, and shall pass the design review with a result for every trade-dress rule and no incumbent screenshot in any source file.
 - **REQ-UX.SCREENS.INSPECT-004** Mockups shall use only synthetic or public data at realistic density (where shown: a characteristic table of at least 500 rows and an element tree of at least 10^4 items [unverified density targets]).
 - **REQ-UX.SCREENS.INSPECT-005** Each screen design shall state its role layout and a keyboard path for its main task; for this module the path shall run J1 from import to report with keyboard paths for every step except free-form viewport navigation, which has keyboard camera commands.
+- **REQ-UX.SCREENS.INSPECT-006** Wireframes and mockups for `SCR.INSP.CMAP`, `SCR.INSP.PMI`, `SCR.INSP.ALIGN` and `SCR.INSP.POINTS` shall include the spatial interaction patterns specified in `research/viz-ux-sota/UX-INTERACTION-SPEC.md` (histogram-embedded scrubbable colorbar, inline tolerance+uncertainty sparkbars, contextual 3D action strip, 3D tolerance-zone ghosts, cursor-pivot DRF orientation cube, Proposal Inbox wipe curtain and zero-chrome focus mode).
 
 ## Interfaces
 

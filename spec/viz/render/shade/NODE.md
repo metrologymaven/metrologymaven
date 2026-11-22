@@ -15,7 +15,7 @@ depends_on: [VIZ.RENDER.SCENE, VIZ.RENDER.FRAME, GEO.CAD]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # VIZ.RENDER.SHADE: Mesh and CAD shading, transparency and clip raster
@@ -61,6 +61,7 @@ MESH, CADFACE (faces, edges, silhouettes), ASSY (culling, instancing), OIT, CLIP
 
 - GEO.CAD is tagged P1b; P1a shades meshes only, and CAD faces, edges and assemblies land with GEO.CAD.
 - Report-quality depth peeling layer count and its budget are to be set with RPT.
+- GPU-driven Visibility Buffer, meshlet cluster LOD, Hi-Z culling, inspection shaders (Zebra/MatCap/Curvature), K-buffer OIT, and optional `T0_RT` hardware ray-query overlays (`VIZ.RENDER.SHADE.RT`) are governed by **D-051** and detailed in `research/viz-ux-sota/GPU-ARCHITECTURE.md`.
 
 ## Children
 
@@ -70,3 +71,4 @@ MESH, CADFACE (faces, edges, silhouettes), ASSY (culling, instancing), OIT, CLIP
 | VIZ.RENDER.SHADE.CAD | CAD faces, edges and large-assembly display (leaf, P1b) | 002 006 | SA.VIZ.01 |
 | VIZ.RENDER.SHADE.OIT | Order-independent transparency and report-quality peeling (leaf) | 003 | none |
 | VIZ.RENDER.SHADE.CLIPR | Clip-plane raster and display caps (leaf) | 004 005 | none |
+| VIZ.RENDER.SHADE.RT | Optional T0_RT hardware ray-query display overlays (leaf, P2) | 001 | none |

@@ -18,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # VIZ.OVERLAY.SCALEED: Colour-scale editor
@@ -49,6 +49,7 @@ The interactive editor for colour scales: choose stepped or continuous mode, set
 - **REQ-VIZ.OVERLAY.SCALEED-004** While the kernel re-bins after an edit, the preview shall show the "updating" state and the previous bins, never a locally computed approximation.
 - **REQ-VIZ.OVERLAY.SCALEED-005** Every editor control shall be operable by keyboard, and the panel shall be reachable from the command palette.
 - **REQ-VIZ.OVERLAY.SCALEED-006** Symmetric mode shall produce edges that are exact decimal negatives of each other about zero.
+- **REQ-VIZ.OVERLAY.SCALEED-007** Users shall be able to drag bin and tolerance handles directly on the viewport colorbar (with keyboard arrow equivalents), showing a clearly labelled `PREVIEW` state while dragging and issuing exactly one `view.set_colormap@1` command on release (or cancelling cleanly on `Esc`).
 
 ## Acceptance criteria
 
@@ -56,13 +57,14 @@ The interactive editor for colour scales: choose stepped or continuous mode, set
 - **AC-2** Given an edge typed as `0.1` mm, then the command receives `0.0001` exactly (string compare).
 - **AC-3** Given a comparison point with limits −0.2 mm and +0.3 mm selected and "from tolerance" with 5 steps, then edges are `-0.0002, -0.0001, 0, 0.0001, 0.0002, 0.0003` m; given a selection without limits, then `NoToleranceLimits` is shown and nothing is issued.
 - **AC-4** Given a slow binning job, then the preview shows "updating" with the previous colours.
-- **AC-5** Given the keyboard-only UI test, then every control is reachable and operable, and the palette entry opens the editor.
+- **AC-5** Given the keyboard-only UI test, then every control (including handle scrubbing) is reachable and operable, and the palette entry opens the editor.
+- **AC-6** Given a colorbar handle dragged 20 steps and released, then zero commands are journaled during the drag, exactly one `view.set_colormap@1` is journaled on release, and pressing `Esc` mid-drag journals nothing.
 
 ## Design
 
 - **Registry command(s):** none owned; issues `view.set_colormap@1` (W2).
-- **Data structures:** `EditorDraft { mode, edges_display: Vec<DecimalString>, unit, palette, out_of_range, symmetric }` (in memory only).
-- **Algorithm:** exact decimal scaling by powers of ten for mm and µm, and by the exact factor 0.0254 for inches; equal steps by exact decimal division where the result terminates, else rounding to 9 significant decimals stated in the preview [unverified that 9 is sufficient]; build spec; submit.
+- **Data structures:** `EditorDraft { mode, edges_display: Vec<DecimalString>, unit, palette, out_of_range, symmetric }` (in memory only); `HandleDragState { handle_idx, original_edges, preview_edges }`.
+- **Algorithm:** exact decimal scaling by powers of ten for mm and µm, and by the exact factor 0.0254 for inches; equal steps by exact decimal division where the result terminates, else rounding to 9 significant decimals stated in the preview [unverified that 9 is sufficient]; direct colorbar handle dragging snaps to display-unit increments in `EditorDraft` with a `PREVIEW` indicator (`research/viz-ux-sota/UX-INTERACTION-SPEC.md`) and submits one `view.set_colormap@1` on release so the kernel re-bins authoritatively.
 - **Errors:** `NoToleranceLimits`, plus validation errors from `view.set_colormap@1` shown inline.
 - **Determinism:** D0 (draft to spec is pure).
 - **Performance budget:** editor interactions < 16 ms [unverified].
@@ -74,7 +76,7 @@ The interactive editor for colour scales: choose stepped or continuous mode, set
 
 ## Build prompt
 
-> In crate `fid-overlay`, add module `scaleed`: a colour-scale editor panel (mode, range, steps, symmetric, per-edge decimal entry in the display unit, palette picker from `palette-catalogue@1`, out-of-range style) hosted through the shell panel host and reachable from the command palette. Convert display-unit decimals to metres by exact decimal scaling (`fid-num` kdec); "from tolerance" derives equal steps from the stored limits of the selected characteristic (`gdt.get_result@1`) or comparison band set, else `NoToleranceLimits`. Each confirm issues exactly one `view.set_colormap@1`; persist nothing else; the preview shows the `cmap::rebin` updating state, never a local approximation. Keyboard-operable. Tests AC-1..AC-5. Rules: no binary rounding of authored decimals; no panics or `unsafe`; deny unwrap/expect/panic/todo/unimplemented/unreachable.
+> In crate `fid-overlay`, add module `scaleed`: a colour-scale editor panel and direct draggable viewport colorbar handles (mode, range, steps, symmetric, per-edge decimal entry in the display unit, palette picker from `palette-catalogue@1`, out-of-range style, per `research/viz-ux-sota/UX-INTERACTION-SPEC.md`) hosted through the shell panel host and reachable from the command palette. Convert display-unit decimals to metres by exact decimal scaling (`fid-num` kdec); "from tolerance" derives equal steps from the stored limits of the selected characteristic (`gdt.get_result@1`) or comparison band set, else `NoToleranceLimits`. Dragging a handle shows a `PREVIEW` state and commits nothing until release (`Esc` cancels); each confirm or release issues exactly one `view.set_colormap@1`; persist nothing else; while the kernel re-bins, show the `cmap::rebin` updating state, never treating a local preview as values of record. Keyboard-operable. Tests AC-1..AC-6. Rules: no binary rounding of authored decimals; no panics or `unsafe`; deny unwrap/expect/panic/todo/unimplemented/unreachable.
 
 ## Open questions
 
