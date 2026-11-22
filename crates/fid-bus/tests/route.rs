@@ -282,7 +282,7 @@ fn harness(tag: &str) -> Harness {
         let h = WriteHandler { calls: Arc::clone(&calls), emits, gate: Arc::clone(&gate), entered: tx.clone() };
         handlers.register(d, Box::new(h)).unwrap();
     }
-    let activity = Arc::new(ActivityLog::new(&dir.0.join("alog"), ActivityLogConfig::default(), manifests()));
+    let activity = Arc::new(ActivityLog::new(dir.0.join("alog"), ActivityLogConfig::default(), manifests()));
     let bus = Bus::new(BusParts {
         table: table(),
         handlers,
