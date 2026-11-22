@@ -39,6 +39,7 @@ python fixtures/core/prj/cont/hier/make_fixtures.py --check
 python fixtures/core/prj/cont/life/make_identity_cases.py --check
 python fixtures/core/prj/stage/model/make_fixtures.py --check
 python fixtures/core/prj/stage/switch/make_fixtures.py --check
+python fixtures/core/prj/tree/group/make_fixtures.py --check
 python fixtures/core/prj/tree/model/make_fixtures.py --check
 python fixtures/core/reg/def/guide/make_fixtures.py --check
 python fixtures/core/reg/def/macro/make_golden.py --check

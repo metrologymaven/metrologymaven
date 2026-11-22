@@ -6,6 +6,7 @@ pub mod lifecycle;
 pub mod stage;
 pub mod stage_switch;
 pub mod tree;
+pub mod tree_cmds;
 
 pub use container::{
     create, Container, ContainerError, ContainerKind, ContainerView, CreatedBy, Hierarchy, Label, Part, Plan, Revision,
@@ -25,6 +26,11 @@ pub use stage_switch::{
     ACTIVE_STAGE_SET, SET_ACTIVE_STAGE,
 };
 pub use tree::{
-    DomainTranslate, Element, ElementName, ElementState, ElementTypeDef, ElementTypeRegistry, Group, Slot, Tree,
-    TreeError, TreeEvent, ELEMENT_CREATED, ELEMENT_SLOT_SET, GROUP_CREATED, GROUP_KIND, MAX_NAME_CHARS,
+    group_list_id, DomainTranslate, Element, ElementName, ElementState, ElementTypeDef, ElementTypeRegistry, Group,
+    Slot, Tree, TreeError, TreeEvent, ELEMENTS_MOVED, ELEMENT_CREATED, ELEMENT_SLOT_SET, GROUP_CREATED, GROUP_KIND,
+    GROUP_LIST_KIND, MAX_BATCH_IDS, MAX_GROUP_DEPTH, MAX_NAME_CHARS, RENAMED, VISIBILITY_SET,
+};
+pub use tree_cmds::{
+    create_group, move_element, rename_element, set_visibility, tree_root_id, CREATE_GROUP, MOVE_ELEMENT,
+    RENAME_ELEMENT, SET_VISIBILITY,
 };

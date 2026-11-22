@@ -1,0 +1,369 @@
+{
+  "element_ids": [
+    "01930000-0001-7001-8000-000000001001",
+    "01930000-0002-7002-8000-000000001002",
+    "01930000-0003-7003-8000-000000001003",
+    "01930000-0004-7004-8000-000000001004",
+    "01930000-0005-7005-8000-000000001005",
+    "01930000-0006-7006-8000-000000001006",
+    "01930000-0007-7007-8000-000000001007",
+    "01930000-0008-7008-8000-000000001008",
+    "01930000-0009-7009-8000-000000001009",
+    "01930000-000a-700a-8000-00000000100a",
+    "01930000-000b-700b-8000-00000000100b",
+    "01930000-000c-700c-8000-00000000100c",
+    "01930000-000d-700d-8000-00000000100d",
+    "01930000-000e-700e-8000-00000000100e",
+    "01930000-000f-700f-8000-00000000100f",
+    "01930000-0010-7010-8000-000000001010",
+    "01930000-0011-7011-8000-000000001011",
+    "01930000-0012-7012-8000-000000001012",
+    "01930000-0013-7013-8000-000000001013",
+    "01930000-0014-7014-8000-000000001014",
+    "01930000-0015-7015-8000-000000001015",
+    "01930000-0016-7016-8000-000000001016",
+    "01930000-0017-7017-8000-000000001017",
+    "01930000-0018-7018-8000-000000001018",
+    "01930000-0019-7019-8000-000000001019",
+    "01930000-001a-701a-8000-00000000101a",
+    "01930000-001b-701b-8000-00000000101b",
+    "01930000-001c-701c-8000-00000000101c",
+    "01930000-001d-701d-8000-00000000101d",
+    "01930000-001e-701e-8000-00000000101e"
+  ],
+  "events": [
+    {
+      "body": {
+        "id": "01930000-0001-7001-8000-000000001001",
+        "meta": {},
+        "name": "Element 1",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0002-7002-8000-000000001002",
+        "meta": {},
+        "name": "Element 2",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0003-7003-8000-000000001003",
+        "meta": {},
+        "name": "Element 3",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0004-7004-8000-000000001004",
+        "meta": {},
+        "name": "Element 4",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0005-7005-8000-000000001005",
+        "meta": {},
+        "name": "Element 5",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0006-7006-8000-000000001006",
+        "meta": {},
+        "name": "Element 6",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0007-7007-8000-000000001007",
+        "meta": {},
+        "name": "Element 7",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0008-7008-8000-000000001008",
+        "meta": {},
+        "name": "Element 8",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0009-7009-8000-000000001009",
+        "meta": {},
+        "name": "Element 9",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-000a-700a-8000-00000000100a",
+        "meta": {},
+        "name": "Element 10",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-000b-700b-8000-00000000100b",
+        "meta": {},
+        "name": "Element 11",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-000c-700c-8000-00000000100c",
+        "meta": {},
+        "name": "Element 12",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-000d-700d-8000-00000000100d",
+        "meta": {},
+        "name": "Element 13",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-000e-700e-8000-00000000100e",
+        "meta": {},
+        "name": "Element 14",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-000f-700f-8000-00000000100f",
+        "meta": {},
+        "name": "Element 15",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0010-7010-8000-000000001010",
+        "meta": {},
+        "name": "Element 16",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0011-7011-8000-000000001011",
+        "meta": {},
+        "name": "Element 17",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0012-7012-8000-000000001012",
+        "meta": {},
+        "name": "Element 18",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0013-7013-8000-000000001013",
+        "meta": {},
+        "name": "Element 19",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0014-7014-8000-000000001014",
+        "meta": {},
+        "name": "Element 20",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0015-7015-8000-000000001015",
+        "meta": {},
+        "name": "Element 21",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0016-7016-8000-000000001016",
+        "meta": {},
+        "name": "Element 22",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0017-7017-8000-000000001017",
+        "meta": {},
+        "name": "Element 23",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0018-7018-8000-000000001018",
+        "meta": {},
+        "name": "Element 24",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-0019-7019-8000-000000001019",
+        "meta": {},
+        "name": "Element 25",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-001a-701a-8000-00000000101a",
+        "meta": {},
+        "name": "Element 26",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-001b-701b-8000-00000000101b",
+        "meta": {},
+        "name": "Element 27",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-001c-701c-8000-00000000101c",
+        "meta": {},
+        "name": "Element 28",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-001d-701d-8000-00000000101d",
+        "meta": {},
+        "name": "Element 29",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    },
+    {
+      "body": {
+        "id": "01930000-001e-701e-8000-00000000101e",
+        "meta": {},
+        "name": "Element 30",
+        "parent": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+        "type": "test.plane",
+        "visible": true
+      },
+      "type": "ElementCreated"
+    }
+  ],
+  "namespace": "11111111-2222-4333-8444-555555555555",
+  "root": "162bfeec-39e4-5aaf-bfce-48feee66ab35",
+  "schema": "fid.core.prj.tree.group.p30/1"
+}
