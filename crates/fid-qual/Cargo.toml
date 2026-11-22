@@ -1,0 +1,28 @@
+[package]
+name = "fid-qual"
+description = "Metrology Maven installation and operational qualification records, status computation and validate.show_record@1 command (spec node QUAL.IQOQ.RECORD)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# RFC 8785 canonical JSON, bounded parsing and SHA-256 (CORE.JRN.CANON). Layer model.
+fid-canon = { path = "../fid-canon" }
+# Journal entry headers, payloads and commitment verification (CORE.JRN.ENTRY). Layer model.
+fid-journal = { path = "../fid-journal" }
+# Command definitions through the registry's field rules (CORE.REG.DEF). Layer model.
+fid-registry = { path = "../fid-registry" }
+# The shared result envelope and error codes (AUTO.SURF.ENV). Layer services.
+fid-surface = { path = "../fid-surface" }
+# Shared `sha256:` digest, side-effect and determinism types. Layer num.
+fid-types = { path = "../fid-types" }
+
+[dev-dependencies]
+# Command-schema tests validate real parameters and results with the bus's own compiled
+# schemas (fid_bus::validate::Compiled). Layer engine; already in the lock.
+fid-bus = { path = "../fid-bus" }
+
+[lints]
+workspace = true

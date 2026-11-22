@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid validate show-record]
 mcp: [validate_show_record]
 journal: [validate.show_record@1]
-updated: 2026-11-17
+built_in: [fid-qual]
+updated: 2026-11-22
 ---
 
 # QUAL.IQOQ.RECORD: Qualification record type, show command and qualification status
