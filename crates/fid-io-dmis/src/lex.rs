@@ -196,6 +196,8 @@ pub enum Relaxation {
     InlineComment,
     /// A CR not followed by LF also ends a physical line.
     BareCrLineEnd,
+    /// Accepts lowercase letters in label prefixes/names (dialect relaxation `allow_lowercase_labels`).
+    AllowLowercaseLabels,
 }
 
 /// Lexer options; the default enables no relaxation.
