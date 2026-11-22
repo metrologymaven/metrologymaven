@@ -5,6 +5,9 @@
 //!   digest (`HAL.IDL.BASE.CFG`).
 //! - [`error`]: the closed device error model, untrusted device text and operator hint IDs
 //!   (`HAL.IDL.BASE.ERR`).
+//! - [`health`]: the 10-state health machine, closed transition table and warm-up mapping
+//!   (`HAL.IDL.BASE.HEALTH`).
 
 pub mod config;
 pub mod error;
+pub mod health;

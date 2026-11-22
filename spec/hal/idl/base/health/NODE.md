@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-hal-idl]
+updated: 2026-11-22
 ---
 
 # HAL.IDL.BASE.HEALTH: Health state machine and transition table

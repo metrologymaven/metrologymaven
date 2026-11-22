@@ -37,6 +37,11 @@ pub use base::error::{
     Behaviour, DeviceError, DeviceErrorParseError, DeviceText, ErrorCode, OperatorHintId, ParseErrorKind, Severity,
 };
 
+pub use base::health::{
+    acquisition_allowed, acquisition_allowed_default, check as check_health_transition, warmup_state, Actor,
+    HealthState, IllegalTransition, Transition, TRANSITIONS as HEALTH_TRANSITIONS,
+};
+
 pub use package::{
     is_semver, validate_and_digest_json, validate_package, BatchColumnDesc, BatchSchemaDesc, CapabilityPackage,
     ConformanceItemDesc, ConformanceProfileDesc, OperationDesc, PackageDescription, PackageError, PackageManifest,
