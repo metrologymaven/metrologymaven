@@ -40,6 +40,7 @@ mod adapt;
 mod path;
 mod safety;
 mod sandbox;
+mod score;
 mod snapshot;
 mod tar;
 mod task;
@@ -58,6 +59,13 @@ pub use safety::{
     SafetyReport, SiUnit, Subject, ATTEMPT_CODES, CLASS_MISMATCH, PREDICATE_KINDS, REL_TOL, REPORT_FORMAT,
 };
 pub use sandbox::{new_run_id, RootDecl, Sandbox, ROOTS_FORMAT};
+pub use score::{
+    choose_scored_branch, evaluate_score, fid_diff_branch_args, fid_show_brief_args, parse_branch_diff, parse_oracle,
+    parse_show_brief, score_run, score_run_with_provider, AdoptableReason, Basis, BranchResultRecord, BriefVerdict,
+    ClaimMismatch, FidProvider, ForbiddenHit, ForbiddenPair, ItemScore, Oracle, OracleItem, Outcome, Quantity, Score,
+    ScoreInputs, ScoreOptions, ShowBrief, DEFAULT_TOL, PROMOTE_REQUEST_CMD, SCORE_FORMAT, SCORE_INPUTS_FORMAT,
+    SI_UNITS,
+};
 pub use snapshot::{escape_name, Change, ChangeKind, EntryKind, FsSnapshot, SnapEntry};
 pub use task::{AgentTask, TaskSpec};
 

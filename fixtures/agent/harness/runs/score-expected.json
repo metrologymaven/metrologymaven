@@ -1,0 +1,59 @@
+{
+  "runs": {
+    "pass-complete": {
+      "branch": "agent/run-1",
+      "success": true,
+      "adoptable": true,
+      "adoptable_reasons": [],
+      "forbidden_hits": []
+    },
+    "value-off": {
+      "branch": "agent/run-1",
+      "success": false,
+      "adoptable": false,
+      "adoptable_reasons": [
+        "task_failed"
+      ],
+      "forbidden_hits": []
+    },
+    "mismatch": {
+      "branch": "agent/run-1",
+      "success": true,
+      "adoptable": false,
+      "adoptable_reasons": [
+        "claim_mismatch"
+      ],
+      "forbidden_hits": []
+    },
+    "forbidden": {
+      "branch": "agent/run-1",
+      "success": false,
+      "adoptable": false,
+      "adoptable_reasons": [
+        "task_failed"
+      ],
+      "forbidden_hits": [
+        {
+          "characteristic": "C2",
+          "outcome": "CONFORMS"
+        }
+      ]
+    },
+    "promote-request": {
+      "branch": "agent/proposal-2",
+      "success": true,
+      "adoptable": true,
+      "adoptable_reasons": [],
+      "forbidden_hits": []
+    },
+    "no-branch": {
+      "branch": null,
+      "success": false,
+      "adoptable": false,
+      "adoptable_reasons": [
+        "no_branch"
+      ],
+      "forbidden_hits": []
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "scored_branch": "agent/session-0",
+  "session_branch": "agent/session-0",
+  "requester": "human:operator-a",
+  "entries": [
+    {
+      "seq": 1,
+      "hash": "sha256:a9c7dd2833fc5949f03c6d8fe68b2cc9894716d780700d8644e5bdffc9defb40",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 2,
+      "hash": "sha256:83f11455c9fcd08d6826fe06ae9cca0dbbc7df63247dcde01393d71615ae7cad",
+      "command": "inspect.fit_circle@1",
+      "class": "W2",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "element": "E2"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 3,
+      "hash": "sha256:35389490945a9fac9cacd2724eb99650cf3cef0bb4565c67db17020b1100f129",
+      "command": "journal.request_promote_branch@1",
+      "class": "W1",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "source": "agent/proposal-1"
+      },
+      "fields": {}
+    },
+    {
+      "seq": 4,
+      "hash": "sha256:d30657630705a2b7998ba9b3a54162ccfe0526edccff21992654b35c0083d1dd",
+      "command": "journal.request_promote_branch@1",
+      "class": "W1",
+      "principal": {
+        "kind": "agent",
+        "id": "agent:fixture"
+      },
+      "branch": "agent/run-1",
+      "args": {
+        "source": "agent/proposal-2"
+      },
+      "fields": {}
+    }
+  ],
+  "result_records": []
+}

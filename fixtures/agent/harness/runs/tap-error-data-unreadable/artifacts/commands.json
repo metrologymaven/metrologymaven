@@ -66,6 +66,13 @@
       "kernel_evaluating": false,
       "manual_reading": false,
       "path_params": []
+    },
+    "journal.request_promote_branch@1": {
+      "class": "W1",
+      "promotion": false,
+      "kernel_evaluating": false,
+      "manual_reading": false,
+      "path_params": []
     }
   }
 }
