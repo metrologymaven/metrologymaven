@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-doctor]
+built_pr: 449
 satisfies: [REQ-PLAT.DOCTOR-001, REQ-PLAT.DOCTOR-006]
 covers: []
 depends_on: [PLAT.GPU.DETECT]
