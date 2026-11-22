@@ -172,22 +172,20 @@ fn all_fixtures_match_python_reference() {
 }
 
 #[test]
-fn repository_support_matrix_is_valid_and_ci_only() {
+fn repository_support_matrix_is_valid_per_d010() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../platform/support-matrix.toml");
     let m = parse(&std::fs::read(path).unwrap()).unwrap();
-    let combos: Vec<(OsFamily, Arch)> = m.rows.iter().map(|r| (r.os, r.arch)).collect();
-    assert_eq!(
-        combos,
-        vec![(OsFamily::Ubuntu, Arch::X86_64), (OsFamily::Windows, Arch::X86_64), (OsFamily::Macos, Arch::Aarch64)]
-    );
+    assert_eq!(m.rows.len(), 9, "D-010 matrix: 6 Tier 1, 2 Tier 2 (Ubuntu aarch64), 1 Tier 3 (Win 11 aarch64)");
     for r in &m.rows {
-        assert!(r.version_max.is_some(), "rows cover only the OS version CI ran");
-        assert!(r.notes.contains("[unverified]"), "tiers are pending PLAT.MATRIX.POLICY");
+        assert!(r.version_max.is_some(), "every row carries a bounded version range");
+        assert!(r.notes.contains("[unverified]"), "exact P1a OS release versions are marked [unverified]");
         assert_eq!(r.since_phase, Phase::P1a, "no row may claim a tier before P1a");
     }
     assert_eq!(m.lookup("ubuntu", "26.04.1", "x86_64", Phase::P0), EffectiveTier::Planned(Tier::Tier1, Phase::P1a));
     assert_eq!(m.lookup("windows", "10.0.26100", "x86_64", Phase::P0), EffectiveTier::Planned(Tier::Tier1, Phase::P1a));
     assert_eq!(m.lookup("macos", "26.7.2", "aarch64", Phase::P0), EffectiveTier::Planned(Tier::Tier1, Phase::P1a));
+    assert_eq!(m.lookup("ubuntu", "24.04", "aarch64", Phase::P1a), EffectiveTier::Tier(Tier::Tier2));
+    assert_eq!(m.lookup("windows", "10.0.26100", "aarch64", Phase::P1a), EffectiveTier::Tier(Tier::Tier3));
 }
 
 #[test]

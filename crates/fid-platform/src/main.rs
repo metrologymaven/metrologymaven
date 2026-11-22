@@ -53,7 +53,8 @@
 //! `platform/install-manifest.schema.json` (exit 0, or 2 if it cannot).
 
 use fid_platform::{
-    bench_schema, gpu_policy, hw_profile, install_manifest, kiosk_display, matrix, os_eol, page, peruser_layout,
+    bench_schema, gpu_policy, hw_profile, install_manifest, kiosk_display, matrix, matrix_policy, os_eol, page,
+    peruser_layout,
 };
 use std::io::{Read, Write};
 use std::path::Path;
@@ -62,6 +63,8 @@ use std::process::ExitCode;
 const USAGE: &str = "usage: fid-platform plat-matrix validate <file>\n       \
                      fid-platform plat-matrix page [--check] [--matrix <file>] --out <file>\n       \
                      fid-platform plat-matrix eol-check --today <YYYY-MM-DD> [--matrix <file>] [--eol <file>]\n       \
+                     fid-platform plat-matrix window-check --phase <P> [--matrix <file>] [--window <file>]\n       \
+                     fid-platform plat-matrix promote-check --old <matrix> --new <matrix> --verdicts <dir>\n       \
                      fid-platform plat-hw validate [--file <path>]\n       \
                      fid-platform plat-hw validate-suite [--file <path>]\n       \
                      fid-platform plat-hw result-schema\n       \
@@ -81,6 +84,8 @@ fn main() -> ExitCode {
         [group, cmd, file] if group == "plat-matrix" && cmd == "validate" => validate(file),
         [group, cmd, rest @ ..] if group == "plat-matrix" && cmd == "page" => page_cmd(rest),
         [group, cmd, rest @ ..] if group == "plat-matrix" && cmd == "eol-check" => eol_check_cmd(rest),
+        [group, cmd, rest @ ..] if group == "plat-matrix" && cmd == "window-check" => window_check_cmd(rest),
+        [group, cmd, rest @ ..] if group == "plat-matrix" && cmd == "promote-check" => promote_check_cmd(rest),
         [group, cmd] if group == "plat-hw" && cmd == "validate" => validate_hw(hw_profile::DEFAULT_PATH),
         [group, cmd, flag, file] if group == "plat-hw" && cmd == "validate" && flag == "--file" => validate_hw(file),
         [group, cmd] if group == "plat-hw" && cmd == "validate-suite" => {
@@ -655,5 +660,212 @@ fn eol_check_cmd(args: &[String]) -> ExitCode {
             }
             ExitCode::from(1)
         }
+    }
+}
+
+/// `fid-platform plat-matrix window-check --phase <P> [--matrix <file>] [--window <file>]`
+/// (spec node `PLAT.MATRIX.POLICY.ROWS`). Exit 0 on ok, 1 on findings, 2 on bad usage or
+/// unreadable inputs.
+fn window_check_cmd(args: &[String]) -> ExitCode {
+    let cmd = "plat-matrix window-check";
+    let mut phase_s: Option<&str> = None;
+    let mut matrix_path: Option<&str> = None;
+    let mut window_path: Option<&str> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--phase" => {
+                let Some(v) = it.next() else {
+                    eprintln!("{cmd}: missing value for --phase\n{USAGE}");
+                    return ExitCode::from(2);
+                };
+                if phase_s.replace(v.as_str()).is_some() {
+                    eprintln!("{cmd}: duplicate --phase\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+            }
+            "--matrix" => {
+                let Some(v) = it.next() else {
+                    eprintln!("{cmd}: missing value for --matrix\n{USAGE}");
+                    return ExitCode::from(2);
+                };
+                if matrix_path.replace(v.as_str()).is_some() {
+                    eprintln!("{cmd}: duplicate --matrix\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+            }
+            "--window" => {
+                let Some(v) = it.next() else {
+                    eprintln!("{cmd}: missing value for --window\n{USAGE}");
+                    return ExitCode::from(2);
+                };
+                if window_path.replace(v.as_str()).is_some() {
+                    eprintln!("{cmd}: duplicate --window\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+            }
+            _ => {
+                eprintln!("{cmd}: unknown argument {a:?}\n{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let Some(phase_s) = phase_s else {
+        eprintln!("{cmd}: --phase <P> is required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let Some(phase) = matrix::Phase::from_name(phase_s) else {
+        eprintln!("{cmd}: invalid phase {phase_s:?}");
+        return ExitCode::from(2);
+    };
+    let matrix_path = matrix_path.unwrap_or(matrix_policy::DEFAULT_MATRIX_PATH);
+    let window_path = window_path.unwrap_or(matrix_policy::DEFAULT_WINDOW_PATH);
+    let Some(matrix_bytes) = read_capped(matrix_path, matrix::MAX_BYTES, cmd) else {
+        return ExitCode::from(2);
+    };
+    let Some(window_bytes) = read_capped(window_path, matrix_policy::MAX_WINDOW_BYTES, cmd) else {
+        return ExitCode::from(2);
+    };
+    let m = match matrix::parse(&matrix_bytes) {
+        Ok(m) => m,
+        Err(err) => {
+            println!("matrix: {err}");
+            return ExitCode::from(1);
+        }
+    };
+    let w = match matrix_policy::parse_window(&window_bytes) {
+        Ok(w) => w,
+        Err(errs) => {
+            for e in errs {
+                println!("window: {e}");
+            }
+            return ExitCode::from(1);
+        }
+    };
+    let findings = matrix_policy::window_check(&m, &w, phase);
+    if findings.is_empty() {
+        println!("window-check: ok (phase {phase})");
+        ExitCode::SUCCESS
+    } else {
+        for f in &findings {
+            println!("{f}");
+        }
+        println!("window-check: {} finding(s)", findings.len());
+        ExitCode::from(1)
+    }
+}
+
+/// `fid-platform plat-matrix promote-check --old <matrix> --new <matrix> --verdicts <dir>`
+/// (spec node `PLAT.MATRIX.POLICY.ROWS`). Exit 0 on ok, 1 on findings, 2 on bad usage or
+/// unreadable inputs.
+fn promote_check_cmd(args: &[String]) -> ExitCode {
+    let cmd = "plat-matrix promote-check";
+    let mut old_path: Option<&str> = None;
+    let mut new_path: Option<&str> = None;
+    let mut verdicts_dir: Option<&str> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--old" => {
+                let Some(v) = it.next() else {
+                    eprintln!("{cmd}: missing value for --old\n{USAGE}");
+                    return ExitCode::from(2);
+                };
+                if old_path.replace(v.as_str()).is_some() {
+                    eprintln!("{cmd}: duplicate --old\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+            }
+            "--new" => {
+                let Some(v) = it.next() else {
+                    eprintln!("{cmd}: missing value for --new\n{USAGE}");
+                    return ExitCode::from(2);
+                };
+                if new_path.replace(v.as_str()).is_some() {
+                    eprintln!("{cmd}: duplicate --new\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+            }
+            "--verdicts" => {
+                let Some(v) = it.next() else {
+                    eprintln!("{cmd}: missing value for --verdicts\n{USAGE}");
+                    return ExitCode::from(2);
+                };
+                if verdicts_dir.replace(v.as_str()).is_some() {
+                    eprintln!("{cmd}: duplicate --verdicts\n{USAGE}");
+                    return ExitCode::from(2);
+                }
+            }
+            _ => {
+                eprintln!("{cmd}: unknown argument {a:?}\n{USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(old_path), Some(new_path), Some(verdicts_dir)) = (old_path, new_path, verdicts_dir) else {
+        eprintln!("{cmd}: --old, --new, and --verdicts are all required\n{USAGE}");
+        return ExitCode::from(2);
+    };
+    let Some(old_bytes) = read_capped(old_path, matrix::MAX_BYTES, cmd) else {
+        return ExitCode::from(2);
+    };
+    let Some(new_bytes) = read_capped(new_path, matrix::MAX_BYTES, cmd) else {
+        return ExitCode::from(2);
+    };
+    let old_m = match matrix::parse(&old_bytes) {
+        Ok(m) => m,
+        Err(err) => {
+            println!("old: {err}");
+            return ExitCode::from(1);
+        }
+    };
+    let new_m = match matrix::parse(&new_bytes) {
+        Ok(m) => m,
+        Err(err) => {
+            println!("new: {err}");
+            return ExitCode::from(1);
+        }
+    };
+
+    let entries = match std::fs::read_dir(verdicts_dir) {
+        Ok(rd) => rd,
+        Err(e) => {
+            eprintln!("{cmd}: cannot read verdicts dir {verdicts_dir}: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let mut file_names: Vec<(String, std::path::PathBuf)> = Vec::new();
+    for entry in entries {
+        let Ok(entry) = entry else {
+            eprintln!("{cmd}: error reading directory {verdicts_dir}");
+            return ExitCode::from(2);
+        };
+        let path = entry.path();
+        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            file_names.push((name, path));
+        }
+    }
+    file_names.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut verdicts = Vec::with_capacity(file_names.len());
+    for (name, path) in file_names {
+        let p_str = path.to_string_lossy();
+        let Some(bytes) = read_capped(&p_str, matrix_policy::MAX_VERDICT_BYTES, cmd) else {
+            return ExitCode::from(2);
+        };
+        verdicts.push((name, bytes));
+    }
+
+    let findings = matrix_policy::promote_check(&old_m, &new_m, &verdicts);
+    if findings.is_empty() {
+        println!("promote-check: ok");
+        ExitCode::SUCCESS
+    } else {
+        for f in &findings {
+            println!("{f}");
+        }
+        println!("promote-check: {} finding(s)", findings.len());
+        ExitCode::from(1)
     }
 }

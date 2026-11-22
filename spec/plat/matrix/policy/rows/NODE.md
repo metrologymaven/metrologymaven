@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-platform]
 satisfies: [REQ-PLAT.MATRIX.POLICY-002, REQ-PLAT.MATRIX.POLICY-003, REQ-PLAT.MATRIX.POLICY-007]
 covers: []
 depends_on: [PLAT.MATRIX.FILE]

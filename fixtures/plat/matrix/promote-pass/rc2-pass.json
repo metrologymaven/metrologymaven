@@ -1,0 +1,15 @@
+{
+  "blocking": [],
+  "jobs": [
+    {
+      "id": "ubuntu-26.04-aarch64-build",
+      "status": "passed"
+    },
+    {
+      "id": "ubuntu-26.04-aarch64-full_test",
+      "status": "passed"
+    }
+  ],
+  "tier2_notes": [],
+  "verdict": "PASS"
+}

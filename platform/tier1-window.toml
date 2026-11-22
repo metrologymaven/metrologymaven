@@ -1,0 +1,6 @@
+# Metrology Maven Tier 1 OS version window rule (decision D-010, spec node PLAT.MATRIX.POLICY.ROWS).
+# Checked with: cargo xtask plat-matrix window-check --phase P1a
+schema_version = 1
+ubuntu_lts = 2
+macos_major = 2
+windows = [10, 11]

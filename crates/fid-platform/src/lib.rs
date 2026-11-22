@@ -18,6 +18,8 @@
 //!   (`PLAT.MATRIX.PAGE`).
 //! - [`os_eol`]: OS end-of-support list, 90-day warning and demotion check
 //!   (`PLAT.MATRIX.POLICY.EOL`).
+//! - [`matrix_policy`]: Tier 1 rolling window and two-RC promotion checks
+//!   (`PLAT.MATRIX.POLICY.ROWS`).
 
 pub mod bench_schema;
 pub mod gpu_policy;
@@ -25,6 +27,7 @@ pub mod hw_profile;
 pub mod install_manifest;
 pub mod kiosk_display;
 pub mod matrix;
+pub mod matrix_policy;
 pub mod os_eol;
 pub mod page;
 pub mod peruser_layout;
