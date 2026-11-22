@@ -1,0 +1,2 @@
+Synthetic, project-authored test fixtures for spec node CORE.RPL.RECON.FOLD.
+Licensed under CC-BY-4.0.
