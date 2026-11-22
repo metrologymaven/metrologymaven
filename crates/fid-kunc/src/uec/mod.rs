@@ -65,6 +65,8 @@
 //! digest to cite, so its statement still fails `label_dropped` unless another cited source
 //! carries the uncharacterized label.
 
+pub mod qif_map;
+
 use std::fmt;
 
 use fid_types::Digest;

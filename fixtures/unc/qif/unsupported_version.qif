@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- UNC.UEC.QIF AC-6 fixture (unsupported extension version unc-qif-stmt@9), synthetic, CC-BY-4.0. -->
+<QIFDocument xmlns="http://qifstandards.org/xsd/qif3" versionQIF="3.0.0" idMax="1">
+  <Results>
+    <MeasurementResultsSet n="1">
+      <MeasurementResults id="1">
+        <Attributes n="1">
+          <AttributeUserData name="fx:UncertaintyStatement">
+            <UserDataXML>
+              <fx:UncertaintyStatement xmlns:fx="https://metrologymaven.org/ns/qif-ext/v1" version="unc-qif-stmt@9"><fx:Class>UEC-1</fx:Class><fx:Method>DECLARED</fx:Method><fx:Unit>si:m</fx:Unit><fx:Expanded><fx:U>3ed0c6f7a0b5ed8d</fx:U><fx:K>4000000000000000</fx:K></fx:Expanded><fx:Model><fx:Id>um:declared</fx:Id><fx:Semver>1.0.0</fx:Semver><fx:Digest>sha256:713d777d61bf55adc4e587a9c638bfa3c42fcbc1b4b9ad899864df7f53ecc787</fx:Digest></fx:Model><fx:Sources><fx:Source><fx:Kind>declared</fx:Kind><fx:Id>decl:2026-11-16-001</fx:Id><fx:Digest>sha256:fb660709415eb1f73bba7ba06893e793573280375e0b5a31f458a1c8625c4557</fx:Digest></fx:Source></fx:Sources><fx:Provenance><fx:RuleSets><fx:RuleSet>uec-assign@1</fx:RuleSet></fx:RuleSets><fx:Principal>person:qa-lead</fx:Principal><fx:PrincipalKind>human</fx:PrincipalKind><fx:Proposal>false</fx:Proposal></fx:Provenance></fx:UncertaintyStatement>
+            </UserDataXML>
+          </AttributeUserData>
+        </Attributes>
+        <MeasurementUncertainty>
+          <Unit>si:m</Unit>
+          <ExpandedUncertainty>3.9999999999999998e-06</ExpandedUncertainty>
+          <CoverageFactor>2</CoverageFactor>
+        </MeasurementUncertainty>
+      </MeasurementResults>
+    </MeasurementResultsSet>
+  </Results>
+</QIFDocument>

@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-kunc]
 satisfies: [REQ-UNC.UEC-009]
 covers: []
 depends_on: [UNC.UEC.STMT, UNC.UEC.CLASS]

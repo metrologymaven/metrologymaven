@@ -4,6 +4,8 @@
 //! Implemented leaves: `UNC.UEC.STMT` (the [`EvidenceClass`] enumeration and the validated
 //! [`UncertaintyStatement`] with its canonical JSON and digest, see [`statement`]),
 //! `UNC.UEC.CLASS` (evidence class assignment, rule set `uec-assign@1`, see [`uec`]),
+//! `UNC.UEC.QIF` (pure QIF 3.0 uncertainty statement mapping `qif-unc-map@1`, see
+//! [`uec::qif_map`]),
 //! `UNC.MODEL.DIST` (input distributions, moments, seeded sampling and the correlation check,
 //! see [`dist`]), `UNC.MODEL.GRAPH.SCHEMA` (the Uncertainty Model graph types, the
 //! `uncertainty-model/v1` document, its canonical form and digest, see [`model`]),

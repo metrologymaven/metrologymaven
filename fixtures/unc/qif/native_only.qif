@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- UNC.UEC.QIF AC-4 fixture (native only, no extension), synthetic, CC-BY-4.0. -->
+<QIFDocument xmlns="http://qifstandards.org/xsd/qif3" versionQIF="3.0.0" idMax="1">
+  <Results>
+    <MeasurementResultsSet n="1">
+      <MeasurementResults id="1">
+        <MeasurementUncertainty>
+          <Unit>si:m</Unit>
+          <CombinedUncertainty>0.00000125</CombinedUncertainty>
+          <ExpandedUncertainty>0.0000025</ExpandedUncertainty>
+          <CoverageFactor>2</CoverageFactor>
+        </MeasurementUncertainty>
+      </MeasurementResults>
+    </MeasurementResultsSet>
+  </Results>
+</QIFDocument>
