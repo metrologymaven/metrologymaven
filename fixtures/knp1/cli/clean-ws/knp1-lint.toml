@@ -1,0 +1,9 @@
+# KRN.NUM.LINT.CLI AC-1 clean workspace config.
+[graph]
+workspace = "."
+roots = ["clean-kernel"]
+allowlist = "kernel-allowlist.toml"
+spdx_allowlist = "spdx-allowlist.toml"
+
+[flags]
+profiles = ["kernel", "release"]

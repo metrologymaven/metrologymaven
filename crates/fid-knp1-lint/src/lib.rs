@@ -8,7 +8,10 @@
 //! - [`data`]: reference-dataset denylist matcher (`KRN.NUM.LINT.DATA`).
 //! - [`syn_scan`]: syntax-level banned-API scan over the kernel closure (`KRN.NUM.LINT.SYN`).
 //! - [`typed`]: type-aware banned-API check on expanded workspace code (`KRN.NUM.LINT.TYPED`).
+//! - [`cli`]: the `fid-knp1-lint` command (`check` and `selftest`), exit codes and seeded-violation
+//!   suite (`KRN.NUM.LINT.CLI`).
 
+pub mod cli;
 pub mod data;
 pub mod findings;
 pub mod flags;
@@ -21,6 +24,6 @@ pub use findings as find;
 
 pub use findings::{
     apply_waivers, catalogue, input_digest, lines_digest, load_waivers, parse_waivers, sort_findings, Applied,
-    CrateRoots, ErrorCode, FindError, Finding, InputDigests, Report, Rule, SourceTree, Waiver, Warning, REPORT_SCHEMA,
-    TOOL_NAME, WAIVER_UNUSED,
+    CrateRoots, ErrorCode, FindError, Finding, InputDigests, Report, Rule, SourceTree, TypedStatus, Waiver, Warning,
+    REPORT_SCHEMA, TOOL_NAME, WAIVER_UNUSED,
 };

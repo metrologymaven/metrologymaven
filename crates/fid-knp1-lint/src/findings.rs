@@ -798,11 +798,33 @@ impl InputDigests {
     }
 }
 
+/// Whether the type-aware check (`KRN.NUM.LINT.TYPED`) ran or was skipped with `--skip-typed`
+/// (REQ-KRN.NUM.LINT.CLI-003).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TypedStatus {
+    Ran,
+    Skipped,
+}
+
+impl TypedStatus {
+    /// Wire value written in `knp1-findings.json`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            TypedStatus::Ran => "ran",
+            TypedStatus::Skipped => "skipped",
+        }
+    }
+}
+
 /// The `knp1-findings.json` report, schema 1.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Report {
     pub tool_version: String,
     pub inputs: InputDigests,
+    /// Optional list of `(crate_name, crate_version)` linted in this run (sorted, deduplicated).
+    pub linted: Option<Vec<(String, String)>>,
+    /// Optional record of whether the typed check ran or was skipped (`--skip-typed`).
+    pub typed: Option<TypedStatus>,
     /// Unwaived findings, sorted.
     pub findings: Vec<Finding>,
     /// Waived findings with their waiver, sorted by finding.
@@ -832,7 +854,29 @@ impl Report {
         }
         sort_findings(&mut findings);
         waived.sort_by_cached_key(|(f, _)| f.sort_key());
-        Ok(Report { tool_version: tool_version.to_string(), inputs, findings, waived, warnings })
+        Ok(Report {
+            tool_version: tool_version.to_string(),
+            inputs,
+            linted: None,
+            typed: None,
+            findings,
+            waived,
+            warnings,
+        })
+    }
+
+    /// Records the type-aware check status (`ran` or `skipped`).
+    pub fn with_typed(mut self, status: TypedStatus) -> Self {
+        self.typed = Some(status);
+        self
+    }
+
+    /// Records the sorted, deduplicated list of `(crate_name, crate_version)` linted by this run.
+    pub fn with_linted(mut self, mut crates: Vec<(String, String)>) -> Self {
+        crates.sort();
+        crates.dedup();
+        self.linted = Some(crates);
+        self
     }
 
     /// Number of unwaived findings.
@@ -890,6 +934,21 @@ impl Report {
         r.insert("tool".to_string(), CValue::Str(TOOL_NAME.to_string()));
         r.insert("tool_version".to_string(), CValue::Str(self.tool_version.clone()));
         r.insert("inputs".to_string(), CValue::Obj(inputs));
+        if let Some(linted) = &self.linted {
+            let arr = linted
+                .iter()
+                .map(|(name, ver)| {
+                    let mut o = BTreeMap::new();
+                    o.insert("crate_name".to_string(), CValue::Str(name.clone()));
+                    o.insert("crate_version".to_string(), CValue::Str(ver.clone()));
+                    CValue::Obj(o)
+                })
+                .collect();
+            r.insert("linted".to_string(), CValue::Arr(arr));
+        }
+        if let Some(typed) = self.typed {
+            r.insert("typed".to_string(), CValue::Str(typed.as_str().to_string()));
+        }
         r.insert("findings".to_string(), CValue::Arr(self.findings.iter().map(Finding::to_cvalue).collect()));
         r.insert("waived".to_string(), CValue::Arr(waived));
         r.insert("warnings".to_string(), CValue::Arr(warnings));

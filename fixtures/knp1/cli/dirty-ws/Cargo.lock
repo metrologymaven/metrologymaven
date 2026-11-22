@@ -1,0 +1,6 @@
+# Fixture lockfile for KRN.NUM.LINT.CLI AC-2.
+version = 4
+
+[[package]]
+name = "dirty-kernel"
+version = "0.1.0"

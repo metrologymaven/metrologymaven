@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-knp1-lint]
+updated: 2026-11-21
 ---
 
 # KRN.NUM.LINT.CLI: fid-knp1-lint command, exit codes and seeded-violation suite
