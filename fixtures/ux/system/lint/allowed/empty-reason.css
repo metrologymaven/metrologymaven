@@ -1,0 +1,4 @@
+/* Synthetic fixture (CC-BY-4.0) for UX.SYSTEM.LINT AC-4. */
+.broken-allow {
+  color: #1f6feb; /* design-allow: */
+}

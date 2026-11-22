@@ -14,8 +14,9 @@
 //! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]`,
 //! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`,
 //! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`,
-//! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`, and
-//! `fid-design icons-lint --root <icons dir> [--json]`.
+//! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`,
+//! `fid-design icons-lint --root <icons dir> [--json]`, and
+//! `fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]`.
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage (`icons-lint` also
 //! exits 2 for a root holding no SVG).
 
@@ -41,11 +42,14 @@ const USAGE: &str =
        fid-design screens-gate --spec <spec dir> --root <design dir> [--json]
        fid-design fonts-check --root <design dir> --allowlist <file> [--json]
        fid-design page-check (--root <design dir> | --file <pages.json>) [--json]
-       fid-design icons-lint --root <icons dir> [--json]";
+       fid-design icons-lint --root <icons dir> [--json]
+       fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]";
 
 #[derive(Default)]
 struct Args {
     root: Option<PathBuf>,
+    rules: Option<PathBuf>,
+    package: Option<PathBuf>,
     allowlist: Option<PathBuf>,
     from: Option<PathBuf>,
     to: Option<PathBuf>,
@@ -74,6 +78,8 @@ fn parse_args(args: &[String]) -> Option<Args> {
         match a.as_str() {
             "--json" => out.json = true,
             "--root" => out.root = Some(PathBuf::from(it.next()?)),
+            "--rules" => out.rules = Some(PathBuf::from(it.next()?)),
+            "--package" => out.package = Some(PathBuf::from(it.next()?)),
             "--allowlist" => out.allowlist = Some(PathBuf::from(it.next()?)),
             "--from" => out.from = Some(PathBuf::from(it.next()?)),
             "--to" => out.to = Some(PathBuf::from(it.next()?)),
@@ -151,6 +157,8 @@ fn main() -> ExitCode {
     if cmd == "fonts-check" {
         let others = princ_flags
             || screen_flags
+            || args.rules.is_some()
+            || args.package.is_some()
             || args.from.is_some()
             || args.to.is_some()
             || args.baseline.is_some()
@@ -173,7 +181,38 @@ fn main() -> ExitCode {
             Err(e) => fail(e),
         };
     }
-    if args.allowlist.is_some() {
+    if cmd == "lint-literals" {
+        let others = princ_flags
+            || screen_flags
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.pr.is_some()
+            || args.all
+            || args.attribution.is_some()
+            || args.manifest.is_some();
+        let Some(root) = &args.root else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        let o = fid_design::lint::Options {
+            root,
+            rules: args.rules.as_deref(),
+            package: args.package.as_deref(),
+            allowlist: args.allowlist.as_deref(),
+        };
+        return match fid_design::lint::check(&o) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        };
+    }
+    if args.rules.is_some() || args.package.is_some() || args.allowlist.is_some() {
         return usage();
     }
     if cmd == "screens-check" || cmd == "screens-gate" {

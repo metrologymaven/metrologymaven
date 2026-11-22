@@ -288,6 +288,7 @@ python fixtures/unc/valid/make_fixtures.py --check
 python fixtures/ux/icons/grid/make_fixtures.py --check
 python fixtures/ux/report/page/make_fixtures.py --check
 python fixtures/ux/screens/inv/make_fixtures.py --check
+python fixtures/ux/system/lint/make_fixtures.py --check
 python fixtures/ux/system/princ/make_fixtures.py --check
 python fixtures/ux/system/review/make_fixtures.py --check
 python fixtures/ux/tokens/check/make_fixtures.py --check

@@ -1,0 +1,11 @@
+{
+  "artefact": "consumption.md",
+  "author": "Antigravity (Google DeepMind), agent author of UX.SYSTEM.LINT",
+  "date": "2026-11-22",
+  "references": [
+    "The UX.SYSTEM.LINT, UX.SYSTEM and UX.SYSTEM.PKG spec nodes in this repository",
+    "The design principles (design/principles.md) in this repository",
+    "The project constitution (spec/CONSTITUTION.md) in this repository"
+  ],
+  "statement_version": "originality-statement@1"
+}
