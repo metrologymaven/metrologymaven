@@ -94,7 +94,7 @@ fn ac1_meta_schema_is_generated() {
     );
 }
 
-/// REQ-001 / REQ-008: the meta-schema admits exactly the nine project keywords, with the
+/// REQ-001 / REQ-008: the meta-schema admits exactly the ten project keywords, with the
 /// closed lists and the standards-reference pattern of the checker.
 #[test]
 fn ac1_meta_schema_matches_the_checker() {
@@ -128,6 +128,8 @@ fn ac1_meta_schema_matches_the_checker() {
     assert_eq!(items["pattern"], CValue::Str(EXTENSION_PATTERN.into()));
     assert_eq!(xext["maxItems"], CValue::Num(MAX_EXTENSIONS as f64));
     assert_eq!(props["path_like"], json(r#"{"const":true}"#));
+    assert_eq!(props["value_of_record"], json(r#"{"type":"boolean"}"#));
+    assert!(!obj_keys(&meta["dependentSchemas"]).contains(&"value_of_record".to_string()), "no sibling needed");
     let CValue::Obj(dep) = &meta["dependentSchemas"] else { panic!() };
     assert_eq!(dep["x-extensions"], json(r#"{"required":["path_like"]}"#));
     assert_eq!(dep["path_like"], json(r#"{"properties":{"type":{"const":"string"}},"required":["type"]}"#));
@@ -152,6 +154,7 @@ fn ac2_invalid_fixtures_report_exactly_their_code() {
         "standards_ref_with_text",
         "unknown_quantity",
         "untrusted_on_number",
+        "value_of_record_not_boolean",
         "x_foo_keyword",
     ];
     assert_eq!(names, want);
@@ -498,6 +501,61 @@ fn project_keyword_values() {
     assert_eq!(check_text(&long), one("bad_standards_ref", "/x-standards-ref"));
     // x-ui never changes validation: a schema inside it is data.
     assert_eq!(check_text(r#"{"x-ui":{"schema":{"type":"bogus","x-foo":1}}}"#), vec![]);
+}
+
+fn obj_keys(v: &CValue) -> Vec<String> {
+    match v {
+        CValue::Obj(o) => o.keys().cloned().collect(),
+        _ => panic!("object expected"),
+    }
+}
+
+/// REQ-011: `value_of_record` is a boolean (both values) on any schema object, with no
+/// sibling needed; any other JSON type is `bad_keyword_value`.
+#[test]
+fn value_of_record_keyword() {
+    for doc in [
+        r#"{"type":"number","x-quantity":"length","value_of_record":true}"#,
+        r#"{"type":"number","x-quantity":"length","value_of_record":false}"#,
+        r#"{"value_of_record":true}"#,
+        r#"{"type":"object","properties":{"r":{"type":"object","properties":{"d":{"value_of_record":true}}}}}"#,
+        r#"{"type":"array","items":{"type":"string","x-ref":"result","value_of_record":true}}"#,
+        r##"{"$defs":{"n":{"type":"number","value_of_record":true}},"anyOf":[{"$ref":"#/$defs/n"}]}"##,
+        r#"{"type":"object","properties":{"p":{"type":"string","path_like":true,"value_of_record":true}}}"#,
+    ] {
+        assert_eq!(check_text(doc), vec![], "{doc}");
+    }
+    for v in [r#""true""#, "1", "0", "null", "[true]", r#"{"on":true}"#] {
+        let doc = format!(r#"{{"type":"number","value_of_record":{v}}}"#);
+        assert_eq!(check_text(&doc), one("bad_keyword_value", "/value_of_record"), "{doc}");
+        let nested = format!(r#"{{"properties":{{"a":{{"items":{{"value_of_record":{v}}}}}}}}}"#);
+        assert_eq!(check_text(&nested), one("bad_keyword_value", "/properties/a/items/value_of_record"), "{nested}");
+    }
+    // Case variants are not the keyword.
+    assert_eq!(check_text(r#"{"Value_of_record":true}"#), one("unknown_keyword", "/Value_of_record"));
+    assert_eq!(check_text(r#"{"x-value-of-record":true}"#), one("unknown_keyword", "/x-value-of-record"));
+    // Inside data it is data.
+    assert_eq!(check_text(r#"{"x-ui":{"value_of_record":"yes"},"default":{"value_of_record":3}}"#), vec![]);
+}
+
+/// REQ-011: the keyword is part of the canonical schema, so it is digested: true, false and
+/// absent give three different canonical forms and digests.
+#[test]
+fn value_of_record_is_digested() {
+    let forms = [
+        r#"{"type":"number","x-quantity":"length"}"#,
+        r#"{"type":"number","x-quantity":"length","value_of_record":false}"#,
+        r#"{"type":"number","x-quantity":"length","value_of_record":true}"#,
+    ];
+    let mut digests = std::collections::BTreeSet::new();
+    for f in forms {
+        let v = json(f);
+        assert_eq!(check_schema(&v, &geo()), vec![], "{f}");
+        let bytes = to_canonical_bytes(&v).unwrap();
+        assert_eq!(bytes.windows(17).any(|w| w == b"\"value_of_record\""), f.contains("value_of_record"), "{f}");
+        digests.insert(fid_canon::digest(&v).unwrap().0);
+    }
+    assert_eq!(digests.len(), 3);
 }
 
 /// REQ-010: `path_like` and `x-extensions` (the file parameters of CORE.BUS.POL.FS).

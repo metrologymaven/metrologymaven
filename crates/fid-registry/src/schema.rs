@@ -1,7 +1,7 @@
 //! Schema keyword vocabulary, meta-schema and schema checker. Spec node
-//! `CORE.REG.DEF.SCHEMA` (REQ-001 to REQ-003, REQ-006 to REQ-009).
+//! `CORE.REG.DEF.SCHEMA` (REQ-001 to REQ-003, REQ-006 to REQ-011).
 //!
-//! Parameter and result schemas are JSON Schema 2020-12 plus nine project keywords
+//! Parameter and result schemas are JSON Schema 2020-12 plus ten project keywords
 //! ([`ProjectKeyword`]). [`check_schema`] refuses every keyword outside a closed, sorted table
 //! ([`KEYWORDS`]) and checks every keyword value; [`registry_keywords_schema`] is the same
 //! vocabulary as a meta-schema, checked in as `schemas/registry-keywords.schema.json`.
@@ -29,7 +29,7 @@ pub const SCHEMA_MAX_DEPTH: usize = 64;
 /// Most issues reported for one document; beyond it the list ends with `too_many_issues`.
 pub const MAX_ISSUES: usize = 10_000;
 /// Version of the project vocabulary; a change to a closed list is a new version.
-pub const REGISTRY_KEYWORDS_VERSION: u32 = 2;
+pub const REGISTRY_KEYWORDS_VERSION: u32 = 3;
 /// `$id` of the meta-schema.
 pub const REGISTRY_KEYWORDS_ID: &str = "https://metrologymaven.io/schemas/registry-keywords.schema.json";
 /// The `x-standards-ref` pattern (REQ-007): an identifier-like designator (a letter, then
@@ -81,9 +81,10 @@ macro_rules! closed_enum {
 }
 
 closed_enum! {
-    /// The nine project keywords (REQ-001), in byte order.
+    /// The ten project keywords (REQ-001), in byte order.
     ProjectKeyword {
         PathLike => "path_like",
+        ValueOfRecord => "value_of_record",
         XExtensions => "x-extensions",
         XQuantity => "x-quantity",
         XRef => "x-ref",
@@ -214,8 +215,8 @@ impl Keyword {
 
 /// The closed keyword vocabulary, sorted by byte order for binary search: the 2020-12
 /// vocabularies (without the deprecated `definitions`, `dependencies`, `$recursiveAnchor`,
-/// `$recursiveRef`) plus the nine project keywords.
-pub const KEYWORDS: [(&str, Role); 66] = [
+/// `$recursiveRef`) plus the ten project keywords.
+pub const KEYWORDS: [(&str, Role); 67] = [
     ("$anchor", Role::Anchor),
     ("$comment", Role::Str),
     ("$defs", Role::SchemaMap),
@@ -273,6 +274,7 @@ pub const KEYWORDS: [(&str, Role); 66] = [
     ("unevaluatedItems", Role::Schema),
     ("unevaluatedProperties", Role::Schema),
     ("uniqueItems", Role::Bool),
+    ("value_of_record", Role::Project(ProjectKeyword::ValueOfRecord)),
     ("writeOnly", Role::Bool),
     ("x-extensions", Role::Project(ProjectKeyword::XExtensions)),
     ("x-quantity", Role::Project(ProjectKeyword::XQuantity)),
@@ -922,7 +924,7 @@ impl Checker<'_> {
         }
     }
 
-    /// The project keywords (REQ-003, REQ-006 to REQ-008, REQ-010); `path` is the position of
+    /// The project keywords (REQ-003, REQ-006 to REQ-008, REQ-010, REQ-011); `path` is the position of
     /// the schema object `m`.
     fn project(&mut self, p: ProjectKeyword, v: &CValue, m: &BTreeMap<String, CValue>, path: &[Seg<'_>], at: String) {
         let kv = SchemaCode::BadKeywordValue;
@@ -935,6 +937,12 @@ impl Checker<'_> {
                     self.push(at, SchemaCode::MisplacedPathLike, msg);
                 } else if m.get("type") != Some(&CValue::Str("string".to_string())) {
                     self.push(at, SchemaCode::MisplacedPathLike, "path_like needs type string".to_string());
+                }
+            }
+            ProjectKeyword::ValueOfRecord => {
+                // REQ-011: a boolean on any schema object; nothing else is judged.
+                if !matches!(v, CValue::Bool(_)) {
+                    self.push(at, kv, "value_of_record must be a boolean".to_string());
                 }
             }
             ProjectKeyword::XExtensions => {
@@ -1034,7 +1042,7 @@ fn strs(items: &[&str]) -> CValue {
 }
 
 /// The meta-schema `registry-keywords.schema.json` (REQ-001): the 2020-12 meta-schema plus
-/// the nine project keywords, with `unevaluatedProperties: false` so that no other keyword
+/// the ten project keywords, with `unevaluatedProperties: false` so that no other keyword
 /// is admitted, the deprecated 2019-09 keywords and `$dynamicRef` refused, and `$ref`
 /// limited to `#...` (REQ-002). Checked in as canonical JSON plus a newline.
 pub fn registry_keywords_schema() -> CValue {
@@ -1066,6 +1074,7 @@ pub fn registry_keywords_schema() -> CValue {
                 ("definitions", f.clone()),
                 ("dependencies", f),
                 ("path_like", obj([("const", CValue::Bool(true))])),
+                ("value_of_record", obj([("type", s("boolean"))])),
                 (
                     "x-extensions",
                     obj([
@@ -1131,7 +1140,7 @@ mod tests {
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(names, sorted);
-        assert_eq!(names.len(), 66);
+        assert_eq!(names.len(), 67);
         for (k, _) in all_keywords() {
             assert!(lookup(k).is_some(), "{k}");
         }

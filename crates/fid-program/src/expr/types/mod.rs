@@ -70,9 +70,10 @@
 //! **Values of record (C1).** Every expression type carries `not_of_record`. A manifest
 //! parameter is a value of record when its schema, or any schema inside it through
 //! `items`, `prefixItems`, `allOf`, `anyOf`, `oneOf`, `properties` or a local `$ref`, has
-//! `"value_of_record": true` or, until `CORE.REG.DEF` names that keyword,
-//! `"x-ref": "result"`; an unresolvable `$ref` counts as one (fail closed). An
-//! `{"expr": ...}` argument for it is `expression_value_of_record` whatever its type.
+//! `"value_of_record": true` (the registry keyword of `CORE.REG.DEF.SCHEMA` REQ-011); an
+//! unresolvable `$ref` counts as one (fail closed). An `{"expr": ...}` argument for it is
+//! `expression_value_of_record` whatever its type. `"x-ref": "result"` alone is not a value
+//! of record: it is a result reference (`element<result>`) and is type-checked as one.
 //! `{"literal": ...}` arguments are not checked here.
 //!
 //! **Order.** Declaration diagnostics first (parameters, variables, subroutine

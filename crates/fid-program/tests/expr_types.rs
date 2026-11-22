@@ -112,10 +112,7 @@ fn ac3_area() {
 fn ac4_value_of_record() {
     let r = run("value-of-record");
     let codes: Vec<_> = r.diagnostics.iter().map(|d| (d.code, d.slot.as_str())).collect();
-    assert_eq!(
-        codes,
-        [(DiagCode::ExpressionValueOfRecord, "args.nominal"), (DiagCode::ExpressionValueOfRecord, "args.result")]
-    );
+    assert_eq!(codes, [(DiagCode::ExpressionValueOfRecord, "args.nominal"), (DiagCode::TypeMismatch, "args.result")]);
     assert_case("value-of-record");
 }
 
@@ -223,7 +220,9 @@ fn value_of_record_nested() {
     let root = json(r##"{"$defs":{"nom":{"type":"number","value_of_record":true},"plain":{"type":"number"}}}"##);
     let vor = |s: &str| value_of_record(&json(s), &root, 0);
     assert!(vor(r#"{"type":"number","value_of_record":true}"#));
-    assert!(vor(r#"{"type":"string","x-ref":"result"}"#));
+    // The x-ref fallback of #418 is gone: a result reference is not itself a value of record.
+    assert!(!vor(r#"{"type":"string","x-ref":"result"}"#));
+    assert!(vor(r#"{"type":"string","x-ref":"result","value_of_record":true}"#));
     assert!(vor(r#"{"items":{"type":"number","value_of_record":true},"type":"array"}"#));
     assert!(vor(r#"{"allOf":[{"type":"number"},{"value_of_record":true}]}"#));
     assert!(vor(r##"{"$ref":"#/$defs/nom"}"##));

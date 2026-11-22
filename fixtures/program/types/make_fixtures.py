@@ -6,8 +6,9 @@ Writes, from hand-written tables in this file:
   (read from fixtures/core/reg/def/schema/catalogue/geo_frame_units.json) plus the kinds
   `area` and `time`;
 - fixtures/manifest/prog-demo.json: a CORE.REG.MAN manifest with result schemas, quantity
-  kinds, an enum parameter and value-of-record parameters (one flagged `value_of_record`,
-  one `x-ref: result`); definition_digest = SHA-256 of the RFC 8785 form of each definition
+  kinds, an enum parameter, a `value_of_record` parameter and an `x-ref: result`
+  parameter (a result reference, not a value of record since CORE.REG.DEF.SCHEMA REQ-011);
+  definition_digest = SHA-256 of the RFC 8785 form of each definition
   without that field, quantity_catalogue_digest = SHA-256 of catalogue.json;
 - fixtures/program/types/valid/*.json and fixtures/program/types/*.json: canonical
   Command Programs (AUTO.PROG.FMT);
@@ -311,7 +312,9 @@ def area_mismatch():
 
 
 def value_of_record():
-    """AC-4: an expression for a value-of-record parameter (flag and x-ref fallback)."""
+    """AC-4: an expression for a value-of-record parameter. An `x-ref: result` parameter is
+    no longer one (the fallback ended with CORE.REG.DEF.SCHEMA REQ-011): a string expression
+    for it is a plain type mismatch against element<result>."""
     p = P(5)
     s1 = p.step("invoke", args={"points": lit("pc-1")}, bind="r", command="feature.fit_cylinder", major=1)
     nom, up = "r.diameter * 2", "r.diameter"
@@ -322,7 +325,7 @@ def value_of_record():
     res = '"r1"'
     s3 = p.step("invoke", args={"result": ex(res)}, command="report.cite_result", major=1)
     p.typed(s3, "args.result", res, "string")
-    p.diag("expression_value_of_record", ["result"], "args.result", s3, p.whole(res))
+    p.diag("type_mismatch", ["element<result>", "string"], "args.result", s3, p.whole(res))
     return p.doc([s1, s2, s3]), p.report()
 
 

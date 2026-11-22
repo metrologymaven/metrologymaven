@@ -119,6 +119,8 @@ VALID = {
                 "x-standards-ref": "ISO-10360-2:2009 cl. 6.2",
             },
             "tilt": {"type": "number", "x-quantity": "angle", "x-unit": "deg", "default": 0},
+            # REQ-011: a measured value of record (rule C1); a boolean on any schema object.
+            "nominal": {"type": "number", "x-quantity": "length", "x-unit": "mm", "value_of_record": True},
             "label": {"type": "string", "maxLength": 128, "x-untrusted": True},
             "note": {"type": ["string", "null"], "x-untrusted": False},
             # REQ-010: a file parameter (CORE.BUS.POL.FS): top level, string, sorted extensions.
@@ -138,6 +140,12 @@ VALID = {
             "mode": {"enum": ["fast", "fine"], "examples": ["fine"]},
             "count": {"type": "integer", "minimum": 1, "maximum": 1000},
             "frame": {"type": "string", "x-ref": "frame", "x-ui": {"group": "advanced"}},
+            # REQ-011: allowed below the top level too, and false is a value.
+            "readings": {
+                "type": "array",
+                "items": {"$ref": "#/$defs/distance", "value_of_record": True},
+                "value_of_record": False,
+            },
         },
         "patternProperties": {"^tag_[a-z]+$": {"type": "string", "maxLength": 32}},
         "dependentRequired": {"span": ["offset"]},
@@ -200,6 +208,12 @@ INVALID = {
         wrap({"type": "string", "x-standards-ref": "ISO-1101:2017 cl. 8.2 the zone is limited by two lines"}),
         "bad_standards_ref",
         "/properties/a/x-standards-ref",
+    ),
+    # REQ-011: value_of_record is a boolean, not the string "true".
+    "value_of_record_not_boolean": (
+        wrap({"type": "number", "x-quantity": "length", "value_of_record": "true"}),
+        "bad_keyword_value",
+        "/properties/a/value_of_record",
     ),
     # REQ-010: path_like only on a top-level property; here on an array's items.
     "nested_path_like": (
