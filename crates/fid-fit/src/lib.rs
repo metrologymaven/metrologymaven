@@ -28,3 +28,4 @@ pub mod ls_rnd;
 pub mod mcc_cyl;
 pub mod tan_plane;
 pub mod tan_rock;
+pub mod vor;

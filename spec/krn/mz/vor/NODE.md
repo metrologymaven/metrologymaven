@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [fid-fit]
+built_pr: 470
+updated: 2026-11-22
 ---
 
 # KRN.MZ.VOR: Exact Voronoi-based minimum-zone 2D circle
@@ -69,7 +71,7 @@ A second, independent path for the minimum-zone 2D circle. The optimal centre li
 ## Open questions
 
 - **Revise for D-035 (accepted 2026-11-17):** move the predicate code into KRN.NUM.PRED and depend on it.
-- None.
+- AC-2 (PTB TraCIM Chebyshev 2D circle sets in `rdl/tracim-cheb-v0`) awaits `UNC.RDL.FREEZE`; AC-1 (500-case brute-force oracle), AC-3 (determinism & permutation invariance), AC-4 (collinear & error paths), and AC-5 (2,000 points < 200 ms) are verified in `crates/fid-fit/tests/vor.rs`.
 
 ## Children
 
