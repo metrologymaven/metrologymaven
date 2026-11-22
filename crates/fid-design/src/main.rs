@@ -12,6 +12,8 @@
 //! `fid-design icons-registry --manifest <file> --root <design dir> [--json]`,
 //! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]` and
 //! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`.
+//! `fid-design icons-registry --manifest <file> --root <design dir> [--json]` and
+//! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`.
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage.
 
 use std::io::Write;
@@ -19,15 +21,26 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 const USAGE: &str =
-    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]
+    "usage: fid-design pkg-check --root <dir> [--json]
+       fid-design pkg-diff --from <dir> --to <dir> [--json]
+       fid-design tokens-check --root <design dir> [--json]
+       fid-design status-check --root <design dir> [--json]
+       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]
+       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]
+       fid-design princ-check [--file <md>] [--json]
+       fid-design words-check --copy <jsonl> [--words <json>] [--json]
+       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]
+       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]
        fid-design icons-prov --root <design dir> --attribution <file> [--json]
        fid-design icons-registry --manifest <file> --root <design dir> [--json]
        fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]
-       fid-design screens-gate --spec <spec dir> --root <design dir> [--json]";
+       fid-design screens-gate --spec <spec dir> --root <design dir> [--json]
+       fid-design fonts-check --root <design dir> --allowlist <file> [--json]";
 
 #[derive(Default)]
 struct Args {
     root: Option<PathBuf>,
+    allowlist: Option<PathBuf>,
     from: Option<PathBuf>,
     to: Option<PathBuf>,
     file: Option<PathBuf>,
@@ -55,6 +68,7 @@ fn parse_args(args: &[String]) -> Option<Args> {
         match a.as_str() {
             "--json" => out.json = true,
             "--root" => out.root = Some(PathBuf::from(it.next()?)),
+            "--allowlist" => out.allowlist = Some(PathBuf::from(it.next()?)),
             "--from" => out.from = Some(PathBuf::from(it.next()?)),
             "--to" => out.to = Some(PathBuf::from(it.next()?)),
             "--file" => out.file = Some(PathBuf::from(it.next()?)),
@@ -129,6 +143,7 @@ fn main() -> ExitCode {
     let princ_flags = args.file.is_some() || args.copy.is_some() || args.words.is_some();
     let screen_flags = args.journeys.is_some() || args.ga.is_some() || args.spec.is_some();
     if cmd == "screens-check" || cmd == "screens-gate" {
+    if cmd == "fonts-check" {
         let others = princ_flags
             || args.from.is_some()
             || args.to.is_some()
@@ -142,6 +157,7 @@ fn main() -> ExitCode {
             || args.attribution.is_some()
             || args.manifest.is_some();
         let Some(root) = args.root.clone() else {
+        let (Some(root), Some(allowlist)) = (&args.root, &args.allowlist) else {
             return usage();
         };
         if others {
@@ -162,6 +178,12 @@ fn main() -> ExitCode {
         };
     }
     if screen_flags {
+        return match fid_design::fonts::check(root, allowlist) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        };
+    }
+    if args.allowlist.is_some() {
         return usage();
     }
     if cmd == "icons-prov" || cmd == "icons-registry" {

@@ -1,0 +1,51 @@
+{
+  "missing-role": {
+    "exit": 1,
+    "findings": [
+      "TYPE-ROLE-MISSING type.heading.3"
+    ],
+    "root": "missing-role"
+  },
+  "no-tnum": {
+    "exit": 1,
+    "findings": [
+      "FONT-TNUM type.numeric"
+    ],
+    "root": "no-tnum"
+  },
+  "no-tnum-feature": {
+    "exit": 1,
+    "findings": [
+      "FONT-TNUM type.numeric"
+    ],
+    "root": "no-tnum-feature"
+  },
+  "proprietary": {
+    "exit": 1,
+    "findings": [
+      "FONT-LICENCE Synth Sans"
+    ],
+    "root": "proprietary"
+  },
+  "small-floor": {
+    "exit": 1,
+    "findings": [
+      "TYPE-SIZE floor type.body"
+    ],
+    "root": "small-floor"
+  },
+  "small-standard": {
+    "exit": 1,
+    "findings": [
+      "TYPE-SIZE light type.label"
+    ],
+    "root": "small-standard"
+  },
+  "unknown-font": {
+    "exit": 1,
+    "findings": [
+      "FONT-UNKNOWN type.code"
+    ],
+    "root": "unknown-font"
+  }
+}

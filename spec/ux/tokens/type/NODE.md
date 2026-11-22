@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-design]
 satisfies: [REQ-UX.TOKENS-001, REQ-UX.TOKENS-011]
 covers: []
 depends_on: [UX.SYSTEM.PKG]
