@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-chain]
+built_pr: 497
 satisfies: [REQ-TRUST.CHAIN-005]
 covers: []
 depends_on: [TRUST.PKG.READER]
