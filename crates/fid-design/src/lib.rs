@@ -6,6 +6,7 @@
 //! - [`words`]: `words-check` (`UX.SYSTEM.PRINC`).
 //! - [`review`]: `review-check` (`UX.SYSTEM.REVIEW`).
 //! - [`screens`]: `screens-check` and `screens-gate` (`UX.SCREENS.INV`).
+//! - [`research`]: `research-check` (`UX.RESEARCH.PROTO`).
 //! - [`tokens`]: `tokens-check` (`UX.TOKENS.COLOR`).
 //! - [`status`]: `status-check` (`UX.TOKENS.STATUS`).
 //! - [`palettes`]: `palettes-check` (`UX.TOKENS.DATAPAL`).
@@ -18,6 +19,7 @@ pub mod icons_prov;
 pub mod palettes;
 pub mod pkg;
 pub mod princ;
+pub mod research;
 pub mod review;
 pub mod screens;
 pub mod status;

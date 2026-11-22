@@ -1,0 +1,11 @@
+{
+  "artefact": "research/protocol.md",
+  "author": "Antigravity (Google DeepMind), agent author of UX.RESEARCH.PROTO",
+  "date": "2026-11-22",
+  "references": [
+    "The UX.RESEARCH.PROTO, UX.RESEARCH.USAB and FLOW.PERSONA.PERS spec nodes in this repository",
+    "The shipped persona definitions in acceptance/personas/personas.json in this repository",
+    "The published System Usability Scale (Brooke, 1996)"
+  ],
+  "statement_version": "originality-statement@1"
+}
