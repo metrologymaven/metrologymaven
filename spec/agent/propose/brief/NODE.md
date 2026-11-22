@@ -19,6 +19,7 @@ cli: [fid agent attach-brief]
 mcp: [agent_attach_brief]
 journal: [agent.attach_brief@1]
 built_in: [fid-agent]
+built_pr: 512
 updated: 2026-11-22
 ---
 
