@@ -1,0 +1,13 @@
+manifest_version = 1
+licence_path = "LICENSE.txt"
+licence_sha256 = "sha256:9cdd657df8d86a6e0462961bb78f9d8cdf0692a6a1e3dcefd4211a1b3e0f5578"
+
+[source]
+url = "https://example.org/qif-flat-fixtures.git"
+rev = "3333333333333333333333333333333333333333"
+
+[[file]]
+path = "identity.xsd"
+bytes = 880
+sha256 = "sha256:7d728a2fe09c3f196e08c41e1244358aa8766e366244856763bd49265f122bfc"
+role = "xsd"

@@ -13,6 +13,8 @@ publish = false
 fid-canon = { path = "../fid-canon" }
 # Safe-read limit harness (IO.REG.LIMITS, REQ-IO.QIF.GEN.PARSE-005).
 fid-io-reg = { path = "../fid-io-reg" }
+# Normalised QIF 3.0 Schema IR types and canonical JSON codec (IO.QIF.GEN.FLAT).
+fid-qif-ir = { path = "../fid-qif-ir" }
 # Shared `sha256:` digest type (AGENTS.md rule 14).
 fid-types = { path = "../fid-types" }
 # Hardened streaming XML pull reader (IO.QIF.XML.PARSE, REQ-IO.QIF.GEN.PARSE-005).
