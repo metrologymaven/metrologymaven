@@ -18,6 +18,7 @@ determinism: D0
 cli: [fid report export-balloon-pack]
 mcp: [report_export_balloon_pack]
 journal: [report.export_balloon_pack@1]
+built_in: [fid-report]
 updated: 2026-11-22
 ---
 
