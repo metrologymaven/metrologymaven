@@ -21,6 +21,7 @@ pub mod attrs;
 pub mod builder;
 pub mod error;
 pub mod obj;
+pub mod ply;
 pub mod precision;
 pub mod stl;
 
