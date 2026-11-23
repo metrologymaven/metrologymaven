@@ -1,0 +1,6 @@
+{
+  "format": "cleanroom-phrases@1",
+  "license": "CC-BY-4.0",
+  "description": "SHA-256 digests of normalised distinctive external phrases forbidden in project-authored FAI header labels (RPT.FORMS.HDR AC-7). Contains hashes only, never standards text.",
+  "forbidden_digests": []
+}

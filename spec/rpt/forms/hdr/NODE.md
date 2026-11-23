@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid report create-fai, fid report set-header-fai, fid report add-item-fai, fid report remove-item-fai, fid report show-fai]
 mcp: [report_create_fai, report_set_header_fai, report_add_item_fai, report_remove_item_fai, report_show_fai]
 journal: [report.create_fai@1, report.set_header_fai@1, report.add_item_fai@1, report.remove_item_fai@1, report.show_fai@1]
-updated: 2026-11-17
+built_in: [fid-report-forms]
+updated: 2026-11-22
 ---
 
 # RPT.FORMS.HDR: FAI header and accountability data (forms 1 and 2)
