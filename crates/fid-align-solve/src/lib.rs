@@ -25,6 +25,7 @@
 pub mod cond;
 pub mod constr;
 pub mod hist;
+pub mod matrix;
 pub mod report;
 pub mod rps321;
 
@@ -41,6 +42,10 @@ pub use constr::{
 pub use hist::{
     ConvergenceHistory, HistError, HistoryRecorder, IterationRow, Outcome, StoppedBy, MAX_CRITERION_BYTES,
     MAX_ITERATIONS,
+};
+pub use matrix::{
+    solve_matrix, MatrixError, MatrixInput, MatrixOrder, MatrixSolution, RotationInput, TransformDirection, DET_TOL,
+    MATRIX_ALGORITHM_ID, ORTHONORMAL_TOL, QUAT_UNIT_TOL,
 };
 pub use report::{
     Disposition, Entry, EntryKind, EntryRef, EntryView, Length, LengthVec, RejectReason, ReportBuilder, ReportError,
