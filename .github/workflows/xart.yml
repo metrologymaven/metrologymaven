@@ -10,48 +10,31 @@ name: xart
 # required check without blocking unrelated PRs (making it required is the owner's decision).
 on:
   pull_request:
+  merge_group:
   push:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
 jobs:
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
-      run: ${{ steps.diff.outputs.run }}
+      run: ${{ steps.diff.outputs.run_xart }}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-      - name: Did the kernel, the artifact tooling or the fixtures change?
+          fetch-depth: ${{ github.event_name == 'pull_request' && 0 || 1 }}
+      - name: Did the kernel, xart tooling, fixtures, or kernel Cargo.lock deps change?
         id: diff
         shell: bash
         env:
-          EVENT: ${{ github.event_name }}
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PUSH_BEFORE: ${{ github.event.before }}
-          HEAD_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          pattern='^(\.github/workflows/xart\.yml|Cargo\.lock|crates/fid-(canon|kci|kernel-wasm|num|types|wasm-check|xart)/|fixtures/man/xart-calls-v1/)'
-          case "$EVENT" in
-            pull_request) base="$PR_BASE" ;;
-            push) base="$PUSH_BEFORE" ;;
-            *) base="" ;;
-          esac
-          # Unknown base (manual run, new branch, force push): run everything.
-          run=true
-          if [ -n "$base" ] && [ "$base" != 0000000000000000000000000000000000000000 ] \
-            && git cat-file -e "$base^{commit}" 2> /dev/null; then
-            files=$(git diff --name-only "$base" "$HEAD_SHA")
-            if ! grep -qE "$pattern" <<< "$files"; then run=false; fi
-          fi
-          echo "run=$run" | tee -a "$GITHUB_OUTPUT"
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 tools/ci_scope.py --event "${{ github.event_name }}" --base "$CI_BASE_SHA" --head "${{ github.sha }}" --github-output "$GITHUB_OUTPUT"
   module:
     # The stand-in test algorithms are compiled only with the test-algorithms feature; the
     # reference build registers none until fid-kernel exists (KRN.MAN.WASM).
@@ -65,6 +48,9 @@ jobs:
         with:
           toolchain: stable
           targets: wasm32-wasip1
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          shared-key: "xart-module"
       - name: Build and seal the WASM test module
         shell: bash
         run: |
@@ -129,6 +115,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
           toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          shared-key: "xart-${{ matrix.host }}"
       - name: Install wasmtime v49.0.6 (archive SHA-256 pinned and verified before use)
         shell: bash
         env:

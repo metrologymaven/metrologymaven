@@ -10,16 +10,17 @@ name: kernel-repro
 # injected build time must fail the comparison and name its section (AC-3).
 on:
   pull_request:
+  merge_group:
   push:
     branches: [main]
     tags: ["**"]
   workflow_dispatch:
 permissions:
   contents: read
-# A newer push to the same PR cancels the older run; runs on main are never cancelled.
+# A newer push to the same PR or main cancels the older run; tags and merge_group are never cancelled.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
 env:
   # rust:1.89.0-bookworm (multi-arch index), pinned by digest: the clean container of AC-2.
   # Its toolchain must match kernel-build/rust-toolchain.toml; the script checks that.
@@ -27,7 +28,24 @@ env:
   # Files every build uploads for the compare job.
   REPRO_FILES: fid-kernel-wasm.wasm fid-kernel-wasm.link.wasm rustc-vV.txt build-settings.json toolchain-digest.txt vendor-digest.txt build-info.txt SHA256SUMS
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      run: ${{ steps.scope.outputs.run_kernel_repro }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && 0 || 1 }}
+      - name: Decide whether kernel-repro needs to run
+        id: scope
+        shell: bash
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 tools/ci_scope.py --event "${{ github.event_name }}" --base "$CI_BASE_SHA" --head "${{ github.sha }}" --github-output "$GITHUB_OUTPUT"
   build-linux:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -77,6 +95,8 @@ jobs:
           path: ${{ runner.temp }}/up/injected/
           if-no-files-found: error
   build-macos:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -110,6 +130,8 @@ jobs:
           path: ${{ runner.temp }}/up/
           if-no-files-found: error
   build-container:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -132,7 +154,8 @@ jobs:
           path: ${{ runner.temp }}/up/
           if-no-files-found: error
   compare:
-    needs: [build-linux, build-macos, build-container]
+    needs: [changes, build-linux, build-macos, build-container]
+    if: needs.changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -2,12 +2,15 @@ name: site
 # Builds metrologymaven.io from the spec tree on every PR; deploys on main (D-039).
 on:
   pull_request:
+  merge_group:
   push:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
-concurrency: site-${{ github.ref }}
+concurrency:
+  group: site-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   build-deploy:
     runs-on: ubuntu-latest

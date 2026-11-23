@@ -5,6 +5,12 @@ name: io-fuzz
 on:
   push:
     branches: [main]
+    paths:
+      - "crates/fid-io-*/**"
+      - "crates/fid-qif*/**"
+      - "crates/fid-xml/**"
+      - "fixtures/io/**"
+      - ".github/workflows/io-fuzz.yml"
   schedule:
     - cron: "23 4 * * 0"
   workflow_dispatch:
@@ -17,7 +23,7 @@ permissions:
   contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 jobs:
   coverage-check:
     runs-on: ubuntu-latest
@@ -29,6 +35,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
           toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          shared-key: "io-fuzz-coverage"
       - name: Check every registered first-party reader has a fuzz target (REQ-001)
         run: |
           cargo run --locked -p fid-io-corp --bin corpus-fuzz -- check \
