@@ -49,6 +49,7 @@ python fixtures/core/jrn/undo/move/make_fixtures.py --check
 python fixtures/core/jrn/undo/super/make_fixtures.py --check
 python fixtures/core/prj/cont/hier/make_fixtures.py --check
 python fixtures/core/prj/cont/life/make_identity_cases.py --check
+python fixtures/core/prj/cont/life/make_p_small.py --check
 python fixtures/core/prj/meta/make_fixtures.py --check
 python fixtures/core/prj/stage/model/make_fixtures.py --check
 python fixtures/core/prj/stage/switch/make_fixtures.py --check
