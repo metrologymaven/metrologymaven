@@ -3,6 +3,8 @@
 //!
 //! - [`bind`]: block binding and resolution of stable IDs against an explicit journal head
 //!   (`RPT.MODEL.BIND.RESOLVE`).
+//! - [`blocks`]: shipped report block kinds, payload schemas, resolvers and commands
+//!   (`RPT.MODEL.BLOCKS`).
 //! - [`doc`]: the report document model and its storage and commands (`RPT.MODEL.DOC`).
 //! - [`fmt`]: value formatting, decision display and source labels (`RPT.MODEL.FMT`); the
 //!   only place where a value of record becomes text.
@@ -11,6 +13,7 @@
 //!   (`RPT.MODEL.TMPL.VER`).
 
 pub mod bind;
+pub mod blocks;
 pub mod doc;
 pub mod fmt;
 mod json_num;

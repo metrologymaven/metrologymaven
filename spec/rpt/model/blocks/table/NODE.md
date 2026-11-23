@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-report]
 satisfies: [REQ-RPT.MODEL.BLOCKS-001, REQ-RPT.MODEL.BLOCKS-002, REQ-RPT.MODEL.BLOCKS-003, REQ-RPT.MODEL.BLOCKS-010, REQ-RPT.MODEL.BLOCKS-011, REQ-RPT.MODEL.BLOCKS-012]
 covers: [GOM.RPT.04, PW.RPT.03, SA.RPT.04]
 depends_on: [RPT.MODEL.DOC, RPT.MODEL.BIND.RESOLVE, RPT.MODEL.FMT, GDT.CHAR.RECORD]
@@ -17,7 +18,7 @@ determinism: D0
 cli: [fid report set-table-block]
 mcp: [report_set_table_block]
 journal: [report.set_table_block@1]
-updated: 2026-11-19
+updated: 2026-11-22
 ---
 
 # RPT.MODEL.BLOCKS.TABLE: Characteristic table block with column and row customisation
