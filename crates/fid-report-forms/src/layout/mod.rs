@@ -3,6 +3,7 @@
 
 pub mod fai;
 pub mod map;
+pub mod ppap;
 
 pub use map::{
     check_cleanroom_labels, check_release_clearance, command_defs, current_build_profile, resolve_form_field_block,
