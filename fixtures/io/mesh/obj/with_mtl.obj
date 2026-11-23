@@ -1,0 +1,43 @@
+# Wavefront OBJ referencing missing.mtl, usemtl x2, vt x24
+mtllib missing.mtl
+o cube_mtl
+v 0 0 0
+v 10 0 0
+v 10 10 0
+v 0 10 0
+v 0 0 10
+v 10 0 10
+v 10 10 10
+v 0 10 10
+vt 0 0
+vt 0.25 0
+vt 0.5 0
+vt 0.75 0
+vt 0 0.125
+vt 0.25 0.125
+vt 0.5 0.125
+vt 0.75 0.125
+vt 0 0.25
+vt 0.25 0.25
+vt 0.5 0.25
+vt 0.75 0.25
+vt 0 0.375
+vt 0.25 0.375
+vt 0.5 0.375
+vt 0.75 0.375
+vt 0 0.5
+vt 0.25 0.5
+vt 0.5 0.5
+vt 0.75 0.5
+vt 0 0.625
+vt 0.25 0.625
+vt 0.5 0.625
+vt 0.75 0.625
+usemtl steel_top
+f 1/1 4/2 3/3 2/4
+f 5/5 6/6 7/7 8/8
+f 1/9 2/10 6/11 5/12
+usemtl steel_sides
+f 4/13 8/14 7/15 3/16
+f 1/17 5/18 8/19 4/20
+f 2/21 3/22 7/23 6/24
