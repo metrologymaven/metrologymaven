@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid report add-char-balloon]
 mcp: [report_add_char_balloon]
 journal: [report.add_char_balloon@1]
-updated: 2026-11-17
+built_in: [fid-report]
+updated: 2026-11-22
 ---
 
 # RPT.BALLOON.CHAR: Characteristics from balloons

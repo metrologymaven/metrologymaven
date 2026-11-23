@@ -3,5 +3,6 @@
 
 pub mod auto_parse;
 pub mod auto_text;
+pub mod char;
 pub mod register;
 pub mod sheet;
