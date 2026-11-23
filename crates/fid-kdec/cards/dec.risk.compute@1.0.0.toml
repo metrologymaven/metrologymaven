@@ -1,0 +1,18 @@
+# Spec card (UNC.DEC.RISK). Cite designators and clause numbers only; never paste standards text.
+id = "dec.risk.compute@1.0.0"
+title = "Specific and global conformity risk"
+method = "Computes specific conformity risk from the evaluated decision outcome and conformance probability p: CONFORMS yields consumer risk 1 - p (exact binary64 subtraction), NONCONFORMS yields producer risk p, INDETERMINATE yields both, and NOT_DECIDABLE yields neither. When a rule requests global risk and a normal process prior N(mu0, sigma0) with a non-empty source string is supplied, derives the rule's acceptance zone and evaluates the JCGM 106 global consumer and producer risk integrals: closed-form normal CDF inner integral via eval::normal::upper_tail (cancellation-free tail formulation) and composite 16-point Gauss-Legendre outer quadrature over [mu0 - 10*sigma0, mu0 + 10*sigma0] split deterministically at tolerance limits, acceptance limits and fixed boundary-layer multiples of u, summed in fixed order via fid_num::red::sum. When global risk is requested without a declared prior, emits no global figures and sets the prior_missing flag rather than assuming a prior."
+applicability = "An evaluated DecisionRecord, its Tolerance, its DecisionRule, positive finite standard uncertainty u, and an optional declared normal Prior(mu0, sigma0, source). Non-normal process priors are out of scope."
+references = [
+  "JCGM 106:2012, clauses 8 and 9 (specific and global consumer and producer risk) [unverified: clause numbering]",
+]
+determinism = "D0"
+input_arity = "5"
+failure_modes = [
+  "Non-finite or non-positive sigma0 or empty/oversized prior source returns invalid_prior.",
+  "Non-finite or non-positive standard uncertainty u returns invalid_uncertainty.",
+  "Empty or inverted tolerance limits return invalid_tolerance.",
+  "An unbound guard-band template or label-only rule requested for global risk returns unbound_rule.",
+  "Truncating the outer integral at mu0 +/- 10*sigma0 omits tail probability below 1.6e-23.",
+]
+validation = "Specific risks match fixtures/unc/dec/risk/specific.csv exactly as binary64; global consumer and producer risks match 50-digit references in fixtures/unc/dec/risk/global.csv within 1e-9 absolute (measured well below 1e-12); tiny-u sanity (u = 1e-6 * tolerance) yields both global risks below 1e-9; missing prior yields prior_missing with no global figures; outputs bit-identical across x86-64, ARM64 and wasm32."

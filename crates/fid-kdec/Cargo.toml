@@ -1,6 +1,6 @@
 [package]
 name = "fid-kdec"
-description = "Metrology Maven kernel decision rules: the DecisionRule type, rule-ID grammar, four-valued Outcome, built-in catalog dr-catalog@1 and decisions that carry their evidence basis and rule evaluation with conformance probability (spec nodes UNC.DEC.TYPE, UNC.DEC.EVAL)"
+description = "Metrology Maven kernel decision rules: the DecisionRule type, rule-ID grammar, four-valued Outcome, built-in catalog dr-catalog@1, decisions with evidence basis, rule evaluation with conformance probability, and specific and global conformity risk (spec nodes UNC.DEC.TYPE, UNC.DEC.EVAL, UNC.DEC.RISK)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

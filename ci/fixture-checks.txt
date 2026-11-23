@@ -238,6 +238,7 @@ python fixtures/trust/esig/meaning/make_fixtures.py --check
 python fixtures/trust/profile/select/make_cases.py --check
 python fixtures/unc/class/make_table.py --check
 python fixtures/unc/dec/eval/make_cases.py --check
+python fixtures/unc/dec/risk/make_cases.py --check
 python fixtures/unc/dec/type/make_fixtures.py --check
 python fixtures/unc/dist/make_fixtures.py --check
 python fixtures/unc/mcm/adapt/make_fixtures.py --check
