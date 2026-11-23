@@ -1,0 +1,14 @@
+# Spec card (KRN.CONS.ELEM.SHAPE). Cite designators and clause numbers only; never paste standards text.
+id = "construct.build_slot.two_circles@1.0.0"
+title = "Slot from two coplanar circles"
+method = "Builds a slot spanning two coplanar equal-radius circles with length equal to centre distance and width equal to mean diameter."
+applicability = "Two coplanar 3D circles with parallel normals and equal radii within thresholds."
+references = [
+  "Metrology Maven spec node KRN.CONS.ELEM.SHAPE (definitional compound and axial primitive constructions).",
+]
+determinism = "D0"
+input_arity = "2"
+failure_modes = [
+  "Non-coplanar, misaligned or unequal-radius circles fail with IllConditioned.",
+]
+validation = "300 seeded closed-form cases per variant in fixtures/cons/shape-defs-v1, checked on x86-64, ARM64 and wasm32."

@@ -1,0 +1,14 @@
+# Spec card (KRN.CONS.ELEM.SHAPE). Cite designators and clause numbers only; never paste standards text.
+id = "construct.build_cylinder.two_circles@1.0.0"
+title = "Cylinder from two coaxial circles"
+method = "Builds a cylinder through two coaxial equal-radius circles using the arithmetic mean of their radii and midpoint of centres."
+applicability = "Two coaxial 3D circles with matching radii within thresholds.angular and thresholds.distance."
+references = [
+  "Metrology Maven spec node KRN.CONS.ELEM.SHAPE (definitional compound and axial primitive constructions).",
+]
+determinism = "D0"
+input_arity = "2"
+failure_modes = [
+  "Axis misalignment, transverse offset or radius difference exceeding thresholds fails with IllConditioned.",
+]
+validation = "300 seeded closed-form cases per variant in fixtures/cons/shape-defs-v1, checked on x86-64, ARM64 and wasm32."
