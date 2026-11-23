@@ -25,6 +25,7 @@
 pub mod cond;
 pub mod constr;
 pub mod hist;
+pub mod icp_metric;
 pub mod report;
 
 pub use cond::{
@@ -40,6 +41,9 @@ pub use constr::{
 pub use hist::{
     ConvergenceHistory, HistError, HistoryRecorder, IterationRow, Outcome, StoppedBy, MAX_CRITERION_BYTES,
     MAX_ITERATIONS,
+};
+pub use icp_metric::{
+    build_rows, Correspondence, Correspondences, Metric, MetricError, Rows, ALG_POINT_TO_PLANE, ALG_POINT_TO_POINT, P3,
 };
 pub use report::{
     Disposition, Entry, EntryKind, EntryRef, EntryView, Length, LengthVec, RejectReason, ReportBuilder, ReportError,
