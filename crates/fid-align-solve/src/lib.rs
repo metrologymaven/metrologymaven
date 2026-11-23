@@ -24,6 +24,7 @@
 
 pub mod cond;
 pub mod constr;
+pub mod feat_dev;
 pub mod hist;
 pub mod report;
 
@@ -36,6 +37,10 @@ pub use constr::{
     combined_weights, linearise, pose_from_params, reduced_jacobian, validate, verify_locks, CertifiedPose,
     ConstrError, ConstraintSet, Dof, DofLocks, FrameContext, Jacobian, Linearisation, LockFrameRef, RegionWeight,
     WeightInput, WeightSpec, B_MAX, LOCK_TOL,
+};
+pub use feat_dev::{
+    deviation, perp_basis, DevError, DevLabel, DevOptions, Deviation, FeaturePair, FeatureType, FittedFeature,
+    NominalFeature, TwistJacobian, Vec3, WorkingPlane, MIN_DIR_NORM,
 };
 pub use hist::{
     ConvergenceHistory, HistError, HistoryRecorder, IterationRow, Outcome, StoppedBy, MAX_CRITERION_BYTES,

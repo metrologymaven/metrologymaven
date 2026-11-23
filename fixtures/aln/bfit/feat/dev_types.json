@@ -1,0 +1,61 @@
+{
+  "format": "fid-aln-bfit-feat-dev-types@1",
+  "license": "CC0-1.0",
+  "seed": 7,
+  "pairs": [
+    {
+      "type": "point",
+      "position": [0.12, -0.05, 0.08]
+    },
+    {
+      "type": "vector_point",
+      "position": [0.05, 0.03, -0.04],
+      "normal": [0.0, 0.6, 0.8]
+    },
+    {
+      "type": "plane",
+      "point": [0.02, -0.01, 0.15],
+      "normal": [0.0, 0.0, 1.0],
+      "support_radius": 0.05
+    },
+    {
+      "type": "line",
+      "point": [0.04, 0.02, 0.01],
+      "direction": [1.0, 0.0, 0.0],
+      "length": 0.08
+    },
+    {
+      "type": "circle",
+      "centre": [-0.03, 0.07, 0.02],
+      "normal": [0.0, 0.0, 1.0],
+      "diameter": 0.04
+    },
+    {
+      "type": "sphere",
+      "centre": [0.06, -0.04, 0.09],
+      "diameter": 0.03
+    },
+    {
+      "type": "cylinder",
+      "point": [0.01, 0.02, 0.0],
+      "axis": [0.0, 0.0, 1.0],
+      "diameter": 0.025,
+      "length": 0.1
+    },
+    {
+      "type": "cone",
+      "apex": [-0.02, -0.03, 0.05],
+      "axis": [0.0, 1.0, 0.0],
+      "size": 0.5235987755982988,
+      "length": 0.06
+    },
+    {
+      "type": "slot",
+      "centre": [0.08, 0.01, -0.02],
+      "normal": [0.0, 0.0, 1.0],
+      "long_axis": [1.0, 0.0, 0.0],
+      "width": 0.012,
+      "length": 0.05
+    }
+  ]
+}
