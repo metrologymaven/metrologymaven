@@ -1,0 +1,28 @@
+{
+  "format": "fid-fai-fixture@1",
+  "license": "CC-BY-4.0",
+  "header": {
+    "part_number": "MM-BRKT-1042",
+    "part_name": "Sensor Mounting Bracket",
+    "part_revision": "C",
+    "drawing_number": "DWG-1042",
+    "drawing_revision": "C2",
+    "serial_number": "SN-00042",
+    "fai_report_number": "FAI-2026-0042",
+    "organisation_name": "Metrology Maven Synthetic Works",
+    "supplier_code": "SUP-042",
+    "purchase_order": "PO-9001",
+    "detail_or_assembly": "detail",
+    "full_or_partial": "full",
+    "prepared_by": "A. Inspector",
+    "reviewed_by": "B. Quality"
+  },
+  "numeric_fields": {
+    "bore_diameter_nominal_mm": {
+      "record_id": "019a9f20-0001-7000-8000-000000000001",
+      "value_m_str": "0.025",
+      "unit": "mm",
+      "decimals": 3
+    }
+  }
+}
