@@ -1288,9 +1288,14 @@ dependencies = [
 name = "fid-dep"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
  "fid-canon",
+ "fid-dep",
+ "fid-jobs",
+ "fid-journal",
  "fid-project",
  "fid-registry",
+ "fid-store",
  "fid-types",
  "fid-uuid",
 ]
