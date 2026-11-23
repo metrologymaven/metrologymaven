@@ -1,0 +1,12 @@
+# Fixture required-check set for ECO.REPO.TPL.SELFTEST AC-1 and AC-2. CC-BY-4.0.
+[[check]]
+id = "format"
+local = ["{python}", "-c", "import pathlib, sys; bad=[str(p) for p in pathlib.Path('.').rglob('*') if p.is_file() and '.git' not in p.parts and bytes([13, 10]) in p.read_bytes()]; sys.exit(1 if bad else 0)"]
+
+[[check]]
+id = "lint"
+local = ["{python}", "-c", "import pathlib, sys; req=['AGENTS.md','CLAUDE.md','LICENSE-MIT','LICENSE-APACHE']; miss=[r for r in req if not pathlib.Path(r).is_file()]; sys.exit(1 if miss else 0)"]
+
+[[check]]
+id = "rules"
+local = ["{python}", "-m", "house_rules", "check", "--target", ".", "--repo-id", "{repo_id}", "--manifest", "{manifest}", "--current-rev", "{rules_rev}"]

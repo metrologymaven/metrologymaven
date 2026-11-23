@@ -1,4 +1,4 @@
-"""CLI entry point: ``python -m repo_template {new,promote,repin} ...``."""
+"""CLI entry point: ``python -m repo_template {new,promote,repin,selftest} ...``."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .new import DEFAULT_TEMPLATES, TemplateError, instantiate
 from .promote import add_subparsers, run_promote_args, run_repin_args
+from .selftest import add_selftest_subparser, run_selftest_args
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -25,6 +26,7 @@ def main(argv: list[str] | None = None) -> int:
     new.add_argument("--templates", type=Path, default=DEFAULT_TEMPLATES, help=argparse.SUPPRESS)
 
     add_subparsers(sub)
+    add_selftest_subparser(sub)
 
     args = ap.parse_args(argv)
     if args.command == "new":
@@ -48,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_promote_args(args)
     if args.command == "repin":
         return run_repin_args(args)
+    if args.command == "selftest":
+        return run_selftest_args(args)
     return 2
 
 
