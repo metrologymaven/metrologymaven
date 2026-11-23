@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-gps]
+built_pr: 519
+updated: 2026-11-22
 ---
 
 # GDT.ZONE.GROUP.IDS: Group identity, pose digest and incomplete groups

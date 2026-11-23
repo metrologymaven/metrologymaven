@@ -275,6 +275,7 @@ python tools/check_eval_suite.py
 python tools/check_knp1_findings.py fixtures/solv/vend/*/knp1-findings.json fixtures/solv/vend/lint/*.json
 python tools/check_manifest_schema.py
 python tools/check_registry_keywords.py
+python tools/fixtures/gdt_zone_group_ids.py --check
 python tools/fixtures/geo_apply_cases.py --check
 python tools/fixtures/geo_digest_vectors.py --check
 python tools/fixtures/geo_dist.py --check
