@@ -1,0 +1,111 @@
+{
+  "schema": "mig-factors@1",
+  "factors": [
+    {
+      "id": "FIT_METHOD",
+      "setting_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["association_policy_id"],
+        "properties": {
+          "association_policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[a-z0-9][a-z0-9._:@/-]{0,127}$"
+          }
+        }
+      }
+    },
+    {
+      "id": "FILTER",
+      "setting_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["filter_policy_id"],
+        "properties": {
+          "filter_policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[a-z0-9][a-z0-9._:@/-]{0,127}$"
+          },
+          "cutoff_mm": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8
+          }
+        }
+      }
+    },
+    {
+      "id": "ALIGNMENT",
+      "setting_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["alignment_ref"],
+        "properties": {
+          "alignment_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,127}$"
+          }
+        }
+      }
+    },
+    {
+      "id": "DATUM_INTERPRETATION",
+      "setting_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["resolver_row_id"],
+        "properties": {
+          "resolver_row_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,127}$"
+          }
+        }
+      }
+    },
+    {
+      "id": "POINT_SELECTION",
+      "setting_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["selection_digest"],
+        "properties": {
+          "selection_digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    {
+      "id": "ROUNDING",
+      "setting_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["decimals", "rule"],
+        "properties": {
+          "decimals": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 12
+          },
+          "rule": {
+            "type": "string",
+            "enum": ["half_even", "half_up", "half_away_from_zero", "truncate"]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -12,7 +12,11 @@
 //! [`cover::taxo`]: per-format construct taxonomies (`mig-taxonomy@1`) and the completeness,
 //! closure, attestation and breaking-change checks run by `cargo xtask mig taxonomy-check`
 //! (spec node `MIG.COVER.TAXO`).
+//!
+//! [`explain::cat`]: closed factor catalogue (`mig-factors@1`) and typed probe candidates
+//! (spec node `MIG.EXPLAIN.CAT`).
 
 pub mod cover;
+pub mod explain;
 pub mod ladder;
 pub mod src;

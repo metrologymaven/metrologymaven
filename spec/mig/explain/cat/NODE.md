@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-mig]
+built_pr: 516
+updated: 2026-11-22
 ---
 
 # MIG.EXPLAIN.CAT: Closed factor catalogue and probe candidates

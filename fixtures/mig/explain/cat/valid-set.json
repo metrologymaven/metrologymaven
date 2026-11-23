@@ -1,0 +1,61 @@
+{
+  "candidates": [
+    {
+      "factor": "ROUNDING",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "decimals": 4,
+        "rule": "half_even"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.gaussian@1"
+      },
+      "source": "ExportStated"
+    },
+    {
+      "factor": "POINT_SELECTION",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "selection_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FILTER",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "cutoff_mm": 0.8,
+        "filter_policy_id": "gauss.iso16610-21@1",
+        "order": 2
+      },
+      "source": "ExportStated"
+    },
+    {
+      "factor": "DATUM_INTERPRETATION",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "resolver_row_id": "dmt.asme.primary-plane@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "ALIGNMENT",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "alignment_ref": "align.datum-abc@1"
+      },
+      "source": "ExportStated"
+    }
+  ]
+}

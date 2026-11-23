@@ -1,0 +1,589 @@
+{
+  "candidates": [
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-000@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-001@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-002@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-003@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-004@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-005@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-006@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-007@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-008@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-009@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-010@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-011@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-012@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-013@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-014@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-015@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-016@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-017@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-018@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-019@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-020@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-021@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-022@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-023@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-024@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-025@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-026@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-027@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-028@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-029@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-030@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-031@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-032@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-033@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-034@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-035@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-036@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-037@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-038@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-039@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-040@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-041@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-042@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-043@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-044@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-045@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-046@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-047@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-048@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-049@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-050@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-051@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-052@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-053@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-054@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-055@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-056@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-057@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-058@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-059@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-060@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-061@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-062@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-063@1"
+      },
+      "source": "UserSelected"
+    },
+    {
+      "factor": "FIT_METHOD",
+      "proposer": "alice",
+      "session": null,
+      "setting": {
+        "association_policy_id": "lsq.variant-064@1"
+      },
+      "source": "UserSelected"
+    }
+  ]
+}
