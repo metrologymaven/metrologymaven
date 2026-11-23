@@ -2178,10 +2178,14 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-fit",
+ "fid-gdt",
  "fid-gps",
+ "fid-io-reg",
  "fid-kdec",
  "fid-num",
  "fid-pkg",
+ "fid-project",
+ "fid-report",
  "fid-surface",
  "fid-types",
 ]
