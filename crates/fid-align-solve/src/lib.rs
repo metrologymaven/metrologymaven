@@ -28,6 +28,7 @@ pub mod hist;
 pub mod matrix;
 pub mod report;
 pub mod rps321;
+pub mod stop;
 
 pub use cond::{
     diagnose, diagnose_reduced, AlignmentDiagnostics, Axis, CondError, CondWarning, MotionKind, PivotKind, Threshold,
@@ -56,4 +57,10 @@ pub use rps321::{
     solve_321_elements, solve_321_three_points, DirectionSource, Locus, Rps321Error, Rps321Solution, Rps321Tolerances,
     RpsElement, SignedAxis, DEFAULT_COLLINEAR_TOL_M, DEFAULT_PARALLEL_TOL_RAD, DEFAULT_TERTIARY_TOL_M,
     RPS321_ALGORITHM_ID,
+};
+pub use stop::{
+    command_convergence_manifest, AlignmentStopStatus, ConvergedReason, CriterionManifestEntry, StopCriteria,
+    StopError, StopMonitor, StoppedReason, Verdict, BESTFIT_STOP_CRITERIA_MANIFEST, DEFAULT_DIVERGENCE_WINDOW,
+    DEFAULT_MAX_ITERATIONS, DEFAULT_OBJECTIVE_REL_TOL, DEFAULT_ROTATION_TOL, DEFAULT_TRANSLATION_TOL,
+    MAX_ALLOWED_ITERATIONS, OBJECTIVE_DENOM_FLOOR,
 };
