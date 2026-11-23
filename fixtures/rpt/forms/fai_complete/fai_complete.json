@@ -15,7 +15,8 @@
     "detail_or_assembly": "detail",
     "full_or_partial": "full",
     "prepared_by": "A. Inspector",
-    "reviewed_by": "B. Quality"
+    "reviewed_by": "B. Quality",
+    "partial_reason": ""
   },
   "numeric_fields": {
     "bore_diameter_nominal_mm": {
@@ -24,5 +25,66 @@
       "unit": "mm",
       "decimals": 3
     }
-  }
+  },
+  "form1_assemblies": [
+    {
+      "sub_part_number": "MM-BUSH-01",
+      "sub_part_name": "Locating Bushing",
+      "sub_fai_ref": "FAI-2026-0011"
+    },
+    {
+      "sub_part_number": "MM-PIN-02",
+      "sub_part_name": "Alignment Dowel",
+      "sub_fai_ref": "FAI-2026-0012"
+    }
+  ],
+  "form2_items": [
+    {
+      "category": "material",
+      "name": "6061-T651 Plate",
+      "specification": "AMS-QQ-A-250/11",
+      "supplier": "AlloyMill Synthetic",
+      "certificate_ref": "CERT-AL-4201"
+    },
+    {
+      "category": "process",
+      "name": "Type III Hard Anodise",
+      "specification": "MIL-A-8625",
+      "supplier": "SurfaceCoat Synthetic",
+      "certificate_ref": "CERT-AN-8812"
+    },
+    {
+      "category": "functional_test",
+      "name": "Proof Load Check",
+      "specification": "TP-1042-A",
+      "supplier": "Metrology Maven Lab",
+      "certificate_ref": "TEST-1042-01"
+    }
+  ],
+  "form3_rows": [
+    {
+      "balloon": "1",
+      "requirement": "25.000 +/- 0.025 mm",
+      "result": "25.004 mm",
+      "decision": "CONFORMS",
+      "basis": "measured (points)",
+      "producing_tool": "CMM-01"
+    },
+    {
+      "balloon": "2",
+      "requirement": "50.000 +/- 0.050 mm",
+      "result": "49.992 mm",
+      "decision": "CONFORMS",
+      "basis": "measured (points)",
+      "producing_tool": "CMM-01"
+    },
+    {
+      "balloon": "3",
+      "requirement": "Ra <= 1.6 um",
+      "result": "1.12 um",
+      "decision": "CONFORMS",
+      "basis": "direct reading (gauge)",
+      "producing_tool": "PROF-04"
+    }
+  ]
 }

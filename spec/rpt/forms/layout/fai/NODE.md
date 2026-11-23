@@ -18,7 +18,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-report-forms]
+updated: 2026-11-22
 ---
 
 # RPT.FORMS.LAYOUT.FAI: Original locked templates for FAI forms 1 to 3
