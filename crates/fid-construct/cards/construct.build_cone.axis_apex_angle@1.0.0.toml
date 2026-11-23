@@ -1,0 +1,14 @@
+# Spec card (KRN.CONS.ELEM.SHAPE). Cite designators and clause numbers only; never paste standards text.
+id = "construct.build_cone.axis_apex_angle@1.0.0"
+title = "Cone from axis, apex and half-angle"
+method = "Builds a cone with the specified apex on the axis line, oriented axis direction and half-angle in (0, pi/2)."
+applicability = "One 3D line, one point within distance threshold of the line and half-angle in (0, pi/2)."
+references = [
+  "Metrology Maven spec node KRN.CONS.ELEM.SHAPE (definitional compound and axial primitive constructions).",
+]
+determinism = "D0"
+input_arity = "2"
+failure_modes = [
+  "Off-axis apex fails with IllConditioned; half-angle outside (0, pi/2) fails with InvalidParams.",
+]
+validation = "300 seeded closed-form cases per variant in fixtures/cons/shape-defs-v1, checked on x86-64, ARM64 and wasm32."

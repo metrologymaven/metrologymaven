@@ -1,0 +1,14 @@
+# Spec card (KRN.CONS.ELEM.SHAPE). Cite designators and clause numbers only; never paste standards text.
+id = "construct.build_cylinder.axis_radius@1.0.0"
+title = "Cylinder from axis and radius"
+method = "Builds a cylinder with the line's locating point, sign-normalised unit axis and positive radius."
+applicability = "One 3D line and positive finite radius in metres."
+references = [
+  "Metrology Maven spec node KRN.CONS.ELEM.SHAPE (definitional compound and axial primitive constructions).",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Non-positive radius fails with InvalidParams.",
+]
+validation = "300 seeded closed-form cases per variant in fixtures/cons/shape-defs-v1, checked on x86-64, ARM64 and wasm32."

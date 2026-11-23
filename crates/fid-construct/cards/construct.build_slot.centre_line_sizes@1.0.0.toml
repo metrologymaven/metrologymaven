@@ -1,0 +1,14 @@
+# Spec card (KRN.CONS.ELEM.SHAPE). Cite designators and clause numbers only; never paste standards text.
+id = "construct.build_slot.centre_line_sizes@1.0.0"
+title = "Slot from plane, centre line and sizes"
+method = "Builds a slot lying in a plane along a centre line with specified centre-to-centre length and width."
+applicability = "One plane, one 3D line in the plane within thresholds, non-negative length and positive width."
+references = [
+  "Metrology Maven spec node KRN.CONS.ELEM.SHAPE (definitional compound and axial primitive constructions).",
+]
+determinism = "D0"
+input_arity = "2"
+failure_modes = [
+  "Out-of-plane line fails with IllConditioned; invalid sizes fail with InvalidParams.",
+]
+validation = "300 seeded closed-form cases per variant in fixtures/cons/shape-defs-v1, checked on x86-64, ARM64 and wasm32."
