@@ -1,0 +1,25 @@
+{
+  "schema": "fid-gdt-form-fcore-fixture/1",
+  "license": "CC0-1.0",
+  "seed": 61863,
+  "description": "Planar point set with exact minimum-zone width 0.010 mm (1e-5 m) between z = -5e-6 and z = +5e-6, plus asymmetric interior tilt so LS residual range >= MZ width, and tied maximum residuals at indices 2 and 7.",
+  "expected_mz_width_m": 0.00001,
+  "mz_plane_point": [0.0, 0.0, 0.0],
+  "mz_plane_normal": [0.0, 0.0, 1.0],
+  "expected_peak_index_mz": 2,
+  "expected_valley_index_mz": 1,
+  "points": [
+    [-0.05, -0.05,  0.000002],
+    [ 0.05, -0.05, -0.000005],
+    [-0.05,  0.05,  0.000005],
+    [ 0.05,  0.05, -0.000005],
+    [-0.02, -0.02, -0.000004],
+    [ 0.02, -0.02, -0.000004],
+    [ 0.00,  0.00, -0.000004],
+    [ 0.05,  0.02,  0.000005],
+    [-0.03,  0.01, -0.000003],
+    [ 0.03,  0.04, -0.000004],
+    [ 0.01, -0.04, -0.000004],
+    [-0.04, -0.01, -0.000003]
+  ]
+}
