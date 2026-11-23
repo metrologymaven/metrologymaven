@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid import mesh-ply, fid export mesh-ply]
 mcp: [import_mesh_ply, export_mesh_ply]
 journal: [import.mesh_ply@1, export.mesh_ply@1]
-updated: 2026-11-16
+built_in: [fid-io-mesh]
+updated: 2026-11-22
 ---
 
 # IO.MESH.PLY: PLY reader and writer
