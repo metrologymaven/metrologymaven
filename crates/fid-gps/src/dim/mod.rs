@@ -6,4 +6,5 @@
 //!   resolved operator chain names.
 
 pub mod angle;
+pub mod linear;
 pub mod radial;

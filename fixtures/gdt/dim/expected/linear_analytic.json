@@ -1,0 +1,11 @@
+{
+  "schema": "fid-gdt-dim-linear-expected/1",
+  "license": "CC0-1.0",
+  "cases": {
+    "point_point_3d": { "value_si": 0.005, "value_mm": 5.0, "basis": "POINTS" },
+    "point_line_3d": { "value_si": 0.005, "value_mm": 5.0, "basis": "FEATURES" },
+    "point_plane_3d": { "value_si": 0.007, "value_mm": 7.0, "basis": "FEATURES" },
+    "skew_lines_shortest": { "value_si": 0.012, "value_mm": 12.0, "basis": "FEATURES" },
+    "parallel_planes_10mm": { "value_si": 0.01, "value_mm": 10.0, "basis": "FEATURES" }
+  }
+}
