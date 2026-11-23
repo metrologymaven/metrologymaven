@@ -15,6 +15,7 @@ disallowed-types = [
 # inference, with no float type named. `tools/rpt_float_lint.py` (RPT-CONFIG) fails when a
 # dependency gains such a function that is not listed here.
 disallowed-methods = [
+    { path = "fid_bus::unit::Normalised::si", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_gdt::chars::record::Quantity::value", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_gdt::dim::radial::event::RadialEvent::value", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_io_reg::prov::UnitResolution::to_metres", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
