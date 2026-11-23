@@ -129,6 +129,7 @@ python fixtures/io/dmis/parse/gdef/make_expected.py --check
 python fixtures/io/dmis/parse/print/make_fixtures.py --check
 python fixtures/io/dmis/parse/tree/make_expected.py --check
 python fixtures/io/e57/phys/make_fixtures.py --check
+python fixtures/io/mesh/mbld/make_fixtures.py --check
 python fixtures/io/qif/gen/flat/make_fixtures.py --check
 python fixtures/io/qif/gen/parse/count_decls.py --check
 python fixtures/io/qif/gen/parse/make_fixtures.py --check

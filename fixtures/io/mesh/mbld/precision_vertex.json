@@ -1,0 +1,12 @@
+{
+  "faces": [],
+  "schema": "fid-io-mesh-fixture/1",
+  "source_precision": "f64",
+  "vertices_m": [
+    [
+      5.000000123,
+      0.0,
+      0.0
+    ]
+  ]
+}
