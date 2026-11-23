@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-io-mesh]
 satisfies: [REQ-IO.MESH-006, REQ-IO.MESH-009]
 covers: []
 depends_on: [IO.REG.LIMITS, GEO.TYPES]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # IO.MESH.MBLD: Shared mesh builder, import report and precision report
@@ -71,7 +72,7 @@ Small JSON meshes under `fixtures/io/mesh/mbld/` and a seeded synthetic grid gen
 
 ## Open questions
 
-- None.
+- **AC-1 face count note:** a closed tetrahedron (4 faces) plus 1 repeated-index degenerate face plus 1 non-manifold fin face totals 6 faces (`tetra_plus_degenerate.json` tests 6 faces, 1 degenerate, 1 non-manifold edge, 0 unreferenced vertices; companion `open_tetra_five_faces.json` tests a 3-face open pyramid + degenerate + fin = 5 faces with the same defect counts).
 
 ## Children
 
