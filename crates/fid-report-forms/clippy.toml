@@ -1,0 +1,10 @@
+# RPT float rule (spec node RPT.MODEL.FMT, REQ-RPT.MODEL.FMT-002): zero floats anywhere in fid-report-forms.
+disallowed-types = [
+    { path = "f32", reason = "RPT float rule: floats only in fid_report::fmt (RPT.MODEL.FMT REQ-002)" },
+    { path = "f64", reason = "RPT float rule: floats only in fid_report::fmt (RPT.MODEL.FMT REQ-002)" },
+]
+
+disallowed-methods = [
+    { path = "fid_gdt::chars::record::Quantity::value", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_gdt::dim::radial::event::RadialEvent::value", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+]

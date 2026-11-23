@@ -1,0 +1,27 @@
+[package]
+name = "fid-report-forms"
+description = "Metrology Maven FAI and PPAP forms data model, header and accountability commands (spec node RPT.FORMS.HDR)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# RFC 8785 canonical JSON, bounded parsing and SHA-256 digests (CORE.JRN.CANON).
+fid-canon = { path = "../fid-canon" }
+# Characteristic model IDs (GDT.CHAR.MODEL). Layer services.
+fid-gdt = { path = "../fid-gdt" }
+# UUIDv7 generation and Uuid type (CORE.PRJ.CONT.ID). Layer model.
+fid-project = { path = "../fid-project" }
+# CommandDef schema validation (CORE.REG). Layer model.
+fid-registry = { path = "../fid-registry" }
+# ReplayOutcome class (CORE.RPL.CLASS). Layer engine.
+fid-replay = { path = "../fid-replay" }
+# Untrusted<Text> and canonical model helpers (RPT.MODEL.DOC). Layer services.
+fid-report = { path = "../fid-report" }
+# Shared sha256 Digest type (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true
