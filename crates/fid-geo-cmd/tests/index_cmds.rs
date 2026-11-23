@@ -110,7 +110,9 @@ fn frame_b() -> FrameRef {
 }
 
 fn write_temp_points(name: &str, content: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("fid-geo-index-cmd-{}", std::process::id()));
+    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("fid-geo-index-cmd-{n}"));
     fs::create_dir_all(&dir).unwrap();
     let path = dir.join(name);
     fs::write(&path, content).unwrap();
