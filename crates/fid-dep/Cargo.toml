@@ -7,9 +7,22 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+# Bus handler-only recompute path (`Bus::run_handlers_as_system`), job scheduling (`fid-jobs`)
+# and single-entry journal commit with CAS (`fid-journal`). Kept optional so `fid-geo-cmd`
+# (which depends on `fid-dep` with default features) stays `wasm32-wasip1` compatible.
+bus = ["dep:fid-bus", "dep:fid-jobs", "dep:fid-journal"]
+
 [dependencies]
+# Bus pipeline handler-only execution as system principal (`CORE.DEP.RECOMP`, optional). Layer engine.
+fid-bus = { path = "../fid-bus", optional = true }
 # Canonical JSON for EdgesSet events, command params/results and the edge-index digest. Layer model.
 fid-canon = { path = "../fid-canon" }
+# Job scheduler, progress reporting and cancellation (`CORE.DEP.RECOMP`, optional). Layer engine.
+fid-jobs = { path = "../fid-jobs", optional = true }
+# Single-entry journal commit with expected_prev CAS (`CORE.DEP.RECOMP`, optional). Layer model.
+fid-journal = { path = "../fid-journal", features = ["store"], optional = true }
 # CommandDef record for `project.show_dependencies@1`, built through the registry's own field rules.
 # Layer model, below fid-dep (engine).
 fid-registry = { path = "../fid-registry" }
@@ -19,6 +32,10 @@ fid-project = { path = "../fid-project" }
 fid-types = { path = "../fid-types" }
 # Entity IDs are UUIDs (CONSTITUTION §5). Layer model.
 fid-uuid = { path = "../fid-uuid" }
+
+[dev-dependencies]
+fid-dep = { path = ".", features = ["bus"] }
+fid-store = { path = "../fid-store" }
 
 [lints]
 workspace = true

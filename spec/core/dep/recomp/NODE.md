@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid project recompute-dependents]
 mcp: [project_recompute_dependents]
 journal: [project.recompute_dependents@1]
-updated: 2026-11-17
+built_in: [fid-dep]
+updated: 2026-11-23
 ---
 
 # CORE.DEP.RECOMP: Deterministic recompute

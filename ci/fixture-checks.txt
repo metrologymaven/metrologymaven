@@ -39,6 +39,7 @@ python fixtures/core/bus/pol/class/make_matrix.py --check
 python fixtures/core/bus/pol/egress/make_fixtures.py --check
 python fixtures/core/bus/pol/proj/make_cases.py --check
 python fixtures/core/bus/unit/make_literals.py --check
+python fixtures/core/dep/recomp/make_fixtures.py --check
 python fixtures/core/jrn/br/diff/make_fixtures.py --check
 python fixtures/core/jrn/br/name/make_cases.py --check
 python fixtures/core/jrn/br/promo/make_fixtures.py --check
