@@ -1953,6 +1953,7 @@ dependencies = [
  "fid-registry",
  "fid-surface",
  "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]

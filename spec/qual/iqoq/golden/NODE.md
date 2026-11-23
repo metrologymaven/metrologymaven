@@ -18,7 +18,9 @@ determinism: D0
 cli: [fid validate register-golden]
 mcp: [validate_register_golden]
 journal: [validate.register_golden@1]
-updated: 2026-11-17
+built_in: [fid-qual]
+built_pr: 523
+updated: 2026-11-22
 ---
 
 # QUAL.IQOQ.GOLDEN: Golden-journal registration for upgrade OQ
