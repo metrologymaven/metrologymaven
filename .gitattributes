@@ -220,3 +220,5 @@ fixtures/core/bus/pol/egress/artifact.bin binary
 fixtures/replay/select/** -text
 # TRUST.PKG.FIXTURE golden packages, pinned digests and index: compared byte for byte by fixtures/pkg/generate --check.
 fixtures/pkg/golden/** -text
+# IO.MESH fixtures: binary and ASCII STL/OBJ/PLY and JSON cases compared byte for byte by make_fixtures.py --check.
+fixtures/io/mesh/** -text

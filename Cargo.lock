@@ -1602,6 +1602,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-io-mesh"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-geo-types",
+ "fid-io-reg",
+]
+
+[[package]]
 name = "fid-io-plugin"
 version = "0.0.1"
 dependencies = [
