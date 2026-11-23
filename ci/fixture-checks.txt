@@ -79,6 +79,7 @@ python fixtures/fit/make_axis_cyl_fixtures.py --check
 python fixtures/fit/make_init_fixtures.py --check
 python fixtures/fit/make_lin_fixtures.py --check
 python fixtures/fit/make_mcc_cyl_fixtures.py --check
+python fixtures/fit/make_mz_circ_fixtures.py --check
 python fixtures/fit/make_mz_flat_fixtures.py --check
 python fixtures/fit/make_mz_line3_fixtures.py --check
 python fixtures/fit/make_rnd_fixtures.py --check

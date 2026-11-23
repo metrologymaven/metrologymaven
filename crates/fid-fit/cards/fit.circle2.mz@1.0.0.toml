@@ -1,0 +1,18 @@
+# Spec card (KRN.MZ.RND.CIRC). Cite designators and clause numbers only; never paste standards text.
+id = "fit.circle2.mz@1.0.0"
+title = "Minimum-zone 2D circle (Chebyshev roundness)"
+method = "Projects 3D points into the caller's projection plane (default XY), checks point count, rank and explicit angular coverage, and starts from the orthogonal least-squares 2D circle. In centred power-of-two scaled coordinates, parameterises concentric bounding circles by (cx, cy, r_outer, r_inner) with linear objective r_outer - r_inner and nonlinear radial constraints rho_i <= r_outer and r_inner <= rho_i. Runs sequential LP (KRN.SOLV.SEQ) from deterministic seeded multi-start perturbations (KRN.SOLV.MSTART), certifies a 4-row active-set KKT vertex (KRN.SOLV.CERT, CertKind::Zone), reports the mean circle and recomputed zone width, and flags local_optimum_only if starts disagree."
+applicability = "At least 3 non-collinear points in a plane meeting the explicit angular coverage threshold (at least 4 for non-zero zone certification; 3 points or exact circles yield width 0.0 closed-form). Finite, non-subnormal SI metre coordinates."
+references = [
+  "ISO 12181-1:2011, Geometrical product specifications (GPS) - Roundness - Part 1: Vocabulary and parameters of roundness.",
+  "Roy, U. and Zhang, X. (1992). Establishment of a pair of concentric circles with the minimum radial separation for assessing roundness error. Computer-Aided Design 24(3), 161-168 [unverified citation details].",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Angular coverage below thresholds.min_coverage: InsufficientCoverage.",
+  "Fewer than 3 points or collinear points: TooFewPoints or Collinear.",
+  "Every start fails certification: SeqFailed (fail closed).",
+  "Any point falls outside [r_inner, r_outer] beyond SIDE_TOL: SideViolation (fail closed).",
+]
+validation = "Seeded lobed circles far from origin fixtures/fit/mz-circ-v1 (make_mz_circ_fixtures.py) verified against the exact Voronoi global optimum (KRN.MZ.VOR, fit.circle2d.mz_vor@1.0.0) within 1e-9 m with injected-shift negative test, partial-arc coverage check, and cross-target output-digest pin on x86-64, ARM64 and wasm32."
