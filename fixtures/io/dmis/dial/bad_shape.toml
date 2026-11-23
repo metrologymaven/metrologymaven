@@ -1,0 +1,13 @@
+schema = "fid.dmis-dialect"
+schema_version = 1
+id = "bad-shape"
+version = "1.0.0"
+base = "dmis-5.3"
+title = "Invalid Dialect With Bad Shape"
+source_note = "Synthetic negative test fixture (CC-BY-4.0)."
+
+[[descriptors]]
+class = "bad-shape.vndx_bad"
+major = "VNDY"
+label_kind = "none"
+shape = { kind = "not_a_real_shape_kind" }

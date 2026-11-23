@@ -1,0 +1,14 @@
+schema = "fid.dmis-dialect"
+schema_version = 1
+id = "bad-vendor"
+version = "1.0.0"
+base = "dmis-5.3"
+title = "Invalid Dialect Redefining FEAT"
+source_note = "Synthetic negative test fixture (CC-BY-4.0)."
+relaxations = []
+
+[[descriptors]]
+class = "bad-vendor.feat_override"
+major = "FEAT"
+label_kind = "required:F"
+shape = { kind = "keyword", value = "POINT" }

@@ -1,0 +1,14 @@
+schema = "fid.dmis-dialect"
+schema_version = 1
+id = "test-vendor"
+version = "1.0.0"
+base = "dmis-5.3"
+title = "Synthetic Test Vendor DMIS Dialect"
+source_note = "Synthetic clean-room test fixture (CC-BY-4.0); no vendor text copied."
+relaxations = ["allow_lowercase_labels"]
+
+[[descriptors]]
+class = "test-vendor.vndx_on"
+major = "VNDX"
+label_kind = "none"
+shape = { kind = "keyword", value = "ON" }

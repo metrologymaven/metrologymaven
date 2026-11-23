@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-dmis"
-description = "Metrology Maven DMIS 5.3 support: conformance table (IO.DMIS.CONF), bounded lexer (IO.DMIS.PARSE.LEX), statement tree (IO.DMIS.PARSE.TREE) and definition grammar (IO.DMIS.PARSE.GDEF)"
+description = "Metrology Maven DMIS 5.3 support: conformance table (IO.DMIS.CONF), bounded lexer (IO.DMIS.PARSE.LEX), statement tree (IO.DMIS.PARSE.TREE), definition grammar (IO.DMIS.PARSE.GDEF), canonical printer (IO.DMIS.PARSE.PRINT) and vendor dialect profiles (IO.DMIS.DIAL)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -19,9 +19,13 @@ path = "src/bin/dmis-classes.rs"
 [dependencies]
 # Reader harness (IO.REG.LIMITS): bounded source, budget, error taxonomy, untrusted text.
 fid-io-reg = { path = "../fid-io-reg" }
-# RFC 8785 canonical JSON writer for dmis-conformance.json (the project's canonical-JSON crate).
+# RFC 8785 canonical JSON writer and SHA-256 (CORE.JRN.CANON).
 fid-canon = { path = "../fid-canon" }
-# Reads the support-declaration file as an untyped table, like fid-accept, fid-vocab and fid-xtask.
+# Command definition for import.dmis_list_dialects@1 (IO.DMIS.DIAL). Layer model.
+fid-registry = { path = "../fid-registry" }
+# Shared `sha256:` digests (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+# Reads the support-declaration and dialect profile files as untyped TOML tables.
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 
 [lints]

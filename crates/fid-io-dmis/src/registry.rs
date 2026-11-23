@@ -285,9 +285,27 @@ pub fn builtin_descriptors() -> Vec<StatementDescriptor> {
     crate::gdef::descriptors()
 }
 
-fn valid_class(s: &str) -> bool {
+fn valid_local_class(s: &str) -> bool {
     let mut b = s.bytes();
     matches!(b.next(), Some(b'a'..=b'z')) && b.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'_')
+}
+
+fn valid_dialect_prefix(s: &str) -> bool {
+    let len = s.len();
+    if !(2..=32).contains(&len) {
+        return false;
+    }
+    let bytes = s.as_bytes();
+    let ends_ok = matches!(bytes.first(), Some(b'a'..=b'z' | b'0'..=b'9'))
+        && matches!(bytes.last(), Some(b'a'..=b'z' | b'0'..=b'9'));
+    ends_ok && bytes.iter().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-')
+}
+
+fn valid_class(s: &str) -> bool {
+    match s.split_once('.') {
+        None => valid_local_class(s),
+        Some((prefix, local)) => valid_dialect_prefix(prefix) && valid_local_class(local),
+    }
 }
 
 fn valid_major(s: &str) -> bool {

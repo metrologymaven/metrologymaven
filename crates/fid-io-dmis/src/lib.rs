@@ -12,6 +12,7 @@
 //! must name a test that exists.
 
 pub mod conf;
+pub mod dial;
 pub mod gdef;
 pub mod inventory;
 pub mod lex;
