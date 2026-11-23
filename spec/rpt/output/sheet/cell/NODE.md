@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-report-out]
+updated: 2026-11-22
 ---
 
 # RPT.OUTPUT.SHEET.CELL: Table-to-cell model, unit headers and formula-injection neutralisation
