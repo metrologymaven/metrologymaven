@@ -6,3 +6,4 @@
 //!   resolved operator chain names.
 
 pub mod radial;
+pub mod scalar;

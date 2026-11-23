@@ -1,0 +1,106 @@
+{
+  "rows": [
+    {
+      "actual_value": "av.synthetic.scalar@1",
+      "characteristic": "scalar",
+      "clauses": [
+        {
+          "clause": "0",
+          "designator": "asme-y14.5",
+          "edition": "2018"
+        }
+      ],
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "default_variant": "registry_property",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "key": "dmt:asme/scalar/none@1",
+      "limitations": [],
+      "modifiers": [],
+      "notes": "Synthetic scalar row for GDT.DIM.SCALAR tests; not an interpretation of any standard.",
+      "ors_cases": [
+        "ors:synthetic/scalar.001"
+      ],
+      "review": {
+        "state": "under_review"
+      },
+      "status": "supported",
+      "synthetic": true,
+      "variants": [
+        {
+          "steps": [
+            {
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "kind": "partition",
+              "params": {}
+            },
+            {
+              "alg": "syn.extract.all_points@0.1.0",
+              "kind": "extraction",
+              "params": {}
+            },
+            {
+              "alg": "gdt.dim.scalar@1.0.0",
+              "kind": "evaluation",
+              "params": {}
+            }
+          ],
+          "variant": "registry_property"
+        }
+      ]
+    },
+    {
+      "actual_value": "av.synthetic.minmax@1",
+      "characteristic": "minmax",
+      "clauses": [
+        {
+          "clause": "0",
+          "designator": "asme-y14.5",
+          "edition": "2018"
+        }
+      ],
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "default_variant": "total_order_scan",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "key": "dmt:asme/minmax/none@1",
+      "limitations": [],
+      "modifiers": [],
+      "notes": "Synthetic minmax row for GDT.DIM.SCALAR tests; not an interpretation of any standard.",
+      "ors_cases": [
+        "ors:synthetic/minmax.001"
+      ],
+      "review": {
+        "state": "under_review"
+      },
+      "status": "supported",
+      "synthetic": true,
+      "variants": [
+        {
+          "steps": [
+            {
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "kind": "partition",
+              "params": {}
+            },
+            {
+              "alg": "syn.extract.all_points@0.1.0",
+              "kind": "extraction",
+              "params": {}
+            },
+            {
+              "alg": "gdt.dim.minmax@1.0.0",
+              "kind": "evaluation",
+              "params": {}
+            }
+          ],
+          "variant": "total_order_scan"
+        }
+      ]
+    }
+  ]
+}
