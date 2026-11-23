@@ -9,7 +9,6 @@ phase: P2
 size: L
 owners: []
 claimed_by:
-needs_expert: cmm-control
 satisfies: [REQ-HAL.IDL.CNC-001, REQ-HAL.IDL.CNC-002, REQ-HAL.IDL.CNC-006]
 covers: []
 depends_on: [HAL.IDL.BASE, HAL.IDL.UNITS, HAL.IDL.CNC.TACT, HAL.IDL.GEN.FMT]
@@ -17,7 +16,7 @@ uses_artifacts: [HAL.IDL.CNC.CARDS]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # HAL.IDL.CNC.MOTION: CncMotion@1 package

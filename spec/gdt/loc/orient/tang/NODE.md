@@ -9,7 +9,6 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
-needs_expert: gdt
 satisfies: [REQ-GDT.LOC.ORIENT-001, REQ-GDT.LOC.ORIENT-004]
 covers: [PW.GDT.03]
 depends_on: [GDT.LOC.ORIENT.ZONE, KRN.ENV, GDT.RES.RESOLVE]
@@ -17,7 +16,7 @@ uses_artifacts: [GDT.RES.ROWASME, GDT.RES.ROWISO, UNC.ORS.GDT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # GDT.LOC.ORIENT.TANG: Tangent-plane modifier for orientation

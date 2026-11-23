@@ -1,7 +1,7 @@
 ---
 id: D-050
 title: UI toolkit evaluation with Vello and Parley hybrid path
-status: open
+status: accepted
 raised_by: founder
 amends: [D-005]
 blocks: [VIZ.SHELL]
@@ -44,4 +44,4 @@ Accept **Option C** by running `VIZ.SHELL.SPKVELLO` (benchmarking `Vello + Parle
 
 ## Decision
 
-_Open._ Requires maintainer approval (D-037 P1). Amends D-005 upon acceptance. Follow-up updates: `spec/CONSTITUTION.md` §2 (UI toolkit bullet) and `VIZ.SHELL.DOCK.HOST` once all four spikes report.
+**Accepted (option C), 2026-11-22, founder (via D-052).** Amends `D-005`: spike evaluation runs automatically on CI runners with headless `wgpu` fallback and automated AccessKit tree-role checks (no manual hardware/screen-reader gate). `spec/CONSTITUTION.md` §2 updated accordingly.

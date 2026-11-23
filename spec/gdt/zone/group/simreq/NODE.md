@@ -9,7 +9,6 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
-needs_expert: gdt
 satisfies: [REQ-GDT.ZONE.GROUP-001, REQ-GDT.ZONE.GROUP-002, REQ-GDT.ZONE.GROUP-004]
 covers: []
 depends_on: [GDT.ZONE.GROUP.PATTERN, GDT.ZONE.GROUP.IDS, GDT.CHAR.MODEL, GDT.RES.RESOLVE]
@@ -17,7 +16,7 @@ uses_artifacts: [UNC.ORS.GDT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # GDT.ZONE.GROUP.SIMREQ: Simultaneous-requirement groups across callouts

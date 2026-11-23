@@ -9,7 +9,6 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
-needs_expert: uncertainty
 satisfies: [REQ-UNC.ORS.DRF-001, REQ-UNC.ORS.DRF-002, REQ-UNC.ORS.DRF-003]
 covers: []
 depends_on: [UNC.ORS.TRACE, UNC.RDL.GEN, UNC.ORS.DRF.GEOM]
@@ -17,7 +16,7 @@ uses_artifacts: [GDT.RES]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # UNC.ORS.DRF.MOD: Datum references at MMB and LMB

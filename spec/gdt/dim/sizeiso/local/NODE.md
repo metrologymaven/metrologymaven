@@ -9,7 +9,6 @@ phase: P1b
 size: L
 owners: []
 claimed_by:
-needs_expert: gdt
 satisfies: [REQ-GDT.DIM.SIZEISO-004]
 covers: []
 depends_on: [GDT.RES.RESOLVE, KRN.LSQ]
@@ -17,7 +16,7 @@ uses_artifacts: [GDT.RES.ROWISO, UNC.ORS.SIZE]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # GDT.DIM.SIZEISO.LOCAL: ISO local sizes (two-point and spherical)

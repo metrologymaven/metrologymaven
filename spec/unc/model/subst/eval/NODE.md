@@ -9,14 +9,13 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
-needs_expert: uncertainty
 satisfies: [REQ-UNC.MODEL.SUBST-003, REQ-UNC.MODEL.SUBST-004]
 covers: []
 depends_on: [UNC.MODEL.SUBST.INPUT, KRN.NUM]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # UNC.MODEL.SUBST.EVAL: Component formulas, bias treatment and combination

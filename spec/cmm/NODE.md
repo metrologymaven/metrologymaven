@@ -15,14 +15,14 @@ depends_on: [HAL, KRN, GDT, GEO, AUTO]
 cli: [fid cmm *]
 mcp: [cmm_*]
 journal: [cmm.*]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # CMM: CMM programming and execution
 
 ## Purpose
 
-Replaces CMM programming suites:
+Provides open-standard CMM programming, simulation and execution:
 - probe and sensor configuration and qualification;
 - measurement strategies for features and scans;
 - path planning with clearance and collision checks;

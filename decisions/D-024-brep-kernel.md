@@ -5,7 +5,7 @@ status: accepted
 raised_by: GEO.CAD split
 blocks: [GEO.CAD.TESS, IO.CAD]
 decide_by: before GEO.CAD.TESS or the IO.CAD STEP geometry reader is expanded
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # D-024: B-rep kernel - own Rust crate or OCCT out of process
@@ -45,3 +45,5 @@ C, with D evaluated as a starting point for the Rust tessellator in a time-boxed
 C, with D evaluated as a starting point for the Rust tessellator in a time-boxed spike. Values of record stay in Rust under every option; the decision mainly sets who builds tessellations and STEP B-rep. Get counsel's view on shipping or recommending an LGPL plugin before choosing B or C.
 
 **Condition:** the counsel review named in the recommendation must happen before the affected node is published or released.
+
+**Amended 2026-11-22 by D-052:** Pure-Rust Option A/D is selected permanently (MIT OR Apache-2.0 STEP/B-rep/tessellation in Rust; LGPL OCCT plugin and its counsel condition are dropped).

@@ -1,18 +1,20 @@
 ---
 id: D-043
 title: rusqlite with bundled SQLite for the project database
-status: proposed
+status: accepted
 raised_by: build of CORE.STO.SQL.SCHEMA
 blocks: [CORE.STO.SQL.SCHEMA, CORE.STO.SQL.TXN, CORE.STO.SQL.CRASH]
 decide_by: before the CORE.STO.SQL.SCHEMA pull request merges
-updated: 2026-11-21
+updated: 2026-11-22
 ---
 
 # D-043: rusqlite with bundled SQLite for the project database
 
-**Status: PROPOSED 2026-11-18.** The binding choice (rusqlite, `bundled`, exact pin) was made
-by the orchestrator under the maintainer's delegation; this record states the CONSTITUTION §8
-exception it needs, for acceptance.
+**Status: ACCEPTED (option A), 2026-11-22, maintainer.** Formalises acceptance of the
+binding choice (`rusqlite = "=0.41.1"`, `bundled`, default features off; plus `backup` per
+the 2026-11-21 note below) already used by `fid-store` (`CORE.STO.SQL.SCHEMA` #191,
+`CORE.STO.SQL.TXN` #203) and referenced as admitted by accepted decision `D-047`. Takes
+effect when the pull request that records this status merges.
 
 ## Question
 

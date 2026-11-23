@@ -9,7 +9,6 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
-needs_expert: gdt
 satisfies: [REQ-GDT.DIM.SIZEASME-001, REQ-GDT.DIM.SIZEASME-004]
 covers: [PW.GDT.01]
 depends_on: [GDT.RES.RESOLVE, KRN.LSQ]
@@ -17,7 +16,7 @@ uses_artifacts: [GDT.RES.ROWASME, UNC.ORS.SIZE]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # GDT.DIM.SIZEASME.LOCAL: ASME two-point local size under a DMT pairing rule

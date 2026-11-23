@@ -5,7 +5,7 @@ status: accepted
 raised_by: MIG split
 blocks: [MIG.PROGEQ]
 decide_by: before MIG.SRC admits any incumbent-native format (P1a) and before MIG.PROGEQ grows its incumbent-format child (P4)
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # D-033: Which incumbent program and project formats migration may read
@@ -39,3 +39,5 @@ A for P1a through P2 (DMIS and open exports cover stages 1 to 5 in part), then B
 A for P1a through P2 (DMIS and open exports cover stages 1 to 5 in part), then B per format at P4 when program conversion from incumbents is scheduled. [unverified: availability of public specifications]
 
 **Condition:** the counsel review named in the recommendation must happen before the affected node is published or released.
+
+**Amended 2026-11-22 by D-052:** Option A is permanent (open metrology standards only: QIF 3.0, STEP AP242, DMIS, I++ DME, STL/PLY/OBJ/E57/LAS/CSV/PDF; proprietary incumbent format readers and counsel condition are dropped).

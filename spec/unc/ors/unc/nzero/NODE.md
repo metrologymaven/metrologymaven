@@ -9,14 +9,13 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
-needs_expert: uncertainty
 satisfies: [REQ-UNC.ORS.UNC-001, REQ-UNC.ORS.UNC-003]
 covers: []
 depends_on: [UNC.ORS.UNC.HARNESS, UNC.RDL.GEN]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # UNC.ORS.UNC.NZERO: Non-negative quantities with true value zero

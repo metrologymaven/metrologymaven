@@ -9,7 +9,6 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
-needs_expert: gdt
 satisfies: [REQ-GDT.LOC.DERIV-001, REQ-GDT.LOC.DERIV-002, REQ-GDT.LOC.DERIV-003]
 covers: []
 depends_on: [GDT.LOC.DERIV.TYPES, KRN.LSQ, KRN.CONS]
@@ -17,7 +16,7 @@ uses_artifacts: [GDT.RES.ROWASME, GDT.RES.ROWISO, UNC.ORS.GDT]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # GDT.LOC.DERIV.MLINE: Derived median line from section centres

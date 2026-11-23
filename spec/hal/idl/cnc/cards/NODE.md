@@ -9,7 +9,6 @@ phase: P2
 size: L
 owners: []
 claimed_by:
-needs_expert: cmm-control
 satisfies: [REQ-HAL.IDL.CNC-001, REQ-HAL.IDL.CNC-005]
 covers: []
 depends_on: []
@@ -17,7 +16,7 @@ uses_artifacts: [HAL.IDL.CNC.MOTION]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # HAL.IDL.CNC.CARDS: I++ DME clause-ID mapping table and own-words semantics notes

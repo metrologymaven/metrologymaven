@@ -9,14 +9,13 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
-needs_expert: uncertainty
 satisfies: [REQ-UNC.INST.MPE-001, REQ-UNC.INST.MPE-002, REQ-UNC.INST.MPE-005]
 covers: [SA.UNC.01]
 depends_on: [UNC.INST.MPE.DERIVE]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # UNC.INST.MPE.ARM: Articulated-arm mapping table (ISO 10360-12)

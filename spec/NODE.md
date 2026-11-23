@@ -15,14 +15,14 @@ depends_on: []
 cli: [fid *]
 mcp: [*]
 journal: [*]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # FID: Open dimensional metrology platform
 
 ## Purpose
 
-An open-source, MCP- and CLI-first, GPU-rendered, fully recordable dimensional metrology platform. It replaces scan inspection (GOM/ZEISS INSPECT, PolyWorks), CMM programming (PC-DMIS, CALYPSO) and large-volume metrology (SpatialAnalyzer). It is built by a self-sustaining community of people and coding agents.
+An open-source, QIF-native, MCP- and CLI-first, GPU-rendered, fully recordable dimensional metrology platform. It provides four focused apps on one shared core for reporting and SPC, scan-to-CAD inspection, open-standard CMM programming and execution (I++ DME and DMIS), and multi-instrument large-volume networks. It is built by a self-sustaining community of people and coding agents.
 
 ## Scope
 
@@ -95,7 +95,7 @@ Alternatives considered:
 
 ## Open questions
 
-- D-001 licence, D-002 name, D-003 governance, D-004 app family, D-005 UI toolkit and the TypeScript boundary.
+- None (`D-001` through `D-052` are accepted; architectural and specification decisions proceed autonomously under `D-052`).
 
 ## Children
 

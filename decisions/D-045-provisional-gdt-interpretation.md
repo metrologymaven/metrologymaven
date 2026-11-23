@@ -5,7 +5,7 @@ status: accepted
 raised_by: maintainer
 blocks: [GDT.RES.STATUS, GDT.RES.PACE, GDT.CHAR.INTERP, OUTR.GDTC]
 decide_by: before any GD&T result is released from a table that holds rows not signed off
-updated: 2026-11-19
+updated: 2026-11-22
 ---
 
 # D-045: Provisional GD&T interpretation, rule sign-off and review pacing
@@ -119,3 +119,5 @@ off? And how is engine work kept from running ahead of expert review?
   aggregate third-party comparisons with named products either.
 - Amending the subset or the pacing rule needs a new decision record whose frontmatter lists
   `D-045` in `amends:`.
+
+**Amended 2026-11-22 by D-052:** Rule 5's hard build-pacing stop is lifted so GD&T work is never blocked on external human recruitment; rules 1–4 and 6 remain binding so every unreviewed rule stays visibly labelled `interpretation: provisional` everywhere it goes.

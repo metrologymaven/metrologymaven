@@ -9,7 +9,6 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
-needs_expert: gdt
 satisfies: [REQ-GDT.RES.ROWASME-001, REQ-GDT.RES.ROWASME-002, REQ-GDT.RES.ROWASME-004]
 covers: []
 depends_on: [GDT.RES.ROWASME.INV, GDT.RES.ROWFLOW.REVIEW, GDT.CHAR.DPROF]
@@ -17,7 +16,7 @@ uses_artifacts: [GDT.RES.SCHEMA]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-19
+updated: 2026-11-22
 ---
 
 # GDT.RES.ROWASME.DPROF: ASME Y14.5-2018 defaults profile values

@@ -23,7 +23,7 @@ Sources: condensed from Design Baseline v3.1 (`../docs/concept/00-design-baselin
 - **Family of focused apps on one shared core** (D-004): Inspect (scan inspection), Probe (CMM programming), Network (large-volume) and Report (reporting and SPC). All share the kernel, data model, registry, journal, viewer, HAL, one project format and one `fid` CLI/MCP surface. Shared libraries contain no app policy.
 - **Engine first, thin UI.** Pure-data document model + command engine + UI. Crate layering is enforced at build time: the kernel depends on nothing above it.
 - **Languages:** Rust for the engine, kernel, apps and CLI. **wgpu** for rendering. Native GUI with no webview, plus a WASM build of the viewer and apps for the web. Python for user scripting (an out-of-process host). TypeScript only for an MCP App host shim if one is needed.
-- **UI toolkit** (D-005, provisional): egui + winit + wgpu. It is confirmed only after prototype spikes on the element tree (10k items), the characteristic table and the report designer.
+- **UI toolkit** (D-005 as amended by D-050 and D-052): hybrid Rust-only path (`Vello + Parley + AccessKit` GPU-2D canvas for Report Designer, GD&T overlays, and charts + `PanelUi`-isolated chrome), confirmed via CI-automated spikes (`SPKTREE`, `SPKTABLE`, `SPKRPT`, `SPKVELLO`) with headless `wgpu` fallback and automated AccessKit tree-role checks.
 - **Binaries:**
   - `fid`: the CLI, including `fid mcp` and the optional self-hosted server, `fid server` (ENT);
   - one desktop app per focused app;
@@ -96,18 +96,18 @@ Agents never perform M1, S1, W3 or A0, and never adopt their own proposals; a hu
   - each cycle begins with a reduced-speed placement check.
 - Agents still never issue motion themselves. The Motion Executive does, under a verified ticket. `run:hold` stays available to agents.
 
-### 3.2 Human gates (D-037, closed list)
+### 3.2 Human gates (D-037 as amended by D-052, closed list)
 
-A human acts only at these gates. Adding a gate needs a decision record. Every gate is batched, pre-digested by an agent (simulation, diff or evidence summary), one action per batch, and journaled.
+Product runtime gates stay intact for shop-floor safety and regulated records; build-time architecture, specification, and implementation proceed autonomously under D-052 without waiting on external expert or legal outreach.
 
 | Gate | Human act | Agents do everything else, for example |
 |---|---|---|
-| **H1 Motion envelope** | Approve a program plus its envelope once | Author, simulate, optimise; re-run within the envelope |
+| **H1 Motion envelope** | Approve a program plus its envelope once (shop-floor runtime safety) | Author, simulate, optimise; re-run within the envelope |
 | **H2 Record release** | Release (and, where required, sign) controlled records in batches, adopting the agent-authored choices they depend on in the same act | Measure, evaluate, draft and check; release non-controlled results |
 | **H3 Conformance authority** | Accept or reject parts only where the customer's quality system requires a named person | Decide everywhere else under typed decision rules |
-| **H4 Interpretation authority** | Sign off DMT rows once per row (D-009) | Apply signed rows; propose new rows with evidence |
-| **P1 Irreversible project decisions** | Licensing, naming, publishing, money, secrets, constitution and decision records | Everything else |
-| **P2 Structural review** | Approve level 1–2 splits and `frozen` transitions | Level 3+ splits and leaves are approved by an independent agent reviewer (different model or fresh session) |
+| **H4 Interpretation sign-off (non-blocking, D-045/D-052)** | Optional credentialed sign-off upgrades a rule from `provisional` to `signed_off` | Author and evaluate all rules autonomously using clean-room math and independent oracles; label unreviewed rules `interpretation: provisional` everywhere |
+| **P1 External account/legal/financial acts (D-052)** | Secrets, DNS, spending money, changing licences | Architecture, crate, solver, UI/rendering, milestone, and specification decisions (verified by independent agent review and CI) |
+| **P2 Autonomous review (D-052)** | Optional maintainer override | Independent agent reviewer + required CI gates across all spec levels and implementation PRs |
 
 ### 3.1 Class assignments for common operations (D-007)
 
@@ -193,7 +193,7 @@ A phase means **when work starts** (D-006). A parent's phase is the earliest pha
 
 - **Never crash.** No panic and no `unsafe` in non-test code (kernel: no exceptions; other crates: named exceptions only). Deny `unwrap`, `expect`, `panic`, `todo`, `unimplemented` and `unreachable`. All input is hostile; parsers are bounded and fail closed.
 - **Clean room.** Public specs and observed behaviour only. No copied code, strings, icons or assets. `ATTRIBUTION.md` lists every third-party asset.
-- **Licence allowlist** of SPDX IDs for dependencies (to be set by D-001).
+- **Licence allowlist** of SPDX IDs for dependencies (set under D-001 and enforced via `house-rules/spdx-allowlist.toml` and `deny.toml`, `ECO.RULES.SPDX`).
 - **Corpora.** Format readers and fits are tested against real-file and reference datasets, and their fidelity is published as numbers.
 - **Honest status.** Docs state gaps plainly. Coverage and parity reports are generated, never hand-edited.
 - **Repository hygiene.** `main` is PR-only, CI changes go in their own PRs, and agent rules follow AGENTS.md.

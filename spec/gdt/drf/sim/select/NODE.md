@@ -9,7 +9,6 @@ phase: P1a
 size: L
 owners: []
 claimed_by:
-needs_expert: gdt
 satisfies: [REQ-GDT.DRF.SIM-002, REQ-GDT.DRF.SIM-004]
 covers: []
 depends_on: [GDT.DRF.SIM.ROCK, GDT.RES.RESOLVE]
@@ -17,7 +16,7 @@ uses_artifacts: [GDT.RES.ROWASME, GDT.RES.ROWISO, UNC.ORS.DRF]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-22
 ---
 
 # GDT.DRF.SIM.SELECT: Applying a DMT selection rule to rocking candidates
