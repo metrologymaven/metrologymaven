@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid geo create-frame, fid geo set-transform, fid geo delete-frame, fid geo apply-transform, fid geo resolve-transform, fid geo convert-units]
 mcp: [geo_create_frame, geo_set_transform, geo_delete_frame, geo_apply_transform, geo_resolve_transform, geo_convert_units]
 journal: [geo.create_frame@1, geo.set_transform@1, geo.delete_frame@1, geo.apply_transform@1, geo.resolve_transform@1, geo.convert_units@1]
-updated: 2026-11-16
+built_in: [fid-geo-cmd]
+updated: 2026-11-23
 ---
 
 # GEO.FRAME.CMD: Frame, transform and unit commands

@@ -15,6 +15,7 @@
 
 pub mod describe;
 mod error;
+pub mod frame_cmds;
 pub mod index_cmds;
 pub mod register;
 
@@ -25,6 +26,16 @@ pub use describe::{
     MAX_PARAMS_BYTES, MAX_PARAMS_DEPTH, MCP_DESCRIBE,
 };
 pub use error::GeoCmdError;
+pub use frame_cmds::{
+    apply_transform, convert_units, create_frame, delete_frame, invoke_frame_cli, invoke_frame_mcp,
+    replay_frame_journal, resolve_transform, set_transform, ApplyTransformResult, AuthoredLengthSpec, ConversionRecord,
+    ConvertUnitsResult, CreateFrameParams, CreateFrameResult, DeleteFrameResult, FrameJournalEntry, FramePrincipal,
+    FrameUsageIndex, ResolveTransformResult, RotationParam, SetTransformParams, SetTransformResult, APPLY_TRANSFORM,
+    CLI_APPLY_TRANSFORM, CLI_CONVERT_UNITS, CLI_CREATE_FRAME, CLI_DELETE_FRAME, CLI_RESOLVE_TRANSFORM,
+    CLI_SET_TRANSFORM, CONVERT_UNITS, CREATE_FRAME, DELETE_FRAME, MAX_FRAME_REFS_REPORTED, MCP_APPLY_TRANSFORM,
+    MCP_CONVERT_UNITS, MCP_CREATE_FRAME, MCP_DELETE_FRAME, MCP_RESOLVE_TRANSFORM, MCP_SET_TRANSFORM, RESOLVE_TRANSFORM,
+    SET_TRANSFORM,
+};
 pub use index_cmds::{
     build_index, invoke_index_cli, invoke_index_mcp, query_box, query_knn, query_radius, AuthoredLength,
     BuildIndexParams, BuildIndexResult, BuildKind, QueryBoxParams, QueryHit, QueryKnnParams, QueryPoints,
@@ -39,11 +50,12 @@ pub use register::{
     MAX_COUNT, MAX_OUTPUT_BYTES, MAX_SOURCE_ID_BYTES,
 };
 
-/// All registry command definitions owned by `fid-geo-cmd`: `geo.describe_element@1` (R0)
-/// and the four `GEO.INDEX.CMD` commands (`geo.build_index@1`, `geo.query_knn@1`,
-/// `geo.query_radius@1`, `geo.query_box@1`; all R1, D0, MCP exposed).
+/// All registry command definitions owned by `fid-geo-cmd`: `geo.describe_element@1` (R0),
+/// the four `GEO.INDEX.CMD` commands (R1, D0, MCP exposed), and the six `GEO.FRAME.CMD`
+/// commands (four W2 + two R1, all D0, MCP exposed).
 pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
     let mut defs = describe::command_defs()?;
     defs.extend(index_cmds::command_defs()?);
+    defs.extend(frame_cmds::command_defs()?);
     Ok(defs)
 }
