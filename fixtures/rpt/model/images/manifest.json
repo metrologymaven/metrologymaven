@@ -1,0 +1,28 @@
+{
+  "files": {
+    "sample.gif": {
+      "bytes": 35,
+      "mime": "image/gif",
+      "sha256": "sha256:6c63cc5063ac82d8bbc925f9a31adf3a87f1510c021e0fde51854d60484b5019"
+    },
+    "sample.jpg": {
+      "bytes": 35,
+      "height_px": 24,
+      "mime": "image/jpeg",
+      "sha256": "sha256:4043f2f040983efafa60af3a47af0356ef9b577b6694f2003b323321534b680d",
+      "width_px": 32
+    },
+    "sample.png": {
+      "bytes": 83,
+      "height_px": 48,
+      "mime": "image/png",
+      "sha256": "sha256:05ae4ed8657e98a06fb22560a86d3dd2dcfb85962a96ee82d6000a88471de30b",
+      "width_px": 64
+    }
+  },
+  "schema": "fid-rpt-images-fixture/1",
+  "size_cases": {
+    "sixty_mib_png_bytes": 62914560,
+    "two_mib_png_bytes": 2097152
+  }
+}

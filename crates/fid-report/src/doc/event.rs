@@ -39,6 +39,10 @@ pub const REMOVE_BLOCK: &str = "report.remove_block@1";
 pub const BIND_BLOCK: &str = "report.bind_block@1";
 /// `report.set_table_block@1` (`RPT.MODEL.BLOCKS.TABLE`).
 pub const SET_TABLE_BLOCK: &str = "report.set_table_block@1";
+/// `report.set_text_block@1` (`RPT.MODEL.BLOCKS.TEXT`).
+pub const SET_TEXT_BLOCK: &str = "report.set_text_block@1";
+/// `report.set_image_block@1` (`RPT.MODEL.BLOCKS.TEXT`).
+pub const SET_IMAGE_BLOCK: &str = "report.set_image_block@1";
 /// The read-only command; it journals nothing.
 pub const SHOW_REPORT: &str = "report.show_report@1";
 
@@ -86,6 +90,18 @@ pub enum Op {
         block: BlockId,
         payload: CanonicalJson,
     },
+    /// Replaces a `text`, `header` or `footer` block's runs (`report.set_text_block@1`).
+    SetTextBlock {
+        report: ReportId,
+        block: BlockId,
+        payload: CanonicalJson,
+    },
+    /// Replaces an `image` block's CAS digest, dimensions and caption (`report.set_image_block@1`).
+    SetImageBlock {
+        report: ReportId,
+        block: BlockId,
+        payload: CanonicalJson,
+    },
 }
 
 impl Op {
@@ -99,6 +115,8 @@ impl Op {
             Op::RemoveBlock { .. } => REMOVE_BLOCK,
             Op::BindBlock { .. } => BIND_BLOCK,
             Op::SetTableBlock { .. } => SET_TABLE_BLOCK,
+            Op::SetTextBlock { .. } => SET_TEXT_BLOCK,
+            Op::SetImageBlock { .. } => SET_IMAGE_BLOCK,
         }
     }
 
@@ -110,7 +128,9 @@ impl Op {
             | Op::AddBlock { report, .. }
             | Op::RemoveBlock { report, .. }
             | Op::BindBlock { report, .. }
-            | Op::SetTableBlock { report, .. } => *report,
+            | Op::SetTableBlock { report, .. }
+            | Op::SetTextBlock { report, .. }
+            | Op::SetImageBlock { report, .. } => *report,
         }
     }
 
@@ -145,6 +165,28 @@ impl Op {
                     return Err(ReportError::InvalidBlockPayload(super::kind::PayloadError::new(
                         "/kind",
                         "not_table_block",
+                    )));
+                }
+                check_block(kinds, b.kind(), b.kind_version(), payload)?;
+                r.set_block_payload(&block.uuid(), payload.clone())?;
+            }
+            Op::SetTextBlock { block, payload, .. } => {
+                let b = r.block(&block.uuid()).ok_or(ReportError::NotFound(block.uuid()))?;
+                if !matches!(b.kind().as_str(), "text" | "header" | "footer") {
+                    return Err(ReportError::InvalidBlockPayload(super::kind::PayloadError::new(
+                        "/kind",
+                        "not_text_block",
+                    )));
+                }
+                check_block(kinds, b.kind(), b.kind_version(), payload)?;
+                r.set_block_payload(&block.uuid(), payload.clone())?;
+            }
+            Op::SetImageBlock { block, payload, .. } => {
+                let b = r.block(&block.uuid()).ok_or(ReportError::NotFound(block.uuid()))?;
+                if b.kind().as_str() != "image" {
+                    return Err(ReportError::InvalidBlockPayload(super::kind::PayloadError::new(
+                        "/kind",
+                        "not_image_block",
                     )));
                 }
                 check_block(kinds, b.kind(), b.kind_version(), payload)?;
@@ -219,7 +261,10 @@ impl ReportEvent {
                 put("payload", payload_value(payload));
             }
             Op::RemoveBlock { block, .. } => put("block", id(block.uuid())),
-            Op::BindBlock { block, payload, .. } | Op::SetTableBlock { block, payload, .. } => {
+            Op::BindBlock { block, payload, .. }
+            | Op::SetTableBlock { block, payload, .. }
+            | Op::SetTextBlock { block, payload, .. }
+            | Op::SetImageBlock { block, payload, .. } => {
                 put("block", id(block.uuid()));
                 put("payload", payload_value(payload));
             }
@@ -250,7 +295,9 @@ impl ReportEvent {
                 &["type", "report", "page", "after", "block", "kind", "kind_version", "payload", "report_digest"]
             }
             REMOVE_BLOCK => &["type", "report", "block", "report_digest"],
-            BIND_BLOCK | SET_TABLE_BLOCK => &["type", "report", "block", "payload", "report_digest"],
+            BIND_BLOCK | SET_TABLE_BLOCK | SET_TEXT_BLOCK | SET_IMAGE_BLOCK => {
+                &["type", "report", "block", "payload", "report_digest"]
+            }
             _ => return Err(ReportError::StoreInvalid("unknown event type")),
         };
         let o = exact_obj(v, keys)?;
@@ -295,6 +342,12 @@ impl ReportEvent {
             BIND_BLOCK => Op::BindBlock { report, block: block()?, payload: payload_from_value(field(o, "payload")?)? },
             SET_TABLE_BLOCK => {
                 Op::SetTableBlock { report, block: block()?, payload: payload_from_value(field(o, "payload")?)? }
+            }
+            SET_TEXT_BLOCK => {
+                Op::SetTextBlock { report, block: block()?, payload: payload_from_value(field(o, "payload")?)? }
+            }
+            SET_IMAGE_BLOCK => {
+                Op::SetImageBlock { report, block: block()?, payload: payload_from_value(field(o, "payload")?)? }
             }
             _ => Op::RemoveBlock { report, block: block()? },
         };

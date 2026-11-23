@@ -214,6 +214,7 @@ python fixtures/rpt/catalog/make_schema_fixtures.py --check
 python fixtures/rpt/model/bind/expand/make_fixtures.py --check
 python fixtures/rpt/model/bracket_3stage/make_fixtures.py --check
 python fixtures/rpt/model/fmt/make_cases.py --check
+python fixtures/rpt/model/images/make_fixtures.py --check
 python fixtures/rpt/model/tmpl/check_schema.py
 python fixtures/rpt/model/tmpl/make_fixtures.py --check
 python fixtures/rpt/model/tmpl/make_slot_fixtures.py --check
