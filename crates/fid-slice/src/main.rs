@@ -9,19 +9,24 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use fid_canon::{to_canonical_bytes, CValue};
+use fid_report::balloon::char::{AuthoredUnit, Dialect};
+use fid_slice::balloon::{run_balloon_demo, run_balloon_file, BalloonSliceOutput};
 use fid_slice::{demo_job, outcome_str, run_slice, verify_package_bytes, JobSpec, SliceOutput};
 use fid_surface::{Envelope, ErrorCode};
 
 const CMD_RUN: &str = "slice.run_vertical@1";
 const CMD_VERIFY: &str = "slice.verify_package@1";
+const CMD_BALLOON: &str = "slice.balloon_pdf@1";
 
 const USAGE: &str = "\
-fid-slice: Metrology Maven Vertical Slice 0 (Inspect + Report + Verify)
+fid-slice: Metrology Maven Vertical Slice 0 (Inspect + 2D PDF Ballooning + Report + Verify)
 
 USAGE:
     fid-slice --demo [--out <dir>] [--json]
     fid-slice --input <job.json> [--out <dir>] [--json]
     fid-slice --verify <package.zip> [--json]
+    fid-slice --balloon <drawing.pdf> --out <dir> [--dialect ASME|ISO] [--unit mm|in] [--json]
+    fid-slice --balloon-demo --out <dir> [--json]
     fid-slice --help";
 
 fn main() -> ExitCode {
@@ -33,6 +38,10 @@ fn main() -> ExitCode {
     }
 
     let mut demo = false;
+    let mut balloon_demo = false;
+    let mut balloon_pdf: Option<PathBuf> = None;
+    let mut dialect = Dialect::Asme;
+    let mut unit = AuthoredUnit::Mm;
     let mut input: Option<PathBuf> = None;
     let mut verify: Option<PathBuf> = None;
     let mut out_dir: Option<PathBuf> = None;
@@ -43,6 +52,37 @@ fn main() -> ExitCode {
             "--demo" => {
                 demo = true;
                 i += 1;
+            }
+            "--balloon-demo" => {
+                balloon_demo = true;
+                i += 1;
+            }
+            "--balloon" => {
+                let Some(p) = args.get(i + 1) else {
+                    return fail(want_json, CMD_BALLOON, ErrorCode::UsageError, "--balloon needs a PDF path");
+                };
+                balloon_pdf = Some(PathBuf::from(p));
+                i += 2;
+            }
+            "--dialect" => {
+                let Some(d) = args.get(i + 1) else {
+                    return fail(want_json, CMD_BALLOON, ErrorCode::UsageError, "--dialect needs ASME or ISO");
+                };
+                let Some(parsed) = Dialect::parse(d) else {
+                    return fail(want_json, CMD_BALLOON, ErrorCode::UsageError, "--dialect must be ASME or ISO");
+                };
+                dialect = parsed;
+                i += 2;
+            }
+            "--unit" => {
+                let Some(u) = args.get(i + 1) else {
+                    return fail(want_json, CMD_BALLOON, ErrorCode::UsageError, "--unit needs mm or in");
+                };
+                let Some(parsed) = AuthoredUnit::parse(u) else {
+                    return fail(want_json, CMD_BALLOON, ErrorCode::UsageError, "--unit must be mm or in");
+                };
+                unit = parsed;
+                i += 2;
             }
             "--json" => {
                 i += 1;
@@ -74,6 +114,33 @@ fn main() -> ExitCode {
         }
     }
 
+    if balloon_demo || balloon_pdf.is_some() {
+        let Some(dir) = out_dir else {
+            return fail(
+                want_json,
+                CMD_BALLOON,
+                ErrorCode::UsageError,
+                "--balloon/--balloon-demo requires --out <dir>",
+            );
+        };
+        let res = if let Some(pdf) = balloon_pdf {
+            run_balloon_file(&pdf, &dir, dialect, unit)
+        } else {
+            run_balloon_demo(&dir)
+        };
+        return match res {
+            Ok(out) => {
+                if want_json {
+                    emit_envelope(&Envelope::computed(CMD_BALLOON, balloon_summary_cvalue(&out)));
+                } else {
+                    print_balloon_human(&out, &dir);
+                }
+                ExitCode::SUCCESS
+            }
+            Err(e) => fail(want_json, CMD_BALLOON, ErrorCode::ValidationError, &e.to_string()),
+        };
+    }
+
     if let Some(pkg_path) = verify {
         return run_verify(&pkg_path, want_json);
     }
@@ -92,7 +159,7 @@ fn main() -> ExitCode {
     } else if demo {
         demo_job()
     } else {
-        return fail(want_json, CMD_RUN, ErrorCode::UsageError, "pass --demo, --input, or --verify");
+        return fail(want_json, CMD_RUN, ErrorCode::UsageError, "pass --demo, --input, --verify, or --balloon-demo");
     };
 
     let output = match run_slice(&job) {
@@ -231,4 +298,50 @@ fn fail(want_json: bool, cmd: &str, code: ErrorCode, msg: &str) -> ExitCode {
         eprintln!("error: {msg}");
     }
     ExitCode::from(1)
+}
+
+fn balloon_summary_cvalue(o: &BalloonSliceOutput) -> CValue {
+    let rows = o
+        .rows
+        .iter()
+        .map(|r| {
+            let mut m = BTreeMap::new();
+            m.insert("confidence".into(), CValue::Str(r.confidence.clone()));
+            m.insert("kind".into(), CValue::Str(r.kind.clone()));
+            m.insert("number".into(), CValue::Num(f64::from(r.number)));
+            m.insert("raw_text".into(), CValue::Str(r.raw_text.clone()));
+            m.insert("zone".into(), CValue::Str(r.zone.clone()));
+            CValue::Obj(m)
+        })
+        .collect();
+    let mut obj = BTreeMap::new();
+    obj.insert("balloon_count".into(), CValue::Num(f64::from(o.pack.balloon_count)));
+    obj.insert("branch".into(), CValue::Str(o.proposal_branch.clone()));
+    obj.insert("branch_digest".into(), CValue::Str(o.branch_digest.to_string()));
+    obj.insert("csv_digest".into(), CValue::Str(o.pack.csv_digest.to_string()));
+    obj.insert("drawing_number".into(), CValue::Str(o.drawing_number.clone()));
+    obj.insert("pdf_digest".into(), CValue::Str(o.pack.pdf_digest.to_string()));
+    obj.insert("rows".into(), CValue::Arr(rows));
+    obj.insert("sheet_count".into(), CValue::Num(o.sheet_count as f64));
+    obj.insert("source_digest".into(), CValue::Str(o.source_digest.to_string()));
+    CValue::Obj(obj)
+}
+
+fn print_balloon_human(o: &BalloonSliceOutput, out_dir: &std::path::Path) {
+    println!(
+        "Metrology Maven Day-1 2D PDF Auto-Ballooning — {} Rev {} ({} sheet(s))",
+        o.drawing_number, o.revision_label, o.sheet_count
+    );
+    println!("Source PDF:      {}", o.source_digest);
+    println!("Proposal branch: {} ({})", o.proposal_branch, o.branch_digest);
+    println!();
+    println!("{:<4} {:<6} {:<18} {:<30} Confidence", "#", "Zone", "Kind", "Callout");
+    println!("{}", "-".repeat(72));
+    for r in &o.rows {
+        println!("{:<4} {:<6} {:<18} {:<30} {}", r.number, r.zone, r.kind, r.raw_text, r.confidence);
+    }
+    println!();
+    println!("Exported {} balloons to {}:", o.pack.balloon_count, out_dir.display());
+    println!("  ballooned.pdf     {}", o.pack.pdf_digest);
+    println!("  form3-starter.csv {}", o.pack.csv_digest);
 }

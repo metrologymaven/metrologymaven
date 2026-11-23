@@ -15,6 +15,8 @@
 //!
 //! Pure Rust, `#![forbid(unsafe_code)]`, zero `unwrap`/`expect`/`panic`, `BTreeMap` only.
 
+pub mod balloon;
+
 use std::collections::BTreeMap;
 use std::fmt;
 use std::io::Cursor;

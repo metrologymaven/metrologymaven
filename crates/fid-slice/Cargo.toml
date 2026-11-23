@@ -11,10 +11,14 @@ publish = false
 [dependencies]
 fid-canon = { path = "../fid-canon" }
 fid-fit = { path = "../fid-fit" }
+fid-gdt = { path = "../fid-gdt" }
 fid-gps = { path = "../fid-gps" }
+fid-io-reg = { path = "../fid-io-reg" }
 fid-kdec = { path = "../fid-kdec" }
 fid-num = { path = "../fid-num" }
 fid-pkg = { path = "../fid-pkg" }
+fid-project = { path = "../fid-project" }
+fid-report = { path = "../fid-report" }
 fid-surface = { path = "../fid-surface" }
 fid-types = { path = "../fid-types" }
 
