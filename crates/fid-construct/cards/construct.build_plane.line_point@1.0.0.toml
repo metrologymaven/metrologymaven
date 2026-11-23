@@ -1,0 +1,15 @@
+# Spec card (KRN.CONS.ELEM.PRIM). Cite designators and clause numbers only; never paste standards text.
+id = "construct.build_plane.line_point@1.0.0"
+title = "Plane from line and point"
+method = "Constructs the plane containing a 3D line and an off-line point via cross product."
+applicability = "One 3D line and one point at perpendicular distance at least thresholds.distance."
+references = [
+  "Golub, G. H. and Van Loan, C. F. (2013). Matrix Computations, 4th ed., section 5.3 (Householder QR least squares).",
+  "Metrology Maven spec node KRN.CONS.ELEM.PRIM (definitional primitive constructions).",
+]
+determinism = "D0"
+input_arity = "2"
+failure_modes = [
+  "Point on the line fails with Undefined(Collinear); distance below threshold fails with IllConditioned.",
+]
+validation = "500 seeded closed-form cases per variant in fixtures/cons/prim-defs-v1 against 60-digit Decimal reference, checked on x86-64, ARM64 and wasm32."
