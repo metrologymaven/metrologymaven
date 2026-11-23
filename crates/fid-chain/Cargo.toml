@@ -1,22 +1,26 @@
 [package]
 name = "fid-chain"
-description = "Verifier-side journal chain checks: checkpoint verification (TRUST.CHAIN.CKPT) and chain/result-linkage modules"
+description = "Verifier-side journal chain checks: chain walk and verify.check_chain@1 (TRUST.CHAIN.LINKS), checkpoint verification (TRUST.CHAIN.CKPT) and ResultRecord linkage (TRUST.CHAIN.RESLINK)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
-# Verifier-side model crate: zero dependency on any CORE crate (fid-canon, fid-journal, etc.)
-# outside dev-dependencies, so the verifier stays independent of the writer (TRUST.CHAIN.CANON).
+# Verifier-side model crate: shares no hashing or canonicalisation code with CORE's journal
+# writer (`fid-journal` is dev-dependencies only; all journal canonicalisation and hashing goes
+# strictly through `fid-trust-canon`, REQ-TRUST.CHAIN-007). `fid-pkg` (package reader/opener)
+# and `fid-registry` (command macro declaration for `verify.check_chain@1`) are both in the
+# model layer and already in `fid-sign-core`'s tree.
 [dependencies]
+fid-pkg = { path = "../fid-pkg" }
+fid-registry = { path = "../fid-registry" }
 fid-sign-core = { path = "../fid-sign-core" }
 fid-trust-canon = { path = "../fid-trust-canon" }
 fid-types = { path = "../fid-types" }
 
 [dev-dependencies]
 fid-journal = { path = "../fid-journal" }
-fid-pkg = { path = "../fid-pkg" }
 
 [lints]
 workspace = true

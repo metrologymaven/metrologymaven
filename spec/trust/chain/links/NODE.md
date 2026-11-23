@@ -17,7 +17,9 @@ determinism: D0
 cli: [fid verify check-chain]
 mcp: [verify_check_chain]
 journal: [verify.check_chain@1]
-updated: 2026-11-17
+built_in: [fid-chain]
+built_pr: 532
+updated: 2026-11-22
 ---
 
 # TRUST.CHAIN.LINKS: Chain walk, findings and check-chain command

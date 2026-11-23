@@ -157,11 +157,14 @@ impl Parser<'_> {
                 _ => return Err(self.err(InvalidKind::Syntax)),
             }
         }
-        // Sort member indices by name (O(n log n), not O(n^2) on hostile input).
-        let mut order: Vec<usize> = (0..members.len()).collect();
-        order.sort_unstable_by(|&a, &b| members[a].0.cmp(&members[b].0));
-        if order.windows(2).any(|w| members[w[0]].0 == members[w[1]].0) {
-            return Err(CanonError::invalid(InvalidKind::DuplicateKey, start));
+        // Fast path for already-strictly-sorted objects (e.g., canonical JSON): O(n) with zero
+        // allocation. Fall back to O(n log n) index sort otherwise (never O(n^2) on hostile input).
+        if !members.windows(2).all(|w| w[0].0 < w[1].0) {
+            let mut order: Vec<usize> = (0..members.len()).collect();
+            order.sort_unstable_by(|&a, &b| members[a].0.cmp(&members[b].0));
+            if order.windows(2).any(|w| members[w[0]].0 == members[w[1]].0) {
+                return Err(CanonError::invalid(InvalidKind::DuplicateKey, start));
+            }
         }
         Ok(Value::Object(members))
     }
@@ -184,7 +187,26 @@ impl Parser<'_> {
     /// Parses a string starting at its opening quote. The input is known to be UTF-8.
     fn string(&mut self) -> Result<String, CanonError> {
         self.pos += 1;
-        let mut buf: Vec<u8> = Vec::new();
+        let start = self.pos;
+        let bytes = self.b;
+        // Fast path for strings without backslash escapes (the common case): single allocation.
+        while let Some(&c) = bytes.get(self.pos) {
+            if c == b'"' {
+                let end = self.pos;
+                self.pos += 1;
+                let s = std::str::from_utf8(&bytes[start..end]).map_err(|_| self.err(InvalidKind::Utf8))?;
+                return Ok(s.to_owned());
+            }
+            if c == b'\\' {
+                break;
+            }
+            if c < 0x20 {
+                return Err(self.err(InvalidKind::Syntax));
+            }
+            self.pos += 1;
+        }
+        let mut buf: Vec<u8> = Vec::with_capacity(self.pos.saturating_sub(start).saturating_add(16));
+        buf.extend_from_slice(&bytes[start..self.pos]);
         loop {
             let Some(c) = self.peek() else {
                 return Err(self.err(InvalidKind::Syntax));
@@ -242,8 +264,15 @@ impl Parser<'_> {
                 }
                 0x00..=0x1f => return Err(self.err(InvalidKind::Syntax)),
                 _ => {
-                    buf.push(c);
+                    let span_start = self.pos;
                     self.pos += 1;
+                    while let Some(&b) = bytes.get(self.pos) {
+                        if b == b'"' || b == b'\\' || b < 0x20 {
+                            break;
+                        }
+                        self.pos += 1;
+                    }
+                    buf.extend_from_slice(&bytes[span_start..self.pos]);
                 }
             }
         }

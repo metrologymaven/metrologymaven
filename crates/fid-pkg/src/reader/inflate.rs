@@ -17,10 +17,10 @@ use super::error::ReadError;
 use std::io::{ErrorKind, Read};
 
 /// Largest chunk handed to the sink at once.
-pub(crate) const FLUSH: usize = 16 * 1024;
+pub(crate) const FLUSH: usize = 32 * 1024;
 const WINDOW: usize = 32 * 1024;
 /// Output kept before the oldest bytes beyond the window are dropped.
-pub(crate) const KEEP: usize = 4 * WINDOW;
+pub(crate) const KEEP: usize = 8 * WINDOW;
 const MAX_BITS: usize = 15;
 const MAX_LCODES: usize = 286;
 const MAX_DCODES: usize = 30;
@@ -104,7 +104,7 @@ impl<R: Read> Inflater<R> {
     pub(crate) fn new(input: R) -> Inflater<R> {
         Inflater {
             input,
-            inbuf: vec![0; 8192],
+            inbuf: vec![0; 64 * 1024],
             inpos: 0,
             inlen: 0,
             consumed: 0,

@@ -22,6 +22,7 @@
 //! it does not share that path with other implementations.
 
 mod entry;
+mod fast_entry;
 mod number;
 mod parse;
 mod write;
@@ -29,6 +30,7 @@ mod write;
 use std::fmt;
 
 pub use entry::{entry_hash, entry_hash_value, ConventionRule, MAX_SAFE_INTEGER, U64_FIELDS};
+pub use fast_entry::{inspect_entry_line, EntryScratch, InspectError, InspectedEntry};
 pub use number::format_number;
 pub use parse::{parse, parse_with_limits, Limits};
 pub use write::{canonicalize, digest_canonical, serialize};
