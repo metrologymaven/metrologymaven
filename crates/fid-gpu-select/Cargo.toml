@@ -1,6 +1,6 @@
 [package]
 name = "fid-gpu-select"
-description = "Metrology Maven GPU adapter probing and backend selection (spec node PLAT.GPU.DETECT): a bounded wgpu probe and a pure selection over the policy row, minimums and known-bad list, with a canonical JSON result and the plain-data adapter choice for the frame graph"
+description = "Metrology Maven GPU adapter probing, backend selection (PLAT.GPU.DETECT) and persistent fallback/workaround render notice builder (PLAT.GPU.NOTICE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

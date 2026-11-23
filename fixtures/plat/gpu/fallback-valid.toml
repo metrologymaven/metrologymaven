@@ -1,0 +1,47 @@
+# Fixture GPU fallback tiers (PLAT.GPU.FALLBK.TIERS schema 1, used by PLAT.GPU.NOTICE).
+schema_version = 1
+
+[[tiers.reduced.features]]
+id = "msaa"
+effect = "reduced"
+note = "2x MSAA instead of 4x"
+
+[[tiers.reduced.features]]
+id = "order_independent_transparency"
+effect = "disabled"
+note = "Sorted alpha blending used instead of OIT"
+
+[[tiers.reduced.features]]
+id = "point_splat_shading"
+effect = "reduced"
+note = "Flat unlit point splats"
+
+[[tiers.software.features]]
+id = "msaa"
+effect = "reduced"
+note = "2x MSAA instead of 4x"
+
+[[tiers.software.features]]
+id = "order_independent_transparency"
+effect = "disabled"
+note = "Sorted alpha blending used instead of OIT"
+
+[[tiers.software.features]]
+id = "point_splat_shading"
+effect = "reduced"
+note = "Flat unlit point splats"
+
+[[tiers.software.features]]
+id = "shadows"
+effect = "disabled"
+note = "Shadows disabled in software rendering"
+
+[[tiers.software.features]]
+id = "lod_budget"
+effect = "reduced"
+note = "Point cloud LOD budget reduced to 2M points"
+
+[tiers.software.floor]
+workload = "render_software_1m"
+metric = "fps"
+min = 5.0

@@ -18,7 +18,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-gpu-select]
+built_pr: 526
+updated: 2026-11-22
 ---
 
 # PLAT.GPU.NOTICE: Fallback and workaround notice
