@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid project replace-input]
 mcp: [project_replace_input]
 journal: [project.replace_input@1]
-updated: 2026-11-16
+built_in: [fid-dep]
+updated: 2026-11-23
 ---
 
 # CORE.DEP.REPL: Input replacement
