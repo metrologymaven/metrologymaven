@@ -2,6 +2,7 @@
 //! extraction and deterministic engineering callout parsing (`RPT.BALLOON`).
 
 pub mod auto_parse;
+pub mod auto_propose;
 pub mod auto_text;
 pub mod char;
 pub mod register;

@@ -17,6 +17,7 @@ determinism: D0
 cli: [fid report propose-balloons]
 mcp: [report_propose_balloons]
 journal: [report.propose_balloons@1]
+built_in: [fid-report]
 updated: 2026-11-22
 ---
 
