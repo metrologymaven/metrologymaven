@@ -2196,9 +2196,11 @@ name = "fid-report-out"
 version = "0.0.1"
 dependencies = [
  "cap-std",
+ "fid-bus",
  "fid-canon",
  "fid-io-reg",
  "fid-project",
+ "fid-registry",
  "fid-report",
  "fid-types",
  "sha2 0.10.9",

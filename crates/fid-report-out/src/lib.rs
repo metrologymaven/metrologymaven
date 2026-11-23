@@ -13,4 +13,9 @@ pub use meta::{
     ExportError, ExportMeta, ExportName, ExportReceipt, ExportRootHandle, ExportRootResolver, ExportSink,
     LocalRootResolver, RendererVersion, ResolvedRoot, TemplateVersionRef, EXPORT_META_SCHEMA, MAX_EXPORT_NAME_BYTES,
 };
-pub use sheet::{convert_report, neutralise_text, Cell, CellText, HeaderCell, SheetError, SheetTable};
+pub use sheet::{
+    convert_report, csv_command_defs, export_csv, invoke_export_csv_cli, neutralise_text, render_table_csv, Cell,
+    CellText, CsvExportError, CsvExportJournal, CsvFileEntry, ExportCsvEnv, ExportCsvEvent, ExportCsvOutput,
+    ExportCsvParams, ExportCsvResult, HeaderCell, MemoryCsvJournal, MemoryResolvedLookup, ResolvedLookup, SheetError,
+    SheetTable, CSV_RENDERER_ID, CSV_RENDERER_VERSION, EXPORT_CSV_CMD, MAX_CSV_TABLES,
+};

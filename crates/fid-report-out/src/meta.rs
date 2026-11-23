@@ -605,6 +605,30 @@ impl<'a> ExportSink<'a> {
         let byte_len = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
         Ok(ExportReceipt { root: resolved.handle, name: valid_name, bytes: byte_len, sha256: digest })
     }
+
+    /// Removes a regular file previously written during a failed multi-file export invocation
+    /// inside the same approved local export root (`RPT.OUTPUT.SHEET.CSV` REQ-005 rollback).
+    pub fn remove_written(
+        &self,
+        principal: Principal,
+        root_handle: &str,
+        name: &ExportName,
+    ) -> Result<(), ExportError> {
+        let resolved = self.resolver.resolve(root_handle, principal)?;
+        if !self.resolver.is_local(&resolved) {
+            return Err(ExportError::ExportRootNotLocal(resolved.handle.wire()));
+        }
+        let dir = Dir::open_ambient_dir(&resolved.dir, ambient_authority()).map_err(|e| ExportError::from_io(&e))?;
+        let target = name.as_str();
+        match dir.symlink_metadata(target) {
+            Ok(meta) if meta.is_file() && !meta.file_type().is_symlink() => {
+                dir.remove_file(target).map_err(|e| ExportError::from_io(&e))
+            }
+            Ok(_) => Err(ExportError::Io { kind: "InvalidInput".to_string() }),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(ExportError::from_io(&e)),
+        }
+    }
 }
 
 fn is_stale_tmp_name(name: &str) -> bool {
