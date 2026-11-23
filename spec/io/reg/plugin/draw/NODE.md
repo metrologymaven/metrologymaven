@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-io-draw]
+updated: 2026-11-22
 ---
 
 # IO.REG.PLUGIN.DRAW: Bounded drawing reader for PDF pages and raster images

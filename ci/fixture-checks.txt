@@ -138,6 +138,7 @@ python fixtures/io/reg/env/export/make_fixtures.py --check
 python fixtures/io/reg/env/import/make_fixtures.py --check
 python fixtures/io/reg/env/report/make_fixtures.py --check
 python fixtures/io/reg/plugin/abi/make_fixtures.py --check
+python fixtures/io/reg/plugin/draw/make_fixtures.py --check
 python fixtures/io/reg/prov/make_cases.py --check
 python fixtures/io/res/trans/model/make_fixtures.py --check
 python fixtures/io/res/trans/view/make_fixtures.py --check
