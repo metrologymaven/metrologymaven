@@ -1,0 +1,35 @@
+{
+  "schema": "guide-topic/v1",
+  "slug": "field-map",
+  "order": 6,
+  "title": "The Complete Map of Dimensional Metrology (0.1 nm to 100 m)",
+  "subtitle": "Where Metrology Maven's 1.0 core stops, which post-1.0 tracks enter core (MSA, surface texture, calibration labs), and which modalities live in ECO.SDK plugins (D-054).",
+  "phase": "P0",
+  "status": "taxonomy-map",
+  "provisional": false,
+  "crates": [],
+  "spec_nodes": ["OUTR.DOCS.GUIDE.MAP", "SURF", "CAL", "RPT.STATS.MSA", "ECO.SDK"],
+  "standards": [
+    {"designator": "ISO 23952 (QIF 3.0)", "topic": "Core macro-coordinate metrology model"},
+    {"designator": "ISO 16610 / 21920 / 25178", "topic": "Post-1.0 core surface filtration & texture (SURF, P3)"},
+    {"designator": "ISO 10360 / ISO 230 / ISO/IEC 17025", "topic": "Post-1.0 core calibration-lab verification (CAL, P4)"},
+    {"designator": "AIAG MSA / VDA 5 / ISO 22514-2", "topic": "Post-1.0 core MSA & non-normal capability (RPT.STATS.MSA, P3)"}
+  ],
+  "sections": [
+    {
+      "heading": "Why scope discipline matters across 12 orders of magnitude",
+      "paragraphs": [
+        "Dimensional metrology spans atomic-scale semiconductor and optical interferometry (0.1 nm) to shipyard and accelerator geodesy (100 m). Trying to cram every physical sensor modality, multi-gigabyte CT voxel volume, and proprietary controller SDK into a single 1.0 monolith would break the core's pure-Rust CPU-only f64 kernel (C1/C2) and QIF-native simplicity.",
+        "Decision D-054 draws an explicit three-tier boundary: (1) ship the four macro-coordinate apps first (Report, Inspect, Probe, Network); (2) expand core post-1.0 with three architectures-aligned tracks—MSA/non-normal SPC (P3), Surface Texture & Precision Form (SURF, P3), and Calibration-Lab Verification (CAL, P4); and (3) keep CT, 2D Vision, On-Machine CNC Probing, Nano/Semi/Optics, and Adjacent Dimensional Engineering behind ECO.SDK plugins or companion projects."
+      ]
+    }
+  ],
+  "lab": {
+    "widget_kind": "field-map-explorer",
+    "op": null,
+    "secondary_ops": [],
+    "instructions": "Filter the eleven branches of dimensional metrology by D-054 scope tier below. Every spec-node and built-leaf count is generated directly from the repository at build time.",
+    "presets": []
+  },
+  "cli_example": "python3 tools/scope.py stats"
+}
