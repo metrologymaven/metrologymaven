@@ -1,0 +1,18 @@
+# Spec card (KRN.MZ.LIN.LINE3). Cite designators and clause numbers only; never paste standards text.
+id = "fit.line3.mz@1.0.0"
+title = "Minimum-zone 3D line (Chebyshev axis straightness in space)"
+method = "Centres and power-of-two scales the point cloud, starts from the orthogonal least-squares 3D line axis, checks the axial-extent to radial-spread aspect ratio, and solves the exact fixed-axis 2D minimum enclosing circle by SOCP (fid_solv::conic::solve_socp) to centre the starting axis. Parameterises the axis by two tangent-plane direction parameters and two perpendicular offset coordinates (a, b, u, v, R), runs sequential linearisation (KRN.SOLV.SEQ) from the SOCP-centred start and four deterministic small-tilt ring starts, and certifies a 5-contact active-set KKT point (KRN.SOLV.CERT, CertKind::Zone). Reports the axis and recomputes the zone diameter 2 * R from the critical points at the final axis."
+applicability = "At least 2 non-coincident 3D points (5 non-degenerate contacts for full-rank free-axis certification; exact collinear clouds return diameter 0.0 closed-form). Axial extent must be at least aspect_min times radial spread (default 2.0)."
+references = [
+  "ISO 12780-1:2011, Geometrical product specifications (GPS) - Straightness - Part 1: Vocabulary and parameters of straightness.",
+  "Conn, A. R., Gould, N. I. M. and Toint, P. L. (2000). Trust-Region Methods. SIAM [unverified chapter].",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Axial extent below aspect_min times radial spread (disc-like cloud): IllConditioned.",
+  "Fewer than 2 points or all coincident: TooFewPoints or Collinear.",
+  "Every deterministic start fails certification: SeqFailed (fail closed).",
+  "Any point exceeds the recomputed zone radius beyond INSIDE_TOL: SideViolation (fail closed).",
+]
+validation = "Exact rational 5-contact twisted-axis fixtures fixtures/fit/mz-line3-v1 (make_mz_line3_fixtures.py) including 1 km from origin, cross-check against fit.cylinder.mc@1.0.0 (KRN.ENV.MCC.CYL) within 1e-9 m, disc aspect-ratio error check, and cross-target output-digest pin on x86-64, ARM64 and wasm32."

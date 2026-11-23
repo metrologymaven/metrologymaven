@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid fit mz-line3d]
 mcp: [fit_mz_line3d]
 journal: [fit.mz_line3d@1]
-updated: 2026-11-17
+built_in: [fid-fit]
+updated: 2026-11-23
 ---
 
 # KRN.MZ.LIN.LINE3: Minimum-zone 3D line (SOCP)
