@@ -220,3 +220,5 @@ fixtures/core/bus/pol/egress/artifact.bin binary
 fixtures/replay/select/** -text
 # TRUST.PKG.FIXTURE golden packages, pinned digests and index: compared byte for byte by fixtures/pkg/generate --check.
 fixtures/pkg/golden/** -text
+# RPT.OUTPUT fixtures: byte-compared golden metadata, CRLF CSV, layout, draw and PDF files.
+fixtures/rpt/output/** -text

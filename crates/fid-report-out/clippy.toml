@@ -1,0 +1,13 @@
+# RPT float rule (spec node RPT.MODEL.FMT, REQ-RPT.MODEL.FMT-002): in the fid-report* crates
+# a float may exist only in module `fid_report::fmt` and `fid_report::json_num`. Anywhere else,
+# naming f32 or f64 fails CI's `cargo clippy -- -D warnings`.
+disallowed-types = [
+    { path = "f32", reason = "RPT float rule: floats only in fid_report::fmt (RPT.MODEL.FMT REQ-002)" },
+    { path = "f64", reason = "RPT float rule: floats only in fid_report::fmt (RPT.MODEL.FMT REQ-002)" },
+]
+
+# Direct path dependency functions returning f32/f64 (verified by tools/rpt_float_lint.py).
+disallowed-methods = [
+    { path = "fid_io_reg::prov::UnitResolution::to_metres", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+    { path = "fid_io_reg::prov::to_metres", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
+]

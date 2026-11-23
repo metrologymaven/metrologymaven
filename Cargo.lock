@@ -2092,6 +2092,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-report-out"
+version = "0.0.1"
+dependencies = [
+ "cap-std",
+ "fid-canon",
+ "fid-io-reg",
+ "fid-project",
+ "fid-report",
+ "fid-types",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "fid-report-pdf"
 version = "0.0.1"
 dependencies = [
