@@ -17,7 +17,8 @@ determinism: D3
 cli: [fid check eval-straightness]
 mcp: [check_eval_straightness]
 journal: [check.eval_straightness@1]
-updated: 2026-11-17
+built_in: [fid-gps, fid-gdt]
+updated: 2026-11-23
 ---
 
 # GDT.FORM.STRAIGHT.CMD: Straightness command and dispatch
