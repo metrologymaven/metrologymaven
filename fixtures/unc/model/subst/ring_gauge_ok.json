@@ -1,0 +1,239 @@
+{
+  "calibrated_runs": {
+    "conditions": {
+      "characteristic_kind": "diameter",
+      "feature_ref": "ring-50mm-master",
+      "machine_id": "cmm-lab-01",
+      "probe_config_digest": "sha256:06a977db2518bc4ac55c2b634b8e4d193722bb8019befd382b902af6e201679d",
+      "program_digest": "sha256:b82bd321cbc2db0d212ac11d2bc8a12d329b8bf43ffa1f35277c0074ad3f7fba",
+      "strategy_digest": "sha256:09aa5f742ed3291e5d5c562e7f14fdd1b4cde269f3d6552442998bfcf812dbfb"
+    },
+    "runs": [
+      {
+        "run_id": "run-01",
+        "values": [
+          0.050001556,
+          0.050001797,
+          0.050001839
+        ]
+      },
+      {
+        "run_id": "run-02",
+        "values": [
+          0.050001654,
+          0.050001932,
+          0.050001694
+        ]
+      },
+      {
+        "run_id": "run-03",
+        "values": [
+          0.050000812,
+          0.050001268,
+          0.050001231
+        ]
+      },
+      {
+        "run_id": "run-04",
+        "values": [
+          0.050000779,
+          0.050001506,
+          0.050001375
+        ]
+      },
+      {
+        "run_id": "run-05",
+        "values": [
+          0.050001896,
+          0.050001456,
+          0.050001806
+        ]
+      },
+      {
+        "run_id": "run-06",
+        "values": [
+          0.050001874,
+          0.050001343,
+          0.050001979
+        ]
+      },
+      {
+        "run_id": "run-07",
+        "values": [
+          0.050001891,
+          0.050002247,
+          0.050001156
+        ]
+      },
+      {
+        "run_id": "run-08",
+        "values": [
+          0.050001144,
+          0.050001661,
+          0.05000121
+        ]
+      },
+      {
+        "run_id": "run-09",
+        "values": [
+          0.050001291,
+          0.050001916,
+          0.050001756
+        ]
+      },
+      {
+        "run_id": "run-10",
+        "values": [
+          0.05000159,
+          0.050001414,
+          0.050002096
+        ]
+      },
+      {
+        "run_id": "run-11",
+        "values": [
+          0.050001061,
+          0.050001857,
+          0.050001433
+        ]
+      },
+      {
+        "run_id": "run-12",
+        "values": [
+          0.05000138,
+          0.050000997,
+          0.050001638
+        ]
+      },
+      {
+        "run_id": "run-13",
+        "values": [
+          0.050001385,
+          0.050001227,
+          0.050001194
+        ]
+      },
+      {
+        "run_id": "run-14",
+        "values": [
+          0.050000753,
+          0.050001442,
+          0.050001259
+        ]
+      },
+      {
+        "run_id": "run-15",
+        "values": [
+          0.050001055,
+          0.05000139,
+          0.050001569
+        ]
+      },
+      {
+        "run_id": "run-16",
+        "values": [
+          0.050001358,
+          0.050001556,
+          0.050000629
+        ]
+      },
+      {
+        "run_id": "run-17",
+        "values": [
+          0.050001884,
+          0.050001265,
+          0.050001632
+        ]
+      },
+      {
+        "run_id": "run-18",
+        "values": [
+          0.050001069,
+          0.050000925,
+          0.05000174
+        ]
+      },
+      {
+        "run_id": "run-19",
+        "values": [
+          0.050001684,
+          0.050001651,
+          0.050001014
+        ]
+      },
+      {
+        "run_id": "run-20",
+        "values": [
+          0.050001116,
+          0.050001211,
+          0.050001356
+        ]
+      }
+    ],
+    "unit": "si:m"
+  },
+  "license": "CC-BY-4.0",
+  "production_runs": {
+    "conditions": {
+      "characteristic_kind": "diameter",
+      "feature_ref": "ring-50mm-master",
+      "machine_id": "cmm-lab-01",
+      "probe_config_digest": "sha256:06a977db2518bc4ac55c2b634b8e4d193722bb8019befd382b902af6e201679d",
+      "program_digest": "sha256:b82bd321cbc2db0d212ac11d2bc8a12d329b8bf43ffa1f35277c0074ad3f7fba",
+      "strategy_digest": "sha256:09aa5f742ed3291e5d5c562e7f14fdd1b4cde269f3d6552442998bfcf812dbfb"
+    },
+    "runs": [
+      {
+        "run_id": "run-01",
+        "values": [
+          0.05000249,
+          0.050001905,
+          0.050002621
+        ]
+      },
+      {
+        "run_id": "run-02",
+        "values": [
+          0.050002581,
+          0.050002513,
+          0.05000228
+        ]
+      },
+      {
+        "run_id": "run-03",
+        "values": [
+          0.0500031,
+          0.050002715,
+          0.050002149
+        ]
+      },
+      {
+        "run_id": "run-04",
+        "values": [
+          0.050002156,
+          0.050001935,
+          0.050001662
+        ]
+      },
+      {
+        "run_id": "run-05",
+        "values": [
+          0.05000163,
+          0.050002532,
+          0.050001819
+        ]
+      }
+    ],
+    "unit": "si:m"
+  },
+  "reference": {
+    "k": 2.0,
+    "source_digest": "sha256:114bca627b9a28971caf7fe7db6dd7a5ff599c5686eca4751cbadf13ab5ef18a",
+    "source_kind": "dcc",
+    "u": 6e-07,
+    "unit": "si:m",
+    "value": 0.0500012
+  },
+  "schema": "subst-input/1",
+  "title": "UNC.MODEL.SUBST.INPUT AC-1: calibrated 50.0012 mm ring gauge, U=0.6 um, k=2, 20 runs x 3 reps"
+}

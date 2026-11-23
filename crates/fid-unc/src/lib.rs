@@ -7,9 +7,13 @@
 //!   `unc.create_model@1`, `unc.validate_model@1` and `unc.show_model@1` (spec node
 //!   `UNC.MODEL.GRAPH.STORE`), with version immutability, release-manifest provenance and
 //!   [`model_store::resolve`] for engines.
+//! - [`subst`]: ISO 15530-3 calibrated-workpiece substitution inputs, procedure profiles
+//!   and condition checks (`UNC.MODEL.SUBST.INPUT`).
 //!
 //! The kernel types, canonical form, digest and validation of a model are in `fid-kunc`
-//! (`model`); this crate adds storage, contributors, the journal, the principal and the surfaces.
+//! (`model`); this crate adds storage, contributors, substitution checks, the journal, the
+//! principal and the surfaces.
 
 pub mod contrib;
 pub mod model_store;
+pub mod subst;
