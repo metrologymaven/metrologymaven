@@ -1,9 +1,12 @@
 //! PDF report renderer of the Report app. Spec node `RPT.OUTPUT.PDF`.
 //!
-//! This crate holds the renderer's first leaf, `RPT.OUTPUT.PDF.TEXT` (module [`text`]):
-//! the bundled font set, deterministic shaping to glyph IDs with integer advances in
-//! micrometres, line-break opportunities, glyph fallback, deterministic font subsetting with
-//! a ToUnicode map, and deterministic PDF text objects. Page layout, the other block painters
-//! and the full PDF writer are later leaves (`RPT.OUTPUT.PDF.LAYOUT`, `.DRAW`, `.WRITE`).
+//! - [`text`] (`RPT.OUTPUT.PDF.TEXT`): bundled fonts, deterministic integer-µm shaping,
+//!   line-break opportunities, glyph fallback, deterministic TrueType subsetting with a
+//!   ToUnicode map, and deterministic PDF text objects.
+//! - [`layout`] (`RPT.OUTPUT.PDF.LAYOUT`): integer-µm page layout engine turning a
+//!   `ResolvedReport` into a canonical `PageLayout` display list with page breaks, continuation
+//!   headers, column groups, designer frames, overflow clipping and page-number fill-in.
 
+pub(crate) mod int_json;
+pub mod layout;
 pub mod text;
