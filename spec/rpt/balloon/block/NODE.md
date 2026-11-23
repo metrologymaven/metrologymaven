@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid report set-drawing-balloon]
 mcp: [report_set_drawing_balloon]
 journal: [report.set_drawing_balloon@1]
-updated: 2026-11-17
+built_in: [fid-report]
+updated: 2026-11-22
 ---
 
 # RPT.BALLOON.BLOCK: Ballooned-drawing report block

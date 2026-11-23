@@ -37,6 +37,8 @@ pub const ADD_BLOCK: &str = "report.add_block@1";
 pub const REMOVE_BLOCK: &str = "report.remove_block@1";
 /// `report.bind_block@1` (`RPT.MODEL.BIND.RESOLVE`).
 pub const BIND_BLOCK: &str = "report.bind_block@1";
+/// `report.set_drawing_balloon@1` (`RPT.BALLOON.BLOCK`).
+pub const SET_DRAWING_BALLOON: &str = "report.set_drawing_balloon@1";
 /// The read-only command; it journals nothing.
 pub const SHOW_REPORT: &str = "report.show_report@1";
 
@@ -78,6 +80,12 @@ pub enum Op {
         block: BlockId,
         payload: CanonicalJson,
     },
+    /// Updates a `drawing` block's payload (`report.set_drawing_balloon@1`, `RPT.BALLOON.BLOCK`).
+    SetDrawingBalloon {
+        report: ReportId,
+        block: BlockId,
+        payload: CanonicalJson,
+    },
 }
 
 impl Op {
@@ -90,6 +98,7 @@ impl Op {
             Op::AddBlock { .. } => ADD_BLOCK,
             Op::RemoveBlock { .. } => REMOVE_BLOCK,
             Op::BindBlock { .. } => BIND_BLOCK,
+            Op::SetDrawingBalloon { .. } => SET_DRAWING_BALLOON,
         }
     }
 
@@ -100,7 +109,8 @@ impl Op {
             | Op::RemovePage { report, .. }
             | Op::AddBlock { report, .. }
             | Op::RemoveBlock { report, .. }
-            | Op::BindBlock { report, .. } => *report,
+            | Op::BindBlock { report, .. }
+            | Op::SetDrawingBalloon { report, .. } => *report,
         }
     }
 
@@ -124,7 +134,7 @@ impl Op {
                 r.insert_block(&page.uuid(), after.map(|a| a.uuid()).as_ref(), b)?;
             }
             Op::RemoveBlock { block, .. } => r.remove_block(&block.uuid())?,
-            Op::BindBlock { block, payload, .. } => {
+            Op::BindBlock { block, payload, .. } | Op::SetDrawingBalloon { block, payload, .. } => {
                 let b = r.block(&block.uuid()).ok_or(ReportError::NotFound(block.uuid()))?;
                 check_block(kinds, b.kind(), b.kind_version(), payload)?;
                 r.set_block_payload(&block.uuid(), payload.clone())?;
@@ -198,7 +208,7 @@ impl ReportEvent {
                 put("payload", payload_value(payload));
             }
             Op::RemoveBlock { block, .. } => put("block", id(block.uuid())),
-            Op::BindBlock { block, payload, .. } => {
+            Op::BindBlock { block, payload, .. } | Op::SetDrawingBalloon { block, payload, .. } => {
                 put("block", id(block.uuid()));
                 put("payload", payload_value(payload));
             }
@@ -229,7 +239,7 @@ impl ReportEvent {
                 &["type", "report", "page", "after", "block", "kind", "kind_version", "payload", "report_digest"]
             }
             REMOVE_BLOCK => &["type", "report", "block", "report_digest"],
-            BIND_BLOCK => &["type", "report", "block", "payload", "report_digest"],
+            BIND_BLOCK | SET_DRAWING_BALLOON => &["type", "report", "block", "payload", "report_digest"],
             _ => return Err(ReportError::StoreInvalid("unknown event type")),
         };
         let o = exact_obj(v, keys)?;
@@ -272,6 +282,9 @@ impl ReportEvent {
                 }
             }
             BIND_BLOCK => Op::BindBlock { report, block: block()?, payload: payload_from_value(field(o, "payload")?)? },
+            SET_DRAWING_BALLOON => {
+                Op::SetDrawingBalloon { report, block: block()?, payload: payload_from_value(field(o, "payload")?)? }
+            }
             _ => Op::RemoveBlock { report, block: block()? },
         };
         Ok(ReportEvent { op, report_digest })

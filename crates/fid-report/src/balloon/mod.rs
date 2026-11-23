@@ -5,6 +5,7 @@ pub mod auto_export;
 pub mod auto_parse;
 pub mod auto_propose;
 pub mod auto_text;
+pub mod block;
 pub mod char;
 pub mod register;
 pub mod sheet;
