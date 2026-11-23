@@ -14,8 +14,11 @@ pub use meta::{
     LocalRootResolver, RendererVersion, ResolvedRoot, TemplateVersionRef, EXPORT_META_SCHEMA, MAX_EXPORT_NAME_BYTES,
 };
 pub use sheet::{
-    convert_report, csv_command_defs, export_csv, invoke_export_csv_cli, neutralise_text, render_table_csv, Cell,
+    convert_report, csv_command_defs, export_csv, export_spreadsheet, format_sheet_name, invoke_export_csv_cli,
+    invoke_export_spreadsheet_cli, neutralise_text, render_table_csv, render_workbook_xlsx, xlsx_command_defs, Cell,
     CellText, CsvExportError, CsvExportJournal, CsvFileEntry, ExportCsvEnv, ExportCsvEvent, ExportCsvOutput,
-    ExportCsvParams, ExportCsvResult, HeaderCell, MemoryCsvJournal, MemoryResolvedLookup, ResolvedLookup, SheetError,
-    SheetTable, CSV_RENDERER_ID, CSV_RENDERER_VERSION, EXPORT_CSV_CMD, MAX_CSV_TABLES,
+    ExportCsvParams, ExportCsvResult, ExportXlsxEnv, ExportXlsxEvent, ExportXlsxOutput, ExportXlsxParams,
+    ExportXlsxResult, HeaderCell, MemoryCsvJournal, MemoryResolvedLookup, MemoryXlsxJournal, ResolvedLookup,
+    SheetError, SheetTable, XlsxExportError, XlsxExportJournal, CSV_RENDERER_ID, CSV_RENDERER_VERSION, EXPORT_CSV_CMD,
+    EXPORT_XLSX_CMD, MAX_CSV_TABLES, MAX_XLSX_COLS, MAX_XLSX_ROWS, XLSX_RENDERER_ID, XLSX_RENDERER_VERSION,
 };

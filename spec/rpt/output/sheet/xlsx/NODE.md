@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid report export-spreadsheet]
 mcp: [report_export_spreadsheet]
 journal: [report.export_spreadsheet@1]
-updated: 2026-11-17
+built_in: [fid-report-out]
+updated: 2026-11-23
 ---
 
 # RPT.OUTPUT.SHEET.XLSX: Deterministic spreadsheet workbook export
