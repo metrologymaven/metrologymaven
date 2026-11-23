@@ -20,6 +20,6 @@ pub use event::{
 };
 pub use model::{parse_zone, Balloon, RenumberChange, RenumberMode, SheetPoint, MAX_ZONE_BYTES};
 pub use store::{
-    replay_exact, AddBalloonParams, BalloonRegister, BalloonReplayRun, MoveBalloonParams, RelinkBalloonParams,
-    RenumberBalloonParams,
+    replay_exact, AddBalloonParams, BalloonRegister, BalloonReplayRun, MoveBalloonParams, RegisterBalloonSink,
+    RelinkBalloonParams, RenumberBalloonParams,
 };

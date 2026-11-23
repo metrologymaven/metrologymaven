@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid report carry-drawing-balloon]
 mcp: [report_carry_drawing_balloon]
 journal: [report.carry_drawing_balloon@1]
-updated: 2026-11-17
+built_in: [fid-report]
+updated: 2026-11-22
 ---
 
 # RPT.BALLOON.SHEET.CARRY: Carry balloons forward to a new drawing revision

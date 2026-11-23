@@ -11,6 +11,7 @@
 //!   `needs_size` raster sheet using exact integer half-even arithmetic (`px × 2540 / dpi`).
 //! - Offers [`SheetInfo`] for downstream balloon register and drawing block modules.
 
+pub mod carry;
 pub mod command;
 pub mod defs;
 pub mod error;
@@ -19,6 +20,10 @@ pub mod model;
 pub mod replay;
 pub mod store;
 
+pub use carry::{
+    carry_command_def, carry_drawing_balloon, replay_carry_event, BalloonSink, BalloonView, CarryDrawingEvent,
+    CarryDrawingParams, CarryDrawingResult, CarryError, CarryPoint, NotCarriedReason, SinkError, CARRY_DRAWING_BALLOON,
+};
 pub use command::{
     add_drawing_balloon, execute, list_drawing_balloon, list_drawing_value, set_size_drawing_balloon, AddDrawingParams,
     AddDrawingResult, DeterministicV7Gen, ImportEnv, ListDrawingParams, ListedDrawingRevision, SetSizeParams,
@@ -32,7 +37,7 @@ pub use model::{
     DrawingSheet, ReaderWarning, RevisionId, SheetId, SheetInfo, SheetStatus, SizeSpec, MAX_DPI,
     MAX_DRAWING_TEXT_BYTES, MAX_SHEET_DIM_CMM,
 };
-pub use replay::{replay_exact, SheetReplayRun};
+pub use replay::{replay_exact, replay_exact_with_sink, SheetReplayRun};
 pub use store::{
     digest_bytes, CasDrawingBlobs, DrawingBlobBackend, DrawingStore, MemoryDrawingBlobs, MAX_CAS_READ_BYTES,
 };

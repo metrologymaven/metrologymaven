@@ -5,6 +5,7 @@
 //! re-running `fid_io_draw::read_drawing_bytes` and confirming that every entity digest, sheet
 //! ID, dimension and warning matches identically (`ReplayOutcome::Identical`).
 
+use super::carry::{replay_carry_event, BalloonSink};
 use super::command::AddDrawingResult;
 use super::event::{canonical_digest, DrawingEvent};
 use super::model::{compute_raster_bounds_cmm, DrawingRevision, DrawingSheet, ReaderWarning, SheetStatus};
@@ -14,7 +15,7 @@ use fid_replay::ReplayOutcome;
 use fid_store::cas::BlobRef;
 use std::collections::BTreeMap;
 
-/// Outcome of an exact replay of drawing-sheet import and sizing events (`AC-6`).
+/// Outcome of an exact replay of drawing-sheet import, sizing and carry events (`AC-6`, `CARRY AC-4`).
 #[derive(Debug, Clone)]
 pub struct SheetReplayRun {
     pub outcome: ReplayOutcome,
@@ -26,10 +27,34 @@ pub struct SheetReplayRun {
 
 /// Replays `events` in order against `blobs` without touching any external path or clock.
 pub fn replay_exact(events: &[DrawingEvent], blobs: &dyn DrawingBlobBackend) -> SheetReplayRun {
+    replay_exact_inner(events, blobs, None)
+}
+
+/// Replays `events` including [`DrawingEvent::CarryDrawingBalloon`] events against `blobs` and `sink`.
+pub fn replay_exact_with_sink(
+    events: &[DrawingEvent],
+    blobs: &dyn DrawingBlobBackend,
+    sink: &mut dyn BalloonSink,
+) -> SheetReplayRun {
+    replay_exact_inner(events, blobs, Some(sink))
+}
+
+fn replay_exact_inner(
+    events: &[DrawingEvent],
+    blobs: &dyn DrawingBlobBackend,
+    mut sink: Option<&mut dyn BalloonSink>,
+) -> SheetReplayRun {
     let mut store = DrawingStore::new();
 
     for (idx, ev) in events.iter().enumerate() {
-        match replay_one(&mut store, blobs, ev) {
+        let step = match ev {
+            DrawingEvent::CarryDrawingBalloon(carry) => match sink.as_deref_mut() {
+                Some(s) => replay_carry_event(&mut store, s, carry),
+                None => Err(ReplayOutcome::NotReplayable),
+            },
+            _ => replay_one(&mut store, blobs, ev),
+        };
+        match step {
             Ok(()) => {}
             Err(outcome) => {
                 return SheetReplayRun { outcome, first_mismatch: Some(idx), store };
@@ -165,5 +190,6 @@ fn replay_one(
             store.update_sheet_bounds(*sheet, w, h, ev.clone()).map_err(|_| ReplayOutcome::Divergent)?;
             Ok(())
         }
+        DrawingEvent::CarryDrawingBalloon(_) => Err(ReplayOutcome::NotReplayable),
     }
 }

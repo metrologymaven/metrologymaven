@@ -463,3 +463,142 @@ pub fn replay_exact(events: &[BalloonEvent], sheets: &dyn SheetInfo) -> BalloonR
     }
     BalloonReplayRun { outcome: ReplayOutcome::Identical, first_mismatch: None, register: reg }
 }
+
+/// Registry-wiring adapter implementing [`crate::balloon::sheet::BalloonSink`] over
+/// [`BalloonRegister`] (`RPT.BALLOON.SHEET.CARRY`).
+///
+/// Mutations are applied directly to the register's indexed state without appending per-balloon
+/// `add_balloon` journal events, because `report.carry_drawing_balloon@1` commits one single
+/// journal event for the whole carry (`REQ-RPT.BALLOON.SHEET.CARRY-001`).
+pub struct RegisterBalloonSink<'a> {
+    register: &'a mut BalloonRegister,
+    ids: &'a mut dyn UuidV7Gen,
+}
+
+impl<'a> RegisterBalloonSink<'a> {
+    pub fn new(register: &'a mut BalloonRegister, ids: &'a mut dyn UuidV7Gen) -> Self {
+        Self { register, ids }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn insert_carried(
+        &mut self,
+        id: BalloonId,
+        rev: DrawingRevId,
+        sheet: SheetId,
+        characteristic: &str,
+        anchor: crate::balloon::sheet::CarryPoint,
+        label: crate::balloon::sheet::CarryPoint,
+        number: u32,
+        zone: Option<&str>,
+    ) -> Result<BalloonId, crate::balloon::sheet::SinkError> {
+        use crate::balloon::sheet::SinkError;
+        if number == 0 {
+            return Err(SinkError::new("report.bad_params", "balloon number must be >= 1"));
+        }
+        if self.register.balloons.contains_key(&id) || self.register.retired_ids.contains(&id) {
+            return Err(SinkError::new("report.store_invalid", "balloon id already exists or retired"));
+        }
+        let char_id = CharId::parse(characteristic)
+            .ok_or_else(|| SinkError::new("report.bad_params", "invalid characteristic id"))?;
+        let parsed_zone = match zone {
+            Some(z) => Some(parse_zone(z).map_err(|e| SinkError::new(e.code(), e.to_string()))?),
+            None => None,
+        };
+        if let Some(idx) = self.register.revs.get(&rev) {
+            if idx.by_number.contains_key(&number) {
+                return Err(SinkError::new(
+                    "report.balloon_number_taken",
+                    format!("balloon number {number} already taken on target revision"),
+                ));
+            }
+            if idx.by_char.contains_key(&char_id) {
+                return Err(SinkError::new(
+                    "report.char_already_ballooned",
+                    format!("characteristic {} already ballooned on target revision", char_id.as_str()),
+                ));
+            }
+        }
+        let b = Balloon {
+            id,
+            drawing_rev: rev,
+            sheet,
+            characteristic: char_id.clone(),
+            number,
+            anchor: SheetPoint::new(anchor.x, anchor.y),
+            label: SheetPoint::new(label.x, label.y),
+            zone: parsed_zone,
+        };
+        let idx = self.register.revs.entry(rev).or_default();
+        idx.by_number.insert(number, id);
+        idx.by_char.insert(char_id, id);
+        self.register.balloons.insert(id, b);
+        Ok(id)
+    }
+}
+
+impl crate::balloon::sheet::BalloonSink for RegisterBalloonSink<'_> {
+    fn list(&self, rev: DrawingRevId) -> Vec<crate::balloon::sheet::BalloonView> {
+        use crate::balloon::sheet::{BalloonView, CarryPoint};
+        self.register
+            .list(rev)
+            .into_iter()
+            .map(|b| BalloonView {
+                id: b.id,
+                sheet: b.sheet,
+                characteristic: b.characteristic.as_str().to_string(),
+                anchor: CarryPoint::new(b.anchor.x, b.anchor.y),
+                label: CarryPoint::new(b.label.x, b.label.y),
+                number: b.number,
+                zone: b.zone.map(|z| z.untrusted_value().as_str().to_string()),
+            })
+            .collect()
+    }
+
+    fn add_with_number(
+        &mut self,
+        rev: DrawingRevId,
+        sheet: SheetId,
+        characteristic: &str,
+        anchor: crate::balloon::sheet::CarryPoint,
+        label: crate::balloon::sheet::CarryPoint,
+        number: u32,
+        zone: Option<&str>,
+    ) -> Result<BalloonId, crate::balloon::sheet::SinkError> {
+        use crate::balloon::sheet::SinkError;
+        let uuid = self.ids.next_v7().map_err(|e| SinkError::new(e.code(), e.to_string()))?;
+        let id = BalloonId::new(uuid)
+            .ok_or_else(|| SinkError::new("report.store_invalid", "id generator did not return UUIDv7"))?;
+        self.insert_carried(id, rev, sheet, characteristic, anchor, label, number, zone)
+    }
+
+    fn add_with_number_exact(
+        &mut self,
+        forced_id: BalloonId,
+        rev: DrawingRevId,
+        sheet: SheetId,
+        characteristic: &str,
+        anchor: crate::balloon::sheet::CarryPoint,
+        label: crate::balloon::sheet::CarryPoint,
+        number: u32,
+        zone: Option<&str>,
+    ) -> Result<BalloonId, crate::balloon::sheet::SinkError> {
+        self.insert_carried(forced_id, rev, sheet, characteristic, anchor, label, number, zone)
+    }
+
+    fn rollback_added(&mut self, rev: DrawingRevId, ids: &[BalloonId]) {
+        for &id in ids {
+            if let Some(removed) = self.register.balloons.remove(&id) {
+                if let Some(idx) = self.register.revs.get_mut(&rev) {
+                    idx.by_number.remove(&removed.number);
+                    idx.by_char.remove(&removed.characteristic);
+                }
+            }
+        }
+        if let Some(idx) = self.register.revs.get(&rev) {
+            if idx.by_number.is_empty() && idx.by_char.is_empty() {
+                self.register.revs.remove(&rev);
+            }
+        }
+    }
+}

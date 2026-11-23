@@ -1,5 +1,6 @@
 //! Canonical journal events for `RPT.BALLOON.SHEET.IMPORT` (`AC-1`, `AC-6`).
 
+use super::carry::{CarryDrawingEvent, CARRY_DRAWING_BALLOON};
 use super::error::SheetError;
 use super::model::{parse_drawing_text, DrawingRevId, ReaderWarning, RevisionId, SheetId, SizeSpec};
 use super::store::digest_bytes;
@@ -31,12 +32,13 @@ pub struct AddDrawingEvent {
     pub result_digest: Digest,
 }
 
-/// Canonical journal event emitted by `report.add_drawing_balloon@1` and
-/// `report.set_size_drawing_balloon@1`.
+/// Canonical journal event emitted by `report.add_drawing_balloon@1`,
+/// `report.set_size_drawing_balloon@1`, and `report.carry_drawing_balloon@1`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DrawingEvent {
     AddDrawingBalloon(Box<AddDrawingEvent>),
     SetSizeDrawingBalloon { sheet: SheetId, size: SizeSpec, width_cmm: i64, height_cmm: i64, result_digest: Digest },
+    CarryDrawingBalloon(Box<CarryDrawingEvent>),
 }
 
 impl DrawingEvent {
@@ -44,6 +46,7 @@ impl DrawingEvent {
         match self {
             DrawingEvent::AddDrawingBalloon(_) => ADD_DRAWING_BALLOON,
             DrawingEvent::SetSizeDrawingBalloon { .. } => SET_SIZE_DRAWING_BALLOON,
+            DrawingEvent::CarryDrawingBalloon(_) => CARRY_DRAWING_BALLOON,
         }
     }
 
@@ -70,6 +73,7 @@ impl DrawingEvent {
                 ("size", size.to_value()),
                 ("width_cmm", CValue::Str(width_cmm.to_string())),
             ]),
+            DrawingEvent::CarryDrawingBalloon(ev) => ev.to_value(),
         }
     }
 
@@ -143,6 +147,10 @@ impl DrawingEvent {
                 let result_digest = Digest::parse(req_str(m, "result_digest")?)
                     .map_err(|_| SheetError::Store("bad result_digest".into()))?;
                 Ok(DrawingEvent::SetSizeDrawingBalloon { sheet, size, width_cmm, height_cmm, result_digest })
+            }
+            CARRY_DRAWING_BALLOON => {
+                let ev = CarryDrawingEvent::from_map(m).map_err(|e| SheetError::Store(e.to_string()))?;
+                Ok(DrawingEvent::CarryDrawingBalloon(Box::new(ev)))
             }
             _ => Err(SheetError::Store("unknown drawing event kind".into())),
         }
