@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-construct]
+updated: 2026-11-23
 ---
 
 # KRN.CONS.OPS.INTLIN: Intersections of points, lines and planes
