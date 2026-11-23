@@ -48,6 +48,16 @@ pub enum GeoCmdError {
     BudgetExceeded { needed: u64, budget: u64 },
     /// An authored length parameter could not be parsed by `fid-geo-frame::units`.
     BadLength(String),
+    /// An authored quantity (length or angle) could not be parsed (`GEO.FRAME.CMD`).
+    BadQuantity(String),
+    /// A coordinate frame is still referenced by child frames or elements (`REQ-GEO.FRAME.CMD-003`).
+    FrameInUse { frame: Uuid, refs: Vec<Uuid> },
+    /// Referenced coordinate frame does not exist in the frame tree (`GEO.FRAME.CMD`).
+    UnknownFrame(String),
+    /// Reparenting would introduce a cycle in the frame tree (`GEO.FRAME.CMD`).
+    Cycle(Vec<Uuid>),
+    /// Rotation matrix or quaternion is not orthonormal / right-handed (`GEO.FRAME.CMD`).
+    NotOrthonormal(String),
     /// An underlying spatial index operation refused the input.
     Index(String),
     /// The dependency graph refused the edges.
@@ -61,8 +71,9 @@ pub enum GeoCmdError {
 }
 
 impl GeoCmdError {
-    /// Stable code. `not_found`, `not_geometry`, `too_many_queries`, `frame_mismatch` and
-    /// `budget_exceeded` are the codes the leaves name; the edge, propagation and ID codes
+    /// Stable code. `not_found`, `not_geometry`, `too_many_queries`, `frame_mismatch`,
+    /// `budget_exceeded`, `frame_in_use`, `unknown_frame`, `cycle`, `not_orthonormal` and
+    /// `bad_quantity` are the codes the leaves name; the edge, propagation and ID codes
     /// pass through unchanged.
     pub fn code(&self) -> &'static str {
         match self {
@@ -82,6 +93,11 @@ impl GeoCmdError {
             GeoCmdError::FrameMismatch { .. } => "frame_mismatch",
             GeoCmdError::BudgetExceeded { .. } => "budget_exceeded",
             GeoCmdError::BadLength(_) => "bad_length",
+            GeoCmdError::BadQuantity(_) => "bad_quantity",
+            GeoCmdError::FrameInUse { .. } => "frame_in_use",
+            GeoCmdError::UnknownFrame(_) => "unknown_frame",
+            GeoCmdError::Cycle(_) => "cycle",
+            GeoCmdError::NotOrthonormal(_) => "not_orthonormal",
             GeoCmdError::Index(_) => "index_error",
             GeoCmdError::Edge(e) => e.code(),
             GeoCmdError::Prop(e) => e.code(),
@@ -101,11 +117,11 @@ impl GeoCmdError {
         match self {
             GeoCmdError::IdCollision(_) => ("conflict", "id_collision"),
             GeoCmdError::DigestMismatch(_) => ("conflict", "expected_digest_mismatch"),
-            GeoCmdError::NotFound(_) => ("not_found", "unknown_entity"),
+            GeoCmdError::NotFound(_) | GeoCmdError::UnknownFrame(_) => ("not_found", "unknown_entity"),
             GeoCmdError::UnknownCommand(_) => ("not_found", "unknown_command"),
             GeoCmdError::Edge(e) if e.code() == "not_found" => ("not_found", "unknown_entity"),
-            GeoCmdError::BadParams(_) => ("validation", "schema"),
-            GeoCmdError::BadLength(_) => ("validation", "literal_syntax"),
+            GeoCmdError::BadParams(_) | GeoCmdError::NotOrthonormal(_) => ("validation", "schema"),
+            GeoCmdError::BadLength(_) | GeoCmdError::BadQuantity(_) => ("validation", "literal_syntax"),
             GeoCmdError::BadSourceId(_) | GeoCmdError::BadOutput(_) => ("validation", "label"),
             GeoCmdError::InputLimit(_) | GeoCmdError::TooManyQueries { .. } | GeoCmdError::BudgetExceeded { .. } => {
                 ("validation", "input_limit")
@@ -114,6 +130,8 @@ impl GeoCmdError {
             | GeoCmdError::DuplicateInput(_)
             | GeoCmdError::KindMismatch { .. }
             | GeoCmdError::FrameMismatch { .. }
+            | GeoCmdError::FrameInUse { .. }
+            | GeoCmdError::Cycle(_)
             | GeoCmdError::Index(_)
             | GeoCmdError::Edge(_)
             | GeoCmdError::Prop(_) => ("validation", "bad_reference"),
@@ -159,7 +177,13 @@ impl fmt::Display for GeoCmdError {
             GeoCmdError::BudgetExceeded { needed, budget } => {
                 write!(f, ": needed {needed} bytes, budget {budget} bytes")
             }
-            GeoCmdError::BadLength(s) | GeoCmdError::Index(s) => write!(f, ": {s}"),
+            GeoCmdError::FrameInUse { frame, refs } => {
+                write!(f, ": frame {frame} referenced by {} entit(y/ies)", refs.len())
+            }
+            GeoCmdError::UnknownFrame(s) => write!(f, ": {s}"),
+            GeoCmdError::Cycle(ids) => write!(f, ": cycle of length {}", ids.len()),
+            GeoCmdError::NotOrthonormal(s) => write!(f, ": {s}"),
+            GeoCmdError::BadLength(s) | GeoCmdError::BadQuantity(s) | GeoCmdError::Index(s) => write!(f, ": {s}"),
             GeoCmdError::Edge(e) => write!(f, ": {e}"),
             GeoCmdError::Prop(e) => write!(f, ": {e:?}"),
             GeoCmdError::Id(e) => write!(f, ": {e}"),
