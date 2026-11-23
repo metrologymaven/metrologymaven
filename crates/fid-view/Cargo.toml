@@ -20,6 +20,8 @@ publish = false
 [dependencies]
 fid-canon = { path = "../fid-canon" }
 fid-geo-frame = { path = "../fid-geo-frame" }
+fid-registry = { path = "../fid-registry" }
+fid-replay = { path = "../fid-replay" }
 fid-types = { path = "../fid-types" }
 fid-uuid = { path = "../fid-uuid" }
 

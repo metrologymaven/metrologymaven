@@ -2300,6 +2300,8 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-geo-frame",
+ "fid-registry",
+ "fid-replay",
  "fid-types",
  "fid-uuid",
 ]
