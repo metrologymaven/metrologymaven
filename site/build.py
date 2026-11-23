@@ -34,28 +34,30 @@ PHASES = [
     ("P1a", "First usable product", "Transcription reports, a prismatic GD&T subset (ASME), a minimal GUI and 3D viewer."),
     ("P1b", "Scan-to-CAD inspection", "Mesh and point-cloud inspection, ISO GPS dialect, CAD + PMI, SPC, Python scripting, report designer."),
     ("P2", "CMMs and live devices", "CMM programming and execution: I++ DME client, simulator, approval station, DMIS import."),
-    ("P3", "Large volume and form", "Laser-tracker networks, live portable arms, form and texture, automatic path planning."),
-    ("P4", "Ecosystem", "OPC UA, MTConnect, a plugin marketplace, program conversion from incumbent software."),
+    ("P3", "Large volume and form", "Laser-tracker networks, live portable arms, form and texture, automatic path planning and process-aware sampling."),
+    ("P4", "Ecosystem", "OPC UA, MTConnect, a plugin marketplace, and open-format workflow migration."),
 ]
 
 APPS = [
     {"slug": "report", "name": "Report", "phase": "P1a", "order": 1,
-     "replaces": "FAI and PPAP spreadsheets, PiWeb and Q-DAS style reporting",
+     "workflow": "Signed FAI, PPAP and SPC reporting from any instrument",
      "pitch": "Turn measurement results from any CMM, scanner or hand gauge into signed, verifiable first-article, PPAP and SPC reports.",
      "domains": ["RPT", "TRUST", "QUAL", "MIG"], "seeds": []},
     {"slug": "inspect", "name": "Inspect", "phase": "P1b", "order": 2,
-     "replaces": "GOM Inspect / ZEISS INSPECT and PolyWorks Inspector",
+     "workflow": "Scan-to-CAD comparison, GD&T evaluation and replayable colour maps",
      "pitch": "Compare scans and point clouds to CAD, evaluate GD&T and produce colour maps and reports, with every step recorded and replayable.",
      "domains": ["SCAN", "ALN", "GDT", "IO", "VIZ", "UNC"], "seeds": ["gom-inspect.md", "polyworks.md"]},
     {"slug": "probe", "name": "Probe", "phase": "P2", "order": 3,
-     "replaces": "PC-DMIS and CALYPSO CMM programming",
-     "pitch": "Program, simulate and run coordinate measuring machines through an open protocol, with a human approval gate before any motion.",
+     "workflow": "Open-standard CMM programming, simulation and execution (I++ DME & DMIS)",
+     "pitch": "Program, simulate and run coordinate measuring machines through open protocols, with deterministic collision checks and a human approval gate before any motion.",
      "domains": ["CMM", "HAL"], "seeds": ["pc-dmis.md"]},
     {"slug": "network", "name": "Network", "phase": "P3", "order": 4,
-     "replaces": "SpatialAnalyzer",
+     "workflow": "Multi-instrument laser-tracker and portable metrology networks with uncertainty",
      "pitch": "Bundle laser trackers and other large-volume instruments into one measurement network with uncertainty you can defend.",
      "domains": ["LVM"], "seeds": ["spatialanalyzer.md"]},
 ]
+
+SHARED_CORE_DOMAINS = ["CORE", "KRN", "GEO", "AUTO", "FLOW", "AGENT", "PLAT", "ECO", "UX", "OUTR"]
 
 NAV = [("/", "Home"), ("/apps/", "Apps"), ("/how-it-works/", "How it works"), ("/status/", "Status"),
        ("/roadmap/", "Roadmap"), ("/contribute/", "Contribute"), ("/company/", "Company")]
@@ -91,11 +93,10 @@ def load():
         if n.level >= 1:
             per[dom(n)]["nodes"] += 1
             per[dom(n)][n.status] += 1
-            if n.meta.get("needs_expert") and n.status == "open":
-                per[dom(n)]["expert"] += 1
             if n.lst("built_in"):
                 per[dom(n)]["built"] += 1
     phase_leaves = Counter(n.meta.get("phase") for n in nodes if n.status == "leaf")
+    phase_built = Counter(n.meta.get("phase") for n in nodes if n.lst("built_in"))
     oos_patterns = [p for p, _ in oos]
     seed_rows = defaultdict(lambda: Counter())
     for sid, (_feat, fname) in seeds.items():
@@ -110,9 +111,9 @@ def load():
         meta, _ = scope.parse_front(f.read_text(encoding="utf-8"))
         if meta:
             decisions.append(meta)
-    queue = scope.expert_queue(nodes)
-    return {"nodes": nodes, "by_id": by_id, "domains": domains, "per": per, "phase_leaves": phase_leaves,
-            "seeds": seeds, "seed_rows": seed_rows, "decisions": decisions, "queue": queue,
+    return {"nodes": nodes, "by_id": by_id, "domains": domains, "per": per,
+            "phase_leaves": phase_leaves, "phase_built": phase_built,
+            "seeds": seeds, "seed_rows": seed_rows, "decisions": decisions,
             "leaves": sum(1 for n in nodes if n.status == "leaf"),
             "built": sum(1 for n in nodes if n.lst("built_in")),
             "open": sum(1 for n in nodes if n.status == "open"),
@@ -163,34 +164,47 @@ def fcf(*parts: str) -> str:
     return '<div class="fcf"><span class="sym">' + e(sym) + "</span>" + "".join(f"<span>{e(p)}</span>" for p in rest) + "</div>"
 
 
-NOTICE = ('<p class="notice"><b>Honest status:</b> nothing here is usable yet. The project is in its '
-          'specification stage: every feature is written down as a testable work order, and the first code is being '
-          'built in the open. Numbers on this site are generated from the repository.</p>')
+def notice(d) -> str:
+    return (f'<p class="notice"><b>Honest status (pre-alpha):</b> nothing here is usable for measurement yet. '
+            f'The product is specified as testable work orders, and <b>{d["built"]:,} of {d["leaves"]:,}</b> '
+            f'leaves are built in code (<code>crates/</code>). Every number on this site is generated from the repository.</p>')
 
 
-def app_card(a) -> str:
+def app_counts(a, d) -> tuple[int, int]:
+    built = sum(d["per"][dom]["built"] for dom in a["domains"])
+    leaves = sum(d["per"][dom]["leaf"] for dom in a["domains"])
+    return built, leaves
+
+
+def app_card(a, d) -> str:
+    built, leaves = app_counts(a, d)
+    if built > 0:
+        pill = f'<span class="pill p">in build · {built}/{leaves} leaves</span>'
+    else:
+        pill = '<span class="pill spec">specification</span>'
     return (f'<a class="card" href="/apps/{a["slug"]}/"><span class="tag">App {a["order"]} · starts {a["phase"]}</span>'
-            f'<h3>Metrology Maven {e(a["name"])}</h3><p>Replaces {e(a["replaces"])}</p>'
-            f'<span class="pill spec">specification</span></a>')
+            f'<h3>Metrology Maven {e(a["name"])}</h3><p>{e(a["workflow"])}</p>'
+            f'{pill}</a>')
 
 
 # ---------------------------------------------------------------- pages
 
 def home(d):
     s = d
+    acc = sum(1 for x in s["decisions"] if x.get("status") == "accepted")
     body = f"""
 <section class="hero">
 {fcf("⌖", "OPEN SOURCE", "DIMENSIONAL METROLOGY")}
 <h1>Open-source inspection software for scanners, CMMs and laser trackers</h1>
-<p class="lead">Metrology Maven is building one open platform to do the work of GOM Inspect, PolyWorks, PC-DMIS, CALYPSO and SpatialAnalyzer. It will be free to use, and its results can be checked by anyone. People and AI agents will drive it through the same commands.</p>
-<div class="btns"><a class="btn primary" href="{REPO}">See it on GitHub</a><a class="btn" href="/contribute/">Help build it</a><a class="btn" href="/how-it-works/">How it works</a></div>
-{NOTICE}
+<p class="lead">Metrology Maven is an open-source, QIF-native dimensional metrology platform for independent machine shops, quality labs and engineers. It is free to use, local-first, and every result can be re-checked by anyone. People and AI agents drive it through the same typed commands.</p>
+<div class="btns"><a class="btn primary" href="{REPO}">See it on GitHub</a><a class="btn" href="/status/">Live status</a><a class="btn" href="/how-it-works/">How it works</a></div>
+{notice(d)}
 </section>
 <section class="sheet" aria-labelledby="apps-h">
 {fcf("1", "FOUR APPS", "ONE CORE")}
 <h2 id="apps-h">Four focused apps on one shared core</h2>
 <p class="muted">Each app does one job people already understand. Under the hood they share one math kernel, one file format (QIF-native), one command list and one 3D viewer, so results move between them without conversion.</p>
-<div class="grid">{"".join(app_card(a) for a in APPS)}</div>
+<div class="grid">{"".join(app_card(a, d) for a in APPS)}</div>
 </section>
 <section class="sheet" aria-labelledby="why-h">
 {fcf("2", "WHY", "DIFFERENT")}
@@ -198,21 +212,21 @@ def home(d):
 <div class="grid">
 <div class="card"><h3>Free and open</h3><p>Code under MIT OR Apache-2.0. No locked features, no dongles, no per-seat fees.</p></div>
 <div class="card"><h3>Every number can be checked</h3><p>A free, independent verifier re-checks results from the recorded journal, bit for bit.</p></div>
-<div class="card"><h3>Agents first</h3><p>Every action is a command available from the CLI and MCP, so AI agents can do the routine work. People approve at a few fixed gates.</p></div>
+<div class="card"><h3>Agents first</h3><p>Every action is a typed command available from the CLI and MCP, designed so automation handles routine steps while shop-floor safety interlocks stay enforced.</p></div>
 <div class="card"><h3>Records everything</h3><p>Every step is journaled, screenshotted and replayable, which makes audits a matter of reading the record.</p></div>
 </div>
 </section>
 <section class="sheet" aria-labelledby="num-h">
 {fcf("3", "THE PLAN", "IN NUMBERS")}
-<h2 id="num-h">The whole product, written down before it is built</h2>
-<p class="muted">The plan is a public tree of small specification files. Each piece is split until it is one pull request of work, with its requirements, tests and a build prompt that a coding agent or a person can follow.</p>
+<h2 id="num-h">The whole product, written down and built in the open</h2>
+<p class="muted">The plan is a public tree of small specification files. Each piece is split until it is one pull request of work, with its requirements, tests and a self-contained build prompt verified by CI.</p>
 <div class="stats">
 <div class="stat"><b>{len(s['domains'])}</b><small>capability domains</small></div>
 <div class="stat"><b>{len(s['nodes']):,}</b><small>spec nodes</small></div>
 <div class="stat"><b>{s['leaves']:,}</b><small>ready-to-build work orders</small></div>
 <div class="stat"><b>{s['built']:,}</b><small>work orders built in code</small></div>
-<div class="stat"><b>{len(s['seeds'])}</b><small>competitor features tracked</small></div>
-<div class="stat"><b>{sum(len(v) for v in s['queue'].values())}</b><small>tasks waiting for experts</small></div>
+<div class="stat"><b>{len(s['seeds'])}</b><small>industry workflow features tracked</small></div>
+<div class="stat"><b>{acc}/{len(s['decisions'])}</b><small>decisions accepted</small></div>
 </div>
 <p><a href="/status/">See the full status, generated from the repository →</a></p>
 </section>
@@ -221,23 +235,38 @@ def home(d):
 
 
 def apps_index(d):
+    core_rows = []
+    for dom in SHARED_CORE_DOMAINS:
+        n = d["by_id"].get(dom)
+        c = d["per"][dom]
+        core_rows.append(
+            f'<tr><td><span class="mono">{dom}</span> {e(n.meta.get("title", "") if n else "")}</td>'
+            f'<td class="n">{c["leaf"]}</td><td class="n">{c["built"]}</td><td class="n">{c["open"]}</td></tr>'
+        )
     body = f"""
 <section class="hero">{fcf("A", "APPS")}
 <h1>The app family</h1>
-<p class="lead">Report and Inspect come first, because they help shops that run several brands of equipment straight away. Probe and Network follow.</p>{NOTICE}</section>
-<section class="sheet"><div class="grid">{"".join(app_card(a) for a in APPS)}</div></section>"""
+<p class="lead">Report and Inspect come first, because they help shops that run several brands of equipment straight away. Probe and Network follow.</p>{notice(d)}</section>
+<section class="sheet"><div class="grid">{"".join(app_card(a, d) for a in APPS)}</div></section>
+<section class="sheet">{fcf("C", "SHARED CORE", "FOUNDATION")}
+<h2>Shared core &amp; platform domains</h2>
+<p class="muted">All four apps sit on the same deterministic kernel, geometry engine, command registry, journal, CLI and MCP surfaces.</p>
+<div class="tbl"><table><thead><tr><th>Domain</th><th>Ready to build</th><th>Built</th><th>Still open</th></tr></thead><tbody>{"".join(core_rows)}</tbody></table></div>
+<p class="muted">See all {len(d['domains'])} domains on the <a href="/status/">status page</a>.</p>
+</section>"""
     return page("/apps/", "Apps", "The Metrology Maven app family: Report, Inspect, Probe and Network.", body, d)
 
 
 def app_page(a, d):
     per = d["per"]
+    built, leaves = app_counts(a, d)
     rows = []
     gaps = []
     for dom in a["domains"]:
         n = d["by_id"].get(dom)
         c = per[dom]
         rows.append(f'<tr><td><span class="mono">{dom}</span> {e(n.meta.get("title", "") if n else "")}</td>'
-                    f'<td class="n">{c["leaf"]}</td><td class="n">{c["built"]}</td><td class="n">{c["open"]}</td><td class="n">{c["expert"]}</td></tr>')
+                    f'<td class="n">{c["leaf"]}</td><td class="n">{c["built"]}</td><td class="n">{c["open"]}</td></tr>')
         gaps += [x for x in d["nodes"] if x.id.split(".")[0] == dom and x.status == "open"]
     seeds = ""
     if a["seeds"]:
@@ -247,24 +276,27 @@ def app_page(a, d):
             tot = sum(c.values()) or 1
             srows.append(f'<tr><td>{e(f.removesuffix(".md"))}</td><td class="n">{c["covered"]}</td><td class="n">{c["out of scope"]}</td>'
                          f'<td class="n">{c["uncovered"]}</td><td><div class="bar"><i style="width:{100 * c["covered"] / tot:.0f}%"></i></div></td></tr>')
-        seeds = f"""<h3>Competitor features mapped into the spec</h3>
-<p class="muted">Each feature of the incumbent product is listed in the repository and traced to the spec nodes that will cover it. "Covered" means specified, not built.</p>
-<div class="tbl"><table><thead><tr><th>Product inventory</th><th>Specified</th><th>Out of scope</th><th>Not yet</th><th>Share specified</th></tr></thead><tbody>{"".join(srows)}</tbody></table></div>"""
-    gap_list = "".join(f'<li><span class="mono">{e(x.id)}</span> {e(x.meta.get("title", ""))}'
-                       f'{" <span class=\"pill red\">needs expert</span>" if x.meta.get("needs_expert") else ""}</li>'
+        seeds = f"""<h3>Industry workflow coverage mapped into the spec</h3>
+<p class="muted">Reference workflow inventories in <code>seeds/</code> are traced to the spec nodes that will cover them. "Specified" means written down as a work order, not built.</p>
+<div class="tbl"><table><thead><tr><th>Workflow inventory</th><th>Specified</th><th>Out of scope</th><th>Not yet</th><th>Share specified</th></tr></thead><tbody>{"".join(srows)}</tbody></table></div>"""
+    gap_list = "".join(f'<li><span class="mono">{e(x.id)}</span> {e(x.meta.get("title", ""))}</li>'
                        for x in sorted(gaps, key=lambda x: x.id)[:60])
     more = f"<li>…and {len(gaps) - 60} more in the repository</li>" if len(gaps) > 60 else ""
+    if built > 0:
+        status_pill = f'<span class="pill p">Status: in build (pre-alpha · {built}/{leaves} app-domain leaves)</span>'
+    else:
+        status_pill = '<span class="pill spec">Status: specification (pre-alpha)</span>'
     body = f"""
 <section class="hero">{fcf(str(a["order"]), "APP", a["name"].upper(), "STARTS " + a["phase"])}
 <h1>Metrology Maven {e(a["name"])}</h1>
 <p class="lead">{e(a["pitch"])}</p>
-<p>Replaces: <b>{e(a["replaces"])}</b></p>
-<p><span class="pill spec">Status: specification (pre-alpha)</span> <span class="pill p">Work starts in {a["phase"]}</span></p>
+<p>Workflow focus: <b>{e(a["workflow"])}</b></p>
+<p>{status_pill} <span class="pill p">Work starts in {a["phase"]}</span></p>
 </section>
 <section class="sheet">{fcf("S", "STATUS", "GENERATED")}
 <h2>Where it stands</h2>
-<p class="muted">Generated from the spec tree at <span class="mono">{d['rev']}</span>. "Ready" means a work order is written and can be built; it does not mean the feature exists yet.</p>
-<div class="tbl"><table><thead><tr><th>Domain</th><th>Ready to build</th><th>Built</th><th>Still open</th><th>Needs expert</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>
+<p class="muted">Generated from the spec tree at <span class="mono">{d['rev']}</span>. "Ready" means a work order is written and can be built; it does not mean the feature exists yet. This app also builds on the <a href="/apps/">shared core domains</a>.</p>
+<div class="tbl"><table><thead><tr><th>Domain</th><th>Ready to build</th><th>Built</th><th>Still open</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>
 {seeds}
 <h3>Known gaps</h3>
 <details><summary>{len(gaps)} open spec nodes in this app's domains</summary><ul class="clean">{gap_list}{more}</ul></details>
@@ -276,12 +308,12 @@ def how(d):
     body = f"""
 <section class="hero">{fcf("H", "HOW IT WORKS")}
 <h1>How the project is built</h1>
-<p class="lead">Most of the work is done by AI coding agents following a public, very detailed plan. People act at a few fixed points where judgement and accountability matter.</p></section>
+<p class="lead">Metrology Maven is specified, reviewed, and built by AI coding agents following a public, strictly checked specification tree and mathematical oracles, with zero human bottlenecks in the build loop.</p></section>
 <section class="sheet">{fcf("1", "THE SPEC TREE")}
 <h2>A plan you can run</h2>
 <p>The product is described as a tree: 1 product, {len(d['domains'])} domains, then subsystems, modules and features, down to <b>{d['leaves']:,} leaves</b>. A leaf is one pull request of work. It contains testable requirements, acceptance tests with named data, a design, and a build prompt that a coding agent can follow on its own.</p>
-<ol class="steps"><li><b>Pick</b>an open node</li><li><b>Expand</b>split it, or finish it as a leaf</li><li><b>Validate</b><code>tools/scope.py check</code> enforces every rule</li><li><b>Review</b>humans for big splits, an independent agent for small ones</li><li><b>Build</b>leaves are built in dependency order, in parallel waves</li></ol>
-<p class="muted">The validator fails a change that drops a requirement or a competitor feature, creates a dependency loop, or adds a feature without its CLI command, MCP tool and journal entry.</p>
+<ol class="steps"><li><b>Pick</b>an open node</li><li><b>Expand</b>split it, or finish it as a leaf</li><li><b>Check</b><code>tools/scope.py check</code> enforces every rule</li><li><b>Review</b>independent agent review plus required CI gates</li><li><b>Build</b>leaves are built in dependency order, in parallel waves</li></ol>
+<p class="muted">The checker fails a change that drops a requirement or a tracked workflow feature, creates a dependency loop, or adds a feature without its CLI command, MCP tool and journal entry.</p>
 </section>
 <section class="sheet">{fcf("2", "ARCHITECTURE")}
 <h2>Five layers, each using only the ones below</h2>
@@ -290,20 +322,21 @@ def how(d):
 <tr><td><b>L2 Services</b></td><td>File formats, alignment, GD&T, uncertainty, scanning, reports, signing, instruments, CMM, trackers</td></tr>
 <tr><td><b>L1 Core</b></td><td>Command registry, command bus, tamper-evident journal, replay, project storage</td></tr>
 <tr><td><b>L0 Foundation</b></td><td>Deterministic math kernel: fits, geometry, GD&T math, units. Never touched by the GPU.</td></tr>
+<tr><td><b>Tooling</b></td><td>Spec checker, CI and licence gates, verification suites, outreach and evidence checks (reads artifacts and pure L0 libraries only)</td></tr>
 </tbody></table></div>
-<p class="muted">Rust throughout (including the web build via WebAssembly), wgpu for graphics, Python for user scripting.</p>
+<p class="muted">Rust throughout (including the web build via WebAssembly), wgpu + Vello/Parley for graphics and 2D surfaces, Python for user scripting.</p>
 </section>
-<section class="sheet">{fcf("3", "HUMAN GATES")}
-<h2>Where people stay in charge</h2>
+<section class="sheet">{fcf("3", "RUNTIME SAFETY &amp; PROVENANCE")}
+<h2>Zero-bottleneck build, honest runtime controls</h2>
 <div class="grid">
-<div class="card"><span class="tag">H1</span><h3>Machine motion</h3><p>A person approves each CMM program once, after simulation. A physical start remains on every cycle.</p></div>
-<div class="card"><span class="tag">H2</span><h3>Record release</h3><p>Controlled records such as first-article reports are released by a person.</p></div>
-<div class="card"><span class="tag">H3</span><h3>Conformance</h3><p>Accept/reject decisions where a customer's quality system requires a named person.</p></div>
-<div class="card"><span class="tag">H4</span><h3>Interpretation</h3><p>GD&T interpretation rules are signed off by credentialed experts.</p></div>
+<div class="card"><span class="tag">H1</span><h3>Machine motion (runtime)</h3><p>On the shop floor, each CMM program and envelope is approved after simulation and collision checks, with physical cycle-start interlocks.</p></div>
+<div class="card"><span class="tag">H2</span><h3>Record release (runtime)</h3><p>Controlled records such as first-article reports are released in batches with full provenance of every step.</p></div>
+<div class="card"><span class="tag">H3</span><h3>Conformance (runtime)</h3><p>Typed decision rules run everywhere; customer quality systems can optionally require named-person accept/reject.</p></div>
+<div class="card"><span class="tag">D-045 / D-052</span><h3>Provisional interpretation</h3><p>GD&T rules are built and tested in CI against clean-room math and oracles; any unreviewed rule stays visibly labelled <code>interpretation: provisional</code> everywhere it goes.</p></div>
 </div>
-<p class="muted">Agents can never act as a person: anything an agent does is recorded under the agent's own identity.</p>
+<p class="muted">An agent never acts as a person: every action is recorded under its own principal identity, and every verification suite runs against open mathematical generators and arbitrary-precision oracles (<a href="{REPO}/blob/main/decisions/D-052-autonomous-zero-human-bottlenecks.md">D-052</a>).</p>
 </section>"""
-    return page("/how-it-works/", "How it works", "How Metrology Maven is specified, built by agents and governed by human gates.", body, d)
+    return page("/how-it-works/", "How it works", "How Metrology Maven is specified, built by coding agents in automated waves, and checked against deterministic oracles.", body, d)
 
 
 def status(d):
@@ -312,7 +345,7 @@ def status(d):
     for x in d["domains"]:
         c = d["per"][x.id]
         rows.append(f'<tr><td><span class="mono">{x.id}</span></td><td>{e(x.meta.get("title", ""))}</td><td class="n">{x.meta.get("phase", "")}</td>'
-                    f'<td class="n">{c["nodes"]}</td><td class="n">{c["leaf"]}</td><td class="n">{c["built"]}</td><td class="n">{c["open"]}</td><td class="n">{c["expert"]}</td>'
+                    f'<td class="n">{c["nodes"]}</td><td class="n">{c["leaf"]}</td><td class="n">{c["built"]}</td><td class="n">{c["open"]}</td>'
                     f'<td><div class="bar"><i style="width:{100 * c["leaf"] / mx:.0f}%"></i></div></td></tr>')
     srows = "".join(f'<tr><td>{e(f.removesuffix(".md"))}</td><td class="n">{c["covered"]}</td><td class="n">{c["out of scope"]}</td><td class="n">{c["uncovered"]}</td></tr>'
                     for f, c in sorted(d["seed_rows"].items()))
@@ -322,14 +355,14 @@ def status(d):
     body = f"""
 <section class="hero">{fcf("S", "STATUS", d['rev'], d['date'])}
 <h1>Project status</h1>
-<p class="lead">Generated from the repository at commit <a class="mono" href="{REPO}/commit/{d['rev']}">{d['rev']}</a> on {d['date']}. Nothing on this page is written by hand.</p>{NOTICE}</section>
+<p class="lead">Generated from the repository at commit <a class="mono" href="{REPO}/commit/{d['rev']}">{d['rev']}</a> on {d['date']}. Nothing on this page is written by hand.</p>{notice(d)}</section>
 <section class="sheet">{fcf("1", "SPEC TREE BY DOMAIN")}
 <div class="stats"><div class="stat"><b>{len(d['nodes']):,}</b><small>nodes</small></div><div class="stat"><b>{d['leaves']:,}</b><small>leaves (ready to build)</small></div><div class="stat"><b>{d['built']:,}</b><small>leaves built in code</small></div><div class="stat"><b>{d['open']}</b><small>open nodes</small></div><div class="stat"><b>{acc}/{len(d['decisions'])}</b><small>decisions accepted</small></div></div>
-<div class="tbl"><table><thead><tr><th>ID</th><th>Domain</th><th>Starts</th><th>Nodes</th><th>Leaves</th><th>Built</th><th>Open</th><th>Expert</th><th>Leaves</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>
-<p class="muted">Full tree: <a href="{REPO}/blob/main/generated/INDEX.md">generated/INDEX.md</a>.</p>
+<div class="tbl"><table><thead><tr><th>ID</th><th>Domain</th><th>Starts</th><th>Nodes</th><th>Leaves</th><th>Built</th><th>Open</th><th>Leaves</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>
+<p class="muted">Full tree: <a href="{REPO}/blob/main/generated/INDEX.md">generated/INDEX.md</a> · Built leaves: <a href="{REPO}/blob/main/generated/BUILT.md">generated/BUILT.md</a>.</p>
 </section>
-<section class="sheet">{fcf("2", "COMPETITOR COVERAGE")}
-<p class="muted">Feature and device inventories of incumbent products, and how many rows the spec covers. Specified is not built. Full mapping: <a href="{REPO}/blob/main/generated/COVERAGE.md">generated/COVERAGE.md</a>.</p>
+<section class="sheet">{fcf("2", "WORKFLOW COVERAGE")}
+<p class="muted">Reference feature and device inventories tracked in <code>seeds/</code>, and how many rows the spec covers. Specified is not built. Full mapping: <a href="{REPO}/blob/main/generated/COVERAGE.md">generated/COVERAGE.md</a>.</p>
 <div class="tbl"><table><thead><tr><th>Inventory</th><th>Specified</th><th>Out of scope</th><th>Not yet</th></tr></thead><tbody>{srows}</tbody></table></div>
 </section>
 <section class="sheet">{fcf("3", "OPEN DECISIONS")}<ul class="clean">{dec}</ul>
@@ -342,54 +375,45 @@ def roadmap(d):
     for p, name, text in PHASES:
         apps = ", ".join(a["name"] for a in APPS if a["phase"] == p)
         items.append(f'<tr><td class="n"><b>{p}</b></td><td><b>{name}</b><br><span class="muted">{e(text)}</span></td>'
-                     f'<td class="n">{d["phase_leaves"].get(p, 0)}</td><td>{apps or "–"}</td></tr>')
+                     f'<td class="n">{d["phase_leaves"].get(p, 0)}</td><td class="n">{d["phase_built"].get(p, 0)}</td><td>{apps or "–"}</td></tr>')
     body = f"""
 <section class="hero">{fcf("R", "ROADMAP", "BY PHASE")}
 <h1>Roadmap</h1>
 <p class="lead">Phases describe the order in which work starts. There are no dates here: dates are published only when a launch milestone is committed.</p></section>
-<section class="sheet"><div class="tbl"><table><thead><tr><th>Phase</th><th>Theme</th><th>Leaves</th><th>App work starts</th></tr></thead><tbody>{"".join(items)}</tbody></table></div>
+<section class="sheet"><div class="tbl"><table><thead><tr><th>Phase</th><th>Theme</th><th>Leaves</th><th>Built</th><th>App work starts</th></tr></thead><tbody>{"".join(items)}</tbody></table></div>
 <p class="muted">An app reaches 1.0 only when every phase holding its core workflow is finished: Report and Inspect after P1b, Probe after P2, Network after P3. The first milestone, <b>launch-1</b>, targets Inspect and Report: <a href="{REPO}/blob/main/milestones/launch-1.md">milestones/launch-1.md</a>.</p></section>"""
     return page("/roadmap/", "Roadmap", "The Metrology Maven roadmap by phase, generated from the spec tree.", body, d)
 
 
 def contribute(d):
-    blocks = []
-    for area, items in d["queue"].items():
-        li = "".join(f'<li><a href="{REPO}/blob/main/{scope.rel(n.path)}"><span class="mono">{e(n.id)}</span></a> {e(n.meta.get("title", ""))}</li>' for n in items)
-        blocks.append(f'<details><summary>{e(scope.EXPERT_AREAS[area])} · {len(items)} tasks</summary><ul class="clean">{li}</ul>'
-                      f'<p><a href="{REPO}/issues?q=is%3Aissue+is%3Aopen+label%3Aexpert%3A{area}">Open issues labelled expert:{area} →</a></p></details>')
     body = f"""
 <section class="hero">{fcf("C", "CONTRIBUTE")}
-<h1>Help build open metrology software</h1>
-<p class="lead">The work is already broken into small pieces. Pick one that fits what you know. Claiming is automatic: comment <code>/claim</code> on an issue.</p>
-<div class="btns"><a class="btn primary" href="{REPO}/issues?q=is%3Aissue+is%3Aopen+label%3Aexpert-queue">Expert tasks</a><a class="btn" href="{REPO}/issues/new?template=expert-offer.yml">Offer your expertise</a><a class="btn" href="{REPO}/blob/main/CONTRIBUTING.md">Contributing guide</a></div></section>
-<section class="sheet">{fcf("1", "METROLOGY EXPERTS")}
-<h2>We need people who know GD&T, uncertainty and CMMs</h2>
-<p>Agents can write most of the specification, but some parts must not be guessed: how a standard is interpreted, how uncertainty is budgeted, how a controller moves. Those tasks are marked for experts and listed below. You can write the piece yourself, or just review an agent's draft in plain words and approve the result.</p>
-{"".join(blocks)}
-<p class="muted">You'll be credited by name in the spec, in CONTRIBUTORS.md and in release notes. Never paste text from a standard: cite the clause and explain it in your own words.</p>
-</section>
-<section class="sheet">{fcf("2", "OTHER WAYS")}
+<h1>Build from the open spec tree</h1>
+<p class="lead">Every piece of work is a self-contained node in the repository. No waiting, no outreach, and no gatekeepers: pick an open node or buildable leaf and open a pull request.</p>
+<div class="btns"><a class="btn primary" href="{REPO}">Open repository</a><a class="btn" href="{REPO}/blob/main/generated/milestones/launch-1.md">Launch-1 build waves</a><a class="btn" href="{REPO}/blob/main/CONTRIBUTING.md">Contributing guide</a></div></section>
+<section class="sheet">{fcf("1", "SELF-SERVICE WORKFLOWS")}
 <div class="grid">
-<div class="card"><h3>Used GOM, PolyWorks, PC-DMIS or SpatialAnalyzer?</h3><p>Check the competitor feature lists in <code>seeds/</code> and fix what's wrong. No coding needed.</p></div>
-<div class="card"><h3>Run a coding agent?</h3><p>Pick an open node with <code>python tools/scope.py open</code> and follow <code>prompts/expand-node.md</code>. Name your agent tool in the PR.</p></div>
-<div class="card"><h3>Write Rust?</h3><p>Build leaves from the first waves in <code>generated/milestones/launch-1.md</code>. Each leaf's build prompt is self-contained.</p></div>
-<div class="card"><h3>Make instruments?</h3><p>Talk to us about driver integration and the "works with" certification: <a href="mailto:{CONTACT}">{CONTACT}</a>.</p></div>
-</div></section>"""
-    return page("/contribute/", "Contribute", "Contribute to Metrology Maven: expert tasks in GD&T, uncertainty and CMM control, plus seed verification and coding.", body, d)
+<div class="card"><h3>Build Rust leaves</h3><p>Pick an unbuilt leaf from the earliest waves in <code>generated/milestones/launch-1.md</code>. Each leaf's build prompt is self-contained and checked by CI.</p></div>
+<div class="card"><h3>Expand open spec nodes</h3><p>Run <code>python tools/scope.py open</code> and follow <code>prompts/expand-node.md</code> with a coding agent or by hand. Name your agent tool in the PR.</p></div>
+<div class="card"><h3>Improve fixtures &amp; workflow rows</h3><p>Add clean-room mathematical fixtures under <code>fixtures/</code> or refine workflow coverage rows in <code>seeds/</code>.</p></div>
+<div class="card"><h3>Optional GD&amp;T rule sign-off</h3><p>Unreviewed GD&amp;T rules carry <code>interpretation: provisional</code> (<a href="{REPO}/blob/main/decisions/D-045-provisional-gdt-interpretation.md">D-045</a>). Reviewers may optionally sign off rules via PR, without ever blocking development.</p></div>
+</div>
+<p class="muted">All commits are DCO signed-off (<code>git commit -s</code>). Never paste text from ISO, ASME, or VDA standards: cite the designator and clause in your own words.</p>
+</section>"""
+    return page("/contribute/", "Contribute", "Self-service contribution guide for Metrology Maven: build Rust leaves, expand spec nodes, and add mathematical test fixtures.", body, d)
 
 
 def company(d):
     body = f"""
 <section class="hero">{fcf("M", "COMPANY")}
 <h1>Metrology Maven, the company</h1>
-<p class="lead">Metrology Maven stewards the open-source project and pays for its infrastructure. The software is free. The company earns from what regulated manufacturers have to buy anyway: validation, support and evidence.</p></section>
-<section class="sheet"><div class="two">
-<div class="col free"><h3>Free forever</h3><ul class="clean"><li>All four apps, the math kernel and file formats</li><li>The CLI and MCP servers for agents</li><li>The independent verifier</li><li>Validation templates and the test runner</li></ul></div>
-<div class="col"><h3>Commercial services (planned)</h3><ul class="clean"><li>Certified builds with a completed validation dossier for aerospace, medical and accredited labs</li><li>Support agreements and long-term-support releases</li><li>Hosted verification and evidence archive</li><li>Instrument-maker integration certification</li></ul></div>
+<p class="lead">Metrology Maven stewards the open-source project and funds its infrastructure. The open-source software is free. The company earns from enterprise services and regulated evidence packages.</p></section>
+<section class="sheet">{fcf("1", "OPEN BOUNDARY")}<div class="two">
+<div class="col free"><h3>Free forever</h3><ul class="clean"><li>All four apps, the deterministic math kernel and QIF-native formats</li><li>The CLI and MCP servers</li><li>The independent verifier (<code>fid-verify</code>)</li><li>Evidence templates and open test runners</li></ul></div>
+<div class="col"><h3>Commercial services (planned)</h3><ul class="clean"><li>Pre-built regulated release dossiers for aerospace, medical and accredited labs</li><li>Support agreements and long-term-support releases</li><li>Hosted verification and evidence archive</li><li>On-premises private machine-adapter fine-tuning and fleet drift monitoring (D-049)</li><li>Instrument-maker integration testing</li></ul></div>
 </div>
-<p>No feature of the open apps will ever be moved behind a paid service. Interested in early access, a pilot or a partnership? <a href="mailto:{CONTACT}">{CONTACT}</a></p></section>"""
-    return page("/company/", "Company", "Metrology Maven stewards the open-source metrology platform and offers certified builds and support.", body, d)
+<p>No feature of the open apps will ever be moved behind a paid service (<a href="{REPO}/blob/main/decisions/D-036-funding-alignment.md">D-036</a>).</p></section>"""
+    return page("/company/", "Company", "Metrology Maven stewards the open-source metrology platform and defines a clear free-forever open boundary.", body, d)
 
 
 def not_found(d):
