@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid report export-csv]
 mcp: [report_export_csv]
 journal: [report.export_csv@1]
-updated: 2026-11-17
+built_in: [fid-report-out]
+updated: 2026-11-22
 ---
 
 # RPT.OUTPUT.SHEET.CSV: CSV export of report tables

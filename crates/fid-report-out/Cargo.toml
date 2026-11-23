@@ -11,10 +11,14 @@ repository.workspace = true
 fid-canon = { path = "../fid-canon" }
 fid-io-reg = { path = "../fid-io-reg" }
 fid-project = { path = "../fid-project" }
+fid-registry = { path = "../fid-registry" }
 fid-report = { path = "../fid-report" }
 fid-types = { path = "../fid-types" }
 cap-std = "3.4"
 sha2 = "0.10"
+
+[dev-dependencies]
+fid-bus = { path = "../fid-bus" }
 
 [lints]
 workspace = true
